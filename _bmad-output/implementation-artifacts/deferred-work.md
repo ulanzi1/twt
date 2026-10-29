@@ -754,6 +754,9 @@ Recorded at Story 5.11's Task 0.4 under [`-389`](../../.decision-log.md#decision
     HAND from ready words, ⛔ a gateway; (4) RULED by [`-416`](../../.decision-log.md#decision-2026-10-29-416) (Trustee-ratified, option
     A — the full name); (5) the words approved and the Hindi reviewed (`-417` FS8). Closed by 5.14 effective when that row is `done` on
     `main`.
+  - *Appended 2026-10-29 (Story 5.14 code review, [`-419`](../../.decision-log.md#decision-2026-10-29-419)):* (1) too — how a member is
+    asked to join: one home card, shown once per phone per account (again after a sign-out), plus a settings entry (`-417` FS9–FS11).
+    ⚠ "Closed by 5.14" above takes effect only when that row is `done` on `main`; until then this item is **building**, ⛔ closed.
 - **The degraded-mode cycle-open SMS bridge has ⛔ registrable words** [`-389` FS10 (a); draft
   `docs/degradation-policy/comms-templates/sms-channel.md`] — the bridge stays DARK; while dark, a bridged send runs the normal ladder
   (push → WhatsApp → SMS). Homed: row `5-8b-degraded-mode-bridge-sms-wording` (backlog). ⭐ Trigger: that row's create-story, or a
@@ -13352,3 +13355,19 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
   notice follows the Pariwar's stored mode (`-181`). Unreachable today: no `pariwar_public_name_presentation` row is `shielded_name`.
   ⭐ Trigger: the first migration, seed or admin write that sets any `pariwar_public_name_presentation` row to `shielded_name` ⇒ the
   question back to BigDev (and to the Panel if the post would change).
+  - *Appended 2026-10-29 (Story 5.14 code review):* "unreachable" re-checked — no migration, seed or API write sets `shielded_name`
+    (2026-10-29). ⚠ The trigger's route is WIDENED: it goes to BigDev AND the Trustee Panel. A post naming the deceased more fully than
+    the member's own push is a disclosure question ([`-416`](../../.decision-log.md#decision-2026-10-29-416)'s own concern), and under
+    `-416`'s reading the post never changes, so *"if the post would change"* would never send it.
+
+## Deferred from: code review of 5-14-trust-announcement-channels (2026-10-29)
+
+- **G2-W1 — the announcement-channels config PUT is last-writer-wins.** Two admins with the page open can each overwrite the other, including
+  the "channels live" switch. Pre-existing pattern: no config PUT in the codebase carries an `expectedVersion` / `updated_at` guard (the
+  channel-config precedent). The stale-form half (re-sync to fresh server data) is patched in 5.14 (G2-P16). Trigger: the first config
+  surface given optimistic concurrency, or a reported lost update.
+- **G3-W1 — the mobile "Announcement channels" settings screen has no error / retry words.** After a failed first fetch it shows only the title.
+  New member-facing words would reopen BigDev's copy review (`2026-10-29-417`), and no generic retry key exists. 5.14 adds only a loading
+  spinner (G3-P5). Trigger: the next copy review for this surface.
+- **G4-W1 — ledger label collision on Story 11b.5's branch.** `story/11b-5-…`'s sprint-status holds `2026-10-29b (STORY 11b.5 …)`, and
+  `main` now holds `2026-10-29b` for 6.32. Not 5.14's; relabel at 11b.5's rebase onto `main` ([[project_rebase_ledger_conflict_separator]]).

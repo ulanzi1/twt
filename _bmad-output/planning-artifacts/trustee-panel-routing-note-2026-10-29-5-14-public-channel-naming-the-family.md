@@ -15,7 +15,7 @@
 > ✅ **ANSWERED 2026-10-29 — Decision `2026-10-29-416` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti): Option A, full name.** The
 > ruling is in the block below; everything after it is kept unedited, as put.
 > ✅ **SENT** — recorded by the answer itself (whether the full note or a shorter copy was shown is not recorded). Written 2026-10-29
-> at Story 5.14 Task 0.3, on BigDev's *"prepare rotuing note"*; committed as put in `f5929d7d`.
+> at Story 5.14 Task 0.3, on BigDev's *"prepare rotuing note"*; committed as put in `f5929d7d` (= `71e0eaf2` after the rebase onto `770ba815`; the story's Debug Log (d2) SHA map).
 
 ---
 

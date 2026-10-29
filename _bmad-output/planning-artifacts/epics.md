@@ -2590,7 +2590,7 @@ down in clear; every failure shows the number + phrase and lets the member conti
 > Channel BY HAND (Meta has no posting API); and the app asks once, calmly — a home card until "Not now" or an open, plus a settings
 > entry. Its build decisions FS1–FS15 and the words (en + hi, the Hindi reviewed by BigDev) are DECIDED by
 > [`-417`](../../.decision-log.md#decision-2026-10-29-417) as amended by [`-418`](../../.decision-log.md#decision-2026-10-29-418)
-> (author-commit). One migration (`0190`). Go-live: roster Row 44 (`trust-announcement-channels-live`). Full ACs:
+> (author-commit). One migration (`0190`) — ⚠ *dated 2026-10-29 (code review, `-419` item 2): two — `0191_announcement-post-recovery` adds the retry delay, the last-day deadline and a tenant-bound alert FK.* Go-live: roster Row 44 (`trust-announcement-channels-live`). Full ACs:
 > `_bmad-output/implementation-artifacts/5-14-trust-announcement-channels.md`. ⛔ Never a merge fence. (Epic 5's two "9 stories" count
 > lines are left as they stand, as for 5.10–5.13.)
 

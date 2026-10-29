@@ -11,7 +11,10 @@ Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --
 iff `git diff --name-only 282bdd33..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY or every changed
 path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never assume either.
 
-STATUS: v1.6 (2026-10-29): THIRD VALIDATION after the rebase onto `770ba815` (6.32 landed) — three fresh-context verifiers; the
+STATUS: v2.0 (2026-10-29): CODE REVIEW DONE — all four file groups reviewed. Group 1's 7 patches, groups 2–4's 37 patches and the
+fix-diff review's 9 follow-ups are applied (BigDev "1" / "2" / "1"). Author-commit `2026-10-29-419` was committed alone. `ci:local` is
+36 / 36 in ONE run on a fresh container. Status done; ⛔ pushed; ⛔ landed. Go-live stays roster Row 44.
+v1.6 (2026-10-29): THIRD VALIDATION after the rebase onto `770ba815` (6.32 landed) — three fresh-context verifiers; the
 decision-level changes are author-commit `2026-10-29-418` (committed alone), the rest applied here (Debug Log (e)); next: Task 0.4.
 v1.5 (2026-10-29): Tasks 0.1–0.3 done — FS1–FS15 answered, PQ1 RULED (`-416`, A, full name), the words approved + Hindi reviewed, author-commit `-417` committed; next: Task 0.4 (records), then Task 1. 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
 (2 CRITICAL / 5 HIGH / 12 MEDIUM / 10 LOW), every finding applied and the critical ones re-checked by hand (Change Log). v1.1 → v1.2 the
@@ -121,7 +124,7 @@ other notice (news, surveys, Niyamavali amendments); a WhatsApp Channel posting 
 
 # Story 5.14: The Trust's Announcement Channels — One Telegram Channel the System Posts To, One WhatsApp Channel an Admin Posts To by Hand, and One Calm Ask in the App `[SURFACE]`
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Trustee Panel ruled on 2026-10-23 (`-390` Q2 A) that the Trust runs one WhatsApp
 > Channel and one Telegram channel that post general notices (a pool opening and a cycle's last day), and that members are ASKED, never
@@ -219,6 +222,9 @@ remains the official place for every notice**.
   `TELEGRAM_ELIGIBLE_CATEGORIES`, `resolveTelegramTarget`, `provider-composition.ts`, the opt-in surfaces, the webhook processor and the
   `telegram_mirror` flag are left unedited; `channels-determinism` stays green. The ONLY change to `packages/channels` is the client's
   timeout + `retryAfter` + `signal` (FS7). *Proof:* AC11.
+  ⚠ *Dated 2026-10-29 (code review, [`-419`](../../.decision-log.md#decision-2026-10-29-419) item 4):* WIDENED. Review G1-4 / G1-7 also
+  changed the shared client: explicit `ok: true` is required, `timeoutMs` must be an integer, and an over-range `retry_after` is ignored.
+  So the per-member mirror also treats a 200 without `ok: true` as `rejected`. The rest of I8 holds.
 - **I9 — A post is never on the member's critical path.** The jobs are enqueued post-commit, best-effort (a failure alarms, never fails
   the cycle-open mint or the sweep); the per-member fan-out is unchanged in order and content. A dropped `pool_open` enqueue is healed by
   the EXISTING hourly `runContributionNotifyRecoverySweep` (`contribution-notify-triggers.ts:1296`, which already scans every live alert
@@ -373,7 +379,7 @@ re-check this note.
   ALSO fires `auditHook('decryptDek')` (`packages/domain/src/encryption/envelope.ts:93`) into the global-lock audit chain (FS15, `-418` item 9). Forced pagination:
   `apps/api/tests/integration/forced-pagination.spec.ts` flags a GET whose body is a top-level array or `{ items[] }` without a bounded
   `limit`; a named array (`{ posts }`) is ⛔ examined by that detector (its `:41-50` note); the bound is the domain read's `clampLimit`ed
-  `.limit()`, enforced by `scripts/domain-accessor-invariants`
+  `.limit()`, enforced by `scripts/domain-accessor-invariants` [⚠ *dated 2026-10-29, code review G2-P8: the read's bound is a raw-SQL `LIMIT`, so it is bounded BY HAND; the gate sees only Drizzle `.limit()` calls and ⛔ checks it*]
   (`packages/domain/src/pagination.ts`).
 - **F15 — the at-most-once send record.** `alert_sms_sends` (migration `0184`): UNIQUE `(alert_id, member_id, occasion)`, a `claim_token`
   (`:45`, `:59`), CHECK-pinned enums, a finished row frozen by trigger; grants `twt_app` SELECT + COLUMN-LIMITED INSERT / UPDATE
@@ -664,7 +670,7 @@ the PUT validates with the contract (refinements equal to the CHECKs), writes on
 non-blank, for AC3); the module is added to `CHANNEL_ROOTS` (`scripts/access-wrapper-invariants/check.ts:69-77`) and a planted bare
 `audit.writeAuditEntry` in it is shown to FAIL the access-wrapper gate (record RED, then remove); the config GET returns `{ enabled: false,
 …nulls }` when no row exists (⛔ a 404). The posts list (an AUDITED read — F14) returns `{ posts: [...] }` (a named array — ⛔ examined by
-the forced-pagination detector; bounded by the domain read's `clampLimit`ed `.limit()`, enforced by `scripts/domain-accessor-invariants`), per pool opening and per last day of the last 15 days — a `last_day` entry only once the cycle has reached
+the forced-pagination detector; bounded by the domain read's `clampLimit`ed `.limit()`, enforced by `scripts/domain-accessor-invariants` [⚠ *dated 2026-10-29, code review G2-P8: the read's bound is a raw-SQL `LIMIT`, so it is bounded BY HAND; the gate sees only Drizzle `.limit()` calls and ⛔ checks it*]), per pool opening and per last day of the last 15 days — a `last_day` entry only once the cycle has reached
 day 14, its date from the SHARED `operationalDate` (AC4) — each with the Telegram state (`posted` / `deferred` / `refused` / `unknown` /
 `skipped` / `attempting` / *"not attempted"*; an `attempting` row past the lease is SHOWN as `unknown`) and, ONLY while `enabled` is true,
 the bilingual words rebuilt through the shared builder with the real `t()` (switch off ⇒ states only); nothing else. 403 / 400 / 401 /
@@ -721,7 +727,8 @@ worker registers with `{ includeMetadata: true }`; every send passes an explicit
 ⛔ final (`-418` item 4). ⛔ a Bot API call in any of
 these. A `skipped` row holds ids, the pool label (no-decrypt — F7) and the date only; ⛔ a decrypt is done for it. (iv) The existing hourly
 `runContributionNotifyRecoverySweep` (`:1296`) gains one best-effort step through the same optional seam: for a live alert whose pools
-lack a `pool_open` post row, re-send the cycle job (the UNIQUE makes a re-send harmless) — placed after the scope read (`:1325-1335`)
+lack a `pool_open` post row, re-send the cycle job (the UNIQUE makes a re-send harmless) [⚠ *dated 2026-10-29, code review G1-1 / `-419` item 3 (b):* it ALSO re-sends a
+pool whose row is `deferred`, or `attempting` past its lease, even after the alert has closed, ⛔ restarting the member fan-out] — placed after the scope read (`:1325-1335`)
 and BEFORE the `continue` at `:1337` (which skips both an all-empty cycle and a fully-notified one), in its own try/catch, run ONLY when the seam is set, its re-sends ⛔ counted in `reEnqueued`;
 "lacks a row" = the cycle's pool ids minus their `pool_open` rows (explicit `pariwar_id`). The queue is created (`boss.createQueue`) BEFORE
 `registerContributionNotifyWorkers` / `registerCycleOpenAlertWorkers`, and its worker registered in jobs boot. The per-member fan-out's
@@ -779,7 +786,8 @@ packages/channels/src/composition/provider-composition.ts packages/domain/src/no
 apps/jobs/src/tg-webhook-processor.ts 'apps/mobile/app/(settings)/telegram-notifications.tsx' packages/domain/src/rbac/permissions.ts
 packages/domain/src/feature-flags/registry.ts packages/channels/src/providers/telegram-errors.ts
 docs/adr/ADR-0030-compensating-audit-mechanization.md` is EMPTY; `channels-determinism` green; the Telegram client diff
-(`telegram-app.ts`) is the timeout + `signal` + `retryAfter` alone (+ their tests); the mirror's tests pass unchanged except NEW timeout / retry-after cases; the F4 regression test
+(`telegram-app.ts`) is the timeout + `signal` + `retryAfter` alone (+ their tests) [⚠ *dated 2026-10-29: widened by `-419` item 4 — plus the
+explicit-`ok: true` acceptance, the integer timeout and the `retry_after` bound (+ their tests)*]; the mirror's tests pass unchanged except NEW timeout / retry-after cases; the F4 regression test
 added beside the webhook processor's tests.
 
 **AC12 — Gate.** `pnpm ci:local` green on an isolated database (⛔ shared :5433 while siblings run — [[project_known_livedb_test_failures]];
@@ -876,6 +884,316 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
 - [x] **Task 8 — Records and gate (AC10, AC12)**: commit, then `pnpm friction:check` (row + disposition); `pnpm ci:local` on an isolated DB;
       Debug Log evidence; story → `review`.
 
+### Review Findings
+
+**2026-10-29 — `bmad-code-review 5.14`, file group 1: posting pipeline.** Reviewed `b3218697` against its rebased base
+`770ba815` (30 changed files; +3,415 / −17): jobs and enqueue hooks, Telegram client, domain accessors, migration/schema/policies,
+post contracts/date helpers, queue entry, post copy, and their tests. Three independent layers completed: Blind Hunter,
+Edge Case Hunter, Acceptance Auditor. **0 decision-needed, 7 patch, 0 defer, 1 dismissed.** These are engineering findings;
+none changes what the Trust is authorised to disclose or owes a person. API/admin, mobile/copy, and governance/release records
+remain for later file groups; this is not a completed review of the whole story.
+
+- [x] [Review][Patch] **G1-1 [P1] Recover stranded 429 deferrals.** After committing `deferred`, a failed replacement enqueue is
+      caught and the current job completes successfully. Recovery counts only pools lacking a row, so it never retries or gives up
+      this existing row; a crash between the commit and enqueue has the same gap. Preserve a durable recovery path, and test enqueue
+      failure/crash recovery. Violates AC6 / FS7 and the claimed give-up behavior. [apps/jobs/src/scheduler/announcement-channel-post.ts:427]
+- [x] [Review][Patch] **G1-2 [P2] Enforce Telegram's retry delay at the shared claim.** `startAfter` delays only the replacement job;
+      an already-queued duplicate can immediately reclaim `deferred` and post again, bypassing `retry_after`. Persist and enforce an
+      earliest retry time in the database claim, with a duplicate-job test. Violates FS7's requirement to honour the 429 delay.
+      [packages/domain/src/announcement-channels/posts.ts:185]
+- [x] [Review][Patch] **G1-3 [P1] Validate the alert/pool/cycle association before posting.** `last_day` does not tenant-load its alert:
+      an A envelope carrying B's alert posts to A and creates an A post referencing B (the FK is global `alert_id` only). `pool_open`
+      separately loads a tenant-local pool and alert but never proves their cycles equal the payload's cycle; an unrelated live
+      alert can supply the stale guard and consume the pool's once-only key. Validate ownership and all resource relationships before
+      decrypt/claim/send; cover both paths. Violates I6 / AC5–AC6 and checklist family 3.
+      [apps/jobs/src/scheduler/announcement-channel-post.ts:321]
+- [x] [Review][Patch] **G1-4 [P2] Require explicit Telegram `ok: true` before recording `posted`.** HTTP 200 with
+      `{ result: { message_id: 42 } }` and no `ok` field is accepted by the reused client's HTTP-success fallback, and the new poster
+      records `posted`. The parser predates this story, but this consumer introduces the stronger I3 / AC6 guarantee. Enforce it and
+      add a malformed-success test. [apps/jobs/src/scheduler/announcement-channel-post.ts:447]
+- [x] [Review][Patch] **G1-5 [P2] Add the required live two-connection race proof.** Existing duplicate-job and stale-token tests are
+      sequential. Prove simultaneous initial claims and deferred reclaims across two live connections, with exactly one send/claim
+      winner and no stale-token finalisation. REAL GAP under checklist family 2, at AC6 severity.
+      [apps/jobs/tests/announcement-channel-post-live.test.ts:236]
+- [x] [Review][Patch] **G1-6 [P2] Implement AC7's mixed-payment-state privacy fixture.** The AC7-labelled test seeds the deceased,
+      claim, alert and pools, but no contributing members/assignments/payments. Seed members in several payment states with distinct
+      name/mobile/amount/status sentinels, then assert exact builder output and no sentinel leakage, as AC7 expressly requires.
+      [apps/jobs/tests/announcement-channel-post-live.test.ts:215]
+- [x] [Review][Patch] **G1-7 [P3] Reject fractional Telegram timeouts at construction.** `timeoutMs: 1.5` passes the new range check,
+      but `AbortSignal.timeout(1.5)` throws before `fetch`; the poster can permanently classify this unattempted post as `unknown`.
+      Require an integer and add a fractional-value case. [packages/channels/src/providers/telegram-app.ts:181]
+
+**Validation:** existing Telegram tests 23/23; post contracts/date tests 26/26; jobs/poster/trigger/webhook tests 209/209 on the story's
+dedicated `twt-514-pg` :5444 database. Six temporary reproductions outside the repository confirmed G1-1, G1-2, both G1-3 paths,
+G1-4 and G1-7 (6/6 assertions of the current faulty behavior; not regression fixes). Logs:
+`/private/tmp/twt-514-review-existing-jobs.log`, `/private/tmp/twt-514-review-repro.log`; repro source/config:
+`/private/tmp/twt-514-review-repro/`. The sandbox denied the first DB run; the rerun with local-network access passed.
+
+**Invariant lens:** family 1 covered by transition/stale/give-up tests; 2 has G1-5; 3 has G1-3; 4 covered by payload/fan-out tests;
+5 has dedicated policy-regression coverage but the alert association lacks a tenant backstop (G1-3); 6 covered by explicit field
+picking and column-limited grants (AC7's required fixture remains G1-6); 7 covered by tenant-scoped counts/`NOT EXISTS`, with the
+500-pool cap matching the spawn ceiling; 9 covered by documented BYPASSRLS/direct-client choices; 10 has G1-1's false give-up
+claim. Family 11 introduces no benefit-gating predicate in this pipeline. API attribution/member-admin writes/UI families are
+outside this group. **Dismissed:** a proposed total 30-minute cap across repeated 429s would change the explicitly prescribed
+0184 lifecycle, whose freshness clock also resets on each attempt; no such new aggregate budget is specified here.
+
+**Group 1 resolution — 2026-10-29:** BigDev chose **1, apply every patch**. G1-1 through G1-7 are fixed, with the
+regression proofs in the tests named above. Migration `0191_announcement-post-recovery` adds `retry_not_before` and the last-day
+`deadline_at` payload snapshot (timestamps only; no name/text), the column-limited grants, and a composite tenant/alert FK backed
+by `alerts_pariwar_alert_uq`; migration 0190 stays unedited. The hourly sweep recovers existing deferred/crash-left rows even after
+an alert closes, without restarting its member fan-out. A lost retry enqueue rethrows; the database claim enforces Telegram's
+persisted delay against every duplicate. Pool/alert/cycle relationships are checked before decrypt/send. Explicit `ok: true` is
+required and fractional timeouts are rejected; this acceptance check is the authorised G1-4 extension to AC11's original client-diff
+limit. The mixed-payment fixture proves real yellow/green/red histories with encrypted contributor names/mobiles and amount
+sentinels; the initial/reclaim race uses two distinct PostgreSQL backend connections and proves one winner/send per attempt and
+stale-token rejection. Focused validation: **215 jobs/trigger/webhook, 30 policy, 28 Telegram tests passed**; jobs/domain/channels
+typecheck and lint, `domain-invariants:check`, and `git diff --check` passed. Full gate evidence is recorded below. Changes remain
+uncommitted. Story stays **in-progress**, rather than `done`, because API/admin, mobile/copy and
+governance/release file-group reviews are still outstanding.
+
+**Group 1 gate completion — 2026-10-29:** `DATABASE_URL=…:5444/twt_dev pnpm ci:local` finished **34/36**. The two failures
+were (1) a plain UUID passed where the new privacy-fixture helper requires `PariwarId` — corrected with `ids.pariwarId`, and
+(2) the existing channel determinism test timing out at 90 seconds during the parallel unit job. The dedicated determinism job
+passed, and the full live integration job passed (domain **439/439 files**, events **7/7**, validity **21/21**, channels **21/21**,
+jobs **86/86**, API **204/204**, plus the other filtered packages). Reruns on the final code: `pnpm turbo run typecheck` —
+**20/20 tasks passed**; `env -u DATABASE_URL pnpm turbo run test --concurrency=1` — **37/37 tasks passed** (packages serialized
+for the rerun; CI configuration unchanged). Thus every CI job has passed across the main run and reruns, **not in one 36/36 run**.
+The final privacy fixture uses the real identity namespace / `member_mobile` AAD for encrypted mobiles. Logs:
+`/private/tmp/twt-514-patch-ci-local.log`, `/private/tmp/twt-514-patch-typecheck-rerun.log`,
+`/private/tmp/twt-514-patch-unit-rerun.log`. All seven findings are resolved; the three remaining file groups are not reviewed.
+
+⚠ **Correction, 2026-10-29 (groups 2–4 review, G4-P4; the text above is kept as written):**
+- *"Every CI job has passed across the main run and reruns"* is too broad. The main run's lint, typecheck and the other early static
+  jobs ran from 14:02:55, before the live test's last edit at 14:08:02 (the `ids.pariwarId` fix). Only typecheck (14:24) and unit
+  (14:30) were re-run afterwards. The integration job did run the final file (jobs tests started 14:17:35). So lint and the other
+  static jobs are unproven on the final group 1 code, and the next full `ci:local` is the proof.
+- The main run's unit job failed on more than the determinism test: 19 admin tests in 5 files, 1 mobile test (all 5 000 ms timeouts),
+  and a domain unit run killed by `ELIFECYCLE`. The serialized 37/37 rerun covers them.
+- *"existing Telegram tests 23/23; post contracts/date tests 26/26"* cites no log. The arithmetic is consistent with the 28 in
+  `twt-514-patch-telegram.log` (23 + 5 new), but neither baseline is attested.
+
+**2026-10-29 — `bmad-code-review 5.14`, file groups 2–4, run together (BigDev: *"go ahead with group 2,3,4 all in parallel"*).**
+Diffs: `770ba815` → the working tree (group 1's patches included, uncommitted). Group 2, API / admin / contracts / OpenAPI / domain
+config + member read: 28 files, +2,426 / −70. Group 3, mobile / copy / friction: 18 files, +716 / −4. Group 4, governance / release
+records plus the uncommitted story delta: 8 files. Nine layers ran (Blind Hunter, Edge Case Hunter and Acceptance Auditor per group),
+and none failed. **1 decision-needed (resolved → G4-P11), 37 patch, 3 defer, 21 dismissed.** The orchestrator re-checked the load-bearing claims
+by hand: EC2-1's swallowed-error path (`later-approval-warnings.ts:189-209` + `pool-identity.ts:280-298`); the PUT's missing denial
+tests; the admin hook's focus refetch; the mobile client's `refetchOnWindowFocus: false`; the shared-client `ok` change
+(`git diff HEAD`). BH4-3 (*"the live-DB job never ran on the final code"*) is **disproved**: the jobs live tests started 14:17:35, after the
+live test's last edit at 14:08:02. The early lint / typecheck of that run did see the pre-fix file (see G4-P4).
+
+*Group 2 — API / admin*
+- [x] [Review][Patch] **G2-P1 [P2] The audited, name-decrypting "Posts" read refetches on window focus / reconnect** — each refocus
+      re-decrypts every name (one `decryptDek` + one global-lock audit write per name) and writes another `posts_read` line. Set
+      `refetchOnWindowFocus: false` and `refetchOnReconnect: false`, as `useNomineeNameCheck` / `useClaimPeerAnswers` do. Breaks FS15 /
+      `-418` item 9's cost, which was accepted *"per admin page view"*. (blind+edge+auditor) [apps/admin/src/api/hooks.ts:1506]
+- [x] [Review][Patch] **G2-P2 [P2] A swallowed SQL error poisons every later row's savepoint** — `resolveCuratedPoolName` catches
+      a failed `reserveNames` query. The tx is aborted, but `read()` returns normally, and `underSavepoint` only logs the failed RELEASE
+      (25P02), so every later `SAVEPOINT` fails and each later row shows "words unavailable". On a RELEASE failure, `ROLLBACK TO
+      SAVEPOINT`; test with a SWALLOWED planted error, not only a thrown one. Breaks AC2's *"the next row's words still build"*.
+      (edge) [apps/api/src/modules/claims/later-approval-warnings.ts:196]
+- [x] [Review][Patch] **G2-P3 [P2] The PUT has no 401 / 403 / cross-Pariwar test** — the denials run against the two GETs only. Add
+      `state_trustee`, no-session and A-admin-PUTs-to-B cases (a seeded B, not a random id). This is AC2 (*"403 / 400 / 401 / cross-Pariwar
+      tested"*) and a family 3 REAL GAP, on the route that switches public naming on. (auditor)
+      [apps/api/tests/integration/announcement-channels.spec.ts:196]
+- [x] [Review][Patch] **G2-P4 [P3] Words + Copy are offered for pools whose alert is not `live`** — `alertLive` is read but never
+      used, so the admin could hand-post an opening the system deliberately held. While `!alertLive` (and no row), show no words.
+      (blind+edge) [apps/api/src/modules/announcement-channels/handlers.ts:131]
+- [x] [Review][Patch] **G2-P5 [P3] `refused` / `skipped` labels name the wrong cause** — every `refused` row reads *"Telegram refused
+      it"*, including `secret_unresolved`, `identity_unavailable`, `switch_off`, `no_chat_id` and `bot_not_configured`. Carry a reason
+      (from `detail`) on `AnnouncementPostEntry` and label it truthfully; OpenAPI regenerated. (edge+auditor)
+      [apps/admin/src/modules/channel-config/AnnouncementPostsList.tsx:14]
+- [x] [Review][Patch] **G2-P6 [P3] A `last_day` row deferred past its deadline shows "Waiting"** — `shownState` checks only the
+      30-minute freshness. FS7 also bounds a `last_day` by `deadlineAt`. (auditor) [apps/api/src/modules/announcement-channels/handlers.ts:49]
+- [x] [Review][Patch] **G2-P7 [P3] The AC4 "same date as the member reminder" test is circular** — it compares with the handler's own
+      helpers. Take the `date` param from the day-14 reminder builder for the same alert, and add a `last_day` words-while-ON case. (auditor)
+      [apps/api/tests/integration/announcement-channels.spec.ts:316]
+- [x] [Review][Patch] **G2-P8 [P3] `poolCount` is recomputed from a truncated set; the "enforced by `domain-accessor-invariants`" claim is
+      unenforced** — the raw-SQL `LIMIT` is invisible to the gate, and the cross-cycle pool cap truncates in UUID order. Read each cycle's
+      pool count in SQL (the curated-name index depends on it), and correct the AC2 / comment claim to "bounded by hand". (blind+auditor)
+      [packages/domain/src/announcement-channels/reads.ts:161]
+- [x] [Review][Patch] **G2-P9 [P3] Copy throws synchronously when `navigator.clipboard` is absent** — the "Copy failed" path is never
+      reached. Guard it and route the failure to `failed`. (blind) [apps/admin/src/modules/channel-config/AnnouncementPostsList.tsx:29]
+- [x] [Review][Patch] **G2-P10 [P3] "Copied" / "Copy failed" are not announced** — add `role="status"` / `aria-live="polite"`. A family 13 (d)
+      REAL GAP. (auditor) [apps/admin/src/modules/channel-config/AnnouncementPostsList.tsx:35]
+- [x] [Review][Patch] **G2-P11 [P3] The D11 crossing has no re-examination trigger, and `pool-identity.ts:87` still says "NOT the admin
+      path"** — add the trigger plus a back-pointer, and fix the `@param mode` doc. Family 9. (auditor)
+      [apps/api/src/modules/announcement-channels/handlers.ts:10]
+- [x] [Review][Patch] **G2-P12 [P3] The admin "switch OFF ⇒ ⛔ words" test does not test the switch** — the UI never branches on
+      `enabled`. Hide words / Copy in the UI while `!enabled` too, and make the test feed words with `enabled: false`. (blind)
+      [apps/admin/tests/announcement-channels-page.test.tsx:95]
+- [x] [Review][Patch] **G2-P13 [P3] A vacuous isolation assertion and a dead helper branch** — the "unrelated Pariwar's bot row" check
+      goes through a read that never touches `pariwar_telegram_config`. Move it to the member read; let `configure` seed NO bot row,
+      and test ON-with-no-bot-row. (blind) [apps/api/tests/integration/announcement-channels.spec.ts:179]
+- [x] [Review][Patch] **G2-P14 [P3] An unguarded `poolLetterCode` — one bad `pool_index` 500s the whole list** — degrade that row,
+      as the shared resolver does. (edge) [apps/api/src/modules/announcement-channels/handlers.ts:140]
+- [x] [Review][Patch] **G2-P15 [P3] The invite-URL patterns accept a bare `https://t.me/` and inner whitespace** — require a
+      non-empty, whitespace-free path in the contract, the domain constant and the CHECK (0191, still unlanded). Lockstep test updated.
+      (edge) [packages/contracts/src/announcement-channels/channels.ts:15]
+- [x] [Review][Patch] **G2-P16 [P3] The config form never re-syncs to fresh server data** — `defaultValues` only, so a stale `enabled`
+      is re-saved. `reset(initial)` when the server data changes (the concurrency half is deferred below). (blind)
+      [apps/admin/src/modules/channel-config/AnnouncementChannelsForm.tsx:35]
+
+*Group 3 — mobile / copy*
+- [x] [Review][Patch] **G3-P1 [P2] `link_error` is shown but never announced** — a bare `accessibilityRole="alert"`. Use the house
+      `announce.tsx` helper, once per failure, including a repeat failure. AC8 / AC9 + family 13 (d) REAL GAP. (blind+edge+auditor)
+      [apps/mobile/components/home/AnnouncementChannelsCard.tsx:41]
+- [x] [Review][Patch] **G3-P2 [P2] The home card / entry never refetch while the process lives** — the home tab mounts once, and
+      `refetchOnWindowFocus` / `refetchOnReconnect` are `false` app-wide, so a switch-off or corrected link is unseen for days. The
+      member can tap a withdrawn link and dismiss the card for good. Refetch on app foreground (AppState `active`) and on screen focus.
+      FS11's *"refetches at each home mount"* does not hold. (edge)
+      [apps/mobile/components/announcement-channels/useAnnouncementChannelsQuery.ts:21]
+- [x] [Review][Patch] **G3-P3 [P2] "Not now" is not an accessibility element** — the frame's tamagui `Button` has no `accessible={true}`,
+      so its role and label are dropped. Add it (this also fixes the 6.36c cards), plus a `data-accessible` assertion. Family 13 (a) REAL
+      GAP. (edge+auditor) [apps/mobile/components/home/HomeReminderCard.tsx:46]
+- [x] [Review][Patch] **G3-P4 [P3] The card / entry / screen keep showing held links after a failed refetch** — gate on `isError` too,
+      and test `data` + `isError`. AC8 / FS11 *"renders NOTHING … on error"*. (blind+auditor)
+      [apps/mobile/components/home/AnnouncementChannelsCard.tsx:30]
+- [x] [Review][Patch] **G3-P5 [P3] The settings screen is a bare title while loading, and its header comment claims words it does not
+      show** — show a Spinner while pending, and correct the comment (the error / retry words are deferred below). (blind+edge+auditor)
+      [apps/mobile/app/(settings)/announcement-channels.tsx:4]
+- [x] [Review][Patch] **G3-P6 [P3] Opening a link from the settings screen does not dismiss the home card** — FS10: *"a successful open
+      of either link hides the card for good"*. (edge) [apps/mobile/app/(settings)/announcement-channels.tsx:30]
+- [x] [Review][Patch] **G3-P7 [P3] A failed MMKV write leaves "Not now" inert, and an `onOpened` throw shows `link_error`** — hide in
+      component state as well as persisting, and call `onOpened` outside the `openURL` try. (blind)
+      [apps/mobile/components/announcement-channels/ChannelLinkButtons.tsx:27]
+- [x] [Review][Patch] **G3-P8 [P3] The copy gate's banned list misses common spellings; the `[t]`-deps loop is dead** — add `जरूरी`
+      (no nukta) and precomposed `ज़`, `आवश्यक`, Hindi and English "lose / miss". Drop the dead regex loop. Per
+      [[feedback_gate_scope_semantic_coverage]]. (blind+edge)
+      [apps/mobile/tests/unit/announcement-channels-copy-keys.test.ts:34]
+- [x] [Review][Patch] **G3-P9 [P3] AC8's named sign-out test is approximated** — run `signOut` through the provider and render the next
+      account. (auditor) [apps/mobile/tests/unit/announcement-channels-dismissal.test.ts]
+- [x] [Review][Patch] **G3-P10 [P3] The friction-ledger disposition says "for good" and omits the sign-out re-ask** — FS10 (a)'s cost
+      line names it. (auditor) [friction-budget.md:3022]
+
+*Group 4 — governance / release records*
+- [x] [Review][Decision] **G4-D1 → RESOLVED 2026-10-29, BigDev: *"2"* — keep asked-or-accepted, but tell the Panel.** It becomes
+      **G4-P11**: if leg (e) is met by the accepted-cost path, the Panel gets a one-line correction before any switch-on, ⛔ only
+      a roster quote. That goes in the new author-commit entry (with G4-P2, superseding `-418` item 1 in part, committed FIRST and alone).
+      Also: a dated pointer under `-416`'s Not covered (the *"a blocker unless BigDev makes it one"* line was the session's, not the
+      Panel's), and the roster leg (e) reworded to *"a deceased member"*, matching `-416` / `-418`. Finding as raised:
+      **[P2] Counsel leg (e) can close on a path the Panel was told would not happen** — the PQ1 note told
+      the Panel *"Going live waits for this answer, and also for … counsel's question"*, and its ruling block accepted *"counsel has not
+      been asked"* as a present fact. `-418` item 1 (BigDev: *"Keep asked-or-accepted"*) lets go-live record *"Counsel has not been
+      asked"* as an accepted cost. It names that sentence, but the Panel is never told. `-416`'s Not covered (session-written, inside a
+      Trustee-ratified entry) says *"a blocker unless BigDev makes it one"*, which the Panel never said. The leg also words the question
+      as naming *"a deceased member's family"* (roster) against *"a deceased member"* (`-416` / `-418`). Not a merge blocker: it is a go-live
+      fence ([[project_not_in_production_merge_is_not_golive]]). (blind+auditor)
+      [docs/launch-gate-inventory/inventory-roster.md (Row 44 (e))]
+- [x] [Review][Patch] **G4-P1 [P2] The uncommitted ledger line takes `2026-10-29`, which is main's 5.8b label** — relabel `2026-10-29m`
+      (free on every ref and worktree) in both ledgers. Add the row's dated `review → in-progress` comment. (blind+edge+auditor)
+      [_bmad-output/implementation-artifacts/sprint-status.yaml:1]
+- [x] [Review][Patch] **G4-P2 [P2] Group 1's build changes are unrecorded in governance** — migration `0191`, `retry_not_before`, the
+      `alerts` unique index, the recovery of EXISTING deferred / crash-left rows (`-418` item 11's *"nothing re-sends a pool that has a row"*
+      is now false), and the SHARED-client `ok: true` / integer-timeout / `retry_after` bound changes. That last one alters 5.5's per-member
+      mirror and breaks I8 / AC11 / `-418` item 6 / the closed edit list / the Debug Log (b) attestation. Write a new author-commit entry
+      (next free id, BigDev's *"1"* recorded verbatim) FIRST and alone, then dated pointers. Update epics *"One migration"*, story I8 / AC5
+      (iv) / AC11 / the edit list / the header STATUS. (blind+edge+auditor) [.decision-log.md (`-418` items 6, 11)]
+- [x] [Review][Patch] **G4-P3 [P3] The Row 26 note under-lists the post job's reads** — it also reads `claims` and `member_kyc_profiles`
+      (via `resolvePoolIdentity`) and `cycle_freeze_commits`. (8.8's jobs path already reads the identity pair under the same login, so
+      this is a record fix, not a new grant class.) (blind+edge+auditor) [docs/launch-gate-inventory/inventory-roster.md (Row 26, 2026-10-29
+      note)]
+- [x] [Review][Patch] **G4-P4 [P2] The group 1 gate record overstates** — *"every CI job has passed"*, but lint and the other static
+      jobs ran only on the pre-`ids.pariwarId` tree (the typecheck and unit were re-run). The unit job's failures also included 19 admin + 1
+      mobile timeouts and a killed domain unit run, not only the determinism test. The 23/23 and 26/26 baselines cite no log. Correct the
+      text; the pre-push `ci:local` is the proof. (edge+blind) [this file, "Group 1 gate completion"]
+- [x] [Review][Patch] **G4-P5 [P3] Unsignposted corrections to ratified / committed entries** — add dated pointers, never edits:
+      under `-416`: *"the WhatsApp Channel is posted by hand"* was stated in `-390`'s note, not this one; Consequence 1's *"(d) MET"* is
+      narrowed by `-418` §2. Under `-417`: a pointer to `-418`. In `-418`: its quote *"a `last_day` job whose IST date is no longer the
+      deadline's"* is not `-417`'s text (*"a last day no longer today"*). (blind+auditor) [.decision-log.md]
+- [x] [Review][Patch] **G4-P6 [P3] `-418`'s Author line over-attributes** — *"Every other item … a correction of fact"*, but items 4 and
+      9–11 are design calls BigDev did not separately answer. A dated pointer states which items were answered (the four, verbatim) and
+      which were session calls applied. (blind+auditor) [.decision-log.md:41]
+- [x] [Review][Patch] **G4-P7 [P3] Pre-rebase SHAs reachable only from the local backup branch** — `f5929d7d` (note line 18), `26fc1f47`,
+      `5fadaabd` (ledger `-29f` / `-29g`): append the rebased SHAs (`71e0eaf2` / `3371b6d6` / `0f55578f`) from Debug Log (d2). (blind+edge)
+      [_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md:18]
+- [x] [Review][Patch] **G4-P8 [P3] The new `-389` pointer renders as a setext heading** — a blank line before `---`. (edge+auditor)
+      [.decision-log.md:1235]
+- [x] [Review][Patch] **G4-P9 [P3] deferred-work wording** — `shielded_name`: "not in effect today" (an admin write path may exist),
+      and the trigger routes to the Panel, since it is a disclosure question. 5.11 item: "Closed by 5.14 when its row is `done` on `main`",
+      and address *"how a member is asked to join"*. (blind+auditor) [_bmad-output/implementation-artifacts/deferred-work.md]
+- [x] [Review][Patch] **G4-P10 [P3] The §3.4 annotation states a reading as fact** — label (1) AUTHOR READING, as (2) is. (4)'s
+      "ids and states" also holds the pool label, the date, `deadline_at` and `retry_not_before`. (auditor)
+      [_bmad-output/planning-artifacts/architecture.md:2392]
+- [x] [Review][Patch] **G4-P11 [P2] Counsel leg (e): the Panel is told before switch-on if the accepted-cost path is taken** (from
+      G4-D1, BigDev *"2"*). New author-commit entry (with G4-P2) superseding `-418` item 1 in part; a dated pointer under `-416` Not
+      covered; roster Row 44 (e) gains the Panel-notice step and is reworded to *"a deceased member"*.
+      [docs/launch-gate-inventory/inventory-roster.md (Row 44 (e))]
+
+*Deferred*
+- [x] [Review][Defer] **G2-W1 The config PUT is last-writer-wins (no version guard)** [apps/api/src/modules/announcement-channels/handlers.ts:76]
+      — deferred, pre-existing: no config PUT in the codebase carries an `expectedVersion` (channel-config precedent). The stale-form half
+      is G2-P16.
+- [x] [Review][Defer] **G3-W1 The settings screen has no error / retry words** [apps/mobile/app/(settings)/announcement-channels.tsx:27] —
+      deferred: new member-facing words reopen BigDev's copy review (`-417`). No generic retry key exists. G3-P5 covers the spinner.
+- [x] [Review][Defer] **G4-W1 Story 11b.5's branch holds ledger `2026-10-29b`, which main's 6.32 also holds**
+      [_bmad-output/implementation-artifacts/sprint-status.yaml] — deferred, not 5.14's: relabel at 11b.5's rebase.
+
+**Dismissed (21):** BH2-4: last-day words from day 14 conform to AC2. BH2-7: list order follows the spec's newest-first. BH2-8: sequential
+KMS per row, an accepted cost (`-418` item 9). BH2-9: audit on the happy path only, because an errored response shows nothing, and each
+decrypt is audited anyway. BH2-10: OpenAPI cannot express zod preprocess / superRefine; the generator limit, not a contract drift.
+BH3-1 / BH3-2: the sign-out clear is ratified (FS10 (a)); the key is per member. BH3-7: double-tap. BH3-8 / AA3-7: https-only, enforced
+by 0190's CHECKs. BH3-9: "opened = handed to the OS" is AC8's rule. BH3-12: the real `t()` leg exists. BH3-13: the entry matches its
+Telegram sibling. BH3-14 / BH3-15: the words and Hindi were approved and reviewed (`-417`). BH3-16: the post keys are tested in the builder
+(group 1). BH4-3: disproved (above). BH4-6: `-416`'s headline is scoped to THIS post, which option A decides. BH4-7: the false-date band
+was accepted by BigDev (*"Mirror, record cost"*). BH4-20: the ⛔ glyph is house style. BH4-22 (a)–(d): /tmp evidence and DR / KB naming
+are house practice and disclosed. EC4-3's cross-tenant recovery scan carries a DELIBERATE block with a re-examination trigger
+(`contribution-notify-triggers.ts:1332`).
+
+**Groups 2–4 resolution — 2026-10-29:** BigDev chose **2** on G4-D1 and **1** on the patches. Author-commit `2026-10-29-419` was
+committed FIRST and alone (`7885114d`). All 37 patches are applied: groups 2 and 3 by two fix agents with disjoint file sets, and group 4's
+records by the session. Every code patch's test was proved red with its fix removed, then restored.
+- **Edits outside the listed files:** `packages/domain/src/schema/pariwar_announcement_channels.ts` (G2-P15's lockstep constant), a new
+  `packages/domain/tests/integration/rls/announcement-activity-read.spec.ts` (G2-P8), and a one-line `retry_not_before` clear in `posts.ts` (FS-5).
+- **The story DB:** 0191 had already been applied on :5444, so G2-P15's four appended statements were run by hand and the drizzle hash was
+  set to the new file's. The gate below runs on a FRESH container.
+
+**Fix-diff review — 2026-10-29** ([[feedback_review_the_fix_diff_before_commit]]): two fresh reviewers, server (2,147 lines) and mobile
+(943 lines). They found 0 P1 / P2 and **9 P3**, all applied. Every finding was verdicted closed except G2-P8, G2-P16 and G3-P6, which were partial before
+these follow-ups.
+- **FS-1:** last-day words also need `now < deadlineAt`. The alert leaves `live` only at the hourly close sweep, so words and Copy
+  were offered for up to an hour past the deadline.
+- **FS-2:** G2-P16 compared raw form values with the parsed server DTO, so after a save that blanked or trimmed a field the re-sync stopped
+  working. It now compares the parsed values.
+- **FS-3:** the F14 / AC2 *"enforced by `domain-accessor-invariants`"* claim is annotated "bounded BY HAND".
+- **FS-4:** the closed-alert heal also fanned out to pools that never had a row, writing `skipped:stale` rows. The trigger now reads
+  the alert itself and runs the gap fan-out only while it is `live` (`-419` item 3 (b)).
+- **FS-5:** the label reads *"this cycle is not open"*, and a given-up row's `retry_not_before` is cleared.
+- **FM-1:** a home card left mounted under the settings screen now re-reads its dismissal on focus.
+- **FM-2:** the link error is announced where it is set (in `onFailed`, once per failure), and it belongs to the read it happened on.
+  This removes a stale re-announcement after a hidden `isError` (a regression from G3-P1 combined with G3-P4).
+- **FM-3:** a throwing `onOpened` is caught at the call site and logged with no URL.
+- **FM-4:** the banned list adds the short-u जरुर / ज़रुर forms, चाहिए, पड़ेगा (both nukta forms) and अवश्य.
+- **Accepted, ⛔ fixed (FM-5):** with G3-P2's foreground refetch and G3-P4's error gate, the card and entry blink out during an offline
+  resume until the next successful read. AC8 ratifies *"renders NOTHING … on error"*, so the cost is accepted as the AC's own.
+- **Fix-diff checks that hold:**
+  - `underSavepoint`'s RELEASE-failure rollback cannot be reached on any claims path, and the KMS audit stays on the service pool.
+  - 0191 applies on a fresh DB, and the journal order holds.
+  - Every new jobs-pool statement carries `pariwar_id`.
+  - The api test's deep import of `@twt/jobs/src/…` breaks no gate.
+- **Focused validation after the follow-ups:** api spec 17/17; jobs live + triggers 195/195; admin page 11/11; domain specs 31/31;
+  announcement-channels mobile tests 38/38; full mobile unit suite 2,143/2,143. Typecheck and lint are clean for api / admin / jobs / domain /
+  contracts / mobile. `friction:check` is green; its AC-4 is re-checked after the commit.
+
+**Groups 2–4 gate — 2026-10-29:** `DATABASE_URL=…:5445/twt_dev pnpm ci:local` ran on a FRESH throwaway container `twt-514-gate`
+(`postgres:16-alpine`, database NAMED `twt_dev`, UTC). It is **36 / 36 green in ONE run**, on the final tree, after every patch and
+follow-up. It covers lint, typecheck, build, unit, every invariant gate, `friction-budget` and `integration-tests`. The api integration job
+was 204 / 204 files (2,462 tests, 1 skipped), and 0191 applied from scratch. That is the full-run proof G4-P4 asked for. Log:
+`/private/tmp/claude-501/-Users-dev-Developer-projects-TWT/72fb0497-d19c-45cc-ab6d-3db60130e1ac/scratchpad/ci-local-g234.log`.
+⚠ Still UN-ATTESTED, carried: no device run (Hindi wrapping, TalkBack / VoiceOver on the card and the new announcements, `openURL` with
+and without the apps installed), and no real Telegram post (Row 44 (b)).
+
+**Invariant lens (groups 2–4):**
+- Family 3: G2-P3, a REAL GAP.
+- Family 5: covered by test (`pariwar-announcement-channels-policy-regression.spec.ts`).
+- Family 6: covered by construction (explicit field picks, `.strict()` responses, counts-only audit).
+- Family 8: covered (`withCompensatingAudit` plus test; actor-id attribution per the channel-config precedent).
+- Family 9: G2-P11 (trigger missing), with the BYPASSRLS scope corrected by G4-P3.
+- Family 10: G4-P2, G4-P4, G4-P5, G4-P6.
+- Family 11: covered; no benefit-gating predicate, and the policy-meaning sentence is checked.
+- Family 12: covered by construction (the only client id is `:pariwarId`, scope-resolved).
+- Family 13: G2-P10, G3-P1, G3-P3 REAL GAPs; (b) not constructible; (c) covered by test.
+
 ## Dev Notes
 
 ### ⚠ TRAPS
@@ -921,6 +1239,12 @@ NEW: the migration `0190` + journal entry; `packages/domain/src/schema/{pariwar_
 `apps/mobile/components/announcement-channels/useAnnouncementChannelsQuery.ts`; `apps/mobile/components/home/AnnouncementChannelsCard.tsx`;
 `apps/mobile/components/notifications/AnnouncementChannelsEntry.tsx`; `apps/mobile/app/(settings)/announcement-channels.tsx`; mobile tests;
 the routing note (Task 0.3).
+⚠ *Dated 2026-10-29 (code review, `-419`):* the review added edit sites outside this list:
+- NEW: migration `0191_announcement-post-recovery` (+ journal);
+- `packages/domain/src/schema/alerts.ts` (the `alerts_pariwar_alert_uq` index);
+- `apps/api/src/modules/claims/later-approval-warnings.ts` (`underSavepoint`'s RELEASE-failure rollback, G2-P2);
+- `apps/api/src/modules/member-pool/pool-identity.ts` (a comment, G2-P11);
+- `apps/mobile/components/home/HomeReminderCard.tsx` (`accessible` on "Not now", G3-P3, shared with the 6.36c cards).
 UPDATE: `packages/channels/src/providers/telegram-app.ts` (FS7 only); `packages/queue/src/index.ts`; `packages/domain/src/schema/index.ts`
 + the domain barrel; `apps/jobs/src/scheduler/cycle-open-alert.ts` (one deps seam + one post-commit send);
 `apps/jobs/src/scheduler/contribution-notify-triggers.ts` (the day-14 seam call; the recovery-sweep step; `operationalDate` /
@@ -1037,7 +1361,8 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.14`, 2026-10-29.
   card and the two link buttons, and `Linking.openURL` on a real phone with / without WhatsApp and Telegram installed.
 - AC11: `git diff origin/main --` the frozen list (dispatch, cascade, the composition, delivery, the telegram-opt-in module, the webhook
   processor, the Telegram settings screen, permissions, the flag registry, telegram-errors, ADR-0030) is EMPTY (0 lines); the
-  `telegram-app.ts` diff is the timeout + `signal` + `retryAfter` alone.
+  `telegram-app.ts` diff is the timeout + `signal` + `retryAfter` alone. ⚠ *Dated 2026-10-29: true of `b3218697`. It no longer holds after
+  code review G1-4 / G1-7 (`-419` item 4), which also changed the shared client's acceptance and bound checks.*
 
 (c) Gate runs (2026-10-29, a FRESH throwaway container `twt-514-pg` on :5444, database NAMED `twt_dev`, UTC session — the clean
 single-run recipe; `DATABASE_URL` set on the command, ⛔ the shell's :5432).
@@ -1197,6 +1522,7 @@ this map resolves them.
 - `packages/contracts/tests/announcement-channels.test.ts`
 - `packages/contracts/tests/contribution-window-fence.test.ts`
 - `packages/domain/migrations/0190_announcement-channels.sql`
+- `packages/domain/migrations/0191_announcement-post-recovery.sql`
 - `packages/domain/migrations/meta/_journal.json`
 - `packages/domain/src/announcement-channels/config.ts`
 - `packages/domain/src/announcement-channels/index.ts`
@@ -1205,6 +1531,7 @@ this map resolves them.
 - `packages/domain/src/index.ts`
 - `packages/domain/src/policies/announcement-channels-rls.ts`
 - `packages/domain/src/policies/index.ts`
+- `packages/domain/src/schema/alerts.ts`
 - `packages/domain/src/schema/announcement_channel_posts.ts`
 - `packages/domain/src/schema/index.ts`
 - `packages/domain/src/schema/pariwar_announcement_channels.ts`
@@ -1232,3 +1559,5 @@ this map resolves them.
 | 2026-10-29 | 1.6 | Rebased onto `770ba815` (6.32 landed; SHA map, ledger `-29c` / `-29d` → `-29h` / `-29i`); third validation — 4 critical / ~15 should-fix / ~12 low, all applied; author-commit `2026-10-29-418` (amends `-417`) committed alone; Debug Log (d2), (e). |
 | 2026-10-29 | 1.7 | `bmad-dev-story 5.14` started — Task 0.4 records (epics, §3.4 annotation, roster Row 44 + Row 26 note, deferred-work, `-389` pointer); Status in-progress; Debug Log (f). |
 | 2026-10-29 | 1.8 | Tasks 1–8 built and tested (Debug Log (b), (c)); `ci:local` 35/36 + the unit job green on its own re-run (a memorial-file timeout under load — untouched by this branch); Status → review; File List. |
+| 2026-10-29 | 1.9 | Group 1 posting-pipeline review: 7 patches accepted (BigDev “1”) and applied; migration 0191; strict acknowledgement, durable delayed retry/recovery, ID binding, two-connection race and mixed-payment privacy proofs. Gate 34/36 + typecheck (20/20) and unit (37/37, serialized) reruns green; remaining file-group reviews pending; Status → in-progress. |
+| 2026-10-29 | 2.0 | Groups 2–4 reviewed in parallel (nine layers): 1 decision (BigDev "2": the Panel is told before switch-on if leg (e) is met by "not asked"), 37 patches (BigDev "1") and 9 fix-diff follow-ups, all applied; 3 deferred; 21 dismissed. Author-commit `2026-10-29-419` committed alone (`7885114d`); records corrected (dated pointers under `-416` / `-417` / `-418`, roster Rows 26 / 44, the §3.4 annotation, epics, deferred-work, ledger `-29m`). `ci:local` 36 / 36 in one run on a fresh container. Status → done. |

@@ -299,6 +299,7 @@ until launch-gate Row 41 closes (its new criteria (l)–(q)).
   plain `<img>` (MP5; the dated note in `architecture.md`). **Trigger: the implementation ADR §4.11.2 names, or a second public image.**
 - **(9) Story 11b.5 refactors this markup** (`FamilyMemorial.astro`) into `<MemorialRecord>` / `<PortraitFrame>` (MP1).
   **Trigger: Story 11b.5.**
+  ⭐ *(2026-10-29) DISCHARGED IN PART by Story 11b.5 (`2026-10-29-420`): `<PortraitFrame>` built — the frame lifted from this markup into `apps/public/src/components/PortraitFrame.astro`, composed by `FamilyMemorial.astro` (commit `98e24152`); `<MemorialRecord>` RE-POINTED to Story 11b.6 (MV1). ⛔ Not closed whole, ⛔ not deleted. **Trigger now (the `<MemorialRecord>` half): Story 11b.6.***
 - **(10) Story 0.9 UN-ATTESTED** — the frame's look and the section's place are ⛔ not validated against a bereaved-family
   conversation (as for 11b.4). **Trigger: the Story 0.9 conversation.**
 - **(11) Counsel:** `-393` M4 and "only the nominee" against the privacy policy's *"withdrawal is as easy as giving it"* (carried from
@@ -4001,6 +4002,7 @@ recorded here rather than left for a future reader to re-derive._
     ⭐ ANNOTATED 2026-10-27 (Story 11b.4a, `2026-10-27-412`): the public render is built by row `11b-4a-family-memorial-public-render` (dark until Row 41). Closes when 11b.4a is `done` on main.
   · **the memorial visual components** (Story **11b.5**) — `backlog`.
     ⭐ ANNOTATED 2026-10-27 (Story 11b.4a MP1, `2026-10-27-412`): the family memorial no longer waits on 11b.5 — 11b.4a renders it with plain markup that 11b.5 later refactors into its components. ⛔ Not closed (11b.5 is still `backlog`).
+    ⭐ ANNOTATED 2026-10-29 (Story 11b.5, `2026-10-29-420`): `<PortraitFrame>` built (`apps/public/src/components/PortraitFrame.astro`, commit `98e24152`); `<MemorialRecord>` → Story 11b.6 (MV1); `<KinshipLattice>` → row `11b-5a-kinship-capture-and-lattice` (MV2). ⛔ Not closed (two of the three components are not built).
   · **`<StatCardStrip>`** — **C-3**: ⛔ NO PRODUCER **and** ⛔ NO OWNER; `2026-08-23-154` declined to
     settle it (*"a settled SHAPE is ⛔ not a settled SOURCE"*). ⛔⛔ **Do ⛔ not stub it** — a stub asserts
     an aggregate that nothing computes.

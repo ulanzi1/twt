@@ -1,6 +1,7 @@
 ---
 // <FamilyMemorial> — the family's memorial on the public Sahyog Vivran page (Story 11b.4a, MP1 / MP3; `2026-10-23-391` item 2;
 // `2026-10-27-411` items 2, 3, 6). Story 11b.5 later lifts this markup into `<MemorialRecord>` / `<PortraitFrame>` (MP1).
+// ⭐ 2026-10-29 (Story 11b.5, `2026-10-29-420`): the frame is now `<PortraitFrame>` (MV3 / MV4); `<MemorialRecord>` is Story 11b.6's (MV1).
 //
 // ⭐ GATED ON THE MATRIX, the path `<MatrixField>` uses (`visibilityOf` → `getVisibility()`): the section renders only while
 // `family_memorial_words` is visible at `public`, and the figure only while `family_memorial_photo` is — ⛔ never markup that
@@ -13,6 +14,8 @@
 // the family's text — its language is ⛔ not recorded.
 // ⭐ THE PHOTO: the UX FuneralFrame as nested wrappers (2 px ink border, 6 pt inner pad, 4:5, `object-fit: contain`), lazy, its
 // `alt` the family's description AS APPROVED (⛔ never synthesised; `''` when all of it was left out).
+// ⭐ 2026-10-29 (Story 11b.5): the frame's markup lives in `PortraitFrame.astro`; this file keeps the `<figure>` (the matrix id) and
+// the gating. The section is spaced by inline token styles — ⛔ no class: `apps/public` has ⛔ no Tailwind pipeline (MV5 (a)).
 // ⛔ The heading does ⛔ not name the member (their name follows ITS own gate — Trap 14). ⛔ Nothing here reaches `<head>`.
 import { planFamilyMemorial } from '../lib/family-memorial.js';
 import type { SahyogVivranFamilyMemorialView } from '../lib/surface-fields.js';

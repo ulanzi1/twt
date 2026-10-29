@@ -28,6 +28,8 @@
 //     `familyMemorial`; `FamilyMemorial.astro`), dark until launch-gate Row 41 closes; closes when 11b.4a is `done` on main.
 //     The line above is kept as the record.
 //   · the memorial visual components (Story **11b.5**) — `backlog`.
+//     ⭐ 2026-10-29 (Story 11b.5, `2026-10-29-420`): `<PortraitFrame>` built (it frames the family's photo); `<MemorialRecord>` →
+//     Story 11b.6 (MV1); `<KinshipLattice>` → row `11b-5a-kinship-capture-and-lattice` (MV2). The line above is kept as the record.
 //   · `<StatCardStrip>` — **C-3**: ⛔ no producer AND ⛔ no owner.
 // ⭐ THE RULED POSTURE IS 11a.5's THIRD PATH, and C-4 SURVIVED `2026-08-28-160` untouched: *"render
 // the real, currently-empty source and RENDER NOTHING WHEN EMPTY — ⛔ never a fabricated row, ⛔ never

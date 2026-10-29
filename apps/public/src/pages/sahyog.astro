@@ -916,7 +916,9 @@ if (!driveStatusVisible) {
 <style>
   /* Story 1.17 design system via @twt/tokens (the documented Story 2.5 variance: @twt/ui is not a
      dependency of this app and there is NO Tailwind pipeline on this surface — ⛔ do not introduce
-     one, and ⛔ do not add @twt/ui here: its 11b consumers are 11b.2 / 11b.5 / 11b.7). */
+     one, and ⛔ do not add @twt/ui here: its 11b consumers are 11b.2 / 11b.5 / 11b.7).
+     ⭐ 2026-10-29: 11b.5 was a named consumer and did ⛔ not take @twt/ui (`2026-10-29-420` MV3); the remaining
+     named consumers are 11b.2 / 11b.7. The fence STANDS (`2026-09-16-219` cl.5). */
   .sahyog { margin: 0 auto; max-width: 60rem; padding: var(--space-page-gutter); }
   .sahyog__title {
     font-family: var(--font-display-name);

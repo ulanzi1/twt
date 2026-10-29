@@ -3027,3 +3027,13 @@ the words say joining is a choice and every notice is always in the app. Declare
 second way to hear about a pool opening or a last day → optional`). Day one the card renders for ⛔ member: every Pariwar's switch
 starts OFF (migration `0190`; roster Row 44). ⛔ A forced row, ⛔ a row retired. `apps/public` is ⛔ touched ⇒ the page-weight baseline
 is unchanged and is ⛔ ratcheted.
+
+**Story 11b.5 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, and ⛔ no row amended; `2026-10-29-420`
+MV3–MV5):** the family memorial's funeral frame on the public Sahyog Vivran page becomes one component
+(`apps/public/src/components/PortraitFrame.astro`, composed by `FamilyMemorial.astro`), its border drawn from the
+`border-funeral-frame` token, and the memorial section is SPACED by inline token styles in place of utility classes that rendered
+nothing (`apps/public` has ⛔ no Tailwind pipeline). ⛔ No new step, wait, decision or data is asked of anybody; ⛔ nothing is gated —
+a visitor reads the same words and sees the same photo, in the same order. ⛔ No `<style>` block is added (Trap 5) ⇒ the page's
+`own_bytes` stays **0**: `pnpm --filter @twt/public build` reports `/sahyog-vivran/[driveToken]` `page_weight_bytes` **1397** and the
+aggregate **11471**, the same before and after the change (both measured 2026-10-29). ⇒ the page-weight baseline is unchanged and
+is ⛔ not ratcheted. Day one nothing renders: the memorial stays dark until launch-gate Row 41 closes.

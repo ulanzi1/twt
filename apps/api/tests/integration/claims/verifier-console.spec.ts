@@ -1170,8 +1170,12 @@ describe.skipIf(!hasDatabase)('Verifier-console read surface — E2E (:5433)', (
     const baseline = await assembleMeasured(pariwarId, own);
     expect(baseline.packet.groundInspection.status).toBe('present');
     expect((baseline.packet.groundInspection as { inheritedFrom?: unknown }).inheritedFrom).toBeUndefined();
-    expect(readCount - baseline.readCount, 'the two inheritance-only reads, booked').toBe(2);
-    expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(readCount - baseline.readCount);
+    // ⭐ Story 6.32 (S22 patch review) FROM 2 — +1: the neighbours' section's pointer to the source (read ONLY when the
+    // claim has ⛔ completed full visit of its own — the baseline has one, so it ⛔ pays it).
+    expect(readCount - baseline.readCount, 'the three inheritance-only reads, booked').toBe(3);
+    // The ground-inspection section's two are one statement each; the S22 pointer rides the neighbours' section, whose reads
+    // each run under their own SAVEPOINT (`underSavepoint` — SAVEPOINT, the read, RELEASE): 2 + 3 statements.
+    expect(actual - baseline.actual, 'statements Postgres received for the inheritance vs reads booked').toBe(2 + 3);
   });
 
   it('⭐⭐ Story 6.23a (Trap 10) — the ceiling is 30 (Story 6.26a: 19 → 20; Story 6.24a: 20 → 21; Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: 23 → 26; 6.27b: → 27; 6.27d: → 29; 6.32: → 30), and the warnings section books EXACTLY one read and sends EXACTLY one statement', async () => {

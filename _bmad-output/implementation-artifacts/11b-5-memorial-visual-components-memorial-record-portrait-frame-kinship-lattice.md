@@ -44,7 +44,7 @@ its own negator word (*not*, *no*, *never*, *none*). ⚠ Upstream text (the deci
 this rule — there a ⛔ often stands in for the negator itself (`-416`'s *"`-160` and `-173` are ⛔ superseded"* means *are NOT superseded*). ⇒ A ⛔
 with no negator is a defect: infer the sense from context and the cited source, ⛔ never by deleting the glyph, and note it.
 
-## ✅ PREFLIGHT — STARTABLE after Task 0.2 (BigDev answers MV1–MV6). ⛔ No Panel question. ⛔ Nothing goes live.
+## ✅ PREFLIGHT — STARTABLE: Task 0.2 is DONE (2026-10-29, MV1–MV6 as recommended); Task 0.1's lettered checks run first. ⛔ No Panel question. ⛔ Nothing goes live.
 
 ⭐ **What this story is, in one paragraph.** The epic asks for three components. At the pin, **exactly one of them has its
 inputs**: the funeral frame around the family's approved photo, which Story 11b.4a already draws as plain markup inside
@@ -235,6 +235,7 @@ must stay green unchanged. **→ AC6.**
 ## ⚖️ Build decisions MV1–MV6 (PROPOSED — for BigDev at Task 0.2; to be recorded as `-NNN` — `-420` at `8dd3e623` — at Task 1.1)
 
 ### MV1 — Where `<MemorialRecord>` is built
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV1 (a).** To be recorded in decision `-NNN` (Task 1.1).
 ⭐ **(a) Not in this story — Story 11b.6 builds it, with its first real consumer.** `FamilyMemorial.astro` stays the Sahyog
 Vivran memorial section (it is ⛔ not renamed).
 **Why:** every input that distinguishes a "memorial record" from the section that exists — the deceased's name in a tier form,
@@ -257,6 +258,7 @@ it cannot use it). **(c)** build `<MemorialRecord>` now with `name` / `dates` / 
 fields with no producer and no ruling; the first story to fill them would inherit an unruled shape).
 
 ### MV2 — Where `<KinshipLattice>` is built, and who asks the Panel
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV2 (a).** To be recorded in decision `-NNN` (Task 1.1).
 ⭐ **(a) A new row, `11b-5a-kinship-capture-and-lattice` (`backlog`), owns kinship end to end** — the capture in the family's
 authoring flow, the Trust's review of it, the public render, and the **Panel question on its purpose**, written from the
 template **at that row's own Task 0** (its create-story must carry this as a Task, ⛔ not a note). This story mints the row
@@ -285,6 +287,7 @@ be ruled publishable; the prototype already shows the look). **(d)** drop kinshi
 but ⛔ not by default in a component story).
 
 ### MV3 — The shape: an Astro component, ⛔ no `@twt/ui` presenter, ⛔ no `@twt/ui` dependency in `apps/public`
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV3 (a).** To be recorded in decision `-NNN` (Task 1.1).
 ⭐ **(a) `<PortraitFrame>` is an Astro render layer at `apps/public/src/components/PortraitFrame.astro`**, taking `{ src: string;
 alt: string }`. The shared layer across stacks is the **token** (MV4), ⛔ not a presenter. ⚠ This **supersedes in part `-154`
 cl.6** (author-commit, *"Stories 11b.2 / 11b.5 / 11b.7 author as presenters + Astro render layers"*) **for 11b.5 only**; its
@@ -308,6 +311,7 @@ home for *"stateless visual … units; no TWT-specific data-shape knowledge"* �
 premature with one built consumer).
 
 ### MV4 — The frame's geometry: refactor, ⛔ not redesign
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV4 (a).** To be recorded in decision `-NNN` (Task 1.1).
 ⭐ **(a) Keep exactly what renders today — a 2 px `ink-primary` border, a 6 pt inset, a 4:5 box, `max-width: 20rem`, the image
 `object-fit: contain` — and source the BORDER from its token:** `border['border-funeral-frame']` corrected from its placeholder
 `4px` to `2px` (UX spec :1174: *"`border-funeral-frame` — composition: 2px outer ink-primary + 6pt cream inset + image"*; §11:
@@ -330,6 +334,7 @@ Rejected — **(b)** adopt the UX's 1:1 default (the pipeline makes no square cr
 title would all move).
 
 ### MV5 — The memorial section's inert classes (Trap 4)
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV5 (a) — spacing only, ⛔ no card.** To be recorded in decision `-NNN` (Task 1.1).
 ⭐ **(a) Replace every utility class in `FamilyMemorial.astro` with SPACING ONLY, as static inline `style` strings holding token
 variables — ⛔ no box border, ⛔ no radius, ⛔ no padding.** The section `margin: var(--space-block) 0 0`; the figure and each
 paragraph `margin: var(--space-row) 0 0` (the exact strings are in Dev Notes § *The exact markup*). ⛔ **Not the card 11b.4a's
@@ -363,6 +368,7 @@ too (⚠ a reasonable choice if BigDev wants the focus ring now — it widens th
 test; if chosen, Task 3.4 runs and AC4 widens to the page).
 
 ### MV6 — The family's own preview screen in the app
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV6 (b).** To be recorded in decision `-NNN` (Task 1.1).
 ⭐ **(b) Not in this story.** The app's preview (`preview.tsx`) and kept-photo view (`MemorialKeptPhoto.tsx`) keep their plain
 `<Image>`; the RN frame waits for its own trigger.
 **Why:** an RN frame needs `ink-primary` in the mobile theme, and `apps/mobile` does not depend on `@twt/tokens` —
@@ -591,7 +597,7 @@ Each code Task ends with **Done when** — the named test(s), each shown RED aga
     Debug Log (if a rule DOES exist, STOP: Trap 4 and MV5 are wrong). ⚠ A fresh worktree has no `node_modules`: `pnpm install`
     first. (i) `scripts/sahyog-vivran-financial-truth/check.ts` still registers `FamilyMemorial.astro` by hand (Task 3.5).
     (j) `scripts/friction-budget/lib.ts` `MEMBER_FACING_PREFIXES` still includes `'apps/public/'` (Task 4.3).
-  - [ ] 0.2 Put MV1–MV6 to BigDev (Questions below); append BigDev's answers verbatim, dated, under each MV and in the Questions list.
+  - [x] 0.2 Put MV1–MV6 to BigDev (Questions below); append BigDev's answers verbatim, dated, under each MV and in the Questions list.
 
 - [ ] **Task 1 — Governance and records (AC0, AC7, AC8, AC10, AC12)**
   - [ ] 1.1 Re-take the next free id; commit decision `-NNN` (author-commit, MV1–MV6 as answered; §0: no Panel question — G5/G6
@@ -796,6 +802,7 @@ Token values at the pin (all emitted by `rootTokenCss()`): `--space-block` 16px 
 - `docs/launch-gate-inventory/inventory-roster.md` Row 41 (unchanged)
 
 ### ❓ Questions for BigDev (Task 0.2)
+⭐ **ANSWERED 2026-10-29 — BigDev, verbatim: *"MV1-MV6 as recommended"*** ⇒ MV1 (a) · MV2 (a) · MV3 (a) · MV4 (a) · MV5 (a) (spacing only; ⛔ not (a′) / (a″) / (c) — so Task 3.4 is skipped and AC4 stays the memorial section's) · MV6 (b).
 1. **MV1** — `<MemorialRecord>`: (a) built by 11b.6 with its first consumer *(recommended)* · (b) rename `FamilyMemorial` · (c) build
    with always-null identity props?
 2. **MV2** — Kinship: (a) a new row `11b-5a-kinship-capture-and-lattice` owns capture + render + the Panel purpose question
@@ -830,3 +837,4 @@ Token values at the pin (all emitted by `rootTokenCss()`): `--space-block` 16px 
 | 2026-10-29 | v1.0 | Created by `bmad-create-story 11b-5` at `282bdd33` (worktree `.claude/worktrees/11b-5-memorial-visual-components`). Three read-only traces (the 11b.4 / 11b.4a stories; the code; the UX spec + decision log). MV1–MV6 PROPOSED; ⛔ no decision entry, ⛔ no Panel note, ⛔ no code. Row `backlog` → `ready-for-dev`. |
 | 2026-10-29 | v1.1 | Fresh-context fact-check (read-only; ~60 claims, 16 findings) applied — numbers, MV4's inset constant, Trap 2's real broken pin, the bare `alt`, MV5's full margins, Task 3.5, 11b.4a item (9) IN PART, 11b-5a's trigger, FR-78. |
 | 2026-10-29 | v1.2 | `bmad-create-story validate 11b-5` against `origin/main` `8dd3e623` (three parallel read-only verifiers: code / governance / adversarial design; 30 findings — 7 critical, 15 should-add, 4 optimisations, 4 LLM — all applied on BigDev's "all"). Critical: NUMBERS re-taken (`-416`…`-419` = 5.14 ⇒ next `-420`, written `-NNN`; ledger `-29b` collides with 6.32 ⇒ relabel at rebase, G4-W1); Trap 6 / MV3 corrected — `-219` cl.5's fence NAMES 11b.5 as a consumer, MV3 declines it as our choice; MV5 (a) is spacing only, ⛔ no card (UX ruled rhythm :505, no rounded corners :462; options (a′) / (a″) added); Task 4.3 — the friction-budget AC-4 declaration `ci:local` enforces on `apps/public/`; AC14 / Task 5.1 — the render spec builds its own copy and is DB-gated; AC7 — `school` / `designation` are RBAC-ineligible, ⛔ not display-barred; inverted ⛔ glyphs fixed and the register's rule changed. Also: the exact markup stated once in Dev Notes; `solid` + no-radius in AC4; the empty-`alt` render leg and its decorative-`alt` gap (AC12 (5)); AC3's three added assertions; Tasks 1.1 / 1.2 name every AC0 record; `-416` §2, `-412` MP3, `-391` item 2's living-adults sentence cited; 11b-5a's STOP in 11b.6's note and its Task-0 routing note; AC9 disposes all six item-(12) departures; the token comment keeps "placeholder"; the `sahyog.astro` line inside its CSS comment; Row 41 (o) / (d) post-date note; Rulings cut to an index; Git intelligence / Latest tech dropped. |
+| 2026-10-29 | v1.3 | Task 0.2: BigDev answered *"MV1-MV6 as recommended"* — MV1 (a), MV2 (a), MV3 (a), MV4 (a), MV5 (a) spacing only, MV6 (b); recorded under each MV and in the Questions list. Next: Task 0.1 (h)–(j) lettered checks, then Task 1.1 decision `-NNN`. |

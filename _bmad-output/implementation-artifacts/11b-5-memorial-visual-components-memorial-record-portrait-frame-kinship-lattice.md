@@ -1,12 +1,14 @@
 ---
-baseline_commit: 282bdd33
+baseline_commit: 8dd3e623
 ---
 
 <!--
-⭐ BASELINE: `282bdd33` — `records: ledger 2026-10-29 — Story 5.8b LANDED on main by fast-forward (PR #308 …)` = `origin/main`
-at creation (2026-10-29). Two facts, stated separately:
+⭐ BASELINE: `8dd3e623` — `records(5.14): roster Row 44 leg (d) recorded MET …` = `origin/main` at the 2026-10-29 rebase (the
+branch was created at `282bdd33`; `git diff 282bdd33..8dd3e623 -- apps/public packages/tokens scripts/sahyog-vivran-financial-truth`
+is EMPTY, so the code claims read at `282bdd33` hold at the new pin). Two facts, stated separately:
   - the pin is an ancestor of HEAD (durable);
-  - every code claim below was read at `282bdd33` (perishable). Re-diff `packages apps scripts` at Task 0.1.
+  - every code claim below was read at `282bdd33` and re-checked against `8dd3e623` (perishable). Re-diff `packages apps scripts
+    friction-budget.md` from `8dd3e623` at Task 0.1.
 ⚠ No `file:NNN` pointer in this file points into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml` (all
 newest-first). Cite those by decision id / clause / item / row key only.
 ⭐ NUMBERS — re-taken 2026-10-29 at `origin/main` = `8dd3e623` (52 commits past the pin; ⛔ no change under `apps/public`,
@@ -17,9 +19,9 @@ AND every worktree, and again at Task 1.1 immediately before writing (`-366` dec
   id is not yet taken; Task 1.1 substitutes the id actually committed · migration: ⛔ none needed (main's newest is `0191`, 5.14's)
   · `PERMISSION_CATALOG_VERSION`: ⛔ no change · ADR: ⛔ none · launch-gate roster: ⛔ no new row (Row 41 is untouched; Rows 42 =
   6.32, 43 = 5.8b, 44 = 5.14) · ledger: main holds the bare `2026-10-29` and `-29a`…`-29q`; this branch's creation entry was written
-  as `2026-10-29b`, which COLLIDES with 6.32's on main (`deferred-work.md` item G4-W1) ⇒ relabel it to the next free letter
-  (`-29r` at `8dd3e623`) at the Task 0.1 rebase, in BOTH ledgers ([[project_rebase_ledger_conflict_separator]]) — ⛔ never
-  renumber another story's entry.
+  as `2026-10-29b`, which COLLIDED with 6.32's on main (`deferred-work.md` item G4-W1) ⇒ ⭐ RELABELLED to `2026-10-29r` in BOTH
+  ledgers at the 2026-10-29 rebase onto `8dd3e623` ([[project_rebase_ledger_conflict_separator]]); the validation + rebase entry is
+  `2026-10-29s` — ⛔ never renumber another story's entry.
 ⭐ WORKTREE: `.claude/worktrees/11b-5-memorial-visual-components`, branch
 `story/11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice` (created from `282bdd33`). Two peer
 interactive sessions shared the main checkout at creation, which is why this is a worktree. Push with `-u origin <branch>` the
@@ -578,8 +580,8 @@ Each code Task ends with **Done when** — the named test(s), each shown RED aga
 
 - [ ] **Task 0 — Re-verify and get answers (AC0)**
   - [ ] 0.1 `git fetch origin`; `git merge-base HEAD origin/main`; `git diff --stat 282bdd33..origin/main -- packages apps scripts friction-budget.md`;
-    rebase onto `origin/main` (it HAS moved — 52 commits at `8dd3e623`) and re-pin `baseline_commit`; at the rebase relabel this
-    branch's `2026-10-29b` ledger entry to the next free letter in BOTH ledgers (header NUMBERS; G4-W1). Re-take the NUMBERS across
+    rebase onto `origin/main` if it moved past `8dd3e623` and re-pin `baseline_commit` (⭐ the 2026-10-29 rebase onto `8dd3e623` is
+    DONE, with `-29b` → `-29r`; a later rebase re-checks ledger letters the same way). Re-take the NUMBERS across
     every branch and worktree. Check STOP 1–7. Lettered checks: (a) `FamilyMemorial.astro` matches the "What already EXISTS" row; (b) `border-funeral-frame` has
     no reader (`grep -rn "funeral-frame" packages apps scripts`, excluding `node_modules` / `dist`); (c) `apps/public/package.json`
     has no `@twt/ui` / Tailwind; (d) the `-219` cl.5 fence sentence in `sahyog.astro`; (e) `deferred-work.md` 11b.4a items (6),

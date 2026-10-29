@@ -253,9 +253,10 @@ const SIGNED_URL_TTL_SECONDS = 300;
  *   + Story 6.32 (IQ7): the claim's family account at the inspection                                +1  → 30
  * ⭐ STORY 6.32's SECOND READ (second review S22, BigDev: "S22 A") — a claim approved on an INHERITED inspection says, in
  * the family's-account area, which claim the answers are recorded on: the `-239` source through the ONE inheritance fragment
- * (`getInheritedGroundInspectionSource` — ⛔ a second definition), ONE statement PER CLAIM, AFTER the section's hide. It can
- * ⛔ fold into the family-account statement (that one returns ⛔ row for a claim with ⛔ visit of its own — exactly the
- * inheriting claim). It decrypts ⛔ nothing. ⭐ Ledger line:
+ * (`getInheritedGroundInspectionSource` — ⛔ a second definition), ONE statement PER CLAIM, AFTER the section's hide, and
+ * ONLY when the claim has ⛔ completed full visit of its own (the condition every other reader of the inheritance applies).
+ * It can ⛔ fold into the family-account statement (that one returns ⛔ row for a claim with ⛔ such visit — exactly the case
+ * this read serves). It decrypts ⛔ nothing. The ceiling counts it (the worst case). ⭐ Ledger line:
  *   + Story 6.32 (S22): the claim whose inspection this claim inherits                              +1  → 31
  */
 export const VERIFIER_CONSOLE_MAX_READS = 31;

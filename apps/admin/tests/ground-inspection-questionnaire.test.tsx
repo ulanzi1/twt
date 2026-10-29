@@ -791,9 +791,12 @@ describe('AC8 / AC10 — the staff view of the family\'s account', () => {
   it('⭐ second review S22 — a claim approved on an INHERITED inspection says which claim the answers are on (⛔ the answers), with ⛔ visit of its own', () => {
     const src = '44444444-4444-4444-4444-444444444444';
     render(<PeerMeshSectionView section={{ status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: src }} />);
-    expect(screen.getByTestId('family-account-inherited')).toHaveTextContent(
-      `This claim relies on the ground inspection of claim ${src}; the family's answers are recorded on that claim.`,
+    const line = screen.getByTestId('family-account-inherited');
+    expect(line).toHaveTextContent(
+      `This claim relies on the ground inspection of the refused claim; the family's answers were recorded at that inspection. Claim: ${src}`,
     );
+    // patch review — the id is shown as the console's other claim references are (code), ⛔ inline prose
+    expect(line.querySelector('code')).toHaveTextContent(src);
     expect(screen.queryByTestId('family-account')).toBeNull();
   });
   it('⛔ block at all when the family account is empty; ⛔ on `unavailable`', () => {

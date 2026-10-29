@@ -171,8 +171,9 @@ export const verifierConsoleEn = {
       letterValue: { collected: 'Collected', not_collected: 'Not collected', not_recorded: 'Not recorded' },
       unavailable: 'This answer could not be shown',
       // ⭐ Second review S22 (BigDev: "S22 A") — a claim approved on an INHERITED inspection: a pointer, ⛔ the answers.
-      inheritedFrom: (claimCaseId: string) =>
-        `This claim relies on the ground inspection of claim ${claimCaseId}; the family's answers are recorded on that claim.`,
+      // Patch review — the console's own form for the source ("Claim:" + the id as code), and ⛔ "recorded on that claim" (it
+      // read as a place the approver can open — the refused claim is ⛔ at an approving step).
+      inheritedFrom: "This claim relies on the ground inspection of the refused claim; the family's answers were recorded at that inspection. Claim:",
     },
   },
   // ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2) — ONE neutral block for an approver whose own ground visit on the claim

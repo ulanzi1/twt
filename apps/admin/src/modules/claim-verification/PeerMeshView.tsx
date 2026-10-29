@@ -23,7 +23,8 @@ import { verifierConsoleEn as t } from './i18n-en.js';
  * approvers' panel (they can ⛔ drift): `present` ⇒ the neighbours' view, `empty` / `unavailable` ⇒ the non-present state;
  * and, on `present` AND `empty`, the family's account at the inspection (a no-one-asked claim has ⛔ selection — its
  * head's letter is the answer that matters there). ⭐ Second review S22 (BigDev: "S22 A") — a claim approved on an INHERITED
- * inspection says which claim the family's answers are recorded on (a pointer — ⛔ the answers), even with ⛔ visit of its own.
+ * inspection (⛔ completed full visit of its own) says at which claim's inspection the family's answers were recorded (a pointer —
+ * ⛔ the answers; ⛔ a promise the reader can open that claim).
  */
 export function PeerMeshSectionView({ section }: { section: PeerMeshSection }): ReactElement {
   return (
@@ -31,7 +32,8 @@ export function PeerMeshSectionView({ section }: { section: PeerMeshSection }): 
       {section.status === 'present' ? <PeerMeshView transcript={section.transcript} /> : <NonPresent status={section.status} />}
       {section.status !== 'unavailable' && section.familyAccountInheritedFromClaimId !== null && (
         <p className="text-xs" data-testid="family-account-inherited">
-          {t.peerMesh.familyAccount.inheritedFrom(section.familyAccountInheritedFromClaimId)}
+          {t.peerMesh.familyAccount.inheritedFrom}{' '}
+          <code className="font-mono">{section.familyAccountInheritedFromClaimId}</code>
         </p>
       )}
       {section.status !== 'unavailable' && section.familyAccount.length > 0 && <FamilyAccountView visits={section.familyAccount} />}

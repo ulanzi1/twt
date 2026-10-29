@@ -745,6 +745,25 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     expect(res.body).not.toMatch(/collected|head_letter/);
     expect(readLines(refile.claimCaseId).at(-1)?.context).toMatchObject({ section: 'empty', family_visit_count: 0, family_account_inherited: true });
     // (a claim with ⛔ inheritance answers `null` — the `empty` leg above pins it exactly)
+
+    // ⭐ patch review — the refile gains a completed FULL visit of its OWN (the source still standing): its gate is met by its
+    // own visit, so ⛔ pointer (the console's ground-inspection section, the warnings and the queue apply the same condition);
+    // its own account is shown
+    const own = randomUUID();
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspections (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+         inspector_actor_id, scheduled_at, status, completed_at, original_certificate_verdict, compared_certificate_upload_id, death_date_ciphertext,
+         death_date_source, death_date_index)
+       VALUES ($1, $2, $3, $4, 'corroboration', 'family_residence', $5, now(), 'completed', clock_timestamp(), 'matches', $6, 'enc:v1:d',
+         'family_statement', 'idx:d')`,
+      [own, refile.claimCaseId, refile.pariwarId, DISTRICT, randomUUID(), uploadId!],
+    );
+    const again = await pa.client.inject({ method: 'GET', url: url(refile.pariwarId, refile.claimCaseId) });
+    expect(again.statusCode, again.body).toBe(200);
+    const s2 = (again.json() as { peerMesh: { familyAccount: unknown[]; familyAccountInheritedFromClaimId: string | null } }).peerMesh;
+    expect(s2.familyAccountInheritedFromClaimId).toBeNull();
+    expect(s2.familyAccount).toHaveLength(1);
+    expect(readLines(refile.claimCaseId).at(-1)?.context).toMatchObject({ family_visit_count: 1, family_account_inherited: false });
   });
 
   it('a broken answer ciphertext ⇒ THAT answer `unavailable`, the rest shown', async () => {

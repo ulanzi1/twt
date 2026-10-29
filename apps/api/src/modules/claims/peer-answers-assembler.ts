@@ -159,14 +159,20 @@ export async function assemblePeerSection(
   // ⭐ Story 6.32 (IQ7) — AFTER the hide, BEFORE the selection (see the header).
   bump();
   const familyVisits = await run('peer_section_family_account', () => claim.readClaimFamilyAccount(ctx.db, pariwarId, claimCaseId));
+  // ⭐ Story 6.32 (second review S22, BigDev: "S22 A") — a claim whose gate is met BY an inherited inspection points at the
+  // claim the family's answers were recorded on (the ONE inheritance fragment — the approval gate's own); ⛔ its answers are
+  // read. ⭐ Patch review — ONLY when the claim has ⛔ completed full visit of its OWN (the console's ground-inspection
+  // section, the approval warnings and the correction queue count the inheritance under the same condition: a refile with
+  // its own full visit does ⛔ rely on the source), and BEFORE any decrypt (a failed read must ⛔ follow a decrypted answer).
+  let familyAccountInheritedFromClaimId: string | null = null;
+  if (familyVisits.length === 0) {
+    bump();
+    const inherited = await run('peer_section_family_account_inherited', () =>
+      claim.getInheritedGroundInspectionSource(ctx.db, pariwarId, claimCaseId),
+    );
+    familyAccountInheritedFromClaimId = inherited === null ? null : inherited.toLowerCase();
+  }
   const familyAccount = await familyAccountViews(enc, ctx.pariwarId, familyVisits, memberName, warn);
-  // ⭐ Story 6.32 (second review S22, BigDev: "S22 A") — a claim approved on an INHERITED inspection points at the claim the
-  // family's answers are recorded on (the ONE inheritance fragment — the approval gate's own); ⛔ its answers are read.
-  bump();
-  const inherited = await run('peer_section_family_account_inherited', () =>
-    claim.getInheritedGroundInspectionSource(ctx.db, pariwarId, claimCaseId),
-  );
-  const familyAccountInheritedFromClaimId = inherited === null ? null : inherited.toLowerCase();
 
   bump();
   const selection = await run('peer_section_selection', () => claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId));

@@ -78,6 +78,7 @@ import {
   VerifyWaOptInCodeResponse,
   TelegramOptInRequestResponse,
   TelegramOptInStatusResponse,
+  AnnouncementChannelsMemberResponse,
   RevokeTelegramOptInResponse,
   PoolOnboardingOutcomeRequest,
   type PoolOnboardingOutcomeSchema as PoolOnboardingOutcome,
@@ -88,6 +89,7 @@ import {
   type VerifyWaOptInCodeResponse as VerifyWaOptInCodeResult,
   type TelegramOptInRequestResponse as TelegramOptInRequestResult,
   type TelegramOptInStatusResponse as TelegramOptInStatusResult,
+  type AnnouncementChannelsMemberResponse as AnnouncementChannelsMemberResult,
   type RevokeTelegramOptInResponse as RevokeTelegramOptInResult,
   type ImaListResponse as ImaListResult,
   type KycInitiateResponse as KycInitiateResult,
@@ -1087,6 +1089,14 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /** Revoke the member's active Telegram opt-in (session; auth). */
     revokeTelegramOptIn(): Promise<RevokeTelegramOptInResult> {
       return call(`${TELEGRAM_OPT_IN_BASE}/revoke`, RevokeTelegramOptInResponse, {}, true);
+    },
+
+    /**
+     * Story 5.14 — the links to the member's OWN Pariwar's announcement channels (session; auth). Both null while the channels are
+     * switched off; the Telegram link only when something can post to it.
+     */
+    getAnnouncementChannels(): Promise<AnnouncementChannelsMemberResult> {
+      return call('/api/v1/member/announcement-channels', AnnouncementChannelsMemberResponse, undefined, true, 'GET');
     },
 
     // ── Pool-engine onboarding tutorial (Story 7.10) ──────────────────────────

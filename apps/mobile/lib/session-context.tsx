@@ -34,6 +34,9 @@ import {
 import { clearAllMemberDrafts } from '../components/life-events/draft-store'
 import { clearPeerRequestsCache } from '../components/peer-request/peer-request-cache'
 import { clearKnownPeopleCache } from '../components/known-people/known-people-cache'
+// Story 5.14 — the announcement channels' member read (keyed per account) and the home card's once-for-good dismissal.
+import { clearAnnouncementChannelsCache } from '../components/announcement-channels/useAnnouncementChannelsQuery'
+import { clearAnnouncementCardDismissal } from './announcement-channels-dismissal'
 import { clearNomineeLinksCache } from '../components/nominee-links/nominee-links-cache'
 import { clearAnswerKeys } from '../components/workplace/suggestion-answer-key-cache'
 import { clearSavedNames } from './known-people-saved-names'
@@ -109,6 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       setSession(null)
       // Story 6.36b — the people-who-know-me lists (other members' names) and the names the member SAVED on this phone.
       clearKnownPeopleCache(queryClient)
+      clearAnnouncementChannelsCache(queryClient)
       // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
       clearNomineeLinksCache(queryClient)
       clearSavedNames()
@@ -126,6 +130,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       clearPeerRequestsCache(queryClient)
       setSession(null)
       clearKnownPeopleCache(queryClient)
+      clearAnnouncementChannelsCache(queryClient)
       // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
       clearNomineeLinksCache(queryClient)
       clearSavedNames()
@@ -142,6 +147,7 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     memberIdRef.current = null
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
+    clearAnnouncementChannelsCache(queryClient)
     // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
     clearNomineeLinksCache(queryClient)
     // Story 6.36c (fix-review) — the dismissal key is namespaced per account (`lib/home-card-dismissals`), so a
@@ -163,12 +169,15 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     memberIdRef.current = null
     clearPeerRequestsCache(queryClient)
     clearKnownPeopleCache(queryClient)
+    clearAnnouncementChannelsCache(queryClient)
     // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
     clearNomineeLinksCache(queryClient)
     clearSavedNames()
     // Story 6.36c (fix-review) — sign-out IS a reliable point to name the account (`session` is still in scope, below),
     // so its dismissals are cleared here for privacy/cleanup on a shared device.
     clearHomeCardDismissals(session?.memberId)
+    // Story 5.14 (FS10 (a)) — the announcement card's once-for-good dismissal, cleared for the same reason.
+    clearAnnouncementCardDismissal(session?.memberId)
     // Code review round 2 — and the two IN-MEMORY 6.36c stores, which outlived a sign-out for the rest of the app
     // process: the suggestion card's session-only "Not now" (`lib/home-card-dismissals`) and the confirm question's
     // shared Idempotency-Keys (`components/workplace/suggestion-answer-key-cache`).

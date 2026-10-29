@@ -1,6 +1,8 @@
 // The frame every home reminder card shares (Story 6.36c, Task 6.2; AC6): a title, an optional line, its actions, and
 // *"Not now"* — dismissed for 30 days on this phone (`lib/home-card-dismissals.ts`), EXCEPT card (c), the suggestion,
 // whose "Not now" lasts for this app session only (round 1; the header comment corrected by code review round 2).
+// Story 5.14 (FS10 (a)) — and EXCEPT the announcement channels card, whose "Not now" (or an opened link) hides it FOR GOOD on this phone
+// for that account (`lib/announcement-channels-dismissal.ts` — ⛔ expiry).
 // Presentational only.
 // ⚠ Code review round 2 (family 13 (c) / (d)) — `dismissDisabled`: while the suggestion's answer is in flight "Not now"
 // is a real DISABLED button (`disabled` + `accessibilityState`, as posting.tsx's "I have been transferred"), ⛔ an

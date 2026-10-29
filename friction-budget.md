@@ -63,6 +63,7 @@ deliberately accepted.
 | member signing up on a phone without their WhatsApp who opens "WhatsApp on another phone?" (asks for a WhatsApp code, reads it on their own phone, types it in) — Story 5.13 | the registered number proven to have WhatsApp and the member's own act before WhatsApp is switched on (`-374`) | optional |
 | family (the nominee, writing the memorial — the code sent to the NOMINEE's phone is asked at Send, and the words go to the Trust for review before they can appear; Story 11b.4) | the family's words reach the page as they wrote them, and only with their permission (`-162` cl.3; `-398` MA5 / MA6) | optional |
 | family (the nominee who sent the memorial, asking for it to be TAKEN DOWN — ⛔ no button in the app: they phone the helpline and are CALLED BACK on the number recorded for them before anything is recorded; only that nominee may ask; and when the Trust approved the memorial exactly as written, a smaller change needs the take-down first, so it is off the page while the new version is reviewed; Story 11b.4a) | only the nominee who gave the permission withdraws it (`-395` item 3, `-411` item 1), verified by a call-back (`-412` MP7); a smaller fix is the family's own new version, ⛔ never an operator's edit (`-412` MP8 (b), accepted by `-411` item 4) | forced |
+| member of a Pariwar whose Trust announcement channels are switched on (seeing ONE card on the home — *"The Trust's announcement channels"*, with a button to open the WhatsApp Channel and / or the Telegram channel, and *"Not now"*; once per phone per account, ⛔ shown again after "Not now" or an opened link; plus a settings entry while a link exists) — Story 5.14 | a second way to hear about a pool opening or a cycle's last day when the app's notification does not reach the member (`2026-10-23-390` Q2 A — members are ASKED, ⛔ required, to join one; the app stays the official channel, R10(B)). ⭐ Shown ONLY while a Pariwar admin has switched the channels on and a link exists; ⛔ blocks any step; ⛔ a word about consequences of not joining | optional |
 
 
 **Story 11b.3b disposition (SECOND review — declaration affirmed, ⛔ no new row):** the Sahyog Vivran
@@ -3012,3 +3013,15 @@ GET `/api/v1/member/claims/member-name`). ⛔ Step, prompt, wait or field is add
 show the existing fallback until it answers, and a failure keeps the fallback (the flow is ⛔ blocked). ⛔ Payer meets anything new.
 Demonstrated on the Android emulator (Hindi): the entry question, the *No* button and the handover heading carry the name; one read
 serves the stack. `apps/public` is ⛔ touched.
+
+**Story 5.14 disposition (NEW row — optional; `2026-10-29-417` FS9–FS11):** the Trust's announcement channels ask
+(`apps/mobile/components/home/AnnouncementChannelsCard.tsx` on `HomeReminderCard`, mounted directly after `<HomePromptCards />` in
+`apps/mobile/app/(tabs)/index.tsx`; the understated `components/notifications/AnnouncementChannelsEntry.tsx` after the Telegram entry;
+the screen `app/(settings)/announcement-channels.tsx`) adds ONE optional home card. It is **not gratuitous**: `-390` Q2 A rules that
+members ARE asked to join one channel, and FS9 (a) chose the lightest place that is still an ask. It is **optional and bounded** —
+shown only while the Pariwar's "channels live" switch is on and a link exists; "Not now", or an opened link, hides it FOR GOOD on that
+phone for that account (FS10 (a) — ⛔ the 6.36c 30-day re-show, which would be the nagging the UX spec rules out); ⛔ a step it gates;
+the words say joining is a choice and every notice is always in the app. Declared as the NEW row above (`member … — Story 5.14 → a
+second way to hear about a pool opening or a last day → optional`). Day one the card renders for ⛔ member: every Pariwar's switch
+starts OFF (migration `0190`; roster Row 44). ⛔ A forced row, ⛔ a row retired. `apps/public` is ⛔ touched ⇒ the page-weight baseline
+is unchanged and is ⛔ ratcheted.

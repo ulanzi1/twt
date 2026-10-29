@@ -24,6 +24,8 @@ import { PeerRequestEntry } from 'components/peer-request/PeerRequestEntry'
 import { KnownPeopleRequestEntry } from 'components/known-people/KnownPeopleRequestEntry'
 import { NomineeLinkRequestEntry } from 'components/nominee-links/NomineeLinkRequestEntry'
 import { HomePromptCards } from 'components/home/HomePromptCards'
+import { AnnouncementChannelsCard } from 'components/home/AnnouncementChannelsCard'
+import { AnnouncementChannelsEntry } from 'components/notifications/AnnouncementChannelsEntry'
 
 // Tab 1 — home. The My Pool card (Story 8.2 — the first Epic-8 SURFACE) is now the TOPMOST element:
 // for an `active` member assigned to a pool whose cycle alert is `live` it renders the contribution
@@ -82,6 +84,9 @@ export default function YogdaanTab() {
             no longer be asked, a new workplace, a campaign, invite your colleagues). Self-suppresses on load / error / no
             card; BELOW the My Pool card (Story 8.2 keeps it topmost). In the app only — ⛔ SMS, push, WhatsApp. */}
         <HomePromptCards />
+        {/* Story 5.14 (FS9 (a), FS11 (a)) — the ONE calm ask to follow the Trust's announcement channels: its own query, shown once per
+            phone per account, and NOTHING while the channels are off or no link is set. Directly after the prompt cards. */}
+        <AnnouncementChannelsCard />
         <LockInClockWidget />
         <RenewalStatusWidget />
         <LifeEventsEntry />
@@ -107,6 +112,8 @@ export default function YogdaanTab() {
         <NotificationSettingsEntry />
         {/* Story 5.5 — understated Telegram opt-in entry (a member choice; the mirror side-channel). */}
         <TelegramNotificationSettingsEntry />
+        {/* Story 5.14 — understated entry into the Trust's announcement channels (shown only while a link exists). */}
+        <AnnouncementChannelsEntry />
         {/* Story 3.11 — understated DPDPA data-export entry (a member right, framed neutrally). */}
         <DataExportEntry />
         {/* Story 3.10 — understated voluntary-withdrawal entry at the very bottom (deliberate, not encouraged). */}

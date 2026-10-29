@@ -121,7 +121,7 @@ other notice (news, surveys, Niyamavali amendments); a WhatsApp Channel posting 
 
 # Story 5.14: The Trust's Announcement Channels — One Telegram Channel the System Posts To, One WhatsApp Channel an Admin Posts To by Hand, and One Calm Ask in the App `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Trustee Panel ruled on 2026-10-23 (`-390` Q2 A) that the Trust runs one WhatsApp
 > Channel and one Telegram channel that post general notices (a pool opening and a cycle's last day), and that members are ASKED, never
@@ -788,7 +788,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance (AC0)**
+- [x] **Task 0 — Governance (AC0)**
   - [x] 0.1 (DONE 2026-10-29 — Debug Log (d)) Preflight: `git fetch origin`; rebase onto `origin/main` if it moved (backup branch first); run the pin checks (header);
         re-trace F1–F19. **STOP and tell BigDev if:** **S1** a ruling on the Trust's channels, their words, or public naming of the
         deceased exists newer than `-415` (grep `^### Decision` for *channel*, *Telegram*, *announcement*, *public*, *deceased*); **S2**
@@ -811,7 +811,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
         options with costs, "How much to trust this note" incl. the v1.0 `-157` error, evidence last); record it NOT sent until BigDev
         sends it. Stage the author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the
         decision-log write first ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.4 Records commit (AC10), the ledger by SAFE prepend ([[project_sprint_status_safe_prepend]]) + row `ready-for-dev →
+  - [x] 0.4 (DONE 2026-10-29 — Debug Log (f)) Records commit (AC10), the ledger by SAFE prepend ([[project_sprint_status_safe_prepend]]) + row `ready-for-dev →
         in-progress`. Check the branch before every commit ([[feedback_concurrent_review_agents_mutate_tree]]).
 - [ ] **Task 1 — Migration + domain schema + accessor (AC1, AC6; FS2, FS3)**: hand-written SQL (⛔ `db:generate` —
       [[project_live_db_test_gotchas]]), `0190` at validation, with a journal `when` above 1795923600034 (`0189`, on `main` since 6.32 landed) and every other
@@ -1006,6 +1006,8 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
 
 (b) RED proofs. (c) Gate runs.
 
+(f) Task 0.4 records — 2026-10-29 (`bmad-dev-story 5.14`): `git fetch origin` — `origin/main` still `770ba815` (the branch's base); ListAgents: no other session; worktree clean. Next free numbers re-found: decision `-419` (none minted here), roster Row 44, ledger `2026-10-29k` (`main` -29d, 11b.5 -29b, this branch -29j). Written: `epics.md` `### Story 5.14` (after 5.13); architecture §3.4 dated ANNOTATION (after 5.8b's); roster Row 44 `trust-announcement-channels-live` (legs (a)–(f) per `-417` FS13 / `-418` item 1 and §2) + a Row 26 dated note; deferred-work: the 5.11 channels item's appended line (HOMED → building) + a new `## Story 5.14` section holding the `shielded_name` item; a dated pointer under `-389` (G13 discharged by `-417` §2). ⚠ AC10's friction-ledger row and disposition are written WITH the card (Task 7) and checked at Task 8 — the friction gate reads committed history and the card's event type does not exist yet. Sprint-status: row ready-for-dev → in-progress; ledger `-29k` in both ledgers; YAML parses (296 rows).
+
 (d) Task 0.1 preflight — 2026-10-29: `git fetch origin`; `origin/main` = `282bdd33` = the pin (no rebase); `git merge-base
 --is-ancestor 282bdd33 HEAD` true; `git diff --name-only 282bdd33..origin/main -- packages apps scripts docs/adr
 docs/launch-gate-inventory` EMPTY ⇒ F1–F19 hold as re-traced at v1.2 the same day (three verifiers). **S1** none: max decision `-415`
@@ -1092,3 +1094,4 @@ this map resolves them.
 | 2026-10-29 | 1.4 | PQ1 RULED — `2026-10-29-416` (Trustee-ratified, DR + KB): *"option A, full name"*. FS6's constant `'full_name'` (no presentation-mode read); I5 / AC4 / FS15 / T4 / Task 4 updated; go-live leg (d) MET; FS6's deferred item not created; the note's ruling block filled. |
 | 2026-10-29 | 1.5 | Task 0.2 done — "The words" (en + hi) approved and the Hindi reviewed by BigDev (roster leg (c) MET for the v1.4 strings); Task 0.3 done — author-commit `2026-10-29-417` committed alone. |
 | 2026-10-29 | 1.6 | Rebased onto `770ba815` (6.32 landed; SHA map, ledger `-29c` / `-29d` → `-29h` / `-29i`); third validation — 4 critical / ~15 should-fix / ~12 low, all applied; author-commit `2026-10-29-418` (amends `-417`) committed alone; Debug Log (d2), (e). |
+| 2026-10-29 | 1.7 | `bmad-dev-story 5.14` started — Task 0.4 records (epics, §3.4 annotation, roster Row 44 + Row 26 note, deferred-work, `-389` pointer); Status in-progress; Debug Log (f). |

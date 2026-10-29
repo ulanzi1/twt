@@ -749,6 +749,11 @@ Recorded at Story 5.11's Task 0.4 under [`-389`](../../.decision-log.md#decision
     ASKED, ⛔ required, to join one channel; the app stays the only official channel; R10(B) unchanged; the Panel did ⛔ narrow `-180`
     for the posts (the family's full name stays). TRIGGER MET ⇒ HOMED: row `5-14-trust-announcement-channels` (backlog) owns (2)–(5) and
     how a member is asked to join. Stays OPEN until that row is `done`.
+  - *Appended 2026-10-29 (Story 5.14 Task 0.4; [`-417`](../../.decision-log.md#decision-2026-10-29-417) / [`-418`](../../.decision-log.md#decision-2026-10-29-418)):* HOMED → **building** (story file
+    `5-14-trust-announcement-channels.md`, v1.6). (2) the §3.4 annotation is written (2026-10-29); (3) the WhatsApp Channel is posted BY
+    HAND from ready words, ⛔ a gateway; (4) RULED by [`-416`](../../.decision-log.md#decision-2026-10-29-416) (Trustee-ratified, option
+    A — the full name); (5) the words approved and the Hindi reviewed (`-417` FS8). Closed by 5.14 effective when that row is `done` on
+    `main`.
 - **The degraded-mode cycle-open SMS bridge has ⛔ registrable words** [`-389` FS10 (a); draft
   `docs/degradation-policy/comms-templates/sms-channel.md`] — the bridge stays DARK; while dark, a bridged send runs the normal ladder
   (push → WhatsApp → SMS). Homed: row `5-8b-degraded-mode-bridge-sms-wording` (backlog). ⭐ Trigger: that row's create-story, or a
@@ -13336,3 +13341,14 @@ Chunked review (domain substrate · send seam · tests · records), diff pinned 
 
 - **The sweep re-raises the "no cycle.frozen event — re-enqueued un-bridged" alarm every hour** [`apps/jobs/src/scheduler/contribution-notify-triggers.ts:1212`]. Every live alert in that state alarms hourly for its whole live window, because F9 re-fans it hourly. Reason: it goes away when the F9 re-fan fix lands, and that fix is already sequenced before go-live.
 - **The account-frozen overlay read has no expression index on `lower(payload->>'deceased_member_id')`** [`packages/domain/src/member/overlay.ts:168`]. Each bridged child job may scan every overlay-type `events_log` row. Reason: a performance item with no measured cost yet; revisit at Row 43 (d)'s throughput measurement.
+
+## Story 5.14 — the Trust's announcement channels (2026-10-29)
+
+Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision-2026-10-29-417) / [`-418`](../../.decision-log.md#decision-2026-10-29-418). Not 5.14's to build.
+
+- **A Pariwar set to `shielded_name` would post the deceased member's FULL name while its member push shows the shorter form**
+  [[`-416`](../../.decision-log.md#decision-2026-10-29-416) Not covered] — the channel post passes the mode `'full_name'` to
+  `resolvePoolIdentity` (⛔ a presentation-mode read — `-416` item 2's reading, the session's), while the member's own cycle-open
+  notice follows the Pariwar's stored mode (`-181`). Unreachable today: no `pariwar_public_name_presentation` row is `shielded_name`.
+  ⭐ Trigger: the first migration, seed or admin write that sets any `pariwar_public_name_presentation` row to `shielded_name` ⇒ the
+  question back to BigDev (and to the Panel if the post would change).

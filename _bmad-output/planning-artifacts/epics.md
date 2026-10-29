@@ -2578,6 +2578,32 @@ left, still signing up, ⛔ a yes ended before); it goes only to the registered 
 the database's rule; a correct code is the same yes as the member's message; a code is a WhatsApp switch and nothing else, never written
 down in clear; every failure shows the number + phrase and lets the member continue signup.
 
+### Story 5.14: The Trust's Announcement Channels — One Telegram Channel the System Posts To, One WhatsApp Channel an Admin Posts To by Hand, and One Calm Ask in the App `[SURFACE]`
+
+> **Added 2026-10-29 (Story 5.14, Task 0.4)** — the row `5-14-trust-announcement-channels` builds
+> [`-390`](../../.decision-log.md#decision-2026-10-23-390) Q2 A (Trustee-ratified: *"A request — members are asked to join one
+> channel; the app stays the official channel; R10(B) is unchanged."*). Per Pariwar (for v1, the one Pariwar's channels ARE the Trust's):
+> a Pariwar admin enters the two invite links and the Telegram channel's id behind ONE "channels live" switch that starts OFF. While it is
+> on, a job posts to the Telegram channel through the Pariwar's existing bot — once per pool when a cycle opens (naming the deceased
+> member in the FULL name — [`-416`](../../.decision-log.md#decision-2026-10-29-416), Trustee-ratified) and once per cycle on its last
+> day (naming no one) — at most once each, recorded without a name or text; the admin page shows the same words to post to the WhatsApp
+> Channel BY HAND (Meta has no posting API); and the app asks once, calmly — a home card until "Not now" or an open, plus a settings
+> entry. Its build decisions FS1–FS15 and the words (en + hi, the Hindi reviewed by BigDev) are DECIDED by
+> [`-417`](../../.decision-log.md#decision-2026-10-29-417) as amended by [`-418`](../../.decision-log.md#decision-2026-10-29-418)
+> (author-commit). One migration (`0190`). Go-live: roster Row 44 (`trust-announcement-channels-live`). Full ACs:
+> `_bmad-output/implementation-artifacts/5-14-trust-announcement-channels.md`. ⛔ Never a merge fence. (Epic 5's two "9 stories" count
+> lines are left as they stand, as for 5.10–5.13.)
+
+As a member of a Pariwar, I want to be able to follow the Trust's WhatsApp Channel or Telegram channel, where every pool opening and
+every cycle's last day is posted, and to be asked about it once, calmly, in the app, so that I have a second way to hear about a pool
+opening or a last day when the app's notification does not reach me, while the app remains the official place for every notice.
+
+**Acceptance Criteria:** see the story file (AC0–AC12) — in short: nothing is posted and nothing is shown until a Pariwar admin switches
+the channels on; at most one post per (Pariwar, occasion, subject), the claim committed before the Telegram call and nothing that may
+have posted ever re-posted; no post reported made without a real `ok: true`; nothing about one member is posted and no name or post
+text is stored; one Pariwar's notices never reach another's channel; the app stays official, joining stays a choice, and the app shows
+only links that exist; the frozen channel core and the per-member Telegram mirror do not move.
+
 ---
 
 ## Epic 6: Claim Filing, Peer Verification, Ground Inspection & Internal Appeal

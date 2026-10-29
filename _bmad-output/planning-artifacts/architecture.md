@@ -2385,6 +2385,22 @@ fallback SMS.
 > cap"* are SUPERSEDED IN PART: the cap is seven (`-415` §2). ⛔ A bulk-alert channel (RA-29): per Pariwar, by declaration, behind the
 > switch. The per-member fallback's three notices and their reach are unchanged.
 
+> ⚠ **ANNOTATION 2026-10-29 (Story `5-14` Task 0.4, `2026-10-23-390` Q2 A and `2026-10-29-416` — Trustee-ratified — and
+> `2026-10-29-417` / `-418` — author-commit) — the Trust's two announcement channels are placed. ⭐ Annotated, ⛔ not rewritten.**
+> (1) **what they are** — MIRRORS members are ASKED, ⛔ required, to join; the in-app surface stays the only official channel (R10(B)
+> unchanged). They are BROADCASTS: a post sends no message to any member, reads no member's opt-in and takes no member's chat id — ⛔
+> the per-member, opt-in "Telegram mirror (Bot API)" above, which is unchanged (as is `dispatch()`, the channel ladder and
+> `TELEGRAM_ELIGIBLE_CATEGORIES`); (2) **whose** — PER PARIWAR (AUTHOR READING of `-390`'s "the Trust's": in v1 the one Pariwar's
+> channels ARE the Trust's; a later Pariwar gets its own, so one Pariwar's deceased is never posted to another's members); (3) **what is
+> posted** — two notices only: once per pool when a cycle opens, naming the deceased member in the FULL name (`-416` option A — the
+> public-pages basis gate does not govern this post and is unmoved for the web pages), and once per cycle on its last day, naming no one;
+> ⛔ any other notice; ⛔ anything about one member; (4) **how** — the Telegram channel is posted by the system through the Pariwar's
+> EXISTING bot (a channel admin), at most once per (Pariwar, occasion, subject) by a durable post record that holds ids and states,
+> ⛔ a name or the text; the WhatsApp Channel is posted BY HAND by an admin from ready words (Meta offers no posting API; an unofficial
+> gateway is ⛔ used); (5) **the switch** — ONE per-Pariwar "channels live" switch, starting OFF, read at post time; go-live is roster
+> Row 44. ⭐ ⇒ this DISCHARGES the two 2026-10-23 annotations' *"still owed"* (their place in this section; `-389` G13). ⛔ A bulk-alert
+> channel (RA-29): no SMS is sent.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

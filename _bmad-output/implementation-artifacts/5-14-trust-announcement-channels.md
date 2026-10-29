@@ -11,7 +11,7 @@ Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --
 iff `git diff --name-only 282bdd33..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY or every changed
 path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never assume either.
 
-STATUS: 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
+STATUS: v1.3 (2026-10-29): Task 0.1 done; FS1–FS15 answered; PQ1 note written. 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
 (2 CRITICAL / 5 HIGH / 12 MEDIUM / 10 LOW), every finding applied and the critical ones re-checked by hand (Change Log). v1.1 → v1.2 the
 same day: a second validation (three fresh-context verifiers — jobs / API-admin-mobile / governance-design; 30 findings, all applied by
 BigDev's "all"; Debug Log (e)). FS1–FS15
@@ -61,7 +61,10 @@ every branch and every worktree — the ledger letter included.
             *"UNNAMED, by ruled design"* until the written clause *"exists and is PINNED"*.
       The `-390` note cited neither (ii) nor the matrix fence, and said of itself *"whether the deceased family's name already appears
       anywhere public — not checked for this note"*. A post built per `-390` would name EVERY family on a public channel, with no per-member
-      basis — today the ONLY public place a deceased member would be named. ⇒ `-390`'s accepted cost and `-160` / `-173`'s basis gate are
+      basis — the only public place the TRUST would name a deceased member on NOBODY's permission (⚠ corrected 2026-10-29 at Task 0.3:
+      since 11b.4a landed, the family's approved memorial is public in the family's own words, sent with the nominee's code — `-391` Q2 A,
+      `-411` — and may name the deceased; and `-198` (BigDev) grounds the member-facing name's exemption in *"publication to the WORLD"*
+      vs *"what a mutual-aid group is told"*). ⇒ `-390`'s accepted cost and `-160` / `-173`'s basis gate are
       two RATIFIED positions that may conflict — the template's fourth case ⇒ the Panel's ⇒ PQ1. ⛔ The author does not decide which
       governs ([[feedback_supersede_never_reinterpret]]). (v1.0 of this file cited `-157` as live — WRONG: `-160` superseded its hold.)
       Sub-question for option A only: WHICH form — the member-facing resolver renders a mononym in full in `shielded_name` mode
@@ -555,8 +558,9 @@ admin posting by hand — the switch's on-label in the admin form says so (AC2),
 It was told a WhatsApp Channel is public. But every public page the Panel has ruled on names a deceased member only if THAT member had
 accepted a Terms version that allows naming after death (`-160`). Until the clause is written and pinned, the page shows no name
 (`-173`); today that holds for every member. The October note did not mention this rule. **The one fact that decides it:** a WhatsApp
-Channel can be found and read by anyone, so as built per October the channel would be the only public place a deceased member is named,
-and the only one without the member's own agreement. Options:
+Channel can be found and read by anyone, so as built per October the TRUST would name a deceased member in public with neither the
+member's own agreement nor the family's — every other public place rests on one of the two (the drive page on the member's Terms; the
+family's memorial on the family's own words). Options:
 - **A — name every family, as October accepted.** Cost: public naming with no per-member basis, unlike every public page; counsel has not
   been asked (FS13 (e)). Sub-question:
   in the member-facing form, or the public form, which leaves out a one-word name.
@@ -703,7 +707,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance (AC0)**
-  - [ ] 0.1 Preflight: `git fetch origin`; rebase onto `origin/main` if it moved (backup branch first); run the pin checks (header);
+  - [x] 0.1 (DONE 2026-10-29 — Debug Log (d)) Preflight: `git fetch origin`; rebase onto `origin/main` if it moved (backup branch first); run the pin checks (header);
         re-trace F1–F19. **STOP and tell BigDev if:** **S1** a ruling on the Trust's channels, their words, or public naming of the
         deceased exists newer than `-415` (grep `^### Decision` for *channel*, *Telegram*, *announcement*, *public*, *deceased*); **S2**
         another worktree edits `cycle-open-alert.ts`, `contribution-notify-triggers.ts`, `telegram-app.ts` / `telegram-errors.ts`,
@@ -715,10 +719,11 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
         **S3** a number moved (NUMBERS); **S4** F4's trace no longer holds (the processor parses `channel_post`, or matches negative chat
         ids); **S5** a `clause_versions` row for the post-death publication clause now exists, or `NAME_PUBLICATION_AUTHORISED` changed (G3
         and PQ1 change).
-  - [ ] 0.2 Put FS1–FS15, "The words" (en + hi) and PQ1 to BigDev; record the answers VERBATIM in Debug Log (a), each with its option's
+  - [ ] 0.2 (FS1–FS15 ANSWERED 2026-10-29 — Debug Log (a); "The words" (en + hi) still open) Put FS1–FS15, "The words" (en + hi) and PQ1 to BigDev; record the answers VERBATIM in Debug Log (a), each with its option's
         cost line (footgun #45). A confirmation of the Hindi in session does NOT discharge roster leg (c) unless BigDev says it does —
         record which.
-  - [ ] 0.3 Write the PQ1 note (`trustee-panel-routing-note-YYYY-MM-DD-5-14-…`, from the template — §0 first, the one deciding fact,
+  - [ ] 0.3 (NOTE WRITTEN 2026-10-29 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md`,
+        ⏳ NOT SENT; decision entry not yet staged) Write the PQ1 note (`trustee-panel-routing-note-YYYY-MM-DD-5-14-…`, from the template — §0 first, the one deciding fact,
         options with costs, "How much to trust this note" incl. the v1.0 `-157` error, evidence last); record it NOT sent until BigDev
         sends it. Stage the author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the
         decision-log write first ([[project_decision_log_writes_user_inserted]]).
@@ -878,7 +883,24 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
 
 ### Debug Log References
 
-(a) Task 0.2 answers — verbatim. (b) RED proofs. (c) Gate runs. (d) Task 0.1 preflight.
+(a) Task 0.2 answers — verbatim.
+- **2026-10-29, BigDev, verbatim:** *"FS1-FS15 as recommended."* ⇒ every FS takes its ⭐ option, and that option's cost line is
+  accepted as written (FS1 (a) … FS15 (a), as the FS block stands at v1.2). That includes FS3 (a)'s *"a `pariwar_admin` can switch on
+  posts that may name the deceased"* (⇒ ⛔ `super_admin`-only); FS8 (a)'s dropping of "TWT:" and of the last-day *"for pool {pool}"*;
+  and FS15 (a)'s audited admin decrypt, crossing D11. ⚠ NOT answered by this line: "The words" (en + hi), so roster leg (c) stays open;
+  the Hindi script choice (व्हाट्सएप / टेलीग्राम vs Latin); PQ1 (the Panel's — the note is written, NOT sent).
+- **2026-10-29, BigDev:** *"prepare rotuing note"* ⇒ Task 0.3's note written (path above).
+
+(b) RED proofs. (c) Gate runs.
+
+(d) Task 0.1 preflight — 2026-10-29: `git fetch origin`; `origin/main` = `282bdd33` = the pin (no rebase); `git merge-base
+--is-ancestor 282bdd33 HEAD` true; `git diff --name-only 282bdd33..origin/main -- packages apps scripts docs/adr
+docs/launch-gate-inventory` EMPTY ⇒ F1–F19 hold as re-traced at v1.2 the same day (three verifiers). **S1** none: max decision `-415`
+on `main` and on every branch and worktree. **S2** known overlap only: 6.32 (migrations / journal / roster / decision-log /
+sprint-status), 11b.5 (sprint-status ledger); 12-1 / 13-2 none. **S3** unchanged since v1.2 (next decision `-416`, Row 44, migration
+`0190`). **S4** F4 holds (no code drift). **S5** none: no `clause_versions` row for `niy.public-disclosure.member-information` in any
+migration or seed; `NAME_PUBLICATION_AUTHORISED` unchanged (`public-read.ts:393`). New at Task 0.3: 11b.4a's public memorial
+(`-391` / `-411`, on `main` since 2026-10-28) — G3 corrected.
 
 (e) Validation 2026-10-29.
 - **v1.0 → v1.1** (one fresh-context verifier; critical claims re-checked by hand): **C1** G3 / PQ1 cited `-157` as live — `-160`
@@ -923,3 +945,4 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
 | 2026-10-29 | 1.0 | Created (`bmad-create-story 5.14`): FS1–FS14 + PQ1 proposed; ready-for-dev. |
 | 2026-10-29 | 1.1 | Checklist validation (one verifier: 2 critical / 5 high / 12 medium / 10 low) — all applied; Debug Log (e). |
 | 2026-10-29 | 1.2 | Second checklist validation (three parallel verifiers: 6 critical / 19 should-add / 4 optimisations / 1 LLM) — all applied on BigDev's "all"; Debug Log (e). Ledger relabelled `-29a` → `-29c`; migration `0190`. |
+| 2026-10-29 | 1.3 | Task 0.1 done (clean — Debug Log (d)); Task 0.2: FS1–FS15 answered as recommended (Debug Log (a)), "The words" still open; Task 0.3: the PQ1 note written, NOT sent; G3 / PQ1 corrected (the public memorial; `-198`). |

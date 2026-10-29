@@ -448,5 +448,17 @@
   "$comment.app_links": "Story 6.30 (2026-10-10-312 AL14 / AL16): not_found.* is the app's dignified page for a link it cannot place; it shows nothing about any member. (peer_request.placeholder — the /peer-request route shell's line until Story 6.27a filled it — was RETIRED by Story 6.27a, Task 5, 2026-10-12: the filled slot renders the claim.json peer_request.* chrome instead.)",
   "not_found.title": "This page could not be opened",
   "not_found.body": "The link may be old or incomplete. You can go to the home screen, or call us for help.",
-  "not_found.go_home": "Go to home"
+  "not_found.go_home": "Go to home",
+  "$comment.announcementChannels": "Story 5.14 (`2026-10-29-417` FS8–FS14): announcementChannels.* is the ONE calm ask to follow the Trust's WhatsApp Channel or Telegram channel — a home card shown once per device and a settings entry. Joining is a choice and the app stays where every notice is (R10(B)); the words never say a member must join or will lose anything, and the body names only a channel that has a link. Approved, the Hindi reviewed by BigDev on 2026-10-29 (go-live gate Row 44 (c)); any later change to a word re-opens that review.",
+  "announcementChannels.card_title": "The Trust's announcement channels",
+  "announcementChannels.body_both": "Pool openings and each cycle's last day are also posted on the Trust's WhatsApp Channel and Telegram channel. Joining one is your choice — every notice is always in this app.",
+  "announcementChannels.body_whatsapp": "Pool openings and each cycle's last day are also posted on the Trust's WhatsApp Channel. Joining it is your choice — every notice is always in this app.",
+  "announcementChannels.body_telegram": "Pool openings and each cycle's last day are also posted on the Trust's Telegram channel. Joining it is your choice — every notice is always in this app.",
+  "announcementChannels.join_whatsapp": "Open the WhatsApp Channel",
+  "announcementChannels.join_telegram": "Open the Telegram channel",
+  "announcementChannels.not_now": "Not now",
+  "announcementChannels.entry_label": "Trust announcement channels",
+  "announcementChannels.entry_hint": "Where the Trust also posts pool openings and last days",
+  "announcementChannels.screen_title": "Announcement channels",
+  "announcementChannels.link_error": "This link could not be opened on your phone."
 }

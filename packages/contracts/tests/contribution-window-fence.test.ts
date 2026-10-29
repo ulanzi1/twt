@@ -157,8 +157,11 @@ describe('AC3 — the tail substrate has NOT leaked into the contribution-window
   });
 
   it('the deadline-reminder sweep still derives deadlineAt from CYCLE_WINDOW_DAYS, un-extended', () => {
-    expect(readCode(DEADLINE_SWEEP)).toContain(
-      'committedAt.getTime() + CYCLE_WINDOW_DAYS * 24 * 60 * 60 * 1000',
-    );
+    // Story 5.14 (AC4) MOVED the arithmetic, unchanged, into the D5 seam's file as `cycleDeadlineAt` (so the sweep, the Trust's
+    // last-day channel post and the admin "Posts" list compute ONE deadline). The fence follows it: the sweep calls the helper, and
+    // the helper is `committedAt + CYCLE_WINDOW_DAYS` whole days — ⛔ a tail term, ⛔ an extension.
+    expect(readCode(DEADLINE_SWEEP)).toContain('const deadlineAt = cycleDeadlineAt(committedAt);');
+    expect(readCode(D5_SEAM)).toContain('return new Date(committedAt.getTime() + CYCLE_WINDOW_DAYS * MS_PER_DAY);');
+    expect(readCode(D5_SEAM)).toContain('const MS_PER_DAY = 24 * 60 * 60 * 1000;');
   });
 });

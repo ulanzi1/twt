@@ -271,5 +271,9 @@
   "sms.cycle_open_bridge": "TWT: आपका पूल {pool} खुल गया है, {member1}{member2} के परिवार के सहयोग हेतु। सुविधानुसार ऐप खोलकर योगदान करें।",
   "sms.deadline_not_recorded": "TWT: पूल {pool} में आपका योगदान अभी दर्ज नहीं हुआ है। यह चक्र {date} को बंद होगा। कृपया योगदान करें।",
   "sms.payment_not_confirmed": "TWT: पूल {pool} के लिए आपके भुगतान की पुष्टि अब तक नहीं हो पाई है। कृपया ऐप में जाँचें या फिर से प्रयास करें।",
-  "sms.payment_not_matched": "TWT: आपके भुगतान का मिलान अभी नहीं हो पाया है। इसे ठीक करने में हम आपकी मदद करेंगे। कृपया ऐप देखें।"
+  "sms.payment_not_matched": "TWT: आपके भुगतान का मिलान अभी नहीं हो पाया है। इसे ठीक करने में हम आपकी मदद करेंगे। कृपया ऐप देखें।",
+  "$comment.channel_post": "Story 5.14 (`2026-10-29-417` FS8 (a); `2026-10-29-416`): channel_post.* are the Trust's announcement channel posts — ONE bilingual post each (Hindi, a blank line, English), posted by the system to the Pariwar's Telegram channel and copied by hand into its WhatsApp Channel. pool_open.named names the deceased member's family in the full name (`-416`, option A); pool_open.unnamed is the built variant a later ruling may switch to; last_day names no one. {pool} is the curated pool name or the letter code; {date} is DD-MM-YYYY (the day-14 member reminder's date). The words are BigDev's 5.11 drafts adapted to a channel every member reads, approved and the Hindi reviewed by BigDev on 2026-10-29 — go-live gate Row 44 (c) records that review for THESE words only; any later change to a word re-opens it.",
+  "channel_post.pool_open.named": "पूल {pool} अब खुल गया है, {deceasedName} के परिवार के सहयोग हेतु। यदि आप इस पूल से जुड़े हैं, तो सुविधानुसार ऐप खोलकर योगदान करें।",
+  "channel_post.pool_open.unnamed": "पूल {pool} अब खुल गया है। यदि आप इस पूल से जुड़े हैं, तो सुविधानुसार ऐप खोलकर योगदान करें।",
+  "channel_post.last_day": "आज, {date}, इस चक्र का अंतिम दिन है। यदि संभव हो, तो कृपया ऐप में योगदान करें।"
 }

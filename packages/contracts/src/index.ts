@@ -106,6 +106,11 @@ export * from './member-language/index.js';
 // EXPECTED diff for this story).
 export * from './telegram-opt-in/index.js';
 
+// Story 5.14 — the Trust's announcement channels: the admin config + "Posts" list DTOs, the member read, and the ONE post builder
+// (`buildAnnouncementPost`) the job and the API share. HTTP endpoints → these DO register in openapi/v1.yaml (the four routes are the
+// EXPECTED diff for this story).
+export * from './announcement-channels/index.js';
+
 // Story 5.8 — per-Pariwar degraded-mode declaration DTOs (trustee declare/revoke/read admin endpoints). HTTP
 // endpoints → these DO register in openapi/v1.yaml (the declare/revoke/active routes are the EXPECTED diff
 // for this story).

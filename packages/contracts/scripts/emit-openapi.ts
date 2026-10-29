@@ -178,6 +178,13 @@ const { MemberLanguageSetRequest, MemberLanguageResponse } = await import('../sr
 // Member-session-gated; the tg-webhook-processor worker advances PENDING → ACTIVE out-of-band.
 const { TelegramOptInRequestResponse, TelegramOptInStatusResponse, RevokeTelegramOptInResponse } =
   await import('../src/telegram-opt-in/index.js');
+// Story 5.14 — the Trust's announcement channels: the admin config + "Posts" list (`pariwar.configure_channels`) and the member read.
+const {
+  AnnouncementChannelsConfigDto,
+  AnnouncementChannelsConfigResponse,
+  AnnouncementPostsResponse,
+  AnnouncementChannelsMemberResponse,
+} = await import('../src/announcement-channels/index.js');
 // Story 7.10 — the member pool-onboarding-tutorial outcome DTO (record completion/skip). Member-session
 // -gated; recorded server-side as a member-level audit line for analytics (best-effort telemetry).
 const { PoolOnboardingOutcomeRequest } = await import('../src/pool-onboarding/index.js');
@@ -470,6 +477,17 @@ const telegramOptInComponents = {
   RevokeTelegramOptInResponse: RevokeTelegramOptInResponse.openapi('RevokeTelegramOptInResponse'),
 } as const;
 for (const [name, schema] of Object.entries(telegramOptInComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 5.14 — the Trust's announcement channels components (admin config + "Posts" list; the member read).
+const announcementChannelsComponents = {
+  AnnouncementChannelsConfigDto: AnnouncementChannelsConfigDto.openapi('AnnouncementChannelsConfigDto'),
+  AnnouncementChannelsConfigResponse: AnnouncementChannelsConfigResponse.openapi('AnnouncementChannelsConfigResponse'),
+  AnnouncementPostsResponse: AnnouncementPostsResponse.openapi('AnnouncementPostsResponse'),
+  AnnouncementChannelsMemberResponse: AnnouncementChannelsMemberResponse.openapi('AnnouncementChannelsMemberResponse'),
+} as const;
+for (const [name, schema] of Object.entries(announcementChannelsComponents)) {
   registry.register(name, schema);
 }
 
@@ -2104,6 +2122,76 @@ registry.registerPath({
     400: errorResponse('Request validation failed'),
     401: channelConfigAuth,
     403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 5.14 — the Trust's announcement channels (per-Pariwar config, the "Posts" list; the member read) ──
+const announcementChannelsTags = ['announcement-channels'];
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/announcement-channels',
+  summary: "Read the Pariwar's announcement channels config (OFF defaults when none exists)",
+  description:
+    'Returns the "channels live" switch (starts OFF), the Telegram channel id and the two invite links. The Pariwar\'s bot ' +
+    'credential is never carried. Requires pariwar.configure_channels at pariwar scope.',
+  tags: announcementChannelsTags,
+  request: { params: channelConfigParams },
+  responses: {
+    200: { description: 'Announcement channels config', content: jsonOf(announcementChannelsComponents.AnnouncementChannelsConfigResponse) },
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/v1/p/{pariwarId}/admin/announcement-channels',
+  summary: "Upsert the Pariwar's announcement channels config (audited)",
+  description:
+    'Upserts the "channels live" switch, the Telegram channel id and the two invite links (a Telegram link and the channel id are ' +
+    'set together). Audited with a compensating record. Requires pariwar.configure_channels at pariwar scope.',
+  tags: announcementChannelsTags,
+  request: {
+    params: channelConfigParams,
+    body: { content: jsonOf(announcementChannelsComponents.AnnouncementChannelsConfigDto), required: true },
+  },
+  responses: {
+    200: { description: 'Announcement channels config upserted', content: jsonOf(announcementChannelsComponents.AnnouncementChannelsConfigResponse) },
+    400: errorResponse('Request validation failed'),
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/admin/announcement-channels/posts',
+  summary: "The Pariwar's pool openings and last days of the last 15 days, with each one's Telegram state",
+  description:
+    'Lists each pool opening and each cycle\'s last day of the last 15 days with its Telegram post state ("not_attempted" when ' +
+    'none was recorded) and — only while the switch is on — the bilingual words to post to the WhatsApp Channel by hand. An ' +
+    'audited read. Requires pariwar.configure_channels at pariwar scope.',
+  tags: announcementChannelsTags,
+  request: { params: channelConfigParams },
+  responses: {
+    200: { description: 'Posts', content: jsonOf(announcementChannelsComponents.AnnouncementPostsResponse) },
+    401: channelConfigAuth,
+    403: channelConfigForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/announcement-channels',
+  summary: "The links to the member's own Pariwar's announcement channels",
+  description:
+    'Both links are null while the channels are switched off. The Telegram link is returned only when the channel id and the ' +
+    "Pariwar's bot are configured. Member-session-gated.",
+  tags: announcementChannelsTags,
+  responses: {
+    200: { description: 'Announcement channel links', content: jsonOf(announcementChannelsComponents.AnnouncementChannelsMemberResponse) },
+    401: errorResponse('Authentication required'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

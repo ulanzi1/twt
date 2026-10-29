@@ -448,5 +448,17 @@
   "$comment.app_links": "Story 6.30 (2026-10-10-312 AL14 / AL16): the Hindi of not_found.* is AGENT-AUTHORED — a person reviews it before go-live (roster Row 28, via Row 29 (h)). (peer_request.placeholder was RETIRED by Story 6.27a, Task 5, 2026-10-12.)",
   "not_found.title": "यह पेज नहीं खुल सका",
   "not_found.body": "लिंक पुराना या अधूरा हो सकता है। आप होम स्क्रीन पर जा सकते हैं, या मदद के लिए हमें कॉल करें।",
-  "not_found.go_home": "होम पर जाएँ"
+  "not_found.go_home": "होम पर जाएँ",
+  "$comment.announcementChannels": "Story 5.14 (`2026-10-29-417` FS8–FS14): announcementChannels.* is the ONE calm ask to follow the Trust's WhatsApp Channel or Telegram channel — a home card shown once per device and a settings entry. Joining is a choice and the app stays where every notice is (R10(B)); the words never say a member must join or will lose anything, and the body names only a channel that has a link. Approved, the Hindi reviewed by BigDev on 2026-10-29 (go-live gate Row 44 (c)); any later change to a word re-opens that review.",
+  "announcementChannels.card_title": "ट्रस्ट के सूचना चैनल",
+  "announcementChannels.body_both": "पूल खुलने और हर चक्र के अंतिम दिन की सूचनाएँ ट्रस्ट के व्हाट्सएप चैनल और टेलीग्राम चैनल पर भी दी जाती हैं। किसी एक से जुड़ना आपकी इच्छा है — हर सूचना हमेशा इस ऐप में रहती है।",
+  "announcementChannels.body_whatsapp": "पूल खुलने और हर चक्र के अंतिम दिन की सूचनाएँ ट्रस्ट के व्हाट्सएप चैनल पर भी दी जाती हैं। इससे जुड़ना आपकी इच्छा है — हर सूचना हमेशा इस ऐप में रहती है।",
+  "announcementChannels.body_telegram": "पूल खुलने और हर चक्र के अंतिम दिन की सूचनाएँ ट्रस्ट के टेलीग्राम चैनल पर भी दी जाती हैं। इससे जुड़ना आपकी इच्छा है — हर सूचना हमेशा इस ऐप में रहती है।",
+  "announcementChannels.join_whatsapp": "व्हाट्सएप चैनल खोलें",
+  "announcementChannels.join_telegram": "टेलीग्राम चैनल खोलें",
+  "announcementChannels.not_now": "अभी नहीं",
+  "announcementChannels.entry_label": "ट्रस्ट के सूचना चैनल",
+  "announcementChannels.entry_hint": "जहाँ ट्रस्ट पूल खुलने और अंतिम दिन की सूचनाएँ भी देता है",
+  "announcementChannels.screen_title": "सूचना चैनल",
+  "announcementChannels.link_error": "यह लिंक आपके फ़ोन पर नहीं खुल सका।"
 }

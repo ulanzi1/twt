@@ -48,6 +48,29 @@ export const CYCLE_WINDOW_DAYS = 15;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
+ * The operational-numeral date string (Gregorian + Latin, amendment-A2) the reminder copy formats the window close against. UTC so it
+ * is deterministic and never drifts with a viewer timezone. ⭐ MOVED here UNCHANGED from `apps/jobs/src/scheduler/
+ * contribution-notify-triggers.ts` by Story 5.14 (AC4) so the day-14 member reminder, the Trust's last-day channel post and the admin
+ * "Posts" list show the SAME date from ONE helper. ⚠ Mirror it; ⛔ "correct" it — for a cycle frozen 05:30–09:30 IST it is the day
+ * AFTER the day-14 sweep (`2026-10-29-418` item 2, an accepted cost).
+ */
+export function operationalDate(at: Date): string {
+  const y = at.getUTCFullYear().toString().padStart(4, '0');
+  const m = (at.getUTCMonth() + 1).toString().padStart(2, '0');
+  const d = at.getUTCDate().toString().padStart(2, '0');
+  return `${d}-${m}-${y}`;
+}
+
+/**
+ * The cycle's deadline instant: `committedAt + CYCLE_WINDOW_DAYS` whole days in milliseconds (UTC-safe — never `setDate`/`getDate`,
+ * which run in the process's LOCAL timezone). Story 5.14 (AC4): the deadline sweep's arithmetic, exported so the sweep, the channel
+ * post job and the API compute it ONE way.
+ */
+export function cycleDeadlineAt(committedAt: Date): Date {
+  return new Date(committedAt.getTime() + CYCLE_WINDOW_DAYS * MS_PER_DAY);
+}
+
+/**
  * Days-remaining in the bounded contribution window (D5 SEAM) — PURE. `committedAt +
  * CYCLE_WINDOW_DAYS` using UTC-safe fixed-ms arithmetic (UTC has no DST/leap-seconds, so adding whole
  * days in milliseconds is calendar-equivalent to a calendar-day add — unlike local-timezone

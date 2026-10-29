@@ -40,6 +40,7 @@ import {
   CONTRIBUTION_MISMATCH_TEMPLATE_KEYS,
   CYCLE_OPEN_TEMPLATE_KEYS,
   CYCLE_WINDOW_DAYS,
+  cycleDeadlineAt,
   DEADLINE_REMINDER_SEND_DAYS,
   PENDING_MATCH_RETRY_TEMPLATE_KEYS,
   buildContributionConfirmedPayloadData,
@@ -50,6 +51,7 @@ import {
   computeDaysRemaining,
   cycleDayFromCommittedAt,
   isDeadlineReminderSendDay,
+  operationalDate,
   Alert,
   type DeadlineReminderSendDay,
   type PendingMatchRetryTier,
@@ -315,14 +317,8 @@ function familyLabel(identity: notifications.ResolvedPoolIdentity): string {
   return identity.deceasedDisplayName;
 }
 
-/** The operational-numeral date string (Gregorian + Latin, amendment-A2) the reminder copy formats the
- *  window close against. UTC so it is deterministic and never drifts with a viewer timezone. */
-function operationalDate(at: Date): string {
-  const y = at.getUTCFullYear().toString().padStart(4, '0');
-  const m = (at.getUTCMonth() + 1).toString().padStart(2, '0');
-  const d = at.getUTCDate().toString().padStart(2, '0');
-  return `${d}-${m}-${y}`;
-}
+// `operationalDate` (the reminder's DD-MM-YYYY window-close date) MOVED unchanged to `@twt/contracts` (Story 5.14, AC4) — the
+// last-day channel post and the admin "Posts" list show the same date from the one helper.
 
 /** The common alert envelope. `created_by_actor` is `system` — the SIE/scheduler drives these sends. */
 function envelope(input: {
@@ -1430,9 +1426,9 @@ export async function runDeadlineReminderSweep(
       const cycleDay = cycleDayFromCommittedAt(committedAt, now);
       if (!isDeadlineReminderSendDay(cycleDay)) continue;
 
-      // UTC-safe: `committedAt` + N whole days in milliseconds, never `setDate`/`getDate` (those run in
-      // the process's LOCAL timezone and would silently disagree with `operationalDate`'s UTC math).
-      const deadlineAt = new Date(committedAt.getTime() + CYCLE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+      // UTC-safe: `committedAt` + N whole days in milliseconds (`cycleDeadlineAt` — Story 5.14 moved the arithmetic to contracts so
+      // the channel post and the admin list compute it the same way).
+      const deadlineAt = cycleDeadlineAt(committedAt);
 
       const candidates = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db) =>
         poolDomain.listCycleBindingCandidates(

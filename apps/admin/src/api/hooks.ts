@@ -1480,6 +1480,33 @@ export function usePutTelegramConfig(pariwarId: string) {
   });
 }
 
+// ── Story 5.14 — the Trust's announcement channels (config + the "Posts" list) ──
+
+export const announcementChannelsConfigKey = (pariwarId: string) => ['announcement-channels', 'config', pariwarId] as const;
+export const announcementPostsKey = (pariwarId: string) => ['announcement-channels', 'posts', pariwarId] as const;
+
+/** The announcement channels config (the OFF defaults when none exists). */
+export function useAnnouncementChannelsConfig(pariwarId: string) {
+  return useQuery({ queryKey: announcementChannelsConfigKey(pariwarId), queryFn: () => api.getAnnouncementChannelsConfig(pariwarId) });
+}
+
+/** Upsert the config, then refresh it AND the "Posts" list (the switch decides whether the list carries the words). */
+export function usePutAnnouncementChannelsConfig(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.putAnnouncementChannelsConfig>[1]) => api.putAnnouncementChannelsConfig(pariwarId, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: announcementChannelsConfigKey(pariwarId) });
+      void qc.invalidateQueries({ queryKey: announcementPostsKey(pariwarId) });
+    },
+  });
+}
+
+/** The "Posts" list — pool openings and last days of the last 15 days. */
+export function useAnnouncementPosts(pariwarId: string) {
+  return useQuery({ queryKey: announcementPostsKey(pariwarId), queryFn: () => api.getAnnouncementPosts(pariwarId) });
+}
+
 // ── Story 7.5 — the fixed-amount schedule surface (FR-15) ──
 // The standard (90-day-notice) + emergency (step-up-gated) fixed-amount write paths + the schedule/
 // effective-amount read view. Both keys are per-Pariwar grants (server permission hook is the real gate).

@@ -128,6 +128,11 @@ import {
   WaTemplateDto,
   WaTemplatesResponse,
   TelegramConfigResponse,
+  AnnouncementChannelsConfigResponse,
+  AnnouncementPostsResponse,
+  type AnnouncementChannelsConfigResponse as AnnouncementChannelsConfig,
+  type AnnouncementChannelsConfigUpsertRequest,
+  type AnnouncementPostsResponse as AnnouncementPosts,
   type DegradedBridgeSmsSwitchResponse as DegradedBridgeSmsSwitch,
   type DegradedBridgeSmsSwitchSetRequest,
   type DegradedModeActiveResponse as DegradedModeActive,
@@ -965,6 +970,30 @@ export function putTelegramConfig(pariwarId: string, body: TelegramConfigUpsertR
     method: 'PUT',
     body: JSON.stringify(body),
   });
+}
+
+// ── The Trust's announcement channels (Story 5.14) — the per-Pariwar config (one "channels live" switch, the Telegram channel id,
+// the two invite links) and the "Posts" list (each post's Telegram state; the words to copy into the WhatsApp Channel while ON).
+
+const announcementChannelsBase = (pariwarId: string): string =>
+  `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/announcement-channels`;
+
+/** GET the announcement channels config (the OFF defaults when none exists). */
+export function getAnnouncementChannelsConfig(pariwarId: string): Promise<AnnouncementChannelsConfig> {
+  return apiFetch(announcementChannelsBase(pariwarId), AnnouncementChannelsConfigResponse);
+}
+
+/** PUT (upsert) the announcement channels config. */
+export function putAnnouncementChannelsConfig(pariwarId: string, body: AnnouncementChannelsConfigUpsertRequest): Promise<AnnouncementChannelsConfig> {
+  return apiFetch(announcementChannelsBase(pariwarId), AnnouncementChannelsConfigResponse, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET the "Posts" list (an audited read on the server). */
+export function getAnnouncementPosts(pariwarId: string): Promise<AnnouncementPosts> {
+  return apiFetch(`${announcementChannelsBase(pariwarId)}/posts`, AnnouncementPostsResponse);
 }
 
 // ── Degraded-mode surface (Story 5.8) ─────────────────────────────────────────

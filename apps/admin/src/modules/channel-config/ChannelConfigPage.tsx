@@ -9,6 +9,9 @@ import type { ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
+  useAnnouncementChannelsConfig,
+  useAnnouncementPosts,
+  usePutAnnouncementChannelsConfig,
   usePutTelegramConfig,
   usePutWaConfig,
   usePutWaTemplate,
@@ -16,6 +19,8 @@ import {
   useWaConfig,
   useWaTemplates,
 } from '../../api/hooks.js';
+import { AnnouncementChannelsForm } from './AnnouncementChannelsForm.js';
+import { AnnouncementPostsList } from './AnnouncementPostsList.js';
 import { TelegramConfigForm } from './TelegramConfigForm.js';
 import { WaConfigForm } from './WaConfigForm.js';
 import { WaTemplateForm } from './WaTemplateForm.js';
@@ -37,6 +42,9 @@ export function ChannelConfigPage({ pariwarId }: ChannelConfigPageProps): ReactE
   const putTemplate = usePutWaTemplate(pariwarId);
   const telegramConfig = useTelegramConfig(pariwarId);
   const putTelegramConfig = usePutTelegramConfig(pariwarId);
+  const announcementConfig = useAnnouncementChannelsConfig(pariwarId);
+  const putAnnouncementConfig = usePutAnnouncementChannelsConfig(pariwarId);
+  const announcementPosts = useAnnouncementPosts(pariwarId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,6 +134,35 @@ export function ChannelConfigPage({ pariwarId }: ChannelConfigPageProps): ReactE
             submitError={errorMessage(putTelegramConfig.error)}
             onSubmit={(payload) => putTelegramConfig.mutate(payload)}
           />
+        )}
+      </section>
+
+      {/* Story 5.14 — the Trust's announcement channels (per Pariwar; one switch that starts off). */}
+      <section aria-label="Announcement channels" className="rounded border p-4">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">Announcement channels</h2>
+        <p className="mb-3 text-sm opacity-70">
+          The Trust’s WhatsApp Channel and Telegram channel, where pool openings and each cycle’s last day are also posted. Members
+          are asked once, in the app, whether they would like to follow one; the app stays where every notice is.
+        </p>
+        {announcementConfig.isLoading ? (
+          <p role="status">Loading announcement channels…</p>
+        ) : announcementConfig.isError ? (
+          <p role="alert" className="text-status-fail-fg">{errorMessage(announcementConfig.error)}</p>
+        ) : (
+          <AnnouncementChannelsForm
+            initial={announcementConfig.data!.config}
+            pending={putAnnouncementConfig.isPending}
+            submitError={errorMessage(putAnnouncementConfig.error)}
+            onSubmit={(payload) => putAnnouncementConfig.mutate(payload)}
+          />
+        )}
+        <h3 className="mb-2 mt-4 text-sm font-semibold">Posts</h3>
+        {announcementPosts.isLoading ? (
+          <p role="status">Loading posts…</p>
+        ) : announcementPosts.isError ? (
+          <p role="alert" className="text-status-fail-fg">{errorMessage(announcementPosts.error)}</p>
+        ) : (
+          <AnnouncementPostsList data={announcementPosts.data!} />
         )}
       </section>
     </div>

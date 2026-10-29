@@ -813,7 +813,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
         decision-log write first ([[project_decision_log_writes_user_inserted]]).
   - [x] 0.4 (DONE 2026-10-29 — Debug Log (f)) Records commit (AC10), the ledger by SAFE prepend ([[project_sprint_status_safe_prepend]]) + row `ready-for-dev →
         in-progress`. Check the branch before every commit ([[feedback_concurrent_review_agents_mutate_tree]]).
-- [ ] **Task 1 — Migration + domain schema + accessor (AC1, AC6; FS2, FS3)**: hand-written SQL (⛔ `db:generate` —
+- [x] **Task 1 — Migration + domain schema + accessor (AC1, AC6; FS2, FS3)**: hand-written SQL (⛔ `db:generate` —
       [[project_live_db_test_gotchas]]), `0190` at validation, with a journal `when` above 1795923600034 (`0189`, on `main` since 6.32 landed) and every other
       sibling's — re-check at Task 0.1 ([[project_sibling_migration_when_order_shared_db]]);
       `packages/domain/src/schema/{pariwar_announcement_channels,announcement_channel_posts}.ts` (+ `packages/domain/src/schema/index.ts`);
@@ -823,18 +823,18 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
       policy-regression specs. The pools-only read returns `{ poolId, claimCaseId, poolIndex, poolCanonicalIdentifier, fixedAmount }[]` for
       `(pariwar_id, cycle_id)` (the `PoolIdentityInput` fields, `pool-identity.ts:70-78`) and the pool count; the pool child re-reads ITS
       pool by `(pariwar_id, pool_id)`. The accessor's never-attempted final write and the `deferred` give-up (FS2, `-418` item 11).
-- [ ] **Task 2 — Contracts + words (AC3, AC4; FS6, FS8, FS12, FS15)**: `packages/contracts/src/announcement-channels/` (config DTO, PUT DTO
+- [x] **Task 2 — Contracts + words (AC3, AC4; FS6, FS8, FS12, FS15)**: `packages/contracts/src/announcement-channels/` (config DTO, PUT DTO
       with refinements equal to the CHECKs, member response, posts-list view `{ posts }`, the builder with its local `t` type +
       `ANNOUNCEMENT_POST_NAME_MODE`); `operationalDate` moved + `cycleDeadlineAt` added in `contribution-loop-templates.ts` (AC4; the jobs
       file imports them); `"@twt/i18n": "workspace:*"` in `packages/contracts/package.json` devDependencies (+ lockfile); the barrel;
       `emit-openapi.ts` (the member route AND the three admin routes — the channel-config paths' shape, `:1992-2108`); the `contribution.json` `channel_post.*` keys + `$comment.channel_post` and `common.json` `announcementChannels.*`
       (en + hi); contract tests (hand-built fixtures — [[project_contracts_tests_outside_tsc]]); builder tests with the real `t`.
-- [ ] **Task 3 — Telegram client (AC6, AC11; FS7)**: `signal` on `FetchInit`; injectable `timeoutMs` (default 9 000) via a
+- [x] **Task 3 — Telegram client (AC6, AC11; FS7)**: `signal` on `FetchInit`; injectable `timeoutMs` (default 9 000) via a
       `timeoutSignal` seam with its bounds check, copied from `whatsapp-app.ts:280-303` (+ `WhatsappAppCacheOptions.timeoutSignal`, `:371`; ⚠ unlike WhatsApp's per-send option with no
       default, a cache-level 9 000 default applies to the mirror too — `-418` item 6); `retryAfter` on `TelegramSendError` parsed from
       `parameters.retry_after`; the timeout stays class `api_unavailable` (already — F1; `telegram-errors.ts` ⛔ edited); tests on both paths
       (the hung-server case through the injected seam).
-- [ ] **Task 4 — The poster job (AC4 job half, AC5, AC6, AC7, AC11's F4 test; I1–I6, I9)**: `QUEUE_NAMES` entry
+- [x] **Task 4 — The poster job (AC4 job half, AC5, AC6, AC7, AC11's F4 test; I1–I6, I9)**: `QUEUE_NAMES` entry
       `announcement.channel.post` (`-417` §5) in `packages/queue/src/index.ts`; handler
       `apps/jobs/src/scheduler/announcement-channel-post.ts` — the cycle job (pools-only read ⇒ one pool child each, `startAfter = i × 3 s`)
       and the post job: LOOKUP (explicit `pariwar_id`: `posted` / final ⇒ done, ⛔ decrypt; in-flight ⇒ throw; stale lease ⇒ finalise
@@ -850,7 +850,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
       ⛔ before `alertSms:`, which the boot pin `apps/jobs/tests/alert-sms-send.test.ts:299-311` holds within 900 characters) (the day-14 hook and the recovery-sweep step — AC5
       (ii), (iv)); `contribution-notify-triggers.ts` imports `operationalDate` / `cycleDeadlineAt` from contracts; the F4 regression test;
       the AC4 identity / date tests; live tests per AC6 / AC7.
-- [ ] **Task 5 — API (AC2, AC3)**: `apps/api/src/modules/announcement-channels/` (admin config + posts list under
+- [x] **Task 5 — API (AC2, AC3)**: `apps/api/src/modules/announcement-channels/` (admin config + posts list under
       `/p/:pariwarId/admin/…` with `pariwar.configure_channels`; the member route with `requireMemberSession` + `openScopeTx` — F16);
       `withCompensatingAudit`; the module added to `CHANNEL_ROOTS` (`scripts/access-wrapper-invariants/check.ts:69-77`, in the SAME commit that creates the module
       folder — a missing root fails the gate; + the root lists in `docs/access-wrapper-invariants.md:110` and
@@ -1004,7 +1004,30 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
 - **2026-10-29, BigDev, v1.6 (third validation), as chosen:** counsel leg *"Keep asked-or-accepted"*; last-day date *"Mirror, record
   cost"*; a throwing identity read *"Retry, final only"*; recording *"New entry -418"* ⇒ `2026-10-29-418` committed ALONE (`194f6d23`).
 
-(b) RED proofs. (c) Gate runs.
+(b) RED proofs (2026-10-29, the story DB `twt-514-pg` :5444, a throwaway container whose database is NAMED `twt_dev`).
+- Task 1: the post-record spec green 21/21; RED by mutation — the freeze trigger DISABLED on the story DB ⇒ the freeze test fails (1), then
+  re-enabled. The config spec 8/8. The whole `@twt/domain` suite 439/439 files on the story DB.
+- Task 2: the builder's `@ts-expect-error` (⛔ a member field) is LOAD-BEARING — without it `tsc` reports TS2353 (the contracts tsconfig
+  includes `tests/`). The Story 8.9 window fence pinned the sweep's arithmetic by TEXT; it now pins the call to `cycleDeadlineAt` and the
+  helper's un-extended body (the arithmetic MOVED, unchanged). OpenAPI: a parsed before/after diff — exactly 3 paths (4 operations) and
+  4 schemas added, nothing changed (the textual diff's 67 deletions are YAML anchor renumbering).
+- Task 3: the 5 new client tests failed first (the hung-server case hung to the 5 s test timeout), then green; the mirror's 18 earlier
+  tests unchanged; `channels-determinism` green (462/462 in `@twt/channels`).
+- Task 4: the poster's 20 live tests passed first run ⇒ RED by mutation: "metadata absent ⇒ final" + the switch check removed ⇒ 4
+  failures, restored ⇒ 20/20. The F4 webhook test is a PIN on code traced safe at the pin (⛔ edited) — it passed on first run; no RED
+  is possible without editing the processor (T5). Seam tests 8 (cycle-open 2, triggers 6). Full `apps/jobs` suite 86/86 files.
+- Task 5: the access-wrapper gate RED with a planted bare `audit.writeAuditEntry` in the new module's `mutate` (1 finding), green after
+  removal. The API spec 9/9; RED by mutation — the per-row savepoint removed ⇒ the throwing row's real SQL error aborts the transaction
+  and the NEXT row's words are lost (1 failure), restored ⇒ 9/9. Full `apps/api` suite 204/204 files on the story DB.
+- Task 5 access-wrapper checklist walk (`docs/access-wrapper-invariants.md`), both route groups + the job: (a) authorization from the
+  caller's grants (`requirePermissionHook`) / the session's own Pariwar — ⛔ a caller-supplied flag; the job's Pariwar is the envelope's,
+  every statement by explicit predicate; (b) no default-disclosure path — no row ⇒ the OFF defaults (nothing about anyone); (c) the PUT's
+  audit hash is over config values (links, chat id, the switch — ⛔ PII); the read line carries counts only; (d) no best-effort write on
+  the request tx (the read audit is the sink; the job's writes are their own short transactions); (e) ⛔ a new key — `pariwar.configure_
+  channels` at pariwar scope on `:pariwarId` routes; (f) ⛔ a credential compare; (g) the PUT under `withCompensatingAudit`, the module
+  in `CHANNEL_ROOTS` (gated).
+
+(c) Gate runs.
 
 (f) Task 0.4 records — 2026-10-29 (`bmad-dev-story 5.14`): `git fetch origin` — `origin/main` still `770ba815` (the branch's base); ListAgents: no other session; worktree clean. Next free numbers re-found: decision `-419` (none minted here), roster Row 44, ledger `2026-10-29k` (`main` -29d, 11b.5 -29b, this branch -29j). Written: `epics.md` `### Story 5.14` (after 5.13); architecture §3.4 dated ANNOTATION (after 5.8b's); roster Row 44 `trust-announcement-channels-live` (legs (a)–(f) per `-417` FS13 / `-418` item 1 and §2) + a Row 26 dated note; deferred-work: the 5.11 channels item's appended line (HOMED → building) + a new `## Story 5.14` section holding the `shielded_name` item; a dated pointer under `-389` (G13 discharged by `-417` §2). ⚠ AC10's friction-ledger row and disposition are written WITH the card (Task 7) and checked at Task 8 — the friction gate reads committed history and the card's event type does not exist yet. Sprint-status: row ready-for-dev → in-progress; ledger `-29k` in both ledgers; YAML parses (296 rows).
 

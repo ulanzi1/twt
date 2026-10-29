@@ -103,7 +103,7 @@ export const border = {
   'border-hairline': '1px', // hairline rule (firm 1px primitive)
   'border-rule': '2px', // standard rule (placeholder)
   'border-double-rule': '3px', // double / emphatic rule (placeholder)
-  'border-funeral-frame': '4px', // Shradhanjali memorial frame (placeholder)
+  'border-funeral-frame': '2px', // Shradhanjali portrait frame — UX §PortraitFrame "2px ink border + 6pt inner pad"; placeholder until P0-2, like its group
 } as const satisfies TokenGroup;
 
 /** The whole registry, grouped — the single import surface for consumers + the generator. */

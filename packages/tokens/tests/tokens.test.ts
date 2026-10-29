@@ -126,6 +126,10 @@ describe('border tokens (AC1 (iv))', () => {
   it('border names are semantic (FM-14 #1)', () => {
     for (const name of Object.keys(border)) expect(name).toMatch(SEMANTIC_NAME);
   });
+
+  it('the funeral frame is the UX\'s 2px ink border (Story 11b.5, `-420` MV4 — still a placeholder until P0-2)', () => {
+    expect(border['border-funeral-frame']).toBe('2px');
+  });
 });
 
 describe('renderThemeCss (AC2)', () => {
@@ -145,7 +149,7 @@ describe('renderThemeCss (AC2)', () => {
   it('emits faces under --font-, named spacing as --space-, borders as --border-', () => {
     expect(css).toContain('--font-display-name:');
     expect(css).toContain('--space-hairline: 1px;');
-    expect(css).toContain('--border-funeral-frame:');
+    expect(css).toContain('--border-funeral-frame: 2px;');
   });
 
   it('emits NO shadow variable / property (FM-3) — the explanatory comment aside', () => {

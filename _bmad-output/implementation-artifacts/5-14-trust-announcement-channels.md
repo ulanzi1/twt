@@ -11,7 +11,7 @@ Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --
 iff `git diff --name-only 282bdd33..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY or every changed
 path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never assume either.
 
-STATUS: v1.4 (2026-10-29): Task 0.1 done; FS1–FS15 answered; PQ1 RULED (`-416`, A, full name); next: "The words" (en + hi), then the author-commit (`-417`). 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
+STATUS: v1.5 (2026-10-29): Tasks 0.1–0.3 done — FS1–FS15 answered, PQ1 RULED (`-416`, A, full name), the words approved + Hindi reviewed, author-commit `-417` committed; next: Task 0.4 (records), then Task 1. 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
 (2 CRITICAL / 5 HIGH / 12 MEDIUM / 10 LOW), every finding applied and the critical ones re-checked by hand (Change Log). v1.1 → v1.2 the
 same day: a second validation (three fresh-context verifiers — jobs / API-admin-mobile / governance-design; 30 findings, all applied by
 BigDev's "all"; Debug Log (e)). FS1–FS15
@@ -506,7 +506,7 @@ Each is the author's (§0, G1) unless it says PQ. Answer by number + letter; a b
   (the WhatsApp Channel on the Trust's own WhatsApp app account — a Cloud-API-only number has no app client; the Telegram channel with the
   Pariwar's bot as an admin with "Post messages"), enters the links and chat id, and sets the bot webhook's `allowed_updates` to
   `["message","my_chat_member"]` (F4); **(b)** a real post from staging to a private test channel (ids only); **(c)** BigDev's review of the
-  Hindi of every string (posts + app) — recorded, ⛔ assumed; **(d)** PQ1 answered and FS6's constant set to match (✅ MET 2026-10-29 by `-416`; the constant `'full_name'`); **(e)** counsel asked
+  Hindi of every string (posts + app) — recorded, ⛔ assumed; (✅ MET 2026-10-29 — `-417` FS8; a later string change re-opens it) **(d)** PQ1 answered and FS6's constant set to match (✅ MET 2026-10-29 by `-416`; the constant `'full_name'`); **(e)** counsel asked
   about naming a deceased member's family on a public channel (or *"Counsel has not been asked"* recorded as an accepted cost — ⛔ an
   answer); **(f)** LAST: a Pariwar admin switches the channels on. ⛔ Never a merge fence ([[project_not_in_production_merge_is_not_golive]]).
 - **FS14 — what the app says about privacy.** ⭐ **(a) nothing about who can see a follower** (F13 — WhatsApp's contact exception and
@@ -526,7 +526,7 @@ Each is the author's (§0, G1) unless it says PQ. Answer by number + letter; a b
   function change. **(c) envelope-encrypt `post_text`.** *Cost (c):* a new ciphertext column, KEK handling and erasure treatment for a
   convenience.
 
-### The words (FS8 (a)) — DRAFT, for BigDev's review at Task 0.2 (Hindi ⚠ unreviewed)
+### The words (FS8 (a)) — ✅ APPROVED, Hindi REVIEWED by BigDev 2026-10-29 (*"Hindi is fine, I reviewed it."*; `-417` FS8)
 
 The posts (one bilingual message each; Hindi first, a blank line, then English; plain text, ⛔ `parse_mode`, ⛔ links). Namespace
 `contribution`, keys `channel_post.pool_open.named`, `channel_post.pool_open.unnamed`, `channel_post.last_day`, with a
@@ -736,11 +736,12 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
         **S3** a number moved (NUMBERS); **S4** F4's trace no longer holds (the processor parses `channel_post`, or matches negative chat
         ids); **S5** a `clause_versions` row for the post-death publication clause now exists, or `NAME_PUBLICATION_AUTHORISED` changed (G3
         and PQ1 change).
-  - [ ] 0.2 (FS1–FS15 ANSWERED 2026-10-29 — Debug Log (a); "The words" (en + hi) still open) Put FS1–FS15, "The words" (en + hi) and PQ1 to BigDev; record the answers VERBATIM in Debug Log (a), each with its option's
+  - [x] 0.2 (DONE 2026-10-29 — FS1–FS15 as recommended; "The words" (en + hi) approved and the Hindi reviewed by BigDev — roster leg (c)
+        MET for the strings as tabled at v1.4; Debug Log (a)) Put FS1–FS15, "The words" (en + hi) and PQ1 to BigDev; record the answers VERBATIM in Debug Log (a), each with its option's
         cost line (footgun #45). A confirmation of the Hindi in session does NOT discharge roster leg (c) unless BigDev says it does —
         record which.
-  - [ ] 0.3 (NOTE WRITTEN 2026-10-29 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md`,
-        SENT and RULED — `-416`; this story's author-commit (`-417`) not yet staged) Write the PQ1 note (`trustee-panel-routing-note-YYYY-MM-DD-5-14-…`, from the template — §0 first, the one deciding fact,
+  - [x] 0.3 (DONE 2026-10-29 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md`
+        SENT and RULED, `-416` (`26fc1f47`); the author-commit `2026-10-29-417` committed ALONE (`5fadaabd`)) Write the PQ1 note (`trustee-panel-routing-note-YYYY-MM-DD-5-14-…`, from the template — §0 first, the one deciding fact,
         options with costs, "How much to trust this note" incl. the v1.0 `-157` error, evidence last); record it NOT sent until BigDev
         sends it. Stage the author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the
         decision-log write first ([[project_decision_log_writes_user_inserted]]).
@@ -910,6 +911,10 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
 - **2026-10-29, BigDev:** *"prepare rotuing note"* ⇒ Task 0.3's note written (path above).
 - **2026-10-29, the Panel's PQ1 ruling, relayed by BigDev, verbatim:** *"by DR and KB"* / *"option A, full name"* ⇒ `2026-10-29-416`
   (Trustee-ratified), committed alone (`26fc1f47`); the note's ruling block filled; FS6's constant `'full_name'`; leg (d) MET.
+- **2026-10-29, BigDev, verbatim, on "The words" (en + hi):** *"Hindi is fine, I reviewed it. commit it"* ⇒ the post and app strings
+  as tabled at v1.4 are approved; BigDev states the Hindi was REVIEWED ⇒ roster leg (c) MET for those strings (a later change to any
+  string re-opens it); the app's Hindi stays in Devanagari (व्हाट्सएप / टेलीग्राम, सूचनाएँ). ⇒ `2026-10-29-417` (author-commit) staged
+  and committed ALONE (`5fadaabd`).
 
 (b) RED proofs. (c) Gate runs.
 
@@ -967,3 +972,4 @@ migration or seed; `NAME_PUBLICATION_AUTHORISED` unchanged (`public-read.ts:393`
 | 2026-10-29 | 1.2 | Second checklist validation (three parallel verifiers: 6 critical / 19 should-add / 4 optimisations / 1 LLM) — all applied on BigDev's "all"; Debug Log (e). Ledger relabelled `-29a` → `-29c`; migration `0190`. |
 | 2026-10-29 | 1.3 | Task 0.1 done (clean — Debug Log (d)); Task 0.2: FS1–FS15 answered as recommended (Debug Log (a)), "The words" still open; Task 0.3: the PQ1 note written, NOT sent; G3 / PQ1 corrected (the public memorial; `-198`). |
 | 2026-10-29 | 1.4 | PQ1 RULED — `2026-10-29-416` (Trustee-ratified, DR + KB): *"option A, full name"*. FS6's constant `'full_name'` (no presentation-mode read); I5 / AC4 / FS15 / T4 / Task 4 updated; go-live leg (d) MET; FS6's deferred item not created; the note's ruling block filled. |
+| 2026-10-29 | 1.5 | Task 0.2 done — "The words" (en + hi) approved and the Hindi reviewed by BigDev (roster leg (c) MET for the v1.4 strings); Task 0.3 done — author-commit `2026-10-29-417` committed alone. |

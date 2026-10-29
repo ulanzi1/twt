@@ -110,9 +110,13 @@ const STYLED = ['src/components/FamilyMemorial.astro', 'src/components/PortraitF
 /** The only literals a memorial `style` may hold; every colour, border width and spacing other than these is a `var(--…)`. */
 const ALLOWED_LITERALS = ['4 / 5', 'pre-wrap', 'contain', 'solid', '20rem', '100%', '6pt', '0'];
 
+/** The value of every double-quoted static `style` attribute in `src` — any letter case, and with or without whitespace before it (`dir="auto"style="…"`). */
+function styleValues(src: string): string[] {
+  return [...src.matchAll(/(?<![\w-])style="([^"]*)"/gi)].map((m) => m[1] as string);
+}
+
 function styles(rel: string): string[] {
-  const src = code(readFileSync(join(appRoot, rel), 'utf-8'));
-  return [...src.matchAll(/\sstyle="([^"]*)"/g)].map((m) => m[1] as string);
+  return styleValues(code(readFileSync(join(appRoot, rel), 'utf-8')));
 }
 
 /** What is left of a declaration's value once its token references and the allowed literals are removed — `''` when clean. */
@@ -124,10 +128,29 @@ function residue(value: string): string {
   return rest.trim();
 }
 
+// Story 11b.5 code review (2026-10-29): the two guards below name the forms HTML and Astro give a class or a style — `class:list`, a
+// `style` with ⛔ no whitespace before it, any letter case, a single-quoted or `{…}` value, `<style>` and `<style/>` — ⛔ not only the one
+// the markup uses today. ⚠ A scan of the file's TEXT still does ⛔ not see a spread or props passthrough (`{...x}`), nor a line `code()`
+// has cut at a space-preceded `//` (the latter is deferred: `deferred-work.md`, the 11b-5 fix-diff review).
+/** A `class` attribute in any form — `class="…"`, and Astro's `class:list={…}`, which compiles to a plain `class` and renders as nothing here. */
+const CLASS_ATTR = /(?<![\w-])class(?::list)?\s*=/i;
+
+/** How many style carriers in `src` are NOT a double-quoted static attribute (`style='…'`, `style={…}`, `style = "…"`) — `styleValues()` reads only that form — plus every `<style>` block. `0` when clean. */
+function strayStyleForms(src: string): number {
+  const attributes = (src.match(/(?<![\w-])style\s*=/gi) ?? []).length;
+  const staticAttributes = (src.match(/(?<![\w-])style="[^"]*"/gi) ?? []).length;
+  const blocks = (src.match(/<style(?=[\s>/])/gi) ?? []).length;
+  return attributes - staticAttributes + blocks;
+}
+
 describe('the memorial section is styled with tokens, spacing only (AC4, MV5 (a))', () => {
-  it.each(STYLED)('%s carries ⛔ no `class=` attribute (a utility class renders nothing on this surface)', (rel) => {
+  it.each(STYLED)('%s carries ⛔ no `class=` / `class:list=` attribute (a utility class renders nothing on this surface)', (rel) => {
     const src = code(readFileSync(join(appRoot, rel), 'utf-8'));
-    expect(src).not.toMatch(/\sclass=/);
+    expect(src).not.toMatch(CLASS_ATTR);
+  });
+
+  it.each(STYLED)('%s carries ⛔ no style but a double-quoted static attribute, and ⛔ no `<style>` block (the allow-list reads only that form)', (rel) => {
+    expect(strayStyleForms(code(readFileSync(join(appRoot, rel), 'utf-8')))).toBe(0);
   });
 
   it('FamilyMemorial.astro holds EXACTLY the three spacing strings, and its `<h2>` carries ⛔ no style', () => {
@@ -166,5 +189,30 @@ describe('the memorial section is styled with tokens, spacing only (AC4, MV5 (a)
     expect(residue(' var(--border-funeral-frame) solid #1a1a1a')).toBe('#1a1a1a');
     expect(residue(' black')).toBe('black');
     expect(residue(' var(--space-row) 0 0')).toBe('');
+  });
+
+  it('the form guards catch a planted `class:list`, a single-quoted / object / spaced `style` and a `<style>` block (positive control)', () => {
+    expect(CLASS_ATTR.test('<p class="mt-3">')).toBe(true);
+    expect(CLASS_ATTR.test('<p class:list={["mt-3"]}>')).toBe(true);
+    expect(CLASS_ATTR.test('<img src="x"class="mt-3">')).toBe(true);
+    expect(CLASS_ATTR.test('<div data-class="x" dir="auto" style="margin: var(--space-row) 0 0;">')).toBe(false);
+    expect(strayStyleForms(`<p style='margin: 0'>`)).toBe(1);
+    expect(strayStyleForms('<p style={{ margin: 0 }}>')).toBe(1);
+    expect(strayStyleForms('<p style = "margin: 0">')).toBe(1);
+    expect(strayStyleForms('<style>p { margin: 0 }</style>')).toBe(1);
+    expect(strayStyleForms('<p dir="auto" style="white-space: pre-wrap; margin: var(--space-row) 0 0;">')).toBe(0);
+  });
+
+  it('the form guards also catch a `style` with ⛔ no whitespace before it, any letter case, and `<style/>` (positive control)', () => {
+    expect(strayStyleForms(`<p dir="auto"style='margin: 0'>`)).toBe(1);
+    expect(strayStyleForms(`<p STYLE='margin: 0'>`)).toBe(1);
+    expect(strayStyleForms('<STYLE>p { margin: 0 }</STYLE>')).toBe(1);
+    expect(strayStyleForms('<style/>')).toBe(1);
+    expect(CLASS_ATTR.test('<p CLASS="mt-3">')).toBe(true);
+    // The allow-list READS a static `style` however it is cased or spaced, so a hex colour there cannot hide from `residue()`.
+    expect(styleValues('<p dir="auto"style="color:#c00">')).toEqual(['color:#c00']);
+    expect(styleValues('<p STYLE="color:#c00">')).toEqual(['color:#c00']);
+    expect(styleValues('<div data-style="color:#c00">')).toEqual([]);
+    expect(residue('#c00')).toBe('#c00');
   });
 });

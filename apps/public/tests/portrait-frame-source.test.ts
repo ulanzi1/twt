@@ -26,6 +26,9 @@ const src = code(raw);
 /** The template — everything after the closing frontmatter fence. */
 const template = src.slice(src.indexOf('---', 3) + 3);
 
+/** A `class` attribute in any form — `class="…"` and Astro's `class:list={…}` (Story 11b.5 code review, 2026-10-29: the guard used to name `classList`, which is ⛔ no Astro form, so `class:list` passed). */
+const CLASS_ATTR = /(?<![\w-])class(?::list)?\s*=/i;
+
 const OUTER = 'border: var(--border-funeral-frame) solid var(--color-ink-primary); padding: 6pt; max-width: 20rem;';
 const INNER = 'aspect-ratio: 4 / 5; width: 100%;';
 const IMAGE = 'width: 100%; height: 100%; object-fit: contain;';
@@ -52,8 +55,8 @@ describe('<PortraitFrame> — the funeral frame as nested wrappers (AC1)', () =>
   });
 
   it('carries ⛔ no class, ⛔ no <style>, ⛔ no shadow / outline / radius, ⛔ no set:html / innerHTML, ⛔ no matrix call, ⛔ no lang, ⛔ no import', () => {
-    expect(src).not.toMatch(/\bclass(?:List)?=/);
-    expect(src).not.toMatch(/<style[\s>]/);
+    expect(src).not.toMatch(CLASS_ATTR);
+    expect(src).not.toMatch(/<style(?=[\s>/])/i);
     expect(src).not.toMatch(/box-shadow|outline|border-radius/);
     expect(src).not.toMatch(/\bset:html\b|\binnerHTML\b/);
     expect(src).not.toContain('visibilityOf');
@@ -62,8 +65,17 @@ describe('<PortraitFrame> — the funeral frame as nested wrappers (AC1)', () =>
   });
 
   it('uses static style STRINGS only (⛔ never the object form `style={{…}}`, which renders `border:var(…)` without spaces)', () => {
-    expect(src).not.toMatch(/style=\{/);
+    expect(src).not.toMatch(/style\s*=\s*\{/i);
     expect([...template.matchAll(/\sstyle="/g)]).toHaveLength(3);
+  });
+});
+
+describe('<PortraitFrame> — the class guard names every form (positive control)', () => {
+  it('catches `class=` and `class:list=` in any letter case, and ignores `data-class=`', () => {
+    expect(CLASS_ATTR.test('<div class="mt-3">')).toBe(true);
+    expect(CLASS_ATTR.test('<div CLASS="mt-3">')).toBe(true);
+    expect(CLASS_ATTR.test('<div class:list={["mt-3"]}>')).toBe(true);
+    expect(CLASS_ATTR.test('<div data-class="x" style="padding: 6pt;">')).toBe(false);
   });
 });
 

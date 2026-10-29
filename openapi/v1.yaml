@@ -2696,13 +2696,13 @@ components:
             - string
             - "null"
           maxLength: 300
-          pattern: ^https:\/\/t\.me\/
+          pattern: ^https:\/\/t\.me\/\S+$
         whatsappChannelUrl:
           type:
             - string
             - "null"
           maxLength: 300
-          pattern: ^https:\/\/(www\.)?whatsapp\.com\/channel\/
+          pattern: ^https:\/\/(www\.)?whatsapp\.com\/channel\/\S+$
       required:
         - enabled
         - telegramChannelChatId
@@ -2730,13 +2730,13 @@ components:
                 - string
                 - "null"
               maxLength: 300
-              pattern: ^https:\/\/t\.me\/
+              pattern: ^https:\/\/t\.me\/\S+$
             whatsappChannelUrl:
               type:
                 - string
                 - "null"
               maxLength: 300
-              pattern: ^https:\/\/(www\.)?whatsapp\.com\/channel\/
+              pattern: ^https:\/\/(www\.)?whatsapp\.com\/channel\/\S+$
           required:
             - enabled
             - telegramChannelChatId
@@ -2786,6 +2786,26 @@ components:
                   - skipped
                   - attempting
                   - not_attempted
+              reason:
+                anyOf:
+                  - type: string
+                    enum:
+                      - tg_429
+                      - tg_429_expired
+                      - secret_unresolved
+                      - identity_unavailable
+                      - switch_off
+                      - no_chat_id
+                      - bot_not_configured
+                      - stale
+                      - timeout_or_network
+                      - http_5xx
+                      - no_message_id
+                      - stale_lease
+                      - unclassified
+                  - type: string
+                    pattern: ^tg_[0-9]{3}$
+                  - type: "null"
               words:
                 type:
                   - string
@@ -2799,6 +2819,7 @@ components:
               - poolLabel
               - lastDate
               - telegramState
+              - reason
               - words
               - wordsUnavailable
             additionalProperties: false

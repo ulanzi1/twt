@@ -1502,9 +1502,22 @@ export function usePutAnnouncementChannelsConfig(pariwarId: string) {
   });
 }
 
-/** The "Posts" list — pool openings and last days of the last 15 days. */
+/**
+ * The "Posts" list — pool openings and last days of the last 15 days.
+ *
+ * ⭐ EXPLICITLY OPTED OUT OF BACKGROUND REFETCHING (the `useNomineeNameCheck` trap; review G2-P1, `2026-10-29-419` item 6 (a)).
+ * While the switch is on, every fetch DECRYPTS each pool's deceased name (one `decryptDek` + one audit-chain write under the global
+ * lock, per name) and writes an `admin_announcement_channels.posts_read` line. On the client defaults a window focus or a reconnect
+ * re-read it — an audit line nobody performed, and a cost `-418` item 9 accepted only *"per admin page view"*.
+ * ⛔ Do not remove these two flags to "keep the list fresh". Staleness is handled by the invalidation after a config write.
+ */
 export function useAnnouncementPosts(pariwarId: string) {
-  return useQuery({ queryKey: announcementPostsKey(pariwarId), queryFn: () => api.getAnnouncementPosts(pariwarId) });
+  return useQuery({
+    queryKey: announcementPostsKey(pariwarId),
+    queryFn: () => api.getAnnouncementPosts(pariwarId),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 }
 
 // ── Story 7.5 — the fixed-amount schedule surface (FR-15) ──

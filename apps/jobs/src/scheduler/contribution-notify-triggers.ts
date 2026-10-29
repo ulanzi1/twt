@@ -1310,20 +1310,33 @@ export async function runContributionNotifyRecoverySweep(
     cycle_id: string;
     pariwar_id: string;
     notified_members: string;
+    current_state: string;
   }>(
-    `SELECT a.alert_id, a.cycle_id, a.pariwar_id,
+    `SELECT a.alert_id, a.cycle_id, a.pariwar_id, a.current_state,
             (SELECT count(*) FROM idempotency_keys k
               WHERE k.key LIKE 'contribution.notify:' || a.alert_id || ':%:cycle_open') AS notified_members
        FROM alerts a
       WHERE a.current_state = 'live'
+         OR ($2::boolean AND EXISTS (
+           SELECT 1 FROM announcement_channel_posts r
+            WHERE r.pariwar_id = a.pariwar_id AND r.alert_id = a.alert_id
+              AND (r.state = 'deferred' OR (r.state = 'attempting' AND r.updated_at < clock_timestamp() - interval '2 minutes'))
+         ))
       ORDER BY a.cycle_id ASC
       LIMIT $1`,
-    [limit],
+    [limit, deps.enqueueAnnouncementPost !== undefined],
   );
 
   let reEnqueued = 0;
   for (const row of rows) {
     try {
+      // DELIBERATE: this cross-tenant coordinator also scans closed alerts with unfinished channel records.
+      // The channel accessor enforces each row's explicit tenant. Never restart member fan-out for a closed alert.
+      // Re-examine when channel-post recovery gets its own scheduler.
+      if (row.current_state !== undefined && row.current_state !== 'live') {
+        await deps.enqueueAnnouncementPost?.({ kind: 'pool_open_heal', pariwarId: row.pariwar_id, alertId: row.alert_id, cycleId: row.cycle_id });
+        continue;
+      }
       // ⭐ Story 5.8b (FS10 (a), I9) — in the SAME scope, and ONLY when the alert is re-enqueued: the AR-18 signal re-derived by the
       // read `openCycleAlert` makes (the freeze `committed_at`), so a recovered cycle is bridged exactly as its first pass was.
       const { expectedMembers, timeCritical } = await withPariwarScope(deps.pool, row.pariwar_id, async (db: Db) => {

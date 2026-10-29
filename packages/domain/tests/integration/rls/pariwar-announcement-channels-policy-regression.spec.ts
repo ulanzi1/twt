@@ -1,7 +1,8 @@
-// pariwar_announcement_channels — migration 0190 + RLS policy regression (Story 5.14, Task 1; AC1, AC3; `2026-10-29-417` FS1 (a),
-// FS3 (a), FS12 (a)). Positive / negative RLS, the connection-level fail-closed probe, FORCE RLS, ⛔ DELETE for `twt_app` (the row is
-// switched off, never deleted), per-command policies, cross-tenant WITH CHECK, ⭐ `enabled` DEFAULT false (I1), the four CHECKs as
-// written + the pairing CHECK (I7) pinned to the TS patterns, and the accessors: the OFF default with no row, the upsert, the state
+// pariwar_announcement_channels — migration 0190 (+ 0191's re-added link CHECKs) + RLS policy regression (Story 5.14, Task 1; AC1, AC3;
+// `2026-10-29-417` FS1 (a), FS3 (a), FS12 (a)). Positive / negative RLS, the connection-level fail-closed probe, FORCE RLS, ⛔ DELETE
+// for `twt_app` (the row is switched off, never deleted), per-command policies, cross-tenant WITH CHECK, ⭐ `enabled` DEFAULT false
+// (I1), the four CHECKs as written (the two link CHECKs as 0191 re-adds them — review G2-P15: a non-empty, whitespace-free path) + the
+// pairing CHECK (I7) pinned to the TS patterns, and the accessors: the OFF default with no row, the upsert, the state
 // read with the bot's token NAME, and the member-visible links (FS12 (a)) — incl. an explicit-predicate read as the superuser (I6).
 // Live DB only; per-test ROLLBACK (setupLiveDb).
 
@@ -124,6 +125,13 @@ describe.skipIf(!hasDatabase)('the Trust announcement channels config — migrat
       [{ whatsapp_channel_url: 'https://chat.whatsapp.com/abc' }, 'pariwar_announcement_channels_whatsapp_url_check'],
       [{ whatsapp_channel_url: 'whatsapp://channel/abc' }, 'pariwar_announcement_channels_whatsapp_url_check'],
       [{ whatsapp_channel_url: null }, null],
+      // G2-P15 (0191) — a NON-EMPTY path with no whitespace: the bare prefix and an inner space are refused, a real path accepted.
+      [{ telegram_invite_url: 'https://t.me/twt_bihar_notices' }, null],
+      [{ telegram_invite_url: 'https://t.me/' }, 'pariwar_announcement_channels_telegram_url_check'],
+      [{ telegram_invite_url: 'https://t.me/twt bihar' }, 'pariwar_announcement_channels_telegram_url_check'],
+      [{ whatsapp_channel_url: 'https://whatsapp.com/channel/0029VaTwtBihar' }, null],
+      [{ whatsapp_channel_url: 'https://whatsapp.com/channel/' }, 'pariwar_announcement_channels_whatsapp_url_check'],
+      [{ whatsapp_channel_url: 'https://whatsapp.com/channel/0029 Va' }, 'pariwar_announcement_channels_whatsapp_url_check'],
       // I7 — a Telegram link only with a chat id, and a chat id only with a link.
       [{ telegram_invite_url: null, telegram_channel_chat_id: null }, null],
       [{ telegram_invite_url: null }, 'pariwar_announcement_channels_telegram_pairing_check'],

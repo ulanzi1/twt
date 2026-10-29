@@ -144,7 +144,7 @@ function extractRetryAfter(payload: unknown): number | null {
       const parameters = (payload as { parameters: unknown }).parameters;
       if (parameters && typeof parameters === 'object' && 'retry_after' in parameters) {
         const after = (parameters as { retry_after: unknown }).retry_after;
-        if (typeof after === 'number' && Number.isInteger(after) && after > 0) return after;
+        if (typeof after === 'number' && Number.isInteger(after) && after > 0 && after <= 2_147_483_647) return after;
       }
     }
   } catch {
@@ -178,7 +178,7 @@ export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch, optio
   const timeoutMs = options.timeoutMs ?? TELEGRAM_SEND_TIMEOUT_MS;
   // whatsapp-app.ts's bound check: ≤ 2^31 − 1 (Node clamps a longer timer to 1 ms — an instant abort). Checked HERE, at construction,
   // so a bad bound is a startup error — ⛔ a send that may or may not have gone.
-  if (!(typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2_147_483_647)) {
+  if (!(typeof timeoutMs === 'number' && Number.isInteger(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2_147_483_647)) {
     throw new Error('telegram-app: timeoutMs is invalid');
   }
   const timeoutSignal = options.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms));
@@ -218,10 +218,7 @@ export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch, optio
 
             // Telegram signals failure via HTTP non-2xx AND/OR `{ ok: false, error_code }`. Treat either as a
             // rejection.
-            const okFlag =
-              payload && typeof payload === 'object' && 'ok' in payload
-                ? (payload as { ok: unknown }).ok === true
-                : res.ok;
+            const okFlag = payload !== null && typeof payload === 'object' && 'ok' in payload && (payload as { ok: unknown }).ok === true;
             if (!res.ok || !okFlag) {
               throw new TelegramSendError(
                 `telegram send rejected (HTTP ${res.status})`,

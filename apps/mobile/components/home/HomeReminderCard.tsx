@@ -7,6 +7,8 @@
 // ⚠ Code review round 2 (family 13 (c) / (d)) — `dismissDisabled`: while the suggestion's answer is in flight "Not now"
 // is a real DISABLED button (`disabled` + `accessibilityState`, as posting.tsx's "I have been transferred"), ⛔ an
 // enabled control whose press silently does nothing.
+// ⚠ Story 5.14 code review (G3-P3; family 13 (a)) — "Not now" is `accessible={true}`: a tamagui `Button` is a plain RN View, and
+// without it the role, label and disabled state are ⛔ announced (`SahyogVivranEntry.tsx`). Every card on this frame gains it.
 
 import type { ReactNode } from 'react'
 
@@ -44,6 +46,7 @@ export function HomeReminderCard({
           this app session; code review round 2). */}
       <Button
         unstyled
+        accessible={true}
         accessibilityRole="button"
         accessibilityLabel={dismissLabel}
         disabled={dismissDisabled}

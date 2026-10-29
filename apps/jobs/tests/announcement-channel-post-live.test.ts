@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import { createTelegramAppCache } from '@twt/channels';
 import { buildAnnouncementPost } from '@twt/contracts';
-import { announcementChannels, bindScopedDb, claim, encryption, ids, pool as poolDomain, schema } from '@twt/domain';
+import { announcementChannels, bindScopedDb, claim, contribution, encryption, ids, pool as poolDomain, schema } from '@twt/domain';
 import { t } from '@twt/i18n';
 import type { JobEnvelope, QueueClient } from '@twt/queue';
 import pg from 'pg';
@@ -214,8 +214,31 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
 
   it('⭐ AC7 / I4 / I5 — the pool child posts EXACTLY the builder\'s text (the full name, the letter code), records posted + the message id; ⛔ a name in the row', async () => {
     const w = await world();
+    const sentinels: string[] = [];
+    await onOwnTx(pool, w.pid, async (client) => {
+      const db = bindScopedDb(client);
+      for (const [i, status] of ['yellow', 'green', 'red'].entries()) {
+        const mid = ids.memberId(randomUUID());
+        const name = `ContributorPrivacySentinel${String(i)}`;
+        const mobile = `+91987654000${String(i)}`;
+        sentinels.push(name, mobile, status, '987654', '500');
+        await db.insert(schema.members).values({ memberId: mid, pariwarId: ids.pariwarId(w.pid), state: 'active', stateEventVersion: 1 });
+        await db.insert(schema.memberKycProfiles).values({ memberId: mid, pariwarId: ids.pariwarId(w.pid), nameCiphertext: await encryption.encryptKycField(name, w.pid, enc), dobCiphertext: await encryption.encryptKycField('1980-01-01', w.pid, enc), verificationStrength: 'self_declared', source: 'manual' });
+        // Login identities use the fixed identity namespace and member_mobile AAD, as the real signup writer does.
+        const mobileCiphertext = encryption.serializeEnvelope(await encryption.encryptTier1(Buffer.from(mobile, 'utf8'), { pariwarId: '00000000-0000-0000-0000-000000000001', fieldClass: 'member_mobile' }, enc.kms, enc.kekRef));
+        await db.insert(schema.memberIdentities).values({ memberId: mid, pariwarId: ids.pariwarId(w.pid), mobileCiphertext, mobileBlindIndex: randomUUID() });
+        await db.insert(schema.memberPoolAssignments).values({ memberId: mid, pariwarId: ids.pariwarId(w.pid), poolId: ids.poolId(w.poolIds[0]!), cycleId: ids.cycleFreezeCommitId(w.cycleId), assignedAt: new Date() });
+        await contribution.attestContributionUtr(client, { pariwarId: ids.pariwarId(w.pid), alertId: ids.alertId(w.alertId), poolId: ids.poolId(w.poolIds[0]!), memberId: mid, tr: poolDomain.deriveContributionReference({ memberId: mid, alertId: ids.alertId(w.alertId) }), utr: `98765432100${String(i)}`, actorId: mid });
+        if (status !== 'yellow') {
+          await db.insert(schema.eventsLog).values({ streamId: randomUUID(), pariwarId: ids.pariwarId(w.pid), eventType: status === 'green' ? 'contribution.confirmed' : 'contribution.reconciliation-mismatch', eventVersion: 1, payload: { poolId: w.poolIds[0], memberId: mid, amount: 987654 } });
+        }
+        const history = await contribution.listMemberContributionHistory(db, { pariwarId: ids.pariwarId(w.pid), memberId: mid });
+        expect(history.some((row) => row.status === status)).toBe(true);
+      }
+    });
     const h = harness();
     expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toEqual({ kind: 'done', state: 'posted', detail: null });
+    for (const sentinel of sentinels) expect(h.requests[0]!.text).not.toContain(sentinel);
     expect(h.requests).toEqual([{ chatId: CHAT, text: buildAnnouncementPost(t, { occasion: 'pool_open', poolLabel: 'A', deceasedName: NAME }) }]);
     const rows = await rowOf(w.pid, w.poolIds[0]!);
     expect(rows).toEqual([{ state: 'posted', detail: null, telegram_message_id: '4242', claim_token: expect.any(String), attempt_count: 1, pool_label: 'A', last_date: null }]);
@@ -255,6 +278,10 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
     expect(h.sends[0]!.options).toMatchObject({ ...ANNOUNCEMENT_POST_RETRY, startAfter: 7 });
     expect(h.sends[0]!.data.payload).toEqual(poolJob(w).payload);
     expect(JSON.stringify(h.sends[0]!.data)).not.toContain(first!.claim_token);
+    // An early duplicate cannot bypass Telegram's delay.
+    expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toEqual({ kind: 'done', state: 'deferred', detail: 'tg_429' });
+    expect(h.requests).toHaveLength(1);
+    await pool.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1`, [w.pid]);
     // the re-sent job re-claims with a NEW token and posts
     expect(await h.poster.run(h.boss, h.sends[0]!.data, FIRST)).toEqual({ kind: 'done', state: 'posted', detail: null });
     const [second] = await rowOf(w.pid, w.poolIds[0]!);
@@ -464,4 +491,137 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
     expect(h.sends[1]!.data.payload).toEqual({ alertId: w.alertId, cycleId: w.cycleId, occasion: 'last_day', deadlineAtIso: deadlineAt.toISOString() });
     expect(h.sends[1]!.options).toMatchObject(ANNOUNCEMENT_POST_RETRY);
   });
+
+  it('review G1-1 — a failed 429 enqueue throws; recovery heals an existing deferred row', async () => {
+    const w = await world();
+    const h = harness([{ ok: false, status: 429, body: { ok: false, error_code: 429, parameters: { retry_after: 600 } } }, { ok: true, status: 200, body: { ok: true, result: { message_id: 77 } } }]);
+    const broken = { send: vi.fn().mockRejectedValue(new Error('queue unavailable')) } as unknown as Pick<QueueClient, 'send'>;
+    await expect(h.poster.run(broken, poolJob(w), FIRST)).rejects.toThrow('queue unavailable');
+    expect((await rowOf(w.pid, w.poolIds[0]!))[0]!.state).toBe('deferred');
+    expect(await announcementChannels.countPoolOpenPostGaps(pool, { pariwarId: w.pid, cycleId: w.cycleId })).toBe(0);
+    const heal = createAnnouncementPostTrigger(h.boss, pool);
+    await heal({ kind: 'pool_open_heal', pariwarId: w.pid, alertId: w.alertId, cycleId: w.cycleId });
+    expect(h.sends).toHaveLength(1);
+    await h.poster.run(h.boss, h.sends[0]!.data, FIRST);
+    expect(h.requests).toHaveLength(1); // still inside retry_after
+    await pool.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1`, [w.pid]);
+    expect(await h.poster.run(h.boss, h.sends[0]!.data, FIRST)).toMatchObject({ state: 'posted' });
+  });
+
+  it('⭐ review FS-4 (`-419` item 3 (b)) — on a CLOSED alert the heal re-sends ONLY the recoverable row; a never-rowed pool stays row-less (⛔ the gap fan-out)', async () => {
+    const w = await world({ pools: 2 });
+    const h = harness([{ ok: false, status: 429, body: { ok: false, error_code: 429, parameters: { retry_after: 600 } } }]);
+    await h.poster.run(h.boss, poolJob(w, 0), FIRST);
+    expect((await rowOf(w.pid, w.poolIds[0]!))[0]!.state).toBe('deferred');
+    expect(await rowOf(w.pid, w.poolIds[1]!)).toEqual([]);
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL app.alert_state_writer = 'on'");
+      await c.query(`UPDATE alerts SET current_state = 'closed', state_event_version = 4 WHERE pariwar_id = $1 AND alert_id = $2`, [w.pid, w.alertId]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+    h.sends.length = 0; // the 429 re-send above — the heal's sends only
+    const heal = createAnnouncementPostTrigger(h.boss, pool);
+    await heal({ kind: 'pool_open_heal', pariwarId: w.pid, alertId: w.alertId, cycleId: w.cycleId });
+    expect(h.sends.map((s) => s.data.payload)).toEqual([{ occasion: 'pool_open', alertId: w.alertId, cycleId: w.cycleId, poolId: w.poolIds[0] }]);
+    // ⛔ a cycle job: the pool that never had a row keeps none (the admin list still says `not_attempted`)
+    expect(await rowOf(w.pid, w.poolIds[1]!)).toEqual([]);
+  });
+
+  it('review G1-1 — recovery retains a lost last-day retry payload and settles it after the deadline', async () => {
+    const w = await world();
+    const deadline = new Date(Date.now() + 600_000);
+    const h = harness([{ ok: false, status: 429, body: { ok: false, error_code: 429, parameters: { retry_after: 7 } } }]);
+    const payload = { occasion: 'last_day', alertId: w.alertId, cycleId: w.cycleId, deadlineAtIso: deadline.toISOString() } as const;
+    await h.poster.run(h.boss, env(w.pid, payload), FIRST);
+    h.sends.length = 0; // simulate a lost queue job after the deferral was committed
+    const heal = createAnnouncementPostTrigger(h.boss, pool);
+    await heal({ kind: 'pool_open_heal', pariwarId: w.pid, alertId: w.alertId, cycleId: w.cycleId });
+    const retry = h.sends.find((s) => s.data.payload.occasion === 'last_day')!;
+    expect(retry.data.payload).toEqual(payload);
+    const afterDeadline = harness(undefined, { nowMs: () => deadline.getTime() });
+    expect(await afterDeadline.poster.run(afterDeadline.boss, retry.data, FIRST)).toMatchObject({ state: 'refused', detail: 'stale' });
+    expect(afterDeadline.requests).toHaveLength(0);
+    // review FS-5 — the give-up clears the retry delay (a finished row carries no `retry_not_before`)
+    const settled = await pool.query<{ state: string; retry_not_before: Date | null }>(
+      `SELECT state, retry_not_before FROM announcement_channel_posts WHERE pariwar_id = $1 AND subject_id = $2`,
+      [w.pid, w.alertId],
+    );
+    expect(settled.rows).toEqual([{ state: 'refused', retry_not_before: null }]);
+  });
+
+  it('review G1-3 — rejects another tenant alert and unrelated pool/alert/cycle IDs before decrypt', async () => {
+    const a = await world(); const b = await world();
+    const resolveName = vi.fn().mockResolvedValue(NAME);
+    const h = harness(undefined, { resolveDeceasedName: resolveName });
+    const deadlineAtIso = new Date(Date.now() + 600_000).toISOString();
+    expect(await h.poster.run(h.boss, env(a.pid, { occasion: 'last_day', alertId: b.alertId, cycleId: b.cycleId, deadlineAtIso }), FIRST)).toEqual({ kind: 'not_found', what: 'alert' });
+    expect(await h.poster.run(h.boss, env(a.pid, { occasion: 'last_day', alertId: a.alertId, cycleId: b.cycleId, deadlineAtIso }), FIRST)).toEqual({ kind: 'not_found', what: 'alert' });
+    expect(await h.poster.run(h.boss, env(a.pid, { occasion: 'pool_open', alertId: b.alertId, cycleId: a.cycleId }), FIRST)).toEqual({ kind: 'not_found', what: 'alert' });
+    const otherAlert = randomUUID(); const otherCycle = randomUUID();
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN'); await c.query("SET LOCAL app.alert_state_writer = 'on'");
+      await c.query(`INSERT INTO alerts (alert_id, cycle_id, pariwar_id, pool_count, current_state, state_event_version, created_by_actor) VALUES ($1, $2, $3, 1, 'live', 3, 'system')`, [otherAlert, otherCycle, a.pid]);
+      await c.query('COMMIT');
+    } finally { c.release(); }
+    expect(await h.poster.run(h.boss, env(a.pid, { occasion: 'pool_open', alertId: otherAlert, cycleId: otherCycle, poolId: a.poolIds[0]! }), FIRST)).toEqual({ kind: 'not_found', what: 'pool' });
+    expect(h.requests).toHaveLength(0); expect(resolveName).not.toHaveBeenCalled();
+    expect(await rowOf(a.pid, a.poolIds[0]!)).toHaveLength(0);
+    expect(await rowOf(a.pid, b.alertId)).toHaveLength(0);
+  });
+
+  it('review G1-4 — HTTP 200 without explicit ok:true is unknown, never posted or retried', async () => {
+    const w = await world(); const h = harness([{ ok: true, status: 200, body: { result: { message_id: 42 } } }]);
+    expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toMatchObject({ state: 'unknown' });
+    expect(await h.poster.run(h.boss, poolJob(w), FINAL)).toMatchObject({ state: 'unknown' });
+    expect(h.requests).toHaveLength(1);
+  });
+
+  it('review G1-5 — two live connections race initial claims and deferred reclaims: one send, fresh token, stale holder denied', async () => {
+    const w = await world();
+    const record = { pariwarId: w.pid, occasion: 'pool_open', subjectId: w.poolIds[0]!, alertId: w.alertId, poolLabel: 'A', lastDate: null } as const;
+    const send = vi.fn().mockResolvedValue('99');
+    async function race(state: 'deferred' | 'posted') {
+      const clients = await Promise.all([pool.connect(), pool.connect()]);
+      try {
+        const pids = await Promise.all(clients.map((c) => c.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')));
+        expect(pids[0]!.rows[0]!.pid).not.toBe(pids[1]!.rows[0]!.pid);
+        await Promise.all(clients.map((c) => c.query('BEGIN')));
+        const results = await Promise.all(clients.map(async (c) => {
+          const claimToken = randomUUID();
+          const result = await announcementChannels.beginAnnouncementPost(c, { ...record, claimToken });
+          await c.query('COMMIT'); // publish winner while the other connection waits on the unique/row lock
+          if (result.kind === 'begun') {
+            await send();
+            await announcementChannels.finaliseAnnouncementPost(pool, { pariwarId: w.pid, postId: result.postId, claimToken, state, detail: state === 'deferred' ? 'tg_429' : null, ...(state === 'posted' ? { telegramMessageId: '99' } : { retryAfterSeconds: 600 }) });
+          }
+          return { result, claimToken };
+        }));
+        expect(results.filter((r) => r.result.kind === 'begun')).toHaveLength(1);
+        expect(results.filter((r) => r.result.kind === 'taken')).toHaveLength(1);
+        return results.find((r) => r.result.kind === 'begun')!;
+      } finally {
+        for (const c of clients) { await c.query('ROLLBACK'); c.release(); }
+      }
+    }
+    const first = await race('deferred');
+    expect(send).toHaveBeenCalledTimes(1);
+    const early = await pool.connect();
+    try {
+      await early.query('BEGIN');
+      expect(await announcementChannels.beginAnnouncementPost(early, { ...record, claimToken: randomUUID() })).toEqual({ kind: 'taken' });
+      await early.query('COMMIT');
+    } finally { early.release(); }
+    await pool.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1`, [w.pid]);
+    const second = await race('posted');
+    expect(send).toHaveBeenCalledTimes(2); expect(second.claimToken).not.toBe(first.claimToken);
+    if (first.result.kind !== 'begun') throw new Error('missing winner');
+    expect(await announcementChannels.finaliseAnnouncementPost(pool, { pariwarId: w.pid, postId: first.result.postId, claimToken: first.claimToken, state: 'unknown', detail: 'unclassified' })).toBe(false);
+    expect(await rowOf(w.pid, w.poolIds[0]!)).toEqual([expect.objectContaining({ state: 'posted', attempt_count: 2, claim_token: second.claimToken })]);
+  });
+
 });

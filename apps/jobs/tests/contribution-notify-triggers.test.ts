@@ -2459,4 +2459,16 @@ describe('Story 5.14 — the day-14 last-day seam and the recovery heal step', (
     expect(await runContributionNotifyRecoverySweep(d, { send })).toBe(1);
     expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('announcement channel heal failed'));
   });
+  it('review G1-1 — closed alerts with pending posts heal channels without restarting member fan-out', async () => {
+    const seam = vi.fn().mockResolvedValue(undefined);
+    const send = vi.fn();
+    const query = vi.fn().mockResolvedValue({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR, current_state: 'closed', notified_members: '0' }] });
+    const d = recovery(0, seam, [M1, M2], { pool: { query } });
+    expect(await runContributionNotifyRecoverySweep(d, { send })).toBe(0);
+    expect(seam).toHaveBeenCalledWith({ kind: 'pool_open_heal', pariwarId: PARIWAR, alertId: ALERT, cycleId: CYCLE });
+    expect(send).not.toHaveBeenCalled();
+    expect(listCycleBindingCandidates).not.toHaveBeenCalled();
+    expect(query.mock.calls[0]![0]).toContain("r.state = 'deferred'");
+  });
+
 });

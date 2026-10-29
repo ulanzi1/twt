@@ -60,6 +60,8 @@ export interface AnnouncementPostRecord extends AnnouncementPostKey {
   readonly poolLabel: string | null;
   /** `last_day` only — DD-MM-YYYY. */
   readonly lastDate: string | null;
+  /** Original last-day deadline, retained for recovery after a queue enqueue is lost. */
+  readonly deadlineAt?: Date | null;
 }
 
 export type AnnouncementPostLookup =
@@ -72,7 +74,7 @@ export type AnnouncementPostLookup =
     }
   | { readonly kind: 'in_flight'; readonly postId: string }
   | { readonly kind: 'stale'; readonly postId: string }
-  | { readonly kind: 'deferred'; readonly postId: string }
+  | { readonly kind: 'deferred'; readonly postId: string; readonly retryAfterSeconds: number }
   | { readonly kind: 'deferred_expired'; readonly postId: string };
 
 const REFUSED_TG = new RegExp(ANNOUNCEMENT_POST_REFUSED_TG_PATTERN);
@@ -118,10 +120,12 @@ export async function lookupAnnouncementPost(q: Queryable, key: AnnouncementPost
     detail: string | null;
     inside_lease: boolean;
     deferred_fresh: boolean;
+    retry_after_seconds: number;
   }>(
     `SELECT post_id, state, detail,
             updated_at >= clock_timestamp() - ($4::int * interval '1 millisecond') AS inside_lease,
-            updated_at >= clock_timestamp() - ($5::int * interval '1 millisecond') AS deferred_fresh
+            updated_at >= clock_timestamp() - ($5::int * interval '1 millisecond') AS deferred_fresh,
+            greatest(0, ceil(extract(epoch FROM (retry_not_before - clock_timestamp()))))::int AS retry_after_seconds
        FROM announcement_channel_posts
       WHERE pariwar_id = $1 AND occasion = $2 AND subject_id = $3`,
     [key.pariwarId, key.occasion, key.subjectId, ANNOUNCEMENT_POST_LEASE_MS, ANNOUNCEMENT_POST_DEFERRED_MAX_AGE_MS],
@@ -130,7 +134,7 @@ export async function lookupAnnouncementPost(q: Queryable, key: AnnouncementPost
   if (r === undefined) return { kind: 'none' };
   switch (r.state) {
     case 'deferred':
-      return r.deferred_fresh ? { kind: 'deferred', postId: r.post_id } : { kind: 'deferred_expired', postId: r.post_id };
+      return r.deferred_fresh ? { kind: 'deferred', postId: r.post_id, retryAfterSeconds: r.retry_after_seconds } : { kind: 'deferred_expired', postId: r.post_id };
     case 'attempting':
       return r.inside_lease ? { kind: 'in_flight', postId: r.post_id } : { kind: 'stale', postId: r.post_id };
     default:
@@ -168,11 +172,11 @@ export async function beginAnnouncementPost(
 ): Promise<BeginAnnouncementPostResult> {
   assertRecord(input);
   const inserted = await q.query<{ post_id: string; attempt_count: number }>(
-    `INSERT INTO announcement_channel_posts (pariwar_id, occasion, subject_id, alert_id, pool_label, last_date, state, claim_token)
-     VALUES ($1, $2, $3, $4, $5, $6, 'attempting', $7)
+    `INSERT INTO announcement_channel_posts (pariwar_id, occasion, subject_id, alert_id, pool_label, last_date, state, claim_token, deadline_at)
+     VALUES ($1, $2, $3, $4, $5, $6, 'attempting', $7, $8)
      ON CONFLICT (pariwar_id, occasion, subject_id) DO NOTHING
      RETURNING post_id, attempt_count`,
-    [input.pariwarId, input.occasion, input.subjectId, input.alertId, input.poolLabel, input.lastDate, input.claimToken],
+    [input.pariwarId, input.occasion, input.subjectId, input.alertId, input.poolLabel, input.lastDate, input.claimToken, input.deadlineAt ?? null],
   );
   const fresh = inserted.rows[0];
   if (fresh !== undefined) return { kind: 'begun', postId: fresh.post_id, attemptCount: fresh.attempt_count };
@@ -184,9 +188,10 @@ export async function beginAnnouncementPost(
   );
   const reclaimed = await q.query<{ post_id: string; attempt_count: number }>(
     `UPDATE announcement_channel_posts
-        SET state = 'attempting', detail = NULL, claim_token = $4, attempt_count = attempt_count + 1, updated_at = clock_timestamp()
+        SET state = 'attempting', detail = NULL, claim_token = $4, attempt_count = attempt_count + 1, updated_at = clock_timestamp(), retry_not_before = NULL
       WHERE pariwar_id = $1 AND occasion = $2 AND subject_id = $3 AND state = 'deferred'
         AND updated_at >= clock_timestamp() - ($5::int * interval '1 millisecond')
+        AND (retry_not_before IS NULL OR retry_not_before <= clock_timestamp())
       RETURNING post_id, attempt_count`,
     [input.pariwarId, input.occasion, input.subjectId, input.claimToken, ANNOUNCEMENT_POST_DEFERRED_MAX_AGE_MS],
   );
@@ -210,16 +215,22 @@ export async function finaliseAnnouncementPost(
     readonly state: AnnouncementPostOutcome;
     readonly detail: string | null;
     readonly telegramMessageId?: string | null;
+    readonly retryAfterSeconds?: number;
   },
 ): Promise<boolean> {
   assertDetail(input.state, input.detail);
   if (input.state === 'posted' && !input.telegramMessageId) throw new Error('finaliseAnnouncementPost: posted needs the Telegram message_id');
   if (input.state !== 'posted' && input.telegramMessageId) throw new Error('finaliseAnnouncementPost: only a posted row carries a message_id');
+  const retryAfter = input.retryAfterSeconds ?? 30;
+  if (input.state === 'deferred' && !(Number.isInteger(retryAfter) && retryAfter >= 1 && retryAfter <= 2_147_483_647)) {
+    throw new Error('finaliseAnnouncementPost: deferred needs a valid retry delay');
+  }
   const { rowCount } = await q.query(
     `UPDATE announcement_channel_posts
-        SET state = $4, detail = $5, telegram_message_id = $6, updated_at = clock_timestamp()
+        SET state = $4, detail = $5, telegram_message_id = $6, updated_at = clock_timestamp(),
+            retry_not_before = CASE WHEN $4 = 'deferred' THEN clock_timestamp() + ($7::int * interval '1 second') ELSE NULL END
       WHERE pariwar_id = $1 AND post_id = $2 AND state = 'attempting' AND claim_token = $3`,
-    [input.pariwarId, input.postId, input.claimToken, input.state, input.detail, input.telegramMessageId ?? null],
+    [input.pariwarId, input.postId, input.claimToken, input.state, input.detail, input.telegramMessageId ?? null, retryAfter],
   );
   return (rowCount ?? 0) > 0;
 }
@@ -241,7 +252,7 @@ export async function giveUpDeferredAnnouncementPost(
     );
   }
   const { rowCount } = await q.query(
-    `UPDATE announcement_channel_posts SET state = 'refused', detail = $3, updated_at = clock_timestamp()
+    `UPDATE announcement_channel_posts SET state = 'refused', detail = $3, retry_not_before = NULL, updated_at = clock_timestamp()
       WHERE pariwar_id = $1 AND post_id = $2 AND state = 'deferred'
       ${input.onlyIfExpired ? "AND updated_at < clock_timestamp() - ($4::int * interval '1 millisecond')" : ''}`,
     [input.pariwarId, input.postId, input.detail, ...(input.onlyIfExpired ? [ANNOUNCEMENT_POST_DEFERRED_MAX_AGE_MS] : [])],

@@ -1,6 +1,7 @@
 // Story 5.14 (Task 2; AC2, AC3, AC4, AC7) — the Trust's announcement channels contract: the post builder through the REAL `t()` (a
-// devDependency — F17), the name-mode pin to `2026-10-29-416`, the DTO refinements equal to migration 0190's CHECKs (and the patterns
-// pinned to the domain constants — a TEST-only cross-package import, so `pg` never reaches the mobile bundle), and the moved
+// devDependency — F17), the name-mode pin to `2026-10-29-416`, the DTO refinements equal to migrations 0190 / 0191's CHECKs (and the
+// patterns and the post `reason` vocabulary pinned to the domain constants — a TEST-only cross-package import, so `pg` never reaches
+// the mobile bundle), and the moved
 // `operationalDate` / new `cycleDeadlineAt` (one date for the day-14 reminder, the last-day post and the admin list). Fixtures are
 // hand-built ([[project_contracts_tests_outside_tsc]]).
 
@@ -11,12 +12,15 @@ import { describe, expect, it } from 'vitest';
 import {
   ANNOUNCEMENT_CHANNEL_URL_MAX_LENGTH,
   ANNOUNCEMENT_POST_KEYS,
+  ANNOUNCEMENT_POST_REASON_CODES,
+  ANNOUNCEMENT_POST_TG_REASON_REGEX,
   ANNOUNCEMENT_POST_NAME_MODE,
   ANNOUNCEMENT_TELEGRAM_CHAT_ID_REGEX,
   ANNOUNCEMENT_TELEGRAM_INVITE_URL_REGEX,
   ANNOUNCEMENT_WHATSAPP_CHANNEL_URL_REGEX,
   AnnouncementChannelsConfigDto,
   AnnouncementChannelsMemberResponse,
+  AnnouncementPostReason,
   AnnouncementPostsResponse,
   CYCLE_WINDOW_DAYS,
   buildAnnouncementPost,
@@ -124,6 +128,36 @@ describe('Story 5.14 — the DTOs (AC2, AC3)', () => {
     expect(ANNOUNCEMENT_CHANNEL_URL_MAX_LENGTH).toBe(schema.ANNOUNCEMENT_CHANNEL_URL_MAX_LENGTH);
   });
 
+  it('⭐ G2-P15 — a link needs a NON-EMPTY path with no whitespace (⛔ a bare https://t.me/ or …/channel/, ⛔ an inner space)', () => {
+    for (const [regex, ok, bad] of [
+      [ANNOUNCEMENT_TELEGRAM_INVITE_URL_REGEX, ['https://t.me/twt_bihar_notices', 'https://t.me/+AbCdEf123'], ['https://t.me/', 'https://t.me/twt bihar', 'https://t.me/x\ty']],
+      [
+        ANNOUNCEMENT_WHATSAPP_CHANNEL_URL_REGEX,
+        ['https://whatsapp.com/channel/0029Va', 'https://www.whatsapp.com/channel/0029Va'],
+        ['https://whatsapp.com/channel/', 'https://whatsapp.com/channel/0029 Va'],
+      ],
+    ] as const) {
+      for (const u of ok) expect(regex.test(u), u).toBe(true);
+      for (const u of bad) expect(regex.test(u), u).toBe(false);
+    }
+    expect(AnnouncementChannelsConfigDto.safeParse({ ...base, telegramInviteUrl: 'https://t.me/' }).success).toBe(false);
+    expect(AnnouncementChannelsConfigDto.safeParse({ ...base, whatsappChannelUrl: 'https://whatsapp.com/channel/' }).success).toBe(false);
+  });
+
+  it('⭐ LOCKSTEP — the reason vocabulary equals the domain `detail` vocabulary (`-418` §3; ⛔ a mint — `-419` §3)', () => {
+    const domain = new Set<string>([
+      ...schema.ANNOUNCEMENT_POST_DEFERRED_DETAILS,
+      ...schema.ANNOUNCEMENT_POST_REFUSED_DETAILS,
+      ...schema.ANNOUNCEMENT_POST_SKIPPED_DETAILS,
+      ...schema.ANNOUNCEMENT_POST_UNKNOWN_DETAILS,
+    ]);
+    expect([...ANNOUNCEMENT_POST_REASON_CODES].sort()).toEqual([...domain].sort());
+    expect(ANNOUNCEMENT_POST_TG_REASON_REGEX.source).toBe(new RegExp(schema.ANNOUNCEMENT_POST_REFUSED_TG_PATTERN).source);
+    expect(AnnouncementPostReason.safeParse('tg_403').success).toBe(true);
+    expect(AnnouncementPostReason.safeParse('tg_40').success).toBe(false);
+    expect(AnnouncementPostReason.safeParse('Ramesh Kumar Sharma').success).toBe(false);
+  });
+
   it('the config accepts the CHECKs\' accept cases and a blank field as "not set"', () => {
     expect(AnnouncementChannelsConfigDto.parse(base)).toEqual(base);
     expect(AnnouncementChannelsConfigDto.parse({ ...base, telegramChannelChatId: '-1001234567890' }).telegramChannelChatId).toBe('-1001234567890');
@@ -160,10 +194,16 @@ describe('Story 5.14 — the DTOs (AC2, AC3)', () => {
       poolLabel: 'A',
       lastDate: null,
       telegramState: 'not_attempted',
+      reason: null,
       words: null,
       wordsUnavailable: false,
     };
     expect(AnnouncementPostsResponse.safeParse({ enabled: false, posts: [entry] }).success).toBe(true);
+    expect(AnnouncementPostsResponse.safeParse({ enabled: false, posts: [{ ...entry, telegramState: 'refused', reason: 'secret_unresolved' }] }).success).toBe(true);
+    expect(AnnouncementPostsResponse.safeParse({ enabled: false, posts: [{ ...entry, reason: 'the name was Ramesh' }] }).success).toBe(false);
+    const withoutReason: Record<string, unknown> = { ...entry };
+    delete withoutReason['reason'];
+    expect(AnnouncementPostsResponse.safeParse({ enabled: false, posts: [withoutReason] }).success).toBe(false);
     expect(AnnouncementPostsResponse.safeParse({ enabled: false, posts: [{ ...entry, memberName: 'x' }] }).success).toBe(false);
     expect(AnnouncementPostsResponse.safeParse({ enabled: false, posts: [{ ...entry, telegramState: 'delivered' }] }).success).toBe(false);
   });

@@ -74,6 +74,10 @@ export const announcementChannelPosts = pgTable(
     poolLabel: text('pool_label'),
     /** `last_day` only — the cycle's last date, DD-MM-YYYY (the day-14 reminder's `date` — AC4). */
     lastDate: text('last_date'),
+    /** Last-day payload snapshot for recovery; never a name or post text. */
+    deadlineAt: timestamp('deadline_at', { withTimezone: true, mode: 'date' }),
+    /** Persisted Telegram rate-limit boundary, enforced by every deferred claim. */
+    retryNotBefore: timestamp('retry_not_before', { withTimezone: true, mode: 'date' }),
     state: text('state').notNull().$type<AnnouncementPostState>(),
     detail: text('detail'),
     /** `${job.id}:${retryCount}` of the attempt that holds the row — ⛔ ever on a job payload (T15). */
@@ -85,7 +89,7 @@ export const announcementChannelPosts = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().default(sql`clock_timestamp()`),
   },
   (t) => [
-    foreignKey({ name: 'announcement_channel_posts_alert_id_fk', columns: [t.alertId], foreignColumns: [alerts.alertId] }),
+    foreignKey({ name: 'announcement_channel_posts_alert_id_fk', columns: [t.pariwarId, t.alertId], foreignColumns: [alerts.pariwarId, alerts.alertId] }),
     uniqueIndex('announcement_channel_posts_pariwar_occasion_subject_uq').on(t.pariwarId, t.occasion, t.subjectId),
     index('announcement_channel_posts_pariwar_alert_idx').on(t.pariwarId, t.alertId),
     check('announcement_channel_posts_occasion_check', sql`${t.occasion} IN ('pool_open', 'last_day')`),

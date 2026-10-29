@@ -264,3 +264,14 @@ describe('createTelegramAppCache — the request timeout and retry_after (Story 
     await expect(createTelegramAppCache(noId).messagingFor('p', config).send(message)).rejects.toMatchObject({ telegramCode: null, httpStatus: 200, retryAfter: null });
   });
 });
+
+
+describe('Story 5.14 review — strict Telegram acceptance and timeout validation', () => {
+  it.each([undefined, false, 'true', 1])('requires explicit boolean ok:true, got %s', async (ok) => {
+    const fetchImpl: FetchLike = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...(ok === undefined ? {} : { ok }), result: { message_id: 42 } }) });
+    await expect(createTelegramAppCache(fetchImpl).messagingFor('p', { botToken: '123:abc' }).send({ chatId: '@test_chat', text: 'x' })).rejects.toMatchObject({ httpStatus: 200 });
+  });
+  it('rejects fractional timeouts at construction, before any send', () => {
+    expect(() => createTelegramAppCache(undefined, { timeoutMs: 1.5 })).toThrow(/timeoutMs is invalid/);
+  });
+});

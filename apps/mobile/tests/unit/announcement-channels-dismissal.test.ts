@@ -1,12 +1,15 @@
 // Story 5.14 (Task 7; AC8; `2026-10-29-417` FS10 (a)) — the announcement card's dismissal: ONCE per device per member, ⛔ expiry, its
 // own module (⛔ the 6.36c store, which prunes after 30 days), cleared on sign-out. The query's key and cache policy (FS11 (a), `-418`
-// item 10) and its account-change clear are pinned here too.
+// item 10) and its account-change clear are pinned here too; the SessionProvider's own `signOut` is EXECUTED in
+// `announcement-channels-signout.test.ts` (G3-P9), the foreground / focus refetch in `announcement-channels-refetch.test.ts` (G3-P2).
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 vi.mock('../../lib/member-api', () => ({ memberAuth: {} }))
 vi.mock('../../lib/session-context', () => ({ useSession: () => ({ session: null }) }))
+vi.mock('react-native', () => ({ AppState: { addEventListener: () => ({ remove: () => undefined }) } }))
+vi.mock('expo-router', () => ({ useFocusEffect: () => undefined }))
 
 import {
   ANNOUNCEMENT_CHANNELS_CACHE_OPTIONS,
@@ -55,7 +58,7 @@ describe('the announcement card dismissal (FS10 (a))', () => {
 })
 
 describe('the member read\'s key and cache policy (FS11 (a), `-418` item 10)', () => {
-  it('⭐ `{ gcTime: 0, staleTime: 0 }` — ⛔ persisted to MMKV, refetched at each mount', () => {
+  it('⭐ `{ gcTime: 0, staleTime: 0 }` — ⛔ persisted to MMKV, refetched at each mount (and on foreground / focus — `-419` item 5)', () => {
     expect(ANNOUNCEMENT_CHANNELS_CACHE_OPTIONS).toEqual({ gcTime: 0, staleTime: 0 })
   })
 

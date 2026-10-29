@@ -8,7 +8,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AnnouncementChannelsConfigDto } from '@twt/contracts';
 import type { AnnouncementChannelsConfigDto as AnnouncementChannelsConfig } from '@twt/contracts';
-import type { ReactElement } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import { useForm } from 'react-hook-form';
 
 /** AC2 — the switch's on-label, verbatim. */
@@ -31,8 +31,30 @@ export function AnnouncementChannelsForm({ initial, onSubmit, pending, submitErr
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    getValues,
+    formState: { errors, isDirty },
   } = useForm<AnnouncementChannelsConfig>({ resolver: zodResolver(AnnouncementChannelsConfigDto), defaultValues: initial });
+
+  // Review G2-P16 — `defaultValues` are read once, so fresh server data (a refetch, another admin's save) never reached the form and a
+  // stale `enabled` was re-saved. Re-sync whenever the server's config changes — but ⛔ over an edit in progress (`isDirty`), unless the
+  // form, PARSED as the server parses it, already equals the server's config: this form's own save coming back. A save does ⛔ clear
+  // `isDirty` by itself — the `reset` here does. Review FS-2: the comparison is on the parsed DTO (`AnnouncementChannelsConfigDto` trims
+  // and blanks-to-null), ⛔ the raw inputs, or a save that trimmed a field would leave the form dirty — and the re-sync dead — for good.
+  // Who-saved-last concurrency is deferred (G2-W1).
+  const { enabled, telegramChannelChatId, telegramInviteUrl, whatsappChannelUrl } = initial;
+  useEffect(() => {
+    const server = { enabled, telegramChannelChatId, telegramInviteUrl, whatsappChannelUrl };
+    const parsed = AnnouncementChannelsConfigDto.safeParse(getValues());
+    const same =
+      parsed.success &&
+      parsed.data.enabled === server.enabled &&
+      parsed.data.telegramChannelChatId === server.telegramChannelChatId &&
+      parsed.data.telegramInviteUrl === server.telegramInviteUrl &&
+      parsed.data.whatsappChannelUrl === server.whatsappChannelUrl;
+    if (isDirty && !same) return;
+    reset(server);
+  }, [enabled, telegramChannelChatId, telegramInviteUrl, whatsappChannelUrl, isDirty, getValues, reset]);
 
   const submit = handleSubmit((values) => onSubmit(values));
 

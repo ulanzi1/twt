@@ -2,7 +2,8 @@
 //
 // Directly after the Telegram opt-in entry on home, shown ONLY while at least one link is returned (the channels on, a link set — I7);
 // it stays whatever the home card's dismissal (FS10 (a)). Chromeless, low-prominence — the `NotificationSettingsEntry` style: following
-// a channel is a member choice, framed neutrally, never nagged. It opens the screen with the same words.
+// a channel is a member choice, framed neutrally, never nagged. It opens the screen with the same words. ⚠ Code review G3-P4 — hidden on
+// `isError` too: a FAILED refetch keeps TanStack's old `data`, which may be a link since switched off.
 
 import { useT } from '@twt/i18n/react'
 import { useRouter } from 'expo-router'
@@ -14,7 +15,7 @@ export function AnnouncementChannelsEntry(): React.ReactElement | null {
   const t = useT()
   const router = useRouter()
   const q = useAnnouncementChannelsQuery()
-  if (announcementBodyKey(q.data) === null) return null
+  if (q.isError || announcementBodyKey(q.data) === null) return null
   return (
     <YStack px="$6" py="$3">
       <Button

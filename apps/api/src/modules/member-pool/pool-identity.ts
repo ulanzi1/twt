@@ -87,13 +87,21 @@ function requestLogSink(request: FastifyRequest): notifications.PoolIdentityLogS
  * deceased-member KYC name at the member-session layer (D11 — NOT the admin path). Returns `null` when
  * the claim / KYC profile / name is unresolvable.
  *
+ * ⚠ ONE ADMIN CALLER, CROSSING D11 CONSCIOUSLY (Story 5.14, `2026-10-29-417` FS15; `-418` item 9): the
+ * announcement-channels "Posts" list (`announcement-channels/handlers.ts`) rebuilds the pool-open words
+ * here for a `pariwar.configure_channels` holder, under its own savepoint per row and ONE audit line per
+ * GET. Re-examine that crossing (and this note) when a SECOND admin caller appears, when the post's name
+ * mode stops being the constant `'full_name'`, or when the admin list starts to persist or export words.
+ *
  * NOTE the differing consequence per consumer: the card and the passbook treat `null` as "omit"
  * (fail-soft); the Contribution Note treats it as a 404, because a Note with a blank family name is a
  * DEFECTIVE ARTIFACT rather than a shortened list (Story 8.7 D6). The resolver reports absence the
  * same way to all three; the caller decides what absence means.
  *
- * @param mode the Pariwar's presentation mode from
- *   {@link resolvePoolNamePresentationModeForRequest}, read ONCE by the caller (Story 8.16 AC2).
+ * @param mode the name form to resolve — for the member surfaces, the Pariwar's presentation mode from
+ *   {@link resolvePoolNamePresentationModeForRequest}, read ONCE by the caller (Story 8.16 AC2); for the
+ *   announcement-channels admin list, the post's own constant `ANNOUNCEMENT_POST_NAME_MODE` (`'full_name'`,
+ *   `2026-10-29-416`), PASSED, ⛔ the presentation-mode read.
  */
 export async function resolvePoolIdentity(
   deps: AppDeps,

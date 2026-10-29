@@ -36,10 +36,10 @@ describe('⛔ a `[t]` dependency in the files this story adds (T6)', () => {
     'components/notifications/AnnouncementChannelsEntry.tsx',
     'app/(settings)/announcement-channels.tsx',
     'components/announcement-channels/ChannelLinkButtons.tsx',
+    'components/announcement-channels/ChannelLinkError.tsx',
   ])('%s', (file) => {
-    for (const deps of raw(file).matchAll(/\],?\s*\[([^\]]*)\]\s*\)/g)) {
-      expect(deps[1]!.split(',').map((d) => d.trim()), `${file}: [${deps[1]}]`).not.toContain('t')
-    }
+    // Code review G3-P8 — the old `[t]`-deps regex loop matched ⛔ dependency array (it needed a `]` before the `[`): dead, so dropped.
+    // This ban is the real pin — ⛔ memo, callback or effect at all, so ⛔ one can list `t`.
     expect(raw(file)).not.toMatch(/useCallback|useMemo|useEffect/) // nothing memoised over `t`
   })
 })

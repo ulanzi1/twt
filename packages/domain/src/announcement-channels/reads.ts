@@ -104,6 +104,22 @@ export async function countPoolOpenPostGaps(
   return Number(rows[0]?.n ?? 0);
 }
 
+/** Durable recovery source for a lost 429 enqueue or a crash-left claim, including closed alerts. */
+export async function listRecoverableAnnouncementPosts(
+  q: Queryable,
+  input: { readonly pariwarId: string; readonly alertId: string },
+): Promise<{ readonly postId: string; readonly occasion: AnnouncementPostOccasion; readonly subjectId: string; readonly deadlineAt: Date | null }[]> {
+  const { rows } = await q.query<{ post_id: string; occasion: AnnouncementPostOccasion; subject_id: string; deadline_at: Date | null }>(
+    `SELECT post_id, occasion, subject_id, deadline_at FROM announcement_channel_posts
+      WHERE pariwar_id = $1 AND alert_id = $2
+        AND (state = 'deferred' OR (state = 'attempting' AND updated_at < clock_timestamp() - ($3::int * interval '1 millisecond')))
+      ORDER BY created_at, post_id
+      LIMIT $4`,
+    [input.pariwarId, input.alertId, ANNOUNCEMENT_POST_LEASE_MS, CYCLE_POOLS_CAP + 1],
+  );
+  return rows.map((r) => ({ postId: r.post_id, occasion: r.occasion, subjectId: r.subject_id, deadlineAt: r.deadline_at }));
+}
+
 /** One post row as the admin list reads it (states only — ⛔ a name, ⛔ text: there are none). */
 export interface AnnouncementPostView {
   readonly occasion: AnnouncementPostOccasion;
@@ -125,7 +141,10 @@ export interface AnnouncementActivityCycle {
   readonly committedAt: Date;
   readonly alertLive: boolean;
   readonly pools: readonly AnnouncementCyclePool[];
-  /** The cycle's pool count (= `pools.length` unless a defect hit the cap). */
+  /**
+   * The cycle's pool count, COUNTED IN SQL (review G2-P8) — ⛔ `pools.length`, which the per-cycle cap can truncate. It is the curated-name
+   * `reserveNames` count (`PoolIdentityInput.poolCount`), so it must equal the job's (`getAnnouncementPool`'s count) or a label could differ.
+   */
   readonly poolCount: number;
   readonly posts: readonly AnnouncementPostView[];
 }
@@ -136,15 +155,20 @@ export const ANNOUNCEMENT_POSTS_LIST_WINDOW_DAYS = 15;
 /**
  * FS4 (a) / FS15 (a) / AC2 — the cycles whose pool openings or last day can fall in the list's window: frozen within the last
  * {@link ANNOUNCEMENT_POSTS_LIST_WINDOW_DAYS} + `cycleWindowDays` days (a cycle frozen earlier had its last day before the window), newest
- * first, at most `limit` cycles (`clampLimit` — family (a)). Which entries show is the API's (pure) decision over this read.
+ * first, at most `limit` cycles, each with at most {@link CYCLE_POOLS_CAP} pools. Which entries show is the API's (pure) decision over
+ * this read.
+ * ⚠ BOUNDED BY HAND (review G2-P8): these are raw-SQL `LIMIT`s, which the `domain-accessor-invariants` gate (family (a)) ⛔ sees — it
+ * scans Drizzle `.limit(…)` calls only. `clampLimit` here clamps the input; the gate does not check that it reaches the SQL.
  */
 export async function listAnnouncementActivity(
   q: Queryable,
   input: { readonly pariwarId: string; readonly now: Date; readonly cycleWindowDays: number; readonly limit?: number },
 ): Promise<AnnouncementActivityCycle[]> {
   const limit = clampLimit(input.limit, { default: 20, cap: 50 });
-  const alerts = await q.query<{ alert_id: string; cycle_id: string; current_state: string; committed_at: Date }>(
-    `SELECT a.alert_id, a.cycle_id, a.current_state, c.committed_at
+  // The pool count is counted here, per cycle (G2-P8), so a capped pool list never changes the curated-name index.
+  const alerts = await q.query<{ alert_id: string; cycle_id: string; current_state: string; committed_at: Date; pool_count: string }>(
+    `SELECT a.alert_id, a.cycle_id, a.current_state, c.committed_at,
+            (SELECT count(*) FROM pools n WHERE n.pariwar_id = $1 AND n.cycle_id = a.cycle_id) AS pool_count
        FROM alerts a
        JOIN cycle_freeze_commits c ON c.commit_id = a.cycle_id AND c.pariwar_id = a.pariwar_id
       WHERE a.pariwar_id = $1
@@ -156,13 +180,20 @@ export async function listAnnouncementActivity(
   if (alerts.rows.length === 0) return [];
   const cycleIds = alerts.rows.map((r) => r.cycle_id);
   const alertIds = alerts.rows.map((r) => r.alert_id);
+  // The cap is PER CYCLE (a LATERAL `LIMIT`), so a defect in one cycle can never crowd another cycle's pools out of the list (G2-P8 —
+  // the cross-cycle `LIMIT cap × limit` truncated in cycle-UUID order).
   const pools = await q.query<PoolRow & { cycle_id: string }>(
-    `SELECT pool_id, claim_case_id, pool_index, pool_canonical_identifier, fixed_amount, cycle_id
-       FROM pools
-      WHERE pariwar_id = $1 AND cycle_id = ANY($2::uuid[])
-      ORDER BY cycle_id, pool_index ASC, pool_id ASC
-      LIMIT $3`,
-    [input.pariwarId, cycleIds, CYCLE_POOLS_CAP * limit],
+    `SELECT p.pool_id, p.claim_case_id, p.pool_index, p.pool_canonical_identifier, p.fixed_amount, p.cycle_id
+       FROM unnest($2::uuid[]) AS k(cycle_id)
+       CROSS JOIN LATERAL (
+         SELECT pool_id, claim_case_id, pool_index, pool_canonical_identifier, fixed_amount, cycle_id
+           FROM pools
+          WHERE pariwar_id = $1 AND cycle_id = k.cycle_id
+          ORDER BY pool_index ASC, pool_id ASC
+          LIMIT $3
+       ) p
+      ORDER BY p.cycle_id, p.pool_index ASC, p.pool_id ASC`,
+    [input.pariwarId, cycleIds, CYCLE_POOLS_CAP],
   );
   const posts = await q.query<{
     alert_id: string;
@@ -190,7 +221,7 @@ export async function listAnnouncementActivity(
       committedAt: a.committed_at,
       alertLive: a.current_state === 'live',
       pools: cyclePools,
-      poolCount: cyclePools.length,
+      poolCount: Number(a.pool_count),
       posts: posts.rows
         .filter((p) => p.alert_id === a.alert_id)
         .map((p) => ({

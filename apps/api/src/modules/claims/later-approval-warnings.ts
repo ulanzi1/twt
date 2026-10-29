@@ -177,6 +177,10 @@ const SAVEPOINT_NAME_RE = /^[a-z_][a-z0-9_]*$/i;
  * because every current call site is read-only and sits BEFORE the surrounding scope tx's `closeScopeTx`. A future
  * caller that wraps a read-then-write in the same scope tx under this helper would need re-examination: a silently
  * aborted transaction here could make that later write fail with a confusing `25P02` instead of the real cause.
+ * ⚠ Story 5.14 code review G2-P2 (2026-10-29): a read that SWALLOWS its own SQL error (e.g. `resolveCuratedPoolName`'s
+ * catch-all) returns normally on an ABORTED transaction, so its RELEASE fails 25P02. That failure is now answered by
+ * `ROLLBACK TO SAVEPOINT` (+ RELEASE), which makes the scope tx usable again — before, the tx stayed aborted and every
+ * LATER savepoint in the request failed. The read's value is still returned (P22's rule, unchanged).
  */
 export async function underSavepoint<T>(
   client: { query(text: string): Promise<unknown> },
@@ -195,6 +199,13 @@ export async function underSavepoint<T>(
       await client.query(`RELEASE SAVEPOINT ${name}`);
     } catch (releaseErr) {
       console.warn(`[later-approval-warnings] RELEASE SAVEPOINT ${name} failed after a successful read:`, releaseErr);
+      // G2-P2 — the read swallowed a SQL error and left the tx aborted: roll back to the savepoint so LATER statements run.
+      try {
+        await client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+        await client.query(`RELEASE SAVEPOINT ${name}`);
+      } catch (rollbackErr) {
+        console.warn(`[later-approval-warnings] ROLLBACK TO SAVEPOINT ${name} failed after a failed RELEASE:`, rollbackErr);
+      }
     }
     return value;
   } catch (err) {

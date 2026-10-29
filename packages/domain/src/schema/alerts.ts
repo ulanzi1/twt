@@ -136,6 +136,8 @@ export const alerts = pgTable(
     // Per-tenant alert scans / RLS-aware planner hint (pariwar_id leads, mirroring
     // pools_pariwar_id_idx). Point lookups use the alert_id PK.
     index('alerts_pariwar_id_idx').on(t.pariwarId),
+    // Announcement post references include their tenant, including on the BYPASSRLS jobs path.
+    uniqueIndex('alerts_pariwar_alert_uq').on(t.pariwarId, t.alertId),
     // The ONE-ALERT-PER-CYCLE invariant (AC2). alert_id = deriveAlertId(cycle_id) is
     // 1:1 with the cycle, but this UNIQUE index is the DB-level backstop: a second
     // alert for an already-minted cycle (a non-deterministic-id bug) hits this index

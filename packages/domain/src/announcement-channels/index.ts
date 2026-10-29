@@ -36,6 +36,7 @@ export {
   getAnnouncementPool,
   listAnnouncementActivity,
   listCyclePoolsForAnnouncement,
+  listRecoverableAnnouncementPosts,
   type AnnouncementActivityCycle,
   type AnnouncementCyclePool,
   type AnnouncementPostView,

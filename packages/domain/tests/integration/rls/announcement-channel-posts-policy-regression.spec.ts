@@ -169,8 +169,8 @@ describe.skipIf(!hasDatabase)('the Trust channel post record — migration 0190 
 
   it('⭐ EXACT column grants (INSERT, UPDATE); table-level SELECT only', async () => {
     const { client } = getTx();
-    expect(await grantedColumns(client, 'INSERT')).toEqual(['alert_id', 'claim_token', 'last_date', 'occasion', 'pariwar_id', 'pool_label', 'state', 'subject_id']);
-    expect(await grantedColumns(client, 'UPDATE')).toEqual(['attempt_count', 'claim_token', 'detail', 'state', 'telegram_message_id', 'updated_at']);
+    expect(await grantedColumns(client, 'INSERT')).toEqual(['alert_id', 'claim_token', 'deadline_at', 'last_date', 'occasion', 'pariwar_id', 'pool_label', 'state', 'subject_id']);
+    expect(await grantedColumns(client, 'UPDATE')).toEqual(['attempt_count', 'claim_token', 'detail', 'retry_not_before', 'state', 'telegram_message_id', 'updated_at']);
     const { rows } = await client.query<{ privilege_type: string }>(
       `SELECT privilege_type FROM information_schema.table_privileges WHERE table_name = $1 AND grantee = 'twt_app' ORDER BY privilege_type`,
       [TABLE],
@@ -190,12 +190,19 @@ describe.skipIf(!hasDatabase)('the Trust channel post record — migration 0190 
       [TABLE],
     );
     expect(rows.map((r) => r.column_name)).toEqual(
-      ['alert_id', 'attempt_count', 'claim_token', 'created_at', 'detail', 'last_date', 'occasion', 'pariwar_id', 'pool_label', 'post_id', 'state', 'subject_id', 'telegram_message_id', 'updated_at'],
+      ['alert_id', 'attempt_count', 'claim_token', 'created_at', 'deadline_at', 'detail', 'last_date', 'occasion', 'pariwar_id', 'pool_label', 'post_id', 'retry_not_before', 'state', 'subject_id', 'telegram_message_id', 'updated_at'],
     );
     // The two free-ish text columns are bounded so neither can carry a post (a bilingual post is ~300 characters — T11).
     const s = await seedPost(client, PARIWAR_A);
     await expectPgError(client, () => insertRow(client, { ...validRow(s), occasion: 'pool_open', subject_id: randomUUID(), last_date: null, pool_label: 'x'.repeat(101) }), CHECK('announcement_channel_posts_pool_label_check'));
     await expectPgError(client, () => insertRow(client, { ...validRow(s), last_date: 'Today, 13-11-2026' }), CHECK('announcement_channel_posts_last_date_check'));
+  });
+
+  it('review G1-3 — the alert FK also rejects another tenant alert as the BYPASSRLS role', async () => {
+    const { client } = getTx();
+    const a = await seedPost(client, PARIWAR_A);
+    const b = await seedPost(client, PARIWAR_B);
+    await expectPgError(client, () => insertRow(client, { ...validRow(a), alert_id: b.alertId, subject_id: b.alertId }), { code: '23503', constraint: 'announcement_channel_posts_alert_id_fk' });
   });
 
   it('the alert FK — an unknown alert is refused (23503)', async () => {
@@ -352,7 +359,9 @@ describe.skipIf(!hasDatabase)('the Trust channel post record — migration 0190 
       expect(await beginAnnouncementPost(client, { ...rec, claimToken: 'other:0' })).toEqual({ kind: 'taken' });
       expect(await finaliseAnnouncementPost(client, { pariwarId: PARIWAR_A, postId: begun.postId, claimToken: 'other:0', state: 'refused', detail: 'tg_400' })).toBe(false);
       expect(await finaliseAnnouncementPost(client, { pariwarId: PARIWAR_A, postId: begun.postId, claimToken: 'job:0', state: 'deferred', detail: 'tg_429' })).toBe(true);
-      expect(await lookupAnnouncementPost(client, rec)).toEqual({ kind: 'deferred', postId: begun.postId });
+      expect(await lookupAnnouncementPost(client, rec)).toMatchObject({ kind: 'deferred', postId: begun.postId, retryAfterSeconds: expect.any(Number) });
+      expect(await beginAnnouncementPost(client, { ...rec, claimToken: 'early:0' })).toEqual({ kind: 'taken' });
+      await client.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1 AND post_id = $2`, [PARIWAR_A, begun.postId]);
       const again = await beginAnnouncementPost(client, { ...rec, claimToken: 'job:1' });
       expect(again).toEqual({ kind: 'begun', postId: begun.postId, attemptCount: 2 });
       // T15 — the OLD token's holder (a pg-boss redelivery of the first attempt) cannot finalise the re-claimed row.
@@ -396,7 +405,9 @@ describe.skipIf(!hasDatabase)('the Trust channel post record — migration 0190 
       if (begun.kind !== 'begun') throw new Error('unreachable');
       await finaliseAnnouncementPost(client, { pariwarId: PARIWAR_A, postId: begun.postId, claimToken: 'job:0', state: 'deferred', detail: 'tg_429' });
       await client.query(`UPDATE ${TABLE} SET updated_at = clock_timestamp() - interval '29 minutes' WHERE post_id = $1`, [begun.postId]);
-      expect(await lookupAnnouncementPost(client, rec)).toEqual({ kind: 'deferred', postId: begun.postId });
+      expect(await lookupAnnouncementPost(client, rec)).toMatchObject({ kind: 'deferred', postId: begun.postId, retryAfterSeconds: expect.any(Number) });
+      expect(await beginAnnouncementPost(client, { ...rec, claimToken: 'early:0' })).toEqual({ kind: 'taken' });
+      await client.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1 AND post_id = $2`, [PARIWAR_A, begun.postId]);
       await client.query(`UPDATE ${TABLE} SET updated_at = clock_timestamp() - interval '31 minutes' WHERE post_id = $1`, [begun.postId]);
       expect(await lookupAnnouncementPost(client, rec)).toEqual({ kind: 'deferred_expired', postId: begun.postId });
       expect(await beginAnnouncementPost(client, { ...rec, claimToken: 'job:1' })).toEqual({ kind: 'taken' });

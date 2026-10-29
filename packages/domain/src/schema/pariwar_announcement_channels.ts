@@ -20,10 +20,16 @@ import type { PariwarId, UserId } from '../ids/index.js';
  * 2^31 (T9). ⚠ LOCKSTEP with `pariwar_announcement_channels_chat_id_check` (0190) and the contract's PUT refinement.
  */
 export const ANNOUNCEMENT_TELEGRAM_CHAT_ID_PATTERN = '^(@[A-Za-z][A-Za-z0-9_]{4,31}|-100[0-9]{1,16})$';
-/** ⚠ LOCKSTEP with `pariwar_announcement_channels_telegram_url_check` (0190). `https://` only — ⛔ `tg://` (F11). */
-export const ANNOUNCEMENT_TELEGRAM_INVITE_URL_PATTERN = '^https://t\\.me/';
-/** ⚠ LOCKSTEP with `pariwar_announcement_channels_whatsapp_url_check` (0190) — the observed invite form (F12; Meta publishes no spec). */
-export const ANNOUNCEMENT_WHATSAPP_CHANNEL_URL_PATTERN = '^https://(www\\.)?whatsapp\\.com/channel/';
+/**
+ * ⚠ LOCKSTEP with `pariwar_announcement_channels_telegram_url_check` (0190, re-added by 0191). `https://` only — ⛔ `tg://` (F11); a
+ * NON-EMPTY path with no whitespace (review G2-P15 — ⛔ a bare `https://t.me/`).
+ */
+export const ANNOUNCEMENT_TELEGRAM_INVITE_URL_PATTERN = '^https://t\\.me/\\S+$';
+/**
+ * ⚠ LOCKSTEP with `pariwar_announcement_channels_whatsapp_url_check` (0190, re-added by 0191) — the observed invite form (F12; Meta
+ * publishes no spec), with a non-empty, whitespace-free path (G2-P15).
+ */
+export const ANNOUNCEMENT_WHATSAPP_CHANNEL_URL_PATTERN = '^https://(www\\.)?whatsapp\\.com/channel/\\S+$';
 /** ⚠ LOCKSTEP with `pariwar_announcement_channels_url_length_check` (0190). */
 export const ANNOUNCEMENT_CHANNEL_URL_MAX_LENGTH = 300;
 

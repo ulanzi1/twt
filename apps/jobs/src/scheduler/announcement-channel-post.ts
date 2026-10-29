@@ -181,8 +181,10 @@ export function enqueueAnnouncementLastDay(
 
 /**
  * Build the contribution-notify triggers' seam (AC5 (ii), (iv)): a last day sends the last-day job; a heal re-sends the cycle job only
- * when the cycle's pools LACK a `pool_open` row (the cycle's pool ids minus their rows — explicit `pariwar_id`). A re-send is harmless
- * (the UNIQUE).
+ * when the cycle's pools LACK a `pool_open` row (the cycle's pool ids minus their rows — explicit `pariwar_id`) AND the alert is still
+ * `live`. A re-send is harmless (the UNIQUE). Review FS-4 (`-419` item 3 (b)): for an alert that is ⛔ `live` the heal re-sends ONLY the
+ * recoverable rows (`deferred`, or `attempting` past its lease) — ⛔ the gap fan-out, which would write `skipped:stale` rows for pools
+ * that never had one and so erase the admin list's `not_attempted` signal.
  */
 export function createAnnouncementPostTrigger(boss: Send, pool: pg.Pool): (input: AnnouncementPostTrigger) => Promise<void> {
   return async (input) => {
@@ -196,8 +198,27 @@ export function createAnnouncementPostTrigger(boss: Send, pool: pg.Pool): (input
       await enqueueAnnouncementLastDay(boss, ctx, input);
       return;
     }
-    const gaps = await channels.countPoolOpenPostGaps(pool, { pariwarId: input.pariwarId, cycleId: input.cycleId });
-    if (gaps > 0) await enqueueAnnouncementCycle(boss, ctx, input);
+    // The alert's state is read HERE (explicit `pariwar_id`), ⛔ trusted from the caller: the sweep may have seen it a moment earlier.
+    const alert = await channels.getAnnouncementAlert(pool, { pariwarId: input.pariwarId, alertId: input.alertId });
+    if (alert?.live === true) {
+      const gaps = await channels.countPoolOpenPostGaps(pool, { pariwarId: input.pariwarId, cycleId: input.cycleId });
+      if (gaps > 0) await enqueueAnnouncementCycle(boss, ctx, input);
+    }
+    // A row is durable even if a process crashes before its retry is queued. Recover it independently of gaps.
+    const pending = await channels.listRecoverableAnnouncementPosts(pool, { pariwarId: input.pariwarId, alertId: input.alertId });
+    for (const post of pending) {
+      if (post.occasion === 'pool_open') {
+        await sendPostJob(boss, ctx, { occasion: 'pool_open', alertId: input.alertId, cycleId: input.cycleId, poolId: post.subjectId });
+      } else if (post.deadlineAt !== null) {
+        await enqueueAnnouncementLastDay(boss, ctx, { alertId: input.alertId, cycleId: input.cycleId, deadlineAt: post.deadlineAt });
+      } else {
+        // Pre-review rows have no deadline snapshot. Never invent a new deadline or send an ambiguous notice.
+        await inTx(pool, async (c) => {
+          await channels.finaliseStaleAnnouncementPost(c, { pariwarId: input.pariwarId, postId: post.postId });
+          await channels.giveUpDeferredAnnouncementPost(c, { pariwarId: input.pariwarId, postId: post.postId, detail: 'stale' });
+        });
+      }
+    }
   };
 }
 
@@ -267,6 +288,8 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
   };
 
   async function runCycle(boss: Send, envelope: JobEnvelope<AnnouncementPostPayload>, pariwarId: string, p: AnnouncementCyclePayload): Promise<AnnouncementPostRunResult> {
+    const alert = await channels.getAnnouncementAlert(deps.pool, { pariwarId, alertId: p.alertId });
+    if (alert === null || alert.cycleId !== p.cycleId) return { kind: 'not_found', what: 'alert' };
     const pools = await channels.listCyclePoolsForAnnouncement(deps.pool, { pariwarId, cycleId: p.cycleId });
     for (const [i, pool] of pools.entries()) {
       await sendPostJob(
@@ -313,17 +336,23 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
     }
     const deferredId = found.kind === 'deferred' ? found.postId : null;
 
+    // All IDs must belong to this tenant AND the same cycle before a name is read or a row is claimed.
+    const alert = await channels.getAnnouncementAlert(deps.pool, { pariwarId, alertId: p.alertId });
+    if (alert === null || alert.cycleId !== p.cycleId) {
+      alarmOnce(pariwarId, 'defect', `${where}: alert/cycle does not belong to this Pariwar — nothing posted`);
+      return { kind: 'not_found', what: 'alert' };
+    }
+
     // ── 2. What the row records (FS15 (a) — ⛔ a decrypt here) and what the post is about ──
     let record: channels.AnnouncementPostRecord;
     let stale: boolean;
     let poolForName: { readonly pool: channels.AnnouncementCyclePool; readonly poolCount: number } | null = null;
     if (p.occasion === 'pool_open') {
       const pool = await channels.getAnnouncementPool(deps.pool, { pariwarId, poolId: p.poolId });
-      const alert = await channels.getAnnouncementAlert(deps.pool, { pariwarId, alertId: p.alertId });
-      if (pool === null || alert === null) {
+      if (pool === null || pool.cycleId !== alert.cycleId) {
         // A defect (the payload names a pool or alert this Pariwar does not hold) — ⛔ a row can name it.
-        alarmOnce(pariwarId, 'defect', `${where}: no such ${pool === null ? 'pool' : 'alert'} in this Pariwar — nothing posted`);
-        return { kind: 'not_found', what: pool === null ? 'pool' : 'alert' };
+        alarmOnce(pariwarId, 'defect', `${where}: pool is not in this alert's cycle — nothing posted`);
+        return { kind: 'not_found', what: 'pool' };
       }
       const poolLabel = await withPariwarScope(deps.pool, pariwarId, async (db: Db) =>
         (await notifications.resolveCuratedPoolName(db, ids.pariwarId(pariwarId), pool.poolCount, pool.poolIndex)) ?? poolDomain.poolLetterCode(pool.poolIndex),
@@ -333,7 +362,7 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
       poolForName = { pool, poolCount: pool.poolCount };
     } else {
       const deadlineAt = new Date(p.deadlineAtIso);
-      record = { ...key, alertId: p.alertId, poolLabel: null, lastDate: operationalDate(deadlineAt) };
+      record = { ...key, alertId: p.alertId, poolLabel: null, lastDate: operationalDate(deadlineAt), deadlineAt };
       // `-418` item 2 — stale only AT or AFTER the deadline itself.
       stale = !(Number.isFinite(deadlineAt.getTime()) && nowMs() < deadlineAt.getTime());
     }
@@ -366,6 +395,11 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
             ? 'stale'
             : null;
     if (skip !== null || chatId === null) return notAttempted('skipped', skip ?? 'no_chat_id');
+
+    if (found.kind === 'deferred' && found.retryAfterSeconds > 0) {
+      await sendPostJob(boss, { ...envelope, pariwarId }, p, found.retryAfterSeconds);
+      return { kind: 'done', state: 'deferred', detail: 'tg_429' };
+    }
 
     // ── 4. The bot's token, resolved BEFORE the claim (FS7 (a)): a throw is TRANSIENT until the final attempt ──
     let handle: TelegramMessagingHandle;
@@ -413,21 +447,22 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
     }
 
     // ── 7. The Bot API call — NOTHING held (T8); its 9 s timeout bounds it (FS7) ──
-    const finalise = (st: channels.AnnouncementPostOutcome, detail: string | null, telegramMessageId?: string) =>
-      channels.finaliseAnnouncementPost(deps.pool, { pariwarId, postId: begun.postId, claimToken, state: st, detail, ...(telegramMessageId ? { telegramMessageId } : {}) });
+    const finalise = (st: channels.AnnouncementPostOutcome, detail: string | null, telegramMessageId?: string, retryAfterSeconds?: number) =>
+      channels.finaliseAnnouncementPost(deps.pool, { pariwarId, postId: begun.postId, claimToken, state: st, detail, ...(telegramMessageId ? { telegramMessageId } : {}), ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}) });
     let messageId: string;
     try {
       messageId = await handle.send({ chatId, text });
     } catch (err) {
       if (err instanceof TelegramSendError && err.telegramCode === 429) {
         // DEFINITELY not posted ⇒ `deferred`, and the job re-sends ITSELF after `retry_after` (the re-claim rotates the token — T15).
-        const ok = await finalise('deferred', 'tg_429');
-        if (!ok) alarmOnce(pariwarId, 'lost_claim', `${where}: the 429 could not be recorded (the row moved on)`);
         const after = err.retryAfter ?? ANNOUNCEMENT_DEFAULT_RETRY_AFTER_SECONDS;
+        const ok = await finalise('deferred', 'tg_429', undefined, after);
+        if (!ok) alarmOnce(pariwarId, 'lost_claim', `${where}: the 429 could not be recorded (the row moved on)`);
         try {
           await sendPostJob(boss, { ...envelope, pariwarId }, p, after);
         } catch (sendErr) {
-          alarmOnce(pariwarId, 'resend', `${where}: the 429 re-send failed — the post stays deferred and will be given up (${String(sendErr)})`);
+          alarmOnce(pariwarId, 'resend', `${where}: the 429 re-send failed — pg-boss and the recovery sweep retry the deferred row (${String(sendErr)})`);
+          throw sendErr;
         }
         return { kind: 'done', state: 'deferred', detail: 'tg_429' };
       }

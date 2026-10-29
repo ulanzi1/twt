@@ -35,7 +35,7 @@ the 11b.4 / 11b.4a story files, the decision log, or the code's behaviour instea
 
 # Story 11b.5: Memorial Visual Components — MemorialRecord + PortraitFrame + KinshipLattice `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -209,7 +209,7 @@ here. MV3 (a) declines that reserved slot as **our** choice (author-commit), on 
 ground *by analogy* (a package for a component with no logic). Story 11b.4a's Trap 16 adds the mechanical hazard: `@twt/ui`'s
 `main` is TypeScript source, so adding it also needs `vite.ssr.noExternal`, or only the **built** image crashes. ⇒ Under MV3 (a)
 this story adds ⛔ no `@twt/ui` dependency; the fence comment is **appended to**, INSIDE its `/* … */` (a line outside it is CSS),
-with a dated line: *"11b.5 was a named consumer and did ⛔ not take `@twt/ui` (`-NNN` MV3); the remaining named consumers are
+with a dated line: *"11b.5 was a named consumer and did ⛔ not take `@twt/ui` (`-420` MV3); the remaining named consumers are
 11b.2 / 11b.7"* — ⛔ never edited or removed. **→ Task 4.1, AC10.**
 
 ### Trap 7 — ⚠ Changing a token value is a change to `theme.css` and `rootTokenCss()` — and ⛔ never a new `space` token
@@ -235,7 +235,7 @@ must stay green unchanged. **→ AC6.**
 ## ⚖️ Build decisions MV1–MV6 (PROPOSED — for BigDev at Task 0.2; to be recorded as `-NNN` — `-420` at `8dd3e623` — at Task 1.1)
 
 ### MV1 — Where `<MemorialRecord>` is built
-⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV1 (a).** To be recorded in decision `-NNN` (Task 1.1).
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV1 (a).** Recorded in decision `2026-10-29-420` (Task 1.1, commit `06e10fbd`).
 ⭐ **(a) Not in this story — Story 11b.6 builds it, with its first real consumer.** `FamilyMemorial.astro` stays the Sahyog
 Vivran memorial section (it is ⛔ not renamed).
 **Why:** every input that distinguishes a "memorial record" from the section that exists — the deceased's name in a tier form,
@@ -258,7 +258,7 @@ it cannot use it). **(c)** build `<MemorialRecord>` now with `name` / `dates` / 
 fields with no producer and no ruling; the first story to fill them would inherit an unruled shape).
 
 ### MV2 — Where `<KinshipLattice>` is built, and who asks the Panel
-⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV2 (a).** To be recorded in decision `-NNN` (Task 1.1).
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV2 (a).** Recorded in decision `2026-10-29-420` (Task 1.1, commit `06e10fbd`).
 ⭐ **(a) A new row, `11b-5a-kinship-capture-and-lattice` (`backlog`), owns kinship end to end** — the capture in the family's
 authoring flow, the Trust's review of it, the public render, and the **Panel question on its purpose**, written from the
 template **at that row's own Task 0** (its create-story must carry this as a Task, ⛔ not a note). This story mints the row
@@ -287,7 +287,7 @@ be ruled publishable; the prototype already shows the look). **(d)** drop kinshi
 but ⛔ not by default in a component story).
 
 ### MV3 — The shape: an Astro component, ⛔ no `@twt/ui` presenter, ⛔ no `@twt/ui` dependency in `apps/public`
-⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV3 (a).** To be recorded in decision `-NNN` (Task 1.1).
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV3 (a).** Recorded in decision `2026-10-29-420` (Task 1.1, commit `06e10fbd`).
 ⭐ **(a) `<PortraitFrame>` is an Astro render layer at `apps/public/src/components/PortraitFrame.astro`**, taking `{ src: string;
 alt: string }`. The shared layer across stacks is the **token** (MV4), ⛔ not a presenter. ⚠ This **supersedes in part `-154`
 cl.6** (author-commit, *"Stories 11b.2 / 11b.5 / 11b.7 author as presenters + Astro render layers"*) **for 11b.5 only**; its
@@ -311,7 +311,7 @@ home for *"stateless visual … units; no TWT-specific data-shape knowledge"* �
 premature with one built consumer).
 
 ### MV4 — The frame's geometry: refactor, ⛔ not redesign
-⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV4 (a).** To be recorded in decision `-NNN` (Task 1.1).
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV4 (a).** Recorded in decision `2026-10-29-420` (Task 1.1, commit `06e10fbd`).
 ⭐ **(a) Keep exactly what renders today — a 2 px `ink-primary` border, a 6 pt inset, a 4:5 box, `max-width: 20rem`, the image
 `object-fit: contain` — and source the BORDER from its token:** `border['border-funeral-frame']` corrected from its placeholder
 `4px` to `2px` (UX spec :1174: *"`border-funeral-frame` — composition: 2px outer ink-primary + 6pt cream inset + image"*; §11:
@@ -334,7 +334,7 @@ Rejected — **(b)** adopt the UX's 1:1 default (the pipeline makes no square cr
 title would all move).
 
 ### MV5 — The memorial section's inert classes (Trap 4)
-⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV5 (a) — spacing only, ⛔ no card.** To be recorded in decision `-NNN` (Task 1.1).
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV5 (a) — spacing only, ⛔ no card.** Recorded in decision `2026-10-29-420` (Task 1.1, commit `06e10fbd`).
 ⭐ **(a) Replace every utility class in `FamilyMemorial.astro` with SPACING ONLY, as static inline `style` strings holding token
 variables — ⛔ no box border, ⛔ no radius, ⛔ no padding.** The section `margin: var(--space-block) 0 0`; the figure and each
 paragraph `margin: var(--space-row) 0 0` (the exact strings are in Dev Notes § *The exact markup*). ⛔ **Not the card 11b.4a's
@@ -368,7 +368,7 @@ too (⚠ a reasonable choice if BigDev wants the focus ring now — it widens th
 test; if chosen, Task 3.4 runs and AC4 widens to the page).
 
 ### MV6 — The family's own preview screen in the app
-⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV6 (b).** To be recorded in decision `-NNN` (Task 1.1).
+⭐ **ANSWERED 2026-10-29 — BigDev: *"MV1-MV6 as recommended"* ⇒ MV6 (b).** Recorded in decision `2026-10-29-420` (Task 1.1, commit `06e10fbd`).
 ⭐ **(b) Not in this story.** The app's preview (`preview.tsx`) and kept-photo view (`MemorialKeptPhoto.tsx`) keep their plain
 `<Image>`; the RN frame waits for its own trigger.
 **Why:** an RN frame needs `ink-primary` in the mobile theme, and `apps/mobile` does not depend on `@twt/tokens` —
@@ -388,14 +388,14 @@ precedent (fires the D6(c) trigger; a fourth drawing of the frame).
 ### AC0 — Governance before code
 **Given** BigDev's answers to MV1–MV6 (Task 0.2)
 **When** the story starts
-**Then** decision `<commit-date>-NNN` (`-420` at `8dd3e623`; the next free id at time of use — STOP 5) is committed **alone**, as
+**Then** decision `2026-10-29-420` (committed `06e10fbd`; the next free id at time of use — STOP 5) is committed **alone**, as
 an **author-commit** recording MV1–MV6 as answered, with the `-154` cl.6 supersession named (MV3 (a)), MV3's declining of the
 fence's reserved slot stated as **our** choice (Trap 6 — ⛔ never as `-219` cl.5's), and ⛔ no Panel question
-**And** `-NNN` also records that it **re-homes** `-391`'s Not-covered line *"relationships (kinship rows) … their collection is
+**And** `-420` also records that it **re-homes** `-391`'s Not-covered line *"relationships (kinship rows) … their collection is
 still Story 11b.4a/11b.5's to plan"* to row `11b-5a` (MV2 (a)) — a pointer, ⛔ not an edit of `-391`
 **And** a separate records commit adds, each as a dated line, with ⛔ no word above it edited:
-  (i) under `-154`: *"cl.6 superseded in part for 11b.5 by `-NNN` MV3 — both the presenter shape and `apps/public` adding `@twt/ui`"*;
-  (ii) under `-391`: its kinship Not-covered line re-homed to row `11b-5a` by `-NNN`;
+  (i) under `-154`: *"cl.6 superseded in part for 11b.5 by `-420` MV3 — both the presenter shape and `apps/public` adding `@twt/ui`"*;
+  (ii) under `-391`: its kinship Not-covered line re-homed to row `11b-5a` by `-420`;
   (iii) `epics.md` `### Story 11b.5`: frame built here; `<MemorialRecord>` → 11b.6 (MV1); `<KinshipLattice>` → 11b-5a (MV2), with
   the annotation that 11b-5a is ⛔ not in the epic's story list (the 11b-2a precedent);
   (iv) `epics.md` `### Story 11b.6`: the AC7 content — and, if MV2 (a), the **STOP** line of MV2 (row 11b-5a created first);
@@ -584,8 +584,8 @@ the production build succeeds.
 
 Each code Task ends with **Done when** — the named test(s), each shown RED against a mutant first.
 
-- [ ] **Task 0 — Re-verify and get answers (AC0)**
-  - [ ] 0.1 `git fetch origin`; `git merge-base HEAD origin/main`; `git diff --stat 282bdd33..origin/main -- packages apps scripts friction-budget.md`;
+- [x] **Task 0 — Re-verify and get answers (AC0)**
+  - [x] 0.1 `git fetch origin`; `git merge-base HEAD origin/main`; `git diff --stat 282bdd33..origin/main -- packages apps scripts friction-budget.md`;
     rebase onto `origin/main` if it moved past `8dd3e623` and re-pin `baseline_commit` (⭐ the 2026-10-29 rebase onto `8dd3e623` is
     DONE, with `-29b` → `-29r`; a later rebase re-checks ledger letters the same way). Re-take the NUMBERS across
     every branch and worktree. Check STOP 1–7. Lettered checks: (a) `FamilyMemorial.astro` matches the "What already EXISTS" row; (b) `border-funeral-frame` has
@@ -599,12 +599,12 @@ Each code Task ends with **Done when** — the named test(s), each shown RED aga
     (j) `scripts/friction-budget/lib.ts` `MEMBER_FACING_PREFIXES` still includes `'apps/public/'` (Task 4.3).
   - [x] 0.2 Put MV1–MV6 to BigDev (Questions below); append BigDev's answers verbatim, dated, under each MV and in the Questions list.
 
-- [ ] **Task 1 — Governance and records (AC0, AC7, AC8, AC10, AC12)**
-  - [ ] 1.1 Re-take the next free id; commit decision `-NNN` (author-commit, MV1–MV6 as answered; §0: no Panel question — G5/G6
+- [x] **Task 1 — Governance and records (AC0, AC7, AC8, AC10, AC12)**
+  - [x] 1.1 Re-take the next free id; commit decision `-NNN` (author-commit, MV1–MV6 as answered; §0: no Panel question — G5/G6
     routed, ⛔ not asked; MV3 supersedes `-154` cl.6 in part and declines the fence's reserved slot as **our** choice, Trap 6; the
     re-homing of `-391`'s kinship Not-covered line to row `11b-5a`, AC0) **alone**
     ([[feedback_governance_commits_precede_implementation]]). Substitute the committed id for every `-NNN` in this file.
-  - [ ] 1.2 Records commit — every item of AC0 (i)–(vi), one by one:
+  - [x] 1.2 Records commit — every item of AC0 (i)–(vi), one by one:
     (i) dated pointer under `-154`; (ii) dated pointer under `-391`; (iii) `epics.md` `### Story 11b.5` dated note + the 11b-5a
     annotation (if MV2 (a)); (iv) `epics.md` `### Story 11b.6` dated note carrying AC7's content (the three rulings incl. `-416` §2,
     the three-way `<MemorialRecord>` disagreement, the FR-78 no-dates gap and the `school` / `designation` RBAC-not-display point) and
@@ -687,7 +687,7 @@ the source pins read the markup). Under MV5 (a′) the section's string becomes
 
 ```astro
 ---
-// <PortraitFrame> — the Trust's one funeral frame around a family's approved photo (Story 11b.5; `-NNN` MV3 / MV4; `-412` MP1).
+// <PortraitFrame> — the Trust's one funeral frame around a family's approved photo (Story 11b.5; `-420` MV3 / MV4; `-412` MP1).
 // ⭐ UX §FuneralFrame: nested wrappers div → div → img, "the pattern, not a typed atom"; ⛔ never box-shadow / outline (Trap 8).
 // ⭐ The border is the `border-funeral-frame` token; the 6pt inset, the 4:5 box and the 20rem cap are component constants (MV4 —
 // ⛔ no fifth `space` token). ⭐ Dumb: it asks the matrix ⛔ nothing — the caller gates and passes `alt` as approved ('' = left out).
@@ -822,7 +822,36 @@ Token values at the pin (all emitted by `rootTokenCss()`): `--space-block` 16px 
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, 2026-10-29.
+
 ### Debug Log References
+
+**Task 0.1 (2026-10-29).** `git fetch origin`: `origin/main` = `8dd3e623` = the merge-base ⇒ ⛔ no rebase, the pin holds.
+`git diff --stat 282bdd33..origin/main -- packages apps scripts friction-budget.md`: 156 files, ⛔ none under `apps/public`,
+`packages/tokens` or `scripts/sahyog-vivran-financial-truth`. NUMBERS: newest decision on every branch, remote and worktree is
+`-419` (the 12-1 / 13-2 worktrees stop at `-410`) ⇒ `-420` free; migration ⛔ none; ledger `-29r` / `-29s` are this branch's.
+STOP 1 ⛔ (no diff to `FamilyMemorial.astro`, `family-memorial.ts` or `apps/public/tests` since `282bdd33`) · STOP 2 ⛔ (no
+`@twt/ui` / Tailwind in `apps/public/package.json`; ⛔ no `integrations` in `astro.config.mjs`) · STOP 3 ⛔ (`11b-6` `backlog`;
+⛔ no kinship hit under `packages/*/src`, `apps/*/src`, `apps/api`, `packages/db` outside the prototype) · STOP 4 ⛔ (the only
+`funeral-frame` hits are `packages/tokens` README / tests / `theme.css` / `tokens.ts`) · STOP 5 ⛔ (`-420` free) · STOP 6 ⛔ (⛔ no
+seed / SQL pins `niy.public-disclosure.member-information`) · STOP 7 ⛔ (the two `friction-budget.md` hits since `282bdd33` are
+5.14-diff CONTEXT lines naming 11b.4 / 11b.4a's existing rows, ⛔ no new disposition).
+Lettered: (a) `FamilyMemorial.astro` 56 lines, matches the EXISTS row (`:35` section, `:39–49` frame, `:53` paragraph) · (b) as
+STOP 4 · (c) as STOP 2 · (d) the fence sentence is at `sahyog.astro:917–919` inside the `<style>`'s `/* … */` · (e) 11b.4a items
+(6), (9), (10) and 11b.4 items (2), (12) read as quoted (11b.4 item (2)'s *"⛔ collected"* is the upstream inverted glyph) · (f)
+`11b-6` `backlog` · (g) the four doc-blocks are at `FamilyMemorial.astro:3, :14`, `sahyog-vivran-render.ts:30`,
+`[driveToken].astro:29`, `sahyog.astro:919` · (h) ⭐ **Trap 4 by BUILD:** `pnpm install` then `pnpm --filter @twt/public build`
+(green); `dist/client/_astro/` holds `404.Di3u6_f9.css`, `500.yfgavWxQ.css`, `PublicShell.C1W1Gejf.css`, `members.DSZt5KAg.css`,
+`niyamavali.pEmzBKYS.css`, `sahyog.ZQSea18r.css`, `terms.X3o2hw_Y.css` — **0** rules matching `.mt-6` / `.rounded` / `.text-sm`
+/ `.list-none` in each, and ⛔ none for `.mt-N`, `.p-N`, `.border`, `.font-semibold`, `.text-lg` ⇒ Trap 4 and MV5 hold;
+`page-weight.json` `/sahyog-vivran/[driveToken]` `own_bytes: 0` · (i) `check.ts:140` registers `FamilyMemorial.astro` by hand ·
+(j) `lib.ts:453` `MEMBER_FACING_PREFIXES = ['apps/mobile/', 'apps/public/']`.
+
+**Task 1 (2026-10-29).** `-420` inserted above `-419` (31 / 0, byte-equal to the scratchpad draft, every anchor resolving),
+committed alone. A glyph scan of the new text then found three ⛔ with no negator in `-420` (*"⛔ a ruling's"*, *"⛔ a validated
+one"*, *"(⛔ border, ⛔ radius, ⛔ padding"*) ⇒ fixed by `--fixup` + `rebase -i --autosquash` before any record cited the SHA:
+governance commit `06e10fbd` (still `-420` alone, 31 / 0). ⚠ The first `-154` pointer insert landed inside `-153` (`-154` has ⛔ no
+`---` before `-153` begins) — caught on the diff and moved to the end of `-154` before commit.
 
 ### Completion Notes List
 

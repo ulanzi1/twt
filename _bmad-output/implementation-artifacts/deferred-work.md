@@ -4,6 +4,38 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md (2026-10-29)
+
+Story 11b.5 lifts the family memorial's funeral frame into `<PortraitFrame>` (an Astro component, its border from the
+`border-funeral-frame` token, corrected 4px → 2px) and gives the memorial section spacing in place of its inert utility classes —
+build decisions [`-420`](../../.decision-log.md#decision-2026-10-29-420) (MV1–MV6). `<MemorialRecord>` → Story 11b.6 (MV1);
+`<KinshipLattice>` → row `11b-5a-kinship-capture-and-lattice` (MV2). ⛔ Nothing is live: launch-gate Row 41 stays open.
+
+- **(1) The page-wide inert utility classes on `apps/public/src/pages/sahyog-vivran/[driveToken].astro`.** `apps/public` has ⛔ no
+  Tailwind pipeline (confirmed 2026-10-29 by building and reading the emitted CSS — ⛔ no rule for `.mt-6`, `.rounded`, `.text-sm`,
+  `.list-none`), so every `class=` on the page renders nothing — including Story 11b.12's stage explainer, whose marker reset and
+  focus ring its own comment calls *"BOTH REQUIRED, ⛔ neither is decoration"*: any visible focus there is the browser's default
+  only. 11b.5 fixed the memorial section alone (MV5 (a)). ⚠ The classes describe a CARD on every section
+  (`rounded border border-gray-300 p-4`), against the UX's *"Ruled rhythm over cards"* (`ux-design-specification.md` :505) ⇒ the
+  fix must choose cards or ruled rhythm for the WHOLE page at once, ⛔ never section by section. **Trigger: Story 11b.8's accessibility
+  audit, or the next story that edits `[driveToken].astro`.**
+- **(2) Story 0.9 UN-ATTESTED** — the frame's look and the memorial section's spacing are ⛔ not validated against a bereaved-family
+  conversation (carries 11b.4a item (10)). ⚠ Any launch-gate Row 41 record that observes the rendered memorial section — leg (o)'s
+  TalkBack / VoiceOver check of the public page, leg (d)'s Story 0.9 conversation — must be taken on the page as 11b.5 renders it.
+  **Trigger: the Story 0.9 conversation.**
+- **(3) The UX's 1:1 default and its 120 / 180 / 240 pt sizes are ⛔ not built** (MV4 (a) kept today's 4:5 box and 20 rem cap; the
+  photo pipeline makes ⛔ no square crop). **Trigger: a second consumer of the frame that needs another size, or the Story 0.9
+  verdict on `grief-grammar-black-bordered-portrait`.**
+- **(4) A third drawing of the frame** — `apps/mobile/components/claim/ClaimProxyFlowShell.tsx` (`FUNERAL_FRAME_BORDER = '#1A1A1A'`,
+  `borderWidth={2}` around the Ravi-mode banner — a hex literal, ⛔ not from the token). ⛔ Not unified here. **Trigger: the story that
+  bridges `@twt/tokens` into the mobile theme (11a.5 D6(c)).**
+- **(5) The decorative empty `alt`.** When the family's photo description was left out whole, the image renders a bare `alt`
+  (`alt=""`), which marks it DECORATIVE: a screen-reader user is ⛔ not told a photo is there at all, against UX :1959 (*"`alt` text
+  on inner image required"*). Today's behaviour, kept — ⛔ no copy is invented here. **Trigger: Story 11b.8's accessibility audit or
+  Story 0.10.**
+
+---
+
 ## Deferred from: code review of 6-32-inspector-questionnaire-at-the-ground-inspection.md — second pass, the whole branch in two chunks (2026-10-29)
 
 Deferred by the second three-layer review (story → Review Findings → "Second code review"). Not closed.
@@ -261,6 +293,7 @@ until launch-gate Row 41 closes (its new criteria (l)–(q)).
 - **(5) A new approved photo can sit beside the new words for ~5 minutes** (the photo route has ⛔ no per-version URL — MP4).
   **Trigger: Row 41 (p).**
 - **(6) Kinship** (11b.4 item (2)) — still 11b.5's, with its own Panel question on the purpose. **Trigger: Story 11b.5.**
+  ⭐ *(2026-10-29) Trigger reached at 11b.5 — RE-POINTED by `2026-10-29-420` MV2 to row `11b-5a-kinship-capture-and-lattice` (`backlog`), which owns the capture, its review, the public `<KinshipLattice>` and the Panel question on kinship's purpose (written at its own Task 0). **Trigger now: row `11b-5a`'s create-story.** ⛔ Not closed, ⛔ not deleted.*
 - **(7) A family's own erasure request** for their words (11b.4 item (7)) — ⛔ not built here. **Trigger: the first such request.**
 - **(8) Architecture §4.11.2's responsive media pipeline and the Astro Image component** stay unbuilt: ONE variant behind a proxied
   plain `<img>` (MP5; the dated note in `architecture.md`). **Trigger: the implementation ADR §4.11.2 names, or a second public image.**
@@ -526,6 +559,7 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
 - **(2) Kinship capture** (epic step (d) — MA2): ⛔ collected; names of living relatives for a purpose not yet ruled. **Trigger: row
   11b-4a / Story 11b.5 (`<KinshipLattice>`), with its own Panel question on the purpose.**
   ⭐ *(2026-10-27) Trigger reached at 11b.4a; carried as 11b.4a item (6) (still 11b.5's / a Panel purpose question), ⛔ not closed.*
+  ⭐ *(2026-10-29) Trigger reached at 11b.5 — RE-POINTED by `2026-10-29-420` MV2 to row `11b-5a-kinship-capture-and-lattice`. ⚠ The "⛔ collected" above means kinship is NOT collected (an upstream glyph standing for the negator). **Trigger now: row `11b-5a`'s create-story.** ⛔ Not closed, ⛔ not deleted.*
 - **(3) Emphasis** (epic step (b) — MA4): v1 is paragraphs only. **Trigger: a Story 0.9 conversation or a family request.**
 - **(4) A staff-initiated helpdesk conversation after a refusal** (the epic's *"request specific changes via empathetic helpdesk
   conversation"*): every non-approved outcome shows the helpline, but ⛔ staff-initiated ticket exists. **Trigger: the next helpdesk story.**
@@ -555,6 +589,7 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
   text); the handover hook's rate-limit case shown as a failed send (the hook is ⛔ edited — AC17, AC7a); Pattern 5's relative-time
   *"Saved"* hint and a screen-reader announcement of save state (a static *"Saved on this phone"* line instead — MA3); `<PortraitFrame>`
   in upload mode (Story 11b.5 is `backlog` — Trap 9). **Trigger: Story 11b.5 / a Story 0.9 conversation.**
+  ⭐ *(2026-10-29) Trigger reached at 11b.5 — all six departures disposed, ⛔ none closed: (i) `<PortraitFrame>` in upload mode is RE-DEFERRED by `2026-10-29-420` MV6 (b) (an RN frame would fire 11a.5 D6(c)'s mobile-tokens re-trigger) — **Trigger now: the story that bridges `@twt/tokens` into the mobile theme (11a.5 D6(c)), or a Story 0.9 conversation**; (ii)–(vi) the HOME entry, the reason copy, the absent SMS / email resume link, the rate-limit case and the "Saved" hint — 11b.5 does ⛔ not touch them ⇒ **their Trigger narrows to a Story 0.9 conversation alone.** ⛔ Not closed, ⛔ not deleted.*
 - **(13) ⛔ No production pool reaches `closed`** — the surface is INERT until the Epic 7 window scheduler appends `pool.closed` (MA14;
   every drive surface shares it). Row 41 (f) carries it. **Trigger: the first non-test producer of `pool.closed`.**
 - **(14) Counsel risks, ⛔ blockers** — `-391`: counsel was ⛔ asked how long words naming living people may be kept (Q5); `-391` /
@@ -7496,6 +7531,7 @@ Closure-language posture per [[feedback_closure_language_precision]]: engineerin
 - **Architecture §1.5 grief-aware-design property as the most architecturally-coupled-but-empirically-unvalidated commitment in TWT** [Story 0.9 file Dev Notes + assumption-inventory critical hypotheses] — the architecture commits "held-not-processed" + "witness-not-bailiff" + "fursat cadence" + named-human-shepherd + black-bordered-portrait + no-countdowns-under-grief + no-penalties-under-grief + opt-in-memorial-consent grief-grammar elements as load-bearing properties. Story 0.9 is the empirical-validation surface; refuted or nuanced verdicts in synthesis §4.2 cross-cutting grief-grammar evaluation may require architecture §1.5 property refinement via Task 11 reconciliation. Tracked here for downstream visibility.
 - **Story 9.1 NomineeConsole load-bearing "fursat" cadence operational-posture invariant (epics line 3094) directly coupled to Story 0.9** — Story 0.9 grief-grammar verdict for `grief-grammar-fursat-cadence` is the empirical validation of the Story 9.1 invariant. If refuted, Story 9.1 design re-scope is required before Epic 9 design freeze. Cross-Story dependency tracked here.
 - **Story 11b.5 Memorial Visual Components culturally-appropriate Hindi-context visual treatment (epics lines 3865-3866) directly coupled to Story 0.9** — Story 0.9 grief-grammar verdict for `grief-grammar-black-bordered-portrait` is the empirical validation. If refuted, Story 11b.5 PortraitFrame + KinshipLattice design re-scope is required before Epic 11b design freeze. Cross-Story dependency tracked here.
+  ⭐ *(2026-10-29, Story 11b.5, `2026-10-29-420`): the `<PortraitFrame>` built by 11b.5 (`apps/public/src/components/PortraitFrame.astro` — 2 px `ink-primary` border, 6 pt inset, 4:5) is the frame this verdict would re-scope; `<KinshipLattice>` moved to row `11b-5a-kinship-capture-and-lattice` (MV2), `<MemorialRecord>` to Story 11b.6 (MV1). ⛔ Not closed.*
 
 ---
 

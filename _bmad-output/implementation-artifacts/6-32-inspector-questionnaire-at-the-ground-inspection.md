@@ -603,14 +603,56 @@ BigDev: *"2, chunks in parallel"*, then *"apply findings then adversarially revi
 Chunk A = `packages/` (3,630 diff lines), chunk B = `apps/` (3,411). Six layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor per chunk.
 After deduplication: **1 decision-needed, 21 patch, 9 defer, 11 dismissed; one rebase-time item (S0)**. One HIGH (S1, three layers independently).
 
-- [ ] [Review][Rebase] **S0 — migration `0188` collides with 5.8b's `0188_degraded-bridge-sms` on `origin/main`, whose `when` (1795837200033) is
+- [x] [Review][Rebase] **S0 — migration `0188` collides with 5.8b's `0188_degraded-bridge-sms` on `origin/main`, whose `when` (1795837200033) is
   GREATER than this branch's (1795750800032) (HIGH; auditor A).** A database that applied main's 0188 would SKIP this one
   ([[project_sibling_migration_when_order_shared_db]]). This is FS18's known renumber: at the rebase onto `origin/main`, this migration becomes
   ≥ `0189` with `when` > main's, and the ledger letter `2026-10-28l` (taken on both branches) is re-lettered. ⛔ A code patch — a landing step.
-- [ ] [Review][Decision] **S22 — a refiled claim approved on the SOURCE claim's inspection (`inherited_source_claim_id`) shows its approvers ⛔ family
+  ✅ *Done 2026-10-29 (BigDev: *"S0 A"* — rebase now):* rebased onto `origin/main` `282bdd33` (5.8b landed; backup
+  `backup/6-32-pre-rebase-2026-10-29` = `99daafa4`); ledger, roster and deferred-work conflicts resolved as newest-first prepends (the decision log
+  ordered by id — `-415`, `-414` above `-413`; `-413` byte-identical to the backup's; Row 42 above Row 43); every file's changed-line set vs
+  `origin/main` equals its set vs the old base (the journal aside); then ONE renumber commit `9eec3559` — `git mv` to
+  `0189_ground-inspection-questionnaire.sql`, journal idx 189 / `when` 1795923600034, every 6.32 reference `0188` → `0189` line by line (5.8b's
+  untouched). The ledger line `2026-10-28l` is relabelled `2026-10-28w` (5.8b's `5b39c9aa` took `-28l` first). ⚠ Records committed before the
+  rebase cite the OLD SHAs — the map is below.
+
+  | old | new | commit |
+  |---|---|---|
+  | `b3be5801` | `7469430b` | story created |
+  | `4748f126` | `19b7f4db` | validated v1.1 |
+  | `c5f7b8c5` | `885ae74f` | IQ13 answered |
+  | `c4c55e0b` | `81fbe674` | governance `-413` (alone) |
+  | `59585565` | `41def5b7` | Task 0.4 records |
+  | `11423375` | `51c3029f` | Task 1 |
+  | `290e6ca5` | `0d842200` | Tasks 2–5 (the store, then `0188`) |
+  | `41ee7f3c` | `bed5143d` | Tasks 6–7 |
+  | `b23ccfcb` | `b8a5111a` | the enum-as-text fix |
+  | `6bf6b5a3` | `6709f3a5` | build recorded (first review's base) |
+  | `568ec92d` | `42c0dc9d` | first review recorded |
+  | `c285bfcf` | `5f2e42c1` | R2 / R3 / R4 / R6 |
+  | `b8f23db8` | `a5da7451` | R1 / R5 |
+  | `179d8b8f` | `8f956b8e` | microcopy word |
+  | `d0d635cb` | `ade601d1` | review continuation recorded |
+  | `e9676496` | `f8e40867` | the manual browser pass recorded (its subject still says `-28l`) |
+  | `fb639715` | `73f58ec0` | second review S1–S21 + patch reviews |
+  | `99daafa4` | `160cc78f` | second review recorded |
+- [x] [Review][Decision] **S22 — a refiled claim approved on the SOURCE claim's inspection (`inherited_source_claim_id`) shows its approvers ⛔ family
   account (blind A).** `readClaimFamilyAccount` reads the claim's OWN visits only, while `groundInspectionApprovalState` accepts an inherited one — so
   the refile's approvers never see the letter answer recorded at the visit that satisfies their gate. Should the family account follow the
   inheritance (the source claim's completed full visits)? Held for BigDev (*"questions … later"*).
+  ✅ *Decided 2026-10-29 — BigDev: *"S22 A"* (a POINTER only; ⛔ the source's answers copied — IQ7 (A)'s audience unchanged, ⛔ a Panel
+  question):* built in `84041e8f` — the neighbours' section (console + approvers' read) carries `familyAccountInheritedFromClaimId` on `present` /
+  `empty`, read by the gate's own `getInheritedGroundInspectionSource` AFTER the PM25 (c) hide; the admin view says *"This claim relies on the
+  ground inspection of claim {id}; the family's answers are recorded on that claim."* (even with an empty own account); the read line gains the
+  flag `family_account_inherited`; `VERIFIER_CONSOLE_MAX_READS` 30 → 31 and the per-section pins + 1, each with its FROM note. The options offered
+  were A (pointer), B (show the source's answers — widens IQ7's audience, arguably the Panel's) and C (defer).
+  ⭐ *Patch review (one layer, Blind + Edge) — fixed in `ca8d2bd4` / `9ad9c66d`:* the pointer was emitted whenever a source stood,
+  even for a refile with its OWN completed full visit (its gate met by that visit) — unlike the console's ground-inspection section, the
+  approval warnings and the correction queue; it is now read ONLY when the claim's family account is empty, and BEFORE any decrypt; the line
+  names the refused claim as the console does (*"Claim:"* + the id as code) and ⛔ says "recorded on that claim" (the source is ⛔ at an
+  approving step — the approver cannot open it there); a leg for the own-visit refile (RED against the unconditional read); AC13's
+  worst-read-path pin moved (booked delta 2 → 3; statements 2 + 3 — the pointer runs under the section's SAVEPOINT). Kept: the console reads
+  the inheritance twice in one request (two sections, two savepoints — a decision allowed between them could disagree; LOW); ⛔ a test of a
+  HIDDEN reader on an INHERITING claim on the approvers' route (the console path is pinned at one read for a hidden reader).
 - [x] [Review][Patch] **S1 — a save the server refuses for good traps the inspector on the page (HIGH; blind B + edge B + auditor B).**
   `unsaved = pending > 0 || failed.size > 0`; a 409 `not_active` / `not_allowed`, a 403 or a 422 stays in `failed` forever, so loading another claim,
   every in-app navigation and `beforeunload` are blocked, and "Try saving again" repeats the refusal. The editor ships `discardFailed()` for exactly
@@ -981,5 +1023,6 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 | 2026-10-28 | 1.2 | **IQ13 answered (A)** — BigDev: *"IQ13 A — keep the letter optional"*. The letter is recorded and shown to approvers, ⛔ a condition of approval; ⛔ Panel question. Status, Policy meaning, §0 row 8, I1, AC0, AC10 (+ an AC4 (a) row) and Task 0.2 updated; the decision is recorded in the Task 0.3 entry with IQ1–IQ12 (superseding `-308` call 2 in part) — ⛔ a decision until committed. Four asks remain: IQ2, IQ3, IQ7, IQ8. |
 | 2026-10-28 | 1.4 | `bmad-dev-story 6.32` (Claude Opus 5.5): Tasks 1–7 and 9 DONE; Task 8 done EXCEPT 8.4 — the real-browser pass could ⛔ be run (the agent's Chrome could ⛔ reach the local dev host) ⇒ recorded un-attested, ⛔ faked; the row stays `in-progress` (the workflow's completion gate). Built: `ground_inspection.v1`, migration `0188` (+ a fresh-database fix, 55P04), the writer, the comparable form on both answer tables, ③ / ④ compared without a decrypt, GET / PUT questionnaire routes, the family's account on the neighbours' section (present AND empty), the inspector's panel and the staff view. Deviations recorded in the Completion Notes: per-code `blindIndex` (⛔ `blindIndexMany`), the 422's reason in `details`, `familyAccount` at the section level, the header's narrower version CHECK. |
 | 2026-10-28 | 1.5 | Addressed code review findings — 6 items resolved (R1–R6; Date: 2026-10-28): `c285bfcf` (R2, R3, R4, R6 — incl. `dependantsToSupersede` following only a changed parent, found by the R2 leg), `b8f23db8` (R1, R5), `179d8b8f` (a microcopy word). R7 / Task 8.4 (the real-browser pass) stays OPEN — the agent's Chrome still cannot load a local page; ⛔ faked. `ci:local` **36 / 36** at `179d8b8f` on a fresh container. Row stays `in-progress` (Task 8 unchecked). |
+| 2026-10-29 | 1.7 | BigDev: *"S22 A, S0 A"*. **S0** — rebased onto `origin/main` `282bdd33`, the migration renumbered `0188` → `0189` (`9eec3559`), ledger `-28l` → `-28w`, SHA map in S0. **S22 (A)** — the pointer built (`84041e8f`), patch-reviewed and fixed (`ca8d2bd4`, `9ad9c66d`). `ci:local` **36 / 36** on a FRESH container `twt-632-ci-pg` (:5450) at `9ad9c66d` (a first run 35 / 36 — AC13's read pin, fixed). Row STAYS `in-progress` (R7 — the real-browser pass). |
 | 2026-10-29 | 1.6 | Second code review (`bmad-code-review 6.32`, BigDev: *"2, chunks in parallel"*; two chunks × three layers at `e9676496`): 1 decision-needed (S22 — the family account on an INHERITED inspection, held for BigDev), 21 patch (1 HIGH — a refused save trapped the page), 9 + 1 deferred, 11 dismissed, S0 (the `0188` renumber at the rebase). All 21 patches APPLIED and each fix diff reviewed adversarially; the patch reviews' findings fixed (see Resolution). 0188 edited in place (S18) — container recreated. Row STAYS `in-progress` (R7, S0, S22). |
 | 2026-10-28 | 1.3 | **Task 0 DONE.** BigDev: *"recommendation accepted for IQ1-IQ12"*. 0.1 — rebased onto `origin/main` (11b.4a landed; the branch's lines verified identical before / after; journal idx / `when` unique); cited files that moved: `audit-sink.ts` (a memorial action appended after the GI actions) and the roster (Row 41 status) — neither shifts a claim here. 0.3 — [`-413`](../../.decision-log.md#decision-2026-10-28-413) committed alone (IQ1–IQ13 all as recommended; supersedes `-308` call 2 and `-319` OP14 in part). 0.4 — roster Row 42 `ground-inspection-family-answers-live` (+ a dated pointer on Row 27 note (5)); `epics.md` `### Story 6.32`; a dated note under 6.28 OP14 (d); `deferred-work.md` — a new section (the "any other claim?" question, the letter's photograph, true offline), 6.36 W1 annotated "trigger ⛔ pulled", the ③ / ④ item marked owned (⛔ discharged); the IQ7 confirm note drafted (BigDev sends); the ledger line. Implementation starts at Task 1. |

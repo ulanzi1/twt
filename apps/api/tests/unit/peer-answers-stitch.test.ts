@@ -55,7 +55,7 @@ const section = (...answers: UnstitchedPeerMeshAnswerView[]): UnstitchedPeerMesh
     recentChangeBeforeFiling: false,
   },
   // ⭐ Story 6.32 (IQ7) — REQUIRED on the SECTION, possibly empty; the stitch passes it through by spread.
-  familyAccount: [],
+  familyAccount: [], familyAccountInheritedFromClaimId: null,
 });
 const flags = (s: ReturnType<typeof stitchPeerAnswerFlags>) =>
   s.status === 'present' ? s.transcript.pings.flatMap((p) => p.reply?.answers.map((a) => a.warningFlag) ?? []) : [];
@@ -92,7 +92,15 @@ describe('stitchPeerAnswerFlags (AC8)', () => {
     const present = { ...section(answer('has_died', A)), familyAccount: family } as UnstitchedPeerMeshSection;
     const out = stitchPeerAnswerFlags(present, { peerAnswerFlags: null });
     expect(out.status === 'present' && out.familyAccount).toEqual(family);
-    expect(stitchPeerAnswerFlags({ status: 'empty', familyAccount: family }, { peerAnswerFlags: null })).toEqual({ status: 'empty', familyAccount: family });
+    expect(stitchPeerAnswerFlags({ status: 'empty', familyAccount: family, familyAccountInheritedFromClaimId: null }, { peerAnswerFlags: null })).toEqual({
+      status: 'empty',
+      familyAccount: family,
+      familyAccountInheritedFromClaimId: null,
+    });
+    // ⭐ second review S22 — the inherited source's pointer passes through the stitch untouched
+    const src = '44444444-4444-4444-4444-444444444444';
+    const inheritedOut = stitchPeerAnswerFlags({ ...present, familyAccountInheritedFromClaimId: src } as UnstitchedPeerMeshSection, { peerAnswerFlags: null });
+    expect(inheritedOut.status === 'present' && inheritedOut.familyAccountInheritedFromClaimId).toBe(src);
   });
 });
 

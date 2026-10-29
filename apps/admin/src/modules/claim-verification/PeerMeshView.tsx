@@ -22,12 +22,18 @@ import { verifierConsoleEn as t } from './i18n-en.js';
  * ⭐ Story 6.32 (IQ7; AC8, AC10) — the WHOLE neighbours' section as staff see it, ONE component for the console and the
  * approvers' panel (they can ⛔ drift): `present` ⇒ the neighbours' view, `empty` / `unavailable` ⇒ the non-present state;
  * and, on `present` AND `empty`, the family's account at the inspection (a no-one-asked claim has ⛔ selection — its
- * head's letter is the answer that matters there).
+ * head's letter is the answer that matters there). ⭐ Second review S22 (BigDev: "S22 A") — a claim approved on an INHERITED
+ * inspection says which claim the family's answers are recorded on (a pointer — ⛔ the answers), even with ⛔ visit of its own.
  */
 export function PeerMeshSectionView({ section }: { section: PeerMeshSection }): ReactElement {
   return (
     <div className="flex flex-col gap-3">
       {section.status === 'present' ? <PeerMeshView transcript={section.transcript} /> : <NonPresent status={section.status} />}
+      {section.status !== 'unavailable' && section.familyAccountInheritedFromClaimId !== null && (
+        <p className="text-xs" data-testid="family-account-inherited">
+          {t.peerMesh.familyAccount.inheritedFrom(section.familyAccountInheritedFromClaimId)}
+        </p>
+      )}
       {section.status !== 'unavailable' && section.familyAccount.length > 0 && <FamilyAccountView visits={section.familyAccount} />}
     </div>
   );

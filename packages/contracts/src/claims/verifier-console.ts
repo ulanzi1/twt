@@ -352,10 +352,31 @@ export const GroundInspectionFamilyAccountVisit = z
   .strict();
 export type GroundInspectionFamilyAccountVisit = z.output<typeof GroundInspectionFamilyAccountVisit>;
 
+/**
+ * ⭐ Story 6.32 (second review S22, BigDev: *"S22 A"*) — the claim whose COMPLETED FULL inspection THIS claim's approval
+ * inherits (the `-239` source — `inheritedGroundInspectionSourceSql`, ⛔ a second definition), or `null`: a POINTER only —
+ * the family's answers stay on that claim (⛔ copied across; the audience of IQ7 (A) is unchanged).
+ */
+const FamilyAccountInheritedFromClaimId = z.string().uuid().nullable();
+
 export const PeerMeshSection = z.discriminatedUnion('status', [
-  // ⭐ Story 6.32 — `familyAccount` REQUIRED (possibly empty) on `present` AND `empty` (⛔ optional — an absent key would hide a defect).
-  z.object({ status: z.literal('present'), transcript: PeerMeshTranscript, familyAccount: z.array(GroundInspectionFamilyAccountVisit) }).strict(),
-  z.object({ status: z.literal('empty'), familyAccount: z.array(GroundInspectionFamilyAccountVisit) }).strict(),
+  // ⭐ Story 6.32 — `familyAccount` REQUIRED (possibly empty) on `present` AND `empty` (⛔ optional — an absent key would hide a defect);
+  // `familyAccountInheritedFromClaimId` (S22) REQUIRED beside it, `null` ⇔ ⛔ inherited inspection.
+  z
+    .object({
+      status: z.literal('present'),
+      transcript: PeerMeshTranscript,
+      familyAccount: z.array(GroundInspectionFamilyAccountVisit),
+      familyAccountInheritedFromClaimId: FamilyAccountInheritedFromClaimId,
+    })
+    .strict(),
+  z
+    .object({
+      status: z.literal('empty'),
+      familyAccount: z.array(GroundInspectionFamilyAccountVisit),
+      familyAccountInheritedFromClaimId: FamilyAccountInheritedFromClaimId,
+    })
+    .strict(),
   z.object({ status: z.literal('unavailable') }).strict(),
 ]);
 export type PeerMeshSection = z.output<typeof PeerMeshSection>;

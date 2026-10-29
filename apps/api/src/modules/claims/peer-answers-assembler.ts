@@ -108,11 +108,17 @@ export type PeerSection =
   /** `cause` (code review round 2, X2) — the reader's own visit is pending (`own_visit`) or the hide check FAILED
    *  (`check_failed`, the V11 fail-closed hide); the console words its withheld staff notes by it. */
   | { readonly kind: 'hidden'; readonly cause: 'own_visit' | 'check_failed' }
-  | { readonly kind: 'no_selection'; readonly familyAccount: GroundInspectionFamilyAccountVisit[] }
+  | {
+      readonly kind: 'no_selection';
+      readonly familyAccount: GroundInspectionFamilyAccountVisit[];
+      readonly familyAccountInheritedFromClaimId: string | null;
+    }
   | {
       readonly kind: 'present';
       /** ⭐ Story 6.32 (IQ7) — the family's account at the inspection (decrypted here). */
       readonly familyAccount: GroundInspectionFamilyAccountVisit[];
+      /** ⭐ Story 6.32 (S22 A) — the `-239` source whose inspection this claim inherits (a POINTER, ⛔ its answers), or `null`. */
+      readonly familyAccountInheritedFromClaimId: string | null;
       readonly selection: NonNullable<Awaited<ReturnType<typeof claim.getPeerMeshSelectionByClaim>>>;
       readonly pingMemberIds: readonly string[];
       readonly responses: Awaited<ReturnType<typeof claim.getPeerMeshResponses>>;
@@ -154,10 +160,17 @@ export async function assemblePeerSection(
   bump();
   const familyVisits = await run('peer_section_family_account', () => claim.readClaimFamilyAccount(ctx.db, pariwarId, claimCaseId));
   const familyAccount = await familyAccountViews(enc, ctx.pariwarId, familyVisits, memberName, warn);
+  // ⭐ Story 6.32 (second review S22, BigDev: "S22 A") — a claim approved on an INHERITED inspection points at the claim the
+  // family's answers are recorded on (the ONE inheritance fragment — the approval gate's own); ⛔ its answers are read.
+  bump();
+  const inherited = await run('peer_section_family_account_inherited', () =>
+    claim.getInheritedGroundInspectionSource(ctx.db, pariwarId, claimCaseId),
+  );
+  const familyAccountInheritedFromClaimId = inherited === null ? null : inherited.toLowerCase();
 
   bump();
   const selection = await run('peer_section_selection', () => claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId));
-  if (!selection) return { kind: 'no_selection', familyAccount };
+  if (!selection) return { kind: 'no_selection', familyAccount, familyAccountInheritedFromClaimId };
   bump();
   const pingRows = await run('peer_section_pings', () => claim.getPeerMeshPingIntentsBySelection(ctx.db, pariwarId, selection.selectionId));
   bump();
@@ -313,7 +326,7 @@ export async function assemblePeerSection(
 
   // The section is whole — only NOW is each shown mobile reported (review S17).
   for (const { pingId, basis } of shown) ctx.onCallbackMobileShown(pingId, basis);
-  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings, inspectionDiscrepancies, familyAccount };
+  return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings, inspectionDiscrepancies, familyAccount, familyAccountInheritedFromClaimId };
 }
 
 /**
@@ -390,7 +403,9 @@ export async function assemblePeerMeshSection(
   try {
     const section = await assemble();
     if (section.kind === 'hidden') return undefined;
-    if (section.kind === 'no_selection') return { status: 'empty', familyAccount: section.familyAccount };
+    if (section.kind === 'no_selection') {
+      return { status: 'empty', familyAccount: section.familyAccount, familyAccountInheritedFromClaimId: section.familyAccountInheritedFromClaimId };
+    }
     const { selection, responses } = section;
     return {
       status: 'present',
@@ -410,8 +425,9 @@ export async function assemblePeerMeshSection(
         // Story 6.36 (SW20) — the staff line, from the selection row in hand; `null` for `district_cohort_v1`.
         recentChangeBeforeFiling: selection.recentChangeBeforeFiling ?? null,
       },
-      // ⭐ Story 6.32 (IQ7) — REQUIRED, possibly empty.
+      // ⭐ Story 6.32 (IQ7) — REQUIRED, possibly empty; (S22) the inherited source, or `null`.
       familyAccount: section.familyAccount,
+      familyAccountInheritedFromClaimId: section.familyAccountInheritedFromClaimId,
     };
   } catch (err) {
     opts.log?.warn({ err, claimCaseId: opts.claimCaseId }, 'peer-answers: the peer-mesh section is unavailable');
@@ -424,10 +440,19 @@ export async function assemblePeerMeshSection(
  * FAMILY's account the section carried: counts only (⛔ a key's value, ⛔ a code). `family_health_answer_count` = the cause /
  * illness answers DECRYPTED for this reader (the Tier-1 read the line must show). ⛔ section (hidden / unavailable) ⇒ zeros.
  */
-export function familyAccountAuditCounts(section: { readonly status: string; readonly familyAccount?: readonly GroundInspectionFamilyAccountVisit[] } | undefined): {
+export function familyAccountAuditCounts(
+  section:
+    | {
+        readonly status: string;
+        readonly familyAccount?: readonly GroundInspectionFamilyAccountVisit[];
+        readonly familyAccountInheritedFromClaimId?: string | null;
+      }
+    | undefined,
+): {
   readonly family_visit_count: number;
   readonly family_answer_count: number;
   readonly family_health_answer_count: number;
+  readonly family_account_inherited: boolean;
 } {
   const visits = section?.familyAccount ?? [];
   const answers = visits.flatMap((v) => v.answers);
@@ -436,6 +461,8 @@ export function familyAccountAuditCounts(section: { readonly status: string; rea
     family_visit_count: visits.length,
     family_answer_count: answers.length,
     family_health_answer_count: answers.filter((a) => health.includes(a.questionKey) && a.value.kind === 'codes').length,
+    // ⭐ S22 — a flag, ⛔ the source's id (the line's locator already names THIS claim).
+    family_account_inherited: (section?.familyAccountInheritedFromClaimId ?? null) !== null,
   };
 }
 

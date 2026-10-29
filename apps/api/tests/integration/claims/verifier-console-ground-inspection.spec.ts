@@ -216,7 +216,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
   });
 
   it('⭐ AC9 — the section books EXACTLY one read and sends EXACTLY one read statement (+ its SAVEPOINT / RELEASE); the ceiling is 30', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(30); // Story 6.32 (IQ7) FROM 29 — +1: the claim's family account at the inspection; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(31); // Story 6.32 (S22) FROM 30 — +1: the claim whose inspection this claim inherits; Story 6.32 (IQ7) FROM 29 — +1: the claim's family account at the inspection; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const claimCaseId = await seedClaim(pariwarId, await seedDeceased(pariwarId));
     await inScope(pariwarId, async (s) => {
@@ -282,6 +282,9 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     const inherited = packet.groundInspection.assignments.filter((a) => a.inherited);
     expect(inherited).toHaveLength(1);
     expect(inherited[0]).toMatchObject({ inspectionStage: 'initial', status: 'completed', comparedAgainst: 'earlier', deathDateSource: 'family_statement' });
+    // ⭐ Story 6.32 (second review S22, BigDev: "S22 A") — the neighbours' section points at the source (the SAME inheritance
+    // the gate reads); the refile's own account is empty (its only visit is a certificate check), ⛔ the source's answers
+    expect(packet.peerMesh).toMatchObject({ familyAccount: [], familyAccountInheritedFromClaimId: source.toLowerCase() });
   });
 
   it('GI10 — a recorded date that can ⛔ not be decrypted says so (`deathDateUnreadable`), ⛔ never a blank', async () => {
@@ -291,6 +294,8 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
     const { packet } = await inScope(pariwarId, (s) => assembleVerifierConsole(deps, ctxOf(s, pariwarId, claimCaseId)));
     if (packet.groundInspection.status !== 'present') throw new Error('expected a present section');
     expect(packet.groundInspection.assignments[0]).toMatchObject({ deathDate: null, deathDateUnreadable: true, deathDateSource: 'family_statement' });
+    // Story 6.32 (S22) — ⛔ inheritance ⇒ `null`, ⛔ an absent key
+    expect(packet.peerMesh).toMatchObject({ familyAccountInheritedFromClaimId: null });
   });
   // ── Story 6.26b (GI10 [b]; `-288` K2, `-289` L3/L4; RD18; invariant 5) ──────────────────────────────────────────────
   const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
@@ -346,7 +351,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — the console\'s ground-inspection 
   });
 
   it('⭐⭐ Story 6.26b (invariant 5; Trap 11) — a FAILED warnings read: `null` on every completed row\'s comparison and on every flag the section does ⛔ rule out; `false` where it does; MAX_READS is pinned (30 since Story 6.32)', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(30); // Story 6.32 (IQ7) FROM 29 — +1: the claim's family account at the inspection; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(31); // Story 6.32 (S22) FROM 30 — +1: the claim whose inspection this claim inherits; Story 6.32 (IQ7) FROM 29 — +1: the claim's family account at the inspection; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1: which approval notes a hidden reader must not see; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3: the inspector check, the answers, the neighbours' contacts; Story 6.28 (OP14 (b), code review chunk 3/4) FROM 22 — +1: the authoritative finally-approved-elsewhere signal; Story 6.28 (OP14 (a)) FROM 21 — +1: the other claims of this death; Story 6.24a (RF10) FROM 20 — +1: the suspicion-refusal section
     const pariwarId = randomUUID();
     const deceased = await seedDeceased(pariwarId);
     await refusedSource(pariwarId, deceased, { deathDate: daysAgo(3) });

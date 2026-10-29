@@ -37,7 +37,7 @@ describe('VerifierConsolePacket — four-state section vocabulary (AC7)', () => 
     expect(GroundInspectionSection.safeParse({ status: 'not_available_yet' }).success).toBe(false);
     // …but they DO admit empty + unavailable.
     // ⭐ Story 6.32 (IQ7) — `empty` carries the REQUIRED family account (a no-one-asked claim's letter lives there).
-    expect(PeerMeshSection.safeParse({ status: 'empty', familyAccount: [] }).success).toBe(true);
+    expect(PeerMeshSection.safeParse({ status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: null }).success).toBe(true);
     expect(PeerMeshSection.safeParse({ status: 'empty' }).success).toBe(false);
     expect(GroundInspectionSection.safeParse({ status: 'unavailable' }).success).toBe(true);
   });
@@ -130,6 +130,8 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
           },
         ],
       },
+      // ⭐ Story 6.32 (second review S22) — REQUIRED beside it: the inherited source's pointer (`null` — ⛔ inherited).
+      familyAccountInheritedFromClaimId: null,
       // ⭐ Story 6.32 (IQ7) — REQUIRED on the section: the family's account at the inspection (the letter, the cause).
       familyAccount: [
         {

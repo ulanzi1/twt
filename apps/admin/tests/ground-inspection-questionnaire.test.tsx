@@ -761,10 +761,12 @@ describe('AC8 / AC10 — the staff view of the family\'s account', () => {
               { questionKey: 'death_cause', question: 'How did Ram die?', value: { kind: 'codes', codes: ['old_age'], labels: ['Old age'] }, savedAt: 'x' },
             ]),
           ],
+          familyAccountInheritedFromClaimId: null,
         }}
       />,
     );
     expect(screen.getByTestId('section-state-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('family-account-inherited')).toBeNull();
     const fam = screen.getByTestId('family-account');
     expect(within(fam).getByTestId('family-account-letter')).toHaveTextContent('Not collected');
     expect(within(fam).getByTestId('family-account-death_cause')).toHaveTextContent('How did Ram die?Old age');
@@ -773,7 +775,7 @@ describe('AC8 / AC10 — the staff view of the family\'s account', () => {
   it('the letter is said even when ⛔ recorded ("Not recorded"); an undecryptable answer "could not be shown"; `collected`', () => {
     const { unmount } = render(
       <PeerMeshSectionView
-        section={{ status: 'empty', familyAccount: [visit([{ questionKey: 'death_cause', question: 'How did Ram die?', value: { kind: 'unavailable' }, savedAt: 'x' }])] }}
+        section={{ status: 'empty', familyAccount: [visit([{ questionKey: 'death_cause', question: 'How did Ram die?', value: { kind: 'unavailable' }, savedAt: 'x' }])], familyAccountInheritedFromClaimId: null }}
       />,
     );
     expect(screen.getByTestId('family-account-letter')).toHaveTextContent('Not recorded');
@@ -781,13 +783,21 @@ describe('AC8 / AC10 — the staff view of the family\'s account', () => {
     unmount();
     render(
       <PeerMeshSectionView
-        section={{ status: 'empty', familyAccount: [visit([{ questionKey: 'head_letter', question: 'q', value: { kind: 'codes', codes: ['collected'], labels: ['Yes'] }, savedAt: 'x' }])] }}
+        section={{ status: 'empty', familyAccount: [visit([{ questionKey: 'head_letter', question: 'q', value: { kind: 'codes', codes: ['collected'], labels: ['Yes'] }, savedAt: 'x' }])], familyAccountInheritedFromClaimId: null }}
       />,
     );
     expect(screen.getByTestId('family-account-letter')).toHaveTextContent('Collected');
   });
+  it('⭐ second review S22 — a claim approved on an INHERITED inspection says which claim the answers are on (⛔ the answers), with ⛔ visit of its own', () => {
+    const src = '44444444-4444-4444-4444-444444444444';
+    render(<PeerMeshSectionView section={{ status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: src }} />);
+    expect(screen.getByTestId('family-account-inherited')).toHaveTextContent(
+      `This claim relies on the ground inspection of claim ${src}; the family's answers are recorded on that claim.`,
+    );
+    expect(screen.queryByTestId('family-account')).toBeNull();
+  });
   it('⛔ block at all when the family account is empty; ⛔ on `unavailable`', () => {
-    const { unmount } = render(<PeerMeshSectionView section={{ status: 'empty', familyAccount: [] }} />);
+    const { unmount } = render(<PeerMeshSectionView section={{ status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: null }} />);
     expect(screen.queryByTestId('family-account')).toBeNull();
     unmount();
     render(<PeerMeshSectionView section={{ status: 'unavailable' }} />);

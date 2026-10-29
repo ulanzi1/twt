@@ -46,13 +46,14 @@ const present = {
     },
     // ⭐ Story 6.32 (IQ7) — REQUIRED on the section, possibly empty.
     familyAccount: [] as unknown[],
+    familyAccountInheritedFromClaimId: null,
   },
 };
 
 describe('ClaimPeerAnswersResponse (Story 6.27b, PM24)', () => {
   it('`peerMesh` ABSENT (hidden), `empty`, `unavailable` and `present` are all valid', () => {
     expect(ClaimPeerAnswersResponse.safeParse({}).success).toBe(true);
-    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty', familyAccount: [] } }).success).toBe(true); // Story 6.32
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: null } }).success).toBe(true); // Story 6.32
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty' } }).success).toBe(false); // ⛔ optional — REQUIRED
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'unavailable' } }).success).toBe(true);
     expect(ClaimPeerAnswersResponse.safeParse(present).success).toBe(true);
@@ -135,5 +136,15 @@ describe('Story 6.32 (IQ7; AC8) — the family account on the section', () => {
     expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: without }).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withF([visit([{ ...answer({ kind: 'unavailable' }), warningFlag: false }])])).success).toBe(false);
     expect(ClaimPeerAnswersResponse.safeParse(withF([{ ...visit([]), neighbourCount: 3 }])).success).toBe(false);
+  });
+  it('⭐ second review S22 — `familyAccountInheritedFromClaimId` REQUIRED on `present` and `empty`: a claim id or `null`', () => {
+    const withI = (v: unknown) => ({ peerMesh: { ...present.peerMesh, familyAccountInheritedFromClaimId: v } });
+    expect(ClaimPeerAnswersResponse.safeParse(withI('44444444-4444-4444-4444-444444444444')).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withI(null)).success).toBe(true);
+    expect(ClaimPeerAnswersResponse.safeParse(withI('claim B')).success).toBe(false);
+    const without: Record<string, unknown> = { ...present.peerMesh };
+    delete without['familyAccountInheritedFromClaimId'];
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: without }).success).toBe(false);
+    expect(ClaimPeerAnswersResponse.safeParse({ peerMesh: { status: 'empty', familyAccount: [] } }).success).toBe(false);
   });
 });

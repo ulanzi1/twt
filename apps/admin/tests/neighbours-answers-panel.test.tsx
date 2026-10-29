@@ -57,7 +57,7 @@ const PRESENT: ClaimPeerAnswersResponse = {
   peerMesh: {
     status: 'present',
     // ⭐ Story 6.32 (IQ7) — REQUIRED on the section, possibly empty.
-    familyAccount: [],
+    familyAccount: [], familyAccountInheritedFromClaimId: null,
     transcript: transcript([
       {
         pingId: 'p1',
@@ -247,7 +247,7 @@ describe('<NeighboursAnswersPanel> — on demand (a PII control)', () => {
 
   it('`empty` / `unavailable` sections ⇒ the `<NonPresent>` words', async () => {
     for (const status of ['empty', 'unavailable'] as const) {
-      getClaimPeerAnswers.mockResolvedValue({ peerMesh: status === 'empty' ? { status, familyAccount: [] } : { status } });
+      getClaimPeerAnswers.mockResolvedValue({ peerMesh: status === 'empty' ? { status, familyAccount: [], familyAccountInheritedFromClaimId: null } : { status } });
       const { unmount } = renderPanel();
       fireEvent.click(toggle());
       expect(await screen.findByTestId(`section-state-${status}`)).toBeInTheDocument();
@@ -446,7 +446,7 @@ describe('<NeighboursAnswersPanel> — on demand (a PII control)', () => {
     if (outcome === '404' || outcome === 'error') {
       const error = outcome === '404' ? new ApiError(404, 'claim.peer_answers_not_found', 'failed') : new ApiError(500, 'test.error', 'failed');
       await act(async () => next.reject(error));
-    } else await act(async () => next.resolve(outcome === 'present' ? PRESENT : { peerMesh: outcome === 'empty' ? { status: outcome, familyAccount: [] } : { status: outcome } }));
+    } else await act(async () => next.resolve(outcome === 'present' ? PRESENT : { peerMesh: outcome === 'empty' ? { status: outcome, familyAccount: [], familyAccountInheritedFromClaimId: null } : { status: outcome } }));
     const words = outcome === '404' ? t.neighboursPanel.notAtStep : outcome === 'error' || outcome === 'unavailable' ? t.states.unavailable : outcome === 'empty' ? t.states.empty : t.neighboursPanel.ready;
     await waitFor(() => expect(status).toHaveTextContent(words));
   });

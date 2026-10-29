@@ -170,6 +170,9 @@ export const verifierConsoleEn = {
       letter: "The head of the school or office's letter",
       letterValue: { collected: 'Collected', not_collected: 'Not collected', not_recorded: 'Not recorded' },
       unavailable: 'This answer could not be shown',
+      // ⭐ Second review S22 (BigDev: "S22 A") — a claim approved on an INHERITED inspection: a pointer, ⛔ the answers.
+      inheritedFrom: (claimCaseId: string) =>
+        `This claim relies on the ground inspection of claim ${claimCaseId}; the family's answers are recorded on that claim.`,
     },
   },
   // ⭐ Story 6.27b (BD4, `2026-10-13-327` decision 2) — ONE neutral block for an approver whose own ground visit on the claim

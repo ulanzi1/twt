@@ -88,7 +88,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
     }
   }
 
-  it('names, send status, every live answer in English (the date decrypted), how / when saved, "changed N times", the call-back mobile on a "yes" (audited once) — and EXACTLY 9 reads', async () => {
+  it('names, send status, every live answer in English (the date decrypted), how / when saved, "changed N times", the call-back mobile on a "yes" (audited once) — and EXACTLY 10 reads', async () => {
     const p = randomUUID();
     const asha = await seedNeighbour(p, 'Asha Devi', '+919876543210');
     const bina = await seedNeighbour(p, 'Bina Kumari', '+919812345678');
@@ -117,10 +117,11 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
     expect(byKey['death_date']).toMatchObject({ value: { kind: 'date', date: '2026-10-01' }, changeCount: 0 });
     expect(a.callbackMobile).toEqual({ status: 'shown', text: '+919876543210' });
     expect(shown).toEqual([pingIds[0]]);
-    // EXACTLY the reads it books: the inspector check, the family account (Story 6.32 IQ7 — per claim), the selection, the
-    // pings, the responses, the answers, the inspector's discrepancy showings and notes (Story 6.27d R5 — per claim), the contacts.
-    expect(booked).toBe(9);
-    expect(statements).toHaveLength(9);
+    // EXACTLY the reads it books: the inspector check, the family account (Story 6.32 IQ7 — per claim), the inherited source
+    // (Story 6.32 S22 — per claim), the selection, the pings, the responses, the answers, the inspector's discrepancy showings
+    // and notes (Story 6.27d R5 — per claim), the contacts.
+    expect(booked).toBe(10); // Story 6.32 (S22) FROM 9 — +1: the claim whose inspection this claim inherits
+    expect(statements).toHaveLength(10);
     expect(tr?.inspectionDiscrepancies).toEqual([]);
     expect(out?.status === 'present' && out.familyAccount).toEqual([]); // Story 6.32 — REQUIRED, possibly empty
   });
@@ -192,7 +193,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the District Admin sees the neigh
     await t.pool.query(`DELETE FROM claim_peer_mesh_pings WHERE ping_id = $1`, [pingIds[0]]); // a selection whose pings never began
     const { out, booked, statements } = await section(p, cid, randomUUID());
     expect(out?.status).toBe('present');
-    expect(booked).toBe(8); // Story 6.32 (IQ7) FROM 7 — +1: the family account; Story 6.27d (R5) FROM 5 — +2: the discrepancy showings and notes
-    expect(statements).toHaveLength(8);
+    expect(booked).toBe(9); // Story 6.32 (S22) FROM 8 — +1: the inherited source; Story 6.32 (IQ7) FROM 7 — +1: the family account; Story 6.27d (R5) FROM 5 — +2: the discrepancy showings and notes
+    expect(statements).toHaveLength(9);
   });
 });

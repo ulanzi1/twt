@@ -143,20 +143,24 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
   async function claimAt(
     state: 'verification_in_progress' | 'verifier_review' | 'verifier_approved' | 'state_trustee_freeze' | 'state_trustee_approved' | 'approved' | 'denied' | 'appeal_stage_1' | 'reversed' | 'closed',
     pariwarId: string = randomUUID(),
+    /** Story 6.32 (S22) — a SECOND claim for an already-seeded death (a refile); its member rows are ⛔ inserted again. */
+    sameDeath?: string,
   ): Promise<World> {
-    const deceased = randomUUID();
+    const deceased = sameDeath ?? randomUUID();
     const claimCaseId = randomUUID();
-    await td.pool.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [deceased, pariwarId]);
-    await td.pool.query(`INSERT INTO member_postings (member_id, pariwar_id, district, is_retirement, created_at) VALUES ($1, $2, $3, false, now())`, [
-      deceased,
-      pariwarId,
-      DISTRICT,
-    ]);
-    await td.pool.query(
-      `INSERT INTO member_kyc_profiles (member_id, pariwar_id, name_ciphertext, dob_ciphertext, verification_strength, source)
-       VALUES ($1, $2, $3, $4, 'self_declared', 'manual')`,
-      [deceased, pariwarId, await encryption.encryptKycField('Ram K.', pariwarId, deps.encryption), await encryption.encryptKycField('1950-01-01', pariwarId, deps.encryption)],
-    );
+    if (sameDeath === undefined) {
+      await td.pool.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [deceased, pariwarId]);
+      await td.pool.query(`INSERT INTO member_postings (member_id, pariwar_id, district, is_retirement, created_at) VALUES ($1, $2, $3, false, now())`, [
+        deceased,
+        pariwarId,
+        DISTRICT,
+      ]);
+      await td.pool.query(
+        `INSERT INTO member_kyc_profiles (member_id, pariwar_id, name_ciphertext, dob_ciphertext, verification_strength, source)
+         VALUES ($1, $2, $3, $4, 'self_declared', 'manual')`,
+        [deceased, pariwarId, await encryption.encryptKycField('Ram K.', pariwarId, deps.encryption), await encryption.encryptKycField('1950-01-01', pariwarId, deps.encryption)],
+      );
+    }
     const s = await openScopeTx(deps, pariwarId);
     const e = (from: string | null, to: string, eventType: string, extra: Json = {}) =>
       claim.projectClaimState(s.client, {
@@ -281,7 +285,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
         expect(r.status, JSON.stringify(r.body)).toBe(200);
         expect(r.body.peerMesh?.status).toBe('present');
         // Story 6.32 (second review S15) — the family's account counts ride the line (zeros: ⛔ completed full visit).
-        expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'present', ping_count: 1, answer_count: 1, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0 });
+        expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'present', ping_count: 1, answer_count: 1, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0, family_account_inherited: false });
       });
     }
 
@@ -293,7 +297,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
         await escalate(w);
         const r = await read(pa, w);
         expect(r.status, JSON.stringify(r.body)).toBe(200);
-        expect(r.body.peerMesh).toEqual({ status: 'empty', familyAccount: [] }); // Story 6.32 (IQ7) — REQUIRED on `empty` too
+        expect(r.body.peerMesh).toEqual({ status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: null }); // Story 6.32 (IQ7) — REQUIRED on `empty` too
         expect(readLines(w.claimCaseId).at(-1)?.context).toMatchObject({ step: 'escalation_resolution', section: 'empty' });
       });
     }
@@ -387,6 +391,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     expect(lines).toHaveLength(1);
     expect(Object.keys(lines[0]!.context ?? {}).sort()).toEqual([
       'answer_count',
+      'family_account_inherited',
       'family_answer_count',
       'family_health_answer_count',
       'family_visit_count',
@@ -624,7 +629,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     const r = await read(pa, w);
     expect(r.status).toBe(200);
     expect(r.body).toEqual({});
-    expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'hidden', ping_count: 0, answer_count: 0, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0 });
+    expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'hidden', ping_count: 0, answer_count: 0, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0, family_account_inherited: false });
   });
 
   it('⭐ Story 6.32 (second review S9 / S15; AC8) — the approvers\' route carries a POPULATED family account (the cause DECRYPTED), and its line counts it — ⛔ a value', async () => {
@@ -685,8 +690,61 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
       family_visit_count: 1,
       family_answer_count: 2,
       family_health_answer_count: 1,
+      family_account_inherited: false,
     });
     expect(JSON.stringify(line)).not.toMatch(/old_age|Old age|collected/);
+  });
+
+  it('⭐ Story 6.32 (second review S22, BigDev: "S22 A") — a refile approved on the INHERITED inspection points at the source claim; ⛔ its answers; the line flags it', async () => {
+    // the source: the same death, with a COMPLETED FULL visit whose letter was recorded while it was open (in the answer
+    // window — 0189's guard), THEN refused `-239` (the standing-refusal rule reads the live decision, ⛔ the claim's state)
+    const src = await claimAt('verifier_review');
+    const s = await openScopeTx(deps, src.pariwarId);
+    let uploadId: string;
+    try {
+      ({ uploadId } = await insertDeathCertificate(s, src.pariwarId, src.claimCaseId));
+      await closeScopeTx(s, true);
+    } catch (err) {
+      await closeScopeTx(s, false);
+      throw err;
+    }
+    const gid = randomUUID();
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspections (ground_inspection_id, claim_case_id, pariwar_id, district, inspection_stage, inspection_site_type,
+         inspector_actor_id, scheduled_at, status)
+       VALUES ($1, $2, $3, $4, 'initial', 'family_residence', $5, now(), 'scheduled')`,
+      [gid, src.claimCaseId, src.pariwarId, DISTRICT, randomUUID()],
+    );
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspection_questionnaires (pariwar_id, claim_case_id, ground_inspection_id, questionnaire_version_id) VALUES ($1, $2, $3, 'ground_inspection.v1')`,
+      [src.pariwarId, src.claimCaseId, gid],
+    );
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspection_answers (pariwar_id, claim_case_id, ground_inspection_id, question_key, value_codes, saved_by_actor_id)
+       VALUES ($1, $2, $3, 'head_letter', ARRAY['collected'], 'inspector')`,
+      [src.pariwarId, src.claimCaseId, gid],
+    );
+    await td.pool.query(
+      `UPDATE claim_ground_inspections SET status = 'completed', completed_at = clock_timestamp(), original_certificate_verdict = 'matches',
+         compared_certificate_upload_id = $2, death_date_ciphertext = 'enc:v1:d', death_date_source = 'family_statement', death_date_index = 'idx:d'
+       WHERE ground_inspection_id = $1`,
+      [gid, uploadId!],
+    );
+    await td.pool.query(
+      `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, actor_id, actor_display)
+       VALUES ($1, $2, 'denied', 'post_death_nominee_change', $3, 'Anita (District Admin)')`,
+      [src.claimCaseId, src.pariwarId, randomUUID()],
+    );
+    const refile = await claimAt('verifier_approved', src.pariwarId, src.deceased);
+    const pa = await staff(refile.pariwarId, 'pariwar_admin');
+    const res = await pa.client.inject({ method: 'GET', url: url(refile.pariwarId, refile.claimCaseId) });
+    expect(res.statusCode, res.body).toBe(200);
+    const section = (res.json() as { peerMesh: Json }).peerMesh;
+    expect(section).toEqual({ status: 'empty', familyAccount: [], familyAccountInheritedFromClaimId: src.claimCaseId.toLowerCase() });
+    // ⛔ the source's answers on the wire
+    expect(res.body).not.toMatch(/collected|head_letter/);
+    expect(readLines(refile.claimCaseId).at(-1)?.context).toMatchObject({ section: 'empty', family_visit_count: 0, family_account_inherited: true });
+    // (a claim with ⛔ inheritance answers `null` — the `empty` leg above pins it exactly)
   });
 
   it('a broken answer ciphertext ⇒ THAT answer `unavailable`, the rest shown', async () => {

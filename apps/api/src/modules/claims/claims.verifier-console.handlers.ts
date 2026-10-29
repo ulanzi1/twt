@@ -251,8 +251,14 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * with nobody to ask has ⛔ selection, and its head's letter is the answer that matters — AC10). The cause / illness decrypt
  * in the ASSEMBLER, as the neighbours' answers do. ⭐ Ledger line:
  *   + Story 6.32 (IQ7): the claim's family account at the inspection                                +1  → 30
+ * ⭐ STORY 6.32's SECOND READ (second review S22, BigDev: "S22 A") — a claim approved on an INHERITED inspection says, in
+ * the family's-account area, which claim the answers are recorded on: the `-239` source through the ONE inheritance fragment
+ * (`getInheritedGroundInspectionSource` — ⛔ a second definition), ONE statement PER CLAIM, AFTER the section's hide. It can
+ * ⛔ fold into the family-account statement (that one returns ⛔ row for a claim with ⛔ visit of its own — exactly the
+ * inheriting claim). It decrypts ⛔ nothing. ⭐ Ledger line:
+ *   + Story 6.32 (S22): the claim whose inspection this claim inherits                              +1  → 31
  */
-export const VERIFIER_CONSOLE_MAX_READS = 30;
+export const VERIFIER_CONSOLE_MAX_READS = 31;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {

@@ -88,7 +88,9 @@ export {
 export {
   createTelegramAppCache,
   TelegramSendError,
+  TELEGRAM_SEND_TIMEOUT_MS,
   type TelegramAppCache,
+  type TelegramAppCacheOptions,
   type TelegramMessagingHandle,
   type TelegramTextMessage,
   type TelegramClientConfig,

@@ -21,6 +21,12 @@
 // This in-process client cache has NO TTL / eviction. If a Pariwar's bot token is ROTATED, the cached client
 // keeps sending with the OLD token until the process restarts. This is RESTART-REQUIRED-ON-ROTATION —
 // documented, not silently unhandled (mirrors whatsapp-app.ts / firebase-app.ts).
+//
+// ── Story 5.14 (FS7 (a), `2026-10-29-418` item 6) — a request TIMEOUT and `retry_after` ─────────────────
+// Every send carries a `signal` (default {@link TELEGRAM_SEND_TIMEOUT_MS} — MSG91's 9 s): an abort is the existing transport path
+// (code null, status 0 ⇒ `api_unavailable` in telegram-errors.ts — ⛔ a new class). The bound is CACHE-level, so the per-member mirror
+// (5.5) gets it too: its hung call now ends `rejected` after 9 s instead of hanging (an accepted fix). A 429's
+// `parameters.retry_after` rides the error as `retryAfter` (the Trust channel poster re-sends after it).
 
 /** The narrow send seam the telegram provider depends on — the ONLY Telegram surface it touches. */
 export interface TelegramMessagingHandle {
@@ -62,6 +68,8 @@ export interface FetchInit {
   method: string;
   headers: Record<string, string>;
   body: string;
+  /** Story 5.14 — the request's timeout bound (the global fetch aborts the request AND its body read on it). */
+  signal?: AbortSignal;
 }
 export interface FetchResponse {
   ok: boolean;
@@ -82,9 +90,23 @@ export class TelegramSendError extends Error {
     public readonly telegramCode: number | null,
     /** The HTTP status (0 for a network failure with no response). */
     public readonly httpStatus: number,
+    /**
+     * Story 5.14 — Telegram's `parameters.retry_after` (whole seconds) on a 429; null otherwise. ⛔ Parsed from `description`
+     * (Telegram: "subject to change").
+     */
+    public readonly retryAfter: number | null = null,
   ) {
     super(message);
   }
+}
+
+/** Story 5.14 (FS7 (a)) — the default request bound: MSG91's `SMS_GATEWAY_TIMEOUT_MS` (sms-app.ts). */
+export const TELEGRAM_SEND_TIMEOUT_MS = 9_000;
+
+/** Options the cache takes — the request bound and its signal factory (`AbortSignal.timeout` by default; tests inject one). */
+export interface TelegramAppCacheOptions {
+  readonly timeoutMs?: number;
+  readonly timeoutSignal?: (ms: number) => AbortSignal;
 }
 
 /** Validate the client config BEFORE building — a missing credential fails clear, not as an opaque 401. */
@@ -115,6 +137,22 @@ function extractTelegramCode(payload: unknown): number | null {
   return null;
 }
 
+/** Pull a 429's `parameters.retry_after` (a positive whole number of seconds), defensively (never throws). */
+function extractRetryAfter(payload: unknown): number | null {
+  try {
+    if (payload && typeof payload === 'object' && 'parameters' in payload) {
+      const parameters = (payload as { parameters: unknown }).parameters;
+      if (parameters && typeof parameters === 'object' && 'retry_after' in parameters) {
+        const after = (parameters as { retry_after: unknown }).retry_after;
+        if (typeof after === 'number' && Number.isInteger(after) && after > 0) return after;
+      }
+    }
+  } catch {
+    // A hostile getter must never escape.
+  }
+  return null;
+}
+
 /** Pull the `result.message_id` off a Telegram success response, defensively (never throws). */
 function extractMessageId(payload: unknown): string | null {
   try {
@@ -136,7 +174,14 @@ function extractMessageId(payload: unknown): string | null {
  * Build a fresh Telegram client cache. One per process (the composition layer holds it). `fetchImpl` defaults
  * to the global `fetch` (Node 18+/undici); tests inject a fake so NO network is touched.
  */
-export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch): TelegramAppCache {
+export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch, options: TelegramAppCacheOptions = {}): TelegramAppCache {
+  const timeoutMs = options.timeoutMs ?? TELEGRAM_SEND_TIMEOUT_MS;
+  // whatsapp-app.ts's bound check: ≤ 2^31 − 1 (Node clamps a longer timer to 1 ms — an instant abort). Checked HERE, at construction,
+  // so a bad bound is a startup error — ⛔ a send that may or may not have gone.
+  if (!(typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2_147_483_647)) {
+    throw new Error('telegram-app: timeoutMs is invalid');
+  }
+  const timeoutSignal = options.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms));
   const clients = new Map<string, TelegramMessagingHandle>();
 
   return {
@@ -155,6 +200,7 @@ export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch): Tele
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: buildRequestBody(message),
+                signal: timeoutSignal(timeoutMs),
               });
             } catch (err) {
               // Network / transport failure — no HTTP response. Classified as network downstream.
@@ -181,6 +227,7 @@ export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch): Tele
                 `telegram send rejected (HTTP ${res.status})`,
                 extractTelegramCode(payload),
                 res.status,
+                extractRetryAfter(payload),
               );
             }
 

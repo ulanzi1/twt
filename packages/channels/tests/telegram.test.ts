@@ -199,3 +199,68 @@ describe('createTelegramAppCache — thin fetch client (AC1, AC2)', () => {
     expect(() => cache.messagingFor('pariwar-a', { botToken: '' })).toThrow(/bot token/);
   });
 });
+
+// Story 5.14 (Task 3; FS7 (a), `2026-10-29-418` item 6) — the client gains a request TIMEOUT (a `signal` on the fetch seam, default
+// 9 000 ms — MSG91's value; the cache-level bound applies to the per-member mirror too: its hung call now ends `rejected` /
+// `api_unavailable` instead of hanging) and `retryAfter` on its error (Telegram's `parameters.retry_after` — the channel poster's 429
+// re-send). ⛔ A new error class: a timeout is the existing transport path (code null, status 0 ⇒ `api_unavailable`).
+describe('createTelegramAppCache — the request timeout and retry_after (Story 5.14, FS7)', () => {
+  const config = { botToken: '123456:ABC-DEF' };
+  const message: TelegramTextMessage = { chatId: '@twt_bihar_notices', text: 'Pool A is now open.' };
+
+  it('every send carries a signal from the timeout seam, bounded at 9 000 ms by default', async () => {
+    const timeoutSignal = vi.fn((ms: number) => AbortSignal.timeout(ms));
+    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, result: { message_id: 5 } }) });
+    await createTelegramAppCache(fetchImpl, { timeoutSignal }).messagingFor('pariwar-a', config).send(message);
+    expect(timeoutSignal).toHaveBeenCalledWith(9_000);
+    expect(fetchImpl.mock.calls[0]![1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('a configured timeoutMs is used; an invalid one fails at construction (⛔ a param error at send time)', async () => {
+    const timeoutSignal = vi.fn((ms: number) => AbortSignal.timeout(ms));
+    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, result: { message_id: 5 } }) });
+    await createTelegramAppCache(fetchImpl, { timeoutMs: 1_500, timeoutSignal }).messagingFor('pariwar-a', config).send(message);
+    expect(timeoutSignal).toHaveBeenCalledWith(1_500);
+    for (const timeoutMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648]) {
+      expect(() => createTelegramAppCache(fetchImpl, { timeoutMs }), String(timeoutMs)).toThrow(/timeoutMs/);
+    }
+  });
+
+  it('⭐ a HUNG server ends in a TelegramSendError (code null, status 0 — the existing api_unavailable class) once the signal aborts', async () => {
+    const controller = new AbortController();
+    // The fake honours the signal the way undici's fetch does: it rejects when the signal aborts, and never resolves otherwise.
+    const fetchImpl: FetchLike = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'TimeoutError')));
+      });
+    const send = createTelegramAppCache(fetchImpl, { timeoutSignal: () => controller.signal }).messagingFor('pariwar-a', config).send(message);
+    controller.abort();
+    const err = await send.catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(TelegramSendError);
+    expect(err).toMatchObject({ telegramCode: null, httpStatus: 0, retryAfter: null });
+    expect(classifyTelegramError(err).errorClass).toBe('api_unavailable');
+  });
+
+  it('⭐ a 429 carries Telegram\'s retry_after (seconds); other errors carry null', async () => {
+    const tooMany: FetchLike = () =>
+      Promise.resolve({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({ ok: false, error_code: 429, description: 'Too Many Requests: retry after 7', parameters: { retry_after: 7 } }),
+      });
+    await expect(createTelegramAppCache(tooMany).messagingFor('p', config).send(message)).rejects.toMatchObject({ telegramCode: 429, httpStatus: 429, retryAfter: 7 });
+    const notFound: FetchLike = () =>
+      Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ ok: false, error_code: 400, description: 'Bad Request: chat not found' }) });
+    await expect(createTelegramAppCache(notFound).messagingFor('p', config).send(message)).rejects.toMatchObject({ telegramCode: 400, retryAfter: null });
+    // a hostile / malformed retry_after is null (⛔ a NaN delay)
+    for (const parameters of [{ retry_after: 'soon' }, { retry_after: -3 }, { retry_after: 1.5 }, null, 'x']) {
+      const odd: FetchLike = () => Promise.resolve({ ok: false, status: 429, json: () => Promise.resolve({ ok: false, error_code: 429, parameters }) });
+      await expect(createTelegramAppCache(odd).messagingFor('p', config).send(message)).rejects.toMatchObject({ retryAfter: null });
+    }
+  });
+
+  it('a 2xx with no message_id still throws (it MAY have posted — the caller records unknown)', async () => {
+    const noId: FetchLike = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, result: {} }) });
+    await expect(createTelegramAppCache(noId).messagingFor('p', config).send(message)).rejects.toMatchObject({ telegramCode: null, httpStatus: 200, retryAfter: null });
+  });
+});

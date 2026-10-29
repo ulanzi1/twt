@@ -84,7 +84,7 @@ cheap AST heuristic — see the story's Review Findings for the retrigger condit
 
 Scanned over the channel access surface — `packages/channels/src` + the `apps/api` channel
 entrypoints (`channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`,
-`degraded-mode`, `device-token`) — **and, as of AI-6-1, the Epic-6 claim surface**
+`degraded-mode`, `device-token`, and — Story 5.14 — `announcement-channels`) — **and, as of AI-6-1, the Epic-6 claim surface**
 (`apps/api/src/modules/{claims,nominee}`, `packages/domain/src/claim`). On the claim surface
 this invariant is **vacuous-safe forward-coverage** today: claim step-up-OTP delegates to the
 already-scanned auth OTP service, so no local verification context exists yet — but a future

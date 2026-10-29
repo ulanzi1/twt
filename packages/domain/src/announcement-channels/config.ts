@@ -49,14 +49,19 @@ function toConfig(r: ConfigRow | undefined): AnnouncementChannelsConfig {
   };
 }
 
-/** The Pariwar's config, or the OFF default when no row exists. */
-export async function getAnnouncementChannelsConfig(q: Queryable, pariwarId: string): Promise<AnnouncementChannelsConfig> {
+/** The Pariwar's config row, or `null` when none exists (the admin GET's `configured` — AC2). */
+export async function findAnnouncementChannelsConfig(q: Queryable, pariwarId: string): Promise<AnnouncementChannelsConfig | null> {
   const { rows } = await q.query<ConfigRow>(
     `SELECT enabled, telegram_channel_chat_id, telegram_invite_url, whatsapp_channel_url
        FROM pariwar_announcement_channels WHERE pariwar_id = $1`,
     [pariwarId],
   );
-  return toConfig(rows[0]);
+  return rows[0] === undefined ? null : toConfig(rows[0]);
+}
+
+/** The Pariwar's config, or the OFF default when no row exists. */
+export async function getAnnouncementChannelsConfig(q: Queryable, pariwarId: string): Promise<AnnouncementChannelsConfig> {
+  return (await findAnnouncementChannelsConfig(q, pariwarId)) ?? ANNOUNCEMENT_CHANNELS_DEFAULT_CONFIG;
 }
 
 /** {@link AnnouncementChannelsState} — the config and the bot's token NAME, read together (two explicit predicates — I6). */

@@ -74,6 +74,8 @@ const CHANNEL_ROOTS = [
   'apps/api/src/modules/channel-config',
   'apps/api/src/modules/degraded-mode',
   'apps/api/src/modules/device-token',
+  // Story 5.14 — the Trust's announcement channels (the config PUT under `withCompensatingAudit`).
+  'apps/api/src/modules/announcement-channels',
 ];
 
 /**

@@ -20,6 +20,7 @@ export {
 } from './posts.js';
 export {
   ANNOUNCEMENT_CHANNELS_DEFAULT_CONFIG,
+  findAnnouncementChannelsConfig,
   getAnnouncementChannelsConfig,
   hasBotTokenName,
   memberVisibleAnnouncementLinks,

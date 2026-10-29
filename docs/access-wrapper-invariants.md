@@ -107,7 +107,7 @@ claiming a transition that never landed.
 The gate is deliberately **narrow by invariant, but now honest about scope** — one gate,
 three mechanized slices, each scanned over the code its commitment is about:
 - **(a)/(b)** over `packages/validity-service/src` — the validity caller/internal fail-closed slice.
-- **(f)** over the channel surface (`packages/channels/src` + the `apps/api` channel entrypoints: `channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`, `degraded-mode`, `device-token`) **and the claim surface** (`apps/api/src/modules/{claims,nominee}`, `packages/domain/src/claim`) — the constant-time secret-compare slice.
+- **(f)** over the channel surface (`packages/channels/src` + the `apps/api` channel entrypoints: `channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`, `degraded-mode`, `device-token`, `announcement-channels` — Story 5.14) **and the claim surface** (`apps/api/src/modules/{claims,nominee}`, `packages/domain/src/claim`) — the constant-time secret-compare slice.
 - **(g)** over the SAME channel **+ claim** surface — the compensating-audit mechanization slice (AI-5-3 / ADR-0030).
 
 This closes the AI-4-3 → AI-5-1 → AI-5-3 → **AI-6-1** chain the Epic-4/5/6 retros flagged (I-1,

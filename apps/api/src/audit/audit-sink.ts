@@ -738,7 +738,12 @@ export type AuthAuditEventType =
   // ── Story 11b.4a (`2026-10-27-412` MP7) — the helpline's take-down DRIVE VIEW: one line per read, `fields_decrypted: n`
   //    (the words, the description, the recorded nominee's name and mobile, the current nominee's name) — ⛔ never the content.
   //    The two WRITES (`memorial.takedown.request_record`, `memorial.takedown.decide`) go through `withCompensatingAudit` only.
-  | 'memorial.takedown.read';
+  | 'memorial.takedown.read'
+  // ── Story 5.14 (`2026-10-29-418` item 9) — the Trust's announcement channels "Posts" list: ONE line per GET (the
+  //    `reconciliation-review` audited-read shape), context COUNTS only (entries, words built / unavailable, the switch) — ⛔ a name,
+  //    ⛔ a post text. Each named row's words decrypt the deceased member's name (each decrypt ALSO fires the global-lock
+  //    `decryptDek` audit hook). The config WRITE goes through `withCompensatingAudit` only.
+  | 'admin_announcement_channels.posts_read';
 
 export interface AuthAuditEvent {
   readonly type: AuthAuditEventType;

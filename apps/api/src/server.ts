@@ -52,6 +52,8 @@ import { registerNomineeBankMaskingModule } from './modules/nominee-bank-masking
 import { registerChannelWebhooksModule } from './modules/channel-webhooks/index.js';
 import { registerWaOptInModule } from './modules/wa-opt-in/index.js';
 import { registerTelegramOptInModule } from './modules/telegram-opt-in/index.js';
+// Story 5.14 — the Trust's announcement channels (admin config + "Posts" list; the member read of the links).
+import { registerAnnouncementChannelsModule } from './modules/announcement-channels/index.js';
 import { registerPoolOnboardingModule } from './modules/pool-onboarding/index.js';
 import { registerMemberTermsModule } from './modules/terms/index.js';
 import { registerNomineeModule } from './modules/nominee/index.js';
@@ -301,6 +303,7 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // tg-webhook-processor worker advances PENDING→ACTIVE on the bot `/start`; this is the member-facing half of
   // the dual gate (config `enabled` AND opt-in ACTIVE).
   registerTelegramOptInModule(app, deps);
+  registerAnnouncementChannelsModule(app, deps);
   // Story 7.10 — member pool-engine onboarding-tutorial outcome surface (UX-DR79; AC4): POST record the
   // completion/skip as a member-level audit line (member.pool_onboarding_tutorial_completed/_skipped) —
   // member-session-gated, best-effort telemetry (the app's MMKV flag is the authoritative suppressor).

@@ -11,12 +11,13 @@ Two facts, kept apart (footgun #24): (1) the PIN is valid iff `git merge-base --
 iff `git diff --name-only 282bdd33..origin/main -- packages apps scripts docs/adr docs/launch-gate-inventory` is EMPTY or every changed
 path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never assume either.
 
-STATUS: v1.3 (2026-10-29): Task 0.1 done; FS1–FS15 answered; PQ1 note written. 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
+STATUS: v1.4 (2026-10-29): Task 0.1 done; FS1–FS15 answered; PQ1 RULED (`-416`, A, full name); next: "The words" (en + hi), then the author-commit (`-417`). 2026-10-29 created (`bmad-create-story 5.14`) → ready-for-dev. v1.0 → v1.1 the same day: one fresh-context checklist verifier
 (2 CRITICAL / 5 HIGH / 12 MEDIUM / 10 LOW), every finding applied and the critical ones re-checked by hand (Change Log). v1.1 → v1.2 the
 same day: a second validation (three fresh-context verifiers — jobs / API-admin-mobile / governance-design; 30 findings, all applied by
 BigDev's "all"; Debug Log (e)). FS1–FS15
-PROPOSED for BigDev at Task 0.2; PQ1 PROPOSED (one Panel question — whether a public channel post may name a deceased member's family
-ahead of the rule every public web page follows; it blocks the go-live row, ⛔ the build). ⛔ No code before Task 0.3 (the
+PROPOSED for BigDev at Task 0.2 (ANSWERED 2026-10-29 — as recommended); PQ1 PROPOSED (one Panel question — whether a public channel
+post may name a deceased member's family ahead of the rule every public web page follows) — ✅ RULED 2026-10-29, `2026-10-29-416`
+(Trustee-ratified, DR + KB): **A, full name**. ⛔ No code before Task 0.3 (the
 author-commit decision committed ALONE) and Task 0.4 (records).
 
 START CONDITION — MET at the pin: `-390` Q2 A (Trustee-ratified, 2026-10-23) homed this row; 5.5 (the per-Pariwar Telegram bot, its
@@ -24,7 +25,8 @@ config table and real `sendMessage` client), 8.1 (`openCycleAlert`), 8.8 (the fa
 `done` on `main`. Nothing this story needs is unbuilt elsewhere.
 
 NUMBERS (footguns #19 / #42(e); `-366` decision 6): this file names no decision id, roster Row, migration number or ledger letter as
-TAKEN. At the pin they WERE: decision max `-415` on `main` (`-413` held by 6.32's unlanded branch) ⇒ next `-416`; roster Row 43 on `main`
+TAKEN. At the pin they WERE: decision max `-415` on `main` (`-413` held by 6.32's unlanded branch) ⇒ next `-416` (TAKEN 2026-10-29 by the Panel's PQ1 ruling ⇒ this story's author-commit takes
+`-417`, re-checked at the time); roster Row 43 on `main`
 (Row 42 held by 6.32's branch) ⇒ next Row 44; migration `0188_degraded-bridge-sms` on `main` (journal `when` 1795837200033), and 6.32's
 branch ALREADY holds `0189_ground-inspection-questionnaire` (`when` 1795923600034, renumbered in `9eec3559`, 2026-10-29) ⇒ this story's
 migration is `0190`, with a `when` above 1795923600034 (`-366` decision 6: a number belongs to the first COMMIT that takes it on any
@@ -67,6 +69,8 @@ every branch and every worktree — the ledger letter included.
       vs *"what a mutual-aid group is told"*). ⇒ `-390`'s accepted cost and `-160` / `-173`'s basis gate are
       two RATIFIED positions that may conflict — the template's fourth case ⇒ the Panel's ⇒ PQ1. ⛔ The author does not decide which
       governs ([[feedback_supersede_never_reinterpret]]). (v1.0 of this file cited `-157` as live — WRONG: `-160` superseded its hold.)
+      ✅ RESOLVED 2026-10-29 by the Panel — `2026-10-29-416` (Trustee-ratified): *"option A, full name"* — the post names the family in
+      the FULL name; `-160` / `-173` do not govern this post and are unmoved for the web pages.
       Sub-question for option A only: WHICH form — the member-facing resolver renders a mononym in full in `shielded_name` mode
       (`pool-identity.ts:226-228`, `resolveMemberFacingDeceasedName`), while the public resolver omits it (`-181` trap; `-145` cl.3).
   G4  Niyamavali R10(B), TWT-adapted (PRD `prds/prd-TWT-2026-05-22/prd.md:1255`, under FR-94 — ⛔ in the seed clause file): *"Missed
@@ -184,8 +188,9 @@ remains the official place for every notice**.
   (G2 / PQ1) and the cycle's last date; the builder's input type has no member field; the post record holds ids, states, the date and
   the pool label — ⛔ the family's name, ⛔ the post text (FS15). *Proof:* AC4, AC7.
 - **I5 — The family's name is the ruled one, whole — or absent.** Which variant posts is ONE exported constant (FS6) set from PQ1's
-  answer. In `member_facing` mode the name comes from `resolvePoolIdentity` (or the public resolver, if PQ1 so rules — G3); never
-  truncated; a pool whose name cannot be resolved is `refused:identity_unavailable`, ⛔ posted without the name. In `none` mode NO name is
+  answer — `'full_name'` (`-416`: *"option A, full name"*). In `full_name` mode the name is the deceased member's stored full name:
+  `resolvePoolIdentity` with the mode `'full_name'` PASSED (⛔ the Pariwar's presentation mode read — `-416` item 2's reading); never
+  truncated, a one-word name shown in full; a pool whose name cannot be resolved is `refused:identity_unavailable`, ⛔ posted without the name. In `none` mode NO name is
   read: ⛔ mode read, ⛔ `resolvePoolIdentity`, ⛔ decrypt — the label comes from `resolveCuratedPoolName` ?? `poolLetterCode`, and
   `identity_unavailable` cannot arise. *Proof:* AC4.
 - **I6 — One Pariwar's notices never reach another Pariwar's channel.** Config, post record and job are keyed by `pariwar_id`. The API
@@ -444,6 +449,10 @@ Each is the author's (§0, G1) unless it says PQ. Answer by number + letter; a b
   it to the decision; PQ1's answer can flip it in a one-line change + its tests (B ⇒ `'none'` until the post-death clause is pinned —
   today that is every member; a later "per member's own Terms" wiring is a deferred item, ⛔ built here); go-live leg (d) is PQ1's
   answer. In `'none'` mode neither the job nor the posts list reads the mode or decrypts anything (I5).** *Cost (a):* if PQ1 rules A with the PUBLIC form (G3 sub-question), a third mode wires the public resolver — small, later.
+  ✅ **RULED 2026-10-29 (`-416`): A, full name** ⇒ the constant is `ANNOUNCEMENT_POST_NAME_MODE: 'full_name' | 'none'`, set to
+  `'full_name'`, the test pinning it to `-416`; `'full_name'` decrypts the stored name and passes the mode `'full_name'` to
+  `resolvePoolIdentity` — ⛔ a presentation-mode read; `'none'` stays built (a later ruling is a one-line flip). The "per member's own
+  Terms" deferred item is ⛔ created (B was not chosen). Go-live leg (d) MET by `-416`.
   Nothing is posted before go-live anyway. **(b) build only the named variant.** *Cost (b):* a B ruling becomes a builder change. **(c)
   build only the unnamed variant now.** *Cost (c):* narrows `-180` without a ruling — the Panel's.
 - **FS7 — sending (F1, F5, F19).** ⭐ **(a) the poster resolves the Pariwar's bot secret itself and calls the messaging handle; the
@@ -497,17 +506,18 @@ Each is the author's (§0, G1) unless it says PQ. Answer by number + letter; a b
   (the WhatsApp Channel on the Trust's own WhatsApp app account — a Cloud-API-only number has no app client; the Telegram channel with the
   Pariwar's bot as an admin with "Post messages"), enters the links and chat id, and sets the bot webhook's `allowed_updates` to
   `["message","my_chat_member"]` (F4); **(b)** a real post from staging to a private test channel (ids only); **(c)** BigDev's review of the
-  Hindi of every string (posts + app) — recorded, ⛔ assumed; **(d)** PQ1 answered and FS6's constant set to match; **(e)** counsel asked
+  Hindi of every string (posts + app) — recorded, ⛔ assumed; **(d)** PQ1 answered and FS6's constant set to match (✅ MET 2026-10-29 by `-416`; the constant `'full_name'`); **(e)** counsel asked
   about naming a deceased member's family on a public channel (or *"Counsel has not been asked"* recorded as an accepted cost — ⛔ an
   answer); **(f)** LAST: a Pariwar admin switches the channels on. ⛔ Never a merge fence ([[project_not_in_production_merge_is_not_golive]]).
 - **FS14 — what the app says about privacy.** ⭐ **(a) nothing about who can see a follower** (F13 — WhatsApp's contact exception and
   Telegram's admin view make any "the Trust cannot see you" untrue). *Cost (a):* a privacy-minded member is not told what the channel shows.
   **(b) a per-platform accurate line.** *Cost (b):* long, platform-specific, and it can go stale when Meta changes it.
 - **FS15 — where the words (with the name) live.** ⭐ **(a) NOWHERE persistent: the job decrypts and builds only when it actually posts
-  (channels on, chat id set, bot resolvable, `member_facing` mode) and never stores the text; a `skipped` row holds ids, the pool label
+  (channels on, chat id set, bot resolvable, `full_name` mode) and never stores the text; a `skipped` row holds ids, the pool label
   (no-decrypt — F7) and the date only; the admin "Posts" list REBUILDS the words at read in the API (via `member-pool/pool-identity.ts`
-  `:63,98` — F14 — crossing its D11 note consciously, recorded in the decision; an AUDITED read per the `reconciliation-review` `:105`
-  precedent; a null identity or a throwing mode read makes THAT row's words *unavailable*, ⛔ a 500 — the `safeDecrypt` shape) under
+  `:98` with the mode `'full_name'` passed — ⛔ the `:63` mode read since `-416` — F14 — crossing its D11 note consciously, recorded in
+  the decision; an AUDITED read per the `reconciliation-review` `:105` precedent; a null identity or a throw makes THAT row's words
+  *unavailable*, ⛔ a 500 — the `safeDecrypt` shape) under
   `pariwar.configure_channels`, from the Pariwar's alerts and pools of the last 15 days LEFT JOINED to the post rows (so a dropped enqueue
   shows *"not attempted"* — I9).** The builder is a pure function in `packages/contracts/src/announcement-channels/` that takes `t` as a
   parameter (F17); jobs and API pass the real `t`. *Cost (a):* a KMS decrypt per pool per admin page view (admin scale); ⛔ erasure work —
@@ -524,7 +534,7 @@ The posts (one bilingual message each; Hindi first, a blank line, then English; 
 
 | Key | Variables | English | Hindi (DRAFT) |
 |---|---|---|---|
-| `channel_post.pool_open.named` (FS6 `member_facing`) | `pool` · `deceasedName` | Pool {pool} is now open, in support of {deceasedName}'s family. If you are assigned to this pool, please open the app to contribute. | पूल {pool} अब खुल गया है, {deceasedName} के परिवार के सहयोग हेतु। यदि आप इस पूल से जुड़े हैं, तो सुविधानुसार ऐप खोलकर योगदान करें। |
+| `channel_post.pool_open.named` (FS6 `full_name` — ruled, `-416`) | `pool` · `deceasedName` | Pool {pool} is now open, in support of {deceasedName}'s family. If you are assigned to this pool, please open the app to contribute. | पूल {pool} अब खुल गया है, {deceasedName} के परिवार के सहयोग हेतु। यदि आप इस पूल से जुड़े हैं, तो सुविधानुसार ऐप खोलकर योगदान करें। |
 | `channel_post.pool_open.unnamed` (FS6 `none`) | `pool` | Pool {pool} is now open. If you are assigned to this pool, please open the app to contribute. | पूल {pool} अब खुल गया है। यदि आप इस पूल से जुड़े हैं, तो सुविधानुसार ऐप खोलकर योगदान करें। |
 | `channel_post.last_day` | `date` (DD-MM-YYYY) | Today, {date}, is the last day of this cycle. If you are able, please contribute in the app. | आज, {date}, इस चक्र का अंतिम दिन है। यदि संभव हो, तो कृपया ऐप में योगदान करें। |
 
@@ -553,6 +563,12 @@ pattern). ⚠ Interim truth (I7): the WhatsApp body says notices are "posted" th
 admin posting by hand — the switch's on-label in the admin form says so (AC2), and the decision records it as FS4 (a)'s accepted gap.
 
 ### PQ1 — for the Trustee Panel (ONE short note; blocks go-live leg (d), ⛔ the build)
+
+✅ **RULED 2026-10-29 — `2026-10-29-416` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti), verbatim: *"by DR and KB"* / *"option A,
+full name"*.** The note: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md`
+(SENT — recorded by the answer). `-390` / `-180` Q1 stand for the posts; `-160` / `-173` do not govern this post and are unmoved for
+the web pages. ⚠ Flagged, not reachable today: a Pariwar set to `shielded_name` would post the full name while its member push shows
+the shorter form (`-416` Not covered). The text below is kept as proposed.
 
 **Plain English:** the Panel agreed on 2026-10-23 that the Trust's channel post for a pool opening names the deceased member's family.
 It was told a WhatsApp Channel is public. But every public page the Panel has ruled on names a deceased member only if THAT member had
@@ -620,8 +636,9 @@ AC2's routes; determinism check green); 401 unauthenticated; a member of A never
 `packages/contracts/src/announcement-channels/` — `input` is `{ occasion: 'pool_open', poolLabel, deceasedName: string | null } | {
 occasion: 'last_day', lastDate }`; a `@ts-expect-error` test proves a member field is refused. `t` is a LOCAL structural type (F17). It
 returns Hindi, a blank line, English, through the injected `t` (tests pass the REAL `t` from `@twt/i18n`, a contracts devDependency).
-Named / unnamed is chosen by `ANNOUNCEMENT_POST_NAME_MODE` (a test pins its value to the decision). In `member_facing` mode the name comes
-from the F7 identity wiring (mode read + a WRAPPED `resolvePoolIdentity`, `poolCount` = the cycle's pools); `null` or a throw gives
+Named / unnamed is chosen by `ANNOUNCEMENT_POST_NAME_MODE` (a test pins its value `'full_name'` to `-416`). In `full_name` mode the name
+comes from a WRAPPED `resolvePoolIdentity` with the mode `'full_name'` passed (⛔ the Pariwar's presentation-mode read; `poolCount` = the
+cycle's pools) — a test proves a Pariwar stored as `shielded_name` still posts the full name, and a one-word name in full; `null` or a throw gives
 `refused:identity_unavailable`, ⛔ an unnamed post; the label is `poolName ?? poolLetterCode`. In `none` mode: ⛔ mode read, ⛔
 `resolvePoolIdentity`, ⛔ decrypt — the label is `resolveCuratedPoolName ?? poolLetterCode(poolIndex)` and a test proves NO KMS call. The
 date is EXACTLY the day-14 member reminder's: `operationalDate` MOVES unchanged from `contribution-notify-triggers.ts:320-326` into
@@ -688,8 +705,8 @@ mirrors members are asked to join; Telegram posted by the system via the Pariwar
 per-member mirror; the name per PQ1); the roster gains the FS13 row, and Row 26 a dated note (the two new tables join its scope — their
 grants bind `twt_app` only; jobs reach them on the BYPASSRLS pool, isolated by explicit predicate — I6); ⛔ ADR-0030 (ratified; F14);
 deferred-work's
-5.11 channels item gets an appended line (HOMED → building; closes when this row is `done` on `main`) plus a NEW item for FS6's deferred
-"per member's own Terms" wiring (trigger: PQ1 ruled B and the post-death clause pinned); the friction ledger gains ONE `optional` row for the
+5.11 channels item gets an appended line (HOMED → building; closes when this row is `done` on `main`) (FS6's "per member's own Terms"
+item is ⛔ created — `-416` ruled A); the friction ledger gains ONE `optional` row for the
 card and a `**Story 5.14 disposition**`.
 
 **AC11 — Nothing frozen moved (I8).** `git diff origin/main -- packages/channels/src/dispatch.ts 'packages/channels/src/cascade*'
@@ -723,7 +740,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
         cost line (footgun #45). A confirmation of the Hindi in session does NOT discharge roster leg (c) unless BigDev says it does —
         record which.
   - [ ] 0.3 (NOTE WRITTEN 2026-10-29 — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md`,
-        ⏳ NOT SENT; decision entry not yet staged) Write the PQ1 note (`trustee-panel-routing-note-YYYY-MM-DD-5-14-…`, from the template — §0 first, the one deciding fact,
+        SENT and RULED — `-416`; this story's author-commit (`-417`) not yet staged) Write the PQ1 note (`trustee-panel-routing-note-YYYY-MM-DD-5-14-…`, from the template — §0 first, the one deciding fact,
         options with costs, "How much to trust this note" incl. the v1.0 `-157` error, evidence last); record it NOT sent until BigDev
         sends it. Stage the author-commit decision (next free id) in the scratchpad; commit it ALONE (`governance:` prefix) — try the
         decision-log write first ([[project_decision_log_writes_user_inserted]]).
@@ -750,8 +767,8 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
 - [ ] **Task 4 — The poster job (AC5, AC6, AC7; I1–I6, I9)**: `QUEUE_NAMES` entry in `packages/queue/src/index.ts`; handler
       `apps/jobs/src/scheduler/announcement-channel-post.ts` — the cycle job (pools-only read ⇒ one pool child each, `startAfter = i × 3 s`)
       and the post job: config read (explicit `pariwar_id`) → skip / stale checks → secret via `resolveChannelSecret` BEFORE the claim (a
-      throw: no row, rethrow; final attempt only: `refused:secret_unresolved`) → identity (`member_facing` only: the F7 wiring, wrapped,
-      with `jobsEncryption`; `none`: the no-decrypt label) → begin (short tx) → send through a handle from `createTelegramAppCache` with
+      throw: no row, rethrow; final attempt only: `refused:secret_unresolved`) → identity (`full_name` only: a wrapped `resolvePoolIdentity`,
+      mode `'full_name'` passed, with `jobsEncryption`; `none`: the no-decrypt label) → begin (short tx) → send through a handle from `createTelegramAppCache` with
       NOTHING held → finalise (short tx, own token) — all through the Task 1 accessor; alarms deduped per Pariwar + class by
       `createTtlMemo`. `createQueue` BEFORE the contribution-notify and cycle-open workers register; worker registration; the optional
       seams on `CycleOpenAlertDeps` and `ContributionNotifyTriggerDeps` wired in boot (the day-14 hook and the recovery-sweep step — AC5
@@ -788,9 +805,10 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
   to their personal Telegram chat — a per-member privacy-posture change (§3.4). The channel post never uses `dispatch`.
 - **T3 — the sweep runs daily; the day-14 hook must hold across runs** (a re-run the same day, a late run): the record's UNIQUE holds
   (F19 — the queue key does not); `cycleDay` 15+ posts nothing — test it.
-- **T4 — the name needs decrypt deps in jobs AND in the API** (FS15) — in `member_facing` mode ONLY. `resolvePoolIdentity` returns `null`
-  on a decrypt failure and can THROW on its DB reads — key `refused:identity_unavailable` on `null`, a throw, and a failed mode read; ⛔ a
-  post without the name in `member_facing` mode. In `none` mode none of this runs (I5) — ⛔ "reuse" the identity wiring for the label.
+- **T4 — the name needs decrypt deps in jobs AND in the API** (FS15) — in `full_name` mode ONLY. `resolvePoolIdentity` returns `null`
+  on a decrypt failure and can THROW on its DB reads — key `refused:identity_unavailable` on `null` and a throw; ⛔ a post without the
+  name in `full_name` mode. ⛔ Read the Pariwar's presentation mode for the post: `-416` rules the FULL name whatever the mode (the F7
+  wiring's mode read is for the member's own notice, ⛔ this post). In `none` mode none of this runs (I5) — ⛔ "reuse" the identity wiring for the label.
 - **T5 — the webhook processor is NOT edited** (F4 — verified safe at the pin); add only the regression test. If S4 trips, stop.
 - **T6 — `useT()` fresh closure.** Depend on `locale`, never `t` ([[project_uset_fresh_closure_memo_trap]]).
 - **T7 — two reminder cards at once (FS11 (a))** — acceptable and bounded; do not "fix" it by hiding known-people cards.
@@ -838,7 +856,7 @@ pattern, ⛔ edited); `home-card-dismissals.ts`; `home-cards.ts`; `apps/mobile/l
 ### Reuse map
 
 the 0184 lifecycle + `alert-sms-sends.ts` accessor shape + `createTtlMemo` (F15) · `createTelegramAppCache` · `channelConfig.getTelegramConfig`
-· `resolveChannelSecret` · the F7 identity wiring (`member_facing` only) · `resolveCuratedPoolName` + `poolLetterCode` (`none` / skipped) ·
+· `resolveChannelSecret` · `resolvePoolIdentity` with mode `'full_name'` (`-416`) · `resolveCuratedPoolName` + `poolLetterCode` (`none` / skipped) ·
 `member-pool/pool-identity.ts` + `reconciliation-review` `safeDecrypt` (API) · `withCompensatingAudit` · `TelegramConfigForm` ·
 `HomeReminderCard` · the `SahyogVivranEntry` link shape · `known-people-cache.ts` key shape · `wa-signup-copy-keys.test.ts`.
 
@@ -890,6 +908,8 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
   and FS15 (a)'s audited admin decrypt, crossing D11. ⚠ NOT answered by this line: "The words" (en + hi), so roster leg (c) stays open;
   the Hindi script choice (व्हाट्सएप / टेलीग्राम vs Latin); PQ1 (the Panel's — the note is written, NOT sent).
 - **2026-10-29, BigDev:** *"prepare rotuing note"* ⇒ Task 0.3's note written (path above).
+- **2026-10-29, the Panel's PQ1 ruling, relayed by BigDev, verbatim:** *"by DR and KB"* / *"option A, full name"* ⇒ `2026-10-29-416`
+  (Trustee-ratified), committed alone (`26fc1f47`); the note's ruling block filled; FS6's constant `'full_name'`; leg (d) MET.
 
 (b) RED proofs. (c) Gate runs.
 
@@ -946,3 +966,4 @@ migration or seed; `NAME_PUBLICATION_AUTHORISED` unchanged (`public-read.ts:393`
 | 2026-10-29 | 1.1 | Checklist validation (one verifier: 2 critical / 5 high / 12 medium / 10 low) — all applied; Debug Log (e). |
 | 2026-10-29 | 1.2 | Second checklist validation (three parallel verifiers: 6 critical / 19 should-add / 4 optimisations / 1 LLM) — all applied on BigDev's "all"; Debug Log (e). Ledger relabelled `-29a` → `-29c`; migration `0190`. |
 | 2026-10-29 | 1.3 | Task 0.1 done (clean — Debug Log (d)); Task 0.2: FS1–FS15 answered as recommended (Debug Log (a)), "The words" still open; Task 0.3: the PQ1 note written, NOT sent; G3 / PQ1 corrected (the public memorial; `-198`). |
+| 2026-10-29 | 1.4 | PQ1 RULED — `2026-10-29-416` (Trustee-ratified, DR + KB): *"option A, full name"*. FS6's constant `'full_name'` (no presentation-mode read); I5 / AC4 / FS15 / T4 / Task 4 updated; go-live leg (d) MET; FS6's deferred item not created; the note's ruling block filled. |

@@ -12,16 +12,28 @@
 > - the per-member "Telegram notifications" a member switches on for themselves — unchanged, ⛔ asked.
 > ⭐ **Nothing in the build waits for your answer.** Both versions of the post are built; one setting selects which is sent. The
 > channels go live only after you answer, and a Pariwar administrator switches them on last.
-> ⏳ **NOT SENT.** Written 2026-10-29 at Story 5.14 Task 0.3. Recorded as sent only when BigDev sends it
-> ([[feedback_shown_to_panel_means_sent]]).
+> ✅ **ANSWERED 2026-10-29 — Decision `2026-10-29-416` (Trustee-ratified, Dhiraj Rahul + Kalpana Bharti): Option A, full name.** The
+> ruling is in the block below; everything after it is kept unedited, as put.
+> ✅ **SENT** — recorded by the answer itself (whether the full note or a shorter copy was shown is not recorded). Written 2026-10-29
+> at Story 5.14 Task 0.3, on BigDev's *"prepare rotuing note"*; committed as put in `f5929d7d`.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULING — 2026-10-29, Decision `2026-10-29-416` (Trustee-ratified)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ratifying trustees:** Dhiraj Rahul, Kalpana Bharti. **Verbatim, as relayed by BigDev:** *"by DR and KB"* / *"option A, full
+> name"*.
+>
+> - **Option A.** The pool-open post on both channels names the deceased member whose family the pool supports, as October agreed.
+>   Cost accepted as put: a deceased member is named in public with no basis of their own, unlike every public page; counsel has not
+>   been asked. B and C were not chosen.
+> - **The name form — full name.** The full name, not the shorter public form; a one-word name is shown in full. ⚠ Our reading,
+>   named in the decision: the `full_name` form whatever the Pariwar's presentation setting — every Pariwar uses `full_name` today, so
+>   it is the same name the member's own notice carries.
+>
+> **Not covered:** counsel (go-live leg (e)); a Pariwar ever set to the shorter form (flagged, not reachable today); the words, the
+> build and the ask — the author's; the public web pages' rule (`-160` / `-173`) — unmoved for those pages.
+> ⭐ Everything below is kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

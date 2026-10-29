@@ -123,6 +123,12 @@ import {
 } from './matcher/matcher-worker.js';
 import { buildContributionProviderResolver, resolveChannelSecret, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
 import { createAlertSmsSender } from './scheduler/alert-sms-send.js';
+import {
+  createAnnouncementPoster,
+  createAnnouncementPostTrigger,
+  enqueueAnnouncementCycle,
+  registerAnnouncementChannelPostWorker,
+} from './scheduler/announcement-channel-post.js';
 import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correction-reminders.js';
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
@@ -150,6 +156,7 @@ import {
   createAuditPort,
   createMsg91PreflightMemo,
   createRenderedMessageHash,
+  createTelegramAppCache,
   MSG91_PREFLIGHT_FAULT_TTL_MS,
   MSG91_PREFLIGHT_TRANSIENT_TTL_MS,
   MSG91_PREFLIGHT_PASS_TTL_MS,
@@ -624,6 +631,21 @@ async function main(): Promise<void> {
     // secret-missing ⇒ fixture; DB/Secret-Manager OUTAGE ⇒ reject → pg-boss retry) lives inside the resolver.
     const contributionProviders = await buildContributionProviderResolver({ pool });
     contributionProvidersTeardown = contributionProviders.teardown;
+    // ── The Trust's announcement channels (Story 5.14) — Class B (one post per pool / per last day) ──
+    // The queue is created FIRST — before the contribution-notify and cycle-open workers whose seams send onto it (F19). The poster
+    // holds its OWN Telegram cache (⛔ the composition's, which falls back to the fixture when the per-member mirror is off — T1): each
+    // post resolves the Pariwar's bot token itself and calls the Bot API directly (I3). `pool` is the BYPASSRLS service pool — every
+    // read and write carries `pariwar_id` (I6). Day one: nothing is posted — every Pariwar's switch starts OFF (I1; roster Row 44).
+    await boss.createQueue(QUEUE_NAMES.ANNOUNCEMENT_CHANNEL_POST);
+    await registerAnnouncementChannelPostWorker(
+      boss,
+      createAnnouncementPoster({
+        pool,
+        encryption: jobsEncryption,
+        resolveSecret: resolveChannelSecret,
+        telegram: createTelegramAppCache(),
+      }),
+    );
     // ⭐ Story 6.37 (MG5) — the ONE process MSG91 pre-flight memo every claim text reads (the send core, and the suspicion /
     // peer-mesh holds): every send runs in a pg-boss CHILD, so ⛔ a per-run memo could reach it. A pass is reused 1 h, a fault
     // 5 min (`2026-10-17-345`), a transient 60 s (`-346`). ⛔ Built while the gateway is unconfigured (the sweeps already hold on that).
@@ -672,6 +694,10 @@ async function main(): Promise<void> {
       // Row 43's last leg turns it ON). The cycle-open child reads it ONCE per job at its first bridge attempt (`onceForJob`), so
       // turning it OFF stops texts already queued. News / survey / moderation share these deps and never reach it (⛔ bridge).
       readBridgeSwitch: async (): Promise<boolean> => (await degradedModeDomain.readDegradedBridgeSmsSwitch(pool)).enabled,
+      // ⭐ Story 5.14 (AC5 (ii), (iv)) — the Trust's announcement channel seam: the day-14 LAST-DAY job, and the hourly recovery heal of
+      // a dropped pool-open enqueue. Its queue is created ABOVE, before these workers register (F19 — a send to a queue not yet created
+      // throws in v12).
+      enqueueAnnouncementPost: createAnnouncementPostTrigger(boss, pool),
     };
     await registerContributionNotifyWorkers(boss, contributionNotifyDeps);
 
@@ -788,6 +814,8 @@ async function main(): Promise<void> {
 
     await registerCycleOpenAlertWorkers(boss, {
       pool,
+      // Story 5.14 (AC5 (i)) — the Trust's channel post's CYCLE job, POST-COMMIT beside the fan-out (best-effort; the recovery sweep heals).
+      enqueueAnnouncementPost: (input) => enqueueAnnouncementCycle(boss, input, { alertId: input.alertId, cycleId: input.cycleId }),
       // Story 8.8 (Task 5) — the PRIMARY contribution-notify enqueue: fired POST-COMMIT the instant
       // the alert reaches `live`, threading the alert.published `time_critical` signal VERBATIM.
       enqueueContributionNotify: (input) =>

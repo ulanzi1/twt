@@ -553,6 +553,13 @@ export const QUEUE_NAMES = {
    * delivery count line (Story 6.37b, DR11 / DR12). Job class C.
    */
   SMS_DELIVERY_SILENCE: 'sms.delivery_report.silence',
+  /**
+   * The Trust's announcement channel posts (Story 5.14, `2026-10-29-417` §5): ONE queue, three payloads (ids only) — the CYCLE job
+   * (enqueued post-commit by the cycle-open alert worker; re-sent by the contribution-notify recovery sweep) fans out ONE POOL child per
+   * pool (`startAfter` i × 3 s); the LAST-DAY job (the day-14 sweep). Each child posts at most once to the Pariwar's Telegram channel
+   * (the `announcement_channel_posts` record — ⛔ `singletonKey`, which dedupes nothing). Job class B.
+   */
+  ANNOUNCEMENT_CHANNEL_POST: 'announcement.channel.post',
 } as const;
 
 /** Union of the registered queue names. */

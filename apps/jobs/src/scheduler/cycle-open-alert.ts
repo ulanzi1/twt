@@ -62,6 +62,19 @@ export interface CycleOpenAlertDeps {
     readonly actorId: string | null;
     readonly traceId: string;
   }) => Promise<void>;
+  /**
+   * Story 5.14 (AC5 (i)) — the Trust's announcement channel CYCLE job, sent POST-COMMIT beside the contribution-notify enqueue (also on
+   * the `minted: false` path). Best-effort with its own alarm: a failure NEVER fails the mint (I9) — the contribution-notify recovery
+   * sweep re-sends the cycle job for a live alert whose pools lack a post row. Omitted ⇒ no post (tests omit it).
+   */
+  readonly enqueueAnnouncementPost?: (input: {
+    readonly alertId: string;
+    readonly cycleId: string;
+    readonly pariwarId: string;
+    readonly requestId: string;
+    readonly actorId: string | null;
+    readonly traceId: string;
+  }) => Promise<void>;
   /** Failure alarm sink — a console stub by default. */
   readonly onAlarm?: (message: string) => void;
 }
@@ -162,6 +175,26 @@ export async function runCycleOpenAlert(
       alarm(
         `[jobs] cycle-open-alert: failed to enqueue the contribution-notify fan-out for cycle ${cycleId} — ` +
           `${String(err)} (the alert is committed; the notify recovery sweep will heal it)`,
+      );
+    }
+  }
+
+  // Story 5.14 (AC5 (i); I9) — the Trust's channel post's CYCLE job, post-commit and best-effort (its own alarm). Whether anything is
+  // POSTED is decided at post time by the Pariwar's "channels live" switch (I1) — this only hands the alert over.
+  if (deps.enqueueAnnouncementPost) {
+    try {
+      await deps.enqueueAnnouncementPost({
+        alertId: result.alertId,
+        cycleId,
+        pariwarId,
+        requestId: envelope.requestId,
+        actorId: envelope.actorId,
+        traceId: envelope.traceId,
+      });
+    } catch (err) {
+      alarm(
+        `[jobs] cycle-open-alert: failed to enqueue the announcement channel post for cycle ${cycleId} — ${String(err)} ` +
+          `(the alert is committed; the contribution-notify recovery sweep re-sends it)`,
       );
     }
   }

@@ -77,6 +77,7 @@ import { QUEUE_NAMES, type Job, type JobEnvelope, type QueueClient } from '@twt/
 import { createHash } from 'node:crypto';
 
 import { isFinalFanOutAttempt, type FanOutCall } from './alert-sms-details.js';
+import type { AnnouncementPostTrigger } from './announcement-channel-post.js';
 import {
   BRIDGE_ALARM_WINDOW_MS,
   alarmBridgeOnce,
@@ -289,6 +290,13 @@ export interface ContributionNotifyTriggerDeps extends ContributionNotifyDeps {
    * (`readMemberTextLanguages`), so a member who chose English may get a Hindi push and an English text (recorded).
    */
   readonly locale?: Locale;
+  /**
+   * Story 5.14 (AC5 (ii), (iv); I9) — the Trust's announcement channel seam, OPTIONAL (unset in the existing tests, so their `send`
+   * calls are untouched — T16): the day-14 sweep hands it each live alert's LAST DAY once; the hourly recovery sweep hands it every
+   * live alert to HEAL a dropped pool-open enqueue (it re-sends the cycle job only when the cycle's pools lack a post row). Each call
+   * is best-effort in its own try/catch — a failure alarms and never suppresses the member fan-out.
+   */
+  readonly enqueueAnnouncementPost?: (input: AnnouncementPostTrigger) => Promise<void>;
 }
 
 // ── Copy assembly (the producer resolves EVERYTHING member-facing — AC5) ────────────────────────────
@@ -1329,6 +1337,15 @@ export async function runContributionNotifyRecoverySweep(
         const signal = await alertDomain.resolveCycleOpenTimeCritical(db, row.cycle_id);
         return { expectedMembers: expected, timeCritical: signal?.timeCritical ?? null };
       });
+      // Story 5.14 (AC5 (iv); I9) — heal a dropped announcement CYCLE enqueue: after the scope read, BEFORE the `continue` below (which
+      // skips an all-empty and a fully-notified cycle alike), in its own try/catch, ⛔ counted in `reEnqueued`.
+      if (deps.enqueueAnnouncementPost) {
+        try {
+          await deps.enqueueAnnouncementPost({ kind: 'pool_open_heal', pariwarId: row.pariwar_id, alertId: row.alert_id, cycleId: row.cycle_id });
+        } catch (err) {
+          alarm(`[jobs] contribution-notify-sweep: the announcement channel heal failed for alert ${row.alert_id} — ${String(err)}`);
+        }
+      }
       const notifiedMembers = Number(row.notified_members);
       if (expectedMembers === 0 || notifiedMembers >= expectedMembers) continue;
       if (timeCritical === null) {
@@ -1429,6 +1446,17 @@ export async function runDeadlineReminderSweep(
       // UTC-safe: `committedAt` + N whole days in milliseconds (`cycleDeadlineAt` — Story 5.14 moved the arithmetic to contracts so
       // the channel post and the admin list compute it the same way).
       const deadlineAt = cycleDeadlineAt(committedAt);
+
+      // Story 5.14 (AC5 (ii)) — the Trust's channel post for the cycle's LAST DAY: once per alert on day 14, AFTER `deadlineAt` and BEFORE
+      // the pool read (whose throw is caught below — it cannot suppress this), through its own optional seam (⛔ the sweep's `send` —
+      // T16), in its own try/catch. Day 15+ posts nothing (T3; a missed day-14 run loses the post — `-417` §4 (1)).
+      if (cycleDay === 14 && deps.enqueueAnnouncementPost) {
+        try {
+          await deps.enqueueAnnouncementPost({ kind: 'last_day', pariwarId: row.pariwar_id, alertId: row.alert_id, cycleId: row.cycle_id, deadlineAt });
+        } catch (err) {
+          alarm(`[jobs] deadline-reminder-sweep: the announcement channel last-day enqueue failed for alert ${row.alert_id} — ${String(err)}`);
+        }
+      }
 
       const candidates = await withPariwarScope(deps.pool, row.pariwar_id, (db: Db) =>
         poolDomain.listCycleBindingCandidates(

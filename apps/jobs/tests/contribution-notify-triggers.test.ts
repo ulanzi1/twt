@@ -2364,3 +2364,99 @@ describe('Story 5.8b code review 2026-10-28 (second pass) — the bridged child'
     expect(alarms[0]).toContain('2 member(s)');
   });
 });
+
+// ─── Story 5.14 — the Trust's announcement channel seam (AC5 (ii), (iv); I9, T3, T16) ─────────────────────────────────────────────
+
+describe('Story 5.14 — the day-14 last-day seam and the recovery heal step', () => {
+  const committedAt = new Date('2026-07-01T00:00:00.000Z');
+  function sweepDeps(now: Date, enqueueAnnouncementPost: ReturnType<typeof vi.fn> | undefined, overrides: Record<string, unknown> = {}) {
+    getCycleFreezeCommittedAt.mockResolvedValue(committedAt);
+    listCycleBindingCandidates.mockResolvedValue([candidate(POOL_A, 0, [M1])]);
+    return deps({
+      now: () => now,
+      pool: { query: () => Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR }] }) },
+      ...(enqueueAnnouncementPost ? { enqueueAnnouncementPost } : {}),
+      ...overrides,
+    });
+  }
+
+  it('⭐ day 14 → the seam ONCE per alert with the deadline; the pool batch is still `send.mock.calls[0]` (T16)', async () => {
+    const seam = vi.fn().mockResolvedValue(undefined);
+    const send = vi.fn().mockResolvedValue(undefined);
+    await runDeadlineReminderSweep(sweepDeps(new Date('2026-07-15T00:00:00.000Z'), seam), { send, insert: vi.fn() });
+    expect(seam).toHaveBeenCalledTimes(1);
+    expect(seam.mock.calls[0]![0]).toEqual({
+      kind: 'last_day',
+      pariwarId: PARIWAR,
+      alertId: ALERT,
+      cycleId: CYCLE,
+      deadlineAt: new Date('2026-07-16T00:00:00.000Z'),
+    });
+    expect(send.mock.calls[0]![1].payload).toMatchObject({ kind: 'deadline_reminder', cycleDay: 14 });
+  });
+
+  for (const [day, iso] of [
+    [5, '2026-07-06T00:00:00.000Z'],
+    [13, '2026-07-14T00:00:00.000Z'],
+    [15, '2026-07-16T00:00:00.000Z'],
+  ] as const) {
+    it(`day ${String(day)} → the seam is NOT called (T3: day 15+ posts nothing)`, async () => {
+      const seam = vi.fn().mockResolvedValue(undefined);
+      await runDeadlineReminderSweep(sweepDeps(new Date(iso), seam), { send: vi.fn().mockResolvedValue(undefined), insert: vi.fn() });
+      expect(seam).not.toHaveBeenCalled();
+    });
+  }
+
+  it('a failing seam ALARMS and the pool batch still goes; a failing pool read cannot suppress the seam', async () => {
+    const onAlarm = vi.fn();
+    const failing = vi.fn().mockRejectedValue(new Error('queue down'));
+    const send = vi.fn().mockResolvedValue(undefined);
+    const r = await runDeadlineReminderSweep(sweepDeps(new Date('2026-07-15T00:00:00.000Z'), failing, { onAlarm }), { send, insert: vi.fn() });
+    expect(r.enqueuedPools).toBe(1);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('announcement channel last-day enqueue failed'));
+    const seam = vi.fn().mockResolvedValue(undefined);
+    const d = sweepDeps(new Date('2026-07-15T00:00:00.000Z'), seam, { onAlarm: vi.fn() });
+    listCycleBindingCandidates.mockRejectedValue(new Error('pool read down'));
+    await runDeadlineReminderSweep(d, { send: vi.fn(), insert: vi.fn() });
+    expect(seam).toHaveBeenCalledTimes(1);
+  });
+
+  it('unset seam ⇒ the sweep is unchanged (the existing tests above run without it)', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    const r = await runDeadlineReminderSweep(sweepDeps(new Date('2026-07-15T00:00:00.000Z'), undefined), { send, insert: vi.fn() });
+    expect(r.enqueuedPools).toBe(1);
+  });
+
+  function recovery(notified: number, seam: ReturnType<typeof vi.fn> | undefined, members = [M1, M2], extra: Record<string, unknown> = {}) {
+    listCycleBindingCandidates.mockResolvedValue(members.length === 0 ? [] : [candidate(POOL_A, 0, members)]);
+    return deps({
+      pool: { query: () => Promise.resolve({ rows: [{ alert_id: ALERT, cycle_id: CYCLE, pariwar_id: PARIWAR, notified_members: String(notified) }] }) },
+      ...(seam ? { enqueueAnnouncementPost: seam } : {}),
+      ...extra,
+    });
+  }
+
+  it('⭐ AC5 (iv) — the heal step runs for EVERY live alert (a fully-notified and an all-empty cycle included) and is ⛔ counted in reEnqueued', async () => {
+    for (const [notified, members, expected] of [
+      [0, [M1, M2], 1],
+      [2, [M1, M2], 0],
+      [0, [], 0],
+    ] as const) {
+      const seam = vi.fn().mockResolvedValue(undefined);
+      const send = vi.fn().mockResolvedValue(undefined);
+      const reEnqueued = await runContributionNotifyRecoverySweep(recovery(notified, seam, [...members]), { send });
+      expect(reEnqueued).toBe(expected);
+      expect(seam).toHaveBeenCalledTimes(1);
+      expect(seam.mock.calls[0]![0]).toEqual({ kind: 'pool_open_heal', pariwarId: PARIWAR, alertId: ALERT, cycleId: CYCLE });
+    }
+  });
+
+  it('a failing heal ALARMS and the fan-out re-enqueue still happens', async () => {
+    const onAlarm = vi.fn();
+    const seam = vi.fn().mockRejectedValue(new Error('db down'));
+    const send = vi.fn().mockResolvedValue(undefined);
+    const d = recovery(0, seam, [M1, M2], { onAlarm });
+    expect(await runContributionNotifyRecoverySweep(d, { send })).toBe(1);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('announcement channel heal failed'));
+  });
+});

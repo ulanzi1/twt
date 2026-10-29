@@ -258,3 +258,32 @@ describe('registerCycleOpenAlertWorkers — queue + worker + sweep-cron wiring',
     );
   });
 });
+
+// Story 5.14 (AC5 (i); I9) — the Trust's announcement channel CYCLE job, sent POST-COMMIT beside the fan-out, on the no-op path too,
+// best-effort with its OWN alarm (a failure never fails the mint and never stops the member fan-out).
+describe('runCycleOpenAlert — the Story 5.14 announcement channel seam', () => {
+  it('fires post-commit (minted and no-op paths alike) with the alert id, cycle id and envelope context', async () => {
+    const cycleId = randomUUID();
+    const pariwarId = randomUUID();
+    const enqueueAnnouncementPost = vi.fn().mockResolvedValue(undefined);
+    const enqueueContributionNotify = vi.fn().mockResolvedValue(undefined);
+    for (const minted of [true, false]) {
+      openCycleAlertMock.mockResolvedValue({ alertId: 'a-5', minted, state: 'live', timeCritical: false });
+      await runCycleOpenAlert(makeDeps({ enqueueAnnouncementPost, enqueueContributionNotify }), envelope(cycleId, pariwarId));
+    }
+    expect(enqueueAnnouncementPost).toHaveBeenCalledTimes(2);
+    expect(enqueueAnnouncementPost.mock.calls[0]![0]).toMatchObject({ alertId: 'a-5', cycleId, pariwarId });
+    expect(enqueueContributionNotify).toHaveBeenCalledTimes(2);
+  });
+
+  it('a FAILED announcement enqueue alarms and never fails the mint; a failed fan-out enqueue does not stop it either', async () => {
+    const onAlarm = vi.fn();
+    const enqueueAnnouncementPost = vi.fn().mockRejectedValue(new Error('queue down'));
+    const enqueueContributionNotify = vi.fn().mockRejectedValue(new Error('queue down'));
+    openCycleAlertMock.mockResolvedValue({ alertId: 'a-6', minted: true, state: 'live', timeCritical: false });
+    const result = await runCycleOpenAlert(makeDeps({ onAlarm, enqueueAnnouncementPost, enqueueContributionNotify }), envelope(randomUUID(), randomUUID()));
+    expect(result.alertId).toBe('a-6');
+    expect(enqueueAnnouncementPost).toHaveBeenCalledTimes(1);
+    expect(onAlarm).toHaveBeenCalledWith(expect.stringContaining('announcement channel post'));
+  });
+});

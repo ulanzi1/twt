@@ -145,4 +145,27 @@ describe.skipIf(!hasDatabase)('tg-webhook-processor — live DB (:5433)', () => 
     );
     expect(await stateOf(optInId)).toBe('PENDING');
   });
+
+  // Story 5.14 (F4, AC11) — the Trust's announcement CHANNEL uses the Pariwar's bot as a channel ADMIN. Adding the bot sends
+  // `my_chat_member` with status `administrator`; removing / banning it sends `left` / `kicked` with the CHANNEL's `-100…` id; a
+  // human admin's post arrives as `channel_post`. None may flip a member's opt-in (the processor matches members' private-chat ids
+  // only) — this pins the trace; the processor is ⛔ edited.
+  it('⭐ Story 5.14 (F4) — channel updates for the bot (administrator / left / kicked on a -100… chat, a channel_post) flip NO opt-in', async () => {
+    const pariwarId = randomUUID();
+    const memberId = randomUUID();
+    const optInId = await seedActive(pariwarId, memberId, CHAT);
+    const channelId = -1001234567890;
+    const updates = [
+      { update_id: 10, my_chat_member: { chat: { id: channelId, type: 'channel' }, new_chat_member: { status: 'administrator' } } },
+      { update_id: 11, my_chat_member: { chat: { id: channelId, type: 'channel' }, new_chat_member: { status: 'left' } } },
+      { update_id: 12, my_chat_member: { chat: { id: channelId, type: 'channel' }, new_chat_member: { status: 'kicked' } } },
+      { update_id: 13, channel_post: { chat: { id: channelId, type: 'channel' }, text: '/stop' } },
+    ];
+    for (const rawPayload of updates) {
+      await processWebhookEvent({ pool, db: created.db }, { eventId: randomUUID(), pariwarId, rawPayload });
+    }
+    expect(await stateOf(optInId)).toBe('ACTIVE');
+    expect(await auditCount(pariwarId, 'member.telegram_opt_in_blocked')).toBe(0);
+    expect(await auditCount(pariwarId, 'member.telegram_opt_in_revoked')).toBe(0);
+  });
 });

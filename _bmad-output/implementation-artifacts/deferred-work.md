@@ -4,6 +4,33 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md — fix-diff review (2026-10-29)
+
+`bmad-code-review 11b.5`, re-run over the fix round (the working-tree diff against `117a92d7`): 3 patches applied (BigDev's "Apply every patch"; recorded in the story's *Review Findings — fix-diff review*), 1 deferral.
+
+- **`code()` swallows the rest of a line after a space-preceded `//` even inside markup.** In the three memorial source tests
+  (`family-memorial-source.test.ts`, copied into `portrait-frame-source.test.ts` and `memorial-token-references.test.ts`), a `class` or
+  `style` after such a `//` on the same line is ⛔ never scanned — reproduced: `<p title="a // b" class="mt-3">` leaves `<p title="a `.
+  ⚠ Pre-existing, not new: the helper dates from Story 11b.4a's `set:html` scan, and the copies were allowed by 11b.5's spec. Low reach (a
+  space-preceded `//` inside a tag line of these two components). The fix changes a shared helper's contract — strip `//` only inside the
+  frontmatter fence — which re-opens the 11b.4a scan, so it is ⛔ not done here. **Trigger: the next change to any `code()` copy, or a
+  fourth copy being written (extract once, then).** ⛔ Not closed.
+
+---
+
+## Deferred from: code review of 11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md (2026-10-29)
+
+`bmad-code-review 11b.5`, second run over `8dd3e623..117a92d7`: 3 patches applied (BigDev's "Apply every patch"; recorded in the story's *Review Findings — second run*), 1 deferral.
+
+- **The decorative empty `alt` — checklist family 13(d) REAL GAP, re-confirmed.** When the family left the photo's description out,
+  `<PortraitFrame>` renders `alt=""` and a screen-reader user is not told a photo is there. ⚠ ⛔ **Not newly introduced:** `alt={plan.alt}`
+  is unchanged from `8dd3e623` (`FamilyMemorial.astro`), AC1 and AC12 (5) ratify it, and the fix needs copy this story forbids.
+  ⛔ **Not a second item** — it is item (5) of the story section directly below, Trigger unchanged (**Story 11b.8's accessibility audit
+  or Story 0.10**). Recorded here only so the review trail carries it; this workflow's customization (`_bmad/custom/bmad-code-review.toml`) rules a checklist REAL GAP is never a mere note, so it can be
+  promoted to a patch or a decision at BigDev's call. ⛔ Not closed.
+
+---
+
 ## Deferred from: story 11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md (2026-10-29)
 
 Story 11b.5 lifts the family memorial's funeral frame into `<PortraitFrame>` (an Astro component, its border from the

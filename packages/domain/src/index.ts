@@ -298,6 +298,10 @@ export * as smsRateLimit from './sms-rate-limit/index.js';
 // Story 6.37b — MSG91 delivery reports: the correlation id every SMS carries (`CRQID` = kind + the send row's uuid —
 // DR3), the report inbox and the per-send delivery record.
 export * as smsDelivery from './sms-delivery/index.js';
+// Story 5.14 — the Trust's announcement channels: the per-Pariwar config (one "channels live" switch, created OFF), the post record
+// (at most one post per (Pariwar, occasion, subject) — the 0184 lifecycle; ⛔ a name, ⛔ the text) and the pools-only reads. Every
+// statement filters on `pariwar_id` (the job runs on the BYPASSRLS pool).
+export * as announcementChannels from './announcement-channels/index.js';
 // Story 5.8 — the per-Pariwar degraded-mode declaration accessors: declareDegradedMode (advisory-locked,
 // auto-revoke-then-insert — enforces single-active-per-Pariwar), revokeDegradedMode (idempotent manual
 // revocation), and getActiveDegradedMode (the computed-active read: revoked_at IS NULL AND

@@ -278,3 +278,6 @@ export * from './memorial-takedown-rls.js';
 export * from './alert-sms-send-rls.js';
 // Story 5.8b — the degraded-mode bridge's Super Admin switch (GLOBAL `USING (true)` SELECT).
 export * from './degraded-bridge-sms-switch-rls.js';
+// Story 5.14 (0190) — the Trust's announcement channels: the per-Pariwar config and the post record. Per command; ⛔ no DELETE leg
+// and ⛔ no `FOR ALL`; the post record's INSERT and UPDATE narrowed by 0190's column grants (the compare-and-set `attempting` → final).
+export * from './announcement-channels-rls.js';

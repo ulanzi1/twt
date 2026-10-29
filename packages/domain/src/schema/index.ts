@@ -187,6 +187,10 @@ export * from './telegram_inbound_webhook_events.js';
 export * from './pariwar_degraded_mode_declarations.js';
 // Story 5.8b — the degraded-mode bridge's Super Admin switch (GLOBAL; one control row created OFF + an append-only history).
 export * from './degraded_bridge_sms_switch.js';
+// Story 5.14 — the Trust's announcement channels (migration 0190): the per-Pariwar config (one "channels live" switch, created OFF)
+// and the post record (at most one post per (Pariwar, occasion, subject); ⛔ a name, ⛔ the text).
+export * from './pariwar_announcement_channels.js';
+export * from './announcement_channel_posts.js';
 // Story 6.1 — claim case lifecycle anchor (claims table + claim_lifecycle_state +
 // claim_intake_channel pgEnums). `claims.current_state` is a replay-derived cache,
 // not the source of truth — guarded by the DB trigger (migration) + the

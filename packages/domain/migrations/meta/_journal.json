@@ -1324,6 +1324,13 @@
       "when": 1795923600034,
       "tag": "0189_ground-inspection-questionnaire",
       "breakpoints": true
+    },
+    {
+      "idx": 190,
+      "version": "7",
+      "when": 1796010000035,
+      "tag": "0190_announcement-channels",
+      "breakpoints": true
     }
   ]
 }

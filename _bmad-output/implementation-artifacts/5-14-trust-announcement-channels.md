@@ -121,7 +121,7 @@ other notice (news, surveys, Niyamavali amendments); a WhatsApp Channel posting 
 
 # Story 5.14: The Trust's Announcement Channels — One Telegram Channel the System Posts To, One WhatsApp Channel an Admin Posts To by Hand, and One Calm Ask in the App `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Trustee Panel ruled on 2026-10-23 (`-390` Q2 A) that the Trust runs one WhatsApp
 > Channel and one Telegram channel that post general notices (a pool opening and a cycle's last day), and that members are ASKED, never
@@ -862,10 +862,10 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
       `shielded_name` Pariwar ⇒ the full name / ONE `admin_announcement_channels.posts_read` line / a `deferred` row past its max age shown
       `refused`); the access-wrapper checklist walk
       (`docs/access-wrapper-invariants.md`) for both route groups and the job.
-- [ ] **Task 6 — Admin UI (AC2; FS4)**: the form + posts list with Copy (`navigator.clipboard.writeText`, a visible "Copied" state) in
+- [x] **Task 6 — Admin UI (AC2; FS4)**: the form + posts list with Copy (`navigator.clipboard.writeText`, a visible "Copied" state) in
       `apps/admin/src/modules/channel-config/`; the three calls in `apps/admin/src/api/client.ts` (F14) and hooks in `src/api/hooks.ts`;
       `apps/admin/tests/announcement-channels-page.test.tsx` (stub `navigator.clipboard` in jsdom — no admin precedent).
-- [ ] **Task 7 — Mobile (AC8, AC9; FS9–FS11, FS14)**: `getAnnouncementChannels()` in `createMemberAuthClient` (`packages/api-client`, F16);
+- [x] **Task 7 — Mobile (AC8, AC9; FS9–FS11, FS14)**: `getAnnouncementChannels()` in `createMemberAuthClient` (`packages/api-client`, F16);
       `components/announcement-channels/useAnnouncementChannelsQuery.ts` (key + sign-out clear per FS11); `lib/announcement-channels-dismissal.ts`
       (no expiry, per member, its own `SyncStorage` interface — the per-module seam of `home-card-dismissals.ts:35`; cleared in
       `session-context.tsx`); `components/home/AnnouncementChannelsCard.tsx` (on `HomeReminderCard`; one header-comment line added to
@@ -873,7 +873,7 @@ set `DATABASE_URL` on the command — [[project_prepush_hook_inherits_5432]]); `
       `components/notifications/AnnouncementChannelsEntry.tsx`; `app/(settings)/announcement-channels.tsx`; home
       wiring + source pins; render + unit tests; copy pin test. Long Hindi labels: the `NomineeMarkControl` multi-line Button pattern
       ([[project_tamagui_button_text_one_line]]); record on-device wrapping as un-attested if no device run.
-- [ ] **Task 8 — Records and gate (AC10, AC12)**: commit, then `pnpm friction:check` (row + disposition); `pnpm ci:local` on an isolated DB;
+- [x] **Task 8 — Records and gate (AC10, AC12)**: commit, then `pnpm friction:check` (row + disposition); `pnpm ci:local` on an isolated DB;
       Debug Log evidence; story → `review`.
 
 ## Dev Notes
@@ -983,6 +983,8 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 5.14`, 2026-10-29.
+
 ### Debug Log References
 
 (a) Task 0.2 answers — verbatim.
@@ -1026,8 +1028,29 @@ FS16 · `architecture.md` §3.4 · `prds/prd-TWT-2026-05-22/prd.md` FR-73, FR-94
   the request tx (the read audit is the sink; the job's writes are their own short transactions); (e) ⛔ a new key — `pariwar.configure_
   channels` at pariwar scope on `:pariwarId` routes; (f) ⛔ a credential compare; (g) the PUT under `withCompensatingAudit`, the module
   in `CHANNEL_ROOTS` (gated).
+- Task 6: the admin test 5/5 (`navigator.clipboard` stubbed AFTER `userEvent.setup()`, which installs its own stub); the admin suite
+  83/83; `microcopy:check` green over `apps/admin`.
+- Task 7: the render suite 6/6; RED by mutation — the join button dismissing BEFORE `openURL` resolves ⇒ the ordering test fails (1),
+  restored ⇒ 6/6. Dismissal + key + cache 5, copy-key pin 4 (the real `t()`, en + hi), source pins 6; the mobile suite 106/106 files.
+  ⚠ UN-ATTESTED (no device run this session — [[feedback_record_unattested_no_backfill]]): the long Hindi labels' wrapping
+  (`noTextWrap` + own `Text`, the `NomineeMarkControl` shape — a render test proves only the props), TalkBack / VoiceOver reading the
+  card and the two link buttons, and `Linking.openURL` on a real phone with / without WhatsApp and Telegram installed.
+- AC11: `git diff origin/main --` the frozen list (dispatch, cascade, the composition, delivery, the telegram-opt-in module, the webhook
+  processor, the Telegram settings screen, permissions, the flag registry, telegram-errors, ADR-0030) is EMPTY (0 lines); the
+  `telegram-app.ts` diff is the timeout + `signal` + `retryAfter` alone.
 
-(c) Gate runs.
+(c) Gate runs (2026-10-29, a FRESH throwaway container `twt-514-pg` on :5444, database NAMED `twt_dev`, UTC session — the clean
+single-run recipe; `DATABASE_URL` set on the command, ⛔ the shell's :5432).
+- `pnpm ci:local`, first run: **35 / 36 green** — every job except `test (unit)`. The one failure: `apps/mobile/tests/unit/memorial-screens-
+  render.test.ts` (Story 11b.4's file — ⛔ touched by this branch: `git diff origin/main` over the memorial components, screens and that
+  test is empty). Its first P4 test hit the 5 s vitest timeout (12.4 s) under the parallel load (load average ≈ 11–12 during the run),
+  and 133 later tests in the same file cascaded from the left-over render (`Unable to find … memorial-withdraw`). The known
+  `ci:local` oversubscription class ([[project_ci_local_concurrency_oversubscription]]) — ⛔ a regression: that file alone 346 / 346;
+  the whole mobile suite 106 / 106 files (twice this session).
+- `test (unit)` re-run ALONE with its exact `ci-local.sh` command (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`): **37 / 37
+  tasks green**. ⇒ every one of the 36 jobs has passed on this tree; ⚠ not in one single run — recorded as such, ⛔ "36/36".
+- `pnpm friction:check` after the Task 7 commit: green (AC-4 — one row added). `i18n:check`, `microcopy:check`,
+  `contracts:check-openapi-determinism`, `access-wrapper:check`, `domain-invariants:check`: green (also inside `ci:local`).
 
 (f) Task 0.4 records — 2026-10-29 (`bmad-dev-story 5.14`): `git fetch origin` — `origin/main` still `770ba815` (the branch's base); ListAgents: no other session; worktree clean. Next free numbers re-found: decision `-419` (none minted here), roster Row 44, ledger `2026-10-29k` (`main` -29d, 11b.5 -29b, this branch -29j). Written: `epics.md` `### Story 5.14` (after 5.13); architecture §3.4 dated ANNOTATION (after 5.8b's); roster Row 44 `trust-announcement-channels-live` (legs (a)–(f) per `-417` FS13 / `-418` item 1 and §2) + a Row 26 dated note; deferred-work: the 5.11 channels item's appended line (HOMED → building) + a new `## Story 5.14` section holding the `shielded_name` item; a dated pointer under `-389` (G13 discharged by `-417` §2). ⚠ AC10's friction-ledger row and disposition are written WITH the card (Task 7) and checked at Task 8 — the friction gate reads committed history and the card's event type does not exist yet. Sprint-status: row ready-for-dev → in-progress; ledger `-29k` in both ledgers; YAML parses (296 rows).
 
@@ -1103,8 +1126,98 @@ this map resolves them.
   checklist verifier).
 - 2026-10-29: v1.2 — second checklist validation (three parallel fresh-context verifiers; 30 findings applied) — Debug Log (e).
 - 2026-10-29: v1.6 — rebased onto `770ba815`; third checklist validation (three verifiers); `-418` committed alone — Debug Log (d2), (e).
+- 2026-10-29: `bmad-dev-story 5.14` — Tasks 0.4–8 DONE (Debug Log (b), (c), (f)). Built: migration `0190` (`pariwar_announcement_channels`
+  — one switch, created OFF; `announcement_channel_posts` — the 0184 lifecycle, ⛔ a name or text column) + the domain accessors (every
+  statement by explicit `pariwar_id`); the contracts (DTOs, the ONE post builder, `ANNOUNCEMENT_POST_NAME_MODE = 'full_name'` pinned to
+  `-416`; `operationalDate` moved, `cycleDeadlineAt`); the words en + hi; the Telegram client's 9 s timeout + `retryAfter`; the poster
+  job (cycle fan-out, at-most-once posts, the 429 re-send, the `-418` final-attempt / give-up / alarm rules) and its three seams; the
+  API (config, the audited "Posts" list with a savepoint per row, the member read); the admin section; the mobile card / entry / screen
+  and the friction row. Day-one output is still NONE (every switch OFF; roster Row 44 legs (a), (b), (e), (f) open; (d)'s constant half
+  closes when this lands on `main`).
+- ⚠ Carried, ⛔ done here: no device run — Hindi label wrapping, TalkBack / VoiceOver on the card, `openURL` with / without the apps
+  installed are UN-ATTESTED (Debug Log (b), Task 7); no real Telegram post (roster Row 44 (b) — staging).
 
 ### File List
+
+- `.decision-log.md`
+- `_bmad-output/implementation-artifacts/5-14-trust-announcement-channels.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/architecture.md`
+- `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-29-5-14-public-channel-naming-the-family.md`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/channel-config/AnnouncementChannelsForm.tsx`
+- `apps/admin/src/modules/channel-config/AnnouncementPostsList.tsx`
+- `apps/admin/src/modules/channel-config/ChannelConfigPage.tsx`
+- `apps/admin/tests/announcement-channels-page.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/modules/announcement-channels/handlers.ts`
+- `apps/api/src/modules/announcement-channels/index.ts`
+- `apps/api/src/modules/announcement-channels/routes.ts`
+- `apps/api/src/server.ts`
+- `apps/api/tests/integration/announcement-channels.spec.ts`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/src/scheduler/announcement-channel-post.ts`
+- `apps/jobs/src/scheduler/contribution-notify-triggers.ts`
+- `apps/jobs/src/scheduler/cycle-open-alert.ts`
+- `apps/jobs/tests/announcement-channel-post-live.test.ts`
+- `apps/jobs/tests/contribution-notify-triggers.test.ts`
+- `apps/jobs/tests/cycle-open-alert.test.ts`
+- `apps/jobs/tests/tg-webhook-processor.test.ts`
+- `apps/mobile/app/(settings)/announcement-channels.tsx`
+- `apps/mobile/app/(tabs)/index.tsx`
+- `apps/mobile/components/announcement-channels/ChannelLinkButtons.tsx`
+- `apps/mobile/components/announcement-channels/useAnnouncementChannelsQuery.ts`
+- `apps/mobile/components/home/AnnouncementChannelsCard.tsx`
+- `apps/mobile/components/home/HomeReminderCard.tsx`
+- `apps/mobile/components/notifications/AnnouncementChannelsEntry.tsx`
+- `apps/mobile/lib/announcement-channels-dismissal.ts`
+- `apps/mobile/lib/session-context.tsx`
+- `apps/mobile/tests/unit/announcement-channels-copy-keys.test.ts`
+- `apps/mobile/tests/unit/announcement-channels-dismissal.test.ts`
+- `apps/mobile/tests/unit/announcement-channels-render.test.ts`
+- `apps/mobile/tests/unit/announcement-channels-source-pins.test.ts`
+- `docs/access-wrapper-invariants.md`
+- `docs/launch-gate-inventory/inventory-roster.md`
+- `friction-budget.md`
+- `openapi/v1.yaml`
+- `packages/api-client/src/index.ts`
+- `packages/channels/src/index.ts`
+- `packages/channels/src/providers/telegram-app.ts`
+- `packages/channels/tests/telegram.test.ts`
+- `packages/contracts/package.json`
+- `packages/contracts/scripts/emit-openapi.ts`
+- `packages/contracts/src/alerts/contribution-loop-templates.ts`
+- `packages/contracts/src/announcement-channels/channels.ts`
+- `packages/contracts/src/announcement-channels/index.ts`
+- `packages/contracts/src/announcement-channels/post.ts`
+- `packages/contracts/src/index.ts`
+- `packages/contracts/tests/announcement-channels.test.ts`
+- `packages/contracts/tests/contribution-window-fence.test.ts`
+- `packages/domain/migrations/0190_announcement-channels.sql`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/announcement-channels/config.ts`
+- `packages/domain/src/announcement-channels/index.ts`
+- `packages/domain/src/announcement-channels/posts.ts`
+- `packages/domain/src/announcement-channels/reads.ts`
+- `packages/domain/src/index.ts`
+- `packages/domain/src/policies/announcement-channels-rls.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/schema/announcement_channel_posts.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/schema/pariwar_announcement_channels.ts`
+- `packages/domain/tests/integration/rls/announcement-channel-posts-policy-regression.spec.ts`
+- `packages/domain/tests/integration/rls/pariwar-announcement-channels-policy-regression.spec.ts`
+- `packages/i18n/locales/en/common.json`
+- `packages/i18n/locales/en/contribution.json`
+- `packages/i18n/locales/hi/common.json`
+- `packages/i18n/locales/hi/contribution.json`
+- `packages/queue/src/index.ts`
+- `pnpm-lock.yaml`
+- `scripts/access-wrapper-invariants/README.md`
+- `scripts/access-wrapper-invariants/check.ts`
 
 ## Change Log
 
@@ -1118,3 +1231,4 @@ this map resolves them.
 | 2026-10-29 | 1.5 | Task 0.2 done — "The words" (en + hi) approved and the Hindi reviewed by BigDev (roster leg (c) MET for the v1.4 strings); Task 0.3 done — author-commit `2026-10-29-417` committed alone. |
 | 2026-10-29 | 1.6 | Rebased onto `770ba815` (6.32 landed; SHA map, ledger `-29c` / `-29d` → `-29h` / `-29i`); third validation — 4 critical / ~15 should-fix / ~12 low, all applied; author-commit `2026-10-29-418` (amends `-417`) committed alone; Debug Log (d2), (e). |
 | 2026-10-29 | 1.7 | `bmad-dev-story 5.14` started — Task 0.4 records (epics, §3.4 annotation, roster Row 44 + Row 26 note, deferred-work, `-389` pointer); Status in-progress; Debug Log (f). |
+| 2026-10-29 | 1.8 | Tasks 1–8 built and tested (Debug Log (b), (c)); `ci:local` 35/36 + the unit job green on its own re-run (a memorial-file timeout under load — untouched by this branch); Status → review; File List. |

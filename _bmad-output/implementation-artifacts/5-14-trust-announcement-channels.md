@@ -14,8 +14,8 @@ path is re-checked against the F it touches. Re-run BOTH at Task 0.1 — never a
 STATUS: v2.2 (2026-10-29): FULL-DIFF CODE REVIEW (a second, independent pass over the whole branch in one go): 0 decision, 13 patch (BigDev
 "1" — all applied, each code patch's test proved red), 4 deferred, 24 dismissed; then a FIX-DIFF REVIEW of those 13 patches (BigDev "2"): 0 decision,
 6 patch (all applied, red-then-green), 2 deferred, 6 dismissed — it found three defects in the patches themselves (the Copy outcome, "Try again",
-a body-less 429 that would loop) and corrected the records. Status done; the full `ci:local` runs as the push hook (fresh container :5450), its
-result recorded in the PR; ⛔ landed. Go-live stays roster Row 44.
+a body-less 429 that would loop) and corrected the records. Status done; `ci:local` 36 / 36 on the THIRD run of the same tree (two unrelated load reds, recorded in
+PR #310); pushed; PR #310 open; ⛔ landed. Go-live stays roster Row 44.
 v2.0 (2026-10-29): CODE REVIEW DONE — all four file groups reviewed. Group 1's 7 patches, groups 2–4's 37 patches and the
 fix-diff review's 9 follow-ups are applied (BigDev "1" / "2" / "1"). Author-commit `2026-10-29-419` was committed alone. `ci:local` is
 36 / 36 in ONE run on a fresh container. Status done; ⛔ pushed; ⛔ landed. Go-live stays roster Row 44.
@@ -1363,9 +1363,16 @@ FD-P3 adds coverage for guards that already worked — there is nothing to turn 
   `rate-limit` 6 / 6 + `login-wall` 5 / 5; channels 464 passed (2 files skipped); admin 1,456 / 1,456; `friction:check`, `microcopy:check`,
   `domain-invariants:check`, `access-wrapper:check` green; `i18n:check` and `contracts:check-openapi-determinism` are turbo cache HITS (their
   inputs are untouched).
-- **The full `pnpm ci:local` (36 gates) is NOT run before this commit.** The 36 / 36 recorded above is for the tree BEFORE these patches. It
-  runs as the PRE-PUSH HOOK on a fresh throwaway container (`twt-514-gate2`, :5450); its result is recorded in the pull request and in a
-  follow-up records commit. ⛔ Pushed at the time of writing. Un-attested: no device run; no real Telegram post.
+- **`pnpm ci:local` (36 gates) ran as the PRE-PUSH HOOK on HEAD `54f379c9`, THREE times on three fresh containers, with ⛔ no code change between
+  runs — 35 / 36, 35 / 36, then 36 / 36 green** (the 36 / 36 recorded earlier in this section is for the tree BEFORE these patches).
+  Run 1 (:5450): `test (unit)` red — 8 admin tests in `ground-inspection-discrepancy.test.tsx` and `correction-queue.test.tsx`, 5 s timeouts
+  under load; alone 86 / 86 TWICE (the first file ~7.3 s alone); neither file imports anything this branch changes. Run 2 (:5451):
+  `integration-tests` red — one API test, `cycle-freeze.spec.ts` (Story 6.19b), a 5 s `lock_timeout` on its own test-only `DROP TRIGGER` on
+  `claim_correction_marks`; alone 27 / 27 TWICE; the Postgres log showed an autovacuum of that table backing off ("lock not available"), but ⛔
+  what held the lock was not found — "load" is the best reading, not a proven cause. Run 3 (:5452): 36 / 36 green, pushed. Two reds on
+  DIFFERENT jobs, both clean in isolation, in areas this diff does not touch = the known `ci:local` load signature
+  ([[project_ci_local_concurrency_oversubscription]]); all three runs are in PR #310. Pull request:
+  [#310](https://github.com/ulanzi1/twt/pull/310). ⛔ Landed. Un-attested: no device run; no real Telegram post.
 
 **Fix-diff review — 2026-10-29** ([[feedback_review_the_fix_diff_before_commit]]; BigDev: *"2 then apply any patches, open pr"*). The 13 patches'
 own diff (694 lines of source + tests + the roster note), three fresh layers: Blind Hunter (12 findings), Edge Case Hunter (9), Acceptance
@@ -1797,4 +1804,4 @@ this map resolves them.
 | 2026-10-29 | 1.9 | Group 1 posting-pipeline review: 7 patches accepted (BigDev “1”) and applied; migration 0191; strict acknowledgement, durable delayed retry/recovery, ID binding, two-connection race and mixed-payment privacy proofs. Gate 34/36 + typecheck (20/20) and unit (37/37, serialized) reruns green; remaining file-group reviews pending; Status → in-progress. |
 | 2026-10-29 | 2.0 | Groups 2–4 reviewed in parallel (nine layers): 1 decision (BigDev "2": the Panel is told before switch-on if leg (e) is met by "not asked"), 37 patches (BigDev "1") and 9 fix-diff follow-ups, all applied; 3 deferred; 21 dismissed. Author-commit `2026-10-29-419` committed alone (`7885114d`); records corrected (dated pointers under `-416` / `-417` / `-418`, roster Rows 26 / 44, the §3.4 annotation, epics, deferred-work, ledger `-29m`). `ci:local` 36 / 36 in one run on a fresh container. Status → done. |
 | 2026-10-29 | 2.1 | Full-diff code review (a second, independent pass; Blind / Edge Case / Acceptance layers over the whole branch): 0 decision, 13 patch (BigDev "1" — all applied; each code patch proved red), 4 deferred, 24 dismissed. A 429 without an `error_code` defers; the Telegram client cache rebuilds on a changed token; a bounded pool label; the sweep query live-tested; the Posts route on the named ceilings + `no-store`; "Try again" and a fading Copy outcome; the Row 26 note corrected; dated notes under FS2 / FS7 / FS11 / AC2 and the edit-site list. The full `ci:local` not re-run; not committed. |
-| 2026-10-29 | 2.2 | Fix-diff review of the 13 full-diff patches (Blind / Edge Case / Acceptance over their 694-line diff; BigDev "2"): 0 decision, 6 patch applied (the Copy outcome tied to its text; "Try again" kept mounted through a v5 refetch reset; the admin words' label bound like the poster's; a 20-attempt cap on a 429 that never clears; records corrected — the FD-P2 mirror claim, I8 / AC11, G4-P3, FS2 / FS7 notes, File List; test gaps), 2 deferred, 6 dismissed. Gate: tsc + eslint clean, jobs 315, domain 32, api 31, channels 464, admin 1,456 + the static gates; `ci:local` by the push hook. |
+| 2026-10-29 | 2.2 | Fix-diff review of the 13 full-diff patches (Blind / Edge Case / Acceptance over their 694-line diff; BigDev "2"): 0 decision, 6 patch applied (the Copy outcome tied to its text; "Try again" kept mounted through a v5 refetch reset; the admin words' label bound like the poster's; a 20-attempt cap on a 429 that never clears; records corrected — the FD-P2 mirror claim, I8 / AC11, G4-P3, FS2 / FS7 notes, File List; test gaps), 2 deferred, 6 dismissed. Gate: tsc + eslint clean, jobs 315, domain 32, api 31, channels 464, admin 1,456 + the static gates; `ci:local` 36 / 36 on the third run of the same tree (35 / 36 twice before — unrelated load reds); PR #310. |

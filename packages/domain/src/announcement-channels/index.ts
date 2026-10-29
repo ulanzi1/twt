@@ -3,6 +3,7 @@
 // and the pools-only reads. RAW SQL on a caller-supplied `pg` handle; every statement filters on `pariwar_id` (I6).
 
 export {
+  ANNOUNCEMENT_POOL_LABEL_MAX_LENGTH,
   ANNOUNCEMENT_POST_DEFERRED_MAX_AGE_MS,
   ANNOUNCEMENT_POST_LEASE_MS,
   beginAnnouncementPost,

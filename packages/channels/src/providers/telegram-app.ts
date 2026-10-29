@@ -15,12 +15,16 @@
 //
 // ── Auth-lifecycle (the deferred 5.1 `_stub.ts` seam, now resolved) ────────────────────────────────────
 // A Telegram bot token is LONG-LIVED — there is no per-send OAuth refresh. Token ROTATION is a config change
-// (update the Secret-Manager value + restart), NOT an SDK concern.
+// (update the Secret-Manager value; a caller that re-resolves it picks it up on the next send — see "Credential rotation" below), NOT an SDK concern.
 //
-// ── KNOWN v1 gap: no cache eviction on credential rotation (same call 5.2/5.3 made) ────────────────────
-// This in-process client cache has NO TTL / eviction. If a Pariwar's bot token is ROTATED, the cached client
-// keeps sending with the OLD token until the process restarts. This is RESTART-REQUIRED-ON-ROTATION —
-// documented, not silently unhandled (mirrors whatsapp-app.ts / firebase-app.ts).
+// ── Credential rotation (5.5's v1 gap, CLOSED for Telegram by Story 5.14 code review FD-P2) ───────────────
+// 5.5 cached ONE client per `pariwar_id` with no eviction, so a ROTATED bot token kept sending with the OLD token until a restart
+// (the same call 5.2/5.3 made for whatsapp-app.ts / firebase-app.ts, which keep it). The Trust channel poster resolves the secret on
+// EVERY post, so for it a stale client was no longer a delay but a permanent loss: Telegram answers 401, recorded final
+// `refused:tg_401`. The cache entry now remembers the token it was built from and is REBUILT when `messagingFor` is handed a different one.
+// ⚠ That helps a CALLER THAT RE-RESOLVES the token on each send — the Trust poster builds its own cache instance (`boot.ts`) and does. The
+// per-member mirror builds a SEPARATE instance (`contribution-providers.ts`) behind a provider-registry memo that lives for the process
+// (`provider-composition.ts`), so `messagingFor` is never re-called with a new token there: a rotation still needs a restart on that path.
 //
 // ── Story 5.14 (FS7 (a), `2026-10-29-418` item 6) — a request TIMEOUT and `retry_after` ─────────────────
 // Every send carries a `signal` (default {@link TELEGRAM_SEND_TIMEOUT_MS} — MSG91's 9 s): an abort is the existing transport path
@@ -55,9 +59,9 @@ export interface TelegramClientConfig {
 /** The per-Pariwar Telegram client cache — lazily builds + caches one client per `pariwar_id`. */
 export interface TelegramAppCache {
   /**
-   * Return the messaging handle for a Pariwar, building + caching its client on first use. The `config` (incl.
-   * the resolved token) is used ONLY on the first (cache-miss) call for a Pariwar — a later rotation is not
-   * picked up until restart (see header).
+   * Return the messaging handle for a Pariwar, building + caching its client on first use. The cached client is reused while the
+   * `config`'s resolved token is the one it was built from; a DIFFERENT token (a rotation, or a changed secret name) rebuilds it —
+   * so the next send uses the new token (see header).
    */
   messagingFor(pariwarId: string, config: TelegramClientConfig): TelegramMessagingHandle;
 }
@@ -182,11 +186,13 @@ export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch, optio
     throw new Error('telegram-app: timeoutMs is invalid');
   }
   const timeoutSignal = options.timeoutSignal ?? ((ms: number) => AbortSignal.timeout(ms));
-  const clients = new Map<string, TelegramMessagingHandle>();
+  // The entry remembers the token its client was built from (FD-P2): the URL below embeds it, so a different token needs a new client.
+  const clients = new Map<string, { readonly botToken: string; readonly client: TelegramMessagingHandle }>();
 
   return {
     messagingFor(pariwarId, config) {
-      let client = clients.get(pariwarId);
+      const cached = clients.get(pariwarId);
+      let client = cached !== undefined && cached.botToken === config.botToken ? cached.client : undefined;
       if (!client) {
         assertClientConfig(pariwarId, config);
         // The bot token embeds in the path (Telegram's addressing). Encode it — it is admin-entered config,
@@ -240,7 +246,7 @@ export function createTelegramAppCache(fetchImpl: FetchLike = globalFetch, optio
             return messageId;
           },
         };
-        clients.set(pariwarId, client);
+        clients.set(pariwarId, { botToken: config.botToken, client });
       }
       return client;
     },

@@ -166,6 +166,27 @@ describe('createTelegramAppCache — thin fetch client (AC1, AC2)', () => {
     expect(h1).toBe(h2);
   });
 
+  it('review FD-P2 — a ROTATED token rebuilds the client: the next send goes out with the NEW token, ⛔ the first', async () => {
+    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ ok: true, result: { message_id: 5 } }),
+    });
+    const cache = createTelegramAppCache(fetchImpl);
+    const before = cache.messagingFor('pariwar-a', config);
+    await before.send(message);
+    const rotated = cache.messagingFor('pariwar-a', { botToken: '999999:NEW-TOKEN' });
+    expect(rotated).not.toBe(before);
+    await rotated.send(message);
+    expect(fetchImpl.mock.calls[0]![0]).toBe(`https://api.telegram.org/bot${encodeURIComponent('123456:ABC-DEF')}/sendMessage`);
+    expect(fetchImpl.mock.calls[1]![0]).toBe(`https://api.telegram.org/bot${encodeURIComponent('999999:NEW-TOKEN')}/sendMessage`);
+    // the same (new) token is cached again, and another Pariwar's client is untouched
+    expect(cache.messagingFor('pariwar-a', { botToken: '999999:NEW-TOKEN' })).toBe(rotated);
+    const other = cache.messagingFor('pariwar-b', config);
+    cache.messagingFor('pariwar-a', { botToken: '555555:NEWER' });
+    expect(cache.messagingFor('pariwar-b', config)).toBe(other);
+  });
+
   it('throws a TelegramSendError carrying the code on a non-2xx (so the provider classifies it)', async () => {
     const fetchImpl: FetchLike = () =>
       Promise.resolve({

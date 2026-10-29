@@ -23,7 +23,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { AppDeps } from '../../src/context.js';
 import * as service from '../../src/modules/auth/admin/admin-auth.service.js';
-import { signAccessToken } from '../../src/modules/auth/member/tokens.js';
+import { signAccessToken, signPariwarSelect, signSignupContinuation } from '../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from './_setup.js';
@@ -244,6 +244,58 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channels API (AC2
     expect((await td.pool.query(`SELECT 1 FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'pariwar.announcement_channels_update'`, [b])).rowCount).toBe(0);
   });
 
+  it('⭐ review FD-P3 (checklist family 3) — HOSTILE principals are denied on every new route: a member bearer and a TAMPERED admin session on the three admin routes (the PUT writes nothing); a tampered / wrong-typed bearer and an admin session on the member route', async () => {
+    const pariwarId = randomUUID();
+    const payload = { enabled: true, telegramChannelChatId: '@twt_bihar_notices', telegramInviteUrl: TG, whatsappChannelUrl: WA };
+    const adminRoutes = [
+      { method: 'GET' as const, url: base(pariwarId) },
+      { method: 'PUT' as const, url: base(pariwarId), payload },
+      { method: 'GET' as const, url: `${base(pariwarId)}/posts` },
+    ];
+    // (a) a MEMBER access token is a bearer, ⛔ an admin session
+    const valid = await member(pariwarId);
+    for (const r of adminRoutes) {
+      const res = await app.inject({ ...r, headers: { origin: 'http://localhost:3001', authorization: `Bearer ${valid}` } });
+      expect([401, 403], `${r.method} ${r.url}`).toContain(res.statusCode);
+    }
+    // (b) a TAMPERED admin session naming a non-human actor: the swapped id holds ⛔ membership, so scope resolution refuses — EXACTLY 404
+    const { client, userId } = await authenticate();
+    await grant(userId, pariwarId, 'pariwar_admin');
+    const swapped = randomUUID();
+    await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE sess ->> 'userId' = $2`, [swapped, userId]);
+    try {
+      for (const r of adminRoutes) {
+        const res = await client.inject(r);
+        expect(res.statusCode, `${r.method} ${r.url}`).toBe(404);
+      }
+    } finally {
+      await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($2::text)) WHERE sess ->> 'userId' = $1`, [swapped, userId]);
+    }
+    expect((await td.pool.query(`SELECT 1 FROM pariwar_announcement_channels WHERE pariwar_id = $1`, [pariwarId])).rowCount).toBe(0);
+    expect((await td.pool.query(`SELECT 1 FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'pariwar.announcement_channels_update'`, [pariwarId])).rowCount).toBe(0);
+    // (c) the member route: a TAMPERED access token, and a signup-continuation / pariwar-select token, are not a session bearer
+    const tampered = `${valid.slice(0, -8)}AAAAAAAA`;
+    expect(tampered).not.toBe(valid);
+    const continuation = signSignupContinuation(app, { mobileBlindIndex: 'blind', jti: randomUUID() }, 60_000);
+    const select = signPariwarSelect(app, { mobileBlindIndex: 'blind', deviceId: 'test-device', jti: randomUUID() }, 60_000);
+    for (const [kind, token] of [['tampered signature', tampered], ['signup-continuation token', continuation], ['pariwar-select token', select]] as const) {
+      const res = await memberGet(token);
+      expect(res.statusCode, kind).toBe(401);
+      expect(res.json<{ error: { code: string } }>().error.code, kind).toBe('auth.session_required');
+    }
+    // (d) an ADMIN cookie session is no member
+    const staff = await admin(pariwarId);
+    expect((await staff.inject({ method: 'GET', url: '/api/v1/member/announcement-channels' })).statusCode).toBe(401);
+  });
+
+  it('⭐ review FD-P7 — the Posts list (it can carry full names) is `Cache-Control: no-store`', async () => {
+    const pariwarId = randomUUID();
+    const client = await admin(pariwarId);
+    const res = await client.inject({ method: 'GET', url: `${base(pariwarId)}/posts` });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
   it('⭐ AC2 — the OFF defaults with no row (⛔ a 404); the PUT upserts, reads back and is AUDITED; ⛔ a bot secret field anywhere', async () => {
     const pariwarId = randomUUID();
     const client = await admin(pariwarId);
@@ -378,6 +430,29 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channels API (AC2
       wordsUnavailable: false,
       words: buildAnnouncementPost(t, { occasion: 'pool_open', poolLabel: 'B', deceasedName: NAME }),
     });
+  });
+
+  it('⭐ review FD2-R3 — a curated pool name over the row\'s 100-character bound (or blank) is ⛔ in the admin\'s words: the SAME letter-code fallback as the Telegram post; exactly 100 is used', async () => {
+    for (const [curatedHi, expected] of [
+      ['क'.repeat(101), 'A'],
+      [' ', 'A'],
+      ['क'.repeat(100), 'क'.repeat(100)],
+    ] as const) {
+      const pariwarId = randomUUID();
+      const cyc = await seedCycle(pariwarId, [await seedClaim(pariwarId)], 1);
+      await td.pool.query(
+        `INSERT INTO pool_names (pariwar_id, position_in_ordered_list, display_name_en, display_name_hi, approval_status) VALUES ($1, 0, 'Curated', $2, 'approved')`,
+        [pariwarId, curatedHi],
+      );
+      await configure(pariwarId, true);
+      const client = await admin(pariwarId);
+      const res = await client.inject({ method: 'GET', url: `${base(pariwarId)}/posts` });
+      expect(res.statusCode).toBe(200);
+      const body = res.json() as { posts: Array<{ subjectId: string; poolLabel: string | null; words: string | null }> };
+      const entry = body.posts.find((p) => p.subjectId === cyc.poolIds[0])!;
+      expect(entry.poolLabel, `curated ${String(curatedHi.length)} chars`).toBe(expected);
+      expect(entry.words).toBe(buildAnnouncementPost(t, { occasion: 'pool_open', poolLabel: expected, deceasedName: NAME }));
+    }
   });
 
   it('AC2 / G2-P5 — the shown states and their reasons: posted, a stale `attempting` ⇒ unknown, an expired `deferred` ⇒ refused, skipped, a recorded refusal; a last day only from day 14', async () => {

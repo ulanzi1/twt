@@ -80,7 +80,11 @@ export const announcementChannelPosts = pgTable(
     retryNotBefore: timestamp('retry_not_before', { withTimezone: true, mode: 'date' }),
     state: text('state').notNull().$type<AnnouncementPostState>(),
     detail: text('detail'),
-    /** `${job.id}:${retryCount}` of the attempt that holds the row — ⛔ ever on a job payload (T15). */
+    /**
+     * A fresh `randomUUID()` minted by the poster for EACH claim (the begin, and every re-claim of a `deferred` row) — the attempt that
+     * holds the row is the only one that can finalise it; ⛔ ever on a job payload (T15). (Review FD-P13: this once said
+     * `${job.id}:${retryCount}`; F15 / T15 read it as a per-claim token, which is what the code does.)
+     */
     claimToken: text('claim_token').notNull(),
     /** Telegram's `message_id` — REQUIRED on `posted` (I3). TEXT, digits only. */
     telegramMessageId: text('telegram_message_id'),

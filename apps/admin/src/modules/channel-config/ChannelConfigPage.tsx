@@ -5,7 +5,7 @@
 // NO gold-plating (Epic 10 owns polish). `pariwarId` is a prop (from the route) so the page is testable
 // without a router (the NiyamavaliPage precedent).
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import {
@@ -45,6 +45,15 @@ export function ChannelConfigPage({ pariwarId }: ChannelConfigPageProps): ReactE
   const announcementConfig = useAnnouncementChannelsConfig(pariwarId);
   const putAnnouncementConfig = usePutAnnouncementChannelsConfig(pariwarId);
   const announcementPosts = useAnnouncementPosts(pariwarId);
+  // Review FD-P8 / FD2-R2 — "Try again". TanStack v5 resets a query with no data to `pending` (error cleared) the moment a refetch starts, so
+  // keying the block on `isError` alone unmounted the button under the admin's finger (focus lost) and, offline, left `data` undefined for the
+  // list. A local flag keeps the SAME block mounted — message, then the button, `aria-disabled` — until the refetch settles.
+  const [postsRetrying, setPostsRetrying] = useState(false);
+  const retryPosts = (): void => {
+    if (postsRetrying) return;
+    setPostsRetrying(true);
+    void announcementPosts.refetch().finally(() => setPostsRetrying(false));
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,12 +166,26 @@ export function ChannelConfigPage({ pariwarId }: ChannelConfigPageProps): ReactE
           />
         )}
         <h3 className="mb-2 mt-4 text-sm font-semibold">Posts</h3>
-        {announcementPosts.isLoading ? (
+        {announcementPosts.isError || postsRetrying ? (
+          <div className="flex flex-col items-start gap-2">
+            {/* ONE alert element whose words change, so the change is announced (G2-P10's rule: the region exists before it changes). */}
+            <p role="alert" className={postsRetrying ? undefined : 'text-status-fail-fg'}>
+              {postsRetrying ? 'Trying again…' : errorMessage(announcementPosts.error)}
+            </p>
+            {/* Review FD-P8 — the list is ⛔ re-read on a focus or a reconnect (G2-P1), so a failed read needs its own way back. */}
+            <button
+              type="button"
+              className="rounded border px-3 py-1 text-sm"
+              aria-disabled={postsRetrying}
+              onClick={retryPosts}
+            >
+              Try again
+            </button>
+          </div>
+        ) : announcementPosts.data === undefined ? (
           <p role="status">Loading posts…</p>
-        ) : announcementPosts.isError ? (
-          <p role="alert" className="text-status-fail-fg">{errorMessage(announcementPosts.error)}</p>
         ) : (
-          <AnnouncementPostsList data={announcementPosts.data!} />
+          <AnnouncementPostsList data={announcementPosts.data} />
         )}
       </section>
     </div>

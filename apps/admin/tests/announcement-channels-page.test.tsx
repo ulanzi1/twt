@@ -39,6 +39,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 
 const { ChannelConfigPage } = await import('../src/modules/channel-config/ChannelConfigPage.js');
 const { ANNOUNCEMENT_BOT_HINT, ANNOUNCEMENT_SWITCH_LABEL } = await import('../src/modules/channel-config/AnnouncementChannelsForm.js');
+const { AnnouncementPostsList, COPY_OUTCOME_MS } = await import('../src/modules/channel-config/AnnouncementPostsList.js');
 const api = await import('../src/api/client.js');
 const { announcementChannelsConfigKey, createQueryClient } = await import('../src/api/hooks.js');
 
@@ -214,6 +215,88 @@ describe('Story 5.14 — the announcement channels section (AC2)', () => {
     await user.click(await s.findByRole('button', { name: 'Copy' }));
     expect(await s.findByRole('button', { name: /Copy failed/ })).toBeInTheDocument();
     expect(s.getByRole('status')).toHaveTextContent(/Copy failed/);
+  });
+
+  it('⭐ review FD-P9 — "Copied" FADES on its own (the live region is emptied too), ⛔ staying for good', async () => {
+    h.posts = { enabled: true, posts: [entry({ words: WORDS })] } satisfies AnnouncementPostsResponse;
+    const user = setupUser();
+    renderWithClient(<ChannelConfigPage pariwarId={PARIWAR} />);
+    const s = await section();
+    await user.click(await s.findByRole('button', { name: 'Copy' }));
+    expect(await s.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    expect(await s.findByRole('button', { name: 'Copy' }, { timeout: COPY_OUTCOME_MS + 1500 })).toBeInTheDocument();
+    expect(s.getByRole('status')).toHaveTextContent('');
+  }, 10_000);
+
+  it('review FD-P9 — when the list is re-read and the words CHANGE, the button is a plain "Copy" again (⛔ "Copied" for text never copied)', async () => {
+    const user = setupUser();
+    const { rerender } = render(<AnnouncementPostsList data={{ enabled: true, posts: [entry({ words: WORDS })] } satisfies AnnouncementPostsResponse} />);
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    rerender(<AnnouncementPostsList data={{ enabled: true, posts: [entry({ words: `${WORDS}\n(changed)` })] } satisfies AnnouncementPostsResponse} />);
+    expect(await screen.findByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
+  it('review FD2-R1 — a write that settles AFTER the words changed (a list re-read) does ⛔ show "Copied" for text never copied; a failure STAYS and a repeat press is cleared first', async () => {
+    const user = setupUser();
+    let settle!: () => void;
+    writeText.mockImplementationOnce(() => new Promise<void>((resolve) => { settle = resolve; }));
+    const { rerender } = render(<AnnouncementPostsList data={{ enabled: true, posts: [entry({ words: WORDS })] } satisfies AnnouncementPostsResponse} />);
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    rerender(<AnnouncementPostsList data={{ enabled: true, posts: [entry({ words: `${WORDS}\n(changed)` })] } satisfies AnnouncementPostsResponse} />);
+    await act(async () => {
+      settle();
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('');
+    // the failure path (no clipboard) is asynchronous too, and a failure does NOT fade
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(await screen.findByRole('button', { name: /Copy failed/ })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, COPY_OUTCOME_MS + 300));
+    expect(screen.getByRole('button', { name: /Copy failed/ })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/Copy failed/);
+  }, 10_000);
+
+  it('review FD-P8 / FD2-R2 — "Try again" reads the list again, STAYS MOUNTED and FOCUSED while it does (aria-disabled, "Trying again…" — ⛔ a v5 reset-to-pending that unmounts it or crashes the list), then shows the list', async () => {
+    h.posts = { enabled: true, posts: [entry({ words: WORDS })] } satisfies AnnouncementPostsResponse;
+    let release!: (value: AnnouncementPostsResponse) => void;
+    vi.mocked(api.getAnnouncementPosts)
+      .mockRejectedValueOnce(new Error('posts unavailable'))
+      .mockImplementationOnce(() => new Promise<AnnouncementPostsResponse>((resolve) => { release = resolve; }));
+    const user = setupUser();
+    renderWithClient(<ChannelConfigPage pariwarId={PARIWAR} />);
+    const s = await section();
+    expect(await s.findByText('posts unavailable')).toBeInTheDocument();
+    expect(s.queryByTestId('announcement-post')).toBeNull();
+    const before = vi.mocked(api.getAnnouncementPosts).mock.calls.length;
+    const button = s.getByRole('button', { name: 'Try again' });
+    await user.click(button);
+    // the read is still in flight (a refetch from an error resets the query to `pending` with no data): the SAME block, the SAME button
+    expect(await s.findByText('Trying again…')).toBeInTheDocument();
+    expect(s.getByRole('button', { name: 'Try again' })).toBe(button);
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveFocus();
+    await user.click(button); // a second press while retrying is ignored
+    expect(vi.mocked(api.getAnnouncementPosts).mock.calls.length).toBe(before + 1);
+    release(h.posts as AnnouncementPostsResponse);
+    expect(await s.findByTestId('announcement-post')).toBeInTheDocument();
+    expect(s.queryByRole('button', { name: 'Try again' })).toBeNull();
+    expect(s.queryByText('posts unavailable')).toBeNull();
+  });
+
+  it('review FD2-R2 — a retry that fails again shows the error again, with the button back (not disabled)', async () => {
+    h.posts = { enabled: true, posts: [] } satisfies AnnouncementPostsResponse;
+    vi.mocked(api.getAnnouncementPosts).mockRejectedValueOnce(new Error('first failure')).mockRejectedValueOnce(new Error('second failure'));
+    const user = setupUser();
+    renderWithClient(<ChannelConfigPage pariwarId={PARIWAR} />);
+    const s = await section();
+    expect(await s.findByText('first failure')).toBeInTheDocument();
+    await user.click(s.getByRole('button', { name: 'Try again' }));
+    expect(await s.findByText('second failure')).toBeInTheDocument();
+    expect(s.getByRole('button', { name: 'Try again' })).toHaveAttribute('aria-disabled', 'false');
   });
 
   it('⭐ G2-P9 — with NO `navigator.clipboard` (an insecure context) Copy says "Copy failed", ⛔ an uncaught throw', async () => {

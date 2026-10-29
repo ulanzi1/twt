@@ -15,7 +15,10 @@ import type {
   AnnouncementPostTelegramState,
   AnnouncementPostsResponse,
 } from '@twt/contracts';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+
+/** Review FD-P9 — how long "Copied" stays on the button before it is a plain "Copy" again ("Copy failed" stays until the next press). */
+export const COPY_OUTCOME_MS = 2000;
 
 /** What each Telegram state means to the admin. The reason (below) says why, for the states that need one. */
 export const TELEGRAM_STATE_LABEL: Record<AnnouncementPostTelegramState, string> = {
@@ -59,31 +62,50 @@ export function reasonLabel(reason: AnnouncementPostReason): string {
 const STATES_WITH_REASON: ReadonlySet<AnnouncementPostTelegramState> = new Set(['refused', 'skipped', 'unknown']);
 
 function CopyButton({ text, testId }: { text: string; testId: string }): ReactElement {
-  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  // Review FD-P9 / FD2-R1 — an outcome records the text it was pressed FOR and is shown only while that is still the text on screen
+  // (derived, ⛔ an effect: no render shows "Copied" for words that were never copied). It is cleared first on every press and EVERY
+  // outcome — including a missing clipboard or a synchronous throw — lands asynchronously, so a repeat press always passes through an
+  // empty live region and is announced again. "Copied" fades; a failure stays (its words are the admin's only instruction on that path).
+  const [outcome, setOutcome] = useState<{ readonly forText: string; readonly kind: 'copied' | 'failed' } | null>(null);
+  const state: 'idle' | 'copied' | 'failed' = outcome !== null && outcome.forText === text ? outcome.kind : 'idle';
+  const alive = useRef(true);
+  const fade = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      if (fade.current !== null) clearTimeout(fade.current);
+    };
+  }, []);
+  const settle = (forText: string, kind: 'copied' | 'failed'): void => {
+    if (!alive.current) return; // the write settled after the row went away
+    if (fade.current !== null) clearTimeout(fade.current);
+    setOutcome({ forText, kind });
+    fade.current = kind === 'copied' ? setTimeout(() => setOutcome(null), COPY_OUTCOME_MS) : null;
+  };
+  const press = (): void => {
+    const pressed = text;
+    setOutcome(null);
+    // Review G2-P9 — `navigator.clipboard` is absent outside a secure context (and `writeText` can throw synchronously):
+    // every failure lands on "Copy failed", ⛔ an uncaught throw.
+    let write: Promise<unknown>;
+    try {
+      const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+      write =
+        clipboard === undefined || typeof clipboard.writeText !== 'function'
+          ? Promise.reject(new Error('no clipboard'))
+          : Promise.resolve(clipboard.writeText(pressed));
+    } catch (err) {
+      write = Promise.reject(err);
+    }
+    void write.then(
+      () => settle(pressed, 'copied'),
+      () => settle(pressed, 'failed'),
+    );
+  };
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        className="rounded border px-2 py-1 text-xs"
-        data-testid={testId}
-        onClick={() => {
-          // Review G2-P9 — `navigator.clipboard` is absent outside a secure context (and `writeText` can throw synchronously):
-          // every failure lands on "Copy failed", ⛔ an uncaught throw.
-          try {
-            const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
-            if (clipboard === undefined || typeof clipboard.writeText !== 'function') {
-              setState('failed');
-              return;
-            }
-            clipboard.writeText(text).then(
-              () => setState('copied'),
-              () => setState('failed'),
-            );
-          } catch {
-            setState('failed');
-          }
-        }}
-      >
+      <button type="button" className="rounded border px-2 py-1 text-xs" data-testid={testId} onClick={press}>
         {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed — select the text' : 'Copy'}
       </button>
       {/* Review G2-P10 — the outcome is ANNOUNCED (a polite live region that exists before it changes). */}

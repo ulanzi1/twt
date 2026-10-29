@@ -45,6 +45,12 @@ export const ANNOUNCEMENT_POST_LEASE_MS = 2 * 60_000;
  */
 export const ANNOUNCEMENT_POST_DEFERRED_MAX_AGE_MS = 30 * 60_000;
 
+/**
+ * The `pool_label` CHECK's upper bound (`announcement_channel_posts_pool_label_check`: 1–100 characters). A curated pool name above it
+ * falls back to the letter code in the poster — a label the INSERT would refuse writes no row, at every attempt (review FD-P6).
+ */
+export const ANNOUNCEMENT_POOL_LABEL_MAX_LENGTH = 100;
+
 /** A post's identity — the UNIQUE key (I2). */
 export interface AnnouncementPostKey {
   readonly pariwarId: string;
@@ -104,8 +110,8 @@ function assertDetail(state: AnnouncementPostState, detail: string | null): void
 /** The record's own shape (the CHECKs' `occasion_fields` / `last_day_subject` legs), asserted before an INSERT. */
 function assertRecord(r: AnnouncementPostRecord): void {
   if (r.occasion === 'pool_open') {
-    if (r.poolLabel === null || r.poolLabel.length === 0 || r.lastDate !== null) {
-      throw new Error('announcement_channel_posts: a pool_open row records its pool label and no date');
+    if (r.poolLabel === null || r.poolLabel.length === 0 || r.poolLabel.length > ANNOUNCEMENT_POOL_LABEL_MAX_LENGTH || r.lastDate !== null) {
+      throw new Error('announcement_channel_posts: a pool_open row records its pool label (1–100 characters) and no date');
     }
   } else if (r.lastDate === null || !LAST_DATE.test(r.lastDate) || r.poolLabel !== null || r.subjectId !== r.alertId) {
     throw new Error('announcement_channel_posts: a last_day row records its date, no label, and its alert as subject');

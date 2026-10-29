@@ -348,6 +348,15 @@ describe.skipIf(!hasDatabase)('the Trust channel post record — migration 0190 
       return { pariwarId: PARIWAR_A, occasion: 'pool_open' as const, subjectId: randomUUID(), alertId, poolLabel: 'A', lastDate: null };
     }
 
+    it('review FD2-R6 — the accessor refuses a pool label the row\'s CHECK would (blank, or over 100 characters) BEFORE any statement; exactly 100 is accepted', async () => {
+      const { client } = getTx();
+      const rec = await freshRecord(client);
+      await expect(beginAnnouncementPost(client, { ...rec, poolLabel: 'x'.repeat(101), claimToken: 'job:0' })).rejects.toThrow(/1–100 characters/);
+      await expect(beginAnnouncementPost(client, { ...rec, poolLabel: '', claimToken: 'job:0' })).rejects.toThrow(/1–100 characters/);
+      expect(await lookupAnnouncementPost(client, rec)).toEqual({ kind: 'none' }); // nothing was written
+      expect(await beginAnnouncementPost(client, { ...rec, poolLabel: 'x'.repeat(100), claimToken: 'job:0' })).toMatchObject({ kind: 'begun', attemptCount: 1 });
+    });
+
     it('⭐ attempting → deferred → attempting (a NEW token; a stale holder of the old one cannot finalise) → posted', async () => {
       const { client } = getTx();
       const rec = await freshRecord(client);

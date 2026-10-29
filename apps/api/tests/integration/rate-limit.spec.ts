@@ -84,6 +84,27 @@ describe('Rate-limit enforcement (AC-1/AC-5/AC-6, hermetic — no DB)', () => {
     expect(t.auditSink.ofType('rate_limit.exceeded').length).toBeGreaterThanOrEqual(1);
   });
 
+  it('Story 5.14 review FD-P7 — the announcement-channels ADMIN routes opt into the named ceilings: the Posts list (it decrypts names) at the read ceiling, the PUT at the write ceiling', async () => {
+    const base = '/api/v1/p/00000000-0000-4000-8000-000000000514/admin/announcement-channels';
+    // The rate-limit hook runs at onRequest, BEFORE the session guard — so an unauthenticated caller reaches the ceiling (401 until then).
+    const reads = await appWith({ READ_RATE_MAX: '2' });
+    const readCodes: number[] = [];
+    for (let i = 0; i < 3; i += 1) readCodes.push((await reads.app.inject({ method: 'GET', url: `${base}/posts` })).statusCode);
+    expect(readCodes).toEqual([401, 401, 429]);
+    // the config GET is on the same named ceiling (a separate route, its own counter)
+    const configReads = await appWith({ READ_RATE_MAX: '2' });
+    const configCodes: number[] = [];
+    for (let i = 0; i < 3; i += 1) configCodes.push((await configReads.app.inject({ method: 'GET', url: base })).statusCode);
+    expect(configCodes).toEqual([401, 401, 429]);
+
+    const writes = await appWith({ WRITE_RATE_MAX: '1' });
+    const putCodes: number[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      putCodes.push((await writes.app.inject({ method: 'PUT', url: base, payload: { enabled: false, telegramChannelChatId: null, telegramInviteUrl: null, whatsappChannelUrl: null } })).statusCode);
+    }
+    expect(putCodes).toEqual([401, 429]);
+  });
+
   it('emits ONE audit line per key-per-window despite many rejected requests (CR-B-1 anti-flood)', async () => {
     const t = await appWith({ RATE_LIMIT_MAX: '2' });
     const url = '/api/v1/_meta/health';

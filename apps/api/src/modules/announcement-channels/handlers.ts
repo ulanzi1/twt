@@ -35,7 +35,7 @@ import {
 } from '@twt/contracts';
 import { announcementChannels as channels, audit, canonicalJsonStringify, ids, pool as poolDomain } from '@twt/domain';
 import { t } from '@twt/i18n';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
 import { UnauthorizedError } from '../../http-errors.js';
@@ -144,7 +144,10 @@ export function createAnnouncementChannelsHandlers(deps: AppDeps) {
     },
 
     /** GET the "Posts" list (FS4 (a), FS15 (a)) — an AUDITED read. */
-    async getPosts(request: FastifyRequest): Promise<AnnouncementPostsResponse> {
+    async getPosts(request: FastifyRequest, reply: FastifyReply): Promise<AnnouncementPostsResponse> {
+      // Review FD-P7 — the list carries the deceased's FULL name: ⛔ stored by a browser or a proxy (the other name-bearing reads set the
+      // same header — `member-pool/handlers.ts`, `claims.contact-call.handlers.ts`).
+      void reply.header('cache-control', 'no-store');
       const { scopeTx, pariwarIdStr, actorId } = scopeCtx(request);
       const pariwarId = ids.pariwarId(pariwarIdStr);
       const now = deps.clock();
@@ -167,12 +170,17 @@ export function createAnnouncementChannelsHandlers(deps: AppDeps) {
             rowIndex += 1;
             // The no-decrypt label (the row's own when it exists — what was posted). Under a savepoint: the curated-name read swallows
             // its own errors, and a swallowed SQL error would otherwise abort the request's transaction for every later row.
-            const poolLabel =
-              post?.poolLabel ??
-              (await underSavepoint(scopeTx.client, `announcement_label_${String(rowIndex)}`, () =>
-                resolveCuratedPoolName(scopeTx.tx, pariwarId, cycle.poolCount, pool.poolIndex, request),
-              ).catch(() => null)) ??
-              letterCodeOrNull(request, pool.poolId, pool.poolIndex);
+            // Review FD2-R3 — and the SAME bound the poster applies (a curated name that is blank or over the row's 100-character CHECK
+            // falls back to the letter code), so the words handed to the admin for the WhatsApp Channel name the pool as the Telegram post does.
+            const curated =
+              post?.poolLabel != null
+                ? null
+                : await underSavepoint(scopeTx.client, `announcement_label_${String(rowIndex)}`, () =>
+                    resolveCuratedPoolName(scopeTx.tx, pariwarId, cycle.poolCount, pool.poolIndex, request),
+                  ).catch(() => null);
+            const usableCurated =
+              curated !== null && curated.trim() !== '' && curated.length <= channels.ANNOUNCEMENT_POOL_LABEL_MAX_LENGTH ? curated : null;
+            const poolLabel = post?.poolLabel ?? usableCurated ?? letterCodeOrNull(request, pool.poolId, pool.poolIndex);
             let words: string | null = null;
             let unavailable = false;
             if (wordsDue) {

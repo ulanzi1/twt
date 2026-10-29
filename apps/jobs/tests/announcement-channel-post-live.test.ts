@@ -15,13 +15,16 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import {
+  ANNOUNCEMENT_DEFAULT_RETRY_AFTER_SECONDS,
   ANNOUNCEMENT_POOL_PACING_SECONDS,
+  ANNOUNCEMENT_POST_MAX_ATTEMPTS,
   ANNOUNCEMENT_POST_RETRY,
   createAnnouncementPoster,
   createAnnouncementPostTrigger,
   type AnnouncementPosterDeps,
   type AnnouncementPostPayload,
 } from '../src/scheduler/announcement-channel-post.js';
+import { runContributionNotifyRecoverySweep } from '../src/scheduler/contribution-notify-triggers.js';
 import { onOwnTx } from './_claim-correction-seed.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
@@ -67,7 +70,7 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
   });
 
   /** A fresh Pariwar: the deceased (a real KYC envelope) + claim, a live alert, `pools` pools, the channels ON and the bot row. */
-  async function world(o: { readonly pools?: number; readonly shielded?: boolean; readonly name?: string; readonly kyc?: boolean; readonly enabled?: boolean; readonly botName?: string | null; readonly chatId?: string } = {}) {
+  async function world(o: { readonly pools?: number; readonly shielded?: boolean; readonly name?: string; readonly kyc?: boolean; readonly enabled?: boolean; readonly botName?: string | null; readonly chatId?: string; readonly firstPoolIndex?: number; readonly curatedHi?: string } = {}) {
     const pid = randomUUID();
     pariwars.push(pid);
     await pool.query(
@@ -123,7 +126,7 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
           `INSERT INTO pools (pool_id, pariwar_id, cycle_id, claim_case_id, pool_index, pool_canonical_identifier, support_category,
                               benefit_mechanism, fixed_amount, current_state, state_event_version, public_token)
            VALUES ($1, $2, $3, $4, $5, $6, 'death_support', 'pool', 500, 'spawned', 1, $7)`,
-          [poolId, pid, cycleId, claimCaseId, i, `P-2026-10-${poolId.slice(0, 3)}`, poolDomain.mintPoolPublicToken()],
+          [poolId, pid, cycleId, claimCaseId, i + (o.firstPoolIndex ?? 0), `P-2026-10-${poolId.slice(0, 3)}`, poolDomain.mintPoolPublicToken()],
         );
       }
       await c.query('COMMIT');
@@ -142,6 +145,13 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
         pid,
         o.botName ?? 'projects/twt/secrets/tg-bot',
       ]);
+    }
+    if (o.curatedHi !== undefined) {
+      // review FD-P6 — one APPROVED curated pool name (position 0): the poster reads it through `resolveCuratedPoolName`.
+      await pool.query(
+        `INSERT INTO pool_names (pariwar_id, position_in_ordered_list, display_name_en, display_name_hi, approval_status) VALUES ($1, 0, 'Curated', $2, 'approved')`,
+        [pid, o.curatedHi],
+      );
     }
     return { pid, alertId, cycleId, poolIds };
   }
@@ -290,6 +300,65 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
     // a stale holder of the OLD token cannot finalise
     const postId = (await pool.query<{ post_id: string }>(`SELECT post_id FROM announcement_channel_posts WHERE pariwar_id = $1 AND subject_id = $2`, [w.pid, w.poolIds[0]])).rows[0]!.post_id;
     expect(await announcementChannels.finaliseAnnouncementPost(pool, { pariwarId: w.pid, postId, claimToken: first!.claim_token, state: 'unknown', detail: 'unclassified' })).toBe(false);
+  });
+
+  it('review FD-P1 — a 429 whose body carries NO Telegram error_code (an intermediary\'s throttle) is DEFERRED and re-sent, ⛔ ended `unknown:unclassified`', async () => {
+    const w = await world();
+    const h = harness([
+      { ok: false, status: 429, body: null },
+      { ok: true, status: 200, body: { ok: true, result: { message_id: 78 } } },
+    ]);
+    expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toEqual({ kind: 'done', state: 'deferred', detail: 'tg_429' });
+    expect((await rowOf(w.pid, w.poolIds[0]!))[0]).toMatchObject({ state: 'deferred', detail: 'tg_429', attempt_count: 1 });
+    // no `retry_after` in the body ⇒ the default delay; and nobody is told "check the channel by hand"
+    expect(h.sends).toHaveLength(1);
+    expect(h.sends[0]!.options).toMatchObject({ ...ANNOUNCEMENT_POST_RETRY, startAfter: ANNOUNCEMENT_DEFAULT_RETRY_AFTER_SECONDS });
+    expect(h.alarms.join('\n')).not.toContain('MAY have gone out');
+    await pool.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1`, [w.pid]);
+    expect(await h.poster.run(h.boss, h.sends[0]!.data, FIRST)).toEqual({ kind: 'done', state: 'posted', detail: null });
+  });
+
+  it('review FD2-R4 — a 429 that NEVER clears (no body, no retry_after) is re-sent only up to the attempt cap, then given up `refused:tg_429_expired` with ONE alarm — ⛔ re-sent (and the name decrypted) for ever', async () => {
+    const w = await world();
+    const h = harness([{ ok: false, status: 429, body: null }]);
+    for (let attempt = 1; attempt < ANNOUNCEMENT_POST_MAX_ATTEMPTS; attempt += 1) {
+      expect(await h.poster.run(h.boss, poolJob(w), FIRST), `attempt ${String(attempt)}`).toEqual({ kind: 'done', state: 'deferred', detail: 'tg_429' });
+      await pool.query(`UPDATE announcement_channel_posts SET retry_not_before = clock_timestamp() - interval '1 second' WHERE pariwar_id = $1`, [w.pid]);
+    }
+    expect((await rowOf(w.pid, w.poolIds[0]!))[0]).toMatchObject({ state: 'deferred', attempt_count: ANNOUNCEMENT_POST_MAX_ATTEMPTS - 1 });
+    expect(h.sends).toHaveLength(ANNOUNCEMENT_POST_MAX_ATTEMPTS - 1);
+    expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toEqual({ kind: 'done', state: 'refused', detail: 'tg_429_expired' });
+    expect((await rowOf(w.pid, w.poolIds[0]!))[0]).toMatchObject({ state: 'refused', detail: 'tg_429_expired', attempt_count: ANNOUNCEMENT_POST_MAX_ATTEMPTS });
+    expect(h.sends).toHaveLength(ANNOUNCEMENT_POST_MAX_ATTEMPTS - 1); // no further re-send
+    expect(h.alarms.filter((a) => a.includes('given up after'))).toHaveLength(1);
+    // finished: another job for the same post is a no-op
+    expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toEqual({ kind: 'done', state: 'refused', detail: 'tg_429_expired' });
+    expect(h.requests).toHaveLength(ANNOUNCEMENT_POST_MAX_ATTEMPTS);
+  });
+
+  it('review FD-P6 — a curated name over the row\'s 100-character bound falls back to the letter code (the post goes out); at exactly 100 it is used', async () => {
+    const long = 'क'.repeat(101);
+    const over = await world({ curatedHi: long });
+    const hOver = harness();
+    expect(await hOver.poster.run(hOver.boss, poolJob(over), FIRST)).toEqual({ kind: 'done', state: 'posted', detail: null });
+    expect((await rowOf(over.pid, over.poolIds[0]!))[0]).toMatchObject({ state: 'posted', pool_label: 'A' });
+    expect(hOver.requests[0]!.text).not.toContain(long);
+
+    const exactName = 'क'.repeat(100);
+    const exact = await world({ curatedHi: exactName });
+    const hExact = harness();
+    expect(await hExact.poster.run(hExact.boss, poolJob(exact), FIRST)).toEqual({ kind: 'done', state: 'posted', detail: null });
+    expect((await rowOf(exact.pid, exact.poolIds[0]!))[0]).toMatchObject({ state: 'posted', pool_label: exactName });
+  });
+
+  it('review FD-P6 — an index the letter code cannot encode writes no row, raises a defect alarm and does ⛔ throw (no retry storm, no post)', async () => {
+    const w = await world({ firstPoolIndex: -1 });
+    const h = harness();
+    expect(await h.poster.run(h.boss, poolJob(w), FIRST)).toEqual({ kind: 'not_found', what: 'pool' });
+    expect(await h.poster.run(h.boss, poolJob(w), FINAL)).toEqual({ kind: 'not_found', what: 'pool' });
+    expect(await rowOf(w.pid, w.poolIds[0]!)).toHaveLength(0);
+    expect(h.requests).toHaveLength(0);
+    expect(h.alarms.join('\n')).toContain('cannot be turned into a label');
   });
 
   it('a `deferred` row past its max age ends `refused:tg_429_expired` (⛔ posted)', async () => {
@@ -529,6 +598,64 @@ describe.skipIf(!hasDatabase)('Story 5.14 — the announcement channel poster, l
     expect(h.sends.map((s) => s.data.payload)).toEqual([{ occasion: 'pool_open', alertId: w.alertId, cycleId: w.cycleId, poolId: w.poolIds[0] }]);
     // ⛔ a cycle job: the pool that never had a row keeps none (the admin list still says `not_attempted`)
     expect(await rowOf(w.pid, w.poolIds[1]!)).toEqual([]);
+  });
+
+  it('⭐ review FD-P4 — the recovery sweep\'s widened query EXECUTES on Postgres: a closed alert with a recoverable row (`deferred`, or `attempting` past the lease) is healed; a young attempt or a finished post is not; the seam unset ⇒ none', async () => {
+    type W = Awaited<ReturnType<typeof world>>;
+    const close = async (w: W) => {
+      const c = await pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query("SET LOCAL app.alert_state_writer = 'on'");
+        await c.query(`UPDATE alerts SET current_state = 'closed', state_event_version = 4 WHERE pariwar_id = $1 AND alert_id = $2`, [w.pid, w.alertId]);
+        await c.query('COMMIT');
+      } finally {
+        c.release();
+      }
+    };
+    const begin = async (w: W) => {
+      const c = await pool.connect();
+      try {
+        await c.query('BEGIN');
+        await announcementChannels.beginAnnouncementPost(c, { pariwarId: w.pid, occasion: 'pool_open', subjectId: w.poolIds[0]!, alertId: w.alertId, poolLabel: 'A', lastDate: null, claimToken: randomUUID() });
+        await c.query('COMMIT');
+      } finally {
+        c.release();
+      }
+    };
+    const deferred = await world();
+    const hd = harness([{ ok: false, status: 429, body: { ok: false, error_code: 429, parameters: { retry_after: 600 } } }]);
+    await hd.poster.run(hd.boss, poolJob(deferred), FIRST);
+    const young = await world();
+    await begin(young);
+    const lapsed = await world();
+    await begin(lapsed);
+    await pool.query(`UPDATE announcement_channel_posts SET updated_at = clock_timestamp() - interval '3 minutes' WHERE pariwar_id = $1`, [lapsed.pid]);
+    const finished = await world();
+    const hf = harness();
+    await hf.poster.run(hf.boss, poolJob(finished), FIRST);
+    const all = [deferred, young, lapsed, finished];
+    for (const w of all) await close(w);
+
+    // The REAL query on the REAL pool — only the returned ROWS are narrowed to this test's alerts (the shared database holds other suites' alerts).
+    const mine = new Set<string>(all.map((w) => w.alertId));
+    const scoped = {
+      query: async (text: string, params?: unknown[]) => {
+        const r = await pool.query(text, params);
+        // every row of the sweep's query names its alert; ⛔ keyed on the SQL text, which an alias or a whitespace change would silently disarm
+        return { ...r, rows: r.rows.filter((row: { alert_id?: string }) => row.alert_id === undefined || mine.has(row.alert_id)) };
+      },
+    };
+    const sweep = async (withSeam: boolean): Promise<string[]> => {
+      const seam = vi.fn().mockResolvedValue(undefined);
+      const send = vi.fn();
+      const deps = { pool: scoped, recoverySweepAlertLimit: 100_000, onAlarm: vi.fn(), ...(withSeam ? { enqueueAnnouncementPost: seam } : {}) } as never;
+      expect(await runContributionNotifyRecoverySweep(deps, { send })).toBe(0);
+      expect(send).not.toHaveBeenCalled(); // a closed alert never restarts the member fan-out
+      return seam.mock.calls.map((call) => (call[0] as { alertId: string }).alertId);
+    };
+    expect((await sweep(true)).sort()).toEqual([deferred.alertId, lapsed.alertId].sort());
+    expect(await sweep(false)).toEqual([]);
   });
 
   it('review G1-1 — recovery retains a lost last-day retry payload and settles it after the deadline', async () => {

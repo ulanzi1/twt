@@ -48,6 +48,14 @@ export const ANNOUNCEMENT_POOL_PACING_SECONDS = 3;
 /** A 429 without `retry_after` waits this long before the re-send (the 429 is honoured either way). */
 export const ANNOUNCEMENT_DEFAULT_RETRY_AFTER_SECONDS = 30;
 
+/**
+ * Review FD2-R4 — a post that has been rate-limited this many times in a row is GIVEN UP (`refused:tg_429_expired`, one alarm), ⛔ re-sent for
+ * ever. The `deferred` lifecycle's 30-minute max age is measured from the LATEST update (the 0184 shape), so a 429 that never clears — an
+ * intermediary's throttle with no `retry_after` — would otherwise re-send every {@link ANNOUNCEMENT_DEFAULT_RETRY_AFTER_SECONDS} until the alert
+ * closes, decrypting the deceased member's name on every pass. 20 attempts is ≥ 10 minutes at the default delay.
+ */
+export const ANNOUNCEMENT_POST_MAX_ATTEMPTS = 20;
+
 /** FS7 (a) / `-418` item 5 — alarms are de-duplicated per (Pariwar, class) for this long (5.11b's 5-minute window). */
 export const ANNOUNCEMENT_ALARM_WINDOW_MS = 5 * 60_000;
 
@@ -354,9 +362,25 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
         alarmOnce(pariwarId, 'defect', `${where}: pool is not in this alert's cycle — nothing posted`);
         return { kind: 'not_found', what: 'pool' };
       }
-      const poolLabel = await withPariwarScope(deps.pool, pariwarId, async (db: Db) =>
-        (await notifications.resolveCuratedPoolName(db, ids.pariwarId(pariwarId), pool.poolCount, pool.poolIndex)) ?? poolDomain.poolLetterCode(pool.poolIndex),
+      // Review FD-P6 — the label is bounded BEFORE any row is written. A curated name the row's CHECK (1–100 characters) would refuse falls back
+      // to the letter code; an index the letter code cannot encode is a defect — alarmed and ended `not_found` like the other defects above. A
+      // throw here wrote no row, retried to the end, and let the hourly heal re-fan-out the cycle for ever (`pool_label` is NOT NULL for a
+      // `pool_open` row, so there is no row to record the refusal on).
+      const curated = await withPariwarScope(deps.pool, pariwarId, (db: Db) =>
+        notifications.resolveCuratedPoolName(db, ids.pariwarId(pariwarId), pool.poolCount, pool.poolIndex),
       );
+      let poolLabel: string;
+      if (curated !== null && curated.trim() !== '' && curated.length <= channels.ANNOUNCEMENT_POOL_LABEL_MAX_LENGTH) {
+        poolLabel = curated;
+      } else {
+        try {
+          poolLabel = poolDomain.poolLetterCode(pool.poolIndex);
+        } catch (err) {
+          if (!(err instanceof poolDomain.PoolLetterCodeRangeError)) throw err;
+          alarmOnce(pariwarId, 'defect', `${where}: the pool's index cannot be turned into a label — nothing posted`);
+          return { kind: 'not_found', what: 'pool' };
+        }
+      }
       record = { ...key, alertId: p.alertId, poolLabel, lastDate: null };
       stale = !alert.live;
       poolForName = { pool, poolCount: pool.poolCount };
@@ -453,7 +477,16 @@ export function createAnnouncementPoster(deps: AnnouncementPosterDeps): Announce
     try {
       messageId = await handle.send({ chatId, text });
     } catch (err) {
-      if (err instanceof TelegramSendError && err.telegramCode === 429) {
+      // Review FD-P1 — a 429 is a 429 whether or not its body carried Telegram's `error_code`: an intermediary's throttle (a missing, non-JSON
+      // or truncated body) has `telegramCode: null` and was otherwise ended `unknown:unclassified` — "may have posted" for a post that did not.
+      if (err instanceof TelegramSendError && (err.telegramCode === 429 || err.httpStatus === 429)) {
+        // Review FD2-R4 — ...unless this is the last attempt the post gets: a 429 that keeps coming is given up, ⛔ looped.
+        if (begun.attemptCount >= ANNOUNCEMENT_POST_MAX_ATTEMPTS) {
+          const gaveUp = await finalise('refused', 'tg_429_expired');
+          if (!gaveUp) alarmOnce(pariwarId, 'lost_claim', `${where}: the give-up after ${String(begun.attemptCount)} rate-limited attempts could not be recorded (the row moved on)`);
+          else alarmOnce(pariwarId, 'refused', `Telegram kept rate-limiting the post — given up after ${String(begun.attemptCount)} attempts (refused:tg_429_expired) — ${where}`);
+          return { kind: 'done', state: 'refused', detail: 'tg_429_expired' };
+        }
         // DEFINITELY not posted ⇒ `deferred`, and the job re-sends ITSELF after `retry_after` (the re-claim rotates the token — T15).
         const after = err.retryAfter ?? ANNOUNCEMENT_DEFAULT_RETRY_AFTER_SECONDS;
         const ok = await finalise('deferred', 'tg_429', undefined, after);

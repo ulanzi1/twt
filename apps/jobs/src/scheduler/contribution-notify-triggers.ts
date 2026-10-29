@@ -58,6 +58,7 @@ import {
 } from '@twt/contracts';
 import {
   alert as alertDomain,
+  announcementChannels,
   contribution as contributionDomain,
   idempotency,
   ids,
@@ -1320,11 +1321,12 @@ export async function runContributionNotifyRecoverySweep(
          OR ($2::boolean AND EXISTS (
            SELECT 1 FROM announcement_channel_posts r
             WHERE r.pariwar_id = a.pariwar_id AND r.alert_id = a.alert_id
-              AND (r.state = 'deferred' OR (r.state = 'attempting' AND r.updated_at < clock_timestamp() - interval '2 minutes'))
+              AND (r.state = 'deferred' OR (r.state = 'attempting' AND r.updated_at < clock_timestamp() - ($3::int * interval '1 millisecond')))
          ))
       ORDER BY a.cycle_id ASC
       LIMIT $1`,
-    [limit, deps.enqueueAnnouncementPost !== undefined],
+    // Review FD-P4 — $3 is the poster's own lease (`ANNOUNCEMENT_POST_LEASE_MS`), ⛔ a second hard-coded "2 minutes" that could drift from it.
+    [limit, deps.enqueueAnnouncementPost !== undefined, announcementChannels.ANNOUNCEMENT_POST_LEASE_MS],
   );
 
   let reEnqueued = 0;

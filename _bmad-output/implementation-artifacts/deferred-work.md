@@ -13371,3 +13371,33 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
   spinner (G3-P5). Trigger: the next copy review for this surface.
 - **G4-W1 — ledger label collision on Story 11b.5's branch.** `story/11b-5-…`'s sprint-status holds `2026-10-29b (STORY 11b.5 …)`, and
   `main` now holds `2026-10-29b` for 6.32. Not 5.14's; relabel at 11b.5's rebase onto `main` ([[project_rebase_ledger_conflict_separator]]).
+
+## Deferred from: code review of 5-14-trust-announcement-channels, full-diff pass (2026-10-29)
+
+- **FD-W1 — the 30-minute `deferred` give-up is measured from the latest update.** Each re-claim and re-defer resets `updated_at`, so a
+  persistent 429 chain expires only when the alert closes (pool opening) or the deadline passes (last day). Inherited: the same shape as
+  `ALERT_SMS_DEFERRED_MAX_AGE_MS` (0184), which FS7 reuses by name; a first-deferral clock needs a new column. Trigger: a post observed late
+  after repeated 429s. *Updated by the fix-diff review (FD2-R4):* FD-P1 made a body-less 429 a deferral, which widened this; the poster now
+  gives a post up after 20 consecutive rate-limited attempts (`refused:tg_429_expired`, one alarm), so the chain is bounded — the
+  first-deferral clock itself stays deferred.
+- **FD-W2 — the deceased's name enters a public plain-text Telegram post unsanitised.** Telegram auto-links URLs and `@mentions` in plain text,
+  and a newline can forge post structure; the KYC name is self-declared. Pre-existing: name validation belongs to KYC input, and the same name
+  already reaches SMS, WhatsApp and pool names. Trigger: the next KYC-name validation change, or any channel post that renders a name with markup.
+- **FD-W3 — the announcement-channels config audit line records only the new values, and the Posts list is silently bounded.** For a switch that
+  publishes names there is no "from → to"; the list drops cycles past 20 and pools past 500 without telling the admin. Low; no ratified
+  requirement. Trigger: the first config surface given a from → to audit shape (with G2-W1's optimistic concurrency).
+- **FD-W4 — test-strength nits in 5.14's suites (read from the diff, not individually re-traced).** The "hung server" live case uses a
+  pre-aborted signal (the 9 s bound is proved in `telegram.test.ts` through a spy); the config audit assertion is `rowCount >= 1`; no boundary
+  test at day 13 / 14 or the 15-day window edge; the source-pin tests match formatting-dependent text; a `ChannelLinkError` race when a refetch
+  lands while `openURL` is pending. None contradicts an AC. Trigger: the next edit of these suites.
+
+## Deferred from: code review of 5-14-trust-announcement-channels, fix-diff review (2026-10-29)
+
+- **FD2-W1 — a post that races a bot-token rotation can still end `refused:tg_401`.** A job builds its Telegram handle before the claim and holds it
+  across the send; a sibling job that rebuilds the cache entry for a rotated token does not change the handle the first job holds. Seconds-wide,
+  and it needs a rotation mid-cycle. Re-resolving the secret once on a 401 is a design choice (a second secret read per refusal). Trigger: a
+  `refused:tg_401` seen right after a rotation.
+- **FD2-W2 — a pool whose index the letter code cannot encode has no post row, so the hourly recovery heal re-sends one cycle job and one pool child
+  per such pool for the alert's life.** Alarmed (a de-duplicated `defect`) and bounded — no retry storm — but not eliminated: `pool_label` is
+  NOT NULL for a `pool_open` row, so there is nothing to record a refusal on without a new `detail` value (a migration). Unreachable through the
+  spawn saga (`pool_index` is assigned 0, 1, 2…). Trigger: a `defect` alarm for a pool label.

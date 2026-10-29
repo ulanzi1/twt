@@ -35,7 +35,7 @@ the 11b.4 / 11b.4a story files, the decision log, or the code's behaviour instea
 
 # Story 11b.5: Memorial Visual Components — MemorialRecord + PortraitFrame + KinshipLattice `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -614,27 +614,27 @@ Each code Task ends with **Done when** — the named test(s), each shown RED aga
     `sprint-status.yaml` with a one-liner (memory: the naive rewrite truncates the 2.7 MB file).
   - **Done when:** both commits exist, alone and in order, before any code; `yaml.safe_load` of `sprint-status.yaml` parses.
 
-- [ ] **Task 2 — Tokens (AC2)**
-  - [ ] 2.1 `tokens.ts`: `border-funeral-frame` `'4px'` → `'2px'` with MV4's comment verbatim (the UX source; *"placeholder
+- [x] **Task 2 — Tokens (AC2)**
+  - [x] 2.1 `tokens.ts`: `border-funeral-frame` `'4px'` → `'2px'` with MV4's comment verbatim (the UX source; *"placeholder
     until P0-2, like its group"* kept). ⛔ No new token (Trap 7, MV4).
-  - [ ] 2.2 `pnpm --filter @twt/tokens tokens:generate-theme`; the identity arrays in `tokens.test.ts` stay unchanged; assert the
+  - [x] 2.2 `pnpm --filter @twt/tokens tokens:generate-theme`; the identity arrays in `tokens.test.ts` stay unchanged; assert the
     value (`'2px'`) in a token test.
-  - [ ] 2.3 In `apps/public/tests/memorial-token-references.test.ts` (AC11 (3)): `rootTokenCss()` contains
+  - [x] 2.3 In `apps/public/tests/memorial-token-references.test.ts` (AC11 (3)): `rootTokenCss()` contains
     `--border-funeral-frame: 2px;`.
   - **Done when:** the token tests and `tokens-theme-check` pass; each new assertion was RED first.
 
-- [ ] **Task 3 — `<PortraitFrame>` and the section (AC1, AC3, AC4, AC6)**
-  - [ ] 3.1 Write `apps/public/src/components/PortraitFrame.astro` exactly as Dev Notes § *The exact markup* (AC1).
-  - [ ] 3.2 `FamilyMemorial.astro`: exactly as Dev Notes § *The exact markup* — `import PortraitFrame from './PortraitFrame.astro';`;
+- [x] **Task 3 — `<PortraitFrame>` and the section (AC1, AC3, AC4, AC6)**
+  - [x] 3.1 Write `apps/public/src/components/PortraitFrame.astro` exactly as Dev Notes § *The exact markup* (AC1).
+  - [x] 3.2 `FamilyMemorial.astro`: exactly as Dev Notes § *The exact markup* — `import PortraitFrame from './PortraitFrame.astro';`;
     `<PortraitFrame src={photoSrc} alt={plan.alt} />` inside the kept `<figure data-field="family_memorial_photo">`; every class →
     the static style strings given (MV5 (a)); `dir="auto"` stays the first `<p>` attribute and `white-space: pre-wrap;` the first
     declaration (Trap 2); ⛔ nothing in the gating is touched.
-  - [ ] 3.3 Tests — AC11 (1)–(3), (5), (6): `portrait-frame-source.test.ts` (new), `family-memorial-source.test.ts` (re-pin +
+  - [x] 3.3 Tests — AC11 (1)–(3), (5), (6): `portrait-frame-source.test.ts` (new), `family-memorial-source.test.ts` (re-pin +
     `TOUCHED` + no-`class=` + allow-list), `memorial-token-references.test.ts` (new), `family-memorial-render.spec.ts` (frame regex,
     the three added assertions, the empty-`alt` leg) — each RED against its named mutant (AC11).
-  - [ ] 3.4 Under MV5 (c) only: the page-wide classes → inline token styles, the `<summary>` focus ring as a real rule, and a
+  - [x] 3.4 ⛔ Not run — MV5 (a) was answered (N/A). Under MV5 (c) only: the page-wide classes → inline token styles, the `<summary>` focus ring as a real rule, and a
     keyboard-focus assertion. (Skip under (a).)
-  - [ ] 3.5 Register `{ path: 'apps/public/src/components/PortraitFrame.astro', renderPath: true }` in
+  - [x] 3.5 Register `{ path: 'apps/public/src/components/PortraitFrame.astro', renderPath: true }` in
     `scripts/sahyog-vivran-financial-truth/check.ts` beside `FamilyMemorial.astro` (*"THE SCOPE TAX, PAID BY HAND"* — its safeguard
     does ⛔ not walk `src/components`, so an unregistered file on the render path is never scanned and the gate stays green
     regardless). Show the gate RED on a mutant it actually matches — its rule (3) fires only on `*` / `*=` with a COUNT_OPERAND on one
@@ -644,11 +644,11 @@ Each code Task ends with **Done when** — the named test(s), each shown RED aga
   - **Done when:** the four test files and the financial-truth gate pass; the mutants are in the Debug Log; `git diff` shows ⛔ no
     AC6 file.
 
-- [ ] **Task 4 — Doc-blocks, discharge, friction declaration (AC10, AC12, AC13)**
-  - [ ] 4.1 Append the dated lines of AC10 (five lines in four files — `FamilyMemorial.astro` gets two; the `sahyog.astro` line goes
+- [x] **Task 4 — Doc-blocks, discharge, friction declaration (AC10, AC12, AC13)**
+  - [x] 4.1 Append the dated lines of AC10 (five lines in four files — `FamilyMemorial.astro` gets two; the `sahyog.astro` line goes
     INSIDE its `/* … */`); the `FOUR PRODUCERS` item's dated line.
-  - [ ] 4.2 `deferred-work.md` 11b.4a item (9): the discharge line naming the Task 3 commit.
-  - [ ] 4.3 ⚠ **`friction-budget.md` — the AC-4 declaration gate is ⛔ not optional:** `scripts/friction-budget/lib.ts` :453 lists
+  - [x] 4.2 `deferred-work.md` 11b.4a item (9): the discharge line naming the Task 3 commit.
+  - [x] 4.3 ⚠ **`friction-budget.md` — the AC-4 declaration gate is ⛔ not optional:** `scripts/friction-budget/lib.ts` :453 lists
     `'apps/public/'` in `MEMBER_FACING_PREFIXES`, and `evaluateDeclaration` (:525–600) FAILS with basis `unchanged` when an
     `apps/public/` path changes and `friction-budget.md` does not; `ci:local` runs it (`ci-local.sh` :69) against `git merge-base
     HEAD origin/main`. Append a block in the 11b.12 precedent's shape (`friction-budget.md`, *"Story 11b.12 disposition
@@ -656,11 +656,11 @@ Each code Task ends with **Done when** — the named test(s), each shown RED aga
     frame becomes a component and the section is spaced; ⛔ no new step, wait, decision or data asked of anybody; ⛔ nothing gated;
     `page_weight_bytes` own-bytes unchanged (inline styles, Trap 5). ⚠ 5.14 appended to this file on main — rebase keep-both.
 
-- [ ] **Task 5 — Verify and close (AC5, AC13, AC14)**
-  - [ ] 5.1 `pnpm --filter @twt/public build` succeeds (recorded); the built-server spec runs and passes, ⛔ not skipped (AC14 —
+- [x] **Task 5 — Verify and close (AC5, AC13, AC14)**
+  - [x] 5.1 `pnpm --filter @twt/public build` succeeds (recorded); the built-server spec runs and passes, ⛔ not skipped (AC14 —
     it builds and serves its own copy).
-  - [ ] 5.2 `pnpm ci:local` on a fresh `twt_dev` (own container; `DATABASE_URL` on the command) — incl. `friction-budget` green.
-  - [ ] 5.3 AC13's `git diff --name-only`; File List; Change Log; row `ready-for-dev` → `in-progress` → `review`; one combined
+  - [x] 5.2 `pnpm ci:local` on a fresh `twt_dev` (own container; `DATABASE_URL` on the command) — incl. `friction-budget` green.
+  - [x] 5.3 AC13's `git diff --name-only`; File List; Change Log; row `ready-for-dev` → `in-progress` → `review`; one combined
     ledger entry (both ledgers — the top comment lines and the `last_updated: >-` block).
 
 ## Dev Notes
@@ -853,11 +853,103 @@ one"*, *"(⛔ border, ⛔ radius, ⛔ padding"*) ⇒ fixed by `--fixup` + `rebas
 governance commit `06e10fbd` (still `-420` alone, 31 / 0). ⚠ The first `-154` pointer insert landed inside `-153` (`-154` has ⛔ no
 `---` before `-153` begins) — caught on the diff and moved to the end of `-154` before commit.
 
+
+**Task 2 (2026-10-29, commit `66de052b`).** RED first: `tokens.test.ts` gained `border['border-funeral-frame']` toBe `'2px'` and
+the `renderThemeCss()` assertion was tightened from `--border-funeral-frame:` to `--border-funeral-frame: 2px;` ⇒ **2 failed / 19
+passed** on `'4px'` (*"expected '4px' to be '2px'"*). Then `tokens.ts` `'4px'` → `'2px'` with MV4's comment verbatim; `pnpm
+tokens:generate-theme` (`theme.css` 2075 bytes, one line changed); `vitest` 22 / 22; `tokens:check-theme-determinism` *"in sync"*;
+`tsc --noEmit` exit 0; `eslint .` clean. The identity array (`EXACTLY the four UX-DR9 border tokens`) is unchanged.
+
+**Task 3 (2026-10-29, commit `98e24152`).** Tests written first, run against the unchanged components ⇒ **9 failed / 15 passed**
+(`PortraitFrame.astro` ENOENT; `class=` on `FamilyMemorial.astro`; and the allow-list already caught today's literal —
+*"border: 2px solid var(--color-ink-primary): expected '2px' to be ''"*). After `PortraitFrame.astro` (exactly the Dev Notes block)
+and `FamilyMemorial.astro` (exactly the Dev Notes block): **29 / 29**. Source-test mutants, each applied by script, run, reverted
+(`git status` clean of them after):
+
+| Mutant | Test(s) | Result |
+|---|---|---|
+| `class="mt-3"` re-added on `<figure>` | `family-memorial-source` | RED 2 (no-`class=`; exact strings) |
+| `var(--border-funeral-frme)` | `memorial-token-references`, `portrait-frame-source` | RED 3 (token resolution; frame-from-token; exact strings) |
+| `solid #1a1a1a` literal | `family-memorial-source`, `portrait-frame-source` | RED 2 (allow-list; exact strings) |
+| inner wrapper dropped | `portrait-frame-source` | RED 2 (wrapper order; three `style`s) |
+| `alt={alt \|\| undefined}` | `portrait-frame-source` | RED 1 |
+| token back to `4px` | `memorial-token-references` | RED 1 (`--border-funeral-frame: 2px;`) |
+| `PortraitFrame.astro` dropped from `TOUCHED` | `family-memorial-source` | ⚠ **SURVIVED** (19 / 19) ⇒ added `expect(TOUCHED).toContain('src/components/PortraitFrame.astro')` (Trap 3's hand-add was unpinned) ⇒ RED 1 |
+| `<p>` spacing as `margin-top` only | `family-memorial-source` | RED 1 |
+| `style="font-weight: 600;"` on the `<h2>` | `family-memorial-source` | RED 2 (exact strings; allow-list property ban) |
+
+Built-server render spec (`family-memorial-render.spec.ts`), against a dedicated container `twt-11b5-pg` (`postgres:16-alpine`,
+`:5450`, database `twt_dev`, migrated): **8 / 8 passed, ⛔ not skipped** (6 existing legs + the empty-`alt` leg; the AC3 leg carries
+the rewritten frame regex and the three added assertions). Mutants (each a fresh programmatic build):
+
+| Mutant | Result |
+|---|---|
+| inner wrapper dropped | RED 1 (AC3 leg — frame regex) |
+| `alt={alt \|\| undefined}` | RED 1 (the empty-`alt` leg) |
+| `data-field` removed from the `<figure>` | RED 1 (AC3 leg) |
+| `data-field` removed from the `<section>` | RED 1 (AC3 leg) |
+| `<h2>` moved below the `<figure>` | RED 1 (AC3 leg) |
+
+⚠ `eslint` then refused the empty-`alt` regex's `[\s>\/]` (`no-useless-escape`) ⇒ written `[\s>/]` (the same class); the spec
+re-ran 8 / 8. Task 3.5: `PortraitFrame.astro` registered in `check.ts` `SCAN_FILES` (`renderPath: true`); the gate listed it
+(*"· apps/public/src/components/PortraitFrame.astro [render path]"*) and, with `<p>{confirmedContributionCount * fixedAmount}</p>`
+planted in it, FAILED with 2 findings — *"PortraitFrame.astro:24 [render_path_multiplication] — render path RE-DERIVES the rupee
+figure locally"* and *"… names "fixedAmount""*; reverted; gate green; `sahyog-vivran-financial-truth:test` 36 / 36. `apps/public`:
+`vitest` 37 files / 802 tests; `astro check` 0 errors / 0 warnings / 0 hints; `eslint .` clean. Task 3.4 ⛔ not run (MV5 (a)).
+AC6: `git diff 8dd3e623..HEAD --name-only` touches ⛔ none of the AC6 files.
+
+**Task 4 (2026-10-29, commit `3f3c4aab`).** Five dated lines in four files. ⚠ `sahyog.astro`: to put the new line INSIDE the
+fence's `/* … */`, the fence's last line keeps every word and only its closing `*/` moves to the end of the appended line (the
+diff's one `-` line); ⛔ no test pins that text (`git grep "11b.2 / 11b.5 / 11b.7"` outside the page: none). `deferred-work.md`:
+the FOUR PRODUCERS annotation and 11b.4a item (9)'s IN-PART discharge naming `98e24152`. `friction-budget.md`: the 11b.5
+disposition; `pnpm --filter @twt/public build` ⇒ `/sahyog-vivran/[driveToken]` `own_bytes` 0, `page_weight_bytes` 1397, aggregate
+11471 — identical to Task 0.1's pre-change build. `friction:check` (on a temporary WIP commit, then reset): *"member-facing surface
+touched and a new story disposition was recorded (11b.5) — declaration affirmed with no new row"*, gate passed.
+
+**Task 5 (2026-10-29).** 5.1: `pnpm --filter @twt/public build` succeeds (Task 0.1 and again after Task 4). 5.2: `pnpm ci:local`
+on a FRESH container `twt-11b5-pg` (`postgres:16-alpine`, `:5450`, database `twt_dev`; recreated before the run; `DATABASE_URL` on
+the command; load average 2.98 at start, ⛔ no peer `ci:local` running) — **36 / 36 green on the first run, ⛔ no re-run**. In it,
+`family-memorial-render.spec.ts` was skipped by the unit job (*"8 tests | 8 skipped"* — ⛔ no `DATABASE_URL` there, by design) and
+**ran and passed in `integration-tests`** (*"✓ … family-memorial-render.spec.ts (8 tests) 5347ms"*; `@twt/public` 37 files / 802
+tests). AC5: the AC5 take-down leg of that spec (byte-identical before / after) and the API spec ran unchanged inside the same run.
+5.3: `git diff --name-only 8dd3e623..HEAD` = exactly AC13's list (19 paths), ⛔ nothing under `apps/mobile`, `apps/admin`,
+`apps/api`, `packages/contracts`, `packages/ui`, ⛔ no i18n file. The container was removed afterwards.
+
 ### Completion Notes List
 
 - Ultimate context engine analysis completed — comprehensive developer guide created (bmad-create-story, 2026-10-29).
 
+- ⭐ **Built:** `<PortraitFrame>` (`apps/public/src/components/PortraitFrame.astro`) — the 11b.4a frame lifted verbatim in geometry
+  (2 px / 6 pt / 4:5 / 20 rem / `contain`), its border now `var(--border-funeral-frame)`; `FamilyMemorial.astro` composes it inside
+  its own `<figure data-field="family_memorial_photo">` and replaces its inert Tailwind classes with spacing-only inline token
+  styles (MV5 (a)); `border-funeral-frame` 4px → 2px (MV4). The public **data** is unchanged (AC6); the visible change is spacing.
+- ⭐ **Placed, ⛔ not built:** `<MemorialRecord>` → Story 11b.6 (MV1, with the rulings it meets and the STOP for 11b-5a in its
+  `epics.md` note); `<KinshipLattice>` + kinship's Panel question → new row `11b-5a-kinship-capture-and-lattice` (`backlog`, MV2);
+  the app preview ⛔ not framed (MV6). ⛔ No Panel question asked; ⛔ no routing note written.
+- ⭐ **Governance:** `2026-10-29-420` (author-commit, `06e10fbd`, alone) → records (`1c373784`) → tokens (`66de052b`) → frame +
+  section + tests (`98e24152`) → doc-blocks / discharge / friction (`3f3c4aab`).
+- ⚠ **Departures, named:** (1) one mutant survived the first test cut — `PortraitFrame.astro` dropped from `TOUCHED` — so a pin was
+  added (Debug Log); (2) the empty-`alt` regex is `[\s>/]`, ⛔ the story's `[\s>\/]` (ESLint `no-useless-escape`; the same class);
+  (3) `sahyog.astro`'s fence: the appended line sits inside the comment by moving the closing `*/` (every word of the fence kept);
+  (4) the remaining `-NNN` in this file are instruction / history text, left as written; every place naming the decision reads
+  `-420`.
+- ⛔ **Nothing is live.** Launch-gate Row 41 stays open; `MEMORIAL_AUTHORSHIP_ENABLED` stays off. Story 0.9 un-attested (carried).
+
 ### File List
+
+- `.decision-log.md` — Decision `2026-10-29-420` (new); dated pointers under `-154` and `-391`
+- `_bmad-output/implementation-artifacts/11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `11b-5` → `review`; row `11b-5a-kinship-capture-and-lattice: backlog`; ledger `2026-10-29t`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/planning-artifacts/epics.md`
+- `friction-budget.md`
+- `packages/tokens/src/tokens.ts` · `packages/tokens/src/theme.css` (regenerated) · `packages/tokens/tests/tokens.test.ts`
+- `apps/public/src/components/PortraitFrame.astro` (new)
+- `apps/public/src/components/FamilyMemorial.astro`
+- `apps/public/src/lib/sahyog-vivran-render.ts` · `apps/public/src/pages/sahyog-vivran/[driveToken].astro` · `apps/public/src/pages/sahyog.astro` (dated comment lines only)
+- `apps/public/tests/portrait-frame-source.test.ts` (new) · `apps/public/tests/memorial-token-references.test.ts` (new)
+- `apps/public/tests/family-memorial-source.test.ts` · `apps/public/tests/integration/public-pages/family-memorial-render.spec.ts`
+- `scripts/sahyog-vivran-financial-truth/check.ts`
 
 ## Change Log
 
@@ -867,3 +959,4 @@ governance commit `06e10fbd` (still `-420` alone, 31 / 0). ⚠ The first `-154` 
 | 2026-10-29 | v1.1 | Fresh-context fact-check (read-only; ~60 claims, 16 findings) applied — numbers, MV4's inset constant, Trap 2's real broken pin, the bare `alt`, MV5's full margins, Task 3.5, 11b.4a item (9) IN PART, 11b-5a's trigger, FR-78. |
 | 2026-10-29 | v1.2 | `bmad-create-story validate 11b-5` against `origin/main` `8dd3e623` (three parallel read-only verifiers: code / governance / adversarial design; 30 findings — 7 critical, 15 should-add, 4 optimisations, 4 LLM — all applied on BigDev's "all"). Critical: NUMBERS re-taken (`-416`…`-419` = 5.14 ⇒ next `-420`, written `-NNN`; ledger `-29b` collides with 6.32 ⇒ relabel at rebase, G4-W1); Trap 6 / MV3 corrected — `-219` cl.5's fence NAMES 11b.5 as a consumer, MV3 declines it as our choice; MV5 (a) is spacing only, ⛔ no card (UX ruled rhythm :505, no rounded corners :462; options (a′) / (a″) added); Task 4.3 — the friction-budget AC-4 declaration `ci:local` enforces on `apps/public/`; AC14 / Task 5.1 — the render spec builds its own copy and is DB-gated; AC7 — `school` / `designation` are RBAC-ineligible, ⛔ not display-barred; inverted ⛔ glyphs fixed and the register's rule changed. Also: the exact markup stated once in Dev Notes; `solid` + no-radius in AC4; the empty-`alt` render leg and its decorative-`alt` gap (AC12 (5)); AC3's three added assertions; Tasks 1.1 / 1.2 name every AC0 record; `-416` §2, `-412` MP3, `-391` item 2's living-adults sentence cited; 11b-5a's STOP in 11b.6's note and its Task-0 routing note; AC9 disposes all six item-(12) departures; the token comment keeps "placeholder"; the `sahyog.astro` line inside its CSS comment; Row 41 (o) / (d) post-date note; Rulings cut to an index; Git intelligence / Latest tech dropped. |
 | 2026-10-29 | v1.3 | Task 0.2: BigDev answered *"MV1-MV6 as recommended"* — MV1 (a), MV2 (a), MV3 (a), MV4 (a), MV5 (a) spacing only, MV6 (b); recorded under each MV and in the Questions list. Next: Task 0.1 (h)–(j) lettered checks, then Task 1.1 decision `-NNN`. |
+| 2026-10-29 | v1.4 | `bmad-dev-story 11b.5`: Tasks 0.1–5 done. Decision `2026-10-29-420` committed alone; records; `border-funeral-frame` 4px → 2px; `<PortraitFrame>` built and composed by `FamilyMemorial.astro`, the section spaced by inline token styles; tests RED-first against 14 named mutants (one survivor fixed); financial-truth gate registered; five dated doc-block lines; 11b.4a item (9) discharged in part; friction disposition. `ci:local` 36 / 36 on a fresh `twt_dev`. Row `in-progress` → `review`. |

@@ -138,6 +138,9 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // ⛔ None carries an amount operand or an event type; scanning them buys that a future edit ⛔ cannot introduce one unnoticed.
   { path: 'apps/public/src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts', renderPath: true },
   { path: 'apps/public/src/components/FamilyMemorial.astro', renderPath: true },
+  // ⭐ STORY 11b.5 — the same tax: `FamilyMemorial.astro` now renders the frame through `<PortraitFrame>`, and ⚠ the safeguard does ⛔ not
+  // walk `src/components` ⇒ an unregistered file on the render path is ⛔ never scanned. ⛔ No amount operand, ⛔ no event type.
+  { path: 'apps/public/src/components/PortraitFrame.astro', renderPath: true },
   { path: 'apps/api/src/modules/public-pages/memorial-public-read.ts', renderPath: false },
 ];
 

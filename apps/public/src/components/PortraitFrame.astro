@@ -1,0 +1,24 @@
+---
+// <PortraitFrame> — the Trust's one funeral frame around a family's approved photo (Story 11b.5; `-420` MV3 / MV4; `-412` MP1).
+// ⭐ UX §FuneralFrame: nested wrappers div → div → img, "the pattern, not a typed atom"; ⛔ never box-shadow / outline (Trap 8).
+// ⭐ The border is the `border-funeral-frame` token; the 6pt inset, the 4:5 box and the 20rem cap are component constants (MV4 —
+// ⛔ no fifth `space` token). ⭐ Dumb: it asks the matrix ⛔ nothing — the caller gates and passes `alt` as approved ('' = left out).
+// ⭐ Body-only: ⛔ nothing here reaches <head>, Open Graph or a link preview.
+interface Props {
+  src: string;
+  alt: string;
+}
+
+const { src, alt } = Astro.props;
+---
+<div style="border: var(--border-funeral-frame) solid var(--color-ink-primary); padding: 6pt; max-width: 20rem;">
+  <div style="aspect-ratio: 4 / 5; width: 100%;">
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      style="width: 100%; height: 100%; object-fit: contain;"
+    />
+  </div>
+</div>

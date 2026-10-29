@@ -7,6 +7,9 @@
 // `astro build` of `dist/` is ⛔ never raced), starts `dist/server/entry.mjs` against a STUB API, and every assertion below is on
 // the real HTML / the real response.
 // The page reads the Pariwar passport (branding) from Postgres ⇒ skips when DATABASE_URL is unset, like every live spec.
+// Story 11b.5 (AC3, AC11 (5)–(6); `2026-10-29-420` MV4 / MV5): the frame is now `<PortraitFrame>`, its border the
+// `border-funeral-frame` token — the frame regex reads the token form; the section's two `data-field`s and its h2 < figure < p
+// order are pinned here; and a photo whose description was left out still carries an (empty) `alt`.
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -158,12 +161,38 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
       expect(WORDS).toContain(text);
     }
     // ⭐ The photo: the page's OWN route, lazy, async, the description as given, inside the nested frame.
-    expect(section).toMatch(/<figure[^>]*>\s*<div[^>]*border: 2px solid var\(--color-ink-primary\)[^>]*>\s*<div[^>]*aspect-ratio: 4 \/ 5[^>]*>\s*<img/);
+    expect(section).toMatch(
+      /<figure[^>]*>\s*<div[^>]*border: var\(--border-funeral-frame\) solid var\(--color-ink-primary\); padding: 6pt;[^>]*>\s*<div[^>]*aspect-ratio: 4 \/ 5[^>]*>\s*<img/,
+    );
     const img = /<img([^>]*)>/.exec(section)![1]!;
     expect(img).toContain('src="/sahyog-vivran/tok-A/memorial-photo"');
     expect(img).toContain(`alt="${ALT}"`);
     expect(img).toContain('loading="lazy"');
     expect(img).toContain('decoding="async"');
+    // ⭐ Story 11b.5 (AC3) — the matrix field ids stay on the section and the figure, and the heading leads the photo and the words.
+    const sectionTag = /<section[^>]*aria-labelledby="sv-family-memorial-heading"[^>]*>/.exec(b)?.[0];
+    expect(sectionTag, 'the <section> opening tag').toBeTruthy();
+    expect(sectionTag).toContain('data-field="family_memorial_words"');
+    const figureTag = /<figure[^>]*>/.exec(section)?.[0];
+    expect(figureTag, 'the <figure> opening tag').toBeTruthy();
+    expect(figureTag).toContain('data-field="family_memorial_photo"');
+    const order = { h2: section.indexOf('<h2'), figure: section.indexOf('<figure'), p: section.indexOf('<p') };
+    for (const [name, i] of Object.entries(order)) expect(i, `the section's <${name}>`).toBeGreaterThan(-1);
+    expect(order.h2).toBeLessThan(order.figure);
+    expect(order.figure).toBeLessThan(order.p);
+  });
+
+  it('⭐ Story 11b.5 AC1 — a photo whose description was LEFT OUT still renders an `alt` (empty: Astro emits it bare), ⛔ never no `alt` at all', async () => {
+    memorialState = { words: WORDS, photo: { altText: '' } };
+    const { html } = await page();
+    memorialState = null;
+    const b = bodyOf(html);
+    const sectionAt = b.indexOf('aria-labelledby="sv-family-memorial-heading"');
+    expect(sectionAt, 'the memorial section is on the page').toBeGreaterThan(-1);
+    const img = /<img[^>]*>/.exec(b.slice(sectionAt))?.[0];
+    expect(img, 'the framed photo').toBeTruthy();
+    expect(img).toContain('src="/sahyog-vivran/tok-A/memorial-photo"');
+    expect(img).toMatch(/\salt(?:=""|[\s>/])/);
   });
 
   it('⭐ AC3 / `-411` item 3 — ⛔ NO marker of a part left out: ⛔ the copy, ⛔ the key, ⛔ an element or class names one', async () => {

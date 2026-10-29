@@ -17,6 +17,7 @@
 import { planFamilyMemorial } from '../lib/family-memorial.js';
 import type { SahyogVivranFamilyMemorialView } from '../lib/surface-fields.js';
 import { visibilityOf } from '../lib/matrix.server.js';
+import PortraitFrame from './PortraitFrame.astro';
 
 interface Props {
   memorial: SahyogVivranFamilyMemorialView;
@@ -32,25 +33,15 @@ const plan = planFamilyMemorial(memorial, {
 });
 ---
 {plan.section && (
-  <section aria-labelledby="sv-family-memorial-heading" class="mt-6 rounded border border-gray-300 p-4" data-field="family_memorial_words">
-    <h2 id="sv-family-memorial-heading" class="text-lg font-semibold">{heading}</h2>
+  <section aria-labelledby="sv-family-memorial-heading" style="margin: var(--space-block) 0 0;" data-field="family_memorial_words">
+    <h2 id="sv-family-memorial-heading">{heading}</h2>
     {plan.photo && (
-      <figure class="mt-3" data-field="family_memorial_photo">
-        <div style="border: 2px solid var(--color-ink-primary); padding: 6pt; max-width: 20rem;">
-          <div style="aspect-ratio: 4 / 5; width: 100%;">
-            <img
-              src={photoSrc}
-              alt={plan.alt}
-              loading="lazy"
-              decoding="async"
-              style="width: 100%; height: 100%; object-fit: contain;"
-            />
-          </div>
-        </div>
+      <figure style="margin: var(--space-row) 0 0;" data-field="family_memorial_photo">
+        <PortraitFrame src={photoSrc} alt={plan.alt} />
       </figure>
     )}
     {memorial.familyMemorialWords.map((paragraph) => (
-      <p dir="auto" class="mt-3 text-sm" style="white-space: pre-wrap;">{paragraph}</p>
+      <p dir="auto" style="white-space: pre-wrap; margin: var(--space-row) 0 0;">{paragraph}</p>
     ))}
   </section>
 )}

@@ -1,4 +1,4 @@
-// Migration 0188 — the inspector's questionnaire for the family, and the comparable form of the health answers (Story 6.32,
+// Migration 0189 — the inspector's questionnaire for the family, and the comparable form of the health answers (Story 6.32,
 // Task 2; AC2, AC5, AC9). Live DB; per-test ROLLBACK. Every refusal runs under a SAVEPOINT so one test can assert several.
 //   · the catalog: both tables' composite FKs cascade, the CHECKs (the Tier-1 keys LOCKSTEP with the domain constant; the
 //     code-index shape the SAME on both answer tables), the partial UNIQUE, ⛔ no DEFERRABLE constraint;
@@ -88,7 +88,7 @@ async function seedHeader(client: Client, s: Seeded): Promise<void> {
 const NOT_OPEN = /the inspection is not an open visit in scope, or the claim is outside the answer window/;
 const APPEND_ONLY = /an answer row is append-only/;
 
-describe.skipIf(!hasDatabase)('0188 — the inspector\'s questionnaire for the family', { timeout: 20000 }, () => {
+describe.skipIf(!hasDatabase)('0189 — the inspector\'s questionnaire for the family', { timeout: 20000 }, () => {
   setupLiveDb();
 
   describe('the catalog', () => {

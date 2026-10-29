@@ -273,7 +273,7 @@ export type PeerMeshPingView = z.output<typeof PeerMeshPingView>;
  * display name, labelled "Recorded after the difference was shown". A note that could ⛔ be decrypted (or was erased) is
  * `{ status: 'unavailable' }`, ⛔ never blank.
  */
-// ⭐ Story 6.32 (AC6 / AC11): + ③ `death_cause` / ④ `death_illness` — ⚠ LOCKSTEP with the domain's twin and 0160's CHECKs (0188).
+// ⭐ Story 6.32 (AC6 / AC11): + ③ `death_cause` / ④ `death_illness` — ⚠ LOCKSTEP with the domain's twin and 0160's CHECKs (0189).
 export const INSPECTION_DISCREPANCY_QUESTION_KEYS = ['has_died', 'death_date', 'death_cause', 'death_illness'] as const;
 export const InspectionDiscrepancyStaffNote = z
   .object({

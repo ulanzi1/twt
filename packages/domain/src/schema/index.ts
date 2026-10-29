@@ -258,7 +258,7 @@ export * from './claim_ground_inspections.js';
 export * from './claim_ground_inspection_photos.js';
 // Story 6.27d (0160) — the inspector's discrepancy screen: the showing record + the re-ask notes (PM25 (a)).
 export * from './claim_ground_inspection_discrepancies.js';
-// Story 6.32 (0188) — the inspector's questionnaire for the family: the version-pinning header + the append-only answers.
+// Story 6.32 (0189) — the inspector's questionnaire for the family: the version-pinning header + the append-only answers.
 export * from './claim_ground_inspection_questionnaire.js';
 // Story 6.8 — claim-time nominee bank: `claim_nominee_bank_accounts` (ONE row per disbursement
 // account, ranked #1/#2 on the composite PK (claim_case_id, account_rank); Tier-1 ciphertext for

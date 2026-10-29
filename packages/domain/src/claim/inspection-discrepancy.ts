@@ -27,8 +27,8 @@
 // of the three to `now()` (the transaction START) — a writer that began before the completion but took the lock after it
 // would then fall on the wrong side. The only answer writer without the claim lock is the anonymizer (it NULLs the window
 // and code indexes), which can only DROP a ② / ③ / ④ on a later recompute (accepted — the recorded showing is the normal
-// path). ⭐ Story 6.32: a NEW family answer, or a supersede, needs a `scheduled` visit (0188's guard), so their live set at
-// completion IS their set as of `completed_at` — EXCEPT the guard's erasure arm (RECORDED in 0188): it admits an in-place
+// path). ⭐ Story 6.32: a NEW family answer, or a supersede, needs a `scheduled` visit (0189's guard), so their live set at
+// completion IS their set as of `completed_at` — EXCEPT the guard's erasure arm (RECORDED in 0189): it admits an in-place
 // rewrite of `value_ciphertext` and indexes → NULL in ANY state (it cannot tell the RTBF scrub from another writer), and
 // such a rewrite can only DROP a ③ / ④ on a later recompute, like the anonymizer above (second review S20).
 //
@@ -42,7 +42,7 @@ import { COMPARABLE_QUESTION_KEYS, type HasDiedCode } from '../questionnaires/ke
 /** A key compared wherever BOTH the family and a neighbour answer (PM23 (a)). */
 export type ComparableQuestionKey = (typeof COMPARABLE_QUESTION_KEYS)[number];
 
-/** A key the inspector may be shown — ⚠ LOCKSTEP with 0160's CHECKs as widened by 0188 (`INSPECTION_DISCREPANCY_QUESTION_KEYS`). */
+/** A key the inspector may be shown — ⚠ LOCKSTEP with 0160's CHECKs as widened by 0189 (`INSPECTION_DISCREPANCY_QUESTION_KEYS`). */
 export type InspectionDiscrepancyKey = 'has_died' | 'death_date' | 'death_cause' | 'death_illness';
 
 /** The keys compared by CODE INDEX overlap (③ / ④) — the family answers them at the inspection (Story 6.32). */

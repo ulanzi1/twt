@@ -1,6 +1,6 @@
-// RLS policy declarations for the inspector's questionnaire for the family — Story 6.32, migration 0188 (IQ5).
+// RLS policy declarations for the inspector's questionnaire for the family — Story 6.32, migration 0189 (IQ5).
 // PER-COMMAND (⛔ never `FOR ALL`; ⛔ a DELETE leg: rows go only by cascade). The header is SELECT + INSERT (⛔ never
-// updated). The answers add an UPDATE leg narrowed by 0188's column grant (`superseded_at`; the RTBF scrub's
+// updated). The answers add an UPDATE leg narrowed by 0189's column grant (`superseded_at`; the RTBF scrub's
 // `value_ciphertext` / `value_code_indexes`) and its guard — load-bearing: without it the supersede and `anonymizeMember`'s
 // scrub silently update 0 rows under FORCE (`2026-10-04-279` A12).
 

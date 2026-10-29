@@ -407,7 +407,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(set.valueCodeIndexes).toBeNull();
     const { sql: text, params } = new PgDialect().sqlToQuery(where as SQL);
     expect(text).toMatch(/"claim_ground_inspection_answers"\."claim_case_id" in \(/);
-    // ⚠ ONLY rows with a ciphertext — the head's-letter row keeps its plaintext codes (0188's one-value CHECK).
+    // ⚠ ONLY rows with a ciphertext — the head's-letter row keeps its plaintext codes (0189's one-value CHECK).
     expect(text).toMatch(/"claim_ground_inspection_answers"\."value_ciphertext" is not null/);
     for (const id of claimIds) expect(params).toContain(id);
   });
@@ -619,7 +619,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     const found = captured.find((c) => c.table === claimPeerMeshReplyAnswers)!;
     expect(await dec(found.set.valueCiphertext, pariwar, 'peer_mesh_answer')).toBe(ANONYMIZED_SENTINEL);
     expect(found.set.deathDateWindowIndexes).toBeNull();
-    // ⭐ Story 6.32 (AC9, TR14) — the cause's / illness's keyed code indexes → NULL in the SAME statement (0188's guard admits it).
+    // ⭐ Story 6.32 (AC9, TR14) — the cause's / illness's keyed code indexes → NULL in the SAME statement (0189's guard admits it).
     expect(found.set.valueCodeIndexes).toBeNull();
     expect(Object.keys(found.set).sort()).toEqual(['deathDateWindowIndexes', 'valueCiphertext', 'valueCodeIndexes']);
     // ⛔ The codes, the question, the provenance and the supersession are kept.

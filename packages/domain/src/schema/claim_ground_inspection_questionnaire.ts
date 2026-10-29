@@ -1,5 +1,5 @@
 // `claim_ground_inspection_questionnaires` + `claim_ground_inspection_answers` — the inspector's questionnaire for the family
-// at the ground inspection (Story 6.32, migration 0188; `2026-10-28-413` IQ5).
+// at the ground inspection (Story 6.32, migration 0189; `2026-10-28-413` IQ5).
 //
 // · The HEADER is ONE per assignment: the questionnaire version PINNED at the first save (a newer version applies to new
 //   visits only — the neighbours' `claim_peer_mesh_replies` precedent) and `started_at`. ⛔ No PII; ⛔ never updated.
@@ -8,7 +8,7 @@
 //   class (IQ5 — the same inspector, the same visit), with `value_code_indexes` — one keyed index per selected code
 //   (`ANSWER_CODE_INDEX_FIELD_CLASS`, claim-scoped), NULL when the answer includes *"I don't know"* — so the completion compares
 //   the family's account with a neighbour's WITHOUT a decrypt (IQ4 / IQ6).
-// · 0188's guard admits a write only while the assignment is `scheduled`, ⛔ a `certificate_check`, and the claim is in the
+// · 0189's guard admits a write only while the assignment is `scheduled`, ⛔ a `certificate_check`, and the claim is in the
 //   answer window; the erasure arm admits the DPDPA-RTBF scrub (`member/anonymize.ts`). ⛔ Nothing reads these to gate (I1).
 // RLS in `policies/claim-ground-inspection-questionnaire-rls.ts`.
 

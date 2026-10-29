@@ -1116,7 +1116,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       const { ground_inspection_id } = request.params as { ground_inspection_id: string };
       const body = request.body as DiscrepancyNoteBody;
       const assignment = loadAssignment(request, ctx, ground_inspection_id);
-      // ⭐ Patch review (S2) — since 0188 a note may carry the family's re-told cause / illness (Tier-1): bound to the path's claim.
+      // ⭐ Patch review (S2) — since 0189 a note may carry the family's re-told cause / illness (Tier-1): bound to the path's claim.
       requirePathClaim(request, assignment);
       const override = resolveInspectorOverride(request, ctx, assignment);
       const authorDisplay = await getDisplayName(deps.pool, ctx.actorId);

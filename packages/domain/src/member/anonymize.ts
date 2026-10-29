@@ -361,7 +361,7 @@ export async function anonymizeMember(
     // row keeps its plaintext CODES, and 0156's exactly-one-value CHECK holds. 0156's answers trigger ADMITS this through
     // its 0143-form erasure arm (⚠ RECORDED: it cannot tell this scrub from another writer of those two columns). The
     // replies table holds ⛔ PII (ids only). ⚠ On erasure of a RESPONDER: whose data an answer is stays OPEN (deferred-work).
-    // ⭐ Story 6.32 (AC9, IQ4) — the cause's / illness's keyed CODE indexes → NULL in the SAME statement (0188 replaced the
+    // ⭐ Story 6.32 (AC9, IQ4) — the cause's / illness's keyed CODE indexes → NULL in the SAME statement (0189 replaced the
     // trigger so its erasure arm admits the third column — TR14).
     await client
       .update(claimPeerMeshReplyAnswers)
@@ -395,7 +395,7 @@ export async function anonymizeMember(
     // claims: EVERY answer row — live AND superseded — whose value is a Tier-1 ciphertext (the cause, the illness; the SAME
     // `ground_inspection` field class as `inspectionSentinel`) → sentinel, and the keyed code indexes → NULL (a keyed hash of
     // a cause of death must ⛔ not outlive the erasure). ⚠ ONLY rows with a ciphertext (a `WHERE`): the head's-letter row keeps
-    // its plaintext codes (`collected` / `not_collected` — ⛔ PII), and 0188's exactly-one-value CHECK holds. 0188's answers
+    // its plaintext codes (`collected` / `not_collected` — ⛔ PII), and 0189's exactly-one-value CHECK holds. 0189's answers
     // trigger ADMITS this through its 0143-form erasure arm. The header holds ⛔ PII (ids, a version, a time) ⇒ untouched.
     await client
       .update(claimGroundInspectionAnswers)

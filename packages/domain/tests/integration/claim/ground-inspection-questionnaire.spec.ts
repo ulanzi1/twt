@@ -241,7 +241,7 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the family\'s answers at the inspe
   });
 
   describe('review R2 — a KNOWN-UNREADABLE saved answer (erased, malformed, undecryptable) is ⛔ a stale read', () => {
-    /** As the superuser: the RTBF scrub's form (0188's erasure arm) — the sentinel, the indexes NULL. */
+    /** As the superuser: the RTBF scrub's form (0189's erasure arm) — the sentinel, the indexes NULL. */
     async function scrub(ctx: Ctx, gid: GroundInspectionId, key: string) {
       await ctx.client.query('RESET ROLE');
       await ctx.client.query(

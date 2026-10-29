@@ -116,7 +116,7 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       }
       expect(def(`${SHOWINGS}_pkey`)).toBe('PRIMARY KEY (ground_inspection_id)');
       expect(def(`${NP}_question_uq`)).toBe('UNIQUE (ground_inspection_id, question_key)');
-      // ⭐ Story 6.32 (AC6 / AC11 — RED BY DESIGN): 0188 widened both CHECKs to the four compared keys (③ cause, ④ illness).
+      // ⭐ Story 6.32 (AC6 / AC11 — RED BY DESIGN): 0189 widened both CHECKs to the four compared keys (③ cause, ④ illness).
       expect(def(`${NP}_question_key_check`)).toMatch(/question_key = ANY \(ARRAY\['has_died'::text, 'death_date'::text, 'death_cause'::text, 'death_illness'::text\]\)/);
       expect(def(`${SP}_question_keys_check`)).toMatch(/question_keys <@ ARRAY\['has_died'::text, 'death_date'::text, 'death_cause'::text, 'death_illness'::text\]/);
       expect(rows.filter((r) => (r.conname.startsWith('claim_gi_discrepancy') || r.conname.startsWith('claim_ground_inspection_discrepancy')) && r.deferrable)).toEqual([]);
@@ -257,7 +257,7 @@ describe.skipIf(!hasDatabase)('0160 — the discrepancy showings and notes', { t
       const { client } = getTx();
       const s = await seedInspection(client, PARIWAR_A);
       await enterAppScope(client, PARIWAR_A);
-      // ⭐ Story 6.32 (AC6): ③ / ④ are compared keys now (0188) — a key outside the FOUR is refused.
+      // ⭐ Story 6.32 (AC6): ③ / ④ are compared keys now (0189) — a key outside the FOUR is refused.
       expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['how_known']))).code).toBe('23514');
       expect((await attempt(client, INSERT_SHOWING, showingParams(s, ['has_died']))).code).toBeNull();
       // ONE showing per assignment — the idempotent writer's `ON CONFLICT DO NOTHING` resolves to 0 rows.

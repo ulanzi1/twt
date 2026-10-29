@@ -131,7 +131,7 @@ describe.skipIf(!hasDatabase)('Story 6.26a — RTBF over the inspection\'s date 
     expect(await showing()).toEqual(before);
   });
 
-  it('⭐ Story 6.32 (AC9; second review S8): a ③ / ④ showing and its notes are ADMITTED (0188 widened 0160\'s CHECKs), and the erasure scrubs a ③ / ④ note', async () => {
+  it('⭐ Story 6.32 (AC9; second review S8): a ③ / ④ showing and its notes are ADMITTED (0189 widened 0160\'s CHECKs), and the erasure scrubs a ③ / ④ note', async () => {
     const { client, tx } = getTx();
     const mid = await seedMember(tx, PARIWAR_A, { state: 'active' });
     await enterAppScope(client, PARIWAR_A);

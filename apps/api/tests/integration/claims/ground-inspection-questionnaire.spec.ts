@@ -378,7 +378,7 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     const d = await a.inspector.client.inject({ method: 'GET', url: url(a, done, '/discrepancy') });
     expect(d.statusCode).toBe(404);
     expect(errOf(d).code).toBe('ground_inspection.not_found');
-    // patch review — the note route too (since 0188 a note may carry the family's re-told cause)
+    // patch review — the note route too (since 0189 a note may carry the family's re-told cause)
     const n = await a.inspector.client.inject({ method: 'POST', url: url(a, done, '/discrepancy-notes'), payload: { questionKey: 'death_cause', note: 'x' } });
     expect(n.statusCode).toBe(404);
     expect(errOf(n).code).toBe('ground_inspection.not_found');

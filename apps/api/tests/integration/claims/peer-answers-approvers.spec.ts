@@ -632,7 +632,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     const [n] = await neighbours(w, [true]);
     await put(w, n!, 'has_died', { codes: ['died'] });
     // a COMPLETED full visit by ANOTHER inspector (⛔ the reader's own — the PM25 (c) hide), its answers saved while it was
-    // open (0188's guard), as the superuser: the letter and a REAL ciphertext cause
+    // open (0189's guard), as the superuser: the letter and a REAL ciphertext cause
     const gid = randomUUID();
     const s = await openScopeTx(deps, w.pariwarId);
     let uploadId: string;

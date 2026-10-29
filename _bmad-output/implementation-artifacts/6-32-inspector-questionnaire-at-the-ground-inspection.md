@@ -39,7 +39,7 @@ LETTERS: G = found facts (traced at the pin) · IQ = build decisions (PROPOSED) 
 
 # Story 6.32: The Inspector Asks the Family a Short Questionnaire — How the Member Died, Which Illness, and the Head's Letter — Saved as They Go, Compared Without Decrypting to What the Neighbours Said, and Shown to Staff as Context Only `[SURFACE]` `[PRIMITIVE]`
 
-Status: in-progress
+Status: done
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -504,7 +504,7 @@ as the question was put. `-413` supersedes `-308` call 2 in part (IQ13) and `-31
 - [x] **Task 7 — the screens (AC7).** `QuestionnairePanel.tsx` (built on `HelplinePeerRequests.tsx`'s `PeerAnswerEditor` + `isShownFor` — ⛔ a fresh editor; adds the
       `.hi` line), the table-driven `DiscrepancyPanel` copy, `i18n-en.ts`, `packages/i18n/locales/{en,hi}/claim.json` `inspector_questions.*`
       (parity gate), the approver's `familyAccount` rendering in `NeighboursAnswersPanel.tsx` / `PeerMeshView.tsx`.
-- [ ] **Task 8 — proof (AC4, AC10, AC12).** 8.1 unit + contracts + admin tests — incl. AC4 (a) the approval-state scenario table, AC5 the real-shape fake-KMS index test and the
+- [x] **Task 8 — proof (AC4, AC10, AC12).** 8.1 unit + contracts + admin tests — incl. AC4 (a) the approval-state scenario table, AC5 the real-shape fake-KMS index test and the
       one-literal pin, AC6 the overlap-rule table (single, multi, `dont_know`, NULL, erased, partial overlap) and "every compared key has copy" (TR12), AC10 the served definition
       byte-identical with 0 / 3 / 5 selected neighbours and the grep pin that no `claim_peer_mesh_selections` column is read, TR13's no-browser-storage grep pin, AC1's purity
       reachability and `peer_mesh`-code lockstep; 8.2 live-DB specs — incl. AC2's refusals / RLS / CHECKs, AC4 (b) `complete` with zero answers, AC6's in-tx result EQUAL to the as-of
@@ -560,7 +560,7 @@ The story status is `in-progress`, matching its sprint row; Task 8 and the real-
   route file. Exercise GET and PUT with that tampered session, a positive human control, and no answer mutation on refusal. This review has not
   established a runtime actor bypass. **AC3; load-bearing checklist family 3.**
   [apps/api/tests/integration/claims/ground-inspection-questionnaire.spec.ts:313]
-- [ ] [Review][Patch] **R7 — Complete the required real-browser pass against the local API (MEDIUM; auditor; verification gap).**
+- [x] [Review][Patch] **R7 — Complete the required real-browser pass against the local API (MEDIUM; auditor; verification gap).**
   Task 8.4 remains explicitly un-attested. Exercise a seeded full visit, interrupted saving and reconnection, completion with a cause/illness
   discrepancy using an isolated recorded-basis fixture, and the approver's read. Record actual evidence; keep this item open if the environment
   still cannot run it. The existing limitation record is honest and is not a false completion claim. **AC12 / Task 8.4.**
@@ -850,7 +850,38 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 - ⚠ **Found by the fresh container (fixed, `b23ccfcb`):** on a fresh database the migrator applies EVERY migration in ONE transaction; 0188's `LANGUAGE sql`
   helper compared `inspection_stage` with `'certificate_check'` — a value ADDED to that enum by an earlier migration — and a `LANGUAGE sql` body is validated at
   CREATE ⇒ `55P04 unsafe use of new value`. An already-migrated database never saw it. 0188 now compares both enums AS TEXT.
-- ⚠ **Task 8.4 (the real-browser pass) is ⛔ attested.** The Chrome reached by the agent's browser tool could ⛔ load the local dev host
+- ✅ **Task 8.4 — ATTESTED 2026-10-29 (BigDev: *"do the real-browser pass"*; code review R7).** A real Chrome (the agent's Claude-in-Chrome —
+  one probe first: a static page on `127.0.0.1:5199` now LOADED, unlike 2026-10-28) against the admin dev server (`localhost:3001`, Vite)
+  proxying a seeded local API (`localhost:3000`, the REAL `buildServer` with the suite's fake passkey provider, in a throwaway uncommitted
+  launcher) on a throwaway database (`twt-632-bp-pg`, migrated fresh through `0189`; removed after). Sessions minted through the real passkey
+  routes; a cookie helper set them in Chrome. Branch at `9ad9c66d` + records. Observed, in order:
+  1. **The panel** on claim A's scheduled full visit: the English question with the Hindi line beneath, both options with their Hindi, the
+     "optional" note, the closing note in both; ⛔ on the certificate check (not seeded) — the cause / illness ⛔ served (TR7, shipped v1).
+  2. **The letter saved** — `Saved`; the stable `role="status"` region announced *"…: Saved"*.
+  3. **Network loss** — the API process STOPPED; a changed answer read `Not saved — retrying` (announced), *"Discard the unsaved answers"*
+     offered (S1), the unsaved note shown; **Load another claim REFUSED** with *"…Wait until they are saved, or discard them, then load another
+     claim."* (R1 / S1). The API RESTARTED (serve mode, same database): the in-memory retry landed — `Saved` (announced); the load-blocked
+     alert and Discard cleared by themselves (S14). Server: `collected` superseded, `not_collected` live.
+  4. **Completion waits for the answers (R1)** — Compare → *It matches* → the family's date; the API STOPPED; the letter changed (retrying);
+     *Complete inspection* pressed → the stable status region: *"Some answers to the family's questions are not saved yet. The visit will be
+     completed as soon as they are saved — or complete it without them."*, Complete disabled, *"Complete without the unsaved answers"* and
+     *"Do not complete yet"* offered. The API RESTARTED: the save went out FIRST, the completion straight after (server: answer `saved_at`
+     …24.546 < `completed_at` …24.616).
+  5. **③ on the result** — the card `completed`; *"The family said: Accident (road, drowning, electric shock, snake bite, fire, other). A
+     neighbour's answer differs."* with its note box; ⛔ the neighbour's value, ⛔ who, ⛔ a count.
+  6. **The approver's read** (a second District Admin, the verifier console of claim A): *"The family's answers at the ground inspection —
+     Background only — never a reason to hold, flag or refuse the claim. Visit completed 29 Oct 2026 … The head of the school or office's
+     letter: Collected · How did the member die?: Accident (…)"* — the cause DECRYPTED; ⛔ inherited pointer (correct — ⛔ inheritance).
+  7. **S4** — the approver on the ground-inspection page, claim B's visit (⛔ theirs): ⛔ request on load; *"Show the questions for the
+     family"*; one click → ONE `GET …/questionnaire` → 403 → *"Only the inspector for this visit, or someone allowed to act for them, can see
+     these questions."*, ⛔ "Try again".
+  8. **BigDev's 2026-10-28 `409` — ⛔ reproduced.** The candidate (a second "Compare" clearing the recorded date) is RULED OUT: a second
+     Compare kept the date and the verdict; claim B then completed `200` with ZERO answers (I1). The earlier 409's cause stays unknown.
+  ⚠ Seed artefacts, ⛔ product defects: the console needed a `members` row + a `member_postings` district for the deceased
+  (`seedClaimWithPings` creates neither); the neighbour's cause read *"Could not be shown just now"* (the seed encrypted it under the GI field
+  class). ⭐ One real finding — **D11** (deferred): with ⛔ readable name for the deceased, the inspector's question reads *"…office where
+  worked?"* (an empty `{member}`); the staff view says *"the member"*.
+- ⚠ *(Superseded by the line above — kept as written:)* **Task 8.4 (the real-browser pass) is ⛔ attested.** The Chrome reached by the agent's browser tool could ⛔ load the local dev host
   (`localhost:5173` / `127.0.0.1:5173` — Chrome's error page; three attempts, inside and outside the shell sandbox) while `curl` from the same machine got 200.
   Recorded as an un-attested item in `deferred-work.md` (6-32 section) and Row 42's evidence line (5) — ⛔ faked.
 
@@ -1023,6 +1054,7 @@ worktree, branch `story/6-32-inspector-questionnaire-at-the-ground-inspection`.
 | 2026-10-28 | 1.2 | **IQ13 answered (A)** — BigDev: *"IQ13 A — keep the letter optional"*. The letter is recorded and shown to approvers, ⛔ a condition of approval; ⛔ Panel question. Status, Policy meaning, §0 row 8, I1, AC0, AC10 (+ an AC4 (a) row) and Task 0.2 updated; the decision is recorded in the Task 0.3 entry with IQ1–IQ12 (superseding `-308` call 2 in part) — ⛔ a decision until committed. Four asks remain: IQ2, IQ3, IQ7, IQ8. |
 | 2026-10-28 | 1.4 | `bmad-dev-story 6.32` (Claude Opus 5.5): Tasks 1–7 and 9 DONE; Task 8 done EXCEPT 8.4 — the real-browser pass could ⛔ be run (the agent's Chrome could ⛔ reach the local dev host) ⇒ recorded un-attested, ⛔ faked; the row stays `in-progress` (the workflow's completion gate). Built: `ground_inspection.v1`, migration `0188` (+ a fresh-database fix, 55P04), the writer, the comparable form on both answer tables, ③ / ④ compared without a decrypt, GET / PUT questionnaire routes, the family's account on the neighbours' section (present AND empty), the inspector's panel and the staff view. Deviations recorded in the Completion Notes: per-code `blindIndex` (⛔ `blindIndexMany`), the 422's reason in `details`, `familyAccount` at the section level, the header's narrower version CHECK. |
 | 2026-10-28 | 1.5 | Addressed code review findings — 6 items resolved (R1–R6; Date: 2026-10-28): `c285bfcf` (R2, R3, R4, R6 — incl. `dependantsToSupersede` following only a changed parent, found by the R2 leg), `b8f23db8` (R1, R5), `179d8b8f` (a microcopy word). R7 / Task 8.4 (the real-browser pass) stays OPEN — the agent's Chrome still cannot load a local page; ⛔ faked. `ci:local` **36 / 36** at `179d8b8f` on a fresh container. Row stays `in-progress` (Task 8 unchecked). |
+| 2026-10-29 | 1.8 | **R7 / Task 8.4 ATTESTED** — the real-browser pass (BigDev: *"do the real-browser pass"*) in the agent's Chrome against a seeded local API on a throwaway database: the panel, the letter's save, a save across an API stop/restart, Load refused while unsaved, the completion WAITING for the save then going out after it, ③ with the family's words, the approver's family account, S4's ask-first panel and its 403 line (Debug Log). BigDev's earlier 409 ⛔ reproduced (the second-Compare candidate ruled out). One finding deferred (D11 — an empty `{member}` in the inspector's question when the deceased's name is unreadable). Every task and review item resolved ⇒ **Status `done`** (row `in-progress` → `done`). |
 | 2026-10-29 | 1.7 | BigDev: *"S22 A, S0 A"*. **S0** — rebased onto `origin/main` `282bdd33`, the migration renumbered `0188` → `0189` (`9eec3559`), ledger `-28l` → `-28w`, SHA map in S0. **S22 (A)** — the pointer built (`84041e8f`), patch-reviewed and fixed (`ca8d2bd4`, `9ad9c66d`). `ci:local` **36 / 36** on a FRESH container `twt-632-ci-pg` (:5450) at `9ad9c66d` (a first run 35 / 36 — AC13's read pin, fixed). Row STAYS `in-progress` (R7 — the real-browser pass). |
 | 2026-10-29 | 1.6 | Second code review (`bmad-code-review 6.32`, BigDev: *"2, chunks in parallel"*; two chunks × three layers at `e9676496`): 1 decision-needed (S22 — the family account on an INHERITED inspection, held for BigDev), 21 patch (1 HIGH — a refused save trapped the page), 9 + 1 deferred, 11 dismissed, S0 (the `0188` renumber at the rebase). All 21 patches APPLIED and each fix diff reviewed adversarially; the patch reviews' findings fixed (see Resolution). 0188 edited in place (S18) — container recreated. Row STAYS `in-progress` (R7, S0, S22). |
 | 2026-10-28 | 1.3 | **Task 0 DONE.** BigDev: *"recommendation accepted for IQ1-IQ12"*. 0.1 — rebased onto `origin/main` (11b.4a landed; the branch's lines verified identical before / after; journal idx / `when` unique); cited files that moved: `audit-sink.ts` (a memorial action appended after the GI actions) and the roster (Row 41 status) — neither shifts a claim here. 0.3 — [`-413`](../../.decision-log.md#decision-2026-10-28-413) committed alone (IQ1–IQ13 all as recommended; supersedes `-308` call 2 and `-319` OP14 in part). 0.4 — roster Row 42 `ground-inspection-family-answers-live` (+ a dated pointer on Row 27 note (5)); `epics.md` `### Story 6.32`; a dated note under 6.28 OP14 (d); `deferred-work.md` — a new section (the "any other claim?" question, the letter's photograph, true offline), 6.36 W1 annotated "trigger ⛔ pulled", the ③ / ④ item marked owned (⛔ discharged); the IQ7 confirm note drafted (BigDev sends); the ledger line. Implementation starts at Task 1. |

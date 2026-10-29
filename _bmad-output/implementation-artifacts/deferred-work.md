@@ -33,6 +33,11 @@ Deferred by the second three-layer review (story → Review Findings → "Second
   `abandonQueued` — the head stays in the queue while its loop waits (up to 30 s), `retrying` stays true] — the new edit reads "Not saved — retrying" and holds
   Load until the timer or an `online` event; before 6.32 a discard always left the screen. Shared with the helpline and mobile editors. ⭐ Trigger: any change to
   the editor's queue, or a report of a stuck "retrying" after a discard.
+- **D11 — the inspector's question reads with an EMPTY name when the deceased's name is unreadable** [`apps/api/src/modules/claims/peer-request-core.ts`
+  `resolvePeerRequestMemberName` → `''` (⛔ KYC name, a failed decrypt, or the RTBF sentinel) → `toWireQuestionnaire`] — seen in the 2026-10-29 real-browser
+  pass: *"Did you collect a letter from the head of the school or office where worked?"* (and the announcement carries the double space). The staff view
+  falls back to *"the member"*; the neighbours' app uses the same resolver (pre-existing there). ⭐ Trigger: any change to `toWireQuestionnaire` or the
+  inspector's copy — give `{member}` a fallback word (en + hi) or a name-less variant of each `{member}` question.
 - **D9 — the questionnaire GET decrypts the member's name inside its read transaction** [`apps/api/src/modules/claims/peer-request-core.ts`
   `resolvePeerRequestMemberName(tx, …)`] — the shared pattern of the neighbours' read; ⛔ a row lock held (I3 holds). ⭐ Trigger: a KMS latency incident, or any
   change to the resolver.
@@ -52,7 +57,7 @@ Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decisio
   `POST …/complete` has ⛔ Idempotency-Key (a replay is `409 not_active`). True offline needs an encrypted browser draft (WebCrypto, non-extractable key), a persisted
   query client or service worker, an Idempotency-Key on `complete` and replay ordering — a story of its own. ⭐ Trigger: the field-worker surface is placed (architecture
   §4.1: *"Scope deferred"*).
-- **⚠ UN-ATTESTED — the inspector's panel has ⛔ been seen in a real browser (Task 8.4)** [`apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx`; AC12] —
+- **✅ ATTESTED 2026-10-29 (was: UN-ATTESTED) — the inspector's panel has ⛔ been seen in a real browser (Task 8.4)** — *Closed by the 2026-10-29 pass (story Debug Log, "Task 8.4 — ATTESTED"); the original text is kept below as written:* [`apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx`; AC12] —
   the panel's behaviour is proven in jsdom (RTL, the real `PeerAnswerEditor` and Query cache; 14 tests incl. the `online` retry) and the API end to end (13 HTTP
   tests), but the real-browser pass AC12 asks for did ⛔ happen: on 2026-10-28 the Chrome reached by the dev agent's browser tool could ⛔ load the local admin
   dev server (`http://localhost:5173` / `127.0.0.1:5173` — Chrome's error page, three attempts, while `curl` from the same machine got 200). The throwaway seeded

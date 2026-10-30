@@ -4,6 +4,30 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: BigDev's questions while reviewing Story 6.33 — why can a dead member's name be unreadable? (2026-10-30)
+
+Two read-only traces at `577a4ca2` (member names; erasure vs claims), load-bearing claims re-checked by hand. ⛔ Fixed here. Not closed.
+
+- **A member's record can be erased after their death is reported, and a claim can be filed for someone who was not a member at death** —
+  ROUTED to the Panel: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-30-erasure-after-a-death-is-reported.md` (DRAFT, ⛔
+  sent; BigDev sends). (i) `resolveRtbfLegality` (`packages/domain/src/member/rtbf-legality.ts`) admits `withdrawn` / `terminated` and
+  reads ⛔ claim, death report or drive; a mid-claim erasure leaves the claim stalled at nominee determination (`certificate_date_anonymized`)
+  while its drive and public page stay up unnamed. (ii) Helpline intake (`claims.helpline.handlers.ts`) checks only `memberExists` (⛔ state
+  filter) ⇒ a claim can be filed for a `pending-kyc` member (⛔ name on record — signup writes the member before KYC), a withdrawn, a
+  terminated or an `anonymized` member. (iii) `2026-08-24-159` cl. 11 (author-commit, Panel ratification owed, ⛔ obtained) says a deceased
+  member IS erasable — the note's Q1 (a) A would replace it. ⚠ BigDev understood the Panel had already ruled "a deceased member's record
+  cannot be erased because consent was taken while alive"; ⛔ such ruling is recorded (nearest: `-391` Q5's accepted cost, `-243`) — hence
+  the note ASKS for the rule. ⭐ Trigger: the Panel answers the note ⇒ transcribe as a new decision and mint a ROW for the build (an
+  erasure refusal from the death report onward; a recorded refusal at intake by membership state) — a discharge with ⛔ row is a decision
+  nobody schedules.
+- **A failed decrypt of the dead member's name is shown as a BLANK with only a warn log — ⛔ alarm, ⛔ retry** [`apps/api/src/modules/claims/peer-request-core.ts`
+  `resolvePeerRequestMemberName`: `catch (err) { log.warn(…'member name decrypt failed — rendering without a name'); return ''; }`]. The jobs
+  side ALARMS and retries the same failure (`claim-peer-mesh-requests.ts`). A permanent cause (corrupt ciphertext, a destroyed key version)
+  would silently blank every question on that claim; a temporary one (a KMS blip) blanks one page load. ⛔ the Panel's — engineering. Story
+  6.33's QE4 fallback word (*"the member"* / *"सदस्य"*, BigDev-reviewed 2026-10-30) fills the blank but does ⛔ make the failure visible.
+  ⭐ Trigger: any change to `resolvePeerRequestMemberName` — raise an ids-only alarm on a decrypt failure (⛔ on a missing KYC row or the
+  erasure sentinel, which are states, ⛔ faults).
+
 ## Deferred from: code review of 11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md — fix-diff review (2026-10-29)
 
 `bmad-code-review 11b.5`, re-run over the fix round (the working-tree diff against `117a92d7`): 3 patches applied (BigDev's "Apply every patch"; recorded in the story's *Review Findings — fix-diff review*), 1 deferral.

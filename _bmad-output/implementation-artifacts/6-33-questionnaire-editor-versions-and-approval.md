@@ -14,8 +14,8 @@ STATUS: ready-for-dev (v1.2 — two fresh-context validations folded in; the sec
 verifiers). QE1–QE17 ANSWERED 2026-10-30 — all as recommended (Task 0.2) and recorded by author-commit `2026-10-30-421` (`283e25f4`,
 alone — Task 0.3). The QE14 confirm was SENT by BigDev and the Panel RULED 2026-10-30 — `2026-10-30-422` (Trustee-ratified, DR + KB):
 *"Q1 A, Q2(a) A, Q2(b) A, Q3 A"* — every edge confirmed as built, ⛔ change. Task 0.4's records DONE 2026-10-30 (Row 45 minted with
-leg (a) MET; `epics.md` `### Story 6.33`; the `deferred-work.md` QE13 annotation). Still OPEN in Task 0: ONLY the Hindi of QE4's fallback
-word — out for BigDev's review in `6-33-hindi-review-member-fallback-word.md` (needed before Task 4.3). Committed (v1.0 / v1.1 at
+leg (a) MET; `epics.md` `### Story 6.33`; the `deferred-work.md` QE13 annotation). The QE4 fallback word's Hindi was
+REVIEWED by BigDev the same day (*"सदस्य is fine"* — `6-33-hindi-review-member-fallback-word.md`) ⇒ Task 0 is COMPLETE. Committed (v1.0 / v1.1 at
 `4c622d7f`, v1.2 at `f5083018`); ⛔ pushed.
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never") · ⭐ = action /
@@ -717,7 +717,8 @@ when"*). Attribution = `getDisplayName` snapshot.
     ⭐ **BigDev, 2026-10-30, verbatim:** *"QE1-QE17 as recommended, prepare routing note"* ⇒ every QE takes its recommended option (QE5 (A),
     QE6 (A), QE10 (A), QE14 (A) among them). ⚠ OPEN: the Hindi of QE4's fallback word was ⛔ given — put to BigDev for review on
     2026-10-30 in `_bmad-output/implementation-artifacts/6-33-hindi-review-member-fallback-word.md` (proposed: en *"the member"*, hi
-    *"सदस्य"*, shown in all six sentences it can land in); record the answer here verbatim before Task 4.3.
+    *"सदस्य"*, shown in all six sentences it can land in). ✅ **BigDev, 2026-10-30, verbatim:** *"A, सदस्य is fine but this better be
+    rarest of rare."* ⇒ en *"the member"*, hi *"सदस्य"* — HUMAN-REVIEWED (mark the copy key's Hindi so in Task 4.3, ⛔ "agent-authored").
   - [x] 0.3 ONE author-commit decision entry (≥ `-421`), committed ALONE: QE1–QE17 as answered; its §0 table (edges 1–10, incl. 3a / 3b);
     the statement that it SUPERSEDES `-413` IQ12 IN PART (the inspector's panel gains a version id and a reload path — the rulings table);
     "How much to trust this entry" naming what was traced vs inferred; ⛔ an in-place edit of `-304` / `-310` / `-413`. If the classifier

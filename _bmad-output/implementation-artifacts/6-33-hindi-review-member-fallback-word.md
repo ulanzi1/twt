@@ -38,10 +38,12 @@ editor that uses the name gets the same word.
 
 ## Your answer
 
-- [ ] **सदस्य** as proposed
+- [x] **सदस्य** as proposed
 - [ ] A different word: ……………… (it must read correctly in every row above)
 
-**BigDev's answer (verbatim):** ……………………
+**BigDev's answer (verbatim, 2026-10-30):** *"A, सदस्य is fine but this better be rarest of rare."* — ✅ REVIEWED. ("A" = keep the
+fallback rather than leave the gap or hide the questions.) BigDev's questions on WHY a name can be unreadable at all are being traced
+separately — ⛔ part of this word's review.
 
 **Once answered:** the word is recorded in the story (Task 0.2 / QE4), then added as one copy key in `packages/i18n/locales/{en,hi}/claim.json`
 (Task 4.3) with a test that runs the real translation function. Its Hindi is then marked human-reviewed — ⛔ "agent-authored", like the

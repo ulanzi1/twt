@@ -1,7 +1,8 @@
 # Trustee Panel routing note — may a member's record be erased once their death is reported, and who may a claim be filed for?
 
-> **Status: DRAFT for BigDev to send.** ⛔ Sent by the session. Written 2026-10-30, from questions BigDev raised while reviewing Story 6.33
-> (BigDev: *"not recorded, draft the note to ask for the rule"*). Non-blocking for any story in progress; ⛔ member uses the system yet.
+> **Status: SENT by BigDev and ANSWERED 2026-10-30 — recorded as [`-423`](../../.decision-log.md#decision-2026-10-30-423).** Written
+> 2026-10-30, from questions BigDev raised while reviewing Story 6.33 (BigDev: *"not recorded, draft the note to ask for the rule"*).
+> Non-blocking for any story in progress; ⛔ member uses the system yet.
 
 ## §0 — the gate
 
@@ -13,11 +14,19 @@ the Trust refuse an erasure request. That is counsel's; we say where it bites.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-30 — recorded as `2026-10-30-423`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by DR + KB (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev — verbatim:**
+> *"by DR and KB*
+> *Q1(a) A, Q1(b) A, Q2 - A*
+> *Q3 B"*
+>
+> ⭐ Our suggestion **taken on Q1 (a), Q1 (b) and Q2**. ⚠ **Q3 answered B — ⛔ our suggestion (A):** a claim for someone who was ⛔ a
+> member at death is refused at the door and ⛔ recorded, with B's cost as put (*"No record and no appeal; a mistyped member number turns a
+> real family away silently"*). `-159` cl. 11 is superseded in part. Our readings needed to build (what "reported" means; that "⛔
+> recorded" leaves the staff security audit line) are recorded in `-423` as ⛔ ratified.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -25,6 +25,8 @@ Two read-only traces at `577a4ca2` (member names; erasure vs claims), load-beari
   may see and correct, ⛔ erase; a claim for someone ⛔ a member at death is refused AT THE DOOR and ⛔ recorded (Q3 B — ⛔ the "recorded and
   refused" we suggested). `-159` cl. 11 superseded in part. ⛔ Closed — the build is owed (`-423` Consequence 1 (a)–(c)). ⭐ Trigger
   RE-POINTED: a ROW is minted for that build ⇒ this item is DISCHARGED into it.
+  ✅ **DISCHARGED 2026-10-30** into row `6-38-death-locks-erasure-and-non-member-claims-refused` (`backlog`, Epic 6; BigDev: *"add it"*). Kept
+  here, ⛔ deleted ([[feedback_closure_language_precision]]).
 - **A failed decrypt of the dead member's name is shown as a BLANK with only a warn log — ⛔ alarm, ⛔ retry** [`apps/api/src/modules/claims/peer-request-core.ts`
   `resolvePeerRequestMemberName`: `catch (err) { log.warn(…'member name decrypt failed — rendering without a name'); return ''; }`]. The jobs
   side ALARMS and retries the same failure (`claim-peer-mesh-requests.ts`). A permanent cause (corrupt ciphertext, a destroyed key version)

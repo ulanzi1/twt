@@ -3640,6 +3640,34 @@ predicate is touched — an inspection completes, and an approval proceeds, with
 permission key, claim event, member-facing string or SMS. The *"any other claim for this death?"* question waits for row 6-33's chain (IQ2 A).
 Go-live: roster Row 42.
 
+### Story 6.33: Staff Write New Versions of the Neighbours' and the Inspector's Questionnaires — the Pariwar Admin Proposes, an Approver Approves, the Super Admin Makes a Version Live for One Pariwar or All — Every Version Kept, Every Answer Tied to Its Version `[SURFACE]` `[PRIMITIVE]` `[GOVERNANCE]`
+
+> ⚠ **Added 2026-10-30 (Story 6.33, Task 0.4)** — the row `6-33-questionnaire-editor-versions-and-approval` was minted by ruling: `-304`
+> Consequence 2 (*"Row `6-33-questionnaire-editor-versions-and-approval` builds the Q7 / Q8 chain (propose → approve / modify → make live per
+> Pariwar or for all; the Super Admin's direct addition), for both questionnaires."*), under `-304` Q7 / Q8 (the Panel's own chain) and `-310`
+> CF3 (a)–(d). Its build decisions QE1–QE17 are [`-421`](../../.decision-log.md#decision-2026-10-30-421) (AUTHOR-COMMIT, BigDev: *"QE1-QE17 as
+> recommended, prepare routing note"*); the three confirms that re-home the State Trustee's step and narrow the ruled words were RATIFIED as
+> built by [`-422`](../../.decision-log.md#decision-2026-10-30-422) (DR + KB: *"Q1 A, Q2(a) A, Q2(b) A, Q3 A"*). The story file is the record.
+
+As a Pariwar Admin, an approver acting for the State Trustee, or the Super Admin, I want to propose a new version of the neighbours'
+questionnaire or the inspector's questionnaire for the family, to approve or return it, and to make an approved version live for one Pariwar or
+for all — or, as the Super Admin, to change it at make-live or add a question directly — with every version and every step kept, so that the
+questions can evolve the way the Panel ruled without a code release, while every limit the Panel set stays enforced and every answer stays tied
+to the version it was given under.
+
+**Acceptance Criteria (in brief):** versions stored in two append-only tables beside the reviewed code versions (numbered from `v1000`; state
+derived from an ordered step log; RLS per command; ⛔ UPDATE / DELETE); the ONE validator the code versions pass, now taking the origin — a
+staff question is optional, ⛔ a warning, ⛔ comparable, `single | multi | yes_no` only, ALWAYS encrypted, ⛔ alcohol (incl. Devanagari, on the
+stored words), ≤ 20 questions per version, its words stored in English AND Hindi; the Panel's own questions, closing note and thank-you LOCKED
+(`-422` Q2 (a)), and a staff version on an older ruled wording ⛔ served once a new one ships (`-422` Q2 (b)); a health question waits for
+counsel's basis and, for the neighbours, holds that Pariwar's texts (said on the make-live screen); ONE async live resolver (Pariwar's own →
+all-Pariwar → code; "all" leaves a Pariwar's own version — `-422` Q3) moved into every consumer incl. both jobs; a newer version applies to NEW
+replies and visits only, a client that rendered an older one told to RELOAD (fixes 6.32 D5 / D8; D11's empty name gets a fallback word);
+three keys (`questionnaire.propose` / `.approve` held by `pariwar_admin` as Trustee-Lite — the approver may be the author, `-422` Q1 A —
+`questionnaire.publish` GLOBAL, `super_admin` only; catalog 56); one admin page `/p/$pariwarId/questionnaires`; every step audited. ⛔ A
+staff question can gate, flag, delay or refuse a claim (proved by fence and live-DB legs); the *"any other claim for this death?"* question is
+⛔ authored in code — it is a Super Admin act through the editor. Go-live: roster Row 45.
+
 ### Story 6.34: Every SMS Template's Variables Are Typed for TRAI — One Vocabulary, a Gate, the Login OTP First `[GOVERNANCE]`
 
 > ⚠ **Added 2026-10-12 (Story 6.34, Task 0.4)** — the row `6-34-sms-templates-typed-variables` was added by

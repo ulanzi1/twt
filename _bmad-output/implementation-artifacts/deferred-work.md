@@ -108,6 +108,11 @@ Deferred by the story's build decisions ([`-413`](../../.decision-log.md#decisio
 - **The family is ⛔ asked "Has the family filed any other claim for this death?"** [6.28 OP14 (d); `packages/domain/src/questionnaires/validator.ts` — a question needs a Panel-ratified `approvedBy`] —
   BigDev said *"yes, fold it"* (2026-10-10); `-413` IQ2 (A) routes it to row 6-33's chain instead (the Super Admin *"can add question directly and make it live"*, `-304` Q8),
   superseding `-319` OP14 in part. The inspector still SEES the other claims (6.28 OP14, built). ⭐ Trigger: row `6-33-questionnaire-editor-versions-and-approval` is `done`.
+  ⭐ **2026-10-30 — HOMED by Story 6.33 ([`-421`](../../.decision-log.md#decision-2026-10-30-421) QE13 (A)); ⛔ closed.** 6.33 does ⛔ author the question in its code or
+  migration (that is the bypass 6.32 IQ2 (C) rejected). Once 6.33's chain is built, adding it is a Super Admin act through the questionnaire editor — the direct addition,
+  `-304` Q8 — ⛔ a code change. ⚠ Under [`-422`](../../.decision-log.md#decision-2026-10-30-422) Q3 A, a version made live "for all Pariwars" does ⛔ reach a Pariwar with its
+  own `ground_inspection` version; the Super Admin must add it there too. ⭐ Trigger RESTATED: closes when a LIVE `ground_inspection` version carries the question (⛔ merely
+  when row 6-33 is `done` — `done` builds the means, ⛔ the question).
 - **The head's letter itself is ⛔ photographed or kept — only "collected / not collected" is recorded** [`packages/domain/src/schema/claim_ground_inspection_photos.ts` `GROUND_INSPECTION_PHOTO_KINDS`] —
   `-413` IQ3 (A). A `head_letter` photo kind needs its own enum migration (6.26a Trap 6), the upload route, the console's photo list, and a Row 42 leg for a third-party
   document about a member; ⛔ decision says where the original letter is kept. An approver sees "Letter: collected" but ⛔ the letter. ⭐ Trigger: BigDev says where the letter is kept.

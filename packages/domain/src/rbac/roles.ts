@@ -312,6 +312,14 @@ const PARIWAR_MANAGE_DRIVE_TARGET = permissionKey('pariwar.manage_drive_target')
 // ([[project_rbac_geo_scope_containment]]).
 const WORKPLACE_REVIEW = permissionKey('workplace.review');
 const KNOWN_PEOPLE_RUN_CAMPAIGN = permissionKey('known_people.run_campaign');
+// Story 6.33 (`2026-10-30-421` QE6 (A); RATIFIED `2026-10-30-422` Q1 A) — the questionnaire chain's TENANT steps
+// (pariwar-dimension), granted to pariwar_admin (+ super_admin auto). `questionnaire.approve` is the ruled "State Trustee"
+// step (`-304` Q7 / Q8) performed by pariwar_admin AS TRUSTEE-LITE — the cycle.freeze / claim.r9_vote posture: a
+// `state_trustee` grant could ⛔ never satisfy a pariwar check (scope.ts §RANK-ORDER), so ⛔ an inert grant is seeded. The
+// approver MAY be the author (`-304`'s *"or their own"*; the second person is the Super Admin at make-live). The sibling
+// `questionnaire.publish` (GLOBAL) is super_admin ONLY and DELIBERATELY ABSENT here — ⛔ do not "complete the triple".
+const QUESTIONNAIRE_PROPOSE = permissionKey('questionnaire.propose');
+const QUESTIONNAIRE_APPROVE = permissionKey('questionnaire.approve');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -481,6 +489,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       WORKPLACE_REVIEW,
       // Story 6.36c (SW16 (5), `-342` call 1) — start / end a people-who-know-me campaign (an in-app card; ⛔ a message).
       KNOWN_PEOPLE_RUN_CAMPAIGN,
+      // Story 6.33 (QE6 (A)) — propose a questionnaire version; approve / return one AS TRUSTEE-LITE (see the consts above).
+      QUESTIONNAIRE_PROPOSE,
+      QUESTIONNAIRE_APPROVE,
     ],
     scopeCeiling: 'pariwar',
   },

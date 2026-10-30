@@ -44,6 +44,16 @@ describe('createMemberPeerRequestClient', () => {
     for (const call of calls) expect(call.headers['x-turnstile-token']).toBeUndefined();
   });
 
+  it('⭐ Story 6.33 (R7) — saveAnswer sends the RENDERED questionnaireVersionId when given; ⛔ the field when not', async () => {
+    const ok = { status: 200, body: { answers: [] } };
+    const { calls, impl } = fakeFetch([ok, ok]);
+    const c = createMemberPeerRequestClient({ baseUrl: 'https://api.test', getAccessToken: () => 'tok', fetchImpl: impl });
+    await c.saveAnswer(P, PING, 'has_died', { codes: ['died'] }, 'k1', 'peer_mesh.v1001');
+    await c.saveAnswer(P, PING, 'has_died', { codes: ['died'] }, 'k2');
+    expect(calls[0]!.body).toEqual({ value: { codes: ['died'] }, questionnaireVersionId: 'peer_mesh.v1001' });
+    expect(calls[1]!.body).toEqual({ value: { codes: ['died'] } });
+  });
+
   it('⭐ Story 6.27c (R14) — byLink: GET …/by-link/<code>, the code path-encoded, ⛔ a Turnstile header; a 404 is typed', async () => {
     const { calls, impl } = fakeFetch([
       { status: 200, body: { pingId: PING } },

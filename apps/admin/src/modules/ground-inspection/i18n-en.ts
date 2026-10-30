@@ -169,6 +169,8 @@ const EN: Record<string, string> = {
   'gi.questionnaire.unsaved': 'Some answers are not saved yet. Stay on this page until they are.',
   'gi.questionnaire.error.answer_invalid': 'This answer cannot be saved.',
   'gi.questionnaire.error.not_active': 'This visit is no longer open for answers.',
+  // Story 6.33 (R7 (v)) — the visit's pinned version cannot be answered (it failed a check); ⛔ retried.
+  'gi.questionnaire.error.version_unreadable': 'These questions cannot be answered just now. Please tell the Super Admin.',
   'gi.questionnaire.error.not_allowed': 'This claim is no longer open for answers on the visit.',
   // ⭐ Story 6.32 second code review (S1, S4, S12, S21; story-minted) — an answer that will ⛔ be saved can be given up by
   // name; another viewer asks for the questions; a completion the record no longer allows is said.

@@ -53,6 +53,8 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
   let app: Awaited<ReturnType<typeof buildServer>>;
   let env: fx.PeerFixtureEnv;
   const createdUserIds: string[] = [];
+  /** Chain (database) versions the review legs insert — removed after (append-only ⇒ superuser, replica role). */
+  const chainVersionIds: string[] = [];
 
   beforeAll(async () => {
     fakeWebauthn = new FakeWebAuthnProvider();
@@ -66,6 +68,20 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     await app.close();
     const c = await td.pool.connect();
     try {
+      if (chainVersionIds.length > 0) {
+        try {
+          await c.query('BEGIN');
+          await c.query("SET LOCAL session_replication_role = 'replica'");
+          await c.query(`DELETE FROM claim_ground_inspection_questionnaires WHERE questionnaire_version_id = ANY($1)`, [chainVersionIds]);
+          await c.query(`DELETE FROM questionnaire_version_steps WHERE version_id = ANY($1)`, [chainVersionIds]);
+          await c.query(`DELETE FROM questionnaire_versions WHERE version_id = ANY($1)`, [chainVersionIds]);
+          await c.query('COMMIT');
+        } catch (e) {
+          // Review RP16 — a failing DELETE must ⛔ leave an aborted transaction on a pooled client or skip the user cleanup below.
+          await c.query('ROLLBACK').catch(() => undefined);
+          console.error('[ground-inspection-questionnaire.spec] chain cleanup:', (e as Error).message);
+        }
+      }
       if (createdUserIds.length > 0) {
         await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1)`, [createdUserIds]);
         await c.query(`DELETE FROM role_grants WHERE user_id = ANY($1)`, [createdUserIds]);
@@ -196,7 +212,7 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     const ciphertext = await encryptGroundInspectionField(JSON.stringify(codes), w.p, deps.encryption);
     const codeIndexes = await answerCodeIndexes(w.cid, key, codes, w.p, deps.encryption);
     await inScope(w.p, (tx) =>
-      claim.saveGroundInspectionAnswer(tx.client, {
+      claim.saveGroundInspectionAnswer(tx.client, { preReadVersionId: 'ground_inspection.v1',
         pariwarId: ids.pariwarId(w.p),
         groundInspectionId: ids.groundInspectionId(gid),
         actingActorId: w.inspector.userId,
@@ -308,6 +324,17 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     expect(JSON.stringify(lines[0])).not.toContain('not_collected');
     const back = await getQ(w.inspector.client, w, gid);
     expect(back.json<Json>()['answers']).toEqual([{ questionKey: 'head_letter', value: { kind: 'codes', codes: ['not_collected'] } }]);
+  });
+
+  it('⭐ Story 6.33 (R7) — the save carries the RENDERED version: matching ⇒ 200; another ⇒ 409 questionnaire_version_stale (RELOAD); a peer_mesh id ⇒ 400', async () => {
+    const w = await world();
+    const gid = await assign(w);
+    const stale = await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['collected'], questionnaireVersionId: 'ground_inspection.v2' });
+    expect(stale.statusCode).toBe(409);
+    expect(errOf(stale).code).toBe('ground_inspection.questionnaire_version_stale');
+    expect((await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['collected'], questionnaireVersionId: 'peer_mesh.v4' })).statusCode).toBe(400);
+    const ok = await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['collected'], questionnaireVersionId: 'ground_inspection.v1' });
+    expect(ok.statusCode, ok.body).toBe(200);
   });
 
   it('the typed refusals: 422 an invalid code / the shipped v1\'s pending cause (`unknown_question`); 400 a malformed body; 401 ⛔ session', async () => {
@@ -584,5 +611,99 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the inspector\'s questionnaire thr
     const list = await w.inspector.client.inject({ method: 'GET', url: `/api/v1/p/${w.p}/admin/claims/${w.cid}/ground-inspection?district=${DISTRICT}` });
     expect(list.statusCode).toBe(200);
     expect(list.body).not.toMatch(/head_letter|familyAccount|collected the letter/);
+  });
+  // ── Code review (2026-10-30) — a CHAIN version served through the real routes; an unreadable pin ──────────────────────
+
+  /** A database version of `ground_inspection` (the shipped v1 + one staff question) — optionally made live for `p`. */
+  async function chainVersion(p: string, opts: { live: boolean; definition?: (versionId: string, version: number) => unknown }): Promise<string> {
+    const base = questionnaires.GROUND_INSPECTION_QUESTIONNAIRE_V1;
+    const id = randomUUID();
+    const n = 1_800_000 + Math.floor(Math.random() * 99_999);
+    const versionId = `ground_inspection.v${n}`;
+    const staff = {
+      key: 'water_source',
+      kind: 'single',
+      text: { en: 'Where does the family of {member} get water?', hi: '{member} का परिवार पानी कहाँ से लाता है?' },
+      options: [
+        { code: 'well', text: { en: 'A well', hi: 'कुआँ' } },
+        { code: 'tap', text: { en: 'A tap', hi: 'नल' } },
+      ],
+      optional: true,
+      showIf: null,
+      sensitive: true,
+      warning: false,
+      approvedBy: [`chain:${id}`],
+      health: false,
+      counselBasis: null,
+    };
+    const def = { ...base, versionId, version: n, scope: { kind: 'all' }, status: 'live', approvedBy: [...base.approvedBy, `chain:${id}`], pages: [...base.pages, { questions: [staff] }] };
+    const stored = opts.definition?.(versionId, n) ?? { kind: 'ground_inspection', versionId, version: n, approvedBy: def.approvedBy, pages: def.pages, closingNoteCopyKey: base.closingNoteCopyKey, thankYouCopyKey: base.thankYouCopyKey };
+    await td.pool.query(
+      `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+       VALUES ($1, 'ground_inspection', $2, $3, 'ground_inspection.v1', 'ground_inspection.v1', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+      [id, n, versionId, p, JSON.stringify(stored)],
+    );
+    chainVersionIds.push(versionId);
+    if (opts.live) {
+      await td.pool.query(`INSERT INTO questionnaire_version_steps (version_id, step, scope_pariwar_id, actor, actor_display) VALUES ($1, 'proposed', $2, 'pa', 'PA')`, [versionId, p]);
+      await td.pool.query(
+        `INSERT INTO questionnaire_version_steps (version_id, step, scope_pariwar_id, actor, actor_display, hindi_reviewed, classification_attested) VALUES ($1, 'approved', $2, 'pa', 'PA', true, true)`,
+        [versionId, p],
+      );
+      await td.pool.query(
+        `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'made_live', $2, $2, 'sa', 'Super Admin')`,
+        [versionId, p],
+      );
+    }
+    return versionId;
+  }
+
+  it('⭐ review RV31 / AC4 — a CHAIN version made live for the Pariwar is SERVED through the real routes: the staff question\'s stored words (the member\'s name in place of {member}), the first save PINS it, and its answer is stored ENCRYPTED', async () => {
+    const w = await world();
+    const v = await chainVersion(w.p, { live: true });
+    const gid = await assign(w);
+    const got = await getQ(w.inspector.client, w, gid);
+    expect(got.statusCode, got.body).toBe(200);
+    const q = got.json<{ questionnaire: { versionId: string; pages: { questions: { key: string; words: { en: string; hi: string } }[] }[] } }>().questionnaire;
+    expect(q.versionId).toBe(v);
+    const staff = q.pages.flatMap((pg) => pg.questions).find((x) => x.key === 'water_source')!;
+    expect(staff.words.en).toMatch(/^Where does the family of .+ get water\?$/);
+    expect(staff.words.en).not.toContain('{member}'); // the placeholder is filled by THE ONE word function
+    expect(staff.words.hi).toContain('पानी');
+    const saved = await putA(w.inspector.client, w, gid, 'water_source', { codes: ['well'], questionnaireVersionId: v });
+    expect(saved.statusCode, saved.body).toBe(200);
+    expect(saved.json<Json>()['questionnaireVersionId']).toBe(v);
+    const pin = await td.pool.query(`SELECT questionnaire_version_id FROM claim_ground_inspection_questionnaires WHERE ground_inspection_id = $1`, [gid]);
+    expect(pin.rows[0].questionnaire_version_id).toBe(v);
+    const row = await td.pool.query(`SELECT value_codes, value_ciphertext FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1 AND question_key = 'water_source'`, [gid]);
+    expect(row.rows[0].value_codes).toBeNull(); // a chain answer is ALWAYS stored as ciphertext (C5)
+    expect(row.rows[0].value_ciphertext).toEqual(expect.any(String));
+    // ⭐ an OLD visit keeps its pin (review RP16): a NEWER chain version is made live for the Pariwar AFTER the pin — the version now in
+    // force is the new one, yet the visit still answers its PINNED version (the assertion fails if the pin were ignored)
+    const newer = await chainVersion(w.p, { live: true });
+    expect(newer).not.toBe(v);
+    const again = await getQ(w.inspector.client, w, gid);
+    expect(again.statusCode, again.body).toBe(200);
+    expect(again.json<{ questionnaire: { versionId: string } }>().questionnaire.versionId).toBe(v);
+  });
+
+  it('⭐ review RV6 / R7 (v) — a visit PINNED to a version that cannot be PARSED: GET ⇒ 409 `…version_unreadable` and PUT ⇒ 409 the same (⛔ the 404 "no panel", on which the panel renders nothing)', async () => {
+    const w = await world();
+    const gid = await assign(w);
+    const junk = await chainVersion(w.p, { live: false, definition: (versionId, version) => ({ kind: 'ground_inspection', versionId, version, junk: true }) });
+    await td.pool.query(
+      `INSERT INTO claim_ground_inspection_questionnaires (ground_inspection_id, pariwar_id, claim_case_id, questionnaire_version_id) VALUES ($1, $2, $3, $4)`,
+      [gid, w.p, w.cid, junk],
+    );
+    const got = await getQ(w.inspector.client, w, gid);
+    expect(got.statusCode, got.body).toBe(409);
+    expect(errOf(got).code).toBe('ground_inspection.questionnaire_version_unreadable');
+    const put = await putA(w.inspector.client, w, gid, 'head_letter', { codes: ['collected'], questionnaireVersionId: junk });
+    expect(put.statusCode, put.body).toBe(409);
+    expect(errOf(put).code).toBe('ground_inspection.questionnaire_version_unreadable');
+    // the 404 stays for the case it MEANS: no panel (a certificate check)
+    const w2 = await world();
+    const check = await assign(w2, { stage: 'certificate_check' });
+    expect(errOf(await getQ(w2.inspector.client, w2, check)).code).toBe('ground_inspection.questionnaire_unavailable');
   });
 });

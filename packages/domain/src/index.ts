@@ -265,6 +265,9 @@ export * as cycleCalendar from './cycle-calendar/index.js';
 // CF3 (a)–(d)), the version registry (`resolveLiveVersion`), the served definition (a `'pending'` health question
 // skipped), the answer check and the dependants. PURE and pg-free (a reachability test). Contracts mirrors only the wire.
 export * as questionnaires from './questionnaires/index.js';
+// Story 6.33 — the questionnaire CHAIN's database side (`-304` Q7 / Q8; `2026-10-30-421` QE12): THE live resolver and THE
+// version lookup (database-aware, async, on the caller's handle); the strict row parse. ⛔ The sync code registry outside it (R6).
+export * as questionnaireVersions from './questionnaire-versions/index.js';
 // Story 4.8 — the FR-12A per-cohort validity cache substrate: cheap key resolution + low-level
 // member_validity_cache access + the cohort_invalidation_epochs bump/read + the GC sweep. The
 // cache-aside orchestration (getValidityCached) lives in @twt/validity-service.

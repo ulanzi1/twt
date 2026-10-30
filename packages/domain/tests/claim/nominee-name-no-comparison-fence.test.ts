@@ -154,6 +154,16 @@ const FENCED_FILES = [
   // declaration — asserted below).
   'packages/domain/src/questionnaires/ground-inspection.ts',
   'packages/domain/src/claim/ground-inspection-questionnaire.ts',
+  // ⭐ STORY 6.33 (`2026-10-30-421`; AC10, AC12) — the questionnaire CHAIN: the pure chain helpers, the database reader / writer
+  // of staff-written versions (they store and validate DEFINITIONS — ⛔ an answer, ⛔ a decrypt, ⛔ the member's medical
+  // declaration — asserted below), the chain's API handlers and THE ONE word function (it interpolates the member's name
+  // into the questions — ⛔ ever compares it).
+  'packages/domain/src/questionnaires/derive.ts',
+  'packages/domain/src/questionnaire-versions/parse.ts',
+  'packages/domain/src/questionnaire-versions/read.ts',
+  'packages/domain/src/questionnaire-versions/write.ts',
+  'apps/api/src/modules/questionnaire-versions/handlers.ts',
+  'apps/api/src/modules/claims/questionnaire-words.ts',
 ] as const;
 
 /**
@@ -203,7 +213,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(56); // Story 6.32 FROM 54 (+2 — the inspector's questionnaire definition and its save / reads module); Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(62); // Story 6.33 FROM 56 (+6 — the chain helpers, the versions reader / parser / writer, the chain's handlers and the ONE word function); Story 6.32 FROM 54 (+2 — the inspector's questionnaire definition and its save / reads module); Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -405,6 +415,11 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       // ⭐ Story 6.32 (TR2) — the family's answers' writer stores the ciphertext and the code indexes the HANDLER computed.
       'packages/domain/src/claim/ground-inspection-questionnaire.ts',
       'packages/domain/src/questionnaires/ground-inspection.ts',
+      // ⭐ Story 6.33 — the chain stores and reads DEFINITIONS (⛔ an answer): ⛔ a decrypt anywhere in it.
+      'packages/domain/src/questionnaires/derive.ts',
+      'packages/domain/src/questionnaire-versions/parse.ts',
+      'packages/domain/src/questionnaire-versions/read.ts',
+      'packages/domain/src/questionnaire-versions/write.ts',
     ]) {
       const code = stripComments(read(f));
       // `decryptedLive` (values the handler decrypted) is the one legitimate `decrypt…` token — every DECRYPT CALL is refused.
@@ -438,6 +453,14 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
       'packages/domain/src/claim/ground-inspection-questionnaire.ts',
       'packages/domain/src/claim/answer-code-index.ts',
       'packages/domain/src/questionnaires/ground-inspection.ts',
+      // ⭐ Story 6.33 (`-304` Q4 A; AC10) — a staff question about cause or illness is ⛔ ever compared with the member's
+      // declaration either: ⛔ the chain, its handlers or the word function touch it.
+      'packages/domain/src/questionnaires/derive.ts',
+      'packages/domain/src/questionnaire-versions/parse.ts',
+      'packages/domain/src/questionnaire-versions/read.ts',
+      'packages/domain/src/questionnaire-versions/write.ts',
+      'apps/api/src/modules/questionnaire-versions/handlers.ts',
+      'apps/api/src/modules/claims/questionnaire-words.ts',
     ]) {
       const code = stripComments(read(f));
       for (const re of FORBIDDEN) expect(re.test(code), `${f} reached for ${String(re)}`).toBe(false);

@@ -38,6 +38,7 @@ import {
   claim as claimDomain,
   encryption,
   ids,
+  questionnaireVersions,
   questionnaires,
   smsDelivery,
   withPariwarScope,
@@ -99,7 +100,10 @@ export interface ClaimPeerMeshWaReminderDeps {
   readonly resolveConfig: (configKey: string) => Promise<string | null>;
   /** `APP_LINKS_BASE_URL`, read at boot and VALIDATED every run. */
   readonly appLinksBaseUrl: string | undefined;
-  /** ⚠ TESTS ONLY — the questionnaire registry the live version is resolved from (default: the shipped one). */
+  /**
+   * ⚠ TESTS ONLY — the CODE questionnaire registry the reader falls back to (default: the shipped one); Story 6.33's
+   * database versions are read through the reader regardless.
+   */
   readonly questionnaireRegistry?: readonly questionnaires.QuestionnaireDefinition[];
   readonly now?: () => Date;
   readonly onAlarm?: (message: string) => void;
@@ -201,16 +205,22 @@ export async function peerMeshWaReminderConfig(
   const origin = resolveAppLinksOrigin(deps.appLinksBaseUrl);
   if (origin === null) return gap('config:app_links_base_url_invalid');
   // The reminder carries the same link to the same questions — a Pariwar whose text would HOLD holds its reminder too.
-  const live = questionnaires.resolveLiveVersion('peer_mesh', pariwarId, deps.questionnaireRegistry);
-  if (live === null) return gap('config:questionnaire_unavailable');
-  if (questionnaires.pendingCounselBasisKeys(live).length > 0) return gap('config:counsel_basis_pending');
-  let locale: PeerMeshWaReminderLocale;
+  // ⭐ Story 6.33 (QE12 R5) — read through the database-aware reader INSIDE the locale's existing scope (⛔ a nested scope),
+  // FIRST; the Pariwar named in SQL (R4 — the pool is BYPASSRLS); a failed read is the locale fault's class (a transient).
+  let read: { readonly live: questionnaires.QuestionnaireDefinition | null; readonly locale: PeerMeshWaReminderLocale | null };
   try {
-    locale = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePariwarDefaultLocale(db, pid));
+    read = await withPariwarScope(deps.pool, pid, async (db: Db) => {
+      const live = (await questionnaireVersions.resolveLiveQuestionnaire(db, 'peer_mesh', pariwarId, deps.questionnaireRegistry)).def;
+      if (live === null || questionnaires.pendingCounselBasisKeys(live).length > 0) return { live, locale: null };
+      return { live, locale: await claimDomain.resolvePariwarDefaultLocale(db, pid) };
+    });
   } catch (err) {
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return gap('config:locale_unavailable');
     throw new PeerMeshWaReminderLocaleReadError(err);
   }
+  if (read.live === null) return gap('config:questionnaire_unavailable');
+  if (questionnaires.pendingCounselBasisKeys(read.live).length > 0) return gap('config:counsel_basis_pending');
+  const locale = read.locale!;
   const phoneNumberId = wa.phoneNumberId?.trim() ?? '';
   const secretName = wa.accessTokenSecretName?.trim() ?? '';
   if (phoneNumberId === '' || secretName === '') return gap('config:wa_config_incomplete');

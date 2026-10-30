@@ -360,6 +360,16 @@ import {
   GroundInspectionQuestionnaireResponse,
   GroundInspectionSaveAnswerResponse,
   NoteWithheldReason,
+  QuestionnaireDirectRequest,
+  QuestionnairePariwarsKeepingOwnResponse,
+  QuestionnaireStepResponse,
+  QuestionnaireVersionDetailResponse,
+  QuestionnaireVersionListResponse,
+  type QuestionnaireApproveRequest,
+  type QuestionnaireMakeLiveRequest,
+  type QuestionnaireProposeRequest,
+  type QuestionnaireRevertRequest,
+  type QuestionnaireVersionKind,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -1532,11 +1542,13 @@ export function saveGroundInspectionAnswer(
   groundInspectionId: string,
   questionKey: string,
   codes: readonly string[],
+  /** Story 6.33 (R7) — the version the panel RENDERED; a changed version answers 409 `…questionnaire_version_stale`. */
+  questionnaireVersionId?: string,
 ): Promise<GroundInspectionSaveAnswerT> {
   return apiFetch(
     `${giBase(pariwarId, claimCaseId)}/${encodeURIComponent(groundInspectionId)}/questionnaire/answers/${encodeURIComponent(questionKey)}`,
     GroundInspectionSaveAnswerResponse,
-    { method: 'PUT', body: JSON.stringify({ codes }) },
+    { method: 'PUT', body: JSON.stringify(questionnaireVersionId === undefined ? { codes } : { codes, questionnaireVersionId }) },
   );
 }
 
@@ -3429,11 +3441,17 @@ export function saveHelplinePeerAnswer(
   questionKey: string,
   value: PeerRequestAnswerValue,
   idempotencyKey: string,
+  /** Story 6.33 (R7) — the version the card RENDERED; a changed version answers 409 `…questionnaire_version_stale`. */
+  questionnaireVersionId?: string,
 ) {
   return apiFetch(
     `${helplinePeerBase(pariwarId)}/members/${encodeURIComponent(memberId)}/peer-requests/${encodeURIComponent(pingId)}/answers/${encodeURIComponent(questionKey)}`,
     PeerRequestSaveAnswerResponse,
-    { method: 'PUT', body: JSON.stringify({ value }), headers: { 'Idempotency-Key': idempotencyKey } },
+    {
+      method: 'PUT',
+      body: JSON.stringify(questionnaireVersionId === undefined ? { value } : { value, questionnaireVersionId }),
+      headers: { 'Idempotency-Key': idempotencyKey },
+    },
   );
 }
 
@@ -3444,4 +3462,52 @@ export function submitHelplinePeerReply(pariwarId: string, memberId: string, pin
     PeerRequestSubmitResponse,
     { method: 'POST', body: JSON.stringify({}), headers: { 'Idempotency-Key': idempotencyKey } },
   );
+}
+
+// ── Story 6.33 (`2026-10-10-304` Q7 / Q8; `2026-10-30-421`) — the questionnaire CHAIN ──────────────────────────────────
+// Tenant routes under `/p/:pariwarId/questionnaire-versions` (gated by `questionnaire.propose` / `.approve` — the server is
+// the boundary); the Super Admin's under `/global/questionnaire-versions` (`questionnaire.publish` + a fresh step-up on every
+// act). Every write carries a fresh Idempotency-Key per user action.
+
+const qvTenant = (pariwarId: string) => `/api/v1/p/${encodeURIComponent(pariwarId)}/questionnaire-versions`;
+const QV_GLOBAL = '/api/v1/global/questionnaire-versions';
+const qvPost = <T>(path: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, body: unknown, idempotencyKey: string): Promise<T> =>
+  apiFetch(path, schema, { method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey } });
+
+export function getQuestionnaireVersions(pariwarId: string) {
+  return apiFetch(qvTenant(pariwarId), QuestionnaireVersionListResponse);
+}
+export function getQuestionnaireVersionDetail(pariwarId: string, versionId: string) {
+  return apiFetch(`${qvTenant(pariwarId)}/${encodeURIComponent(versionId)}`, QuestionnaireVersionDetailResponse);
+}
+export function proposeQuestionnaireVersion(pariwarId: string, body: QuestionnaireProposeRequest, idempotencyKey: string) {
+  return qvPost(qvTenant(pariwarId), QuestionnaireStepResponse, body, idempotencyKey);
+}
+export function approveQuestionnaireVersion(pariwarId: string, versionId: string, body: QuestionnaireApproveRequest, idempotencyKey: string) {
+  return qvPost(`${qvTenant(pariwarId)}/${encodeURIComponent(versionId)}/approve`, QuestionnaireStepResponse, body, idempotencyKey);
+}
+export function returnQuestionnaireVersion(pariwarId: string, versionId: string, note: string, idempotencyKey: string) {
+  return qvPost(`${qvTenant(pariwarId)}/${encodeURIComponent(versionId)}/return`, QuestionnaireStepResponse, { note }, idempotencyKey);
+}
+export function withdrawQuestionnaireVersion(pariwarId: string, versionId: string, idempotencyKey: string) {
+  return qvPost(`${qvTenant(pariwarId)}/${encodeURIComponent(versionId)}/withdraw`, QuestionnaireStepResponse, {}, idempotencyKey);
+}
+/** The Super Admin's view — every version, and the version in force for `pariwarId`. */
+export function getGlobalQuestionnaireVersions(pariwarId: string) {
+  return apiFetch(`${QV_GLOBAL}?pariwarId=${encodeURIComponent(pariwarId)}`, QuestionnaireVersionListResponse);
+}
+export function getGlobalQuestionnaireVersion(versionId: string) {
+  return apiFetch(`${QV_GLOBAL}/${encodeURIComponent(versionId)}`, QuestionnaireVersionDetailResponse);
+}
+export function getPariwarsKeepingOwnQuestionnaire(kind: QuestionnaireVersionKind) {
+  return apiFetch(`${QV_GLOBAL}/pariwars-keeping-own?kind=${kind}`, QuestionnairePariwarsKeepingOwnResponse);
+}
+export function makeQuestionnaireVersionLive(versionId: string, body: QuestionnaireMakeLiveRequest, idempotencyKey: string) {
+  return qvPost(`${QV_GLOBAL}/${encodeURIComponent(versionId)}/make-live`, QuestionnaireStepResponse, body, idempotencyKey);
+}
+export function directQuestionnaireVersion(body: QuestionnaireDirectRequest, idempotencyKey: string) {
+  return qvPost(`${QV_GLOBAL}/direct`, QuestionnaireStepResponse, body, idempotencyKey);
+}
+export function revertQuestionnairePariwar(body: QuestionnaireRevertRequest, idempotencyKey: string) {
+  return qvPost(`${QV_GLOBAL}/revert`, QuestionnaireStepResponse, body, idempotencyKey);
 }

@@ -2733,18 +2733,27 @@ export function useHelplineSavePeerAnswer(pariwarId: string, memberId: string | 
   const qc = useQueryClient();
   const key = helplinePeerRequestsKey(pariwarId, memberId ?? '');
   return useMutation({
-    mutationFn: (input: { pingId: string; questionKey: string; value: import('@twt/contracts').PeerRequestAnswerValue; idempotencyKey: string }) => {
+    mutationFn: (input: {
+      pingId: string;
+      questionKey: string;
+      value: import('@twt/contracts').PeerRequestAnswerValue;
+      idempotencyKey: string;
+      /** Story 6.33 (R7) — the version the card rendered. */
+      questionnaireVersionId: string;
+    }) => {
       // ⛔ `/members/null/…` (third-pass review U13 (d)) — a save needs the caller it is bound to.
       if (memberId === null) throw new Error('[helpline] a peer answer is saved for a selected caller only');
-      return api.saveHelplinePeerAnswer(pariwarId, memberId, input.pingId, input.questionKey, input.value, input.idempotencyKey);
+      return api.saveHelplinePeerAnswer(pariwarId, memberId, input.pingId, input.questionKey, input.value, input.idempotencyKey, input.questionnaireVersionId);
     },
     onSuccess: (result, input) =>
       qc.setQueryData<import('@twt/contracts').HelplinePeerRequestListResponse>(key, (old) =>
         old === undefined ? old : { items: old.items.map((i) => (i.pingId === input.pingId ? { ...i, answers: result.answers } : i)) },
       ),
     onError: (error) => {
-      // Terminal window/ownership/access changes must refresh and hide the obsolete request.
-      if (error instanceof api.ApiError && (
+      // Terminal window/ownership/access changes must refresh and hide the obsolete request. ⭐ Story 6.33 (R7) — ⛔ a
+      // VERSION change: the card's own reload (`onReload`) refetches the list itself, and the rebuilt card applies the unsent
+      // answers the previous card MIRRORED into the shared hand-over (review RV7), so a refetch here would only duplicate it.
+      if (error instanceof api.ApiError && error.code !== 'peer_request.questionnaire_version_stale' && (
         error.status === 404 || error.status === 409 || error.status === 401 ||
         (error.status === 403 && error.code !== 'auth.step_up_required')
       )) void qc.invalidateQueries({ queryKey: key });
@@ -2768,4 +2777,43 @@ export function useHelplineSubmitPeerReply(pariwarId: string, memberId: string |
 export function useRefreshHelplinePeerRequests() {
   const qc = useQueryClient();
   return () => void qc.invalidateQueries({ queryKey: ['helpline-peer-requests'] });
+}
+
+// ── Story 6.33 — the questionnaire CHAIN ───────────────────────────────────────────────────────────────────────────────
+// The page reads the TENANT list / detail for a Pariwar Admin and the GLOBAL ones for the Super Admin (who may hold ⛔ grant
+// row in the Pariwar — `scopeResolutionHook` would 404 them). Every write invalidates the page's reads.
+
+export const questionnaireVersionsKey = (pariwarId: string, global: boolean) => ['questionnaire-versions', pariwarId, global] as const;
+const questionnaireVersionsRoot = ['questionnaire-versions'] as const;
+
+export function useQuestionnaireVersions(pariwarId: string, global: boolean) {
+  return useQuery({
+    queryKey: questionnaireVersionsKey(pariwarId, global),
+    queryFn: () => (global ? api.getGlobalQuestionnaireVersions(pariwarId) : api.getQuestionnaireVersions(pariwarId)),
+  });
+}
+
+export function useQuestionnaireVersion(pariwarId: string, global: boolean, versionId: string | null) {
+  return useQuery({
+    queryKey: [...questionnaireVersionsKey(pariwarId, global), 'detail', versionId] as const,
+    queryFn: () => (global ? api.getGlobalQuestionnaireVersion(versionId!) : api.getQuestionnaireVersionDetail(pariwarId, versionId!)),
+    enabled: versionId !== null,
+  });
+}
+
+export function usePariwarsKeepingOwnQuestionnaire(kind: import('@twt/contracts').QuestionnaireVersionKind, enabled: boolean) {
+  return useQuery({ queryKey: [...questionnaireVersionsRoot, 'keeping-own', kind] as const, queryFn: () => api.getPariwarsKeepingOwnQuestionnaire(kind), enabled });
+}
+
+/**
+ * One mutation for every chain act — the caller passes the act; each refetches the page's reads on success.
+ * ⚠ TanStack fires `mutate`'s per-call callbacks for the LATEST call only: the page runs each act on its OWN promise
+ * (`mutateAsync`), so a second click cannot drop the first call's step-up prompt or `onDone` (review RV15).
+ */
+export function useQuestionnaireChainAct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (run: () => Promise<import('@twt/contracts').QuestionnaireStepResponse>) => run(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: questionnaireVersionsRoot }),
+  });
 }

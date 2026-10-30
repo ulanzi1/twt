@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { BackHandler, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useIsFocused, useNavigation, usePreventRemove } from '@react-navigation/native'
-import { PeerAnswerEditor } from '@twt/api-client'
+import { PeerAnswerEditor, RELOAD_REFETCH_BOUND_MS, withTimeout } from '@twt/api-client'
 import { Button, Input, Paragraph, Text, XStack, YStack } from 'tamagui'
 import { useLocale } from '@twt/i18n/react'
 
@@ -30,6 +30,7 @@ import { useClaimT } from '../../lib/claim-i18n'
 import {
   canLeavePage,
   classifyFailure,
+  mergeCarried,
   newIdempotencyKey,
   parseDisplayDate,
   retryDelayMs,
@@ -60,6 +61,35 @@ export function PeerQuestionnaire({
   const { data, isLoading, error, refetch } = usePeerRequestQuery(pariwarId, pingId)
   // Did a "Loading…" (or an error) line precede the questionnaire in this screen? (W3)
   const sawPlaceholder = useRef(false)
+  // ⭐ Story 6.33 (R7) — the HAND-OVER: the unsent answers of the editor a rebuild REPLACES, carried into the rebuilt
+  // questionnaire (keyed on the version AND this reload's generation, so even a refetch that returns the same version
+  // rebuilds). ⭐ Review RV7 — the child MIRRORS its editor's unsent drafts in here continuously (⛔ only on a version-stale
+  // save), so ANY rebuild — a stale save, a refetch that changes the data and THEN bumps `reloads`, a background refetch
+  // returning a new `versionId` while answers sit queued offline — finds the old editor's last drafts. ⛔ Nothing clears it
+  // here: the next instance takes its copy on its first render, and keeps mirroring over it.
+  const carried = useRef<{ readonly questionKey: string; readonly value: PeerRequestAnswerValue }[]>([])
+  const [reloads, setReloads] = useState(0)
+  const [reloadFailed, setReloadFailed] = useState(false)
+  // ⭐ Review RP4 — `onReload` takes ⛔ drafts and ⛔ writes the hand-over: the MIRROR (`mergeCarried`, in `Questionnaire`) is its
+  // only writer, so answers carried in but ⛔ yet applied survive a reload that fires before this instance applied them.
+  // ⭐ Review RP9 — the refetch is BOUNDED: the transport has ⛔ timeout and `refetch()` re-joins a hung fetch, so an unbounded
+  // wait sat on the spinner with ⛔ exit and the answers neither saved nor recoverable. The bound, a failed result and a REJECTION
+  // are all a failure ⇒ the load error's "Try again" (which reloads once more).
+  const onReload = useCallback(() => {
+    // The DETAIL query (`staleTime: 0`, `retry: false`; each save cancels it) — ⛔ the by-link query's `staleTime: Infinity`.
+    // A failed refetch ⇒ the load error's "Try again" (⛔ a rebuild on the old questions, which would only meet the 409 again).
+    void withTimeout(
+      refetch().then((r) => !r.isError && r.data !== undefined),
+      RELOAD_REFETCH_BOUND_MS,
+      false,
+    ).then(
+      (ok) => {
+        if (ok) setReloads((n) => n + 1)
+        else setReloadFailed(true)
+      },
+      () => setReloadFailed(true),
+    )
+  }, [refetch])
 
   if (isLoading) {
     sawPlaceholder.current = true
@@ -68,22 +98,92 @@ export function PeerQuestionnaire({
   const status = (error as { status?: number } | null)?.status
   // Keep the existing editor through a transient background GET failure; its saves still settle.
   const retainLoaded = data !== undefined && classifyFailure(error) === 'retry' && status !== 401 && status !== 403
-  if ((error && !retainLoaded) || !data) {
+  if ((error && !retainLoaded) || !data || reloadFailed) {
     sawPlaceholder.current = true
     const failure = classifyFailure(error)
     if (failure === 'not_openable') return <PeerRequestNotOpenable messageKey="peer_request.not_openable" />
     if (failure === 'no_longer_open' || failure === 'submitted') return <PeerRequestNotOpenable messageKey="peer_request.no_longer_open" />
     return (
-      <YStack p="$4" gap="$3">
-        <Paragraph>{t('peer_request.load_error')}</Paragraph>
-        <Button onPress={() => void refetch()} accessibilityRole="button">
-          {t('peer_request.try_again')}
-        </Button>
-        <CallHelplineCTA />
-      </YStack>
+      <LoadError
+        carried={carried}
+        onTryAgain={() => {
+          if (reloadFailed) {
+            setReloadFailed(false)
+            onReload()
+          } else void refetch()
+        }}
+      />
     )
   }
-  return <Questionnaire pariwarId={pariwarId} pingId={pingId} detail={data} onBack={onBack} openedWithoutLoading={!sawPlaceholder.current} />
+  return (
+    <Questionnaire
+      key={`${data.questionnaire.versionId}:${reloads}`}
+      pariwarId={pariwarId}
+      pingId={pingId}
+      detail={data}
+      onBack={onBack}
+      openedWithoutLoading={!sawPlaceholder.current}
+      carried={carried}
+      onReload={onReload}
+    />
+  )
+}
+
+/**
+ * The load error — the first load failed, or a reload's refetch failed / timed out (review RP9). ⭐ Review RP8 — it REPLACES the
+ * `Questionnaire`, and with it the `usePreventRemove` leave guard, while the member's unsent answers sit ONLY in the hand-over
+ * (`carried`): so it asks before they leave, with the questionnaire's own words ("please wait until your answers are saved" and
+ * "Leave without saving") — ⛔ a silent loss. Leaving anyway gives the hand-over up (the questionnaire's `abandonQueued`). With
+ * nothing carried there is nothing to lose, and ⛔ no guard.
+ */
+function LoadError({
+  carried,
+  onTryAgain,
+}: {
+  readonly carried: React.MutableRefObject<{ readonly questionKey: string; readonly value: PeerRequestAnswerValue }[]>
+  readonly onTryAgain: () => void
+}): React.ReactElement {
+  const t = useClaimT()
+  const navigation = useNavigation()
+  const [leaveTo, setLeaveTo] = useState<(() => void) | null>(null)
+  const [allowLeave, setAllowLeave] = useState(false)
+  const pendingLeave = useRef<(() => void) | null>(null)
+  const hasUnsent = carried.current.length > 0
+  usePreventRemove(hasUnsent && !allowLeave, ({ data }) => {
+    setLeaveTo(() => () => navigation.dispatch(data.action))
+  })
+  useEffect(() => {
+    if (!allowLeave || pendingLeave.current === null) return
+    const go = pendingLeave.current
+    pendingLeave.current = null
+    go()
+    // The guard comes BACK (third-pass review U7) — should the leave ⛔ unmount this screen, it is ⛔ left unguarded.
+    setAllowLeave(false)
+  }, [allowLeave])
+  return (
+    <YStack p="$4" gap="$3">
+      <Paragraph>{t('peer_request.load_error')}</Paragraph>
+      {leaveTo !== null && hasUnsent && <AnnouncedText text={t('peer_request.unsaved')} kind="error" />}
+      <Button onPress={onTryAgain} accessibilityRole="button">
+        {t('peer_request.try_again')}
+      </Button>
+      {leaveTo !== null && hasUnsent && (
+        <Button
+          accessibilityRole="button"
+          onPress={() => {
+            // The member CHOSE to give up what is unsent — ⛔ silent: the notice above said so.
+            carried.current = []
+            pendingLeave.current = leaveTo
+            setLeaveTo(null)
+            setAllowLeave(true)
+          }}
+        >
+          {t('peer_request.leave_anyway')}
+        </Button>
+      )}
+      <CallHelplineCTA />
+    </YStack>
+  )
 }
 
 function Questionnaire({
@@ -92,6 +192,8 @@ function Questionnaire({
   detail,
   onBack,
   openedWithoutLoading,
+  carried,
+  onReload,
 }: {
   readonly pariwarId: string
   readonly pingId: string
@@ -99,6 +201,10 @@ function Questionnaire({
   readonly onBack: () => void
   /** The questionnaire IS the screen's first render (no "Loading…" before it) — W3. */
   readonly openedWithoutLoading: boolean
+  /** Story 6.33 (R7) — unsaved answers handed over by the editor this one REPLACES; this one's own drafts are MIRRORED back in (RV7). */
+  readonly carried: React.MutableRefObject<{ readonly questionKey: string; readonly value: PeerRequestAnswerValue }[]>
+  /** The questions changed: refetch and rebuild. ⛔ Takes no drafts — the hand-over is the mirror's alone (review RP4). */
+  readonly onReload: () => void
 }): React.ReactElement {
   const t = useClaimT()
   const router = useRouter()
@@ -129,10 +235,13 @@ function Questionnaire({
   saveRef.current = save.mutateAsync
   const initialAnswers = useRef(detail.answers)
   const allQuestions = useMemo(() => detail.questionnaire.pages.flatMap((p) => p.questions), [detail])
+  const versionId = detail.questionnaire.versionId
   const [editor] = useState(() => new PeerAnswerEditor(detail.answers, {
-    save: (task) => saveRef.current(task),
+    // ⭐ Story 6.33 (R7) — the RENDERED version on every save (without it the server can ⛔ say the questions changed).
+    save: (task) => saveRef.current({ ...task, questionnaireVersionId: versionId }),
     newKey: newIdempotencyKey,
     shouldRetry: (err) => classifyFailure(err) === 'retry',
+    isReload: (err) => classifyFailure(err) === 'reload',
     wait: (attempt) => new Promise((resolve) => setTimeout(resolve, retryDelayMs(attempt))),
     questions: allQuestions,
   }))
@@ -157,6 +266,37 @@ function Questionnaire({
   useEffect(() => {
     editor.replaceFromServer(detail.answers)
   }, [editor, detail.answers])
+  // ⭐ Story 6.33 (R7) — the questions changed: reload; this editor is replaced. Its unsent answers are ALREADY in the hand-over
+  // (the mirror below ran on the publish that set `reload`) — ⛔ handed up again here (review RP4).
+  useEffect(() => {
+    if (state.saveLine === 'reload') onReload()
+  }, [state.saveLine, onReload])
+  // …and the REBUILT one re-saves each carried answer whose question is still asked (the rest are dropped). Copied on the
+  // FIRST render (the old instance's cleanup runs only after this render, and its disposed editor ⛔ publishes); applied
+  // ONCE (⭐ review RV1 — ⛔ re-applied when `detail` changes identity, which every acknowledged save does), one tick after
+  // mount, and CANCELLED on cleanup, so React's development Strict Mode (setup → cleanup → setup, the editor disposed
+  // between) sends each answer ONCE.
+  const toCarry = useRef(carried.current)
+  const allQuestionsRef = useRef(allQuestions)
+  allQuestionsRef.current = allQuestions
+  // ⭐ Review RV7 — MIRROR this editor's unsent drafts into the hand-over after every change, so a rebuild at ANY moment finds
+  // them. Answers carried in but ⛔ yet applied (`toCarry`) stay in it, beneath the editor's own newer drafts — this
+  // instance can itself be replaced before its timer fires (the data changes, THEN `reloads` is bumped: two rebuilds).
+  const mirror = useCallback(() => {
+    carried.current = mergeCarried(toCarry.current, editor.carryOverDrafts())
+  }, [carried, editor])
+  useEffect(() => editor.subscribe(mirror), [editor, mirror])
+  useEffect(() => {
+    if (toCarry.current.length === 0) return
+    const timer = setTimeout(() => {
+      const keys = new Set(allQuestionsRef.current.map((q) => q.key))
+      const drafts = toCarry.current
+      toCarry.current = []
+      for (const d of drafts) if (keys.has(d.questionKey)) editor.save(d.questionKey, d.value)
+      mirror() // a carried answer whose question is gone was dropped — ⛔ left in the hand-over for a LATER rebuild
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [editor, mirror])
   // The newest refused answer, NAMED — it may be on an earlier page (review S32). The editor keeps the newest failure
   // LAST and `state.error` is its error (V5). Derived, so ⛔ effect can overwrite or wipe it (W2).
   const newestFailedKey = [...state.failed].at(-1) ?? null
@@ -352,7 +492,8 @@ function Questionnaire({
                 .catch((err: unknown) => {
                   if (!mounted.current) return
                   const failure = classifyFailure(err)
-                  if (failure === 'submitted') setPhase('thanks')
+                  if (failure === 'reload') onReload()
+                  else if (failure === 'submitted') setPhase('thanks')
                   else if (failure === 'no_longer_open') setPhase('no_longer_open')
                   else if (failure === 'not_openable') setPhase('not_openable')
                   else setSubmitFailed(true)
@@ -434,7 +575,17 @@ function Questionnaire({
 function SaveLineText({ line }: { readonly line: SaveLine }): React.ReactElement | null {
   const t = useClaimT()
   if (line === 'idle') return null
-  const key = line === 'saved' ? 'peer_request.saved' : line === 'saving' ? 'peer_request.saving' : line === 'failed' ? 'peer_request.not_saved' : 'peer_request.not_saved_retrying'
+  // Story 6.33 (R7) — `reload`: the questions are being loaded again ("Loading…" — the existing words, ⛔ new copy).
+  const key =
+    line === 'saved'
+      ? 'peer_request.saved'
+      : line === 'saving'
+        ? 'peer_request.saving'
+        : line === 'failed'
+          ? 'peer_request.not_saved'
+          : line === 'reload'
+            ? 'peer_request.loading'
+            : 'peer_request.not_saved_retrying'
   // SPOKEN on both platforms (review S28 — the live region alone is Android-only).
   return <AnnouncedText text={t(key)} color={line === 'retrying' ? '$red10' : '$colorPress'} />
 }

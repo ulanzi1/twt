@@ -8,6 +8,8 @@
 import 'dotenv/config';
 import { pathToFileURL } from 'node:url';
 
+import { questionnaireVersions } from '@twt/domain';
+
 import { loadConfig } from './config.js';
 import { createDeps } from './deps.js';
 import { buildServer } from './server.js';
@@ -39,6 +41,8 @@ async function main(): Promise<void> {
 
   let app;
   try {
+    // Story 6.33 (QE3) — ⛔ a code questionnaire id stored as a database version (a migration cannot see the code registry).
+    await questionnaireVersions.assertNoCodeVersionInDatabase(deps.serviceDb);
     app = await buildServer(deps);
   } catch (err) {
     await endPools();

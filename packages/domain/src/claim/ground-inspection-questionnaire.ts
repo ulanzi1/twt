@@ -24,13 +24,12 @@ import type pg from 'pg';
 import { bindScopedDb, type Db } from '../db.js';
 import type { ClaimId, GroundInspectionId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
+import { readQuestionnaireDefinition, resolveLiveQuestionnaire } from '../questionnaire-versions/index.js';
 import {
   answerCodeIndexInputs,
   checkAnswer,
   dependantsToSupersede,
-  getQuestionnaireVersion,
   QUESTIONNAIRE_REGISTRY,
-  resolveLiveVersion,
   servedDefinition,
   type AnswerRefusalReason,
   type LiveAnswerCodes,
@@ -70,6 +69,28 @@ export class GroundInspectionQuestionnaireInvalidAnswerError extends Error {
   }
 }
 
+/**
+ * Story 6.33 (QE12 R7 (ii)) — the inspector's panel RENDERED another version than the one this save would pin: 409
+ * `ground_inspection.questionnaire_version_stale` — the panel RELOADS (⛔ retries).
+ */
+export class GroundInspectionQuestionnaireVersionStaleError extends Error {
+  public readonly name = 'GroundInspectionQuestionnaireVersionStaleError';
+  constructor() {
+    super('[ground-inspection-questionnaire] the questionnaire version changed — reload');
+  }
+}
+
+/**
+ * Story 6.33 (QE12 R7 (v)) — the visit's PINNED version fails validation at read: served READ-ONLY, a save REFUSED (409
+ * `ground_inspection.questionnaire_version_unreadable` — ⛔ the existing 404 `…questionnaire_unavailable`, which means "⛔ panel").
+ */
+export class GroundInspectionQuestionnaireVersionUnreadableError extends Error {
+  public readonly name = 'GroundInspectionQuestionnaireVersionUnreadableError';
+  constructor() {
+    super('[ground-inspection-questionnaire] the pinned questionnaire version cannot be served');
+  }
+}
+
 /** The handler's pre-lock read went stale (409 `ground_inspection.questionnaire_stale` — the client retries the save). */
 export class GroundInspectionQuestionnaireStaleError extends Error {
   public readonly name = 'GroundInspectionQuestionnaireStaleError';
@@ -98,22 +119,49 @@ export async function readGroundInspectionQuestionnaireHeader(
   return rows[0] ?? null;
 }
 
+/** A visit's version and whether a save may be made to it (Story 6.33 R7 (v): a pin failing validation is READ-ONLY). */
+export interface GroundInspectionVersion {
+  readonly def: QuestionnaireDefinition;
+  readonly writable: boolean;
+}
+
 /**
- * The version a visit is (or will be) pinned to: its header's, else the LIVE one now (IQ12), or `null` (⛔ panel). `registry`
- * is a TEST seam (an injected copy with a recorded counsel basis — TR7: v1's `counselBasis` is ⛔ edited to pass a test).
+ * The version a visit is (or will be) pinned to: its header's, else the one IN FORCE now (IQ12), or `null` (⛔ panel) —
+ * through Story 6.33's database-aware reader, on the caller's transaction (QE12 R5; `-413` IQ12 superseded IN PART by
+ * `2026-10-30-421`). `registry` is a TEST seam for the CODE registry (an injected copy with a recorded counsel basis — TR7:
+ * v1's `counselBasis` is ⛔ edited to pass a test).
  */
-export function groundInspectionVersionFor(
+export async function groundInspectionVersionFor(
+  db: Db,
   pinnedVersionId: string | null,
   pariwarId: PariwarId,
   registry: readonly QuestionnaireDefinition[] = QUESTIONNAIRE_REGISTRY,
-): QuestionnaireDefinition | null {
-  const def = pinnedVersionId !== null ? getQuestionnaireVersion(pinnedVersionId, registry) : resolveLiveVersion('ground_inspection', pariwarId, registry);
-  return def !== null && def.kind === 'ground_inspection' ? def : null;
+): Promise<GroundInspectionVersion | null> {
+  if (pinnedVersionId !== null) {
+    const read = await readQuestionnaireDefinition(db, pinnedVersionId, registry);
+    // Review RV6 / QE12 R7 (v) — a pin that cannot be READ (unparseable, missing, the wrong kind) is `…version_unreadable` (409,
+    // the clients' terminal state), ⛔ the 404 "no panel" (`QuestionnairePanel` renders nothing on it). The peer side already does.
+    if (read.status !== 'found' || read.def.kind !== 'ground_inspection') throw new GroundInspectionQuestionnaireVersionUnreadableError();
+    return { def: read.def, writable: read.writable };
+  }
+  const live = await resolveLiveQuestionnaire(db, 'ground_inspection', pariwarId, registry);
+  return live.def !== null && live.def.kind === 'ground_inspection' ? { def: live.def, writable: true } : null;
+}
+
+/** Story 6.33 (QE12 R7 (i)–(iii)) — the ONE version compare, UNDER the locks, FIRST (`assertPeerVersionCurrent`'s twin). */
+export function assertGroundInspectionVersionCurrent(
+  version: GroundInspectionVersion,
+  preReadVersionId: string,
+  clientVersionId: string | undefined,
+): void {
+  if (clientVersionId !== undefined && clientVersionId !== version.def.versionId) throw new GroundInspectionQuestionnaireVersionStaleError();
+  if (preReadVersionId !== version.def.versionId) throw new GroundInspectionQuestionnaireStaleError();
+  if (!version.writable) throw new GroundInspectionQuestionnaireVersionUnreadableError();
 }
 
 // ── the live answers ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** A visit holds at most three ruled answers; the cap bounds a later version's. */
+/** A visit holds one live answer per question; a version holds ≤ 20 (Story 6.33 QE8 C8) — the cap bounds it. */
 export const GROUND_INSPECTION_LIVE_ANSWERS_CAP = 50;
 
 /** The visit's LIVE answer rows (ciphertext AS STORED — the handler decrypts). */
@@ -169,6 +217,10 @@ export interface SaveGroundInspectionAnswerInput {
   readonly unreadableLive: ReadonlyMap<string, string>;
   /** Today in IST (`YYYY-MM-DD`) — the engine's date rule (v1 has ⛔ date question). */
   readonly todayIst: string;
+  /** Story 6.33 (R7) — the version the HANDLER prepared `prepared` against (its pre-read in the `pre` transaction). */
+  readonly preReadVersionId: string;
+  /** Story 6.33 (R7) — the version the inspector's panel RENDERED (`questionnaireVersionId`); absent from an older client. */
+  readonly clientVersionId?: string;
   /** TEST seam — see `groundInspectionVersionFor`. */
   readonly registry?: readonly QuestionnaireDefinition[];
 }
@@ -208,8 +260,11 @@ export async function saveGroundInspectionAnswer(
   authorizeInspector(assignment, input.actingActorId, input.override);
 
   const header = await readGroundInspectionQuestionnaireHeader(db, input.pariwarId, input.groundInspectionId);
-  const def = groundInspectionVersionFor(header?.questionnaireVersionId ?? null, input.pariwarId, input.registry);
-  if (def === null) throw new GroundInspectionQuestionnaireUnavailableError();
+  const version = await groundInspectionVersionFor(db, header?.questionnaireVersionId ?? null, input.pariwarId, input.registry);
+  if (version === null) throw new GroundInspectionQuestionnaireUnavailableError();
+  // ⭐ Story 6.33 (R7) — FIRST, before anything reads the definition (D5's concurrent first pin is a 409 here, ⛔ a 500).
+  assertGroundInspectionVersionCurrent(version, input.preReadVersionId, input.clientVersionId);
+  const def = version.def;
   const served = servedDefinition(def);
 
   const liveRows = await readLiveGroundInspectionAnswers(db, input.pariwarId, input.groundInspectionId);
@@ -326,7 +381,10 @@ export interface ClaimFamilyAccountVisit {
   readonly answers: readonly Pick<ClaimGroundInspectionAnswerRow, 'answerId' | 'questionKey' | 'valueCodes' | 'valueCiphertext' | 'savedAt'>[];
 }
 
-/** A claim has few visits, each with few answers; the cap bounds the read's ROWS (forced pagination). */
+/**
+ * A claim has few visits, each with ≤ 20 LIVE answers (Story 6.33 QE8 C8 — the read joins `superseded_at IS NULL` only, so
+ * a superseded row is ⛔ read); the cap bounds the read's ROWS (forced pagination).
+ */
 export const CLAIM_FAMILY_ACCOUNT_ROWS_CAP = 200;
 
 /**

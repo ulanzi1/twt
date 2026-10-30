@@ -10,7 +10,7 @@ research passes (governance; engine code; the 6.27a / 6.32 story records; planni
 (`rbac/roles.ts` state_trustee + the RANK-ORDER note in `rbac/scope.ts`, `0189`'s answer-table CHECKs, `answerCodeIndexInputs`, the 6.32
 save contracts, Niyamavali §5 / Part 8 / Part 9) — perishable, re-check at Task 0.1. Re-locate by FUNCTION, ⛔ by line number.
 
-STATUS: ready-for-dev (v1.3 — three fresh-context validations folded in, the last a FINAL pass after Task 0 with three read-only
+STATUS: review (v1.4 — implemented by `bmad-dev-story 6.33`, 2026-10-30; AC11 un-attested — see the Dev Agent Record). Was: ready-for-dev (v1.3 — three fresh-context validations folded in, the last a FINAL pass after Task 0 with three read-only
 verifiers). QE1–QE17 ANSWERED 2026-10-30 — all as recommended (Task 0.2) and recorded by author-commit `2026-10-30-421` (`283e25f4`,
 alone — Task 0.3). The QE14 confirm was SENT by BigDev and the Panel RULED 2026-10-30 — `2026-10-30-422` (Trustee-ratified, DR + KB):
 *"by DR and KB / Q1 A, Q2(a) A, Q2(b) A, Q3 A"* — every edge confirmed as built, ⛔ change. Task 0.4's records DONE 2026-10-30 (Row 45 minted with
@@ -39,7 +39,7 @@ QE12's resolver rules · C = QE8's checklist · TR = traps · I = invariants.
 
 # Story 6.33: Staff Write New Versions of the Neighbours' and the Inspector's Questionnaires — the Pariwar Admin Proposes, an Approver Approves, the Super Admin Makes a Version Live for One Pariwar or All — Every Version Kept, Every Answer Tied to Its Version `[SURFACE]` `[PRIMITIVE]` `[GOVERNANCE]`
 
-Status: ready-for-dev
+Status: review
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -493,6 +493,12 @@ page renders the missing part as *"Proposed and approved in another Pariwar"* �
 full history through the global list route). (B) Every read through
 `serviceDb`. *Cost:* a tenant read path bypasses RLS (architecture §1.2 names cross-tenant reads as a named surface).
 
+> ⭐ **ANNOTATION 2026-10-30 (code review RV2 / RP20) — QE11 (A)'s steps SELECT is now THREE legs, ⛔ two.** `USING (scope_pariwar_id IS NULL OR scope_pariwar_id = <current> OR "questionnaire_version_steps"."version_id" IN (SELECT v."version_id" FROM
+> "questionnaire_versions" v WHERE v."origin_pariwar_id" = <current>))` — the ORIGIN Pariwar reads EVERY step of a version it originated. Why: QE7 lets a Super Admin make P's version live for Q; that step is scoped to Q, so P's handle could not see it, `stageOf`
+> read `approved`, and P's author could WITHDRAW a live version. **What it exposes at the DB layer:** the origin can read, for a `made_live` / `pariwar_reverted` aimed at ANOTHER Pariwar, the target's uuid, the Super Admin's actor id and display name, and the time. **What still withholds it:**
+> the API — `shownSteps()` filters every step list (`summaryOf`, `detail`'s 404 rule, `historyElsewhere`) to scope-null or the viewer's own; the one derived fact the origin now learns is `stage = published` (the version is live somewhere), not where or by whom.
+> **Re-examine when** any new consumer returns step rows from a TENANT handle — it must filter them the same way. (Migration 0192 was amended in place: unmerged, applied only in this story's container.)
+
 **QE12 — the async resolver, the call sites, the flip, D5 (recommended).** (A) A new db-touching module
 `packages/domain/src/questionnaire-versions/` exports `resolveLiveQuestionnaire(db, kind, pariwarId)` and
 `getQuestionnaireDefinition(db, versionId)`. The rules, numbered — AC3 / AC4 / AC5 cite them:
@@ -621,6 +627,8 @@ RESPONSE and a replay returns it (the feature-flags shape).
 
 ### The step table (QE2 × QE7 × QE11 × AC2 × AC8 — derived once, here)
 
+> ⭐ 2026-10-30 (RV2 / RP20): the table's tenancy column describes who WRITES a step. The steps SELECT policy also lets the version's ORIGIN Pariwar READ a step scoped to another (a `made_live` elsewhere) — QE11 (A)'s annotation.
+
 | Step | Who / key | Path (DB role) | `scope_pariwar_id` | `target_pariwar_id` | Required columns | Admitted by |
 |---|---|---|---|---|---|---|
 | `proposed` (version row written with it) | `questionnaire.propose` | tenant (`twt_app`) | origin P | NULL | — | versions INSERT `origin = <current> AND NOT direct`; steps INSERT `scope = <current> AND step IN (the four)` |
@@ -674,6 +682,7 @@ Every row also takes the per-version step lock (QE2) before its state check. A N
    (QE11); cheap CHECKs — `target_pariwar_id IS NULL` unless the step is `made_live` / `pariwar_reverted`, `pariwar_reverted` ⇒ target NOT
    NULL, both ticks NULL off `approved`, `length(reason) <= 500`; a UNIQUE `(kind, version)`; ⛔ distinct-actor trigger (QE6). Journal `when` > every
    sibling's.
+   > ⭐ **ANNOTATION 2026-10-30 (RV2 / RP20):** "steps keyed on `scope_pariwar_id`" is now ALSO "or any step of a version this Pariwar ORIGINATED" — see QE11 (A)'s annotation for the exposure and the API filter that withholds it.
 3. **AC3 — the async resolver** (QE12 R1–R4, R8): the strict Zod parse (R1); resolution exactly as R2 — ordered by `seq`, the revert rule
    as written, a candidate that fails validation OR is on a stale ruled base SKIPPED (the next level used); a failing pinned version still
    READ for its pins; the counsel-basis overlay (R3); the explicit Pariwar predicate (R4); the R8 alarm and log; the boot-time code-vs-DB
@@ -769,8 +778,8 @@ Every row also takes the per-version step lock (QE2) before its state check. A N
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance first (AC0).** Nothing below starts before 0.3 is committed.
-  - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved (backup branch first — [[project_rebase_ledger_conflict_separator]]);
+- [x] **Task 0 — governance first (AC0).** Nothing below starts before 0.3 is committed.
+  - [x] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved (backup branch first — [[project_rebase_ledger_conflict_separator]]);
     `git diff --name-only 26901c92..HEAD -- packages apps scripts infra docs` — re-read any cited file that moved; re-grep the five NUMBERS on
     every branch and worktree; re-derive G8's call-site list (the grep in G8) and paste it into the Debug Log.
   - [x] 0.2 Put QE1–QE17 to BigDev; the four real asks (QE5, QE6, QE10, QE14) first, each with its cost as written; plus the Hindi of
@@ -799,7 +808,7 @@ Every row also takes the per-version step lock (QE2) before its state check. A N
     `epics.md` `### Story 6.33` (after 6.32, the minted-by-ruling banner citing `-304` Consequence 2, `-421`, `-422`); `deferred-work.md` —
     the "any other claim?" item annotated HOMED (⛔ closed; its trigger restated: a LIVE `ground_inspection` version carries it, ⛔ merely
     6-33 `done`); the ledger line.
-- [ ] **Task 1 — the engine (AC1).** `questionnaires/types.ts` (`text?`), `keys.ts` (`COUNSEL_BASIS_DECISIONS = []`, the chain-record regex,
+- [x] **Task 1 — the engine (AC1).** `questionnaires/types.ts` (`text?`), `keys.ts` (`COUNSEL_BASIS_DECISIONS = []`, the chain-record regex,
   the reserved-key sets, the Devanagari forbidden terms, the stale comment), `validator.ts` (AC1: the origin input; QE8 C1–C12 one rule per
   line; `typeof` / `=== true` checks; the `{member}`-only placeholder rule; the version-level `approvedBy`; the ruled-question lock — incl.
   the closing note / thank-you — against the `ruled_base_code_version_id` PASSED IN, which is ALWAYS QE5's one definition: the newest code
@@ -807,43 +816,43 @@ Every row also takes the per-version step lock (QE2) before its state check. A N
   `questionnaires/derive.ts` (state from steps ordered by `seq`; the per-question change marker) — RE-EXPORTED from `questionnaires/index.ts`
   so the G13 fence scans them. Keep `questionnaires/` package-free (G13 fence green — ⛔ zod here). Tests in
   `packages/domain/tests/questionnaires/` — RED first.
-- [ ] **Task 2 — the migration and schema (AC2).** `packages/domain/migrations/0192_questionnaire-versions.sql` (hand-written; ⛔
+- [x] **Task 2 — the migration and schema (AC2).** `packages/domain/migrations/0192_questionnaire-versions.sql` (hand-written; ⛔
   `db:generate` over an applied migration — 42P07) incl. `seq` / `clock_timestamp()`, the `NOT direct` tenant insert leg, the steps tenant policy
   limited to the four tenant steps, AC2's cheap CHECKs, ⛔ distinct-actor trigger; `schema/questionnaire_versions.ts`; `policies/questionnaire-versions-rls.ts` (house `<current>` form); `meta/_journal.json`
   (`when` > 1796096400036 and > any sibling's at the commit). ⚠ Compare enums AS TEXT in any `LANGUAGE sql` body (the 6.32 55P04 trap — a
   fresh database applies every migration in ONE transaction). Live-DB policy regression spec (positive + negative, incl. `direct: true`
   refused as `twt_app`).
-- [ ] **Task 3 — the reader (AC3).** `packages/domain/src/questionnaire-versions/{read,parse,index}.ts`: `resolveLiveQuestionnaire`,
+- [x] **Task 3 — the reader (AC3).** `packages/domain/src/questionnaire-versions/{read,parse,index}.ts`: `resolveLiveQuestionnaire`,
   `getQuestionnaireDefinition`; the STRICT Zod row parse (R1); R2's resolution by `seq` with the revert rule and the invalid / stale skips;
   the counsel-basis overlay (R3); the explicit Pariwar predicate (R4); the R8 alarm; the boot-time id-collision assertion, exported and
   WIRED into `apps/api/src/index.ts` `main()` (after `createDeps`; ⛔ `server.ts`) and `apps/jobs/src/boot.ts` `main()`. Live-DB spec covering every R2 branch incl. revert, re-make-live after
   revert, same-transaction direct steps, and a run on the BYPASSRLS pool.
-- [ ] **Task 4 — move every consumer (AC4, AC5, AC6).**
-  - [ ] 4.1 Before anything: TR10's grep, every hit judged in the Debug Log.
-  - [ ] 4.2 The G8 list onto the reader (R5): the ground-inspection save INSIDE `pre`; `familyAccountViews` fed pre-read definitions via
+- [x] **Task 4 — move every consumer (AC4, AC5, AC6).**
+  - [x] 4.1 Before anything: TR10's grep, every hit judged in the Debug Log.
+  - [x] 4.2 The G8 list onto the reader (R5): the ground-inspection save INSIDE `pre`; `familyAccountViews` fed pre-read definitions via
     `run(...)`; the jobs' read INSIDE `pariwarConfig` / `peerMeshWaReminderConfig`'s existing locale `withPariwarScope` (⛔ nested scope, ⛔ the
     begin path), its fault in the same class as the locale fault per job (R5); the
     sync-resolver fence (R6).
-  - [ ] 4.3 The ONE word function over the three word sites (QE4), incl. the `{member}` fallback copy key — en *"the member"*, hi
+  - [x] 4.3 The ONE word function over the three word sites (QE4), incl. the `{member}` fallback copy key — en *"the member"*, hi
     *"सदस्य"*, its Hindi marked HUMAN-REVIEWED (BigDev 2026-10-30), ⛔ "agent-authored" — with a real-`t()` leg (D11); applied IN the word
     function, `resolvePeerRequestMemberName`'s `''` contract UNCHANGED; each use logged `questionnaire.member_name_fallback` (ids only).
-  - [ ] 4.4 R7: the optional `questionnaireVersionId` (contracts `packages/contracts/src/claims/{peer-request,ground-inspection-questionnaire}.ts`);
+  - [x] 4.4 R7: the optional `questionnaireVersionId` (contracts `packages/contracts/src/claims/{peer-request,ground-inspection-questionnaire}.ts`);
     both writers' under-lock comparison FIRST (before the live read, `checkAnswer`, the three `prepared …` checks), `prepareSave`
     returning `def.versionId`, the ground-inspection writer's new version input — making the six bare `Error`s (D8) and D5's 500
     unreachable; the absent-field leg; the NEW `*.questionnaire_version_unreadable` 409 refusal + its R8 alarm (the existing 404
     `ground_inspection.questionnaire_unavailable` UNCHANGED).
-  - [ ] 4.5 The clients: EACH SENDS `questionnaireVersionId` = the rendered `questionnaire.versionId` on every save (a test asserts each
+  - [x] 4.5 The clients: EACH SENDS `questionnaireVersionId` = the rendered `questionnaire.versionId` on every save (a test asserts each
     body); `packages/api-client/src/peer-answer-editor.ts` gains `isReload` + the `'reload'` state; mobile
     `apps/mobile/lib/peer-request.ts` (`'reload'` in `PeerRequestFailure`, `classifyFailure` at all FIVE call sites) + `PeerQuestionnaire.tsx`
     (rebuild the editor keyed on `versionId`, refetch `peerRequestDetailKey`); `apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx`
     and `apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx` likewise — each with a test.
-  - [ ] 4.6 G16: the caps' comments updated; the 20 × 5 cap leg. QE8 C11: the two new counts on BOTH audit lines, counted INTERNALLY (⛔ a field on the
+  - [x] 4.6 G16: the caps' comments updated; the 20 × 5 cap leg. QE8 C11: the two new counts on BOTH audit lines, counted INTERNALLY (⛔ a field on the
     `.strict()` `GroundInspectionFamilyAnswerView`) (`claims.peer-answers.handlers.ts`, `claims.verifier-console.handlers.ts`). Every existing suite green.
-- [ ] **Task 5 — RBAC (AC7).** `rbac/permissions.ts` (append three keys with REUSE CHECK comments; version 56 with its paragraph),
+- [x] **Task 5 — RBAC (AC7).** `rbac/permissions.ts` (append three keys with REUSE CHECK comments; version 56 with its paragraph),
   `rbac/roles.ts` (`pariwar_admin` gains propose + approve with the Trustee-Lite comment citing G6 and the `-304` *"or their own"*
   reading; ⛔ state_trustee), contracts mirror if any, `tests/rbac/permissions.test.ts` (56 / 74), `tests/rbac/roles.test.ts` (holder sets;
   live-on-dimension).
-- [ ] **Task 6 — the chain (AC8).** Domain writer `questionnaire-versions/write.ts` (one function per step, per the step table; the QE3 /
+- [x] **Task 6 — the chain (AC8).** Domain writer `questionnaire-versions/write.ts` (one function per step, per the step table; the QE3 /
   QE7 / per-version step locks in their ONE fixed order, every step inserted AFTER them; ids generated app-side (`randomUUID()`) before
   stamping `chain:<id>`; the state machine by `seq`; the server-side replacement of the ruled
   questions; the validator + warnings on every new definition), API module
@@ -856,17 +865,320 @@ Every row also takes the per-version step lock (QE2) before its state check. A N
   `requireGlobalPermission`. API integration specs (each refusal; idempotent replay; concurrent make-live; make-live vs revert; the global
   path; the 404 rule incl. an all-Pariwar version originated elsewhere = 200 and a reverted one keeping its history; the global detail and
   `pariwarsKeepingOwn` reads; `questionnaire.not_author`; a replay returning the RECORDED response — QE17).
-- [ ] **Task 7 — the admin page (AC9).** `apps/admin/src/modules/questionnaire-versions/` (page, editor, history, render, `i18n-en.ts`),
+- [x] **Task 7 — the admin page (AC9).** `apps/admin/src/modules/questionnaire-versions/` (page, editor, history, render, `i18n-en.ts`),
   route in `router.tsx` + `src/routes/QuestionnaireVersionsRoute.tsx`, nav in `RootLayout.tsx`; client functions IN `src/api/client.ts`
   (`apiFetch` is module-private — G17) + hooks in `src/api/hooks.ts`; the step-up flow on a 403 `StepUpRequiredError`
   (`'questionnaire_publish'`, the `ApprovalWarningReasonsPage.tsx` precedent: catch `auth.step_up_required`, keep the pending write, re-run
   it after verify); for `super_admin` the page reads the GLOBAL list / detail (AC8); the QE8 C12 guidance shown in the editor. Tests in `apps/admin/tests/` (RTL `cleanup`; generous
   timeouts — the 6.32 5 s timeout under `ci:local` load).
-- [ ] **Task 8 — nothing gates, proven (AC10)** + the mutants (AC12).
-- [ ] **Task 9 — the real-browser pass (AC11).**
-- [ ] **Task 10 — records (AC13)** incl. every deferred disposition AC13 names (Row 45's mint, the `epics.md` entry and the "any other
+- [x] **Task 8 — nothing gates, proven (AC10)** + the mutants (AC12).
+- [ ] **Task 9 — the real-browser pass (AC11).** ⚠ ⛔ RUN — recorded UN-ATTESTED: the Chrome extension was ⛔ connected (`tabs_context_mcp`), which is a DIFFERENT cause from AC11's alternative ("Chrome cannot reach the local host after ONE probe" — ⛔ local host was reached). Row 45 (b) stays OPEN; unticked by the 2026-10-30 code review (RV30), a ticked box read as done.
+- [x] **Task 10 — records (AC13)** incl. every deferred disposition AC13 names (Row 45's mint, the `epics.md` entry and the "any other
   claim?" annotation are DONE — Task 0.4; add only Row 45's (b) / (d) evidence lines); `ci:local` on a fresh container; the Dev Agent Record, File
   List, Change Log; the row → `review`.
+
+### Review Findings
+
+Full three-layer code review, 2026-10-30, of the UNCOMMITTED tree on `story/6-33-questionnaire-editor-versions-and-approval` (HEAD `bc88bd5e` = `origin/main`; 92 code
+files, ~8,870 diff lines, reviewed as four chunks — 1a store, 1b engine + contracts, 2 API + jobs, 3 clients — each by a Blind Hunter, an Edge Case Hunter and an Acceptance
+Auditor, 12 layers in parallel, strictly read-only; the working-tree content fingerprint was identical before and after). 147 raw findings (81 blind / 24 edge / 42 auditor).
+After deduplication and a hand-trace of every load-bearing claim: **0 decision-needed, 32 patch, 9 defer; 14 dismissal groups**. **1 HIGH, 11 MEDIUM, 20 LOW.** The Panel-routing
+§0 gate was applied to every candidate: none is about what the Trust discloses about a person, what it owes one, a legal basis, or two ratified clauses in conflict —
+**no Trustee Panel decision is needed.** Product code was not changed by this review. IDs are `RV` / `RVD` (⛔ `R1`–`R8` are this story's resolver rules).
+
+⚠ **What this review did NOT do:** run a test, a mutant or `ci:local`. The Dev Agent Record's counts ("84 files / 1,470 tests", "mutants killed", the 35/36 runs) are CLAIMS here,
+⛔ re-proved. Each entry says whether I READ the code (**traced**) or took a layer's reading (**layer-reported**). AC11 (the real-browser pass) stays UN-ATTESTED and OPEN
+(Row 45 (b)) — ⛔ closed by this review.
+
+**Disposition (BigDev, 2026-10-30): option 1 — apply every patch.** All 32 were applied the same day; ⛔ committed, ⛔ pushed. The server side (domain,
+migration 0192, API, jobs) and the fences/records by the reviewer; the admin web and the mobile app by two agents on disjoint files, each reporting its own mutation
+checks. **Verified:** `typecheck` 20/20 and `lint` 20/20; the unit phase 37/37 tasks; the live-DB `integration-tests` job against the story's own container
+(`twt-633-pg`, 24/24 tasks, EVERY file executed — domain 447 files / 6,784 tests, api 207 / 2,495, jobs 86 / 1,962, the rest green); the 31 other `ci:local` gates (build,
+the structural invariants, the determinism replays) — `domain-invariants` caught RV20's hoisted `.limit(cap)` and it was fixed inline. Mutants run and KILLED for the
+load-bearing legs: RV2 (policy leg; stage from displayed steps), RV3 (base visibility; detail), RV4 (raw record), RV6 (domain throw; the handler `catch`), RV12 (the numbering lock,
+tightened to an ADVISORY wait after the first mutant survived), RV10, RV23 (three injected violations), RV32, and the admin / mobile hand-over mutants.
+**⚠ NOT done:** one full `pnpm ci:local` run as a single command on a fresh container (the parts were run separately); a review of the PATCH DIFF itself (the standing
+rule — [[feedback_review_the_fix_diff_before_commit]]); AC11's real-browser pass (still UN-ATTESTED, Row 45 (b) OPEN). ⇒ the story stays `review`.
+
+**Deviations and additions (⛔ silent):**
+- **RV2** — beyond the policy leg, `summaryOf` derives the STAGE from every readable step and DISPLAYS only the shown ones, so the origin sees `published` without the target's step; migration 0192 was amended IN PLACE (unmerged) and re-applied in the story DB only.
+- **RV3** — also refuses an unreadable base on the global path; `versionVisibleTo` is exported and used by `detail`.
+- **RV6** — the domain throw was ⛔ enough: the save's pre-block needed its own `catch` (without it the answer was a 500 — proven by a mutant).
+- **RV7** — the design CHANGED during the build: a plain mirror lets a rebuilt instance's first publish overwrite the hand-over with `[]`, so the mirror MERGES (`mergeCarried`, now ONE function in `@twt/api-client`, re-exported by mobile and admin). The helpline also clears the hand-over when the caller changes.
+- **RV5** — the page-level boolean became `baseMovedVia` ('make_live' | 'direct'), so a direct 409 does not lock an open make-live panel.
+- **RV12** — the backstop now WORKS (a run with the numbering lock removed still produced the next number through the retry); the race legs therefore assert an ADVISORY-lock wait.
+- **RV18** — if the newest code version's detail fails to load, the editor falls back to the base's ruled questions and says so.
+- **RV21** — PARTIAL: history says "for this Pariwar" for the page's own Pariwar; another Pariwar still shows its raw uuid (the response carries no name).
+- **RV23** — `nothing-gates` is split: the behavioural modules stay TRANSITIVE; the medical table is checked DIRECTLY (a transitive check on a table is meaningless — `db.ts` imports the whole schema barrel). The word fence is a TRIPWIRE by item name, ⛔ a proof.
+- **RV24** — counted and batched (`getQuestionnaireDefinitions`); `VERIFIER_CONSOLE_MAX_READS` 31 → **33** (+2, conditional on a DATABASE pin; ledger entry + the four pinned assertions updated).
+- **RV25** — both jobs live tests (requests and WhatsApp reminders) now sweep the chain rows.
+- **RV30** — Task 9 is UNTICKED and the cause reworded in `deferred-work.md`.
+- **RV32** — the unreadable request is omitted, alarmed, and counted on the audit line (`unreadable_requests`); a visible "could not be opened" stub would need a contract field and remains BigDev's call.
+
+- [x] [Review][Patch] **RV1 — Mobile carry-over re-sends STALE answers after every acknowledged save (HIGH; blind + edge; traced).** `Questionnaire`'s carry effect depends on
+  `[editor, allQuestions]`; `allQuestions` is `useMemo([detail])` and the save hook does `setQueryData(detailKey, d => ({ ...d, answers }))`, so EVERY acknowledged save gives
+  `detail` a new identity and the effect re-runs. `toCarry` is the ORIGINAL array (the parent replaces `carried.current`, never mutates it) and is never emptied ⇒ after a version
+  reload, a carried answer (Q1 = A) the member then changes to B is re-saved as A on the next acknowledgement. Claim data, silent. The admin panel and helpline use `[editor]` only
+  (not affected); the mobile test mocks a stable `mock.detail`, so it cannot see this. Fix: apply once (an `applied` ref; deps `[editor]`) and empty `toCarry` after applying; a test
+  whose mocked save rewrites `detail`. **AC5, QE12 R7; checklist 2.**
+  [apps/mobile/components/peer-request/PeerQuestionnaire.tsx:215-223; apps/mobile/components/peer-request/usePeerRequestQueries.ts:76-80]
+- [x] [Review][Patch] **RV2 — A tenant author can WITHDRAW a version already made live for ANOTHER Pariwar (MEDIUM; blind + edge + auditor; traced).** QE7: a version from Pariwar P
+  MAY be made live for Q. That `made_live` step is scoped to Q (`questionnaire_version_steps_scope_check`); P's handle cannot see it (steps SELECT policy), so `stageOf` reads
+  `approved`, `canTakeStep('approved','withdrawn')` is true, and the `withdrawn` step lands: the history says withdrawn while the resolver (reads only `made_live` /
+  `pariwar_reverted`) still serves it in Q, and the Super Admin's next make-live is refused `not_publishable`. NOT reachable: `return` (needs stage `proposed`) and make-live for ALL
+  (NULL scope is visible). The `stageOf` comment ("every step of that version's own path is visible") is false for this path; every test uses target == origin. Fix
+  (recommended; migration 0192 is still unmerged, so amend in place): a second steps SELECT leg letting the ORIGIN Pariwar read the steps of versions it originated (the versions row
+  is already SELECT-open), and compute `stage` from everything readable BEFORE `detail()` / `summaryOf` filter what is displayed; cross-Pariwar legs (domain + API). **AC8
+  ("`made_live` is not withdrawable"); checklist 1, 3.** [packages/domain/src/questionnaire-versions/write.ts:122-124,332-338; packages/domain/migrations/0192_questionnaire-versions.sql
+  (questionnaire_version_steps_read); apps/api/src/modules/questionnaire-versions/handlers.ts:357-363]
+- [x] [Review][Patch] **RV3 — Another Pariwar's unapproved draft is readable through `baseVersionId` (MEDIUM; blind ×2 + edge ×2 + auditor ×2; traced).** `assertBase` accepts any
+  version of the kind (exists + kind only — an unparseable or invalid one too); tenant `detail` then reads that base unfiltered and returns `change` markers and `removedKeys`
+  against it, so a Pariwar Admin who names a guessable id (`peer_mesh.v1001`) learns the foreign draft's question KEYS (and, via markers, whether their questions match its), and
+  success-vs-`base_invalid` is an existence oracle. This bypasses the API filter that `-421` QE11 names as the ratified confidentiality control ("an API filter hides them").
+  Fix: validate a tenant's `baseVersionId` with the SAME visibility rule as `detail()` / `list()` (a code version, its own origin, or a step scoped to it / all) else `base_invalid`;
+  compute `change` / `removedKeys` only against a base the viewer may see; refuse an unparseable base; a cross-Pariwar leg. **QE11; checklist 12 (a).**
+  [packages/domain/src/questionnaire-versions/write.ts:195-200; apps/api/src/modules/questionnaire-versions/handlers.ts:365,393-401]
+- [x] [Review][Patch] **RV4 — Replaying a completed `return` / `withdraw` answers 409 `idempotency_in_progress` until the 24 h TTL (MEDIUM; edge + auditor; traced).** Both writers return
+  `void` ⇒ `recordResult(key, undefined)` ⇒ stored `null` (`JSON.stringify(result ?? null)`) ⇒ `getResult` is `null` ⇒ the claim is read as "in progress". The house shape this was
+  "copied from" records `{ done: true }` (`helplineSave`). Only `direct` has a replay leg (the Dev Record says the replay is "asserted"). Fix: record `out ?? { done: true }`; replay legs
+  for propose / approve / return / withdraw / make-live / revert. **AC8, QE17; checklist 2.**
+  [apps/api/src/modules/questionnaire-versions/handlers.ts:237-252,415-430; packages/domain/src/idempotency/keyed-store.ts:211,254; apps/api/src/modules/claims/claims.peer-request.handlers.ts:165]
+- [x] [Review][Patch] **RV5 — The Super Admin's "with modification" (direct) cannot acknowledge `base_moved` — the button silently does nothing (MEDIUM; auditor + blind + edge; traced).**
+  `Editor` calls `directQuestionnaireVersion` WITHOUT `acknowledgeBaseMoved` (the request carries it). The domain throws 409 `base_moved` whenever the named base's own base is not what is
+  in force — QE7 (b)'s case ("base = the approved one"). The page's `run` maps that to `setBaseMoved(true)` with no `setError`; the acknowledgement UI exists only in `VersionPanel`'s
+  make-live block and its `ack` is local ⇒ nothing is rendered. Fix: an acknowledgement in `Editor`, sent as `acknowledgeBaseMoved`; a leg. **QE7 (b)/(e), AC9.**
+  [apps/admin/src/modules/questionnaire-versions/QuestionnaireVersionsPage.tsx:152-156,614-623; packages/domain/src/questionnaire-versions/write.ts:399-401]
+- [x] [Review][Patch] **RV6 — A ground-inspection pin that fails R1 is served 404 "no panel", not 409 `ground_inspection.questionnaire_version_unreadable` (MEDIUM; 6 layers; traced).**
+  `groundInspectionVersionFor` returns `null` for `unparseable` / `missing`; the GET and the save pre-check then throw `GroundInspectionQuestionnaireUnavailableError`, and
+  `QuestionnairePanel` renders NOTHING on it. R7 (v) requires 409 `…version_unreadable` and says the 404 "means ⛔ panel — UNCHANGED". The peer side is right
+  (`pinnedVersionFor` throws `PeerRequestVersionUnreadableError`). Reach is narrow (a corrupted row, or a later parser tightening — what R1 is for); the R7 (v) legs use `warning: true`,
+  which PARSES, so the unparseable case is untested on both consumers. Fix: throw the existing `GroundInspectionQuestionnaireVersionUnreadableError` for a non-`found` pinned read, map it
+  on the GET, add a leg with an unparseable row. **AC5, QE12 R7 (v).**
+  [packages/domain/src/claim/ground-inspection-questionnaire.ts:134-143; apps/api/src/modules/claims/claims.ground-inspection.handlers.ts:1219,1301]
+- [x] [Review][Patch] **RV7 — The hand-over of unsent answers is fragile (MEDIUM; PLAUSIBLE — timing-dependent, the unit tests mock `refetch` synchronously; blind + edge).** (a) The admin panel and
+  the helpline clear the hand-over on the rebuilt editor's FIRST mount while the key can change TWICE (the refetch changes the data ⇒ `v2:0`; then `setReloads` ⇒ `v2:1`); the second
+  rebuild reads `[]`. (b) Only the `'reload'` path hands drafts over: any other key change — a background refetch (reconnect / focus) returning a new `versionId` — disposes the editor with
+  its queued unsent drafts (mobile: answers queued while offline). Fix: empty the hand-over only when it has been APPLIED (inside the timer); hand drafts over on any key-driven unmount;
+  a test with an async refetch that changes the data and then increments `reloads`. **AC5, R7.**
+  [apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx:251-262; apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx:273-283; apps/mobile/components/peer-request/PeerQuestionnaire.tsx:81-83,117]
+- [x] [Review][Patch] **RV8 — The helpline card DEAD-ENDS when the reload refetch fails (MEDIUM; blind + edge + auditor; traced).** `onReload` has no `else` after `if (!r.isError)`;
+  `reloadRequired` is permanent and `drain()` returns; the retained-list branch (5xx / 429 / network) shows an alert with NO retry button; the card sits at "Saving…" and its leave-guard
+  stays on ⇒ the operator's answers are never sent. Mobile (`reloadFailed` + "Try again") and the inspector panel (the load-failure "Try again") both have an exit. Fix: a failed-refetch
+  state with a Try again that re-calls `onReload`; a leg. **AC5; checklist 1 (a state with no exit).** [apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx:110-117,140-153]
+- [x] [Review][Patch] **RV9 — AC10's live "nothing gates" leg cannot reach the predicate it says is unchanged (MEDIUM; auditor; traced).** The only byte-identical leg answers a `peer_mesh`
+  chain question and compares `assertClaimApprovable`, the warnings and `groundInspectionApprovalState`; nothing answers a `ground_inspection` chain question — the case that can reach the
+  completion predicate and the discrepancy path. AC10 is met to the letter; its purpose (I1, the Policy-meaning sentence) is ⛔ proven on the ground-inspection side, which today rests on the
+  validator key sets and the import fence alone. **Checklist 11; [[feedback_gate_scope_semantic_coverage]].** Fix: a leg answering a `ground_inspection` chain question and asserting
+  completion / `assertClaimApprovable` / warnings unchanged. [packages/domain/tests/integration/claim/peer-mesh-reply.spec.ts:644; packages/domain/tests/integration/claim/ground-inspection-questionnaire.spec.ts]
+- [x] [Review][Patch] **RV10 — The C11 audit counts are untested where they matter (MEDIUM; auditor; traced by grep).** Every `sensitive_answer_count` assertion is `0` (only
+  `family_sensitive_answer_count` is `1`); the console line's new keys are never asserted; deleting `neighbourSensitive += 1` leaves every test green. Fix: seed a neighbour chain answer and
+  assert the non-zero counts on BOTH audit lines. **AC4; checklist 8.** [apps/api/tests/integration/claims/peer-answers-approvers.spec.ts:397-401,697-698;
+  apps/api/src/modules/claims/peer-answers-assembler.ts:282; apps/api/src/modules/claims/claims.verifier-console.handlers.ts:1385-1387]
+- [x] [Review][Patch] **RV11 — No tampered / non-human-actor denial on any of the 7 new mutation routes; approve and return are never tried across Pariwars (MEDIUM; auditor; layer-reported,
+  grep-consistent).** The API spec covers cross-Pariwar for GET detail and withdraw only; the house precedent is `approval-warning-reasons.spec.ts:160` (a TAMPERED-session leg with a positive
+  control). Fix: a tampered-session leg per mutation route + cross-Pariwar approve / return. **Checklist 3.** [apps/api/tests/integration/questionnaire-versions/questionnaire-versions.spec.ts]
+- [x] [Review][Patch] **RV12 — The QE3 `23505` backstop can never fire (MEDIUM, latent; auditor + traced).** `insertVersion` tests `(err as { code?: string }).code`, but drizzle-orm 0.45.2
+  wraps every query failure in `DrizzleQueryError` (`pg-core/session.js:41,48`) — the SQLSTATE is on `.cause`; the sibling writers unwrap (`niyamavali/write.ts:50-54`,
+  `memorial/submission.ts:179-184`). Latent today because the numbering lock serialises every writer — but there is no propose × propose or propose × direct race leg, so dropping
+  `lockNumbering` leaves every test green. Fix: `err.code ?? err.cause?.code`; the two race legs. **QE3; checklist 2.** [packages/domain/src/questionnaire-versions/write.ts:239-242]
+- [x] [Review][Patch] **RV13 — Make-live for "every Pariwar" is not gated on the keeping-own list having loaded (LOW; blind + edge + auditor; traced).** The list renders only when `keeping.data`
+  exists; loading / error / paused render nothing and the button is `disabled={busy || (baseMoved && !ack)}`. QE7 (a): the screen "lists … before the confirm". Also the copy reads "1 Pariwar
+  keep their own version". [apps/admin/src/modules/questionnaire-versions/QuestionnaireVersionsPage.tsx:386-407]
+- [x] [Review][Patch] **RV14 — `ack` and `baseMoved` leak between acts (LOW; blind + edge + auditor; traced).** `ack` is never reset (not on success, not on a scope change); `baseMoved` is
+  page-level and survives a version switch. A second make-live in the same panel sends `acknowledgeBaseMoved: true` without the warning having been shown for that target. Send
+  `baseMoved && ack`; reset on scope change / success; scope `baseMoved` to the version. **QE7 (e).** [QuestionnaireVersionsPage.tsx:141,293,404-413]
+- [x] [Review][Patch] **RV15 — Revert is not disabled while an act is pending, and `useQuestionnaireChainAct` is ONE shared `mutate` with per-call callbacks (LOW; blind + edge + auditor;
+  traced).** TanStack fires per-call callbacks for the LATEST call only (the recorded TR15 / per-row `mutateAsync` rule); a second click drops the first call's step-up prompt or `onDone`.
+  [QuestionnaireVersionsPage.tsx:213-221; apps/admin/src/api/hooks.ts (useQuestionnaireChainAct)]
+- [x] [Review][Patch] **RV16 — Revert is not offered when the Pariwar's own version was SKIPPED (LOW; auditor; traced).** Shown only for `inForce.source === 'own'`; QE7 (d): "a skipped own
+  version is still revertable" — and the page already renders the "out of date, serving Y" alert for exactly that case. Use `skipped.some((s) => s.level === 'own')`. [QuestionnaireVersionsPage.tsx:213]
+- [x] [Review][Patch] **RV17 — The direct path's counsel warning ignores the RULED pending health questions (LOW; auditor; traced).** Make-live warns on `q.health && q.counselPending` over all
+  questions; the direct section warns on `q.health` over the STAFF drafts only ⇒ a direct peer_mesh version whose ruled `death_cause` / `death_illness` are pending never shows the hold
+  warning. **QE10, AC9.** [QuestionnaireVersionsPage.tsx:298 vs 595]
+- [x] [Review][Patch] **RV18 — The editor shows the BASE's ruled questions as locked, not the CURRENT ones (LOW; auditor; traced).** QE5: "the editor always shows the CURRENT ruled questions
+  locked". From an out-of-date base the staff see the old wording while the server silently substitutes the new. [QuestionnaireVersionsPage.tsx:494-498]
+- [x] [Review][Patch] **RV19 — An offline / paused list query crashes the page (LOW; edge; traced).** `const data = list.data!` follows checks on `isLoading` / `isError` only; `createQueryClient`
+  sets no `networkMode`, so a paused query has `data` undefined (the repo documents this cell at `DriveTargetPage.tsx:188`). Guard `!list.data`. [QuestionnaireVersionsPage.tsx:160-164]
+- [x] [Review][Patch] **RV20 — `listVersionRows` truncates silently (LOW; blind + edge + auditor; traced).** `ORDER BY kind ASC, version DESC` under ONE `LIMIT 200` with no cursor or "more" signal:
+  past 200 rows the later kind (`peer_mesh` sorts AFTER `ground_inspection`) drops out. (Edge 1a had the direction backwards.) AC8 asks for forced pagination of both kinds. Cap per kind or add
+  a cursor. [packages/domain/src/questionnaire-versions/write.ts:469-482]
+- [x] [Review][Patch] **RV21 — Editor details (LOW; blind + edge; traced).** Switching a question's kind away from `multi` keeps `exclusive` flags the checkbox no longer shows (the validator then
+  refuses and the editor cannot clear them); the "codes" input drops a typed comma (`a,` → `a`) so a second code can only be pasted; a request-validation error names no field; history prints a
+  raw Pariwar UUID (`t.forTarget`). [QuestionnaireVersionsPage.tsx:123,508,552-553]
+- [x] [Review][Patch] **RV22 — A NUL (U+0000) or lone surrogate in stored text, a return `note` or a direct `reason` fails in Postgres (22P05) as a 500 (LOW; PLAUSIBLE; edge; layer-reported).**
+  It passes the trim / length checks. Reject in the validator and the contracts. [packages/domain/src/questionnaires/validator.ts:111-125; packages/contracts/src/questionnaire-versions/index.ts:61,80]
+- [x] [Review][Patch] **RV23 — The fences are narrow (LOW; blind + edge + auditor; layer-reported, AC10 text traced).** The nothing-gates forbidden list names the `medical/` directory but not
+  `schema/member_medical_disclosures.ts` (AC10 names the TABLE) and its import scan ignores dynamic and side-effect imports; the sync-resolver word regex misses `t(def.copyKey)` /
+  `i18n.t(…)`, has no positive control, and its roots omit `apps/mobile`. **AC10; [[feedback_gate_scope_semantic_coverage]].**
+  [packages/domain/tests/questionnaire-versions/nothing-gates-fence.test.ts:35-41; packages/domain/tests/questionnaire-versions/sync-resolver-fence.test.ts:49-58]
+- [x] [Review][Patch] **RV24 — The assembler's two new definition reads are not counted (LOW; auditor; traced).** They run through `run(...)` without `bump()`, and the console's
+  `VERIFIER_CONSOLE_MAX_READS` ledger comment and its pinned `toBe(31)` tests are unchanged — the standing rule in `claims.verifier-console.handlers.ts` forbids silently excluding a
+  newly-added read. They are also one query per distinct DB-pinned version (N+1). Count them (or explain) and batch. [apps/api/src/modules/claims/peer-answers-assembler.ts:201-203,219]
+- [x] [Review][Patch] **RV25 — The jobs live test leaves permanent chain rows and asserts weakly (LOW; blind + auditor; traced).** `afterAll` sweeps only tables with a `pariwar_id` column (these have
+  `origin_` / `scope_` / `target_pariwar_id`); the version is random 700000–799999 (on a persistent dev DB the next real version becomes 7xxxxx+1); the Pariwar-B check is
+  `.not.toEqual(held…)` (passes for ANY other outcome); Pariwar A's alarm is not asserted. [apps/jobs/tests/claim-peer-mesh-requests-live.test.ts:93-106,598-615]
+- [x] [Review][Patch] **RV26 — Small hygiene (LOW; auditor + blind).** `releaseHookTx` was copied without `helplineSave`'s W9 line (`request.scopeTx = undefined`; QE17 says "copied from"; safe today);
+  the `CLAIM_FAMILY_ACCOUNT_ROWS_CAP` comment mentions superseded rows the query does not read; `propose` takes an unused `reply` and calls `void reply.status(200)`.
+  [apps/api/src/modules/questionnaire-versions/handlers.ts:223-228,390-402; packages/domain/src/claim/ground-inspection-questionnaire.ts]
+- [x] [Review][Patch] **RV27 — Widen the alcohol denylist's reach (LOW; blind + edge).** A lexical backstop beside the human classification tick: add the variant / romanised spellings (`daru`,
+  `daaru`, `दारु`) and normalise zero-width characters before matching; the over-blocking ("drinking water") stays accepted by its own comment. **CF3 (c).**
+  [packages/domain/src/questionnaires/keys.ts:123]
+- [x] [Review][Patch] **RV28 — AC5's "a test asserts each request body" is not met for two admin clients and one mobile link (LOW; auditor; layer-reported).** The admin panel / helpline tests mock
+  `api.save…` and assert the argument, never the JSON built in `client.ts`; mobile mocks `usePeerRequestQueries` wholesale, so `args.questionnaireVersionId` → `saveAnswer`
+  (`usePeerRequestQueries.ts:75`) is untested; AC12's mutant "a client NOT sending `questionnaireVersionId`" survives there. [apps/admin/tests; apps/mobile/tests/unit/peer-questionnaire-render.test.ts:20]
+- [x] [Review][Patch] **RV29 — Accessibility of the new page (LOW; auditor + blind; layer-reported).** **Checklist 13 (d), by web analogy:** the C9 warnings blocks, the keeping-own list and the act
+  confirmations have no live-region semantics (`t.saved` is defined, never rendered); the scope fieldsets and the per-question fieldsets have no `<legend>`; every "View" button shares one
+  accessible name; option inputs repeat identical `aria-label`s. [QuestionnaireVersionsPage.tsx]
+- [x] [Review][Patch] **RV30 — Records wording on AC11 (LOW; auditor; traced).** `deferred-work.md` (the build section) says "the ONE probe of a local host failed"; the Debug Log shows the one probe
+  was `tabs_context_mcp` answering *"Browser extension is not connected"* — no local host was reached. Task 9 calls that "AC11's own alternative"; AC11's alternative is "Chrome cannot reach
+  the local host after ONE probe". The un-attested disclosure itself is complete and AC11 stays OPEN; only the cause is worded imprecisely, and Task 9 is ticked `[x]` while un-attested.
+  **[[feedback_closure_language_precision]].** (My grep of the roster found ⛔ this wording in Row 45 (b).) [_bmad-output/implementation-artifacts/deferred-work.md:10; this story, Task 9 / Debug Log]
+- [x] [Review][Patch] **RV31 — Chain test holes (LOW–MEDIUM; auditor ×3 + blind; mixed).** `directVersion` with a NAMED base and its `base_moved` / acknowledge; approving a stale-ruled-base version ⇒ 409
+  `ruled_base_moved` (QE5 — only make-live is tested); make-live with target ≠ origin (→ RV2); `listVersionRows` / `readStepsFor`; the floor boundary (1000 is never inserted); a ruled-question
+  lock leg on `ground_inspection` (only `peer_mesh` `how_known` is exercised); HTTP legs for `not_publishable` / `not_withdrawable` / `base_moved` / `*_version_unreadable`; the WhatsApp-reminder
+  chain leg; and ONE test that serves a chain version through a consumer route — the API spec's header claims "the neighbours' questionnaire for a NEW request is the new version" but ⛔ member,
+  helpline or inspector route is called (**closure honesty, checklist 10**). [packages/domain/tests/integration/questionnaire-versions/*; apps/api/tests/integration/questionnaire-versions/questionnaire-versions.spec.ts]
+- [x] [Review][Patch] **RV32 — One unreadable pin fails the WHOLE helpline list (LOW; edge + auditor; traced).** `helplineList` loops `buildPeerRequestDetail` with no per-item guard and `pinnedVersionFor`
+  throws `PeerRequestVersionUnreadableError` ⇒ 409 for ALL of that neighbour's open requests while an operator is on the phone. Suggested: catch per item, raise the R8 alarm, omit THAT item
+  (BigDev may prefer a visible "could not be opened" stub — a contract field). **R7 (v).** [apps/api/src/modules/claims/claims.peer-request.handlers.ts:384-392; apps/api/src/modules/claims/peer-request-core.ts:184]
+- [x] [Review][Defer] **RVD1 — A failed `recordResult` AFTER the commit releases the idempotency key, so a retry re-runs the write** [handlers.ts:244-252] — deferred: the SAME shape as `helplineSave` (copied
+  faithfully), so a house-wide fix, not this diff's. ⚠ The cost differs here: a re-run `propose` / `direct` mints a second PERMANENT (append-only) version. Trigger: the next writer built on this shape, or a house pass.
+- [x] [Review][Defer] **RVD2 — `questionnaireVersionId` is optional on the wire, with no sunset** [contracts peer-request / ground-inspection save requests] — deferred: designed (R7 (iii), roster Row 45 (d); an old app that
+  sends none keeps the retryable stale). Trigger: the store build that sends the field has fully rolled out ⇒ make it required.
+- [x] [Review][Defer] **RVD3 — The steps INSERT policy does not bind a step to a version the Pariwar owns** [0192 `questionnaire_version_steps_tenant_insert`] — deferred: defence in depth (QE11 specifies the policy as
+  built; `ownTenantVersion` / `canTakeStep` guard every writer, and `versionStage` is last-step-wins). Trigger: any new `twt_app` code path that inserts steps.
+- [x] [Review][Defer] **RVD4 — No FK or existence check on `origin_` / `target_` / `scope_pariwar_id`** [0192; `makeVersionLive`, `directVersion`] — deferred: hardening (QE2 does not require one; a mistyped uuid writes a dangling
+  `made_live` for a Pariwar that does not exist; Super-Admin-only). Trigger: the first mistyped target, or the next migration touching these tables.
+- [x] [Review][Defer] **RVD5 — Read cost and alarm noise** [`rawLiveCandidates` has no LIMIT and re-parses every live step on each resolve; `pariwarsKeepingOwn` is N+1 (TR12); the R8 alarm is an unthrottled `console.error`] — deferred:
+  measured nothing; the alarm sink is roster Row 32 (h). Trigger: Row 32 (h) lands, or a measured resolve latency.
+- [x] [Review][Defer] **RVD6 — `CHAIN_RESERVED_QUESTION_KEYS` is a snapshot of today's ruled keys** [keys.ts] — deferred: a later code version that rules a key a live chain question already uses would
+  silently replace that question on re-base. Trigger: the next story that adds a ruled key.
+- [x] [Review][Defer] **RVD7 — Audit granularity of the Super Admin's direct path** [handlers.ts `globalWrite`] — deferred: three step rows under ONE `admin_questionnaire.made_live` line; propose / direct locators name the
+  kind, not the version; the hash omits the pages (QE17 as built, the feature-flags precedent). Trigger: an audit-trail requirement that names the direct path.
+- [x] [Review][Defer] **RVD8 — Test hardening** [lockstep tests pin the step enum and the floor, ⛔ the kind list or the wire limits 500 / 64 / 20 / 3-per-page; specs hard-code `ground_inspection.v2` / `peer_mesh.v3` / `v4` and random version
+  numbers; the `peer-mesh-reply.spec.ts` `save` helper's `.catch(() => null)` falls back to a version id] — deferred: nothing is wrong today. Trigger: the next version shipped in code.
+- [x] [Review][Defer] **RVD9 — Counsel basis on a RULED health question is exempt from the lock and relies on every reader calling `overlayCounselBasis`** [validator.ts `lockedView`, derive.ts] — deferred: the API forces
+  `counselBasis` for staff questions (`draftToPages`), so a forged value is ⛔ reachable over HTTP; the exemption exists for the day counsel's basis is recorded. Trigger: the first entry in `COUNSEL_BASIS_DECISIONS`.
+
+Dismissed (14 groups, ~55 raw findings — listed so BigDev can audit the dismissals): (1) the tenant list shows other Pariwars' steps — REFUTED: the tenant handle + the steps SELECT policy hide them;
+(2) drafts / `reason` readable cross-tenant at the DB layer — `-421` QE11 (A)'s recorded cost (the base bypass is RV3); (3) an unparseable row via the `toStoredDefinition` cast — it is an explicit
+7-field pick, and approve parses what it wrote; (4) silent un-publish on a stale ruled base / validator change — QE5 / R2 ratified, with the R8 alarm; (5) the author may approve their own proposal,
+the ticks are self-attested, read is bundled in `propose` — `-421` QE6 / QE9 / QE10 and `-422` Q1 A; (6) journal `when` "in the future" — the repo's +24 h-per-entry convention (190 / 191 / 192);
+(7) `...body` spread last — the body schema is `.strict()` with two booleans; (8) the boot assertion's crash-loop, the jobs fault relabelling, a staff health question holding that Pariwar's texts, and
+a `null` callback audience — designed (QE3, R5, QE10), and `callbackBasisFor` fails CLOSED; (9) the 422 `problems` echo staff text, word-function robustness, `typeof`-unsafe dereferences — intended
+(the editor shows the matched term) / guarded by R1's strict parse; (10) ruled-question order not locked, `canonicalJson` undefined-vs-absent, `newestCodeVersion` nits — AC1 locks per question and JSON
+transport has no `undefined`; (11) the deploy-order-is-a-comment point — Row 45 (d); (12) the `⛔` glyph readability complaint (4 layers) — the story's own glyph register; (13) AC12 "RED by construction",
+the R4 SQL-predicate mutant recorded "equivalent", R7 (v) unreadable terminal on mobile only — all DISCLOSED in the Dev Agent Record (AC12 is ⛔ met to its letter, and says so); (14) the nav link
+ungated (QE16), a tenant list fetched before the session resolves, the global detail without Pariwar context, the `$comment` in the locale bundle (13 already ship), the "In force: X — out of date,
+serving Y" copy (the R8 line verbatim), `abandonQueued` resurrecting answers (it clears `drafts`), `toDraft`'s kind coercion, member-name fallback logged once per binding, revert's response naming.
+
+### Review Findings — round 2 (the PATCH diff)
+
+Second three-layer review, 2026-10-30, of the diff the round-1 patches made (52 files, +2,988 / −209; the pre-patch tree was rebuilt from HEAD + the round-1 chunk diffs and the patch diff taken against it): two chunks — A server (2,142 lines), B clients
+(2,565) — each by a Blind Hunter, an Edge Case Hunter and an Acceptance Auditor, 6 layers in parallel, strictly read-only; the working-tree fingerprint was identical before and after. ~65 raw findings. After deduplication and a hand-trace of every
+load-bearing claim: **0 decision-needed, 20 patch, 12 defer (15 after applying — `RPD13`–`RPD15` were found while doing it); 14 dismissals**. **0 HIGH, 3 MEDIUM, 17 LOW.** No Trustee Panel question (§0 applied to each). IDs `RP` / `RPD` (round 2 of the patch diff; ⛔ `RV`, which is round 1).
+**Round 2 found defects the round-1 patches INTRODUCED or OVERSTATED:** RP1 (the denylist widening refuses "दारुण" — *grievous* — and "Daruka village", in a bereavement product), RP2 (the RV9 leg I called non-vacuous IS vacuous — its `approvable` is a constant
+`DeathCertificateAcceptanceRequiredError`, traced by running it), RP11 (the mobile hand-over has no identity guard). The round-1 Disposition's "verified" list stands for what it names; ⛔ for RV9's meaning.
+
+**Disposition (BigDev, 2026-10-30): option 1 — apply every patch.** All 20 applied; ⛔ committed, ⛔ pushed. Server side, fences, records and the shared helper by the reviewer; the admin web and the mobile app by two agents on disjoint files. **Verified on the FINAL tree:** `typecheck` 20/20,
+`lint` 20/20, the unit phase 37/37; the 31 other `ci:local` gates (build, structural invariants, determinism) — all pass; the live-DB `integration-tests` job on a FRESH database from scratch (a throwaway `postgres:16-alpine` on :5461, `pnpm db:migrate` through the AMENDED 0192 — which also answers round 2's "fresh-DB apply unverified"):
+24/24 tasks, every file executed — domain 447 files / 6,788 tests, api 208 / 2,499, jobs 86 / 1,962, the rest green; mobile 110 files / 2,162, admin 86 / 1,535. Mutants run and KILLED for every load-bearing leg (RP1 ×3, RP3, RP4, RP5, RP6 ×3, RP7, RP8, RP9 ×4, RP11 ×2, RP12, RP13, RP14, RP16, RP18).
+**⚠ A first re-run of the integration job on the SAME database failed once** (`announcement-activity-read.spec.ts`, 3/3 alone) — ⛔ this review's code: the first full run had left 7 committed `cycle_freeze_commits` for the shared `PARIWAR_A` (the jobs / api specs commit them and do not sweep them), which push that spec's rolled-back cycle out of its top-2 window.
+A fresh database cleared it (RPD15). **⚠ NOT done:** a single `pnpm ci:local` command on a fresh container (the phases were run separately); a THIRD review of this round's diff; AC11's real-browser pass (UN-ATTESTED, Row 45 (b) OPEN). ⇒ the story stays `review`.
+
+**Deviations and additions (⛔ silent):**
+- **RP1** — also folds full-width Latin (NFKC) and strips every Unicode FORMAT character, the variation selectors, U+034F and U+3164 (built without `\u` escapes); `दारु` takes a lookahead for `ण`, Latin `daru` / `daaru` are whole-word. Tested BOTH ways (the false positives not refused; the evasions caught).
+- **RP2** — the leg was REWRITTEN around the real gate (a claim approvable in everything but the visit, so the ground-inspection completion is the one conjunct left): it waits while chain answers are saved, is APPROVABLE once the visit completes with a chain answer on it, and goes back to waiting when the completed visit is voided.
+- **RP3** — `key={view.pingId}` on the slot's `PeerQuestionnaire`; the mobile agent found the same stale ref is also reached when B's detail is not yet cached.
+- **RP6** — `definitionsFor` is exported for its API spec.
+- **RP8** — the inspector panel got a `LoadFailed` screen that keeps `reportUnsaved` set, registers a discard and offers the existing "complete without the unsaved answers"; mobile got a `LoadError` with a leave guard (pressing "Leave without saving" GIVES UP the hand-over, like `abandonQueued`). Residual: RPD13.
+- **RP9** — ONE shared `withTimeout` / `RELOAD_REFETCH_BOUND_MS` (15 s) in `@twt/api-client`, used by all three clients; a rejection and the bound are both a failure ⇒ the existing Try again. Residual: RPD14.
+- **RP11** — the retry is restricted to the two NUMBERING constraints (`isNumberingCollision`), and a persisted two-connection leg proves the loop end to end.
+- **RP13 / RP12 / RP14** — as specified; `qv-keeping-own-retry` is a new button + string.
+- **RP19** — the mobile BACKGROUND leg now waits past the 1 s backoff; the admin panel legs run on a fake clock; the admin HELPLINE "ONCE" legs stay on real timers with their comments reworded (a fake clock there spammed `act` warnings) and gained a replaced-while-armed leg + a control.
+- **RP20** — dated annotations under QE11 (A), AC2 and the step table; a re-examination trigger in the migration header and the policy file. (The migration's COMMENT changed after it was applied; no statement did.)
+
+- [x] [Review][Patch] **RP1 — The RV27 denylist widening REFUSES innocent bereavement wording and still misses forms it was meant to catch (MEDIUM; blind + edge; traced by running it).** `forbiddenTopicMatch('दारुण दुःख')` ⇒ `दारु` and `('इस दारुण घटना')` ⇒ `दारु`
+  (*दारुण* = grievous, the commonest word in condolence text); `('Daruka village')` and `('darumaa')` ⇒ `daru` (a bare Latin substring). Meanwhile full-width `ＡＬＣＯＨＯＬ` (NFC does not fold it — NFKC does) and `alco` + U+2061 + `hol` PASS (the invisible-character class is
+  too short). Also: stored chain versions are re-validated on every read, so a term added to the list can make an approved version unreadable — nothing is live yet, but the list must not be widened carelessly. Fix: `दारु(?!ण)`; Latin `daru` / `daaru`
+  with word boundaries; `normalize('NFKC')`; strip `\p{Cf}` + variation selectors + U+034F (built without `\u` escapes); tests for BOTH directions (the false positives refused-not, the evasions caught). **CF3 (c); `-304` Q5 A.**
+  [packages/domain/src/questionnaires/keys.ts:123-137; packages/domain/tests/questionnaires/chain-versions.test.ts (the RV27 leg)]
+- [x] [Review][Patch] **RP2 — The RV9 "nothing gates" leg for the ground-inspection side is VACUOUS in what it names (MEDIUM; auditor; traced by instrumenting it).** `gates()`'s `approvable` is `DeathCertificateAcceptanceRequiredError … 'not_reviewed'` in this fixture —
+  a constant, thrown before any conjunct a chain answer could reach; `completion` reads only assignment status / stage / inherited source / compared-upload id (`ground-inspection-approval.ts`), and the visit is never completed. The "control" moves the CLAIM STATE, which
+  moves everything — it proves the serialisation reacts to the claim, ⛔ to a gating answer. Round 1's Disposition called the leg non-vacuous; ⛔ it is. Fix: seed a claim that is APPROVABLE (accepted certificate, nominee accounts, a completed visit via
+  `completeWithDate`) so `approvable` is `'ok'` BEFORE the answer, assert that before-state, then answer; and a control that varies the GATING input (complete / un-complete the visit) so `completion` is shown sensitive to the right thing. **AC10; checklist 11;
+  [[feedback_gate_scope_semantic_coverage]].** [packages/domain/tests/integration/claim/ground-inspection-questionnaire.spec.ts (the NOTHING GATES describe)]
+- [x] [Review][Patch] **RP3 — The mobile hand-over is not scoped to the ping it came from (MEDIUM; auditor + blind; traced).** `PeerRequestSlot` mounts `<PeerQuestionnaire pingId={view.pingId}>` with ⛔ `key`; the screen's `carried` ref lives as long as the screen. A
+  link-to-link switch whose by-link result is cached goes `questionnaire(A)` → `questionnaire(B)` without passing through `loading`; B's first render takes `toCarry = carried.current` (A's unsent answers) and re-saves them INTO B. Both pings are the same member's, so the
+  server accepts the write. Before round 1 this was unreachable (`carried` was set only on a version-stale reload); the always-on mirror made it reachable. The helpline and the inspector panel are guarded (`[memberId, ready]` clear; a per-visit card key). Fix: `key={view.pingId}`
+  on the slot's `PeerQuestionnaire` (a remount per ping resets the ref), and a leg that switches ping with unsent drafts. **RV7; checklist 12 (a).** [apps/mobile/components/peer-request/PeerRequestSlot.tsx:69-70]
+- [x] [Review][Patch] **RP4 — The mobile `onReload` still overwrites the merged hand-over (LOW–MEDIUM; blind + edge; traced).** `onReload` does `carried.current = drafts` (`PeerQuestionnaire.tsx:75`) with the editor's OWN drafts, from both call sites (211, 434) — bypassing
+  `mergeCarried`, so answers carried in but not yet applied are dropped when a reload fires before the instance applied them. The admin versions already ignore the argument. Fix: `onReload` takes no drafts and leaves the mirror as the only writer. **RV7.**
+  [apps/mobile/components/peer-request/PeerQuestionnaire.tsx:75,105,211,434]
+- [x] [Review][Patch] **RP5 — The RV10 count is still unasserted on the CONSOLE audit line (LOW–MEDIUM; auditor; layer-reported, grep-consistent).** Only `admin_claim.peer_answers_read` gets a non-zero `sensitive_answer_count` (`peer-answers-approvers.spec.ts`); deleting the spread at
+  `claims.verifier-console.handlers.ts:1396` leaves the suite green. Round 1's "BOTH audit lines" was overstated. Fix: read the console as a district admin in the same spec and assert `admin_verifier_console.read`'s context carries `sensitive_answer_count: 1` and
+  `family_sensitive_answer_count`. **AC4; checklist 8.** [apps/api/tests/integration/claims/peer-answers-approvers.spec.ts; apps/api/src/modules/claims/claims.verifier-console.handlers.ts:1396]
+- [x] [Review][Patch] **RP6 — RV24's counted, batched path has no test (LOW–MEDIUM; auditor + edge; traced by grep).** `getQuestionnaireDefinitions` and `databaseVersionIds` are referenced by no test; no API spec drives a DATABASE-pinned reply / visit through the assembler, so deleting the
+  `bump()` (the original defect) leaves everything green and "+2 conditional → 33" is never reached. Also `readStepsFor` has no direct leg. Fix: domain live-DB legs (code-only ⇒ `queried: false` and NO statement; N distinct DATABASE ids ⇒ ONE statement; unparseable ⇒ `null` + alarm; unknown ⇒ `null`) and an
+  API leg on `definitionsFor` (exported for it): code-only ⇒ no `bump`, no `run`; a DATABASE pin ⇒ one `bump` and one `run`, however many ids. **RV24; checklist 7.**
+  [packages/domain/src/questionnaire-versions/read.ts; apps/api/src/modules/claims/peer-answers-assembler.ts (`definitionsFor`)]
+- [x] [Review][Patch] **RP7 — The RV18 payload is still built from the BASE (LOW–MEDIUM; blind + auditor; traced).** The editor shows the newest code version's ruled questions (`ruledQuestions`, line 598) but `const pages = draftPages(b, questions)` (line 607) takes the ruled keys and
+  layout from the base. If the newest Panel version added, removed or regrouped a ruled key, the locked list on screen and the proposal disagree (the validator then refuses a missing ruled key, which the editor cannot fix). QE5 is met for wording only. Fix: build the ruled pages from the
+  current code version's pages when it loaded; fall back to the base only on the same notice as the display. A leg where the two versions differ. **QE5; AC9.** [apps/admin/src/modules/questionnaire-versions/QuestionnaireVersionsPage.tsx:537,598,607]
+- [x] [Review][Patch] **RP8 — A failed reload drops the leave guard while answers are still unsent (LOW–MEDIUM; edge; traced).** The inspector panel's `reportUnsaved` lives in the editor child (cleanup sets it false); when the load-failed screen replaces the editor, the inspector can complete the visit or leave
+  the claim with no warning, the unsent answers sitting only in the hand-over ref. Mobile: the failed-reload screen replaces the `Questionnaire` that owns `usePreventRemove`. Fix: keep reporting unsaved from the PARENT while `carried.current.length > 0` in the error branch; mobile: a leave guard on the failed screen. **RV8 (the same class: no exit / silent loss).**
+  [apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx:151-160,279-284; apps/mobile/components/peer-request/PeerQuestionnaire.tsx:92-110]
+- [x] [Review][Patch] **RP9 — A reload refetch that NEVER settles leaves the card / panel / screen stuck (LOW–MEDIUM; edge + blind; the house lesson).** The admin transport has no timeout and the recorded lesson says to RACE a bound ([[project_tanstack_refetch_rejoins_hung_fetch]]): the helpline card sits on "updating them…", the inspector
+  on "Loading…", and mobile on its spinner, with no Try again, the answers neither saved nor recoverable. Fix: bound each `onReload` refetch (≈ 15 s) and treat the bound as a failure ⇒ the existing Try again. A leg with a never-resolving refetch under fake timers.
+  [apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx (onReload); apps/admin/src/modules/ground-inspection/QuestionnairePanel.tsx (onReload); apps/mobile/components/peer-request/PeerQuestionnaire.tsx (onReload)]
+- [x] [Review][Patch] **RP10 — `versionVisibleTo` leans on RLS for its Pariwar filter (LOW; auditor + blind; traced).** Its steps leg is `readVersionSteps(db, id).length > 0` with the `pariwarId` argument unused: correct only on an RLS-bound tenant handle; on a superuser / BYPASSRLS handle any version with any step reads
+  "visible" and `assertBase` fails OPEN. Inconsistent with `listVersionRows` and `shownSteps`, which filter explicitly (R4: "no query leans on RLS"). Fix: filter the steps by `scopePariwarId === null || === pariwarId` in code, plus a leg on the superuser handle.
+  [packages/domain/src/questionnaire-versions/write.ts (versionVisibleTo)]
+- [x] [Review][Patch] **RP11 — `isUniqueViolation` throws on `null`, retries ANY unique violation, and the retry has no persisted end-to-end leg (LOW; blind + auditor; traced).** `isUniqueViolation(null)` reads `e.code` on `null`; the retry fires for ⛔ only `(kind, version)` / `version_id` but any 23505
+  (three attempts); the loop's success path was shown only by an unpersisted mutant run. Fix: guard non-objects; retry only when the constraint is `questionnaire_versions_kind_version_uq` or `…_version_id_uq` (else rethrow); a persisted two-connection leg — a raw uncommitted insert of the
+  next number, then `proposeVersion` blocks on the unique index, the first commits, the proposal takes the NEXT number. **RV12; checklist 2.** [packages/domain/src/questionnaire-versions/write.ts (insertVersion, isUniqueViolation); packages/domain/tests/integration/questionnaire-versions/write-concurrency.spec.ts]
+- [x] [Review][Patch] **RP12 — A base-moved tick outlives the warning it was given for (LOW; auditor + edge + blind; traced).** `ack` resets on scope change and success but ⛔ where `baseMovedVia` clears (View, open / close editor, an unrelated success). The panels are keyed per version, so a version switch is safe, but the SAME mounted panel
+  re-shows a fresh `base_moved` with the box already ticked and Make live enabled — one click sends `acknowledgeBaseMoved: true`. The round-1 leg proves only the intermediate click. Fix: reset `ack` when `baseMoved` becomes false (panel and editor), and a leg that re-raises the 409. **RV14; QE7 (e).**
+  [apps/admin/src/modules/questionnaire-versions/QuestionnaireVersionsPage.tsx:354-358,496,589-613]
+- [x] [Review][Patch] **RP13 — The every-Pariwar gate accepts a STALE list and its error has no retry (LOW; auditor + edge + blind; traced).** `keeping.isSuccess` is also true for cached data while a background refetch runs, so a stale list can unlock the confirm; and `qv-keeping-own-error` says "Please try again" with no control (the only way
+  out is toggling the radios). Fix: `isSuccess && !isFetching`; a Try again button calling `keeping.refetch()`. **RV13; QE7 (a).** [QuestionnaireVersionsPage.tsx:455-466,486]
+- [x] [Review][Patch] **RP14 — `run` leaves the previous act's warnings and "Saved" beside a new failure (LOW; blind + edge; traced).** `run` clears the error but ⛔ the C9 warnings; after act 2 fails, act 1's warnings and (via per-call `mutateAsync`) a "Saved" can sit beside it. Fix: clear warnings and saved at the top of `run`.
+  **RV15.** [QuestionnaireVersionsPage.tsx (run)]
+- [x] [Review][Patch] **RP15 — The domain GI spec has two imports glued on one line (LOW; blind + auditor; traced).** Line 31: `…errors.js';import { assertClaimApprovable } from …` — a paste defect of the round-1 edit. [packages/domain/tests/integration/claim/ground-inspection-questionnaire.spec.ts:31]
+- [x] [Review][Patch] **RP16 — The new `afterAll` sweeps have no ROLLBACK, and one test claim cannot fail (LOW; edge + blind + auditor; traced).** The ground-inspection and helpline API specs `BEGIN … COMMIT` with no `catch`: a failing `DELETE` aborts the transaction on a pooled client and skips the user cleanup in the same `try` (the member spec has the `ROLLBACK`).
+  And "an OLD visit keeps its pin" re-GETs the same visit while the chain version is STILL the one in force — it would pass if the pin were ignored. Fix: the `try / catch → ROLLBACK` form; make a NEWER chain version live after the pin and assert the old visit still answers its pinned version.
+  [apps/api/tests/integration/claims/ground-inspection-questionnaire.spec.ts (afterAll; the RV31 / AC4 test); apps/api/tests/integration/claims/peer-request-helpline.spec.ts (afterAll)]
+- [x] [Review][Patch] **RP17 — The RV20 leg is non-hermetic and its bounds are vague (LOW; blind + auditor).** `top` is random in 1.3M–2.2M and the leg expects the peer_mesh versions to be EXACTLY `[top+2, top+1]` and the inspection one to contain `top`: any committed row above it (leaked rows from the API specs, 1.8M–1.95M, or the jobs tests, 2.0M+) fails it; the
+  `gi` bounds are `>= 1` and `<= 2`. Fix: take `top` from `max(version) + 10` read in the test's own transaction; assert `gi` exactly. [packages/domain/tests/integration/questionnaire-versions/write.spec.ts (the RV20 leg)]
+- [x] [Review][Patch] **RP18 — The nothing-gates direct scan is not recursive (LOW; blind).** It lists `questionnaire-versions/` and `questionnaires/` with a non-recursive `readdirSync`, so a subdirectory is never scanned. Fix: walk recursively; keep the `> 10` floor. [packages/domain/tests/questionnaire-versions/nothing-gates-fence.test.ts]
+- [x] [Review][Patch] **RP19 — Test titles and comments that claim more than the leg proves (LOW; blind + auditor).** The "applied ONCE" admin / helpline / mobile legs settle for 60–80 ms against a retry that runs behind `retryDelayMs(1)` = 1000 ms (the comment "rules out the disposed editor's retry" is not what it observes); the RV16 title says "nor with none" but the none case (code, empty `skipped`) is not in it;
+  four titles still say "the ceiling is 29 / 30" and "MAX_READS is pinned (30 …)" while the code asserts 33. Fix: advance the clock past the retry delay in the "ONCE" legs (or state what they observe), add the RV16 none case, correct the titles. [apps/admin/tests/*; apps/mobile/tests/unit/peer-questionnaire-render.test.ts; apps/api/tests/integration/claims/verifier-console*.spec.ts, suspicion-refusal-routes.spec.ts]
+- [x] [Review][Patch] **RP20 — The story's records still describe the two-leg steps policy (LOW; auditor; checklist 9).** QE11 (A), AC2 ("steps keyed on `scope_pariwar_id`") and the step table were written before RV2's third SELECT leg, and the migration / policy-file notes give a rationale but no RE-EXAMINATION TRIGGER.
+  Fix: a dated annotation under QE11 (A), AC2 and the step table naming the third leg and what it exposes at the DB level (the origin reads the target's uuid, the actor's display name and the time of a `made_live` for another Pariwar; the API's `shownSteps` withholds them); a trigger line in the migration header and the policy file ("any
+  new consumer that returns step rows from a tenant handle"). **Checklist 9.** [this story, QE11 / AC2 / step table; packages/domain/migrations/0192_questionnaire-versions.sql; packages/domain/src/policies/questionnaire-versions-rls.ts]
+- [x] [Review][Defer] **RPD1 — The reload is a DOUBLE rebuild by construction (data changes, then the generation bumps), so one answer is sent three times** [QuestionnairePanel / HelplinePeerRequests `onReload`; the "ASYNC reload" legs assert `saves()` = 3] — deferred: the merge makes the second rebuild survivable (round 1 RV7); removing it means restructuring the reload around ONE signal. Trigger: any change to the reload mechanism, or an observed duplicate-save complaint.
+- [x] [Review][Defer] **RPD2 — A draft whose request is still on the wire is mirrored and re-sent under a NEW idempotency key by the successor** [the three clients' `mirror()`] — deferred: for a version change the old request is refused 409 (safe); for a same-version rebuild the old request could land after a later edit (last write wins), a narrow window. Trigger: the first report of an answer that reverted.
+- [x] [Review][Defer] **RPD3 — No loop breaker on repeated stale → reload → re-save** [the three `onReload`s] — deferred: needs a server that keeps answering stale for a version it also serves, which the version compare makes impossible short of a cache fault. Trigger: a stuck-reload report.
+- [x] [Review][Defer] **RPD4 — The version list truncates silently past 200 versions of ONE kind, and may cut the in-force one** [`listVersionRows`] — deferred: staff-written versions are few; a "more" signal needs a contract field. Trigger: any kind passing ~150 versions, or the list gaining a pager.
+- [x] [Review][Defer] **RPD5 — The new `role="status"` nodes that mount WITH their text (`qv-keeping-own`, `qv-keeping-own-loading`, `qv-detail-warnings`) are not reliably announced** [QuestionnaireVersionsPage.tsx] — deferred: checklist 13 (d) by web analogy; the persistent `qv-status` region is right. Trigger: 11b.8's accessibility audit, or any surface refactor of this page.
+- [x] [Review][Defer] **RPD6 — Validation issue lines show raw 0-based pointers, capped at 5 with no "and N more"** [`issueLine` / `errorLines`] — deferred: editorial. Trigger: the first editor who cannot find the field.
+- [x] [Review][Defer] **RPD7 — The helpline omits an unreadable request silently from the operator's point of view** [`helplineList`] — deferred: round 1 RV32 disclosed it as BigDev's call (omit + alarm + audit count vs a visible stub, which needs a contract field). Trigger: BigDev's choice.
+- [x] [Review][Defer] **RPD8 — Concurrency specs have no `try / finally` around the open transactions, and several specs draw version numbers from overlapping random bands** [`write-concurrency.spec.ts`; the API and jobs specs] — deferred: the same pattern as the specs before this story; the sweep is the real protection. Trigger: a hung run holding an advisory lock.
+- [x] [Review][Defer] **RPD9 — The Editor swaps the form for "Loading…" if the code-version query changes id mid-edit, losing typed state** [Editor] — deferred: code versions change only on deploy. Trigger: a deploy while an editor is open.
+- [x] [Review][Defer] **RPD10 — Refs are assigned during render (`questionsRef`, `allQuestionsRef`)** [QuestionnairePanel / HelplinePeerRequests / PeerQuestionnaire] — deferred: lint passes today; unsafe under a discarded concurrent render. Trigger: React concurrent features or a newer `react-hooks` rule.
+- [x] [Review][Defer] **RPD11 — A cross-Pariwar withdraw-vs-make-live RACE leg** [`write-concurrency.spec.ts`] — deferred: round 1 RV2 added the non-racing legs; the step lock serialises both. Trigger: any change to the step lock order.
+- [x] [Review][Defer] **RPD12 — A few test-infrastructure nits** [the RV7 legs re-assume the TanStack scheduler default after `setScheduler`; the mobile save-version test says "ONLY the transport is stubbed" yet mocks ~ten modules; the duplicated pure-function tests; the cross-feature import of `mergeCarried` through `helpline-claims/carry-over.ts`] — deferred: cosmetic. Trigger: the next edit of those files.
+
+- [x] [Review][Defer] **RPD13 — The failed-reload screen does not replicate the editor's tab-close warning (`beforeunload`) or its router-block** [`QuestionnairePanel.tsx` `LoadFailed`] — deferred: it keeps `reportUnsaved`, a discard and the unsaved note; closing the TAB during a failed reload is still unwarned. Trigger: the first report of answers lost on a closed tab.
+- [x] [Review][Defer] **RPD14 — A very late reload timeout can show the failed screen over an editor another route already rebuilt** [the three `onReload`s] — deferred: needs the reload's refetch still pending 15 s after a rebuild; judged degenerate. Trigger: a flash of "could not be updated" over a working questionnaire.
+- [x] [Review][Defer] **RPD15 — The integration job is not re-runnable on one database: jobs / api specs commit `cycle_freeze_commits` for the shared `PARIWAR_A` and do not sweep them, so `announcement-activity-read.spec.ts` (top-2 window) fails on the second run** [`apps/jobs/tests/close-cycle-alert-live.test.ts`, `assignable-roster-live.test.ts`, `apps/api/tests/integration/announcement-channels.spec.ts`, …] — deferred: pre-existing test pollution, not this story's; CI and `ci:local` use a fresh database. Trigger: the next story that runs the job twice on one database, or a sweep pass over the committing specs.
+
+Dismissed (14 groups, ~25 raw findings — listed so BigDev can audit them): (1) "migration 0192 edited in place never reaches an already-migrated database" — REFUTED: `git log --all -- 'packages/domain/migrations/0192*'` is empty and none of the four other story databases has the tables;
+(2) "`recordResult` runs before the commit" — REFUTED: `closeScopeTx` is in `tenantWrite`'s `finally`, inside the function `withIdempotency` awaits, before `recordResult`; (3) "`translateGroundInspectionError` may return" — it is typed `never` and ends in `throw err`;
+(4) "other callers of `groundInspectionVersionFor` turn a corrupt pin into a 500" — there are exactly three (the writer, the GET, the save pre-block), all covered; (5) "the contracts test lacks a `questionnaires` import" — it is at the top of the file (and was before); (6) "`mergeCarried` orders by recency, not dependency" — the order is the editor's
+own edit order, which the editor's queue already handles; (7) the same-tick double click on Revert and the differing idempotency keys — cosmetic, the second is a 409 `nothing_to_revert`; (8) "changing a kind deletes `exclusive` irreversibly" — RV21's own intent; (9) "`ack` / `scope` survive a version switch" — `VersionPanel` and `Editor` are keyed, so they remount;
+(10) "`apps/mobile/lib/peer-request.ts` now loads the api-client barrel" — the whole mobile suite (2,156) and the screen already import it; (11) the helpline `reloading` entry not reset on a rebuild — cosmetic; (12) `resolveSpecifier` on `.json` / `.tsx` — a missing resolution throws LOUDLY, by design;
+(13) "the fence ROOTS are hard-coded" / "`ITEM_WORD_RE` is evadable" — stated in its own comment (a tripwire, ⛔ a proof); (14) "no test of a never-recorded `QuestionnaireDefinition` alarm on a missing pin", "RV11 has no non-human leg" — round 1's Fix text asked only for tampered sessions.
 
 ## Dev Notes
 
@@ -991,16 +1303,117 @@ first; record mutants in the Debug Log.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), Claude Code — `bmad-dev-story 6.33`, 2026-10-30.
+
 ### Debug Log References
 
+- **Task 0.1 (2026-10-30).** `git fetch origin`: `origin/main` = `bc88bd5e`, HEAD `823c81cc` an ancestor ⇒ fast-forwarded (⛔ rebase needed).
+  `git diff --name-only 26901c92..HEAD -- packages apps scripts infra docs` → only `docs/launch-gate-inventory/inventory-roster.md` (Row 45,
+  this story's) ⇒ ⛔ cited code file moved. NUMBERS re-grepped on every branch / remote / worktree: decisions max `-423` (next `-424`);
+  migrations max `0191` (this story `0192`); `PERMISSION_CATALOG_VERSION` max `55` (this story `56`); Row 45 minted; ledger next `2026-10-30l`.
+  G8 call sites (the full grep, non-test): `claims.ground-inspection.handlers.ts` (`enWords` def; `getQuestionnaireVersion` in the completion
+  discrepancy path; `groundInspectionVersionFor` ×2 — GET + save; `servedDefinition`; `toWireQuestionnaire`), `peer-answers-assembler.ts`
+  (`enWords` def + 4 uses; `getQuestionnaireVersion` ×2 — replies + `familyAccountViews`), `peer-request-core.ts` (`toWireQuestionnaire`
+  def; `pinnedVersionFor` ×2 — detail + `prepareSave`; `servedDefinition` ×3), `claim-peer-mesh-requests.ts` / `claim-peer-mesh-wa-reminders.ts`
+  (`resolveLiveVersion` + `pendingCounselBasisKeys`), `claim/ground-inspection-questionnaire.ts` (`groundInspectionVersionFor` + its writer use),
+  `claim/peer-mesh-reply.ts` (`pinnedVersionFor` + its writer use), `questionnaires/registry.ts` (the definitions). Matches G8.
+- Task 1: chain-versions.test.ts RED first (36/37 failing before the engine change). Mutants KILLED: C1 reserved, C1 length, C2, C3 GI max, C4 optional truthy, C5 truthy, C6 text leg, C7 basis list, C8 cap, C10 placeholder, CHAIN_RECORD_RE widened to any string, code citing chain admitted, lock drops closing note, lock drops a field (approvedBy), chain decided by approvedBy (a DB question citing a Panel id escaping), code >= 1000 refusal dropped, exactly-one by truthiness. EQUIVALENT (recorded): dropping the regex inside isOwnChainRecord alone — checkDbVersion's own uuid check on the context id refuses the same input.
+- Task 2: 0192 hand-written; fresh-DB migrate (twt-633-pg :5450) applied 0000–0192 in one run. Policy spec 10/10. DB mutants KILLED by ALTER POLICY: steps tenant INSERT admitting made_live; versions INSERT without NOT direct. twt_app inserts into the identity `seq` with ⛔ sequence grant (a leg).
+- Task 3: read.spec.ts 11/11. Mutants KILLED: all-before-own, stale resolves, R1 validator dropped, strict → passthrough, string "true" admitted, counsel overlay dropped, revert keyed on version, seq ignored (array order). EQUIVALENT (recorded): the SQL Pariwar predicate dropped, the SQL step filter dropped — `liveCandidates` filters the Pariwar and the step again in JS (two layers); the R4 leg still runs on the superuser (RLS-bypassing) connection.
+- Task 4.1 (TR10): `git grep SENSITIVE_QUESTION_KEYS -- packages apps ':!**/tests/**'` — the writers decide encrypt by the DEFINITION's `q.sensitive` (`answers.ts` `checkAnswer` → `storage.form`); the only fixed-list reads are the validator (rules), the two migrations' LOCKSTEP comments, and `familyAccountAuditCounts` (the `family_health_answer_count` audit count — kept; C11 adds the ciphertext counts beside it). ⛔ fixed-list encrypt decision.
+- Task 4.2: every G8 site moved (GI GET / save INSIDE `pre` / completion discrepancy; peer detail + `prepareSave`; the assembler's two lookups — pre-read via `run('peer_section_family_definitions' / 'peer_section_reply_definitions')`, handed to `familyAccountViews`; both jobs inside the locale `withPariwarScope`). R6 fence `sync-resolver-fence.test.ts` (+ the QE4 word fence). `registry` kept as the CODE-registry test seam through the async reader (the ~70 jobs-test usages unchanged).
+- Task 4.3: copy key `questionnaire.member_fallback` (en "the member", hi "सदस्य" — HUMAN-REVIEWED 2026-10-30, `$comment.questionnaire_member_fallback`); ⚠ the claimant screens' `member_fallback` ("your family member") is a DIFFERENT key, untouched. The fallback is logged only when a `{member}` slot actually takes it (an option-only read logs nothing). Real-t() leg in `apps/api/tests/unit/questionnaire-words.test.ts`.
+- Task 4.4: also added the client-id compare to the PRE-LOCK paths (`prepareSave`, the GI save's `pre`) — a flip that removed the question would otherwise 422 there before the writer runs. Mutants KILLED (live DB): GI compare removed (handler-only), GI compare after checkAnswer, peer compare removed, peer compare after checkAnswer, version-stale classified as the retryable stale.
+- Task 4.5: `PeerAnswerEditor` `isReload` + `'reload'` + `carryOverDrafts()`; each client keys its editor on `versionId` + a reload generation, hands drafts up, refetches, and the rebuilt editor re-saves surviving drafts one tick after mount (cancelled on cleanup — Strict Mode sends each once; seen 3 saves before the tick). Mobile: a failed reload refetch ⇒ the load error's "Try again" (⛔ a rebuild on the old version — it would only meet the 409 again). Admin helpline: the save hook's 409 invalidation EXCLUDES the version-stale code (it could rebuild the card before the drafts were handed over). Unreadable ⇒ terminal everywhere (mobile `not_openable`; panel / helpline a named admin-English line). Mutants KILLED: mobile version-stale → retry; mobile not sending the id.
+- Task 4.6: 20 × 5 cap leg (live DB, 100 answers read, 20 live per reply); C11 `sensitive_answer_count` + `family_sensitive_answer_count` on BOTH read lines via an internal `onSensitiveAnswerCounts` callback (⛔ a wire field); approvers spec expectations updated.
+- Task 5: catalog 55 → 56 (71 → 74); `questionnaire.propose` / `.approve` on `pariwar_admin` (Trustee-Lite consts + comment citing G6 / `-304` "or their own"); `.publish` super_admin only (derived). Tests: holder sets, ⛔ state_trustee (with the RANK-ORDER reason proven), LIVE-on-dimension for each, publish global-only. ⛔ contracts mirror of keys exists (grep) — none touched.
+- Task 6 (domain): `questionnaire-versions/write.ts`. Mutants KILLED (live DB): step lock dropped (approve vs return; withdraw vs make-live — the second never blocked), live lock dropped (concurrent make-live; make-live vs revert), server ⛔ replacing the ruled questions, server ⛔ stamping chain:<id>. A new code `questionnaire.not_withdrawable` (409) for a withdraw in the wrong state (the story names not_approvable / not_publishable for approve/return and make-live; a withdraw is neither) and `questionnaire.base_invalid` (422) for an unknown / other-kind base.
+- Task 6 (API): `apps/api/src/modules/questionnaire-versions/{handlers,routes,index}.ts` (QE17's composed order; a replay returns the RECORDED response — asserted); contracts `packages/contracts/src/questionnaire-versions/index.ts` (draft pages: a ruled question BY KEY, a staff question with en + hi words — the server sets optional / sensitive / ⛔ warning / counsel pending / the chain record). API spec 8/8 (403 by key incl. state_trustee; the chain end to end; 422 problems; ticks; not_author; the 404 rule + schema-shape; global reads; direct / revert / replay; Idempotency-Key required). ⛔ An all-Pariwar version is committed by any spec (the ALL legs run in the domain spec's rolled-back transaction).
+- Task 7: admin page `/p/$pariwarId/questionnaires` (nav UNGATED), module-local English (both QE10 counsel warnings verbatim per kind). 10/10 RTL legs. The admin client function is `getQuestionnaireVersionDetail` (⛔ `getQuestionnaireVersion` — it collided with the R6 fence's pattern, which caught it).
+- Task 8: `nothing-gates-fence.test.ts` (transitive import scan — ⛔ approval-warnings / ground-inspection-approval / inspection-discrepancy / nominee-name-check / medical; teeth leg); `nominee-name-no-comparison-fence.test.ts` +6 files (56 → 62) incl. its decrypt-free and medical-declaration legs; live-DB AC10 leg (two staff answers written; `assertClaimApprovable`'s outcome, the warnings read and the completion state byte-identical). Mutant KILLED: the fallback word dropped. ⚠ Every new leg was RED before its change BY CONSTRUCTION (the module / function / field did not exist) except where noted RED-run (Task 1's 36/37).
+- Task 9 (AC11): the ONE probe — `tabs_context_mcp` answered *"Browser extension is not connected"* (a static page on `127.0.0.1:5199` served by curl) ⇒ the real-browser pass is recorded UN-ATTESTED (`deferred-work.md`; Row 45 (b)), ⛔ faked.
+- Task 10: the contracts lockstep test (`packages/contracts/tests/questionnaire-versions.test.ts` — steps, kinds, chain kinds, the inspection option cap; the draft question refuses a client-chosen flag). Lint: the `{ x: _x, ...rest }` omit idiom is refused by the repo's lint (5 sites rewritten).
+
+- **`ci:local` (AC12), honestly:** run 1 on a FRESH container (`twt-633-ci`, DB `twt_dev`, `DATABASE_URL` set) — 35 / 36: `domain-invariants` found a REAL
+  defect (`listVersionRows`' `.limit(n)` clamped into a variable — the gate needs `clampLimit(…)` inline); fixed. Run 2 on a RECREATED fresh container — 35 / 36:
+  `domain-invariants` ✓, `integration-tests` ✓; the one red was `test (unit)` → `apps/admin/tests/niyamavali-page.test.tsx` (*"shows the tone-review resolution
+  path when publish is rejected 409"*) timing out at 5.4 s under `--concurrency=4` — the known unit-phase oversubscription class
+  ([[project_ci_local_concurrency_oversubscription]]); ⛔ touched by this story; passes 3 / 3 in isolation and the whole admin suite passes alone (84 files,
+  1470 tests). ⇒ ⛔ a single clean 36 / 36 run is claimed; every job has been green in at least one of the two fresh-container runs, and the red of each
+  run is explained. The push's own gate re-runs it ([[project_prepush_hook_inherits_5432]] — `DATABASE_URL=<story port>` on the push).
 ### Completion Notes List
 
+- ⭐ **Built as ruled and as answered** (`-304` Q7 / Q8; `-421` QE1–QE17 all (A); `-422` Q1 A, Q2 (a) A, Q2 (b) A, Q3 A): versions in the database
+  beside the code ones (0192 — two append-only tables, `seq` order, RLS: versions readable by every tenant, tenant INSERT only own origin ⛔
+  `direct`; steps keyed on `scope_pariwar_id`, the tenant leg only the four tenant steps); the ONE validator widened to the origin (`code` / `db`):
+  the server-stamped chain record, the ruled-question lock against the RECORDED ruled base, QE8's C1–C8 / C10 (C9 as separate warnings), QE10's
+  counsel basis, QE3's 1000 floor; the async database-aware reader (R1 strict parse + the same validator, R2 by `seq` with the revert rule and
+  the invalid / stale skips, R3 overlay, R4 explicit Pariwar predicate, R8 alarm) and the boot check in both `main()`s; every consumer moved (R5)
+  behind the sync-resolver fence (R6); the ONE word function (stored text + copy keys; D11's reviewed fallback word, logged); R7 — the optional
+  `questionnaireVersionId`, the version compared FIRST under the lock in both writers (and pre-lock), new `*.questionnaire_version_stale` /
+  `*_unreadable` codes, the editor's third `'reload'` outcome and a keyed rebuild in all three clients; RBAC catalog 56 (propose / approve on
+  `pariwar_admin` as Trustee-Lite, the author MAY approve; publish super_admin only); the chain's domain writer (one fixed lock order) and API
+  (QE17's composed order, the recorded replay); the admin page (both kinds; both counsel warnings verbatim); nothing gates, proven (import fence
+  + a byte-identical live-DB leg).
+- ⚠ **Departures, each stated:** (1) the `registry` test seam was KEPT (as the reader's code-registry fallback) instead of replacing the jobs'
+  `deps.questionnaireRegistry` with the reader object — every existing test injection works unchanged; (2) the client-id compare is ALSO made
+  pre-lock (`prepareSave`, the GI save's `pre`) — otherwise a flip that removed the question 422s before the writer sees it; (3) two refusal codes
+  beyond AC8's list (`not_withdrawable`, `base_invalid`); (4) the draft wire carries ruled questions BY KEY and staff questions' words + kind +
+  options + condition + health only — the server sets every flag; (5) the admin client function is `getQuestionnaireVersionDetail` (the R6
+  fence caught the name `getQuestionnaireVersion(`).
+- ⚠ **UN-ATTESTED:** the real-browser pass (AC11) — the extension was ⛔ connected; recorded in `deferred-work.md` and Row 45 (b), ⛔ faked.
+- ⚠ **D8 split, ⛔ overclaimed:** its version half is closed (the compare-first makes the six bare `Error`s unreachable on a flip); its S10 half
+  (an erasure rewrite keeping the row id) is ⛔ touched and stays OPEN. `resolvePeerRequestMemberName` was ⛔ touched (its item stays OPEN).
+- ⚠ **Equivalent mutants (recorded, ⛔ killed):** the SQL Pariwar predicate and the SQL step filter in the reader (`liveCandidates` filters both
+  again in JS); the regex inside `isOwnChainRecord` alone (the context id is checked separately). "Steps ordered by `at`" is ⛔ expressible — `at`
+  is ⛔ read by any resolver; the array-order mutant of `versionStage` / `liveCandidates` is killed.
+
 ### File List
+
+**New**
+- `packages/domain/migrations/0192_questionnaire-versions.sql`
+- `packages/domain/src/schema/questionnaire_versions.ts`
+- `packages/domain/src/policies/questionnaire-versions-rls.ts`
+- `packages/domain/src/questionnaires/derive.ts`
+- `packages/domain/src/questionnaire-versions/{index,parse,read,write}.ts`
+- `packages/domain/tests/questionnaires/{chain-versions.test.ts,_chain-fixtures.ts}`
+- `packages/domain/tests/questionnaire-versions/{sync-resolver-fence,nothing-gates-fence}.test.ts`
+- `packages/domain/tests/integration/questionnaire-versions/{read,write,write-concurrency}.spec.ts`
+- `packages/domain/tests/integration/rls/questionnaire-versions-policy-regression.spec.ts`
+- `packages/contracts/src/questionnaire-versions/index.ts`
+- `packages/contracts/tests/questionnaire-versions.test.ts`
+- `apps/api/src/modules/claims/questionnaire-words.ts`
+- `apps/api/src/modules/questionnaire-versions/{index,routes,handlers}.ts`
+- `apps/api/tests/unit/questionnaire-words.test.ts`
+- `apps/api/tests/integration/questionnaire-versions/questionnaire-versions.spec.ts`
+- `apps/admin/src/modules/questionnaire-versions/{index.ts,i18n-en.ts,QuestionnaireVersionsPage.tsx}`
+- `apps/admin/src/routes/QuestionnaireVersionsRoute.tsx`
+- `apps/admin/tests/questionnaire-versions-page.test.tsx`
+
+**Modified**
+- `packages/domain/migrations/meta/_journal.json`; `packages/domain/src/{index.ts,schema/index.ts,policies/index.ts}`
+- `packages/domain/src/questionnaires/{index,keys,types,validator}.ts`
+- `packages/domain/src/claim/{peer-mesh-reply,ground-inspection-questionnaire}.ts`
+- `packages/domain/src/rbac/{permissions,roles}.ts`
+- `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts`; `packages/domain/tests/questionnaires/{questionnaires,ground-inspection-questionnaire}.test.ts`; `packages/domain/tests/rbac/{permissions,roles}.test.ts`
+- `packages/domain/tests/integration/claim/{_peer-reply-fixtures.ts,peer-mesh-reply.spec.ts,peer-mesh-reply-concurrency.spec.ts,peer-mesh-reply-rtbf.spec.ts,ground-inspection-questionnaire.spec.ts,ground-inspection-questionnaire-concurrency.spec.ts}`
+- `packages/contracts/src/{index.ts,claims/peer-request.ts,claims/ground-inspection-questionnaire.ts}`; `packages/contracts/tests/claims-peer-request.test.ts`
+- `packages/api-client/src/{index,peer-answer-editor}.ts`; `packages/api-client/tests/{peer-answer-editor,peer-request-client}.test.ts`
+- `packages/i18n/locales/{en,hi}/claim.json`
+- `apps/api/src/{index,server}.ts`; `apps/api/src/modules/claims/{peer-request-core,peer-answers-assembler,claims.peer-request.handlers,claims.ground-inspection.handlers,claims.peer-answers.handlers,claims.verifier-console.handlers}.ts`
+- `apps/api/tests/integration/claims/{peer-answers-approvers,peer-request-member,ground-inspection-questionnaire}.spec.ts`
+- `apps/jobs/src/boot.ts`; `apps/jobs/src/scheduler/{claim-peer-mesh-requests,claim-peer-mesh-wa-reminders}.ts`; `apps/jobs/tests/claim-peer-mesh-requests-live.test.ts`
+- `apps/mobile/lib/peer-request.ts`; `apps/mobile/components/peer-request/{PeerQuestionnaire.tsx,usePeerRequestQueries.ts}`; `apps/mobile/tests/unit/{peer-request,peer-questionnaire-render}.test.ts`
+- `apps/admin/src/{router.tsx,routes/RootLayout.tsx,api/client.ts,api/hooks.ts}`; `apps/admin/src/modules/ground-inspection/{QuestionnairePanel.tsx,i18n-en.ts}`; `apps/admin/src/modules/helpline-claims/{HelplinePeerRequests.tsx,i18n-en.ts}`
+- `apps/admin/tests/{ground-inspection-questionnaire,helpline-peer-requests}.test.tsx`
+- `docs/launch-gate-inventory/inventory-roster.md` (Rows 27, 42, 45 — dated lines)
+- `_bmad-output/implementation-artifacts/{deferred-work.md,sprint-status.yaml,6-33-questionnaire-editor-versions-and-approval.md}`
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-30 | 1.4 | `bmad-dev-story 6.33` — Tasks 0.1–10 implemented (the chain end to end: migration 0192, the widened validator, the async reader and every consumer, the ONE word function + D11's fallback word, R7's version compare and the clients' reload, RBAC 56, the chain's writer / API, the admin page, the nothing-gates proofs, the records). AC11's real-browser pass UN-ATTESTED (the extension ⛔ connected). Row → `review`. |
 | 2026-10-30 | 1.3 | Task 0 completed and a FINAL fresh-context validation (three read-only verifiers — consistency / spec→Tasks, the v1.2 code claims, governance + cross-branch records — load-bearing findings re-checked by hand): 38 improvements, all applied (BigDev: *"all"*). Task 0: `-421` (`283e25f4`), the QE14 note drafted, `-422` ratified all four as built, Row 45 / `epics.md` / the deferred annotation (`577a4ca2`), the fallback word's Hindi reviewed (`83a34074`). Critical: a per-version step lock in one fixed order (approve / return / withdraw were unserialized); the tenant steps policy limited to the four tenant steps; the clients SEND `questionnaireVersionId`; a NEW `*.questionnaire_version_unreadable` (the existing 404 `ground_inspection.questionnaire_unavailable` is unchanged); the jobs' read sites corrected (`pariwarConfig` / `peerMeshWaReminderConfig`, two fault classes); the version compare FIRST in both writers (six bare `Error`s); NUMBERS restated (next decision ≥ `-424`, Row 46, ledger `30j`). Plus: the 404 rule, page-data routes, C1–C12 test split, the 6.27b hazard closed only for clients that send the id, the GI save's tolerance, C11 counted internally, the API boot file `index.ts`, replay returns the recorded response, five `classifyFailure` sites, the fallback log line, the `-423` pointer, stale post-ruling wording. |
 | 2026-10-30 | 1.2 | Second fresh-context validation (`bmad-create-story validate 6.33`; four read-only verifiers — engine, API / jobs / clients, governance, design — each load-bearing finding re-checked by hand): 52 improvements, all applied. Critical: a stale-ruled-base rule (a DB version on an older ruled code base is ⛔ served; `ruled_base_moved` refusal; ONE definition of the ruled base, server-replaced); steps ordered by a `seq` identity, ⛔ `at`; the revert rule made exact; the flip compared UNDER the lock (D8's bare `Error` fixed; old clients keep the retryable code); a ≤ 20-question cap (the answer read caps were sized for seven); the jobs' BYPASSRLS pool ⇒ an explicit Pariwar predicate; the RELOAD path as a third editor outcome (`shouldRetry` is injected); the distinct-approver rule DROPPED (`-304`'s reading allows *"or their own"*; a different approver is Q8 A, ⛔ taken); QE17's precedent corrected to `helplineSave`. Plus: `NOT direct` on tenant inserts; every publish act on the global path; both ticks on direct steps; the R8 alarm and read-only invalid pins; the 404 rule; QE14 grown to three questions (§0 edges 2, 3 / 3a, 3b; new §0 edges 8–10 recorded as the author's / MATCH); `-413` IQ12 superseded in part; D10 / drain-loop / W3 / W9 dispositions; D11 fixed (fallback word); QE8 as checklist C1–C12; QE12 as rules R1–R8; the step table. |
 | 2026-10-30 | 1.1 | Fresh-context validation (one read-only verifier re-traced every code claim, quote and number): 8 critical gaps folded in — DB versions number from 1000 (a code / DB id collision); the ruled lock against a RECORDED code base + a read-time counsel-basis overlay (else counsel's code edit strands every DB version in force); the distinct-actor trigger keyed on `direct` and the direct path writes all three steps; steps tenancy on a new `scope_pariwar_id`; NEW version-stale codes mapped to RELOAD in all three clients (mobile retried any unknown 409 forever); "chain question" decided by ORIGIN with server-stamped `approvedBy`; the alcohol rule on stored text incl. Devanagari; the jobs read under `withPariwarScope`. Plus: wire limits, three word sites, the widened G8 grep + a sync-resolver fence, a third deferred item and the D8 / D11 triggers, the route table, the audit-order composition, the classification attestation, the cross-Pariwar disclosure in QE14, status labels on the recorder's text. |

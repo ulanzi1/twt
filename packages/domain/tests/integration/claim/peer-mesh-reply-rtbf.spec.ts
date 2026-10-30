@@ -56,8 +56,8 @@ describe.skipIf(!hasDatabase)('Story 6.27a — RTBF over the neighbours\' answer
       savedByActorId: neighbour,
       todayIst: '2026-10-12',
     };
-    await savePeerAnswer(client, { ...base, questionKey: 'has_died', value: { codes: ['died'] }, prepared: { form: 'codes', codes: ['died'] }, decryptedLive: new Map() });
-    const first = await savePeerAnswer(client, {
+    await savePeerAnswer(client, { preReadVersionId: 'peer_mesh.v4', ...base, questionKey: 'has_died', value: { codes: ['died'] }, prepared: { form: 'codes', codes: ['died'] }, decryptedLive: new Map() });
+    const first = await savePeerAnswer(client, { preReadVersionId: 'peer_mesh.v4',
       ...base,
       questionKey: 'death_date',
       value: { date: '2026-09-30' },
@@ -65,7 +65,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — RTBF over the neighbours\' answer
       decryptedLive: new Map(),
     });
     const firstDate = first.live.find((a) => a.questionKey === 'death_date')!;
-    await savePeerAnswer(client, {
+    await savePeerAnswer(client, { preReadVersionId: 'peer_mesh.v4',
       ...base,
       questionKey: 'death_date',
       value: { date: '2026-10-01' },

@@ -34,6 +34,7 @@ import {
   degradedMode as degradedModeDomain,
   idempotency,
   pool as poolDomain,
+  questionnaireVersions,
   resolveConnectionString,
   resolveSecretValue,
   validityCache,
@@ -393,6 +394,9 @@ async function main(): Promise<void> {
   // Wrap the startup sequence: if any step throws after pool + boss are created,
   // clean them up before re-throwing so the process exits without leaked handles.
   try {
+    // Story 6.33 (QE3) — ⛔ a code questionnaire id stored as a database version (a migration cannot see the code registry).
+    await questionnaireVersions.assertNoCodeVersionInDatabase(db);
+
     // Start the boss — creates the `pgboss` schema on first run (the connection role
     // needs CREATE on the DB; CI's superuser has it — see the runbook for prod).
     await boss.start();

@@ -14,7 +14,12 @@ export interface PeerAnswerEditorSnapshot {
   readonly answers: ReadonlyMap<string, PeerRequestLiveAnswer['value']>;
   readonly pending: number;
   readonly failed: ReadonlySet<string>;
-  readonly saveLine: 'idle' | 'saving' | 'retrying' | 'saved' | 'failed';
+  /**
+   * Story 6.33 (R7) — `'reload'`: the server answered that the questionnaire VERSION changed since it was loaded; the editor
+   * has stopped sending, keeps every draft (`carryOverDrafts`), and the screen refetches and REBUILDS a new editor keyed on
+   * the new version (⛔ retried — a retry would meet the same version).
+   */
+  readonly saveLine: 'idle' | 'saving' | 'retrying' | 'saved' | 'failed' | 'reload';
   readonly error: unknown;
 }
 
@@ -45,6 +50,8 @@ export class PeerAnswerEditor {
   /** The task whose request is on the wire RIGHT NOW (⛔ one merely waiting out a retry backoff) — W8. */
   private sending: Task | null = null;
   private retrying = false;
+  /** Story 6.33 (R7) — a version-stale answer arrived: ⛔ more sends; the screen rebuilds. */
+  private reloadRequired = false;
   private snapshot: PeerAnswerEditorSnapshot;
 
   constructor(
@@ -53,6 +60,11 @@ export class PeerAnswerEditor {
       save: (task: Pick<Task, 'questionKey' | 'value' | 'idempotencyKey'>) => Promise<PeerRequestSaveAnswerResponse>;
       newKey: () => string;
       shouldRetry: (error: unknown) => boolean;
+      /**
+       * Story 6.33 (R7) — the THIRD outcome of a failed save (beside retry and failure): the questionnaire version changed
+       * (`*.questionnaire_version_stale`) ⇒ `'reload'`. Optional — absent, nothing is a reload. Checked BEFORE `shouldRetry`.
+       */
+      isReload?: (error: unknown) => boolean;
       wait: (attempt: number) => Promise<void>;
       questions?: readonly PeerRequestQuestion[];
     },
@@ -145,6 +157,14 @@ export class PeerAnswerEditor {
     this.publish();
   }
 
+  /**
+   * Story 6.33 (R7) — the edits ⛔ yet saved, oldest first, for the REBUILT editor: the screen keeps those whose question is
+   * still in the new version and drops the rest.
+   */
+  carryOverDrafts(): { readonly questionKey: string; readonly value: PeerRequestAnswerValue }[] {
+    return [...this.drafts.values()].sort((x, y) => x.generation - y.generation).map((t) => ({ questionKey: t.questionKey, value: t.value }));
+  }
+
   dispose(): void {
     this.disposed = true;
     this.epoch += 1; // the running loop (if any) is over — it ⛔ never touches this editor again
@@ -189,7 +209,17 @@ export class PeerAnswerEditor {
       answers,
       pending,
       failed: new Set(this.failures.keys()),
-      saveLine: pending > 0 ? (this.retrying ? 'retrying' : 'saving') : this.failures.size > 0 ? 'failed' : this.generation === 0 && this.authoritative.size === 0 ? 'idle' : 'saved',
+      saveLine: this.reloadRequired
+        ? 'reload'
+        : pending > 0
+          ? this.retrying
+            ? 'retrying'
+            : 'saving'
+          : this.failures.size > 0
+            ? 'failed'
+            : this.generation === 0 && this.authoritative.size === 0
+              ? 'idle'
+              : 'saved',
       error: [...this.failures.values()].at(-1)?.error ?? null,
     };
     for (const listener of this.listeners) listener();
@@ -252,7 +282,7 @@ export class PeerAnswerEditor {
   }
 
   private async drain(): Promise<void> {
-    if (this.running || this.disposed) return;
+    if (this.running || this.disposed || this.reloadRequired) return;
     this.running = true;
     const epoch = this.epoch;
     const live = () => epoch === this.epoch && !this.disposed;
@@ -277,6 +307,13 @@ export class PeerAnswerEditor {
           } catch (error) {
             if (!live()) return;
             if (task.discarded || task.abandoned) break; // given up — ⛔ retried, ⛔ a failure (X2)
+            // ⭐ Story 6.33 (R7) — the version changed: STOP (every later save would meet the same answer), keep the drafts.
+            if (this.options.isReload?.(error) === true) {
+              this.reloadRequired = true;
+              this.retrying = false;
+              this.publish();
+              return;
+            }
             if (this.options.shouldRetry(error)) {
               this.retrying = true;
               this.publish();
@@ -303,3 +340,48 @@ export class PeerAnswerEditor {
     }
   }
 }
+
+/** An unsent answer handed from one questionnaire instance to the next (`PeerAnswerEditor.carryOverDrafts`). */
+export type CarriedDraft = { readonly questionKey: string; readonly value: PeerRequestAnswerValue };
+
+/**
+ * ⭐ Story 6.33 review RV7 — the HAND-OVER of unsent answers between two questionnaire instances, ONE rule for the mobile app and
+ * both admin screens (it lived in two copies; a merge rule that decides which of a person's answers survives must not drift).
+ * The answers carried IN but ⛔ yet applied (`pending`), then the editor's own unsent drafts (`drafts`, oldest first). Newer wins
+ * per question and moves to the END (the order a prerequisite is saved before its dependant); an older answer to a question no
+ * draft touched stays — the instance may be replaced AGAIN before it applied anything.
+ */
+export function mergeCarried(pending: readonly CarriedDraft[], drafts: readonly CarriedDraft[]): CarriedDraft[] {
+  const merged = new Map<string, PeerRequestAnswerValue>();
+  for (const d of [...pending, ...drafts]) {
+    merged.delete(d.questionKey);
+    merged.set(d.questionKey, d.value);
+  }
+  return [...merged].map(([questionKey, value]) => ({ questionKey, value }));
+}
+
+/** How long a reload's refetch may take before it is treated as FAILED (review RP9). */
+export const RELOAD_REFETCH_BOUND_MS = 15_000;
+
+/**
+ * Race `work` against a timer (review RP9): resolves with `work`'s value, or with `onTimeout` once `ms` has passed, whichever is
+ * first — and CLEARS the timer when `work` settles. The admin / mobile transports have no timeout, and `refetch()` re-joins a hung
+ * fetch ([[project_tanstack_refetch_rejoins_hung_fetch]]), so a reload that waits on one would sit on "updating…" forever with the
+ * person's unsent answers neither saved nor recoverable. A REJECTION of `work` is passed through (the caller maps it to failed).
+ */
+export function withTimeout<T>(work: Promise<T>, ms: number, onTimeout: T): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => resolve(onTimeout), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+

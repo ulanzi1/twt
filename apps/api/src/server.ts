@@ -79,6 +79,7 @@ import { registerSurveyModule } from './modules/surveys/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerModerationAppealRoutes } from './modules/member-moderation-appeals/routes.js';
 import { registerFeatureFlagsModule } from './modules/feature-flags/index.js';
+import { registerQuestionnaireVersionsModule } from './modules/questionnaire-versions/index.js';
 import { registerCustomFieldsModule } from './modules/custom-fields/index.js';
 import { registerTrusteeLiteModule } from './modules/trustee-lite/index.js';
 import { registerPublicPagesModule } from './modules/public-pages/index.js';
@@ -380,6 +381,9 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // Story 10.8 — the FR-58C feature-flag admin surface (catalog + effective inventory + versions +
   // the flip). The inventory routes are what make "no secret flags" real.
   registerFeatureFlagsModule(app, deps);
+  // Story 6.33 — the questionnaire CHAIN (`-304` Q7 / Q8): propose / approve / return / withdraw in a Pariwar; make live /
+  // direct / revert at global scope (the Super Admin, step-up).
+  registerQuestionnaireVersionsModule(app, deps);
   // Story 10.12 — the FR-54 per-Pariwar custom-fields admin surface: the definition-set read
   // (in-force + full history in ONE call, so the two panels cannot be read at different instants),
   // publish-or-retire through ONE route (retirement IS a version — a separate `/retire` route would

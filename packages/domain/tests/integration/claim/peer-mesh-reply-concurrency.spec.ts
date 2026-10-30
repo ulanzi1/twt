@@ -136,7 +136,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — a save racing an approval or a cl
   }
 
   const saveHasDied = (client: pg.PoolClient, pid: PariwarId, pingId: PeerMeshPingId, neighbour: MemberId) =>
-    savePeerAnswer(client, {
+    savePeerAnswer(client, { preReadVersionId: 'peer_mesh.v4',
       pariwarId: pid,
       pingId,
       memberId: neighbour,

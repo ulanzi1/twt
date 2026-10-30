@@ -1,22 +1,24 @@
 // @vitest-environment jsdom
 // Execute the mobile component with React DOM and mocked native primitives. This exercises
 // its actual hooks/handlers; native layout and screen-reader behavior still need a device.
+import { RELOAD_REFETCH_BOUND_MS } from '@twt/api-client';
 import type { PeerRequestDetailResponse } from '@twt/contracts';
 import '@testing-library/jest-dom/vitest';
 import { createElement, StrictMode } from 'react';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { usePreventRemove } from '@react-navigation/native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PeerQuestionnaire } from '../../components/peer-request/PeerQuestionnaire';
+import { retryDelayMs } from '../../lib/peer-request';
 
 const mock = vi.hoisted(() => ({
-  detail: null as PeerRequestDetailResponse | null, error: null as unknown, save: vi.fn(), submit: vi.fn(),
+  detail: null as PeerRequestDetailResponse | null, error: null as unknown, save: vi.fn(), submit: vi.fn(), refetch: vi.fn(),
   announce: vi.fn(), dispatch: vi.fn(), backHandlers: [] as (() => boolean)[], os: 'ios' as string, focused: true, loading: false,
 }));
 vi.mock('../../components/peer-request/usePeerRequestQueries', () => ({
-  usePeerRequestQuery: () => ({ data: mock.loading ? undefined : mock.detail, error: mock.error, isLoading: mock.loading }),
+  usePeerRequestQuery: () => ({ data: mock.loading ? undefined : mock.detail, error: mock.error, isLoading: mock.loading, refetch: mock.refetch }),
   useSavePeerAnswer: () => ({ mutateAsync: mock.save }),
   useSubmitPeerReply: () => ({ mutateAsync: mock.submit, isPending: false }),
 }));
@@ -84,6 +86,7 @@ describe('mobile questionnaire interaction regressions', () => {
     mock.error = null;
     mock.save.mockReset().mockImplementation(async ({ value }: { value: { codes: string[] } }) => ({ answers: saved(value.codes[0]!) }));
     mock.submit.mockReset().mockResolvedValue({ submitted: true });
+    mock.refetch.mockReset().mockImplementation(async () => ({ data: mock.detail, isError: false }));
     vi.mocked(usePreventRemove).mockClear();
     mock.announce.mockClear();
     mock.dispatch.mockClear();
@@ -261,6 +264,37 @@ describe('mobile questionnaire interaction regressions', () => {
     await waitFor(() => expect(screen.getByLabelText('When?', { selector: 'input' })).toHaveValue('02-10-2026'));
   });
 
+  it('⭐ Story 6.33 (R7) — EVERY save carries the RENDERED questionnaireVersionId', async () => {
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(1));
+    expect(mock.save.mock.calls[0]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['not_died'] }, questionnaireVersionId: 'v2' });
+  });
+
+  it('⭐ Story 6.33 (R7) — a VERSION-stale save RELOADS (⛔ a retry): the detail is refetched, the questions rebuilt, the unsaved answer re-saved on the new version (Strict Mode)', async () => {
+    mock.save.mockRejectedValueOnce({ status: 409, code: 'peer_request.questionnaire_version_stale' });
+    mock.refetch.mockImplementation(async () => {
+      mock.detail = { ...detail(), questionnaire: { ...detail().questionnaire, versionId: 'v1001' } };
+      return { data: mock.detail, isError: false };
+    });
+    render(createElement(StrictMode, null, createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} })));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    await waitFor(() => expect(mock.refetch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2));
+    expect(mock.save.mock.calls[0]![0]).toMatchObject({ questionnaireVersionId: 'v2' });
+    expect(mock.save.mock.calls[1]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['not_died'] }, questionnaireVersionId: 'v1001' });
+    expect(await screen.findByText('peer_request.saved')).toBeInTheDocument();
+  });
+
+  it('⭐ Story 6.33 (R7 (v)) — an UNREADABLE pinned version closes the screen (⛔ a reload loop, ⛔ a retry)', async () => {
+    mock.save.mockRejectedValue({ status: 409, code: 'peer_request.questionnaire_version_unreadable' });
+    render(createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} }));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    await waitFor(() => expect(screen.queryByRole('radio', { name: 'not_died' })).not.toBeInTheDocument());
+    expect(mock.refetch).not.toHaveBeenCalled();
+    expect(mock.save).toHaveBeenCalledTimes(1);
+  });
+
   it('saves still work after the Strict Mode setup-cleanup-setup cycle', async () => {
     render(createElement(StrictMode, null, createElement(PeerQuestionnaire, { pariwarId: 'p', pingId: 'ping', onBack: () => {} })));
     await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
@@ -422,5 +456,259 @@ describe('mobile questionnaire interaction regressions', () => {
     expect(screen.getByText('peer_request.date_unsaved')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'peer_request.date_clear' }));
     await waitFor(() => expect(screen.queryByText('peer_request.date_unsaved')).not.toBeInTheDocument());
+  });
+  // ── Story 6.33 review RV1 / RV7 — the hand-over of unsent answers between questionnaire instances ──────────────────────
+  const props = { pariwarId: 'p', pingId: 'ping', onBack: () => {} };
+  const stale = { status: 409, code: 'peer_request.questionnaire_version_stale' };
+  /** The rendered detail as the NEXT version: `versionId` changed, the questions kept (or replaced by `questions`). */
+  const nextVersion = (versionId: string, answers = saved('died')): PeerRequestDetailResponse => ({ ...detail(answers), questionnaire: { ...detail(answers).questionnaire, versionId } });
+  const withHowKnown = (d: PeerRequestDetailResponse): PeerRequestDetailResponse => {
+    d.questionnaire.pages[0]!.questions.push({ key: 'how_known', kind: 'single', words: words('How?'), options: ['saw', 'told'].map((code) => ({ code, words: words(code), exclusive: false })), optional: true, showIf: null });
+    return d;
+  };
+  /** Let timers (the carry-over's 0 ms tick, a stray re-apply) and the promises behind them run. ⛔ NOT a retry backoff: a leg
+   *  that rules out a retry waits past `retryDelayMs` (`outwaitRetryBackoff`; review RP19). */
+  const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 60)); });
+  /** Wait (REAL time) past the first retry backoff — a retry the disposed editor still owed would have been SENT by now. */
+  const outwaitRetryBackoff = () => act(async () => { await new Promise((r) => setTimeout(r, retryDelayMs(1) + 150)); });
+
+  it('⭐ RV1 — the carried answers are applied ONCE: an acknowledged save that REWRITES `detail` (new identity, same questions) re-saves nothing over the member\'s later edit', async () => {
+    mock.save.mockRejectedValueOnce(stale);
+    mock.refetch.mockImplementation(async () => {
+      mock.detail = nextVersion('v1001');
+      return { data: mock.detail, isError: false };
+    });
+    const tree = () => createElement(StrictMode, null, createElement(PeerQuestionnaire, props));
+    const view = render(tree());
+    // From now on an ACKNOWLEDGED save rewrites the cached detail, as `useSavePeerAnswer`'s `setQueryData` does — the screen
+    // re-renders with a `detail` of a NEW identity (same questions), the trigger of the old effect's re-run.
+    mock.save.mockImplementation(async ({ value }: { value: { codes: string[] } }) => {
+      await Promise.resolve();
+      const answers = saved(value.codes[0]!);
+      mock.detail = { ...mock.detail!, answers };
+      view.rerender(tree());
+      return { answers };
+    });
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' })); // A — refused as version-stale
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2)); // …re-saved on the new version
+    expect(await screen.findByText('peer_request.saved')).toBeInTheDocument();
+    await settle(); // the rewrite has re-rendered; a re-run of the carry effect would have fired by now
+    expect(mock.save).toHaveBeenCalledTimes(2);
+    expect(mock.save.mock.calls[1]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['not_died'] }, questionnaireVersionId: 'v1001' });
+    await userEvent.click(screen.getByRole('radio', { name: 'died' })); // B — the member changes their mind
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(3));
+    await settle();
+    expect(mock.save).toHaveBeenCalledTimes(3); // ⛔ the old carried A re-saved over B
+    expect(mock.save.mock.calls[2]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['died'] } });
+    expect(screen.getByRole('radio', { name: 'died' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('⭐ RV7 — a BACKGROUND refetch returns a NEW versionId while answers sit queued (offline): the rebuilt screen re-saves them once, on the new version', async () => {
+    mock.save.mockRejectedValueOnce(new TypeError('offline')); // retried behind a backoff — queued, ⛔ yet saved
+    const view = render(createElement(PeerQuestionnaire, props));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('peer_request.not_saved_retrying')).toBeInTheDocument();
+    mock.detail = nextVersion('v3'); // reconnect / focus: the detail query refetched ITSELF — ⛔ a stale save, ⛔ `onReload`
+    view.rerender(createElement(PeerQuestionnaire, props));
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2));
+    expect(mock.save.mock.calls[1]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['not_died'] }, questionnaireVersionId: 'v3' });
+    expect(await screen.findByText('peer_request.saved')).toBeInTheDocument();
+    // Review RP19 — the disposed editor's retry was due `retryDelayMs(1)` (1000 ms) after the failure, so a 60 ms settle observed
+    // NOTHING of it: wait past the backoff, and only then is "2 saves" a proof of ONCE (⛔ the old editor's retry, ⛔ a second apply).
+    await outwaitRetryBackoff();
+    expect(mock.save).toHaveBeenCalledTimes(2);
+    expect(mock.refetch).not.toHaveBeenCalled();
+    expect(screen.getByRole('radio', { name: 'not_died' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('⭐ RV7 — the data changes (v2) and ONLY THEN `reloads` is bumped (a DOUBLE rebuild): the carried answer is applied once, to the FINAL instance — ⛔ lost', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); // the 0 ms carry tick fires only when WE say so
+    try {
+      mock.save.mockRejectedValueOnce(stale);
+      let release!: (result: unknown) => void;
+      mock.refetch.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+      const view = render(createElement(PeerQuestionnaire, props));
+      const first = screen.getByRole('radio', { name: 'not_died' });
+      fireEvent.click(first);
+      await act(async () => {});
+      expect(mock.refetch).toHaveBeenCalledTimes(1);
+      // 1st rebuild — the query's DATA changes (the key is `v2b:0`); its carry tick is still pending when…
+      mock.detail = nextVersion('v2b');
+      view.rerender(createElement(PeerQuestionnaire, props));
+      const second = screen.getByRole('radio', { name: 'not_died' });
+      expect(second).not.toBe(first); // a new instance
+      expect(mock.save).toHaveBeenCalledTimes(1);
+      // …meanwhile the cached detail is rewritten (same version, NEW identity): the first rebuild's editor PUBLISHES (it takes the
+      // server's answers) — a hand-over that this overwrote with the editor's own (empty) drafts would lose the carried answer.
+      mock.detail = { ...mock.detail!, answers: saved('died') };
+      view.rerender(createElement(PeerQuestionnaire, props));
+      expect(screen.getByRole('radio', { name: 'not_died' })).toBe(second);
+      // …2nd rebuild — the refetch RESOLVES and `reloads` is bumped (`v2b:1`): the first rebuild never applied anything.
+      await act(async () => { release({ data: mock.detail, isError: false }); });
+      expect(screen.getByRole('radio', { name: 'not_died' })).not.toBe(second); // a third instance
+      expect(mock.save).toHaveBeenCalledTimes(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(mock.save).toHaveBeenCalledTimes(2);
+      expect(mock.save.mock.calls[1]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['not_died'] }, questionnaireVersionId: 'v2b' });
+      await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+      expect(mock.save).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('peer_request.saved')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('⭐ RV7 — an unsent answer to a question the NEW version no longer asks is DROPPED; the rest are re-saved, once', async () => {
+    mock.detail = withHowKnown(detail([]));
+    let refuse!: (error: unknown) => void;
+    mock.save.mockReturnValueOnce(new Promise((_resolve, reject) => { refuse = reject; }));
+    mock.refetch.mockImplementation(async () => {
+      mock.detail = nextVersion('v1001', []); // the new version has no `how_known`
+      return { data: mock.detail, isError: false };
+    });
+    render(createElement(PeerQuestionnaire, props));
+    await userEvent.click(screen.getByRole('radio', { name: 'saw' })); // on the wire
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' })); // queued behind it
+    await act(async () => refuse(stale));
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2));
+    expect(mock.save.mock.calls[1]![0]).toMatchObject({ questionKey: 'has_died', value: { codes: ['not_died'] }, questionnaireVersionId: 'v1001' });
+    expect(await screen.findByText('peer_request.saved')).toBeInTheDocument();
+    await settle();
+    expect(mock.save).toHaveBeenCalledTimes(2);
+    expect(mock.save.mock.calls.some(([task]) => (task as { questionKey: string }).questionKey === 'how_known' && (task as { questionnaireVersionId: string }).questionnaireVersionId === 'v1001')).toBe(false);
+  });
+
+  it('⭐ RV7 — a DROPPED answer is gone for good: a LATER rebuild whose version asks that question again does not bring it back', async () => {
+    mock.detail = withHowKnown(detail([]));
+    mock.save.mockRejectedValueOnce(stale);
+    mock.refetch.mockImplementation(async () => {
+      mock.detail = nextVersion('v1001', []); // no `how_known`: the only unsent answer is dropped, NOTHING is saved
+      return { data: mock.detail, isError: false };
+    });
+    const view = render(createElement(PeerQuestionnaire, props));
+    await userEvent.click(screen.getByRole('radio', { name: 'saw' }));
+    await waitFor(() => expect(mock.refetch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole('radio', { name: 'saw' })).not.toBeInTheDocument());
+    await settle();
+    expect(mock.save).toHaveBeenCalledTimes(1);
+    mock.detail = withHowKnown(nextVersion('v1002', [])); // a later version asks `how_known` again
+    view.rerender(createElement(PeerQuestionnaire, props));
+    expect(await screen.findByRole('radio', { name: 'saw' })).toHaveAttribute('aria-checked', 'false');
+    await settle();
+    expect(mock.save).toHaveBeenCalledTimes(1); // ⛔ the dropped 'saw' carried into v1002
+  });
+
+  // ── Story 6.33 review round 2 (RP4, RP8, RP9) ──────────────────────────────────────────────────────────────────────────
+  const fakeTimers = () => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); // the 0 ms carry tick + the reload bound fire only when WE say so
+  const asksHowKnown = (versionId: string) => withHowKnown(nextVersion(versionId, []));
+  /** What the screen SENT: [questionKey, code, versionId] per save, in order. */
+  const sent = () => mock.save.mock.calls.map(([task]) => {
+    const t = task as { questionKey: string; value: { codes: string[] }; questionnaireVersionId: string };
+    return [t.questionKey, t.value.codes[0], t.questionnaireVersionId];
+  });
+
+  it('⭐ RP4 — a reload that fires while answers carried IN are not yet applied keeps them in the hand-over: the next rebuild applies BOTH, in order', async () => {
+    fakeTimers();
+    try {
+      mock.detail = withHowKnown(detail([]));
+      mock.save.mockRejectedValueOnce(stale).mockRejectedValueOnce(stale); // X (instance 0) and Y (instance 1): both refused as version-stale
+      mock.refetch
+        .mockImplementationOnce(async () => { mock.detail = asksHowKnown('v1001'); return { data: mock.detail, isError: false }; })
+        .mockImplementationOnce(async () => { mock.detail = asksHowKnown('v1002'); return { data: mock.detail, isError: false }; });
+      render(createElement(PeerQuestionnaire, props));
+      fireEvent.click(screen.getByRole('radio', { name: 'not_died' })); // X — refused ⇒ reload ⇒ instance 1, X carried IN, its 0 ms tick PENDING
+      await act(async () => {});
+      expect(mock.refetch).toHaveBeenCalledTimes(1);
+      expect(mock.save).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('radio', { name: 'saw' })); // Y — instance 1's OWN draft, refused ⇒ reload BEFORE X was applied
+      await act(async () => {});
+      expect(mock.refetch).toHaveBeenCalledTimes(2);
+      expect(mock.save).toHaveBeenCalledTimes(2); // ⛔ X was never sent by instance 1
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); }); // instance 2's carry tick
+      // `onReload(editor.carryOverDrafts())` used to REPLACE the hand-over with [Y]: X was lost.
+      expect(sent().slice(2)).toEqual([['has_died', 'not_died', 'v1002'], ['how_known', 'saw', 'v1002']]);
+      await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+      expect(mock.save).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('⭐ RP9 — a reload refetch that NEVER settles is a FAILURE after the bound (⇒ Try again); Try again reloads and the carried answer is applied ONCE', async () => {
+    fakeTimers();
+    try {
+      mock.save.mockRejectedValueOnce(stale);
+      mock.refetch
+        .mockImplementationOnce(() => new Promise(() => {})) // a hung fetch: `refetch()` re-joins it, the transport has no timeout
+        .mockImplementationOnce(async () => { mock.detail = nextVersion('v1001'); return { data: mock.detail, isError: false }; });
+      render(createElement(PeerQuestionnaire, props));
+      fireEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+      await act(async () => {});
+      expect(mock.refetch).toHaveBeenCalledTimes(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(RELOAD_REFETCH_BOUND_MS - 1); });
+      expect(screen.queryByText('peer_request.load_error')).not.toBeInTheDocument(); // still within the bound
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(screen.getByText('peer_request.load_error')).toBeInTheDocument(); // the bound = a failure
+      expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+      expect(mock.save).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: 'peer_request.try_again' }));
+      await act(async () => {});
+      expect(mock.refetch).toHaveBeenCalledTimes(2);
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(sent()).toEqual([['has_died', 'not_died', 'v2'], ['has_died', 'not_died', 'v1001']]);
+      await act(async () => { await vi.advanceTimersByTimeAsync(RELOAD_REFETCH_BOUND_MS + 100); }); // the FIRST bound's timer must not fail a good reload
+      expect(mock.save).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText('peer_request.load_error')).not.toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'not_died' })).toHaveAttribute('aria-checked', 'true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('⭐ RP9 — a reload refetch that REJECTS is a failure too (⇒ Try again), ⛔ an unhandled rejection and ⛔ a stuck spinner', async () => {
+    mock.save.mockRejectedValueOnce(stale);
+    mock.refetch.mockRejectedValueOnce(new TypeError('offline'));
+    render(createElement(PeerQuestionnaire, props));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    expect(await screen.findByText('peer_request.load_error')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'peer_request.try_again' })).toBeEnabled();
+    mock.refetch.mockImplementationOnce(async () => { mock.detail = nextVersion('v1001'); return { data: mock.detail, isError: false }; });
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.try_again' }));
+    await waitFor(() => expect(mock.save).toHaveBeenCalledTimes(2));
+    expect(sent()[1]).toEqual(['has_died', 'not_died', 'v1001']);
+  });
+
+  it('⭐ RP8 — the failed-reload screen keeps a LEAVE GUARD while unsent answers sit in the hand-over: leaving is intercepted and asks; "Leave without saving" gives them up', async () => {
+    mock.save.mockRejectedValueOnce(stale);
+    mock.refetch.mockImplementation(async () => ({ data: undefined, isError: true })); // the reload's refetch FAILED
+    render(createElement(PeerQuestionnaire, props));
+    await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+    expect(await screen.findByText('peer_request.load_error')).toBeInTheDocument(); // the Questionnaire (and ITS guard) is gone
+    expect(vi.mocked(usePreventRemove).mock.lastCall?.[0]).toBe(true); // …but the screen still guards the answer only the hand-over holds
+    expect(screen.queryByRole('button', { name: 'peer_request.leave_anyway' })).not.toBeInTheDocument();
+    const onPrevented = vi.mocked(usePreventRemove).mock.lastCall?.[1] as (e: { data: { action: unknown } }) => void;
+    act(() => onPrevented({ data: { action: { type: 'GO_BACK' } } })); // the member tries to leave
+    expect(mock.dispatch).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('peer_request.unsaved');
+    const before = vi.mocked(usePreventRemove).mock.calls.length;
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.leave_anyway' }));
+    await waitFor(() => expect(mock.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' }));
+    expect(vi.mocked(usePreventRemove).mock.calls.slice(before).some((c) => c[0] === false)).toBe(true); // the guard was lifted for that dispatch
+    // The answers were GIVEN UP: a Try again on a screen that stayed does ⛔ re-send them.
+    mock.refetch.mockImplementation(async () => { mock.detail = nextVersion('v1001'); return { data: mock.detail, isError: false }; });
+    await userEvent.click(screen.getByRole('button', { name: 'peer_request.try_again' }));
+    expect(await screen.findByRole('radio', { name: 'died' })).toBeInTheDocument();
+    await settle();
+    expect(mock.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ RP8 — a load error with NOTHING carried has ⛔ a leave guard (nothing to lose, and the member is ⛔ trapped)', async () => {
+    mock.detail = null; // the first load failed
+    mock.error = { status: 500 };
+    render(createElement(PeerQuestionnaire, props));
+    expect(screen.getByText('peer_request.load_error')).toBeInTheDocument();
+    expect(vi.mocked(usePreventRemove).mock.lastCall?.[0]).toBe(false);
+    expect(screen.queryByRole('button', { name: 'peer_request.leave_anyway' })).not.toBeInTheDocument();
   });
 });

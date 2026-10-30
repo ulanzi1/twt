@@ -39,6 +39,12 @@ const EN: Record<string, string> = {
   'helpline.peer.failure.submitted': 'These answers were already sent.',
   'helpline.peer.failure.notFound': 'This request could not be opened.',
   'helpline.peer.failure.invalid': 'That answer could not be saved — please choose again.',
+  // Story 6.33 (R7 (v)) — the reply's pinned version cannot be answered (it failed a check).
+  'helpline.peer.failure.versionUnreadable': 'These questions cannot be answered just now. Please tell the Super Admin.',
+  // Story 6.33 (R7, review RV8) — the questions changed under a save; the card reads them again, keeping the answers.
+  'helpline.peer.reload.updating': 'The questions have changed — updating them…',
+  'helpline.peer.reload.failed': 'The questions have changed but could not be updated just now. Your answers are kept.',
+  'helpline.peer.reload.retry': 'Try again',
   'helpline.peer.outcome': 'Request about {member}: {outcome}',
   // Console chrome
   'helpline.title': 'Helpline Operator Console',

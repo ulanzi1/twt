@@ -235,9 +235,11 @@ describe('PERMISSION_CATALOG', () => {
     // 69 -> 70 keys).
     // 55 at Story 5.8b +1 (degraded_mode.switch_bridge_sms — the Super Admin's Trust-wide switch for the bridge's text;
     // `2026-10-28-415` FS17 (a); 70 -> 71 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(55);
+    // 56 at Story 6.33 +3 (questionnaire.propose / .approve / .publish — the `-304` Q7 / Q8 chain; `2026-10-30-421` QE6 (A);
+    // ONE bump for the three; 71 -> 74 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(56);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(71);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(74);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

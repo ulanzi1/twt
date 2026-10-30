@@ -26,9 +26,41 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
   beforeAll(async () => {
     t = await createTestApp();
   });
+  /** Chain (database) versions the review legs insert — removed after (append-only ⇒ superuser, replica role). */
+  const chainVersionIds: string[] = [];
   afterAll(async () => {
+    if (chainVersionIds.length > 0) {
+      const c = await t.pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query("SET LOCAL session_replication_role = 'replica'");
+        await c.query(`DELETE FROM claim_peer_mesh_reply_answers WHERE reply_id IN (SELECT reply_id FROM claim_peer_mesh_replies WHERE questionnaire_version_id = ANY($1))`, [chainVersionIds]);
+        await c.query(`DELETE FROM claim_peer_mesh_replies WHERE questionnaire_version_id = ANY($1)`, [chainVersionIds]);
+        await c.query(`DELETE FROM questionnaire_version_steps WHERE version_id = ANY($1)`, [chainVersionIds]);
+        await c.query(`DELETE FROM questionnaire_versions WHERE version_id = ANY($1)`, [chainVersionIds]);
+        await c.query('COMMIT');
+      } catch (e) {
+        await c.query('ROLLBACK').catch(() => undefined);
+        console.error('[peer-request-member.spec] cleanup:', (e as Error).message);
+      } finally {
+        c.release();
+      }
+    }
     await teardown(t);
   });
+
+  /** A database version row of `peer_mesh` for `p` — `junk` ⇒ a definition that cannot even be PARSED (R1). */
+  async function junkVersion(p: string): Promise<string> {
+    const n = 1_900_000 + Math.floor(Math.random() * 99_999);
+    const versionId = `peer_mesh.v${n}`;
+    await t.pool.query(
+      `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+       VALUES ($1, 'peer_mesh', $2, $3, 'peer_mesh.v4', 'peer_mesh.v4', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+      [randomUUID(), n, versionId, p, JSON.stringify({ kind: 'peer_mesh', versionId, version: n, junk: true })],
+    );
+    chainVersionIds.push(versionId);
+    return versionId;
+  }
 
   async function seedMember(pariwarId: string): Promise<string> {
     const memberId = randomUUID();
@@ -306,6 +338,40 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' member routes (:
     expect((bad.body['error'] as Json)['code']).toBe('peer_request.invalid_answer');
     // ⛔ the value in the error body
     expect(JSON.stringify(bad.body)).not.toContain('old_age');
+  });
+
+  it('⭐ Story 6.33 (R7) — the save carries the RENDERED version: matching ⇒ 200; another ⇒ 409 questionnaire_version_stale (RELOAD, ⛔ the retryable stale); a malformed id ⇒ 400', async () => {
+    const p = randomUUID();
+    const m = await seedMember(p);
+    const r = await seedRequest(p, m);
+    const tok = token(m, p);
+    const send = (versionId: string) =>
+      call('PUT', `${base(p)}/${r.pingId}/answers/has_died`, tok, { value: { codes: ['died'] }, questionnaireVersionId: versionId }, { 'idempotency-key': randomUUID() });
+    const stale = await send('peer_mesh.v3');
+    expect(stale.status).toBe(409);
+    expect((stale.body['error'] as Json)['code']).toBe('peer_request.questionnaire_version_stale');
+    expect((await send('ground_inspection.v1')).status).toBe(400);
+    expect((await send('peer_mesh.v4')).status).toBe(200);
+  });
+
+  it('⭐ review RV31 / R7 (v) — a reply PINNED to a version that cannot be PARSED: the detail ⇒ 409 `peer_request.questionnaire_version_unreadable` and the save ⇒ 409 the same (⛔ a 500, ⛔ the retryable stale)', async () => {
+    const p = randomUUID();
+    const m = await seedMember(p);
+    const r = await seedRequest(p, m);
+    const tok = token(m, p);
+    const junk = await junkVersion(p);
+    const { rows: [sel] } = await t.pool.query<{ selection_id: string }>(`SELECT selection_id FROM claim_peer_mesh_pings WHERE ping_id = $1`, [r.pingId]);
+    await t.pool.query(
+      `INSERT INTO claim_peer_mesh_replies (reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [randomUUID(), p, r.cid, sel!.selection_id, r.pingId, m, junk],
+    );
+    const detail = await call('GET', `${base(p)}/${r.pingId}`, tok);
+    expect(detail.status, JSON.stringify(detail.body)).toBe(409);
+    expect((detail.body['error'] as Json)['code']).toBe('peer_request.questionnaire_version_unreadable');
+    const save = await call('PUT', `${base(p)}/${r.pingId}/answers/has_died`, tok, { value: { codes: ['died'] }, questionnaireVersionId: junk }, { 'idempotency-key': randomUUID() });
+    expect(save.status, JSON.stringify(save.body)).toBe(409);
+    expect((save.body['error'] as Json)['code']).toBe('peer_request.questionnaire_version_unreadable');
   });
 
   it('an undecryptable saved date remains explicitly unavailable to its owner (review R10)', async () => {

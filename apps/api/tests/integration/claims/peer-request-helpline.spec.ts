@@ -37,10 +37,27 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     app = await buildServer(deps);
   });
 
+  /** Chain (database) versions the review leg inserts — removed after (append-only ⇒ superuser, replica role). */
+  const chainVersionIds: string[] = [];
   afterAll(async () => {
     await app.close();
     const c = await td.pool.connect();
     try {
+      if (chainVersionIds.length > 0) {
+        try {
+          await c.query('BEGIN');
+          await c.query("SET LOCAL session_replication_role = 'replica'");
+          await c.query(`DELETE FROM claim_peer_mesh_reply_answers WHERE reply_id IN (SELECT reply_id FROM claim_peer_mesh_replies WHERE questionnaire_version_id = ANY($1))`, [chainVersionIds]);
+          await c.query(`DELETE FROM claim_peer_mesh_replies WHERE questionnaire_version_id = ANY($1)`, [chainVersionIds]);
+          await c.query(`DELETE FROM questionnaire_version_steps WHERE version_id = ANY($1)`, [chainVersionIds]);
+          await c.query(`DELETE FROM questionnaire_versions WHERE version_id = ANY($1)`, [chainVersionIds]);
+          await c.query('COMMIT');
+        } catch (e) {
+          // Review RP16 — ROLLBACK, so a failing DELETE leaves ⛔ an aborted transaction on a pooled client or skips the user cleanup below.
+          await c.query('ROLLBACK').catch(() => undefined);
+          console.error('[peer-request-helpline.spec] chain cleanup:', (e as Error).message);
+        }
+      }
       if (createdUserIds.length > 0) {
         await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1)`, [createdUserIds]);
         await c.query(`DELETE FROM role_grants WHERE user_id = ANY($1)`, [createdUserIds]);
@@ -177,6 +194,34 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the helpline records a neighbour\
     expect(read.at(-1)).toMatchObject({ resourceLocator: `member:${m}`, context: { member_id: m, requests: 1, answers: 1 } });
     expect(Object.keys(read.at(-1)!.context ?? {}).sort()).toEqual(['answers', 'member_id', 'requests']); // ⛔ a name / an answer
     expect(JSON.stringify(read.at(-1)!.context)).not.toContain('died');
+  });
+
+  it('⭐ review RV32 / R7 (v) — ONE open request pinned to an UNREADABLE version is left out of the list (logged, counted on the audit line); the neighbour\'s OTHER open requests are still shown (⛔ a 409 for all)', async () => {
+    const p = randomUUID();
+    const m = randomUUID();
+    const good = await seedRequest(p, m);
+    const bad = await seedRequest(p, m);
+    const n = 1_950_000 + Math.floor(Math.random() * 49_999);
+    const junk = `peer_mesh.v${n}`;
+    await td.pool.query(
+      `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+       VALUES ($1, 'peer_mesh', $2, $3, 'peer_mesh.v4', 'peer_mesh.v4', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+      [randomUUID(), n, junk, p, JSON.stringify({ kind: 'peer_mesh', versionId: junk, version: n, junk: true })],
+    );
+    chainVersionIds.push(junk);
+    const { rows: [sel] } = await td.pool.query<{ selection_id: string }>(`SELECT selection_id FROM claim_peer_mesh_pings WHERE ping_id = $1`, [bad.pingId]);
+    await td.pool.query(
+      `INSERT INTO claim_peer_mesh_replies (reply_id, pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [randomUUID(), p, bad.cid, sel!.selection_id, bad.pingId, m, junk],
+    );
+    const op = await operator(p);
+    const res = await op.client.inject({ method: 'GET', url: listUrl(p, m) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json<{ items: { pingId: string }[] }>().items.map((i) => i.pingId)).toEqual([good.pingId]);
+    expect(Object.keys(res.json<Json>())).toEqual(['items']); // ⛔ the count on the wire — it is on the audit line
+    const read = td.auditSink.events.filter((e) => e.type === 'helpline_claim.peer_requests_read');
+    expect(read.at(-1)).toMatchObject({ resourceLocator: `member:${m}`, context: { member_id: m, requests: 1, unreadable_requests: 1 } });
   });
 
   it('BOUND to the caller (review S12): recording neighbour M, the OTHER neighbour\'s ping is the SAME 404 on the PUT and the submit', async () => {

@@ -19,15 +19,17 @@ import {
   PEER_REQUEST_NO_LONGER_OPEN_CODE,
   PEER_REQUEST_STALE_CODE,
   PEER_REQUEST_SUBMITTED_CODE,
+  PEER_REQUEST_VERSION_STALE_CODE,
+  PEER_REQUEST_VERSION_UNREADABLE_CODE,
 } from '@twt/contracts';
 import { canonicalJsonStringify, claim, cycleCalendar, encryption, ids, kyc as kycDomain, member as memberDomain, notifications, questionnaires, type Db } from '@twt/domain';
-import { t } from '@twt/i18n';
 import type { FastifyBaseLogger } from 'fastify';
 
 import { PEER_MESH_ANSWER_FIELD_CLASS, type EncryptionDeps } from '../../context.js';
 import { ApiError, ConflictError, NotFoundError } from '../../http-errors.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { answerCodeIndexes, deathDateBlindIndex } from './ground-inspection-crypto.js';
+import { questionnaireWordsFor, type FallbackLogContext } from './questionnaire-words.js';
 
 /** The ONE not-found code on every peer-request route (member and helpline) — indistinguishable by design. */
 export const PEER_REQUEST_NOT_FOUND_CODE = 'peer_request.not_found';
@@ -64,6 +66,11 @@ export function mapPeerRequestError(err: unknown): never {
   if (err instanceof claim.PeerRequestNoLongerOpenError) throw new ConflictError('This request is no longer open', PEER_REQUEST_NO_LONGER_OPEN_CODE);
   if (err instanceof claim.PeerRequestSubmittedError) throw new ConflictError('These answers were already sent', PEER_REQUEST_SUBMITTED_CODE);
   if (err instanceof claim.PeerRequestStaleError) throw new ConflictError('Please try again', PEER_REQUEST_STALE_CODE);
+  // Story 6.33 (R7) — the version changed (RELOAD), or the pinned version cannot be saved to (terminal).
+  if (err instanceof claim.PeerRequestVersionStaleError) throw new ConflictError('These questions have changed', PEER_REQUEST_VERSION_STALE_CODE);
+  if (err instanceof claim.PeerRequestVersionUnreadableError) {
+    throw new ConflictError('These questions cannot be answered just now', PEER_REQUEST_VERSION_UNREADABLE_CODE);
+  }
   if (err instanceof claim.PeerRequestInvalidAnswerError) {
     throw new ApiError(422, PEER_REQUEST_INVALID_ANSWER_CODE, 'This answer cannot be saved', { reason: err.reason });
   }
@@ -97,27 +104,31 @@ export async function resolvePeerRequestMemberName(
   return notifications.resolveMemberFacingDeceasedName(mode, stored).trim();
 }
 
-/** The SERVED definition on the wire, its words resolved in en AND hi on the server (`{member}` interpolated). */
-export function toWireQuestionnaire(def: questionnaires.QuestionnaireDefinition, memberName: string): PeerRequestQuestionnaire {
+/**
+ * The SERVED definition on the wire, its words resolved in en AND hi on the server through THE ONE word function (Story
+ * 6.33 QE4 — a copy key or stored text; `{member}` interpolated; an empty name ⇒ the reviewed fallback word, logged).
+ */
+export function toWireQuestionnaire(
+  def: questionnaires.QuestionnaireDefinition,
+  memberName: string,
+  fallbackLog: FallbackLogContext = { log: null, ids: {} },
+): PeerRequestQuestionnaire {
   const served = questionnaires.servedDefinition(def);
-  const words = (key: string) => ({
-    en: t(key, { member: memberName }, { locale: 'en', namespace: 'claim' }),
-    hi: t(key, { member: memberName }, { locale: 'hi', namespace: 'claim' }),
-  });
+  const words = questionnaireWordsFor(memberName, { log: fallbackLog.log, ids: { ...fallbackLog.ids, versionId: served.versionId } });
   return {
     versionId: served.versionId,
     pages: served.pages.map((p) => ({
       questions: p.questions.map((q) => ({
         key: q.key,
         kind: q.kind,
-        words: words(q.copyKey),
-        options: q.options.map((o) => ({ code: o.code, words: words(o.copyKey), exclusive: o.exclusive === true })),
+        words: words.both(q),
+        options: q.options.map((o) => ({ code: o.code, words: words.both(o), exclusive: o.exclusive === true })),
         optional: q.optional,
         showIf: q.showIf === null ? null : { key: q.showIf.key, anyOf: [...q.showIf.anyOf] },
       })),
     })),
-    closingNote: words(served.closingNoteCopyKey),
-    thankYou: words(served.thankYouCopyKey),
+    closingNote: words.both({ copyKey: served.closingNoteCopyKey }),
+    thankYou: words.both({ copyKey: served.thankYouCopyKey }),
   };
 }
 
@@ -169,14 +180,15 @@ export async function buildPeerRequestDetail(
   enc: EncryptionDeps,
   log: FastifyBaseLogger,
 ): Promise<PeerRequestDetailResponse> {
-  const def = claim.pinnedVersionFor(view.reply, ids.pariwarId(pariwarId));
+  // Story 6.33 (R5) — the database-aware reader, on this transaction. A pin failing validation is still SHOWN (read-only — R7 (v)).
+  const { def } = await claim.pinnedVersionFor(tx, view.reply, ids.pariwarId(pariwarId));
   const memberName = await resolvePeerRequestMemberName(tx, pariwarId, view.deceasedMemberId, enc, log);
   const rows = view.reply ? await claim.readLivePeerAnswers(tx, ids.pariwarId(pariwarId), view.reply.replyId) : [];
   const decrypted = await decryptLiveSensitive(rows, pariwarId, enc, log);
   return {
     pingId: view.pingId,
     memberName,
-    questionnaire: toWireQuestionnaire(def, memberName),
+    questionnaire: toWireQuestionnaire(def, memberName, { log, ids: { pariwarId, pingId: view.pingId } }),
     answers: toWireAnswers(rows, decrypted),
     submitted: view.reply?.submittedAt != null,
   };
@@ -194,6 +206,8 @@ export interface PreparedSave {
   readonly stored: questionnaires.QuestionnaireAnswerValue;
   /** The question's live answer already holds `stored` — the save is a no-op and writes ⛔ no audit line (review S20). */
   readonly unchanged: boolean;
+  /** Story 6.33 (R7) — the version `prepared` was computed against; the writer compares it UNDER the locks. */
+  readonly versionId: string;
 }
 
 function sameAnswer(a: questionnaires.QuestionnaireAnswerValue | undefined, b: questionnaires.QuestionnaireAnswerValue): boolean {
@@ -216,6 +230,8 @@ export async function prepareSave(
     readonly questionKey: string;
     readonly value: questionnaires.QuestionnaireAnswerValue;
     readonly todayIst: string;
+    /** Story 6.33 (R7) — the version the client RENDERED (absent from an installed app). */
+    readonly clientVersionId?: string;
   },
   enc: EncryptionDeps,
   log: FastifyBaseLogger,
@@ -224,7 +240,13 @@ export async function prepareSave(
   const view = await claim.readPeerRequest(tx, pid, ids.peerMeshPingId(input.pingId), ids.memberId(input.memberId));
   if (!view.inWindow) throw new claim.PeerRequestNoLongerOpenError();
   if (view.reply?.submittedAt != null) throw new claim.PeerRequestSubmittedError();
-  const def = claim.pinnedVersionFor(view.reply, pid);
+  const pinned = await claim.pinnedVersionFor(tx, view.reply, pid);
+  // ⭐ Story 6.33 (R7) — a client that rendered another version RELOADS before anything checks its value against this one
+  // (after a flip that removed its question, `checkAnswer` would otherwise answer a 422). The writer repeats the compare
+  // under its locks; an unwritable pin is refused here too.
+  if (input.clientVersionId !== undefined && input.clientVersionId !== pinned.def.versionId) throw new claim.PeerRequestVersionStaleError();
+  if (!pinned.writable) throw new claim.PeerRequestVersionUnreadableError();
+  const def = pinned.def;
   const rows = view.reply ? await claim.readLivePeerAnswers(tx, pid, view.reply.replyId) : [];
   const decryptedLive = await decryptLiveSensitive(rows, input.pariwarId, enc, log);
   const live = new Map<string, readonly string[] | null>();
@@ -253,7 +275,8 @@ export async function prepareSave(
   const liveRow = rows.find((r) => r.questionKey === input.questionKey);
   const current = liveRow === undefined ? undefined : liveRow.valueCodes !== null ? { codes: liveRow.valueCodes } : decryptedLive.get(liveRow.answerId);
   const unchanged = sameAnswer(current, stored);
-  if (s.form === 'codes') return { prepared: { form: 'codes', codes: s.codes }, decryptedLive, stored, unchanged };
+  const versionId = def.versionId;
+  if (s.form === 'codes') return { prepared: { form: 'codes', codes: s.codes }, decryptedLive, stored, unchanged, versionId };
   const ciphertext = await encryptPeerAnswer(s.plaintext, input.pariwarId, enc);
   const dateWindowIndexes =
     s.dateWindow === null
@@ -261,7 +284,7 @@ export async function prepareSave(
       : ((await Promise.all(s.dateWindow.map((d) => deathDateBlindIndex(d, input.pariwarId, enc)))) as [string, string, string]);
   // ⭐ Story 6.32 (AC5) — the cause's / illness's keyed code indexes, through the ONE helper the family's writer uses.
   const codeIndexes = check.codes === null ? null : await answerCodeIndexes(view.claimCaseId, input.questionKey, check.codes, input.pariwarId, enc);
-  return { prepared: { form: 'encrypted', ciphertext, dateWindowIndexes, codeIndexes }, decryptedLive, stored, unchanged };
+  return { prepared: { form: 'encrypted', ciphertext, dateWindowIndexes, codeIndexes }, decryptedLive, stored, unchanged, versionId };
 }
 
 /** The audit intent's payload hash — the ping and the question KEY only (⛔ never the value). */

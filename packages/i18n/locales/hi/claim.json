@@ -1,5 +1,7 @@
 {
   "member_fallback": "आपके परिजन",
+  "$comment.questionnaire_member_fallback": "Story 6.33 (`2026-10-30-421` QE4; fixes 6.32 deferred D11): questionnaire.member_fallback fills the member's name in a questionnaire question (the Panel's copy keys AND staff-written stored text) when the name cannot be read — ⛔ the claimant screens' member_fallback. The Hindi was agent-authored and HUMAN-REVIEWED by BigDev on 2026-10-30 (`6-33-hindi-review-member-fallback-word.md`: \"A, सदस्य is fine but this better be rarest of rare\"). Each use is logged (`questionnaire.member_name_fallback`).",
+  "questionnaire.member_fallback": "सदस्य",
   "entry.question": "क्या आप {name} के परिजन हैं? हम दावा दर्ज करने में आपका मार्गदर्शन कर सकते हैं। हमें यह सत्यापित करना होगा कि यह आप ही हैं।",
   "entry.yes": "हाँ, मैं परिवार से हूँ",
   "entry.no": "नहीं — {name} के रूप में जारी रखें",

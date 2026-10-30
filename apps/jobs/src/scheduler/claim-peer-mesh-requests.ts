@@ -63,6 +63,7 @@ import {
   kyc as kycDomain,
   member as memberDomain,
   notifications,
+  questionnaireVersions,
   questionnaires,
   schema,
   withPariwarScope,
@@ -100,7 +101,10 @@ import { resolveAppLinksOrigin } from './staff-email-config.js';
 export interface ClaimPeerMeshRequestDeps extends Omit<ClaimCorrectionReminderDeps, 'push'> {
   /** `APP_LINKS_BASE_URL`, read at boot (the `ADMIN_APP_ORIGIN` precedent) and VALIDATED every run (R12). */
   readonly appLinksBaseUrl: string | undefined;
-  /** ⚠ TESTS ONLY — the questionnaire registry the live version is resolved from (default: the shipped one). */
+  /**
+   * ⚠ TESTS ONLY — the CODE questionnaire registry the reader falls back to (default: the shipped one); Story 6.33's
+   * database versions are read through the reader regardless.
+   */
   readonly questionnaireRegistry?: readonly questionnaires.QuestionnaireDefinition[];
 }
 
@@ -263,18 +267,27 @@ async function pariwarConfig(
   pariwarId: string,
   states: TextTemplateStates,
 ): Promise<{ readonly gap: string } | { readonly gap: null; readonly config: PariwarSendConfig }> {
-  const live = questionnaires.resolveLiveVersion('peer_mesh', pariwarId, deps.questionnaireRegistry);
-  if (live === null) return { gap: 'config:questionnaire_unavailable' };
-  if (questionnaires.pendingCounselBasisKeys(live).length > 0) return { gap: 'config:counsel_basis_pending' };
-  let locale: PeerMeshRequestSmsLocale;
+  // ⭐ Story 6.33 (QE12 R5) — the questionnaire in force is read through the database-aware reader INSIDE the locale's
+  // existing scope (ONE connection on the `max: 2` pool — ⛔ a nested scope), FIRST (its gaps precede the locale's, as
+  // before). The pool is BYPASSRLS: the reader names the Pariwar in SQL (R4), so a Pariwar-only version with a pending
+  // health question holds THIS Pariwar's texts and ⛔ another's (CF3 (d)). A failed read is the locale fault's class —
+  // a transient (the sweep records the Pariwar's gap and continues; the child retries).
+  const pid = ids.pariwarId(pariwarId);
+  let read: { readonly live: questionnaires.QuestionnaireDefinition | null; readonly locale: PeerMeshRequestSmsLocale | null };
   try {
-    const pid = ids.pariwarId(pariwarId);
-    locale = await withPariwarScope(deps.pool, pid, (db: Db) => claimDomain.resolvePariwarDefaultLocale(db, pid));
+    read = await withPariwarScope(deps.pool, pid, async (db: Db) => {
+      const live = (await questionnaireVersions.resolveLiveQuestionnaire(db, 'peer_mesh', pariwarId, deps.questionnaireRegistry)).def;
+      if (live === null || questionnaires.pendingCounselBasisKeys(live).length > 0) return { live, locale: null };
+      return { live, locale: await claimDomain.resolvePariwarDefaultLocale(db, pid) };
+    });
   } catch (err) {
     // ⛔ passport row — a DATA gap a retry ⛔ fixes ⇒ HELD; anything else is a failed READ ⇒ a transient (P7)
     if (err instanceof claimDomain.PeerRequestLocaleMissingError) return { gap: 'config:locale_unavailable' };
     throw new PeerRequestLocaleReadError(err);
   }
+  if (read.live === null) return { gap: 'config:questionnaire_unavailable' };
+  if (questionnaires.pendingCounselBasisKeys(read.live).length > 0) return { gap: 'config:counsel_basis_pending' };
+  const locale = read.locale!;
   // 📌 Story 6.35 (LS10 (b), the TX row) — a read fault on the Pariwar's OWN default locale's key HOLDS it, as before; on the OTHER
   // locale's key that locale is merely unusable (its recipients wait) — else a fault on the `en` key would hold every Hindi
   // Pariwar, what 6.37 AC9 (a) avoided. BOTH locales unusable ⇒ HELD with the default locale's gap (the alarm text as before).

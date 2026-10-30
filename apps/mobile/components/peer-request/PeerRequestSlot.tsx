@@ -67,7 +67,10 @@ export function PeerRequestSlot({ code }: PeerRequestSlotProps): React.ReactElem
           // ⛔ No API call before the session has loaded (or while the guard sends a signed-out member to login).
           <Paragraph p="$4">{t('peer_request.loading')}</Paragraph>
         ) : view.kind === 'questionnaire' ? (
-          <PeerQuestionnaire pariwarId={pariwarId as string} pingId={view.pingId} onBack={back} />
+          // ⭐ Story 6.33 review RP3 — `key` = the ping: the questionnaire's hand-over of unsent answers (`carried`) lives as long as the
+          // screen, and a link-to-link switch whose by-link result is cached never passes through `loading` — ⛔ without a remount B's first
+          // render would take A's unsent answers and re-save them INTO B. A remount per ping resets it.
+          <PeerQuestionnaire key={view.pingId} pariwarId={pariwarId as string} pingId={view.pingId} onBack={back} />
         ) : view.kind === 'not_openable' ? (
           <PeerRequestNotOpenable messageKey="peer_request.not_openable" />
         ) : (

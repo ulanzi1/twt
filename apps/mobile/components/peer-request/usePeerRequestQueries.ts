@@ -70,8 +70,9 @@ export function useSavePeerAnswer(pariwarId: string | undefined, pingId: string)
   return useMutation({
     ...PEER_REQUEST_MUTATION_OPTIONS,
     onMutate: () => qc.cancelQueries({ queryKey: detailKey, exact: true }),
-    mutationFn: (args: { questionKey: string; value: PeerRequestAnswerValue; idempotencyKey: string }) =>
-      peerRequestApi.saveAnswer(pariwarId as string, pingId, args.questionKey, args.value, args.idempotencyKey),
+    // ⭐ Story 6.33 (R7) — EVERY save carries the version the screen RENDERED.
+    mutationFn: (args: { questionKey: string; value: PeerRequestAnswerValue; idempotencyKey: string; questionnaireVersionId: string }) =>
+      peerRequestApi.saveAnswer(pariwarId as string, pingId, args.questionKey, args.value, args.idempotencyKey, args.questionnaireVersionId),
     onSuccess: (result) => {
       // A late acknowledgement after sign-out must not recreate a removed sensitive query.
       qc.setQueryData<import('@twt/contracts').PeerRequestDetailResponse>(detailKey, (detail) =>

@@ -1684,11 +1684,13 @@ export function createMemberPeerRequestClient(opts: MemberAuthClientOptions) {
       questionKey: string,
       value: PeerRequestAnswerValue,
       idempotencyKey: string,
+      /** Story 6.33 (R7) — the version the screen RENDERED; a changed version answers 409 `…questionnaire_version_stale`. */
+      questionnaireVersionId?: string,
     ): Promise<PeerRequestSaveAnswerResponse> {
       return call(
         `${base(pariwarId)}/${encodeURIComponent(pingId)}/answers/${encodeURIComponent(questionKey)}`,
         PeerRequestSaveAnswerResponse,
-        { value },
+        questionnaireVersionId === undefined ? { value } : { value, questionnaireVersionId },
         true,
         'PUT',
         undefined,
@@ -1783,7 +1785,7 @@ export function createMemberNomineeLinksClient(opts: MemberAuthClientOptions) {
 }
 
 export type MemberNomineeLinksClient = ReturnType<typeof createMemberNomineeLinksClient>;
-export { PeerAnswerEditor, type PeerAnswerEditorSnapshot } from './peer-answer-editor';
+export { PeerAnswerEditor, RELOAD_REFETCH_BOUND_MS, mergeCarried, withTimeout, type CarriedDraft, type PeerAnswerEditorSnapshot } from './peer-answer-editor';
 
 /**
  * ⭐ Story 11b.4 — the family memorial's MEMBER client (the Ravi-mode session-as-deceased). A SEPARATE factory sharing only

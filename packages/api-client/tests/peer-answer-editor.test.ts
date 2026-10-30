@@ -1,6 +1,6 @@
 import type { PeerRequestLiveAnswer, PeerRequestQuestion, PeerRequestSaveAnswerResponse } from '@twt/contracts';
 import { describe, expect, it, vi } from 'vitest';
-import { PeerAnswerEditor } from '../src/peer-answer-editor';
+import { PeerAnswerEditor, RELOAD_REFETCH_BOUND_MS, mergeCarried, withTimeout } from '../src/peer-answer-editor';
 
 const answer = (questionKey: string, code: string): PeerRequestLiveAnswer => ({ questionKey, value: { codes: [code] }, savedAt: 'now' });
 function deferred<T>() {
@@ -445,5 +445,118 @@ describe('PeerAnswerEditor — ordered saves and honest acknowledgements (6.27a 
     await flush();
     expect(editor.getSnapshot()).toMatchObject({ error: null, saveLine: 'saved', pending: 0 });
     expect(editor.getSnapshot().failed.size).toBe(0);
+  });
+});
+
+describe('PeerAnswerEditor — Story 6.33 (R7): the THIRD outcome, a version-stale reload', () => {
+  const stale = Object.assign(new Error('version changed'), { code: 'peer_request.questionnaire_version_stale' });
+  const isReload = (e: unknown) => (e as { code?: string } | null)?.code === 'peer_request.questionnaire_version_stale';
+
+  it("a version-stale answer ⇒ saveLine 'reload': ⛔ retried, ⛔ a failure, ⛔ further sends; every draft kept for carry-over", async () => {
+    const save = vi.fn(async () => {
+      throw stale;
+    });
+    const opts = { ...options(save), shouldRetry: () => true, isReload };
+    const editor = new PeerAnswerEditor([], opts);
+    editor.save('has_died', { codes: ['died'] });
+    editor.save('how_known', { codes: ['family_told'] });
+    await flush();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(opts.wait).not.toHaveBeenCalled();
+    const snap = editor.getSnapshot();
+    expect(snap.saveLine).toBe('reload');
+    expect(snap.failed.size).toBe(0);
+    editor.save('relationship', { codes: ['neighbour'] });
+    await flush();
+    expect(save).toHaveBeenCalledTimes(1); // ⛔ sent after a reload
+    expect(editor.carryOverDrafts()).toEqual([
+      { questionKey: 'has_died', value: { codes: ['died'] } },
+      { questionKey: 'how_known', value: { codes: ['family_told'] } },
+      { questionKey: 'relationship', value: { codes: ['neighbour'] } },
+    ]);
+  });
+
+  it('WITHOUT isReload the same error takes the existing path (retry / failure) — the option is the only way in', async () => {
+    let n = 0;
+    const save = vi.fn(async () => {
+      n += 1;
+      if (n === 1) throw stale;
+      return { answers: [answer('has_died', 'died')] };
+    });
+    const editor = new PeerAnswerEditor([], { ...options(save), shouldRetry: () => true });
+    editor.save('has_died', { codes: ['died'] });
+    await flush();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(editor.getSnapshot().saveLine).toBe('saved');
+  });
+});
+
+describe('mergeCarried — the hand-over of unsent answers between two questionnaire instances (Story 6.33 review RV7)', () => {
+  const codes = (...c: string[]) => ({ codes: c });
+  it('the editor\'s newer draft wins per question and moves to the END; an older carried answer no draft touched STAYS', () => {
+    const pending = [
+      { questionKey: 'has_died', value: codes('died') },
+      { questionKey: 'how_known', value: codes('neighbour') },
+    ];
+    const drafts = [{ questionKey: 'has_died', value: codes('not_died') }];
+    expect(mergeCarried(pending, drafts)).toEqual([
+      { questionKey: 'how_known', value: codes('neighbour') },
+      { questionKey: 'has_died', value: codes('not_died') },
+    ]);
+  });
+  it('nothing pending ⇒ the drafts, in order; nothing at all ⇒ [] (so an emptied editor EMPTIES the hand-over)', () => {
+    const drafts = [
+      { questionKey: 'a', value: codes('1') },
+      { questionKey: 'b', value: codes('2') },
+    ];
+    expect(mergeCarried([], drafts)).toEqual(drafts);
+    expect(mergeCarried([], [])).toEqual([]);
+  });
+  it('is PURE: neither input is mutated, and the result is a fresh array', () => {
+    const pending = [{ questionKey: 'a', value: codes('1') }];
+    const drafts = [{ questionKey: 'a', value: codes('2') }];
+    const out = mergeCarried(pending, drafts);
+    expect(pending).toEqual([{ questionKey: 'a', value: codes('1') }]);
+    expect(drafts).toEqual([{ questionKey: 'a', value: codes('2') }]);
+    expect(out).not.toBe(pending);
+    expect(out).not.toBe(drafts);
+  });
+});
+
+describe('withTimeout — a reload\'s refetch is BOUNDED (review RP9)', () => {
+  it('resolves with the work\'s value when it settles first, and CLEARS the timer', async () => {
+    vi.useFakeTimers();
+    try {
+      const out = withTimeout(Promise.resolve('data'), RELOAD_REFETCH_BOUND_MS, 'timed out');
+      await expect(out).resolves.toBe('data');
+      expect(vi.getTimerCount()).toBe(0); // ⛔ a timer left behind
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('resolves with the fallback once the bound passes when the work NEVER settles', async () => {
+    vi.useFakeTimers();
+    try {
+      const out = withTimeout(new Promise<string>(() => undefined), RELOAD_REFETCH_BOUND_MS, 'timed out');
+      await vi.advanceTimersByTimeAsync(RELOAD_REFETCH_BOUND_MS - 1);
+      let settled = false;
+      void out.then(() => (settled = true));
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(out).resolves.toBe('timed out');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('passes a REJECTION through (the caller maps it to failed) and clears the timer', async () => {
+    vi.useFakeTimers();
+    try {
+      const out = withTimeout(Promise.reject(new Error('network')), RELOAD_REFETCH_BOUND_MS, 'timed out');
+      await expect(out).rejects.toThrow('network');
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

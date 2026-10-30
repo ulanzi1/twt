@@ -793,7 +793,26 @@ export function permissionKey(value: string): PermissionKey {
 // `pariwar.declare_degraded_mode`'s. REUSE CHECK — ⛔ no existing key fits: `pariwar.declare_degraded_mode` is held by
 // `pariwar_admin` too (the Panel named the Super Admin), `feature_flag.flip` likewise (`-415` FS17 (c)). 54 / 70 READ LIVE at
 // `64e01121`. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 55 as const;
+//
+// ⭐ Story 6.33 (author-commit `2026-10-30-421` QE6 (A); the Panel's chain `2026-10-10-304` Q7 / Q8; the Trustee-Lite reading
+// RATIFIED by `2026-10-30-422` Q1 A) — 55 → 56, THREE keys (71 → 74), ONE bump:
+//   · `questionnaire.propose` — pariwar-dimension; `pariwar_admin` (+ derived super_admin): read the Pariwar's versions and
+//     PROPOSE a new version of the neighbours' or the inspector's questionnaire, and WITHDRAW one's own proposal.
+//   · `questionnaire.approve` — pariwar-dimension; `pariwar_admin` (+ derived super_admin) ACTING AS TRUSTEE-LITE for the
+//     ruled "State Trustee" step (the 6.13 `cycle.freeze` / 6.14 `claim.r9_vote` posture, `-305` §1 (c)): APPROVE (with the
+//     Hindi and classification ticks) or RETURN a proposal. ⭐ The approver MAY be the author (`-304`'s reading: *"a Pariwar
+//     Admin's proposal or their own"*) — the second person is the Super Admin at make-live; ⛔ a distinct-approver rule (Q8 A,
+//     ⛔ taken).
+//   · `questionnaire.publish` — GLOBAL-dimension (`requireGlobalPermission`); `super_admin` ONLY (derived — ⛔ a `roles.ts`
+//     const, the `degraded_mode.switch_bridge_sms` precedent): make a version live for one Pariwar or all, modify at
+//     make-live, add a question directly and make it live, revert a Pariwar — *"No additional Permission required for
+//     Superadmin"* (`-304` Q7 / Q8) is automatic.
+// REUSE CHECK — ⛔ no existing key fits: `survey.*` are member surveys (a different instrument, ⛔ a claim's evidence),
+// `niyamavali.*` the rulebook's draft → publish, `approval_warning_reason.manage` a claim-approval list. ⛔ NOT `state_trustee`
+// on any: its `state` ceiling can ⛔ never satisfy a `pariwar`-dimension check — an INERT grant (scope.ts §RANK-ORDER;
+// [[project_rbac_geo_scope_containment]]); ⛔ NOT `trustee_panel` (the trust-wide Panel as per-version approver is Q8 B,
+// ⛔ taken). `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 56 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1383,6 +1402,16 @@ export const SEED_PERMISSION_KEYS = [
   // or off, Trust-wide, with a required reason. global-dimension (`requireGlobalPermission`); `super_admin` ONLY (derived —
   // ⛔ `roles.ts` const).
   'degraded_mode.switch_bridge_sms',
+  // Story 6.33 (`2026-10-30-421` QE6 (A)) — PROPOSE a new version of a questionnaire (and withdraw one's own); read the
+  // Pariwar's versions. pariwar-dimension; `pariwar_admin` (+ derived super_admin).
+  'questionnaire.propose',
+  // Story 6.33 (QE6 (A); `-422` Q1 A) — APPROVE (both ticks) or RETURN a proposal — the ruled "State Trustee" step, performed
+  // by `pariwar_admin` as Trustee-Lite (the approver MAY be the author). pariwar-dimension; `pariwar_admin` (+ derived
+  // super_admin).
+  'questionnaire.approve',
+  // Story 6.33 (QE6 (A), QE7) — MAKE LIVE for one Pariwar or all, modify at make-live, add directly, revert a Pariwar.
+  // global-dimension (`requireGlobalPermission`); `super_admin` ONLY (derived — ⛔ `roles.ts` const).
+  'questionnaire.publish',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

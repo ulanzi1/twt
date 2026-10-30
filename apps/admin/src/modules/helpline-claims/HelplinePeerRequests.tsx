@@ -18,13 +18,14 @@
 // call only ([[project_tanstack_mutate_callbacks_latest_only]]).
 
 import type { PeerRequestAnswerValue, PeerRequestDetailResponse, PeerRequestLiveAnswer, PeerRequestQuestion } from '@twt/contracts';
-import { PEER_REQUEST_STALE_CODE } from '@twt/contracts';
-import { PeerAnswerEditor } from '@twt/api-client';
+import { PEER_REQUEST_STALE_CODE, PEER_REQUEST_VERSION_STALE_CODE, PEER_REQUEST_VERSION_UNREADABLE_CODE } from '@twt/contracts';
+import { PeerAnswerEditor, RELOAD_REFETCH_BOUND_MS, withTimeout } from '@twt/api-client';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { useRouter } from '@tanstack/react-router';
 
 import { ApiError } from '../../api/client.js';
 import { useHelplinePeerRequests, useHelplineSavePeerAnswer, useHelplineSubmitPeerReply } from '../../api/hooks.js';
+import { mergeCarried, type CarriedDraft } from './carry-over.js';
 import { resolveEn } from './i18n-en.js';
 
 /** The earliest date a neighbour may give (the server's `EARLIEST_ANSWER_DATE`). */
@@ -44,8 +45,20 @@ export function isShownFor(q: PeerRequestQuestion, answers: ReadonlyMap<string, 
 
 /** A refusal that ENDS the request for this caller (it leaves the list). */
 function isTerminal(err: unknown): boolean {
-  return err instanceof ApiError && ['peer_request.no_longer_open', 'peer_request.submitted', 'peer_request.not_found'].includes(err.code ?? '');
+  return (
+    err instanceof ApiError &&
+    // Story 6.33 (R7 (v)) — a pinned version that cannot be answered ENDS the request for this call (⛔ a reload, ⛔ a retry).
+    ['peer_request.no_longer_open', 'peer_request.submitted', 'peer_request.not_found', PEER_REQUEST_VERSION_UNREADABLE_CODE].includes(err.code ?? '')
+  );
 }
+
+/** Story 6.33 (R7) — the questions changed since the card loaded them: RELOAD (⛔ a retry). */
+function isReload(err: unknown): boolean {
+  return err instanceof ApiError && err.code === PEER_REQUEST_VERSION_STALE_CODE;
+}
+
+/** A card whose questions changed: the list is being read again (`working`), or that read failed (`failed` — "Try again"). */
+type ReloadState = 'working' | 'failed';
 
 function failureText(err: unknown): string {
   if (err instanceof ApiError) {
@@ -53,6 +66,7 @@ function failureText(err: unknown): string {
     if (err.code === 'peer_request.submitted') return resolveEn('helpline.peer.failure.submitted');
     if (err.code === 'peer_request.not_found') return resolveEn('helpline.peer.failure.notFound');
     if (err.code === 'peer_request.invalid_answer') return resolveEn('helpline.peer.failure.invalid');
+    if (err.code === PEER_REQUEST_VERSION_UNREADABLE_CODE) return resolveEn('helpline.peer.failure.versionUnreadable');
   }
   return resolveEn('helpline.peer.notSaved');
 }
@@ -90,6 +104,47 @@ export function HelplinePeerRequests({
     const line = resolveEn('helpline.peer.outcome', { member: memberName || resolveEn('helpline.peer.about.fallback'), outcome: text });
     setOutcomes((prev) => [...prev.filter((o) => o.pingId !== pingId), { memberId, pingId, text: line }]);
   }, [memberId]);
+  // ⭐ Story 6.33 (R7) — each card MIRRORS its unsent answers here as they change, so that ANY rebuild of a card (keyed on the
+  // ping, the version AND this reload's generation) hands them to the next one: a reload after a version-stale save, a
+  // refetch that changes the data (and then the generation), or a background refetch that brings a new version (review RV7).
+  const carried = useRef(new Map<string, CarriedDraft[]>());
+  // … but only for as long as this caller stays selected: a card opened LATER (another caller, or the page left and come back)
+  // starts clean — it never re-sends what an earlier card was holding.
+  useEffect(() => {
+    carried.current.clear();
+  }, [memberId, ready]);
+  const [reloads, setReloads] = useState<Readonly<Record<string, number>>>({});
+  // A card whose questions changed: the list is read again; a read that FAILS says so on that card, with a "Try again"
+  // (the answers stay in `carried`) — ⛔ a card left at "Saving…" for good (review RV8).
+  const [reloading, setReloading] = useState<Readonly<Record<string, ReloadState>>>({});
+  const refetchList = listQ.refetch;
+  const onReload = useCallback(
+    (pingId: string) => {
+      const mark = (to: ReloadState | null): void =>
+        setReloading((g) => {
+          const next = { ...g };
+          if (to === null) delete next[pingId];
+          else next[pingId] = to;
+          return next;
+        });
+      mark('working');
+      // The refetch is BOUNDED (review RP9): the admin transport has no timeout and a refetch re-joins a hung fetch, so a read
+      // that never settles is a FAILED read — the card says so, with its "Try again" — ⛔ "updating them…" for good. A rejection
+      // is a failure too.
+      void withTimeout<{ readonly isError: boolean }>(refetchList(), RELOAD_REFETCH_BOUND_MS, { isError: true }).then(
+        (r) => {
+          if (r.isError) {
+            mark('failed');
+            return;
+          }
+          mark(null);
+          setReloads((g) => ({ ...g, [pingId]: (g[pingId] ?? 0) + 1 }));
+        },
+        () => mark('failed'),
+      );
+    },
+    [refetchList],
+  );
   if (!ready) return null;
   const title = resolveEn('helpline.peer.title');
   const finished = outcomes.filter((o) => o.memberId === memberId);
@@ -139,13 +194,16 @@ export function HelplinePeerRequests({
       {items.length > 0 && <p className="text-xs opacity-70">{resolveEn('helpline.peer.intro')}</p>}
       {items.map((item) => (
         <PeerRequestCard
-          key={item.pingId}
+          key={`${item.pingId}:${item.questionnaire.versionId}:${reloads[item.pingId] ?? 0}`}
           pariwarId={pariwarId}
           memberId={memberId}
           item={item}
           onStepUpRequired={onStepUpRequired}
           onBusyChange={reportBusy}
           onFinished={onFinished}
+          carried={carried}
+          reload={reloading[item.pingId]}
+          onReload={onReload}
         />
       ))}
     </section>
@@ -159,6 +217,9 @@ function PeerRequestCard({
   onStepUpRequired,
   onBusyChange,
   onFinished,
+  carried,
+  reload,
+  onReload,
 }: {
   pariwarId: string;
   memberId: string | null;
@@ -166,6 +227,11 @@ function PeerRequestCard({
   onStepUpRequired: () => void;
   onBusyChange: (pingId: string, busy: boolean) => void;
   onFinished: (pingId: string, memberName: string, text: string) => void;
+  /** Story 6.33 (R7) — unsaved answers handed over by the card this one REPLACES (kept current by every card, see below). */
+  carried: { current: Map<string, CarriedDraft[]> };
+  /** Where this card's reload stands (RV8): reading the list again, or that read failed. */
+  reload: ReloadState | undefined;
+  onReload: (pingId: string) => void;
 }): ReactElement {
   const save = useHelplineSavePeerAnswer(pariwarId, memberId);
   const submit = useHelplineSubmitPeerReply(pariwarId, memberId);
@@ -200,10 +266,18 @@ function PeerRequestCard({
         staleFor.current = task.idempotencyKey;
         staleRetries.current = 0;
       }
-      return saveRef.current({ pingId: item.pingId, questionKey: task.questionKey, value: task.value, idempotencyKey: task.idempotencyKey });
+      // ⭐ Story 6.33 (R7) — the RENDERED version on every save.
+      return saveRef.current({
+        pingId: item.pingId,
+        questionKey: task.questionKey,
+        value: task.value,
+        idempotencyKey: task.idempotencyKey,
+        questionnaireVersionId: item.questionnaire.versionId,
+      });
     },
     newKey: () => crypto.randomUUID(),
     shouldRetry: (err) => err instanceof ApiError && err.code === PEER_REQUEST_STALE_CODE && (staleRetries.current += 1) <= 3,
+    isReload,
     wait: (attempt) => new Promise((resolve) => setTimeout(resolve, 300 * attempt)),
     questions: allQuestions,
   }));
@@ -221,6 +295,40 @@ function PeerRequestCard({
   useEffect(() => {
     editor.replaceFromServer(item.answers);
   }, [editor, item.answers]);
+  // ⭐ Story 6.33 (R7) — the questions changed: reload; this card is replaced …
+  const reloadRef = useRef(onReload);
+  reloadRef.current = onReload;
+  useEffect(() => {
+    if (state.saveLine === 'reload') reloadRef.current(item.pingId);
+  }, [state.saveLine, editor, item.pingId]);
+  // … and the REBUILT one re-records each carried answer whose question is still asked (the rest are dropped) — one tick
+  // after mount, CANCELLED on cleanup (Strict Mode's setup → cleanup → setup records each answer ONCE), and ONCE only: the
+  // answers are emptied out of `toCarry` as they are applied (review RV7).
+  const toCarry = useRef(carried.current.get(item.pingId) ?? []);
+  const questionsRef = useRef(allQuestions);
+  questionsRef.current = allQuestions;
+  // This card's unsent answers are mirrored into the shared hand-over on every change — a dispose publishes nothing, so the
+  // last mirror survives whatever rebuilds it. Answers handed to THIS card and not yet re-recorded stay in the mirror
+  // (`mergeCarried`): a second rebuild before they are applied (the data changes, then the generation) must not lose them.
+  const mirror = useCallback(() => {
+    const unsent = mergeCarried(toCarry.current, editor.carryOverDrafts());
+    if (unsent.length > 0) carried.current.set(item.pingId, unsent);
+    else carried.current.delete(item.pingId);
+  }, [editor, carried, item.pingId]);
+  useEffect(() => editor.subscribe(mirror), [editor, mirror]);
+  useEffect(() => {
+    if (toCarry.current.length === 0) return;
+    const timer = setTimeout(() => {
+      const keys = new Set(questionsRef.current.map((q) => q.key));
+      // Emptied BEFORE the saves (same tick): the mirror each save triggers then sees only the card's own drafts.
+      const handed = toCarry.current;
+      toCarry.current = [];
+      for (const d of handed) if (keys.has(d.questionKey)) editor.save(d.questionKey, d.value);
+      // An answer DROPPED (its question is gone) leaves the hand-over — a later version asking it again must not resurrect it.
+      mirror();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [editor, mirror]);
   useEffect(() => {
     const notify = () => onBusyChange(item.pingId, isBusy());
     notify();
@@ -289,6 +397,9 @@ function PeerRequestCard({
   const dirtyDates = Object.keys(dates).length > 0;
   const about = item.memberName || resolveEn('helpline.peer.about.fallback');
   const today = todayIst();
+  // The save met a questions change: the card says so while the list is read again (⛔ "Saving…" — it is not), and its
+  // "Try again" line below says it when that read FAILED (RV8).
+  const reloadLine = state.saveLine === 'reload' ? (reload === 'failed' ? '' : resolveEn('helpline.peer.reload.updating')) : null;
   return (
     <article aria-label={resolveEn('helpline.peer.about', { member: about })} className="rounded border p-3">
       <h3 className="font-semibold">{resolveEn('helpline.peer.about', { member: about })}</h3>
@@ -415,7 +526,8 @@ function PeerRequestCard({
           {resolveEn('helpline.peer.submit')}
         </button>
         <span role="status" className="text-sm">
-          {status ??
+          {reloadLine ??
+            status ??
             (state.pending > 0
               ? resolveEn('helpline.peer.saving')
               : state.saveLine === 'saved'
@@ -424,6 +536,14 @@ function PeerRequestCard({
                   ? resolveEn('helpline.peer.notSaved')
                   : '')}
         </span>
+        {state.saveLine === 'reload' && reload === 'failed' && (
+          <>
+            <span role="alert" className="text-sm" data-testid="peer-reload-failed">{resolveEn('helpline.peer.reload.failed')}</span>
+            <button type="button" className="rounded border px-3 py-1 text-sm" onClick={() => reloadRef.current(item.pingId)}>
+              {resolveEn('helpline.peer.reload.retry')}
+            </button>
+          </>
+        )}
         {state.failed.size > 0 && (
           <>
             <button type="button" onClick={() => { setStatus(null); editor.retryFailed(); }}>{resolveEn('helpline.peer.retry')}</button>

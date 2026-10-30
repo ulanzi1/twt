@@ -61,6 +61,8 @@ import {
   assemblePeerMeshSection,
   assemblePeerSection,
   familyAccountAuditCounts,
+  sensitiveAnswerAuditCounts,
+  type SensitiveAnswerCounts,
   stitchPeerAnswerFlags,
   type PeerCallbackBasis,
   type PeerCallbackViewer,
@@ -258,8 +260,17 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * It can ⛔ fold into the family-account statement (that one returns ⛔ row for a claim with ⛔ such visit — exactly the case
  * this read serves). It decrypts ⛔ nothing. The ceiling counts it (the worst case). ⭐ Ledger line:
  *   + Story 6.32 (S22): the claim whose inspection this claim inherits                              +1  → 31
+ *
+ * ⭐ STORY 6.33's TWO CONDITIONAL READS (code review RV24) — the explanation this counter demands. A reply or a visit may now be
+ * pinned to a DATABASE version (a chain version staff wrote), whose words are in a table, not in the code registry; the section
+ * must read that definition to show the answers by their words. Each section (the family account's visits; the neighbours' replies)
+ * does it in ONE batched statement for ALL its DATABASE-pinned versions (`getQuestionnaireDefinitions`) — ⛔ one per version — and
+ * ⛔ NOTHING when every pin is a code version (today's only claims: no query, no savepoint, no bump). They decrypt ⛔ nothing. The
+ * ceiling counts them (the worst case: both sections pinned to a DATABASE version). They were first shipped UNCOUNTED, which is the
+ * silent exclusion the paragraph above forbids. ⭐ Ledger line:
+ *   + Story 6.33 (RV24): the family account's / the replies' DATABASE-pinned definitions          +2  → 33 (conditional)
  */
-export const VERIFIER_CONSOLE_MAX_READS = 31;
+export const VERIFIER_CONSOLE_MAX_READS = 33;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -294,6 +305,8 @@ export interface VerifierConsoleContext {
    *  REQUIRED (third-pass review U11 — an optional one, defaulted to a no-op, let a context show mobiles unaudited).
    *  ⭐ Story 6.27b — with WHY it was shown (`consented` / `super_admin`), for the audit context. */
   onCallbackMobileShown: (pingId: string, basis: PeerCallbackBasis) => void;
+  /** Story 6.33 (QE8 C11) — the peer section's ciphertext counts, for the read line (⛔ a wire field). */
+  onSensitiveAnswerCounts?: (counts: SensitiveAnswerCounts) => void;
   /** ⭐ Story 6.27b (`-328` read with `-329`) — REQUIRED, ⛔ never defaulted: `'super_admin'` ONLY when the console's
    *  `claim.verify` gate matched a `super_admin` grant (`rbac.matchingGrantRole`), else `'district'`. */
   callbackViewer: Extract<PeerCallbackViewer, 'district' | 'super_admin'>;
@@ -932,6 +945,7 @@ export async function assemblePeerMesh(
           ...(ctx.log ? { log: ctx.log } : {}),
           // REQUIRED on the context; the route emits the audit lines only once its packet is built (review S17).
           onCallbackMobileShown: ctx.onCallbackMobileShown,
+          ...(ctx.onSensitiveAnswerCounts ? { onSensitiveAnswerCounts: ctx.onSensitiveAnswerCounts } : {}),
           run: (label, read) => underSavepoint(ctx.client, `console_${label}`, read),
         },
         () => reads.bump(),
@@ -1338,6 +1352,7 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         ) === 'super_admin'
           ? 'super_admin'
           : 'district';
+      let sensitiveCounts: SensitiveAnswerCounts | null = null;
       const { packet } = await assembleVerifierConsole(deps, {
         db: scopeTx.tx,
         client: scopeTx.client,
@@ -1351,6 +1366,7 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
         log: request.log,
         // ⭐ Story 6.27a (PM13) — EACH call-back mobile shown is audited: actor, claim, ping — ⛔ never the number.
         onCallbackMobileShown: (pingId, basis) => shownPings.push({ pingId, basis }),
+        onSensitiveAnswerCounts: (counts) => (sensitiveCounts = counts),
         callbackViewer,
       });
       // ⭐ Code review round 2 (S8) — only for a section the packet ACTUALLY carries: the wire mapping runs after the
@@ -1376,6 +1392,8 @@ export function createVerifierConsoleHandlers(deps: AppDeps) {
           deceased_member_id: packet.deceasedMemberId,
           // ⭐ Story 6.32 (second review S15) — the family's account the neighbours' section carried (counts only).
           ...familyAccountAuditCounts(packet.peerMesh),
+          // ⭐ Story 6.33 (QE8 C11) — the answers stored as ciphertext the section carried (each decrypted to be shown).
+          ...sensitiveAnswerAuditCounts(packet.peerMesh, sensitiveCounts),
         },
       });
 

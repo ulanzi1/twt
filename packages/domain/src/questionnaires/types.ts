@@ -28,11 +28,23 @@ export type CallbackAudience = (typeof CALLBACK_AUDIENCES)[number];
 /** `counselBasis` — a STATE, ⛔ never a boolean: `'pending'`, or counsel's recorded basis as a decision id. */
 export type CounselBasis = 'pending' | string;
 
+/**
+ * Story 6.33 (`2026-10-30-421` QE4) — words STORED on a chain-authored question or option, in both languages (⛔ a copy
+ * key: `t()`'s catalog is a static import). EXACTLY ONE of `copyKey` / `text` per question and option (the validator,
+ * by `typeof`); the ONE word function resolves either.
+ */
+export interface StoredText {
+  readonly en: string;
+  readonly hi: string;
+}
+
 export interface QuestionOption {
   /** The stored plaintext / encrypted CODE — stable across versions. */
   readonly code: string;
   /** The copy key of the option's words (`claim` namespace), resolved in en and hi on the server. */
-  readonly copyKey: string;
+  readonly copyKey?: string;
+  /** Story 6.33 — a chain option's stored words (⛔ with `copyKey`). */
+  readonly text?: StoredText;
   /** A `multi` option that must stand alone (e.g. *"I don't know"*). */
   readonly exclusive?: boolean;
 }
@@ -47,7 +59,9 @@ export interface QuestionDefinition {
   readonly key: string;
   readonly kind: QuestionKind;
   /** The question's words (`claim` namespace). May interpolate `{member}`. */
-  readonly copyKey: string;
+  readonly copyKey?: string;
+  /** Story 6.33 — a chain question's stored words (⛔ with `copyKey`); `{member}` is the only placeholder. */
+  readonly text?: StoredText;
   readonly options: readonly QuestionOption[];
   readonly optional: boolean;
   readonly showIf: QuestionShowIf | null;
@@ -55,7 +69,7 @@ export interface QuestionDefinition {
   readonly sensitive: boolean;
   /** Feeds a 6.27b warning kind — ONLY `has_died` and `death_date` (CF3 (b)); the validator refuses any other. */
   readonly warning: boolean;
-  /** Trustee-ratified decision ids (or, once row 6-33 lands, chain records). */
+  /** Trustee-ratified decision ids — or, on a chain question (Story 6.33), exactly `['chain:<its version's id>']`. */
   readonly approvedBy: readonly string[];
   /** Health information (CF3 (d)) — needs counsel's basis before it is served. */
   readonly health: boolean;

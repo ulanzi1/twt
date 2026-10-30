@@ -26,6 +26,8 @@ import {
   GROUND_INSPECTION_QUESTIONNAIRE_CERTIFICATE_CHECK_CODE,
   GROUND_INSPECTION_QUESTIONNAIRE_STALE_CODE,
   GROUND_INSPECTION_QUESTIONNAIRE_UNAVAILABLE_CODE,
+  GROUND_INSPECTION_QUESTIONNAIRE_VERSION_STALE_CODE,
+  GROUND_INSPECTION_QUESTIONNAIRE_VERSION_UNREADABLE_CODE,
   type FamilyAnswerDisplay,
   type FamilyAnswersDisplay,
   type GroundInspectionLiveAnswer,
@@ -33,8 +35,7 @@ import {
   type GroundInspectionSaveAnswerResponse,
   type NoteWithheldReason,
 } from '@twt/contracts';
-import { claim, cycleCalendar, ids, member as memberDomain, questionnaires, rbac, schema } from '@twt/domain';
-import { t } from '@twt/i18n';
+import { claim, cycleCalendar, ids, member as memberDomain, questionnaireVersions, questionnaires, rbac, schema } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -55,6 +56,7 @@ import { auditAuthorizationDenied, geoTreeResolverForRequest } from '../rbac/ind
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { underSavepoint } from './later-approval-warnings.js';
 import { resolvePeerRequestMemberName, toWireQuestionnaire } from './peer-request-core.js';
+import { questionnaireWordsFor } from './questionnaire-words.js';
 import { readClaimsHiddenFromReader, withheldReasonOn, withheldUnlessAuthor } from './hidden-reader-notes.js';
 import {
   answerCodeIndexes,
@@ -208,6 +210,13 @@ function translateGroundInspectionError(err: unknown): never {
   if (err instanceof claim.GroundInspectionQuestionnaireCertificateCheckError) {
     throw new ConflictError('A certificate check asks the family no questions', GROUND_INSPECTION_QUESTIONNAIRE_CERTIFICATE_CHECK_CODE);
   }
+  // Story 6.33 (R7) — the version changed since the panel loaded it (RELOAD), or the pinned version cannot be saved to.
+  if (err instanceof claim.GroundInspectionQuestionnaireVersionStaleError) {
+    throw new ConflictError('These questions have changed — reload them', GROUND_INSPECTION_QUESTIONNAIRE_VERSION_STALE_CODE);
+  }
+  if (err instanceof claim.GroundInspectionQuestionnaireVersionUnreadableError) {
+    throw new ConflictError('These questions cannot be answered just now', GROUND_INSPECTION_QUESTIONNAIRE_VERSION_UNREADABLE_CODE);
+  }
   if (err instanceof claim.GroundInspectionQuestionnaireStaleError) {
     throw new ConflictError('The answers changed while saving — please try again', GROUND_INSPECTION_QUESTIONNAIRE_STALE_CODE);
   }
@@ -266,12 +275,10 @@ interface InspectionDiscrepancyNoteDto {
 export type DiscrepancyNoteBody = { questionKey: claim.InspectionDiscrepancyKey; note: string };
 
 /** Story 6.32 — the questionnaire save's body (the route validates it `.strict()`). */
-export type QuestionnaireAnswerBody = { codes: string[] };
+export type QuestionnaireAnswerBody = { codes: string[]; questionnaireVersionId?: string };
 
 /** The ③ / ④ keys — the family answers them at the inspection (Story 6.32). */
 const FAMILY_ANSWER_KEYS = ['death_cause', 'death_illness'] as const;
-
-const enWords = (key: string, member: string): string => t(key, { member }, { locale: 'en', namespace: 'claim' });
 
 /** A family answer's stored value as codes: plaintext codes, else the decrypted JSON code list; `null` ⇔ ⛔ shown. */
 function codesOfDecrypted(plain: string): string[] | null {
@@ -447,7 +454,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
     const warn = (what: string, err: unknown) =>
       request.log.warn({ err: err instanceof Error ? err.name : 'unknown', ground_inspection_id: groundInspectionId, what }, 'discrepancy: a family answer could not be shown');
     let rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>> = [];
-    let def: ReturnType<typeof questionnaires.getQuestionnaireVersion> = null;
+    let def: questionnaires.QuestionnaireDefinition | null = null;
     try {
       const pid = ids.pariwarId(ctx.pariwarId);
       const gid = ids.groundInspectionId(groundInspectionId);
@@ -456,7 +463,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       try {
         rows = await claim.readLiveGroundInspectionAnswers(scopeTx.tx, pid, gid);
         const header = await claim.readGroundInspectionQuestionnaireHeader(scopeTx.tx, pid, gid);
-        def = header === null ? null : questionnaires.getQuestionnaireVersion(header.questionnaireVersionId);
+        // Story 6.33 (R5) — the database-aware reader, on this transaction (a chain version's pin resolves too).
+        def = header === null ? null : await questionnaireVersions.getQuestionnaireDefinition(scopeTx.tx, header.questionnaireVersionId);
         ok = true;
       } finally {
         await closeScopeTx(scopeTx, ok);
@@ -465,6 +473,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       warn('read', err);
     }
     const out: { -readonly [K in keyof FamilyAnswersDisplay]: FamilyAnswersDisplay[K] } = {};
+    const optionWords = questionnaireWordsFor('');
     for (const key of keys) {
       const row = rows.find((r) => r.questionKey === key);
       let codes: string[] | null = null;
@@ -476,9 +485,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
         }
       }
       const q = def === null ? undefined : questionnaires.questionsOf(def).find((x) => x.key === key);
+      // THE ONE word function (Story 6.33 QE4) — an option's words carry ⛔ `{member}` slot, so ⛔ name is needed here.
       const label = (code: string) => {
         const o = q?.options.find((x) => x.code === code);
-        return o === undefined ? code : enWords(o.copyKey, '');
+        return o === undefined ? code : optionWords.en(o);
       };
       const display: FamilyAnswerDisplay = codes === null ? { status: 'unavailable' } : { status: 'shown', codes, labels: codes.map(label) };
       out[key] = display;
@@ -1204,8 +1214,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       let read: { def: questionnaires.QuestionnaireDefinition; rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>>; memberName: string };
       try {
         const header = await claim.readGroundInspectionQuestionnaireHeader(scopeTx.tx, pid, gid);
-        const def = claim.groundInspectionVersionFor(header?.questionnaireVersionId ?? null, pid);
-        if (def === null || (header === null && !open)) throw new claim.GroundInspectionQuestionnaireUnavailableError();
+        // Story 6.33 (R5) — the database-aware reader, on this transaction (a pin failing validation is still SHOWN — R7 (v)).
+        const version = await claim.groundInspectionVersionFor(scopeTx.tx, header?.questionnaireVersionId ?? null, pid);
+        if (version === null || (header === null && !open)) throw new claim.GroundInspectionQuestionnaireUnavailableError();
+        const def = version.def;
         const rows = header === null ? [] : await claim.readLiveGroundInspectionAnswers(scopeTx.tx, pid, gid);
         const claimRow = await claim.getClaimCase(scopeTx.tx, pid, assignment.claimCaseId);
         const memberName = claimRow
@@ -1236,7 +1248,10 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       });
       const body: GroundInspectionQuestionnaireResponse = {
         groundInspectionId: ground_inspection_id,
-        questionnaire: toWireQuestionnaire(read!.def, read!.memberName),
+        questionnaire: toWireQuestionnaire(read!.def, read!.memberName, {
+          log: request.log,
+          ids: { pariwarId: ctx.pariwarId, groundInspectionId: ground_inspection_id },
+        }),
         open,
         answers,
       };
@@ -1273,15 +1288,27 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       let preOk = false;
       let header: Awaited<ReturnType<typeof claim.readGroundInspectionQuestionnaireHeader>> = null;
       let rows: Awaited<ReturnType<typeof claim.readLiveGroundInspectionAnswers>> = [];
+      let version: claim.GroundInspectionVersion | null = null;
       try {
         header = await claim.readGroundInspectionQuestionnaireHeader(pre.tx, pid, gid);
         rows = await claim.readLiveGroundInspectionAnswers(pre.tx, pid, gid);
+        // ⭐ Story 6.33 (R5) — the version resolved INSIDE `pre` (the database-aware reader needs a transaction).
+        version = await claim.groundInspectionVersionFor(pre.tx, header?.questionnaireVersionId ?? null, pid);
         preOk = true;
+      } catch (err) {
+        // Review RV6 — an unreadable pin throws here: the 409 `…version_unreadable`, ⛔ a 500.
+        translateGroundInspectionError(err);
       } finally {
         await closeScopeTx(pre, preOk);
       }
-      const def = claim.groundInspectionVersionFor(header?.questionnaireVersionId ?? null, pid);
-      if (def === null) translateGroundInspectionError(new claim.GroundInspectionQuestionnaireUnavailableError());
+      if (version === null) translateGroundInspectionError(new claim.GroundInspectionQuestionnaireUnavailableError());
+      // ⭐ Story 6.33 (R7) — a panel that rendered another version RELOADS before its value is checked against this one; an
+      // unwritable pin is refused. The writer repeats the compare under its locks, FIRST.
+      if (body.questionnaireVersionId !== undefined && body.questionnaireVersionId !== version!.def.versionId) {
+        translateGroundInspectionError(new claim.GroundInspectionQuestionnaireVersionStaleError());
+      }
+      if (!version!.writable) translateGroundInspectionError(new claim.GroundInspectionQuestionnaireVersionUnreadableError());
+      const def = version!.def;
 
       // (2) the live sensitive answers, decrypted OUTSIDE any transaction. One that will ⛔ decrypt (erased, malformed,
       //     undecryptable) is KNOWN UNREADABLE — its value is `null`, ⛔ stale (review R2): the letter, or a replacement of
@@ -1304,7 +1331,7 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
       for (const row of rows) live.set(row.questionKey, row.valueCodes ?? decryptedLive.get(row.answerId)?.codes ?? null);
 
       // (3) the pre-check — to learn the storage form (the writer re-does it under its locks)
-      const served = questionnaires.servedDefinition(def!);
+      const served = questionnaires.servedDefinition(def);
       const check = questionnaires.checkAnswer(served, questionKey, { codes: body.codes }, live, todayIst);
       if (!check.ok) {
         const parentKey = questionnaires.questionsOf(served).find((q) => q.key === questionKey)?.showIf?.key ?? null;
@@ -1344,6 +1371,8 @@ export function createGroundInspectionHandlers(deps: AppDeps) {
           decryptedLive,
           unreadableLive,
           todayIst,
+          preReadVersionId: def.versionId,
+          ...(body.questionnaireVersionId !== undefined ? { clientVersionId: body.questionnaireVersionId } : {}),
         });
         ok = true;
       } catch (err) {

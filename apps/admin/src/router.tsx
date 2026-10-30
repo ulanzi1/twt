@@ -32,6 +32,7 @@ import {
 } from './routes/CorrectionClosureRoutes.js';
 import { CertificateRemindersRoute } from './routes/CertificateReminderRoutes.js';
 import { ApprovalWarningReasonsRoute } from './routes/ApprovalWarningReasonsRoute.js';
+import { QuestionnaireVersionsRoute } from './routes/QuestionnaireVersionsRoute.js';
 import { WorkplaceRequestsRoute } from './routes/WorkplaceRequestsRoute.js';
 import { WorkplacesRoute } from './routes/WorkplacesRoute.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
@@ -304,6 +305,13 @@ const approvalWarningReasonsRoute = createRoute({
   path: '/p/$pariwarId/approval-warning-reasons',
   component: ApprovalWarningReasonsRoute,
 });
+// Story 6.33 (QE16) — the questionnaire chain: propose / approve / return / withdraw; the Super Admin makes live, adds
+// directly, reverts (both kinds on ONE page).
+const questionnaireVersionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/questionnaires',
+  component: QuestionnaireVersionsRoute,
+});
 // Story 6.36c (SW9 A) — the Super Admin's workplace list (add / rename / delist / relist a STAFF row; ⛔ delete).
 const workplacesRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -442,6 +450,7 @@ const routeTree = rootRoute.addChildren([
   closureLettersRoute,
   certificateRemindersRoute,
   approvalWarningReasonsRoute,
+  questionnaireVersionsRoute,
   workplacesRoute,
   workplaceRequestsRoute,
   escalationsPickerRoute,

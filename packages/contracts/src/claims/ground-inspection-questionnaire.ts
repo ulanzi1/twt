@@ -17,6 +17,13 @@ const KEY = /^[a-z][a-z0-9_]*$/;
 export const GROUND_INSPECTION_QUESTIONNAIRE_UNAVAILABLE_CODE = 'ground_inspection.questionnaire_unavailable' as const;
 export const GROUND_INSPECTION_QUESTIONNAIRE_CERTIFICATE_CHECK_CODE = 'ground_inspection.questionnaire_not_for_certificate_check' as const;
 export const GROUND_INSPECTION_QUESTIONNAIRE_STALE_CODE = 'ground_inspection.questionnaire_stale' as const;
+/** Story 6.33 (`2026-10-30-421` QE12 R7) — 409: the version changed since the panel loaded it — the panel RELOADS (⛔ retries). */
+export const GROUND_INSPECTION_QUESTIONNAIRE_VERSION_STALE_CODE = 'ground_inspection.questionnaire_version_stale' as const;
+/**
+ * Story 6.33 (R7 (v)) — 409: the visit's pinned version cannot be served for saving — the panel's terminal (read-only) state.
+ * ⛔ `…questionnaire_unavailable` (that 404 means "⛔ panel" and is UNCHANGED).
+ */
+export const GROUND_INSPECTION_QUESTIONNAIRE_VERSION_UNREADABLE_CODE = 'ground_inspection.questionnaire_version_unreadable' as const;
 /** 422 — the engine refused the answer; `details.reason` is the engine's `AnswerRefusalReason`. */
 export const GROUND_INSPECTION_ANSWER_INVALID_CODE = 'questionnaire.answer_invalid' as const;
 
@@ -43,8 +50,12 @@ export const GroundInspectionQuestionnaireResponse = z
   .strict();
 export type GroundInspectionQuestionnaireResponse = z.infer<typeof GroundInspectionQuestionnaireResponse>;
 
+/** Story 6.33 (R7) — `questionnaireVersionId` = the version the panel RENDERED; optional (an older client keeps the retryable stale). */
 export const GroundInspectionSaveAnswerRequest = z
-  .object({ codes: z.array(z.string().regex(KEY)).min(1).max(GROUND_INSPECTION_ANSWER_MAX_CODES) })
+  .object({
+    codes: z.array(z.string().regex(KEY)).min(1).max(GROUND_INSPECTION_ANSWER_MAX_CODES),
+    questionnaireVersionId: z.string().regex(/^ground_inspection\.v[0-9]+$/).max(64).optional(),
+  })
   .strict();
 export type GroundInspectionSaveAnswerRequest = z.infer<typeof GroundInspectionSaveAnswerRequest>;
 

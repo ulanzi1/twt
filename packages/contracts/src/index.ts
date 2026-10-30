@@ -275,3 +275,7 @@ export const __substrateOnly = Symbol.for('@twt/contracts:substrate-only');
 // the feature-flags precedent. The CUSTOM_FIELD_TYPES / PII_TIERS enums are drift-guarded against the
 // @twt/domain tuples by a test-only sync-guard (tests/custom-fields.test.ts).
 export * from './custom-fields/index.js';
+// Story 6.33 (`2026-10-10-304` Q7 / Q8; `2026-10-30-421`) — the questionnaire CHAIN: draft pages (a ruled question by key, or
+// a staff question with words in English and Hindi), the tenant steps (propose / approve / return / withdraw) and the Super
+// Admin's (make live for one Pariwar or all, direct, revert); every write answers the validator's warnings.
+export * from './questionnaire-versions/index.js';

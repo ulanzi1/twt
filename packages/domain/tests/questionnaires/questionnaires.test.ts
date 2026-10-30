@@ -400,7 +400,7 @@ describe('the copy keys exist in en AND hi (server-resolved words)', () => {
       const catalog = load(locale);
       for (const def of QUESTIONNAIRE_REGISTRY) {
         const keys = [def.closingNoteCopyKey, def.thankYouCopyKey, ...questionsOf(def).flatMap((q) => [q.copyKey, ...q.options.map((o) => o.copyKey)])];
-        for (const k of keys) expect(catalog[k], `${locale}: ${k}`).toEqual(expect.any(String));
+        for (const k of keys) expect(k === undefined ? undefined : catalog[k], `${locale}: ${k}`).toEqual(expect.any(String));
       }
     });
   }

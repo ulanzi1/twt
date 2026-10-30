@@ -285,7 +285,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
         expect(r.status, JSON.stringify(r.body)).toBe(200);
         expect(r.body.peerMesh?.status).toBe('present');
         // Story 6.32 (second review S15) — the family's account counts ride the line (zeros: ⛔ completed full visit).
-        expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'present', ping_count: 1, answer_count: 1, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0, family_account_inherited: false });
+        expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'present', ping_count: 1, answer_count: 1, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0, family_account_inherited: false, sensitive_answer_count: 0, family_sensitive_answer_count: 0 });
       });
     }
 
@@ -379,6 +379,22 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
 
   // ── The audit line ───────────────────────────────────────────────────────────────────────────────────────────────
 
+  it('⭐ review RP5 / QE8 C11 — the CONSOLE\'s audit line carries the SAME counts (the second line the finding named): the neighbour\'s ciphertext answer is counted on `admin_verifier_console.read` too', async () => {
+    const w = await claimAt('verifier_approved');
+    const [n] = await neighbours(w, [true]);
+    await put(w, n!, 'has_died', { codes: ['died'] });
+    await put(w, n!, 'death_date', { date: '2026-10-01' }); // stored as CIPHERTEXT, decrypted to be shown ⇒ counted
+    const sa = await staff(w.pariwarId, 'super_admin');
+    const res = await sa.client.inject({ method: 'GET', url: consoleUrl(w.pariwarId, w.claimCaseId) });
+    expect(res.statusCode, res.body).toBe(200);
+    expect((res.json() as { packet: { peerMesh?: { status?: string } } }).packet.peerMesh?.status).toBe('present');
+    const lines = td.auditSink.ofType('admin_verifier_console.read').filter((e) => (e.context as Json | undefined)?.['claim_case_id'] === w.claimCaseId);
+    expect(lines).toHaveLength(1);
+    // the same helper puts BOTH keys on this line as on the approvers' line — deleting its spread leaves them ABSENT, which this fails
+    expect(lines[0]!.context).toMatchObject({ sensitive_answer_count: 1, family_sensitive_answer_count: 0 });
+    expect(JSON.stringify(lines[0])).not.toContain('2026-10-01'); // counts only, ⛔ a value
+  });
+
   it('the read is audited ONCE — context keys only (⛔ a name, a date, a number), and the persisted row names the claim', async () => {
     const w = await claimAt('verifier_approved');
     const [n] = await neighbours(w, [true]);
@@ -389,14 +405,19 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     expect((await read(pa, w)).status).toBe(200);
     const lines = readLines(w.claimCaseId);
     expect(lines).toHaveLength(1);
+    // ⭐ Review RV10 / QE8 C11 — the neighbour's `death_date` is stored as CIPHERTEXT and decrypted to be shown: it is COUNTED (1 of the 3 answers).
+    // Every other assertion on this key is 0, so deleting the count left the suite green.
+    expect(lines[0]!.context).toMatchObject({ answer_count: 3, sensitive_answer_count: 1, family_sensitive_answer_count: 0 });
     expect(Object.keys(lines[0]!.context ?? {}).sort()).toEqual([
       'answer_count',
       'family_account_inherited',
       'family_answer_count',
       'family_health_answer_count',
+      'family_sensitive_answer_count',
       'family_visit_count',
       'ping_count',
       'section',
+      'sensitive_answer_count',
       'step',
     ]);
     const all = JSON.stringify([...lines, ...shownLines(w.claimCaseId)]);
@@ -629,7 +650,7 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
     const r = await read(pa, w);
     expect(r.status).toBe(200);
     expect(r.body).toEqual({});
-    expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'hidden', ping_count: 0, answer_count: 0, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0, family_account_inherited: false });
+    expect(readLines(w.claimCaseId).at(-1)?.context).toEqual({ step: 'final_vote', section: 'hidden', ping_count: 0, answer_count: 0, family_visit_count: 0, family_answer_count: 0, family_health_answer_count: 0, family_account_inherited: false, sensitive_answer_count: 0, family_sensitive_answer_count: 0 });
   });
 
   it('⭐ Story 6.32 (second review S9 / S15; AC8) — the approvers\' route carries a POPULATED family account (the cause DECRYPTED), and its line counts it — ⛔ a value', async () => {
@@ -691,6 +712,9 @@ describe.skipIf(!hasDatabase)('Story 6.27b — the approvers\' read of the neigh
       family_answer_count: 2,
       family_health_answer_count: 1,
       family_account_inherited: false,
+      // ⭐ Story 6.33 (QE8 C11) — the answers stored as ciphertext the section carried, counted internally.
+      sensitive_answer_count: 0,
+      family_sensitive_answer_count: 1,
     });
     expect(JSON.stringify(line)).not.toMatch(/old_age|Old age|collected/);
   });

@@ -31,9 +31,7 @@ import {
   answerCodeIndexInputs,
   checkAnswer,
   dependantsToSupersede,
-  getQuestionnaireVersion,
   HAS_DIED_CODES,
-  resolveLiveVersion,
   servedDefinition,
   type AnswerRefusalReason,
   type HasDiedCode,
@@ -41,6 +39,7 @@ import {
   type QuestionnaireAnswerValue,
   type QuestionnaireDefinition,
 } from '../questionnaires/index.js';
+import { readQuestionnaireDefinition, resolveLiveQuestionnaire } from '../questionnaire-versions/index.js';
 import { claimPeerMeshPings, type PeerMeshSendOutcome } from '../schema/claim_peer_mesh_pings.js';
 import {
   claimPeerMeshReplies,
@@ -101,6 +100,29 @@ export class PeerRequestStaleError extends Error {
   public readonly name = 'PeerRequestStaleError';
   public constructor() {
     super('[peer-request] stale read — retry');
+  }
+}
+
+/**
+ * Story 6.33 (QE12 R7 (ii)) — the client RENDERED another version than the one this save would pin (a flip between its
+ * load and this save): 409 `peer_request.questionnaire_version_stale` — the client RELOADS (⛔ retries: a retry would meet
+ * the same version).
+ */
+export class PeerRequestVersionStaleError extends Error {
+  public readonly name = 'PeerRequestVersionStaleError';
+  public constructor() {
+    super('[peer-request] the questionnaire version changed — reload');
+  }
+}
+/**
+ * Story 6.33 (QE12 R7 (v)) — the reply's PINNED version fails validation (or ⛔ parses) at read: served READ-ONLY, a save
+ * REFUSED (409 `peer_request.questionnaire_version_unreadable`) — the clients' terminal state (⛔ a reload: it returns the
+ * same pin; ⛔ a retry).
+ */
+export class PeerRequestVersionUnreadableError extends Error {
+  public readonly name = 'PeerRequestVersionUnreadableError';
+  public constructor() {
+    super('[peer-request] the pinned questionnaire version cannot be served');
   }
 }
 
@@ -243,8 +265,9 @@ export async function listOpenPeerRequestsForMember(
 }
 
 /**
- * The cap of one reply's LIVE answers — bounded by construction (one live row per question; v2 has seven), clamped all
- * the same (AC9: every new domain list read takes `clampLimit` — second-pass review S7).
+ * The cap of one reply's LIVE answers — bounded by construction (one live row per question; a version holds ≤ 20
+ * questions — Story 6.33 QE8 C8), clamped all the same (AC9: every new domain list read takes `clampLimit` — second-pass
+ * review S7).
  */
 export const PEER_LIVE_ANSWERS_CAP = 50;
 
@@ -276,11 +299,43 @@ export async function peerMeshReplyState(db: Db, pariwarId: PariwarId, pingId: P
   return rows[0]!.submittedAt === null ? 'started' : 'submitted';
 }
 
-/** The version a reply is (or will be) pinned to: its own, else the live one at this first save (PM23 (c)). */
-export function pinnedVersionFor(reply: PeerRequestRow['reply'], pariwarId: PariwarId): QuestionnaireDefinition {
-  const def = reply ? getQuestionnaireVersion(reply.questionnaireVersionId) : resolveLiveVersion('peer_mesh', pariwarId);
-  if (!def) throw new Error('[peer-request] no questionnaire version to pin');
-  return def;
+/** A reply's version and whether a save may be made to it (Story 6.33 R7 (v): a pin failing validation is READ-ONLY). */
+export interface PinnedPeerVersion {
+  readonly def: QuestionnaireDefinition;
+  readonly writable: boolean;
+}
+
+/**
+ * The version a reply is (or will be) pinned to: its own, else the one IN FORCE at this first save (PM23 (c)) — through
+ * Story 6.33's database-aware reader, on the caller's transaction (QE12 R5). A pin that cannot be parsed at all ⇒
+ * `PeerRequestVersionUnreadableError`.
+ */
+export async function pinnedVersionFor(db: Db, reply: PeerRequestRow['reply'], pariwarId: PariwarId): Promise<PinnedPeerVersion> {
+  if (reply) {
+    const read = await readQuestionnaireDefinition(db, reply.questionnaireVersionId);
+    if (read.status !== 'found') throw new PeerRequestVersionUnreadableError();
+    return { def: read.def, writable: read.writable };
+  }
+  const live = await resolveLiveQuestionnaire(db, 'peer_mesh', pariwarId);
+  if (!live.def) throw new Error('[peer-request] no questionnaire version to pin');
+  return { def: live.def, writable: true };
+}
+
+/**
+ * Story 6.33 (QE12 R7 (i)–(iii)) — the ONE version compare, made UNDER the locks immediately after resolving the version
+ * this save would pin, BEFORE the live read, `checkAnswer` and the `prepared …` checks (after a flip those would fire
+ * first — a 422, or a bare `Error`). The client's rendered id differs ⇒ version-stale (RELOAD); the client sent ⛔ id (an
+ * installed app) and the handler's pre-read differs ⇒ the EXISTING retryable stale (a version-stale code would make an old
+ * app retry forever); a pin ⛔ writable ⇒ unreadable.
+ */
+export function assertPeerVersionCurrent(
+  pinned: PinnedPeerVersion,
+  preReadVersionId: string,
+  clientVersionId: string | undefined,
+): void {
+  if (clientVersionId !== undefined && clientVersionId !== pinned.def.versionId) throw new PeerRequestVersionStaleError();
+  if (preReadVersionId !== pinned.def.versionId) throw new PeerRequestStaleError();
+  if (!pinned.writable) throw new PeerRequestVersionUnreadableError();
 }
 
 // ── save ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -305,6 +360,10 @@ export interface SavePeerAnswerInput {
   /** The PLAINTEXT value — validation only; ⛔ never stored for a sensitive question. */
   readonly value: QuestionnaireAnswerValue;
   readonly prepared: PreparedPeerAnswer;
+  /** Story 6.33 (R7) — the version the HANDLER prepared `prepared` against (`prepareSave`'s pre-read). */
+  readonly preReadVersionId: string;
+  /** Story 6.33 (R7) — the version the CLIENT rendered (`questionnaireVersionId`); absent from an installed app. */
+  readonly clientVersionId?: string;
   /** The reply's live SENSITIVE answers, DECRYPTED by the handler before the locks, keyed by `answer_id`. */
   readonly decryptedLive: ReadonlyMap<string, QuestionnaireAnswerValue>;
   readonly savedVia: PeerMeshAnswerSavedVia;
@@ -367,7 +426,10 @@ async function lockForWrite(db: Db, pariwarId: PariwarId, pingId: PeerMeshPingId
 export async function savePeerAnswer(client: pg.PoolClient, input: SavePeerAnswerInput): Promise<SavePeerAnswerResult> {
   const db = bindScopedDb(client);
   const { pre, reply } = await lockForWrite(db, input.pariwarId, input.pingId, input.memberId);
-  const def = pinnedVersionFor(reply ? { ...reply, submittedAt: reply.submittedAt ?? null } : null, input.pariwarId);
+  const pinned = await pinnedVersionFor(db, reply ? { ...reply, submittedAt: reply.submittedAt ?? null } : null, input.pariwarId);
+  // ⭐ Story 6.33 (R7) — FIRST, before anything reads the definition.
+  assertPeerVersionCurrent(pinned, input.preReadVersionId, input.clientVersionId);
+  const def = pinned.def;
   const served = servedDefinition(def);
 
   const liveRows = reply ? await readLivePeerAnswers(db, input.pariwarId, reply.replyId) : [];
@@ -546,7 +608,10 @@ export interface PeerConsoleReplyRow {
   readonly submittedAt: Date | null;
 }
 
-/** The cap of the console's answers read (≤ 5 replies × ≤ 7 questions today) — forced pagination, `clampLimit`. */
+/**
+ * The cap of the console's answers read (≤ 5 replies × ≤ 20 questions — Story 6.33 QE8 C8 caps a version at 20, the ruled
+ * ones included) — forced pagination, `clampLimit`.
+ */
 export const PEER_CONSOLE_ANSWERS_CAP = 100;
 
 /**

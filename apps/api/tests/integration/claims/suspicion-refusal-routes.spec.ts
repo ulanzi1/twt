@@ -479,8 +479,8 @@ describe.skipIf(!hasDatabase)('Story 6.24a — the suspicion refusal through HTT
     };
   }
 
-  it('the console — R is KEPT APART (S by reference only) and its final approval waits `appeal_not_filed`; S itself shows nothing; the ceiling is 29 (Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: → 26; 6.27b: → 27; 6.27d: → 29)', async () => {
-    expect(VERIFIER_CONSOLE_MAX_READS).toBe(31); // Story 6.32 (S22) FROM 30 — +1: the claim whose inspection this claim inherits; Story 6.32 (IQ7) FROM 29 — +1: the claim's family account; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
+  it('the console — R is KEPT APART (S by reference only) and its final approval waits `appeal_not_filed`; S itself shows nothing; the ceiling is 33 (Story 6.28 OP14 (a): 21 → 22; OP14 (b), code review chunk 3/4: 22 → 23; Story 6.27a: → 26; 6.27b: → 27; 6.27d: → 29; 6.32: → 31; 6.33: → 33)', async () => {
+    expect(VERIFIER_CONSOLE_MAX_READS).toBe(33); // Story 6.33 (RV24) FROM 31 — +2 CONDITIONAL: the DATABASE-pinned definitions (batched; none for a code pin); Story 6.32 (S22) FROM 30 — +1: the claim whose inspection this claim inherits; Story 6.32 (IQ7) FROM 29 — +1: the claim's family account; Story 6.27d (R5) FROM 27 — +2: the claim's discrepancy showings and notes; Story 6.27b (code review round 2, S18) FROM 26 — +1; Story 6.27a (PM13, PM25 (c)) FROM 23 — +3
     const w = await seedWorld();
     const refusedAt = new Date(); // ONE instant for the seed and the expectation (code review round 2 — 00:00 IST)
     const s = await refuseSibling(w, { decidedAt: refusedAt });

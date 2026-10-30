@@ -22,7 +22,7 @@
 //     (`tests/ground-inspection-questionnaire.test.tsx`) keeps this module free of all three.
 //   · ⛔ NOTHING here gates the completion (I1): every question is optional, and `CompleteAction` reads ⛔ of this.
 
-import { PeerAnswerEditor } from '@twt/api-client';
+import { PeerAnswerEditor, RELOAD_REFETCH_BOUND_MS, withTimeout } from '@twt/api-client';
 import type { PeerRequestLiveAnswer, PeerRequestQuestion } from '@twt/contracts';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
@@ -31,14 +31,24 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 
 import { ApiError } from '../../api/client.js';
 import * as api from '../../api/client.js';
+import { mergeCarried, type CarriedDraft } from '../helpline-claims/carry-over.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useUnsavedAnswers } from './unsaved-answers.js';
 
 const QUESTIONNAIRE_ROOT = 'ground-inspection-questionnaire';
 const UNAVAILABLE_CODE = 'ground_inspection.questionnaire_unavailable';
 const STALE_CODE = 'ground_inspection.questionnaire_stale';
+/** Story 6.33 (R7) — the version changed since the panel loaded: RELOAD (⛔ a retry). */
+const VERSION_STALE_CODE = 'ground_inspection.questionnaire_version_stale';
+/** Story 6.33 (R7 (v)) — the visit's pinned version cannot be answered: terminal (⛔ a reload — the same pin; ⛔ a retry). */
+const VERSION_UNREADABLE_CODE = 'ground_inspection.questionnaire_version_unreadable';
+
 /** The longest wait between two automatic retries of a save that failed on the network. */
 const MAX_BACKOFF_MS = 30_000;
+
+/** What a reload's bounded refetch settles with (review RP9) — a `refetch()` result, or `BOUND_PASSED` when the bound ran out. */
+type ReloadSettled = { readonly isError: boolean };
+const BOUND_PASSED: ReloadSettled = { isError: true };
 
 type LiveValue = PeerRequestLiveAnswer['value'];
 
@@ -97,6 +107,7 @@ function saveErrorText(err: unknown): string {
     // ⭐ Second review S21 — STALE: a saved answer changed (or could ⛔ be read) between the server's read and its write —
     // the earlier answer this one depends on, most often.
     if (err.code === STALE_CODE) return t('gi.questionnaire.error.stale');
+    if (err.code === VERSION_UNREADABLE_CODE) return t('gi.questionnaire.error.version_unreadable');
   }
   return t('gi.questionnaire.state.failed');
 }
@@ -113,6 +124,15 @@ export function QuestionnairePanel(props: {
   const { pariwarId, claimCaseId, groundInspectionId, viewerId, isInspector } = props;
   const [requested, setRequested] = useState(false);
   const enabled = isInspector || requested;
+  // ⭐ Story 6.33 (R7) — the editor's unsaved answers, MIRRORED here as they change, so that ANY rebuild of the editor (keyed
+  // on the version AND this reload's generation) hands them to the next one: a reload after a version-stale save, a refetch
+  // that changes the data (and then the generation), or a background refetch that brings a new version (review RV7).
+  const carried = useRef<CarriedDraft[]>([]);
+  const [reloads, setReloads] = useState(0);
+  // ⭐ Story 6.33 (review RP9) — a reload whose refetch NEVER settled within the bound (or was rejected): the load-failed screen,
+  // with its "Try again" — the unsent answers stay in `carried`. `retryingReload`: that "Try again" is in flight.
+  const [reloadTimedOut, setReloadTimedOut] = useState(false);
+  const [retryingReload, setRetryingReload] = useState(false);
   const query = useQuery({
     queryKey: [QUESTIONNAIRE_ROOT, pariwarId, claimCaseId, groundInspectionId] as const,
     queryFn: () => api.getGroundInspectionQuestionnaire(pariwarId, claimCaseId, groundInspectionId),
@@ -143,18 +163,103 @@ export function QuestionnairePanel(props: {
     // audited denial).
     return <p className="text-sm text-amber-700" data-testid="gi-questionnaire-load-denied">{t('gi.questionnaire.loadDenied')}</p>;
   }
-  if (query.isError) {
+  // The questions changed under a save: read them again — BOUNDED (review RP9): the admin transport has no timeout and a refetch
+  // re-joins a hung fetch, so a read that never settles is a FAILED read (the load-failed screen below), ⛔ "Loading…" for good.
+  const onReload = (): void => {
+    void withTimeout<ReloadSettled>(query.refetch(), RELOAD_REFETCH_BOUND_MS, BOUND_PASSED).then(
+      (r) => {
+        setRetryingReload(false);
+        // A refetch that FAILED is the query's own error — the load-failed screen below says it (its "Try again" remounts the
+        // editor, which then takes the carried answers).
+        if (r === BOUND_PASSED) setReloadTimedOut(true);
+        else if (!r.isError) {
+          setReloadTimedOut(false);
+          setReloads((n) => n + 1);
+        }
+      },
+      () => {
+        setRetryingReload(false);
+        setReloadTimedOut(true);
+      },
+    );
+  };
+  if (query.isError || reloadTimedOut) {
     return (
-      <div className="flex flex-col gap-1 text-sm" data-testid="gi-questionnaire-load-failed">
-        <p role="alert" className="text-red-600">{t('gi.questionnaire.loadFailed')}</p>
-        <button type="button" className="self-start rounded border px-2 py-1" onClick={() => void query.refetch()}>
-          {t('gi.questionnaire.retryLoad')}
-        </button>
-      </div>
+      <LoadFailed
+        groundInspectionId={groundInspectionId}
+        carried={carried}
+        retrying={retryingReload}
+        onRetry={() => {
+          if (!reloadTimedOut) {
+            void query.refetch();
+            return;
+          }
+          setRetryingReload(true);
+          onReload();
+        }}
+      />
     );
   }
   if (!query.data.open) return null;
-  return <QuestionnaireEditor pariwarId={pariwarId} claimCaseId={claimCaseId} groundInspectionId={groundInspectionId} data={query.data} />;
+  return (
+    <QuestionnaireEditor
+      key={`${query.data.questionnaire.versionId}:${reloads}`}
+      pariwarId={pariwarId}
+      claimCaseId={claimCaseId}
+      groundInspectionId={groundInspectionId}
+      data={query.data}
+      carried={carried}
+      onReload={onReload}
+    />
+  );
+}
+
+/**
+ * The load-failed screen — a first load that failed, a reload's refetch that FAILED, or one that never settled (review RP9) — with
+ * its "Try again". ⭐ Review RP8: it REPLACES the editor, and the editor's leave guard (`reportUnsaved`, whose cleanup says "nothing
+ * is unsaved") goes with it while the answers the editor handed over are still unsent in `carried`. So THIS screen keeps the visit
+ * reported as unsaved for as long as it holds them (⛔ a completion or a "Load" that goes ahead in silence), registers a discard
+ * (the page's "complete without the unsaved answers" reaches it too) and offers it by name; it lets go when it unmounts — the
+ * rebuilt editor reports for itself (all passive cleanups run before any setup, so the two never fight).
+ */
+function LoadFailed(props: {
+  groundInspectionId: string;
+  carried: { current: CarriedDraft[] };
+  retrying: boolean;
+  onRetry: () => void;
+}): ReactElement {
+  const { groundInspectionId, carried, retrying, onRetry } = props;
+  const { reportUnsaved, registerDiscard } = useUnsavedAnswers();
+  const [holding, setHolding] = useState(() => carried.current.length > 0);
+  const discard = useCallback(() => {
+    carried.current = [];
+    setHolding(false);
+  }, [carried]);
+  useEffect(() => {
+    if (!holding) return;
+    reportUnsaved(groundInspectionId, true);
+    const unregister = registerDiscard(groundInspectionId, discard);
+    return () => {
+      unregister();
+      reportUnsaved(groundInspectionId, false);
+    };
+  }, [holding, discard, reportUnsaved, registerDiscard, groundInspectionId]);
+  return (
+    <div className="flex flex-col gap-1 text-sm" data-testid="gi-questionnaire-load-failed">
+      <p role="alert" className="text-red-600">{t('gi.questionnaire.loadFailed')}</p>
+      {holding && <p className="text-xs text-amber-700" data-testid="gi-questionnaire-load-failed-unsaved">{t('gi.questionnaire.unsaved')}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="rounded border px-2 py-1 disabled:opacity-50" disabled={retrying} onClick={onRetry}>
+          {t('gi.questionnaire.retryLoad')}
+        </button>
+        {holding && (
+          <button type="button" className="rounded border px-2 py-1" data-testid="gi-questionnaire-load-failed-discard" onClick={discard}>
+            {t('gi.questionnaire.discard')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function QuestionnaireEditor(props: {
@@ -162,8 +267,12 @@ function QuestionnaireEditor(props: {
   claimCaseId: string;
   groundInspectionId: string;
   data: api.GroundInspectionQuestionnaireT;
+  /** Story 6.33 (R7) — unsaved answers handed over by the editor this one REPLACES (kept current by every editor, see below). */
+  carried: { current: CarriedDraft[] };
+  onReload: () => void;
 }): ReactElement {
-  const { pariwarId, claimCaseId, groundInspectionId, data } = props;
+  const { pariwarId, claimCaseId, groundInspectionId, data, carried, onReload } = props;
+  const versionId = data.questionnaire.versionId;
   const questions = data.questionnaire.pages.flatMap((p) => p.questions);
   // The server's last ACKNOWLEDGED value per question — what `Saved` means.
   const saved = useRef(new Map<string, LiveValue>(toLive(data.answers).map((a) => [a.questionKey, a.value])));
@@ -181,7 +290,8 @@ function QuestionnaireEditor(props: {
             staleCount.current = 0;
           }
           const codes = 'codes' in task.value ? task.value.codes : [];
-          const r = await api.saveGroundInspectionAnswer(pariwarId, claimCaseId, groundInspectionId, task.questionKey, codes);
+          // ⭐ Story 6.33 (R7) — the RENDERED version on every save.
+          const r = await api.saveGroundInspectionAnswer(pariwarId, claimCaseId, groundInspectionId, task.questionKey, codes, versionId);
           const next = new Map(saved.current);
           next.set(task.questionKey, { codes: [...codes] });
           for (const k of r.supersededDependants) next.delete(k);
@@ -192,6 +302,7 @@ function QuestionnaireEditor(props: {
         newKey: () => String((nextKey.current += 1)),
         shouldRetry: (err) =>
           err instanceof ApiError && err.code === STALE_CODE ? (staleCount.current += 1) <= 3 : isRetryableSaveError(err),
+        isReload: (err) => err instanceof ApiError && err.code === VERSION_STALE_CODE,
         wait: waitForRetry,
         questions,
       }),
@@ -207,6 +318,37 @@ function QuestionnaireEditor(props: {
   useEffect(() => {
     editor.replaceFromServer(toLive(data.answers));
   }, [editor, data.answers]);
+  // ⭐ Story 6.33 (R7) — the questions changed: reload; this editor is replaced …
+  useEffect(() => {
+    if (state.saveLine === 'reload') onReload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.saveLine, editor]);
+  // … and the REBUILT one re-saves each carried answer whose question is still asked (the rest are dropped) — one tick
+  // after mount, CANCELLED on cleanup (Strict Mode's setup → cleanup → setup sends each answer ONCE), and ONCE only: the
+  // answers are emptied out of `toCarry` as they are applied (review RV7).
+  const toCarry = useRef(carried.current);
+  const questionsRef = useRef(questions);
+  questionsRef.current = questions;
+  // This editor's unsent answers are mirrored into the shared hand-over on every change — a dispose publishes nothing, so
+  // the last mirror survives whatever rebuilds it. Answers handed to THIS editor and not yet re-saved stay in the mirror
+  // (`mergeCarried`): a second rebuild before they are applied (the data changes, then the generation) must not lose them.
+  const mirror = useCallback(() => {
+    carried.current = mergeCarried(toCarry.current, editor.carryOverDrafts());
+  }, [editor, carried]);
+  useEffect(() => editor.subscribe(mirror), [editor, mirror]);
+  useEffect(() => {
+    if (toCarry.current.length === 0) return;
+    const timer = setTimeout(() => {
+      const keys = new Set(questionsRef.current.map((q) => q.key));
+      // Emptied BEFORE the saves (same tick): the mirror each save triggers then sees only the editor's own drafts.
+      const handed = toCarry.current;
+      toCarry.current = [];
+      for (const d of handed) if (keys.has(d.questionKey)) editor.save(d.questionKey, d.value);
+      // An answer DROPPED (its question is gone) leaves the hand-over — a later version asking it again must not resurrect it.
+      mirror();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [editor, mirror]);
 
   const unsaved = state.pending > 0 || state.failed.size > 0;
   // ⭐ Code review R1 — the page and the completion learn that this visit holds unsaved answers (⛔ on unmount), and the
@@ -280,6 +422,7 @@ function QuestionnaireEditor(props: {
     if (current === undefined) return null;
     if (state.failed.has(key)) return null; // the error line says it
     if (sameCodes(current, saved.current.get(key))) return t('gi.questionnaire.state.saved');
+    if (state.saveLine === 'reload') return t('gi.questionnaire.loading');
     return state.saveLine === 'retrying' ? t('gi.questionnaire.state.retrying') : t('gi.questionnaire.state.saving');
   };
   // ⭐ Code review R5 — ONE stable live region says each CHANGE of an answer's line (`Saving…` → `Not saved — retrying` →

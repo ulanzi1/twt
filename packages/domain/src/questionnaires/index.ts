@@ -16,3 +16,4 @@ export * from './peer-mesh.js';
 export * from './ground-inspection.js';
 export * from './registry.js';
 export * from './answers.js';
+export * from './derive.js';

@@ -28,7 +28,13 @@ import {
   PeerRequestNotFoundError,
   PeerRequestStaleError,
   PeerRequestSubmittedError,
+  PeerRequestVersionStaleError,
+  PeerRequestVersionUnreadableError,
+  PEER_CONSOLE_ANSWERS_CAP,
+  PEER_LIVE_ANSWERS_CAP,
   readLivePeerAnswers,
+  readPeerAnswersForClaim,
+  pinnedVersionFor,
   readPeerRequest,
   savePeerAnswer,
   submitPeerReply,
@@ -53,6 +59,13 @@ import { driveClaimTo, enterAppScope, PARIWAR_A, PARIWAR_B, seedAcceptedDeathCer
 import { isPeerSectionHiddenFromActor } from '../../../src/claim/index.js';
 import { scheduleGroundInspection } from '../../../src/claim/ground-inspection-persist.js';
 import { claimAt, emitClaim, type FixtureState } from './_one-payment-fixtures.js';
+import { toStoredDefinition } from '../../../src/questionnaire-versions/index.js';
+import { QUESTIONNAIRE_MAX_QUESTIONS } from '../../../src/questionnaires/index.js';
+import { attachTextedPings } from './_peer-reply-fixtures.js';
+import { assertClaimApprovable } from '../../../src/claim/nominee-name-check.js';
+import { readClaimApprovalWarnings } from '../../../src/claim/approval-warnings.js';
+import { groundInspectionApprovalState, readGroundInspectionApprovalFacts } from '../../../src/claim/ground-inspection-approval.js';
+import { chainDefinition, chainQuestion } from '../../questionnaires/_chain-fixtures.js';
 
 type Client = pg.PoolClient;
 const TODAY = '2026-10-12';
@@ -137,7 +150,10 @@ async function decryptedLiveOf(client: Client, r: Req): Promise<Map<string, Ques
 
 async function save(client: Client, r: Req, key: string, value: QuestionnaireAnswerValue, opts: { via?: 'member_app' | 'helpline'; memberId?: MemberId; pingId?: PeerMeshPingId } = {}) {
   const via = opts.via ?? 'member_app';
-  return savePeerAnswer(client, {
+  // The handler's pre-read (Story 6.33 R7): the reply's pinned version, else the one in force.
+  const view = await readPeerRequest(bindScopedDb(client), r.pid, opts.pingId ?? r.pingId, opts.memberId ?? r.neighbour).catch(() => null);
+  const preReadVersionId = view === null ? 'peer_mesh.v4' : (await pinnedVersionFor(bindScopedDb(client), view.reply, r.pid)).def.versionId;
+  return savePeerAnswer(client, { preReadVersionId,
     pariwarId: r.pid,
     pingId: opts.pingId ?? r.pingId,
     memberId: opts.memberId ?? r.neighbour,
@@ -236,7 +252,7 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
       await save(client, r, 'has_died', { codes: ['died'] });
       await save(client, r, 'death_date', { date: '2026-10-01' });
       await expect(
-        savePeerAnswer(client, { pariwarId: r.pid, pingId: r.pingId, memberId: r.neighbour, questionKey: 'how_known', value: { codes: ['other'] }, prepared: { form: 'codes', codes: ['other'] }, decryptedLive: new Map(), savedVia: 'member_app', savedByActorId: r.neighbour, todayIst: TODAY }),
+        savePeerAnswer(client, { preReadVersionId: 'peer_mesh.v4', pariwarId: r.pid, pingId: r.pingId, memberId: r.neighbour, questionKey: 'how_known', value: { codes: ['other'] }, prepared: { form: 'codes', codes: ['other'] }, decryptedLive: new Map(), savedVia: 'member_app', savedByActorId: r.neighbour, todayIst: TODAY }),
       ).rejects.toBeInstanceOf(PeerRequestStaleError);
     });
 
@@ -473,3 +489,184 @@ describe.skipIf(!hasDatabase)('Story 6.27a — the neighbours\' reply writer', {
     });
   });
 });
+
+/** Story 6.33 — a `peer_mesh` DB version on v4 (one chain question), inserted as the superuser, made live for `pid`. */
+async function peerDbVersion(client: Client, pid: string, over: { warning?: boolean; madeLive?: boolean } = {}): Promise<string> {
+  const version = 500_000 + Math.floor(Math.random() * 499_999);
+  const { id, def } = chainDefinition(PEER_MESH_QUESTIONNAIRE_V4, version, randomUUID(), (cid) => [chainQuestion(cid, { warning: over.warning ?? false })]);
+  await client.query('RESET ROLE');
+  await client.query(
+    `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+     VALUES ($1, 'peer_mesh', $2, $3, 'peer_mesh.v4', 'peer_mesh.v4', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+    [id, version, def.versionId, pid, JSON.stringify(toStoredDefinition(def))],
+  );
+  if (over.madeLive !== false) {
+    await client.query(
+      `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'made_live', $2, $2, 'sa', 'Super Admin')`,
+      [def.versionId, pid],
+    );
+  }
+  await enterAppScope(client, pid);
+  return def.versionId;
+}
+
+const flipSave = (client: Client, r: Req, key: string, value: QuestionnaireAnswerValue, prepared: PreparedPeerAnswer, preRead: string, clientId?: string) =>
+  savePeerAnswer(client, {
+    pariwarId: r.pid,
+    pingId: r.pingId,
+    memberId: r.neighbour,
+    questionKey: key,
+    value,
+    prepared,
+    decryptedLive: new Map(),
+    preReadVersionId: preRead,
+    ...(clientId !== undefined ? { clientVersionId: clientId } : {}),
+    savedVia: 'member_app',
+    savedByActorId: r.neighbour,
+    todayIst: TODAY,
+  });
+
+async function probe<T>(client: Client, fn: () => Promise<T>): Promise<T> {
+  await client.query('SAVEPOINT flip_probe');
+  try {
+    const out = await fn();
+    await client.query('RELEASE SAVEPOINT flip_probe');
+    return out;
+  } catch (err) {
+    await client.query('ROLLBACK TO SAVEPOINT flip_probe');
+    throw err;
+  }
+}
+
+describe.skipIf(!hasDatabase)('Story 6.33 — the neighbours\' reply after a version FLIP (R7; D8)', { timeout: 20000 }, () => {
+  setupLiveDb();
+  const died: PreparedPeerAnswer = { form: 'codes', codes: ['died'] };
+
+  it('a NEW reply pins the version in force — a chain version', async () => {
+    const { client } = getTx();
+    const r = await requestAt(client, 'verification_in_progress', { pariwarId: randomUUID() });
+    const v = await peerDbVersion(client, r.pid);
+    await flipSave(client, r, 'has_died', { codes: ['died'] }, died, v, v);
+    const { rows } = await client.query(`SELECT questionnaire_version_id FROM claim_peer_mesh_replies WHERE ping_id = $1`, [r.pingId]);
+    expect(rows).toEqual([{ questionnaire_version_id: v }]);
+  });
+
+  it("a flip between the client's load and its first save: its id ⇒ VERSION-stale (reload); ⛔ id (an installed app) ⇒ the retryable stale", async () => {
+    const { client } = getTx();
+    const r = await requestAt(client, 'verification_in_progress', { pariwarId: randomUUID() });
+    await peerDbVersion(client, r.pid);
+    await expect(probe(client, () => flipSave(client, r, 'has_died', { codes: ['died'] }, died, 'peer_mesh.v4', 'peer_mesh.v4'))).rejects.toBeInstanceOf(PeerRequestVersionStaleError);
+    await expect(probe(client, () => flipSave(client, r, 'has_died', { codes: ['died'] }, died, 'peer_mesh.v4'))).rejects.toBeInstanceOf(PeerRequestStaleError);
+  });
+
+  it('⭐ D8 — the compare runs FIRST: a save prepared on the chain version after a revert is VERSION-stale, ⛔ a 422 / a bare Error', async () => {
+    const { client } = getTx();
+    const r = await requestAt(client, 'verification_in_progress', { pariwarId: randomUUID() });
+    const v = await peerDbVersion(client, r.pid);
+    await client.query('RESET ROLE');
+    await client.query(
+      `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'pariwar_reverted', $2, $2, 'sa', 'Super Admin')`,
+      [v, r.pid],
+    );
+    await enterAppScope(client, r.pid);
+    const sealed: PreparedPeerAnswer = { form: 'encrypted', ciphertext: 'enc:test:["well"]', dateWindowIndexes: null, codeIndexes: null };
+    await expect(probe(client, () => flipSave(client, r, 'water_source', { codes: ['well'] }, sealed, v, v))).rejects.toBeInstanceOf(PeerRequestVersionStaleError);
+  });
+
+  it('R7 (v) — a reply PINNED to a version that fails validation at read: a save is REFUSED unreadable', async () => {
+    const { client } = getTx();
+    const r = await requestAt(client, 'verification_in_progress', { pariwarId: randomUUID() });
+    const bad = await peerDbVersion(client, r.pid, { warning: true, madeLive: false });
+    await client.query('RESET ROLE');
+    await client.query(
+      `INSERT INTO claim_peer_mesh_replies (pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+       SELECT pariwar_id, $2, selection_id, ping_id, member_id, $3 FROM claim_peer_mesh_pings WHERE ping_id = $1`,
+      [r.pingId, r.cid, bad],
+    );
+    await enterAppScope(client, r.pid);
+    await expect(probe(client, () => flipSave(client, r, 'has_died', { codes: ['died'] }, died, bad, bad))).rejects.toBeInstanceOf(PeerRequestVersionUnreadableError);
+  });
+});
+
+describe.skipIf(!hasDatabase)('Story 6.33 (AC4; G16) — the answer read caps hold at the version cap: 20 questions × 5 replies', { timeout: 20000 }, () => {
+  setupLiveDb();
+
+  it('the console read returns ALL 100 live answers (⛔ silent truncation); one reply\'s live read returns its 20', async () => {
+    expect(QUESTIONNAIRE_MAX_QUESTIONS).toBe(20);
+    expect(PEER_CONSOLE_ANSWERS_CAP).toBeGreaterThanOrEqual(5 * QUESTIONNAIRE_MAX_QUESTIONS);
+    expect(PEER_LIVE_ANSWERS_CAP).toBeGreaterThanOrEqual(QUESTIONNAIRE_MAX_QUESTIONS);
+    const { client } = getTx();
+    const pid = randomUUID();
+    const cid = randomUUID();
+    const mid = randomUUID();
+    await driveClaimTo(client, pid, cid, mid, 'verification_in_progress');
+    const pings = await attachTextedPings(client, pid, cid, mid, 5);
+    for (const ping of pings) {
+      const { rows } = await client.query<{ reply_id: string }>(
+        `INSERT INTO claim_peer_mesh_replies (pariwar_id, claim_case_id, selection_id, ping_id, responder_member_id, questionnaire_version_id)
+         SELECT pariwar_id, $2, selection_id, ping_id, member_id, 'peer_mesh.v4' FROM claim_peer_mesh_pings WHERE ping_id = $1 RETURNING reply_id`,
+        [ping.pingId, cid],
+      );
+      for (let i = 0; i < QUESTIONNAIRE_MAX_QUESTIONS; i += 1) {
+        await client.query(
+          `INSERT INTO claim_peer_mesh_reply_answers (pariwar_id, claim_case_id, reply_id, question_key, value_ciphertext, saved_via, saved_by_actor_id)
+           VALUES ($1, $2, $3, $4, 'enc:test:["x"]', 'member_app', 'm')`,
+          [pid, cid, rows[0]!.reply_id, `chain_q_${i}`],
+        );
+      }
+    }
+    const read = await readPeerAnswersForClaim(bindScopedDb(client), toPariwarId(pid), toClaimId(cid));
+    expect(read.replies).toHaveLength(5);
+    expect(read.answers).toHaveLength(100);
+    const view = await readPeerRequest(bindScopedDb(client), toPariwarId(pid), toPingId(pings[0]!.pingId), toMemberId(pings[0]!.neighbour));
+    expect(await readLivePeerAnswers(bindScopedDb(client), toPariwarId(pid), view.reply!.replyId)).toHaveLength(20);
+  });
+});
+
+describe.skipIf(!hasDatabase)('Story 6.33 (AC10; I1) — NOTHING GATES: a staff question answered leaves every gate byte-identical', { timeout: 20000 }, () => {
+  setupLiveDb();
+
+  /** Every reader that decides, flags or delays a claim — its outcome, serialised. */
+  async function gates(client: Client, r: Req): Promise<string> {
+    const db = bindScopedDb(client);
+    let approvable: string;
+    try {
+      await assertClaimApprovable(db, r.pid, r.cid, r.mid, { approvingActorIds: [OPERATOR], step: 'final' });
+      approvable = 'ok';
+    } catch (err) {
+      approvable = `${(err as Error).name}: ${(err as Error).message}`;
+    }
+    const warnings = await readClaimApprovalWarnings(db, r.pid, r.cid);
+    const completion = groundInspectionApprovalState(await readGroundInspectionApprovalFacts(db, r.pid, r.cid));
+    return JSON.stringify({ approvable, warnings, completion }, (_k, v: unknown) => (v instanceof Map ? [...v] : v));
+  }
+
+  it('a chain question (any value) answered on a claim ⇒ assertClaimApprovable, the completion predicate and the warnings summary are UNCHANGED', async () => {
+    const { client } = getTx();
+    const r = await requestAt(client, 'verification_in_progress', { pariwarId: randomUUID() });
+    const v = await peerDbVersion(client, r.pid);
+    await flipSave(client, r, 'has_died', { codes: ['died'] }, { form: 'codes', codes: ['died'] }, v, v);
+    const before = await gates(client, r);
+    for (const code of ['well', 'tap']) {
+      const sealed: PreparedPeerAnswer = { form: 'encrypted', ciphertext: `enc:test:${JSON.stringify([code])}`, dateWindowIndexes: null, codeIndexes: null };
+      await savePeerAnswer(client, {
+        pariwarId: r.pid,
+        pingId: r.pingId,
+        memberId: r.neighbour,
+        questionKey: 'water_source',
+        value: { codes: [code] },
+        prepared: sealed,
+        decryptedLive: await decryptedLiveOf(client, r),
+        preReadVersionId: v,
+        clientVersionId: v,
+        savedVia: 'member_app',
+        savedByActorId: r.neighbour,
+        todayIst: TODAY,
+      });
+      expect(await gates(client, r)).toBe(before);
+    }
+    const { rows } = await client.query(`SELECT count(*)::int AS n FROM claim_peer_mesh_reply_answers WHERE claim_case_id = $1 AND question_key = 'water_source'`, [r.cid]);
+    expect(rows[0].n).toBe(2); // the staff answers WERE written (⛔ a vacuous comparison)
+  });
+});
+

@@ -49,13 +49,13 @@ import {
   type PeerMeshPingView,
   type PeerMeshSection,
 } from '@twt/contracts';
-import { claim, encryption, ids, member as memberDomain, questionnaires, type Db } from '@twt/domain';
-import { t } from '@twt/i18n';
+import { claim, encryption, ids, member as memberDomain, questionnaireVersions, questionnaires, type Db } from '@twt/domain';
 
 import type { EncryptionDeps } from '../../context.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { decryptPeerAnswer, sensitivePlaintextToValue } from './peer-request-core.js';
 import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
+import { questionnaireWordsFor, type QuestionnaireWords } from './questionnaire-words.js';
 
 /**
  * Story 6.27b (`-328` read with `-329`) — WHO is reading, for the call-back number's four rules (the header). Each caller
@@ -89,6 +89,11 @@ export interface PeerAnswersContext {
    * failure inside an ABORTED tx (25P02) — so 6.27b's reuse must pass one too.
    */
   readonly run: <T>(label: string, read: () => Promise<T>) => Promise<T>;
+  /**
+   * Story 6.33 (QE8 C11) — OPTIONAL; called once the section is whole with the answers it carries that were stored as
+   * ciphertext (⛔ a wire field — the audit lines count them).
+   */
+  readonly onSensitiveAnswerCounts?: (counts: SensitiveAnswerCounts) => void;
 }
 
 /** An answer before its warning flag is stitched (Story 6.27b, the 6.26b `UnstitchedGroundInspectionItem` pattern) — it
@@ -127,7 +132,31 @@ export type PeerSection =
       readonly inspectionDiscrepancies: InspectionDiscrepancyStaffView[];
     };
 
-const enWords = (key: string, member: string): string => t(key, { member }, { locale: 'en', namespace: 'claim' });
+/**
+ * Story 6.33 (R5) — the definitions of the pinned versions a section shows, read through the database-aware reader on the
+ * section's handle (a chain version's pin resolves too; a pin that cannot be parsed shows its answers by key). Review RV24 —
+ * ONE batched statement for ALL the DATABASE-pinned versions (⛔ one per version); a code-only set costs ⛔ query and ⛔ savepoint;
+ * a read that DOES happen is COUNTED against the console's ceiling (`bump`) — the ceiling's ledger names it.
+ */
+export async function definitionsFor(
+  ctx: PeerAnswersContext,
+  bump: () => void,
+  name: string,
+  versionIds: readonly (string | null)[],
+): Promise<ReadonlyMap<string, questionnaires.QuestionnaireDefinition | null>> {
+  const present = versionIds.filter((v): v is string => v !== null);
+  if (questionnaireVersions.databaseVersionIds(present).length === 0) {
+    return (await questionnaireVersions.getQuestionnaireDefinitions(ctx.db, present)).defs;
+  }
+  bump();
+  return (await ctx.run(name, () => questionnaireVersions.getQuestionnaireDefinitions(ctx.db, present))).defs;
+}
+
+/** Story 6.33 (QE8 C11) — the answers shown that were STORED as ciphertext (each decrypted to be shown), counted internally. */
+export interface SensitiveAnswerCounts {
+  readonly neighbours: number;
+  readonly family: number;
+}
 
 /**
  * Build the peer-mesh section for `ctx.actorId`. `bump` is called once per counted source read (the console's read
@@ -172,17 +201,26 @@ export async function assemblePeerSection(
     );
     familyAccountInheritedFromClaimId = inherited === null ? null : inherited.toLowerCase();
   }
-  const familyAccount = await familyAccountViews(enc, ctx.pariwarId, familyVisits, memberName, warn);
+  // THE ONE word function (Story 6.33 QE4) — an empty name ⇒ the reviewed fallback word, logged with ids only.
+  const words = questionnaireWordsFor(memberName, { log: ctx.log ?? null, ids: { pariwarId: ctx.pariwarId, claimCaseId: ctx.claimCaseId } });
+  const familyDefs = await definitionsFor(ctx, bump, 'peer_section_family_definitions', familyVisits.map((v) => v.questionnaireVersionId));
+  const familyAccount = await familyAccountViews(enc, ctx.pariwarId, familyVisits, familyDefs, words, warn);
+  const familySensitive = familyVisits.flatMap((v) => v.answers).filter((a) => a.valueCiphertext !== null).length;
 
   bump();
   const selection = await run('peer_section_selection', () => claim.getPeerMeshSelectionByClaim(ctx.db, pariwarId, claimCaseId));
-  if (!selection) return { kind: 'no_selection', familyAccount, familyAccountInheritedFromClaimId };
+  if (!selection) {
+    ctx.onSensitiveAnswerCounts?.({ neighbours: 0, family: familySensitive });
+    return { kind: 'no_selection', familyAccount, familyAccountInheritedFromClaimId };
+  }
   bump();
   const pingRows = await run('peer_section_pings', () => claim.getPeerMeshPingIntentsBySelection(ctx.db, pariwarId, selection.selectionId));
   bump();
   const responses = await run('peer_section_responses', () => claim.getPeerMeshResponses(ctx.db, claimCaseId));
   bump();
   const { replies, answers } = await run('peer_section_answers', () => claim.readPeerAnswersForClaim(ctx.db, pariwarId, claimCaseId));
+  const replyDefs = await definitionsFor(ctx, bump, 'peer_section_reply_definitions', replies.map((r) => r.questionnaireVersionId));
+  let neighbourSensitive = 0;
   // ⭐ Story 6.27d (R5) — the inspector's discrepancy showings and re-ask notes, PER CLAIM (two reads, ⛔ per assignment),
   // AFTER the hide above: the audience is exactly the one already entitled to every neighbour answer.
   bump();
@@ -230,7 +268,7 @@ export async function assemblePeerSection(
     // `-329` decision 1 — whom the reply's call-back question named (its OWN version; ⛔ never a list of version ids).
     let audience: questionnaires.CallbackAudience | null = null;
     if (reply) {
-      const def = questionnaires.getQuestionnaireVersion(reply.questionnaireVersionId);
+      const def = replyDefs.get(reply.questionnaireVersionId) ?? null;
       const questions = def ? questionnaires.questionsOf(def) : [];
       audience = questions.find((x) => x.key === 'callback_consent')?.callbackAudience ?? null;
       const views: UnstitchedPeerMeshAnswerView[] = [];
@@ -238,12 +276,13 @@ export async function assemblePeerSection(
         const q = questions.find((x) => x.key === a.questionKey);
         const label = (code: string) => {
           const option = q?.options.find((o) => o.code === code);
-          return option ? enWords(option.copyKey, memberName) : code;
+          return option ? words.en(option) : code;
         };
         let value: PeerMeshAnswerView['value'];
         if (a.valueCodes !== null) {
           value = { kind: 'codes', codes: a.valueCodes, labels: a.valueCodes.map(label) };
         } else {
+          neighbourSensitive += 1;
           try {
             const v = sensitivePlaintextToValue(await decryptPeerAnswer(a.valueCiphertext!, ctx.pariwarId, enc));
             value = v === null ? { kind: 'unavailable' } : 'date' in v ? { kind: 'date', date: v.date } : { kind: 'codes', codes: [...v.codes], labels: v.codes.map(label) };
@@ -256,7 +295,7 @@ export async function assemblePeerSection(
         views.push({
           answerId: a.answerId,
           questionKey: a.questionKey,
-          question: q ? enWords(q.copyKey, memberName) : a.questionKey,
+          question: q ? words.en(q) : a.questionKey,
           value,
           savedVia: a.savedVia,
           savedAt: a.savedAt.toISOString(),
@@ -330,8 +369,9 @@ export async function assemblePeerSection(
     });
   }
 
-  // The section is whole — only NOW is each shown mobile reported (review S17).
+  // The section is whole — only NOW is each shown mobile reported (review S17), and (Story 6.33 C11) its ciphertext counts.
   for (const { pingId, basis } of shown) ctx.onCallbackMobileShown(pingId, basis);
+  ctx.onSensitiveAnswerCounts?.({ neighbours: neighbourSensitive, family: familySensitive });
   return { kind: 'present', selection, pingMemberIds: pingRows.map((p) => p.memberId), responses, pings, inspectionDiscrepancies, familyAccount, familyAccountInheritedFromClaimId };
 }
 
@@ -344,18 +384,20 @@ async function familyAccountViews(
   enc: EncryptionDeps,
   pariwarId: string,
   visits: readonly claim.ClaimFamilyAccountVisit[],
-  memberName: string,
+  /** Story 6.33 (R5) — the visits' pinned definitions, PRE-READ on the section's handle (this function has ⛔ handle). */
+  defs: ReadonlyMap<string, questionnaires.QuestionnaireDefinition | null>,
+  words: QuestionnaireWords,
   warn: (what: string, err: unknown) => void,
 ): Promise<GroundInspectionFamilyAccountVisit[]> {
   const out: GroundInspectionFamilyAccountVisit[] = [];
   for (const visit of visits) {
-    const def = visit.questionnaireVersionId === null ? null : questionnaires.getQuestionnaireVersion(visit.questionnaireVersionId);
+    const def = visit.questionnaireVersionId === null ? null : (defs.get(visit.questionnaireVersionId) ?? null);
     const answers: GroundInspectionFamilyAccountVisit['answers'] = [];
     for (const a of visit.answers) {
       const q = def === null ? undefined : questionnaires.questionsOf(def).find((x) => x.key === a.questionKey);
       const labelOf = (code: string) => {
         const o = q?.options.find((x) => x.code === code);
-        return o === undefined ? code : enWords(o.copyKey, memberName);
+        return o === undefined ? code : words.en(o);
       };
       let codes: readonly string[] | null = a.valueCodes;
       if (codes === null && a.valueCiphertext !== null) {
@@ -370,7 +412,7 @@ async function familyAccountViews(
       }
       answers.push({
         questionKey: a.questionKey,
-        question: q === undefined ? a.questionKey : enWords(q.copyKey, memberName),
+        question: q === undefined ? a.questionKey : words.en(q),
         value: codes === null ? { kind: 'unavailable' } : { kind: 'codes', codes: [...codes], labels: codes.map(labelOf) },
         savedAt: a.savedAt.toISOString(),
       });
@@ -469,6 +511,25 @@ export function familyAccountAuditCounts(
     family_health_answer_count: answers.filter((a) => health.includes(a.questionKey) && a.value.kind === 'codes').length,
     // ⭐ S22 — a flag, ⛔ the source's id (the line's locator already names THIS claim).
     family_account_inherited: (section?.familyAccountInheritedFromClaimId ?? null) !== null,
+  };
+}
+
+/**
+ * ⭐ Story 6.33 (QE8 C11) — every chain answer is stored as ciphertext and DECRYPTED to be shown, so both read lines count
+ * the answers stored as ciphertext that the DELIVERED section carried: `family_sensitive_answer_count` (the family's side —
+ * `family_health_answer_count` keeps its meaning: the ruled health keys) and `sensitive_answer_count` (the neighbours').
+ * Counted INTERNALLY (`SensitiveAnswerCounts` from the assembler — ⛔ a wire field); a section ⛔ delivered (hidden,
+ * unavailable) counts zero; an `empty` section carries the family's account only.
+ */
+export function sensitiveAnswerAuditCounts(
+  section: { readonly status: string } | undefined,
+  counts: SensitiveAnswerCounts | null,
+): { readonly sensitive_answer_count: number; readonly family_sensitive_answer_count: number } {
+  const status = section?.status;
+  const c = counts ?? { neighbours: 0, family: 0 };
+  return {
+    sensitive_answer_count: status === 'present' ? c.neighbours : 0,
+    family_sensitive_answer_count: status === 'present' || status === 'empty' ? c.family : 0,
   };
 }
 

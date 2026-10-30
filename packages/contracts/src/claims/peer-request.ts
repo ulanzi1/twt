@@ -24,6 +24,14 @@ export const PEER_REQUEST_NO_LONGER_OPEN_CODE = 'peer_request.no_longer_open' as
 export const PEER_REQUEST_SUBMITTED_CODE = 'peer_request.submitted' as const;
 export const PEER_REQUEST_INVALID_ANSWER_CODE = 'peer_request.invalid_answer' as const;
 export const PEER_REQUEST_STALE_CODE = 'peer_request.stale' as const;
+/**
+ * Story 6.33 (`2026-10-30-421` QE12 R7) — 409: the questionnaire version changed since the client loaded it (the client sent
+ * `questionnaireVersionId`) — the client RELOADS, ⛔ retries (a retry meets the same version). ⛔ `peer_request.stale`, which
+ * every client retries.
+ */
+export const PEER_REQUEST_VERSION_STALE_CODE = 'peer_request.questionnaire_version_stale' as const;
+/** Story 6.33 (R7 (v)) — 409: the reply's pinned version cannot be served for saving — the clients' terminal state (⛔ reload, ⛔ retry). */
+export const PEER_REQUEST_VERSION_UNREADABLE_CODE = 'peer_request.questionnaire_version_unreadable' as const;
 
 /** The list cap (PM11 — at most five requests are ever open for one member about one death; forced pagination). */
 export const PEER_REQUEST_LIST_MAX = 5;
@@ -98,7 +106,14 @@ export const PeerRequestDetailResponse = z.object({
 });
 export type PeerRequestDetailResponse = z.infer<typeof PeerRequestDetailResponse>;
 
-export const PeerRequestSaveAnswerRequest = z.object({ value: PeerRequestAnswerValue }).strict();
+/**
+ * Story 6.33 (R7) — `questionnaireVersionId` = the version the client RENDERED; OPTIONAL (an installed app that does ⛔ send it
+ * keeps today's retryable stale). ⚠ Deploy order: this server BEFORE a mobile build that sends it (an older `.strict()`
+ * server 400s it) — roster Row 45 (d).
+ */
+export const PeerRequestSaveAnswerRequest = z
+  .object({ value: PeerRequestAnswerValue, questionnaireVersionId: z.string().regex(/^peer_mesh\.v[0-9]+$/).max(64).optional() })
+  .strict();
 export type PeerRequestSaveAnswerRequest = z.infer<typeof PeerRequestSaveAnswerRequest>;
 
 /** The save's reply: every live answer after the save (dependants superseded in the same transaction drop out). */

@@ -5,15 +5,19 @@
 //   · the served questions in English, ONLY the shown ones (the date after "died"), the caller's own answers selected;
 //   · a tap records ONE answer for THAT ping; Submit needs `has_died`; a step-up 403 opens the page's panel.
 
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { notifyManager, QueryClientProvider } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { RELOAD_REFETCH_BOUND_MS } from '@twt/api-client';
 import type { PeerRequestDetailResponse } from '@twt/contracts';
 
 import * as api from '../src/api/client.js';
 import { ApiError } from '../src/api/client.js';
+import { createQueryClient } from '../src/api/hooks.js';
 import { HelplinePeerRequests } from '../src/modules/helpline-claims/HelplinePeerRequests.js';
 import { renderWithClient } from './_helpers.js';
 
@@ -100,7 +104,7 @@ describe('<HelplinePeerRequests>', () => {
     expect(screen.queryByText('If you know, on what date did they die?')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
     await userEvent.click(screen.getByRole('radio', { name: 'Yes, they have died' }));
-    await waitFor(() => expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledWith('p1', MEMBER, PING, 'has_died', { codes: ['died'] }, expect.any(String)));
+    await waitFor(() => expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledWith('p1', MEMBER, PING, 'has_died', { codes: ['died'] }, expect.any(String), 'peer_mesh.v2'));
   });
 
   it("the caller's own answers are selected; the date shows; Submit sends THAT ping", async () => {
@@ -153,7 +157,7 @@ describe('<HelplinePeerRequests>', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'tb' }));
     expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(1);
     await act(async () => first({ answers: [...initial, { questionKey: 'death_illness', value: { codes: ['cancer'] }, savedAt: 'y' }] }));
-    await waitFor(() => expect(mocked.saveHelplinePeerAnswer).toHaveBeenLastCalledWith('p1', MEMBER, PING, 'death_illness', { codes: ['cancer', 'tb'] }, expect.any(String)));
+    await waitFor(() => expect(mocked.saveHelplinePeerAnswer).toHaveBeenLastCalledWith('p1', MEMBER, PING, 'death_illness', { codes: ['cancer', 'tb'] }, expect.any(String), 'peer_mesh.v2'));
     const answers = [...initial, { questionKey: 'death_illness', value: { codes: ['cancer', 'tb'] }, savedAt: 'z' }];
     mocked.getHelplinePeerRequests.mockResolvedValue({ items: [{ ...request, answers }] });
     await act(async () => second({ answers }));
@@ -425,5 +429,305 @@ describe('<HelplinePeerRequests>', () => {
     fireEvent.blur(input);
     expect(screen.queryByText(/A date was typed but not saved/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+  });
+
+  it('⭐ Story 6.33 (R7) — a VERSION-stale save RELOADS the list (⛔ a retry): the card is rebuilt and the unsaved answer re-recorded on the new version', async () => {
+    const v1001 = { ...item(), questionnaire: { ...item().questionnaire, versionId: 'peer_mesh.v1001' } };
+    mocked.getHelplinePeerRequests.mockResolvedValueOnce({ items: [item()] }).mockResolvedValue({ items: [v1001] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(new ApiError(409, 'peer_request.questionnaire_version_stale', 'changed'));
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(2));
+    expect(mocked.saveHelplinePeerAnswer.mock.calls[0]!.at(-1)).toBe('peer_mesh.v2');
+    expect(mocked.saveHelplinePeerAnswer.mock.calls[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), 'peer_mesh.v1001']);
+  });
+
+  it('⭐ Story 6.33 (R7 (v)) — an UNREADABLE pinned version ends the request for this call (said; ⛔ retried, ⛔ reloaded)', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item()] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValue(new ApiError(409, 'peer_request.questionnaire_version_unreadable', 'x'));
+    renderWithClient(<HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />);
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    expect((await screen.findAllByText(/cannot be answered just now/)).length).toBeGreaterThan(0);
+    expect(mocked.saveHelplinePeerAnswer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('<HelplinePeerRequests> — Story 6.33 review RV7 / RV8', () => {
+  const LIST_KEY = ['helpline-peer-requests', 'p1', MEMBER];
+  const V1001 = 'peer_mesh.v1001';
+  const at = (id: string): PeerRequestDetailResponse => ({ ...item(), questionnaire: { ...item().questionnaire, versionId: id } });
+  const stale = () => new ApiError(409, 'peer_request.questionnaire_version_stale', 'changed');
+  const never = () => new Promise<never>(() => {});
+  const saves = () => mocked.saveHelplinePeerAnswer.mock.calls;
+  const diedAnswers = [{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }];
+  const acknowledged = async () => ({ answers: diedAnswers });
+  // What the "once" legs below observe: the 0 ms apply-timer is ⛔ run a second time within these 60 ms. A retry armed BEHIND a
+  // longer wait (the stale wait of 300 ms × attempt) is ⛔ what they cover — the RP19 legs at the end of this file run that wait out
+  // on a fake clock (review RP19).
+  const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 60)); });
+  function renderOwn(memberId: string = MEMBER, strict = false) {
+    const client = createQueryClient();
+    const ui = (id: string) => (
+      <QueryClientProvider client={client}>
+        <HelplinePeerRequests pariwarId="p1" memberId={id} identityConfirmed onStepUpRequired={() => {}} />
+      </QueryClientProvider>
+    );
+    const out = render(strict ? <StrictMode>{ui(memberId)}</StrictMode> : ui(memberId));
+    return { client, rerenderFor: (id: string) => out.rerender(strict ? <StrictMode>{ui(id)}</StrictMode> : ui(id)) };
+  }
+
+  beforeEach(() => {
+    mocked.getHelplinePeerRequests.mockReset();
+    mocked.saveHelplinePeerAnswer.mockReset();
+    mocked.submitHelplinePeerReply.mockReset();
+  });
+
+  it('RV7 — an ASYNC reload that changes the data FIRST and bumps the generation LATER: the answer is re-recorded on the final card — once — and ⛔ lost', async () => {
+    let finishRefetch!: () => void;
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item()] })
+      .mockImplementationOnce(() => new Promise((resolve) => { finishRefetch = () => resolve({ items: [at(V1001)] }); }));
+    mocked.saveHelplinePeerAnswer
+      .mockRejectedValueOnce(stale()) // 1 — v2: the version moved
+      .mockImplementationOnce(never) // 2 — the card built from the CHANGED DATA: its save is still on the wire …
+      .mockImplementation(acknowledged); // 3 — … when the generation bump replaces it
+    const { client } = renderOwn();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(2)); // the reload's refetch, still pending
+    // while it is pending the card SAYS the questions are being updated — ⛔ "Saving…"
+    expect(within(screen.getByRole('article')).getByText(/updating them/)).toBeInTheDocument();
+    expect(within(screen.getByRole('article')).queryByText('Saving…')).toBeNull();
+    act(() => client.setQueryData(LIST_KEY, { items: [at(V1001)] })); // the data changes (key …v1001:0) …
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await act(async () => finishRefetch()); // … and only NOW the refetch resolves and the generation moves (key …v1001:1)
+    await waitFor(() => expect(saves()).toHaveLength(3));
+    expect(saves()[2]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Yes, they have died' })).toHaveAttribute('aria-checked', 'true'));
+    await settle();
+    expect(saves()).toHaveLength(3); // the 0 ms apply ran ONCE on the final card — ⛔ run again within 60 ms
+  });
+
+  it('RV7 — a BACKGROUND refetch that brings a new version (no reload) hands the unsent answer over too', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item()] });
+    mocked.saveHelplinePeerAnswer.mockImplementationOnce(never).mockImplementation(acknowledged);
+    const { client } = renderOwn();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    act(() => client.setQueryData(LIST_KEY, { items: [at(V1001)] }));
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await settle();
+    expect(saves()).toHaveLength(2);
+  });
+
+  it('RV7 — a SECOND rebuild before the first card applied what it was handed — with a publish on it in between — loses nothing', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item()] });
+    mocked.saveHelplinePeerAnswer.mockImplementationOnce(never).mockImplementation(acknowledged);
+    const { client } = renderOwn();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    // Three cache writes in ONE tick, each rendered at once (the query client's notifications made synchronous): the v1001
+    // card is built and re-reads its answers (a publish with NO drafts of its own — the answers must really differ, or the
+    // cache keeps the old object) before its 0 ms apply-timer can fire, then v1002 replaces it — the answer must still reach v1002.
+    notifyManager.setScheduler((cb) => cb());
+    try {
+      act(() => client.setQueryData(LIST_KEY, { items: [at(V1001)] }));
+      act(() => client.setQueryData(LIST_KEY, { items: [{ ...at(V1001), answers: [{ questionKey: 'death_date', value: { date: '2026-10-01' }, savedAt: 'y' }] }] }));
+      act(() => client.setQueryData(LIST_KEY, { items: [at('peer_mesh.v1002')] }));
+    } finally {
+      notifyManager.setScheduler((cb) => setTimeout(cb, 0));
+    }
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), 'peer_mesh.v1002']);
+    await settle();
+    expect(saves()).toHaveLength(2);
+  });
+
+  it('RV7 — Strict Mode (setup → cleanup → setup): the carried answer is recorded ONCE', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValueOnce({ items: [item()] }).mockResolvedValue({ items: [at(V1001)] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(stale()).mockImplementation(acknowledged);
+    renderOwn(MEMBER, true);
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    await settle();
+    expect(saves()).toHaveLength(2);
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+  });
+
+  it('RV7 — an answer unsent for ONE caller is ⛔ re-sent when the operator comes back to that caller later', async () => {
+    const OTHER = '33333333-3333-4333-8333-333333333333';
+    mocked.getHelplinePeerRequests.mockImplementation(async (_p, memberId) => ({ items: memberId === MEMBER ? [item()] : [] }));
+    mocked.saveHelplinePeerAnswer.mockImplementationOnce(never).mockImplementation(acknowledged);
+    const { rerenderFor } = renderOwn();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    rerenderFor(OTHER);
+    await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
+    rerenderFor(MEMBER);
+    await screen.findByRole('radio', { name: 'Yes, they have died' });
+    await settle();
+    expect(saves()).toHaveLength(1);
+  });
+
+  it('RV8 — a FAILED reload refetch says so ON the card, keeps the answer, and "Try again" reads the list again', async () => {
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item()] })
+      .mockRejectedValueOnce(new ApiError(503, 'http.503', 'down'))
+      .mockResolvedValue({ items: [at(V1001)] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(stale()).mockImplementation(acknowledged);
+    renderOwn();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    const card = within(await screen.findByRole('article'));
+    expect(await card.findByTestId('peer-reload-failed')).toHaveTextContent('could not be updated just now');
+    expect(card.queryByText('Saving…')).toBeNull(); // ⛔ stuck at "Saving…"
+    expect(saves()).toHaveLength(1);
+    await userEvent.click(card.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(saves()).toHaveLength(2)); // the kept answer, on the new version
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await waitFor(() => expect(screen.queryByTestId('peer-reload-failed')).toBeNull());
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Yes, they have died' })).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('RV8 — "Try again" can fail again and again; the card keeps saying so and ⛔ loses the answer', async () => {
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item()] })
+      .mockRejectedValueOnce(new ApiError(503, 'http.503', 'down'))
+      .mockRejectedValueOnce(new ApiError(503, 'http.503', 'down'))
+      .mockResolvedValue({ items: [at(V1001)] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(stale()).mockImplementation(acknowledged);
+    renderOwn();
+    await userEvent.click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    const card = within(await screen.findByRole('article'));
+    await card.findByTestId('peer-reload-failed');
+    await userEvent.click(card.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(3));
+    await card.findByTestId('peer-reload-failed');
+    expect(saves()).toHaveLength(1);
+    await userEvent.click(card.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+  });
+});
+
+describe('<HelplinePeerRequests> — Story 6.33 review RP9 / RP19', () => {
+  const LIST_KEY = ['helpline-peer-requests', 'p1', MEMBER];
+  const V1001 = 'peer_mesh.v1001';
+  const at = (id: string): PeerRequestDetailResponse => ({ ...item(), questionnaire: { ...item().questionnaire, versionId: id } });
+  const versionStale = () => new ApiError(409, 'peer_request.questionnaire_version_stale', 'changed');
+  const never = () => new Promise<never>(() => {});
+  const saves = () => mocked.saveHelplinePeerAnswer.mock.calls;
+  const acknowledged = async () => ({ answers: [{ questionKey: 'has_died', value: { codes: ['died'] }, savedAt: 'x' }] });
+  let actEnvironment: boolean | undefined;
+  /** Past the 300 ms stale wait of the first attempt (the other screens back off for 1 s). */
+  const PAST_RETRY_MS = 1_100;
+  const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+  /** A click, and the fake clock's 0 ms notifications it sets off, inside ONE act (⛔ React updates outside it). */
+  const click = (el: HTMLElement) => act(async () => { fireEvent.click(el); await vi.advanceTimersByTimeAsync(0); });
+  function renderOwn() {
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <HelplinePeerRequests pariwarId="p1" memberId={MEMBER} identityConfirmed onStepUpRequired={() => {}} />
+      </QueryClientProvider>,
+    );
+    return client;
+  }
+
+  beforeEach(() => {
+    mocked.getHelplinePeerRequests.mockReset();
+    mocked.saveHelplinePeerAnswer.mockReset();
+    mocked.submitHelplinePeerReply.mockReset();
+    // The fake clock keeps ticking in real time (`shouldAdvanceTime`), so its 0 ms notifications land BETWEEN the test's awaits —
+    // outside any `act`, which is not a defect of the card. Every assertion here waits (`waitFor` / `act`) for what it reads.
+    actEnvironment = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT;
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false;
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = actEnvironment;
+  });
+
+  it('RP9 — a reload refetch that NEVER settles is a FAILURE once the bound has passed: the card says so with "Try again", keeps the answer; "Try again" then succeeds', async () => {
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item()] })
+      .mockImplementationOnce(never) // the reload's refetch hangs (the admin transport has no timeout)
+      .mockResolvedValue({ items: [at(V1001)] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(versionStale()).mockImplementation(acknowledged);
+    renderOwn();
+    await click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(2));
+    const card = within(await screen.findByRole('article'));
+    // within the bound the card says the questions are being updated — ⛔ yet a failure
+    await advance(RELOAD_REFETCH_BOUND_MS - 500);
+    expect(card.getByText(/updating them/)).toBeInTheDocument();
+    expect(card.queryByTestId('peer-reload-failed')).toBeNull();
+    await advance(1_000);
+    expect(await card.findByTestId('peer-reload-failed')).toHaveTextContent('could not be updated just now');
+    expect(card.queryByText(/updating them/)).toBeNull(); // ⛔ stuck at "updating them…"
+    expect(saves()).toHaveLength(1);
+    await click(card.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(saves()).toHaveLength(2)); // the kept answer, on the new version
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await waitFor(() => expect(screen.queryByTestId('peer-reload-failed')).toBeNull());
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Yes, they have died' })).toHaveAttribute('aria-checked', 'true'));
+    await advance(50); // (the trailing acknowledgement lands inside an act)
+  });
+
+  it('RP9 — "Try again" after a timeout can time out again (bounded each time); the card keeps saying so and ⛔ loses the answer', async () => {
+    mocked.getHelplinePeerRequests
+      .mockResolvedValueOnce({ items: [item()] })
+      .mockImplementationOnce(never)
+      .mockImplementationOnce(never)
+      .mockResolvedValue({ items: [at(V1001)] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(versionStale()).mockImplementation(acknowledged);
+    renderOwn();
+    await click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await advance(RELOAD_REFETCH_BOUND_MS + 500);
+    const card = within(await screen.findByRole('article'));
+    await card.findByTestId('peer-reload-failed');
+    await click(card.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mocked.getHelplinePeerRequests).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(card.getByText(/updating them/)).toBeInTheDocument());
+    await advance(RELOAD_REFETCH_BOUND_MS + 500);
+    await card.findByTestId('peer-reload-failed');
+    expect(saves()).toHaveLength(1);
+    await click(card.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await advance(50);
+  });
+
+  it('RP19 — a card REPLACED while its save waits to retry a stale is ⛔ retried by the replaced one: the successor sends the answer once, and a whole wait later nothing else has gone out', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item()] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(new ApiError(409, 'peer_request.stale', 'try again')).mockImplementation(acknowledged);
+    const client = renderOwn();
+    await click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(saves()).toHaveLength(1)); // the 300 ms stale wait is ARMED
+    // the questions change under it: the card is replaced
+    await act(async () => {
+      client.setQueryData(LIST_KEY, { items: [at(V1001)] });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]!.slice(3)).toEqual(['has_died', { codes: ['died'] }, expect.any(String), V1001]);
+    await advance(PAST_RETRY_MS); // … the replaced card's wait has now run out
+    expect(saves()).toHaveLength(2);
+  });
+
+  it('RP19 (control) — the same stale on a card that is ⛔ replaced IS retried (same key) once the wait has run: the clock above does reach it', async () => {
+    mocked.getHelplinePeerRequests.mockResolvedValue({ items: [item()] });
+    mocked.saveHelplinePeerAnswer.mockRejectedValueOnce(new ApiError(409, 'peer_request.stale', 'try again')).mockImplementation(acknowledged);
+    renderOwn();
+    await click(await screen.findByRole('radio', { name: 'Yes, they have died' }));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    await advance(PAST_RETRY_MS);
+    expect(saves()).toHaveLength(2);
+    expect(saves()[1]![5]).toBe(saves()[0]![5]); // the SAME idempotency key on the retry
+    expect(saves()[1]!.at(-1)).toBe('peer_mesh.v2');
   });
 });

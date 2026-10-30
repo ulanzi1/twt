@@ -75,8 +75,8 @@ describe('ground_inspection v1 (IQ1)', () => {
   });
   it("uses the inspector's OWN copy keys — ⛔ the neighbours' words", () => {
     for (const q of questionsOf(V1)) {
-      expect(q.copyKey.startsWith('inspector_questions.'), q.key).toBe(true);
-      for (const o of q.options) expect(o.copyKey.startsWith(`inspector_questions.${q.key}.`), o.code).toBe(true);
+      expect(q.copyKey?.startsWith('inspector_questions.'), q.key).toBe(true);
+      for (const o of q.options) expect(o.copyKey?.startsWith(`inspector_questions.${q.key}.`), o.code).toBe(true);
     }
     expect(V1.closingNoteCopyKey).toBe('inspector_questions.closing_note');
     expect(V1.thankYouCopyKey).toBe('inspector_questions.thank_you');

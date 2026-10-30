@@ -1,5 +1,7 @@
 {
   "member_fallback": "your family member",
+  "$comment.questionnaire_member_fallback": "Story 6.33 (`2026-10-30-421` QE4; fixes 6.32 deferred D11): questionnaire.member_fallback fills the member's name in a questionnaire question (the Panel's copy keys AND staff-written stored text) when the name cannot be read — ⛔ the claimant screens' member_fallback. The Hindi was agent-authored and HUMAN-REVIEWED by BigDev on 2026-10-30 (`6-33-hindi-review-member-fallback-word.md`: \"A, सदस्य is fine but this better be rarest of rare\"). Each use is logged (`questionnaire.member_name_fallback`).",
+  "questionnaire.member_fallback": "the member",
   "entry.question": "Are you family of {name}? We can guide you through filing a claim. We need to verify it's you.",
   "entry.yes": "Yes, I am family",
   "entry.no": "No — continue as {name}",

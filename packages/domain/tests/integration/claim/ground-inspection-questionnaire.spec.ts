@@ -8,7 +8,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   answerCodeBlindIndexes,
@@ -17,6 +17,9 @@ import {
   GroundInspectionQuestionnaireInvalidAnswerError,
   GroundInspectionQuestionnaireStaleError,
   GroundInspectionQuestionnaireUnavailableError,
+  GroundInspectionQuestionnaireVersionStaleError,
+  GroundInspectionQuestionnaireVersionUnreadableError,
+  groundInspectionVersionFor,
   readClaimFamilyAccount,
   readGroundInspectionQuestionnaireHeader,
   readLiveGroundInspectionAnswers,
@@ -26,17 +29,22 @@ import {
   type PreparedGroundInspectionAnswer,
 } from '../../../src/claim/index.js';
 import { GroundInspectionClaimNotInVerificationError, GroundInspectionNotActiveError } from '../../../src/claim/errors.js';
+import { assertClaimApprovable } from '../../../src/claim/nominee-name-check.js';
+import { readClaimApprovalWarnings } from '../../../src/claim/approval-warnings.js';
+import { groundInspectionApprovalState, readGroundInspectionApprovalFacts } from '../../../src/claim/ground-inspection-approval.js';
 import { bindScopedDb } from '../../../src/db.js';
 import { createFakeKmsProvider, type KmsKeyRef } from '../../../src/encryption/index.js';
-import { claimId as toClaimId, pariwarId as toPariwarId, type ClaimId, type GroundInspectionId, type PariwarId } from '../../../src/ids/index.js';
+import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId, type ClaimId, type GroundInspectionId, type PariwarId } from '../../../src/ids/index.js';
 import {
   GROUND_INSPECTION_QUESTIONNAIRE_V1,
   type QuestionnaireDefinition,
 } from '../../../src/questionnaires/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { driveClaimTo, enterAppScope, seedDeathCertificate } from '../_helpers.js';
+import { driveClaimTo, enterAppScope, seedDeathCertificate, seedNomineeNameCheck } from '../_helpers.js';
 import { completeWithDate, FAMILY_DATE, scheduleWithOriginalPhoto } from './_inspection-discrepancy-fixtures.js';
 import { attachTextedPings, savePeerFixtureAnswer, type TextedPing } from './_peer-reply-fixtures.js';
+import { toStoredDefinition } from '../../../src/questionnaire-versions/index.js';
+import { chainDefinition, chainQuestion } from '../../questionnaires/_chain-fixtures.js';
 
 const INSPECTOR = 'a1a1a1a1-0000-4000-8000-000000000001';
 const STRANGER = 'c3c3c3c3-0000-4000-8000-000000000003';
@@ -111,9 +119,19 @@ async function save(
   gid: GroundInspectionId,
   key: string,
   codes: string[],
-  over: { actor?: string; registry?: readonly QuestionnaireDefinition[]; decrypted?: Map<string, DecryptedLiveAnswer>; unreadable?: Map<string, string> } = {},
+  over: {
+    actor?: string;
+    registry?: readonly QuestionnaireDefinition[];
+    decrypted?: Map<string, DecryptedLiveAnswer>;
+    unreadable?: Map<string, string>;
+    /** Story 6.33 (R7) — the handler's pre-read version and the panel's rendered one. */
+    preRead?: string;
+    client?: string;
+  } = {},
 ) {
   return saveGroundInspectionAnswer(ctx.client, {
+    preReadVersionId: over.preRead ?? 'ground_inspection.v1',
+    ...(over.client !== undefined ? { clientVersionId: over.client } : {}),
     pariwarId: ctx.pid,
     groundInspectionId: gid,
     actingActorId: over.actor ?? INSPECTOR,
@@ -411,5 +429,194 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the family\'s answers at the inspe
         { groundInspectionId: zero, questionnaireVersionId: null, completedAt: expect.any(Date), answers: [] },
       ]);
     });
+  });
+});
+
+/** Story 6.33 — a `ground_inspection` DB version on the RECORDED v1 base, inserted as the superuser; optional steps. */
+async function dbVersion(ctx: Ctx, over: { warning?: boolean; madeLive?: boolean } = {}): Promise<string> {
+  const version = 500_000 + Math.floor(Math.random() * 499_999);
+  const { id, def } = chainDefinition(RECORDED, version, randomUUID(), (cid) => [
+    chainQuestion(cid, {
+      key: 'other_claim_filed',
+      kind: 'yes_no',
+      text: { en: 'Has the family filed any other claim for this death?', hi: 'क्या परिवार ने इस मृत्यु के लिए कोई और दावा किया है?' },
+      options: [
+        { code: 'yes', text: { en: 'Yes', hi: 'हाँ' } },
+        { code: 'no', text: { en: 'No', hi: 'नहीं' } },
+      ],
+      warning: over.warning ?? false,
+    }),
+  ]);
+  await ctx.client.query('RESET ROLE');
+  await ctx.client.query(
+    `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+     VALUES ($1, 'ground_inspection', $2, $3, 'ground_inspection.v1', 'ground_inspection.v1', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+    [id, version, def.versionId, ctx.pid, JSON.stringify(toStoredDefinition(def))],
+  );
+  if (over.madeLive !== false) {
+    await ctx.client.query(
+      `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'made_live', $2, $2, 'sa', 'Super Admin')`,
+      [def.versionId, ctx.pid],
+    );
+  }
+  await enterAppScope(ctx.client, ctx.pid);
+  return def.versionId;
+}
+
+describe.skipIf(!hasDatabase)('Story 6.33 — the family\'s questionnaire after a version FLIP (R7; D5)', { timeout: 30000 }, () => {
+  setupLiveDb();
+
+  it('a NEW visit pins the version in force — a chain version; its chain answer is stored ENCRYPTED (C5)', async () => {
+    const ctx = await claim();
+    const gid = await schedule(ctx);
+    const v = await dbVersion(ctx);
+    const r = await save(ctx, gid, 'head_letter', ['collected'], { preRead: v, client: v });
+    expect(r.questionnaireVersionId).toBe(v);
+    await save(ctx, gid, 'other_claim_filed', ['no'], { preRead: v, client: v });
+    const { rows } = await ctx.client.query(`SELECT value_codes, value_ciphertext FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1 AND question_key = 'other_claim_filed'`, [gid]);
+    expect(rows[0].value_codes).toBeNull();
+    expect(rows[0].value_ciphertext).toEqual(expect.any(String));
+  });
+
+  it('a flip between the panel\'s load and the first save: the client\'s id ⇒ VERSION-stale (reload); ⛔ id (an older client) ⇒ the retryable stale', async () => {
+    const ctx = await claim();
+    const gid = await schedule(ctx);
+    await dbVersion(ctx); // made live AFTER the panel loaded v1
+    await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { preRead: 'ground_inspection.v1', client: 'ground_inspection.v1' }))).rejects.toBeInstanceOf(
+      GroundInspectionQuestionnaireVersionStaleError,
+    );
+    await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { preRead: 'ground_inspection.v1' }))).rejects.toBeInstanceOf(
+      GroundInspectionQuestionnaireStaleError,
+    );
+  });
+
+  it('⭐ D5 / D8 — the compare runs FIRST: a chain question removed by the flip is VERSION-stale, ⛔ a 422 (and ⛔ a bare Error)', async () => {
+    const ctx = await claim();
+    const gid = await schedule(ctx);
+    const v = await dbVersion(ctx);
+    // the Super Admin reverts this Pariwar before the inspector's save lands — the version in force is v1 again
+    await ctx.client.query('RESET ROLE');
+    await ctx.client.query(
+      `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'pariwar_reverted', $2, $2, 'sa', 'Super Admin')`,
+      [v, ctx.pid],
+    );
+    await enterAppScope(ctx.client, ctx.pid);
+    await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'other_claim_filed', ['no'], { preRead: v, client: v }))).rejects.toBeInstanceOf(
+      GroundInspectionQuestionnaireVersionStaleError,
+    );
+  });
+
+  it('R7 (v) — a visit PINNED to a version that fails validation at read: a save is REFUSED unreadable (⛔ the 404 unavailable)', async () => {
+    const ctx = await claim();
+    const gid = await schedule(ctx);
+    const bad = await dbVersion(ctx, { warning: true, madeLive: false });
+    await ctx.client.query(
+      `INSERT INTO claim_ground_inspection_questionnaires (ground_inspection_id, pariwar_id, claim_case_id, questionnaire_version_id) VALUES ($1, $2, $3, $4)`,
+      [gid, ctx.pid, ctx.cid, bad],
+    );
+    await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { preRead: bad, client: bad }))).rejects.toBeInstanceOf(
+      GroundInspectionQuestionnaireVersionUnreadableError,
+    );
+  });
+  it('review RV6 / R7 (v) — a visit PINNED to a version that cannot even be PARSED (R1), or that does not exist: a save is REFUSED unreadable (⛔ the 404 "no panel"); the reader still returns null only when NO version is in force', async () => {
+    const ctx = await claim();
+    const gid = await schedule(ctx);
+    const n = 1_600_000 + Math.floor(Math.random() * 99_999);
+    const junk = `ground_inspection.v${n}`;
+    await ctx.client.query('RESET ROLE');
+    await ctx.client.query(
+      `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+       VALUES ($1, 'ground_inspection', $2, $3, 'ground_inspection.v1', 'ground_inspection.v1', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+      [randomUUID(), n, junk, ctx.pid, JSON.stringify({ kind: 'ground_inspection', versionId: junk, version: n, junk: true })],
+    );
+    await enterAppScope(ctx.client, ctx.pid);
+    await ctx.client.query(
+      `INSERT INTO claim_ground_inspection_questionnaires (ground_inspection_id, pariwar_id, claim_case_id, questionnaire_version_id) VALUES ($1, $2, $3, $4)`,
+      [gid, ctx.pid, ctx.cid, junk],
+    );
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => undefined); // the R8 alarm, expected here
+    try {
+      await expect(underSavepoint(ctx.client, () => save(ctx, gid, 'head_letter', ['collected'], { preRead: junk, client: junk }))).rejects.toBeInstanceOf(
+        GroundInspectionQuestionnaireVersionUnreadableError,
+      );
+      // the reader itself: a pin that cannot be read throws (the handlers translate it — the GET and the save pre-check)
+      const db = bindScopedDb(ctx.client);
+      await expect(underSavepoint(ctx.client, () => groundInspectionVersionFor(db, junk, ctx.pid))).rejects.toBeInstanceOf(
+        GroundInspectionQuestionnaireVersionUnreadableError,
+      );
+      await expect(underSavepoint(ctx.client, () => groundInspectionVersionFor(db, 'ground_inspection.v7654321', ctx.pid))).rejects.toBeInstanceOf(
+        GroundInspectionQuestionnaireVersionUnreadableError,
+      );
+      // ⛔ pinned yet ⇒ the version IN FORCE (the shipped v1 for a Pariwar with none of its own) — never `null` here
+      expect((await groundInspectionVersionFor(db, null, ctx.pid))?.def.versionId).toBe('ground_inspection.v1');
+    } finally {
+      quiet.mockRestore();
+    }
+  });
+});
+
+describe.skipIf(!hasDatabase)('Story 6.33 (AC10; I1; review RV9 / RP2) — NOTHING GATES, on the GROUND-INSPECTION side: the gate IS the inspection, and a staff question the inspector answers neither opens nor closes it', { timeout: 30000 }, () => {
+  setupLiveDb();
+
+  /** Every reader that decides, flags or delays a claim — its outcome, serialised. */
+  async function gates(ctx: Ctx): Promise<string> {
+    const db = bindScopedDb(ctx.client);
+    const { rows } = await ctx.client.query<{ deceased_member_id: string }>(`SELECT deceased_member_id FROM claims WHERE pariwar_id = $1 AND claim_case_id = $2`, [ctx.pid, ctx.cid]);
+    let approvable: string;
+    try {
+      await assertClaimApprovable(db, ctx.pid, ctx.cid, toMemberId(rows[0]!.deceased_member_id), { approvingActorIds: [INSPECTOR], step: 'final' });
+      approvable = 'ok';
+    } catch (err) {
+      approvable = `${(err as Error).name}: ${(err as Error).message}`;
+    }
+    const warnings = await readClaimApprovalWarnings(db, ctx.pid, ctx.cid);
+    const completion = groundInspectionApprovalState(await readGroundInspectionApprovalFacts(db, ctx.pid, ctx.cid));
+    return JSON.stringify({ approvable, warnings, completion }, (_k, v: unknown) => (v instanceof Map ? [...v] : v));
+  }
+
+  /** A claim approvable in EVERYTHING but the visit (accepted certificate, nominee accounts, determination, name check, contact),
+   *  with a SCHEDULED full visit — so the one conjunct left is the ground-inspection completion, the gate this leg is about. */
+  async function approvableButForTheVisit(): Promise<{ ctx: Ctx; gid: GroundInspectionId }> {
+    const { client } = getTx();
+    const pid = toPariwarId(randomUUID());
+    const cid = toClaimId(randomUUID());
+    await enterAppScope(client, pid);
+    await driveClaimTo(client, pid, cid, randomUUID(), 'verification_in_progress');
+    await seedNomineeNameCheck(client, pid, cid, { inspection: 'skip' });
+    const ctx: Ctx = { client, pid, cid, pings: [] };
+    return { ctx, gid: await schedule(ctx) };
+  }
+
+  const waitsForTheVisit = (approvable: string) => approvable.startsWith('GroundInspectionRequiredError') && approvable.includes('its ground inspection is not complete');
+
+  it('a claim approvable but for its visit WAITS on the visit however many chain answers are saved (the answers ⛔ open the gate); once the visit completes WITH a chain answer on it, the claim is APPROVABLE (the answer ⛔ closes it)', async () => {
+    const { ctx, gid } = await approvableButForTheVisit();
+    const before = await gates(ctx);
+    // ⭐ the before-state is the REAL gate — ⛔ the unrelated certificate error round 2 found in the first version of this leg
+    expect(waitsForTheVisit(JSON.parse(before).approvable), JSON.parse(before).approvable).toBe(true);
+    const v = await dbVersion(ctx);
+    await save(ctx, gid, 'head_letter', ['collected'], { preRead: v, client: v });
+    for (const code of ['yes', 'no']) {
+      await save(ctx, gid, 'other_claim_filed', [code], { preRead: v, client: v });
+      const after = JSON.parse(await gates(ctx)) as { approvable: string };
+      expect(waitsForTheVisit(after.approvable), after.approvable).toBe(true); // still waiting: a chain answer does ⛔ satisfy "complete"
+    }
+    const { rows } = await ctx.client.query(
+      `SELECT count(*)::int AS n FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1 AND question_key = 'other_claim_filed'`,
+      [gid],
+    );
+    expect(rows[0].n).toBe(2); // yes then no (the first superseded) — the staff answers WERE written (⛔ a vacuous comparison)
+    // the chain answer is on the visit; completing the visit OPENS the gate — the answer does ⛔ block approval or completion
+    await completeWithDate(ctx.client, ctx.pid, ctx.cid, gid, { actor: INSPECTOR });
+    const opened = JSON.parse(await gates(ctx)) as { approvable: string; completion: unknown };
+    expect(opened.approvable, opened.approvable).toBe('ok');
+    const live = await ctx.client.query(
+      `SELECT count(*)::int AS n FROM claim_ground_inspection_answers WHERE ground_inspection_id = $1 AND question_key = 'other_claim_filed' AND superseded_at IS NULL`,
+      [gid],
+    );
+    expect(live.rows[0].n).toBe(1); // the chain answer is STILL there on the completed visit
+    // ⭐ CONTROL — the serialisation is sensitive to the GATING input: voiding the completed visit closes the gate again
+    await ctx.client.query(`UPDATE claim_ground_inspections SET status = 'superseded' WHERE claim_case_id = $1 AND status = 'completed'`, [ctx.cid]);
+    expect(waitsForTheVisit((JSON.parse(await gates(ctx)) as { approvable: string }).approvable)).toBe(true);
   });
 });

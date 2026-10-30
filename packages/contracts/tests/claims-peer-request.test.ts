@@ -28,8 +28,8 @@ function toWire(def: questionnaires.QuestionnaireDefinition) {
       questions: p.questions.map((q) => ({
         key: q.key,
         kind: q.kind,
-        words: words(q.copyKey),
-        options: q.options.map((o) => ({ code: o.code, words: words(o.copyKey), exclusive: o.exclusive === true })),
+        words: words(q.copyKey!),
+        options: q.options.map((o) => ({ code: o.code, words: words(o.copyKey!), exclusive: o.exclusive === true })),
         optional: q.optional,
         showIf: q.showIf === null ? null : { key: q.showIf.key, anyOf: [...q.showIf.anyOf] },
       })),

@@ -23,6 +23,7 @@ import {
   canLeavePage,
   classifyFailure,
   isShown,
+  mergeCarried,
   newIdempotencyKey,
   parseDisplayDate,
   retryDelayMs,
@@ -111,9 +112,23 @@ describe('the pure logic', () => {
     expect(classifyFailure({ status: 409, code: 'peer_request.submitted' })).toBe('submitted')
     expect(classifyFailure({ status: 422, code: 'peer_request.invalid_answer' })).toBe('invalid')
     expect(classifyFailure({ status: 409, code: 'peer_request.stale' })).toBe('retry')
+    // ⭐ Story 6.33 (R7) — the version changed ⇒ RELOAD (⛔ a retry — it would meet the same version forever); the pinned
+    // version cannot be answered ⇒ the request closes.
+    expect(classifyFailure({ status: 409, code: 'peer_request.questionnaire_version_stale' })).toBe('reload')
+    expect(classifyFailure({ status: 409, code: 'peer_request.questionnaire_version_unreadable' })).toBe('not_openable')
     expect(classifyFailure({ status: 503 })).toBe('retry')
     expect(classifyFailure(new TypeError('Network request failed'))).toBe('retry')
     expect([1, 2, 3, 10].map(retryDelayMs)).toEqual([1000, 2000, 4000, 30000])
+  })
+
+  it('⭐ Story 6.33 review RV7 — the hand-over merge: newer wins per question and moves to the END; an untouched older answer stays', () => {
+    const a = { questionKey: 'has_died', value: { codes: ['died'] } }
+    const b = { questionKey: 'death_date', value: { date: '2026-10-01' } }
+    const a2 = { questionKey: 'has_died', value: { codes: ['not_died'] } }
+    expect(mergeCarried([], [])).toEqual([])
+    expect(mergeCarried([a, b], [])).toEqual([a, b]) // nothing applied yet, no draft of its own: ⛔ lost
+    expect(mergeCarried([], [a, b])).toEqual([a, b])
+    expect(mergeCarried([a, b], [a2])).toEqual([b, a2]) // a newer draft of the same question replaces it, as the newest
   })
 
   it('answersToMap, wordsIn, a fresh v4-shaped Idempotency-Key', () => {

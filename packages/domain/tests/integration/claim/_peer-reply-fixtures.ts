@@ -100,7 +100,7 @@ export async function savePeerFixtureAnswer(
   value: QuestionnaireAnswerValue,
   opts: { indexOf?: (date: string) => string } = {},
 ) {
-  return savePeerAnswer(client, {
+  return savePeerAnswer(client, { preReadVersionId: 'peer_mesh.v4',
     pariwarId,
     pingId: ping.pingId,
     memberId: ping.neighbour,

@@ -497,3 +497,7 @@ export * from './memorial_withdrawals.js';
 // outbox (6.25's shape — ADR-0043). `memorial_withdrawals` gains the `helpline` actor and `takedown_request_id`.
 export * from './memorial_takedown_requests.js';
 export * from './memorial_takedown_approver_emails.js';
+// Story 6.33 (0192) — the questionnaire CHAIN (`-304` Q7 / Q8): staff-written versions of the neighbours' and the
+// inspector's questionnaires and every step they take. Both append-only (grant + trigger); RLS keys versions' INSERT on
+// the origin Pariwar and steps on `scope_pariwar_id`; versions are readable by every tenant (reference data).
+export * from './questionnaire_versions.js';

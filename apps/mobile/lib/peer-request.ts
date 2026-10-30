@@ -96,10 +96,14 @@ export function todayInIst(now: Date): string {
 
 // ── the save line ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-export type SaveLine = 'idle' | 'saving' | 'saved' | 'retrying' | 'failed'
+export type SaveLine = 'idle' | 'saving' | 'saved' | 'retrying' | 'failed' | 'reload'
 
-/** What a failed call means for the screen. `retry` keeps the answer on screen and retries ("Not saved — retrying"). */
-export type PeerRequestFailure = 'not_openable' | 'no_longer_open' | 'submitted' | 'invalid' | 'retry'
+/**
+ * What a failed call means for the screen. `retry` keeps the answer on screen and retries ("Not saved — retrying").
+ * ⭐ Story 6.33 (R7) — `reload`: the questions CHANGED since the screen loaded them — the screen refetches the request and
+ * rebuilds its questions, keeping every answer whose question is still asked (⛔ a retry: it would meet the same version).
+ */
+export type PeerRequestFailure = 'not_openable' | 'no_longer_open' | 'submitted' | 'invalid' | 'reload' | 'retry'
 
 /** Map a transport failure (`ApiError`-shaped: `status` + `code`, or anything else) to the screen's response. */
 export function classifyFailure(err: unknown): PeerRequestFailure {
@@ -107,6 +111,10 @@ export function classifyFailure(err: unknown): PeerRequestFailure {
   if (e?.status === 404) return 'not_openable'
   if (e?.status === 409 && e.code === 'peer_request.no_longer_open') return 'no_longer_open'
   if (e?.status === 409 && e.code === 'peer_request.submitted') return 'submitted'
+  // ⭐ Story 6.33 (R7) — the version changed ⇒ RELOAD; the pinned version cannot be answered ⇒ the request closes (⛔ a
+  // reload — it would return the same pin; ⛔ a retry — the 409 below would otherwise retry forever).
+  if (e?.status === 409 && e.code === 'peer_request.questionnaire_version_stale') return 'reload'
+  if (e?.status === 409 && e.code === 'peer_request.questionnaire_version_unreadable') return 'not_openable'
   if (e?.status === 422) return 'invalid'
   // ⭐ Second-pass review S32 — a 403 (e.g. the member was suspended mid-session) ⛔ never retries every 30 s behind a
   // blocked Back: the screen closes like the load path's. (A 401 still retries: the token refresh makes it transient, and
@@ -120,6 +128,10 @@ export function classifyFailure(err: unknown): PeerRequestFailure {
 export function retryDelayMs(attempt: number): number {
   return Math.min(30_000, 1_000 * 2 ** Math.max(0, attempt - 1))
 }
+
+// ⭐ Story 6.33 review RV7 — the hand-over merge of unsent answers is ONE rule shared with the admin screens: it lives in
+// `@twt/api-client` beside `PeerAnswerEditor.carryOverDrafts`. Re-exported here so the screen and its tests keep one import.
+export { mergeCarried, type CarriedDraft } from '@twt/api-client'
 
 // ── the link (Story 6.27c, AC6) ────────────────────────────────────────────────────────────────────────────────────
 

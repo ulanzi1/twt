@@ -26,7 +26,7 @@ import {
   type SmsAppClient,
   type SmsGatewayMessage,
 } from '@twt/channels';
-import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, schema } from '@twt/domain';
+import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaireVersions, questionnaires, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -104,6 +104,10 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
             WHERE c.table_schema = 'public' AND c.column_name = 'pariwar_id' AND t.table_type = 'BASE TABLE'`,
         );
         for (const { table_name } of rows) await c.query(`DELETE FROM "${table_name}" WHERE pariwar_id::text = ANY($1)`, [pariwars]);
+        // Review RV25 — the chain tables key their Pariwar on `origin_` / `scope_` / `target_pariwar_id`, ⛔ `pariwar_id`, so the sweep
+        // above never saw them: a leaked row is PERMANENT (append-only) and moves the next real version number of a persistent DB.
+        await c.query(`DELETE FROM questionnaire_version_steps WHERE scope_pariwar_id::text = ANY($1) OR target_pariwar_id::text = ANY($1)`, [pariwars]);
+        await c.query(`DELETE FROM questionnaire_versions WHERE origin_pariwar_id::text = ANY($1)`, [pariwars]);
         await c.query('COMMIT');
       } catch (e) {
         await c.query('ROLLBACK').catch(() => undefined);
@@ -563,6 +567,63 @@ describe.skipIf(!hasDatabase)('Story 6.27c — the neighbours\' text (live DB, o
     expect(h.sent).toHaveLength(0);
     expect(h.alarms.some((a) => a.includes('config:counsel_basis_pending') && a.includes(w.claimCaseId))).toBe(true);
     await expectIdsOnly(h, w);
+  });
+
+  it('⭐ Story 6.33 (AC4; QE12 R4 / R5; CF3 (d)) — a Pariwar-ONLY chain version with a pending HEALTH question holds THAT Pariwar\'s texts and ⛔ another\'s — on an RLS-bypassing pool', async () => {
+    // The ruled questions CLEARED (an injected code registry), so only the chain question can hold.
+    const a = await world();
+    const b = await world();
+    const chainId = randomUUID();
+    const version = 2_000_000 + Math.floor(Math.random() * 900_000); // far above any real number; the rows are swept in afterAll
+    const versionId = `peer_mesh.v${version}`;
+    const stored = questionnaireVersions.toStoredDefinition({
+      ...CLEARED,
+      versionId,
+      version,
+      approvedBy: [...CLEARED.approvedBy, `chain:${chainId}`],
+      pages: [
+        ...CLEARED.pages,
+        {
+          questions: [
+            {
+              key: 'long_illness_hospital',
+              kind: 'yes_no' as const,
+              text: { en: 'Was {member} in hospital for long?', hi: 'क्या {member} लंबे समय तक अस्पताल में थे?' },
+              options: [
+                { code: 'yes', text: { en: 'Yes', hi: 'हाँ' } },
+                { code: 'no', text: { en: 'No', hi: 'नहीं' } },
+              ],
+              optional: true,
+              showIf: null,
+              sensitive: true,
+              warning: false,
+              approvedBy: [`chain:${chainId}`],
+              health: true,
+              counselBasis: 'pending',
+            },
+          ],
+        },
+      ],
+    });
+    await pool.query(
+      `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+       VALUES ($1, 'peer_mesh', $2, $3, 'peer_mesh.v4', 'peer_mesh.v4', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+      [chainId, version, versionId, a.pid, JSON.stringify(stored)],
+    );
+    await pool.query(
+      `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'made_live', $2, $2, 'sa', 'Super Admin')`,
+      [versionId, a.pid],
+    );
+    const ha = harness(a, { registry: [CLEARED] });
+    expect(await runPeerMeshRequestChild(ha.deps, boss(ha), envelopeOf(a), randomUUID())).toEqual({ status: 'held_config', reason: 'config:counsel_basis_pending' });
+    expect((await tick(ha, a)).swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect((await rows(a)).every((r) => r.send_outcome === null)).toBe(true);
+    expect(ha.alarms.some((m) => m.includes('config:counsel_basis_pending'))).toBe(true); // the HELD Pariwar is alarmed (ops sees why)
+    // Pariwar B (no chain version) is ⛔ held by A's: its texts GO — asserted as an outcome, ⛔ merely "anything but A's hold"
+    const hb = harness(b, { registry: [CLEARED] });
+    expect(await runPeerMeshRequestChild(hb.deps, boss(hb), envelopeOf(b), randomUUID())).toMatchObject({ status: 'done' });
+    expect((await rows(b)).every((r) => r.send_outcome === 'accepted')).toBe(true);
+    expect(hb.alarms.some((m) => m.includes('config:counsel_basis_pending'))).toBe(false);
   });
 
   it.each([

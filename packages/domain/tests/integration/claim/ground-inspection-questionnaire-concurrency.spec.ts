@@ -150,7 +150,7 @@ describe.skipIf(!hasDatabase)('Story 6.32 — the family\'s answers: save / comp
 
   /** The letter (codes — ⛔ KMS, ⛔ decrypted live answers to pass) through the REAL writer and the SHIPPED v1. */
   const saveLetter = (client: pg.PoolClient, s: Seeded, code: 'collected' | 'not_collected') =>
-    saveGroundInspectionAnswer(client, {
+    saveGroundInspectionAnswer(client, { preReadVersionId: 'ground_inspection.v1',
       pariwarId: s.pid,
       groundInspectionId: s.gid,
       actingActorId: INSPECTOR,

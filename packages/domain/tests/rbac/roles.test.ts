@@ -949,3 +949,49 @@ describe('Story 11b.4a — `memorial.takedown` (`2026-10-27-412` MP6)', () => {
     expect(hasPermission([{ ...grant, role: 'pariwar_admin' }], 'memorial.takedown', resource)).toBe(false);
   });
 });
+
+describe('Story 6.33 — the questionnaire chain keys (`2026-10-30-421` QE6 (A); `-422` Q1 A)', () => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const holders = (key: string) =>
+    defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+
+  it('propose + approve: `pariwar_admin` (Trustee-Lite) + derived super_admin; publish: super_admin ONLY', () => {
+    expect(holders('questionnaire.propose')).toEqual(['pariwar_admin', 'super_admin']);
+    expect(holders('questionnaire.approve')).toEqual(['pariwar_admin', 'super_admin']);
+    expect(holders('questionnaire.publish')).toEqual(['super_admin']);
+  });
+
+  it('⛔ `state_trustee` holds ANY of the three — its `state` ceiling can never satisfy a pariwar check (scope.ts §RANK-ORDER), so a grant would be INERT', () => {
+    const st = bundleForRole('state_trustee')!;
+    for (const key of ['questionnaire.propose', 'questionnaire.approve', 'questionnaire.publish']) {
+      expect((st.permissions as readonly string[]).includes(key)).toBe(false);
+    }
+    expect(st.scopeCeiling).toBe('state');
+    // …and the reason, proven: even a state_trustee grant row could ⛔ pass the pariwar-dimension check.
+    const resource = { pariwarId: P, dimension: 'pariwar', value: P } as const;
+    expect(hasPermission([{ pariwarId: P, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'MP' }], 'claim.approve', resource)).toBe(false);
+  });
+
+  it('propose / approve are LIVE for pariwar_admin on the pariwar dimension (⛔ inert on arrival); ⛔ another Pariwar', () => {
+    const resource = { pariwarId: P, dimension: 'pariwar', value: P } as const;
+    const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+    const other = { ...pa, pariwarId: '22222222-2222-2222-2222-222222222222', scopeValue: '22222222-2222-2222-2222-222222222222' };
+    for (const key of ['questionnaire.propose', 'questionnaire.approve']) {
+      expect(hasPermission([pa], key, resource)).toBe(true);
+      expect(hasPermission([other], key, resource)).toBe(false);
+      expect(hasPermission([{ ...pa, role: 'trustee_panel' }], key, resource)).toBe(false);
+    }
+  });
+
+  it('publish is LIVE for a GLOBAL super_admin grant; ⛔ pariwar_admin; ⛔ a super_admin grant narrowed to a Pariwar', () => {
+    const resource = { dimension: 'global', value: null, pariwarId: '00000000-0000-0000-0000-000000000000' } as const;
+    const sa = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+    expect(hasPermission([sa], 'questionnaire.publish', resource)).toBe(true);
+    expect(hasPermission([{ pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P }], 'questionnaire.publish', resource)).toBe(false);
+    expect(hasPermission([{ ...sa, scopeDimension: 'pariwar', scopeValue: P }], 'questionnaire.publish', resource)).toBe(false);
+  });
+});
+

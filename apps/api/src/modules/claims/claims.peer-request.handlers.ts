@@ -214,12 +214,20 @@ export function createPeerRequestHandlers(deps: AppDeps) {
 
   async function saveOn(client: pg.PoolClient, tx: Db, ctx: Ctx, request: FastifyRequest): Promise<PeerRequestSaveAnswerResponse> {
     const { pingId, questionKey } = request.params as { pingId: string; questionKey: string };
-    const { value } = request.body as PeerRequestSaveAnswerRequest;
+    const { value, questionnaireVersionId } = request.body as PeerRequestSaveAnswerRequest;
     const today = todayIst(deps.clock());
     // ⭐ PRE-LOCK: read, decrypt, check, encrypt, index (⛔ no KMS under a lock — Trap 9).
-    const { prepared, decryptedLive, stored, unchanged } = await prepareSave(
+    const { prepared, decryptedLive, stored, unchanged, versionId } = await prepareSave(
       tx,
-      { pariwarId: ctx.pariwarId, pingId, memberId: ctx.memberId, questionKey, value, todayIst: today },
+      {
+        pariwarId: ctx.pariwarId,
+        pingId,
+        memberId: ctx.memberId,
+        questionKey,
+        value,
+        todayIst: today,
+        ...(questionnaireVersionId !== undefined ? { clientVersionId: questionnaireVersionId } : {}),
+      },
       deps.encryption,
       request.log,
     );
@@ -233,6 +241,9 @@ export function createPeerRequestHandlers(deps: AppDeps) {
         value,
         prepared,
         decryptedLive,
+        // ⭐ Story 6.33 (R7) — the writer compares both with the version it would pin, UNDER its locks, FIRST.
+        preReadVersionId: versionId,
+        ...(questionnaireVersionId !== undefined ? { clientVersionId: questionnaireVersionId } : {}),
         savedVia: ctx.via,
         savedByActorId: ctx.actorId,
         todayIst: today,
@@ -373,21 +384,37 @@ export function createPeerRequestHandlers(deps: AppDeps) {
       const out = await onHelplineTx(request, async (_client, tx) => {
         const rows = await claim.listOpenPeerRequestsForMember(tx, ids.pariwarId(ctx.pariwarId), ids.memberId(ctx.memberId), limit);
         const items = [];
+        let unreadable = 0;
         for (const row of rows) {
           const view = await claim.readPeerRequest(tx, ids.pariwarId(ctx.pariwarId), row.pingId, ids.memberId(ctx.memberId));
-          items.push(await buildPeerRequestDetail(tx, view, ctx.pariwarId, deps.encryption, request.log));
+          try {
+            items.push(await buildPeerRequestDetail(tx, view, ctx.pariwarId, deps.encryption, request.log));
+          } catch (err) {
+            // Review RV32 / QE12 R7 (v) — ONE request whose pinned version cannot be read (the reader has already raised the R8
+            // alarm) must ⛔ hide the neighbour's OTHER open requests while an operator is on the phone: it is left out of the
+            // list, logged with ids only and COUNTED on the audit line. The member's own view of THAT request is still the 409.
+            // (Thrown in JS after a successful read — the shared transaction is intact.)
+            if (!(err instanceof claim.PeerRequestVersionUnreadableError)) throw err;
+            unreadable += 1;
+            request.log.warn({ pingId: row.pingId, memberId: ctx.memberId }, 'helpline peer-requests: a request is left out — its pinned questionnaire version cannot be read');
+          }
         }
-        return { items };
+        return { items, unreadable };
       });
       // ⭐ Review S12 — an AUDITED read: the operator saw the deceased's name and this neighbour's answers (Tier-1 among
       // them). ONE line per read, naming the neighbour (`member:<id>`) and HOW MANY — ⛔ never a name, an answer or a code.
       emitAuthAudit(deps, request, 'helpline_claim.peer_requests_read', {
         actorId: ctx.actorId,
         pariwarId: ctx.pariwarId,
-        context: { member_id: ctx.memberId, requests: out.items.length, answers: out.items.reduce((n, i) => n + i.answers.length, 0) },
+        context: {
+          member_id: ctx.memberId,
+          requests: out.items.length,
+          answers: out.items.reduce((n, i) => n + i.answers.length, 0),
+          ...(out.unreadable > 0 ? { unreadable_requests: out.unreadable } : {}),
+        },
         resourceLocator: `member:${ctx.memberId}`,
       });
-      return out;
+      return { items: out.items };
     },
 
     /** PUT …/admin/claims/helpline/members/:memberId/peer-requests/:pingId/answers/:questionKey — the operator records ONE

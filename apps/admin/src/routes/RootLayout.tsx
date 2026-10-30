@@ -15,6 +15,7 @@ import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
 import { approvalWarningReasonsEn } from '../modules/approval-warning-reasons/i18n-en.js';
+import { questionnaireVersionsEn } from '../modules/questionnaire-versions/i18n-en.js';
 import { resolveEn as memorialReviewEn } from '../modules/memorial-review/i18n-en.js';
 import { resolveEn as memorialTakedownEn } from '../modules/memorial-takedown/i18n-en.js';
 import { workplaceRequestsEn, workplacesEn } from '../modules/workplaces/i18n-en.js';
@@ -121,6 +122,12 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/certificate-reminders" params={{ pariwarId }} className="text-sm underline" data-testid="nav-certificate-reminders">
               {certificateRemindersEn.nav}
+            </Link>
+          )}
+          {/* Story 6.33 (QE16) — UNGATED: the server's 403 is the boundary (a Pariwar Admin proposes, the Super Admin publishes). */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/questionnaires" params={{ pariwarId }} className="text-sm underline" data-testid="nav-questionnaires">
+              {questionnaireVersionsEn.nav}
             </Link>
           )}
           {pariwarId && canManageWarningReasons && (

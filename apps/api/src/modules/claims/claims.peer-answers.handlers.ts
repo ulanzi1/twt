@@ -43,6 +43,8 @@ import {
   assemblePeerMeshSection,
   assemblePeerSection,
   familyAccountAuditCounts,
+  sensitiveAnswerAuditCounts,
+  type SensitiveAnswerCounts,
   stitchPeerAnswerFlags,
   type PeerCallbackBasis,
 } from './peer-answers-assembler.js';
@@ -119,6 +121,7 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
       }
 
       const shown: { pingId: string; basis: PeerCallbackBasis }[] = [];
+      let sensitiveCounts: SensitiveAnswerCounts | null = null;
       const section = await assemblePeerMeshSection(
         () =>
           assemblePeerSection(
@@ -131,6 +134,7 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
               callbackViewer,
               log: request.log,
               onCallbackMobileShown: (pingId, basis) => shown.push({ pingId, basis }),
+              onSensitiveAnswerCounts: (counts) => (sensitiveCounts = counts),
               run: (label, read) => underSavepoint(scopeTx.client, `peer_answers_${label}`, read),
             },
             () => {},
@@ -172,6 +176,8 @@ export function createPeerAnswersHandlers(deps: AppDeps) {
             peer?.status === 'present' ? peer.transcript.pings.reduce((n, p) => n + (p.reply?.answers.length ?? 0), 0) : 0,
           // ⭐ Story 6.32 (second review S15) — the family's account the section carried (counts only).
           ...familyAccountAuditCounts(peer),
+          // ⭐ Story 6.33 (QE8 C11) — the answers stored as ciphertext the section carried (each decrypted to be shown).
+          ...sensitiveAnswerAuditCounts(peer, sensitiveCounts),
         },
       });
       // ⭐ Code review round 2 (S8) — only for a section the response ACTUALLY carries (`present`): the wire mapping runs

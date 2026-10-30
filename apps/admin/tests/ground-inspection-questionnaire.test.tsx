@@ -24,16 +24,21 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { RELOAD_REFETCH_BOUND_MS } from '@twt/api-client';
 import type { GroundInspectionFamilyAccountVisit } from '@twt/contracts';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
+import { notifyManager, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as api from '../src/api/client.js';
+import { createQueryClient } from '../src/api/hooks.js';
 import { PeerMeshSectionView } from '../src/modules/claim-verification/PeerMeshView.js';
 import { DISCREPANCY_LINE, GroundInspectionPage } from '../src/modules/ground-inspection/GroundInspectionPage.js';
 import { QuestionnairePanel } from '../src/modules/ground-inspection/QuestionnairePanel.js';
+import { UnsavedAnswersProvider } from '../src/modules/ground-inspection/unsaved-answers.js';
 import { renderWithClient } from './_helpers.js';
 
 vi.mock('../src/api/client.js', async () => {
@@ -136,16 +141,16 @@ describe('<QuestionnairePanel> (AC7; IQ8 (A))', () => {
     expect(screen.getByTestId('gi-questionnaire-unsaved')).toBeInTheDocument();
     await act(async () => release());
     await waitFor(() => expect(screen.getByTestId('gi-questionnaire-death_cause-state')).toHaveTextContent('Saved'));
-    expect(api.saveGroundInspectionAnswer).toHaveBeenCalledWith(PARIWAR, CLAIM, GID, 'death_cause', ['illness_long']);
+    expect(api.saveGroundInspectionAnswer).toHaveBeenCalledWith(PARIWAR, CLAIM, GID, 'death_cause', ['illness_long'], 'ground_inspection.v1');
     const illness = await screen.findByTestId('gi-questionnaire-death_illness');
     fireEvent.click(within(illness).getByLabelText(/^Cancer/));
-    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['cancer']));
+    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['cancer'], 'ground_inspection.v1'));
     fireEvent.click(within(illness).getByLabelText(/^TB/));
-    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['cancer', 'tb']));
+    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['cancer', 'tb'], 'ground_inspection.v1'));
     fireEvent.click(within(illness).getByLabelText(/The family does not know/));
-    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['dont_know']));
+    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['dont_know'], 'ground_inspection.v1'));
     fireEvent.click(within(illness).getByLabelText(/^TB/));
-    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['tb']));
+    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenLastCalledWith(PARIWAR, CLAIM, GID, 'death_illness', ['tb'], 'ground_inspection.v1'));
   });
 
   it('⭐ IQ8 (A) — a NETWORK failure is `Not saved — retrying`, retried IN MEMORY, and sent again at once on `online`; the leave warning while unsaved', async () => {
@@ -382,6 +387,374 @@ describe('second code review — the panel', () => {
     }
     expect(await within(letter).findByRole('alert')).toHaveTextContent('an earlier answer changed or could not be read');
     expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('Story 6.33 (R7) — the panel after a version FLIP', () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(cleanup);
+
+  it('a VERSION-stale save RELOADS (⛔ a retry): the questions are fetched again, the editor rebuilt, the unsaved answer re-sent on the new version', async () => {
+    const v1001 = { ...QUESTIONNAIRE, questionnaire: { ...QUESTIONNAIRE.questionnaire, versionId: 'ground_inspection.v1001' } };
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValueOnce(QUESTIONNAIRE).mockResolvedValue(v1001);
+    vi.mocked(api.saveGroundInspectionAnswer)
+      .mockRejectedValueOnce(new api.ApiError(409, 'ground_inspection.questionnaire_version_stale', 'changed'))
+      .mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(api.getGroundInspectionQuestionnaire).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.saveGroundInspectionAnswer).mock.calls[0]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], 'ground_inspection.v1']);
+    expect(vi.mocked(api.saveGroundInspectionAnswer).mock.calls[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], 'ground_inspection.v1001']);
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+  });
+
+  it('an UNREADABLE pinned version is said and ⛔ retried by itself (⛔ a reload)', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValue(new api.ApiError(409, 'ground_inspection.questionnaire_version_unreadable', 'x'));
+    renderPanel();
+    const letter = await screen.findByTestId('gi-questionnaire-head_letter');
+    fireEvent.click(within(letter).getByLabelText(/Yes — I collected/));
+    expect(await within(letter).findByRole('alert')).toHaveTextContent('cannot be answered just now');
+    expect(api.saveGroundInspectionAnswer).toHaveBeenCalledTimes(1);
+    expect(api.getGroundInspectionQuestionnaire).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Story 6.33 review RV7 — the HAND-OVER of unsent answers survives every rebuild, and is applied ONCE', () => {
+  const KEY = ['ground-inspection-questionnaire', PARIWAR, CLAIM, GID];
+  const version = (id: string, drop: string[] = []): api.GroundInspectionQuestionnaireT => ({
+    ...QUESTIONNAIRE,
+    questionnaire: {
+      ...QUESTIONNAIRE.questionnaire,
+      versionId: id,
+      pages: QUESTIONNAIRE.questionnaire.pages.filter((p) => !p.questions.some((q) => drop.includes(q.key))),
+    },
+  });
+  const V1001 = 'ground_inspection.v1001';
+  const stale = () => new api.ApiError(409, 'ground_inspection.questionnaire_version_stale', 'changed');
+  const never = () => new Promise<never>(() => {});
+  const saves = () => vi.mocked(api.saveGroundInspectionAnswer).mock.calls;
+  /** The panel under ITS OWN query client (so a test can change the cached data, as a background refetch would). */
+  function renderOwn(strict = false) {
+    const client = createQueryClient();
+    const ui = (
+      <QueryClientProvider client={client}>
+        <QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} viewerId={INSPECTOR} isInspector />
+      </QueryClientProvider>
+    );
+    render(strict ? <StrictMode>{ui}</StrictMode> : ui);
+    return client;
+  }
+  // Time passes on a FAKE clock, PAST the 1 s first network backoff (`waitForRetry(1)`): a retry or a re-send still armed by an
+  // instance that was replaced would have fired by now — the "applied ONCE" legs below observe that, ⛔ just the 0 ms re-apply (RP19).
+  const PAST_FIRST_BACKOFF_MS = 1_100;
+  const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(PAST_FIRST_BACKOFF_MS); });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockReset();
+    vi.mocked(api.saveGroundInspectionAnswer).mockReset();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it('an ASYNC reload that changes the data FIRST (v1 → v1001) and bumps the generation LATER: the answer is re-saved on the final instance — once — and ⛔ lost', async () => {
+    let finishRefetch!: () => void;
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockImplementationOnce(() => new Promise((resolve) => { finishRefetch = () => resolve(version(V1001)); }));
+    vi.mocked(api.saveGroundInspectionAnswer)
+      .mockRejectedValueOnce(stale()) // 1 — v1: the version moved
+      .mockImplementationOnce(never) // 2 — the instance built from the CHANGED DATA: its save is still on the wire …
+      .mockImplementation(async (_p, _c, _g, key) => ok(key)); // 3 — … when the generation bump replaces it
+    const client = renderOwn();
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(api.getGroundInspectionQuestionnaire).toHaveBeenCalledTimes(2)); // the reload's refetch, still pending
+    act(() => client.setQueryData(KEY, version(V1001))); // the data changes (key v1001:0) …
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+    await act(async () => finishRefetch()); // … and only NOW the refetch resolves and the generation moves (key v1001:1)
+    await waitFor(() => expect(saves()).toHaveLength(3));
+    expect(saves()[2]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    await settle();
+    expect(saves()).toHaveLength(3); // applied ONCE to the final instance — ⛔ re-sent by anything in the 1.1 s after (past the 1 s backoff)
+  });
+
+  it('a BACKGROUND refetch that brings a new version (no reload) hands the unsent answer over too', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer)
+      .mockImplementationOnce(never) // the first answer never gets its acknowledgement …
+      .mockImplementation(async (_p, _c, _g, key) => ok(key));
+    const client = renderOwn();
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    act(() => client.setQueryData(KEY, version(V1001))); // … when a new version arrives by any other road
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    await settle();
+    expect(saves()).toHaveLength(2);
+  });
+
+  it('Strict Mode (setup → cleanup → setup): the carried answer is sent ONCE', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValueOnce(QUESTIONNAIRE).mockResolvedValue(version(V1001));
+    vi.mocked(api.saveGroundInspectionAnswer)
+      .mockRejectedValueOnce(stale())
+      .mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderOwn(true);
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    await settle();
+    expect(saves()).toHaveLength(2);
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+  });
+
+  it('a SECOND rebuild before the first instance applied what it was handed — with a publish on it in between — loses nothing', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce(never).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    const client = renderOwn();
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    // Three cache writes in ONE tick, each rendered at once (the query client's notifications made synchronous): the v1001
+    // instance is built and re-reads its answers (a publish with NO drafts of its own — the answers must really differ, or the
+    // cache keeps the old object) before its 0 ms apply-timer can fire, then v1002 replaces it — the answer must still reach v1002.
+    notifyManager.setScheduler((cb) => cb());
+    try {
+      act(() => client.setQueryData(KEY, version(V1001)));
+      act(() => client.setQueryData(KEY, { ...version(V1001), answers: [{ questionKey: 'death_cause', value: { kind: 'codes' as const, codes: ['accident'] } }] }));
+      act(() => client.setQueryData(KEY, version('ground_inspection.v1002')));
+    } finally {
+      notifyManager.setScheduler((cb) => setTimeout(cb, 0));
+    }
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], 'ground_inspection.v1002']);
+    await settle();
+    expect(saves()).toHaveLength(2);
+  });
+
+  it('an answer whose question is GONE in the new version is dropped — and ⛔ resurrected when a later version asks the question again', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer).mockImplementationOnce(never).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    const client = renderOwn();
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(saves()).toHaveLength(1));
+    act(() => client.setQueryData(KEY, version(V1001, ['head_letter']))); // the question is no longer asked
+    await screen.findByTestId('gi-questionnaire-death_cause');
+    expect(screen.queryByTestId('gi-questionnaire-head_letter')).toBeNull();
+    await settle();
+    act(() => client.setQueryData(KEY, version('ground_inspection.v1002'))); // … and is asked again
+    await screen.findByTestId('gi-questionnaire-head_letter');
+    await settle();
+    expect(saves()).toHaveLength(1); // the dropped answer never comes back
+    expect(screen.queryByTestId('gi-questionnaire-head_letter-state')).toBeNull();
+  });
+
+  it('RP19 — an instance REPLACED while its save backs off on the network is ⛔ retried by the replaced one: the successor sends the answer once, and a whole backoff later nothing else has gone out', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockImplementation(async (_p, _c, _g, key) => ok(key));
+    const client = renderOwn();
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Not saved — retrying')); // the backoff is ARMED
+    expect(saves()).toHaveLength(1);
+    act(() => client.setQueryData(KEY, version(V1001))); // the questions change under it: the instance is replaced
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    await settle(); // … the replaced instance's 1 s backoff has now run out
+    expect(saves()).toHaveLength(2);
+  });
+
+  it('RP19 (control) — the same failure on an instance that is ⛔ replaced IS retried once the backoff has run: the clock above does reach it', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockResolvedValue(QUESTIONNAIRE);
+    vi.mocked(api.saveGroundInspectionAnswer)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderOwn();
+    fireEvent.click(within(await screen.findByTestId('gi-questionnaire-head_letter')).getByLabelText(/Yes — I collected/));
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Not saved — retrying'));
+    expect(saves()).toHaveLength(1);
+    await settle();
+    expect(saves()).toHaveLength(2);
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], 'ground_inspection.v1']);
+  });
+});
+
+describe('Story 6.33 review RP8 / RP9 — a reload that fails, or never settles, is not a dead end', () => {
+  const V1001 = 'ground_inspection.v1001';
+  const v1001 = (): api.GroundInspectionQuestionnaireT => ({ ...QUESTIONNAIRE, questionnaire: { ...QUESTIONNAIRE.questionnaire, versionId: V1001 } });
+  const stale = () => new api.ApiError(409, 'ground_inspection.questionnaire_version_stale', 'changed');
+  const never = () => new Promise<never>(() => {});
+  const saves = () => vi.mocked(api.saveGroundInspectionAnswer).mock.calls;
+  const letter = async () => within(await screen.findByTestId('gi-questionnaire-head_letter'));
+  const yes = async () => fireEvent.click((await letter()).getByLabelText(/Yes — I collected/));
+  /** The panel inside the page's provider, with a probe of the visit's "unsaved" flag, the page's own discard, and a hide switch. */
+  function Probed() {
+    const [shown, setShown] = useState(true);
+    return (
+      <UnsavedAnswersProvider>
+        {(u) => (
+          <>
+            <p data-testid="probe">{u.unsaved.has(GID) ? 'unsaved' : 'clean'}</p>
+            <button type="button" onClick={() => u.discardUnsaved(GID)}>page: complete without the unsaved answers</button>
+            <button type="button" onClick={() => setShown(false)}>hide the panel</button>
+            {shown && <QuestionnairePanel pariwarId={PARIWAR} claimCaseId={CLAIM} groundInspectionId={GID} viewerId={INSPECTOR} isInspector />}
+          </>
+        )}
+      </UnsavedAnswersProvider>
+    );
+  }
+  const renderProbed = () => renderWithClient(<Probed />);
+  const probe = () => screen.getByTestId('probe');
+  const tryAgain = () => screen.getByRole('button', { name: 'Try again' });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockReset();
+    vi.mocked(api.saveGroundInspectionAnswer).mockReset();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it('RP8 — after a FAILED reload the visit stays reported as unsaved while the answers are only in the hand-over; "Try again" rebuilds the editor, re-sends them, and the flag clears', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockRejectedValueOnce(new api.ApiError(500, 'http.500', 'down')) // the reload's refetch fails
+      .mockResolvedValue(v1001());
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(stale()).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderProbed();
+    await yes();
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    // the editor (and its own report) is gone — the screen says the answers are still unsent, and the page is told so
+    expect(probe()).toHaveTextContent('unsaved');
+    expect(screen.getByTestId('gi-questionnaire-load-failed-unsaved')).toBeInTheDocument();
+    expect(saves()).toHaveLength(1);
+    fireEvent.click(tryAgain());
+    await waitFor(() => expect(saves()).toHaveLength(2)); // rebuilt: the carried answer, on the new version
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    expect(screen.queryByTestId('gi-questionnaire-load-failed')).toBeNull();
+    expect(probe()).toHaveTextContent('clean');
+  });
+
+  it('RP8 — a first load that failed has nothing unsent: ⛔ reported as unsaved, ⛔ offered a discard', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire).mockRejectedValueOnce(new api.ApiError(500, 'http.500', 'down')).mockResolvedValue(QUESTIONNAIRE);
+    renderProbed();
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    expect(probe()).toHaveTextContent('clean');
+    expect(screen.queryByTestId('gi-questionnaire-load-failed-discard')).toBeNull();
+    fireEvent.click(tryAgain());
+    await screen.findByTestId('gi-questionnaire-head_letter');
+  });
+
+  it('RP8 — the page’s "complete without the unsaved answers" reaches the failed screen: the hand-over is dropped, the flag clears, and the rebuilt editor sends nothing', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockRejectedValueOnce(new api.ApiError(500, 'http.500', 'down'))
+      .mockResolvedValue(v1001());
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(stale()).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderProbed();
+    await yes();
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    expect(probe()).toHaveTextContent('unsaved');
+    fireEvent.click(screen.getByRole('button', { name: 'page: complete without the unsaved answers' }));
+    await waitFor(() => expect(probe()).toHaveTextContent('clean'));
+    expect(screen.queryByTestId('gi-questionnaire-load-failed-unsaved')).toBeNull();
+    expect(screen.queryByTestId('gi-questionnaire-load-failed-discard')).toBeNull();
+    fireEvent.click(tryAgain());
+    await screen.findByTestId('gi-questionnaire-head_letter');
+    await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
+    expect(saves()).toHaveLength(1); // the discarded answer was ⛔ re-sent
+    expect(probe()).toHaveTextContent('clean');
+  });
+
+  it('RP8 — the flag is released when the panel goes away (the visit completed and left the list, the page moved on)', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockRejectedValue(new api.ApiError(500, 'http.500', 'down'));
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(stale());
+    renderProbed();
+    await yes();
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    expect(probe()).toHaveTextContent('unsaved');
+    fireEvent.click(screen.getByRole('button', { name: 'hide the panel' }));
+    await waitFor(() => expect(probe()).toHaveTextContent('clean'));
+    expect(screen.queryByTestId('gi-questionnaire-load-failed')).toBeNull();
+  });
+
+  it('RP8 — Discard on the failed screen drops the hand-over and clears the flag', async () => {
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockRejectedValue(new api.ApiError(500, 'http.500', 'down'));
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(stale());
+    renderProbed();
+    await yes();
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    expect(probe()).toHaveTextContent('unsaved');
+    fireEvent.click(screen.getByTestId('gi-questionnaire-load-failed-discard'));
+    await waitFor(() => expect(probe()).toHaveTextContent('clean'));
+    expect(screen.queryByTestId('gi-questionnaire-load-failed-unsaved')).toBeNull();
+    expect(screen.getByTestId('gi-questionnaire-load-failed')).toBeInTheDocument(); // the load is still failed — it says so
+  });
+
+  it('RP9 — a reload refetch that NEVER settles is a FAILURE once the bound has passed: the load-failed screen with "Try again", the answer still carried and the visit still unsaved; "Try again" then succeeds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockImplementationOnce(never) // the reload's refetch hangs (the admin transport has no timeout)
+      .mockResolvedValue(v1001());
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(stale()).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderProbed();
+    await yes();
+    await waitFor(() => expect(api.getGroundInspectionQuestionnaire).toHaveBeenCalledTimes(2));
+    // within the bound the editor says it is loading the questions — ⛔ yet a failure
+    await act(async () => { await vi.advanceTimersByTimeAsync(RELOAD_REFETCH_BOUND_MS - 500); });
+    expect(screen.queryByTestId('gi-questionnaire-load-failed')).toBeNull();
+    expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Loading the questions…');
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    expect(saves()).toHaveLength(1);
+    expect(probe()).toHaveTextContent('unsaved'); // RP8 on the timed-out screen too
+    fireEvent.click(tryAgain());
+    await waitFor(() => expect(saves()).toHaveLength(2)); // the carried answer, on the new version
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
+    await waitFor(() => expect(screen.getByTestId('gi-questionnaire-head_letter-state')).toHaveTextContent('Saved'));
+    expect(screen.queryByTestId('gi-questionnaire-load-failed')).toBeNull();
+    expect(probe()).toHaveTextContent('clean');
+  });
+
+  it('RP9 — "Try again" after a timeout can time out again (bounded each time) and ⛔ loses the answer', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(api.getGroundInspectionQuestionnaire)
+      .mockResolvedValueOnce(QUESTIONNAIRE)
+      .mockImplementationOnce(never)
+      .mockImplementationOnce(never)
+      .mockResolvedValue(v1001());
+    vi.mocked(api.saveGroundInspectionAnswer).mockRejectedValueOnce(stale()).mockImplementation(async (_p, _c, _g, key) => ok(key));
+    renderProbed();
+    await yes();
+    await act(async () => { await vi.advanceTimersByTimeAsync(RELOAD_REFETCH_BOUND_MS + 500); });
+    await screen.findByTestId('gi-questionnaire-load-failed');
+    fireEvent.click(tryAgain());
+    await waitFor(() => expect(api.getGroundInspectionQuestionnaire).toHaveBeenCalledTimes(3));
+    expect(tryAgain()).toBeDisabled(); // in flight — one read at a time
+    await act(async () => { await vi.advanceTimersByTimeAsync(RELOAD_REFETCH_BOUND_MS + 500); });
+    await waitFor(() => expect(tryAgain()).toBeEnabled());
+    expect(probe()).toHaveTextContent('unsaved');
+    expect(saves()).toHaveLength(1);
+    fireEvent.click(tryAgain());
+    await waitFor(() => expect(saves()).toHaveLength(2));
+    expect(saves()[1]).toEqual([PARIWAR, CLAIM, GID, 'head_letter', ['collected'], V1001]);
   });
 });
 

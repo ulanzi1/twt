@@ -4,6 +4,75 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review (round 2 — the PATCH diff) of 6-33-questionnaire-editor-versions-and-approval.md (2026-10-30)
+
+The second review (the round-1 patches' own diff, 6 layers): 0 decision-needed, 20 patch (the story's `### Review Findings — round 2`, `RP1`–`RP20` — ALL APPLIED), 15 deferred below. Real, small, or waiting on a trigger.
+
+- **The reload is a DOUBLE rebuild by construction (the data changes, then the generation bumps), so one answer is sent three times** [`QuestionnairePanel.tsx` / `HelplinePeerRequests.tsx` `onReload`; RPD1] — the merge (round 1 RV7) makes the second rebuild survivable; removing it means restructuring the reload around ONE signal. ⭐ Trigger: any change to the reload mechanism, or a duplicate-save complaint.
+- **A draft whose request is still on the wire is mirrored and re-sent under a NEW idempotency key by the successor** [the three clients' `mirror()`; RPD2] — for a version change the old request is refused 409 (safe); for a same-version rebuild the old request could land after a later edit (last write wins), a narrow window. ⭐ Trigger: the first report of an answer that reverted.
+- **No loop breaker on repeated stale → reload → re-save** [the three `onReload`s; RPD3] — needs a server that keeps answering stale for a version it also serves, which the version compare makes impossible short of a cache fault. ⭐ Trigger: a stuck-reload report.
+- **The version list truncates silently past 200 versions of ONE kind, and may cut the in-force one** [`listVersionRows`; RPD4] — staff-written versions are few; a "more" signal needs a contract field. ⭐ Trigger: any kind passing ~150 versions, or the list gaining a pager.
+- **The `role="status"` nodes that mount WITH their text (`qv-keeping-own`, `qv-keeping-own-loading`, `qv-detail-warnings`) are not reliably announced** [`QuestionnaireVersionsPage.tsx`; RPD5] — checklist 13 (d) by web analogy; the persistent `qv-status` region is right. ⭐ Trigger: 11b.8's accessibility audit, or a refactor of this page.
+- **Validation issue lines show raw 0-based pointers, capped at 5 with no "and N more"** [`issueLine` / `errorLines`; RPD6] — editorial. ⭐ Trigger: the first editor who cannot find the field.
+- **The helpline omits an unreadable request silently from the operator's point of view** [`helplineList`; RPD7] — round 1 RV32 disclosed it as BigDev's call (omit + alarm + audit count, vs a visible "could not be opened" stub, which needs a contract field). ⭐ Trigger: BigDev's choice.
+- **Concurrency specs have no `try / finally` around their open transactions, and several specs draw version numbers from overlapping random bands** [`write-concurrency.spec.ts`; the API and jobs specs; RPD8] — the pattern of the specs before this story; the sweep is the real protection. ⭐ Trigger: a hung run holding an advisory lock.
+- **The Editor swaps the form for "Loading…" if the code-version query changes id mid-edit, losing typed state** [`Editor`; RPD9] — code versions change only on deploy. ⭐ Trigger: a deploy while an editor is open.
+- **Refs are assigned during render (`questionsRef`, `allQuestionsRef`)** [the three clients; RPD10] — lint passes; unsafe under a discarded concurrent render. ⭐ Trigger: React concurrent features, or a newer `react-hooks` rule.
+- **A cross-Pariwar withdraw-vs-make-live RACE leg** [`write-concurrency.spec.ts`; RPD11] — round 1 RV2 added the non-racing legs; the step lock serialises both. ⭐ Trigger: any change to the step lock order.
+- **Test-infrastructure nits** [RPD12] — the RV7 legs re-assume the TanStack scheduler default after `setScheduler`; the mobile save-version test says "ONLY the transport is stubbed" yet mocks ~ten modules; the pure merge is tested in four suites; `ground-inspection` imports `mergeCarried` through `helpline-claims/carry-over.ts`. ⭐ Trigger: the next edit of those files.
+- **The failed-reload screen does not replicate the editor's tab-close warning (`beforeunload`) or router-block** [`QuestionnairePanel.tsx` `LoadFailed`; RPD13] — it keeps `reportUnsaved`, a discard and the unsaved note; closing the TAB during a failed reload is still unwarned. ⭐ Trigger: the first report of answers lost on a closed tab.
+- **A very late reload timeout can show the failed screen over an editor another route already rebuilt** [the three `onReload`s; RPD14] — needs the reload's refetch still pending 15 s after a rebuild; judged degenerate. ⭐ Trigger: a flash of "could not be updated" over a working questionnaire.
+- **The integration job is not re-runnable on ONE database** [`apps/jobs/tests/close-cycle-alert-live.test.ts`, `assignable-roster-live.test.ts`, `apps/api/tests/integration/announcement-channels.spec.ts`, …; RPD15] — they commit `cycle_freeze_commits` for the shared `PARIWAR_A` and never sweep them, so `packages/domain/tests/integration/rls/announcement-activity-read.spec.ts` (a top-2 window over that Pariwar's cycles) fails on the SECOND run (3/3 alone); a fresh database clears it. Pre-existing pollution, ⛔ Story 6.33's. ⭐ Trigger: the next story that runs the job twice on one database, or a sweep pass over the committing specs.
+
+## Deferred from: code review of 6-33-questionnaire-editor-versions-and-approval.md (2026-10-30)
+
+Three-layer review of the uncommitted tree (4 chunks × Blind / Edge / Auditor); 0 decision-needed, 32 patch (in the story's `### Review Findings`, `RV1`–`RV32`), 9 deferred below. Each of these
+is real but is a house shape, a hardening, or waits on a trigger — ⛔ a defect the diff must fix to be correct. (The skill's wording is "pre-existing"; most of these are NEW code — they are deferred
+because the fix is not this story's, and the trigger says when it is.)
+
+- **A failed `recordResult` AFTER the commit releases the idempotency key, so a retry re-runs the write** [`apps/api/src/modules/questionnaire-versions/handlers.ts` `withIdempotency`; RVD1] — the SAME
+  shape as `helplineSave` (`claims.peer-request.handlers.ts:158-170`), copied faithfully per QE17, so the fix is house-wide. ⚠ The cost is higher here: a re-run `propose` / `direct` mints a second PERMANENT
+  (append-only) version. ⭐ Trigger: the next writer built on this shape, or a house pass over `settled` / `release`.
+- **`questionnaireVersionId` is optional on the wire, with no sunset** [`packages/contracts/src/claims/peer-request.ts`, the ground-inspection save request; RVD2] — designed (QE12 R7 (iii); roster Row 45 (d)):
+  an installed app that sends none keeps the retryable `*.stale` and never sees the version-stale 409. ⭐ Trigger: the store build that sends the field has fully rolled out ⇒ make it required.
+- **The steps INSERT policy does not bind a step to a version the Pariwar owns** [`0192` `questionnaire_version_steps_tenant_insert`; RVD3] — defence in depth: QE11 specifies the policy as built;
+  `ownTenantVersion` and `canTakeStep` guard every writer; `versionStage` is last-step-wins, so a stray `twt_app` insert could revive a withdrawn version. ⭐ Trigger: any new `twt_app` code path that inserts steps.
+- **No FK or existence check on `origin_pariwar_id` / `target_pariwar_id` / `scope_pariwar_id`** [`0192`; `makeVersionLive`, `directVersion`; RVD4] — a mistyped target uuid writes a dangling `made_live` for a
+  Pariwar that does not exist (Super-Admin-only; QE2 does not require an FK). ⭐ Trigger: the first mistyped target, or the next migration touching these tables.
+- **Read cost and alarm noise** [`read.ts` `rawLiveCandidates` has no LIMIT and re-parses every live step per resolve; `write.ts` `pariwarsKeepingOwn` is N+1 (TR12); the R8 alarm is an unthrottled
+  `console.error`; RVD5] — nothing measured. The alarm sink is roster Row 32 (h). ⭐ Trigger: Row 32 (h) lands, or a measured resolve latency.
+- **`CHAIN_RESERVED_QUESTION_KEYS` is a snapshot of today's ruled keys** [`packages/domain/src/questionnaires/keys.ts`; RVD6] — a later code version that rules a key a live chain question already uses would
+  silently replace that question on a re-base (answers stored under the key would be read under new semantics). ⭐ Trigger: the next story that adds a ruled key.
+- **Audit granularity of the Super Admin's direct path** [`handlers.ts` `globalWrite`; RVD7] — three step rows under ONE `admin_questionnaire.made_live` line; the propose / direct locators name the kind, not the
+  version; the hash omits the pages (QE17 as built, the feature-flags precedent). ⭐ Trigger: an audit-trail requirement that names the direct path.
+- **Test hardening** [RVD8] — the lockstep tests pin the step enum and the floor but ⛔ the kind list or the wire limits (500 / 64 / 20 / 3-per-page); specs hard-code `ground_inspection.v2` /
+  `peer_mesh.v3` / `v4` and random version numbers; the `peer-mesh-reply.spec.ts` `save` helper's `.catch(() => null)` falls back to a version id. Nothing is wrong today. ⭐ Trigger: the next version shipped in code.
+- **Counsel basis on a RULED health question is exempt from the lock and relies on every reader calling `overlayCounselBasis`** [`validator.ts` `lockedView`, `derive.ts`; RVD9] — the API forces `counselBasis` for
+  staff questions (`draftToPages`), so a forged value is ⛔ reachable over HTTP; the exemption exists for the day counsel's basis is recorded. ⭐ Trigger: the first entry in `COUNSEL_BASIS_DECISIONS`.
+
+## Deferred from: story 6-33-questionnaire-editor-versions-and-approval.md — the build (2026-10-30)
+
+- **The real-browser pass of the questionnaires page is UN-ATTESTED** [AC11; roster Row 45 (b)] — the session's Claude-in-Chrome extension was
+  ⛔ connected (`tabs_context_mcp`: *"Browser extension is not connected"*) — that was the ONE probe, and ⛔ local host was reached by it (a DIFFERENT
+  cause from AC11's alternative, "Chrome cannot reach the local host after ONE probe"), so the pass was ⛔ run and is ⛔
+  faked ([[feedback_record_unattested_no_backfill]]). What IS proven: the chain through HTTP end to end (propose → approve → step-up → make
+  live for ONE Pariwar ⇒ in force there, a NEW reply pins it, an older pin keeps its version — `apps/api/tests/integration/questionnaire-versions/`,
+  the domain writer / reader specs) and the page's render and acts in RTL (`apps/admin/tests/questionnaire-versions-page.test.tsx`, 10 legs).
+  ⭐ Trigger: a session whose Chrome reaches the local host (the 6.32 launcher — [[project_admin_browser_pass_launcher]]), or Playwright's
+  headless Chromium from the shell — then Row 45 (b) gets its evidence line.
+- **The 6.27b flip hazard — a client that loaded before a version flip shows the old words but pins the new** [`packages/domain/src/questionnaires/peer-mesh.ts`
+  v3's note; 6.27b Task 3c.2] — ✅ **Closed by 6.33 FOR CLIENTS THAT SEND `questionnaireVersionId`** (QE12 R7: both writers compare the version they
+  would pin with the client's rendered one UNDER the lock, FIRST ⇒ 409 `*.questionnaire_version_stale` ⇒ the client RELOADS — the admin inspector's
+  panel, the admin helpline and the mobile app in this build all send it). ⚠ **OPEN (re-triggered) for INSTALLED mobile builds** that do ⛔ send the
+  field: they keep the retryable `peer_request.stale` (a version-stale code would make an old app retry forever). ⭐ Trigger: the first store build
+  that sends the field ships (roster Row 45 (d) — the API before the build).
+- **A version made live for ALL cannot be ended by itself — only replaced** [`packages/domain/src/questionnaire-versions/write.ts`; QE7 (d)] — there is
+  ⛔ "revert ALL to code" step: a bad all-Pariwar version is replaced by a NEW direct version based on the code version in force (the remedy, stated as
+  the cost in `-421` QE7 (d)). ⭐ Trigger: an operator asking to "undo" an all-Pariwar version.
+- **Two new refusal codes beyond AC8's list** [`questionnaire.not_withdrawable` (409 — a withdraw in the wrong state: AC8 names `not_approvable`
+  for approve / return and `not_publishable` for make-live; a withdraw is neither); `questionnaire.base_invalid` (422 — an unknown or other-kind base)]
+  — recorded so the codes are ⛔ a surprise in review. ⭐ Trigger: none — closes at review.
+
 ## Deferred from: landing Story 6.33 — the pre-push `ci:local` (2026-10-30)
 
 - **A flaky fixture in Story 5.14's live test — a 3-hex pool identifier collides under the per-Pariwar UNIQUE** [`apps/jobs/tests/announcement-channel-post-live.test.ts`
@@ -57,6 +126,7 @@ Two read-only traces at `577a4ca2` (member names; erasure vs claims), load-beari
   ⭐ Trigger: any change to `resolvePeerRequestMemberName` — raise an ids-only alarm on a decrypt failure (⛔ on a missing KYC row or the
   erasure sentinel, which are states, ⛔ faults).
 
+  ⚠ **Dated 2026-10-30 (Story 6.33):** `resolvePeerRequestMemberName` was ⛔ touched (QE4's fallback lives in the word function), so this item's trigger did ⛔ fire. The BLANK is filled (D11, closed); the failure's VISIBILITY is partly improved — each fallback is now logged `questionnaire.member_name_fallback` (countable) — but ⛔ an alarm or a retry. **OPEN.**
 ## Deferred from: code review of 11b-5-memorial-visual-components-memorial-record-portrait-frame-kinship-lattice.md — fix-diff review (2026-10-29)
 
 `bmad-code-review 11b.5`, re-run over the fix round (the working-tree diff against `117a92d7`): 3 patches applied (BigDev's "Apply every patch"; recorded in the story's *Review Findings — fix-diff review*), 1 deferral.
@@ -135,21 +205,25 @@ Deferred by the second three-layer review (story → Review Findings → "Second
 - **D5 — a handler/writer version mismatch under a concurrent first pin is a bare `Error` (500)** [`packages/domain/src/claim/ground-inspection-questionnaire.ts`
   — "prepared form does not match"] — unreachable for the three ruled keys (their `sensitive` / `health` are validator-pinned). ⭐ Trigger: row 6-33 adds a
   chain-authored question to a `ground_inspection` version.
+  ✅ **Closed by 6.33 (2026-10-30, QE12 R7)** — the trigger FIRED (a chain question on a `ground_inspection` version is now possible); the writer compares the version it would pin with the handler's pre-read FIRST, under the lock ⇒ a concurrent first pin is a 409 (`ground_inspection.questionnaire_stale`, or `…_version_stale` for a client that sent its id), ⛔ a 500 (`ground-inspection-questionnaire.spec.ts` "Story 6.33 — … after a version FLIP"; mutants: compare removed / compare after `checkAnswer` — killed).
 - **D6 — `readClaimFamilyAccount`'s 200-row cap truncates silently** [`CLAIM_FAMILY_ACCOUNT_ROWS_CAP`] — ≈ 66 visits on one claim before it binds; a cut visit
   would read "Letter: not recorded". ⭐ Trigger: any claim near 30 visits.
 - **D7 — the letter / illness question WORDS address the inspector** [`packages/i18n/locales/{en,hi}/claim.json` `inspector_questions.head_letter.question`,
   `.death_illness.question`] — IQ9 serves the Hindi line *"for the inspector to read aloud"*. ⭐ Trigger: Row 42 (b)'s human review of the words.
 - **D8 — the neighbours' writer trusts a pre-lock decrypt the same way** [`packages/domain/src/claim/peer-mesh-reply.ts`] — S10's class (an erasure rewrite keeps
   the row id), pre-existing (6.27c); fixed for the family's writer only. ⭐ Trigger: any change to `peer-mesh-reply.ts`'s pre-read.
+  ⚠ **Dated 2026-10-30 (Story 6.33, QE12 R7):** the trigger FIRED (`peer-mesh-reply.ts`'s pre-read now carries a version). ✅ The version half is **Closed by 6.33** — the writer compares the pinned version with the pre-read FIRST, so the six bare `prepared …` `Error`s are unreachable on a flip. ⚠ The S10 half (an erasure rewrite keeping the row id — the decrypted value matched by `answer_id` only) is ⛔ fixed here: **OPEN**, trigger restated — the next change to the neighbours' decrypted-live map.
 - **D10 — after "Discard the unsaved answers", the next edit can wait out the discarded task's backoff** [`packages/api-client/src/peer-answer-editor.ts`
   `abandonQueued` — the head stays in the queue while its loop waits (up to 30 s), `retrying` stays true] — the new edit reads "Not saved — retrying" and holds
   Load until the timer or an `online` event; before 6.32 a discard always left the screen. Shared with the helpline and mobile editors. ⭐ Trigger: any change to
   the editor's queue, or a report of a stuck "retrying" after a discard.
+  ⚠ **Dated 2026-10-30 (Story 6.33, R7):** the trigger FIRED — the editor's drain gained a third outcome (`isReload` ⇒ `'reload'`, the drain stops and keeps its drafts). D10 itself is ⛔ fixed (the discarded head still waits out its backoff). **OPEN**, re-triggered: the next change to the editor's queue, or a report of a stuck "retrying" after a discard.
 - **D11 — the inspector's question reads with an EMPTY name when the deceased's name is unreadable** [`apps/api/src/modules/claims/peer-request-core.ts`
   `resolvePeerRequestMemberName` → `''` (⛔ KYC name, a failed decrypt, or the RTBF sentinel) → `toWireQuestionnaire`] — seen in the 2026-10-29 real-browser
   pass: *"Did you collect a letter from the head of the school or office where worked?"* (and the announcement carries the double space). The staff view
   falls back to *"the member"*; the neighbours' app uses the same resolver (pre-existing there). ⭐ Trigger: any change to `toWireQuestionnaire` or the
   inspector's copy — give `{member}` a fallback word (en + hi) or a name-less variant of each `{member}` question.
+  ✅ **Closed by 6.33 (2026-10-30, QE4)** — THE ONE word function (`apps/api/src/modules/claims/questionnaire-words.ts`) fills an empty name with the human-reviewed fallback word (`questionnaire.member_fallback` — en *"the member"*, hi *"सदस्य"*, BigDev 2026-10-30) through the real `t()`, for copy keys and stored text, and logs `questionnaire.member_name_fallback` (ids only) each time a `{member}` slot takes it; `resolvePeerRequestMemberName`'s `''` contract is UNCHANGED (`apps/api/tests/unit/questionnaire-words.test.ts`).
 - **D9 — the questionnaire GET decrypts the member's name inside its read transaction** [`apps/api/src/modules/claims/peer-request-core.ts`
   `resolvePeerRequestMemberName(tx, …)`] — the shared pattern of the neighbours' read; ⛔ a row lock held (I3 holds). ⭐ Trigger: a KMS latency incident, or any
   change to the resolver.
@@ -1639,6 +1713,7 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
   + the helpline; a 401 after a failed token refresh, a 5xx, a 429 or a network fault therefore reads as a broken link until the member
   leaves the screen and taps again (the same file's `classifyFailure` treats those as `'retry'`). ⭐ Trigger: the next touch of the slot or
   a helpline report of "the link does not open" — then a Retry on non-404 failures (and a 401 routed to login, `c` kept — AL6).
+  ⚠ **Dated 2026-10-30 (Story 6.33, R7):** `classifyFailure` gained `'reload'` (the version-stale code) and the unreadable code ⇒ `not_openable`; the SLOT (`peerRequestSlotView`, the by-link path) was ⛔ touched ⇒ W3 is ⛔ fixed and its trigger stands (the next touch of the slot). **OPEN.**
 - **W4 — A member of several Pariwars whose phone is signed into another Pariwar gets the ONE 404** [`apps/api/src/modules/claims/claims.peer-request.handlers.ts`
   (the by-link handler); `packages/contracts/src/app-links/paths.ts` `buildAppLinkUrl`] — the texted link carries only `?c=`; the resolver
   is scoped to the session's Pariwar ⇒ the neighbour lands on that Pariwar's list with ⛔ hint to switch. 6.30's link shape (⛔ a Pariwar in
@@ -13066,6 +13141,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 
 - **An optional multi-select answer, once given, can never be CLEARED** [`apps/mobile/lib/peer-request.ts` `toggleOption` (`next.length === 0 ? null`); `apps/admin/.../HelplinePeerRequests.tsx` (`if (next.length > 0)`); the API's `checkAnswer` refuses empty `codes` (422)] — review S37 (c). The neighbour can swap an optional answer for another but ⛔ never remove it; a client-side fix is impossible because the reply's answers are append-only and the API has ⛔ no "clear" (an empty value is `invalid_value` by design). ⭐ Trigger: a ruling that a neighbour may WITHDRAW an optional answer (a supersede-to-nothing row + a route), or row 6-33's questionnaire versions revisiting the answer model.
 
+  ⚠ **Dated 2026-10-30 (Story 6.33, G15 / QE8):** row 6-33 did ⛔ revisit the answer model ⇒ this item is ⛔ closed; its trigger is RE-POINTED to *"a ruling that a neighbour or the family may WITHDRAW an optional answer"*. ⚠ WIDENED COST: every staff-added `multi` question is optional (QE8 C4), so it now applies to EVERY one of them, on both questionnaires (6.32 D2's family side too). **OPEN.**
 ## Deferred from: code review of 6-27-peer-mesh-sending-replies-and-date-of-death (6.27a third pass — review of the fix commit 7eaf50c4) (2026-10-13)
 
 - **`closeScopeTx` swallows a failed COMMIT** [`apps/api/src/modules/multi-tenant/scope-tx.ts:57`] — a write whose COMMIT fails is answered 200 and its Idempotency-Key recorded done; a retry then replays answers that never persisted. Pre-existing in the shared helper (every `onMemberTx` route). ⭐ Trigger: any route whose correctness depends on knowing the COMMIT happened, or a COMMIT failure seen in production logs. ⭐ **Closed by Story 6.36a's code review, round 2 (2026-10-15):** `closeScopeTx` now RETHROWS a failed COMMIT (a 500, ⛔ a false 2xx; ROLLBACK stays non-fatal; a second close is a no-op) — the full `apps/api` integration suite green. ⚠ The audit-TIMING half carried here (a phantom audit line emitted before the commit) is ⛔ moved by it.
@@ -13076,6 +13152,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
 - **The admin `role="radiogroup"` has ⛔ arrow-key / roving-tabindex handling** [`apps/admin/src/modules/helpline-claims/HelplinePeerRequests.tsx`] — each radio is reachable by Tab and Enter; the full ARIA radio keyboard pattern belongs to an admin-wide component. ⭐ Trigger: 11b.8's accessibility audit or the admin's first shared radio component.
 - **The operator's Retry can still send a dependant ahead of its retried parent when that dependant sits at the queue head waiting out a backoff** [`packages/api-client/src/peer-answer-editor.ts` `retryFailed`] — 6.27a fifth-pass D6. The head is owned by its drain loop (shifted only while `queue[0] === task`), so reordering it needs a loop-restart signal. Cost: a 422 on the dependant, cleared by the next Retry; ⛔ data is lost. ⭐ Trigger: the next change to the editor's drain loop.
 
+  ⚠ **Dated 2026-10-30 (Story 6.33, R7):** the trigger FIRED — the drain loop gained the `isReload` early stop (the queue is kept for the rebuilt editor). This ordering is ⛔ fixed. **OPEN**, re-triggered: the next change to the editor's drain loop.
 ## Deferred from: code review of 6-27b-peer-mesh-warnings-wait-and-approvers-view (round 2 — fix diff + whole story) (2026-10-13)
 
 - **The correction queue's fifth arm (PM10) catches only neighbour answers saved AFTER the approval — ⛔ a certificate re-review that moves the accepted death date** [`packages/domain/src/claim/correction-queue-read.ts` `lateArm`] — a late `peer_death_date_differs` key can also appear when the accepted certificate date moves with ⛔ answer saved; the final vote's wait still reads every key, but the District Admin's queue would ⛔ list the claim. Test (d) lists that case only through arm (1)'s re-determination. ⭐ Trigger: proof that a certificate re-review can be ACCEPTED without a fresh determination (then add a certificate-review arm).

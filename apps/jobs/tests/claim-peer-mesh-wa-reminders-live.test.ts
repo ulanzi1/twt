@@ -21,7 +21,7 @@ import { randomUUID } from 'node:crypto';
 
 import { createWhatsappAppCache, WhatsappTemplateParamError, type FetchInit, type FetchLike, type WhatsappAppCache } from '@twt/channels';
 import { buildAppLinkUrl } from '@twt/contracts';
-import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, schema } from '@twt/domain';
+import { bindScopedDb, claim, encryption, ids, member as memberDomain, questionnaires, questionnaireVersions, schema } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -83,6 +83,9 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
             WHERE c.table_schema = 'public' AND c.column_name = 'pariwar_id' AND t.table_type = 'BASE TABLE'`,
         );
         for (const { table_name } of rows) await c.query(`DELETE FROM "${table_name}" WHERE pariwar_id::text = ANY($1)`, [pariwars]);
+        // Review RV25 — the chain tables key their Pariwar on `origin_` / `scope_` / `target_pariwar_id` (⛔ `pariwar_id`): sweep them too.
+        await c.query(`DELETE FROM questionnaire_version_steps WHERE scope_pariwar_id::text = ANY($1) OR target_pariwar_id::text = ANY($1)`, [pariwars]);
+        await c.query(`DELETE FROM questionnaire_versions WHERE origin_pariwar_id::text = ANY($1)`, [pariwars]);
         await c.query('COMMIT');
       } catch (e) {
         await c.query('ROLLBACK').catch(() => undefined);
@@ -631,6 +634,63 @@ describe.skipIf(!hasDatabase)('Story 6.31 — the WhatsApp reminder (live DB, ow
     expect((await tick(h, w)).swept).toMatchObject({ enqueued: 0 });
     expect(await reminders(w)).toEqual([]);
     expect(h.sent).toHaveLength(0);
+  });
+
+  it('⭐ review RV31 / R5 — a PARIWAR-ONLY chain version with a PENDING health question HOLDS that Pariwar\'s reminders (counsel_basis_pending, ONE alarm, the child holds too) and ⛔ another Pariwar\'s', async () => {
+    const a = await world();
+    const b = await world();
+    const chainId = randomUUID();
+    const version = 2_000_000 + Math.floor(Math.random() * 900_000); // far above any real number; swept in afterAll
+    const versionId = `peer_mesh.v${version}`;
+    const stored = questionnaireVersions.toStoredDefinition({
+      ...CLEARED,
+      versionId,
+      version,
+      approvedBy: [...CLEARED.approvedBy, `chain:${chainId}`],
+      pages: [
+        ...CLEARED.pages,
+        {
+          questions: [
+            {
+              key: 'long_illness_hospital',
+              kind: 'yes_no' as const,
+              text: { en: 'Was {member} in hospital for long?', hi: 'क्या {member} लंबे समय तक अस्पताल में थे?' },
+              options: [
+                { code: 'yes', text: { en: 'Yes', hi: 'हाँ' } },
+                { code: 'no', text: { en: 'No', hi: 'नहीं' } },
+              ],
+              optional: true,
+              showIf: null,
+              sensitive: true,
+              warning: false,
+              approvedBy: [`chain:${chainId}`],
+              health: true,
+              counselBasis: 'pending',
+            },
+          ],
+        },
+      ],
+    });
+    await pool.query(
+      `INSERT INTO questionnaire_versions (id, kind, version, version_id, base_version_id, ruled_base_code_version_id, origin_pariwar_id, definition, authored_by_actor, authored_by_display, direct, reason)
+       VALUES ($1, 'peer_mesh', $2, $3, 'peer_mesh.v4', 'peer_mesh.v4', $4, $5, 'pa', 'Pariwar Admin', false, NULL)`,
+      [chainId, version, versionId, a.pid, JSON.stringify(stored)],
+    );
+    await pool.query(
+      `INSERT INTO questionnaire_version_steps (version_id, step, target_pariwar_id, scope_pariwar_id, actor, actor_display) VALUES ($1, 'made_live', $2, $2, 'sa', 'Super Admin')`,
+      [versionId, a.pid],
+    );
+    const ha = harness(a);
+    const { swept } = await tick(ha, a);
+    expect(swept).toMatchObject({ enqueued: 0, heldForConfig: 1 });
+    expect(ha.alarms.filter((m) => m.includes('config:counsel_basis_pending') && m.includes(a.claimCaseId))).toHaveLength(1);
+    expect(await child(ha, a)).toEqual({ status: 'held_config', reason: 'config:counsel_basis_pending' });
+    expect(await reminders(a)).toEqual([]);
+    expect(ha.sent).toHaveLength(0);
+    // Pariwar B has no chain version: its reminder goes
+    const hb = harness(b);
+    expect((await tick(hb, b)).swept).toMatchObject({ enqueued: 1, heldForConfig: 0 });
+    expect(hb.alarms.some((m) => m.includes('config:counsel_basis_pending'))).toBe(false);
   });
 
   it('AC10 — a HELD claim is due again once its config gap closes (⛔ only the switch): the next tick sends it', async () => {

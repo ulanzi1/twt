@@ -12,7 +12,8 @@ save contracts, Niyamavali §5 / Part 8 / Part 9) — perishable, re-check at Ta
 
 STATUS: ready-for-dev (v1.2 — two fresh-context validations folded in; the second re-traced the v1.1 edits with four read-only
 verifiers). QE1–QE17 ANSWERED 2026-10-30 — all as recommended (Task 0.2) and recorded by author-commit `2026-10-30-421` (`283e25f4`,
-alone — Task 0.3). The QE14 confirm note is DRAFTED, ⛔ sent (BigDev sends). Still OPEN in Task 0: the Hindi of QE4's fallback word (needed
+alone — Task 0.3). The QE14 confirm was SENT by BigDev and the Panel RULED 2026-10-30 — `2026-10-30-422` (Trustee-ratified, DR + KB):
+*"Q1 A, Q2(a) A, Q2(b) A, Q3 A"* — every edge confirmed as built, ⛔ change. Still OPEN in Task 0: the Hindi of QE4's fallback word (needed
 before Task 4.3) and the rest of Task 0.4 (Row 45, `epics.md`, `deferred-work.md`). Committed (v1.0 / v1.1 at `4c622d7f`, v1.2 at
 `f5083018`); ⛔ pushed.
 
@@ -128,10 +129,10 @@ flag"*; [[feedback_mechanization_split_commitment]]).
 | # | Edge | Ratified text | Verdict |
 |---|---|---|---|
 | 1 | Pariwar Admin proposes; the Super Admin makes live for one Pariwar or all; the Super Admin adds directly, alone; the approver MAY approve their own proposal | `-304` Q7 / Q8; the `-304` reading *"approves a Pariwar Admin's proposal or their own … at least two people (proposer / approver, and the Super Admin)"* | MATCH — built as ruled; ⛔ distinct-approver rule (that would revive Q8 A — *"a DIFFERENT person must approve"* — which the Panel did ⛔ take) |
-| 2 | Who performs "State Trustee proposes/approves" | `-304` names the State Trustee; the role can ⛔ pass a Pariwar-wide check (G6) | **NARROWS / RE-HOMES a named actor ⇒ the Panel's** — built on the established Trustee-Lite posture (QE6), NON-BLOCKING confirm (QE14) |
-| 3 | The ruled questions' WORDS through the chain — and the ruled closing note and thank-you (`-304` ruling item 4: *"the closing note before Submit, as put"*) | CF3 (a) keeps the questions; *"with/without modification"* is silent on their words; `-328` re-routed a word change to the Panel | **NARROWS the delegation if locked ⇒ the Panel's** — QE5 (A) locks, NON-BLOCKING confirm (QE14) |
-| 3a | A new reviewed CODE version (a Panel word change, or a counsel basis minted as a new version) makes every DB version on the older ruled base stale — it stops being served until rebased (QE12 R2) | `-304` Q7 / Q8 *"make it live"* vs QE5's "ruled words stay the Panel's" | **NARROWS what staff made live, for the Panel's own later ruling ⇒ disclosed** — QE14 (2) |
-| 3b | "Make live for … all pariwar" = the DEFAULT level: a Pariwar with its own version in force keeps it (QE7 (a)) | `-304` Q7 / Q8 *"for one pariwar/all pariwar"* | **NARROWS "all" if read literally ⇒ the Panel's** — QE14 (3), NON-BLOCKING |
+| 2 | Who performs "State Trustee proposes/approves" | `-304` names the State Trustee; the role can ⛔ pass a Pariwar-wide check (G6) | **NARROWS / RE-HOMES a named actor ⇒ the Panel's** — built on the established Trustee-Lite posture (QE6), NON-BLOCKING confirm (QE14) — ✅ **RATIFIED `-422` Q1 A** |
+| 3 | The ruled questions' WORDS through the chain — and the ruled closing note and thank-you (`-304` ruling item 4: *"the closing note before Submit, as put"*) | CF3 (a) keeps the questions; *"with/without modification"* is silent on their words; `-328` re-routed a word change to the Panel | **NARROWS the delegation if locked ⇒ the Panel's** — QE5 (A) locks, NON-BLOCKING confirm (QE14) — ✅ **RATIFIED `-422` Q2 (a) A** |
+| 3a | A new reviewed CODE version (a Panel word change, or a counsel basis minted as a new version) makes every DB version on the older ruled base stale — it stops being served until rebased (QE12 R2) | `-304` Q7 / Q8 *"make it live"* vs QE5's "ruled words stay the Panel's" | **NARROWS what staff made live, for the Panel's own later ruling ⇒ disclosed** — QE14 (2) — ✅ **RATIFIED `-422` Q2 (b) A** |
+| 3b | "Make live for … all pariwar" = the DEFAULT level: a Pariwar with its own version in force keeps it (QE7 (a)) | `-304` Q7 / Q8 *"for one pariwar/all pariwar"* | **NARROWS "all" if read literally ⇒ the Panel's** — QE14 (3), NON-BLOCKING — ✅ **RATIFIED `-422` Q3 A** |
 | 4 | Health / alcohol / warning / flag limits on chain questions | CF3 (b)–(d) | MATCH — the validator already enforces; DB versions inherit (QE8, QE10) |
 | 5 | Hindi supplied by the chain, a person reviews it | `-304` unratified reading | author's (building the reading as written; ⛔ a change to what anyone is told) — QE9 |
 | 6 | Storage, numbering, resolver, RLS, UI, audit | — | author's (engineering) — QE1–QE4, QE7, QE11, QE12, QE15–QE17 |
@@ -543,6 +544,8 @@ Pariwar meanwhile (QE5's staleness rule — §0 edge 3a). (3) "Make it live for 
 version in force keeps it (QE7 (a) — §0 edge 3b); option (B): "all" also ends every own version. Build proceeds on the recommendations; a
 different answer changes a grant, a validator rule or the resolver and is roster Row 45 (a) — ⛔ go-live before it is answered. *Cost:* the
 build may need a follow-up. (B) BLOCKING — ⛔ code before the Panel rules. *Cost:* the row waits for a sitting.
+✅ **ANSWERED 2026-10-30 — `2026-10-30-422` (Trustee-ratified, DR + KB), verbatim: *"Q1 A, Q2(a) A, Q2(b) A, Q3 A"*** — the note's Q1 = (1),
+Q2 (a) / (b) = (2), Q3 = (3); every one as built ⇒ ⛔ code change; Row 45 (a) is MET when the row is minted.
 
 **QE15 — go-live: roster Row 45 `questionnaire-editor-live` (recommended).** (a) The QE14 confirm answered and, if it differs, reflected in
 code; (b) the real-browser pass (AC11) on the admin surface — propose → approve → make live → a NEW visit / reply is served the new version,
@@ -725,7 +728,8 @@ when"*). Attribution = `getDisplayName` snapshot.
     ⭐ PARTLY DONE 2026-10-30: the confirm note is DRAFTED at
     `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-30-6-33-questionnaire-chain.md` (Q1 = QE6, Q2 (a) / (b) = QE5's lock
     and staleness rule — split per the template's "a mixed question is two questions", Q3 = QE7 (a)); E4's commands run, every one
-    non-empty; ⛔ sent. ⚠ OPEN: Row 45, `epics.md` `### Story 6.33`, the `deferred-work.md` QE13 annotation.
+    non-empty. SENT by BigDev; RULED 2026-10-30 as `2026-10-30-422` (all A) — transcribed into the note's ⏳ block, the rest of the note
+    kept unedited. ⚠ OPEN: Row 45 (leg (a) MET by `-422` — mint it so), `epics.md` `### Story 6.33`, the `deferred-work.md` QE13 annotation.
 - [ ] **Task 1 — the engine (AC1).** `questionnaires/types.ts` (`text?`), `keys.ts` (`COUNSEL_BASIS_DECISIONS = []`, the chain-record regex,
   the reserved-key sets, the Devanagari forbidden terms, the stale comment), `validator.ts` (AC1: the origin input; QE8 C1–C12 one rule per
   line; `typeof` / `=== true` checks; the `{member}`-only placeholder rule; the version-level `approvedBy`; the ruled-question lock — incl.

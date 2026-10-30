@@ -11,13 +11,18 @@ cases the name cannot be read — the member has ⛔ recorded name, the encrypte
 request. Today the sentence then reads with a hole: *"Did you collect a letter from the head of the school or office where  worked?"*
 (seen on the 2026-10-29 test run). This word fills the hole.
 
+⚠ **2026-10-30 — `2026-10-30-423`** (Trustee-ratified, on branch `governance/erasure-after-death-note`): once its build (row `6-38`) lands,
+a claim cannot be filed for a member with ⛔ recorded name or an erased one, and a dead member's record is ⛔ erased — so those two cases
+remain only for claims filed before then, or a report closed as false. A failed decrypt can still happen, so the word is still needed, and
+each use is logged so its rarity can be checked.
+
 ## The words proposed
 
 | | English | Hindi (proposed) |
 |---|---|---|
 | The fallback word | **the member** | **सदस्य** |
 
-**Why सदस्य, and ⛔ "इस सदस्य" / "यह सदस्य":** the word drops into four different Hindi sentences, in different grammatical positions. सदस्य
+**Why सदस्य, and ⛔ "इस सदस्य" / "यह सदस्य":** the word drops into six different Hindi sentences (four questions, the list line, the reminder), in different grammatical positions. सदस्य
 keeps the same form in all of them; "this member" would need "इस" in some sentences and "यह" in others, and one word cannot be both.
 
 ## How each sentence would read

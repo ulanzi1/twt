@@ -3646,8 +3646,8 @@ Go-live: roster Row 42.
 > Consequence 2 (*"Row `6-33-questionnaire-editor-versions-and-approval` builds the Q7 / Q8 chain (propose → approve / modify → make live per
 > Pariwar or for all; the Super Admin's direct addition), for both questionnaires."*), under `-304` Q7 / Q8 (the Panel's own chain) and `-310`
 > CF3 (a)–(d). Its build decisions QE1–QE17 are [`-421`](../../.decision-log.md#decision-2026-10-30-421) (AUTHOR-COMMIT, BigDev: *"QE1-QE17 as
-> recommended, prepare routing note"*); the three confirms that re-home the State Trustee's step and narrow the ruled words were RATIFIED as
-> built by [`-422`](../../.decision-log.md#decision-2026-10-30-422) (DR + KB: *"Q1 A, Q2(a) A, Q2(b) A, Q3 A"*). The story file is the record.
+> recommended, prepare routing note"*); the three confirms — who acts for the State Trustee; the ruled words locked and staff versions paused on a
+> rewording; what "all Pariwars" reaches — were RATIFIED as built by [`-422`](../../.decision-log.md#decision-2026-10-30-422) (DR + KB: *"Q1 A, Q2(a) A, Q2(b) A, Q3 A"*). The story file is the record.
 
 As a Pariwar Admin, an approver acting for the State Trustee, or the Super Admin, I want to propose a new version of the neighbours'
 questionnaire or the inspector's questionnaire for the family, to approve or return it, and to make an approved version live for one Pariwar or

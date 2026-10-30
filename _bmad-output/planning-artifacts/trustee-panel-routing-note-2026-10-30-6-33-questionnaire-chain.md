@@ -1,8 +1,8 @@
 # Trustee Panel routing note — three confirms on how staff change the neighbours' and the inspector's questions (non-blocking)
 
-> **Status: DRAFT for BigDev to send.** ⛔ Sent by the session. Written 2026-10-30 by Story 6.33 (Task 0.4) under
-> [`-421`](../../.decision-log.md#decision-2026-10-30-421) QE14 (A). Non-blocking: the story is built on our suggestions, and ⛔ staff-written
-> version can go live in production until you have answered (roster Row 45 (a)).
+> **Status: SENT by BigDev and ANSWERED 2026-10-30 — recorded as [`-422`](../../.decision-log.md#decision-2026-10-30-422).** Written
+> 2026-10-30 by Story 6.33 (Task 0.4) under [`-421`](../../.decision-log.md#decision-2026-10-30-421) QE14 (A). Non-blocking: the story is built
+> on our suggestions, and ⛔ staff-written version can go live in production until you have answered (roster Row 45 (a)).
 
 ## §0 — the gate
 
@@ -14,11 +14,17 @@ this note.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-30 — recorded as `2026-10-30-422`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into
-> `.decision-log.md` as a new decision id. ⭐ Everything below is then kept **unedited** as the question
-> **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by DR + KB (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev — verbatim:**
+> *"by DR and KB*
+> *Q1 A, Q2(a) A, Q2(b) A, Q3 A"*
+>
+> ⭐ Our suggestion **taken on all four**, each with its cost as put. ⇒ `-421` QE5 (A), QE6 (A), QE7 (a) are confirmed as built; roster Row 45
+> (a) is met. ⚠ ⛔ covered: a Pariwar Admin's approval making a version live (it does ⛔ — only the Super Admin makes live, for one Pariwar
+> or all).
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

@@ -129,25 +129,34 @@ function shownSteps(
   return viewer.pariwarId === null ? steps : steps.filter((s) => s.scopePariwarId === null || s.scopePariwarId === viewer.pariwarId);
 }
 
-/** A version's summary as `viewer` sees it (`pariwarId: null` = the Super Admin's global view). */
+/**
+ * A version's summary as `viewer` sees it (`pariwarId: null` = the Super Admin's global view). ⭐ Review RT6 (RTQ1 (A)) — the
+ * withholding is UNIFORM: what `shownSteps` hides of another Pariwar, the summary hides too — to a Pariwar Admin, a version
+ * from ANOTHER Pariwar carries ⛔ its origin uuid, ⛔ its author's name and ⛔ a direct version's reason (`historyElsewhere`
+ * says where it came from), and
+ * a base is named only when `baseShown` (the viewer may SEE it — `versionVisibleTo`, the RV3 rule).
+ */
 function summaryOf(
   row: questionnaireVersions.QuestionnaireVersionRow,
   steps: readonly questionnaireVersions.QuestionnaireStepRow[],
   viewer: { readonly actorId: string; readonly pariwarId: string | null },
+  baseShown: boolean,
 ): QuestionnaireVersionSummary {
   const stage = questionnaires.versionStage(steps.map((s) => ({ step: s.step, seq: Number(s.seq) }))) ?? 'proposed';
   const shown = shownSteps(steps, viewer);
+  const fromElsewhere = viewer.pariwarId !== null && row.originPariwarId !== null && row.originPariwarId !== viewer.pariwarId;
   return {
     versionId: row.versionId,
     kind: row.kind,
     version: row.version,
     stage,
-    baseVersionId: row.baseVersionId,
+    baseVersionId: baseShown ? row.baseVersionId : null,
     ruledBaseCodeVersionId: row.ruledBaseCodeVersionId,
-    originPariwarId: row.originPariwarId,
+    originPariwarId: fromElsewhere ? null : row.originPariwarId,
     direct: row.direct,
-    reason: row.reason,
-    authoredByDisplay: row.authoredByDisplay,
+    // Review round 4 (RF6) — the Super Admin's free-text reason may name the origin: withheld with it.
+    reason: fromElsewhere ? null : row.reason,
+    authoredByDisplay: fromElsewhere ? null : row.authoredByDisplay,
     authoredByMe: row.authoredByActor === viewer.actorId,
     authoredAt: row.authoredAt.toISOString(),
     outOfDate: row.ruledBaseCodeVersionId !== questionnaires.newestCodeVersion(row.kind).versionId,
@@ -338,6 +347,14 @@ export function createQuestionnaireVersionHandlers(deps: AppDeps) {
     });
   }
 
+  /** Whether `viewer` may SEE a version's base: the Super Admin every one; a Pariwar a code version, or a database version
+   *  `versionVisibleTo` admits (its own, or one live here / for all) — the RV3 rule, also the one that NAMES it (RT6). */
+  async function baseVisibleTo(db: Db, viewer: { readonly pariwarId: string | null }, baseVersionId: string): Promise<boolean> {
+    if (viewer.pariwarId === null) return true;
+    if (questionnaires.QUESTIONNAIRE_REGISTRY.some((d) => d.versionId === baseVersionId)) return true;
+    return questionnaireVersions.versionVisibleTo(db, viewer.pariwarId, baseVersionId);
+  }
+
   /** In force for `pariwarId` (null = the ALL level), both kinds — and what R2 passed over (R8). */
   async function inForce(db: Db, pariwarId: string | null): Promise<QuestionnaireInForce[]> {
     const out: QuestionnaireInForce[] = [];
@@ -353,10 +370,17 @@ export function createQuestionnaireVersionHandlers(deps: AppDeps) {
     const steps = await questionnaireVersions.readStepsFor(db, rows.map((r) => r.versionId));
     const byVersion = new Map<string, questionnaireVersions.QuestionnaireStepRow[]>();
     for (const s of steps) byVersion.set(s.versionId, [...(byVersion.get(s.versionId) ?? []), s]);
+    // RT6 — a listed version is one the viewer may see (the same rule); a base beyond the list is asked for by name.
+    const listed = new Set(rows.map((r) => r.versionId));
+    const summaries: QuestionnaireVersionSummary[] = [];
+    for (const r of rows) {
+      const baseShown = listed.has(r.baseVersionId) || (await baseVisibleTo(db, viewer, r.baseVersionId));
+      summaries.push(summaryOf(r, byVersion.get(r.versionId) ?? [], viewer, baseShown));
+    }
     return {
       inForce: await inForce(db, inForceFor),
       versions: [
-        ...rows.map((r) => summaryOf(r, byVersion.get(r.versionId) ?? [], viewer)),
+        ...summaries,
         ...[...questionnaires.QUESTIONNAIRE_REGISTRY].sort((a, b) => b.version - a.version).map(codeSummary),
       ],
     };
@@ -375,13 +399,12 @@ export function createQuestionnaireVersionHandlers(deps: AppDeps) {
     if (viewer.pariwarId !== null && row.originPariwarId !== viewer.pariwarId && shownSteps(steps, viewer).length === 0) {
       throw new NotFoundError('No such questionnaire version', 'questionnaire.not_found');
     }
-    const summary = summaryOf(row, steps, viewer);
-    const parsed = questionnaireVersions.parseVersionRow(row);
     // Review RV3 — the change markers / removed keys are computed against the base ONLY when the viewer may SEE that base
     // (a code version, its own, or one live here / for all): ⛔ another Pariwar's open proposal, whose question keys they show.
-    const baseIsCode = questionnaires.QUESTIONNAIRE_REGISTRY.some((d) => d.versionId === row.baseVersionId);
-    const baseVisible =
-      viewer.pariwarId === null || baseIsCode || (await questionnaireVersions.versionVisibleTo(db, viewer.pariwarId, row.baseVersionId));
+    // Review RT6 — and the base is NAMED by the same rule.
+    const baseVisible = await baseVisibleTo(db, viewer, row.baseVersionId);
+    const summary = summaryOf(row, steps, viewer, baseVisible);
+    const parsed = questionnaireVersions.parseVersionRow(row);
     const base = baseVisible ? await questionnaireVersions.getQuestionnaireDefinition(db, row.baseVersionId) : null;
     if (parsed.def === null) {
       return { ...summary, questions: null, pages: null, closingNote: null, removedKeys: [], warnings: [], problems: parsed.ok ? [] : [...parsed.problems] };

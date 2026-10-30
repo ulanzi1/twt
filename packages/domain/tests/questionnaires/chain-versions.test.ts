@@ -407,6 +407,23 @@ describe('derive.ts — the chain helpers (pure)', () => {
     expect(m.removed).toEqual(['gone']);
     expect(changeMarkers(null, next).markers.get('has_died')).toBe('new');
   });
+  it('changeMarkers — review RT1: a staff question carried into a NEW version (its own, different chain record) is unchanged', () => {
+    // Every version re-stamps its chain questions with ITS OWN id, so base and next never share a `chain:<id>`.
+    const baseId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const nextId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const base = dbVersion(PEER_MESH_QUESTIONNAIRE_V4, [chainQ({ approvedBy: [`chain:${baseId}`] }), chainQ({ key: 'kept', approvedBy: [`chain:${baseId}`] })]);
+    const next = dbVersion(PEER_MESH_QUESTIONNAIRE_V4, [
+      chainQ({ approvedBy: [`chain:${nextId}`], text: { en: 'Changed {member}', hi: 'बदला' } }),
+      chainQ({ key: 'kept', approvedBy: [`chain:${nextId}`] }),
+    ]);
+    const m = changeMarkers(base, next);
+    expect(m.markers.get('kept')).toBe('unchanged');
+    expect(m.markers.get('water_source')).toBe('changed');
+    // a ruled question keeps its Panel ids in the comparison — only a question's OWN chain record is set aside
+    const ruled = questionsOf(PEER_MESH_QUESTIONNAIRE_V4)[0]!;
+    const reRuled = { ...PEER_MESH_QUESTIONNAIRE_V4, pages: [{ questions: [{ ...ruled, approvedBy: [`chain:${nextId}`] }] }] };
+    expect(changeMarkers({ ...PEER_MESH_QUESTIONNAIRE_V4, pages: [{ questions: [ruled] }] }, reRuled).markers.get(ruled.key)).toBe('changed');
+  });
 });
 
 describe('the G13 fence reaches derive.ts (re-exported from index.ts)', () => {

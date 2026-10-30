@@ -9,7 +9,7 @@
 //   replacement of the submitted ruled questions; `overlayCounselBasis` — QE12 R3.
 // · `changeMarkers(base, next)` — the editor's per-question marker (QE16), by key.
 
-import { ruledQuestionKeysFor } from './keys.js';
+import { CHAIN_RECORD_RE, ruledQuestionKeysFor } from './keys.js';
 import { QUESTIONNAIRE_REGISTRY, questionsOf } from './registry.js';
 import type { QuestionDefinition, QuestionnaireDefinition, QuestionnaireKind } from './types.js';
 import { canonicalJson, lockedView } from './validator.js';
@@ -142,6 +142,14 @@ export function overlayCounselBasis(def: QuestionnaireDefinition, newestCode: Qu
 
 export type ChangeMarker = 'new' | 'changed' | 'unchanged';
 
+/** A question as the marker compares it: the lock's view, less a CHAIN question's own record — every version re-stamps its
+ *  chain questions `['chain:<its own id>']`, so an untouched staff question would otherwise never compare equal (review RT1). */
+function markerView(q: QuestionDefinition): unknown {
+  const view = lockedView(q) as Record<string, unknown>;
+  const ownRecord = q.approvedBy.length === 1 && CHAIN_RECORD_RE.test(q.approvedBy[0] ?? '');
+  return ownRecord ? Object.fromEntries(Object.entries(view).filter(([k]) => k !== 'approvedBy')) : view;
+}
+
 /** QE16 — each question of `next` against `base` by key; `removed` = the base's keys `next` dropped (in base order). */
 export function changeMarkers(
   base: QuestionnaireDefinition | null,
@@ -151,7 +159,7 @@ export function changeMarkers(
   const markers = new Map<string, ChangeMarker>();
   for (const q of questionsOf(next)) {
     const b = before.get(q.key);
-    markers.set(q.key, b === undefined ? 'new' : canonicalJson(lockedView(b)) === canonicalJson(lockedView(q)) ? 'unchanged' : 'changed');
+    markers.set(q.key, b === undefined ? 'new' : canonicalJson(markerView(b)) === canonicalJson(markerView(q)) ? 'unchanged' : 'changed');
   }
   return { markers, removed: [...before.keys()].filter((k) => !markers.has(k)) };
 }

@@ -410,4 +410,32 @@ describe.skipIf(!hasDatabase)('Story 6.33 — the chain writer (live DB)', { tim
     await client.query(`INSERT INTO questionnaire_version_steps (version_id, step, scope_pariwar_id, actor, actor_display) VALUES ($1, 'proposed', $2, 'pa', 'PA')`, [stale.versionId, p]);
     expect(await code(client, async () => approveVersion(await asTenant(client, p), { ...PA, pariwarId: p, versionId: stale.versionId, ...TICKS }))).toBe('questionnaire.ruled_base_moved');
   });
+
+  it('review RT7 / QE7 (b) — the direct path\'s base is a CODE version or one APPROVED / made live: ⛔ proposed, returned or withdrawn (any Pariwar\'s)', async () => {
+    const { client } = getTx();
+    const [p, q] = [randomUUID(), randomUUID()];
+    const t = await asTenant(client, p);
+    const proposed = await proposeVersion(t, { ...PA, pariwarId: p, kind: 'peer_mesh', pages: draft() });
+    const returned = await proposeVersion(t, { ...PA, pariwarId: p, kind: 'peer_mesh', pages: draft() });
+    await returnVersion(t, { ...PA, pariwarId: p, versionId: returned.versionId, note: 'not yet' });
+    const withdrawn = await proposeVersion(t, { ...PA, pariwarId: p, kind: 'peer_mesh', pages: draft() });
+    await withdrawVersion(t, { ...PA, pariwarId: p, versionId: withdrawn.versionId });
+    const approved = await proposeVersion(t, { ...PA, pariwarId: p, kind: 'peer_mesh', pages: draft() });
+    await approveVersion(t, { ...PA, pariwarId: p, versionId: approved.versionId, ...TICKS });
+    const published = await proposeVersion(t, { ...PA, pariwarId: p, kind: 'peer_mesh', pages: draft() });
+    await approveVersion(t, { ...PA, pariwarId: p, versionId: published.versionId, ...TICKS });
+    let g = await asGlobal(client);
+    await makeVersionLive(g, { ...SA, versionId: published.versionId, targetPariwarId: p, acknowledgeBaseMoved: true });
+    // the target is ANOTHER Pariwar (q), so the origin's own version in force is ⛔ the reason for any refusal below
+    const direct = (baseVersionId: string) => async () => {
+      g = await asGlobal(client);
+      return directVersion(g, { ...SA, kind: 'peer_mesh', targetPariwarId: q, baseVersionId, pages: draft(), reason: 'modify', ...TICKS, acknowledgeBaseMoved: true });
+    };
+    for (const refused of [proposed, returned, withdrawn]) {
+      expect(await code(client, direct(refused.versionId)), refused.versionId).toBe('questionnaire.base_invalid');
+    }
+    expect(await code(client, direct(approved.versionId))).toBe('ok');
+    expect(await code(client, direct(published.versionId))).toBe('ok');
+    expect(await code(client, direct('peer_mesh.v3'))).toBe('ok');
+  });
 });

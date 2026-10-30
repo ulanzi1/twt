@@ -366,10 +366,7 @@ function VersionPanel(props: {
   };
   const d = detail.data;
   const keeping = usePariwarsKeepingOwnQuestionnaire(d?.kind ?? 'peer_mesh', isSuperAdmin && d !== undefined && scope === 'every');
-  // The list counts only when it is FRESH: a cached list that is being read again (an act just invalidated it) is not the
-  // one the confirm may rest on (RP13). A read that failed is `error` only once nothing is in flight.
-  const keepingReady = keeping.isSuccess && !keeping.isFetching;
-  const keepingFailed = keeping.isError && !keeping.isFetching;
+  const keepingReady = isKeepingReady(keeping);
   if (detail.isLoading) return <p role="status">{t.loading}</p>;
   // A paused (offline) query has no data and is not loading either — it is ⛔ an error (RV19).
   if (d === undefined) return detail.isError ? <p role="alert">{errorLines(detail.error)[0]}</p> : <p role="status">{t.loading}</p>;
@@ -407,11 +404,17 @@ function VersionPanel(props: {
           </li>
         ))}
       </ul>
-      <button type="button" className="w-fit text-sm underline" onClick={() => props.onEdit(d.kind)}>
-        {t.newVersion}
-      </button>
+      {/* The Super Admin's editor has only the DIRECT path, whose base must be a code version or one approved / made live (RT7,
+          QE7 (b)) — so ⛔ offered from a version it would refuse (review round 4, RF1). */}
+      {(!isSuperAdmin || d.stage === 'code' || d.stage === 'approved' || d.stage === 'published') && (
+        <button type="button" className="w-fit text-sm underline" onClick={() => props.onEdit(d.kind)}>
+          {t.newVersion}
+        </button>
+      )}
 
-      {d.stage === 'proposed' && (
+      {/* The tenant acts — ⛔ for the Super Admin, whose page reads the GLOBAL list: the tenant routes 404 a Super Admin with no
+          grant row here, and another Pariwar's proposal on any (review RT2). Their acts are QE7's: make live, direct, revert. */}
+      {d.stage === 'proposed' && !isSuperAdmin && (
         <div className="flex flex-col gap-2 rounded border p-2" data-testid="qv-approve">
           <label className="text-sm">
             <input type="checkbox" checked={hindiReviewed} onChange={(e) => setHindiReviewed(e.target.checked)} /> {t.hindiTick}
@@ -463,26 +466,7 @@ function VersionPanel(props: {
             </label>
           </fieldset>
           {/* QE7 (a) — the screen LISTS the Pariwars keeping their own version BEFORE the confirm; the confirm waits for it (RV13). */}
-          {scope === 'every' && keepingReady && (
-            <p role="status" className="text-sm" data-testid="qv-keeping-own">
-              {t.keepingOwn(keeping.data.pariwars.length, keeping.data.pariwars.map((p) => p.name ?? p.pariwarId).join(', '))}
-            </p>
-          )}
-          {scope === 'every' && keepingFailed && (
-            <div className="flex flex-wrap items-center gap-2">
-              <p role="alert" className="text-sm text-status-fail-fg" data-testid="qv-keeping-own-error">
-                {t.keepingError}
-              </p>
-              <button type="button" className="rounded border px-2 py-1 text-sm" data-testid="qv-keeping-own-retry" onClick={() => void keeping.refetch()}>
-                {t.keepingRetry}
-              </button>
-            </div>
-          )}
-          {scope === 'every' && !keepingReady && !keepingFailed && (
-            <p role="status" className="text-sm" data-testid="qv-keeping-own-loading">
-              {t.keepingLoading}
-            </p>
-          )}
+          {scope === 'every' && <KeepingOwn keeping={keeping} testId="qv-keeping-own" />}
           {counselPending && (
             <p role="alert" className="text-sm text-amber-700" data-testid="qv-counsel-warning">
               {t.counselWarning(d.kind, scope)}
@@ -519,6 +503,41 @@ function VersionPanel(props: {
         </div>
       )}
     </section>
+  );
+}
+
+type KeepingOwnQuery = ReturnType<typeof usePariwarsKeepingOwnQuestionnaire>;
+
+/** The list counts only when it is FRESH: a cached list that is being read again (an act just invalidated it) is not the
+ *  one the confirm may rest on (RP13). */
+const isKeepingReady = (keeping: KeepingOwnQuery): boolean => keeping.isSuccess && !keeping.isFetching;
+
+/** QE7 (a) — "N Pariwars keep their own version: [names]", before an all-Pariwar confirm: the make-live AND the direct path,
+ *  which writes the same default-level step (review RT3). A read that failed is `error` only once nothing is in flight. */
+function KeepingOwn({ keeping, testId }: { keeping: KeepingOwnQuery; testId: string }): ReactElement {
+  if (isKeepingReady(keeping) && keeping.data !== undefined) {
+    return (
+      <p role="status" className="text-sm" data-testid={testId}>
+        {t.keepingOwn(keeping.data.pariwars.length, keeping.data.pariwars.map((p) => p.name ?? p.pariwarId).join(', '))}
+      </p>
+    );
+  }
+  if (keeping.isError && !keeping.isFetching) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <p role="alert" className="text-sm text-status-fail-fg" data-testid={`${testId}-error`}>
+          {t.keepingError}
+        </p>
+        <button type="button" className="rounded border px-2 py-1 text-sm" data-testid={`${testId}-retry`} onClick={() => void keeping.refetch()}>
+          {t.keepingRetry}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <p role="status" className="text-sm" data-testid={`${testId}-loading`}>
+      {t.keepingLoading}
+    </p>
   );
 }
 
@@ -609,6 +628,7 @@ function Editor(props: {
   useEffect(() => {
     if (!baseMoved) setAck(false);
   }, [baseMoved]);
+  const keeping = usePariwarsKeepingOwnQuestionnaire(kind, isSuperAdmin && scope === 'every');
   if (base.isLoading || code.isLoading) return <p role="status">{t.loading}</p>;
   // A paused (offline) query has no data and is not loading either — it is ⛔ an error (RV19).
   if (base.data === undefined) return base.isError ? <p role="alert">{errorLines(base.error)[0]}</p> : <p role="status">{t.loading}</p>;
@@ -735,14 +755,17 @@ function Editor(props: {
         {t.addQuestion}
       </button>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-          disabled={busy}
-          onClick={() => run(() => api.proposeQuestionnaireVersion(pariwarId, { kind, baseVersionId, pages }, newKey()), props.onClose)}
-        >
-          {t.propose}
-        </button>
+        {/* Propose is a tenant act — ⛔ for the Super Admin, who adds through the direct path below (review RT2). */}
+        {!isSuperAdmin && (
+          <button
+            type="button"
+            className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
+            disabled={busy}
+            onClick={() => run(() => api.proposeQuestionnaireVersion(pariwarId, { kind, baseVersionId, pages }, newKey()), props.onClose)}
+          >
+            {t.propose}
+          </button>
+        )}
         <button type="button" className="rounded border px-3 py-1 text-sm" onClick={props.onClose}>
           {t.cancel}
         </button>
@@ -758,6 +781,7 @@ function Editor(props: {
               <input type="radio" name="qv-direct-scope" checked={scope === 'every'} onChange={() => chooseScope('every')} /> {t.scopeAll}
             </label>
           </fieldset>
+          {scope === 'every' && <KeepingOwn keeping={keeping} testId="qv-direct-keeping-own" />}
           {counselPending && (
             <p role="alert" className="text-sm text-amber-700" data-testid="qv-direct-counsel-warning">
               {t.counselWarning(kind, scope)}
@@ -785,7 +809,7 @@ function Editor(props: {
           <button
             type="button"
             className="w-fit rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-            disabled={busy || reason.trim() === '' || (baseMoved && !ack)}
+            disabled={busy || reason.trim() === '' || (scope === 'every' && !isKeepingReady(keeping)) || (baseMoved && !ack)}
             onClick={() =>
               run(
                 () =>

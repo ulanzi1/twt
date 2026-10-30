@@ -14,6 +14,10 @@
 // Round 2 of the review (`describe('review round 2 …')`, last): RP7 the proposal names the ruled questions the screen LOCKS (the
 // newest Panel version's), RP12 the base-moved tick dies with its warning, RP13 the every-Pariwar confirm rests on a FRESH list
 // that can be asked for again, RP14 an act starts from a clean slate.
+//
+// Round 3 of the review (`describe('review round 3 …')`, last): RT2 the Super Admin is ⛔ offered the tenant acts (approve /
+// return / propose — the tenant routes 404 them); RT3 the direct path for EVERY Pariwar lists the Pariwars keeping their own
+// version and its confirm waits for that list, as the make-live's does.
 
 import { onlineManager } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -908,5 +912,89 @@ describe('review round 2 — RP7 / RP12 / RP13 / RP14', () => {
     expect(await screen.findByTestId('qv-error')).toHaveTextContent(t.genericError);
     expect(screen.queryByTestId('qv-saved')).toBeNull();
     expect(screen.queryByTestId('qv-warnings')).toBeNull();
+  });
+});
+
+describe('review round 3 — RT2 / RT3', () => {
+  it('RT2 — the Super Admin is ⛔ offered approve / return on a proposal, nor Propose in the editor; a Pariwar Admin is', async () => {
+    h.grants = ['questionnaire.publish'];
+    api.getGlobalQuestionnaireVersions.mockResolvedValue(LIST({ versions: [summary({ stage: 'proposed' })] }));
+    api.getGlobalQuestionnaireVersion.mockResolvedValue(DETAIL({ stage: 'proposed' }));
+    const d = await open();
+    expect(within(d).queryByTestId('qv-approve')).toBeNull();
+    // round 4 (RF1) — ⛔ New version from a proposal either: the direct path would refuse that base (RT7)
+    expect(within(d).queryByRole('button', { name: t.newVersion })).toBeNull();
+    cleanup();
+    api.getGlobalQuestionnaireVersions.mockResolvedValue(LIST({ versions: [summary({ stage: 'approved' })] }));
+    api.getGlobalQuestionnaireVersion.mockResolvedValue(DETAIL({ stage: 'approved' }));
+    const approved = await open();
+    await userEvent.click(within(approved).getByRole('button', { name: t.newVersion }));
+    const ed = await screen.findByTestId('qv-editor');
+    expect(within(ed).queryByRole('button', { name: t.propose })).toBeNull();
+    expect(within(ed).getByTestId('qv-direct')).toBeInTheDocument();
+    cleanup();
+    h.grants = [];
+    api.getQuestionnaireVersions.mockResolvedValue(LIST({ versions: [summary({ stage: 'proposed' })] }));
+    api.getQuestionnaireVersionDetail.mockResolvedValue(DETAIL({ stage: 'proposed' }));
+    const d2 = await open();
+    expect(within(d2).getByTestId('qv-approve')).toBeInTheDocument();
+    await userEvent.click(within(d2).getByRole('button', { name: t.newVersion }));
+    const ed2 = await screen.findByTestId('qv-editor');
+    expect(within(ed2).getByRole('button', { name: t.propose })).toBeInTheDocument();
+    expect(within(ed2).queryByTestId('qv-direct')).toBeNull();
+  });
+
+  it('round 4 (RF1) — the Super Admin is offered New version only from a base the direct path accepts: code, approved, published', async () => {
+    h.grants = ['questionnaire.publish'];
+    // (a CODE version is a base too — the kind section's New version, the earlier direct-path leg; it lists as no row here)
+    for (const stage of ['approved', 'published', 'proposed', 'returned', 'withdrawn'] as const) {
+      api.getGlobalQuestionnaireVersions.mockResolvedValue(LIST({ versions: [summary({ stage })] }));
+      api.getGlobalQuestionnaireVersion.mockResolvedValue(DETAIL({ stage }));
+      const d = await open();
+      const offered = within(d).queryByRole('button', { name: t.newVersion }) !== null;
+      expect(offered, stage).toBe(stage === 'approved' || stage === 'published');
+      cleanup();
+    }
+    // a Pariwar Admin proposes from any version it may see
+    h.grants = [];
+    api.getQuestionnaireVersions.mockResolvedValue(LIST({ versions: [summary({ stage: 'returned' })] }));
+    api.getQuestionnaireVersionDetail.mockResolvedValue(DETAIL({ stage: 'returned' }));
+    expect(within(await open()).getByRole('button', { name: t.newVersion })).toBeInTheDocument();
+  });
+
+  it('RT3 / QE7 (a) — the direct path for EVERY Pariwar lists who keeps their own version, and its confirm waits for the list', async () => {
+    h.grants = ['questionnaire.publish'];
+    api.getGlobalQuestionnaireVersion.mockResolvedValue(codeDetail());
+    let release!: (v: Awaited<ReturnType<typeof api.getPariwarsKeepingOwnQuestionnaire>>) => void;
+    api.getPariwarsKeepingOwnQuestionnaire.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    await openEditor();
+    const direct = screen.getByTestId('qv-direct');
+    fireEvent.change(within(direct).getByLabelText(t.directReason), { target: { value: 'For every Pariwar' } });
+    const confirm = () => within(direct).getByRole('button', { name: t.makeLiveDirect });
+    expect(confirm()).toBeEnabled(); // this Pariwar: nothing to list
+    expect(within(direct).queryByTestId('qv-direct-keeping-own-loading')).toBeNull();
+    await userEvent.click(within(direct).getByLabelText(t.scopeAll));
+    expect(within(direct).getByTestId('qv-direct-keeping-own-loading')).toHaveTextContent(t.keepingLoading);
+    expect(confirm()).toBeDisabled();
+    await act(async () => release({ pariwars: [{ pariwarId: 'x', name: 'Jaipur Pariwar', versionId: 'peer_mesh.v1001' }] }));
+    expect(await within(direct).findByTestId('qv-direct-keeping-own')).toHaveTextContent('1 Pariwar keeps its own version: Jaipur Pariwar');
+    expect(confirm()).toBeEnabled();
+    await userEvent.click(confirm());
+    await waitFor(() => expect(api.directQuestionnaireVersion).toHaveBeenCalledWith(expect.objectContaining({ targetPariwarId: null }), expect.any(String)));
+  });
+
+  it('RT3 — a keeping-own list that FAILED keeps the direct every-Pariwar confirm disabled, with a Try again', async () => {
+    h.grants = ['questionnaire.publish'];
+    api.getGlobalQuestionnaireVersion.mockResolvedValue(codeDetail());
+    api.getPariwarsKeepingOwnQuestionnaire.mockRejectedValueOnce(new ApiError(500, 'internal', 'boom'));
+    await openEditor();
+    const direct = screen.getByTestId('qv-direct');
+    fireEvent.change(within(direct).getByLabelText(t.directReason), { target: { value: 'For every Pariwar' } });
+    await userEvent.click(within(direct).getByLabelText(t.scopeAll));
+    expect(await within(direct).findByTestId('qv-direct-keeping-own-error')).toHaveAttribute('role', 'alert');
+    expect(within(direct).getByRole('button', { name: t.makeLiveDirect })).toBeDisabled();
+    await userEvent.click(within(direct).getByRole('button', { name: t.keepingRetry }));
+    expect(await within(direct).findByTestId('qv-direct-keeping-own')).toHaveTextContent('Jaipur Pariwar');
+    expect(within(direct).getByRole('button', { name: t.makeLiveDirect })).toBeEnabled();
   });
 });

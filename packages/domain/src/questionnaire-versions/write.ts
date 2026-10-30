@@ -419,9 +419,9 @@ export async function makeVersionLive(
 }
 
 /**
- * QE7 (b) / (c) — the Super Admin's DIRECT version: author it (from `baseVersionId` — an approved version to modify, or the
- * version in force), approve it (both ticks) and make it live for one Pariwar or ALL, in ONE transaction, with a REQUIRED
- * reason. Its `proposed` / `approved` steps are scoped to the target (NULL for all) — ⛔ a tenant step.
+ * QE7 (b) / (c) — the Super Admin's DIRECT version: author it (from `baseVersionId` — a code version, or a database version
+ * approved or made live (review RT7); by default the version in force), approve it (both ticks) and make it live for one
+ * Pariwar or ALL, in ONE transaction, with a REQUIRED reason. Its `proposed` / `approved` steps are scoped to the target (NULL for all) — ⛔ a tenant step.
  */
 export async function directVersion(
   db: Db,
@@ -443,6 +443,16 @@ export async function directVersion(
   const baseVersionId = input.baseVersionId ?? inForce;
   if (baseVersionId === null) throw new QuestionnaireChainError('questionnaire.base_invalid', { kind: input.kind });
   await assertBase(db, input.kind, baseVersionId, null);
+  // QE7 (b) — "base = the APPROVED one" (review RTQ2 (A) ⇒ RT7): a code version, or a database version approved or made live —
+  // ⛔ one still proposed, returned or withdrawn (the history would show a live version built on a refused draft). On the
+  // global handle the steps are every Pariwar's, so this is the version's true stage. Review round 4 (RF7) — read UNDER the
+  // base's step lock, which every step writer takes (a concurrent withdraw cannot slip between this read and the commit); the
+  // one fixed order holds: numbering → live → step (the base's, then the new version's — fresh, ⛔ contended).
+  if ((await readVersionRow(db, baseVersionId)) !== null) {
+    await lockStep(db, baseVersionId);
+    const stage = await stageOf(db, baseVersionId);
+    if (stage !== 'approved' && stage !== 'published') throw new QuestionnaireChainError('questionnaire.base_invalid', { baseVersionId, stage });
+  }
   // A modification of an approved proposal is judged by what THAT proposal was based on (QE7 (b)); a code base by itself.
   const baseRow = baseVersionId === inForce ? null : await readVersionRow(db, baseVersionId);
   assertBaseCurrent(baseRow?.baseVersionId ?? baseVersionId, inForce, input.acknowledgeBaseMoved || baseVersionId === inForce);

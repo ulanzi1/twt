@@ -154,6 +154,23 @@ describe.skipIf(!hasDatabase)('Story 6.33 — the chain steps serialize on their
     expect(codeOf(r)).toBe('questionnaire.not_withdrawable');
   });
 
+  it('review round 4 (RF7) — withdraw vs a direct version BASED on it: the direct path WAITS on the base\'s step lock, then sees it withdrawn ⇒ base_invalid', async () => {
+    const [p, q] = [randomUUID(), randomUUID()];
+    const v = await proposed(p, true);
+    const t = await openTx(p);
+    const g = await openTx(null);
+    await withdrawVersion(t.db, { ...PA, pariwarId: p, versionId: v });
+    const second = settle(
+      directVersion(g.db, { ...SA, kind: 'peer_mesh', targetPariwarId: q, baseVersionId: v, pages: pages(), reason: 'modify', ...TICKS, acknowledgeBaseMoved: true }),
+    );
+    await waitUntilBlockedOnAdvisoryLock(g.backendPid);
+    await t.commit();
+    const r = await second;
+    if (r.ok) versionIds.push(r.value.versionId);
+    await (r.ok ? g.commit() : g.rollback());
+    expect(codeOf(r)).toBe('questionnaire.base_invalid');
+  });
+
   it('two make-lives of one version for one Pariwar: the second WAITS, then sees it live there ⇒ not_publishable', async () => {
     const p = randomUUID();
     const v = await proposed(p, true);

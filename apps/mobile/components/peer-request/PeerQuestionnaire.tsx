@@ -70,12 +70,19 @@ export function PeerQuestionnaire({
   const carried = useRef<{ readonly questionKey: string; readonly value: PeerRequestAnswerValue }[]>([])
   const [reloads, setReloads] = useState(0)
   const [reloadFailed, setReloadFailed] = useState(false)
+  // Review round 4 (RF5) — ONE reload at a time: a second Try again while the first is out would `refetch()` again, which
+  // CANCELS the first fetch — whose promise then resolves with the OLD data and bumps the generation on the old version.
+  const reloading = useRef(false)
   // ⭐ Review RP4 — `onReload` takes ⛔ drafts and ⛔ writes the hand-over: the MIRROR (`mergeCarried`, in `Questionnaire`) is its
   // only writer, so answers carried in but ⛔ yet applied survive a reload that fires before this instance applied them.
   // ⭐ Review RP9 — the refetch is BOUNDED: the transport has ⛔ timeout and `refetch()` re-joins a hung fetch, so an unbounded
   // wait sat on the spinner with ⛔ exit and the answers neither saved nor recoverable. The bound, a failed result and a REJECTION
-  // are all a failure ⇒ the load error's "Try again" (which reloads once more).
+  // are all a failure ⇒ the load error's "Try again" (which reloads once more). ⭐ Review RT4 — the failure screen is cleared ONLY
+  // by a reload that SUCCEEDED (here, with the generation bump): clearing it before the retry's refetch settled remounted the
+  // editor on the OLD version, whose carry tick re-sent the hand-over stale ⇒ a certain 409 and a second reload.
   const onReload = useCallback(() => {
+    if (reloading.current) return
+    reloading.current = true
     // The DETAIL query (`staleTime: 0`, `retry: false`; each save cancels it) — ⛔ the by-link query's `staleTime: Infinity`.
     // A failed refetch ⇒ the load error's "Try again" (⛔ a rebuild on the old questions, which would only meet the 409 again).
     void withTimeout(
@@ -84,10 +91,16 @@ export function PeerQuestionnaire({
       false,
     ).then(
       (ok) => {
-        if (ok) setReloads((n) => n + 1)
-        else setReloadFailed(true)
+        reloading.current = false
+        if (ok) {
+          setReloadFailed(false)
+          setReloads((n) => n + 1)
+        } else setReloadFailed(true)
       },
-      () => setReloadFailed(true),
+      () => {
+        reloading.current = false
+        setReloadFailed(true)
+      },
     )
   }, [refetch])
 
@@ -107,10 +120,9 @@ export function PeerQuestionnaire({
       <LoadError
         carried={carried}
         onTryAgain={() => {
-          if (reloadFailed) {
-            setReloadFailed(false)
-            onReload()
-          } else void refetch()
+          // The failure screen stays until the retry settles (RT4) — `onReload` clears it on success.
+          if (reloadFailed) onReload()
+          else void refetch()
         }}
       />
     )

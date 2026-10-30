@@ -1,6 +1,8 @@
 // Story 6.33 (QE12 R6; I6; AC4) — the SYNC resolver fence: ⛔ non-test code outside `questionnaire-versions/` and the code
 // registry's own module calls `resolveLiveVersion(` / `getQuestionnaireVersion(` — every consumer reads through the ONE
-// database-aware reader, so a chain version is ⛔ invisible to a consumer that kept the old call. Plus the word fence: ⛔
+// database-aware reader, so a chain version is ⛔ invisible to a consumer that kept the old call. Review RT5 — the same for a
+// DIRECT read of `QUESTIONNAIRE_REGISTRY` (the code versions the sync resolver walks): outside its named readers it would
+// resolve "the version in force" around the reader and stay green. Plus the word fence: ⛔
 // non-test code resolves a questionnaire item's words with `t(…copyKey…)` outside THE ONE word function (QE4).
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -63,6 +65,49 @@ describe('R6 — the sync resolver is called ONLY by the reader and the code reg
     expect(reader).toMatch(/getQuestionnaireVersion\(/);
     // every root contributes files — a renamed / moved root must fail loudly, ⛔ shrink the scan silently
     for (const r of ROOTS) expect(walk(path.join(repo, r), []).length, r).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Review RT5 — the code registry's readers, each for a reason that is ⛔ "the version in force": the code module itself
+ * (`questionnaires/` — the registry, the validator, `newestCodeVersion`), THE reader (`questionnaire-versions/`), the ground
+ * inspection's pin read (it passes the registry INTO `readQuestionnaireDefinition`), and the editor's handlers (the catalogue
+ * of code versions and a code version's detail — QE16).
+ */
+const REGISTRY_READERS = (f: string): boolean =>
+  f.startsWith('packages/domain/src/questionnaires/') ||
+  f.startsWith('packages/domain/src/questionnaire-versions/') ||
+  f === 'packages/domain/src/claim/ground-inspection-questionnaire.ts' ||
+  f === 'apps/api/src/modules/questionnaire-versions/handlers.ts';
+const REGISTRY_RE = /\bQUESTIONNAIRE_REGISTRY\b/;
+
+describe('R6 (review RT5) — ⛔ a direct read of QUESTIONNAIRE_REGISTRY outside its named readers', () => {
+  it('⛔ QUESTIONNAIRE_REGISTRY elsewhere', () => {
+    const hits = files
+      .filter((f) => !REGISTRY_READERS(rel(f)))
+      .filter((f) => REGISTRY_RE.test(readFileSync(f, 'utf8')))
+      .map(rel);
+    expect(hits).toEqual([]);
+  });
+  it('the registry scan has TEETH: it matches the bypass it is for, the reader is a reader, and every allow-listed file exists', () => {
+    expect(REGISTRY_RE.test("questionnaires.QUESTIONNAIRE_REGISTRY.filter((d) => d.kind === 'peer_mesh').at(-1)")).toBe(true);
+    expect(REGISTRY_RE.test('const MY_QUESTIONNAIRE_REGISTRY_COPY = []')).toBe(false);
+    expect(readFileSync(path.join(repo, 'packages/domain/src/questionnaire-versions/read.ts'), 'utf8')).toMatch(REGISTRY_RE);
+    for (const f of ['packages/domain/src/claim/ground-inspection-questionnaire.ts', 'apps/api/src/modules/questionnaire-versions/handlers.ts']) {
+      expect(files.map(rel), f).toContain(f);
+    }
+    // review round 4 (RF4) — the ALLOW-LIST refuses: a consumer anywhere else (each root's kind) is ⛔ a named reader
+    for (const outside of [
+      'apps/jobs/src/boot.ts',
+      'apps/api/src/modules/claims/peer-request-core.ts',
+      'apps/admin/src/modules/questionnaire-versions/QuestionnaireVersionsPage.tsx',
+      'apps/mobile/components/peer-request/PeerQuestionnaire.tsx',
+      'packages/domain/src/claim/peer-mesh-reply.ts',
+      'packages/api-client/src/index.ts',
+    ]) {
+      expect(REGISTRY_READERS(outside), outside).toBe(false);
+      expect(files.map(rel), outside).toContain(outside);
+    }
   });
 });
 

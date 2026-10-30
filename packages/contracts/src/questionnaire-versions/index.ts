@@ -138,12 +138,16 @@ export const QuestionnaireVersionSummary = z.object({
   kind: QuestionnaireVersionKind,
   version: z.number().int(),
   stage: z.enum(QUESTIONNAIRE_VERSION_STAGES),
+  /** `null` for a code version, and — to a Pariwar Admin — a base it may ⛔ see (another Pariwar's proposal; review RT6). */
   baseVersionId: z.string().nullable(),
   ruledBaseCodeVersionId: z.string().nullable(),
-  /** `null` for a code version and for a direct all-Pariwar one. */
+  /** `null` for a code version, for a direct all-Pariwar one, and — to a Pariwar Admin — for a version from ANOTHER Pariwar
+   *  (`historyElsewhere` says so; review RT6: withheld as its steps are). */
   originPariwarId: z.string().nullable(),
   direct: z.boolean(),
+  /** `null` unless a direct version — and, to a Pariwar Admin, for a version from ANOTHER Pariwar (review round 4, RF6). */
   reason: z.string().nullable(),
+  /** `null` for a code version, and — to a Pariwar Admin — for a version from ANOTHER Pariwar (review RT6). */
   authoredByDisplay: z.string().nullable(),
   authoredByMe: z.boolean(),
   authoredAt: z.string().nullable(),

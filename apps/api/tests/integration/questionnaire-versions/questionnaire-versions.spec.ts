@@ -325,6 +325,57 @@ describe.skipIf(!hasDatabase)('Story 6.33 — the questionnaire chain through HT
     expect(forQ.removedKeys).toEqual([]);
   });
 
+  it("review RT6 — withholding is UNIFORM: to Q's admin a version from P carries ⛔ P's uuid, ⛔ its author's name, and its base only once Q may see it; P and the Super Admin see all", async () => {
+    const [p, q] = [randomUUID(), randomUUID()];
+    const pa = await pariwarAdmin(p, 'Meera (Pariwar Admin)');
+    const qa = await pariwarAdmin(q);
+    const open = await propose(pa, p);
+    const second = await post(pa, T(p), { kind: 'peer_mesh', baseVersionId: open, pages: draftPages(staffQuestion('rt6_q')) });
+    expect(second.statusCode, second.body).toBe(200);
+    const v2 = QuestionnaireStepResponse.parse(second.json()).versionId;
+    versionIds.add(v2);
+    expect((await post(pa, `${T(p)}/${v2}/approve`, TICKS)).statusCode).toBe(200);
+    const sa = await superAdmin(p);
+    await elevate(sa);
+    expect((await post(sa, `${G}/${v2}/make-live`, { targetPariwarId: q, acknowledgeBaseMoved: true })).statusCode).toBe(200);
+    const withheld = { originPariwarId: null, authoredByDisplay: null, baseVersionId: null, historyElsewhere: true };
+    expect(QuestionnaireVersionDetailResponse.parse((await qa.inject({ method: 'GET', url: `${T(q)}/${v2}` })).json())).toMatchObject(withheld);
+    const qList = QuestionnaireVersionListResponse.parse((await qa.inject({ method: 'GET', url: T(q) })).json());
+    expect(qList.versions.find((x) => x.versionId === v2)).toMatchObject(withheld);
+    // the origin and the Super Admin: everything
+    const named = { originPariwarId: p, authoredByDisplay: 'Meera (Pariwar Admin)', baseVersionId: open };
+    expect(QuestionnaireVersionDetailResponse.parse((await pa.inject({ method: 'GET', url: `${T(p)}/${v2}` })).json())).toMatchObject(named);
+    expect(QuestionnaireVersionDetailResponse.parse((await sa.inject({ method: 'GET', url: `${G}/${v2}` })).json())).toMatchObject(named);
+    // once the base is one Q may SEE (made live for Q — ⛔ for ALL, which would move every later leg's default), it is named to
+    // Q — the origin and the author stay withheld
+    expect((await post(pa, `${T(p)}/${open}/approve`, TICKS)).statusCode).toBe(200);
+    expect((await post(sa, `${G}/${open}/make-live`, { targetPariwarId: q, acknowledgeBaseMoved: true })).statusCode).toBe(200);
+    expect(QuestionnaireVersionDetailResponse.parse((await qa.inject({ method: 'GET', url: `${T(q)}/${v2}` })).json())).toMatchObject({ ...withheld, baseVersionId: open });
+    const qList2 = QuestionnaireVersionListResponse.parse((await qa.inject({ method: 'GET', url: T(q) })).json());
+    expect(qList2.versions.find((x) => x.versionId === v2)).toMatchObject({ ...withheld, baseVersionId: open });
+    // review round 4 (RF2) — a version built on a CODE version keeps naming it in the LIST (the code base is ⛔ a listed row: the
+    // fallback names it), to its own Pariwar and to the Super Admin
+    const codeBased = QuestionnaireVersionListResponse.parse((await pa.inject({ method: 'GET', url: T(p) })).json()).versions.find((x) => x.versionId === open);
+    expect(codeBased?.baseVersionId).toMatch(/^peer_mesh\.v\d+$/);
+    expect(Number(codeBased!.baseVersionId!.split('.v')[1])).toBeLessThan(1000);
+    const saList = QuestionnaireVersionListResponse.parse((await sa.inject({ method: 'GET', url: `${G}?pariwarId=${p}` })).json());
+    expect(saList.versions.find((x) => x.versionId === open)?.baseVersionId).toBe(codeBased!.baseVersionId);
+    // review round 4 (RF6) — a DIRECT version for P, made live for Q too: its reason (the Super Admin's words, which may name P)
+    // is withheld from Q with the rest; P still reads it
+    const d = await post(sa, `${G}/direct`, { kind: 'peer_mesh', targetPariwarId: p, pages: draftPages(staffQuestion('rf6_q')), reason: 'For Jaipur only', ...TICKS, acknowledgeBaseMoved: true });
+    expect(d.statusCode, d.body).toBe(200);
+    const dv = QuestionnaireStepResponse.parse(d.json()).versionId;
+    versionIds.add(dv);
+    expect((await post(sa, `${G}/${dv}/make-live`, { targetPariwarId: q, acknowledgeBaseMoved: true })).statusCode).toBe(200);
+    expect(QuestionnaireVersionDetailResponse.parse((await qa.inject({ method: 'GET', url: `${T(q)}/${dv}` })).json())).toMatchObject({
+      direct: true,
+      reason: null,
+      authoredByDisplay: null,
+      originPariwarId: null,
+    });
+    expect(QuestionnaireVersionDetailResponse.parse((await pa.inject({ method: 'GET', url: `${T(p)}/${dv}` })).json())).toMatchObject({ direct: true, reason: 'For Jaipur only', originPariwarId: p });
+  });
+
   it('review RV4 — an idempotent REPLAY returns the RECORDED response on EVERY write (return / withdraw record `{ done: true }` — ⛔ a 409 "in progress" for the TTL)', async () => {
     const p = randomUUID();
     const pa = await pariwarAdmin(p);

@@ -4,6 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review (round 3 — the whole story, code only) of 6-33-questionnaire-editor-versions-and-approval.md (2026-10-30)
+
+The third review (`origin/main..de86f2ad`, `apps` + `packages`, 3 layers over the whole diff): 2 decision-needed, 5 patch (the story's `### Review Findings — round 3`, `RTQ1`–`RTQ2`, `RT1`–`RT5`), 2 deferred below.
+
+- **An idempotent replay ignores the request body** [`apps/api/src/modules/questionnaire-versions/handlers.ts` `withIdempotency`; RTD1] — the replay returns the recorded result for the same key whatever the body (propose's hash omits `pages`; make-live's key omits `targetPariwarId`); the shipped client mints a fresh key per click, so ⛔ reachable from it; the house shape (`helplineSave`) shares it — only the ground-inspection writer compares (`GroundInspectionIdempotencyMismatchError`). Trigger: a client or retry layer that reuses a key across bodies, or a house pass on `withIdempotency`.
+- **A STAFF health question's `'pending'` basis can never be cleared, so its hold outlives counsel's recorded basis** [`handlers.ts` `draftToPages`; `packages/domain/src/questionnaires/derive.ts` `overlayCounselBasis` (ruled keys only); the jobs' `pendingCounselBasisKeys`; RTD2] — QE10 lets a chain version carry a basis only as an id in `COUNSEL_BASIS_DECISIONS`, but the wire has ⛔ basis field and the API hard-codes `'pending'`; once counsel's basis is recorded a staff health question still holds that Pariwar's texts and reminders until a version without it replaces it, and the QE10 warning reads otherwise for staff questions. ⛔ reachable today (the list is empty). Trigger: the first entry in `COUNSEL_BASIS_DECISIONS` (with RVD9).
+
+---
+
 ## Deferred from: code review (round 2 — the PATCH diff) of 6-33-questionnaire-editor-versions-and-approval.md (2026-10-30)
 
 The second review (the round-1 patches' own diff, 6 layers): 0 decision-needed, 20 patch (the story's `### Review Findings — round 2`, `RP1`–`RP20` — ALL APPLIED), 15 deferred below. Real, small, or waiting on a trigger.

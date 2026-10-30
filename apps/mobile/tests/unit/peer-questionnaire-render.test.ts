@@ -666,6 +666,66 @@ describe('mobile questionnaire interaction regressions', () => {
     }
   });
 
+  it('⭐ RT4 — Try again keeps the failure screen until the retry SETTLES: ⛔ a remount on the OLD version re-sending the carried answer stale', async () => {
+    fakeTimers();
+    try {
+      mock.save.mockRejectedValueOnce(stale);
+      let settle!: () => void;
+      mock.refetch
+        .mockRejectedValueOnce(new TypeError('offline')) // the first reload fails ⇒ Try again
+        .mockImplementationOnce(() => new Promise((resolve) => {
+          // a real network: the retry's refetch lands AFTER the 0 ms carry tick a premature remount would schedule
+          settle = () => { mock.detail = nextVersion('v1001'); resolve({ data: mock.detail, isError: false }); };
+        }));
+      render(createElement(PeerQuestionnaire, props));
+      fireEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+      await act(async () => {});
+      expect(screen.getByText('peer_request.load_error')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'peer_request.try_again' }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(mock.refetch).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('peer_request.load_error')).toBeInTheDocument(); // ⛔ the old questions while the retry is on the wire
+      expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+      expect(sent()).toEqual([['has_died', 'not_died', 'v2']]); // ⛔ a second, stale send
+      await act(async () => settle());
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(sent()).toEqual([['has_died', 'not_died', 'v2'], ['has_died', 'not_died', 'v1001']]);
+      expect(mock.refetch).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText('peer_request.load_error')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('⭐ round 4 (RF5) — a DOUBLE tap on Try again starts ONE retry: a second refetch would cancel the first, which then "succeeds" on the OLD data', async () => {
+    fakeTimers();
+    try {
+      mock.save.mockRejectedValueOnce(stale);
+      let settle!: () => void;
+      mock.refetch
+        .mockRejectedValueOnce(new TypeError('offline'))
+        .mockImplementationOnce(() => new Promise((resolve) => {
+          settle = () => { mock.detail = nextVersion('v1001'); resolve({ data: mock.detail, isError: false }); };
+        }));
+      render(createElement(PeerQuestionnaire, props));
+      fireEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+      await act(async () => {});
+      const tryAgain = () => fireEvent.click(screen.getByRole('button', { name: 'peer_request.try_again' }));
+      tryAgain();
+      tryAgain();
+      await act(async () => { await vi.advanceTimersByTimeAsync(50); });
+      expect(mock.refetch).toHaveBeenCalledTimes(2); // the failed reload + ONE retry — ⛔ a third
+      expect(screen.getByText('peer_request.load_error')).toBeInTheDocument();
+      await act(async () => settle());
+      await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+      expect(sent()).toEqual([['has_died', 'not_died', 'v2'], ['has_died', 'not_died', 'v1001']]);
+      // the guard is released once the retry settled: a later stale save reloads again
+      expect(screen.queryByText('peer_request.load_error')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('⭐ RP9 — a reload refetch that REJECTS is a failure too (⇒ Try again), ⛔ an unhandled rejection and ⛔ a stuck spinner', async () => {
     mock.save.mockRejectedValueOnce(stale);
     mock.refetch.mockRejectedValueOnce(new TypeError('offline'));

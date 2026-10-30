@@ -11,8 +11,10 @@ research passes (governance; engine code; the 6.27a / 6.32 story records; planni
 save contracts, Niyamavali §5 / Part 8 / Part 9) — perishable, re-check at Task 0.1. Re-locate by FUNCTION, ⛔ by line number.
 
 STATUS: ready-for-dev (v1.2 — two fresh-context validations folded in; the second re-traced the v1.1 edits with four read-only
-verifiers). QE1–QE17 PROPOSED — BigDev answers at Task 0.2; the FOUR real asks are QE5, QE6, QE10, QE14 (each carries an honest cost).
-⛔ No code before Task 0.3's author-commit. Committed (v1.0 / v1.1 at `4c622d7f`); ⛔ pushed.
+verifiers). QE1–QE17 ANSWERED 2026-10-30 — all as recommended (Task 0.2) and recorded by author-commit `2026-10-30-421` (`283e25f4`,
+alone — Task 0.3). The QE14 confirm note is DRAFTED, ⛔ sent (BigDev sends). Still OPEN in Task 0: the Hindi of QE4's fallback word (needed
+before Task 4.3) and the rest of Task 0.4 (Row 45, `epics.md`, `deferred-work.md`). Committed (v1.0 / v1.1 at `4c622d7f`, v1.2 at
+`f5083018`); ⛔ pushed.
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never") · ⭐ = action /
 emphasis · ⚠ = hazard.
@@ -257,7 +259,7 @@ flag"*; [[feedback_mechanization_split_commitment]]).
   (`step-up/gate.ts`) — a FREE string (⛔ closed union), 403 `StepUpRequiredError(actionContext)`; the admin precedent for handling it is
   `ApprovalWarningReasonsPage.tsx`. `apiFetch` is module-private to `apps/admin/src/api/client.ts` ⇒ new client functions live in that file.
 
-## ⚖️ Build decisions QE1–QE17 (PROPOSED — BigDev answers at Task 0.2)
+## ⚖️ Build decisions QE1–QE17 (ANSWERED 2026-10-30 — ALL AS RECOMMENDED; recorded by `2026-10-30-421`)
 
 > ⭐ The FOUR real asks are **QE5, QE6, QE10, QE14**. The rest are the author's calls with a stated default; answering "as recommended"
 > takes every (A). ⛔ Silently pick: an option not taken is recorded in the author-commit as not taken.
@@ -706,18 +708,24 @@ when"*). Attribution = `getDisplayName` snapshot.
   - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved (backup branch first — [[project_rebase_ledger_conflict_separator]]);
     `git diff --name-only 26901c92..HEAD -- packages apps scripts infra docs` — re-read any cited file that moved; re-grep the five NUMBERS on
     every branch and worktree; re-derive G8's call-site list (the grep in G8) and paste it into the Debug Log.
-  - [ ] 0.2 Put QE1–QE17 to BigDev; the four real asks (QE5, QE6, QE10, QE14) first, each with its cost as written; plus the Hindi of
+  - [x] 0.2 Put QE1–QE17 to BigDev; the four real asks (QE5, QE6, QE10, QE14) first, each with its cost as written; plus the Hindi of
     QE4's `{member}` fallback word. Record the answers here verbatim.
-  - [ ] 0.3 ONE author-commit decision entry (≥ `-421`), committed ALONE: QE1–QE17 as answered; its §0 table (edges 1–10, incl. 3a / 3b);
+    ⭐ **BigDev, 2026-10-30, verbatim:** *"QE1-QE17 as recommended, prepare routing note"* ⇒ every QE takes its recommended option (QE5 (A),
+    QE6 (A), QE10 (A), QE14 (A) among them). ⚠ OPEN: the Hindi of QE4's fallback word was ⛔ given — ask before Task 4.3.
+  - [x] 0.3 ONE author-commit decision entry (≥ `-421`), committed ALONE: QE1–QE17 as answered; its §0 table (edges 1–10, incl. 3a / 3b);
     the statement that it SUPERSEDES `-413` IQ12 IN PART (the inspector's panel gains a version id and a reload path — the rulings table);
     "How much to trust this entry" naming what was traced vs inferred; ⛔ an in-place edit of `-304` / `-310` / `-413`. If the classifier
     refuses the `.decision-log.md` write, stage the entry and ask BigDev once ([[project_decision_log_writes_user_inserted]]). Write its SHA
-    here AFTER the commit.
+    here AFTER the commit. ⭐ **DONE: `2026-10-30-421`, commit `283e25f4`** (alone, `governance(6.33):`).
   - [ ] 0.4 Records commit: roster Row 45 (QE15 (a)–(e), incl. the deploy-order leg (d)) in `docs/launch-gate-inventory/inventory-roster.md`;
     `epics.md` `### Story 6.33` (title, `[SURFACE] [PRIMITIVE] [GOVERNANCE]`, the minted-by-ruling banner citing `-304` Consequence 2, the
     ACs in brief — the 6.32 entry's shape); `deferred-work.md` (QE13 annotation); the ledger line (next free letter). If QE14 (A): draft
     `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-3x-6-33-questionnaire-chain.md` FROM the template with QE14's THREE
     questions — ⛔ send it.
+    ⭐ PARTLY DONE 2026-10-30: the confirm note is DRAFTED at
+    `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-30-6-33-questionnaire-chain.md` (Q1 = QE6, Q2 (a) / (b) = QE5's lock
+    and staleness rule — split per the template's "a mixed question is two questions", Q3 = QE7 (a)); E4's commands run, every one
+    non-empty; ⛔ sent. ⚠ OPEN: Row 45, `epics.md` `### Story 6.33`, the `deferred-work.md` QE13 annotation.
 - [ ] **Task 1 — the engine (AC1).** `questionnaires/types.ts` (`text?`), `keys.ts` (`COUNSEL_BASIS_DECISIONS = []`, the chain-record regex,
   the reserved-key sets, the Devanagari forbidden terms, the stale comment), `validator.ts` (AC1: the origin input; QE8 C1–C12 one rule per
   line; `typeof` / `=== true` checks; the `{member}`-only placeholder rule; the version-level `approvedBy`; the ruled-question lock — incl.

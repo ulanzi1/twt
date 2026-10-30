@@ -60,6 +60,17 @@ because the fix is not this story's, and the trigger says when it is.)
   the domain writer / reader specs) and the page's render and acts in RTL (`apps/admin/tests/questionnaire-versions-page.test.tsx`, 10 legs).
   ⭐ Trigger: a session whose Chrome reaches the local host (the 6.32 launcher — [[project_admin_browser_pass_launcher]]), or Playwright's
   headless Chromium from the shell — then Row 45 (b) gets its evidence line.
+  ✅ **DISCHARGED 2026-10-30 (the same day, after the commit `0793112a`).** The trigger fired: the extension was connected and reached the local host, the pass ran, and
+  Row 45 (b) has its evidence line — the story's Dev Agent Record, *Browser pass (AC11)*: propose → approve → make live for ONE Pariwar, then the inspector's panel and the
+  helpline's neighbours' card serve the new version for a NEW visit / request while the OLD one keeps its pin (checked in the database: `ground_inspection.v1` vs
+  `.v1000`, `peer_mesh.v4` vs `.v1000`). The text above stays as written. **Limits, ⛔ overclaimed:** the NEW claim / visit / requests were seeded (the texting and the
+  Pariwar's counsel hold were ⛔ exercised); the neighbour's own app was ⛔ driven (the helpline's card serves the same definition); the passkey and the step-up delivery were
+  faked; the Hindi acknowledgements were ticked by the agent on its own test version (⛔ a Hindi review); "All Pariwars", return, withdraw, revert and the direct add were ⛔
+  exercised in the browser.
+- **The step-up prompt after "Make live" may sit out of view** [`apps/admin/src/modules/questionnaire-versions/QuestionnaireVersionsPage.tsx`; observed in the 2026-10-30 browser
+  pass] — after "Make live" was clicked at the foot of a long version detail (a 1200 × 646 window), the viewport showed no change; the step-up prompt (`role="alert"`, "Making a version live
+  changes what families are asked. Please confirm it is you.") was elsewhere in `<main>` and was found by a DOM query. ⛔ investigated: where the prompt renders relative to the
+  button, and whether a Super Admin on a real window sees it, are unknown. ⭐ Trigger: the next browser pass of this page, or a Super Admin who reports a "dead" Make-live button.
 - **The 6.27b flip hazard — a client that loaded before a version flip shows the old words but pins the new** [`packages/domain/src/questionnaires/peer-mesh.ts`
   v3's note; 6.27b Task 3c.2] — ✅ **Closed by 6.33 FOR CLIENTS THAT SEND `questionnaireVersionId`** (QE12 R7: both writers compare the version they
   would pin with the client's rendered one UNDER the lock, FIRST ⇒ 409 `*.questionnaire_version_stale` ⇒ the client RELOADS — the admin inspector's

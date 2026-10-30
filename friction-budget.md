@@ -3037,3 +3037,22 @@ a visitor reads the same words and sees the same photo, in the same order. ⛔ N
 `own_bytes` stays **0**: `pnpm --filter @twt/public build` reports `/sahyog-vivran/[driveToken]` `page_weight_bytes` **1397** and the
 aggregate **11471**, the same before and after the change (both measured 2026-10-29). ⇒ the page-weight baseline is unchanged and
 is ⛔ not ratcheted. Day one nothing renders: the memorial stays dark until launch-gate Row 41 closes.
+
+**Story 6.33 disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, ⛔ no row amended; `2026-10-30-421` / `-422`):** the
+neighbours' questionnaire on the app (`apps/mobile/components/peer-request/PeerQuestionnaire.tsx`, `PeerRequestSlot.tsx`,
+`usePeerRequestQueries.ts`, `lib/peer-request.ts`) is now read from the Trust's reviewed CHAIN of versions (`-304` Q7 / Q8) instead of
+code alone. The payer is the one Row 56 already names — the member chosen as one of the five asked about a reported death — and what
+they meet is still Row 56's few short questions:
+1. ⭐ **A question the Trust adds through the chain is OPTIONAL, always.** The validator refuses a chain question that is not optional
+   (QE8 C4) and the API stamps `optional: true` on every staff question; ⛔ a chain question is ever a warning, a flag or a gate (I1 —
+   the check with neighbours stays a SIGNAL). A health question waits for counsel's basis and is ⛔ shown until then (QE10). ⚠ Row 56's
+   parenthetical lists the Panel's code questions by name; an added optional question is covered by its "a few short questions" and
+   its OPTIONAL classification — RECORDED here, ⛔ amended.
+2. ⛔ **No new step, wait or prompt.** Each save now carries the version the screen shows (R7). If the Trust changed the questions while
+   a neighbour was answering, the next save is refused as stale and the screen RELOADS the new questions, re-saving the neighbour's
+   unsent answers to the questions still asked — ⛔ a re-ask of anything already saved. A reload that fails shows the existing
+   "could not be loaded — Try again", which retries ONCE at a time and keeps that screen until the retry settles (code review RT4 /
+   RF5) — the same exit the screen already had.
+3. ⛔ **Dark until go-live:** the neighbours are texted only once 6.27c's sends go live (roster Row 27), and a chain version reaches
+   them only once one is made live (roster Row 45) — ⛔ a member pays anything new before then.
+`apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted.

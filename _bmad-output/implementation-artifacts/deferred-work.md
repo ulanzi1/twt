@@ -4,6 +4,20 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: landing Story 6.33 — the pre-push `ci:local` (2026-10-30)
+
+- **A tree-walking test crashes on ONE dangling symlink in a git-ignored build directory** [`packages/domain/tests/claim/answer-code-index.test.ts`
+  TR3 `walk()` — skips only `node_modules`, `dist` and dot-names, then `statSync(p).isDirectory()`] — the 6.33 landing push's `ci:local` failed
+  35 / 36 on it: `ENOENT … stat 'apps/mobile/ios/Pods/Headers/Private/React-jsinspector/jsinspector-modern/Base64.h'`, a CocoaPods symlink
+  from a 2026-07-22 `pod install` whose `react-native` target no longer exists. The unit phase showed it GREEN only because turbo replayed a
+  cached result; the integration phase (`--force`) ran it for real. GitHub CI has ⛔ `Pods`, so it never sees this — a developer-machine trap
+  that fails the pre-push gate on a branch that changed ⛔ code (6.33's push was docs / governance only). Worked around by deleting the stale
+  `apps/mobile/ios/Pods` (1.0 GB, git-ignored; `pod install` regenerates it — BigDev: *"delete Pods and re-run"*). ⭐ Fix: the walk skips
+  native build directories (`ios/Pods`, `ios/build`, `android/build`, `android/.gradle`) AND uses `lstatSync` (a symlink is ⛔ followed —
+  a dangling one is then ⛔ an error). Same walker shape in `apps/jobs/tests/claim-peer-mesh-wa-reminders.test.ts` (and 12 test files call
+  `statSync(…).isDirectory()` — judge each); `apps/public/scripts/page-weight.mjs` is a script, ⛔ a test. ⭐ Trigger: the next change to any
+  of those walkers, or the next `pod install` that leaves a dangling link — whichever first.
+
 ## Deferred from: BigDev's questions while reviewing Story 6.33 — why can a dead member's name be unreadable? (2026-10-30)
 
 Two read-only traces at `577a4ca2` (member names; erasure vs claims), load-bearing claims re-checked by hand. ⛔ Fixed here. Not closed.

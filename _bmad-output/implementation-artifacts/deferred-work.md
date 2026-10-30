@@ -6,6 +6,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Deferred from: landing Story 6.33 — the pre-push `ci:local` (2026-10-30)
 
+- **A flaky fixture in Story 5.14's live test — a 3-hex pool identifier collides under the per-Pariwar UNIQUE** [`apps/jobs/tests/announcement-channel-post-live.test.ts`
+  `world()` — `pool_canonical_identifier` = `` `P-2026-10-${poolId.slice(0, 3)}` `` (4,096 values) vs `pools_pariwar_canonical_identifier_uq`] — `main`'s
+  push-run CI at `823c81cc` (run `41008391247`) went RED on it: *"⭐ AC5 (iv) — the heal re-sends the cycle job only while the cycle's pools LACK a
+  pool_open row"* hit `duplicate key value violates unique constraint "pools_pariwar_canonical_identifier_uq"` while seeding several pools in one
+  Pariwar, and *"review G1-1 — a failed 429 enqueue throws; recovery heals an existing deferred row"* then failed on the aborted transaction. The SAME
+  SHA passed this file on the PR run and locally — a fixture flake, ⛔ a product bug, ⛔ the landing (docs-only). ⭐ Fix: build the identifier from the
+  pool index or the whole uuid (e.g. `` `P-${cycleId.slice(0, 8)}-${i}` ``) — any value unique per Pariwar. ⭐ Trigger: the next red on it, or the next
+  change to that file — whichever first.
 - **A tree-walking test crashes on ONE dangling symlink in a git-ignored build directory** [`packages/domain/tests/claim/answer-code-index.test.ts`
   TR3 `walk()` — skips only `node_modules`, `dist` and dot-names, then `statSync(p).isDirectory()`] — the 6.33 landing push's `ci:local` failed
   35 / 36 on it: `ENOENT … stat 'apps/mobile/ios/Pods/Headers/Private/React-jsinspector/jsinspector-modern/Base64.h'`, a CocoaPods symlink

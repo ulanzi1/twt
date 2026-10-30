@@ -4,6 +4,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: landing PR #314 (Story 6.33) — a CI flake (2026-10-30)
+
+- **`apps/api/tests/integration/claims/cycle-freeze.spec.ts` — the Story 6.19b leg "the mark is IN THE RETURN'S TRANSACTION" fails on `canceling statement due to lock timeout`** [its `ddl()` helper, `SET lock_timeout = '5s'` then `CREATE TRIGGER … ON claim_correction_marks` (spec ~line 866)] — GitHub CI run `41090548105` on PR #314 (`8660f84b`): the DDL waits for a table lock that concurrent specs hold on the shared table and times out; the failed job RE-RUN green, and the same commit passed `ci:local` 36/36 on a fresh container. 6.33 ⛔ touches this file or table. Real but not this story's: a test that adds a trigger to a SHARED table under a fixed 5 s lock budget is load-sensitive. Suggested: a per-test table / trigger guarded by a `WHEN` on the test's own ids, or a longer `lock_timeout` with a retry. Trigger: the next red `integration-tests` on this leg.
+
+---
+
 ## Deferred from: code review (round 3 — the whole story, code only) of 6-33-questionnaire-editor-versions-and-approval.md (2026-10-30)
 
 The third review (`origin/main..de86f2ad`, `apps` + `packages`, 3 layers over the whole diff): 2 decision-needed, 5 patch (the story's `### Review Findings — round 3`, `RTQ1`–`RTQ2`, `RT1`–`RT5`), 2 deferred below.

@@ -10,7 +10,7 @@ research passes (governance; engine code; the 6.27a / 6.32 story records; planni
 (`rbac/roles.ts` state_trustee + the RANK-ORDER note in `rbac/scope.ts`, `0189`'s answer-table CHECKs, `answerCodeIndexInputs`, the 6.32
 save contracts, Niyamavali §5 / Part 8 / Part 9) — perishable, re-check at Task 0.1. Re-locate by FUNCTION, ⛔ by line number.
 
-STATUS: review (v1.4 — implemented by `bmad-dev-story 6.33`, 2026-10-30; AC11 was un-attested at v1.4; ATTESTED 2026-10-30 by the post-commit browser pass — see the Dev Agent Record, *Browser pass (AC11)*). Was: ready-for-dev (v1.3 — three fresh-context validations folded in, the last a FINAL pass after Task 0 with three read-only
+STATUS: done (2026-10-30 — code review rounds 3 and 4 applied in `69ee580d`; LANDED on `main` by fast-forward, PR #314, `bc88bd5e..8660f84b`; `ci:local` 36/36 on a fresh container ⇒ AC12 met; roster Row 45 stays open — ⛔ live). Was: review (v1.4 — implemented by `bmad-dev-story 6.33`, 2026-10-30; AC11 was un-attested at v1.4; ATTESTED 2026-10-30 by the post-commit browser pass — see the Dev Agent Record, *Browser pass (AC11)*). Was: ready-for-dev (v1.3 — three fresh-context validations folded in, the last a FINAL pass after Task 0 with three read-only
 verifiers). QE1–QE17 ANSWERED 2026-10-30 — all as recommended (Task 0.2) and recorded by author-commit `2026-10-30-421` (`283e25f4`,
 alone — Task 0.3). The QE14 confirm was SENT by BigDev and the Panel RULED 2026-10-30 — `2026-10-30-422` (Trustee-ratified, DR + KB):
 *"by DR and KB / Q1 A, Q2(a) A, Q2(b) A, Q3 A"* — every edge confirmed as built, ⛔ change. Task 0.4's records DONE 2026-10-30 (Row 45 minted with

@@ -7300,6 +7300,7 @@ So that I see relevant partner offers without irrelevant noise.
 > - **The event is `module.lead_submitted`** (single-dot snake_case — ⛔ the hyphen above).
 > - **C1 — offerable** = `active` AND `now() ∈ [valid_from, valid_until)` AND, if capped, `slots_remaining > 0`. Evaluate `ScopeFilterV1` / `EligibilityFilterV1` fail-closed. `age_band` is Not addressed here (it decrypts Tier-1 DOB).
 > - **C9 — the shelf filter is ⛔ an authorization.** The lead route re-checks scope, eligibility, member state (refuse `withdrawn` / `anonymized`) and 12.4's grief suppression server-side, before `marketplace.checkModuleLeadAllowed` / `submitModuleLead`. Those run as caller-wrapped: pre-check BEFORE `withCompensatingAudit`, then the command with `{ …, auditId }`. The lead id is caller-minted and idempotent (a replay returns `{ replayed: true }`); one place per member per module.
+> - **I11 / C13:** a lead's actor is the member themself (`actor: 'member'`, `actorId === memberId`, from the member session). An operator-assisted lead is NOT supported.
 > - ⚠ **C6 + C8:** the privacy policy §6 names ⛔ partners, and an RTBF can never remove a member↔offer link. Route the data and retention basis BEFORE the first production caller. The data export must learn to find lead events on the module stream. **C5:** partner colours never touch the shelf chrome. **C12:** a curated rank goes in its own table.
 
 ### Story 12.4: Grief-Context Module Shelf Suppression — State-Machine-Enforced + Structural-Not-Cosmetic Invariant `[GOVERNANCE]`

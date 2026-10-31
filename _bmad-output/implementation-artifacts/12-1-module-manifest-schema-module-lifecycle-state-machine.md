@@ -19,6 +19,9 @@ STATUS: ready-for-dev (2026-10-31 — v1.4).
   records audit). BigDev: *"I think story is not yet ready for dev, run story validation one more time"*, then *"apply
   all findings"*. Amending author-commit `2026-10-31-429` (`0168592b`, alone). Every finding applied; records updated;
   ledger `r` relabelled `t`.
+- v1.5: BigDev's four checks (*"check these"*), each verified against the repo and fixed: the genesis projector is now
+  specified as precisely as the transition projector; the registry-count question is answered with evidence; the index
+  build's lock cost is corrected; a lead's actor must BE the member (I11).
 - ⛔ pushed. ⭐ **Task 0.1 runs FIRST in `bmad-dev-story`; then the build may start.**
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In ACs, Invariants,
@@ -43,7 +46,7 @@ COMMIT". For migrations `-415` follows `-332` d2: the number follows the MERGE o
   - `2026-10-31a`–`o` and `r` are taken elsewhere. `story/11b-5a-…` committed `r` first (`ec7e5eb9`), so this branch's
     `r` was relabelled `t`.
   - `s` is held uncommitted in the 11b-5a worktree, and `n` / `o` in the 6-38 worktree.
-  - Ours: `p`, `q`, `t`, `u` ⇒ next free ≥ `2026-10-31v`.
+  - Ours: `p`, `q`, `t`, `u`, `v` ⇒ next free ≥ `2026-10-31w`.
 - Roster: no row.
 
 ⭐ Re-grep ALL of these at Task 0.1 and again at the commit that takes each. `story/6-38-…` and `story/11b-5a-…` are live
@@ -258,7 +261,11 @@ cannot reconcile them (§0: what the Trust discloses).
   - The snapshot is frozen at 0020 (`0084`: "DO NOT REGENERATE with `db:generate`"). Use `--> statement-breakpoint`, and
     hand-add the `meta/_journal.json` entry with a trailing newline.
   - `CREATE INDEX CONCURRENTLY` is impossible because drizzle-kit wraps each migration in a transaction (25001 — the
-    `0096_members-custom-fields.sql` header). A plain `CREATE INDEX` takes a SHARE lock on its table for the build.
+    `0096_members-custom-fields.sql` header). A plain `CREATE INDEX` takes a SHARE lock on its table for the whole build, and ⚠ a PARTIAL index still scans the
+    ENTIRE heap — the `WHERE` filters tuples, ⛔ the scan. On `events_log`, the SHARE lock blocks every event INSERT,
+    system-wide, for the length of that scan. Precedents that accepted this on `events_log`: `0079` (the same SHARE-lock
+    partial unique index) and `0185` (an ACCESS EXCLUSIVE rewrite). `docs/runbooks/deploy.md`: the migration phase runs
+    BEFORE code promotion, i.e. while the previous code is still serving.
 - **G14 — Live-DB harness** (paths under `packages/domain/`).
   - `src/test-utils/integration-setup.ts` provides `setupLiveDb`, `getTx` (rolled back) and `hasDatabase`.
   - `tests/integration/_helpers.ts` provides `PARIWAR_A` / `PARIWAR_B`, `enterAppScope` and `enterAppRoleNoScope`.
@@ -464,7 +471,8 @@ cannot reconcile them (§0: what the Trust discloses).
     - `ModuleGenesisAlreadyExistsError`
     - `ModuleGenesisMissingError` (also thrown when the locked row is absent)
     - `ModulePersistError`
-    - `ModuleProjectorInputError` (actor / actorId mismatch; flat inputs vs payload)
+    - `ModuleProjectorInputError` (actor / actorId mismatch; a member actor on a non-lead event; a lead whose actor is not
+      the member — I11; flat inputs vs payload; a genesis payload that fails its schema)
     - `ModuleManifestInvalidError`
     - `ModuleArchiveReasonNotSatisfiedError`
   - Lead: `ModuleNotActiveError`, `ModuleOutsideWindowError`, `ModuleSlotsExhaustedError`,
@@ -513,12 +521,52 @@ checkModuleLeadAllowed(db: Db, a: { pariwarId: PariwarId; moduleId: ModuleId; me
 type ModuleLeadRefusal = 'not_found' | 'not_active' | 'outside_window' | 'slots_exhausted' | 'duplicate_lead' | 'already_submitted'; // QE7 order
 
 // marketplace/project.ts — ⛔ re-exported from marketplace/index.ts (specs import from src/marketplace/project.js)
-projectModuleGenesis(client: pg.PoolClient, i: { pariwarId; moduleId; manifest: ModuleManifestV1; auditId; actor; actorId }): Promise<…>
+projectModuleGenesis(client: pg.PoolClient, i: {
+  pariwarId: PariwarId; moduleId: ModuleId; manifest: ModuleManifestV1; auditId: string;
+  actor: Exclude<ModuleEventActor, 'member'>; actorId: string | null;
+}): Promise<{ eventId: string; eventVersion: 1; state: 'draft' }>
 projectModuleTransition(client: pg.PoolClient, i: {
   pariwarId; moduleId; eventType: Exclude<ModuleEventType, 'module.authored'>; payload: unknown; auditId; actor; actorId;
   lockedRow: { currentState: MarketplaceModuleState; stateEventVersion: number; slotsRemaining: number | null; slotCapacity: number | null };
 }): Promise<ModuleTransitionResult>
 ```
+
+`projectModuleGenesis` runs these steps, in order. Each step's failure is typed, and the whole function runs inside
+`SAVEPOINT module_genesis`; on ANY error it runs `ROLLBACK TO SAVEPOINT module_genesis` BEFORE mapping or rethrowing, so
+the caller's transaction stays usable. It runs `RELEASE` on success.
+1. **Actor check (I11):** `(actor === 'system') === (actorId === null)`, and `actor !== 'member'`. Otherwise →
+   `ModuleProjectorInputError`.
+2. **Stream empty:** `SELECT 1 FROM events_log WHERE stream_id = $moduleId LIMIT 1`. A row → `ModuleGenesisAlreadyExistsError`.
+   The check is RLS-scoped. A concurrent or cross-tenant collision is caught by the 23505 in step 4 / 5.
+3. **Build + parse the payload:**
+   - `{ from_state: null, to_state: 'draft', trigger: 'module.author', actor, module_id, pariwar_id,
+     manifest_schema_version: 1, …every QE5 content column in snake_case }`, with `valid_from` / `valid_until` as
+     `Date.toISOString()`;
+   - parse it with `ModuleAuthoredPayloadSchema` (`.strict()`). A failure here is a programming error (the manifest was
+     already parsed) → `ModuleProjectorInputError`, wrapping the ZodError.
+4. **Append:** INSERT into `events_log` with `{ streamId: moduleId, eventType: 'module.authored', payload, eventVersion: 1,
+   actorId, pariwarId }`, `RETURNING event_id`.
+5. **Write the row:** `SET LOCAL app.marketplace_module_state_writer = 'on'`, then INSERT `marketplace_modules`:
+   - every content column from `manifest` (the SAME values the payload carries — one object feeds both);
+   - `manifest_schema_version = 1`, `current_state = 'draft'`, `state_event_version = 1`;
+   - `slots_remaining = slot_capacity`, `archive_reason = NULL`, `audit_id = auditId`;
+   - `created_at` / `updated_at` take their defaults;
+   - `RETURNING module_id`; 0 rows → `ModulePersistError`;
+   - `'off'` in a `finally`.
+6. **Map errors** (cause-chain walker, QE8):
+   - 23505 on `events_log_stream_id_event_version_uq` or `marketplace_modules_pkey` → `ModuleGenesisAlreadyExistsError`;
+   - 42501 (RLS `withCheck`: the scope ≠ `pariwarId`) propagates unchanged;
+   - P0001 with `MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX` → `ModuleStateDirectWriteError` (only reachable if the guard
+     was not set — a bug).
+7. Return `{ eventId, eventVersion: 1, state: 'draft' }`.
+
+`authorModule` runs these steps, in order, before calling the projector:
+1. the step-1 actor check;
+2. `parseModuleManifest(i.manifest)`;
+3. `SELECT now()` and A5 (`valid_until > now()`, else `ModuleOutsideWindowError`);
+4. `projectModuleGenesis`.
+
+It takes ⛔ row lock: there is no row yet, and the race is decided by the 23505.
 
 `projectModuleTransition` runs these steps, in order:
 1. Read `SELECT max(event_version)` for the stream. If it ≠ `lockedRow.stateEventVersion`, throw
@@ -540,9 +588,35 @@ z.string().min(1), actor: moduleActorSchema }`):
   `z.string().datetime({ offset: true })`.
 - `ModuleScheduledPayloadSchema` / `ModuleActivatedPayloadSchema`: the audit shape only, with `from_state` / `to_state`
   literals per arm.
-- `ModuleLeadSubmittedPayloadSchema`: QE7's shape. It accepts only `from_state === to_state === 'active'`, with lower-case
-  ids.
+- `ModuleLeadSubmittedPayloadSchema`: QE7's shape with `actor: z.literal('member')`. It accepts only
+  `from_state === to_state === 'active'`, with lower-case ids.
 - `ModuleArchivedPayloadSchema`: the audit shape + `reason: z.enum(MARKETPLACE_MODULE_ARCHIVE_REASONS)`.
+
+### Actor rules (I11 — implements `-429` A6)
+
+| Event | Allowed `actor` | `actorId` |
+|---|---|---|
+| `module.authored`, `module.scheduled`, `module.activated` | `operator` \| `trustee` \| `system` (⛔ `member`) | non-null for `operator` / `trustee`; null for `system` |
+| `module.archived` | `operator` \| `trustee` \| `system` (the 12.6 sweep is `system`) | same |
+| `module.lead_submitted` | **`member` ONLY** | **MUST equal `memberId`** |
+
+- Why `actorId === memberId` is meaningful: a member session sets `request.requestContext.actorId = payload.sub`, and the
+  JWT `sub` IS the `member_id` (`apps/api/src/modules/auth/shared/member-session-guard.ts`). The helpdesk member handlers
+  pass `actorId: memberIdStr`.
+  - So a lead whose `actorId` is not the member's own id is one member registering someone ELSE's interest. A lead is
+    the member's own consented act (C6 / 12.3's consent), so it must be refused.
+- Enforced in THREE places:
+  - **`submitModuleLead`** checks `i.actor === 'member' && i.actorId === i.memberId` FIRST, before the row lock →
+    `ModuleProjectorInputError`. `checkModuleLeadAllowed` takes no actor; its caller passes the session's member id as
+    `memberId`.
+  - **`ModuleLeadSubmittedPayloadSchema`** has `actor: z.literal('member')`.
+  - **`projectModuleTransition`**, for `module.lead_submitted`, cross-validates `actorId === payload.member_id` →
+    `ModuleProjectorInputError`.
+- Every other event's schema uses `actor: z.enum(['operator','trustee','system'])`.
+- ⚠ The id spaces differ: admin sessions set `actorId = userId` (`admin-auth.handlers.ts`), a `users` id, ⛔ a member id.
+  So an operator-assisted lead ("the helpline registers interest for a member") is **NOT supported in 12.1**. It would
+  record a staff user as the actor of a member's consented act, and needs its own consent basis (C6). This is carried as
+  C13.
 
 ## Invariants (I)
 
@@ -566,6 +640,8 @@ z.string().min(1), actor: moduleActorSchema }`):
 - **I8** — No new `account-frozen` source or reason; `member/overlay.ts` is untouched.
 - **I9** — Event payloads carry no Tier-1 PII; the member is identified only by a lower-case `member_id`.
 - **I10** — Every transition takes the row lock before any `events_log` append (one lock order, A1).
+- **I11** — A `module.lead_submitted` event's actor is `member` and its `events_log.actor_id` equals its payload
+  `member_id`. No other event has actor `member`.
 
 ## Acceptance Criteria
 
@@ -603,7 +679,21 @@ z.string().min(1), actor: moduleActorSchema }`):
      - description template: *"`<event>` (`<from>` → `<to>`) on the MODULE stream (stream_id = module_id) (Story 12.1).
        ⛔ No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built)."*;
      - a section header comment mirrors the helpdesk block.
-   - **And** `packages/events/tests/module-registry-coverage.test.ts` asserts set equality + schema identity.
+   - **And** `packages/events/tests/module-registry-coverage.test.ts` asserts set equality + schema identity. Copy
+     `claim-registry-coverage.test.ts`, whose header explains why it is SET EQUALITY, ⛔ a count: a count passes when one
+     event is added and another deleted.
+   - **And** the existing count assertions are checked, ⛔ assumed. Verified 2026-10-31:
+     - ⛔ test counts `EVENT_TYPE_REGISTRY` as a whole. Its only consumers are `claim-registry-coverage.test.ts`
+       (set equality, `claim.*` only) and `smoke.test.ts` (two named keys).
+     - The per-family LENGTH assertions are `MEMBER_EVENT_TYPES` 24 (`member/life-events-markers.test.ts`,
+       `member/personal-event-assertion.test.ts`) and `CLAIM_EVENT_TYPES` 37 (`claim/dpdpa-consent-events.test.ts`).
+       Neither moves, because `module.*` is a new family.
+     - ⭐ At Task 0.1 and again before commit, re-run:
+       `grep -rnE 'EVENT_TYPE_REGISTRY' packages apps scripts | grep -v node_modules` and
+       `grep -rnE '_EVENT_TYPES\)?\.?.*(toHaveLength|length\)\.toBe)' packages apps`.
+     - If ANY assertion counts the registry or a tuple this story changes, update it IN THE SAME COMMIT, with a comment
+       naming Story 12.1, as `dpdpa-consent-events.test.ts` does.
+     - `MODULE_EVENT_TYPES` itself gets an exact-membership assertion (`toEqual([...])`), ⛔ a bare length.
 4. **AC4 — reducer.** `marketplace/state.ts` uses `defineStateMachine` with `initial: 'draft'` and `transitions`
    **exactly**:
    - `draft→scheduled` (`module.scheduled`);
@@ -629,6 +719,13 @@ z.string().min(1), actor: moduleActorSchema }`):
      stays usable (SAVEPOINT discipline, Task 5.2).
    - **And** `projectModuleTransition` rejects `module.authored` with `ModuleGenesisAlreadyExistsError`; an actor /
      actorId mismatch → `ModuleProjectorInputError`.
+   - **And** `projectModuleGenesis` follows its seven steps ("Exact signatures"); a genesis on a non-empty stream →
+     `ModuleGenesisAlreadyExistsError` with the caller's transaction still usable.
+   - **And** the I11 actor rules hold, each leg throwing `ModuleProjectorInputError` with no event:
+     - `submitModuleLead` with `actor: 'operator'`;
+     - `submitModuleLead` with `actor: 'member'` and `actorId ≠ memberId`;
+     - `authorModule` / `scheduleModule` / `activateModule` / `archiveModule` with `actor: 'member'`;
+     - a raw `projectModuleTransition` lead whose `actorId ≠ payload.member_id`.
    - **And** I4 holds after every command.
    - **And** no domain function calls `withCompensatingAudit`.
    - **And** ONE spec composes `submitModuleLead` under the real wrapper (recipe in Testing standards) and asserts, by
@@ -720,10 +817,20 @@ z.string().min(1), actor: moduleActorSchema }`):
         - The enums, the table, the six named CHECKs and the two indexes.
         - `GRANT SELECT, INSERT, UPDATE … TO twt_app`.
         - RLS ENABLE + FORCE, and the three policies.
-        - QE8's two `events_log` partial unique indexes. The header notes:
-          - the SHARE lock on `events_log` during the build;
+        - QE8's two `events_log` partial unique indexes. The header states the cost HONESTLY (G13):
+          - each `CREATE INDEX` takes a SHARE lock on `events_log` and scans the WHOLE table (a partial predicate filters
+            tuples, ⛔ the scan), so every event INSERT in the system waits for both builds. ⛔ Claim the build is fast
+            because no `module.lead_submitted` rows exist: the cost is set by the size of `events_log`, ⛔ by the count
+            of lead rows;
           - `CONCURRENTLY` is impossible inside drizzle-kit's transaction (25001, the `0096` header);
-          - the build is fast because no `module.lead_submitted` rows exist yet.
+          - why it is accepted now: TWT has ⛔ production deployment ([[project_not_in_production_merge_is_not_golive]]),
+            so the first live run of this migration is on a fresh or small database; precedents `0079` / `0185`;
+          - ⚠ re-check trigger: if a live deployment with a populated `events_log` exists when this lands, STOP and
+            route the index build to a separate, non-transactional step run outside the migrator (a deploy-runbook
+            change), ⛔ ship it in-migration.
+          - ⭐ Measure it: in Completion Notes, record `SELECT count(*) FROM events_log` and
+            `pg_size_pretty(pg_total_relation_size('events_log'))` on the dev / CI database, plus the two builds' wall
+            time (`\timing`).
         - The trigger fn + trigger. Every RAISE uses `MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX` + `ERRCODE 'P0001'`. Use
           `IS DISTINCT FROM` throughout, NOT `<>` / `=`.
           - **INSERT:**
@@ -866,6 +973,8 @@ z.string().min(1), actor: moduleActorSchema }`):
 - **C10 → 12.2 / 12.5:** a correction or endpoint change means re-authoring, which resets places and allows duplicate
   leads. The wizard warns.
 - **C11 → 12.2:** scope values are not validated against the geo tree; the wizard picks them from the tree.
+- **C13 → 12.3 / 12.5 (with C6):** an operator-assisted lead (staff registering interest for a member) is NOT supported —
+  a lead's actor must be the member (I11). A helpline path needs its own consent basis and a separate actor model.
 - **C12 → every sibling:** mutable presentation data goes in its own table. A new `marketplace_modules` column is
   immutable unless its story amends the trigger chain and `GUARDED_COLUMNS`.
 - Also carried:
@@ -888,6 +997,8 @@ All paths are under `packages/domain/` unless marked. Do NOT use the repo-root `
     - exact tuple membership.
   - `tests/marketplace/events.test.ts`:
     - accept / reject per schema;
+    - `MODULE_EVENT_TYPES` exact membership (`toEqual`), ⛔ a length;
+    - the lead schema rejects `actor: 'operator'`; the non-lead schemas reject `actor: 'member'`;
     - `.strict()`;
     - `from_state` null only at genesis;
     - the lead is `active → active` only;
@@ -907,6 +1018,9 @@ All paths are under `packages/domain/` unless marked. Do NOT use the repo-root `
     - AC5 / AC6's sequential legs within one `getTx`, with windows relative to `SELECT now()`;
     - I4 after each;
     - the three idempotency outcomes;
+    - AC5's I11 actor legs;
+    - the genesis legs: a non-empty stream (`ModuleGenesisAlreadyExistsError`, then the transaction is still usable —
+      run one more query); a wrong-Pariwar scope (42501); payload content equal to row content, column by column;
     - **the real-wrapper composition:**
       1. Create an own `new pg.Pool({ connectionString: DATABASE_URL, max: 2, ssl: false })`.
       2. On a capacity-1 module, `checkModuleLeadAllowed` returns ok for member A.
@@ -991,6 +1105,7 @@ All paths are under `packages/domain/` unless marked. Do NOT use the repo-root `
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v1.5 | BigDev's four checks (*"check these"*), each verified in the repo. (1) The genesis projector gets a seven-step contract equal in precision to the transition's (actor check, stream-empty, payload build + parse, append, guarded INSERT, error map, SAVEPOINT discipline) plus `authorModule`'s order. (2) Registry counts: ⛔ registry-wide count exists (grep evidence); the per-family length assertions (member 24, claim 37) do not move; the re-grep commands and the update-in-the-same-commit rule are added; `MODULE_EVENT_TYPES` gets exact membership. (3) The index build: a partial index still scans all of `events_log` under a SHARE lock that blocks every event INSERT; "fast because no lead rows" withdrawn; accepted pre-production (`0079` / `0185` precedent), with a measure step and a stop-and-route trigger if a populated live DB exists. (4) I11: a lead's actor is `member` and `actorId === memberId` (a member session's `actorId` IS the `member_id`); members cannot author, schedule, activate or archive; operator-assisted leads are not supported (C13). This implements `-429` A6 — ⛔ new decision. Ledger `2026-10-31v`. |
 | 2026-10-31 | v1.4 | SECOND validation by four read-only verifiers (DB feasibility; dev-agent dry run; adversarial semantics; records audit); BigDev: *"apply all findings"*. **Decisions:** amending author-commit `-429` (`0168592b`) — every transition locks the row first (deadlock); lead-id idempotency; URL rules; `member_state_in` excludes withdrawn / anonymized; authoring dates; actor set + triggers; §0 / D8 corrections. **Spec precision added:** exact signatures; payload schemas; constants; the projector contract (`lockedRow`); the transitions table; the clock spec; the DB-free retry test; the real-wrapper recipe; SAVEPOINT discipline; trigger rules (d) / (e) + 23514; citation fixes (`0096` / `0185` / `0189`). **Carried items:** C9–C12 added; C2 / C4 / C8 rewritten; trust-deed "disclosed" + Hindi grep. **Records:** ledger `r` → `t`; NUMBERS corrected (`-426` / `-428` taken); Task 0.1 open. Trimmed duplication. |
 | 2026-10-31 | v1.3 | Task 0.4 records (`39ef1763`). |
 | 2026-10-31 | v1.2 | Task 0.2 answered (*"QE1-QE15 as recommended."*); Task 0.3 `-427` (`a22dbdec`). |

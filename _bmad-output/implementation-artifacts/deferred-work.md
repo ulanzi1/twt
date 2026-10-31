@@ -55,6 +55,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   - 12.2's wizard warns before re-authoring a module that has leads. If 12.5 moves the endpoint or key to a partner entity, it owns relaxing those NOT NULL columns.
   - ⭐ Trigger: either story's create-story.
 - **C11 — scope values are not checked against the geo tree** [`-429`] → **Story 12.2**. `ScopeFilterV1.values` are free strings in 12.1. The wizard must pick values from the Pariwar's published tree, and refuse `state` scope for a Pariwar with no tree; otherwise a mistyped value silently reaches nobody. ⭐ Trigger: Story 12.2's create-story.
+- **C13 — operator-assisted leads are NOT supported** [12.1 I11, implementing `-429` A6] → **Stories 12.3 / 12.5 (with C6)**. A `module.lead_submitted` event's actor must be the member themself (`actorId === member_id`; a member session's `actorId` IS the `member_id`). A staff or helpline path that registers interest on a member's behalf would record a `users` id as the actor of the member's consented act, so it needs its own consent basis and actor model. ⭐ Trigger: the first requirement for a helpline-registered lead.
 - **C12 — mutable data lives in its own table** [`-429`] → **every sibling**.
   - Mutable presentation data (12.3's curated rank, 12.2's review status) lives in its own table.
   - Every `marketplace_modules` column is immutable by the whole-row trigger, unless the adding story amends the trigger's exception chain AND the gate's `GUARDED_COLUMNS`.

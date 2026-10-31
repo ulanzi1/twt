@@ -4115,6 +4115,30 @@ account held frozen in all three overlay readers (a declared narrowing, Q1); an 
 `6-22c`); a member found innocent re-enters the peer-mesh five; the override refuses a closed claim; staff see *"Closed — the member was
 found alive"*; ⛔ notice, ⛔ appeal, ⛔ ban, ⛔ identifier, ⛔ member-facing screen.
 
+### Story 6.39: Before Any Drive Opens, Staff Check That the Person Who Died Is the Member — When Nobody Has Checked Their Identity — and That the Joining Fee Was Paid Before the Death `[PRIMITIVE]` `[SURFACE]`
+
+> ⚠ **Added 2026-10-31 (`bmad-create-story 6.39`)** — the row `6-39-identity-check-before-a-drive-for-an-unchecked-identity` was added by
+> [`-424`](../../.decision-log.md#decision-2026-10-31-424) Consequence 2 (Q1 (a) C, Trustee-ratified, DR + KB) and GROWN by
+> [`-430`](../../.decision-log.md#decision-2026-10-31-430) Consequence 1 (Q1 B), with ⛔ `epics.md` entry. A go-live condition (*"before
+> members' claims go live"*). The build decisions (DL1–DL16) are PROPOSED in the story file and answered at its Task 0; the two edges the
+> ruled words do ⛔ decide (PQ1 — a fee paid on the day of death; PQ2 — what the family is told) are ONE non-blocking note.
+
+As a family whose member has died, the District Admin who reviews their claim, and every member who will be asked to give, I want staff to
+confirm, before any drive opens, that the person who died is the member — whenever nobody has checked the identity the member typed in —
+and that the joining fee was paid before the death, so that no drive raises money in the name of someone who was ⛔ the member, or who
+became a member only after they had died.
+
+**Acceptance Criteria (in brief):** ONE recorded staff act per claim — the membership check (a new append-only table, one live row, a
+re-check supersedes) — by the District Admin (new key `claim.check_membership`) on the verifier console; the SYSTEM compares the IST date of
+the joining-fee receipt's `paidAt` (the receipt the `pending-fee → lock-in` event names) with the date the District Admin entered on the
+CURRENT accepted death certificate (`before_death` / `same_day` / `after_death`), computed in the API handler (⛔ decrypt in the domain),
+⛔ overridable; the identity half applies iff the deceased's KYC is ⛔ DigiLocker-verified and ⛔ trustee-verified (or absent), judged
+`confirmed` / `not_confirmed` (reason + note — the claim WAITS, ⛔ a denial); ONE conjunct in `assertClaimApprovable` (all six approval
+sites and the `-251` waived approve) makes a claim wait (409 `claim.membership_check_required`: `not_checked` / `stale` /
+`identity_not_confirmed` / `fee_after_death`), and the cycle-freeze commit skips a claim that fails it; `after_death` never passes — staff
+deny with the new deny-only reason `fee_paid_after_death`; a fee paid on the day of death passes until the Panel answers PQ1; ⛔ new
+family-facing words until PQ2; ⛔ change to the door, any lifecycle state, or `trusteeVerified`.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

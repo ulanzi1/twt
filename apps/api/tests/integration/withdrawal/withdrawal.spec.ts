@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
-import { fileClaim, findInnocent } from '../_death-report-fixture.js';
+import { fileClaim, findInnocent, raceFirstIntake, seedMemberAt } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -295,7 +295,8 @@ describe.skipIf(!hasDatabase)('Story 6.38 — withdrawal after a death is report
       await fileClaim(t, pariwarId, memberId);
       await elevate(t, memberId, 'withdrawal');
 
-      const res = await inject(t, 'POST', URL, { payload: {}, token: token(t, memberId, pariwarId) });
+      const tok = token(t, memberId, pariwarId);
+      const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
       expect(res.status).toBe(409);
       expect(String((res.body.error as Json)?.code)).toBe('withdrawal.death_reported');
       expect(await eventRows(t, memberId, 'member.withdrawal_completed')).toHaveLength(0);
@@ -303,6 +304,31 @@ describe.skipIf(!hasDatabase)('Story 6.38 — withdrawal after a death is report
       expect(rows.rowCount).toBe(0);
       expect(await memberState(t, memberId)).toBe('active');
       expect(t.auditSink.ofType('member_withdrawal.completed')).toHaveLength(0);
+      // AC14 "the session unchanged": TRUE BY CONSTRUCTION — `withdrawal/handlers.ts` has no session code (the CLIENT ends the session
+      // after a success) and member sessions are stateless JWTs. ⚠ This is a SMOKE CHECK that the refusal left the token usable; it can
+      // fail only if the token itself stopped verifying, ⛔ on any change to a session — no production line makes it the proof.
+      expect((await inject(t, 'GET', '/api/v1/member/life-events', { token: tok })).status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ DL18 precedence — the death check BEATS the state check: a LOCK-IN member (not withdrawable) with a standing claim gets withdrawal.death_reported, ⛔ invalid_state', async () => {
+    const t = await createTestApp();
+    try {
+      // Control: with NO claim the state alone refuses — so the next assertion can only be the death check winning.
+      const bare = await seedMemberAt(t, 'lock-in');
+      await elevate(t, bare.memberId, 'withdrawal');
+      const noClaim = await inject(t, 'POST', URL, { payload: {}, token: token(t, bare.memberId, bare.pariwarId) });
+      expect(noClaim.status).toBe(409);
+      expect(String((noClaim.body.error as Json)?.code)).toBe('withdrawal.invalid_state');
+
+      const { memberId, pariwarId } = await seedMemberAt(t, 'lock-in');
+      await fileClaim(t, pariwarId, memberId);
+      await elevate(t, memberId, 'withdrawal');
+      const res = await inject(t, 'POST', URL, { payload: {}, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('withdrawal.death_reported');
     } finally {
       await teardown(t);
     }
@@ -324,7 +350,29 @@ describe.skipIf(!hasDatabase)('Story 6.38 — withdrawal after a death is report
     }
   });
 
-  it.each([1, 2, 3])('⭐ AC14 race %i — a withdrawal racing a FIRST intake never ends with BOTH a minted claim and a withdrawal', async () => {
+  it('⭐ AC14 / N9 FORCED race — the withdrawal WAITS on the claim-intake key, then sees the claim a first intake committed and is refused', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      await elevate(t, memberId, 'withdrawal');
+      const tok = token(t, memberId, pariwarId);
+
+      const race = await raceFirstIntake(t, pariwarId, memberId, () => inject(t, 'POST', URL, { payload: {}, token: tok }));
+      // The proof the lock is TAKEN: remove the intake-key line from `assertWithdrawable` and this is the assertion that fails.
+      expect(race.waited, 'the withdrawal did not wait on the claim-intake key — its guard does not take it').toBe(true);
+      expect(race.response.status).toBe(409);
+      expect(String((race.response.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+      expect(await eventRows(t, memberId, 'member.withdrawal_completed')).toHaveLength(0);
+      expect(await memberState(t, memberId)).toBe('active');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ⚠ FREE-RUNNING — a sanity check of the two real routes together, ⛔ a proof of the lock: it passes whichever request
+  // commits first, even with no lock at all (the withdrawal is the lighter request and usually wins). The FORCED test above is
+  // the proof. Kept as ONE run: three identical runs added nothing.
+  it('AC14 sanity (free-running) — a withdrawal and a real first intake together never end with BOTH a minted claim and a withdrawal', async () => {
     const t = await createTestApp();
     try {
       const { memberId, pariwarId } = await seedActiveMember(t);

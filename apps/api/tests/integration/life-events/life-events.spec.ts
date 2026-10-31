@@ -25,7 +25,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
-import { fileClaim, findInnocent } from '../_death-report-fixture.js';
+import { fileClaim, findInnocent, raceFirstIntake, seedMemberAt } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -294,11 +294,13 @@ describe.skipIf(!hasDatabase)('Life Events panel — E2E (:5433)', () => {
 
 // ── Story 6.38 — the record is ⛔ changed from the account once a death is reported (AC15; `-424` Q2 (b) A, DL19) ────
 
+// ⚠ These legs seed an ACTIVE member (`seedMemberAt`), ⛔ the `pending-fee` member the rest of this file uses: the claim door
+// refuses a `pending-fee` member (`not_paid`), so a standing claim for one is a combination the system cannot reach.
 describe.skipIf(!hasDatabase)('Story 6.38 — Life Events after a death is reported (:5433)', () => {
   it('⭐ AC15 — address and posting ⇒ 409 life_events.death_reported; ⛔ new history row, ⛔ marker; the prior rows unchanged', async () => {
     const t = await createTestApp();
     try {
-      const { memberId, pariwarId } = await seedMember(t);
+      const { memberId, pariwarId } = await seedMemberAt(t, 'active');
       const tok = token(t, memberId, pariwarId);
       expect((await inject(t, 'POST', '/api/v1/member/life-events/address', { payload: { addressLine: '12 Gandhi Marg', locale: 'en' }, token: tok })).status).toBe(200);
       const before = await t.pool.query('SELECT * FROM member_addresses WHERE member_id = $1', [memberId]);
@@ -329,7 +331,7 @@ describe.skipIf(!hasDatabase)('Story 6.38 — Life Events after a death is repor
   it('⭐ AC15 — the innocence finding lifts the lock: the address is accepted as today', async () => {
     const t = await createTestApp();
     try {
-      const { memberId, pariwarId } = await seedMember(t);
+      const { memberId, pariwarId } = await seedMemberAt(t, 'active');
       const cid = await fileClaim(t, pariwarId, memberId);
       await findInnocent(t, pariwarId, cid);
       const res = await inject(t, 'POST', '/api/v1/member/life-events/address', {
@@ -337,6 +339,49 @@ describe.skipIf(!hasDatabase)('Story 6.38 — Life Events after a death is repor
         token: token(t, memberId, pariwarId),
       });
       expect(res.status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ DL19 precedence — the death check BEATS the state check: a WITHDRAWN member with a standing claim gets life_events.death_reported, ⛔ member_terminal', async () => {
+    // ⚠ AN ORDER GUARD, ⛔ a reachable scenario: the door refuses a WITHDRAWN member at filing (`left`) and DL18 refuses a withdrawal
+    // once a report stands, so a withdrawn member with a standing claim exists only for a claim filed before DL18 / DL19 existed, or
+    // a race the locks now prevent. It pins the ORDER of two checks in `assertMemberExistsAndNotTerminal` — the death check first.
+    const t = await createTestApp();
+    try {
+      const address = { addressLine: '99 New Colony', locale: 'en' };
+      // Control: with NO claim the state alone refuses — so the next assertion can only be the death check winning.
+      const bare = await seedMemberAt(t, 'withdrawn');
+      const noClaim = await inject(t, 'POST', '/api/v1/member/life-events/address', { payload: address, token: token(t, bare.memberId, bare.pariwarId) });
+      expect(noClaim.status).toBe(409);
+      expect(String((noClaim.body.error as Json)?.code)).toBe('life_events.member_terminal');
+
+      const { memberId, pariwarId } = await seedMemberAt(t, 'withdrawn');
+      await fileClaim(t, pariwarId, memberId);
+      const res = await inject(t, 'POST', '/api/v1/member/life-events/address', { payload: address, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('life_events.death_reported');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ N9 FORCED race — an address change WAITS on the claim-intake key, then sees the claim a first intake committed and is refused', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberAt(t, 'active');
+      const tok = token(t, memberId, pariwarId);
+
+      const race = await raceFirstIntake(t, pariwarId, memberId, () =>
+        inject(t, 'POST', '/api/v1/member/life-events/address', { payload: { addressLine: '99 New Colony', locale: 'en' }, token: tok }),
+      );
+      // The proof the lock is TAKEN: remove the intake-key line from `lockAndReadDeathReport` and this assertion fails.
+      expect(race.waited, 'the address change did not wait on the claim-intake key — its guard does not take it').toBe(true);
+      expect(race.response.status).toBe(409);
+      expect(String((race.response.body.error as Json)?.code)).toBe('life_events.death_reported');
+      expect((await t.pool.query('SELECT 1 FROM member_addresses WHERE member_id = $1', [memberId])).rowCount).toBe(0);
+      expect(await eventRows(t, memberId, 'member.address_updated')).toHaveLength(0);
     } finally {
       await teardown(t);
     }

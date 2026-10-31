@@ -35,6 +35,9 @@ const EN: Record<string, string> = {
   'helpline.peer.leave.blocked': 'Please finish saving these answers before leaving.',
   'helpline.peer.caller.blocked':
     "Please finish saving this caller's answers before changing callers — or discard the unsaved answer.",
+  // Story 6.38 code review round 3 — a change of caller attempted while the claim is still being filed.
+  'helpline.intake.changeHeld':
+    'The claim is still being filed for this caller — please wait for it to finish before changing callers.',
   'helpline.peer.failure.noLongerOpen': 'This request is no longer open.',
   'helpline.peer.failure.submitted': 'These answers were already sent.',
   'helpline.peer.failure.notFound': 'This request could not be opened.',

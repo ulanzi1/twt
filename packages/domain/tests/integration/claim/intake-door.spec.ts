@@ -119,6 +119,33 @@ describe.skipIf(!hasDatabase)('Story 6.38 — the claim door (:5433)', { timeout
     expect(door).toEqual(want === null ? { kind: 'open' } : { kind: 'refused', reason: want });
   });
 
+  it('⭐ policy meaning — a member REMOVED and then RESTORED on appeal was ⛔ removed at the first report: the door is open', async () => {
+    // `-423` Q3 B refuses a family when the person "had been removed". An appeal ruled `allowed` DIRECTS a restore (§8.8): the
+    // overlay folds back to `none`, so the person is no longer removed. A door keyed on "was EVER terminated" would refuse that
+    // family as `removed` and nothing else would notice — the 27-cell table has no restored cell, because `restored` is an
+    // EVENT, ⛔ a standing.
+    const { client, tx } = getTx();
+    const midRemoved = toMemberId(randomUUID());
+    const midRestored = toMemberId(randomUUID());
+    for (const [mid, tail] of [
+      [midRemoved, ['member.moderation.suspended', 'member.moderation.terminated']],
+      [midRestored, ['member.moderation.suspended', 'member.moderation.terminated', 'member.moderation.restored']],
+    ] as const) {
+      let v = 0;
+      for (const [eventType, payload] of [
+        ...PATH.active,
+        ...tail.map((t) => [t, { reason_code: 'conduct', actor: 'trustee' }] as const),
+      ]) {
+        v += 1;
+        await seedEvent(tx, PARIWAR_A, { streamId: mid, eventType, payload, eventVersion: v });
+      }
+    }
+    await enterAppScope(client, PARIWAR_A);
+    // Control: without the restore the same history IS refused — so the open door below can only be the restore.
+    expect(await resolveClaimIntakeDoor(tx, midRemoved)).toEqual({ kind: 'refused', reason: 'removed' });
+    expect(await resolveClaimIntakeDoor(tx, midRestored)).toEqual({ kind: 'open' });
+  });
+
   it('⭐ N5 — `tryConverge` refuses BEFORE any write: ⛔ claim, ⛔ attempt, ⛔ claim event', async () => {
     const { client, tx } = getTx();
     const mid = await seedMemberAt(tx, 'pending-kyc');

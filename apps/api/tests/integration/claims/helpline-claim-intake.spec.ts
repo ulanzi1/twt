@@ -675,8 +675,14 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
 
   it('⛔ AC6 — an unknown id ⇒ 404 member.not_found as today (⛔ the door)', async () => {
     const pariwarId = randomUUID();
-    const { res } = await fileFor(pariwarId, randomUUID());
+    const unknownId = randomUUID();
+    const { res } = await fileFor(pariwarId, unknownId);
     expect(res.statusCode).toBe(404);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('member.not_found');
+    // DL16 (a): the readable `resourceLocator` is ⛔ a door refusal's alone — a failure that is NOT the door keeps the default
+    // (no locator). The 404 reaches the same `intake_failed` catch, so a locator built for it would show here.
+    const failed = td.auditSink.ofType('helpline_claim.intake_failed').filter((e) => (e.context as Json)?.deceased_member_id === unknownId);
+    expect(failed).toHaveLength(1);
+    expect((failed[0] as { resourceLocator?: string }).resourceLocator).toBeUndefined();
   });
 });

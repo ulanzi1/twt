@@ -108,9 +108,16 @@ export async function resolveRtbfLegality(
  * ⛔ The caller must use `pg_advisory_xact_lock`, NOT `pg_advisory_lock`. Every domain precedent is
  * transaction-scoped; the one session-scoped precedent needs a manual unlock on a dedicated client, and
  * copied onto a POOLED client without that `finally` it leaks the lock for the connection's life.
+ *
+ * ⭐ CASE-INSENSITIVE on both ids (Story 6.38 code review round 2). `acquireErasureLocks` is called with BRANDED ids (always
+ * lower-case) while the export-grant paths in `member-data-rights/handlers.ts` key this SAME lock on the raw request string, and
+ * the contract accepts an any-case `uuid()`: hashing the spelling gave an upper-case request an erasure key and a grant key that
+ * never met. A lower-case id still hashes to the key it always did.
  */
 export function rtbfAdvisoryLockKey(pariwarId: string, memberId: string): bigint {
-  const hex = createHash('sha256').update(`member.rtbf:${pariwarId}:${memberId}`).digest('hex');
+  const hex = createHash('sha256')
+    .update(`member.rtbf:${pariwarId.toLowerCase()}:${memberId.toLowerCase()}`)
+    .digest('hex');
   return BigInt(`0x${hex.slice(0, 15)}`);
 }
 

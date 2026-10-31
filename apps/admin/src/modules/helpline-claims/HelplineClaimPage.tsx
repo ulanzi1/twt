@@ -18,7 +18,7 @@ import type {
   MemberSearchRequest,
   MemberSearchResultItem,
 } from '@twt/contracts';
-import { CLAIM_INTAKE_REFUSAL_REASONS, CLAIM_INTAKE_REFUSED_CODE } from '@twt/contracts';
+import { CLAIM_INTAKE_REFUSED_CODE, isClaimIntakeRefusalReason } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -54,13 +54,15 @@ function messageOf(err: unknown): string | undefined {
 
 /**
  * Story 6.38 (DL9; `2026-10-30-423` reading 3) — a claim-door 409 → the copy key of its reason's line, else `null` (the
- * caller keeps `messageOf`). The code AND the reasons are the contracts package's RUNTIME values (⛔ local literals); an
- * unknown reason falls back, so a future reason never renders as a raw code or an unmapped key.
+ * caller keeps `messageOf`). The code AND the reasons are the contracts package's RUNTIME values (⛔ local literals) — the
+ * guard is the contracts package's own `isClaimIntakeRefusalReason`. A reason OUTSIDE that tuple falls back, so it never
+ * renders as a raw code; a reason ADDED to the tuple needs its line in `i18n-en.ts` — `helpline-claim-page.test.tsx` iterates
+ * the tuple and fails there, ⛔ on the operator's console as a raw key.
  */
 function intakeRefusalKey(err: unknown): string | null {
   if (!(err instanceof ApiError) || err.code !== CLAIM_INTAKE_REFUSED_CODE) return null;
   const reason = (err.details as { reason?: unknown } | undefined)?.reason;
-  if (typeof reason !== 'string' || !(CLAIM_INTAKE_REFUSAL_REASONS as readonly string[]).includes(reason)) return null;
+  if (!isClaimIntakeRefusalReason(reason)) return null;
   return `helpline.intake.refused.${reason}`;
 }
 
@@ -97,7 +99,21 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     peerRequestsBusy.current = busy;
     if (!busy) setPeerRequestWarning(false);
   }, []);
+  // Story 6.38 code review round 3 — a change of caller held while a filing is in flight is SAID, ⛔ silently ignored (below).
+  const [intakeChangeHeld, setIntakeChangeHeld] = useState(false);
+  useEffect(() => {
+    if (!intake.isPending) setIntakeChangeHeld(false);
+  }, [intake.isPending]);
   const canChangeCaller = (): boolean => {
+    // ⭐ Story 6.38 code review round 2 — ⛔ while the intake is IN FLIGHT. `resetDownstreamState` calls `intake.reset()` (DL9),
+    // which detaches the in-flight mutation so its per-call `onSuccess` never runs: the claim would be minted and the account
+    // frozen on the server while the console showed nothing — no result, no case id for the caller. The change is HELD, and
+    // (round 3) a polite `role="status"` line says so — a click that does nothing and says nothing is unspoken to a screen reader.
+    // ⚠ A request that never settles holds the console until a reload: `apiFetch` has no transport timeout (`deferred-work.md` D6).
+    if (intake.isPending) {
+      setIntakeChangeHeld(true);
+      return false;
+    }
     if (!peerRequestsBusy.current) return true;
     setPeerRequestWarning(true);
     return false;
@@ -507,6 +523,11 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         onBusyChange={reportPeerRequestsBusy}
       />
       {peerRequestWarning && <p role="alert">{resolveEn('helpline.peer.caller.blocked')}</p>}
+      {intakeChangeHeld && (
+        <p role="status" data-testid="helpline-change-held">
+          {resolveEn('helpline.intake.changeHeld')}
+        </p>
+      )}
     </>
   );
 }

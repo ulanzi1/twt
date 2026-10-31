@@ -73,6 +73,117 @@ export async function forceClaimState(t: TestDeps, claimCaseId: string, state: s
   }
 }
 
+export interface FirstIntakeRace<R> {
+  /** True iff the request was SEEN WAITING on the intake key (a backend blocked by the holder) before the claim was committed. */
+  readonly waited: boolean;
+  readonly response: R;
+}
+
+/**
+ * THE FORCED INTERLEAVING, for ANY advisory key (Story 6.38; code review rounds 2 and 3). On a SECOND connection it takes
+ * `key`, fires the request WITHOUT awaiting it, proves the request is WAITING on that key (`pg_blocking_pids`), runs
+ * `whileWaiting`, then releases the key and hands back the response.
+ *
+ *   · a handler that takes the key blocks, wakes AFTER `whileWaiting`, and answers (the caller asserts what it answered);
+ *   · a handler that does ⛔ take it never blocks — `waited` is false and the request has already answered, before
+ *     `whileWaiting` ran (⛔ it is skipped). The caller asserts `waited` first: a removed lock fails there, deterministically.
+ *
+ * ⚠ INCONCLUSIVE is its own outcome (round 3): if within `timeoutMs` the request neither waits nor answers, the runner is slow —
+ * that is ⛔ evidence about the lock, so it THROWS a message that says so, rather than returning `waited: false` (which the
+ * caller reads as "your guard does not take the key"). The default is 4 s so this diagnostic prints before vitest's own 5 s.
+ *
+ * ⚠ CLEANUP IS NOT OPTIONAL: whatever throws, the holder is rolled back (a connection whose ROLLBACK failed is DESTROYED, ⛔ handed
+ * back to the pool) and a request still in flight is awaited (bounded) before this returns, so it cannot commit a real write
+ * while the test's `teardown` closes the pool. The holder is released straight after COMMIT, ⛔ after the response.
+ */
+export async function sendWhileHolding<R>(
+  t: TestDeps,
+  key: bigint,
+  send: () => Promise<R>,
+  whileWaiting: () => Promise<void> = async () => undefined,
+  timeoutMs = 4_000,
+): Promise<FirstIntakeRace<R>> {
+  const holder = await t.pool.connect();
+  let open = false;
+  let released = false;
+  let broken = false;
+  let pending: Promise<R> | undefined;
+  try {
+    await holder.query('BEGIN');
+    open = true;
+    await holder.query('SELECT pg_advisory_xact_lock($1)', [key.toString()]);
+    const holderPid = Number((await holder.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid);
+
+    let settled = false;
+    const inFlight = send().finally(() => {
+      settled = true;
+    });
+    pending = inFlight;
+    inFlight.catch(() => undefined); // an early rejection must not be unhandled while we poll; `await inFlight` below still throws
+
+    let waited = false;
+    for (const deadline = Date.now() + timeoutMs; !settled && Date.now() < deadline; ) {
+      const blocked = await t.pool.query('SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))', [holderPid]);
+      if ((blocked.rowCount ?? 0) > 0) {
+        waited = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    if (!waited && !settled) {
+      throw new Error(
+        `INCONCLUSIVE: the request neither waited on the held advisory key nor answered within ${timeoutMs} ms — a slow runner, ⛔ evidence about the lock`,
+      );
+    }
+
+    if (waited) await whileWaiting(); // e.g. the first intake commits its claim while the request waits …
+    await holder.query('COMMIT'); // … and releases the key
+    open = false;
+    holder.release();
+    released = true;
+    return { waited, response: await inFlight };
+  } finally {
+    // ⛔ Never hand an OPEN transaction (it holds the advisory lock) back to the pool.
+    if (open) {
+      try {
+        await holder.query('ROLLBACK');
+      } catch {
+        broken = true;
+      }
+    }
+    if (!released) holder.release(broken);
+    // ⛔ A request still in flight must not outlive the test: released from the holder it would run to a real write.
+    if (pending !== undefined) {
+      await Promise.race([pending.then(() => undefined, () => undefined), new Promise((resolve) => setTimeout(resolve, 5_000))]);
+    }
+  }
+}
+
+/**
+ * A write racing a FIRST intake (N9; Story 6.38 code review round 2, patch 3): `sendWhileHolding` on the claim-INTAKE key for
+ * `(pariwarId, memberId)` — exactly what a first intake holds between its door and its commit — with a claim COMMITTED while the
+ * request waits. A handler that took the intake key wakes, sees the claim and refuses.
+ *
+ * ⚠ `fileClaim` bypasses `tryConverge` (it takes ⛔ the intake key), so committing the claim does not wait on the holder.
+ */
+export function raceFirstIntake<R>(
+  t: TestDeps,
+  pariwarId: string,
+  memberId: string,
+  send: () => Promise<R>,
+  timeoutMs?: number,
+): Promise<FirstIntakeRace<R>> {
+  return sendWhileHolding(
+    t,
+    claim.intakeAdvisoryLockKey(pariwarId, memberId),
+    send,
+    async () => {
+      await fileClaim(t, pariwarId, memberId);
+    },
+    timeoutMs,
+  );
+}
+
 /** Release the claim by an innocence finding (`-238` cl.1) — TEST-SEEDED: its producer is row 6-22, unbuilt. */
 export async function findInnocent(t: TestDeps, pariwarId: string, claimCaseId: string): Promise<void> {
   await inScope(t, pariwarId, (s) =>

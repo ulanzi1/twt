@@ -79,6 +79,18 @@ describe.skipIf(!hasDatabase)('Story 6.38 — isDeathReportStanding (:5433)', { 
     expect(await both(tx, mid)).toBe(false);
   });
 
+  it('⭐ a claim in ANOTHER Pariwar ⇒ false ON THE PREDICATE\'S OWN — with RLS out of the way (the explicit `c.pariwar_id` filter)', async () => {
+    // The case above runs as the app role, where RLS hides the other Pariwar's row whether or not the predicate filters on it —
+    // so it cannot tell a predicate that dropped its own tenant filter. Here the connection is the SUPERUSER (⛔ `enterAppScope`):
+    // RLS does not apply, and only `c.pariwar_id = …` keeps the other Pariwar's claim out.
+    const { tx } = getTx();
+    const mid = toMemberId(randomUUID());
+    await seedClaim(tx, PARIWAR_B, { deceasedMemberId: mid });
+    // Control: this connection SEES the claim in its own Pariwar — so the miss below is the filter, not an empty read.
+    expect(await isDeathReportStanding(tx, PARIWAR_B, mid)).toBe(true);
+    expect(await isDeathReportStanding(tx, PARIWAR_A, mid)).toBe(false);
+  });
+
   it('⛔ a `nominee_disqualified` finding does ⛔ release', async () => {
     const { client, tx } = getTx();
     const mid = toMemberId(randomUUID());

@@ -12,7 +12,7 @@
 // The api client module is mocked (mirrors niyamavali-page.test.tsx); the real hooks + Query
 // cache are exercised via `renderWithClient`.
 
-import type { MemberSearchResultItem } from '@twt/contracts';
+import { CLAIM_INTAKE_REFUSAL_REASONS, type MemberSearchResultItem } from '@twt/contracts';
 import { act, screen, waitFor } from '@testing-library/react';
 import { focusManager } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as api from '../src/api/client.js';
 import { HelplineClaimPage } from '../src/modules/helpline-claims/HelplineClaimPage.js';
+import { resolveEn } from '../src/modules/helpline-claims/i18n-en.js';
 import { renderWithClient } from './_helpers.js';
 
 const MEMBER_A: MemberSearchResultItem = {
@@ -133,6 +134,41 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
     expect(screen.queryByTestId('helpline-intake-result')).not.toBeInTheDocument();
     expect(screen.queryByTestId('helpline-route-for-verification')).not.toBeInTheDocument();
     expect(screen.queryByTestId('helpline-bank-required')).not.toBeInTheDocument();
+  });
+
+  it('⭐ code review round 2 — switching member or searching while an intake is IN FLIGHT is ignored: the filing\'s result is not lost', async () => {
+    // `resetDownstreamState` calls `intake.reset()` (Story 6.38 DL9), which DETACHES the in-flight mutation — its per-call
+    // `onSuccess` never runs. The claim is minted and the account frozen on the server; without this guard the console would
+    // show nothing and the operator would have no case id to give the caller.
+    let finish!: (value: Awaited<ReturnType<typeof api.initiateHelplineClaim>>) => void;
+    vi.mocked(api.initiateHelplineClaim).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await searchAndGetBothResults(user);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    await waitFor(() => expect(api.initiateHelplineClaim).toHaveBeenCalled());
+
+    // In flight: choosing the OTHER member, or searching again, is ignored — the caller (A) and the confirmation stay.
+    vi.mocked(api.searchMembers).mockClear();
+    await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+    await user.click(screen.getByTestId('member-search-submit'));
+    expect(screen.getByTestId('readback-confirm-identity')).toBeChecked();
+    expect(api.searchMembers).not.toHaveBeenCalled();
+    // …and the hold is SAID (round 3): a polite status line, ⛔ a click that does nothing and says nothing.
+    const held = screen.getByTestId('helpline-change-held');
+    expect(held).toHaveAttribute('role', 'status');
+    expect(held).toHaveTextContent('The claim is still being filed for this caller');
+
+    await act(async () => finish({ claimCaseId: '66666666-6666-6666-6666-666666666666', state: 'intake_pending', created: true } as never));
+    expect(await screen.findByTestId('helpline-intake-result')).toBeInTheDocument();
+    expect(screen.queryByTestId('helpline-change-held')).not.toBeInTheDocument(); // cleared once the filing settled
+
+    // And once it has settled the operator is free to change caller again (the guard is for the in-flight window only).
+    await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+    expect(screen.queryByTestId('helpline-intake-result')).not.toBeInTheDocument();
   });
 
   it('resets a pending step-up panel and the result banner when switching members', async () => {
@@ -485,13 +521,26 @@ describe('<HelplineClaimPage> — the claim door refusal (Story 6.38)', () => {
     await user.click(screen.getByTestId('helpline-submit-intake'));
   }
 
-  it.each([
+  const REASON_LINES: ReadonlyArray<readonly [string, string]> = [
     ['not_joined', 'This person signed up but never finished joining — their identity check was not done. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
     ['left', 'This member had left the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
     ['removed', 'This member had been removed from the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
     ['erased', "This member's record was erased at their request. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."],
     ['not_paid', 'This person gave their details but never paid the joining fee. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
-  ])('a 409 claim.intake_refused (%s) shows that reason\'s EXACT line + the general line to tell the caller, in the ONE alert', async (reason, line) => {
+  ];
+
+  it('⭐ the exact-line cases below cover EXACTLY the contracts tuple, and every reason in it has an operator line', () => {
+    // The cases are written out so each line is asserted verbatim — which is why they can drift from the tuple. A sixth reason
+    // added to `CLAIM_INTAKE_REFUSAL_REASONS` with no admin line would render as a raw key (`resolveEn` returns the KEY when
+    // it is missing) on the operator's console; it fails HERE instead.
+    expect(REASON_LINES.map(([reason]) => reason).sort()).toEqual([...CLAIM_INTAKE_REFUSAL_REASONS].sort());
+    for (const reason of CLAIM_INTAKE_REFUSAL_REASONS) {
+      const key = `helpline.intake.refused.${reason}`;
+      expect(resolveEn(key), key).not.toBe(key);
+    }
+  });
+
+  it.each(REASON_LINES)('a 409 claim.intake_refused (%s) shows that reason\'s EXACT line + the general line to tell the caller, in the ONE alert', async (reason, line) => {
     vi.mocked(api.initiateHelplineClaim).mockRejectedValueOnce(
       new api.ApiError(409, 'claim.intake_refused', 'A claim cannot be filed for this member', { reason }),
     );

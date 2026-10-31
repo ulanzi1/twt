@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
-import { fileClaim, findInnocent, forceClaimState } from '../_death-report-fixture.js';
+import { fileClaim, findInnocent, forceClaimState, raceFirstIntake } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -303,6 +303,51 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure after a death is reported,
       expect(await memberState(t, memberId)).toBe('withdrawn');
       expect(await rtbfEvents(t, memberId)).toBe(0);
       expect(t.auditSink.ofType('member_rtbf.completed')).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ N3 FORCED race (code review round 3) — the member erasure WAITS on the claim-intake key, then sees the claim a first intake committed and is refused', async () => {
+    // The fence pins that the handler CALLS `acquireErasureLocks`; this is the LIVE proof that it takes the intake key first.
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t, { withdraw: true });
+      const tok = token(t, memberId, pariwarId);
+      await elevate(t, memberId, 'rtbf');
+
+      const race = await raceFirstIntake(t, pariwarId, memberId, () => inject(t, 'POST', URL, { payload: {}, token: tok }));
+      expect(race.waited, 'the member erasure did not wait on the claim-intake key — `acquireErasureLocks` is not taken first').toBe(true);
+      expect(race.response.status).toBe(409);
+      expect(String((race.response.body.error as Json)?.code)).toBe('rtbf.death_reported');
+      expect(await memberState(t, memberId)).toBe('withdrawn');
+      expect(await rtbfEvents(t, memberId)).toBe(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ DL2 / N2 precedence — the death check BEATS the state arm: an ACTIVE member with a standing claim gets rtbf.death_reported, ⛔ rtbf.invalid_state', async () => {
+    const t = await createTestApp();
+    try {
+      // Control, INLINE: the same kind of ACTIVE member with NO claim answers `rtbf.invalid_state` — so state alone refuses, and
+      // the assertion below can only be the death check coming first.
+      const bare = await seedMember(t);
+      await elevate(t, bare.memberId, 'rtbf');
+      const noClaim = await inject(t, 'POST', URL, { payload: {}, token: token(t, bare.memberId, bare.pariwarId) });
+      expect(noClaim.status).toBe(409);
+      expect(String((noClaim.body.error as Json)?.code)).toBe('rtbf.invalid_state');
+
+      const { memberId, pariwarId } = await seedMember(t); // active, not withdrawn
+      await fileClaim(t, pariwarId, memberId);
+      const tok = token(t, memberId, pariwarId);
+      await elevate(t, memberId, 'rtbf');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('rtbf.death_reported');
+      expect(await memberState(t, memberId)).toBe('active');
+      expect(await rtbfEvents(t, memberId)).toBe(0);
     } finally {
       await teardown(t);
     }

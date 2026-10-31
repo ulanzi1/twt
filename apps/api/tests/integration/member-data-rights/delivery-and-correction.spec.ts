@@ -18,7 +18,7 @@ import {
   DATA_RIGHTS_STEP_UP_CONTEXT,
   DPDPA_DATA_RIGHTS_SUBCATEGORY,
 } from '@twt/contracts';
-import { encryption } from '@twt/domain';
+import { encryption, member as memberDomain } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { encryptMobile, mobileBlindIndex, normalizeMobile } from '../../../src/modules/auth/shared/mobile-index.js';
@@ -35,7 +35,7 @@ import {
   type TestDeps,
 } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
-import { fileClaim, findInnocent, forceClaimState } from '../_death-report-fixture.js';
+import { fileClaim, findInnocent, forceClaimState, raceFirstIntake, sendWhileHolding } from '../_death-report-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 
@@ -1643,7 +1643,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
     const s = await seedTerminatedSubject(a.client, p);
-    await fileClaim(td, p, s.memberId);
+    const cid = await fileClaim(td, p, s.memberId);
     const key = randomUUID();
 
     const res = await erase(a.client, p, s, key);
@@ -1651,11 +1651,56 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     expect((res.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
     expect(await rtbfEventCount(s.memberId)).toBe(0);
 
-    // The FAILED attempt released its idempotency claim: a retry with the SAME key re-reads legality — ⛔ a replay 409.
+    // The FAILED attempt released its idempotency claim: a retry with the SAME key goes back through legality.
     const retry = await erase(a.client, p, s, key);
     expect(retry.statusCode).toBe(409);
     expect((retry.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
     expect(await rtbfEventCount(s.memberId)).toBe(0);
+
+    // ⭐ …and that is PROVEN, not assumed: two 409s cannot tell a re-read from a replayed 409. Change the one fact legality
+    // reads — the innocence finding — and retry with the SAME key: a re-evaluation now succeeds; a replay would still say 409.
+    await findInnocent(td, p, cid);
+    const afterFinding = await erase(a.client, p, s, key);
+    expect(afterFinding.statusCode).toBe(200);
+    expect(await rtbfEventCount(s.memberId)).toBe(1);
+  });
+
+  it('⭐ 6.38 N3 FORCED race (code review round 3) — the off-portal erasure WAITS on the claim-intake key, then sees the claim a first intake committed and is refused', async () => {
+    // The fence pins that the handler CALLS `acquireErasureLocks`; this is the LIVE proof that it takes the intake key first.
+    const p = randomUUID();
+    const a = await authenticate('Operator Race');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedTerminatedSubject(a.client, p);
+
+    const race = await raceFirstIntake(td, p, s.memberId, () => erase(a.client, p, s));
+    expect(race.waited, 'the off-portal erasure did not wait on the claim-intake key — `acquireErasureLocks` is not taken first').toBe(true);
+    expect(race.response.statusCode).toBe(409);
+    expect((race.response.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
+    expect(await rtbfEventCount(s.memberId)).toBe(0);
+  });
+
+  it('⭐ 6.38 N3 (code review round 3) — a GRANT naming the member in UPPER case takes the SAME `rtbf` lock an erasure holds: the key is ⛔ the spelling', async () => {
+    // `fulfilErasure` builds the key from BRANDED (lower-case) ids; the grant paths key the same lock on the raw request string,
+    // and the contract accepts an any-case `uuid()`. Before the lock-key functions lower-cased their ids, an UPPER-case grant got a
+    // different key and ran straight past an erasure ("no grant against an artifact about to be zeroed", 10.21 AC13). The grant
+    // takes the lock before it reads anything, so it WAITS here whatever else is wrong with the request.
+    const p = randomUUID();
+    const a = await authenticate('Operator Upper');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+
+    const race = await sendWhileHolding(td, memberDomain.rtbfAdvisoryLockKey(p, s.memberId), () =>
+      a.client.inject({
+        method: 'POST',
+        url: `${base(p)}/delivery/member-direct`,
+        headers: { 'idempotency-key': randomUUID() },
+        payload: { export_id: s.exportId, member_id: s.memberId.toUpperCase(), helpdesk_ticket_id: s.ticketId },
+      }),
+    );
+    expect(race.waited, 'an UPPER-case grant did not wait on the erasure\'s `rtbf` lock — the key still hashes the spelling').toBe(true);
+    expect(race.response.statusCode).toBe(200);
   });
 
   it('⭐ 6.38 AC4 — the innocence finding lifts the lock off-portal: the terminated member is erased as today', async () => {
@@ -1672,19 +1717,23 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     expect(await rtbfEventCount(s.memberId)).toBe(1);
   });
 
-  it('⛔ 6.38 AC4 — a claim `settled` WITHOUT the finding still refuses off-portal', async () => {
-    const p = randomUUID();
-    const a = await authenticate('Operator Settled');
-    await grant(a.userId, p, 'pariwar_admin');
-    await elevate(a.client);
-    const s = await seedTerminatedSubject(a.client, p);
-    const cid = await fileClaim(td, p, s.memberId);
-    await forceClaimState(td, cid, 'settled');
+  it.each(['denied', 'closed', 'reversed', 'settled'])(
+    '⛔ 6.38 AC4 — a claim `%s` WITHOUT the finding still refuses off-portal',
+    async (state) => {
+      const p = randomUUID();
+      const a = await authenticate(`Operator ${state}`);
+      await grant(a.userId, p, 'pariwar_admin');
+      await elevate(a.client);
+      const s = await seedTerminatedSubject(a.client, p);
+      const cid = await fileClaim(td, p, s.memberId);
+      await forceClaimState(td, cid, state);
 
-    const res = await erase(a.client, p, s);
-    expect(res.statusCode).toBe(409);
-    expect((res.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
-  });
+      const res = await erase(a.client, p, s);
+      expect(res.statusCode).toBe(409);
+      expect((res.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
+      expect(await rtbfEventCount(s.memberId)).toBe(0);
+    },
+  );
 
   it('⭐ 6.38 N8 — SEE stays open: the off-portal export request succeeds for a member with a standing claim', async () => {
     const p = randomUUID();
@@ -1725,5 +1774,12 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
       },
     });
     expect(res.statusCode).toBe(200);
+    // ⭐ "Recorded" is a ROW, ⛔ a status code: a no-op 200 would pass the line above.
+    const recorded = await td.pool.query(
+      'SELECT helpdesk_ticket_id FROM member_data_rights_corrections WHERE member_id = $1',
+      [s.memberId],
+    );
+    expect(recorded.rows).toHaveLength(1);
+    expect(recorded.rows[0].helpdesk_ticket_id).toBe(s.ticketId);
   });
 });

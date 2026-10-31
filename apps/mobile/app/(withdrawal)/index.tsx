@@ -25,6 +25,7 @@ import { useStepUpGate } from '../../components/life-events/useStepUpGate'
 import { formatWithdrawalDate } from '../../components/withdrawal/format-date'
 import { useSession } from '../../lib/session-context'
 import { withdrawalErrorKey } from '../../lib/death-report-copy'
+import { AnnouncedText } from '../../components/peer-request/announce'
 
 /** The bounded, NON-PII reason codes (value-aligned with contracts `WithdrawalReasonCode`). */
 const REASON_CODES = ['financial', 'relocation', 'dissatisfied', 'personal', 'other'] as const
@@ -181,11 +182,7 @@ export default function WithdrawalScreen() {
             <YStack gap="$4">
               <H2>{t('withdrawal.confirm_title')}</H2>
               <Paragraph color="$colorPress">{t('withdrawal.confirm_body')}</Paragraph>
-              {error ? (
-                <Text color="#C0392B" accessibilityLiveRegion="polite">
-                  {error}
-                </Text>
-              ) : null}
+              {error ? <AnnouncedText text={error} kind="error" color="#C0392B" /> : null}
               {stepUp.needsOtp ? (
                 <YStack gap="$3">
                   <Text accessibilityRole="text" accessibilityLiveRegion="polite">

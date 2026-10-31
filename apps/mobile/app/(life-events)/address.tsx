@@ -18,6 +18,7 @@ import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { lifeEventsDeathReportedKey } from '../../lib/death-report-copy'
 import { memberAuth } from '../../lib/member-api'
+import { AnnouncedText } from '../../components/peer-request/announce'
 
 export default function AddressScreen() {
   const t = useT()
@@ -74,11 +75,7 @@ export default function AddressScreen() {
             {t('lifeEvents.address_field_help')}
           </Paragraph>
 
-          {error ? (
-            <Text color="#C0392B" accessibilityRole="alert" accessibilityLiveRegion="assertive">
-              {error}
-            </Text>
-          ) : null}
+          {error ? <AnnouncedText text={error} kind="error" color="#C0392B" /> : null}
 
           <Button
             theme="accent"

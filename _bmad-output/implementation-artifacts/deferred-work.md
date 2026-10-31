@@ -4,11 +4,20 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 12-1-module-manifest-schema-module-lifecycle-state-machine.md — round 3, the production slice after the RP patches and the rebase (2026-10-31)
+
+Three-layer review of the committed production code (27 files, fingerprint `ce548749fee072e4`): 0 decision-needed, 12 patch (the story's `### Review Findings — round 3`, `R3-1`–`R3-12`), 2 deferred below.
+
+- **Free-text manifest fields accept invisible, control and bidi characters other than NUL** [`filters.ts` `hasUnstorableChar`, `moduleNameSchema`; R3D1] — a name of only U+200B passes `trim().min(1)`; C0 controls and U+202E pass in names, descriptions and scope values; an immutable module could carry a blank-looking or direction-flipped title. The display-text character policy (descriptions may need line breaks) is the authoring wizard's. ⭐ Trigger: Story 12.2's create-story — decide it before the first module is authored.
+- **The state-invariant gate's allowlist walk climbs past an anonymous function expression or an object-property arrow** [`scripts/marketplace-module-state-invariant/lib.ts` `enclosingFunctionName`; README line "a helper or an inner named arrow is flagged"; R3D2; extends RVD3] — a write in `const helper = function () { … }` inside `projectModuleTransition` is allowlisted. Making every unnamed function innermost would flag legitimate callbacks, so it needs a deliberate rule; the trigger still guards at runtime. ⭐ Trigger: RVD3's — and correct the README sentence then.
+
+---
+
 ## Deferred from: code review of 12-1-module-manifest-schema-module-lifecycle-state-machine.md — round 2, chunk 2 (tests) + the patch diff (2026-10-31)
 
 Three-layer review of the 15 test files and the round-1 PATCH diff: 0 decision-needed, 20 patch (the story's `### Review Findings — round 2`, `RP1`–`RP20`), 4 deferred below. Real, but waiting on a caller, a first stored module, or a house-wide pass.
 
-- **`foldModuleProjection` re-parses history through the WRITE schema** [`state.ts` `foldModuleProjection`; RPD1] — a genesis written before a schema tightening folds to `slotsRemaining: null` silently, and I4 would then disagree with the row. ⚠ The schemas were tightened (RV3 / RV5 / RV7) BEFORE any module existed — record that. ADR-0044 D4: a change that stops an existing value parsing is `version: 2`. ⭐ Trigger: the first module stored, or the first tightening after 12.2 ships — read capacity through a narrow `{ slot_capacity }` schema then.
+- **`foldModuleProjection` re-parses history through the WRITE schema** [`state.ts` `foldModuleProjection`; RPD1] — a genesis written before a schema tightening folds to `slotsRemaining: null` silently, and I4 would then disagree with the row. ⚠ The schemas were tightened (RV3 / RV5 / RV7; then RP1 in round 2, R3-4 / R3-6 in round 3 and R4-1 in round 4) BEFORE any module existed — record that (the top-level fields fall under ADR-0044 D3, the grammars under D4 — code review R4-7). ADR-0044 D4: a change that stops an existing value parsing is `version: 2`. ⭐ Trigger: the first module stored, or the first tightening after 12.2 ships — read capacity through a narrow `{ slot_capacity }` schema then.
 - **The RLS UPDATE `WITH CHECK` is never isolated; the fail-closed leg tests `''`, not an unset GUC** [`marketplace-modules-policy-regression.spec.ts`; RPD2] — the UPDATE policy is unreachable behind the immutability trigger (rule (b) fires first). ⭐ Trigger: any change to the policies or the trigger — step the trigger aside for the UPDATE leg as the INSERT leg does.
 - **The clock spec is one 20 s `it` that outwaits the DB clock with app-clock sleeps** [`commands-clock.spec.ts`; RPD3] — three scenarios share one `it`; a 500 ms margin between a Node timer and the DB `now()` can be exceeded by Docker / VM drift. ⭐ Trigger: the first flake of this file — poll the DB clock until `valid_*` has passed; split the scenarios.
 - **The negative-claim ACs have no standing test** [AC5 "no domain function calls `withCompensatingAudit`", AC7 "no evaluator is exported", I6, I7, I8; RPD4] — each is a one-time grep in the Completion Notes. I6 changes meaning when 12.2 adds the first production caller. ⭐ Trigger: Story 12.2's create-story — decide which becomes a gate or a test.
@@ -43,6 +52,7 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   - (b) ⚠ **⛔ nothing activates a `scheduled` module at `valid_from`.** The epic's cron only archives.
   - (c) The sweep must also archive `draft` / `scheduled` modules once `now() ≥ valid_until` (reason `valid_until_reached`, legal from any non-archived state).
   - (d) 12.6 owns a cross-tenant indexed candidate scan — there is ⛔ `pariwars` table to loop over. Use the `member/renewal-scheduler.ts` `selectRenewalCandidates` shape: unscoped under the BYPASSRLS service login, then per-candidate `withPariwarScope`. It needs its own partial indexes (`(valid_until) WHERE current_state <> 'archived'`, `(valid_from) WHERE current_state = 'scheduled'`) and a rule for which reason wins when both hold.
+  - (e) The sweep's per-candidate transaction must be READ COMMITTED — the commands assume it (added by code review R3-7, 2026-10-31).
   - Recorded cost: an offer past `valid_until` stays `active`, and a past-start `scheduled` offer stays hidden, until the sweep runs — up to a day with a daily sweep.
   - ⭐ Trigger: Story 12.6's create-story, or 12.2's if its publish step emits `module.scheduled`.
 - **C3 — `module.restored`** [12.1 QE6; epic 12.6 (iii)] → **Story 12.6**.
@@ -63,6 +73,7 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   - The scheme is unresolved. Architecture §3.7 / §5.9 says asymmetric JWT **per partner**, with keys in the high-sensitivity project. Epic 12.5 says HMAC-SHA-256 **per module**.
   - 12.1 stores only a Secret Manager NAME per module (`lead_handoff_signing_key_secret_name`), which fits either. 12.5 decides.
   - 12.5 also re-checks the RESOLVED address at send time (SSRF / DNS rebinding). 12.1's write-time host rule (⛔ IP literal, ⛔ localhost, ⛔ query / fragment) is not enough.
+  - Any explicit port (`https://h:0/`) is accepted at write; whether it is acceptable is a send-time check (added by code review R3-6, 2026-10-31).
   - ⭐ Trigger: Story 12.5's create-story.
 - **C8 — an RTBF can NEVER remove a member↔offer link** [12.1 QE7, QE8, I9; `-429`] → **Stories 12.3 / 12.5 (route with C6)**.
   - `module.lead_submitted` carries `member_id` on the MODULE stream. `events_log` is append-only (the `0001` triggers) and erasure keeps event streams (`member/anonymize.ts`), so `module_lead_member_uq` keeps the link for good.
@@ -73,6 +84,7 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
 - **C9 — the shelf filter is ⛔ an authorization** [`-429`] → **Stories 12.3 / 12.4**.
   - Before `checkModuleLeadAllowed` / `submitModuleLead`, the lead route re-evaluates, server-side and against the requesting member: the module's scope and eligibility (fail-closed), the member's state (refuse `withdrawn` / `anonymized`), and 12.4's grief-context suppression.
   - 12.1's three lead rules (open, places left, once) are necessary, ⛔ sufficient.
+  - The route's transaction must be READ COMMITTED: under REPEATABLE READ / SERIALIZABLE a lead waiting on the module row lock gets an untyped 40001 (added by code review R3-7, 2026-10-31).
   - The shelf READ must field-pick too (checklist family 6): `getModule` / `listModulesForPariwar` return the ADMIN shape — every column, including `lead_handoff_url` and the signing-key secret name — and must never be serialised to a member (added by code review RV9, 2026-10-31).
   - ⭐ Trigger: Story 12.3's create-story.
 - **C10 — a correction resets places** [12.1 QE11; `-429`] → **Stories 12.2 / 12.5**.
@@ -86,6 +98,10 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   - Mutable presentation data (12.3's curated rank, 12.2's review status) lives in its own table.
   - Every `marketplace_modules` column is immutable by the whole-row trigger, unless the adding story amends the trigger's exception chain AND the gate's `GUARDED_COLUMNS`.
   - ⭐ Trigger: any story adding a column to `marketplace_modules`.
+- **C13 — two caller obligations of the module commands** [12.1 review R3-7, R3-3; added by code review R4-8, 2026-10-31] → **Story 12.2**.
+  - (a) 12.2's wizard calls `scheduleModule`, `activateModule` and the trustee `archiveModule`, which take the module row lock: run them in a READ COMMITTED transaction. Under REPEATABLE READ / SERIALIZABLE a waiter gets an untyped 40001 (a trustee archive racing a lead is the TR12 case).
+  - (b) Mint the `module_id` server-side. `marketplace_modules_pkey` and the stream-version key ignore RLS, so a genesis with another Pariwar's id answers "already exists" — harmless for a server-minted id, a cross-tenant existence oracle for a client-chosen one (DELIBERATE note on `MODULE_PKEY_CONSTRAINT`, `errors.ts`).
+  - ⭐ Trigger: Story 12.2's create-story.
 - **`commission_terms` has ⛔ home** [12.1 QE5] → **Story 12.2**.
   - FR-64 lists it. It is "never public" (PRD) and its shape is OQ-4, still open; 12.2 chooses an admin-only home.
   - ⚠ The draft trust deed's Clause 7.2(i) requires partner arrangements to be "**disclosed**", which sits against the PRD's "partner commission rates … never public". If 12.2 cannot reconcile them, route it (§0: what the Trust discloses).

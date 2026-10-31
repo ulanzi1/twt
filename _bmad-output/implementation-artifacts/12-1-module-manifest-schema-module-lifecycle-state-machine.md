@@ -10,7 +10,7 @@ PINNED: `b2f36fe9` = `origin/main` (2026-10-31k). The story lives on branch
 pin on 2026-10-31, then re-checked by SEVEN read-only verifiers across two rounds. Perishable — re-check at Task 0.1.
 Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: review (2026-10-31 — v1.6, implemented by `bmad-dev-story`; code UNCOMMITTED for review). Was: ready-for-dev (v1.4).
+STATUS: review (2026-10-31 — v1.6, implemented by `bmad-dev-story`; code UNCOMMITTED for review — ⚠ [code review R3-11: since committed as `49b22edd`, rebased `6669f21d`; review round 3 reviewed it]). Was: ready-for-dev (v1.4).
 - v1.1: validated by three read-only verifiers; 19 improvements (`62416719`).
 - v1.2: Task 0.2 answered — BigDev, *"QE1-QE15 as recommended."* Task 0.3: author-commit `2026-10-31-427` (`a22dbdec`,
   alone) (`e38fc5a3`).
@@ -331,16 +331,16 @@ cannot reconcile them (§0: what the Trust discloses).
   | `module_id` | uuid PK, ⛔ default | caller-minted, passed to `authorModule` (QE15) |
   | `pariwar_id` | uuid NOT NULL, ⛔ FK | QE4 |
   | `partner_id` | uuid NOT NULL, ⛔ FK | `PartnerId`; partner identity is 12.2's |
-  | `name_en`, `name_hi` | text NOT NULL | trimmed 1–120 (zod) |
-  | `description_en`, `description_hi` | text NOT NULL | trimmed 1–2000 (zod) |
+  | `name_en`, `name_hi` | text NOT NULL | trimmed 1–120 (zod); ⚠ [code review R3-9: ⛔ NUL / unpaired surrogate (RV5)] |
+  | `description_en`, `description_hi` | text NOT NULL | trimmed 1–2000 (zod); ⚠ [code review R3-9: ⛔ NUL / unpaired surrogate (RV5)] |
   | `eligibility_filter` | jsonb NOT NULL, `$type<EligibilityFilterV1>` | QE9 (zod) |
   | `scope_filter` | jsonb NOT NULL, `$type<ScopeFilterV1>` | QE9 (zod) |
-  | `valid_from`, `valid_until` | timestamptz NOT NULL | `CONSTRAINT marketplace_modules_window CHECK (valid_until > valid_from)` |
+  | `valid_from`, `valid_until` | timestamptz NOT NULL | `CONSTRAINT marketplace_modules_window CHECK (valid_until > valid_from)`; ⚠ [code review R3-4: each a real instant in UTC years 0001–9999 (zod `moduleInstantSchema`) — ⛔ only the written digits; ⚠ code review R4-1: the floor is now **2000**, ⛔ 0001 — drizzle reads years 1–99 back as 19xx / 20xx] |
   | `slot_capacity` | integer NULL (NULL = uncapped) | `CONSTRAINT marketplace_modules_capacity_positive CHECK (slot_capacity > 0)` |
   | `slots_remaining` | integer NULL — **projected** | `CONSTRAINT marketplace_modules_slots_pair CHECK ((slot_capacity IS NULL) = (slots_remaining IS NULL))`; `CONSTRAINT marketplace_modules_slots_range CHECK (slots_remaining >= 0 AND slots_remaining <= slot_capacity)` |
-  | `lead_handoff_url` | text NOT NULL | ⭐ (zod, A3) `https:` only; ⚠ [code review RV3 / RV4 / RP1: also ⛔ whitespace, control characters and backslashes, ⛔ an `@` ANYWHERE in the string, and the string must be in CANONICAL form — equal to `new URL(raw).href` (a bare origin's `/` aside) — because the column stores the RAW string]; ⛔ userinfo; **⛔ query string, ⛔ fragment** (`url.search === '' && url.hash === ''`); host ⛔ an IP literal (v4/v6) and ⛔ `localhost`; ≤ 2048 |
+  | `lead_handoff_url` | text NOT NULL | ⭐ (zod, A3) `https:` only; ⚠ [code review RV3 / RV4 / RP1: also ⛔ whitespace, control characters and backslashes, ⛔ an `@` ANYWHERE in the string, and the string must be in CANONICAL form — equal to `new URL(raw).href` (a bare origin's `/` aside) — because the column stores the RAW string]; ⚠ [code review R3-6: and RFC 3986-valid — only unreserved / sub-delim / `:` / `/` characters, `%` only as `%HH`; any explicit port is accepted (C7)]; ⛔ userinfo; **⛔ query string, ⛔ fragment** (`url.search === '' && url.hash === ''`); host ⛔ an IP literal (v4/v6) and ⛔ `localhost`; ≤ 2048 |
   | `lead_handoff_signing_key_secret_name` | text NOT NULL | `^[A-Za-z0-9_-]{1,255}$` (zod) — a Secret Manager NAME (G6), renamed from the epic's `_ref` |
-  | `branding_bundle` | jsonb NOT NULL, `$type<ModuleBrandingBundle>` | `{ version: 1, logo_object_key: string(1–1024) \| null, accent_color_hex: /^#[0-9a-f]{6}$/ \| null }` `.strict()` (zod); C5 |
+  | `branding_bundle` | jsonb NOT NULL, `$type<ModuleBrandingBundle>` | `{ version: 1, logo_object_key: string(1–1024) \| null, accent_color_hex: /^#[0-9a-f]{6}$/ \| null }` `.strict()` (zod); C5; ⚠ [code review R3-9: `logo_object_key` ⛔ NUL / unpaired surrogate (RV5)] |
   | `manifest_schema_version` | smallint NOT NULL | `CONSTRAINT marketplace_modules_manifest_schema_version_v1 CHECK (manifest_schema_version = 1)` |
   | `current_state` | `marketplace_module_state` NOT NULL — **projected** | |
   | `state_event_version` | bigint NOT NULL — **projected** | |
@@ -381,10 +381,13 @@ cannot reconcile them (§0: what the Trust discloses).
 - **QE7 — Every transition locks the row first (A1).**
   - `scheduleModule`, `activateModule`, `submitModuleLead` and `archiveModule` FIRST run `SELECT … FROM
     marketplace_modules WHERE module_id = $1 AND pariwar_id = $2 FOR UPDATE`, then check their guards against the locked
-    row, then call `projectModuleTransition(client, { …, lockedRow })`.
+    row, then call `projectModuleTransition(client, { …, lockedRow })`. ⚠ [code review R3-10: a `SAVEPOINT` precedes the
+    lock (as Task 5.2's RV10 (b) note says); I10's actual rule is the lock before any `events_log` read or append. Code review
+    R3-7: the callers' transaction must be READ COMMITTED — under REPEATABLE READ / SERIALIZABLE a lock waiter gets an untyped 40001.]
   - There is ONE lock order everywhere — row lock → `events_log` append → row UPDATE. This prevents the 40P01 deadlock
     that an append-first transition would cause against a lead (TR12). Under the lock, a version conflict is reachable
-    only at genesis.
+    only at genesis. ⚠ [code review R4-6 (the R3-12 correction, carried here): a TRANSITION's conflict is reachable only on
+    drift (`ModuleStreamConcurrencyError`); a genesis conflict is `ModuleGenesisAlreadyExistsError`.]
   - The lead path checks in this order, throwing at the first failure:
     1. row present (`ModuleGenesisMissingError`);
     2. **replay** (QE8 (i)) — returns the original result;
@@ -472,7 +475,8 @@ cannot reconcile them (§0: what the Trust discloses).
     - `ModuleGenesisMissingError` (also thrown when the locked row is absent)
     - `ModulePersistError`
     - `ModuleProjectorInputError` (actor / actorId mismatch; a member actor on a non-lead event; a lead whose actor is not
-      the member — I11; flat inputs vs payload; a genesis payload that fails its schema)
+      the member — I11; flat inputs vs payload; a genesis payload that fails its schema; ⚠ [code review R3-8: also `trustee_archived`
+      under actor `system` (RV8 — now refused by `ModuleArchivedPayloadSchema` too, R3-2), and a TRANSITION payload that fails its schema])
     - `ModuleManifestInvalidError`
     - `ModuleArchiveReasonNotSatisfiedError`
   - Lead: `ModuleNotActiveError`, `ModuleOutsideWindowError`, `ModuleSlotsExhaustedError`,
@@ -587,12 +591,14 @@ It ⛔ replays payloads. `authorModule` needs ⛔ time guard beyond A5; `created
 z.string().min(1), actor: moduleActorSchema }`):
 - `ModuleAuthoredPayloadSchema`: `from_state: z.null()`, `to_state: z.literal('draft')`, plus `module_id`, `pariwar_id`,
   `manifest_schema_version: z.literal(1)` and every QE5 content column in snake_case. Timestamps are
-  `z.string().datetime({ offset: true })`.
+  `z.string().datetime({ offset: true })`. ⚠ [code review R4-6: now `moduleInstantSchema` (filters.ts) — `datetime`, then a
+  UTC year in 2000–9999 (R3-4, R4-1) — shared with the manifest input.]
 - `ModuleScheduledPayloadSchema` / `ModuleActivatedPayloadSchema`: the audit shape only, with `from_state` / `to_state`
   literals per arm.
 - `ModuleLeadSubmittedPayloadSchema`: QE7's shape with `actor: z.literal('member')`. It accepts only
   `from_state === to_state === 'active'`, with lower-case ids.
-- `ModuleArchivedPayloadSchema`: the audit shape + `reason: z.enum(MARKETPLACE_MODULE_ARCHIVE_REASONS)`.
+- `ModuleArchivedPayloadSchema`: the audit shape + `reason: z.enum(MARKETPLACE_MODULE_ARCHIVE_REASONS)`. ⚠ [code review R4-6:
+  plus a refinement refusing `actor: 'system'` with `reason: 'trustee_archived'` (R3-2); the projector parses with it.]
 
 ### Actor rules (I11 — implements `-429` A6)
 
@@ -760,9 +766,10 @@ z.string().min(1), actor: moduleActorSchema }`):
    - an unknown clause (`age_band`) or a duplicate clause;
    - a state not allowed (including `withdrawn`, `anonymized`);
    - extra keys, or `version ≠ 1`;
-   - a URL that is `http:`, or has userinfo, a **query string, a fragment, an IP-literal host, or `localhost`**; ⚠ [code review RV3 / RP1: or that holds whitespace, a control character or a backslash, or is not in canonical form — a lone surrogate, `https:host`, an upper-case host, `:443`, dot segments, an un-encoded non-ASCII character];
+   - a URL that is `http:`, or has userinfo, a **query string, a fragment, an IP-literal host, or `localhost`**; ⚠ [code review RV3 / RP1: or that holds whitespace, a control character or a backslash, or is not in canonical form — a lone surrogate, `https:host`, an upper-case host, `:443`, dot segments, an un-encoded non-ASCII character]; ⚠ [code review R3-6: or is not RFC 3986-valid — `%zz`, a bare `%`, `|`, `^`, `[`, `]`];
    - a bad secret name;
    - `valid_until ≤ valid_from`;
+   - ⚠ [code review R3-4: a `valid_from` / `valid_until` outside UTC years 0001–9999, or with an offset `Date.parse` cannot read; ⚠ code review R4-1: the floor is now 2000 — years 0001–1999 are refused too];
    - `slot_capacity ≤ 0`.
 
    **And** `authorModule` refuses `valid_until ≤ now()` with `ModuleOutsideWindowError` and accepts a past `valid_from`.
@@ -895,7 +902,7 @@ z.string().min(1), actor: moduleActorSchema }`):
 - [x] **Task 7 — ADR (AC11).** The ADR, the index row flip and the reconciliation note, committed alone.
 - [x] **Task 8 — tests (AC1–AC8).** Per Testing standards; paths under `packages/domain/` / `packages/events/`, NOT the
       repo root. Every assertion names a typed error class.
-- [x] **Task 9 — verify + ledger (AC12).** (⚠ ticked on the PRE-patch tree: code review v1.7 and v1.8 changed production code and tests afterwards; a full `ci:local` was then run on the patched tree — 36 of 37 jobs in one invocation, `test (unit)` green on a re-run of that job; see the round-2 Disposition)
+- [x] **Task 9 — verify + ledger (AC12).** (⚠ ticked on the PRE-patch tree: code review v1.7 and v1.8 changed production code and tests afterwards; a full `ci:local` was then run on the patched tree — 36 of 37 jobs in one invocation, `test (unit)` green on a re-run of that job; see the round-2 Disposition; ⚠ code review R4-7: superseded — after round 3, ONE `ci:local` was green, 37 / 37, on a fresh container; see the round-3 and round-4 Dispositions)
   - `pnpm ci:local` on a fresh container. Set `DATABASE_URL` to the story's port for every push
     ([[project_prepush_hook_inherits_5432]]).
   - Completion Notes: the I6–I9 greps and the variance list.
@@ -935,7 +942,7 @@ window rule off), RV8 (the system + `trustee_archived` rule off) — every file 
   `pgMessageOf` / `pgSqlstateOf` now appear in the `marketplace` namespace through `export * from './errors.js'`.
 - **RV7** — only the window half was changed. The `partner_id` half was **traced and is false**: zod 3.25.76 `.uuid()` and the repo's `UUID_REGEX` (`db.ts`) accept the same set, so there is no differential and no change.
 - **RV8** — an EXISTING live leg asserted "a system-actor archive is allowed (the 12.6 sweep)" using `trustee_archived`; that is exactly the attribution the patch closes, so the leg now asserts the refusal AND the allowed path (`slot_capacity_exhausted` after the last place is taken).
-- **RV10 (b)** — only Task 5.2 carried the wording; QE7 did not. **(d)** — a comment-only edit to the unmerged migration 0193 (no DDL change) plus the constant's doc in `errors.ts`.
+- **RV10 (b)** — only Task 5.2 carried the wording; QE7 did not. ⚠ [code review R3-10: FALSE — QE7 carried it too; annotated in round 3.] **(d)** — a comment-only edit to the unmerged migration 0193 (no DDL change) plus the constant's doc in `errors.ts`.
 - **RV11** — the glyph is in the five `registry.ts` strings; the test's substring never had it, so the test is unchanged.
 - **Also done in round 1, not listed there (RP18):** RV6's "A1 sentence" — `-429` A1 in `.decision-log.md` was left AS WRITTEN (a governance entry is superseded, never edited); the story's contract text (Step 6) carries the correction.
   `archiveModule` now calls `assertModuleActor` itself and `runLockedTransition` calls it again (harmless). New exports: `MAX_SCOPE_VALUE_LENGTH`, `refineModuleWindow`, `mapModuleWriteError` (for its spec — the barrel does not re-export `project.js`) and, through
@@ -1154,6 +1161,154 @@ on the story's container — the original definitions were restored and verified
 "`getModuleStateAt` throws a RangeError on an Invalid Date" — the old `lte(col, at)` reached `toISOString()` through drizzle's column mapper on the same value; no change (edge #13) · "`trustee_archived` is still accepted from `operator`" — RV8 deliberately excluded `system` only; who may record a trustee's decision is the 12.2 authorization surface, and there is no route here (edge #17) ·
 duplicated test helpers (`inTx`, the purge `afterAll`, `base()`) (blind #23).
 
+### Review Findings — round 3 (the PRODUCTION slice, whole, after the RP patches and the rebase)
+
+Three-layer review, 2026-10-31, of the COMMITTED production code on `story/12-1-module-manifest-schema-module-lifecycle-state-machine` (HEAD `cf407340`, rebased onto `origin/main` `beae5116`): `git diff origin/main...HEAD` less `_bmad-output/`,
+`.decision-log.md`, `docs/` and every test file — 27 files, 3,282 diff lines, fingerprint `ce548749fee072e4`. It is the closest stand-in for the review round 2 owed its own patch diff (its "⚠ NOT done"), which can no longer be isolated:
+the code is one commit (`6669f21d`). A Blind Hunter (diff only), an Edge Case Hunter and an Acceptance Auditor, in parallel, strictly read-only (the Edge Case Hunter wrote one URL-probe script to the session scratchpad,
+outside the repo; nothing in the repo, git state or any database changed). **The tests slice (3,965 lines) was NOT re-reviewed this round.**
+32 raw items (10 + 6 notes blind / 6 edge / 10 auditor). After deduplication and a hand-trace of the load-bearing claims: **0 decision-needed, 12 patch, 2 defer; 15 raw items dismissed.** Of the 12 patches: **0 HIGH, 1 MEDIUM, 8 LOW, 3 INFO.**
+The Panel-routing §0 gate was applied to every candidate: none is about what the Trust discloses about a person, what it owes one, a legal basis, or two RATIFIED clauses in conflict — **no Trustee Panel decision is needed.**
+Product code was not changed by this round. IDs are `R3-n` / `R3Dn`.
+
+**What the round-2 patches look like now:** RP1's `raw + '/'` exception admits only a bare origin, and lone surrogates, dot segments (incl. `%2e%2e`), `:443`, upper case and `https:host` all fail `raw === url.href` (auditor, traced); RP17 / RP20 are
+applied as described. Two of them are INCOMPLETE — RP1 (R3-6) and RP8 (R3-5). **Checklist verdicts (auditor, touched families):** 1, 2, 3, 4, 5, 7, 11, 12 covered-by-test or by construction (tests named in the auditor's table);
+6 REAL GAP carried (previously RV9 / RP17, not re-raised); 8 covered with one partial gap (R3-2); **9 REAL GAP (R3-3)**; 10 covered, with stale lines (R3-11) and AC12 (R3-1); 13 untouched (no UI).
+
+⚠ **What this round did NOT do:** run a test, a mutant or `ci:local`. Each entry says **traced** (I read the code), **RUN** (I re-ran the probe here, node v22.22.2 + zod 3.25.76), or **layer-reported**.
+
+**Disposition (BigDev, 2026-10-31): option 1 — apply every patch (R3-1 – R3-12).** All 12 were applied the same day; ⛔ committed, ⛔ pushed. The story-text edits are annotations naming the review id; the original words stay.
+**Verified (run here, on the patched tree):** **`pnpm ci:local` as ONE command — `ci:local PASSED — 37 job(s) green`** (21:19–21:43, exit 0) against a NEW empty `postgres:16-alpine` container `twt-121-ci3-pg` on :5473 (DB `twt_dev`; `integration-tests` migrated from scratch, so 0193 applied after every earlier migration) — the first single-invocation green on the rebased, RP- and R3-patched tree, which discharges R3-1 / AC12. Before it: the DB-free `tests/marketplace` + `tests/ids` suites 324 passed / 9 files (303 → 324: filters 121 → 134, events 42 → 47, errors 21 → 24); the events suite 26 passed; `turbo lint typecheck` over `@twt/domain` + `@twt/events` + `@twt/api` and their dependencies — 32 / 32.
+**Mutants run and KILLED** (each file restored and hash-verified; ⚠ code review R4-7: each count is for the ONE named test file the mutant was run against — `filters`, `errors` or `events` — ⛔ the whole suite; the shared schemas would also fail `events.test.ts` legs): R3-6 the RFC 3986 rule off (6 legs fail), its escape half alone off (3), R3-4 the year bound off (3), R3-4 the NaN early return off (1), R3-5 the `severity` check off (3), R3-2 the archive refinement off (1).
+**Deviations and additions (⛔ silent):**
+- **R3-2** — ⚠ [code review R4-5: "the projector and the registry both parse with it" (R3-2's **Fix:**) overclaims for the registry — `appendEvent` parses only when its caller passes `payloadSchema`; the docs now say so.] An EXISTING `events.test.ts` leg ("every non-lead transition … accepts system / trustee") used `trustee_archived` under `system` — exactly the attribution this patch closes; its archive arm now uses `valid_until_reached`, and a new leg asserts the refusal (path `actor`) and the operator / trustee / automatic-reason accepts. The command's own early check stays.
+- **R3-4** — beyond the finding: `ModuleAuthoredPayloadSchema` now uses the same exported `moduleInstantSchema` (its local `isoInstantSchema` is gone), so the payload and the manifest share the bound; and `refineModuleWindow` returns early on an unreadable instant, because a zod refinement still runs on a "dirty" object and would otherwise stack "valid_until must be after valid_from" on top of the real issue.
+- **R3-5** — `findPgError` now also carries `severity`; only `pgSqlstateOf` requires it. `uniqueViolationConstraint` and `isModuleStateDirectWriteError` are unchanged (they compare exact codes). The tests' `pgError` helper now carries `severity: 'ERROR'` (pg's `DatabaseError` sets it from the server's required `S` field — `pg-protocol` `parser.js`), and Node socket errors get their own `nodeError` helper.
+- **R3-3** — comments only (`MODULE_PKEY_CONSTRAINT` and the genesis mapping); migration 0193 was ⛔ edited.
+- **R3-6** — the C7 port note went into both the story's Carried section and `deferred-work.md`; QE5 and AC7 are annotated.
+- **R3-7** — also annotated QE7 (the callers' contract), besides the `commands.ts` header, C2 (e) and C9 in both files.
+- **R3-11** — ADR-0044 lists no tightenings, so it was ⛔ edited (⚠ code review R4-7: the clause that governs the tightened top-level fields — `lead_handoff_url`, `valid_*` — is ADR-0044 **D3**, ⛔ D4, which governs the grammar-versioned values; the conclusion holds: nothing is stored, I6); the RPD1 entry in `deferred-work.md` now names RP1 and R3-4 / R3-6.
+- **Environment** — the first `ci:local` attempt was cut off when the session ended (a machine restart: Docker stopped and the session scratchpad was wiped, taking the review diff file `r3-prod.diff` and the Edge Case Hunter's URL probe script with it). Docker Desktop was restarted, `twt-121-ci3-pg` re-created empty, and the run above is the re-run. `twt-121-ci-pg` (round 2's) was ⛔ touched.
+- **Status** — the row stays `review`: this project moves a story to `done` when it LANDS on `main` (the 6.38 precedent), ⛔ at the end of a review round.
+
+- [x] [Review][Patch] **R3-1 — AC12 is not met for the tree under review: there is no single green `pnpm ci:local` on the rebased, RP-patched code** [Task 9; the Debug Log; the Rebase map] — MEDIUM, **layer-reported** (the record says it).
+  Round 2's Run A was 36 / 37 (`test (unit)` green only on a separate re-run, the known admin flake); the Rebase map says "⚠ NOT re-run: a full `pnpm ci:local`" after 6.38's code came in. The record DISCLOSES this (family 10 holds), but Task 9 is `[x]`
+  and AC12 as written is unmet. Previously RP19 — which fixed the annotation, not the AC. **Fix:** after this round's patches, one `pnpm ci:local` in the story's own container (DB named `twt_dev`, `DATABASE_URL` set to the story port);
+  record it. If it is not green in one invocation, un-tick Task 9 and say why. (auditor #1)
+- [x] [Review][Patch] **R3-2 — RV8's attribution rule lives only in the command: the payload schema and the projector accept `system` + `trustee_archived`** [`events.ts:151-159` (`ModuleArchivedPayloadSchema`); `commands.ts:274-278`; `project.ts` transition cross-checks] — LOW, **traced**.
+  `projectModuleTransition` is exported (specs import it) and the registry validates `module.archived` with the same schema, so a direct projector call or a stray `appendEvent` records a trustee's decision as the sweep's. I11 for leads is
+  enforced in three places; this rule in one. Latent (I6; RVD2's stray-emitter class). Checklist family 8. **Fix:** a refinement on `ModuleArchivedPayloadSchema` refusing `actor: 'system'` with `reason: 'trustee_archived'` — the projector
+  and the registry both parse with it; keep the command's early check. (auditor #2)
+- [x] [Review][Patch] **R3-3 — checklist family 9 REAL GAP: the cross-tenant `module_id` collision is not documented as DELIBERATE and has no re-examination trigger** [`project.ts:283-285` (the genesis 23505 map); `errors.ts:153-154` (`MODULE_PKEY_CONSTRAINT`); migration 0193 header] — LOW, **traced**.
+  `module_id` is caller-minted (QE15). `marketplace_modules_pkey` and `events_log_stream_id_event_version_uq` ignore RLS, so a genesis under Pariwar A with an id that exists under Pariwar B is `ModuleGenesisAlreadyExistsError` — an existence
+  oracle across tenants, pinned by `commands.spec.ts` ("a genesis for a module_id already authored under ANOTHER Pariwar…"). `lead_id` has exactly this shape and carries the DELIBERATE block + "RE-EXAMINE if Story 12.3 lets a CLIENT choose" (`errors.ts:146-152`,
+  `0193:175-177`); `module_id` has neither. **Fix:** the same block on `MODULE_PKEY_CONSTRAINT` and the genesis mapping, trigger "RE-EXAMINE if Story 12.2 lets a CLIENT choose the `module_id` — derive it server-side". A comment in the unmerged
+  0193 is optional (no DDL change). (auditor #3 + blind #10)
+- [x] [Review][Patch] **R3-4 — a manifest instant outside UTC years 0001–9999 passes `parseModuleManifest`, then fails at genesis as the wrong error** [`filters.ts:261` (`isoInstantSchema`), `:295` (`refineModuleWindow`); `project.ts` genesis parse + INSERT] — LOW, **RUN**.
+  `"9999-12-31T20:00:00-05:00"` → `toISOString()` `"+010000-01-01T01:00:00.000Z"`, which `ModuleAuthoredPayloadSchema` refuses ⇒ `ModuleProjectorInputError` ("a programming error"). `"0001-01-01T00:00:00+05:30"` (UTC `0000-12-31T18:30Z`) and
+  `"0000-06-01T00:00:00Z"` pass everything up to the INSERT ⇒ Postgres 22008 ⇒ `ModulePersistError` (layer-reported for the 22008, probed on `twt-121-pg`). zod also accepts offsets `+24:00`…`+99:59`, where `Date.parse` is NaN — refused only because
+  `NaN > x` is false, with the wrong message ("valid_until must be after valid_from"). A content error must be `ModuleManifestInvalidError` — the contract RV5 protects. **Fix:** refine `isoInstantSchema` — `Date.parse` finite AND the UTC year
+  in 1–9999; a unit row for each of the four inputs above. (edge #1)
+- [x] [Review][Patch] **R3-5 — RP8 is incomplete: five-letter Node errno codes still pass as a SQLSTATE** [`errors.ts:118-121` (`pgSqlstateOf`), `:67` (`findPgError`)] — LOW, **traced** (`/^[0-9A-Z]{5}$/` matches `EPIPE`, `EPERM`, `EBUSY`).
+  A socket write failure during the row INSERT / UPDATE rejects with `{ code: 'EPIPE' }` ⇒ `ModulePersistError.sqlstate === 'EPIPE'` — RP8's own bug class; the regex excluded only codes longer than five. Latent: nothing branches on `.sqlstate`.
+  **Fix:** recognise a pg error by SHAPE — a string `severity` (pg's `DatabaseError` always carries it) — in `pgSqlstateOf` (or in `findPgError`, checking the other callers still compare exact codes); a unit row with `{ code: 'EPIPE' }`. (edge #2)
+- [x] [Review][Patch] **R3-6 — RP1's canonical form is WHATWG-canonical, not RFC 3986-valid: malformed escapes and RFC-illegal characters are stored, immutably** [`filters.ts:249`] — LOW, **RUN**.
+  Each of `https://h/a%zz`, `https://h/a%`, `https://h/a|b`, `https://h/a^b`, `https://h/a[b]` equals its own `href`, so it passes. RP1's stated aim was that a strict RFC 3986 parser cannot read the stored URL differently — these are what strict
+  parsers reject (Go `url.Parse` "invalid URL escape"; Java `URI` throws; layer-reported). The manifest is immutable (C10), so a 12.5 strict client could never deliver that module's leads. **Fix:** after the `href` rule, refuse a `%` not followed by
+  two hex digits and any character outside RFC 3986 unreserved / sub-delims / `:` / `/` / pct-encoded (`@`, `?`, `#` are refused already); unit rows for the five inputs. Also record in C7 that any explicit port (`https://h:0/`) is accepted at
+  write and is 12.5's to check at send time. (edge #3)
+- [x] [Review][Patch] **R3-7 — the commands assume READ COMMITTED and nothing says so** [`commands.ts:16-25` (header), `:134` (`lockModuleRow`)] — LOW, **inferred** (the path traced, not run at RR).
+  Under a caller's REPEATABLE READ / SERIALIZABLE, a lead or archive waiting on `FOR UPDATE` behind a committed update gets 40001 — untyped, outside AC6's typed-outcome promise, and not retried (the loop catches only
+  `ModuleStreamConcurrencyError`). TR6 restricts only the TESTS to READ COMMITTED. **Fix:** one line in the `commands.ts` header (the callers' transaction must be READ COMMITTED; 40001 is theirs otherwise), and the same sentence in C2 / C9. (edge #6 + auditor #8)
+- [x] [Review][Patch] **R3-8 — RP16 residue: QE13 and the `ModuleProjectorInputError` JSDoc list its causes without two that the code throws** [QE13; `errors.ts:229-233`] — LOW, **layer-reported**.
+  Missing: RV8's "`trustee_archived` under actor `system`" (`commands.ts:274-278`) and "a TRANSITION payload that fails its schema" (`project.ts:392-395`; QE13 names only the genesis case). **Fix:** an annotation on QE13 naming RV8, and one clause in the JSDoc. (auditor #4)
+- [x] [Review][Patch] **R3-9 — RP16 residue: QE5's rows for `name_*`, `description_*` and `branding_bundle.logo_object_key` do not record RV5's NUL / unpaired-surrogate refusal** [QE5 table] — LOW, **layer-reported**.
+  The code applies `storableText` to all of them (`filters.ts:168`, `:179-180`); RP16 annotated QE9's scope values only. **Fix:** an annotation on each row, naming RV5. (auditor #5)
+- [x] [Review][Patch] **R3-10 — QE7's "FIRST run `SELECT … FOR UPDATE`" is unannotated, and RV10 (b)'s "the phrase is in Task 5.2 only" is false** [QE7; RV10 (b)] — INFO, **layer-reported**.
+  The code issues `SAVEPOINT` first (`commands.ts:201-203`, `:458-461`); I10's real rule (the lock before any `events_log` read or append) holds and is pinned by `commands-guards.test.ts` ("I10 — the row lock comes before…"). **Fix:** the
+  Task 5.2 annotation on QE7 too, and a correction note on RV10 (b). (auditor #6)
+- [x] [Review][Patch] **R3-11 — stale records that contradict the current git state** [STATUS; Completion Notes "Commits" and the test-count label; ADR-0044 D4 / `deferred-work.md` RPD1] — INFO, **layer-reported** (family 10).
+  STATUS still reads "code UNCOMMITTED for review"; the Completion Notes "Commits" still say the code is UNCOMMITTED (it is `6669f21d`, pre-rebase `49b22edd`); the test-count annotation labelled "After code review v1.7" includes round 2's
+  `commands-guards.test.ts` (v1.8). RPD1's "record that the schemas were tightened BEFORE any module existed" names RV3 / RV5 / RV7 but not RP1 — the largest in-version tightening of the v1 grammar (harmless under ADR-0044 D4: I6, no stored
+  value). **Fix:** annotate each; add RP1 (and this round's R3-4 / R3-6) to the RPD1 entry and to ADR-0044's record if it lists them. (auditor #7 + #9)
+- [x] [Review][Patch] **R3-12 — two docs say a stream-version conflict is "reachable only at genesis", where it is never thrown** [`errors.ts:174-177` (`ModuleStreamConcurrencyError`); `project.ts:18-19` (header)] — INFO, **traced**.
+  At genesis the 23505 maps to `ModuleGenesisAlreadyExistsError` (`project.ts:283-285`); under the row lock, `ModuleStreamConcurrencyError` is reachable only on drift, which is deterministic — the lead retry retries what cannot clear
+  (previously RVD2, deferred). **Fix:** say what is true: drift only, and the retry is a backstop that will re-read the same drift. (auditor #10)
+- [x] [Review][Defer] **R3D1 — free-text manifest fields accept invisible, control and bidi characters other than NUL** [`filters.ts:46` (`hasUnstorableChar`), `:179` (`moduleNameSchema`)] — deferred: **traced**.
+  `name_en: "\u200B"` passes `trim().min(1)` (`String.prototype.trim` keeps U+200B); C0 controls (`\u0007`, `\u001b`) and U+202E pass in names, descriptions and scope values. An immutable module could carry a blank-looking or
+  direction-flipped title. A control character in a scope value matches nobody (fail-closed). Not patched here: the author is staff, and descriptions may legitimately need line breaks, so the display-text character policy is the
+  authoring wizard's call, not a guess here. ⭐ Trigger: Story 12.2's create-story — decide it before the first module is authored (the manifest is immutable). (edge #4)
+- [x] [Review][Defer] **R3D2 — the gate's allowlist walk climbs past an anonymous function expression or an object-property arrow** [`scripts/marketplace-module-state-invariant/lib.ts:78-93` (`enclosingFunctionName`); README `:39`] — deferred: **traced**. Extends RVD3.
+  Inside `projectModuleTransition`, a write in `const helper = function () { … }` or `{ write: () => … }` is attributed to `projectModuleTransition` and allowlisted; README:39 says "a helper or an inner named arrow is flagged". Not patched:
+  treating every unnamed function as innermost would also flag legitimate callbacks, so it needs a deliberate rule, and the trigger still guards at runtime. ⭐ Trigger: RVD3's (the first `marketplace_modules` writer outside the projector, or
+  any gate revisit) — and correct README:39 then. (edge #5)
+
+**Dismissed (15 raw items, 9 groups):** the gate scans only `packages/domain/src` and only literal `.set({…})` / `.values({…})` — previously RVD3 (blind #1, #2) · `listModulesForPariwar` has no cursor past 200 — previously RVD6 (blind #3) ·
+a stray `module.*` append wedges the module and the lead retry cannot clear it — previously RVD2; and "the `SAVEPOINT` in the retry loop is outside the `try`, so a failed rollback hides the original error" — reachable only on RVD2's
+drift-only retry path AND after `rollbackToSavepoint` failed, i.e. on a dead connection (blind #6, #9) · the trigger does not enforce terminality / version +1 / a fixed `archive_reason` — previously RVD4 (blind #7) ·
+an `events_log` append error escapes with drizzle's "Failed query … params" — dismissed in round 2 (the API's global handler returns an opaque 500 and never exposes `err.message`) (blind #4) · `operator` may record `trustee_archived` —
+RV8 deliberately excluded `system` only; dismissed in round 2 (blind #5) · the payloads persist the raw object, not `parsed.data`, and the name schema trims — the only producer feeds the already-parsed, trimmed manifest; a stray registry
+emitter is RVD2's class (blind #8) · the helpdesk `ids.moduleId(body.module_id)` could throw — FALSE: contracts `UuidString` is `z.string().uuid()`, the same set as `UUID_REGEX` (traced in round 1, RV7), as for the adjacent `claimId` / `poolId`
+lines (blind note B) · the writer GUC is a convention, not a security boundary; the trigger text reaches `toErrorResponse`; `.cause` keeps drizzle's params for a logger; the pre-check passes a `lead_id` used on another module; two callers
+batching crossing leads could block — respectively the house pattern of all six primitives (the trigger catches bugs, it does not authorise), reachable only on a projector bug and carrying ids / states / versions with no member data,
+the house convention with server-side logs only, documented and intended (the race writes intent + `_rolled_back`), and no caller batches leads (I6) (blind notes A, C, D, E, F).
+
+### Review Findings — round 4 (round 3's PATCH diff)
+
+Three-layer review, 2026-10-31, of round 3's UNCOMMITTED patch (`git diff HEAD -- packages/` on `story/12-1-…` at HEAD `cf407340`: 5 production + 3 test files, +170 / −30, 436 diff lines, fingerprint `ee6b9f19ae802a1c`) — the standing
+rule ([[feedback_review_the_fix_diff_before_commit]]). The record edits were audited as the spec side. A Blind Hunter (diff only), an Edge Case Hunter and an Acceptance Auditor, in parallel, strictly read-only (each ran throwaway `node -e`
+probes only). 28 raw items (10 + 5 notes blind / 5 edge / 8 auditor). After deduplication and a hand-trace: **0 decision-needed, 8 patch, 0 defer; 12 raw items dismissed.** **0 HIGH, 1 MEDIUM, 4 LOW, 3 INFO.**
+The Auditor confirmed every R3 fix is present and does what its **Fix:** says, and the Disposition's counts add up (267 + 21 = 288; + 36 = 324). The Panel-routing §0 gate was applied: **no Trustee Panel decision is needed.** Product code was
+not changed by this round. IDs are `R4-n`. ⚠ **The MEDIUM item is a hole round 3 OPENED:** R3-4's floor of year 0001 admits instants the admin read path misreads.
+
+**Disposition (BigDev, 2026-10-31): option 1 — apply every patch (R4-1 – R4-8), R4-1's floor at year 2000.** All 8 were applied the same day; ⛔ committed, ⛔ pushed. Story-text edits are annotations naming the review id.
+**Verified (run here, on the patched tree):** the DB-free `tests/marketplace` + `tests/ids` suites 333 passed / 9 files (324 → 333: filters 134 → 140, events 47 → 49, errors 24 → 25); `turbo lint typecheck` over `@twt/domain` + `@twt/events` + `@twt/api` and their dependencies — 32 / 32.
+**Mutants run and KILLED — this time against the WHOLE `tests/marketplace` suite** (R4-7's lesson; each file restored and hash-verified): R4-1 the floor back to 1 (8 legs fail, in `filters` AND `events`), R4-2 (a) the range check run regardless of `datetime` (an intersection in place of the `.pipe`; 1), R4-2 (b) the window guard back to `Date.parse` (2), R4-3 the range check always true (9, both files), R4-4 the `pgShaped` filter ignored (4).
+**`pnpm ci:local` on this tree — ⚠ NOT green in one invocation.** Two full runs, each on a re-created EMPTY `twt-121-ci3-pg` (:5473): **Run A** 22:17–22:48 and **Run B** 22:50–23:12, each **36 of 37 jobs green**; the ONE red both times is `test (unit)` → `@twt/admin`, a single `Test timed out in 5000ms` — a DIFFERENT test each time (`ground-inspection-page.test.tsx` "renders the absence-is-a-signal empty state…", then `ground-inspection-discrepancy.test.tsx` "the completion SEEDS the result…"). **Evidence it is the known flake and not this patch:** `@twt/admin` alone — 87 / 87 files, 1,554 / 1,554 tests in 54 s; this story touches ⛔ file under `apps/admin` (branch and working tree); every other job, incl. `integration-tests` (migration 0193 from scratch) and `marketplace-module-state-invariant`, green in both runs ([[project_ci_local_concurrency_oversubscription]]). ⇒ **AC12 is met on the ROUND-3 tree (its single green, 21:19–21:43) and is NOT re-attested on this tree in one invocation**; the delta since is `marketplace/filters.ts`, `errors.ts`, `events.ts` and three marketplace unit specs. Carried as an un-attested item — ⛔ backfilled.
+**Deviations and additions (⛔ silent):**
+- **R4-1** — beyond the finding: the range message is built from the two constants (`INSTANT_RANGE_MESSAGE`), so a future floor change cannot leave the message stale; the round-3 bounds leg became a `2000-01-01` accept leg, and the refusal table gained `0001`, `0050` and `1999-12-31T23:59:59.999Z` rows.
+- **R4-2** — the window guard now re-uses `moduleInstantSchema.safeParse` on both fields rather than `Date.parse`; the R3-4 test block was restructured around one `messagesOf` helper (the `try / expect.unreachable` shape kept).
+- **R4-4** — `findPgError` gained an optional `pgShaped` flag; only `pgSqlstateOf` passes it. `uniqueViolationConstraint`, `isModuleStateDirectWriteError` and `pgMessageOf` are unchanged.
+- **R4-7** — the round-3 Disposition, Task 9, the Debug Log AC12 line and the Rebase map carry annotations; the Change Log gained v1.10 (round 3) and v1.11 (round 4).
+- **R4-8** — C13 is new in BOTH the story's Carried section and `deferred-work.md` (the "build decisions" section, after C12).
+- **Process** — the first background `ci:local` of this round reported exit 0 to the harness although the run FAILED: the wrapper appended `date` after the exit line. The log itself recorded `exit 1`; Run B's wrapper preserves the exit code.
+
+- [x] [Review][Patch] **R4-1 — a `valid_from` / `valid_until` in UTC years 0001–0099 is written correctly but READ BACK as 19xx / 20xx by drizzle** [`filters.ts` `MIN_INSTANT_YEAR`; consumers `read.ts` `getModule` / `listModulesForPariwar`] — MEDIUM, **RUN** (V8 probe here).
+  drizzle's node-postgres session returns timestamptz as text and `PgTimestamp.mapFromDriverValue` calls `new Date(str)`; V8's legacy parser reads Postgres' `'0001-01-01 00:00:00+00'` as `2001-01-01`, `0049` as 2049, `0050` / `0099` as 1950 / 1999
+  (probed; `0100` and later round-trip). The command guards read the same column through pg's own parser and get it right — so the admin read model and the guards would DISAGREE about a module's window. Related (inferred): in a non-UTC
+  session, an old date whose zone offset carries seconds (LMT, e.g. `+05:53:28`) reads as an Invalid Date. R3-4's comment is also wrong about its own bound ("what `toISOString()` writes as four digits and Postgres stores" — year 0000 is four
+  digits and Postgres stores years far past 9999). **Fix:** raise `MIN_INSTANT_YEAR` to **2000** — clear of both traps with no product cost (a module window starting before 2000 has no meaning); rewrite the comment with the real reasons;
+  move the bounds test to `2000-01-01` accepted / `1999-12-31T23:59:59.999Z` refused, plus a `0001` row; annotate QE5 / AC7. (edge #1, blind #10a)
+- [x] [Review][Patch] **R4-2 — the "misleading stacked message" R3-4 set out to remove still appears, one level down and in one more shape** [`filters.ts` `moduleInstantSchema`, `refineModuleWindow`] — LOW, **layer-reported** (both layers probed it).
+  (a) `moduleInstantSchema`'s `.refine` runs after a failed `.datetime()`, so `"hello"` reports `Invalid datetime` AND "must be a real instant in UTC years 0001–9999". (b) `refineModuleWindow` returns early only on NaN, so a string that fails
+  `datetime` but that V8 parses (`'2027-01-01'`, `'2026/12/01'`) in an inverted pair still gets "valid_until must be after valid_from" stacked on the format error — the R3-4 comment says this cannot happen. **Fix:** run the year refinement
+  only after `datetime` passes (`.pipe(...)`, which zod 3 does not run on a dirty input), and guard `refineModuleWindow` on both fields passing `moduleInstantSchema`; a leg for each shape. (blind #2, edge #4)
+- [x] [Review][Patch] **R4-3 — the events-level "year 10000" leg passes with R3-4 reverted** [`events.test.ts`, the `+010000-…` row] — LOW, **RUN** by two layers. zod's `datetime` already refused a six-digit signed year, so the leg pins OLD behaviour; no
+  payload-level leg uses a finite out-of-range value. **Fix:** replace it with `'9999-12-31T20:00:00-05:00'`, and add `'2026-12-01T00:00:00+24:00'`. (blind #3, edge #5, auditor #3)
+- [x] [Review][Patch] **R4-4 — `pgSqlstateOf` stops at the FIRST link with a string `code`, so a coded wrapper hides a real pg error below it** [`errors.ts` `pgSqlstateOf` / `findPgError`] — LOW, **traced**.
+  R3-5 gates on `severity` AFTER the walk: an app error with its own string `code` whose `cause` is pg's `DatabaseError` now yields null, ⛔ the pg SQLSTATE (e.g. the 40001 R3-7 tells callers to handle). (Before R3-5 it yielded the wrapper's code —
+  also wrong.) No caller wraps that way today (drizzle's wrapper has no `code`). **Fix:** walk for the first pg-SHAPED link (string `code` AND `severity`); a leg with a coded wrapper over a pg error. (blind #7)
+- [x] [Review][Patch] **R4-5 — R3-2's "a stray append cannot record it either" overclaims: nothing parses the registry schema unless the appender passes it** [`events.ts` `ModuleArchivedPayloadSchema` doc; `events.test.ts` comment; the R3-2 Disposition line] — LOW, **traced**
+  (`packages/events/src/events-log.ts`: `payloadSchema?` is optional and `parse` runs only `if (input.payloadSchema)`; no production code reads `EVENT_TYPE_REGISTRY[…].schema`). The refinement does cover the projector (it parses with the
+  same map). A raw `appendEvent` without `payloadSchema` is RVD2's stray-emitter class. **Fix:** say exactly that in the doc, the test comment and an annotation on the R3-2 Disposition line. (edge #2)
+- [x] [Review][Patch] **R4-6 — spec text the round-3 patch left contradicting the code** [QE7's "Under the lock, a version conflict is reachable only at genesis"; the "Payload schemas" paragraph's "Timestamps are `z.string().datetime({ offset: true })`" and "`ModuleArchivedPayloadSchema` … the audit shape + `reason`"] — LOW, **layer-reported**.
+  R3-12 corrected the two code docs but not QE7's copy; the payload paragraph predates R3-4 / R3-2. **Fix:** annotate each, naming R3-12 / R3-4 / R3-2 (and R4-1's new floor). (auditor #1, #2)
+- [x] [Review][Patch] **R4-7 — record precision in the round-3 closure** [the R3 Disposition's mutant counts; Task 9, the Debug Log AC12 line, the Rebase map; the Change Log; RPD1 / R3-11's ADR clause] — INFO, **traced**.
+  (a) The mutant kill counts are `filters.test.ts` / `errors.test.ts` / `events.test.ts` ALONE — each mutant ran only its named file; the shared schemas would also fail `events.test.ts` legs (the Auditor's expectation: 8 / 4 / 4). Say "in the named
+  file". (b) R3-1 is closed only in the Disposition: Task 9, the Debug Log and the Rebase map still say "36 of 37" / "⚠ NOT re-run"; no Change Log row for rounds 3 / 4. (c) RPD1 and R3-11 cite ADR-0044 **D4**, which governs the grammar-versioned
+  values; the tightened top-level fields (`lead_handoff_url`, `valid_*`) fall under **D3** — the conclusion holds (no module or `module.*` event is stored — I6), only the clause is wrong. **Fix:** annotate each; add the Change Log row. (auditor #4, #5, #8)
+- [x] [Review][Patch] **R4-8 — two caller obligations reach Story 12.2 only through code comments** [Carried C-list, both files] — INFO, **traced**.
+  12.2 owns `scheduleModule`, `activateModule` and the trustee `archiveModule` (`events.ts` owners), which take the same row lock, yet R3-7's READ COMMITTED rule was carried only to 12.6 (C2 (e)) and 12.3 / 12.4 (C9); and R3-3's "RE-EXAMINE if 12.2
+  lets a client choose the `module_id`" lives only in `errors.ts` / `project.ts`. 12.2's create-story reads the carried list, ⛔ the code. **Fix:** a new carried item **C13 → Story 12.2** with both obligations, in the story's Carried section
+  and in `deferred-work.md`. (auditor #6, #7)
+
+**Dismissed (12 raw items):** `.superRefine` makes `ModuleArchivedPayloadSchema` a `ZodEffects` — so is `ModuleAuthoredPayloadSchema` already (its window refinement); the map is typed `z.ZodTypeAny`, tsc is 32 / 32 and nothing introspects `.shape`
+(blind #1) · offsets +16:00…+23:59 and sub-millisecond fractions would fail or shift in Postgres — the genesis binds `Date` / `toISOString()` (UTC `Z`, millisecond), never the raw string, and the payload is built the same way (traced by the edge
+layer) (blind #4) · percent-encoded control / `@` octets (`%0D%0A`, `%40`) are stored — RFC-legal; what a receiver does when it decodes its own path is 12.5's send-time question (C7) (blind #5) · lower- and upper-case hex escapes both stored —
+RFC 3986-equivalent, not a defect (blind #6) · the converse attribution (an automatic reason under a person) — RV8 deliberately refused only `system` + `trustee_archived`; dismissed in rounds 1–2 (blind #8) · tightened schemas break replay of
+already-stored events — previously RPD1; nothing is stored (I6) (blind #9, edge #3) · READ COMMITTED is a comment, not an assertion; the drift retry is wasted work — R3-7's chosen fix; previously RVD2 (blind #10 b, c) · future IPv6 literals,
+`:0` port, `+0530` engine dependence, no year-0 `valid_until` leg, a zod-4 migration (blind notes).
+
 ## Dev Notes
 
 ### Current state (what this story changes, what must be preserved)
@@ -1212,7 +1367,8 @@ duplicated test helpers (`inTx`, the purge `afterAll`, `base()`) (blind #23).
   - (a) immediate vs daily archive at zero;
   - (b) nothing activates a `scheduled` module;
   - (c) sweep stale `draft` / `scheduled` modules;
-  - (d) a cross-tenant indexed candidate scan, plus a rule for which reason wins.
+  - (d) a cross-tenant indexed candidate scan, plus a rule for which reason wins;
+  - (e) the sweep's per-candidate transaction must be READ COMMITTED (code review R3-7).
 
   Cost: an offer can stall for up to a day.
 - **C3 → 12.6:** `module.restored` — its target state, the grace window, and its meaning after `valid_until_reached` / at
@@ -1222,14 +1378,15 @@ duplicated test helpers (`inTx`, the purge `afterAll`, `base()`) (blind #23).
 - **C5 → 12.2 / 12.3:** partner colours never touch the shelf chrome.
 - **C6 → 12.3 / 12.5:** partner data has no basis on record — route it to Panel / counsel BEFORE anything leaves.
 - **C7 → 12.5:** the signing scheme (HMAC per module vs JWT per partner), plus a send-time check of the resolved address
-  (SSRF / DNS rebinding).
+  (SSRF / DNS rebinding). Any explicit port (`https://h:0/`) is accepted at write — whether it is acceptable is 12.5's
+  send-time question (code review R3-6).
 - **C8 → 12.3 / 12.5 (with C6):** an RTBF can never remove a member↔offer link.
   - (a) The retention basis goes to Panel / counsel.
   - (b) The data export must add these events; a by-member lookup needs a generated column + index.
   - (c) Lead PII belongs in 12.5's entity.
 - **C9 → 12.3 / 12.4:** the shelf filter is NOT an authorization. The lead route re-checks scope, eligibility, member
   state and grief suppression server-side. The shelf READ also field-picks: `getModule` / `listModulesForPariwar` are
-  the ADMIN shape (code review RV9).
+  the ADMIN shape (code review RV9). The route's transaction must be READ COMMITTED (code review R3-7).
 - **C10 → 12.2 / 12.5:** a correction or endpoint change means re-authoring, which resets places and allows duplicate
   leads. The wizard warns.
 - **C11 → 12.2:** scope values are not validated against the geo tree; the wizard picks them from the tree.
@@ -1237,6 +1394,9 @@ duplicated test helpers (`inTx`, the purge `afterAll`, `base()`) (blind #23).
   a lead's actor must be the member (I11). A helpline path needs its own consent basis and a separate actor model.
 - **C12 → every sibling:** mutable presentation data goes in its own table. A new `marketplace_modules` column is
   immutable unless its story amends the trigger chain and `GUARDED_COLUMNS`.
+- **C13 → 12.2** (added by code review R4-8): (a) the wizard's `scheduleModule` / `activateModule` / `archiveModule` callers run
+  in a READ COMMITTED transaction (R3-7); (b) the `module_id` is minted server-side — a client-chosen id turns the genesis
+  "already exists" answer into a cross-tenant oracle (R3-3).
 - Also carried:
   - `commission_terms` (+ the trust-deed "disclosed") → 12.2;
   - `age_band` → 12.3;
@@ -1388,7 +1548,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
   crypto-check, integration-tests), ALL from one cause: `@twt/contracts#build` → TS2307 *"Cannot find module
   '@twt/i18n'"* — this worktree's install predated contracts' `@twt/i18n` workspace dep (the known machine-state trap,
   ⛔ code). Fix: `pnpm install --frozen-lockfile` (re-links only; ⛔ tracked file changed); ⛔ dangling links found.
-  **Run 2, on a re-created fresh container: `ci:local PASSED — 37 job(s) green`** (⚠ PRE-patch run. After code review v1.7 / v1.8 a SECOND full `ci:local` ran on the patched tree against a fresh container: 36 of 37 jobs green in one invocation; the one red, `test (unit)`, was `@twt/admin` timing out under CPU contention and passed on a re-run of that job — see the round-2 Disposition) (incl. the new
+  **Run 2, on a re-created fresh container: `ci:local PASSED — 37 job(s) green`** (⚠ code review R4-7: the current tree's single-invocation green is in the round-3 / round-4 Dispositions. ⚠ PRE-patch run. After code review v1.7 / v1.8 a SECOND full `ci:local` ran on the patched tree against a fresh container: 36 of 37 jobs green in one invocation; the one red, `test (unit)`, was `@twt/admin` timing out under CPU contention and passed on a re-run of that job — see the round-2 Disposition) (incl. the new
   `marketplace-module-state-invariant` and `integration-tests`: domain 457 files / 7,007 tests (1 skipped), api 208 /
   2,500 (1 skipped), jobs 86 / 1,962, events 8 / 39, public 37 / 807, channels 21 / 468, validity-service 21 / 284,
   niyamavali-engine 13 / 144, queue 1 / 4). ⚠ The machine load reached 68.8 (1-min) by the end — a peer was busy; the
@@ -1410,7 +1570,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
   `packages/events/tests/module-registry-coverage` (3) + the gate's `lib.test.ts` (20). Live-DB (story container
   :5471): `projector-trigger` (16), `commands` (17), `commands-clock` (1, ~5 s), `module-stream-concurrency` (3; run 3×
   green), `read` (4), `rls/marketplace-modules-policy-regression` (8). Own-committing specs clean up by id (0 rows left).
-  ⚠ (PRE-patch counts. After code review v1.7: DB-free `tests/marketplace` 267 across seven files — filters 121, events 42, state 47, errors 21, commands-guards 25, archive-actor 6, lead-retry 5 — plus `tests/ids` 36;
+  ⚠ (PRE-patch counts. After code review v1.7 / v1.8 — ⚠ code review R3-11: `commands-guards` 25 is round 2's (v1.8) — and after round 3: 288 across the seven files (filters 134, events 47, errors 24, the rest unchanged) + `tests/ids` 36 = 324. Before round 3: DB-free `tests/marketplace` 267 across seven files — filters 121, events 42, state 47, errors 21, commands-guards 25, archive-actor 6, lead-retry 5 — plus `tests/ids` 36;
   live-DB 72 — projector-trigger 22, commands 28, read 8, module-stream-concurrency 5, commands-clock 1, rls policy-regression 8.)
 - **I6 — no production call site.** `grep -rnE "\b(authorModule|scheduleModule|activateModule|submitModuleLead|archiveModule|checkModuleLeadAllowed|projectModuleGenesis|projectModuleTransition)\("`
   over `apps packages scripts`, excluding tests and `packages/domain/src/marketplace/` → **no hits**.
@@ -1458,7 +1618,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
   by 12.1 — it has ⛔ verification context, ⛔ audit pairing and ⛔ route; the first Epic-12 route story (12.2 / 12.3) is
   where it applies.
 - **Commits.** Only `28908112` (ADR-0044 + the index flip, alone — AC11). The code, tests, gate, migration and records are
-  UNCOMMITTED on `story/12-1-…`, for code review (the 6.33 precedent: committed after review). ⛔ pushed.
+  UNCOMMITTED on `story/12-1-…`, for code review (the 6.33 precedent: committed after review). ⛔ pushed. ⚠ [code review R3-11:
+  superseded — the code was committed after review rounds 1–2 as `49b22edd`, rebased to `6669f21d`; see the Rebase map.]
 
 ### File List
 
@@ -1494,6 +1655,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v1.11 | Code review ROUND 4 (round 3's patch diff, 436 lines), Blind / Edge / Auditor: 0 decision-needed, 8 patch, 0 defer, 12 dismissed. BigDev: option 1 — every patch applied (R4-1 floor 2000; R4-2 – R4-8). Unit 333; mutants killed across the whole marketplace suite; `ci:local` 36 / 37 twice — the `@twt/admin` timeout flake, a different test each run; admin alone 1,554 / 1,554 — ⚠ not re-attested green in one invocation on this tree. Code committed `4541c66d` (rounds 3 + 4 together); records in the commit after it. |
+| 2026-10-31 | v1.10 | Code review ROUND 3 (the whole production slice after the RP patches and the rebase, 3,282 lines), Blind / Edge / Auditor: 0 decision-needed, 12 patch, 2 defer (R3D1, R3D2), 15 dismissed. BigDev: option 1 — every patch applied. Unit 324; six mutants killed; `ci:local` GREEN 37 / 37 in one invocation on a fresh container (21:19–21:43) — R3-1 / AC12 discharged for that tree. Code committed `4541c66d` (rounds 3 + 4 together); records in the commit after it. |
 | 2026-10-31 | v1.9 | REBASED onto `origin/main` `beae5116` (6.38 landed; our base was `b2f36fe9`), 10 commits replayed, conflicts only in the three newest-first files (`.decision-log.md`, `deferred-work.md`, `sprint-status.yaml`), resolved branch-on-top and verified byte for byte; then the `2026-10-31` ledger labels were RELABELLED (main took `p`–`u` first). Pre-rebase tip kept as `backup/12-1-pre-rebase-2026-10-31`. See the rebase map below. Status stays `review`. |
 | 2026-10-31 | v1.8 | Code review ROUND 2 (chunk 2 — the tests — plus the round-1 patch diff), Blind / Edge / Auditor: 0 decision-needed, 20 patch, 4 defer, 7 dismissal groups. BigDev: option 1 — all 20 applied (uncommitted): `filters.ts` (canonical URL form), `errors.ts` (SQLSTATE shape), `read.ts` / `registry.ts` wording; a new DB-free `commands-guards.test.ts`; live legs for the CHECKs, indexes, trigger chain, redelivery, cross-tenant and projector guards. 303 DB-free + 72 live green; 18 mutants killed this round. `ci:local` on the patched tree: 36 of 37 jobs in one invocation (the red `test (unit)` was `@twt/admin` timing out under CPU load; that job is green on a re-run). NOT done: a single green `ci:local` invocation; a review of this round's own diff. Status stays `review`. |
 | 2026-10-31 | v1.7 | Code review, chunk 1 of 2 (production code), Blind / Edge / Auditor: 1 decision-needed (RVQ1 → BigDev: amend AC3), 11 patch, 6 defer, 12 dismissal groups. BigDev: option 1 — all 12 patches applied (uncommitted): AC3 amended; RV1–RV11 in code, tests, `deferred-work.md` and prose. Chunk 2 (tests) and the PATCH diff are NOT yet reviewed; status stays `review`. |
@@ -1542,4 +1705,4 @@ The pre-rebase tip is kept as the local branch `backup/12-1-pre-rebase-2026-10-3
 (its highest migration is `0192`); the journal `idx` and `when` values are unique and increasing.
 
 **Verified after the rebase:** for all 51 files the set of changed lines against `origin/main` equals the set against the old base; the four decision entries around ours (`-427`, `-429` against the backup; `-430`, `-425` against `origin/main`) are byte-identical;
-`sprint-status.yaml` parses with 301 rows (main's count), differing from main only in `epic-12` and the 12.1 row; every non-ledger file this story changed is identical to the backup's version. **Re-verified on the MERGED tree** (run after the rebase, before the relabel commit): `turbo lint typecheck` over the whole monorepo — 40 / 40 tasks; unit — `domain` 3,461, `events` 26, `api` 797, `jobs` 1,242 (turbo 19 / 19, 0 failed; the counts rose because main's 6.38 added tests); the six marketplace live-DB files — 72 / 72 on the fresh container `twt-121-ci-pg`; the 22 invariant gates and `db:check`, openapi-determinism, pii-scrape, i18n-parity and tokens-theme — PASS. ⚠ **NOT re-run:** a full `pnpm ci:local` (it also builds, runs the `admin` / `mobile` unit suites and the live-DB `integration-tests` across eight packages).
+`sprint-status.yaml` parses with 301 rows (main's count), differing from main only in `epic-12` and the 12.1 row; every non-ledger file this story changed is identical to the backup's version. **Re-verified on the MERGED tree** (run after the rebase, before the relabel commit): `turbo lint typecheck` over the whole monorepo — 40 / 40 tasks; unit — `domain` 3,461, `events` 26, `api` 797, `jobs` 1,242 (turbo 19 / 19, 0 failed; the counts rose because main's 6.38 added tests); the six marketplace live-DB files — 72 / 72 on the fresh container `twt-121-ci-pg`; the 22 invariant gates and `db:check`, openapi-determinism, pii-scrape, i18n-parity and tokens-theme — PASS. ⚠ **NOT re-run:** [⚠ code review R4-7: since run — green, 37 / 37, after review round 3; see its Disposition] a full `pnpm ci:local` (it also builds, runs the `admin` / `mobile` unit suites and the live-DB `integration-tests` across eight packages).

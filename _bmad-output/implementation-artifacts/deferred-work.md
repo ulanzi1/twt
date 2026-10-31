@@ -4,6 +4,74 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review (fix round) of 11b-5a-kinship-capture-and-lattice.md (2026-11-01)
+
+Review of the uncommitted patch round for RP1–RP20 (`bmad-code-review 11b.5a`, option 2). 7 patches and 6 deferrals (DN1 was decision-needed and BigDev deferred it as RD17); none is a Panel question. Full record: the story's `### Review Findings — fix-round review`.
+
+- **RD12 — A version whose family list is permanently unreadable has no exit** [`apps/api/src/modules/memorial-review/handlers.ts` `decide`; `apps/admin/src/modules/memorial-review/MemorialReviewPage.tsx` `DecisionForm`]
+  - The decision form is withheld and `decide` decrypts the list before validating, so even `not_approved` cannot be recorded; the family cannot re-send (`canSend` false). Same class as an undecryptable body; reachable only after a schema change or corruption.
+  - **Trigger:** RD1 — the first change to `MemorialKinshipListSchema`. Then a `not_approved` path that does not need the list, and `decide` decrypting the list only when `kinshipLeftOut` is non-empty.
+- **RD13 — The helpline view diverges from the public page for an unreadable body or kept-photo description** [`apps/api/src/modules/memorial-takedown/handlers.ts`]
+  - Only an unreadable list was brought into line (RP5). For an unreadable body or alt text the view keeps the photo and list while the public page drops the whole memorial; pre-existing.
+  - **Trigger:** the outcome of DN1 (the same "the page shows nothing" signal would cover both).
+- **RD14 — `sendContent` does not sign exactly what the Send carries** [`apps/mobile/lib/memorial-draft.ts`]
+  - `altText` with no photo, `photoMime`, and `photoFileName` beside `keepPreviousPhoto` are hashed raw; the photo predicate is a copy. Not reachable by a UI edit today.
+  - **Trigger:** the next change to the draft or Send photo logic.
+- **RD15 — The AC10 purpose pin scans TypeScript-family sources only** [`packages/domain/tests/memorial/kinship-purpose-pin.test.ts`]
+  - No `.sql` outside migrations, `.sh`, `.py`, `.json`, `.yml`; `SKIP_DIR` drops any `test` / `tests` directory at any depth, including under `src`.
+  - **Trigger:** the first non-TypeScript tooling that touches the memorial tables.
+- **RD16 — Observability and test leftovers** [`apps/api/src/modules/memorial-review/handlers.ts`, `memorial-takedown/handlers.ts`; `apps/api/tests/integration/memorial/kinship.spec.ts`; `packages/domain/tests/integration/rls/memorial-policy-regression.spec.ts`; `apps/mobile/app/(memorial)/family.tsx`]
+  - A list decrypt failure logs the generic "decrypt failed" in the review detail and take-down; the leak test checks the memorial object only; the audit-hash test recomputes the payload from a copy; the (s4) title says "lockstep" but proves a subset; the limit-line announcement does not manage focus when the focused "Add someone" button is removed at 20 rows.
+  - **Trigger:** the next touch of these files, or Story 11b.8.
+- **RD17 — The helpline screen does not say what the page actually shows for an unreadable memorial** (from DN1; BigDev: defer) [`apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx` ~263-281; `apps/api/src/modules/memorial-takedown/handlers.ts`]
+  - For a list that will not decrypt or parse, the API now returns `words`, `altText`, `photoUrl`, `kinship` all `null` and `hasPhoto:false` (the public page drops the whole memorial, KL10), but the screen keeps the headline "On the Sahyog Vivran page now" and prints "The words could not be read just now" (false — the words decrypted). `shown` has no field to tell "the page shows nothing" from "the words failed"; `takedown.drive.notOnPage` is unreachable because `shown` must stay non-null for `submissionId`.
+  - **Reason deferred (the reviewer's; BigDev gave none):** only reachable with a corrupt or unparsable stored list (none today); two "could not be read" lines already show; the fix is a contract flag plus helpline copy needing BigDev's approval, together with RD13.
+  - **Trigger:** the next change to the helpline drive view, the RD1 list-schema change, or the first reported confusion. Sibling: RD13.
+
+---
+
+## Deferred from: code review of 11b-5a-kinship-capture-and-lattice.md (2026-11-01)
+
+Three-chunk, nine-layer review of `origin/main...7de62adf` (`bmad-code-review 11b.5a`). 20 patches and 11 deferrals; none is a Panel question. Full record: the story's `### Review Findings`.
+
+- **RD1 — The stored family list has no version, and its read schema is strict** [`apps/api/src/modules/memorial/memorial-kinship.ts`; `packages/contracts/src/memorial/kinship.ts`]
+  - `.strict()`, a closed relation enum and `inPhoto: literal(true)`, the same schema on every read; KL10 drops the whole memorial on a parse failure.
+  - A later tightening, a new relation or a rollback (old pod, new row) removes approved memorials from the page with only a log line.
+  - **Trigger:** the first change to `MemorialKinshipListSchema` or `MEMORIAL_KINSHIP_RELATIONS` after go-live (Row 41) — a versioned envelope or a read-tolerant schema first.
+- **RD2 — Kinship omissions are bare indexes into a write-once list** [`packages/contracts/src/memorial/kinship.ts` `groupMemorialKinship`; `memorial_review_decisions.kinship_omissions`]
+  - Safe today: only the erasure scrub updates the ciphertext, and it leaves a sentinel that drops the memorial. `groupMemorialKinship` ignores an out-of-range index and the decision row binds no length or digest.
+  - **Trigger:** the 11b-5b story's creation (`-428` PQ2 B, KL14: remove one entry "by submission + index"). It must remove by marker, never splice, and pin that with a test.
+- **RD3 — The public SSR guard sends the whole drive page to the outage state over a bad family list** [`apps/public/src/lib/sahyog-vivran.server.ts` `isFamilyMemorial` / `isKinshipRow`]
+  - Requires the `kinship` key and rejects an unknown relation; no row or name ceilings; the `names.length > 0` filter in `kinshipLatticeRows` is unreachable.
+  - Same fail-closed posture as the words and photo guards, and the memorial is dark behind Row 41.
+  - **Trigger:** the go-live deploy-order decision (Row 41), or the first relation minted.
+- **RD4 — The earlier withdrawn approval's reason is worded by the latest version's declaration flag** [`apps/mobile/app/(memorial)/outcome.tsx`]
+  - A pre-v4 earlier version would show copy 4.3's "a confirmation never given". Unreachable until a v1–v3 approval exists in a live environment; the fix needs the earlier version's flag on the wire.
+  - **Trigger:** any live pre-v4 submission, or Row 41 go-live.
+- **RD5 — Family-screen rough edges** [`apps/mobile/app/(memorial)/family.tsx`; `apps/mobile/lib/memorial-draft.ts`]
+  - "Continue without a list" discards up to 20 typed names with no confirmation; navigation proceeds when `save` failed; a whitespace-only name with no relation blocks "Next" with nothing visibly wrong; a blank row counts as draft content; an unfinished row left by Back is dropped from the Send; "Start from the list I sent" re-seeds entries the Trust left out.
+  - **Trigger:** Story 11b.8, or a family-reported confusion.
+- **RD6 — Accessibility beyond checklist 13(a)–(d)** [`apps/mobile/app/(memorial)/family.tsx`; `apps/mobile/tests/unit/memorial-screens-render.test.ts`]
+  - Every row's controls share one label; the "unfinished row" line does not name or focus the row; the 14 `radio` buttons have no `radiogroup`; the render-test mock makes role / state assertions tautological and never maps `expanded`. Any fix needs new accessibility copy (BigDev approval).
+  - **Trigger:** Story 11b.8's accessibility audit (UX-DR70, a launch-blocker).
+- **RD7 — Wife / Husband / Father / Mother have no plural** [`packages/contracts/src/memorial/kinship.ts` `KINSHIP_PLURAL_RELATIONS`]
+  - Copy 5.2 lists ten plurals and skips these four, but a list may hold many names per relation ("Mother · A, B" in English). Options: cap at one, add four plural keys (new copy), or accept.
+  - **Trigger:** the Row 41 (a) copy review.
+- **RD8 — Names accept newline, tab, U+2028 / 2029, C0 / C1 controls and lone surrogates** [`packages/contracts/src/memorial/kinship.ts`]
+  - An API-direct caller can fuse two people into one entry the Trust cannot split; the app's single-line input cannot. Names are stored byte-identical by design (AC2).
+  - **Trigger:** the next change to KL4's name rule, or a reported fused entry.
+- **RD9 — Maintainability drift across the new shapes** [`family.tsx`, `preview.tsx`, `use-memorial-send.ts`; the four API read paths; `apps/admin/src/modules/memorial-review/i18n-en.ts`; `apps/mobile/lib/memorial-draft.ts`]
+  - The "same photo test" is derived three ways (equivalent today); `kinship: null` means different things per layer; the omissions carry four names and the `{index, reason}` projection is copied in four places; the admin label table duplicates `memorial.json` with no unknown-relation fallback; the draft module imports its row type from a components folder (and now a runtime function — no cycle: `memorial-kinship.ts` imports only `@twt/contracts`).
+  - **Trigger:** the next change to the Send photo logic, or 11b-5b / 11b-5c touching these shapes.
+- **RD10 — Test hardening** [`apps/public/tests/kinship-lattice-source.test.ts`; `apps/admin/tests/memorial-review.test.tsx`; `apps/api/tests/integration/memorial-takedown/takedown.spec.ts`; `packages/domain/tests/member/rtbf-anonymize.test.ts`; `scripts/microcopy/memorial.test.ts`]
+  - Positive-control legs test re-declared regexes; admin test titles overclaim; the KL15 confirm is tested on its happy path only; a dead cast; the DB-free erasure test asserts `typeof … === 'object'`; thin unit coverage of the new public read without a DB; the microcopy gate's Proxy placeholder and magic offsets; the 32 KiB multipart field against escaped JSON.
+  - **Trigger:** the next touch of these suites.
+- **RD11 — Operator-screen polish** [`apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx`]
+  - Names are joined with ", " (a name with a comma is ambiguous) and the isolate controls are invisible where the review screen makes them visible; singular English labels (already disclosed in the Completion Notes).
+  - **Trigger:** Story 11b.8, or helpline feedback.
+
+---
+
 ## Deferred from: code review of 12-1-module-manifest-schema-module-lifecycle-state-machine.md — round 3, the production slice after the RP patches and the rebase (2026-10-31)
 
 Three-layer review of the committed production code (27 files, fingerprint `ce548749fee072e4`): 0 decision-needed, 12 patch (the story's `### Review Findings — round 3`, `R3-1`–`R3-12`), 2 deferred below.

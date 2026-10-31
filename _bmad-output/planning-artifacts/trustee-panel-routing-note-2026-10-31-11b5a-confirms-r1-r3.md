@@ -1,6 +1,6 @@
 # Trustee Panel routing note — three short confirms on your family-list rulings: what "members also see the memorial" means, whose agreement the declaration covers, and when a child is still left out
 
-> **Status: WRITTEN 2026-10-31 (committed alone, `bdc24e92` — `3981fd0b` before the second rebase) — SENT 2026-10-31 by BigDev** (*"I have sent the note"*). ⏳ ⛔ No ruling yet. Drafted from Story 11b.5a after a review of how
+> **Status: WRITTEN 2026-10-31 (committed alone, `bdc24e92` — `3981fd0b` before the second rebase) — SENT 2026-10-31 by BigDev** (*"I have sent the note"*) — **RULED 2026-10-31 (`-432`).** Drafted from Story 11b.5a after a review of how
 > we recorded your rulings of today on the family list (Decisions `2026-10-31-426` and `2026-10-31-428`). **Blocking:** ⛔ not the
 > building of the family list itself; R1 decides whether the members' app shows the memorial at all, and all three are answered before
 > anything goes live. ⛔ No member uses the system yet, and ⛔ no family memorial is live.
@@ -14,10 +14,16 @@ it, the wording of the screens, how the reviewer's screen is laid out.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — Decision `2026-10-31-432` (Trustee-ratified, DR + KB, 2026-10-31, relayed by BigDev)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited** as the questions as they were put.
+> *"by DR and KB*
+> *R1 A, R2 A, R3 A"*
+>
+> ⇒ **R1 A** — the members' app shows the memorial itself (words, photo, list) beside the member's name, only for memorials sent with
+> the new permission. **R2 A** — the declaration's adult half covers every adult a family names, in the list **or** in its words
+> (⚠ ⛔ not our suggestion, B). **R3 A** — after a declaration the reviewer leaves out a child only where something in the memorial
+> itself shows the declaration cannot cover that child, and the family is told why. What this does ⛔ not cover is in the decision
+> entry. Everything below is kept **unedited** as the questions as they were put.
 
 ---
 

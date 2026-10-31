@@ -1494,6 +1494,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v1.9 | REBASED onto `origin/main` `beae5116` (6.38 landed; our base was `b2f36fe9`), 10 commits replayed, conflicts only in the three newest-first files (`.decision-log.md`, `deferred-work.md`, `sprint-status.yaml`), resolved branch-on-top and verified byte for byte; then the `2026-10-31` ledger labels were RELABELLED (main took `p`–`u` first). Pre-rebase tip kept as `backup/12-1-pre-rebase-2026-10-31`. See the rebase map below. Status stays `review`. |
 | 2026-10-31 | v1.8 | Code review ROUND 2 (chunk 2 — the tests — plus the round-1 patch diff), Blind / Edge / Auditor: 0 decision-needed, 20 patch, 4 defer, 7 dismissal groups. BigDev: option 1 — all 20 applied (uncommitted): `filters.ts` (canonical URL form), `errors.ts` (SQLSTATE shape), `read.ts` / `registry.ts` wording; a new DB-free `commands-guards.test.ts`; live legs for the CHECKs, indexes, trigger chain, redelivery, cross-tenant and projector guards. 303 DB-free + 72 live green; 18 mutants killed this round. `ci:local` on the patched tree: 36 of 37 jobs in one invocation (the red `test (unit)` was `@twt/admin` timing out under CPU load; that job is green on a re-run). NOT done: a single green `ci:local` invocation; a review of this round's own diff. Status stays `review`. |
 | 2026-10-31 | v1.7 | Code review, chunk 1 of 2 (production code), Blind / Edge / Auditor: 1 decision-needed (RVQ1 → BigDev: amend AC3), 11 patch, 6 defer, 12 dismissal groups. BigDev: option 1 — all 12 patches applied (uncommitted): AC3 amended; RV1–RV11 in code, tests, `deferred-work.md` and prose. Chunk 2 (tests) and the PATCH diff are NOT yet reviewed; status stays `review`. |
 | 2026-10-31 | v1.6 | Implemented by `bmad-dev-story` (Tasks 0.1–9). Task 0.1 re-grep clean (`origin/main` = `b2f36fe9`; `0193` / `ADR-0044` / ledger `w` free). Built the primitive, migration `0193`, the gate and ADR-0044 (`drafted`, committed alone as `28908112`); 211 marketplace tests + the gate's 20; `ci:local` 37/37 green on a fresh container (run 1's 5 reds = a stale install, re-linked). Eight implementation choices recorded in Completion Notes for review. Code UNCOMMITTED for review; ⛔ pushed. Row in-progress → review; ledger `2026-10-31w`. |
@@ -1503,3 +1504,42 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
 | 2026-10-31 | v1.2 | Task 0.2 answered (*"QE1-QE15 as recommended."*); Task 0.3 `-427` (`a22dbdec`). |
 | 2026-10-31 | v1.1 | Fast-forwarded to `b2f36fe9`; first validation (three verifiers), 19 improvements. |
 | 2026-10-31 | v1.0 | Created at `01062c51`; row backlog → ready-for-dev. |
+
+### Rebase map (2026-10-31, over `origin/main` `beae5116`)
+
+The branch was rebased onto `beae5116` (the base was `b2f36fe9`; 6.38 landed in between). Commit messages and the prose above cite the PRE-rebase SHAs and ledger labels; this map is the key.
+The pre-rebase tip is kept as the local branch `backup/12-1-pre-rebase-2026-10-31` (`e72c0779`). Nothing had been pushed.
+
+**Commits (old → new).** The relabel commit that carries this section follows the last row.
+
+| Pre-rebase | Rebased | Subject |
+|---|---|---|
+| `62416719` | `780461ea` | story(12.1): created + validated — v1.1; row backlog -> ready-for-dev, epic-12 -> in-progress; ledger 2026-10-31p |
+| `a22dbdec` | `91b35a57` | governance: decision 2026-10-31-427 — AUTHOR-COMMIT: Story 12.1 build decisions QE1-QE15, all as recommended |
+| `e38fc5a3` | `9848e65a` | records(12.1): Task 0.2 answered + Task 0.3 done (2026-10-31-427); story v1.2; ledger 2026-10-31q |
+| `39ef1763` | `e0b8e933` | records(12.1): Task 0.4 done — Task 0 complete; story v1.3; ledger 2026-10-31r |
+| `0168592b` | `1c90a73b` | governance: decision 2026-10-31-429 — AUTHOR-COMMIT: amends -427 from Story 12.1's second validation |
+| `0626311c` | `46f0487e` | records(12.1): second validation applied — story v1.4; deferred-work C1-C12; epics notes refreshed; ledger r -> t + 20… |
+| `977977ae` | `92996c2e` | records(12.1): v1.5 — BigDev's four checks verified and fixed; ledger 2026-10-31v |
+| `28908112` | `b0efc99a` | governance: ADR-0044 drafted — module manifest schema versioning |
+| `49b22edd` | `6669f21d` | story(12.1): implement the module manifest schema and lifecycle state machine — the sixth event-derived primitive |
+| `e72c0779` | `7ba1347e` | records(12.1): story implemented (49b22edd) and code-reviewed in two rounds — findings, dispositions, deferrals; row -… |
+
+**`2026-10-31` ledger labels (both ledgers).** Main's 6.38 landed `l`–`u` first, so this branch yielded and its six entries were RELABELLED in ONE commit after the rebase — each keeps its position and carries a "relabelled from" note
+(intermediate commits keep their original labels, and their messages cite them):
+
+| Entry | Was | Now |
+|---|---|---|
+| Story created | `p` | `v` |
+| Task 0.2 answered / Task 0.3 done | `q` | `w` |
+| Task 0.4 done (itself relabelled `r` → `t` earlier, for `story/11b-5a`) | `t` | `x` |
+| Second validation | `u` | `y` |
+| v1.5 — BigDev's four checks | `v` | `z` |
+| Implemented (and reviewed) | `w` | `aa` |
+
+**Numbers.** `-430` is now TAKEN on `main` (6.38's ruling on a fee paid after the death), so the header note "any further decision takes ≥ `-430`" is stale: the next free decision id is ≥ `-431`
+(`-426` and `-428` are still on `story/11b-5a-…`). `-427` and `-429` are unchanged and were verified byte-identical to the pre-rebase entries. Migration `0193`, ADR-0044 and journal idx 193 are still free on `main`
+(its highest migration is `0192`); the journal `idx` and `when` values are unique and increasing.
+
+**Verified after the rebase:** for all 51 files the set of changed lines against `origin/main` equals the set against the old base; the four decision entries around ours (`-427`, `-429` against the backup; `-430`, `-425` against `origin/main`) are byte-identical;
+`sprint-status.yaml` parses with 301 rows (main's count), differing from main only in `epic-12` and the 12.1 row; every non-ledger file this story changed is identical to the backup's version. **Re-verified on the MERGED tree** (run after the rebase, before the relabel commit): `turbo lint typecheck` over the whole monorepo — 40 / 40 tasks; unit — `domain` 3,461, `events` 26, `api` 797, `jobs` 1,242 (turbo 19 / 19, 0 failed; the counts rose because main's 6.38 added tests); the six marketplace live-DB files — 72 / 72 on the fresh container `twt-121-ci-pg`; the 22 invariant gates and `db:check`, openapi-determinism, pii-scrape, i18n-parity and tokens-theme — PASS. ⚠ **NOT re-run:** a full `pnpm ci:local` (it also builds, runs the `admin` / `mobile` unit suites and the live-DB `integration-tests` across eight packages).

@@ -4063,12 +4063,12 @@ the neighbours' text `no_target:name_too_long`); the eight registered texts, the
 (11–14 ⛔ helpline variable); the WhatsApp reminder's words and its name reader unchanged; ⛔ name in any alarm, log line, detail or
 payload; ⛔ migration, schema, detail vocabulary or send-core change; every flipped or new test proven RED.
 
-### Story 6.38: Once a Death Is Reported the Member's Record Is ⛔ Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door `[PRIMITIVE]` `[SURFACE]`
+### Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-10-30 (`bmad-create-story 6.38`)** — the row `6-38-death-locks-erasure-and-non-member-claims-refused` was added by
 > [`-423`](../../.decision-log.md#decision-2026-10-30-423) Consequence 1 (Trustee-ratified, DR + KB: *"Q1(a) A, Q1(b) A, Q2 - A / Q3 B"*;
-> BigDev: *"add it"*), with ⛔ `epics.md` entry. The build decisions (DL1–DL15) are PROPOSED in the story file and answered at its Task 0;
-> three edges the ruled words do ⛔ decide (PQ1–PQ3) are routed as ONE non-blocking note.
+> BigDev: *"add it"*), with ⛔ `epics.md` entry. The build decisions (DL1–DL16) are PROPOSED in the story file and answered at its Task 0;
+> the edges the ruled words do ⛔ decide (PQ1 (a) / (b), PQ2, PQ3) are routed as ONE non-blocking note (validated 2026-10-31, story v1.1).
 
 As a family reporting a member's death, a helpline operator, a Pariwar Admin handling a data-rights request, and the person a member
 nominated, I want the member's record kept exactly as they left it once their death is reported — open to see and to correct, ⛔ to erase —
@@ -4080,9 +4080,10 @@ off-portal — while any claim for the member's death stands that ⛔ `member_fo
 its producer is row 6-22, ⛔ built — a named residual); erasure serialised against intake on the intake lock; intake — helpline AND app —
 refuses at the door (409 `claim.intake_refused`, reason `not_joined` / `left` / `removed` / `erased`) a first report for a member at
 `pending-kyc`, `withdrawn`, `anonymized` or terminated, writing ⛔ claim, attempt or event (the existing staff security audit line stays);
-checked once per death; lock-in, lapsed, grace, `pending-fee`, `pending-valid` and suspended members filed as today; the operator shown
-WHY with a read-back prompt, the app ONE calm message with ⛔ reason; see (the in-app export) and ask (the data-rights ticket + the staff
-correction record) fenced OPEN after a death is reported; ⛔ migration, ⛔ new audit type, ⛔ new nominee surface.
+checked once per death; lock-in, lapsed, grace and suspended members filed as today, and `pending-fee` / `pending-valid` too — for
+`pending-valid` (identity check submitted, ⛔ verified) a DECLARED narrowing of the ruled words, routed (PQ1 (a)); the operator shown
+WHY with a read-back prompt, the app ONE calm message with ⛔ reason on screen or wire; see (the in-app and off-portal exports) and ask
+(the data-rights ticket + the staff correction record) fenced OPEN after a death is reported for a member ⛔ withdrawn; ⛔ migration, ⛔ new audit type, ⛔ new nominee surface.
 
 ---
 

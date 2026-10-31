@@ -24,24 +24,25 @@ NUMBERS: ⛔ claimed by this file. At authoring the highest decision anywhere (e
 `2026-10-30q` (main). This create-story run's ledger line takes `2026-10-30r`. Task 0.4's decision entry is "the next free one" at the
 commit that takes it.
 
-LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL15 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel questions
-(PQ1–PQ3, non-blocking); **TR** = traps; **AC1–AC12**.
+LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL16 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel questions
+(PQ1 (a) / (b), PQ2, PQ3 — non-blocking); **TR** = traps (TR1–TR10); **AC1–AC12**.
 -->
 
-# Story 6.38: Once a Death Is Reported the Member's Record Is ⛔ Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
+# Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
 
 Status: ready-for-dev
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled three things on 2026-10-30 (`2026-10-30-423`). **(a)** From the moment a claim
-> is filed for a member's death, ⛔ nobody can have that member's record erased — not the member's own account (`POST /api/v1/member/rtbf`),
+> is filed for a member's death, nobody can have that member's record erased — not the member's own account (`POST /api/v1/member/rtbf`),
 > not a Pariwar Admin off-portal (`member-data-rights/erasure`) — unless the report is closed because the member is ALIVE. **(b)** The person
 > the member nominated may SEE the record and ASK for a correction, ⛔ erase it. **(c)** A claim for someone who, at death, had ⛔ finished
 > joining (⛔ identity check — `pending-kyc`), had left (`withdrawn`), had been erased (`anonymized`) or had been removed (terminated —
 > the moderation overlay) is REFUSED at the door — on the helpline AND in the app — with ⛔ claim record and ⛔ appeal; the helpline
-> operator is shown WHY, so a mistyped member number can be re-checked with the caller before the call ends. This story builds ONE leaf
-> predicate ("a death is reported and stands"), puts it in the ONE erasure legality function both routes already share, serialises
-> erasure against intake on the intake lock, adds ONE intake door inside the ONE mint path both intakes already share, and gives the
-> operator, the Pariwar Admin and the app their words. ⛔ Migration, ⛔ new table, ⛔ new audit type, ⛔ new nominee surface.
+> operator is shown WHY, so a mistyped search (the member id or mobile number the operator searched with) can be re-checked with the
+> caller before the call ends. This story builds ONE leaf predicate ("a death is reported and stands"), puts it in the ONE erasure
+> legality function both routes already share, serialises erasure against intake on the intake lock, adds ONE intake door inside the ONE
+> mint path both intakes already share, and gives the operator, the Pariwar Admin and the app their words. ⛔ Migration, ⛔ new table,
+> ⛔ new audit type, ⛔ new nominee surface.
 
 **What already ships and this story REUSES — rebuild none of it:**
 - `resolveRtbfLegality` (`packages/domain/src/member/rtbf-legality.ts`) — the ONE erasure legality function; its header: *"declared ONCE,
@@ -49,7 +50,10 @@ Status: ready-for-dev
 - `isNomineeDeclarationLocked` (`packages/domain/src/claim/nominee-lock.ts`) — the EXACT shape of "a claim was ever filed and ⛔ released
   by an innocence finding", keyed to the durable `claims` row, ⛔ the `account-frozen` overlay (G4).
 - `intakeAdvisoryLockKey` (`packages/domain/src/claim/icp-lock.ts`) — a LEAF module (imports only `node:crypto`), the key every intake
-  takes; the nominee edit already serialises on it (Story 6.20 D3).
+  takes; the nominee edit already serialises on it (Story 6.20 D3). `icp.ts` re-exports it.
+- The domain-owns-the-vocabulary, contracts-mirrors-it pattern (`@twt/domain` ⛔ imports `@twt/contracts` — `domain/src/errors.ts`
+  header): e.g. `APPROVAL_WARNING_REASON_REFUSALS`, pinned by `packages/contracts/tests/claims-verifier-decision.test.ts`;
+  `reconciliation/review-reason-codes.ts` + `contracts/tests/reconciliation-review.test.ts`.
 - `tryConverge` (`packages/domain/src/claim/icp.ts`) — the ONE mint path; reached by the helpline and the member app through
   `initiateIntake` (`apps/api/src/modules/claims/claims.service.ts`).
 - `translateRefileRequiresConfirmation` + `REFILE_REQUIRES_CONFIRMATION_CODE` — the precedent for a domain refusal mapped to a 409 at
@@ -71,14 +75,15 @@ agreement they gave while alive, and no money is raised in the name of someone w
 
 | Source | Key (verbatim, abridged) | Status |
 |---|---|---|
-| `2026-10-30-423` Q1 (a) A | *"From the moment a claim is filed for the member's death, an erasure request is refused, for good — unless the report is closed as false (Q1 (b))."* Reason: *"the member agreed to how their data is used while they were alive; … no one can withdraw it on their behalf afterwards."* | Trustee-ratified (DR + KB) |
+| `2026-10-30-423` Q1 (a) A | *"From the moment a claim is filed for the member's death, an erasure request is refused, for good — unless the report is closed as false (Q1 (b))."* Reason: *"the member agreed to how their data is used while they were alive; … no one can withdraw it on their behalf afterwards."* Cost accepted: *"Nobody — not the nominee, not the family — can have a dead member's record erased; it is kept indefinitely. Whether the law allows the Trust to refuse is counsel's to confirm."* | Trustee-ratified (DR + KB) |
 | `-423` Q1 (b) A | *"Once the report is closed because the member is alive, erasure is possible again."* Cost accepted: *"while the false report is open, the member cannot have their data erased."* | Trustee-ratified |
-| `-423` Q2 A | *"The person the member nominated … may SEE the record and ask for a CORRECTION, ⛔ erase it"*; the privacy policy changes to say so (BigDev and counsel). | Trustee-ratified |
+| `-423` Q2 A | *"The person the member nominated (the draft privacy policy's "nominate a person to exercise your rights in the event of death") may SEE the record and ask for a CORRECTION, ⛔ erase it; the privacy policy is changed to say so before members agree to it."* Cost accepted: *"If counsel says the law gives the nominated person a right to erase, A must change."* | Trustee-ratified |
 | `-423` Q3 B | *"A claim for someone who, at their death, had not finished joining (⛔ identity check), had left the Trust, had been removed, or had been erased is refused when it is filed: the helpline tells the caller the claim cannot be filed; ⛔ claim record is kept."* Cost accepted: *"No record and no appeal; a mistyped member number turns a real family away silently."* ⛔ Touched: *"members in their first days after joining, behind on contributions, or suspended"*. | Trustee-ratified (⛔ our suggestion A) |
 | `-423` "Our readings — ⛔ NOT RATIFIED" | (1) *"A death is reported"* = a claim FILED; a claim later withdrawn or refused for another reason still counts. (2) *"⛔ recorded"* leaves the staff SECURITY audit line (`claims.helpline.handlers.ts`, *"a probing/invalid id is never audit-silent"*). (3) The mistyped-number cost is MITIGATED by showing the operator WHY. | readings — build on them; challenge ⇒ back to the Panel |
 | `-423` Consequence 1 | the build row: (a) both erasure routes; (b) the nominated person's access / correction without erasure; (c) intake refuses at the door — helpline and app — `pending-kyc`, `withdrawn`, `anonymized`, terminated, *"with the reason shown to the operator"*. | the row this story is |
+| `-423` Consequences 2 · 3 | (2) the privacy policy (draft, outside this repository) must say Q2 A before members agree to it — BigDev and counsel; (3) counsel confirms the law allows the refusal (Q1 (a)) and gives the nominated person ⛔ right to erase (Q2). ⛔ Built here — TRACKED by Task 0.5 (iii) so they do ⛔ go untracked once this row closes. | obligations outside the code |
 | `-159` cl. 11 | SUPERSEDED IN PART by `-423`: *"a deceased member IS reachable"* / *"RTBF → the name GOES"* no longer hold once a death is reported. *"death → the name STAYS"* is unchanged. | author-commit, superseded in part |
-| `-238` cl. 1 · `-241` §6 | a claim against a LIVING member must not lock them for life; the release is the fraud register's INNOCENCE finding (`member_found_innocent`), whose producer is row `6-22` (⛔ built). | Trustee-ratified / author-commit |
+| `-238` cl. 1 · cl. 4 · cl. 5 · `-241` §6 | cl. 1: *"A claim filed against a member who is **alive** does ⛔ not lock that member's declaration for life. On investigation finding the member **innocent**, the declaration **unlocks immediately**."* — scoped to the NOMINEE DECLARATION. cl. 4: *"TWO OUTCOMES ONLY. An investigation finds the member innocent or guilty."* cl. 5: guilty ⇒ *"terminated and blacklisted"*. `-241` §6: the finding's producer is row `6-22` (⛔ built). ⚠ That the SAME innocence finding releases the ERASURE lock is this story's READING (DL4), ⛔ a ratified rule. | Trustee-ratified / author-commit |
 | Niyamavali §2.1, §8.4, §8.4a, Part 10 | *"Registration alone does not constitute membership"*; termination ends beneficiary entitlement; *"honours … erasure … subject to lawful retention"*. A rulebook, ⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]) — read for the Policy-meaning check only. | ⛔ ratified |
 
 ## 📜 Policy meaning (AI-10-1)
@@ -86,20 +91,24 @@ agreement they gave while alive, and no money is raised in the name of someone w
 **This story INTRODUCES two predicates that gate a member's (or their family's) access to a benefit or a right.**
 
 1. **The erasure lock (`resolveRtbfLegality` gains a conjunct).** *In the member's terms:* **"Once anyone files a claim for your death,
-   nobody — not you, your family, the person you nominated, or the Trust's staff — can have your record erased; if you are in fact alive,
-   you can ask again once the claim is found to be about a living member."** ⚠ What the member must also be told, because it is TRUE
+   nobody — not you, your family, the person you nominated, or the Trust's staff — can have your record erased, and it is kept
+   indefinitely; if you are in fact alive, you can ask again once the claim is found to be about a living member."** ⚠ What the member must also be told, because it is TRUE
    today and ⛔ a defect of this story: the "found alive" finding has ⛔ producer until row `6-22` lands, so until then a living member who
    is falsely reported can ⛔ have their record erased at all (DL4). **Checked against the Niyamavali:** Part 10 honours erasure *"subject
    to lawful retention"* — CONSISTENT in kind (a retention exception); whether this retention is lawful is counsel's (`-423`
    Consequence 3), ⛔ the Niyamavali's. ⛔ Clause contradicts it.
 2. **The intake door (a new conjunct on who a claim may be filed for).** *In the member's terms:* **"If, when your death is first
-   reported, you had never finished your identity check, had left the Trust, had been removed from it, or had had your record erased,
+   reported, you had only signed up and never done your identity check, had left the Trust, had been removed from it, or had had your record erased,
    no claim can be filed for you — the helpline tells your family so on the call and keeps no claim; if you were new, behind on your
    contributions or suspended, a claim is filed as usual and the existing rules decide it."** **Checked against the Niyamavali:** §2.1
    (*"Registration alone does not constitute membership"*) and §8.4 / §8.4a (termination: beneficiary entitlement *"Ended"*) —
-   CONSISTENT. Withdrawal and erasure: the Niyamavali is SILENT (⛔ clause found). ⚠ **One mismatch, routed, ⛔ built:** §2.1 also makes
-   the FEE a condition of membership, so the Niyamavali alone would refuse `pending-fee` (identity checked, fee unpaid) too; the Panel's
-   words name only the identity check ⇒ PQ1, and this story builds the NARROW reading (only `pending-kyc`).
+   CONSISTENT. Withdrawal and erasure: the Niyamavali is SILENT (⛔ clause found). ⚠ **Two mismatches, routed, ⛔ built** — §2.1 lists
+   (a) registration, (b) identity verification (KYC), (c) the fee, (d) admission, so the Niyamavali alone would ALSO refuse:
+   **(i) `pending-valid`** (*"lock-in elapsed but KYC still unverified … awaits trustee"* — fee paid, identity check ⛔ finished) and a
+   member who reached `pending-fee` / `lock-in` through the UNVERIFIED manual fallback — the ruled words *"had not finished joining (⛔
+   identity check)"* literally reach these too, while `-423` Consequence 1 (c) lists only `pending-kyc` ⇒ **PQ1 (a)**; this story builds
+   them OPEN — a DECLARED NARROWING of the ruled words, ⛔ silent; **(ii) `pending-fee`** (identity checked, fee unpaid) — the fee is ⛔ in
+   the Panel's words at all ⇒ **PQ1 (b)**; built OPEN.
 
 ## ⭐ THE INVARIANTS
 
@@ -112,30 +121,49 @@ call), ⛔ in either handler. The member's state does ⛔ matter: an `active`, `
 alike. An `anonymized` member still answers `already_anonymized` (nothing left to protect).
 
 **N3 — Erasure and intake serialise on the SAME lock.** Each erasure transaction takes `pg_advisory_xact_lock(intakeAdvisoryLockKey(p, m))`
-BEFORE the existing `rtbfAdvisoryLockKey` lock and BEFORE the N1 read; intake already takes it before minting. Intake ⛔ ever takes the
-rtbf key ⇒ ⛔ lock-order cycle. Whichever commits first wins: an erasure first ⇒ the intake sees `anonymized` and the door refuses
-(`erased`); an intake first ⇒ the erasure sees the claim and is refused.
+BEFORE the existing `rtbfAdvisoryLockKey` lock and BEFORE the N1 read — through ONE domain helper (DL3); intake already takes it before
+minting. ⛔ Path takes the rtbf key and then the intake key ⇒ ⛔ lock-order cycle. ⚠ **What the lock is FOR — said plainly so the test is
+⛔ vacuous:** erasure is legal only for a `withdrawn` or terminated member, and the door refuses exactly those, so in a TWO-party race
+over a member already erasable ⛔ claim can be minted in either order — the DOOR closes that case, ⛔ the lock. The lock closes the
+case where the member's state CHANGES during the race: an intake that passed the door on `active` holds the lock with its claim
+uncommitted; a withdrawal (which takes ⛔ lock) commits; an erasure then reads `withdrawn` — without the lock it sees ⛔ committed
+claim and erases, and both commit; with it, it waits, sees the claim and is refused `death_reported`. It also keeps the race closed if
+PQ1 later narrows the door.
 
 **N4 — The door is checked ONCE per death, at the first report.** Inside `tryConverge`, under the intake lock: when N1 is FALSE (⛔ claim,
 or every claim released as alive) the door decides; when N1 is TRUE the death was already reported while the person passed the door, and
 today's flow (converge / idempotent / cross-channel pending / re-file guard) runs UNCHANGED. "At their death" = the state when the death is
-first reported (G10: ⛔ death date exists at intake).
+first reported (G10: ⛔ death date exists at intake). ⚠ This includes a standing claim that is TERMINAL (`denied` / `closed`, ⛔
+innocence-released): `getConvergenceCandidate` skips it, so a new report MINTS a second claim through `assertRefileAllowed` with ⛔ door —
+even for a member withdrawn or terminated since. Consistent with `-423` reading 1 (the death was reported while the person passed the
+door); AC8 tests it. ⚠ Termination and withdrawal take ⛔ intake lock, so one that commits DURING a first intake does ⛔ stop that
+intake's mint — consistent with "the state at the first report"; noted, ⛔ fixed.
 
 **N5 — Refused at the door means ⛔ record.** A refusal writes ⛔ `claims` row, ⛔ `intake_attempts` row, ⛔ `events_log` row, ⛔ new audit
-type. It throws BEFORE any write in `tryConverge`. The one line that stays is the EXISTING helpline catch audit
-(`helpline_claim.intake_failed`, a staff ACTION — `-423` reading 2), whose text carries the reason CODE only, ⛔ a name.
+type. It throws BEFORE any write in `tryConverge`. Two EXISTING security lines stay, unchanged in kind: the helpline catch's
+`helpline_claim.intake_failed` (a staff ACTION — `-423` reading 2; its `context.error` = `${err.name}: ${err.message}` =
+*"ConflictError: A claim cannot be filed for this member"*) and the member route's `member_claim.intake_failed` (`context.error` =
+`err.name` — the deceased's OWN account acting, ⛔ a caller's record; reading 2's logic covers it). ⚠ Neither carries the reason, and
+`emitAuthAudit`'s `context` is only SHA-256 HASHED (`audit_log_entries` has ⛔ context column — `auth/shared/audit.ts`), so ⛔ text in
+either line is readable at rest. Whether the helpline line NAMES the reason (via `resourceLocator`) is DL16 — BigDev's.
 
 **N6 — Exactly four refusals, and only these.** `anonymized` ⇒ `erased`; terminated (moderation overlay) ⇒ `removed`; `withdrawn` ⇒ `left`;
 `pending-kyc` ⇒ `not_joined`. Checked in that order. Every other lifecycle state (`pending-fee`, `pending-valid`, `lock-in`, `active`,
-`active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules decide them later (`-423` Q3 *"⛔ Touched"*; PQ1). An
-exhaustive `switch` with a `never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it.
+`active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules decide them later (`-423` Q3 *"⛔ Touched"*; PQ1 (a) / (b):
+`pending-valid` and the unverified-fallback members are open as a DECLARED narrowing of the ruled words). An exhaustive `switch` with a
+`never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it.
 
-**N7 — The operator is told WHY; the caller is told only that it cannot be filed.** The helpline sees one line per reason and is told to read
-the number back. The app shows ONE calm message with ⛔ reason (PQ3).
+**N7 — The operator is told WHY; the caller and the app are told only that it cannot be filed.** The helpline sees one line per reason and
+is told to read back what they searched with. The app shows ONE calm message with ⛔ reason (PQ3) — and the reason is ⛔ on the member
+route's WIRE either (uniform withholding: a reason the screen hides but the 409 body carries is a disclosure — DL8).
 
-**N8 — See and ask stay OPEN after a death is reported.** The in-app data export (the deceased's session — Ravi mode), the `dpdpa-data-rights`
-helpdesk ticket and the staff `recordCorrection` keep working for a member with a standing report — fenced by tests (AC8), so a later
-freeze conjunct cannot silently remove what Q2 A grants.
+**N8 — See and ask stay OPEN after a death is reported — for a member who is ⛔ `withdrawn` / `anonymized`.** The in-app data export (the
+deceased's session — Ravi mode), the Pariwar Admin's off-portal export (`member-data-rights` `requestExport` + delivery), the
+`dpdpa-data-rights` helpdesk ticket and the staff `recordCorrection` keep working for a member with a standing report — fenced by tests
+(AC11), so a later freeze conjunct cannot silently remove what Q2 A grants. ⚠ **The edge this story does ⛔ close:** both exports refuse
+a `withdrawn` member (`DATA_EXPORT_TERMINAL_STATES` → 409 `data_export.member_terminal`), and withdrawal stays reachable after a death is
+reported (`assertWithdrawable` reads ⛔ claim) — so ONE post-death withdrawal ends SEE on both routes (only `recordCorrection`, a record,
+survives). That is PQ2's harm; ⛔ built until the Panel answers.
 
 ## Found facts (traced at `01062c51`)
 
@@ -153,15 +181,20 @@ freeze conjunct cannot silently remove what Q2 A grants.
   NOT NULL`, index `claims_deceased_member_id_idx`; ⛔ DELETE grant (never row-deleted). `claim_lifecycle_state` includes `denied`,
   `reversed`, `settled`, `closed`; `claim.closed` triggers are only `suspicion_appeal_allowed`, `death_already_finally_approved`. ⛔ Event or
   state means "closed because the member is alive".
-- **G4 — The one "alive" fact the code has** is `claim_nominee_findings.kind = 'member_found_innocent'` (`-238` cl. 1: *"a claim filed
-  against a LIVING member"*), written by `recordMemberInnocenceFinding` — ⛔ production caller until row
+- **G4 — The one "alive" fact the code has** is `claim_nominee_findings.kind = 'member_found_innocent'` (`-238` cl. 1: *"A claim filed
+  against a member who is **alive** does ⛔ not lock that member's declaration for life"*; the finding kinds today are
+  `member_found_innocent` and `nominee_disqualified` — ⛔ guilty kind yet), written by `recordMemberInnocenceFinding` — ⛔ production caller until row
   `6-22-fraud-register-blacklist-instrument-and-identifier-set` lands (`nominee-lock.ts` header; that row is `backlog`).
   `isNomineeDeclarationLocked` is raw SQL with explicit aliases ([[project_epic6_drizzle_correlated_subquery_bug]]); the same
-  "⛔ released" filter recurs in `claim/approval-warnings.ts` and `claim/peer-mesh-read.ts` (read-only uses; ⛔ touched here).
+  "⛔ released" filter recurs in `claim/approval-warnings.ts` (THREE copies) and `claim/peer-mesh-read.ts` (one) — read-only uses whose
+  comments name `nominee-lock.ts` / `isNomineeDeclarationLocked` as the source (DL13 re-points the comments; the SQL is ⛔ touched).
 - **G5 — Locks.** Erasure: `rtbfAdvisoryLockKey` = sha256 `member.rtbf:${p}:${m}` (`member/rtbf-legality.ts`). Intake:
   `intakeAdvisoryLockKey` = sha256 `${p}:${m}` (`claim/icp-lock.ts`, a leaf). The two keys differ and intake ⛔ locks the `members` row ⇒
   TODAY an erasure and an intake can both commit (READ COMMITTED). The nominee edit's D3 (`acquireNomineeDeclarationLock`) is the precedent:
-  the intake key FIRST, then the check.
+  the intake key FIRST, then the check. Intake-key takers today: `icp.ts` (`acquireIntakeLock`), `refile-guard.ts`,
+  `verifier-decision-persist.ts`, `suspicion-refusal-persist.ts` (twice — its header lists *"Every intake-key taker"*), the nominee edit.
+  rtbf-key takers: the two erasure handlers + three `member-data-rights` delivery / redeem paths (rtbf key ONLY). ⛔ Path takes rtbf
+  then intake. `anonymizeMember` takes ⛔ lock. The withdrawal and moderation writers take ⛔ lock.
 - **G6 — Import direction.** `claim/` already imports `member/` (`nominee-correction-persist.ts`, `peer-mesh-*.ts`); `member/` imports ⛔
   `claim/` module today. A `member/ → claim/<leaf>` import is safe ONLY if that leaf imports nothing from `claim/` ([[project_type_only_import_cycle_trap]]).
 - **G7 — The intake paths.** The ONE `insert(claims)` is `claim/project.ts` (via `projectClaimState`); the two mints emitting
@@ -176,9 +209,13 @@ freeze conjunct cannot silently remove what Q2 A grants.
   (DigiLocker-verified or manual fallback), awaiting fee"*), `pending-valid` (*"lock-in elapsed but KYC still unverified"*), `lock-in`,
   `active`, `active-in-grace`, `lapsed-unpaid`, `withdrawn`, `anonymized`. ⛔ `deceased` state (death is an overlay —
   [[project_death_is_an_overlay_not_a_state]]). Termination is the moderation overlay: `getCurrentMemberModerationOverlay(db, memberId)`
-  (`member/moderation/overlay.ts`, unbounded — the bounded variant is unsafe for legality), `MODERATION_STATUSES = ['none','suspended','terminated']`.
-  `getCurrentMemberState(db, memberId)` (`member/read.ts`) = the unbounded `events_log` replay (the clock-domain-safe read; ⛔
-  `members.state`, a projected cache).
+  (`member/moderation/overlay.ts`, unbounded — the bounded variant is unsafe for legality; returns `{ status, reasonCode, since,
+  lastActionAt }`, `NO_MODERATION.status === 'none'` for a never-moderated member), `MODERATION_STATUSES = ['none','suspended','terminated']`
+  (`member/moderation/status.ts`). Moderation writes do ⛔ gate on lifecycle ⇒ `withdrawn` + terminated and terminated-then-`anonymized`
+  are both reachable. `getCurrentMemberState(db, memberId): Promise<MemberLifecycleState>` (`member/read.ts`) = the unbounded
+  `events_log` replay (the clock-domain-safe read; ⛔ `members.state`, a projected cache). ⚠ A member with ZERO events replays to
+  `pending-kyc` (the reducer's initial state) — this is what makes TR2 bite. `kyc_manual_fallback` moves `pending-kyc` → `pending-fee`
+  WITHOUT verification; `lock_in_expired` with `kyc_verified: false` gives `pending-valid` (`member/state.ts`).
 - **G10 — ⛔ death date at intake.** Neither intake request carries one; OCR is the all-null provider; the certificate date arrives at 6.21a
   review ([[project_ocr_v1_always_empty]]) ⇒ the state at the first report stands in for the state at death.
 - **G11 — Signup** creates the member at `pending-kyc` with only a phone (`signup.handlers.ts`); the name lives only in
@@ -187,20 +224,33 @@ freeze conjunct cannot silently remove what Q2 A grants.
   OFF (default). `withdrawn` / `anonymized`: login and refresh refuse — only a ≤ 15-minute access-token window. The door is in the shared
   core, so all are covered.
 - **G13 — The operator's screens.** The lookup is the 4.7 member search (`member-validity/handlers.ts`): it shows the lifecycle `state`
-  badge, ⛔ moderation status (a terminated member looks ordinary). `HelplineClaimPage.tsx` `submitIntake` `onError` handles only
-  `auth.step_up_required` and `claim.refile_requires_confirmation`; everything else is `messageOf(err)` — the raw server English — in
-  `HelplineConsoleShell`'s `<p role="alert">`. Copy: `helpline-claims/i18n-en.ts` (`resolveEn(key)`), English only.
+  badge, ⛔ moderation status (a terminated member looks ordinary). The search is by `HelplineLookupMethod` = `memberId` / `mobile` /
+  `pariwar` — there is ⛔ membership number ([[project_membership_number_deferred_feature]]). `HelplineClaimPage.tsx` `submitIntake`
+  `onError` only SETS STATE for two codes (`auth.step_up_required` → `setStepUpRequired`; `claim.refile_requires_confirmation` →
+  `setRefileClaimId` from `details.closed_claim_case_id`) and renders nothing. The alert TEXT always comes from the `submitError`
+  EXPRESSION passed to `HelplineConsoleShell` (`submitError?: string` → ONE `<p role="alert">`): `messageOf(intake.error)` — the raw
+  server English — for every error except step-up (so the refile 409's raw English still shows beside its card). `resetDownstreamState`
+  (called by `selectMember` and `onSearch`) resets the step-ups and `refileClaimId` but ⛔ calls `intake.reset()` — a failed submit's
+  error OUTLIVES a change of member. The admin keeps the refile code as a LOCAL literal. Admin `ApiError` (`apps/admin/src/api/client.ts`)
+  carries `code`, `status`, `details` (parsed from `body.error.details`). Copy: `helpline-claims/i18n-en.ts` (`resolveEn(key)` — untyped
+  `Record<string,string>`, returns the KEY when missing; ⛔ test checks keys exist), English only; the `helpline.intake.*` namespace is free.
 - **G14 — The Pariwar Admin's erasure** button lives in `apps/admin/src/modules/helpdesk/HelpdeskDetailShell.tsx`; refusals render as
-  `messageOf(err)` (raw server English) in `HelpdeskDetailPage.tsx`; copy in `helpdesk/i18n-en.ts` (`helpdesk.dataRights.*`).
-  ⛔ Admin test exercises the erasure button.
+  `messageOf(err)` (raw server English) in `HelpdeskDetailPage.tsx` — the `dataRightsError` `??` chain (a stale `buildExport` error sits
+  AHEAD of the erasure error), passed to the Shell's `role="alert"`; copy in `helpdesk/i18n-en.ts` (`helpdesk.dataRights.*`).
+  ⛔ Admin test exercises the erasure button, and ⛔ test renders `HelpdeskDetailPage` at all (it needs eight hooks); the Shell is tested in
+  `apps/admin/tests/helpdesk-responder-console.test.tsx` (`describe('<HelpdeskDetailShell> (D5)…')`, a `dataRightsDetail` fixture).
 - **G15 — The nominated person (Q2).** ⛔ Separate data-rights nominee exists: the only nomination is the claim nominee (`member_nominees`,
   Story 3.4); `member_nominee_links` (6.36e) grants ⛔ access. The nominee acts through the DECEASED'S own session (Ravi mode — 9.1; the
   `claim_handover` OTP to the nominee's declared mobile gates the claim filing). That session reaches: the data export
   (`data-export/routes.ts` — blocked only for `withdrawn` / `anonymized`; download step-up `data_export`, whose code goes to the
   DECEASED'S mobile), the `dpdpa-data-rights` helpdesk subcategory (`apps/mobile/app/(helpdesk)/new.tsx`), Life Events edits (address
-  with ⛔ step-up, posting, medical with `medical_change`), and WITHDRAWAL (`withdrawal/routes.ts`; ⛔ session revoked) — then erasure within
-  the 15-minute token window (the routing note's E3 inference: CONFIRMED reachable by trace). The nominee declaration itself is locked
-  (6.20). The staff `recordCorrection` (`member-data-rights/handlers.ts`) is a RECORD, ⛔ a profile write; it has ⛔ "who asked" field.
+  with ⛔ step-up, posting, medical with `medical_change`), and WITHDRAWAL (`withdrawal/routes.ts`; `assertWithdrawable` checks only
+  `active` / `active-in-grace` / `lapsed-unpaid`, reads ⛔ claim; ⛔ session revoked). Erasure after that withdrawal is reachable at the
+  API ONLY (`POST /member/rtbf` within the 15-minute token window) — ⛔ through any app screen (G16); the realistic path is a
+  `dpdpa-data-rights` ticket then the Pariwar Admin's off-portal erasure (the routing note's E3, now traced). The `account-frozen`
+  overlay has ⛔ consumer in the session guard, step-up, export, helpdesk or data-rights handlers ⇒ ⛔ existing freeze blocks SEE / ASK
+  today. The nominee declaration itself is locked (6.20). The staff `recordCorrection` (`member-data-rights/handlers.ts`) is a RECORD
+  (*"THIS RECORDS; IT DOES NOT WRITE"*), checks only `memberExists`, and has ⛔ "who asked" field.
 - **G16 — The mobile app has ⛔ erasure screen** (`anonymizeMember` in `packages/api-client` has ⛔ mobile caller); `rtbf.*` copy keys in
   `packages/i18n/locales/{en,hi}/common.json` have ⛔ consumer.
 
@@ -208,85 +258,152 @@ freeze conjunct cannot silently remove what Q2 A grants.
 
 - **DL1 — The leaf predicate.** NEW `packages/domain/src/claim/death-report.ts` exporting `isDeathReportStanding(db: Db, pariwarId: PariwarId,
   memberId: MemberId): Promise<boolean>` — the SQL of `isNomineeDeclarationLocked`, MOVED here unchanged (raw SQL, explicit aliases, the
-  explicit `pariwar_id` predicate as well as RLS). It imports ONLY `drizzle-orm`'s `sql`, the `Db` type and id types — ⛔ anything from
-  `claim/` (so `member/` may import it — G6). `isNomineeDeclarationLocked` becomes a one-line delegation (its name, signature, header and
+  explicit `pariwar_id` predicate as well as RLS). It imports ONLY `drizzle-orm`'s `sql`, the `Db` type (`../db.js`) and id types
+  (`../ids/index.js`) — ⛔ anything from `claim/` (so `member/` may import it — G6). `isNomineeDeclarationLocked` becomes a one-line delegation (its name, signature, header and
   callers unchanged). *Rejected:* a copy of the SQL in `member/` (a second definition of "reported"); importing `nominee-lock.ts` from
   `member/` (it imports `icp.js` and `project.js` — a runtime init cycle typecheck cannot see).
 - **DL2 — The erasure refusal.** `resolveRtbfLegality(db, pariwarId, memberId, currentState)` (⭐ `pariwarId` ADDED; both callers have it)
   gains `{ kind: 'death_reported'; fromState }`, checked AFTER `anonymized` → `already_anonymized` and BEFORE the `withdrawn` / terminated
   arms. Both handlers map it to 409 **`rtbf.death_reported`**, message *"Erasure is refused: a claim has been filed for this member's death"*.
-  ⛔ Change to the other kinds or codes.
-- **DL3 — Serialise (N3).** Both handlers take `SELECT pg_advisory_xact_lock(intakeAdvisoryLockKey(pariwarId, memberId))` immediately BEFORE
-  the existing `rtbfAdvisoryLockKey` lock (⛔ advisory lock before it), in the same transaction. Order everywhere: intake key → rtbf key.
+  ⛔ Change to the other kinds or codes. ⚠ The new kind also carries `fromState`, so a handler that keeps today's two `if`s and then
+  reads `legality.fromState` COMPILES and ERASES: each handler narrows with an exhaustive `switch (legality.kind)` + a `never` default
+  (or `if (legality.kind !== 'legal')` before reading `fromState`), so a missing arm fails to compile. ⛔ `rtbf.death_reported` key in
+  `packages/i18n` `common.json` (the `rtbf.*` keys have ⛔ consumer; ⛔ unreviewed Hindi ships).
+- **DL3 — Serialise (N3), through ONE helper.** NEW `acquireErasureLocks(client, pariwarId, memberId)` in `member/rtbf-legality.ts`:
+  `SELECT pg_advisory_xact_lock(intakeAdvisoryLockKey(pariwarId, memberId))` then the existing `rtbfAdvisoryLockKey` lock — taking ⛔
+  advisory lock before the intake key. It imports `../claim/icp-lock.js` (a leaf — `node:crypto` only). BOTH handlers replace their
+  inline rtbf-lock call with it, in the same transaction, and the AC5 race spec CALLS it (⛔ a hand copy of the lock order — a copy proves
+  only the copy: [[feedback_stub_must_call_not_transcribe]]). Order everywhere: intake key → rtbf key. The handlers' entry reads before
+  it (`memberExists`, `requireTicketInScope`) take ⛔ lock, which satisfies `suspicion-refusal-persist.ts`'s intake-key-taker rule.
 - **DL4 — The release is `member_found_innocent`, and nothing else.** It is the only fact the code has that a reported member is alive
   (G4). ⛔ 6.38 builds a "found alive" act — that is the fraud register's (row 6-22). ⚠ Consequence, said plainly: until 6-22 lands, a
   living member wrongly reported can ⛔ have their record erased at all (the same named residual 6.20 carries for the nominee lock).
-  Recorded in `deferred-work.md` (trigger: 6-22's create-story) and as a dated comment line on the 6-22 row. ⚠ Also for 6-22: if it
-  builds a GUILTY-but-alive arm (a member complicit in a false report), whether that releases the erasure lock is a §0 question THERE
-  (⛔ reachable today — ⛔ finding of any kind is written).
+  Recorded in `deferred-work.md` (trigger: 6-22's create-story) and as a dated comment line on the 6-22 row. ⚠ Also for 6-22: it WILL
+  build the GUILTY arm — ratified and owed (`-238` cl. 4 *"TWO OUTCOMES ONLY"*, cl. 5 guilty ⇒ *"terminated and blacklisted"*; `-241`
+  Consequence 3). Q1 (b)'s words (*"closed because the member is alive"*) cover a guilty-but-alive finding too, so releasing the erasure
+  lock on INNOCENCE ONLY is a NARROWING of Q1 (b) that 6-22 must put to the Panel or justify (⛔ reachable today — ⛔ finding of any kind
+  is written). Equating "closed because the member is alive" with `member_found_innocent` is this story's READING, ⛔ ratified.
 - **DL5 — "Filed" = a `claims` row exists** (any state, any closure — `-423` reading 1). An `intake_attempts` row alone ⛔ counts (it
   exists only beside a candidate claim anyway — G7).
 - **DL6 — The door.** NEW `packages/domain/src/claim/intake-door.ts`: `resolveClaimIntakeDoor(db, memberId): Promise<{ kind: 'open' } |
-  { kind: 'refused'; reason: ClaimIntakeRefusalReason }>`, reading `member.getCurrentMemberState` (unbounded replay — G9) and
-  `member.moderation.getCurrentMemberModerationOverlay` (unbounded). Precedence N6. The wire vocabulary lives in contracts:
-  `CLAIM_INTAKE_REFUSAL_REASONS = ['erased', 'removed', 'left', 'not_joined'] as const` (+ type), in
-  `packages/contracts/src/claims/` beside the helpline contracts, exported from the package index.
-- **DL7 — Where the door runs (N4).** In `tryConverge`, after `acquireIntakeLock` and BEFORE `getConvergenceCandidate`:
-  `if (!(await isDeathReportStanding(db, p, m))) { const door = await resolveClaimIntakeDoor(db, m); if (door.kind === 'refused') throw new
-  ClaimIntakeRefusedError(m, door.reason); }`. ⛔ Gate on `overrideIntakeAttempt` (G7). ⛔ Gate in either handler (one door).
-- **DL8 — The 409.** `ClaimIntakeRefusedError` in `claim/errors.ts`; `translateClaimIntakeRefused(err)` in `claims.service.ts`, called in
-  `initiateIntake`'s `catch` BEFORE `translateRefileRequiresConfirmation` → `ConflictError('A claim cannot be filed for this member',
-  CLAIM_INTAKE_REFUSED_CODE, { reason })`, `CLAIM_INTAKE_REFUSED_CODE = 'claim.intake_refused'` exported from contracts (the
-  `REFILE_REQUIRES_CONFIRMATION_CODE` precedent). ⛔ Name, ⛔ member id in the message or details. The helpline catch's existing
-  `helpline_claim.intake_failed` line then records `${err.name}: ${err.message}` — the security line `-423` keeps; ⛔ new audit type.
-- **DL9 — The operator's words** (`helpline-claims/i18n-en.ts`, keys `helpline.intake.refused.<reason>` + `helpline.intake.refused.readBack`):
-  a `intakeRefusalKey(err)` in `HelplineClaimPage.tsx` (the `refusalKey` pattern) picks the line when `err.code === CLAIM_INTAKE_REFUSED_CODE`
-  and `details.reason` is one of the four; any other shape keeps today's `messageOf(err)`. Proposed copy (BigDev approves or edits):
-  - `not_joined` — *"This member number belongs to someone who never finished joining — their identity check was not done. A claim cannot be filed. Read the member number back to the caller to check it."*
-  - `left` — *"This member had left the Trust. A claim cannot be filed. Read the member number back to the caller to check it."*
-  - `removed` — *"This member had been removed from the Trust. A claim cannot be filed. Read the member number back to the caller to check it."*
-  - `erased` — *"This member's record was erased at their request. A claim cannot be filed. Read the member number back to the caller to check it."*
-  - a shared second line under each: *"If the number is right, tell the caller the claim cannot be filed."* — ⛔ "tell them why" (PQ3).
+  { kind: 'refused'; reason: ClaimIntakeRefusalReason }>`, importing DIRECTLY `getCurrentMemberState` from `../member/read.js` (unbounded
+  replay — G9) and `getCurrentMemberModerationOverlay` from `../member/moderation/overlay.js` (unbounded; refuse on `overlay.status ===
+  'terminated'`) — the `claim/nominee-correction-persist.ts` precedent; ⛔ cycle (`member/` imports only `claim/death-report.js` and
+  `claim/icp-lock.js`, both leaves). Precedence N6. ⚠ **The vocabulary is DOMAIN-OWNED** (`@twt/domain` ⛔ imports `@twt/contracts` —
+  contracts depends on domain, a turbo cycle): `CLAIM_INTAKE_REFUSAL_REASONS = ['erased', 'removed', 'left', 'not_joined'] as const` +
+  `type ClaimIntakeRefusalReason` live in `claim/intake-door.ts` (`claim/errors.ts` type-imports it). Contracts MIRRORS the tuple with ⛔
+  source import, in a NEW `packages/contracts/src/claims/intake-refusal.ts` beside `CLAIM_INTAKE_REFUSED_CODE` (contracts-only — API and
+  mobile use it), re-exported by an `export * from './intake-refusal.js'` line in `packages/contracts/src/claims/index.ts` (the barrel the
+  top `index.ts` re-exports); a lockstep test in `packages/contracts/tests/` pins the two tuples equal (the `APPROVAL_WARNING_REASON_REFUSALS`
+  precedent).
+- **DL7 — Where the door runs (N4).** In `tryConverge`, after `acquireIntakeLock` and BEFORE `getConvergenceCandidate` (the `db =
+  bindScopedDb(client)` already in scope): `if (!(await isDeathReportStanding(db, input.pariwarId, input.deceasedMemberId))) { const door =
+  await resolveClaimIntakeDoor(db, input.deceasedMemberId); if (door.kind === 'refused') throw new
+  ClaimIntakeRefusedError(input.deceasedMemberId, door.reason); }`. ⛔ Gate on `overrideIntakeAttempt` (G7). ⛔ Gate in either handler (one
+  door). ⚠ Two residual edges, ⛔ reachable until 6-22 writes a finding (the innocence finding changes ⛔ claim state, so a released
+  claim can still be a non-terminal candidate): (a) when the door opens for a released member, a new report CONVERGES onto the released
+  claim; (b) a `pending` attempt parked beside a claim later released can still be overridden by `overrideIntakeAttempt` with ⛔ door.
+  Recorded for 6-22 in the same deferred item as DL4; ⛔ built.
+- **DL8 — The 409, and who sees the reason.** `ClaimIntakeRefusedError` in `claim/errors.ts`; `translateClaimIntakeRefused(err, { withReason })`
+  in `claims.service.ts`, called in `initiateIntake`'s `catch` beside `translateRefileRequiresConfirmation` → `ConflictError('A claim
+  cannot be filed for this member', CLAIM_INTAKE_REFUSED_CODE, withReason ? { reason } : undefined)` (`ConflictError(message, code,
+  details?)` — `details` reaches the wire via `toErrorResponse`), `CLAIM_INTAKE_REFUSED_CODE = 'claim.intake_refused'` exported from
+  contracts (the `REFILE_REQUIRES_CONFIRMATION_CODE` precedent, `contracts/src/claims/death-certificate.ts`). ⭐ **Only the HELPLINE
+  route passes `withReason: true`;** the member route's 409 carries ⛔ `details` at all (N7 — uniform withholding: the app hides the
+  reason, so the wire must too, or PQ3 is answered by default). Thread the flag from each handler into `initiateIntake` (or strip in
+  `claims.handlers.ts`) — the dev picks, the test (AC7) pins it. ⛔ Name, ⛔ member id in the message or details. The two existing
+  audit lines stay as N5 describes; ⛔ new audit type.
+- **DL9 — The operator's words** (`helpline-claims/i18n-en.ts`, keys `helpline.intake.refused.<reason>` + `helpline.intake.refused.tellCaller`):
+  a pure `intakeRefusalKey(err)` in `HelplineClaimPage.tsx` (the `refusalKey` pattern of `HelplineClaimContact.tsx`) returns the reason's
+  key when `err instanceof ApiError && err.code === CLAIM_INTAKE_REFUSED_CODE` and `details.reason` is in `CLAIM_INTAKE_REFUSAL_REASONS`
+  — BOTH imported at RUNTIME from `@twt/contracts` (⛔ a local literal; the admin already imports runtime contracts values, e.g.
+  `DPDPA_DATA_RIGHTS_SUBCATEGORY`), else `null`. The line is derived IN the `submitError` expression (G13): a key ⇒ `resolveEn(key) + ' '
+  + resolveEn('helpline.intake.refused.tellCaller')`; else today's `messageOf`. ⛔ New state in `onError` (TR7). ⭐ And
+  `resetDownstreamState` ALSO calls `intake.reset()`, so a refusal for member A is ⛔ shown after the operator selects member B or
+  searches again — the very re-check `-423` reading 3 relies on. Proposed copy (BigDev approves or edits; there is ⛔ membership number —
+  G13):
+  - `not_joined` — *"This person signed up but never finished joining — their identity check was not done. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
+  - `left` — *"This member had left the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
+  - `removed` — *"This member had been removed from the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
+  - `erased` — *"This member's record was erased at their request. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
+  - the shared `tellCaller` line after each: *"If the details are right, tell the caller the claim cannot be filed."* — ⛔ "tell them why" (PQ3).
 - **DL10 — The app's words.** NEW calm state `apps/mobile/app/(claim)/cannot-file.tsx` (the `refile-helpline.tsx` shape: plain `YStack`,
-  ONE labelled container announced on arrival, `<CallHelplineCTA>`, a back button; ⛔ `CLAIM_STEPS`), pure key map
-  `apps/mobile/lib/cannot-file-copy.ts` (+ the code constant cross-checked against contracts), routed from `relationship.tsx`'s catch on
-  `CLAIM_INTAKE_REFUSED_CODE`. ⛔ Reason shown (N7). Proposed copy — en: title *"A claim cannot be filed"*; body *"We cannot file a claim
-  for this member. If you have a question, please call the helpline."*; call *"Call the helpline"*; back *"Go back"*. hi (agent-authored,
-  for BigDev's review): *"दावा दर्ज नहीं किया जा सकता"* · *"इस सदस्य के लिए हम दावा दर्ज नहीं कर सकते। कोई प्रश्न हो तो कृपया हेल्पलाइन पर
-  कॉल करें।"* · *"हेल्पलाइन पर कॉल करें"* · *"वापस जाएँ"*. ⚠ "call the helpline" is a route to a QUESTION, ⛔ an appeal (Q3 B) — the
-  helpline is refused by the same door.
+  ONE `accessible` labelled container announced on arrival, `<CallHelplineCTA chromeless={false} theme="accent" height={56}>`, a chromeless
+  back button `router.replace('/(tabs)')`; ⛔ `CLAIM_STEPS`; `closed-helpline.tsx` / `closed-helpline-copy.ts` is an equally close
+  precedent — a calm screen that gives ⛔ reason). The announce effect depends on the RESOLVED STRINGS (`[title, body]`), ⛔ on `t` —
+  `useClaimT()` returns a fresh closure every render ([[project_uset_fresh_closure_memo_trap]]). Pure key map
+  `apps/mobile/lib/cannot-file-copy.ts` (zero imports; holds the code LITERAL — the cross-check against `@twt/contracts` lives in the
+  test, the `refile-helpline-copy.ts` precedent), keys `cannot_file.{title,body,call,back}` in the `claim` namespace. Routed from
+  `relationship.tsx`'s catch (the ONLY mobile caller of `claimApi.initiateIntake`): after the `auth.step_up_required` branch and beside the
+  refile branch, BEFORE `setError(t('relationship.error'))` — `if (e.code === CLAIM_INTAKE_REFUSED_CODE) { router.replace('/(claim)/cannot-file');
+  return; }`, ⛔ `saveClaimDraft`. ⛔ Reason shown (N7) — and ⛔ reason is on this route's wire (DL8). ⚠ With ⛔ record kept, each re-entry
+  walks the wizard back to `relationship.tsx`'s submit before the refusal shows — accepted (Q3 B's ⛔ record). Proposed copy — en: title
+  *"A claim cannot be filed"*; body *"We cannot file a claim for this member. If you have a question, please call the helpline."*; call
+  *"Call the helpline"*; back *"Go back"*. hi: *"दावा दर्ज नहीं किया जा सकता"* · *"इस सदस्य के लिए हम दावा दर्ज नहीं कर सकते। कोई प्रश्न हो
+  तो कृपया हेल्पलाइन पर कॉल करें।"* (title + body agent-authored, for BigDev's review) · *"हेल्पलाइन पर कॉल करें"* · *"वापस जाएँ"* (call +
+  back are the ALREADY-REVIEWED `refile.call` / `refile.back` strings, 2026-10-01). ⚠ "call the helpline" is a route to a QUESTION, ⛔ an
+  appeal (Q3 B) — the helpline is refused by the same door.
 - **DL11 — The Pariwar Admin's words.** `helpdesk.dataRights.erasureRefused.deathReported` in `helpdesk/i18n-en.ts`, shown when the erasure
   error's code is `rtbf.death_reported` (other codes keep `messageOf`): *"This member's data cannot be erased: a claim has been filed for
   their death. The person they nominated may see the record and ask for corrections. It can be erased only if the claim is found to be
   about a member who is alive."* ⛔ Pre-emptive disabling of the button (⛔ read exists that carries the fact; the refusal is the
-  control).
-- **DL12 — Q2 is built by DL2 + fences, ⛔ a new surface (N8).** SEE = the in-app export via the deceased's session; ASK = the
-  `dpdpa-data-rights` ticket + staff `recordCorrection` (a record — "ask, ⛔ edit" holds by construction); ⛔ ERASE = DL2. ⚠ READINGS for
-  BigDev (⛔ the Panel's unless challenged): (i) the claim nominee IS the privacy policy's "nominated person" — the only nomination the
-  Trust records (BigDev + counsel own the policy wording — `-423` Consequence 2); (ii) the deceased's session holder is ⛔ proven to be the
+  control). Build: a pure `erasureErrorText(err)` next to `messageOf` in `HelpdeskDetailPage.tsx` (the DL11 line for `rtbf.death_reported`,
+  else `messageOf`), used at the erasure leg of the `dataRightsError` `??` chain; move the erasure leg FIRST in that chain so a stale
+  `buildExport` error cannot hide the refusal.
+- **DL12 — Q2 is built by DL2 + fences, ⛔ a new surface (N8).** SEE = the in-app export via the deceased's session, and the Pariwar
+  Admin's off-portal export; ASK = the `dpdpa-data-rights` ticket + staff `recordCorrection` (a record — "ask, ⛔ edit" holds by
+  construction); ⛔ ERASE = DL2. Both SEE routes are open only while the member is ⛔ `withdrawn` / `anonymized` (N8's edge — PQ2). ⚠
+  READINGS for BigDev (⛔ the Panel's unless challenged): (i) the claim nominee IS the privacy policy's "nominated person" — the only
+  nomination the Trust records; the draft policy's own words are *"**Nominate** a person to exercise your rights in the event of death or
+  incapacity"* (`docs/legal/privacy-policy.md`, main checkout only) (BigDev + counsel own the policy wording — `-423` Consequence 2); (ii) the deceased's session holder is ⛔ proven to be the
   nominee for the export (its step-up code goes to the deceased's mobile) — recorded in `deferred-work.md` as a risk, ⛔ built: moving the
   export to the `claim_handover` code would cost a falsely-reported LIVING member their own export with ⛔ release until 6-22 — a cost ⛔
   put to the Panel.
-- **DL13 — Stale text re-worded** (comments / docstrings only, ⛔ behaviour): `rtbf-legality.ts` header (the rule text); `member/state.ts`'s
-  `member.rtbf_anonymized` arm comment (*"legal from EVERY live state"* — keep the reducer arm BROAD, legality is the predicate's; say the
-  death lock lives there; fix its stale *"(`withdrawn` only)"* caller note); `packages/api-client/src/index.ts` `anonymizeMember` docstring
-  (already stale); `member/anonymize.ts`'s claim-scrub branch comment (now reachable only for an innocence-released claim). Each cites
-  `2026-10-30-423`. The `-159` cl. 11 citations in code cite the name-STAYS half ⇒ ⛔ edited.
+- **DL13 — Stale text re-worded** (comments / docstrings only, ⛔ behaviour):
+  - `rtbf-legality.ts` header (the rule text) and `resolveRtbfLegality`'s JSDoc `@param` list (add `pariwarId`);
+  - `rtbf/handlers.ts` doc-block *"The rule is: legal from `withdrawn`, OR … `terminated`"* and `member-data-rights/handlers.ts`'s
+    *"⛔ The SHARED predicate — legal from `withdrawn`, OR …"* comment (in `fulfilErasure`);
+  - `member/state.ts`'s `member.rtbf_anonymized` arm comment (*"legal from EVERY live state"* — keep the reducer arm BROAD, legality is
+    the predicate's; say the death lock lives there; fix its stale *"(`withdrawn` only)"* caller note);
+  - `packages/api-client/src/index.ts` `anonymizeMember` docstring (already stale);
+  - `claim/suspicion-refusal-persist.ts`'s *"Every intake-key taker"* list — add the erasure handlers via `acquireErasureLocks`;
+  - `claim/approval-warnings.ts` (its header + the copy near the third filter) and `claim/peer-mesh-read.ts` — they name
+    `isNomineeDeclarationLocked` / `nominee-lock.ts` as the predicate's source ⇒ name `death-report.ts`;
+  - `member/anonymize.ts` — ADD (⛔ comment states reachability today) a note on the deceased-keyed scrubs (memorial MA15, 6.21a
+    death-certificate reviews, 6.23a warning approvals, the `if (deceasedClaimIds.length > 0)` block): now reachable only for an
+    innocence-released claim or a pre-6.38 row.
+
+  Each cites `2026-10-30-423`. The `-159` cl. 11 citations in code cite the name-STAYS half ⇒ ⛔ edited.
 - **DL14 — Fixtures follow the door.** Every test that files a claim for a member whose REPLAYED state is a refused one is re-seeded
   through events to an open state (TR2). ⛔ Test is weakened to get green; ⛔ door bypass flag.
-- **DL15 — A caller fence for erasure.** A source-scan test asserting `anonymizeMember(` has EXACTLY the two production call sites of G1 and
-  that each enclosing handler calls `resolveRtbfLegality` before it — a third caller fails CI until it is reviewed against `-423`.
+- **DL15 — A caller fence for erasure.** A source-scan test in `apps/api/tests/unit/` (modelled on
+  `family-account-reach-fence.test.ts`): comments stripped, scanning `apps/api/src`, `apps/jobs/src` and `packages/domain/src` —
+  EXCLUDING the definition in `member/anonymize.ts` and `packages/api-client` (whose own `anonymizeMember(` method is ⛔ a production
+  caller) — `memberDomain.anonymizeMember(` / `anonymizeMember(` appears at EXACTLY the two G1 sites; and in each of those FILES,
+  `resolveRtbfLegality(` — or the `assertAnonymizable(` call that wraps it (`rtbf/handlers.ts` `confirm` reaches the predicate only
+  through it) — precedes `anonymizeMember(` in the same function. A POSITIVE CONTROL (a planted third caller in a fixture string) is
+  caught. A third caller fails CI until it is reviewed against `-423`.
+- **DL16 — Does the helpline audit line NAME the reason? (BigDev's.)** Today ⛔ (N5: `context` is hashed). Option (a): pass
+  `resourceLocator` = `claim-intake-refused:<reason>` (lowercase, NON-PII, caller-authored — `auth/shared/audit.ts`'s only readable
+  channel) on the helpline catch's line when `err.code === CLAIM_INTAKE_REFUSED_CODE` — cost: the operator's refusals become countable
+  per reason at rest (a membership-history fact about the searched person, ⛔ a name). Option (b): leave it — cost: a disputed refusal
+  cannot be reconstructed from the audit log. Recommended (a) for the helpline only; the member route's line stays reason-less (N7).
 
 ## Panel questions — NON-BLOCKING (one note, Task 0.3; BigDev sends)
 
-- **PQ1 — "Not finished joining": the identity check only, or the fee too?** The ruled words: *"had not finished joining (⛔ identity
-  check)"*. The Niyamavali §2.1 requires KYC AND the fee. Built: only `pending-kyc` refused; `pending-fee` / `pending-valid` OPEN (filed,
-  existing rules decide). If the Panel widens, it is one arm of N6's switch.
+- **PQ1 — "Had not finished joining": where does it end?** The ruled words: *"had not finished joining (⛔ identity check)"*; `-423`
+  Consequence 1 (c) lists only `pending-kyc`. Two edges, put separately:
+  - **PQ1 (a) — an identity check SUBMITTED but ⛔ VERIFIED.** `pending-valid` (*"lock-in elapsed but KYC still unverified … awaits
+    trustee"* — fee paid) and a member who reached `pending-fee` / `lock-in` through the unverified manual fallback (G9). The ruled words
+    literally reach them; Consequence 1 (c) does ⛔. Built: OPEN — a DECLARED narrowing of the ruled words (one arm of N6's switch if the
+    Panel says refuse).
+  - **PQ1 (b) — the FEE.** `pending-fee` with KYC verified: Niyamavali §2.1 (c) makes the fee a condition of membership; the Panel's
+    words do ⛔ mention it. Built: OPEN.
 - **PQ2 — After a death is reported, may the member's account still WITHDRAW the membership or CHANGE the record directly** (address,
   posting, medical declaration — G15), or only ASK for a correction? Q2 A names see + ask; `-423`'s own reason (*"no one can withdraw it
   on their behalf afterwards"*) points at withdrawal too — but the ruled words cover erasure only, so a refusal would WIDEN the ruling.
-  Built: unchanged (reachable); a withdrawal after death also ends the nominee's own Ravi-mode access (login refuses `withdrawn`) — the
-  harm the note must show.
+  Built: unchanged (reachable). The harm the note must show: a withdrawal after death ends the nominee's own Ravi-mode access (login
+  refuses `withdrawn`) AND closes BOTH exports (`data_export.member_terminal` — N8), so it defeats the SEE right Q2 A grants.
 - **PQ3 — May the helpline tell the caller WHY** (e.g. *"this member left the Trust"*, *"…was removed"*)? A disclosure of a person's
   membership history to a caller. Built: the operator sees why (`-423` reading 3); the copy tells them to say only that the claim cannot
   be filed; the app shows ⛔ reason.
@@ -294,9 +411,11 @@ freeze conjunct cannot silently remove what Q2 A grants.
 ## Acceptance Criteria
 
 1. **AC1 — The leaf predicate (N1, DL1).** `isDeathReportStanding` exists in `claim/death-report.ts`, imports nothing from `claim/`, and
-   `isNomineeDeclarationLocked` delegates to it with byte-identical behaviour (its existing 6.20 tests pass UNCHANGED). Live-DB tests: ⛔
-   claim ⇒ false; a claim in each of `intake_pending`, `denied`, `closed`, `settled` ⇒ true; a claim + a `member_found_innocent` finding ⇒
-   false; two claims, one released ⇒ true; a claim in ANOTHER Pariwar ⇒ false.
+   `isNomineeDeclarationLocked` delegates to it with byte-identical behaviour (its existing 6.20 tests —
+   `apps/api/tests/integration/nominee/nominee-lock.spec.ts`, `packages/domain/tests/integration/nominee/nominee-history-concurrency.spec.ts`
+   — pass with ⛔ assertion changed; the latter's member seed is re-seeded per TR2). Live-DB tests: ⛔ claim ⇒ false; a claim in each of
+   `intake_pending`, `denied`, `closed`, `settled` ⇒ true; a claim + a `member_found_innocent` finding ⇒ false; two claims, one released
+   ⇒ true; a claim in ANOTHER Pariwar ⇒ false.
 2. **AC2 — Erasure refused on the member route (Q1 (a)).** `POST /api/v1/member/rtbf` for a `withdrawn` member with a standing report ⇒ 409
    `rtbf.death_reported`; the member is ⛔ anonymized, ⛔ `member.rtbf_anonymized` event, ⛔ `member_rtbf.completed` audit. The same member
    WITHOUT a claim ⇒ erased as today.
@@ -306,34 +425,53 @@ freeze conjunct cannot silently remove what Q2 A grants.
 4. **AC4 — The lock lifts only when the member is found alive (Q1 (b), DL4).** With the claim's `member_found_innocent` finding seeded
    (`recordMemberInnocenceFinding`, as 6.20's AC11(ii) does), both routes erase again. A claim `denied` / `closed` / `reversed` / `settled`
    WITHOUT the finding still refuses.
-5. **AC5 — Erasure and intake cannot both commit (N3).** A two-client, own-committing race (the `rtbf-concurrency.spec.ts` shape) of an
-   erasure and a first intake for the same member ends in EXACTLY one of: {claim minted, erasure refused `rtbf.death_reported`} or {member
-   anonymized, intake refused `claim.intake_refused` / `erased`} — ⛔ both, across repeated runs; ⛔ deadlock.
+5. **AC5 — Erasure and intake cannot both commit (N3, DL3).** Two parts, both own-committing clients (the `rtbf-concurrency.spec.ts`
+   shape), both calling `acquireErasureLocks` and `tryConverge` — ⛔ a hand copy of either:
+   (i) **two-party, over an already-erasable member** (`withdrawn`, and terminated): in EITHER lock order ⛔ claim is minted — erasure first
+   ⇒ anonymized + intake refused `erased`; intake first ⇒ intake refused `left` / `removed`, then anonymized.
+   (ii) **three-party, the case the lock exists for:** T1 = an intake for an `active` member holding the intake lock with its claim minted
+   and UNCOMMITTED; T2 = a withdrawal (`member.withdrawal_completed`, or the suspended → terminated pair) that COMMITS; T3 = an erasure,
+   which must BLOCK on the intake key, then (after T1 commits) be refused `rtbf.death_reported`. The test is shown to FAIL with the
+   intake-key lock removed from `acquireErasureLocks` (prove it can fail — note the run in the Completion Notes), and passes across
+   repeated runs with ⛔ deadlock.
 6. **AC6 — The door, helpline (Q3 B).** `POST /api/v1/p/:pariwarId/admin/claims/intake` for a member at `pending-kyc` / `withdrawn` /
    `anonymized` / terminated ⇒ 409 `claim.intake_refused` with `details.reason` = `not_joined` / `left` / `erased` / `removed`; ⛔ `claims`
-   row, ⛔ `intake_attempts` row, ⛔ claim event; the existing `helpline_claim.intake_failed` audit line IS written. A member at `pending-fee`,
+   row, ⛔ `intake_attempts` row, ⛔ claim event; the existing `helpline_claim.intake_failed` audit line IS written (asserted through the
+   in-memory audit sink / the persisted action, ⛔ its hashed text; plus the `resourceLocator` if DL16 (a)). A member at `pending-fee`,
    `pending-valid`, `lock-in`, `active`, `active-in-grace`, `lapsed-unpaid`, and a SUSPENDED active member ⇒ filed as today. Precedence:
    a terminated `withdrawn` member ⇒ `removed`; an `anonymized` terminated member ⇒ `erased`. An unknown id ⇒ 404 `member.not_found` as
    today.
-7. **AC7 — The door, app (Q3 B).** `POST /api/v1/member/claims/intake` (Ravi mode) for a `pending-kyc` member and a terminated member ⇒ the
-   same 409 + reason, ⛔ record. The mobile `relationship.tsx` routes that code to `(claim)/cannot-file`; the screen renders the four keys in
-   BOTH locales through the real `t()` ([[feedback_stub_must_call_not_transcribe]]), announces once, and shows ⛔ reason.
+7. **AC7 — The door, app (Q3 B).** `POST /api/v1/member/claims/intake` (Ravi mode) for a `pending-kyc` member and a terminated member ⇒ 409
+   `claim.intake_refused` with ⛔ `details` key at all (asserted absent — DL8), ⛔ record; the existing `member_claim.intake_failed` line IS
+   written. Mobile, by SOURCE SCAN (the calm-screen precedent `apps/mobile/tests/unit/refile-copy-resolves.test.ts` — ⛔ a mounted screen):
+   NEW `apps/mobile/tests/unit/cannot-file-copy-resolves.test.ts` asserts the four `cannot_file.*` keys resolve through the real
+   `t(key, undefined, { locale, namespace: 'claim' })` in BOTH locales ([[feedback_stub_must_call_not_transcribe]]); the copy file's code
+   literal equals `@twt/contracts`' `CLAIM_INTAKE_REFUSED_CODE`; the screen source contains `<CallHelplineCTA`, `accessible={true}` and
+   `announceForAccessibility`; `relationship.tsx` contains the code check and `router.replace('/(claim)/cannot-file')`; and the en copy
+   does ⛔ match `/left|removed|erased|identity|KYC|member (id|number)/i` (⛔ reason). `apps/mobile/tests/unit/helpline-cta-presence.test.ts`
+   gains a `describe` for `(claim)/cannot-file.tsx` (as 6.19c did).
 8. **AC8 — Once per death (N4).** A member with a STANDING report whose state has since become refusable (e.g. terminated after the first
-   filing) gets today's flow on a second report (idempotent / cross-channel pending / re-file guard) — ⛔ door refusal. A member whose ONLY
-   claim was released by an innocence finding meets the door again on a new report.
-9. **AC9 — The operator sees why (`-423` reading 3, DL9).** `apps/admin` RTL test: a 409 `claim.intake_refused` with each reason renders
-   that reason's line + the read-back line in the console's alert; an unknown reason or code falls back to today's `messageOf`. ⛔ Raw code
-   rendered.
-10. **AC10 — The Pariwar Admin sees why (DL11).** `apps/admin` RTL test: a 409 `rtbf.death_reported` on the erasure button renders the
-    DL11 line; other erasure errors render as today.
-11. **AC11 — See and ask stay open; one definition (N1, N8, DL12, DL15).** Live-DB: for a member with a standing report, the in-app export
-    create + download (with its step-up) succeeds, and the staff `recordCorrection` on a `dpdpa-data-rights` ticket succeeds. Source fences:
-    the gate SQL (`claims` ⛔ released by `member_found_innocent`) exists ONLY in `death-report.ts` (the read-only
-    `approval-warnings.ts` / `peer-mesh-read.ts` filters are named, allow-listed exceptions in the fence); `anonymizeMember(` has exactly the two G1
-    production callers, each calling `resolveRtbfLegality` first.
+   filing) gets today's flow on a second report — ⛔ door refusal — in each of: idempotent (same channel), cross-channel `pending`, the
+   re-file guard, AND a standing claim that is TERMINAL (`denied` / `closed`, ⛔ released) ⇒ a NEW claim is minted through
+   `assertRefileAllowed`. A member whose ONLY claim was released by an innocence finding meets the door again on a new report.
+9. **AC9 — The operator sees why (`-423` reading 3, DL9).** `apps/admin/tests/helpline-claim-page.test.tsx` (the submit-flow template is its
+   "Story 6.28 (OP10)" test; `new api.ApiError(409, code, msg, details)`): a 409 `claim.intake_refused` with each reason renders that
+   reason's EXACT English sentence + the `tellCaller` sentence in the console's ONE `role="alert"` (assert the sentences — `resolveEn`
+   returns the key when missing, so "something rendered" proves nothing); an unknown reason or code falls back to today's `messageOf`; ⛔
+   raw code rendered. And after a refusal for member A, selecting member B or searching again shows ⛔ refusal line (`intake.reset()`).
+10. **AC10 — The Pariwar Admin sees why (DL11).** A unit test of the pure `erasureErrorText(err)` (`rtbf.death_reported` ⇒ the DL11
+    sentence; any other code ⇒ `messageOf`), and a Shell test in `apps/admin/tests/helpdesk-responder-console.test.tsx` that a
+    `dataRightsError` renders in the Shell's `role="alert"`. A full `HelpdeskDetailPage` test is optional (eight hooks to mock).
+11. **AC11 — See and ask stay open; one definition (N1, N8, DL12, DL15).** Live-DB, for an `active` member with a standing report: the
+    in-app export create + download (with its step-up) succeeds; the Pariwar Admin's off-portal export request succeeds; and the staff
+    `recordCorrection` on a `dpdpa-data-rights` ticket succeeds. Source fences (one file, with a POSITIVE CONTROL each): the gate SQL —
+    pattern `f.kind = 'member_found_innocent'` inside a `NOT EXISTS` — appears ONLY in `death-report.ts`, with a named allow-list of the
+    read-only copies (`approval-warnings.ts` ×3, `peer-mesh-read.ts` ×1; the writer, the schema and the migration do ⛔ match the pattern);
+    `death-report.ts`'s imports are only `drizzle-orm`, `../db.js`, `../ids/index.js` (TR1); and DL15's caller fence.
 12. **AC12 — ⛔ Regression.** `pnpm ci:local` 36 / 36 green on the story's own database ([[project_prepush_hook_inherits_5432]] —
-    `DATABASE_URL=<story port>` on every push); every existing rtbf, member-data-rights, helpline-intake, member-intake, nominee-lock and
-    refile test passes (fixtures re-seeded per DL14, ⛔ assertion weakened).
+    `DATABASE_URL=<story port>` on every push) — including `friction-budget` (a row or a 6.38 disposition, Task 4.3) and `i18n-parity`;
+    every existing rtbf, member-data-rights, helpline-intake, member-intake, nominee-lock, refile, `claim/icp`,
+    `nominee-refusal-inheritance` and `nominee-history-concurrency` test passes (fixtures re-seeded per DL14 / TR2, ⛔ assertion weakened).
 
 ## Tasks / Subtasks
 
@@ -341,104 +479,165 @@ freeze conjunct cannot silently remove what Q2 A grants.
   - [ ] 0.1 `git fetch origin`; confirm `01062c51` is an ancestor of HEAD and re-derive G1–G16 at the tip (`git diff --name-only 01062c51
         origin/main -- apps packages`); STOP and re-read if any cited function moved. Check `ListAgents` + the branch before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL15 to BigDev (the copy of DL9 / DL10 / DL11 verbatim, the Hindi for review). Record the answers.
+  - [ ] 0.2 Put DL1–DL16 to BigDev (the copy of DL9 / DL10 / DL11 verbatim; the Hindi title + body for review — call + back are
+        already reviewed; DL16 (a) / (b)). Record the answers.
   - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied): `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-38-door-and-after-death.md`
-        — PQ1–PQ3, plain-English question first, THE ONE FACT, options with an honest cost on each, evidence LAST. Status: WRITTEN, ⛔
-        sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge.
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL15 as answered; names PQ1–PQ3 routed; cites `-423`; ⛔ supersedes
-        a ratified entry. Committed ALONE, first.
-  - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty-alive §0
-        question for 6-22; (ii) DL12 (ii) — the export's step-up does not prove the nominee (trigger: PQ2's answer or any change to
-        `data-export/routes.ts`). A dated comment line on the `6-22-…` row in `sprint-status.yaml`.
+        — PQ1 (a), PQ1 (b), PQ2 (with N8's export harm), PQ3; plain-English question first, THE ONE FACT, options with an honest cost on
+        each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge.
+  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL16 as answered; names PQ1–PQ3 routed and PQ1 (a) as a DECLARED
+        narrowing of the ruled words; cites `-423`; ⛔ supersedes a ratified entry. Committed ALONE, first.
+  - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
+        OWES (`-238` cl. 4–5) and whether it releases the erasure lock (Q1 (b)'s words cover it) + DL7's two residual edges; (ii) DL12 (ii)
+        — the export's step-up does not prove the nominee (trigger: PQ2's answer or any change to `data-export/routes.ts`); (iii) `-423`
+        Consequences 2 · 3 — the privacy policy says Q2 A before members agree to it, and counsel on Q1 (a) / Q2 (trigger: go-live of
+        member data-rights, or counsel's answer) — or a roster go-live row instead, BigDev's pick; (iv) PQ1–PQ3 — the Panel's answers
+        (trigger: the answer; each is one arm / one flag in this story's code). A dated comment line on the `6-22-…` row in
+        `sprint-status.yaml`.
   - [ ] 0.6 Ledger line + row `ready-for-dev → in-progress` (prepend safely — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 1 — The leaf predicate (AC1)**
   - [ ] 1.1 Create `packages/domain/src/claim/death-report.ts` (DL1), header citing `-423`, `-238` cl. 1, N1, and the import rule.
   - [ ] 1.2 Delegate `isNomineeDeclarationLocked`; export `isDeathReportStanding` from the `claim` barrel.
-  - [ ] 1.3 Live-DB tests (AC1) in `packages/domain/tests/integration/claim/death-report.spec.ts`.
-- [ ] **Task 2 — The erasure lock (AC2–AC5)**
-  - [ ] 2.1 `resolveRtbfLegality`: add `pariwarId`, the `death_reported` kind (DL2); import `../claim/death-report.js` (the leaf only).
-  - [ ] 2.2 `rtbf/handlers.ts` `assertAnonymizable` and `member-data-rights/handlers.ts` `fulfilErasure`: the intake-key lock BEFORE the
-        rtbf-key lock (DL3); map `death_reported` → 409 `rtbf.death_reported`; in `fulfilErasure` make sure the idempotency claim is
-        released on this 409 exactly as on `rtbf.invalid_state`.
-  - [ ] 2.3 Tests: extend `apps/api/tests/integration/rtbf/rtbf.spec.ts` (AC2, AC4) and
-        `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts` (AC3, AC4); the race (AC5) in
-        `packages/domain/tests/integration/member/rtbf-concurrency.spec.ts` or a sibling spec driving the API-level lock order.
-- [ ] **Task 3 — The door (AC6–AC8)**
-  - [ ] 3.1 Contracts: `CLAIM_INTAKE_REFUSAL_REASONS`, its type, `CLAIM_INTAKE_REFUSED_CODE` (DL6, DL8); export from the index.
-  - [ ] 3.2 `claim/intake-door.ts` `resolveClaimIntakeDoor` with the exhaustive switch (N6); `ClaimIntakeRefusedError` in `claim/errors.ts`.
+  - [ ] 1.3 Live-DB tests (AC1) in `packages/domain/tests/integration/claim/death-report.spec.ts` — seed with `seedClaim(tx, pariwarId, {
+        deceasedMemberId, currentState })` (`packages/domain/tests/integration/_helpers.ts`; it sets `app.claim_state_writer`, so every
+        state seeds) and the finding as a RAW `claim_nominee_findings` row (`recordMemberInnocenceFinding` replays the claim stream through
+        `projectClaimState`, and a `seedClaim` row has ⛔ events).
+- [ ] **Task 2 — The erasure lock (AC2–AC4)**
+  - [ ] 2.1 `resolveRtbfLegality`: add `pariwarId`, the `death_reported` kind (DL2); `acquireErasureLocks` (DL3); import
+        `../claim/death-report.js` and `../claim/icp-lock.js` (the two leaves only — TR1).
+  - [ ] 2.2 `rtbf/handlers.ts` `assertAnonymizable` and `member-data-rights/handlers.ts` `fulfilErasure`: `acquireErasureLocks` in place
+        of the inline rtbf-key lock (DL3); the exhaustive narrowing on `legality.kind` (DL2); map `death_reported` → 409
+        `rtbf.death_reported`. `fulfilErasure`'s idempotency claim is ALREADY released on any throw (`ok = false` + the `finally`) — assert
+        it in AC3, ⛔ add code for it. `rtbf/handlers.ts` imports `{ ids, member }` today — add `claim` only if it needs it.
+  - [ ] 2.3 Tests: extend `apps/api/tests/integration/rtbf/rtbf.spec.ts` (AC2, AC4 — post `'{}'`, TR8) and
+        `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts` (AC3, AC4). Neither has claim helpers: copy
+        `fileClaim` / `forceClaimState` / `appendClaimEvent` / `inScope` from `apps/api/tests/integration/nominee/nominee-lock.spec.ts`,
+        and its AC11(ii) for the finding — `claim.recordMemberInnocenceFinding(s.client, { claimCaseId, pariwarId, findingId, actorId,
+        actorDisplay, actor })`.
+- [ ] **Task 3 — The door (AC5–AC8)**
+  - [ ] 3.1 Domain vocabulary + contracts mirror (DL6, DL8): `CLAIM_INTAKE_REFUSAL_REASONS` + type in `claim/intake-door.ts`; NEW
+        `packages/contracts/src/claims/intake-refusal.ts` with the mirrored tuple + `CLAIM_INTAKE_REFUSED_CODE`; an `export *` line in
+        `packages/contracts/src/claims/index.ts`; a lockstep test in `packages/contracts/tests/`. ⛔ `@twt/contracts` import in `@twt/domain`.
+  - [ ] 3.2 `claim/intake-door.ts` `resolveClaimIntakeDoor` with the exhaustive switch (N6); `ClaimIntakeRefusedError` in `claim/errors.ts`;
+        export both from the `claim` barrel.
   - [ ] 3.3 `tryConverge`: the gate at DL7's position. ⛔ Write before it.
-  - [ ] 3.4 `claims.service.ts`: `translateClaimIntakeRefused` in `initiateIntake`'s catch (DL8).
-  - [ ] 3.5 Domain unit tests for every lifecycle state × moderation status (the full 9 × 3 table) and the precedence; API live-DB tests
-        AC6 (`helpline-claim-intake.spec.ts`), AC7 (`claims-intake.spec.ts`), AC8.
+  - [ ] 3.4 `claims.service.ts`: `translateClaimIntakeRefused` in `initiateIntake`'s catch (DL8, TR6), with the helpline-only reason flag
+        threaded from each handler; DL16's `resourceLocator` on the helpline catch if BigDev picks (a).
+  - [ ] 3.5 Domain unit tests for every lifecycle state × moderation status (the full 9 × 3 = 27 table) and the precedence; API live-DB
+        tests AC6 (`helpline-claim-intake.spec.ts`), AC7 (`claims-intake.spec.ts` — incl. `details` ABSENT), AC8.
+  - [ ] 3.6 The race (AC5 (i) + (ii)) — AFTER 3.3, because "intake refused `erased`" exists only once the door is in `tryConverge`: in
+        `packages/domain/tests/integration/member/rtbf-concurrency.spec.ts` or a sibling, CALLING `acquireErasureLocks` and `tryConverge`
+        (⛔ a hand copy of the handler sequence — that spec's existing `takeLock` and `members.state` read are ⛔ the pattern to follow
+        for the new cases). Run (ii) once with the intake-key lock removed and record that it fails.
 - [ ] **Task 4 — Words (AC7, AC9, AC10)**
-  - [ ] 4.1 Admin helpline: keys + `intakeRefusalKey` (DL9); RTL test in `apps/admin/tests/helpline-claim-page.test.tsx`.
-  - [ ] 4.2 Admin helpdesk: the DL11 key + the code check in `HelpdeskDetailPage.tsx`; RTL test (new, the erasure button has none).
-  - [ ] 4.3 Mobile: `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` route; keys in
-        `packages/i18n/locales/{en,hi}/claim.json` with a `$comment.cannot_file` naming who reviewed the Hindi; real-`t()` test in both
-        locales; the code constant cross-checked against `@twt/contracts` (the refile precedent). ⚠ [[project_mobile_vitest_and_expo_install_traps]].
+  - [ ] 4.1 Admin helpline (DL9, TR7): keys; the pure `intakeRefusalKey`; the line derived in the `submitError` expression;
+        `intake.reset()` in `resetDownstreamState`; RTL tests in `apps/admin/tests/helpline-claim-page.test.tsx` (AC9).
+  - [ ] 4.2 Admin helpdesk (DL11): the key; `erasureErrorText` in `HelpdeskDetailPage.tsx`; the erasure leg first in the `dataRightsError`
+        chain; its unit test + the Shell test in `apps/admin/tests/helpdesk-responder-console.test.tsx` (AC10).
+  - [ ] 4.3 Mobile (DL10): `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` branch; keys `cannot_file.*` in
+        BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both — naming BigDev's review
+        if done at 0.2, else *"agent-authored and is NOT YET HUMAN-REVIEWED — go-live gate Row N"* (the `$comment.closed` form) and a roster
+        go-live row opened; the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
+        refused-at-door state** (payer: the family of a non-member, or of a mistyped search — `-423` Q3 B's accepted cost; the 6.19c
+        re-file-screen row is the precedent); run `pnpm friction:check` before push — `MEMBER_FACING_PREFIXES` includes `apps/mobile/`, so
+        without it the gate fails. Enrol `apps/mobile/app/(claim)/cannot-file.tsx` and `apps/mobile/lib/cannot-file-copy.ts` in
+        `microcopy.yaml` `code_globs` (6.19c enrolled the refile files). ⚠ The worktree has ⛔ `.expo/types`, so `tsc` does ⛔ check the
+        new `/(claim)/cannot-file` href ([[project_mobile_typed_routes_worktree]]) — check the path by hand. ⚠
+        [[project_mobile_vitest_and_expo_install_traps]].
 - [ ] **Task 5 — Fences, stale text, fixtures (AC11, AC12)**
-  - [ ] 5.1 The N8 live-DB tests (export + correction for a standing report).
-  - [ ] 5.2 The DL15 + N1 source fences (one test file, `packages/domain/tests/claim/death-report-fence.test.ts` or the api tests).
+  - [ ] 5.1 The N8 live-DB tests (in-app export, off-portal export request, correction — for an `active` member with a standing report).
+  - [ ] 5.2 The DL15 + N1 + TR1 source fences — ONE file, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (modelled on
+        `family-account-reach-fence.test.ts`), each with a positive control.
   - [ ] 5.3 DL13's comment re-wordings ([[project_markdown_emphasis_closes_jsdoc]] — ⛔ `**` adjacent to `/` inside a JSDoc).
   - [ ] 5.4 DL14 fixture re-seeds (TR2) — list each re-seeded file in the Completion Notes.
 - [ ] **Task 6 — Gate and records**
-  - [ ] 6.1 `pnpm ci:local` on the story's own DB container (AC12). `typecheck` + `lint` per package.
+  - [ ] 6.1 `pnpm ci:local` on the story's own DB container (AC12 — incl. `friction-budget`, `i18n-parity`). `typecheck` + `lint` per package.
   - [ ] 6.2 Story File List, Completion Notes, Change Log; ledger line; row → `review`.
 
 ## Dev Notes
 
 ### Traps
 
-- **TR1 — The import cycle.** `member/rtbf-legality.ts` may import `../claim/death-report.js` ONLY; if `death-report.ts` ever imports from
-  `claim/` (even a type re-export through `icp.ts`), the domain package acquires a runtime init cycle that typecheck cannot see
-  ([[project_type_only_import_cycle_trap]]). The fence in Task 5.2 can assert the leaf's import list.
-- **TR2 — Fixtures replay to `pending-kyc`.** The door reads the EVENT REPLAY (G9). `apps/api/tests/integration/claims/helpline-claim-intake.spec.ts`'s
-  `seedMember` seeds `pending-kyc` ⇒ every existing helpline test starts refusing — re-seed to `active` (or `lock-in`) through events.
-  `suspicion-refusal-routes.spec.ts`, `one-payment-per-death-routes.spec.ts`, `correction-closure.spec.ts` and
-  `_nominee-name-check-fixture.ts` raw-`INSERT INTO members … 'active'` with ⛔ events ⇒ they REPLAY to `pending-kyc` and are refused — add
-  the lifecycle events (the `project(...)` helper `rtbf.spec.ts` uses). Grep every `tryConverge` / `initiateIntake` / intake-route test
-  for its member seed before the first run; `nominee-bank`, `claim-contact`, `dpdpa-consent`, `claims-intake` seed `pending-fee` via
-  events (open) — unaffected.
-- **TR3 — The claim-side erasure specs** (`packages/domain/tests/integration/claim/{ground-inspection,death-certificate,peer-mesh-reply,approval-warnings}-rtbf.spec.ts`)
-  seed a claim for an erased member by calling `anonymizeMember` DIRECTLY (⛔ the routes). They stay green and stay VALUABLE as
-  defence-in-depth (a pre-6.38 row, or an innocence-released claim, can still meet an erased member) — ⛔ delete them; re-word their headers
-  if they claim the scenario is ordinary.
+- **TR1 — The import cycle.** `member/rtbf-legality.ts` may import `../claim/death-report.js` and `../claim/icp-lock.js` ONLY (both leaves);
+  if `death-report.ts` ever imports from `claim/` (even a type re-export through `icp.ts`), the domain package acquires a runtime init
+  cycle that typecheck cannot see ([[project_type_only_import_cycle_trap]]). The fence in Task 5.2 asserts the leaf's import list.
+- **TR2 — Fixtures replay to `pending-kyc`.** The door reads the EVENT REPLAY (G9), and a member with ZERO events replays to `pending-kyc`
+  ⇒ refused `not_joined`. The door runs only on a FIRST report (N1 false), so a test whose intake follows a seeded prior claim is
+  UNAFFECTED. Traced at `01062c51`:
+  - **Breaks — re-seed the member through events to an open state** (`signup_initiated` → `kyc_manual_fallback`, or the domain member
+    helpers; the `project(...)` helper `rtbf.spec.ts` uses at API level), under the same Pariwar scope:
+    `packages/domain/tests/integration/claim/icp.spec.ts` (random member ids, ⛔ row, ⛔ events — every "NO CANDIDATE → mints" leg and
+    the merge / override legs); `packages/domain/tests/integration/claim/nominee-refusal-inheritance.spec.ts` (raw-inserts `'active'`, ⛔
+    events); `packages/domain/tests/integration/nominee/nominee-history-concurrency.spec.ts` (its `seedMember` projects
+    `signup_initiated` only — the D3 tests); `apps/api/tests/integration/claims/helpline-claim-intake.spec.ts` (its `seedMember` replays
+    to `pending-kyc` — the first-filing tests; its prior-claim test is unaffected).
+  - **Unaffected — a prior claim is seeded before every intake** (`claimAt` / `paidApart` / `refusedClaim` / `emit(...)` / a closure):
+    domain `claim/correction-closure`, `claim/one-payment-per-death-{closure,concurrency,paths}`, `claim/suspicion-refusal{,-concurrency}`;
+    API `suspicion-refusal-routes`, `one-payment-per-death-routes`, `correction-closure`. `_nominee-name-check-fixture.ts` never calls
+    intake. `nominee-bank`, `claim-contact`, `dpdpa-consent`, `claims-intake` seed `pending-fee` via events (open).
+  - Claims seeded through `projectClaimState` / `seedClaim` / `driveClaimTo` bypass `tryConverge` entirely.
+  - ⚠ Still grep every `tryConverge(` / `initiateIntake(` / intake-route test for a FIRST report on a member with no events before the
+    first run — this list is a trace, ⛔ a guarantee.
+- **TR3 — The erasure specs that call `anonymizeMember` DIRECTLY** (⛔ the routes) on a member with a claim or a memorial — they stay green
+  (`anonymizeMember` is unchanged) and stay VALUABLE as defence-in-depth (a pre-6.38 row, or an innocence-released claim, can still meet
+  an erased member) — ⛔ delete or "fix" them; re-word a header only if it claims the scenario is ordinary:
+  `packages/domain/tests/integration/claim/{ground-inspection,death-certificate,peer-mesh-reply,approval-warnings}-rtbf.spec.ts`,
+  `packages/domain/tests/integration/nominee/nominee-history-rtbf.spec.ts`, and in `apps/api/tests/integration/`:
+  `claims/death-certificate.spec.ts`, `memorial/memorial-gates.spec.ts`, `public-pages/sahyog-vivran-memorial.spec.ts`,
+  `memorial-takedown/takedown.spec.ts`, `nominee/nominee-marks-save.spec.ts`, `contributions/pool-contributors-rtbf.spec.ts`,
+  `rls/memorial-policy-regression.spec.ts`.
 - **TR4 — The drizzle correlated-subquery tautology.** Keep the moved SQL raw with explicit aliases
   ([[project_epic6_drizzle_correlated_subquery_bug]]).
 - **TR5 — Clock domain.** Read state with the UNBOUNDED replay (`getCurrentMemberState`) and the unbounded overlay — ⛔ `getMemberStateAt(…,
   deps.clock())` for the door (the erasure handlers' existing `getMemberStateAt` call is ⛔ this story's to change).
-- **TR6 — 409 ordering in `initiateIntake`'s catch.** `translateClaimIntakeRefused` must run BEFORE the `ClaimStreamConcurrencyError`
-  backstop; it is a no-op for any other error.
-- **TR7 — The admin helpline's error union.** `submitIntake`'s `onError` special-cases two codes by name; add the third the same way and
-  keep `messageOf` as the fallback — ⛔ a blanket switch that hides future codes.
+- **TR6 — 409 placement in `initiateIntake`'s catch.** The translators are `instanceof` no-ops on disjoint error types, so the order
+  against `translateRefileRequiresConfirmation` and the `ClaimStreamConcurrencyError` backstop does ⛔ change behaviour — put
+  `translateClaimIntakeRefused` beside the refile translator, before the backstop, for readability; ⛔ more is load-bearing.
+- **TR7 — The admin helpline's alert text is an EXPRESSION, ⛔ `onError`.** `onError` only sets state; the text is the `submitError`
+  expression (G13). Derive the refusal line THERE (DL9) — ⛔ new state in `onError` (it would also need clearing on a member change) and
+  ⛔ a blanket switch that hides future codes; `messageOf` stays the fallback. Alternative only if the line needs markup: widen
+  `submitError` to `ReactNode` and add `HelplineConsoleShell.tsx` to the File List.
 - **TR8 — Fastify empty body.** The rtbf confirm body is `{}` strict — tests post `'{}'` ([[project_fastify_empty_json_body_400]]).
 - **TR9 — Live-DB hygiene.** Own DB container named `twt_dev`; known failures #13–#15 ([[project_known_livedb_test_failures]]);
   separate transactions for ordering ([[project_db_clock_ordering_tests_tie]]); every `git push` prefixed with the story's `DATABASE_URL`.
+- **TR10 — Uniform withholding on the wire.** The translation lives in the SHARED `initiateIntake`, so the easy build sends `details.reason`
+  to BOTH routes — and the app's 409 body then discloses what its screen hides (N7). Only the helpline route carries `details`; AC7
+  asserts the key ABSENT on the member route ([[feedback_withholding_must_be_uniform]]).
 
 ### What this story does ⛔ do
 
-⛔ A "found alive" closure (6-22's); ⛔ a separate data-rights nominee; ⛔ moderation status in the 4.7 search results; ⛔ disabling the
-admin erasure button pre-emptively; ⛔ a refusal of withdrawal or of direct edits after death (PQ2); ⛔ telling the caller why (PQ3); ⛔
-refusing `pending-fee` / `pending-valid` (PQ1); ⛔ any change to living members' erasure; ⛔ backfill of existing claims (⛔ member uses the
-system — `-423` "What is at stake"); ⛔ the privacy policy (outside this repository — BigDev and counsel).
+⛔ A "found alive" closure (6-22's); ⛔ a guilty-finding release rule (6-22's — DL4); ⛔ a separate data-rights nominee; ⛔ moderation
+status in the 4.7 search results; ⛔ disabling the admin erasure button pre-emptively; ⛔ a refusal of withdrawal or of direct edits
+after death (PQ2); ⛔ telling the caller why (PQ3); ⛔ refusing `pending-fee` / `pending-valid` / unverified-fallback members (PQ1 (a) /
+(b)); ⛔ any change to the erasure of a living member for whom ⛔ claim has been filed; ⛔ backfill of existing claims (⛔ member uses the
+system yet — the routing note's "What is at stake right now"); ⛔ the privacy policy (outside this repository — BigDev and counsel;
+tracked by Task 0.5 (iii)).
 
 ### Project Structure Notes
 
 - Domain: `packages/domain/src/claim/{death-report,intake-door}.ts` (NEW), `claim/{nominee-lock,icp,errors}.ts`,
-  `claim/index.ts` (barrel), `member/rtbf-legality.ts`, `member/state.ts` (comment), `member/anonymize.ts` (comment).
-- Contracts: `packages/contracts/src/claims/` (the reasons + code), the package index.
+  `claim/index.ts` (barrel), `member/rtbf-legality.ts`, `member/state.ts` (comment), `member/anonymize.ts` (comment);
+  comments only: `claim/{suspicion-refusal-persist,approval-warnings,peer-mesh-read}.ts`.
+- Contracts: `packages/contracts/src/claims/intake-refusal.ts` (NEW — the mirrored reasons + the code), `packages/contracts/src/claims/index.ts`
+  (barrel line); a lockstep test in `packages/contracts/tests/`.
 - API: `apps/api/src/modules/rtbf/handlers.ts`, `apps/api/src/modules/member-data-rights/handlers.ts`,
-  `apps/api/src/modules/claims/claims.service.ts`.
-- Admin: `apps/admin/src/modules/helpline-claims/{HelplineClaimPage.tsx,i18n-en.ts}`, `apps/admin/src/modules/helpdesk/{HelpdeskDetailPage.tsx,i18n-en.ts}`.
-- Mobile: `apps/mobile/app/(claim)/{cannot-file,relationship}.tsx`, `apps/mobile/lib/cannot-file-copy.ts`; i18n `packages/i18n/locales/{en,hi}/claim.json`.
+  `apps/api/src/modules/claims/{claims.service,claims.helpline.handlers,claims.handlers}.ts`; the fence
+  `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (NEW).
+- Admin: `apps/admin/src/modules/helpline-claims/{HelplineClaimPage.tsx,i18n-en.ts}` (+ `HelplineConsoleShell.tsx` only if TR7's
+  alternative), `apps/admin/src/modules/helpdesk/{HelpdeskDetailPage.tsx,i18n-en.ts}`; tests `apps/admin/tests/{helpline-claim-page,helpdesk-responder-console}.test.tsx`.
+- Mobile: `apps/mobile/app/(claim)/{cannot-file,relationship}.tsx`, `apps/mobile/lib/cannot-file-copy.ts`; i18n `packages/i18n/locales/{en,hi}/claim.json`;
+  tests `apps/mobile/tests/unit/{cannot-file-copy-resolves,helpline-cta-presence}.test.ts`.
+- Records: `friction-budget.md` (repo root), `microcopy.yaml` (`code_globs`).
 - API client: `packages/api-client/src/index.ts` (docstring only).
 - ⛔ Migration: every table and index needed exists (`claims_deceased_member_id_idx`, `claim_nominee_findings`'s unique per claim).
 - Hand-format (Prettier is ⛔ enforced — [[project_prettier_not_enforced]]); ESLint cwd-relative ([[project_eslint_config_per_package_cwd]]).
 
 ### References
 
-- `.decision-log.md` — `2026-10-30-423` (the ruling, the readings, Consequences); `2026-08-24-159` cl. 11; `2026-09-21-238` cl. 1; `2026-09-21-241` §6.
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-30-erasure-after-a-death-is-reported.md` — Q1–Q3 as put; E3 (the code as traced).
+- `.decision-log.md` — `2026-10-30-423` (the ruling, the readings, Consequences); `2026-08-24-159` cl. 11; `2026-09-21-238` cl. 1, 4, 5;
+  `2026-09-21-241` §6 and Consequence 3.
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-30-erasure-after-a-death-is-reported.md` — Q1–Q3 as put; E3 (the
+  code as traced); "What is at stake right now".
+- `_bmad-output/planning-artifacts/epics.md` — `### Story 6.38` (the epics entry).
 - `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: BigDev's questions while reviewing Story 6.33" (DISCHARGED into this row).
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — row `6-38-death-locks-erasure-and-non-member-claims-refused` (its comment block).
 - Precedent stories: 6.20 (the nominee lock, D3, AC11), 6.19c (the re-file 409 at both intake callers, the calm helpline screen), 10.21
@@ -463,3 +662,4 @@ system — `-423` "What is at stake"); ⛔ the privacy policy (outside this repo
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.1 | Fresh-context validation (`bmad-create-story validate 6.38`): the refusal vocabulary is domain-owned (contracts mirrors it); AC5 split into the two-party and the three-party race, run through the new `acquireErasureLocks` helper, moved to Task 3.6; the reason kept off the member route's wire; N5's audit lines corrected and DL16 added; N8 qualified for withdrawn members; the stale operator alert cleared on a member change; PQ1 split into (a) / (b); TR2 / TR3 re-traced; the friction-budget row, the fences, the test helpers and the omitted `-423` / `-238` text added. |

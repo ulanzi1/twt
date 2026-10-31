@@ -127,7 +127,8 @@ while they cannot yet confirm that, the claim waits rather than being refused."*
 *What that sentence deliberately does ⛔ promise:* that the family is ASKED for anything. Nothing built asks: once a certificate is
 accepted every upload is closed (`CLAIM_DOCUMENT_UPLOADABLE_STATES` + the accepted-certificate block, `death-certificate-approval.ts`), ⛔
 claim state leads back to `documents_pending`, and ⛔ documents-request route exists; 6.21b / 6.19d ask only for a REPLACEMENT certificate
-after a rejection. Staff may reach the family outside the app, and that contact is itself gated by roster Row 34 (counsel's basis). What the
+after a rejection. Staff may reach the family outside the app — a call to the CLAIMANT rests on their filing agreement (`-367` decision 2
+names *"phone call"*); a call to a NOMINEE waits on roster Row 34 (counsel's basis). What the
 family is told while the identity waits is PQ2.
 
 **Checked against the Niyamavali** (the git-ignored copy in the main checkout, `docs/legal/niyamavali.md`, 2026-10-31) — result: CONSISTENT
@@ -438,7 +439,8 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   name and age / date of birth on the documents agree with the record, or a difference is explained by the documents or the inspection.
   They choose `confirmed` or `not_confirmed`; `not_confirmed` needs a reason — `name_differs` | `age_or_birth_date_differs` |
   `document_unreadable` | `other` — and a note. `not_confirmed` makes the claim WAIT (N5); a later check SUPERSEDES it. ⛔ In-app ask
-  exists: staff may reach the family outside the app (that contact is gated by roster Row 34 — counsel's basis), and the wait has ⛔ time
+  exists: staff may reach the family outside the app (the claimant by phone under their filing agreement; a nominee by phone only once
+  roster Row 34 — counsel's basis — closes), and the wait has ⛔ time
   limit (TL2). ⛔ It denies: the existing denials remain available, unchanged. ⚠ That a failed identity check WAITS rather than ends the
   claim is the author's reading of *"the identity is checked first … before any drive opens"* (the ruling holds the drive; it says ⛔ more)
   — the unchanged side; challenge ⇒ the Panel (TL2 tells them).
@@ -542,14 +544,15 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
     **B**. **Built: A** until ruled; B is a follow-up (a new staff input + its own DL).
 - **PQ2 — What the family is told** (a disclosure — `-424` Q3 B ruled the words AT THE DOOR; using them later WIDENS that ruling, §0).
   Two moments: (i) ⛔ drive opens because the fee came after the death; (ii) the claim WAITS because staff cannot yet confirm the identity
-  (DL8 — ⛔ in-app ask exists; staff contact outside the app is gated by roster Row 34). Today a denied claim shows the family only *"This
+  (DL8 — ⛔ in-app ask exists; staff may phone the claimant, a nominee only once roster Row 34 closes). Today a denied claim shows the family only *"This
   claim was not approved. If you believe that was a mistake, you can ask us to look at it again."* + "Ask for a review", ⛔ reason (G9); a
   waiting claim shows its existing in-review status. Options for (i): **A** — as today: the denial, ⛔ reason; cost: the family learns
   nothing after sending documents. **B** — the one general reason, *"the person was not a member of the Trust when they died"* (TRUE for
   this person — `-430` reading 3); cost: a small disclosure, the same as at the door. **C** — the specific reason (*"the joining fee was
   paid after the date of death on the certificate"*); cost: tells the family exactly what to dispute. Suggest **B**. Options for (ii):
   **A** — as today (in review, ⛔ more); cost: an open-ended silence. **B** — *"We need to confirm a few details before this claim can go
-  ahead. Our staff will contact you."*; cost: a promise of contact that Row 34 gates. Suggest **B** once Row 34 clears. **Built: A** for
+  ahead. Our staff will contact you."*; cost: a promise of contact staff must keep (a nominee only by letter until Row 34 closes). Suggest
+  **B**. **Built: A** for
   both (⛔ new family words) until ruled; B or C is a follow-up task on this row if ruled before Task 6, else a deferred item.
 - **TOLD LINES (⛔ asked — the note states them so the Panel can object):**
   - **TL1 — The appeal cannot open a drive.** A `fee_paid_after_death` denial is appealable once with ⛔ deadline through the existing
@@ -635,11 +638,13 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
         (every writer of `member_kyc_profiles`, every state gate, the callback's TTL); G9's family-facing denial surface; G10's window.
         Check `ListAgents` + the branch before every commit ([[feedback_concurrent_review_agents_mutate_tree]]).
   - [ ] 0.2 Put DL1–DL16 to BigDev (DL12's English verbatim; DL3's rejected alternative named). Record the answers here.
-  - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
-        `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-39-fee-date-and-family-told.md` — PQ1 (a) (evidence led by
+  - [x] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` — PQ1 (a) (evidence led by
         `-235` Y and Niyamavali §2.2), PQ1 (b), PQ2 (i) + (ii), and TL1–TL3; plain-English question first, THE ONE FACT, options with an
         honest cost on each, evidence LAST; E4 commands run. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking for build and merge;
-        ruled before go-live (Row 46).
+        ruled before go-live (Row 46). ⭐ **DONE 2026-10-31** (ledger `2026-10-31aj`): the Panel's numbering is **Q1 = PQ1 (a), Q2 = PQ1
+        (b), Q3 = PQ2 (i), Q4 = PQ2 (ii)**, told lines 1–3 = TL1–TL3; suggestions B / B / B / B; E4's 13 commands run at `f792d4e3`, all as
+        stated (one re-pointed: `-235` Y's reading is found by *"on the day of death or any day after"*).
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-432` at 2026-10-31): DL1–DL16 as answered; cites
         `-424` Q1 (a) C and `-430` Q1 B; declares N3's narrowing and DL8's "death documents" match; names PQ1 (a) / (b) and PQ2 as open;
         ⛔ supersedes a ratified entry. Committed ALONE, first. It is also the decision the permission bump block cites (G8).
@@ -809,4 +814,5 @@ family-facing or helpline words (PQ2); ⛔ deny automatically; ⛔ store a secon
 | Version | Date | Change |
 |---|---|---|
 | v1.0 | 2026-10-31 | Created (`bmad-create-story 6.39`) on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity`, pinned `beae5116`. |
+| v1.2 | 2026-10-31 | Task 0.3 done: the routing note `trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` WRITTEN (⛔ sent) — Q1–Q4 = PQ1 (a) / PQ1 (b) / PQ2 (i) / PQ2 (ii), TL1–TL3 as told lines, E4 run. Corrected while writing it: a staff phone call to the CLAIMANT rests on their filing agreement (`-367` decision 2); only a call to a NOMINEE waits on roster Row 34 (Policy meaning, DL8, PQ2). |
 | v1.1 | 2026-10-31 | Fresh-context validation (`bmad-create-story validate 6.39`): DL9 gives `fee_paid_after_death` to BOTH denial vocabularies (P1 verifier + final-vote state-trustee; P1 cannot deny after P1), guarded in `adjudicateClaim`, `reviseDecision` and `voteOnFrozenClaim`; the Policy meaning is ONE sentence, ⛔ promises an ask nothing builds, and records Niyamavali §2.2; DL1 / AC1 grant `note_ciphertext` + an UPDATE policy at birth for DL14 (the `0122` shape, ⛔ `0121`), AC14 added; DL3 matches the receipt by `member_id` too (the event carries the body's UTR); the gate's codes prefixed per route at four translators + four admin surfaces (G16); AC5's `stale` leg avoids `determination_stale` (TR12); numbers re-read across branches (decision ≥ `-432`, ledger `ag` / `ah`, migrations ≥ `0194`); N3's binding outcome declared a narrowing, PQ1 split into (a) same day — evidence led by `-235` Y + §2.2, suggestion B — and (b) the attest-vs-bank time; DL8 shows every death document; TL1–TL3 told lines; DL6's "page shows why" dropped and the stranded claim recorded; the fixture-KYC-provider leg and roster Row 46; G15–G17 + the fence, NW1 scan, frozen event list, read budget, COVERAGE_SET, RLS policy file, branded id and 44-file blast radius named. |

@@ -25,7 +25,7 @@ NUMBERS: ⛔ claimed by this file. At authoring the highest decision anywhere (e
 commit that takes it.
 
 LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL16 — ANSWERED 2026-10-31 at Task 0.2: all as recommended); **PQ** = Panel questions
-(PQ1 (a) / (b), PQ2, PQ3 — non-blocking); **TR** = traps (TR1–TR10); **AC1–AC12**.
+(PQ1 (a) / (b), PQ2 (a) / (b), PQ3 — non-blocking; the note is WRITTEN, ⛔ sent); **TR** = traps (TR1–TR10); **AC1–AC12**.
 -->
 
 # Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
@@ -104,11 +104,12 @@ agreement they gave while alive, and no money is raised in the name of someone w
    (*"Registration alone does not constitute membership"*) and §8.4 / §8.4a (termination: beneficiary entitlement *"Ended"*) —
    CONSISTENT. Withdrawal and erasure: the Niyamavali is SILENT (⛔ clause found). ⚠ **Two mismatches, routed, ⛔ built** — §2.1 lists
    (a) registration, (b) identity verification (KYC), (c) the fee, (d) admission, so the Niyamavali alone would ALSO refuse:
-   **(i) `pending-valid`** (*"lock-in elapsed but KYC still unverified … awaits trustee"* — fee paid, identity check ⛔ finished) and a
-   member who reached `pending-fee` / `lock-in` through the UNVERIFIED manual fallback — the ruled words *"had not finished joining (⛔
-   identity check)"* literally reach these too, while `-423` Consequence 1 (c) lists only `pending-kyc` ⇒ **PQ1 (a)**; this story builds
-   them OPEN — a DECLARED NARROWING of the ruled words, ⛔ silent; **(ii) `pending-fee`** (identity checked, fee unpaid) — the fee is ⛔ in
-   the Panel's words at all ⇒ **PQ1 (b)**; built OPEN.
+   **(i) `pending-valid`** (*"lock-in elapsed but KYC still unverified … awaits trustee"* — fee paid, identity check ⛔ finished) — the
+   ruled words *"had not finished joining (⛔ identity check)"* literally reach it, while `-423` Consequence 1 (c) lists only `pending-kyc`
+   ⇒ **PQ1 (a)**; this story builds it OPEN — a DECLARED NARROWING of the ruled words, ⛔ silent; **(ii) `pending-fee`** (fee unpaid —
+   identity verified OR given through the unverified manual fallback) — the fee is ⛔ in the Panel's words at all ⇒ **PQ1 (b)**; built
+   OPEN. A manual-fallback member in `lock-in` is ⛔ asked: `-423`'s *"⛔ Touched … members in their first days after joining"* already
+   keeps them open.
 
 ## ⭐ THE INVARIANTS
 
@@ -150,7 +151,7 @@ either line is readable at rest. Whether the helpline line NAMES the reason (via
 **N6 — Exactly four refusals, and only these.** `anonymized` ⇒ `erased`; terminated (moderation overlay) ⇒ `removed`; `withdrawn` ⇒ `left`;
 `pending-kyc` ⇒ `not_joined`. Checked in that order. Every other lifecycle state (`pending-fee`, `pending-valid`, `lock-in`, `active`,
 `active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules decide them later (`-423` Q3 *"⛔ Touched"*; PQ1 (a) / (b):
-`pending-valid` and the unverified-fallback members are open as a DECLARED narrowing of the ruled words). An exhaustive `switch` with a
+`pending-valid` is open as a DECLARED narrowing of the ruled words; `pending-fee` is open pending the fee question). An exhaustive `switch` with a
 `never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it.
 
 **N7 — The operator is told WHY; the caller and the app are told only that it cannot be filed.** The helpline sees one line per reason and
@@ -257,9 +258,8 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
 ## Build decisions — ANSWERED (BigDev, 2026-10-31, Task 0.2: *"DL1-DL16 as recommended"*)
 
 Every DL below is built as written; where a DL offers a choice, the recommended option is the answer (DL16 ⇒ (a)). The proposed
-English copy of DL9 / DL10 / DL11 is approved as written. ⚠ The DL10 Hindi TITLE + BODY are ⛔ yet counted as human-reviewed (the
-answer approved the decisions; it did ⛔ say the Hindi was read) — until BigDev confirms the Hindi, Task 4.3's `$comment.cannot_file`
-carries the NOT-YET-HUMAN-REVIEWED form and a go-live row. The call + back strings are the already-reviewed `refile.*` ones.
+English copy of DL9 / DL10 / DL11 is approved as written. The DL10 Hindi TITLE + BODY are HUMAN-REVIEWED — BigDev, 2026-10-31: *"DL10
+Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` ones (2026-10-01).
 
 - **DL1 — The leaf predicate.** NEW `packages/domain/src/claim/death-report.ts` exporting `isDeathReportStanding(db: Db, pariwarId: PariwarId,
   memberId: MemberId): Promise<boolean>` — the SQL of `isNomineeDeclarationLocked`, MOVED here unchanged (raw SQL, explicit aliases, the
@@ -399,20 +399,23 @@ carries the NOT-YET-HUMAN-REVIEWED form and a go-live row. The call + back strin
 
 - **PQ1 — "Had not finished joining": where does it end?** The ruled words: *"had not finished joining (⛔ identity check)"*; `-423`
   Consequence 1 (c) lists only `pending-kyc`. Two edges, put separately:
-  - **PQ1 (a) — an identity check SUBMITTED but ⛔ VERIFIED.** `pending-valid` (*"lock-in elapsed but KYC still unverified … awaits
-    trustee"* — fee paid) and a member who reached `pending-fee` / `lock-in` through the unverified manual fallback (G9). The ruled words
-    literally reach them; Consequence 1 (c) does ⛔. Built: OPEN — a DECLARED narrowing of the ruled words (one arm of N6's switch if the
-    Panel says refuse).
-  - **PQ1 (b) — the FEE.** `pending-fee` with KYC verified: Niyamavali §2.1 (c) makes the fee a condition of membership; the Panel's
-    words do ⛔ mention it. Built: OPEN.
-- **PQ2 — After a death is reported, may the member's account still WITHDRAW the membership or CHANGE the record directly** (address,
-  posting, medical declaration — G15), or only ASK for a correction? Q2 A names see + ask; `-423`'s own reason (*"no one can withdraw it
-  on their behalf afterwards"*) points at withdrawal too — but the ruled words cover erasure only, so a refusal would WIDEN the ruling.
-  Built: unchanged (reachable). The harm the note must show: a withdrawal after death ends the nominee's own Ravi-mode access (login
-  refuses `withdrawn`) AND closes BOTH exports (`data_export.member_terminal` — N8), so it defeats the SEE right Q2 A grants.
+  - **PQ1 (a) — paid, identity ⛔ yet VERIFIED by the Trust.** `pending-valid` (*"lock-in elapsed but KYC still unverified … awaits
+    trustee"*; the name is on record — the manual route writes it). The ruled words literally reach it; Consequence 1 (c) does ⛔. Built:
+    OPEN — a DECLARED narrowing (one arm of N6's switch if the Panel says refuse). The note suggests A (file) — the last step was the
+    Trust's. (Manual-fallback members in `lock-in` are ⛔ asked — `-423`'s *"first days after joining"* keeps them open.)
+  - **PQ1 (b) — the FEE never paid.** `pending-fee`, identity verified or manual: Niyamavali §2.1 (c) makes the fee a condition of
+    membership; the Panel's words do ⛔ mention it. Built: OPEN (one arm of N6's switch if refused). The note suggests B (refuse).
+- **PQ2 — After a death is reported, what may the member's account still do?** Two questions (a mixed question is two — the template):
+  - **PQ2 (a) — WITHDRAW the membership?** `-423`'s own reason (*"no one can withdraw it on their behalf afterwards"*) points at
+    withdrawal too — but the ruled words cover erasure only, so a refusal would WIDEN the ruling. Built: unchanged (reachable). The harm:
+    a withdrawal after death ends the nominee's own Ravi-mode access (login refuses `withdrawn`) AND closes BOTH exports
+    (`data_export.member_terminal` — N8), so it defeats the SEE right Q2 A grants. The note suggests A (refuse, lifted as erasure is).
+  - **PQ2 (b) — CHANGE the record directly** (address and posting — ⛔ step-up; medical declaration — `medical_change`; G15), or only ASK
+    for a correction as Q2 A's words say? Built: unchanged. The note suggests A (only ask).
 - **PQ3 — May the helpline tell the caller WHY** (e.g. *"this member left the Trust"*, *"…was removed"*)? A disclosure of a person's
   membership history to a caller. Built: the operator sees why (`-423` reading 3); the copy tells them to say only that the claim cannot
-  be filed; the app shows ⛔ reason.
+  be filed; the app shows ⛔ reason. The note suggests B (one general reason for every case: *"the person was not a member of the Trust
+  when they died"*) — the caller already hears the member's NAME at the read-back before filing.
 
 ## Acceptance Criteria
 
@@ -487,11 +490,13 @@ carries the NOT-YET-HUMAN-REVIEWED form and a go-live row. The call + back strin
         ([[feedback_concurrent_review_agents_mutate_tree]]).
   - [x] 0.2 Put DL1–DL16 to BigDev (the copy of DL9 / DL10 / DL11 verbatim; the Hindi title + body for review — call + back are
         already reviewed; DL16 (a) / (b)). Record the answers. — ✅ 2026-10-31, BigDev: *"DL1-DL16 as recommended"* ⇒ every DL as
-        written, DL16 (a), the English copy approved; the DL10 Hindi title + body ⛔ yet confirmed as reviewed (see the DL section's
-        header) — ask once at Task 4.3, else ship the NOT-YET-HUMAN-REVIEWED comment + go-live row.
-  - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied): `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-38-door-and-after-death.md`
+        written, DL16 (a), the English copy approved; the DL10 Hindi title + body confirmed reviewed by BigDev the same day (*"DL10 Hindi
+        is fine"*).
+  - [x] 0.3 Draft ONE routing note from the template (by path, ⛔ copied): `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-38-door-and-after-death.md`
         — PQ1 (a), PQ1 (b), PQ2 (with N8's export harm), PQ3; plain-English question first, THE ONE FACT, options with an honest cost on
-        each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge.
+        each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge. — ✅ 2026-10-31:
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (Q1 (a) / (b), Q2 (a) / (b),
+        Q3; suggestions A · B · A · A · B; E4 re-run clean). Status WRITTEN, ⛔ sent.
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL16 as answered; names PQ1–PQ3 routed and PQ1 (a) as a DECLARED
         narrowing of the ruled words; cites `-423`; ⛔ supersedes a ratified entry. Committed ALONE, first.
   - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
@@ -542,9 +547,8 @@ carries the NOT-YET-HUMAN-REVIEWED form and a go-live row. The call + back strin
   - [ ] 4.2 Admin helpdesk (DL11): the key; `erasureErrorText` in `HelpdeskDetailPage.tsx`; the erasure leg first in the `dataRightsError`
         chain; its unit test + the Shell test in `apps/admin/tests/helpdesk-responder-console.test.tsx` (AC10).
   - [ ] 4.3 Mobile (DL10): `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` branch; keys `cannot_file.*` in
-        BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both — naming BigDev's review
-        if done at 0.2, else *"agent-authored and is NOT YET HUMAN-REVIEWED — go-live gate Row N"* (the `$comment.closed` form) and a roster
-        go-live row opened; the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
+        BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both naming BigDev's review
+        (2026-10-31, *"DL10 Hindi is fine"*; call + back reuse the reviewed `refile.*` strings) — ⛔ go-live row needed; the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
         refused-at-door state** (payer: the family of a non-member, or of a mistyped search — `-423` Q3 B's accepted cost; the 6.19c
         re-file-screen row is the precedent); run `pnpm friction:check` before push — `MEMBER_FACING_PREFIXES` includes `apps/mobile/`, so
         without it the gate fails. Enrol `apps/mobile/app/(claim)/cannot-file.tsx` and `apps/mobile/lib/cannot-file-copy.ts` in
@@ -615,7 +619,7 @@ carries the NOT-YET-HUMAN-REVIEWED form and a go-live row. The call + back strin
 
 ⛔ A "found alive" closure (6-22's); ⛔ a guilty-finding release rule (6-22's — DL4); ⛔ a separate data-rights nominee; ⛔ moderation
 status in the 4.7 search results; ⛔ disabling the admin erasure button pre-emptively; ⛔ a refusal of withdrawal or of direct edits
-after death (PQ2); ⛔ telling the caller why (PQ3); ⛔ refusing `pending-fee` / `pending-valid` / unverified-fallback members (PQ1 (a) /
+after death (PQ2 (a) / (b)); ⛔ telling the caller why (PQ3); ⛔ refusing `pending-valid` / `pending-fee` (PQ1 (a) /
 (b)); ⛔ any change to the erasure of a living member for whom ⛔ claim has been filed; ⛔ backfill of existing claims (⛔ member uses the
 system yet — the routing note's "What is at stake right now"); ⛔ the privacy policy (outside this repository — BigDev and counsel;
 tracked by Task 0.5 (iii)).
@@ -670,5 +674,6 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.3 | Task 0.3 done — the routing note `trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` WRITTEN (⛔ sent): Q1 (a) / (b), Q2 (a) / (b), Q3. PQ2 split into (a) / (b); PQ1 (a) is `pending-valid` only (manual-fallback `pending-fee` moves to PQ1 (b); manual-fallback `lock-in` is ⛔ asked — `-423`'s "first days after joining"). The DL10 Hindi confirmed reviewed by BigDev (*"DL10 Hindi is fine"*). |
 | 2026-10-31 | 1.2 | Task 0.2 answered — BigDev: *"DL1-DL16 as recommended"* (DL16 (a); the English copy approved; the DL10 Hindi ⛔ yet confirmed as reviewed). |
 | 2026-10-31 | 1.1 | Fresh-context validation (`bmad-create-story validate 6.38`): the refusal vocabulary is domain-owned (contracts mirrors it); AC5 split into the two-party and the three-party race, run through the new `acquireErasureLocks` helper, moved to Task 3.6; the reason kept off the member route's wire; N5's audit lines corrected and DL16 added; N8 qualified for withdrawn members; the stale operator alert cleared on a member change; PQ1 split into (a) / (b); TR2 / TR3 re-traced; the friction-budget row, the fences, the test helpers and the omitted `-423` / `-238` text added. |

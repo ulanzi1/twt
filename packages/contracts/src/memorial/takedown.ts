@@ -10,6 +10,7 @@
 import { z } from 'zod';
 
 import { MemorialStateSchema } from './dto.js';
+import { MemorialKinshipRowOutput } from './kinship.js';
 
 /** How a request ended (MP8). ⚠ LOCKSTEP with the domain's `MEMORIAL_TAKEDOWN_OUTCOMES` (pinned by test). */
 export const MEMORIAL_TAKEDOWN_OUTCOMES = ['taken_down', 'kept', 'superseded'] as const;
@@ -93,6 +94,12 @@ export const MemorialTakedownDriveResponse = z
         /** A 5-minute signed URL (the audited `memorial.photo.url` path); `null` when ⛔ no photo is shown. */
         photoUrl: z.string().nullable(),
         altText: z.string().nullable(),
+        /**
+         * Story 11b.5a (KL11) — the family list as the public page shows it: grouped by relation, left-out entries absent with ⛔ no
+         * trace, each name bidi-isolated (the SAME helper as the page). `[]` when the version has ⛔ no list or every entry was left
+         * out; `null` on a decrypt failure (as `words`). ⛔ Never an `inPhoto` tick.
+         */
+        kinship: z.array(MemorialKinshipRowOutput).nullable(),
       })
       .strict()
       .nullable(),

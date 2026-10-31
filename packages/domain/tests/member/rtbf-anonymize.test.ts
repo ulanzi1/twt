@@ -640,8 +640,10 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(await dec(sub.bodyCiphertext, pariwar, 'memorial')).toBe(ANONYMIZED_SENTINEL);
     // The alt text is optional ⇒ a CASE (replaced only where present).
     expect(typeof sub.altTextCiphertext).toBe('object');
-    // ⛔ Only the ciphertexts — the authorisation record, the photo key and the chain are kept (0182's column grant).
-    expect(Object.keys(sub).sort()).toEqual(['altTextCiphertext', 'bodyCiphertext']);
+    // Story 11b.5a (KL13) — the family list is optional too ⇒ a CASE (NULL stays NULL).
+    expect(typeof sub.kinshipCiphertext).toBe('object');
+    // ⛔ Only the ciphertexts — the authorisation record, the photo key and the chain are kept (0182's column grant; 0194's).
+    expect(Object.keys(sub).sort()).toEqual(['altTextCiphertext', 'bodyCiphertext', 'kinshipCiphertext']);
     expect(Object.keys(setFor(captured, memorialReviewDecisions))).toEqual(['internalNoteCiphertext']);
     expect(Object.keys(setFor(captured, memorialWithdrawals))).toEqual(['internalNoteCiphertext']);
     expect(await dec(setFor(captured, memorialReviewDecisions).internalNoteCiphertext, pariwar, 'memorial')).toBe(

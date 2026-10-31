@@ -79,7 +79,7 @@ describe('widening the class moves no blank-detection (it reads MEMORIAL_INVISIB
 
 describe('widening the class moves no decision validation (MA6)', () => {
   const body = `AB${ch(0x200f)}CD`;
-  const subject = { body, altText: null, hasPhoto: false };
+  const subject = { body, altText: null, hasPhoto: false, kinshipLength: null };
   const omit = (start: number, end: number) => ({
     action: 'approved_with_omissions' as const,
     omissions: [{ field: 'body' as const, start, end, reason: 'against_the_law' as const }],

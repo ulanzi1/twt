@@ -54,6 +54,10 @@ export const memorialSubmissions = pgTable(
     // Present iff a photo is (alt text is required with a photo — enforced by the writer, ⛔ a ciphertext CHECK).
     altTextCiphertext: piiColumn(1, MEMORIAL_FIELD_CLASS)('alt_text_ciphertext'),
     photoObjectKey: text('photo_object_key'),
+    // Story 11b.5a (KL5, migration 0194) — the family list, `JSON.stringify(entries)` encrypted (Tier-1; relation codes INSIDE).
+    // NULL ⇔ ⛔ no list (an empty array is ⛔ never stored). ⛔ No CHECK (the scrub's UPDATE). Used for NOTHING but the memorial
+    // (`-428` PQ1 A — the AC10 source pin).
+    kinshipCiphertext: piiColumn(1, MEMORIAL_FIELD_CLASS)('kinship_ciphertext'),
     // ⚠ text + CHECK, ⛔ a pgEnum: `-398` mints exactly three enums, and these two values carry ⛔ authority.
     photoMime: text('photo_mime').$type<MemorialPhotoMime>(),
     // MA5 — the permission given at Send. The registry version id (⛔ the text) and the locale actually shown.

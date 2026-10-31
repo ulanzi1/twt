@@ -15,6 +15,8 @@
 
 import { z } from 'zod';
 
+import { MemorialKinshipEntryOutput, MemorialKinshipOmissionInput, MemorialKinshipOmissionOutput } from './kinship.js';
+import { MEMORIAL_KINSHIP_MAX_ENTRIES } from './text-classes.js';
 import { MEMORIAL_OMISSION_FIELDS, MEMORIAL_REVIEW_ACTIONS, MEMORIAL_REVIEW_REASONS, MEMORIAL_STATES, MEMORIAL_WITHDRAWAL_ACTORS } from './vocab.js';
 
 export const MemorialReviewActionSchema = z.enum(MEMORIAL_REVIEW_ACTIONS);
@@ -72,6 +74,19 @@ export const MemorialMemberView = z
     /** The parts the Trust left out, each with its own reason (`approved_with_omissions`). */
     omissions: z.array(OmissionOutput),
     photoLeftOut: z.object({ reason: MemorialReviewReasonSchema }).strict().nullable(),
+    /**
+     * Story 11b.5a (KL9) — the latest version's family list as the family SENT it (⛔ not as approved — the re-send's "Start from
+     * the list I sent" reads it); `null` when it carried ⛔ no list or the decrypt failed (then `unavailable` is set and
+     * `canSend` is false — a re-send must ⛔ not silently drop the list).
+     */
+    kinship: z.array(MemorialKinshipEntryOutput).nullable(),
+    /** The entries the Trust left out, by index into {@link kinship}, each with its own reason. */
+    kinshipLeftOut: z.array(MemorialKinshipOmissionOutput),
+    /**
+     * KL16 — the latest version's permission carried the guardian declaration (`carriesGuardianDeclaration`, ⛔ a version-id
+     * match): the outcome screen then shows copy 4.3 for `identifies_a_child`. `false` when nothing was sent.
+     */
+    guardianDeclaration: z.boolean(),
     /** The `not_approved` reason, or the Trust's own withdrawal reason (`approval_withdrawn`). ⛔ Never the internal note. */
     reasonCode: MemorialReviewReasonSchema.nullable(),
     /** MA16 — an OLDER approval the Trust withdrew while a newer version is current. */
@@ -96,7 +111,16 @@ export type MemorialMemberViewResponse = z.output<typeof MemorialMemberViewRespo
  * `POST /api/v1/member/memorial/submissions` — MULTIPART (Trap 11), so this is ⛔ a JSON body schema: the handler reads
  * an explicit allow-list of parts. Documented here so the api-client and the handler share the names.
  */
-export const MEMORIAL_SEND_FIELDS = ['body', 'altText', 'authorisationCopyVersion', 'authorisationLocale', 'keepPreviousPhoto'] as const;
+export const MEMORIAL_SEND_FIELDS = [
+  'body',
+  'altText',
+  'authorisationCopyVersion',
+  'authorisationLocale',
+  'keepPreviousPhoto',
+  // Story 11b.5a (KL8) — the family list: `JSON.stringify(entries)`, sent ONLY when non-empty (parsed with
+  // `MemorialKinshipListSchema`; refused `memorial.kinship_invalid`).
+  'kinship',
+] as const;
 export const MEMORIAL_SEND_FILE_FIELD = 'photo';
 
 export const MemorialSendResponse = z
@@ -149,6 +173,8 @@ const MemorialReviewDecisionOutput = z
     action: MemorialReviewActionSchema,
     omissions: z.array(OmissionOutput),
     photoLeftOutReason: MemorialReviewReasonSchema.nullable(),
+    /** Story 11b.5a (KL6) — the list entries left out, by index, each with its reason (`[]` when none). */
+    kinshipLeftOut: z.array(MemorialKinshipOmissionOutput),
     reasonCode: MemorialReviewReasonSchema.nullable(),
     internalNote: z.string().nullable(),
     actorDisplay: z.string(),
@@ -173,9 +199,19 @@ export const MemorialReviewVersion = z
     /** The family's words VERBATIM; `null` on a decrypt failure (`unavailable` set). */
     body: z.string().nullable(),
     altText: z.string().nullable(),
+    /**
+     * Story 11b.5a (KL6 / KL12) — the family list VERBATIM, `inPhoto` ticks included (KL15 — shown to the reviewer beside the
+     * photo); `null` when the version carried ⛔ no list or on a decrypt failure (`unavailable` set).
+     */
+    kinship: z.array(MemorialKinshipEntryOutput).nullable(),
     unavailable: z.literal('memorial.unavailable_now').nullable(),
     hasPhoto: z.boolean(),
     photoUrl: z.string().nullable(),
+    /**
+     * KL16 — this version's permission carried the guardian declaration (the registry's `carriesGuardianDeclaration`; an unknown
+     * id ⇒ `false`). The admin reads THIS boolean — ⛔ never a version-id match (it cannot import `@twt/domain`).
+     */
+    guardianDeclaration: z.boolean(),
     authorisationCopyVersion: z.string(),
     authorisationLocale: MemorialLocaleSchema,
     handoverRecipient: z.enum(['latest', 'at_death']),
@@ -225,6 +261,8 @@ export const MemorialReviewDecisionInput = z
     action: MemorialReviewActionSchema,
     omissions: z.array(OmissionInput).max(200).optional(),
     photoLeftOut: z.object({ reason: MemorialReviewReasonSchema }).strict().optional(),
+    /** Story 11b.5a (KL6) — whole list entries left out, by index (sorted, unique — `validateMemorialDecision`). ⛔ No name. */
+    kinshipLeftOut: z.array(MemorialKinshipOmissionInput).max(MEMORIAL_KINSHIP_MAX_ENTRIES).optional(),
     reasonCode: MemorialReviewReasonSchema.optional(),
     /** Tier-1, ⛔ never shown to the family; read back in the history view. */
     internalNote: z.string().min(1).max(4000).optional(),

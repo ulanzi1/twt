@@ -106,7 +106,7 @@ describe('memorialParagraphRanges (AC11)', () => {
 
 describe('validateMemorialDecision (MA6)', () => {
   const body = 'पहला वाक्य। दूसरा वाक्य।\n\nतीसरा वाक्य।';
-  const subject = { body, altText: 'माँ की फ़ोटो', hasPhoto: true };
+  const subject = { body, altText: 'माँ की फ़ोटो', hasPhoto: true, kinshipLength: null };
   const span = (start: number, end: number, field: 'body' | 'altText' = 'body') =>
     ({ field, start, end, reason: 'attacks_someone_named' }) as const;
   const awo = (d: Partial<MemorialDecisionCandidate>): MemorialDecisionCandidate => ({ action: 'approved_with_omissions', ...d });
@@ -136,7 +136,7 @@ describe('validateMemorialDecision (MA6)', () => {
   });
 
   // Ordering / range cases on an ASCII body, so every offset is a grapheme boundary and only the rule under test fires.
-  const ascii = { body: 'alpha beta gamma\n\ndelta epsilon', altText: null, hasPhoto: false };
+  const ascii = { body: 'alpha beta gamma\n\ndelta epsilon', altText: null, hasPhoto: false, kinshipLength: null };
   it.each([
     ['empty', [span(3, 3)], 'span_empty'],
     ['out of range', [span(0, ascii.body.length + 1)], 'span_out_of_range'],
@@ -158,7 +158,7 @@ describe('validateMemorialDecision (MA6)', () => {
 
   it('refuses a whitespace-only span', () => {
     const t = 'एक  दो';
-    expect(validateMemorialDecision(awo({ omissions: [span(2, 4)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
+    expect(validateMemorialDecision(awo({ omissions: [span(2, 4)] }), { body: t, altText: null, hasPhoto: false, kinshipLength: null })).toEqual({
       ok: false,
       problem: 'span_blank',
     });
@@ -166,7 +166,7 @@ describe('validateMemorialDecision (MA6)', () => {
 
   it('refuses a boundary inside a surrogate pair', () => {
     const t = 'a😀b c';
-    expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
+    expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false, kinshipLength: null })).toEqual({
       ok: false,
       problem: 'span_not_grapheme_boundary',
     });
@@ -175,7 +175,7 @@ describe('validateMemorialDecision (MA6)', () => {
   it('refuses a boundary inside a Devanagari conjunct', () => {
     const t = 'क्ष और';
     // `क्ष` is ONE grapheme cluster of three code units — cutting after `क्` splits it.
-    expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
+    expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false, kinshipLength: null })).toEqual({
       ok: false,
       problem: 'span_not_grapheme_boundary',
     });
@@ -184,25 +184,25 @@ describe('validateMemorialDecision (MA6)', () => {
   it('refuses a boundary inside a ZWJ sequence', () => {
     const family = '👨\u200d👩\u200d👧';
     const t = `${family} x`;
-    expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
+    expect(validateMemorialDecision(awo({ omissions: [span(0, 2)] }), { body: t, altText: null, hasPhoto: false, kinshipLength: null })).toEqual({
       ok: false,
       problem: 'span_not_grapheme_boundary',
     });
-    expect(validateMemorialDecision(awo({ omissions: [span(0, family.length)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
+    expect(validateMemorialDecision(awo({ omissions: [span(0, family.length)] }), { body: t, altText: null, hasPhoto: false, kinshipLength: null })).toEqual({
       ok: true,
     });
   });
 
   it('refuses leaving ⛔ visible character of the body (that is not_approved)', () => {
     const t = 'केवल यह';
-    expect(validateMemorialDecision(awo({ omissions: [span(0, t.length)] }), { body: t, altText: null, hasPhoto: false })).toEqual({
+    expect(validateMemorialDecision(awo({ omissions: [span(0, t.length)] }), { body: t, altText: null, hasPhoto: false, kinshipLength: null })).toEqual({
       ok: false,
       problem: 'nothing_left',
     });
   });
 
   it('the photo rules', () => {
-    const noPhoto = { body, altText: null, hasPhoto: false };
+    const noPhoto = { body, altText: null, hasPhoto: false, kinshipLength: null };
     expect(validateMemorialDecision(awo({ photoLeftOut: { reason: 'identifies_a_child' } }), noPhoto)).toEqual({
       ok: false,
       problem: 'photo_left_out_without_photo',
@@ -224,7 +224,7 @@ describe('validateMemorialDecision (MA6)', () => {
     it('leaving out ALL of the alt text while the photo stays is refused — the cure is photoLeftOut', () => {
       expect(validateMemorialDecision(awo({ omissions: [whole] }), subject)).toEqual({ ok: false, problem: 'alt_text_nothing_left' });
       // Several spans that together leave only whitespace are the same thing.
-      const two = { body, altText: 'एक दो', hasPhoto: true };
+      const two = { body, altText: 'एक दो', hasPhoto: true, kinshipLength: null };
       expect(validateMemorialDecision(awo({ omissions: [span(0, 2, 'altText'), span(3, 5, 'altText')] }), two)).toEqual({
         ok: false,
         problem: 'alt_text_nothing_left',
@@ -249,7 +249,7 @@ describe('validateMemorialDecision (MA6)', () => {
     it('a body that is emptied is still reported as nothing_left (the body is checked first)', () => {
       const t = 'केवल यह';
       expect(
-        validateMemorialDecision(awo({ omissions: [span(0, t.length), span(0, alt.length, 'altText')] }), { body: t, altText: alt, hasPhoto: true }),
+        validateMemorialDecision(awo({ omissions: [span(0, t.length), span(0, alt.length, 'altText')] }), { body: t, altText: alt, hasPhoto: true, kinshipLength: null }),
       ).toEqual({ ok: false, problem: 'nothing_left' });
     });
   });

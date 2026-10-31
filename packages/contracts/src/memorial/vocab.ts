@@ -24,6 +24,28 @@ export type MemorialWithdrawalActor = (typeof MEMORIAL_WITHDRAWAL_ACTORS)[number
 export const MEMORIAL_OMISSION_FIELDS = ['body', 'altText'] as const;
 export type MemorialOmissionField = (typeof MEMORIAL_OMISSION_FIELDS)[number];
 
+/**
+ * The family list's fourteen relations, in DISPLAY order (Story 11b.5a KL3, `-431`). ⭐ Each is the person's relation TO THE
+ * MEMBER WHO DIED. ⛔ No `other`.
+ */
+export const MEMORIAL_KINSHIP_RELATIONS = [
+  'wife',
+  'husband',
+  'son',
+  'daughter',
+  'father',
+  'mother',
+  'brother',
+  'sister',
+  'sons_son',
+  'daughters_son',
+  'sons_daughter',
+  'daughters_daughter',
+  'daughter_in_law',
+  'son_in_law',
+] as const;
+export type MemorialKinshipRelation = (typeof MEMORIAL_KINSHIP_RELATIONS)[number];
+
 /** The derived state (MA10). ⚠ The wire key is `memorialState` — ⛔ never `status`. */
 export const MEMORIAL_STATES = [
   'none',

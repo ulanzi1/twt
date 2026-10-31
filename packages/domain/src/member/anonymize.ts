@@ -197,6 +197,12 @@ export async function anonymizeMember(
       .set({
         bodyCiphertext: memorialSentinel,
         altTextCiphertext: sql`CASE WHEN ${memorialSubmissions.altTextCiphertext} IS NULL THEN NULL ELSE ${memorialSentinel} END`,
+        // Story 11b.5a (KL13, migration 0194) — the family list: NULL stays NULL (⛔ no list), else the sentinel. ⚠ Legality, as
+        // built (6.38, `rtbf-legality.ts`): once a claim is filed for the member's death the shared legality refuses the erasure
+        // (`death_reported`), and a memorial exists only after a death claim — so this line runs only for a member whose every
+        // claim was released by an innocence finding (`-423` Q1 (b)) or for a row older than Story 6.38. ⛔ Never read it as
+        // "the list is erased with the record" unqualified.
+        kinshipCiphertext: sql`CASE WHEN ${memorialSubmissions.kinshipCiphertext} IS NULL THEN NULL ELSE ${memorialSentinel} END`,
       })
       .where(inArray(memorialSubmissions.submissionId, memorialIds));
     await client

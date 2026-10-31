@@ -96,6 +96,7 @@ import { z } from 'zod';
 // *"the FR-91 cap"* — the exact defect the 11a.2 review found in a *"shared cap"* claim whose
 // comment named a constant that did not exist. ⛔ Raising either is a ruling, ⛔ not a tuning knob.
 import { PUBLIC_SURFACE_PAGE_SIZE_CAP } from '../_common/pagination.js';
+import { MEMORIAL_KINSHIP_RELATIONS } from '../memorial/vocab.js';
 import { PUBLIC_DIRECTORY_PAGE_HORIZON } from './directory.js';
 
 /**
@@ -210,11 +211,26 @@ export type PublicSahyogVivranAppealReversal = z.output<typeof PublicSahyogVivra
  * ⚠ `null` on the parent — the switch is off, ⛔ no approved version stands, it was taken down, the member was erased, or ⛔ nothing
  * is left to show (every word left out and ⛔ no photo: `{ words: [], photo: null }` is ⛔ never sent) — and the page then renders
  * NOTHING: the same bytes as a drive whose family never wrote (`-393` M1 — ⛔ no trace).
+ *
+ * ⭐ 2026-10-31 (Story 11b.5a, `2026-10-31-428` item 1 — the family list, Trustee-ratified): `kinship` — the list as the Trust
+ * approved it, ALREADY grouped by relation in the fourteen's display order, left-out entries absent, each name's direction
+ * controls isolated by the API (`isolateMemorialBidi`, per name). ⚠ The relation CODE crosses the wire by design: it is a
+ * closed-set value the page translates like any enum — ⛔ not a marker, a reason, a key or a cut position; the "FINISHED STRINGS
+ * ONLY" rule above is otherwise unchanged (⛔ no index, ⛔ no reason, ⛔ no count of left-out entries, ⛔ no `inPhoto`). `[]` when the
+ * version has ⛔ no list or every entry was left out — the page then draws ⛔ no heading and ⛔ no `<dl>`.
  */
 export const PublicSahyogVivranFamilyMemorial = z
   .object({
     words: z.array(z.string().min(1)),
     photo: z.object({ altText: z.string() }).strict().nullable(),
+    kinship: z.array(
+      z
+        .object({
+          relation: z.enum(MEMORIAL_KINSHIP_RELATIONS),
+          names: z.array(z.string().min(1)).min(1),
+        })
+        .strict(),
+    ),
   })
   .strict();
 export type PublicSahyogVivranFamilyMemorial = z.output<typeof PublicSahyogVivranFamilyMemorial>;

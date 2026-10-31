@@ -19,6 +19,9 @@
 //     all the others; ⛔ no DELETE.
 //   · a LIVE scrub as `twt_app` under FORCE RLS — rows updated > 0 and the ciphertext really changed, for all four columns,
 //     directly AND through the real `anonymizeMember`.
+//   · migration 0194 (Story 11b.5a) — the family list: `kinship_ciphertext` joins the scrubbable columns (its own UPDATE grant,
+//     the live scrubs (v) / (w) — NULL stays NULL); `kinship_omissions` and its shape CHECK; the REPLACED `omissions_iff_action`
+//     (a kinship-only `approved_with_omissions` is valid, `approved` with a kinship omission is refused).
 //   · migration 0183 — the Send's `idempotency_key` ON the row: the partial UNIQUE index per pool (the replay's lookup and the
 //     backstop an unlocked writer reaches), its shape CHECK, and the column grant (INSERT via the table grant; ⛔ UPDATE).
 //
@@ -45,15 +48,17 @@ const DECISIONS = 'memorial_review_decisions';
 const WITHDRAWALS = 'memorial_withdrawals';
 const TABLES = [SUBMISSIONS, DECISIONS, WITHDRAWALS] as const;
 
-/** The only columns the app role may UPDATE (MA15) — the four Tier-1 ciphertext columns. */
+/** The only columns the app role may UPDATE (MA15) — the five Tier-1 ciphertext columns (0194 adds `kinship_ciphertext`). */
 const SCRUBBABLE: Readonly<Record<string, readonly string[]>> = {
-  [SUBMISSIONS]: ['alt_text_ciphertext', 'body_ciphertext'],
+  [SUBMISSIONS]: ['alt_text_ciphertext', 'body_ciphertext', 'kinship_ciphertext'],
   [DECISIONS]: ['internal_note_ciphertext'],
   [WITHDRAWALS]: ['internal_note_ciphertext'],
 };
 
 const GOOD_SPAN = '[{"field":"body","start":0,"end":3,"reason":"against_the_law"}]';
 const ALT_SPAN = '[{"field":"altText","start":1,"end":4,"reason":"identifies_a_child"}]';
+/** 0194 (Story 11b.5a, KL6) — a whole family-list entry left out. */
+const KIN_OMIT = '[{"index":0,"reason":"identifies_a_child"}]';
 
 interface Outcome {
   code: string | null;
@@ -176,7 +181,9 @@ async function seedTenant(pariwarId: string) {
     [root, null, 'R'],
     [head, root, 'H'],
   ] as const) {
-    const q = sub(submissionRow(w, { submission_id: id, supersedes_submission_id: supersedes, body_ciphertext: `enc:v1:BODY-${tag}`, alt_text_ciphertext: `enc:v1:ALT-${tag}` }));
+    // 0194 — the root carries a family list, the head none (the scrub's CASE keeps NULL).
+    const kinship_ciphertext = tag === 'R' ? 'enc:v1:KIN-R' : null;
+    const q = sub(submissionRow(w, { submission_id: id, supersedes_submission_id: supersedes, body_ciphertext: `enc:v1:BODY-${tag}`, alt_text_ciphertext: `enc:v1:ALT-${tag}`, kinship_ciphertext }));
     await client.query(q.text, q.params);
   }
   for (const q of [
@@ -300,12 +307,14 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expect(def('memorial_submissions_pool_idempotency_key_uq')).toMatch(
         /UNIQUE INDEX .*\(pool_id, idempotency_key\) WHERE \(idempotency_key IS NOT NULL\)/,
       );
-      // The thirteen named CHECKs are all there (0187 — Story 11b.4a — adds the withdrawals' `helpline` pair) (a dropped one fails here before it fails in a probe below).
+      // The fourteen named CHECKs are all there (0187 — Story 11b.4a — adds the withdrawals' `helpline` pair; 0194 — Story 11b.5a —
+      // the decisions' kinship-omission shape) (a dropped one fails here before it fails in a probe below).
       const checks = await client.query<{ conname: string }>(
         `SELECT conname FROM pg_constraint WHERE contype = 'c' AND conrelid = ANY (ARRAY['memorial_submissions'::regclass, 'memorial_review_decisions'::regclass, 'memorial_withdrawals'::regclass]) ORDER BY conname`,
       );
       expect(checks.rows.map((r) => r.conname)).toEqual([
         'memorial_review_decisions_actor_display_check',
+        'memorial_review_decisions_kinship_omissions_check',
         'memorial_review_decisions_omissions_check',
         'memorial_review_decisions_omissions_iff_action',
         'memorial_review_decisions_reason_iff_not_approved',
@@ -618,6 +627,68 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expect((await take({ action: 'approved_with_omissions', omissions: GOOD_SPAN, photo_left_out_reason: 'against_the_law' })).code).toBeNull();
     });
 
+    it('(q2) 0194 — `omissions_iff_action` counts the family list: a kinship-only `approved_with_omissions` is valid; `approved` / `not_approved` with one is refused', async () => {
+      const { client } = getTx();
+      const w = await seedWorld(PARIWAR_A, 3);
+      const free = [...w.versions];
+      await enterAppScope(client, PARIWAR_A);
+      const put = (over: Record<string, unknown>): Promise<Outcome> => ins(client, DECISIONS, decisionRow(PARIWAR_A, free[0]!, over));
+      const take = (over: Record<string, unknown>): Promise<Outcome> => ins(client, DECISIONS, decisionRow(PARIWAR_A, free.shift()!, over));
+      expectCheck(await put({ action: 'approved', kinship_omissions: KIN_OMIT }), 'memorial_review_decisions_omissions_iff_action');
+      expectCheck(
+        await put({ action: 'not_approved', reason_code: 'against_the_law', kinship_omissions: KIN_OMIT }),
+        'memorial_review_decisions_omissions_iff_action',
+      );
+      // `kinship_omissions` is NOT NULL (default `[]`).
+      expect((await put({ action: 'approved', kinship_omissions: null })).code).toBe('23502');
+      expect((await take({ action: 'approved_with_omissions', omissions: '[]', kinship_omissions: KIN_OMIT })).code).toBeNull();
+      expect((await take({ action: 'approved_with_omissions', omissions: GOOD_SPAN, kinship_omissions: '[{"index":0,"reason":"against_the_law"},{"index":3,"reason":"identifies_a_child"}]' })).code).toBeNull();
+      // The default: an insert that names no kinship column stores `[]`.
+      const last = free.shift()!;
+      expect((await ins(client, DECISIONS, decisionRow(PARIWAR_A, last))).code).toBeNull();
+      const stored = await client.query<{ k: unknown }>(`SELECT kinship_omissions AS k FROM ${DECISIONS} WHERE submission_id = $1`, [last]);
+      expect(stored.rows[0]!.k).toEqual([]);
+    });
+
+    it.each([
+      ['a JSON-null `reason`', '[{"index":0,"reason":null}]'],
+      ['a JSON-null `index`', '[{"index":null,"reason":"against_the_law"}]'],
+      ['a missing key', '[{"index":0}]'],
+      ['an extra key (⛔ a name)', '[{"index":0,"reason":"against_the_law","name":"x"}]'],
+      ['a non-integer index', '[{"index":0.5,"reason":"against_the_law"}]'],
+      ['a string index', '[{"index":"0","reason":"against_the_law"}]'],
+      ['a negative index', '[{"index":-1,"reason":"against_the_law"}]'],
+      ['an index over the cap', '[{"index":2147483648,"reason":"against_the_law"}]'],
+      ['an index of 1e400', '[{"index":1e400,"reason":"against_the_law"}]'],
+      ['an unknown reason', '[{"index":0,"reason":"family_asked"}]'],
+      ['an element that is not an object', '[1]'],
+      ['a JSON-null element', '[null]'],
+    ])('(r2) 0194 memorial_kinship_omissions_valid: %s is REFUSED by the kinship CHECK', async (_name, kinship) => {
+      const { client } = getTx();
+      const w = await seedWorld(PARIWAR_A, 1);
+      await enterAppScope(client, PARIWAR_A);
+      const out = await ins(
+        client,
+        DECISIONS,
+        decisionRow(PARIWAR_A, w.versions[0]!, { action: 'approved_with_omissions', omissions: GOOD_SPAN, kinship_omissions: kinship }),
+      );
+      expectCheck(out, 'memorial_review_decisions_kinship_omissions_check');
+    });
+
+    it('(s3) 0194 memorial_kinship_omissions_valid: the function itself — null and non-arrays false (never NULL), [] and a valid entry true, the cap', async () => {
+      const { client } = getTx();
+      const fn = async (v: string | null) =>
+        (await client.query<{ ok: boolean | null }>(`SELECT memorial_kinship_omissions_valid($1::jsonb) AS ok`, [v])).rows[0]!.ok;
+      expect(await fn(null)).toBe(false);
+      expect(await fn('{"index":0,"reason":"against_the_law"}')).toBe(false);
+      expect(await fn('[{"index":null,"reason":null}]')).toBe(false);
+      expect(await fn('[]')).toBe(true);
+      expect(await fn(KIN_OMIT)).toBe(true);
+      expect(await fn('[{"index":2147483647,"reason":"against_the_law"}]')).toBe(true);
+      expect(await fn('[{"index":2147483648,"reason":"against_the_law"}]')).toBe(false);
+      expect(await fn('[{"index":99999999999999999999999,"reason":"against_the_law"}]')).toBe(false);
+    });
+
     it.each([
       ['⭐ R18: JSON-null `field` AND `reason`', '[{"field":null,"start":0,"end":1,"reason":null}]'],
       ['a JSON-null `reason`', '[{"field":"body","start":0,"end":1,"reason":null}]'],
@@ -759,7 +830,8 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       await enterAppScope(client, PARIWAR_A);
 
       const subs = await client.query(
-        `UPDATE ${SUBMISSIONS} SET body_ciphertext = 'enc:v1:SCRUBBED', alt_text_ciphertext = CASE WHEN alt_text_ciphertext IS NULL THEN NULL ELSE 'enc:v1:SCRUBBED' END
+        `UPDATE ${SUBMISSIONS} SET body_ciphertext = 'enc:v1:SCRUBBED', alt_text_ciphertext = CASE WHEN alt_text_ciphertext IS NULL THEN NULL ELSE 'enc:v1:SCRUBBED' END,
+                kinship_ciphertext = CASE WHEN kinship_ciphertext IS NULL THEN NULL ELSE 'enc:v1:SCRUBBED' END
           WHERE deceased_member_id = $1`,
         [a.memberId],
       );
@@ -776,11 +848,14 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expect(withdrawals.rowCount, 'memorial_withdrawals scrub must update the row (not 0)').toBe(1);
 
       // The ciphertext really changed (read back through the same FORCE-RLS session).
-      const after = await client.query<{ body_ciphertext: string; alt_text_ciphertext: string }>(
-        `SELECT body_ciphertext, alt_text_ciphertext FROM ${SUBMISSIONS} WHERE deceased_member_id = $1`,
+      const after = await client.query<{ submission_id: string; body_ciphertext: string; alt_text_ciphertext: string; kinship_ciphertext: string | null }>(
+        `SELECT submission_id, body_ciphertext, alt_text_ciphertext, kinship_ciphertext FROM ${SUBMISSIONS} WHERE deceased_member_id = $1`,
         [a.memberId],
       );
       expect(after.rows.every((r) => r.body_ciphertext === 'enc:v1:SCRUBBED' && r.alt_text_ciphertext === 'enc:v1:SCRUBBED')).toBe(true);
+      // 0194 — the root carried a family list (scrubbed); the head carried none (NULL stays NULL).
+      expect(after.rows.find((r) => r.submission_id === a.root)?.kinship_ciphertext).toBe('enc:v1:SCRUBBED');
+      expect(after.rows.find((r) => r.submission_id === a.head)?.kinship_ciphertext).toBeNull();
       const notes = await client.query<{ internal_note_ciphertext: string }>(
         `SELECT internal_note_ciphertext FROM ${DECISIONS} WHERE submission_id = $1 UNION ALL SELECT internal_note_ciphertext FROM ${WITHDRAWALS} WHERE submission_id = $1`,
         [a.root],
@@ -808,14 +883,16 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       // Real envelopes, so the sentinel is distinguishable from what was there.
       const original = await enc('the family\'s words and the reviewer\'s note');
       await client.query(`UPDATE ${SUBMISSIONS} SET body_ciphertext = $2, alt_text_ciphertext = $2 WHERE deceased_member_id = $1`, [a.memberId, original]);
+      // 0194 — the root's family list is a real envelope too; the head keeps NULL.
+      await client.query(`UPDATE ${SUBMISSIONS} SET kinship_ciphertext = $2 WHERE submission_id = $1`, [a.root, original]);
       await client.query(`UPDATE ${DECISIONS} SET internal_note_ciphertext = $2 WHERE submission_id = $1`, [a.root, original]);
       await client.query(`UPDATE ${WITHDRAWALS} SET internal_note_ciphertext = $2 WHERE submission_id = $1`, [a.root, original]);
 
       await enterAppScope(client, PARIWAR_A);
       await anonymizeMember(tx, { kms, kekRef }, { memberId: toMemberId(a.memberId), pariwarId: PARIWAR_A });
 
-      const subs = await client.query<{ body_ciphertext: string; alt_text_ciphertext: string }>(
-        `SELECT body_ciphertext, alt_text_ciphertext FROM ${SUBMISSIONS} WHERE deceased_member_id = $1`,
+      const subs = await client.query<{ submission_id: string; body_ciphertext: string; alt_text_ciphertext: string; kinship_ciphertext: string | null }>(
+        `SELECT submission_id, body_ciphertext, alt_text_ciphertext, kinship_ciphertext FROM ${SUBMISSIONS} WHERE deceased_member_id = $1`,
         [a.memberId],
       );
       expect(subs.rows).toHaveLength(2);
@@ -824,6 +901,11 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
         expect(await dec(r.body_ciphertext)).toBe(ANONYMIZED_SENTINEL);
         expect(await dec(r.alt_text_ciphertext)).toBe(ANONYMIZED_SENTINEL);
       }
+      // 0194 (Story 11b.5a, KL13) — the family list becomes the sentinel; a version with ⛔ no list stays NULL.
+      const rootKin = subs.rows.find((r) => r.submission_id === a.root)!.kinship_ciphertext!;
+      expect(rootKin).not.toBe(original);
+      expect(await dec(rootKin)).toBe(ANONYMIZED_SENTINEL);
+      expect(subs.rows.find((r) => r.submission_id === a.head)!.kinship_ciphertext).toBeNull();
       const d = await client.query<{ internal_note_ciphertext: string }>(`SELECT internal_note_ciphertext FROM ${DECISIONS} WHERE submission_id = $1`, [a.root]);
       const wd = await client.query<{ internal_note_ciphertext: string }>(`SELECT internal_note_ciphertext FROM ${WITHDRAWALS} WHERE submission_id = $1`, [a.root]);
       expect(d.rows[0]!.internal_note_ciphertext).not.toBe(original);

@@ -48,6 +48,13 @@ export function memorialCodePointLength(text: string): number {
 /** AC7 limits (`-398` §1 item 20; BigDev *"6,000 / 300"*). */
 export const MEMORIAL_BODY_MAX_CODE_POINTS = 6000;
 export const MEMORIAL_ALT_TEXT_MAX_CODE_POINTS = 300;
+/**
+ * The family list's limits (Story 11b.5a KL4 — BigDev, Task 0.2, 2026-10-31): at most 20 entries; a name of 1–200 code
+ * points on the RAW string (the codebase's other name cap — `claims/contact.ts`). 20 × 200 Devanagari code points ≈ 12 KB of
+ * JSON — inside the Send's 32 KiB multipart `fieldSize`.
+ */
+export const MEMORIAL_KINSHIP_MAX_ENTRIES = 20;
+export const MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS = 200;
 /** ≤ 10 MiB — the claim-document limit BY VALUE (⛔ by import: the purposes differ — MA8). */
 export const MEMORIAL_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 

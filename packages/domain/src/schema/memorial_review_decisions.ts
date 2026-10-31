@@ -18,7 +18,12 @@ import { foreignKey, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizz
 import { MEMORIAL_FIELD_CLASS } from '../encryption/field-classes.js';
 import { piiColumn } from '../encryption/column.js';
 import type { PariwarId } from '../ids/index.js';
-import { MEMORIAL_REVIEW_ACTIONS, MEMORIAL_REVIEW_REASONS, type MemorialOmission } from '../memorial/vocab.js';
+import {
+  MEMORIAL_REVIEW_ACTIONS,
+  MEMORIAL_REVIEW_REASONS,
+  type MemorialKinshipOmission,
+  type MemorialOmission,
+} from '../memorial/vocab.js';
 import { memorialSubmissions } from './memorial_submissions.js';
 
 export const memorialReviewActionEnum = pgEnum('memorial_review_action', MEMORIAL_REVIEW_ACTIONS);
@@ -37,6 +42,12 @@ export const memorialReviewDecisions = pgTable(
       .default(sql`'[]'::jsonb`),
     // NULL = the photo was kept (or there was none).
     photoLeftOutReason: memorialReviewReasonEnum('photo_left_out_reason'),
+    // Story 11b.5a (KL6, migration 0194) — whole family-list entries left out, `[{ index, reason }]` (⛔ never a name); `'[]'` when
+    // none. Shape backstopped by `memorial_kinship_omissions_valid`; sorted / unique / in range by the pure validator.
+    kinshipOmissions: jsonb('kinship_omissions')
+      .$type<MemorialKinshipOmission[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     // `not_approved` only.
     reasonCode: memorialReviewReasonEnum('reason_code'),
     internalNoteCiphertext: piiColumn(1, MEMORIAL_FIELD_CLASS)('internal_note_ciphertext'),

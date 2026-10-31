@@ -1352,6 +1352,13 @@
       "when": 1796269200038,
       "tag": "0193_marketplace-modules",
       "breakpoints": true
+    },
+    {
+      "idx": 194,
+      "version": "7",
+      "when": 1796355600039,
+      "tag": "0194_memorial-kinship",
+      "breakpoints": true
     }
   ]
 }

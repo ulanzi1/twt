@@ -492,12 +492,26 @@ describe('the response is ONE DRIVE + a BOUNDED PAGE of its contributors', () =>
 // ⭐⭐ STORY 11b.3a — THE NOMINEE BANK ACCOUNTS. AC4 IS A SHAPE, ⛔ NOT A CONVENTION.
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 describe('⭐⭐ familyMemorial — FINISHED STRINGS ONLY (Story 11b.4a; `-411` item 3 — ⛔ no marker; Trap 3)', () => {
-  const MEMORIAL = { words: ['पहला अनुच्छेद', 'Second paragraph'], photo: { altText: 'Our father at the well' } };
+  // Story 11b.5a — `kinship` is a REQUIRED key (`[]` when there is no list).
+  const MEMORIAL = { words: ['पहला अनुच्छेद', 'Second paragraph'], photo: { altText: 'Our father at the well' }, kinship: [] };
 
   it('accepts the words and a photo, a memorial with ⛔ no photo, and an empty description (all of it left out)', () => {
     expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: MEMORIAL }).success).toBe(true);
     expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, photo: null } }).success).toBe(true);
     expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, photo: { altText: '' } } }).success).toBe(true);
+    // Story 11b.5a — grouped rows of the family list.
+    const kinship = [{ relation: 'wife', names: ['सुनीता देवी'] }, { relation: 'son', names: ['अमित', 'राहुल'] }];
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, kinship } }).success).toBe(true);
+  });
+
+  it('⛔ rejects a memorial without `kinship` (Story 11b.5a — the key is required, `[]` for no list)', () => {
+    const { kinship: _omit, ...withoutKinship } = MEMORIAL;
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: withoutKinship }).success).toBe(false);
+  });
+
+  it.each(['index', 'reason', 'inPhoto', 'leftOut', 'name'])('⛔ rejects `%s` on a kinship row (Story 11b.5a, Trap 8)', (key) => {
+    const kinship = [{ relation: 'son', names: ['अमित'], [key]: 1 }];
+    expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: { ...MEMORIAL, kinship } }).success).toBe(false);
   });
 
   it('⛔ the key is REQUIRED (`null`, ⛔ absent) — a drive with no memorial says so with `null`', () => {

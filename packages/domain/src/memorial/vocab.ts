@@ -64,6 +64,49 @@ export interface MemorialOmission {
 }
 
 /**
+ * The family list's relations (Story 11b.5a KL3 — minted by `#decision-2026-10-31-431`, author-commit; the list itself is
+ * ruled by `-428` PQ1 A). ⭐ Every code is the person's relation **TO THE MEMBER WHO DIED** — a deceased woman's spouse is
+ * `husband`; the nominee's own mother, if she is the member's wife, is `wife`. Fourteen, in DISPLAY order (spouse, children,
+ * parents, siblings, grandchildren — grandsons before granddaughters, the son's line first — in-laws). ⛔ No `other`, ⛔ no
+ * free-text relation; ⛔ not `NOMINEE_RELATIONSHIPS` (`-257` — a form picker's words for a different purpose). ⛔ No pgEnum:
+ * the code lives only INSIDE the kinship ciphertext (KL5 — a family's shape is itself personal). A new value needs a new
+ * decision entry (⛔ not under the `-210` cl.2 delegation — a member-facing vocabulary).
+ */
+export const MEMORIAL_KINSHIP_RELATIONS = [
+  'wife',
+  'husband',
+  'son',
+  'daughter',
+  'father',
+  'mother',
+  'brother',
+  'sister',
+  'sons_son',
+  'daughters_son',
+  'sons_daughter',
+  'daughters_daughter',
+  'daughter_in_law',
+  'son_in_law',
+] as const;
+export type MemorialKinshipRelation = (typeof MEMORIAL_KINSHIP_RELATIONS)[number];
+
+/**
+ * One entry of the family list (KL4): one relation, ONE person's name — kept exactly as typed (⛔ no trim, ⛔ no
+ * normalisation). `inPhoto` (KL15, `-426` AQ3 (b)1) — the family ticked this person as in the photo; ⛔ never public.
+ */
+export interface MemorialKinshipEntry {
+  readonly relation: MemorialKinshipRelation;
+  readonly name: string;
+  readonly inPhoto?: true;
+}
+
+/** One entry the Trust left out (KL6): its index in the submission's decrypted list, with one of the four reasons. */
+export interface MemorialKinshipOmission {
+  readonly index: number;
+  readonly reason: MemorialReviewReason;
+}
+
+/**
  * The shape of a Send's `Idempotency-Key` (migration 0183 — the key is stored ON the submission row, so it is bounded and
  * plain): 1–128 characters of `[A-Za-z0-9_-]` — a UUID (the phone's `newIdempotencyKey()`), a ULID or a nanoid. ⚠ LOCKSTEP
  * with the `memorial_submissions_idempotency_key_check` CHECK. ⛔ No `g` flag (a global regex is stateful under `.test()`).

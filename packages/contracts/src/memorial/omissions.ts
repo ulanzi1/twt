@@ -17,14 +17,25 @@
 // go together); an `altText` span with ⛔ no alt text; `altText` spans that leave ⛔ no visible character of the description
 // while the photo stays (`alt_text_nothing_left` — the cure is `photoLeftOut`, which takes the photo and its description
 // together).
+// Story 11b.5a (KL6) — the family list is left out a WHOLE ENTRY at a time (`kinshipLeftOut`: `{ index, reason }`), like the
+// photo, ⛔ never by span. It counts in all three act rules (`approved` / `not_approved` take ⛔ none; a kinship-only
+// `approved_with_omissions` is valid — the DB CHECK `omissions_iff_action` agrees, so a mismatch can ⛔ never surface as a
+// 23514 ⇒ 500). Refused: kinship omissions on a version with ⛔ no list; an index outside the list; indexes unsorted or repeated.
 
 import { isMemorialTextBlank, memorialParagraphRanges } from './text-classes.js';
 import type { MemorialOmission, MemorialOmissionField, MemorialReviewAction, MemorialReviewReason } from './vocab.js';
+
+/** One list entry the reviewer leaves out (KL6). */
+export interface MemorialKinshipLeftOut {
+  readonly index: number;
+  readonly reason: MemorialReviewReason;
+}
 
 export interface MemorialDecisionCandidate {
   readonly action: MemorialReviewAction;
   readonly omissions?: readonly MemorialOmission[];
   readonly photoLeftOut?: { readonly reason: MemorialReviewReason };
+  readonly kinshipLeftOut?: readonly MemorialKinshipLeftOut[];
   readonly reasonCode?: MemorialReviewReason;
 }
 
@@ -32,6 +43,8 @@ export interface MemorialDecisionSubject {
   readonly body: string;
   readonly altText: string | null;
   readonly hasPhoto: boolean;
+  /** The decrypted list's length; `null` when the version carries ⛔ no list. */
+  readonly kinshipLength: number | null;
 }
 
 export type MemorialDecisionProblem =
@@ -46,7 +59,11 @@ export type MemorialDecisionProblem =
   | 'span_blank'
   | 'span_crosses_paragraph'
   | 'nothing_left'
-  | 'alt_text_nothing_left';
+  | 'alt_text_nothing_left'
+  // Story 11b.5a (KL6)
+  | 'kinship_without_list'
+  | 'kinship_index_out_of_range'
+  | 'kinship_order';
 
 export type MemorialDecisionValidation = { readonly ok: true } | { readonly ok: false; readonly problem: MemorialDecisionProblem };
 
@@ -104,16 +121,27 @@ export function validateMemorialDecision(
   subject: MemorialDecisionSubject,
 ): MemorialDecisionValidation {
   const omissions = decision.omissions ?? [];
+  const kinshipLeftOut = decision.kinshipLeftOut ?? [];
   const fail = (problem: MemorialDecisionProblem): MemorialDecisionValidation => ({ ok: false, problem });
 
   switch (decision.action) {
     case 'approved':
-      if (omissions.length > 0 || decision.photoLeftOut !== undefined || decision.reasonCode !== undefined) {
+      if (
+        omissions.length > 0 ||
+        decision.photoLeftOut !== undefined ||
+        kinshipLeftOut.length > 0 ||
+        decision.reasonCode !== undefined
+      ) {
         return fail('action_shape');
       }
       return { ok: true };
     case 'not_approved':
-      if (decision.reasonCode === undefined || omissions.length > 0 || decision.photoLeftOut !== undefined) {
+      if (
+        decision.reasonCode === undefined ||
+        omissions.length > 0 ||
+        decision.photoLeftOut !== undefined ||
+        kinshipLeftOut.length > 0
+      ) {
         return fail('action_shape');
       }
       return { ok: true };
@@ -126,8 +154,22 @@ export function validateMemorialDecision(
   }
 
   if (decision.reasonCode !== undefined) return fail('action_shape');
-  if (omissions.length === 0 && decision.photoLeftOut === undefined) return fail('action_shape');
+  if (omissions.length === 0 && decision.photoLeftOut === undefined && kinshipLeftOut.length === 0) {
+    return fail('action_shape');
+  }
   if (decision.photoLeftOut !== undefined && !subject.hasPhoto) return fail('photo_left_out_without_photo');
+  if (kinshipLeftOut.length > 0) {
+    if (subject.kinshipLength === null) return fail('kinship_without_list');
+    let prev = -1;
+    for (const k of kinshipLeftOut) {
+      if (!Number.isInteger(k.index) || k.index < 0 || k.index >= subject.kinshipLength) {
+        return fail('kinship_index_out_of_range');
+      }
+      // Ascending and unique (an equal index is a duplicate).
+      if (k.index <= prev) return fail('kinship_order');
+      prev = k.index;
+    }
+  }
 
   const byField = (field: MemorialOmissionField) => omissions.filter((o) => o.field === field);
   const bodySpans = byField('body');

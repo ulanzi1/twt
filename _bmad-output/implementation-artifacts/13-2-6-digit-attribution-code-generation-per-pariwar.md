@@ -10,7 +10,7 @@ PINNED: `3d6b46c5` = `origin/main` (ledger 2026-11-01a — Story 12.1 landed). T
 (`beae5116..3d6b46c5`, the module-marketplace primitive) touches none of them. Perishable — re-check at Task 0.1.
 Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.4 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3).
+STATUS: ready-for-dev (v1.5 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items — ⛔ a redesign).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
@@ -73,11 +73,11 @@ foreign key** (AT2).
 | Migration | `NNNN_field-worker-attribution-codes.sql` (next free number ≥ `0195`, taken at Task 0.1 — NUMBERS) |
 | New brands | `FieldWorkerId`, `AttributionCodeId`, `AttributionCodeFlagId` (`packages/domain/src/ids/index.ts`) |
 | Generator | `generateAttributionCode()` |
-| Allocator | `allocateAttributionCode(db, { pariwarId, fieldWorkerId }, opts?)` |
-| Lookup | `resolveAttribution(db, { code, pariwarId, asOf }) → FieldWorkerId \| null` (AT4 (c)) |
+| Allocator | `allocateAttributionCode(client, { pariwarId, fieldWorkerId }, opts?)` — `client: pg.PoolClient` in a tx (AT8 v2 i) |
+| Lookup | `resolveAttribution(client, { code, pariwarId, asOf: { captureId } \| 'now' }) → FieldWorkerId \| null` (AT4 (c)) |
 | API door (the ONLY `apps/*` user of the module) | `apps/api/src/modules/field-worker/attribution-code-access.ts` (AT8 v2) |
-| Holder read | `readAttributionCodeForFieldWorker(db, { pariwarId, fieldWorkerId })` |
-| Flag write / read | `flagAllocationExhausted(db, …)` / `listAllocationFlags(db, { pariwarId })` |
+| Holder read | `readAttributionCodeForFieldWorker(client, { pariwarId, fieldWorkerId })` |
+| Flag write / read | `flagAllocationExhausted(client, …)` / `listAllocationFlags(client, { pariwarId, limit? })` |
 | Retry default | `ATTRIBUTION_CODE_MAX_ATTEMPTS = 8` |
 
 ## Story
@@ -238,30 +238,37 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     `member_attribution`, so each candidate scans the Pariwar's rows — fine at admin "Add Field Worker" rate; ⛔ add an
     index (AC9). The race: a capture whose tx is concurrent with the allocation may commit AFTER it yet carry an EARLIER
     `captured_at` (`defaultNow()` = its tx start) — AT4 (c) makes that case deterministic.
-  - **AT4 (c) — the ROLLOUT SEQUENCING GUARANTEE (v1.3, PROPOSED — BigDev asked for one).** AT4 (a) alone rests on a
-    promise about ORDER (signup ⛔ live before 13.1; Q-S5). ⭐ Make correctness independent of rollout order: **a code
-    credits its holder only for a capture made AT OR AFTER the code was allocated.** `resolveAttribution` takes a
-    REQUIRED `asOf: Date` and returns the holder only if `date_trunc('milliseconds', allocated_at) <= asOf`; otherwise
-    `null`. ⚠ MILLISECOND granularity, on purpose: `allocated_at` is `clock_timestamp()` (µs) but a JS `Date` holds ms
-    (`new Date('… 12:00:00.123999+00')` → `.123Z`), so a µs comparison would make `asOf = <the allocator's returned
-    allocatedAt>` resolve to `null`. `asOf` is a DB instant, ⛔ an app-clock value (`new Date()`, `deps.clock()`): the
-    capture's own `member_attribution.captured_at`, or — for a lookup tied to no capture (an admin "who holds code X
-    now?") — `clock_timestamp()` read in the same tx (AC5). Consequences:
+  - **AT4 (c) — the ROLLOUT SEQUENCING GUARANTEE (v1.3; v1.5 — the comparison never leaves the database).** AT4 (a)
+    alone rests on a promise about ORDER (signup ⛔ live before 13.1; Q-S5). ⭐ Make correctness independent of rollout
+    order: **a code credits its holder only for a capture made AT OR AFTER the code was allocated.**
+    - **The instant is named, ⛔ passed.** `resolveAttribution` takes a REQUIRED `asOf` that is one of exactly two forms:
+      `{ captureId: MemberAttributionId }` — the comparison instant is that `member_attribution` row's persisted
+      `captured_at`, read IN THE SAME SQL STATEMENT (the row must be in the same Pariwar and its `attribution_source`
+      must equal `code`, else `AttributionCaptureMismatchError`) — or `'now'` — the comparison instant is
+      `clock_timestamp()` evaluated in that statement (a lookup tied to no capture, e.g. an admin "who holds code X
+      now?"). The predicate is `fwac.allocated_at <= ma.captured_at` (or `<= clock_timestamp()`), both `timestamptz`.
+    - **Why (v1.5, BigDev item 5):** v1.4 truncated `allocated_at` to milliseconds to compare against a JS `Date`. That
+      credited a capture made up to ~1 ms BEFORE the code existed — a false positive. Postgres stores both columns at
+      MICROSECOND precision; a JS `Date` holds milliseconds (`new Date('… 12:00:00.123999+00')` → `.123Z`). ⇒ ⛔ JS
+      timestamp is ever an input to the comparison: the instant stays in the database, and the comparison is exact at
+      the precision Postgres keeps (I7). ⛔ `date_trunc`, ⛔ `asOf: Date`.
+    - **Consumers (v1.5, BigDev item 6):** signup (13.8) INSERTs the `member_attribution` row, takes its returned
+      `attribution_id`, and resolves with `{ captureId }` in the same tx; a backfill (C4) resolves each row with its own
+      `{ captureId }`. Neither ever reads `captured_at` into JS. (The 3.6b capture write `insertMemberAttribution`
+      already returns the row; 13.8 reads its id from it.)
     - signup going live before 13.1 becomes HARMLESS — every pre-registry capture predates every allocation, so it
       credits ⛔ one, whatever the order of deploys, and whether or not AT4 (a) caught it;
-    - the concurrent-capture race mostly resolves the right way — a capture whose tx began before the code's INSERT
-      could not have been typed from that worker. ⚠ RESIDUAL: `allocated_at` is the insert-time clock, ⛔ the commit
-      time, so a capture whose tx starts between the allocator's INSERT and the registration COMMIT is credited though
-      the code was visible to no one yet (and AT4 (a)'s `EXISTS` missed it too) — odds ≈ 10⁻⁶ per capture × a
-      milliseconds-wide window; accepted, ⛔ engineered away;
-    - the live path (13.8: capture, then resolve in the same tx with the row's `captured_at`) is unaffected;
-    - a backfill (C4) needs ⛔ temporal rule of its own — it is in the only door, and no caller can forget it because
-      `asOf` is required.
+    - ⚠ RESIDUAL (unchanged): `allocated_at` is the insert-time clock, ⛔ the commit time, and `captured_at` is the
+      capture tx's START (`DEFAULT now()`), so a capture whose tx starts between the allocator's INSERT and the
+      registration COMMIT is credited though the code was visible to no one yet (and AT4 (a)'s `EXISTS` missed it too) —
+      odds ≈ 10⁻⁶ per capture × a milliseconds-wide window; accepted, ⛔ engineered away;
     - What it does ⛔ cover: a code handed out by hand OUTSIDE the registry (Q-S5's first half). No software can see a
       code that was never issued; that premise is carried to 13.1, whose registration flow is the only issuer (C6).
     - ⛔ (d) a per-Pariwar "registry opened at" marker — the same rule with one more table and a write to keep in step.
     - ⛔ (e) a launch-roster row — the roster's rows need ≥ 2-trustee ratification (`docs/launch-gate-inventory/`) for
       what (c) makes mechanical; C6 carries the one human premise left.
+    - ⛔ (f) `asOf` as a µs-precise timestamp STRING — works, but every consumer must remember to read `captured_at` as
+      text and never through a `Date`; naming the capture removes the chance to get it wrong.
 - **AT5 — Format.** ⭐ (a) exactly six ASCII digits `000000`–`999999`, stored as `text` (⛔ integer — leading zeros),
   DB `CHECK ("code" ~ '^[0-9]{6}$')`, drawn by `crypto.randomInt(0, 1_000_000)` + `padStart(6, '0')` (unbiased —
   Node's `randomInt` rejection-samples), **excluding a small deny-list of guessable codes**: the ten repdigits
@@ -280,10 +287,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - **AT7 — "Flagged for trustee review".** ⭐ (a) exhaustion throws `AttributionCodeAllocationExhaustedError { pariwarId,
   attempts }`, and a **durable, append-only flag row** in `attribution_code_allocation_flags` (`flag_id`, `pariwar_id`,
   `attempts`, `actor_id` — the admin who pressed "Add Field Worker" — and `flagged_at`) is written by
-  `flagAllocationExhausted(db, …)`. A flag written inside the failing tx would roll back with it, and on an admin
+  `flagAllocationExhausted(client, …)`. A flag written inside the failing tx would roll back with it, and on an admin
   `/p/:pariwarId` route the handler does ⛔ own that tx (G9a) ⇒ the flag is written in a SEPARATE
   `openScopeTx(deps, pariwarId)` that commits independently — built into the API door's
-  `flagAllocationExhaustedForRequest` (AT8 v2 iii); the caller calls it in its catch, then rethrows (C1). `listAllocationFlags(db, { pariwarId, limit? })` is the read the trustee surface renders (C3). ⛔ No `field_worker_id` on the flag: the registration that failed rolled back,
+  `flagAllocationExhaustedForRequest` (AT8 v2 iii); the caller calls it in its catch, then rethrows (C1). `listAllocationFlags(client, { pariwarId, limit? })` is the read the trustee surface renders (C3). ⛔ No `field_worker_id` on the flag: the registration that failed rolled back,
   so that id names nothing.
   - ⛔ (b) a system-origin helpdesk ticket — needs a subject, a new category and a routing-policy version bump (G7) for
     a ~10⁻¹⁶ event.
@@ -303,10 +310,25 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     endpoint, page or job present or future, must go through one door that takes the Pariwar ONLY from the
     authenticated request — and the domain refuses any tx that is not scoped to that same Pariwar. Four links, each
     enforced, each non-vacuous today:
-    - **(i) the domain door** (unchanged): `resolveAttribution` is the only export keyed by `code`; it filters
-      `WHERE "pariwar_id" = $1 AND "code" = $2` explicitly and asserts `current_setting('app.pariwar_id', true)` =
-      `pariwarId` (unset ⇒ `PariwarScopeMissingError`; non-UUID ⇒ `InvalidPariwarScopeError`; different ⇒
-      `AttributionPariwarScopeMismatchError`). Pinned export list.
+    - **(i) the domain door — on ONE transaction-bound connection (v1.5, BigDev item 1).** Every exported DB function
+      of the module takes `client: pg.PoolClient` — a single checked-out connection — ⛔ a Drizzle `Db` (which may be
+      pool-bound: `createDb()` and `bindScopedDb(client)` return the same `Db` type, so the type cannot tell them apart,
+      and on a pool each statement may run on a DIFFERENT connection — the scope assertion on one, the query on
+      another). House precedent: `helpdesk/project.ts` `projectTicketGenesis(client: pg.PoolClient, …)`, which binds
+      Drizzle internally with `bindScopedDb(client)`. Each function's FIRST step is a private `assertTxBoundScope(client,
+      pariwarId)`:
+      1. rejects a `pg.Pool` (or anything without a `release` function) ⇒ `AttributionCodeRequiresTransactionError` —
+         the runtime backstop to the type;
+      2. proves the connection is INSIDE a transaction block: `SAVEPOINT attribution_code_tx_guard` then `RELEASE
+         SAVEPOINT attribution_code_tx_guard` — outside a transaction Postgres raises `25P01` ("SAVEPOINT can only be
+         used in transaction blocks") ⇒ `AttributionCodeRequiresTransactionError` (so a session-level `SET
+         app.pariwar_id` leaking on a pooled connection cannot satisfy the check);
+      3. reads `current_setting('app.pariwar_id', true)` on THAT client: unset ⇒ `PariwarScopeMissingError`; non-UUID ⇒
+         `InvalidPariwarScopeError`; different ⇒ `AttributionPariwarScopeMismatchError`.
+      Every subsequent statement runs on the same `client` (Drizzle via `bindScopedDb(client)`, raw SQL via
+      `client.query`). ⇒ the scope assertion and the query use the same connection BY CONSTRUCTION. The lookup
+      filters `WHERE "pariwar_id" = $1 AND "code" = $2` explicitly. `resolveAttribution` is the only export keyed by
+      `code`; pinned export list.
     - **(ii) ONE REACH FENCE over the whole repo** (replaces v1.3's separate domain boundary scan and door-only scan —
       both were too narrow: v1.3 missed `apps/public`, an UNAUTHENTICATED server that sets its scope from config
       (`apps/public/src/lib/db.server.ts` `withPublicScope` → `setPariwarScope(client, ACTIVE_PARIWAR_ID)`, importing
@@ -314,8 +336,12 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
       raw SQL, or a wrapper in another package / domain module). House precedent: `apps/api/tests/unit/family-account-reach-fence.test.ts`
       (one REACH pattern, scanned TREES, an EXACT allow-list, comments stripped, a planted-importer positive control —
       its header records the same lesson: *"the first version scanned `apps/api/src` alone"*).
-      - **REACH:** the `attributionCode` export of `@twt/domain` (matched by the EXPORTED name, so an alias counts; also
-        `domain.attributionCode` after `import * as domain`, and re-exports); any import path containing
+      - **REACH:** the identifier `attributionCode` in ANY import / export specifier, property access or element access,
+        from ANY module source (so an alias at import, `domain.attributionCode` after `import * as domain`, a type-level
+        `import('@twt/domain').attributionCode`, a dynamic `(await import('@twt/domain')).attributionCode`, a CommonJS
+        `require('@twt/domain').attributionCode`, and a name passed on through an intermediate barrel all count); an
+        `export * from '@twt/domain'` / `export * as X from '@twt/domain'` in any file outside ALLOWED (a barrel that
+        would re-export the namespace without naming it — ⛔ such file exists today); any import path containing
         `attribution-code`; `fieldWorkerAttributionCodes`; `attributionCodeAllocationFlags`;
         `field_worker_attribution_codes`; `attribution_code_allocation_flags`; and the domain function names
         `resolveAttribution`, `allocateAttributionCode`, `readAttributionCodeForFieldWorker`, `flagAllocationExhausted`,
@@ -329,16 +355,52 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
       - **Positive controls:** a planted importer in `apps/public/src/pages/*.astro`, in `packages/validity-service/src`,
         a `schema.fieldWorkerAttributionCodes` read, a raw-SQL `field_worker_attribution_codes`, and a `../attribution-code/`
         import from another domain module — each caught; a COMMENTED mention ⛔.
-      - **Floor:** every ALLOWED file exists and matches REACH (an allow-list entry that no longer reaches is stale and
-        fails); ≥ 500 files scanned.
+      - **Synthetic bite tests for the supported import forms (v1.5, BigDev item 4)** — each a planted source the fence
+        must flag: `import { attributionCode as ac } from '@twt/domain'`; `import * as d from '@twt/domain'; d.attributionCode`;
+        `d['attributionCode']`; `type T = import('@twt/domain').attributionCode.X` (the repo already uses
+        `import('@twt/domain').<ns>` type expressions, e.g. `apps/api/src/types.ts`); `const { attributionCode } = await
+        import('@twt/domain')`; `(await import('@twt/domain')).attributionCode`; `require('@twt/domain').attributionCode`;
+        `const { attributionCode } = require('@twt/domain')`; `await import('../attribution-code/resolve.js')` and
+        `require('…/attribution-code/…')`; an INTERMEDIATE re-export — file A `export { attributionCode as ac } from
+        '@twt/domain'` (A flagged) and file B `export * from '@twt/domain'` (B flagged) and file C `import { attributionCode }
+        from './b.js'` (C flagged); plus the earlier controls. Negative controls: a comment, a string in an unrelated
+        error message that is ⛔ an import, and an ALLOWED file — ⛔ flagged.
+      - **Floor and the RECORDED scan count:** at the pin (`3d6b46c5`) the TREES hold **1,785** files of the scanned
+        extensions — `packages/domain/src` 732, `apps/api/src` 371, `packages/contracts/src` 215, `apps/admin/src` 210,
+        `apps/jobs/src` 71, `apps/public/src` 37, `packages/channels/src` 36, `packages/ui/src` 31,
+        `packages/platform-adapters/src` 23, `packages/validity-service/src` 14, `packages/niyamavali-engine/src` 12,
+        `packages/i18n/src` 8, `packages/bank-parsers/src` 6, `packages/measured-validation/src` 6, `packages/events/src` 5,
+        `packages/tokens/src` 3, `packages/api-client/src` 2, `packages/edge/src` 2, `packages/queue/src` 1 (`apps/mobile`
+        has ⛔ `src/` — it ships ⛔ `pg`, the existing Metro boundary). The fence asserts ≥ **1,600** files scanned and
+        ≥ **19** trees found, and prints the count; the dev re-records both numbers at Task 0.1 and in the Debug Log.
+        Every ALLOWED file must exist and match REACH (a stale allow-list entry fails).
       - The AT9 rule rides here too: ⛔ file outside `packages/domain/src/attribution-code/` and test trees passes `generate`.
     - **(iii) the API door** — `apps/api/src/modules/field-worker/attribution-code-access.ts`, exporting EXACTLY these five
       wrappers with EXACTLY these option keys (pinned by name and key):
-      `resolveAttributionForRequest(request, tx, { code, asOf })`, `readAttributionCodeForRequest(request, tx,
-      { fieldWorkerId })`, `allocateAttributionCodeForRequest(request, tx, { fieldWorkerId }, opts?: { maxAttempts?:
-      number })` (⛔ `generate` — AT9), `listAllocationFlagsForRequest(request, tx, { limit? })`, and
+      `resolveAttributionForRequest(request, scopeTx, { code, asOf })`, `readAttributionCodeForRequest(request, scopeTx,
+      { fieldWorkerId })`, `allocateAttributionCodeForRequest(request, scopeTx, { fieldWorkerId }, opts?: { maxAttempts?:
+      number })` (⛔ `generate` — AT9), `listAllocationFlagsForRequest(request, scopeTx, { limit? })`, and
       `flagAllocationExhaustedForRequest(deps, request, { attempts })` (opens and commits its OWN
       `openScopeTx(deps, <request's Pariwar>)` — the C1 separate-tx rule, built in).
+      - **Transaction-bound through every wrapper (v1.5, BigDev item 2).** The four wrappers that run in the caller's
+        transaction take `scopeTx: ScopeTx` (`apps/api/src/modules/multi-tenant/scope-tx.ts` — `{ client, tx, pariwarId }`,
+        opened by `openScopeTx`: BEGIN → `SET LOCAL ROLE twt_app` → scope) — ⛔ a bare `Db`, ⛔ a `pg.Pool`, ⛔
+        `deps.db` — and pass `scopeTx.client` to the domain. Admin routes pass `request.scopeTx` (opened by
+        `scopeResolutionHook`); member handlers pass the `ScopeTx` they opened. Each wrapper first checks
+        `scopeTx.pariwarId === <the authenticated Pariwar>` (else `AttributionPariwarScopeMismatchError`, before any SQL)
+        and the domain re-proves it on the connection (AT8 v2 i). The fifth, `flagAllocationExhaustedForRequest`, owns
+        its transaction end to end (open → write → `closeScopeTx(…, true)`; on error `closeScopeTx(…, false)`), so it
+        takes no transaction from the caller. The door-shape gate pins these parameter types.
+      - **Authorization is the CALLER's, ⛔ the door's (v1.5, BigDev item 3).** The door guarantees Pariwar CONTEXT — that
+        a lookup or allocation is confined to the authenticated Pariwar — and nothing more: it checks ⛔ permission.
+        ⇒ the future registration route (13.1, "Add Field Worker") owns authorization: `requireAdminSession` →
+        `scopeResolutionHook` → `requirePermissionHook(<the field-worker key, Panel-ratified under `2026-06-21-059`
+        amendment B(3)>)` BEFORE it calls `allocateAttributionCodeForRequest` or `flagAllocationExhaustedForRequest`;
+        likewise 13.3 / 13.4 / 13.8 for their reads (C1, C3, C5, C2). The FLAG records ONLY the authenticated actor:
+        `flagAllocationExhaustedForRequest` takes ⛔ actor option (the pinned option keys are `{ attempts }` only) and
+        passes `requestContext.actorId` — set by `requireAdminSession` / `requireMemberSession` — as the domain's
+        `actorId`; the domain function `flagAllocationExhausted` is reachable only through the door (the reach fence), so
+        ⛔ caller can supply a different actor. Unset actor ⇒ the loud 500.
       - **POSITIVE shape rule** (⛔ a deny-list): the `request` parameter is used ONLY by passing it to ONE private helper,
         `authenticatedScope(request)`, which reads `request.requestContext.pariwarId` and `request.requestContext.actorId`
         and nothing else; ⛔ other property access on `request`, ⛔ element access, ⛔ destructuring, ⛔ passing `request`
@@ -383,7 +445,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     same guarantee as (a) at many times the code, and brittle across dependency injection (`createXHandlers(deps)`).
   - ⛔ (d) take the Pariwar off the domain signature (read it from the tx scope only) — the epic names
     `resolveAttribution(code, pariwar_id)`, and (i)'s equality check is what catches a mis-scoped tx.
-- **AT9 — Test seam for clashes.** ⭐ `allocateAttributionCode(db, input, opts?)` where `opts = { maxAttempts?,
+- **AT9 — Test seam for clashes.** ⭐ `allocateAttributionCode(client, input, opts?)` where `opts = { maxAttempts?,
   generate? }`; `generate` defaults to `generateAttributionCode` and exists for tests to force collisions. The reach
   fence (AT8 v2 ii) fails any non-test file outside the module that passes `generate`, and the API door's `opts` is
   typed `{ maxAttempts?: number }` only (AT8 v2 iii).
@@ -404,9 +466,11 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   Pariwar (AT4).
 - **I6** — `resolveAttribution` returns the code's **holder**, ⛔ the holder's eligibility. Whether a holder who is
   suspended or terminated may receive NEW attributions (FR-85) is 13.1's state, applied by the caller (C2).
-- **I7** — A code credits its holder only for a capture at or after its allocation: `resolveAttribution` returns the
-  holder iff `date_trunc('milliseconds', allocated_at) <= asOf` (AT4 (c)). Correctness ⛔ depends on the order in which
-  signup and the registry go live.
+- **I7** — A code credits its holder only for a capture at or after its allocation — STRICTLY: `resolveAttribution`
+  returns the holder iff `allocated_at <= captured_at` (or `<= clock_timestamp()` for `'now'`), evaluated by Postgres on
+  the two stored `timestamptz` values at the precision Postgres keeps them — MICROSECONDS — with ⛔ truncation and ⛔ JS
+  `Date` in between (AT4 (c)). Two instants in the same microsecond count as "at" (credited). Correctness ⛔ depends on
+  the order in which signup and the registry go live.
 
 ## Acceptance Criteria
 
@@ -432,7 +496,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    `node:crypto` `randomInt`, never a deny-listed value; ⛔ `Math.random` anywhere in the module (a unit test greps the
    module source). A unit test over 20,000 draws asserts: every draw matches the format, none is deny-listed, and at least
    one draw starts with `0` (leading zeros are reachable).
-4. **AC4 — the allocator.** `allocateAttributionCode(db, { pariwarId, fieldWorkerId }, opts?)` runs in the caller's
+4. **AC4 — the allocator.** `allocateAttributionCode(client, { pariwarId, fieldWorkerId }, opts?)` runs in the caller's
    scoped transaction (⛔ opens none) and returns `{ attributionCodeId, code, allocatedAt, attempts }`. **And** per attempt
    it draws a candidate; a candidate failing the format or the deny-list (possible only from an injected `generate`) ⇒
    `InvalidAttributionCodeError` (⛔ surfaced as a raw 23514); it skips the candidate (counting the attempt) if it equals
@@ -442,28 +506,40 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    error ⇒ rethrown. **And** after `maxAttempts` (default 8, override `1..32` else `RangeError`) without success ⇒
    `AttributionCodeAllocationExhaustedError { pariwarId, attempts }`. **And** it first asserts the scope equals
    `pariwarId` (as AC5).
-5. **AC5 — the lookup.** `resolveAttribution(db, { code, pariwarId, asOf })` returns the holder's `FieldWorkerId` when
-   the code is held in the Pariwar AND `date_trunc('milliseconds', allocated_at) <= asOf`; otherwise `null`. `asOf: Date`
-   is REQUIRED (a missing or
-   invalid `Date` ⇒ `TypeError`) and is documented as a DB instant — the capture's `member_attribution.captured_at`, or `clock_timestamp()` read in
-   the same tx for a lookup tied to no capture — ⛔ an app-clock value (AT4 (c), I7).
+5. **AC5 — the lookup.** `resolveAttribution(client, { code, pariwarId, asOf })` returns the holder's `FieldWorkerId` when
+   the code is held in the Pariwar AND `allocated_at <= <the asOf instant>` compared IN SQL at full `timestamptz`
+   precision; otherwise `null`. `asOf` is REQUIRED and is exactly `{ captureId: MemberAttributionId }` (the instant is
+   that row's persisted `captured_at`, read in the same statement; the row must be in the Pariwar and its
+   `attribution_source` must equal `code`, else `AttributionCaptureMismatchError`) or `'now'` (`clock_timestamp()` in
+   the same statement); anything else ⇒ `TypeError`. ⛔ JS `Date` is an input to the comparison (AT4 (c), I7).
    **And** a `code` not matching `^[0-9]{6}$` ⇒ `InvalidAttributionCodeError` (⛔ a query). **And** unset scope ⇒
    `PariwarScopeMissingError`; a non-UUID scope ⇒ `InvalidPariwarScopeError`; scope ≠ `pariwarId` ⇒
    `AttributionPariwarScopeMismatchError`. **And** the SQL filters on
    BOTH `pariwar_id` and `code`. **And** there is ⛔ any other exported function that reads by `code`.
-6. **AC6 — the holder read.** `readAttributionCodeForFieldWorker(db, { pariwarId, fieldWorkerId })` returns `{ code,
+6. **AC6 — the holder read.** `readAttributionCodeForFieldWorker(client, { pariwarId, fieldWorkerId })` returns `{ code,
    allocatedAt } | null` with the same scope assertion — the read 13.3's "my code" screen and 13.1 use instead of a
    column (AT2).
-7. **AC7 — the flag.** `flagAllocationExhausted(db, { pariwarId, attempts, actorId })` inserts one flag row and returns
-   its id; `listAllocationFlags(db, { pariwarId, limit? })` returns them ordered `flagged_at DESC, flag_id DESC`, the
+7. **AC7 — the flag.** `flagAllocationExhausted(client, { pariwarId, attempts, actorId })` inserts one flag row and returns
+   its id; `listAllocationFlags(client, { pariwarId, limit? })` returns them ordered `flagged_at DESC, flag_id DESC`, the
    limit clamped with `clampLimit({ default, cap })` (the domain-accessor gate) — both with the scope assertion.
+   **And (AC4–AC7)** every exported DB function takes `client: pg.PoolClient` and runs `assertTxBoundScope` first (AT8 v2
+   i): a `pg.Pool`, or a client outside a transaction block, ⇒ `AttributionCodeRequiresTransactionError`; every statement
+   then runs on that same client.
 8. **AC8 — the CI proof the epic asks for** (live-DB, `packages/domain/tests/integration/attribution-code/*.spec.ts`):
    - same `(code, pariwarId)` resolves to the same field worker on every call (for any `asOf` ≥ its allocation);
-   - **AT4 (c):** `asOf` = the allocator's RETURNED `allocatedAt` ⇒ the holder; `allocatedAt − 1 ms` ⇒ `null`; a
-     `member_attribution` row seeded with a `captured_at` BEFORE the allocation, resolved with that `captured_at`, ⇒
-     `null` (the sequencing guarantee, with no reliance on AT4 (a)); ⭐ and the POSITIVE leg — a row whose `captured_at`
-     is set EXPLICITLY after the allocation (`clock_timestamp()`, ⛔ the column default — TR10), resolved with it, ⇒ the
-     holder;
+   - **AT4 (c), sub-millisecond (v1.5, BigDev item 7):** with a code row seeded at `allocated_at = '2026-11-01
+     12:00:00.123456+00'` and three captures of that code seeded with EXPLICIT `captured_at` (⛔ the column default —
+     TR10) all inside the SAME millisecond — `.123455` (BEFORE), `.123456` (EQUAL), `.123457` (AFTER) — resolving with
+     `{ captureId }` gives `null`, the holder, the holder. (v1.4's `date_trunc` would have credited `.123455` — this leg
+     fails on it.) Seed the `allocated_at` and `captured_at` values with `timestamptz` LITERALS in SQL, ⛔ through a JS
+     `Date` (which would round them to the millisecond and make the three legs identical). Plus: a capture whose `attribution_source` ≠ `code` ⇒ `AttributionCaptureMismatchError`; a
+     `captureId` from ANOTHER Pariwar ⇒ `AttributionCaptureMismatchError` (as the owner role too, so RLS is not what
+     catches it); `'now'` ⇒ the holder for a code allocated earlier in the test;
+   - **transaction-bound handle (v1.5, BigDev item 7):** for EACH exported DB function — passed the test `pg.Pool`
+     (cast past the type) ⇒ `AttributionCodeRequiresTransactionError`; passed a checked-out client with ⛔ `BEGIN`, even
+     after a session-level `SET app.pariwar_id = '<A>'` on it, ⇒ `AttributionCodeRequiresTransactionError` (the
+     SAVEPOINT probe); passed the scoped tx client ⇒ succeeds. A type-level test (`// @ts-expect-error`) proves a
+     `pg.Pool` and a Drizzle `Db` do ⛔ compile as the `client` argument;
    - the SAME code seeded in `PARIWAR_A` (worker W1) and `PARIWAR_B` (worker W2) resolves to W1 under A and to W2 under
      B — and both INSERTs succeed (cross-Pariwar collision permitted, I1);
    - resolving A's code with `pariwarId = PARIWAR_B` while scoped to A ⇒ `AttributionPariwarScopeMismatchError`;
@@ -494,9 +570,11 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; exact allow-list; floors), (iii) the
    positive door shape and (iv) the writer pin (exactly the two G9b sites, any receiver, plus the
    `Object.assign` / `.requestContext =` rules), TypeScript-AST, with every bite test listed in AT8 v2; **and**
-   `apps/api/tests/integration/attribution-code-access.spec.ts` proves: A-request + A-tx ⇒ resolves; A-request + B-tx ⇒
-   `AttributionPariwarScopeMismatchError`; no `requestContext.pariwarId` ⇒ 500; flag wrapper without `actorId` ⇒ 500; the
-   flag wrapper's row survives the caller's rollback.
+   `apps/api/tests/integration/attribution-code-access.spec.ts` proves: A-request + A-`ScopeTx` ⇒ resolves; A-request +
+   B-`ScopeTx` ⇒ `AttributionPariwarScopeMismatchError` before any SQL; no `requestContext.pariwarId` ⇒ 500; flag wrapper
+   without `actorId` ⇒ 500; the flag row's `actor_id` = `requestContext.actorId` (the authenticated actor, ⛔ a caller
+   value); the flag wrapper's row survives the caller's rollback. The door-shape gate pins `scopeTx: ScopeTx` as the
+   second parameter of the four in-transaction wrappers (⛔ `Db`, ⛔ `pg.Pool`).
 
 ## Tasks / Subtasks
 
@@ -514,7 +592,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     hand before Story 13.1 ships, and will member signup go live before 13.1?"* — verbatim into Debug Log (a).
     ✅ **Q-S5 ANSWERED 2026-11-01 (create-story pass), BigDev: *"Answer is no to both"*** — AT4 stands; dev re-confirms
     S5 at 0.1 only. ✅ **AT1–AT7, AT9, AT10 ANSWERED 2026-11-01, BigDev: *"AT1-AT10 as recommended, except AT8"*.**
-    ⏳ **AT8 v2 and AT4 (c) — PROPOSED v1.3, awaiting BigDev** (both written in response to that same message). If any answer departs from ⭐, update the ACs and Tasks
+    ⏳ **AT8 v2 and AT4 (c) — PROPOSED v1.3, hardened v1.4, amended v1.5 on BigDev's eight items; awaiting BigDev's
+    final word** (all written in response to BigDev's messages). If any answer departs from ⭐, update the ACs and Tasks
     BEFORE coding ([[feedback_spec_edits_must_propagate_to_tasks]]).
   - [ ] 0.3 ⛔ No decision entry is needed (all AT decisions are author-level, §0). If BigDev asks for one, stage it in the
     scratchpad, insert above the newest `### Decision`, verify additive-only, and commit it ALONE before code
@@ -533,8 +612,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     lower-case.
   - [ ] 1.2 `attribution-code/errors.ts`: `InvalidAttributionCodeError`, `AttributionPariwarScopeMismatchError`,
     `FieldWorkerAlreadyHasAttributionCodeError`, `AttributionCodeAllocationExhaustedError` (carries `pariwarId`,
-    `attempts`). Reuse `PariwarScopeMissingError` and `InvalidPariwarScopeError` from `packages/domain/src/errors.ts`
-    (⛔ `db.ts`; `assertPariwarScopeSet` takes a `pg.PoolClient`, so it is ⛔ usable on a `Db` — hence Task 5's helper).
+    `attempts`), `AttributionCodeRequiresTransactionError`, `AttributionCaptureMismatchError`. Reuse
+    `PariwarScopeMissingError` and `InvalidPariwarScopeError` from `packages/domain/src/errors.ts` (⛔ `db.ts`).
 - [ ] **Task 2 — schema + migration + RLS + guard (AC1, AC2).**
   - [ ] 2.1 `schema/field_worker_attribution_codes.ts`, `schema/attribution_code_allocation_flags.ts`; export from
     `schema/index.ts`.
@@ -549,16 +628,24 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - [ ] **Task 3 — generator (AC3).** `attribution-code/code.ts`: `ATTRIBUTION_CODE_LENGTH = 6`,
   `ATTRIBUTION_CODE_PATTERN`, `ATTRIBUTION_CODE_DENYLIST` (frozen, 20 entries), `isDenylistedAttributionCode`,
   `generateAttributionCode()` (redraw while deny-listed). Unit tests in `packages/domain/tests/attribution-code/code.test.ts`.
-- [ ] **Task 4 — allocator (AC4).** `attribution-code/allocate.ts`, shape of `telegram-opt-in/write.ts`
+- [ ] **Task 3a — the transaction-bound guard (AC4–AC7, AT8 v2 i).** `attribution-code/tx-guard.ts`: private
+  `assertTxBoundScope(client, pariwarId)` — reject a `pg.Pool` / anything without `release`; `SAVEPOINT
+  attribution_code_tx_guard` + `RELEASE` (map `25P01` to `AttributionCodeRequiresTransactionError`); read
+  `current_setting('app.pariwar_id', true)` on the same client (missing / invalid / mismatch errors). Every exported DB
+  function calls it FIRST, then binds Drizzle with `bindScopedDb(client)` (precedent `helpdesk/project.ts`
+  `projectTicketGenesis`). ⛔ function accepts a `Db`.
+- [ ] **Task 4 — allocator (AC4).** `attribution-code/allocate.ts` (takes `client`), shape of `telegram-opt-in/write.ts`
   `createPendingOptIn` (G5): raw `SAVEPOINT allocate_attribution_code`, constraint-name matching, `uniqueViolationConstraint`
   copied locally or lifted (⛔ match any 23505). The AT4 `EXISTS` read on `member_attribution` (`pariwar_id` + 
   `attribution_source`) per candidate. `ATTRIBUTION_CODE_MAX_ATTEMPTS = 8`; `opts.maxAttempts` range check.
-- [ ] **Task 5 — lookup, holder read, flags (AC5, AC6, AC7).** `resolve.ts` (`resolveAttribution` with the required
-  `asOf: Date` — invalid ⇒ `TypeError` — and the `date_trunc('milliseconds', allocated_at) <= $asOf` predicate in SQL,
-  `readAttributionCodeForFieldWorker`), `flags.ts` (`flagAllocationExhausted`, `listAllocationFlags` with `clampLimit`).
-  One private `assertScopeIs(db, pariwarId)` (reads `current_setting('app.pariwar_id', true)` via `db.execute`; empty ⇒
-  `PariwarScopeMissingError`, non-UUID ⇒ `InvalidPariwarScopeError`, different ⇒ `AttributionPariwarScopeMismatchError`)
-  used by every exported DB function. `index.ts` + `export * as attributionCode` in `packages/domain/src/index.ts`.
+- [ ] **Task 5 — lookup, holder read, flags (AC5, AC6, AC7).** `resolve.ts`: `resolveAttribution(client, …)` with the
+  required `asOf` union — `{ captureId }` joins `member_attribution ma` IN THE SAME STATEMENT (`ma.attribution_id =
+  $captureId AND ma.pariwar_id = $pariwarId`, and `ma.attribution_source = $code` checked — a missing row or a different
+  code ⇒ `AttributionCaptureMismatchError`) with predicate `fwac.allocated_at <= ma.captured_at`; `'now'` uses
+  `fwac.allocated_at <= clock_timestamp()`; any other `asOf` ⇒ `TypeError`; ⛔ JS timestamp in the comparison, ⛔
+  `date_trunc`. `readAttributionCodeForFieldWorker(client, …)`. `flags.ts` (`flagAllocationExhausted(client, …)`,
+  `listAllocationFlags(client, …)` with `clampLimit`). All via Task 3a's guard. `index.ts` + `export * as attributionCode`
+  in `packages/domain/src/index.ts`.
 - [ ] **Task 6 — the proofs (AC8).**
   - [ ] 6.1 Live-DB specs (`tests/integration/attribution-code/allocate.spec.ts`, `resolve.spec.ts`, `flags.spec.ts`)
     with `setupLiveDb` / `getTx` / `enterAppScope`, `PARIWAR_A/B`. ⚠ Seed `member_attribution` rows with a real member
@@ -576,7 +663,12 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     predicate (⇒ the owner-role AC8 leg fails); drop the as-of predicate (⇒ the AT4 (c) legs fail);
     remove the scope assertion (⇒ the A-request + B-tx leg fails); add a `UNIQUE("code")`; remove the TRUNCATE trigger;
     plant an importer in `apps/public/src/pages/*.astro` and a `schema.fieldWorkerAttributionCodes` read in `apps/api/src`;
-    add a third `pariwarId` writer via an alias (`ctx.pariwarId = …`); forward `generate` through the door.
+    add a third `pariwarId` writer via an alias (`ctx.pariwarId = …`); forward `generate` through the door; (v1.5) replace
+    the SQL as-of predicate with `date_trunc('milliseconds', allocated_at) <= …` (⇒ the `.123455` BEFORE leg fails);
+    delete the SAVEPOINT probe from `assertTxBoundScope` (⇒ the no-`BEGIN` + session-`SET` leg fails); widen a domain
+    function's `client` parameter to `Db | pg.PoolClient` (⇒ the `@ts-expect-error` test fails); make a wrapper accept
+    `tx: Db` (⇒ the door-shape pin fails); let the flag wrapper take an `actorId` option (⇒ the option-key pin fails).
+    Record the reach fence's printed scan count beside 1,785.
 - [ ] **Task 7 — close.** `pnpm ci:local` with `DATABASE_URL` = the story DB port (⚠ the shell's `DATABASE_URL` points at
   `:5432`); File List; Change Log; row `ready-for-dev → in-progress → review` in `sprint-status.yaml` via the SAFE
   prepend.
@@ -618,7 +710,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   policy behaviour; the guard-trigger test runs as the owner role on purpose.
 - **TR8 — `pariwar_id` has no FK target** (G4) — ⛔ invent a `pariwars` table.
 - **TR9 — the shell's `DATABASE_URL` is `:5432`.** Prefix every `ci:local` and `git push` with the story port.
-- **TR10 — inside one transaction every default-seeded capture PREDATES every allocation.** `member_attribution.captured_at`
+- **TR10 — inside one transaction every default-seeded capture PREDATES every allocation; and a JS `Date` erases the
+  microseconds.** Seed `allocated_at` / `captured_at` as SQL `timestamptz` literals for the sub-ms legs. `member_attribution.captured_at`
   is `DEFAULT now()` (tx start — schema `.defaultNow()`, migration 0027), and `setupLiveDb` runs each test in ONE
   rolled-back tx, so a capture seeded with the default always sorts before an allocation's `clock_timestamp()` and
   resolves to `null`. Set `captured_at` EXPLICITLY (`clock_timestamp()`) for the positive leg (AC8); 13.8's same-tx
@@ -632,17 +725,24 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   the `field_workers` row, and a `TRUNCATE field_workers CASCADE` will hit this story's TRUNCATE trigger. Registration
   calls `allocateAttributionCodeForRequest` (the API door) in the SAME tx as the worker insert; on
   `AttributionCodeAllocationExhaustedError` its catch calls `flagAllocationExhaustedForRequest` (which writes the flag in
-  its own committed scope tx) and rethrows (the request tx belongs to `scopeResolutionHook`, G9a). The flag's `actor_id` is NOT NULL ⇒ a system / bulk registration
+  its own committed scope tx) and rethrows (the request tx belongs to `scopeResolutionHook`, G9a). ⭐ AUTHORIZATION IS
+  13.1's (v1.5): its route runs `requireAdminSession` → `scopeResolutionHook` → `requirePermissionHook(<the field-worker
+  key, Panel-ratified under `-059` B(3)>)` BEFORE either call — the door enforces Pariwar context only. The flag's
+  `actor_id` is ALWAYS the authenticated `requestContext.actorId` (the door takes no actor input). The flag's `actor_id` is NOT NULL ⇒ a system / bulk registration
   path (none planned) would need a decision on whose id it records. The `field_worker.registered` payload may carry
   `attributionCodeId`. 13.1's `packages/field-worker-lifecycle` home should be re-weighed against
   [[feedback_no_premature_package]] (13.1's call).
 - **C2 → 13.1 + the first attribution consumer (13.8 / signup wiring).** `resolveAttribution` returns the HOLDER (I6).
   FR-85 — *"new attributions on deactivated code rejected"* — is a check on 13.1's lifecycle state, made by whoever
-  records an attribution, ⛔ by this lookup.
+  records an attribution, ⛔ by this lookup. The signup consumer INSERTs the `member_attribution` row, then calls
+  `resolveAttributionForRequest(request, scopeTx, { code, asOf: { captureId: <the new row's attribution_id> } })` in the
+  same `ScopeTx` — ⛔ it never reads `captured_at` into JS (AT4 (c)). It owns its route's authorization (the member
+  session) — the door checks ⛔ permission.
 - **C3 → 13.4 (attribution analytics / trustee surface).** Render `listAllocationFlags` to trustees; until then a flag is
   recorded but ⛔ seen (expected frequency ≈ 0, AT6).
 - **C4 → 13.5 / 13.8 (backfill of 3.6b captures).** A backfill resolves each `member_attribution` row with
-  `asOf = captured_at` — the as-of rule (AT4 (c), I7) then credits ⛔ capture that predates its code, whatever the rollout
+  `asOf: { captureId: <that row's attribution_id> }` — the comparison runs in SQL on the persisted `captured_at` at full
+  precision; ⛔ it reads `captured_at` into JS — the as-of rule (AT4 (c), I7) then credits ⛔ capture that predates its code, whatever the rollout
   order (with the AT4 (c) insert-vs-commit residual). A backfill JOB has no request: it needs (1) a `twt_service` grant
   on the codes table (none today) — under which the explicit `pariwar_id` predicate is the only Pariwar filter (TR3) —
   and (2) a REVIEWED entry in the reach fence's ALLOWED list naming its own Pariwar source (TR4b).
@@ -710,7 +810,16 @@ will any be, handed out by hand before Story 13.1 ships? Will member signup go l
 is no to both"*. **AT1–AT10** (2026-11-01): BigDev — *"AT1-AT10 as recommended, except AT8. I want you to come up with
 better proposal for AT8. Also I want you to look into these / AT8 member-route rule contradicts G9a / AT8 route matching
 can miss future lookup routes / AT4 needs a rollout sequencing guarantee"*. ⇒ AT1–AT7, AT9, AT10 ANSWERED as ⭐; AT8 v2
-and AT4 (c) written in v1.3, ⏳ awaiting BigDev.
+and AT4 (c) written in v1.3, ⏳ awaiting BigDev. **v1.5 request** (2026-11-01), BigDev, verbatim: *"I would request a
+focused v1.5, not another redesign. 1. AT8 (i): require transaction-bound DB handles. The scope assertion and query must
+use the same connection. 2. AT8 (iii): enforce the transaction-bound requirement through all five wrapper contracts
+where applicable. 3. AT8 authorization: explicitly place authorization responsibility on the future registration
+caller; the flag must record only the authenticated actor. 4. AT8 (ii): add synthetic tests for supported
+dynamic/CommonJS import paths and intermediate re-exports; record the actual scan count. 5. AT4 (c): remove the
+millisecond-truncation false-positive. Preserve timestamp precision through the comparison. 6. AT4 consumer: make the
+signup and backfill consumers use the persisted captured_at at sufficient precision. 7. AC8: add the before/equal/after
+sub-millisecond tests and a transaction-bound-handle test. 8. I7: retain the strict at-or-after invariant, but express
+it in terms of the precision actually preserved by the implementation."* ⇒ all eight applied in v1.5 (Change Log).
 
 ### Completion Notes List
 
@@ -720,6 +829,7 @@ and AT4 (c) written in v1.3, ⏳ awaiting BigDev.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | 1.5 | BigDev's focused v1.5 (eight items, ⛔ a redesign), all applied. (1) AT8 (i): every exported DB function takes `client: pg.PoolClient` (precedent `projectTicketGenesis`) and runs `assertTxBoundScope` first — rejects a `pg.Pool`, proves a transaction block with a SAVEPOINT probe (`25P01` ⇒ `AttributionCodeRequiresTransactionError`), reads the scope on THAT client — so assertion and query share one connection by construction; new Task 3a. (2) AT8 (iii): the four in-transaction wrappers take `scopeTx: ScopeTx` and pre-check its Pariwar; the flag wrapper owns its tx end to end; types pinned by the door-shape gate. (3) Authorization stated as the CALLER's (13.1's route: admin session → scope → the Panel-ratified field-worker key); the flag records only `requestContext.actorId`, ⛔ actor option. (4) AT8 (ii): REACH widened to the bare identifier from any source + `export *` from `@twt/domain`; synthetic tests for alias / namespace / element / type-level `import()` / dynamic `import()` / `require` / path forms / intermediate re-exports; scan count RECORDED (1,785 files in 19 trees at `3d6b46c5`; floor 1,600). (5)–(6) AT4 (c): `date_trunc` and `asOf: Date` REMOVED — `asOf` is `{ captureId }` (the persisted `captured_at`, joined in the same statement) or `'now'` (`clock_timestamp()`); ⛔ JS timestamp in the comparison; signup and backfill pass `{ captureId }`. (7) AC8: before / equal / after legs within one millisecond (`.123455` / `.123456` / `.123457`, seeded as SQL literals), capture-mismatch legs, and the transaction-bound-handle legs (Pool, no-`BEGIN` + session `SET`, `@ts-expect-error`). (8) I7: strict at-or-after, at Postgres's microsecond precision, same-µs counts as "at". Carried blocks updated (asOf form, ScopeTx, authorization). |
 | 2026-11-01 | 1.4 | Second fresh-context validation (of v1.3): 1 critical / 3 high / 4 medium / 6 low, all applied. AT8 v2 HARDENED — (ii) is now ONE repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; REACH covers the namespace, paths, schema symbols, SQL table names and the domain function names; exact allow-list; precedent `family-account-reach-fence.test.ts`) — v1.3 missed the unauthenticated `apps/public` server and schema / raw-SQL / wrapper bypasses; (iii) door shape is POSITIVE (request reached only through `authenticatedScope`), names + option keys pinned, `opts` without `generate`, unset actor ⇒ 500; (iv) writer pin covers any receiver / element access / compound / destructuring, plus `Object.assign` and `.requestContext =` rules. AT4 (c) at MILLISECOND granularity (`date_trunc`), `asOf` is a DB instant (incl. `clock_timestamp()` for capture-less lookups), positive leg + TR10, insert-vs-commit residual stated. AC2 NARROWED note; I6/I7 order; AC9 wording; G9 marked historical; TR4c; carried blocks show `asOf`. Turbo-cache local-rerun limit noted. AT8 v2 and AT4 (c) still PROPOSED. |
 | 2026-11-01 | 1.3 | BigDev: AT1–AT10 as recommended EXCEPT AT8, plus three findings. Both AT8 findings CONFIRMED in the code (G9a extended: member handlers open their own scoped tx; G9b added: exactly two `requestContext.pariwarId` writers). AT8 REPLACED by v2 — gate the call, not the route shape: domain door + domain boundary scan + ONE API door (`attribution-code-access.ts`) + a pin on the two authenticated-Pariwar writers; the route scan, Zod walker, pinned route list and `SCOPE_RESOLUTION_HOOK` marker are DROPPED. AT4 (c) ADDED — the rollout sequencing guarantee: required `asOf`, a code credits only captures at/after its allocation (I7). New AC10; AC5 / AC8 / AC9 / Tasks 5–6 / TR4–TR4b / C1 / C4 / C5 updated; C6 added. AT8 v2 and AT4 (c) PROPOSED. |
 | 2026-11-01 | 1.2 | Q-S5 ANSWERED — BigDev: *"Answer is no to both"* (no hand-issued codes before 13.1; signup not live before 13.1). AT4's premise and the §0 gate now ESTABLISHED, ⛔ conditional; G2 and Task 0.2 updated; Debug Log (a) started. AT1–AT10 still pending. |

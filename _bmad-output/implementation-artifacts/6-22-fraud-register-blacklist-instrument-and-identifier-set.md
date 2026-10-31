@@ -15,8 +15,12 @@ Re-locate every code claim by FUNCTION, not by line number — line numbers rot.
 the Panel's and is RULED — `2026-09-21-238` (the release; blacklisting; two outcomes only), `2026-09-21-240` (what is kept, how far the ban
 reaches, who imposes and lifts), `2026-09-28-261` D3 A (the lock is lifted ONLY by the investigation's finding), `-262` FQ4 (go-live may
 precede the release). WHAT this story builds, WHERE the record lives and WHO holds each key are the AUTHOR's (DL — BigDev at Task 0.2).
-Six edges the ruled words do not decide — or that this build NARROWS — are the Panel's: PQ1–PQ6 in ONE note (Task 0.3). PQ1 is a DECLARED
-NARROWING carried from 6.38 and is a GO-LIVE condition for the guilty arm; PQ3–PQ6 are asked now so row `6-22d` is built on rulings.
+Eight edges the ruled words do not decide — or that this build NARROWS — are the Panel's: PQ1–PQ8 in ONE note (Task 0.3). PQ1 is a
+DECLARED NARROWING carried from 6.38 and is a GO-LIVE condition for the guilty arm; PQ7 (what an open flag does to approval — `-263` FQ10
+already made a neighbour's *"they have not died"* a WARNING, and a staff-raised gate *"changes who is paid"*) and PQ8 (notice, appeal and
+re-filing after a found-alive closure — `-291` Q2 B already texts a claimant whose claim is closed out from under them) are GO-LIVE
+conditions for the flag and the close; PQ3–PQ6 are asked now so row `6-22d` is built on rulings. The flag is seeded on the helpline operator
+ONLY, so the ruled two-actor chain (*"operator flags → District Admin verifies"*) is kept, not narrowed (DL4).
 ⚠ The IDENTIFIER SET (`-238` cl. 6 — PAN and Aadhaar of nominee and claimant) is COUNSEL-GATED and counsel has not been asked (G15) — this
 story does not build it (DL0).
 
@@ -34,8 +38,8 @@ collide with each other), decision `-433` and migration `0195` reserved (also by
 This file's validate ledger is `2026-11-01d`. ⇒ Every number this story takes (decision entry, migrations, catalog bump, event counts,
 roster row) is "the next free one" at the commit that takes it — READ LIVE then, across branches (TR10).
 
-LETTERS: **G** = found facts (G1–G19); **DL** = build decisions (DL0–DL17 — PROPOSED, BigDev answers at Task 0.2; DL0's split is ANSWERED);
-**PQ** = Panel questions (PQ1–PQ6) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR14); **AC1–AC14**.
+LETTERS: **G** = found facts (G1–G21); **DL** = build decisions (DL0–DL17 — PROPOSED, BigDev answers at Task 0.2; DL0's split is ANSWERED);
+**PQ** = Panel questions (PQ1–PQ8) + **TL** = lines the note TELLS the Panel (TL1–TL2); **TR** = traps (TR1–TR15); **AC1–AC14**.
 -->
 
 # Story 6.22: The Fraud Register, First Half — Staff Investigate a Death Claim Filed Against a Living Member; an Innocent Member Is Released at Once and the False Claim Is Closed
@@ -49,9 +53,10 @@ Status: ready-for-dev
 > the **Super Admin may lift** (`-238` cl. 3 as amended by `-240` cl. 5). Three shipped stories have built locks that wait on that finding,
 > and nothing writes it yet: 6.20's nominee lock, 6.38's erasure / withdrawal / Life Events locks (one leaf predicate,
 > `isDeathReportStanding`), and the peer-mesh anchor (`-339` / `-340`). Today a living member wrongly reported dead is frozen out of all of
-> them with no way out. **This story builds the investigation up to and including its finding**: the flag (helpline operator and District
-> Admin), the District Admin's finding — which requires that the member was confirmed ALIVE — the release (the existing writer, hardened),
-> the false claim CLOSED through the shipped closure core, and the guilty finding RECORDED (the claim closed, the member's locks kept).
+> them with no way out. **This story builds the investigation up to and including its finding**: the flag (the helpline operator — the
+> ruled flagger), the District Admin's finding — which requires that the member was confirmed ALIVE, by a different person from the
+> flagger — the release (the existing writer, hardened), the false claim CLOSED through the shipped closure core, and the guilty finding
+> RECORDED (the claim closed so it can never be paid; the member's death locks AND frozen account kept, so the two never disagree).
 > **It does not build** the refer → impose → lift chain, the termination or the ban (row `6-22d`), the identifier set, filer bans and the
 > `-240` cl. 1 deletion (row `6-22b`, counsel-gated), or the disqualified-nominee ladder (row `6-22c`) — DL0.
 
@@ -90,8 +95,12 @@ As **a member who has been wrongly reported dead, and the helpline operator and 
 I want **a recorded investigation that ends in one of the two findings the Panel ruled — and only once the member has been confirmed alive:
 innocent, which releases every lock on the member at once and closes the false claim; or guilty, which closes the false claim and records
 the finding the Pariwar Admin will later refer**,
-so that **a living member is no longer frozen out of their own record for ever by someone else's lie, and no claim is ever paid on a death
-that did not happen**.
+so that **a living member is no longer frozen out of their own record for ever by someone else's lie, and a claim found to be about a
+living member is stopped**.
+
+> ⚠ **What this story does NOT yet guarantee:** a FLAGGED claim that has no finding yet still moves through approval and can reach payment —
+> the flag gates nothing until the Panel rules what an open flag does to approval (PQ7, a go-live condition). Every approval still needs a
+> completed ground inspection (`-263` FQ9), which is the backstop in the meantime.
 
 ## The rulings and records this story builds on
 
@@ -125,7 +134,7 @@ that did not happen**.
 ## 📜 Policy meaning (AI-10-1)
 
 **This story gives a shipped, inert predicate its first producer (1), keeps a declared narrowing of it (2), introduces a predicate that ends
-a family's claim (3), and changes one selection predicate (4). The ban at joining is NOT built here — its Policy-meaning note is owed by
+a family's claim (3), changes one selection predicate (4), and builds a flag that gates nothing until the Panel rules (5). The ban at joining is NOT built here — its Policy-meaning note is owed by
 row `6-22d`.**
 
 1. **The release (shipped by 6.20 / 6.38; this story writes its first finding).** *In the member's terms:* **"If someone reports you dead
@@ -136,28 +145,35 @@ row `6-22d`.**
      into (the predicate is "ANY standing report", G3); and your account stays marked frozen while any other claim for your death is still
      open (G5).
    - ⚠ *Also true:* "unlocked" means the ordinary rules apply again — e.g. an `active` member still cannot have their data erased (TR1).
-2. **A member found GUILTY stays locked (6.38's declared narrowing, kept — PQ1).** *In the member's terms:* **"If the investigation finds you
-   took part in a false report of your own death, the claim is closed but your record stays locked: you cannot leave the Trust or have your
-   data erased."** This NARROWS `-423` Q1 (b) (*"closed because the member is alive"*) and `-424` Q2 (a); it is declared in Task 0.4, put to
-   the Panel as PQ1, and is a go-live condition for the guilty arm.
-3. **A claim closed because the member is alive (NEW).** *In the claimant's terms:* **"If the Trust's investigation confirms the person your
-   claim names is alive, your claim is closed; the app does not tell you, and the closure cannot be appealed."**
+2. **A member found GUILTY stays locked AND stays marked as reported dead (6.38's declared narrowing, kept — PQ1).** *In the member's
+   terms:* **"If the investigation finds you took part in a false report of your own death, the claim is closed so nothing is ever paid on
+   it, but your record stays as it was while the report stood: you cannot leave the Trust or have your data erased, and you stay off the
+   Member Directory."** This NARROWS `-423` Q1 (b) (*"closed because the member is alive"*) and `-424` Q2 (a); it is declared in Task 0.4,
+   put to the Panel as PQ1, and is a go-live condition for the guilty arm.
+3. **A claim closed because the member is alive (NEW — pending PQ8).** *In the claimant's terms, as BUILT:* **"If the Trust's
+   investigation confirms the person your claim names is alive, your claim is closed; as built, the app does not tell you, you cannot
+   appeal, and you may file again — a new claim needs its own investigation."** The notice and the appeal are the Panel's (PQ8 — `-291` Q2
+   B texted a claimant once when another process closed her claim); the built side is a go-live condition, not a ruling.
 4. **Peer-mesh selection (CHANGED — DL11).** *In the member's terms:* **"If you were wrongly reported dead and found innocent, you can again
    be one of the five people asked to confirm a colleague's death."** (Only peer-mesh: "People who know me" and nominee links still treat
    you as reported — a named residual, DL11.)
+5. **An open flag (NO predicate today — pending PQ7).** As built the flag gates nothing: a flagged claim is approved and paid on the same
+   rules as any other. If PQ7 is ruled A (a wait) or B (a warning), the flag becomes a predicate on the family's payout and its
+   Policy-meaning note is owed with that build.
 
 **Checked against the Niyamavali** (the git-ignored copy in the main checkout, `docs/legal/niyamavali.md`, 2026-11-01) — result:
 - 1, 2 — §8.5 grounds 1–3 CONSISTENT (a false report of one's own death is grounds under any of them); otherwise SILENT on a member wrongly
   reported dead — `-238` cl. 1 / `-261` D3 A are the instrument. 2's narrowing is of `-423` / `-424`, not of the rulebook.
 - 3 — SILENT: no clause speaks to closing a claim because the subject is alive; §8.8's appeals reach moderation acts, not claim closures.
-  The no-notice / no-appeal choice is TOLD to the Panel (TL2).
+  The notice and appeal are put to the Panel (PQ8), not told.
 - 4 — SILENT (the five are a `-311` construct).
+- 5 — SILENT; the Panel's own rule for "someone says the member is alive" is `-263` FQ10's warning (PQ7).
 
 ## ⭐ THE INVARIANTS
 
 **N1 — A finding is an investigation's outcome, and it requires the member confirmed ALIVE.** A finding (innocent | guilty) can be recorded
-ONLY on a claim that carries a `flagged` step and no `found_*` step, by the District Admin, with a note AND an `alive_confirmation` (DL3) —
-never a bare staff "alive" mark (`-261` D3 A rejected exactly that). A flag on a claim whose member is in fact dead simply never receives
+ONLY on a claim that carries a `flagged` step and no `found_*` step, by the District Admin, who is NOT the person who flagged it, with a
+note AND an `alive_confirmation` (DL3) — never a bare staff "alive" mark (`-261` D3 A rejected exactly that). A flag on a claim whose member is in fact dead simply never receives
 a finding; the claim proceeds (the post-death cases are `6-22b`). One investigation per claim, ever; its steps are append-only.
 
 **N2 — Two outcomes only.** `member_found_innocent` (existing kind) or `member_found_guilty` (NEW kind) in `claim_nominee_findings` — at
@@ -172,8 +188,14 @@ keys → the claim row (the closure core's order), writes the finding (innocent:
 `endLiveProcesses`. Triggers: `fraud_finding_innocent` / `fraud_finding_guilty` (DL13). An `approved` / `settled` claim is not closable:
 the finding is still recorded (an innocent member is still released) and the claim is left for row `6-22c` (DL9).
 
-**N5 — Every claim-closing path refuses a payout on a living member.** After a finding, the claim is `closed` (terminal) — or, if already
-`approved` / `settled`, recorded for `6-22c` and named in the response. No finding writer ever moves money or a pool.
+**N5 — After a finding, no claim on a living member can be paid; BEFORE a finding, nothing stops it (PQ7).** After a finding, the claim is
+`closed` (terminal) — or, if already `approved` / `settled`, recorded for `6-22c` and named in the response. No finding writer ever moves
+money or a pool. Between the flag and the finding the claim moves on its ordinary rules (built side of PQ7 — a go-live condition).
+
+**N7 — The account overlay and the death lock never disagree.** For every member, "the account is frozen" (`evaluateAccountOverlay` and
+its two set-based twins) is TRUE whenever a report stands for a reason this story writes: a GUILTY close does NOT unfreeze the account
+(DL13), so a member the leaf still treats as reported dead is never shown as "Active" on the public Member Directory. If PQ1 is ruled A,
+the leaf and the overlay flip TOGETHER (one swap point, DL8).
 
 **N6 — No Tier-1 in events, logs or audits.** Every staff note (flag, finding) is a Tier-1 ciphertext; events and audit contexts carry ids,
 outcome, `alive_confirmation` and reason codes only.
@@ -302,6 +324,23 @@ outcome, `alive_confirmation` and reason codes only.
   DISTINCT FROM OLD.x`; DELETE allowed only when `pg_trigger_depth() > 1` — the cascade from `claims`; a separate `BEFORE TRUNCATE`
   trigger). Policies are `pgPolicy`, per-command (no `FOR ALL`), generated by `drizzle-kit generate` from `*-rls.ts`; grants and triggers are
   HAND-APPENDED.
+- **G20 — What the account-frozen overlay gates.** `member/overlay.ts`: frozen on `claim.intake_initiated` naming the member, unfrozen per
+  stream by `ACCOUNT_UNFREEZE_EVENT_TYPES` (`claim.closed` among them — trigger-blind). Consumers that *"MUST STAY OBSERVATIONALLY
+  EQUIVALENT"* (its header — *"Change one, check the other"*): `evaluateAccountOverlay` / `getMemberAccountOverlay`; `member/directory-
+  read.ts` `NOT_DECEASED` (the PUBLIC Member Directory — the 11a.3 incident that published reported-dead members as "Active");
+  `listAccountFrozenMemberIds` (the degraded-mode bridge's cycle-open text, 5.8b); plus Module Shelf suppression (12.4) and
+  `pool/sahyog-vivran-read.ts`. ⇒ Closing a GUILTY claim through the closure core unfreezes all of them while `isDeathReportStanding` stays
+  TRUE for that claim — the account reads "alive, normal" while every death lock reads "reported dead" (N7, DL13).
+- **G21 — What the Panel already ruled about a signal that the member is alive, and about a claim closed under a claimant.**
+  `assertClaimApprovable` (`claim/nominee-name-check.ts`) has two shipped shapes: a WAIT that is not a denial (`SuspicionAppealPendingError`
+  — `-262` FQ5 A / `-291` Q1 A; `GroundInspectionRequiredError` — every approval needs a completed ground inspection, `-263` FQ9) and the
+  late-WARNING wait (`LateWarningReasonRequiredError` — `-277` Q3 B). `-263` FQ10 made a neighbour's *"they have not died"* a WARNING (on
+  `-264` FQ12's list), and the Panel's own record says *"Only `-263` FQ10 … and `-262` FQ8 E … raise warnings; making any other answer gate,
+  delay or flag a claim changes who is paid"* — the Panel's. `-291` Q2 B: when an allowed appeal closes the true nominee's claim, *"she is
+  texted once"* — *"Your claim for [member] has been closed. Please call the helpline."* — and its §0: *"whether the Trust sends a new
+  message to a person who never agreed to be contacted"* is the Panel's. A suspicion refusal is appealable for 90 days (`-291` Q1 A). And a
+  closed claim can be RE-FILED at once (G10 — `assertRefileAllowed` keys on a closures row only): the same filer can re-lock a released
+  member with a new report.
 
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
 
@@ -360,7 +399,9 @@ outcome, `alive_confirmation` and reason codes only.
   1. take the closure core's keys in ITS order — `intakeAdvisoryLockKey(pariwar, deceased)` (lower-cased), `appealAdvisoryLockKey`,
      `r9VotingAdvisoryLockKey`, `stateTrusteeDecisionAdvisoryLockKey` — then lock the claim row (the closure core's "Trap 8 / 40P01" order;
      add this writer to the "every intake-key taker" list in `acquireSuspicionReversalLockForClaim`'s doc block);
-  2. require a `flagged` step and no `found_*` step on this claim (409 `fraud_investigation.not_flagged` / `.already_found`);
+  2. require a `flagged` step and no `found_*` step on this claim (409 `fraud_investigation.not_flagged` / `.already_found`), and that the
+     finder is NOT the flag's `actor_id` (409 `fraud_investigation.finder_is_flagger` — the ruled two-actor chain; the 10.22 precedent
+     `ModerationAppealAdjudicatorExcludedError`; it bites only for `super_admin`, which derives both keys, since no seeded role holds both);
   3. `aliveConfirmation` REQUIRED — text CHECK `in_person | video_call | ground_inspection` (PROPOSED values; a phone call alone is not
      proof — someone may answer for the member); missing ⇒ 400;
   4. INNOCENT ⇒ the HARDENED `recordMemberInnocenceFinding` (DL12) — GUILTY ⇒ insert `member_found_guilty` + append the annotation
@@ -375,11 +416,16 @@ outcome, `alive_confirmation` and reason codes only.
   them. *Rejected:* one finding releasing every claim on the member (a finding is an investigation's outcome on ONE report — `-261` D3 A);
   closing a guilty claim with the same trigger as an innocent one (it would read literally as "closed because the member is alive" and
   still refuse erasure — PQ1); leaving a guilty claim open (a claim on a living member could then be approved and paid — N5).
-- **DL4 — The flag.** `flagClaimForFraudInvestigation(client, { claimCaseId, pariwarId, stepId, noteCiphertext, actor… })` — any claim in
-  ANY state that is not already flagged. The ruled flagger is the helpline operator (`-238` cl. 3 *"operator flags"*); adding the District
-  Admin as a flagger is the AUTHOR's (`-238` NOT covered (iii) — in the post-death case the discovery is the District Admin's). A District
-  Admin may flag AND find the same claim (the ruled chain's "verifies" is the finding) — TOLD (TL3). Annotation `claim.fraud_flagged`. The
-  flag has no effect on the claim's state or on any approval gate (a flag is a question, not a hold — TL1).
+- **DL4 — The flag: the helpline operator ONLY.** `flagClaimForFraudInvestigation(client, { claimCaseId, pariwarId, stepId,
+  noteCiphertext, actor… })` — any claim in ANY state that is not already flagged. The ruled chain is TWO people: *"operator flags →
+  District Admin verifies and confirms"* (`-238` cl. 3). So the flag key is seeded on `helpline_operator` alone and the finding key on
+  `district_admin` alone — different roles by construction — and DL3 step 2 refuses the same ACTOR for both (for `super_admin`). A living
+  member wrongly reported dead reaches the Trust through the helpline (6.38 D1's copy points them there), so the operator is where the
+  flag starts. *Rejected:* letting the District Admin flag AND find (one person doing the whole chain is weaker than option B, which the
+  Panel REJECTED under `-261` D3 A — *"the District Admin records it, the Pariwar Admin approves"*; it would narrow `-238` cl. 3); a
+  District Admin flagger with a different-DA finder (one DA per district would leave the claim unfindable). The post-death case, where the
+  discovery IS the District Admin's, is `6-22b`'s. Annotation `claim.fraud_flagged`. As built the flag has no effect on the claim's state
+  or on any approval gate — pending PQ7, a go-live condition (N5).
 - **DL5 — The helpline's way to a claim (G8).** A NEW helpline read: *"claims naming this member as deceased"* — for the member the operator
   has already found by search, the claim ids, states and filed dates (no claimant PII), each with a Flag action. Gated by the flag key
   (district dimension, resolved from the member's posting). *Rejected:* flag only on an intake result (the living member calling in is not
@@ -387,15 +433,16 @@ outcome, `alive_confirmation` and reason codes only.
 - **DL6 — The keys** — minted in Task 0.4's decision, catalog "the next free version" (READ LIVE — TR10):
   | Key | Dimension | Seeded holders | Step-up |
   |---|---|---|---|
-  | `claim.flag_fraud` | district | `helpline_operator`, `district_admin` | — |
+  | `claim.flag_fraud` | district | `helpline_operator` | — |
   | `claim.record_fraud_finding` | district | `district_admin` | ✅ purpose `fraud_finding` (one exported constant, G11) |
-  The helpline read (DL5) is gated by `claim.flag_fraud`. `super_admin` derives both. `6-22d` mints its own keys.
+  The helpline read (DL5) is gated by `claim.flag_fraud`. `super_admin` derives both — DL3's actor check keeps one person from doing both
+  steps. A unit test asserts no seeded role other than `super_admin` holds both keys. `6-22d` mints its own keys.
 - **DL7 — Who sees the investigation.** The verifier console's `FraudInvestigationPanel` shows the steps (outcome, actor display, time —
   notes decrypted only for holders of `claim.record_fraud_finding`); the helpline sees only "flagged" / "found" status on its read.
 - **DL8 — No effect on the leaf (N3, PQ1).** `isDeathReportStanding` is not edited. A guilty member stays locked out of erasure, withdrawal
   and Life Events — 6.38's declared narrowing, carried as a DECLARED NARROWING of `-423` Q1 (b) / `-424` Q2 (a) in Task 0.4, PQ1, and a
-  go-live leg (Task 0.5). If PQ1 is ruled A, the change is ONE kind in the leaf's `NOT EXISTS` plus the fence's allow-list — record that in
-  the leaf's header as the swap point.
+  go-live leg (Task 0.5). If PQ1 is ruled A, the change is ONE kind in the leaf's `NOT EXISTS` plus the fence's allow-list, AND removing
+  DL13's guilty-trigger exclusion from the overlay's three readers — record BOTH in the leaf's header as the one swap point (N7).
 - **DL9 — 6.38 DL7's two residual edges.** (a) A released claim as a convergence candidate — CLOSED by DL3's close for every closable state
   (a `closed` claim is not a candidate — G10); `approved` / `settled` released claims stay candidates ⇒ `6-22c` (recorded). (b) The
   override has no door (G10) ⇒ BUILD: under the intake lock, `overrideIntakeAttempt` refuses a `closed` against-claim and, when no report
@@ -403,9 +450,10 @@ outcome, `alive_confirmation` and reason codes only.
   (c) A GUILTY member's later death reports skip the door for ever (the guilty claim stands in the leaf; it is `closed`, so not a candidate;
   a new report mints a fresh claim with no door) — a named residual ⇒ `6-22d` (a door keyed on a standing ban).
 - **DL10 — The surfaces.** (i) Verifier console: a `FraudInvestigationPanel` (`DeathCertificateReviewControl.tsx`'s FORM shape +
-  `HelplineClaimPage`'s STEP-UP handling) — Flag (note), then Record finding (innocent / guilty radios, nothing pre-selected;
-  `alive_confirmation` radios, nothing pre-selected; note required; step-up), showing the member's OTHER standing claims after the finding.
-  (ii) Helpline console: DL5's read + Flag. (iii) The closed-claim staff label (G9): contracts gain `closed_member_alive: boolean` beside
+  `HelplineClaimPage`'s STEP-UP handling) — the flag shown read-only (who flagged, when), then Record finding (innocent / guilty radios,
+  nothing pre-selected; `alive_confirmation` radios, nothing pre-selected; note required; step-up; the `finder_is_flagger` refusal mapped
+  to copy), showing the member's OTHER standing claims after the finding. (ii) Helpline console: DL5's read + Flag (the only place a flag
+  is raised). (iii) The closed-claim staff label (G9): contracts gain `closed_member_alive: boolean` beside
   `closed_holder_refused`; `closedClaimStateLabel` renders *"Closed — the member was found alive"* for it (English, verbatim — BigDev
   reviews at Task 0.2). Every refusal mapped to copy (no raw code); `role="alert"` errors and an always-mounted `role="status"` (6.38 R4 P1).
   Copy in the module's own `i18n-en.ts` (G18).
@@ -429,7 +477,11 @@ outcome, `alive_confirmation` and reason codes only.
   join gains `AND op_e.payload ->> 'trigger' NOT IN ('fraud_finding_innocent', 'fraud_finding_guilty')`; the registry description is
   updated. `CLAIM_EVENT_TYPES` +2 (READ LIVE — 6.39 adds one); a frozen literal `STORY_6_22_CLAIM_EVENTS` in
   `nominee-name-check-events.test.ts`. No member-stream event (the member events belong to `6-22d`). No notification on a fraud close —
-  the claimant is told nothing by the app (TL2).
+  the built side of PQ8 (a); if PQ8 (a) is ruled A, the `-291` Q2 B text and its DLT template are reused (it accuses no one).
+  **The overlay (N7, G20):** a `claim.closed` with trigger `fraud_finding_guilty` does NOT unfreeze the account. `evaluateAccountOverlay`,
+  `directory-read.ts` `NOT_DECEASED` and `listAccountFrozenMemberIds` each exclude it — the same edit in all three, with ONE equivalence
+  test that runs the three over the same seeded members (*"Change one, check the other"*); `ACCOUNT_UNFREEZE_EVENT_TYPES` itself is
+  unchanged (the trigger is read from the payload). `fraud_finding_innocent` unfreezes as any close does.
 - **DL14 — Audits.** `admin_claim.fraud_flagged`, `admin_claim.fraud_finding_recorded` — `AuthAuditEventType` entries; contexts carry ids,
   the outcome and `alive_confirmation` only (N6, asserted with a planted value).
 - **DL15 — Erasure.** `claim_fraud_investigation_steps.note_ciphertext` is scrubbed by `member/anonymize.ts` keyed on `deceased_member_id`
@@ -454,16 +506,19 @@ outcome, `alive_confirmation` and reason codes only.
 - **DL17 — Scope fence.** Not here: the identifier set, PAN service, filer bans, filing-form changes, deletion (`6-22b`); the
   disqualification producer, succession payment, committed-claim recovery (`6-22c`); refer / impose / lift, termination, the ban, the bar
   at joining, any member-facing screen (`6-22d`); a change to the leaf (PQ1); a new moderation reason code; a notification to the claimant
-  or nominee; the flag as an approval hold; a backfill (no member uses the system).
+  or nominee (PQ8); the flag as an approval wait or warning (PQ7); an appeal of a found-alive closure, or a re-filing bar (PQ8); a backfill
+  (no member uses the system).
 
 ## Panel questions — ONE note at Task 0.3 (WRITTEN; BigDev sends)
 
-- **PQ1 — A member found ALIVE but GUILTY: do the death locks lift?** (`-425` 6.38 DL4: *"6-22 must put that to the Panel or justify it"*.)
-  `-423` Q1 (b)'s words — *"closed because the member is alive"* — cover a guilty member, and this story closes the guilty claim. ⭐ THE ONE
-  FACT: lifting means a member just found to have faked their own death could have their data ERASED and LEAVE the Trust before any ban.
-  Options: **A** lift on either finding (the literal words); **B** lift on innocence only (built — a DECLARED NARROWING of `-423` Q1 (b) /
-  `-424` Q2 (a), justified by `-240` cl. 1 *"only the guilty are kept"*); **C** lift on guilt only once `6-22d`'s ban is imposed or
-  declined. *Built: B. Suggest: B.* ⚠ A GO-LIVE condition for the guilty arm, and the 6.38 helpdesk copy (G9) changes with the ruling.
+- **PQ1 — A member found ALIVE but GUILTY: do the death locks lift, and does the account stop reading "reported dead"?** (`-425` 6.38 DL4:
+  *"6-22 must put that to the Panel or justify it"*.) `-423` Q1 (b)'s words — *"closed because the member is alive"* — cover a guilty
+  member, and this story closes the guilty claim (so it can never be paid). ⭐ THE ONE FACT: lifting means a member just found to have faked
+  their own death could have their data ERASED and LEAVE the Trust before any ban. Options: **A** lift on either finding (the literal
+  words) — the locks lift and the member reappears on the public Member Directory as "Active"; **B** lift on innocence only (built — a
+  DECLARED NARROWING of `-423` Q1 (b) / `-424` Q2 (a), justified by `-240` cl. 1 *"only the guilty are kept"*; the account stays frozen
+  with the locks, so the member stays off the directory — N7); **C** lift on guilt only once `6-22d`'s ban is imposed or declined.
+  *Built: B. Suggest: B.* ⚠ A GO-LIVE condition for the guilty arm, and the 6.38 helpdesk copy (G9) changes with the ruling.
 - **PQ2 — The NOMINEE of a guilty member: banned automatically, or only on a finding of their own?** (`-238` / `-240` NOT covered (i) —
   the claimant half is ruled by `-238` cl. 5.) ⭐ THE ONE FACT: a nominee may never have known they were named. Options: **A**
   automatically; **B** only on a finding naming them. *Built: neither (`6-22b`). Suggest: B.*
@@ -485,15 +540,32 @@ outcome, `alive_confirmation` and reason codes only.
 - **PQ6 (for `6-22d`) — "THE BAN IS TRUST-WIDE": does it end the person's memberships in OTHER Pariwars?** `-240` cl. 5 / `-238` cl. 2
   (*"ABOVE TERMINATION"*). ⭐ THE ONE FACT: stopping only NEW joins leaves existing memberships elsewhere standing — a narrowing of
   "Trust-wide". Options: **A** terminate every membership; **B** stop new joins only. *Suggest: A.*
-- **TL1 (told) — three quiet choices.** (i) A flag is a question, not a hold — a flagged claim keeps moving until a finding; (ii) a member
-  found innocent can again be one of the five asked to confirm a colleague's death (DL11) — "People who know me" and nominee links still
-  treat them as reported (residual); (iii) bans on nominees, claimants and non-members wait for counsel, and counsel has not yet been asked
-  (`6-22b`'s first task writes the question).
-- **TL2 (told) — a claim closed because the member is alive tells the claimant nothing and cannot be appealed** (Policy meaning 3); a
-  finding requires the member confirmed alive in person, by video or by ground inspection.
-- **TL3 (told) — the release is built before counsel, and one District Admin may flag and find the same claim** (the ruled chain is
-  *"operator flags → District Admin verifies"*; the Panel rejected B — *"the District Admin records it, the Pariwar Admin approves"* —
-  under `-261`; this build adds a recorded flag, a recorded alive confirmation and a step-up).
+- **PQ7 — What does an open fraud flag do to a claim's approval?** No ruling covers a STAFF flag. ⭐ THE ONE FACT: as built, a flagged
+  claim on a member who may be alive can be approved and PAID before the District Admin records a finding — and once it is `approved` /
+  `settled`, a finding can no longer close it (`6-22c`). The Panel's own rule for the nearest signal — a neighbour's *"they have not died"*
+  (`-263` FQ10) — is a WARNING, and its record says any other signal that *"gate[s], delay[s] or flag[s] a claim changes who is paid"*
+  (G21). Options: **A** a WAIT at both approvals until a finding (the `SuspicionAppealPendingError` shape) — cost: a flag on a death that
+  DID happen never receives a finding, so the claim would wait for ever unless the Panel adds a "flag closed: death confirmed" step, which
+  it must confirm is not a third outcome under `-238` cl. 4; **B** a WARNING on `-264` FQ12's list (the approver records a reason to go
+  on — the late-warning wait, `-277` Q3 B) — cost: a determined approver can still approve with a reason; **C** nothing (built) — cost: a
+  living member's false claim can be paid during the investigation; the ground inspection every approval needs (`-263` FQ9) is the only
+  backstop. *Built: C. Suggest: B — it is the Panel's own rule for "someone says the member is alive".* ⚠ A GO-LIVE condition for the flag.
+- **PQ8 — When an investigation closes a claim because the member is alive: is the claimant told, may they appeal, and may they file
+  again?** No ruling covers it. ⭐ THE ONE FACT: the claimant loses a filed claim — the nearest ruling (`-291` Q2 B) TEXTS a claimant once
+  when another process closes her claim, and a suspicion refusal is appealable for 90 days (`-291` Q1 A); and as built the same filer can
+  file again at once and re-lock the released member (G21). Options: (a) notice — **A** the `-291` Q2 B text, once (*"Your claim for
+  [member] has been closed. Please call the helpline."* — accusing no one; its DLT template reused); **B** nothing (built); (b) appeal —
+  **A** appealable within 90 days (the `-291` shape); **B** not appealable (built — the member has been seen alive); (c) re-filing — **A**
+  allowed, each new claim needs its own investigation (built); **B** a new claim for a member found innocent is refused at intake unless
+  a District Admin allows it. *Built: (a) B, (b) B, (c) A. Suggest: (a) A, (b) B, (c) B.* ⚠ A GO-LIVE condition for the close; (a) A
+  rides FQ7's counsel row as `-291` Q2 B does.
+- **TL1 (told) — three quiet choices.** (i) A member found innocent can again be one of the five asked to confirm a colleague's death
+  (DL11) — "People who know me" and nominee links still treat them as reported (residual); (ii) bans on nominees, claimants and
+  non-members wait for counsel, and counsel has not yet been asked (`6-22b`'s first task writes the question); (iii) the release is built
+  before counsel.
+- **TL2 (told) — how a finding is made.** The helpline operator flags, a DIFFERENT person — the District Admin — records the finding (the
+  ruled chain, kept), and only after the member has been confirmed alive in person, by video or by ground inspection, with a note and a
+  step-up.
 
 ## Acceptance Criteria
 
@@ -506,13 +578,14 @@ outcome, `alive_confirmation` and reason codes only.
    TRUE (erasure 409 `rtbf.death_reported`, withdrawal 409 `withdrawal.death_reported`, Life Events 409, declare 409
    `nominee.locked_claim_filed`); a different seeded claim with `member_found_innocent` ⇒ FALSE. ONE test named for PQ1 so a ruling of A
    flips it visibly. `git diff` shows `death-report.ts` unchanged except its header's swap-point note.
-3. **AC3 — Flag (DL4, DL5).** API live-DB: a helpline operator (through DL5's read) and a District Admin each flag (201, step row,
-   `claim.fraud_flagged`, state unchanged); a second flag ⇒ 409 `fraud_investigation.already_flagged`; a verifier / `pariwar_admin` ⇒ 403;
-   a District Admin of another district ⇒ 403; a member with no posting ⇒ 403 for every role (G7 — recorded residual); a flag with no note
-   ⇒ 400; a flagged claim still passes P1 approval (not a hold). DL5's read returns ids / states / dates only (a planted claimant name is
-   absent).
+3. **AC3 — Flag (DL4, DL5).** API live-DB: a helpline operator (through DL5's read) flags (201, step row, `claim.fraud_flagged`, state
+   unchanged); a second flag ⇒ 409 `fraud_investigation.already_flagged`; a District Admin, a verifier and a `pariwar_admin` ⇒ 403; a
+   member with no posting ⇒ 403 for every role (G7 — recorded residual); a flag with no note ⇒ 400. ONE test named for PQ7: a flagged claim
+   with no finding still passes P1 AND final approval (the built side C — a ruling of A or B flips it visibly). DL5's read returns ids /
+   states / dates only (a planted claimant name is absent). Unit: no seeded role other than `super_admin` holds both DL6 keys.
 4. **AC4 — The innocence finding releases and closes (DL3, DL12, N4).** API live-DB, the member seeded through real events
-   (`seedLifecycleMember` — TR3): un-flagged ⇒ 409 `fraud_investigation.not_flagged`; no `alive_confirmation` / no note ⇒ 400; flagged +
+   (`seedLifecycleMember` — TR3): un-flagged ⇒ 409 `fraud_investigation.not_flagged`; no `alive_confirmation` / no note ⇒ 400; a
+   `super_admin` who flagged the claim then trying to find it ⇒ 409 `fraud_investigation.finder_is_flagger`; flagged +
    innocent ⇒ the finding row, `claim.nominee_lock_released`, `claim.closed` (`fraud_finding_innocent`, no `held_by`), the step — ONE
    transaction; THEN, for the member: a nominee re-declare succeeds (with its `nominee_change` step-up), erasure is refused only by its
    ordinary rules (`active` ⇒ `rtbf.invalid_state`, not `death_reported`), withdrawal (with step-up) and a Life Events write succeed, the
@@ -527,8 +600,11 @@ outcome, `alive_confirmation` and reason codes only.
    intake either converges before the close or mints a NEW standing claim after it — never absorbed into the closed claim (mutation: remove
    the finding's intake lock ⇒ RED). An upper-case id ⇒ the same key (TR11).
 7. **AC7 — The guilty finding (DL2, DL3).** Flagged + guilty ⇒ `member_found_guilty`, `claim.member_found_guilty`, `claim.closed`
-   (`fraud_finding_guilty`), step `found_guilty`; the member stays locked (AC2); the overlay unfreezes for that stream. A second finding of
-   either kind ⇒ 409 `fraud_investigation.already_found`.
+   (`fraud_finding_guilty`), step `found_guilty`; the member stays locked (AC2) AND the account stays frozen (N7): `getMemberAccountOverlay`
+   frozen, the member absent from the public Member Directory read (`NOT_DECEASED`), present in `listAccountFrozenMemberIds` — ONE
+   equivalence test runs all three readers over the same seeded members (innocent-closed, guilty-closed, open, approved) and they agree; the
+   test is named for PQ1 so a ruling of A flips the guilty row visibly. A second finding of either kind ⇒ 409
+   `fraud_investigation.already_found`.
 8. **AC8 — Idempotence and targeted conflicts (DL12).** Retrying the same request (same `step_id` / `finding_id`) ⇒ 200 with the SAME event
    version and no second event; a different `finding_id` on a found claim ⇒ 409; a planted PK collision ⇒ 500 (never "duplicate"). The
    existing `nominee-lock.spec.ts` / `nominee-determination.spec.ts` / `findInnocent` callers stay green with no assertion weakened.
@@ -568,18 +644,23 @@ outcome, `alive_confirmation` and reason codes only.
   - [ ] 0.2 Put DL1–DL17 to BigDev (DL0's split is answered; DL3's `alive_confirmation` values; DL6's table; DL10's label verbatim). Record
         the answers here.
   - [ ] 0.3 Draft ONE routing note from the template (by path, not copied):
-        `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-22-fraud-register-first-half.md` — PQ1–PQ6 + TL1–TL3;
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-22-fraud-register-first-half.md` — PQ1–PQ8 + TL1–TL2;
         plain-English question first, THE ONE FACT, options with an honest cost on each, evidence LAST; E4 commands run. Status: WRITTEN, not
-        sent (BigDev sends). Non-blocking for build and merge; PQ1 blocks the guilty arm's GO-LIVE; PQ3–PQ6 gate `6-22d`'s build.
+        sent (BigDev sends). Non-blocking for build and merge; PQ1 blocks the guilty arm's GO-LIVE, PQ7 the flag's, PQ8 the close's; PQ3–PQ6
+        gate `6-22d`'s build.
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — `-433` is reserved by siblings): DL0–DL17 as answered;
         the two keys (`-195` cl. 2); cites `-238`, `-240`, `-261` D3 A, `-425` 6.38 DL4 / DL7; declares the scope split (`6-22b`, `6-22c`,
-        `6-22d`, named); DECLARES the guilty arm's kept locks as a narrowing of `-423` Q1 (b) / `-424` Q2 (a) pending PQ1; declares the
-        District Admin as an author-added flagger (`-238` NOT covered (iii)); supersedes no ratified entry. Committed ALONE, first.
+        `6-22d`, named); DECLARES the guilty arm's kept locks and kept frozen account as a narrowing of `-423` Q1 (b) / `-424` Q2 (a)
+        pending PQ1; records that the flag gates nothing (PQ7) and that a found-alive close sends no notice and has no appeal (PQ8) as
+        BUILT SIDES pending rulings, not as decisions; keeps the ruled two-actor chain (operator flags, District Admin finds); supersedes
+        no ratified entry. Committed ALONE, first.
   - [ ] 0.5 Records: the three rows `6-22b-…` / `6-22c-…` / `6-22d-…` in `sprint-status.yaml` (backlog, with comment blocks carrying DL0's
         lists verbatim); `deferred-work.md` — PQ1–PQ6 open, the `6-22b` counsel question owed, DL11's residual, DL9 (c); a go-live roster
         row or legs in `docs/launch-gate-inventory/inventory-roster.md` (READ the roster first — Row 46 is reserved by two siblings; take the
-        next free row of the same shape): (a) PQ1 ruled and reflected (the guilty arm; the 6.38 helpdesk copy, G9); (b) 6.22's browser pass
-        attested; (c) `6-22b`'s counsel question SENT; (d) 6.38 round-2 D1 (c); a retention-matrix row for `claim_fraud_investigation_steps`.
+        next free row of the same shape): (a) PQ1 ruled and reflected (the guilty arm; the 6.38 helpdesk copy, G9); (b) PQ7 ruled and
+        built — the flag must not go live while a flagged claim can be paid; (c) PQ8 ruled and built (notice, appeal, re-filing); (d) 6.22's
+        browser pass attested; (e) `6-22b`'s counsel question SENT; (f) 6.38 round-2 D1 (c); a retention-matrix row for
+        `claim_fraud_investigation_steps`.
         An `epics.md` entry for Story 6.22 (none today — 6.20's `> ⚠ Minted by…` header shape).
   - [ ] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 1 — The records (AC1)**
@@ -592,7 +673,8 @@ outcome, `alive_confirmation` and reason codes only.
   - [ ] 2.1 DL12 on `recordMemberInnocenceFinding` (targeted conflict, idempotent retry, intake key first) — its existing tests stay green
         with no assertion weakened.
   - [ ] 2.2 The exported fraud closer in `suspicion-refusal-persist.ts` (DL3 step 6; `endLiveProcesses`); the discriminated
-        `ClaimClosedPayloadSchema`, OP10's guard, the registry text (DL13).
+        `ClaimClosedPayloadSchema`, OP10's guard, the registry text (DL13); the guilty-trigger exclusion in the overlay's three readers
+        (`member/overlay.ts`, `member/directory-read.ts`, `listAccountFrozenMemberIds`) and the overlay header's consumer list updated (N7).
   - [ ] 2.3 `fraud-investigation-persist.ts`: `flagClaimForFraudInvestigation`, `recordFraudFinding` (DL3, DL4); errors in `claim/errors.ts`;
         the two annotations + two triggers — tuple, payload map, reducer arms, registry, counts.
   - [ ] 2.4 Tests: AC2 (with the PQ1-named leg), AC4 (domain half), AC5, AC6 (`sendWhileHolding` — add the finding to the fixture), AC7,
@@ -645,8 +727,8 @@ outcome, `alive_confirmation` and reason codes only.
   the claim *"the other claim for this death was later refused; the family may file again"*. Use DL13's discriminated union.
 - **TR7 — The new close triggers are a schema change.** Every reader of `claim.closed` must still type-check AND behave: `suspicion-notice.ts`
   filters on its own trigger (safe — assert it); OP10 branches on `held_by`, not on the trigger (guard it).
-- **TR8 — The overlay is per stream.** "Overlay OFF" after a finding holds only when no other claim stream for the member is frozen (an
-  `approved` claim, a second standing claim). Assert both.
+- **TR8 — The overlay is per stream.** "Overlay OFF" after an INNOCENT finding holds only when no other claim stream for the member is
+  frozen (an `approved` claim, a second standing claim). Assert both. After a GUILTY finding the overlay stays ON by design (N7, TR15).
 - **TR9 — Re-entrant lock.** `recordMemberInnocenceFinding` re-taking `intakeAdvisoryLockKey` inside DL3's transaction is a no-op
   (`pg_advisory_xact_lock` is re-entrant per session) — do not add a "lock must already be held" assertion that breaks its test callers.
 - **TR10 — Numbers collide with siblings.** Decision `-433`, migration `0195`, catalog v57, `CLAIM_EVENT_TYPES` 38, ledger `2026-11-01c`
@@ -660,6 +742,10 @@ outcome, `alive_confirmation` and reason codes only.
   a finding on a member whose aliveness was not confirmed — that would close a genuine family's claim, silently and for good.
 - **TR14 — Withholding on the wire.** DL5's helpline read and the finding's "other claims" list carry ids, states and dates only — no
   claimant name, mobile or address ([[feedback_withholding_must_be_uniform]]).
+- **TR15 — Two "reported dead" truths.** The leaf (`isDeathReportStanding`) and the account overlay are different readers of the same fact.
+  A `claim.closed` unfreezes the overlay by event TYPE, so a guilty close would make the account read "Active" while every lock still reads
+  "reported dead" — and the public Member Directory would show a member the Trust has just found faked their own death. Exclude the guilty
+  trigger in ALL THREE overlay readers or none (the 11a.3 incident is the cost of one reader drifting — G20).
 
 ### What this story does not do
 
@@ -713,3 +799,4 @@ code; notify a claimant or nominee; add any member-facing screen.
 |---|---|---|
 | 2026-11-01 | 1.0 | Created by `bmad-create-story 6.22` in its own worktree, traced at `beae5116`, pinned at `origin/main` `3d6b46c5`: the counsel-free first half of the fraud register; DL0–DL18 PROPOSED; PQ1–PQ4 + TL1–TL4; AC1–AC16. Row `backlog → ready-for-dev`; ledger `2026-11-01b`. |
 | 2026-11-01 | 1.1 | Validated by `bmad-create-story validate 6.22` (five read-only verifiers, each critical re-read by hand at `3d6b46c5`); BigDev: split → new row `6-22d`, apply all. The refer / impose / lift chain, termination and the member ban move to `6-22d` (as designed they barred no one — sign-up is unreachable for an existing mobile — went beyond `-240` cl. 3, and let `super_admin` impose and lift, `-240` cl. 5's named collapse). The close now runs through the shipped closure core (its lock order and `endLiveProcesses`) with discriminated `fraud_finding_*` triggers (OP10 joined on `held_by`); a finding requires the member confirmed alive; the guilty arm is a DECLARED narrowing (PQ1, go-live); peer-mesh-only release (`namedByClaimSql` gates nominee links and "People who know me"); a helpline read for the flag; the override door built; the vacuous erasure race replaced by the intake race; PQ2 narrowed to the nominee; PQ3–PQ6 added for `6-22d`; numbers, pins, file homes and closure words corrected. Ledger `2026-11-01d`. |
+| 2026-11-01 | 1.2 | BigDev's four checks (*"check these"*), each verified in the repo and the decision log, then fixed. (1) A flagged claim could be approved and paid before a finding — the "no claim is ever paid" promise is withdrawn; what an open flag does to approval is now PQ7 (the Panel's own rule for a neighbour's *"they have not died"* is a WARNING, `-263` FQ10; built C, a go-live condition). (2) No notice / no appeal on a found-alive close was a TOLD line — it is now PQ8 (`-291` Q2 B texts a claimant whose claim is closed under her; a suspicion refusal is appealable 90 days), with re-filing added (a released member can be re-locked by a new filing). (3) The District Admin could flag AND find — the flag is now the helpline operator's alone (the ruled two-actor chain) plus a `finder_is_flagger` 409 for `super_admin`. (4) A guilty close unfroze the account (public directory "Active") while the death lock stood — the guilty trigger no longer unfreezes, in all three overlay readers (N7, TR15), one swap point with PQ1. |

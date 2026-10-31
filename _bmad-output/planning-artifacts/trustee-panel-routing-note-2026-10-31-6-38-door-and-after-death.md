@@ -1,8 +1,7 @@
 # Trustee Panel routing note — three edges of your 30 October ruling: who counts as "not finished joining", what a dead member's account may still do, and what the family is told
 
-> **Status: WRITTEN 2026-10-31 — ⛔ sent.** BigDev sends. Drafted from Story 6.38 (the build your ruling `2026-10-30-423` asked
-> for), Task 0.3. **Non-blocking:** the build goes ahead on the narrow / unchanged side of each question below, and each answer is a small
-> change afterwards. ⛔ Member uses the system yet.
+> **Status: SENT by BigDev and ANSWERED 2026-10-31 — recorded as [`-424`](../../.decision-log.md#decision-2026-10-31-424).** Written
+> 2026-10-31 from Story 6.38 (the build `2026-10-30-423` asked for), Task 0.3. ⛔ Member uses the system yet.
 
 ## §0 — the gate
 
@@ -14,10 +13,19 @@ member's record — counsel's, already owed by your 30 October ruling.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-10-31 — recorded as `2026-10-31-424`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited** as the question as it was put.
+> **Ruled by DR + KB (Dhiraj Rahul + Kalpana Bharti), relayed by BigDev — verbatim:**
+> *"by DR and KB*
+> *Q1(a) - C, Q1(b) - B, Q2(a) - A, Q2(b) - A (even though staff can change, old entry cannot be gone in this particular case, but clearly
+> visible along with new entry made by staff), Q3 - B"*
+>
+> ⭐ Our suggestion **taken on every question**. ⚠ **Q2 (b) carries an addition of the Panel's own:** staff may change the record of a member
+> whose death is reported, but the old entry is never removed — it stays clearly visible with the staff's new entry. Our readings needed to
+> build (what "an identity nobody has checked" and "in this particular case" mean; that the operator still sees the specific reason) are
+> recorded in `-424` as ⛔ ratified. Q1 (a) C's staff identity check is a NEW row (`6-39-…`), a go-live condition.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put.
 
 ---
 

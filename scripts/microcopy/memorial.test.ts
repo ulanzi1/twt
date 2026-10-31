@@ -287,7 +287,8 @@ describe('the no-deadline scan (AC2 / AC14)', () => {
 // ─── (d) ⛔ take-down button anywhere (AC4 / AC12 — a take-down goes through the helpline, `-393`) ──────────────────────
 
 /**
- * ⚠ Story 11b.5a — the ONE named exception to (d) and (e), and it is ⛔ a take-down: copy 2.13–2.15 (APPROVED by BigDev 2026-10-31)
+ * ⚠ Story 11b.5a — the ONE named exception to (d) and (e) — CONFIRMED by BigDev 2026-10-31 ("agreed"; re-wording the approved copy
+ * was declined) — and it is ⛔ a take-down: copy 2.13–2.15 (APPROVED by BigDev 2026-10-31)
  * label the family screen's control that removes ONE LINE from the family's own UNSENT list, on the phone (nothing is published;
  * nothing the Trust holds changes). Exact keys, and — in (e) — ONLY inside `family.tsx`; the same key on any other screen, or any
  * other remove / delete / take-down label, still fails (the planted legs below prove it).

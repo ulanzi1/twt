@@ -1168,12 +1168,13 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, worktree `.claude/worktre
     `<dl>`, the plural, nothing in `<head>`, `[]` ⇒ ⛔ heading, a leaked tick ⇒ outage).
   - **Fences:** the AC10 pin (`packages/domain/tests/memorial/kinship-purpose-pin.test.ts`, allow-list from the pasted grep, planted RED);
     `SCAN_FILES` += `KinshipLattice.astro`; `microcopy.yaml` `code_globs` += `family.tsx`, `memorial-kinship.ts`; friction disposition.
-  - ⚠ **FOR BIGDEV — a gate's scope was narrowed (please confirm):** the 11b.4 R16 scans (`scripts/microcopy/memorial.test.ts` — "no
+  - ✅ **A gate's scope was narrowed — CONFIRMED by BigDev 2026-10-31 (*"agreed"*, on the recommendation to keep the exception):** the 11b.4 R16 scans (`scripts/microcopy/memorial.test.ts` — "no
     memorial Button offers a take-down", by key name and by value) flagged the APPROVED copy 2.13–2.15 (*"Remove"* / *"हटाएँ"*, *"Remove
     {name} from the list"*) — the control that removes one line from the family's own UNSENT list. Added ONE named exception: exactly
     `family.remove`, `family.remove_a11y`, `family.remove_empty_a11y`, and (for the value scan) only inside `family.tsx`, with legs proving
-    those keys ARE flagged and that a fourth "remove" key or the same key elsewhere still fails. The alternative is re-wording the
-    approved copy (e.g. "Take off the list") — your call.
+    those keys ARE flagged and that a fourth "remove" key or the same key elsewhere still fails. Re-wording the copy was declined (the
+    plain word for the family; the button cannot touch anything published). ⚠ Carried to the device / TalkBack pass (still owed): check a
+    family reads "Remove" as "this line", ⛔ "the memorial" — if anyone hesitates, re-word then.
   - **Un-attested (carried, ⛔ closed — AC12):** device / TalkBack / VoiceOver passes of `family.tsx`, real-browser pass of the lattice,
     Story 0.9, the non-author Hindi review of the KL3 labels, the family-screen copy and v4 (`hiReviewed: false` — Row 41 (a) / (s));
     `MEMORIAL_AUTHORSHIP_ENABLED` stays off; ⛔ no Row 41 criterion marked MET; v4 is ⛔ never live unless rows 11b-5b and 11b-5c are `done`.
@@ -1304,6 +1305,7 @@ Code commits `9c695ef1`…`b61e2b37` (Tasks 2–8) + `50b7a2b6` (the `ci:local` 
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v2.10 | The R16 take-down-scan exception (the three family-list row keys, copy 2.13–2.15, only in `family.tsx`) **CONFIRMED by BigDev** (*"agreed"*); copy unchanged; the device / TalkBack pass checks that "Remove" reads as "this line". Ledger `2026-10-31am`. |
 | 2026-10-31 | v2.9 | **TASKS 2–9 IMPLEMENTED** (`bmad-dev-story`) — six code commits `9c695ef1`…`b61e2b37`: contracts + migration **0194** (re-taken — 12-1 committed 0193 first), the API (Send / member view / review / decide / public read / take-down; permission **v4** with the declaration flag), the mobile family screen, the admin review + take-down, the public `<KinshipLattice>` with its ruled matrix pair (`-428` item 1) and the floor's four declared gaps (owed by 11b-5c), the fences (AC10 pin, `SCAN_FILES`, microcopy, friction). 17 named mutants planted and proven RED, each restored byte-identical. ⚠ One gate scope narrowed for BigDev to confirm (the R16 take-down scan vs approved copy 2.13–2.15 — Completion Notes). Status → **review**. ⏳ `ci:local`: four runs, each 35 / 36 (load timeouts / fixed-Pariwar pollution, each red spec green in isolation; run 1's lint red was ours — fixed `50b7a2b6`) — a clean 36 / 36 is owed before `done` (AC13). Ledger `2026-10-31al`. |
 | 2026-10-31 | v2.8 | The confirms RULED — Decision `2026-10-31-432` (Trustee-ratified, DR + KB): *"R1 A, R2 A, R3 A"* — R1 A the members' app shows the memorial itself, v4+ only (row 11b-5c builds it, ⛔ no longer waits); R2 A (⚠ ⛔ not our suggestion) the declaration's adult half covers the words too (v4 ③ stands); R3 A the reviewer's child test narrowed to a reason in the memorial itself (KL16's guidance and copy 4.4's guidance line re-worded to it — ✅ BigDev confirmed, *"changes fine"*). Row 41 (r)'s *"R1–R3 answered"* clause met. |
 | 2026-10-31 | v2.7 | The follow-up note R1–R3 (`bdc24e92`, `3981fd0b` before the second rebase) SENT by BigDev (*"I have sent the note"*) — ⏳ no ruling yet. It gates row 11b-5c and go-live (Row 41 (r)), ⛔ not Task 2. |

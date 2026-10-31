@@ -472,7 +472,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the helpline take-down (live DB)
     const before = t.auditSink.events.length;
     const view = await op.inject({ method: 'GET', url: `${base(w)}/drives/${w.poolId}` });
     expect(view.statusCode, view.body).toBe(200);
-    const shown = (view.json() as { shown: { submissionId: string; words: string[]; hasPhoto: boolean; photoUrl: string | null; altText: string | null } }).shown;
+    const shown = (view.json() as { shown: { submissionId: string; words: string[]; hasPhoto: boolean; photoUrl: string | null; altText: string | null; kinship: unknown } }).shown;
     expect(shown.submissionId).toBe(id);
     expect(shown.hasPhoto).toBe(true);
     // The URL is the storage port's for THIS object at the 5-minute TTL (AC6) — ⛔ another version's, ⛔ another lifetime.
@@ -492,7 +492,13 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the helpline take-down (live DB)
     const [pool] = await rows<{ public_token: string }>(t, `SELECT public_token FROM pools WHERE pool_id = $1`, [w.poolId]);
     const page = await t.app.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/public-pages/sahyog-vivran/${pool!.public_token}` });
     expect(page.statusCode, page.body).toBe(200);
-    expect((page.json() as { drive: { familyMemorial: unknown } }).drive.familyMemorial).toEqual({ words: shown.words, photo: { altText: shown.altText } });
+    expect((page.json() as { drive: { familyMemorial: unknown } }).drive.familyMemorial).toEqual({
+      words: shown.words,
+      photo: { altText: shown.altText },
+      // Story 11b.5a (KL11) — the SAME list rows on both (this version has ⛔ no list).
+      kinship: shown.kinship,
+    });
+    expect(shown.kinship).toEqual([]);
   });
 
   it('⭐ R5 / AC6 — a photo the Trust LEFT OUT: ⛔ no URL, ⛔ no alt text, ⛔ no storage call, ⛔ no `memorial.photo.url` line; the words and the one read line stay', async () => {
@@ -503,7 +509,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the helpline take-down (live DB)
       const before = t.auditSink.events.length;
       const view = await op.inject({ method: 'GET', url: `${base(w)}/drives/${w.poolId}` });
       expect(view.statusCode, view.body).toBe(200);
-      const shown = (view.json() as { shown: { submissionId: string; words: string[]; hasPhoto: boolean; photoUrl: string | null; altText: string | null } }).shown;
+      const shown = (view.json() as { shown: { submissionId: string; words: string[]; hasPhoto: boolean; photoUrl: string | null; altText: string | null; kinship: unknown } }).shown;
       expect(shown).toMatchObject({ submissionId: id, words: [BODY], hasPhoto: false, photoUrl: null, altText: null });
       expect(view.body).not.toContain('Ramesh the cheat');
       expect(signed).not.toHaveBeenCalled();

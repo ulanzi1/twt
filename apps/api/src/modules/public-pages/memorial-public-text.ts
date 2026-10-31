@@ -15,7 +15,7 @@
 // direction control on either side, and once joined it would run on into the next piece.
 // ⛔ No `reason`, ⛔ no key, ⛔ no marker, ⛔ no position: the output is plain strings.
 
-import type { MemorialOmission } from '@twt/contracts';
+import { groupMemorialKinship, type MemorialKinshipEntry, type MemorialKinshipRelation, type MemorialOmission } from '@twt/contracts';
 import { isolateMemorialBidi, reconstructMemorial, type MemorialParagraph } from '@twt/ui';
 
 const LINE_BREAK = /[\r\n\u2028\u2029]/u;
@@ -101,4 +101,21 @@ export function publicMemorialText(input: {
       ? null
       : joinKeptSegments(rec.altText.asApproved, memorialCutTexts(altText, omissions.filter((o) => o.field === 'altText'))).join(' ');
   return { words, altText: description };
+}
+
+/**
+ * ⭐ Story 11b.5a (KL10 / KL11) — the family list EXACTLY as the public page shows it: the entries the Trust kept, grouped by the
+ * ONE helper (`groupMemorialKinship` — the fourteen's order, the family's order within a relation, ⛔ `inPhoto`), each NAME
+ * isolated by `isolateMemorialBidi` (an unclosed RLO in one name would otherwise reorder every later name in the same `<dd>`;
+ * `dir="auto"` isolates rows, ⛔ names). The ONE function both consumers call — the page and the helpline's drive view — so the
+ * two cannot drift. ⛔ No index, ⛔ no reason, ⛔ no count of left-out entries leaves it.
+ */
+export function publicMemorialKinship(
+  entries: readonly MemorialKinshipEntry[],
+  leftOutIndexes: readonly number[],
+): { relation: MemorialKinshipRelation; names: string[] }[] {
+  return groupMemorialKinship(entries, leftOutIndexes).map((row) => ({
+    relation: row.relation,
+    names: row.names.map((n) => isolateMemorialBidi(n)),
+  }));
 }

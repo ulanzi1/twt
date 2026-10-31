@@ -11,6 +11,10 @@
 // ⭐ Read inside the page handler's EXISTING public scope transaction (⛔ never a second one); ⛔ no advisory lock is taken, so
 // the decrypt may run inside it (the page's own deceased-name decrypt does).
 // The decrypted words ⛔ never reach a log line.
+// ⭐ Story 11b.5a (KL10 — ONE decrypt rule, the code's "Trap 4"): the family list (`kinship_ciphertext`) follows the words — a
+// sentinel, a bad envelope, unparsable JSON or a schema failure ⇒ the WHOLE memorial is `null` (⛔ never "no list but the memorial
+// stays" — that would be a second rule); a KMS outage rethrows. It parses with THE schema the Send used (so a ticked list is
+// valid), is grouped by the ONE helper (`inPhoto` dropped) and each name is bidi-isolated (`publicMemorialKinship`).
 
 import type { PublicSahyogVivranFamilyMemorial } from '@twt/contracts';
 import { memorial, member as memberDomain, type Db, type ids } from '@twt/domain';
@@ -19,7 +23,8 @@ import type { FastifyBaseLogger } from 'fastify';
 import type { AppDeps, EncryptionDeps } from '../../context.js';
 import { KmsOutageError } from '../kyc/name-render.js';
 import { decryptMemorialField } from '../memorial/memorial-crypto.js';
-import { publicMemorialText } from './memorial-public-text.js';
+import { parseMemorialKinship } from '../memorial/memorial-kinship.js';
+import { publicMemorialKinship, publicMemorialText } from './memorial-public-text.js';
 
 export async function resolvePublicFamilyMemorial(
   deps: Pick<AppDeps, 'config'>,
@@ -39,10 +44,14 @@ export async function resolvePublicFamilyMemorial(
 
   let body: string;
   let altText: string | null = null;
+  let kinshipPlain: string | null = null;
   try {
     body = await decryptMemorialField(shown.bodyCiphertext, input.pariwarIdStr, input.encryption);
     if (shown.photo !== null && shown.altTextCiphertext !== null) {
       altText = await decryptMemorialField(shown.altTextCiphertext, input.pariwarIdStr, input.encryption);
+    }
+    if (shown.kinshipCiphertext !== null) {
+      kinshipPlain = await decryptMemorialField(shown.kinshipCiphertext, input.pariwarIdStr, input.encryption);
     }
   } catch (err) {
     if (err instanceof KmsOutageError) throw err;
@@ -54,8 +63,18 @@ export async function resolvePublicFamilyMemorial(
   }
   // ⭐ Trap 4 — the erased member's memorial goes WHOLE: words and photo (the photo object was deleted best-effort).
   // IMPORTED, ⛔ never a retyped literal.
-  if (body === memberDomain.ANONYMIZED_SENTINEL || altText === memberDomain.ANONYMIZED_SENTINEL) {
+  if (
+    body === memberDomain.ANONYMIZED_SENTINEL ||
+    altText === memberDomain.ANONYMIZED_SENTINEL ||
+    kinshipPlain === memberDomain.ANONYMIZED_SENTINEL
+  ) {
     log.warn('sahyog-vivran: erasure sentinel reached the family memorial — omitting the MEMORIAL, keeping the page');
+    return null;
+  }
+  // KL10 — an unparsable or schema-failing list drops the WHOLE memorial (the same rule as a bad envelope).
+  const entries = kinshipPlain === null ? [] : parseMemorialKinship(kinshipPlain);
+  if (entries === null) {
+    log.error('sahyog-vivran: family list did not parse — omitting the MEMORIAL, keeping the page');
     return null;
   }
 
@@ -63,5 +82,6 @@ export async function resolvePublicFamilyMemorial(
   const words = text.words;
   const photo = shown.photo === null ? null : { altText: text.altText ?? '' };
   if (words.length === 0 && photo === null) return null;
-  return { words, photo };
+  const kinship = publicMemorialKinship(entries, shown.kinshipOmissions.map((k) => k.index));
+  return { words, photo, kinship };
 }

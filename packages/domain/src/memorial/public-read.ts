@@ -19,7 +19,7 @@ import { memorialSubmissions } from '../schema/memorial_submissions.js';
 import { pools } from '../schema/pools.js';
 import { latestApprovedIndex } from './status.js';
 import { readMemorialChain, type MemorialChainLink } from './submission.js';
-import type { MemorialOmission, MemorialPhotoMime } from './vocab.js';
+import type { MemorialKinshipOmission, MemorialOmission, MemorialPhotoMime } from './vocab.js';
 
 /** The version the public page shows — ciphertexts AS STORED, the Trust's omissions, and the photo's key (⛔ never serialised). */
 export interface PublicMemorialVersion {
@@ -27,6 +27,12 @@ export interface PublicMemorialVersion {
   readonly bodyCiphertext: string;
   readonly altTextCiphertext: string | null;
   readonly omissions: readonly MemorialOmission[];
+  /**
+   * Story 11b.5a (KL10) — the family list AS STORED (`null` ⇔ the version has ⛔ no list) and the entries the Trust left out. The
+   * API decrypts, parses and groups it; a sentinel / bad envelope / unparsable / schema-failing list drops the WHOLE memorial.
+   */
+  readonly kinshipCiphertext: string | null;
+  readonly kinshipOmissions: readonly MemorialKinshipOmission[];
   /** The photo the page may show — `null` when ⛔ none was sent or the Trust left it out. */
   readonly photo: { readonly objectKey: string; readonly mime: MemorialPhotoMime } | null;
 }
@@ -61,6 +67,8 @@ export async function readPublicMemorial(
     bodyCiphertext: shown.submission.bodyCiphertext,
     altTextCiphertext: shown.submission.altTextCiphertext,
     omissions: shown.decision?.omissions ?? [],
+    kinshipCiphertext: shown.submission.kinshipCiphertext,
+    kinshipOmissions: shown.decision?.kinshipOmissions ?? [],
     photo: publicPhotoOf(shown),
   };
 }

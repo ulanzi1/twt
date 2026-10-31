@@ -34,6 +34,16 @@
 // ⚠⭐ GO-LIVE GATED (launch-gate Row 41): the id carries `pending-hi-review` until a non-author Hindi review (AC14) accepts
 // the words; the AC14 tone review checks M2 in both locales. The scope fence (`-160` cl.3 / cl.6): ⛔ no question about the
 // member's name or the nominee's data — the permission covers the FAMILY's words and photo only.
+//
+// ⭐ v4's basis (Story 11b.5a, 2026-10-31 — KL7 / KL16, `-431`; copy Q-copy-3 APPROVED by BigDev, ④ RE-APPROVED): v3 word for
+// word except FIVE marked sentences, in both locales — ① names the family list and BOTH places it appears (the public page and
+// the members' app — `-428`'s rider, built by row 11b-5c; `-391` item 2: "told exactly where"); ② a name may be left out, names
+// never changed; ③ THE GUARDIAN DECLARATION (`-426` AQ1 / AQ2 / AQ3 A; `-432` R2 A — its adult half covers names in the words
+// too) REPLACES v3's child sentence; ⑤B a named person may ask for their own name to be removed (`-428` PQ2 B — built by row
+// 11b-5b); ④ the list joins the Trust's grounds and the child ground is narrowed to a child the confirmation does not cover.
+// ⚠ v4 PROMISES rows 11b-5b and 11b-5c (① / ⑤B) and can ⛔ never be edited ⇒ it is ⛔ never live with the switch on unless both
+// rows are `done` (Row 41 (r)); a row dropped or narrowed ⇒ a v5 without that clause before go-live (AC12). The permission now
+// covers the family's words, list and photo — still ⛔ nothing about the member's name or the nominee's data.
 
 /** The two languages the permission is shown in (the domain's own type — `packages/domain` has ⛔ `@twt/contracts`). */
 export type MemorialAuthorisationLocale = 'hi' | 'en';
@@ -43,6 +53,12 @@ export interface MemorialAuthorisationVersion {
   readonly en: string;
   /** The Hindi was reviewed by a person (AC14) — false until a non-author reviewer accepts it. */
   readonly hiReviewed: boolean;
+  /**
+   * Story 11b.5a (KL16, `-426`) — the text carries the guardian declaration (v4 sentence ③): pressing Send under it GIVES the
+   * declaration. v1–v3 `false`; v4 and every later version containing ③ `true`. ⭐ The review screen and the family's outcome
+   * key on THIS flag — ⛔ never on a version-id match.
+   */
+  readonly carriesGuardianDeclaration: boolean;
 }
 
 export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string, MemorialAuthorisationVersion>> = {
@@ -63,6 +79,7 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
       'किसी बच्चे का नाम मिलता है, तो वह उसे छोड़ देगा। अगर आप, नॉमिनी, कभी इसमें बदलाव चाहें या इसे हटवाना चाहें, तो हेल्पलाइन पर ' +
       'फ़ोन कर सकते हैं। अक्सर एक छोटा-सा बदलाव काफ़ी होता है।',
     hiReviewed: false,
+    carriesGuardianDeclaration: false,
   },
   // v2 — SUPERSEDED by v3 (the Hindi review, 2026-10-25); kept word for word because a submission row cites its version.
   // v2 — v1 plus TWO sentences: only the nominee can ask for a take-down (R1, `-395` item 3), before the gentle close; and,
@@ -92,6 +109,7 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
       'फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ गलत किया, कुछ ऐसा हो जो ' +
       'कानून के विरुद्ध हो सकता है, या किसी बच्चे का नाम हो या कोई बच्चा दिखता हो।',
     hiReviewed: false,
+    carriesGuardianDeclaration: false,
   },
   // v3 — the Hindi review (BigDev, 2026-10-25: "hindi reviewed. It's fine.") accepted v2's words in both locales and changed
   // ONE sentence: v2's "The Trust will read them first." / "ट्रस्ट पहले इन्हें पढ़ेगा।" → that the Trust reads them before
@@ -123,11 +141,53 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
       'है, पर केवल तब, जब शब्दों या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ ' +
       'गलत किया, कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है, या किसी बच्चे का नाम हो या कोई बच्चा दिखता हो।',
     hiReviewed: false,
+    carriesGuardianDeclaration: false,
+  },
+  // v4 — Story 11b.5a (see "v4's basis" above): v3 with exactly the five marked sentences of Q-copy-3 changed (① the list and
+  // both places; ② a name may be left out; ③ the declaration, in place of v3's child sentence; ⑤B a named person's own name;
+  // ④ the list among the grounds, the child ground narrowed). ① Hindi is BigDev's own wording (kept verbatim) — so its Hindi
+  // review needs a reviewer who is ⛔ not BigDev (Row 41 (a) / (s)). `hiReviewed: false`.
+  '2026-10-31.v4-pending-hi-review': {
+    en:
+      'When you press Send, you, as the nominee, give the Trust permission to show these words, the family list if you added ' +
+      "one, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read, and to " +
+      'members in the app. The Trust will read them before anyone else does. It may leave out a sentence, a name from the list, ' +
+      'or the photo, and will tell you why, but it will never change your words or the names you wrote. By pressing Send you ' +
+      'also confirm: for every child you have named or who is in the photo, you are their parent or lawful guardian, or you ' +
+      "have their parent's or guardian's agreement; and every adult you have named has agreed to be named. If you, the " +
+      'nominee, ever want it changed or taken down, you can call the helpline. Only the nominee can ask for it to be taken ' +
+      "down; the helpline will not remove it at anyone else's request — except that a person named in the family list may ask " +
+      'for their own name to be removed. Often a small change is enough. The Trust itself may still withdraw its approval, but ' +
+      'only if something in the words, the list or the photo speaks against a person by name, says that someone did something ' +
+      'wrong, may be against the law, or names or shows a child this confirmation does not cover.',
+    hi:
+      "जब आप 'भेजें' (Send) पर क्लिक करते हैं, तो नॉमिनी के तौर पर आप ट्रस्ट को यह अनुमति देते हैं कि वह इन शब्दों, परिवार की " +
+      "सूची (यदि आपने जोड़ी है), और फोटो (यदि आपने जोड़ी है) को इस सदस्य के 'सहयोग विवरण' (Sahyog Vivran) पेज पर दिखाए। इस " +
+      'पेज को कोई भी व्यक्ति, जिसके पास इसका लिंक हो, देख सकता है; साथ ही, ऐप में मौजूद अन्य सदस्य भी इसे देख सकते हैं। किसी ' +
+      'और के देखने से पहले ट्रस्ट इनका अवलोकन करेगा। वह कोई वाक्य, सूची का कोई नाम या फ़ोटो छोड़ सकता है, और आपको इसका कारण ' +
+      'बताएगा, पर आपके शब्द या आपके लिखे नाम कभी नहीं बदलेगा। भेजें दबाकर आप यह भी पुष्टि करते हैं: आपने जिस भी बच्चे का नाम ' +
+      'लिखा है या जो फ़ोटो में है, उसके आप माता-पिता या कानूनी अभिभावक हैं, या आपने उसके माता-पिता या अभिभावक की सहमति ली है; ' +
+      'और आपने जिस भी वयस्क का नाम लिखा है, उसने नाम लिखे जाने पर सहमति दी है। अगर आप, नॉमिनी, कभी इसमें बदलाव चाहें या इसे ' +
+      'हटवाना चाहें, तो हेल्पलाइन पर फ़ोन कर सकते हैं। इसे हटवाने का अनुरोध केवल नॉमिनी ही कर सकते हैं; किसी और के कहने पर ' +
+      'हेल्पलाइन इसे नहीं हटाएगी — सिवाय इसके कि परिवार की सूची में जिसका नाम है, वह अपना नाम हटवाने का अनुरोध कर सकता है। ' +
+      'अक्सर एक छोटा-सा बदलाव काफ़ी होता है। ट्रस्ट स्वयं फिर भी अपनी स्वीकृति वापस ले सकता है, पर केवल तब, जब शब्दों, सूची ' +
+      'या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ गलत किया, कुछ ऐसा हो जो ' +
+      'कानून के विरुद्ध हो सकता है, या किसी ऐसे बच्चे का नाम हो या वह दिखता हो जिसके लिए यह पुष्टि लागू नहीं होती।',
+    hiReviewed: false,
+    carriesGuardianDeclaration: true,
   },
 };
 
-/** The version every NEW submission must have been shown (and echo). v1 and v2 are superseded — see their entries above. */
-export const MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION = '2026-10-25.v3-pending-hi-review';
+/** The version every NEW submission must have been shown (and echo). v1–v3 are superseded — see their entries above. */
+export const MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION = '2026-10-31.v4-pending-hi-review';
+
+/**
+ * KL16 — whether the version a recorded id names carries the guardian declaration (`false` for an id this registry does not
+ * know — the review-detail and member-view builders' rule).
+ */
+export function memorialVersionCarriesGuardianDeclaration(copyVersion: unknown): boolean {
+  return memorialAuthorisationVersion(copyVersion)?.carriesGuardianDeclaration ?? false;
+}
 
 /** The version a recorded id names — `undefined` for an id this registry does not know. */
 export function memorialAuthorisationVersion(copyVersion: unknown): MemorialAuthorisationVersion | undefined {

@@ -31,6 +31,9 @@ function shown(over: { omissions?: readonly MemorialOmission[]; photo?: boolean 
     bodyCiphertext: BODY,
     altTextCiphertext: over.photo === true ? ALT : null,
     omissions: over.omissions ?? [],
+    // Story 11b.5a — ⛔ family list on these versions.
+    kinshipCiphertext: null,
+    kinshipOmissions: [],
     photo: over.photo === true ? { objectKey: 'k', mime: 'image/jpeg' } : null,
   };
 }
@@ -60,11 +63,11 @@ describe('resolvePublicFamilyMemorial — nothing left to show is `null`, ⛔ no
 
   it('non-vacuity — the SAME cut body WITH a photo is a memorial (words: [], the photo and its description)', async () => {
     readPublicMemorial.mockResolvedValue(shown({ omissions: [cut('body', BODY)], photo: true }));
-    expect(await run()).toEqual({ words: [], photo: { altText: ALT } });
+    expect(await run()).toEqual({ words: [], photo: { altText: ALT }, kinship: [] });
   });
 
   it('non-vacuity — kept words WITHOUT a photo are a memorial (words, photo: null)', async () => {
     readPublicMemorial.mockResolvedValue(shown({ omissions: [cut('body', 'He was kind to everyone.')] }));
-    expect(await run()).toEqual({ words: ['We miss him every day.'], photo: null });
+    expect(await run()).toEqual({ words: ['We miss him every day.'], photo: null, kinship: [] });
   });
 });

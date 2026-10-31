@@ -18,6 +18,7 @@ import {
   deriveMemorialStatus,
   latestApprovedIndex,
   memorialAuthorisationVersion,
+  memorialVersionCarriesGuardianDeclaration,
   memorialCanSend,
   memorialCanWithdraw,
   memorialReviewTargetIndex,
@@ -31,6 +32,7 @@ import {
 const PERMISSION_V1 = '2026-10-23.v1-pending-hi-review';
 const PERMISSION_V2 = '2026-10-24.v2-pending-hi-review';
 const PERMISSION_V3 = '2026-10-25.v3-pending-hi-review';
+const PERMISSION_V4 = '2026-10-31.v4-pending-hi-review';
 
 let seq = 0;
 function link(
@@ -170,14 +172,14 @@ describe('decideMemorialSend (AC7 order under the lock)', () => {
     });
   });
 
-  it('refuses the SUPERSEDED v1 and v2 ids — a phone that still shows either must read v3 first (R1, the 2026-10-25 Hindi review)', () => {
-    for (const old of [PERMISSION_V1, PERMISSION_V2]) {
+  it('refuses the SUPERSEDED v1, v2 and v3 ids — a phone that still shows one must read v4 first (R1; Story 11b.5a KL7)', () => {
+    for (const old of [PERMISSION_V1, PERMISSION_V2, PERMISSION_V3]) {
       expect(decideMemorialSend([], { ...current, authorisationCopyVersion: old }), old).toEqual({
         ok: false,
         refusal: 'authorisation_outdated',
       });
     }
-    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V3 }).ok).toBe(true);
+    expect(decideMemorialSend([], { ...current, authorisationCopyVersion: PERMISSION_V4 }).ok).toBe(true);
     // The id v1 carried is still a KNOWN id (a row sent under it names it) — only the current one is accepted.
     expect(memorialAuthorisationVersion(PERMISSION_V1)).toBeDefined();
     expect(PERMISSION_V1).not.toBe(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION);
@@ -258,9 +260,10 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     }
   });
 
-  it('the current id is v3: it carries the go-live marker and is unreviewed; v1 and v2 are superseded but still resolve', () => {
-    expect(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION).toBe(PERMISSION_V3);
-    expect(Object.keys(MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS)).toEqual([PERMISSION_V1, PERMISSION_V2, PERMISSION_V3]);
+  it('the current id is v4 (Story 11b.5a): it carries the go-live marker and is unreviewed; v1–v3 are superseded but still resolve', () => {
+    expect(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION).toBe(PERMISSION_V4);
+    expect(Object.keys(MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS)).toEqual([PERMISSION_V1, PERMISSION_V2, PERMISSION_V3, PERMISSION_V4]);
+    expect(memorialAuthorisationVersion(PERMISSION_V4)?.hiReviewed).toBe(false);
     // v3's changed sentence is BigDev's own wording — its Hindi needs a reviewer who is not its author (AC14).
     expect(memorialAuthorisationVersion(PERMISSION_V3)?.hiReviewed).toBe(false);
     expect(memorialAuthorisationVersion(PERMISSION_V2)?.hiReviewed).toBe(false);
@@ -270,8 +273,8 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     expect(memorialAuthorisationVersion(42)).toBeUndefined();
     expect(currentMemorialAuthorisation().copyVersion).toBe(MEMORIAL_SUBMISSION_AUTHORISATION_COPY_VERSION);
     expect(currentMemorialAuthorisation().text).toEqual({
-      hi: memorialAuthorisationVersion(PERMISSION_V3)!.hi,
-      en: memorialAuthorisationVersion(PERMISSION_V3)!.en,
+      hi: memorialAuthorisationVersion(PERMISSION_V4)!.hi,
+      en: memorialAuthorisationVersion(PERMISSION_V4)!.en,
     });
   });
 
@@ -312,6 +315,108 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
       expect(v3.hi).not.toMatch(/ ।/);
       expect(v3.hi).toContain('इस सदस्य के सहयोग विवरण पेज');
       expect(v3.en).toContain("this member's Sahyog Vivran page");
+    });
+  });
+
+  // Story 11b.5a (KL7 / KL16) — v4 is v3 with EXACTLY the five marked sentences of Q-copy-3 changed (approved by BigDev
+  // 2026-10-31; ④ re-approved). Each pair is [the v3 sentence, its v4 replacement]; anything else that differs fails.
+  describe('v4 is v3 with exactly the marked changes: ① the list + both places, ② a name, ③ the declaration, ⑤B, ④', () => {
+    const v3 = memorialAuthorisationVersion(PERMISSION_V3)!;
+    const v4 = memorialAuthorisationVersion(PERMISSION_V4)!;
+    const EN: readonly (readonly [string, string])[] = [
+      [
+        "When you press Send, you, as the nominee, give the Trust permission to show these words, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read.",
+        "When you press Send, you, as the nominee, give the Trust permission to show these words, the family list if you added one, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read, and to members in the app.",
+      ],
+      [
+        'It may leave out a sentence or the photo, and will tell you why, but it will never change your words.',
+        'It may leave out a sentence, a name from the list, or the photo, and will tell you why, but it will never change your words or the names you wrote.',
+      ],
+      [
+        "Please do not name any children; if the Trust finds a child's name, it will leave it out.",
+        "By pressing Send you also confirm: for every child you have named or who is in the photo, you are their parent or lawful guardian, or you have their parent's or guardian's agreement; and every adult you have named has agreed to be named.",
+      ],
+      [
+        "the helpline will not remove it at anyone else's request.",
+        "the helpline will not remove it at anyone else's request — except that a person named in the family list may ask for their own name to be removed.",
+      ],
+      [
+        'only if something in the words or the photo speaks against a person by name, says that someone did something wrong, may be against the law, or names or shows a child.',
+        'only if something in the words, the list or the photo speaks against a person by name, says that someone did something wrong, may be against the law, or names or shows a child this confirmation does not cover.',
+      ],
+    ];
+    const HI: readonly (readonly [string, string])[] = [
+      [
+        'भेजें दबाने पर आप, नॉमिनी के रूप में, ट्रस्ट को यह अनुमति देते हैं कि ये शब्द, और अगर आपने फ़ोटो जोड़ी है तो वह भी, इस सदस्य के सहयोग विवरण पेज पर दिखाए जाएँ, जिसे उसका लिंक रखने वाला कोई भी पढ़ सकता है।',
+        "जब आप 'भेजें' (Send) पर क्लिक करते हैं, तो नॉमिनी के तौर पर आप ट्रस्ट को यह अनुमति देते हैं कि वह इन शब्दों, परिवार की सूची (यदि आपने जोड़ी है), और फोटो (यदि आपने जोड़ी है) को इस सदस्य के 'सहयोग विवरण' (Sahyog Vivran) पेज पर दिखाए। इस पेज को कोई भी व्यक्ति, जिसके पास इसका लिंक हो, देख सकता है; साथ ही, ऐप में मौजूद अन्य सदस्य भी इसे देख सकते हैं।",
+      ],
+      [
+        'वह कोई वाक्य या फ़ोटो छोड़ सकता है, और आपको इसका कारण बताएगा, पर आपके शब्द कभी नहीं बदलेगा।',
+        'वह कोई वाक्य, सूची का कोई नाम या फ़ोटो छोड़ सकता है, और आपको इसका कारण बताएगा, पर आपके शब्द या आपके लिखे नाम कभी नहीं बदलेगा।',
+      ],
+      [
+        'कृपया किसी बच्चे का नाम न लिखें; अगर ट्रस्ट को किसी बच्चे का नाम मिलता है, तो वह उसे छोड़ देगा।',
+        'भेजें दबाकर आप यह भी पुष्टि करते हैं: आपने जिस भी बच्चे का नाम लिखा है या जो फ़ोटो में है, उसके आप माता-पिता या कानूनी अभिभावक हैं, या आपने उसके माता-पिता या अभिभावक की सहमति ली है; और आपने जिस भी वयस्क का नाम लिखा है, उसने नाम लिखे जाने पर सहमति दी है।',
+      ],
+      [
+        'किसी और के कहने पर हेल्पलाइन इसे नहीं हटाएगी।',
+        'किसी और के कहने पर हेल्पलाइन इसे नहीं हटाएगी — सिवाय इसके कि परिवार की सूची में जिसका नाम है, वह अपना नाम हटवाने का अनुरोध कर सकता है।',
+      ],
+      [
+        'जब शब्दों या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ गलत किया, कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है, या किसी बच्चे का नाम हो या कोई बच्चा दिखता हो।',
+        'जब शब्दों, सूची या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ गलत किया, कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है, या किसी ऐसे बच्चे का नाम हो या वह दिखता हो जिसके लिए यह पुष्टि लागू नहीं होती।',
+      ],
+    ];
+    const apply = (text: string, pairs: readonly (readonly [string, string])[]): string =>
+      pairs.reduce((t, [from, to]) => {
+        expect(t.split(from).length - 1, from).toBe(1);
+        return t.replace(from, to);
+      }, text);
+
+    it('en and hi: exactly those five sentences replaced, nothing else', () => {
+      expect(v4.en).toBe(apply(v3.en, EN));
+      expect(v4.hi).toBe(apply(v3.hi, HI));
+    });
+
+    it('carries the guardian declaration (KL16) — v1–v3 do not; the flag, ⛔ the id, says so', () => {
+      expect(v4.carriesGuardianDeclaration).toBe(true);
+      for (const id of [PERMISSION_V1, PERMISSION_V2, PERMISSION_V3]) {
+        expect(memorialAuthorisationVersion(id)!.carriesGuardianDeclaration, id).toBe(false);
+        expect(memorialVersionCarriesGuardianDeclaration(id), id).toBe(false);
+      }
+      expect(memorialVersionCarriesGuardianDeclaration(PERMISSION_V4)).toBe(true);
+      expect(memorialVersionCarriesGuardianDeclaration('2099-01-01.v9')).toBe(false); // an unknown id ⇒ false
+      expect(memorialVersionCarriesGuardianDeclaration(undefined)).toBe(false);
+    });
+
+    it('names BOTH places (`-428` rider) and keeps M2 addressed to the nominee; ⛔ no "cannot"', () => {
+      expect(v4.en).toMatch(/Sahyog Vivran page/);
+      expect(v4.en).toMatch(/and to members in the app\./);
+      expect(v4.en).toMatch(/you, the nominee, ever want it changed or taken down, you can call the helpline/);
+      expect(v4.hi).toMatch(/आप, नॉमिनी, कभी इसमें बदलाव चाहें या इसे हटवाना चाहें, तो हेल्पलाइन/);
+      expect(v4.en).not.toMatch(/\bcannot\b/i);
+      expect(v4.hi).not.toMatch(/अभी\s*कर/);
+    });
+
+    // ④ — one phrase per `MEMORIAL_REVIEW_REASONS` code; the child ground narrowed to a child the confirmation does not cover.
+    const GROUND_EN_V4: Readonly<Record<MemorialReviewReason, string>> = {
+      attacks_someone_named: 'speaks against a person by name',
+      accuses_someone_of_wrongdoing: 'says that someone did something wrong',
+      against_the_law: 'may be against the law',
+      identifies_a_child: 'names or shows a child this confirmation does not cover',
+    };
+    const GROUND_HI_V4: Readonly<Record<MemorialReviewReason, string>> = {
+      attacks_someone_named: 'किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो',
+      accuses_someone_of_wrongdoing: 'यह कहा गया हो कि किसी ने कुछ गलत किया',
+      against_the_law: 'कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है',
+      identifies_a_child: 'किसी ऐसे बच्चे का नाम हो या वह दिखता हो जिसके लिए यह पुष्टि लागू नहीं होती',
+    };
+    it.each([
+      ['en', GROUND_EN_V4, () => v4.en],
+      ['hi', GROUND_HI_V4, () => v4.hi],
+    ] as const)('%s: ④ names ONE phrase per reason — the map\'s keys ARE the reasons', (_locale, grounds, text) => {
+      expect(Object.keys(grounds).sort()).toEqual([...MEMORIAL_REVIEW_REASONS].sort());
+      for (const code of MEMORIAL_REVIEW_REASONS) expect(text().split(grounds[code]).length - 1, code).toBe(1);
     });
   });
 

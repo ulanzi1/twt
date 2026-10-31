@@ -17,6 +17,7 @@ import { createHash } from 'node:crypto';
 
 import {
   MEMORIAL_PHOTO_URL_TTL_SECONDS,
+  type MemorialKinshipRelation,
   type MemorialTakedownDriveResponse,
   type MemorialTakedownMemberDrivesResponse,
   type MemorialTakedownOpenRequestsResponse,
@@ -40,9 +41,10 @@ import {
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { decryptMemorialField } from '../memorial/memorial-crypto.js';
+import { parseMemorialKinship } from '../memorial/memorial-kinship.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { decryptNomineeField } from '../nominee/nominee-crypto.js';
-import { publicMemorialText } from '../public-pages/memorial-public-text.js';
+import { publicMemorialKinship, publicMemorialText } from '../public-pages/memorial-public-text.js';
 
 export const MEMORIAL_TAKEDOWN_REQUEST_RECORD_ACTION = 'memorial.takedown.request_record';
 export const MEMORIAL_TAKEDOWN_DECIDE_ACTION = 'memorial.takedown.decide';
@@ -190,8 +192,17 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
         const body = await dec(s.bodyCiphertext, 'memorial');
         const photoKept = s.photoObjectKey !== null && read.shown.decision?.photoLeftOutReason == null;
         const alt = photoKept ? await dec(s.altTextCiphertext, 'memorial') : null;
-        // ⭐ Trap 4 — the sentinel is an erasure the member-state check missed (a race): ⛔ never shown as words.
-        if (body === memberDomain.ANONYMIZED_SENTINEL || alt === memberDomain.ANONYMIZED_SENTINEL) throw takedownNotFound();
+        // Story 11b.5a (KL11) — the family list (decrypt failure ⇒ `null`, as the words).
+        const kinPlain = await dec(s.kinshipCiphertext, 'memorial');
+        // ⭐ Trap 4 — the sentinel is an erasure the member-state check missed (a race): ⛔ never shown as words. KL10 — a sentinel
+        // list joins the same OR (the whole memorial goes, never "the memorial without its list").
+        if (
+          body === memberDomain.ANONYMIZED_SENTINEL ||
+          alt === memberDomain.ANONYMIZED_SENTINEL ||
+          kinPlain === memberDomain.ANONYMIZED_SENTINEL
+        ) {
+          throw takedownNotFound();
+        }
         const omissions = read.shown.decision?.omissions ?? [];
         let words: string[] | null = null;
         let altText: string | null = null;
@@ -215,7 +226,17 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
             request.log.warn({ errorName: err instanceof Error ? err.name : typeof err }, 'memorial-takedown: photo url failed');
           }
         }
-        shown = { submissionId: s.submissionId, sentAt: s.createdAt.toISOString(), words, hasPhoto: photoKept, photoUrl, altText };
+        // The SAME rows the public page gets (`publicMemorialKinship` — grouped, left-out entries absent, each name isolated;
+        // ⛔ never an `inPhoto` tick). `[]` for ⛔ no list; `null` when the list could not be read.
+        let kinship: { relation: MemorialKinshipRelation; names: string[] }[] | null = [];
+        if (s.kinshipCiphertext !== null) {
+          const entries = kinPlain === null ? null : parseMemorialKinship(kinPlain);
+          kinship =
+            entries === null
+              ? null
+              : publicMemorialKinship(entries, (read.shown.decision?.kinshipOmissions ?? []).map((k) => k.index));
+        }
+        shown = { submissionId: s.submissionId, sentAt: s.createdAt.toISOString(), words, hasPhoto: photoKept, photoUrl, altText, kinship };
       }
 
       const nomineeToCallBack =

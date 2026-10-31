@@ -45,6 +45,7 @@ import {
   isMemorialTextBlank,
   memorialCodePointLength,
   type MemorialEntryResponse,
+  type MemorialKinshipEntry,
   type MemorialMemberView,
   type MemorialMemberViewResponse,
   type MemorialWithdrawResponse,
@@ -71,6 +72,7 @@ import { resolvePoolNamePresentationModeForRequest } from '../member-pool/pool-i
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 import { decryptNomineeField } from '../nominee/nominee-crypto.js';
 import { decryptMemorialField, encryptMemorialField } from './memorial-crypto.js';
+import { memorialKinshipPlaintext, parseMemorialKinship } from './memorial-kinship.js';
 import { stripMemorialPhotoMetadata } from './photo-metadata.js';
 
 /** The write actions (the hash-chain sink, through `withCompensatingAudit` — MA11). */
@@ -384,6 +386,7 @@ export function createMemorialHandlers(deps: AppDeps) {
       const latest = chain.length === 0 ? null : chain[chain.length - 1]!;
       let body: string | null = null;
       let altText: string | null = null;
+      let kinship: MemorialKinshipEntry[] | null = null;
       let unavailable: 'memorial.unavailable_now' | null = null;
       if (latest !== null) {
         try {
@@ -393,11 +396,20 @@ export function createMemorialHandlers(deps: AppDeps) {
             altText = await decryptMemorialField(latest.submission.altTextCiphertext, ctx.pariwarIdStr, deps.encryption);
             fieldsDecrypted += 1;
           }
+          // Story 11b.5a (KL9) — the family list as SENT. A decrypt or parse failure is the words' failure: `unavailable`, and
+          // `canSend` false — else a re-send with ⛔ no list would silently take the list off the page at the next approval.
+          if (latest.submission.kinshipCiphertext !== null) {
+            const plain = await decryptMemorialField(latest.submission.kinshipCiphertext, ctx.pariwarIdStr, deps.encryption);
+            fieldsDecrypted += 1;
+            kinship = parseMemorialKinship(plain);
+            if (kinship === null) throw new Error('memorial: the family list did not parse');
+          }
         } catch (err) {
           // AC1 — a FAIL-SOFT 200 (responses are PARSED — ⛔ a 500); the app can neither send nor withdraw until it reads.
           request.log.warn({ errorName: err instanceof Error ? err.name : typeof err }, 'memorial: words decrypt failed — unavailable now');
           body = null;
           altText = null;
+          kinship = null;
           unavailable = memorial.MEMORIAL_UNAVAILABLE_NOW;
         }
       }
@@ -428,6 +440,10 @@ export function createMemorialHandlers(deps: AppDeps) {
         photoUrl,
         omissions: decision?.omissions.map((o) => ({ field: o.field, start: o.start, end: o.end, reason: o.reason })) ?? [],
         photoLeftOut: decision?.photoLeftOutReason ? { reason: decision.photoLeftOutReason } : null,
+        kinship,
+        kinshipLeftOut: decision?.kinshipOmissions.map((k) => ({ index: k.index, reason: k.reason })) ?? [],
+        // KL16 — the registry's flag for the latest version (⛔ a version-id match); an unknown id ⇒ false.
+        guardianDeclaration: latest !== null && memorial.memorialVersionCarriesGuardianDeclaration(latest.submission.authorisationCopyVersion),
         // Under `taken_down` (11b.4a MP9) ⛔ no Trust reason rides beside it — the head may carry an older `trust` withdrawal.
         reasonCode: takenDown ? null : withdrawal?.withdrawnBy === 'trust' ? withdrawal.reasonCode : (decision?.reasonCode ?? null),
         earlierApprovalWithdrawn: takenDown ? null : memorial.deriveEarlierApprovalWithdrawn(chain),
@@ -524,6 +540,18 @@ export function createMemorialHandlers(deps: AppDeps) {
       if (locale !== 'hi' && locale !== 'en') {
         throw new BadRequestError('A field is not allowed here', 'memorial.field_not_allowed');
       }
+      // Story 11b.5a (KL8 / KL15) — the family list: present ONLY when non-empty. Malformed JSON, an unknown relation, > 20 entries,
+      // a blank or > 200-code-point name, an extra key, `inPhoto` other than `true`, an empty array (the app never sends `[]` — ⛔
+      // never coerced to "no list"), or a tick when the Send carries ⛔ no photo ⇒ ONE code, before anything is stored.
+      const kinshipRaw = fields['kinship'];
+      let kinshipPlain: string | null = null;
+      if (kinshipRaw !== undefined) {
+        const entries = parseMemorialKinship(kinshipRaw);
+        if (entries === null || (!withPhoto && entries.some((e) => e.inPhoto === true))) {
+          throw new BadRequestError('We could not read the family list', 'memorial.kinship_invalid');
+        }
+        kinshipPlain = memorialKinshipPlaintext(entries);
+      }
       let stripped: { bytes: Uint8Array; mime: 'image/jpeg' | 'image/png' } | null = null;
       if (photo !== null) {
         if (photo.truncated || photo.bytes.byteLength > MEMORIAL_PHOTO_MAX_BYTES) {
@@ -569,6 +597,8 @@ export function createMemorialHandlers(deps: AppDeps) {
         // (7) Encrypt — ⛔ never inside the lock.
         const bodyCiphertext = await encryptMemorialField(body, ctx.pariwarIdStr, deps.encryption);
         const altTextCiphertext = altText === null ? null : await encryptMemorialField(altText, ctx.pariwarIdStr, deps.encryption);
+        const kinshipCiphertext =
+          kinshipPlain === null ? null : await encryptMemorialField(kinshipPlain, ctx.pariwarIdStr, deps.encryption);
 
         // (8) The locked section. The scope tx is opened and the pool lock taken BEFORE the audit intent, so the key's
         //     second lookup — a same-key Send that committed while this one queued on the lock — answers the replay with ⛔ no
@@ -602,6 +632,9 @@ export function createMemorialHandlers(deps: AppDeps) {
                   // ⛔ No digest of the words (or the description): the audit chain is append-only and erasure never
                   // reaches it, and a hash of short or formulaic text is guessable (the personal-event handlers' rule).
                   has_photo: withPhoto,
+                  // Story 11b.5a (KL8) — whether a family list rode with it; ⛔ never a digest of the list (names are short and
+                  // guessable — the same rule as the words).
+                  has_kinship: kinshipPlain !== null,
                   keep_previous_photo: keepPreviousPhoto,
                   authorisation_copy_version: copyVersion,
                   authorisation_locale: locale,
@@ -635,6 +668,7 @@ export function createMemorialHandlers(deps: AppDeps) {
                   supersedesSubmissionId: decision.supersedesSubmissionId,
                   bodyCiphertext,
                   altTextCiphertext,
+                  kinshipCiphertext,
                   photoObjectKey: photoKey,
                   photoMime,
                   authorisationCopyVersion: copyVersion,

@@ -66,7 +66,7 @@ describe('MemorialKinshipListSchema — the ONE schema for Send and every read (
   it('accepts a list, a tick, and a name kept exactly as typed', () => {
     expect(ok([{ relation: 'wife', name: 'सुनीता देवी' }])).toBe(true);
     expect(ok([{ relation: 'son', name: 'अमित', inPhoto: true }])).toBe(true);
-    const typed = '  अमि́त ‮X  ';
+    const typed = '  अमि\u0301त \u202eX  ';
     const parsed = MemorialKinshipListSchema.parse([{ relation: 'son', name: typed }]);
     expect(parsed[0]?.name).toBe(typed); // ⛔ trimmed, ⛔ normalised
   });
@@ -87,7 +87,7 @@ describe('MemorialKinshipListSchema — the ONE schema for Send and every read (
     ['too many entries', Array.from({ length: MEMORIAL_KINSHIP_MAX_ENTRIES + 1 }, () => ({ relation: 'son', name: 'x' }))],
     ['an unknown relation', [{ relation: 'uncle', name: 'x' }]],
     ['`other`', [{ relation: 'other', name: 'x' }]],
-    ['a blank name', [{ relation: 'son', name: '  ​ ' }]],
+    ['a blank name', [{ relation: 'son', name: '  \u200b ' }]],
     ['an empty name', [{ relation: 'son', name: '' }]],
     ['a name over the cap', [{ relation: 'son', name: 'न'.repeat(MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS + 1) }]],
     ['an extra key', [{ relation: 'son', name: 'x', age: 7 }]],
@@ -200,7 +200,7 @@ describe('groupMemorialKinship — THE grouping helper (KL10)', () => {
     { relation: 'son' as const, name: 'अमित' },
   ];
 
-  it('groups in the fourteen’s order, names in the family’s order, duplicates kept', () => {
+  it('groups in the fourteen\u2019s order, names in the family\u2019s order, duplicates kept', () => {
     expect(groupMemorialKinship(list)).toEqual([
       { relation: 'wife', names: ['सुनीता देवी'] },
       { relation: 'son', names: ['अमित', 'राहुल', 'अमित'] },

@@ -159,7 +159,7 @@ describe.skipIf(!hasDatabase)('memorial — the Trust\'s review (live DB)', () =
       const r = await post(panel, `${base(w)}/${id}/decision`, payload);
       expect(r.statusCode, problem).toBe(400);
       expect(r.json(), problem).toMatchObject({ error: { code: 'memorial_review.invalid_omissions', details: { problem } } });
-      expect(validateMemorialDecision(payload as unknown as Parameters<typeof validateMemorialDecision>[0], { body, altText: null, hasPhoto: false }), problem).toEqual({
+      expect(validateMemorialDecision(payload as unknown as Parameters<typeof validateMemorialDecision>[0], { body, altText: null, hasPhoto: false, kinshipLength: null }), problem).toEqual({
         ok: false,
         problem,
       });

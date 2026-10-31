@@ -34,6 +34,7 @@ import { emitAuthAudit } from '../auth/shared/audit.js';
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { normalisePublicName } from '../kyc/name-render.js';
 import { decryptMemorialField, encryptMemorialField } from '../memorial/memorial-crypto.js';
+import { parseMemorialKinship } from '../memorial/memorial-kinship.js';
 import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
 
 export const MEMORIAL_REVIEW_DECIDE_ACTION = 'memorial.review.decide';
@@ -205,6 +206,10 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
         const s = link.submission;
         const body = await dec(s.bodyCiphertext);
         const alt = await dec(s.altTextCiphertext);
+        // Story 11b.5a (KL6 / KL12) — the family list VERBATIM, ticks included; a decrypt OR parse failure is `unavailable`.
+        const kin = await dec(s.kinshipCiphertext);
+        const kinship = kin.value === null ? null : parseMemorialKinship(kin.value);
+        const kinshipFailed = kin.failed || (kin.value !== null && kinship === null);
         const decisionNote = await dec(link.decision?.internalNoteCiphertext ?? null);
         const withdrawalNote = await dec(link.withdrawal?.internalNoteCiphertext ?? null);
         versions.push({
@@ -212,9 +217,12 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
           sentAt: s.createdAt.toISOString(),
           body: body.value,
           altText: alt.value,
-          unavailable: body.failed || alt.failed ? memorial.MEMORIAL_UNAVAILABLE_NOW : null,
+          kinship,
+          unavailable: body.failed || alt.failed || kinshipFailed ? memorial.MEMORIAL_UNAVAILABLE_NOW : null,
           hasPhoto: s.photoObjectKey !== null,
           photoUrl: s.photoObjectKey === null ? null : await signedUrl(request, who, s.submissionId, s.photoObjectKey),
+          // KL16 — the registry's flag (an unknown id ⇒ false); the admin reads THIS, ⛔ never the version id.
+          guardianDeclaration: memorial.memorialVersionCarriesGuardianDeclaration(s.authorisationCopyVersion),
           authorisationCopyVersion: s.authorisationCopyVersion,
           authorisationLocale: s.authorisationLocale,
           handoverRecipient: s.handoverRecipient,
@@ -225,6 +233,7 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
                   action: link.decision.action,
                   omissions: link.decision.omissions.map((o) => ({ field: o.field, start: o.start, end: o.end, reason: o.reason })),
                   photoLeftOutReason: link.decision.photoLeftOutReason,
+                  kinshipLeftOut: link.decision.kinshipOmissions.map((k) => ({ index: k.index, reason: k.reason })),
                   reasonCode: link.decision.reasonCode,
                   internalNote: decisionNote.value,
                   actorDisplay: link.decision.actorDisplay,
@@ -281,7 +290,15 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
       const body = await decryptMemorialField(target.bodyCiphertext, who.pariwarIdStr, deps.encryption);
       const altText =
         target.altTextCiphertext === null ? null : await decryptMemorialField(target.altTextCiphertext, who.pariwarIdStr, deps.encryption);
-      const verdict = validateMemorialDecision(input, { body, altText, hasPhoto: target.photoObjectKey !== null });
+      // Story 11b.5a (KL6) — kinship omissions are validated against the DECRYPTED list's length (a list that does not parse
+      // cannot be decided — the same failure class as a body that does not decrypt).
+      let kinshipLength: number | null = null;
+      if (target.kinshipCiphertext !== null) {
+        const kinship = parseMemorialKinship(await decryptMemorialField(target.kinshipCiphertext, who.pariwarIdStr, deps.encryption));
+        if (kinship === null) throw new Error('memorial-review: the family list did not parse');
+        kinshipLength = kinship.length;
+      }
+      const verdict = validateMemorialDecision(input, { body, altText, hasPhoto: target.photoObjectKey !== null, kinshipLength });
       if (!verdict.ok) {
         throw new BadRequestError('The parts left out are not valid', 'memorial_review.invalid_omissions', { problem: verdict.problem });
       }
@@ -291,6 +308,7 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
       const noteCiphertext =
         input.internalNote === undefined ? null : await encryptMemorialField(input.internalNote, who.pariwarIdStr, deps.encryption);
       const omissions = input.omissions ?? [];
+      const kinshipLeftOut = (input.kinshipLeftOut ?? []).map((k) => ({ index: k.index, reason: k.reason }));
 
       await audit.withCompensatingAudit(deps.servicePool, {
         auditIntent: {
@@ -305,6 +323,8 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
               action: input.action,
               omissions,
               photo_left_out_reason: input.photoLeftOut?.reason ?? null,
+              // Story 11b.5a (KL6) — indexes + reasons only (⛔ PII — ⛔ never a name).
+              kinship_left_out: kinshipLeftOut,
               reason_code: input.reasonCode ?? null,
               has_internal_note: noteCiphertext !== null,
             }),
@@ -324,6 +344,7 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
               action: input.action,
               omissions: omissions.map((o) => ({ field: o.field, start: o.start, end: o.end, reason: o.reason })),
               photoLeftOutReason: input.photoLeftOut?.reason ?? null,
+              kinshipOmissions: kinshipLeftOut,
               reasonCode: input.reasonCode ?? null,
               internalNoteCiphertext: noteCiphertext,
               actorId: who.actorId,

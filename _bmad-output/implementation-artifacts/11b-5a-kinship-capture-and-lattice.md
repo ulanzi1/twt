@@ -55,6 +55,7 @@ negator is a defect: infer the sense from context and the cited source, ⛔ neve
 |---|---|
 | **`2026-10-31-426`** (addendum; DR + KB): AQ1 A, AQ2 A, AQ3 A, AQ3 (b)1 | **A guardian declaration at Send** — *"For every child I have named, I am their parent or lawful guardian, or I have their parent's or guardian's agreement. Every adult I have named has agreed to be named."* + *"… and every child in the photo"*. It covers **the list, the words and the photo** (KL16). The reviewer does ⛔ not leave out a child the declaration covers; `identifies_a_child` stays for a child it cannot cover (reading — KL16). The "in the photo" ticks are built (KL15) and are ⛔ never public. Supersedes `-391` item 2's child + photo halves in part |
 | **`2026-10-31-428`** (main note v2; DR + KB): PQ1 A + rider, PQ2 B, PC1 A | **PQ1 A** — the list may appear, relation + name, the fourteen relations, children on the declaration, used for **nothing else** (AC10). **The rider** — *"member also sees the memorial page"* — BigDev's reading: the **member app's drive screen also shows the memorial** (words, photo, list) ⇒ built by **row `11b-5c`** (BigDev 2026-10-31), ⛔ not here; this story renders the **public** page only; in the floor test all four memorial ids become **declared gaps owed by 11b-5c** (Trap 6). ⚠ BigDev's reading is put back to the Panel as confirm **R1** (`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-11b5a-confirms-r1-r3.md` — SENT by BigDev 2026-10-31, ⏳ no ruling yet) — 11b-5c is ⛔ not built until R1 is answered. Supersedes `-412` §3 item 3 in part. **PQ2 B** — a named person may have their own name removed through the helpline ⇒ built by **row `11b-5b`** (KL14 (a)), ⛔ not here; this story's per-entry model makes it possible. **PC1 A** — the four reasons (the child reason only for an undeclared child) + "no mark" apply to the list (KL6 unchanged). **PC2** — ⛔ not answered as put; the rider governs |
+| **`2026-10-31-432`** (confirms; DR + KB): R1 A, R2 A, R3 A | **R1 A** — the members' app shows the memorial ITSELF (words, photo + description, list) beside the member's name, **v4+ memorials only** ⇒ row 11b-5c builds exactly that and ⛔ no longer waits. **R2 A** (⚠ ⛔ not our suggestion) — the declaration's adult half covers every adult named, in the list **or** in the words ⇒ v4 ③ stands as approved. **R3 A** — after a declaration the reviewer leaves out a child only where **something in the memorial itself** shows the declaration cannot cover that child, and the family is told why ⇒ KL16's guidance and copy 4.4 follow these words |
 
 **Scope after the rulings (BigDev, 2026-10-31):** **11b-5a (this story)** — capture (list + "in the photo" ticks), the ONE
 declaration at Send for words + list + photo (v4 permission), the review (list entries + the declaration-aware child rule for words,
@@ -459,13 +460,13 @@ list and photo):** when `guardianDeclaration` is true, `VersionCard` shows a ban
 — *"The sender has declared they are the parent or guardian of every child named or shown, or have that person's agreement, and that every
 adult named has agreed."* — and reviewer guidance is **added** (there is none today — the admin has only the label `'Names or shows a
 child'`, `i18n-en.ts:101`): a new `i18n-en.ts` key shown by every reason select, including `WithdrawApprovalForm` (:769) — *use "names or
-shows a child" only where you have a concrete reason to think the declaration cannot cover that child*. For a v4+ submission the admin
+shows a child" only where something in the memorial itself shows the declaration cannot cover that child* (`-432` R3 A, as put; the family is told why). For a v4+ submission the admin
 label reads *"Names or shows a child the declaration cannot cover"* and the family's outcome reason is copy 4.3. ⛔ No validator change
 (`validateMemorialDecision` :102-153 never checks a reason against content). A historical v1–v3 row (dev / test data only — v1–v3 are
 refused `authorisation_outdated` once v4 is current, `submission.ts:137-139`, and production never had the switch on) shows ⛔ no banner
 and ⛔ no declaration guidance. **The family's screens:** copy 2.4A on the family screen; ⛔ no child line on the write or photo screens.
-⚠ **Two readings carried to the Panel as R2 / R3** (follow-up note — SENT by BigDev 2026-10-31, ⏳ no ruling yet): ③'s adults half reaching names in the WORDS, and the reviewer's
-"concrete reason" test. Until answered they stand as `-426`'s readings; ⛔ not a blocker for Task 1, a go-live condition (Row 41 (r)).
+✅ **Both readings RULED by `-432`** (R2 A — ③'s adult half reaches names in the WORDS; R3 A — the reviewer's test, narrowed to a reason in
+the memorial itself).
 **Why:** `-426` rules one rule for one page; the v4 permission is already this story's (KL7). **Cost:** the reviewer's child rule becomes
 a judgment, ⛔ not a mechanical one (`-426`'s accepted cost) — AC14 proves the guidance is SHOWN, ⛔ not that reviewers follow it
 (un-mechanised by design). Rejected — **(b)** a separate declaration column; **(c)** the words / photo change in its own row (BigDev).
@@ -645,7 +646,7 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     minted at Task 1.2; story v2.0 + a validate pass before Task 1. (The original outcome branches are in the appendix.)
 - [x] **Task 1 — Governance commits (AC0)** — ✅ 2026-10-31: `-431` committed alone (`1c68adc4`); records (Task 1.2) in the next commit
   - [x] 1.1 ✅ `-431` committed alone (`1c68adc4`). Re-take the id (`-431` at validation); commit our author-commit `-NNN` **alone** (KL1–KL16 as answered — all answered
-    2026-10-31; §0: the questions were the Panel's and are ruled by `-426` / `-428`; records BigDev's reading of the rider (R1 pending),
+    2026-10-31; §0: the questions were the Panel's and are ruled by `-426` / `-428`; records BigDev's reading of the rider (since RATIFIED — `-432` R1 A),
     the 11b-5b / 11b-5c split, and KL16's design; mints: the relation tuple, v4 with `carriesGuardianDeclaration`, the matrix pair under
     `2026-10-31-428 item 1`). **Commit slicing after it:** records → contracts + migration → API → admin (incl. KL16) → mobile → public →
     fences.
@@ -660,7 +661,7 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     here; closes when 11b-5a is `done` on main"* (⛔ not deleted; DISCHARGED is written at Task 9, or at once under PQ1 D); the 6.27a
     family-link item annotated *"⛔ not this list — AC10"*, ⛔ not discharged; (iv) Row 41 dated annotation (KL13 — (r), (s), (t)); (iv-b) mint rows `11b-5b-kinship-named-relative-removal` (comment block = KL14's, verbatim) and `11b-5c-member-app-shows-the-memorial`
     (`backlog`), its comment block verbatim: *"`-428` rider (verbatim) + BigDev's reading (the drive screen shows words, photo + description,
-    and list). ⛔ NOT BUILT until confirm R1 is answered (the follow-up note); v1–v3 submissions are ⛔ never shown in the app. Removes the
+    and list). ⛔ NOT BUILT until confirm R1 is answered (the follow-up note) [⭐ ANSWERED 2026-10-31 — `-432` R1 A: build it]; v1–v3 submissions are ⛔ never shown in the app. Removes the
     four floor-test GAPS 11b-5a declares (`MEMBER_COUNTERPART: []` for the memorial ids). Adds a member surface to the matrix rows' scope
     (they read 'sahyog-vivran ONLY' today) and to AC10's allow-list. Shows the same finished, grouped rows as the public page, ⛔ never
     `inPhoto`. ⚠ v4 ① / copy 2.3 already promise this — if descoped or narrowed, mint a v5 before go-live."*; (iv-c) ✅ pointers under
@@ -944,7 +945,7 @@ Under PQ1 B (relations only) ①–④ change again; under PQ1 D there is ⛔ no
 | 4.1 | `outcome.kinship_left_out` | Left out of the family list: {relation} — {name} | परिवार की सूची से छोड़ा गया: {relation} — {name} | followed by the existing `outcome.reason` (*"The reason: {reason}"* / *"कारण: {reason}"*); `{name}` bidi-isolated |
 | 4.2 | (existing) `outcome.approved_with_omissions` | — | — | already reads *"left out a part, marked below … nothing marks where it was"*; it fits a list entry too ⇒ ⛔ no change proposed |
 | 4.3 | `outcome.reason_child_undeclared` — ✅ **NEW, APPROVED 2026-10-31** | it names or shows a child your confirmation cannot cover | इसमें किसी ऐसे बच्चे का नाम है या वह दिखता है जिसके लिए आपकी पुष्टि लागू नहीं हो सकती | shown in place of `reason.identifies_a_child` for a submission whose version carries the declaration (KL16) — so a family that declared does ⛔ not read the plain *"it names or shows a child"* |
-| 4.4 | admin `memorial.reason.identifies_a_child_declared` (English only) — ✅ **NEW, APPROVED 2026-10-31** | Names or shows a child the declaration cannot cover | — | the admin label for a v4+ submission; plus the added guidance key: *"Use this only where you have a concrete reason to think the sender's declaration cannot cover the child."* |
+| 4.4 | admin `memorial.reason.identifies_a_child_declared` (English only) — ✅ **NEW, APPROVED 2026-10-31** | Names or shows a child the declaration cannot cover | — | the admin label for a v4+ submission; plus the added guidance key: *"Use this only where something in the memorial itself shows the sender's declaration cannot cover the child; the family is told why."* (worded to `-432` R3 A as put — was *"…a concrete reason to think…"*; ✅ BigDev confirmed 2026-10-31: *"changes fine"*) |
 
 **Q-copy-5 — the public heading over the list (also used by the app's preview, which must match the page)**
 
@@ -1128,6 +1129,7 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v2.8 | The confirms RULED — Decision `2026-10-31-432` (Trustee-ratified, DR + KB): *"R1 A, R2 A, R3 A"* — R1 A the members' app shows the memorial itself, v4+ only (row 11b-5c builds it, ⛔ no longer waits); R2 A (⚠ ⛔ not our suggestion) the declaration's adult half covers the words too (v4 ③ stands); R3 A the reviewer's child test narrowed to a reason in the memorial itself (KL16's guidance and copy 4.4's guidance line re-worded to it — ✅ BigDev confirmed, *"changes fine"*). Row 41 (r)'s *"R1–R3 answered"* clause met. |
 | 2026-10-31 | v2.7 | The follow-up note R1–R3 (`bdc24e92`, `3981fd0b` before the second rebase) SENT by BigDev (*"I have sent the note"*) — ⏳ no ruling yet. It gates row 11b-5c and go-live (Row 41 (r)), ⛔ not Task 2. |
 | 2026-10-31 | v2.6 | REBASED onto `origin/main` `beae5116` (Story 6.38 landed; backup `backup/11b-5a-pre-rebase-2-2026-10-31`); ledger-only conflicts; `-426`'s swallowed separator and its misplaced dated note fixed inside their commits; changed-line sets and all decision entries verified. **STOP 2 now satisfied** — 6.38's erasure lock is on `main` under this branch (Task 4.7 writes AC9 from its code; ⛔ no further rebase needed for it). SHA map 2 above. Ledger letters `-31m/n/o/r/s` relabelled `-31aa`…`-31ae` (`main` holds them); this entry `-31af`. Migration `0193` still free on `main` (re-take at Task 3.1). |
 | 2026-10-31 | v2.5 | TASK 1 DONE — Decision `2026-10-31-431` (author-commit, KL1–KL16) committed alone (`1c68adc4`); Task 1.2's records: rows `11b-5b-kinship-named-relative-removal` and `11b-5c-member-app-shows-the-memorial` minted (`backlog`, comment blocks); launch-gate Row 41 annotated (r)(s)(t); a dated note in `architecture.md` :1839-1846; `epics.md` dated notes under 11b.4 / 11b.5 / 11b.6 (11b.6's STOP met and carried out); `deferred-work.md` annotated. Status `ready-for-dev` → **`in-progress`**. Next: Task 2 — rebase onto 6.38 before Task 4.7; re-take the migration number at Task 3.1. |

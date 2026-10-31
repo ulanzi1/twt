@@ -638,7 +638,7 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     meeting part carries ⛔ no clause ids — they go to E1/E2 with the verbatim texts); run E4; commit it **alone**
     (`governance(11b.5a): routing note — kinship …`). ⛔ Never send. Record "prepared for relay — ⛔ not yet sent". ⏳ **WRITTEN
     2026-10-31** — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (PQ1, PQ2, PC1, PC2; E4 run);
-    committed ALONE as `6f22bd4d` (`9efa0c06` before the rebase); ledger `2026-10-31n` (relabelled from `-31f`). ✅ **SENT 2026-10-31** — BigDev: *"routing note sent"*. Task 0.4 waits on
+    committed ALONE as `6f22bd4d` (`9efa0c06` before the rebase); ledger `2026-10-31ab` (relabelled from `-31n`, earlier from `-31f`). ✅ **SENT 2026-10-31** — BigDev: *"routing note sent"*. Task 0.4 waits on
     the ruling.
   - [x] 0.4 ✅ **Done 2026-10-31:** the addendum ruled (`-426`, committed alone `16dc6911`), the main note v2 ruled (`-428`, committed
     alone `1bdd8cd0`); outcome **PQ1 A + rider, PQ2 B, PC1 A, AQ1–AQ3 A, (b)1** ⇒ the RULED block at the top; rows 11b-5b / 11b-5c
@@ -1091,7 +1091,30 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 
 ### File List
 
-## Change Log (rows newest first, below the SHA map)
+## Change Log (rows newest first, below the SHA maps)
+
+**SHA map 2 — the 2026-10-31 rebase onto `beae5116` (Story 6.38 landed)** (every SHA written before this map — in the story, the ledger and the routing notes' status lines — is the OLD one; read it through this table):
+
+| Old | New | Commit |
+|---|---|---|
+| `a27febe0` | `6c04fb78` | story(11b.5a): created and validated — kinship capture, review and the |
+| `6f22bd4d` | `014bd52c` | governance(11b.5a): routing note — kinship: may the Trust ask for the  |
+| `5f28d24e` | `cc5abb9a` | records(11b.5a): Task 0.2 build answers (KL3 fourteen codes, KL4 200-c |
+| `130943af` | `d1af5acb` | governance(11b.5a): routing note ADDENDUM — may a family name and show |
+| `1c582ad7` | `8454f1c1` | records(11b.5a): routing note SENT; Q-copy-1 answered; Q-copy-2..5 dra |
+| `b0f1a675` | `9e92d1f8` | records(11b.5a): rebased onto origin/main b2f36fe9 — SHA map in the st |
+| `16dc6911` | `49649186` | governance: 2026-10-31-426 TRUSTEE-RATIFIED (DR + KB) — a family may n |
+| `04c17a0c` | `91d4b3f7` | governance(11b.5a): routing note REVISED to version 2 at the Panel's d |
+| `ec7e5eb9` | `92810cab` | records(11b.5a): -426 recorded — dated pointer under -391; story v1.11 |
+| `1bdd8cd0` | `93e8a9f9` | governance: 2026-10-31-428 TRUSTEE-RATIFIED (DR + KB) — the family lis |
+| `2330a941` | `e988396c` | records(11b.5a): -428 recorded — pointers under -391 / -398 / -411 / - |
+| `9006d0ce` | `b4b501cf` | records(11b.5a): Task 0.2 done — all copy approved (v4 sentence 1 Hind |
+| `3981fd0b` | `bdc24e92` | governance(11b.5a): routing note — three confirms on the family-list r |
+| `691020b1` | `032a2652` | records(11b.5a): second validation applied — story v2.3 (33 findings + |
+| `0e642974` | `2d63bda9` | records(11b.5a): copy re-approved — v4 sentence 4's child ground narro |
+| `1c68adc4` | `d971c015` | governance: 2026-10-31-431 AUTHOR-COMMIT (BigDev) — Story 11b.5a's bui |
+| `13f8dbff` | `fddd2fc2` | records(11b.5a): Task 1.2 — rows 11b-5b / 11b-5c minted, launch-gate R |
+
 
 **SHA map — the 2026-10-31 rebase onto `b2f36fe9`** (rows below written before it cite the OLD SHAs):
 
@@ -1105,6 +1128,7 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v2.6 | REBASED onto `origin/main` `beae5116` (Story 6.38 landed; backup `backup/11b-5a-pre-rebase-2-2026-10-31`); ledger-only conflicts; `-426`'s swallowed separator and its misplaced dated note fixed inside their commits; changed-line sets and all decision entries verified. **STOP 2 now satisfied** — 6.38's erasure lock is on `main` under this branch (Task 4.7 writes AC9 from its code; ⛔ no further rebase needed for it). SHA map 2 above. Ledger letters `-31m/n/o/r/s` relabelled `-31aa`…`-31ae` (`main` holds them); this entry `-31af`. Migration `0193` still free on `main` (re-take at Task 3.1). |
 | 2026-10-31 | v2.5 | TASK 1 DONE — Decision `2026-10-31-431` (author-commit, KL1–KL16) committed alone (`1c68adc4`); Task 1.2's records: rows `11b-5b-kinship-named-relative-removal` and `11b-5c-member-app-shows-the-memorial` minted (`backlog`, comment blocks); launch-gate Row 41 annotated (r)(s)(t); a dated note in `architecture.md` :1839-1846; `epics.md` dated notes under 11b.4 / 11b.5 / 11b.6 (11b.6's STOP met and carried out); `deferred-work.md` annotated. Status `ready-for-dev` → **`in-progress`**. Next: Task 2 — rebase onto 6.38 before Task 4.7; re-take the migration number at Task 3.1. |
 | 2026-10-31 | v2.4 | Copy RE-APPROVED by BigDev (*"approved"*): v4 ④ with the child ground narrowed (*"…or names or shows a child this confirmation does not cover"*, en + hi), new 4.3 (the family's reason for a declared submission) and 4.4 (the admin label + guidance). `hiReviewed` stays `false` pending a non-author review. Open: the R1–R3 note to send; Task 1. |
 | 2026-10-31 | v2.3 | VALIDATED (`bmad-create-story validate 11b.5a`, second pass; three parallel read-only verifiers — code as built / governance / adversarial design — at `9006d0ce`): 33 findings (9 critical, 17 should-add, 6 optimisations, 1 wording), ALL applied on BigDev's "all". Critical: next decision id `-431` (`-430` is 6.38's); STOP 2 FIRED (6.38's `e813e5ee` changes `anonymize.ts` / `resolveRtbfLegality` — rebase before Task 4.7); v4 ④ + the family's child reason contradicted the declaration ⇒ ④ narrowed + copy 4.3 / 4.4 (⏳ RE-APPROVAL owed); KL15 / KL16 propagated to Tasks 2 / 4 / 5 / 6 / 9 (the `inPhoto` schema on Send AND every read, the tick-without-photo refusal + client strip, `carriesGuardianDeclaration` + `guardianDeclaration` for the banner); the floor test's four memorial ids → declared GAPS owed by 11b-5c (⛔ never "the PC2 ruling"); dated notes under `-428` (Consequence 1 moved to 11b-5c; PQ2 B's grounds corrected — `-391` item 7 ⛔ not superseded by `-428`; quotes exact; "no fifth reason" a reading), `-426` (items 4 / 7 superseded in part; readings 2 / 3 carried as R2 / R3), `-391` (correction), `-420` (MV2 carried out); superseded plan text struck; history moved to a non-binding appendix. Governance: a follow-up note **R1–R3** written (`trustee-panel-routing-note-2026-10-31-11b5a-confirms-r1-r3.md`) — prepared for relay, ⛔ not yet sent. Recorded defects in notes as sent: the addendum (`130943af`) went out with *"Split out and ⛔ asked"* / *"Also ⛔ yours"* (negators missing — meant "not asked" / "not yours"); v2 (`04c17a0c`) said *"⛔ Nothing else changed"* though its §0 wording, one example, its plain English and its evidence also changed — both disclosed in R1–R3's *How much to trust*. Migration `0193` is held UNCOMMITTED by the 12-1 worktree — re-take at Task 3.1. |

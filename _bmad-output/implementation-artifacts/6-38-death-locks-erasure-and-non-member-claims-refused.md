@@ -24,7 +24,7 @@ NUMBERS: ⛔ claimed by this file. At authoring the highest decision anywhere (e
 `2026-10-30q` (main). This create-story run's ledger line takes `2026-10-30r`. Task 0.4's decision entry is "the next free one" at the
 commit that takes it.
 
-LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL16 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel questions
+LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL16 — ANSWERED 2026-10-31 at Task 0.2: all as recommended); **PQ** = Panel questions
 (PQ1 (a) / (b), PQ2, PQ3 — non-blocking); **TR** = traps (TR1–TR10); **AC1–AC12**.
 -->
 
@@ -254,7 +254,12 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
 - **G16 — The mobile app has ⛔ erasure screen** (`anonymizeMember` in `packages/api-client` has ⛔ mobile caller); `rtbf.*` copy keys in
   `packages/i18n/locales/{en,hi}/common.json` have ⛔ consumer.
 
-## Build decisions — PROPOSED (BigDev answers at Task 0.2)
+## Build decisions — ANSWERED (BigDev, 2026-10-31, Task 0.2: *"DL1-DL16 as recommended"*)
+
+Every DL below is built as written; where a DL offers a choice, the recommended option is the answer (DL16 ⇒ (a)). The proposed
+English copy of DL9 / DL10 / DL11 is approved as written. ⚠ The DL10 Hindi TITLE + BODY are ⛔ yet counted as human-reviewed (the
+answer approved the decisions; it did ⛔ say the Hindi was read) — until BigDev confirms the Hindi, Task 4.3's `$comment.cannot_file`
+carries the NOT-YET-HUMAN-REVIEWED form and a go-live row. The call + back strings are the already-reviewed `refile.*` ones.
 
 - **DL1 — The leaf predicate.** NEW `packages/domain/src/claim/death-report.ts` exporting `isDeathReportStanding(db: Db, pariwarId: PariwarId,
   memberId: MemberId): Promise<boolean>` — the SQL of `isNomineeDeclarationLocked`, MOVED here unchanged (raw SQL, explicit aliases, the
@@ -387,7 +392,8 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
   `resourceLocator` = `claim-intake-refused:<reason>` (lowercase, NON-PII, caller-authored — `auth/shared/audit.ts`'s only readable
   channel) on the helpline catch's line when `err.code === CLAIM_INTAKE_REFUSED_CODE` — cost: the operator's refusals become countable
   per reason at rest (a membership-history fact about the searched person, ⛔ a name). Option (b): leave it — cost: a disputed refusal
-  cannot be reconstructed from the audit log. Recommended (a) for the helpline only; the member route's line stays reason-less (N7).
+  cannot be reconstructed from the audit log. **ANSWERED (a)** (2026-10-31) — for the helpline only; the member route's line stays
+  reason-less (N7).
 
 ## Panel questions — NON-BLOCKING (one note, Task 0.3; BigDev sends)
 
@@ -479,8 +485,10 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
   - [ ] 0.1 `git fetch origin`; confirm `01062c51` is an ancestor of HEAD and re-derive G1–G16 at the tip (`git diff --name-only 01062c51
         origin/main -- apps packages`); STOP and re-read if any cited function moved. Check `ListAgents` + the branch before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL16 to BigDev (the copy of DL9 / DL10 / DL11 verbatim; the Hindi title + body for review — call + back are
-        already reviewed; DL16 (a) / (b)). Record the answers.
+  - [x] 0.2 Put DL1–DL16 to BigDev (the copy of DL9 / DL10 / DL11 verbatim; the Hindi title + body for review — call + back are
+        already reviewed; DL16 (a) / (b)). Record the answers. — ✅ 2026-10-31, BigDev: *"DL1-DL16 as recommended"* ⇒ every DL as
+        written, DL16 (a), the English copy approved; the DL10 Hindi title + body ⛔ yet confirmed as reviewed (see the DL section's
+        header) — ask once at Task 4.3, else ship the NOT-YET-HUMAN-REVIEWED comment + go-live row.
   - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied): `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-38-door-and-after-death.md`
         — PQ1 (a), PQ1 (b), PQ2 (with N8's export harm), PQ3; plain-English question first, THE ONE FACT, options with an honest cost on
         each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge.
@@ -662,4 +670,5 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.2 | Task 0.2 answered — BigDev: *"DL1-DL16 as recommended"* (DL16 (a); the English copy approved; the DL10 Hindi ⛔ yet confirmed as reviewed). |
 | 2026-10-31 | 1.1 | Fresh-context validation (`bmad-create-story validate 6.38`): the refusal vocabulary is domain-owned (contracts mirrors it); AC5 split into the two-party and the three-party race, run through the new `acquireErasureLocks` helper, moved to Task 3.6; the reason kept off the member route's wire; N5's audit lines corrected and DL16 added; N8 qualified for withdrawn members; the stale operator alert cleared on a member change; PQ1 split into (a) / (b); TR2 / TR3 re-traced; the friction-budget row, the fences, the test helpers and the omitted `-423` / `-238` text added. |

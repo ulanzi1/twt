@@ -30,7 +30,7 @@ LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL19 �
 
 # Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled three things on 2026-10-30 (`2026-10-30-423`). **(a)** From the moment a claim
 > is filed for a member's death, nobody can have that member's record erased — not the member's own account (`POST /api/v1/member/rtbf`),
@@ -623,8 +623,8 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `01062c51` is an ancestor of HEAD and re-derive G1–G16 at the tip (`git diff --name-only 01062c51
+- [x] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
+  - [x] 0.1 `git fetch origin`; confirm `01062c51` is an ancestor of HEAD and re-derive G1–G16 at the tip (`git diff --name-only 01062c51
         origin/main -- apps packages`); STOP and re-read if any cited function moved. Check `ListAgents` + the branch before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
   - [x] 0.2 Put DL1–DL16 to BigDev (the copy of DL9 / DL10 / DL11 verbatim; the Hindi title + body for review — call + back are
@@ -637,16 +637,16 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (Q1 (a) / (b), Q2 (a) / (b),
         Q3; suggestions C · B · A · A · B — Q1 (a) rewritten the same day from A to C once G9a was traced; E4 re-run clean). SENT by BigDev;
         RULED the same day — `2026-10-31-424` (every suggestion taken; Q2 (b) with the Panel's addition).
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number — `-424` is the Panel's ruling, already recorded): DL1–DL19 as answered;
+  - [x] 0.4 Decision entry (AUTHOR-COMMIT, the next free number — `-424` is the Panel's ruling, already recorded): DL1–DL19 as answered;
         cites `-423` and `-424`; ⛔ supersedes a ratified entry. Committed ALONE, first.
-  - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
+  - [x] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
         OWES (`-238` cl. 4–5) and whether it releases the erasure lock (Q1 (b)'s words cover it) + DL7's two residual edges; (ii) DL12 (ii)
         — the export's step-up does not prove the nominee (trigger: PQ2's answer or any change to `data-export/routes.ts`); (iii) `-423`
         Consequences 2 · 3 — the privacy policy says Q2 A before members agree to it, and counsel on Q1 (a) / Q2 (trigger: go-live of
         member data-rights, or counsel's answer) — or a roster go-live row instead, BigDev's pick; (iv) PQ1–PQ3 — ✅ RULED (`-424`), ⛔ item
         needed; (v) the `-424` Q2 (b) addition (DL19 (c)) — ✅ recorded 2026-10-31 at the ruling. A dated comment line on the `6-22-…` row in
         `sprint-status.yaml`.
-  - [ ] 0.6 Ledger line + row `ready-for-dev → in-progress` (prepend safely — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
+  - [x] 0.6 Ledger line + row `ready-for-dev → in-progress` (prepend safely — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 1 — The leaf predicate (AC1)**
   - [ ] 1.1 Create `packages/domain/src/claim/death-report.ts` (DL1), header citing `-423`, `-238` cl. 1, N1, and the import rule.
   - [ ] 1.2 Delegate `isNomineeDeclarationLocked`; export `isDeathReportStanding` from the `claim` barrel.

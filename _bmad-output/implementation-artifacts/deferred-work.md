@@ -4,6 +4,32 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 6-38-death-locks-erasure-and-non-member-claims-refused.md — Task 0.5 (2026-10-31)
+
+- **The death locks lift only on an innocence finding, and ⛔ code writes one yet** [Decision `2026-10-31-425` DL4 / DL7;
+  `packages/domain/src/claim/death-report.ts` `isDeathReportStanding`; `recordMemberInnocenceFinding` has ⛔ production caller] — until
+  row `6-22-fraud-register-blacklist-instrument-and-identifier-set` lands, a LIVING member wrongly reported dead can ⛔ be erased, ⛔
+  withdraw and ⛔ change their own Life Events — at all (the same named residual 6.20 carries for the nominee lock). For 6-22: (a) it
+  WILL build the GUILTY arm (`-238` cl. 4 *"TWO OUTCOMES ONLY"*, cl. 5 guilty ⇒ *"terminated and blacklisted"*; `-241` Consequence 3);
+  `-423` Q1 (b)'s words (*"closed because the member is alive"*) cover a guilty-but-alive finding too, so releasing ONLY on innocence is
+  a NARROWING 6-22 must put to the Panel or justify; (b) DL7's two residual edges — the innocence finding changes ⛔ claim state, so a
+  released claim can still be a non-terminal convergence candidate (a new report CONVERGES onto it, ⛔ meets the door), and a `pending`
+  intake attempt parked beside a claim later released can still be overridden by `overrideIntakeAttempt` with ⛔ door. Trigger: 6-22's
+  create-story.
+- **The in-app data export's step-up does ⛔ prove the person exporting is the nominee** [Decision `2026-10-31-425` DL12 (ii);
+  `apps/api/src/modules/data-export/routes.ts` — the `data_export` step-up code goes to the DECEASED'S mobile] — after a death is
+  reported, whoever holds the deceased's session (Ravi mode) can export the record; moving the export to the `claim_handover` code would
+  cost a falsely-reported LIVING member their own export with ⛔ release until 6-22 — a cost ⛔ put to the Panel. A recorded risk, ⛔ built.
+  Trigger: any change to `data-export/routes.ts`, or a Panel question on who may SEE a dead member's record.
+- **Two obligations outside the code: the privacy policy, and counsel** [`-423` Consequences 2 · 3] — (a) the draft privacy policy
+  (outside this repository) must say, before members agree to it, that the person a member nominated may SEE and ask to CORRECT the
+  record after death, ⛔ erase it (`-423` Q2 A) — BigDev and counsel own the wording; (b) counsel confirms the law allows the Trust to
+  refuse erasure once a death is reported (Q1 (a)) and gives the nominated person ⛔ right to erase (Q2 — *"If counsel says the law gives
+  the nominated person a right to erase, A must change"*). Story 6.38 builds the refusal; ⛔ either obligation. (BigDev may prefer a
+  roster go-live row instead — a move of this item, ⛔ a change of it.) Trigger: go-live of member data rights, or counsel's answer.
+
+---
+
 ## Deferred from: the Panel's ruling `2026-10-31-424` Q2 (b) — the addition on staff changes (2026-10-31)
 
 - **A staff change to the record of a member whose death is reported must never remove the old entry — both stay, the old clearly

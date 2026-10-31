@@ -13,7 +13,7 @@ FUNCTION, ⛔ by line.
 
 STATUS: ready-for-dev (2026-10-31 — v1.1: created v1.0, then validated by three read-only verifiers (facts against the repo;
 disaster-prevention against the helpdesk / pool / alert twins; coherence + LLM optimisation), all 19 improvements applied.
-Committed at the `story(12.1): created + validated` commit; ⛔ pushed. The four Task 0.2 ASKs are OPEN.)
+Committed at `62416719`; ⛔ pushed. QE1–QE15 ANSWERED 2026-10-31 — all as recommended (Task 0.2), recorded by author-commit `2026-10-31-427` (`a22dbdec`, alone — Task 0.3). Task 0.4's records are next.)
 
 GLYPH REGISTER: ⛔ NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never");
 ⭐ = action / emphasis; ⚠ = hazard. ⭐ In ACs, Invariants, Tasks and Traps, negations are written in PLAIN WORDS ("No …",
@@ -26,12 +26,14 @@ are perishable hints; re-locate by function.
 NUMBERS, re-checked 2026-10-31 on every branch and worktree. Rule (`-366` decision 6): "the number belongs to the first COMMIT
 that takes it on any branch". For migrations `-415` follows `-332` d2: the number follows the MERGE order.
 - Decisions: `-424` is the highest on `origin/main` (also on `story/11b-5a-…` and `governance-lock-in-gap-rows`). `-425`
-  exists only on LOCAL `story/6-38-…`. ⇒ this story's author-commit takes ≥ `-426`.
+  exists only on LOCAL `story/6-38-…`; `-426` is held UNCOMMITTED in the `11b-5a-…` worktree. ⇒ `-427` is TAKEN here
+  (`a22dbdec`); any further decision takes ≥ `-428`.
 - Migrations: highest `0192_questionnaire-versions` (journal `when` 1796182800037; recent entries step by 86400001) ⇒ this
   story takes ≥ `0193`, `when` ≈ 1796269200038, GREATER than every sibling's.
 - ADRs: highest `ADR-0043` ⇒ this story takes ≥ `ADR-0044`.
 - RBAC: `PERMISSION_CATALOG_VERSION = 56` ⇒ this story does not change it (I7).
-- Ledger: `2026-10-31a`–`o` are taken elsewhere and `p` by this story's creation entry ⇒ next free ≥ `2026-10-31q`.
+- Ledger: `2026-10-31a`–`o` are taken elsewhere; `p` (creation) and `q` (Task 0.2 / 0.3) are taken here ⇒ next free ≥
+  `2026-10-31r`.
 - Roster: no row (nothing member-visible ships).
 
 ⭐ Re-grep ALL of these at Task 0.1 and again at the commit that takes each. `story/6-38-…` and `story/11b-5a-…` are live
@@ -80,7 +82,7 @@ here, and members feel them once 12.3 ships.
 | Brands | `ModuleId`, `PartnerId`, `ModuleLeadId` |
 | Gate | `scripts/marketplace-module-state-invariant/` · scripts `marketplace-module-state:{check,test}` |
 | ADR | `docs/adr/ADR-0044-module-manifest-schema-versioning.md` (≥, re-grep) |
-| Author-commit decision | ≥ `2026-10-31-426` (re-grep) |
+| Author-commit decision | `2026-10-31-427` (TAKEN, `a22dbdec`) |
 
 ## Story
 
@@ -510,7 +512,7 @@ are counted exactly (I5) and taken once per member (QE8) are consistent with tha
 ## Acceptance Criteria
 
 0. **AC0 — governance first.**
-   - QE1–QE15 are recorded in ONE author-commit decision entry (≥ `-426`), committed ALONE with a `governance:` prefix,
+   - QE1–QE15 are recorded in ONE author-commit decision entry (`-427`, `a22dbdec` — ⭐ MET), committed ALONE with a `governance:` prefix,
      BEFORE any code commit.
    - The four ASKs (QE5 `commission_terms` deferral, QE7 no auto-archive, QE8 one place per member, QE9 role / cohort absent)
      carry BigDev's answers verbatim.
@@ -627,14 +629,15 @@ are counted exactly (I5) and taken once per member (QE8) are consistent with tha
   - [ ] 0.1 `git fetch origin`; rebase this branch on `origin/main` if it moved. Re-grep NUMBERS (decision id, migration +
         journal `when`, ADR number, `PERMISSION_CATALOG_VERSION`, ledger letter) across every branch and worktree
         ([[feedback_git_fetch_before_remote_reasoning]]). Re-verify G1, G4, G5, G7, G11 and G17.
-  - [ ] 0.2 Put the four ASKs to BigDev and record the answers verbatim here:
+  - [x] 0.2 Put the four ASKs to BigDev and record the answers verbatim here. ⭐ **ANSWERED 2026-10-31 — BigDev, verbatim:
+        *"QE1-QE15 as recommended."*** All four ASKs are confirmed as written, and ⛔ QE changed:
         - QE5: `commission_terms` → 12.2;
         - QE7: no auto-archive;
         - QE8: one place per member;
         - QE9: role / cohort absent.
 
         If an answer changes a QE, edit the QE, the ACs AND the Tasks together.
-  - [ ] 0.3 Write ONE author-commit decision entry (QE1–QE15, the §0 table, the four answers) at the top of
+  - [x] 0.3 ⭐ DONE — `2026-10-31-427` (`a22dbdec`, committed alone; `-426` skipped as held uncommitted elsewhere). Write ONE author-commit decision entry (QE1–QE15, the §0 table, the four answers) at the top of
         `.decision-log.md`. Commit it ALONE as `governance: decision 2026-10-31-4NN — Story 12.1 build decisions …`
         ([[project_decision_log_writes_user_inserted]]: try first; if refused, ask once).
   - [ ] 0.4 Records:
@@ -912,6 +915,7 @@ All paths below are under `packages/domain/` unless prefixed otherwise. Do NOT u
 ### Change Log
 
 - 2026-10-31 — v1.0 created by `bmad-create-story` at `01062c51` (four read-only research passes); row backlog → ready-for-dev.
+- 2026-10-31 — v1.2: Task 0.2 answered ("QE1-QE15 as recommended."); Task 0.3 done — `2026-10-31-427` (`a22dbdec`).
 - 2026-10-31 — v1.1 at `b2f36fe9` (worktree fast-forwarded to `origin/main`): validated by three read-only verifiers; all 19
   improvements applied (audit pairing moved to the caller — QE15; no tenant FK; row-lock last-place design + RC isolation;
   valid named CHECKs; package-scoped test paths; the `apps/api` QE14 line; whole-row trigger incl. `audit_id` /

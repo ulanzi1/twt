@@ -3,44 +3,54 @@ baseline_commit: b2f36fe9
 ---
 
 <!--
-PINNED: `b2f36fe9` = `origin/main` (2026-10-31k, the rows 3-13 / 3-14 landing). The story lives on branch
+PINNED: `b2f36fe9` = `origin/main` (2026-10-31k). The story lives on branch
 `story/12-1-module-manifest-schema-module-lifecycle-state-machine` in its OWN worktree
-(`.claude/worktrees/12-1-module-manifest-schema-module-lifecycle-state-machine`). The branch was fast-forwarded
-`4e57fa42 → 01062c51 → b2f36fe9` and has no commits of its own; the last hop was records and governance only (`git diff --stat
-01062c51 b2f36fe9 -- apps packages scripts docs/adr` is empty). Every `apps/` / `packages/` / `scripts/` claim below was traced
-at the pin on 2026-10-31 and re-checked by three read-only verifiers. It is perishable: re-check at Task 0.1. Re-locate by
-FUNCTION, ⛔ by line.
+(`.claude/worktrees/12-1-module-manifest-schema-module-lifecycle-state-machine`), fast-forwarded
+`4e57fa42 → 01062c51 → b2f36fe9` with no code change. Every `apps/` / `packages/` / `scripts/` claim was traced at the
+pin on 2026-10-31, then re-checked by SEVEN read-only verifiers across two rounds. Perishable — re-check at Task 0.1.
+Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (2026-10-31 — v1.1: created v1.0, then validated by three read-only verifiers (facts against the repo;
-disaster-prevention against the helpdesk / pool / alert twins; coherence + LLM optimisation), all 19 improvements applied.
-Committed at `62416719`; ⛔ pushed. QE1–QE15 ANSWERED 2026-10-31 — all as recommended (Task 0.2), recorded by author-commit `2026-10-31-427` (`a22dbdec`, alone — Task 0.3). Task 0.4's records DONE 2026-10-31 (`deferred-work.md` section with C1–C8 + the QE5 / QE9 / QE11 deferrals; "⭐ INHERITED FROM 12.1" notes in `epics.md` under 12.2–12.6) ⇒ **Task 0 is COMPLETE**; the build may start.)
+STATUS: ready-for-dev (2026-10-31 — v1.4).
+- v1.1: validated by three read-only verifiers; 19 improvements (`62416719`).
+- v1.2: Task 0.2 answered — BigDev, *"QE1-QE15 as recommended."* Task 0.3: author-commit `2026-10-31-427` (`a22dbdec`,
+  alone) (`e38fc5a3`).
+- v1.3: Task 0.4 records (`39ef1763`).
+- v1.4: a SECOND validation by four read-only verifiers (DB feasibility; a dev-agent dry run; adversarial semantics;
+  records audit). BigDev: *"I think story is not yet ready for dev, run story validation one more time"*, then *"apply
+  all findings"*. Amending author-commit `2026-10-31-429` (`0168592b`, alone). Every finding applied; records updated;
+  ledger `r` relabelled `t`.
+- ⛔ pushed. ⭐ **Task 0.1 runs FIRST in `bmad-dev-story`; then the build may start.**
 
-GLYPH REGISTER: ⛔ NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never");
-⭐ = action / emphasis; ⚠ = hazard. ⭐ In ACs, Invariants, Tasks and Traps, negations are written in PLAIN WORDS ("No …",
-"Do NOT …") so that a skim cannot invert them.
+GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In ACs, Invariants,
+Tasks and Traps, negations are written in PLAIN WORDS ("No …", "Do NOT …"), so a skim cannot invert them.
 
 ADDRESSING RULE: never cite file:NNN into `.decision-log.md`, `deferred-work.md` or `sprint-status.yaml`. They are
-newest-first files; cite the decision id + clause, the item heading, or the row key instead. Line numbers into other files
-are perishable hints; re-locate by function.
+newest-first files, so cite the decision id + clause, the item heading, or the row key. Line numbers into other files
+are perishable hints.
 
-NUMBERS, re-checked 2026-10-31 on every branch and worktree. Rule (`-366` decision 6): "the number belongs to the first COMMIT
-that takes it on any branch". For migrations `-415` follows `-332` d2: the number follows the MERGE order.
-- Decisions: `-424` is the highest on `origin/main` (also on `story/11b-5a-…` and `governance-lock-in-gap-rows`). `-425`
-  exists only on LOCAL `story/6-38-…`; `-426` is held UNCOMMITTED in the `11b-5a-…` worktree. ⇒ `-427` is TAKEN here
-  (`a22dbdec`); any further decision takes ≥ `-428`.
-- Migrations: highest `0192_questionnaire-versions` (journal `when` 1796182800037; recent entries step by 86400001) ⇒ this
-  story takes ≥ `0193`, `when` ≈ 1796269200038, GREATER than every sibling's.
-- ADRs: highest `ADR-0043` ⇒ this story takes ≥ `ADR-0044`.
-- RBAC: `PERMISSION_CATALOG_VERSION = 56` ⇒ this story does not change it (I7).
-- Ledger: `2026-10-31a`–`o` are taken elsewhere; `p` (creation), `q` (Task 0.2 / 0.3) and `r` (Task 0.4) are taken here ⇒
-  next free ≥ `2026-10-31s`.
-- Roster: no row (nothing member-visible ships).
+NUMBERS — re-checked 2026-10-31 on every ref and worktree. Rule (`-366` decision 6): "the number belongs to the first
+COMMIT". For migrations `-415` follows `-332` d2: the number follows the MERGE order.
+- Decisions:
+  - `-427` (`a22dbdec`) and `-429` (`0168592b`) are TAKEN here.
+  - `-426` (`16dc6911`) and `-428` (`1bdd8cd0`) are on `story/11b-5a-…`.
+  - `-425` is on local `story/6-38-…`.
+  - ⇒ any further decision takes ≥ `-430`.
+- Migrations: highest `0192_questionnaire-versions` (journal `when` 1796182800037, step 86400001) ⇒ this story takes
+  ≥ `0193`, with `when` ≈ 1796269200038 and greater than every sibling's.
+- ADRs: highest `ADR-0043` ⇒ ≥ `ADR-0044`.
+- RBAC: `PERMISSION_CATALOG_VERSION = 56` (unchanged — I7).
+- Ledger:
+  - `2026-10-31a`–`o` and `r` are taken elsewhere. `story/11b-5a-…` committed `r` first (`ec7e5eb9`), so this branch's
+    `r` was relabelled `t`.
+  - `s` is held uncommitted in the 11b-5a worktree, and `n` / `o` in the 6-38 worktree.
+  - Ours: `p`, `q`, `t`, `u` ⇒ next free ≥ `2026-10-31v`.
+- Roster: no row.
 
 ⭐ Re-grep ALL of these at Task 0.1 and again at the commit that takes each. `story/6-38-…` and `story/11b-5a-…` are live
-and may take `0193` / `-426` first.
+and may take `0193`, `ADR-0044` or the next ledger letter first.
 
-LETTERS: G = found facts (traced at the pin) · QE = build decisions · I = invariants · TR = traps · C = carried to a
-sibling story.
+LETTERS: G = found facts · QE = build decisions (ANSWERED — `-427`, amended by `-429`) · I = invariants · TR = traps ·
+C = carried to a sibling story.
 -->
 
 # Story 12.1: Module Manifest Schema + Module Lifecycle State Machine `[PRIMITIVE]`
@@ -49,21 +59,24 @@ Status: ready-for-dev
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
-The **sixth** event-derived-state primitive, after member (3.1), claim (6.1), pool (7.1), alert (8.1) and helpdesk (10.1).
-It stores a partner **module** — an HDFC home-loan, LIC term-plan or health-camp offer that a Pariwar shows its members — as
-an immutable, bilingual **manifest**. The manifest records:
-- who the partner is and what the offer says;
-- the rules for who may see it;
-- its dates and how many places it has;
-- where leads go, and which Secret Manager secret signs them.
+This is the **sixth** event-derived-state primitive, after member (3.1), claim (6.1), pool (7.1), alert (8.1) and
+helpdesk (10.1).
 
-It also gives the module a lifecycle `draft → scheduled → active → archived`, derived **only from `events_log`**. Five events
-drive it — `module.authored`, `module.scheduled`, `module.activated`, `module.lead_submitted`, `module.archived` — and ONE
-projector writes them. A DB trigger and an AST gate guard that projector, exactly as they do for `helpdesk_tickets`.
+It stores a partner **module** — an HDFC home-loan, LIC term-plan or health-camp offer that a Pariwar shows its members —
+as an immutable, bilingual **manifest**: who the partner is, what the offer says, who may see it, its dates, how many
+places it has, where leads go, and which Secret Manager secret signs them.
 
-It builds **no** route, UI, shelf, filter evaluator, webhook, cron, permission key, consent type or audit wrapper call;
-those belong to 12.2–12.6. **Nothing reaches a member from 12.1 alone** (I6). The three lead rules in Policy meaning are fixed
-here, and members feel them once 12.3 ships.
+Its lifecycle, `draft → scheduled → active → archived`, is derived **only from `events_log`**:
+- Five events drive it: `module.authored`, `module.scheduled`, `module.activated`, `module.lead_submitted` and
+  `module.archived`.
+- ONE projector writes them, guarded by a DB trigger and an AST gate, as for `helpdesk_tickets`.
+- Every transition first locks the module row.
+
+It builds **no** route, UI, shelf, filter evaluator, webhook, cron, permission key, consent type or audit-wrapper call.
+Those belong to 12.2–12.6.
+
+**Nothing reaches a member from 12.1 alone** (I6). The lead rules in Policy meaning are fixed here; members feel them once
+12.3 ships.
 
 ## ⭐ Names at a glance
 
@@ -73,16 +86,20 @@ here, and members feel them once 12.3 ships.
 | Table / drizzle export | `marketplace_modules` / `marketplaceModules` (`packages/domain/src/schema/marketplace_modules.ts`) |
 | Enums (domain tuples → pgEnums) | `MARKETPLACE_MODULE_STATES` → `marketplace_module_state`; `MARKETPLACE_MODULE_ARCHIVE_REASONS` → `marketplace_module_archive_reason` |
 | Guard session var | `app.marketplace_module_state_writer` |
-| Trigger fn | `marketplace_modules_reject_unguarded_state_write()` |
-| Lead uniqueness indexes (on `events_log`) | `module_lead_member_uq`, `module_lead_id_uq` |
+| Trigger fn / trigger | `marketplace_modules_reject_unguarded_state_write()` / `marketplace_modules_state_write_guard` (BEFORE INSERT OR UPDATE … FOR EACH ROW) |
+| Direct-write error | `ModuleStateDirectWriteError`, `MODULE_STATE_DIRECT_WRITE_CODE = 'module.state_direct_write_rejected'`, `MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX = 'marketplace_modules direct write rejected'`, SQLSTATE `P0001` |
+| RLS policies | `marketplace_modules_tenant_isolation_{select,insert,update}` |
+| Named CHECKs (the ONLY DB-side content rules) | `marketplace_modules_window`, `_capacity_positive`, `_slots_pair`, `_slots_range`, `_archive_reason_pair`, `_manifest_schema_version_v1` |
+| Indexes | `marketplace_modules_pariwar_id_idx`, `marketplace_modules_pariwar_state_idx`; on `events_log`: `module_lead_member_uq`, `module_lead_id_uq` |
 | Migration | `packages/domain/migrations/0193_marketplace-modules.sql` (≥, re-grep) |
-| Projector fns (the only writers) | `projectModuleGenesis`, `projectModuleTransition` (`marketplace/project.ts`) |
+| Projector fns (the only writers; ⛔ re-exported) | `projectModuleGenesis`, `projectModuleTransition` (`marketplace/project.ts`) |
 | Commands (public write entry points) | `authorModule`, `scheduleModule`, `activateModule`, `submitModuleLead`, `archiveModule` (`marketplace/commands.ts`) |
 | Pre-check | `checkModuleLeadAllowed` |
+| Payload schemas | `ModuleAuthoredPayloadSchema`, `ModuleScheduledPayloadSchema`, `ModuleActivatedPayloadSchema`, `ModuleLeadSubmittedPayloadSchema`, `ModuleArchivedPayloadSchema` |
 | Brands | `ModuleId`, `PartnerId`, `ModuleLeadId` |
 | Gate | `scripts/marketplace-module-state-invariant/` · scripts `marketplace-module-state:{check,test}` |
 | ADR | `docs/adr/ADR-0044-module-manifest-schema-versioning.md` (≥, re-grep) |
-| Author-commit decision | `2026-10-31-427` (TAKEN, `a22dbdec`) |
+| Decisions | `2026-10-31-427` (QE1–QE15) · `2026-10-31-429` (amendments A1–A7) |
 
 ## Story
 
@@ -92,27 +109,41 @@ so that **every module is event-derived, audit-replayable, and lifecycle-traceab
 
 ## 📜 Policy meaning (AI-10-1)
 
-**This story introduces NO predicate that decides which members SEE a module.** It stores the eligibility and scope rules
-as data and evaluates none of them. Evaluating them is Story 12.3's job, and 12.3 owes its own Policy meaning note.
+**This story evaluates NO predicate that decides which members SEE a module.** It does FIX the meanings 12.3 must
+evaluate:
+- **Offerable:** an offer is shown to no one unless it is active, within its dates and, if capped, has places left (C1).
+- **Audience:** `members-all` means every member of the Pariwar; zero eligibility clauses means no restriction beyond
+  scope.
+- **Matching:** values match byte-for-byte, and an empty or unknown audience means nobody.
 
-**It DOES introduce three predicates that gate a member's ability to register interest (a lead) in a partner offer.** All
-three sit in the lead-submission command (QE7, QE8).
+Which members see it is 12.3's call, and 12.3 owes its own note.
+
+**It introduces three predicates that gate a member's ability to register interest (a lead)**, inside the lead command
+(QE7, QE8):
 
 *In a member's terms:* **"You can register interest in a partner offer only while it is open (live and within its dates).
-Once every place on it is taken, nobody else can register. And you can register interest in each offer only once."**
+Once every place on it is taken, nobody else can register. And you can register interest in each offer only once — a
+corrected offer is published as a new offer."**
 
-**Checked against the Niyamavali.** Grepped 2026-10-31: the git-ignored copy in the main checkout, `docs/legal/niyamavali.md`,
-for `partner|commercial|advertis|insurance|loan|marketplace|LIC|HDFC|third part|share.*data|lead|camp`, plus the Hindi
-साझेदार|पार्टनर|विज्ञापन|बीमा|ऋण|मॉड्यूल.
+⚠ **These three are necessary, NOT sufficient.** Who may register at all — scope, eligibility, member state and grief
+suppression — is checked by 12.3 at submission (C9).
 
-**Result: SILENT.** The Niyamavali has no clause on partners, modules or leads. The nearest clauses are not engaged, because a
-lead is not a benefit the Trust owes:
-- §1.2: "facilitator of mutual aid, not a guarantor, insurer, or financial intermediary".
-- Part 10: consent "for specified purposes".
+**Checked against the Niyamavali** (the git-ignored copies in the main checkout, grepped 2026-10-31):
+- `docs/legal/niyamavali.md` for `partner|commercial|advertis|insurance|loan|marketplace|LIC|HDFC|third part|share.*data|lead|camp`.
+- `docs/legal/niyamavali.hi.md` for साझेदार|पार्टनर|विज्ञापन|बीमा|ऋण|मॉड्यूल.
 
-The draft trust deed's Clause 7.2(i) requires partner arrangements to "not compromise the interests of members". Places that
-are counted exactly (I5) and taken once per member (QE8) are consistent with that. ⇒ **No conflict; nothing to route.**
-(⚠ The Niyamavali is a rulebook, not a ratified spec — [[feedback_niyamavali_rulebook_not_spec]].)
+**Result: SILENT.** No clause covers partners, modules or leads. The only hits are §1.2 and its Hindi equivalents
+(बीमाकर्ता, ऋण): "facilitator of mutual aid, not a guarantor, insurer, or financial intermediary". Neither §1.2 nor Part 10
+("specified purposes") is engaged, because a lead is ⛔ a benefit the Trust owes.
+
+**The trust deed:** the draft Clause 7.2(i) permits partner arrangements "provided such arrangements are **disclosed**,
+are consistent with the Trust's charitable character, and do not compromise the interests of members". Places counted
+exactly (I5) and taken once per member (QE8) are consistent with the last limb. ⚠ "Disclosed" sits against the PRD's
+"partner commission rates … never public". That tension is carried to 12.2 with `commission_terms`, and is routed if 12.2
+cannot reconcile them (§0: what the Trust discloses).
+
+⇒ **No conflict for 12.1; nothing to route now.** (The Niyamavali is a rulebook, ⛔ a ratified spec —
+[[feedback_niyamavali_rulebook_not_spec]].)
 
 ## The rulings and decisions this story builds on (quoted, never paraphrased)
 
@@ -123,784 +154,828 @@ are counted exactly (I5) and taken once per member (QE8) are consistent with tha
 | PRD FR-64 | "A module is described by a manifest: `{module_id, title, description, eligibility_filter, scope_filter, valid_from, valid_until, slot_capacity?, target_url_or_form, partner_id, commission_terms (private)}`." | PRD |
 | PRD §4.9 Out of Scope v1 | "Partner self-service portal — v2. - Cross-Pariwar partner manifest — v2." | PRD |
 | architecture §3.7 | "lead contracts are per-Pariwar (TWT-Bihar's HDFC contract ≠ future Rail Parivar's HDFC contract); contract storage scoped by `pariwar_id`." | architecture |
-| Decision `2026-08-13-103` D8 (Story 1.19) | "`role`/`cohort` are recorded "Not addressed", and ⛔ NO successor is minted … ⛔ **Story 12.2 is not the owner** either — it *consumes* a role/cohort filter but does not **own** the attribute." Re-trigger: "the first surface that must target members by `role` or `cohort` … ⛔ Do not mint a successor before a live requirement attaches." | ratified (author) |
-| Decision `2026-08-21-147` cl.3 (Trustee-ratified) | "Any future change that introduces a new **source/reason** for account-frozen must re-examine the directory exclusion predicate and the ratified member-facing sentence" | ratified — not engaged (I8) |
-| Decision `2026-09-08-210` cl.2 (Trustee-ratified) | NOT delegated: "anything touching `PERMISSION_CATALOG_VERSION`, a role, or a permission key · … · ⛔ any status whose meaning reaches a **member**." | ratified — see §0 edge 6 |
+| Decision `2026-08-13-103` D8 (Story 1.19) | "`role`/`cohort` are recorded "Not addressed", and ⛔ NO successor is minted … ⛔ **Story 12.2 is not the owner** either — it *consumes* a role/cohort filter but does not **own** the attribute." Re-trigger (a CONDITION, naming no story): "the first surface that must target members by `role` or `cohort` … ⛔ Do not mint a successor before a live requirement attaches." | ratified (author) — unchanged |
+| Decision `2026-08-21-147` cl.3 (Trustee-ratified) | "Any future change that introduces a new **source/reason** for account-frozen must re-examine the directory exclusion predicate and the ratified member-facing sentence" | not engaged by 12.1 (I8); engaged at 12.4 (C4) |
+| Decision `2026-09-08-210` cl.2 (Trustee-ratified) | NOT delegated: "anything touching `PERMISSION_CATALOG_VERSION`, a role, or a permission key · … · ⛔ any status whose meaning reaches a **member**." | does not govern this vocabulary (§0 edge 6) |
+| Draft trust deed Clause 7.2(i) | "To collaborate with, or receive commissions or fees from, partners offering products or services to members, provided such arrangements are disclosed, are consistent with the Trust's charitable character, and do not compromise the interests of members" | draft — "disclosed" carried to 12.2 |
 | UX spec "Module Shelf Partner Brand Integration" | "partner colors are NOT applied to card backgrounds, CTAs, or surrounding chrome." | UX — carried (C5) |
 
-### §0 — whose decision is this (`trustee-panel-routing-note-TEMPLATE.md` §0, applied per edge)
+### §0 — whose decision is this (`trustee-panel-routing-note-TEMPLATE.md` §0, per edge; answered `-427`, corrected `-429` A7)
 
 | # | Edge | Verdict |
 |---|---|---|
-| 1 | Package location (`packages/marketplace` vs `packages/domain/src/marketplace/`) | **Yours** — this is "which implementation is correct". See QE1. |
-| 2 | Event-name spelling (`module.lead-submitted` vs `module.lead_submitted`) | **Yours** — a naming question. See QE3. |
-| 3 | `pariwar_id` NOT NULL in v1 (the epic says nullable, for cross-Pariwar) | **Yours** — the PRD already puts the cross-Pariwar manifest in v2. See QE4. |
-| 4 | One place per member per module | **Yours, confirm with BigDev.** This is partner place accounting, not something the Trust owes. Stripped of citations it reads "should a double tap count twice?" See QE8. |
-| 5 | Sharing member data with partners — the privacy policy's §6 recipient list names no partners | **Panel / counsel's, but not 12.1's.** 12.1 sends nothing to anyone. Carried to 12.3 / 12.5, which must raise it **before** anything leaves (C6). |
-| 6 | New enums (`module_state`, `archive_reason`) and `-210` | **Not engaged.** `-210` governs ADDING values to an existing tracking vocabulary. This is a new primitive's vocabulary, authored from the epic text and recorded in the author-commit (Task 0.3), as 10.1's lifecycle set was. Any LATER value added to it IS `-210`-shaped and reaches members, so it is not delegated. |
-| 7 | `account-frozen` / grief suppression | **Not 12.1's.** 12.1 adds no freeze source (I8). The overlay lifting on settle is 12.4's problem (C4). |
+| 1 | Package location | **Yours** — QE1. |
+| 2 | Event-name spelling | **Yours** — QE3. |
+| 3 | `pariwar_id` NOT NULL in v1 | **Yours** — the PRD already puts the cross-Pariwar manifest in v2 (QE4). |
+| 4 | One place per member per module | **Yours — confirmed by BigDev (`-427`).** Stripped: "may a member who already registered interest in an offer register again?" A person sees the refusal, but it is ⛔ something the Trust owes (a lead is ⛔ a benefit), ⛔ a disclosure (it NARROWS what reaches a partner), and raises ⛔ consent basis. The cost is recorded (`-427` Consequence 3). |
+| 5 | Sharing member data with partners (privacy policy §6 names ⛔ partners) | **Panel / counsel's — ⛔ 12.1's.** 12.1 sends nothing. Carried, with C8 (a), to 12.3 / 12.5, to be raised BEFORE anything leaves (C6). |
+| 6 | New enums and `-210` | **⛔ engaged, now or later.** `-210` delegates `development_status`-class tracking values; it does not govern this vocabulary. A later value (a restore state, a new archive reason) is judged by §0 on its own: the Panel's if it changes what a member is shown or owed. |
+| 7 | `account-frozen` / grief suppression | **⛔ 12.1's** — no freeze source (I8). C4 → 12.4. |
+| 8 | Trust-deed "disclosed" vs the PRD's "commission … never public" | **Possibly the Panel's (what the Trust discloses) — ⛔ 12.1's.** 12.1 stores ⛔ commission. Carried to 12.2 with `commission_terms`. |
 
-## FOUND FACTS (G) — traced at `b2f36fe9`
+## FOUND FACTS (G) — traced at `b2f36fe9`, re-verified 2026-10-31
 
-- **G1 — There is no per-primitive package. The epic's `packages/marketplace` is the same misnamed home that Story 3.1
-  refused.**
-  - All five existing primitives live in `packages/domain/src/<area>/` and are exported as namespaces from
-    `packages/domain/src/index.ts`, e.g. `export * as helpdesk from './helpdesk/index.js'`.
-  - Story 3.1's file: "The epic AC text says author in `packages/member-lifecycle`. **Do NOT create that package.**"
-    Story 3.3a did the same for `packages/digilocker`.
-  - Five structural forces keep the schema, reducer and projector in domain:
-    - `drizzle.config.ts` reads only `./src/schema/*.ts` and `./src/policies/*-rls.ts`.
-    - Every `*-state-invariant` gate has `SCAN_ROOT = 'packages/domain/src'`.
-    - `domain-accessor-invariants` scans only `packages/domain/src`.
-    - `@twt/events` depends on `@twt/domain`, so projectors insert into `events_log` directly (see the `helpdesk/project.ts`
-      header).
-    - `packages/events/src/registry.ts` imports payload schemas from `@twt/domain`.
-  - Architecture never lists `packages/marketplace`. It maps §4.9 to `apps/api/src/modules/{modules-shelf,partner-leads}`
-    and `packages/contracts/src/{modules,partners}/`. Both contracts folders already exist as README-only placeholders.
-- **G2 — The closest twin is helpdesk (10.1, migration `0084_helpdesk-tickets-and-routing-policy.sql`).**
-  - **Columns:** `current_state` (pgEnum) and `state_event_version bigint {mode:'number'}`.
-  - **Trigger:** `helpdesk_tickets_reject_unguarded_state_write()`, `BEFORE INSERT OR UPDATE`, guarded by
-    `current_setting('app.helpdesk_state_writer', true)`. It checks the genesis state on INSERT and requires
-    `state_event_version` to be strictly monotonic.
-    - ⚠ It checks ONLY `current_state` / `state_event_version`. A literal copy leaves this story's other projected columns
-      unguarded (TR10).
-  - **Privileges and RLS:**
-    - `GRANT SELECT, INSERT, UPDATE … TO twt_app` (no DELETE).
-    - RLS ENABLE + FORCE.
-    - Separate select / insert / update policies. `for:'all'` is avoided because it would bring DELETE in.
-  - **Projector:** `helpdesk/project.ts` `projectTicketGenesis` / `projectTicketTransition`. It:
-    - takes `client: pg.PoolClient` and `auditId: string`;
-    - loads and replays the stream;
-    - parses the payload with `.strict()`;
-    - inserts into `events_log` at max+1;
-    - runs `SET LOCAL app.helpdesk_state_writer = 'on'` → write → `'off'` in a `finally`.
-  - **Gate:** `scripts/helpdesk-state-invariant/{check,lib,lib.test}.ts`. ⚠ It has **no README**; the pool / alert /
-    member / claim gates do.
-    - The allowlist is per file AND per function.
-    - `MIN_EXPECTED_FILES = 50` is a local const in `check.ts`.
-  - **Wiring:** root `package.json` `helpdesk-state:{check,test}`; a standalone `.github/workflows/ci.yml` job (no aggregate
-    `needs:` list to update); a `run` line in `scripts/ci-local.sh`.
+- **G1 — Home.** The code lives in `packages/domain/src/<area>/`; there is ⛔ per-primitive package (decided by QE1 /
+  `-427`). Domain owns the schema, reducer and projector because the drizzle globs, every `*-state-invariant` gate's
+  `SCAN_ROOT` and `domain-accessor-invariants` all read only `packages/domain/src`, and `@twt/events` depends on
+  `@twt/domain`. The epic's `packages/marketplace` is the same misnamed home Story 3.1 refused for
+  `packages/member-lifecycle`.
+- **G2 — Helpdesk twin (10.1, `0084_helpdesk-tickets-and-routing-policy.sql`).**
+  - **Columns:** `current_state` pgEnum + `state_event_version bigint {mode:'number'}`.
+  - **Trigger:** a guarded `BEFORE INSERT OR UPDATE` trigger. ⚠ It checks ONLY `current_state` / `state_event_version`
+    (TR10).
+  - **Grants and RLS:** `GRANT SELECT, INSERT, UPDATE` (⛔ DELETE). ENABLE + FORCE RLS, with separate select / insert /
+    update policies.
+  - **Projector:** `helpdesk/project.ts` takes `client: pg.PoolClient` + `auditId: string`. ⚠ It **replays the whole
+    stream, appends to `events_log`, THEN updates the row**. That append-first order deadlocks against a row lock (TR12),
+    so it is ⛔ copied.
+  - **Gate:** `scripts/helpdesk-state-invariant/{check,lib,lib.test}.ts` — ⛔ README (the pool / alert gates have one).
+    - `lib.ts` declares `const HELPDESK_TICKETS_TABLE = 'helpdeskTickets'` and `GUARDED_COLUMNS = new Set([...])`.
+    - `enclosingFunctionName` returns the INNERMOST named function or const-arrow.
+    - `isAllowlistedWrite` (in `check.ts`) drops allowlisted findings.
+    - `MIN_EXPECTED_FILES = 50` is local to `check.ts`.
+  - **Wiring:**
+    - `package.json`: `"helpdesk-state:check": "tsx scripts/helpdesk-state-invariant/check.ts"` and `"helpdesk-state:test": "vitest run scripts/helpdesk-state-invariant"`.
+    - `scripts/ci-local.sh`: `run "helpdesk-state-invariant" "pnpm helpdesk-state:test && pnpm helpdesk-state:check"`.
+    - `.github/workflows/ci.yml`: a standalone `helpdesk-state-invariant` job (⛔ aggregate `needs:`).
 - **G3 — Reducer framework.**
-  - `packages/domain/src/state-machine.ts` provides `defineStateMachine({initial, reduce, transitions?})`. Its header says
-    the framework "is PURE … and stays so". Do NOT edit it.
+  - `defineStateMachine({initial, reduce, transitions?})` in `packages/domain/src/state-machine.ts`, which "is PURE … and
+    stays so". Do NOT edit it.
   - `transitions` is "documentation-only — runtime authority is `reduce`". `fold` returns the state STRING only.
-  - Reducers are pure, deterministic and **total**: an inapplicable or unknown event returns the same state and never
-    throws.
-  - `alert/state.ts` uses a pre-genesis `initial: 'draft'`.
-  - `helpdesk/state.ts` `nextTicketState` returns the **unchanged state** for an illegal pair. The projector then throws
-    when `toState === fromState`, which is fatal for a same-state event (TR1).
-  - The bridges `toAlertEvent` / `toHelpdeskEvent` are private functions.
+  - `helpdesk/state.ts` `nextTicketState` returns the **unchanged state** for an illegal pair, and the projector then
+    throws on `toState === fromState` (TR1).
+  - `alert/state.ts` has a pre-genesis `initial: 'draft'`. Its bridge `toAlertEvent` is private.
   - Same-state events with a version bump already exist: the member "NON-TRANSITION MARKER" in `member/events.ts`.
-- **G4 — Event names are single-dot snake_case for a primitive family.**
-  - `pool/events.ts` carries a "PINNED SEAM" reconciling the epic's `pool.opened-for-contributions` to
-    `pool.opened_for_contributions`.
-  - `helpdesk/events.ts` and `alert/events.ts` state the same convention in an "Event-name delimiter" header.
-  - `registry.ts` has 86 entries and no `module.*`. Its import line is `import { alert, claim, contribution, helpdesk,
-    member, pool, reconciliation } from '@twt/domain'`. No test asserts the registry's size.
-  - **Audit actions cannot contain a hyphen**: `audit/write.ts` uses the regex `/^[a-z0-9_]+(\.[a-z0-9_]+)+$/`.
-- **G5 — `events_log.pariwar_id` is NOT NULL** (`schema/events_log.ts`). Its RLS policy (`0002_events-log-rls.sql`) is
-  `FOR ALL` with `withCheck pariwar_id = app.pariwar_id`, so every append needs the Pariwar scope set.
-- **G6 — Secret Manager references are stored as `<thing>_secret_name text`, holding a NAME.**
-  - Examples: `pariwar_wa_config.access_token_secret_name`, `pariwar_telegram_config.bot_token_secret_name`.
-  - The schema comment: "a NAME is not a secret, so this column is plain `text` (NOT piiColumn)".
-  - Resolution is `resolveSecretValue` (`domain/src/secrets.ts`). No column anywhere is named `*_key_ref`.
-  - ⚠ The epic attributes this to "Story 1.5", but 1.5 is KMS / Tink PII encryption. Secret Manager is AR-13 /
-    architecture §5.9.
-- **G7 — `module_id` already exists UNBRANDED, waiting for this PR.**
-  - It appears in `helpdesk_tickets.module_id` (`schema/helpdesk_tickets.ts`) and `ProjectTicketGenesisInput.moduleId`
-    (`helpdesk/project.ts`). One comment covers BOTH `module_id` and `validity_lookup_id`: "deliberately NOT branded … Brand
-    on the first PR that builds the owning primitive."
-  - The API passes a raw string: `apps/api/src/modules/helpdesk/handlers.ts`
-    `moduleId: body.module_id ?? null`. The `poolId` line beside it is the branded pattern:
-    `body.pool_id ? ids.poolId(body.pool_id) : null`.
-  - Other seams: alert category `module_new {module_id, module_title}`; deep link `resource:'modules'`; helpdesk category
-    `partner-module-issue`.
-- **G8 — `branding_bundle` / `BrandingBundle` already means PARIWAR branding** (`schema/pariwar_passport.ts`, migration
-  0003). Do NOT reuse that name for a module type.
-- **G9 — Audience vocabulary precedent.**
-  - `BANNER_AUDIENCE_SCOPES = ['public', 'members-all', 'state', 'role', 'cohort']` (`schema/banners.ts`) and News/Blog
-    (`news-blog/audience.ts`) both DECLARE `role` / `cohort` and resolve them to the EMPTY set with a logged note.
-  - `state` resolves via `districtsBeneathState(tree, stateValue)` (`member-geo/resolve.ts`). A member's district comes
-    from their newest `member_postings` row.
-  - Comparison is byte-identical (no case-folding). `block` is "⛔ NEVER" resolvable.
-  - An empty audience means "no audience", never "all".
-- **G10 — A member's date of birth is Tier-1 ciphertext** (`member_kyc_profiles`, `piiColumn(1, …)`). An age-band
-  eligibility rule cannot be evaluated without decrypting Tier-1 data on the shelf path.
-- **G11 — The `account-frozen` overlay is BUILT**, in `member/overlay.ts`:
-  - `ACCOUNT_FREEZE_EVENT_TYPE = 'claim.intake_initiated'`;
-  - unfreeze on `claim.settled | claim.denied_no_appeal | claim.closed`;
-  - `getMemberAccountOverlay`, which has **zero production call sites**.
-
-  ⚠ The overlay **lifts** on settle / deny (Decision `2026-09-20-233`) and on close (`claim.closed` was added by
-  `2026-10-07-292` RF4).
-- **G12 — Audit pairing is the CALLER's, never the domain's.**
-  - `audit.withCompensatingAudit(pool: pg.Pool, { auditIntent, mutate: ({ auditId }) => … })` (`audit/compensating.ts`)
-    takes the SERVICE pool. It commits its intent line in its own transaction and writes `<action>_rolled_back` if `mutate`
-    throws.
-  - No domain primitive calls it; only a comment mentions it. The twin is `apps/api/src/modules/helpdesk/handlers.ts`:
-    `audit.withCompensatingAudit(deps.servicePool, { auditIntent, mutate: async ({ auditId }) =>
-    helpdesk.projectTicketGenesis(scopeTx.client, { …, auditId }) })`.
-  - Why a refusal must not run inside the wrapper (`wa-opt-in/code.ts` header): "a refusal thrown inside
-    `withCompensatingAudit` would write an intent line + `_rolled_back`". That is two rows on the global hash chain, under
-    its global advisory lock.
+- **G4 — Events.**
+  - Names are single-dot snake_case: `pool/events.ts` "PINNED SEAM"; the `helpdesk/events.ts` and `alert/events.ts`
+    "Event-name delimiter" headers.
+  - `registry.ts`: 86 entries, ⛔ `module.*`. Import line: `import { alert, claim, contribution, helpdesk, member, pool,
+    reconciliation } from '@twt/domain'`. ⛔ test asserts the registry size.
+  - Registry descriptions follow `registry.ts`'s "⚠ An owner named here is an ASSERTION NOTHING VERIFIES".
+  - Actor sets: claim `['member','operator','trustee','system']`; helpdesk `['member','operator','staff','system']`.
+  - Audit actions must match `/^[a-z0-9_]+(\.[a-z0-9_]+)+$/` (`audit/write.ts`).
+- **G5 — `events_log` (`0001`, `0002`).**
+  - `pariwar_id` NOT NULL. RLS is `FOR ALL` with `withCheck pariwar_id = app.pariwar_id`.
+  - It is append-only: BEFORE UPDATE / DELETE / TRUNCATE triggers reject with "events_log is append-only — corrections
+    emit a new event (AR-8)". `twt_app` has SELECT + INSERT only.
+  - Erasure keeps streams (`member/anonymize.ts`: "the event stream is RETAINED").
+  - Its AFTER INSERT triggers fire only for `member.%` / `contribution.*`.
+- **G6 — Secret references.** Secret Manager references are `<thing>_secret_name text` columns holding a NAME:
+  `pariwar_wa_config.access_token_secret_name`, `pariwar_telegram_config.bot_token_secret_name`, resolved by
+  `resolveSecretValue` (`domain/src/secrets.ts`). ⛔ `*_key_ref` column exists anywhere.
+- **G7 — The helpdesk `module_id` seam is UNBRANDED.**
+  - Schema: `helpdesk_tickets.moduleId: uuid('module_id')`, with ⛔ `$type`. Projector input:
+    `ProjectTicketGenesisInput.moduleId` (`helpdesk/project.ts`).
+  - The same "deliberately NOT branded" comment, covering BOTH `module_id` and `validity_lookup_id`, appears in BOTH
+    files.
+  - The API passes a raw string — `moduleId: body.module_id ?? null` in `apps/api/src/modules/helpdesk/handlers.ts` —
+    while the `poolId` line beside it is branded.
+  - Helpdesk specs pass `moduleId: null`. `uuidBrand` lower-cases (`ids/index.ts`).
+- **G8 — Name clash.** `BrandingBundle` already means PARIWAR branding (`schema/pariwar_passport.ts`).
+- **G9 — Audience precedent** (`schema/banners.ts`, `news-blog/audience.ts`, `member-geo/resolve.ts`):
+  - byte-identical value comparison;
+  - `block` never resolvable;
+  - an empty audience means nobody;
+  - banners and news DECLARE `role` / `cohort` and resolve them to empty.
+- **G10 — DOB is Tier-1 ciphertext** (`member_kyc_profiles`, `piiColumn(1, …)`).
+- **G11 — The `account-frozen` overlay** (`member/overlay.ts`).
+  - It freezes on `claim.intake_initiated` and lifts on `claim.settled` / `claim.denied_no_appeal` (`-233`) and
+    `claim.closed` (`-292` RF4).
+  - `getMemberAccountOverlay` has zero production call sites.
+  - The durable "a claim was ever filed" fact is `claim/nominee-lock.ts`. A living member locked by a stray claim "STAYS
+    locked" until row 6-22.
+- **G12 — Audit pairing is the CALLER's.**
+  - `audit.withCompensatingAudit(servicePool: pg.Pool, { auditIntent, mutate: ({ auditId }) => … })`
+    (`audit/compensating.ts`) commits the intent line in its own transaction, and writes `<action>_rolled_back` if
+    `mutate` throws.
+  - ⛔ domain primitive calls it. The twin caller is `apps/api/src/modules/helpdesk/handlers.ts`. `wa-opt-in/code.ts`:
+    "a refusal thrown inside `withCompensatingAudit` would write an intent line + `_rolled_back`".
   - Domain specs pass `auditId: randomUUID()`.
-  - `audit_id` is a plain uuid with no FK. It is NOT NULL on helpdesk and nullable on pools / alerts, and **genesis-only**
-    in all three: no twin refreshes it on transition.
+  - `setupLiveDb`'s pool is private, so wrapper specs create `new pg.Pool({ connectionString: DATABASE_URL, max: 2, ssl:
+    false })` (`wa-opt-in/end-every-wa-yes.spec.ts`, `bulk-operations/audit-seam.spec.ts`).
+  - `audit_id` is genesis-only in every twin.
 - **G13 — Migrations are HAND-AUTHORED.**
-  - The drizzle snapshot baseline is frozen at 0020. `0084`'s header says "⚠ DO NOT REGENERATE with `db:generate`".
-  - Statements are separated by `--> statement-breakpoint`.
-  - The journal entry is hand-added to `meta/_journal.json`; keep the trailing newline.
-- **G14 — Live-DB harness (all paths under `packages/domain/`).**
-  - `src/test-utils/integration-setup.ts` provides `setupLiveDb`, `getTx` (a per-test transaction, rolled back) and
-    `hasDatabase`. Suites use `describe.skipIf(!hasDatabase)`.
-  - Helpers are in `tests/integration/_helpers.ts` (`PARIWAR_A`, `enterAppScope`).
-  - `vitest.config.ts` includes `tests/**/*.test.ts` and `tests/integration/**/*.spec.ts`.
-  - `@twt/domain` is already in the integration `--filter` list in `ci-local.sh` / `ci.yml`, so no config change is needed.
-  - ⚠ The REPO-ROOT `tests/integration/` is a placeholder that no workspace runs. The AI-10-5 guard greps only
-    `packages apps`, so a spec placed there would run nowhere, silently.
-- **G15 — The concurrency and lock precedents.**
-  - The genesis race: `alert-stream-concurrency.spec.ts`. Each connection runs `BEGIN; SET TRANSACTION ISOLATION LEVEL
-    REPEATABLE READ; SET LOCAL ROLE twt_app; setPariwarScope; SELECT max(event_version) …`, then waits at a barrier. The
-    specs own their commits (a separate `pg.Pool`) and clean up via `session_replication_role='replica'`.
-  - The SAVEPOINT retry: `reconciliation/reconciliation-review-write.ts` (`SAVEPOINT …` / `ROLLBACK TO SAVEPOINT` /
-    version-conflict check / backoff / `continue`), under the default READ COMMITTED. Nothing in `packages/domain/src` or
-    `apps/api/src` sets an isolation level.
-  - The lock-before-guard convention: `docs/domain-accessor-invariants.md` family (c), "Either `SELECT … FOR UPDATE` the row
-    before the guard, or …".
-- **G16 — Payload-expression indexes on the shared `events_log` already exist.**
+  - The snapshot is frozen at 0020 (`0084`: "DO NOT REGENERATE with `db:generate`"). Use `--> statement-breakpoint`, and
+    hand-add the `meta/_journal.json` entry with a trailing newline.
+  - `CREATE INDEX CONCURRENTLY` is impossible because drizzle-kit wraps each migration in a transaction (25001 — the
+    `0096_members-custom-fields.sql` header). A plain `CREATE INDEX` takes a SHARE lock on its table for the build.
+- **G14 — Live-DB harness** (paths under `packages/domain/`).
+  - `src/test-utils/integration-setup.ts` provides `setupLiveDb`, `getTx` (rolled back) and `hasDatabase`.
+  - `tests/integration/_helpers.ts` provides `PARIWAR_A` / `PARIWAR_B`, `enterAppScope` and `enterAppRoleNoScope`.
+  - `vitest.config.ts` includes `tests/**/*.test.ts` and `tests/integration/**/*.spec.ts`, and `@twt/domain` is already in
+    the CI integration filter. ⚠ The REPO-ROOT `tests/integration/` is a placeholder that nothing runs.
+  - RLS twin: `tests/integration/rls/alerts-policy-regression.spec.ts` (it sets the writer guard before a raw INSERT).
+  - Concurrency twin: `tests/integration/alert/alert-stream-concurrency.spec.ts` (RR + barrier, its own pool,
+    `session_replication_role='replica'` cleanup).
+- **G15 — Lock and retry precedents.**
+  - `FOR UPDATE` under the three-policy RLS shape: `announcement-channels/posts.ts`. It needs the UPDATE grant plus the
+    SELECT and UPDATE policies' USING clauses.
+  - SAVEPOINT retry: `reconciliation/reconciliation-review-write.ts`, under READ COMMITTED.
+  - Lock before guard: `docs/domain-accessor-invariants.md` family (c).
+- **G16 — `events_log` payload-expression indexes.**
   - `0079`: `CREATE UNIQUE INDEX "contribution_utr_attested_tr_uq" ON "events_log" ((payload ->> 'tr')) WHERE event_type =
-    'contribution.utr-attested';`.
-  - `0081` has a partial expression index, and `0185` has generated columns.
-  - `0185` notes that a non-`CONCURRENTLY` build takes a SHARE lock on `events_log`, and that under RLS a JSON-expression
-    predicate is not usable as an index condition.
-- **G17 — There is no `pariwars` table** (only `pariwar_passport` / `pariwar_wa_config` / `pariwar_telegram_config`).
-  - The twin migrations (`0071`, `0078`, `0084`) carry no tenant FK; tenancy is enforced by the RLS `withCheck`.
-  - Helpdesk specs use `PARIWAR_A` without seeding a passport.
-- **G18 — The ADR slot exists, and nothing in governance gates Epic 12.**
-  - The slot: `docs/knowledge-transfer/adr-index.md` row `ADR-NNNN-module-manifest-schema-versioning`, "Story 12.1 …
-    closure", `slot-reserved-pre-write`.
-  - No decision, routing note, deferred item or roster row defers or gates the marketplace. The only open item pointing at
-    Epic 12 is 1.19's role / cohort "Not addressed", which points at **12.2**.
+    'contribution.utr-attested';` — global and partial.
+  - Under RLS, `->>` is not leakproof, so a JSON predicate is a Filter, ⛔ an Index Cond (`0185:3`). Unique enforcement
+    ignores RLS.
+  - Hand-authored `events_log` indexes are named in `schema/events_log.ts`'s header (the 0185 lines), ⛔ declared on the
+    Drizzle table.
+  - The constraint name is read from the cause chain by `uniqueViolationConstraint` in `contribution/write.ts`. It is
+    private, so copy its shape. `helpdesk/errors.ts` compares against `'events_log_stream_id_event_version_uq'`.
+- **G17 — There is ⛔ `pariwars` table.** The twin migrations carry ⛔ tenant FK, and specs use `PARIWAR_A` unseeded.
+- **G18 — Whole-row trigger precedent:** `0189_ground-inspection-questionnaire.sql`, in chained-key form —
+  `(to_jsonb(NEW) - 'value_ciphertext' - 'value_code_indexes') IS NOT DISTINCT FROM (to_jsonb(OLD) - …)`. Postgres is
+  **16** (`ci.yml` `postgres:16-alpine`).
+- **G19 — Nothing in governance gates Epic 12.**
+  - The ADR slot `ADR-NNNN-module-manifest-schema-versioning` is reserved in `docs/knowledge-transfer/adr-index.md`.
+  - The only open items pointing at Epic 12 are 1.19's member-geo seam (12.2 consumes `state` / `district`) and D8's
+    condition-shaped role / cohort re-trigger.
 
-## ⚖️ Build decisions QE1–QE15
+## ⚖️ Build decisions QE1–QE15 (ANSWERED 2026-10-31 — all as recommended, `2026-10-31-427`; amended by `2026-10-31-429` A1–A7)
 
-> ⭐ Each QE is an author decision under §0. The four marked **ASK** go to BigDev at Task 0.2. All of them are recorded in
-> ONE author-commit decision entry at Task 0.3, BEFORE any code.
-
-- **QE1 — Home: `packages/domain/src/marketplace/`. Do NOT create `packages/marketplace`.**
-  - Basis: G1, and the 3.1 / 3.3a precedent ([[feedback_no_premature_package]]). Export with `export * as marketplace from
+- **QE1 — Home.**
+  - `packages/domain/src/marketplace/`, ⛔ `packages/marketplace`. Exported as `export * as marketplace from
     './marketplace/index.js'`.
-  - Tables go in `packages/domain/src/schema/`, RLS in `packages/domain/src/policies/`.
-  - No contracts in 12.1. Architecture: "`packages/contracts/src/<domain>/` exists for **externally-consumed API surfaces**
-    only", and 12.1 has no route. 12.2 / 12.3 add `packages/contracts/src/modules/` with the sync-guard test.
+  - Tables go in `schema/`, RLS in `policies/`.
+  - ⛔ contracts in 12.1: there is ⛔ route, and contracts serve "externally-consumed API surfaces only".
 - **QE2 — Names:** see "Names at a glance".
-  - Brands use `uuidBrand` in `ids/index.ts`; ids are lower-case ([[project_branded_ids_lowercase]]).
-  - The TS row type is `MarketplaceModule`. The branding type is `ModuleBrandingBundle`, not `BrandingBundle` (G8).
-  - The stream id is `module_id`.
-- **QE3 — Event types:** `module.authored`, `module.scheduled`, `module.activated`, `module.lead_submitted`,
-  `module.archived`.
-  - This follows the single-dot snake_case convention for primitive families (G4).
-  - The epic's `module.lead-submitted` is reconciled in a "PINNED SEAM" comment in `marketplace/events.ts`, copied from
-    `pool/events.ts`.
-  - Audit actions use the same strings, which already satisfy the audit regex.
-- **QE4 — `pariwar_id uuid NOT NULL`, with no FK** (G17; tenancy is enforced by RLS). Do not make it nullable:
-  - the PRD puts the cross-Pariwar manifest in v2;
-  - architecture §3.7 scopes contracts by `pariwar_id`;
-  - `events_log.pariwar_id` is NOT NULL (G5).
+  - TS row type: `MarketplaceModule`. Stream id: `module_id`.
+  - `schema/marketplace_modules.ts` takes the filter / branding TYPES via `import type` from `../marketplace/filters.js`
+    (type-only ⇒ ⛔ runtime cycle) and uses them with `$type<…>()`.
+- **QE3 — Events, actors, triggers (A6).**
+  - Events: `module.authored`, `module.scheduled`, `module.activated`, `module.lead_submitted`, `module.archived`.
+    `marketplace/events.ts` carries a "PINNED SEAM" comment reconciling the epic's `module.lead-submitted`.
+  - Actors: `moduleActorSchema = z.enum(['member','operator','trustee','system'])` (the claim set).
+    - `system` iff `actorId === null`.
+    - A lead is `actor: 'member'` with `actorId` = the member's id.
+  - Commands COMPUTE `trigger` themselves (⛔ caller input): `module.author`, `module.schedule`, `module.activate`,
+    `module.lead_submit`, `module.archive:<reason>`. The schema keeps `z.string().min(1)`.
+  - Audit actions are the event-type strings.
+- **QE4 — `pariwar_id uuid NOT NULL`, ⛔ FK (G17).**
+  - ⛔ nullable, because:
+    - the cross-Pariwar manifest is v2;
+    - contracts are per-Pariwar (architecture §3.7);
+    - `events_log.pariwar_id` is NOT NULL.
+  - Re-trigger: the v2 cross-Pariwar manifest.
+- **QE5 — Manifest columns.** ⭐ The DB enforces ONLY the six named CHECKs; every other rule below is zod-only, in
+  `parseModuleManifest`.
 
-  A nullable column would ship an affordance v1 can never write. Re-trigger: the v2 cross-Pariwar manifest. It will need its
-  own rule for which tenant owns the stream; `feature_flag_versions.ts` shows the three carve-outs a NULL tenant forces.
-- **QE5 — Manifest fields (the epic list reconciled with FR-64):**
-
-  | Column | Type / rule | Note |
+  | Column | Type | Rule (where) |
   |---|---|---|
-  | `module_id` | uuid PK, no default; **caller-minted**, passed into `authorModule` (QE15) | stream id |
-  | `pariwar_id` | uuid NOT NULL, no FK | QE4 |
-  | `partner_id` | uuid NOT NULL, `PartnerId`, no FK | No partner registry exists; partner identity is 12.2's step (a). Mirrors pool `cycle_id` unFK'd ([[project_pool_primitive_substrate]]). |
-  | `name_en`, `name_hi` | text NOT NULL, trimmed length 1–120 | both locales required (FR-64 `title`) |
-  | `description_en`, `description_hi` | text NOT NULL, trimmed length 1–2000 | FR-64 `description` |
-  | `eligibility_filter` | jsonb NOT NULL — `EligibilityFilterV1` (QE9) | |
-  | `scope_filter` | jsonb NOT NULL — `ScopeFilterV1` (QE9) | |
-  | `valid_from`, `valid_until` | timestamptz NOT NULL; `CONSTRAINT marketplace_modules_window CHECK (valid_until > valid_from)` | |
-  | `slot_capacity` | integer NULL; `CONSTRAINT marketplace_modules_capacity_positive CHECK (slot_capacity > 0)`; NULL = uncapped | FR-64 `slot_capacity?` |
-  | `slots_remaining` | integer NULL; `CONSTRAINT marketplace_modules_slots_pair CHECK ((slot_capacity IS NULL) = (slots_remaining IS NULL))`; `CONSTRAINT marketplace_modules_slots_range CHECK (slots_remaining >= 0 AND slots_remaining <= slot_capacity)` (NULLs pass; the pair CHECK covers them) | **projected** |
-  | `lead_handoff_url` | text NOT NULL; `https:` only, no userinfo, ≤ 2048 | partner endpoint (delivered by 12.5) |
-  | `lead_handoff_signing_key_secret_name` | text NOT NULL; `^[A-Za-z0-9_-]{1,255}$` | renamed from the epic's `lead_handoff_signing_key_ref` to the repo convention (G6). Holds a Secret Manager NAME, never key material. |
-  | `branding_bundle` | jsonb NOT NULL — `{ version: 1, logo_object_key: string \| null, accent_color_hex: /^#[0-9a-f]{6}$/ \| null }`, `.strict()` | C5 |
-  | `manifest_schema_version` | smallint NOT NULL; `CHECK (manifest_schema_version = 1)` | QE11 / ADR |
-  | `current_state` | `marketplace_module_state` NOT NULL | **projected** |
-  | `state_event_version` | bigint NOT NULL | **projected** |
-  | `archive_reason` | `marketplace_module_archive_reason` NULL; `CONSTRAINT marketplace_modules_archive_reason_pair CHECK ((current_state = 'archived') = (archive_reason IS NOT NULL))` | **projected** (CHECKs see the final row; the archive UPDATE sets both columns in one statement) |
-  | `audit_id` | uuid NOT NULL, no FK — the audit line of the **most recent** transition | ⚠ Unlike the twins (genesis-only, G12), the projector SETs it on every transition, so it is projector-written (I1). |
+  | `module_id` | uuid PK, ⛔ default | caller-minted, passed to `authorModule` (QE15) |
+  | `pariwar_id` | uuid NOT NULL, ⛔ FK | QE4 |
+  | `partner_id` | uuid NOT NULL, ⛔ FK | `PartnerId`; partner identity is 12.2's |
+  | `name_en`, `name_hi` | text NOT NULL | trimmed 1–120 (zod) |
+  | `description_en`, `description_hi` | text NOT NULL | trimmed 1–2000 (zod) |
+  | `eligibility_filter` | jsonb NOT NULL, `$type<EligibilityFilterV1>` | QE9 (zod) |
+  | `scope_filter` | jsonb NOT NULL, `$type<ScopeFilterV1>` | QE9 (zod) |
+  | `valid_from`, `valid_until` | timestamptz NOT NULL | `CONSTRAINT marketplace_modules_window CHECK (valid_until > valid_from)` |
+  | `slot_capacity` | integer NULL (NULL = uncapped) | `CONSTRAINT marketplace_modules_capacity_positive CHECK (slot_capacity > 0)` |
+  | `slots_remaining` | integer NULL — **projected** | `CONSTRAINT marketplace_modules_slots_pair CHECK ((slot_capacity IS NULL) = (slots_remaining IS NULL))`; `CONSTRAINT marketplace_modules_slots_range CHECK (slots_remaining >= 0 AND slots_remaining <= slot_capacity)` |
+  | `lead_handoff_url` | text NOT NULL | ⭐ (zod, A3) `https:` only; ⛔ userinfo; **⛔ query string, ⛔ fragment** (`url.search === '' && url.hash === ''`); host ⛔ an IP literal (v4/v6) and ⛔ `localhost`; ≤ 2048 |
+  | `lead_handoff_signing_key_secret_name` | text NOT NULL | `^[A-Za-z0-9_-]{1,255}$` (zod) — a Secret Manager NAME (G6), renamed from the epic's `_ref` |
+  | `branding_bundle` | jsonb NOT NULL, `$type<ModuleBrandingBundle>` | `{ version: 1, logo_object_key: string(1–1024) \| null, accent_color_hex: /^#[0-9a-f]{6}$/ \| null }` `.strict()` (zod); C5 |
+  | `manifest_schema_version` | smallint NOT NULL | `CONSTRAINT marketplace_modules_manifest_schema_version_v1 CHECK (manifest_schema_version = 1)` |
+  | `current_state` | `marketplace_module_state` NOT NULL — **projected** | |
+  | `state_event_version` | bigint NOT NULL — **projected** | |
+  | `archive_reason` | `marketplace_module_archive_reason` NULL — **projected** | `CONSTRAINT marketplace_modules_archive_reason_pair CHECK ((current_state = 'archived') = (archive_reason IS NOT NULL))` |
+  | `audit_id` | uuid NOT NULL, ⛔ FK — **projected** | the audit line of the MOST RECENT transition (unlike the genesis-only twins) |
   | `created_at` | timestamptz NOT NULL default `now()` | immutable |
-  | `updated_at` | timestamptz NOT NULL default `now()`; SET to DB `now()` by the projector on every transition | projector-written (twin posture) |
+  | `updated_at` | timestamptz NOT NULL default `now()` — **projected** | SET to `now()` on every transition |
 
   Indexes: `marketplace_modules_pariwar_id_idx (pariwar_id)` and `marketplace_modules_pariwar_state_idx (pariwar_id,
-  current_state)` (the `0084` twin).
+  current_state)`.
 
   **Deliberately NOT in 12.1:**
-  - **`commission_terms` → 12.2.** It is the private commercial term the PRD says is "**never** public", and its shape is
-    OQ-4, still open (Trustee Panel + partners). Storing it on a row that member-facing reads will select invites a leak;
-    12.2 chooses an admin-only home. **ASK (BigDev): confirm this deferral.**
-  - **FR-64's `target_url_or_form` / an external-URL CTA.** The epic resolved the CTA to an in-app interest form (12.3)
-    plus a webhook (12.5). An external-URL CTA is **Not addressed**. Re-trigger: the first partner whose contract requires
-    sending the member to the partner's own page.
-  - **Lead delivery status** (`delivered | pending_retry | failed_delivery`, architecture §3.7) → 12.5's lead entity.
-  - **`module.restored`** → 12.6 (C3).
-- **QE6 — The lifecycle.** All arms are authored here. 12.1 ships one command per event, called from tests only (I6).
+  - `commission_terms` → 12.2: admin-only home; PRD "never public"; OQ-4 open; trust-deed "disclosed" (§0 edge 8).
+  - The external-URL CTA (FR-64 `target_url_or_form`) — Not addressed.
+  - Lead delivery status → 12.5.
+  - `module.restored` → 12.6.
+- **QE6 — The lifecycle.** All arms are authored here: one command per event, called from tests only (I6).
 
-  | From | Event | To | Command guard (DB `now()`, never the app clock) | Failure |
+  | From | Event | To | Guard (DB `now()`) | Failure |
   |---|---|---|---|---|
-  | — | `module.authored` | `draft` | stream empty (genesis); manifest valid | `ModuleGenesisAlreadyExistsError` / `ModuleManifestInvalidError` |
+  | — | `module.authored` | `draft` | stream empty; manifest valid; **`valid_until > now()`** (A5 — a past `valid_from` is fine) | `ModuleGenesisAlreadyExistsError` / `ModuleManifestInvalidError` / `ModuleOutsideWindowError` |
   | `draft` | `module.scheduled` | `scheduled` | `now() < valid_from` | `ModuleOutsideWindowError` |
   | `draft` / `scheduled` | `module.activated` | `active` | `valid_from ≤ now() < valid_until` | `ModuleOutsideWindowError` |
-  | `active` | `module.lead_submitted` | `active` (**same-state**) | QE7 / QE8 | see QE7 / QE8 |
-  | `draft` / `scheduled` / `active` | `module.archived` | `archived` | the reason's rule (below) | `ModuleArchiveReasonNotSatisfiedError` |
+  | `active` | `module.lead_submitted` | `active` (same-state) | QE7 / QE8 | QE7 / QE8 |
+  | `draft` / `scheduled` / `active` | `module.archived` | `archived` | the reason's rule | `ModuleArchiveReasonNotSatisfiedError` |
 
-  An event from any other state throws `ModuleIllegalTransitionError`. `archived` is **terminal in 12.1's vocabulary**;
-  12.6 may add `module.restored` (C3).
-
-  Archive reasons:
-  - `trustee_archived` — allowed from any non-archived state.
-  - `valid_until_reached` — requires `now() ≥ valid_until`; allowed from any non-archived state.
-  - `slot_capacity_exhausted` — requires `active`, a capped module, and `slots_remaining = 0`.
-
-  The reducer uses the pre-genesis `initial: 'draft'`, as alert does. Genesis legality is "the stream is empty", checked in
-  `projectModuleGenesis`. `module.authored` is NEVER legal through `projectModuleTransition` (TR2).
-
-  The time window is **half-open**, `[valid_from, valid_until)`: at `now() = valid_until` the module is closed. FR-65 writes
-  `[valid_from, valid_until]`; this is a deliberate variance, so that an archive at `valid_until` and a lead at
-  `valid_until` cannot both be legal.
-- **QE7 — `module.lead_submitted`: row lock first, then the guards, then a decrement in the projector.**
-  `submitModuleLead` first runs `SELECT … FROM marketplace_modules WHERE module_id = $1 AND pariwar_id = $2 FOR UPDATE`
-  (G15 family (c)). The lock serialises leads per module, so the last place is decided under the lock, not by a version race.
-
-  It then re-checks against the locked row, in this order, throwing the first that fails:
-  1. state ≠ `active` → `ModuleNotActiveError` (`submitModuleLead` never throws `ModuleIllegalTransitionError`);
-  2. `now() ∉ [valid_from, valid_until)` → `ModuleOutsideWindowError`;
-  3. capped and `slots_remaining = 0` → `ModuleSlotsExhaustedError`;
-  4. QE8.
-
-  Payload: `{ lead_id, member_id, slots_remaining_after: number | null, from_state:'active', to_state:'active', trigger,
-  actor }`, `.strict()`. No name, mobile number or other PII.
-
-  **There is no automatic archive at zero in 12.1.** A capped module whose last place goes stays `active` with
-  `slots_remaining = 0` until a `module.archived` (`slot_capacity_exhausted`) is emitted. Whether that happens immediately or
-  in a daily sweep is 12.6's call (C2), so 12.3's shelf must treat `slots_remaining = 0` as not offerable (C1).
-  **ASK (BigDev): confirm "no auto-archive inside 12.1"**, rather than archiving in the same projector call.
-- **QE8 — One place per member per module. The DB enforces it, not a stream scan.**
-  - `leadId: ModuleLeadId` is CALLER-supplied: it is the idempotency key for 12.3 / 12.5.
-  - The migration adds two partial unique indexes on `events_log` (G16 precedent):
+  - Archive reasons:
+    - `trustee_archived` — from any non-archived state;
+    - `valid_until_reached` — `now() ≥ valid_until`, from any non-archived state;
+    - `slot_capacity_exhausted` — only when `active`, capped and `slots_remaining = 0`.
+  - `archived` is terminal in 12.1 (C3).
+  - Guard order for schedule / activate / archive: row present (`ModuleGenesisMissingError`) → transition legal
+    (`ModuleIllegalTransitionError`) → window / reason guard.
+  - The window is half-open, `[valid_from, valid_until)`. FR-65 writes a closed interval; this is a variance, so that an
+    archive at `valid_until` and a lead at `valid_until` cannot both be legal.
+  - The reducer uses a pre-genesis `initial: 'draft'`. `module.authored` is NEVER legal through `projectModuleTransition`
+    (TR2).
+- **QE7 — Every transition locks the row first (A1).**
+  - `scheduleModule`, `activateModule`, `submitModuleLead` and `archiveModule` FIRST run `SELECT … FROM
+    marketplace_modules WHERE module_id = $1 AND pariwar_id = $2 FOR UPDATE`, then check their guards against the locked
+    row, then call `projectModuleTransition(client, { …, lockedRow })`.
+  - There is ONE lock order everywhere — row lock → `events_log` append → row UPDATE. This prevents the 40P01 deadlock
+    that an append-first transition would cause against a lead (TR12). Under the lock, a version conflict is reachable
+    only at genesis.
+  - The lead path checks in this order, throwing at the first failure:
+    1. row present (`ModuleGenesisMissingError`);
+    2. **replay** (QE8 (i)) — returns the original result;
+    3. state ≠ `active` → `ModuleNotActiveError` (`submitModuleLead` never throws `ModuleIllegalTransitionError`);
+    4. `now() ∉ [valid_from, valid_until)` → `ModuleOutsideWindowError`;
+    5. capped and `slots_remaining = 0` → `ModuleSlotsExhaustedError`;
+    6. QE8 (ii);
+    7. QE8 (iii).
+  - **⛔ Automatic archive at zero** (confirmed `-427`): a capped module stays `active` at 0 places until an archive is
+    emitted, and 12.6 decides when (C2).
+  - Payload: `{ lead_id, member_id, slots_remaining_after: number | null, from_state: 'active', to_state: 'active',
+    trigger, actor }`, `.strict()`, ⛔ PII.
+- **QE8 — One place per member per module; the lead id is the idempotency key (A2).**
+  - `leadId: ModuleLeadId` is CALLER-supplied. Under the row lock:
+    - (i) a `module.lead_submitted` with the same `lead_id` on THIS stream for the SAME `member_id` → return `{ replayed:
+      true, leadId, eventVersion, slotsRemainingAfter }`, read from that event; ⛔ event, ⛔ decrement;
+    - (ii) the same `lead_id` for a DIFFERENT member on this stream → `ModuleLeadDuplicateError`;
+    - (iii) the same member with a different `lead_id` → `ModuleLeadAlreadySubmittedError`.
+  - Two partial unique indexes on `events_log` (the `0079` precedent) are the guarantee:
     - `CREATE UNIQUE INDEX "module_lead_member_uq" ON "events_log" ("stream_id", (payload ->> 'member_id')) WHERE
       event_type = 'module.lead_submitted';`
     - `CREATE UNIQUE INDEX "module_lead_id_uq" ON "events_log" ((payload ->> 'lead_id')) WHERE event_type =
-      'module.lead_submitted';`
-  - A 23505 is mapped by constraint name:
+      'module.lead_submitted';` — global, so a `lead_id` reused on ANOTHER module (even another tenant's) is a 23505 →
+      `ModuleLeadDuplicateError`.
+  - Map each 23505 by constraint name, using a local copy of `contribution/write.ts`'s cause-chain walker (G16):
     - `module_lead_member_uq` → `ModuleLeadAlreadySubmittedError`;
     - `module_lead_id_uq` → `ModuleLeadDuplicateError`;
     - `events_log_stream_id_event_version_uq` → `ModuleStreamConcurrencyError`.
-
-    `isModuleStreamVersionConflict` keys on the constraint name, as `helpdesk/errors.ts` does, so a lead-uniqueness
-    violation is never mistaken for a version conflict.
-  - A cheap pre-check (`SELECT 1 … WHERE stream_id = $ AND event_type = 'module.lead_submitted' AND payload->>'member_id' =
-    $`) lets `checkModuleLeadAllowed` refuse before any audit wrapper runs (QE15). The unique index is the guarantee.
-  - The lead path does NOT load the full stream with payloads. The genesis payload carries the whole manifest, up to about
-    4 KB plus 200 filter values. The lead path reads the locked row's projected scalars and the stream head version only.
-  - A place counts a PERSON, not a tap. **ASK (BigDev)** — §0 edge 4.
-- **QE9 — Filter grammars: closed, versioned and `.strict()`. `parseModuleManifest` validates them at WRITE and rejects
-  anything unknown. Nothing in 12.1 evaluates them.**
+  - In `projectModuleGenesis`, a 23505 on `events_log_stream_id_event_version_uq` or `marketplace_modules_pkey` →
+    `ModuleGenesisAlreadyExistsError`.
+  - `member_id` / `lead_id` in the payload are validated as LOWER-CASE uuids
+    (`/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/`), so case cannot bypass the text-keyed indexes.
+    The index key names equal the zod keys exactly.
+  - The pre-check reads THIS stream only: `SELECT payload FROM events_log WHERE pariwar_id = $ AND stream_id = $ AND
+    event_type = 'module.lead_submitted' AND (payload->>'lead_id' = $ OR payload->>'member_id' = $) LIMIT 2`. The JSON
+    predicate is a Filter, bounded by the `stream_id` index (G16).
+  - ⛔ cross-stream `lead_id` pre-check (RLS hides other tenants); that case comes only from the 23505.
+  - The lead path ⛔ replays the stream.
+- **QE9 — Filter grammars: closed, versioned, `.strict()`, validated at WRITE by `parseModuleManifest`, ⛔ evaluated in
+  12.1.**
   - **`ScopeFilterV1`** is one of:
     - `{ version: 1, scope: 'members-all' }`
     - `{ version: 1, scope: 'state', values: string[] }`
     - `{ version: 1, scope: 'district', values: string[] }`
 
-    `values` holds 1–200 entries, unique and non-empty, and is not normalised (byte-identical, G9).
-  - Scopes deliberately absent:
-    - `'public'`: the shelf is members-only.
-    - `block`: never resolvable (G9).
-    - **`role` / `cohort`: ABSENT, rather than declared-and-empty as in banners / news.** A module authored for "cohort X"
-      would silently reach nobody: a targeting mistake with no signal. 1.19 D8 says do not mint before a live requirement,
-      and 12.2 is the named re-trigger surface. **ASK (BigDev): confirm ABSENT (rejected at write) rather than
-      declared-and-empty.**
-  - "Pariwar" in the epic's `Pariwar / state / district / role / cohort` is `members-all`, because the row is already
-    Pariwar-scoped (QE4).
+    `values` has 1–200 entries, unique, non-empty, ⛔ normalised. Excluded:
+    - ⛔ `'public'` — the shelf is members-only;
+    - ⛔ `block` — never resolvable;
+    - **`role` / `cohort` — ABSENT, rejected at write** (confirmed `-427`). D8's re-trigger is unchanged: the first
+      surface that must target by role / cohort, which 12.2 MAY be.
+
+    Values are ⛔ validated against the geo tree in 12.1 (C11).
   - **`EligibilityFilterV1`** is `{ version: 1, clauses: Clause[] }`, with 0–8 clauses and each `kind` at most once.
-    - The only v1 clause is `{ kind: 'member_state_in', states: MemberLifecycleState[] }`: non-empty, unique, drawn from
-      `MEMBER_LIFECYCLE_STATES`.
-    - **Zero clauses = no eligibility restriction beyond scope**; document this on the type.
-    - The epic's eligibility "district" is expressed in `ScopeFilterV1`'s `district` arm.
-    - **`age_band` is Not addressed** (G10): evaluating it decrypts Tier-1 DOB on the shelf path. Re-trigger: the first
-      age-banded module (the PRD's LIC UJ-10 edge case); 12.2 / 12.3 raise it with that requirement attached.
-  - The grammar grows additively within `version: 1`. A breaking change is `version: 2`.
-- **QE10 — No route, UI, permission key, consent type or job.** The `module_lead_handoff` consent type is added "by the epic
-  that FIRST WRITES" it (`schema/consent_records.ts` comment), which is 12.3. The commands are domain functions, called from
-  tests only in 12.1 (I6).
-- **QE11 — Manifest content is IMMUTABLE after `module.authored`.**
-  - The genesis event payload carries the whole manifest. The projector writes the content columns once, and the trigger
-    rejects any later change (I2).
-  - A correction means archiving (`trustee_archived`) and authoring a new module. There is no revise event in v1.
-  - Re-trigger: 12.2, if the wizard needs server-side save-as-you-go. It would then add a `module.revised` arm, legal in
-    `draft` only.
-  - This posture, plus `manifest_schema_version` and QE9's grammar-version rule, is the ADR (Task 7).
-- **QE12 — Reads**, with an explicit `pariwarId` as `helpdesk/read.ts` does (RLS is the second line, not the only one):
-  - `getModule(db, pariwarId, moduleId)`;
-  - `listModulesForPariwar(db, pariwarId, { state?, limit? })`, ordered `created_at DESC, module_id DESC`, with
-    `.limit(clampLimit(opts.limit, { default, cap }))` written inline (TR5);
-  - `getModuleStateAt(db, pariwarId, moduleId, at)`, which replays `events_log` with `occurred_at ≤ at` (AR-14
-    time-travel, the `member/read.ts` `getMemberStateAt` shape).
+    - The v1 clause is `{ kind: 'member_state_in', states: (MemberLifecycleState minus 'withdrawn' | 'anonymized')[] }`,
+      non-empty and unique (A4).
+    - Zero clauses = no restriction beyond scope.
+    - The epic's eligibility "district" lives in `ScopeFilterV1`.
+    - `age_band` is Not addressed (it would decrypt Tier-1 DOB) → 12.3.
+  - The grammar grows additively within `version: 1`; a breaking change is `version: 2`.
+  - **`parseModuleManifest(input: unknown): ModuleManifestV1`.**
+    - Input: snake_case JSON with exactly the QE5 content keys — `partner_id`, `name_en`, `name_hi`, `description_en`,
+      `description_hi`, `eligibility_filter`, `scope_filter`, `valid_from`, `valid_until`, `slot_capacity`,
+      `lead_handoff_url`, `lead_handoff_signing_key_secret_name`, `branding_bundle`.
+    - `valid_*` are ISO strings in and `Date` out.
+    - NOT input: `module_id`, `pariwar_id`, `manifest_schema_version` (command args / constants).
+    - It throws `ModuleManifestInvalidError`, wrapping the ZodError.
+    - The window-vs-`now()` rule (A5) is checked by `authorModule` against DB time, ⛔ by the parser.
+- **QE10 — No route, UI, permission key, consent type or job.** `module_lead_handoff` is 12.3's.
+- **QE11 — Manifest content is immutable after `module.authored`.** A correction = archive + a new module (C10). ⛔ revise
+  event (re-trigger: 12.2). Recorded in the ADR.
+- **QE12 — Reads (explicit `pariwarId`):**
+  - `getModule(db, pariwarId, moduleId)`.
+  - `listModulesForPariwar(db, pariwarId, { state?, limit? })` — ordered `created_at DESC, module_id DESC`; uses
+    `.limit(clampLimit(opts.limit, { default: LIST_MODULES_DEFAULT_LIMIT, cap: LIST_MODULES_MAX_LIMIT }))` inline, with
+    `LIST_MODULES_DEFAULT_LIMIT = 50` and `LIST_MODULES_MAX_LIMIT = 200` (TR5).
+  - `getModuleStateAt(db, pariwarId, moduleId, at)` — STATE only, in the `member/read.ts` `getMemberStateAt` shape plus
+    `eq(eventsLog.pariwarId, pariwarId)`. Mind its clock-domain caveat.
 
-  No shelf read.
-- **QE13 — Per-domain errors, in `marketplace/errors.ts`:**
-  - `ModuleIllegalTransitionError`
-  - `ModuleStreamConcurrencyError` + `isModuleStreamVersionConflict`
-  - `ModuleGenesisAlreadyExistsError`, `ModuleGenesisMissingError`
-  - `ModulePersistError`
-  - `ModuleManifestInvalidError` (wraps a ZodError)
-  - `ModuleArchiveReasonNotSatisfiedError`
-  - the five lead / window errors: `ModuleNotActiveError`, `ModuleOutsideWindowError`, `ModuleSlotsExhaustedError`,
-    `ModuleLeadAlreadySubmittedError`, `ModuleLeadDuplicateError`
-  - `ModuleStateDirectWriteError` + `MODULE_STATE_DIRECT_WRITE_CODE` + `isModuleStateDirectWriteError`
-
-  Borrow none from another namespace (10.1 review). Only the direct-write trio is exported at the TOP level of
-  `domain/src/index.ts`, following the `PoolStateDirectWriteError` trio. Every other error is reached through the
-  `marketplace` namespace (the helpdesk precedent). Do NOT register anything in the API error mapper (12.1 has no route).
-- **QE14 — Back-brand the helpdesk seam** (type-only: no FK, no migration):
-  - `helpdesk_tickets.moduleId` and `ProjectTicketGenesisInput.moduleId` become `ModuleId | null`.
-  - `apps/api/src/modules/helpdesk/handlers.ts` becomes `moduleId: body.module_id ? ids.moduleId(body.module_id) : null`.
-    This mirrors `poolId`; the contract is `UuidString`, so the brand cannot throw.
-  - Rewrite only the `module_id` half of the shared comment. `validity_lookup_id` stays unbranded.
-  - `uuidBrand` lower-cases, so the `helpdesk.ticket_created` payload `module_id` becomes lower-case. This is harmless.
+  ⛔ shelf read.
+- **QE13 — Errors (`marketplace/errors.ts`).**
+  - Lifecycle and projector:
+    - `ModuleIllegalTransitionError`
+    - `ModuleStreamConcurrencyError` + `isModuleStreamVersionConflict`
+    - `ModuleGenesisAlreadyExistsError`
+    - `ModuleGenesisMissingError` (also thrown when the locked row is absent)
+    - `ModulePersistError`
+    - `ModuleProjectorInputError` (actor / actorId mismatch; flat inputs vs payload)
+    - `ModuleManifestInvalidError`
+    - `ModuleArchiveReasonNotSatisfiedError`
+  - Lead: `ModuleNotActiveError`, `ModuleOutsideWindowError`, `ModuleSlotsExhaustedError`,
+    `ModuleLeadAlreadySubmittedError`, `ModuleLeadDuplicateError`.
+  - Direct write: `ModuleStateDirectWriteError` + `MODULE_STATE_DIRECT_WRITE_CODE` +
+    `MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX` + `isModuleStateDirectWriteError`. Only this set is exported at the TOP
+    level of `domain/src/index.ts` (the pool trio shape); everything else goes through the `marketplace` namespace.
+  - ⛔ API error-mapper entry.
+- **QE14 — Back-brand the helpdesk seam** (type-only).
+  - Schema: `moduleId: uuid('module_id').$type<ModuleId>()`. Projector: `ProjectTicketGenesisInput.moduleId: ModuleId |
+    null`.
+  - Rewrite only the `module_id` half of the shared comment, in BOTH files.
+  - In `apps/api/src/modules/helpdesk/handlers.ts`: `moduleId: body.module_id ? ids.moduleId(body.module_id) : null`.
+  - The `helpdesk.ticket_created` payload's `module_id` becomes lower-case, which is harmless.
 - **QE15 — Audit pairing is the CALLER's (G12).**
-  - Every command takes `client: pg.PoolClient` (a caller-held transaction with `SET LOCAL ROLE twt_app` and
-    `setPariwarScope` already done; `events_log` needs it, G5) and a REQUIRED `auditId: string`, and writes `auditId` to
-    `audit_id`.
-  - No domain function calls `withCompensatingAudit`. The caller (the 12.2 / 12.3 / 12.6 routes and jobs; in 12.1, one spec
-    only) mints `moduleId` / `leadId`, runs `checkModuleLeadAllowed(db, …) → { ok: true } | { ok: false, refusal }`
-    BEFORE the wrapper (the wa-opt-in shape), and then calls `audit.withCompensatingAudit(servicePool, { auditIntent, mutate:
-    ({ auditId }) => marketplace.<command>(client, { …, auditId }) })`. The audit `resourceLocator` is `module/<id>`.
-  - The in-transaction re-check under the row lock still throws the typed errors. Only a genuine race reaches
-    `_rolled_back`.
-  - `submitModuleLead`'s backstop retry stays inside ONE command call: one `auditId`, one intent line.
+  - Commands take `client: pg.PoolClient` (`SET LOCAL ROLE twt_app` + `setPariwarScope` already done) and a REQUIRED
+    `auditId`. ⛔ domain function calls `withCompensatingAudit`.
+  - The caller (the 12.2 / 12.3 / 12.6 routes and jobs):
+    1. mints `moduleId` / `leadId`;
+    2. runs `checkModuleLeadAllowed` BEFORE the wrapper;
+    3. calls `audit.withCompensatingAudit(servicePool, { auditIntent, mutate: ({ auditId }) => marketplace.<command>(client,
+       { …, auditId }) })` with `resourceLocator` `module/<id>`.
+  - A lead refused by the pre-check writes ⛔ audit lines. A refusal under the lock (a genuine race) writes the intent
+    line + `_rolled_back`.
+  - The lead's backstop retry stays inside ONE command call, so it uses one `auditId`.
+
+### Exact signatures (Task 5 — copy these)
+
+```ts
+type ModuleEventActor = 'member' | 'operator' | 'trustee' | 'system';
+interface ModuleCommandBase {
+  pariwarId: PariwarId; moduleId: ModuleId; auditId: string;
+  actor: ModuleEventActor; actorId: string | null;            // 'system' iff null (else ModuleProjectorInputError)
+}
+interface ModuleTransitionResult { eventId: string; eventVersion: number; fromState: MarketplaceModuleState; state: MarketplaceModuleState }
+
+authorModule(client: pg.PoolClient, i: ModuleCommandBase & { manifest: unknown }): Promise<{ eventId: string; eventVersion: 1; state: 'draft' }>
+scheduleModule(client: pg.PoolClient, i: ModuleCommandBase): Promise<ModuleTransitionResult>
+activateModule(client: pg.PoolClient, i: ModuleCommandBase): Promise<ModuleTransitionResult>
+archiveModule(client: pg.PoolClient, i: ModuleCommandBase & { reason: MarketplaceModuleArchiveReason }): Promise<ModuleTransitionResult & { reason: MarketplaceModuleArchiveReason }>
+submitModuleLead(client: pg.PoolClient, i: ModuleCommandBase & { leadId: ModuleLeadId; memberId: MemberId })
+  : Promise<ModuleTransitionResult & { replayed: false; slotsRemainingAfter: number | null }
+         | { replayed: true; leadId: ModuleLeadId; eventVersion: number; slotsRemainingAfter: number | null }>
+checkModuleLeadAllowed(db: Db, a: { pariwarId: PariwarId; moduleId: ModuleId; memberId: MemberId; leadId: ModuleLeadId })
+  : Promise<{ ok: true; replayed: boolean } | { ok: false; refusal: ModuleLeadRefusal }>
+type ModuleLeadRefusal = 'not_found' | 'not_active' | 'outside_window' | 'slots_exhausted' | 'duplicate_lead' | 'already_submitted'; // QE7 order
+
+// marketplace/project.ts — ⛔ re-exported from marketplace/index.ts (specs import from src/marketplace/project.js)
+projectModuleGenesis(client: pg.PoolClient, i: { pariwarId; moduleId; manifest: ModuleManifestV1; auditId; actor; actorId }): Promise<…>
+projectModuleTransition(client: pg.PoolClient, i: {
+  pariwarId; moduleId; eventType: Exclude<ModuleEventType, 'module.authored'>; payload: unknown; auditId; actor; actorId;
+  lockedRow: { currentState: MarketplaceModuleState; stateEventVersion: number; slotsRemaining: number | null; slotCapacity: number | null };
+}): Promise<ModuleTransitionResult>
+```
+
+`projectModuleTransition` runs these steps, in order:
+1. Read `SELECT max(event_version)` for the stream. If it ≠ `lockedRow.stateEventVersion`, throw
+   `ModuleStreamConcurrencyError`.
+2. Set `fromState = lockedRow.currentState`. Legality is `nextModuleState(fromState, eventType) !== null`.
+3. Cross-validate `payload.from_state === fromState` and `payload.to_state === nextModuleState(…)`. For a lead, also
+   `payload.slots_remaining_after === (slotsRemaining === null ? null : slotsRemaining − 1)`. A mismatch →
+   `ModuleProjectorInputError`.
+4. Parse the payload `.strict()` and insert it at `stateEventVersion + 1`.
+5. `SET LOCAL app.marketplace_module_state_writer = 'on'` → UPDATE (the I1 columns, `updated_at = now()`, `audit_id`) →
+   `'off'` in a `finally`.
+
+It ⛔ replays payloads. `authorModule` needs ⛔ time guard beyond A5; `created_at` / `updated_at` take their defaults.
+
+**Payload schemas** (`marketplace/events.ts`, all `.strict()`; `auditShape = { from_state, to_state, trigger:
+z.string().min(1), actor: moduleActorSchema }`):
+- `ModuleAuthoredPayloadSchema`: `from_state: z.null()`, `to_state: z.literal('draft')`, plus `module_id`, `pariwar_id`,
+  `manifest_schema_version: z.literal(1)` and every QE5 content column in snake_case. Timestamps are
+  `z.string().datetime({ offset: true })`.
+- `ModuleScheduledPayloadSchema` / `ModuleActivatedPayloadSchema`: the audit shape only, with `from_state` / `to_state`
+  literals per arm.
+- `ModuleLeadSubmittedPayloadSchema`: QE7's shape. It accepts only `from_state === to_state === 'active'`, with lower-case
+  ids.
+- `ModuleArchivedPayloadSchema`: the audit shape + `reason: z.enum(MARKETPLACE_MODULE_ARCHIVE_REASONS)`.
 
 ## Invariants (I)
 
 - **I1** — The projected columns `current_state`, `state_event_version`, `slots_remaining`, `archive_reason`, `audit_id`
   and `updated_at` are written ONLY by `projectModuleGenesis` / `projectModuleTransition`. Two mechanisms enforce this:
-  - the trigger: ANY UPDATE without `app.marketplace_module_state_writer = 'on'` raises P0001, and so does an unguarded
-    INSERT;
+  - the trigger rejects any unguarded UPDATE or INSERT;
   - the AST gate.
-- **I2** — These columns are immutable after INSERT, **even with the guard on**: `module_id`, `pariwar_id`, `partner_id`,
-  `name_en`, `name_hi`, `description_en`, `description_hi`, `eligibility_filter`, `scope_filter`, `valid_from`,
-  `valid_until`, `slot_capacity`, `lead_handoff_url`, `lead_handoff_signing_key_secret_name`, `branding_bundle`,
-  `manifest_schema_version`, `created_at`. The trigger compares the whole row minus the I1 columns, so any column added
-  later is immutable by default.
+- **I2** — Every other column is immutable after INSERT, even with the guard on. The trigger compares the whole row
+  minus the I1 columns, so a column added later is immutable by default (C12).
 - **I3** — On INSERT: `current_state = 'draft'`, `state_event_version = 1`, `slots_remaining IS NOT DISTINCT FROM
-  slot_capacity`, and `archive_reason IS NULL`. With the guard on, `state_event_version` strictly increases, and
-  `slots_remaining` either stays the same or drops by exactly 1.
-- **I4** — After every projector call, the persisted row equals `foldModuleProjection(loadEvents(module_id))` on `{ state,
-  version, slotsRemaining, archiveReason }`. Tests assert this.
+  slot_capacity`, and `archive_reason IS NULL`. With the guard on:
+  - `state_event_version` strictly increases;
+  - `slots_remaining` stays the same or drops by exactly 1;
+  - a state change never moves `slots_remaining`.
+- **I4** — After every projector call, the row equals `foldModuleProjection(loadEvents(module_id))` on `{ state,
+  version, slotsRemaining, archiveReason }`.
 - **I5** — For a capped module, `0 ≤ slots_remaining ≤ slot_capacity`, and `slot_capacity − slots_remaining` equals the
-  number of `module.lead_submitted` events on the stream. This holds under two concurrent connections. For an uncapped
-  module both columns stay NULL.
-- **I6** — No production call site exists for any 12.1 write command (grep result in Completion Notes). 12.2 / 12.3 / 12.6
-  add them.
-- **I7** — `PERMISSION_CATALOG_VERSION` stays 56. No role, permission key or consent value is added.
-- **I8** — No new `account-frozen` source or reason. `member/overlay.ts` is untouched, so the `-147` cl.3 fence is not
-  engaged.
-- **I9** — Event payloads carry no Tier-1 PII; a member is identified by `member_id` only.
+  number of `module.lead_submitted` events, under concurrency. For an uncapped module, both columns stay NULL.
+- **I6** — No production call site exists for any 12.1 write command (grep in Completion Notes).
+- **I7** — `PERMISSION_CATALOG_VERSION` stays 56; no role, permission key or consent value is added.
+- **I8** — No new `account-frozen` source or reason; `member/overlay.ts` is untouched.
+- **I9** — Event payloads carry no Tier-1 PII; the member is identified only by a lower-case `member_id`.
+- **I10** — Every transition takes the row lock before any `events_log` append (one lock order, A1).
 
 ## Acceptance Criteria
 
-0. **AC0 — governance first.**
-   - QE1–QE15 are recorded in ONE author-commit decision entry (`-427`, `a22dbdec` — ⭐ MET), committed ALONE with a `governance:` prefix,
-     BEFORE any code commit.
-   - The four ASKs (QE5 `commission_terms` deferral, QE7 no auto-archive, QE8 one place per member, QE9 role / cohort absent)
-     carry BigDev's answers verbatim.
-   - ⭐ MET: the carried items C1–C8 land in `deferred-work.md`, and as short "⭐ INHERITED FROM 12.1" notes under the owning
-     stories in `epics.md` ([[feedback_governance_commits_precede_implementation]],
-     [[feedback_spec_edits_must_propagate_to_tasks]]).
-1. **AC1 — manifest table.** **Given** FR-64 + AR-42 + QE4 / QE5, **when** `0193_marketplace-modules.sql` is applied,
-   **then**:
-   - `marketplace_modules` exists with exactly QE5's columns, types, NOT NULLs, named CHECKs and indexes.
-   - Both pgEnums exist, sourced from the domain tuples (one tuple feeds both the pgEnum and the TS union).
-   - **And** `twt_app` has SELECT / INSERT / UPDATE, and no DELETE.
-   - **And** RLS is ENABLE + FORCE, with separate select / insert / update policies on `pariwar_id =
-     nullif(current_setting('app.pariwar_id', true), '')::uuid`.
-   - **And** the two `events_log` partial unique indexes from QE8 exist.
-2. **AC2 — guarded state (I1–I3).** Each of these is rejected with P0001 and the `ModuleStateDirectWriteError` message
-   prefix:
+0. **AC0 — governance first.** ⭐ MET.
+   - QE1–QE15 are in `-427` (`a22dbdec`) and the amendments in `-429` (`0168592b`), each committed ALONE before code.
+   - The four ASKs carry BigDev's answer (*"QE1-QE15 as recommended."*); the amendments carry *"apply all findings"*.
+   - C1–C12 are in `deferred-work.md` ("Deferred from: story 12-1-…"), with "⭐ INHERITED FROM 12.1" notes under 12.2–12.6
+     in `epics.md`.
+1. **AC1 — table.** **Given** `0193_marketplace-modules.sql` is applied, **then**:
+   - `marketplace_modules` has exactly QE5's columns, types, NOT NULLs, six named CHECKs and two indexes, with pgEnums
+     sourced from the domain tuples;
+   - **and** `twt_app` has SELECT / INSERT / UPDATE (no DELETE);
+   - **and** RLS is ENABLE + FORCE, with the three named policies on `pariwar_id = nullif(current_setting('app.pariwar_id',
+     true), '')::uuid`;
+   - **and** QE8's two `events_log` indexes exist. A spec asserts `pg_indexes.indexdef` contains `'member_id'` /
+     `'lead_id'` and `module.lead_submitted` (the `contribution-suppression-index-policy-regression.spec.ts` shape).
+2. **AC2 — guarded state (I1–I3).** Each of these is rejected with P0001 and `MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX`:
    - an unguarded INSERT;
    - an unguarded UPDATE of ANY column, including `audit_id` alone or `slots_remaining` alone;
    - a guarded UPDATE that changes any I2 column (at least `name_en`, `scope_filter`, `pariwar_id`, `created_at`);
-   - a guarded INSERT that violates I3, including the uncapped (NULL, NULL) case passing and a (5, 4) case failing;
-   - a guarded UPDATE with a non-increasing `state_event_version`;
-   - a guarded UPDATE that moves `slots_remaining` by anything other than 0 or −1.
-3. **AC3 — events.** **Given** QE3 / QE6 / QE7, **then**:
-   - `marketplace/events.ts` exports `MODULE_EVENT_TYPES` (the five) and `MODULE_EVENT_PAYLOAD_SCHEMAS … satisfies
-     Record<ModuleEventType, z.ZodTypeAny>`.
-   - Every schema is `.strict()` and carries the AR-14 audit shape: `from_state` (null only at genesis), `to_state`,
-     `trigger`, `actor`. AR-14's `timestamp` is `events_log.occurred_at` and its `pariwar_id` is `events_log.pariwar_id`;
-     both are row columns, not payload keys.
-   - `module.authored` carries the full manifest. `module.archived` carries `reason`. `module.lead_submitted` accepts only
-     `from_state === to_state === 'active'`.
-   - **And** all five are registered in `packages/events/src/registry.ts`: add `marketplace` to the `@twt/domain` import,
-     and each `entry.schema` is the SAME object as the domain schema.
-   - **And** `packages/events/tests/module-registry-coverage.test.ts` asserts set equality, as
-     `claim-registry-coverage.test.ts` does.
-4. **AC4 — reducer.** **Given** QE6, **then** `marketplace/state.ts` defines the machine with `defineStateMachine`, and the
-   reducer is pure and total: every legal arm is covered, every inapplicable (state × event) pair returns the same state,
-   and unknown types are no-ops.
-   - **And** `nextModuleState(state, eventType)` looks the pair up in the machine's `transitions` table and returns the
-     `to` state, or `null` if the pair is absent. This deliberately differs from `nextTicketState`, which returns the same
-     state (TR1).
-   - **And** a unit test asserts, for EVERY (state × event type) pair, that `reduce` equals the table's `to` when present
-     and equals the input state when absent.
-   - **And** `nextModuleState(s, 'module.authored')` is `null` for every `s`.
-   - **And** a pure `foldModuleProjection(rows) → { state, version, slotsRemaining, archiveReason }` exists:
-     - `slotsRemaining` = the authored `slot_capacity` − the count of `module.lead_submitted`, or null if uncapped;
-     - `archiveReason` = the `module.archived` reason.
-5. **AC5 — projector + commands (QE15).** **Given** a caller-held `pg.PoolClient` with the Pariwar scope set and a
-   caller-supplied `auditId`, **then**:
-   - `authorModule` (which takes the caller-minted `moduleId`), `scheduleModule`, `activateModule`, `submitModuleLead` and
-     `archiveModule` are the only public write entry points. They write `marketplace_modules` / `events_log` ONLY through
-     `projectModuleGenesis` / `projectModuleTransition` (I1).
-   - Each enforces QE6's guards against DB `now()`.
-   - **And** each failed guard throws its QE6 / QE7 / QE13 class with no event appended and the row unchanged.
-   - **And** `projectModuleTransition` rejects `module.authored` with `ModuleGenesisAlreadyExistsError`.
-   - **And** `actor === 'system'` holds iff `actorId === null`.
+   - a guarded INSERT that violates I3 — the uncapped `(NULL, NULL)` case passes, `(5, 4)` fails;
+   - a guarded UPDATE with a non-increasing version;
+   - a guarded UPDATE that moves `slots_remaining` by anything other than 0 / −1;
+   - a guarded UPDATE that changes state AND moves `slots_remaining`.
+
+   ⚠ A guarded `slots_remaining` 0 → −1 passes the trigger and fails `marketplace_modules_slots_range` with **23514**.
+   Assert that separately.
+3. **AC3 — events.**
+   - The five payload schemas are exported under their names, along with `MODULE_EVENT_TYPES` and
+     `MODULE_EVENT_PAYLOAD_SCHEMAS … satisfies Record<ModuleEventType, z.ZodTypeAny>`.
+   - AR-14's `timestamp` / `pariwar_id` are the `events_log` columns `occurred_at` / `pariwar_id`, ⛔ payload keys.
+   - **And** all five are registered in `packages/events/src/registry.ts`:
+     - add `marketplace` to the import;
+     - each `entry.schema` is the same object;
+     - description template: *"`<event>` (`<from>` → `<to>`) on the MODULE stream (stream_id = module_id) (Story 12.1).
+       ⛔ No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built)."*;
+     - a section header comment mirrors the helpdesk block.
+   - **And** `packages/events/tests/module-registry-coverage.test.ts` asserts set equality + schema identity.
+4. **AC4 — reducer.** `marketplace/state.ts` uses `defineStateMachine` with `initial: 'draft'` and `transitions`
+   **exactly**:
+   - `draft→scheduled` (`module.scheduled`);
+   - `draft→active` and `scheduled→active` (`module.activated`);
+   - `active→active` (`module.lead_submitted`);
+   - `draft` / `scheduled` / `active` → `archived` (`module.archived`);
+   - ⛔ `module.authored` row.
+
+   `reduce` = table lookup, else identity.
+   - **And** `nextModuleState` returns the table's `to`, or `null`.
+   - **And** a test asserts table / reducer agreement for EVERY (state × event type) pair.
+   - **And** the exported pure `foldModuleProjection(rows: readonly { type: string; payload: unknown; eventVersion:
+     number }[]) → { state, version, slotsRemaining, archiveReason }`:
+     - `version` = the last `eventVersion`;
+     - `slot_capacity` comes from `ModuleAuthoredPayloadSchema.safeParse` (on failure `slotsRemaining` is null; the fold
+       never throws);
+     - `slotsRemaining` = `slot_capacity` − the count of lead events.
+   - **And** `toModuleEvent(row)` is exported for tests.
+5. **AC5 — commands (QE7, QE15).**
+   - The commands match "Exact signatures". They write only through the projector (I1), take the row lock first (I10),
+     and enforce QE6 / QE7 against DB `now()`.
+   - **And** each failed guard throws its QE13 class with no event and the row unchanged, and the caller's transaction
+     stays usable (SAVEPOINT discipline, Task 5.2).
+   - **And** `projectModuleTransition` rejects `module.authored` with `ModuleGenesisAlreadyExistsError`; an actor /
+     actorId mismatch → `ModuleProjectorInputError`.
    - **And** I4 holds after every command.
-   - **And** no domain function calls `withCompensatingAudit`. ONE spec composes `submitModuleLead` under the real wrapper
-     (the service pool is the test superuser pool) and asserts, by baseline rather than counts, the intent row and, for a
-     forced race refusal, the `_rolled_back` row.
-6. **AC6 — places (I5, QE7, QE8).** **Given** a module with `slot_capacity = 1`, **when** two connections at the default
-   READ COMMITTED submit leads for two different members concurrently, **then**:
-   - exactly one `module.lead_submitted` is appended and `slots_remaining = 0`;
-   - one caller fulfils and the other receives `ModuleSlotsExhaustedError` (assert symmetrically: order does not matter).
-     The `FOR UPDATE` lock decides it.
-   - **And** the same member submitting twice gets `ModuleLeadAlreadySubmittedError`, and a replayed `leadId` gets
-     `ModuleLeadDuplicateError`; neither decrements.
-   - **And** an uncapped module accepts leads with `slots_remaining_after: null`.
-   - **And** a lead outside the window, or on a non-active module, is refused with `ModuleOutsideWindowError` /
-     `ModuleNotActiveError` respectively, with no event.
-   - **And** the backstop retry on `ModuleStreamConcurrencyError` runs at most 3 times, each under its own SAVEPOINT (TR3).
-     If the 3rd retry still conflicts, `ModuleStreamConcurrencyError` propagates.
-   - **And** a GENESIS race (two `authorModule` calls with the same `moduleId`) leaves exactly one stream. This spec copies
-     the alert spec's REPEATABLE READ + barrier rendezvous.
-7. **AC7 — filter grammars (QE9).** `parseModuleManifest` accepts every valid form and REJECTS each of these with
-   `ModuleManifestInvalidError`:
+   - **And** no domain function calls `withCompensatingAudit`.
+   - **And** ONE spec composes `submitModuleLead` under the real wrapper (recipe in Testing standards) and asserts, by
+     baseline, the intent row plus — for a race refusal — the `module.lead_submitted_rolled_back` row with
+     `resourceLocator = 'module/<id>'`.
+6. **AC6 — places and idempotency (I5, QE7, QE8).** **Given** `slot_capacity = 1`:
+   - two connections at READ COMMITTED submitting for two members produce exactly one event and `slots_remaining = 0`:
+     one fulfils, the other gets `ModuleSlotsExhaustedError` (assert symmetrically);
+   - **and** a concurrent `archiveModule` racing a `submitModuleLead` on the same module ends in typed outcomes, NEVER
+     40P01;
+   - **and** the identical call replayed returns `{ replayed: true }` with no event;
+   - **and** the same member with a NEW `leadId` gets `ModuleLeadAlreadySubmittedError`;
+   - **and** a `leadId` reused for a DIFFERENT member gets `ModuleLeadDuplicateError`, both on the same module (pre-check
+     / locked check) and on another module (23505). Neither decrements;
+   - **and** an uncapped module accepts leads with `slots_remaining_after: null`;
+   - **and** a lead on a non-active module → `ModuleNotActiveError`, and outside the window → `ModuleOutsideWindowError`,
+     with no event (the clock spec);
+   - **and** the backstop retry is `MAX_LEAD_APPEND_ATTEMPTS = 3` attempts total, backoff `min(200, 10·2^attempt)` ms;
+     after the 3rd conflict `ModuleStreamConcurrencyError` propagates (DB-free);
+   - **and** the GENESIS race (two `authorModule` with the same `moduleId`, RR + barrier) leaves exactly one stream; the
+     loser gets `ModuleGenesisAlreadyExistsError`.
+7. **AC7 — grammars + manifest (QE5, QE9).** `parseModuleManifest` accepts every valid form and REJECTS each of these
+   with `ModuleManifestInvalidError`:
    - an unknown scope (`role`, `cohort`, `public`, `block`);
    - empty or duplicate `values`;
-   - an unknown clause kind (`age_band`);
-   - a duplicate clause kind;
-   - a state not in `MEMBER_LIFECYCLE_STATES`;
-   - extra keys;
-   - `version ≠ 1`;
-   - a bad URL (`http:`, userinfo), a bad secret name, `valid_until ≤ valid_from`, or `slot_capacity ≤ 0`.
+   - an unknown clause (`age_band`) or a duplicate clause;
+   - a state not allowed (including `withdrawn`, `anonymized`);
+   - extra keys, or `version ≠ 1`;
+   - a URL that is `http:`, or has userinfo, a **query string, a fragment, an IP-literal host, or `localhost`**;
+   - a bad secret name;
+   - `valid_until ≤ valid_from`;
+   - `slot_capacity ≤ 0`.
 
-   No evaluator function is exported.
-8. **AC8 — reads (QE12).**
-   - `getModule` / `listModulesForPariwar` return only the given Pariwar's rows (a second-tenant spec).
-   - The list is capped by `clampLimit`.
-   - `getModuleStateAt` returns the replayed state as of a timestamp between two transitions.
-9. **AC9 — static gate.** `scripts/marketplace-module-state-invariant/{check,lib,lib.test}.ts` + `README.md` exist:
-   - The code is copied from helpdesk's gate; the README is written from `scripts/pool-state-invariant/README.md` (helpdesk
-     has none).
-   - `TABLE = 'marketplaceModules'`; `GUARDED_COLUMNS` = the six I1 columns.
-   - The allowlist is file + function: `marketplace/project.ts` → `projectModuleGenesis`, `projectModuleTransition`.
-   - It keeps `MIN_EXPECTED_FILES`, template-literal computed keys, bulk array inserts and `onConflictDoUpdate`.
-   - It is wired into root `package.json` (`marketplace-module-state:{check,test}`), `scripts/ci-local.sh` and
-     `.github/workflows/ci.yml`.
-   - **And** `lib.test.ts` flags a `.set({ slotsRemaining })` and a `.set({ auditId })` OUTSIDE the allowlist (so the
-     columns new to this table have teeth), and does NOT flag a same-state lead write inside the allowlisted function.
-   - **And** a known-bad fixture turns the gate RED; record the revert-sanity check
-     ([[feedback_gate_scope_semantic_coverage]]).
-10. **AC10 — ids + seam.** The `ModuleId`, `PartnerId` and `ModuleLeadId` brands exist with tests in
-    `packages/domain/tests/ids/branded-ids.test.ts`. QE14 is applied, including `apps/api`. `pnpm typecheck` is green across
-    the workspace.
-11. **AC11 — ADR.** `docs/adr/ADR-0044-module-manifest-schema-versioning.md` (≥ 0044, re-grepped), written from
-    `_adr-template.md`, records QE11 + QE4 + QE9's version rule. The `adr-index.md` row flips from `slot-reserved-pre-write`
-    to its written status.
-12. **AC12 — full gate.** `pnpm ci:local` is green on a fresh Postgres container, and the result is recorded. Per-package
-    runs miss `domain-accessor-invariants` (TR5).
+   **And** `authorModule` refuses `valid_until ≤ now()` with `ModuleOutsideWindowError` and accepts a past `valid_from`.
+   No evaluator is exported.
+8. **AC8 — reads (QE12).** Both reads are isolated from a second tenant; the list is capped; `getModuleStateAt` returns
+   the state between two transitions.
+9. **AC9 — gate.**
+   - Files: `scripts/marketplace-module-state-invariant/{check,lib,lib.test}.ts` (copied from helpdesk) + `README.md`
+     (from `scripts/pool-state-invariant/README.md`).
+   - Renames: `MARKETPLACE_MODULES_TABLE = 'marketplaceModules'`; `GUARDED_COLUMNS = new Set(['currentState',
+     'stateEventVersion','slotsRemaining','archiveReason','auditId','updatedAt'])`; `scanMarketplaceModuleStateWrites`;
+     `MarketplaceModuleStateWriteFinding`.
+   - Allowlist: `marketplace/project.ts` → `projectModuleGenesis`, `projectModuleTransition`.
+   - **And** `lib.test.ts` flags `.set({ slotsRemaining })` and `.set({ auditId })` outside the allowlist, while `scan…` +
+     `isAllowlistedWrite` produce zero findings for the full guarded `.set({ … })` written directly inside
+     `projectModuleTransition`.
+   - **And** the known-bad cases live in `lib.test.ts` (the helpdesk / pool practice); record the revert-sanity check.
+   - Wire it exactly as G2's three lines, renamed. ⛔ "match the column alignment" — the existing alignment is
+     inconsistent.
+10. **AC10 — ids + seam.** The three brands go in `packages/domain/src/ids/index.ts`, with tests in
+    `packages/domain/tests/ids/branded-ids.test.ts`. QE14 is applied, including `apps/api`. `pnpm typecheck` is green.
+11. **AC11 — ADR.** `docs/adr/ADR-0044-module-manifest-schema-versioning.md`, from `_adr-template.md`, **Status
+    `drafted`** (an author decision; no ratification).
+    - It records QE11 + QE4 + QE9's version rule. Alternatives considered: a nullable `pariwar_id`; a mutable manifest
+      with `module.revised`; declared-and-empty role / cohort; an unversioned grammar.
+    - **And** the `adr-index.md` row is renamed `ADR-NNNN-…` → `ADR-0044-module-manifest-schema-versioning`, with Status
+      `drafted` and the last column set to the file path.
+    - **And** a dated reconciliation note is appended (re-count `grep -cE '^\| ADR-'`; the total is unchanged).
+    - Commit both ALONE: `governance: ADR-0044 drafted — module manifest schema versioning` (the `35c39dcf` precedent).
+12. **AC12 — full gate.** `pnpm ci:local` is green on a fresh Postgres container, and the result is recorded.
 
 ## Tasks / Subtasks
 
-- [x] **Task 0 — governance first (AC0).** ⭐ COMPLETE 2026-10-31. Do NOT start anything below until 0.3 is committed.
-  - [ ] 0.1 `git fetch origin`; rebase this branch on `origin/main` if it moved. Re-grep NUMBERS (decision id, migration +
-        journal `when`, ADR number, `PERMISSION_CATALOG_VERSION`, ledger letter) across every branch and worktree
-        ([[feedback_git_fetch_before_remote_reasoning]]). Re-verify G1, G4, G5, G7, G11 and G17.
-  - [x] 0.2 Put the four ASKs to BigDev and record the answers verbatim here. ⭐ **ANSWERED 2026-10-31 — BigDev, verbatim:
-        *"QE1-QE15 as recommended."*** All four ASKs are confirmed as written, and ⛔ QE changed:
-        - QE5: `commission_terms` → 12.2;
-        - QE7: no auto-archive;
-        - QE8: one place per member;
-        - QE9: role / cohort absent.
-
-        If an answer changes a QE, edit the QE, the ACs AND the Tasks together.
-  - [x] 0.3 ⭐ DONE — `2026-10-31-427` (`a22dbdec`, committed alone; `-426` skipped as held uncommitted elsewhere). Write ONE author-commit decision entry (QE1–QE15, the §0 table, the four answers) at the top of
-        `.decision-log.md`. Commit it ALONE as `governance: decision 2026-10-31-4NN — Story 12.1 build decisions …`
-        ([[project_decision_log_writes_user_inserted]]: try first; if refused, ask once).
-  - [x] 0.4 ⭐ DONE 2026-10-31. Records:
-        - In `deferred-work.md`, add C1–C8 under a `## Story 12.1` heading, each with its owning story and re-trigger.
-        - In `epics.md`, add short "⭐ INHERITED FROM 12.1" notes:
-          - under 12.2: C2 (activation emitter), C5, QE9 role / cohort, QE11 revise, QE5 `commission_terms`;
-          - under 12.3: C1, C5, C6, C8, the QE3 `module.lead_submitted` spelling, QE15 caller-wraps, `age_band`;
-          - under 12.4: C4;
-          - under 12.5: C6, C7, C8;
-          - under 12.6: C2, C3.
+- [ ] **Task 0 — governance first (AC0).** 0.2–0.4 DONE 2026-10-31. ⭐ **0.1 runs FIRST in `bmad-dev-story`. Do NOT
+      write code before 0.1 is done and its greps are in the Debug Log.**
+  - [ ] 0.1 `git fetch origin`, and rebase on `origin/main` if it moved.
+        - Re-grep NUMBERS across every branch and worktree: decision id; migration + journal `when`; ADR;
+          `PERMISSION_CATALOG_VERSION`; the ledger letter in BOTH ledgers.
+        - Re-verify G2, G4, G5, G7, G11 and G17.
+        - Run 0.1 again at each numbered commit.
+  - [x] 0.2 BigDev: *"QE1-QE15 as recommended."* · amendments: *"apply all findings"*.
+  - [x] 0.3 `-427` (`a22dbdec`) · `-429` (`0168592b`), each committed alone.
+  - [x] 0.4 `deferred-work.md` "Deferred from: story 12-1-…" (C1–C12) · `epics.md` INHERITED notes under 12.2–12.6.
 - [ ] **Task 1 — ids (AC10).**
-  - Add `ModuleId`, `PartnerId` and `ModuleLeadId` to `packages/domain/src/ids/index.ts` (`uuidBrand`), with tests in
-    `packages/domain/tests/ids/branded-ids.test.ts`.
-  - Apply QE14 in `schema/helpdesk_tickets.ts`, `helpdesk/project.ts` (type + the `module_id` half of the comment) and
-    `apps/api/src/modules/helpdesk/handlers.ts` (one line).
+  - Add the brands (`uuidBrand`) and their tests.
+  - QE14:
+    - the schema: `moduleId: uuid('module_id').$type<ModuleId>()`;
+    - `ProjectTicketGenesisInput.moduleId`;
+    - BOTH comments (the `module_id` half only);
+    - the one line in `apps/api/src/modules/helpdesk/handlers.ts`.
 - [ ] **Task 2 — schema + migration + RLS (AC1, AC2).**
-  - [ ] 2.1 Create `packages/domain/src/schema/marketplace_modules.ts`, with a header block in the `alerts.ts` /
-        `helpdesk_tickets.ts` style that states I1–I3. Export it from `schema/index.ts`.
-  - [ ] 2.2 Create `packages/domain/src/policies/marketplace-modules-rls.ts` (separate select / insert / update policies, NOT
-        `for:'all'`). Export it from `policies/index.ts`.
-  - [ ] 2.3 HAND-AUTHOR `packages/domain/migrations/0193_marketplace-modules.sql`. Do NOT run `db:generate`. Separate
-        statements with `--> statement-breakpoint`. In order:
-        - the enums, the table, QE5's named CHECKs and its two indexes;
-        - `GRANT SELECT, INSERT, UPDATE … TO twt_app`;
-        - RLS ENABLE + FORCE, and the policies;
-        - QE8's two `events_log` partial unique indexes. The header notes the SHARE lock on `events_log` during the build
-          (the `0185` precedent);
-        - the trigger `marketplace_modules_reject_unguarded_state_write()`, `BEFORE INSERT OR UPDATE`. Every RAISE uses
-          the `ModuleStateDirectWriteError` message prefix and `ERRCODE 'P0001'`. Use `IS DISTINCT FROM` throughout, NOT
-          `<>` / `=` (NULL-uncapped must compare equal):
-          - **INSERT:** if the guard `IS DISTINCT FROM 'on'`, RAISE. RAISE if `NEW.current_state IS DISTINCT FROM 'draft'
-            OR NEW.state_event_version IS DISTINCT FROM 1 OR NEW.slots_remaining IS DISTINCT FROM NEW.slot_capacity OR
-            NEW.archive_reason IS NOT NULL`.
+  - [ ] 2.1 `schema/marketplace_modules.ts`: a header block stating I1–I3 and I10, plus `import type` for the filter types
+        (QE2). Export it from `schema/index.ts`.
+  - [ ] 2.2 `policies/marketplace-modules-rls.ts`: the three named policies (NOT `for:'all'`). Export from
+        `policies/index.ts`.
+  - [ ] 2.3 HAND-AUTHOR `0193_marketplace-modules.sql`. Do NOT run `db:generate`. Separate statements with
+        `--> statement-breakpoint`.
+        - The enums, the table, the six named CHECKs and the two indexes.
+        - `GRANT SELECT, INSERT, UPDATE … TO twt_app`.
+        - RLS ENABLE + FORCE, and the three policies.
+        - QE8's two `events_log` partial unique indexes. The header notes:
+          - the SHARE lock on `events_log` during the build;
+          - `CONCURRENTLY` is impossible inside drizzle-kit's transaction (25001, the `0096` header);
+          - the build is fast because no `module.lead_submitted` rows exist yet.
+        - The trigger fn + trigger. Every RAISE uses `MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX` + `ERRCODE 'P0001'`. Use
+          `IS DISTINCT FROM` throughout, NOT `<>` / `=`.
+          - **INSERT:**
+            - the guard `IS DISTINCT FROM 'on'` → RAISE;
+            - `NEW.current_state IS DISTINCT FROM 'draft' OR NEW.state_event_version IS DISTINCT FROM 1 OR
+              NEW.slots_remaining IS DISTINCT FROM NEW.slot_capacity OR NEW.archive_reason IS NOT NULL` → RAISE.
           - **UPDATE:**
-            - (a) if the guard is not 'on', RAISE unconditionally;
-            - (b) RAISE, even when guarded, if `(to_jsonb(NEW) - ARRAY['current_state','state_event_version','slots_remaining','archive_reason','audit_id','updated_at'])
-              IS DISTINCT FROM (to_jsonb(OLD) - ARRAY[…same…])` (I2, fail-closed for future columns — the
-              `0189_ground-inspection-questionnaire.sql` precedent);
-            - (c) RAISE if `NEW.state_event_version <= OLD.state_event_version`;
-            - (d) RAISE if `NEW.slots_remaining IS DISTINCT FROM OLD.slots_remaining AND NEW.slots_remaining IS DISTINCT
-              FROM OLD.slots_remaining - 1`.
-
-        Hand-add the `_journal.json` entry: idx 193, `when` greater than every sibling's, trailing newline.
+            - (a) the guard not 'on' → RAISE unconditionally;
+            - (b) `(to_jsonb(NEW) - 'current_state' - 'state_event_version' - 'slots_remaining' - 'archive_reason' -
+              'audit_id' - 'updated_at') IS DISTINCT FROM (to_jsonb(OLD) - …same chain…)` → RAISE even when guarded.
+              This is the `0189` chained-key form; `- ARRAY[…]` is equivalent on PG16;
+            - (c) `NEW.state_event_version <= OLD.state_event_version` → RAISE;
+            - (d) `NEW.slots_remaining IS DISTINCT FROM OLD.slots_remaining AND NEW.slots_remaining IS DISTINCT FROM
+              OLD.slots_remaining - 1` → RAISE;
+            - (e) `NEW.current_state IS DISTINCT FROM OLD.current_state AND NEW.slots_remaining IS DISTINCT FROM
+              OLD.slots_remaining` → RAISE.
+          - Header note: ⚠ a future STORED GENERATED column reads NULL in a BEFORE trigger's NEW, so (b) would reject
+            every guarded UPDATE. Add any such column to the exclusion chain (C12).
+        - Hand-add the `_journal.json` entry (idx 193, `when` > every sibling, trailing newline).
+        - Add a header comment line to `schema/events_log.ts` naming `module_lead_member_uq` / `module_lead_id_uq`
+          (migration 0193), mirroring the 0185 lines. Do NOT declare them on the Drizzle table.
 - [ ] **Task 3 — events (AC3).**
-  - Create `packages/domain/src/marketplace/events.ts`: the PINNED SEAM comment for QE3, the schemas and the tuple.
-  - In `packages/events/src/registry.ts`, add `marketplace` to the import and register the five entries.
-  - Add `packages/events/tests/module-registry-coverage.test.ts`.
-- [ ] **Task 4 — filters (AC7).** Create `packages/domain/src/marketplace/filters.ts`:
-  - the `ScopeFilterV1`, `EligibilityFilterV1` and `ModuleBrandingBundle` zod schemas;
-  - `parseModuleManifest`, which validates the whole manifest (lengths, URL, secret name, window, capacity) and throws
-    `ModuleManifestInvalidError`;
-  - doc comments on each type stating QE9's "zero clauses" meaning and its absences (role / cohort / age_band / block /
-    public), each with its re-trigger.
-- [ ] **Task 5 — reducer, projector, commands, reads, errors (AC4, AC5, AC6, AC8).** Create
-      `packages/domain/src/marketplace/{state,project,commands,read,errors,index}.ts`. The twins are `alert/state.ts`
-      (pre-genesis initial) and `helpdesk/project.ts` (projector shape). Add the namespace export and the direct-write
-      trio to `domain/src/index.ts`. Do NOT copy helpdesk's `updatedAt` handling blindly: this table's `updated_at` is
-      projector-written (QE5).
-  - [ ] 5.1 Projector:
-        - checks genesis first (stream empty) in `projectModuleGenesis`;
-        - in `projectModuleTransition`, decides legality with `nextModuleState(...) !== null`. ⚠ **NOT
-          `toState !== fromState`: copying helpdesk's check makes every lead illegal (TR1).**
-        - cross-validates its flat inputs against the parsed payload (7.1 review);
-        - sets `updated_at = now()` and `audit_id = auditId` on every transition;
-        - is followed by an I4 check in tests.
-  - [ ] 5.2 `submitModuleLead`:
-        - `SELECT … FOR UPDATE` the row first (QE7), then the QE7 / QE8 guards against the locked row;
-        - map 23505 by constraint name (QE8);
-        - a backstop retry (≤ 3) on `ModuleStreamConcurrencyError`, each attempt under its own SAVEPOINT, in the
-          `reconciliation-review-write.ts` shape. ⚠ **A 23505 aborts the transaction, so a retry without a SAVEPOINT fails
-          (TR3).**
-  - [ ] 5.3 `checkModuleLeadAllowed`: a pure-read pre-check returning `{ ok } | { ok: false, refusal }` (QE15).
-  - [ ] 5.4 Take DB time from `select now()` inside the transaction, NOT `new Date()` (TR4).
-- [ ] **Task 6 — static gate (AC9).**
-  - Copy `scripts/helpdesk-state-invariant/{check,lib,lib.test}.ts` → `scripts/marketplace-module-state-invariant/` and
-    retarget them. Write `README.md` from `scripts/pool-state-invariant/README.md`.
-  - Wire root `package.json`, `scripts/ci-local.sh` (match the column alignment) and `.github/workflows/ci.yml`.
-  - Add the known-bad fixture leg, and do the revert-sanity check by hand once (record it).
-- [ ] **Task 7 — ADR (AC11).** Write `docs/adr/ADR-0044-module-manifest-schema-versioning.md` from `_adr-template.md`, and
-      flip the `adr-index.md` row.
-- [ ] **Task 8 — tests (AC1–AC8).** See Testing standards: every path is under `packages/domain/` or `packages/events/`,
-      NOT the repo-root `tests/`. Every test asserts a typed error class, NOT a bare `.toThrow()`.
+  - `marketplace/events.ts`: the PINNED SEAM, `moduleActorSchema`, `auditShape`, the five named schemas and the tuple.
+  - Registry: add the import, the five entries (description template) and the section header.
+  - `packages/events/tests/module-registry-coverage.test.ts`.
+- [ ] **Task 4 — filters + manifest (AC7).** `marketplace/filters.ts`:
+  - `ScopeFilterV1`, `EligibilityFilterV1` and `ModuleBrandingBundle` (schemas + exported types);
+  - `parseModuleManifest`, per the QE9 contract and QE5's zod rules;
+  - doc comments stating "zero clauses" and each absence (role / cohort / age_band / block / public; withdrawn /
+    anonymized) with its re-trigger.
+- [ ] **Task 5 — reducer, projector, commands, reads, errors (AC4, AC5, AC6, AC8).**
+      `marketplace/{state,project,commands,read,errors,index}.ts`, per "Exact signatures".
+  - `index.ts` does NOT re-export the projectors.
+  - Add the namespace export and the direct-write set to `domain/src/index.ts`.
+  - [ ] 5.1 The projector, as specified under "Exact signatures".
+        - ⚠ **Legality is `nextModuleState(...) !== null`, NOT `toState !== fromState`; copying helpdesk makes every lead
+          illegal (TR1).**
+        - ⚠ **It does NOT replay the stream; it takes `lockedRow` (TR12).**
+        - Every guarded write sits LEXICALLY in the two projector bodies — no inner named arrow or helper — or the gate
+          flags it (G2).
+  - [ ] 5.2 Commands. Every transition command's FIRST statement is `SELECT … FOR UPDATE` (QE7, I10). A missing row →
+        `ModuleGenesisMissingError`. Then the guards, in QE6 / QE7 order.
+        - `submitModuleLead`: QE8 (i)–(iii), then up to `MAX_LEAD_APPEND_ATTEMPTS = 3` attempts.
+        - Each attempt runs inside `SAVEPOINT module_lead_append` and re-issues the `FOR UPDATE` (PG16 keeps a lock taken
+          before the loop).
+        - On ANY error, `ROLLBACK TO SAVEPOINT` BEFORE mapping or rethrowing, so the caller's transaction stays usable.
+          `RELEASE` on success.
+        - Map 23505 via the cause-chain walker (QE8).
+
+        ⚠ **A 23505 aborts the transaction; a retry without a SAVEPOINT fails (TR3).**
+  - [ ] 5.3 `checkModuleLeadAllowed`: a read-only pre-check in QE7 order, returning `{ ok: true, replayed }` or a
+        `ModuleLeadRefusal`.
+  - [ ] 5.4 DB time via `select now()` inside the transaction, NOT `new Date()` (TR4).
+- [ ] **Task 6 — gate (AC9).** Copy, rename, README, wire, revert-sanity.
+- [ ] **Task 7 — ADR (AC11).** The ADR, the index row flip and the reconciliation note, committed alone.
+- [ ] **Task 8 — tests (AC1–AC8).** Per Testing standards; paths under `packages/domain/` / `packages/events/`, NOT the
+      repo root. Every assertion names a typed error class.
 - [ ] **Task 9 — verify + ledger (AC12).**
-  - Run `pnpm ci:local` on a fresh container. Set `DATABASE_URL` to the story's port for every push
+  - `pnpm ci:local` on a fresh container. Set `DATABASE_URL` to the story's port for every push
     ([[project_prepush_hook_inherits_5432]]).
-  - In Completion Notes: the greps for I6 / I7 / I8 / I9, and every variance (list under Project Structure Notes).
-  - Prepend the sprint-status ledger entries safely ([[project_sprint_status_safe_prepend]] — BOTH ledgers). Row →
-    `review`.
+  - Completion Notes: the I6–I9 greps and the variance list.
+  - Prepend the ledger lines safely to BOTH ledgers, with a letter ≥ the one re-grepped at 0.1
+    ([[project_sprint_status_safe_prepend]]). Row → `review`.
 
 ## Dev Notes
 
-### Current state (what exists, what this story changes, what must be preserved)
+### Current state (what this story changes, what must be preserved)
 
-- **Helpdesk `moduleId`** in `schema/helpdesk_tickets.ts` + `helpdesk/project.ts` (UPDATE, type-only):
-  - Today: `string | null`, unbranded.
-  - Change: `ModuleId | null`, and update the `module_id` half of the shared comment.
-  - Preserve: the column, the migration, every helpdesk test, nullability, and `validityLookupId` (still unbranded).
-  - Helpdesk specs that pass `moduleId: null` compile unchanged.
-- **`apps/api/src/modules/helpdesk/handlers.ts`** (UPDATE, one line): `moduleId: body.module_id ? ids.moduleId(body.module_id)
-  : null`. Without this change the workspace typecheck fails (TS2322). `member-handlers.ts` (`moduleId: null`) is unchanged.
-- **`packages/events/src/registry.ts`** (UPDATE):
-  - Today: 86 entries; `@twt/domain` import without `marketplace`.
-  - Change: add the import and 5 entries.
-  - Preserve: every existing entry, and the `satisfies` shape.
-- **`packages/domain/src/index.ts`, `ids/index.ts`, `schema/index.ts`, `policies/index.ts`** (UPDATE): additive exports only.
-- **`package.json`, `scripts/ci-local.sh`, `.github/workflows/ci.yml`** (UPDATE): one gate each, mirroring the helpdesk lines.
-- **`docs/knowledge-transfer/adr-index.md`** (UPDATE): one row's status.
+- **The helpdesk `moduleId` seam:** see QE14. Preserve:
+  - the column, the migration and every helpdesk test;
+  - nullability;
+  - `validityLookupId` (still unbranded).
+
+  `member-handlers.ts` is unchanged.
+- **`packages/events/src/registry.ts`:** add the import + 5 entries. Preserve every existing entry and the `satisfies`
+  shape.
+- **Additive exports only:** `packages/domain/src/{index,ids/index,schema/index,policies/index}.ts`.
+- **One change each:**
+  - `schema/events_log.ts` — a header comment line;
+  - `package.json`, `scripts/ci-local.sh`, `.github/workflows/ci.yml` — the gate wiring.
+- **`docs/knowledge-transfer/adr-index.md`:** one row + a reconciliation note.
 - **Do NOT touch:**
   - `member/overlay.ts` (I8);
   - `state-machine.ts`;
   - `rbac/permissions.ts` (I7);
-  - `schema/consent_records.ts` (QE10);
-  - `packages/contracts/src/modules/README.md` (12.2 / 12.3 replace it);
-  - the API error mapper (QE13).
+  - `schema/consent_records.ts`;
+  - `packages/contracts/src/modules/README.md`;
+  - the API error mapper;
+  - `contribution/write.ts` — copy its walker; do NOT refactor it.
 
 ### Traps (TR)
 
-- **TR1 — `lead_submitted` is a SAME-STATE transition.** The helpdesk projector throws when `toState === fromState`, and
-  `nextTicketState` returns the unchanged state for an illegal pair. Copying either makes every lead illegal. Decide
-  legality from the transitions table (`nextModuleState` returns `null` when the pair is not legal).
-- **TR2 — Genesis.** In the reducer, `initial: 'draft'` + `module.authored → draft` is a no-op. Check genesis legality as
-  "the stream is empty" in `projectModuleGenesis`, not in the reducer. The INSERT trigger enforces `draft` / version 1, and
-  `projectModuleTransition` must reject `module.authored`.
-- **TR3 — A 23505 aborts the transaction.** A retry inside the same transaction without a SAVEPOINT fails with "current
-  transaction is aborted" ([[project_domain_limit_clamp_and_savepoint_retry]]). drizzle wraps pg errors, so check
-  `err.cause.code` and `err.cause.constraint`.
-- **TR4 — One transaction means one `now()`.** Ordering tests that need distinct timestamps must use separate transactions
-  ([[project_db_clock_ordering_tests_tie]]). For `getModuleStateAt`, commit the transitions in separate transactions, or
-  seed `occurred_at` explicitly.
-- **TR5 — `domain-accessor-invariants` rejects `.limit(NAMED_CONST)`.** This was 10.1's post-review CI red (fix
-  `0f696111`). Use `clampLimit(...)` inline. Only the full `ci:local` runs this gate.
-- **TR6 — REPEATABLE READ on the last-place spec gives the wrong error.** Under RR, the waiter on the locked row gets 40001,
-  and a SAVEPOINT retry re-reads the same snapshot. The last-place race runs at the default READ COMMITTED. Only the
-  GENESIS race copies the alert spec's RR + barrier.
-- **TR7 — Contracts/domain boundary.** Do NOT import `@twt/domain` from `packages/contracts/src` (the Metro bundle —
-  [[project_contracts_domain_bundle_boundary]]). 12.1 adds no contracts.
-- **TR8 — Migration ordering on the shared DB.** If a sibling branch lands a later `when` first, drizzle skips this
-  migration ([[project_sibling_migration_when_order_shared_db]]; `-332` d2 merge-order rule). Re-check at the commit. Do NOT
-  regenerate an applied migration (42P07 — [[project_live_db_test_gotchas]]).
-- **TR9 — The epic's own event names are wrong elsewhere.** `claim.intake.initiated` is really `claim.intake_initiated`.
-  Read the registry; do NOT copy epic spellings.
-- **TR10 — A literal copy of `0084`'s trigger guards only two columns.** It would let an unguarded UPDATE of
-  `slots_remaining`, `archive_reason` or `audit_id` through. Use Task 2.3's whole-row trigger.
-- **TR11 — Concurrency specs must own their commits.** `getTx()` rolls back, so two-connection specs use their own
-  `pg.Pool`, clean up via `session_replication_role='replica'` (the alert spec's `afterAll`), and declare `hasDatabase`, so
-  the AI-10-5 guard sees them.
+- **TR1 — A same-state lead.** See Task 5.1.
+- **TR2 — Genesis legality** is "stream empty", checked in `projectModuleGenesis`. `projectModuleTransition` rejects
+  `module.authored`.
+- **TR3 — A 23505 aborts the transaction.** See Task 5.2. drizzle wraps pg errors, so walk `.cause` for `code` /
+  `constraint`.
+- **TR4 — `now()` is the TRANSACTION START.**
+  - One transaction has ONE `now()`, so legs with disjoint guards cannot share a transaction (use the clock spec).
+  - A lead that began before `valid_until` and waited on the row lock is judged at its start time. QE6's "cannot both be
+    legal" holds per instant; across transactions, the lock serialises.
+- **TR5 — `domain-accessor-invariants` rejects `.limit(NAMED_CONST)`.** Use `clampLimit(...)` inline. Only the full
+  `ci:local` runs this gate.
+- **TR6 — REPEATABLE READ on the last-place spec gives 40001.** The last-place and archive-vs-lead races run at READ
+  COMMITTED. Only the genesis race uses RR + barrier.
+- **TR7 — Contracts must NOT import `@twt/domain`** (Metro). 12.1 adds no contracts.
+- **TR8 — Migration ordering.** A sibling's later `when` landing first makes drizzle skip this migration (`-332` d2;
+  [[project_sibling_migration_when_order_shared_db]]). Do NOT regenerate an applied migration (42P07).
+- **TR9 — Read the registry for spellings, NOT the epic.** `claim.intake.initiated` is really `claim.intake_initiated`.
+- **TR10 — A literal `0084` trigger copy guards only two columns.** Use Task 2.3's trigger.
+- **TR11 — Concurrency and clock specs own their commits:** their own `pg.Pool`, `session_replication_role = 'replica'`
+  cleanup, and they declare `hasDatabase` (the AI-10-5 guard).
+- **TR12 — Copying the helpdesk projector's append-then-UPDATE order** under a lead's row lock deadlocks (40P01, which is
+  unmapped). Every transition locks first (I10).
 
-### Carried to sibling stories (C) — recorded at Task 0.4, NOT built here
+### Carried to sibling stories (C) — full text in `deferred-work.md` "Deferred from: story 12-1-…". ⭐ Build NONE of these.
 
-- **C1 → 12.3:** the shelf must treat all of these as not offerable:
-  - `slots_remaining = 0`;
-  - `now() ∉ [valid_from, valid_until)`;
-  - any state other than `active`.
+- **C1 → 12.3:** the offerable rule (`active` + in window + places left); evaluate fail-closed.
+- **C2 → 12.6 (or 12.2):**
+  - (a) immediate vs daily archive at zero;
+  - (b) nothing activates a `scheduled` module;
+  - (c) sweep stale `draft` / `scheduled` modules;
+  - (d) a cross-tenant indexed candidate scan, plus a rule for which reason wins.
 
-  It evaluates QE9's grammars fail-closed: an unknown or empty audience is nobody.
-- **C2 → 12.6 (or 12.2) — three items:**
-  - (a) Decide whether exhaustion archives immediately or in the daily sweep (QE7).
-  - (b) **Nothing activates a `scheduled` module at `valid_from`.** The epic's cron only archives, so 12.6 or 12.2 must own
-    the `scheduled → active` emitter, or `scheduled` is a dead end.
-  - (c) The sweep must also archive `draft` / `scheduled` modules with `now() ≥ valid_until` (reason `valid_until_reached`,
-    legal from any non-archived state), or they never leave. The epic's `valid_until < now()` and 12.1's
-    `now() ≥ valid_until` are compatible, because at `now() = valid_until` leads are already refused.
-- **C3 → 12.6:** `module.restored`. 12.6 decides its target state, the grace window (the epic says "e.g., 7 days"), and
-  what a restore means after `valid_until_reached` or with 0 places, and adds the arm to QE6's table.
-- **C4 → 12.4:** the `account-frozen` overlay LIFTS on `claim.settled` / `claim.denied_no_appeal` (`-233`) and
-  `claim.closed` (`-292` RF4) — G11.
-  - "Structurally absent post-claim" therefore cannot key on the overlay alone. The durable "a claim was ever filed" fact is
-    `claim/nominee-lock.ts`.
-  - The `-147` cl.3 fence applies if 12.4 adds a freeze reason.
-- **C5 → 12.2 / 12.3:** `branding_bundle.accent_color_hex` is never applied to shelf card backgrounds, CTAs or chrome (UX).
-  It is allowed only on a partner-dedicated detail page.
-- **C6 → 12.3 / 12.5 (Panel / counsel):** the privacy policy's §6 recipient list names no partners, and the PRD adversarial
-  review's M-8 calls each lead "a controller-to-controller PII transfer under DPDPA". Raise this before any member data
-  leaves ([[project_dpdpa_counsel_engaged_but_unrecorded]]).
-- **C7 → 12.5:** the signing scheme conflicts.
-  - Architecture §3.7 / §5.9: asymmetric JWT, **per partner**, keys in the high-sensitivity project.
-  - Epic 12.5: HMAC-SHA-256, **per module**.
-
-  12.1 stores only a Secret Manager NAME per module, which fits either. 12.5 decides, and may move the reference to a
-  partner entity.
-- **C8 → 12.3 / 12.5:** lead events carry `member_id` on the MODULE stream, not the member's. Before leads go live,
-  DPDPA data export (`packages/domain/src/data-export/`, whose sections are strict-parsed —
-  [[project_data_export_sections_strict_parsed]]) and RTBF must learn to find them.
+  Cost: an offer can stall for up to a day.
+- **C3 → 12.6:** `module.restored` — its target state, the grace window, and its meaning after `valid_until_reached` / at
+  0 places. New values are judged by §0 (edge 6).
+- **C4 → 12.4:** the overlay lifts on settle / deny / close. Keying on the durable claim fact is a new `-147` cl.3 reason,
+  so re-examination is MANDATORY.
+- **C5 → 12.2 / 12.3:** partner colours never touch the shelf chrome.
+- **C6 → 12.3 / 12.5:** partner data has no basis on record — route it to Panel / counsel BEFORE anything leaves.
+- **C7 → 12.5:** the signing scheme (HMAC per module vs JWT per partner), plus a send-time check of the resolved address
+  (SSRF / DNS rebinding).
+- **C8 → 12.3 / 12.5 (with C6):** an RTBF can never remove a member↔offer link.
+  - (a) The retention basis goes to Panel / counsel.
+  - (b) The data export must add these events; a by-member lookup needs a generated column + index.
+  - (c) Lead PII belongs in 12.5's entity.
+- **C9 → 12.3 / 12.4:** the shelf filter is NOT an authorization. The lead route re-checks scope, eligibility, member
+  state and grief suppression server-side.
+- **C10 → 12.2 / 12.5:** a correction or endpoint change means re-authoring, which resets places and allows duplicate
+  leads. The wizard warns.
+- **C11 → 12.2:** scope values are not validated against the geo tree; the wizard picks them from the tree.
+- **C12 → every sibling:** mutable presentation data goes in its own table. A new `marketplace_modules` column is
+  immutable unless its story amends the trigger chain and `GUARDED_COLUMNS`.
+- Also carried:
+  - `commission_terms` (+ the trust-deed "disclosed") → 12.2;
+  - `age_band` → 12.3;
+  - the revise event → 12.2;
+  - the external CTA (no owner).
 
 ### Testing standards
 
-All paths below are under `packages/domain/` unless prefixed otherwise. Do NOT use the repo-root `tests/` (G14).
+All paths are under `packages/domain/` unless marked. Do NOT use the repo-root `tests/`.
 
 - **DB-free unit tests:**
   - `tests/marketplace/state.test.ts`:
-    - every legal arm;
-    - every (state × event) pair against the transitions table (AC4);
+    - every arm;
+    - table / reducer agreement over all pairs;
     - unknown types;
     - prefix replay;
-    - `foldModuleProjection`;
-    - exact-membership assertions on both tuples.
-  - `tests/marketplace/events.test.ts`: accept and reject for every schema; a `.strict()` extra key; `from_state` null only
-    at genesis; the lead schema's `active → active` only.
-  - `tests/marketplace/filters.test.ts`: AC7's full reject list, plus the accepted forms as frozen vectors.
-  - `tests/ids/branded-ids.test.ts`: the three new brands.
-- **Live-DB tests** (`:5433` `twt-test-pg`). Assert membership, not counts. Do NOT `DROP SCHEMA`.
-  - `tests/integration/marketplace/projector-trigger.spec.ts`: every AC2 leg via raw SQL (P0001 + message prefix); trigger
-    presence via `pg_trigger`.
+    - `foldModuleProjection`, including a malformed authored payload;
+    - exact tuple membership.
+  - `tests/marketplace/events.test.ts`:
+    - accept / reject per schema;
+    - `.strict()`;
+    - `from_state` null only at genesis;
+    - the lead is `active → active` only;
+    - upper-case ids are rejected.
+  - `tests/marketplace/filters.test.ts`: AC7's reject list + the accepted frozen vectors.
+  - `tests/marketplace/lead-retry.test.ts`: a stub `pg.PoolClient` whose `events_log` INSERT rejects `{ code: '23505',
+    constraint: 'events_log_stream_id_event_version_uq' }`. Assert 3 attempts, then `ModuleStreamConcurrencyError`, and
+    the SAVEPOINT / ROLLBACK TO / RELEASE call sequence.
+  - `tests/ids/branded-ids.test.ts`.
+- **Live-DB tests** (`:5433`; assert membership, not counts; do NOT `DROP SCHEMA`):
+  - `tests/integration/marketplace/projector-trigger.spec.ts`:
+    - every AC2 leg via raw SQL, with the guard set via `SET LOCAL` (the `alerts-policy-regression.spec.ts` shape);
+    - the 23514 leg;
+    - `pg_trigger` presence;
+    - AC1's `pg_indexes` leg.
   - `tests/integration/marketplace/commands.spec.ts`:
-    - AC5 / AC6 sequential legs;
-    - I4 after each command;
-    - window guards against DB time;
-    - the one real-wrapper composition (AC5).
-  - `tests/integration/marketplace/module-stream-concurrency.spec.ts`: TWO real connections (7.1 / 8.1 both had to add this
-    in review); own commits (TR11).
-    - the last-place race at READ COMMITTED (TR6);
-    - the genesis race at RR + barrier.
-  - `tests/integration/marketplace/read.spec.ts`: AC8, including the cap and time-travel.
+    - AC5 / AC6's sequential legs within one `getTx`, with windows relative to `SELECT now()`;
+    - I4 after each;
+    - the three idempotency outcomes;
+    - **the real-wrapper composition:**
+      1. Create an own `new pg.Pool({ connectionString: DATABASE_URL, max: 2, ssl: false })`.
+      2. On a capacity-1 module, `checkModuleLeadAllowed` returns ok for member A.
+      3. In the same transaction, call `submitModuleLead` for member B directly.
+      4. Then `audit.withCompensatingAudit(pool, …)` wrapping A's submit throws `ModuleSlotsExhaustedError`.
+      5. Assert the intent row and the `module.lead_submitted_rolled_back` row (`resourceLocator = 'module/<id>'`) newer
+         than a baseline `max(created_at)`. The audit rows commit permanently.
+  - `tests/integration/marketplace/commands-clock.spec.ts` (TR4, TR11), on its own pool:
+    1. Transaction 1 authors with `valid_from = now()+2s` (or `valid_until = now()+2s`), schedules / activates, and
+       commits.
+    2. Sleep 2.5 s.
+    3. Transaction 2 runs one of: `scheduled → active`; `archive(valid_until_reached)`; a lead refused with
+       `ModuleOutsideWindowError` on an ACTIVE module.
+  - `tests/integration/marketplace/module-stream-concurrency.spec.ts` (TR6, TR11):
+    - the last-place race and the archive-vs-lead race, at READ COMMITTED;
+    - the genesis race at RR + barrier (the `alert-stream-concurrency.spec.ts` shape).
+  - `tests/integration/marketplace/read.spec.ts`: AC8.
   - `tests/integration/rls/marketplace-modules-policy-regression.spec.ts`:
     - positive and negative cases;
-    - a mismatched-Pariwar `withCheck` (42501);
+    - 42501 on withCheck;
     - unscoped fail-closed;
     - `relforcerowsecurity`;
-    - DELETE denied.
-- **Events:** `packages/events/tests/module-registry-coverage.test.ts`.
-- **Gate:** `scripts/marketplace-module-state-invariant/lib.test.ts` (AC9's three extra cases).
-- **Merge gate:** `pnpm ci:local` (GitHub Actions status flips — [[project_ci_actions_suspension_local_mirror]]).
+    - DELETE denied;
+    - `FOR UPDATE` allowed under `twt_app`.
+- **Elsewhere:** `packages/events/tests/module-registry-coverage.test.ts` ·
+  `scripts/marketplace-module-state-invariant/lib.test.ts`.
+- **Merge gate:** `pnpm ci:local` ([[project_ci_actions_suspension_local_mirror]]).
 
 ### Project Structure Notes
 
-**New:**
-- `packages/domain/src/marketplace/`
-- `schema/marketplace_modules.ts`
-- `policies/marketplace-modules-rls.ts`
-- `migrations/0193_marketplace-modules.sql`
-- `scripts/marketplace-module-state-invariant/`
-- `docs/adr/ADR-0044-…`
-
-**Variances from the epic and PRD text.** Each is deliberate; list each one in Completion Notes:
-- no `packages/marketplace` (QE1);
-- `pariwar_id` NOT NULL, with no FK (QE4);
-- `module.lead_submitted` (QE3);
-- `lead_handoff_signing_key_secret_name` (QE5);
-- `state` → `current_state` (QE5, the helpdesk convention);
-- branding "logo + colors" → `logo_object_key` + a single `accent_color_hex` (QE5);
-- the scope vocabulary (QE9), with eligibility "district" moved into the scope filter (QE9);
-- `age_band` Not addressed (QE9);
-- the half-open window `[valid_from, valid_until)` vs FR-65's closed interval (QE6);
-- `commission_terms` / the external CTA / restore deferred (QE5, C3).
-
-**Not this story's to change** (noted only):
-- the readiness report lists Epic 4 as an Epic 12 dependency, while the epic body lists Epics 1 / 3 / 6;
-- `per-epic-aggregation-estimates/epic-12.md` scopes a forum integration, not this marketplace;
-- `-104`'s "deferred to Epic 12" for field workers is stale numbering (field workers are now Epic 13).
+- **New:**
+  - `packages/domain/src/marketplace/`
+  - `schema/marketplace_modules.ts`
+  - `policies/marketplace-modules-rls.ts`
+  - `migrations/0193_marketplace-modules.sql`
+  - `scripts/marketplace-module-state-invariant/`
+  - `docs/adr/ADR-0044-…`
+  - the tests
+- **Variances from the epic / PRD** (list in Completion Notes):
+  - ⛔ `packages/marketplace`;
+  - `pariwar_id` NOT NULL with ⛔ FK;
+  - `module.lead_submitted`;
+  - `lead_handoff_signing_key_secret_name`;
+  - `state` → `current_state`;
+  - branding → `logo_object_key` + one `accent_color_hex`;
+  - the scope vocabulary (eligibility "district" → scope);
+  - `age_band`;
+  - the half-open window;
+  - `member_state_in` excluding withdrawn / anonymized;
+  - the URL rules;
+  - `commission_terms` / the CTA / restore deferred.
+- **Not this story's to change** (noted only):
+  - the readiness report's Epic 4 dependency vs the epic's 1 / 3 / 6;
+  - `per-epic-aggregation-estimates/epic-12.md` (a forum integration);
+  - `-104`'s stale "Epic 12" for field workers (now Epic 13).
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md#Epic 12: Module Marketplace — Stories 12.1, 12.2 (inherited seam), 12.5, 12.6]
+- [Source: _bmad-output/planning-artifacts/epics.md#Epic 12 — Stories 12.1–12.6 (incl. the INHERITED FROM 12.1 notes)]
 - [Source: _bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md#§4.9 FR-64..FR-67, Out of Scope, OQ-4]
-- [Source: _bmad-output/planning-artifacts/architecture.md#§3.7 Module Marketplace lead-handoff transport; §5.9 secrets; Contracts sub-domain rule; branded IDs]
+- [Source: _bmad-output/planning-artifacts/architecture.md#§3.7; §5.9; Contracts sub-domain rule; branded IDs]
 - [Source: _bmad-output/planning-artifacts/ux-design-specification.md#Module Shelf Partner Brand Integration]
-- [Source: _bmad-output/implementation-artifacts/10-1-helpdesk-subsystem-data-model-routing-policy-registry.md — File List + Review Findings]
-- [Source: _bmad-output/implementation-artifacts/7-1-pool-object-…md, 8-1-alert-state-machine-cycle-open-trigger.md, 3-1-member-lifecycle-state-machine-event-stream.md]
-- [Source: packages/domain/migrations/0084_helpdesk-tickets-and-routing-policy.sql, 0079 (events_log partial unique index), 0189 (whole-row trigger compare)]
-- [Source: packages/domain/src/helpdesk/{project,state,events,errors,read}.ts; apps/api/src/modules/helpdesk/handlers.ts; scripts/helpdesk-state-invariant/, scripts/pool-state-invariant/README.md]
-- [Source: packages/domain/src/audit/compensating.ts; wa-opt-in/code.ts header; reconciliation/reconciliation-review-write.ts; tests/integration/alert/alert-stream-concurrency.spec.ts; docs/domain-accessor-invariants.md family (c)]
-- [Source: packages/domain/src/member-geo/resolve.ts; news-blog/audience.ts; schema/banners.ts]
-- [Source: Decisions `2026-08-13-103` D8, `2026-08-21-147` cl.3, `2026-09-08-210` cl.2, `2026-09-20-233`, `2026-10-07-292` RF4]
+- [Source: _bmad-output/implementation-artifacts/10-1-…md, 7-1-…md, 8-1-…md, 3-1-…md]
+- [Source: packages/domain/migrations/0001, 0002, 0079, 0084, 0096 (header), 0185 (header), 0189]
+- [Source: packages/domain/src/helpdesk/{project,state,events,errors,read}.ts; alert/state.ts; pool/errors.ts; member/read.ts; member/anonymize.ts; contribution/write.ts (`uniqueViolationConstraint`); announcement-channels/posts.ts; reconciliation/reconciliation-review-write.ts; audit/compensating.ts; wa-opt-in/code.ts]
+- [Source: apps/api/src/modules/helpdesk/handlers.ts; scripts/helpdesk-state-invariant/; scripts/pool-state-invariant/README.md]
+- [Source: packages/domain/tests/integration/{_helpers.ts, alert/alert-stream-concurrency.spec.ts, rls/alerts-policy-regression.spec.ts}]
+- [Source: Decisions `2026-10-31-427`, `2026-10-31-429`, `2026-08-13-103` D8, `2026-08-21-147` cl.3, `2026-09-08-210` cl.2, `2026-09-20-233`, `2026-10-07-292` RF4]
+- [Source: /Users/dev/Developer/projects/TWT/docs/legal/{niyamavali.md, niyamavali.hi.md, trust-deed.md, privacy-policy.md} (git-ignored)]
 
 ## Dev Agent Record
 
@@ -914,12 +989,10 @@ All paths below are under `packages/domain/` unless prefixed otherwise. Do NOT u
 
 ### Change Log
 
-- 2026-10-31 — v1.0 created by `bmad-create-story` at `01062c51` (four read-only research passes); row backlog → ready-for-dev.
-- 2026-10-31 — v1.3: Task 0.4 done (`deferred-work.md` C1–C8 + deferrals; `epics.md` INHERITED notes under 12.2–12.6) ⇒ Task 0 complete.
-- 2026-10-31 — v1.2: Task 0.2 answered ("QE1-QE15 as recommended."); Task 0.3 done — `2026-10-31-427` (`a22dbdec`).
-- 2026-10-31 — v1.1 at `b2f36fe9` (worktree fast-forwarded to `origin/main`): validated by three read-only verifiers; all 19
-  improvements applied (audit pairing moved to the caller — QE15; no tenant FK; row-lock last-place design + RC isolation;
-  valid named CHECKs; package-scoped test paths; the `apps/api` QE14 line; whole-row trigger incl. `audit_id` /
-  `updated_at`; gate README source; ASK / C-list / error-name consistency; `events_log` partial unique indexes for QE8;
-  `foldModuleProjection` + table/reducer agreement; explicit-`pariwarId` reads; C2 (c) and C8; variance list; plain-word
-  negations; names-at-a-glance).
+| Date | Version | Change |
+|---|---|---|
+| 2026-10-31 | v1.4 | SECOND validation by four read-only verifiers (DB feasibility; dev-agent dry run; adversarial semantics; records audit); BigDev: *"apply all findings"*. **Decisions:** amending author-commit `-429` (`0168592b`) — every transition locks the row first (deadlock); lead-id idempotency; URL rules; `member_state_in` excludes withdrawn / anonymized; authoring dates; actor set + triggers; §0 / D8 corrections. **Spec precision added:** exact signatures; payload schemas; constants; the projector contract (`lockedRow`); the transitions table; the clock spec; the DB-free retry test; the real-wrapper recipe; SAVEPOINT discipline; trigger rules (d) / (e) + 23514; citation fixes (`0096` / `0185` / `0189`). **Carried items:** C9–C12 added; C2 / C4 / C8 rewritten; trust-deed "disclosed" + Hindi grep. **Records:** ledger `r` → `t`; NUMBERS corrected (`-426` / `-428` taken); Task 0.1 open. Trimmed duplication. |
+| 2026-10-31 | v1.3 | Task 0.4 records (`39ef1763`). |
+| 2026-10-31 | v1.2 | Task 0.2 answered (*"QE1-QE15 as recommended."*); Task 0.3 `-427` (`a22dbdec`). |
+| 2026-10-31 | v1.1 | Fast-forwarded to `b2f36fe9`; first validation (three verifiers), 19 improvements. |
+| 2026-10-31 | v1.0 | Created at `01062c51`; row backlog → ready-for-dev. |

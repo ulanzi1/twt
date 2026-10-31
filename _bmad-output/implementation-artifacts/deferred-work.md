@@ -4,27 +4,68 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
-## Deferred from: story 12-1-module-manifest-schema-module-lifecycle-state-machine.md — the build decisions `2026-10-31-427` (2026-10-31)
+## Deferred from: story 12-1-module-manifest-schema-module-lifecycle-state-machine.md — the build decisions `2026-10-31-427` (amended `2026-10-31-429`) (2026-10-31)
 
-> Story 12.1 builds the module primitive only (⛔ route, ⛔ shelf, ⛔ evaluator, ⛔ webhook, ⛔ cron). The items below are its carried items C1–C8 and its recorded deferrals. Each is NOT built by 12.1 and is owned by the sibling story named. Source: the story's "Carried to sibling stories (C)" section and QE5 / QE9 / QE11.
+> Story 12.1 builds the module primitive only (⛔ route, ⛔ shelf, ⛔ evaluator, ⛔ webhook, ⛔ cron). The items below are its carried items C1–C12 and its recorded deferrals. Each is NOT built by 12.1 and is owned by the sibling story named. Source: the story's "Carried to sibling stories (C)" section and QE5 / QE9 / QE11. (v1.4: C2 / C4 / C8 rewritten and C9–C12 added by `-429`; the role / cohort and `age_band` lines corrected.)
 
-- **C1 — the shelf's "offerable" rule** [12.1 QE7, QE9] → **Story 12.3**. A module is offerable only when it is `active`, `now() ∈ [valid_from, valid_until)` (half-open) and, if capped, `slots_remaining > 0`. A capped module whose last place went stays `active` with 0 places until archived (QE7). The scope and eligibility grammars are evaluated fail-closed: an unknown or empty audience means nobody, never "all". ⭐ Trigger: Story 12.3's create-story.
-- **C2 — what moves a module forward in time** [12.1 QE6, QE7] → **Story 12.6** (or 12.2):
-  - (a) whether slot exhaustion archives immediately or in the daily sweep;
-  - (b) ⚠ **⛔ nothing activates a `scheduled` module at `valid_from`** — the epic's cron only archives, so without an owner `scheduled` is a dead end;
-  - (c) the sweep must also archive `draft` / `scheduled` modules once `now() ≥ valid_until` (reason `valid_until_reached`, legal from any non-archived state).
-
-  ⭐ Trigger: Story 12.6's create-story, or 12.2's if its publish step emits `module.scheduled`.
-- **C3 — `module.restored`** [12.1 QE6; epic 12.6 (iii)] → **Story 12.6**. 12.1 makes `archived` terminal. 12.6 decides the target state, the grace window (the epic says only "e.g., 7 days"), and what a restore means after `valid_until_reached` or with 0 places. It then adds the arm to 12.1's transition table. ⭐ Trigger: Story 12.6's create-story.
-- **C4 — grief-context suppression cannot key on the overlay alone** [12.1 G11] → **Story 12.4**. The `account-frozen` overlay LIFTS on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4). "Structurally absent post-claim" therefore needs the durable "a claim was ever filed" fact (`claim/nominee-lock.ts`). Adding a freeze reason re-engages `2026-08-21-147` cl.3. ⭐ Trigger: Story 12.4's create-story.
-- **C5 — partner colours never touch the shelf chrome** [12.1 QE5; UX "Module Shelf Partner Brand Integration"] → **Stories 12.2 / 12.3**. `branding_bundle.accent_color_hex` is never applied to shelf card backgrounds, CTAs or chrome; it is allowed only on a partner-dedicated detail page. ⭐ Trigger: either story's create-story.
-- **C6 — ⚠ partner data sharing has ⛔ basis on record (Panel / counsel)** [12.1 §0 edge 5] → **Stories 12.3 / 12.5, BEFORE any member data leaves**. The privacy policy's §6 recipient list names ⛔ partners. The PRD's adversarial review M-8 calls each lead "a controller-to-controller PII transfer under DPDPA". ⭐ Trigger: the first story that sends any member field to a partner — route it then ([[project_dpdpa_counsel_engaged_but_unrecorded]]).
-- **C7 — the lead signing scheme conflicts** [12.1 QE5] → **Story 12.5**. Architecture §3.7 / §5.9 says asymmetric JWT, **per partner**, with keys in the high-sensitivity project. Epic 12.5 says HMAC-SHA-256, **per module**. 12.1 stores only a Secret Manager NAME per module (`lead_handoff_signing_key_secret_name`), which fits either. 12.5 decides, and may move the reference to a partner entity. ⭐ Trigger: Story 12.5's create-story.
-- **C8 — lead events live on the MODULE stream** [12.1 QE7, I9] → **Stories 12.3 / 12.5**. `module.lead_submitted` carries `member_id` on the module's stream, ⛔ the member's. The DPDPA data export (`packages/domain/src/data-export/`, strict-parsed sections) and RTBF must learn to find these events before leads go live. ⭐ Trigger: the first story with a production caller of `submitModuleLead`.
-- **`commission_terms` has ⛔ home** [12.1 QE5] → **Story 12.2**. FR-64 lists it; 12.1 deferred it because it is "never public" (PRD) and its shape is OQ-4, still open. 12.2 chooses an admin-only home that member-facing reads cannot select. ⭐ Trigger: Story 12.2's create-story.
-- **`role` / `cohort` scopes are ABSENT** [12.1 QE9; `2026-08-13-103` D8 intact] → **Story 12.2** (the named re-trigger surface). They are refused at write, rather than declared and empty. ⛔ attribute owner exists. ⭐ Trigger: the first module that must target by role or cohort — raise it with that live requirement.
-- **`age_band` eligibility is Not addressed** [12.1 QE9, G10] → **Stories 12.2 / 12.3**. Evaluating it decrypts the Tier-1 date of birth on the shelf path. ⭐ Trigger: the first age-banded module (the PRD's LIC UJ-10 edge case).
-- **The manifest has ⛔ revise event** [12.1 QE11; ADR-0044] → **Story 12.2**. Content is immutable after `module.authored`; a correction is archive + a new module. ⭐ Trigger: the 12.2 wizard needing server-side save-as-you-go, which would add a draft-only `module.revised` arm.
+- **C1 — the shelf's "offerable" rule** [12.1 QE7, QE9] → **Story 12.3**.
+  - A module is offerable only when it is `active`, `now() ∈ [valid_from, valid_until)` (half-open) and, if capped, `slots_remaining > 0`.
+  - A capped module whose last place went stays `active` with 0 places until archived (QE7).
+  - The grammars are evaluated fail-closed: an unknown or empty audience is nobody, never "all".
+  - ⭐ Trigger: Story 12.3's create-story.
+- **C2 — what moves a module forward in time** [12.1 QE6, QE7; `-429`] → **Story 12.6** (or 12.2):
+  - (a) Decide whether slot exhaustion archives immediately or in the daily sweep.
+  - (b) ⚠ **⛔ nothing activates a `scheduled` module at `valid_from`.** The epic's cron only archives.
+  - (c) The sweep must also archive `draft` / `scheduled` modules once `now() ≥ valid_until` (reason `valid_until_reached`, legal from any non-archived state).
+  - (d) 12.6 owns a cross-tenant indexed candidate scan — there is ⛔ `pariwars` table to loop over. Use the `member/renewal-scheduler.ts` `selectRenewalCandidates` shape: unscoped under the BYPASSRLS service login, then per-candidate `withPariwarScope`. It needs its own partial indexes (`(valid_until) WHERE current_state <> 'archived'`, `(valid_from) WHERE current_state = 'scheduled'`) and a rule for which reason wins when both hold.
+  - Recorded cost: an offer past `valid_until` stays `active`, and a past-start `scheduled` offer stays hidden, until the sweep runs — up to a day with a daily sweep.
+  - ⭐ Trigger: Story 12.6's create-story, or 12.2's if its publish step emits `module.scheduled`.
+- **C3 — `module.restored`** [12.1 QE6; epic 12.6 (iii)] → **Story 12.6**.
+  - 12.1 makes `archived` terminal.
+  - 12.6 decides the target state, the grace window (the epic says only "e.g., 7 days"), and what a restore means after `valid_until_reached` or at 0 places. It then adds the arm to 12.1's transition table.
+  - A new state or reason value is judged by §0 on its own (12.1 §0 edge 6, as corrected by `-429` A7).
+  - ⭐ Trigger: Story 12.6's create-story.
+- **C4 — grief-context suppression** [12.1 G11; `-429`] → **Story 12.4**.
+  - The `account-frozen` overlay LIFTS on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4).
+  - Keying suppression instead on the durable "a claim was ever filed" fact (`claim/nominee-lock.ts`) would suppress a LIVING member after an erroneous claim; nominee-lock has ⛔ production release until row 6-22. That IS a new reason in `2026-08-21-147` cl.3's widened sense ⇒ **the re-examination is MANDATORY at 12.4**. Routing depends on what it finds.
+  - ⭐ Trigger: Story 12.4's create-story.
+- **C5 — partner colours never touch the shelf chrome** [12.1 QE5; UX "Module Shelf Partner Brand Integration"] → **Stories 12.2 / 12.3**. `branding_bundle.accent_color_hex` is only for a partner-dedicated detail page. ⭐ Trigger: either story's create-story.
+- **C6 — ⚠ partner data sharing has ⛔ basis on record (Panel / counsel)** [12.1 §0 edge 5] → **Stories 12.3 / 12.5, BEFORE any member data leaves**.
+  - The privacy policy §6 names ⛔ partners.
+  - The PRD adversarial review M-8: each lead is "a controller-to-controller PII transfer under DPDPA".
+  - Route it together with C8 (a). ⭐ Trigger: the first story that sends any member field to a partner ([[project_dpdpa_counsel_engaged_but_unrecorded]]).
+- **C7 — lead signing scheme, and send-time address checks** [12.1 QE5; `-429` A3] → **Story 12.5**.
+  - The scheme is unresolved. Architecture §3.7 / §5.9 says asymmetric JWT **per partner**, with keys in the high-sensitivity project. Epic 12.5 says HMAC-SHA-256 **per module**.
+  - 12.1 stores only a Secret Manager NAME per module (`lead_handoff_signing_key_secret_name`), which fits either. 12.5 decides.
+  - 12.5 also re-checks the RESOLVED address at send time (SSRF / DNS rebinding). 12.1's write-time host rule (⛔ IP literal, ⛔ localhost, ⛔ query / fragment) is not enough.
+  - ⭐ Trigger: Story 12.5's create-story.
+- **C8 — an RTBF can NEVER remove a member↔offer link** [12.1 QE7, QE8, I9; `-429`] → **Stories 12.3 / 12.5 (route with C6)**.
+  - `module.lead_submitted` carries `member_id` on the MODULE stream. `events_log` is append-only (the `0001` triggers) and erasure keeps event streams (`member/anonymize.ts`), so `module_lead_member_uq` keeps the link for good.
+  - (a) The retention basis for that link goes to Panel / counsel with C6, before the first production caller. The privacy policy §8 has ⛔ row for it, and a health-camp lead may imply health data.
+  - (b) The DPDPA data export (`packages/domain/src/data-export/`, strict-parsed sections) must add these events. A by-member lookup needs a generated column + index (the `0185` precedent), because `payload ->> 'member_id'` cannot be an index condition under RLS.
+  - (c) Any lead PII (name, mobile) lives in 12.5's lead entity, which erasure IS able to reach.
+  - ⭐ Trigger: the first story with a production caller of `submitModuleLead`.
+- **C9 — the shelf filter is ⛔ an authorization** [`-429`] → **Stories 12.3 / 12.4**.
+  - Before `checkModuleLeadAllowed` / `submitModuleLead`, the lead route re-evaluates, server-side and against the requesting member: the module's scope and eligibility (fail-closed), the member's state (refuse `withdrawn` / `anonymized`), and 12.4's grief-context suppression.
+  - 12.1's three lead rules (open, places left, once) are necessary, ⛔ sufficient.
+  - ⭐ Trigger: Story 12.3's create-story.
+- **C10 — a correction resets places** [12.1 QE11; `-429`] → **Stories 12.2 / 12.5**.
+  - A correction (archive + re-author) starts a NEW stream: places reset to the new `slot_capacity`, members who registered on the old module can register again, and the partner may receive a second lead for the same member.
+  - A partner endpoint change forces the same reset, because `lead_handoff_url` is immutable.
+  - 12.2's wizard warns before re-authoring a module that has leads. If 12.5 moves the endpoint or key to a partner entity, it owns relaxing those NOT NULL columns.
+  - ⭐ Trigger: either story's create-story.
+- **C11 — scope values are not checked against the geo tree** [`-429`] → **Story 12.2**. `ScopeFilterV1.values` are free strings in 12.1. The wizard must pick values from the Pariwar's published tree, and refuse `state` scope for a Pariwar with no tree; otherwise a mistyped value silently reaches nobody. ⭐ Trigger: Story 12.2's create-story.
+- **C12 — mutable data lives in its own table** [`-429`] → **every sibling**.
+  - Mutable presentation data (12.3's curated rank, 12.2's review status) lives in its own table.
+  - Every `marketplace_modules` column is immutable by the whole-row trigger, unless the adding story amends the trigger's exception chain AND the gate's `GUARDED_COLUMNS`.
+  - ⭐ Trigger: any story adding a column to `marketplace_modules`.
+- **`commission_terms` has ⛔ home** [12.1 QE5] → **Story 12.2**.
+  - FR-64 lists it. It is "never public" (PRD) and its shape is OQ-4, still open; 12.2 chooses an admin-only home.
+  - ⚠ The draft trust deed's Clause 7.2(i) requires partner arrangements to be "**disclosed**", which sits against the PRD's "partner commission rates … never public". If 12.2 cannot reconcile them, route it (§0: what the Trust discloses).
+  - ⭐ Trigger: Story 12.2's create-story.
+- **`role` / `cohort` scopes are ABSENT** [12.1 QE9; `2026-08-13-103` D8 intact] → whichever story meets **D8's condition** ("the first surface that must target members by `role` or `cohort`"). 12.2 MAY be it; D8 names ⛔ story. They are refused at write, rather than declared and empty. ⭐ Trigger: that condition, raised with its live requirement.
+- **`age_band` eligibility is Not addressed** [12.1 QE9, G10] → **Story 12.3**. Evaluating it decrypts the Tier-1 date of birth on the shelf path. ⭐ Trigger: the first age-banded module (the PRD's LIC UJ-10 edge case).
+- **The manifest has ⛔ revise event** [12.1 QE11; ADR-0044] → **Story 12.2**. ⭐ Trigger: the wizard needing server-side save-as-you-go, which would add a draft-only `module.revised` arm.
 - **An external-URL CTA (FR-64 `target_url_or_form`) is Not addressed** [12.1 QE5] → ⛔ owner yet. ⭐ Trigger: the first partner whose contract requires sending the member to the partner's own page.
 
 ---

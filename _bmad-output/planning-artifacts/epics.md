@@ -7275,12 +7275,12 @@ So that module creation is structured + scope-respecting + audit-logged.
 >   story's to raise **with its live requirement attached**; it is not a thing 1.19 left half-built.
 > - `national` — orthogonal to both; it is not a geo-tree node dimension.
 
-> ⭐ **INHERITED FROM 12.1 (Decision `2026-10-31-427`).** The manifest primitive this wizard writes is built (`packages/domain/src/marketplace/`, ⛔ `packages/marketplace`):
-> - **`commission_terms` is THIS story's** (FR-64/66). 12.1 deferred it; choose an admin-only home that member-facing reads cannot select (PRD: "never public"; OQ-4 open).
-> - **`role` / `cohort` are ABSENT from 12.1's `ScopeFilterV1`** (refused at write). If this wizard needs them, raise the attribute WITH its live requirement (`2026-08-13-103` D8). The scope arms built are `members-all` / `state` / `district`.
-> - The manifest is immutable after `module.authored` (⛔ revise event). If the wizard needs server-side save-as-you-go, add a draft-only `module.revised` arm (ADR-0044).
-> - **Publish with a future `valid_from` emits `module.scheduled`, ⛔ `module.activated`.** If this story owns the publish step, see C2 (nothing yet activates a `scheduled` module).
-> - The signing key is stored as a Secret Manager NAME (`lead_handoff_signing_key_secret_name`). Audit pairing is the CALLER's (`withCompensatingAudit` around `marketplace.<command>(client, { …, auditId })`). **C5:** partner colours never touch the shelf chrome.
+> ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; `deferred-work.md` "Deferred from: story 12-1-…").** The manifest primitive this wizard writes is built (`packages/domain/src/marketplace/`, ⛔ `packages/marketplace`).
+> - **`commission_terms` is THIS story's** (FR-64/66): choose an admin-only home (PRD "never public"; OQ-4 open). ⚠ The trust deed's Clause 7.2(i) says partner arrangements must be "**disclosed**". Reconcile it, or route it (§0: what the Trust discloses).
+> - **`role` / `cohort` are ABSENT from `ScopeFilterV1`** (refused at write). If this wizard must target by them, it meets `2026-08-13-103` D8's condition; raise the attribute WITH that requirement. Built arms: `members-all` / `state` / `district`. **C11:** pick `state` / `district` values from the Pariwar's geo tree; refuse `state` where there is no tree.
+> - The manifest is immutable after `module.authored` (⛔ revise event; ADR-0044). If the wizard needs server-side drafts, add a draft-only `module.revised` arm. **C10:** a correction re-authors, which resets places and lets earlier registrants register again — warn before re-authoring a module that has leads.
+> - **Publish with a future `valid_from` emits `module.scheduled`, ⛔ `module.activated`.** Nothing yet activates a `scheduled` module (C2 (b)) — if this story owns publishing, it may own that too.
+> - The URL rule is `https`, ⛔ query or fragment, ⛔ IP / localhost. The key is a Secret Manager NAME. Audit pairing is the CALLER's (`withCompensatingAudit` around `marketplace.<command>(client, { …, auditId })`). **C5:** partner colours never touch the shelf chrome. **C12:** mutable data (a review status) goes in its own table.
 
 ### Story 12.3: Member Module Shelf — Eligibility Filter + Scope Filter `[SURFACE]`
 
@@ -7296,12 +7296,11 @@ So that I see relevant partner offers without irrelevant noise.
 **And** the shelf is paginated; modules rank by partner-trustee-curated relevance (no algorithmic engagement-optimization ranking)
 **And** tapping a module opens a brief interest form with explicit consent (Story 2.7 `recordConsent` for `module_lead_handoff` consent type); submission emits `module.lead-submitted` event consuming Story 12.5 transport
 
-> ⭐ **INHERITED FROM 12.1 (Decision `2026-10-31-427`; `deferred-work.md` "Deferred from: story 12-1-…").** The primitive this shelf reads is built. Five things bind this story:
+> ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; `deferred-work.md` "Deferred from: story 12-1-…").** The primitive this shelf reads is built. These bind this story:
 > - **The event is `module.lead_submitted`** (single-dot snake_case — ⛔ the hyphen above).
-> - **Offerable = `active` AND `now() ∈ [valid_from, valid_until)` AND, if capped, `slots_remaining > 0`** (C1). A capped module whose last place went stays `active` with 0 places until archived.
-> - Evaluate 12.1's closed `ScopeFilterV1` / `EligibilityFilterV1` fail-closed (unknown or empty audience = nobody). `age_band` is Not addressed (decrypts Tier-1 DOB).
-> - Audit pairing is the CALLER's: run `marketplace.checkModuleLeadAllowed` BEFORE `withCompensatingAudit`, then call `submitModuleLead(client, { …, auditId })`. One place per member per module (a second registration is refused).
-> - ⚠ **C6:** the privacy policy's §6 names ⛔ partners — route the partner-data basis BEFORE any member field leaves. **C8:** lead events sit on the MODULE stream, so the data export and RTBF must find them. **C5:** partner colours never touch the shelf chrome.
+> - **C1 — offerable** = `active` AND `now() ∈ [valid_from, valid_until)` AND, if capped, `slots_remaining > 0`. Evaluate `ScopeFilterV1` / `EligibilityFilterV1` fail-closed. `age_band` is Not addressed here (it decrypts Tier-1 DOB).
+> - **C9 — the shelf filter is ⛔ an authorization.** The lead route re-checks scope, eligibility, member state (refuse `withdrawn` / `anonymized`) and 12.4's grief suppression server-side, before `marketplace.checkModuleLeadAllowed` / `submitModuleLead`. Those run as caller-wrapped: pre-check BEFORE `withCompensatingAudit`, then the command with `{ …, auditId }`. The lead id is caller-minted and idempotent (a replay returns `{ replayed: true }`); one place per member per module.
+> - ⚠ **C6 + C8:** the privacy policy §6 names ⛔ partners, and an RTBF can never remove a member↔offer link. Route the data and retention basis BEFORE the first production caller. The data export must learn to find lead events on the module stream. **C5:** partner colours never touch the shelf chrome. **C12:** a curated rank goes in its own table.
 
 ### Story 12.4: Grief-Context Module Shelf Suppression — State-Machine-Enforced + Structural-Not-Cosmetic Invariant `[GOVERNANCE]`
 
@@ -7324,7 +7323,7 @@ So that grief-context dignity is preserved at the architectural layer, not at re
 **And** a CI test asserts: for a `account-frozen` member view, no API call to module endpoints is made; the rendered DOM contains no module shelf elements; no placeholder content references modules; no partner branding appears anywhere on the surface
 **And** the philosophy is documented: the trust does not market to grieving families; absence is the architectural commitment, not cosmetic concealment
 
-> ⭐ **INHERITED FROM 12.1 (Decision `2026-10-31-427`, C4).** ⚠ The `account-frozen` overlay this story keys on **LIFTS** on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4). "Structurally absent post-claim" therefore cannot key on the overlay alone; the durable "a claim was ever filed" fact is `claim/nominee-lock.ts`. Adding a new freeze reason re-engages `2026-08-21-147` cl.3. 12.1 added ⛔ freeze source.
+> ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; C4, C9).** ⚠ The `account-frozen` overlay this story keys on **LIFTS** on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4). Keying instead on the durable "a claim was ever filed" fact (`claim/nominee-lock.ts`) would suppress a LIVING member after an erroneous claim, which IS a new reason under `2026-08-21-147` cl.3 ⇒ the re-examination is MANDATORY here. **C9:** suppression must also bind the lead route, not only the rendered shelf. 12.1 added ⛔ freeze source.
 
 ### Story 12.5: Module Lead-Handoff Transport + Partners-as-Downstream-Consumers Invariant `[PRIMITIVE]`
 
@@ -7348,10 +7347,10 @@ So that partner systems receive valid leads with provenance, and partner integra
 **And** acceptable integration patterns: outbound lead handoff (this story); partner-provided lead-outcome feedback recorded as informational only (advisory, not authoritative); partner branding and module metadata consumed inbound at module-authoring time only (Story 12.2 wizard)
 **And** the philosophy is documented: TWT's canonical state authority is preserved; partner systems are CRM/sales consumers, not membership co-owners; this prevents partner-driven state drift, CRM synchronization creep, and governance erosion
 
-> ⭐ **INHERITED FROM 12.1 (Decision `2026-10-31-427`; C6, C7, C8).**
-> - **C7 — the signing scheme conflicts.** The AC above says HMAC-SHA-256 **per module**; architecture §3.7 / §5.9 says asymmetric JWT **per partner**, with keys in the high-sensitivity project. 12.1 stores only a Secret Manager NAME per module (`lead_handoff_signing_key_secret_name`, ⛔ `_ref`), which fits either. This story decides, and may move the reference to a partner entity.
-> - **C6** — route the partner-data basis BEFORE any member field leaves (the privacy policy's §6 names ⛔ partners).
-> - **C8** — `module.lead_submitted` carries `member_id` on the module stream; the data export and RTBF must find it.
+> ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; C6, C7, C8, C10).**
+> - **C7 — the signing scheme conflicts.** The AC above says HMAC-SHA-256 **per module**; architecture §3.7 / §5.9 says asymmetric JWT **per partner**. 12.1 stores only a Secret Manager NAME per module (`lead_handoff_signing_key_secret_name`, ⛔ `_ref`). This story decides. It also re-checks the resolved address at send time (SSRF / DNS rebinding); a URL token must travel as a header from Secret Manager, because 12.1's URLs carry ⛔ query string.
+> - **C6 + C8** — route the partner-data and retention basis BEFORE any member field leaves. Lead PII belongs in this story's lead entity, which erasure can reach.
+> - **C10** — if the endpoint or key moves to a partner entity, this story owns relaxing 12.1's NOT NULL columns.
 > - Lead delivery status (`delivered | pending_retry | failed_delivery`) is this story's entity, ⛔ a module column.
 
 ### Story 12.6: Time-Bombed Module Lifecycle + Auto-Archive `[CONSUMER]`
@@ -7368,11 +7367,12 @@ So that modules don't linger on shelves past their valid window or after slot ex
 **And** archived modules: (i) no longer appear on member shelves; (ii) past lead-handoffs remain queryable for audit; (iii) can be restored by trustee within a grace window (e.g., 7 days) with `module.restored` event
 **And** archived state respects Story 9.5 / Story 11b.3 canonical-truth patterns: archived modules don't appear in member-facing aggregates as active; archived counts surface in admin analytics only (Story 10.7 reports library)
 
-> ⭐ **INHERITED FROM 12.1 (Decision `2026-10-31-427`; C2, C3).**
-> - **(a)** 12.1 does ⛔ auto-archive at zero places; this story decides immediate vs daily.
-> - **(b)** ⚠ **⛔ nothing activates a `scheduled` module at `valid_from`.** The cron above only archives, so this story (or 12.2) must own the `scheduled → active` emitter, or `scheduled` is a dead end.
-> - **(c)** The sweep must also archive `draft` / `scheduled` modules once `now() ≥ valid_until`. 12.1's window is half-open, so `valid_until < now()` above is compatible.
-> - **C3 — `module.restored`** is ⛔ in 12.1's vocabulary (`archived` is terminal there). This story decides its target state, the real grace window, and restore after `valid_until_reached` / at 0 places, then adds the arm to 12.1's transition table.
+> ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; C2, C3).**
+> - **(a)** 12.1 does ⛔ auto-archive at zero places; decide immediate vs daily.
+> - **(b)** ⚠ **⛔ nothing activates a `scheduled` module at `valid_from`** — own the `scheduled → active` emitter (or 12.2 does).
+> - **(c)** Also archive `draft` / `scheduled` modules once `now() ≥ valid_until`. 12.1's window is half-open, so `valid_until < now()` above is compatible.
+> - **(d)** There is ⛔ `pariwars` table, so use a cross-tenant indexed candidate scan (the `member/renewal-scheduler.ts` shape) with its own partial indexes, plus a rule for which reason wins. Cost if daily: an offer can stall for up to a day.
+> - **C3 — `module.restored`** is ⛔ in 12.1's vocabulary (`archived` is terminal). Decide its target state, the real grace window, and restore after `valid_until_reached` / at 0 places. A new value is judged by §0 on its own. Every transition takes the module row lock first (12.1 I10).
 
 ---
 

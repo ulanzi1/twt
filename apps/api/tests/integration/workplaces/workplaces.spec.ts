@@ -42,6 +42,7 @@ import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/sco
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
+import { fileClaim, seedLifecycleMember } from '../_death-report-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 type Json = Record<string, unknown>;
@@ -674,6 +675,22 @@ describe.skipIf(!hasDatabase)('Story 6.36c — workplaces, the queue, the answer
       expect((await memberCall('POST', answerUrl('nope'), tok, { answer: 'yes', workplaceId: shown })).status).toBe(400);
       // ⭐ Code review round 2 — the body MUST name the workplace the member was shown.
       expect((await memberCall('POST', answerUrl(theirs), tok, { answer: 'yes' })).status).toBe(400);
+    });
+
+    it('⭐ Story 6.38 AC15 — a standing claim ⇒ 409 life_events.death_reported; the request stays `suggested`, ⛔ posting', async () => {
+      const { pariwarId: p, ids } = await seedList();
+      // Code review round 4 (DL14 / TR2): an `active` member walked through REAL events — a `seedMemberRow` replays to
+      // `pending-kyc`, which the door refuses, so a standing claim for it could ⛔ exist.
+      const { memberId: me } = await seedLifecycleMember(td, { pariwarId: p });
+      const r = await seedRequest(p, me);
+      await suggestRaw(r, ids['GMS RAMPUR']!);
+      await fileClaim(td, p, me);
+      const res = await memberCall('POST', answerUrl(r), memberToken(me, p), { answer: 'yes', workplaceId: ids['GMS RAMPUR']! });
+      expect(res.status).toBe(409);
+      expect((res.body.error as Json).code).toBe('life_events.death_reported');
+      expect(await requestRow(r)).toMatchObject({ state: 'suggested' });
+      const postings = await td.pool.query('SELECT 1 FROM member_postings WHERE member_id = $1', [me]);
+      expect(postings.rowCount).toBe(0);
     });
 
     it('"Yes" ⇒ 200 with the summary; ONE posting naming the workplace, the marker, the audit line; a replay ⛔ writes twice', async () => {

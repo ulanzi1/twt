@@ -33,7 +33,12 @@ const mock = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: mock.invalidate }) }))
 vi.mock('../../lib/member-api', () => ({ memberAuth: { answerWorkplaceSuggestion: mock.answer } }))
-const echo = (key: string, params?: Record<string, unknown>) => (params ? `${key}:${Object.values(params).map(String).join(',')}` : key)
+// ⭐ Namespace-aware (Story 6.38 code review round 2): a key asked of ANOTHER namespace shows as `<namespace>:<key>`, so a test can see the
+// component asked for the `common` namespace. Every key without an `opts.namespace` echoes exactly as before.
+const echo = (key: string, params?: Record<string, unknown>, opts?: { readonly namespace?: string }) => {
+  const line = params ? `${key}:${Object.values(params).map(String).join(',')}` : key
+  return opts?.namespace ? `${opts.namespace}:${line}` : line
+}
 vi.mock('../../lib/workplace-i18n', () => ({ useWorkplaceT: () => echo }))
 vi.mock('../../lib/idempotency-key', () => ({ newIdempotencyKey: () => `key-${(mock.keys += 1)}` }))
 // `./useWorkplaceQueries` (its `workplaceKeys.all`) imports `useSession` at module level — unused by this component's
@@ -111,6 +116,20 @@ describe('"Saving…" is per-button (fix-review — it used to show on "Yes" reg
       resolveAnswer({ answer: 'no' })
       await Promise.resolve()
     })
+  })
+})
+
+describe('Story 6.38 (DL19) — a claim filed for the member\'s death refuses the answer', () => {
+  it('⭐ a prompt `life_events.death_reported` shows the `common` death-reported line — ⛔ a workplace refusal word; both buttons stay usable', async () => {
+    mock.answer.mockRejectedValue(Object.assign(new Error('refused'), { status: 409, code: 'life_events.death_reported' }))
+    render(createElement(Host, { s: suggestion({ requestId: 'r-death' }) }))
+
+    await userEvent.click(screen.getByText('question.yes'))
+
+    expect(await screen.findByText('common:lifeEvents.error_death_reported')).toBeInTheDocument()
+    expect(screen.queryByText(/^refusal\./)).toBeNull() // ⛔ one of the workplace namespace's own refusal lines
+    expect(screen.queryByText('error_generic')).toBeNull()
+    expect(screen.getByText('question.yes')).not.toBeDisabled() // the refusal is not a "saved" — nothing locked
   })
 })
 
@@ -279,6 +298,15 @@ describe('the abandoned (timed-out) POST — fix-diff review', () => {
     await flush()
     expect(screen.queryByText('error_generic')).toBeNull()
     expect(screen.queryByText(/^refusal\./)).toBeNull()
+  })
+
+  it('⭐ Story 6.38 — a late `life_events.death_reported` reads the `common` death-reported line (⛔ a workplace word, ⛔ the generic line)', async () => {
+    vi.useFakeTimers()
+    const w = await pressAndTimeOut('yes', 'r-ab-death')
+    w.rejectWrite(Object.assign(new Error('refused'), { status: 409, code: 'life_events.death_reported' }))
+    await flush()
+    expect(screen.queryByText('error_generic')).toBeNull()
+    expect(screen.getByText('common:lifeEvents.error_death_reported')).toBeInTheDocument()
   })
 
   it('⛔ a NEWER outcome is overwritten: the same answer retried (same key) and refused, then the abandoned POST lands', async () => {

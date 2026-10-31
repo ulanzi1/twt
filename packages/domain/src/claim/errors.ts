@@ -19,6 +19,7 @@
 // `.includes()` — a Story 3.1 review defect carried forward as a fix, not a bug).
 
 import type { ErrorResponseShape } from '../errors.js';
+import type { ClaimIntakeRefusalReason } from './intake-door.js';
 
 /** Namespaced error code for a rejected direct write to `claims.current_state`. */
 export const CLAIM_STATE_DIRECT_WRITE_CODE = 'claim.state_direct_write_rejected';
@@ -904,5 +905,20 @@ export class SuspicionReasonLockedError extends Error {
     super(
       `[suspicion-refusal] claim ${claimCaseId}'s refusal reason cannot be changed while another claim for this death (${heldClaimCaseId}) is not closed`,
     );
+  }
+}
+
+// ── Story 6.38 — the claim door (`2026-10-30-423` Q3 B; `2026-10-31-424` Q1 (b) B, Q3 B) ─────────────────────────────
+
+/** N4 / N6 / DL8 — a claim cannot be filed: at the first report the person was ⛔ a member (one of five reasons). Thrown
+ *  by `tryConverge` BEFORE any write (⛔ claim, ⛔ attempt, ⛔ event — N5). → 409 `claim.intake_refused`; ONLY the helpline
+ *  route carries `details.reason` (the app hides the reason, so its wire must too — N7). */
+export class ClaimIntakeRefusedError extends Error {
+  public readonly name = 'ClaimIntakeRefusedError';
+  public constructor(
+    public readonly deceasedMemberId: string,
+    public readonly reason: ClaimIntakeRefusalReason,
+  ) {
+    super(`[claim-door] a claim cannot be filed for member ${deceasedMemberId} (${reason})`);
   }
 }

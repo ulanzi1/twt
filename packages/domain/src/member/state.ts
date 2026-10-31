@@ -127,11 +127,13 @@ function reduce(state: MemberLifecycleState, event: MemberEventInput): MemberLif
     // PII column and then append an event that returned IDENTITY — a PHANTOM ANONYMIZATION: PII gone,
     // state never moved, member still `active` on replay.
     //
-    // WHERE LEGALITY LIVES NOW — in the CALLERS, both of them, and there are exactly two:
-    //   1. `apps/api/src/modules/rtbf/handlers.ts`            — member self-service (`withdrawn` only)
-    //   2. `apps/api/src/modules/member-data-rights/`          — off-portal admin (the overlay reads
-    //                                                            `terminated`)
-    // Each asserts its own predicate BEFORE appending. This is the Story 10.20 WS-D shape: a precondition
+    // WHERE LEGALITY LIVES NOW — in the ONE predicate both callers share (`member/rtbf-legality.ts`
+    // `resolveRtbfLegality`: `withdrawn`, OR the overlay reads `terminated`), and there are exactly two callers:
+    //   1. `apps/api/src/modules/rtbf/handlers.ts`            — member self-service
+    //   2. `apps/api/src/modules/member-data-rights/`          — off-portal admin
+    // Each asserts it BEFORE appending. ⭐ Story 6.38 (`2026-10-30-423` Q1 (a)): the DEATH LOCK lives there too — once a
+    // claim is filed for the member's death the predicate refuses (`death_reported`) whatever the state, so this arm
+    // stays BROAD and ⛔ learns about claims (the purity argument below). This is the Story 10.20 WS-D shape: a precondition
     // belongs in `nextModerationStatus`'s CALLER, never as a new state.
     //
     // ⛔ WHY THE REDUCER MUST NOT READ THE OVERLAY. `reduce` is a PURE, SYNCHRONOUS fold over

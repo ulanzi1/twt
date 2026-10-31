@@ -34,6 +34,7 @@ import {
   type TestDeps,
 } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
+import { seedMemberAt, type SeedLifecycleState } from '../_death-report-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 type Json = Record<string, unknown>;
@@ -118,6 +119,16 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
       await memberDomain.projectMemberState(scopeTx.client, {
         memberId: mid, pariwarId: pid, eventType: 'member.signup_initiated', actorId: memberId,
         payload: { from_state: null, to_state: 'pending-kyc', trigger: 'signup', actor: 'member' },
+      });
+      // Story 6.38 (TR2): on to `lock-in` — a `pending-kyc` member's FIRST report is refused at the claim door
+      // (`not_joined`), and `pending-fee` is refused `not_paid` (`2026-10-31-424` Q1 (b)).
+      await memberDomain.projectMemberState(scopeTx.client, {
+        memberId: mid, pariwarId: pid, eventType: 'member.kyc_completed', actorId: memberId,
+        payload: { from_state: 'pending-kyc', to_state: 'pending-fee', trigger: 'kyc', actor: 'member' },
+      });
+      await memberDomain.projectMemberState(scopeTx.client, {
+        memberId: mid, pariwarId: pid, eventType: 'member.vyawastha_shulk_paid', actorId: memberId,
+        payload: { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'fee_paid', actor: 'member', utr: 'UTR-638', amount_inr: 110 } as never,
       });
       await closeScopeTx(scopeTx, true);
     } catch (err) {
@@ -592,5 +603,86 @@ describe.skipIf(!hasDatabase)('Helpline-mediated claim filing — E2E (:5433)', 
       [deceasedMemberId],
     );
     expect(claims.rows[0]?.n).toBe(1); // still just the canonical claim — no second claim minted
+  });
+
+  // ── Story 6.38 — THE CLAIM DOOR, helpline (AC6; `2026-10-30-423` Q3 B, `2026-10-31-424` Q1 (b) B) ─────────────────
+
+  async function fileFor(pariwarId: string, deceasedMemberId: string) {
+    const { client, userId } = await authenticate();
+    await grantRole(userId, pariwarId, 'helpline_operator');
+    await elevateClaimFile(client);
+    const res = await client.inject({ method: 'POST', url: intakeUrl(pariwarId), payload: validBody(deceasedMemberId) });
+    return { res, userId };
+  }
+
+  async function claimTrace(deceasedMemberId: string) {
+    const claims = await td.pool.query('SELECT 1 FROM claims WHERE deceased_member_id = $1', [deceasedMemberId]);
+    const attempts = await td.pool.query('SELECT 1 FROM intake_attempts WHERE deceased_member_id = $1', [deceasedMemberId]);
+    const events = await td.pool.query(
+      `SELECT 1 FROM events_log WHERE event_type LIKE 'claim.%' AND payload ->> 'deceased_member_id' = $1`,
+      [deceasedMemberId],
+    );
+    return { claims: claims.rowCount, attempts: attempts.rowCount, events: events.rowCount };
+  }
+
+  const REFUSED: ReadonlyArray<readonly [string, SeedLifecycleState, Parameters<typeof seedMemberAt>[2], string]> = [
+    ['pending-kyc (never finished joining)', 'pending-kyc', {}, 'not_joined'],
+    ['withdrawn (left)', 'withdrawn', {}, 'left'],
+    ['anonymized (erased)', 'anonymized', {}, 'erased'],
+    ['terminated (removed)', 'active', { moderation: 'terminated' }, 'removed'],
+    ['pending-fee, identity verified (never paid)', 'pending-fee', {}, 'not_paid'],
+    ['pending-fee, identity typed in (never paid)', 'pending-fee', { manual: true }, 'not_paid'],
+    ['⭐ precedence — a terminated WITHDRAWN member ⇒ removed', 'withdrawn', { moderation: 'terminated' }, 'removed'],
+    ['⭐ precedence — an ANONYMIZED terminated member ⇒ erased', 'anonymized', { moderation: 'terminated' }, 'erased'],
+  ];
+
+  it.each(REFUSED)('⛔ AC6 — %s ⇒ 409 claim.intake_refused, reason on the wire, ⛔ record, the audit line names it', async (_l, state, opts, reason) => {
+    const pariwarId = randomUUID();
+    const { memberId } = await seedMemberAt(td, state, { ...opts, pariwarId });
+    const { res, userId } = await fileFor(pariwarId, memberId);
+    expect(res.statusCode).toBe(409);
+    const err = res.json<{ error: { code: string; message: string; details?: Json } }>().error;
+    expect(err.code).toBe('claim.intake_refused');
+    expect(err.details).toEqual({ reason });
+    // ⛔ Name, ⛔ member id in the message.
+    expect(err.message).not.toContain(memberId);
+    // N5 — ⛔ claim row, ⛔ intake attempt, ⛔ claim event.
+    expect(await claimTrace(memberId)).toEqual({ claims: 0, attempts: 0, events: 0 });
+    // The EXISTING staff security line IS written, and (DL16 (a)) names the reason on its readable channel.
+    const failed = td.auditSink.ofType('helpline_claim.intake_failed').filter((e) => (e.context as Json)?.deceased_member_id === memberId);
+    expect(failed).toHaveLength(1);
+    expect(failed[0]?.actorId).toBe(userId);
+    expect((failed[0] as { resourceLocator?: string }).resourceLocator).toBe(`claim-intake-refused:${reason}`);
+  });
+
+  const OPEN: ReadonlyArray<readonly [string, SeedLifecycleState, Parameters<typeof seedMemberAt>[2]]> = [
+    ['pending-valid', 'pending-valid', { manual: true }],
+    ['lock-in', 'lock-in', {}],
+    ['lock-in with a typed-in identity (`-424` Q1 (a) C — filed)', 'lock-in', { manual: true }],
+    ['active', 'active', {}],
+    ['active-in-grace', 'active-in-grace', {}],
+    ['lapsed-unpaid', 'lapsed-unpaid', {}],
+    ['a SUSPENDED active member', 'active', { moderation: 'suspended' }],
+  ];
+
+  it.each(OPEN)('✅ AC6 — %s ⇒ filed as today', async (_l, state, opts) => {
+    const pariwarId = randomUUID();
+    const { memberId } = await seedMemberAt(td, state, { ...opts, pariwarId });
+    const { res } = await fileFor(pariwarId, memberId);
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ created: boolean }>().created).toBe(true);
+  });
+
+  it('⛔ AC6 — an unknown id ⇒ 404 member.not_found as today (⛔ the door)', async () => {
+    const pariwarId = randomUUID();
+    const unknownId = randomUUID();
+    const { res } = await fileFor(pariwarId, unknownId);
+    expect(res.statusCode).toBe(404);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe('member.not_found');
+    // DL16 (a): the readable `resourceLocator` is ⛔ a door refusal's alone — a failure that is NOT the door keeps the default
+    // (no locator). The 404 reaches the same `intake_failed` catch, so a locator built for it would show here.
+    const failed = td.auditSink.ofType('helpline_claim.intake_failed').filter((e) => (e.context as Json)?.deceased_member_id === unknownId);
+    expect(failed).toHaveLength(1);
+    expect((failed[0] as { resourceLocator?: string }).resourceLocator).toBeUndefined();
   });
 });

@@ -20,6 +20,7 @@ import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { ids, member as memberDomain } from '@twt/domain';
 
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, seedLifecycleMember } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -368,6 +369,32 @@ describe.skipIf(!hasDatabase)('Story 10.21 (AC12) — terminal members cannot en
       const tok = token(t, memberId, pariwarId);
       const res = await injectJson(t, 'POST', '/api/v1/member/data-export', tok);
       expect(res.status).not.toBe(409);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 6.38 (N8, AC11; `2026-10-30-423` Q2 A) — SEE stays open after a death is reported ─────────────────────────
+
+describe.skipIf(!hasDatabase)('Story 6.38 — the in-app export after a death is reported (:5433)', () => {
+  it('⭐ an ACTIVE member with a standing claim: the export is created, and downloads with its step-up', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedLifecycleMember(t);
+      await fileClaim(t, pariwarId, memberId);
+      const tok = token(t, memberId, pariwarId);
+
+      const created = await injectJson(t, 'POST', BASE, tok);
+      expect(created.status).toBe(200);
+      expect(created.body.status).toBe('pending');
+
+      const plaintext = Buffer.from('the-record-as-the-member-left-it');
+      const id = await seedReadyExport(t, memberId, pariwarId, plaintext);
+      await elevate(t, memberId, 'data_export');
+      const ok = await injectRaw(t, `${BASE}/${id}/download`, tok);
+      expect(ok.status).toBe(200);
+      expect(ok.payload.equals(plaintext)).toBe(true);
     } finally {
       await teardown(t);
     }

@@ -109,6 +109,19 @@ const DEFAULT_BRANDING: BrandingBundle = {
   secondary_color: '#FFFFFF',
 };
 
+/**
+ * Story 6.38 (DL14, TR2) — seed a member stream that replays to `lock-in` (signup → KYC → fee paid): a state the claim
+ * DOOR leaves OPEN. A member with ZERO events replays to `pending-kyc` and is refused `not_joined`; `pending-fee` is
+ * refused `not_paid` (`2026-10-31-424` Q1 (b)). ⛔ A `members` row (the door reads the replay). Returns the member id.
+ */
+export async function seedOpenMemberStream(tx: Db, pariwarId: string, memberId: string = randomUUID()): Promise<string> {
+  const events = ['member.signup_initiated', 'member.kyc_completed', 'member.vyawastha_shulk_paid'];
+  for (const [i, eventType] of events.entries()) {
+    await seedEvent(tx, pariwarId, { streamId: memberId, eventType, payload: {}, eventVersion: i + 1 });
+  }
+  return memberId;
+}
+
 export interface SeedPassportOptions {
   displayNameEn?: string;
   displayNameHi?: string;

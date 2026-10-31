@@ -4,6 +4,109 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review (round 5 — the round-4 PATCH diff) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **D8 — The helpline console's "held" line is ⛔ re-announced on a second held click, and no screen reader has heard it**
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`, the always-mounted `role="status"` line]
+  - A repeat click while the line is showing changes no text, so a polite live region says nothing. This is a known limit, recorded in the
+    code comment.
+  - Every test checks DOM shape in jsdom, so a real VoiceOver / NVDA pass is un-attested.
+  - **Trigger:** the admin accessibility audit (11b.8), or a reported miss.
+
+---
+
+## Deferred from: code review (round 4 — the full branch) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **A — The door's "when they died" is measured at FILING, and a refused filing leaves no trace, so a fee paid after the death opens the
+  door** [`packages/domain/src/claim/intake-door.ts` `resolveClaimIntakeDoor`; `apps/api/src/modules/vyawastha-shulk/handlers.ts` (⛔ death
+  check)] — ROUTED TO THE PANEL (BigDev: "1"). The note is
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-paid-after-death.md`: WRITTEN, ⛔ yet SENT.
+  - **Q1 — a fee paid after the death:** we suggest B, the staff date check before any drive (an extension of row `6-39`).
+  - **Q2 — a membership ended between the death and the report:** we suggest A, leave it as built.
+  - **Non-blocking:** 6.38 builds A in both questions. Nothing is live.
+  - **Reason deferred:** what the Trust owes a family whose fee was paid after the death is the Panel's to decide (§0), and the
+    build half follows their answer.
+  - **Trigger:** the Panel's ruling. Then transcribe it into a decision id, and either amend row `6-39` (Q1 B) or open a row (Q1 C / Q2 B).
+  - ✅ **RULED 2026-10-31 — `2026-10-31-430` (DR + KB): Q1 B, Q2 A. DISCHARGED into row
+    `6-39-identity-check-before-a-drive-for-an-unchecked-identity`.** The row grows by the fee-date / death-date comparison before any
+    drive. Its create-story owes the same-day edge and what the family is told. Q2 A leaves the door as built. Story 6.38 is ⛔ changed.
+    The text above is kept as the item was put.
+
+---
+
+## Deferred from: code review (round 3 — the round-2 PATCH diff) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **D7 — A complete `integration-tests` run leaves 7 committed `PARIWAR_A` cycles, and `announcement-activity-read.spec.ts` fails if it runs
+  within an hour after one on the same DB** [`packages/domain/tests/integration/rls/announcement-activity-read.spec.ts` — seeds two cycles at
+  "now − 1 h" and asks `listAnnouncementActivity` for the 2 most recent; the committing fixtures are eight specs across apps/api
+  (claims, payment, self-verify), packages/domain (pool, contribution) and packages/validity-service, all `Trustee One` with `P-TEST-`
+  pools] — PRE-EXISTING, not caused by Story 6.38 (none of those files, and nothing 6.38 changed, mentions the table). Found when a second
+  full `ci:local` on the story's DB went red on exactly this spec; verified by letting the residue age out — the spec then passed alone on
+  the same DB and the exact `integration-tests` job passed in full. Clears after an hour, or by recreating the container. Fix sketch: seed
+  the spec's cycles relative to the DB's newest committed cycle, or in a throwaway Pariwar, ⛔ a fixed "an hour ago". Trigger: any second
+  `ci:local` on a reused DB within the hour.
+
+- **D6 — A hung intake POST holds the helpline console: the admin `apiFetch` has no transport timeout** [`apps/admin/src/api/client.ts`;
+  `HelplineClaimPage` `canChangeCaller`] — round-2 patch 4 made the console ignore a change of caller while a filing is in flight (so
+  `intake.reset()` cannot detach the mutation and lose the claim's result); with no transport bound, a request that never settles
+  leaves the operator unable to change caller until a reload. Only the workplace write is bounded today (`boundedWrite`,
+  `AbortSignal.timeout`), because it is idempotent. The intake is idempotent server-side too (a re-tap returns the same claim), but
+  aborting a request the server then completes would show a failure for a minted claim — so this is a design choice for the
+  intake's contract, ⛔ a patch. Trigger: any change to the client's fetch wrapper, or a reported hang.
+
+## Deferred from: code review (round 2 — chunked: source + tests) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **D1 — The death locks lift only on an innocence finding, and the copy points a falsely-reported member at a helpline that cannot yet
+  lift them** [`packages/domain/src/claim/death-report.ts` `isDeathReportStanding`] — already tracked in the Task 0.5 section below (DL4 /
+  DL7, row 6-22). Added by this review: (a) the withdrawal line says "If this is a mistake, please call the helpline" and the helpdesk
+  line says the record "can be erased only if the claim is found to be about a member who is alive" — until 6-22 the helpline has
+  nothing to lift the lock with; (b) closure wording for `-423` Q1 (b) must stay "mechanism built, lift deferred to 6-22", never "Q1 (b)
+  closed"; (c) the go-live list should carry it (merge is not go-live; nothing is live). Trigger: 6-22's create-story, or a go-live
+  checklist.
+- **D2 — An OTP is spent before a permanent refusal appears** [`apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable` — the route's
+  `requireMemberStepUp` runs before the handler's death-report guard; `apps/mobile/app/(withdrawal)/index.tsx`;
+  `apps/mobile/app/(life-events)/medical.tsx`] — a refused withdrawal / medical change costs an OTP SMS first; withdrawal's catch
+  re-arms Confirm for a retry that cannot succeed; medical keeps the OTP prompt open after any post-verify failure. Story DL18 records
+  withdrawal as unreachable in production today (no lock-in exit — rows 3-13 / 3-14). Fix sketch: a cheap non-locking pre-read before
+  step-up; the locking read stays in the handler. Trigger: row 3-14 landing, or any change to the step-up preHandler order.
+- **D3 — A sticky erasure refusal can mask a newer export / delivery failure** [`apps/admin/src/modules/helpdesk/HelpdeskDetailPage.tsx`
+  `dataRightsError` chain] — AC10 put the erasure leg first on purpose (a stale build error must not hide the death-reported refusal);
+  react-query `isError` is sticky on every leg, so the chain has always shown the first stale error. Trigger: any rework of the
+  data-rights error chain.
+- **D4 — `fulfilErasure`'s `body.member_id` is not bound to the ticket's subject** [`apps/api/src/modules/member-data-rights/handlers.ts`
+  near `requireTicketInScope`; the file's own comment admits it] — pre-existing, not caused by Story 6.38; recorded because 6.38 now
+  routes this handler through `acquireErasureLocks`. Trigger: any change to the erasure request contract.
+- **D5 — Native VoiceOver / TalkBack behaviour of Story 6.38's announcements is un-attested** [`apps/mobile/app/(claim)/cannot-file.tsx`,
+  `(life-events)/address.tsx`, `(withdrawal)/index.tsx`, `components/life-events/MedicalForm.tsx`] — code and executed unit tests exist;
+  no device pass has been run, and none is claimed. For a device: whether `accessible={true}` plus announce-on-arrival double-reads on
+  `cannot-file`, and that `AnnouncedText` does not repeat. Trigger: a device pass, or Story 11b.8's accessibility audit.
+
+## Deferred from: story 6-38-death-locks-erasure-and-non-member-claims-refused.md — Task 0.5 (2026-10-31)
+
+- **The death locks lift only on an innocence finding, and ⛔ code writes one yet** [Decision `2026-10-31-425` DL4 / DL7;
+  `packages/domain/src/claim/death-report.ts` `isDeathReportStanding`; `recordMemberInnocenceFinding` has ⛔ production caller] — until
+  row `6-22-fraud-register-blacklist-instrument-and-identifier-set` lands, a LIVING member wrongly reported dead can ⛔ be erased, ⛔
+  withdraw and ⛔ change their own Life Events — at all (the same named residual 6.20 carries for the nominee lock). For 6-22: (a) it
+  WILL build the GUILTY arm (`-238` cl. 4 *"TWO OUTCOMES ONLY"*, cl. 5 guilty ⇒ *"terminated and blacklisted"*; `-241` Consequence 3);
+  `-423` Q1 (b)'s words (*"closed because the member is alive"*) cover a guilty-but-alive finding too, so releasing ONLY on innocence is
+  a NARROWING 6-22 must put to the Panel or justify; (b) DL7's two residual edges — the innocence finding changes ⛔ claim state, so a
+  released claim can still be a non-terminal convergence candidate (a new report CONVERGES onto it, ⛔ meets the door), and a `pending`
+  intake attempt parked beside a claim later released can still be overridden by `overrideIntakeAttempt` with ⛔ door. Trigger: 6-22's
+  create-story.
+- **The in-app data export's step-up does ⛔ prove the person exporting is the nominee** [Decision `2026-10-31-425` DL12 (ii);
+  `apps/api/src/modules/data-export/routes.ts` — the `data_export` step-up code goes to the DECEASED'S mobile] — after a death is
+  reported, whoever holds the deceased's session (Ravi mode) can export the record; moving the export to the `claim_handover` code would
+  cost a falsely-reported LIVING member their own export with ⛔ release until 6-22 — a cost ⛔ put to the Panel. A recorded risk, ⛔ built.
+  Trigger: any change to `data-export/routes.ts`, or a Panel question on who may SEE a dead member's record.
+- **Two obligations outside the code: the privacy policy, and counsel** [`-423` Consequences 2 · 3] — (a) the draft privacy policy
+  (outside this repository) must say, before members agree to it, that the person a member nominated may SEE and ask to CORRECT the
+  record after death, ⛔ erase it (`-423` Q2 A) — BigDev and counsel own the wording; (b) counsel confirms the law allows the Trust to
+  refuse erasure once a death is reported (Q1 (a)) and gives the nominated person ⛔ right to erase (Q2 — *"If counsel says the law gives
+  the nominated person a right to erase, A must change"*). Story 6.38 builds the refusal; ⛔ either obligation. (BigDev may prefer a
+  roster go-live row instead — a move of this item, ⛔ a change of it.) Trigger: go-live of member data rights, or counsel's answer.
+
+---
+
 ## Deferred from: the Panel's ruling `2026-10-31-424` Q2 (b) — the addition on staff changes (2026-10-31)
 
 - **A staff change to the record of a member whose death is reported must never remove the old entry — both stay, the old clearly

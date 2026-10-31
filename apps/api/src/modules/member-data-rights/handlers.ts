@@ -1164,25 +1164,38 @@ export function createMemberDataRightsHandlers(deps: AppDeps) {
         // (`member.rtbf:`) — a bare hashtext(member_id) collides with the device-binding lock.
         // ⛔ The SAME lock is taken by the member self-service caller. A lock on one path only is not
         // serialization.
-        await scopeTx.client.query('SELECT pg_advisory_xact_lock($1)', [
-          memberDomain.rtbfAdvisoryLockKey(pariwarIdStr, body.member_id).toString(),
-        ]);
+        // ⭐ Story 6.38 (DL3): `acquireErasureLocks` takes the claim-INTAKE key FIRST, then the rtbf key — so an
+        // erasure and a first claim intake for this member serialise (`2026-10-30-423`; N3).
+        await memberDomain.acquireErasureLocks(scopeTx.client, pariwarId, memberId);
 
         const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, anonymizedAt);
         // ⛔ The SHARED predicate — legal from `withdrawn`, OR when the moderation overlay reads
-        // `terminated`. Do not re-inline a local check: 10.21 relocated legality out of the reducer
-        // into the callers precisely so it lives in exactly one place.
-        const legality = await memberDomain.resolveRtbfLegality(scopeTx.tx, memberId, state);
-        if (legality.kind === 'already_anonymized') {
-          throw new ConflictError('Member has already been anonymized', 'rtbf.already_anonymized');
+        // `terminated`, and NEVER while a death report stands (Story 6.38, `2026-10-30-423` Q1 (a)). Do not
+        // re-inline a local check: 10.21 relocated legality out of the reducer into the callers precisely so
+        // it lives in exactly one place.
+        const legality = await memberDomain.resolveRtbfLegality(scopeTx.tx, pariwarId, memberId, state);
+        // ⚠ Exhaustive (DL2): every refusing kind carries `fromState` too, so a missing arm must fail to compile.
+        switch (legality.kind) {
+          case 'already_anonymized':
+            throw new ConflictError('Member has already been anonymized', 'rtbf.already_anonymized');
+          case 'death_reported':
+            throw new ConflictError(
+              "Erasure is refused: a claim has been filed for this member's death",
+              'rtbf.death_reported',
+            );
+          case 'illegal':
+            throw new ConflictError(
+              'Erasure requires a withdrawn membership or a terminated member',
+              'rtbf.invalid_state',
+            );
+          case 'legal':
+            fromState = legality.fromState;
+            break;
+          default: {
+            const unreachable: never = legality;
+            throw new Error(`unhandled RTBF legality ${JSON.stringify(unreachable)}`);
+          }
         }
-        if (legality.kind === 'illegal') {
-          throw new ConflictError(
-            'Erasure requires a withdrawn membership or a terminated member',
-            'rtbf.invalid_state',
-          );
-        }
-        fromState = legality.fromState;
 
         // ⛔ `withCompensatingAudit` (ADR-0030) around the IRREVERSIBLE act, not a bare
         // `writeAuditEntry` after it. An erasure whose `mutate` THROWS must still leave an intent line

@@ -12,7 +12,7 @@
 // The api client module is mocked (mirrors niyamavali-page.test.tsx); the real hooks + Query
 // cache are exercised via `renderWithClient`.
 
-import type { MemberSearchResultItem } from '@twt/contracts';
+import { CLAIM_INTAKE_REFUSAL_REASONS, type MemberSearchResultItem } from '@twt/contracts';
 import { act, screen, waitFor } from '@testing-library/react';
 import { focusManager } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import * as api from '../src/api/client.js';
 import { HelplineClaimPage } from '../src/modules/helpline-claims/HelplineClaimPage.js';
+import { resolveEn } from '../src/modules/helpline-claims/i18n-en.js';
 import { renderWithClient } from './_helpers.js';
 
 const MEMBER_A: MemberSearchResultItem = {
@@ -133,6 +134,49 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
     expect(screen.queryByTestId('helpline-intake-result')).not.toBeInTheDocument();
     expect(screen.queryByTestId('helpline-route-for-verification')).not.toBeInTheDocument();
     expect(screen.queryByTestId('helpline-bank-required')).not.toBeInTheDocument();
+  });
+
+  it('⭐ code review round 2 — switching member or searching while an intake is IN FLIGHT is ignored: the filing\'s result is not lost', async () => {
+    // `resetDownstreamState` calls `intake.reset()` (Story 6.38 DL9), which DETACHES the in-flight mutation — its per-call
+    // `onSuccess` never runs. The claim is minted and the account frozen on the server; without this guard the console would
+    // show nothing and the operator would have no case id to give the caller.
+    let finish!: (value: Awaited<ReturnType<typeof api.initiateHelplineClaim>>) => void;
+    vi.mocked(api.initiateHelplineClaim).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    // Rounds 4–5: the live region is in the page from the FIRST render, empty, and stays the SAME node through the hold and its
+    // clearing — a region inserted (or re-inserted) already filled is often ⛔ announced.
+    const region = screen.getByTestId('helpline-change-held');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    await searchAndGetBothResults(user);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    await waitFor(() => expect(api.initiateHelplineClaim).toHaveBeenCalled());
+    expect(screen.getByTestId('helpline-change-held')).toBe(region);
+    expect(region).toBeEmptyDOMElement();
+
+    // In flight: choosing the OTHER member, or searching again, is ignored — the caller (A) and the confirmation stay.
+    vi.mocked(api.searchMembers).mockClear();
+    await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+    await user.click(screen.getByTestId('member-search-submit'));
+    expect(screen.getByTestId('readback-confirm-identity')).toBeChecked();
+    expect(api.searchMembers).not.toHaveBeenCalled();
+    // …and the hold is SAID (round 3): a polite status line, ⛔ a click that does nothing and says nothing.
+    const held = screen.getByTestId('helpline-change-held');
+    expect(held).toBe(region); // the text changed IN PLACE — ⛔ a remount
+    expect(held).toHaveTextContent('The claim is still being filed for this caller');
+
+    await act(async () => finish({ claimCaseId: '66666666-6666-6666-6666-666666666666', state: 'intake_pending', created: true } as never));
+    expect(await screen.findByTestId('helpline-intake-result')).toBeInTheDocument();
+    expect(screen.getByTestId('helpline-change-held')).toBe(region); // cleared once the filing settled — the SAME region stays
+    expect(region).toBeEmptyDOMElement();
+
+    // And once it has settled the operator is free to change caller again (the guard is for the in-flight window only).
+    await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+    expect(screen.queryByTestId('helpline-intake-result')).not.toBeInTheDocument();
   });
 
   it('resets a pending step-up panel and the result banner when switching members', async () => {
@@ -470,5 +514,91 @@ describe('<HelplineClaimPage> — a failed REFRESH keeps the card and what was t
     expect(alert.textContent?.toLowerCase()).not.toContain('reload');
     await user.click(screen.getByTestId('helpline-bank-status-retry'));
     expect(await screen.findByTestId('helpline-bank-holder-1')).toBeInTheDocument();
+  });
+});
+
+// ── Story 6.38 (AC9, DL9; `2026-10-30-423` reading 3, `2026-10-31-424` Q3 B) — the operator is told WHY the claim door refused ─
+describe('<HelplineClaimPage> — the claim door refusal (Story 6.38)', () => {
+  const TELL = "If the details are right, tell the caller: the person was not a member of the Trust when they died, so a claim cannot be filed.";
+
+  async function submitFor(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await searchAndGetBothResults(user);
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+  }
+
+  const REASON_LINES: ReadonlyArray<readonly [string, string]> = [
+    ['not_joined', 'This person signed up but never finished joining — their identity check was not done. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
+    ['left', 'This member had left the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
+    ['removed', 'This member had been removed from the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
+    ['erased', "This member's record was erased at their request. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."],
+    ['not_paid', 'This person gave their details but never paid the joining fee. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.'],
+  ];
+
+  it('⭐ the exact-line cases below cover EXACTLY the contracts tuple, and every reason in it has an operator line', () => {
+    // The cases are written out so each line is asserted verbatim — which is why they can drift from the tuple. A sixth reason
+    // added to `CLAIM_INTAKE_REFUSAL_REASONS` with no admin line would render as a raw key (`resolveEn` returns the KEY when
+    // it is missing) on the operator's console; it fails HERE instead.
+    expect(REASON_LINES.map(([reason]) => reason).sort()).toEqual([...CLAIM_INTAKE_REFUSAL_REASONS].sort());
+    for (const reason of CLAIM_INTAKE_REFUSAL_REASONS) {
+      const key = `helpline.intake.refused.${reason}`;
+      expect(resolveEn(key), key).not.toBe(key);
+    }
+  });
+
+  it.each(REASON_LINES)('a 409 claim.intake_refused (%s) shows that reason\'s EXACT line + the general line to tell the caller, in the ONE alert', async (reason, line) => {
+    vi.mocked(api.initiateHelplineClaim).mockRejectedValueOnce(
+      new api.ApiError(409, 'claim.intake_refused', 'A claim cannot be filed for this member', { reason }),
+    );
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await submitFor(user);
+    // ⚠ The page holds several alert regions; the intake's is the ONE whose text is the line (exact — `resolveEn` returns
+    // the KEY when a key is missing, so "something rendered" proves nothing).
+    const alert = await screen.findByText(`${line} ${TELL}`);
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(document.body.textContent).not.toContain('claim.intake_refused');
+    expect(document.body.textContent).not.toContain('helpline.intake.refused');
+    expect(screen.queryByTestId('helpline-intake-result')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['an UNKNOWN reason', new api.ApiError(409, 'claim.intake_refused', 'A claim cannot be filed for this member', { reason: 'suspended' })],
+    ['⛔ details', new api.ApiError(409, 'claim.intake_refused', 'A claim cannot be filed for this member')],
+    ['another code', new api.ApiError(409, 'claim.something_else', 'Something else went wrong')],
+  ])('%s falls back to today\'s server message (⛔ a raw code, ⛔ an unmapped key)', async (_l, err) => {
+    vi.mocked(api.initiateHelplineClaim).mockRejectedValueOnce(err);
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await submitFor(user);
+    const alert = await screen.findByText(err.message);
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(document.body.textContent).not.toContain('helpline.intake.refused');
+    expect(document.body.textContent).not.toContain('tell the caller');
+  });
+
+  it('after a refusal for member A, selecting member B or searching again shows ⛔ refusal line', async () => {
+    vi.mocked(api.initiateHelplineClaim).mockRejectedValueOnce(
+      new api.ApiError(409, 'claim.intake_refused', 'A claim cannot be filed for this member', { reason: 'left' }),
+    );
+    const user = userEvent.setup();
+    renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    await submitFor(user);
+    expect(await screen.findByText(/had left the Trust/)).toHaveAttribute('role', 'alert');
+    await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));
+    expect(screen.queryByText(/had left the Trust/)).not.toBeInTheDocument();
+
+    vi.mocked(api.initiateHelplineClaim).mockRejectedValueOnce(
+      new api.ApiError(409, 'claim.intake_refused', 'A claim cannot be filed for this member', { reason: 'removed' }),
+    );
+    await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
+    await user.click(screen.getByTestId('readback-confirm-identity'));
+    await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
+    await user.click(screen.getByTestId('helpline-submit-intake'));
+    expect(await screen.findByText(/had been removed/)).toHaveAttribute('role', 'alert');
+    await user.click(screen.getByTestId('member-search-submit'));
+    await waitFor(() => expect(screen.queryByText(/had been removed/)).not.toBeInTheDocument());
   });
 });

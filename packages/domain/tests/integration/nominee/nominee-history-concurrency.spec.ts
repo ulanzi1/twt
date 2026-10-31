@@ -78,7 +78,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
     }
   }
 
-  async function seedMember(opts: { viaProjector?: boolean } = {}): Promise<MemberId> {
+  async function seedMember(opts: { viaProjector?: boolean; openForIntake?: boolean } = {}): Promise<MemberId> {
     const mid = toMemberId(randomUUID());
     members.push(mid);
     await onOwnTx(async (c) => {
@@ -91,6 +91,24 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
           payload: { from_state: null, to_state: 'pending-kyc', trigger: 'signup', actor: 'member' },
           actorId: mid,
         });
+        if (opts.openForIntake) {
+          // Story 6.38 (TR2): on to `lock-in`, a state the claim DOOR leaves open — a `pending-kyc` member's FIRST report is
+          // refused `not_joined`, and the D3 races need the intake to MINT.
+          for (const [eventType, from, to] of [
+            ['member.kyc_completed', 'pending-kyc', 'pending-fee'],
+            ['member.vyawastha_shulk_paid', 'pending-fee', 'lock-in'],
+          ] as const) {
+            await projectMemberState(c, {
+              memberId: mid,
+              pariwarId: PARIWAR,
+              eventType,
+              payload: (eventType === 'member.vyawastha_shulk_paid'
+                ? { from_state: from, to_state: to, trigger: 'fee_paid', actor: 'member', utr: 'UTR-638', amount_inr: 110 }
+                : { from_state: from, to_state: to, trigger: 'kyc', actor: 'member' }) as never,
+              actorId: mid,
+            });
+          }
+        }
       }
       await seedNomineeDeclaration(bindScopedDb(c), PARIWAR, mid, {
         declaredAt: new Date('2026-01-10T06:00:00.000Z'),
@@ -246,7 +264,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
   });
 
   it('⭐⭐ D3 — an INTAKE holding the lock makes the edit WAIT, then REFUSE (it sees the committed claim)', { timeout: TIMEOUT }, async () => {
-    const mid = await seedMember();
+    const mid = await seedMember({ viaProjector: true, openForIntake: true });
     // ⭐ The held transaction is opened INSIDE the try (code review 2026-09-24b): a throw between `begin()` and
     // the try used to leak a checked-out client holding the advisory lock, hanging `afterAll`.
     let intake: pg.PoolClient | undefined;
@@ -282,7 +300,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history two-connection con
   });
 
   it('⭐⭐ D3 — an EDIT holding the lock makes the intake WAIT; the edit lands legitimately BEFORE the claim', { timeout: TIMEOUT }, async () => {
-    const mid = await seedMember();
+    const mid = await seedMember({ viaProjector: true, openForIntake: true });
     // ⭐ Opened INSIDE the try (code review 2026-09-24b) — see the test above.
     // The edit leg is the declare handler's own composition: `lockNomineeDeclarationForEdit`, then the two
     // writes it makes (`replaceMemberNominees` + `appendMemberDeclarationVersions`, which is exactly what

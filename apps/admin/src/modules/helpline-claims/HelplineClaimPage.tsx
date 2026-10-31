@@ -18,6 +18,7 @@ import type {
   MemberSearchRequest,
   MemberSearchResultItem,
 } from '@twt/contracts';
+import { CLAIM_INTAKE_REFUSED_CODE, isClaimIntakeRefusalReason } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -51,6 +52,26 @@ function messageOf(err: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Story 6.38 (DL9; `2026-10-30-423` reading 3) — a claim-door 409 → the copy key of its reason's line, else `null` (the
+ * caller keeps `messageOf`). The code AND the reasons are the contracts package's RUNTIME values (⛔ local literals) — the
+ * guard is the contracts package's own `isClaimIntakeRefusalReason`. A reason OUTSIDE that tuple falls back, so it never
+ * renders as a raw code; a reason ADDED to the tuple needs its line in `i18n-en.ts` — `helpline-claim-page.test.tsx` iterates
+ * the tuple and fails there, ⛔ on the operator's console as a raw key.
+ */
+function intakeRefusalKey(err: unknown): string | null {
+  if (!(err instanceof ApiError) || err.code !== CLAIM_INTAKE_REFUSED_CODE) return null;
+  const reason = (err.details as { reason?: unknown } | undefined)?.reason;
+  if (!isClaimIntakeRefusalReason(reason)) return null;
+  return `helpline.intake.refused.${reason}`;
+}
+
+/** The intake alert's text: a door refusal's reason line + the general line to tell the caller; else the server's words. */
+function intakeErrorText(err: unknown): string | undefined {
+  const key = intakeRefusalKey(err);
+  return key !== null ? `${resolveEn(key)} ${resolveEn('helpline.intake.refused.tellCaller')}` : messageOf(err);
+}
+
 const STEP_UP_CONTEXT = 'claim_file';
 /** Story 6.19c — the intake's 409 when the death's last claim was closed for no response (D19). */
 const REFILE_REQUIRES_CONFIRMATION_CODE = 'claim.refile_requires_confirmation';
@@ -78,7 +99,21 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     peerRequestsBusy.current = busy;
     if (!busy) setPeerRequestWarning(false);
   }, []);
+  // Story 6.38 code review round 3 — a change of caller held while a filing is in flight is SAID, ⛔ silently ignored (below).
+  const [intakeChangeHeld, setIntakeChangeHeld] = useState(false);
+  useEffect(() => {
+    if (!intake.isPending) setIntakeChangeHeld(false);
+  }, [intake.isPending]);
   const canChangeCaller = (): boolean => {
+    // ⭐ Story 6.38 code review round 2 — ⛔ while the intake is IN FLIGHT. `resetDownstreamState` calls `intake.reset()` (DL9),
+    // which detaches the in-flight mutation so its per-call `onSuccess` never runs: the claim would be minted and the account
+    // frozen on the server while the console showed nothing — no result, no case id for the caller. The change is HELD, and
+    // (round 3) a polite `role="status"` line says so — a click that does nothing and says nothing is unspoken to a screen reader.
+    // ⚠ A request that never settles holds the console until a reload: `apiFetch` has no transport timeout (`deferred-work.md` D6).
+    if (intake.isPending) {
+      setIntakeChangeHeld(true);
+      return false;
+    }
     if (!peerRequestsBusy.current) return true;
     setPeerRequestWarning(true);
     return false;
@@ -116,6 +151,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     setRefileClaimId(null);
     requestStepUp.reset();
     verifyStepUp.reset();
+    // Story 6.38 (DL9): a failed submit's error must ⛔ outlive a change of member — a refusal for member A shown beside
+    // member B would undo the very re-check the operator's reason line is for.
+    intake.reset();
   };
 
   const selectMember = (id: string | null): void => {
@@ -375,8 +413,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         submitPending={intake.isPending}
         submitError={
           // A step-up-required error is handled via the panel, not surfaced as a hard error.
+          // Story 6.38 (DL9, TR7): a claim-door refusal is derived HERE (⛔ new state in `onError`).
           intake.isError && !(intake.error instanceof ApiError && intake.error.code === 'auth.step_up_required')
-            ? messageOf(intake.error)
+            ? intakeErrorText(intake.error)
             : undefined
         }
         result={result}
@@ -484,6 +523,11 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         onBusyChange={reportPeerRequestsBusy}
       />
       {peerRequestWarning && <p role="alert">{resolveEn('helpline.peer.caller.blocked')}</p>}
+      {/* Code review round 4 — the live region is ALWAYS mounted and only its text changes: a `role="status"` region inserted
+          already filled is often ⛔ announced. ⚠ A second held click while the line shows changes nothing, so it is ⛔ re-read. */}
+      <p role="status" data-testid="helpline-change-held">
+        {intakeChangeHeld ? resolveEn('helpline.intake.changeHeld') : ''}
+      </p>
     </>
   );
 }

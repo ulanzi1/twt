@@ -17,6 +17,7 @@ import { useLocale, useT } from '@twt/i18n/react'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { memberAuth } from '../../lib/member-api'
+import { AnnouncedText } from '../peer-request/announce'
 
 interface ImaCondition {
   code: string
@@ -219,11 +220,7 @@ export function MedicalForm(props: MedicalFormProps) {
 
       {props.footer}
 
-      {shownError ? (
-        <Text color="#C0392B" accessibilityRole="alert" accessibilityLiveRegion="assertive">
-          {shownError}
-        </Text>
-      ) : null}
+      {shownError ? <AnnouncedText text={shownError} kind="error" color="#C0392B" /> : null}
 
       <Button
         theme="accent"

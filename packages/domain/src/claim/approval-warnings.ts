@@ -37,7 +37,8 @@
 //
 // ── The 90-day ANCHOR (Trap 3, Trap 4) ───────────────────────────────────────────────────────────────────────────
 // The earliest `claims.created_at` among the deceased's claims in this Pariwar that ⛔ no innocence finding released
-// (the SAME predicate `isNomineeDeclarationLocked` uses — COPIED below, ⛔ never imported: `nominee-lock.ts` reaches
+// (the SAME predicate `death-report.ts` `isDeathReportStanding` defines — Story 6.38, `2026-10-30-423`; the nominee lock
+// delegates to it — COPIED below, ⛔ never imported, and named in that story's source fence: `nominee-lock.ts` reaches
 // `nominee-name-check.ts` through `project.ts` → `events.ts`, and 6.23b makes `nominee-name-check.ts` import THIS
 // module — a runtime cycle typecheck cannot see). All released ⇒ this claim's own `created_at`. The window is
 // ONE-SIDED: `istDateOf(effectiveAt) >= istDateOf(anchor) − 90` — ⛔ never `effectiveAt <= anchor` (a nominee edit that
@@ -839,7 +840,8 @@ export async function readR9VoteWarningCoverage(
  * JUST the 90-day anchor (`first_filed_at ?? created_at`) — for a caller that needs no other field of
  * `readClaimApprovalWarnings`'s full read (code review 2026-10-05; `claims.nominee-declaration.handlers.ts`'s
  * `getTimeline`, which re-derives its own per-version warnings via `classifyNomineeVersion` and only needed the
- * anchor). A THIRD copy of Trap 3's predicate (`isNomineeDeclarationLocked`'s WHERE, adapted to `min(created_at)`)
+ * anchor). A THIRD copy of Trap 3's predicate (`death-report.ts` `isDeathReportStanding`'s WHERE — Story 6.38 — adapted
+ * to `min(created_at)`)
  * — ⛔ still never imported, for the same leaf discipline (NW1; the header comment above).
  */
 export async function getClaimWarningAnchor(db: Db, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<Date> {

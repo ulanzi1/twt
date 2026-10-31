@@ -63,7 +63,8 @@ export function createRtbfHandlers(deps: AppDeps) {
    *     predicate shared with the off-portal admin caller, so the two paths CANNOT diverge. ⛔ Do not
    *     re-inline a local state check: 10.21 relocated legality out of the reducer into the callers
    *     precisely so it lives in exactly one place, and two copies is how that guarantee dies.
-   *     The rule is: legal from `withdrawn`, OR when the moderation overlay reads `terminated`.
+   *     The rule is: legal from `withdrawn`, OR when the moderation overlay reads `terminated` — and NEVER
+   *     while a death report stands (Story 6.38, `2026-10-30-423` Q1 (a): 409 `rtbf.death_reported`).
    * (2) A transaction-scoped ADVISORY LOCK is taken BEFORE the legality read.
    *
    * ⛔ WHY THE LOCK, and why the pre-existing 23505 catch was NOT protection. `scope-tx.ts` issues a
@@ -83,8 +84,6 @@ export function createRtbfHandlers(deps: AppDeps) {
     pariwarId: ids.PariwarId,
     memberId: ids.MemberId,
     at: Date,
-    pariwarIdStr: string,
-    memberIdStr: string,
   ): Promise<memberDomain.MemberLifecycleState> {
     const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
     if (!exists) {
@@ -95,26 +94,37 @@ export function createRtbfHandlers(deps: AppDeps) {
     // session-scoped lock on a POOLED client without a manual unlock in a `finally` leaks the lock for
     // the connection's whole life. The key is NAMESPACE-PREFIXED (`member.rtbf:`) — a bare
     // `hashtext(member_id)` collides with the device-binding lock in `member-auth.service.ts`.
-    await scopeTx.client.query('SELECT pg_advisory_xact_lock($1)', [
-      memberDomain.rtbfAdvisoryLockKey(pariwarIdStr, memberIdStr).toString(),
-    ]);
+    // ⭐ Story 6.38 (DL3): `acquireErasureLocks` takes the claim-INTAKE key FIRST, then the rtbf key — so an
+    // erasure and a first claim intake for this member serialise (`2026-10-30-423`; N3).
+    await memberDomain.acquireErasureLocks(scopeTx.client, pariwarId, memberId);
 
     const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, at);
-    const legality = await memberDomain.resolveRtbfLegality(scopeTx.tx, memberId, state);
-    if (legality.kind === 'already_anonymized') {
-      throw new ConflictError(
-        'Member has already been anonymized',
-        'rtbf.already_anonymized',
-      );
+    const legality = await memberDomain.resolveRtbfLegality(scopeTx.tx, pariwarId, memberId, state);
+    // ⚠ Exhaustive (DL2): every refusing kind carries `fromState` too, so a missing arm must fail to compile.
+    switch (legality.kind) {
+      case 'already_anonymized':
+        throw new ConflictError(
+          'Member has already been anonymized',
+          'rtbf.already_anonymized',
+        );
+      case 'death_reported':
+        throw new ConflictError(
+          "Erasure is refused: a claim has been filed for this member's death",
+          'rtbf.death_reported',
+        );
+      case 'illegal':
+        throw new ConflictError(
+          'RTBF is only permitted for a withdrawn membership',
+          'rtbf.invalid_state',
+        );
+      case 'legal':
+        // ⚠ Returned so the caller writes the REAL replayed state into the event's `from_state`.
+        return legality.fromState;
+      default: {
+        const unreachable: never = legality;
+        throw new Error(`unhandled RTBF legality ${JSON.stringify(unreachable)}`);
+      }
     }
-    if (legality.kind === 'illegal') {
-      throw new ConflictError(
-        'RTBF is only permitted for a withdrawn membership',
-        'rtbf.invalid_state',
-      );
-    }
-    // ⚠ Returned so the caller writes the REAL replayed state into the event's `from_state`.
-    return legality.fromState;
   }
 
   return {
@@ -135,7 +145,7 @@ export function createRtbfHandlers(deps: AppDeps) {
       try {
         const memberId = ids.memberId(memberIdStr);
         const pariwarId = ids.pariwarId(pariwarIdStr);
-        const fromState = await assertAnonymizable(scopeTx, pariwarId, memberId, anonymizedAt, pariwarIdStr, memberIdStr);
+        const fromState = await assertAnonymizable(scopeTx, pariwarId, memberId, anonymizedAt);
 
         // Field-level anonymize every Tier-1 PII column (the inverse of data-export/assemble). Runs
         // under the scope tx; RETAINS mobile_blind_index (AC4) + all non-PII / history rows.

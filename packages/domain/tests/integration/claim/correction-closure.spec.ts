@@ -714,6 +714,31 @@ describe.skipIf(!hasDatabase)('the correction closure — request, decision, hol
       expect((await override()).newClaimCaseId).not.toBe(r1.claimCaseId);
     });
 
+    it('⭐ Story 6.38 AC8 — a death CLOSED for no response, the member TERMINATED since: the RE-FILE 409 (⛔ the door), then minted on a confirmation', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PARIWAR_A);
+      const c = await closedClaim(client, tx);
+      // The member is terminated AFTER the first report (the moderation overlay on the member's own stream).
+      await asSuperuser(client, async () => {
+        for (const eventType of ['member.moderation.suspended', 'member.moderation.terminated']) {
+          await client.query(
+            `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id)
+             SELECT $1, $2, '{"reason_code":"conduct","actor":"trustee"}'::jsonb, COALESCE(max(event_version), 0) + 1, $3
+               FROM events_log WHERE stream_id = $1`,
+            [c.mid, eventType, PARIWAR_A],
+          );
+        }
+      });
+      await client.query('SAVEPOINT door');
+      const err = await tryConverge(client, intake(c.mid, 'member_app', 'd1')).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(RefileRequiresConfirmationError);
+      await client.query('ROLLBACK TO SAVEPOINT door');
+      await recordRefileConfirmation(client, {
+        pariwarId: PARIWAR_A, closedClaimCaseId: c.cid, via: 'helpline', actorId: 'op', actorDisplay: 'Helpline Operator', noteCiphertext: 'enc:v1:n',
+      });
+      expect((await tryConverge(client, intake(c.mid, 'member_app', 'd2'))).minted).toBe(true);
+    });
+
     it('⭐ T9 — keyed on the CLOSURE row: an ordinary denied claim re-files freely; a confirmation on a claim ⛔ closed is refused', async () => {
       const { client, tx } = getTx();
       await enterAppScope(client, PARIWAR_A);

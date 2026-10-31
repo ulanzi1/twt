@@ -22,12 +22,13 @@ import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { seedMemberAt } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
 type Json = Record<string, unknown>;
 
-/** Seed a member in `pending-fee` (signup_initiated → kyc_manual_fallback), committed so the
+/** Seed a member in `lock-in` (signup_initiated → kyc_manual_fallback → fee paid — Story 6.38), committed so the
  * request handlers (separate scope tx) see the row (the nominee-declare.spec.ts precedent). */
 async function seedMember(t: TestApp): Promise<{ memberId: string; pariwarId: string }> {
   const memberId = randomUUID();
@@ -43,6 +44,12 @@ async function seedMember(t: TestApp): Promise<{ memberId: string; pariwarId: st
     await memberDomain.projectMemberState(scopeTx.client, {
       memberId: mid, pariwarId: pid, eventType: 'member.kyc_manual_fallback', actorId: memberId,
       payload: { from_state: 'pending-kyc', to_state: 'pending-fee', trigger: 'kyc_manual', actor: 'member', reason: 'manual_fallback' },
+    });
+    // Story 6.38 (TR2): on to `lock-in` — `pending-fee` is now refused at the claim door (`not_paid`, `2026-10-31-424`
+    // Q1 (b)), and every FIRST report below must pass it.
+    await memberDomain.projectMemberState(scopeTx.client, {
+      memberId: mid, pariwarId: pid, eventType: 'member.vyawastha_shulk_paid', actorId: memberId,
+      payload: { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'fee_paid', actor: 'member', utr: 'UTR-638', amount_inr: 110 } as never,
     });
     await closeScopeTx(scopeTx, true);
   } catch (err) {
@@ -465,6 +472,43 @@ describe.skipIf(!hasDatabase)('Member-app claim filing — E2E (:5433)', () => {
         payload: { relationship: 'sibling' }, token: token(t, memberId, pariwarId),
       });
       expect(intake.status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 6.38 — THE CLAIM DOOR, member app (AC7; `2026-10-30-423` Q3 B, `2026-10-31-424` Q3 B) ─────────────────────
+
+describe.skipIf(!hasDatabase)('Story 6.38 — the claim door on the member route (:5433)', () => {
+  it.each([
+    ['a `pending-kyc` member (never finished joining)', 'pending-kyc', {}],
+    ['a TERMINATED member', 'lock-in', { moderation: 'terminated' }],
+  ] as const)('⛔ AC7 — %s ⇒ 409 claim.intake_refused with ⛔ `details` at all, ⛔ record; the audit line IS written', async (_l, state, opts) => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberAt(t, state, opts);
+      await declareNominee(t, memberId, pariwarId, '9876543210');
+      await establishHandoverTrust(t, memberId, pariwarId);
+
+      const res = await inject(t, 'POST', '/api/v1/member/claims/intake', {
+        payload: { relationship: 'spouse' }, token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(409);
+      const err = res.body.error as Json;
+      expect(err.code).toBe('claim.intake_refused');
+      // ⭐ N7 / DL8 — uniform withholding: the app shows one general reason, so the WIRE carries ⛔ reason at all.
+      expect(err).not.toHaveProperty('details');
+      expect(JSON.stringify(res.body)).not.toMatch(/not_joined|removed|left|erased|not_paid/);
+
+      const claims = await t.pool.query('SELECT 1 FROM claims WHERE deceased_member_id = $1', [memberId]);
+      const attempts = await t.pool.query('SELECT 1 FROM intake_attempts WHERE deceased_member_id = $1', [memberId]);
+      expect(claims.rowCount).toBe(0);
+      expect(attempts.rowCount).toBe(0);
+      const failed = t.auditSink.ofType('member_claim.intake_failed');
+      expect(failed.length).toBeGreaterThanOrEqual(1);
+      // The member route's line stays reason-less (DL16 is the helpline's only).
+      expect((failed.at(-1) as { resourceLocator?: string }).resourceLocator).toBeUndefined();
     } finally {
       await teardown(t);
     }

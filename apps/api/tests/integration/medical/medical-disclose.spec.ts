@@ -26,6 +26,7 @@ import { describe, expect, it } from 'vitest';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { createMedicalHandlers } from '../../../src/modules/medical/medical.handlers.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, findInnocent, raceFirstIntake, seedMemberAt } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -629,3 +630,93 @@ describe.skipIf(!hasDatabase)('Medical disclosure — E2E (:5433)', () => {
   // 6.8's ci:local verification — passes in isolation). 20s removes the contention flake without
   // masking a real hang (see apps/jobs/tests/audit/integrity-check.test.ts precedent).
 }, { timeout: 20000 });
+
+// ── Story 6.38 — the medical declaration is ⛔ changed from the account once a death is reported (AC15; DL19) ────────
+
+// ⚠ These legs seed an ACTIVE member (`seedMemberAt`), ⛔ the `pending-fee` member the rest of this file uses: the claim door
+// refuses a `pending-fee` member (`not_paid`), so a standing claim for one is a combination the system cannot reach.
+describe.skipIf(!hasDatabase)('Story 6.38 — medical declaration after a death is reported (:5433)', () => {
+  it('⭐ AC15 — a standing claim ⇒ 409 medical.death_reported; ⛔ new disclosure row, ⛔ event; the prior row unchanged', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberAt(t, 'active');
+      const { imaVersion } = await seedMedicalClauses(t, pariwarId);
+      const body = { conditionCodes: [], imaListVersion: imaVersion, acknowledged: true, ackLocale: 'en' };
+      expect((await inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: token(t, memberId, pariwarId) })).status).toBe(200);
+      const before = await t.pool.query('SELECT * FROM member_medical_disclosures WHERE member_id = $1', [memberId]);
+      await fileClaim(t, pariwarId, memberId);
+
+      const res = await inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('medical.death_reported');
+      const after = await t.pool.query('SELECT * FROM member_medical_disclosures WHERE member_id = $1', [memberId]);
+      expect(after.rows).toEqual(before.rows);
+      expect((await eventTypes(t, memberId)).filter((e) => e === 'member.medical_disclosed')).toHaveLength(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC15 — the innocence finding lifts the lock: accepted as today', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberAt(t, 'active');
+      const { imaVersion } = await seedMedicalClauses(t, pariwarId);
+      const cid = await fileClaim(t, pariwarId, memberId);
+      await findInnocent(t, pariwarId, cid);
+      const res = await inject(t, 'POST', '/api/v1/member/medical-disclosure', {
+        payload: { conditionCodes: [], imaListVersion: imaVersion, acknowledged: true, ackLocale: 'en' },
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ DL19 precedence — the death check BEATS the state check: a WITHDRAWN member with a standing claim gets medical.death_reported, ⛔ member_terminal', async () => {
+    // ⚠ AN ORDER GUARD, ⛔ a reachable scenario: the door refuses a WITHDRAWN member at filing (`left`) and DL18 refuses a withdrawal
+    // once a report stands, so a withdrawn member with a standing claim exists only for a claim filed before DL18 / DL19 existed, or
+    // a race the locks now prevent. It pins the ORDER of two checks in the medical guard — the death check first. (`imaListVersion`
+    // is a placeholder: both checks run before any version or clause is read.)
+    const t = await createTestApp();
+    try {
+      const body = { conditionCodes: [], imaListVersion: 'x', acknowledged: true, ackLocale: 'en' };
+      // Control: with NO claim the state alone refuses — so the next assertion can only be the death check winning.
+      const bare = await seedMemberAt(t, 'withdrawn');
+      const noClaim = await inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: token(t, bare.memberId, bare.pariwarId) });
+      expect(noClaim.status).toBe(409);
+      expect(String((noClaim.body.error as Json)?.code)).toBe('medical.member_terminal');
+
+      const { memberId, pariwarId } = await seedMemberAt(t, 'withdrawn');
+      await fileClaim(t, pariwarId, memberId);
+      const res = await inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('medical.death_reported');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ N9 FORCED race — a medical declaration WAITS on the claim-intake key, then sees the claim a first intake committed and is refused', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberAt(t, 'active');
+      const { imaVersion } = await seedMedicalClauses(t, pariwarId);
+      const tok = token(t, memberId, pariwarId);
+      const body = { conditionCodes: [], imaListVersion: imaVersion, acknowledged: true, ackLocale: 'en' };
+
+      const race = await raceFirstIntake(t, pariwarId, memberId, () =>
+        inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: tok }),
+      );
+      // The proof the lock is TAKEN: remove the intake-key line from `lockAndReadDeathReport` and this assertion fails.
+      expect(race.waited, 'the medical declaration did not wait on the claim-intake key — its guard does not take it' + ' — ' + race.answeredWithoutWaiting).toBe(true);
+      expect(race.response.status).toBe(409);
+      expect(String((race.response.body.error as Json)?.code)).toBe('medical.death_reported');
+      expect(await disclosureCount(t, memberId)).toBe(0);
+      expect((await eventTypes(t, memberId)).filter((e) => e === 'member.medical_disclosed')).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+});

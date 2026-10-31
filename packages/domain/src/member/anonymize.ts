@@ -164,6 +164,11 @@ async function encSentinel(
  *
  * Runs under the caller's RLS scope-tx (tenant-isolated). Does NOT touch `members.state` or the event
  * stream — the caller projects `member.rtbf_anonymized` (`withdrawn → anonymized`) in the SAME tx.
+ *
+ * ⚠ Story 6.38 (`2026-10-30-423` Q1 (a) / (b)) — the DECEASED-keyed scrubs below (the family memorial, MA15; the 6.21a
+ * death-certificate reviews; the 6.23a warning approvals; the `deceasedClaimIds.length > 0` block) are now reachable only
+ * for a member whose every claim was released by an innocence finding, or for a row older than Story 6.38: once a claim is
+ * filed for the member's death the shared legality refuses the erasure. They stay — defence in depth — ⛔ dead code.
  */
 export async function anonymizeMember(
   client: Db,

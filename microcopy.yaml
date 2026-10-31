@@ -329,6 +329,13 @@ scope:
     - apps/mobile/app/(claim)/relationship.tsx
     - apps/mobile/lib/refile-helpline-copy.ts
     - apps/mobile/lib/appeal-status.ts
+    # ⭐ Story 6.38 (DL10, DL18, DL19) — the "a claim cannot be filed" state, its pure key map, and the pure map of the two
+    # after-death refusals (withdrawal; the Life Events / medical / workplace writes). `relationship.tsx` is above; the
+    # strings (`cannot_file.*` in claim.json, `withdrawal.error_death_reported` / `lifeEvents.error_death_reported` in
+    # common.json) are already in copy_globs.
+    - apps/mobile/app/(claim)/cannot-file.tsx
+    - apps/mobile/lib/cannot-file-copy.ts
+    - apps/mobile/lib/death-report-copy.ts
     # ⭐ Story 6.27a (PM11, Task 5) — every new or edited mobile file of the neighbours' answer screens (the slot 6.30 left, the
     # questionnaire, the list, the home card / notice-strip entry, the not-openable state, the pure logic). The chrome strings
     # (`peer_request.*`) and the question words (`peer_request_questions.*`) are in `claim.json`, already in copy_globs.

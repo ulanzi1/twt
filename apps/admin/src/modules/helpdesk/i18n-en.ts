@@ -95,6 +95,11 @@ const EN: Record<string, string> = {
     'Erasure completed. The member’s personal details have been overwritten.',
   'helpdesk.dataRights.erasureNote':
     'Permanent and cannot be undone. Their personal details are overwritten; the membership record and history remain for audit.',
+  // Story 6.38 (DL11; `2026-10-30-423` Q1 (a) / (b), Q2 A) — the erasure is refused once a claim is filed for the death.
+  // Code review rounds 4–5 (BigDev chose the wording, round 5 E): the last sentence ⛔ promises an erasure (once released, an
+  // `active` member is still refused, `rtbf.invalid_state`) and says a CLOSED or REFUSED claim still locks (`-423` reading 1).
+  'helpdesk.dataRights.erasureRefused.deathReported':
+    'This member’s data cannot be erased: a claim has been filed for their death. The person they nominated may see the record and ask for corrections. This stays so even if the claim is closed or refused; only a finding that the member is alive lifts it, and then the usual erasure rules apply.',
   // ── The data-rights step-up (round-2 code review) ────────────────────────────────────────────────
   // ⛔ Every action on this panel is gated by a DISTINCT step-up context, and the app previously offered
   // no way to satisfy it: `requestDataRightsStepUp` was defined and called from nowhere, so an operator

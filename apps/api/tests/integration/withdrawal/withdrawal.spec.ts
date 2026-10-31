@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, findInnocent, raceFirstIntake, seedMemberAt } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -262,6 +263,139 @@ describe.skipIf(!hasDatabase)('Voluntary withdrawal — E2E (:5433)', () => {
     try {
       const res = await inject(t, 'POST', URL, { payload: {} });
       expect(res.status).toBe(401);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 6.38 — withdrawal refused once a death is reported (AC14; `2026-10-31-424` Q2 (a) A, DL18) ───────────────
+
+async function declareNominee(t: TestApp, memberId: string, pariwarId: string): Promise<void> {
+  const res = await inject(t, 'POST', '/api/v1/member/nominees', {
+    payload: { nominees: [{ name: 'Asha Devi', relationship: 'spouse', mobile: '9876543210' }] },
+    token: token(t, memberId, pariwarId),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function establishHandoverTrust(t: TestApp, memberId: string, pariwarId: string): Promise<void> {
+  const tok = token(t, memberId, pariwarId);
+  expect((await inject(t, 'POST', '/api/v1/member/claims/handover-otp', { payload: {}, token: tok })).status).toBe(200);
+  const code = t.stepUpDelivery.last?.code;
+  const verify = await inject(t, 'POST', '/api/v1/member/claims/handover-otp/verify', { payload: { code }, token: tok });
+  expect(verify.body).toMatchObject({ verified: true });
+}
+
+describe.skipIf(!hasDatabase)('Story 6.38 — withdrawal after a death is reported (:5433)', () => {
+  it('⭐ AC14 — a standing claim ⇒ 409 withdrawal.death_reported; ⛔ withdrawal event, ⛔ row; the member stays active', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      await fileClaim(t, pariwarId, memberId);
+      await elevate(t, memberId, 'withdrawal');
+
+      const tok = token(t, memberId, pariwarId);
+      const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+      expect(await eventRows(t, memberId, 'member.withdrawal_completed')).toHaveLength(0);
+      const rows = await t.pool.query('SELECT 1 FROM member_withdrawals WHERE member_id = $1', [memberId]);
+      expect(rows.rowCount).toBe(0);
+      expect(await memberState(t, memberId)).toBe('active');
+      expect(t.auditSink.ofType('member_withdrawal.completed')).toHaveLength(0);
+      // AC14 "the session unchanged": TRUE BY CONSTRUCTION — `withdrawal/handlers.ts` has no session code (the CLIENT ends the session
+      // after a success) and member sessions are stateless JWTs. ⚠ This is a SMOKE CHECK that the refusal left the token usable; it can
+      // fail only if the token itself stopped verifying, ⛔ on any change to a session — no production line makes it the proof.
+      expect((await inject(t, 'GET', '/api/v1/member/life-events', { token: tok })).status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ DL18 precedence — the death check BEATS the state check: a LOCK-IN member (not withdrawable) with a standing claim gets withdrawal.death_reported, ⛔ invalid_state', async () => {
+    const t = await createTestApp();
+    try {
+      // Control: with NO claim the state alone refuses — so the next assertion can only be the death check winning.
+      const bare = await seedMemberAt(t, 'lock-in');
+      await elevate(t, bare.memberId, 'withdrawal');
+      const noClaim = await inject(t, 'POST', URL, { payload: {}, token: token(t, bare.memberId, bare.pariwarId) });
+      expect(noClaim.status).toBe(409);
+      expect(String((noClaim.body.error as Json)?.code)).toBe('withdrawal.invalid_state');
+
+      const { memberId, pariwarId } = await seedMemberAt(t, 'lock-in');
+      await fileClaim(t, pariwarId, memberId);
+      await elevate(t, memberId, 'withdrawal');
+      const res = await inject(t, 'POST', URL, { payload: {}, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC14 — the claim\'s innocence finding lifts the lock: withdrawn as today', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      const cid = await fileClaim(t, pariwarId, memberId);
+      await findInnocent(t, pariwarId, cid);
+      await elevate(t, memberId, 'withdrawal');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(200);
+      expect(await memberState(t, memberId)).toBe('withdrawn');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC14 / N9 FORCED race — the withdrawal WAITS on the claim-intake key, then sees the claim a first intake committed and is refused', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      await elevate(t, memberId, 'withdrawal');
+      const tok = token(t, memberId, pariwarId);
+
+      const race = await raceFirstIntake(t, pariwarId, memberId, () => inject(t, 'POST', URL, { payload: {}, token: tok }));
+      // The proof the lock is TAKEN: remove the intake-key line from `assertWithdrawable` and this is the assertion that fails.
+      expect(race.waited, 'the withdrawal did not wait on the claim-intake key — its guard does not take it' + ' — ' + race.answeredWithoutWaiting).toBe(true);
+      expect(race.response.status).toBe(409);
+      expect(String((race.response.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+      expect(await eventRows(t, memberId, 'member.withdrawal_completed')).toHaveLength(0);
+      expect(await memberState(t, memberId)).toBe('active');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  // ⚠ FREE-RUNNING — a sanity check of the two real routes together, ⛔ a proof of the lock: it passes whichever request
+  // commits first, even with no lock at all (the withdrawal is the lighter request and usually wins). The FORCED test above is
+  // the proof. Kept as ONE run: three identical runs added nothing.
+  it('AC14 sanity (free-running) — a withdrawal and a real first intake together never end with BOTH a minted claim and a withdrawal', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      await declareNominee(t, memberId, pariwarId);
+      await establishHandoverTrust(t, memberId, pariwarId);
+      await elevate(t, memberId, 'withdrawal');
+      const tok = token(t, memberId, pariwarId);
+
+      const [filed, withdrew] = await Promise.all([
+        inject(t, 'POST', '/api/v1/member/claims/intake', { payload: { relationship: 'spouse' }, token: tok }),
+        inject(t, 'POST', URL, { payload: {}, token: tok }),
+      ]);
+      const claims = await t.pool.query('SELECT 1 FROM claims WHERE deceased_member_id = $1', [memberId]);
+      const withdrawn = (await eventRows(t, memberId, 'member.withdrawal_completed')).length;
+      // Exactly one side wins; the loser is the matching refusal.
+      expect((claims.rowCount ?? 0) + withdrawn).toBe(1);
+      if (withdrawn === 1) {
+        expect(filed.status).toBe(409);
+        expect(String((filed.body.error as Json)?.code)).toBe('claim.intake_refused');
+      } else {
+        expect(withdrew.status).toBe(409);
+        expect(String((withdrew.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+      }
     } finally {
       await teardown(t);
     }

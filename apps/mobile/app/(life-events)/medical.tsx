@@ -15,6 +15,7 @@ import { Button, Input, Spinner, Text, YStack } from 'tamagui'
 
 import type { MedicalDiscloseRequest } from '@twt/contracts'
 
+import { lifeEventsDeathReportedKey } from '../../lib/death-report-copy'
 import { memberAuth } from '../../lib/member-api'
 import {
   MedicalForm,
@@ -78,8 +79,9 @@ export default function LifeEventsMedicalScreen() {
     try {
       const result = await stepUp.guard(() => memberAuth.lifeEventsUpdateMedical(req))
       if (result !== undefined) await invalidateAndLeave()
-    } catch {
-      setError(t('lifeEvents.error_generic'))
+    } catch (e) {
+      // Story 6.38 (DL19): a claim filed for this member's death refuses a direct change — its own calm line.
+      setError(t(lifeEventsDeathReportedKey(e) ?? 'lifeEvents.error_generic'))
     } finally {
       setBusy(false)
     }
@@ -92,8 +94,9 @@ export default function LifeEventsMedicalScreen() {
     try {
       await stepUp.verifyAndRetry(() => memberAuth.lifeEventsUpdateMedical(pending))
       await invalidateAndLeave()
-    } catch {
-      setError(t('lifeEvents.error_generic'))
+    } catch (e) {
+      // Story 6.38 (DL19): a claim filed for this member's death refuses a direct change — its own calm line.
+      setError(t(lifeEventsDeathReportedKey(e) ?? 'lifeEvents.error_generic'))
     } finally {
       setBusy(false)
     }

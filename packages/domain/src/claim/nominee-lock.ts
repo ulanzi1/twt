@@ -30,13 +30,14 @@
 // ⛔ Lives in `claim/` and is COMPOSED with `nominee/` in the API handler (T5(a): a `nominee/` → `claim/`
 // import would form a runtime init cycle typecheck cannot see).
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
 import type { ClaimId, ClaimNomineeFindingId, MemberId, PariwarId } from '../ids/index.js';
 import { claimNomineeFindings } from '../schema/claim_nominee_findings.js';
 import { claims } from '../schema/claims.js';
+import { isDeathReportStanding } from './death-report.js';
 import { ClaimNomineeFindingRefusedError, NomineeDeclarationLockedError } from './errors.js';
 import type { ClaimEventActor } from './events.js';
 import { intakeAdvisoryLockKey } from './icp.js';
@@ -62,30 +63,15 @@ export async function acquireNomineeDeclarationLock(
  * state, that ⛔ no innocence finding has released? Tenant-scoped (RLS + the explicit predicate): a
  * claim in another Pariwar is a miss.
  *
- * ⚠ Raw SQL with explicit aliases, ⛔ not a Drizzle correlated subquery: an outer column referenced
- * inside a same-named subquery table collapses to a tautology ([[project_epic6_drizzle_correlated_subquery_bug]]).
+ * ⭐ Story 6.38 (DL1): the SQL MOVED, unchanged, to the leaf `death-report.ts` (`isDeathReportStanding`) — the ONE
+ * definition of "a death is reported and stands" the nominee lock, the erasure lock and the claim door share.
  */
 export async function isNomineeDeclarationLocked(
   db: Db,
   pariwarId: PariwarId,
   memberId: MemberId,
 ): Promise<boolean> {
-  const rows = await db.execute<{ locked: boolean }>(sql`
-    SELECT EXISTS (
-      SELECT 1
-        FROM claims c
-       WHERE c.pariwar_id = ${pariwarId}
-         AND c.deceased_member_id = ${memberId}
-         AND NOT EXISTS (
-           SELECT 1
-             FROM claim_nominee_findings f
-            WHERE f.pariwar_id = c.pariwar_id
-              AND f.claim_case_id = c.claim_case_id
-              AND f.kind = 'member_found_innocent'
-         )
-    ) AS locked
-  `);
-  return rows.rows?.[0]?.locked === true;
+  return isDeathReportStanding(db, pariwarId, memberId);
 }
 
 /**

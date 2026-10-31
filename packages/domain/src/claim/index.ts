@@ -62,6 +62,9 @@ export * from './nominee-name-check-persist.js';
 // D6 cutoff (D5), and the District Admin's DETERMINATION writer (D4). ⛔ `nominee-effective.ts` never
 // imports `events.ts` (T5(b)).
 export * from './nominee-lock.js';
+export * from './death-report.js';
+export * from './death-report-lock.js';
+export * from './intake-door.js';
 export * from './nominee-effective.js';
 export * from './nominee-determination-persist.js';
 // Story 6.21a — the death certificate's clear-date rule: the LEAF (the current-certificate snapshot, the D6

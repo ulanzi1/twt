@@ -20,7 +20,7 @@
 // NEVER the free-text `reason_text`. No refund is issued (the ₹110 is forfeited, not returned).
 
 import type { WithdrawalConfirmRequest, WithdrawalStatusResponse } from '@twt/contracts';
-import { ids, member as memberDomain } from '@twt/domain';
+import { claim as claimDomain, ids, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
@@ -88,6 +88,16 @@ export function createWithdrawalHandlers(deps: AppDeps) {
     const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
     if (!exists) {
       throw new NotFoundError('Member not found', 'withdrawal.member_not_found');
+    }
+    // ⭐ Story 6.38 (DL18; `2026-10-31-424` Q2 (a) A): once a death is reported the membership can ⛔ be withdrawn — the
+    // member agreed while alive, and ⛔ one withdraws it on their behalf (`-423` Q1 (a)'s reason). The intake key FIRST
+    // (a withdrawal and a first intake serialise), then the ONE predicate; checked BEFORE the state (the more specific
+    // refusal wins). Lifted only by the innocence finding (DL4).
+    if (await claimDomain.lockAndReadDeathReport(scopeTx.client, pariwarId, memberId)) {
+      throw new ConflictError(
+        "The membership cannot be withdrawn: a claim has been filed for this member's death",
+        'withdrawal.death_reported',
+      );
     }
     const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, at);
     if (!WITHDRAWABLE_STATES.has(state)) {

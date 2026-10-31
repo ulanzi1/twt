@@ -118,8 +118,11 @@ export interface CloseClaimsHeldBySuspicionAppealResult {
  * ⚠ WHY ⛔ NO CYCLE — the property is the REVERSE of "who waits after taking the intake key" (this writer does: on the
  * reversal key, `appeal:` keys and rows): ⛔ nobody holding a claim row, an `appeal:` / `r9:` / trustee key or a
  * `suspicion-*` key then asks for the INTAKE key. Every intake-key taker — `tryConverge`, `convergeIntakeAttempt`,
- * `overrideIntakeAttempt`, `recordRefileConfirmation`, `reviseDecision`, `acquireNomineeDeclarationLock` and the three
- * reversal writers (through this helper) — takes it FIRST, or after ONE unlocked read; none holds a lock on entry.
+ * `overrideIntakeAttempt`, `recordRefileConfirmation`, `reviseDecision`, `acquireNomineeDeclarationLock`, the three
+ * reversal writers (through this helper) and — Story 6.38, `2026-10-30-423` — the two erasure handlers (through
+ * `member/rtbf-legality.ts` `acquireErasureLocks`, intake key BEFORE the rtbf key) and the withdrawal / Life Events /
+ * medical guards (through `death-report-lock.ts` `lockAndReadDeathReport`) — takes it FIRST, or after ONE unlocked read;
+ * none holds a lock on entry.
  */
 export async function acquireSuspicionReversalLockForClaim(
   client: pg.PoolClient,

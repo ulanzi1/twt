@@ -29,7 +29,7 @@ import {
 import { getMemberAccountOverlay } from '../../../src/member/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
-import { PARIWAR_A, enterAppScope, seedClaim } from '../_helpers.js';
+import { PARIWAR_A, enterAppScope, seedClaim, seedOpenMemberStream } from '../_helpers.js';
 
 /** Count events on a claim's stream (tenant-scoped). */
 async function streamLen(tx: ReturnType<typeof getTx>['tx'], streamId: string): Promise<number> {
@@ -74,8 +74,9 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
 
   it('NO CANDIDATE → mints + intake_initiated + intake_converged; attempt `converged`; freeze fires', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): the member's stream replays to an OPEN state, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
 
     const r = await tryConverge(client, base(mid, 'member_app', 'a1'));
     expect(r.minted).toBe(true);
@@ -106,8 +107,9 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
 
   it('SAME-CHANNEL RETRY → idempotent no-op: no new attempt, no event, returns existing canonical', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): the member's stream replays to an OPEN state, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
 
     const r1 = await tryConverge(client, base(mid, 'member_app', 'a1'));
     const r2 = await tryConverge(client, base(mid, 'member_app', 'a2'));
@@ -129,8 +131,9 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
 
   it('CROSS-CHANNEL → attempt `pending`, NO mint/freeze/event; getPendingIntakeAttempts surfaces both channels', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): the member's stream replays to an OPEN state, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
 
     const r1 = await tryConverge(client, base(mid, 'member_app', 'a1'));
     const r2 = await tryConverge(client, base(mid, 'helpline', 'a2'));
@@ -242,8 +245,9 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
 
   it('MERGE → union the channel + flip attempt `converged`; NO new lifecycle event; idempotent', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): the member's stream replays to an OPEN state, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
 
     const r1 = await tryConverge(client, base(mid, 'member_app', 'a1'));
     const r2 = await tryConverge(client, base(mid, 'helpline', 'a2')); // cross-channel pending
@@ -287,8 +291,9 @@ describe.skipIf(!hasDatabase)('ICP tryConverge resolution matrix (PARIWAR_A scop
 
   it('OVERRIDE → mints a distinct claim + ledger row; candidate skips the overridden claim; aggregate overlay stays frozen until BOTH terminal', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): the member's stream replays to an OPEN state, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
 
     const r1 = await tryConverge(client, base(mid, 'member_app', 'a1'));
     const r2 = await tryConverge(client, base(mid, 'helpline', 'a2')); // cross-channel pending

@@ -51,7 +51,10 @@ import {
 import { claims, type ClaimIntakeChannel, type ClaimLifecycleState } from '../schema/claims.js';
 import { intakeAttempts, type IntakeAttemptRow } from '../schema/intake_attempts.js';
 import { convergenceOverrides } from '../schema/convergence_overrides.js';
+import { isDeathReportStanding } from './death-report.js';
+import { ClaimIntakeRefusedError } from './errors.js';
 import type { ClaimEventActor } from './events.js';
+import { resolveClaimIntakeDoor } from './intake-door.js';
 import { projectClaimState } from './project.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
 import { CLAIM_TERMINAL_STATES } from './read.js';
@@ -282,6 +285,15 @@ export async function tryConverge(
   // (1) Serialize concurrent intakes for THIS death so the candidate read is race-safe.
   await acquireIntakeLock(client, input.pariwarId, input.deceasedMemberId);
 
+  // (1b) ⭐ Story 6.38 — THE DOOR (N4, DL7; `2026-10-30-423` Q3 B, `2026-10-31-424` Q1 (b) B), under the intake lock and
+  //      BEFORE any read of candidates or any write: checked ONCE per death — only while ⛔ report stands (⛔ claim, or every
+  //      claim released as alive). Once a report stands the person passed the door, and today's flow below runs UNCHANGED.
+  //      A refusal writes NOTHING (N5).
+  if (!(await isDeathReportStanding(db, input.pariwarId, input.deceasedMemberId))) {
+    const door = await resolveClaimIntakeDoor(db, input.deceasedMemberId);
+    if (door.kind === 'refused') throw new ClaimIntakeRefusedError(input.deceasedMemberId, door.reason);
+  }
+
   // (2) Override-aware candidate lookup (⛔ no time window — Story 6.28 OP11).
   const candidate = await getConvergenceCandidate(db, input.pariwarId, input.deceasedMemberId);
 
@@ -463,6 +475,12 @@ export interface ConvergeIntakeAttemptResult {
  *
  * Idempotent: merging an already-`converged` attempt is a no-op (returns the current channel set,
  * `merged: false`).
+ *
+ * ⚠ DELIBERATE (checklist family 9) — ⛔ claim door (Story 6.38 DL7): a merge mints ⛔ claim — it joins an attempt to a
+ * canonical claim that already passed the door at ITS first report. Residual (DL7 (a)): once a report is released by the
+ * innocence finding the door opens again, but a new report CONVERGES onto the released claim (the finding changes ⛔ claim
+ * state, so it stays a candidate) rather than meeting the door. Unreachable until a finding has a producer. Re-examine
+ * when row 6-22 writes `member_found_innocent` (`deferred-work.md`, the DL4 / DL7 item).
  */
 export async function convergeIntakeAttempt(
   client: pg.PoolClient,
@@ -571,6 +589,12 @@ export interface OverrideIntakeAttemptResult {
  *
  * ⚠ Ships ONLY behind the Task-7 aggregate-overlay gate (override must never weaken the account
  * freeze — see the route). This writer is the mutation half; the route decides whether to call it.
+ *
+ * ⚠ DELIBERATE (checklist family 9) — ⛔ claim door (Story 6.38 DL7), though this MINTS a claim: it separates a `pending`
+ * attempt that was parked beside a canonical claim, and that claim passed the door at the death's first report — the door
+ * is checked ONCE per death, only while ⛔ report stands. Residual (DL7 (b)): an attempt parked beside a claim that is LATER
+ * released by the innocence finding can still be overridden with ⛔ door. Unreachable until a finding has a producer.
+ * Re-examine when row 6-22 writes `member_found_innocent` (`deferred-work.md`, the DL4 / DL7 item).
  */
 export async function overrideIntakeAttempt(
   client: pg.PoolClient,

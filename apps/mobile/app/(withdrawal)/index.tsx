@@ -24,6 +24,8 @@ import { memberAuth } from '../../lib/member-api'
 import { useStepUpGate } from '../../components/life-events/useStepUpGate'
 import { formatWithdrawalDate } from '../../components/withdrawal/format-date'
 import { useSession } from '../../lib/session-context'
+import { withdrawalErrorKey } from '../../lib/death-report-copy'
+import { AnnouncedText } from '../../components/peer-request/announce'
 
 /** The bounded, NON-PII reason codes (value-aligned with contracts `WithdrawalReasonCode`). */
 const REASON_CODES = ['financial', 'relocation', 'dissatisfied', 'personal', 'other'] as const
@@ -63,8 +65,9 @@ export default function WithdrawalScreen() {
         setRejoinDate(result.rejoinPermittedAt)
         setStage('done')
       }
-    } catch {
-      setError(t('withdrawal.error_generic'))
+    } catch (e) {
+      // Story 6.38 (DL18): a claim filed for this member's death refuses the withdrawal — its own calm line.
+      setError(t(withdrawalErrorKey(e)))
     } finally {
       setBusy(false)
     }
@@ -81,8 +84,8 @@ export default function WithdrawalScreen() {
       })
       setRejoinDate(result.rejoinPermittedAt)
       setStage('done')
-    } catch {
-      setError(t('withdrawal.error_generic'))
+    } catch (e) {
+      setError(t(withdrawalErrorKey(e)))
       // If OTP verify succeeded but the withdrawal mutation failed, verifyAndRetry cleared the
       // OTP field leaving the Verify button permanently disabled. Reset to restore the Confirm
       // button — the server elevation is still live so the member can retry without re-OTP.
@@ -179,11 +182,7 @@ export default function WithdrawalScreen() {
             <YStack gap="$4">
               <H2>{t('withdrawal.confirm_title')}</H2>
               <Paragraph color="$colorPress">{t('withdrawal.confirm_body')}</Paragraph>
-              {error ? (
-                <Text color="#C0392B" accessibilityLiveRegion="polite">
-                  {error}
-                </Text>
-              ) : null}
+              {error ? <AnnouncedText text={error} kind="error" color="#C0392B" /> : null}
               {stepUp.needsOtp ? (
                 <YStack gap="$3">
                   <Text accessibilityRole="text" accessibilityLiveRegion="polite">

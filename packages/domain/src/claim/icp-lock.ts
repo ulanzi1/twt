@@ -8,8 +8,11 @@
 
 import { createHash } from 'node:crypto';
 
+// ⭐ CASE-INSENSITIVE on both ids (Story 6.38 code review round 2): the erasure handlers and the intake share this key, and one
+// caller may hold a branded (lower-case) id while another holds a raw request string — hashing the spelling would let them miss
+// each other. A lower-case id still hashes to the key it always did.
 export function intakeAdvisoryLockKey(pariwarId: string, deceasedMemberId: string): bigint {
-  const hex = createHash('sha256').update(`${pariwarId}:${deceasedMemberId}`).digest('hex');
+  const hex = createHash('sha256').update(`${pariwarId.toLowerCase()}:${deceasedMemberId.toLowerCase()}`).digest('hex');
   // 15 hex chars (60 bits) → always positive, safely inside Postgres' signed bigint
   // advisory-lock arg (63 usable magnitude bits).
   return BigInt(`0x${hex.slice(0, 15)}`);

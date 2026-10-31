@@ -87,6 +87,17 @@ describe('Story 6.19c — the re-file "please call the helpline" state renders <
   });
 });
 
+// ─── Story 6.38 (DL10, AC7) — the "a claim cannot be filed" state keeps the helpline one tap away ─────────────────
+//
+// ⛔ Claim is kept and there is ⛔ appeal, so the call is the family's only route to a QUESTION.
+describe('Story 6.38 — the "a claim cannot be filed" state renders <CallHelplineCTA>', () => {
+  const CANNOT_FILE = 'apps/mobile/app/(claim)/cannot-file.tsx';
+  it(`${CANNOT_FILE} renders <${AFFORDANCE}>`, () => {
+    const src = stripComments(read(CANNOT_FILE));
+    expect(src.includes(`<${AFFORDANCE}`), `${CANNOT_FILE} no longer renders <${AFFORDANCE}>`).toBe(true);
+  });
+});
+
 // ─── the PDF artifact carries the printed helpline line too (AC4) ────────────────────────────────
 //
 // A PDF is not tappable, so it carries the NUMBER, not a <CallHelplineCTA>. Guard the artifact's

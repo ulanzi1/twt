@@ -55,9 +55,12 @@ function version(over: Partial<MemorialReviewVersion> = {}): MemorialReviewVersi
     sentAt: '2026-10-20T10:00:00.000Z',
     body: BODY,
     altText: null,
+    // Story 11b.5a — ⛔ family list and ⛔ declaration unless a test gives them (a v1 row).
+    kinship: null,
     unavailable: null,
     hasPhoto: false,
     photoUrl: null,
+    guardianDeclaration: false,
     authorisationCopyVersion: '2026-10-23.v1-pending-hi-review',
     authorisationLocale: 'hi',
     handoverRecipient: 'latest',
@@ -87,6 +90,7 @@ function approvedVersion(over: Partial<MemorialReviewVersion> = {}): MemorialRev
       action: 'approved',
       omissions: [],
       photoLeftOutReason: null,
+      kinshipLeftOut: [],
       reasonCode: null,
       internalNote: null,
       actorDisplay: 'Panel Member',
@@ -369,6 +373,7 @@ describe('one version and its decision', () => {
               action: 'approved_with_omissions',
               omissions: [{ field: 'body', start, end: BODY.indexOf('।', start) + 1, reason: 'accuses_someone_of_wrongdoing' }],
               photoLeftOutReason: null,
+              kinshipLeftOut: [],
               reasonCode: null,
               internalNote: 'नाम लेकर आरोप',
               actorDisplay: 'Panel Member',
@@ -496,6 +501,7 @@ describe('one version and its decision', () => {
           action: 'approved_with_omissions',
           omissions: [{ field: 'body', start, end: BODY.indexOf('।', start) + 1, reason: 'accuses_someone_of_wrongdoing' }],
           photoLeftOutReason: null,
+          kinshipLeftOut: [],
           reasonCode: null,
           internalNote: null,
           actorDisplay: 'Panel Member',
@@ -665,6 +671,7 @@ describe('a hidden bidi control is shown visibly EVERYWHERE the family\'s words 
               action: 'approved_with_omissions',
               omissions: [{ field: 'body', start, end: start + S2.length, reason: 'accuses_someone_of_wrongdoing' }],
               photoLeftOutReason: null,
+              kinshipLeftOut: [],
               reasonCode: null,
               internalNote: null,
               actorDisplay: 'Panel Member',
@@ -723,6 +730,9 @@ describe('what the screen says back (R19)', () => {
     span_blank: true,
     span_crosses_paragraph: true,
     nothing_left: true,
+    kinship_without_list: true,
+    kinship_index_out_of_range: true,
+    kinship_order: true,
     alt_text_nothing_left: true,
   };
 
@@ -985,5 +995,162 @@ describe('what the screen says back (R19)', () => {
         expect(api.withdrawMemorialApproval).toHaveBeenCalledTimes(1);
       });
     });
+  });
+});
+
+// ─── Story 11b.5a — the family list on the review screen (KL6 / KL12 / KL15 / KL16; AC5 / AC14 / AC15) ──────────────────
+describe('Story 11b.5a — the family list, the declaration and the ticks', () => {
+  const LIST: NonNullable<MemorialReviewVersion['kinship']> = [
+    { relation: 'wife', name: 'परीक्षा-पत्नी' },
+    { relation: 'daughters_daughter', name: 'परीक्षा-नातिन', inPhoto: true },
+    { relation: 'son', name: `परीक्षा${RLO}पुत्र` },
+  ];
+  const withList = (over: Partial<MemorialReviewVersion> = {}) =>
+    detail({ chain: [version({ kinship: LIST, hasPhoto: true, altText: 'फ़ोटो', photoUrl: 'https://x/p.jpg', ...over })] });
+
+  it('the list sits under the words, each relation labelled (relative to the member who died), the bidi control visible', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(withList());
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const list = await screen.findByTestId('memorial-kinship');
+    expect(list).toHaveTextContent('Each relation is the person’s relation to the member who died.');
+    const entries = within(list).getAllByTestId('memorial-kinship-entry');
+    expect(entries.map((e) => e.textContent?.split(' — ')[0])).toEqual(['Wife', 'Granddaughter (daughter\'s daughter)', 'Son']);
+    expect(list.textContent).not.toContain(RLO); // shown as a visible marker, ⛔ raw
+    // KL15 — the ticked person is listed BESIDE the photo.
+    expect(screen.getByTestId('memorial-kinship-in-photo')).toHaveTextContent('परीक्षा-नातिन');
+  });
+
+  it('⭐ AC5 — leaving out one entry posts its INDEX and reason — ⛔ a name; ⛔ no textbox holds a name', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(withList({ hasPhoto: false, altText: null, photoUrl: null }));
+    vi.mocked(api.decideMemorialReview).mockResolvedValue({ submissionId: SUB, memorialState: 'approved_with_omissions' });
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const form = await screen.findByTestId('memorial-decision-form');
+    fireEvent.click(within(form).getByLabelText('Approve, leaving out a part'));
+    const choices = within(form).getAllByTestId('memorial-kinship-choice');
+    expect(choices).toHaveLength(3);
+    fireEvent.click(within(choices[2]!).getByRole('checkbox'));
+    fireEvent.change(within(choices[2]!).getByRole('combobox'), { target: { value: 'attacks_someone_named' } });
+    for (const box of screen.getAllByRole('textbox') as HTMLTextAreaElement[]) expect(box.value).not.toContain('परीक्षा');
+    fireEvent.click(within(form).getByRole('button', { name: 'Record decision' }));
+    await waitFor(() =>
+      expect(api.decideMemorialReview).toHaveBeenCalledWith(PARIWAR, SUB, {
+        action: 'approved_with_omissions',
+        kinshipLeftOut: [{ index: 2, reason: 'attacks_someone_named' }],
+      }),
+    );
+    expect(JSON.stringify(vi.mocked(api.decideMemorialReview).mock.calls[0])).not.toContain('परीक्षा');
+  });
+
+  it('⭐ KL15 — leaving out a TICKED entry on the child reason while the photo stays asks to confirm (⛔ a refusal); the second press posts', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(withList());
+    vi.mocked(api.decideMemorialReview).mockResolvedValue({ submissionId: SUB, memorialState: 'approved_with_omissions' });
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const form = await screen.findByTestId('memorial-decision-form');
+    fireEvent.click(within(form).getByLabelText('Approve, leaving out a part'));
+    const ticked = within(form).getAllByTestId('memorial-kinship-choice')[1]!;
+    fireEvent.click(within(ticked).getByRole('checkbox'));
+    fireEvent.change(within(ticked).getByRole('combobox'), { target: { value: 'identifies_a_child' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Record decision' }));
+    expect(await screen.findByTestId('memorial-decision-problem')).toHaveTextContent(
+      'This person is ticked as in the photo; the photo is being kept.',
+    );
+    expect(api.decideMemorialReview).not.toHaveBeenCalled();
+    fireEvent.click(within(form).getByRole('button', { name: 'Record decision' }));
+    await waitFor(() =>
+      expect(api.decideMemorialReview).toHaveBeenCalledWith(PARIWAR, SUB, {
+        action: 'approved_with_omissions',
+        kinshipLeftOut: [{ index: 1, reason: 'identifies_a_child' }],
+      }),
+    );
+  });
+
+  it('⭐ AC14 — guardianDeclaration: the banner, the v4 child label and the guidance on EVERY reason select (decision AND withdrawal)', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({
+        chain: [approvedVersion({ kinship: LIST, guardianDeclaration: true, authorisationCopyVersion: '2026-10-31.v4-pending-hi-review' })],
+        canDecide: false,
+        canWithdrawApproval: true,
+        withdrawApprovalTargetId: SUB,
+      }),
+    );
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    expect(await screen.findByTestId('memorial-declaration')).toHaveTextContent(
+      'The sender has declared they are the parent or guardian of every child named or shown',
+    );
+    const withdrawForm = screen.getByTestId('memorial-withdraw-form');
+    expect(within(withdrawForm).getByRole('option', { name: 'Names or shows a child the declaration cannot cover' })).toBeInTheDocument();
+    expect(within(withdrawForm).getByTestId('memorial-child-guidance')).toHaveTextContent(
+      'Use this only where something in the memorial itself shows the sender’s declaration cannot cover the child; the family is told why.',
+    );
+  });
+
+  it('AC14 — the decision form\'s selects carry the guidance too under the declaration', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(withList({ guardianDeclaration: true }));
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const form = await screen.findByTestId('memorial-decision-form');
+    fireEvent.click(within(form).getByLabelText('Do not approve'));
+    expect(within(form).getByTestId('memorial-child-guidance')).toBeInTheDocument();
+    expect(within(form).getByRole('option', { name: 'Names or shows a child the declaration cannot cover' })).toBeInTheDocument();
+  });
+
+  it('AC14 — a historical v1–v3 row shows ⛔ banner, ⛔ guidance, the plain label', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({ chain: [approvedVersion()], canDecide: false, canWithdrawApproval: true, withdrawApprovalTargetId: SUB }),
+    );
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const withdrawForm = await screen.findByTestId('memorial-withdraw-form');
+    expect(screen.queryByTestId('memorial-declaration')).toBeNull();
+    expect(within(withdrawForm).queryByTestId('memorial-child-guidance')).toBeNull();
+    expect(within(withdrawForm).getByRole('option', { name: 'Names or shows a child' })).toBeInTheDocument();
+  });
+
+  it('AC14 — the FLAG drives the banner, ⛔ the version string: a synthetic later version with the flag shows it; a v4 id without it does not', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({ chain: [version({ guardianDeclaration: true, authorisationCopyVersion: '2099-01-01.v9-pending-hi-review' })] }),
+    );
+    const { unmount } = renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    expect(await screen.findByTestId('memorial-declaration')).toBeInTheDocument();
+    unmount();
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({ chain: [version({ guardianDeclaration: false, authorisationCopyVersion: '2026-10-31.v4-pending-hi-review' })] }),
+    );
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    await screen.findByTestId('memorial-decision-form');
+    expect(screen.queryByTestId('memorial-declaration')).toBeNull();
+  });
+
+  it('the history shows each left-out entry with its reason', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({
+        chain: [
+          version({
+            kinship: LIST,
+            decision: {
+              action: 'approved_with_omissions',
+              omissions: [],
+              photoLeftOutReason: null,
+              kinshipLeftOut: [{ index: 0, reason: 'against_the_law' }],
+              reasonCode: null,
+              internalNote: null,
+              actorDisplay: 'Panel Member',
+              decidedAt: '2026-10-21T10:00:00.000Z',
+            },
+          }),
+        ],
+        canDecide: false,
+      }),
+    );
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const left = await screen.findByTestId('memorial-kinship-left-out');
+    expect(left).toHaveTextContent('Wife — परीक्षा-पत्नी — Against the law');
+  });
+
+  it('the admin\'s English relation labels are pinned EQUAL to memorial.json en (KL9 — one wording)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const path = await import('node:path');
+    const { MEMORIAL_KINSHIP_RELATIONS } = await import('@twt/contracts');
+    const { kinshipLabel } = await import('../src/modules/memorial-review/i18n-en.js');
+    const en = JSON.parse(readFileSync(path.resolve(__dirname, '../../../packages/i18n/locales/en/memorial.json'), 'utf8')) as Record<string, string>;
+    for (const r of MEMORIAL_KINSHIP_RELATIONS) expect(kinshipLabel(r), r).toBe(en[`kinship.${r}`]);
   });
 });

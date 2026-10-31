@@ -76,6 +76,7 @@ function drive(over: Partial<MemorialTakedownDriveResponse> = {}): MemorialTaked
       hasPhoto: false,
       photoUrl: null,
       altText: null,
+      kinship: [],
     },
     nomineeToCallBack: { name: 'Asha Devi', mobile: '+919876543210' },
     smallerFix: 'send_now',
@@ -1075,5 +1076,29 @@ describe('RS3 — "Try again" cannot make the page worse, and is offered only wh
     const unavailable = await screen.findByTestId('takedown-record-unavailable');
     expect(unavailable).toHaveTextContent('Not readable just now');
     expect(within(unavailable).queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
+});
+
+// Story 11b.5a (KL11 / AC8) — the operator sees the family list as the page shows it, under the words.
+describe('Story 11b.5a — the family list on the drive view', () => {
+  it('lists each relation with its names (the page\'s rows), under the words; ⛔ list ⇒ nothing; unreadable ⇒ a line', async () => {
+    const shown = drive().shown!;
+    vi.mocked(api.getMemorialTakedownDrive).mockResolvedValue(
+      drive({ shown: { ...shown, kinship: [{ relation: 'wife', names: ['परीक्षा-पत्नी'] }, { relation: 'son', names: ['अ', 'ब'] }] } }),
+    );
+    const { unmount } = renderWithClient(<MemorialTakedownDrivePage pariwarId={PARIWAR} poolId={POOL} />);
+    const list = await screen.findByTestId('takedown-kinship');
+    expect(list).toHaveTextContent('Wife: परीक्षा-पत्नी');
+    expect(list).toHaveTextContent('Son: अ, ब');
+    expect(follows(screen.getByText('माँ हमेशा मुस्कुराती थीं।'), list)).toBe(true);
+    unmount();
+    vi.mocked(api.getMemorialTakedownDrive).mockResolvedValue(drive());
+    const second = renderWithClient(<MemorialTakedownDrivePage pariwarId={PARIWAR} poolId={POOL} />);
+    await screen.findByTestId('takedown-shown');
+    expect(screen.queryByTestId('takedown-kinship')).toBeNull();
+    second.unmount();
+    vi.mocked(api.getMemorialTakedownDrive).mockResolvedValue(drive({ shown: { ...shown, kinship: null } }));
+    renderWithClient(<MemorialTakedownDrivePage pariwarId={PARIWAR} poolId={POOL} />);
+    expect(await screen.findByText('The family list could not be read just now.')).toBeInTheDocument();
   });
 });

@@ -25,6 +25,7 @@ import {
   useRequestMemorialTakedownStepUp,
   useVerifyStepUp,
 } from '../../api/hooks.js';
+import { kinshipLabel } from '../memorial-review/i18n-en.js';
 import { openRequestOf, operatorScript, requestStatus, toLocalInput } from './derive.js';
 import { errorSentence, recordErrorSentence, resolveEn as t } from './i18n-en.js';
 
@@ -272,6 +273,23 @@ export function MemorialTakedownDrivePage({ pariwarId, poolId }: { pariwarId: st
                 {p}
               </p>
             ))
+          )}
+          {/* Story 11b.5a (KL11) — the family list as the page shows it: the SAME grouped rows (left-out names absent, ⛔ a tick). */}
+          {d.shown.kinship === null ? (
+            <p>{t('takedown.drive.kinshipUnavailable')}</p>
+          ) : (
+            d.shown.kinship.length > 0 && (
+              <dl className="mt-2" data-testid="takedown-kinship">
+                {d.shown.kinship.map((row) => (
+                  <div key={row.relation}>
+                    <dt className="inline font-bold">{kinshipLabel(row.relation)}: </dt>
+                    <dd className="inline" dir="auto">
+                      {row.names.join(', ')}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )
           )}
           {d.shown.photoUrl !== null && (
             <figure className="mt-2">

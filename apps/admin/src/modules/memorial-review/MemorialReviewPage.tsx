@@ -45,7 +45,7 @@ import {
   type SelectedPart,
   type TextRange,
 } from './derive.js';
-import { problemSentence, reasonLabel, resolveEn as t, withdrawAnswer } from './i18n-en.js';
+import { kinshipLabel, problemSentence, reasonLabel, resolveEn as t, withdrawAnswer } from './i18n-en.js';
 
 type DecideMutation = ReturnType<typeof useDecideMemorialReview>;
 type WithdrawMutation = ReturnType<typeof useWithdrawMemorialApproval>;
@@ -395,6 +395,7 @@ function MemorialReviewDetail({ pariwarId, submissionId }: MemorialReviewDetailP
               key={withdrawTargetId}
               targetSubmissionId={withdrawTargetId}
               targetLabel={withdrawTargetAt < 0 ? null : versionLabel(data.chain, withdrawTargetAt)}
+              declared={withdrawTargetAt >= 0 && data.chain[withdrawTargetAt]!.guardianDeclaration}
               withdraw={withdraw}
               actionPending={actionPending}
               onStart={() => {
@@ -426,7 +427,12 @@ function VersionCard({
           { omissions: v.decision.omissions, photoLeftOut: v.decision.photoLeftOutReason !== null },
         )
       : null;
-  const hasBidi = [v.body, v.altText].some((x) => x !== null && bidiVisible(x).some((s) => s.kind === 'bidi'));
+  const hasBidi = [v.body, v.altText, ...(v.kinship ?? []).map((e) => e.name)].some(
+    (x) => x !== null && bidiVisible(x).some((s) => s.kind === 'bidi'),
+  );
+  // Story 11b.5a (KL15) — the people the family ticked as in the photo, shown beside it (⛔ ever public).
+  const inPhoto = (v.kinship ?? []).filter((e) => e.inPhoto === true);
+  const declared = v.guardianDeclaration;
   return (
     <article
       className={`rounded border p-4 ${current ? 'border-2' : 'opacity-90'}`}
@@ -439,6 +445,22 @@ function VersionCard({
       </p>
       <h3 className="mt-2 font-bold">{t('memorial.detail.words')}</h3>
       {v.body === null ? <p role="status">{t('memorial.detail.unavailable')}</p> : <StoredText text={v.body} testId="memorial-body" />}
+      {/* Story 11b.5a (KL12) — the family list, under the words and before the photo; each name shown with its hidden
+          direction controls visible (R13's helper). */}
+      {v.kinship !== null && (
+        <div data-testid="memorial-kinship">
+          <h3 className="mt-2 font-bold">{t('memorial.detail.kinship')}</h3>
+          <p className="text-sm opacity-70">{t('memorial.detail.kinshipRelative')}</p>
+          <ul className="list-disc pl-5">
+            {v.kinship.map((e, i) => (
+              <li key={i} data-testid="memorial-kinship-entry">
+                {kinshipLabel(e.relation)} — <VisibleText text={e.name} />
+                {e.inPhoto === true && <span className="text-sm opacity-70"> ({t('memorial.detail.inPhoto')})</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {v.hasPhoto && (
         <>
           <h3 className="mt-2 font-bold">{t('memorial.detail.photo')}</h3>
@@ -452,23 +474,41 @@ function VersionCard({
               <StoredText text={v.altText} />
             </>
           )}
+          {inPhoto.length > 0 && (
+            <div data-testid="memorial-kinship-in-photo">
+              <h4 className="text-sm font-bold">{t('memorial.detail.kinshipInPhoto')}</h4>
+              <ul className="list-disc pl-5 text-sm">
+                {inPhoto.map((e, i) => (
+                  <li key={i}>
+                    {kinshipLabel(e.relation)} — <VisibleText text={e.name} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
       {hasBidi && <p className="text-sm opacity-70">{t('memorial.detail.bidiNotice')}</p>}
       <p className="mt-2 text-xs opacity-70">
         {t('memorial.detail.permission')}: <code>{v.authorisationCopyVersion}</code> ({v.authorisationLocale})
       </p>
+      {/* KL16 — keyed on the server's flag (`guardianDeclaration`), ⛔ on the version id; v1–v3 rows show ⛔ banner. */}
+      {declared && (
+        <p className="mt-1 rounded border p-2 text-sm" data-testid="memorial-declaration">
+          {t('memorial.detail.declaration')}
+        </p>
+      )}
       {v.decision !== null && (
         <div className="mt-3" data-testid="memorial-decision">
           <h3 className="font-bold">{t('memorial.detail.decision')}: {t(`memorial.action.${v.decision.action}`)}</h3>
-          {v.decision.reasonCode !== null && <p>{reasonLabel(v.decision.reasonCode)}</p>}
+          {v.decision.reasonCode !== null && <p>{reasonLabel(v.decision.reasonCode, declared)}</p>}
           {v.decision.omissions.length > 0 && (
             <ul className="list-disc pl-5 text-sm">
               {v.decision.omissions.map((o) => {
                 const source = o.field === 'body' ? v.body : v.altText;
                 return (
                   <li key={`${o.field}:${o.start}`} data-testid="memorial-omission">
-                    “{source === null ? '…' : <VisibleText text={source.slice(o.start, o.end)} />}” — {reasonLabel(o.reason)}
+                    “{source === null ? '…' : <VisibleText text={source.slice(o.start, o.end)} />}” — {reasonLabel(o.reason, declared)}
                   </li>
                 );
               })}
@@ -476,8 +516,23 @@ function VersionCard({
           )}
           {v.decision.photoLeftOutReason !== null && (
             <p>
-              {t('memorial.detail.photoLeftOut')} — {reasonLabel(v.decision.photoLeftOutReason)}
+              {t('memorial.detail.photoLeftOut')} — {reasonLabel(v.decision.photoLeftOutReason, declared)}
             </p>
+          )}
+          {v.decision.kinshipLeftOut.length > 0 && (
+            <div data-testid="memorial-kinship-left-out">
+              <h4 className="mt-2 text-sm font-bold">{t('memorial.detail.kinshipLeftOut')}</h4>
+              <ul className="list-disc pl-5 text-sm">
+                {v.decision.kinshipLeftOut.map((k) => {
+                  const e = v.kinship?.[k.index];
+                  return (
+                    <li key={k.index}>
+                      {e === undefined ? '…' : <>{kinshipLabel(e.relation)} — <VisibleText text={e.name} /></>} — {reasonLabel(k.reason, declared)}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
           {decided !== null && (
             <>
@@ -500,7 +555,7 @@ function VersionCard({
           <h3 className="font-bold">{t('memorial.detail.withdrawal')}</h3>
           <p>
             {withdrawalLine(v.withdrawal)}
-            {v.withdrawal.reasonCode !== null && <> — {reasonLabel(v.withdrawal.reasonCode)}</>}
+            {v.withdrawal.reasonCode !== null && <> — {reasonLabel(v.withdrawal.reasonCode, declared)}</>}
           </p>
           {v.withdrawal.actorDisplay !== null && <p className="text-sm opacity-70">{v.withdrawal.actorDisplay}</p>}
           {v.withdrawal.internalNote !== null && (
@@ -516,16 +571,23 @@ function VersionCard({
 
 // ── The decision ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * One of the four reasons. Story 11b.5a (KL16) — `declared` (the version's `guardianDeclaration`): the child reason reads as a
+ * child the declaration cannot cover, and the reviewer guidance (`-432` R3 A) is shown with the select — on EVERY reason select
+ * (sentences, the photo, a list entry, not approving, withdrawing an approval). ⛔ For v1–v3 rows.
+ */
 function ReasonSelect({
   id,
   label,
   value,
   onChange,
+  declared = false,
 }: {
   id: string;
   label: string;
   value: MemorialReviewReason | '';
   onChange: (v: MemorialReviewReason | '') => void;
+  declared?: boolean;
 }): ReactElement {
   return (
     <label htmlFor={id} className="ml-2 text-sm">
@@ -534,10 +596,15 @@ function ReasonSelect({
         <option value="">{t('memorial.decide.chooseReason')}</option>
         {MEMORIAL_REVIEW_REASONS.map((r) => (
           <option key={r} value={r}>
-            {reasonLabel(r)}
+            {reasonLabel(r, declared)}
           </option>
         ))}
       </select>
+      {declared && (
+        <span className="block text-xs opacity-70" data-testid="memorial-child-guidance">
+          {t('memorial.reason.childGuidance')}
+        </span>
+      )}
     </label>
   );
 }
@@ -554,7 +621,9 @@ function SentencePicker({
   choices,
   onChoose,
   legend,
+  declared,
 }: {
+  declared: boolean;
   field: 'body' | 'altText';
   text: string;
   ranges: readonly TextRange[];
@@ -584,6 +653,7 @@ function SentencePicker({
                   label={t('memorial.decide.reasonFor')}
                   value={choice.reason}
                   onChange={(reason) => onChoose(key, { ...choice, reason })}
+                  declared={declared}
                 />
               )}
             </li>
@@ -618,6 +688,10 @@ function DecisionForm({
   const [action, setAction] = useState<MemorialReviewAction>('approved');
   const [choices, setChoices] = useState<Map<string, SentenceChoice>>(new Map());
   const [photoOut, setPhotoOut] = useState<SentenceChoice>({ checked: false, reason: '' });
+  // Story 11b.5a (KL6 / KL12) — one choice per family-list entry, by its index (modelled on the photo control).
+  const [kinshipOut, setKinshipOut] = useState<ReadonlyMap<number, SentenceChoice>>(new Map());
+  // KL15 — the confirm when a ticked entry is left out on the child reason while the photo is kept (a confirm, ⛔ a refusal).
+  const [inPhotoConfirmed, setInPhotoConfirmed] = useState(false);
   const [reasonCode, setReasonCode] = useState<MemorialReviewReason | ''>('');
   // ⛔ Starts EMPTY — an internal note, never shown to the family, ⛔ pre-filled from anything.
   const [internalNote, setInternalNote] = useState('');
@@ -628,6 +702,8 @@ function DecisionForm({
   const locale = v.authorisationLocale;
   const bodyRanges = memorialSentenceRanges(body, locale);
   const altRanges = v.altText === null ? [] : memorialSentenceRanges(v.altText, locale);
+  const kinship = v.kinship ?? [];
+  const declared = v.guardianDeclaration;
 
   const choose = (key: string, choice: SentenceChoice): void => {
     setChoices((prev) => new Map(prev).set(key, choice));
@@ -656,6 +732,23 @@ function DecisionForm({
         }
         candidate.photoLeftOut = { reason: photoOut.reason };
       }
+      const kinshipLeftOut: { index: number; reason: MemorialReviewReason }[] = [];
+      for (const [index, c] of [...kinshipOut].sort(([a], [b]) => a - b)) {
+        if (!c.checked) continue;
+        if (c.reason === '') {
+          setProblem(t('memorial.decide.chooseReason'));
+          return;
+        }
+        kinshipLeftOut.push({ index, reason: c.reason });
+      }
+      if (kinshipLeftOut.length > 0) candidate.kinshipLeftOut = kinshipLeftOut;
+      // KL15 — a ticked person left out on the child reason while the photo stays: confirm once (the photo still shows them).
+      const tickedChild = kinshipLeftOut.some((k) => k.reason === 'identifies_a_child' && kinship[k.index]?.inPhoto === true);
+      if (tickedChild && v.hasPhoto && !photoOut.checked && !inPhotoConfirmed) {
+        setInPhotoConfirmed(true);
+        setProblem(t('memorial.decide.kinshipInPhotoConfirm'));
+        return;
+      }
     }
     if (action === 'not_approved') {
       if (reasonCode === '') {
@@ -665,7 +758,12 @@ function DecisionForm({
       candidate.reasonCode = reasonCode;
     }
     // Pre-check with the SAME validator the server runs (a UI aid — the server is the boundary).
-    const verdict = validateMemorialDecision(candidate, { body, altText: v.altText, hasPhoto: v.hasPhoto });
+    const verdict = validateMemorialDecision(candidate, {
+      body,
+      altText: v.altText,
+      hasPhoto: v.hasPhoto,
+      kinshipLength: v.kinship === null ? null : v.kinship.length,
+    });
     if (!verdict.ok) {
       setProblem(problemSentence(verdict.problem));
       return;
@@ -674,6 +772,8 @@ function DecisionForm({
       action: candidate.action,
       ...(candidate.omissions ? { omissions: [...candidate.omissions] } : {}),
       ...(candidate.photoLeftOut ? { photoLeftOut: candidate.photoLeftOut } : {}),
+      // Indexes and reasons ONLY — ⛔ a name (the input is `.strict()`; the reviewer never edits the list).
+      ...(candidate.kinshipLeftOut ? { kinshipLeftOut: candidate.kinshipLeftOut.map((k) => ({ index: k.index, reason: k.reason })) } : {}),
       ...(candidate.reasonCode ? { reasonCode: candidate.reasonCode } : {}),
       ...(internalNote.trim() !== '' ? { internalNote } : {}),
     };
@@ -697,7 +797,15 @@ function DecisionForm({
       {action === 'approved_with_omissions' && (
         <>
           <p className="mt-2 text-sm opacity-70">{t('memorial.decide.selectHint')}</p>
-          <SentencePicker field="body" text={body} ranges={bodyRanges} choices={choices} onChoose={choose} legend={t('memorial.decide.sentencesBody')} />
+          <SentencePicker
+            field="body"
+            text={body}
+            ranges={bodyRanges}
+            choices={choices}
+            onChoose={choose}
+            legend={t('memorial.decide.sentencesBody')}
+            declared={declared}
+          />
           {v.altText !== null && (
             <SentencePicker
               field="altText"
@@ -706,6 +814,7 @@ function DecisionForm({
               choices={choices}
               onChoose={choose}
               legend={t('memorial.decide.sentencesAlt')}
+              declared={declared}
             />
           )}
           {v.hasPhoto && (
@@ -720,16 +829,57 @@ function DecisionForm({
                   label={t('memorial.decide.reasonFor')}
                   value={photoOut.reason}
                   onChange={(reason) => setPhotoOut({ ...photoOut, reason })}
+                  declared={declared}
                 />
               )}
             </div>
+          )}
+          {kinship.length > 0 && (
+            <fieldset className="mt-2" data-testid="memorial-kinship-choices">
+              <legend className="text-sm font-bold">{t('memorial.decide.kinship')}</legend>
+              <p className="text-xs opacity-70">{t('memorial.detail.kinshipRelative')}</p>
+              <ol className="flex flex-col gap-1">
+                {kinship.map((e, index) => {
+                  const choice = kinshipOut.get(index) ?? { checked: false, reason: '' };
+                  const set = (next: SentenceChoice): void => {
+                    setInPhotoConfirmed(false);
+                    setKinshipOut((prev) => new Map(prev).set(index, next));
+                  };
+                  return (
+                    <li key={index} data-testid="memorial-kinship-choice">
+                      <label>
+                        <input type="checkbox" checked={choice.checked} onChange={(ev) => set({ ...choice, checked: ev.target.checked })} />{' '}
+                        <span className="sr-only">{t('memorial.decide.kinshipLeaveOut')}: </span>
+                        {kinshipLabel(e.relation)} — <VisibleText text={e.name} />
+                        {e.inPhoto === true && <span className="text-xs opacity-70"> ({t('memorial.detail.inPhoto')})</span>}
+                      </label>
+                      {choice.checked && (
+                        <ReasonSelect
+                          id={`reason-kinship-${index}`}
+                          label={t('memorial.decide.reasonFor')}
+                          value={choice.reason}
+                          onChange={(reason) => set({ ...choice, reason })}
+                          declared={declared}
+                        />
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </fieldset>
           )}
         </>
       )}
 
       {action === 'not_approved' && (
         <div className="mt-2">
-          <ReasonSelect id="reason-not-approved" label={t('memorial.decide.reasonCode')} value={reasonCode} onChange={setReasonCode} />
+          <ReasonSelect
+            id="reason-not-approved"
+            label={t('memorial.decide.reasonCode')}
+            value={reasonCode}
+            onChange={setReasonCode}
+            declared={declared}
+          />
         </div>
       )}
 
@@ -772,7 +922,10 @@ function WithdrawApprovalForm({
   withdraw,
   actionPending,
   onStart,
+  declared,
 }: {
+  /** KL16 — the TARGET version's `guardianDeclaration` (the label and the guidance on its reason select). */
+  declared: boolean;
   targetSubmissionId: string;
   /** "Version 1 of 2 · Sent …" for the version being withdrawn; `null` if it is not in the chain (never expected). */
   targetLabel: string | null;
@@ -795,7 +948,7 @@ function WithdrawApprovalForm({
         </p>
       )}
       <p className="text-sm opacity-70">{t('memorial.withdraw.hint')}</p>
-      <ReasonSelect id="reason-withdraw" label={t('memorial.withdraw.reason')} value={reason} onChange={setReason} />
+      <ReasonSelect id="reason-withdraw" label={t('memorial.withdraw.reason')} value={reason} onChange={setReason} declared={declared} />
       <label className="mt-3 block">
         {t('memorial.withdraw.internalNote')}
         <textarea className="mt-1 w-full rounded border p-2" rows={3} value={internalNote} onChange={(e) => setInternalNote(e.target.value)} />

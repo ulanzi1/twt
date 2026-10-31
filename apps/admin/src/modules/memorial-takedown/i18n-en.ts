@@ -36,6 +36,8 @@ const EN: Record<string, string> = {
   'takedown.drive.onPage': 'On the Sahyog Vivran page now',
   'takedown.drive.notOnPage': 'No memorial is on the page for this drive.',
   'takedown.drive.wordsUnavailable': 'The words could not be read just now.',
+  // Story 11b.5a (KL11)
+  'takedown.drive.kinshipUnavailable': 'The family list could not be read just now.',
   'takedown.drive.photo': 'The photo',
   'takedown.callBack.title': 'Call this nominee back',
   'takedown.callBack.body': 'Only this nominee — the one who sent the memorial on the page — can ask for it to be taken down. Anyone else who calls: listen, and ask them to have the nominee call.',

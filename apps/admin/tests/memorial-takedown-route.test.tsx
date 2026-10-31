@@ -42,6 +42,7 @@ function drive(poolId: string, identifier: string): MemorialTakedownDriveRespons
       hasPhoto: false,
       photoUrl: null,
       altText: null,
+      kinship: [],
     },
     nomineeToCallBack: { name: 'Asha Devi', mobile: '+919876543210' },
     smallerFix: 'send_now',

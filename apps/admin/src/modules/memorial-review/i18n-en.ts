@@ -4,7 +4,7 @@
 // `i18n-en.ts` precedent). ⛔ The family's words are CONTENT, never chrome: they are shown as stored, ⛔ translated,
 // ⛔ resolved through here. The four reasons are the epic's grounds only (`-391` Confirm 2 A) — ⛔ no catch-all.
 
-import type { MemorialDecisionProblem, MemorialReviewReason } from '@twt/contracts';
+import type { MemorialDecisionProblem, MemorialKinshipRelation, MemorialReviewReason } from '@twt/contracts';
 
 const EN: Record<string, string> = {
   'memorial.title': 'Family memorials',
@@ -99,6 +99,38 @@ const EN: Record<string, string> = {
   'memorial.reason.accuses_someone_of_wrongdoing': 'Accuses someone of wrongdoing',
   'memorial.reason.against_the_law': 'Against the law',
   'memorial.reason.identifies_a_child': 'Names or shows a child',
+  // ── Story 11b.5a — the family list (KL6 / KL12 / KL15 / KL16; copy 4.4 approved 2026-10-31) ──────────────────────────────
+  'memorial.detail.kinship': 'The family list, as sent',
+  'memorial.detail.kinshipRelative': 'Each relation is the person’s relation to the member who died.',
+  'memorial.detail.kinshipInPhoto': 'In the photo (ticked by the family)',
+  'memorial.detail.inPhoto': 'Ticked as in the photo',
+  'memorial.detail.kinshipLeftOut': 'Left out of the family list',
+  'memorial.detail.declaration':
+    'The sender has declared they are the parent or guardian of every child named or shown, or have that person’s agreement, and that every adult named has agreed.',
+  'memorial.decide.kinship': 'The family list',
+  'memorial.decide.kinshipLeaveOut': 'Leave this one out',
+  'memorial.decide.kinshipInPhotoConfirm':
+    'This person is ticked as in the photo; the photo is being kept. Record the decision again to confirm.',
+  // KL16 — for a version whose permission carried the declaration (the label and the guidance shown by EVERY reason select).
+  'memorial.reason.identifies_a_child_declared': 'Names or shows a child the declaration cannot cover',
+  'memorial.reason.childGuidance':
+    'Use this only where something in the memorial itself shows the sender’s declaration cannot cover the child; the family is told why.',
+  // The fourteen relations — ⚠ pinned EQUAL to `packages/i18n/locales/en/memorial.json` `kinship.<code>` (a test): the admin is
+  // a browser bundle with its own English chrome, the app and the public page read the namespace.
+  'memorial.kinship.wife': 'Wife',
+  'memorial.kinship.husband': 'Husband',
+  'memorial.kinship.son': 'Son',
+  'memorial.kinship.daughter': 'Daughter',
+  'memorial.kinship.father': 'Father',
+  'memorial.kinship.mother': 'Mother',
+  'memorial.kinship.brother': 'Brother',
+  'memorial.kinship.sister': 'Sister',
+  'memorial.kinship.sons_son': 'Grandson (son\'s son)',
+  'memorial.kinship.daughters_son': 'Grandson (daughter\'s son)',
+  'memorial.kinship.sons_daughter': 'Granddaughter (son\'s daughter)',
+  'memorial.kinship.daughters_daughter': 'Granddaughter (daughter\'s daughter)',
+  'memorial.kinship.daughter_in_law': 'Daughter-in-law',
+  'memorial.kinship.son_in_law': 'Son-in-law',
 };
 
 /**
@@ -122,6 +154,10 @@ const PROBLEM_SENTENCES: Record<MemorialDecisionProblem, string> = {
   nothing_left: 'Nothing of the words would be left. Choose “Do not approve” instead.',
   alt_text_nothing_left:
     'Nothing of the photo’s description would be left while the photo stays. Leave out the photo instead — it takes its description with it.',
+  // Story 11b.5a (KL6)
+  kinship_without_list: 'This version has no family list, so no name can be left out of one.',
+  kinship_index_out_of_range: 'A chosen name is not in this version’s family list. Reload the page and choose again.',
+  kinship_order: 'The chosen names are out of order or chosen twice. Reload the page and choose again.',
 };
 
 /** A problem this build does not know (a newer server) — still a complete sentence, never a lead-in with nothing after it. */
@@ -145,6 +181,16 @@ export function withdrawAnswer(kind: 'recorded' | 'error', versionNo: number | n
     : resolveEn(`memorial.withdraw.${kind}For`).replace('{n}', String(versionNo));
 }
 
-export function reasonLabel(reason: MemorialReviewReason): string {
+/**
+ * A reason's label. KL16 — `declared` (the version's `guardianDeclaration`): the child reason reads *"…a child the declaration
+ * cannot cover"* (copy 4.4); v1–v3 rows keep the plain label.
+ */
+export function reasonLabel(reason: MemorialReviewReason, declared = false): string {
+  if (declared && reason === 'identifies_a_child') return resolveEn('memorial.reason.identifies_a_child_declared');
   return resolveEn(`memorial.reason.${reason}`);
+}
+
+/** A family-list relation's English label (the relation TO THE MEMBER WHO DIED). */
+export function kinshipLabel(relation: MemorialKinshipRelation): string {
+  return resolveEn(`memorial.kinship.${relation}`);
 }

@@ -134,10 +134,18 @@ PQ1 later narrows the door.
 **N4 — The door is checked ONCE per death, at the first report.** Inside `tryConverge`, under the intake lock: when N1 is FALSE (⛔ claim,
 or every claim released as alive) the door decides; when N1 is TRUE the death was already reported while the person passed the door, and
 today's flow (converge / idempotent / cross-channel pending / re-file guard) runs UNCHANGED. "At their death" = the state when the death is
-first reported (G10: ⛔ death date exists at intake). ⚠ This includes a standing claim that is TERMINAL (`denied` / `closed`, ⛔
-innocence-released): `getConvergenceCandidate` skips it, so a new report MINTS a second claim through `assertRefileAllowed` with ⛔ door —
-even for a member withdrawn or terminated since. Consistent with `-423` reading 1 (the death was reported while the person passed the
-door); AC8 tests it. ⚠ Termination and withdrawal take ⛔ intake lock, so one that commits DURING a first intake does ⛔ stop that
+first reported (G10: ⛔ death date exists at intake). ⚠ **A standing claim that is TERMINAL** (`CLAIM_TERMINAL_STATES` =
+`settled` / `denied` / `closed`, `claim/read.ts`; ⛔ innocence-released) is ⛔ a convergence candidate, so a new report reaches the MINT
+branch — with ⛔ door (N1 is TRUE), even for a member withdrawn or terminated since — and meets the EXISTING mint guards UNCHANGED, which
+decide it (⛔ the door, ⛔ "it mints"):
+  - most recent terminal claim `closed` FOR NO RESPONSE (a `claim_correction_closures` row in state `closed`) ⇒ `assertRefileAllowed`
+    throws 409 `claim.refile_requires_confirmation` until a person records a re-file confirmation (`-254`); then it mints and consumes it;
+  - `denied` (incl. a stage-3 uphold), or `closed` by another trigger (⛔ correction-closure row) ⇒ mints freely;
+  - the death's payment already committed (`settled`, or the paid claim overridden apart) ⇒ mints and is CLOSED IN THE MINT (6.28 OP4
+    H(ii), `2026-10-11-319`).
+  (`approved` and `reversed` are ⛔ terminal ⇒ candidates ⇒ converge / pend, as today.) The door sits BEFORE all of this, so for a FIRST
+  report the door's 409 wins over the re-file 409; for a later report the door never runs. Consistent with `-423` reading 1 (the death was
+  reported while the person passed the door); AC8 tests each leg. ⚠ Termination and withdrawal take ⛔ intake lock, so one that commits DURING a first intake does ⛔ stop that
 intake's mint — consistent with "the state at the first report"; noted, ⛔ fixed.
 
 **N5 — Refused at the door means ⛔ record.** A refusal writes ⛔ `claims` row, ⛔ `intake_attempts` row, ⛔ `events_log` row, ⛔ new audit
@@ -174,7 +182,14 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
   (`member.rtbf_anonymized`) in ONE `openScopeTx`. `apps/api/src/modules/member-data-rights/handlers.ts` `fulfilErasure`: ticket →
   attribution → `claimIdempotency` → `openScopeTxClaimed` → `requireTicketInScope` → `memberExists` → the same advisory lock →
   `getMemberStateAt` → `resolveRtbfLegality` → the same two 409s → `withCompensatingAudit(anonymizeMember + projectMemberState)`.
-  `anonymizeMember(` has ⛔ other production caller; ⛔ job runs an erasure later (⛔ grace period).
+  `anonymizeMember(` has ⛔ other production caller; ⛔ job runs an erasure later (⛔ grace period). Traced 2026-10-31: the member route is
+  ONE synchronous step (`rtbf/routes.ts` has one route — the confirm; ⛔ request-then-execute); the off-portal ticket is filed EARLIER
+  but the erasure is a separate act whose legality is read INSIDE the executing transaction, so a ticket filed before a death report and
+  executed after it is refused; a replay of the irreversible act is refused (409 `member_data_rights.idempotency_replay`) and a FAILED
+  attempt releases its key, so a retry re-reads legality. `member.rtbf_anonymized` is emitted ONLY by the two handlers; the
+  `ANONYMIZED_SENTINEL` is written ONLY inside `member/anonymize.ts`. The jobs that DELETE rows (`apps/jobs/src/device-token-cleanup.ts`
+  — stale push tokens; `sms-delivery-prune.ts` — the global SMS delivery-report inbox) prune OPERATIONAL rows, ⛔ the member's record;
+  ⛔ touched (⛔ an erasure in `-423`'s sense).
 - **G2 — `resolveRtbfLegality(db, memberId, currentState)`** returns `already_anonymized` | `legal via withdrawn` | `legal via terminated`
   (reads `getCurrentMemberModerationOverlay`, unbounded, on purpose) | `illegal`. ⛔ `pariwarId` parameter, ⛔ claim input. ⛔ Direct unit
   test of the predicate (the race is covered by `packages/domain/tests/integration/member/rtbf-concurrency.spec.ts`).
@@ -387,7 +402,14 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   caller) — `memberDomain.anonymizeMember(` / `anonymizeMember(` appears at EXACTLY the two G1 sites; and in each of those FILES,
   `resolveRtbfLegality(` — or the `assertAnonymizable(` call that wraps it (`rtbf/handlers.ts` `confirm` reaches the predicate only
   through it) — precedes `anonymizeMember(` in the same function. A POSITIVE CONTROL (a planted third caller in a fixture string) is
-  caught. A third caller fails CI until it is reviewed against `-423`.
+  caught. A third caller fails CI until it is reviewed against `-423`. ⭐ **Delayed-job protection — the fence pins the ERASURE ACT,
+  ⛔ only the function name**, because a future job or sweep could erase without calling `anonymizeMember(`: the same file also asserts
+  (i) `'member.rtbf_anonymized'` as an `eventType` is emitted ONLY at the two G1 handlers (the reducer accepts it from EVERY live state —
+  DL13 keeps that arm broad — so an emitter elsewhere would bypass the lock entirely), and (ii) `ANONYMIZED_SENTINEL` is WRITTEN only in
+  `member/anonymize.ts` (comparisons `===` / `!==` and the read-side imports are allow-listed). Both scans cover `apps/jobs/src`. And
+  the `rtbf-legality.ts` header (DL13) states the RULE a future deferred / scheduled erasure must follow: legality is decided at
+  EXECUTION, inside the executing transaction, after `acquireErasureLocks` — ⛔ at request or scheduling time (a death can be reported
+  in between). ⚠ Out of the fence's reach, said plainly: SQL in migrations or operator scripts; those are reviewed by hand.
 - **DL16 — Does the helpline audit line NAME the reason? (BigDev's.)** Today ⛔ (N5: `context` is hashed). Option (a): pass
   `resourceLocator` = `claim-intake-refused:<reason>` (lowercase, NON-PII, caller-authored — `auth/shared/audit.ts`'s only readable
   channel) on the helpline catch's line when `err.code === CLAIM_INTAKE_REFUSED_CODE` — cost: the operator's refusals become countable
@@ -460,9 +482,9 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
    does ⛔ match `/left|removed|erased|identity|KYC|member (id|number)/i` (⛔ reason). `apps/mobile/tests/unit/helpline-cta-presence.test.ts`
    gains a `describe` for `(claim)/cannot-file.tsx` (as 6.19c did).
 8. **AC8 — Once per death (N4).** A member with a STANDING report whose state has since become refusable (e.g. terminated after the first
-   filing) gets today's flow on a second report — ⛔ door refusal — in each of: idempotent (same channel), cross-channel `pending`, the
-   re-file guard, AND a standing claim that is TERMINAL (`denied` / `closed`, ⛔ released) ⇒ a NEW claim is minted through
-   `assertRefileAllowed`. A member whose ONLY claim was released by an innocence finding meets the door again on a new report.
+   filing) gets today's flow on a second report — ⛔ door refusal — in each of: idempotent (same channel); cross-channel `pending`; a
+   TERMINAL standing claim, per N4's three legs — `closed` for no response ⇒ 409 `claim.refile_requires_confirmation` (⛔
+   `claim.intake_refused`), then minted once a confirmation is recorded; `denied` ⇒ minted; `settled` ⇒ minted and closed in the mint. A member whose ONLY claim was released by an innocence finding meets the door again on a new report.
 9. **AC9 — The operator sees why (`-423` reading 3, DL9).** `apps/admin/tests/helpline-claim-page.test.tsx` (the submit-flow template is its
    "Story 6.28 (OP10)" test; `new api.ApiError(409, code, msg, details)`): a 409 `claim.intake_refused` with each reason renders that
    reason's EXACT English sentence + the `tellCaller` sentence in the console's ONE `role="alert"` (assert the sentences — `resolveEn`
@@ -476,7 +498,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
     `recordCorrection` on a `dpdpa-data-rights` ticket succeeds. Source fences (one file, with a POSITIVE CONTROL each): the gate SQL —
     pattern `f.kind = 'member_found_innocent'` inside a `NOT EXISTS` — appears ONLY in `death-report.ts`, with a named allow-list of the
     read-only copies (`approval-warnings.ts` ×3, `peer-mesh-read.ts` ×1; the writer, the schema and the migration do ⛔ match the pattern);
-    `death-report.ts`'s imports are only `drizzle-orm`, `../db.js`, `../ids/index.js` (TR1); and DL15's caller fence.
+    `death-report.ts`'s imports are only `drizzle-orm`, `../db.js`, `../ids/index.js` (TR1); and DL15's fences — the two `anonymizeMember(` callers, the two `member.rtbf_anonymized` emitters, the one sentinel writer.
 12. **AC12 — ⛔ Regression.** `pnpm ci:local` 36 / 36 green on the story's own database ([[project_prepush_hook_inherits_5432]] —
     `DATABASE_URL=<story port>` on every push) — including `friction-budget` (a row or a 6.38 disposition, Task 4.3) and `i18n-parity`;
     every existing rtbf, member-data-rights, helpline-intake, member-intake, nominee-lock, refile, `claim/icp`,
@@ -674,6 +696,7 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.4 | Two technicals clarified (BigDev): (1) N4 / AC8 — a TERMINAL standing claim meets the existing mint guards, ⛔ "it mints": `closed` for no response ⇒ 409 re-file confirmation first; `denied` ⇒ mints; `settled` ⇒ mints and is closed in the mint. (2) G1 / DL15 — ⛔ delayed erasure exists (legality read at execution, failed attempts release the key); the fence now pins the ACT (the `member.rtbf_anonymized` emitters and the sentinel writer, incl. `apps/jobs/src`), and the header states the execution-time rule for any future deferred erasure. |
 | 2026-10-31 | 1.3 | Task 0.3 done — the routing note `trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` WRITTEN (⛔ sent): Q1 (a) / (b), Q2 (a) / (b), Q3. PQ2 split into (a) / (b); PQ1 (a) is `pending-valid` only (manual-fallback `pending-fee` moves to PQ1 (b); manual-fallback `lock-in` is ⛔ asked — `-423`'s "first days after joining"). The DL10 Hindi confirmed reviewed by BigDev (*"DL10 Hindi is fine"*). |
 | 2026-10-31 | 1.2 | Task 0.2 answered — BigDev: *"DL1-DL16 as recommended"* (DL16 (a); the English copy approved; the DL10 Hindi ⛔ yet confirmed as reviewed). |
 | 2026-10-31 | 1.1 | Fresh-context validation (`bmad-create-story validate 6.38`): the refusal vocabulary is domain-owned (contracts mirrors it); AC5 split into the two-party and the three-party race, run through the new `acquireErasureLocks` helper, moved to Task 3.6; the reason kept off the member route's wire; N5's audit lines corrected and DL16 added; N8 qualified for withdrawn members; the stale operator alert cleared on a member change; PQ1 split into (a) / (b); TR2 / TR3 re-traced; the friction-budget row, the fences, the test helpers and the omitted `-423` / `-238` text added. |

@@ -10,14 +10,15 @@ PINNED: `3d6b46c5` = `origin/main` (ledger 2026-11-01a — Story 12.1 landed). T
 (`beae5116..3d6b46c5`, the module-marketplace primitive) touches none of them. Perishable — re-check at Task 0.1.
 Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.1 — created v1.0 by `bmad-create-story 13.2`, then validated by one fresh-context checker).
+STATUS: ready-for-dev (v1.2 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
-Panel. ⚠ ONE premise is conditional, ⛔ asserted: AT4 (never allocate a code a member already typed) costs a field
-worker nothing ONLY IF no code was handed out outside this registry before 13.1 ships (Task 0.2 Q-S5). If BigDev says
-codes were or will be issued by hand, AT4 forfeits that worker's credit for those signups — that is money owed to a
-person, and AT4 must then be re-decided (with an import path owned by 13.1) before code, and this gate re-derived.
+Panel. The ONE premise that was conditional — AT4 (never allocate a code a member already typed) costs a field worker
+nothing ONLY IF no code was handed out outside this registry before 13.1 ships — is now ESTABLISHED: Q-S5 ANSWERED
+2026-11-01, BigDev: *"Answer is no to both"* (⛔ code has been or will be handed out by hand before 13.1; member signup
+will ⛔ go live before 13.1). ⇒ every `member_attribution` code is one no field worker holds, and AT4 forfeits nothing.
+⚠ If either fact changes before 13.1 ships, AT4 and this gate are re-decided (STOP S5).
 The edge that WOULD be the Panel's — a NEW RBAC permission key for field-worker features (`2026-06-21-059` amendment
 B(3)) — this story does ⛔ not touch: it adds ⛔ no endpoint and ⛔ no key (AT8).
 
@@ -135,8 +136,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   `attribution_source text NOT NULL`, `pariwar_id`, `captured_at`, `UNIQUE(member_id)`, ⛔ no FK on the code; migration
   `0027_vyawastha-shulk-receipts.sql` grants `SELECT, INSERT` with RLS ENABLE + FORCE and a SELECT policy on `pariwar_id`
   (so the AT4 read is permitted under `twt_app`). Every row captured before this registry exists names a code that no
-  field worker held **in this system** — ⚠ whether a code was handed out by hand outside it is BigDev's to answer
-  (Task 0.2 Q-S5; §0). Nothing is live (member signup has ⛔ gone live), so today the table holds no production rows.
+  field worker held — ⛔ code was handed out by hand outside this system (Q-S5, BigDev 2026-11-01: *"Answer is no to
+  both"*; §0). Nothing is live (member signup has ⛔ gone live), so today the table holds no production rows.
 - **G3 — there is no field-worker table, package, permission key or endpoint.** The RBAC role exists with nothing in it:
   `packages/domain/src/rbac/roles.ts` (`field_worker`: `permissions: []`, `scopeCeiling: 'self'`, comment *"Dispatch keys
   land Epic 12"*) and `packages/contracts/src/rbac/roles.ts`. ⚠ That "Epic 12" (and the `permissions.ts` catalog
@@ -215,8 +216,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   caller's scope, before the insert). Why: those strings were typed before any field worker held them (G2); if the
   registry later drew the same digits, every pre-registry signup that typed them would silently credit the new worker.
   - ⛔ (b) no check — a backfill (C4) would then need a temporal rule to undo the false matches.
-  - ⚠ CONDITIONAL on Task 0.2 Q-S5 (§0): if codes were handed out by hand before 13.1, AT4 would make exactly those
-    codes unallocatable and forfeit their holders' credit — then AT4 is re-decided with an import path (13.1's).
+  - ✅ Premise ESTABLISHED by Q-S5 (BigDev 2026-11-01: *"Answer is no to both"*, §0): ⛔ code was or will be handed out
+    by hand before 13.1, and signup will ⛔ go live before it — so AT4 forfeits no one's credit. Had either been yes,
+    AT4 would have needed an import path (13.1's); STOP S5 re-opens it if either fact changes.
   - ⚠ Not index-enforceable (different table). There is ⛔ `(pariwar_id, attribution_source)` index on
     `member_attribution`, so each candidate scans the Pariwar's rows — fine at admin "Add Field Worker" rate; ⛔ add an
     index (AC9). The race: a capture whose tx is concurrent with the allocation may commit AFTER it yet carry an EARLIER
@@ -385,8 +387,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     route carrying `referenceCode` / `attributionCode`; (S4) a decision mentioning field workers or attribution has
     landed; (S5) member signup has gone live, or any record shows attribution codes handed out outside this registry.
   - [ ] 0.2 BigDev answers AT1–AT10 **and Q-S5** — *"Has any field-worker code been, or will any be, handed out by
-    hand before Story 13.1 ships, and will member signup go live before 13.1?"* — verbatim into Debug Log (a). If Q-S5
-    is YES, STOP: AT4 and the §0 gate are re-decided first. If any answer departs from ⭐, update the ACs and Tasks
+    hand before Story 13.1 ships, and will member signup go live before 13.1?"* — verbatim into Debug Log (a).
+    ✅ **Q-S5 ANSWERED 2026-11-01 (create-story pass), BigDev: *"Answer is no to both"*** — AT4 stands; dev re-confirms
+    S5 at 0.1 only. ⏳ AT1–AT10 still to be answered. If any answer departs from ⭐, update the ACs and Tasks
     BEFORE coding ([[feedback_spec_edits_must_propagate_to_tasks]]).
   - [ ] 0.3 ⛔ No decision entry is needed (all AT decisions are author-level, §0). If BigDev asks for one, stage it in the
     scratchpad, insert above the newest `### Decision`, verify additive-only, and commit it ALONE before code
@@ -558,6 +561,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 
 ### Debug Log References
 
+(a) Task 0.2 answers, verbatim — **Q-S5** (2026-11-01, during create-story, asked as *"Has any field-worker code been, or
+will any be, handed out by hand before Story 13.1 ships? Will member signup go live before 13.1?"*): BigDev — *"Answer
+is no to both"*. AT1–AT10: ⏳ pending.
+
 ### Completion Notes List
 
 ### File List
@@ -566,5 +573,6 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | 1.2 | Q-S5 ANSWERED — BigDev: *"Answer is no to both"* (no hand-issued codes before 13.1; signup not live before 13.1). AT4's premise and the §0 gate now ESTABLISHED, ⛔ conditional; G2 and Task 0.2 updated; Debug Log (a) started. AT1–AT10 still pending. |
 | 2026-11-01 | 1.1 | Fast-forwarded to `3d6b46c5` (12.1 landed). One fresh-context checker: 1 critical / 2 high / 7 medium / 11 low, all applied — AT8 (iii) route rule rewritten for admin `/p/:pariwarId` routes + `SCOPE_RESOLUTION_HOOK` marker + throwing walker + exact pin (two routes); Q-S5 / S5 and the §0 premise made conditional; owner-role leg that proves the `pariwar_id` predicate; 0192 append-only + TRUNCATE triggers; migration number left `NNNN` (0195 contended by 14-3 / 6-22); flag-in-a-separate-`openScopeTx`; the "Epic 12" comment edit DROPPED (Decision `2026-08-13-104`); C3–C5 also homed under 13.3 / 13.4 / 13.5 / 13.8; carried-item writes moved into Task 0.4; L-1…L-11. |
 | 2026-11-01 | 1.0 | Created by `bmad-create-story 13.2` at `beae5116`; row backlog → ready-for-dev; AT1–AT10 PROPOSED. |

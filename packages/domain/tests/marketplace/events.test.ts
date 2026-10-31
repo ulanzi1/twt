@@ -128,6 +128,13 @@ describe('ModuleAuthoredPayloadSchema', () => {
     ['a lead URL that is not canonical (upper-case host)', { lead_handoff_url: 'HTTPS://Leads.Partner.Example/hdfc' }],
     ['a lead URL with a lone surrogate', { lead_handoff_url: 'https://leads.partner.example/x\ud800' }],
     ['an "@" in the lead URL path', { lead_handoff_url: 'https://partner.example/@team/hook' }],
+    ['a malformed escape in the lead URL (R3-6)', { lead_handoff_url: 'https://leads.partner.example/a%zz' }],
+    ['a "|" in the lead URL (R3-6)', { lead_handoff_url: 'https://leads.partner.example/a|b' }],
+    // R4-3: finite out-of-range values zod's `datetime` ACCEPTS, so only the shared range check refuses them.
+    ['a valid_until that is year 10000 in UTC (R3-4, R4-3)', { valid_until: '9999-12-31T20:00:00-05:00' }],
+    ['an offset of +24:00 (Date.parse is NaN — R4-3)', { valid_until: '2026-12-01T00:00:00+24:00' }],
+    ['a year-0000 valid_from (R3-4)', { valid_from: '0000-06-01T00:00:00.000Z' }],
+    ['a valid_from before the year-2000 floor (R4-1)', { valid_from: '1999-12-31T23:59:59.999Z' }],
   ])('rejects %s — the same field rules as the manifest input, not only the row (RP9)', (_l, o) => {
     expect(ModuleAuthoredPayloadSchema.safeParse(authored(o)).success).toBe(false);
   });
@@ -179,13 +186,28 @@ describe('transition schemas', () => {
     const arms = [
       [ModuleScheduledPayloadSchema, { from_state: 'draft', to_state: 'scheduled' }],
       [ModuleActivatedPayloadSchema, { from_state: 'draft', to_state: 'active' }],
-      [ModuleArchivedPayloadSchema, { from_state: 'active', to_state: 'archived', reason: 'trustee_archived' }],
+      // An AUTOMATIC reason: `trustee_archived` is refused under `system` (R3-2, the next test).
+      [ModuleArchivedPayloadSchema, { from_state: 'active', to_state: 'archived', reason: 'valid_until_reached' }],
     ] as const;
     for (const [schema, shape] of arms) {
       expect(schema.safeParse({ ...shape, trigger: 't', actor: 'member' }).success).toBe(false);
       expect(schema.safeParse({ ...shape, trigger: 't', actor: 'system' }).success).toBe(true);
       expect(schema.safeParse({ ...shape, trigger: 't', actor: 'trustee' }).success).toBe(true);
       expect(schema.safeParse({ ...shape, trigger: 't', actor: 'system', extra: 1 }).success).toBe(false);
+    }
+  });
+
+  // R3-2: RV8's attribution rule held in the SCHEMA, so the projector refuses it too (the registry only carries the
+  // schema — `appendEvent` parses it only when passed `payloadSchema`; R4-5).
+  it('archived refuses trustee_archived under system, and accepts it from operator / trustee', () => {
+    const shape = { from_state: 'active', to_state: 'archived', trigger: 't', reason: 'trustee_archived' };
+    const refused = ModuleArchivedPayloadSchema.safeParse({ ...shape, actor: 'system' });
+    expect(refused.success).toBe(false);
+    expect(refused.error?.issues.map((i) => i.path.join('.'))).toEqual(['actor']);
+    expect(ModuleArchivedPayloadSchema.safeParse({ ...shape, actor: 'operator' }).success).toBe(true);
+    expect(ModuleArchivedPayloadSchema.safeParse({ ...shape, actor: 'trustee' }).success).toBe(true);
+    for (const reason of ['valid_until_reached', 'slot_capacity_exhausted']) {
+      expect(ModuleArchivedPayloadSchema.safeParse({ ...shape, reason, actor: 'system' }).success).toBe(true);
     }
   });
 });

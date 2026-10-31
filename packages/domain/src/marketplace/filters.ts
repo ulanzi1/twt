@@ -203,13 +203,25 @@ function hasUrlUnsafeChar(raw: string): boolean {
 }
 
 /**
+ * The characters RFC 3986 allows in an `https:` URL that carries ⛔ userinfo, query or fragment: unreserved,
+ * sub-delims, `:`, `/` and `%` (`@`, `?`, `#` are refused by their own rules). The WHATWG parser leaves
+ * `|`, `^`, `[`, `]` and a malformed `%` escape in `href` unchanged, so the canonical-form rule alone
+ * stores strings a strict RFC 3986 parser refuses (review R3-6).
+ */
+const RFC3986_URL_CHARS = /^[A-Za-z0-9\-._~!$&'()*+,;=:/%]*$/;
+/** A `%` that does not begin a `%HH` escape. */
+const MALFORMED_PERCENT_ESCAPE = /%(?![0-9A-Fa-f]{2})/;
+
+/**
  * Where 12.5 delivers this module's leads (A3): `https:` only; ⛔ userinfo — and ⛔ an `@` ANYWHERE in the
  * string, stricter than QE5 / A3's "no userinfo" (a raw `@` is the classic parser-differential), so
  * `https://partner.example/@team/hook` is refused (RV4; recorded in the Completion Notes); ⛔ query string and ⛔
  * fragment (a raw `?` or `#` is refused too, since the parser reports a bare `?` / `#` as empty); ⛔ whitespace,
  * control characters and backslashes (`hasUrlUnsafeChar`); the host is ⛔ an IP literal (v4 / v6) and ⛔
  * `localhost` (or a `*.localhost` name); ≤ 2048 characters; and the string must equal what the parser would
- * produce (`url.href`, or `url.href` less a bare origin's `/`) — the canonical-form rule (RP1).
+ * produce (`url.href`, or `url.href` less a bare origin's `/`) — the canonical-form rule (RP1); and it must be
+ * RFC 3986-valid too — only `RFC3986_URL_CHARS`, and a `%` only as a `%HH` escape (R3-6). Any explicit port is
+ * accepted here; whether a port is acceptable is a send-time question (carried item C7).
  * ⚠ This is a WRITE-time shape rule only — a send-time check of the RESOLVED address (SSRF / DNS
  * rebinding) is Story 12.5's (carried item C7).
  */
@@ -251,6 +263,12 @@ export const moduleLeadHandoffUrlSchema = z
         'lead_handoff_url must be in canonical form: https://<lower-case host>/<path>, no default port, no dot segments, special characters percent-encoded',
       );
     }
+    // RFC 3986 validity (R3-6) — what WHATWG leaves alone, a strict parser (12.5's client may be one) refuses.
+    if (!RFC3986_URL_CHARS.test(raw) || MALFORMED_PERCENT_ESCAPE.test(raw)) {
+      fail(
+        'lead_handoff_url must be RFC 3986-valid: only unreserved, sub-delim, ":" and "/" characters, and "%" only as a %HH escape',
+      );
+    }
   });
 
 /** A Secret Manager secret NAME (G6) — ⛔ a resource path, ⛔ a key value. */
@@ -258,7 +276,39 @@ export const moduleSigningKeySecretNameSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{1,255}$/, 'lead_handoff_signing_key_secret_name must match ^[A-Za-z0-9_-]{1,255}$');
 
-const isoInstantSchema = z.string().datetime({ offset: true });
+/**
+ * The years an instant may fall in, in UTC (reviews R3-4, R4-1). The ceiling: past 9999 `toISOString()` writes
+ * `+010000-…`, which zod's `datetime` refuses. The floor is 2000, ⛔ 0001: Postgres refuses year 0 (22008); drizzle
+ * reads a timestamptz back through `new Date(text)`, whose legacy parser turns `'0001-01-01 00:00:00+00'` into 2001
+ * and `'0050-…'` into 1950 (years 1–99), while the command guards read the same column through pg's own parser —
+ * the two would disagree about the window; and in a non-UTC session an old date whose zone offset carries seconds
+ * (LMT) reads as an Invalid Date. A module window that starts before 2000 has no meaning, so the floor costs nothing.
+ */
+const MIN_INSTANT_YEAR = 2000;
+const MAX_INSTANT_YEAR = 9999;
+const INSTANT_RANGE_MESSAGE = `must be a real instant in UTC years ${String(MIN_INSTANT_YEAR)}–${String(MAX_INSTANT_YEAR)}`;
+
+/**
+ * An ISO-8601 instant with an offset, whose UTC value lies in years 2000–9999 (reviews R3-4, R4-1). zod's `datetime`
+ * bounds only the WRITTEN digits: `9999-12-31T20:00:00-05:00` is year 10000 in UTC, and an offset of `+24:00` or more
+ * makes `Date.parse` NaN. Each is a manifest error HERE, ⛔ a projector or persist error at genesis. The range check
+ * is a `.pipe`, so it runs ONLY on a string `datetime` accepted — a malformed string carries the one `datetime`
+ * issue, ⛔ a second, misleading range message (R4-2). Shared by `ModuleAuthoredPayloadSchema` (events.ts).
+ */
+export const moduleInstantSchema = z
+  .string()
+  .datetime({ offset: true })
+  .pipe(
+    z.string().refine(
+      (v) => {
+        const ms = Date.parse(v);
+        if (!Number.isFinite(ms)) return false;
+        const year = new Date(ms).getUTCFullYear();
+        return year >= MIN_INSTANT_YEAR && year <= MAX_INSTANT_YEAR;
+      },
+      { message: INSTANT_RANGE_MESSAGE },
+    ),
+  );
 
 // ── The manifest ───────────────────────────────────────────────────────────────────────────────────
 
@@ -276,8 +326,8 @@ const ModuleManifestInputSchema = z
     description_hi: moduleDescriptionSchema,
     eligibility_filter: EligibilityFilterV1Schema,
     scope_filter: ScopeFilterV1Schema,
-    valid_from: isoInstantSchema,
-    valid_until: isoInstantSchema,
+    valid_from: moduleInstantSchema,
+    valid_until: moduleInstantSchema,
     slot_capacity: moduleSlotCapacitySchema,
     lead_handoff_url: moduleLeadHandoffUrlSchema,
     lead_handoff_signing_key_secret_name: moduleSigningKeySecretNameSchema,
@@ -293,6 +343,12 @@ const ModuleManifestInputSchema = z
  * the row's CHECK (RV7).
  */
 export function refineModuleWindow(v: { valid_from: string; valid_until: string }, ctx: z.RefinementCtx): void {
+  // A field that is not a valid instant already carries its own issue (`moduleInstantSchema`) — a zod refinement
+  // still runs on a "dirty" object, so ⛔ add a misleading "after" message on top of it (R3-4). The guard is the
+  // field schema itself, ⛔ `Date.parse`: V8 also parses strings `datetime` refuses, e.g. `'2027-01-01'` (R4-2).
+  if (!moduleInstantSchema.safeParse(v.valid_from).success || !moduleInstantSchema.safeParse(v.valid_until).success) {
+    return;
+  }
   if (!(Date.parse(v.valid_until) > Date.parse(v.valid_from))) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

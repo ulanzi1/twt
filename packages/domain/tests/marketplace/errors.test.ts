@@ -21,8 +21,14 @@ import { mapModuleWriteError } from '../../src/marketplace/project.js';
 const BOUND = 'https://leads.partner.example/hdfc/twt-bihar';
 const TRIGGER_TEXT = `${PREFIX} — only the event-replay projector may create a module row (Story 12.1 I1); attempted INSERT of module m1`;
 
+/** pg's `DatabaseError` shape: a `code` AND a `severity` (the server's required `S` field). */
 function pgError(code: string, message: string): Error {
-  return Object.assign(new Error(message), { code });
+  return Object.assign(new Error(message), { code, severity: 'ERROR' });
+}
+
+/** A Node system error (a socket failure): a string `code`, ⛔ `severity`. */
+function nodeError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code, errno: -32, syscall: 'write' });
 }
 
 /** What `db.insert(...)` throws on drizzle-orm 0.45: the wrapper's message holds the SQL and every parameter. */
@@ -55,13 +61,26 @@ describe('pgMessageOf / pgSqlstateOf', () => {
   });
 });
 
-describe('pgSqlstateOf — a SQLSTATE is five upper-case alphanumerics (RP8)', () => {
-  it.each(['ECONNRESET', 'ETIMEDOUT', 'p0001', '4001', '400011'])('%s is not a SQLSTATE ⇒ null', (code) => {
-    expect(pgSqlstateOf(drizzleWrapped(pgError(code, 'socket')))).toBeNull();
+describe('pgSqlstateOf — a pg-shaped error with five upper-case alphanumerics (RP8, R3-5)', () => {
+  it.each(['p0001', '4001', '400011'])('%s is not a SQLSTATE ⇒ null, even on a pg-shaped error', (code) => {
+    expect(pgSqlstateOf(drizzleWrapped(pgError(code, 'pg')))).toBeNull();
+  });
+
+  // R3-5: the five-character rule alone let EPIPE / EPERM / EBUSY through.
+  it.each(['ECONNRESET', 'ETIMEDOUT', 'EPIPE', 'EPERM', 'EBUSY'])('a Node system error %s ⇒ null', (code) => {
+    expect(pgSqlstateOf(drizzleWrapped(nodeError(code, 'socket')))).toBeNull();
+    expect(new ModulePersistError('m1', drizzleWrapped(nodeError(code, 'socket'))).sqlstate).toBeNull();
   });
 
   it.each(['40P01', '42501', '23514', 'P0001', '22P02'])('%s is returned', (code) => {
     expect(pgSqlstateOf(drizzleWrapped(pgError(code, 'pg')))).toBe(code);
+  });
+
+  // R4-4: the walk passes a link with its own string `code` but no `severity`, to the pg error below it.
+  it('a coded wrapper (no severity) over a pg error ⇒ the pg SQLSTATE, not null and not the wrapper’s code', () => {
+    const wrapper = Object.assign(new Error('app said no'), { code: 'APPXX', cause: pgError('40001', 'serialization failure') });
+    expect(pgSqlstateOf(wrapper)).toBe('40001');
+    expect(pgSqlstateOf(drizzleWrapped(wrapper))).toBe('40001');
   });
 
   it('a cyclic cause chain terminates (depth-bounded) and yields no SQLSTATE', () => {

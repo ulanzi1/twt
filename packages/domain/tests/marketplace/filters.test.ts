@@ -192,6 +192,13 @@ describe('parseModuleManifest — rejected (AC7), each with ModuleManifestInvali
     ['an un-encoded non-ASCII path character (RP1)', 'https://leads.partner.example/café'],
     ['a no-break space in the path (RP1)', 'https://leads.partner.example/x y'],
     ['over 2048 characters', `https://leads.partner.example/${'a'.repeat(2048)}`],
+    // R3-6 — each of these EQUALS its own WHATWG href, so only the RFC 3986 rule refuses it.
+    ['a malformed escape "%zz" (R3-6)', 'https://leads.partner.example/a%zz'],
+    ['a bare "%" at the end (R3-6)', 'https://leads.partner.example/a%'],
+    ['a one-digit escape "%a" (R3-6)', 'https://leads.partner.example/a%a'],
+    ['a "|" in the path (R3-6)', 'https://leads.partner.example/a|b'],
+    ['a "^" in the path (R3-6)', 'https://leads.partner.example/a^b'],
+    ['a "[" / "]" in the path (R3-6)', 'https://leads.partner.example/a[b]'],
   ])('a lead_handoff_url with %s', (_l, url) => {
     expectInvalid(manifest({ lead_handoff_url: url }));
   });
@@ -227,6 +234,49 @@ describe('parseModuleManifest — rejected (AC7), each with ModuleManifestInvali
     ['a non-ISO date', { valid_from: '1 Nov 2026' }],
   ])('%s', (_l, o) => {
     expectInvalid(manifest(o));
+  });
+
+  // R3-4 / R4-1 — zod's `datetime` bounds only the WRITTEN digits; each of these passes it and must be refused here.
+  const RANGE = 'must be a real instant in UTC years 2000–9999';
+  const messagesOf = (input: unknown): string[] => {
+    try {
+      parseModuleManifest(input);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ModuleManifestInvalidError);
+      return (err as ModuleManifestInvalidError).issues.map((i) => i.message);
+    }
+    return expect.unreachable('parseModuleManifest accepted it');
+  };
+
+  it.each([
+    ['a valid_until that is year 10000 in UTC', { valid_until: '9999-12-31T20:00:00-05:00' }],
+    ['a valid_from in year 0000 UTC', { valid_from: '0000-06-01T00:00:00Z' }],
+    ['a valid_from that is year 0000 in UTC (0001-01-01 at +05:30)', { valid_from: '0001-01-01T00:00:00+05:30' }],
+    ['an offset of +24:00 (Date.parse is NaN)', { valid_until: '2026-12-01T00:00:00+24:00' }],
+    // R4-1: drizzle reads these back through `new Date(text)` as 2001 / 1950 — the floor is 2000.
+    ['a valid_from in year 0001 (read back as 2001 — R4-1)', { valid_from: '0001-01-01T00:00:00Z' }],
+    ['a valid_from in year 0050 (read back as 1950 — R4-1)', { valid_from: '0050-01-01T00:00:00Z' }],
+    ['a valid_from one millisecond before the 2000 floor (R4-1)', { valid_from: '1999-12-31T23:59:59.999Z' }],
+  ])('%s (R3-4) — a manifest error, with no misleading window message', (_l, o) => {
+    const messages = messagesOf(manifest(o));
+    expect(messages).toContain(RANGE);
+    expect(messages).not.toContain('valid_until must be after valid_from');
+  });
+
+  // R4-2 — a malformed string carries the ONE `datetime` issue: no range message, no window message — even when V8
+  // can parse it (`'2027-01-01'`) and the pair is inverted.
+  it.each([
+    ['a non-date string', { valid_from: 'hello' }],
+    ['a date-only valid_until before valid_from', { valid_from: '2026-11-01T00:00:00Z', valid_until: '2026-10-01' }],
+    ['a slash-separated valid_from after valid_until', { valid_from: '2027/01/01', valid_until: '2026-12-01T00:00:00Z' }],
+  ])('%s (R4-2) — only the datetime issue', (_l, o) => {
+    expect(messagesOf(manifest(o))).toEqual(['Invalid datetime']);
+  });
+
+  it('R4-1 accepts the year bounds themselves: 2000-01-01 and 9999-12-31 in UTC', () => {
+    const m = parseModuleManifest(manifest({ valid_from: '2000-01-01T00:00:00Z', valid_until: '9999-12-31T23:59:59.999Z' }));
+    expect(m.validFrom.toISOString()).toBe('2000-01-01T00:00:00.000Z');
+    expect(m.validUntil.toISOString()).toBe('9999-12-31T23:59:59.999Z');
   });
 
   it.each([0, -1, 1.5, '5'])('slot_capacity %j', (cap) => {
@@ -280,6 +330,9 @@ describe('lead_handoff_url — the canonical form is accepted (RP1)', () => {
     'https://leads.partner.example/caf%C3%A9',
     'https://leads.partner.example:8443/hdfc',
     'https://leads.partner.example/a/b.c-d_e',
+    // R3-6 — every RFC 3986 sub-delim, `~`, `:` in the path, and a lower-case escape stay accepted.
+    "https://leads.partner.example/x~y/!$&'()*+,;=:z",
+    'https://leads.partner.example/caf%c3%a9',
   ])('%s is stored exactly as written', (url) => {
     expect(parseModuleManifest(manifest({ lead_handoff_url: url })).leadHandoffUrl).toBe(url);
   });

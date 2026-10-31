@@ -57,23 +57,28 @@ interface PgErrorLike {
   code?: string;
   message: string;
   constraint?: string;
+  /** pg's `DatabaseError` always carries it (the server's required `S` field); a Node system error never does. */
+  severity?: string;
 }
 
 /**
  * Walk an error's `.cause` chain (drizzle wraps the pg error, possibly more than once) and return the
- * first link carrying a string SQLSTATE `code`. A local copy of the `contribution/write.ts`
- * `uniqueViolationConstraint` walker's SHAPE (G16) — that one is private and is ⛔ refactored here.
+ * first link carrying a string SQLSTATE `code` — or, with `pgShaped`, the first link that also carries pg's
+ * `severity`, so a wrapper with its own string `code` does not hide the pg error below it (review R4-4). A local
+ * copy of the `contribution/write.ts` `uniqueViolationConstraint` walker's SHAPE (G16) — that one is private and is
+ * ⛔ refactored here.
  */
-function findPgError(err: unknown): PgErrorLike | null {
+function findPgError(err: unknown, pgShaped = false): PgErrorLike | null {
   let cur: unknown = err;
   for (let depth = 0; depth < 8 && cur !== null && cur !== undefined; depth += 1) {
     if (typeof cur === 'object') {
-      const c = cur as { code?: unknown; message?: unknown; constraint?: unknown };
-      if (typeof c.code === 'string' && typeof c.message === 'string') {
+      const c = cur as { code?: unknown; message?: unknown; constraint?: unknown; severity?: unknown };
+      if (typeof c.code === 'string' && typeof c.message === 'string' && (!pgShaped || typeof c.severity === 'string')) {
         return {
           code: c.code,
           message: c.message,
           ...(typeof c.constraint === 'string' ? { constraint: c.constraint } : {}),
+          ...(typeof c.severity === 'string' ? { severity: c.severity } : {}),
         };
       }
     }
@@ -111,12 +116,13 @@ export function pgMessageOf(err: unknown): string {
 }
 
 /**
- * The SQLSTATE of the pg error on `err`'s cause chain, or null. A SQLSTATE is five upper-case alphanumerics:
- * `findPgError` accepts any link with a string `code`, so a Node socket error (`ECONNRESET`) would otherwise
- * read as one (RP8).
+ * The SQLSTATE of the pg error on `err`'s cause chain, or null. `findPgError` accepts any link with a string
+ * `code`, so a Node system error would otherwise read as one: the walk takes the first pg-SHAPED link — a string
+ * `severity` (review R3-5; the five-character test alone (RP8) still let `EPIPE` / `EPERM` / `EBUSY` through) — and
+ * walks PAST a coded link without one (review R4-4); its code must be five upper-case alphanumerics.
  */
 export function pgSqlstateOf(err: unknown): string | null {
-  const code = findPgError(err)?.code;
+  const code = findPgError(err, true)?.code;
   return code !== undefined && /^[0-9A-Z]{5}$/.test(code) ? code : null;
 }
 
@@ -150,7 +156,14 @@ export const MODULE_LEAD_MEMBER_CONSTRAINT = 'module_lead_member_uq';
  * would then be a cross-tenant collision oracle — derive it server-side, or key `(pariwar_id, lead_id)`.
  */
 export const MODULE_LEAD_ID_CONSTRAINT = 'module_lead_id_uq';
-/** The `marketplace_modules` primary key — a genesis on an already-authored `module_id`. */
+/**
+ * The `marketplace_modules` primary key — a genesis on an already-authored `module_id`. DELIBERATE (checklist
+ * family 9, review R3-3): this key, like `STREAM_VERSION_CONSTRAINT`, ignores RLS, so a genesis under one Pariwar
+ * with a `module_id` that exists under ANOTHER is `ModuleGenesisAlreadyExistsError` — an existence signal across
+ * tenants. Accepted because the `module_id` is minted by the caller's own server code (QE15), never chosen by a
+ * client. ⭐ RE-EXAMINE if Story 12.2 lets a CLIENT choose the `module_id`: derive it server-side, or the
+ * "already exists" answer becomes a cross-tenant oracle (the `MODULE_LEAD_ID_CONSTRAINT` note, for `lead_id`).
+ */
 export const MODULE_PKEY_CONSTRAINT = 'marketplace_modules_pkey';
 
 // ── Lifecycle + projector ──────────────────────────────────────────────────────────────────────────
@@ -172,9 +185,11 @@ export class ModuleIllegalTransitionError extends Error {
 }
 
 /**
- * A `(stream_id, event_version)` conflict on the module's stream. Under the row lock (I10) this is
- * reachable only at genesis or when the locked row's version disagrees with the stream head (drift).
- * `submitModuleLead` retries it at most `MAX_LEAD_APPEND_ATTEMPTS` times before letting it propagate.
+ * A `(stream_id, event_version)` conflict on a module TRANSITION. Under the row lock (I10) it is reachable only
+ * when the locked row's version disagrees with the stream head (drift — the projector's head check), and drift
+ * is deterministic. At genesis the same 23505 is `ModuleGenesisAlreadyExistsError`, ⛔ this class (review R3-12).
+ * `submitModuleLead` retries it at most `MAX_LEAD_APPEND_ATTEMPTS` times before letting it propagate — a
+ * backstop that re-reads the same drift; there is no repair path yet (review RVD2).
  */
 export class ModuleStreamConcurrencyError extends Error {
   public readonly name = 'ModuleStreamConcurrencyError';
@@ -228,8 +243,9 @@ export class ModulePersistError extends Error {
 
 /**
  * The caller's inputs are inconsistent: an actor / actorId mismatch, a `member` actor on a non-lead event,
- * a lead whose actor is not the member (I11), flat inputs that disagree with the payload, or a genesis
- * payload that fails its schema (a programming error — the manifest was already parsed).
+ * a lead whose actor is not the member (I11), `trustee_archived` under the `system` actor (RV8), flat inputs
+ * that disagree with the payload, a TRANSITION payload that fails its schema, or a genesis payload that fails
+ * its schema (a programming error — the manifest was already parsed) (review R3-8).
  */
 export class ModuleProjectorInputError extends Error {
   public readonly name = 'ModuleProjectorInputError';

@@ -18,6 +18,9 @@
 // FOR UPDATE` before any `events_log` read or append, checks its guards against the LOCKED row, then calls
 // `projectModuleTransition(client, { …, lockedRow })`. One lock order everywhere — row lock → append → row
 // UPDATE — so a lead racing an archive serialises on the row instead of deadlocking (40P01, TR12).
+// ⚠ The caller's transaction must be READ COMMITTED (the Postgres default). Under REPEATABLE READ or
+// SERIALIZABLE, a command that waited on the row lock behind a committed update gets 40001 — untyped, and
+// ⛔ retried here; it is the caller's to handle (review R3-7).
 //
 // ── ⚠ TR4 — `now()` is the TRANSACTION START ───────────────────────────────────────────────────────
 // A lead that began before `valid_until` and waited on the row lock is judged at its start time. "An

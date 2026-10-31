@@ -15,8 +15,9 @@
 // order deadlocks (40P01) against an archive that appended first (TR12). Here every transition command
 // takes `SELECT … FOR UPDATE` on the row FIRST and passes the locked row in as `lockedRow`; the projector
 // does ⛔ replay — it checks the stream head equals the locked row's version, appends at version + 1, then
-// UPDATEs. One order everywhere: row lock → events_log append → row UPDATE. Under the lock, a version
-// conflict is reachable only at genesis (or on drift, which the head check reports).
+// UPDATEs. One order everywhere: row lock → events_log append → row UPDATE. Under the lock, a transition's
+// version conflict is reachable only on drift, which the head check reports as `ModuleStreamConcurrencyError`;
+// a genesis conflict is `ModuleGenesisAlreadyExistsError` (review R3-12).
 //
 // ── Transaction contract ───────────────────────────────────────────────────────────────────────────
 // Called inside the caller's open transaction, with `SET LOCAL ROLE twt_app` + `setPariwarScope` done. The
@@ -278,7 +279,8 @@ export async function projectModuleGenesis(
   } catch (err) {
     // ROLLBACK TO before mapping or rethrowing, so the caller's transaction stays usable.
     await rollbackToSavepoint(client, GENESIS_SAVEPOINT);
-    // (6) Map errors.
+    // (6) Map errors. Both keys ignore RLS, so another Pariwar's `module_id` also lands here — DELIBERATE, with
+    // its re-examination trigger on `MODULE_PKEY_CONSTRAINT` (errors.ts; checklist family 9, review R3-3).
     const constraint = uniqueViolationConstraint(err);
     if (constraint === STREAM_VERSION_CONSTRAINT || constraint === MODULE_PKEY_CONSTRAINT) {
       throw new ModuleGenesisAlreadyExistsError(input.moduleId);

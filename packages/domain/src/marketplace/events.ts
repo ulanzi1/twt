@@ -38,6 +38,7 @@ import {
   ModuleBrandingBundleSchema,
   ScopeFilterV1Schema,
   moduleDescriptionSchema,
+  moduleInstantSchema,
   moduleLeadHandoffUrlSchema,
   moduleNameSchema,
   moduleSigningKeySecretNameSchema,
@@ -68,8 +69,6 @@ const lowerUuidSchema = z.string().regex(LOWER_UUID_REGEX, 'must be a lower-case
 /** Freeform human-readable audit note — the commands COMPUTE it (⛔ caller input), e.g. `module.archive:<reason>`. */
 const triggerSchema = z.string().min(1);
 
-const isoInstantSchema = z.string().datetime({ offset: true });
-
 /**
  * `module.authored` → `draft` (the genesis: (none) → draft). Owner: Story 12.2's wizard route (⛔ production
  * emitter in 12.1 — I6). The FIRST event of the stream; it snapshots the WHOLE manifest, so the module is
@@ -92,8 +91,8 @@ export const ModuleAuthoredPayloadSchema = z
     description_hi: moduleDescriptionSchema,
     eligibility_filter: EligibilityFilterV1Schema,
     scope_filter: ScopeFilterV1Schema,
-    valid_from: isoInstantSchema,
-    valid_until: isoInstantSchema,
+    valid_from: moduleInstantSchema,
+    valid_until: moduleInstantSchema,
     slot_capacity: moduleSlotCapacitySchema,
     lead_handoff_url: moduleLeadHandoffUrlSchema,
     lead_handoff_signing_key_secret_name: moduleSigningKeySecretNameSchema,
@@ -147,7 +146,11 @@ export const ModuleLeadSubmittedPayloadSchema = z
 export type ModuleLeadSubmittedPayload = z.infer<typeof ModuleLeadSubmittedPayloadSchema>;
 
 /** `module.archived`: `draft` | `scheduled` | `active` → `archived`, terminal in 12.1 (C3). Owner: Story
- *  12.2 (a trustee archive) / 12.6 (the `system` sweep). */
+ *  12.2 (a trustee archive) / 12.6 (the `system` sweep). `trustee_archived` is a person's decision, so it is
+ *  refused under the `system` actor HERE as well as in `archiveModule` (RV8) — the projector parses with this
+ *  schema, so a direct projector call cannot record it either (review R3-2). ⚠ The registry only CARRIES it:
+ *  `@twt/events` `appendEvent` validates a payload only when its caller passes `payloadSchema`, so a raw append
+ *  without one is not refused — RVD2's stray-emitter class (review R4-5). */
 export const ModuleArchivedPayloadSchema = z
   .object({
     from_state: z.enum(['draft', 'scheduled', 'active']),
@@ -156,7 +159,16 @@ export const ModuleArchivedPayloadSchema = z
     actor: moduleStaffActorSchema,
     reason: moduleArchiveReasonSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((v, ctx) => {
+    if (v.reason === 'trustee_archived' && v.actor === 'system') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "reason 'trustee_archived' is a trustee's decision — it cannot be recorded under actor 'system'",
+        path: ['actor'],
+      });
+    }
+  });
 export type ModuleArchivedPayload = z.infer<typeof ModuleArchivedPayloadSchema>;
 
 // ── The event-type vocabulary + the type→schema map (single source) ────────────────────────────────

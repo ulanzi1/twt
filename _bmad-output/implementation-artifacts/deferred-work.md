@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 13-2-6-digit-attribution-code-generation-per-pariwar (create-story, 2026-11-01)
+
+Carried items C1–C5 of Story 13.2 (ready-for-dev). Each is HOMED in its trigger story — a dated "INHERITED FROM 13.2" block sits under that story's AC in `epics.md` — ⛔ closed. 13.2 builds the Pariwar-scoped code registry (`packages/domain/src/attribution-code/`, table `field_worker_attribution_codes`, `resolveAttribution(code, pariwarId) → field_worker_id`); the link runs codes → field worker (AT2).
+
+- **C1 — Story 13.1: add the FK, never a code column.** `field_workers` carries ⛔ `attribution_code`; 13.1's migration adds `FOREIGN KEY (pariwar_id, field_worker_id) REFERENCES field_workers (pariwar_id, field_worker_id) ON DELETE NO ACTION` on `field_worker_attribution_codes`. Registration calls `allocateAttributionCode` in the worker-insert tx; on `AttributionCodeAllocationExhaustedError` a SEPARATE `openScopeTx` writes `flagAllocationExhausted`, then rethrows. Erasure anonymizes, ⛔ deletes. Trigger: Story 13.1 create-story.
+- **C2 — Story 13.1 + the first signup consumer (13.8): FR-85 lives in the caller.** `resolveAttribution` returns the holder, ⛔ eligibility; "new attributions on deactivated code rejected" is checked against 13.1's lifecycle state by whoever records an attribution. Trigger: 13.1 / 13.8 create-story.
+- **C3 — Story 13.4: render the allocation flags to trustees.** Until then a flag is written but ⛔ seen (expected ≈ never). Trigger: Story 13.4 create-story.
+- **C4 — Story 13.5 / 13.8: backfilling 3.6b's captured codes.** The allocator skips codes already captured in `member_attribution` for the Pariwar, but a concurrent capture can commit after an allocation with an earlier `captured_at`; a backfill job needs a `twt_service` grant (none today). Trigger: the first story that resolves `member_attribution` rows.
+- **C5 — Story 13.3: the "my code" read.** `readAttributionCodeForFieldWorker` under `field_worker_self`; the permission key is the Panel's to ratify (`2026-06-21-059` amendment B(3)); any new route with an attribution-code key joins 13.2's pinned route-scan set. Trigger: Story 13.3 create-story.
+
+---
+
 ## Deferred from: code review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, round 2 — the full diff (2026-11-02)
 
 - **RD8 — the sticky freeze adds a second un-indexed `events_log` payload scan to the directory predicate** [`packages/domain/src/member/overlay.ts`

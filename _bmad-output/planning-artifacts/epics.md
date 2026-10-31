@@ -7463,6 +7463,11 @@ So that field-worker state is event-derived + audit-replayable.
 **And** state transitions emit events: `field_worker.registered`, `field_worker.kyc-completed`, `field_worker.activated`, `field_worker.suspended`, `field_worker.reactivated`, `field_worker.terminated`
 **And** state is event-derived per Story 3.1 pattern; persisted state column never directly UPDATEd
 
+> ⭐ **INHERITED FROM 13.2 (2026-11-01; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C1, C2).** HOMED here, ⛔ closed. 13.2 (ready-for-dev) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(code, pariwarId) → field_worker_id`.
+> - **C1 — the link runs the OTHER way from this AC's `attribution_code` (FK to Story 13.2 codes table).** The codes table carries `field_worker_id` (⛔ FK yet); `field_workers` carries ⛔ **no** `attribution_code` column — read it with `attributionCode.readAttributionCodeForFieldWorker`. ⭐ This story's migration adds `FOREIGN KEY (pariwar_id, field_worker_id) REFERENCES field_workers (pariwar_id, field_worker_id) ON DELETE NO ACTION` on `field_worker_attribution_codes` (needs `UNIQUE (pariwar_id, field_worker_id)` on `field_workers`). A field worker holding a code is ⛔ never deleted — erasure anonymizes; a `TRUNCATE … CASCADE` hits 13.2's TRUNCATE trigger.
+> - **C1 (cont.) — registration.** Call `allocateAttributionCode` in the SAME tx as the worker insert. On `AttributionCodeAllocationExhaustedError`, the catch opens a SEPARATE `openScopeTx(deps, pariwarId)`, calls `flagAllocationExhausted` (actor = the admin), closes it, rethrows — the request tx belongs to `scopeResolutionHook`. The `field_worker.registered` payload may carry `attributionCodeId`. Re-weigh `packages/field-worker-lifecycle` against "no package before a second consumer".
+> - **C2 — `resolveAttribution` returns the code's HOLDER, ⛔ the holder's eligibility.** FR-85's *"new attributions on deactivated code rejected"* is a check on THIS story's lifecycle state, made by whoever records an attribution.
+
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
 As Solo Builder authoring the attribution code allocation system,
@@ -7497,6 +7502,9 @@ So that I can work effectively without a desktop or back-office tools.
 **And** the dispatch scheduler `<FieldWorkerDispatchScheduler>` lets Vikram plan visits (dates, locations, expected outreach); records dispatch activity for analytics
 **And** mobile-first means: optimized for entry-level Android per Story 0.10; offline-tolerant for in-field use; Hindi-first per Story 2.1
 
+> ⭐ **INHERITED FROM 13.2 (2026-11-01; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C5).** HOMED here, ⛔ closed. 13.2 (ready-for-dev) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(code, pariwarId) → field_worker_id`.
+> - **C5 — "my attribution code"** reads `attributionCode.readAttributionCodeForFieldWorker` under `field_worker_self` scope. The permission key it needs is the Panel's to ratify (`2026-06-21-059` amendment B(3)). Any route carrying an attribution-code key must pass 13.2's route scan (`apps/api/tests/integration/attribution-code-pariwar-context.spec.ts`): member-session with ⛔ `pariwarId` in the request, or `/api/v1/p/:pariwarId/` + admin session + scope hook — and must be added to its pinned match set.
+
 ### Story 13.4: Attribution Analytics Dashboard `[SURFACE]`
 
 As a Pariwar admin or trustee monitoring field-worker performance,
@@ -7510,6 +7518,9 @@ So that field-worker effectiveness is visible without exposing per-member PII in
 **Then** the dashboard shows scope-respecting (Story 1.8) views: field workers by Pariwar/district, attribution pipeline (registered → qualified), aggregate qualification rates, commission projections (this month, next month)
 **And** dashboard data flows from Story 9.5 canonical event-derived qualification status — never inferred from attestation alone
 **And** per-member detail respects matrix tier — analytics aggregates are operator-tier; drill-down to individual member requires `member.lookup` permission
+
+> ⭐ **INHERITED FROM 13.2 (2026-11-01; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C3).** HOMED here, ⛔ closed. 13.2 (ready-for-dev) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(code, pariwarId) → field_worker_id`.
+> - **C3 — "permanent unallocation flagged for trustee review" becomes TRUE here.** 13.2 writes the flag (`attribution_code_allocation_flags`) and ships `attributionCode.listAllocationFlags`; ⛔ surface renders it until this dashboard does (expected frequency ≈ 0 — eight straight clashes in a 10⁶ space).
 
 ### Story 13.5: Commission Payment Trigger — Qualified-Acquisition-Gated + TDS §194H Deduction `[CONSUMER]`
 
@@ -7529,6 +7540,9 @@ So that commissions disburse only after canonical financial-truth confirmation a
 **Given** Phase B (≥1L members) deferred per FR-87
 **When** Phase B activation arrives in v2
 **Then** the commission flow for adopter chains can extend this primitive; v1 commission flow is field-worker-only (Vikram-class), not member-invite-chain (Sushil-class)
+
+> ⭐ **INHERITED FROM 13.2 (2026-11-01; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C4).** HOMED here, ⛔ closed. 13.2 (ready-for-dev) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(code, pariwarId) → field_worker_id`.
+> - **C4 — backfilling Story 3.6b's captured Reference Codes.** `member_attribution.attribution_source` holds unvalidated 6-digit strings typed before any code existed. 13.2's allocator never issues a code already captured in the Pariwar, but a capture CONCURRENT with an allocation can commit after it with an earlier `captured_at` — ⛔ assume strict ordering. A backfill JOB needs a `twt_service` grant on `field_worker_attribution_codes` (none today); under it the explicit `pariwar_id` predicate is the only Pariwar filter.
 
 ### Story 13.6: Field Worker Anti-Fraud Throttling — Assistive-Not-Auto-Punitive Invariant `[GOVERNANCE]`
 
@@ -7591,6 +7605,9 @@ So that the trust knows my chain origin (for Phase B future activation) without 
 **When** v1 ships
 **Then** **chain data is captured + queryable v1**; **no commission disbursement on the chain in v1**; the architecture supports Phase B activation later (≥1L members threshold)
 **And** AC explicitly confirms: v1 chain capture is active; v1 chain commission is NOT active; v2 development can add commission flow without back-edits to the chain schema
+
+> ⭐ **INHERITED FROM 13.2 (2026-11-01; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C2, C4).** HOMED here, ⛔ closed. 13.2 (ready-for-dev) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(code, pariwarId) → field_worker_id`.
+> - **C2 / C4 — the first consumer that records an attribution at signup.** Use `resolveAttribution(code, pariwarId)` with the session's Pariwar; apply FR-85's deactivated-code rejection from 13.1's lifecycle state (⛔ in the lookup); see C4 under Story 13.5 for pre-registry captures. The member's `referenceCode` contract (`^\d{6}$`) does ⛔ yet accept FR-82's username / eHRMS form or UX §7's member-ID deep link — this story's adopter chain needs that widened.
 
 ---
 

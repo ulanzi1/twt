@@ -10,7 +10,8 @@ docs/launch-gate-inventory` from `01062c51` at Task 0.1.
 newest-first). Cite those by decision id / clause / item / row key only.
 ⭐ NUMBERS — taken 2026-10-30 at `01062c51` across EVERY local + remote branch and EVERY worktree (12-1, 13-2, 6-38, this one).
 Re-take ALL of them at Task 0.1 and again immediately before each write (`-366` decision 6: a number belongs to the first COMMIT):
-  next decision id **`-424`** (main's top is `-423`, Trustee-ratified 2026-10-30; ⛔ no branch is higher) — ⭐ this file writes `-NNN`
+  next decision id **`-425`** (⚠ `-424` was taken 2026-10-31 by Story 6.38's Panel ruling, `bfa95281`, now on `main` — it does ⛔ not
+  touch the memorial; at creation the next was `-424`) — ⭐ this file writes `-NNN`
   wherever an id is not yet taken; this story will take TWO, in the order AC0 fixes: the Panel's transcription FIRST (AC0 (3)),
   then our author-commit (AC0 (4)) · migration **`0193`** (main's newest is `0192_questionnaire-versions.sql`;
   directory `packages/domain/migrations/` — there is ⛔ no `packages/db`) · `PERMISSION_CATALOG_VERSION` **56**, ⛔ no change
@@ -179,14 +180,14 @@ reads ⛔ no memorial table — KL13).
 | UX `<MemorialAuthorshipSurface>` anatomy: *"`<KinshipLattice>` editor"*; UX :1671 *"any family member with handover credentials … add kinship details"* | ⚠ `-391` Q1 A: only the **nominee** sends (with their code) | KL8 — the nominee only |
 | UX :1966 *"empty rows hidden"*; :1968 *"Semantic definition-list (`<dl>`); screen reader announces 'wife: Sunita Devi, son: Amit and Rahul'"* | — | KL10, AC7 |
 
-## 🧭 Build decisions KL1–KL14 — ANSWERED by BigDev at Task 0.2 (2026-10-31). ⭐ marks the recommendation.
+## 🧭 Build decisions KL1–KL14 — ANSWERED by BigDev at Task 0.2 (2026-10-31); KL15 PROPOSED 2026-10-31 (rides on the addendum's AQ3). ⭐ marks the recommendation.
 
 ⭐ **The answer, verbatim:** *"KL1-KL2, KL5-KL14 as recommended. KL3 - Use a closed domain vocabulary, not the nominee relationship
 vocabulary or free text. I recommend splitting grandchildren into four precise relations rather than using only grandson /
 granddaughter. KL4 - One relation and one name per entry; adults only by name; maximum 20 entries. I recommend a 200-code-point
 name limit rather than 80."* ⇒ every KL below is **(a)**; KL3 with **fourteen** codes (the four-way grandchildren split — this also
 answers Q-copy-1's structural half and keeps grandchildren in the list: Questions-list item 2); KL4 with a **200**-code-point cap
-(answers Q-copy-6). ⚠ Still open at Task 0.2: Q-copy-1's label WORDING, Q-copy-2…5, Questions 7–8. These are build decisions,
+(answers Q-copy-6). ⚠ Still open at Task 0.2 (as of v1.2; Q-copy-1's wording was answered later the same day, v1.4): Q-copy-2…5, Questions 7–8. These are build decisions,
 ⛔ not a ruling: what is disclosed still waits on PQ1 / PQ2 / PC1 / PC2.
 
 ⚠ These are written for **PQ1 A** (the recommended ruling). Each states what changes under B / C / D. ⛔ Never build ahead of the
@@ -213,10 +214,10 @@ split four ways. `MEMORIAL_KINSHIP_RELATIONS` = `wife · husband · son · daugh
 daughters_son · sons_daughter · daughters_daughter · daughter_in_law · son_in_law` — **in this display order** (spouse, children,
 parents, siblings, grandchildren — grandsons before granddaughters, the son's line first — in-laws). ⭐ **Every code is the person's relation TO THE MEMBER WHO DIED** (a deceased woman's spouse is `husband`; the nominee's
 own mother, if she is the member's wife, is `wife`) — said in the code's doc-block, the screen's question (Q-copy-2) and the
-reviewer's screen. Proposed Hindi labels (**the WORDING is still BigDev's, Task 0.2 Q-copy-1**; a non-author Hindi review follows): पत्नी · पति ·
+reviewer's screen. Hindi labels (**approved by BigDev, Task 0.2 Q-copy-1, 2026-10-31: *"fourteen labels are fine"***; the non-author Hindi review of `docs/tone-review-checklist.md` (`reviewedBy ≠ authoredBy`) still decides `hiReviewed` — Row 41 (s)): पत्नी · पति ·
 पुत्र · पुत्री · पिता · माता · भाई · बहन · पौत्र · नाती · पौत्री · नातिन · पुत्रवधू · दामाद — one plain word each (पौत्र = a son's son, नाती =
 a daughter's son, पौत्री = a son's daughter, नातिन = a daughter's daughter — the distinction obituaries keep), ⛔ no slash label
-anywhere (the ground on which (b) below is rejected). Proposed English: Wife · Husband · Son · Daughter · Father · Mother · Brother ·
+anywhere (the ground on which (b) below is rejected). English (approved with the Hindi): Wife · Husband · Son · Daughter · Father · Mother · Brother ·
 Sister · Grandson (son's son) · Grandson (daughter's son) · Granddaughter (son's daughter) · Granddaughter (daughter's daughter) ·
 Daughter-in-law · Son-in-law. ⚠ **Grandchildren are very often minors** (and so are sons and daughters when a young member dies) —
 kept by BigDev's answer; the "adults only" ask and the reviewer's `identifies_a_child` are the protection, and the cost is in PQ1 A.
@@ -363,7 +364,7 @@ last paragraph (UX anatomy: parichay → kinship). **Gating lives in `planFamily
 component only renders its verdicts): it gains a `kinship` verdict — the lattice is drawn **iff the section is drawn AND
 `family_memorial_kinship` is visible at `public` AND ≥ 1 row survives**; otherwise ⛔ nothing (⛔ no heading, ⛔ no empty `<dl>`). (A
 lattice with ⛔ no words is unreachable — `nothing_left` refuses leaving out every word, `omissions.ts:146`.) Heading copy Q-copy-5
-(proposed: hi *"शोकाकुल परिवार"*, en *"The family"*), relation labels from KL9's ONE home `memorial.kinship.<code>`. **Wire:**
+(*Copy for review* 5.1: hi *"शोकाकुल परिवार"*, en ⭐ *"Mourned by"*), relation labels from KL9's ONE home `memorial.kinship.<code>` (English plurals for two or more names — 5.2). **Wire:**
 `PublicSahyogVivranFamilyMemorial` gains `kinship: z.array(z.object({ relation: z.enum(MEMORIAL_KINSHIP_RELATIONS), names:
 z.array(z.string().min(1)).min(1) }).strict())` — **already grouped, ordered and filtered by the API**; ⭐ **the API applies
 `isolateMemorialBidi` (`@twt/ui`, `packages/ui/src/memorial/bidi.ts:39`) to EACH name before the wire** — a render view, ⛔ never
@@ -427,6 +428,21 @@ the operator offers the nominee a re-send without them (the existing smaller-fix
 ⚠ and over a clean `approved` head that re-send means the memorial comes down first and stays off the page while the new version is
 reviewed (`-411` item 4 / 11b.4a PC2 A, 11b.4 MA13).
 ⚠ If BigDev prefers it in scope, say so at Task 0.2 — the ACs grow by one act.
+
+### KL15 — "Who is in the photo": a tick on listed people — PROPOSED 2026-10-31, ⛔ not yet answered; built ONLY if the addendum's AQ3 = A
+⭐ **(a)** On `family.tsx`, when the draft has a photo (new or kept), each list row gains an optional *"In the photo"* tick. Stored as
+`inPhoto?: true` on the entry, INSIDE the kinship ciphertext (KL5 — ⛔ no new column); `MemorialKinshipEntry` gains the optional key
+(`.strict()` still refuses any other). ⛔ No new names: a tick only points at a listed person. A tick with ⛔ no photo in the Send (none
+chosen, or the photo left out by the reviewer) is ignored at render and refused at Send if no photo is being sent (`memorial.kinship_invalid`).
+Used by: the review screen (KL12 — the photo control lists the ticked people and relations next to the photo) and the declaration (it
+covers every child in the photo, ticked or ⛔ not). **Public page:** under AQ3 (b)1 ⭐ the ticks are ⛔ never on the wire (Trap 8 — the
+public kinship rows carry relation + names only; a leg asserts ⛔ no `inPhoto` crosses); under (b)2 a caption *"In the photo: …"* renders
+under the photo, from the surviving ticked entries, and becomes its own matrix field on the ruling's id (`-205` cl.2).
+**Why:** it makes the declaration and the review exact, and records who is in the photo for a later per-person removal. **Cost:** one more
+optional control on the family screen; one more personal fact per listed person, kept for good with the list. Rejected — **(b)** a free
+"names in the photo" field (new names, new Tier-1 text to review — the photo description already lets a family write one); **(c)** face
+tagging on the image (a face-to-name map of children — ⛔ never).
+⚠ Under AQ3 B, AQ1 B/C or PQ1 D: ⛔ not built.
 
 ## ⚖️ The Panel questions this story will put (written at Task 0.3 FROM THE TEMPLATE — this is a plan, ⛔ not the note)
 
@@ -618,24 +634,31 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     (⛔ no prior KL). ✅ **Run 2026-10-31:** `origin/main` still `01062c51` (⛔ no rebase); STOP 1 ⛔ no change under any listed path;
     STOP 2 — 6.38 has committed records + its own routing note (2026-10-31), ⛔ no code, ⛔ no `anonymize.ts` change ⇒ ⛔ not a stop;
     STOP 3 11b-6 `backlog` on every ref; STOP 4 three comments only; STOP 5 v3 current, ⛔ none `hiReviewed`; STOP 6 ⛔ not pinned; STOP 7
-    ⛔ no kinship ruling. Numbers: decision `-424`, migration `0193`, ledger next `2026-10-31e` at the run — ⚠ 6.38 then took `-31e` (`c9fed42a`), so this story's Task 0.3 records are `-31f`. ⏳ The
+    ⛔ no kinship ruling. Numbers: decision `-424` at the run (⚠ since taken by 6.38's ruling — next is `-425`), migration `0193`, ledger next `2026-10-31e` at the run — ⚠ 6.38 then took `-31e` (`c9fed42a`), so this story's Task 0.3 records are `-31f`. ⏳ The
     `deferred-work.md` trigger lines below are ⛔ not yet written. Record in `deferred-work.md`: 11b.4 item (2) and 11b.4a item (6) — *"Trigger reached 2026-10-30 at 11b-5a's
     create-story — carried to the Panel ruling (Task 0.4); ⛔ not closed."*
   - [ ] 0.2 BigDev answers **KL1–KL14**, **Q-copy-1…6** and Questions 7–8 (below). Record the answers verbatim under each KL and in the
     Questions list; story version bump. ⏳ **Part done 2026-10-31 (v1.2):** KL1–KL14 answered (verbatim under the KL heading), Q-copy-1's
-    structure and Q-copy-6 answered. Open: Q-copy-1 wording, Q-copy-2…5, Questions 7–8. ⚠ Task 0.1 (fetch, re-diff, STOP 1–7, numbers)
+    structure and Q-copy-6 answered. Q-copy-1 wording answered later the same day. Open: Q-copy-2…5, Questions 7–8. ⚠ Task 0.1 (fetch, re-diff, STOP 1–7, numbers)
     has ⛔ not been run yet — run it before 0.3.
-  - [ ] 0.3 Write the routing note from the template (PQ1, PQ2, PC1, PC2 as planned above, re-costed against the KL answers; the
+  - [x] 0.3 Write the routing note from the template (PQ1, PQ2, PC1, PC2 as planned above, re-costed against the KL answers; the
     meeting part carries ⛔ no clause ids — they go to E1/E2 with the verbatim texts); run E4; commit it **alone**
     (`governance(11b.5a): routing note — kinship …`). ⛔ Never send. Record "prepared for relay — ⛔ not yet sent". ⏳ **WRITTEN
     2026-10-31** — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (PQ1, PQ2, PC1, PC2; E4 run);
-    committed ALONE as `9efa0c06`; ledger `2026-10-31f`. Prepared for relay — ⛔ not yet sent (the box stays open until BigDev confirms
-    it went, then Task 0.4 waits on the ruling).
+    committed ALONE as `9efa0c06`; ledger `2026-10-31f`. ✅ **SENT 2026-10-31** — BigDev: *"routing note sent"*. Task 0.4 waits on
+    the ruling.
   - [ ] 0.4 When BigDev relays the ruling: transcribe it (AC0 (3)); then by outcome — **(a) PQ1 A** → Task 1; **(b) PQ1 B / C** →
     revise KL4 / KL10 and the ACs (story version bump, a validate pass) before Task 1; **(c) PQ2 B** and KL14 (a) → mint row
     `11b-5b-kinship-named-relative-removal: backlog` with its comment block (including the re-send-revives-the-name design point);
     **PQ2 C** → as (c), the nominee callback in its scope; **PQ2 A** → record, ⛔ no row, and v4's take-down sentence stays as v3's;
     **(d) PQ1 D** → AC1's records, then close; **PQ1 C** makes PC2 moot (record it so); **PC1 B or PC2 B** → revise KL6 / KL10 (and the floor exclusion) before Task 1.
+    **The addendum (guardian declaration), ruled with the main note:** **AQ1 A** → revise KL4 (children by name under the
+    declaration), KL7 (v4 carries the declaration — Q-copy-3 ③ rewritten), copy 2.4, AC2 / AC5 / AC7, and the reviewer's
+    `identifies_a_child` use for the list (only an undeclared child); **AQ2 A** → the same for the words — a change to the 11b.4 review
+    flow and permission (supersedes `-391` item 2's child half in part), possibly its own row; **AQ3 A** → the photo too, and KL15
+    (the *"in the photo"* tick) is built — shown publicly only under **(b)2**; **any A** → an architecture amendment to :1839-1846
+    (*"Sahyog Vivran shows family without minor's name"*) after the ruling, and the counsel question on DPDPA §9 recorded as owed;
+    **AQ1 B / C** → the main note's PQ1 answer stands (C: children as a count). Story version bump and a validate pass before Task 1.
 - [ ] **Task 1 — Governance commits (AC0)**
   - [ ] 1.1 Re-take the id; commit our author-commit `-NNN` (KL1–KL14 as answered; §0: the questions were the Panel's and are ruled by
     `-NNN`; mints: the relation tuple, v4, the matrix pair) **alone**.
@@ -830,18 +853,85 @@ needed — no library or API changes.
 1. **KL1–KL14** — as recommended, or which differ? (KL14: PQ2's build in a follow-up row, or here?) — ✅ **ANSWERED 2026-10-31**:
    KL1–KL2, KL5–KL14 as recommended (KL14: a follow-up row); KL3 a closed domain vocabulary, grandchildren split four ways; KL4 one
    relation + one name per entry, adults only by name, at most 20, a 200-code-point cap (verbatim under the KL heading).
-2. **Q-copy-1** — the relation labels (hi + en), KL3. ✅ Structure ANSWERED 2026-10-31: split into four codes, and grandchildren stay
-   in the list. ⏳ **Still open: the WORDING** of all fourteen labels — proposed hi पत्नी · पति · पुत्र · पुत्री · पिता · माता · भाई · बहन ·
-   पौत्र · नाती · पौत्री · नातिन · पुत्रवधू · दामाद, and the English in KL3. ⛔ No slash label.
-3. **Q-copy-2** — the family screen's words (title; *"How is each person related to {the member}?"*; *"One person per row"*; the
-   "adults only — please leave children out" line; Add / Remove / Skip; *"Start from the list I sent"*; preview's *"No family list"*).
-4. **Q-copy-3** — the v4 permission text (en + hi), KL7 — including how v3's *"only the nominee … not at anyone else's request"* reads
-   after PQ2 (final words after the ruling).
-5. **Q-copy-4** — the outcome line for a left-out entry; **Q-copy-5** — the public heading (proposed *"शोकाकुल परिवार"* / *"The family"*).
+2. **Q-copy-1** — the relation labels (hi + en), KL3. ✅ **ANSWERED 2026-10-31**: structure — four grandchildren codes, grandchildren
+   kept; wording — *"fourteen labels are fine"*: hi पत्नी · पति · पुत्र · पुत्री · पिता · माता · भाई · बहन · पौत्र · नाती · पौत्री · नातिन ·
+   पुत्रवधू · दामाद, and the English in KL3. (`hiReviewed` still waits on a non-author review — Row 41 (s).)
+3. **Q-copy-2** — the family screen's words → drafted in full, en + hi, in *Copy for review* below (2.1–2.22).
+4. **Q-copy-3** — the v4 permission text → drafted below (①–⑤), with one take-down sentence per PQ2 outcome.
+5. **Q-copy-4** — the outcome line → below (4.1); **Q-copy-5** — the public heading → below (5.1), plus a gap found while drafting:
+   English plural labels (5.2).
 6. **Q-copy-6** — the name cap. ✅ **ANSWERED 2026-10-31: 200 code points** (KL4).
 7. **Split?** After the ruling, build in two rows — 11b-5a (capture, storage, review, member screens, v4) and a new 11b-5c (public
    lattice, matrix pair, helpline view, floor exclusion) — or one pass as written?
 8. Send the routing note yourself once written (Task 0.3)? — the agent ⛔ never sends.
+
+### Copy for review — Q-copy-2…5 (PROPOSED 2026-10-31; BigDev approves or edits line by line)
+
+⭐ Written to match the shipped `memorial` namespace (`photo.title` *"A photo, if you wish"*, `write.start_from_sent`, `photo.without`,
+v3's sentences). Every key is in `memorial` — the ONE home (KL9); the public page reads the same keys. `{…}` = interpolated (each needs
+a real-`t()` leg in both locales — AC11). ⚠ Approval here is BigDev's; `hiReviewed` still needs a reviewer who did ⛔ not write the
+text (`docs/tone-review-checklist.md`, `reviewedBy ≠ authoredBy`) — Row 41 (s).
+
+**Q-copy-2 — the family screen (`family.tsx`), its preview line and its refusal**
+
+| # | Key | English | Hindi | Note |
+|---|---|---|---|---|
+| 2.1 | `family.title` | Their family, if you wish | उनका परिवार, अगर आप चाहें | mirrors `photo.title` |
+| 2.2 | `family.body` | You can list the family they leave behind, as an obituary does. It is up to you. | आप चाहें तो, शोक संदेश की तरह, उनके परिवार के लोगों के नाम लिख सकते हैं। यह आपकी इच्छा पर है। | optional, said plainly |
+| 2.3 | `family.where_shown` | The list will appear with your words on the member's Sahyog Vivran page, which anyone with its link can read. The Trust will see it before anyone else does. | यह सूची आपके शब्दों के साथ सदस्य के सहयोग विवरण पेज पर दिखेगी, जिसे उसका लिंक रखने वाला कोई भी पढ़ सकता है। किसी और से पहले ट्रस्ट इसे देखेगा। | `-391` item 2: *"told exactly where it will appear"*; under PQ1 C this line changes |
+| 2.4 | `family.adults_only` | Please list only adults. Do not list any children — if the Trust finds a child's name, it will leave it out. | कृपया केवल वयस्कों के नाम लिखें। किसी बच्चे का नाम न लिखें — अगर ट्रस्ट को किसी बच्चे का नाम मिलता है, तो वह उसे छोड़ देगा। | v3's child sentence, extended |
+| 2.5 | `family.relation_question` | For each person, choose how they are related to the member. | हर व्यक्ति के लिए चुनें कि सदस्य से उनका क्या रिश्ता है। | KL3: relation TO THE MEMBER WHO DIED |
+| 2.6 | `family.relation_label` | Relation | रिश्ता | picker label |
+| 2.7 | `family.relation_choose` | Choose | चुनें | picker placeholder |
+| 2.8 | `family.name_label` | Name | नाम | |
+| 2.9 | `family.name_hint` | One person on each line, written as you would like it to appear. | हर पंक्ति में एक ही व्यक्ति — नाम वैसे लिखें जैसे आप उसे दिखाना चाहें। | KL4 one person per entry; names never changed |
+| 2.10 | `family.name_over_limit` | This name is a little long for the page. Please shorten it by about {count} letters. | यह नाम पेज के लिए थोड़ा लंबा है। कृपया इसे लगभग {count} अक्षर छोटा करें। | mirrors `write.over_limit`; cap 200 |
+| 2.11 | `family.row_incomplete` | Please choose a relation and write a name for each person, or remove that line. | कृपया हर व्यक्ति के लिए रिश्ता चुनें और नाम लिखें, या वह पंक्ति हटा दें। | blocks Next |
+| 2.12 | `family.add` | Add someone | किसी को जोड़ें | |
+| 2.13 | `family.remove` | Remove | हटाएँ | |
+| 2.14 | `family.remove_a11y` | Remove {name} from the list | {name} को सूची से हटाएँ | screen-reader label; an empty name falls back to 2.15 |
+| 2.15 | `family.remove_empty_a11y` | Remove this line | यह पंक्ति हटाएँ | |
+| 2.16 | `family.limit_reached` | You have listed {count} people, which is as many as the page can hold. | आपने {count} लोगों के नाम लिखे हैं; पेज पर इतने ही आ सकते हैं। | `{count}` = 20 |
+| 2.17 | `family.start_from_sent` | Start from the list I sent | जो सूची मैंने भेजी थी, वहीं से शुरू करें | mirrors `write.start_from_sent`; re-send only |
+| 2.18 | `family.without` | Continue without a list | बिना सूची के आगे बढ़ें | mirrors `photo.without` |
+| 2.19 | `family.next` | Next | आगे | |
+| 2.20 | `preview.change_family` | Change the family list | परिवार की सूची बदलें | mirrors `preview.change_photo` |
+| 2.21 | `preview.no_family_list` | This version has no family list. The list you sent before will not appear. | इस संस्करण में परिवार की सूची नहीं है। पहले भेजी गई सूची नहीं दिखेगी। | shown only when the previous version had one |
+| 2.22 | `send.kinship_invalid` | We could not read the family list. Please check that each person has a relation and a name, then send again. | हम परिवार की सूची नहीं पढ़ सके। कृपया देखें कि हर व्यक्ति का रिश्ता और नाम लिखा है, फिर दोबारा भेजें। | refusal `memorial.kinship_invalid` |
+| 2.23 | `family.in_photo` | In the photo | फ़ोटो में | optional tick on each row; only when a photo is being sent (KL15) |
+| 2.24 | `family.in_photo_hint` | If you added a photo, you can tick who in your list appears in it. This helps the Trust; it is not shown under the photo. | अगर आपने फ़ोटो जोड़ी है, तो आप सूची में से उन लोगों पर निशान लगा सकते हैं जो फ़ोटो में हैं। इससे ट्रस्ट को मदद मिलती है; यह फ़ोटो के नीचे नहीं दिखाया जाता। | ⚠ last sentence true only under AQ3 (b)1 — reworded under (b)2 |
+| 2.25 | `family.in_photo_a11y` | {name} is in the photo | {name} फ़ोटो में हैं | screen-reader state of the tick |
+
+**Q-copy-3 — the v4 permission shown above Send (`MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS` v4).** v3 word for word, except the
+five marked changes. ⚠ Sentence ⑤ has **one wording per PQ2 outcome** — the one the Panel picks is minted; the others are dropped.
+Under PQ1 B (relations only) ①–④ change again; under PQ1 D there is ⛔ no v4.
+
+| # | Change from v3 | English | Hindi |
+|---|---|---|---|
+| ① | the list named | When you press Send, you, as the nominee, give the Trust permission to show these words, the family list if you added one, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read. | भेजें दबाने पर आप, नॉमिनी के रूप में, ट्रस्ट को यह अनुमति देते हैं कि ये शब्द, अगर आपने परिवार की सूची जोड़ी है तो वह, और अगर आपने फ़ोटो जोड़ी है तो वह भी, इस सदस्य के सहयोग विवरण पेज पर दिखाए जाएँ, जिसे उसका लिंक रखने वाला कोई भी पढ़ सकता है। |
+| — | unchanged | The Trust will read them before anyone else does. | किसी और के देखने से पहले ट्रस्ट इनका अवलोकन करेगा। |
+| ② | a name may be left out; names never changed | It may leave out a sentence, a name from the list, or the photo, and will tell you why, but it will never change your words or the names you wrote. | वह कोई वाक्य, सूची का कोई नाम या फ़ोटो छोड़ सकता है, और आपको इसका कारण बताएगा, पर आपके शब्द या आपके लिखे नाम कभी नहीं बदलेगा। |
+| ③ | children — words and list; adults only | Please do not name any children, in your words or in the list, and list only adults; if the Trust finds a child's name, it will leave it out. | कृपया न अपने शब्दों में और न सूची में किसी बच्चे का नाम लिखें, और सूची में केवल वयस्कों के नाम लिखें; अगर ट्रस्ट को किसी बच्चे का नाम मिलता है, तो वह उसे छोड़ देगा। |
+| — | unchanged | If you, the nominee, ever want it changed or taken down, you can call the helpline. | अगर आप, नॉमिनी, कभी इसमें बदलाव चाहें या इसे हटवाना चाहें, तो हेल्पलाइन पर फ़ोन कर सकते हैं। |
+| ⑤A | **if PQ2 = A** (unchanged from v3) | Only the nominee can ask for it to be taken down; the helpline will not remove it at anyone else's request. | इसे हटवाने का अनुरोध केवल नॉमिनी ही कर सकते हैं; किसी और के कहने पर हेल्पलाइन इसे नहीं हटाएगी। |
+| ⑤B | **if PQ2 = B** | Only the nominee can ask for it to be taken down; the helpline will not remove it at anyone else's request — except that a person named in the family list may ask for their own name to be removed. | इसे हटवाने का अनुरोध केवल नॉमिनी ही कर सकते हैं; किसी और के कहने पर हेल्पलाइन इसे नहीं हटाएगी — सिवाय इसके कि परिवार की सूची में जिसका नाम है, वह अपना नाम हटवाने का अनुरोध कर सकता है। |
+| ⑤C | **if PQ2 = C** | Only the nominee can ask for it to be taken down; the helpline will not remove it at anyone else's request — except that a person named in the family list may ask for their own name to be removed, and the helpline will do so if you, the nominee, agree. | इसे हटवाने का अनुरोध केवल नॉमिनी ही कर सकते हैं; किसी और के कहने पर हेल्पलाइन इसे नहीं हटाएगी — सिवाय इसके कि परिवार की सूची में जिसका नाम है, वह अपना नाम हटवाने का अनुरोध कर सकता है, और आप, नॉमिनी, सहमत हों तो हेल्पलाइन उसे हटा देगी। |
+| — | unchanged | Often a small change is enough. | अक्सर एक छोटा-सा बदलाव काफ़ी होता है। |
+| ④ | the list among the Trust's grounds | The Trust itself may still withdraw its approval, but only if something in the words, the list or the photo speaks against a person by name, says that someone did something wrong, may be against the law, or names or shows a child. | ट्रस्ट स्वयं फिर भी अपनी स्वीकृति वापस ले सकता है, पर केवल तब, जब शब्दों, सूची या फ़ोटो में किसी व्यक्ति के विरुद्ध उसका नाम लेकर कुछ कहा गया हो, यह कहा गया हो कि किसी ने कुछ गलत किया, कुछ ऐसा हो जो कानून के विरुद्ध हो सकता है, या किसी बच्चे का नाम हो या कोई बच्चा दिखता हो। |
+
+**Q-copy-4 — the outcome screen, for each entry the Trust left out**
+
+| # | Key | English | Hindi | Note |
+|---|---|---|---|---|
+| 4.1 | `outcome.kinship_left_out` | Left out of the family list: {relation} — {name} | परिवार की सूची से छोड़ा गया: {relation} — {name} | followed by the existing `outcome.reason` (*"The reason: {reason}"* / *"कारण: {reason}"*); `{name}` bidi-isolated |
+| 4.2 | (existing) `outcome.approved_with_omissions` | — | — | already reads *"left out a part, marked below … nothing marks where it was"*; it fits a list entry too ⇒ ⛔ no change proposed |
+
+**Q-copy-5 — the public heading over the list (also used by the app's preview, which must match the page)**
+
+| # | Key | English | Hindi | Note |
+|---|---|---|---|---|
+| 5.1 | `kinship.heading` | ⭐ Mourned by · *alt:* The grieving family | शोकाकुल परिवार | the `<h3>` and the `<dl>`'s label; it sits under the section heading *"In the family's words"* / *"परिवार के शब्द"*. *"Mourned by"* is the obituary idiom and reads straight into the list (*"Mourned by — Wife: Sunita Devi"*); *"The grieving family"* is the literal Hindi |
+| 5.2 | `kinship.<code>_plural` (English only) | Sons · Daughters · Brothers · Sisters · Grandsons (son's sons) · Grandsons (daughter's sons) · Granddaughters (son's daughters) · Granddaughters (daughter's daughters) · Daughters-in-law · Sons-in-law | — (Hindi labels read correctly for one or more: *पुत्र · अमित, राहुल*) | ⚠ **a gap found while drafting:** the approved English labels are singular, so two names under one relation would read *"Son: Amit, Rahul"*. Proposed: an English plural used when a relation has two or more names (Wife / Husband / Father / Mother need none). ⛔ No new relation; Q-copy-1's words unchanged |
 
 ### References
 - Decisions: `-398` MA2, MA6, MA11, MA13, MA15 (author-commit) · `-391` items 2, 4, 5, 7, Not covered + dated pointer (Trustee-ratified) ·
@@ -868,6 +958,7 @@ needed — no library or API changes.
 - 2026-10-30 — Story created by `bmad-create-story 11b.5a` at `01062c51`: comprehensive developer guide; build gated on the Panel (Task 0).
 - 2026-10-31 — Validated against the checklist (v1.1); every finding applied. Next: Task 0.1, then BigDev's answers at Task 0.2.
 - 2026-10-31 — Task 0.2 in part (v1.2): KL1–KL14 answered; Q-copy-1 wording, Q-copy-2…5 and Questions 7–8 still open.
+- 2026-10-31 — v1.4: Q-copy-1 answered; the routing note SENT by BigDev. Next: Task 0.4 on the ruling; Q-copy-2…5 and Questions 7–8 still open.
 
 ### File List
 
@@ -875,6 +966,10 @@ needed — no library or API changes.
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | v1.0 | Created (`bmad-create-story 11b.5a`, worktree `.claude/worktrees/11b-5a-kinship-capture-and-lattice`, pin `01062c51`). Three read-only research passes (governance / code as built / tests-gates-numbers) + hand checks of every load-bearing quote and the Niyamavali. KL1–KL14 PROPOSED; PQ1, PQ2, PC1 PLANNED (the note is written at Task 0.3). ⛔ No code, ⛔ no decision id taken, ⛔ no Panel note. |
+| 2026-10-31 | v1.7 | Addendum committed ALONE as `f8e0455d` (prepared for relay — ⛔ not yet sent). `origin/main` MOVED since Task 0.1 (`01062c51` → `b2f36fe9`: Story 6.38's records + Decision `-424` (6.38's Panel ruling, ⛔ no memorial content) + rows 3-13 / 3-14) ⇒ next decision id `-425`; ⛔ no memorial path changed (STOP 1 still clear); the branch is ⛔ not yet rebased — owed before any push. Ledger: this entry `-31m` (`-31j` / `-31k` are on `main`, `-31l` is 6.38's). |
+| 2026-10-31 | v1.6 | BigDev asked whether children may be named (and shown) on a guardian's declaration ⇒ an ADDENDUM to the Panel note drafted — `trustee-panel-routing-note-2026-10-31-11b5a-kinship-addendum-guardian-declaration.md`: AQ1 the list (⭐ A a declaration — BigDev's proposal), AQ2 the words (⭐ A one rule; reverses `-391` Q2 A's child half), AQ3 the photo (⭐ A, BigDev's reading; the drafter's B disclosed) with AQ3 (b) an optional *"in the photo"* tick on listed people (⭐ (b)1 ⛔ not shown publicly). Architecture :1839-1846 (*"Sahyog Vivran shows family without minor's name"*, DPDPA §9 *"carries to all minor-data handling"*) disclosed — an amendment follows under A. KL15 + copy 2.23–2.25 PROPOSED. Addendum prepared for relay — ⛔ not yet sent, ⛔ not committed. ⚠ Every AC/Task assumes the main note's PQ1 A (adults only) until the addendum is ruled — Task 0.4 revises. |
+| 2026-10-31 | v1.5 | Q-copy-2…5 DRAFTED in full (en + hi) in one review table under *Questions for BigDev* — the family screen (2.1–2.22), the v4 permission (①–⑤, one take-down sentence per PQ2 outcome), the outcome line (4.1), the public heading (5.1); gap found: English plural labels (5.2). PROPOSED — awaiting BigDev. |
+| 2026-10-31 | v1.4 | Q-copy-1 answered (*"fourteen labels are fine"* — the KL3 Hindi + English stand; `hiReviewed` still owed by a non-author review). Task 0.3 DONE: BigDev confirmed the routing note SENT (*"routing note sent"*). Waiting on the ruling (Task 0.4). Ledger `2026-10-31j`. |
 | 2026-10-31 | v1.3 | Task 0.1 run (⛔ no STOP; numbers unchanged; ledger next `-31e`). Task 0.3: the routing note WRITTEN from the template — `trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (PQ1, PQ2, PC1, PC2; meeting part with ⛔ no clause ids; E1 verbatim, E4 run). Prepared for relay — ⛔ not yet sent. Note committed alone (`9efa0c06`); records `2026-10-31f`. |
 | 2026-10-31 | v1.2 | Task 0.2, part: BigDev answered KL1–KL14 — KL1–KL2, KL5–KL14 as recommended; KL3 a closed domain vocabulary of **fourteen** codes (grandchildren split `sons_son · daughters_son · sons_daughter · daughters_daughter`, grandchildren kept); KL4 one relation + one name per entry, adults only by name, ≤ 20, a **200**-code-point cap (fits the 32 KiB part — worked in KL4). Propagated to §0 G10, PQ1 A, AC2, Task 2.1, Task 9. Open: Q-copy-1 wording, Q-copy-2…5, Questions 7–8; Task 0.1 not yet run. ⛔ No code, ⛔ no decision id, ⛔ no Panel note. |
 | 2026-10-31 | v1.1 | Validated (`bmad-create-story validate 11b.5a`; three parallel read-only verifiers — code as built / governance / adversarial design — at `01062c51`): 52 findings (13 critical, 27 should-add, 7 optimisations, 5 wording), ALL applied on BigDev's "all", then a fix-diff review of the patch (one fresh reviewer): 14 corrections applied (the floor test's `-411` item 7 assertion moves; PC2 moot under PQ1 C; costs on PC1 / PC2; read schema never tighter than a Send schema; letter qualifications). Critical: the October note's promise was the AUTHOR's and conditional on Q2 (answered) — MA2 is the live ground; PC5 A read correctly; PC2 added (the list off the members' drive view needs its own ruling); PQ2 B disclosed as a fifth ground; G2 quotes `-395` item 3 + `-411` PQ1 A; `-393` M4 (not M3); ledger letter; microcopy `code_globs`; re-send keeps the list ("Start from the list I sent"); `sendContent` stores a string; all three `action_shape` checks count kinship; per-name bidi isolation; AC10's scan root + table-identifier pin. ⛔ No code, ⛔ no decision id taken, ⛔ no Panel note. |

@@ -523,11 +523,11 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         onBusyChange={reportPeerRequestsBusy}
       />
       {peerRequestWarning && <p role="alert">{resolveEn('helpline.peer.caller.blocked')}</p>}
-      {intakeChangeHeld && (
-        <p role="status" data-testid="helpline-change-held">
-          {resolveEn('helpline.intake.changeHeld')}
-        </p>
-      )}
+      {/* Code review round 4 — the live region is ALWAYS mounted and only its text changes: a `role="status"` region inserted
+          already filled is often ⛔ announced. ⚠ A second held click while the line shows changes nothing, so it is ⛔ re-read. */}
+      <p role="status" data-testid="helpline-change-held">
+        {intakeChangeHeld ? resolveEn('helpline.intake.changeHeld') : ''}
+      </p>
     </>
   );
 }

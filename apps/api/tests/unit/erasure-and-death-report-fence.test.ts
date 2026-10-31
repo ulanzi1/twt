@@ -117,22 +117,45 @@ function locksBeforeLegality(src: string): boolean {
 }
 
 /**
- * How many advisory-lock calls in `src` take a key that is ⛔ built by `rtbfAdvisoryLockKey(` / `intakeAdvisoryLockKey(`? A
- * hand-built key (an inline hash, a `hashtext`) could disagree with the erasure's for the same member — the class round 2's
- * lock-key patch closed for the key FUNCTIONS; this pins that the call SITES keep using them.
+ * Every advisory-LOCK function spelling (round 5): the transaction and session forms, `try_`, `_shared`. Round 4 counted only
+ * `pg_advisory_xact_lock(`, so a `pg_advisory_lock(hashtext($1))` (the session form — `member-auth.service.ts` uses one) was in
+ * NEITHER count. `pg_advisory_unlock` is ⛔ a lock.
+ */
+const ADVISORY_LOCK_FN = String.raw`pg_(?:try_)?advisory_(?:xact_)?lock(?:_shared)?`;
+
+/**
+ * How many advisory-lock calls in `src` are PARSED but ⛔ keyed the data-rights way (below)? A hand-built key (an inline hash, a
+ * `hashtext`) could disagree with the erasure's for the same member — the class round 2's lock-key patch closed for the key
+ * FUNCTIONS; this pins that the call SITES keep using them.
  */
 function handBuiltAdvisoryLocks(src: string): number {
-  let n = 0;
-  // `pg_advisory_xact_lock(…)` with ONE level of nested parentheses (`hashtext($1)`), then the params array of the `query(text, […])`.
-  for (const m of src.matchAll(/pg_advisory_xact_lock\((?:[^()]|\([^()]*\))*\)['"`]?\s*,\s*\[([\s\S]{0,240}?)\]\s*\)/g)) {
-    if (!/\b(?:rtbfAdvisoryLockKey|intakeAdvisoryLockKey)\(/.test(m[1]!)) n += 1;
-  }
-  return n;
+  return parsedAdvisoryLocks(src).filter((keyed) => !keyed).length;
 }
 
-/** How many `pg_advisory_xact_lock(` calls `src` makes at all — so the scan above cannot pass by matching nothing. */
+/**
+ * How many advisory-lock calls in `src` the scan PARSED and found keyed. ⚠ Code review round 4: a call the pattern cannot parse
+ * (an object-form `query({ text, values })`, a params array past 240 characters) is in NEITHER count — so the fence asserts THIS
+ * equals `advisoryLockCalls`, ⛔ only that the hand-built count is 0.
+ */
+function keyedAdvisoryLocks(src: string): number {
+  return parsedAdvisoryLocks(src).filter((keyed) => keyed).length;
+}
+
+/**
+ * Each `query(text, […])` advisory-lock call the pattern parses: is it keyed the data-rights way? Round 5 — BOTH must hold:
+ * the SQL argument is a bare `$n` (⛔ `hashtext($1)` around a key-function param, which locks a DIFFERENT key), and the params
+ * array is built by `rtbfAdvisoryLockKey(` (⛔ `intakeAdvisoryLockKey(`: a grant keyed by the intake key would invert the one
+ * order, intake → rtbf, against the erasure).
+ */
+function parsedAdvisoryLocks(src: string): boolean[] {
+  // the lock call with ONE level of nested parentheses in its SQL argument, then the params array of the `query(text, […])`.
+  const call = new RegExp(String.raw`${ADVISORY_LOCK_FN}\(((?:[^()]|\([^()]*\))*)\)['"` + '`' + String.raw`]?\s*,\s*\[([\s\S]{0,240}?)\]\s*\)`, 'g');
+  return [...src.matchAll(call)].map((m) => /^\s*\$\d+\s*$/.test(m[1]!) && /\brtbfAdvisoryLockKey\(/.test(m[2]!));
+}
+
+/** How many advisory-lock calls (any spelling) `src` makes at all — so the scan above cannot pass by matching nothing. */
 function advisoryLockCalls(src: string): number {
-  return [...src.matchAll(/pg_advisory_xact_lock\(/g)].length;
+  return [...src.matchAll(new RegExp(String.raw`${ADVISORY_LOCK_FN}\(`, 'g'))].length;
 }
 
 /** In `file`, does the legality guard precede EVERY `anonymizeMember(` inside the same named method? */
@@ -305,9 +328,35 @@ describe('Story 6.38 — the erasure act and the one death-report predicate (sou
   });
 
   it('DL3 / N3 (round 3) — every advisory lock the data-rights handlers take is built by `rtbfAdvisoryLockKey(`, ⛔ by hand', () => {
-    expect(advisoryLockCalls(tree[DATA_RIGHTS]!)).toBe(3); // two grant paths + the redeem path — so the scan below cannot pass by matching nothing
+    expect(advisoryLockCalls(tree[DATA_RIGHTS]!)).toBe(3); // two grant paths + the redeem path
+    // Round 4: EVERY call parsed AND keyed — a call the pattern cannot parse (object form) would otherwise pass unseen.
+    expect(keyedAdvisoryLocks(tree[DATA_RIGHTS]!)).toBe(advisoryLockCalls(tree[DATA_RIGHTS]!));
     expect(handBuiltAdvisoryLocks(tree[DATA_RIGHTS]!)).toBe(0);
-    expect(handBuiltAdvisoryLocks(tree[RTBF]!)).toBe(0);
+    // The member's own erasure route takes its locks ONLY through `acquireErasureLocks` (the order test above): ⛔ raw call.
+    expect(advisoryLockCalls(tree[RTBF]!)).toBe(0);
+  });
+
+  it('⭐ (round 4) positive control — an OBJECT-FORM lock call escapes the parse, and the equality above catches it', () => {
+    const proper = "await c.query('SELECT pg_advisory_xact_lock($1)', [memberDomain.rtbfAdvisoryLockKey(p, m).toString()]);";
+    const objectForm = "await c.query({ text: 'SELECT pg_advisory_xact_lock($1)', values: [handKey] });";
+    const src = `${proper}\n${objectForm}`;
+    expect(handBuiltAdvisoryLocks(src)).toBe(0); // the old assertion alone passes…
+    expect(advisoryLockCalls(src)).toBe(2); // …both calls are SEEN…
+    expect(keyedAdvisoryLocks(src)).toBe(1); // …only the proper one is parsed and keyed, so the equality fails (round 5: pinned)
+  });
+
+  it('⭐ (round 5) positive controls — a key-function param under `hashtext`, the INTAKE key, and a session-form lock are caught', () => {
+    const wrapped = "await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', [memberDomain.rtbfAdvisoryLockKey(p, m).toString()]);";
+    const intakeKeyed = "await c.query('SELECT pg_advisory_xact_lock($1)', [claimDomain.intakeAdvisoryLockKey(p, m).toString()]);";
+    const sessionHand = "await c.query('SELECT pg_advisory_lock(hashtext($1)::bigint)', [body.member_id]);";
+    const tryForm = "await c.query('SELECT pg_try_advisory_xact_lock($1)', [memberDomain.rtbfAdvisoryLockKey(p, m).toString()]);";
+    expect(handBuiltAdvisoryLocks(wrapped)).toBe(1);
+    expect(handBuiltAdvisoryLocks(intakeKeyed)).toBe(1);
+    expect(advisoryLockCalls(sessionHand)).toBe(1); // round 4 counted 0
+    expect(handBuiltAdvisoryLocks(sessionHand)).toBe(1);
+    expect(advisoryLockCalls(tryForm)).toBe(1);
+    expect(keyedAdvisoryLocks(tryForm)).toBe(1);
+    expect(advisoryLockCalls("await c.query('SELECT pg_advisory_unlock($1)', [k]);")).toBe(0); // an unlock is ⛔ a lock
   });
 
   it('⭐ DL3 / N3 positive control (round 3) — a HAND-BUILT key (an inline hash; `hashtext`) is caught; the key function is not', () => {

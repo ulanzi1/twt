@@ -475,6 +475,12 @@ export interface ConvergeIntakeAttemptResult {
  *
  * Idempotent: merging an already-`converged` attempt is a no-op (returns the current channel set,
  * `merged: false`).
+ *
+ * ⚠ DELIBERATE (checklist family 9) — ⛔ claim door (Story 6.38 DL7): a merge mints ⛔ claim — it joins an attempt to a
+ * canonical claim that already passed the door at ITS first report. Residual (DL7 (a)): once a report is released by the
+ * innocence finding the door opens again, but a new report CONVERGES onto the released claim (the finding changes ⛔ claim
+ * state, so it stays a candidate) rather than meeting the door. Unreachable until a finding has a producer. Re-examine
+ * when row 6-22 writes `member_found_innocent` (`deferred-work.md`, the DL4 / DL7 item).
  */
 export async function convergeIntakeAttempt(
   client: pg.PoolClient,
@@ -583,6 +589,12 @@ export interface OverrideIntakeAttemptResult {
  *
  * ⚠ Ships ONLY behind the Task-7 aggregate-overlay gate (override must never weaken the account
  * freeze — see the route). This writer is the mutation half; the route decides whether to call it.
+ *
+ * ⚠ DELIBERATE (checklist family 9) — ⛔ claim door (Story 6.38 DL7), though this MINTS a claim: it separates a `pending`
+ * attempt that was parked beside a canonical claim, and that claim passed the door at the death's first report — the door
+ * is checked ONCE per death, only while ⛔ report stands. Residual (DL7 (b)): an attempt parked beside a claim that is LATER
+ * released by the innocence finding can still be overridden with ⛔ door. Unreachable until a finding has a producer.
+ * Re-examine when row 6-22 writes `member_found_innocent` (`deferred-work.md`, the DL4 / DL7 item).
  */
 export async function overrideIntakeAttempt(
   client: pg.PoolClient,

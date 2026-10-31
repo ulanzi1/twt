@@ -317,7 +317,7 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure after a death is reported,
       await elevate(t, memberId, 'rtbf');
 
       const race = await raceFirstIntake(t, pariwarId, memberId, () => inject(t, 'POST', URL, { payload: {}, token: tok }));
-      expect(race.waited, 'the member erasure did not wait on the claim-intake key — `acquireErasureLocks` is not taken first').toBe(true);
+      expect(race.waited, 'the member erasure did not wait on the claim-intake key — `acquireErasureLocks` is not taken first' + ' — ' + race.answeredWithoutWaiting).toBe(true);
       expect(race.response.status).toBe(409);
       expect(String((race.response.body.error as Json)?.code)).toBe('rtbf.death_reported');
       expect(await memberState(t, memberId)).toBe('withdrawn');

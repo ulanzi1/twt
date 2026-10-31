@@ -24,7 +24,7 @@ const TICKET = '22222222-2222-2222-2222-222222222222';
 const MEMBER = '44444444-4444-4444-4444-444444444444';
 
 const SENTENCE =
-  'This member’s data cannot be erased: a claim has been filed for their death. The person they nominated may see the record and ask for corrections. It can be erased only if the claim is found to be about a member who is alive.';
+  'This member’s data cannot be erased: a claim has been filed for their death. The person they nominated may see the record and ask for corrections. This stays so even if the claim is closed or refused; only a finding that the member is alive lifts it, and then the usual erasure rules apply.';
 const SERVER_MESSAGE = "Erasure is refused: a claim has been filed for this member's death";
 
 const timer = { due_at: '2026-08-04T06:00:00.000Z', running: true, breached: false, ms_remaining: 3_600_000 };

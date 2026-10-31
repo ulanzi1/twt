@@ -377,7 +377,7 @@ describe.skipIf(!hasDatabase)('Story 6.38 — Life Events after a death is repor
         inject(t, 'POST', '/api/v1/member/life-events/address', { payload: { addressLine: '99 New Colony', locale: 'en' }, token: tok }),
       );
       // The proof the lock is TAKEN: remove the intake-key line from `lockAndReadDeathReport` and this assertion fails.
-      expect(race.waited, 'the address change did not wait on the claim-intake key — its guard does not take it').toBe(true);
+      expect(race.waited, 'the address change did not wait on the claim-intake key — its guard does not take it' + ' — ' + race.answeredWithoutWaiting).toBe(true);
       expect(race.response.status).toBe(409);
       expect(String((race.response.body.error as Json)?.code)).toBe('life_events.death_reported');
       expect((await t.pool.query('SELECT 1 FROM member_addresses WHERE member_id = $1', [memberId])).rowCount).toBe(0);

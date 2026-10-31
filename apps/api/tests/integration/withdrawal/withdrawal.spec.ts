@@ -359,7 +359,7 @@ describe.skipIf(!hasDatabase)('Story 6.38 — withdrawal after a death is report
 
       const race = await raceFirstIntake(t, pariwarId, memberId, () => inject(t, 'POST', URL, { payload: {}, token: tok }));
       // The proof the lock is TAKEN: remove the intake-key line from `assertWithdrawable` and this is the assertion that fails.
-      expect(race.waited, 'the withdrawal did not wait on the claim-intake key — its guard does not take it').toBe(true);
+      expect(race.waited, 'the withdrawal did not wait on the claim-intake key — its guard does not take it' + ' — ' + race.answeredWithoutWaiting).toBe(true);
       expect(race.response.status).toBe(409);
       expect(String((race.response.body.error as Json)?.code)).toBe('withdrawal.death_reported');
       expect(await eventRows(t, memberId, 'member.withdrawal_completed')).toHaveLength(0);

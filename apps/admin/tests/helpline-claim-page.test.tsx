@@ -144,12 +144,19 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
     vi.mocked(api.initiateHelplineClaim).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
     const user = userEvent.setup();
     renderWithClient(<HelplineClaimPage pariwarId="99999999-9999-9999-9999-999999999999" />);
+    // Rounds 4–5: the live region is in the page from the FIRST render, empty, and stays the SAME node through the hold and its
+    // clearing — a region inserted (or re-inserted) already filled is often ⛔ announced.
+    const region = screen.getByTestId('helpline-change-held');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
     await searchAndGetBothResults(user);
     await user.click(screen.getByTestId(`member-row-${MEMBER_A.memberId}`));
     await user.click(screen.getByTestId('readback-confirm-identity'));
     await user.selectOptions(screen.getByTestId('helpline-relationship'), 'spouse');
     await user.click(screen.getByTestId('helpline-submit-intake'));
     await waitFor(() => expect(api.initiateHelplineClaim).toHaveBeenCalled());
+    expect(screen.getByTestId('helpline-change-held')).toBe(region);
+    expect(region).toBeEmptyDOMElement();
 
     // In flight: choosing the OTHER member, or searching again, is ignored — the caller (A) and the confirmation stay.
     vi.mocked(api.searchMembers).mockClear();
@@ -159,12 +166,13 @@ describe('<HelplineClaimPage> — selection-reset safety gate (Review Finding)',
     expect(api.searchMembers).not.toHaveBeenCalled();
     // …and the hold is SAID (round 3): a polite status line, ⛔ a click that does nothing and says nothing.
     const held = screen.getByTestId('helpline-change-held');
-    expect(held).toHaveAttribute('role', 'status');
+    expect(held).toBe(region); // the text changed IN PLACE — ⛔ a remount
     expect(held).toHaveTextContent('The claim is still being filed for this caller');
 
     await act(async () => finish({ claimCaseId: '66666666-6666-6666-6666-666666666666', state: 'intake_pending', created: true } as never));
     expect(await screen.findByTestId('helpline-intake-result')).toBeInTheDocument();
-    expect(screen.queryByTestId('helpline-change-held')).not.toBeInTheDocument(); // cleared once the filing settled
+    expect(screen.getByTestId('helpline-change-held')).toBe(region); // cleared once the filing settled — the SAME region stays
+    expect(region).toBeEmptyDOMElement();
 
     // And once it has settled the operator is free to change caller again (the guard is for the in-flight window only).
     await user.click(screen.getByTestId(`member-row-${MEMBER_B.memberId}`));

@@ -710,7 +710,7 @@ describe.skipIf(!hasDatabase)('Story 6.38 — medical declaration after a death 
         inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: tok }),
       );
       // The proof the lock is TAKEN: remove the intake-key line from `lockAndReadDeathReport` and this assertion fails.
-      expect(race.waited, 'the medical declaration did not wait on the claim-intake key — its guard does not take it').toBe(true);
+      expect(race.waited, 'the medical declaration did not wait on the claim-intake key — its guard does not take it' + ' — ' + race.answeredWithoutWaiting).toBe(true);
       expect(race.response.status).toBe(409);
       expect(String((race.response.body.error as Json)?.code)).toBe('medical.death_reported');
       expect(await disclosureCount(t, memberId)).toBe(0);

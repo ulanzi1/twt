@@ -42,7 +42,7 @@ import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/sco
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
-import { fileClaim } from '../_death-report-fixture.js';
+import { fileClaim, seedLifecycleMember } from '../_death-report-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 type Json = Record<string, unknown>;
@@ -679,7 +679,9 @@ describe.skipIf(!hasDatabase)('Story 6.36c — workplaces, the queue, the answer
 
     it('⭐ Story 6.38 AC15 — a standing claim ⇒ 409 life_events.death_reported; the request stays `suggested`, ⛔ posting', async () => {
       const { pariwarId: p, ids } = await seedList();
-      const me = await seedMemberRow(p);
+      // Code review round 4 (DL14 / TR2): an `active` member walked through REAL events — a `seedMemberRow` replays to
+      // `pending-kyc`, which the door refuses, so a standing claim for it could ⛔ exist.
+      const { memberId: me } = await seedLifecycleMember(td, { pariwarId: p });
       const r = await seedRequest(p, me);
       await suggestRaw(r, ids['GMS RAMPUR']!);
       await fileClaim(td, p, me);

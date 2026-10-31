@@ -7,9 +7,15 @@
 //        first ⇒ anonymized, then the intake is refused `erased`; intake first ⇒ refused `left` / `removed`, then erased.
 //        (The DOOR closes this case, ⛔ the lock.)
 //   (ii) ⭐ THREE-PARTY — the case the lock exists for: T1 = an intake for an `active` member holding the intake lock with
-//        its claim minted and UNCOMMITTED; T2 = a withdrawal that COMMITS (it takes ⛔ lock); T3 = an erasure, which must
-//        BLOCK on the intake key (server truth — `pg_blocking_pids`) and, once T1 commits, be refused `death_reported`.
-//        Without the intake key in `acquireErasureLocks` T3 reads `withdrawn`, sees ⛔ committed claim and erases.
+//        its claim minted and UNCOMMITTED; T2 = a write that makes the member erasable and COMMITS without the intake key;
+//        T3 = an erasure, which must BLOCK on the intake key (server truth — `pg_blocking_pids`) and, once T1 commits, be
+//        refused `death_reported`. Without the intake key in `acquireErasureLocks` T3 sees ⛔ committed claim and erases.
+//        T2 runs as a moderation TERMINATION — the path still reachable (`moderateMember` takes ⛔ advisory lock) — and as a
+//        WITHDRAWAL projector step. ⚠ BOTH are stand-ins, ⛔ the writers: the termination is this file's `terminate` (a
+//        superuser append of the overlay pair `moderateMember` writes), the withdrawal a bare projector step — the withdrawal
+//        ROUTE now takes the intake key itself (DL18, `lockAndReadDeathReport`), so through the route it would WAIT behind T1.
+//        Each leg first proves T2 made the member ERASABLE (a lock-free legality read returns `legal` while T1's claim is
+//        uncommitted — the erasure the lock prevents), then that T3 blocks. Three runs per kind (AC5 (ii)). (Rounds 4–5.)
 //
 // ⚠ Own-committing (⛔ setupLiveDb): real concurrent COMMITs on separate pool clients; cleanup by this suite's ids.
 
@@ -174,6 +180,7 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure vs claim intake, own-commi
     const mid = await seedMember(opts);
     let eraser: pg.PoolClient | undefined;
     let eraserOpen = false;
+    let filed: Promise<unknown> | undefined;
     try {
       eraser = await beginScoped();
       eraserOpen = true;
@@ -181,7 +188,10 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure vs claim intake, own-commi
       const intakeClient = await beginScoped();
       const intakePid = await pidOf(intakeClient);
       const eraserPid = await pidOf(eraser);
-      const filed = tryConverge(intakeClient, intake(mid, 'i1')).finally(() => end(intakeClient, false));
+      filed = tryConverge(intakeClient, intake(mid, 'i1')).finally(() => end(intakeClient, false));
+      // Round 5: a handler NOW — with the lock removed the door refuses in milliseconds while `blockedBy` still polls, and an
+      // un-handled rejection would add a second, misleading error. The awaits below still see the rejection.
+      filed.catch(() => undefined);
       expect(await blockedBy(intakePid, eraserPid), 'the intake did not wait for the erasure\'s intake-key lock').toBe(true);
       await end(eraser, true);
       eraserOpen = false;
@@ -190,6 +200,8 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure vs claim intake, own-commi
       expect((err as ClaimIntakeRefusedError).reason).toBe('erased');
     } finally {
       if (eraserOpen && eraser) await end(eraser, false).catch(() => undefined);
+      // Round 4: settle the intake on the FAILURE path too, so it ⛔ rejects unhandled or races `afterAll`'s `pool.end()`.
+      if (filed) await filed.catch(() => undefined);
     }
     expect(await committedState(mid)).toBe('anonymized');
     expect(await committedClaims(mid)).toBe(0);
@@ -210,7 +222,13 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure vs claim intake, own-commi
 
   // ── (ii) THREE-PARTY — the case the intake key in `acquireErasureLocks` exists for ──────────────────────────────
 
-  it.each([1, 2, 3])('⭐ (ii) run %i — T1 intake (uncommitted claim) · T2 withdrawal COMMITS · T3 erasure BLOCKS, then is refused `death_reported`', { timeout: TIMEOUT }, async () => {
+  // AC5 (ii): repeated runs with ⛔ deadlock — three per kind (round 5 restored them; round 4 had cut them to one).
+  it.each(
+    ([
+      ['a moderation TERMINATION', 'termination', 'active'],
+      ['a withdrawal (projector step)', 'withdrawal', 'withdrawn'],
+    ] as const).flatMap(([label, kind, state]) => [1, 2, 3].map((run) => [label, run, kind, state] as const)),
+  )('⭐ (ii) T1 intake (uncommitted claim) · T2 %s COMMITS · T3 erasure BLOCKS, then is refused `death_reported` (run %i)', { timeout: TIMEOUT }, async (_l, _run, t2Kind, finalState) => {
     const mid = await seedMember();
     let t1: pg.PoolClient | undefined;
     let t1Open = false;
@@ -221,8 +239,17 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure vs claim intake, own-commi
       t1Open = true;
       const filed = await tryConverge(t1, intake(mid, 'ii1'));
       expect(filed.minted).toBe(true);
-      // T2 — a withdrawal (takes ⛔ advisory lock) commits while T1 is open.
-      await onOwnTx((c) => step(c, mid, 'member.withdrawal_completed', ev('active', 'withdrawn')));
+      // T2 — commits while T1 is open, taking ⛔ advisory lock. Stand-ins (header): the overlay pair `moderateMember` writes,
+      // appended by `terminate`, or the withdrawal as a bare projector step (the route itself would wait on T1 — DL18).
+      if (t2Kind === 'termination') await terminate(mid);
+      else await onOwnTx((c) => step(c, mid, 'member.withdrawal_completed', ev('active', 'withdrawn')));
+      // Round 5 — the COUNTERFACTUAL: T2 really made the member erasable. A legality read that takes ⛔ lock sees ⛔
+      // committed claim and says `legal` — exactly the erasure T3 would commit without the intake key.
+      const unlocked = await onOwnTx(async (c) => {
+        const db = bindScopedDb(c);
+        return resolveRtbfLegality(db, PARIWAR, mid, await getCurrentMemberState(db, mid));
+      });
+      expect(unlocked.kind, 'T2 did not make the member erasable — the leg would not test the lock').toBe('legal');
       // T3 — the erasure: must BLOCK on the intake key held by T1.
       const t3 = await beginScoped();
       const t3Pid = await pidOf(t3);
@@ -246,8 +273,8 @@ describe.skipIf(!hasDatabase)('Story 6.38 — erasure vs claim intake, own-commi
       if (t1Open && t1) await end(t1, false).catch(() => undefined);
       if (t3Result) await t3Result.catch(() => undefined);
     }
-    // Both the claim and the withdrawal stand; ⛔ erasure.
+    // Both the claim and T2 stand; ⛔ erasure (a termination is an overlay — the lifecycle state stays `active`).
     expect(await committedClaims(mid)).toBe(1);
-    expect(await committedState(mid)).toBe('withdrawn');
+    expect(await committedState(mid)).toBe(finalState);
   });
 });

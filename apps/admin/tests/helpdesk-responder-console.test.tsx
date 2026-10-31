@@ -356,7 +356,7 @@ describe('<HelpdeskDetailShell> (D5) — the staff-mediation fallback courtesy',
 
 // ── Story 6.38 (AC10, DL11; `2026-10-30-423` Q1 (a)) — the Pariwar Admin is told WHY an erasure was refused ─────────
 describe('Story 6.38 — the erasure refused once a death is reported', () => {
-  const SENTENCE = 'This member’s data cannot be erased: a claim has been filed for their death. The person they nominated may see the record and ask for corrections. It can be erased only if the claim is found to be about a member who is alive.';
+  const SENTENCE = 'This member’s data cannot be erased: a claim has been filed for their death. The person they nominated may see the record and ask for corrections. This stays so even if the claim is closed or refused; only a finding that the member is alive lifts it, and then the usual erasure rules apply.';
 
   it('erasureErrorText: `rtbf.death_reported` ⇒ the panel\'s sentence; any other error ⇒ its own message', () => {
     expect(erasureErrorText(new ApiError(409, 'rtbf.death_reported', "Erasure is refused: a claim has been filed for this member's death"))).toBe(SENTENCE);

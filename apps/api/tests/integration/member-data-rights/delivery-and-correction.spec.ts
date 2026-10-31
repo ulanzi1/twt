@@ -35,7 +35,7 @@ import {
   type TestDeps,
 } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
-import { fileClaim, findInnocent, forceClaimState, raceFirstIntake, sendWhileHolding } from '../_death-report-fixture.js';
+import { fileClaim, findInnocent, forceClaimState, raceFirstIntake, seedLifecycleMember, sendWhileHolding } from '../_death-report-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 
@@ -181,19 +181,25 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
    * untestable end-to-end. The two PRE-EXISTING gate tests that hand-insert an OTP row under a fake
    * `bi-${memberId}` blind index are UNAFFECTED — `primaryDeliveryNotCompletedAt` filters on
    * `member_id`, never the blind index.
+   * ⚠ Story 6.38 code review round 4 — `replayed: true` walks the member to `active` through REAL events (a bare `members`
+   * row replays to `pending-kyc`, which the claim door refuses, so a standing claim for it could ⛔ exist); `status: 'none'`
+   * seeds ⛔ export, so the export route must create one. ⚠ With `'none'` the returned `exportId` has ⛔ row behind it — ⛔ pass
+   * it to a delivery or redeem call (round 5).
    */
   async function seedSubject(
     client: Client,
     pariwarId: string,
-    opts: { status?: 'pending' | 'ready'; memberRequestedStaffMediation?: boolean } = {},
+    opts: { status?: 'pending' | 'ready' | 'none'; memberRequestedStaffMediation?: boolean; replayed?: boolean } = {},
   ): Promise<{ memberId: string; exportId: string; ticketId: string }> {
     const status = opts.status ?? 'ready';
-    const memberId = randomUUID();
+    const memberId = opts.replayed ? (await seedLifecycleMember(td, { pariwarId })).memberId : randomUUID();
     const exportId = randomUUID();
     createdMemberIds.push(memberId);
     const c = await td.pool.connect();
     try {
-      await c.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1,$2,'active',1)`, [memberId, pariwarId]);
+      if (!opts.replayed) {
+        await c.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1,$2,'active',1)`, [memberId, pariwarId]);
+      }
       const mobile = randomMobile();
       const mobileCiphertext = await encryptMobile(normalizeMobile(mobile) as string, deps.encryption);
       const blindIndex = await mobileBlindIndex(mobile, deps.encryption);
@@ -220,7 +226,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
            VALUES ($1,$2,$3,'ready', now(), $4, 'off_portal_admin', now() + interval '1 day')`,
           [exportId, memberId, pariwarId, encryption.serializeEnvelope(ct)],
         );
-      } else {
+      } else if (status === 'pending') {
         await c.query(
           `INSERT INTO data_exports (export_id, member_id, pariwar_id, status, requested_at, requested_via)
            VALUES ($1,$2,$3,'pending', now(), 'off_portal_admin')`,
@@ -1674,7 +1680,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const s = await seedTerminatedSubject(a.client, p);
 
     const race = await raceFirstIntake(td, p, s.memberId, () => erase(a.client, p, s));
-    expect(race.waited, 'the off-portal erasure did not wait on the claim-intake key — `acquireErasureLocks` is not taken first').toBe(true);
+    expect(race.waited, 'the off-portal erasure did not wait on the claim-intake key — `acquireErasureLocks` is not taken first' + ' — ' + race.answeredWithoutWaiting).toBe(true);
     expect(race.response.statusCode).toBe(409);
     expect((race.response.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
     expect(await rtbfEventCount(s.memberId)).toBe(0);
@@ -1699,7 +1705,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         payload: { export_id: s.exportId, member_id: s.memberId.toUpperCase(), helpdesk_ticket_id: s.ticketId },
       }),
     );
-    expect(race.waited, 'an UPPER-case grant did not wait on the erasure\'s `rtbf` lock — the key still hashes the spelling').toBe(true);
+    expect(race.waited, 'an UPPER-case grant did not wait on the erasure\'s `rtbf` lock — the key still hashes the spelling' + ' — ' + race.answeredWithoutWaiting).toBe(true);
     expect(race.response.statusCode).toBe(200);
   });
 
@@ -1735,12 +1741,15 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     },
   );
 
-  it('⭐ 6.38 N8 — SEE stays open: the off-portal export request succeeds for a member with a standing claim', async () => {
+  // Code review rounds 4–5: the SEE and ASK legs use a member walked through REAL events (`replayed`) — a bare row replays to
+  // `pending-kyc`, which the door refuses, so a standing claim for it could ⛔ exist — and the export leg creates a NEW
+  // request (⛔ the reuse path). The build itself is queued (`requestExport` inserts `pending`); ⛔ asserted here.
+  it('⭐ 6.38 N8 — SEE stays open: a NEW off-portal export request is created for a member with a standing claim (⛔ the reuse path)', async () => {
     const p = randomUUID();
     const a = await authenticate('Operator See');
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
-    const s = await seedSubject(a.client, p);
+    const s = await seedSubject(a.client, p, { status: 'none', replayed: true });
     await fileClaim(td, p, s.memberId);
 
     const res = await a.client.inject({
@@ -1750,7 +1759,27 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
       payload: { member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
     });
     expect(res.statusCode).toBe(200);
-    expect((res.json() as { export_id: string }).export_id).toBe(s.exportId);
+    const built = (res.json() as { export_id: string }).export_id;
+    const { rows } = await td.pool.query(`SELECT export_id, status FROM data_exports WHERE member_id = $1`, [s.memberId]);
+    expect(rows).toEqual([{ export_id: built, status: 'pending' }]); // ONE row, the one the route created, queued
+  });
+
+  it('⭐ 6.38 N8 — SEE stays open: the member-direct DELIVERY is issued for a member with a standing claim', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator See Delivery');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p, { replayed: true });
+    await fileClaim(td, p, s.memberId);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/delivery/member-direct`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: { export_id: s.exportId, member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as { channel: string }).channel).toBe('member_direct');
   });
 
   it('⭐ 6.38 N8 / AC15 — ASK stays open: the staff correction is recorded for a member with a standing claim', async () => {
@@ -1758,7 +1787,7 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     const a = await authenticate('Operator Ask');
     await grant(a.userId, p, 'pariwar_admin');
     await elevate(a.client);
-    const s = await seedSubject(a.client, p);
+    const s = await seedSubject(a.client, p, { replayed: true }); // round 5 (DL14 / TR2): a member the door would admit
     await fileClaim(td, p, s.memberId);
 
     const res = await a.client.inject({

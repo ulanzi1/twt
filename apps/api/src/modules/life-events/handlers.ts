@@ -476,8 +476,8 @@ export function createLifeEventsHandlers(deps: AppDeps) {
      * POST /api/v1/member/life-events/workplace-requests/:requestId/answer — the MEMBER answers a Pariwar Admin's suggestion
      * (Story 6.36c, AC4; `-330` SW9 A). ⭐ The ONE write near who is asked about a death — and the member's own act: *"Yes"*
      * writes a posting through the ONE writer (6.36 reads it like any other, as of the cut — SW20, `-339`); a Pariwar Admin's
-     * suggestion alone changes nothing. Gate = the posting route's (`assertMemberExistsAndNotTerminal`, ⛔ a claim check —
-     * recorded). The SAME closure-local `requireIdempotencyKey`, keyed store, 24 h TTL and `releaseClaimWithRetry` as
+     * suggestion alone changes nothing. Gate = the posting route's (`assertMemberExistsAndNotTerminal` — since Story 6.38
+     * DL19 it also refuses while a death report stands, 409 `life_events.death_reported`). The SAME closure-local `requireIdempotencyKey`, keyed store, 24 h TTL and `releaseClaimWithRetry` as
      * `updatePosting`, under its OWN key prefix (one key ⛔ replays across routes). ONE transaction: the domain serialises the
      * member's posting writes, re-reads the request, and takes district → workplace → request.
      *   · `confirmed` ⇒ the `member.posting_updated` marker (the posting route's payload shape), the summary, recorded, 200

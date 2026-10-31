@@ -77,6 +77,19 @@ export interface FirstIntakeRace<R> {
   /** True iff the request was SEEN WAITING on the intake key (a backend blocked by the holder) before the claim was committed. */
   readonly waited: boolean;
   readonly response: R;
+  /**
+   * When the request answered WITHOUT waiting: its status and body, for the caller's failure message (code review round 4) — a
+   * fast 4xx / 500 from an unrelated fault is ⛔ a missing lock, and the message must let the reader tell. `''` when it waited.
+   */
+  readonly answeredWithoutWaiting: string;
+}
+
+/** A short status + body summary of an inject / `memberCall` response, for a diagnostic. */
+function describeAnswer(r: unknown): string {
+  if (r === null || typeof r !== 'object') return `answered ${String(r)}`;
+  const o = r as Record<string, unknown>;
+  const body = typeof o['payload'] === 'string' ? o['payload'] : JSON.stringify(o['body'] ?? null);
+  return `answered status ${String(o['statusCode'] ?? o['status'])}, body ${String(body).slice(0, 300)}`;
 }
 
 /**
@@ -90,7 +103,9 @@ export interface FirstIntakeRace<R> {
  *
  * ⚠ INCONCLUSIVE is its own outcome (round 3): if within `timeoutMs` the request neither waits nor answers, the runner is slow —
  * that is ⛔ evidence about the lock, so it THROWS a message that says so, rather than returning `waited: false` (which the
- * caller reads as "your guard does not take the key"). The default is 4 s so this diagnostic prints before vitest's own 5 s.
+ * caller reads as "your guard does not take the key"). The default is 4 s, well inside the api suite's `testTimeout` (20 s,
+ * `vitest.config.ts`) even after the app and the seeding have taken their share. (Round 4: the "before vitest's own 5 s"
+ * reason given here was wrong — that is vitest's default, ⛔ this suite's.)
  *
  * ⚠ CLEANUP IS NOT OPTIONAL: whatever throws, the holder is rolled back (a connection whose ROLLBACK failed is DESTROYED, ⛔ handed
  * back to the pool) and a request still in flight is awaited (bounded) before this returns, so it cannot commit a real write
@@ -141,7 +156,8 @@ export async function sendWhileHolding<R>(
     open = false;
     holder.release();
     released = true;
-    return { waited, response: await inFlight };
+    const response = await inFlight;
+    return { waited, response, answeredWithoutWaiting: waited ? '' : describeAnswer(response) };
   } finally {
     // ⛔ Never hand an OPEN transaction (it holds the advisory lock) back to the pool.
     if (open) {
@@ -154,7 +170,9 @@ export async function sendWhileHolding<R>(
     if (!released) holder.release(broken);
     // ⛔ A request still in flight must not outlive the test: released from the holder it would run to a real write.
     if (pending !== undefined) {
-      await Promise.race([pending.then(() => undefined, () => undefined), new Promise((resolve) => setTimeout(resolve, 5_000))]);
+      let bound: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([pending.then(() => undefined, () => undefined), new Promise((resolve) => (bound = setTimeout(resolve, 5_000)))]);
+      clearTimeout(bound); // round 4: ⛔ leave the bound's timer keeping the event loop alive once the request has settled
     }
   }
 }

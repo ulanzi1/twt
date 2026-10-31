@@ -125,9 +125,11 @@ export function rtbfAdvisoryLockKey(pariwarId: string, memberId: string): bigint
  * Take BOTH erasure locks, in the ONE order (Story 6.38, N3, DL3): the INTAKE key for `(pariwarId, memberId)` FIRST — the
  * key every claim intake takes before it mints (`claim/icp-lock.ts`) — then the `rtbfAdvisoryLockKey`. Transaction-scoped.
  *
- * ⭐ WHY THE INTAKE KEY: an intake that passed the door on `active` holds it with its claim uncommitted; a withdrawal
- * (which takes ⛔ lock) commits; an erasure then reads `withdrawn`. Without the intake key it sees ⛔ committed claim and
- * erases while the claim commits too; with it, it waits, sees the claim, and is refused `death_reported`.
+ * ⭐ WHY THE INTAKE KEY: an intake that passed the door on `active` holds it with its claim uncommitted; a write that makes
+ * the member erasable commits without the key — today a moderation TERMINATION (the moderation writers take ⛔ advisory
+ * lock); an erasure then reads an erasable member. Without the intake key it sees ⛔ committed claim and erases while the
+ * claim commits too; with it, it waits, sees the claim, and is refused `death_reported`. (A withdrawal ROUTE now takes the
+ * intake key itself — DL18, `lockAndReadDeathReport` — so it waits behind the intake; the key here does ⛔ rely on that.)
  * ⛔ Take ⛔ other advisory lock before this call (intake → rtbf, everywhere — ⛔ a lock-order cycle). Both erasure
  * handlers call it; the race spec calls it too (⛔ a hand copy of the order).
  */

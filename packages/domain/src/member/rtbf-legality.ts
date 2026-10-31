@@ -21,11 +21,25 @@
 // whole 10.16–10.23 correct-course exists to prevent). Termination is an OVERLAY, orthogonal to the
 // lifecycle — a terminated member's `members.state` is whatever it already was, which is why (b) cannot
 // be expressed as a lifecycle check.
+//
+// ⭐ BUT NEVER ONCE A DEATH IS REPORTED (Story 6.38; `2026-10-30-423` Q1 (a) A, Q1 (b) A; `2026-10-31-425` DL2): *"From
+// the moment a claim is filed for the member's death, an erasure request is refused, for good — unless the report is
+// closed as false."* A standing report (`claim/death-report.ts` `isDeathReportStanding` — a claim ⛔ released by a
+// `member_found_innocent` finding) refuses BOTH (a) and (b) as `death_reported`, whatever the member's state. Only
+// `anonymized` answers first (nothing is left to protect). It supersedes `2026-08-24-159` cl. 11's *"RTBF → the name
+// GOES"* once a death is reported.
+//
+// ⭐ THE RULE FOR ANY FUTURE DEFERRED / SCHEDULED ERASURE (DL15): legality is decided at EXECUTION, inside the executing
+// transaction, after `acquireErasureLocks` — ⛔ at request or scheduling time (a death can be reported in between).
 
 import { createHash } from 'node:crypto';
 
+import type pg from 'pg';
+
+import { isDeathReportStanding } from '../claim/death-report.js';
+import { intakeAdvisoryLockKey } from '../claim/icp-lock.js';
 import type { Db } from '../db.js';
-import type { MemberId } from '../ids/index.js';
+import type { MemberId, PariwarId } from '../ids/index.js';
 import { getCurrentMemberModerationOverlay } from './moderation/overlay.js';
 import type { MemberLifecycleState } from './state.js';
 
@@ -33,6 +47,9 @@ import type { MemberLifecycleState } from './state.js';
 export type RtbfLegality =
   /** Already terminal. The caller returns the shipped 409 `rtbf.already_anonymized`. */
   | { readonly kind: 'already_anonymized' }
+  /** A claim was filed for the member's death and ⛔ released (Story 6.38). The caller returns 409 `rtbf.death_reported`.
+   *  ⚠ It carries `fromState` too — so a caller MUST narrow on `kind` exhaustively before reading `fromState`. */
+  | { readonly kind: 'death_reported'; readonly fromState: MemberLifecycleState }
   /** Legal via the lifecycle route (`withdrawn`). */
   | { readonly kind: 'legal'; readonly via: 'withdrawn'; readonly fromState: MemberLifecycleState }
   /** Legal via the moderation overlay (`terminated`) — the off-portal statutory-rights route. */
@@ -54,17 +71,23 @@ export type RtbfLegality =
  * `from_state` audit field. ⛔ Do not hardcode `'withdrawn'` there — with (b) in play that would be a
  * false audit record on the one event whose `from` set this story widened.
  *
+ * ⭐ Story 6.38: checked AFTER `anonymized` and BEFORE both legal routes — a standing death report refuses an
+ * erasure from ANY state (`2026-10-30-423` Q1 (a)). The caller must hold `acquireErasureLocks` first.
+ *
  * @param db          the caller's scoped transaction (RLS applies)
+ * @param pariwarId   the subject's Pariwar (the death-report read is tenant-scoped — explicit predicate + RLS)
  * @param memberId    the subject
  * @param currentState the member's replayed lifecycle state (the caller already has it; passing it in
  *                     keeps this function from owning a second replay strategy)
  */
 export async function resolveRtbfLegality(
   db: Db,
+  pariwarId: PariwarId,
   memberId: MemberId,
   currentState: MemberLifecycleState,
 ): Promise<RtbfLegality> {
   if (currentState === 'anonymized') return { kind: 'already_anonymized' };
+  if (await isDeathReportStanding(db, pariwarId, memberId)) return { kind: 'death_reported', fromState: currentState };
   if (currentState === 'withdrawn') return { kind: 'legal', via: 'withdrawn', fromState: currentState };
 
   const overlay = await getCurrentMemberModerationOverlay(db, memberId);
@@ -89,4 +112,23 @@ export async function resolveRtbfLegality(
 export function rtbfAdvisoryLockKey(pariwarId: string, memberId: string): bigint {
   const hex = createHash('sha256').update(`member.rtbf:${pariwarId}:${memberId}`).digest('hex');
   return BigInt(`0x${hex.slice(0, 15)}`);
+}
+
+/**
+ * Take BOTH erasure locks, in the ONE order (Story 6.38, N3, DL3): the INTAKE key for `(pariwarId, memberId)` FIRST — the
+ * key every claim intake takes before it mints (`claim/icp-lock.ts`) — then the `rtbfAdvisoryLockKey`. Transaction-scoped.
+ *
+ * ⭐ WHY THE INTAKE KEY: an intake that passed the door on `active` holds it with its claim uncommitted; a withdrawal
+ * (which takes ⛔ lock) commits; an erasure then reads `withdrawn`. Without the intake key it sees ⛔ committed claim and
+ * erases while the claim commits too; with it, it waits, sees the claim, and is refused `death_reported`.
+ * ⛔ Take ⛔ other advisory lock before this call (intake → rtbf, everywhere — ⛔ a lock-order cycle). Both erasure
+ * handlers call it; the race spec calls it too (⛔ a hand copy of the order).
+ */
+export async function acquireErasureLocks(
+  client: pg.PoolClient,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+): Promise<void> {
+  await client.query('SELECT pg_advisory_xact_lock($1)', [intakeAdvisoryLockKey(pariwarId, memberId).toString()]);
+  await client.query('SELECT pg_advisory_xact_lock($1)', [rtbfAdvisoryLockKey(pariwarId, memberId).toString()]);
 }

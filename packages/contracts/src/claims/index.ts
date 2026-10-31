@@ -10,6 +10,8 @@
 
 export * from './filing.js';
 export * from './helpline.js';
+// Story 6.38 — the claim door's 409 code + the five refusal reasons (mirrored from the domain).
+export * from './intake-refusal.js';
 // Story 6.4 — the ICP convergence-resolution DTOs (pending list + merge + override) for the
 // operator/trustee <ConvergenceDecisionStrip>.
 export * from './convergence.js';

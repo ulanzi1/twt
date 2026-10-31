@@ -34,6 +34,7 @@ import {
   type WorkplaceSearchResponse,
 } from '@twt/contracts';
 import {
+  claim as claimDomain,
   idempotency,
   ids,
   medical as medicalDomain,
@@ -184,6 +185,15 @@ export function createLifeEventsHandlers(deps: AppDeps) {
     const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
     if (!exists) {
       throw new ConflictError('Member not found', 'life_events.member_not_found');
+    }
+    // ⭐ Story 6.38 (DL19 (a); `2026-10-31-424` Q2 (b) A): once a death is reported the record is ⛔ changed DIRECTLY from the
+    // account — the family ASKS (the data-rights helpdesk ticket + the staff correction). The ONE guard of address, posting
+    // and the suggested-workplace answer. The intake key FIRST, then the ONE predicate; lifted only by the innocence finding.
+    if (await claimDomain.lockAndReadDeathReport(scopeTx.client, pariwarId, memberId)) {
+      throw new ConflictError(
+        "A claim has been filed for this member's death — these details can no longer be changed here",
+        'life_events.death_reported',
+      );
     }
     const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, deps.clock());
     if (TERMINAL_STATES.has(state)) {

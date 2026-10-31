@@ -21,6 +21,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, findInnocent, forceClaimState } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -271,6 +272,92 @@ describe.skipIf(!hasDatabase)('Member RTBF anonymization — E2E (:5433)', () =>
     try {
       const res = await inject(t, 'POST', URL, { payload: {} });
       expect(res.status).toBe(401);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 6.38 — once a death is reported, the member route REFUSES the erasure (`2026-10-30-423` Q1 (a) / (b)) ──
+
+async function rtbfEvents(t: TestApp, memberId: string): Promise<number> {
+  const r = await t.pool.query(
+    `SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'member.rtbf_anonymized'`,
+    [memberId],
+  );
+  return r.rowCount ?? 0;
+}
+
+describe.skipIf(!hasDatabase)('Story 6.38 — erasure after a death is reported, member route (:5433)', () => {
+  it('⭐ AC2 — a WITHDRAWN member with a standing claim ⇒ 409 rtbf.death_reported; ⛔ anonymized, ⛔ event, ⛔ audit', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t, { withdraw: true });
+      await fileClaim(t, pariwarId, memberId);
+      const tok = token(t, memberId, pariwarId);
+      await elevate(t, memberId, 'rtbf');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('rtbf.death_reported');
+      expect(await memberState(t, memberId)).toBe('withdrawn');
+      expect(await rtbfEvents(t, memberId)).toBe(0);
+      expect(t.auditSink.ofType('member_rtbf.completed')).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC4 — the claim\'s innocence finding lifts the lock: the same member is erased as today', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t, { withdraw: true });
+      const cid = await fileClaim(t, pariwarId, memberId);
+      await findInnocent(t, pariwarId, cid);
+      const tok = token(t, memberId, pariwarId);
+      await elevate(t, memberId, 'rtbf');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
+      expect(res.status).toBe(200);
+      expect(await memberState(t, memberId)).toBe('anonymized');
+      expect(await rtbfEvents(t, memberId)).toBe(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it.each(['denied', 'closed', 'reversed', 'settled'])(
+    '⛔ AC4 — a claim `%s` WITHOUT the finding still refuses',
+    async (state) => {
+      const t = await createTestApp();
+      try {
+        const { memberId, pariwarId } = await seedMember(t, { withdraw: true });
+        const cid = await fileClaim(t, pariwarId, memberId);
+        await forceClaimState(t, cid, state);
+        const tok = token(t, memberId, pariwarId);
+        await elevate(t, memberId, 'rtbf');
+
+        const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
+        expect(res.status).toBe(409);
+        expect(String((res.body.error as Json)?.code)).toBe('rtbf.death_reported');
+        expect(await memberState(t, memberId)).toBe('withdrawn');
+      } finally {
+        await teardown(t);
+      }
+    },
+  );
+
+  it('⛔ an already-anonymized member still answers rtbf.already_anonymized (checked before the death lock)', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t, { anonymize: true });
+      await fileClaim(t, pariwarId, memberId);
+      const tok = token(t, memberId, pariwarId);
+      await elevate(t, memberId, 'rtbf');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: tok });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('rtbf.already_anonymized');
     } finally {
       await teardown(t);
     }

@@ -18,6 +18,7 @@ import type {
   MemberSearchRequest,
   MemberSearchResultItem,
 } from '@twt/contracts';
+import { CLAIM_INTAKE_REFUSAL_REASONS, CLAIM_INTAKE_REFUSED_CODE } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -49,6 +50,24 @@ function messageOf(err: unknown): string | undefined {
   if (err instanceof ApiError) return err.message;
   if (err instanceof Error) return err.message;
   return undefined;
+}
+
+/**
+ * Story 6.38 (DL9; `2026-10-30-423` reading 3) — a claim-door 409 → the copy key of its reason's line, else `null` (the
+ * caller keeps `messageOf`). The code AND the reasons are the contracts package's RUNTIME values (⛔ local literals); an
+ * unknown reason falls back, so a future reason never renders as a raw code or an unmapped key.
+ */
+function intakeRefusalKey(err: unknown): string | null {
+  if (!(err instanceof ApiError) || err.code !== CLAIM_INTAKE_REFUSED_CODE) return null;
+  const reason = (err.details as { reason?: unknown } | undefined)?.reason;
+  if (typeof reason !== 'string' || !(CLAIM_INTAKE_REFUSAL_REASONS as readonly string[]).includes(reason)) return null;
+  return `helpline.intake.refused.${reason}`;
+}
+
+/** The intake alert's text: a door refusal's reason line + the general line to tell the caller; else the server's words. */
+function intakeErrorText(err: unknown): string | undefined {
+  const key = intakeRefusalKey(err);
+  return key !== null ? `${resolveEn(key)} ${resolveEn('helpline.intake.refused.tellCaller')}` : messageOf(err);
 }
 
 const STEP_UP_CONTEXT = 'claim_file';
@@ -116,6 +135,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
     setRefileClaimId(null);
     requestStepUp.reset();
     verifyStepUp.reset();
+    // Story 6.38 (DL9): a failed submit's error must ⛔ outlive a change of member — a refusal for member A shown beside
+    // member B would undo the very re-check the operator's reason line is for.
+    intake.reset();
   };
 
   const selectMember = (id: string | null): void => {
@@ -375,8 +397,9 @@ export function HelplineClaimPage({ pariwarId }: HelplineClaimPageProps): ReactE
         submitPending={intake.isPending}
         submitError={
           // A step-up-required error is handled via the panel, not surfaced as a hard error.
+          // Story 6.38 (DL9, TR7): a claim-door refusal is derived HERE (⛔ new state in `onError`).
           intake.isError && !(intake.error instanceof ApiError && intake.error.code === 'auth.step_up_required')
-            ? messageOf(intake.error)
+            ? intakeErrorText(intake.error)
             : undefined
         }
         result={result}

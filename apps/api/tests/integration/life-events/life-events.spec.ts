@@ -25,6 +25,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, findInnocent } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -285,6 +286,57 @@ describe.skipIf(!hasDatabase)('Life Events panel — E2E (:5433)', () => {
         payload: { addressLine: '5 Main Rd', locale: 'en' },
       });
       expect(res.status).toBe(401);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 6.38 — the record is ⛔ changed from the account once a death is reported (AC15; `-424` Q2 (b) A, DL19) ────
+
+describe.skipIf(!hasDatabase)('Story 6.38 — Life Events after a death is reported (:5433)', () => {
+  it('⭐ AC15 — address and posting ⇒ 409 life_events.death_reported; ⛔ new history row, ⛔ marker; the prior rows unchanged', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t);
+      const tok = token(t, memberId, pariwarId);
+      expect((await inject(t, 'POST', '/api/v1/member/life-events/address', { payload: { addressLine: '12 Gandhi Marg', locale: 'en' }, token: tok })).status).toBe(200);
+      const before = await t.pool.query('SELECT * FROM member_addresses WHERE member_id = $1', [memberId]);
+      await fileClaim(t, pariwarId, memberId);
+
+      const address = await inject(t, 'POST', '/api/v1/member/life-events/address', { payload: { addressLine: '99 New Colony', locale: 'en' }, token: tok });
+      expect(address.status).toBe(409);
+      expect(String((address.body.error as Json)?.code)).toBe('life_events.death_reported');
+      const posting = await inject(t, 'POST', '/api/v1/member/life-events/posting', {
+        payload: { choice: 'district_only', district: 'Nagpur', isRetirement: false },
+        token: tok,
+        headers: { 'idempotency-key': randomUUID() },
+      });
+      expect(posting.status).toBe(409);
+      expect(String((posting.body.error as Json)?.code)).toBe('life_events.death_reported');
+
+      const after = await t.pool.query('SELECT * FROM member_addresses WHERE member_id = $1', [memberId]);
+      expect(after.rows).toEqual(before.rows);
+      const postings = await t.pool.query('SELECT 1 FROM member_postings WHERE member_id = $1', [memberId]);
+      expect(postings.rowCount).toBe(0);
+      expect(await eventRows(t, memberId, 'member.address_updated')).toHaveLength(1);
+      expect(await eventRows(t, memberId, 'member.posting_updated')).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC15 — the innocence finding lifts the lock: the address is accepted as today', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMember(t);
+      const cid = await fileClaim(t, pariwarId, memberId);
+      await findInnocent(t, pariwarId, cid);
+      const res = await inject(t, 'POST', '/api/v1/member/life-events/address', {
+        payload: { addressLine: '99 New Colony', locale: 'en' },
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(200);
     } finally {
       await teardown(t);
     }

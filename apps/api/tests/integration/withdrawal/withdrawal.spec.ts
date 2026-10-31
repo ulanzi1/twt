@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, findInnocent } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -262,6 +263,91 @@ describe.skipIf(!hasDatabase)('Voluntary withdrawal — E2E (:5433)', () => {
     try {
       const res = await inject(t, 'POST', URL, { payload: {} });
       expect(res.status).toBe(401);
+    } finally {
+      await teardown(t);
+    }
+  });
+});
+
+// ── Story 6.38 — withdrawal refused once a death is reported (AC14; `2026-10-31-424` Q2 (a) A, DL18) ───────────────
+
+async function declareNominee(t: TestApp, memberId: string, pariwarId: string): Promise<void> {
+  const res = await inject(t, 'POST', '/api/v1/member/nominees', {
+    payload: { nominees: [{ name: 'Asha Devi', relationship: 'spouse', mobile: '9876543210' }] },
+    token: token(t, memberId, pariwarId),
+  });
+  expect(res.status).toBe(200);
+}
+
+async function establishHandoverTrust(t: TestApp, memberId: string, pariwarId: string): Promise<void> {
+  const tok = token(t, memberId, pariwarId);
+  expect((await inject(t, 'POST', '/api/v1/member/claims/handover-otp', { payload: {}, token: tok })).status).toBe(200);
+  const code = t.stepUpDelivery.last?.code;
+  const verify = await inject(t, 'POST', '/api/v1/member/claims/handover-otp/verify', { payload: { code }, token: tok });
+  expect(verify.body).toMatchObject({ verified: true });
+}
+
+describe.skipIf(!hasDatabase)('Story 6.38 — withdrawal after a death is reported (:5433)', () => {
+  it('⭐ AC14 — a standing claim ⇒ 409 withdrawal.death_reported; ⛔ withdrawal event, ⛔ row; the member stays active', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      await fileClaim(t, pariwarId, memberId);
+      await elevate(t, memberId, 'withdrawal');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+      expect(await eventRows(t, memberId, 'member.withdrawal_completed')).toHaveLength(0);
+      const rows = await t.pool.query('SELECT 1 FROM member_withdrawals WHERE member_id = $1', [memberId]);
+      expect(rows.rowCount).toBe(0);
+      expect(await memberState(t, memberId)).toBe('active');
+      expect(t.auditSink.ofType('member_withdrawal.completed')).toHaveLength(0);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC14 — the claim\'s innocence finding lifts the lock: withdrawn as today', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      const cid = await fileClaim(t, pariwarId, memberId);
+      await findInnocent(t, pariwarId, cid);
+      await elevate(t, memberId, 'withdrawal');
+
+      const res = await inject(t, 'POST', URL, { payload: {}, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(200);
+      expect(await memberState(t, memberId)).toBe('withdrawn');
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it.each([1, 2, 3])('⭐ AC14 race %i — a withdrawal racing a FIRST intake never ends with BOTH a minted claim and a withdrawal', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedActiveMember(t);
+      await declareNominee(t, memberId, pariwarId);
+      await establishHandoverTrust(t, memberId, pariwarId);
+      await elevate(t, memberId, 'withdrawal');
+      const tok = token(t, memberId, pariwarId);
+
+      const [filed, withdrew] = await Promise.all([
+        inject(t, 'POST', '/api/v1/member/claims/intake', { payload: { relationship: 'spouse' }, token: tok }),
+        inject(t, 'POST', URL, { payload: {}, token: tok }),
+      ]);
+      const claims = await t.pool.query('SELECT 1 FROM claims WHERE deceased_member_id = $1', [memberId]);
+      const withdrawn = (await eventRows(t, memberId, 'member.withdrawal_completed')).length;
+      // Exactly one side wins; the loser is the matching refusal.
+      expect((claims.rowCount ?? 0) + withdrawn).toBe(1);
+      if (withdrawn === 1) {
+        expect(filed.status).toBe(409);
+        expect(String((filed.body.error as Json)?.code)).toBe('claim.intake_refused');
+      } else {
+        expect(withdrew.status).toBe(409);
+        expect(String((withdrew.body.error as Json)?.code)).toBe('withdrawal.death_reported');
+      }
     } finally {
       await teardown(t);
     }

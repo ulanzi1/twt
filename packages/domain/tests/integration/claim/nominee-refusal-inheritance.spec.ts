@@ -36,6 +36,7 @@ import {
   PARIWAR_A,
   driveClaimTo,
   enterAppScope,
+  seedOpenMemberStream,
   seedDeathCertificate,
   seedNomineeDeclaration,
   seedNomineeDetermination,
@@ -107,8 +108,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
 
   it('⭐⭐ AC11(v) — the true nominee\'s REFILE inherits the refused claim\'s completed inspection', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): an OPEN member stream, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
     const refused = await tryConverge(client, intake(mid, 'member_app', 'a1'));
     const refusedId = toClaimId(refused.claimCaseId);
     await completedInspection(tx, refusedId);
@@ -128,8 +130,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
 
   it('⛔ AC11(v) sibling — a claim denied for ANY OTHER reason passes NOTHING on', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): an OPEN member stream, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
     const denied = await tryConverge(client, intake(mid, 'member_app', 'b1'));
     await completedInspection(tx, toClaimId(denied.claimCaseId));
     await refuse(tx, toClaimId(denied.claimCaseId), 'other');
@@ -141,8 +144,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
 
   it('⛔ a `-239` refusal with ⛔ no COMPLETED inspection has nothing to pass on', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): an OPEN member stream, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
     const refused = await tryConverge(client, intake(mid, 'member_app', 'c1'));
     await refuse(tx, toClaimId(refused.claimCaseId), 'post_death_nominee_change');
     await forceState(client, refused.claimCaseId, 'denied');
@@ -266,8 +270,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
 
   it('⛔ a SUPERSEDED `-239` refusal is ⛔ not listed and passes ⛔ nothing on', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): an OPEN member stream, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
     const refused = await tryConverge(client, intake(mid, 'member_app', 'e1'));
     const refusedId = toClaimId(refused.claimCaseId);
     await completedInspection(tx, refusedId);
@@ -308,8 +313,9 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the `-239` refusal: inheritance + 
 
   it('⭐ Story 6.26a (`-283` A2) — a refused source whose ONLY completed assignment is a `certificate_check` is ⛔ not returned (⛔ never a visit); an older refused claim with a FULL visit is', async () => {
     const { client, tx } = getTx();
+    // Story 6.38 (TR2): an OPEN member stream, so the claim door lets the FIRST report through.
+    const mid = toMemberId(await seedOpenMemberStream(tx, PARIWAR_A));
     await enterAppScope(client, PARIWAR_A);
-    const mid = toMemberId(randomUUID());
     // The OLDER refused claim — a full visit.
     const older = await tryConverge(client, intake(mid, 'member_app', 'b1'));
     const olderId = toClaimId(older.claimCaseId);

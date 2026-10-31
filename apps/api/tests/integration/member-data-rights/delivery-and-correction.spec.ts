@@ -35,6 +35,7 @@ import {
   type TestDeps,
 } from '../_setup.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
+import { fileClaim, findInnocent, forceClaimState } from '../_death-report-fixture.js';
 
 type Client = ReturnType<typeof makeClient>;
 
@@ -77,6 +78,16 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
         // ⛔ Order matters: children before parents, deepest first.
         await c.query('BEGIN');
         await c.query("SET LOCAL session_replication_role = 'replica'");
+        // Story 6.38 — the death reports its tests file (children first: the findings, the claim stream, the claim rows).
+        await c.query(
+          `DELETE FROM events_log WHERE stream_id IN (SELECT claim_case_id FROM claims WHERE deceased_member_id = ANY($1::uuid[]))`,
+          [createdMemberIds],
+        );
+        await c.query(
+          `DELETE FROM claim_nominee_findings WHERE claim_case_id IN (SELECT claim_case_id FROM claims WHERE deceased_member_id = ANY($1::uuid[]))`,
+          [createdMemberIds],
+        );
+        await c.query('DELETE FROM claims WHERE deceased_member_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('DELETE FROM member_data_rights_corrections WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('DELETE FROM data_export_delivery_grants WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
         await c.query('DELETE FROM data_exports WHERE member_id = ANY($1::uuid[])', [createdMemberIds]);
@@ -1607,4 +1618,112 @@ describe.skipIf(!hasDatabase)('Story 10.21 AC-R1/AC-R2 — delivery + correction
     }
   });
 
+  // ── Story 6.38 — once a death is reported: ⛔ ERASE off-portal (AC3 / AC4); SEE and ASK stay open (N8, AC11) ──
+
+  async function erase(client: Client, p: string, s: { memberId: string; ticketId: string }, key = randomUUID()) {
+    return client.inject({
+      method: 'POST',
+      url: `${base(p)}/erasure`,
+      headers: { 'idempotency-key': key },
+      payload: { member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
+    });
+  }
+
+  async function rtbfEventCount(memberId: string): Promise<number> {
+    const { rowCount } = await td.pool.query(
+      `SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'member.rtbf_anonymized'`,
+      [memberId],
+    );
+    return rowCount ?? 0;
+  }
+
+  it('⭐ 6.38 AC3 — a TERMINATED member with a standing claim ⇒ 409 rtbf.death_reported; ⛔ anonymized; the key is released', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator Death Report');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedTerminatedSubject(a.client, p);
+    await fileClaim(td, p, s.memberId);
+    const key = randomUUID();
+
+    const res = await erase(a.client, p, s, key);
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
+    expect(await rtbfEventCount(s.memberId)).toBe(0);
+
+    // The FAILED attempt released its idempotency claim: a retry with the SAME key re-reads legality — ⛔ a replay 409.
+    const retry = await erase(a.client, p, s, key);
+    expect(retry.statusCode).toBe(409);
+    expect((retry.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
+    expect(await rtbfEventCount(s.memberId)).toBe(0);
+  });
+
+  it('⭐ 6.38 AC4 — the innocence finding lifts the lock off-portal: the terminated member is erased as today', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator Innocent');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedTerminatedSubject(a.client, p);
+    const cid = await fileClaim(td, p, s.memberId);
+    await findInnocent(td, p, cid);
+
+    const res = await erase(a.client, p, s);
+    expect(res.statusCode).toBe(200);
+    expect(await rtbfEventCount(s.memberId)).toBe(1);
+  });
+
+  it('⛔ 6.38 AC4 — a claim `settled` WITHOUT the finding still refuses off-portal', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator Settled');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedTerminatedSubject(a.client, p);
+    const cid = await fileClaim(td, p, s.memberId);
+    await forceClaimState(td, cid, 'settled');
+
+    const res = await erase(a.client, p, s);
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe('rtbf.death_reported');
+  });
+
+  it('⭐ 6.38 N8 — SEE stays open: the off-portal export request succeeds for a member with a standing claim', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator See');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+    await fileClaim(td, p, s.memberId);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/export`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: { member_id: s.memberId, helpdesk_ticket_id: s.ticketId },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as { export_id: string }).export_id).toBe(s.exportId);
+  });
+
+  it('⭐ 6.38 N8 / AC15 — ASK stays open: the staff correction is recorded for a member with a standing claim', async () => {
+    const p = randomUUID();
+    const a = await authenticate('Operator Ask');
+    await grant(a.userId, p, 'pariwar_admin');
+    await elevate(a.client);
+    const s = await seedSubject(a.client, p);
+    await fileClaim(td, p, s.memberId);
+
+    const res = await a.client.inject({
+      method: 'POST',
+      url: `${base(p)}/correction`,
+      headers: { 'idempotency-key': randomUUID() },
+      payload: {
+        member_id: s.memberId,
+        helpdesk_ticket_id: s.ticketId,
+        requested_change: 'The family asks to correct the address on the record',
+        action_taken: 'Recorded the request; the address will be checked against the documents',
+        outcome: 'applied',
+      },
+    });
+    expect(res.statusCode).toBe(200);
+  });
 });

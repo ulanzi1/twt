@@ -52,6 +52,7 @@ import { newIdempotencyKey } from '../../lib/idempotency-key'
 import { memberAuth } from '../../lib/member-api'
 import { AnswerTimeout, answerKeyFor, answerKeySettled, refusalCopyKey, withAnswerTimeout } from '../../lib/workplace'
 import { useWorkplaceT } from '../../lib/workplace-i18n'
+import { lifeEventsDeathReportedKey } from '../../lib/death-report-copy'
 import { invalidateKnownPeoplePrompts } from '../known-people/known-people-cache'
 import { AnnouncedText } from '../peer-request/announce'
 import {
@@ -116,6 +117,11 @@ export function WorkplaceSuggestionQuestion({
   onOutcome: Dispatch<SetStateAction<SuggestionOutcome | null>>
 }) {
   const t = useWorkplaceT()
+  // Story 6.38 (DL19): a claim filed for this member's death refuses the answer — the `common` line (⛔ a workplace word).
+  const refusalText = (err: unknown): string => {
+    const deathKey = lifeEventsDeathReportedKey(err)
+    return deathKey !== null ? t(deathKey, undefined, { namespace: 'common' }) : t(refusalCopyKey(err))
+  }
   const queryClient = useQueryClient()
   const [busy, setBusy] = useState(false)
   // WHICH answer is in flight — "Saving…" belongs on that button alone (fix-review: it used to show ⛔ on "Yes").
@@ -179,7 +185,7 @@ export function WorkplaceSuggestionQuestion({
         abandonedSettled()
         // A refusal (an HTTP status) has its own words; a transport error says nothing new — the line is dropped.
         const refused = typeof (err as { status?: unknown } | null)?.status === 'number'
-        onOutcome((cur) => (cur === timeoutLine ? (refused ? { text: t(refusalCopyKey(err)), kind: 'error' } : null) : cur))
+        onOutcome((cur) => (cur === timeoutLine ? (refused ? { text: refusalText(err), kind: 'error' } : null) : cur))
         return refresh()
       },
     )
@@ -211,7 +217,7 @@ export function WorkplaceSuggestionQuestion({
     } catch (e) {
       // ⛔ `setAnswerKeyState`: an entry a sibling's 200 (or the prompts) evicted meanwhile stays gone (round 2).
       updateAnswerKeyStateIfPresent(suggestion.requestId, suggestion.workplaceId, answerKeySettled(next.state, false))
-      const line: SuggestionOutcome = { text: t(refusalCopyKey(e)), kind: 'error' }
+      const line: SuggestionOutcome = { text: refusalText(e), kind: 'error' }
       onOutcome(line)
       // A timed-out POST was only abandoned — when it does settle, report what really happened and look again.
       if (e instanceof AnswerTimeout && write !== undefined) watchAbandoned(write, a, line)

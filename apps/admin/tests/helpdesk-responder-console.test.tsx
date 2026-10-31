@@ -19,6 +19,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { crossLinkNavs } from '../src/modules/helpdesk/crossLinks.js';
 import { formatSlaRemaining, severityLabel } from '../src/modules/helpdesk/presentation.js';
 import { HelpdeskDetailShell } from '../src/modules/helpdesk/HelpdeskDetailShell.js';
+import { erasureErrorText } from '../src/modules/helpdesk/HelpdeskDetailPage.js';
+import { ApiError } from '../src/api/client.js';
 import { HelpdeskQueueShell } from '../src/modules/helpdesk/HelpdeskQueueShell.js';
 
 const PARIWAR = '11111111-1111-1111-1111-111111111111';
@@ -349,5 +351,36 @@ describe('<HelpdeskDetailShell> (D5) — the staff-mediation fallback courtesy',
     expect(onDeliverStaffMediated).toHaveBeenCalledWith(
       'Caller states the registered handset was lost; identity confirmed by read-back.',
     );
+  });
+});
+
+// ── Story 6.38 (AC10, DL11; `2026-10-30-423` Q1 (a)) — the Pariwar Admin is told WHY an erasure was refused ─────────
+describe('Story 6.38 — the erasure refused once a death is reported', () => {
+  const SENTENCE = 'This member’s data cannot be erased: a claim has been filed for their death. The person they nominated may see the record and ask for corrections. It can be erased only if the claim is found to be about a member who is alive.';
+
+  it('erasureErrorText: `rtbf.death_reported` ⇒ the panel\'s sentence; any other error ⇒ its own message', () => {
+    expect(erasureErrorText(new ApiError(409, 'rtbf.death_reported', "Erasure is refused: a claim has been filed for this member's death"))).toBe(SENTENCE);
+    expect(erasureErrorText(new ApiError(409, 'rtbf.invalid_state', 'Erasure requires a withdrawn membership or a terminated member'))).toBe(
+      'Erasure requires a withdrawn membership or a terminated member',
+    );
+    expect(erasureErrorText(new Error('network down'))).toBe('network down');
+    expect(erasureErrorText('nope')).toBeUndefined();
+  });
+
+  it('the Shell renders a `dataRightsError` in its role="alert"', () => {
+    render(
+      <HelpdeskDetailShell
+        pariwarId={PARIWAR}
+        detail={detail({ sub_category: DPDPA_DATA_RIGHTS_SUBCATEGORY })}
+        loading={false}
+        onPickUp={vi.fn()}
+        onReply={vi.fn()}
+        onResolve={vi.fn()}
+        pending={{ pickUp: false, reply: false, resolve: false }}
+        canFulfilDataRights={true}
+        dataRightsError={SENTENCE}
+      />,
+    );
+    expect(screen.getByText(SENTENCE).getAttribute('role')).toBe('alert');
   });
 });

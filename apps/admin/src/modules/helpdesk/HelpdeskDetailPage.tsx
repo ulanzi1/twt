@@ -28,6 +28,18 @@ function messageOf(err: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Story 6.38 (DL11) — the erasure's error text: `rtbf.death_reported` (a claim was filed for the member's death —
+ * `2026-10-30-423` Q1 (a)) gets the panel's own sentence; any other error keeps `messageOf`. ⛔ The button is disabled
+ * pre-emptively (⛔ read carries the fact; the refusal is the control).
+ */
+export function erasureErrorText(err: unknown): string | undefined {
+  if (err instanceof ApiError && err.code === 'rtbf.death_reported') {
+    return resolveEn('helpdesk.dataRights.erasureRefused.deathReported');
+  }
+  return messageOf(err);
+}
+
 export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string; ticketId: string }): ReactElement {
   const ticket = useHelpdeskTicket(pariwarId, ticketId);
   const { pickUp, reply, resolve } = useHelpdeskTransitions(pariwarId, ticketId);
@@ -169,8 +181,9 @@ export function HelpdeskDetailPage({ pariwarId, ticketId }: { pariwarId: string;
         erasure: dataRights.erasure.isPending,
       }}
       dataRightsError={
+        // Story 6.38 (DL11): the erasure leg FIRST — a stale build error must ⛔ hide the death-reported refusal.
+        (dataRights.erasure.isError ? erasureErrorText(dataRights.erasure.error) : undefined) ??
         (dataRights.buildExport.isError ? messageOf(dataRights.buildExport.error) : undefined) ??
-        (dataRights.erasure.isError ? messageOf(dataRights.erasure.error) : undefined) ??
         (delivery.memberDirect.isError ? messageOf(delivery.memberDirect.error) : undefined) ??
         (delivery.staffMediated.isError ? messageOf(delivery.staffMediated.error) : undefined) ??
         (correction.isError ? messageOf(correction.error) : undefined)

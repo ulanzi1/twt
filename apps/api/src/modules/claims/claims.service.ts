@@ -35,7 +35,7 @@
 // (ClaimStreamConcurrencyError → return the existing claim), though the advisory lock
 // means it should never be reached in practice.
 
-import { REFILE_REQUIRES_CONFIRMATION_CODE } from '@twt/contracts';
+import { CLAIM_INTAKE_REFUSED_CODE, REFILE_REQUIRES_CONFIRMATION_CODE } from '@twt/contracts';
 import { claim, ids, nominee as nomineeDomain, schema } from '@twt/domain';
 import type pg from 'pg';
 
@@ -306,6 +306,23 @@ export function translateRefileRequiresConfirmation(err: unknown): void {
   }
 }
 
+/**
+ * Story 6.38 (DL8; `2026-10-30-423` Q3 B, `2026-10-31-424` Q3 B) — `claim.ClaimIntakeRefusedError` → 409
+ * `claim.intake_refused`: at the first report the person was ⛔ a member. ⭐ `withReason` is TRUE on the HELPLINE route
+ * only — its `details.reason` lets the operator re-check a mistyped search with the caller (`-423` reading 3); the
+ * MEMBER route's 409 carries ⛔ `details` at all, because the app shows one general reason and a reason the screen hides
+ * but the wire carries is a disclosure (N7). ⛔ Name, ⛔ member id in the message or details. A no-op for any other error.
+ */
+export function translateClaimIntakeRefused(err: unknown, opts: { readonly withReason: boolean }): void {
+  if (err instanceof claim.ClaimIntakeRefusedError) {
+    throw new ConflictError(
+      'A claim cannot be filed for this member',
+      CLAIM_INTAKE_REFUSED_CODE,
+      opts.withReason ? { reason: err.reason } : undefined,
+    );
+  }
+}
+
 export async function initiateIntake(
   deps: AppDeps,
   scopeTx: ScopeTx,
@@ -315,6 +332,8 @@ export async function initiateIntake(
     auditId: string;
     /** Channel + attribution overrides (Story 6.3). Defaults to member-app (Story 6.2). */
     attribution?: Partial<IntakeAttribution>;
+    /** Story 6.38 (DL8) — put the claim door's refusal REASON on the 409's wire. ⭐ The helpline route ONLY. */
+    revealRefusalReason?: boolean;
   },
 ): Promise<IntakeOutcome> {
   const client: pg.PoolClient = scopeTx.client;
@@ -353,6 +372,9 @@ export async function initiateIntake(
     // confirmation waits: a 409, ⛔ never a 500 — at BOTH callers (the member app and the helpline) through this one
     // core. The member app routes it to the calm "please call the helpline" state; the helpline's card records one.
     translateRefileRequiresConfirmation(err);
+    // ⭐ Story 6.38 (DL8) — the claim door refused (⛔ a member at the first report): a 409 at BOTH callers, the reason on
+    // the helpline's wire only.
+    translateClaimIntakeRefused(err, { withReason: input.revealRefusalReason === true });
     // Backstop (should be unreachable under the ICP's advisory lock): a concurrent submit that
     // slipped past the lock collided at the (stream_id, event_version) unique index. Re-read and
     // return the existing canonical claim rather than surfacing a 500.

@@ -23,6 +23,7 @@ import { getFiledClaimCaseId, setFiledClaimCaseId } from '../../lib/filed-claim'
 import { useClaimT } from '../../lib/claim-i18n'
 import { useClaimMemberName } from '../../lib/use-claim-member-name'
 import { loadClaimDraft, saveClaimDraft } from '../../lib/claim-draft'
+import { CLAIM_INTAKE_REFUSED_CODE } from '../../lib/cannot-file-copy'
 import { REFILE_REQUIRES_CONFIRMATION_CODE } from '../../lib/refile-helpline-copy'
 import { useSession } from '../../lib/session-context'
 
@@ -86,6 +87,12 @@ export default function RelationshipScreen(): React.ReactElement {
       // recorded (a phone without the filed-claim pointer reaches the wizard): the SAME calm helpline state.
       if (e instanceof ApiError && e.code === REFILE_REQUIRES_CONFIRMATION_CODE) {
         router.replace('/(claim)/refile-helpline')
+        return
+      }
+      // Story 6.38 (DL10; `2026-10-30-423` Q3 B) — the claim door refused: the person was ⛔ a member when the death was
+      // first reported. ⛔ Claim was kept, so ⛔ draft is saved; the calm state carries ONE general reason (⛔ which case).
+      if (e instanceof ApiError && e.code === CLAIM_INTAKE_REFUSED_CODE) {
+        router.replace('/(claim)/cannot-file')
         return
       }
       setError(t('relationship.error'))

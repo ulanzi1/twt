@@ -30,7 +30,7 @@ LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL19 �
 
 # Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled three things on 2026-10-30 (`2026-10-30-423`). **(a)** From the moment a claim
 > is filed for a member's death, nobody can have that member's record erased — not the member's own account (`POST /api/v1/member/rtbf`),
@@ -647,53 +647,53 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
         needed; (v) the `-424` Q2 (b) addition (DL19 (c)) — ✅ recorded 2026-10-31 at the ruling. A dated comment line on the `6-22-…` row in
         `sprint-status.yaml`.
   - [x] 0.6 Ledger line + row `ready-for-dev → in-progress` (prepend safely — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
-- [ ] **Task 1 — The leaf predicate (AC1)**
-  - [ ] 1.1 Create `packages/domain/src/claim/death-report.ts` (DL1), header citing `-423`, `-238` cl. 1, N1, and the import rule.
-  - [ ] 1.2 Delegate `isNomineeDeclarationLocked`; export `isDeathReportStanding` from the `claim` barrel.
-  - [ ] 1.3 Live-DB tests (AC1) in `packages/domain/tests/integration/claim/death-report.spec.ts` — seed with `seedClaim(tx, pariwarId, {
+- [x] **Task 1 — The leaf predicate (AC1)**
+  - [x] 1.1 Create `packages/domain/src/claim/death-report.ts` (DL1), header citing `-423`, `-238` cl. 1, N1, and the import rule.
+  - [x] 1.2 Delegate `isNomineeDeclarationLocked`; export `isDeathReportStanding` from the `claim` barrel.
+  - [x] 1.3 Live-DB tests (AC1) in `packages/domain/tests/integration/claim/death-report.spec.ts` — seed with `seedClaim(tx, pariwarId, {
         deceasedMemberId, currentState })` (`packages/domain/tests/integration/_helpers.ts`; it sets `app.claim_state_writer`, so every
         state seeds) and the finding as a RAW `claim_nominee_findings` row (`recordMemberInnocenceFinding` replays the claim stream through
         `projectClaimState`, and a `seedClaim` row has ⛔ events).
-- [ ] **Task 2 — The erasure lock (AC2–AC4)**
-  - [ ] 2.1 `resolveRtbfLegality`: add `pariwarId`, the `death_reported` kind (DL2); `acquireErasureLocks` (DL3); import
+- [x] **Task 2 — The erasure lock (AC2–AC4)**
+  - [x] 2.1 `resolveRtbfLegality`: add `pariwarId`, the `death_reported` kind (DL2); `acquireErasureLocks` (DL3); import
         `../claim/death-report.js` and `../claim/icp-lock.js` (the two leaves only — TR1).
-  - [ ] 2.2 `rtbf/handlers.ts` `assertAnonymizable` and `member-data-rights/handlers.ts` `fulfilErasure`: `acquireErasureLocks` in place
+  - [x] 2.2 `rtbf/handlers.ts` `assertAnonymizable` and `member-data-rights/handlers.ts` `fulfilErasure`: `acquireErasureLocks` in place
         of the inline rtbf-key lock (DL3); the exhaustive narrowing on `legality.kind` (DL2); map `death_reported` → 409
         `rtbf.death_reported`. `fulfilErasure`'s idempotency claim is ALREADY released on any throw (`ok = false` + the `finally`) — assert
         it in AC3, ⛔ add code for it. `rtbf/handlers.ts` imports `{ ids, member }` today — add `claim` only if it needs it.
-  - [ ] 2.3 Tests: extend `apps/api/tests/integration/rtbf/rtbf.spec.ts` (AC2, AC4 — post `'{}'`, TR8) and
+  - [x] 2.3 Tests: extend `apps/api/tests/integration/rtbf/rtbf.spec.ts` (AC2, AC4 — post `'{}'`, TR8) and
         `apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts` (AC3, AC4). Neither has claim helpers: copy
         `fileClaim` / `forceClaimState` / `appendClaimEvent` / `inScope` from `apps/api/tests/integration/nominee/nominee-lock.spec.ts`,
         and its AC11(ii) for the finding — `claim.recordMemberInnocenceFinding(s.client, { claimCaseId, pariwarId, findingId, actorId,
         actorDisplay, actor })`.
-- [ ] **Task 3 — The door (AC5–AC8)**
-  - [ ] 3.1 Domain vocabulary + contracts mirror (DL6, DL8): `CLAIM_INTAKE_REFUSAL_REASONS` + type in `claim/intake-door.ts`; NEW
+- [x] **Task 3 — The door (AC5–AC8)**
+  - [x] 3.1 Domain vocabulary + contracts mirror (DL6, DL8): `CLAIM_INTAKE_REFUSAL_REASONS` + type in `claim/intake-door.ts`; NEW
         `packages/contracts/src/claims/intake-refusal.ts` with the mirrored tuple + `CLAIM_INTAKE_REFUSED_CODE`; an `export *` line in
         `packages/contracts/src/claims/index.ts`; a lockstep test in `packages/contracts/tests/`. ⛔ `@twt/contracts` import in `@twt/domain`.
-  - [ ] 3.2 `claim/intake-door.ts` `resolveClaimIntakeDoor` with the exhaustive switch (N6); `ClaimIntakeRefusedError` in `claim/errors.ts`;
+  - [x] 3.2 `claim/intake-door.ts` `resolveClaimIntakeDoor` with the exhaustive switch (N6); `ClaimIntakeRefusedError` in `claim/errors.ts`;
         export both from the `claim` barrel.
-  - [ ] 3.3 `tryConverge`: the gate at DL7's position. ⛔ Write before it.
-  - [ ] 3.4 `claims.service.ts`: `translateClaimIntakeRefused` in `initiateIntake`'s catch (DL8, TR6), with the helpline-only reason flag
+  - [x] 3.3 `tryConverge`: the gate at DL7's position. ⛔ Write before it.
+  - [x] 3.4 `claims.service.ts`: `translateClaimIntakeRefused` in `initiateIntake`'s catch (DL8, TR6), with the helpline-only reason flag
         threaded from each handler; DL16's `resourceLocator` on the helpline catch if BigDev picks (a).
-  - [ ] 3.5 Domain unit tests for every lifecycle state × moderation status (the full 9 × 3 = 27 table — five refusals) and the precedence; API live-DB
+  - [x] 3.5 Domain unit tests for every lifecycle state × moderation status (the full 9 × 3 = 27 table — five refusals) and the precedence; API live-DB
         tests AC6 (`helpline-claim-intake.spec.ts`), AC7 (`claims-intake.spec.ts` — incl. `details` ABSENT), AC8.
-  - [ ] 3.6 The race (AC5 (i) + (ii)) — AFTER 3.3, because "intake refused `erased`" exists only once the door is in `tryConverge`: in
+  - [x] 3.6 The race (AC5 (i) + (ii)) — AFTER 3.3, because "intake refused `erased`" exists only once the door is in `tryConverge`: in
         `packages/domain/tests/integration/member/rtbf-concurrency.spec.ts` or a sibling, CALLING `acquireErasureLocks` and `tryConverge`
         (⛔ a hand copy of the handler sequence — that spec's existing `takeLock` and `members.state` read are ⛔ the pattern to follow
         for the new cases). Run (ii) once with the intake-key lock removed and record that it fails.
-- [ ] **Task 3A — The after-death locks (AC14, AC15)**
-  - [ ] 3A.1 DL18: `assertWithdrawable` — intake key, N1, 409 `withdrawal.death_reported`; live-DB tests (AC14) incl. the race.
-  - [ ] 3A.2 DL19 (a): the Life Events guard + the medical guard — intake key, N1, the two 409s; live-DB tests (AC15).
-  - [ ] 3A.3 Mobile: the withdrawal screen + the `(life-events)` screens map the codes to their copy keys (en + hi — the Hindi
+- [x] **Task 3A — The after-death locks (AC14, AC15)**
+  - [x] 3A.1 DL18: `assertWithdrawable` — intake key, N1, 409 `withdrawal.death_reported`; live-DB tests (AC14) incl. the race.
+  - [x] 3A.2 DL19 (a): the Life Events guard + the medical guard — intake key, N1, the two 409s; live-DB tests (AC15).
+  - [x] 3A.3 Mobile: the withdrawal screen + the `(life-events)` screens map the codes to their copy keys (en + hi — the Hindi
         reviewed by BigDev 2026-10-31, *"Hindi is fine"*: a `$comment` naming that review; ⛔ go-live row needed);
         source-scan tests; `friction-budget.md` rows for both refusals (payer: whoever holds the dead member's account — `-424`'s accepted
         cost); enrol the changed files in `microcopy.yaml` if they are not already.
-- [ ] **Task 4 — Words (AC7, AC9, AC10)**
-  - [ ] 4.1 Admin helpline (DL9, TR7): keys (five reasons + the general `tellCaller`); the pure `intakeRefusalKey`; the line derived in the `submitError` expression;
+- [x] **Task 4 — Words (AC7, AC9, AC10)**
+  - [x] 4.1 Admin helpline (DL9, TR7): keys (five reasons + the general `tellCaller`); the pure `intakeRefusalKey`; the line derived in the `submitError` expression;
         `intake.reset()` in `resetDownstreamState`; RTL tests in `apps/admin/tests/helpline-claim-page.test.tsx` (AC9).
-  - [ ] 4.2 Admin helpdesk (DL11): the key; `erasureErrorText` in `HelpdeskDetailPage.tsx`; the erasure leg first in the `dataRightsError`
+  - [x] 4.2 Admin helpdesk (DL11): the key; `erasureErrorText` in `HelpdeskDetailPage.tsx`; the erasure leg first in the `dataRightsError`
         chain; its unit test + the Shell test in `apps/admin/tests/helpdesk-responder-console.test.tsx` (AC10).
-  - [ ] 4.3 Mobile (DL10): `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` branch; keys `cannot_file.*` in
+  - [x] 4.3 Mobile (DL10): `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` branch; keys `cannot_file.*` in
         BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both — the title
         reviewed by BigDev (2026-10-31), call + back the reviewed `refile.*` strings, the BODY rewritten after `-424` and reviewed by BigDev
         the same day (*"Hindi is fine"*) — ⛔ go-live row needed; the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
@@ -703,17 +703,17 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
         `microcopy.yaml` `code_globs` (6.19c enrolled the refile files). ⚠ The worktree has ⛔ `.expo/types`, so `tsc` does ⛔ check the
         new `/(claim)/cannot-file` href ([[project_mobile_typed_routes_worktree]]) — check the path by hand. ⚠
         [[project_mobile_vitest_and_expo_install_traps]].
-- [ ] **Task 5 — Fences, stale text, fixtures (AC11, AC12, AC13)**
-  - [ ] 5.1 The N8 live-DB tests (in-app export, off-portal export request, correction — for an `active` member with a standing report).
-  - [ ] 5.2 The DL15 + N1 + TR1 source fences — ONE file, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (modelled on
+- [x] **Task 5 — Fences, stale text, fixtures (AC11, AC12, AC13)**
+  - [x] 5.1 The N8 live-DB tests (in-app export, off-portal export request, correction — for an `active` member with a standing report).
+  - [x] 5.2 The DL15 + N1 + TR1 source fences — ONE file, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (modelled on
         `family-account-reach-fence.test.ts`), each with a positive control.
-  - [ ] 5.3 DL13's comment re-wordings ([[project_markdown_emphasis_closes_jsdoc]] — ⛔ `**` adjacent to `/` inside a JSDoc).
-  - [ ] 5.4 DL14 fixture re-seeds (TR2) — list each re-seeded file in the Completion Notes.
-  - [ ] 5.5 DL17's door-input fence (AC13): export the refused lifecycle states from `claim/intake-door.ts`; the reducer-driven test with
+  - [x] 5.3 DL13's comment re-wordings ([[project_markdown_emphasis_closes_jsdoc]] — ⛔ `**` adjacent to `/` inside a JSDoc).
+  - [x] 5.4 DL14 fixture re-seeds (TR2) — list each re-seeded file in the Completion Notes.
+  - [x] 5.5 DL17's door-input fence (AC13): export the refused lifecycle states from `claim/intake-door.ts`; the reducer-driven test with
         its positive control.
-- [ ] **Task 6 — Gate and records**
-  - [ ] 6.1 `pnpm ci:local` on the story's own DB container (AC12 — incl. `friction-budget`, `i18n-parity`). `typecheck` + `lint` per package.
-  - [ ] 6.2 Story File List, Completion Notes, Change Log; ledger line; row → `review`.
+- [x] **Task 6 — Gate and records**
+  - [x] 6.1 `pnpm ci:local` on the story's own DB container (AC12 — incl. `friction-budget`, `i18n-parity`). `typecheck` + `lint` per package.
+  - [x] 6.2 Story File List, Completion Notes, Change Log; ledger line; row → `review`.
 
 ## Dev Notes
 
@@ -820,20 +820,144 @@ tracked by Task 0.5 (iii)).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in the story's own worktree (branch fast-forwarded to
+`origin/main` `b2f36fe9`; ⛔ `apps/` / `packages/` change since the pin `01062c51`). Live DB: the story's own container
+`twt-638-pg` (:5461, DB `twt_dev`, 192 migrations).
+
 ### Debug Log References
+
+- Red checks run and recorded (each restored byte-for-byte afterwards — `git diff` of the file re-checked):
+  - AC2 / AC3 / AC4 — the `death_reported` line in `resolveRtbfLegality` disabled ⇒ **7 of the new erasure tests FAIL** (member
+    route ×5, off-portal ×2); restored ⇒ green.
+  - ⭐ AC5 (ii) — the intake-key lock removed from `acquireErasureLocks` ⇒ **5 FAIL**: (i) erasure-first ×2 (*"the intake did
+    not wait for the erasure's intake-key lock"*) and (ii) three-party ×3 (*"the erasure did not wait for the intake's lock
+    (N3)"*); restored ⇒ 7 / 7 green, three repeated (ii) runs, ⛔ deadlock. ⚠ The failure shows at the server-truth WAIT
+    assertion (`pg_blocking_pids`), which precedes the outcome assertion — without the lock T3 never waits.
+  - AC9 — `intake.reset()` removed from `resetDownstreamState` ⇒ the member-change test FAILS; restored ⇒ green.
+- TR2 trace confirmed by running, ⛔ guessed: the door broke exactly the traced files (domain `icp.spec.ts` ×5,
+  `nominee-refusal-inheritance.spec.ts` ×5, `nominee-history-concurrency.spec.ts` ×2 D3; API `helpline-claim-intake`,
+  `claims-intake`, `claim-contact` ×10, `dpdpa-consent` ×11, `nominee-bank` ×8). Two other first-run reds
+  (`approval-warnings-every-approver`, `memorial-takedown/takedown`) were 30 s / 20 s TIMEOUTS under a concurrent full run +
+  `tsc`; both pass in isolation (145 / 145 with the re-seeded files).
 
 ### Completion Notes List
 
 - 2026-10-30 (`bmad-create-story 6.38`): the comprehensive developer guide was written from three read-only traces at `01062c51` plus a
   hand re-read of the load-bearing claims. Status ready-for-dev; next is Task 0 (governance first).
+- 2026-10-31 (`bmad-dev-story 6.38`) — **Task 0:** decision `2026-10-31-425` AUTHOR-COMMIT (DL1–DL19 as answered) committed ALONE
+  (`23ac6f19`); `deferred-work.md` — DL4 / DL7 (innocence-only release, the guilty arm 6-22 owes, the two residual edges),
+  DL12 (ii), `-423` Consequences 2 · 3 (in `deferred-work.md`, ⛔ a roster row — BigDev may move it); a dated POINTER on row
+  `6-22-…`; ledger `2026-10-31l`, row → in-progress (`bcd51be4`).
+- **Task 1 (AC1):** `claim/death-report.ts` `isDeathReportStanding` — the nominee lock's SQL MOVED unchanged; the nominee lock
+  delegates (its 6.20 specs green, ⛔ assertion changed). 9 live-DB cases (incl. a `nominee_disqualified` finding ⛔ releasing).
+- **Task 2 (AC2–AC4):** `resolveRtbfLegality(db, pariwarId, memberId, state)` gains `death_reported` (after `anonymized`, before
+  both legal arms); `acquireErasureLocks` (intake key → rtbf key); both handlers switch EXHAUSTIVELY (`never` arm) and answer
+  409 `rtbf.death_reported`. AC3 asserts the failed attempt's idempotency key is released (a same-key retry re-reads legality).
+- **Task 3 (AC5–AC8):** `claim/intake-door.ts` (`CLAIM_INTAKE_REFUSAL_REASONS`, the exhaustive `lifecycleRefusal`,
+  `DOOR_REFUSED_LIFECYCLE_STATES` derived from it, `resolveClaimIntakeDoor`); `ClaimIntakeRefusedError`; the gate in
+  `tryConverge` after the lock, before any read or write, only while ⛔ report stands. Contracts mirror
+  (`claims/intake-refusal.ts`: the code, the tuple, `isClaimIntakeRefusalReason`) + lockstep test. `translateClaimIntakeRefused`
+  — `details.reason` on the HELPLINE route only (`revealRefusalReason: true`); the member route's 409 has ⛔ `details` (AC7
+  asserts the key absent). DL16 (a): the helpline `helpline_claim.intake_failed` line carries `resourceLocator =
+  claim-intake-refused:<reason>` (asserted on the sink event); the member line stays reason-less. Domain: the full 9 × 3 table
+  (27 cells, five refusals), N5 ⛔ writes, AC8 legs — idempotent, cross-channel `pending`, `denied` ⇒ mints, `settled` ⇒ minted
+  and CLOSED, `closed` for no response ⇒ the RE-FILE 409 then minted on a confirmation (in `correction-closure.spec.ts`, beside
+  its 6.19c test), the released-only member meets the door again. Race spec `member/erasure-intake-race.spec.ts` calls
+  `acquireErasureLocks` + `resolveRtbfLegality` + `tryConverge` (⛔ a hand copy).
+- **Task 3A (AC14, AC15):** ONE domain helper `claim/death-report-lock.ts` `lockAndReadDeathReport` (intake key, then the
+  predicate — the 6.20 D3 shape) so the three guards ⛔ re-type the lock order: withdrawal (`withdrawal.death_reported`, checked
+  BEFORE the state), the Life Events guard (`life_events.death_reported` — address, posting, the workplace answer) and medical
+  (`medical.death_reported`). AC14's race fires the member's own intake and withdrawal concurrently (×3): exactly one wins.
+  Mobile: pure `lib/death-report-copy.ts`; the withdrawal, address and medical screens and BOTH workplace components (the
+  picker, the suggestion question) route their failure through it. ⚠ **A deviation from the letter of DL19 (b), noted:** the
+  workplace components resolve the line from `common` (⛔ the `workplace` namespace, whose `$comment` promises ⛔ key there
+  names a death or a claim). DL19 (c): ⛔ staff-change path built (the rule is in `deferred-work.md`, recorded at `-424`).
+- **Task 4 (AC7, AC9, AC10):** admin helpline — five reason lines + `tellCaller`, the pure `intakeRefusalKey` (contracts RUNTIME
+  values), the line derived in the `submitError` expression, `intake.reset()` on a member change; admin helpdesk —
+  `erasureErrorText` + the erasure leg FIRST in the `dataRightsError` chain; mobile — `(claim)/cannot-file.tsx`,
+  `lib/cannot-file-copy.ts`, the `relationship.tsx` branch (⛔ draft saved), `cannot_file.*` en + hi with
+  `$comment.cannot_file`; withdrawal / Life Events lines in `common` with `$comment.death_reported` (Hindi reviewed by BigDev
+  2026-10-31 — ⛔ go-live row). `friction-budget.md`: THREE rows (the refused-at-door state; withdrawal refused; direct changes
+  refused). `microcopy.yaml`: three files enrolled (a comment in `cannot-file-copy.ts` reworded — the vocabulary gate reads
+  "report").
+- **Task 5 (AC11–AC13):** N8 live-DB — the in-app export create + download (step-up) for an ACTIVE member with a standing claim;
+  the off-portal export request and the staff correction (`delivery-and-correction.spec.ts`). Fences
+  `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (11 cases, a positive control each): two `anonymizeMember(`
+  callers, each guarded in its own method; two `member.rtbf_anonymized` EMITTERS (named also only in `state.ts` / `events.ts`);
+  ⛔ sentinel WRITE outside `anonymize.ts` (the constant or its literal); the gate SQL — `death-report.ts` ×1,
+  `approval-warnings.ts` ×3, `peer-mesh-read.ts` ×1; `death-report.ts`'s imports. DL17 `door-input-fence.test.ts` drives the real
+  reducer; its edge set equals DL17's exactly. DL13 comments re-worded (each cites `-423`); ⛔ `**` beside `/` in a JSDoc.
+- **DL14 / TR2 — fixtures re-seeded** (through events to an OPEN state — `lock-in`; ⛔ assertion weakened, ⛔ bypass flag):
+  domain `integration/_helpers.ts` (NEW `seedOpenMemberStream`), `claim/icp.spec.ts` (5 tests), `claim/nominee-refusal-inheritance.spec.ts`
+  (5), `nominee/nominee-history-concurrency.spec.ts` (the two D3 tests, `openForIntake`); API `claims/helpline-claim-intake.spec.ts`
+  (`seedMember` → `lock-in`), `claims/claims-intake.spec.ts`, `claims/claim-contact.spec.ts`, `claims/dpdpa-consent.spec.ts`,
+  `claims/nominee-bank.spec.ts` (each `pending-fee` seed + `member.vyawastha_shulk_paid`). The API's shared NEW
+  `integration/_death-report-fixture.ts` (claim filing through the projector, forced state, the innocence finding, a member at any
+  lifecycle state ± moderation) replaces five copies of the nominee-lock helpers. TR3's direct-`anonymizeMember` specs untouched.
+- **Task 6 — the gate (AC12), reported as it ran.** `pnpm ci:local` on the story DB (:5461): **34 / 36** on the first run. (1)
+  `test (unit)` — MINE, FIXED: a Life Events comment spelled the `dpdpa-data-rights` literal, which
+  `contracts/tests/member-data-rights-single-literal.test.ts` allows in ONE module; reworded, 3 / 3. The `--continue` re-run then
+  showed the mobile workplace render tests red — MINE, FIXED: a bare `useT()` in the two workplace components had ⛔ provider
+  under those tests' `lib/workplace-i18n` mock; the `common` line now goes through `useWorkplaceT(…, { namespace: 'common' })`
+  (mobile 112 files / 2177 green). A final `--continue` unit pass: 35 / 37 tasks, the two reds 5 s TIMEOUTS / an unfound
+  element in files this story does ⛔ touch (`admin` ground-inspection-discrepancy, memorial-review; `mobile`
+  nominee-form-link-render) — green alone and in full (admin 86 files / 1550; mobile 2177): the known unit `--concurrency=4`
+  oversubscription class. (2) `integration-tests` — ⛔ this story's: `domain` `rls/announcement-activity-read.spec.ts` fails
+  ALONE too, because the story DB holds 14 COMMITTED `PARIWAR_A` cycles (`Trustee One`, 7 per full API run, the first at
+  04:26 UTC — before this session) that crowd its own seeds out of its newest-two read — the `PARIWAR_A` accumulation class
+  (`project_known_livedb_test_failures` #15 shape). ⛔ Touched by this diff. The remedy (recreate `twt-638-pg`) is destructive
+  ⇒ BigDev's call, ⛔ taken. Every OTHER integration package green with `--continue`: api 2552 (+1 skipped), jobs 1962,
+  domain 6847 / 6849 (the one red above), channels 468, public 807, validity-service 284, niyamavali-engine 144, events 36,
+  queue 4. Every other `ci:local` job green, incl. `i18n-parity`, `microcopy`, `friction-budget` (its AC-4 facet is dormant
+  until commit — the three ledger rows are in place), `member-state-invariant`, `claim-state-invariant`.
+  ⭐ **RESOLVED 2026-10-31 — AC12 MET.** BigDev: *"yes, recreate twt-638-pg and rerun the gate"* ⇒ `docker rm -f -v twt-638-pg`,
+  recreated to its inspected config (`postgres:16-alpine`, :5461, DB `twt_dev`; ⚠ now without `--rm`), then `pnpm ci:local`
+  (it migrates first): **`ci:local PASSED — 36 job(s) green`**, every turbo task successful (unit 37 / 37, integration 24 / 24) —
+  `announcement-activity-read` included. The residue diagnosis is confirmed by the class, ⛔ root-caused per spec (the owing fix
+  is a per-test tenant in the specs that commit `PARIWAR_A` cycles — ⛔ this story's).
 
 ### File List
+
+**Records (committed with Task 0):** `.decision-log.md` (`-425`, `23ac6f19`); `_bmad-output/implementation-artifacts/deferred-work.md`,
+`_bmad-output/implementation-artifacts/sprint-status.yaml` (`bcd51be4`).
+
+**New:**
+- `packages/domain/src/claim/death-report.ts`, `packages/domain/src/claim/death-report-lock.ts`, `packages/domain/src/claim/intake-door.ts`
+- `packages/contracts/src/claims/intake-refusal.ts`, `packages/contracts/tests/claims-intake-refusal.test.ts`
+- `packages/domain/tests/integration/claim/death-report.spec.ts`, `packages/domain/tests/integration/claim/intake-door.spec.ts`,
+  `packages/domain/tests/integration/member/erasure-intake-race.spec.ts`, `packages/domain/tests/member/door-input-fence.test.ts`
+- `apps/api/tests/integration/_death-report-fixture.ts`, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts`
+- `apps/mobile/app/(claim)/cannot-file.tsx`, `apps/mobile/lib/cannot-file-copy.ts`, `apps/mobile/lib/death-report-copy.ts`,
+  `apps/mobile/tests/unit/cannot-file-copy-resolves.test.ts`, `apps/mobile/tests/unit/death-report-copy-resolves.test.ts`
+
+**Modified — source:**
+- domain: `claim/{nominee-lock,icp,errors,index}.ts`, `member/rtbf-legality.ts`; comments only: `member/{state,anonymize}.ts`,
+  `claim/{suspicion-refusal-persist,approval-warnings,peer-mesh-read}.ts`
+- contracts: `src/claims/index.ts`
+- api: `modules/rtbf/handlers.ts`, `modules/member-data-rights/handlers.ts`, `modules/claims/{claims.service,claims.helpline.handlers}.ts`,
+  `modules/withdrawal/handlers.ts`, `modules/life-events/handlers.ts`, `modules/medical/medical.handlers.ts`
+- api-client: `src/index.ts` (docstring)
+- admin: `modules/helpline-claims/{HelplineClaimPage.tsx,i18n-en.ts}`, `modules/helpdesk/{HelpdeskDetailPage.tsx,i18n-en.ts}`
+- mobile: `app/(claim)/relationship.tsx`, `app/(withdrawal)/index.tsx`, `app/(life-events)/{address,medical}.tsx`,
+  `components/workplace/{WorkplacePicker,WorkplaceSuggestionQuestion}.tsx`, `lib/workplace-i18n.ts`
+- i18n: `packages/i18n/locales/{en,hi}/{claim,common}.json`
+- records: `friction-budget.md`, `microcopy.yaml`
+
+**Modified — tests:**
+- domain: `tests/integration/_helpers.ts`, `tests/integration/claim/{icp,nominee-refusal-inheritance,correction-closure}.spec.ts`,
+  `tests/integration/nominee/nominee-history-concurrency.spec.ts`
+- api: `tests/integration/rtbf/rtbf.spec.ts`, `tests/integration/member-data-rights/delivery-and-correction.spec.ts`,
+  `tests/integration/claims/{helpline-claim-intake,claims-intake,claim-contact,dpdpa-consent,nominee-bank}.spec.ts`,
+  `tests/integration/{withdrawal/withdrawal,life-events/life-events,medical/medical-disclose,workplaces/workplaces,data-export/data-export}.spec.ts`
+- admin: `tests/{helpline-claim-page,helpdesk-responder-console}.test.tsx`
+- mobile: `tests/unit/helpline-cta-presence.test.ts`
 
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 2.0 | `bmad-dev-story 6.38` — Tasks 0–6 built: decision `-425` + records committed first; the leaf predicate, the erasure lock + `acquireErasureLocks`, the claim door (five refusals, once per death, the reason on the helpline wire only, DL16 (a)), the after-death withdrawal / Life Events / medical locks, the operator / Pariwar Admin / app words, the fences (DL15, N1, TR1, DL17), the TR2 fixture re-seeds. Gate: `ci:local` 36 / 36 green on a recreated `twt-638-pg` (BigDev's go-ahead; the one earlier red was `PARIWAR_A` residue). Status → review. |
 | 2026-10-31 | 1.8 | The three new Hindi strings — the cannot-file body (DL10), the withdrawal refusal (DL18), the Life Events refusal (DL19) — reviewed by BigDev: *"Hindi is fine"*. ⛔ Go-live row needed for any of them. |
 | 2026-10-31 | 1.7 | The Panel RULED the note — `2026-10-31-424` (DR + KB: Q1 (a) C, Q1 (b) B, Q2 (a) A, Q2 (b) A + the Panel's addition, Q3 B). Built here: N6 five refusals (`pending-fee` ⇒ `not_paid`); N7 / DL9 / DL10 the general reason to the caller and the app (the app body's Hindi NEW, ⛔ yet reviewed); N9 + DL18 (withdrawal refused) + DL19 (direct changes refused; staff changes never remove the old entry — recorded); AC14 / AC15, Task 3A; TR2 — the `pending-fee` fixtures now break; DL17's edges add `pending-fee`. Q1 (a) C's staff identity check is row `6-39-…`, ⛔ this story's. |
 | 2026-10-31 | 1.6 | DL17 added (BigDev: *"yes, add DL17"*), from BigDev's question on a later change to the KYC basis: a reducer-driven fence on every way INTO a state the door refuses (`pending-kyc` ← none; `withdrawn` ← withdrawal from active / grace / lapsed; `anonymized` ← erasure), refused set read from `intake-door.ts`, positive control — AC13, Task 5.5; the Policy-meaning note that a KYC-basis change reopens PQ1 (a). Edge sets checked against the reducer at `01062c51`. |

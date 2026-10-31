@@ -1001,8 +1001,10 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     // ── RTBF anonymization (Story 3.12) ───────────────────────────────────────
     /**
      * Confirm RTBF anonymization (FR-96) — step-up gated ('rtbf' context; the confirm requires a FRESH
-     * elevation, RTBF being irreversible). Legal ONLY from `withdrawn` (Story 3.10): a not-yet-withdrawn
-     * or already-anonymized member surfaces as ApiError `rtbf.already_anonymized` (409). Takes NO input (there
+     * elevation, RTBF being irreversible). Legal from `withdrawn`, or for a member the moderation overlay reads
+     * `terminated` (Story 10.21's shared predicate); a member in any other state surfaces as ApiError `rtbf.invalid_state`
+     * (409), an already-anonymized one as `rtbf.already_anonymized` (409), and — Story 6.38, `2026-10-30-423` Q1 (a) — a
+     * member for whose death a claim has been filed as `rtbf.death_reported` (409), whatever the state. Takes NO input (there
      * is no reason to collect). Returns the terminal `anonymized` state + the anonymization instant; NO
      * cleared PII is echoed (R1). A missing/expired elevation surfaces as ApiError `auth.step_up_required`
      * (drive the step-up request/verify then retry the SAME call — the 3.9/3.10 useStepUpGate precedent).

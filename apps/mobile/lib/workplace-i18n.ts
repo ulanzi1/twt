@@ -7,7 +7,9 @@
 import type { TranslateParams } from '@twt/i18n'
 import { useT } from '@twt/i18n/react'
 
-export function useWorkplaceT(): (key: string, params?: TranslateParams) => string {
+export function useWorkplaceT(): (key: string, params?: TranslateParams, opts?: { readonly namespace: 'common' }) => string {
   const t = useT()
-  return (key, params) => t(key, params, { namespace: 'workplace' })
+  // Story 6.38 (DL19): `opts.namespace: 'common'` for the ONE line this namespace must ⛔ hold — the death-reported refusal
+  // (the `workplace` namespace names ⛔ death or claim).
+  return (key, params, opts) => t(key, params, { namespace: opts?.namespace ?? 'workplace' })
 }

@@ -30,19 +30,28 @@
 
 import { randomUUID } from 'node:crypto';
 
-import type {
-  HelplineClaimIntakeRequest,
-  HelplineClaimIntakeResponse,
-  HelplineOperatorEventRequest,
-  HelplineOperatorEventResponse,
+import {
+  CLAIM_INTAKE_REFUSED_CODE,
+  isClaimIntakeRefusalReason,
+  type HelplineClaimIntakeRequest,
+  type HelplineClaimIntakeResponse,
+  type HelplineOperatorEventRequest,
+  type HelplineOperatorEventResponse,
 } from '@twt/contracts';
 import { ids, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { NotFoundError } from '../../http-errors.js';
+import { ConflictError, NotFoundError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
 import { HELPLINE_INTAKE_TRIGGER, initiateIntake } from './claims.service.js';
+
+/** Story 6.38 (DL16 (a)) — `claim-intake-refused:<reason>` for a claim-door 409, else `undefined` (the default locator). */
+function claimIntakeRefusalLocator(err: unknown): string | undefined {
+  if (!(err instanceof ConflictError) || err.code !== CLAIM_INTAKE_REFUSED_CODE) return undefined;
+  const reason = (err.details as { reason?: unknown } | undefined)?.reason;
+  return isClaimIntakeRefusalReason(reason) ? `claim-intake-refused:${reason}` : undefined;
+}
 
 export function createHelplineClaimsHandlers(deps: AppDeps) {
   /** Read the scope-resolved (operator admin actor id, scope tx) or fail loud (500 — the
@@ -100,6 +109,8 @@ export function createHelplineClaimsHandlers(deps: AppDeps) {
             claimantActorId: null,
             trigger: HELPLINE_INTAKE_TRIGGER,
           },
+          // Story 6.38 (DL8): the operator is shown WHY the door refused (`-423` reading 3).
+          revealRefusalReason: true,
         });
 
         // Three outcomes (Story 6.4): a fresh mint (intake_initiated); a genuine cross-channel
@@ -177,6 +188,10 @@ export function createHelplineClaimsHandlers(deps: AppDeps) {
             audit_id: auditId,
             error: err instanceof Error ? `${err.name}: ${err.message}` : 'unknown',
           },
+          // ⭐ Story 6.38 (DL16 (a)) — a door refusal NAMES its reason on the ONE readable channel (`context` is only
+          // hashed), lowercase and non-PII, so a disputed refusal can be reconstructed. The member route's line stays
+          // reason-less (N7).
+          resourceLocator: claimIntakeRefusalLocator(err),
         });
         throw err;
       }

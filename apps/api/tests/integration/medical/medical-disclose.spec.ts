@@ -26,6 +26,7 @@ import { describe, expect, it } from 'vitest';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { createMedicalHandlers } from '../../../src/modules/medical/medical.handlers.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { fileClaim, findInnocent } from '../_death-report-fixture.js';
 import { createTestApp, hasDatabase, teardown, type TestApp } from '../_setup.js';
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -629,3 +630,45 @@ describe.skipIf(!hasDatabase)('Medical disclosure — E2E (:5433)', () => {
   // 6.8's ci:local verification — passes in isolation). 20s removes the contention flake without
   // masking a real hang (see apps/jobs/tests/audit/integrity-check.test.ts precedent).
 }, { timeout: 20000 });
+
+// ── Story 6.38 — the medical declaration is ⛔ changed from the account once a death is reported (AC15; DL19) ────────
+
+describe.skipIf(!hasDatabase)('Story 6.38 — medical declaration after a death is reported (:5433)', () => {
+  it('⭐ AC15 — a standing claim ⇒ 409 medical.death_reported; ⛔ new disclosure row, ⛔ event; the prior row unchanged', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+      const { imaVersion } = await seedMedicalClauses(t, pariwarId);
+      const body = { conditionCodes: [], imaListVersion: imaVersion, acknowledged: true, ackLocale: 'en' };
+      expect((await inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: token(t, memberId, pariwarId) })).status).toBe(200);
+      const before = await t.pool.query('SELECT * FROM member_medical_disclosures WHERE member_id = $1', [memberId]);
+      await fileClaim(t, pariwarId, memberId);
+
+      const res = await inject(t, 'POST', '/api/v1/member/medical-disclosure', { payload: body, token: token(t, memberId, pariwarId) });
+      expect(res.status).toBe(409);
+      expect(String((res.body.error as Json)?.code)).toBe('medical.death_reported');
+      const after = await t.pool.query('SELECT * FROM member_medical_disclosures WHERE member_id = $1', [memberId]);
+      expect(after.rows).toEqual(before.rows);
+      expect((await eventTypes(t, memberId)).filter((e) => e === 'member.medical_disclosed')).toHaveLength(1);
+    } finally {
+      await teardown(t);
+    }
+  });
+
+  it('⭐ AC15 — the innocence finding lifts the lock: accepted as today', async () => {
+    const t = await createTestApp();
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+      const { imaVersion } = await seedMedicalClauses(t, pariwarId);
+      const cid = await fileClaim(t, pariwarId, memberId);
+      await findInnocent(t, pariwarId, cid);
+      const res = await inject(t, 'POST', '/api/v1/member/medical-disclosure', {
+        payload: { conditionCodes: [], imaListVersion: imaVersion, acknowledged: true, ackLocale: 'en' },
+        token: token(t, memberId, pariwarId),
+      });
+      expect(res.status).toBe(200);
+    } finally {
+      await teardown(t);
+    }
+  });
+});

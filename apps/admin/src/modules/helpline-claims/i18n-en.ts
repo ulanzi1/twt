@@ -291,6 +291,17 @@ const EN: Record<string, string> = {
   'helpline.contact.refusal.not_found': 'This claim could not be found.',
   'helpline.contact.refusal.invalid': 'Some details are not valid — check the mobile number and that each address is filled in.',
   'helpline.contact.refusal.generic': 'The details could not be saved. Try again.',
+  // ── Story 6.38 (DL9; `2026-10-30-423` Q3 B, reading 3; `2026-10-31-424` Q1 (b) B, Q3 B) — the claim door refused. The
+  // OPERATOR is told why (so a mistyped search can be re-checked before the call ends); the CALLER is told only the
+  // general reason (`tellCaller`). ⛔ A membership number exists — the search is by member ID or mobile.
+  'helpline.intake.refused.not_joined':
+    'This person signed up but never finished joining — their identity check was not done. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.',
+  'helpline.intake.refused.left': 'This member had left the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.',
+  'helpline.intake.refused.removed': 'This member had been removed from the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.',
+  'helpline.intake.refused.erased': "This member's record was erased at their request. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.",
+  'helpline.intake.refused.not_paid': 'This person gave their details but never paid the joining fee. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it.',
+  'helpline.intake.refused.tellCaller':
+    'If the details are right, tell the caller: the person was not a member of the Trust when they died, so a claim cannot be filed.',
 };
 
 /** Resolve a console-chrome key to English (loud-ish fallback: return the key if unmapped). */

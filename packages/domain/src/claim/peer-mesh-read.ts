@@ -286,7 +286,8 @@ export interface PeerMeshFilingAnchor extends PeerMeshFilingCut {
  * ⭐ THE ONE place the anchor is chosen (AC4; RF1 — `2026-10-16-339`, Trustee-ratified, option C): *"The first filing
  * counts, unless an investigation found the member innocent of a claim filed while they were alive."* The anchor is the
  * EARLIEST `claims.created_at` among the claims — in ANY state — naming this deceased in the Pariwar, EXCLUDING every
- * claim that carries a `member_found_innocent` finding (`-238`; the SAME filter `nominee-lock.ts` applies); two claims
+ * claim that carries a `member_found_innocent` finding (`-238`; the SAME filter `death-report.ts` defines — Story 6.38,
+ * `2026-10-30-423` — a read-only copy named in that story's source fence); two claims
  * filed at the same instant break by `claim_case_id`. Our reading (⛔ ratified): a refused, closed or appealed claim
  * still anchors; only the innocence finding lifts one. Until the fraud register (row 6-22) writes that finding, this
  * behaves exactly as option A. When every such claim carries the finding, the claim being selected for counts from its

@@ -51,7 +51,10 @@ import {
 import { claims, type ClaimIntakeChannel, type ClaimLifecycleState } from '../schema/claims.js';
 import { intakeAttempts, type IntakeAttemptRow } from '../schema/intake_attempts.js';
 import { convergenceOverrides } from '../schema/convergence_overrides.js';
+import { isDeathReportStanding } from './death-report.js';
+import { ClaimIntakeRefusedError } from './errors.js';
 import type { ClaimEventActor } from './events.js';
+import { resolveClaimIntakeDoor } from './intake-door.js';
 import { projectClaimState } from './project.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
 import { CLAIM_TERMINAL_STATES } from './read.js';
@@ -281,6 +284,15 @@ export async function tryConverge(
 
   // (1) Serialize concurrent intakes for THIS death so the candidate read is race-safe.
   await acquireIntakeLock(client, input.pariwarId, input.deceasedMemberId);
+
+  // (1b) ⭐ Story 6.38 — THE DOOR (N4, DL7; `2026-10-30-423` Q3 B, `2026-10-31-424` Q1 (b) B), under the intake lock and
+  //      BEFORE any read of candidates or any write: checked ONCE per death — only while ⛔ report stands (⛔ claim, or every
+  //      claim released as alive). Once a report stands the person passed the door, and today's flow below runs UNCHANGED.
+  //      A refusal writes NOTHING (N5).
+  if (!(await isDeathReportStanding(db, input.pariwarId, input.deceasedMemberId))) {
+    const door = await resolveClaimIntakeDoor(db, input.deceasedMemberId);
+    if (door.kind === 'refused') throw new ClaimIntakeRefusedError(input.deceasedMemberId, door.reason);
+  }
 
   // (2) Override-aware candidate lookup (⛔ no time window — Story 6.28 OP11).
   const candidate = await getConvergenceCandidate(db, input.pariwarId, input.deceasedMemberId);

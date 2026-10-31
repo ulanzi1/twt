@@ -98,6 +98,11 @@ describe.skipIf(!hasDatabase)('claim contact record — routes (Story 6.19a)', {
         memberId: mid, pariwarId: pid, eventType: 'member.kyc_manual_fallback', actorId: memberId,
         payload: { from_state: 'pending-kyc', to_state: 'pending-fee', trigger: 'kyc_manual', actor: 'member', reason: 'manual_fallback' },
       });
+      // Story 6.38 (TR2): on to `lock-in` — `pending-fee` is refused at the claim door (`not_paid`, `2026-10-31-424` Q1 (b)).
+      await memberDomain.projectMemberState(scopeTx.client, {
+        memberId: mid, pariwarId: pid, eventType: 'member.vyawastha_shulk_paid', actorId: memberId,
+        payload: { from_state: 'pending-fee', to_state: 'lock-in', trigger: 'fee_paid', actor: 'member', utr: 'UTR-638', amount_inr: 110 } as never,
+      });
       await closeScopeTx(scopeTx, true);
     } catch (err) {
       await closeScopeTx(scopeTx, false);

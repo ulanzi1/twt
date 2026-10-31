@@ -39,6 +39,7 @@ import {
 import {
   audit,
   canonicalJsonStringify,
+  claim as claimDomain,
   consent,
   ids,
   medical as medicalDomain,
@@ -136,6 +137,14 @@ export function createMedicalHandlers(deps: AppDeps) {
         const exists = await memberDomain.memberExists(scopeTx.tx, pariwarId, memberId);
         if (!exists) {
           throw new ConflictError('Member not found', 'medical.member_not_found');
+        }
+        // ⭐ Story 6.38 (DL19 (a); `2026-10-31-424` Q2 (b) A): once a death is reported the medical declaration is ⛔ changed
+        // from the account — only asked. The intake key FIRST, then the ONE predicate; lifted only by the innocence finding.
+        if (await claimDomain.lockAndReadDeathReport(scopeTx.client, pariwarId, memberId)) {
+          throw new ConflictError(
+            "A claim has been filed for this member's death — the medical declaration can no longer be changed here",
+            'medical.death_reported',
+          );
         }
         const state = await memberDomain.getMemberStateAt(scopeTx.tx, memberId, deps.clock());
         if (TERMINAL_STATES.has(state)) {

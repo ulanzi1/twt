@@ -43,6 +43,7 @@ import {
   type WorkplaceAnswerKind,
 } from '../../lib/workplace'
 import { useWorkplaceT } from '../../lib/workplace-i18n'
+import { lifeEventsDeathReportedKey } from '../../lib/death-report-copy'
 import { invalidateKnownPeoplePrompts } from '../known-people/known-people-cache'
 import { AnnouncedText, useAnnounceOnChange } from '../peer-request/announce'
 import { useWorkplaceDistrictsQuery, useWorkplaceSearchQuery, workplaceKeys } from './useWorkplaceQueries'
@@ -113,6 +114,12 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
       ])
       onSaved()
     } catch (e) {
+      // Story 6.38 (DL19): a claim filed for this member's death refuses the change — the `common` line (⛔ a workplace word).
+      const deathKey = lifeEventsDeathReportedKey(e)
+      if (deathKey !== null) {
+        setError(t(deathKey, undefined, { namespace: 'common' }))
+        return
+      }
       const key = refusalCopyKey(e)
       setError(t(key))
       // The list moved under the member (a delisting, a rename, the Pariwar's first import): drop the cached districts and

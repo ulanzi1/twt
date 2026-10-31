@@ -645,7 +645,7 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     meeting part carries ⛔ no clause ids — they go to E1/E2 with the verbatim texts); run E4; commit it **alone**
     (`governance(11b.5a): routing note — kinship …`). ⛔ Never send. Record "prepared for relay — ⛔ not yet sent". ⏳ **WRITTEN
     2026-10-31** — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (PQ1, PQ2, PC1, PC2; E4 run);
-    committed ALONE as `9efa0c06`; ledger `2026-10-31f`. ✅ **SENT 2026-10-31** — BigDev: *"routing note sent"*. Task 0.4 waits on
+    committed ALONE as `6f22bd4d` (`9efa0c06` before the rebase); ledger `2026-10-31n` (relabelled from `-31f`). ✅ **SENT 2026-10-31** — BigDev: *"routing note sent"*. Task 0.4 waits on
     the ruling.
   - [ ] 0.4 When BigDev relays the ruling: transcribe it (AC0 (3)); then by outcome — **(a) PQ1 A** → Task 1; **(b) PQ1 B / C** →
     revise KL4 / KL10 and the ACs (story version bump, a validate pass) before Task 1; **(c) PQ2 B** and KL14 (a) → mint row
@@ -963,9 +963,21 @@ Under PQ1 B (relations only) ①–④ change again; under PQ1 D there is ⛔ no
 ### File List
 
 ## Change Log
+
+**SHA map — the 2026-10-31 rebase onto `b2f36fe9`** (rows below written before it cite the OLD SHAs):
+
+| Old | New | Commit |
+|---|---|---|
+| `dbbafd59` | `a27febe0` | story created + validated (ledger -30s / -30t) |
+| `9efa0c06` | `6f22bd4d` | governance: the routing note, ALONE |
+| `bc6edbad` | `5f28d24e` | records: Task 0.2 / 0.1 / 0.3 (ledger -31f → RELABELLED -31n) |
+| `f8e0455d` | `130943af` | governance: the addendum, ALONE |
+| `45ae84e1` | `1c582ad7` | records: note SENT, copy table, KL15 (ledger -31m) |
+
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | v1.0 | Created (`bmad-create-story 11b.5a`, worktree `.claude/worktrees/11b-5a-kinship-capture-and-lattice`, pin `01062c51`). Three read-only research passes (governance / code as built / tests-gates-numbers) + hand checks of every load-bearing quote and the Niyamavali. KL1–KL14 PROPOSED; PQ1, PQ2, PC1 PLANNED (the note is written at Task 0.3). ⛔ No code, ⛔ no decision id taken, ⛔ no Panel note. |
+| 2026-10-31 | v1.8 | REBASED onto `origin/main` `b2f36fe9` (backup `backup/11b-5a-pre-rebase-2026-10-31`); changed-line sets verified equal to pre-rebase; governance commits still alone. SHAs rewritten — see the SHA map below; earlier rows keep the old SHAs as written. Ledger `-31f` RELABELLED `-31n` (`main` holds `-31f`); this entry `-31o`. |
 | 2026-10-31 | v1.7 | Addendum committed ALONE as `f8e0455d` (prepared for relay — ⛔ not yet sent). `origin/main` MOVED since Task 0.1 (`01062c51` → `b2f36fe9`: Story 6.38's records + Decision `-424` (6.38's Panel ruling, ⛔ no memorial content) + rows 3-13 / 3-14) ⇒ next decision id `-425`; ⛔ no memorial path changed (STOP 1 still clear); the branch is ⛔ not yet rebased — owed before any push. Ledger: this entry `-31m` (`-31j` / `-31k` are on `main`, `-31l` is 6.38's). |
 | 2026-10-31 | v1.6 | BigDev asked whether children may be named (and shown) on a guardian's declaration ⇒ an ADDENDUM to the Panel note drafted — `trustee-panel-routing-note-2026-10-31-11b5a-kinship-addendum-guardian-declaration.md`: AQ1 the list (⭐ A a declaration — BigDev's proposal), AQ2 the words (⭐ A one rule; reverses `-391` Q2 A's child half), AQ3 the photo (⭐ A, BigDev's reading; the drafter's B disclosed) with AQ3 (b) an optional *"in the photo"* tick on listed people (⭐ (b)1 ⛔ not shown publicly). Architecture :1839-1846 (*"Sahyog Vivran shows family without minor's name"*, DPDPA §9 *"carries to all minor-data handling"*) disclosed — an amendment follows under A. KL15 + copy 2.23–2.25 PROPOSED. Addendum prepared for relay — ⛔ not yet sent, ⛔ not committed. ⚠ Every AC/Task assumes the main note's PQ1 A (adults only) until the addendum is ruled — Task 0.4 revises. |
 | 2026-10-31 | v1.5 | Q-copy-2…5 DRAFTED in full (en + hi) in one review table under *Questions for BigDev* — the family screen (2.1–2.22), the v4 permission (①–⑤, one take-down sentence per PQ2 outcome), the outcome line (4.1), the public heading (5.1); gap found: English plural labels (5.2). PROPOSED — awaiting BigDev. |

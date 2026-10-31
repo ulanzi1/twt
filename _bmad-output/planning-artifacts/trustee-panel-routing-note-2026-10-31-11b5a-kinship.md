@@ -1,6 +1,6 @@
 # Trustee Panel routing note — the family list on a memorial: may the Trust ask for the names of the relatives a member leaves behind, where may they appear, and what is a named relative owed?
 
-> **Status: WRITTEN 2026-10-31 (committed alone, `9efa0c06`) — SENT 2026-10-31 by BigDev** (*"routing note sent"*). ⏳ ⛔ No ruling yet. Drafted from Story 11b.5a (row
+> **Status: WRITTEN 2026-10-31 (committed alone, `6f22bd4d` — `9efa0c06` before the 2026-10-31 rebase) — SENT 2026-10-31 by BigDev** (*"routing note sent"*). ⏳ ⛔ No ruling yet. Drafted from Story 11b.5a (row
 > `11b-5a-kinship-capture-and-lattice`), Task 0.3, after BigDev's build answers of 2026-10-31. **Blocking:** ⛔ nothing about
 > relatives is built, collected or shown until you answer. ⛔ No member uses the system yet, and ⛔ no family memorial is live.
 

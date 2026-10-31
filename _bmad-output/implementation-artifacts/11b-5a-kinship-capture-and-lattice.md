@@ -77,7 +77,7 @@ from `main`); **its purpose — the Panel question — is carried to Task 0.3**,
 | G7 | The UX's other homes for the lattice (admin Phase 1, the claim-intake nominee view, the live-pool `<ActiveContributionCard>` — UX :1969, :2026) | **Ours to decline** — each would read family-owned data outside the one place the family's permission names (`sahyog-vivran`); ⛔ not built, recorded | Out of scope |
 | G8 | The permission text the nominee agrees to at Send must mention the list | **Ours** to write (a new version — the registry rule), BigDev's copy; the RULE that the family is told exactly where it appears is `-391` item 2's and is ⛔ not moved | KL7 |
 | G9 | Whether the list is kept OFF the members' drive view (`11b-17`'s surface), as the family's words are | **Panel's to confirm** — the field-floor test (`member-drive-detail-field-floor.test.ts:80-91`) pins EVERY exclusion's cite to `-411` item 7 (`toContain('2026-10-27-411 item 7')` at :284), so a fourth exclusion needs that assertion changed; the three memorial exclusions cite `-195` cl.1 + `-411` item 7 (11b.4a PC5 A), and PC5 A as put reads *"The rule does ⛔ not reach the family's **words**"* — a list is ⛔ not the words ⇒ ⛔ no text we wrote may stand in for it | **PC2** |
-| G10 | Which relations may be listed (KL3's six groups, twelve codes — e.g. grandchildren in, uncles out) | Codes and labels are **ours** (G5), but the SET decides whose names reach a public page ⇒ the six relation groups (twelve codes) relation groups are written INTO PQ1 A's option text so the ruling covers them | PQ1 A text |
+| G10 | Which relations may be listed (KL3's six groups, fourteen codes — e.g. grandchildren in, uncles out) | Codes and labels are **ours** (G5), but the SET decides whose names reach a public page ⇒ the six relation groups (fourteen codes) relation groups are written INTO PQ1 A's option text so the ruling covers them | PQ1 A text |
 
 ⇒ ⭐ **One routing note, written at Task 0.3 from the template, AFTER BigDev answers KL1–KL14** (the options' costs depend on
 them). The agent ⛔ never sends it — BigDev does. Until BigDev confirms it went, every record says *"prepared for relay — ⛔ not
@@ -179,7 +179,15 @@ reads ⛔ no memorial table — KL13).
 | UX `<MemorialAuthorshipSurface>` anatomy: *"`<KinshipLattice>` editor"*; UX :1671 *"any family member with handover credentials … add kinship details"* | ⚠ `-391` Q1 A: only the **nominee** sends (with their code) | KL8 — the nominee only |
 | UX :1966 *"empty rows hidden"*; :1968 *"Semantic definition-list (`<dl>`); screen reader announces 'wife: Sunita Devi, son: Amit and Rahul'"* | — | KL10, AC7 |
 
-## 🧭 Build decisions KL1–KL14 — PROPOSED (BigDev answers at Task 0.2). ⭐ marks the recommendation.
+## 🧭 Build decisions KL1–KL14 — ANSWERED by BigDev at Task 0.2 (2026-10-31). ⭐ marks the recommendation.
+
+⭐ **The answer, verbatim:** *"KL1-KL2, KL5-KL14 as recommended. KL3 - Use a closed domain vocabulary, not the nominee relationship
+vocabulary or free text. I recommend splitting grandchildren into four precise relations rather than using only grandson /
+granddaughter. KL4 - One relation and one name per entry; adults only by name; maximum 20 entries. I recommend a 200-code-point
+name limit rather than 80."* ⇒ every KL below is **(a)**; KL3 with **fourteen** codes (the four-way grandchildren split — this also
+answers Q-copy-1's structural half and keeps grandchildren in the list: Questions-list item 2); KL4 with a **200**-code-point cap
+(answers Q-copy-6). ⚠ Still open at Task 0.2: Q-copy-1's label WORDING, Q-copy-2…5, Questions 7–8. These are build decisions,
+⛔ not a ruling: what is disclosed still waits on PQ1 / PQ2 / PC1 / PC2.
 
 ⚠ These are written for **PQ1 A** (the recommended ruling). Each states what changes under B / C / D. ⛔ Never build ahead of the
 ruling: under any outcome other than A, Task 0.4 revises the ACs (story version bump) before Task 1.
@@ -199,19 +207,20 @@ diagram)"*): one row per relation, relation label left, names right, joined by `
 forbid a social graph. **Cost:** the epic's *"structural diagram"* wording is ⛔ not delivered — recorded as a narrowing of the plan,
 ⛔ not of a ruling. Rejected — **(b)** a diagram (the epic's word; harder to make accessible; reads as a family tree).
 
-### KL3 — The relations: a NEW closed list of twelve, in obituary words
-⭐ **(a)** `MEMORIAL_KINSHIP_RELATIONS` = `wife · husband · son · daughter · father · mother · brother · sister · grandson ·
-granddaughter · daughter_in_law · son_in_law` — **in this display order** (spouse, children, parents, siblings, grandchildren,
-in-laws). ⭐ **Every code is the person's relation TO THE MEMBER WHO DIED** (a deceased woman's spouse is `husband`; the nominee's
+### KL3 — The relations: a NEW closed list of fourteen, in obituary words
+⭐ **(a)** — ⭐ **BigDev, Task 0.2 (2026-10-31):** a closed domain vocabulary (⛔ not `NOMINEE_RELATIONSHIPS`, ⛔ not free text), grandchildren
+split four ways. `MEMORIAL_KINSHIP_RELATIONS` = `wife · husband · son · daughter · father · mother · brother · sister · sons_son ·
+daughters_son · sons_daughter · daughters_daughter · daughter_in_law · son_in_law` — **in this display order** (spouse, children,
+parents, siblings, grandchildren — grandsons before granddaughters, the son's line first — in-laws). ⭐ **Every code is the person's relation TO THE MEMBER WHO DIED** (a deceased woman's spouse is `husband`; the nominee's
 own mother, if she is the member's wife, is `wife`) — said in the code's doc-block, the screen's question (Q-copy-2) and the
-reviewer's screen. Proposed Hindi labels (**BigDev's copy, Task 0.2 Q-copy-1**; a non-author Hindi review follows): पत्नी · पति ·
-पुत्र · पुत्री · पिता · माता · भाई · बहन · पौत्र · पौत्री · पुत्रवधू · दामाद — ⛔ no slash label anywhere (the ground on which (b) below is
-rejected). ⚠ पौत्र (a son's son) and नाती (a daughter's son) are DIFFERENT relations that obituaries tell apart ⇒ Q-copy-1 also
-asks: keep one plain `grandson` / `granddaughter` (label पौत्र / पौत्री — a daughter's child is then named in the family's words), or split into
-`sons_son · daughters_son · sons_daughter · daughters_daughter` (fourteen codes). English: Wife · Husband · Son · Daughter · Father ·
-Mother · Brother · Sister · Grandson · Granddaughter · Daughter-in-law · Son-in-law. ⚠ **Grandchildren are very often minors** (and
-so are sons and daughters when a young member dies) — Task 0.2 asks BigDev whether the grandchildren codes belong under PQ1 A at
-all; the six relation groups (twelve codes, or fewer) are written into PQ1 A's option text (§0 G10). ⛔ No `other`, ⛔ no free-text relation: anyone
+reviewer's screen. Proposed Hindi labels (**the WORDING is still BigDev's, Task 0.2 Q-copy-1**; a non-author Hindi review follows): पत्नी · पति ·
+पुत्र · पुत्री · पिता · माता · भाई · बहन · पौत्र · नाती · पौत्री · नातिन · पुत्रवधू · दामाद — one plain word each (पौत्र = a son's son, नाती =
+a daughter's son, पौत्री = a son's daughter, नातिन = a daughter's daughter — the distinction obituaries keep), ⛔ no slash label
+anywhere (the ground on which (b) below is rejected). Proposed English: Wife · Husband · Son · Daughter · Father · Mother · Brother ·
+Sister · Grandson (son's son) · Grandson (daughter's son) · Granddaughter (son's daughter) · Granddaughter (daughter's daughter) ·
+Daughter-in-law · Son-in-law. ⚠ **Grandchildren are very often minors** (and so are sons and daughters when a young member dies) —
+kept by BigDev's answer; the "adults only" ask and the reviewer's `identifies_a_child` are the protection, and the cost is in PQ1 A.
+The six relation groups (fourteen codes) are written into PQ1 A's option text (§0 G10). ⛔ No `other`, ⛔ no free-text relation: anyone
 else, the family names in its own words (which the reviewer already reads). Minted as a domain tuple + contracts copy pinned equal,
 ⛔ no pgEnum (the code lives only inside the ciphertext — KL5). Minted in **our** author-commit (a member-facing vocabulary — the
 `-398` §2 precedent: ⛔ not under the `-210` cl.2 delegation).
@@ -220,15 +229,17 @@ else, the family names in its own words (which the reviewer already reads). Mint
 span. **Cost:** a family with a relation off the list (an uncle, a niece) cannot list them — only name them in the words; gendered
 codes assume the family picks the right one (it does — it is their family). Rejected — **(b)** reuse `NOMINEE_RELATIONSHIPS`
 (slash-compound picker labels on an obituary; a ruled vocabulary borrowed for a purpose it was ⛔ not ruled for); **(c)** free text.
-⚠ Under **PQ1 B** the same twelve; under **D** ⛔ none.
+⚠ Under **PQ1 B** the same fourteen; under **D** ⛔ none.
 
 ### KL4 — One entry = one relation + one name; adults only by name
-⭐ **(a)** `MemorialKinshipEntry = { relation: MemorialKinshipRelation; name: string }` — **name required**, 1–80 Unicode code points
+⭐ **(a)** — ⭐ **BigDev, Task 0.2 (2026-10-31):** one relation and one name per entry; adults only by name; at most 20 entries; a 200-code-point
+name cap. `MemorialKinshipEntry = { relation: MemorialKinshipRelation; name: string }` — **name required**, 1–200 Unicode code points
 on the raw string (`memorialCodePointLength`, `packages/contracts/src/memorial/text-classes.ts:44`), blank by the existing
-`isMemorialTextBlank` (:39 — ZWJ/ZWNJ-only counts as blank; ⚠ "." or "🙏" passes as a name — accepted, recorded) ⇒ refused. ⚠ The
-80 cap is a proposal with ⛔ no recorded basis (the codebase's other name limit is 200 — `packages/contracts/src/claims/contact.ts:43`;
-20 × 200 code points still fits the 32 KiB field) ⇒ Task 0.2 Q-copy-6 shows BigDev the longest real name (honorific + a long
-South-Indian name) before the cap is fixed. **One person per entry** — the screen says so (Q-copy-2), so *"अमित, राहुल"* is ⛔ not
+`isMemorialTextBlank` (:39 — ZWJ/ZWNJ-only counts as blank; ⚠ "." or "🙏" passes as a name — accepted, recorded) ⇒ refused. The 200
+cap matches the codebase's other name limit (`packages/contracts/src/claims/contact.ts:43`). ⭐ It fits the multipart `fieldSize`
+of 32 KiB (`handlers.ts:134-140`): `JSON.stringify` writes Devanagari as raw UTF-8 (3 bytes a code point) ⇒ 20 × 200 × 3 ≈ 12 KB;
+the worst case, every code point a lone surrogate escaped as `\uXXXX` (6 bytes), is ≈ 24 KB + ~1 KB of JSON — still under. A leg
+sends 20 entries at the cap and proves the part is accepted. **One person per entry** — the screen says so (Q-copy-2), so *"अमित, राहुल"* is ⛔ not
 typed into one name (that would defeat KL6's per-entry cut); at most **20** entries;
 duplicates allowed (two sons called the same? the family's call — ⛔ never deduplicated). Names are kept **exactly as typed** (⛔ no
 trim, ⛔ no case or Unicode normalisation, ⛔ no initials — [[feedback_never_mangle_member_names]]). The screen says to list **adults
@@ -365,8 +376,8 @@ accepts exactly `kinship,photo,words` (and validates each row's keys exactly —
 **whole** memorial is `null` — the same rule `memorial-public-read.ts:4-10, :55-59` applies to the words and alt text (⛔ never "no list but
 the memorial stays" — that would be a second rule); a KMS outage rethrows. The same OR joins the take-down's sentinel check
 (`memorial-takedown/handlers.ts:194`). Add it to both doc-blocks. ⚠ Because a schema failure drops the WHOLE memorial, the READ
-schema is ⛔ never tighter than any Send-time schema ever was (relation set ⊇, name cap ≥) — a later narrowing (a lower cap at
-Q-copy-6, a ruling that removes grandchildren) filters entries at render, ⛔ never by failing the parse. **Matrix:** a fourth memorial row `id:
+schema is ⛔ never tighter than any Send-time schema ever was (relation set ⊇, name cap ≥) — a later narrowing (a lower cap, a
+ruling that removes grandchildren) filters entries at render, ⛔ never by failing the parse. **Matrix:** a fourth memorial row `id:
 family_memorial_kinship`, `tier: public`, `pii_tier: 1`, `tier1_public_exception: { decision: '<the PQ1 ruling id> item N', rationale
 (verbatim ruling), scope: 'sahyog-vivran ONLY …' }`; `RULED_TIER1_PUBLIC_EXCEPTIONS` gains `['sahyog-vivran.family_memorial_kinship',
 '<ruling id> item N']` (Tier-1-public pairs nine → ten). ⛔ Never in `<head>`, Open Graph, a share card or a sitemap.
@@ -431,7 +442,7 @@ report closed as false, Q1 (b)).
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** ⭐ | A list on the public memorial page **only** (⛔ not on the members' drive view — as you ruled for the words): relation and name, **adults only**, from these relations of the member who died: spouse, children, parents, siblings, grandchildren, children-in-law (KL3 as answered at Task 0.2); the family is asked ⛔ not to list children; the reviewer leaves out any entry naming a child; used for **nothing else** | A family may show, as an obituary does, *पत्नी · सुनीता देवी, पुत्र · अमित, राहुल* | The Trust asks for names of living people who have ⛔ not themselves agreed (only the nominee does); grandchildren — and the children of a member who died young — are offered by name and many will be children: the family is asked to leave them out and the reviewer cannot age them, so a child's name the reviewer does ⛔ not recognise stays up until someone tells the Trust, and then the Trust can only take the **whole** memorial down until a one-name removal is built (`-398` MA16); kept indefinitely, unless counsel finds otherwise or the family uses the erasure route promised in October (⛔ not built yet); counsel ⛔ not asked |
+| **A** ⭐ | A list on the public memorial page **only** (⛔ not on the members' drive view — as you ruled for the words): relation and name, **adults only**, from these relations of the member who died: spouse, children, parents, siblings, grandchildren (a son's and a daughter's children, named apart), children-in-law (KL3 as answered at Task 0.2); the family is asked ⛔ not to list children; the reviewer leaves out any entry naming a child; used for **nothing else** | A family may show, as an obituary does, *पत्नी · सुनीता देवी, पुत्र · अमित, राहुल* | The Trust asks for names of living people who have ⛔ not themselves agreed (only the nominee does); grandchildren — and the children of a member who died young — are offered by name and many will be children: the family is asked to leave them out and the reviewer cannot age them, so a child's name the reviewer does ⛔ not recognise stays up until someone tells the Trust, and then the Trust can only take the **whole** memorial down until a one-name removal is built (`-398` MA16); kept indefinitely, unless counsel finds otherwise or the family uses the erasure route promised in October (⛔ not built yet); counsel ⛔ not asked |
 | **B** | A list of **relations only**, ⛔ no names (*"wife, two sons, one daughter"*), children included; used for nothing else | The family's shape is shown without anyone's name | Less of what families expect of a शोक संदेश; a small village can still tell who is meant; the family may still name people in its words; kept indefinitely (as A) |
 | **C** | Relation and name, adults only — but shown **only to members** signed in, ⛔ not on the public page | Members see it; the open page does ⛔ not | A new member-only place for family-owned data; the family's permission would have to name it (you ruled that "members see more than the public" does ⛔ not reach the family's words — so nothing requires this, and nothing forbids it); more to build; members are thousands of people, ⛔ not a closed circle; kept indefinitely (as A) |
 | **D** | ⛔ No list. The family names whom it wishes in its words, as today | Nothing changes | The design's family line is dropped; the epic's third component is ⛔ never built |
@@ -496,13 +507,13 @@ annotated **dropped by ruling** (⛔ no AC edited), UX §11's lattice annotated 
 ### AC2 — Capture (PQ1 A)
 **Given** a nominee in the memorial flow with the switch on
 **When** they reach `family.tsx`
-**Then** it starts empty (⛔ nothing pre-filled), offers KL3's twelve relations in order with a name field per entry, allows 0–20
+**Then** it starts empty (⛔ nothing pre-filled), offers KL3's fourteen relations in order with a name field per entry, allows 0–20
 entries, and Skip / Continue both go to preview; **and** the draft saves the list on every change, `sendContent` includes it as
 `JSON.stringify(d.kinship ?? [])` (an edit to the list ALONE after a failed Send mints a new Idempotency-Key — a unit leg proves it),
 and `memorialDraftHasContent` counts it; **and** on a re-send *"Start from the list I sent"* fills the rows from `view.kinship` on a
 tap, ⛔ never automatically (a leg proves a re-send after `approved_with_omissions` can keep the list, and that preview says *"No
 family list"* when the draft has none but the previous version had one); **and** the Send carries `kinship` only when non-empty;
-**and** the server refuses a malformed list (unknown relation, > 20, blank or over-cap name, non-array, extra keys, an empty array
+**and** the server refuses a malformed list (unknown relation, > 20, blank or > 200 code-point name, non-array, extra keys, an empty array
 `[]`) with `memorial.kinship_invalid` before the lock, writing ⛔ no row; **and** a name is stored byte-identical to what was typed
 (a leg with a Devanagari name, a combining mark and a bidi control round-trips through encrypt → decrypt unchanged).
 
@@ -602,15 +613,24 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Preflight and the Panel (AC0, AC1)** ⛔ no code in this task
-  - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved; re-diff from `01062c51`; run STOP 1–7; re-take every number in
+  - [x] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved; re-diff from `01062c51`; run STOP 1–7; re-take every number in
     the header across all branches and worktrees (the ledger letter included — `-30r` is 6.38's); `grep -n 'KL[0-9]' .decision-log.md`
-    (⛔ no prior KL). Record in `deferred-work.md`: 11b.4 item (2) and 11b.4a item (6) — *"Trigger reached 2026-10-30 at 11b-5a's
+    (⛔ no prior KL). ✅ **Run 2026-10-31:** `origin/main` still `01062c51` (⛔ no rebase); STOP 1 ⛔ no change under any listed path;
+    STOP 2 — 6.38 has committed records + its own routing note (2026-10-31), ⛔ no code, ⛔ no `anonymize.ts` change ⇒ ⛔ not a stop;
+    STOP 3 11b-6 `backlog` on every ref; STOP 4 three comments only; STOP 5 v3 current, ⛔ none `hiReviewed`; STOP 6 ⛔ not pinned; STOP 7
+    ⛔ no kinship ruling. Numbers: decision `-424`, migration `0193`, ledger next `2026-10-31e` at the run — ⚠ 6.38 then took `-31e` (`c9fed42a`), so this story's Task 0.3 records are `-31f`. ⏳ The
+    `deferred-work.md` trigger lines below are ⛔ not yet written. Record in `deferred-work.md`: 11b.4 item (2) and 11b.4a item (6) — *"Trigger reached 2026-10-30 at 11b-5a's
     create-story — carried to the Panel ruling (Task 0.4); ⛔ not closed."*
   - [ ] 0.2 BigDev answers **KL1–KL14**, **Q-copy-1…6** and Questions 7–8 (below). Record the answers verbatim under each KL and in the
-    Questions list; story version bump.
+    Questions list; story version bump. ⏳ **Part done 2026-10-31 (v1.2):** KL1–KL14 answered (verbatim under the KL heading), Q-copy-1's
+    structure and Q-copy-6 answered. Open: Q-copy-1 wording, Q-copy-2…5, Questions 7–8. ⚠ Task 0.1 (fetch, re-diff, STOP 1–7, numbers)
+    has ⛔ not been run yet — run it before 0.3.
   - [ ] 0.3 Write the routing note from the template (PQ1, PQ2, PC1, PC2 as planned above, re-costed against the KL answers; the
     meeting part carries ⛔ no clause ids — they go to E1/E2 with the verbatim texts); run E4; commit it **alone**
-    (`governance(11b.5a): routing note — kinship …`). ⛔ Never send. Record "prepared for relay — ⛔ not yet sent".
+    (`governance(11b.5a): routing note — kinship …`). ⛔ Never send. Record "prepared for relay — ⛔ not yet sent". ⏳ **WRITTEN
+    2026-10-31** — `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (PQ1, PQ2, PC1, PC2; E4 run);
+    committed ALONE as `9efa0c06`; ledger `2026-10-31f`. Prepared for relay — ⛔ not yet sent (the box stays open until BigDev confirms
+    it went, then Task 0.4 waits on the ruling).
   - [ ] 0.4 When BigDev relays the ruling: transcribe it (AC0 (3)); then by outcome — **(a) PQ1 A** → Task 1; **(b) PQ1 B / C** →
     revise KL4 / KL10 and the ACs (story version bump, a validate pass) before Task 1; **(c) PQ2 B** and KL14 (a) → mint row
     `11b-5b-kinship-named-relative-removal: backlog` with its comment block (including the re-send-revives-the-name design point);
@@ -630,8 +650,8 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     `ready-for-dev` → `in-progress` and the ledger (both lists).
 - [ ] **Task 2 — Vocabulary and contracts (AC2, AC5, AC7)**
   - [ ] 2.1 Domain `vocab.ts`: `MEMORIAL_KINSHIP_RELATIONS` (KL3 order; doc-block: relation TO THE MEMBER WHO DIED), `MemorialKinshipEntry`,
-    `MemorialKinshipOmission`. Limits `MEMORIAL_KINSHIP_MAX_ENTRIES = 20`, `MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS` (the cap BigDev fixes
-    at Q-copy-6) in **`packages/contracts/src/memorial/text-classes.ts`** (there is ⛔ no domain `text-classes.ts`; the handler imports
+    `MemorialKinshipOmission`. Limits `MEMORIAL_KINSHIP_MAX_ENTRIES = 20`, `MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS = 200` (KL4, BigDev
+    2026-10-31) in **`packages/contracts/src/memorial/text-classes.ts`** (there is ⛔ no domain `text-classes.ts`; the handler imports
     its limits from `@twt/contracts`).
   - [ ] 2.2 Contracts copies + `memorial.test.ts` lockstep legs; `MemorialKinshipListSchema` (`.strict()` entries; `[]` refused);
     `MEMORIAL_SEND_FIELDS` + `'kinship'`; `MemorialReviewDecisionInput.kinshipLeftOut`; `validateMemorialDecision` — kinship problems
@@ -703,7 +723,7 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
 - [ ] **Task 8 — Fences (AC10, AC11)** — the purpose-limitation pin (built from the pasted grep); `SCAN_FILES`; `microcopy.yaml`
   **`code_globs`**; the friction-budget disposition; `contracts:check-openapi-determinism`.
 - [ ] **Task 9 — Verify and record (AC12, AC13)** — plant named mutants and prove each RED, then restore byte-identical: drop `kinship`
-  from `sendContent`; render a left-out entry; accept an index out of range; a fifth relation; a wire key leak; the guard accepting an
+  from `sendContent`; render a left-out entry; accept an index out of range; an unknown relation code; a wire key leak; the guard accepting an
   unknown row key; per-name bidi isolation removed; an `action_shape` check ignoring kinship; `family` missing from the T6 list;
   `data-field` missing; the floor exclusion missing; a reference outside AC10's allow-list. `pnpm ci:local` 36 / 36 (AC13); records
   (story Dev Agent Record, File List, Change Log, ledger); the Task 1.2 (iii) items annotated DISCHARGED once `done` is on main.
@@ -807,17 +827,18 @@ needed — no library or API changes.
 - 11b.4a: the render spec builds its own server copy; a take-down must leave the page byte-identical (the same assert AC7 reuses).
 
 ### Questions for BigDev (Task 0.2) — saved for the end, as the workflow asks
-1. **KL1–KL14** — as recommended, or which differ? (KL14: PQ2's build in a follow-up row, or here?)
-2. **Q-copy-1** — the relation labels (hi + en), KL3: keep one plain `grandson` / `granddaughter` (पौत्र / पौत्री) or split into four
-   codes (पौत्र · नाती · पौत्री · नातिन)? ⛔ No slash label either way. **And: do the grandchildren codes belong under PQ1 A at all**, given
-   most grandchildren listed will be children?
+1. **KL1–KL14** — as recommended, or which differ? (KL14: PQ2's build in a follow-up row, or here?) — ✅ **ANSWERED 2026-10-31**:
+   KL1–KL2, KL5–KL14 as recommended (KL14: a follow-up row); KL3 a closed domain vocabulary, grandchildren split four ways; KL4 one
+   relation + one name per entry, adults only by name, at most 20, a 200-code-point cap (verbatim under the KL heading).
+2. **Q-copy-1** — the relation labels (hi + en), KL3. ✅ Structure ANSWERED 2026-10-31: split into four codes, and grandchildren stay
+   in the list. ⏳ **Still open: the WORDING** of all fourteen labels — proposed hi पत्नी · पति · पुत्र · पुत्री · पिता · माता · भाई · बहन ·
+   पौत्र · नाती · पौत्री · नातिन · पुत्रवधू · दामाद, and the English in KL3. ⛔ No slash label.
 3. **Q-copy-2** — the family screen's words (title; *"How is each person related to {the member}?"*; *"One person per row"*; the
    "adults only — please leave children out" line; Add / Remove / Skip; *"Start from the list I sent"*; preview's *"No family list"*).
 4. **Q-copy-3** — the v4 permission text (en + hi), KL7 — including how v3's *"only the nominee … not at anyone else's request"* reads
    after PQ2 (final words after the ruling).
 5. **Q-copy-4** — the outcome line for a left-out entry; **Q-copy-5** — the public heading (proposed *"शोकाकुल परिवार"* / *"The family"*).
-6. **Q-copy-6** — the name cap: 80 code points (proposed) or 200 (the codebase's other name limit)? The session shows you the longest
-   real name it can find (an honorific + a long South-Indian name) first.
+6. **Q-copy-6** — the name cap. ✅ **ANSWERED 2026-10-31: 200 code points** (KL4).
 7. **Split?** After the ruling, build in two rows — 11b-5a (capture, storage, review, member screens, v4) and a new 11b-5c (public
    lattice, matrix pair, helpline view, floor exclusion) — or one pass as written?
 8. Send the routing note yourself once written (Task 0.3)? — the agent ⛔ never sends.
@@ -846,6 +867,7 @@ needed — no library or API changes.
 ### Completion Notes List
 - 2026-10-30 — Story created by `bmad-create-story 11b.5a` at `01062c51`: comprehensive developer guide; build gated on the Panel (Task 0).
 - 2026-10-31 — Validated against the checklist (v1.1); every finding applied. Next: Task 0.1, then BigDev's answers at Task 0.2.
+- 2026-10-31 — Task 0.2 in part (v1.2): KL1–KL14 answered; Q-copy-1 wording, Q-copy-2…5 and Questions 7–8 still open.
 
 ### File List
 
@@ -853,4 +875,6 @@ needed — no library or API changes.
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | v1.0 | Created (`bmad-create-story 11b.5a`, worktree `.claude/worktrees/11b-5a-kinship-capture-and-lattice`, pin `01062c51`). Three read-only research passes (governance / code as built / tests-gates-numbers) + hand checks of every load-bearing quote and the Niyamavali. KL1–KL14 PROPOSED; PQ1, PQ2, PC1 PLANNED (the note is written at Task 0.3). ⛔ No code, ⛔ no decision id taken, ⛔ no Panel note. |
+| 2026-10-31 | v1.3 | Task 0.1 run (⛔ no STOP; numbers unchanged; ledger next `-31e`). Task 0.3: the routing note WRITTEN from the template — `trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (PQ1, PQ2, PC1, PC2; meeting part with ⛔ no clause ids; E1 verbatim, E4 run). Prepared for relay — ⛔ not yet sent. Note committed alone (`9efa0c06`); records `2026-10-31f`. |
+| 2026-10-31 | v1.2 | Task 0.2, part: BigDev answered KL1–KL14 — KL1–KL2, KL5–KL14 as recommended; KL3 a closed domain vocabulary of **fourteen** codes (grandchildren split `sons_son · daughters_son · sons_daughter · daughters_daughter`, grandchildren kept); KL4 one relation + one name per entry, adults only by name, ≤ 20, a **200**-code-point cap (fits the 32 KiB part — worked in KL4). Propagated to §0 G10, PQ1 A, AC2, Task 2.1, Task 9. Open: Q-copy-1 wording, Q-copy-2…5, Questions 7–8; Task 0.1 not yet run. ⛔ No code, ⛔ no decision id, ⛔ no Panel note. |
 | 2026-10-31 | v1.1 | Validated (`bmad-create-story validate 11b.5a`; three parallel read-only verifiers — code as built / governance / adversarial design — at `01062c51`): 52 findings (13 critical, 27 should-add, 7 optimisations, 5 wording), ALL applied on BigDev's "all", then a fix-diff review of the patch (one fresh reviewer): 14 corrections applied (the floor test's `-411` item 7 assertion moves; PC2 moot under PQ1 C; costs on PC1 / PC2; read schema never tighter than a Send schema; letter qualifications). Critical: the October note's promise was the AUTHOR's and conditional on Q2 (answered) — MA2 is the live ground; PC5 A read correctly; PC2 added (the list off the members' drive view needs its own ruling); PQ2 B disclosed as a fifth ground; G2 quotes `-395` item 3 + `-411` PQ1 A; `-393` M4 (not M3); ledger letter; microcopy `code_globs`; re-send keeps the list ("Start from the list I sent"); `sendContent` stores a string; all three `action_shape` checks count kinship; per-name bidi isolation; AC10's scan root + table-identifier pin. ⛔ No code, ⛔ no decision id taken, ⛔ no Panel note. |

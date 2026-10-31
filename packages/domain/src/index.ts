@@ -142,6 +142,16 @@ export {
   POOL_STATE_DIRECT_WRITE_CODE,
   isPoolStateDirectWriteError,
 } from './pool/errors.js';
+// Module Marketplace direct-write rejection (Story 12.1, QE13). Surfaced at the top level — the pool trio
+// shape — so a future apps/api error-mapping middleware (Story 12.2's wizard route) imports the class + code
+// constant from `@twt/domain` directly to map the DB trigger's rejection; the full primitive is also under
+// the `marketplace` namespace.
+export {
+  ModuleStateDirectWriteError,
+  MODULE_STATE_DIRECT_WRITE_CODE,
+  MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX,
+  isModuleStateDirectWriteError,
+} from './marketplace/errors.js';
 // Story 11b.13 — the per-Pariwar DRIVE TARGET typed errors. Surfaced at the top level for one
 // specific reason: `apps/api/src/middleware/error-mapping/index.ts` matches on the CLASS, and every
 // one of these MUST be registered there.
@@ -333,6 +343,11 @@ export * as nomineeConsole from './nominee-console/index.js';
 // resolve, the clause_versions immutability posture). Consumed by the apps/api create-ticket route;
 // the member/operator/admin surfaces are Stories 10.2/10.3/10.4.
 export * as helpdesk from './helpdesk/index.js';
+// Story 12.1 (the FIRST Epic-12 story) — the Module Marketplace primitive: the SIXTH event-derived-state
+// primitive (marketplace_modules — an immutable bilingual partner manifest + the projector-only lifecycle
+// cache — + the five module.* events + the closed, versioned filter grammars). ⛔ production caller in 12.1
+// (I6): the wizard / shelf / sweep are Stories 12.2 / 12.3 / 12.6.
+export * as marketplace from './marketplace/index.js';
 // Story 10.5 — the News/Blog `[SURFACE]` workflow module: a mutable-`status` post lifecycle
 // (Decision 1 — NOT event-derived-state) wired to the shipped tone-review gate (approve), the
 // Story 1.10 audit, and the `alert_published` dispatch fan-out (publish). Full module under the

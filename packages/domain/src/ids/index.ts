@@ -847,3 +847,26 @@ export const knownPeopleCampaignId = uuidBrand('KnownPeopleCampaignId');
 export type NomineeLinkId = Brand<'NomineeLinkId'>;
 /** Smart constructor: validates UUID shape, returns a branded `NomineeLinkId`. */
 export const nomineeLinkId = uuidBrand('NomineeLinkId');
+
+// ── Story 12.1 — Module Marketplace primitive ids (§Naming "branding mandatory on a new ID's first PR") ──
+// `ModuleId` is a partner module's canonical id AND its events_log stream_id (the SIXTH event-derived-state
+// primitive). Like `HelpdeskTicketId` it has no natural key, and unlike it there is ⛔ DB default: the CALLER
+// mints it and passes it to `marketplace.authorModule` (QE15), so the intent audit line can name it first.
+// `PartnerId` addresses the partner a module belongs to; partner identity is Story 12.2's (⛔ FK in 12.1).
+// `ModuleLeadId` is the caller-minted idempotency key of ONE `module.lead_submitted` (QE8). The shared
+// validator lower-cases, which is what makes the two text-keyed `events_log` lead indexes (0193) case-safe.
+
+/** A partner module's canonical id == its events_log stream_id. Caller-minted (no DB default). */
+export type ModuleId = Brand<'ModuleId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ModuleId`. */
+export const moduleId = uuidBrand('ModuleId');
+
+/** The partner a module is offered by (`marketplace_modules.partner_id`; ⛔ FK until Story 12.2). */
+export type PartnerId = Brand<'PartnerId'>;
+/** Smart constructor: validates UUID shape, returns a branded `PartnerId`. */
+export const partnerId = uuidBrand('PartnerId');
+
+/** The caller-minted idempotency key of one `module.lead_submitted` event (its payload `lead_id`). */
+export type ModuleLeadId = Brand<'ModuleLeadId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ModuleLeadId`. */
+export const moduleLeadId = uuidBrand('ModuleLeadId');

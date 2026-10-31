@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { alert, claim, contribution, helpdesk, member, pool, reconciliation } from '@twt/domain';
+import { alert, claim, contribution, helpdesk, marketplace, member, pool, reconciliation } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -618,5 +618,42 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       'A responder resolved a ticket → resolved (in_progress/awaiting_member → resolved), emitted by the Story 10.4 admin resolve route. Carries the staff closing `message` (fires the helpdesk_reply member notification).',
     schema: helpdesk.HelpdeskResolvedPayloadSchema,
+  },
+  // ── Story 12.1 — module.* vocabulary (the SIXTH event-derived-state primitive's own stream) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/marketplace/events.ts) — appended on the
+  // MODULE stream (stream_id = module_id; caller-minted, no DB default). Story 12.1 authors the complete
+  // reducer and registers ALL five types now, because each one is written by `projectModuleGenesis` /
+  // `projectModuleTransition` through a 12.1 command — but ⛔ production caller exists (I6): the wizard,
+  // the lead route and the sweep are Stories 12.2 / 12.3 / 12.6. ⚠ An owner named here is an ASSERTION
+  // NOTHING VERIFIES until those stories build their emitters.
+  'module.authored': {
+    type: 'module.authored',
+    description:
+      '`module.authored` ((none) → draft) on the MODULE stream (stream_id = module_id) (Story 12.1). The genesis: snapshots the WHOLE immutable bilingual manifest (partner, text, filters, window, capacity, lead endpoint + signing-key secret NAME, branding). No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
+    schema: marketplace.ModuleAuthoredPayloadSchema,
+  },
+  'module.scheduled': {
+    type: 'module.scheduled',
+    description:
+      '`module.scheduled` (draft → scheduled) on the MODULE stream (stream_id = module_id) (Story 12.1). Before valid_from. No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
+    schema: marketplace.ModuleScheduledPayloadSchema,
+  },
+  'module.activated': {
+    type: 'module.activated',
+    description:
+      '`module.activated` (draft | scheduled → active) on the MODULE stream (stream_id = module_id) (Story 12.1). Inside [valid_from, valid_until). No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
+    schema: marketplace.ModuleActivatedPayloadSchema,
+  },
+  'module.lead_submitted': {
+    type: 'module.lead_submitted',
+    description:
+      '`module.lead_submitted` (active → active) on the MODULE stream (stream_id = module_id) (Story 12.1). A same-state event that takes one place: lead_id + member_id (lower-case, NO PII) + slots_remaining_after; actor is the member only. No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
+    schema: marketplace.ModuleLeadSubmittedPayloadSchema,
+  },
+  'module.archived': {
+    type: 'module.archived',
+    description:
+      '`module.archived` (draft | scheduled | active → archived) on the MODULE stream (stream_id = module_id) (Story 12.1). Terminal in 12.1; carries the archive reason. No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
+    schema: marketplace.ModuleArchivedPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

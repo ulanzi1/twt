@@ -19,6 +19,10 @@
 // are private lookup metadata used by contribution/read.ts, intentionally omitted from the canonical event row below:
 // adding derived database fields to $inferSelect would change EventRow, replay fixtures and strict wire contracts.
 // The dedicated contribution-suppression-index-policy-regression spec verifies the database-only additions.
+// Hand-authored migration 0193 (Story 12.1) adds two PARTIAL UNIQUE expression indexes on `module.lead_submitted`:
+// module_lead_member_uq (stream_id, payload->>'member_id') — one place per member per module — and module_lead_id_uq
+// (payload->>'lead_id') — a lead id is used once, globally. Constraint names are mapped in marketplace/errors.ts;
+// they are deliberately NOT declared on the table below (drizzle-kit does not model JSONB-expression partial indexes).
 // The application layer (@twt/events) provides no UPDATE / DELETE paths.
 
 import { sql } from 'drizzle-orm';

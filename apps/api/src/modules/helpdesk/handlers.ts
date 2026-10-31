@@ -299,7 +299,7 @@ export function createHelpdeskHandlers(deps: AppDeps) {
               actorId,
               claimCaseId: body.claim_case_id ? ids.claimId(body.claim_case_id) : null,
               poolId: body.pool_id ? ids.poolId(body.pool_id) : null,
-              moduleId: body.module_id ?? null,
+              moduleId: body.module_id ? ids.moduleId(body.module_id) : null,
               validityLookupId: body.validity_lookup_id ?? null,
               memberStaffMediationRequestedAt,
             });

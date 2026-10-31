@@ -34,6 +34,7 @@ import type {
   ClaimId,
   HelpdeskTicketId,
   MemberId,
+  ModuleId,
   PariwarId,
   PoolId,
   UserId,
@@ -98,12 +99,12 @@ export interface ProjectTicketGenesisInput {
   // Nullable cross-link seams (navigation is Story 10.4).
   claimCaseId: ClaimId | null;
   poolId: PoolId | null;
-  // `module_id` / `validity_lookup_id` are deliberately NOT branded — no owning primitive exists yet
-  // (Story 12.x partner modules; Story 4.7 MemberStatusPanel), so there is no brand to reuse and
-  // minting a speculative one now would be premature (mirrors the `subject_id`/`kyc_transactions
-  // .member_id` "polymorphic, no owning entity yet" precedent in ids/index.ts). Brand these on the
-  // first PR that actually builds the owning primitive.
-  moduleId: string | null;
+  // `module_id` is branded `ModuleId` since Story 12.1 built its owning primitive (QE14 — type-only).
+  // `validity_lookup_id` is still deliberately NOT branded — no owning primitive exists yet (Story 4.7
+  // MemberStatusPanel), so there is no brand to reuse and minting a speculative one now would be
+  // premature (mirrors the `subject_id`/`kyc_transactions.member_id` "polymorphic, no owning entity
+  // yet" precedent in ids/index.ts). Brand it on the first PR that actually builds the owning primitive.
+  moduleId: ModuleId | null;
   validityLookupId: string | null;
   /**
    * Story 10.29 — ELEMENT 1, captured at intake (Decision `2026-08-15-120` cl.1). The instant the

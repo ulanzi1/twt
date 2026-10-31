@@ -84,6 +84,7 @@ run "pool-bound-payment-invariant" "pnpm pool-bound-payment:test && pnpm pool-bo
 run "sahyog-vivran-financial-truth" "pnpm sahyog-vivran-financial-truth:test && pnpm sahyog-vivran-financial-truth:check"
 run "alert-state-invariant"  "pnpm alert-state:test && pnpm alert-state:check"
 run "helpdesk-state-invariant"  "pnpm helpdesk-state:test && pnpm helpdesk-state:check"
+run "marketplace-module-state-invariant" "pnpm marketplace-module-state:test && pnpm marketplace-module-state:check"
 run "governance-boundary"  "pnpm governance-boundary:test && pnpm governance-boundary:check"
 run "custom-field-governance" "pnpm custom-field:test && pnpm custom-field:check"
 # [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): CRITICAL — the gate existed as

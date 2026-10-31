@@ -638,6 +638,30 @@ jobs:
       - run: pnpm helpdesk-state:test
       - run: pnpm helpdesk-state:check
 
+  marketplace-module-state-invariant:
+    name: marketplace-module-state-invariant (marketplace_modules projected columns are projector-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 12.1 I1: marketplace_modules' six projected columns (current_state, state_event_version,
+    # slots_remaining, archive_reason, audit_id, updated_at) are a replay-derived cache writable ONLY by
+    # the event-replay projector (packages/domain/src/marketplace/project.ts). Static TS-AST scan of
+    # packages/domain/src — flags any write outside the projector allowlist. No DB / network. See
+    # scripts/marketplace-module-state-invariant/. Twin of helpdesk-state-invariant.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm marketplace-module-state:test
+      - run: pnpm marketplace-module-state:check
+
   governance-boundary:
     name: governance-boundary (a feature flag cannot bypass a governance control)
     runs-on: ubuntu-latest

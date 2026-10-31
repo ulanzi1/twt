@@ -9,7 +9,10 @@ import { describe, expect, it } from 'vitest';
 import {
   InvalidBrandedIdError,
   claimId,
+  moduleId,
+  moduleLeadId,
   pariwarId,
+  partnerId,
   userId,
 } from '../../src/ids/index.js';
 
@@ -67,6 +70,24 @@ describe('branded-id smart constructors', () => {
       userId('bad');
     } catch (err) {
       expect((err as InvalidBrandedIdError).brand).toBe('UserId');
+    }
+  });
+
+  // Story 12.1 (AC10) — the three marketplace brands. `ModuleId` is the module's id AND its events_log
+  // stream_id; `ModuleLeadId` is the caller-minted lead idempotency key (QE8). All three lower-case, which
+  // is what makes the text-keyed `events_log` lead indexes case-safe.
+  it.each([
+    ['ModuleId', moduleId],
+    ['PartnerId', partnerId],
+    ['ModuleLeadId', moduleLeadId],
+  ] as const)('%s (Story 12.1) validates, lower-cases and brands like the others', (brand, ctor) => {
+    expect(ctor(VALID_UUID_V4.toUpperCase())).toBe(VALID_UUID_V4);
+    try {
+      ctor('not-a-uuid');
+      expect.unreachable('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(InvalidBrandedIdError);
+      expect((err as InvalidBrandedIdError).brand).toBe(brand);
     }
   });
 });

@@ -30,7 +30,7 @@
 import { sql } from 'drizzle-orm';
 import { bigint, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import type { ClaimId, HelpdeskTicketId, MemberId, PariwarId, PoolId, UserId } from '../ids/index.js';
+import type { ClaimId, HelpdeskTicketId, MemberId, ModuleId, PariwarId, PoolId, UserId } from '../ids/index.js';
 import { scopeDimensionEnum } from './role_grants.js';
 
 /**
@@ -192,11 +192,13 @@ export const helpdeskTickets = pgTable(
     // Cross-link seams (nullable now; the navigation that reads them is Story 10.4).
     claimCaseId: uuid('claim_case_id').$type<ClaimId>(),
     poolId: uuid('pool_id').$type<PoolId>(),
-    // `module_id` / `validity_lookup_id` are deliberately NOT branded — no owning primitive exists
-    // yet (Story 12.x partner modules; Story 4.7 MemberStatusPanel). Brand on the first PR that
-    // builds the owning primitive (the ids/index.ts "branding mandatory on a new ID's first PR"
-    // discipline applies to the OWNING id, not to a seam referencing an id that doesn't exist yet).
-    moduleId: uuid('module_id'),
+    // `module_id` is branded `ModuleId` since Story 12.1 built its owning primitive (QE14 — type-only;
+    // the column, its nullability and the migration are unchanged). `validity_lookup_id` is still
+    // deliberately NOT branded — no owning primitive exists yet (Story 4.7 MemberStatusPanel). Brand it
+    // on the first PR that builds the owning primitive (the ids/index.ts "branding mandatory on a new
+    // ID's first PR" discipline applies to the OWNING id, not to a seam referencing an id that doesn't
+    // exist yet).
+    moduleId: uuid('module_id').$type<ModuleId>(),
     validityLookupId: uuid('validity_lookup_id'),
 
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

@@ -501,3 +501,8 @@ export * from './memorial_takedown_approver_emails.js';
 // inspector's questionnaires and every step they take. Both append-only (grant + trigger); RLS keys versions' INSERT on
 // the origin Pariwar and steps on `scope_pariwar_id`; versions are readable by every tenant (reference data).
 export * from './questionnaire_versions.js';
+// Story 12.1 (0193) — the Module Marketplace primitive substrate: `marketplace_modules` (the SIXTH
+// event-derived-state primitive — an immutable bilingual partner manifest + the projector-only lifecycle
+// cache, guarded by the whole-row DB trigger (migration 0193) + the marketplace-module-state-invariant CI
+// gate; marketplace_module_state + marketplace_module_archive_reason pgEnums).
+export * from './marketplace_modules.js';

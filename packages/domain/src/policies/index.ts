@@ -284,3 +284,6 @@ export * from './announcement-channels-rls.js';
 // Story 6.33 (0192) — the questionnaire chain: versions SELECT `USING (true)` (reference data), INSERT own origin AND ⛔
 // direct; steps keyed on `scope_pariwar_id`, INSERT only the four tenant steps. Per command; ⛔ UPDATE / DELETE legs.
 export * from './questionnaire-versions-rls.js';
+// Story 12.1 (0193) — marketplace_modules tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`,
+// ⛔ DELETE; mirror helpdesk-tickets-rls). The marketplace_modules_state_write_guard trigger is ORTHOGONAL.
+export * from './marketplace-modules-rls.js';

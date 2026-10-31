@@ -61,6 +61,8 @@
     "alert-state:test": "vitest run scripts/alert-state-invariant",
     "helpdesk-state:check": "tsx scripts/helpdesk-state-invariant/check.ts",
     "helpdesk-state:test": "vitest run scripts/helpdesk-state-invariant",
+    "marketplace-module-state:check": "tsx scripts/marketplace-module-state-invariant/check.ts",
+    "marketplace-module-state:test": "vitest run scripts/marketplace-module-state-invariant",
     "survey-advisory:check": "tsx scripts/survey-advisory-invariant/check.ts",
     "survey-advisory:test": "vitest run scripts/survey-advisory-invariant",
     "governance-boundary:check": "tsx scripts/governance-boundary/check.ts",

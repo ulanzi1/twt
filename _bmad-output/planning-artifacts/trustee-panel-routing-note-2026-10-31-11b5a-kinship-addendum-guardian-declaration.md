@@ -1,6 +1,6 @@
 # Trustee Panel routing note — ADDENDUM to the family-list note: may a family name — and show — children if the person sending declares they are the child's guardian, and that the adults named have agreed?
 
-> **Status: WRITTEN 2026-10-31 — prepared for relay, ⛔ not yet sent.** BigDev sends. An addendum to
+> **Status: WRITTEN 2026-10-31 (committed alone, `130943af`) — SENT by BigDev — RULED 2026-10-31 (`-426`).** An addendum to
 > `trustee-panel-routing-note-2026-10-31-11b5a-kinship.md` (sent 2026-10-31, ⛔ not yet answered). Drafted from Story 11b.5a at BigDev's
 > request. **Please read it with that note and answer both together** — AQ1 changes what PQ1 A means. ⛔ Nothing is built, collected or
 > shown until you answer.
@@ -15,10 +15,19 @@ this note*).
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — Decision `2026-10-31-426` (Trustee-ratified, DR + KB, 2026-10-31, relayed by BigDev)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited** as the questions as they were put.
+> *"by DR and KB*
+> *addendum*
+> *AQ1 - A, AQ2 - A, AQ3 - A, AQ3(b) - (b)1*
+> *revise the main routing note and send again"*
+>
+> ⇒ **AQ1 A** — a child may be named on the family list on the sender's declaration (parent or lawful guardian, or that person's
+> agreement; every adult named has agreed). **AQ2 A** — the same for the family's words (supersedes `-391` item 2's child half in part).
+> **AQ3 A** — the same for a child in the photo (supersedes its photo half in part). **AQ3 (b)1** — the "who is in the photo" ticks
+> stay with the review and the declaration, ⛔ never shown publicly. The main note is to be **revised and sent again** (⛔ not answered).
+> What this does ⛔ not cover, and the readings the build needs, are in the decision entry. Everything below is kept **unedited** as
+> the questions as they were put.
 
 ---
 

@@ -405,8 +405,8 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   *"A claim cannot be filed"*; body (`-424` Q3 B — the general reason) *"We cannot file this claim: the person was not a member of the
   Trust when they died. If you have a question, please call the helpline."*; call *"Call the helpline"*; back *"Go back"*. hi: *"दावा दर्ज
   नहीं किया जा सकता"* (reviewed — BigDev 2026-10-31) · *"हम यह दावा दर्ज नहीं कर सकते, क्योंकि मृत्यु के समय वे ट्रस्ट के सदस्य नहीं थे।
-  कोई प्रश्न हो तो कृपया हेल्पलाइन पर कॉल करें।"* (⚠ the BODY is NEW after `-424` — agent-authored, ⛔ yet reviewed; the earlier reviewed
-  body is superseded) · *"हेल्पलाइन पर कॉल करें"* · *"वापस जाएँ"* (call + back are the ALREADY-REVIEWED `refile.call` / `refile.back`
+  कोई प्रश्न हो तो कृपया हेल्पलाइन पर कॉल करें।"* (the BODY is NEW after `-424` — reviewed by BigDev 2026-10-31: *"Hindi is fine"*; the
+  earlier reviewed body is superseded) · *"हेल्पलाइन पर कॉल करें"* · *"वापस जाएँ"* (call + back are the ALREADY-REVIEWED `refile.call` / `refile.back`
   strings, 2026-10-01). ⚠ "call the helpline" is a route to a QUESTION, ⛔ an
   appeal (Q3 B) — the helpline is refused by the same door.
 - **DL11 — The Pariwar Admin's words.** `helpdesk.dataRights.erasureRefused.deathReported` in `helpdesk/i18n-en.ts`, shown when the erasure
@@ -493,7 +493,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   specific refusal wins). Mobile: `apps/mobile/app/(withdrawal)/index.tsx` maps the code to a calm line (⛔ the raw server English) — en
   *"A claim has been filed for this member's death, so the membership cannot be withdrawn. If this is a mistake, please call the
   helpline."*; hi *"इस सदस्य की मृत्यु के लिए दावा दर्ज हो चुका है, इसलिए सदस्यता वापस नहीं ली जा सकती। यदि यह गलती है, तो कृपया
-  हेल्पलाइन पर कॉल करें।"* (agent-authored, ⛔ yet reviewed); key in the namespace that screen already uses. ⚠ Unreachable in production
+  हेल्पलाइन पर कॉल करें।"* (reviewed by BigDev 2026-10-31); key in the namespace that screen already uses. ⚠ Unreachable in production
   today (⛔ member can withdraw — G9a); built and tested on a seeded `active` member.
 - **DL19 — The member's own direct changes refused while a death report stands; staff changes keep the old entry (`-424` Q2 (b) A, N9).**
   (a) `apps/api/src/modules/life-events/handlers.ts` `assertMemberExistsAndNotTerminal` — the ONE guard of address, posting and the
@@ -502,7 +502,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   nominee route is already refused (`nominee.locked_claim_filed`, 6.20) — unchanged. (b) Mobile: the `(life-events)` screens map both
   codes to one calm line — en *"A claim has been filed for this member's death, so these details can no longer be changed here. To ask
   for a correction, please call the helpline."*; hi *"इस सदस्य की मृत्यु के लिए दावा दर्ज हो चुका है, इसलिए ये विवरण अब यहाँ बदले नहीं जा
-  सकते। सुधार के लिए कृपया हेल्पलाइन पर कॉल करें।"* (agent-authored, ⛔ yet reviewed). The staff `recordCorrection` (ASK) stays open (N8).
+  सकते। सुधार के लिए कृपया हेल्पलाइन पर कॉल करें।"* (reviewed by BigDev 2026-10-31). The staff `recordCorrection` (ASK) stays open (N8).
   (c) **The Panel's addition — staff changes never remove the old entry.** Today ⛔ staff path writes a member's address, posting or
   medical declaration, and those three are APPEND-ONLY history (prior value preserved — `schema/member_addresses.ts`,
   `member_postings.ts`, `member_medical_disclosures.ts`), so the rule holds by construction for them; the 6.20 staff NOMINEE correction
@@ -685,7 +685,7 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
   - [ ] 3A.1 DL18: `assertWithdrawable` — intake key, N1, 409 `withdrawal.death_reported`; live-DB tests (AC14) incl. the race.
   - [ ] 3A.2 DL19 (a): the Life Events guard + the medical guard — intake key, N1, the two 409s; live-DB tests (AC15).
   - [ ] 3A.3 Mobile: the withdrawal screen + the `(life-events)` screens map the codes to their copy keys (en + hi — the Hindi
-        agent-authored, ⛔ yet reviewed: a `$comment` saying NOT YET HUMAN-REVIEWED + a roster go-live row unless BigDev reviews first);
+        reviewed by BigDev 2026-10-31, *"Hindi is fine"*: a `$comment` naming that review; ⛔ go-live row needed);
         source-scan tests; `friction-budget.md` rows for both refusals (payer: whoever holds the dead member's account — `-424`'s accepted
         cost); enrol the changed files in `microcopy.yaml` if they are not already.
 - [ ] **Task 4 — Words (AC7, AC9, AC10)**
@@ -695,8 +695,8 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
         chain; its unit test + the Shell test in `apps/admin/tests/helpdesk-responder-console.test.tsx` (AC10).
   - [ ] 4.3 Mobile (DL10): `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` branch; keys `cannot_file.*` in
         BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both — the title
-        reviewed by BigDev (2026-10-31), call + back the reviewed `refile.*` strings, the BODY rewritten after `-424` and ⛔ yet reviewed
-        (NOT-YET-HUMAN-REVIEWED form + a roster go-live row, unless BigDev reviews it first); the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
+        reviewed by BigDev (2026-10-31), call + back the reviewed `refile.*` strings, the BODY rewritten after `-424` and reviewed by BigDev
+        the same day (*"Hindi is fine"*) — ⛔ go-live row needed; the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
         refused-at-door state** (payer: the family of a non-member, or of a mistyped search — `-423` Q3 B's accepted cost; the 6.19c
         re-file-screen row is the precedent); run `pnpm friction:check` before push — `MEMBER_FACING_PREFIXES` includes `apps/mobile/`, so
         without it the gate fails. Enrol `apps/mobile/app/(claim)/cannot-file.tsx` and `apps/mobile/lib/cannot-file-copy.ts` in
@@ -834,6 +834,7 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.8 | The three new Hindi strings — the cannot-file body (DL10), the withdrawal refusal (DL18), the Life Events refusal (DL19) — reviewed by BigDev: *"Hindi is fine"*. ⛔ Go-live row needed for any of them. |
 | 2026-10-31 | 1.7 | The Panel RULED the note — `2026-10-31-424` (DR + KB: Q1 (a) C, Q1 (b) B, Q2 (a) A, Q2 (b) A + the Panel's addition, Q3 B). Built here: N6 five refusals (`pending-fee` ⇒ `not_paid`); N7 / DL9 / DL10 the general reason to the caller and the app (the app body's Hindi NEW, ⛔ yet reviewed); N9 + DL18 (withdrawal refused) + DL19 (direct changes refused; staff changes never remove the old entry — recorded); AC14 / AC15, Task 3A; TR2 — the `pending-fee` fixtures now break; DL17's edges add `pending-fee`. Q1 (a) C's staff identity check is row `6-39-…`, ⛔ this story's. |
 | 2026-10-31 | 1.6 | DL17 added (BigDev: *"yes, add DL17"*), from BigDev's question on a later change to the KYC basis: a reducer-driven fence on every way INTO a state the door refuses (`pending-kyc` ← none; `withdrawn` ← withdrawal from active / grace / lapsed; `anonymized` ← erasure), refused set read from `intake-door.ts`, positive control — AC13, Task 5.5; the Policy-meaning note that a KYC-basis change reopens PQ1 (a). Edge sets checked against the reducer at `01062c51`. |
 | 2026-10-31 | 1.5 | How identity is verified today traced (G9a): DigiLocker or a self-declared entry; ⛔ trustee verification step and ⛔ lock-in exit exist, so `pending-valid` is unreachable and ⛔ member becomes `active`. PQ1 (a) re-framed to "an identity nobody has checked" (any state; refusing needs the identity record, ⛔ a switch arm); the note's Q1 (a) rewritten, suggestion A → C; the gap recorded in `deferred-work.md`, observational. |

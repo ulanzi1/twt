@@ -57,8 +57,8 @@ const ALLOWED: readonly string[] = [
 ];
 
 function globToRegExp(glob: string): RegExp {
-  const esc = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*');
-  return new RegExp(`^${esc}$`);
+  const part = (seg: string): string => seg.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*');
+  return new RegExp(`^${glob.split('**').map(part).join('.*')}$`);
 }
 const ALLOWED_RE = ALLOWED.map(globToRegExp);
 export const isAllowed = (rel: string): boolean => ALLOWED_RE.some((re) => re.test(rel));

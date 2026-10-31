@@ -505,7 +505,8 @@ describe('⭐⭐ familyMemorial — FINISHED STRINGS ONLY (Story 11b.4a; `-411` 
   });
 
   it('⛔ rejects a memorial without `kinship` (Story 11b.5a — the key is required, `[]` for no list)', () => {
-    const { kinship: _omit, ...withoutKinship } = MEMORIAL;
+    const withoutKinship: Record<string, unknown> = { ...MEMORIAL };
+    delete withoutKinship['kinship'];
     expect(PublicSahyogVivranEntry.safeParse({ ...ENTRY, familyMemorial: withoutKinship }).success).toBe(false);
   });
 

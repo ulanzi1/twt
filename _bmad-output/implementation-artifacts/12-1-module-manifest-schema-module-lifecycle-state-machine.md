@@ -10,7 +10,7 @@ PINNED: `b2f36fe9` = `origin/main` (2026-10-31k). The story lives on branch
 pin on 2026-10-31, then re-checked by SEVEN read-only verifiers across two rounds. Perishable — re-check at Task 0.1.
 Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: review (2026-10-31 — v1.6, implemented by `bmad-dev-story`; code UNCOMMITTED for review — ⚠ [code review R3-11: since committed as `49b22edd`, rebased `6669f21d`; review round 3 reviewed it]). Was: ready-for-dev (v1.4).
+STATUS: done (2026-11-01 — v1.12: LANDED on `main` by fast-forward, PR #318, `beae5116..7aed6feb`; GitHub CI 37 / 37). Was: review (2026-10-31 — v1.6, implemented by `bmad-dev-story`; code UNCOMMITTED for review — ⚠ [code review R3-11: since committed as `49b22edd`, rebased `6669f21d`; review round 3 reviewed it]). Was: ready-for-dev (v1.4).
 - v1.1: validated by three read-only verifiers; 19 improvements (`62416719`).
 - v1.2: Task 0.2 answered — BigDev, *"QE1-QE15 as recommended."* Task 0.3: author-commit `2026-10-31-427` (`a22dbdec`,
   alone) (`e38fc5a3`).
@@ -1655,6 +1655,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), via `bmad-dev-story`, 2026-10-31.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.12 | **LANDED on `main` by fast-forward**, SHAs unchanged (no merge commit, no squash): PR #318 MERGED 2026-10-31T18:30:29Z, `beae5116..7aed6feb` (13 commits: the story, decisions `-427` / `-429`, ADR-0044 drafted, the build, review rounds 1–4, the records). GitHub CI 37 / 37 on the PR head `7aed6feb`. Before that: the pre-push `ci:local` failed 2 / 37 on timeouts outside this story (two `@twt/admin` 5 s, one `@twt/domain` `member/import-workplaces.spec.ts` 30 s; load average ~153 on 8 cores after a reboot), so the branch was pushed with `SKIP_CI_LOCAL=1` on BigDev's call and GitHub CI was the gate. Row review → done. |
 | 2026-10-31 | v1.11 | Code review ROUND 4 (round 3's patch diff, 436 lines), Blind / Edge / Auditor: 0 decision-needed, 8 patch, 0 defer, 12 dismissed. BigDev: option 1 — every patch applied (R4-1 floor 2000; R4-2 – R4-8). Unit 333; mutants killed across the whole marketplace suite; `ci:local` 36 / 37 twice — the `@twt/admin` timeout flake, a different test each run; admin alone 1,554 / 1,554 — ⚠ not re-attested green in one invocation on this tree. Code committed `4541c66d` (rounds 3 + 4 together); records in the commit after it. |
 | 2026-10-31 | v1.10 | Code review ROUND 3 (the whole production slice after the RP patches and the rebase, 3,282 lines), Blind / Edge / Auditor: 0 decision-needed, 12 patch, 2 defer (R3D1, R3D2), 15 dismissed. BigDev: option 1 — every patch applied. Unit 324; six mutants killed; `ci:local` GREEN 37 / 37 in one invocation on a fresh container (21:19–21:43) — R3-1 / AC12 discharged for that tree. Code committed `4541c66d` (rounds 3 + 4 together); records in the commit after it. |
 | 2026-10-31 | v1.9 | REBASED onto `origin/main` `beae5116` (6.38 landed; our base was `b2f36fe9`), 10 commits replayed, conflicts only in the three newest-first files (`.decision-log.md`, `deferred-work.md`, `sprint-status.yaml`), resolved branch-on-top and verified byte for byte; then the `2026-10-31` ledger labels were RELABELLED (main took `p`–`u` first). Pre-rebase tip kept as `backup/12-1-pre-rebase-2026-10-31`. See the rebase map below. Status stays `review`. |

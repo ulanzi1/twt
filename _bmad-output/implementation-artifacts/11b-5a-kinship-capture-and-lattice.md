@@ -1385,6 +1385,45 @@ Code commits `9c695ef1`…`b61e2b37` (Tasks 2–8) + `50b7a2b6` (the `ci:local` 
 
 ## Change Log (rows newest first, below the SHA maps)
 
+**SHA map 3 — the 2026-11-01 rebase onto `3d6b46c5` (Story 12.1 landed, PR #318)** (every SHA written before this map — in the story, the ledger, the routing notes and the decision log — is the OLD one; read it through this table. all 32 commits changed SHA: the branch moved onto a new base):
+
+**Label map 3** (the branch yields; `main` is never rewritten — the house convention of the 12.1 relabel commit `cf407340`). Story 12.1 holds `2026-10-31v…ab`, so this branch's six colliding ledger labels were relabelled in both ledgers, each keeping its position and carrying a "relabelled from" note: `-31ab` → `-31an`, `-31aa` → `-31ao`, `-31w` → `-31ap`, `-31x` → `-31aq`, `-31y` → `-31ar`, `-31z` → `-31as`. Every other label of this branch (`-30s`, `-30t`, `-31ac`…`-31ae`, `-31af`, `-31ai`, `-31ak`, `-31al`, `-31am`) is unchanged and unclaimed on `main`. The decision ids are untouched (`main` holds `-427`, `-429`, `-430`, `-425`, `-424`; this branch holds `-426`, `-428`, `-431`, `-432`; migration `0193` is 12.1's and `0194` is this story's, `when` 1796355600039 > 1796269200038). The old commit messages keep citing the old labels.
+
+| Old | New | Commit |
+|---|---|---|
+| `6c04fb78` | `b6d59e9b` | story(11b.5a): created and validated — kinship capture, review and the |
+| `014bd52c` | `f9149c59` | governance(11b.5a): routing note — kinship: may the Trust ask for the  |
+| `cc5abb9a` | `ff38ec73` | records(11b.5a): Task 0.2 build answers (KL3 fourteen codes, KL4 200-c |
+| `d1af5acb` | `d392a1e9` | governance(11b.5a): routing note ADDENDUM — may a family name and show |
+| `8454f1c1` | `94daeb9e` | records(11b.5a): routing note SENT; Q-copy-1 answered; Q-copy-2..5 dra |
+| `9e92d1f8` | `52c5110c` | records(11b.5a): rebased onto origin/main b2f36fe9 — SHA map in the st |
+| `49649186` | `0980d815` | governance: 2026-10-31-426 TRUSTEE-RATIFIED (DR + KB) — a family may n |
+| `91d4b3f7` | `d14bcd07` | governance(11b.5a): routing note REVISED to version 2 at the Panel's d |
+| `92810cab` | `ec1b4e66` | records(11b.5a): -426 recorded — dated pointer under -391; story v1.11 |
+| `93e8a9f9` | `570cf4e1` | governance: 2026-10-31-428 TRUSTEE-RATIFIED (DR + KB) — the family lis |
+| `e988396c` | `055df04a` | records(11b.5a): -428 recorded — pointers under -391 / -398 / -411 / - |
+| `b4b501cf` | `c85ea7ad` | records(11b.5a): Task 0.2 done — all copy approved (v4 sentence 1 Hind |
+| `bdc24e92` | `ef339cdf` | governance(11b.5a): routing note — three confirms on the family-list r |
+| `032a2652` | `c21adbef` | records(11b.5a): second validation applied — story v2.3 (33 findings + |
+| `2d63bda9` | `55088097` | records(11b.5a): copy re-approved — v4 sentence 4's child ground narro |
+| `d971c015` | `b787bc01` | governance: 2026-10-31-431 AUTHOR-COMMIT (BigDev) — Story 11b.5a's bui |
+| `fddd2fc2` | `05110d56` | records(11b.5a): Task 1.2 — rows 11b-5b / 11b-5c minted, launch-gate R |
+| `2615878a` | `7eb0ceab` | records(11b.5a): rebased onto origin/main beae5116 (Story 6.38 landed) |
+| `f87d4067` | `1a19d3fb` | records(11b.5a): follow-up note R1-R3 SENT by BigDev — no ruling yet;  |
+| `4ee9b93c` | `a78c7498` | governance: 2026-10-31-432 TRUSTEE-RATIFIED (DR + KB) — the three conf |
+| `82c4df53` | `5d4b3a3f` | records(11b.5a): -432 recorded — pointers under -428 / -426; row 11b-5 |
+| `9c695ef1` | `29c2eaac` | story(11b.5a): Tasks 2-3 — the family list's vocabulary, contracts and |
+| `a3e1240c` | `3f336fe9` | story(11b.5a): Task 4 — the API reads and writes the family list; perm |
+| `51f65a0d` | `aa6162e7` | story(11b.5a): Task 5 — the family screen, the list in the draft, prev |
+| `8d33cecc` | `a0787b81` | story(11b.5a): Task 6 — the admin review and take-down screens show th |
+| `3c97d091` | `99fe5af2` | story(11b.5a): Task 7 — the public <KinshipLattice>, its matrix pair u |
+| `b61e2b37` | `7be195bc` | story(11b.5a): Task 8 — the fences: the AC10 purpose pin, SCAN_FILES,  |
+| `50b7a2b6` | `075e7b62` | fix(11b.5a): ci:local lint — the AC10 pin's glob helper uses no contro |
+| `a9bc1552` | `f53ffb12` | records(11b.5a): Tasks 2-9 implemented — row in-progress -> review; fo |
+| `7de62adf` | `9670e381` | records(11b.5a): the R16 take-down-scan exception CONFIRMED by BigDev  |
+| `ee25f597` | `6af370ef` | fix(11b.5a): code review rounds 1 and 2 — the 27 patches (RP1-RP27) |
+| `612bd498` | `716de91b` | records(11b.5a): code review rounds 1 and 2 — findings, deferrals RD1- |
+
 **SHA map 2 — the 2026-10-31 rebase onto `beae5116` (Story 6.38 landed)** (every SHA written before this map — in the story, the ledger and the routing notes' status lines — is the OLD one; read it through this table):
 
 | Old | New | Commit |
@@ -1420,6 +1459,7 @@ Code commits `9c695ef1`…`b61e2b37` (Tasks 2–8) + `50b7a2b6` (the `ci:local` 
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v2.13 | **Rebased onto `origin/main` `3d6b46c5`** (Story 12.1 landed with migration `0193`): 32 commits replayed, conflicts hand-resolved in the ledger (both lists), `.decision-log.md`, the migration journal (idx 193 then 194, `when` increasing) and `deferred-work.md`; `main`'s entries verified byte-identical. Six ledger labels relabelled (SHA map 3 / label map 3). Backup: branch `backup/11b-5a-pre-rebase-3-2026-11-01` (`612bd498`). `pnpm ci:local` NOT yet run on the rebased tree (Task 9). |
 | 2026-11-01 | v2.12 | **Fix-round review** (`bmad-code-review 11b.5a`, option 2; 3 / 3 layers): 35 raw → 24 distinct → DN1 deferred by BigDev (RD17), 7 patch (RP21–RP27), 6 defer (RD12–RD17), 11 dismissed; the Auditor judged 16 of the 20 round-one patches RESOLVED, 3 PARTIAL (RP5, RP14, RP20), 1 NOT TESTED (RP13). BigDev: apply every patch — RP21–RP27 applied in the working tree (uncommitted, ungated). Status stays `review`. |
 | 2026-11-01 | v2.11 | **Code review** (`bmad-code-review 11b.5a`, three chunks × three layers, 9 / 9 completed): 96 raw → 51 distinct → 0 decision-needed, 20 patch, 11 defer, 20 dismissed; no Panel question. BigDev: apply every patch — all 20 applied in the working tree (uncommitted, ungated); RP3 landed with one new admin string; deferrals RD1–RD11 in `deferred-work.md`. `origin/main` is now `3d6b46c5` (Story 12.1 landed, `0193`) — rebase owed. Task 9 still OPEN. Status stays `review`. |
 | 2026-10-31 | v2.10 | The R16 take-down-scan exception (the three family-list row keys, copy 2.13–2.15, only in `family.tsx`) **CONFIRMED by BigDev** (*"agreed"*); copy unchanged; the device / TalkBack pass checks that "Remove" reads as "this line". Ledger `2026-10-31am`. |

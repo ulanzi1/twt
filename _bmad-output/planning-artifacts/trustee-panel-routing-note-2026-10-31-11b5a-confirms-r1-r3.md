@@ -1,6 +1,6 @@
 # Trustee Panel routing note — three short confirms on your family-list rulings: what "members also see the memorial" means, whose agreement the declaration covers, and when a child is still left out
 
-> **Status: WRITTEN 2026-10-31 — prepared for relay, ⛔ not yet sent.** BigDev sends. Drafted from Story 11b.5a after a review of how
+> **Status: WRITTEN 2026-10-31 (committed alone, `bdc24e92` — `3981fd0b` before the second rebase) — SENT 2026-10-31 by BigDev** (*"I have sent the note"*). ⏳ ⛔ No ruling yet. Drafted from Story 11b.5a after a review of how
 > we recorded your rulings of today on the family list (Decisions `2026-10-31-426` and `2026-10-31-428`). **Blocking:** ⛔ not the
 > building of the family list itself; R1 decides whether the members' app shows the memorial at all, and all three are answered before
 > anything goes live. ⛔ No member uses the system yet, and ⛔ no family memorial is live.

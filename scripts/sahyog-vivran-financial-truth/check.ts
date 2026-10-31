@@ -141,6 +141,9 @@ const SCAN_FILES: readonly { readonly path: string; readonly renderPath: boolean
   // ⭐ STORY 11b.5 — the same tax: `FamilyMemorial.astro` now renders the frame through `<PortraitFrame>`, and ⚠ the safeguard does ⛔ not
   // walk `src/components` ⇒ an unregistered file on the render path is ⛔ never scanned. ⛔ No amount operand, ⛔ no event type.
   { path: 'apps/public/src/components/PortraitFrame.astro', renderPath: true },
+  // ⭐ STORY 11b.5a — the same tax again: `FamilyMemorial.astro` renders the family list through `<KinshipLattice>` (⛔ walked —
+  // `src/components`). ⛔ No amount operand, ⛔ no event type.
+  { path: 'apps/public/src/components/KinshipLattice.astro', renderPath: true },
   { path: 'apps/api/src/modules/public-pages/memorial-public-read.ts', renderPath: false },
 ];
 

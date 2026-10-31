@@ -375,6 +375,9 @@ scope:
     - apps/mobile/app/(memorial)/photo.tsx
     - apps/mobile/app/(memorial)/preview.tsx
     - apps/mobile/app/(memorial)/outcome.tsx
+    # ⭐ Story 11b.5a (AC11) — the family list's screen and its pure helper (the `memorial.json` keys are already in copy_globs).
+    - apps/mobile/app/(memorial)/family.tsx
+    - apps/mobile/components/memorial-authorship/memorial-kinship.ts
     - apps/mobile/components/memorial-authorship/MemorialEntry.tsx
     - apps/mobile/components/memorial-authorship/MemorialHeader.tsx
     - apps/mobile/components/memorial-authorship/MemorialText.tsx

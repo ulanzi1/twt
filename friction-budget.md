@@ -3059,3 +3059,19 @@ they meet is still Row 56's few short questions:
 3. ⛔ **Dark until go-live:** the neighbours are texted only once 6.27c's sends go live (roster Row 27), and a chain version reaches
    them only once one is made live (roster Row 45) — ⛔ a member pays anything new before then.
 `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted.
+
+**Story 11b.5a disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, ⛔ no row amended; `2026-10-31-426` / `-428` /
+`-431`):** the memorial flow gains ONE screen between the photo and the preview — the family list (`apps/mobile/app/(memorial)/family.tsx`,
+with `photo.tsx` / `preview.tsx` / `outcome.tsx` and the draft) — and the public memorial gains `<KinshipLattice>`
+(`apps/public/src/components/KinshipLattice.astro`). The payer is the one Row 64 already names — the nominee writing the memorial —
+and what they meet is ⛔ heavier than Row 64's flow:
+1. ⭐ **The list is OPTIONAL, always.** It starts empty, ⛔ pre-filled; *"Continue without a list"* and *"Next"* both go on; ⛔ nothing
+   on it is required. A row left half-filled asks the family to finish it or remove it (copy 2.11) — ⛔ a refusal of the Send.
+2. ⛔ **No new tick, code or wait.** The guardian declaration (`-426`) is sentence ③ of the permission the nominee ALREADY accepts by
+   pressing Send (the v4 text) — the same press, the same handover code Row 64 records. The "In the photo" ticks are optional and
+   shown only when a photo is sent.
+3. **The public page:** ⛔ no `<style>` block and ⛔ no script are added — the lattice's spacing is inline token styles in the
+   server-rendered HTML ⇒ the page's `own_bytes` stays **0** (⛔ re-measured here: the metric facet is a no-op for this surface — see
+   above). ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted. A visitor reads the list; ⛔ nothing is asked of them.
+4. ⛔ **Dark until go-live:** the memorial stays behind `MEMORIAL_AUTHORSHIP_ENABLED` (off) until launch-gate Row 41 closes, including
+   its (r) criteria — rows 11b-5b and 11b-5c `done` — so ⛔ a family pays anything new before then.

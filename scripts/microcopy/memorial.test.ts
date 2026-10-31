@@ -36,6 +36,9 @@ const MOBILE_FILES = [
   'apps/mobile/app/(memorial)/photo.tsx',
   'apps/mobile/app/(memorial)/preview.tsx',
   'apps/mobile/app/(memorial)/outcome.tsx',
+  // Story 11b.5a — the family list.
+  'apps/mobile/app/(memorial)/family.tsx',
+  'apps/mobile/components/memorial-authorship/memorial-kinship.ts',
   'apps/mobile/components/memorial-authorship/MemorialEntry.tsx',
   'apps/mobile/components/memorial-authorship/MemorialHeader.tsx',
   'apps/mobile/components/memorial-authorship/MemorialText.tsx',
@@ -283,9 +286,28 @@ describe('the no-deadline scan (AC2 / AC14)', () => {
 
 // ─── (d) ⛔ take-down button anywhere (AC4 / AC12 — a take-down goes through the helpline, `-393`) ──────────────────────
 
+/**
+ * ⚠ Story 11b.5a — the ONE named exception to (d) and (e), and it is ⛔ a take-down: copy 2.13–2.15 (APPROVED by BigDev 2026-10-31)
+ * label the family screen's control that removes ONE LINE from the family's own UNSENT list, on the phone (nothing is published;
+ * nothing the Trust holds changes). Exact keys, and — in (e) — ONLY inside `family.tsx`; the same key on any other screen, or any
+ * other remove / delete / take-down label, still fails (the planted legs below prove it).
+ */
+const FAMILY_LIST_ROW_KEYS: ReadonlySet<string> = new Set(['family.remove', 'family.remove_a11y', 'family.remove_empty_a11y']);
+const FAMILY_SCREEN = 'apps/mobile/app/(memorial)/family.tsx';
+
 describe('the namespace holds ⛔ take-down / remove / delete button key', () => {
   it.each([EN_FILE, HI_FILE])('%s', (file) => {
-    for (const [key] of copyEntries(file)) expect(key).not.toMatch(/take[_-]?down|remove|delete|unpublish/i);
+    for (const [key] of copyEntries(file)) {
+      if (FAMILY_LIST_ROW_KEYS.has(key)) continue;
+      expect(key).not.toMatch(/take[_-]?down|remove|delete|unpublish/i);
+    }
+  });
+
+  it('the exception is exactly the three family-list row keys (a fourth "remove" key fails)', () => {
+    const removeKeys = copyEntries(EN_FILE)
+      .map(([k]) => k)
+      .filter((k) => /take[_-]?down|remove|delete|unpublish/i.test(k));
+    expect(removeKeys.sort()).toEqual([...FAMILY_LIST_ROW_KEYS].sort());
   });
 });
 
@@ -359,7 +381,13 @@ function takeDownButtons(source: string, resolve: (key: string, locale: 'en' | '
   return out;
 }
 
-const realCopy = (key: string, locale: 'en' | 'hi'): string => translate(key, undefined, { locale, namespace: 'memorial' });
+/**
+ * Story 11b.5a — a Button label may now interpolate (`family.remove_a11y` — *"Remove {name} from the list"*): every `{param}` is
+ * filled with its own placeholder, so the VALUE scan reads the label's own words and ⛔ a family's name.
+ */
+const PLACEHOLDER_PARAMS = new Proxy({} as Record<string, string>, { get: (_t, p) => `{${String(p)}}` });
+const realCopy = (key: string, locale: 'en' | 'hi'): string =>
+  translate(key, PLACEHOLDER_PARAMS, { locale, namespace: 'memorial' });
 
 describe('no memorial Button offers a take-down — by role and by VALUE, in en and hi (AC4 / AC12, R16)', () => {
   const SCREEN_AND_COMPONENT_FILES = MOBILE_FILES.filter((f) => f.endsWith('.tsx'));
@@ -378,7 +406,19 @@ describe('no memorial Button offers a take-down — by role and by VALUE, in en 
   });
 
   it.each(SCREEN_AND_COMPONENT_FILES)('%s — no Button label says taken down / take down / remove', (f) => {
-    expect(takeDownButtons(readRepo(f), realCopy)).toEqual([]);
+    // Story 11b.5a — the family screen's row control removes a line of the UNSENT list (the named exception above), ⛔ elsewhere.
+    const exempt = (hit: string): boolean => f === FAMILY_SCREEN && FAMILY_LIST_ROW_KEYS.has(hit.slice(3, hit.indexOf(' = ')));
+    expect(takeDownButtons(readRepo(f), realCopy).filter((hit) => !exempt(hit))).toEqual([]);
+  });
+
+  it('Story 11b.5a — the family-list row keys ARE flagged by the value scan (so the exception is real), and ⛔ exempt outside family.tsx', () => {
+    const src = `const A = () => <Button accessibilityLabel={t('family.remove_a11y', { name })}>{t('family.remove')}</Button>`;
+    expect(takeDownButtons(src, realCopy).length).toBeGreaterThan(0);
+    expect(takeDownButtons(readRepo(FAMILY_SCREEN), realCopy).length).toBeGreaterThan(0);
+    // Every hit on the family screen is one of the three named keys — ⛔ anything else.
+    for (const hit of takeDownButtons(readRepo(FAMILY_SCREEN), realCopy)) {
+      expect(FAMILY_LIST_ROW_KEYS.has(hit.slice(3, hit.indexOf(' = '))), hit).toBe(true);
+    }
   });
 
   describe('PLANTED — the scan can fail', () => {

@@ -6,6 +6,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Deferred from: BigDev's question while preparing Story 6.38's routing note — "how is identity being verified today?" (2026-10-31)
 
+✅ **DISCHARGED 2026-10-31 into rows `3-13-trustee-validation-of-manually-entered-identity` and `3-14-lock-in-expiry-producer`** (backlog,
+Epic 3 — BigDev: *"yes, add it"*; added on `governance/lock-in-gap-rows`, ledger `2026-10-31f`; ⚠ 3-13 before 3-14). The text below is kept
+as it was recorded.
+
 OBSERVED, ⛔ planned ([[feedback_gap_analysis_observational]]): traced read-only at `01062c51`; ⛔ row, ⛔ owner, ⛔ fix proposed here.
 Escalated to BigDev in session, and to the Panel only as the one fact behind Q1 (a) of
 `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (⛔ asked there).

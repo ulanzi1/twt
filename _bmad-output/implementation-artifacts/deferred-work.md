@@ -444,6 +444,7 @@ Story 11b.5 lifts the family memorial's funeral frame into `<PortraitFrame>` (an
 `border-funeral-frame` token, corrected 4px → 2px) and gives the memorial section spacing in place of its inert utility classes —
 build decisions [`-420`](../../.decision-log.md#decision-2026-10-29-420) (MV1–MV6). `<MemorialRecord>` → Story 11b.6 (MV1);
 `<KinshipLattice>` → row `11b-5a-kinship-capture-and-lattice` (MV2). ⛔ Nothing is live: launch-gate Row 41 stays open.
+⭐ *(2026-10-31) `<KinshipLattice>`: RULED by [`2026-10-31-428`](../../.decision-log.md#decision-2026-10-31-428) (with [`-426`](../../.decision-log.md#decision-2026-10-31-426); build decisions [`-431`](../../.decision-log.md#decision-2026-10-31-431)) — HOMED in row `11b-5a-kinship-capture-and-lattice` (Trigger reached at its create-story, 2026-10-30); closes when 11b-5a is `done` on main. ⛔ Not closed yet, ⛔ not deleted.*
 
 - **(1) The page-wide inert utility classes on `apps/public/src/pages/sahyog-vivran/[driveToken].astro`.** `apps/public` has ⛔ no
   Tailwind pipeline (confirmed 2026-10-29 by building and reading the emitted CSS — ⛔ no rule for `.mt-6`, `.rounded`, `.text-sm`,
@@ -738,6 +739,7 @@ until launch-gate Row 41 closes (its new criteria (l)–(q)).
   **Trigger: Row 41 (p).**
 - **(6) Kinship** (11b.4 item (2)) — still 11b.5's, with its own Panel question on the purpose. **Trigger: Story 11b.5.**
   ⭐ *(2026-10-29) Trigger reached at 11b.5 — RE-POINTED by `2026-10-29-420` MV2 to row `11b-5a-kinship-capture-and-lattice` (`backlog`), which owns the capture, its review, the public `<KinshipLattice>` and the Panel question on kinship's purpose (written at its own Task 0). **Trigger now: row `11b-5a`'s create-story.** ⛔ Not closed, ⛔ not deleted.*
+  ⭐ *(2026-10-31) RULED by [`2026-10-31-428`](../../.decision-log.md#decision-2026-10-31-428) (with [`-426`](../../.decision-log.md#decision-2026-10-31-426); build decisions [`-431`](../../.decision-log.md#decision-2026-10-31-431)) — HOMED in row `11b-5a-kinship-capture-and-lattice` (Trigger reached at its create-story, 2026-10-30); closes when 11b-5a is `done` on main. ⛔ Not closed yet, ⛔ not deleted.*
 - **(7) A family's own erasure request** for their words (11b.4 item (7)) — ⛔ not built here. **Trigger: the first such request.**
 - **(8) Architecture §4.11.2's responsive media pipeline and the Astro Image component** stay unbuilt: ONE variant behind a proxied
   plain `<img>` (MP5; the dated note in `architecture.md`). **Trigger: the implementation ADR §4.11.2 names, or a second public image.**
@@ -1005,6 +1007,7 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
   11b-4a / Story 11b.5 (`<KinshipLattice>`), with its own Panel question on the purpose.**
   ⭐ *(2026-10-27) Trigger reached at 11b.4a; carried as 11b.4a item (6) (still 11b.5's / a Panel purpose question), ⛔ not closed.*
   ⭐ *(2026-10-29) Trigger reached at 11b.5 — RE-POINTED by `2026-10-29-420` MV2 to row `11b-5a-kinship-capture-and-lattice`. ⚠ The "⛔ collected" above means kinship is NOT collected (an upstream glyph standing for the negator). **Trigger now: row `11b-5a`'s create-story.** ⛔ Not closed, ⛔ not deleted.*
+  ⭐ *(2026-10-31) RULED by [`2026-10-31-428`](../../.decision-log.md#decision-2026-10-31-428) (with [`-426`](../../.decision-log.md#decision-2026-10-31-426); build decisions [`-431`](../../.decision-log.md#decision-2026-10-31-431)) — HOMED in row `11b-5a-kinship-capture-and-lattice` (Trigger reached at its create-story, 2026-10-30); closes when 11b-5a is `done` on main. ⛔ Not closed yet, ⛔ not deleted.*
 - **(3) Emphasis** (epic step (b) — MA4): v1 is paragraphs only. **Trigger: a Story 0.9 conversation or a family request.**
 - **(4) A staff-initiated helpdesk conversation after a refusal** (the epic's *"request specific changes via empathetic helpdesk
   conversation"*): every non-approved outcome shows the helpline, but ⛔ staff-initiated ticket exists. **Trigger: the next helpdesk story.**
@@ -1040,6 +1043,7 @@ build decisions [`-398`](../../.decision-log.md#decision-2026-10-24-398) (MA1–
 - **(14) Counsel risks, ⛔ blockers** — `-391`: counsel was ⛔ asked how long words naming living people may be kept (Q5); `-391` /
   `-393`: the draft T&C *"revocable consent"* sentence flagged for its owner; `-393`: whether M4's conversation keeps withdrawal as easy
   as giving permission. **Trigger: the next counsel round (Story 0.13).**
+  ⭐ *(2026-10-31, Story 11b.5a): EXTENDED — [`-426`](../../.decision-log.md#decision-2026-10-31-426): whether a typed guardian declaration is *"verifiable"* consent for a child under DPDPA §9 (if counsel says it is ⛔ not, AQ1–AQ3 return to the Panel before go-live — launch-gate Row 41 (t)); [`-428`](../../.decision-log.md#decision-2026-10-31-428): whether a named person has a legal right to have their own name removed (row 11b-5b). Trigger unchanged. ⛔ Not closed.*
 - **(15) The helpdesk create route TRUNCATES an over-long field SILENTLY** (`apps/api/src/modules/helpdesk/member-handlers.ts`
   `readCreateMultipart`: `@fastify/multipart` passes a text field over `fieldSize` through CUT with `valueTruncated: true` and raises ⛔
   error; there is ⛔ `FST_FIELD_SIZE_LIMIT` code, so its catch arm is dead — Trap 11). 11b.4's own route refuses it (`400
@@ -2195,6 +2199,7 @@ would bring members into them in numbers. Neither needs a ruling to identify; th
     6.36e's `done` this item NARROWS FURTHER to the OTHER relatives, to nominees declared before 6.36e ships or never marked, and to a
     marked-impossible nominee whose sign-in number the deceased did ⛔ hold (often a family phone); until then it stays as the 2026-10-23
     line says.
+  - *Appended 2026-10-31 (Story 11b.5a, [`-428`](../../.decision-log.md#decision-2026-10-31-428)):* the family LIST row 11b-5a builds is ⛔ not this family-link substrate — `-428` PQ1 A rules it *"used for **nothing else**"* (Story 11b.5a AC10 pins it mechanically); reusing it here would need its own Panel question. Stays OPEN as written.
 - **A live SENSITIVE answer that cannot be DECRYPTED blocks further saves on that reply** [`apps/api/src/modules/claims/peer-request-core.ts`
   `decryptLiveSensitive` → `claim.savePeerAnswer` `PeerRequestStaleError`]. The handler leaves an undecryptable live answer OUT of the map it
   hands the writer, and the writer refuses the save as STALE (409 `peer_request.stale`) rather than act on an unknown (fail-closed — ⛔ a
@@ -4448,6 +4453,7 @@ recorded here rather than left for a future reader to re-derive._
   · **the memorial visual components** (Story **11b.5**) — `backlog`.
     ⭐ ANNOTATED 2026-10-27 (Story 11b.4a MP1, `2026-10-27-412`): the family memorial no longer waits on 11b.5 — 11b.4a renders it with plain markup that 11b.5 later refactors into its components. ⛔ Not closed (11b.5 is still `backlog`).
     ⭐ ANNOTATED 2026-10-29 (Story 11b.5, `2026-10-29-420`): `<PortraitFrame>` built (`apps/public/src/components/PortraitFrame.astro`, commit `98e24152`); `<MemorialRecord>` → Story 11b.6 (MV1); `<KinshipLattice>` → row `11b-5a-kinship-capture-and-lattice` (MV2). ⛔ Not closed (two of the three components are not built).
+    ⭐ ANNOTATED 2026-10-31 (Story 11b.5a): the third component, `<KinshipLattice>`, is RULED by [`2026-10-31-428`](../../.decision-log.md#decision-2026-10-31-428) (with [`-426`](../../.decision-log.md#decision-2026-10-31-426); build decisions [`-431`](../../.decision-log.md#decision-2026-10-31-431)) — HOMED in row `11b-5a-kinship-capture-and-lattice` (Trigger reached at its create-story, 2026-10-30); closes when 11b-5a is `done` on main. ⛔ Not closed yet, ⛔ not deleted. (`<MemorialRecord>` stays Story 11b.6's.)
   · **`<StatCardStrip>`** — **C-3**: ⛔ NO PRODUCER **and** ⛔ NO OWNER; `2026-08-23-154` declined to
     settle it (*"a settled SHAPE is ⛔ not a settled SOURCE"*). ⛔⛔ **Do ⛔ not stub it** — a stub asserts
     an aggregate that nothing computes.
@@ -7979,6 +7985,7 @@ Closure-language posture per [[feedback_closure_language_precision]]: engineerin
 - **Story 9.1 NomineeConsole load-bearing "fursat" cadence operational-posture invariant (epics line 3094) directly coupled to Story 0.9** — Story 0.9 grief-grammar verdict for `grief-grammar-fursat-cadence` is the empirical validation of the Story 9.1 invariant. If refuted, Story 9.1 design re-scope is required before Epic 9 design freeze. Cross-Story dependency tracked here.
 - **Story 11b.5 Memorial Visual Components culturally-appropriate Hindi-context visual treatment (epics lines 3865-3866) directly coupled to Story 0.9** — Story 0.9 grief-grammar verdict for `grief-grammar-black-bordered-portrait` is the empirical validation. If refuted, Story 11b.5 PortraitFrame + KinshipLattice design re-scope is required before Epic 11b design freeze. Cross-Story dependency tracked here.
   ⭐ *(2026-10-29, Story 11b.5, `2026-10-29-420`): the `<PortraitFrame>` built by 11b.5 (`apps/public/src/components/PortraitFrame.astro` — 2 px `ink-primary` border, 6 pt inset, 4:5) is the frame this verdict would re-scope; `<KinshipLattice>` moved to row `11b-5a-kinship-capture-and-lattice` (MV2), `<MemorialRecord>` to Story 11b.6 (MV1). ⛔ Not closed.*
+  ⭐ *(2026-10-31, Story 11b.5a): the `<KinshipLattice>` look (a two-column `<dl>`, `-431` KL2) joins this item — built by row 11b-5a and carried UN-ATTESTED against Story 0.9 like the frame. ⛔ Not closed.*
 
 ---
 

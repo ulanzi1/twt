@@ -1844,6 +1844,7 @@ minor, the claim flow:
 - Suppresses minor identity from public surfaces (Sahyog Vivran shows family without
   minor's name; In Memoriam unaffected since the deceased is the member, not the minor).
 - DPDPA §9 compliance carries to all minor-data handling.
+- ⚠ *Dated note (2026-10-31, Story 11b.5a — [Decision 2026-10-31-426](../../.decision-log.md#decision-2026-10-31-426), Trustee-ratified; ⛔ no word above is edited):* the bullet *"Suppresses minor identity from public surfaces (Sahyog Vivran shows family without minor's name …)"* is written for a **minor nominee captured at claim time** and stands for that case. For **family-authored memorial content** (the family's words, photo and family list), `-426` lets a child be named or shown on the sender's guardian declaration (parent or lawful guardian, or that person's agreement). ⇒ This section is OWED an amendment before go-live (`-426` Consequence 3; launch-gate Row 41 (t)), and *"DPDPA §9 compliance carries to all minor-data handling"* depends on counsel's answer whether a typed declaration is verifiable consent — if it is ⛔ not, `-426` returns to the Panel.
 
 #### 2.13 Member directory attributes — classification, authority layering, presentation, and hierarchy integrity
 

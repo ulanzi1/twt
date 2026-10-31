@@ -39,7 +39,7 @@ It exists only in the MAIN checkout, git-ignored. Cite its sections by number; �
 
 # Story 11b.5a: Kinship — Capture, Review and the Public `<KinshipLattice>`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -47,7 +47,7 @@ Status: ready-for-dev
 its own negator word (*not*, *no*, *never*, *none*). Upstream text does ⛔ not follow this rule (see the header). ⇒ A ⛔ with no
 negator is a defect: infer the sense from context and the cited source, ⛔ never by deleting the glyph, and note it.
 
-## PREFLIGHT — ✅ TASK 0 DONE: the Panel has RULED (`-426`, `-428`). Next: Task 1 (governance). Follow-up confirms R1–R3 are written for the Panel (prepared for relay — ⛔ not yet sent; they gate 11b-5c and go-live, ⛔ not Task 1).
+## PREFLIGHT — ✅ TASKS 0–1 DONE: the Panel has RULED (`-426`, `-428`); our author-commit is `-431`. Next: Task 2 (code). Follow-up confirms R1–R3 are written for the Panel (prepared for relay — ⛔ not yet sent; they gate 11b-5c and go-live, ⛔ not Task 1).
 
 ### ⚖️ RULED — what binds the build (this block WINS over any plan text below that still reads otherwise)
 
@@ -621,7 +621,7 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight and the Panel (AC0, AC1)** ⛔ no code in this task
+- [x] **Task 0 — Preflight and the Panel (AC0, AC1)** ⛔ no code in this task
   - [x] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved; re-diff from `01062c51`; run STOP 1–7; re-take every number in
     the header across all branches and worktrees (the ledger letter included — `-30r` is 6.38's); `grep -n 'KL[0-9]' .decision-log.md`
     (⛔ no prior KL). ✅ **Run 2026-10-31:** `origin/main` still `01062c51` (⛔ no rebase); STOP 1 ⛔ no change under any listed path;
@@ -643,13 +643,13 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
   - [x] 0.4 ✅ **Done 2026-10-31:** the addendum ruled (`-426`, committed alone `16dc6911`), the main note v2 ruled (`-428`, committed
     alone `1bdd8cd0`); outcome **PQ1 A + rider, PQ2 B, PC1 A, AQ1–AQ3 A, (b)1** ⇒ the RULED block at the top; rows 11b-5b / 11b-5c
     minted at Task 1.2; story v2.0 + a validate pass before Task 1. (The original outcome branches are in the appendix.)
-- [ ] **Task 1 — Governance commits (AC0)**
-  - [ ] 1.1 Re-take the id (`-431` at validation); commit our author-commit `-NNN` **alone** (KL1–KL16 as answered — all answered
+- [x] **Task 1 — Governance commits (AC0)** — ✅ 2026-10-31: `-431` committed alone (`1c68adc4`); records (Task 1.2) in the next commit
+  - [x] 1.1 ✅ `-431` committed alone (`1c68adc4`). Re-take the id (`-431` at validation); commit our author-commit `-NNN` **alone** (KL1–KL16 as answered — all answered
     2026-10-31; §0: the questions were the Panel's and are ruled by `-426` / `-428`; records BigDev's reading of the rider (R1 pending),
     the 11b-5b / 11b-5c split, and KL16's design; mints: the relation tuple, v4 with `carriesGuardianDeclaration`, the matrix pair under
     `2026-10-31-428 item 1`). **Commit slicing after it:** records → contracts + migration → API → admin (incl. KL16) → mobile → public →
     fences.
-  - [ ] 1.2 Records commit: (i) ✅ pointers under `-391` / `-398` WRITTEN (`2330a941`); ⏳ the pointer under `-420` (MV2 **carried out**
+  - [x] 1.2 ✅ Records commit (2026-10-31): rows 11b-5b / 11b-5c minted; Row 41 (r)(s)(t); the architecture dated note; epics notes under 11b.4 / 11b.5 / 11b.6; deferred-work annotated (kinship items RULED + HOMED, counsel item extended, the 6.27a family-link item); the sprint row → `in-progress`; ledger `2026-10-31z`. Records commit: (i) ✅ pointers under `-391` / `-398` WRITTEN (`2330a941`); ⏳ the pointer under `-420` (MV2 **carried out**
     by `-428` — ⛔ not "discharged") — written at validation (v2.3), confirm present; (ii) `epics.md` dated notes under `### Story 11b.4` (step (d)),
     `### Story 11b.5` (lattice built here / dropped) and `### Story 11b.6` (**the STOP's literal condition met** by this row's creation,
     committed on <date>, **its purpose carried out by the ruling `-NNN`**; and the lattice ⛔ not part of an In Memoriam entry — the
@@ -1105,6 +1105,7 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v2.5 | TASK 1 DONE — Decision `2026-10-31-431` (author-commit, KL1–KL16) committed alone (`1c68adc4`); Task 1.2's records: rows `11b-5b-kinship-named-relative-removal` and `11b-5c-member-app-shows-the-memorial` minted (`backlog`, comment blocks); launch-gate Row 41 annotated (r)(s)(t); a dated note in `architecture.md` :1839-1846; `epics.md` dated notes under 11b.4 / 11b.5 / 11b.6 (11b.6's STOP met and carried out); `deferred-work.md` annotated. Status `ready-for-dev` → **`in-progress`**. Next: Task 2 — rebase onto 6.38 before Task 4.7; re-take the migration number at Task 3.1. |
 | 2026-10-31 | v2.4 | Copy RE-APPROVED by BigDev (*"approved"*): v4 ④ with the child ground narrowed (*"…or names or shows a child this confirmation does not cover"*, en + hi), new 4.3 (the family's reason for a declared submission) and 4.4 (the admin label + guidance). `hiReviewed` stays `false` pending a non-author review. Open: the R1–R3 note to send; Task 1. |
 | 2026-10-31 | v2.3 | VALIDATED (`bmad-create-story validate 11b.5a`, second pass; three parallel read-only verifiers — code as built / governance / adversarial design — at `9006d0ce`): 33 findings (9 critical, 17 should-add, 6 optimisations, 1 wording), ALL applied on BigDev's "all". Critical: next decision id `-431` (`-430` is 6.38's); STOP 2 FIRED (6.38's `e813e5ee` changes `anonymize.ts` / `resolveRtbfLegality` — rebase before Task 4.7); v4 ④ + the family's child reason contradicted the declaration ⇒ ④ narrowed + copy 4.3 / 4.4 (⏳ RE-APPROVAL owed); KL15 / KL16 propagated to Tasks 2 / 4 / 5 / 6 / 9 (the `inPhoto` schema on Send AND every read, the tick-without-photo refusal + client strip, `carriesGuardianDeclaration` + `guardianDeclaration` for the banner); the floor test's four memorial ids → declared GAPS owed by 11b-5c (⛔ never "the PC2 ruling"); dated notes under `-428` (Consequence 1 moved to 11b-5c; PQ2 B's grounds corrected — `-391` item 7 ⛔ not superseded by `-428`; quotes exact; "no fifth reason" a reading), `-426` (items 4 / 7 superseded in part; readings 2 / 3 carried as R2 / R3), `-391` (correction), `-420` (MV2 carried out); superseded plan text struck; history moved to a non-binding appendix. Governance: a follow-up note **R1–R3** written (`trustee-panel-routing-note-2026-10-31-11b5a-confirms-r1-r3.md`) — prepared for relay, ⛔ not yet sent. Recorded defects in notes as sent: the addendum (`130943af`) went out with *"Split out and ⛔ asked"* / *"Also ⛔ yours"* (negators missing — meant "not asked" / "not yours"); v2 (`04c17a0c`) said *"⛔ Nothing else changed"* though its §0 wording, one example, its plain English and its evidence also changed — both disclosed in R1–R3's *How much to trust*. Migration `0193` is held UNCOMMITTED by the 12-1 worktree — re-take at Task 3.1. |
 | 2026-10-31 | v2.2 | KL15 and KL16 ANSWERED as proposed (*"KL15 and KL16 looks good"*) ⇒ Task 0.2 DONE (KL1–KL16, all copy, Questions 7–8). Open before Task 1: the validate pass of v2.x. |

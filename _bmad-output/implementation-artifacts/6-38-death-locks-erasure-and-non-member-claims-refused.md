@@ -24,8 +24,8 @@ NUMBERS: ⛔ claimed by this file. At authoring the highest decision anywhere (e
 `2026-10-30q` (main). This create-story run's ledger line takes `2026-10-30r`. Task 0.4's decision entry is "the next free one" at the
 commit that takes it.
 
-LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL17 — ANSWERED 2026-10-31: DL1–DL16 at Task 0.2, all as recommended; DL17 added and approved the same day); **PQ** = Panel questions
-(PQ1 (a) / (b), PQ2 (a) / (b), PQ3 — non-blocking; the note is WRITTEN, ⛔ sent); **TR** = traps (TR1–TR10); **AC1–AC13**.
+LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL19 — ANSWERED 2026-10-31: DL1–DL16 at Task 0.2, all as recommended; DL17 added and approved the same day; DL18–DL19 build `-424`); **PQ** = Panel questions
+(PQ1 (a) / (b), PQ2 (a) / (b), PQ3 — RULED 2026-10-31 as `2026-10-31-424`); **TR** = traps (TR1–TR10); **AC1–AC15**.
 -->
 
 # Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
@@ -42,7 +42,11 @@ Status: ready-for-dev
 > caller before the call ends. This story builds ONE leaf predicate ("a death is reported and stands"), puts it in the ONE erasure
 > legality function both routes already share, serialises erasure against intake on the intake lock, adds ONE intake door inside the ONE
 > mint path both intakes already share, and gives the operator, the Pariwar Admin and the app their words. ⛔ Migration, ⛔ new table,
-> ⛔ new audit type, ⛔ new nominee surface.
+> ⛔ new audit type, ⛔ new nominee surface. **The Panel then ruled the edges (`2026-10-31-424`):** the door also refuses someone who never
+> paid the joining fee (Q1 (b) B); once a death is reported the membership cannot be WITHDRAWN (Q2 (a) A) and the record cannot be changed
+> DIRECTLY from the account — only asked; a staff change never removes the old entry (Q2 (b) A + the Panel's addition); the caller and the
+> app are told one general reason — *"the person was not a member of the Trust when they died"* (Q3 B). Q1 (a) C — staff check an
+> unchecked identity before any drive opens — is a NEW row (`6-39-…`), ⛔ this story's.
 
 **What already ships and this story REUSES — rebuild none of it:**
 - `resolveRtbfLegality` (`packages/domain/src/member/rtbf-legality.ts`) — the ONE erasure legality function; its header: *"declared ONCE,
@@ -82,6 +86,7 @@ agreement they gave while alive, and no money is raised in the name of someone w
 | `-423` "Our readings — ⛔ NOT RATIFIED" | (1) *"A death is reported"* = a claim FILED; a claim later withdrawn or refused for another reason still counts. (2) *"⛔ recorded"* leaves the staff SECURITY audit line (`claims.helpline.handlers.ts`, *"a probing/invalid id is never audit-silent"*). (3) The mistyped-number cost is MITIGATED by showing the operator WHY. | readings — build on them; challenge ⇒ back to the Panel |
 | `-423` Consequence 1 | the build row: (a) both erasure routes; (b) the nominated person's access / correction without erasure; (c) intake refuses at the door — helpline and app — `pending-kyc`, `withdrawn`, `anonymized`, terminated, *"with the reason shown to the operator"*. | the row this story is |
 | `-423` Consequences 2 · 3 | (2) the privacy policy (draft, outside this repository) must say Q2 A before members agree to it — BigDev and counsel; (3) counsel confirms the law allows the refusal (Q1 (a)) and gives the nominated person ⛔ right to erase (Q2). ⛔ Built here — TRACKED by Task 0.5 (iii) so they do ⛔ go untracked once this row closes. | obligations outside the code |
+| `2026-10-31-424` | Q1 (a) **C** — an identity nobody has checked: filed, but staff check it *"before any drive opens"* (cost: *"it must be built before members' claims go live"*). Q1 (b) **B** — fee never paid: refused at the door. Q2 (a) **A** — withdrawal refused once a death is reported, lifted as erasure is. Q2 (b) **A** — only ask, ⛔ direct change; the Panel's addition, verbatim: *"even though staff can change, old entry cannot be gone in this particular case, but clearly visible along with new entry made by staff"*. Q3 **B** — one general reason: *"the person was not a member of the Trust when they died"*. Our readings in the entry (⛔ ratified). | Trustee-ratified (DR + KB) |
 | `-159` cl. 11 | SUPERSEDED IN PART by `-423`: *"a deceased member IS reachable"* / *"RTBF → the name GOES"* no longer hold once a death is reported. *"death → the name STAYS"* is unchanged. | author-commit, superseded in part |
 | `-238` cl. 1 · cl. 4 · cl. 5 · `-241` §6 | cl. 1: *"A claim filed against a member who is **alive** does ⛔ not lock that member's declaration for life. On investigation finding the member **innocent**, the declaration **unlocks immediately**."* — scoped to the NOMINEE DECLARATION. cl. 4: *"TWO OUTCOMES ONLY. An investigation finds the member innocent or guilty."* cl. 5: guilty ⇒ *"terminated and blacklisted"*. `-241` §6: the finding's producer is row `6-22` (⛔ built). ⚠ That the SAME innocence finding releases the ERASURE lock is this story's READING (DL4), ⛔ a ratified rule. | Trustee-ratified / author-commit |
 | Niyamavali §2.1, §8.4, §8.4a, Part 10 | *"Registration alone does not constitute membership"*; termination ends beneficiary entitlement; *"honours … erasure … subject to lawful retention"*. A rulebook, ⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]) — read for the Policy-meaning check only. | ⛔ ratified |
@@ -98,7 +103,7 @@ agreement they gave while alive, and no money is raised in the name of someone w
    to lawful retention"* — CONSISTENT in kind (a retention exception); whether this retention is lawful is counsel's (`-423`
    Consequence 3), ⛔ the Niyamavali's. ⛔ Clause contradicts it.
 2. **The intake door (a new conjunct on who a claim may be filed for).** *In the member's terms:* **"If, when your death is first
-   reported, you had only signed up and never done your identity check, had left the Trust, had been removed from it, or had had your record erased,
+   reported, you had only signed up and never done your identity check, had never paid the joining fee, had left the Trust, had been removed from it, or had had your record erased,
    no claim can be filed for you — the helpline tells your family so on the call and keeps no claim; if you were new, behind on your
    contributions or suspended, a claim is filed as usual and the existing rules decide it."** **Checked against the Niyamavali:** §2.1
    (*"Registration alone does not constitute membership"*) and §8.4 / §8.4a (termination: beneficiary entitlement *"Ended"*) —
@@ -111,11 +116,23 @@ agreement they gave while alive, and no money is raised in the name of someone w
    identity verified OR given through the unverified manual fallback) — the fee is ⛔ in the Panel's words at all ⇒ **PQ1 (b)**; built
    OPEN.
 
+   ⭐ **RULED 2026-10-31 (`-424`):** (i) Q1 (a) **C** — the typed-in identity is FILED (the door stays open — this story), and staff check
+   it before any drive opens (row `6-39-…` — ⛔ this story); (ii) Q1 (b) **B** — `pending-fee` is REFUSED at the door (`not_paid`) —
+   CONSISTENT with §2.1 (c). The family is told one general reason (Q3 B).
+
    ⚠ **What the door refuses is tied to the lifecycle STATES, ⛔ to how identity is checked.** "Never finished joining" means
    `pending-kyc` only because today `pending-kyc` is reached only at signup. Any change to the KYC basis — DigiLocker made mandatory, KYC
    moved before a member record exists, a re-verification of typed-in identities — REOPENS PQ1 (a), and any new way INTO a refused state
    (e.g. a re-verification that sends a paid member back to `pending-kyc`) would silently refuse that member's family as "never finished
    joining". DL17 makes that fail CI.
+
+3. **The after-death locks on the member's own account (Q2 (a) / (b), `-424`; NEW conjuncts on withdrawal and on Life Events).** *In the
+   member's terms:* **"Once anyone files a claim for your death, your membership can no longer be withdrawn and your details can no
+   longer be changed from your account — your family asks the helpline instead, and any change the Trust's staff make is added beside
+   the old entry, never replacing it; if you are in fact alive, both open again once the claim is found to be about a living member."**
+   **Checked against the Niyamavali:** withdrawal after death and changes to a dead member's record — SILENT (⛔ clause found; the
+   nominee declaration is already locked by 6.20). ⚠ Today ⛔ member can withdraw at all (G9a), so the withdrawal lock binds only once
+   row `3-14` lets members leave lock-in.
 
 ## ⭐ THE INVARIANTS
 
@@ -162,16 +179,24 @@ type. It throws BEFORE any write in `tryConverge`. Two EXISTING security lines s
 `emitAuthAudit`'s `context` is only SHA-256 HASHED (`audit_log_entries` has ⛔ context column — `auth/shared/audit.ts`), so ⛔ text in
 either line is readable at rest. Whether the helpline line NAMES the reason (via `resourceLocator`) is DL16 — BigDev's.
 
-**N6 — Exactly four refusals, and only these.** `anonymized` ⇒ `erased`; terminated (moderation overlay) ⇒ `removed`; `withdrawn` ⇒ `left`;
-`pending-kyc` ⇒ `not_joined`. Checked in that order. Every other lifecycle state (`pending-fee`, `pending-valid`, `lock-in`, `active`,
-`active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules decide them later (`-423` Q3 *"⛔ Touched"*; PQ1 (a) / (b):
-a typed-in identity nobody checked — in any state — is open as a DECLARED narrowing of the ruled words; `pending-fee` is open pending the
-fee question). An exhaustive `switch` with a
-`never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it. A new way INTO an existing refused state is caught by DL17.
+**N6 — Exactly five refusals, and only these (`-423` Q3 B + `-424` Q1 (b) B).** `anonymized` ⇒ `erased`; terminated (moderation overlay)
+⇒ `removed`; `withdrawn` ⇒ `left`; `pending-kyc` ⇒ `not_joined`; `pending-fee` ⇒ `not_paid`. Checked in that order. Every other
+lifecycle state (`pending-valid`, `lock-in`, `active`, `active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules
+decide them later (`-423` Q3 *"⛔ Touched"*). A typed-in identity nobody checked is OPEN in any state (`-424` Q1 (a) C — "filed"; the
+check before a drive is row `6-39-…`). An exhaustive `switch` with a `never` arm: a new lifecycle state FAILS TO COMPILE until someone
+decides it. A new way INTO an existing refused state is caught by DL17.
 
-**N7 — The operator is told WHY; the caller and the app are told only that it cannot be filed.** The helpline sees one line per reason and
-is told to read back what they searched with. The app shows ONE calm message with ⛔ reason (PQ3) — and the reason is ⛔ on the member
-route's WIRE either (uniform withholding: a reason the screen hides but the 409 body carries is a disclosure — DL8).
+**N7 — The operator is told WHY; the caller and the app are told ONE GENERAL reason (`-424` Q3 B).** The helpline sees one line per
+reason, is told to read back what they searched with, and to tell the caller only: *"the person was not a member of the Trust when they
+died"*. The app shows ONE calm message carrying that same general sentence — ⛔ which of the five it was — and the specific reason is ⛔
+on the member route's WIRE (uniform withholding: a reason the screen hides but the 409 body carries is a disclosure — DL8).
+
+**N9 — After a death is reported, the member's account can ⛔ WITHDRAW and ⛔ CHANGE the record directly (`-424` Q2 (a) / (b)).** The
+same predicate (N1) gates withdrawal (DL18) and the member's own Life Events writes — address, posting, the answer to a suggested
+workplace, the medical declaration (DL19); the nominee declaration is already locked (6.20). Each write path takes the INTAKE key first
+(the 6.20 D3 precedent), then reads N1. Lifted exactly as erasure is: only by the innocence finding (DL4). ⭐ **The Panel's addition:** a
+STAFF change to such a member's record never removes the old entry — both stay, the old clearly visible beside the staff's new entry
+(DL19 (c)).
 
 **N8 — See and ask stay OPEN after a death is reported — for a member who is ⛔ `withdrawn` / `anonymized`.** The in-app data export (the
 deceased's session — Ravi mode), the Pariwar Admin's off-portal export (`member-data-rights` `requestExport` + delivery), the
@@ -328,7 +353,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   replay — G9) and `getCurrentMemberModerationOverlay` from `../member/moderation/overlay.js` (unbounded; refuse on `overlay.status ===
   'terminated'`) — the `claim/nominee-correction-persist.ts` precedent; ⛔ cycle (`member/` imports only `claim/death-report.js` and
   `claim/icp-lock.js`, both leaves). Precedence N6. ⚠ **The vocabulary is DOMAIN-OWNED** (`@twt/domain` ⛔ imports `@twt/contracts` —
-  contracts depends on domain, a turbo cycle): `CLAIM_INTAKE_REFUSAL_REASONS = ['erased', 'removed', 'left', 'not_joined'] as const` +
+  contracts depends on domain, a turbo cycle): `CLAIM_INTAKE_REFUSAL_REASONS = ['erased', 'removed', 'left', 'not_joined', 'not_paid'] as const` +
   `type ClaimIntakeRefusalReason` live in `claim/intake-door.ts` (`claim/errors.ts` type-imports it). Contracts MIRRORS the tuple with ⛔
   source import, in a NEW `packages/contracts/src/claims/intake-refusal.ts` beside `CLAIM_INTAKE_REFUSED_CODE` (contracts-only — API and
   mobile use it), re-exported by an `export * from './intake-refusal.js'` line in `packages/contracts/src/claims/index.ts` (the barrel the
@@ -364,7 +389,8 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   - `left` — *"This member had left the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
   - `removed` — *"This member had been removed from the Trust. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
   - `erased` — *"This member's record was erased at their request. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
-  - the shared `tellCaller` line after each: *"If the details are right, tell the caller the claim cannot be filed."* — ⛔ "tell them why" (PQ3).
+  - `not_paid` (`-424` Q1 (b)) — *"This person gave their details but never paid the joining fee. A claim cannot be filed. Read back to the caller the member ID or mobile number you searched with, to check it."*
+  - the shared `tellCaller` line after each (`-424` Q3 B): *"If the details are right, tell the caller: the person was not a member of the Trust when they died, so a claim cannot be filed."* — ⛔ the specific reason.
 - **DL10 — The app's words.** NEW calm state `apps/mobile/app/(claim)/cannot-file.tsx` (the `refile-helpline.tsx` shape: plain `YStack`,
   ONE `accessible` labelled container announced on arrival, `<CallHelplineCTA chromeless={false} theme="accent" height={56}>`, a chromeless
   back button `router.replace('/(tabs)')`; ⛔ `CLAIM_STEPS`; `closed-helpline.tsx` / `closed-helpline-copy.ts` is an equally close
@@ -376,10 +402,12 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   refile branch, BEFORE `setError(t('relationship.error'))` — `if (e.code === CLAIM_INTAKE_REFUSED_CODE) { router.replace('/(claim)/cannot-file');
   return; }`, ⛔ `saveClaimDraft`. ⛔ Reason shown (N7) — and ⛔ reason is on this route's wire (DL8). ⚠ With ⛔ record kept, each re-entry
   walks the wizard back to `relationship.tsx`'s submit before the refusal shows — accepted (Q3 B's ⛔ record). Proposed copy — en: title
-  *"A claim cannot be filed"*; body *"We cannot file a claim for this member. If you have a question, please call the helpline."*; call
-  *"Call the helpline"*; back *"Go back"*. hi: *"दावा दर्ज नहीं किया जा सकता"* · *"इस सदस्य के लिए हम दावा दर्ज नहीं कर सकते। कोई प्रश्न हो
-  तो कृपया हेल्पलाइन पर कॉल करें।"* (title + body agent-authored, for BigDev's review) · *"हेल्पलाइन पर कॉल करें"* · *"वापस जाएँ"* (call +
-  back are the ALREADY-REVIEWED `refile.call` / `refile.back` strings, 2026-10-01). ⚠ "call the helpline" is a route to a QUESTION, ⛔ an
+  *"A claim cannot be filed"*; body (`-424` Q3 B — the general reason) *"We cannot file this claim: the person was not a member of the
+  Trust when they died. If you have a question, please call the helpline."*; call *"Call the helpline"*; back *"Go back"*. hi: *"दावा दर्ज
+  नहीं किया जा सकता"* (reviewed — BigDev 2026-10-31) · *"हम यह दावा दर्ज नहीं कर सकते, क्योंकि मृत्यु के समय वे ट्रस्ट के सदस्य नहीं थे।
+  कोई प्रश्न हो तो कृपया हेल्पलाइन पर कॉल करें।"* (⚠ the BODY is NEW after `-424` — agent-authored, ⛔ yet reviewed; the earlier reviewed
+  body is superseded) · *"हेल्पलाइन पर कॉल करें"* · *"वापस जाएँ"* (call + back are the ALREADY-REVIEWED `refile.call` / `refile.back`
+  strings, 2026-10-01). ⚠ "call the helpline" is a route to a QUESTION, ⛔ an
   appeal (Q3 B) — the helpline is refused by the same door.
 - **DL11 — The Pariwar Admin's words.** `helpdesk.dataRights.erasureRefused.deathReported` in `helpdesk/i18n-en.ts`, shown when the erasure
   error's code is `rtbf.death_reported` (other codes keep `messageOf`): *"This member's data cannot be erased: a claim has been filed for
@@ -445,8 +473,9 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
     branches on (today only `member.lock_in_expired` `{ kyc_verified: true | false }`); the creation event `member.signup_initiated` is
     the replay's initial step;
   - collects every edge `from → to` with `from ≠ to` and `to` ∈ the door's refused STATES, and asserts the set EQUALS exactly:
-    `pending-kyc` ← ⛔ edge (reached only as the replay's initial state); `withdrawn` ← `member.withdrawal_completed` from `active` /
-    `active-in-grace` / `lapsed-unpaid`; `anonymized` ← `member.rtbf_anonymized` from every other state;
+    `pending-kyc` ← ⛔ edge (reached only as the replay's initial state); `pending-fee` ← `member.kyc_completed` and
+    `member.kyc_manual_fallback` from `pending-kyc` (`-424` Q1 (b) made it a refused state); `withdrawn` ← `member.withdrawal_completed`
+    from `active` / `active-in-grace` / `lapsed-unpaid`; `anonymized` ← `member.rtbf_anonymized` from every other state;
   - the refused set is READ from `claim/intake-door.ts`'s own mapping (export the lifecycle states the switch refuses, e.g.
     `DOOR_REFUSED_LIFECYCLE_STATES`), ⛔ restated in the test — so widening the door (PQ1) moves the fence with it;
   - fails with a message naming `2026-10-30-423` Q3 B, `resolveClaimIntakeDoor` and PQ1 (a): *"a new way into a state the claim door
@@ -456,7 +485,36 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   only if that story adds its variant; and TERMINATED is the moderation overlay (Panel-governed `-238` / 10.20 machinery, its own
   invariants), ⛔ a lifecycle state — outside this fence.
 
-## Panel questions — NON-BLOCKING (one note, Task 0.3; BigDev sends)
+- **DL18 — Withdrawal refused while a death report stands (`-424` Q2 (a) A, N9).** In `apps/api/src/modules/withdrawal/handlers.ts`
+  `assertWithdrawable`, inside the request's scope transaction and BEFORE the state read: `pg_advisory_xact_lock(intakeAdvisoryLockKey(p,
+  m))` (a withdrawal and a first intake then serialise — an intake first ⇒ the withdrawal sees the claim and is refused; a withdrawal
+  first ⇒ the intake meets the door, `left`), then `claim.isDeathReportStanding` ⇒ 409 **`withdrawal.death_reported`**, message *"The
+  membership cannot be withdrawn: a claim has been filed for this member's death"*. Checked BEFORE `WITHDRAWABLE_STATES` (the more
+  specific refusal wins). Mobile: `apps/mobile/app/(withdrawal)/index.tsx` maps the code to a calm line (⛔ the raw server English) — en
+  *"A claim has been filed for this member's death, so the membership cannot be withdrawn. If this is a mistake, please call the
+  helpline."*; hi *"इस सदस्य की मृत्यु के लिए दावा दर्ज हो चुका है, इसलिए सदस्यता वापस नहीं ली जा सकती। यदि यह गलती है, तो कृपया
+  हेल्पलाइन पर कॉल करें।"* (agent-authored, ⛔ yet reviewed); key in the namespace that screen already uses. ⚠ Unreachable in production
+  today (⛔ member can withdraw — G9a); built and tested on a seeded `active` member.
+- **DL19 — The member's own direct changes refused while a death report stands; staff changes keep the old entry (`-424` Q2 (b) A, N9).**
+  (a) `apps/api/src/modules/life-events/handlers.ts` `assertMemberExistsAndNotTerminal` — the ONE guard of address, posting and the
+  answer to a suggested workplace (6.36c) — and the medical guard in `apps/api/src/modules/medical/medical.handlers.ts` (the 3.5 service
+  Life Events reuses): take the intake key first, then N1 ⇒ 409 **`life_events.death_reported`** / **`medical.death_reported`**. The
+  nominee route is already refused (`nominee.locked_claim_filed`, 6.20) — unchanged. (b) Mobile: the `(life-events)` screens map both
+  codes to one calm line — en *"A claim has been filed for this member's death, so these details can no longer be changed here. To ask
+  for a correction, please call the helpline."*; hi *"इस सदस्य की मृत्यु के लिए दावा दर्ज हो चुका है, इसलिए ये विवरण अब यहाँ बदले नहीं जा
+  सकते। सुधार के लिए कृपया हेल्पलाइन पर कॉल करें।"* (agent-authored, ⛔ yet reviewed). The staff `recordCorrection` (ASK) stays open (N8).
+  (c) **The Panel's addition — staff changes never remove the old entry.** Today ⛔ staff path writes a member's address, posting or
+  medical declaration, and those three are APPEND-ONLY history (prior value preserved — `schema/member_addresses.ts`,
+  `member_postings.ts`, `member_medical_disclosures.ts`), so the rule holds by construction for them; the 6.20 staff NOMINEE correction
+  writes a new version into `member_nominee_versions` (the old version kept — whether the staff screens show old WITH new is ⛔ traced);
+  the KYC NAME is stored latest-wins (`member_kyc_profiles` UPSERT). ⇒ this story builds ⛔ staff-change path; the rule is recorded in
+  `deferred-work.md` (trigger: the first story that lets staff change a member's record, or touches the nominee-correction screens).
+  ⛔ Weaken an append-only guard.
+
+## Panel questions — RULED 2026-10-31 (`2026-10-31-424`)
+
+⭐ Q1 (a) **C**, Q1 (b) **B**, Q2 (a) **A**, Q2 (b) **A** (+ the Panel's addition), Q3 **B** — built by N6, N7, N9, DL9, DL10, DL18, DL19;
+Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-an-unchecked-identity`. The questions as put are kept below.
 
 - **PQ1 — "Had not finished joining": where does it end?** The ruled words: *"had not finished joining (⛔ identity check)"*; `-423`
   Consequence 1 (c) lists only `pending-kyc`. Two edges, put separately:
@@ -511,8 +569,10 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
 6. **AC6 — The door, helpline (Q3 B).** `POST /api/v1/p/:pariwarId/admin/claims/intake` for a member at `pending-kyc` / `withdrawn` /
    `anonymized` / terminated ⇒ 409 `claim.intake_refused` with `details.reason` = `not_joined` / `left` / `erased` / `removed`; ⛔ `claims`
    row, ⛔ `intake_attempts` row, ⛔ claim event; the existing `helpline_claim.intake_failed` audit line IS written (asserted through the
-   in-memory audit sink / the persisted action, ⛔ its hashed text; plus the `resourceLocator` if DL16 (a)). A member at `pending-fee`,
-   `pending-valid`, `lock-in`, `active`, `active-in-grace`, `lapsed-unpaid`, and a SUSPENDED active member ⇒ filed as today. Precedence:
+   in-memory audit sink / the persisted action, ⛔ its hashed text; plus the `resourceLocator` (DL16 (a)). A member at `pending-fee` ⇒
+   409 with `not_paid` (`-424` Q1 (b)), whether the identity was verified or typed in. A member at `pending-valid`, `lock-in` (incl. a
+   typed-in identity — `-424` Q1 (a) "filed"), `active`, `active-in-grace`, `lapsed-unpaid`, and a SUSPENDED active member ⇒ filed as
+   today. Precedence:
    a terminated `withdrawn` member ⇒ `removed`; an `anonymized` terminated member ⇒ `erased`. An unknown id ⇒ 404 `member.not_found` as
    today.
 7. **AC7 — The door, app (Q3 B).** `POST /api/v1/member/claims/intake` (Ravi mode) for a `pending-kyc` member and a terminated member ⇒ 409
@@ -521,8 +581,9 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
    NEW `apps/mobile/tests/unit/cannot-file-copy-resolves.test.ts` asserts the four `cannot_file.*` keys resolve through the real
    `t(key, undefined, { locale, namespace: 'claim' })` in BOTH locales ([[feedback_stub_must_call_not_transcribe]]); the copy file's code
    literal equals `@twt/contracts`' `CLAIM_INTAKE_REFUSED_CODE`; the screen source contains `<CallHelplineCTA`, `accessible={true}` and
-   `announceForAccessibility`; `relationship.tsx` contains the code check and `router.replace('/(claim)/cannot-file')`; and the en copy
-   does ⛔ match `/left|removed|erased|identity|KYC|member (id|number)/i` (⛔ reason). `apps/mobile/tests/unit/helpline-cta-presence.test.ts`
+   `announceForAccessibility`; `relationship.tsx` contains the code check and `router.replace('/(claim)/cannot-file')`; the en body
+   CONTAINS *"the person was not a member of the Trust when they died"* (`-424` Q3 B) and does ⛔ match
+   `/left|removed|erased|identity|KYC|fee|member (id|number)/i` (⛔ specific reason). `apps/mobile/tests/unit/helpline-cta-presence.test.ts`
    gains a `describe` for `(claim)/cannot-file.tsx` (as 6.19c did).
 8. **AC8 — Once per death (N4).** A member with a STANDING report whose state has since become refusable (e.g. terminated after the first
    filing) gets today's flow on a second report — ⛔ door refusal — in each of: idempotent (same channel); cross-channel `pending`; a
@@ -530,7 +591,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
    `claim.intake_refused`), then minted once a confirmation is recorded; `denied` ⇒ minted; `settled` ⇒ minted and closed in the mint. A member whose ONLY claim was released by an innocence finding meets the door again on a new report.
 9. **AC9 — The operator sees why (`-423` reading 3, DL9).** `apps/admin/tests/helpline-claim-page.test.tsx` (the submit-flow template is its
    "Story 6.28 (OP10)" test; `new api.ApiError(409, code, msg, details)`): a 409 `claim.intake_refused` with each reason renders that
-   reason's EXACT English sentence + the `tellCaller` sentence in the console's ONE `role="alert"` (assert the sentences — `resolveEn`
+   reason's EXACT English sentence (all five) + the `tellCaller` sentence (the general reason) in the console's ONE `role="alert"` (assert the sentences — `resolveEn`
    returns the key when missing, so "something rendered" proves nothing); an unknown reason or code falls back to today's `messageOf`; ⛔
    raw code rendered. And after a refusal for member A, selecting member B or searching again shows ⛔ refusal line (`intake.reset()`).
 10. **AC10 — The Pariwar Admin sees why (DL11).** A unit test of the pure `erasureErrorText(err)` (`rtbf.death_reported` ⇒ the DL11
@@ -549,6 +610,16 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
 13. **AC13 — A new way into a refused state fails CI (DL17).** `packages/domain/tests/member/door-input-fence.test.ts` passes on the
     reducer as it stands (the three edge sets of DL17, exactly), reads the refused states from `claim/intake-door.ts`, and its positive
     control (an extra edge into `pending-kyc`) fails it with the `-423` message.
+14. **AC14 — Withdrawal refused after a death is reported (`-424` Q2 (a), DL18).** Live-DB, a seeded `active` member: with a standing
+    claim ⇒ withdrawal 409 `withdrawal.death_reported`, ⛔ `member.withdrawal_completed`, the session unchanged; with the claim's
+    innocence finding ⇒ withdrawn as today; ⛔ claim ⇒ withdrawn as today. A withdrawal racing a first intake (own-committing clients)
+    never ends with both a minted claim and a withdrawal. Mobile source-scan: the withdrawal screen maps the code to its copy key; both
+    locales resolve through the real `t()`.
+15. **AC15 — Direct changes refused after a death is reported; staff entries never overwrite (`-424` Q2 (b), DL19).** Live-DB, with a
+    standing claim: address, posting, the suggested-workplace answer ⇒ 409 `life_events.death_reported`; medical ⇒ 409
+    `medical.death_reported`; ⛔ new history row in each case; the prior rows unchanged. With the innocence finding, or ⛔ claim ⇒
+    accepted as today. The staff `recordCorrection` on a `dpdpa-data-rights` ticket still succeeds (N8). Mobile source-scan: the Life
+    Events screens map both codes to the copy key; both locales resolve through the real `t()`.
 
 ## Tasks / Subtasks
 
@@ -564,15 +635,16 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
         — PQ1 (a), PQ1 (b), PQ2 (with N8's export harm), PQ3; plain-English question first, THE ONE FACT, options with an honest cost on
         each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge. — ✅ 2026-10-31:
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (Q1 (a) / (b), Q2 (a) / (b),
-        Q3; suggestions C · B · A · A · B — Q1 (a) rewritten the same day from A to C once G9a was traced; E4 re-run clean). Status WRITTEN, ⛔ sent.
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL17 as answered; names PQ1–PQ3 routed and PQ1 (a) as a DECLARED
-        narrowing of the ruled words; cites `-423`; ⛔ supersedes a ratified entry. Committed ALONE, first.
+        Q3; suggestions C · B · A · A · B — Q1 (a) rewritten the same day from A to C once G9a was traced; E4 re-run clean). SENT by BigDev;
+        RULED the same day — `2026-10-31-424` (every suggestion taken; Q2 (b) with the Panel's addition).
+  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number — `-424` is the Panel's ruling, already recorded): DL1–DL19 as answered;
+        cites `-423` and `-424`; ⛔ supersedes a ratified entry. Committed ALONE, first.
   - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
         OWES (`-238` cl. 4–5) and whether it releases the erasure lock (Q1 (b)'s words cover it) + DL7's two residual edges; (ii) DL12 (ii)
         — the export's step-up does not prove the nominee (trigger: PQ2's answer or any change to `data-export/routes.ts`); (iii) `-423`
         Consequences 2 · 3 — the privacy policy says Q2 A before members agree to it, and counsel on Q1 (a) / Q2 (trigger: go-live of
-        member data-rights, or counsel's answer) — or a roster go-live row instead, BigDev's pick; (iv) PQ1–PQ3 — the Panel's answers
-        (trigger: the answer; each is one arm / one flag in this story's code). A dated comment line on the `6-22-…` row in
+        member data-rights, or counsel's answer) — or a roster go-live row instead, BigDev's pick; (iv) PQ1–PQ3 — ✅ RULED (`-424`), ⛔ item
+        needed; (v) the `-424` Q2 (b) addition (DL19 (c)) — ✅ recorded 2026-10-31 at the ruling. A dated comment line on the `6-22-…` row in
         `sprint-status.yaml`.
   - [ ] 0.6 Ledger line + row `ready-for-dev → in-progress` (prepend safely — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 1 — The leaf predicate (AC1)**
@@ -603,20 +675,28 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   - [ ] 3.3 `tryConverge`: the gate at DL7's position. ⛔ Write before it.
   - [ ] 3.4 `claims.service.ts`: `translateClaimIntakeRefused` in `initiateIntake`'s catch (DL8, TR6), with the helpline-only reason flag
         threaded from each handler; DL16's `resourceLocator` on the helpline catch if BigDev picks (a).
-  - [ ] 3.5 Domain unit tests for every lifecycle state × moderation status (the full 9 × 3 = 27 table) and the precedence; API live-DB
+  - [ ] 3.5 Domain unit tests for every lifecycle state × moderation status (the full 9 × 3 = 27 table — five refusals) and the precedence; API live-DB
         tests AC6 (`helpline-claim-intake.spec.ts`), AC7 (`claims-intake.spec.ts` — incl. `details` ABSENT), AC8.
   - [ ] 3.6 The race (AC5 (i) + (ii)) — AFTER 3.3, because "intake refused `erased`" exists only once the door is in `tryConverge`: in
         `packages/domain/tests/integration/member/rtbf-concurrency.spec.ts` or a sibling, CALLING `acquireErasureLocks` and `tryConverge`
         (⛔ a hand copy of the handler sequence — that spec's existing `takeLock` and `members.state` read are ⛔ the pattern to follow
         for the new cases). Run (ii) once with the intake-key lock removed and record that it fails.
+- [ ] **Task 3A — The after-death locks (AC14, AC15)**
+  - [ ] 3A.1 DL18: `assertWithdrawable` — intake key, N1, 409 `withdrawal.death_reported`; live-DB tests (AC14) incl. the race.
+  - [ ] 3A.2 DL19 (a): the Life Events guard + the medical guard — intake key, N1, the two 409s; live-DB tests (AC15).
+  - [ ] 3A.3 Mobile: the withdrawal screen + the `(life-events)` screens map the codes to their copy keys (en + hi — the Hindi
+        agent-authored, ⛔ yet reviewed: a `$comment` saying NOT YET HUMAN-REVIEWED + a roster go-live row unless BigDev reviews first);
+        source-scan tests; `friction-budget.md` rows for both refusals (payer: whoever holds the dead member's account — `-424`'s accepted
+        cost); enrol the changed files in `microcopy.yaml` if they are not already.
 - [ ] **Task 4 — Words (AC7, AC9, AC10)**
-  - [ ] 4.1 Admin helpline (DL9, TR7): keys; the pure `intakeRefusalKey`; the line derived in the `submitError` expression;
+  - [ ] 4.1 Admin helpline (DL9, TR7): keys (five reasons + the general `tellCaller`); the pure `intakeRefusalKey`; the line derived in the `submitError` expression;
         `intake.reset()` in `resetDownstreamState`; RTL tests in `apps/admin/tests/helpline-claim-page.test.tsx` (AC9).
   - [ ] 4.2 Admin helpdesk (DL11): the key; `erasureErrorText` in `HelpdeskDetailPage.tsx`; the erasure leg first in the `dataRightsError`
         chain; its unit test + the Shell test in `apps/admin/tests/helpdesk-responder-console.test.tsx` (AC10).
   - [ ] 4.3 Mobile (DL10): `cannot-file-copy.ts`, `(claim)/cannot-file.tsx`, the `relationship.tsx` branch; keys `cannot_file.*` in
-        BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both naming BigDev's review
-        (2026-10-31, *"DL10 Hindi is fine"*; call + back reuse the reviewed `refile.*` strings) — ⛔ go-live row needed; the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
+        BOTH `packages/i18n/locales/{en,hi}/claim.json` (parity is a gate) with a `$comment.cannot_file` in both — the title
+        reviewed by BigDev (2026-10-31), call + back the reviewed `refile.*` strings, the BODY rewritten after `-424` and ⛔ yet reviewed
+        (NOT-YET-HUMAN-REVIEWED form + a roster go-live row, unless BigDev reviews it first); the AC7 source-scan tests. ⭐ **`friction-budget.md` (repo root): a new row — or a 6.38 disposition — for the
         refused-at-door state** (payer: the family of a non-member, or of a mistyped search — `-423` Q3 B's accepted cost; the 6.19c
         re-file-screen row is the precedent); run `pnpm friction:check` before push — `MEMBER_FACING_PREFIXES` includes `apps/mobile/`, so
         without it the gate fails. Enrol `apps/mobile/app/(claim)/cannot-file.tsx` and `apps/mobile/lib/cannot-file-copy.ts` in
@@ -645,8 +725,8 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
 - **TR2 — Fixtures replay to `pending-kyc`.** The door reads the EVENT REPLAY (G9), and a member with ZERO events replays to `pending-kyc`
   ⇒ refused `not_joined`. The door runs only on a FIRST report (N1 false), so a test whose intake follows a seeded prior claim is
   UNAFFECTED. Traced at `01062c51`:
-  - **Breaks — re-seed the member through events to an open state** (`signup_initiated` → `kyc_manual_fallback`, or the domain member
-    helpers; the `project(...)` helper `rtbf.spec.ts` uses at API level), under the same Pariwar scope:
+  - **Breaks — re-seed the member through events to an open state** (`signup_initiated` → `kyc_completed` → `vyawastha_shulk_paid`, i.e. `lock-in` — ⛔ `pending-fee`, which `-424` Q1 (b) made
+    REFUSED; or the domain member helpers; the `project(...)` helper `rtbf.spec.ts` uses at API level), under the same Pariwar scope:
     `packages/domain/tests/integration/claim/icp.spec.ts` (random member ids, ⛔ row, ⛔ events — every "NO CANDIDATE → mints" leg and
     the merge / override legs); `packages/domain/tests/integration/claim/nominee-refusal-inheritance.spec.ts` (raw-inserts `'active'`, ⛔
     events); `packages/domain/tests/integration/nominee/nominee-history-concurrency.spec.ts` (its `seedMember` projects
@@ -655,7 +735,11 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   - **Unaffected — a prior claim is seeded before every intake** (`claimAt` / `paidApart` / `refusedClaim` / `emit(...)` / a closure):
     domain `claim/correction-closure`, `claim/one-payment-per-death-{closure,concurrency,paths}`, `claim/suspicion-refusal{,-concurrency}`;
     API `suspicion-refusal-routes`, `one-payment-per-death-routes`, `correction-closure`. `_nominee-name-check-fixture.ts` never calls
-    intake. `nominee-bank`, `claim-contact`, `dpdpa-consent`, `claims-intake` seed `pending-fee` via events (open).
+    intake.
+  - ⚠ **NEWLY breaking after `-424` Q1 (b) (`pending-fee` ⇒ `not_paid`):** `nominee-bank`, `claim-contact`, `dpdpa-consent` and
+    `claims-intake` seed their deceased at `pending-fee` via events — every FIRST-report leg in them is now refused; add the
+    `member.vyawastha_shulk_paid` event (⇒ `lock-in`). Grep every other fixture that stops at `kyc_completed` / `kyc_manual_fallback`
+    for a first report too.
   - Claims seeded through `projectClaimState` / `seedClaim` / `driveClaimTo` bypass `tryConverge` entirely.
   - ⚠ Still grep every `tryConverge(` / `initiateIntake(` / intake-route test for a FIRST report on a member with no events before the
     first run — this list is a trace, ⛔ a guarantee.
@@ -689,8 +773,9 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
 
 ⛔ A "found alive" closure (6-22's); ⛔ a guilty-finding release rule (6-22's — DL4); ⛔ a separate data-rights nominee; ⛔ moderation
 status in the 4.7 search results; ⛔ disabling the admin erasure button pre-emptively; ⛔ a refusal of withdrawal or of direct edits
-after death (PQ2 (a) / (b)); ⛔ telling the caller why (PQ3); ⛔ refusing a typed-in identity or `pending-fee` (PQ1 (a) /
-(b)); ⛔ any change to the erasure of a living member for whom ⛔ claim has been filed; ⛔ backfill of existing claims (⛔ member uses the
+after death beyond `-424` Q2 (a) / (b)'s member-side refusals; ⛔ telling the caller the SPECIFIC reason (`-424` Q3 B — the general
+sentence only); ⛔ refusing a typed-in identity, and ⛔ the staff identity check before a drive (`-424` Q1 (a) C — row `6-39-…`); ⛔ a
+staff path that changes a member's record (DL19 (c) — the rule is recorded for it); ⛔ any change to the erasure of a living member for whom ⛔ claim has been filed; ⛔ backfill of existing claims (⛔ member uses the
 system yet — the routing note's "What is at stake right now"); ⛔ the privacy policy (outside this repository — BigDev and counsel;
 tracked by Task 0.5 (iii)).
 
@@ -706,7 +791,11 @@ tracked by Task 0.5 (iii)).
   `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (NEW).
 - Admin: `apps/admin/src/modules/helpline-claims/{HelplineClaimPage.tsx,i18n-en.ts}` (+ `HelplineConsoleShell.tsx` only if TR7's
   alternative), `apps/admin/src/modules/helpdesk/{HelpdeskDetailPage.tsx,i18n-en.ts}`; tests `apps/admin/tests/{helpline-claim-page,helpdesk-responder-console}.test.tsx`.
+- API (`-424`): `apps/api/src/modules/withdrawal/handlers.ts` (DL18), `apps/api/src/modules/life-events/handlers.ts` and
+  `apps/api/src/modules/medical/medical.handlers.ts` (DL19).
 - Mobile: `apps/mobile/app/(claim)/{cannot-file,relationship}.tsx`, `apps/mobile/lib/cannot-file-copy.ts`; i18n `packages/i18n/locales/{en,hi}/claim.json`;
+  (`-424`) `apps/mobile/app/(withdrawal)/index.tsx`, the `apps/mobile/app/(life-events)/` screens that post address / posting / medical /
+  the workplace answer, and their locale keys;
   tests `apps/mobile/tests/unit/{cannot-file-copy-resolves,helpline-cta-presence}.test.ts`.
 - Domain test (NEW, DL17): `packages/domain/tests/member/door-input-fence.test.ts` (unit, ⛔ DB).
 - Records: `friction-budget.md` (repo root), `microcopy.yaml` (`code_globs`).
@@ -745,6 +834,7 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.7 | The Panel RULED the note — `2026-10-31-424` (DR + KB: Q1 (a) C, Q1 (b) B, Q2 (a) A, Q2 (b) A + the Panel's addition, Q3 B). Built here: N6 five refusals (`pending-fee` ⇒ `not_paid`); N7 / DL9 / DL10 the general reason to the caller and the app (the app body's Hindi NEW, ⛔ yet reviewed); N9 + DL18 (withdrawal refused) + DL19 (direct changes refused; staff changes never remove the old entry — recorded); AC14 / AC15, Task 3A; TR2 — the `pending-fee` fixtures now break; DL17's edges add `pending-fee`. Q1 (a) C's staff identity check is row `6-39-…`, ⛔ this story's. |
 | 2026-10-31 | 1.6 | DL17 added (BigDev: *"yes, add DL17"*), from BigDev's question on a later change to the KYC basis: a reducer-driven fence on every way INTO a state the door refuses (`pending-kyc` ← none; `withdrawn` ← withdrawal from active / grace / lapsed; `anonymized` ← erasure), refused set read from `intake-door.ts`, positive control — AC13, Task 5.5; the Policy-meaning note that a KYC-basis change reopens PQ1 (a). Edge sets checked against the reducer at `01062c51`. |
 | 2026-10-31 | 1.5 | How identity is verified today traced (G9a): DigiLocker or a self-declared entry; ⛔ trustee verification step and ⛔ lock-in exit exist, so `pending-valid` is unreachable and ⛔ member becomes `active`. PQ1 (a) re-framed to "an identity nobody has checked" (any state; refusing needs the identity record, ⛔ a switch arm); the note's Q1 (a) rewritten, suggestion A → C; the gap recorded in `deferred-work.md`, observational. |
 | 2026-10-31 | 1.4 | Two technicals clarified (BigDev): (1) N4 / AC8 — a TERMINAL standing claim meets the existing mint guards, ⛔ "it mints": `closed` for no response ⇒ 409 re-file confirmation first; `denied` ⇒ mints; `settled` ⇒ mints and is closed in the mint. (2) G1 / DL15 — ⛔ delayed erasure exists (legality read at execution, failed attempts release the key); the fence now pins the ACT (the `member.rtbf_anonymized` emitters and the sentinel writer, incl. `apps/jobs/src`), and the header states the execution-time rule for any future deferred erasure. |

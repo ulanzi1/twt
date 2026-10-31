@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: the Panel's ruling `2026-10-31-424` Q2 (b) — the addition on staff changes (2026-10-31)
+
+- **A staff change to the record of a member whose death is reported must never remove the old entry — both stay, the old clearly
+  visible beside the staff's new one** [`-424` Q2 (b), verbatim: *"even though staff can change, old entry cannot be gone in this
+  particular case, but clearly visible along with new entry made by staff"*; Story 6.38 DL19 (c)] — Story 6.38 builds ⛔ staff-change
+  path, so the rule binds the FUTURE: today ⛔ staff path writes a member's address, posting or medical declaration, and those are
+  append-only history (`packages/domain/src/schema/member_addresses.ts`, `member_postings.ts`, `member_medical_disclosures.ts` — the
+  prior value preserved), so they comply by construction; the member's KYC NAME is stored latest-wins (`member_kyc_profiles`, an UPSERT
+  — `packages/domain/src/kyc/profile-write.ts`), so a staff name change built on it would BREACH the rule; Story 6.20's staff NOMINEE
+  correction writes a new version (`member_nominee_versions` — the old one kept) — whether the staff screens SHOW the old version with
+  the new one is ⛔ traced. Trigger: the first story that lets staff change a member's record (any field), any change to the KYC profile
+  write path, or the next story touching the nominee-correction screens.
+
+---
+
 ## Deferred from: BigDev's question while preparing Story 6.38's routing note — "how is identity being verified today?" (2026-10-31)
 
 ✅ **DISCHARGED 2026-10-31 into rows `3-13-trustee-validation-of-manually-entered-identity` and `3-14-lock-in-expiry-producer`** (backlog,

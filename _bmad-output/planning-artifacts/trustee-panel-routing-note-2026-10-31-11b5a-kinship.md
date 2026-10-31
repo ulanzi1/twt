@@ -1,7 +1,7 @@
 # Trustee Panel routing note — the family list on a memorial: may the Trust ask for the names of the relatives a member leaves behind, where may they appear, and what is a named relative owed?
 
-> **Status: REVISED 2026-10-31 (version 2) at your direction** — *"revise the main routing note and send again"* (with your ruling on the
-> addendum, Decision `2026-10-31-426`). Prepared for relay — ⛔ not yet sent; BigDev sends. Version 1 was written and sent earlier the
+> **Status: RULED 2026-10-31 (`-428`) on version 2 (committed alone, `04c17a0c`; re-sent by BigDev). Version 2 was REVISED 2026-10-31 at your direction** — *"revise the main routing note and send again"* (with your ruling on the
+> addendum, Decision `2026-10-31-426`). Version 1 was written and sent earlier the
 > same day (committed alone, `6f22bd4d`); what changed is listed under *How much to trust this note*. Drafted from Story 11b.5a (row
 > `11b-5a-kinship-capture-and-lattice`). **Blocking:** ⛔ nothing about relatives is built, collected or shown until you answer. ⛔ No
 > member uses the system yet, and ⛔ no family memorial is live.
@@ -17,10 +17,17 @@ your rulings (see *How much to trust this note*), and the law on it is counsel's
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED — Decision `2026-10-31-428` (Trustee-ratified, DR + KB, 2026-10-31, relayed by BigDev) — on version 2
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited** as the questions as they were put.
+> *"by DR and KB*
+> *PQ1 -A, member also sees the memorial page, they don't have to logout to see the public memorial page. PQ2 - B, PC1 -A"*
+>
+> ⇒ **PQ1 A, with a rider** — a family list may appear, on the guardian's declaration (`-426`), used for nothing else; the rider replaces
+> *"⛔ not on the members' screen"*: **members also see the memorial** (BigDev's reading, asked in session: the member app's drive screen
+> shows the memorial — words, photo and list). **PQ2 B** — a named person may have their own name removed through the helpline.
+> **PC1 A** — the four reasons (the child reason for an undeclared child) and "no mark" apply to the list. **PC2** was ⛔ not answered as
+> put; the rider goes the other way, so PC2 A is ⛔ not taken. What this does ⛔ not cover is in the decision entry. Everything below is
+> kept **unedited** as the questions as they were put (version 2; version 1 is `6f22bd4d`).
 
 ---
 

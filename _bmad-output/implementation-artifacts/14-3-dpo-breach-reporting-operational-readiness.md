@@ -25,13 +25,22 @@ NUMBERS (⛔ claimed by this file — every number below is "the next free AT TH
 value at authoring): at authoring the highest MINTED decision on any ref is `2026-10-31-432` (`story/11b-5a-…`; main's is `-430`) ⇒ Task
 0.4's entry [`-433`]. Highest minted roster row: Row 45 ⇒ [Row 46]. Highest migration on any ref: `0194_memorial-kinship`
 (`story/11b-5a-…`, unlanded, journal `when` 1796355600039); main holds `0193` ⇒ [`0195`], `when` ABOVE every sibling's
-([[project_sibling_migration_when_order_shared_db]]). Permission catalog on main: `PERMISSION_CATALOG_VERSION = 56` ⇒ [57]. Ledger:
-`2026-11-01a` (main) and `2026-11-01b` (`story/6-22-…`) are taken ⇒ this creation's line is `2026-11-01c`.
+([[project_sibling_migration_when_order_shared_db]]). Permission catalog on main: `PERMISSION_CATALOG_VERSION = 56` ⇒ [57]. Ledger
+(re-derived on every ref AND every worktree's dirty `sprint-status.yaml`, 2026-11-01): `2026-11-01a` (main), `-b` (`story/6-22-…`),
+`-c` (held THREE times — `story/13-2-…` `2a89a370`, committed 19 s BEFORE this branch's `0280dfc9`; this branch; 12.2's dirty tree),
+`-d` (`story/13-2-…` and `story/6-22-…`). This creation's line keeps `2026-11-01c`; the v1.2 validation's is `2026-11-01e`. ⚠ Whichever
+of 13.2 / 14.3 lands SECOND relabels its `-c` line to the next free letter at landing, keeping both entries
+([[project_rebase_ledger_conflict_separator]]).
 ⚠ **PEERS RESERVE THE SAME NUMBERS IN THEIR STORY FILES (⛔ minted yet):** 6.39 (`story/6-39-…`: Row 46 "Members' claims go live",
-catalog 56→57, migrations `0195` / `0196`); 6.22 (`story/6-22-…`: decision `-433`, `0195`, catalog 57; it defers Row 46 to 6.39); 13.2
-(worktree `13-2-…`, untracked: `-433`, `0195_field-worker-attribution-codes`). Whoever commits first takes the number; every later one
-re-derives. ⇒ This file writes the placeholders `<DEC>` (decision), `<ROW>` (roster row), `<MIG>` (migration), `<CAT>` (catalog version)
-wherever the value is not yet minted.
+catalog 56→57, THREE migrations — two enum-value migrations, then `0196_claim-membership-checks`); 6.22 (`story/6-22-…`: decision `-433`,
+`0195`, catalog 57; it defers Row 46 to 6.39); 12.2 (worktree `12-2-…`, untracked story file: `-433`, `0195` / `0196_marketplace-partners-and-publications`,
+catalog 57); 13.2 (`story/13-2-…`, committed `b85a597e`: a migration `NNNN_field-worker-attribution-codes`, `-433` only "if one becomes
+necessary", catalog stays 56). Whoever commits first takes the number; every later one re-derives. ⇒ This file writes the placeholders
+`<DEC>` (decision), `<ROW>` (roster row), `<MIG>` (migration), `<CAT>` (catalog version) wherever the value is not yet minted.
+
+PRIVATE CORPUS: this repo is PUBLIC (`ulanzi1/twt`). The Niyamavali, the Deed and the draft privacy policy live in the PRIVATE `twt-legal`
+repo (`2026-08-28-167`: cite sections by number; ⛔ paste). Every reference below to them is a PARAPHRASE with a section number — and so
+must be every file this story writes (runbooks, the PQ1 note, the CQ file, the decision entry).
 
 LETTERS: **G** = found facts (G1–G22); **DL** = build decisions (DL1–DL14, PROPOSED — BigDev answers at Task 0.2); **PQ** = Panel question
 (PQ1); **CQ** = counsel questions (CQ1–CQ5); **TR** = traps; **AC1–AC13**.
@@ -57,15 +66,28 @@ Status: ready-for-dev
 
 **What already ships and this story REUSES — rebuild none of it:**
 - The GLOBAL-table shape of `0188_degraded-bridge-sms.sql` (⛔ `pariwar_id`; ENABLE + FORCE RLS; writes through the BYPASSRLS
-  `deps.servicePool`; append-only `no_update_delete` / `no_truncate` triggers) and its RLS spec `packages/domain/src/policies/degraded-bridge-sms-switch-rls.ts`.
+  `deps.servicePool`; table-prefixed `<table>_no_update_delete` / `<table>_no_truncate` triggers; the `_stamp` BEFORE INSERT trigger;
+  `audit_id`). This story DEPARTS from 0188 on purpose (DL4): 0188 grants `twt_app` SELECT and has a `USING (true)` SELECT policy — here
+  ⛔ `twt_app` grant and ⛔ policy; 0188's append-only function raises `P0001` — here 0192's `integrity_constraint_violation`. Its
+  regression spec `packages/domain/tests/integration/rls/degraded-bridge-sms-switch-policy-regression.spec.ts` (its local
+  `tablePrivileges(client, table, grantee)` helper and its "writer on the service LOGIN's privileges" test) is the model
+  (`packages/domain/src/policies/degraded-bridge-sms-switch-rls.ts` is the pgPolicy DECLARATION, ⛔ a spec).
+- The advisory-lock serialisation of `packages/domain/src/degraded-mode/declarations.ts` (`SELECT pg_advisory_xact_lock(hashtext(...))`)
+  — DL4's append lock (⛔ `FOR UPDATE` — TR18).
+- The GLOBAL idempotency precedent `apps/api/src/modules/feature-flags/handlers.ts` `withIdempotency(request, key, run)` on
+  `idempotency.createKeyedStore(deps.pool)` (claim → replay / in-flight 409 → run) — with DL5's ⚠ change to WHERE `recordResult` and
+  `release` run.
 - The GLOBAL-write handler shape of `setBridgeSwitch` (`apps/api/src/modules/degraded-mode/handlers.ts`): `getDisplayName` (fail-closed —
   `AdminDisplayNameMissingError`) BEFORE any write, `audit.withCompensatingAudit(deps.servicePool, { auditIntent: { pariwarId:
   ADMIN_GLOBAL_NAMESPACE, … }, mutate })`, the display name SNAPSHOT on the row ([[project_admin_display_name_attribution]]).
-- The GLOBAL route guard `[requireAdminSession(deps), requireGlobalPermission(deps, KEY)]` (`apps/api/src/modules/rbac/index.ts`) — as
-  `GET /api/v1/audit/integrity-checks` uses it (`apps/api/src/modules/audit-log/index.ts`).
+- The GLOBAL route guard `[requireAdminSession(deps), requireGlobalPermission(deps, KEY)]` — `requireAdminSession` from
+  `apps/api/src/modules/auth/shared/session-guard.ts`, `requireGlobalPermission` from `apps/api/src/modules/rbac/index.ts` — as
+  `GET /api/v1/audit/integrity-checks` uses them (`apps/api/src/modules/audit-log/index.ts`, with its `ListChecksQuery` querystring schema
+  and `config: { rateLimit: namedRateLimits(deps).read }`).
 - The admin trust-wide page precedent `apps/admin/src/modules/audit-integrity/` + `apps/admin/src/routes/IntegrityRoute.tsx`
-  (`IntegrityGateView` → `AccessDenied` unless the grant; advisory only — the server is the boundary) and its test shape
-  (`apps/admin/tests/integrity-page.test.tsx`: `vi.mock('../src/api/client.js')` with in-memory state, `tests/_helpers.tsx`).
+  (`IntegrityGateView` → a NON-EXPORTED, route-local `AccessDenied` unless the grant; `ProvisioningRoute.tsx` defines its own the same way;
+  advisory only — the server is the boundary) and its test shape (`apps/admin/tests/integrity-page.test.tsx`:
+  `vi.mock('../src/api/client.js')` with in-memory state — the factory must also export `ApiError`; `tests/_helpers.tsx`).
 - `audit_integrity_checks` + `audit_integrity_acknowledgements` (Stories 1.11a / 1.11b) — the ONE persisted detection signal (G14).
 - The table-top runbook shape `docs/degradation-policy/table-top-exercise.md` (output is a GAP LIST, ⛔ a pass/fail).
 - The runbook template `docs/runbooks/_template.md` (five mandatory sections) and the sign-off ledger
@@ -91,8 +113,8 @@ and 72-hour duties without scrambling, and a member whose data was exposed is to
 | architecture §2.12 | *"Breach reporting: incident-response procedure documented in ops runbook (Category 5); DPDPA notification timelines + DPO contact baked into the runbook."* · *"SDF classification is reviewed at named triggers (member-base milestone, biometric data inclusion, regulatory threshold publication); DPIA artifact lives in the trust's governance documentation, not in the codebase."* · **Breach detection signals**: cross-tenant read anomaly, PII export volume above baseline, RLS-bypass attempts, out-of-hours privileged admin sessions, Class-A dead-letter accumulation — *"Alert routing committed in Category 5."* | architecture |
 | architecture §1.5 / Launch Gate Risks | *"chain break triggers a P0 incident"* · risk row *"DPDPA grievance officer designation | Trustee Panel | Legal Counsel + BigDev"* · *"Incident response tabletop | Pre-launch | Semi-annual"*. | architecture |
 | `2026-08-14-106` item 8 | *"No `dpo` role is minted. FR-99 activates at the MeitY threshold, DPO appointment is OQ-7 (open), and minting a role bundle for an unconstituted body is the inert-capability defect…"* — mirrored at `packages/domain/src/rbac/permissions.ts` (the `member.data_rights` key's comment). | author-commit — BINDING here (TR1) |
-| `2026-06-21-057` · `2026-08-24-156` | Counsel Adv. Mohit Agrawal (`lc-1`, `docs/legal-counsel-engagement/counsel-roster.md`) IS engaged; his recorded acts cover edge/WAF, directory/public surfaces, T&C clauses — ⛔ DPO, ⛔ breach, ⛔ SDF. Review-artifact Row 18 `dpo-breach-reporting-envelope-v1` is `pending-submission` — counsel has ⛔ been asked. | recorded |
-| Niyamavali Part 10 · Deed cl. 15(b) · privacy policy §11 (private corpus — `docs/legal/`, git-ignored copy in the main checkout) | Niyamavali Part 10: a DPO / grievance officer *"designated as and when required, with breach-notification procedures per law"*. Draft privacy policy §11: notify the Board and affected Data Principals *"in the manner and timelines required by the DPDPA … The DPO owns this process."* — DPO name/contact are placeholders. ⚠ Deed is an unexecuted agent draft ([[project_legal_corpus_private_repo_split]]). | ⛔ ratified / draft |
+| `2026-06-21-057` · `2026-08-24-156` | Counsel Adv. Mohit Agrawal (`lc-1`, `docs/legal-counsel-engagement/counsel-roster.md`) IS engaged; his recorded acts: edge/WAF (written, `-057`), the four public surfaces (VERBAL, `-156`); the T&C draft `epic-2-tc-draft-v1` SUBMITTED 2026-08-24, ⛔ returned — ⛔ DPO, ⛔ breach, ⛔ SDF. Review-artifact Row 18 `dpo-breach-reporting-envelope-v1` is `pending-submission` — counsel has ⛔ been asked. | recorded |
+| Niyamavali Part 10 · Deed cl. 15(b) · draft privacy policy (PRIVATE corpus — `twt-legal`; a git-ignored copy under `docs/legal/` in the main checkout; PARAPHRASED here, ⛔ quoted — this repo is public) | Niyamavali Part 10 (draft, unratified): a DPO / grievance officer is designated when required, with breach-notification procedures per law. Draft privacy policy §11: the Board and affected people are notified as the DPDPA requires, a process the policy assigns to the DPO; ⚠ the policy also names the DPO as the grievance contact in its contact block, its rights section, its grievance section and its closing contact block, and its own checklist carries "appoint / name the DPO" — DPO name / contact are placeholders throughout. ⚠ Deed is an unexecuted agent draft ([[project_legal_corpus_private_repo_split]]). | ⛔ ratified / draft |
 
 ## 📜 Policy meaning (AI-10-1)
 
@@ -101,16 +123,18 @@ drafts notices; ⛔ code path reads a breach record to decide anything about a m
 
 What it MEANS to a member, in their terms (for the record, ⛔ a gate): *"If the Trust's handling of your data goes wrong, the Trust will
 tell you without delay what happened, what it may mean for you, what it is doing about it, what you can do, and whom to ask."* —
-**checked against the Niyamavali:** Part 10 (*"breach-notification procedures per law"*) — CONSISTENT; ⛔ clause contradicts it.
+**checked against the Niyamavali:** Part 10 (breach-notification procedures follow the law — paraphrased; private corpus) — CONSISTENT;
+⛔ clause contradicts it.
 
 ## ⭐ THE INVARIANTS
 
 - **N1 — The system drafts; people send.** ⛔ Code path transmits a breach notice to a member, the Board or CERT-In. Every "sent" fact is
-  an entry RECORDED by staff after they sent it outside the system (`*_recorded` kinds, DL5). ⛔ SMS / WhatsApp / push / email dispatch is
+  an entry RECORDED by staff after they sent it by their own means (`*_recorded` kinds, DL5). ⛔ SMS / WhatsApp / push / email dispatch is
   added ([[project_dlt_only_approved_text_is_delivered]] — an un-registered SMS text would ⛔ even be delivered).
 - **N2 — Every breach is notifiable; a signal is ⛔ a breach.** The law has ⛔ materiality threshold (G1). ⛔ Field, enum value, copy or
   runbook line may say a breach is "minor" and so need not be notified. Conversely a detection SIGNAL (G14–G16) only opens an ASSESSMENT —
-  the runbook says so in one line.
+  the runbook says so in one line. A CONFIRMED leak of personal data IS a breach (the epic's *"any leak is an incident"*); a CI-red scrape
+  or any other signal is a prompt to assess, ⛔ yet a breach.
 - **N3 — Append-only.** `breach_incidents` and `breach_incident_entries` reject UPDATE / DELETE / TRUNCATE at the DB (triggers), and the
   incident's status, deadlines and "what has been recorded" are DERIVED from the entries by ONE pure function (`deriveBreachIncidentView`,
   DL6). ⛔ Mutable status column.
@@ -135,11 +159,14 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - **G2 — Rule 7 content.** 7(1) to each affected Data Principal, *"without delay, through her user account or any mode of communication
   registered by her"*: (a) description — nature, extent, timing; (b) likely consequences for her; (c) mitigation implemented / being
   implemented; (d) safety measures she may take; (e) business contact of a person who can respond. 7(2)(a) to the Board *"without
-  delay"*: description incl. nature, extent, timing **and location**, likely impact. 7(2)(b) to the Board *"within seventy-two hours of
-  becoming aware"* (or a longer period the Board allows on written request): (i) updated detailed description; (ii) broad facts on events,
-  circumstances, reasons; (iii) mitigation implemented or proposed; (iv) findings regarding the person who caused it; (v) remedial measures
-  to prevent recurrence; (vi) report on the intimations given to Data Principals. ⛔ Prescribed form or portal — the Board is a "digital
-  office" (Rule 20); [S] reported *"constituted but not yet functional"* (Union, Kerala HC, 7 Oct 2026).
+  delay"*: description incl. nature, extent, timing **and location** (⚠ 7(1)(a) has ⛔ "location"; 7(2)(a) does), likely impact. 7(2)(b)
+  to the Board *"within seventy-two hours of becoming aware of the breach"* (or a longer period the Board allows on written request):
+  (i) updated detailed description; (ii) broad facts on events, circumstances, reasons; (iii) mitigation implemented or proposed;
+  (iv) findings regarding the person who caused it; (v) remedial measures to prevent recurrence; (vi) report on the intimations given to
+  Data Principals. ⛔ Prescribed form or portal — the Board (established by G.S.R. 844(E)) is a "digital office" (Rule 20); `dpb.gov.in`
+  does ⛔ resolve (NXDOMAIN, 2026-11-01). [S] *C.R. Neelakandan v. Union of India*, WP(PIL) 15/2026, Kerala HC, 7 Oct 2026 (LiveLaw,
+  10 Oct 2026): the Union said the Board is constituted but not yet functional; the court *"expect[s] that the Board will be made
+  functional within … eight weeks"* (≈ 2 Dec 2026) ⇒ a filing route may exist by ~Dec 2026 — the monthly review re-checks (DL11).
 - **G3 — DPO is SDF-only; a CONTACT is universal.** s.10(2)(a): an SDF's DPO is *"based in India"*, *"an individual responsible to the
   Board of Directors or similar governing body"*, the grievance point of contact. s.8(9) + Rule 9 (every fiduciary): publish *"prominently"*
   the business contact of *"a Data Protection Officer, if applicable, or a person who is able to answer"*, and state it in every rights
@@ -148,10 +175,13 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   sensitivity, risk to rights, sovereignty, electoral democracy, security of the State, public order). [S] ⛔ SDF or class notified as of
   Oct 2026. SDF duties (s.10(2), Rule 13): DPO, independent data auditor, DPIA + audit every 12 months, algorithmic due diligence,
   localisation of specified data. ⇒ the epic's *"monitoring of data-principal count threshold"* monitors a number with ⛔ threshold (DL9).
-- **G5 — Commencement.** Rules notified 13 Nov 2025. Rule 1(4): Rules 3, 5–16, 22, 23 — **including Rule 7 (breach)** — commence 18 months
-  later ⇒ **13 May 2027** (one firm reads 12 May). [S] Act ss.3–17 + Schedule commence the same day (G.S.R. 843(E)). [S] A Jan 2026 MeitY
-  PROPOSAL to cut 18 → 12 months (⇒ 13 Nov 2026) — ⛔ amending notification found as of late Oct 2026. [S] DPDP (Removal of Difficulties)
-  Order 2026 (S.O. 5458(E)) — editorial only. ⚠ TWT is ⛔ in production ([[project_not_in_production_merge_is_not_golive]]) — the duty
+- **G5 — Commencement.** Rules notified 13 Nov 2025 (e-Gazette 267650). Rule 1(4): Rules 3, 5–16, 22, 23 — **including Rule 7 (breach)**
+  — commence 18 months later ⇒ **13 May 2027** (COMPUTED from the notification date — ⛔ an officially stated date; 14 Nov is only the
+  PIB press date). Act commencement, G.S.R. 843(E) (e-Gazette 267647, primary): ss.3–5, 7–10, 11–17, 28–34, 36, 37, 44(2) at 18 months
+  (with Rule 7); s.6(9) and s.27(1)(d) at one year (13 Nov 2026); ss.18–26 (the Board) on publication. [S] A Jan 2026 MeitY PROPOSAL to
+  cut 18 → 12 months (⇒ 13 Nov 2026) — ⛔ amending notification found (dpdprules.org timeline, checked 28 Oct 2026). [S] DPDP (Removal of
+  Difficulties) Order 2026 (S.O. 5458(E), 5 Oct 2026, under s.43): amends the WORDING of s.9(1) and s.10(2)(c)(ii) ("periodic data audit")
+  — ⛔ a commencement change. ⚠ Corrigendum G.S.R. 892(E) (10 Dec 2025) exists — its text ⛔ read; read it at Task 0.1. ⚠ TWT is ⛔ in production ([[project_not_in_production_merge_is_not_golive]]) — the duty
   binds once real personal data is processed after commencement.
 - **G6 — CERT-In.** Directions 28-04-2022: incidents in Annexure I reported *"within 6 hours of noticing"*; ICT logs kept 180 days in
   India. Addressees: *"service providers, intermediaries, data centres, body corporate and Government organisations"*. Whether a public
@@ -168,7 +198,8 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - **G9 — ⛔ launch-gate row.** `docs/launch-gate-inventory/inventory-roster.md`: Row 8 `dpdpa-grievance-officer-designation` (open — the s.8(9)
   contact is this row's person); Row 10 / Row 11 cover "DPDPA Data Fiduciary registration"; ⛔ row covers breach readiness, DPO, or SDF watch.
   Rows are append-only, supersession-only; decision-authored rows carry `architecture_source_line: N/A — **decision-authored**` under an
-  "Appended … by Story X (Task 0.4) under [Decision …]" preamble (Row 44's shape); Row 16 was minted by an AUTHOR-COMMIT decision.
+  "Appended … by Story X (Task 0.4) under [Decision …]" preamble — **Row 45 is the exact precedent** (author-commit `-421`,
+  decision-authored, with the preamble); Row 16 was the first author-commit append but is `N/A — PRD/epics-authored` with ⛔ preamble.
 - **G10 — Counsel ⛔ asked.** `docs/legal-counsel-engagement/review-scope-charter.md` §1(b) lists *"DPO appointment per PRD §11 OQ-7"* and
   *"Breach-reporting tooling per architecture §2.12 + Story 14.3"*; `review-artifact-roster.md` Row 18 `dpo-breach-reporting-envelope-v1` is
   `pending-submission`. ⛔ Counsel question pack on breach / DPO / SDF exists.
@@ -196,8 +227,10 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   One client `apps/admin/src/api/client.ts`, one hooks file `apps/admin/src/api/hooks.ts`. Nav in `apps/admin/src/routes/RootLayout.tsx`
   (national links gated by grant booleans). Admin copy is English-only per-module `i18n-en.ts` maps (⛔ `@twt/i18n`).
 - **G19 — RBAC.** `packages/domain/src/rbac/permissions.ts`: `PERMISSION_CATALOG_VERSION = 56`; adding a key = append to
-  `SEED_PERMISSION_KEYS` + bump with a dated comment block + update the pins in `packages/domain/tests/rbac/permissions.test.ts`; ⛔
-  migration (catalog is pure data); `super_admin` derives every key; the 5.8b / 6.33 precedent for a Super-Admin-only global key is
+  `SEED_PERMISSION_KEYS` + bump with a dated comment block + update the pins in `packages/domain/tests/rbac/permissions.test.ts`
+  (`toBe(56)` → `<CAT>`; `toHaveLength(74)` → 75; `defaultRoleBundles` `toHaveLength(13)` UNCHANGED); ⛔ migration (catalog is pure data);
+  ⛔ other registration (`nationalGrants` derives from bundles in `admin-session.handler.ts`; `requireGlobalPermission` reads `role_grants`
+  with ⛔ list of global keys); `super_admin` derives every key; the 5.8b / 6.33 precedent for a Super-Admin-only global key is
   "derived, ⛔ `roles.ts` const". Contracts transport mirror `packages/contracts/src/rbac/permissions.ts`.
 - **G20 — Migrations.** `packages/domain/migrations/NNNN_kebab.sql`, hand-authored, `meta/_journal.json`; never regenerate an applied one
   (42P07 — [[project_live_db_test_gotchas]]). main's highest `0193_marketplace-modules`; `0194_memorial-kinship` on `story/11b-5a-…`.
@@ -211,8 +244,17 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 
 - **DL1 — Correct the premise, FOUND (⛔ a ruling).** The decision entry (Task 0.4) records G1–G5 as found law: breach-reporting readiness
   is due by **go-live or DPDP commencement (13 May 2027, re-checked), whichever is first**, for the Trust as it is today; only the DPO is
-  SDF-gated. PRD FR-99 and epics 14.3 get DATED annotation lines (⛔ rewrites — [[feedback_supersede_never_reinterpret]]): *"breach
-  reporting is ⛔ SDF-gated — see `<DEC>`"*. ⛔ Panel routing (it is statute — [[feedback_provider_policy_is_found_not_counsel]]); the
+  SDF-gated. Dated annotations (⛔ rewrites — [[feedback_supersede_never_reinterpret]]) in the PRECEDENT shapes — PRD:
+  `> ⚠ **ANNOTATION <date> (Story 14.3 Task 0)** — … ⭐ Annotated, ⛔ not rewritten.` (the 2026-09-21 Story 6-20 annotation); epics:
+  `- ⚠ **ANNOTATED <date> ([`<DEC>`](…)) — ⛔ not rewritten.**` (the 2026-10-14 `-330` annotation) — text: *"breach reporting is ⛔
+  SDF-gated; only the DPO is — see `<DEC>`"*, beside EVERY site that carries the premise: **PRD** — the FR-99 entry (§4.14) and the §4.14
+  "DPDPA & PMLA" paragraph (*"… activate at the MeitY threshold"*); **epics.md** — the FR inventory's FR-99 line, the Epic 14 intro
+  (*"… lands at MeitY SDF threshold"*), the Epic 14 User Outcome (*"DPO appointment ratified pre-MeitY threshold"*), and Story 14.3's
+  title + Given (*"MeitY SDF Threshold Activation"*). Re-grep `MeitY` in both files at Task 0.5 — annotate any further site found.
+  ⚠ **DECLARED — the DPO appointment is DOCUMENTED, ⛔ performed.** The epic's 14.3 AC *"DPO appointment ceremony completes within the
+  regulator-notified window; trustee panel ratifies + records"* and the Demoable *"DPO ratified in `.decision-log.md`"* become Row `<ROW>`
+  (c) after PQ1: the DPO runbook carries the ceremony and its trigger (on an SDF notification, the ceremony runs within any window the
+  notification sets — the Rules set ⛔ fixed window; re-check at Task 0.1). ⛔ Panel routing (it is statute — [[feedback_provider_policy_is_found_not_counsel]]); the
   residue (does it bind a trust; CERT-In) is CQ1 / CQ2. ⚠ The entry LABELS its two legs: "by DPDP commencement" is FOUND law; "by
   go-live, if earlier" is the AUTHOR's readiness target (⛔ law — before commencement ⛔ duty binds).
   ⚠ **The same wrong premise sits in `-106` item 8** (*"FR-99 activates at the MeitY threshold"*) and its mirror comment in
@@ -234,7 +276,8 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   - `breach_incidents` — `incident_id uuid PK default gen_random_uuid()`, `is_rehearsal boolean NOT NULL`, `title text NOT NULL` (1–200),
     `became_aware_at timestamptz NOT NULL` (the 72-hour clock — G2), `opened_at timestamptz NOT NULL default now()`, CHECK
     `became_aware_at <= opened_at`, `detection_source text NOT NULL` CHECK in DL8's list, `detection_signal_ref text NULL` (≤ 200; e.g. an
-    `audit_integrity_checks.check_id`), `opened_by uuid NOT NULL` (admin user id), `opened_by_display text NOT NULL` (snapshot),
+    `audit_integrity_checks.check_id`), `opened_by uuid NOT NULL` (admin user id — ⛔ FK to `users`, as 0188 has none: test cleanup
+    deletes `users` rows, and an append-only row could never let it), `opened_by_display text NOT NULL` (snapshot),
     `audit_id uuid NOT NULL` (the compensating-audit intent line's id, as 0188's history row stores it). The handler generates
     `incident_id` with `randomUUID()` BEFORE the audit intent (the `declare` handler's precedent — DL10's locator embeds it).
   - `breach_incident_entries` — `entry_id uuid PK` (generated before the audit intent, as above), `entry_seq bigint GENERATED ALWAYS AS
@@ -243,34 +286,76 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
     now()`, which is the transaction START and can sort a lock-waiter before an earlier commit — footgun #62c), `recorded_by uuid NOT NULL`,
     `recorded_by_display text NOT NULL`, `audit_id uuid NOT NULL`; index `(incident_id, entry_seq)`. **Order everywhere by `entry_seq`.**
   - Both: ENABLE + FORCE RLS with **ZERO policies**, ⛔ `twt_app` grant (N5); `GRANT SELECT, INSERT ON <both> TO twt_service` — ⛔ UPDATE /
-    DELETE (`twt_service` is `NOBYPASSRLS` from `0002`; the service login inherits it and BYPASSRLS does ⛔ bypass GRANTs — a superuser test
-    DB HIDES a missing grant; 0188 grants it explicitly). Append-only trigger function `breach_reject_mutation()` raising
-    `integrity_constraint_violation` + `no_update_delete` / `no_truncate` triggers per table (0192's / 0188's shape).
-    ⚠ **FIRST OF ITS KIND, declared:** ⛔ table in the repo has RLS on with no `twt_app` grant and no policy. ⛔ Gate requires a policy per
-    table (`policies/README.md` requires a regression spec per POLICY; ⛔ rule for a policy-less table) ⇒ ⛔ `policies/breach-incidents-rls.ts`.
-    The regression spec `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts` pins: `twt_app`'s privilege set
-    EMPTY and `twt_service`'s = {SELECT, INSERT} (`tablePrivileges(client, …)` as `degraded-bridge-sms-switch-policy-regression.spec.ts`
-    does), the triggers, and the CHECKs.
-  - The kind / source lists are TUPLES exported from `packages/domain/src/breach/` (0188's `ALERT_SMS_SEND_*` lockstep pattern); the
-    regression spec compares each tuple to `pg_get_constraintdef` of its CHECK; contracts mirrors the tuples and a contracts test pins them
-    equal to the domain export ([[project_contracts_domain_bundle_boundary]] — contracts ⛔ imports a pg-touching domain module at runtime;
-    the test may).
-  - Drizzle schema `packages/domain/src/schema/breach_incidents.ts` (+ export from `schema/index.ts`); `pnpm db:check` clean. `when` above
-    `0194`'s 1796355600039 and every other sibling's at the commit.
-  - **Domain module `packages/domain/src/breach/`** (`index.ts`, `incidents.ts`) — the handlers call it, ⛔ inline SQL in handlers:
-    `openBreachIncident(pool, input)`; `appendBreachEntry(pool, input)` which takes a client, `BEGIN`, `SELECT … FROM breach_incidents WHERE
-    incident_id = $1 FOR UPDATE` (a row lock fires ⛔ UPDATE trigger), reads the entries, derives (DL6), checks closed / extension, inserts,
-    `COMMIT` — so "after `closed` ⇒ 409" and "`grantedUntil` > current due" cannot race; `listBreachIncidents(pool, limit)` (clamped);
-    `readBreachIncident(pool, id)`. A concurrency spec: a `closed` and a `mitigation` append raced on two own-committing clients (both CALLING
-    `appendBreachEntry` — ⛔ a hand copy of the lock, [[feedback_stub_must_call_not_transcribe]]) ⇒ ⛔ entry ever has a higher `entry_seq`
-    than the incident's `closed` entry; the loser gets `breach.incident_closed`.
+    DELETE, ⛔ policy `TO twt_service` (the 0007 / 0009 posture). WHY those grants and nothing more: `twt_service` itself is a NOLOGIN
+    NOBYPASSRLS group (`0002`); production's service login is a SEPARATE BYPASSRLS login that is a MEMBER of `twt_service` (0009's header;
+    `deps.ts` `SERVICE_DATABASE_URL`). Role ATTRIBUTES are ⛔ inherited through membership, GRANTs are; BYPASSRLS skips policies, ⛔
+    GRANTs — so the login needs exactly these grants, and a FORCE-RLS zero-policy table is readable by it (and by the superuser test DB,
+    which HIDES a missing grant — TR16). Append-only trigger function `breach_reject_mutation()` raising `integrity_constraint_violation`
+    (0192's; ⛔ 0188's `P0001`) + table-prefixed `breach_incidents_no_update_delete` / `breach_incidents_no_truncate` (and the same for
+    `breach_incident_entries`) — row-level BEFORE UPDATE OR DELETE, statement-level BEFORE TRUNCATE.
+    ⚠ **FIRST OF ITS KIND, declared:** ⛔ table in the repo has RLS on with no `twt_app` grant and no policy. ⛔ Gate or test enumerates
+    tables by RLS / policy / `pariwar_id` (checked: `policies/README.md`, `cross-pariwar-leak.spec.ts`, schema-diff, pii-scrape,
+    access-wrapper; `policies/README.md` requires a regression spec per POLICY — ⛔ rule for a policy-less table) ⇒ ⛔
+    `policies/breach-incidents-rls.ts`. The regression spec `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts`
+    pins: (i) `twt_app`'s privilege set EMPTY and `twt_service`'s = {SELECT, INSERT} on both (copy the local `tablePrivileges(client,
+    table, grantee)` helper from `degraded-bridge-sms-switch-policy-regression.spec.ts`); (ii) ⭐ an EXECUTED service-login leg (that spec's
+    "writer on the service LOGIN's privileges" test): `CREATE ROLE <tmp> NOLOGIN BYPASSRLS IN ROLE twt_service`, `SET LOCAL ROLE <tmp>`, then
+    CALL `openBreachIncident` and `appendBreachEntryInTx` (⛔ a hand copy — [[feedback_stub_must_call_not_transcribe]]) and see both
+    succeed, and UPDATE / DELETE / TRUNCATE refused; (iii) bare `SET LOCAL ROLE twt_service` (NOBYPASSRLS) sees ⛔ rows (FORCE RLS, zero
+    policies); (iv) the triggers; (v) the CHECKs.
+  - The kind / source lists are TUPLES in the pg-free schema file `packages/domain/src/schema/breach_incidents.ts` (where
+    `ALERT_SMS_SEND_*` live — `schema/alert_sms_sends.ts`), re-exported from `breach/`; the regression spec compares each tuple to
+    `pg_get_constraintdef` of its CHECK (the `alert-sms-sends-policy-regression.spec.ts` pattern); contracts mirrors the tuples and a
+    contracts test pins them equal to the domain export ([[project_contracts_domain_bundle_boundary]] — contracts ⛔ imports a pg-touching
+    domain module at runtime; the test may — `audit.test.ts` already does).
+  - Drizzle schema `packages/domain/src/schema/breach_incidents.ts` (+ export from `schema/index.ts`); `pnpm db:check` (`drizzle-kit check`)
+    clean. `when` above `0194`'s 1796355600039 and every other sibling's at the commit. ⚠ 14.3 alone can ⛔ guarantee "either landing
+    order": if 14.3 lands BEFORE `story/11b-5a-…`, that branch must re-date its `0194` `when` above 14.3's (say so in Completion Notes and
+    the PR body); if after, 14.3 re-checks its own `when` at the rebase.
+  - **Domain module `packages/domain/src/breach/`** (`index.ts`, `incidents.ts`; barrel `export * as breach from './breach/index.js'`) —
+    the handlers call it, ⛔ inline SQL in handlers:
+    - `openBreachIncident(pool, input)`.
+    - `appendBreachEntry(pool, input)` = `connect` + `BEGIN` + `appendBreachEntryInTx(client, input)` + `COMMIT` (the bridge-switch pair).
+      `appendBreachEntryInTx`: `SELECT … FROM breach_incidents WHERE incident_id = $1` (absent ⇒ `breach.incident_not_found`), then
+      `SELECT pg_advisory_xact_lock(hashtext('breach_incident:' || $1))` (the `degraded-mode/declarations.ts` precedent), THEN reads the
+      entries, derives (DL6), checks closed / extension, inserts. ⛔ `SELECT … FOR UPDATE` — Postgres requires UPDATE privilege on some
+      column to take ANY row lock (`0142`'s header records it; 0188's own `FOR UPDATE` works only because 0188 grants a column UPDATE),
+      and `twt_service` has ⛔ UPDATE here: every production append would fail 42501 while every superuser test passes (TR16, TR18).
+      Under the lock, "after `closed` ⇒ 409" and "`grantedUntil` > current due" cannot race, and `entry_seq` order = commit order.
+    - `listBreachIncidents(pool, limit)` and the signals read — raw SQL `LIMIT $n` with `clampLimit` from `packages/domain/src/pagination.ts`
+      called EXPLICITLY (the `domain-accessor-invariants` gate only scans Drizzle `.limit(` — it will ⛔ catch a raw `LIMIT`).
+    - `readBreachIncident(pool, id)`; `countMembersOnRecord(pool)` (DL9).
+    A concurrency spec: a `closed` and a `mitigation` append raced on two own-committing clients (both CALLING `appendBreachEntry` — ⛔ a
+    hand copy of the lock, [[feedback_stub_must_call_not_transcribe]]) ⇒ ⛔ entry ever has a higher `entry_seq` than the incident's
+    `closed` entry; the loser gets `breach.incident_closed`.
 - **DL5 — Entry kinds (closed list; one strict Zod payload each in `packages/contracts/src/breach/`; the DB CHECK lists the same strings —
   pinned by DL4's lockstep mechanism).** Text fields bounded (≤ 2000 unless noted). Request body `{ kind, payload }` is a Zod discriminated
-  union on `kind`. A DB CHECK violation (23514 — e.g. app clock ahead of the DB on `became_aware_at`) maps to **400**, ⛔ a 500.
-  ⭐ Appends take an `Idempotency-Key` header through the existing idempotency substrate (`idempotency_keys` — a GLOBAL table; the caller
-  namespaces the key `breach-entry:${incidentId}:${headerKey}`; `packages/domain/src/idempotency/keyed-store.ts`; COMMIT then `recordResult` —
-  [[project_idempotent_write_handler_shape]]): an append-only row can never be removed, so a retried `principals_notice_recorded` must ⛔
-  land twice.
+  union on `kind`. A DB CHECK violation (23514 — e.g. app clock ahead of the DB on `became_aware_at`) maps to **400**, ⛔ a 500: ⛔ global
+  23514 mapper exists (`apps/api/src/middleware/error-mapping/index.ts` maps only typed errors) — copy `isCheckViolation` from
+  `memorial-takedown/handlers.ts` (it checks `.code` AND `.cause.code`) and catch it in the handler AFTER `withCompensatingAudit` has
+  written its `_rolled_back` line and rethrown.
+  - ⭐ **Idempotency — REQUIRED on BOTH writes** (open AND append): an append-only row can never be removed, so a retried open must ⛔
+    create a second incident and a retried `principals_notice_recorded` must ⛔ land twice. Substrate: `idempotency_keys` (GLOBAL; the
+    caller namespaces) via `idempotency.createKeyedStore(deps.pool)` (`packages/domain/src/idempotency/keyed-store.ts`); ⛔ shared HTTP
+    helper exists — each handler hand-rolls it; the GLOBAL precedent is `feature-flags/handlers.ts` `withIdempotency`.
+    - Header `Idempotency-Key` (`request.headers['idempotency-key']`): missing, blank, or sent as an array ⇒ **400
+      `breach.idempotency_key_required`**.
+    - Namespaces: `breach-open:${actorId}:${key}` and `breach-entry:${incidentId}:${key}`.
+    - ORDER (⚠ DIFFERS from the feature-flags precedent on two points): claim → replay (stored body, same status) / in flight ⇒ **409
+      `breach.idempotency_in_progress`** → pre-checks (below) → `withCompensatingAudit({ mutate: the domain write, which COMMITs })` →
+      `recordResult` **OUTSIDE `mutate`** (`error-mapping/index.ts`: *"`recordResult` runs AFTER `run()` has succeeded and AFTER
+      `withCompensatingAudit` returned"* → 503 `idempotency.record_failed`). Inside `mutate` a failed `recordResult` would write a
+      `_rolled_back` line for an entry that DID commit. ⛔ `release` once the domain write has committed (the precedent's `catch` releases
+      on ANY error, so a failed `recordResult` would let a retry duplicate a permanent row) — `release` only when the throw came BEFORE the
+      commit ([[project_idempotent_write_handler_shape]]).
+    - Admin: `newIdempotencyKey()` (`apps/admin/src/api/hooks.ts`), held in a `useRef` across the retries of ONE decision and renewed after
+      a success (the `useSetDriveTarget` comment).
+  - ⭐ **Pre-checks BEFORE the audit intent.** `withCompensatingAudit` (`packages/domain/src/audit/compensating.ts`) writes the intent line
+    first and, on any throw from `mutate`, a `${action}_rolled_back` line — so a refusal raised only inside the lock leaves two audit lines.
+    As `setBridgeSwitch` does (`alreadyInThisState()` before the audit, `concurrentChange()` in the lock as the backstop): pre-read the
+    incident + its derived view and refuse 404 / 409 closed / 400 extension with ⛔ audit line; the in-lock check is the RACE backstop
+    only (intent + `_rolled_back` accepted there). A test asserts ZERO `data_protection.breach.entry_appended*` lines for a pre-checked
+    refusal.
   - `assessment` — `nature`, `extent`, `location` (G2 7(2)(a)), `dataCategories: string[]` (closed list: `identity`, `contact`, `kyc`,
     `financial`, `nominee`, `health_or_death`, `credentials`, `other`), `estimatedAffected: { count: int ≥ 0 } | { unknown: true }`,
     `affectedPariwarIds: uuid[]` (empty = unknown / trust-wide), `likelyConsequences`, `safetyMeasuresForPrincipals` (7(1)(d)),
@@ -286,8 +371,8 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   - `board_extension_recorded` — `grantedUntil` (> the current deadline), `reference`.
   - `cert_in_report_recorded` — `sentAt`, `reference` (kept although CQ2 is open — recording a report that was made is harmless).
   - `owner_review` — `note` (the breach owner's review; named "owner", ⛔ "DPO" — PQ1).
-  - `signoff_recorded` — `signers: string[]` (≥ 2 DISTINCT trimmed names, each ≤ 120), `signedOn` (date ≤ today), `note`. ⚠ A RECORD
-    that trustees signed outside the system, made by the operator — ⛔ the trustees' own sessions (name it so in the UI).
+  - `signoff_recorded` — `signers: string[]` (≥ 2 DISTINCT trimmed names, each ≤ 120), `signedOn` (date ≤ today), `note`. ⚠ A RECORD,
+    made by the operator, that trustees signed on paper or by their own means — ⛔ the trustees' own sessions (name it so in the UI).
   - `closed` — `summary`. After `closed` every append is refused **409 `breach.incident_closed`**.
   - `note` — `text`.
 - **DL6 — ONE derivation.** `deriveBreachIncidentView(incident, entries, now)` (pure, in `packages/contracts/src/breach/derive.ts` so the API
@@ -296,8 +381,12 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   `boardReportRecorded`, `boardReportOverdue (open && !boardReportRecorded && now > due)`, `signoffRecorded`. ⛔ Stored. Entries are
   consumed in `entry_seq` order. Times shown in IST with `formatIst` (`apps/admin/src/modules/correction-chase/ist.ts` — already imported by
   `degraded-mode/BridgeSwitchPanel.tsx`; ⛔ inline `toLocaleString`). Form inputs (`becameAwareAt`, `occurredAt`, `sentAt`, `grantedUntil`)
-  are `datetime-local` read as IST wall-clock and converted to an ISO instant with the `+05:30` offset before submit (one helper in the
-  module, unit-tested; ⛔ the browser's local zone). The overdue badge reads "Board report overdue" — ⛔ `URGENT` (a microcopy tone rule).
+  are `datetime-local` read as IST wall-clock and converted to an ISO instant with the `+05:30` offset before submit. The helper works in
+  BOTH directions — `istLocalInputToIso(value)` and `isoToIstLocalInput(iso)` (the second pre-fills `becameAwareAt` from a signal's
+  `verified_at`) — placed beside `formatIst` / `istToday` in `correction-chase/ist.ts`, unit-tested in a non-IST `TZ`. ⛔ IST helper exists
+  today (building it is ⛔ reinvention); ⚠ ⛔ copy the existing `datetime-local` helpers (`banners/BannersPage.tsx` `toIsoOrNull` /
+  `toLocalInput`, `degraded-mode/DeclareForm.tsx`) — they use the browser's zone. The overdue badge reads "Board report overdue" — ⛔
+  "urgent" in any case (TR15).
 - **DL7 — The three drafts.** `buildBreachDrafts(view)` (pure, `packages/contracts/src/breach/drafts.ts`) → `{ principalsNotice,
   boardInitial, boardReport }`, each `{ text: string; complete: boolean; missing: string[] }`. Every paragraph is labelled with its sub-rule
   (e.g. `7(1)(b) Likely consequences for you:`); a missing input renders `[MISSING — <field>]` and sets `complete: false`; the Trust is
@@ -311,26 +400,35 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   acknowledgement, read through a NEW `GET /api/v1/data-protection/signals?limit=` behind `breach.manage` (⛔ the existing
   `/api/v1/audit/integrity-checks`, which needs `audit.verify`; bounded `limit`, default 20, max 50; newest `verified_at` first; response
   `{ items: [...] }`) with "Open an incident from this" — prefilling `detection_source =
-  'audit_chain_break'`, `detection_signal_ref = check_id`, `became_aware_at = verified_at`. ⛔ Other signal is wired: 4.8 and 1.16b and the
+  'audit_chain_break'`, `detection_signal_ref = check_id`, `became_aware_at = verified_at`. Acknowledgement stays with the integrity page,
+  so an assessed break would keep offering the action: each signal item carries `incidentIds` (the incidents whose `detection_signal_ref =
+  check_id`); with ≥ 1 the page shows "Incident opened" + a link to it IN PLACE of the open action (a live-DB test pins it). ⛔ Other
+  signal is wired: 4.8 and 1.16b and the
   five have ⛔ persisted signal to read (G15–G17); the runbook's triage table says WHERE each surfaces today (CI red; a pino `op`; ⛔ built)
   and a `deferred-work.md` item homes the live feeds to Category 5. ⚠ This is a DECLARED NARROWING of the epic's "integrates with" — ⛔
   silent; AC10 says so. ⛔ New alert sink, paging, or acknowledgement write from the breach page (the integrity page owns acknowledgement).
 - **DL9 — Members on record (the monthly review's input, ⛔ a threshold).** ⭐ (a) `GET /api/v1/data-protection/members-on-record` →
-  `{ asOf, pariwarCount, total, byState: Record<MemberLifecycleStateWire, int> }` (contracts' `MemberLifecycleStateWire` from
-  `packages/contracts/src/kyc/signup.ts` — contracts ⛔ imports `@twt/domain`; trust-wide via `deps.servicePool`, the shipped convention
-  for global reads — `runAsCrossTenant` has ⛔ production caller; `total` EXCLUDES `anonymized`, which stays visible in `byState`).
-  ⚠ `twt_service` holds ⛔ grant on `members` today (the `role_grants` posture; the production service login is undecided — roster Row 26):
-  the test DB's superuser hides it — the migration adds ⛔ grant; Completion Notes name it as a Row 26 residual. Labelled **"Members on
-  record"** — ⛔ "data principals": the runbook lists the people-holding tables it does ⛔ count
-  (nominees, known people, claim contacts, workplace requests). ⛔ Threshold, ⛔ alert (G4). Shown in a "Monthly review" panel on the
+  `{ asOf, pariwarCount, total, byState }` (contracts' `MemberLifecycleStateWire` from `packages/contracts/src/kyc/signup.ts` — nine
+  states, equal to the domain tuple incl. `anonymized`; contracts ⛔ imports `@twt/domain`). `byState` is a `.strict()` `z.object` with
+  ALL nine state keys REQUIRED (0 for an empty state) — ⛔ `z.record(MemberLifecycleStateWire, …)`, which Zod 3 makes Partial.
+  `pariwarCount` = `COUNT(DISTINCT pariwar_id)` over the rows `total` counts. Trust-wide via `deps.servicePool`, the shipped convention for
+  global reads — `runAsCrossTenant` has ⛔ production caller; `total` EXCLUDES `anonymized`, which stays visible in `byState`.
+  ⚠ `twt_service` holds ⛔ grant on `members` today; the test DB's superuser hides it. This is ⛔ new: login already reads `members` on
+  `deps.servicePool` (`member-auth.repo.ts` `resolveMembersByMobile`) with the same gap. The migration adds ⛔ grant; Completion Notes name
+  it as part of Row 26's shared-service-login grant gap. Labelled **"Members on record"** — ⛔ "data principals": the runbook lists the
+  people-holding tables the count excludes (nominees, known people, claim contacts, workplace requests). ⛔ Threshold, ⛔ alert (G4). Shown in a "Monthly review" panel on the
   breach list page. *(b)* ⛔ endpoint — a documented SQL in the runbook run by hand monthly. ⭐ (a): it makes the monthly review real and
   gives "extent" a number.
 - **DL10 — Audit.** Writes under `withCompensatingAudit` (ADMIN_GLOBAL_NAMESPACE): `data_protection.breach.opened`,
   `data_protection.breach.entry_appended` (resource locator `global/data-protection/breaches/<id>[/entries/<entryId>];kind=<kind>`; payload
   hash over the canonical body). ⭐ The DETAIL read is audited `data_protection.breach.viewed` (FR-47 — narratives may hold personal data)
-  by a direct `audit.writeAuditEntry(deps.servicePool, …)` (precedent: `member-validity/handlers.ts`'s `member.search`; the module is
-  outside the access-wrapper roots, so a direct write is allowed); the list and signals reads are ⛔ audited (titles, dates, flags only —
-  ⛔ narrative in the list DTO). ⛔ Audit-action registry exists — the names are free strings in the dotted `resource.action` form.
+  by a direct `audit.writeAuditEntry(deps.servicePool, …)` (precedent: `member-validity/handlers.ts`'s `member.search`; the access-wrapper
+  roots are an explicit list in `scripts/access-wrapper-invariants/check.ts` and `data-protection` is ⛔ in it, so a direct write is
+  allowed); `requestPayloadHash` must be SHA-256 hex (`write.ts` enforces the regex) — ⛔ named helper exists; the idiom is
+  `createHash('sha256').update(canonicalJsonStringify({ incidentId }), 'utf8').digest('hex')`; ⛔ `.viewed` line on a 404. The list,
+  signals and members-on-record reads are ⛔ audited (titles, dates, flags, counts only — ⛔ narrative in the list DTO). ⛔ Audit-action
+  registry exists — the names are free strings in the dotted `resource.action` form. All three GETs and the detail GET carry `config: {
+  rateLimit: namedRateLimits(deps).read }` (the integrity-checks route's).
 - **DL11 — The runbooks (`docs/runbooks/`, `_template.md`'s five sections, header "⚠ NOT AUTHORITATIVE until signed in
   `operational-readiness-ledger.md`").**
   - `personal-data-breach-response.md` — G2's two clocks; who does what (owner = `[PENDING PQ1]`, interim = on-call §2.13's escalation);
@@ -338,23 +436,32 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
     (the app's per-Pariwar News / noticeboard banner, the Pariwar's WhatsApp / announcement channels where live, phone via the helpline) —
     ⛔ a channel that is not built, and SMS only with a DLT-registered text (deferred item); "translate the member notice before sending";
     the CERT-In leg marked `[COUNSEL — CQ2]` with the 6-hour clock stated as the conservative reading; Board filing route `[no portal yet —
-    re-check]`.
+    re-check; the Kerala HC expects the Board functional by ≈ 2 Dec 2026 (G2)]`.
   - `dpo-appointment-and-sdf-watch.md` — named-candidate criteria (G3: an individual, India-based, responsible to the Board of Trustees, the
     grievance contact; independence / conflicts `[COUNSEL — CQ5]`); the appointment ceremony (Panel decision entry naming the person +
     contact; `dpo-contact-path` envelope sealed per `docs/escrow/`; privacy policy / T&C placeholders filled in the private corpus; Rule 9
-    publication; Row 8 / Row <ROW> updated); the SDF watch (architecture's named triggers + the Gazette check + the members-on-record count);
-    the **FR-99 monthly compliance review** checklist (open incidents and overdue clocks; SDF / commencement Gazette check; members on record;
-    Row 8 / Row <ROW> status; counsel returns; a dated line in this runbook's log table — ⛔ the decision log, unless something changed).
+    publication; Row 8 / Row <ROW> updated) and its TRIGGER (on an SDF notification, within any window the notification sets — DL1's
+    declared mapping); the SDF watch (architecture's named triggers + the Gazette check + the members-on-record count); the DPIA OWNER (the
+    DPIA is SDF-only in law — Rule 13 — but architecture §2.12 asks for its owner to be identified before launch; the runbook names the
+    role, `[PENDING PQ1]` for the person); the **FR-99 monthly compliance review** checklist (open incidents and overdue clocks; SDF /
+    commencement Gazette check; whether the Board is functional and has a filing route; members on record; Row 8 / Row <ROW> status;
+    counsel returns; a dated line in this runbook's log table — ⛔ the decision log, unless something changed).
   - `breach-tabletop-exercise.md` — the degradation table-top's shape: a synthetic incident run on a REHEARSAL record end to end (signal →
     open → assessment → drafts → owner review → recorded sign-off → close), ≥ 2 trustees, output a GAP LIST, logged as a decision entry WHEN
     RUN (architecture: pre-launch, then semi-annual). ⛔ Run by this story.
   - Also: `docs/runbooks/README.md` related-runbooks list gains the three; on-call playbook §2.13 points at the breach runbook and drops
     the stale "(when engaged)" ([[project_dpdpa_counsel_engaged_but_unrecorded]] — write "counsel has not been asked about breach
-    reporting", ⛔ "counsel is not engaged"); `docs/escrow/credential-inventory.md` Domain 7 gains ONE dated line (status unchanged — G11).
-- **DL12 — Launch-gate Row <ROW> `dpdpa-breach-and-dpo-readiness`**, appended by the author-commit `<DEC>` (Row 16 precedent): owner Trustee
+    reporting", ⛔ "counsel is not engaged"); the playbook's §3 escalation bullet (*"Pre-Story-0.13-closure, the escalation routes to the
+    Trustee Panel chair + pre-existing legal counsel contact"*) is stale the same way — it routes to counsel `lc-1` and points at the breach
+    runbook; `docs/escrow/credential-inventory.md` Domain 7 gains ONE dated line (status unchanged — G11).
+- **DL12 — Launch-gate Row <ROW> `dpdpa-breach-and-dpo-readiness`**, appended by the author-commit `<DEC>` (Row 45's shape — author-commit
+  `-421`, `architecture_source_line: N/A — **decision-authored**`, the "Appended … by Story 14.3 (Task 0.5) under [Decision `<DEC>`]"
+  preamble; Row 16 was the first author-commit append): owner Trustee
   Panel; support BigDev + counsel `lc-1`; closure criteria — (a) the three runbooks signed by ≥ 2 trustees in the ledger; (b) the table-top
-  RUN and logged with its gap list closed or homed; (c) PQ1 ruled and the breach owner named with a published contact (with Row 8); (d)
-  counsel's return on CQ1–CQ5 recorded; (e) commencement / SDF Gazette check dated within 30 days of go-live; (f) a DLT-registered breach
+  RUN and logged with its gap list closed or homed; (c) PQ1 ruled and the breach owner named with a published contact (with Row 8) — and,
+  if the ruling or an SDF notification calls for one, the DPO appointed and ratified in `.decision-log.md` (DL1's declared mapping); (d)
+  counsel's return on CQ1–CQ5 recorded; (e) commencement / SDF Gazette check dated within 30 days of go-live, and the DPIA owner named
+  (architecture §2.12); (f) a DLT-registered breach
   SMS text OR a recorded decision not to use SMS; target: before go-live or 13 May 2027, whichever is first; `current_status: open`. Row 8
   gets ONE dated cross-reference line.
 - **DL13 — Counsel question** `_bmad-output/planning-artifacts/counsel-question-2026-11-01-14-3-breach-and-dpo.md` (the 2026-10-18 file's
@@ -364,55 +471,75 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
   user account or any mode of communication registered by her"; CQ4 the Trust's SDF exposure (Aadhaar-derived KYC, death certificates,
   financial history) and whether a voluntary DPO is advisable; CQ5 who may be the DPO / breach owner (a trustee? independence). `review-artifact-roster.md`
   Row 18 gets a dated "question drafted (not submitted)" line — ⛔ `submitted` until BigDev sends.
-- **DL14 — Records.** Ledger `2026-11-01c`; row `14-3-…` backlog → ready-for-dev; `epic-14` backlog → in-progress (12.1's precedent).
-  `deferred-work.md` items (Task 0.6).
+- **DL14 — Records.** The creation transitions (row `14-3-…` backlog → ready-for-dev; `epic-14` backlog → in-progress — 12.1's
+  precedent) were made by `0280dfc9` (ledger `2026-11-01c`; see NUMBERS on its collision); the v1.2 validation is ledger `2026-11-01e`.
+  Dev-story's transitions (ready-for-dev → in-progress at Task 0.7, → review at Task 7) each take the NEXT FREE ledger letter at that
+  commit, re-derived on every ref AND every worktree's dirty `sprint-status.yaml`. `deferred-work.md` items: Task 0.6.
 
 ## Panel question (NON-BLOCKING — ⛔ gates the build or the merge; gates Row <ROW> (c))
 
 - **PQ1 — Until the Trust is notified as a Significant Data Fiduciary, who owns a personal data breach, and when is a DPO appointed?**
   THE ONE FACT: the law requires a DPO only of an SDF, but requires EVERY fiduciary to report a breach and to publish a person who can
-  answer (G1, G3); our draft privacy policy says *"The DPO owns this process"* while PRD OQ-7 targets a DPO *"before public launch"*.
+  answer (G1, G3); our draft privacy policy assigns breach notification to a DPO and names the DPO as the grievance contact throughout
+  (paraphrased — private corpus), while PRD OQ-7 targets a DPO *"before public launch"* — and ⛔ person holds Row 8 (the published contact)
+  today: Row 8 is `open` with ⛔ Trustee Panel designation event.
+  Under EVERY option a contact must be published (Rule 9) by commencement.
   - **A** — appoint a DPO before go-live, voluntarily. Cost: a named, India-based individual responsible to the Board of Trustees, with
-    time and independence, from launch; the privacy policy stays as drafted.
-  - **B** ⭐ — designate now the person Row 8 publishes as the contact (s.8(9)) as the breach owner; appoint a DPO only when notified as an
-    SDF (or earlier on counsel's advice — CQ4). Cost: privacy policy §11's *"The DPO owns this process"* must change before members agree to
-    it; an SDF notification would start the 12-month DPIA / audit clock with ⛔ DPO in post.
+    time and independence, from launch; ⛔ candidate is identified today; the privacy policy stays as drafted.
+  - **B** ⭐ — designate now ONE named person as BOTH the published contact (Row 8 — ⛔ yet designated) and the breach owner; appoint a
+    DPO only when notified as an SDF (or earlier on counsel's advice — CQ4). Cost: TWO Panel acts — the Panel must name that person now,
+    and make them breach owner; every "DPO" reference in the draft privacy policy (contact block, rights, grievance, breach section) must
+    change before members agree to it; an SDF notification would start the 12-month DPIA / audit clock with ⛔ DPO in post.
   - **C** — the Panel chair owns breaches until an SDF notification. Cost: a trustee carries an operational 72-hour duty; the published
-    contact (Row 8) and the breach owner become two people.
-  Written from the template (§0 gate passed — WHO the Trust names and what it owes a member), Task 0.3.
+    contact (Row 8) and the breach owner become two people; whether a trustee may hold it at all is CQ5 (open).
+  Written from the template (§0 gate passed — WHO the Trust names and what it owes a member), Task 0.3. ⚠ In the NOTE, the options say
+  what changes for a person in plain words; section numbers (`s.8(9)`), CQ ids and row numbers move to the EVIDENCE section.
 
 ## Acceptance Criteria
 
 1. **AC1 — Governance first (Task 0).** Before any code: the decision entry `<DEC>` (AUTHOR-COMMIT; G1–G5 as found law with the Gazette
-   check's date; DL1–DL14 as answered; Row <ROW> minted; ⛔ supersedes a ratified entry) committed ALONE; the PQ1 note and the CQ file written
-   (⛔ sent); FR-99 / epics 14.3 annotated (dated lines, ⛔ rewrites); the `-106` item 8 premise corrected in the entry (DL1); Row <ROW> +
-   Row 8 line + Row 18 line + escrow Domain 7 line present; `deferred-work.md` carries Task 0.6's four items.
+   check's date and the sources actually read — or "Gazette re-check UN-ATTESTED" if it could ⛔ be fetched; DL1–DL14 as answered; Row
+   <ROW> minted; ⛔ supersedes a ratified entry) committed ALONE; the PQ1 note and the CQ file written (⛔ sent); EVERY premise site DL1
+   lists annotated in the precedent shape (dated lines, ⛔ rewrites); DL1's declared DPO-appointment mapping in the entry; the `-106` item
+   8 premise corrected in the entry (DL1); Row <ROW> + Row 8 line + Row 18 line + escrow Domain 7 line present; `deferred-work.md` carries
+   Task 0.6's four items; ⛔ private-corpus text pasted into any tracked file.
 2. **AC2 — Runbooks (DL11).** The three runbooks exist with the template's five sections and the NOT-AUTHORITATIVE header; the breach runbook
-   states both Rule-7 clocks, N2's line, the DL8 triage table with each signal's present surface, and ⛔ channel that is not built; the DPO
-   runbook carries the FR-99 monthly review checklist; ⛔ sign-off row, ⛔ "table-top run" line is written anywhere. README + playbook §2.13
-   updated.
+   states both Rule-7 clocks, N2's lines (incl. the confirmed-leak line), the DL8 triage table with each signal's present surface, and ⛔
+   channel that is not built; the DPO runbook carries the ceremony + its SDF trigger, the DPIA-owner line and the FR-99 monthly review
+   checklist; ⛔ sign-off row, ⛔ "table-top run" line is written anywhere. README + playbook §2.13 AND §3's escalation bullet updated.
 3. **AC3 — Permission (DL3).** `breach.manage` in `SEED_PERMISSION_KEYS`; `PERMISSION_CATALOG_VERSION = <CAT>` with a dated block; the pins in
-   `permissions.test.ts` updated; `super_admin` derives it; `roles.test.ts` pins that ⛔ other role holds it; the dated DL1 correction
+   `permissions.test.ts` updated (`toBe(56)` → `<CAT>`, `toHaveLength(74)` → 75; the 13-bundle pin unchanged); `super_admin` derives it; `roles.test.ts` pins that ⛔ other role holds it; the dated DL1 correction
    line sits beside the `member.data_rights` comment; ⛔ `dpo` role anywhere.
-4. **AC4 — Migration (DL4, N3, N5).** `<MIG>_…` applies on a fresh DB and on top of `0194` in either landing order (journal `when` above);
-   live-DB tests: UPDATE / DELETE / TRUNCATE on either table raise; `twt_app`'s privilege set on both tables is EMPTY and `twt_service`'s is
-   exactly {SELECT, INSERT}; `became_aware_at > opened_at` and an unknown `kind` / `detection_source` are refused by CHECK; each CHECK's
+4. **AC4 — Migration (DL4, N3, N5).** `<MIG>_…` applies on a fresh DB and on top of `0194` (journal `when` above every sibling's at the
+   commit; the other landing order is DL4's note, ⛔ claimed); live-DB tests: UPDATE / DELETE / TRUNCATE on either table raise; `twt_app`'s
+   privilege set on both tables is EMPTY and `twt_service`'s is exactly {SELECT, INSERT}; ⭐ the EXECUTED service-login leg (DL4 (ii)):
+   `openBreachIncident` and `appendBreachEntryInTx` succeed under a BYPASSRLS role IN ROLE `twt_service`, and bare `twt_service` sees ⛔
+   rows; `became_aware_at > opened_at` and an unknown `kind` / `detection_source` are refused by CHECK; each CHECK's
    list equals its domain tuple (`pg_get_constraintdef`); `recorded_at` is trigger-stamped; `pnpm db:check` clean.
-5. **AC5 — Open an incident.** `POST /api/v1/data-protection/breaches` (`breach.manage`): body `{ isRehearsal, title, becameAwareAt,
-   detectionSource, detectionSignalRef? }`; `becameAwareAt` in the future ⇒ 400; a nameless admin ⇒ refused before any write (the
-   bridge-switch shape); one row + one `data_protection.breach.opened` audit line; without the grant ⇒ 403 (the global-gate denial audit
-   as today); a non-admin session ⇒ 401.
+5. **AC5 — Open an incident.** `POST /api/v1/data-protection/breaches` (`breach.manage`, `Idempotency-Key` REQUIRED — DL5): body
+   `{ isRehearsal, title, becameAwareAt, detectionSource, detectionSignalRef? }`; responds **200 with the detail DTO** (AC7's shape);
+   `becameAwareAt` in the future ⇒ 400; a missing key ⇒ 400 `breach.idempotency_key_required`; the same key twice ⇒ ONE incident, the
+   same response; a nameless admin ⇒ **409 `admin.display_name_missing`** (`AdminDisplayNameMissingError`) before any write (the
+   bridge-switch shape); one row + one `data_protection.breach.opened` audit line; without the grant ⇒ 403 (`authz.denied` through
+   `deps.auditSink`, as today); ⛔ admin session ⇒ 401 `auth.session_required`.
 6. **AC6 — Append an entry.** `POST /api/v1/data-protection/breaches/:incidentId/entries` with `{ kind, payload }` — each DL5 kind accepted
    with a valid payload and refused 400 with an invalid one (one test per kind); `signoff_recorded` with < 2 distinct names ⇒ 400;
    `board_extension_recorded.grantedUntil` ≤ the current due time ⇒ 400; any append after `closed` ⇒ 409 `breach.incident_closed`; unknown
-   incident ⇒ 404; a DB CHECK violation ⇒ 400 (⛔ 500); one `data_protection.breach.entry_appended` audit line per accepted append; the
-   same `Idempotency-Key` twice ⇒ ONE entry, the same response; the DL4 concurrency spec passes; a bodyless request is sent `'{}'` in
+   incident ⇒ 404; a DB CHECK violation ⇒ 400 (⛔ 500); one `data_protection.breach.entry_appended` audit line per accepted append and
+   ZERO `entry_appended*` lines for a pre-checked refusal (404 / 409 / extension 400 — DL5); a missing key ⇒ 400; the same
+   `Idempotency-Key` twice ⇒ ONE entry, the same response; a claimed-but-unfinished key ⇒ 409 `breach.idempotency_in_progress`; the DL4
+   concurrency spec passes; a bodyless request is sent `'{}'` in
    tests ([[project_fastify_empty_json_body_400]]).
 7. **AC7 — Read.** `GET /api/v1/data-protection/breaches?limit=` (bounded, default 20, max 100; newest `opened_at` first; response
    `{ items: [...] }` — ⛔ a named array such as `{ incidents }`, which `forced-pagination.spec.ts` cannot see, making it vacuous; item =
    id, title, isRehearsal, openedAt, becameAwareAt, detectionSource + DL6's status / due / overdue / recorded flags — ⛔ narrative) passes
-   `forced-pagination.spec.ts` and `login-wall.spec.ts`; `GET …/:incidentId` returns the incident, every entry in `entry_seq` order, and
-   `deriveBreachIncidentView`'s output, and writes ONE `data_protection.breach.viewed` audit line.
+   `forced-pagination.spec.ts` and `login-wall.spec.ts`. ⚠ `forced-pagination.spec.ts` walks the LIVE `app.swagger()` and examines only a
+   route that declares `responses['200']` (top-level array or `{ items: array }`) and needs a query `limit` with a numeric `maximum` — a
+   route WITHOUT a 200 schema is never examined and the gate passes vacuously. So every new route declares `schema: { querystring:
+   z.object({ limit: z.coerce.number().int().min(1).max(N).default(20) }).strict(), response: { 200: … } }` (collection routes; the
+   `ListChecksQuery` shape in `audit-log/index.ts`) or at least `response: { 200: … }` (detail / members-on-record — named arrays such as
+   the detail's `entries` are ⛔ flagged; ⛔ allow-list entry needed). `GET …/:incidentId` returns the incident, every entry in
+   `entry_seq` order, and `deriveBreachIncidentView`'s output, and writes ONE `data_protection.breach.viewed` audit line (⛔ line on 404).
 8. **AC8 — Derivation (DL6).** Unit tests of `deriveBreachIncidentView`: due = aware + 72h; an extension moves it; overdue only when open,
    unreported and past due; `closed` ⇒ status closed and ⛔ overdue; the latest `assessment` wins. The API and the admin page import the
    SAME function (a grep-able single definition).
@@ -421,67 +548,97 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
    `REHEARSAL — DO NOT SEND`; ⛔ draft contains a hard-coded trust name. The admin page shows each draft read-only with "Copy" and ⛔ send
    control.
 10. **AC10 — The one live link (DL8).** `GET /api/v1/data-protection/signals` (bounded, `{ items }`, `breach.manage`) lists failed,
-    unacknowledged integrity checks and "Open an incident from this" pre-fills source / ref / awareness; a live-DB test seeds its OWN
-    `chain_valid = false` check and its own acknowledged failed check and asserts by MEMBERSHIP (own unacknowledged present, own acknowledged
-    absent — both tables are append-only and accumulate; ⛔ "sees only"). The story's Completion Notes state the narrowing: 4.8, 1.16b and
+    unacknowledged integrity checks and "Open an incident from this" pre-fills source / ref / awareness (via `isoToIstLocalInput`); a
+    live-DB test seeds its OWN `chain_valid = false` check and its own acknowledged failed check (the insert-helper shape of
+    `apps/api/tests/integration/audit-integrity-ui.spec.ts`; 0010's CHECKs need coherent start / end / broken values) and asserts by
+    MEMBERSHIP (own unacknowledged present, own acknowledged absent — both tables are append-only and accumulate; ⛔ "sees only"); after an
+    incident is opened with `detectionSignalRef = check_id`, that item's `incidentIds` contains it and the page shows "Incident opened" + a
+    link in place of the action. The story's Completion Notes state the narrowing: 4.8, 1.16b and
     architecture's five are runbook triage + a deferred item, ⛔ wired.
-11. **AC11 — Members on record (DL9), by the arm BigDev picks.** (a): the endpoint returns `total` (⛔ `anonymized`) and per-state counts
-    trust-wide across ≥ 2 seeded Pariwars, `anonymized` visible in `byState`; the panel is labelled "Members on record"; ⛔ threshold or
+11. **AC11 — Members on record (DL9), by the arm BigDev picks.** (a): the endpoint returns `total` (⛔ `anonymized`), `pariwarCount`
+    (distinct Pariwars over the counted rows) and per-state counts trust-wide across ≥ 2 seeded Pariwars (asserted as a DELTA over a
+    before-read — other tests' members accumulate), `anonymized` visible in `byState`, every one of the nine state keys present; the panel is labelled "Members on record"; ⛔ threshold or
     alert. (b): ⛔ endpoint, ⛔ panel; the SDF-watch runbook carries the count SQL with the same `total` rule. Strike the other arm at Task
     0.2.
-12. **AC12 — Admin page (DL2).** `/data-protection/breaches` behind `hasBreachManage` (`AccessDenied` otherwise — a SIBLING of
-    `IntegrityGateView`, which is hard-wired to `hasAuditVerify`; ⛔ reuse it);
+12. **AC12 — Admin page (DL2).** `/data-protection/breaches` behind `hasBreachManage` (a module-local `BreachGateView` + its own
+    `AccessDenied` — the `IntegrityRoute` / `ProvisioningRoute` shape; `IntegrityGateView` is hard-wired to `hasAuditVerify` and its
+    `AccessDenied` is ⛔ exported; ⛔ reuse them); query keys `['breaches', 'list']`, `['breaches', 'detail', id]`, `['breaches',
+    'signals']`, `['breaches', 'members-on-record']`; after an open ⇒ navigate to `/data-protection/breaches/$incidentId` and invalidate
+    list + signals; after an append ⇒ invalidate detail + list; a 409 `breach.incident_closed` ⇒ refetch the detail and show the closed
+    state (forms hidden); a 409 `admin.display_name_missing` ⇒ a "set your display name first" message in the module's `i18n-en.ts` (the
+    shipped handling in `feature-flags/FeatureFlagsPage.tsx` / `approval-warning-reasons/` is the model);
     list with overdue and rehearsal badges; open form (react-hook-form + the contracts schema); detail page with the timeline, one form per
     kind, the clock panel (IST), the drafts, and the rehearsal banner; the free-text hint (N4); copy in `breach-reporting/i18n-en.ts`.
     vitest + jsdom tests mocking `../src/api/client.js` cover the gate, open, append, the closed state, the rehearsal banner and the drafts.
 13. **AC13 — Gates.** Every new path registered by hand in `packages/contracts/scripts/emit-openapi.ts` (`registerPath` — the bridge
-    switch's entries are the model; re-running the emitter WITHOUT them changes nothing), then `pnpm contracts:emit-openapi` re-run and
-    `openapi/v1.yaml` committed; the microcopy gate green — per-file `allow` entries in `microcopy.yaml` with `pattern: '\breport'` and a
-    reason ("statutory DPDP Rule 7(2)(b) term — 'report to the Board' — staff surface") for every new `breach-reporting/*` file,
-    `BreachReportingRoute.tsx` and `api/hooks.ts` (Story 10.7's precedent; ⛔ reword the statute's language); `pnpm ci:local` green on a fresh container
+    switch's entries are the model; re-running the emitter WITHOUT them changes nothing; paths written `{incidentId}`; every new schema
+    ALSO registered as a component — `X.openapi('X')` in a components map, as `degradedModeComponents` does; the `Idempotency-Key`
+    header documented in the description text, as the drive-target entries do), then `pnpm contracts:emit-openapi` re-run and
+    `openapi/v1.yaml` committed (`contracts:check-openapi-determinism` byte-compares it); the microcopy gate green — run `scripts/microcopy`
+    FIRST and add one `{ file, pattern: '\breport', reason: "statutory DPDP Rule 7(2)(b) term — 'report to the Board' — staff surface" }`
+    entry for EACH file it actually flags (the rule is `\breport\b`, word-bounded, case-insensitive — "reporting", "Reports",
+    `boardReport`, `board_report_recorded`, `breach-reporting/` do ⛔ match; `file:` is matched by `endsWith`, ⛔ globs; `api/client.ts`
+    already carries Story 10.7's entry; ⛔ reword the statute's language), and ⛔ tone-rule hit (TR15); `pnpm ci:local` (`bash
+    scripts/ci-local.sh`) green on a fresh container
     ([[project_known_livedb_test_failures]] — own container, DB named `twt_dev`); every push prefixed `DATABASE_URL=<story port>`
     ([[project_prepush_hook_inherits_5432]]).
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `3d6b46c5` is an ancestor of HEAD; re-derive the NUMBERS block on every ref (decision, roster row,
-        migration, catalog version, ledger letter); re-check G5 against the e-Gazette (commencement; any SDF notification; any Board portal)
-        and write the check's date into the entry. `ListAgents` + `git branch --show-current` before every commit
+  - [ ] 0.1 `git fetch origin`; confirm `3d6b46c5` is an ancestor of HEAD; re-derive the NUMBERS block on every ref AND every worktree's
+        dirty tree (decision, roster row, migration, catalog version, ledger letter); re-check G5 against the e-Gazette (commencement; the
+        corrigendum G.S.R. 892(E); any SDF notification; any Board portal; any window an SDF notification would set for a DPO) and write
+        the check's date into the entry. ⚠ Record each source ACTUALLY read (URL + date). If the e-Gazette cannot be fetched, the entry
+        says "Gazette re-check UN-ATTESTED — secondary sources only", ⛔ "checked". A negative ("⛔ SDF notified") is written "none found
+        by <method>, <date>" — a search can ⛔ prove an absence. `ListAgents` + `git branch --show-current` before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL14 to BigDev (DL9 (a)/(b)); record the answers verbatim in this file.
+  - [ ] 0.2 ⛔ **STOP — HUMAN.** Put DL1–DL14 to BigDev (DL9 (a)/(b)); proceed ONLY on BigDev's verbatim answers, recorded verbatim in this
+        file. ⛔ Infer, default or "take as recommended" an answer BigDev did not give.
   - [ ] 0.3 Write the PQ1 note from the template (by path, ⛔ copied):
-        `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-14-3-who-owns-a-breach.md` — question, THE ONE FACT, A/B/C with
-        an honest cost each, evidence LAST; run the template's checks. Status WRITTEN, ⛔ sent (BigDev sends). Written now, committed
-        AFTER 0.4's entry (the entry is the first commit).
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, next free — `-433` at authoring; peers 6.22 / 13.2 reserve the same — re-derive), committed
-        ALONE, FIRST; try the write — if refused, ask once ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 The CQ file (DL13) + Row 18 dated line; Row <ROW> appended + Row 8 line (DL12); FR-99 + epics 14.3 dated annotations (DL1); escrow
-        Domain 7 dated line.
-  - [ ] 0.6 `deferred-work.md` items: (i) live feeds for 4.8 / 1.16b / architecture's five signals → Category 5 (trigger: the Category-5
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-14-3-who-owns-a-breach.md`, in the template's order: the
+        ⏳ AWAITING block; The question (one sentence + why it needs the Panel, ⛔ clause ids); The one fact; the options table (what changes
+        for a person / honest cost) + Our reading; What is at stake (live / blocked: nothing / if nothing is decided); How much to trust
+        this note; In plain English; EVIDENCE E1–E4 LAST (E4's commands RUN before sending). PQ1's `s.8(9)` / `CQ4` / Row 8 references move
+        to the evidence. ⛔ Private-corpus text — paraphrase with section numbers. Run the template's checks. Status WRITTEN, ⛔ sent
+        (BigDev sends). Written now, committed AFTER 0.4's entry (the entry is the first commit).
+  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, next free — `-433` at authoring; peers 6.22 / 12.2 reserve the same, 13.2 possibly —
+        re-derive), committed ALONE, FIRST; try the write — if refused, ask once ([[project_decision_log_writes_user_inserted]]).
+  - [ ] 0.5 The CQ file (DL13) + Row 18 dated line; Row <ROW> appended (Row 45's shape) + Row 8 line (DL12); EVERY premise site's dated
+        annotation (DL1's list, precedent shapes; re-grep `MeitY` in `prd.md` and `epics.md`); escrow Domain 7 dated line.
+  - [ ] 0.6 `deferred-work.md` — a NEW newest-first section `## Deferred from: story 14-3-dpo-breach-reporting-operational-readiness.md —
+        the build decisions `<DEC>` (<date>)`, one-line intro, items `- **<title>** [<file / symbol>; <id>] — <what and why>. ⭐ Trigger:
+        <…>.`, then `---`. Items: (i) live feeds for 4.8 / 1.16b / architecture's five signals → Category 5 (trigger: the Category-5
         observability story's create-story); (ii) a DLT-registered breach SMS text (trigger: Row <ROW> (f)); (iii) a human-reviewed Hindi member
         notice template (trigger: go-live of member comms in Hindi); (iv) members-on-record omits nominees / known people / claim contacts
         (trigger: an SDF notification or CQ4's return).
-  - [ ] 0.7 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]] — verify the YAML parses).
-- [ ] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13. Cite sections, ⛔ paste private-corpus text.
+  - [ ] 0.7 Ledger line (next free letter — DL14) + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]] — verify the
+        YAML parses).
+- [ ] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13 and §3's escalation bullet. Cite sections, ⛔ paste
+      private-corpus text (this repo is public — `-167`).
 - [ ] **Task 2 — Permission (AC3)** — DL3; run `packages/domain/tests/rbac/permissions.test.ts` and `roles.test.ts`.
 - [ ] **Task 3 — Migration + schema + domain module (AC4, AC6)** — DL4: `<MIG>`, journal entry (`when` above every sibling), Drizzle schema,
-      `packages/domain/src/breach/` (tuples + `openBreachIncident` / `appendBreachEntry` (row lock) / `listBreachIncidents` /
-      `readBreachIncident` / the signals read / the members-on-record count); the regression spec
-      `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts` (⛔ policy file — DL4); the concurrency spec.
+      tuples in `schema/breach_incidents.ts`, `packages/domain/src/breach/` (`openBreachIncident` / `appendBreachEntry` +
+      `appendBreachEntryInTx` (ADVISORY lock — ⛔ `FOR UPDATE`, TR18) / `listBreachIncidents` / `readBreachIncident` / the signals read
+      (with `incidentIds`) / `countMembersOnRecord`; explicit `clampLimit`); the regression spec
+      `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts` incl. the EXECUTED service-login leg (⛔ policy
+      file — DL4); the concurrency spec.
 - [ ] **Task 4 — Contracts (AC5–AC9)** — `packages/contracts/src/breach/` (`schemas.ts`, `derive.ts`, `drafts.ts`, `index.ts`; re-export from
       `src/index.ts`); tuples mirrored + pinned to the domain export; unit tests for derive + drafts
       ([[project_contracts_tests_outside_tsc]] — run them, typecheck does ⛔ see them).
 - [ ] **Task 5 — API (AC5–AC7, AC10, AC11)** — `apps/api/src/modules/data-protection/{index,routes,handlers}.ts` registered in `server.ts`;
-      global guards (⛔ `scopeResolutionHook` / `requirePermissionHook` — TR3); handlers in the bridge-switch shape (ids by `randomUUID()`
-      before the audit intent; 23514 ⇒ 400; the idempotency key on appends); live-DB specs under
+      global guards (⛔ `scopeResolutionHook` / `requirePermissionHook` — TR3); route schemas with `querystring` / `response[200]` (AC7)
+      and the read rate limit; handlers in the bridge-switch shape (ids by `randomUUID()` before the audit intent; pre-checks before the
+      intent; 23514 ⇒ 400 via a copied `isCheckViolation`; the REQUIRED idempotency key on open AND append in DL5's order); live-DB specs under
       `apps/api/tests/integration/data-protection/` (assert own rows by membership — append-only rows cannot be cleaned; delete
       `role_grants` after each test, as `audit-integrity-ui.spec.ts` does); `registerPath` entries in
-      `packages/contracts/scripts/emit-openapi.ts`, then `pnpm contracts:emit-openapi`.
-- [ ] **Task 6 — Admin (AC12, AC9, AC10, AC11)** — module + route + nav + `hasBreachManage` + client / hooks additions in `api/client.ts` /
-      `api/hooks.ts` + the IST input helper; `microcopy.yaml` per-file `allow` entries (AC13); tests.
-- [ ] **Task 7 — Gate + records (AC13)** — `ci:local` on a fresh container; story Completion Notes (including AC10's narrowing and every
-      un-attested item: ⛔ table-top run, ⛔ sign-off, ⛔ counsel return, ⛔ device / browser pass); File List; ledger; row → review.
+      `packages/contracts/scripts/emit-openapi.ts` (+ component registrations — AC13), then `pnpm contracts:emit-openapi`.
+- [ ] **Task 6 — Admin (AC12, AC9, AC10, AC11)** — module + route + nav + `BreachGateView` / local `AccessDenied` + `hasBreachManage` +
+      client / hooks additions in `api/client.ts` / `api/hooks.ts` (query keys, invalidation, `newIdempotencyKey()` in a `useRef`) + the
+      two-way IST helper in `correction-chase/ist.ts`; `microcopy.yaml` entries only for files the gate flags (AC13); tests.
+- [ ] **Task 7 — Gate + records (AC13)** — `ci:local` on a fresh container; story Completion Notes (including AC10's narrowing, DL4's
+      `0194` landing-order note, the Row 26 `members` grant residual, and every un-attested item: ⛔ table-top run, ⛔ sign-off, ⛔ counsel
+      return, ⛔ device / browser pass, the Gazette re-check if it was un-attested); File List; ledger (next free letter); row → review.
 
 ## Dev Notes
 
@@ -503,7 +660,9 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - **TR9 — JSDoc + markdown.** `**7(2)(b)**` inside a `/** */` block contains `**/` and closes the comment
   ([[project_markdown_emphasis_closes_jsdoc]]) — write sub-rule labels without bold in code comments.
 - **TR10 — ⛔ fabricate the un-attested.** ⛔ Sign-off rows in `operational-readiness-ledger.md`, ⛔ "table-top run", ⛔ counsel return,
-  ⛔ `submitted` on Row 18 ([[feedback_record_unattested_no_backfill]]).
+  ⛔ `submitted` on Row 18 ([[feedback_record_unattested_no_backfill]]); ⛔ a named breach owner / DPO / Row 8 contact anywhere; ⛔ PQ1 or
+  the CQ file marked sent or "shown to Panel" ([[feedback_shown_to_panel_means_sent]]); ⛔ a DL answer BigDev did not give; ⛔ "Gazette
+  checked" when it could ⛔ be fetched (Task 0.1).
 - **TR11 — ⛔ "counsel is not engaged".** Write "counsel has not been asked about breach reporting / DPO / SDF" (G10).
 - **TR12 — Free text can still hold PII.** The UI hint (N4) is guidance, ⛔ a control; the detail read is audited (DL10). ⛔ Add a member-id
   lookup that would render a name into the breach page.
@@ -512,11 +671,20 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - **TR14 — Admin mutate callbacks.** Per-row actions use per-call `mutateAsync` ([[project_tanstack_mutate_callbacks_latest_only]]); a
   refetch can rejoin a hung fetch ([[project_tanstack_refetch_rejoins_hung_fetch]]).
 - **TR15 — Microcopy gate.** `microcopy.yaml` scans `apps/admin/src/**` (comments too) and maps `report → Sahyog Vivran` with ⛔
-  `member_only` — "Board report" turns `ci:local` red until the per-file `allow` entries (AC13) exist. `\bURGENT\b` is a tone rule.
+  `member_only` — "Board report" turns `ci:local` red until the per-file `allow` entries (AC13) exist. The TONE rules also run on admin
+  code, comments included, flags `'gi'` (case-insensitive). Avoid: "urgent" (any case); "outside the system / app / platform" (say "by
+  staff, by their own means"); "does / did / will / would not count" (say "excludes"); "action required", "needs action"; "act now",
+  "last chance", "final notice", "N% complete"; "receipt" (say "reference"). `packages/contracts/src` is ⛔ scanned (so `drafts.ts`'s
+  notice text is safe there).
 - **TR16 — The superuser hides grants.** The test DB connects as a superuser, so a missing `twt_service` GRANT passes every test and
-  fails only in production — the regression spec pins the privilege sets (DL4).
-- **TR17 — Numbers are contested.** 6.22, 6.39 and 13.2 reserve `-433` / Row 46 / `0195` / catalog 57 in their files; re-derive at each
-  commit (NUMBERS block).
+  fails only in production — the regression spec pins the privilege sets AND executes the writes under a BYPASSRLS role IN ROLE
+  `twt_service` (DL4 (ii)).
+- **TR17 — Numbers are contested.** 6.22, 6.39 and 12.2 reserve `-433` / Row 46 / `0195`–`0197` / catalog 57 in their files; 13.2
+  reserves a migration (`NNNN`) and `-433` only if needed; ledger `-11-01c` / `-d` are already doubly held. Re-derive at each commit
+  (NUMBERS block).
+- **TR18 — ⛔ row locks.** `SELECT … FOR UPDATE` / `FOR SHARE` / `FOR NO KEY UPDATE` / `FOR KEY SHARE` on either table needs an UPDATE
+  privilege `twt_service` does ⛔ have (and must ⛔ get — N3): production fails 42501, the superuser test DB passes. Serialise appends with
+  `pg_advisory_xact_lock(hashtext('breach_incident:' || id))` (DL4).
 
 ### What this story does ⛔ do
 
@@ -536,9 +704,11 @@ PQ1, there).
 - UPDATE: `packages/domain/src/rbac/permissions.ts` (+ `permissions.test.ts` / `roles.test.ts` pins), `packages/contracts/src/index.ts`,
   `packages/contracts/scripts/emit-openapi.ts`, `microcopy.yaml`, `packages/domain/src/index.ts` (export `breach`),
   `packages/domain/src/schema/index.ts`, `apps/api/src/server.ts`, `apps/admin/src/router.tsx`, `apps/admin/src/routes/RootLayout.tsx`,
-  `apps/admin/src/api/{client,hooks}.ts`, `openapi/v1.yaml` (emitted), `docs/runbooks/README.md`, `docs/knowledge-transfer/on-call-playbook.md`,
+  `apps/admin/src/api/{client,hooks}.ts`, `apps/admin/src/modules/correction-chase/ist.ts` (the two-way IST input helper, + its test),
+  `openapi/v1.yaml` (emitted), `docs/runbooks/README.md`, `docs/knowledge-transfer/on-call-playbook.md` (§2.13 + §3),
   `docs/launch-gate-inventory/inventory-roster.md`, `docs/legal-counsel-engagement/review-artifact-roster.md`, `docs/escrow/credential-inventory.md`,
-  `prd.md` FR-99 + `epics.md` 14.3 (dated lines), `.decision-log.md`, `deferred-work.md`, `sprint-status.yaml`.
+  `prd.md` (FR-99 + §4.14 DPDPA paragraph) + `epics.md` (FR inventory, Epic 14 intro + User Outcome, Story 14.3 title + Given) — dated
+  lines, `.decision-log.md`, `deferred-work.md`, `sprint-status.yaml`.
 - Preserve: the integrity page owns acknowledgement (⛔ write `audit_integrity_acknowledgements` from here); `audit-log` routes unchanged.
 
 ### References
@@ -571,3 +741,13 @@ PQ1, there).
   lock + a concurrency spec; `clock_timestamp()` + `entry_seq` ordering; `-106` item 8's premise corrected; AC11 two-armed + `total`; named
   helpers — `formatIst`, `hasBreachManage`, `MemberLifecycleStateWire`, ids before audit, the `.viewed` write, `{ items }`, a signals route;
   hand-registered OpenAPI paths), ~12 low — ALL applied.
+- 2026-11-01 — v1.2: second validation (`bmad-create-story validate 14.3`) by three parallel fresh-context, read-only verifiers (DB /
+  domain / RBAC; API / contracts / admin / gates; governance / law — the law against the e-Gazette primary texts). 3 critical, 16
+  should-add, 14 low — ALL applied on BigDev's "all". Critical: the append's `FOR UPDATE` row lock needs an UPDATE grant `twt_service`
+  does ⛔ have (42501 in production, green on the superuser test DB) ⇒ an advisory lock + an EXECUTED service-login regression leg +
+  TR18; the repo is PUBLIC ⇒ every private-corpus quote paraphrased with its section number (`-167`); idempotency REQUIRED on open AND
+  append with `recordResult` outside `mutate` and ⛔ `release` after commit. Should-add: pre-checks before the audit intent; the tone
+  rules; forced-pagination needs a `response[200]` schema; signals carry `incidentIds`; admin query keys / invalidation / 409 handling /
+  the two-way IST helper; the service-login posture restated; ledger `-11-01c` collision + DL14 staleness; DL1 annotates every premise
+  site and declares the DPO-appointment mapping; N2's confirmed-leak line; PQ1's costs (⛔ Row 8 person exists); G5 corrected from
+  G.S.R. 843(E) / S.O. 5458(E) / G.S.R. 892(E); Task 0.1 / 0.2 / TR10 anti-fabrication; precedent paths. ⛔ Code; ⛔ decision entry.

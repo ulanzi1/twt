@@ -39,7 +39,7 @@ It exists only in the MAIN checkout, git-ignored. Cite its sections by number; �
 
 # Story 11b.5a: Kinship — Capture, Review and the Public `<KinshipLattice>`
 
-Status: in-progress
+Status: review
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -670,12 +670,12 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     ⏳ a dated note in `architecture.md` :1839-1846 recording `-426` (the amendment is owed before
     go-live — `-426` Consequence 3); (v) the sprint row
     `ready-for-dev` → `in-progress` and the ledger (both lists).
-- [ ] **Task 2 — Vocabulary and contracts (AC2, AC5, AC7)**
-  - [ ] 2.1 Domain `vocab.ts`: `MEMORIAL_KINSHIP_RELATIONS` (KL3 order; doc-block: relation TO THE MEMBER WHO DIED), `MemorialKinshipEntry`
+- [x] **Task 2 — Vocabulary and contracts (AC2, AC5, AC7)**
+  - [x] 2.1 Domain `vocab.ts`: `MEMORIAL_KINSHIP_RELATIONS` (KL3 order; doc-block: relation TO THE MEMBER WHO DIED), `MemorialKinshipEntry`
     (`{ relation; name; inPhoto?: true }` — KL15), `MemorialKinshipOmission`. Limits `MEMORIAL_KINSHIP_MAX_ENTRIES = 20`, `MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS = 200` (KL4, BigDev
     2026-10-31) in **`packages/contracts/src/memorial/text-classes.ts`** (there is ⛔ no domain `text-classes.ts`; the handler imports
     its limits from `@twt/contracts`).
-  - [ ] 2.2 Contracts copies + `memorial.test.ts` lockstep legs; `MemorialKinshipListSchema` (`.strict()` entries with
+  - [x] 2.2 Contracts copies + `memorial.test.ts` lockstep legs; `MemorialKinshipListSchema` (`.strict()` entries with
     `inPhoto: z.literal(true).optional()` — `false` refused; `[]` refused) — the ONE schema for Send AND every read (KL15);
     `MEMORIAL_SEND_FIELDS` + `'kinship'`; `MemorialReviewDecisionInput.kinshipLeftOut`; `validateMemorialDecision` — kinship problems
     (names grepped first), `MemorialDecisionCandidate.kinshipLeftOut`, `MemorialDecisionSubject.kinshipLength`, and **all three
@@ -689,74 +689,74 @@ in its own container ([[project_known_livedb_test_failures]]), with `DATABASE_UR
     `apps/api/tests/integration/{memorial-takedown/takedown,memorial/review-memorial}.spec.ts` (re-grep `familyMemorial: {` and
     `photoLeftOut` at the time). Re-emit `openapi/v1.yaml` (`pnpm contracts:emit-openapi`). ⚠ Contracts tests sit outside tsc — run
     them ([[project_contracts_tests_outside_tsc]]).
-  - [ ] 2.3 ONE pure grouping helper (entries + left-out indexes → ordered `{relation, names[]}` rows) — in
+  - [x] 2.3 ONE pure grouping helper (entries + left-out indexes → ordered `{relation, names[]}` rows) — in
     `packages/contracts/src/memorial/kinship.ts` so the API, the mobile preview and the admin all import it (⛔ not `@twt/ui` for
     `apps/public` — 11b.5 MV3; the page receives grouped rows). The helper DROPS `inPhoto` (⛔ never in its output). The helper stays free of `@twt/ui`; each caller that renders applies
     `isolateMemorialBidi` per name (the API before the wire; the mobile preview).
-- [ ] **Task 3 — Migration `0193` — RE-TAKE first (`0194` if 12-1 has committed `0193`) (AC3, AC5)**
-  - [ ] 3.1 Hand-author `0193_memorial-kinship.sql` + `_journal.json` (idx 193, `when` > 0192's — KL5's convention): idempotent (KL5);
+- [x] **Task 3 — Migration `0193` — RE-TAKE first (`0194` if 12-1 has committed `0193`) (AC3, AC5)**
+  - [x] 3.1 Hand-author `0193_memorial-kinship.sql` + `_journal.json` (idx 193, `when` > 0192's — KL5's convention): idempotent (KL5);
     the column, its GRANT UPDATE, the `kinship_omissions` column, `memorial_kinship_omissions_valid(jsonb)` mirroring 0182:47-67's
     NULL-safe / ORDER-safe `CASE WHEN` chain (type before value; `^[0-9]+$` on `->>`; numeric cap 2147483647), its CHECK (in a
     `duplicate_object` guard), the DROP IF EXISTS + ADD of `omissions_iff_action`. Drizzle schema edits. `db-check` green.
-  - [ ] 3.2 `memorial-policy-regression.spec.ts`: `SCRUBBABLE`, (c)/(c2), the named-CHECK list thirteen → fourteen (:303-321), CHECK
+  - [x] 3.2 `memorial-policy-regression.spec.ts`: `SCRUBBABLE`, (c)/(c2), the named-CHECK list thirteen → fourteen (:303-321), CHECK
     legs (kinship-only omission valid under `approved_with_omissions`; refused under `approved`; malformed element refused), a scrub
     leg over a row with a list. (`(u)` :732-745 walks every column — no edit.)
-- [ ] **Task 4 — API (AC2, AC4, AC5, AC7, AC8, AC9)**
-  - [ ] 4.1 Send: accept/parse `kinship`; validate before the lock (`[]` refused; any `inPhoto` when `withPhoto` (`handlers.ts:504`) is
+- [x] **Task 4 — API (AC2, AC4, AC5, AC7, AC8, AC9)**
+  - [x] 4.1 Send: accept/parse `kinship`; validate before the lock (`[]` refused; any `inPhoto` when `withPhoto` (`handlers.ts:504`) is
     false ⇒ `memorial.kinship_invalid`); encrypt with the body (before the lock); insert. Refusal mapping. Audit: `has_kinship` only.
-  - [ ] 4.2 v4 in `authorisation-copy.ts` — minted with ③ as approved (if R2 = B arrives after minting, that is a v5) (Q-copy-3 as approved, ④ as re-approved: both places, the declaration ③, take-down ⑤B); the
+  - [x] 4.2 v4 in `authorisation-copy.ts` — minted with ③ as approved (if R2 = B arrives after minting, that is a v5) (Q-copy-3 as approved, ④ as re-approved: both places, the declaration ③, take-down ⑤B); the
     entry type gains `carriesGuardianDeclaration` (v1–v3 `false`, v4 `true`); current → v4; the `memorial-status.test.ts` pins of AC4.
-  - [ ] 4.3 Member view + review detail: decrypt after the tx (`dec()` on the review side); return the list and its left-out indexes;
+  - [x] 4.3 Member view + review detail: decrypt after the tx (`dec()` on the review side); return the list and its left-out indexes;
     a kinship decrypt failure on the member view ⇒ `unavailable`, `canSend: false`; the review detail computes `guardianDeclaration` from
     the registry flag (an unknown id ⇒ `false`) — and the member view computes the same for its latest submission; every read parses with the Task 2.2 schema.
-  - [ ] 4.4 Decide: validate kinship omissions against the decrypted length; audit hash + `kinship_left_out`; insert.
-  - [ ] 4.5 Public: `readPublicMemorial` returns `kinshipCiphertext` + `kinshipOmissions`; `resolvePublicFamilyMemorial` decrypts;
+  - [x] 4.4 Decide: validate kinship omissions against the decrypted length; audit hash + `kinship_left_out`; insert.
+  - [x] 4.5 Public: `readPublicMemorial` returns `kinshipCiphertext` + `kinshipOmissions`; `resolvePublicFamilyMemorial` decrypts;
     sentinel / bad envelope / unparsable / schema failure ⇒ the **whole** memorial `null` (KL10's one rule; a KMS outage rethrows as
     today); parses with the Task 2.2 schema (a ticked list is valid — a leg); groups via the Task 2.3 helper (⛔ no `inPhoto` on the wire);
     `isolateMemorialBidi` per name; the doc-block (:4-10) gains the list.
-  - [ ] 4.6 Take-down `shown.kinship` from the same helper (`memorial-takedown/handlers.ts:187-218`); a kinship sentinel joins the
+  - [x] 4.6 Take-down `shown.kinship` from the same helper (`memorial-takedown/handlers.ts:187-218`); a kinship sentinel joins the
     `takedownNotFound()` OR at :194.
-  - [ ] 4.7 ⚠ FIRST rebase onto 6.38 (STOP 2 fired — `e813e5ee` changes `anonymize.ts` / `resolveRtbfLegality`); then the
+  - [x] 4.7 ⚠ FIRST rebase onto 6.38 (STOP 2 fired — `e813e5ee` changes `anonymize.ts` / `resolveRtbfLegality`); then the
     `anonymizeMember` scrub line; `rtbf-anonymize.test.ts:644` key list; live legs; AC9's legality sentence from 6.38's code.
-- [ ] **Task 5 — Mobile (AC2, AC6)**
-  - [ ] 5.1 `family.tsx` (empty start, *"How is each person related to {the member}?"*, *"One person per row"*, picker, add/remove,
+- [x] **Task 5 — Mobile (AC2, AC6)**
+  - [x] 5.1 `family.tsx` (empty start, *"How is each person related to {the member}?"*, *"One person per row"*, picker, add/remove,
     Skip/Continue, copy 2.4A under the body, the *"In the photo"* tick only when the Send will carry a photo (KL15), *"Start from the list I
     sent"* on a re-send (ticks copied only with the previous photo kept; choosing "without photo" or a NEW photo clears every tick);
     accessible labels on every control — `memorial-a11y-scan` walks the
     directory); `photo.tsx` — BOTH pushes (:176, :234) → `family`; `preview.tsx` link + list render (bidi-isolated per name) + *"No
     family list"* line.
-  - [ ] 5.2 Draft `kinship` field; `sendContent` + `JSON.stringify(d.kinship ?? [])`; `memorialDraftHasContent` +
+  - [x] 5.2 Draft `kinship` field; `sendContent` + `JSON.stringify(d.kinship ?? [])`; `memorialDraftHasContent` +
     `(d.kinship?.length ?? 0) > 0`; `use-memorial-send.ts` FormData part (only when non-empty; strips every `inPhoto` when the photo test at :286-287 is false — a unit leg).
-  - [ ] 5.3 `outcome.tsx` left-out lines; when `view.guardianDeclaration` is true, copy 4.3 replaces `reason.identifies_a_child` (a render leg); `memorial-copy.ts` refusal mapping; `memorial.json` en + hi keys incl. `kinship.<code>` +
+  - [x] 5.3 `outcome.tsx` left-out lines; when `view.guardianDeclaration` is true, copy 4.3 replaces `reason.identifies_a_child` (a render leg); `memorial-copy.ts` refusal mapping; `memorial.json` en + hi keys incl. `kinship.<code>` +
     `kinship.heading` (Q-copy answers) — the ONE home of the labels.
-  - [ ] 5.4 Tests: `memorial-screens-render.test.ts` (family step, re-send start, preview, outcome), `memorial-draft.test.ts` (R6 leg —
+  - [x] 5.4 Tests: `memorial-screens-render.test.ts` (family step, re-send start, preview, outcome), `memorial-draft.test.ts` (R6 leg —
     an edit to the list alone mints a new key; ticks stripped with no photo), `memorial-source-pins.test.ts` — **`family` joins the screen lists at :56 (no
     `useStepUpGate`), :64 (R20 `SCREENS`), :73-75 (draft loaded in an effect) and :107-112 (T6, re-read on focus)**; route present;
     `gcTime: 0` unchanged. ⚠ Mock `lib/mmkv`, add RTL `cleanup` ([[project_mobile_vitest_and_expo_install_traps]]).
-- [ ] **Task 6 — Admin (AC5, AC8, AC14, AC15)** — when `guardianDeclaration` is true: the banner in `VersionCard` (:458-460), the ADDED
+- [x] **Task 6 — Admin (AC5, AC8, AC14, AC15)** — when `guardianDeclaration` is true: the banner in `VersionCard` (:458-460), the ADDED
   guidance and the v4 child label on every reason select incl. `WithdrawApprovalForm` (:769) (KL16; ⛔ not for v1–v3 rows); the ticked
   people beside the photo, and the confirm when a ticked entry is left out on the child reason with the photo kept (KL15); KL12 controls, pre-check (:668), payload builder (:673-679), history; `PROBLEM_SENTENCES`
   entries; the English labels pinned equal to `memorial.json` en; `memorial-review.test.tsx` legs (the decision posts indexes and
   reasons, ⛔ never a name; ⛔ no textbox holds a name); take-down screen (`MemorialTakedownPage.tsx`) shows the list
   (`memorial-takedown.test.tsx`).
-- [ ] **Task 7 — Public (AC7)**
-  - [ ] 7.1 `KinshipLattice.astro` (with `data-field`, styles inside it); `planFamilyMemorial` gains the `kinship` verdict;
+- [x] **Task 7 — Public (AC7)**
+  - [x] 7.1 `KinshipLattice.astro` (with `data-field`, styles inside it); `planFamilyMemorial` gains the `kinship` verdict;
     `FamilyMemorial.astro` places it (a fourth `visibilityOf` call); `surface-fields.ts` view + ids map + shape;
     `sahyog-vivran-render.ts` mapping; the guard (exact keys, exact row keys); labels read from `memorial.kinship.<code>` (⛔ no copy in
     `sahyog-vivran.json`).
-  - [ ] 7.2 Matrix YAML row + `RULED_TIER1_PUBLIC_EXCEPTIONS` + every Trap 6 pin; the floor test (`member-drive-detail-field-floor.test.ts`): ALL FOUR memorial ids move to `MEMBER_COUNTERPART: []` as declared GAPS
+  - [x] 7.2 Matrix YAML row + `RULED_TIER1_PUBLIC_EXCEPTIONS` + every Trap 6 pin; the floor test (`member-drive-detail-field-floor.test.ts`): ALL FOUR memorial ids move to `MEMBER_COUNTERPART: []` as declared GAPS
     owed by row 11b-5c (`2026-10-31-428` — the memorial is owed to members); `declaredGaps` (:258-262) grows 3 → 7 with a comment citing
     `-428` and 11b-5c; `DATA_CLASS_EXCLUDED` (:87-91) is emptied (or removed) with a dated doc-block line (*"2026-10-31: `-428` supersedes
     `-412` §3 item 3 — ⛔ no longer a data-class exclusion; a GAP owed by 11b-5c"*); the :275 test is rewritten to assert the four are gaps
     and ⛔ none is excluded (:284 / :288 move with it).
-  - [ ] 7.3 Tests: `family-memorial-render.spec.ts` (AC7 byte-identity with interleaved input, empty, `<head>`, RLO-in-a-name, whole
+  - [x] 7.3 Tests: `family-memorial-render.spec.ts` (AC7 byte-identity with interleaved input, empty, `<head>`, RLO-in-a-name, whole
     memorial dropped on a bad list), a new `kinship-lattice-source.test.ts` (the 11b.5 `portrait-frame-source.test.ts` pattern: props,
     markup order, `data-field`, ⛔ no class / `<style>` / `set:html`, positive controls), `family-memorial-source.test.ts` (`TOUCHED`
     :17-28 + `KinshipLattice.astro`, `STYLED` :108, the id list :75 and `feeds` map :84, the exact-three-styles pin :162-166 unchanged),
     `family-memorial-gating.test.ts` (the kinship verdict), `sahyog-vivran-copy.test.ts` (real `t()`).
-- [ ] **Task 8 — Fences (AC10, AC11)** — the purpose-limitation pin (built from the pasted grep); `SCAN_FILES`; `microcopy.yaml`
+- [x] **Task 8 — Fences (AC10, AC11)** — the purpose-limitation pin (built from the pasted grep); `SCAN_FILES`; `microcopy.yaml`
   **`code_globs`**; the friction-budget disposition; `contracts:check-openapi-determinism`.
-- [ ] **Task 9 — Verify and record (AC12, AC13)** — plant named mutants and prove each RED, then restore byte-identical: drop `kinship`
+- [ ] **Task 9 — Verify and record (AC12, AC13)** — ✅ the 17 named mutants RED + restored; ✅ records (Dev Agent Record, File List, Change Log, ledger `2026-10-31al`). ⏳ **OPEN: `pnpm ci:local` 36 / 36 on one run** — four runs on tip `50b7a2b6` (lint fix included), each 35 / 36, every red a load timeout or the fixed-`PARIWAR_A` pollution, each red spec green in isolation (Debug Log); AC13 makes it the `review` → `done` gate. ⏳ The Task 1.2 (iii) DISCHARGED annotations — owed when `done` is on main. — plant named mutants and prove each RED, then restore byte-identical: drop `kinship`
   from `sendContent`; render a left-out entry; accept an index out of range; an unknown relation code; a wire key leak; the guard accepting an
   unknown row key; per-name bidi isolation removed; an `action_shape` check ignoring kinship; `family` missing from the T6 list;
   `data-field` missing; a memorial id dropped from the declared gaps; a reference outside AC10's allow-list; `inPhoto` reaching the
@@ -1078,7 +1078,43 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, worktree `.claude/worktrees/11b-5a-kinship-capture-and-lattice`, 2026-10-31.
+
 ### Debug Log References
+
+- Task 0.1 STOP re-run before Task 2 (2026-10-31): STOP 1 ⛔ change under any listed path (`origin/main` = `beae5116`, the branch's base);
+  STOP 2 satisfied (6.38 landed — its `death_reported` branch is in `rtbf-legality.ts`); STOP 3 `11b-6` `backlog` on all 350 refs read;
+  STOP 6 the `-173` clause still has ⛔ pinned row. ⇒ ⛔ stop.
+- Migration number RE-TAKEN at Task 3.1: Story 12-1's branch had COMMITTED `0193_marketplace-modules` (`when` 1796269200038) ⇒ this story
+  takes **`0194_memorial-kinship`**, journal idx 194, `when` **1796355600039** (later than 12-1's). ⚠ For 12-1: if 11b.5a lands first, a
+  DB that applied 0194 will SKIP 12-1's 0193 (earlier `when`) — [[project_sibling_migration_when_order_shared_db]]; whichever lands second
+  must check. Applied to this story's own container (`twt-11b5a-pg`, :5481, DB `twt_dev`); re-run by hand with `psql -f` = idempotent.
+- The session broke once mid-Task 4 (Docker Desktop went down with it); the container was restarted, ⛔ nothing was lost.
+- ⚠ The Write tool landed `\u` escapes as RAW invisibles in two test files ([[project_unicode_escapes_written_raw]]); found by a scan of
+  every changed file and converted back to escapes before commit (`kinship.spec.ts`, `memorial-kinship.test.ts`); ⛔ none in source.
+- Named mutants (Task 9) — each planted, the named test run, then `git checkout` (byte-identical; tree clean after each): (1) `kinship`
+  dropped from `sendContent` · (2) the helper rendering a left-out entry · (3) an index out of range accepted · (4) an unknown relation
+  accepted · (5) a wire key leak (row `.passthrough()`) · (6) the guard accepting an unknown row key · (7) per-name bidi isolation
+  removed — API (live spec) AND the mobile preview · (8) an `action_shape` check ignoring kinship · (9) `family` losing its focus
+  re-read (the T6 pin) · (10) `data-field` missing · (11) a memorial id dropped from the declared gaps · (12) a reference outside AC10's
+  allow-list (`claim/index.ts`) · (13) `inPhoto` reaching the public wire · (14) copy 4.3 not shown under the declaration · (15) the
+  banner keyed on the version string · (16) ticks kept after the photo changes · (17) a read schema without `inPhoto`. ⇒ **all 17 RED.**
+- **`pnpm ci:local` (AC13) — four runs, ⛔ yet a 36 / 36 on one run** (`DATABASE_URL` = this story's own container :5481, DB `twt_dev`;
+  the host's load average ~22–25 throughout — peer sessions' vitest runs):
+  · **Run 1** (tip `b61e2b37`, fresh DB): **35 / 36** — `integration-tests` GREEN; `lint` RED: a `\x00` placeholder in the AC10 pin's glob
+    helper (`no-control-regex`) and an unused destructure in `public-pages-sahyog-vivran.test.ts` — both MINE, fixed in `50b7a2b6`;
+    `pnpm turbo run lint --force` then 20 / 20.
+  · **Run 2** (tip `50b7a2b6`, the same DB): **35 / 36** — `lint` GREEN; `integration-tests` RED: `state-trustee-cycle-freeze.spec.ts`
+    and `import-workplaces.spec.ts` (timeouts — both GREEN in isolation) and `announcement-activity-read.spec.ts` (deterministic on that DB:
+    it lists the latest two cycles of the FIXED `PARIWAR_A`, and run 1's own-committing specs crowded its seeded cycles out —
+    [[project_known_livedb_test_failures]]'s accumulation class; ⛔ memorial code touched).
+  · **Run 3** (tip `50b7a2b6`, container RECREATED fresh): **35 / 36** — `integration-tests` RED on 20 s timeouts / vitest-worker
+    timeouts in 5 api files (`memorial/races`, `memorial/review-memorial`, `claims/nominee-bank`, `member-moderation/moderation-escalation`,
+    `payment/nominee-accounts`) — all five GREEN in isolation (65 / 65).
+  · **Run 4** (tip `50b7a2b6`, container recreated fresh): **35 / 36** — ONE test: `import-workplaces.spec.ts` "a header-only file exits 1"
+    (a spawned CLI, 30 s timeout) — GREEN in isolation in run 2's check.
+  ⇒ every job has been GREEN in at least one run on this code; ⛔ single run is 36 / 36. ⚠ **A clean 36 / 36 is OWED before `review` →
+  `done`** (AC13) — on a quieter host; ⛔ claimed here.
 
 ### Completion Notes List
 - 2026-10-30 — Story created by `bmad-create-story 11b.5a` at `01062c51`: comprehensive developer guide; build gated on the Panel (Task 0).
@@ -1089,8 +1125,147 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 - 2026-10-31 — v2.0: the main note v2 RULED (`-428`); Task 0.4 done; scope split to rows 11b-5b / 11b-5c (BigDev).
 - 2026-10-31 — v2.1–v2.2: all copy approved (v4 ① Hindi is BigDev's); KL15 / KL16 answered ⇒ Task 0.2 done.
 - 2026-10-31 — v2.3: validated (three verifiers, then a fix-diff review whose 20 corrections are applied); all findings applied; follow-up confirms R1–R3 drafted for the Panel; ④ / 4.3 / 4.4 copy re-approval owed. Next: Task 1.
+- 2026-10-31 — **Tasks 2–9 implemented (`bmad-dev-story`)** — commits `9c695ef1` (Tasks 2–3), `a3e1240c` (4), `51f65a0d` (5),
+  `8d33cecc` (6), `3c97d091` (7), `b61e2b37` (8). What was ACTUALLY built and tested:
+  - **Contracts / domain:** `MEMORIAL_KINSHIP_RELATIONS` (fourteen, KL3 order, domain + contracts lockstep test); `kinship.ts` — THE list
+    schema (`.strict()`, `inPhoto: z.literal(true).optional()`, `[]` refused, 1–200 code points, ≤ 20) used at Send AND on every read; the
+    ONE grouping helper (drops `inPhoto`; a left-out entry leaves no trace — interleaved-input leg); label keys (English plurals, copy 5.2).
+    `validateMemorialDecision`: `kinship_without_list` / `kinship_index_out_of_range` / `kinship_order`; ALL THREE `action_shape` checks count
+    `kinshipLeftOut`. Permission **v4** minted (Q-copy-3 as approved, ④ as re-approved; `carriesGuardianDeclaration`, v1–v3 `false`) —
+    v4 is pinned as "v3 with exactly the five marked sentences changed" in both locales; v3 now refused `authorisation_outdated`.
+  - **Migration 0194** (number re-taken — see the Debug Log): `kinship_ciphertext` (+ scrub-only UPDATE grant, ⛔ CHECK),
+    `kinship_omissions` + `memorial_kinship_omissions_valid` CHECK, `omissions_iff_action` replaced (VALID). The RLS spec: `SCRUBBABLE`,
+    fourteen named CHECKs, legs (q2) / (r2) / (s3), scrub legs (v) / (w) over a row with a list (NULL stays NULL) — **live**, 69 legs.
+  - **AC9 legality, from 6.38's code (⛔ "erased with the record" unqualified):** `anonymizeMember` sentinels `kinship_ciphertext`
+    (CASE-NULL). As built, `resolveRtbfLegality` refuses erasure with `death_reported` once a claim is filed for the member's death, and a
+    memorial exists only after a death claim ⇒ the line runs only for a member whose every claim was released by an innocence finding
+    (`-423` Q1 (b)) or for a row older than Story 6.38 (`anonymize.ts`'s own 6.38 note: "defence in depth — dead code"). Recorded in the
+    code comment beside the line.
+  - **API:** Send parses part `kinship` (refusals `memorial.kinship_invalid` before anything is written, incl. a tick with no photo and
+    `[]`), encrypts before the lock, audit `has_kinship` only; member view (`kinship` as SENT, `kinshipLeftOut`, `guardianDeclaration`; a
+    list decrypt/parse failure ⇒ `unavailable`, `canSend: false`); review detail (`kinship` with ticks, `decision.kinshipLeftOut`,
+    `guardianDeclaration` from the registry flag); decide validates against the decrypted length, audit `kinship_left_out`; public read —
+    a sentinel / bad envelope / unparsable / schema-failing list drops the WHOLE memorial (four live legs), grouped by the helper and
+    each name isolated (`publicMemorialKinship`); take-down `shown.kinship` from the same function, a sentinel list ⇒ `not_found`.
+    New live spec `apps/api/tests/integration/memorial/kinship.spec.ts` (22 legs, incl. AC7's interleaved byte-identity at the WIRE —
+    `son, wife, son-left-out` vs `wife, son` give equal rows — and the RLO-in-one-name leg).
+  - **Mobile:** `family.tsx` between photo and preview (starts empty; fourteen relations as inline radio options; one person per row;
+    ≤ 20; an unfinished row blocks Next with 2.11; copy 2.4A under the body; the "In the photo" tick only when a photo is sent; "Start
+    from the list I sent" on a re-send, ticks only with the previous photo kept); `photo.tsx` — both pushes → `family`, any photo change
+    clears every tick; the draft's `sendContent` carries `JSON.stringify(kinship ?? [])` (R6 leg: an edit to the list ALONE mints a new
+    key); FormData part only when non-empty, ticks stripped with no photo (ONE function — what the preview draws is what the Send
+    carries); preview draws the grouped rows (names isolated) + *"Change the family list"* + *"No family list"*; outcome lines per
+    left-out entry; copy 4.3 under the declaration. Copy (en + hi) for Q-copy-2, 4.1, 4.3, 5.1, 5.2 and the 24 label keys.
+  - **Admin:** the list under the words, ticked people beside the photo, a per-entry "Leave this one out" + reason (the photo's model),
+    pre-check + payload (indexes and reasons only), history lines; KL16 banner + v4 child label + R3 A guidance on EVERY reason select
+    (decision and withdraw-approval), keyed on `guardianDeclaration` (a synthetic later version with the flag shows it; a v4 id without it
+    does not); the KL15 confirm (a second press, ⛔ a refusal); English labels pinned equal to `memorial.json` en; take-down lists the rows.
+  - **Public:** `KinshipLattice.astro` (`<h3>` + `<dl data-field aria-labelledby>`, `<dd dir="auto">`, spacing tokens inside it);
+    `planFamilyMemorial` gains the kinship verdict (a fourth `visibilityOf`); guard demands exactly `kinship,photo,words` and exact row keys;
+    labels from the `memorial` namespace (⛔ copy in `sahyog-vivran`). Matrix row `family_memorial_kinship` + the ruled pair under
+    `2026-10-31-428 item 1` (nine → ten). Floor test: the four memorial ids are DECLARED GAPS owed by row 11b-5c (`declaredGaps` 3 → 7,
+    `DATA_CLASS_EXCLUDED` emptied, its test rewritten to cite `-428`). Built-server render spec + 3 lattice legs (after the words, the
+    `<dl>`, the plural, nothing in `<head>`, `[]` ⇒ ⛔ heading, a leaked tick ⇒ outage).
+  - **Fences:** the AC10 pin (`packages/domain/tests/memorial/kinship-purpose-pin.test.ts`, allow-list from the pasted grep, planted RED);
+    `SCAN_FILES` += `KinshipLattice.astro`; `microcopy.yaml` `code_globs` += `family.tsx`, `memorial-kinship.ts`; friction disposition.
+  - ⚠ **FOR BIGDEV — a gate's scope was narrowed (please confirm):** the 11b.4 R16 scans (`scripts/microcopy/memorial.test.ts` — "no
+    memorial Button offers a take-down", by key name and by value) flagged the APPROVED copy 2.13–2.15 (*"Remove"* / *"हटाएँ"*, *"Remove
+    {name} from the list"*) — the control that removes one line from the family's own UNSENT list. Added ONE named exception: exactly
+    `family.remove`, `family.remove_a11y`, `family.remove_empty_a11y`, and (for the value scan) only inside `family.tsx`, with legs proving
+    those keys ARE flagged and that a fourth "remove" key or the same key elsewhere still fails. The alternative is re-wording the
+    approved copy (e.g. "Take off the list") — your call.
+  - **Un-attested (carried, ⛔ closed — AC12):** device / TalkBack / VoiceOver passes of `family.tsx`, real-browser pass of the lattice,
+    Story 0.9, the non-author Hindi review of the KL3 labels, the family-screen copy and v4 (`hiReviewed: false` — Row 41 (a) / (s));
+    `MEMORIAL_AUTHORSHIP_ENABLED` stays off; ⛔ no Row 41 criterion marked MET; v4 is ⛔ never live unless rows 11b-5b and 11b-5c are `done`.
+  - ⚠ **AC13 not met yet:** four `ci:local` runs, each 35 / 36 with a different load-class red (Debug Log) — a clean 36 / 36 on one run
+    is owed before `done`.
+  - **Not done here (by design):** the Task 1.2 (iii) DISCHARGED annotations — owed when this row is `done` ON MAIN; the take-down screen
+    shows singular English labels (operator chrome; the page uses the plurals) — recorded, ⛔ changed.
 
 ### File List
+
+Code commits `9c695ef1`…`b61e2b37` (Tasks 2–8) + `50b7a2b6` (the `ci:local` lint fix — two of the test files below); governance and records before them are listed in their own commits:
+
+- UPDATE `apps/admin/src/modules/memorial-review/MemorialReviewPage.tsx`
+- UPDATE `apps/admin/src/modules/memorial-review/i18n-en.ts`
+- UPDATE `apps/admin/src/modules/memorial-takedown/MemorialTakedownPage.tsx`
+- UPDATE `apps/admin/src/modules/memorial-takedown/i18n-en.ts`
+- UPDATE `apps/admin/tests/memorial-review.test.tsx`
+- UPDATE `apps/admin/tests/memorial-takedown-route.test.tsx`
+- UPDATE `apps/admin/tests/memorial-takedown.test.tsx`
+- UPDATE `apps/api/src/modules/memorial-review/handlers.ts`
+- UPDATE `apps/api/src/modules/memorial-takedown/handlers.ts`
+- UPDATE `apps/api/src/modules/memorial/handlers.ts`
+- NEW `apps/api/src/modules/memorial/memorial-kinship.ts`
+- UPDATE `apps/api/src/modules/public-pages/memorial-public-read.ts`
+- UPDATE `apps/api/src/modules/public-pages/memorial-public-text.ts`
+- UPDATE `apps/api/tests/integration/memorial-takedown/takedown.spec.ts`
+- NEW `apps/api/tests/integration/memorial/kinship.spec.ts`
+- UPDATE `apps/api/tests/integration/memorial/review-memorial.spec.ts`
+- UPDATE `apps/api/tests/unit/memorial-public-read.test.ts`
+- NEW `apps/mobile/app/(memorial)/family.tsx`
+- UPDATE `apps/mobile/app/(memorial)/outcome.tsx`
+- UPDATE `apps/mobile/app/(memorial)/photo.tsx`
+- UPDATE `apps/mobile/app/(memorial)/preview.tsx`
+- UPDATE `apps/mobile/components/memorial-authorship/MemorialText.tsx`
+- UPDATE `apps/mobile/components/memorial-authorship/memorial-copy.ts`
+- NEW `apps/mobile/components/memorial-authorship/memorial-kinship.ts`
+- UPDATE `apps/mobile/lib/memorial-draft.ts`
+- UPDATE `apps/mobile/lib/use-memorial-send.ts`
+- UPDATE `apps/mobile/tests/unit/memorial-draft.test.ts`
+- UPDATE `apps/mobile/tests/unit/memorial-screens-render.test.ts`
+- UPDATE `apps/mobile/tests/unit/memorial-source-pins.test.ts`
+- UPDATE `apps/public/src/components/FamilyMemorial.astro`
+- NEW `apps/public/src/components/KinshipLattice.astro`
+- UPDATE `apps/public/src/lib/family-memorial.ts`
+- UPDATE `apps/public/src/lib/sahyog-vivran-render.ts`
+- UPDATE `apps/public/src/lib/sahyog-vivran.server.ts`
+- UPDATE `apps/public/src/lib/surface-fields.ts`
+- UPDATE `apps/public/src/pages/sahyog-vivran/[driveToken].astro`
+- UPDATE `apps/public/tests/family-memorial-gating.test.ts`
+- UPDATE `apps/public/tests/family-memorial-source.test.ts`
+- UPDATE `apps/public/tests/integration/public-pages/family-memorial-render.spec.ts`
+- UPDATE `apps/public/tests/integration/public-pages/scrape-test.spec.ts`
+- NEW `apps/public/tests/kinship-lattice-source.test.ts`
+- UPDATE `apps/public/tests/member-drive-detail-field-floor.test.ts`
+- UPDATE `apps/public/tests/sahyog-vivran-client.test.ts`
+- UPDATE `apps/public/tests/sahyog-vivran-render.test.ts`
+- UPDATE `friction-budget.md`
+- UPDATE `microcopy.yaml`
+- UPDATE `openapi/v1.yaml`
+- UPDATE `packages/contracts/public-pages/public-vs-private-matrix.yaml`
+- UPDATE `packages/contracts/src/memorial/dto.ts`
+- UPDATE `packages/contracts/src/memorial/index.ts`
+- NEW `packages/contracts/src/memorial/kinship.ts`
+- UPDATE `packages/contracts/src/memorial/omissions.ts`
+- UPDATE `packages/contracts/src/memorial/takedown.ts`
+- UPDATE `packages/contracts/src/memorial/text-classes.ts`
+- UPDATE `packages/contracts/src/memorial/vocab.ts`
+- UPDATE `packages/contracts/src/public-pages/matrix.ts`
+- UPDATE `packages/contracts/src/public-pages/sahyog-vivran.ts`
+- NEW `packages/contracts/tests/memorial-kinship.test.ts`
+- UPDATE `packages/contracts/tests/memorial-text-classes.test.ts`
+- UPDATE `packages/contracts/tests/memorial.test.ts`
+- UPDATE `packages/contracts/tests/public-pages-sahyog-vivran.test.ts`
+- UPDATE `packages/contracts/tests/public-pages.test.ts`
+- NEW `packages/domain/migrations/0194_memorial-kinship.sql`
+- UPDATE `packages/domain/migrations/meta/_journal.json`
+- UPDATE `packages/domain/src/member/anonymize.ts`
+- UPDATE `packages/domain/src/memorial/authorisation-copy.ts`
+- UPDATE `packages/domain/src/memorial/public-read.ts`
+- UPDATE `packages/domain/src/memorial/vocab.ts`
+- UPDATE `packages/domain/src/schema/memorial_review_decisions.ts`
+- UPDATE `packages/domain/src/schema/memorial_submissions.ts`
+- UPDATE `packages/domain/tests/integration/rls/memorial-policy-regression.spec.ts`
+- UPDATE `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- NEW `packages/domain/tests/memorial/kinship-purpose-pin.test.ts`
+- UPDATE `packages/domain/tests/memorial/memorial-status.test.ts`
+- UPDATE `packages/i18n/locales/en/memorial.json`
+- UPDATE `packages/i18n/locales/hi/memorial.json`
+- UPDATE `scripts/microcopy/memorial.test.ts`
+- UPDATE `scripts/sahyog-vivran-financial-truth/check.ts`
+- UPDATE `_bmad-output/implementation-artifacts/11b-5a-kinship-capture-and-lattice.md` (this file — the permitted sections)
+- UPDATE `_bmad-output/implementation-artifacts/sprint-status.yaml` (row → `review`; ledger)
 
 ## Change Log (rows newest first, below the SHA maps)
 
@@ -1129,6 +1304,7 @@ note :188-189: the memorial is off the member app *"because the family's permiss
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-10-31 | v2.9 | **TASKS 2–9 IMPLEMENTED** (`bmad-dev-story`) — six code commits `9c695ef1`…`b61e2b37`: contracts + migration **0194** (re-taken — 12-1 committed 0193 first), the API (Send / member view / review / decide / public read / take-down; permission **v4** with the declaration flag), the mobile family screen, the admin review + take-down, the public `<KinshipLattice>` with its ruled matrix pair (`-428` item 1) and the floor's four declared gaps (owed by 11b-5c), the fences (AC10 pin, `SCAN_FILES`, microcopy, friction). 17 named mutants planted and proven RED, each restored byte-identical. ⚠ One gate scope narrowed for BigDev to confirm (the R16 take-down scan vs approved copy 2.13–2.15 — Completion Notes). Status → **review**. ⏳ `ci:local`: four runs, each 35 / 36 (load timeouts / fixed-Pariwar pollution, each red spec green in isolation; run 1's lint red was ours — fixed `50b7a2b6`) — a clean 36 / 36 is owed before `done` (AC13). Ledger `2026-10-31al`. |
 | 2026-10-31 | v2.8 | The confirms RULED — Decision `2026-10-31-432` (Trustee-ratified, DR + KB): *"R1 A, R2 A, R3 A"* — R1 A the members' app shows the memorial itself, v4+ only (row 11b-5c builds it, ⛔ no longer waits); R2 A (⚠ ⛔ not our suggestion) the declaration's adult half covers the words too (v4 ③ stands); R3 A the reviewer's child test narrowed to a reason in the memorial itself (KL16's guidance and copy 4.4's guidance line re-worded to it — ✅ BigDev confirmed, *"changes fine"*). Row 41 (r)'s *"R1–R3 answered"* clause met. |
 | 2026-10-31 | v2.7 | The follow-up note R1–R3 (`bdc24e92`, `3981fd0b` before the second rebase) SENT by BigDev (*"I have sent the note"*) — ⏳ no ruling yet. It gates row 11b-5c and go-live (Row 41 (r)), ⛔ not Task 2. |
 | 2026-10-31 | v2.6 | REBASED onto `origin/main` `beae5116` (Story 6.38 landed; backup `backup/11b-5a-pre-rebase-2-2026-10-31`); ledger-only conflicts; `-426`'s swallowed separator and its misplaced dated note fixed inside their commits; changed-line sets and all decision entries verified. **STOP 2 now satisfied** — 6.38's erasure lock is on `main` under this branch (Task 4.7 writes AC9 from its code; ⛔ no further rebase needed for it). SHA map 2 above. Ledger letters `-31m/n/o/r/s` relabelled `-31aa`…`-31ae` (`main` holds them); this entry `-31af`. Migration `0193` still free on `main` (re-take at Task 3.1). |

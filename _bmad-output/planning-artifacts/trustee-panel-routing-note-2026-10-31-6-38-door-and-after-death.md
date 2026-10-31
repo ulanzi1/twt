@@ -25,33 +25,39 @@ member's record — counsel's, already owed by your 30 October ruling.
 
 You ruled that a claim is refused at the door for someone who, at their death, *"had not finished joining (no identity check)"*. Your
 rulebook says a person becomes a member only once they have registered, had their identity verified, and paid the joining fee. Two kinds of
-people sit between "only signed up" and "full member", and your words do not say which side they fall on.
+people sit between "only signed up" and "full member", and your words do not say which side they fall on. (Someone in both — typed-in
+identity AND fee unpaid — is refused if either answer says refuse.)
 
 **Untouched by this question, by your own words:** members in their first days after joining, behind on contributions, or suspended — the
 existing rules decide them, as you said.
 
-## Q1 (a) — paid the fee, but the Trust had not yet verified their identity
+## Q1 (a) — an identity nobody has checked
 
-**In one sentence:** should a claim be refused for someone who filled in their identity details and paid the fee, but whose identity the
-Trust had not yet verified when they died?
+**In one sentence:** should a claim be refused for someone whose identity was never checked — they typed their own details into the app
+instead of verifying through DigiLocker, and nobody at the Trust has verified them since?
 
-**Why it cannot be decided without you:** it decides whether these families are helped.
+**Why it cannot be decided without you:** it decides whether these families are helped — and your words *"(no identity check)"* and
+*"first days after joining … untouched"* pull in opposite directions for exactly these people.
 
 ### The one fact that decides it
 
-**The last step was the Trust's, not theirs.** These people typed in their details by hand (when the automatic identity check was not
-available), paid, and finished the first days after joining; their identity was then waiting for a trustee to verify it. They have a name
-on record. When you ruled, the example in front of you was the other case — someone who signed up with only a phone number and has no name
-on record at all.
+**Today nothing ever checks a typed-in identity, and these members never leave their "first days after joining".** There are two ways to
+give your identity when joining: through DigiLocker (the government's Aadhaar service sends the Trust the person's details), or — when
+DigiLocker is switched off for a group, or is failing — by typing them in. The rules say a typed-in identity is to be verified by a trustee
+when the first days after joining end. ⚠ **Neither of those two steps is built:** nothing ends the first days after joining, and there is
+no screen on which anyone verifies a typed-in identity. So a member who typed their details in and paid stays, in the system, "in their
+first days after joining" — which your ruling left untouched — for as long as they are a member, with an identity no one has checked.
+(Members who used DigiLocker stay in that period too; their identity WAS checked.) When you ruled, the example in front of you was the
+person who signed up with only a phone number and has no name on record at all.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **A claim is filed as usual** (our suggestion; what is being built). The claim's normal checks then apply. | The family is helped like any other. | A drive may open for someone whose identity the Trust never verified — the step your words name was not finished. |
-| **B** | **Refused at the door**, like someone who only signed up. | The family is told the claim cannot be filed; no record, no appeal (your Q3 B). | A family is turned away because the Trust had not done its own last step in time. |
-| **C** | **Filed, but the identity is verified first** — from the death documents and the details on record — before any drive opens. | The family is helped once staff confirm who the person was. | A new step for staff that does not exist today; it must be built. |
+| **A** | **A claim is filed as usual** (what is being built until you answer). The claim's normal checks then apply. | The family is helped like any other. | A drive may open in the name of someone whose identity nobody ever checked — today, every member who joined by typing their details in. |
+| **B** | **Refused at the door** when the identity was never checked, like someone who only signed up. | The family is told the claim cannot be filed; no record, no appeal (your Q3 B). | A family is turned away because the Trust never built its own check — after the member did everything asked of them and paid. It also reaches members your ruling said were untouched. |
+| **C** | **Filed, but the identity is checked first** — by staff, from the death documents and the details on record — before any drive opens (our suggestion). | The family is helped once staff confirm who the person was. | A new step for staff that does not exist today; it must be built before members' claims go live. We have ⛔ found an existing step that compares the dead person's details with the member record (the automatic certificate reader returns nothing yet). |
 
-**Our reading:** **A** — **because** the person did everything asked of them, and the claim's own checks still look at the death
-documents before money moves.
+**Our reading:** **C** — **because** it keeps money from being raised in an unchecked name without turning a family away for a check the
+Trust itself never made. Until it is built, A stands.
 
 ## Q1 (b) — identity details given, but the joining fee never paid
 
@@ -160,12 +166,20 @@ disclosing which of the four it was.
 
 - **Earlier versions of this question:** none put to you. These edges were found while preparing the build of your 30 October ruling.
 - **Corrected in this note:** our first draft of the build treated "not finished joining" as a question about the FEE only. On a fresh
-  check we saw that the paid-but-unverified case (Q1 (a)) is about the identity check your words name — so we split it out. We also
-  dropped from Q1 (a) the hand-entered members still in their first days after joining: your ruling already says those are untouched.
+  check we saw that an unverified identity is the identity check your words name — so we split it out (Q1 (a)). ⚠ **Then corrected
+  again before sending:** our first draft of Q1 (a) described people "waiting for a trustee to verify" them. Checking how identity is
+  verified today showed that waiting step does not exist: nothing ends the first days after joining, and no screen verifies a typed-in
+  identity. Q1 (a) now asks about the people who actually exist — typed-in identities nobody has checked — and our suggestion changed
+  from A to C.
+- **A wider gap, found while checking (⛔ asked here — recorded for the build):** because nothing ends the first days after joining, no
+  member ever becomes a fully "active" member in the system; so the renewal and grace steps (which start only from "active") never begin
+  either, and a member cannot withdraw (withdrawal is allowed only for active, grace or lapsed members). That last point means Q2 (a)'s
+  withdrawal-after-death cannot happen TODAY — it becomes possible once that gap is closed, which is why we still ask it.
 - **Still uncertain:**
   - Q2 (a): that the claim carries on after a withdrawal is INFERRED — we found nothing in the claim's processing that reads the member's
     status after filing, but have ⛔ traced every step end to end;
-  - Q1 (a): whether your words "(no identity check)" meant only the signed-up-with-a-phone case you were shown, or every unverified identity;
+  - Q1 (a): whether your words "(no identity check)" meant only the signed-up-with-a-phone case you were shown, or every unchecked identity;
+  - Q1 (a) C: whether staff can in practice confirm an identity from the death documents — the step is not designed yet;
   - Q1 (b) under option B also covers people whose identity WAS verified but who had not paid — we read your rulebook as treating them the same.
 
 ---
@@ -173,8 +187,9 @@ disclosing which of the four it was.
 # In plain English
 
 Your ruling on 30 October is being built. Three edges need your word. **First**, between "only signed up" and "full member" are two groups:
-people who paid but were still waiting for the Trust to verify their identity, and people who gave their details but never paid. We suggest
-helping the first (the delay was the Trust's) and refusing the second (they never joined, by your own rulebook). **Second**, after a death
+people who typed in their own identity details, which nobody has ever checked (the Trust's checking step is not built), and people who gave
+their details but never paid. We suggest that for the first, a claim is filed but staff check who the person was before any drive opens
+(that check must be built); and that the second is refused (they never joined, by your own rulebook). **Second**, after a death
 is reported, the dead member's account can still withdraw the membership — which would end the family's access to the record you said they
 may see — and can still change details directly instead of asking. We suggest stopping both, as your own reasons point. **Third**, when a
 claim is refused, we suggest telling the family one general, true reason — the person was not a member when they died — rather than nothing,
@@ -222,12 +237,26 @@ or the specific (and sometimes sensitive) reason. Until you answer, the build ta
   done (DigiLocker-verified or manual fallback), awaiting fee"*), `pending-valid` (*"lock-in elapsed but KYC still unverified (FR-2); awaits
   trustee"*), `lock-in` (*"fee paid; the lock-in clock is running"*). `packages/domain/src/member/state.ts`: `member.kyc_manual_fallback`
   moves `pending-kyc` → `pending-fee` (unverified); `member.lock_in_expired` with `kyc_verified: false` gives `pending-valid`.
+- **How identity is checked.** `apps/api/src/modules/kyc/kyc.routes.ts`: `/member/kyc/initiate` + `/confirm` (DigiLocker OAuth; the
+  profile is written with `verificationStrength: 'aadhaar_kyc'` — `providers/digilocker/mapper.ts` — and `member.kyc_completed` emitted)
+  and `/member/kyc/manual` (the member's own entry; `verificationStrength: 'self_declared'`, `trusteeVerified: false`;
+  `member.kyc_manual_fallback`). Which is offered: the `kyc_manual_fallback` flag per cohort, inverted, defaulting to manual AVAILABLE
+  (`manual-fallback-seam.ts`); a stale DigiLocker certificate also routes to manual (`providers/digilocker/staleness-policy.ts`). With ⛔
+  DigiLocker secrets configured, the FIXTURE provider is used (`config.ts` — whether a deployment has them is ⛔ visible in the repo).
+- **⚠ The two missing steps (Q1 (a)'s one fact).** (i) ⛔ production code emits `member.lock_in_expired` — only test seeds do (`grep`
+  below); `lock-in` has ⛔ other exit (`member/state.ts`: `vyawastha_shulk_paid` leaves it unchanged), so ⛔ member reaches `active` or
+  `pending-valid`; `lock-in` counts as covered (`packages/validity-service/src/payload.ts` `VALID_STATES`), `active` only is "active"
+  (`ACTIVE_STATES`). The renewal scheduler (`packages/domain/src/member/renewal-scheduler.ts`, the job `member-renewal-lifecycle.ts`)
+  fires `grace_entered` only from `active`, so it never starts; withdrawal is allowed only from `active` / `active-in-grace` /
+  `lapsed-unpaid`. (ii) `trusteeVerified` is written `false` on both routes and set `true` nowhere; the only `member.kyc_completed`
+  emitter is the member's own DigiLocker confirm — ⛔ staff or trustee surface verifies a typed-in identity.
 - **Names on record.** The manual route writes the name (`apps/api/src/modules/kyc/kyc.handlers.ts` → `kyc.upsertMemberKycProfile`); signup
   alone writes none (`apps/api/src/modules/auth/member/signup.handlers.ts`).
 - **What Story 6.38 builds until you answer:** refused at the door — `pending-kyc`, `withdrawn`, `anonymized`, terminated; filed —
-  everything else, including `pending-fee` and `pending-valid`. The app shows "a claim cannot be filed" with ⛔ reason, and the reason is ⛔
-  sent to the app at all; the helpline screen shows the operator the reason and tells them to say only that it cannot be filed. Q1 (a) / (b)
-  "refuse" is one branch of one switch; Q1 (b) restricted to manual-fallback members only would also need the identity record read.
+  everything else, including `pending-fee`, `pending-valid` and a typed-in identity in `lock-in`. The app shows "a claim cannot be filed" with ⛔ reason, and the reason is ⛔
+  sent to the app at all; the helpline screen shows the operator the reason and tells them to say only that it cannot be filed. Q1 (b)
+  "refuse" is one branch of one switch (the state); Q1 (a) "refuse" needs the identity record read (`member_kyc_profiles.verification_strength`
+  / `trusteeVerified`), ⛔ the state; Q1 (a) "C" is a new staff step.
 - **Withdrawal after a claim.** `apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable`: checks only that the member exists and is
   in a withdrawable state — ⛔ claim read; the session is ⛔ revoked. After withdrawal, sign-in refuses (`member-auth.handlers.ts`:
   *"Member is withdrawn"*); the in-app export refuses (`data-export/handlers.ts` `DATA_EXPORT_TERMINAL_STATES = ['withdrawn',
@@ -256,4 +285,9 @@ grep -n 'DATA_EXPORT_TERMINAL_STATES' apps/api/src/modules/data-export/handlers.
 grep -n 'Member is withdrawn' apps/api/src/modules/auth/member/member-auth.handlers.ts
 grep -rn "'withdrawn'" packages/domain/src/claim packages/domain/src/pool apps/api/src/modules/claims   # the Q2 (a) inference
 grep -n 'readback.identity.script' packages/i18n/locales/en/claim.json
+grep -rn "lock_in_expired" apps packages --include='*.ts' | grep -v '/tests/\|\.test\.ts\|\.spec\.ts'   # ⛔ producer: registry, reducer, schema only
+grep -rn "trusteeVerified" apps/api/src packages/domain/src | grep -v '\.test\.'               # written false; ⛔ set true
+grep -n "'self_declared'\|aadhaar_kyc" apps/api/src/modules/kyc/kyc.handlers.ts apps/api/src/modules/kyc/providers/digilocker/mapper.ts
+grep -n 'VALID_STATES\|ACTIVE_STATES' packages/validity-service/src/payload.ts
+grep -n 'grace_entered' packages/domain/src/member/renewal-scheduler.ts
 ```

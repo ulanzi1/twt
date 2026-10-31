@@ -4,6 +4,33 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: BigDev's question while preparing Story 6.38's routing note — "how is identity being verified today?" (2026-10-31)
+
+OBSERVED, ⛔ planned ([[feedback_gap_analysis_observational]]): traced read-only at `01062c51`; ⛔ row, ⛔ owner, ⛔ fix proposed here.
+Escalated to BigDev in session, and to the Panel only as the one fact behind Q1 (a) of
+`_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (⛔ asked there).
+
+- **Nothing ends a member's lock-in, so ⛔ member ever becomes `active`** [`packages/domain/src/member/state.ts` — `lock-in` leaves only on
+  `member.lock_in_expired`; `packages/events/src/registry.ts` / `member/events.ts` (*"populated by whatever emits the event (the SIE
+  scheduler in Story 3.7)"*)] — ⛔ production code emits `member.lock_in_expired` (only test seeds: `apps/jobs/tests/pool-cohort-seed.ts`,
+  `packages/validity-service/tests/framework/seed.ts`); Story 3.7 shipped a read-only widget and Story 3.8's renewal scheduler built the
+  grace emits only (its header: the SIE scheduler *"was never built"*). Consequences observed, ⛔ traced further: `pending-valid` is
+  unreachable; `is_active` (`ACTIVE_STATES = ['active']`) is never true while `is_valid` stays true (`VALID_STATES` includes `lock-in`);
+  the renewal scheduler fires `grace_entered` only from `active`, so ⛔ member enters grace or lapses; withdrawal is allowed only from
+  `active` / `active-in-grace` / `lapsed-unpaid` (`apps/api/src/modules/withdrawal/handlers.ts` `WITHDRAWABLE_STATES`), so ⛔ member can
+  withdraw — and so ⛔ member can be erased except through termination. Every live-DB fixture that needs `active` seeds the event by hand,
+  which is why ⛔ test shows the gap. Trigger: before members go live, or any story that reads `active` / `is_active` / grace.
+- **⛔ step verifies a self-declared identity** [`apps/api/src/modules/kyc/kyc.handlers.ts` — the manual route writes
+  `verificationStrength: 'self_declared'`, `trusteeVerified: false`; `packages/domain/src/schema/members.ts` — `pending-valid`
+  *"awaits trustee"*] — `trusteeVerified` is set `true` nowhere, and the only `member.kyc_completed` emitter is the member's own DigiLocker
+  confirm; ⛔ staff or trustee surface exists. With the gap above, a member who joined by typing their own details stays in `lock-in`,
+  unverified and covered, for as long as they are a member. Which members are offered the manual route: the inverted per-cohort
+  `kyc_manual_fallback` flag (default — manual AVAILABLE, `manual-fallback-seam.ts`), and any member whose DigiLocker check fails on a
+  stale certificate (`providers/digilocker/staleness-policy.ts`). Whether a deployment has real DigiLocker secrets (else the fixture
+  provider — `config.ts`) is ⛔ visible in the repo. Trigger: the Panel's answer to Q1 (a) of the 2026-10-31 note, or before members go live.
+
+---
+
 ## Deferred from: landing PR #314 (Story 6.33) — a CI flake (2026-10-30)
 
 - **`apps/api/tests/integration/claims/cycle-freeze.spec.ts` — the Story 6.19b leg "the mark is IN THE RETURN'S TRANSACTION" fails on `canceling statement due to lock timeout`** [its `ddl()` helper, `SET lock_timeout = '5s'` then `CREATE TRIGGER … ON claim_correction_marks` (spec ~line 866)] — GitHub CI run `41090548105` on PR #314 (`8660f84b`): the DDL waits for a table lock that concurrent specs hold on the shared table and times out; the failed job RE-RUN green, and the same commit passed `ci:local` 36/36 on a fresh container. 6.33 ⛔ touches this file or table. Real but not this story's: a test that adds a trigger to a SHARED table under a fixed 5 s lock budget is load-sensitive. Suggested: a per-test table / trigger guarded by a `WHEN` on the test's own ids, or a longer `lock_timeout` with a retry. Trigger: the next red `integration-tests` on this leg.

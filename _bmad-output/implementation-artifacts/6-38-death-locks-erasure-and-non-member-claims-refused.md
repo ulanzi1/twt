@@ -104,12 +104,12 @@ agreement they gave while alive, and no money is raised in the name of someone w
    (*"Registration alone does not constitute membership"*) and §8.4 / §8.4a (termination: beneficiary entitlement *"Ended"*) —
    CONSISTENT. Withdrawal and erasure: the Niyamavali is SILENT (⛔ clause found). ⚠ **Two mismatches, routed, ⛔ built** — §2.1 lists
    (a) registration, (b) identity verification (KYC), (c) the fee, (d) admission, so the Niyamavali alone would ALSO refuse:
-   **(i) `pending-valid`** (*"lock-in elapsed but KYC still unverified … awaits trustee"* — fee paid, identity check ⛔ finished) — the
-   ruled words *"had not finished joining (⛔ identity check)"* literally reach it, while `-423` Consequence 1 (c) lists only `pending-kyc`
-   ⇒ **PQ1 (a)**; this story builds it OPEN — a DECLARED NARROWING of the ruled words, ⛔ silent; **(ii) `pending-fee`** (fee unpaid —
+   **(i) an identity nobody has checked** — a member who joined through the manual fallback (`self_declared`, `trusteeVerified: false`),
+   in ANY state: the ruled words *"had not finished joining (⛔ identity check)"* literally reach them, while `-423` Consequence 1 (c)
+   lists only `pending-kyc` and the *"⛔ Touched … first days after joining"* list covers `lock-in` — where, TODAY, they stay for good
+   (G9a) ⇒ **PQ1 (a)**; this story builds them OPEN — a DECLARED NARROWING of the ruled words, ⛔ silent; **(ii) `pending-fee`** (fee unpaid —
    identity verified OR given through the unverified manual fallback) — the fee is ⛔ in the Panel's words at all ⇒ **PQ1 (b)**; built
-   OPEN. A manual-fallback member in `lock-in` is ⛔ asked: `-423`'s *"⛔ Touched … members in their first days after joining"* already
-   keeps them open.
+   OPEN.
 
 ## ⭐ THE INVARIANTS
 
@@ -159,7 +159,8 @@ either line is readable at rest. Whether the helpline line NAMES the reason (via
 **N6 — Exactly four refusals, and only these.** `anonymized` ⇒ `erased`; terminated (moderation overlay) ⇒ `removed`; `withdrawn` ⇒ `left`;
 `pending-kyc` ⇒ `not_joined`. Checked in that order. Every other lifecycle state (`pending-fee`, `pending-valid`, `lock-in`, `active`,
 `active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules decide them later (`-423` Q3 *"⛔ Touched"*; PQ1 (a) / (b):
-`pending-valid` is open as a DECLARED narrowing of the ruled words; `pending-fee` is open pending the fee question). An exhaustive `switch` with a
+a typed-in identity nobody checked — in any state — is open as a DECLARED narrowing of the ruled words; `pending-fee` is open pending the
+fee question). An exhaustive `switch` with a
 `never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it.
 
 **N7 — The operator is told WHY; the caller and the app are told only that it cannot be filed.** The helpline sees one line per reason and
@@ -232,6 +233,16 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
   `events_log` replay (the clock-domain-safe read; ⛔ `members.state`, a projected cache). ⚠ A member with ZERO events replays to
   `pending-kyc` (the reducer's initial state) — this is what makes TR2 bite. `kyc_manual_fallback` moves `pending-kyc` → `pending-fee`
   WITHOUT verification; `lock_in_expired` with `kyc_verified: false` gives `pending-valid` (`member/state.ts`).
+- **G9a — How identity is checked TODAY, and the two missing steps** (traced 2026-10-31). Signup = phone only (`pending-kyc`, ⛔ name).
+  Then `kyc.routes.ts`: DigiLocker (`/kyc/initiate` + `/confirm` — the Trust receives the Aadhaar-backed details from DigiLocker;
+  `verificationStrength: 'aadhaar_kyc'`; `member.kyc_completed`) OR the manual fallback (`/kyc/manual` — the member's own entry;
+  `'self_declared'`, `trusteeVerified: false`; `member.kyc_manual_fallback`), the choice per cohort by the inverted `kyc_manual_fallback`
+  flag (default: manual AVAILABLE) or a stale DigiLocker certificate; ⛔ DigiLocker secrets ⇒ the fixture provider. ⚠ **Missing:** (i) ⛔
+  production emitter of `member.lock_in_expired` (only test seeds), and `lock-in` has ⛔ other exit ⇒ ⛔ member reaches `active` or
+  `pending-valid`; the renewal scheduler fires grace only from `active`; withdrawal is allowed only from `active` / grace / lapsed (so
+  PQ2 (a) is unreachable today); `lock-in` IS covered (`VALID_STATES`). (ii) `trusteeVerified` is set `true` nowhere; ⛔ staff / trustee
+  surface verifies a typed-in identity. Recorded as an observed gap in `deferred-work.md` (2026-10-31). ⛔ This story's to build; the door
+  is unaffected (it reads the state; the `pending-valid` arm is inert today).
 - **G10 — ⛔ death date at intake.** Neither intake request carries one; OCR is the all-null provider; the certificate date arrives at 6.21a
   review ([[project_ocr_v1_always_empty]]) ⇒ the state at the first report stands in for the state at death.
 - **G11 — Signup** creates the member at `pending-kyc` with only a phone (`signup.handlers.ts`); the name lives only in
@@ -421,12 +432,16 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
 
 - **PQ1 — "Had not finished joining": where does it end?** The ruled words: *"had not finished joining (⛔ identity check)"*; `-423`
   Consequence 1 (c) lists only `pending-kyc`. Two edges, put separately:
-  - **PQ1 (a) — paid, identity ⛔ yet VERIFIED by the Trust.** `pending-valid` (*"lock-in elapsed but KYC still unverified … awaits
-    trustee"*; the name is on record — the manual route writes it). The ruled words literally reach it; Consequence 1 (c) does ⛔. Built:
-    OPEN — a DECLARED narrowing (one arm of N6's switch if the Panel says refuse). The note suggests A (file) — the last step was the
-    Trust's. (Manual-fallback members in `lock-in` are ⛔ asked — `-423`'s *"first days after joining"* keeps them open.)
+  - **PQ1 (a) — an identity nobody has checked.** A member who joined through the manual fallback (`member_kyc_profiles`:
+    `verification_strength = 'self_declared'`, `trusteeVerified = false`), whatever their state — TODAY that is `pending-fee` or `lock-in`
+    for good, because the trustee-verification step and the lock-in exit are ⛔ built (G9a; `pending-valid` is unreachable). The ruled
+    words literally reach them; Consequence 1 (c) does ⛔, and the *"first days after joining"* exemption covers their state. Built: OPEN
+    — a DECLARED narrowing. ⚠ "Refuse" is ⛔ an arm of N6's switch: it needs the identity record read beside the state. The note suggests
+    **C** — filed, but staff confirm the identity from the death documents before any drive opens (a NEW step, ⛔ this story's); A stands
+    until then.
   - **PQ1 (b) — the FEE never paid.** `pending-fee`, identity verified or manual: Niyamavali §2.1 (c) makes the fee a condition of
-    membership; the Panel's words do ⛔ mention it. Built: OPEN (one arm of N6's switch if refused). The note suggests B (refuse).
+    membership; the Panel's words do ⛔ mention it. Built: OPEN (one arm of N6's switch if refused). The note suggests B (refuse). A person
+    in both (typed-in AND unpaid) is refused if either answer refuses.
 - **PQ2 — After a death is reported, what may the member's account still do?** Two questions (a mixed question is two — the template):
   - **PQ2 (a) — WITHDRAW the membership?** `-423`'s own reason (*"no one can withdraw it on their behalf afterwards"*) points at
     withdrawal too — but the ruled words cover erasure only, so a refusal would WIDEN the ruling. Built: unchanged (reachable). The harm:
@@ -518,7 +533,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
         — PQ1 (a), PQ1 (b), PQ2 (with N8's export harm), PQ3; plain-English question first, THE ONE FACT, options with an honest cost on
         each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge. — ✅ 2026-10-31:
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (Q1 (a) / (b), Q2 (a) / (b),
-        Q3; suggestions A · B · A · A · B; E4 re-run clean). Status WRITTEN, ⛔ sent.
+        Q3; suggestions C · B · A · A · B — Q1 (a) rewritten the same day from A to C once G9a was traced; E4 re-run clean). Status WRITTEN, ⛔ sent.
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL16 as answered; names PQ1–PQ3 routed and PQ1 (a) as a DECLARED
         narrowing of the ruled words; cites `-423`; ⛔ supersedes a ratified entry. Committed ALONE, first.
   - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
@@ -641,7 +656,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
 
 ⛔ A "found alive" closure (6-22's); ⛔ a guilty-finding release rule (6-22's — DL4); ⛔ a separate data-rights nominee; ⛔ moderation
 status in the 4.7 search results; ⛔ disabling the admin erasure button pre-emptively; ⛔ a refusal of withdrawal or of direct edits
-after death (PQ2 (a) / (b)); ⛔ telling the caller why (PQ3); ⛔ refusing `pending-valid` / `pending-fee` (PQ1 (a) /
+after death (PQ2 (a) / (b)); ⛔ telling the caller why (PQ3); ⛔ refusing a typed-in identity or `pending-fee` (PQ1 (a) /
 (b)); ⛔ any change to the erasure of a living member for whom ⛔ claim has been filed; ⛔ backfill of existing claims (⛔ member uses the
 system yet — the routing note's "What is at stake right now"); ⛔ the privacy policy (outside this repository — BigDev and counsel;
 tracked by Task 0.5 (iii)).
@@ -696,6 +711,7 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.5 | How identity is verified today traced (G9a): DigiLocker or a self-declared entry; ⛔ trustee verification step and ⛔ lock-in exit exist, so `pending-valid` is unreachable and ⛔ member becomes `active`. PQ1 (a) re-framed to "an identity nobody has checked" (any state; refusing needs the identity record, ⛔ a switch arm); the note's Q1 (a) rewritten, suggestion A → C; the gap recorded in `deferred-work.md`, observational. |
 | 2026-10-31 | 1.4 | Two technicals clarified (BigDev): (1) N4 / AC8 — a TERMINAL standing claim meets the existing mint guards, ⛔ "it mints": `closed` for no response ⇒ 409 re-file confirmation first; `denied` ⇒ mints; `settled` ⇒ mints and is closed in the mint. (2) G1 / DL15 — ⛔ delayed erasure exists (legality read at execution, failed attempts release the key); the fence now pins the ACT (the `member.rtbf_anonymized` emitters and the sentinel writer, incl. `apps/jobs/src`), and the header states the execution-time rule for any future deferred erasure. |
 | 2026-10-31 | 1.3 | Task 0.3 done — the routing note `trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` WRITTEN (⛔ sent): Q1 (a) / (b), Q2 (a) / (b), Q3. PQ2 split into (a) / (b); PQ1 (a) is `pending-valid` only (manual-fallback `pending-fee` moves to PQ1 (b); manual-fallback `lock-in` is ⛔ asked — `-423`'s "first days after joining"). The DL10 Hindi confirmed reviewed by BigDev (*"DL10 Hindi is fine"*). |
 | 2026-10-31 | 1.2 | Task 0.2 answered — BigDev: *"DL1-DL16 as recommended"* (DL16 (a); the English copy approved; the DL10 Hindi ⛔ yet confirmed as reviewed). |

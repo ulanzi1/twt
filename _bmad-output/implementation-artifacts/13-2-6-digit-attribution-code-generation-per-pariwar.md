@@ -10,7 +10,7 @@ PINNED: `3d6b46c5` = `origin/main` (ledger 2026-11-01a — Story 12.1 landed). T
 (`beae5116..3d6b46c5`, the module-marketplace primitive) touches none of them. Perishable — re-check at Task 0.1.
 Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.3 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c)).
+STATUS: ready-for-dev (v1.4 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
@@ -111,7 +111,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   includes Pariwar context"* · *"`resolveAttribution(code, pariwar_id) → field_worker_id` — takes BOTH the code AND the
   Pariwar context; never accepts a code lookup without Pariwar context"* · *"a CI test asserts: no API endpoint allows
   attribution-code lookup without Pariwar context; same `(code, pariwar_id)` pair always resolves to the same field
-  worker; same code across different Pariwars resolves to different field workers"*.
+  worker; same code across different Pariwars resolves to different field workers"*. ⚠ NARROWED by AT4 (c): the lookup
+  also takes a required `asOf`, and the same `(code, pariwar_id)` resolves to the same field worker for every `asOf` at
+  or after the code's allocation — and to `null` before it.
 - **epics.md, Story 13.1 AC:** `attribution_code` *"(Pariwar-scoped 6-digit; FK to Story 13.2 codes table)"* — ⚠ the
   FK DIRECTION is reversed by AT2 (and a dated note is added under 13.1 in `epics.md`, Task 0.4).
 - **PRD FR-81:** *"Code generated on admin 'Add Field Worker.' Unique per Pariwar."* · **FR-82:** *"Accepts: 6-digit
@@ -169,7 +171,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   Purpose-built review queues are the house pattern (`reconciliation/reconciliation-review-read.ts`, `memorial/review.ts`).
 - **G8 — no generic config store.** Thresholds are domain constants (`WA_OPT_IN_CODE_MAX_SENDS`, `MAX_CODE_RETRIES`) or
   API env via `intEnv` (`apps/api/src/config.ts`) passed through `deps.config`.
-- **G9 — the route-scan precedent.** `apps/api/src/route-registry.ts` (`collectRoutes` / `getCollectedRoutes` — each
+- **G9 — the route-scan precedent (HISTORICAL since v1.3 — AT8 v2 does ⛔ use it; kept so the reasoning in AT8 v2's "why
+  v1.2's rule was replaced" can be checked).** `apps/api/src/route-registry.ts` (`collectRoutes` / `getCollectedRoutes` — each
   entry exposes the raw Zod `schema`, so a key-walk is feasible) + `apps/api/tests/integration/login-wall.spec.ts` (every
   collected route, skips HEAD, an allowlist, guard symbols `ADMIN_SESSION_GUARD` / `MEMBER_SESSION_GUARD`, and a
   **non-vacuity floor** `guarded >= 6`).
@@ -238,12 +241,19 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   - **AT4 (c) — the ROLLOUT SEQUENCING GUARANTEE (v1.3, PROPOSED — BigDev asked for one).** AT4 (a) alone rests on a
     promise about ORDER (signup ⛔ live before 13.1; Q-S5). ⭐ Make correctness independent of rollout order: **a code
     credits its holder only for a capture made AT OR AFTER the code was allocated.** `resolveAttribution` takes a
-    REQUIRED `asOf` instant and returns the holder only if `allocated_at <= asOf`; otherwise `null`. `asOf` is the
-    capture's own DB instant (`member_attribution.captured_at`), ⛔ an app-clock value (AC5). Consequences:
+    REQUIRED `asOf: Date` and returns the holder only if `date_trunc('milliseconds', allocated_at) <= asOf`; otherwise
+    `null`. ⚠ MILLISECOND granularity, on purpose: `allocated_at` is `clock_timestamp()` (µs) but a JS `Date` holds ms
+    (`new Date('… 12:00:00.123999+00')` → `.123Z`), so a µs comparison would make `asOf = <the allocator's returned
+    allocatedAt>` resolve to `null`. `asOf` is a DB instant, ⛔ an app-clock value (`new Date()`, `deps.clock()`): the
+    capture's own `member_attribution.captured_at`, or — for a lookup tied to no capture (an admin "who holds code X
+    now?") — `clock_timestamp()` read in the same tx (AC5). Consequences:
     - signup going live before 13.1 becomes HARMLESS — every pre-registry capture predates every allocation, so it
       credits ⛔ one, whatever the order of deploys, and whether or not AT4 (a) caught it;
-    - the concurrent-capture race resolves the right way — a capture whose tx began before the code existed could not
-      have been typed from that worker (the worker only learns the code after registration commits);
+    - the concurrent-capture race mostly resolves the right way — a capture whose tx began before the code's INSERT
+      could not have been typed from that worker. ⚠ RESIDUAL: `allocated_at` is the insert-time clock, ⛔ the commit
+      time, so a capture whose tx starts between the allocator's INSERT and the registration COMMIT is credited though
+      the code was visible to no one yet (and AT4 (a)'s `EXISTS` missed it too) — odds ≈ 10⁻⁶ per capture × a
+      milliseconds-wide window; accepted, ⛔ engineered away;
     - the live path (13.8: capture, then resolve in the same tx with the row's `captured_at`) is unaffected;
     - a backfill (C4) needs ⛔ temporal rule of its own — it is in the only door, and no caller can forget it because
       `asOf` is required.
@@ -289,66 +299,94 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     - *Name matching misses future lookups.* A lookup route with `:code`, `{ code }`, `{ ref }`, a deep-link token, a
       job, or any lookup reached through a helper never matches a `referenceCode|attributionCode|attribution_code`
       key list — and the pin can only catch keys it already knows.
-  - ⭐ **(a) Gate the CALL, not the route shape.** Every lookup, from any endpoint present or future, must go through
-    one API door that takes the Pariwar ONLY from the authenticated request — and the domain refuses any tx that is
-    not scoped to that same Pariwar. Four links, each enforced, each non-vacuous today:
-    - **(i) the domain door** (unchanged from v1.2): `resolveAttribution` is the only export keyed by `code`; it filters
+  - ⭐ **(a) Gate the CALL, not the route shape (v1.4 — hardened after the v1.3 validation).** Every lookup, from any
+    endpoint, page or job present or future, must go through one door that takes the Pariwar ONLY from the
+    authenticated request — and the domain refuses any tx that is not scoped to that same Pariwar. Four links, each
+    enforced, each non-vacuous today:
+    - **(i) the domain door** (unchanged): `resolveAttribution` is the only export keyed by `code`; it filters
       `WHERE "pariwar_id" = $1 AND "code" = $2` explicitly and asserts `current_setting('app.pariwar_id', true)` =
       `pariwarId` (unset ⇒ `PariwarScopeMissingError`; non-UUID ⇒ `InvalidPariwarScopeError`; different ⇒
       `AttributionPariwarScopeMismatchError`). Pinned export list.
-    - **(ii) the domain boundary scan** (unchanged from v1.2): the two tables are named only inside
-      `packages/domain/src/attribution-code/`, `schema/`, `policies/` (and their barrels); no non-test file outside the
-      module passes the `generate` seam (AT9).
-    - **(iii) the API door** — NEW file `apps/api/src/modules/field-worker/attribution-code-access.ts`, the ONLY file in
-      `apps/*/src` allowed to reference the `attributionCode` namespace (or any `attribution-code` import path). It
-      exports one request-bound wrapper per domain function — `resolveAttributionForRequest(request, tx, { code, asOf })`,
-      `readAttributionCodeForRequest(request, tx, { fieldWorkerId })`, `allocateAttributionCodeForRequest(request, tx,
-      { fieldWorkerId }, opts?)`, `listAllocationFlagsForRequest(request, tx, { limit? })`, and
+    - **(ii) ONE REACH FENCE over the whole repo** (replaces v1.3's separate domain boundary scan and door-only scan —
+      both were too narrow: v1.3 missed `apps/public`, an UNAUTHENTICATED server that sets its scope from config
+      (`apps/public/src/lib/db.server.ts` `withPublicScope` → `setPariwarScope(client, ACTIVE_PARIWAR_ID)`, importing
+      `@twt/domain` from `.ts` and `.astro` files), and could be bypassed through `schema.fieldWorkerAttributionCodes`,
+      raw SQL, or a wrapper in another package / domain module). House precedent: `apps/api/tests/unit/family-account-reach-fence.test.ts`
+      (one REACH pattern, scanned TREES, an EXACT allow-list, comments stripped, a planted-importer positive control —
+      its header records the same lesson: *"the first version scanned `apps/api/src` alone"*).
+      - **REACH:** the `attributionCode` export of `@twt/domain` (matched by the EXPORTED name, so an alias counts; also
+        `domain.attributionCode` after `import * as domain`, and re-exports); any import path containing
+        `attribution-code`; `fieldWorkerAttributionCodes`; `attributionCodeAllocationFlags`;
+        `field_worker_attribution_codes`; `attribution_code_allocation_flags`; and the domain function names
+        `resolveAttribution`, `allocateAttributionCode`, `readAttributionCodeForFieldWorker`, `flagAllocationExhausted`,
+        `listAllocationFlags`.
+      - **TREES:** every `apps/*/src` and every `packages/*/src` — enumerated from the workspace directories at run time
+        (⛔ a hard-coded list), files `.ts`, `.tsx`, `.mts`, `.js`, `.astro`.
+      - **ALLOWED (exact):** the module's own files `packages/domain/src/attribution-code/*.ts`; the two schema files and
+        `schema/index.ts`; the two policy files and `policies/index.ts`; `packages/domain/src/index.ts` (the namespace
+        export); and the API door `apps/api/src/modules/field-worker/attribution-code-access.ts`. Inside
+        `packages/domain/src`, ⛔ other module may import `../attribution-code/` (that would be a second door).
+      - **Positive controls:** a planted importer in `apps/public/src/pages/*.astro`, in `packages/validity-service/src`,
+        a `schema.fieldWorkerAttributionCodes` read, a raw-SQL `field_worker_attribution_codes`, and a `../attribution-code/`
+        import from another domain module — each caught; a COMMENTED mention ⛔.
+      - **Floor:** every ALLOWED file exists and matches REACH (an allow-list entry that no longer reaches is stale and
+        fails); ≥ 500 files scanned.
+      - The AT9 rule rides here too: ⛔ file outside `packages/domain/src/attribution-code/` and test trees passes `generate`.
+    - **(iii) the API door** — `apps/api/src/modules/field-worker/attribution-code-access.ts`, exporting EXACTLY these five
+      wrappers with EXACTLY these option keys (pinned by name and key):
+      `resolveAttributionForRequest(request, tx, { code, asOf })`, `readAttributionCodeForRequest(request, tx,
+      { fieldWorkerId })`, `allocateAttributionCodeForRequest(request, tx, { fieldWorkerId }, opts?: { maxAttempts?:
+      number })` (⛔ `generate` — AT9), `listAllocationFlagsForRequest(request, tx, { limit? })`, and
       `flagAllocationExhaustedForRequest(deps, request, { attempts })` (opens and commits its OWN
-      `openScopeTx(deps, <request's Pariwar>)`, actor = `requestContext.actorId` — the C1 separate-tx rule, built in).
-      Each takes the Pariwar from `request.requestContext.pariwarId` and from nowhere else; ⛔ wrapper has a `pariwarId`
-      parameter, and the file ⛔ reads `request.params`, `request.body`, `request.query` or `request.headers`. An
-      unset `requestContext.pariwarId` ⇒ a loud 500 (`Error('[attribution-code-access] no authenticated Pariwar')`) —
-      it means a route without a Pariwar-setting guard reached the door, a programming error.
-    - **(iv) the authenticated-Pariwar pin**: exactly TWO sites in `apps/api/src` write `requestContext.pariwarId` —
-      `requireMemberSession` and `scopeResolutionHook` (G9b) — pinned by a scan, so no future code can put a body-,
-      header- or config-derived Pariwar there without failing CI and being reviewed.
-  - **What the four links prove together, for ANY endpoint and ANY key name:** a lookup happens only through (iii);
-    (iii) uses only `requestContext.pariwarId`; (iv) makes that an authenticated Pariwar (a verified member JWT or a
-    `role_grants`-checked admin scope); (i) refuses unless the transaction is scoped to that same Pariwar and filters
-    on it. ⇒ a lookup without Pariwar context THROWS; a lookup under the wrong Pariwar THROWS — including the member
-    handler that opened its tx from config or a header (the G9a gap closes at (i)).
-  - **The gates (static, in `apps/api/tests/unit/attribution-code-door.test.ts`, TypeScript-AST via the `typescript`
-    package the `scripts/access-wrapper-invariants/` gate already uses — ⛔ regex):**
-    - **door-only**: no `.ts`/`.tsx` under `apps/{api,jobs,admin}/src` other than `attribution-code-access.ts` references
-      the `attributionCode` export of `@twt/domain` — matched by the EXPORTED name, so an alias
-      (`import { attributionCode as ac }`) counts — via named import, namespace member access (`domain.attributionCode`
-      after `import * as domain`), or re-export, or imports a path containing `attribution-code`. (`typescript` is
-      already an `apps/api` devDependency.) Floor: the door file is
-      found and references it.
-    - **door-shape**: in the door file, ⛔ exported function has a parameter (or destructured property) named
-      `pariwarId` / `pariwar_id`, and ⛔ property access to `params` / `body` / `query` / `headers` on a request.
-    - **writer pin**: the set of files containing an assignment (`=`, `??=`, `||=`) whose target is `X.pariwarId` with `X`
-      ending in `requestContext`, or an object literal with a `pariwarId` key assigned to `X.requestContext`, is EXACTLY
-      `{ auth/shared/member-session-guard.ts, middleware/scope-resolution/index.ts }`. Finding fewer than two fails too.
-    - Each gate gets a synthetic-source unit test proving it bites (a second importer; a `pariwarId` param; a `body` read;
-      a third writer; a `??=` writer).
+      `openScopeTx(deps, <request's Pariwar>)` — the C1 separate-tx rule, built in).
+      - **POSITIVE shape rule** (⛔ a deny-list): the `request` parameter is used ONLY by passing it to ONE private helper,
+        `authenticatedScope(request)`, which reads `request.requestContext.pariwarId` and `request.requestContext.actorId`
+        and nothing else; ⛔ other property access on `request`, ⛔ element access, ⛔ destructuring, ⛔ passing `request`
+        to any other function, ⛔ `getRequestContext()`. An unset Pariwar — or, for the flag wrapper, an unset actor —
+        ⇒ a loud 500 (`Error('[attribution-code-access] no authenticated Pariwar')` / `… actor`), matching
+        `scopeResolutionHook`'s own loud-500-on-misuse. ⛔ exported wrapper has any parameter or option key other than
+        those pinned above (so ⛔ `pariwarId`, `pariwar`, `tenantId` …).
+    - **(iv) the authenticated-Pariwar writer pin** (`apps/api/src`): the set of files containing ANY assignment or
+      compound assignment (`=`, `??=`, `||=`, `&&=`) whose target is a property access OR element access named
+      `pariwarId` — on ANY receiver (`request.requestContext`, an alias `ctx`, `getRequestContext()!`, `x['pariwarId']`)
+      — or a destructuring assignment that writes a `pariwarId` property, is EXACTLY
+      `{ modules/auth/shared/member-session-guard.ts, middleware/scope-resolution/index.ts }` (G9b; two today, so the pin
+      is non-vacuous, and ⛔ fewer than two passes). Also: ⛔ `Object.assign` / `Reflect.set` / `Object.defineProperty`
+      whose target is `requestContext`, `request.requestContext` or `getRequestContext()`, anywhere in `apps/api/src`;
+      and assignment TO a `.requestContext` property only in `middleware/request-context/index.ts`.
+  - **What the four links prove together, for ANY endpoint, page or job and ANY key name:** the module and its tables
+    are reachable only through (iii) (ii); (iii) takes the Pariwar only from `requestContext.pariwarId`; (iv) makes that
+    an authenticated Pariwar (a verified member JWT, or a `role_grants`-checked admin scope); (i) refuses unless the
+    transaction is scoped to that same Pariwar, and filters on it. ⇒ a lookup without Pariwar context THROWS; under the
+    wrong Pariwar THROWS — including the member handler that opened its tx from config or a header (G9a closes at (i)),
+    and ⛔ public page can reach it at all ((ii)).
+  - **Where the gates live.** (ii) and (iv) and the (iii) shape rule: `apps/api/tests/unit/attribution-code-reach-fence.test.ts`,
+    TypeScript-AST via the `typescript` devDependency of `apps/api` (for `.astro`, scan the frontmatter / script text
+    with the same REACH regex after comment-stripping — the precedent's approach). ⚠ Like the precedent, it reads other
+    workspaces, so a LOCAL `ci:local` re-run is skipped by turbo's cache when only another workspace changed (`@twt/api#test`
+    uses default inputs); GitHub CI has no turbo cache and is the backstop. ⛔ add turbo `inputs` in this story.
+  - **Bite tests** (synthetic sources, unit): for (ii) — each positive control above, an alias import, `domain.attributionCode`,
+    a re-export, a path import; for (iii) — a `pariwarId` param, a `pariwar` option key, a `request.body` read, a
+    `request['body']` read, `const { body } = request`, `request` passed to a helper, `getRequestContext()`, a forwarded
+    `generate`; for (iv) — a third writer via `ctx.pariwarId = …`, `getRequestContext()!.pariwarId = …`,
+    `x['pariwarId'] = …`, `??=`, `Object.assign(request.requestContext, { pariwarId })`, `({ pariwarId: ctx.pariwarId } = o)`,
+    and `request.requestContext = { …ctx, pariwarId }` outside `request-context/index.ts`.
   - **The runtime proof (live-DB, `apps/api/tests/integration/attribution-code-access.spec.ts`):** a fake request with
     `requestContext.pariwarId = A` and a tx scoped to A resolves A's holder; the same request with a tx scoped to B ⇒
     `AttributionPariwarScopeMismatchError` (the G9a gap, caught); `requestContext` without `pariwarId` ⇒ the loud 500;
-    the flag wrapper commits a flag row even when the caller's tx then rolls back.
+    the flag wrapper without `actorId` ⇒ the loud 500; the flag wrapper's row survives the caller's rollback.
   - **Cost:** one small API file with no route caller yet (13.1 / 13.3 / 13.8 are its callers — C1, C5, C2) and one
-    static test file. ⛔ Middleware change, ⛔ route scan, ⛔ Zod walker, ⛔ pinned route list to maintain. A future job
-    (C4's backfill) that must read the codes without a request is a REVIEWED addition to the door-only allowlist, with
-    its own Pariwar source named there.
+    static test file. ⛔ Middleware change, ⛔ route scan, ⛔ Zod walker, ⛔ pinned route list. A future request-less
+    caller (C4's backfill job) is a REVIEWED addition to the fence's ALLOWED list, with its own named Pariwar source.
   - ⛔ (b) v1.2's route-shape scan — fails both findings above.
   - ⛔ (c) a full route→call-graph AST (find every route whose handler transitively reaches `resolveAttribution`) — the
     same guarantee as (a) at many times the code, and brittle across dependency injection (`createXHandlers(deps)`).
   - ⛔ (d) take the Pariwar off the domain signature (read it from the tx scope only) — the epic names
     `resolveAttribution(code, pariwar_id)`, and (i)'s equality check is what catches a mis-scoped tx.
 - **AT9 — Test seam for clashes.** ⭐ `allocateAttributionCode(db, input, opts?)` where `opts = { maxAttempts?,
-  generate? }`; `generate` defaults to `generateAttributionCode` and exists for tests to force collisions. The boundary
-  scan (AT8 ii) fails any non-test file outside the module that passes `generate`.
+  generate? }`; `generate` defaults to `generateAttributionCode` and exists for tests to force collisions. The reach
+  fence (AT8 v2 ii) fails any non-test file outside the module that passes `generate`, and the API door's `opts` is
+  typed `{ maxAttempts?: number }` only (AT8 v2 iii).
 - **AT10 — No event.** ⭐ (a) allocation emits ⛔ no `events_log` event: the append-only codes row IS the record (the
   `member_attribution` precedent); 13.1's `field_worker.registered` payload may carry `attributionCodeId` (C1).
   - ⛔ (b) an `attribution_code.allocated` event — a second record of the same fact with no reader.
@@ -364,11 +402,11 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   must equal the transaction's own scope (AT8 v2 i).
 - **I5** — The allocator never issues a deny-listed code (AT5) or a code already captured in `member_attribution` for the
   Pariwar (AT4).
-- **I7** — A code credits its holder only for a capture at or after its allocation: `resolveAttribution` returns the
-  holder iff `allocated_at <= asOf` (AT4 (c)). Correctness ⛔ depends on the order in which signup and the registry go
-  live.
 - **I6** — `resolveAttribution` returns the code's **holder**, ⛔ the holder's eligibility. Whether a holder who is
   suspended or terminated may receive NEW attributions (FR-85) is 13.1's state, applied by the caller (C2).
+- **I7** — A code credits its holder only for a capture at or after its allocation: `resolveAttribution` returns the
+  holder iff `date_trunc('milliseconds', allocated_at) <= asOf` (AT4 (c)). Correctness ⛔ depends on the order in which
+  signup and the registry go live.
 
 ## Acceptance Criteria
 
@@ -405,9 +443,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    `AttributionCodeAllocationExhaustedError { pariwarId, attempts }`. **And** it first asserts the scope equals
    `pariwarId` (as AC5).
 5. **AC5 — the lookup.** `resolveAttribution(db, { code, pariwarId, asOf })` returns the holder's `FieldWorkerId` when
-   the code is held in the Pariwar AND `allocated_at <= asOf`; otherwise `null`. `asOf: Date` is REQUIRED (a missing or
-   invalid `Date` ⇒ `TypeError`) and is documented as the capture's DB instant (`member_attribution.captured_at`), ⛔ an
-   app-clock value (AT4 (c), I7).
+   the code is held in the Pariwar AND `date_trunc('milliseconds', allocated_at) <= asOf`; otherwise `null`. `asOf: Date`
+   is REQUIRED (a missing or
+   invalid `Date` ⇒ `TypeError`) and is documented as a DB instant — the capture's `member_attribution.captured_at`, or `clock_timestamp()` read in
+   the same tx for a lookup tied to no capture — ⛔ an app-clock value (AT4 (c), I7).
    **And** a `code` not matching `^[0-9]{6}$` ⇒ `InvalidAttributionCodeError` (⛔ a query). **And** unset scope ⇒
    `PariwarScopeMissingError`; a non-UUID scope ⇒ `InvalidPariwarScopeError`; scope ≠ `pariwarId` ⇒
    `AttributionPariwarScopeMismatchError`. **And** the SQL filters on
@@ -419,10 +458,12 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    its id; `listAllocationFlags(db, { pariwarId, limit? })` returns them ordered `flagged_at DESC, flag_id DESC`, the
    limit clamped with `clampLimit({ default, cap })` (the domain-accessor gate) — both with the scope assertion.
 8. **AC8 — the CI proof the epic asks for** (live-DB, `packages/domain/tests/integration/attribution-code/*.spec.ts`):
-   - same `(code, pariwarId)` resolves to the same field worker on every call (for any `asOf` ≥ its `allocated_at`);
-   - **AT4 (c):** `asOf` one microsecond BEFORE `allocated_at` ⇒ `null`; `asOf = allocated_at` ⇒ the holder; a
-     `member_attribution` row seeded with a `captured_at` before the allocation, resolved with that `captured_at`, ⇒
-     `null` (the sequencing guarantee, with no reliance on AT4 (a));
+   - same `(code, pariwarId)` resolves to the same field worker on every call (for any `asOf` ≥ its allocation);
+   - **AT4 (c):** `asOf` = the allocator's RETURNED `allocatedAt` ⇒ the holder; `allocatedAt − 1 ms` ⇒ `null`; a
+     `member_attribution` row seeded with a `captured_at` BEFORE the allocation, resolved with that `captured_at`, ⇒
+     `null` (the sequencing guarantee, with no reliance on AT4 (a)); ⭐ and the POSITIVE leg — a row whose `captured_at`
+     is set EXPLICITLY after the allocation (`clock_timestamp()`, ⛔ the column default — TR10), resolved with it, ⇒ the
+     holder;
    - the SAME code seeded in `PARIWAR_A` (worker W1) and `PARIWAR_B` (worker W2) resolves to W1 under A and to W2 under
      B — and both INSERTs succeed (cross-Pariwar collision permitted, I1);
    - resolving A's code with `pariwarId = PARIWAR_B` while scoped to A ⇒ `AttributionPariwarScopeMismatchError`;
@@ -437,22 +478,25 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    - a second allocation for the same worker ⇒ `FieldWorkerAlreadyHasAttributionCodeError`;
    - as `twt_app`: `UPDATE` and `DELETE` on both tables are refused; as the owner role the guard triggers refuse
      `UPDATE`, `DELETE` and `TRUNCATE`; a hand INSERT of `'123456'` or `'12345'` fails its CHECK;
-   - **plus** the AT8 v2 (ii) domain boundary scan (with its floor) — the API-side proof is AC10;
+   - the reach fence and the door are AC10;
    - **plus** a block in `cross-pariwar-leak.spec.ts` for each new table (G11) and an RLS policy-regression spec per
      table under `tests/integration/rls/`.
 9. **AC9 — nothing else moves.** ⛔ No endpoint, ⛔ permission key, ⛔ `PERMISSION_CATALOG_VERSION` bump, ⛔ change to
    `member_attribution` (columns, grants, policies, ⛔ even an index) or the vyawastha-shulk confirm path, ⛔ event type,
    ⛔ env var, ⛔ mobile/admin UI, ⛔ edit to the `rbac/roles.ts` / `permissions.ts` "Epic 12" comments (G3), ⛔ change to
-   `requireMemberSession`, `scopeResolutionHook` or `requestContextHook`. The ONE file outside the domain module: the API
-   door `apps/api/src/modules/field-worker/attribution-code-access.ts` (AT8 v2 iii) — no route uses it yet.
+   `requireMemberSession`, `scopeResolutionHook` or `requestContextHook`. The ONE production file outside `packages/domain`:
+   the API door `apps/api/src/modules/field-worker/attribution-code-access.ts` (AT8 v2 iii) — no route uses it yet.
    `pnpm ci:local` passes with `DATABASE_URL` set to the story's own DB port.
 10. **AC10 — the API door and its gates (AT8 v2 iii–iv).** **Given** `attribution-code-access.ts`, **then** it exports
-   the five request-bound wrappers named in AT8 v2 (iii), each taking the Pariwar ONLY from
-   `request.requestContext.pariwarId` (unset ⇒ loud 500); **and** `apps/api/tests/unit/attribution-code-door.test.ts`
-   enforces door-only, door-shape and the writer pin (exactly the two G9b sites), TypeScript-AST, each with a synthetic
-   test that bites; **and** `apps/api/tests/integration/attribution-code-access.spec.ts` proves: A-request + A-tx ⇒
-   resolves; A-request + B-tx ⇒ `AttributionPariwarScopeMismatchError`; no `requestContext.pariwarId` ⇒ 500; the flag
-   wrapper's row survives the caller's rollback.
+   EXACTLY the five request-bound wrappers and option keys pinned in AT8 v2 (iii), each reaching `request` only through
+   the private `authenticatedScope(request)` (unset Pariwar — or unset actor for the flag wrapper — ⇒ loud 500), and
+   ⛔ `generate` through the door; **and** `apps/api/tests/unit/attribution-code-reach-fence.test.ts` enforces (ii) the
+   repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; exact allow-list; floors), (iii) the
+   positive door shape and (iv) the writer pin (exactly the two G9b sites, any receiver, plus the
+   `Object.assign` / `.requestContext =` rules), TypeScript-AST, with every bite test listed in AT8 v2; **and**
+   `apps/api/tests/integration/attribution-code-access.spec.ts` proves: A-request + A-tx ⇒ resolves; A-request + B-tx ⇒
+   `AttributionPariwarScopeMismatchError`; no `requestContext.pariwarId` ⇒ 500; flag wrapper without `actorId` ⇒ 500; the
+   flag wrapper's row survives the caller's rollback.
 
 ## Tasks / Subtasks
 
@@ -510,7 +554,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   copied locally or lifted (⛔ match any 23505). The AT4 `EXISTS` read on `member_attribution` (`pariwar_id` + 
   `attribution_source`) per candidate. `ATTRIBUTION_CODE_MAX_ATTEMPTS = 8`; `opts.maxAttempts` range check.
 - [ ] **Task 5 — lookup, holder read, flags (AC5, AC6, AC7).** `resolve.ts` (`resolveAttribution` with the required
-  `asOf` and the `allocated_at <= asOf` predicate in SQL,
+  `asOf: Date` — invalid ⇒ `TypeError` — and the `date_trunc('milliseconds', allocated_at) <= $asOf` predicate in SQL,
   `readAttributionCodeForFieldWorker`), `flags.ts` (`flagAllocationExhausted`, `listAllocationFlags` with `clampLimit`).
   One private `assertScopeIs(db, pariwarId)` (reads `current_setting('app.pariwar_id', true)` via `db.execute`; empty ⇒
   `PariwarScopeMissingError`, non-UUID ⇒ `InvalidPariwarScopeError`, different ⇒ `AttributionPariwarScopeMismatchError`)
@@ -521,16 +565,18 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     (FK) — reuse an existing member-seed helper.
   - [ ] 6.2 `tests/integration/multi-tenant/cross-pariwar-leak.spec.ts` blocks + `tests/integration/rls/` regression
     specs for both tables.
-  - [ ] 6.3 Unit: `tests/attribution-code/exports.test.ts` (pinned export list), `boundary.test.ts` (AT8 v2 ii, with
-    floor), deny-list ↔ migration lockstep test.
+  - [ ] 6.3 Unit: `tests/attribution-code/exports.test.ts` (pinned export list), deny-list ↔ migration lockstep test.
+    (The v1.3 domain-only `boundary.test.ts` is FOLDED into the repo-wide reach fence, 6.4.)
   - [ ] 6.4 **The API door (AC10).** `apps/api/src/modules/field-worker/attribution-code-access.ts` (the five wrappers);
-    `apps/api/tests/unit/attribution-code-door.test.ts` (door-only / door-shape / writer pin, TypeScript-AST — reuse the
-    parsing helpers' shape from `scripts/access-wrapper-invariants/lib.ts`, ⛔ import from `scripts/`); its synthetic
-    bite tests; `apps/api/tests/integration/attribution-code-access.spec.ts` (live DB).
+    `apps/api/tests/unit/attribution-code-reach-fence.test.ts` — modelled on `family-account-reach-fence.test.ts` (REACH /
+    TREES / exact ALLOWED / comment-stripping / positive control), with TypeScript-AST for the door shape and the writer
+    pin (reuse the parsing approach of `scripts/access-wrapper-invariants/lib.ts`, ⛔ import from `scripts/`); every bite
+    test in AT8 v2; `apps/api/tests/integration/attribution-code-access.spec.ts` (live DB).
   - [ ] 6.5 RED proofs into Debug Log (b): break each guard once and record the failing test — drop the `pariwar_id`
-    predicate (⇒ the owner-role AC8 leg fails); drop the `allocated_at <= asOf` predicate (⇒ the AT4 (c) legs fail);
+    predicate (⇒ the owner-role AC8 leg fails); drop the as-of predicate (⇒ the AT4 (c) legs fail);
     remove the scope assertion (⇒ the A-request + B-tx leg fails); add a `UNIQUE("code")`; remove the TRUNCATE trigger;
-    add a second `attributionCode` importer under `apps/api/src`; add a third `requestContext.pariwarId` writer.
+    plant an importer in `apps/public/src/pages/*.astro` and a `schema.fieldWorkerAttributionCodes` read in `apps/api/src`;
+    add a third `pariwarId` writer via an alias (`ctx.pariwarId = …`); forward `generate` through the door.
 - [ ] **Task 7 — close.** `pnpm ci:local` with `DATABASE_URL` = the story DB port (⚠ the shell's `DATABASE_URL` points at
   `:5432`); File List; Change Log; row `ready-for-dev → in-progress → review` in `sprint-status.yaml` via the SAFE
   prepend.
@@ -560,8 +606,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - **TR4 — a guard proves a Pariwar was AUTHENTICATED, ⛔ that the lookup USED it.** Member handlers open their own
   scoped tx (G9a); only the domain's scope-equality check (AT8 v2 i) ties the two. ⛔ "simplify" it away.
 - **TR4a — a key-name list cannot find a lookup it has never seen.** Gate the call (the door), ⛔ the request shape.
-- **TR4b — the door must not grow a `pariwarId` parameter "for jobs".** A request-less caller is a reviewed allowlist
-  addition with its own named Pariwar source (C4), ⛔ an optional argument on the request door.
+- **TR4b — the door must not grow a `pariwarId` parameter "for jobs".** A request-less caller is a reviewed addition to
+  the reach fence's ALLOWED list with its own named Pariwar source (C4), ⛔ an optional argument on the request door.
+- **TR4c — the unauthenticated public server is a DB client too.** `apps/public` opens its own `twt_app` scope from config
+  (`withPublicScope`). Any fence that skips `apps/public` — or `.astro` files — is not a fence (AT8 v2 ii).
 - **TR5 — `\d` vs `[0-9]`.** JS `\d` without the `u` flag is ASCII; Postgres `~ '\d'` can match other digits under some
   locales — use `[0-9]` in SQL.
 - **TR6 — the deny-list lives in two places (TS constant + SQL CHECK).** The lockstep test is the only thing keeping them
@@ -570,6 +618,11 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   policy behaviour; the guard-trigger test runs as the owner role on purpose.
 - **TR8 — `pariwar_id` has no FK target** (G4) — ⛔ invent a `pariwars` table.
 - **TR9 — the shell's `DATABASE_URL` is `:5432`.** Prefix every `ci:local` and `git push` with the story port.
+- **TR10 — inside one transaction every default-seeded capture PREDATES every allocation.** `member_attribution.captured_at`
+  is `DEFAULT now()` (tx start — schema `.defaultNow()`, migration 0027), and `setupLiveDb` runs each test in ONE
+  rolled-back tx, so a capture seeded with the default always sorts before an allocation's `clock_timestamp()` and
+  resolves to `null`. Set `captured_at` EXPLICITLY (`clock_timestamp()`) for the positive leg (AC8); 13.8's same-tx
+  capture-then-resolve has the same trap.
 
 ### Carried to sibling stories (C) — HOMED (⛔ closed) in `deferred-work.md` and under each sibling in `epics.md` (Task 0.4)
 
@@ -590,9 +643,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   recorded but ⛔ seen (expected frequency ≈ 0, AT6).
 - **C4 → 13.5 / 13.8 (backfill of 3.6b captures).** A backfill resolves each `member_attribution` row with
   `asOf = captured_at` — the as-of rule (AT4 (c), I7) then credits ⛔ capture that predates its code, whatever the rollout
-  order, and the concurrent-capture race resolves the right way. A backfill JOB has no request: it needs (1) a
-  `twt_service` grant on the codes table (none today) — under which the explicit `pariwar_id` predicate is the only
-  Pariwar filter (TR3) — and (2) a REVIEWED entry in the API door-only allowlist naming its own Pariwar source (TR4b).
+  order (with the AT4 (c) insert-vs-commit residual). A backfill JOB has no request: it needs (1) a `twt_service` grant
+  on the codes table (none today) — under which the explicit `pariwar_id` predicate is the only Pariwar filter (TR3) —
+  and (2) a REVIEWED entry in the reach fence's ALLOWED list naming its own Pariwar source (TR4b).
 - **C5 → 13.3 (field-worker app).** FR-53's "my own code" reads `readAttributionCodeForRequest` (the API door) under
   `field_worker_self` scope; the permission key it needs is the Panel's to ratify (`-059` B(3)). Every route that touches a
   code — any shape, any key name — goes through the door (AT8 v2).
@@ -640,8 +693,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   `apps/api/src/modules/vyawastha-shulk/handlers.ts` (confirm handler); `packages/contracts/src/payments/vyawastha-shulk.ts`;
   `packages/domain/src/telegram-opt-in/{code,write}.ts`; `apps/api/src/modules/auth/shared/otp.ts`;
   `packages/domain/src/db.ts`; `packages/domain/migrations/0178_member-wa-opt-in-codes.sql`;
-  `packages/domain/src/policies/member-wa-opt-in-codes-rls.ts`; `apps/api/src/route-registry.ts`;
-  `apps/api/tests/integration/login-wall.spec.ts`; `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts`;
+  `packages/domain/src/policies/member-wa-opt-in-codes-rls.ts`; `apps/api/tests/unit/family-account-reach-fence.test.ts`
+  (the reach-fence precedent, AT8 v2 ii); `apps/api/src/modules/auth/shared/member-session-guard.ts`;
+  `apps/api/src/middleware/{scope-resolution,request-context}/index.ts`; `apps/public/src/lib/db.server.ts`;
+  `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts`;
   `packages/domain/src/rbac/roles.ts`.
 
 ## Dev Agent Record
@@ -665,6 +720,7 @@ and AT4 (c) written in v1.3, ⏳ awaiting BigDev.
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | 1.4 | Second fresh-context validation (of v1.3): 1 critical / 3 high / 4 medium / 6 low, all applied. AT8 v2 HARDENED — (ii) is now ONE repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; REACH covers the namespace, paths, schema symbols, SQL table names and the domain function names; exact allow-list; precedent `family-account-reach-fence.test.ts`) — v1.3 missed the unauthenticated `apps/public` server and schema / raw-SQL / wrapper bypasses; (iii) door shape is POSITIVE (request reached only through `authenticatedScope`), names + option keys pinned, `opts` without `generate`, unset actor ⇒ 500; (iv) writer pin covers any receiver / element access / compound / destructuring, plus `Object.assign` and `.requestContext =` rules. AT4 (c) at MILLISECOND granularity (`date_trunc`), `asOf` is a DB instant (incl. `clock_timestamp()` for capture-less lookups), positive leg + TR10, insert-vs-commit residual stated. AC2 NARROWED note; I6/I7 order; AC9 wording; G9 marked historical; TR4c; carried blocks show `asOf`. Turbo-cache local-rerun limit noted. AT8 v2 and AT4 (c) still PROPOSED. |
 | 2026-11-01 | 1.3 | BigDev: AT1–AT10 as recommended EXCEPT AT8, plus three findings. Both AT8 findings CONFIRMED in the code (G9a extended: member handlers open their own scoped tx; G9b added: exactly two `requestContext.pariwarId` writers). AT8 REPLACED by v2 — gate the call, not the route shape: domain door + domain boundary scan + ONE API door (`attribution-code-access.ts`) + a pin on the two authenticated-Pariwar writers; the route scan, Zod walker, pinned route list and `SCOPE_RESOLUTION_HOOK` marker are DROPPED. AT4 (c) ADDED — the rollout sequencing guarantee: required `asOf`, a code credits only captures at/after its allocation (I7). New AC10; AC5 / AC8 / AC9 / Tasks 5–6 / TR4–TR4b / C1 / C4 / C5 updated; C6 added. AT8 v2 and AT4 (c) PROPOSED. |
 | 2026-11-01 | 1.2 | Q-S5 ANSWERED — BigDev: *"Answer is no to both"* (no hand-issued codes before 13.1; signup not live before 13.1). AT4's premise and the §0 gate now ESTABLISHED, ⛔ conditional; G2 and Task 0.2 updated; Debug Log (a) started. AT1–AT10 still pending. |
 | 2026-11-01 | 1.1 | Fast-forwarded to `3d6b46c5` (12.1 landed). One fresh-context checker: 1 critical / 2 high / 7 medium / 11 low, all applied — AT8 (iii) route rule rewritten for admin `/p/:pariwarId` routes + `SCOPE_RESOLUTION_HOOK` marker + throwing walker + exact pin (two routes); Q-S5 / S5 and the §0 premise made conditional; owner-role leg that proves the `pariwar_id` predicate; 0192 append-only + TRUNCATE triggers; migration number left `NNNN` (0195 contended by 14-3 / 6-22); flag-in-a-separate-`openScopeTx`; the "Epic 12" comment edit DROPPED (Decision `2026-08-13-104`); C3–C5 also homed under 13.3 / 13.4 / 13.5 / 13.8; carried-item writes moved into Task 0.4; L-1…L-11. |

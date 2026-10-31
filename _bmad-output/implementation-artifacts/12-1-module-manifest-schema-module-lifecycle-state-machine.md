@@ -13,7 +13,7 @@ FUNCTION, ⛔ by line.
 
 STATUS: ready-for-dev (2026-10-31 — v1.1: created v1.0, then validated by three read-only verifiers (facts against the repo;
 disaster-prevention against the helpdesk / pool / alert twins; coherence + LLM optimisation), all 19 improvements applied.
-Committed at `62416719`; ⛔ pushed. QE1–QE15 ANSWERED 2026-10-31 — all as recommended (Task 0.2), recorded by author-commit `2026-10-31-427` (`a22dbdec`, alone — Task 0.3). Task 0.4's records are next.)
+Committed at `62416719`; ⛔ pushed. QE1–QE15 ANSWERED 2026-10-31 — all as recommended (Task 0.2), recorded by author-commit `2026-10-31-427` (`a22dbdec`, alone — Task 0.3). Task 0.4's records DONE 2026-10-31 (`deferred-work.md` section with C1–C8 + the QE5 / QE9 / QE11 deferrals; "⭐ INHERITED FROM 12.1" notes in `epics.md` under 12.2–12.6) ⇒ **Task 0 is COMPLETE**; the build may start.)
 
 GLYPH REGISTER: ⛔ NEGATES the word or phrase it precedes (before an already-negative word it is emphasis: "⛔ never");
 ⭐ = action / emphasis; ⚠ = hazard. ⭐ In ACs, Invariants, Tasks and Traps, negations are written in PLAIN WORDS ("No …",
@@ -32,8 +32,8 @@ that takes it on any branch". For migrations `-415` follows `-332` d2: the numbe
   story takes ≥ `0193`, `when` ≈ 1796269200038, GREATER than every sibling's.
 - ADRs: highest `ADR-0043` ⇒ this story takes ≥ `ADR-0044`.
 - RBAC: `PERMISSION_CATALOG_VERSION = 56` ⇒ this story does not change it (I7).
-- Ledger: `2026-10-31a`–`o` are taken elsewhere; `p` (creation) and `q` (Task 0.2 / 0.3) are taken here ⇒ next free ≥
-  `2026-10-31r`.
+- Ledger: `2026-10-31a`–`o` are taken elsewhere; `p` (creation), `q` (Task 0.2 / 0.3) and `r` (Task 0.4) are taken here ⇒
+  next free ≥ `2026-10-31s`.
 - Roster: no row (nothing member-visible ships).
 
 ⭐ Re-grep ALL of these at Task 0.1 and again at the commit that takes each. `story/6-38-…` and `story/11b-5a-…` are live
@@ -516,7 +516,7 @@ are counted exactly (I5) and taken once per member (QE8) are consistent with tha
      BEFORE any code commit.
    - The four ASKs (QE5 `commission_terms` deferral, QE7 no auto-archive, QE8 one place per member, QE9 role / cohort absent)
      carry BigDev's answers verbatim.
-   - The carried items C1–C8 land in `deferred-work.md`, and as short "⭐ INHERITED FROM 12.1" notes under the owning
+   - ⭐ MET: the carried items C1–C8 land in `deferred-work.md`, and as short "⭐ INHERITED FROM 12.1" notes under the owning
      stories in `epics.md` ([[feedback_governance_commits_precede_implementation]],
      [[feedback_spec_edits_must_propagate_to_tasks]]).
 1. **AC1 — manifest table.** **Given** FR-64 + AR-42 + QE4 / QE5, **when** `0193_marketplace-modules.sql` is applied,
@@ -625,7 +625,7 @@ are counted exactly (I5) and taken once per member (QE8) are consistent with tha
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance first (AC0).** Do NOT start anything below until 0.3 is committed.
+- [x] **Task 0 — governance first (AC0).** ⭐ COMPLETE 2026-10-31. Do NOT start anything below until 0.3 is committed.
   - [ ] 0.1 `git fetch origin`; rebase this branch on `origin/main` if it moved. Re-grep NUMBERS (decision id, migration +
         journal `when`, ADR number, `PERMISSION_CATALOG_VERSION`, ledger letter) across every branch and worktree
         ([[feedback_git_fetch_before_remote_reasoning]]). Re-verify G1, G4, G5, G7, G11 and G17.
@@ -640,7 +640,7 @@ are counted exactly (I5) and taken once per member (QE8) are consistent with tha
   - [x] 0.3 ⭐ DONE — `2026-10-31-427` (`a22dbdec`, committed alone; `-426` skipped as held uncommitted elsewhere). Write ONE author-commit decision entry (QE1–QE15, the §0 table, the four answers) at the top of
         `.decision-log.md`. Commit it ALONE as `governance: decision 2026-10-31-4NN — Story 12.1 build decisions …`
         ([[project_decision_log_writes_user_inserted]]: try first; if refused, ask once).
-  - [ ] 0.4 Records:
+  - [x] 0.4 ⭐ DONE 2026-10-31. Records:
         - In `deferred-work.md`, add C1–C8 under a `## Story 12.1` heading, each with its owning story and re-trigger.
         - In `epics.md`, add short "⭐ INHERITED FROM 12.1" notes:
           - under 12.2: C2 (activation emitter), C5, QE9 role / cohort, QE11 revise, QE5 `commission_terms`;
@@ -915,6 +915,7 @@ All paths below are under `packages/domain/` unless prefixed otherwise. Do NOT u
 ### Change Log
 
 - 2026-10-31 — v1.0 created by `bmad-create-story` at `01062c51` (four read-only research passes); row backlog → ready-for-dev.
+- 2026-10-31 — v1.3: Task 0.4 done (`deferred-work.md` C1–C8 + deferrals; `epics.md` INHERITED notes under 12.2–12.6) ⇒ Task 0 complete.
 - 2026-10-31 — v1.2: Task 0.2 answered ("QE1-QE15 as recommended."); Task 0.3 done — `2026-10-31-427` (`a22dbdec`).
 - 2026-10-31 — v1.1 at `b2f36fe9` (worktree fast-forwarded to `origin/main`): validated by three read-only verifiers; all 19
   improvements applied (audit pairing moved to the caller — QE15; no tenant FK; row-lock last-place design + RC isolation;

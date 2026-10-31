@@ -4,6 +4,36 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review (round 5 — the round-4 PATCH diff) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **D8 — The helpline console's "held" line is ⛔ re-announced on a second held click, and no screen reader has heard it**
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`, the always-mounted `role="status"` line]
+  - A repeat click while the line is showing changes no text, so a polite live region says nothing. This is a known limit, recorded in the
+    code comment.
+  - Every test checks DOM shape in jsdom, so a real VoiceOver / NVDA pass is un-attested.
+  - **Trigger:** the admin accessibility audit (11b.8), or a reported miss.
+
+---
+
+## Deferred from: code review (round 4 — the full branch) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **A — The door's "when they died" is measured at FILING, and a refused filing leaves no trace, so a fee paid after the death opens the
+  door** [`packages/domain/src/claim/intake-door.ts` `resolveClaimIntakeDoor`; `apps/api/src/modules/vyawastha-shulk/handlers.ts` (⛔ death
+  check)] — ROUTED TO THE PANEL (BigDev: "1"). The note is
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-paid-after-death.md`: WRITTEN, ⛔ yet SENT.
+  - **Q1 — a fee paid after the death:** we suggest B, the staff date check before any drive (an extension of row `6-39`).
+  - **Q2 — a membership ended between the death and the report:** we suggest A, leave it as built.
+  - **Non-blocking:** 6.38 builds A in both questions. Nothing is live.
+  - **Reason deferred:** what the Trust owes a family whose fee was paid after the death is the Panel's to decide (§0), and the
+    build half follows their answer.
+  - **Trigger:** the Panel's ruling. Then transcribe it into a decision id, and either amend row `6-39` (Q1 B) or open a row (Q1 C / Q2 B).
+  - ✅ **RULED 2026-10-31 — `2026-10-31-430` (DR + KB): Q1 B, Q2 A. DISCHARGED into row
+    `6-39-identity-check-before-a-drive-for-an-unchecked-identity`.** The row grows by the fee-date / death-date comparison before any
+    drive. Its create-story owes the same-day edge and what the family is told. Q2 A leaves the door as built. Story 6.38 is ⛔ changed.
+    The text above is kept as the item was put.
+
+---
+
 ## Deferred from: code review (round 3 — the round-2 PATCH diff) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
 
 - **D7 — A complete `integration-tests` run leaves 7 committed `PARIWAR_A` cycles, and `announcement-activity-read.spec.ts` fails if it runs

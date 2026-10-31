@@ -500,7 +500,7 @@ describe('buildSahyogVivranOutageView — ⛔ an outage is NOT a 404', () => {
 describe('the field-id derivation is OPERATIVE from this surface’s first commit (AC2)', () => {
   const { model } = buildSahyogVivranView(SETTLED, LABELS);
 
-  it('⭐ returns EXACTLY the fourteen classified field ids — ⛔ not "length > 0"', () => {
+  it('⭐ returns EXACTLY the fifteen classified field ids (Story 11b.5a: the family list) — ⛔ not "length > 0"', () => {
     // ⛔ Asserting the EXACT set — rather than non-emptiness — is what makes a DROPPED field fail here
     // too. A leg that only detects additions accepts a field vanishing from the render while the
     // matrix still claims it is shown.
@@ -536,6 +536,8 @@ describe('the field-id derivation is OPERATIVE from this surface’s first commi
       'drive_status',
       // ⭐ Story 11b.4a — the family memorial's three ids (`-391` item 2; `-411` item 6), derived from the SHAPE: this fixture
       // carries ⛔ no memorial, and the surface still DECLARES them.
+      // Story 11b.5a — the family list (`2026-10-31-428` item 1).
+      'family_memorial_kinship',
       'family_memorial_photo',
       'family_memorial_photo_alt_text',
       'family_memorial_words',

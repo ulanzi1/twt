@@ -17,22 +17,31 @@
 // ⭐ 2026-10-29 (Story 11b.5): the frame's markup lives in `PortraitFrame.astro`; this file keeps the `<figure>` (the matrix id) and
 // the gating. The section is spaced by inline token styles — ⛔ no class: `apps/public` has ⛔ no Tailwind pipeline (MV5 (a)).
 // ⛔ The heading does ⛔ not name the member (their name follows ITS own gate — Trap 14). ⛔ Nothing here reaches `<head>`.
-import { planFamilyMemorial } from '../lib/family-memorial.js';
+// ⭐ 2026-10-31 (Story 11b.5a, `2026-10-31-428` item 1): `<KinshipLattice>` — the family list — after the last paragraph (UX anatomy:
+// the words, then the family), gated by a FOURTH verdict (`family_memorial_kinship`) through the same `planFamilyMemorial`; its
+// spacing lives inside `KinshipLattice.astro` (⛔ a styled wrapper here). Its labels are the `memorial` namespace's (`kinshipLabel`).
+import { kinshipLatticeRows, planFamilyMemorial } from '../lib/family-memorial.js';
 import type { SahyogVivranFamilyMemorialView } from '../lib/surface-fields.js';
 import { visibilityOf } from '../lib/matrix.server.js';
+import KinshipLattice from './KinshipLattice.astro';
 import PortraitFrame from './PortraitFrame.astro';
 
 interface Props {
   memorial: SahyogVivranFamilyMemorialView;
   heading: string;
   photoSrc: string;
+  /** Story 11b.5a — the lattice's heading (`memorial` `kinship.heading`). */
+  kinshipHeading: string;
+  /** Story 11b.5a — a `memorial`-namespace key (`kinship.<code>` / `kinship.<code>_plural`) → its label in the page's locale. */
+  kinshipLabel: (key: string) => string;
 }
 
-const { memorial, heading, photoSrc } = Astro.props;
+const { memorial, heading, photoSrc, kinshipHeading, kinshipLabel } = Astro.props;
 const plan = planFamilyMemorial(memorial, {
   words: visibilityOf('sahyog-vivran', 'family_memorial_words', 'public').visible,
   photo: visibilityOf('sahyog-vivran', 'family_memorial_photo', 'public').visible,
   altText: visibilityOf('sahyog-vivran', 'family_memorial_photo_alt_text', 'public').visible,
+  kinship: visibilityOf('sahyog-vivran', 'family_memorial_kinship', 'public').visible,
 });
 ---
 {plan.section && (
@@ -46,5 +55,8 @@ const plan = planFamilyMemorial(memorial, {
     {memorial.familyMemorialWords.map((paragraph) => (
       <p dir="auto" style="white-space: pre-wrap; margin: var(--space-row) 0 0;">{paragraph}</p>
     ))}
+    {plan.kinship && (
+      <KinshipLattice heading={kinshipHeading} rows={kinshipLatticeRows(memorial.familyMemorialKinship, kinshipLabel)} />
+    )}
   </section>
 )}

@@ -518,6 +518,9 @@ export const PublicVsPrivateMatrixSchema = z
       ['sahyog-vivran.family_memorial_words', '2026-10-23-391 item 2'],
       ['sahyog-vivran.family_memorial_photo', '2026-10-23-391 item 2'],
       ['sahyog-vivran.family_memorial_photo_alt_text', '2026-10-27-411 item 6'],
+      // ── ⭐⭐ STORY 11b.5a — THE FAMILY LIST (`2026-10-31-428` item 1, Trustee-ratified: PQ1 A — relation and name, the fourteen
+      // relations, children on the guardian's declaration (`-426`), used for nothing else). Its OWN authority (`-205` cl.2).
+      ['sahyog-vivran.family_memorial_kinship', '2026-10-31-428 item 1'],
     ]);
 
     const exceptions = data.surfaces.flatMap((surface) =>

@@ -1,0 +1,28 @@
+---
+// <KinshipLattice> — the family list on the public Sahyog Vivran page (Story 11b.5a; `2026-10-31-428` item 1, Trustee-ratified:
+// relation + name, the fourteen relations, used for nothing else; build decision `-431` KL2 / KL10).
+// ⭐ UX §11: a two-column label/value list — ⛔ a family tree, ⛔ lines, ⛔ avatars, ⛔ a social graph (11a.3's invariant). A semantic
+// `<dl>` labelled by its own heading, so a screen reader announces the pairs (*"wife: Sunita Devi, son: Amit and Rahul"*).
+// ⭐ Dumb: it asks the matrix ⛔ nothing and decides ⛔ nothing — `planFamilyMemorial` gates it and `kinshipLatticeRows` labels the
+// rows; it renders what it is given through `{}` interpolation (⛔ `set:html`). Each `<dd dir="auto">` isolates its ROW; the API
+// already isolated each NAME. Spacing only, as static inline token styles here (⛔ a styled wrapper in `FamilyMemorial.astro` — its
+// exact-three-styles pin), ⛔ a class (`apps/public` has ⛔ Tailwind pipeline — 11b.5 MV5), ⛔ a `<style>`.
+// ⭐ Body-only: ⛔ nothing here reaches <head>, Open Graph, a share card or a sitemap. ⛔ No `lang` (the family's language is ⛔ recorded).
+import type { KinshipLatticeRow } from '../lib/family-memorial.js';
+
+interface Props {
+  heading: string;
+  rows: readonly KinshipLatticeRow[];
+}
+
+const { heading, rows } = Astro.props;
+---
+<h3 id="sv-family-kinship-heading" style="margin: var(--space-row) 0 0;">{heading}</h3>
+<dl data-field="family_memorial_kinship" aria-labelledby="sv-family-kinship-heading" style="margin: var(--space-row) 0 0;">
+  {rows.map((row) => (
+    <div style="margin: var(--space-row) 0 0;">
+      <dt>{row.label}</dt>
+      <dd dir="auto" style="margin: 0;">{row.names}</dd>
+    </div>
+  ))}
+</dl>

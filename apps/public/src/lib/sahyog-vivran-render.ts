@@ -485,6 +485,8 @@ export function buildSahyogVivranView(
               familyMemorialWords: drive.familyMemorial.words,
               familyMemorialPhoto: drive.familyMemorial.photo !== null,
               familyMemorialPhotoAltText: drive.familyMemorial.photo === null ? null : drive.familyMemorial.photo.altText,
+              // Story 11b.5a — the family list, PASSED THROUGH (grouped, ordered, filtered and isolated by the API).
+              familyMemorialKinship: drive.familyMemorial.kinship,
             },
     },
   };

@@ -45,7 +45,8 @@ const OK_BODY = {
     deceasedMemberName: 'Rajesh Kumar Sharma',
     amountRaisedInr: 13700,
     // ⭐ Story 11b.4a — a memorial WITH a photo, so the guard's positive arm is exercised by a real value.
-    familyMemorial: { words: ['पहला अनुच्छेद', 'Second paragraph'], photo: { altText: 'माँ' } },
+    // Story 11b.5a — `kinship` is REQUIRED (`[]` for no list); a real row here exercises the row guard.
+    familyMemorial: { words: ['पहला अनुच्छेद', 'Second paragraph'], photo: { altText: 'माँ' }, kinship: [{ relation: 'wife', names: ['सुनीता'] }] },
   },
   // ⭐⭐ Story 11b.3b (Task 3, AC4) — the paginated contributor envelope, ALONGSIDE `drive`,
   // ⛔ never inside it.
@@ -393,7 +394,12 @@ describe('⭐ fetchSahyogVivran — every bounded field is validated against its
 
 describe('⭐⭐ Story 11b.4a — `familyMemorial` at the SSR boundary (Trap 5)', () => {
   it('ACCEPTS a memorial with a photo, one without, and `null`', async () => {
-    for (const familyMemorial of [OK_BODY.drive.familyMemorial, { words: ['a'], photo: null }, { words: [], photo: { altText: '' } }, null]) {
+    for (const familyMemorial of [
+      OK_BODY.drive.familyMemorial,
+      { words: ['a'], photo: null, kinship: [] },
+      { words: [], photo: { altText: '' }, kinship: [] },
+      null,
+    ]) {
       stubFetch(() => json({ ...OK_BODY, drive: { ...OK_BODY.drive, familyMemorial } }));
       expect((await fetchSahyogVivran({ driveToken: 't', forwardedFor: null })).ok, JSON.stringify(familyMemorial)).toBe(true);
     }
@@ -412,6 +418,15 @@ describe('⭐⭐ Story 11b.4a — `familyMemorial` at the SSR boundary (Trap 5)'
       { words: ['a'], photo: { altText: 'x', url: 'https://bucket/photo.jpg' } },
       { words: ['a'], photo: { altText: 1 } },
       { words: ['a'] },
+      // Story 11b.5a — the family list: missing, not an array, an unknown relation, an empty row, a leaked tick / index / reason.
+      { words: ['a'], photo: null },
+      { words: ['a'], photo: null, kinship: 'x' },
+      { words: ['a'], photo: null, kinship: [{ relation: 'uncle', names: ['x'] }] },
+      { words: ['a'], photo: null, kinship: [{ relation: 'son', names: [] }] },
+      { words: ['a'], photo: null, kinship: [{ relation: 'son', names: [''] }] },
+      { words: ['a'], photo: null, kinship: [{ relation: 'son', names: ['x'], inPhoto: true }] },
+      { words: ['a'], photo: null, kinship: [{ relation: 'son', names: ['x'], index: 0 }] },
+      { words: ['a'], photo: null, kinship: [{ relation: 'son', names: ['x'] }], leftOut: 1 },
     ];
     for (const familyMemorial of malformed) {
       const drive: Record<string, unknown> = { ...OK_BODY.drive, familyMemorial };

@@ -143,6 +143,9 @@ const tr = (key: string, params?: Record<string, string | number>) =>
 // same keys, and (at story E, 11b-15) so will the member app. ⛔ Do not re-add a `status.*` key to
 // `sahyog-vivran.json`: two sources is exactly how *"Active"* came to mean two different things.
 const ts = (key: string) => t(key, undefined, { locale, namespace: 'sahyog-shared' });
+// ⭐ Story 11b.5a (KL9) — the family list's labels and heading have ONE home, the `memorial` namespace (the app reads the same keys);
+// ⛔ a copy in `sahyog-vivran`.
+const tm = (key: string) => t(key, undefined, { locale, namespace: 'memorial' });
 
 const labels: SahyogVivranLabels = {
   pageTitle: tr('page.title'),
@@ -610,6 +613,8 @@ const messageBlockCopy =
             memorial={model.familyMemorial}
             heading={tr('family_memorial.heading')}
             photoSrc={`/sahyog-vivran/${encodeURIComponent(driveToken)}/memorial-photo`}
+            kinshipHeading={tm('kinship.heading')}
+            kinshipLabel={tm}
           />
         )}
 

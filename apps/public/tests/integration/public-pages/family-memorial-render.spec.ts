@@ -135,7 +135,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   const bodyOf = (html: string) => html.slice(html.indexOf('<body'));
 
   it('⭐ AC3 — the section renders after the facts and before the contributors: pre-wrap, `dir="auto"`, ⛔ `lang`, the words AS GIVEN, the framed photo with the family\'s description', async () => {
-    memorialState = { words: WORDS, photo: { altText: ALT } };
+    memorialState = { words: WORDS, photo: { altText: ALT }, kinship: [] };
     const { status, html } = await page();
     expect(status).toBe(200);
     const b = bodyOf(html);
@@ -183,7 +183,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   });
 
   it('⭐ Story 11b.5 AC1 — a photo whose description was LEFT OUT still renders an `alt` (empty: Astro emits it bare), ⛔ never no `alt` at all', async () => {
-    memorialState = { words: WORDS, photo: { altText: '' } };
+    memorialState = { words: WORDS, photo: { altText: '' }, kinship: [] };
     const { html } = await page();
     memorialState = null;
     const b = bodyOf(html);
@@ -196,7 +196,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   });
 
   it('⭐ AC3 / `-411` item 3 — ⛔ NO marker of a part left out: ⛔ the copy, ⛔ the key, ⛔ an element or class names one', async () => {
-    memorialState = { words: WORDS, photo: { altText: ALT } };
+    memorialState = { words: WORDS, photo: { altText: ALT }, kinship: [] };
     const { html } = await page();
     expect(bodyOf(html)).toContain('माँ हमेशा मुस्कुराती थीं।'); // non-vacuity: the section is there
     for (const marker of ['render.omitted', 'left out by the Trust', 'छोड़ा गया', 'omitted', 'removed', 'taken down', 'redact']) {
@@ -205,7 +205,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   });
 
   it('⭐ Trap 12 — ⛔ nothing of the memorial reaches `<head>` (⛔ title, ⛔ description, ⛔ Open Graph, ⛔ og:image) — after asserting the BODY carries the words and the photo URL', async () => {
-    memorialState = { words: WORDS, photo: { altText: ALT } };
+    memorialState = { words: WORDS, photo: { altText: ALT }, kinship: [] };
     const { html } = await page();
     const b = bodyOf(html);
     expect(b).toContain(WORDS[0]);
@@ -219,7 +219,7 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   it('⭐⭐ AC5 — ⛔ no trace: the page with its memorial TAKEN DOWN is BYTE-IDENTICAL to the page before any memorial was written (the middle render carries the section)', async () => {
     memorialState = null;
     const before = await page();
-    memorialState = { words: WORDS, photo: { altText: ALT } };
+    memorialState = { words: WORDS, photo: { altText: ALT }, kinship: [] };
     const middle = await page();
     memorialState = null;
     const after = await page();
@@ -230,15 +230,63 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   });
 
   it('⭐ R22 / Trap 9 — a memorial with NOTHING in it (`words: []`, no photo) draws ⛔ no heading — and the section IS drawn the moment it holds words', async () => {
-    memorialState = { words: WORDS, photo: null };
+    memorialState = { words: WORDS, photo: null, kinship: [] };
     const withWords = await page();
     expect(withWords.html).toContain('sv-family-memorial-heading'); // non-vacuity: the same request shape DOES draw it
-    memorialState = { words: [], photo: null };
+    memorialState = { words: [], photo: null, kinship: [] };
     const empty = await page();
     memorialState = null;
     expect(empty.status).toBe(200);
     expect(empty.html).not.toContain('sv-family-memorial-heading');
     expect(empty.html).not.toContain('In the family&#39;s words');
+  });
+
+  // ── Story 11b.5a (AC7 / KL10) — `<KinshipLattice>` on the BUILT page. The grouping (interleaved input, a left-out entry) is the API's
+  // and is proven byte-for-byte on the wire by `apps/api/tests/integration/memorial/kinship.spec.ts`; here the page draws what it gets.
+  const KINSHIP = [
+    { relation: 'wife', names: ['Sunita Devi'] },
+    { relation: 'son', names: [`${FSI}Amit ${RLO}override${PDI}`, 'Rahul'] },
+  ];
+
+  it('⭐ AC7 — the lattice renders AFTER the words: an <h3> labelling a <dl data-field>, one <dt>/<dd dir="auto"> per relation in the wire\'s order, names joined by ", ", the English plural', async () => {
+    memorialState = { words: WORDS, photo: null, kinship: KINSHIP };
+    const { status, html } = await page();
+    expect(status).toBe(200);
+    const body = bodyOf(html);
+    const heading = body.indexOf('id="sv-family-kinship-heading"');
+    expect(heading).toBeGreaterThan(body.indexOf('मदद करती थीं।')); // after the words
+    expect(body).toContain('<dl data-field="family_memorial_kinship" aria-labelledby="sv-family-kinship-heading"');
+    expect(body).toMatch(/>Mourned by<\/h3>/);
+    expect(body).toMatch(/<dt>Wife<\/dt>\s*<dd dir="auto"[^>]*>Sunita Devi<\/dd>/);
+    // The names AS GIVEN (the API's isolation kept), joined by ", " — an unclosed override in one name stays inside it.
+    expect(body).toContain(`<dt>Sons</dt>`);
+    expect(body).toContain(`${FSI}Amit ${RLO}override${PDI}, Rahul</dd>`);
+    expect(body.indexOf('<dt>Wife</dt>')).toBeLessThan(body.indexOf('<dt>Sons</dt>'));
+    memorialState = null;
+  });
+
+  it('⭐ AC7 — `kinship: []` (no list, or every entry left out) draws ⛔ heading and ⛔ <dl>; the page is byte-identical to the same memorial before lists existed', async () => {
+    memorialState = { words: WORDS, photo: null, kinship: KINSHIP };
+    expect((await page()).html).toContain('sv-family-kinship-heading'); // non-vacuity
+    memorialState = { words: WORDS, photo: null, kinship: [] };
+    const empty = await page();
+    memorialState = null;
+    expect(empty.html).not.toContain('sv-family-kinship-heading');
+    expect(empty.html).not.toContain('family_memorial_kinship');
+    expect(empty.html).not.toContain('Mourned by');
+  });
+
+  it('⭐ AC7 — ⛔ nothing of the list reaches <head>; an unknown row key sends the page to its outage state (the guard, ⛔ a leak)', async () => {
+    memorialState = { words: WORDS, photo: null, kinship: KINSHIP };
+    const ok = await page();
+    expect(bodyOf(ok.html)).toContain('Sunita Devi');
+    expect(headOf(ok.html)).not.toContain('Sunita Devi');
+    expect(headOf(ok.html)).not.toContain('Rahul');
+    memorialState = { words: WORDS, photo: null, kinship: [{ relation: 'wife', names: ['Sunita Devi'], inPhoto: true }] };
+    const leaked = await page();
+    memorialState = null;
+    expect(leaked.html).not.toContain('Sunita Devi');
+    expect(leaked.html).not.toContain('inPhoto');
   });
 
   it('⭐ AC4 — the photo endpoint: `image/jpeg`, the page\'s cache posture, nosniff; its OWN headers (⛔ the upstream\'s); ⛔ the query string, ⛔ the cookie', async () => {

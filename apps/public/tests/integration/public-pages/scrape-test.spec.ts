@@ -1329,7 +1329,12 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
           { accountRank: 2, accountHolderName: 'B Holder' },
         ],
         // ⭐ Story 11b.4a — a memorial WITH a photo on purpose, so the three memorial ids are exercised by a real value.
-        familyMemorial: { words: ['माँ हमेशा मुस्कुराती थीं।'], photo: { altText: 'माँ बगीचे में' } },
+        // Story 11b.5a — and a family list, so the fourth memorial id is exercised by a real value too.
+        familyMemorial: {
+          words: ['माँ हमेशा मुस्कुराती थीं।'],
+          photo: { altText: 'माँ बगीचे में' },
+          kinship: [{ relation: 'son', names: ['परीक्षा-पुत्र'] }],
+        },
       },
     // ⭐ Story 11b.3b (Task 3) — the contributor PAGE and the SET SIZE.
     // ⚠ SUPERSEDED HEADER, quoted ⛔ not deleted (fifth review pass, 2026-09-18 — the correction
@@ -1409,7 +1414,7 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     fields: sahyogVivranSurfaceFieldIds(model),
   };
 
-  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the fourteen classified fields', () => {
+  it('⭐ the snapshot field set is NON-EMPTY, and is EXACTLY the fifteen classified fields (Story 11b.5a adds the family list)', () => {
     // ⛔ The EXACT set, ⛔ not "length > 0": a leg that only detects additions accepts a field
     // vanishing from the render while the matrix still claims it is shown.
     // ⭐ TEN → SIXTEEN at Story 11b.3a: the four ruled Tier-1 nominee-bank fields plus their two
@@ -1443,6 +1448,8 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       'drive_closed_at',
       'drive_status',
       // ⭐ Story 11b.4a — the family memorial's three ids (`2026-10-23-391` item 2; `2026-10-27-411` item 6).
+      // Story 11b.5a — the family list (`2026-10-31-428` item 1).
+      'family_memorial_kinship',
       'family_memorial_photo',
       'family_memorial_photo_alt_text',
       'family_memorial_words',
@@ -1554,6 +1561,8 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     expect(tier1AtPublic.map((f) => f.id).sort()).toEqual([
       'contributor_name',
       'deceased_member_name',
+      // Story 11b.5a — the family list (`2026-10-31-428` item 1).
+      'family_memorial_kinship',
       'family_memorial_photo',
       'family_memorial_photo_alt_text',
       'family_memorial_words',
@@ -1592,9 +1601,12 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
     // ⭐⭐ AND 11b.10's OWN PROPERTY IS STILL ASSERTED AND STILL UNAFFECTED — `drive_href` is
     // `pii_tier: 3` and moved ⛔ neither set. ⇒ the ⛔ only thing that widened this one is a ruling.
     // ⚠⛔ AMENDED BY STORY 11b.4a — SIX (was three): the family memorial's three fields, each on its OWN ruling.
+    // ⚠⛔ AMENDED BY STORY 11b.5a — SEVEN: the family list (`2026-10-31-428` item 1), on its OWN ruling.
     expect(tier1AtPublic('sahyog-vivran')).toEqual([
       'contributor_name',
       'deceased_member_name',
+      // Story 11b.5a — the family list (`2026-10-31-428` item 1).
+      'family_memorial_kinship',
       'family_memorial_photo',
       'family_memorial_photo_alt_text',
       'family_memorial_words',
@@ -1652,6 +1664,8 @@ describe('Story 11b.3 — the `sahyog-vivran` surface is DECLARED and its leak l
       family_memorial_words: '2026-10-23-391 item 2',
       family_memorial_photo: '2026-10-23-391 item 2',
       family_memorial_photo_alt_text: '2026-10-27-411 item 6',
+      // ⭐ Story 11b.5a — the family list on its OWN ruling (`-428` item 1, PQ1 A).
+      family_memorial_kinship: '2026-10-31-428 item 1',
     };
     expect(withException.map((f) => f.id).sort()).toEqual(Object.keys(RULED).sort());
     for (const f of withException) {

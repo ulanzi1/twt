@@ -20,6 +20,8 @@ const TOUCHED = [
   // Story 11b.5 (Trap 3): added BY HAND — it names no memorial, so the completeness scan below cannot find it, but it renders the
   // family's approved description into `alt`, so the no-`set:html` / no-`innerHTML` property must cover it.
   'src/components/PortraitFrame.astro',
+  // Story 11b.5a — the family list's component (it names `family_memorial_kinship`, so the completeness scan finds it too).
+  'src/components/KinshipLattice.astro',
   'src/pages/sahyog-vivran/[driveToken].astro',
   'src/pages/sahyog-vivran/[driveToken]/memorial-photo.ts',
   'src/lib/sahyog-vivran.server.ts',
@@ -69,10 +71,10 @@ describe('⛔ no `set:html` on the family memorial\'s render path (AC3, Trap 8)'
   });
 
   // ── R12 — the matrix gating (AC3: ⛔ never markup that bypasses the matrix, which would make the three ids decorative) ──────────
-  it('the component asks `visibilityOf` for ALL THREE ids at `public`, and renders only what `planFamilyMemorial` allows', () => {
+  it('the component asks `visibilityOf` for ALL FOUR ids at `public` (Story 11b.5a adds the list), and renders only what `planFamilyMemorial` allows', () => {
     const src = code(readFileSync(join(appRoot, 'src/components/FamilyMemorial.astro'), 'utf-8'));
     // ⭐ The ids are the SURFACE'S declared ones — a decoy id (or a deleted call) fails here, not on a live page.
-    const ids = ['family_memorial_photo', 'family_memorial_photo_alt_text', 'family_memorial_words'];
+    const ids = ['family_memorial_kinship', 'family_memorial_photo', 'family_memorial_photo_alt_text', 'family_memorial_words'];
     expect(Object.values(SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS).sort()).toEqual(ids);
     for (const id of ids) {
       expect(src, id).toContain(`visibilityOf('sahyog-vivran', '${id}', 'public').visible`);
@@ -81,7 +83,12 @@ describe('⛔ no `set:html` on the family memorial\'s render path (AC3, Trap 8)'
     // ⭐ …and EACH verdict feeds ITS OWN part of the plan (review RR6): the words' verdict is `words:`, the photo's is `photo:`, the
     // description's is `altText:`. Pinning only that the three calls exist let a swap — or a decoy call whose result is dropped —
     // pass here AND in the pure gating test, so neither could fail on the one mistake the gating exists to prevent.
-    const feeds = { words: 'family_memorial_words', photo: 'family_memorial_photo', altText: 'family_memorial_photo_alt_text' } as const;
+    const feeds = {
+      words: 'family_memorial_words',
+      photo: 'family_memorial_photo',
+      altText: 'family_memorial_photo_alt_text',
+      kinship: 'family_memorial_kinship',
+    } as const;
     // …and ONLY inside the object handed to `planFamilyMemorial(...)` — a decoy literal elsewhere in the file would satisfy a file-wide match.
     const planArgs = /planFamilyMemorial\(memorial,\s*\{([\s\S]*?)\}\s*\)/.exec(src)?.[1];
     expect(planArgs, 'the object passed to planFamilyMemorial').toBeTruthy();
@@ -92,6 +99,10 @@ describe('⛔ no `set:html` on the family memorial\'s render path (AC3, Trap 8)'
     expect(src).toMatch(/\{plan\.section && \(\s*<section/);
     expect(src).toMatch(/\{plan\.photo && \(\s*<figure/);
     expect(src).toContain('alt={plan.alt}');
+    // Story 11b.5a — the lattice is drawn from the plan, AFTER the last paragraph, inside the section.
+    expect(src).toMatch(/\{plan\.kinship && \(\s*<KinshipLattice /);
+    expect(src.indexOf('{paragraph}')).toBeLessThan(src.indexOf('<KinshipLattice'));
+    expect(src.indexOf('<KinshipLattice')).toBeLessThan(src.indexOf('</section>'));
   });
 
   it('the scanner itself catches a planted `set:html` (positive control)', () => {
@@ -105,7 +116,7 @@ describe('⛔ no `set:html` on the family memorial\'s render path (AC3, Trap 8)'
 // class there renders NOTHING. The section's spacing is a static inline `style` holding token variables; ⛔ no card (⛔ no border,
 // radius or padding — UX "ruled rhythm over cards"), ⛔ no type size, ⛔ no `style` on the `<h2>`. The microcopy FM-14 colour gate does
 // ⛔ not scan `apps/public` `.astro`, so the literal allow-list below is the only guard against a hex or a named colour.
-const STYLED = ['src/components/FamilyMemorial.astro', 'src/components/PortraitFrame.astro'] as const;
+const STYLED = ['src/components/FamilyMemorial.astro', 'src/components/PortraitFrame.astro', 'src/components/KinshipLattice.astro'] as const;
 
 /** The only literals a memorial `style` may hold; every colour, border width and spacing other than these is a `var(--…)`. */
 const ALLOWED_LITERALS = ['4 / 5', 'pre-wrap', 'contain', 'solid', '20rem', '100%', '6pt', '0'];

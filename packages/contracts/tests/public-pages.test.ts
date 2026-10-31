@@ -509,7 +509,7 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
   // ⭐ The IDENTITY discipline is unchanged and is what matters: the assertion still names every
   // pair with its decision id, so a withdrawn exception silently reappearing — or an entry landing
   // with ⛔ no ruling behind it — still FAILS here.
-  it('carries EXACTLY the nine ruled Tier-1 public exceptions, each attributed to its decision', () => {
+  it('carries EXACTLY the ten ruled Tier-1 public exceptions, each attributed to its decision', () => {
     const exceptions = committed().surfaces.flatMap((s) =>
       s.fields.filter((f) => f.tier1_public_exception !== undefined).map((f) => ({ s, f })),
     );
@@ -527,6 +527,8 @@ describe('committed matrix — the POPULATED invariants (Story 11a.1)', () => {
       'sahyog-vivran.deceased_member_name@2026-09-02-173',
       // ⭐ Story 11b.4a — the family's memorial: the words and photo on `-391` item 2, the photo's description on its OWN
       // ruling (`-411` item 6, PC4 A — a third field neither the ruling nor the permission text names).
+      // ⭐ Story 11b.5a — the family list, a FOURTH memorial field on its OWN ruling (`-428` item 1, PQ1 A).
+      'sahyog-vivran.family_memorial_kinship@2026-10-31-428 item 1',
       'sahyog-vivran.family_memorial_photo@2026-10-23-391 item 2',
       'sahyog-vivran.family_memorial_photo_alt_text@2026-10-27-411 item 6',
       'sahyog-vivran.family_memorial_words@2026-10-23-391 item 2',

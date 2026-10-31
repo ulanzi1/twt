@@ -1402,6 +1402,30 @@ surfaces:
             it is the family's own words about their photo."*
           scope: >-
             ⛔ `sahyog-vivran` ONLY, ⛔ only with a photo that is shown.
+      # ── ⭐⭐ STORY 11b.5a — THE FAMILY LIST (`2026-10-31-428` item 1, Trustee-ratified) ─────────────────────────────────
+      # ⭐ Declared in the SAME COMMIT as its `RULED_TIER1_PUBLIC_EXCEPTIONS` pair. A DECLARATION, ⛔ an escalation: a field declared
+      # for the first time has ⛔ no honest `from` tier ⇒ `escalation_count` is UNCHANGED.
+      - id: family_memorial_kinship
+        tier: public
+        pii_tier: 1
+        description: >-
+          ⭐ The family list on the memorial — `<KinshipLattice>`, a two-column `<dl>` after the family's words: one row per
+          relation (the fourteen, each the person's relation TO THE MEMBER WHO DIED), the names under it in the family's order,
+          entries the Trust left out ABSENT with ⛔ no mark (`-428` PC1 A). Grouped, ordered and bidi-isolated by the API; the
+          "in the photo" ticks are ⛔ never on the wire (`-426` AQ3 (b)1). ⛔ Never in `<head>`, Open Graph, a share card or a
+          sitemap.
+        tier1_public_exception:
+          decision: '2026-10-31-428 item 1'
+          rationale: >-
+            ⭐ A FOURTH field: `-391` item 2 ruled the family's words and photo, ⛔ a list the Trust asks for, so it carries its
+            OWN authority (`2026-09-07-205` cl.2). `2026-10-31-428` item 1 (PQ1 A, Trustee-ratified — DR + KB), as put: *"relation
+            and name, from these relations of the member who died — spouse, children, parents, brothers and sisters,
+            grandchildren (a son's and a daughter's children, named apart), and sons- and daughters-in-law. Children may be
+            listed on the guardian's declaration you ruled; every adult listed has agreed, on the same declaration. … The list
+            is used for nothing else."* With the rider *"member also sees the memorial page"* (the member app — row 11b-5c).
+          scope: >-
+            ⛔ `sahyog-vivran` ONLY (until row 11b-5c adds the members' app surface, under the same ruling), ⛔ only inside a
+            shown memorial; ⛔ not In Memoriam (Story 11b.6), ⛔ not any other surface; used for NOTHING else (the AC10 source pin).
 
 # ── The escalation ledger (AC8) ──────────────────────────────────────────────
 # One entry per visibility ESCALATION (a field moving toward `public`), each

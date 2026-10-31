@@ -11,13 +11,16 @@
 import { getVisibility, type PublicVsPrivateMatrix } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { planFamilyMemorial, type FamilyMemorialVisibility } from '../src/lib/family-memorial.js';
+import { t } from '@twt/i18n';
+
+import { kinshipLatticeRows, planFamilyMemorial, type FamilyMemorialVisibility } from '../src/lib/family-memorial.js';
 import { RUNTIME_MATRIX, visibilityOf } from '../src/lib/matrix.server.js';
 import type { SahyogVivranFamilyMemorialView } from '../src/lib/surface-fields.js';
 
 const WORDS = 'family_memorial_words';
 const PHOTO = 'family_memorial_photo';
 const ALT = 'family_memorial_photo_alt_text';
+const KINSHIP = 'family_memorial_kinship';
 
 /** The three verdicts a page would get from a matrix where `hiddenId` (if any) is raised above the public ceiling. */
 function verdicts(hiddenId: string | null): FamilyMemorialVisibility {
@@ -32,20 +35,21 @@ function verdicts(hiddenId: string | null): FamilyMemorialVisibility {
   const ask = (id: string) => getVisibility(matrix, 'sahyog-vivran', id, 'public');
   expect(ask(hiddenId ?? WORDS).visible, 'the planted verdict is ABOVE the ceiling (else the leg proves nothing)').toBe(hiddenId === null);
   if (hiddenId !== null) expect(ask(hiddenId).reason).toBe('above_viewer_ceiling');
-  return { words: ask(WORDS).visible, photo: ask(PHOTO).visible, altText: ask(ALT).visible };
+  return { words: ask(WORDS).visible, photo: ask(PHOTO).visible, altText: ask(ALT).visible, kinship: ask(KINSHIP).visible };
 }
 
 const view = (over: Partial<SahyogVivranFamilyMemorialView> = {}): SahyogVivranFamilyMemorialView => ({
   familyMemorialWords: ['He was kind.', 'We miss him.'],
   familyMemorialPhoto: true,
   familyMemorialPhotoAltText: 'Papa in the garden',
+  familyMemorialKinship: [{ relation: 'son', names: ['Amit'] }],
   ...over,
 });
 
 describe('planFamilyMemorial — every matrix verdict is honoured (AC3, R12)', () => {
   it('non-vacuity — the committed matrix shows all three ids at `public`, and then the whole memorial is drawn', () => {
-    for (const id of [WORDS, PHOTO, ALT]) expect(visibilityOf('sahyog-vivran', id, 'public').visible, id).toBe(true);
-    expect(planFamilyMemorial(view(), verdicts(null))).toEqual({ section: true, photo: true, alt: 'Papa in the garden' });
+    for (const id of [WORDS, PHOTO, ALT, KINSHIP]) expect(visibilityOf('sahyog-vivran', id, 'public').visible, id).toBe(true);
+    expect(planFamilyMemorial(view(), verdicts(null))).toEqual({ section: true, photo: true, alt: 'Papa in the garden', kinship: true });
   });
 
   it('`family_memorial_words` above the ceiling ⇒ NOTHING is drawn — the figure lives INSIDE the section, which is withheld', () => {
@@ -57,12 +61,12 @@ describe('planFamilyMemorial — every matrix verdict is honoured (AC3, R12)', (
   });
 
   it('`family_memorial_photo_alt_text` above the ceiling ⇒ the figure is drawn with an EMPTY `alt` — ⛔ never a synthesised one', () => {
-    expect(planFamilyMemorial(view(), verdicts(ALT))).toEqual({ section: true, photo: true, alt: '' });
+    expect(planFamilyMemorial(view(), verdicts(ALT))).toEqual({ section: true, photo: true, alt: '', kinship: true });
   });
 
   it('no photo in the memorial ⇒ no figure, whatever the matrix says', () => {
     const plan = planFamilyMemorial(view({ familyMemorialPhoto: false, familyMemorialPhotoAltText: null }), verdicts(null));
-    expect(plan).toEqual({ section: true, photo: false, alt: '' });
+    expect(plan).toEqual({ section: true, photo: false, alt: '', kinship: true });
   });
 });
 
@@ -78,10 +82,44 @@ describe('planFamilyMemorial — a section with NOTHING in it is not drawn (R22,
   });
 
   it('non-vacuity — no words but a photo the matrix shows ⇒ the section IS drawn, with the figure alone', () => {
-    expect(planFamilyMemorial(view(noWords), verdicts(null))).toEqual({ section: true, photo: true, alt: 'Papa in the garden' });
+    expect(planFamilyMemorial(view(noWords), verdicts(null))).toEqual({ section: true, photo: true, alt: 'Papa in the garden', kinship: true });
   });
 
   it('non-vacuity — words and the photo hidden ⇒ the section is drawn with the words alone', () => {
     expect(planFamilyMemorial(view(), verdicts(PHOTO)).section).toBe(true);
+  });
+});
+
+// Story 11b.5a (KL10) — `<KinshipLattice>` is drawn iff the section is drawn AND `family_memorial_kinship` is visible AND ≥ 1 row.
+describe('planFamilyMemorial — the family list\'s verdict (Story 11b.5a)', () => {
+  it('`family_memorial_kinship` above the ceiling ⇒ the words and photo are drawn, ⛔ the lattice is not', () => {
+    expect(planFamilyMemorial(view(), verdicts(KINSHIP))).toMatchObject({ section: true, photo: true, kinship: false });
+  });
+
+  it('⛔ rows (no list, or every entry left out) ⇒ ⛔ lattice — ⛔ heading, ⛔ empty <dl>', () => {
+    expect(planFamilyMemorial(view({ familyMemorialKinship: [] }), verdicts(null)).kinship).toBe(false);
+  });
+
+  it('the section withheld ⇒ ⛔ lattice either (it lives INSIDE the section)', () => {
+    expect(planFamilyMemorial(view(), verdicts(WORDS)).kinship).toBe(false);
+    expect(planFamilyMemorial(view({ familyMemorialWords: [], familyMemorialPhoto: false, familyMemorialPhotoAltText: null }), verdicts(null)).kinship).toBe(false);
+  });
+
+  it('kinshipLatticeRows: labels through the ONE home (English plural for two or more), names joined by ", " AS GIVEN', () => {
+    const tm = (key: string) => t(key, undefined, { locale: 'en', namespace: 'memorial' });
+    expect(
+      kinshipLatticeRows(
+        [
+          { relation: 'wife', names: ['Sunita Devi'] },
+          { relation: 'son', names: ['Amit', ' Rahul '] },
+        ],
+        tm,
+      ),
+    ).toEqual([
+      { label: 'Wife', names: 'Sunita Devi' },
+      { label: 'Sons', names: 'Amit,  Rahul ' },
+    ]);
+    const hi = (key: string) => t(key, undefined, { locale: 'hi', namespace: 'memorial' });
+    expect(kinshipLatticeRows([{ relation: 'son', names: ['अमित', 'राहुल'] }], hi)).toEqual([{ label: 'पुत्र', names: 'अमित, राहुल' }]);
   });
 });

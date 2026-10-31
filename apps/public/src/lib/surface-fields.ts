@@ -38,6 +38,8 @@
  * `null` declares a key that is carried in the model but NOT rendered as a
  * visible field — a claim a reader can check against the template.
  */
+import type { MemorialKinshipRelation } from '@twt/contracts';
+
 export type FieldIdMapping<T> = Readonly<Record<keyof T & string, string | null>>;
 
 /**
@@ -646,6 +648,17 @@ export interface SahyogVivranFamilyMemorialView {
   readonly familyMemorialPhoto: boolean;
   /** The family's description of the photo, as approved (`''` when all of it was left out). `null` ⇔ ⛔ no photo. */
   readonly familyMemorialPhotoAltText: string | null;
+  /**
+   * Story 11b.5a (`2026-10-31-428` item 1) — the family list, ALREADY grouped by relation in the fourteen's display order, left-out
+   * entries absent, each name bidi-isolated by the API. `[]` ⇔ ⛔ list (or every entry left out) — then ⛔ heading and ⛔ `<dl>`.
+   */
+  readonly familyMemorialKinship: readonly SahyogVivranKinshipRow[];
+}
+
+/** One relation and the names under it (the wire's row, passed through). */
+export interface SahyogVivranKinshipRow {
+  readonly relation: MemorialKinshipRelation;
+  readonly names: readonly string[];
 }
 
 /**
@@ -755,6 +768,8 @@ export const SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS: FieldIdMapping<SahyogVivra
   familyMemorialWords: 'family_memorial_words',
   familyMemorialPhoto: 'family_memorial_photo',
   familyMemorialPhotoAltText: 'family_memorial_photo_alt_text',
+  // Story 11b.5a — the fourth memorial field, its OWN ruled pair (`2026-10-31-428 item 1`).
+  familyMemorialKinship: 'family_memorial_kinship',
 };
 
 /** The representative SHAPE the memorial's ids are derived from — ⛔ never `model.familyMemorial` (it is usually `null`). */
@@ -762,6 +777,7 @@ const SAHYOG_VIVRAN_FAMILY_MEMORIAL_SHAPE: SahyogVivranFamilyMemorialView = {
   familyMemorialWords: [],
   familyMemorialPhoto: false,
   familyMemorialPhotoAltText: null,
+  familyMemorialKinship: [],
 };
 
 /**

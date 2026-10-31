@@ -73,6 +73,15 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
   // ⛔ ONLY classified field left on a nominee-account row (`2026-09-04-190` cl.2). ⚠⛔ The member
   // side carries it **AND FOUR MORE** the public no longer has.
   nominee_account_holder_name: ['nomineeName', 'nomineeAccounts'],
+  // ⭐⭐ Story 11b.5a (2026-10-31) — THE FAMILY MEMORIAL IS OWED TO MEMBERS: `2026-10-31-428` (Trustee-ratified, the PQ1 rider —
+  // *"member also sees the memorial page"*; read by `2026-10-31-432` R1 A as the members' app showing the memorial itself, v4+
+  // memorials only) supersedes `-412` §3 item 3 in part ⇒ the four memorial ids are ⛔ no longer a data-class exclusion; they are
+  // DECLARED GAPS, OWED BY ROW `11b-5c-member-app-shows-the-memorial`, which closes them. ⛔ Never cite `-411` item 7 for them any
+  // more (it stands — it did ⛔ not REQUIRE the memorial here; the Panel now directs it here).
+  family_memorial_words: [],
+  family_memorial_photo: [],
+  family_memorial_photo_alt_text: [],
+  family_memorial_kinship: [],
 };
 
 /**
@@ -84,11 +93,10 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
  * exact set of three). The three ids ARE spread into the floor (so they can ⛔ not escape it silently) and are then SUBTRACTED
  * here, by name, each citing its ruling; the set is pinned to exactly these three.
  */
-const DATA_CLASS_EXCLUDED: Readonly<Record<string, string>> = {
-  family_memorial_words: '2026-09-04-195 cl.1 + 2026-10-27-411 item 7',
-  family_memorial_photo: '2026-09-04-195 cl.1 + 2026-10-27-411 item 7',
-  family_memorial_photo_alt_text: '2026-09-04-195 cl.1 + 2026-10-27-411 item 7',
-};
+// ⭐ 2026-10-31: `-428` supersedes `-412` §3 item 3 — ⛔ no longer a data-class exclusion; a GAP owed by 11b-5c (Story 11b.5a,
+// Task 7.2). The map is kept EMPTY (⛔ deleted) so the floor's arithmetic below still reads "public minus the exclusions", and a
+// future ruled exclusion has its place.
+const DATA_CLASS_EXCLUDED: Readonly<Record<string, string>> = {};
 
 /** The public DETAIL floor, READ FROM THE LIVE MAPS. `null` entries are selectors/containers, ⛔ not fields. */
 const PUBLIC_DETAIL_FIELD_IDS: string[] = [
@@ -259,8 +267,8 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
       expect(PUBLIC_DETAIL_FIELD_IDS).toContain(id);
       expect(MEMBER_COUNTERPART[id]).toEqual([]);
     }
-    // ⭐ AND THE GAP IS BOUNDED: it is these THREE ids and ⛔ no others. ⚠ A fourth appearing with an
-    // empty counterpart would mean a later author widened the gap silently.
+    // ⭐ AND THE GAP IS BOUNDED: it is these ids and ⛔ no others. ⚠ One more appearing with an empty counterpart would mean a later
+    // author widened the gap silently. Story 11b.5a: 3 → 7 — the four memorial ids, owed by row 11b-5c (`2026-10-31-428`).
     const declaredGaps = Object.entries(MEMBER_COUNTERPART)
       .filter(([, keys]) => keys.length === 0)
       .map(([id]) => id)
@@ -269,22 +277,25 @@ describe('⭐⭐ Story 11b.17 AC2 — the member drive DETAIL meets the PUBLIC S
       'appeal_disposition_category',
       'appeal_reversal_at',
       'appeal_reversal_stage',
+      'family_memorial_kinship',
+      'family_memorial_photo',
+      'family_memorial_photo_alt_text',
+      'family_memorial_words',
     ]);
   });
 
-  it('⭐⭐ Story 11b.4a — the family memorial is a RULED DATA-CLASS EXCLUSION (`-411` item 7), ⛔ not a gap: exactly three ids, spread in, subtracted by name', () => {
-    // ⭐ Non-vacuity: the three ids ARE in the public detail set (spread from the live element map) …
-    for (const id of Object.keys(DATA_CLASS_EXCLUDED)) expect(PUBLIC_DETAIL_FIELD_IDS).toContain(id);
-    // … they are EXACTLY the memorial map's ids — a fourth memorial id can ⛔ not ride the exclusion …
-    expect(Object.keys(DATA_CLASS_EXCLUDED).sort()).toEqual(
-      Object.values(SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS).filter((id): id is string => id !== null).sort(),
-    );
-    // … each cites the ruling, ⛔ none sits in MEMBER_COUNTERPART (that would record it as a gap or a counterpart) …
-    for (const [id, cite] of Object.entries(DATA_CLASS_EXCLUDED)) {
-      expect(cite).toContain('2026-10-27-411 item 7');
-      expect(MEMBER_COUNTERPART[id]).toBeUndefined();
-    }
-    // … and ⛔ nothing else is excluded: the floor is the public detail minus exactly these three.
-    expect(PUBLIC_DETAIL_FIELD_IDS.length - FLOOR_FIELD_IDS.length).toBe(3);
+  // ⚠ REWRITTEN 2026-10-31 (Story 11b.5a, Task 7.2): this test pinned the memorial as a RULED DATA-CLASS EXCLUSION (`-411` item 7 —
+  // "exactly three ids, spread in, subtracted by name"). `2026-10-31-428` (Trustee-ratified) superseded `-412` §3 item 3: the memorial
+  // is OWED to members, so the four ids are declared GAPS owed by row 11b-5c, and ⛔ none is excluded.
+  it('⭐⭐ Story 11b.5a — the family memorial is OWED to members (`2026-10-31-428`): all FOUR ids are declared GAPS owed by row 11b-5c, ⛔ none excluded', () => {
+    const memorialIds = Object.values(SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS).filter((id): id is string => id !== null).sort();
+    // ⭐ Non-vacuity: the four ids ARE in the public detail set (spread from the live element map) …
+    expect(memorialIds).toEqual(['family_memorial_kinship', 'family_memorial_photo', 'family_memorial_photo_alt_text', 'family_memorial_words']);
+    for (const id of memorialIds) expect(PUBLIC_DETAIL_FIELD_IDS).toContain(id);
+    // … each is a declared gap (an EMPTY counterpart — 11b-5c fills it) …
+    for (const id of memorialIds) expect(MEMBER_COUNTERPART[id], id).toEqual([]);
+    // … ⛔ none is excluded, and ⛔ nothing else is: the floor IS the public detail.
+    expect(Object.keys(DATA_CLASS_EXCLUDED)).toEqual([]);
+    expect(PUBLIC_DETAIL_FIELD_IDS.length - FLOOR_FIELD_IDS.length).toBe(0);
   });
 });

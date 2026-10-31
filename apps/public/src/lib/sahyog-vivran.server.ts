@@ -26,7 +26,7 @@
 // attacker the rate-limit key. ⛔ A second copy of that logic here is exactly how the two drift, and
 // this one would drift silently — no render breaks when the ceiling disappears.
 
-import { PublicSahyogVivranParams, type PublicSahyogVivranResponse } from '@twt/contracts';
+import { MEMORIAL_KINSHIP_RELATIONS, PublicSahyogVivranParams, type PublicSahyogVivranResponse } from '@twt/contracts';
 
 import { API_ORIGIN } from './directory.server.js';
 import { ACTIVE_PARIWAR_ID } from './pariwar.server.js';
@@ -203,17 +203,31 @@ export async function fetchSahyogVivran(
  * INSIDE the render, defeating this module's own "⛔ NEVER THROWS" guarantee one function later.
  */
 /**
+ * ⭐ Story 11b.5a — one family-list row: EXACTLY `{ relation, names }` (⛔ an index, a reason, a tick or any other key), the relation
+ * one of the fourteen, `names` a non-empty array of non-empty strings.
+ */
+function isKinshipRow(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false;
+  const r = v as Record<string, unknown>;
+  if (Object.keys(r).sort().join(',') !== 'names,relation') return false;
+  if (typeof r['relation'] !== 'string' || !(MEMORIAL_KINSHIP_RELATIONS as readonly string[]).includes(r['relation'])) return false;
+  const names = r['names'];
+  return Array.isArray(names) && names.length > 0 && names.every((n) => typeof n === 'string' && n.length > 0);
+}
+
+/**
  * ⭐ Story 11b.4a — `familyMemorial` is `null`, or EXACTLY `{ words: string[] (each non-empty), photo: null | { altText: string } }`
- * with ⛔ no other key at either level (the wire's `.strict()`, restated because this guard otherwise passes unknown keys — a
+ * (Story 11b.5a: and `kinship` — an array of {@link isKinshipRow} rows) with ⛔ no other key at either level (the wire's `.strict()`, restated because this guard otherwise passes unknown keys — a
  * `reason`, a `segments` array or a URL reaching the render would be the leak Trap 3 forbids).
  */
 function isFamilyMemorial(v: unknown): boolean {
   if (v === null) return true;
   if (typeof v !== 'object' || Array.isArray(v)) return false;
   const m = v as Record<string, unknown>;
-  if (Object.keys(m).sort().join(',') !== 'photo,words') return false;
+  if (Object.keys(m).sort().join(',') !== 'kinship,photo,words') return false;
   if (!Array.isArray(m['words'])) return false;
   for (const w of m['words']) if (typeof w !== 'string' || w.length === 0) return false;
+  if (!Array.isArray(m['kinship']) || !m['kinship'].every(isKinshipRow)) return false;
   const photo = m['photo'];
   if (photo === null) return true;
   if (typeof photo !== 'object' || Array.isArray(photo)) return false;

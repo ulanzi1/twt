@@ -159,10 +159,14 @@ export function validateMemorialDecision(
   }
   if (decision.photoLeftOut !== undefined && !subject.hasPhoto) return fail('photo_left_out_without_photo');
   if (kinshipLeftOut.length > 0) {
-    if (subject.kinshipLength === null) return fail('kinship_without_list');
+    // ⛔ Not `=== null`, and ⛔ not `typeof … === 'number'` alone: a caller or fixture that omits the field passes `undefined`, and a
+    // `NaN` / `Infinity` / negative length makes every `index >= length` comparison false or vacuous — each would skip the range
+    // check below. Only a whole, non-negative length is "a list of that many entries".
+    const length = subject.kinshipLength;
+    if (typeof length !== 'number' || !Number.isInteger(length) || length < 0) return fail('kinship_without_list');
     let prev = -1;
     for (const k of kinshipLeftOut) {
-      if (!Number.isInteger(k.index) || k.index < 0 || k.index >= subject.kinshipLength) {
+      if (!Number.isInteger(k.index) || k.index < 0 || k.index >= length) {
         return fail('kinship_index_out_of_range');
       }
       // Ascending and unique (an equal index is a duplicate).

@@ -23,6 +23,8 @@ export const MEMORIAL_MEMBER_ERROR_CODES = [
   'memorial.photo_too_large',
   'memorial.photo_conflict',
   'memorial.no_previous_photo',
+  // Story 11b.5a — the Send's `kinship` part is not a valid family list (the one schema, or a tick with ⛔ no photo).
+  'memorial.kinship_invalid',
   'memorial.already_reviewed',
   'memorial.authorisation_outdated',
   'memorial.nominee_unresolved',

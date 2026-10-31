@@ -14,6 +14,10 @@
 // R20 / T6 / V9 (a) — as on Write and Photo: the saved draft is loaded in an EFFECT once the view and the member are known,
 // re-read every time the screen comes back to the front, and that re-read is skipped while this screen's last save failed.
 // T1 — the screen's heading is SPOKEN on arrival (the stack has no title).
+// RP2 / T8 / V8 — the two states that APPEAR here with no live region beside them are SPOKEN too, once at the crossing and never
+// on every keystroke (the Write / Photo counters' rule): a name going over its cap (copy 2.10, per row), and the 20th row
+// replacing "Add someone" with the limit line (copy 2.16). A state the screen STARTS in (a restored draft) is the baseline, not
+// announced.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Platform, ScrollView } from 'react-native'
@@ -31,7 +35,12 @@ import {
   memorialKinshipStartFromSent,
   type MemorialDraftKinshipRow,
 } from '../../components/memorial-authorship/memorial-kinship'
-import { useMemorialAnnounce, useMemorialScreenAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
+import {
+  MemorialRowOverLimitAnnouncer,
+  useMemorialAnnounce,
+  useMemorialOverLimitAnnounce,
+  useMemorialScreenAnnounce,
+} from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import { loadMemorialDraft, memorialPhotoUri, saveMemorialDraft, type MemorialDraft } from '../../lib/memorial-draft'
 import { useMemorialT } from '../../lib/memorial-i18n'
@@ -50,6 +59,9 @@ export default function MemorialFamilyScreen(): React.ReactElement {
   // Which row's relation options are open (one at a time), and whether "Next" was pressed over an unfinished row.
   const [openRow, setOpenRow] = useState<number | null>(null)
   const [incomplete, setIncomplete] = useState(false)
+  // RP2 — bumped when a row is removed: the rows after it shift up an index, and each row's announcer (keyed on this) starts again
+  // from its new baseline, so a name that was already over its cap is not announced afresh at its new position.
+  const [removals, setRemovals] = useState(0)
   const driveId = view?.driveId ?? null
   useEffect(() => {
     if (loaded !== null || driveId === null || memberId === null) return
@@ -71,6 +83,11 @@ export default function MemorialFamilyScreen(): React.ReactElement {
   const incompleteText = incomplete ? t('family.row_incomplete') : null
   const incompleteLive = useMemorialAnnounce(incompleteText, { hasLiveRegion: true, kind: 'error' })
   useMemorialScreenAnnounce(view && memberId ? t('family.title') : null)
+  // RP2 — copy 2.16 replaces the "Add someone" button in place: spoken once when the 20th row appears (and again after a removal
+  // and a new 20th), silent when the draft was restored already at 20.
+  const limitText =
+    (loaded?.kinship?.length ?? 0) >= MEMORIAL_KINSHIP_MAX_ENTRIES ? t('family.limit_reached', { count: String(MEMORIAL_KINSHIP_MAX_ENTRIES) }) : null
+  useMemorialOverLimitAnnounce(limitText, loaded !== null)
   if (!view || !memberId)
     return (
       <MemorialViewMissing
@@ -142,6 +159,7 @@ export default function MemorialFamilyScreen(): React.ReactElement {
             const overText = over > 0 ? t('family.name_over_limit', { count: String(over) }) : null
             return (
               <YStack key={i} gap="$2" testID={`memorial-family-row-${i}`}>
+                <MemorialRowOverLimitAnnouncer key={removals} text={overText} />
                 <Paragraph fontWeight="600">{t('family.relation_label')}</Paragraph>
                 <Button
                   style={{ minHeight: 44 }}
@@ -205,6 +223,7 @@ export default function MemorialFamilyScreen(): React.ReactElement {
                     testID={`memorial-family-remove-${i}`}
                     onPress={() => {
                       setOpenRow(null)
+                      setRemovals((n) => n + 1)
                       const left = rows.filter((_, j) => j !== i)
                       save(left.length > 0 ? left : undefined)
                     }}
@@ -217,7 +236,7 @@ export default function MemorialFamilyScreen(): React.ReactElement {
           })}
           {rows.length >= MEMORIAL_KINSHIP_MAX_ENTRIES ? (
             <Paragraph size="$2" testID="memorial-family-limit">
-              {t('family.limit_reached', { count: String(MEMORIAL_KINSHIP_MAX_ENTRIES) })}
+              {limitText}
             </Paragraph>
           ) : (
             <Button

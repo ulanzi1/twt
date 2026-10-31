@@ -134,8 +134,12 @@ export function memorialKinshipLabelKey(relation: MemorialKinshipRelation, nameC
   return nameCount >= 2 && KINSHIP_PLURAL_RELATIONS.has(relation) ? `kinship.${relation}_plural` : `kinship.${relation}`;
 }
 
-/** Every `kinship.*` label key the namespace must hold (the parity / copy tests walk it). */
+/**
+ * Every `kinship.*` key the namespace must hold (the parity / copy tests walk it): the lattice's heading, the fourteen relation
+ * labels and the ten plurals. `packages/contracts/tests/memorial-kinship.test.ts` walks it against the en and hi `memorial.json`.
+ */
 export const MEMORIAL_KINSHIP_LABEL_KEYS: readonly string[] = [
+  'kinship.heading',
   ...MEMORIAL_KINSHIP_RELATIONS.map((r) => `kinship.${r}`),
   ...MEMORIAL_KINSHIP_RELATIONS.filter((r) => KINSHIP_PLURAL_RELATIONS.has(r)).map((r) => `kinship.${r}_plural`),
 ];

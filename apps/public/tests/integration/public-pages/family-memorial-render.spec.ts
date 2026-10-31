@@ -17,7 +17,7 @@ import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const hasDatabase = Boolean(process.env['DATABASE_URL']);
 const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -127,6 +127,11 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     if (outDir) rmSync(outDir, { recursive: true, force: true });
   });
 
+  // The stub answers with whatever the test set; no test leaves its memorial behind for the next one.
+  afterEach(() => {
+    memorialState = null;
+  });
+
   const page = async (token = 'tok-A') => {
     const res = await fetch(`${origin}/sahyog-vivran/${token}?lang=en`);
     return { status: res.status, html: await res.text() };
@@ -185,7 +190,6 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   it('⭐ Story 11b.5 AC1 — a photo whose description was LEFT OUT still renders an `alt` (empty: Astro emits it bare), ⛔ never no `alt` at all', async () => {
     memorialState = { words: WORDS, photo: { altText: '' }, kinship: [] };
     const { html } = await page();
-    memorialState = null;
     const b = bodyOf(html);
     const sectionAt = b.indexOf('aria-labelledby="sv-family-memorial-heading"');
     expect(sectionAt, 'the memorial section is on the page').toBeGreaterThan(-1);
@@ -235,7 +239,6 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     expect(withWords.html).toContain('sv-family-memorial-heading'); // non-vacuity: the same request shape DOES draw it
     memorialState = { words: [], photo: null, kinship: [] };
     const empty = await page();
-    memorialState = null;
     expect(empty.status).toBe(200);
     expect(empty.html).not.toContain('sv-family-memorial-heading');
     expect(empty.html).not.toContain('In the family&#39;s words');
@@ -254,7 +257,11 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     expect(status).toBe(200);
     const body = bodyOf(html);
     const heading = body.indexOf('id="sv-family-kinship-heading"');
-    expect(heading).toBeGreaterThan(body.indexOf('मदद करती थीं।')); // after the words
+    const wordsEnd = body.indexOf('मदद करती थीं।');
+    // ⚠ PRESENCE FIRST: `indexOf` is -1 for an absent marker, and `heading > -1` would PASS vacuously on a missing anchor.
+    expect(wordsEnd, 'the words are on the page').toBeGreaterThan(-1);
+    expect(heading, 'the lattice heading is on the page').toBeGreaterThan(-1);
+    expect(heading).toBeGreaterThan(wordsEnd); // after the words
     expect(body).toContain('<dl data-field="family_memorial_kinship" aria-labelledby="sv-family-kinship-heading"');
     expect(body).toMatch(/>Mourned by<\/h3>/);
     expect(body).toMatch(/<dt>Wife<\/dt>\s*<dd dir="auto"[^>]*>Sunita Devi<\/dd>/);
@@ -262,15 +269,17 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     expect(body).toContain(`<dt>Sons</dt>`);
     expect(body).toContain(`${FSI}Amit ${RLO}override${PDI}, Rahul</dd>`);
     expect(body.indexOf('<dt>Wife</dt>')).toBeLessThan(body.indexOf('<dt>Sons</dt>'));
-    memorialState = null;
   });
 
-  it('⭐ AC7 — `kinship: []` (no list, or every entry left out) draws ⛔ heading and ⛔ <dl>; the page is byte-identical to the same memorial before lists existed', async () => {
+  // ⚠ This leg asserts ONLY what its title says (⛔ no heading, ⛔ no <dl>, ⛔ no copy). The stronger claim — that a list with a
+  // left-out entry INTERLEAVED among the others yields the same rows as a list that never held it — is proven on the wire (the
+  // public page's `memorial.kinship`, `toEqual`) by `apps/api/tests/integration/memorial/kinship.spec.ts`; ⛔ not here, ⛔ not on the
+  // built page's HTML. The page draws what the wire gives it.
+  it('⭐ AC7 — `kinship: []` (no list, or every entry left out) draws no heading and no <dl>', async () => {
     memorialState = { words: WORDS, photo: null, kinship: KINSHIP };
     expect((await page()).html).toContain('sv-family-kinship-heading'); // non-vacuity
     memorialState = { words: WORDS, photo: null, kinship: [] };
     const empty = await page();
-    memorialState = null;
     expect(empty.html).not.toContain('sv-family-kinship-heading');
     expect(empty.html).not.toContain('family_memorial_kinship');
     expect(empty.html).not.toContain('Mourned by');
@@ -284,7 +293,6 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
     expect(headOf(ok.html)).not.toContain('Rahul');
     memorialState = { words: WORDS, photo: null, kinship: [{ relation: 'wife', names: ['Sunita Devi'], inPhoto: true }] };
     const leaked = await page();
-    memorialState = null;
     expect(leaked.html).not.toContain('Sunita Devi');
     expect(leaked.html).not.toContain('inPhoto');
   });

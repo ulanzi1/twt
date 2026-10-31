@@ -15,7 +15,7 @@
 // screen reader to read on arrival — the intro, Write and Preview opened in SILENCE (the photo step was read only because
 // TalkBack happened to move focus there). `useMemorialScreenAnnounce` speaks the screen's heading on arrival.
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type ReactElement } from 'react'
 import { AccessibilityInfo, Platform } from 'react-native'
 import { useFocusEffect } from 'expo-router'
 
@@ -106,4 +106,14 @@ export function useMemorialOverLimitAnnounce(overText: string | null, ready: boo
     } else if (crossing.current === null) crossing.current = overText
   }
   useMemorialAnnounce(silent.current ? null : crossing.current, { hasLiveRegion: false, kind: 'error' })
+}
+
+/**
+ * RP2 (11b.5a) — {@link useMemorialOverLimitAnnounce} for ONE row of a list (the family screen's names): a hook cannot run inside
+ * a `map`, so each row mounts this. It draws nothing — the over-limit line itself is the row's own plain line, with no live
+ * region. A `key` that changes when the rows shift (a removal) starts it again from a fresh baseline.
+ */
+export function MemorialRowOverLimitAnnouncer({ text }: { readonly text: string | null }): ReactElement | null {
+  useMemorialOverLimitAnnounce(text)
+  return null
 }

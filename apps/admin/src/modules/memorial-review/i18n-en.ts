@@ -40,6 +40,10 @@ const EN: Record<string, string> = {
   'memorial.detail.thisVersion': 'This version',
   'memorial.detail.words': 'The family’s words, as sent',
   'memorial.detail.unavailable': 'The stored words could not be read right now.',
+  // RP21 — the card's line is NEUTRAL (it also shows on a version already decided, withdrawn or erased); the decision form's line
+  // carries the consequence, and only a version that can still be decided has a form.
+  'memorial.detail.partUnavailable': 'Part of this version could not be read right now.',
+  'memorial.detail.partUnavailableForm': 'Part of this version could not be read right now, so it cannot be decided yet.',
   'memorial.detail.photo': 'Photo',
   'memorial.detail.altText': 'Description of the photo, as sent',
   'memorial.detail.asApproved': 'As approved',
@@ -185,7 +189,7 @@ export function withdrawAnswer(kind: 'recorded' | 'error', versionNo: number | n
  * A reason's label. KL16 — `declared` (the version's `guardianDeclaration`): the child reason reads *"…a child the declaration
  * cannot cover"* (copy 4.4); v1–v3 rows keep the plain label.
  */
-export function reasonLabel(reason: MemorialReviewReason, declared = false): string {
+export function reasonLabel(reason: MemorialReviewReason, declared: boolean): string {
   if (declared && reason === 'identifies_a_child') return resolveEn('memorial.reason.identifies_a_child_declared');
   return resolveEn(`memorial.reason.${reason}`);
 }

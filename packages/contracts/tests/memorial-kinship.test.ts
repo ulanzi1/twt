@@ -2,6 +2,10 @@
 // list schema (Send AND every read — KL15), the reviewer's whole-entry omissions in the shared validator (KL6 — all three act
 // rules), the no-edit input, and the ONE grouping helper (KL9 / KL10 / KL11).
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { memorial as domainMemorial } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
@@ -77,8 +81,29 @@ describe('MemorialKinshipListSchema — the ONE schema for Send and every read (
     expect(ok(list)).toBe(true);
     // The worst case fits the Send's 32 KiB multipart part (KL4).
     expect(Buffer.byteLength(JSON.stringify(list), 'utf8')).toBeLessThan(32 * 1024);
-    const astral = Array.from({ length: MEMORIAL_KINSHIP_MAX_ENTRIES }, () => ({ relation: 'son', name: '\ud800'.repeat(200) }));
-    expect(Buffer.byteLength(JSON.stringify(astral), 'utf8')).toBeLessThan(32 * 1024);
+  });
+
+  // The Send's multipart `kinship` part is capped at 32 KiB. Two byte worst cases, both with the LONGEST relation code and the tick
+  // on every entry (the biggest entry the schema allows): REAL astral text (4 UTF-8 bytes per code point, ~17 KB for 20 x 200) and
+  // the ILL-FORMED case — a lone surrogate, which `JSON.stringify` ESCAPES (`\ud800`, 6 bytes for one code point; ~25 KB).
+  // This is the escaped worst case, ⛔ not astral text: a hand-escaped surrogate PAIR (12 bytes per code point) would not fit,
+  // and is refused by the part cap before the schema sees it — no app produces that, `JSON.stringify` does not escape a pair.
+  const worstCase = (name: string) =>
+    Array.from({ length: MEMORIAL_KINSHIP_MAX_ENTRIES }, () => ({ relation: 'daughters_daughter', name, inPhoto: true }));
+
+  it('the 20 x 200 REAL-astral list (4 bytes per code point) is accepted and fits the 32 KiB part', () => {
+    const list = worstCase(String.fromCodePoint(0x1f468).repeat(MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS));
+    expect(ok(list)).toBe(true);
+    const bytes = Buffer.byteLength(JSON.stringify(list), 'utf8');
+    expect(bytes).toBeGreaterThan(MEMORIAL_KINSHIP_MAX_ENTRIES * MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS * 4); // non-vacuous: 4 B per code point
+    expect(bytes).toBeLessThan(32 * 1024);
+  });
+
+  it('the ILL-FORMED worst case — a lone surrogate JSON-escapes to 6 bytes per code point — still fits the 32 KiB part', () => {
+    const list = worstCase('\ud800'.repeat(MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS));
+    const bytes = Buffer.byteLength(JSON.stringify(list), 'utf8');
+    expect(bytes).toBeGreaterThan(MEMORIAL_KINSHIP_MAX_ENTRIES * MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS * 6); // non-vacuous: 6 B each
+    expect(bytes).toBeLessThan(32 * 1024);
   });
 
   it.each([
@@ -100,6 +125,21 @@ describe('MemorialKinshipListSchema — the ONE schema for Send and every read (
 
   it('counts the cap in CODE POINTS, ⛔ UTF-16 units', () => {
     expect(ok([{ relation: 'son', name: '😀'.repeat(MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS) }])).toBe(true);
+  });
+
+  it('an ASTRAL name: exactly 200 code points accepted, 201 refused (a `.length` count would refuse 101 of them)', () => {
+    const man = String.fromCodePoint(0x1f468); // one code point, TWO UTF-16 units
+    expect(man.length).toBe(2);
+    const named = (name: string) => [{ relation: 'son', name }];
+    expect(ok(named(man.repeat(MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS)))).toBe(true);
+    expect(ok(named(man.repeat(MEMORIAL_KINSHIP_NAME_MAX_CODE_POINTS + 1)))).toBe(false);
+    // 101 astral characters are 202 UTF-16 units but only 101 code points: a units count would wrongly refuse them.
+    expect(ok(named(man.repeat(101)))).toBe(true);
+    // Mixed scripts count the same way: 100 astral + 100 Devanagari = 200 (accepted); one more of EITHER kind = 201 (refused).
+    const mixed = man.repeat(100) + 'न'.repeat(100);
+    expect(ok(named(mixed))).toBe(true);
+    expect(ok(named(`${mixed}${man}`))).toBe(false);
+    expect(ok(named(`${mixed}न`))).toBe(false);
   });
 });
 
@@ -139,6 +179,41 @@ describe('validateMemorialDecision — whole-entry kinship omissions (KL6)', () 
     expect(validateMemorialDecision(awo({ kinshipLeftOut: leave(0) }), { ...subject, kinshipLength: null })).toEqual({
       ok: false,
       problem: 'kinship_without_list',
+    });
+  });
+
+  it('FAILS CLOSED when the caller omits `kinshipLength` (an `undefined` is ⛔ not "a list of any length")', () => {
+    // Contracts tests run outside `tsc`, so a fixture can leave the required field out; the casts stand in for that caller.
+    const keyAbsent = { body: subject.body, altText: null, hasPhoto: false } as unknown as typeof subject;
+    const keyUndefined = { ...subject, kinshipLength: undefined } as unknown as typeof subject;
+    for (const subj of [keyAbsent, keyUndefined]) {
+      // In range and OUT of range alike: with no list to range-check against, both are `kinship_without_list`.
+      for (const index of [0, 999]) {
+        expect(validateMemorialDecision(awo({ kinshipLeftOut: leave(index) }), subj)).toEqual({ ok: false, problem: 'kinship_without_list' });
+      }
+    }
+  });
+
+  // RP22 — `typeof … === 'number'` alone let `NaN` through: both `index < 0` and `index >= NaN` are false, so ANY index passed.
+  it.each([
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['a negative length', -1],
+    ['a fractional length', 2.5],
+  ])('FAILS CLOSED on %s as the list length (not a whole, non-negative number)', (_why, kinshipLength) => {
+    for (const index of [0, 999]) {
+      expect(validateMemorialDecision(awo({ kinshipLeftOut: leave(index) }), { ...subject, kinshipLength })).toEqual({
+        ok: false,
+        problem: 'kinship_without_list',
+      });
+    }
+  });
+
+  it('still accepts an in-range index against a whole length, and a length of 0 refuses every index', () => {
+    expect(validateMemorialDecision(awo({ kinshipLeftOut: leave(0) }), { ...subject, kinshipLength: 1 })).toEqual({ ok: true });
+    expect(validateMemorialDecision(awo({ kinshipLeftOut: leave(0) }), { ...subject, kinshipLength: 0 })).toEqual({
+      ok: false,
+      problem: 'kinship_index_out_of_range',
     });
   });
 });
@@ -230,6 +305,35 @@ describe('groupMemorialKinship — THE grouping helper (KL10)', () => {
   it('DROPS `inPhoto` (KL15 — ⛔ never public)', () => {
     expect(JSON.stringify(groupMemorialKinship(list))).not.toContain('inPhoto');
   });
+
+  // ⚠ CURRENT behaviour, pinned — NOT an endorsement. A left-out index that names no entry (past the end, negative, fractional,
+  // NaN) is IGNORED, so the entry the Trust meant to remove would be SHOWN: a known FAIL-OPEN, recorded as deferral RD2 (review
+  // 2026-11-01) for row 11b-5b — the first writer that can shift positions (PQ2 B / KL14 removes "by submission + index"). Today it
+  // is unreachable: the list is write-once and `validateMemorialDecision` refuses every such index before a decision is stored. When
+  // 11b-5b lands (removal by marker, never splice), these cases are the ones to revisit — change them deliberately, ⛔ not by accident.
+  describe('an index that names no entry (RD2 — ignored today, a known fail-open)', () => {
+    const everyone = groupMemorialKinship(list);
+
+    it.each([
+      ['past the end', [5]],
+      ['far past the end', [99]],
+      ['negative', [-1]],
+      ['fractional', [0.5]],
+      ['NaN', [Number.NaN]],
+      ['Infinity', [Number.POSITIVE_INFINITY]],
+    ])('%s: ignored — the rows are those of an empty left-out set', (_why, leftOut) => {
+      expect(groupMemorialKinship(list, leftOut)).toEqual(everyone);
+    });
+
+    it('a bad index beside a good one: only the good one takes effect', () => {
+      expect(groupMemorialKinship(list, [99, 3, Number.NaN, -1])).toEqual(groupMemorialKinship(list, [3]));
+    });
+
+    it('a duplicate index is the same as one (a set, ⛔ not a count)', () => {
+      expect(groupMemorialKinship(list, [3, 3, 3])).toEqual(groupMemorialKinship(list, [3]));
+      expect(groupMemorialKinship(list, [0, 0]).find((r) => r.relation === 'son')?.names).toEqual(['राहुल', 'अमित']);
+    });
+  });
 });
 
 describe('the label keys (KL9 — the ONE home; copy 5.2)', () => {
@@ -240,8 +344,26 @@ describe('the label keys (KL9 — the ONE home; copy 5.2)', () => {
     expect(memorialKinshipLabelKey('mother', 3)).toBe('kinship.mother');
   });
 
-  it('fourteen singular + ten plural keys', () => {
-    expect(MEMORIAL_KINSHIP_LABEL_KEYS).toHaveLength(24);
+  it('the heading + fourteen singular + ten plural keys', () => {
+    expect(MEMORIAL_KINSHIP_LABEL_KEYS).toHaveLength(25);
+    expect(MEMORIAL_KINSHIP_LABEL_KEYS).toContain('kinship.heading');
     expect(MEMORIAL_KINSHIP_LABEL_KEYS.filter((k) => k.endsWith('_plural'))).toHaveLength(10);
+    expect(new Set(MEMORIAL_KINSHIP_LABEL_KEYS).size).toBe(25);
   });
+
+  // The walk the list's doc-comment promises: `t()` throws on a missing key at RENDER time, so a key deleted from one locale would
+  // only surface on the first page that shows that relation. The catalogs are read by relative path, as the other contracts tests do.
+  const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+  const readCatalog = (locale: 'en' | 'hi'): Record<string, string> =>
+    JSON.parse(readFileSync(path.join(REPO_ROOT, 'packages/i18n/locales', locale, 'memorial.json'), 'utf8')) as Record<string, string>;
+
+  for (const locale of ['en', 'hi'] as const) {
+    it(`every key in the list exists in the ${locale} memorial catalog, with a non-empty value`, () => {
+      const catalog = readCatalog(locale);
+      for (const key of MEMORIAL_KINSHIP_LABEL_KEYS) {
+        expect(Object.hasOwn(catalog, key), `${locale}: ${key}`).toBe(true);
+        expect(catalog[key]?.trim().length ?? 0, `${locale}: ${key} is empty`).toBeGreaterThan(0);
+      }
+    });
+  }
 });

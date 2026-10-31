@@ -5,7 +5,9 @@
 // FORCE, a typo in a policy, a lost column grant, a dropped CHECK or the missing UPDATE policy of `-279` A12 (the RTBF scrub
 // silently updating 0 rows) would each have shipped green. Everything here is asserted against the DATABASE ITSELF.
 //   · structure — ENABLE + FORCE on all three; exactly the SELECT / INSERT / UPDATE policy per table (no DELETE, no ALL);
-//     the privilege matrix (SELECT + INSERT; no DELETE or TRUNCATE; UPDATE on exactly the four Tier-1 ciphertext columns);
+//     the privilege matrix (SELECT + INSERT; no DELETE or TRUNCATE; UPDATE on exactly the five Tier-1 ciphertext columns —
+//     0182's four plus 0194's `kinship_ciphertext`: body, alt text and the family list on the submissions, the internal note on
+//     each of the decisions and the withdrawals);
 //     the unique constraints and the indexes by name.
 //   · RLS — the owning Pariwar reads / inserts its own rows; another Pariwar sees NOTHING and cannot insert (42501);
 //     with no scope SELECT returns 0 rows and an INSERT is refused (fail-closed); the per-command UPDATE policy admits the
@@ -15,9 +17,9 @@
 //   · every CHECK (thirteen: five on the submissions — 0183 adds the Send key's shape — four on the decisions, four on the
 //     withdrawals — 0187 adds the `helpline` pair, Story 11b.4a Trap 7), each with a violating row that names the ONE constraint it trips, and a legal row of the same shape
 //     that still inserts — plus the JSON-null spans `memorial_omissions_valid` once passed (R18).
-//   · the column grants — a sweep of EVERY column: UPDATE is admitted on the four ciphertext columns and refused (42501) on
+//   · the column grants — a sweep of EVERY column: UPDATE is admitted on the five ciphertext columns and refused (42501) on
 //     all the others; ⛔ no DELETE.
-//   · a LIVE scrub as `twt_app` under FORCE RLS — rows updated > 0 and the ciphertext really changed, for all four columns,
+//   · a LIVE scrub as `twt_app` under FORCE RLS — rows updated > 0 and the ciphertext really changed, for all five columns,
 //     directly AND through the real `anonymizeMember`.
 //   · migration 0194 (Story 11b.5a) — the family list: `kinship_ciphertext` joins the scrubbable columns (its own UPDATE grant,
 //     the live scrubs (v) / (w) — NULL stays NULL); `kinship_omissions` and its shape CHECK; the REPLACED `omissions_iff_action`
@@ -38,6 +40,7 @@ import { createFakeKmsProvider } from '../../../src/encryption/index.js';
 import { MEMORIAL_FIELD_CLASS } from '../../../src/encryption/field-classes.js';
 import { memberId as toMemberId } from '../../../src/ids/index.js';
 import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../../src/member/anonymize.js';
+import { MEMORIAL_REVIEW_REASONS } from '../../../src/memorial/vocab.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppRoleNoScope, enterAppScope, seedClaim, seedMember, seedPool } from '../_helpers.js';
 
@@ -689,6 +692,35 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
       expect(await fn('[{"index":99999999999999999999999,"reason":"against_the_law"}]')).toBe(false);
     });
 
+    it('(s4) 0194 memorial_kinship_omissions_valid: EVERY reason in `MEMORIAL_REVIEW_REASONS` is accepted (the function AND the CHECK), an unknown one is refused — the SQL list is in lockstep with the vocabulary', async () => {
+      const { client } = getTx();
+      const fn = async (v: string) =>
+        (await client.query<{ ok: boolean | null }>(`SELECT memorial_kinship_omissions_valid($1::jsonb) AS ok`, [v])).rows[0]!.ok;
+      const entry = (reason: string) => `[{"index":0,"reason":"${reason}"}]`;
+      // ⛔ Not a hard-coded four: a reason minted later (-210 cl.2) must reach the SQL list or this leg goes red on that reason.
+      expect(MEMORIAL_REVIEW_REASONS.length, 'a vacuous loop').toBeGreaterThan(0);
+      for (const reason of MEMORIAL_REVIEW_REASONS) expect(await fn(entry(reason)), `the function accepts ${reason}`).toBe(true);
+      for (const bad of ['family_asked', '', 'AGAINST_THE_LAW', 'against_the_law ']) {
+        expect(await fn(entry(bad)), `the function refuses ${JSON.stringify(bad)}`).toBe(false);
+      }
+      // One bad element among good ones sinks the whole array.
+      expect(await fn(`[{"index":0,"reason":"${MEMORIAL_REVIEW_REASONS[0]}"},{"index":1,"reason":"family_asked"}]`)).toBe(false);
+
+      // And through the CHECK itself: each reason inserts (a kinship-only `approved_with_omissions`), an unknown one trips the constraint.
+      const w = await seedWorld(PARIWAR_A, MEMORIAL_REVIEW_REASONS.length + 1);
+      const free = [...w.versions];
+      await enterAppScope(client, PARIWAR_A);
+      const take = (over: Record<string, unknown>): Promise<Outcome> => ins(client, DECISIONS, decisionRow(PARIWAR_A, free.shift()!, over));
+      for (const reason of MEMORIAL_REVIEW_REASONS) {
+        const out = await take({ action: 'approved_with_omissions', omissions: '[]', kinship_omissions: entry(reason) });
+        expect(out.code, `the CHECK accepts ${reason}: ${out.message}`).toBeNull();
+      }
+      expectCheck(
+        await take({ action: 'approved_with_omissions', omissions: '[]', kinship_omissions: entry('family_asked') }),
+        'memorial_review_decisions_kinship_omissions_check',
+      );
+    });
+
     it.each([
       ['⭐ R18: JSON-null `field` AND `reason`', '[{"field":null,"start":0,"end":1,"reason":null}]'],
       ['a JSON-null `reason`', '[{"field":"body","start":0,"end":1,"reason":null}]'],
@@ -823,7 +855,7 @@ describe.skipIf(!hasDatabase)('0182 — the family memorial tables: RLS, FKs, CH
   });
 
   describe('the LIVE scrub (-279 A12: without the UPDATE policy it silently updates 0 rows under FORCE)', () => {
-    it('(v) as twt_app in scope: rows updated > 0 and the ciphertext CHANGED in all four columns; another tenant\'s rows untouched', async () => {
+    it('(v) as twt_app in scope: rows updated > 0 and the ciphertext CHANGED in all five columns; another tenant\'s rows untouched', async () => {
       const { client } = getTx();
       const a = await seedTenant(PARIWAR_A);
       const b = await seedTenant(PARIWAR_B);

@@ -5,7 +5,10 @@
 -- `CREATE OR REPLACE FUNCTION`, each new CHECK in a `duplicate_object` guard, `DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT` for
 -- the replaced one, the grant re-runnable).
 -- ⚠ Numbered 0194: Story 12-1's branch committed `0193_marketplace-modules` (`when` 1796269200038) first — the number belongs
--- to the first COMMIT (`-366` decision 6). This `when` is later, so whichever lands second on a shared DB still applies both.
+-- to the first COMMIT (`-366` decision 6). The `when` order is what the migrator reads, and it is safe in ONE order only: Drizzle
+-- skips every migration whose `when` is not above the newest one already applied, so a DB that applied this 0194 (`when`
+-- 1796355600039) BEFORE 0193 skips 0193 for good. 12-1's 0193 has since landed on `main` first, so the order `main` now has (0193,
+-- then this 0194) is the one that works — any dev DB that ran this branch's 0194 before the rebase onto it must be recreated.
 --
 -- (1) `memorial_submissions.kinship_ciphertext` — the family list, `JSON.stringify(entries)` encrypted under the memorial field
 --     class (Tier-1; the relation CODES live inside it too — a family's shape is itself personal). NULL ⇔ ⛔ no list: an empty
@@ -14,7 +17,8 @@
 --     ⛔ No CHECK on it (a CHECK re-runs on the scrub's UPDATE — the sentinel must pass; 0182's header rule).
 -- (2) `memorial_review_decisions.kinship_omissions` — `[{ index, reason }]`, the entries the Trust left out WHOLE (KL6 — like the
 --     photo, ⛔ never a span: `memorial_omissions_valid` and its `field IN ('body','altText')` are ⛔ not touched). Its SHAPE is
---     checked here; the SEMANTIC rules (sorted, unique, inside the list) are the pure validator's — the DB cannot see the list.
+--     checked here; the SEMANTIC rules are the pure validator's — `inside the list` needs the list, which the DB cannot see, and `sorted`
+--     / `unique` are validator-only by the 0182 `memorial_omissions_valid` precedent (harmless downstream: the grouping uses a `Set`).
 --     ⛔ No UPDATE grant (the decisions table's only UPDATE grant stays `internal_note_ciphertext`; its INSERT is table-level).
 -- (3) `omissions_iff_action` REPLACED so a kinship-only `approved_with_omissions` is valid and `approved` / `not_approved` carry
 --     ⛔ kinship omissions. Existing rows re-validate trivially (the new column defaults to `[]`) ⇒ the constraint stays VALID

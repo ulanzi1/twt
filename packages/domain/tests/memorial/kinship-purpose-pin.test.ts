@@ -5,10 +5,14 @@
 // peer-mesh, directory, validity or jobs file may read it: reusing the list (e.g. the 6.27a "family-link substrate" to exclude
 // relatives from the peer-mesh five) is exactly the purpose-creep `-398` MA2 forbids, and needs its own Panel question.
 //
-// Scanned: `packages/*/src`, `apps/*/src`, `apps/*/app`, `apps/*/lib`, `apps/*/components`. ⛔ Not scanned: tests, `openapi/`,
-// `_bmad-output`, migrations (the migration is named by its own file). The allow-list was built from the pasted grep at Task 8
-// (2026-10-31) — every user at that commit is covered, or this pin would fail on `main`. A walker that meets a symlink skips it
-// (⛔ `statSync` through it — a dangling `ios/Pods` link once crashed a sibling walker).
+// Scanned: EVERY source file under `packages/*` and `apps/*` (not a fixed list of roots — a new `hooks/` or `store/` folder is covered
+// the day it appears), plus the repo-root `scripts/` and `infra/`. ⛔ Not scanned: tests, `openapi/`, `_bmad-output`, migrations (the
+// migration is named by its own file). The guarded names are the list's COLUMN (`kinship_ciphertext`), its domain property
+// (`kinshipOmissions`, `kinshipLeftOut`) and its HELPERS (`parseMemorialKinship`, `MemorialKinshipListSchema`, `groupMemorialKinship`)
+// — a file that decodes or groups the list without naming a column is the same reuse. The allow-list was built from the pasted grep
+// at Task 8 (2026-10-31) and re-checked when the helpers were added (review 2026-11-01) — every user at that commit is covered, or
+// this pin would fail on `main`. A walker that meets a symlink skips it (⛔ never `statSync` through it — a dangling `ios/Pods` link once
+// crashed a sibling walker).
 
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -19,7 +23,8 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
 /** The guarded identifiers (AC10). */
-const GUARDED = /\b(kinship_ciphertext|kinshipCiphertext|MEMORIAL_KINSHIP_RELATIONS|kinshipLeftOut|kinship_omissions|memorialSubmissions|memorial_submissions)\b/;
+const GUARDED =
+  /\b(kinship_ciphertext|kinshipCiphertext|MEMORIAL_KINSHIP_RELATIONS|kinshipLeftOut|kinship_omissions|kinshipOmissions|parseMemorialKinship|MemorialKinshipListSchema|groupMemorialKinship|memorialSubmissions|memorial_submissions)\b/;
 
 /** The memorial's own paths — repo-relative, `**` = any depth. */
 const ALLOWED: readonly string[] = [
@@ -63,8 +68,8 @@ function globToRegExp(glob: string): RegExp {
 const ALLOWED_RE = ALLOWED.map(globToRegExp);
 export const isAllowed = (rel: string): boolean => ALLOWED_RE.some((re) => re.test(rel));
 
-const SOURCE = /\.(ts|tsx|astro|mjs|js)$/;
-const SKIP_DIR = /^(node_modules|dist|build|\..*|tests?|__tests__|migrations|openapi|ios|android)$/;
+const SOURCE = /\.(ts|tsx|mts|cts|astro|mjs|cjs|js|jsx)$/;
+const SKIP_DIR = /^(node_modules|dist|build|coverage|\..*|tests?|__tests__|migrations|openapi|ios|android)$/;
 
 function walk(dir: string, out: string[]): void {
   let entries: string[];
@@ -87,12 +92,13 @@ function walk(dir: string, out: string[]): void {
 
 function sourceFiles(): string[] {
   const out: string[] = [];
+  // Each package and app is walked WHOLE (⛔ not a fixed `src` / `app` / `lib` list — `hooks/`, `store/`, a package's `scripts/` or
+  // `seed/` are in scope without an edit here); `SKIP_DIR` drops the build output, the dependencies and the tests.
   for (const top of ['packages', 'apps']) {
-    for (const pkg of readdirSync(join(repoRoot, top))) {
-      const roots = top === 'packages' ? ['src'] : ['src', 'app', 'lib', 'components'];
-      for (const r of roots) walk(join(repoRoot, top, pkg, r), out);
-    }
+    for (const pkg of readdirSync(join(repoRoot, top))) walk(join(repoRoot, top, pkg), out);
   }
+  // The repo-root tooling — a gate script or an ops script is source too.
+  for (const root of ['scripts', 'infra']) walk(join(repoRoot, root), out);
   return out.sort();
 }
 
@@ -107,7 +113,16 @@ describe('AC10 — the family list is used for nothing else (`-428` item 1)', ()
 
   it('the scan is NON-EMPTY and reaches every root (⛔ a vacuous pass)', () => {
     expect(files.size).toBeGreaterThan(500);
-    for (const prefix of ['packages/domain/src/', 'packages/contracts/src/', 'apps/api/src/', 'apps/mobile/app/', 'apps/mobile/lib/', 'apps/admin/src/', 'apps/public/src/']) {
+    for (const prefix of [
+      'packages/domain/src/',
+      'packages/contracts/src/',
+      'apps/api/src/',
+      'apps/mobile/app/',
+      'apps/mobile/lib/',
+      'apps/admin/src/',
+      'apps/public/src/',
+      'scripts/',
+    ]) {
       expect([...files.keys()].some((rel) => rel.startsWith(prefix)), prefix).toBe(true);
     }
     // The guarded identifiers really are found — in the places that must hold them.
@@ -127,16 +142,41 @@ describe('AC10 — the family list is used for nothing else (`-428` item 1)', ()
   });
 
   it('⛔ no claims, nominee, peer-mesh, directory, validity or jobs file is on the allow-list', () => {
+    // Real files (each is asserted to be in the scan, so a rename or a delete fails here instead of passing on a dead path).
     for (const rel of [
       'packages/domain/src/claim/peer-mesh.ts',
       'packages/domain/src/nominee/relationship.ts',
-      'apps/api/src/modules/claims/handlers.ts',
-      'apps/jobs/src/peer-mesh.ts',
+      'apps/api/src/modules/claims/claims.appeal.handlers.ts',
+      'apps/jobs/src/claim-peer-mesh.ts',
+      'apps/api/src/modules/directory-publication/handlers.ts',
+      'apps/api/src/modules/member-validity/handlers.ts',
       'apps/public/src/pages/members.astro',
       'packages/validity-service/src/producer.ts',
     ]) {
+      expect(files.has(rel), `${rel} is a scanned file`).toBe(true);
       expect(isAllowed(rel), rel).toBe(false);
     }
+  });
+
+  it('the allow-list matcher, on SYNTHETIC paths (not files in the repo): `**` crosses folders, `*` does not, nothing else widens', () => {
+    expect(isAllowed('packages/domain/src/memorial/deep/er/x.ts')).toBe(true);
+    expect(isAllowed('packages/domain/src/schema/memorial_submissions.ts')).toBe(true);
+    expect(isAllowed('packages/domain/src/schema/memorial_x/y.ts')).toBe(false);
+    expect(isAllowed('packages/domain/src/schema/claims.ts')).toBe(false);
+    expect(isAllowed('apps/jobs/src/memorial/x.ts')).toBe(false);
+    expect(isAllowed('apps/mobile/hooks/use-memorial.ts')).toBe(false);
+    expect(isAllowed('scripts/memorial/x.ts')).toBe(false);
+  });
+
+  it('the scan reads the HELPER names and the wider file extensions (positive control)', () => {
+    const planted = new Map<string, string>([
+      ['apps/mobile/hooks/use-family.ts', 'export const g = groupMemorialKinship(list, []);'],
+      ['apps/jobs/src/decode.mts', 'parseMemorialKinship(text);'],
+      ['scripts/gate.cjs', 'MemorialKinshipListSchema.parse(x);'],
+      ['apps/admin/src/x.jsx', 'row.kinshipOmissions;'],
+    ]);
+    expect(purposeViolations(planted)).toEqual(['apps/admin/src/x.jsx', 'apps/jobs/src/decode.mts', 'apps/mobile/hooks/use-family.ts', 'scripts/gate.cjs']);
+    for (const rel of planted.keys()) expect(SOURCE.test(rel), rel).toBe(true);
   });
 
   it('a planted reference outside the allow-list is caught (positive control)', () => {

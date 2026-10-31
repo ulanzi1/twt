@@ -655,7 +655,7 @@ type Locale = (typeof ALL_LOCALES)[number]
  * (`useMemorialScreenAnnounce`). `announced()` is everything ELSE that was spoken, so the "silent" legs below keep asserting what
  * they did (no refusal, no notice, no over-limit line); `arrivals()` is the arrival announcements alone (the T1 legs).
  */
-const ARRIVAL_KEYS = ['write.title', 'photo.title', 'preview.title', 'intro.prompt_no_name'] as const
+const ARRIVAL_KEYS = ['write.title', 'photo.title', 'preview.title', 'family.title', 'intro.prompt_no_name'] as const
 const isArrival = (text: string): boolean =>
   ALL_LOCALES.some(
     (l) =>
@@ -3705,17 +3705,18 @@ describe('Story 11b.5a — the family screen (AC2)', () => {
     expect(mock.push).toHaveBeenCalledWith('/(memorial)/preview')
   })
 
-  it('⭐ KL15 — the "In the photo" tick shows ONLY when the Send will carry a photo; it is a checkbox with its state', () => {
+  it.each(['hi', 'en'] as const)('%s: ⭐ KL15 — the "In the photo" tick shows ONLY when the Send will carry a photo; it is a checkbox with its state', (locale) => {
     saveMemorialDraft('m-1', 'pool-1', { kinship: [{ relation: 'son', name: 'परीक्षा-पुत्र' }] })
-    const { unmount } = renderIn(MemorialFamilyScreen, 'en')
+    const { unmount } = renderIn(MemorialFamilyScreen, locale)
     expect(screen.queryByTestId('memorial-family-in-photo-0')).toBeNull()
     unmount()
     mock.view = resend()
     saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true })
-    renderIn(MemorialFamilyScreen, 'en')
+    renderIn(MemorialFamilyScreen, locale)
     const tick = screen.getByTestId('memorial-family-in-photo-0')
     expect(tick).toHaveAttribute('data-role', 'checkbox')
-    expect(tick).toHaveAttribute('aria-label', tr('family.in_photo_a11y', 'en', { name: 'परीक्षा-पुत्र' }))
+    expect(tick).toHaveAttribute('aria-label', tr('family.in_photo_a11y', locale, { name: 'परीक्षा-पुत्र' }))
+    expect(tr('family.in_photo_a11y', locale, { name: 'परीक्षा-पुत्र' })).toContain('परीक्षा-पुत्र')
     fireEvent.click(tick)
     expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual([{ relation: 'son', name: 'परीक्षा-पुत्र', inPhoto: true }])
     expect(screen.getByTestId('memorial-family-in-photo-0')).toHaveAttribute('aria-checked', 'true')
@@ -3739,11 +3740,12 @@ describe('Story 11b.5a — the family screen (AC2)', () => {
     expect(screen.queryByTestId('memorial-family-start-from-sent')).toBeNull() // only while the rows are empty
   })
 
-  it('at 20 rows "Add someone" gives way to the limit line', () => {
+  it.each(['hi', 'en'] as const)('%s: at 20 rows "Add someone" gives way to the limit line (the real t(), the count filled in)', (locale) => {
     saveMemorialDraft('m-1', 'pool-1', { kinship: Array.from({ length: 20 }, () => ({ relation: 'son' as const, name: 'न' })) })
-    renderIn(MemorialFamilyScreen, 'hi')
+    renderIn(MemorialFamilyScreen, locale)
     expect(screen.queryByTestId('memorial-family-add')).toBeNull()
-    expect(screen.getByTestId('memorial-family-limit')).toHaveTextContent(tr('family.limit_reached', 'hi', { count: '20' }))
+    expect(screen.getByTestId('memorial-family-limit')).toHaveTextContent(tr('family.limit_reached', locale, { count: '20' }))
+    expect(tr('family.limit_reached', locale, { count: '20' })).toContain('20')
   })
 
   it.each(['hi', 'en'] as const)('%s: the interpolated keys render through the real t() (remove label, over-limit line)', (locale) => {
@@ -3755,26 +3757,259 @@ describe('Story 11b.5a — the family screen (AC2)', () => {
     expect(tr('family.name_over_limit', locale, { count: '3' })).toContain('3')
   })
 
-  it('a photo change on the Photo screen clears every tick (KL15)', () => {
-    mock.view = resend()
-    saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
-    renderIn(MemorialPhotoScreen, 'en')
-    fireEvent.click(screen.getByText(tr('photo.without', 'en')))
+  // RP7 (AC2) — the re-send after the Trust left something out can keep the list too (the state the family sees is
+  // `approved_with_omissions`, not only `approved`).
+  it('⭐ AC2 — a re-send after approved_with_omissions can keep the list: "Start from the list I sent" is offered on a TAP and fills the rows', () => {
+    mock.view = resend({ memorialState: 'approved_with_omissions', kinshipLeftOut: [{ index: 1, reason: 'identifies_a_child' }] })
+    renderIn(MemorialFamilyScreen, 'en')
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toBeUndefined() // never automatic
+    fireEvent.click(screen.getByTestId('memorial-family-start-from-sent'))
     expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual([
       { relation: 'wife', name: 'परीक्षा-पत्नी' },
       { relation: 'son', name: 'परीक्षा-पुत्र' },
     ])
+    expect(screen.queryByTestId('memorial-family-start-from-sent')).toBeNull() // only while the rows are empty
+  })
+
+  // RP18 (AC2) — the name cap is 200 CODE POINTS: an astral name (two UTF-16 units per code point) of exactly 200 is within
+  // it, 201 is one over — a `.length` count would call 200 "a hundred over".
+  it.each(['hi', 'en'] as const)('%s: an ASTRAL name of exactly 200 code points shows no over-limit line; 201 shows "about 1"', (locale) => {
+    const astral = (n: number) => String.fromCodePoint(0x1f468).repeat(n)
+    saveMemorialDraft('m-1', 'pool-1', { kinship: [{ relation: 'son', name: astral(200) }] })
+    renderIn(MemorialFamilyScreen, locale)
+    expect(screen.queryByText(tr('family.name_over_limit', locale, { count: '1' }))).toBeNull()
+    expect(screen.queryByText(tr('family.name_over_limit', locale, { count: '200' }))).toBeNull()
+    fireEvent.change(screen.getByTestId('memorial-family-name-0'), { target: { value: astral(201) } })
+    expect(screen.getByText(tr('family.name_over_limit', locale, { count: '1' }))).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('memorial-family-next'))
+    expect(mock.push).not.toHaveBeenCalled() // 201 is an unfinished row: it blocks Next
+    fireEvent.change(screen.getByTestId('memorial-family-name-0'), { target: { value: astral(200) } })
+    fireEvent.click(screen.getByTestId('memorial-family-next'))
+    expect(mock.push).toHaveBeenCalledWith('/(memorial)/preview')
+  })
+
+  // RP2 (checklist 13 (d)) — the two states that appear on the family screen with no live region beside them are SPOKEN: once at
+  // the crossing (never per keystroke), on both platforms, in both languages.
+  describe('RP2 — the over-limit name and the limit line are announced once at the crossing', () => {
+    const over = (locale: 'hi' | 'en', n: number) => tr('family.name_over_limit', locale, { count: String(n) })
+    const typeName = (i: number, n: number) =>
+      fireEvent.change(screen.getByTestId(`memorial-family-name-${i}`), { target: { value: 'न'.repeat(n) } })
+    const finished = (n: number) => ({ relation: 'son' as const, name: 'न'.repeat(n) })
+
+    it.each(ALL_LOCALES.flatMap((l) => (['ios', 'android'] as const).map((os) => [l, os] as const)))(
+      '%s / %s: the crossing is spoken once (not per keystroke), and again after coming back under',
+      (locale, os) => {
+        mock.os = os
+        saveMemorialDraft('m-1', 'pool-1', { kinship: [finished(200)] })
+        renderIn(MemorialFamilyScreen, locale)
+        expect(announced()).toEqual([]) // 200 is within the cap
+        typeName(0, 203)
+        expect(screen.getByText(over(locale, 3))).toBeInTheDocument()
+        expect(announced()).toEqual([over(locale, 3)]) // the crossing, once
+        typeName(0, 205)
+        typeName(0, 209)
+        expect(announced()).toHaveLength(1) // typing further past the cap is not re-announced
+        typeName(0, 10)
+        expect(announced()).toHaveLength(1) // back under: nothing is spoken
+        typeName(0, 201)
+        expect(announced()).toEqual([over(locale, 3), over(locale, 1)])
+      },
+    )
+
+    it('a draft restored already over the cap is the baseline (silent); only a crossing after it is spoken', () => {
+      saveMemorialDraft('m-1', 'pool-1', { kinship: [finished(203)] })
+      renderIn(MemorialFamilyScreen, 'en')
+      expect(screen.getByText(over('en', 3))).toBeInTheDocument()
+      expect(announced()).toEqual([])
+      typeName(0, 205)
+      expect(announced()).toEqual([])
+      typeName(0, 10)
+      typeName(0, 201)
+      expect(announced()).toEqual([over('en', 1)])
+    })
+
+    it('each row crosses on its own: a second name going over is spoken while the first is still over', () => {
+      saveMemorialDraft('m-1', 'pool-1', { kinship: [finished(203), finished(1)] })
+      renderIn(MemorialFamilyScreen, 'en')
+      expect(announced()).toEqual([])
+      typeName(1, 202)
+      expect(announced()).toEqual([over('en', 2)])
+      typeName(0, 210) // the first row stays over: still not re-announced
+      expect(announced()).toHaveLength(1)
+    })
+
+    it('removing a row does not make a name that was already over its cap sound new at its new position', () => {
+      saveMemorialDraft('m-1', 'pool-1', { kinship: [finished(1), finished(203)] })
+      renderIn(MemorialFamilyScreen, 'en')
+      expect(announced()).toEqual([])
+      fireEvent.click(screen.getByTestId('memorial-family-remove-0'))
+      expect(screen.getByTestId('memorial-family-name-0')).toHaveValue('न'.repeat(203))
+      expect(screen.getByText(over('en', 3))).toBeInTheDocument()
+      expect(announced()).toEqual([])
+    })
+
+    it.each(ALL_LOCALES.flatMap((l) => (['ios', 'android'] as const).map((os) => [l, os] as const)))(
+      '%s / %s: the 20th row replaces "Add someone" with the limit line, and that is spoken once; again at the next 20th',
+      (locale, os) => {
+        mock.os = os
+        saveMemorialDraft('m-1', 'pool-1', { kinship: Array.from({ length: 19 }, () => finished(1)) })
+        renderIn(MemorialFamilyScreen, locale)
+        expect(announced()).toEqual([])
+        expect(screen.queryByTestId('memorial-family-limit')).toBeNull()
+        fireEvent.click(screen.getByTestId('memorial-family-add'))
+        const limit = tr('family.limit_reached', locale, { count: '20' })
+        expect(screen.getByTestId('memorial-family-limit')).toHaveTextContent(limit)
+        expect(announced()).toEqual([limit])
+        fireEvent.click(screen.getByTestId('memorial-family-remove-0')) // back to 19: the button returns, nothing is spoken
+        expect(screen.getByTestId('memorial-family-add')).toBeInTheDocument()
+        expect(announced()).toEqual([limit])
+        fireEvent.click(screen.getByTestId('memorial-family-add'))
+        expect(announced()).toEqual([limit, limit])
+      },
+    )
+
+    it('a draft restored already at 20 rows is the baseline: the limit line is drawn, not spoken', () => {
+      saveMemorialDraft('m-1', 'pool-1', { kinship: Array.from({ length: 20 }, () => finished(1)) })
+      renderIn(MemorialFamilyScreen, 'en')
+      expect(screen.getByTestId('memorial-family-limit')).toBeInTheDocument()
+      expect(announced()).toEqual([])
+    })
+  })
+
+  // KL15 — a tick points at the photo it was given for: a CHANGE of the photo choice clears every tick (the Photo screen),
+  // a re-press of the choice the draft already holds (RP9) does not.
+  describe('KL15 — the Photo screen and the ticks (RP7, RP9)', () => {
+    const UNTICKED = [
+      { relation: 'wife' as const, name: 'परीक्षा-पत्नी' },
+      { relation: 'son' as const, name: 'परीक्षा-पुत्र' },
+    ]
+    const picked = () => {
+      mock.files.add('file:///docs/p.jpg')
+      return { photoFileName: 'p.jpg', photoMime: 'image/jpeg' as const, altText: 'विवरण', kinship: LIST }
+    }
+    const pickNew = async (label: string) => {
+      const picker = await import('expo-image-picker')
+      vi.mocked(picker.launchImageLibraryAsync).mockResolvedValueOnce({ canceled: false, assets: [{ uri: 'file:///picker/new.jpg', mimeType: 'image/jpeg' }] } as never)
+      fireEvent.click(screen.getByText(label))
+      await settle()
+    }
+
+    it('a photo change on the Photo screen clears every tick: "without" while the previous photo is kept', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      fireEvent.click(screen.getByText(tr('photo.without', 'en')))
+      expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual(UNTICKED)
+    })
+
+    it('… "without" while a photo is picked', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', picked())
+      renderIn(MemorialPhotoScreen, 'en')
+      fireEvent.click(screen.getByText(tr('photo.without', 'en')))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.kinship).toEqual(UNTICKED)
+      expect(d.photoFileName).toBeUndefined()
+      expect(d.keepPreviousPhoto).toBe(false)
+    })
+
+    it('… "use the photo I sent before" while a photo is picked (the keep-previous branch)', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', picked())
+      renderIn(MemorialPhotoScreen, 'en')
+      fireEvent.click(screen.getByTestId('memorial-use-previous-photo'))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.kinship).toEqual(UNTICKED)
+      expect(d.photoFileName).toBeUndefined()
+      expect(d.keepPreviousPhoto).toBe(true)
+    })
+
+    it('… a NEW pick over the previous photo it was kept from (the new-pick branch)', async () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      await pickNew(tr('photo.choose', 'en'))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.photoFileName).toBeDefined()
+      expect(d.keepPreviousPhoto).toBe(false)
+      expect(d.kinship).toEqual(UNTICKED)
+    })
+
+    it('… and a NEW pick over a photo picked before (the ticks pointed at the one it replaces)', async () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', picked())
+      renderIn(MemorialPhotoScreen, 'en')
+      await pickNew(tr('photo.choose_other', 'en'))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.photoFileName).not.toBe('p.jpg')
+      expect(d.kinship).toEqual(UNTICKED)
+    })
+
+    it('RP9 — "use the photo I sent before" while it is ALREADY kept changes nothing: the ticks stay', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      fireEvent.click(screen.getByTestId('memorial-use-previous-photo'))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.kinship).toEqual(LIST)
+      expect(d.keepPreviousPhoto).toBe(true)
+      expect(d.altText).toBe('विवरण')
+    })
+
+    it('RP9 — "without" with no photo picked and none kept changes nothing either: the ticks stay', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      fireEvent.click(screen.getByText(tr('photo.without', 'en')))
+      expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual(LIST)
+      expect(mock.push).toHaveBeenCalledWith('/(memorial)/family')
+    })
+
+    it('RP9 — choosing "the photo I sent before" when there was none IS a change: the ticks go', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      fireEvent.click(screen.getByTestId('memorial-use-previous-photo'))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.keepPreviousPhoto).toBe(true)
+      expect(d.kinship).toEqual(UNTICKED)
+    })
+
+    // RP25 — after a FAILED save the stored draft is OLDER than the screen (X1): the choice the family is holding is the SCREEN's,
+    // so a re-press of it changes nothing even when the stored draft names another choice. (Storage is made to disagree on
+    // purpose — only the failed-save branch reads `shown.current`; a read of storage would see "none" and clear the ticks.)
+    it('RP25 — after a FAILED save, a re-press of the choice the SCREEN holds keeps the ticks, ⛔ not judged by the older stored draft', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      mock.failWrites = true
+      fireEvent.change(screen.getByTestId('memorial-alt-text'), { target: { value: 'नया विवरण' } }) // this save FAILS
+      mock.failWrites = false
+      expect(loadMemorialDraft('m-1', 'pool-1').altText).toBe('विवरण') // the stored draft really is older than the screen
+      saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: false }) // …and names another choice ("none")
+      fireEvent.click(screen.getByTestId('memorial-use-previous-photo'))
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.keepPreviousPhoto).toBe(true)
+      expect(d.kinship).toEqual(LIST) // the ticks stay: the screen already held "the photo I sent before"
+      expect(d.altText).toBe('नया विवरण') // and the next save wrote the screen's choices (X1), not the press alone
+    })
   })
 })
 
 describe('Story 11b.5a — the preview and the Send carry the list (AC2 / AC6)', () => {
+  // The hostile name's bidi controls, by code point (never written raw in source): an unterminated RLO, and the isolate the preview draws it in.
+  const RLO = cpoint(0x202e)
+  const PDF = cpoint(0x202c)
+  const FSI = cpoint(0x2068)
+  const PDI = cpoint(0x2069)
+
   it.each(['hi', 'en'] as const)('%s: the preview draws the grouped rows (plural English label, names isolated); the Send carries exactly them', async (locale) => {
     saveMemorialDraft('m-1', 'pool-1', {
       body: 'शब्द',
       kinship: [
         { relation: 'son', name: 'अमित' },
         { relation: 'wife', name: 'सुनीता', inPhoto: true },
-        { relation: 'son', name: 'राहुल‮' },
+        { relation: 'son', name: `राहुल${RLO}` },
       ],
     })
     mock.send.mockResolvedValue(SENT_OK)
@@ -3784,7 +4019,7 @@ describe('Story 11b.5a — the preview and the Send carry the list (AC2 / AC6)',
     const lines = Array.from(block.children).slice(1).map((c) => c.textContent)
     expect(lines).toEqual([
       `${tr('kinship.wife', locale)}: सुनीता`,
-      `${tr('kinship.son_plural', locale)}: अमित, ⁨राहुल‮‬⁩`,
+      `${tr('kinship.son_plural', locale)}: अमित, ${FSI}राहुल${RLO}${PDF}${PDI}`,
     ])
     fireEvent.click(screen.getByTestId('memorial-send'))
     await settle()
@@ -3793,7 +4028,7 @@ describe('Story 11b.5a — the preview and the Send carry the list (AC2 / AC6)',
     expect(JSON.parse(form.get('kinship') as string)).toEqual([
       { relation: 'son', name: 'अमित' },
       { relation: 'wife', name: 'सुनीता' },
-      { relation: 'son', name: 'राहुल‮' },
+      { relation: 'son', name: `राहुल${RLO}` },
     ])
   })
 
@@ -3843,5 +4078,73 @@ describe('Story 11b.5a — the outcome tells each left-out entry and its reason 
     expect(line).toHaveTextContent(tr('outcome.reason', locale, { reason: tr('outcome.reason_child_undeclared', locale) }))
     // (the English 4.3 begins with the plain phrase, so the check is on how the line ENDS)
     expect(line.textContent?.endsWith(tr('reason.identifies_a_child', locale))).toBe(false)
+  })
+})
+
+// RP7 (KL16) — copy 4.3 is not only the kinship line's: EVERY reason line of the outcome that carries `identifies_a_child` reads it
+// under the declaration — the words' markers (`MemorialText showReasons`), the photo, a part of the photo description, the earlier
+// approval the Trust withdrew, and a decision's own reason — and the plain wording everywhere else. (A photo left out takes its
+// description with it, so the photo line and the description-part line are two views.)
+describe('Story 11b.5a — KL16: copy 4.3 reaches every reason line of the outcome, not only the kinship one', () => {
+  const body = 'एक दो तीन'
+  const cut = body.indexOf('दो')
+  const bodyPart = { field: 'body' as const, start: cut, end: cut + 2, reason: 'identifies_a_child' as const }
+  const photoGone: Partial<MemorialMemberView> = { photoLeftOut: { reason: 'identifies_a_child' }, omissions: [bodyPart] }
+  const altPartGone: Partial<MemorialMemberView> = {
+    omissions: [bodyPart, { field: 'altText', start: 0, end: 5, reason: 'identifies_a_child' }],
+  }
+  const declared = (over: Partial<MemorialMemberView> = {}) =>
+    view({
+      memorialState: 'approved_with_omissions',
+      submissionId: 's-1',
+      body,
+      altText: 'alpha beta',
+      hasPhoto: true,
+      earlierApprovalWithdrawn: { reasonCode: 'identifies_a_child' },
+      guardianDeclaration: true,
+      ...over,
+    })
+  const VIEWS = [
+    ['the photo left out', photoGone, 'memorial-photo-left-out'],
+    ['a part of the photo description left out', altPartGone, 'memorial-alt-text-left-out'],
+  ] as const
+  const line = (locale: 'hi' | 'en', key: string) => tr('outcome.reason', locale, { reason: tr(key, locale) })
+  // The reason line is the END of each element's text; the English 4.3 begins with the plain phrase, so the check is on how it ENDS.
+  const endsWith = (el: HTMLElement, text: string) => el.textContent?.endsWith(text) === true
+  const reasonLines = (testID: string) => [
+    screen.getByTestId('memorial-omitted-reason'),
+    screen.getByTestId(testID),
+    screen.getByTestId('memorial-earlier-withdrawn'),
+  ]
+
+  it.each(VIEWS.flatMap(([what, over, testID]) => (['hi', 'en'] as const).map((l) => [l, what, over, testID] as const)))(
+    '%s, %s: under the declaration, the marker, that line and the earlier withdrawal all read 4.3',
+    (locale, _what, over, testID) => {
+      mock.view = declared(over)
+      renderIn(MemorialOutcomeScreen, locale)
+      for (const el of reasonLines(testID)) {
+        expect(endsWith(el, line(locale, 'outcome.reason_child_undeclared'))).toBe(true)
+        expect(endsWith(el, line(locale, 'reason.identifies_a_child'))).toBe(false)
+      }
+    },
+  )
+
+  it.each(VIEWS.flatMap(([what, over, testID]) => (['hi', 'en'] as const).map((l) => [l, what, over, testID] as const)))(
+    '%s, %s: without the declaration, the same lines read the plain wording',
+    (locale, _what, over, testID) => {
+      mock.view = declared({ ...over, guardianDeclaration: false })
+      renderIn(MemorialOutcomeScreen, locale)
+      for (const el of reasonLines(testID)) {
+        expect(endsWith(el, line(locale, 'reason.identifies_a_child'))).toBe(true)
+        expect(el.textContent).not.toContain(tr('outcome.reason_child_undeclared', locale))
+      }
+    },
+  )
+
+  it.each(['hi', 'en'] as const)('%s: a decision\'s own reason (not approved) reads 4.3 under the declaration too', (locale) => {
+    mock.view = view({ memorialState: 'not_approved', submissionId: 's-1', body, reasonCode: 'identifies_a_child', guardianDeclaration: true })
+    renderIn(MemorialOutcomeScreen, locale)
+    expect(screen.getByText(line(locale, 'outcome.reason_child_undeclared'))).toBeInTheDocument()
+    expect(screen.queryByText(line(locale, 'reason.identifies_a_child'))).toBeNull()
   })
 })

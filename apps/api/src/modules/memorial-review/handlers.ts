@@ -210,6 +210,8 @@ export function createMemorialReviewHandlers(deps: AppDeps) {
         const kin = await dec(s.kinshipCiphertext);
         const kinship = kin.value === null ? null : parseMemorialKinship(kin.value);
         const kinshipFailed = kin.failed || (kin.value !== null && kinship === null);
+        // A decrypt failure was logged by `dec`; a list that decrypted but did not parse is logged here (⛔ never the plaintext).
+        if (kin.value !== null && kinship === null) request.log.warn('memorial-review: family list did not parse');
         const decisionNote = await dec(link.decision?.internalNoteCiphertext ?? null);
         const withdrawalNote = await dec(link.withdrawal?.internalNoteCiphertext ?? null);
         versions.push({

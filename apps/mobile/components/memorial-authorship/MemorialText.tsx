@@ -23,13 +23,17 @@ export function MemorialText({
   paragraphs,
   testID,
   showReasons = false,
-  guardianDeclaration = false,
+  guardianDeclaration,
 }: {
   paragraphs: readonly MemorialParagraph[]
   testID?: string
   showReasons?: boolean
-  /** Story 11b.5a (KL16) — the version carried the guardian declaration: the child reason reads copy 4.3. */
-  guardianDeclaration?: boolean
+  /**
+   * Story 11b.5a (KL16) — the version carried the guardian declaration: the child reason reads copy 4.3. REQUIRED (RP23): a call
+   * site that forgets it would quietly show the plain wording KL16 forbids, so the type checker must find it. A caller that
+   * never shows reasons passes `false`.
+   */
+  guardianDeclaration: boolean
 }): React.ReactElement {
   const t = useMemorialT()
   return (

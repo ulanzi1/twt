@@ -16,9 +16,11 @@
 // V9 (a) — while this screen's last save FAILED (full storage), the focus re-read is skipped: the screen's state is newer
 // than the stored draft, and must not be replaced by it. W5 — and a change made then is merged into the SCREEN's state;
 // X1 — and the next save after a failed one writes the screen's choices, not the change alone.
-// Story 11b.5a (KL8 / KL15) — BOTH ways on go to the FAMILY LIST (`family.tsx`), then the preview; and ANY change of the photo
+// Story 11b.5a (KL8 / KL15) — BOTH ways on go to the FAMILY LIST (`family.tsx`), then the preview; and a CHANGE of the photo
 // choice (a new pick, "without", "the photo I sent before") clears every "in the photo" tick — a tick points at the photo it
 // was given for, ⛔ at the next one.
+// RP9 — only an actual change: pressing the choice the draft already holds ("the photo I sent before" while it is kept, "without"
+// with no photo) leaves the ticks, which still point at the right photo.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, Platform, ScrollView } from 'react-native'
@@ -171,8 +173,19 @@ export default function MemorialPhotoScreen(): React.ReactElement {
   // keep showing the picked photo X while the Send carries `keepPreviousPhoto` and no file: the family approving one image
   // and sending another.
   function releasePicked(keepPrevious: boolean): void {
+    // RP9 (KL15) — the ticks go only when the choice CHANGES. `keepPreviousPhoto` WINS (as on the screen): kept ⇒ "previous",
+    // else a picked file ⇒ "picked", else "none". A re-press of the choice already held keeps them. The held choice is read
+    // fresh from the phone's storage — or, after a FAILED save (X1), from what the screen holds.
+    const held: MemorialDraft = lastSaveFailed.current ? (shown.current ?? {}) : loadMemorialDraft(mid, drive)
+    const before = held.keepPreviousPhoto === true ? 'previous' : held.photoFileName !== undefined ? 'picked' : 'none'
+    const changed = before !== (keepPrevious ? 'previous' : 'none')
     deletePickedCopy()
-    patch({ photoFileName: undefined, photoMime: undefined, keepPreviousPhoto: keepPrevious, kinship: clearedTicks() })
+    patch({
+      photoFileName: undefined,
+      photoMime: undefined,
+      keepPreviousPhoto: keepPrevious,
+      ...(changed ? { kinship: clearedTicks() } : {}),
+    })
   }
 
   // Story 11b.5a (KL15) — the family list with every tick cleared, read FRESH from the phone's storage (the list is the family

@@ -25,7 +25,7 @@
 
 import { File, Paths } from 'expo-file-system'
 
-import type { MemorialDraftKinshipRow } from '../components/memorial-authorship/memorial-kinship'
+import { memorialKinshipForSend, type MemorialDraftKinshipRow } from '../components/memorial-authorship/memorial-kinship'
 
 import { newIdempotencyKey } from './idempotency-key'
 import { mmkvStorage } from './mmkv'
@@ -73,15 +73,23 @@ export function loadMemorialDraft(memberId: string, driveId: string): MemorialDr
  * content.) ⚠ Every element is a PRIMITIVE (compared with `===` below): the list rides as ONE string — an array here would
  * compare by reference and an edit to the list alone would keep the old Idempotency-Key, replaying the old Send (R6 — 11b.5a
  * Trap 5).
+ * ⭐ RP1 — the list part is CANONICAL: it is built from the rows the Send would actually CARRY (`memorialKinshipForSend`, the
+ * Send's own function — finished rows only, ticks only with a photo) as `[relation, name, inPhoto]` tuples, so the order of a
+ * row's keys, a blank or unfinished row and a tick with no photo to point at cannot change the Idempotency-Key: content that
+ * sends identically signs identically (a lost answer, then "Continue without a photo" rebuilding the rows, must still replay).
  */
 function sendContent(d: MemorialDraft): readonly (string | boolean)[] {
+  // The Send's photo test, read from what the DRAFT holds: the previous photo kept, or a picked photo's file NAME. (`use-memorial-send.ts`
+  // asks instead whether that file still RESOLVES. The two differ only when a picked file has vanished — then this signature still
+  // sees the ticks the Send strips, and errs on the side of changing the key, never of reusing one for different content.)
+  const withPhoto = d.keepPreviousPhoto === true || (d.photoFileName ?? '') !== ''
   return [
     d.body ?? '',
     d.altText ?? '',
     d.photoFileName ?? '',
     d.photoMime ?? '',
     d.keepPreviousPhoto === true,
-    JSON.stringify(d.kinship ?? []),
+    JSON.stringify(memorialKinshipForSend(d.kinship, withPhoto).map((e) => [e.relation, e.name, e.inPhoto === true])),
   ]
 }
 

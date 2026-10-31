@@ -85,13 +85,15 @@ const MEMBER_COUNTERPART: Record<string, readonly string[]> = {
 };
 
 /**
- * ⭐⭐ Story 11b.4a — THE FAMILY'S MEMORIAL IS A DIFFERENT DATA CLASS, and the floor does ⛔ not reach it: RULED by
- * `2026-10-27-411` item 7 (PC5 A, Trustee-ratified) — *"The rule does ⛔ not reach the family's words: they are the family's
- * writing, not the drive's information."* — reading `2026-09-04-195` cl.1, which bounds `-189` cl.3 to *"the drive data class —
- * the nominee/bank fields and the drive record"*, although the page serves the memorial INSIDE `drive`.
- * ⚠⛔ **AN EXCLUSION, ⛔ NOT A GAP** — ⛔ never the `[]` rows below (those are a recorded `-189` SHORTFALL and `declaredGaps` is an
- * exact set of three). The three ids ARE spread into the floor (so they can ⛔ not escape it silently) and are then SUBTRACTED
- * here, by name, each citing its ruling; the set is pinned to exactly these three.
+ * ⭐⭐ Story 11b.4a — THE FAMILY'S MEMORIAL WAS RULED A DIFFERENT DATA CLASS, and the floor did ⛔ not reach it: `2026-10-27-411`
+ * item 7 (PC5 A, Trustee-ratified) — *"The rule does ⛔ not reach the family's words: they are the family's writing, not the
+ * drive's information."* — reading `2026-09-04-195` cl.1, which bounds `-189` cl.3 to *"the drive data class — the nominee/bank
+ * fields and the drive record"*, although the page serves the memorial INSIDE `drive`. That made the memorial ids a data-class
+ * EXCLUSION (subtracted by name, each citing its ruling) — HISTORY ONLY: ⛔ never cite `-411` item 7 for the memorial ids any more.
+ * ⚠⛔ **SUPERSEDED IN PART (2026-10-31, Story 11b.5a): `-428` supersedes `-412` §3 item 3 — the memorial is OWED to members, so the
+ * four memorial ids are ⛔ NO LONGER an exclusion: they are DECLARED GAPS (the `[]` rows above, owed by row `11b-5c`), and
+ * `declaredGaps` is an exact set of SEVEN (the three appeal-lineage ids + the four memorial ids).** The ids are still spread into
+ * the floor (so a memorial id can ⛔ not escape it silently); {@link DATA_CLASS_EXCLUDED} below is kept EMPTY.
  */
 // ⭐ 2026-10-31: `-428` supersedes `-412` §3 item 3 — ⛔ no longer a data-class exclusion; a GAP owed by 11b-5c (Story 11b.5a,
 // Task 7.2). The map is kept EMPTY (⛔ deleted) so the floor's arithmetic below still reads "public minus the exclusions", and a
@@ -102,7 +104,8 @@ const DATA_CLASS_EXCLUDED: Readonly<Record<string, string>> = {};
 const PUBLIC_DETAIL_FIELD_IDS: string[] = [
   ...Object.values(SAHYOG_VIVRAN_FIELD_IDS),
   ...Object.values(SAHYOG_VIVRAN_NOMINEE_ACCOUNT_FIELD_IDS),
-  // ⭐ Story 11b.4a — spread IN, so a memorial id can ⛔ never escape this test; excluded below BY NAME (`DATA_CLASS_EXCLUDED`).
+  // ⭐ Story 11b.4a — spread IN, so a memorial id can ⛔ never escape this test. Since 2026-10-31 (`-428`) none is excluded: the four
+  // are declared GAPS in `MEMBER_COUNTERPART` (owed by row 11b-5c), and `DATA_CLASS_EXCLUDED` is empty.
   ...Object.values(SAHYOG_VIVRAN_FAMILY_MEMORIAL_FIELD_IDS),
 ].filter((id): id is string => id !== null);
 

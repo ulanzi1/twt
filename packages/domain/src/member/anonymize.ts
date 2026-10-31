@@ -179,9 +179,10 @@ export async function anonymizeMember(
 
   // ── ⭐ Story 11b.4 (MA15, Trap 10) — the FAMILY MEMORIAL about the member, keyed on `deceased_member_id` (= the member —
   // the Ravi-mode session member is the deceased), UNCONDITIONALLY (⛔ inside the has-claims branch below: the row carries
-  // its own deceased key). Every version's words + alt text → sentinel; the reviewer's internal notes on those versions
-  // (decisions + Trust withdrawals) → sentinel. Only the four Tier-1 columns 0182 grants UPDATE on; every other column (the
-  // acts, reasons, offsets, the authorisation record) is governance history, kept. ⚠ Read the submission ids FIRST, then
+  // its own deceased key). Every version's words, alt text and family list → sentinel; the reviewer's internal notes on those
+  // versions (decisions + Trust withdrawals) → sentinel. Only the five Tier-1 columns 0182 / 0194 grant UPDATE on (body, alt
+  // text, the family list, and the two internal notes); every other column (the acts, reasons, offsets, the authorisation
+  // record, the left-out entries' indexes) is governance history, kept. ⚠ Read the submission ids FIRST, then
   // `= ANY(...)` — ⛔ never a correlated subquery through the builder ([[project_epic6_drizzle_correlated_subquery_bug]]).
   // The photo keys are RETURNED: the caller deletes the objects after COMMIT, best-effort (logged, anonymous convention).
   const memorialRows = await client

@@ -1008,6 +1008,10 @@ describe('Story 11b.5a — the family list, the declaration and the ticks', () =
   const withList = (over: Partial<MemorialReviewVersion> = {}) =>
     detail({ chain: [version({ kinship: LIST, hasPhoto: true, altText: 'फ़ोटो', photoUrl: 'https://x/p.jpg', ...over })] });
 
+  /** The child reason's reviewer guidance (`-432` R3 A), as every reason select under a declaration describes itself. */
+  const GUIDANCE =
+    'Use this only where something in the memorial itself shows the sender’s declaration cannot cover the child; the family is told why.';
+
   it('the list sits under the words, each relation labelled (relative to the member who died), the bidi control visible', async () => {
     vi.mocked(api.getMemorialReview).mockResolvedValue(withList());
     renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
@@ -1082,6 +1086,8 @@ describe('Story 11b.5a — the family list, the declaration and the ticks', () =
     expect(within(withdrawForm).getByTestId('memorial-child-guidance')).toHaveTextContent(
       'Use this only where something in the memorial itself shows the sender’s declaration cannot cover the child; the family is told why.',
     );
+    // The select's `aria-label` is its name, so the guidance is spoken as its DESCRIPTION (not only drawn beside it).
+    expect(within(withdrawForm).getByRole('combobox')).toHaveAccessibleDescription(GUIDANCE);
   });
 
   it('AC14 — the decision form\'s selects carry the guidance too under the declaration', async () => {
@@ -1091,6 +1097,23 @@ describe('Story 11b.5a — the family list, the declaration and the ticks', () =
     fireEvent.click(within(form).getByLabelText('Do not approve'));
     expect(within(form).getByTestId('memorial-child-guidance')).toBeInTheDocument();
     expect(within(form).getByRole('option', { name: 'Names or shows a child the declaration cannot cover' })).toBeInTheDocument();
+    expect(within(form).getByRole('combobox')).toHaveAccessibleDescription(GUIDANCE);
+  });
+
+  it('AC14 — every reason select describes ITSELF: two selects on the form point at two different guidance elements', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(withList({ guardianDeclaration: true, hasPhoto: false, altText: null, photoUrl: null }));
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const form = await screen.findByTestId('memorial-decision-form');
+    fireEvent.click(within(form).getByLabelText('Approve, leaving out a part'));
+    fireEvent.click(within(within(form).getAllByTestId('memorial-sentence')[0]!).getByRole('checkbox'));
+    fireEvent.click(within(within(form).getAllByTestId('memorial-kinship-choice')[0]!).getByRole('checkbox'));
+    const selects = within(form).getAllByRole('combobox');
+    expect(selects).toHaveLength(2);
+    const targets = selects.map((select) => select.getAttribute('aria-describedby'));
+    expect(targets[0]).toBeTruthy();
+    expect(targets[1]).toBeTruthy();
+    expect(targets[0]).not.toBe(targets[1]);
+    for (const select of selects) expect(select).toHaveAccessibleDescription(GUIDANCE);
   });
 
   it('AC14 — a historical v1–v3 row shows ⛔ banner, ⛔ guidance, the plain label', async () => {
@@ -1102,6 +1125,60 @@ describe('Story 11b.5a — the family list, the declaration and the ticks', () =
     expect(screen.queryByTestId('memorial-declaration')).toBeNull();
     expect(within(withdrawForm).queryByTestId('memorial-child-guidance')).toBeNull();
     expect(within(withdrawForm).getByRole('option', { name: 'Names or shows a child' })).toBeInTheDocument();
+    expect(within(withdrawForm).getByRole('combobox')).not.toHaveAttribute('aria-describedby');
+  });
+
+  // The API sets `unavailable` when the words, the photo's description OR the family list will not decrypt / parse. A LIST-only
+  // failure leaves `body` set, so the screen keys on `unavailable` — else it shows the words, omits the list and offers a form
+  // the API then answers with a 500.
+  // RP3 / RP21 — the card says the version is not whole (NEUTRAL: it also shows on a decided version); only the decision form,
+  // which only a still-decidable version has, says "so it cannot be decided yet". Each is drawn exactly once.
+  const PART = 'Part of this version could not be read right now.';
+  const PART_FORM = 'Part of this version could not be read right now, so it cannot be decided yet.';
+
+  it('RP3 — a version whose family list could not be read: the words that did decrypt stay, a neutral notice on the card and the consequence in place of the form (each once, role=status)', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(detail({ chain: [version({ kinship: null, unavailable: 'memorial.unavailable_now' })] }));
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    const card = await screen.findByText(PART);
+    expect(card).toHaveAttribute('role', 'status');
+    expect(screen.getAllByText(PART)).toHaveLength(1);
+    const form = screen.getByText(PART_FORM);
+    expect(form).toHaveAttribute('role', 'status');
+    expect(screen.getAllByText(PART_FORM)).toHaveLength(1);
+    expect(screen.getByTestId('memorial-body')).toBeInTheDocument(); // the words were readable — ⛔ not hidden behind a words-specific notice
+    expect(screen.queryByText('The stored words could not be read right now.')).toBeNull();
+    expect(screen.queryByTestId('memorial-kinship')).toBeNull();
+    expect(screen.queryByTestId('memorial-decision-form')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Record decision' })).toBeNull();
+  });
+
+  it('RP21 — an already-DECIDED version with an unreadable part gets the neutral card line, ⛔ never "cannot be decided yet"', async () => {
+    vi.mocked(api.getMemorialReview).mockResolvedValue(
+      detail({
+        memorialState: 'approved',
+        canDecide: false,
+        chain: [
+          version({
+            kinship: null,
+            unavailable: 'memorial.unavailable_now',
+            decision: {
+              action: 'approved',
+              omissions: [],
+              photoLeftOutReason: null,
+              kinshipLeftOut: [],
+              reasonCode: null,
+              internalNote: null,
+              actorDisplay: 'Panel Member',
+              decidedAt: '2026-10-21T10:00:00.000Z',
+            },
+          }),
+        ],
+      }),
+    );
+    renderWithClient(<MemorialReviewDetailPage pariwarId={PARIWAR} submissionId={SUB} />);
+    expect(await screen.findByText(PART)).toHaveAttribute('role', 'status');
+    expect(screen.queryByText(PART_FORM)).toBeNull();
+    expect(screen.getByTestId('memorial-body')).toBeInTheDocument();
   });
 
   it('AC14 — the FLAG drives the banner, ⛔ the version string: a synthetic later version with the flag shows it; a v4 id without it does not', async () => {

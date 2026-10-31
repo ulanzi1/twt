@@ -388,6 +388,8 @@ export function createMemorialHandlers(deps: AppDeps) {
       let altText: string | null = null;
       let kinship: MemorialKinshipEntry[] | null = null;
       let unavailable: 'memorial.unavailable_now' | null = null;
+      // Which read failed — the log names the family list apart from the words (the error NAME only, ⛔ no plaintext).
+      let reading: 'words' | 'family list' = 'words';
       if (latest !== null) {
         try {
           body = await decryptMemorialField(latest.submission.bodyCiphertext, ctx.pariwarIdStr, deps.encryption);
@@ -399,6 +401,7 @@ export function createMemorialHandlers(deps: AppDeps) {
           // Story 11b.5a (KL9) — the family list as SENT. A decrypt or parse failure is the words' failure: `unavailable`, and
           // `canSend` false — else a re-send with ⛔ no list would silently take the list off the page at the next approval.
           if (latest.submission.kinshipCiphertext !== null) {
+            reading = 'family list';
             const plain = await decryptMemorialField(latest.submission.kinshipCiphertext, ctx.pariwarIdStr, deps.encryption);
             fieldsDecrypted += 1;
             kinship = parseMemorialKinship(plain);
@@ -406,7 +409,10 @@ export function createMemorialHandlers(deps: AppDeps) {
           }
         } catch (err) {
           // AC1 — a FAIL-SOFT 200 (responses are PARSED — ⛔ a 500); the app can neither send nor withdraw until it reads.
-          request.log.warn({ errorName: err instanceof Error ? err.name : typeof err }, 'memorial: words decrypt failed — unavailable now');
+          request.log.warn(
+            { errorName: err instanceof Error ? err.name : typeof err },
+            reading === 'words' ? 'memorial: words decrypt failed — unavailable now' : 'memorial: family list unreadable — unavailable now',
+          );
           body = null;
           altText = null;
           kinship = null;

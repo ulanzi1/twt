@@ -3,13 +3,17 @@
 // review detail, public page and helpline drive view. Names here are obviously synthetic (Trap 2).
 //   · AC2 — the Send refuses a malformed list with `memorial.kinship_invalid` BEFORE anything is written; a tick with ⛔ no photo is
 //     refused; 20 entries at the 200-code-point cap are accepted; a name round-trips byte for byte; `[]` is refused.
-//   · AC6 / KL9 / KL16 — the member view returns the list as SENT, the left-out indexes, and `guardianDeclaration`.
+//   · AC6 / KL9 / KL16 — the member view returns the list as SENT, the left-out indexes, and `guardianDeclaration`; an unreadable
+//     list is `unavailable` on the member view and the review detail.
 //   · AC5 — a kinship-only `approved_with_omissions`; the validator's problems; the decide audit carries the indexes, ⛔ a name.
 //   · AC7 / AC15 — the public wire carries grouped surviving rows only: ⛔ index, ⛔ reason, ⛔ `inPhoto`, ⛔ a count; a list whose
 //     every entry was left out is `[]`; a sentinel / unparsable list drops the WHOLE memorial.
-//   · AC8 — the helpline's `shown.kinship` equals the page's rows; a sentinel list makes the drive view `not_found`.
+//   · AC8 — the helpline's `shown.kinship` equals the page's rows; a sentinel list makes the drive view `not_found`; a list that
+//     cannot be read (bad envelope, bad JSON, schema failure) reads the memorial as unreadable, as the page drops it.
 
-import { member as memberDomain } from '@twt/domain';
+import { createHash } from 'node:crypto';
+
+import { canonicalJsonStringify, member as memberDomain } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { encryptMemorialField } from '../../../src/modules/memorial/memorial-crypto.js';
@@ -40,6 +44,14 @@ const LIST = [
   { relation: 'wife', name: 'परीक्षा-पत्नी', inPhoto: true },
   { relation: 'son', name: 'परीक्षा-पुत्र दो' },
   { relation: 'daughters_daughter', name: 'परीक्षा-नातिन' },
+];
+
+// A PRESENT `kinship_ciphertext` the routes cannot read (KL10), each as the ciphertext the column would hold. The erasure
+// sentinel is not among them: it has its own `not_found` branch on the helpline view.
+const UNREADABLE_LISTS: [string, (t: TestApp, w: MemorialWorld) => Promise<string>][] = [
+  ['a bad envelope', async () => 'enc:v1:not-an-envelope'],
+  ['unparsable JSON', async (t, w) => encryptMemorialField('[{"relation":', w.pariwarId, t.deps.encryption)],
+  ['a schema failure', async (t, w) => encryptMemorialField('[{"relation":"uncle","name":"x"}]', w.pariwarId, t.deps.encryption)],
 ];
 
 describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real routes (live DB)', { timeout: 60000 }, () => {
@@ -162,6 +174,30 @@ describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real
     const [dec] = await rows<{ kinship_omissions: unknown }>(t, `SELECT kinship_omissions FROM memorial_review_decisions WHERE submission_id = $1`, [id]);
     expect(dec!.kinship_omissions).toEqual([{ index: 0, reason: 'against_the_law' }, { index: 3, reason: 'identifies_a_child' }]);
     expect(JSON.stringify(t.auditSink.events.slice(before))).not.toContain('परीक्षा');
+    // The audit intent's payload hash carries `kinship_left_out` (indexes + reasons): recomputed here from the same canonical
+    // shape, and ≠ the hash of the SAME decision with an empty list — so dropping the key, or its content, is caught.
+    const intentHash = (kinshipLeftOut: unknown): string =>
+      createHash('sha256')
+        .update(
+          canonicalJsonStringify({
+            submission_id: id,
+            action: 'approved_with_omissions',
+            omissions: [],
+            photo_left_out_reason: null,
+            kinship_left_out: kinshipLeftOut,
+            reason_code: null,
+            has_internal_note: false,
+          }),
+        )
+        .digest('hex');
+    const intents = await rows<{ request_payload_hash: string }>(
+      t,
+      `SELECT request_payload_hash FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'memorial.review.decide' AND resource_locator = $2`,
+      [w.pariwarId, `memorial:${id}`],
+    );
+    expect(intents).toHaveLength(1);
+    expect(intents[0]!.request_payload_hash).toBe(intentHash([{ index: 0, reason: 'against_the_law' }, { index: 3, reason: 'identifies_a_child' }]));
+    expect(intents[0]!.request_payload_hash).not.toBe(intentHash([]));
     // Kinship omissions on a version with ⛔ list.
     const w2 = await world();
     const r2 = await send(t, w2, sendFields());
@@ -206,7 +242,15 @@ describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real
     ];
     expect(pa.memorial?.kinship).toEqual(expected);
     expect(pb.memorial?.kinship).toEqual(pa.memorial?.kinship);
-    for (const forbidden of ['inPhoto', 'index', 'leftOut', 'identifies_a_child', 'परीक्षा-पुत्र दो']) expect(pa.raw).not.toContain(forbidden);
+    // The field NAMES a leak would take are camelCase (`inPhoto`, `kinshipLeftOut`, `kinshipOmissions`), so the match is
+    // case-insensitive — and over the MEMORIAL object only: the page's other keys carry legitimate `…Count` / `…Account…` names.
+    const LEAK_TOKENS = ['inphoto', 'index', 'leftout', 'omission', 'reason', 'count'];
+    const leaks = (wire: string): string[] => LEAK_TOKENS.filter((token) => wire.toLowerCase().includes(token));
+    expect(leaks(JSON.stringify(pa.memorial))).toEqual([]);
+    // Not vacuous: the same match DOES fire on each shape a leak would take.
+    expect(leaks(JSON.stringify({ ...pa.memorial, inPhoto: true, kinshipLeftOut: [{ index: 2, reason: 'x' }], kinshipOmissions: [], leftOutCount: 1 }))).toEqual(LEAK_TOKENS);
+    // The VALUES that must not cross: the reason code, and the left-out entry's name.
+    for (const forbidden of ['identifies_a_child', 'परीक्षा-पुत्र दो']) expect(pa.raw).not.toContain(forbidden);
   });
 
   it('AC7 — every entry left out ⇒ kinship []; an unclosed RLO in one name is closed inside that name', async () => {
@@ -240,6 +284,30 @@ describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real
     expect((await pageMemorial(w)).memorial).toBeNull();
   });
 
+  it.each(UNREADABLE_LISTS)(
+    '⭐ AC6 / KL9 — %s in kinship_ciphertext: the member view and the review detail say unavailable (the detail still decrypts the words); canSend and canWithdraw false',
+    async (_why, cipher) => {
+      const w = await world();
+      const r = await send(t, w, [...sendFields(), kinshipPart(LIST.slice(0, 1))]);
+      const id = r.body.submissionId as string;
+      // Not approved, so a re-send is open — the control proves `canSend` is true while the list reads, and the failure turns it off.
+      expect((await decide(w, id, { action: 'not_approved', reasonCode: 'against_the_law' })).statusCode).toBe(200);
+      expect(await view(w)).toMatchObject({ kinship: LIST.slice(0, 1), unavailable: null, canSend: true });
+      await rows(t, `UPDATE memorial_submissions SET kinship_ciphertext = $2 WHERE submission_id = $1`, [id, await cipher(t, w)]);
+      // The member view: the words' failure — everything `null`, nothing the app can send over or withdraw.
+      expect(await view(w)).toMatchObject({ body: null, altText: null, kinship: null, unavailable: 'memorial.unavailable_now', canSend: false, canWithdraw: false });
+      // The review detail: the words decrypt, the list does not — `unavailable` is how the screen learns it (it then hides the form).
+      const panel = await h.staff(w.pariwarId, 'trustee_panel');
+      const detail = await panel.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/memorial-reviews/${id}` });
+      expect(detail.statusCode, detail.body).toBe(200);
+      expect(detail.json<{ chain: Record<string, unknown>[] }>().chain[0]).toMatchObject({
+        body: expect.any(String),
+        kinship: null,
+        unavailable: 'memorial.unavailable_now',
+      });
+    },
+  );
+
   it('AC8 — the helpline drive view shows the SAME rows as the page (⛔ tick); a sentinel list makes it not_found', async () => {
     const w = await world();
     const r = await send(t, w, [...sendFields(), ...photoParts(), kinshipPart(LIST)]);
@@ -259,4 +327,39 @@ describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real
     const gone = await op.inject({ method: 'GET', url });
     expect(gone.statusCode).toBe(404);
   });
+
+  it.each(UNREADABLE_LISTS)(
+    '⭐ AC8 / KL10 — %s in kinship_ciphertext: the helpline view reads the memorial as unreadable (no words, no photo, no list) — the page drops it whole; the submissionId stays for the take-down',
+    async (_why, cipher) => {
+      const w = await world();
+      const r = await send(t, w, [...sendFields(), ...photoParts(), kinshipPart(LIST)]);
+      const id = r.body.submissionId as string;
+      expect((await decide(w, id, { action: 'approved' })).statusCode).toBe(200);
+      const op = await h.staff(w.pariwarId, 'helpline_operator', 'Helpline Operator');
+      const url = `/api/v1/p/${w.pariwarId}/memorial-takedowns/drives/${w.poolId}`;
+      // Control: while the list reads, the words, the photo and the list are all "on the page now".
+      const ok = (await op.inject({ method: 'GET', url })).json<{ shown: Record<string, unknown> }>().shown;
+      expect(ok).toMatchObject({ submissionId: id, hasPhoto: true, photoUrl: expect.any(String), words: expect.any(Array) });
+      expect(ok['kinship']).not.toBeNull();
+      expect((await pageMemorial(w)).memorial).not.toBeNull();
+
+      await rows(t, `UPDATE memorial_submissions SET kinship_ciphertext = $2 WHERE submission_id = $1`, [id, await cipher(t, w)]);
+      const before = t.auditSink.events.length;
+      const dv = await op.inject({ method: 'GET', url });
+      expect(dv.statusCode, dv.body).toBe(200);
+      expect(dv.json<{ shown: unknown }>().shown).toEqual({
+        submissionId: id,
+        sentAt: expect.any(String),
+        words: null,
+        hasPhoto: false,
+        photoUrl: null,
+        altText: null,
+        kinship: null,
+      });
+      // ⛔ No signed URL minted for a photo the page does not show, and ⛔ no photo line for it.
+      expect(t.auditSink.events.slice(before).filter((e) => e.type === 'memorial.photo.url')).toEqual([]);
+      // The page's side of the same fact: it carries no memorial.
+      expect((await pageMemorial(w)).memorial).toBeNull();
+    },
+  );
 });

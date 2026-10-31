@@ -134,7 +134,7 @@ function Preview(props: {
             {t('preview.before_publish')}
           </Paragraph>
           <H2 accessibilityRole="header">{t('preview.title')}</H2>
-          <MemorialText paragraphs={rendered.asApproved} testID="memorial-preview-text" />
+          <MemorialText paragraphs={rendered.asApproved} testID="memorial-preview-text" guardianDeclaration={false} />
           {photoUri !== null ? (
             <Image
               accessible
@@ -149,7 +149,7 @@ function Preview(props: {
           {rendered.altText !== null && (photoUri !== null || keepingPrevious) ? (
             <YStack gap="$1">
               <H3>{t('preview.photo_alt_heading')}</H3>
-              <MemorialText paragraphs={rendered.altText.original} />
+              <MemorialText paragraphs={rendered.altText.original} guardianDeclaration={false} />
             </YStack>
           ) : null}
           {kinshipRows.length > 0 ? (

@@ -61,16 +61,20 @@ import {
   copyMemorialPhoto,
   dropMemorialSendKey,
   loadMemorialDraft,
+  memorialDraftContentSignature,
   memorialDraftHasContent,
   memorialDraftKey,
   memorialPhotoUri,
   memorialSendKey,
   memorialSendLanded,
   saveMemorialDraft,
+  type MemorialDraft,
 } from '../../lib/memorial-draft'
 import {
   memorialKinshipClearTicks,
   memorialKinshipForSend,
+  memorialKinshipNameOver,
+  memorialKinshipRowComplete,
   memorialKinshipRowsReady,
   memorialKinshipStartFromSent,
 } from '../../components/memorial-authorship/memorial-kinship'
@@ -367,5 +371,111 @@ describe('the family list (Story 11b.5a)', () => {
     expect(memorialKinshipRowsReady([{ name: 'नाम' }])).toBe(false)
     expect(memorialKinshipRowsReady([{ relation: 'son', name: '' }])).toBe(false)
     expect(memorialKinshipRowsReady([{ relation: 'son', name: 'नाम' }])).toBe(true)
+  })
+
+  // RP18 — the name cap is 200 CODE POINTS (AC2). A BMP Devanagari name counts the same by `.length` and by code points, so
+  // only an ASTRAL name (two UTF-16 units per code point) tells a `.length` mutant from the real count.
+  describe('RP18 — the 200-code-point name cap counts CODE POINTS, never UTF-16 units', () => {
+    const astral = (n: number): string => String.fromCodePoint(0x1f468).repeat(n)
+
+    it('an astral name of exactly 200 code points (400 units) is finished and carried; 201 is neither', () => {
+      expect(astral(200).length).toBe(400)
+      expect(memorialKinshipRowComplete({ relation: 'son', name: astral(200) })).toBe(true)
+      expect(memorialKinshipRowComplete({ relation: 'son', name: astral(201) })).toBe(false)
+      expect(memorialKinshipForSend([{ relation: 'son', name: astral(200) }], false)).toEqual([{ relation: 'son', name: astral(200) }])
+      expect(memorialKinshipForSend([{ relation: 'son', name: astral(201) }], false)).toEqual([])
+      expect(memorialKinshipRowsReady([{ relation: 'son', name: astral(200) }])).toBe(true)
+      expect(memorialKinshipRowsReady([{ relation: 'son', name: astral(201) }])).toBe(false)
+    })
+
+    it('the over-the-cap count is in code points too: 0 at 200, 1 at 201, 5 at 205', () => {
+      expect(memorialKinshipNameOver(astral(200))).toBe(0)
+      expect(memorialKinshipNameOver(astral(201))).toBe(1)
+      expect(memorialKinshipNameOver(astral(205))).toBe(5)
+    })
+
+    it('a mix of BMP and astral counts each code point once (100 + 100 = 200 carried; one more is not)', () => {
+      const mix = (extra: number): string => astral(100) + 'न'.repeat(100 + extra)
+      expect(memorialKinshipRowComplete({ relation: 'son', name: mix(0) })).toBe(true)
+      expect(memorialKinshipRowComplete({ relation: 'son', name: mix(1) })).toBe(false)
+    })
+  })
+
+  // RP1 — the Idempotency-Key is derived from the signature of the content; the list part is built from the rows the Send would
+  // CARRY, so content that sends identically signs identically (and a real change to what is sent still changes it).
+  describe('⭐ RP1 — the content signature is canonical: it reads what the Send would carry', () => {
+    const sig = (d: MemorialDraft): string => memorialDraftContentSignature(d)
+    const LIST = [
+      { relation: 'wife' as const, name: 'परीक्षा-पत्नी' },
+      { relation: 'son' as const, name: 'परीक्षा-पुत्र' },
+    ]
+
+    it('the order of a row\'s keys makes no difference ({name, relation} as the UI builds it, {relation, name} as a rebuild does)', () => {
+      const typed = [{ name: 'परीक्षा-पत्नी', relation: 'wife' as const }, { name: 'परीक्षा-पुत्र', relation: 'son' as const }]
+      expect(JSON.stringify(typed)).not.toBe(JSON.stringify(LIST)) // the two really are different as stored
+      expect(sig({ body: 'शब्द', kinship: typed })).toBe(sig({ body: 'शब्द', kinship: LIST }))
+    })
+
+    it('a blank row, an unfinished row and a name over the cap (none of which the Send carries) make no difference', () => {
+      const withNoise = [
+        { name: '' },
+        LIST[0]!,
+        { name: 'बिना रिश्ते' },
+        { relation: 'son' as const, name: '   ' },
+        LIST[1]!,
+        { relation: 'son' as const, name: 'न'.repeat(201) },
+        { relation: 'daughter' as const, name: '' },
+      ]
+      expect(sig({ body: 'शब्द', kinship: withNoise })).toBe(sig({ body: 'शब्द', kinship: LIST }))
+    })
+
+    it('a tick with no photo to point at (the Send strips it) makes no difference; with a photo it does — kept or picked', () => {
+      const ticked = [{ relation: 'wife' as const, name: 'परीक्षा-पत्नी', inPhoto: true as const }, LIST[1]!]
+      expect(sig({ body: 'शब्द', kinship: ticked })).toBe(sig({ body: 'शब्द', kinship: LIST }))
+      expect(sig({ body: 'शब्द', kinship: ticked, keepPreviousPhoto: true })).not.toBe(sig({ body: 'शब्द', kinship: LIST, keepPreviousPhoto: true }))
+      expect(sig({ body: 'शब्द', kinship: ticked, photoFileName: 'p.jpg', photoMime: 'image/jpeg' })).not.toBe(
+        sig({ body: 'शब्द', kinship: LIST, photoFileName: 'p.jpg', photoMime: 'image/jpeg' }),
+      )
+    })
+
+    it('a REAL edit of what is sent changes it: a name (kept exactly — a trailing space counts), a relation, the row order, a row added or removed', () => {
+      const base = sig({ kinship: LIST })
+      expect(sig({ kinship: [LIST[0]!, { relation: 'son', name: 'परीक्षा-पुत्र ' }] })).not.toBe(base)
+      expect(sig({ kinship: [LIST[0]!, { relation: 'daughter', name: 'परीक्षा-पुत्र' }] })).not.toBe(base)
+      expect(sig({ kinship: [LIST[1]!, LIST[0]!] })).not.toBe(base)
+      expect(sig({ kinship: [...LIST, { relation: 'mother', name: 'परीक्षा-माता' }] })).not.toBe(base)
+      expect(sig({ kinship: [LIST[0]!] })).not.toBe(base)
+      expect(sig({ kinship: [] })).not.toBe(base)
+    })
+
+    it('an absent list, an empty list and a list of only unfinished rows are the SAME content', () => {
+      expect(sig({ body: 'शब्द' })).toBe(sig({ body: 'शब्द', kinship: [] }))
+      expect(sig({ body: 'शब्द' })).toBe(sig({ body: 'शब्द', kinship: [{ name: '' }, { name: 'बिना रिश्ते' }] }))
+    })
+
+    it('the signature stays a list of primitives (the `===` compare in saveMemorialDraft)', () => {
+      const parsed = JSON.parse(sig({ body: 'शब्द', kinship: LIST })) as unknown[]
+      expect(parsed.every((v) => typeof v === 'string' || typeof v === 'boolean')).toBe(true)
+    })
+
+    it('⭐ the lost-answer story: the Send landed, the family opens Photo and chooses "without" (rows rebuilt, a blank row left) ⇒ the kept key SURVIVES', () => {
+      saveMemorialDraft('m', 'd', { body: 'शब्द', kinship: [{ name: 'परीक्षा-पत्नी', relation: 'wife' }, { name: '' }] })
+      const first = memorialSendKey('m', 'd')
+      // The Photo screen rebuilds every row through `memorialKinshipClearTicks` ({relation, name}); the blank row is still there.
+      saveMemorialDraft('m', 'd', { keepPreviousPhoto: false, kinship: memorialKinshipClearTicks(loadMemorialDraft('m', 'd').kinship) })
+      expect(loadMemorialDraft('m', 'd').pending).toEqual({ idempotencyKey: first.idempotencyKey })
+      expect(memorialSendKey('m', 'd')).toEqual(first)
+    })
+
+    it('… and a real edit still drops it: a tick WITH a photo, then a new name', () => {
+      saveMemorialDraft('m', 'd', { body: 'शब्द', keepPreviousPhoto: true, kinship: [{ relation: 'wife', name: 'परीक्षा-पत्नी' }] })
+      const first = memorialSendKey('m', 'd')
+      saveMemorialDraft('m', 'd', { kinship: [{ relation: 'wife', name: 'परीक्षा-पत्नी', inPhoto: true }] })
+      expect(loadMemorialDraft('m', 'd').pending).toBeUndefined()
+      const second = memorialSendKey('m', 'd')
+      expect(second.idempotencyKey).not.toBe(first.idempotencyKey)
+      saveMemorialDraft('m', 'd', { kinship: [{ relation: 'wife', name: 'परीक्षा-पत्नी-२', inPhoto: true }] })
+      expect(loadMemorialDraft('m', 'd').pending).toBeUndefined()
+    })
   })
 })

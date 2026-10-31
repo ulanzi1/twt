@@ -17,6 +17,7 @@ import { createHash } from 'node:crypto';
 
 import {
   MEMORIAL_PHOTO_URL_TTL_SECONDS,
+  type MemorialKinshipEntry,
   type MemorialKinshipRelation,
   type MemorialTakedownDriveResponse,
   type MemorialTakedownMemberDrivesResponse,
@@ -203,17 +204,26 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
         ) {
           throw takedownNotFound();
         }
+        // KL10 — a PRESENT list that fails to decrypt (`kinPlain` null) or to parse drops the WHOLE memorial from the public page, so
+        // the helpline may not say its words are "on the page now": the memorial reads as unreadable (words, photo and list all
+        // `null`, ⛔ no photo URL minted — the screen's own words-unavailable state), and the take-down still works off `submissionId`.
+        let entries: MemorialKinshipEntry[] | null = [];
+        if (s.kinshipCiphertext !== null) {
+          entries = kinPlain === null ? null : parseMemorialKinship(kinPlain);
+          if (kinPlain !== null && entries === null) request.log.warn('memorial-takedown: family list did not parse');
+        }
+        const unreadable = entries === null;
         const omissions = read.shown.decision?.omissions ?? [];
         let words: string[] | null = null;
         let altText: string | null = null;
-        if (body !== null) {
+        if (body !== null && !unreadable) {
           // The SAME function the public page calls — "the words as the page shows them" cannot drift (R5).
           const text = publicMemorialText({ body, altText: alt, omissions });
           words = text.words;
           altText = text.altText;
         }
         let photoUrl: string | null = null;
-        if (photoKept) {
+        if (photoKept && !unreadable) {
           try {
             photoUrl = await deps.memorialPhotoStorage.signedReadUrl(s.photoObjectKey!, MEMORIAL_PHOTO_URL_TTL_SECONDS);
             emitAuthAudit(deps, request, 'memorial.photo.url', {
@@ -230,13 +240,20 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
         // ⛔ never an `inPhoto` tick). `[]` for ⛔ no list; `null` when the list could not be read.
         let kinship: { relation: MemorialKinshipRelation; names: string[] }[] | null = [];
         if (s.kinshipCiphertext !== null) {
-          const entries = kinPlain === null ? null : parseMemorialKinship(kinPlain);
           kinship =
             entries === null
               ? null
               : publicMemorialKinship(entries, (read.shown.decision?.kinshipOmissions ?? []).map((k) => k.index));
         }
-        shown = { submissionId: s.submissionId, sentAt: s.createdAt.toISOString(), words, hasPhoto: photoKept, photoUrl, altText, kinship };
+        shown = {
+          submissionId: s.submissionId,
+          sentAt: s.createdAt.toISOString(),
+          words,
+          hasPhoto: photoKept && !unreadable,
+          photoUrl,
+          altText,
+          kinship,
+        };
       }
 
       const nomineeToCallBack =

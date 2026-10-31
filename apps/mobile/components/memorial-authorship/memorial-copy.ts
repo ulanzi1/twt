@@ -46,8 +46,10 @@ export function memorialSendRefusalKey(code: string): string {
  * The reason copy for a part left out / a refusal / a withdrawn approval (MA6's four grounds). Story 11b.5a (KL16, copy 4.3) —
  * when the version carried the guardian declaration (`guardianDeclaration`), `identifies_a_child` reads as a child the
  * family's confirmation cannot cover, ⛔ the plain "names or shows a child".
+ * RP20 — `guardianDeclaration` is REQUIRED (no default): a call site that forgets it would quietly show the plain wording KL16
+ * forbids, so the type checker must find it.
  */
-export function memorialReasonKey(reason: string, guardianDeclaration = false): string {
+export function memorialReasonKey(reason: string, guardianDeclaration: boolean): string {
   if (guardianDeclaration && reason === 'identifies_a_child') return 'outcome.reason_child_undeclared'
   return `reason.${reason}`
 }

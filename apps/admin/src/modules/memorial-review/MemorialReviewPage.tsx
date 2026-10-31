@@ -445,6 +445,10 @@ function VersionCard({
       </p>
       <h3 className="mt-2 font-bold">{t('memorial.detail.words')}</h3>
       {v.body === null ? <p role="status">{t('memorial.detail.unavailable')}</p> : <StoredText text={v.body} testId="memorial-body" />}
+      {/* `unavailable` is the API's word for ANY unreadable part (the words, the photo's description OR the family list). The
+          words above are drawn when they did decrypt; this line says the version is not whole, and the form below is withheld —
+          else a list-only failure would show the words, leave the list out and offer a form the API answers with a 500. */}
+      {v.body !== null && v.unavailable !== null && <p role="status">{t('memorial.detail.partUnavailable')}</p>}
       {/* Story 11b.5a (KL12) — the family list, under the words and before the photo; each name shown with its hidden
           direction controls visible (R13's helper). */}
       {v.kinship !== null && (
@@ -581,18 +585,27 @@ function ReasonSelect({
   label,
   value,
   onChange,
-  declared = false,
+  declared,
 }: {
   id: string;
   label: string;
   value: MemorialReviewReason | '';
   onChange: (v: MemorialReviewReason | '') => void;
-  declared?: boolean;
+  declared: boolean;
 }): ReactElement {
+  // The select's `aria-label` replaces the wrapping label as its name, so the guidance inside that label would never be
+  // announced: it is attached as the select's DESCRIPTION (unique per select, as `id` already is).
+  const guidanceId = `${id}-guidance`;
   return (
     <label htmlFor={id} className="ml-2 text-sm">
       <span className="sr-only">{label}</span>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value as MemorialReviewReason | '')} aria-label={label}>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value as MemorialReviewReason | '')}
+        aria-label={label}
+        aria-describedby={declared ? guidanceId : undefined}
+      >
         <option value="">{t('memorial.decide.chooseReason')}</option>
         {MEMORIAL_REVIEW_REASONS.map((r) => (
           <option key={r} value={r}>
@@ -601,7 +614,7 @@ function ReasonSelect({
         ))}
       </select>
       {declared && (
-        <span className="block text-xs opacity-70" data-testid="memorial-child-guidance">
+        <span id={guidanceId} className="block text-xs opacity-70" data-testid="memorial-child-guidance">
           {t('memorial.reason.childGuidance')}
         </span>
       )}
@@ -698,6 +711,7 @@ function DecisionForm({
   const [problem, setProblem] = useState<string | null>(null);
 
   if (v.body === null) return <p role="status">{t('memorial.detail.unavailable')}</p>;
+  if (v.unavailable !== null) return <p role="status">{t('memorial.detail.partUnavailableForm')}</p>;
   const body = v.body;
   const locale = v.authorisationLocale;
   const bodyRanges = memorialSentenceRanges(body, locale);

@@ -715,6 +715,380 @@ Q1 (a) C's staff identity check is row `6-39-identity-check-before-a-drive-for-a
   - [x] 6.1 `pnpm ci:local` on the story's own DB container (AC12 — incl. `friction-budget`, `i18n-parity`). `typecheck` + `lint` per package.
   - [x] 6.2 Story File List, Completion Notes, Change Log; ledger line; row → `review`.
 
+### Review Findings
+
+Full three-layer code review, 2026-10-31, baseline `01062c51` → `e813e5ee`.
+
+- [x] [Review][Patch] **P2 — Announce the new after-death refusals on iOS**
+  [`apps/mobile/app/(withdrawal)/index.tsx:69`, `apps/mobile/app/(life-events)/address.tsx:50`,
+  `apps/mobile/app/(life-events)/medical.tsx:84`] — Checklist family 13(d), applied to AC14 / AC15:
+  after a standing death report, the new 409 branches set the refusal text (including both OTP retry legs), but their
+  error renderers only use `accessibilityLiveRegion` / an alert role. They have no iOS announcement, so a VoiceOver user
+  can remain focused on Submit / Verify without hearing why the action was refused. Use the existing platform-aware
+  `AnnouncedText` pattern (`components/peer-request/announce.tsx`) or an equivalent iOS announcement while preserving the
+  Android live region; cover announcement wiring for all three surfaces. The workplace refusal lines already use
+  `AnnouncedText`, and `cannot-file.tsx` explicitly announces its message. The copy-resolution tests currently prove
+  translated text and error mapping, not these announcements.
+
+  **Resolved 2026-10-31 (BigDev: "1"):** the address and withdrawal errors and the shared `MedicalForm` error now render
+  through the existing `AnnouncedText`. It announces on iOS and uses the Android live region without a duplicate announce
+  call. `death-report-refusal-announcements.test.ts` executes the real three screens, the shared medical form, the step-up
+  hook and the announcement component, mocking native primitives / HTTP / storage / navigation / locale hooks. Ten cases
+  cover iOS and Android, including both withdrawal and medical OTP retries and no repeat announcement on a plain rerender.
+  Before the fix: 7 failed / 3 passed (all five iOS cases failed; withdrawal also lacked an alert role on Android).
+  After the fix: 10 / 10 passed; related copy / announcement tests bring the focused run to 26 / 26. Mobile typecheck and
+  ESLint of the four changed code / test files pass. The preceding review's 298 targeted tests passed, including the live
+  database tests on :5461; full `ci:local` was not rerun for this UI patch. Native VoiceOver / TalkBack behavior still needs
+  a device. No unresolved review finding remains; story and sprint row → `done`. Changes are uncommitted.
+
+### Review Findings — round 2 (2026-10-31)
+
+Second full three-layer review, run in two chunks at BigDev's choice — **A:** the 44 non-test source files (1,493 diff lines);
+**B:** the 30 test / fixture files, including the untracked announcement test (2,515 lines) — against `origin/main` `b2f36fe9`
+with the round-1 patch (uncommitted) included. Six layers ran, none failed. 83 raw items became 19 findings and 32 dismissals.
+Every claim a layer made that changed a verdict was re-read against the tree before it was classified.
+
+**Panel-routing gate (template §0) applied: 0 decision-needed.** Every policy-shaped item is either inside a ratified clause
+(`-423` Q3 B, `-424` Q3 B) or already a declared residual (`-425` DL4 / DL7, `deferred-work.md`). **No acceptance-criterion
+violation in the non-test source:** every ratified clause (`-423` Q1 (a), Q2, Q3 B; `-424` Q1 (a) / (b), Q2 (a) / (b), Q3 B)
+MATCHES; the one narrowing (`-423` Q1 (b) — released only by an innocence finding) is the declared one.
+**Checklist verdicts:** family 2 = **REAL GAP** (patches 1–3, same severity as an AC violation); family 10 = patches 13–14;
+family 13 = patch 9 (evidence strength) and defer D5; families 1, 3, 4, 5, 6, 8, 9, 11, 12 covered by test or by construction
+(family 5: no migration, by `-425` Consequence 1 — verified none in the diff).
+
+- [x] [Review][Patch] **1 — Lock-key case divergence: erasure and the two export-grant paths no longer share the `rtbf` key for a
+  non-lower-case id** [`packages/domain/src/member/rtbf-legality.ts:112`,
+  `apps/api/src/modules/member-data-rights/handlers.ts:535`, `:851` (vs `:1169`)] — family 2, REAL GAP. `acquireErasureLocks` is
+  called with branded ids (`uuidBrand` lower-cases); the grant paths still hash the raw `body.member_id`, and the contract accepts
+  any-case `uuid()`. Before 6.38 both hashed the raw string and matched; now an upper-case id gives erasure and grant different keys
+  and the "no grant against an artifact about to be zeroed" serialisation (10.21) is lost for that input. Exposure is narrow (the
+  console sends lower-case) but this story introduced it. Fix: lower-case inside `rtbfAdvisoryLockKey` (and defensively
+  `intakeAdvisoryLockKey` — lower-case input hashes identically, so no live key moves) + one integration case with an upper-case id.
+  Found by edge + auditor (chunk A); confirmed by reading the code.
+- [x] [Review][Patch] **2 — The erasure handlers' use of `acquireErasureLocks` is pinned by no test or fence**
+  [`apps/api/src/modules/rtbf/handlers.ts:99`, `apps/api/src/modules/member-data-rights/handlers.ts:1169`,
+  `apps/api/tests/unit/erasure-and-death-report-fence.test.ts:58`] — family 2, REAL GAP; AC5, DL3 / N3. Verified: the only test
+  reference is the race spec's own `erase()` helper; `guardedBeforeErasure` accepts `resolveRtbfLegality(` / `assertAnonymizable(`
+  alone. Reverting either handler to the old rtbf-key-only lock turns nothing red. Fix: extend the fence — `acquireErasureLocks(`
+  must precede the legality read in both files — with a positive control.
+- [x] [Review][Patch] **3 — The intake-key lock on withdrawal, Life Events and medical is proven by nothing that fails without it;
+  the AC14 race is unforced** [`apps/api/tests/integration/withdrawal/withdrawal.spec.ts:327`,
+  `apps/api/src/modules/withdrawal/handlers.ts:96`, `apps/api/src/modules/life-events/handlers.ts:192`,
+  `apps/api/src/modules/medical/medical.handlers.ts:143`, `packages/domain/src/claim/death-report-lock.ts`] — family 2, REAL GAP;
+  N9, DL18, DL19, AC14. Verified: `it.each([1, 2, 3])` ignores its parameter; two `inject` calls run in a `Promise.all`; the
+  assertion accepts either winner, so a missing lock passes unless the bad interleave happens by luck. `lockAndReadDeathReport` has
+  no test reference at all. Found by all three chunk-B layers. Fix, as `erasure-intake-race.spec.ts` does: hold the intake key on a
+  second connection, fire the request, wait on `pg_blocking_pids`, commit a claim, expect the 409 and no write — one probe each for
+  withdrawal, address / posting / answer, and medical (or one helper probe plus a fence that each caller invokes it before its
+  state read).
+- [x] [Review][Patch] **4 — Helpline console: changing member or searching while an intake is in flight loses the result**
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx:100`, `:140`, `:188-198`] — `canChangeCaller` checks only the
+  peer-request flag, not `intake.isPending`; `resetDownstreamState` now calls `intake.reset()` (DL9), which detaches the in-flight
+  mutation so the per-call `onSuccess` never runs. The claim is minted and the account frozen on the server; the console shows
+  nothing and the operator has no case id to give the caller. (Before DL9 the same overlap showed member A's result beside member
+  B.) Fix: `canChangeCaller` returns false while `intake.isPending`, plus a test. Found by edge (chunk A); confirmed by reading.
+- [x] [Review][Patch] **5 — The precedence legs are untested: every new lock test uses a state that is otherwise legal**
+  [`withdrawal.spec.ts`, `rtbf.spec.ts`, `life-events.spec.ts`, `apps/api/tests/integration/medical/medical-disclose.spec.ts:640`]
+  — DL2 / N2 ("the death check wins over the state arm"), DL18 ("before `WITHDRAWABLE_STATES`"). Moving the death check behind
+  the state check would stay green. Add: lock-in member + claim → `withdrawal.death_reported`; active member + claim on erasure →
+  `rtbf.death_reported` (not `rtbf.invalid_state`); withdrawn member's address / medical → `*.death_reported` (not
+  `*.member_terminal`). Also the medical AC15 tests seed `seedMemberPendingFee` + `fileClaim` — a member the door would refuse
+  (`not_paid`); re-seed an active member so the reachable path is the one shown.
+- [x] [Review][Patch] **6 — AC3's same-key retry cannot tell a re-evaluation from a replayed 409**
+  [`apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts:1640-1660`] — the comment says the failed
+  attempt "released its idempotency claim"; the retry asserts only 409 + the same code, which a cached replay also produces. Fix:
+  after the retry, `findInnocent`, retry with the same key, expect 200 and one erasure event.
+- [x] [Review][Patch] **7 — `HelpdeskDetailPage`'s death-reported wiring is untested**
+  [`apps/admin/src/modules/helpdesk/HelpdeskDetailPage.tsx:183-190`, `apps/admin/tests/helpdesk-responder-console.test.tsx`] —
+  AC10 / DL11. The tests cover `erasureErrorText` (pure) and the Shell with the sentence passed in as a prop; reverting line 185 to
+  `messageOf(...)`, or moving the erasure leg behind `buildExport`, stays green. AC10 makes the page test optional (letter-
+  compliant), but the wiring has no coverage. Fix: a page-level test with a mocked data-rights hook (erasure error = 409
+  `rtbf.death_reported`, plus a stale build error).
+- [x] [Review][Patch] **8 — Admin reason-key guard: the contracts helper is not used, and the page test lists reasons by hand**
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx:60-65`, `packages/contracts/src/claims/intake-refusal.ts:20`,
+  `apps/admin/tests/helpline-claim-page.test.tsx:488-521`] — the contracts comment calls `isClaimIntakeRefusalReason` "the admin
+  console's guard", but only the API imports it; the page casts and `.includes`. The page's comment ("a future reason never
+  renders as a raw key") holds only for a reason outside the tuple: a sixth reason added to the tuple with no admin line renders
+  the raw key on the operator console, and the test's cases are written out, not iterated from `CLAIM_INTAKE_REFUSAL_REASONS`.
+  Fix: use the helper; iterate the tuple in the test through the real lookup.
+- [x] [Review][Patch] **9 — The UI death-refusal branches are evidenced by source scan only**
+  [`apps/mobile/app/(claim)/cannot-file.tsx:31-33`, `apps/mobile/app/(claim)/relationship.tsx:94`,
+  `apps/mobile/components/workplace/WorkplacePicker.tsx:120`, `WorkplaceSuggestionQuestion.tsx:123`,
+  `apps/mobile/lib/workplace-i18n.ts`, `apps/mobile/tests/unit/cannot-file-copy-resolves.test.ts:42`,
+  `death-report-copy-resolves.test.ts`] — family 13 (d), evidence strength. AC7 specified a source scan, so this is letter-
+  compliant; but round 1 held address / withdrawal / medical to executed announcement tests, and the same class is open on the new
+  `cannot-file` screen (its announcement on arrival is its main content), on the 409 routing and no-draft behaviour in
+  `relationship.tsx`, and on the workplace `{ namespace: 'common' }` override (the existing render tests mock `useWorkplaceT`, so
+  the override never runs). Fix: executed tests — mount `CannotFileScreen` (one `announceForAccessibility`), the relationship
+  submit rejecting 409 `claim.intake_refused` (`router.replace`, no draft save), and the workplace components with a rejected
+  `life_events.death_reported`.
+- [x] [Review][Patch] **10 — The cross-Pariwar case is masked by RLS**
+  [`packages/domain/tests/integration/claim/death-report.spec.ts:74`] — it runs as `twt_app`, so the predicate's own
+  `c.pariwar_id` filter is never exercised; dropping it stays green. Fix: also run it unscoped (`asUnscopedSuperuser`) with a
+  claim seeded only in the other Pariwar → false.
+- [x] [Review][Patch] **11 — The source-scan fences are textual and narrower than the rule they pin (optional hardening)**
+  [`apps/api/tests/unit/erasure-and-death-report-fence.test.ts:98` (`gateSqlCopies`), `anonymizeCallers`, the sentinel allow-list,
+  `importsOf`] — AC11 / N1 ("a second copy anywhere"). `gateSqlCopies` matches one spelling (`NOT EXISTS (` … `f.kind =
+  'member_found_innocent'` within 400 characters), so a second definition under another alias, a `LEFT JOIN … IS NULL` or a
+  Drizzle `notExists` escapes; `anonymizeCallers` matches the literal `anonymizeMember(` only; the sentinel allow-list admits an
+  alias; `importsOf` lets a side-effect import swallow the next. Each has a positive control, but the controls are written to
+  match the pattern exactly. Fix: a literal-based scan of `member_found_innocent` with the writer and schema allow-listed, plus
+  alias-evasion controls.
+- [x] [Review][Patch] **12 — Minor test gaps** — (a) AC14 "the session unchanged" is not asserted (`withdrawal.spec.ts`); (b) AC4
+  off-portal runs only `settled` (`denied` / `closed` / `reversed` run on the member route only); (c) no door case for suspended →
+  terminated → restored (appeal allowed ⇒ open; `intake-door.spec.ts`); (d) the helpline 404 test does not assert the default
+  `resourceLocator` (`helpline-claim-intake.spec.ts`); (e) "staff correction is recorded" asserts only the status code
+  (`delivery-and-correction.spec.ts`).
+- [x] [Review][Patch] **13 — Closure honesty: the fixture "replaces five copies" — it does not**
+  [story Completion Notes `:922`, `apps/api/tests/integration/_death-report-fixture.ts`] — family 10. The diff removes none;
+  `fileClaim` is still defined in `nominee-lock.spec.ts`, `nominee-member-link.spec.ts`, `nominee-marks-save.spec.ts`,
+  `known-people.spec.ts` and `claim-contact.spec.ts`, and the fixture adds a sixth. Fix: reword the note ("adds a shared copy;
+  consolidating the five is a follow-up").
+- [x] [Review][Patch] **14 — Closure honesty: `done` is ahead of the evidence** (⚠ PARTIAL — the commit it called for is BigDev's; round 3, patch 8)
+  [story `Status:`, `sprint-status.yaml` row 6-38, ledger `2026-10-31n`] — AC12, family 10. The 36 / 36 `ci:local` ran at
+  `e813e5ee`. The round-1 patch (`address.tsx`, `(withdrawal)/index.tsx`, the shared `MedicalForm.tsx` — also used by
+  `(signup)/medical.tsx` — and one new test) is uncommitted and has had only a focused 26-test run; and this round leaves patches
+  open. Fix: keep the story and row `in-progress` until the patches land, then commit, re-run the gate on the final tree, and
+  record the run.
+  **Resolved 2026-10-31 (BigDev: "1" — apply every patch; patches 1–13).** Each fix was shown to FAIL without it — a mutation of
+  the production line, run, then restored byte-identical to `HEAD` — not only to pass with it:
+  ⚠ **CORRECTED 2026-10-31 (code review round 3, patch 8):** that sentence was too broad. Which fixes have a mutation result, and which
+  do not, is the item-by-item table at the end of round 3. And "restored byte-identical to `HEAD`" holds for the files that were only
+  MUTATED — ⛔ for the three the patches changed on purpose (`rtbf-legality.ts`, `icp-lock.ts`, `HelplineClaimPage.tsx`), which were
+  restored to their post-patch content.
+  1. `rtbfAdvisoryLockKey` and `intakeAdvisoryLockKey` lower-case both ids. New `packages/domain/tests/member/erasure-lock-keys.test.ts`:
+     red before the fix (the two upper-case cases), green after; the lower-case keys are pinned to the bigints the old code produced.
+  2. The fence gains `locksBeforeLegality` (DL3 / N3), keyed on the function enclosing each `resolveRtbfLegality(` read (the RTBF lock
+     sits in a helper, not the method). Reverting EITHER real handler to the rtbf-key-only lock turns exactly that test red.
+  3. New fixture helper `raceFirstIntake`: it holds the intake key on a second connection, fires the request unawaited, proves the
+     request is WAITING (`pg_blocking_pids`), commits a claim, releases. Forced probes for withdrawal, address and medical; deleting
+     the one `pg_advisory_xact_lock` line in `lockAndReadDeathReport` turns all three red ("did not wait on the claim-intake key").
+     The free-running race is kept as ONE sanity run, relabelled — it went red in that mutation run too, by luck, which is why it was
+     never the proof.
+  4. `canChangeCaller` ignores a change while `intake.isPending`. The new test was red before the fix and is green after.
+  5. Precedence: rtbf (active + claim), withdrawal (lock-in + claim), address and medical (withdrawn + claim), each beside a no-claim
+     control that shows state alone refuses. The life-events and medical 6.38 legs now seed an ACTIVE member — they had used a
+     `pending-fee` member, whom the door refuses. Demoting the death check in `resolveRtbfLegality` turns the rtbf case red.
+  6. AC3: after the two 409s the finding lands and the SAME key succeeds (200, one erasure event) — a re-evaluation, not a replay.
+  7. New `apps/admin/tests/helpdesk-detail-page-erasure.test.tsx` runs the PAGE: reverting the erasure leg to `messageOf` fails both
+     tests; moving it behind the export leg fails the ordering test.
+  8. The admin page uses `isClaimIntakeRefusalReason`; the page test asserts its written-out cases equal the contracts tuple and
+     that every reason has an operator line.
+  9. Executed: new `apps/mobile/tests/unit/death-refusal-claim-screens.test.ts` (cannot-file announces once, in the active locale, in
+     one accessible container, with the CTA and a working way back; relationship routes a 409 `claim.intake_refused` to the calm
+     state with no draft saved, plus a generic-error control; `useWorkplaceT`'s `common` override, plus a throws-without control) and
+     two death-reported cases in `workplace-suggestion-question.test.ts` (direct and abandoned POST). Four behaviours of the new
+     file and the component's branch were each mutation-checked. ⚠ **NOT done:** the `WorkplacePicker` save branch (four lines, the
+     same shape) is still evidenced by source scan — no harness drives its multi-phase flow; its namespace override is covered
+     through `useWorkplaceT`.
+  10. `death-report.spec`: an unscoped (superuser) cross-Pariwar case with a same-connection positive control. Dropping the
+     predicate's `c.pariwar_id` turns it red; the old RLS-masked case stayed green through the same mutation.
+  11. Fences: `anonymizeNamers` (alias / destructure / callback), alias-following `sentinelWriters`, `findingKindLiteralFiles`
+     (spelling-proof N1), set-valued `importsOf` (side-effect, `export … from`, dynamic, `require`) — each with an evasion control.
+     ⚠ `stripComments` is unchanged.
+  12. (a) the same bearer token still authenticates after the refused withdrawal; (b) AC4 off-portal runs `denied` / `closed` /
+     `reversed` / `settled`; (c) a removed-then-RESTORED member's door is open, beside a removed control; (d) the 404 keeps the default
+     `resourceLocator`; (e) "correction recorded" asserts the row.
+  13. The Completion Note is annotated (not rewritten): the fixture adds a sixth copy; the five remain.
+  **Evidence, run live on the story DB (:5461):** domain `death-report` + `intake-door` + lock-key tests 52 / 52; api withdrawal 11,
+  life-events 10, medical 21, rtbf 14, data-rights 36, helpline-intake 29, fence 19 (unit); admin helpline page 28 + the new page test
+  2; mobile 11 new + workplace question 11. `tsc` clean in domain, api and admin (their projects include these tests); the mobile
+  files were type-checked ad hoc (their project includes no unit tests); ESLint clean on every changed file.
+
+  **Patch 14 — resolved 2026-10-31, with what is NOT done said plainly.**
+  (i) **AC12 re-gate on the final tree** — `pnpm ci:local` on the story DB (:5461): **35 / 36 on the first run.** `integration-tests`
+  was green (it ran the new forced-race probes and the other live-DB specs). The one red, `test (unit)`, was **16 admin timeouts**
+  (`Test timed out in 5000ms` × 8, the rest their fallout) in six admin files this round did not touch —
+  `ground-inspection-{questionnaire,page,discrepancy}`, `questionnaire-versions-page`, `helpline-peer-requests`,
+  `announcement-channels-page` — the class `scripts/ci-local.sh` already names for this job's concurrency; the two admin files this
+  round changed passed in that same run. Those six files alone: 215 / 215. All of admin alone: 87 files / 1,554 tests. Then the same
+  job re-run at turbo `--concurrency=2` (4 → 2): **37 / 37 tasks, 0 failures** — admin 1,554, mobile 2,200, domain 3,191, api 790,
+  jobs 1,242 passed (the skips are the DB-gated specs that self-skip without a `DATABASE_URL`, by design). So every one of the 36
+  jobs has been green on the final tree — **across two runs, not one.**
+  (ii) The round-1 patch (`address.tsx`, `(withdrawal)/index.tsx`, `MedicalForm.tsx`, the announcement test) was inside that gated tree.
+  (iii) **Not done: the patches are not committed.** ⚠ CORRECTED 2026-10-31 (round 3, patch 8) — this said "nothing is committed — the
+  whole tree is still uncommitted", which was wrong: `HEAD` `e813e5ee` is the committed 74-file build; what is uncommitted is the
+  round-1 and round-2 patches, awaiting BigDev. **This round's patch diff has not
+  itself been reviewed** (BigDev's standing rule: the fix diff gets the adversarial layers before it is committed).
+  (iv) The device VoiceOver / TalkBack check is carried as `deferred-work.md` D5 — un-attested, ⛔ backfilled.
+  ⇒ Story and row set to `review`, ⛔ `done`: what `done` still needs is the review of the patch diff and the commit.
+- [x] [Review][Defer] **D1 — The death locks lift only on an innocence finding, and the copy points a falsely-reported member at a
+  helpline that cannot yet lift them** [`packages/domain/src/claim/death-report.ts:36-43`] — deferred (tracked): already the first
+  6.38 bullet in `deferred-work.md` (DL4 / DL7, row 6-22 pointer) — a declared narrowing of `-423` Q1 (b); `overrideIntakeAttempt`
+  mints without the door; any claim in any state locks. Added by this round: the withdrawal line says "If this is a mistake,
+  please call the helpline" and the helpdesk line says it "can be erased only if the claim is found to be about a member who is
+  alive", while nothing yet lets the helpline lift anything; closure wording must stay "mechanism built, lift deferred to 6-22",
+  never "Q1 (b) closed"; the go-live list should carry it.
+- [x] [Review][Defer] **D2 — An OTP is spent before the refusal appears**
+  [`apps/api/src/modules/withdrawal/handlers.ts:96`, `apps/mobile/app/(withdrawal)/index.tsx:65-95`,
+  `apps/mobile/app/(life-events)/medical.tsx:94-101`] — deferred: the guard sits in the handler, after the step-up preHandler, so a
+  permanent refusal costs an OTP SMS; withdrawal's catch re-arms Confirm for a retry that cannot succeed; medical keeps the OTP
+  prompt open after any post-verify failure (existing behaviour). DL18 records withdrawal as unreachable in production today.
+- [x] [Review][Defer] **D3 — A sticky erasure refusal can mask a newer export / delivery failure**
+  [`apps/admin/src/modules/helpdesk/HelpdeskDetailPage.tsx:183-190`] — deferred: AC10 put the erasure leg first on purpose;
+  react-query `isError` is sticky for every leg, so the chain has always shown the first stale error.
+- [x] [Review][Defer] **D4 — `fulfilErasure`'s `body.member_id` is not bound to the ticket's subject**
+  [`apps/api/src/modules/member-data-rights/handlers.ts:871`] — deferred, pre-existing (the file's own comment admits it).
+- [x] [Review][Defer] **D5 — Native VoiceOver / TalkBack behaviour of the new announcements is un-attested**
+  [`apps/mobile/app/(claim)/cannot-file.tsx`, `address.tsx`, `(withdrawal)/index.tsx`, `MedicalForm.tsx`] — deferred (un-attested,
+  not backfilled): code and executed unit tests exist; no device pass has been run. For a device: whether `accessible={true}` plus
+  announce-on-arrival double-reads on `cannot-file` (TalkBack re-read is a known issue here), and that `AnnouncedText` does not
+  repeat.
+
+**Dismissed (32 raw items):** declared or ratified readings (the door reads the state at the first report — G10; the one general
+reason and the 409 as a disclosure — `-424` Q3 B; `overrideIntakeAttempt` ungated — DL7); false positives on re-read (the
+`rows.rows?.[0]` idiom is used 15 times in the domain package; `tryConverge` has one caller and both callers translate the
+refusal; the real `t()` throws on a missing key, so the copy "non-empty" checks are not vacuous; moderation order is
+`event_version`, so same-transaction clock ties cannot reorder it; the audit event names asserted absent all exist; no mobile
+RTBF screen exists to map `rtbf.death_reported`); house conventions (the `⛔` glyph register, `$comment` keys in the i18n catalogs);
+and comment nits or test-hygiene points that do not change what a test can catch.
+
+### Review Findings — round 3 (2026-10-31) — the round-2 PATCH diff
+
+BigDev's rule — the fix diff gets the adversarial layers before it is committed — chosen at the close of round 2 ("2": re-run code
+review). Diff: **1,337 lines** (83 production source — the two lock-key functions, `canChangeCaller`, the contracts guard — and 1,254
+tests / fixture), 15 tracked files + 3 new; one chunk (under the 3,000-line threshold); three layers, none failed. 38 raw items became
+**8 patches + 1 defer (D6), 8 dismissed** — and a second defer, **D7**, found afterwards while gating the fixes (below). Panel-routing gate (template §0): **0 decision-needed.** The Acceptance Auditor found **no HIGH**:
+of round 2's 14 patches 11 are satisfied, 3 partial (1, 9, 14 — 9 and 14 were disclosed, 1 was not). Checked by me before classifying:
+the tree is byte-identical to what the layers read; **no other code computes either lock key** (the only places that hash those two
+string shapes are the two patched functions — every other advisory lock is a different namespace); `apiFetch` has **no transport
+timeout** (only the workplace write is bounded).
+
+- [x] [Review][Patch] **1 — Nothing proves a GRANT path shares the erasure key for an upper-case `member_id`** — round-2 patch 1 asked for
+  an integration case; a unit test replaced it, and the Resolved block did not say so
+  [`apps/api/tests/integration/member-data-rights/delivery-and-correction.spec.ts`, the three `rtbfAdvisoryLockKey(` sites in
+  `apps/api/src/modules/member-data-rights/handlers.ts`] — family 2, REAL GAP (partial delivery of round-2 patch 1). The unit test pins the
+  key FUNCTION; nothing pins that the grant handlers keep calling it, and an inline re-hash in a grant path would reopen the
+  divergence. The grant takes the `rtbf` key BEFORE any read, so a live probe is cheap: hold the lower-case `rtbf` key on a second
+  connection, send the grant with an UPPER-case `member_id`, prove the request WAITS. Plus a fence: every `pg_advisory_xact_lock` in
+  the data-rights handlers takes `rtbfAdvisoryLockKey(…)` or comes from `acquireErasureLocks`, ⛔ a hand-built key.
+- [x] [Review][Patch] **2 — The two ERASURE routes have no HTTP-level forced probe** [`apps/api/tests/integration/rtbf/rtbf.spec.ts`,
+  `…/member-data-rights/delivery-and-correction.spec.ts`, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts`] — family 2. The fence
+  is textual and the domain race spec calls the HELPER, ⛔ the handlers: a handler that calls `acquireErasureLocks(` un-awaited, or in a
+  dead branch, passes the fence with no live proof. Fix: `raceFirstIntake` against `POST /api/v1/member/rtbf` (a withdrawn member) and
+  against the off-portal erasure — expect `waited`, a 409 `rtbf.death_reported`, ⛔ anonymized.
+- [x] [Review][Patch] **3 — `raceFirstIntake` blames production for a slow runner, and can leak a live request** [`apps/api/tests/integration/_death-report-fixture.ts`
+  `raceFirstIntake`] — (a) when the request neither waits nor answers within the 5 s poll, the caller is told "its guard does not take
+  it" — a scheduling delay reported as a missing lock (and 5 s is vitest's own default test timeout, so the diagnostic may never print);
+  (b) if `fileClaim` or the poll throws, the holder is rolled back, the blocked request wakes and may commit a real write while
+  `teardown` closes the pool; (c) the holder is released only after `await pending`; (d) a connection whose ROLLBACK failed goes back
+  to the pool. Fix: a distinct "inconclusive — neither waited nor answered in N ms" error, default 4 s; in `finally`, after ROLLBACK,
+  await `pending` (bounded); release the holder right after COMMIT; `release(true)` when COMMIT / ROLLBACK failed.
+- [x] [Review][Patch] **4 — The fence scans over-claim** [`apps/api/tests/unit/erasure-and-death-report-fence.test.ts`: `enclosingFunctionStart`
+  / `locksBeforeLegality`, `sentinelWriters`, `findingKindLiteralFiles`, `importsOf`] — family 10. `enclosingFunctionStart` takes the
+  nearest preceding `async name(`, so a read inside an arrow function, `private async`, `static async` or `export default async function`
+  is attributed to an EARLIER locked method and **false-passes** — the comment says "fails CLOSED" (a node probe by the auditor returned
+  `true`); `sentinelWriters` follows a same-file `const` alias only — `import { ANONYMIZED_SENTINEL as X }`, or an `export const S = …`
+  used from another file, escapes; `findingKindLiteralFiles` / the dynamic-`import()` pattern read `'` and `"` only (a backtick
+  escapes) and ignore `CLAIM_NOMINEE_FINDING_KINDS`; "spelling-proof" claims more than the scan does. Fix: add the missing function-start
+  forms (with a control — an arrow after a locked method now FAILS the scan), follow import aliases, flag an exported alias, widen the
+  quote class to the backtick and name the tuple; reword the comments to say what the scans are — textual tripwires; the live probes
+  (patches 1–2) are the proof.
+- [x] [Review][Patch] **5 — The helpline console silently ignores a change of caller while a filing is in flight**
+  [`apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx` `canChangeCaller`] — family 13 (d). The click does nothing and nothing is
+  said, visibly or to a screen reader; with no transport timeout a hung POST leaves the operator unable to change caller until a
+  reload. Fix: a visible `role="status"` line while the change is held (a new admin i18n line) + a test; the transport bound is
+  deferred (D6).
+- [x] [Review][Patch] **6 — The precedence legs are not honest about what they pin** [`apps/api/tests/integration/life-events/life-events.spec.ts`,
+  `…/medical/medical-disclose.spec.ts`, `…/rtbf/rtbf.spec.ts`] — families 10 and 11. The address and medical legs seed a WITHDRAWN member
+  with a standing claim: the door refuses that at filing and DL18 refuses withdrawal afterwards — the exact objection round-2 patch 5
+  raised against `pending-fee` — and the file comment explains only the active re-seed. The rtbf leg's no-claim control is another
+  test ("the test above" is not above it). Fix: label those legs as ORDER guards (reachable only for a claim filed before DL18 /
+  DL19 existed, or a race the locks now prevent); give the rtbf test its own inline no-claim control.
+- [x] [Review][Patch] **7 — Test overclaims and hygiene** — (a) `withdrawal.spec.ts` "the session unchanged" asserts a stateless JWT
+  still verifies: it cannot fail on any session change (the handler has no session code — true by construction) → relabel it; (b)
+  `death-refusal-claim-screens.test.ts` compares `CLAIM_INTAKE_REFUSED_CODE` to its own literal — the real pin is
+  `cannot-file-copy-resolves.test.ts` → delete; (c) the "explicitly accessible" test asserts the MOCK's prop mapping → retitle it as the
+  prop, ⛔ a device claim; (d) `helpdesk-detail-page-erasure.test.tsx` queues `mockRejectedValueOnce` with no reset between tests → a
+  `beforeEach` reset.
+- [x] [Review][Patch] **8 — Closure language outruns the record** [this file's Resolved block and Change Log 2.2, `sprint-status.yaml` row comment and
+  ledger `2026-10-31o`, `deferred-work.md` D2] — family 10. (a) "Each fix was shown to FAIL without it" holds for patches 1, 2, 3, 4, 7,
+  9, 10 and the rtbf leg of 5 — ⛔ for 5's withdrawal / address / medical legs, 6, 8, 12 — and "restored byte-identical to `HEAD`"
+  cannot be said of the three files changed by design; (b) "all 14 patches applied" while 1, 9 and 14 are partial; (c) "nothing is
+  committed — the whole tree is uncommitted" is false: `HEAD` `e813e5ee` is the committed build, what is uncommitted is the round-1 and
+  round-2 patches; (d) patch 14 is ticked though its fix included the commit; (e) the File List's records line omits this review's
+  edits; (f) `deferred-work.md` D2 cites a `file:NNN`, against that file's own rule; (g) "the Picker's override is covered through
+  `useWorkplaceT`" proves the hook, ⛔ that the Picker passes it. Fix: run the cheap missing mutations and state each result — and
+  which have none — and reword (a)–(g).
+  **Resolved 2026-10-31 (BigDev: "1" — apply every patch; round-3 patches 1–8).**
+  1. **Grant path, live.** New probe in `delivery-and-correction.spec.ts`: hold the lower-case `rtbf` key, send `member-direct` with an
+     UPPER-case `member_id`, require it to WAIT. Dropping the lower-casing of the member id in `rtbfAdvisoryLockKey` turns it red (the
+     original defect, end to end). Fence: `handBuiltAdvisoryLocks` — every `pg_advisory_xact_lock` in the data-rights handlers is built by
+     `rtbfAdvisoryLockKey(` (3 calls pinned, so the scan cannot pass by matching nothing); making a grant hand-build its key turns it red.
+     ⚠ Only the member-direct grant is probed live; the staff-mediated grant shares the fence, ⛔ a live probe.
+  2. **Erasure routes, live.** `raceFirstIntake` against `POST /api/v1/member/rtbf` (a withdrawn member) and against the off-portal
+     erasure: each goes red when its handler is reverted to the rtbf-key-only lock, and so does the fence.
+  3. **`sendWhileHolding`** (the general helper; `raceFirstIntake` is a wrapper): an explicit INCONCLUSIVE error when the request neither
+     waits nor answers (default 4 s, ⛔ vitest's 5 s); the holder is released straight after COMMIT; a request still in flight is
+     awaited (bounded) before return; `release(true)` after a failed ROLLBACK. ⚠ Those cleanup paths (a throwing `fileClaim`, a failed
+     ROLLBACK) are written and read but ⛔ driven by a test — the probes' mutations cover the wait and the no-wait paths only.
+  4. **Fence.** `FUNCTION_STARTS` (arrow, `private` / `static` / `export default async`, property and inline `async (…) =>` forms);
+     import-alias and exported-alias following in `sentinelWriters`; backtick quotes and `CLAIM_NOMINEE_FINDING_KINDS` in the literal
+     scan; the comments now say what the scans are. The first version's matcher WAS shown to false-pass an arrow function (evaluated
+     directly), and the new controls fail the scan for arrow / `private async` / `export default` / inline callback. ⚠ Residual, in the
+     comments: textual tripwires — a function-start form not on the list can still false-pass; a kind reached through another
+     constant escapes; `stripComments` is unchanged.
+  5. **Console.** `intakeChangeHeld` + a polite `role="status"` line (`helpline.intake.changeHeld`), cleared when the filing settles;
+     test extended. Removing the setter turns it red; so does removing the guard from `onSearch` alone.
+  6. **Precedence legs.** The withdrawn-member legs are labelled ORDER GUARDS (the combination is reachable only for a claim filed before
+     DL18 / DL19, or a race the locks now prevent); the rtbf test has its own inline no-claim control.
+  7. **Hygiene.** 12(a) relabelled a smoke check (true by construction); the redundant constant test deleted (the real pin is
+     `cannot-file-copy-resolves.test.ts` against `@twt/contracts`); the accessible-container test retitled as the PROP; the new admin page
+     test resets its mocks in `beforeEach`.
+  8. **Closure.** Corrections annotated above; the table below replaces round 2's blanket claim.
+
+  | Round-2 patch | The production mutation that turns it red | Run |
+  |---|---|---|
+  | 1 lock keys lower-case | drop `.toLowerCase()` on the ids → the unit test AND the UPPER-case grant probe | 2 · 3 |
+  | 2 erasure-handler lock | revert either handler to the rtbf-key-only lock → the fence AND the live probe | 2 · 3 |
+  | 3 N9 locks | delete the lock line in `lockAndReadDeathReport` → all three probes | 2 |
+  | 4 `canChangeCaller` | remove the guard / remove it from `onSearch` alone / remove the notice | 2 · 3 |
+  | 5 precedence | demote the death check: rtbf (2); withdrawal, life-events, medical (3) | 2 · 3 |
+  | 6 release-retry | **none** — a stronger assertion; a mutation would need the idempotency layer to cache failed attempts | — |
+  | 7 helpdesk page | revert the leg to `messageOf` (both tests) / move it behind the export leg (the ordering test) | 2 |
+  | 8 reason tuple | add a sixth reason to the contracts tuple → "cover EXACTLY the tuple" | 3 |
+  | 9 executed mobile tests | drop the announce / `accessible` / routing branch / namespace override; the component's branch | 2 |
+  | 10 cross-Pariwar | drop the predicate's `c.pariwar_id` | 2 |
+  | 11 fences | evasion controls (2); reverting a real handler / a hand-built key (3) | 2 · 3 |
+  | 12 (a) session | **none possible** — a smoke check | — |
+  | 12 (b) AC4 ×4 | the predicate ignores a `denied` claim | 3 |
+  | 12 (c) restored door | a RESTORE no longer clears a termination | 3 |
+  | 12 (d) 404 locator | a locator built for every failure | 3 |
+  | 12 (e) correction row | the handler answers 200 and inserts nothing | 3 |
+  | 13 · 14 | records | — |
+
+  **Gate on the final tree** (`ci:local` on :5461). **Run 1: 35 / 36** — `test (unit)` GREEN this time (admin 1,554, mobile 2,199, domain
+  3,191, api 795); `integration-tests` RED on ONE spec, `rls/announcement-activity-read.spec.ts` (`of(big)` undefined). **Diagnosis, checked
+  — ⛔ assumed:** the DB held 14 committed `PARIWAR_A` cycle rows, all `Trustee One` with `P-TEST-` pools, in two batches of 7 (07:22 and
+  08:55 UTC) — one per COMPLETE earlier integration run; they come from eight unrelated specs (api claims / payment / self-verify, domain
+  pool / contribution, validity-service), none touched by this story, and nothing this story changed mentions the table. The spec seeds
+  its two cycles at "now − 1 h" and asks for the 2 most recent, so a committed cycle newer than that crowds them out; the 08:55 batch
+  was 50 minutes old. This run's own domain failure stopped turbo before the later packages ran, so it added none. **The prediction was
+  tested:** after the DB clock passed 09:55:44 UTC the spec passed ALONE on the same DB and tree, and the exact `integration-tests` job
+  command then passed in full — **24 / 24 tasks** (domain 6,856 passed, api 2,576, jobs 1,962, public 807, validity-service 284, channels
+  468, niyamavali-engine 144, events 36). So every one of the 36 jobs is green on the final tree — **across two runs, not one.**
+  ⚠ The same residue will fail that spec for an hour after this run too (D7).
+- [x] [Review][Defer] **D7 — A complete `integration-tests` run leaves 7 committed `PARIWAR_A` cycles; `announcement-activity-read.spec.ts` fails if run within an hour after one on the same DB**
+  [`packages/domain/tests/integration/rls/announcement-activity-read.spec.ts` (seeds at "now − 1 h", `limit: 2`); the eight specs that commit
+  `Trustee One` / `P-TEST-` cycles] — deferred, pre-existing, ⛔ this story's: the "double-run pollution" trap, still alive in the integration job.
+  Clears with an hour, or by recreating the container. Fix sketch: seed the spec's cycles relative to the DB's newest committed cycle
+  (or in a throwaway Pariwar), ⛔ a fixed "an hour ago". Trigger: any second `ci:local` on a reused DB within the hour.
+- [x] [Review][Defer] **D6 — A hung intake POST holds the helpline console: `apiFetch` has no transport timeout**
+  [`apps/admin/src/api/client.ts`, `HelplineClaimPage`] — deferred (a design choice for the intake's contract, ⛔ a patch): only the
+  workplace write is bounded (`boundedWrite` / `AbortSignal.timeout`), because it is idempotent. The intake is idempotent server-side
+  too (a re-tap returns the same claim), but aborting a request the server then completes would show a failure for a minted claim.
+  Trigger: any change to the client's fetch wrapper, or a reported hang.
+
+**Dismissed (8):** a new test file "may not be in the vitest include glob" — false, it ran (6 tests); "other code may compute the lock keys
+by a different formula" and "the pinned bigints may be self-generated" — false, grepped (the only computations are the two patched
+functions) and the pins were computed from the OLD formula and passed against the unmodified code; "`resourceLocator` undefined may be
+vacuous" — the refusal test in the same spec asserts that field positively; "the medical precedence test sends a made-up
+`imaListVersion`" — the state and death checks run before any version check, so a reorder fails loudly; "the search half of the
+in-flight test may not need the guard" — dropping the guard from `onSearch` alone turns it red (run); "hooks called outside a component"
+— `useT` is mocked as a plain function, and a future hook in `useWorkplaceT` would fail the test loudly, the right signal; "a
+negative assertion right after a `waitFor`" — the 409 branch returns before `setError`; "the sticky erasure error is unpinned" —
+already D3, deliberate.
+
 ## Dev Notes
 
 ### Traps
@@ -894,6 +1268,10 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in th
   `claims/nominee-bank.spec.ts` (each `pending-fee` seed + `member.vyawastha_shulk_paid`). The API's shared NEW
   `integration/_death-report-fixture.ts` (claim filing through the projector, forced state, the innocence finding, a member at any
   lifecycle state ± moderation) replaces five copies of the nominee-lock helpers. TR3's direct-`anonymizeMember` specs untouched.
+  ⚠ **CORRECTED 2026-10-31 (code review round 2, patch 13):** that sentence was wrong — the fixture replaces NONE of them; it ADDS a
+  shared copy. `fileClaim` is still defined in `nominee/nominee-lock.spec.ts`, `nominee/nominee-member-link.spec.ts`,
+  `nominee/nominee-marks-save.spec.ts`, `known-people/known-people.spec.ts` and `claims/claim-contact.spec.ts`. Consolidating the
+  five onto the fixture is a follow-up, not done here.
 - **Task 6 — the gate (AC12), reported as it ran.** `pnpm ci:local` on the story DB (:5461): **34 / 36** on the first run. (1)
   `test (unit)` — MINE, FIXED: a Life Events comment spelled the `dpdpa-data-rights` literal, which
   `contracts/tests/member-data-rights-single-literal.test.ts` allows in ONE module; reworded, 3 / 3. The `--continue` re-run then
@@ -921,6 +1299,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in th
 **Records (committed with Task 0):** `.decision-log.md` (`-425`, `23ac6f19`); `_bmad-output/implementation-artifacts/deferred-work.md`,
 `_bmad-output/implementation-artifacts/sprint-status.yaml` (`bcd51be4`).
 
+**Records (code review rounds 1–3 — committed together, after the code):** this story file; `_bmad-output/implementation-artifacts/deferred-work.md` (D1–D6, on top);
+`_bmad-output/implementation-artifacts/sprint-status.yaml` (ledger lines `2026-10-31n` / `o` / `p`; the row is `review`).
+
 **New:**
 - `packages/domain/src/claim/death-report.ts`, `packages/domain/src/claim/death-report-lock.ts`, `packages/domain/src/claim/intake-door.ts`
 - `packages/contracts/src/claims/intake-refusal.ts`, `packages/contracts/tests/claims-intake-refusal.test.ts`
@@ -929,6 +1310,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in th
 - `apps/api/tests/integration/_death-report-fixture.ts`, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts`
 - `apps/mobile/app/(claim)/cannot-file.tsx`, `apps/mobile/lib/cannot-file-copy.ts`, `apps/mobile/lib/death-report-copy.ts`,
   `apps/mobile/tests/unit/cannot-file-copy-resolves.test.ts`, `apps/mobile/tests/unit/death-report-copy-resolves.test.ts`
+- `apps/mobile/tests/unit/death-report-refusal-announcements.test.ts` (review patch: executed screen / OTP announcement cases)
+- Code review round 2: `packages/domain/tests/member/erasure-lock-keys.test.ts`, `apps/admin/tests/helpdesk-detail-page-erasure.test.tsx`,
+  `apps/mobile/tests/unit/death-refusal-claim-screens.test.ts`
 
 **Modified — source:**
 - domain: `claim/{nominee-lock,icp,errors,index}.ts`, `member/rtbf-legality.ts`; comments only: `member/{state,anonymize}.ts`,
@@ -940,6 +1324,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in th
 - admin: `modules/helpline-claims/{HelplineClaimPage.tsx,i18n-en.ts}`, `modules/helpdesk/{HelpdeskDetailPage.tsx,i18n-en.ts}`
 - mobile: `app/(claim)/relationship.tsx`, `app/(withdrawal)/index.tsx`, `app/(life-events)/{address,medical}.tsx`,
   `components/workplace/{WorkplacePicker,WorkplaceSuggestionQuestion}.tsx`, `lib/workplace-i18n.ts`
+- mobile (review patch): `components/life-events/MedicalForm.tsx`
+- code review round 2: domain `claim/icp-lock.ts`, `member/rtbf-legality.ts` (lower-case lock keys); admin `modules/helpline-claims/HelplineClaimPage.tsx`
+  (`canChangeCaller` + the contracts guard)
 - i18n: `packages/i18n/locales/{en,hi}/{claim,common}.json`
 - records: `friction-budget.md`, `microcopy.yaml`
 
@@ -951,6 +1338,14 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in th
   `tests/integration/{withdrawal/withdrawal,life-events/life-events,medical/medical-disclose,workplaces/workplaces,data-export/data-export}.spec.ts`
 - admin: `tests/{helpline-claim-page,helpdesk-responder-console}.test.tsx`
 - mobile: `tests/unit/helpline-cta-presence.test.ts`
+- code review round 2: domain `tests/integration/claim/{death-report,intake-door}.spec.ts`; api `tests/unit/erasure-and-death-report-fence.test.ts`,
+  `tests/integration/_death-report-fixture.ts` (`raceFirstIntake`), and the withdrawal, life-events, medical, rtbf, data-rights and
+  helpline-intake specs; admin `tests/helpline-claim-page.test.tsx`; mobile `tests/unit/workplace-suggestion-question.test.ts`
+- code review round 3: api `tests/integration/_death-report-fixture.ts` (`sendWhileHolding`; `raceFirstIntake` now a wrapper),
+  `tests/unit/erasure-and-death-report-fence.test.ts`, `tests/integration/rtbf/rtbf.spec.ts`,
+  `tests/integration/member-data-rights/delivery-and-correction.spec.ts`, comment-only edits to the withdrawal / life-events / medical
+  specs; admin `modules/helpline-claims/{HelplineClaimPage.tsx,i18n-en.ts}`, `tests/{helpline-claim-page,helpdesk-detail-page-erasure}.test.tsx`;
+  mobile `tests/unit/death-refusal-claim-screens.test.ts`
 
 ## Change Log
 
@@ -958,6 +1353,10 @@ Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.38`, 2026-10-31, in th
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
 | 2026-10-31 | 2.0 | `bmad-dev-story 6.38` — Tasks 0–6 built: decision `-425` + records committed first; the leaf predicate, the erasure lock + `acquireErasureLocks`, the claim door (five refusals, once per death, the reason on the helpline wire only, DL16 (a)), the after-death withdrawal / Life Events / medical locks, the operator / Pariwar Admin / app words, the fences (DL15, N1, TR1, DL17), the TR2 fixture re-seeds. Gate: `ci:local` 36 / 36 green on a recreated `twt-638-pg` (BigDev's go-ahead; the one earlier red was `PARIWAR_A` residue). Status → review. |
+| 2026-10-31 | 2.1 | Full three-layer code review: one P2 accessibility patch, applied on BigDev's "1"; address / withdrawal / medical refusal errors use `AnnouncedText`. Executed screen tests cover iOS announcements, Android live regions and both OTP retry paths (10 / 10; 26 / 26 with related tests); mobile typecheck and changed-file lint pass. No unresolved review item; story and sprint row → done. Full CI not rerun for the patch; changes uncommitted. |
+| 2026-10-31 | 2.2 | Code review round 2 (two chunks — source, then tests; six layers, none failed): 0 decision-needed, 14 patch, 5 defer, 32 dismissed. All 14 patches applied on BigDev's "1" — three were checklist-family-2 REAL GAPS (the `rtbf` lock key hashed the spelling of the ids; the erasure handlers' lock call and the withdrawal / Life Events / medical intake-key lock were pinned by no test: now a fence and forced-interleave probes), each shown to fail under a mutation of the production line. New: `erasure-lock-keys.test.ts`, `helpdesk-detail-page-erasure.test.tsx`, `death-refusal-claim-screens.test.ts`, fixture `raceFirstIntake`. Gate on the final tree: 35 / 36 first run (`test (unit)` = load timeouts in six untouched admin files), the unit job re-run at `--concurrency=2` 37 / 37. Not done: the `WorkplacePicker` save branch is still source-scanned; nothing committed; this round's patch diff is unreviewed. Status → `review`. |
+| 2026-10-31 | 2.4 | **COMMITTED locally** (supersedes the "uncommitted" wording in 2.2, 2.3 and the round-2 / round-3 Resolved blocks, which were true when written): the round-1 patch as `85581ad6`; the round-2 and round-3 code and tests as `5a213f79`; these records in the commit that follows. ⛔ Pushed, ⛔ yet through CI on a PR; the round-3 patch diff has ⛔ itself been reviewed (BigDev, after weighing the trade-off, chose to commit). Status stays `review`; `done` follows CI on the PR. |
+| 2026-10-31 | 2.3 | Code review round 3 — the round-2 PATCH diff (1,337 lines; three layers, none failed): 0 decision-needed, 8 patch, 2 defer (D6, and D7 found while gating), 8 dismissed. All 8 patches applied on BigDev's "1". **Corrects 2.2:** patches 1, 9 and 14 of round 2 were PARTIAL, not "all 14 applied"; "nothing is committed" was wrong (`HEAD` `e813e5ee` is the committed build; the round-1, -2 and -3 patches are uncommitted); "each fix was shown to fail" now has an item-by-item table (12 of 14 have a production mutation; 6 and 12 (a) cannot). New live proof: an UPPER-case grant waits on the erasure's `rtbf` lock; both erasure routes take the intake key first (forced probes); `sendWhileHolding`; a hardened fence; the console says when it holds a change of caller. Gate on the final tree: run 1 35 / 36 (`integration-tests` red on `announcement-activity-read.spec.ts` = another suite's committed residue in the reused DB, diagnosed and the prediction tested); the integration job re-run once the residue aged out 24 / 24. Not done: the `WorkplacePicker` save branch is still source-scanned; the cleanup paths of `sendWhileHolding` are ⛔ driven by a test; nothing committed; this round's patch diff is unreviewed. Status stays `review`. |
 | 2026-10-31 | 1.8 | The three new Hindi strings — the cannot-file body (DL10), the withdrawal refusal (DL18), the Life Events refusal (DL19) — reviewed by BigDev: *"Hindi is fine"*. ⛔ Go-live row needed for any of them. |
 | 2026-10-31 | 1.7 | The Panel RULED the note — `2026-10-31-424` (DR + KB: Q1 (a) C, Q1 (b) B, Q2 (a) A, Q2 (b) A + the Panel's addition, Q3 B). Built here: N6 five refusals (`pending-fee` ⇒ `not_paid`); N7 / DL9 / DL10 the general reason to the caller and the app (the app body's Hindi NEW, ⛔ yet reviewed); N9 + DL18 (withdrawal refused) + DL19 (direct changes refused; staff changes never remove the old entry — recorded); AC14 / AC15, Task 3A; TR2 — the `pending-fee` fixtures now break; DL17's edges add `pending-fee`. Q1 (a) C's staff identity check is row `6-39-…`, ⛔ this story's. |
 | 2026-10-31 | 1.6 | DL17 added (BigDev: *"yes, add DL17"*), from BigDev's question on a later change to the KYC basis: a reducer-driven fence on every way INTO a state the door refuses (`pending-kyc` ← none; `withdrawn` ← withdrawal from active / grace / lapsed; `anonymized` ← erasure), refused set read from `intake-door.ts`, positive control — AC13, Task 5.5; the Policy-meaning note that a KYC-basis change reopens PQ1 (a). Edge sets checked against the reducer at `01062c51`. |

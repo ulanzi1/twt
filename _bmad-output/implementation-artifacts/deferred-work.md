@@ -4,6 +4,53 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review (round 3 — the round-2 PATCH diff) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **D7 — A complete `integration-tests` run leaves 7 committed `PARIWAR_A` cycles, and `announcement-activity-read.spec.ts` fails if it runs
+  within an hour after one on the same DB** [`packages/domain/tests/integration/rls/announcement-activity-read.spec.ts` — seeds two cycles at
+  "now − 1 h" and asks `listAnnouncementActivity` for the 2 most recent; the committing fixtures are eight specs across apps/api
+  (claims, payment, self-verify), packages/domain (pool, contribution) and packages/validity-service, all `Trustee One` with `P-TEST-`
+  pools] — PRE-EXISTING, not caused by Story 6.38 (none of those files, and nothing 6.38 changed, mentions the table). Found when a second
+  full `ci:local` on the story's DB went red on exactly this spec; verified by letting the residue age out — the spec then passed alone on
+  the same DB and the exact `integration-tests` job passed in full. Clears after an hour, or by recreating the container. Fix sketch: seed
+  the spec's cycles relative to the DB's newest committed cycle, or in a throwaway Pariwar, ⛔ a fixed "an hour ago". Trigger: any second
+  `ci:local` on a reused DB within the hour.
+
+- **D6 — A hung intake POST holds the helpline console: the admin `apiFetch` has no transport timeout** [`apps/admin/src/api/client.ts`;
+  `HelplineClaimPage` `canChangeCaller`] — round-2 patch 4 made the console ignore a change of caller while a filing is in flight (so
+  `intake.reset()` cannot detach the mutation and lose the claim's result); with no transport bound, a request that never settles
+  leaves the operator unable to change caller until a reload. Only the workplace write is bounded today (`boundedWrite`,
+  `AbortSignal.timeout`), because it is idempotent. The intake is idempotent server-side too (a re-tap returns the same claim), but
+  aborting a request the server then completes would show a failure for a minted claim — so this is a design choice for the
+  intake's contract, ⛔ a patch. Trigger: any change to the client's fetch wrapper, or a reported hang.
+
+## Deferred from: code review (round 2 — chunked: source + tests) of 6-38-death-locks-erasure-and-non-member-claims-refused.md (2026-10-31)
+
+- **D1 — The death locks lift only on an innocence finding, and the copy points a falsely-reported member at a helpline that cannot yet
+  lift them** [`packages/domain/src/claim/death-report.ts` `isDeathReportStanding`] — already tracked in the Task 0.5 section below (DL4 /
+  DL7, row 6-22). Added by this review: (a) the withdrawal line says "If this is a mistake, please call the helpline" and the helpdesk
+  line says the record "can be erased only if the claim is found to be about a member who is alive" — until 6-22 the helpline has
+  nothing to lift the lock with; (b) closure wording for `-423` Q1 (b) must stay "mechanism built, lift deferred to 6-22", never "Q1 (b)
+  closed"; (c) the go-live list should carry it (merge is not go-live; nothing is live). Trigger: 6-22's create-story, or a go-live
+  checklist.
+- **D2 — An OTP is spent before a permanent refusal appears** [`apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable` — the route's
+  `requireMemberStepUp` runs before the handler's death-report guard; `apps/mobile/app/(withdrawal)/index.tsx`;
+  `apps/mobile/app/(life-events)/medical.tsx`] — a refused withdrawal / medical change costs an OTP SMS first; withdrawal's catch
+  re-arms Confirm for a retry that cannot succeed; medical keeps the OTP prompt open after any post-verify failure. Story DL18 records
+  withdrawal as unreachable in production today (no lock-in exit — rows 3-13 / 3-14). Fix sketch: a cheap non-locking pre-read before
+  step-up; the locking read stays in the handler. Trigger: row 3-14 landing, or any change to the step-up preHandler order.
+- **D3 — A sticky erasure refusal can mask a newer export / delivery failure** [`apps/admin/src/modules/helpdesk/HelpdeskDetailPage.tsx`
+  `dataRightsError` chain] — AC10 put the erasure leg first on purpose (a stale build error must not hide the death-reported refusal);
+  react-query `isError` is sticky on every leg, so the chain has always shown the first stale error. Trigger: any rework of the
+  data-rights error chain.
+- **D4 — `fulfilErasure`'s `body.member_id` is not bound to the ticket's subject** [`apps/api/src/modules/member-data-rights/handlers.ts`
+  near `requireTicketInScope`; the file's own comment admits it] — pre-existing, not caused by Story 6.38; recorded because 6.38 now
+  routes this handler through `acquireErasureLocks`. Trigger: any change to the erasure request contract.
+- **D5 — Native VoiceOver / TalkBack behaviour of Story 6.38's announcements is un-attested** [`apps/mobile/app/(claim)/cannot-file.tsx`,
+  `(life-events)/address.tsx`, `(withdrawal)/index.tsx`, `components/life-events/MedicalForm.tsx`] — code and executed unit tests exist;
+  no device pass has been run, and none is claimed. For a device: whether `accessible={true}` plus announce-on-arrival double-reads on
+  `cannot-file`, and that `AnnouncedText` does not repeat. Trigger: a device pass, or Story 11b.8's accessibility audit.
+
 ## Deferred from: story 6-38-death-locks-erasure-and-non-member-claims-refused.md — Task 0.5 (2026-10-31)
 
 - **The death locks lift only on an innocence finding, and ⛔ code writes one yet** [Decision `2026-10-31-425` DL4 / DL7;

@@ -53,7 +53,8 @@ describe('⭐ every memorial query is kept out of the persisted cache (AC1)', ()
   })
 
   it('⛔ memorial screen uses useStepUpGate (it texts the SESSION member — the deceased)', () => {
-    for (const f of ['preview', 'outcome', 'write', 'photo', 'index']) {
+    // Story 11b.5a — `family` (the family list) joins every screen list.
+    for (const f of ['preview', 'outcome', 'write', 'photo', 'family', 'index']) {
       expect(stripComments(read(`apps/mobile/app/(memorial)/${f}.tsx`))).not.toMatch(/useStepUpGate/)
     }
     expect(stripComments(read('apps/mobile/lib/use-memorial-send.ts'))).not.toMatch(/useStepUpGate/)
@@ -61,7 +62,7 @@ describe('⭐ every memorial query is kept out of the persisted cache (AC1)', ()
 })
 
 describe('R20 — the screens never go blank, and never read the saved draft before the view exists', () => {
-  const SCREENS = ['index', 'write', 'photo', 'preview', 'outcome']
+  const SCREENS = ['index', 'write', 'photo', 'family', 'preview', 'outcome']
 
   it('no memorial screen returns null for a missing view or session — each renders <MemorialViewMissing />', () => {
     for (const f of SCREENS) {
@@ -72,7 +73,7 @@ describe('R20 — the screens never go blank, and never read the saved draft bef
   })
 
   it('write and photo load the saved draft in an EFFECT, never in a useState initializer (a cold mount has no view yet)', () => {
-    for (const f of ['write', 'photo']) {
+    for (const f of ['write', 'photo', 'family']) {
       const src = stripComments(read(`apps/mobile/app/(memorial)/${f}.tsx`))
       expect(src, f).not.toMatch(/useState[^\n]*loadMemorialDraft/)
       expect(src, f).toMatch(/useEffect\(\(\) => \{[^}]*loadMemorialDraft/)
@@ -105,7 +106,7 @@ describe('Y — ⛔ no clock decides the Send key or the handover code', () => {
 })
 
 describe('T6 — write and photo re-read the saved draft on FOCUS (a stale screen in the stack cannot save over a newer draft)', () => {
-  it.each(['write', 'photo'])('%s: a useFocusEffect reads loadMemorialDraft', (f) => {
+  it.each(['write', 'photo', 'family'])('%s: a useFocusEffect reads loadMemorialDraft', (f) => {
     const src = stripComments(read(`apps/mobile/app/(memorial)/${f}.tsx`))
     expect(src).toMatch(/useFocusEffect\(\s*useCallback\(\(\) => \{[\s\S]{0,300}?loadMemorialDraft/)
   })
@@ -116,5 +117,15 @@ describe('T12 (b) — the outcome reads the photo\'s reason from ONE source (the
     const src = stripComments(read('apps/mobile/app/(memorial)/outcome.tsx'))
     expect(src).not.toMatch(/photoLeftOutReason/)
     expect(src).toMatch(/reason\(view\.photoLeftOut\.reason\)/)
+  })
+})
+
+// Story 11b.5a (KL8) — the family step sits between the photo and the preview: BOTH of the photo screen's ways on lead to it.
+describe('Story 11b.5a — the family step is routed', () => {
+  it('photo.tsx pushes only to /(memorial)/family (⛔ straight to the preview); the preview links back to the family list', () => {
+    const photo = stripComments(read('apps/mobile/app/(memorial)/photo.tsx'))
+    expect(photo.match(/router\.push\('\/\(memorial\)\/family'\)/g)).toHaveLength(2)
+    expect(photo).not.toMatch(/router\.push\('\/\(memorial\)\/preview'\)/)
+    expect(stripComments(read('apps/mobile/app/(memorial)/preview.tsx'))).toMatch(/router\.push\('\/\(memorial\)\/family'\)/)
   })
 })

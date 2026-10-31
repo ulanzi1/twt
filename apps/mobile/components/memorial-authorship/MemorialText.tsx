@@ -23,10 +23,13 @@ export function MemorialText({
   paragraphs,
   testID,
   showReasons = false,
+  guardianDeclaration = false,
 }: {
   paragraphs: readonly MemorialParagraph[]
   testID?: string
   showReasons?: boolean
+  /** Story 11b.5a (KL16) — the version carried the guardian declaration: the child reason reads copy 4.3. */
+  guardianDeclaration?: boolean
 }): React.ReactElement {
   const t = useMemorialT()
   return (
@@ -42,7 +45,7 @@ export function MemorialText({
                 {showReasons ? (
                   <Text fontStyle="italic" testID="memorial-omitted-reason">
                     {' '}
-                    {t('outcome.reason', { reason: t(memorialReasonKey(s.reason)) })}
+                    {t('outcome.reason', { reason: t(memorialReasonKey(s.reason, guardianDeclaration)) })}
                   </Text>
                 ) : null}
               </Fragment>

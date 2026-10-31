@@ -19,15 +19,20 @@
 // Y — Send is enabled exactly when the handover state machine allows a press (`handover-gate.ts`): ⛔ not while a request
 // runs, ⛔ not while the nominee's code is asked for, checked or retried; the code panel stays up through its check and its
 // retry (Confirm off then — X3).
+// Story 11b.5a (KL9) — the family list is shown EXACTLY as the public page will draw it: the Send's own rows
+// (`memorialKinshipForSend` — what the Send carries), grouped by the ONE helper (`groupMemorialKinship`), labelled from the ONE
+// home (`memorial.kinship.<code>`, English plurals for two or more names), each name bidi-isolated (`isolateMemorialBidi`, per
+// name — the API does the same before the public wire). ⛔ Styled beyond the existing preview (11b.5 MV6). When the draft has
+// ⛔ list but the version before had one, a line says so — else a re-send to fix one word would take the list off the page.
 
 import { useCallback, useRef, useState } from 'react'
 import { Image, ScrollView } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, H3, Paragraph, YStack } from 'tamagui'
 
-import type { MemorialMemberView } from '@twt/contracts'
+import { groupMemorialKinship, memorialKinshipLabelKey, type MemorialMemberView } from '@twt/contracts'
 import { useLocale } from '@twt/i18n/react'
-import { reconstructMemorial } from '@twt/ui'
+import { isolateMemorialBidi, reconstructMemorial } from '@twt/ui'
 
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
 import { HandoverCodePanel } from '../../components/memorial-authorship/HandoverCodePanel'
@@ -35,6 +40,7 @@ import { MemorialHeader } from '../../components/memorial-authorship/MemorialHea
 import { MemorialKeptPhoto } from '../../components/memorial-authorship/MemorialKeptPhoto'
 import { MemorialText } from '../../components/memorial-authorship/MemorialText'
 import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
+import { memorialKinshipForSend } from '../../components/memorial-authorship/memorial-kinship'
 import { useMemorialAnnounce, useMemorialScreenAnnounce } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import { loadMemorialDraft, memorialPhotoUri } from '../../lib/memorial-draft'
@@ -71,6 +77,7 @@ export default function MemorialPreviewScreen(): React.ReactElement {
       }}
       onChangeWords={() => router.push('/(memorial)/write')}
       onChangePhoto={() => router.push('/(memorial)/photo')}
+      onChangeFamily={() => router.push('/(memorial)/family')}
     />
   )
 }
@@ -84,6 +91,7 @@ function Preview(props: {
   readonly onSent: () => void
   readonly onChangeWords: () => void
   readonly onChangePhoto: () => void
+  readonly onChangeFamily: () => void
 }): React.ReactElement {
   const { view, memberId, locale, t } = props
   // T1 (TalkBack device session 2026-10-27) — the heading is SPOKEN on arrival and on every return (the stack has no title).
@@ -106,6 +114,9 @@ function Preview(props: {
   // The photo the Send will CARRY as a file: `attempt()` attaches the picked file only when keepPreviousPhoto is not set.
   const photoUri = keepingPrevious ? null : memorialPhotoUri(draft.photoFileName)
   const rendered = reconstructMemorial({ body: draft.body ?? '', altText: draft.altText ?? null }, null)
+  // KL9 — the rows the Send will carry, grouped as the page groups them (`inPhoto` is dropped by the helper — ⛔ public).
+  const kinshipRows = groupMemorialKinship(memorialKinshipForSend(draft.kinship, photoUri !== null || keepingPrevious))
+  const noFamilyList = kinshipRows.length === 0 && view.memorialState !== 'none' && view.kinship !== null
   // The edit buttons are off while a request is in flight or the typed code is being checked (an edit would drop the kept
   // Idempotency-Key — R6 — under a request that is still running). They stay ON while the code is asked for (P1 (d)).
   const editsLocked = sender.inFlight || sender.phase === 'verifying'
@@ -141,11 +152,25 @@ function Preview(props: {
               <MemorialText paragraphs={rendered.altText.original} />
             </YStack>
           ) : null}
+          {kinshipRows.length > 0 ? (
+            <YStack gap="$1" testID="memorial-preview-kinship">
+              <H3>{t('kinship.heading')}</H3>
+              {kinshipRows.map((row) => (
+                <Paragraph key={row.relation}>
+                  {`${t(memorialKinshipLabelKey(row.relation, row.names.length))}: ${row.names.map((n) => isolateMemorialBidi(n)).join(', ')}`}
+                </Paragraph>
+              ))}
+            </YStack>
+          ) : null}
+          {noFamilyList ? <Paragraph testID="memorial-preview-no-family-list">{t('preview.no_family_list')}</Paragraph> : null}
           <Button style={{ minHeight: 44 }} accessibilityRole="button" disabled={editsLocked} onPress={props.onChangeWords}>
             {t('preview.change_words')}
           </Button>
           <Button style={{ minHeight: 44 }} accessibilityRole="button" disabled={editsLocked} onPress={props.onChangePhoto}>
             {t('preview.change_photo')}
+          </Button>
+          <Button style={{ minHeight: 44 }} accessibilityRole="button" disabled={editsLocked} onPress={props.onChangeFamily}>
+            {t('preview.change_family')}
           </Button>
 
           {sender.codeAsked ? (

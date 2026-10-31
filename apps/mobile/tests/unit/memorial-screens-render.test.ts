@@ -199,6 +199,7 @@ vi.mock('tamagui', async () => {
     accessible?: boolean
     style?: { minHeight?: number }
     pt?: number | string
+    accessibilityState?: { checked?: boolean; expanded?: boolean }
   }
   const attrs = (p: P) => ({
     'data-testid': p.testID,
@@ -229,12 +230,22 @@ vi.mock('tamagui', async () => {
     Button: (p: P) =>
       createElement(
         'button',
-        { 'data-testid': p.testID, 'aria-label': p.accessibilityLabel, 'data-minheight': p.style?.minHeight, onClick: p.onPress, disabled: p.disabled },
+        {
+          'data-testid': p.testID,
+          'aria-label': p.accessibilityLabel,
+          'data-minheight': p.style?.minHeight,
+          onClick: p.onPress,
+          disabled: p.disabled,
+          // Story 11b.5a — the family screen's relation options (radio) and "in the photo" tick (checkbox) carry their state.
+          'data-role': p.accessibilityRole,
+          'aria-checked': p.accessibilityState?.checked,
+        },
         p.children,
       ),
   }
 })
 
+import MemorialFamilyScreen from '../../app/(memorial)/family'
 import MemorialIntroScreen from '../../app/(memorial)/index'
 import MemorialOutcomeScreen from '../../app/(memorial)/outcome'
 import MemorialPhotoScreen from '../../app/(memorial)/photo'
@@ -260,6 +271,10 @@ function view(over: Partial<MemorialMemberView> = {}): MemorialMemberView {
     photoUrl: null,
     omissions: [],
     photoLeftOut: null,
+    // Story 11b.5a — ⛔ family list unless a test gives one.
+    kinship: null,
+    kinshipLeftOut: [],
+    guardianDeclaration: false,
     reasonCode: null,
     earlierApprovalWithdrawn: null,
     earlierApprovalStands: false,
@@ -1141,7 +1156,8 @@ describe('R8 — "Use the photo I sent before" lets go of the picked photo and p
     fireEvent.click(screen.getByText(tr('photo.without', 'en')))
     expect(loadMemorialDraft('m-1', 'pool-1')).toEqual({ keepPreviousPhoto: false })
     expect(mock.files.has('file:///docs/picked.jpg')).toBe(false)
-    expect(mock.push).toHaveBeenCalledWith('/(memorial)/preview')
+    // Story 11b.5a (KL8) — both ways on from the photo go to the family list, then the preview.
+    expect(mock.push).toHaveBeenCalledWith('/(memorial)/family')
   })
 
   it('the preview shows the KEPT photo (its signed URL), and the Send carries keepPreviousPhoto with the alt text and NO file', async () => {
@@ -3641,5 +3657,191 @@ describe('T1 — a memorial screen speaks its heading on arrival (on the device 
     cleanup()
     renderIn(MemorialOutcomeScreen, 'en')
     expect(spokenAll()).toEqual([]) // its arrival after a Send is spoken by the Send (R5); on arrival the reader reads it
+  })
+})
+
+// ─── Story 11b.5a — the family list (KL8 / KL9 / KL15 / KL16; AC2 / AC6 / AC14 / AC15) ──────────────────────────────────
+
+describe('Story 11b.5a — the family screen (AC2)', () => {
+  const LIST = [
+    { relation: 'wife' as const, name: 'परीक्षा-पत्नी', inPhoto: true as const },
+    { relation: 'son' as const, name: 'परीक्षा-पुत्र' },
+  ]
+  const resend = (over: Partial<MemorialMemberView> = {}) =>
+    view({ memorialState: 'approved', submissionId: 's-1', body: 'पहले', kinship: LIST, hasPhoto: true, photoUrl: 'https://signed.example/p.jpg', ...over })
+
+  it.each(['hi', 'en'] as const)('%s: starts EMPTY (⛔ pre-filled), with the guardian line under the body and the places it appears', (locale) => {
+    renderIn(MemorialFamilyScreen, locale)
+    expect(screen.getByText(tr('family.title', locale))).toBeInTheDocument()
+    expect(screen.getByText(tr('family.children_guardian', locale))).toBeInTheDocument()
+    expect(screen.getByText(tr('family.where_shown', locale))).toBeInTheDocument()
+    expect(screen.queryByTestId('memorial-family-row-0')).toBeNull()
+    expect(screen.queryByTestId('memorial-family-start-from-sent')).toBeNull() // ⛔ re-send ⇒ ⛔ offer
+  })
+
+  it('add a row, choose one of the fourteen relations, type a name (kept exactly), Next ⇒ the draft holds it and the preview opens', () => {
+    renderIn(MemorialFamilyScreen, 'en')
+    fireEvent.click(screen.getByTestId('memorial-family-add'))
+    fireEvent.click(screen.getByTestId('memorial-family-relation-0'))
+    const options = screen.getAllByRole('button').filter((b) => b.getAttribute('data-role') === 'radio')
+    expect(options.map((b) => b.textContent)).toEqual(
+      ['wife', 'husband', 'son', 'daughter', 'father', 'mother', 'brother', 'sister', 'sons_son', 'daughters_son', 'sons_daughter', 'daughters_daughter', 'daughter_in_law', 'son_in_law'].map((c) => tr(`kinship.${c}`, 'en')),
+    )
+    fireEvent.click(screen.getByTestId('memorial-family-relation-0-daughter'))
+    fireEvent.change(screen.getByTestId('memorial-family-name-0'), { target: { value: '  परीक्षा-पुत्री ' } })
+    fireEvent.click(screen.getByTestId('memorial-family-next'))
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual([{ relation: 'daughter', name: '  परीक्षा-पुत्री ' }])
+    expect(mock.push).toHaveBeenCalledWith('/(memorial)/preview')
+  })
+
+  it('an unfinished row blocks Next with copy 2.11 (spoken); "Continue without a list" clears it and goes on', () => {
+    saveMemorialDraft('m-1', 'pool-1', { kinship: [{ name: 'बिना रिश्ते' }] })
+    renderIn(MemorialFamilyScreen, 'en')
+    fireEvent.click(screen.getByTestId('memorial-family-next'))
+    expect(screen.getByTestId('memorial-family-incomplete')).toHaveTextContent(tr('family.row_incomplete', 'en'))
+    expect(mock.push).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('memorial-family-without'))
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toBeUndefined()
+    expect(mock.push).toHaveBeenCalledWith('/(memorial)/preview')
+  })
+
+  it('⭐ KL15 — the "In the photo" tick shows ONLY when the Send will carry a photo; it is a checkbox with its state', () => {
+    saveMemorialDraft('m-1', 'pool-1', { kinship: [{ relation: 'son', name: 'परीक्षा-पुत्र' }] })
+    const { unmount } = renderIn(MemorialFamilyScreen, 'en')
+    expect(screen.queryByTestId('memorial-family-in-photo-0')).toBeNull()
+    unmount()
+    mock.view = resend()
+    saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true })
+    renderIn(MemorialFamilyScreen, 'en')
+    const tick = screen.getByTestId('memorial-family-in-photo-0')
+    expect(tick).toHaveAttribute('data-role', 'checkbox')
+    expect(tick).toHaveAttribute('aria-label', tr('family.in_photo_a11y', 'en', { name: 'परीक्षा-पुत्र' }))
+    fireEvent.click(tick)
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual([{ relation: 'son', name: 'परीक्षा-पुत्र', inPhoto: true }])
+    expect(screen.getByTestId('memorial-family-in-photo-0')).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('⭐ re-send — "Start from the list I sent" fills the rows on a TAP (⛔ automatically); ticks copied only with the previous photo kept', () => {
+    mock.view = resend()
+    const { unmount } = renderIn(MemorialFamilyScreen, 'en')
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toBeUndefined() // ⛔ automatic
+    fireEvent.click(screen.getByTestId('memorial-family-start-from-sent'))
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual([
+      { relation: 'wife', name: 'परीक्षा-पत्नी' },
+      { relation: 'son', name: 'परीक्षा-पुत्र' },
+    ])
+    unmount()
+    mock.store.clear()
+    saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true })
+    renderIn(MemorialFamilyScreen, 'en')
+    fireEvent.click(screen.getByTestId('memorial-family-start-from-sent'))
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual(LIST)
+    expect(screen.queryByTestId('memorial-family-start-from-sent')).toBeNull() // only while the rows are empty
+  })
+
+  it('at 20 rows "Add someone" gives way to the limit line', () => {
+    saveMemorialDraft('m-1', 'pool-1', { kinship: Array.from({ length: 20 }, () => ({ relation: 'son' as const, name: 'न' })) })
+    renderIn(MemorialFamilyScreen, 'hi')
+    expect(screen.queryByTestId('memorial-family-add')).toBeNull()
+    expect(screen.getByTestId('memorial-family-limit')).toHaveTextContent(tr('family.limit_reached', 'hi', { count: '20' }))
+  })
+
+  it.each(['hi', 'en'] as const)('%s: the interpolated keys render through the real t() (remove label, over-limit line)', (locale) => {
+    saveMemorialDraft('m-1', 'pool-1', { kinship: [{ relation: 'son', name: 'न'.repeat(203) }, { name: '' }] })
+    renderIn(MemorialFamilyScreen, locale)
+    expect(screen.getByTestId('memorial-family-remove-0')).toHaveAttribute('aria-label', tr('family.remove_a11y', locale, { name: 'न'.repeat(203) }))
+    expect(screen.getByTestId('memorial-family-remove-1')).toHaveAttribute('aria-label', tr('family.remove_empty_a11y', locale))
+    expect(screen.getByText(tr('family.name_over_limit', locale, { count: '3' }))).toBeInTheDocument()
+    expect(tr('family.name_over_limit', locale, { count: '3' })).toContain('3')
+  })
+
+  it('a photo change on the Photo screen clears every tick (KL15)', () => {
+    mock.view = resend()
+    saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
+    renderIn(MemorialPhotoScreen, 'en')
+    fireEvent.click(screen.getByText(tr('photo.without', 'en')))
+    expect(loadMemorialDraft('m-1', 'pool-1').kinship).toEqual([
+      { relation: 'wife', name: 'परीक्षा-पत्नी' },
+      { relation: 'son', name: 'परीक्षा-पुत्र' },
+    ])
+  })
+})
+
+describe('Story 11b.5a — the preview and the Send carry the list (AC2 / AC6)', () => {
+  it.each(['hi', 'en'] as const)('%s: the preview draws the grouped rows (plural English label, names isolated); the Send carries exactly them', async (locale) => {
+    saveMemorialDraft('m-1', 'pool-1', {
+      body: 'शब्द',
+      kinship: [
+        { relation: 'son', name: 'अमित' },
+        { relation: 'wife', name: 'सुनीता', inPhoto: true },
+        { relation: 'son', name: 'राहुल‮' },
+      ],
+    })
+    mock.send.mockResolvedValue(SENT_OK)
+    renderIn(MemorialPreviewScreen, locale)
+    const block = screen.getByTestId('memorial-preview-kinship')
+    expect(block).toHaveTextContent(tr('kinship.heading', locale))
+    const lines = Array.from(block.children).slice(1).map((c) => c.textContent)
+    expect(lines).toEqual([
+      `${tr('kinship.wife', locale)}: सुनीता`,
+      `${tr('kinship.son_plural', locale)}: अमित, ⁨राहुल‮‬⁩`,
+    ])
+    fireEvent.click(screen.getByTestId('memorial-send'))
+    await settle()
+    const form = mock.send.mock.calls[0]![0] as FormData
+    // ⛔ photo in this Send ⇒ the tick is STRIPPED from the part.
+    expect(JSON.parse(form.get('kinship') as string)).toEqual([
+      { relation: 'son', name: 'अमित' },
+      { relation: 'wife', name: 'सुनीता' },
+      { relation: 'son', name: 'राहुल‮' },
+    ])
+  })
+
+  it('⛔ list ⇒ ⛔ kinship part; a re-send without a list when the last version had one says so', async () => {
+    mock.view = view({ memorialState: 'approved', submissionId: 's-1', body: 'पहले', kinship: [{ relation: 'son', name: 'x' }] })
+    saveMemorialDraft('m-1', 'pool-1', { body: 'नए शब्द' })
+    mock.send.mockResolvedValue(SENT_OK)
+    renderIn(MemorialPreviewScreen, 'en')
+    expect(screen.getByTestId('memorial-preview-no-family-list')).toHaveTextContent(tr('preview.no_family_list', 'en'))
+    fireEvent.click(screen.getByText(tr('preview.change_family', 'en')))
+    expect(mock.push).toHaveBeenCalledWith('/(memorial)/family')
+    fireEvent.click(screen.getByTestId('memorial-send'))
+    await settle()
+    expect((mock.send.mock.calls[0]![0] as FormData).get('kinship')).toBeNull()
+  })
+})
+
+describe('Story 11b.5a — the outcome tells each left-out entry and its reason (AC6 / AC14)', () => {
+  const omitted = (over: Partial<MemorialMemberView> = {}) =>
+    view({
+      memorialState: 'approved_with_omissions',
+      submissionId: 's-1',
+      body: 'शब्द',
+      kinship: [
+        { relation: 'wife', name: 'परीक्षा-पत्नी' },
+        { relation: 'daughters_daughter', name: 'परीक्षा-नातिन' },
+      ],
+      kinshipLeftOut: [{ index: 1, reason: 'identifies_a_child' }],
+      canSend: true,
+      ...over,
+    })
+
+  it.each(['hi', 'en'] as const)('%s: one line per left-out entry — relation, name, then the reason (copy 4.1)', (locale) => {
+    mock.view = omitted()
+    renderIn(MemorialOutcomeScreen, locale)
+    const lines = screen.getAllByTestId('memorial-kinship-left-out')
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toHaveTextContent(
+      `${tr('outcome.kinship_left_out', locale, { relation: tr('kinship.daughters_daughter', locale), name: 'परीक्षा-नातिन' })} ${tr('outcome.reason', locale, { reason: tr('reason.identifies_a_child', locale) })}`,
+    )
+  })
+
+  it.each(['hi', 'en'] as const)('%s: ⭐ KL16 — under the declaration the child reason reads copy 4.3, ⛔ the plain one', (locale) => {
+    mock.view = omitted({ guardianDeclaration: true })
+    renderIn(MemorialOutcomeScreen, locale)
+    const line = screen.getByTestId('memorial-kinship-left-out')
+    expect(line).toHaveTextContent(tr('outcome.reason', locale, { reason: tr('outcome.reason_child_undeclared', locale) }))
+    // (the English 4.3 begins with the plain phrase, so the check is on how the line ENDS)
+    expect(line.textContent?.endsWith(tr('reason.identifies_a_child', locale))).toBe(false)
   })
 })

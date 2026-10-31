@@ -25,6 +25,8 @@
 
 import { File, Paths } from 'expo-file-system'
 
+import type { MemorialDraftKinshipRow } from '../components/memorial-authorship/memorial-kinship'
+
 import { newIdempotencyKey } from './idempotency-key'
 import { mmkvStorage } from './mmkv'
 
@@ -44,6 +46,11 @@ export interface MemorialDraft {
   photoFileName?: string
   photoMime?: 'image/jpeg' | 'image/png'
   keepPreviousPhoto?: boolean
+  /**
+   * Story 11b.5a (KL8) — the family list, row by row as the family types it (a row may be unfinished). Optional and additive, so
+   * the key stays `v1` (an older draft simply has none). ⛔ Never pre-filled from the nominee record or the claim.
+   */
+  kinship?: MemorialDraftKinshipRow[]
   pending?: MemorialPendingSend
 }
 
@@ -61,9 +68,21 @@ export function loadMemorialDraft(memberId: string, driveId: string): MemorialDr
   }
 }
 
-/** What a Send is made OF — the words, the alt text and the photo choice. (Absent and empty/false are the same content.) */
+/**
+ * What a Send is made OF — the words, the alt text, the photo choice and the family list. (Absent and empty/false are the same
+ * content.) ⚠ Every element is a PRIMITIVE (compared with `===` below): the list rides as ONE string — an array here would
+ * compare by reference and an edit to the list alone would keep the old Idempotency-Key, replaying the old Send (R6 — 11b.5a
+ * Trap 5).
+ */
 function sendContent(d: MemorialDraft): readonly (string | boolean)[] {
-  return [d.body ?? '', d.altText ?? '', d.photoFileName ?? '', d.photoMime ?? '', d.keepPreviousPhoto === true]
+  return [
+    d.body ?? '',
+    d.altText ?? '',
+    d.photoFileName ?? '',
+    d.photoMime ?? '',
+    d.keepPreviousPhoto === true,
+    JSON.stringify(d.kinship ?? []),
+  ]
 }
 
 /**
@@ -111,7 +130,9 @@ export function saveMemorialDraft(memberId: string, driveId: string, patch: Part
 
 /** Is there anything of the family's in the draft (for *resume / start again*)? */
 export function memorialDraftHasContent(d: MemorialDraft): boolean {
-  return (d.body ?? '').length > 0 || (d.altText ?? '').length > 0 || d.photoFileName !== undefined
+  return (
+    (d.body ?? '').length > 0 || (d.altText ?? '').length > 0 || d.photoFileName !== undefined || (d.kinship?.length ?? 0) > 0
+  )
 }
 
 /** Clear the draft AND its photo copy — ONLY after a 2xx from Send (or a refetch showing it landed), or *start again*. */

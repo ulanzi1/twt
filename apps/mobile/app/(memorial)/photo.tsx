@@ -16,6 +16,9 @@
 // V9 (a) — while this screen's last save FAILED (full storage), the focus re-read is skipped: the screen's state is newer
 // than the stored draft, and must not be replaced by it. W5 — and a change made then is merged into the SCREEN's state;
 // X1 — and the next save after a failed one writes the screen's choices, not the change alone.
+// Story 11b.5a (KL8 / KL15) — BOTH ways on go to the FAMILY LIST (`family.tsx`), then the preview; and ANY change of the photo
+// choice (a new pick, "without", "the photo I sent before") clears every "in the photo" tick — a tick points at the photo it
+// was given for, ⛔ at the next one.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Image, Platform, ScrollView } from 'react-native'
@@ -29,6 +32,7 @@ import { useLocale } from '@twt/i18n/react'
 import { MemorialHeader } from '../../components/memorial-authorship/MemorialHeader'
 import { MemorialKeptPhoto } from '../../components/memorial-authorship/MemorialKeptPhoto'
 import { MemorialViewMissing } from '../../components/memorial-authorship/MemorialViewMissing'
+import { memorialKinshipClearTicks } from '../../components/memorial-authorship/memorial-kinship'
 import {
   useMemorialAnnounce,
   useMemorialOverLimitAnnounce,
@@ -159,7 +163,7 @@ export default function MemorialPhotoScreen(): React.ReactElement {
       return
     }
     deletePickedCopy() // the earlier pick, replaced
-    patch({ photoFileName: name, photoMime: mime, keepPreviousPhoto: false })
+    patch({ photoFileName: name, photoMime: mime, keepPreviousPhoto: false, kinship: clearedTicks() })
   }
 
   // One photo at a time: *"Continue without a photo"* and *"Use the photo I sent before"* both let go of a photo picked in
@@ -168,12 +172,18 @@ export default function MemorialPhotoScreen(): React.ReactElement {
   // and sending another.
   function releasePicked(keepPrevious: boolean): void {
     deletePickedCopy()
-    patch({ photoFileName: undefined, photoMime: undefined, keepPreviousPhoto: keepPrevious })
+    patch({ photoFileName: undefined, photoMime: undefined, keepPreviousPhoto: keepPrevious, kinship: clearedTicks() })
+  }
+
+  // Story 11b.5a (KL15) — the family list with every tick cleared, read FRESH from the phone's storage (the list is the family
+  // screen's; this screen only lets go of the ticks).
+  function clearedTicks(): MemorialDraft['kinship'] {
+    return memorialKinshipClearTicks(loadMemorialDraft(mid, drive).kinship ?? draft.kinship)
   }
 
   function without(): void {
     releasePicked(false)
-    router.push('/(memorial)/preview')
+    router.push('/(memorial)/family')
   }
 
   return (
@@ -231,7 +241,7 @@ export default function MemorialPhotoScreen(): React.ReactElement {
           <Button style={{ minHeight: 44 }} accessibilityRole="button" onPress={without}>
             {t('photo.without')}
           </Button>
-          <Button style={{ minHeight: 44 }} accessibilityRole="button" onPress={() => router.push('/(memorial)/preview')}>
+          <Button style={{ minHeight: 44 }} accessibilityRole="button" onPress={() => router.push('/(memorial)/family')}>
             {t('photo.next')}
           </Button>
         </YStack>

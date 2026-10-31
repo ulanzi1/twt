@@ -48,6 +48,7 @@ import type { MemorialMemberView } from '@twt/contracts'
 import type { HandoverPanelState } from '../components/memorial-authorship/HandoverCodePanel'
 import { invalidateMemorialQueries } from '../components/memorial-authorship/useMemorialQueries'
 import { memorialSendRefusalKey } from '../components/memorial-authorship/memorial-copy'
+import { memorialKinshipForSend } from '../components/memorial-authorship/memorial-kinship'
 import {
   HANDOVER_GATE_INITIAL,
   handoverGateCanPress,
@@ -286,6 +287,10 @@ export function useMemorialSend(args: {
     const photoUri = memorialPhotoUri(draft.photoFileName)
     if (draft.keepPreviousPhoto) form.append('keepPreviousPhoto', 'true')
     if (photoUri !== null || draft.keepPreviousPhoto) form.append('altText', draft.altText ?? '')
+    // Story 11b.5a (KL8 / KL15) — the family list, ONLY when non-empty; the ticks ride only when this Send carries a photo (the
+    // same photo test as the two lines above), else every one is stripped.
+    const kinship = memorialKinshipForSend(draft.kinship, photoUri !== null || draft.keepPreviousPhoto === true)
+    if (kinship.length > 0) form.append('kinship', JSON.stringify(kinship))
     if (photoUri !== null && !draft.keepPreviousPhoto) {
       // RN multipart: the { uri, name, type } descriptor (cast — RN's FormData accepts it).
       form.append('photo', { uri: photoUri, name: draft.photoFileName, type: draft.photoMime ?? 'image/jpeg' } as unknown as Blob)

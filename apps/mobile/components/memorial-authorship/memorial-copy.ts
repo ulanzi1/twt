@@ -30,6 +30,9 @@ export function memorialSendRefusalKey(code: string): string {
       return 'send.nominee_unresolved'
     case 'memorial.try_again':
       return 'send.try_again'
+    // Story 11b.5a (KL8) — the family list could not be read (the app never sends one the server refuses: a malformed client).
+    case 'memorial.kinship_invalid':
+      return 'send.kinship_invalid'
     // Y — defensive: only an OLDER server answers this (the key now lives on the submission row). The key is kept (a Send
     // never drops it on a refusal), so the next press replays or lands under it.
     case 'memorial.idempotency_in_progress':
@@ -39,7 +42,12 @@ export function memorialSendRefusalKey(code: string): string {
   }
 }
 
-/** The reason copy for a part left out / a refusal / a withdrawn approval (MA6's four grounds). */
-export function memorialReasonKey(reason: string): string {
+/**
+ * The reason copy for a part left out / a refusal / a withdrawn approval (MA6's four grounds). Story 11b.5a (KL16, copy 4.3) —
+ * when the version carried the guardian declaration (`guardianDeclaration`), `identifies_a_child` reads as a child the
+ * family's confirmation cannot cover, ⛔ the plain "names or shows a child".
+ */
+export function memorialReasonKey(reason: string, guardianDeclaration = false): string {
+  if (guardianDeclaration && reason === 'identifies_a_child') return 'outcome.reason_child_undeclared'
   return `reason.${reason}`
 }

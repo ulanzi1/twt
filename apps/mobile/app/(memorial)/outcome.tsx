@@ -18,6 +18,9 @@
 //   · W3 / Y — Withdraw is enabled exactly when the handover state machine allows a press (`handover-gate.ts`): ⛔ not while its
 //     request is in flight, ⛔ not while the nominee's code is asked for, checked or retried (as Send is);
 //   · R5 — a state that appears (the Withdraw that worked, a refusal, the notice) is SPOKEN, not only drawn.
+//   · Story 11b.5a (KL9) — for EACH family-list entry the Trust left out, one line: the relation and the name (isolated), then
+//     its own reason (copy 4.1 + `outcome.reason`). KL16 — when the version carried the guardian declaration, the child reason
+//     reads copy 4.3 (*"a child your confirmation cannot cover"*) everywhere on this screen, ⛔ the plain "names or shows a child".
 
 import { useState } from 'react'
 import { ScrollView } from 'react-native'
@@ -26,7 +29,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Button, H2, Paragraph, YStack } from 'tamagui'
 
 import type { MemorialMemberView } from '@twt/contracts'
-import { memorialOmittedReasons, reconstructMemorial } from '@twt/ui'
+import { isolateMemorialBidi, memorialOmittedReasons, reconstructMemorial } from '@twt/ui'
 
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
 import { HandoverCodePanel } from '../../components/memorial-authorship/HandoverCodePanel'
@@ -72,7 +75,13 @@ function Outcome({
   const queryClient = useQueryClient()
   const [notice, setNotice] = useState<string | null>(null)
   const state = view.memorialState
-  const reason = (r: string | null) => (r === null ? null : t('outcome.reason', { reason: t(memorialReasonKey(r)) }))
+  const reason = (r: string | null) =>
+    r === null ? null : t('outcome.reason', { reason: t(memorialReasonKey(r, view.guardianDeclaration)) })
+  // KL9 — the entries the Trust left out, each with its relation, name and reason (indexes into the list as SENT).
+  const kinshipLeftOut = view.kinshipLeftOut.flatMap((k) => {
+    const entry = view.kinship?.[k.index]
+    return entry === undefined ? [] : [{ relation: entry.relation, name: entry.name, reason: k.reason }]
+  })
 
   // AC8 — withdraw while with the Trust; a 403 asks the NOMINEE's code (AC7a); `not_withdrawable` ⇒ the outcome is
   // refetched (the Trust decided meanwhile), quietly.
@@ -151,7 +160,12 @@ function Outcome({
           ) : null}
 
           {words !== null && (state === 'approved' || state === 'approved_with_omissions') ? (
-            <MemorialText paragraphs={words.asApproved} testID="memorial-outcome-text" showReasons />
+            <MemorialText
+              paragraphs={words.asApproved}
+              testID="memorial-outcome-text"
+              showReasons
+              guardianDeclaration={view.guardianDeclaration}
+            />
           ) : null}
           {state === 'approved_with_omissions' ? (
             <YStack gap="$1" testID="memorial-left-out">
@@ -163,6 +177,12 @@ function Outcome({
               {altTextReasons.map((r, i) => (
                 <Paragraph key={i} testID="memorial-alt-text-left-out">
                   {t('outcome.alt_text_left_out')} {reason(r)}
+                </Paragraph>
+              ))}
+              {kinshipLeftOut.map((k, i) => (
+                <Paragraph key={`k${i}`} testID="memorial-kinship-left-out">
+                  {t('outcome.kinship_left_out', { relation: t(`kinship.${k.relation}`), name: isolateMemorialBidi(k.name) })}{' '}
+                  {reason(k.reason)}
                 </Paragraph>
               ))}
             </YStack>

@@ -68,6 +68,12 @@ import {
   memorialSendLanded,
   saveMemorialDraft,
 } from '../../lib/memorial-draft'
+import {
+  memorialKinshipClearTicks,
+  memorialKinshipForSend,
+  memorialKinshipRowsReady,
+  memorialKinshipStartFromSent,
+} from '../../components/memorial-authorship/memorial-kinship'
 
 beforeEach(() => {
   mock.store.clear()
@@ -299,5 +305,67 @@ describe('the memorial draft (MA3)', () => {
     expect(saveMemorialDraft('m', 'd', { body: 'नए शब्द' })).toEqual({ draft: { body: 'नए शब्द' }, saved: false })
     mock.failWrites = false
     expect(loadMemorialDraft('m', 'd')).toEqual({ body: 'शब्द' })
+  })
+})
+
+// Story 11b.5a (KL8 / KL15 / Trap 5) — the family list in the draft and the Send's own list.
+describe('the family list (Story 11b.5a)', () => {
+  it('⭐ R6 — an edit to the LIST ALONE after a kept key ⇒ the next Send mints a NEW key (the list is a STRING in sendContent)', () => {
+    saveMemorialDraft('m', 'd', { body: 'शब्द', kinship: [{ relation: 'wife', name: 'परीक्षा-पत्नी' }] })
+    const first = memorialSendKey('m', 'd')
+    // The same list saved again keeps the key (a fresh array with equal content — ⛔ a reference compare).
+    saveMemorialDraft('m', 'd', { kinship: [{ relation: 'wife', name: 'परीक्षा-पत्नी' }] })
+    expect(loadMemorialDraft('m', 'd').pending).toEqual({ idempotencyKey: first.idempotencyKey })
+    saveMemorialDraft('m', 'd', { kinship: [{ relation: 'wife', name: 'परीक्षा-पत्नी' }, { relation: 'son', name: 'परीक्षा-पुत्र' }] })
+    expect(loadMemorialDraft('m', 'd').pending).toBeUndefined()
+    expect(memorialSendKey('m', 'd').idempotencyKey).not.toBe(first.idempotencyKey)
+  })
+
+  it('absent and an empty list are the SAME content (the key is kept)', () => {
+    saveMemorialDraft('m', 'd', { body: 'शब्द' })
+    const first = memorialSendKey('m', 'd')
+    saveMemorialDraft('m', 'd', { kinship: [] })
+    expect(loadMemorialDraft('m', 'd').pending).toEqual({ idempotencyKey: first.idempotencyKey })
+  })
+
+  it('memorialDraftHasContent counts the list', () => {
+    expect(memorialDraftHasContent({})).toBe(false)
+    expect(memorialDraftHasContent({ kinship: [] })).toBe(false)
+    expect(memorialDraftHasContent({ kinship: [{ name: '' }] })).toBe(true)
+  })
+
+  it('⭐ KL15 — the Send\'s list strips EVERY tick when no photo is sent; keeps them with one; drops unfinished rows; ⛔ trims', () => {
+    const rows = [
+      { relation: 'wife' as const, name: '  परीक्षा-पत्नी ', inPhoto: true as const },
+      { name: 'बिना रिश्ते' },
+      { relation: 'son' as const, name: '   ' },
+      { relation: 'son' as const, name: 'परीक्षा-पुत्र' },
+    ]
+    expect(memorialKinshipForSend(rows, false)).toEqual([
+      { relation: 'wife', name: '  परीक्षा-पत्नी ' },
+      { relation: 'son', name: 'परीक्षा-पुत्र' },
+    ])
+    expect(memorialKinshipForSend(rows, true)[0]).toEqual({ relation: 'wife', name: '  परीक्षा-पत्नी ', inPhoto: true })
+    expect(memorialKinshipForSend(undefined, true)).toEqual([])
+    expect(memorialKinshipForSend([{ relation: 'son', name: 'न'.repeat(201) }], false)).toEqual([])
+  })
+
+  it('KL15 — "Start from the list I sent" copies ticks ONLY when the previous photo is kept; clearing ticks keeps the rows', () => {
+    const sent = [{ relation: 'wife' as const, name: 'परीक्षा-पत्नी', inPhoto: true as const }, { relation: 'son' as const, name: 'परीक्षा-पुत्र' }]
+    expect(memorialKinshipStartFromSent(sent, true)).toEqual(sent)
+    expect(memorialKinshipStartFromSent(sent, false)).toEqual([
+      { relation: 'wife', name: 'परीक्षा-पत्नी' },
+      { relation: 'son', name: 'परीक्षा-पुत्र' },
+    ])
+    expect(memorialKinshipClearTicks(sent)).toEqual(memorialKinshipStartFromSent(sent, false))
+    expect(memorialKinshipClearTicks(undefined)).toBeUndefined()
+  })
+
+  it('the family screen goes on only when every row is finished or wholly empty', () => {
+    expect(memorialKinshipRowsReady([])).toBe(true)
+    expect(memorialKinshipRowsReady([{ name: '' }])).toBe(true)
+    expect(memorialKinshipRowsReady([{ name: 'नाम' }])).toBe(false)
+    expect(memorialKinshipRowsReady([{ relation: 'son', name: '' }])).toBe(false)
+    expect(memorialKinshipRowsReady([{ relation: 'son', name: 'नाम' }])).toBe(true)
   })
 })

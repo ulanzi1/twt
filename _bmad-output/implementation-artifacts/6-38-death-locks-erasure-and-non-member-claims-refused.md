@@ -24,8 +24,8 @@ NUMBERS: ⛔ claimed by this file. At authoring the highest decision anywhere (e
 `2026-10-30q` (main). This create-story run's ledger line takes `2026-10-30r`. Task 0.4's decision entry is "the next free one" at the
 commit that takes it.
 
-LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL16 — ANSWERED 2026-10-31 at Task 0.2: all as recommended); **PQ** = Panel questions
-(PQ1 (a) / (b), PQ2 (a) / (b), PQ3 — non-blocking; the note is WRITTEN, ⛔ sent); **TR** = traps (TR1–TR10); **AC1–AC12**.
+LETTERS: **G** = found facts (G1–G16); **DL** = build decisions (DL1–DL17 — ANSWERED 2026-10-31: DL1–DL16 at Task 0.2, all as recommended; DL17 added and approved the same day); **PQ** = Panel questions
+(PQ1 (a) / (b), PQ2 (a) / (b), PQ3 — non-blocking; the note is WRITTEN, ⛔ sent); **TR** = traps (TR1–TR10); **AC1–AC13**.
 -->
 
 # Story 6.38: Once a Death Is Reported the Member's Record Is Never Erased — Unless the Member Is Found Alive — and a Claim for Someone Who Was ⛔ a Member at Death Is Refused at the Door
@@ -111,6 +111,12 @@ agreement they gave while alive, and no money is raised in the name of someone w
    identity verified OR given through the unverified manual fallback) — the fee is ⛔ in the Panel's words at all ⇒ **PQ1 (b)**; built
    OPEN.
 
+   ⚠ **What the door refuses is tied to the lifecycle STATES, ⛔ to how identity is checked.** "Never finished joining" means
+   `pending-kyc` only because today `pending-kyc` is reached only at signup. Any change to the KYC basis — DigiLocker made mandatory, KYC
+   moved before a member record exists, a re-verification of typed-in identities — REOPENS PQ1 (a), and any new way INTO a refused state
+   (e.g. a re-verification that sends a paid member back to `pending-kyc`) would silently refuse that member's family as "never finished
+   joining". DL17 makes that fail CI.
+
 ## ⭐ THE INVARIANTS
 
 **N1 — One predicate for "a death is reported and stands".** `isDeathReportStanding(db, pariwarId, memberId)` = a `claims` row exists for
@@ -161,7 +167,7 @@ either line is readable at rest. Whether the helpline line NAMES the reason (via
 `active-in-grace`, `lapsed-unpaid`) and `suspended` ⇒ open — the existing rules decide them later (`-423` Q3 *"⛔ Touched"*; PQ1 (a) / (b):
 a typed-in identity nobody checked — in any state — is open as a DECLARED narrowing of the ruled words; `pending-fee` is open pending the
 fee question). An exhaustive `switch` with a
-`never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it.
+`never` arm: a new lifecycle state FAILS TO COMPILE until someone decides it. A new way INTO an existing refused state is caught by DL17.
 
 **N7 — The operator is told WHY; the caller and the app are told only that it cannot be filed.** The helpline sees one line per reason and
 is told to read back what they searched with. The app shows ONE calm message with ⛔ reason (PQ3) — and the reason is ⛔ on the member
@@ -283,7 +289,8 @@ survives). That is PQ2's harm; ⛔ built until the Panel answers.
 
 ## Build decisions — ANSWERED (BigDev, 2026-10-31, Task 0.2: *"DL1-DL16 as recommended"*)
 
-Every DL below is built as written; where a DL offers a choice, the recommended option is the answer (DL16 ⇒ (a)). The proposed
+Every DL below is built as written; where a DL offers a choice, the recommended option is the answer (DL16 ⇒ (a)). DL17 was added
+after Task 0.2 (BigDev's question on a later change to the KYC basis) and approved the same day: *"yes, add DL17"*. The proposed
 English copy of DL9 / DL10 / DL11 is approved as written. The DL10 Hindi TITLE + BODY are HUMAN-REVIEWED — BigDev, 2026-10-31: *"DL10
 Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` ones (2026-10-01).
 
@@ -427,6 +434,27 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
   per reason at rest (a membership-history fact about the searched person, ⛔ a name). Option (b): leave it — cost: a disputed refusal
   cannot be reconstructed from the audit log. **ANSWERED (a)** (2026-10-31) — for the helpline only; the member route's line stays
   reason-less (N7).
+- **DL17 — A fence on the ways INTO a refused state (the door's inputs).** The door is keyed on state labels, so its meaning can change
+  without its code changing: a later story that adds a transition INTO a refused state — e.g. a KYC re-verification that sends a paid
+  member back to `pending-kyc` — compiles, passes N6's exhaustive switch, and silently refuses that member's family as `not_joined`. The
+  AI-10-1 policy-meaning check catches a story that edits the DOOR, ⛔ one that edits its INPUTS. NEW unit test (⛔ DB)
+  `packages/domain/tests/member/door-input-fence.test.ts`:
+  - drives the REAL reducer — `memberStateMachine.step(from, event)` for every `from` in `MEMBER_LIFECYCLE_STATES` × every type in
+    `MEMBER_EVENT_TYPES` (⛔ the documentation `transitions` matrix — `state.test.ts` checks that matrix against the reducer for the
+    `rtbf_anonymized` rows ONLY, so it cannot be trusted as the map), each with an empty payload AND every payload variant a reducer arm
+    branches on (today only `member.lock_in_expired` `{ kyc_verified: true | false }`); the creation event `member.signup_initiated` is
+    the replay's initial step;
+  - collects every edge `from → to` with `from ≠ to` and `to` ∈ the door's refused STATES, and asserts the set EQUALS exactly:
+    `pending-kyc` ← ⛔ edge (reached only as the replay's initial state); `withdrawn` ← `member.withdrawal_completed` from `active` /
+    `active-in-grace` / `lapsed-unpaid`; `anonymized` ← `member.rtbf_anonymized` from every other state;
+  - the refused set is READ from `claim/intake-door.ts`'s own mapping (export the lifecycle states the switch refuses, e.g.
+    `DOOR_REFUSED_LIFECYCLE_STATES`), ⛔ restated in the test — so widening the door (PQ1) moves the fence with it;
+  - fails with a message naming `2026-10-30-423` Q3 B, `resolveClaimIntakeDoor` and PQ1 (a): *"a new way into a state the claim door
+    refuses — decide whether those members' families may file before changing this list"*;
+  - a POSITIVE CONTROL: a stub reducer with one extra edge into `pending-kyc` is caught.
+  ⚠ Limits, said plainly: payload branches the test does ⛔ know about (a future arm that branches on a new payload field) are covered
+  only if that story adds its variant; and TERMINATED is the moderation overlay (Panel-governed `-238` / 10.20 machinery, its own
+  invariants), ⛔ a lifecycle state — outside this fence.
 
 ## Panel questions — NON-BLOCKING (one note, Task 0.3; BigDev sends)
 
@@ -518,6 +546,9 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
     `DATABASE_URL=<story port>` on every push) — including `friction-budget` (a row or a 6.38 disposition, Task 4.3) and `i18n-parity`;
     every existing rtbf, member-data-rights, helpline-intake, member-intake, nominee-lock, refile, `claim/icp`,
     `nominee-refusal-inheritance` and `nominee-history-concurrency` test passes (fixtures re-seeded per DL14 / TR2, ⛔ assertion weakened).
+13. **AC13 — A new way into a refused state fails CI (DL17).** `packages/domain/tests/member/door-input-fence.test.ts` passes on the
+    reducer as it stands (the three edge sets of DL17, exactly), reads the refused states from `claim/intake-door.ts`, and its positive
+    control (an extra edge into `pending-kyc`) fails it with the `-423` message.
 
 ## Tasks / Subtasks
 
@@ -534,7 +565,7 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
         each, evidence LAST. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking: ⛔ gates the build or the merge. — ✅ 2026-10-31:
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` (Q1 (a) / (b), Q2 (a) / (b),
         Q3; suggestions C · B · A · A · B — Q1 (a) rewritten the same day from A to C once G9a was traced; E4 re-run clean). Status WRITTEN, ⛔ sent.
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL16 as answered; names PQ1–PQ3 routed and PQ1 (a) as a DECLARED
+  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number): DL1–DL17 as answered; names PQ1–PQ3 routed and PQ1 (a) as a DECLARED
         narrowing of the ruled words; cites `-423`; ⛔ supersedes a ratified entry. Committed ALONE, first.
   - [ ] 0.5 `deferred-work.md`: (i) DL4 — the release has ⛔ producer until 6-22 (trigger: 6-22's create-story) + the guilty arm 6-22
         OWES (`-238` cl. 4–5) and whether it releases the erasure lock (Q1 (b)'s words cover it) + DL7's two residual edges; (ii) DL12 (ii)
@@ -592,12 +623,14 @@ Hindi is fine"*. The call + back strings are the already-reviewed `refile.*` one
         `microcopy.yaml` `code_globs` (6.19c enrolled the refile files). ⚠ The worktree has ⛔ `.expo/types`, so `tsc` does ⛔ check the
         new `/(claim)/cannot-file` href ([[project_mobile_typed_routes_worktree]]) — check the path by hand. ⚠
         [[project_mobile_vitest_and_expo_install_traps]].
-- [ ] **Task 5 — Fences, stale text, fixtures (AC11, AC12)**
+- [ ] **Task 5 — Fences, stale text, fixtures (AC11, AC12, AC13)**
   - [ ] 5.1 The N8 live-DB tests (in-app export, off-portal export request, correction — for an `active` member with a standing report).
   - [ ] 5.2 The DL15 + N1 + TR1 source fences — ONE file, `apps/api/tests/unit/erasure-and-death-report-fence.test.ts` (modelled on
         `family-account-reach-fence.test.ts`), each with a positive control.
   - [ ] 5.3 DL13's comment re-wordings ([[project_markdown_emphasis_closes_jsdoc]] — ⛔ `**` adjacent to `/` inside a JSDoc).
   - [ ] 5.4 DL14 fixture re-seeds (TR2) — list each re-seeded file in the Completion Notes.
+  - [ ] 5.5 DL17's door-input fence (AC13): export the refused lifecycle states from `claim/intake-door.ts`; the reducer-driven test with
+        its positive control.
 - [ ] **Task 6 — Gate and records**
   - [ ] 6.1 `pnpm ci:local` on the story's own DB container (AC12 — incl. `friction-budget`, `i18n-parity`). `typecheck` + `lint` per package.
   - [ ] 6.2 Story File List, Completion Notes, Change Log; ledger line; row → `review`.
@@ -675,6 +708,7 @@ tracked by Task 0.5 (iii)).
   alternative), `apps/admin/src/modules/helpdesk/{HelpdeskDetailPage.tsx,i18n-en.ts}`; tests `apps/admin/tests/{helpline-claim-page,helpdesk-responder-console}.test.tsx`.
 - Mobile: `apps/mobile/app/(claim)/{cannot-file,relationship}.tsx`, `apps/mobile/lib/cannot-file-copy.ts`; i18n `packages/i18n/locales/{en,hi}/claim.json`;
   tests `apps/mobile/tests/unit/{cannot-file-copy-resolves,helpline-cta-presence}.test.ts`.
+- Domain test (NEW, DL17): `packages/domain/tests/member/door-input-fence.test.ts` (unit, ⛔ DB).
 - Records: `friction-budget.md` (repo root), `microcopy.yaml` (`code_globs`).
 - API client: `packages/api-client/src/index.ts` (docstring only).
 - ⛔ Migration: every table and index needed exists (`claims_deceased_member_id_idx`, `claim_nominee_findings`'s unique per claim).
@@ -711,6 +745,7 @@ tracked by Task 0.5 (iii)).
 | Date | Version | Change |
 |---|---|---|
 | 2026-10-30 | 1.0 | Story created (`bmad-create-story 6.38`) against `2026-10-30-423`; DL1–DL15 proposed, PQ1–PQ3 identified (non-blocking). |
+| 2026-10-31 | 1.6 | DL17 added (BigDev: *"yes, add DL17"*), from BigDev's question on a later change to the KYC basis: a reducer-driven fence on every way INTO a state the door refuses (`pending-kyc` ← none; `withdrawn` ← withdrawal from active / grace / lapsed; `anonymized` ← erasure), refused set read from `intake-door.ts`, positive control — AC13, Task 5.5; the Policy-meaning note that a KYC-basis change reopens PQ1 (a). Edge sets checked against the reducer at `01062c51`. |
 | 2026-10-31 | 1.5 | How identity is verified today traced (G9a): DigiLocker or a self-declared entry; ⛔ trustee verification step and ⛔ lock-in exit exist, so `pending-valid` is unreachable and ⛔ member becomes `active`. PQ1 (a) re-framed to "an identity nobody has checked" (any state; refusing needs the identity record, ⛔ a switch arm); the note's Q1 (a) rewritten, suggestion A → C; the gap recorded in `deferred-work.md`, observational. |
 | 2026-10-31 | 1.4 | Two technicals clarified (BigDev): (1) N4 / AC8 — a TERMINAL standing claim meets the existing mint guards, ⛔ "it mints": `closed` for no response ⇒ 409 re-file confirmation first; `denied` ⇒ mints; `settled` ⇒ mints and is closed in the mint. (2) G1 / DL15 — ⛔ delayed erasure exists (legality read at execution, failed attempts release the key); the fence now pins the ACT (the `member.rtbf_anonymized` emitters and the sentinel writer, incl. `apps/jobs/src`), and the header states the execution-time rule for any future deferred erasure. |
 | 2026-10-31 | 1.3 | Task 0.3 done — the routing note `trustee-panel-routing-note-2026-10-31-6-38-door-and-after-death.md` WRITTEN (⛔ sent): Q1 (a) / (b), Q2 (a) / (b), Q3. PQ2 split into (a) / (b); PQ1 (a) is `pending-valid` only (manual-fallback `pending-fee` moves to PQ1 (b); manual-fallback `lock-in` is ⛔ asked — `-423`'s "first days after joining"). The DL10 Hindi confirmed reviewed by BigDev (*"DL10 Hindi is fine"*). |

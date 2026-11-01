@@ -15,7 +15,7 @@ every finding. The v1.3 pass re-traced every G fact at `36b489c9`: the only reli
 re-check at Task 0.1.
 Re-locate by FUNCTION, never by line.
 
-STATUS: review (2026-11-01 — v1.10; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.10 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
+STATUS: review (2026-11-01 — v1.11; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.11 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
 carry FIVE real asks (QE3, QE6, QE7, QE9, QE17); BigDev answers them at Task 0.2 and the author-commit lands ALONE at
 Task 0.3 BEFORE any code** ([[feedback_governance_commits_precede_implementation]]). If an ASK is answered with a
 non-recommended option, Task 0.3 rewrites the dependent ACs / Tasks / Invariants first (the map is in Task 0.3).
@@ -31,6 +31,8 @@ Task 0.2 is DONE and QE1–QE22 are all answered.**
 records.** Round 2 reviews the committed production slice next.
 ⭐ **v1.10 (2026-11-01): the QE12 narrowing (DN1 + DN2) is recorded — author-commit `2026-11-01-434` (`e6f30675`), amending
 `-433` QE12 and ADR-0044 D3 / D4 in part.**
+⭐ **v1.11 (2026-11-01): code review round 2, chunk A — decision `2026-11-01-435` (`ac1ddad3`, DN3 + DN4), code `497c69e4`;
+DN5 / DN6 open (from the patch-diff review). Chunks B and C of round 2 are next.**
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 the G / QE prose and historical Change Log rows) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In the Names table, Policy meaning, ACs, Invariants,
@@ -64,7 +66,7 @@ Story 6.32 only" — it is NOT a standing rule; a merge-order departure needs it
   **`2026-11-01m`** (relabelled `c` → `g` in v1.2, `g` → `m` in v1.3), **`2026-11-01n`** (v1.4), **`2026-11-01o`**
   (v1.5 — the Task 0.2 answers), **`2026-11-01p`** (v1.6 — the author-commit), **`2026-11-01q`** (v1.7 — Task 0.1 re-grep +
   Task 0.4, the `-433` records), **`2026-11-01r`** (v1.8 — dev-story complete, row → review), **`2026-11-01s`** (v1.9 —
-  code review round 1 committed; `s` re-grepped free on every ref and worktree) and **`2026-11-01t`** (v1.10 — `-434`);
+  code review round 1 committed; `s` re-grepped free on every ref and worktree), **`2026-11-01t`** (v1.10 — `-434`) and **`2026-11-01u`** (v1.11 — round 2 chunk A);
   re-grep and relabel again at landing if needed.
 - Roster: highest Row 45 (14-3 and 6-39 both plan 46). This story adds NO row (QE19); it appends a dated note to Row 26
   (QE7 (A) only; QE19, Task 0.4).
@@ -1437,6 +1439,87 @@ Considered and refuted: records PR9 said RP6's "bound to the Pariwar" holds only
 
 Verified after the fixes, on the story container (`twt-12-2-pg`, port 5451): `tsc --noEmit` exits 0 and ESLint exits 0 for `@twt/admin`, `@twt/api`, `@twt/jobs` and `@twt/domain` on the changed files; the WHOLE admin suite passes (93 files, 1,653 tests); the API admin-module spec, the errors unit test, `login-wall` and `forced-pagination` pass (65); the jobs `module-activation` test passes (6); the domain marketplace unit + integration sets pass (23 files, 544); `access-wrapper:check` and its 34 tests, `marketplace-module-state:check`, the contracts `modules.test.ts` (10) and the OpenAPI determinism gate pass. Five new behaviours were mutation-checked with a harness that backs up every file first, aborts if a backup is missing and `cmp`s each restore (the retry buttons stay mounted — wizard and partner picker; focus after Remove; the refresh note's role; the single status region). After DN2 was applied: the domain marketplace unit + integration sets pass (23 files, 554 tests), the API admin-module spec and errors unit pass (54), and `tsc` exits 0 for `@twt/domain` and `@twt/api`. NOT run: the full `pnpm ci:local` gate (37 jobs) and a real-browser pass — run both before the push.
 
+### Review Findings — round 2, chunk A: the domain / DB layer (2026-11-01, `bmad-code-review 12.2`)
+
+Scope: `36b489c9..c62eb930` restricted to `packages/domain` + `packages/queue` (45 files, 3,902 diff lines) — the committed
+production slice after round 1 (code `465a2ac8`). Three layers in parallel, read-only: Blind Hunter (the diff as a scratchpad file,
+nothing else), Edge Case Hunter, Acceptance Auditor (spec + load-bearing-invariant checklist lens). Each was told round 1's findings
+and dismissals and asked to re-raise only with new evidence. 16 raw → 13 distinct: 2 decision-needed, 6 patch, 0 defer, 5 dismissed.
+Each finding below was re-checked against the tree before it was written. The Edge layer ran one `git fetch` despite its read-only
+brief (remote-tracking refs only; tree, index and branch untouched). `-434` was committed WHILE this round ran; its "Not covered"
+already names DN3.
+
+- [x] [Review][Patch] **DN3 — Partner names that look identical still register, through VISIBLE look-alikes (MED) — RESOLVED by BigDev (verbatim: "DN3 1", option 1): the server refuses non-NFC text, every space but U+0020 and a doubled space in a name; the admin client cleans pasted text first — recorded as Decision `2026-11-01-435` (`ac1ddad3`), built in `497c69e4`** — DN1 / DN2 closed the invisible characters, but `displayTextRefusal` has no rule for space separators other than U+0020 (U+00A0 no-break, U+202F, U+2007, U+2009, U+200A, U+205F, U+1680, U+3000), for runs of interior spaces, or for normalisation (NFD "Café" vs NFC "Café"), and nothing between the admin client and the INSERT normalises (the only `normalize` is `derive.ts`'s CRLF → LF). The partner unique index is `lower(display_name_en)` (0195), which folds none of these, and partner rows are insert-only. Executed by the Edge layer against the real `filters.ts`: NBSP, U+202F, NFD "Café", a double space and the NFC / NFD pair are all accepted; full-width "ＬＩＣ" and a Cyrillic "LІС" also pass (Blind, executed). A name pasted from a PDF or Word usually carries a no-break space, so this happens by accident. Panel gate (§0) FAILS — a validation rule; BigDev's call, NOT routed. A change is a NEW decision entry superseding `-434`'s "Not covered" line. [packages/domain/src/marketplace/filters.ts `displayTextRefusal`; packages/domain/migrations/0195_marketplace-partners-and-publications.sql (the `lower(display_name_en)` unique index)] (blind+edge+auditor)
+- [x] [Review][Patch] **DN4 — DN1's joiner ban refuses ZWJ emoji in English MODULE text, where DN1's reason does not apply (LOW) — RESOLVED by BigDev (verbatim: "DN4 1", option 1): a ZWJ between two emoji is allowed in the English module texts, the partner name stays strict, the message is readable — `-435`, built in `497c69e4`** — U+200D is refused in all three `*_en` schemas, so an English description such as "Cover for the whole family 👨‍👩‍👧" (also 👩‍⚕️, 🏳️‍🌈) answers 422 with "must not contain a zero-width joiner or non-joiner" — a character the admin never typed — while the same text is accepted in `*_hi`; the England / Scotland / Wales flags (U+1F3F4 + tag characters) are refused in every schema. DN1's reason is the partner-name unique index; module names and descriptions have no unique index. DN1's recorded cost ("an English name that needs a joiner is refused (none expected)") did not consider emoji; `-434` Consequence 1 does. Executed by the Edge layer. BigDev's call (it reshapes DN1); NOT routed. [packages/domain/src/marketplace/filters.ts `displayTextRefusal` (the `allowJoiners: false` branch)] (edge)
+- [x] [Review][Patch] **RP36 — The R3D1 closure line in `deferred-work.md` still describes the pre-review rule set (LOW — checklist family 10)** — the R3D1 item ("Free-text manifest fields accept invisible, control and bidi characters other than NUL") reads "Closed by `89add5ee` (12.2's leg — QE12 … ZWJ / ZWNJ allowed …)"; the shipped rule is `465a2ac8`'s, recorded by `-434`. Fix: a dated line under it citing `465a2ac8` and `-434` (the `89add5ee` closure stays true for its date) [_bmad-output/implementation-artifacts/deferred-work.md (the R3D1 item)] (auditor)
+- [x] [Review][Patch] **RP37 — Four new reads' explicit `pariwar_id` predicates are never tested with RLS bypassed; one test title promises a check it does not make (LOW — checklist family 3)** — `getPartner` ("… (RLS + the explicit predicate)" asserts only under scope `p`, where RLS already hides the row), `listPartnersForPariwar` ("… and only this Pariwar" — RLS alone), `findListedWorkplaceDistricts` ("own-Pariwar spellings" seeds no other Pariwar's district) and `pageModulesForPariwar` (reads only its own fresh Pariwar). Deleting any of the four `eq(…pariwarId, pariwarId)` leaves the suite green; it would bite under the RLS-bypassing jobs login or a future service-pool caller. Precedent: 12.1's RP10(e) leg in `read.spec.ts`. Fix: a superuser-pool (RLS-bypassed) leg for each that seeds a second Pariwar's row and asserts it is not returned; mutation-check each by deleting the predicate [packages/domain/tests/integration/marketplace/partners.spec.ts; scope-check.spec.ts; read-cursor.spec.ts] (blind+auditor)
+- [x] [Review][Patch] **RP38 — AC1's columns / NOT NULLs / DEFAULTs on the two new tables are never checked against the catalog (LOW — checklist family 5)** — the two new policy-regression specs check grants, ENABLE / FORCE, policies, the composite FKs and the indexes, not the column list, `attnotnull` or `DEFAULT now()`; the migration is hand-written and the drizzle snapshot has been frozen since 0020, so a later edit dropping e.g. `reviewed_by_actor_id`'s or `audit_id`'s NOT NULL passes every test. Today the DDL and the drizzle declarations agree. Fix: the house `information_schema.columns` assertion (as `member-nominee-links-policy-regression.spec.ts`) for `marketplace_partners` and `marketplace_module_publications` [packages/domain/tests/integration/marketplace-partners-policy-regression.spec.ts; marketplace-module-publications-policy-regression.spec.ts] (auditor)
+- [x] [Review][Patch] **RP39 — The activation scan's cross-Pariwar reach is never tested across Pariwars (LOW)** — every module in `activation-select.spec.ts` is in one Pariwar, so a scope or tenant filter added to the scan would fail nothing; the scan's whole point (QE7 (A)) is that it is unscoped. Fix: seed a due module in a second Pariwar and assert both are selected. (The Blind layer's second half — 500+ foreign `scheduled` rows on a shared DB, a live jobs worker — is dismissed: CI and the story containers are fresh and run no worker.) [packages/domain/tests/integration/marketplace/activation-select.spec.ts] (blind)
+- [x] [Review][Patch] **RP40 — The QE22 gate misses the generic and spaced call forms (LOW)** — `callsAuditWrapper` matches the substring `withCompensatingAudit(`, so `audit.withCompensatingAudit<R>(pool, o)` (an ordinary TypeScript call) and `withCompensatingAudit (pool, o)` pass; executed by the Blind layer. Round 1 dismissed "the gate is evadable" on the alias / subdirectory shapes; the generic form is new and is not evasion, just idiom. Fix: match `/\bwithCompensatingAudit\s*(<[^>]*>)?\s*\(/` and add both as teeth vectors (alias and subdirectory stay out of scope, as round 1 recorded) [packages/domain/tests/marketplace/no-audit-wrapper-in-domain.test.ts `callsAuditWrapper`] (blind)
+- [x] [Review][Patch] **RP41 — The publications schema header calls its data "mutable" above its own INSERT-ONLY section (LOW)** — "so mutable presentation / review data lives beside it" means "data written after authoring, which the immutable module row cannot hold"; read literally it invites an UPDATE grant. Fix: reword [packages/domain/src/schema/marketplace_module_publications.ts (the "Why its own table" paragraph)] (blind)
+
+Dismissed as noise (5), each checked against the tree: same-named districts in different states (`geo-tree/document.ts` rejects a duplicate `(dimension, value)` across the WHOLE document — round 1's dismissal stands; a Pariwar cannot hold two "Aurangabad" districts); the `byValue` comparator returning 1 for equal pairs (its tie branch is unreachable for the same reason); the sweep starving behind 500 stuck rows (that is RD1, already deferred with this exact scenario); the cursor's `DateStyle` dependency (round 1's dismissal stands — documented, every Postgres default is ISO); the tone hash omitting the branding bundle (`ModuleBrandingBundleSchema` holds a logo object key and an accent colour, no text a member reads; the logo upload is carried to 12.3).
+
+Checklist lens (Edge + Auditor): families 1, 2, 4, 6, 7, 8, 9, 11, 12 covered by test or by construction (named in the layer reports); family 3 REAL GAP → RP37; family 5 REAL GAP → RP38 (and DN3 is the application half of the partner-name index); family 10 REAL GAP → RP36; family 13 not touched.
+
+#### Round 2 chunk A patches applied (2026-11-01 — BigDev: *"DN3 1, DN4 1"*, then *"apply all patches"*)
+
+Decision `2026-11-01-435` (DN3 + DN4) was committed ALONE first (`ac1ddad3`); the code is `497c69e4` (it also carries the
+patch-diff review's fixes, below). How each was done and proven:
+
+- **DN3 — server (`filters.ts` `displayTextRefusal`).** Every display schema refuses a value that is not NFC (refused, not
+  rewritten) and every `\p{Zs}` but U+0020; the four NAME schemas refuse two spaces in a row on the RAW value (edges included —
+  `-435` item 1(c) and QE12's "rules on the raw string"; the first build checked the trimmed value and the patch-diff review
+  caught that as an unrecorded reading, PQ1). Five existing tests that passed names with two edge spaces now use one.
+- **DN3 — client (`derive.ts` `normaliseDisplayText`).** CRLF → LF, every other space separator → U+0020, NFC, and in a name a
+  run of spaces → one; used by `toAuthorRequest` (all four texts) and the partner picker. Step (a) judges length on the SENT
+  text (PQ3).
+- **DN4 (`zwjJoinsTwoEmoji`).** A ZWJ is allowed in the English module name / description only when the code point before it
+  (past U+FE0F and `\p{Emoji_Modifier}`) and after it are `\p{Extended_Pictographic}`; partner English stays strict; U+200C
+  stays refused; the message reads "an invisible joining character". The partner picker now shows that reason (PQ2).
+- **RP36** — the R3D1 line in `deferred-work.md`, citing `465a2ac8`, `-434`, `-435` and `497c69e4`.
+- **RP37** — four RLS-bypassed legs (`RESET ROLE` in the test transaction, an assertion that the role bypasses RLS, a second
+  Pariwar seeded, a positive control): `partners.spec.ts` (getPartner + listPartnersForPariwar; the old title corrected),
+  `scope-check.spec.ts` (findListedWorkplaceDistricts), `read.spec.ts` (pageModulesForPariwar — placed there, not in
+  `read-cursor.spec.ts`, beside 12.1's RP10(e) leg).
+- **RP38** — the full column list, types, NOT NULL and `now()` defaults of both tables, from `information_schema.columns`.
+- **RP39** — P and Q each hold a module scheduled a DAY ahead; one scan at T0+1d must return both, each with its Pariwar.
+- **RP40** — `/\bwithCompensatingAudit\b\s*(?:\(|<|\?\.|\.(?:call|apply)\b)/` (any call shape — PQ5 widened RP40's own
+  regex), teeth for nested generics, an arrow type argument, `?.(`, `.call`, and three non-calls.
+- **RP41** — the publications header reworded.
+
+RED / mutation evidence (each source file backed up, compared with `cmp` after restore):
+- 13 of the new `filters.test.ts` cases failed against the committed `filters.ts` of `ac1ddad3`, and pass now.
+- Each of these was caught by its test: dropping the FE0F / skin-tone skip, dropping the after-ZWJ check, the doubled-space
+  rule on raw edges (first build), the client cleaning reverted to CRLF-only, length judged on the raw text, the partner
+  picker ignoring the issue, deleting each of the four `pariwar_id` predicates (RP37 — one test each), a one-Pariwar-per-tick
+  scan (RP39 — the only failing test), and the old substring gate (RP40).
+- RP38 was NOT mutation-checked (it would need a DDL change on the shared container); it is an exact `toEqual` on the catalog.
+
+Verified on `twt-12-2-pg` (:5451), at `497c69e4`: `tsc --noEmit` exits 0 for `@twt/domain`, `@twt/admin`, `@twt/api`,
+`@twt/jobs`; ESLint exits 0 on every changed file; the domain marketplace unit + integration sets pass (26 files, 609); the
+WHOLE admin suite passes (93 files, 1,658); the API admin-module spec + errors unit pass (54); the jobs `module-activation`
+test passes (6). NOT run: the full `pnpm ci:local` gate (37 jobs) and a real-browser pass.
+
+#### Round 2 chunk A — patch-diff review (before the commit; three fresh-context layers, read-only)
+
+28 raw → 16 distinct: 9 patched (PQ1–PQ9, in `497c69e4`), 2 decision-needed (DN5, DN6), 1 deferred (RD7), 4 dismissed.
+
+- [x] [Review][Patch] **PQ1 — The doubled-space rule checked the TRIMMED value; `-435` item 1(c) and QE12 say raw (MED — auditor)** — fixed by checking `raw` (above); recorded here rather than as a reading of `-435`.
+- [x] [Review][Patch] **PQ2 — The partner picker showed fixed copy ("each needs letters…") for every name refusal, so `-435` item 4's message never reached the admin (MED — auditor+edge)** — `partnerIssueMessage` shows the server's reason with the field's label; the fixed copy is the fallback [apps/admin/src/modules/marketplace/derive.ts; PartnerPicker.tsx]
+- [x] [Review][Patch] **PQ3 — Step (a) judged length on the raw text; NFC lengthens a precomposed nukta letter and collapsing shortens a name (LOW — blind+edge+auditor)** — `sentLength` measures the normalised text [derive.ts `validateStep`]
+- [x] [Review][Patch] **PQ4 — `normaliseDisplayText`'s comment claimed "pasted text just works" and "changes nothing a reader can see" (LOW — blind+edge)** — narrowed: it cleans exactly the DN3 look-alikes; a tab, soft hyphen, zero-width space or U+2028 is still sent and refused with the server's reason (DN5 asks whether to clean those too)
+- [x] [Review][Patch] **PQ5 — RP40's regex missed nested generics, an arrow type argument, `?.(` and `.call` (LOW — blind+edge+auditor)** — any call shape (above)
+- [x] [Review][Patch] **PQ6 — RP39's module tied with `opensSoon` and became due on the real clock, where the jobs suite's live tick shares the database (LOW — blind+edge; the stale "two modules are due" comment — auditor)** — the pair moved a day ahead; the variable `otherPariwar` (a module id) renamed
+- [x] [Review][Patch] **PQ7 — `toAuthorRequest`'s description wiring was untested (LOW — auditor)** — a test sends NBSP / NFD / precomposed nukta descriptions and checks doubled spaces are kept
+- [x] [Review][Patch] **PQ8 — 9 of the 16 refused space separators were tested (LOW — auditor)** — all 16, plus a guard that the list equals every `Zs` but U+0020
+- [x] [Review][Patch] **PQ9 — The NFC refusal said "retype or paste it again", which reproduces the same text (LOW — blind)** — it now says the admin console converts text and another caller must normalise first
+- [ ] [Review][Decision] **DN5 — Should the admin client also clean the OTHER paste artefacts the server refuses? (LOW — blind+edge)** — a tab (copying two spreadsheet cells into an `<input>` keeps it), U+00AD soft hyphen and U+2028 (Word / PDF pastes), U+200B, U+FEFF, U+0085 are sent unchanged and refused (now with the server's reason, PQ2). `-435` item 2 cleans exactly the DN3 set, so cleaning more departs from it. Options: (1, recommended) clean them too — tab → space, U+2028 / U+2029 / U+0085 → LF in a description and a space in a name, drop U+00AD / U+200B / U+FEFF / U+2060 — as a new entry superseding `-435` item 2; cost: the client removes characters the admin pasted (all invisible). (2) leave it; cost: an admin meets a 422 for a character they cannot see, now with a reason that names it. Not routed (§0: a validation rule).
+- [ ] [Review][Decision] **DN6 — The emoji allowances are broader than "emoji" (LOW — blind+edge)** — (a) `\p{Extended_Pictographic}` includes ©, ®, ™, ‼ and unassigned code points, so "©" + ZWJ + "™" passes an English module text (executed); (b) U+FE0F is allowed anywhere, so "LIC" + U+FE0F stays a second "LIC" partner (`-434`'s recorded residual) and "LIC" + space + U+FE0F + space + "Housing" looks like a doubled space yet passes. Options: (1, recommended) allow U+FE0F only right after a pictographic character or a keycap base (0–9, #, *), in every schema; keep the ZWJ rule as `-435` has it and record (a) as a residual (module texts carry no unique index); cost: a stray U+FE0F after a letter is refused. (2) also require each ZWJ to sit inside a recognised emoji (`Intl.Segmenter` + `\p{RGI_Emoji}`); cost: an emoji newer than the server's Unicode data is refused until Node updates. (3) record both as residuals; cost: the partner-name look-alike stays. Not routed (§0). A change is a new entry superseding `-434` / `-435` in part.
+- [x] [Review][Defer] **RD7 — The display-text rules have no database backstop (LOW — auditor, family 5)** — deferred, recorded in `deferred-work.md` (owner none yet; re-trigger: a partner writer that skips `parsePartnerDisplayNames`, or the go-live review).
+
+Dismissed (4): U+2800 passing the doubled-space rule (it is refused outright — `DISPLAY_REFUSED_FORMAT_CHARS`; the blind layer could not see that set); the tone hash built from raw text (`moduleToneContentHash` runs on the server over the STORED module, `handlers.ts` publish); other assertions on the old joiner message (none outside build output); a U+FE0E text-presentation heart in a ZWJ sequence and the tag-character flags being refused (not recommended emoji sequences; the flags are `-435`'s recorded residual).
+
 ## Dev Notes
 
 ### Current state (what this story changes, what must be preserved)
@@ -1756,6 +1839,7 @@ Modified:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.11 | Code review round 2, chunk A (`bmad-code-review 12.2`): 16 raw → 13 distinct — DN3 + DN4 (BigDev: *"DN3 1, DN4 1"* — Decision `2026-11-01-435`, committed ALONE as `ac1ddad3`), RP36–RP41, 5 dismissed; *"apply all patches"* → code `497c69e4` after a patch-diff review (28 raw → 16: PQ1–PQ9 fixed, DN5 / DN6 open, RD7 deferred, 4 dismissed). ADR-0044 gets a third dated line (`-435`). `deferred-work.md`: the R3D1 line (RP36), RD7. Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01u`. Not pushed. |
 | 2026-11-01 | v1.10 | BigDev: *"Write the QE12 narrowing into -433 and ADR-0044"* — author-commit `2026-11-01-434` committed ALONE as `e6f30675` (after the code it records, `465a2ac8`): DN1 + DN2 + RP1's display-text rules; amends `-433` QE12 (not edited in place) and ADR-0044 D3 / D4 in part (dated line + Changelog row); RPD1 not triggered. QE12's two dated pointers, the chunk A "Open after this round" line and the Completion Note now cite `-434`. Its "Not covered" names round 2's visible look-alike finding (under triage). Row stays `review`; ledger `2026-11-01t`. Not pushed. |
 | 2026-11-01 | v1.9 | Code review round 1 COMMITTED (`bmad-code-review 12.2`; BigDev: *"1"* — commit round 1, then round 2): code `465a2ac8` (DN1, DN2, RP1–RP35 with RP7 reverted by PP1, PP1–PP4; 30 files, two new admin test files). Records: the three chunk sections and the patch-diff review (DN1–DN2 resolved by BigDev, RP1–RP35, PP1–PP5, deferrals RD1–RD6), QE12's dated WIDENED / NARROWED pointers, `deferred-work.md`, `epics.md` (RD4 / RD5 under 12.6 / 12.3), roster Row 26 (`0195`). The QE12 narrowing is still in NO governance document (`-433`, ADR-0044 say "allowed"). Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01s`. Not pushed. |
 | 2026-11-01 | v1.8 | `bmad-dev-story` COMPLETE: Tasks 1–10 done; code commit `89add5ee` (migration `0195`, `module.manage` v57, domain, contracts + OpenAPI, eight API routes, the 5-minute activation sweep, the access-wrapper roots, the admin wizard / detail / list); `ci:local` 37/37 on a fresh container (run 2; run 1 red only on the known medical-disclose `ckd` collision). `deferred-work.md`: 13 "being built" legs → "Closed by `89add5ee`"; one new "Not addressed" item (the gate's namespace-shape limit). Status → review; row → `review`; ledger `2026-11-01r`. Not pushed. |

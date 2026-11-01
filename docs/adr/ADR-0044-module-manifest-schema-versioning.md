@@ -72,6 +72,10 @@ the grammars growing additively inside `version: 1` and every breaking change ta
    code point is refused (except the presentation selectors U+FE0E / U+FE0F), as are U+2028 / U+2029, the Braille blank
    U+2800 and the four Hangul fillers. These are write-only schemas the genesis payload does not re-parse, and 12.2 has not
    shipped, so RPD1's re-trigger is NOT met. The line above stays a true record of the rules from `-433` to `-434`.
+   ⭐ *Amended in part 2026-11-01 by `2026-11-01-435` (Story 12.2 code review round 2, DN3 + DN4, superseding `-434` in
+   part):* the display rules ALSO refuse a value that is not NFC, every space separator but U+0020, and (in a name) two spaces
+   in a row; a ZWJ joining two emoji is allowed in the English MODULE texts (the English partner name stays strict). Still
+   write-only, still before anything was stored — RPD1's re-trigger is NOT met. The two lines above stay true for their periods.
 5. **Where the rules live.** The DB enforces only six named CHECKs (the window, positive capacity, the capacity/places
    pair and range, the archive-reason pair, the v1 pin). Every other content rule is validated once, at write, by
    `marketplace.parseModuleManifest`, and the genesis payload schema reuses the same field schemas.
@@ -149,3 +153,4 @@ the grammars growing additively inside `version: 1` and every breaking change ta
 | 2026-10-31 | (initial draft) | BigDev (Solo Builder) | Authored under Story 12.1 (author-commit `2026-10-31-427` / `-429`); the reserved slot `ADR-NNNN-module-manifest-schema-versioning` flipped `slot-reserved-pre-write` → `drafted` |
 | 2026-11-01 | (⛔ flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-433` (Story 12.2 QE20, A4): dated lines at D2, D3 / D4, D5 (both sentences), Alternatives (revise event; role / cohort) and Consequences (`commission_terms`) |
 | 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-434` (Story 12.2 code review DN1 + DN2, A2): a second dated line at D3 / D4 — QE12's display rules tightened (ZWJ / ZWNJ `*_hi` only; every other invisible code point refused except U+FE0E / U+FE0F) |
+| 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-435` (Story 12.2 code review DN3 + DN4): a third dated line at D3 / D4 — NFC, U+0020 the only space, no doubled space in a name; ZWJ between two emoji in the English module texts |

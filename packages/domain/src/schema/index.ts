@@ -506,3 +506,7 @@ export * from './questionnaire_versions.js';
 // cache, guarded by the whole-row DB trigger (migration 0193) + the marketplace-module-state-invariant CI
 // gate; marketplace_module_state + marketplace_module_archive_reason pgEnums).
 export * from './marketplace_modules.js';
+// Story 12.2 (0195) — the per-Pariwar partner registry + the one-row-per-module publication record (both insert-only,
+// tenant-isolated; composite FKs on `pariwar_id`).
+export * from './marketplace_partners.js';
+export * from './marketplace_module_publications.js';

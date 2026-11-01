@@ -19,6 +19,7 @@ import { questionnaireVersionsEn } from '../modules/questionnaire-versions/i18n-
 import { resolveEn as memorialReviewEn } from '../modules/memorial-review/i18n-en.js';
 import { resolveEn as memorialTakedownEn } from '../modules/memorial-takedown/i18n-en.js';
 import { workplaceRequestsEn, workplacesEn } from '../modules/workplaces/i18n-en.js';
+import { resolveEn as modulesEn } from '../modules/marketplace/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -128,6 +129,13 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/questionnaires" params={{ pariwarId }} className="text-sm underline" data-testid="nav-questionnaires">
               {questionnaireVersionsEn.nav}
+            </Link>
+          )}
+          {/* Story 12.2 — UNGATED inside a Pariwar context: `module.manage` is a Pariwar grant (⛔ in `nationalGrants`); the
+              server's 403 is the boundary. */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/modules" params={{ pariwarId }} className="text-sm underline" data-testid="nav-modules">
+              {modulesEn('module.list.title')}
             </Link>
           )}
           {pariwarId && canManageWarningReasons && (

@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppRoleNoScope, enterAppScope } from '../_helpers.js';
-import { RAW_INSERT_SQL, expectSqlRejected, rawInsertParams } from '../marketplace/_fixtures.js';
+import { RAW_INSERT_SQL, expectSqlRejected, rawInsertParams, seedPartner } from '../marketplace/_fixtures.js';
 
 const GUARD_ON = "SET LOCAL app.marketplace_module_state_writer = 'on'";
 
@@ -25,10 +25,10 @@ describe.skipIf(!hasDatabase)('marketplace_modules RLS policy regression', () =>
     const b = randomUUID();
     await enterAppScope(client, PARIWAR_B);
     await client.query(GUARD_ON);
-    await client.query(RAW_INSERT_SQL, rawInsertParams(b, PARIWAR_B));
+    await client.query(RAW_INSERT_SQL, rawInsertParams(b, PARIWAR_B, { partnerId: await seedPartner(client, PARIWAR_B) }));
     await enterAppScope(client, PARIWAR_A);
     await client.query(GUARD_ON);
-    await client.query(RAW_INSERT_SQL, rawInsertParams(a, PARIWAR_A));
+    await client.query(RAW_INSERT_SQL, rawInsertParams(a, PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A) }));
     return [a, b];
   }
 
@@ -55,7 +55,7 @@ describe.skipIf(!hasDatabase)('marketplace_modules RLS policy regression', () =>
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     await client.query(GUARD_ON);
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_B), '42501');
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_B, { partnerId: await seedPartner(client, PARIWAR_B) }), '42501');
   });
 
   it('negative: an UPDATE cannot reach another tenant’s row (0 rows), even guarded', async () => {
@@ -79,7 +79,7 @@ describe.skipIf(!hasDatabase)('marketplace_modules RLS policy regression', () =>
     const r = await client.query('SELECT 1 FROM marketplace_modules');
     expect(r.rows).toHaveLength(0);
     await client.query(GUARD_ON);
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A), '42501');
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A) }), '42501');
   });
 
   it('DELETE is denied to twt_app (42501 — ⛔ grant, ⛔ policy)', async () => {

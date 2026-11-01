@@ -40,6 +40,7 @@ import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
 import { BannersRoute } from './routes/BannersRoute.js';
+import { ModuleDetailRoute, ModuleNewRoute, ModulesRoute, validateModuleNewSearch } from './routes/ModulesRoute.js';
 import { SurveysRoute } from './routes/SurveysRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
 import { CustomFieldsRoute } from './routes/CustomFieldsRoute.js';
@@ -195,6 +196,28 @@ const bannersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/banners',
   component: BannersRoute,
+});
+
+// Story 12.2 — the tenant-scoped partner-offer (module) console: the list, the authoring wizard (`?from=` pre-fills a
+// corrected copy) and one module (publish by a non-author with step-up; withdraw). The static `new` segment outranks the
+// `$moduleId` param.
+const modulesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/modules',
+  component: ModulesRoute,
+});
+
+const moduleNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/modules/new',
+  validateSearch: validateModuleNewSearch,
+  component: ModuleNewRoute,
+});
+
+const moduleDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/modules/$moduleId',
+  component: ModuleDetailRoute,
 });
 
 // Story 10.15 — the tenant-scoped survey/poll console (list + authoring editor + the aggregate
@@ -437,6 +460,9 @@ const routeTree = rootRoute.addChildren([
   helpdeskTicketRoute,
   newsRoute,
   bannersRoute,
+  modulesRoute,
+  moduleNewRoute,
+  moduleDetailRoute,
   surveysRoute,
   reportsRoute,
   featureFlagsRoute,

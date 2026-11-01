@@ -23,7 +23,7 @@ import {
 import { ModuleOutsideWindowError } from '../../../src/marketplace/errors.js';
 import { DATABASE_URL, hasDatabase } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A } from '../_helpers.js';
-import { HOUR_MS, expectRowMatchesStream, manifestInput, newLeadId, newMemberId, newModuleId, streamTypes, txNow } from './_fixtures.js';
+import { HOUR_MS, expectRowMatchesStream, manifestInput, newLeadId, seedPartner, newMemberId, newModuleId, streamTypes, txNow } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const OPERATOR = randomUUID();
@@ -33,9 +33,18 @@ describe.skipIf(!hasDatabase)('marketplace commands — across the clock (own-co
   let pool: pg.Pool;
   const created: ModuleId[] = [];
 
-  beforeAll(() => {
+  // Story 12.2 — the module FK needs a COMMITTED same-Pariwar partner; deleted in cleanup AFTER the modules.
+  let partnerA: string;
+
+  beforeAll(async () => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 2, ssl: false });
     pool.on('error', (err) => console.error('[commands-clock pool]', err.message));
+    const c = await pool.connect();
+    try {
+      partnerA = await seedPartner(c, PARIWAR_A);
+    } finally {
+      c.release();
+    }
   });
 
   afterAll(async () => {
@@ -46,6 +55,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — across the clock (own-co
       await admin.query("SET LOCAL session_replication_role = 'replica'");
       await admin.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1)', [created]);
       await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [created]);
+      await admin.query('DELETE FROM marketplace_partners WHERE partner_id = $1', [partnerA]);
       await admin.query('COMMIT');
     } catch (e) {
       await admin.query('ROLLBACK').catch(() => undefined);
@@ -89,6 +99,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — across the clock (own-co
       await authorModule(client, {
         ...base(opening),
         manifest: manifestInput(now, {
+          partner_id: partnerA,
           valid_from: new Date(now.getTime() + EDGE_MS).toISOString(),
           valid_until: new Date(now.getTime() + HOUR_MS).toISOString(),
         }),
@@ -96,7 +107,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — across the clock (own-co
       await scheduleModule(client, base(opening));
       await authorModule(client, {
         ...base(closing),
-        manifest: manifestInput(now, { valid_until: new Date(now.getTime() + EDGE_MS).toISOString() }),
+        manifest: manifestInput(now, { partner_id: partnerA, valid_until: new Date(now.getTime() + EDGE_MS).toISOString() }),
       });
       await activateModule(client, base(closing));
       await submitModuleLead(client, {
@@ -165,7 +176,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — across the clock (own-co
       const now = await txNow(client);
       await authorModule(client, {
         ...base(late),
-        manifest: manifestInput(now, { valid_until: new Date(now.getTime() + EDGE_MS).toISOString() }),
+        manifest: manifestInput(now, { partner_id: partnerA, valid_until: new Date(now.getTime() + EDGE_MS).toISOString() }),
       });
     });
     await new Promise((r) => setTimeout(r, EDGE_MS + 500));

@@ -279,3 +279,7 @@ export * from './custom-fields/index.js';
 // a staff question with words in English and Hindi), the tenant steps (propose / approve / return / withdraw) and the Super
 // Admin's (make live for one Pariwar or all, direct, revert); every write answers the validator's warnings.
 export * from './questionnaire-versions/index.js';
+// Story 12.2 (`2026-11-01-433`) — the admin MODULE surface: author a partner offer as a draft, register partners, the
+// audience options (geo tree / listed workplace districts), the cursor list + detail, publish (a non-author, step-up
+// `module_publish`) and withdraw. Tuples drift-guarded against @twt/domain by tests/modules.test.ts. ⛔ Member shape.
+export * from './modules/index.js';

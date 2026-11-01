@@ -16,7 +16,17 @@ export * from './filters.js';
 export * from './state.js';
 // The five commands (the only public writers) + the read-only lead pre-check.
 export * from './commands.js';
-// The read accessors (getModule / listModulesForPariwar / getModuleStateAt).
+// The read accessors (getModule / listModulesForPariwar / getModuleStateAt; Story 12.2: pageModulesForPariwar + the
+// strict cursor, getModuleAuthorActorId, countModuleLeads).
 export * from './read.js';
 // The typed domain errors.
 export * from './errors.js';
+// ── Story 12.2 (`2026-11-01-433`) — the first production caller's additions ──
+// The per-Pariwar partner registry (QE3 (A)).
+export * from './partners.js';
+// The publish record + the tone content hash + the audit locators (QE4).
+export * from './publication.js';
+// The audience options + the author-time C11 check (QE5).
+export * from './scope-options.js';
+// The activation sweep's SCAN + CLASSIFIER only — ⛔ an audit wrapper in the domain (QE7 (A), I11).
+export * from './activation-sweep.js';

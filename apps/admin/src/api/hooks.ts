@@ -2817,3 +2817,84 @@ export function useQuestionnaireChainAct() {
     onSuccess: () => qc.invalidateQueries({ queryKey: questionnaireVersionsRoot }),
   });
 }
+
+// ── Story 12.2 (`2026-11-01-433`) — the admin MODULE surface ─────────────────────────────────────────────────────────────
+// Per-feature keys under `['modules', pariwarId]`; every write invalidates the Pariwar's module reads. Writes are driven with
+// `mutateAsync` by the pages (TR5 — per-call `mutate` callbacks fire for the latest call only).
+
+const modulesRoot = (pariwarId: string) => ['modules', pariwarId] as const;
+export const modulesListKey = (pariwarId: string, state: import('@twt/contracts').ModuleState | null) =>
+  [...modulesRoot(pariwarId), 'list', state ?? 'all'] as const;
+export const moduleDetailKey = (pariwarId: string, moduleId: string) => [...modulesRoot(pariwarId), 'detail', moduleId] as const;
+
+/** The list, a cursor page at a time ("Load more" while `next_cursor` is non-null). */
+export function useModules(pariwarId: string, state: import('@twt/contracts').ModuleState | null) {
+  return useInfiniteQuery({
+    queryKey: modulesListKey(pariwarId, state),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.listModules(pariwarId, {
+        ...(state !== null ? { state } : {}),
+        ...(pageParam !== undefined ? { cursor: pageParam } : {}),
+      }),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    retry: false,
+  });
+}
+
+export function useModuleDetail(pariwarId: string, moduleId: string | null) {
+  return useQuery({
+    queryKey: moduleDetailKey(pariwarId, moduleId ?? ''),
+    queryFn: () => api.getModuleDetail(pariwarId, moduleId!),
+    enabled: moduleId !== null,
+    retry: false,
+  });
+}
+
+export function useModuleScopeOptions(pariwarId: string) {
+  return useQuery({ queryKey: [...modulesRoot(pariwarId), 'scope-options'] as const, queryFn: () => api.getModuleScopeOptions(pariwarId), retry: false });
+}
+
+export function useModulePartners(pariwarId: string) {
+  return useQuery({ queryKey: [...modulesRoot(pariwarId), 'partners'] as const, queryFn: () => api.listModulePartners(pariwarId), retry: false });
+}
+
+export function useCreateModulePartner(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { body: import('@twt/contracts').CreateModulePartnerRequest; idempotencyKey: string }) =>
+      api.createModulePartner(pariwarId, input.body, input.idempotencyKey),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...modulesRoot(pariwarId), 'partners'] }),
+  });
+}
+
+export function useAuthorModule(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { body: import('@twt/contracts').AuthorModuleRequest; idempotencyKey: string }) =>
+      api.authorModule(pariwarId, input.body, input.idempotencyKey),
+    onSuccess: () => qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) }),
+  });
+}
+
+export function usePublishModule(pariwarId: string, moduleId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { idempotencyKey: string }) =>
+      api.publishModule(
+        pariwarId,
+        moduleId,
+        { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true },
+        input.idempotencyKey,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) }),
+  });
+}
+
+export function useWithdrawModule(pariwarId: string, moduleId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { idempotencyKey: string }) => api.withdrawModule(pariwarId, moduleId, input.idempotencyKey),
+    onSuccess: () => qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) }),
+  });
+}

@@ -995,3 +995,28 @@ describe('Story 6.33 — the questionnaire chain keys (`2026-10-30-421` QE6 (A);
   });
 });
 
+
+describe('Story 12.2 — `module.manage` (`2026-11-01-433` QE2)', () => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const holders = (key: string) =>
+    defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+
+  it('held by `pariwar_admin` + derived super_admin ONLY — ⛔ district_admin / state_trustee / trustee_panel', () => {
+    expect(holders('module.manage')).toEqual(['pariwar_admin', 'super_admin']);
+    for (const role of ['district_admin', 'state_trustee', 'trustee_panel'] as const) {
+      expect((bundleForRole(role)!.permissions as readonly string[]).includes('module.manage')).toBe(false);
+    }
+  });
+
+  it('LIVE for pariwar_admin on the pariwar dimension; ⛔ another Pariwar; a narrower grant is INERT', () => {
+    const resource = { pariwarId: P, dimension: 'pariwar', value: P } as const;
+    const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+    const other = { ...pa, pariwarId: '22222222-2222-2222-2222-222222222222', scopeValue: '22222222-2222-2222-2222-222222222222' };
+    expect(hasPermission([pa], 'module.manage', resource)).toBe(true);
+    expect(hasPermission([other], 'module.manage', resource)).toBe(false);
+    expect(hasPermission([{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }], 'module.manage', resource)).toBe(false);
+  });
+});

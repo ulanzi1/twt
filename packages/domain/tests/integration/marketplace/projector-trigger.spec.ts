@@ -14,7 +14,7 @@ import {
 } from '../../../src/schema/marketplace_modules.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
-import { RAW_INSERT_SQL, expectSqlRejected, rawInsertParams, rawInsertSqlWith } from './_fixtures.js';
+import { RAW_INSERT_SQL, expectSqlRejected, rawInsertParams, seedPartner, rawInsertSqlWith } from './_fixtures.js';
 import {
   MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX,
   ModuleStateDirectWriteError,
@@ -79,7 +79,8 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
     expect(await labels('marketplace_module_archive_reason')).toEqual([...MARKETPLACE_MODULE_ARCHIVE_REASONS]);
   });
 
-  it('carries exactly the six named CHECKs, the PK and the two indexes, and ⛔ foreign key', async () => {
+  // Story 12.2 (QE3 / QE4 / QE7 (A)) added ONE unique, ONE composite FK and ONE partial index — ⛔ a CHECK.
+  it('carries exactly the six named CHECKs, the PK, the 12.2 unique + partner FK, and the five indexes', async () => {
     const { client } = getTx();
     const cons = await client.query<{ conname: string; contype: string }>(
       `SELECT conname, contype FROM pg_constraint WHERE conrelid = 'marketplace_modules'::regclass ORDER BY conname`,
@@ -92,15 +93,32 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
       'marketplace_modules_slots_range',
       'marketplace_modules_window',
     ]);
-    expect(cons.rows.filter((c) => c.contype === 'f')).toEqual([]);
-    const idx = await client.query<{ indexname: string }>(
-      `SELECT indexname FROM pg_indexes WHERE tablename = 'marketplace_modules' ORDER BY indexname`,
+    expect(cons.rows.filter((c) => c.contype === 'p').map((c) => c.conname)).toEqual(['marketplace_modules_pkey']);
+    expect(cons.rows.filter((c) => c.contype === 'u').map((c) => c.conname)).toEqual([
+      'marketplace_modules_pariwar_module_unique',
+    ]);
+    expect(cons.rows.filter((c) => c.contype === 'f').map((c) => c.conname)).toEqual(['marketplace_modules_partner_fk']);
+    expect(cons.rows).toHaveLength(9);
+    // The FK BY COLUMNS (both sides, in order) and its actions — ⛔ CASCADE / SET NULL (an FK action updating this table
+    // would run without the writer guard and the 0193 trigger would reject it).
+    const fk = await client.query<{ def: string }>(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'marketplace_modules_partner_fk'`,
+    );
+    expect(fk.rows[0]!.def).toBe(
+      'FOREIGN KEY (pariwar_id, partner_id) REFERENCES marketplace_partners(pariwar_id, partner_id)',
+    );
+    const idx = await client.query<{ indexname: string; indexdef: string }>(
+      `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'marketplace_modules' ORDER BY indexname`,
     );
     expect(idx.rows.map((i) => i.indexname)).toEqual([
       'marketplace_modules_pariwar_id_idx',
+      'marketplace_modules_pariwar_module_unique',
       'marketplace_modules_pariwar_state_idx',
       'marketplace_modules_pkey',
+      'marketplace_modules_scheduled_valid_from_idx',
     ]);
+    const partial = idx.rows.find((i) => i.indexname === 'marketplace_modules_scheduled_valid_from_idx')!;
+    expect(partial.indexdef).toMatch(/USING btree \(valid_from\) WHERE \(current_state = 'scheduled'::marketplace_module_state\)$/);
   });
 
   // RP2 — by COLUMNS and ORDER, not only by name: a reordered or swapped column list passes a names-only check.
@@ -182,31 +200,31 @@ describe.skipIf(!hasDatabase)('marketplace_modules — the whole-row write guard
     const { client } = getTx();
     const id = randomUUID();
     await client.query(GUARD_ON);
-    await client.query(RAW_INSERT_SQL, rawInsertParams(id, PARIWAR_A, { capacity }));
+    await client.query(RAW_INSERT_SQL, rawInsertParams(id, PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), capacity }));
     return id;
   }
 
   it('an UNGUARDED INSERT is rejected (P0001), even of the genesis shape', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A), 'P0001');
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A) }), 'P0001');
     await client.query(GUARD_OFF);
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A), 'P0001');
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A) }), 'P0001');
   });
 
   it('a GUARDED INSERT must be the genesis shape (I3): (5,5) and the uncapped (NULL,NULL) pass; (5,4) fails', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     await client.query(GUARD_ON);
-    await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A));
-    await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { capacity: null, slots: null }));
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { capacity: 5, slots: 4 }), 'P0001');
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { state: 'active' }), 'P0001');
-    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { version: 2 }), 'P0001');
+    await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A) }));
+    await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), capacity: null, slots: null }));
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), capacity: 5, slots: 4 }), 'P0001');
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), state: 'active' }), 'P0001');
+    await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), version: 2 }), 'P0001');
     await expectSqlRejected(
       client,
       RAW_INSERT_SQL,
-      rawInsertParams(randomUUID(), PARIWAR_A, { state: 'draft', reason: 'trustee_archived' }),
+      rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), state: 'draft', reason: 'trustee_archived' }),
       'P0001',
     );
   });
@@ -393,7 +411,7 @@ describe.skipIf(!hasDatabase)('marketplace_modules — the whole-row write guard
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     await client.query(GUARD_ON);
-    await expectSqlRejected(client, sqlOf(), rawInsertParams(randomUUID(), PARIWAR_A, opts), '23514', name);
+    await expectSqlRejected(client, sqlOf(), rawInsertParams(randomUUID(), PARIWAR_A, { partnerId: await seedPartner(client, PARIWAR_A), ...opts }), '23514', name);
   });
 
   it('the archive pair CHECK holds: archived ⇔ a reason (23514 either way)', async () => {

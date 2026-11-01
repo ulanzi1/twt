@@ -374,3 +374,117 @@ describe('limits — accepted AT the limit, refused one past it (RP9)', () => {
     expectInvalid(manifest({ slot_capacity: 2_147_483_648 }));
   });
 });
+
+// ── Story 12.2 (`2026-11-01-433` QE12; AC10) — the WRITE-ONLY display-text schemas ─────────────────────
+// Every refused character sits at an INTERIOR position (`.trim()` would strip an edge one) and is built with
+// `String.fromCodePoint`, so this file holds ⛔ raw invisible character (TR15).
+describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
+  const cp = (n: number): string => String.fromCodePoint(n);
+  const en = (ch: string): string => `HDFC${ch}home`;
+  const hi = (ch: string): string => `गृह${ch}ऋण`;
+
+  const refused: Array<[string, number]> = [
+    ['NUL', 0x0000],
+    ['TAB', 0x0009],
+    ['CR', 0x000d],
+    ['US (0x1F)', 0x001f],
+    ['DEL', 0x007f],
+    ['C1 0x80', 0x0080],
+    ['C1 0x85 (NEL)', 0x0085],
+    ['C1 0x9F', 0x009f],
+    ['ALM U+061C', 0x061c],
+    ['LRM U+200E', 0x200e],
+    ['RLM U+200F', 0x200f],
+    ['LRE U+202A', 0x202a],
+    ['RLE U+202B', 0x202b],
+    ['PDF U+202C', 0x202c],
+    ['LRO U+202D', 0x202d],
+    ['RLO U+202E', 0x202e],
+    ['LRI U+2066', 0x2066],
+    ['RLI U+2067', 0x2067],
+    ['FSI U+2068', 0x2068],
+    ['PDI U+2069', 0x2069],
+    ['ZWSP U+200B', 0x200b],
+    ['WJ U+2060', 0x2060],
+    ['BOM U+FEFF', 0xfeff],
+    ['SHY U+00AD', 0x00ad],
+  ];
+
+  it.each(refused)('refuses %s inside every one of the four module display schemas', (_l, code) => {
+    const ch = cp(code);
+    expect(marketplace.moduleDisplayNameEnSchema.safeParse(en(ch)).success).toBe(false);
+    expect(marketplace.moduleDisplayNameHiSchema.safeParse(hi(ch)).success).toBe(false);
+    expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(en(ch)).success).toBe(false);
+    expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(hi(ch)).success).toBe(false);
+  });
+
+  it('LF is accepted inside a description and refused inside a name', () => {
+    const lf = cp(0x0a);
+    expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(en(lf)).success).toBe(true);
+    expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(hi(lf)).success).toBe(true);
+    expect(marketplace.moduleDisplayNameEnSchema.safeParse(en(lf)).success).toBe(false);
+    expect(marketplace.moduleDisplayNameHiSchema.safeParse(hi(lf)).success).toBe(false);
+  });
+
+  it('ZWJ / ZWNJ inside Devanagari are ACCEPTED (conjunct control)', () => {
+    for (const code of [0x200c, 0x200d]) {
+      const v = `क्${cp(code)}ष`;
+      expect(marketplace.moduleDisplayNameHiSchema.safeParse(v).success).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(v).success).toBe(true);
+    }
+  });
+
+  it.each([['spaces and punctuation', ' - . , '], ['dashes only', '---'], ['a danda only', '।']])(
+    'refuses a blank-looking value (%s)',
+    (_l, v) => {
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success).toBe(false);
+      expect(marketplace.moduleDisplayNameHiSchema.safeParse(v).success).toBe(false);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(v).success).toBe(false);
+    },
+  );
+
+  it.each([['LIC'], ['LIC ।'], ['12345']])('a *_hi value with NO Devanagari letter is refused: %s', (v) => {
+    expect(marketplace.moduleDisplayNameHiSchema.safeParse(v).success).toBe(false);
+    expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(v).success).toBe(false);
+    // …while the English schemas accept the letter-bearing ones.
+    if (/[A-Za-z0-9]/.test(v)) expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success).toBe(true);
+  });
+
+  it('mixed Latin + Devanagari passes the Hindi schema, and values are trimmed', () => {
+    expect(marketplace.moduleDisplayNameHiSchema.parse('  LIC टर्म प्लान  ')).toBe('LIC टर्म प्लान');
+    expect(marketplace.moduleDisplayNameEnSchema.parse('  LIC term plan ')).toBe('LIC term plan');
+  });
+
+  it('keeps 12.1 lengths: name 120 / 121, description 2000 / 2001', () => {
+    expect(marketplace.moduleDisplayNameEnSchema.safeParse('n'.repeat(120)).success).toBe(true);
+    expect(marketplace.moduleDisplayNameEnSchema.safeParse('n'.repeat(121)).success).toBe(false);
+    expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse('क'.repeat(2000)).success).toBe(true);
+    expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse('क'.repeat(2001)).success).toBe(false);
+  });
+
+  it('keeps 12.1’s storableText refine (an unpaired surrogate is refused)', () => {
+    expect(marketplace.moduleDisplayNameEnSchema.safeParse(`ab${String.fromCharCode(0xd800)}cd`).success).toBe(false);
+  });
+
+  it('parseModuleManifest USES them: a Hindi name with no Devanagari is ModuleManifestInvalidError at path name_hi', () => {
+    let caught: unknown;
+    try {
+      parseModuleManifest(manifest({ name_hi: 'LIC' }));
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(ModuleManifestInvalidError);
+    expect((caught as ModuleManifestInvalidError).issues.map((i) => i.path.join('.'))).toContain('name_hi');
+  });
+
+  it('parseModuleManifest refuses a bidi control inside description_en (path description_en)', () => {
+    let caught: unknown;
+    try {
+      parseModuleManifest(manifest({ description_en: `A home${cp(0x202e)}loan` }));
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(ModuleManifestInvalidError);
+    expect((caught as ModuleManifestInvalidError).issues.map((i) => i.path.join('.'))).toEqual(['description_en']);
+  });
+});

@@ -29,6 +29,8 @@
 //     included (carried item C9).
 //   - scope values are ⛔ validated against the geo tree here (carried item C11 — 12.2's wizard picks them
 //     from the tree).
+//     ⭐ Story 12.2 (`2026-11-01-433` QE5, amending `-429` C11 in part) checks scope-value MEMBERSHIP at its route
+//     (`scope-options.ts` `assertScopeValuesRecorded`) — ⛔ here: this parser stays the same for every other caller.
 
 import { z } from 'zod';
 
@@ -178,6 +180,75 @@ export type ModuleBrandingBundle = z.infer<typeof ModuleBrandingBundleSchema>;
 
 export const moduleNameSchema = storableText(z.string().trim().min(1).max(120));
 export const moduleDescriptionSchema = storableText(z.string().trim().min(1).max(2000));
+
+// ── WRITE-ONLY display-text schemas (Story 12.2 — `2026-11-01-433` QE12; 12.1 R3D1's name / description leg) ──────────
+// ⚠ `moduleNameSchema` / `moduleDescriptionSchema` above are SHARED with `ModuleAuthoredPayloadSchema` (events.ts), which
+// `foldModuleProjection` (state.ts) re-parses with `safeParse` to read capacity (TR16). Tightening THEM would drift the
+// fold on any stored genesis. So the stricter rules live HERE, in schemas used ONLY by `parseModuleManifest` (the WRITE)
+// and the partner-name parser — the write rules are a SUBSET of the payload rules, so every stored genesis still parses.
+// RPD1: this tightening was made BEFORE any module was stored; any FURTHER tightening of a schema the genesis payload
+// re-parses must read capacity through a narrow `{ slot_capacity }` schema in the fold, or bump to `version: 2`.
+//
+// The rules run on the RAW string, BEFORE `.trim()` (an edge character would otherwise be trimmed away unseen):
+//   - ⛔ C0 controls (U+0000–U+001F, U+007F) — EXCEPT U+000A (line feed) inside a description; ⛔ U+000D (the admin
+//     client normalises CRLF → LF before sending);
+//   - ⛔ C1 controls (U+0080–U+009F);
+//   - ⛔ bidi controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069) — they reorder what a reader sees;
+//   - ⛔ invisible formatters U+200B, U+2060, U+FEFF, U+00AD;
+//   - ⭐ U+200C / U+200D (ZWNJ / ZWJ) are ALLOWED — Devanagari conjunct control;
+//   - at least one letter or digit (a blank-looking value is refused);
+//   - a `*_hi` value must hold at least one Devanagari LETTER (Story 2.1: member-facing copy needs Hindi) — "LIC टर्म
+//     प्लान" passes; "LIC" and "LIC ।" (a danda is punctuation) are refused.
+// Code points are compared NUMERICALLY (⛔ escapes in a regex class), so the source carries ⛔ invisible character (TR15).
+
+/** Bidi controls (the Trojan-Source set) and invisible formatters — refused anywhere in display text. */
+const DISPLAY_REFUSED_FORMAT_CHARS: ReadonlySet<number> = new Set([
+  0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
+  0x200b, 0x2060, 0xfeff, 0x00ad,
+]);
+const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+const DEVANAGARI_LETTER = /(?=\p{Script=Devanagari})\p{L}/u;
+
+/** The first QE12 rule `raw` breaks, as a message — or null. */
+function displayTextRefusal(raw: string, o: { allowLineFeed: boolean; requireDevanagari: boolean }): string | null {
+  for (const ch of raw) {
+    const c = ch.codePointAt(0) ?? 0;
+    if ((c <= 0x1f || c === 0x7f) && !(o.allowLineFeed && c === 0x0a)) {
+      return o.allowLineFeed
+        ? 'must not contain a control character (only a line feed is allowed)'
+        : 'must not contain a control character or a line break';
+    }
+    if (c >= 0x80 && c <= 0x9f) return 'must not contain a control character';
+    if (DISPLAY_REFUSED_FORMAT_CHARS.has(c)) return 'must not contain an invisible or text-direction character';
+  }
+  if (!LETTER_OR_DIGIT.test(raw)) return 'must contain at least one letter or digit';
+  if (o.requireDevanagari && !DEVANAGARI_LETTER.test(raw)) return 'must contain Hindi (Devanagari) text';
+  return null;
+}
+
+/** A write-only display-text schema: the QE12 rules on the RAW string, then the 12.1 storage rules (trim + length). */
+function displayText(max: number, o: { allowLineFeed: boolean; requireDevanagari: boolean }) {
+  return z
+    .string()
+    .superRefine((raw, ctx) => {
+      const refusal = displayTextRefusal(raw, o);
+      if (refusal !== null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: refusal });
+    })
+    .pipe(storableText(z.string().trim().min(1).max(max)));
+}
+
+/** A module's English name at WRITE (QE12). Same length as `moduleNameSchema` (trim, 1–120). */
+export const moduleDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false });
+/** A module's Hindi name at WRITE (QE12) — must hold a Devanagari letter. */
+export const moduleDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true });
+/** A module's English description at WRITE (QE12) — a line feed is allowed. Same length as `moduleDescriptionSchema`. */
+export const moduleDisplayDescriptionEnSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: false });
+/** A module's Hindi description at WRITE (QE12) — a line feed is allowed; must hold a Devanagari letter. */
+export const moduleDisplayDescriptionHiSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: true });
+/** A partner's English display name (QE3 / QE12) — trim, 1–120; unique per Pariwar, case-insensitively (the DB). */
+export const partnerDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false });
+/** A partner's Hindi display name (QE3 / QE12) — trim, 1–120; must hold a Devanagari letter. */
+export const partnerDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true });
 /** `integer` column (int4) — capped at its maximum so a huge value is a manifest error, ⛔ a 22003. */
 export const moduleSlotCapacitySchema = z.number().int().positive().max(2_147_483_647).nullable();
 
@@ -320,10 +391,11 @@ export const moduleInstantSchema = z
 const ModuleManifestInputSchema = z
   .object({
     partner_id: z.string().uuid(),
-    name_en: moduleNameSchema,
-    name_hi: moduleNameSchema,
-    description_en: moduleDescriptionSchema,
-    description_hi: moduleDescriptionSchema,
+    // The WRITE-ONLY display schemas (Story 12.2 QE12) — ⛔ the shared payload schemas (TR16).
+    name_en: moduleDisplayNameEnSchema,
+    name_hi: moduleDisplayNameHiSchema,
+    description_en: moduleDisplayDescriptionEnSchema,
+    description_hi: moduleDisplayDescriptionHiSchema,
     eligibility_filter: EligibilityFilterV1Schema,
     scope_filter: ScopeFilterV1Schema,
     valid_from: moduleInstantSchema,

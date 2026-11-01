@@ -22,7 +22,16 @@ import {
 } from '../../../src/marketplace/read.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { RAW_INSERT_SQL, manifestInput, newLeadId, newMemberId, newModuleId, rawInsertParams, txNow } from './_fixtures.js';
+import {
+  RAW_INSERT_SQL,
+  manifestInput,
+  newLeadId,
+  newMemberId,
+  newModuleId,
+  rawInsertParams,
+  seedPartner,
+  txNow,
+} from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const B = toPariwarId(PARIWAR_B);
@@ -41,10 +50,10 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_B);
     const bId = newModuleId();
-    await authorModule(client, { ...base(B, bId), manifest: manifestInput(await txNow(client)) });
+    await authorModule(client, { ...base(B, bId), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, PARIWAR_B) }) });
     await enterAppScope(client, PARIWAR_A);
     const aId = newModuleId();
-    await authorModule(client, { ...base(A, aId), manifest: manifestInput(await txNow(client)) });
+    await authorModule(client, { ...base(A, aId), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, PARIWAR_A) }) });
     const db = bindScopedDb(client);
 
     expect((await getModule(db, A, aId))?.moduleId).toBe(aId);
@@ -70,7 +79,7 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
     for (let n = 0; n < 3; n += 1) {
       const id = newModuleId();
       ids.push(id);
-      await authorModule(client, { ...base(A, id), manifest: manifestInput(await txNow(client)) });
+      await authorModule(client, { ...base(A, id), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, PARIWAR_A) }) });
     }
     await activateModule(client, base(A, ids[0]!));
     const db = bindScopedDb(client);
@@ -88,10 +97,11 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
 
   it('a limit above the cap returns at most LIST_MODULES_MAX_LIMIT (200) rows', async () => {
     const { client } = getTx();
+    const partnerId = await seedPartner(client, PARIWAR_A);
     await enterAppScope(client, PARIWAR_A);
     await client.query("SET LOCAL app.marketplace_module_state_writer = 'on'");
     for (let n = 0; n < LIST_MODULES_MAX_LIMIT + 5; n += 1) {
-      await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A));
+      await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { partnerId }));
     }
     const rows = await listModulesForPariwar(bindScopedDb(client), A, { limit: 10_000 });
     expect(rows).toHaveLength(LIST_MODULES_MAX_LIMIT);
@@ -108,10 +118,10 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_B);
     const bId = newModuleId();
-    await authorModule(client, { ...base(B, bId), manifest: manifestInput(await txNow(client)) });
+    await authorModule(client, { ...base(B, bId), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, PARIWAR_B) }) });
     await enterAppScope(client, PARIWAR_A);
     const aId = newModuleId();
-    await authorModule(client, { ...base(A, aId), manifest: manifestInput(await txNow(client)) });
+    await authorModule(client, { ...base(A, aId), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, PARIWAR_A) }) });
     await activateModule(client, base(A, aId));
 
     await client.query('RESET ROLE');
@@ -134,9 +144,17 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
 describe.skipIf(!hasDatabase)('marketplace reads — getModuleStateAt between transitions (AC8, own-committing)', () => {
   let pool: pg.Pool;
   const created: ModuleId[] = [];
+  // Story 12.2 — the module FK needs a COMMITTED same-Pariwar partner; deleted in cleanup AFTER the modules.
+  let partnerA: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 2, ssl: false });
+    const c = await pool.connect();
+    try {
+      partnerA = await seedPartner(c, PARIWAR_A);
+    } finally {
+      c.release();
+    }
   });
   afterAll(async () => {
     if (!pool) return; // beforeAll failed before it could create one (RP11)
@@ -146,6 +164,7 @@ describe.skipIf(!hasDatabase)('marketplace reads — getModuleStateAt between tr
       await admin.query("SET LOCAL session_replication_role = 'replica'");
       await admin.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1)', [created]);
       await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [created]);
+      await admin.query('DELETE FROM marketplace_partners WHERE partner_id = $1', [partnerA]);
       await admin.query('COMMIT');
     } catch (e) {
       await admin.query('ROLLBACK').catch(() => undefined);
@@ -186,7 +205,7 @@ describe.skipIf(!hasDatabase)('marketplace reads — getModuleStateAt between tr
     created.push(id);
     const beforeGenesis = await clock();
     await pad();
-    await inTx(async (c) => authorModule(c, { ...base(A, id), manifest: manifestInput(await txNow(c)) }));
+    await inTx(async (c) => authorModule(c, { ...base(A, id), manifest: manifestInput(await txNow(c), { partner_id: partnerA }) }));
     await pad();
     const afterAuthor = await clock();
     await pad();
@@ -217,9 +236,9 @@ describe.skipIf(!hasDatabase)('marketplace reads — getModuleStateAt between tr
   it('RP10 (c): the list is newest-first by created_at, ahead of the module_id tie-break', async () => {
     const [lo, hi] = [newModuleId(), newModuleId()].sort() as [ModuleId, ModuleId];
     created.push(lo, hi);
-    await inTx(async (c) => authorModule(c, { ...base(A, hi), manifest: manifestInput(await txNow(c)) })); // OLDER, higher id
+    await inTx(async (c) => authorModule(c, { ...base(A, hi), manifest: manifestInput(await txNow(c), { partner_id: partnerA }) })); // OLDER, higher id
     await pad();
-    await inTx(async (c) => authorModule(c, { ...base(A, lo), manifest: manifestInput(await txNow(c)) })); // NEWER, lower id
+    await inTx(async (c) => authorModule(c, { ...base(A, lo), manifest: manifestInput(await txNow(c), { partner_id: partnerA }) })); // NEWER, lower id
     await inTx(async (c) => {
       const page = await listModulesForPariwar(bindScopedDb(c), A, { limit: 200 });
       expect(page.map((m) => m.moduleId).filter((x) => x === lo || x === hi)).toEqual([lo, hi]);
@@ -229,7 +248,7 @@ describe.skipIf(!hasDatabase)('marketplace reads — getModuleStateAt between tr
   it('replays the longest PREFIX when occurred_at runs against event_version (RV1)', async () => {
     const id = newModuleId();
     created.push(id);
-    await inTx(async (c) => authorModule(c, { ...base(A, id), manifest: manifestInput(await txNow(c)) }));
+    await inTx(async (c) => authorModule(c, { ...base(A, id), manifest: manifestInput(await txNow(c), { partner_id: partnerA }) }));
 
     // `occurred_at` is the TRANSACTION START (TR4): `slow` begins FIRST — the earlier instant — but takes the
     // module lock SECOND, so its event gets the HIGHER version and the LOWER timestamp.
@@ -271,7 +290,7 @@ describe.skipIf(!hasDatabase)('marketplace reads — getModuleStateAt between tr
   it('reads no module.lead_submitted rows, and a stream holding a lead still replays to its transition state (RV1)', async () => {
     const id = newModuleId();
     created.push(id);
-    await inTx(async (c) => authorModule(c, { ...base(A, id), manifest: manifestInput(await txNow(c)) }));
+    await inTx(async (c) => authorModule(c, { ...base(A, id), manifest: manifestInput(await txNow(c), { partner_id: partnerA }) }));
     await inTx(async (c) => activateModule(c, base(A, id)));
     const member = newMemberId();
     await inTx(async (c) =>

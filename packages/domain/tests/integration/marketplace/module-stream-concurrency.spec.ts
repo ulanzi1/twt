@@ -32,7 +32,7 @@ import {
 } from '../../../src/marketplace/errors.js';
 import { DATABASE_URL, hasDatabase } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A } from '../_helpers.js';
-import { expectRowMatchesStream, manifestInput, newLeadId, newMemberId, newModuleId, streamTypes, txNow } from './_fixtures.js';
+import { expectRowMatchesStream, manifestInput, newLeadId, seedPartner, newMemberId, newModuleId, streamTypes, txNow } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const OPERATOR = randomUUID();
@@ -66,9 +66,18 @@ describe.skipIf(!hasDatabase)('module stream — two-connection concurrency (own
   let pool: pg.Pool;
   const created: ModuleId[] = [];
 
-  beforeAll(() => {
+  // Story 12.2 — the module FK needs a COMMITTED same-Pariwar partner; deleted in cleanup AFTER the modules.
+  let partnerA: string;
+
+  beforeAll(async () => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4, ssl: false });
     pool.on('error', (err) => console.error('[module-stream-concurrency pool]', err.message));
+    const c = await pool.connect();
+    try {
+      partnerA = await seedPartner(c, PARIWAR_A);
+    } finally {
+      c.release();
+    }
   });
 
   afterAll(async () => {
@@ -79,6 +88,7 @@ describe.skipIf(!hasDatabase)('module stream — two-connection concurrency (own
       await admin.query("SET LOCAL session_replication_role = 'replica'");
       await admin.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1)', [created]);
       await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [created]);
+      await admin.query('DELETE FROM marketplace_partners WHERE partner_id = $1', [partnerA]);
       await admin.query('COMMIT');
     } catch (e) {
       await admin.query('ROLLBACK').catch(() => undefined);
@@ -106,7 +116,7 @@ describe.skipIf(!hasDatabase)('module stream — two-connection concurrency (own
     try {
       await begin(client, 'READ COMMITTED');
       const now = await txNow(client);
-      await authorModule(client, { ...base(id), manifest: manifestInput(now, { slot_capacity: slotCapacity }) });
+      await authorModule(client, { ...base(id), manifest: manifestInput(now, { partner_id: partnerA, slot_capacity: slotCapacity }) });
       await activateModule(client, base(id));
       await client.query('COMMIT');
     } catch (e) {
@@ -266,7 +276,7 @@ describe.skipIf(!hasDatabase)('module stream — two-connection concurrency (own
         await client.query('SELECT max(event_version) FROM events_log WHERE stream_id = $1', [id]);
         await arrive();
         const now = await txNow(client);
-        const r = await authorModule(client, { ...base(id), manifest: manifestInput(now) });
+        const r = await authorModule(client, { ...base(id), manifest: manifestInput(now, { partner_id: partnerA }) });
         await client.query('COMMIT');
         return r.eventVersion;
       } catch (e) {

@@ -287,3 +287,7 @@ export * from './questionnaire-versions-rls.js';
 // Story 12.1 (0193) — marketplace_modules tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`,
 // ⛔ DELETE; mirror helpdesk-tickets-rls). The marketplace_modules_state_write_guard trigger is ORTHOGONAL.
 export * from './marketplace-modules-rls.js';
+// Story 12.2 (0195) — marketplace_partners + marketplace_module_publications tenant-isolation policies (select / insert
+// only — both tables are insert-only).
+export * from './marketplace-partners-rls.js';
+export * from './marketplace-module-publications-rls.js';

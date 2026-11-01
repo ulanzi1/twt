@@ -320,6 +320,10 @@ const KNOWN_PEOPLE_RUN_CAMPAIGN = permissionKey('known_people.run_campaign');
 // `questionnaire.publish` (GLOBAL) is super_admin ONLY and DELIBERATELY ABSENT here — ⛔ do not "complete the triple".
 const QUESTIONNAIRE_PROPOSE = permissionKey('questionnaire.propose');
 const QUESTIONNAIRE_APPROVE = permissionKey('questionnaire.approve');
+// Story 12.2 (`2026-11-01-433` QE2) — the partner-module surface (author / publish / withdraw / partners), pariwar-dimension,
+// granted to pariwar_admin (+ super_admin auto). ⛔ state_trustee / district_admin / trustee_panel: a narrower grant is INERT
+// against a pariwar key (the `banner.manage` precedent); the acceptance condition for one is in permissions.ts.
+const MODULE_MANAGE = permissionKey('module.manage');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -492,6 +496,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 6.33 (QE6 (A)) — propose a questionnaire version; approve / return one AS TRUSTEE-LITE (see the consts above).
       QUESTIONNAIRE_PROPOSE,
       QUESTIONNAIRE_APPROVE,
+      // Story 12.2 (QE2) — author, publish (a non-author) and withdraw partner modules; register partners.
+      MODULE_MANAGE,
     ],
     scopeCeiling: 'pariwar',
   },

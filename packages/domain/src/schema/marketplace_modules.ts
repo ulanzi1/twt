@@ -23,19 +23,24 @@
 //     everywhere (row lock → append → row UPDATE), which is what keeps a lead and an archive from
 //     deadlocking (40P01). The helpdesk projector's append-then-UPDATE order is ⛔ copied (TR12).
 //
-// ── The DB enforces ONLY the six named CHECKs ─────────────────────────────────────────────────────
+// ── The DB enforces the six named CHECKs + (Story 12.2) one FK and one unique ──────────────────────
 // Every other content rule (text bounds, the URL rules, the secret-name pattern, the filter grammars,
 // the branding bundle) is zod-only, in `marketplace/filters.ts` `parseModuleManifest` (QE5). ⛔ Add a
 // content CHECK here without amending the story's QE5 table: the DB is the shape backstop, not a second
-// copy of the grammar.
+// copy of the grammar. Story 12.2 (`2026-11-01-433` QE3 / QE4 — ADR-0044 D5 amended in part) added the
+// COMPOSITE FK `marketplace_modules_partner_fk (pariwar_id, partner_id) → marketplace_partners` and the
+// `marketplace_modules_pariwar_module_unique (pariwar_id, module_id)` key the publication FK targets — neither
+// changes a row, so the 0193 whole-row trigger is untouched.
 //
 // ── module_id is CALLER-MINTED (⛔ DB default) ────────────────────────────────────────────────────
 // The caller (12.2's wizard route) mints the id so the intent audit line can name `module/<id>` before
-// the write (QE15). `pariwar_id` is NOT NULL with ⛔ FK — there is ⛔ `pariwars` table (G17), and the
-// cross-Pariwar manifest is v2 (QE4). `partner_id` has ⛔ FK — partner identity is Story 12.2's.
+// the write (QE15). `pariwar_id` is NOT NULL with ⛔ FK to a `pariwars` table — there is ⛔ such table (G17),
+// and the cross-Pariwar manifest is v2 (QE4); it IS the first column of `marketplace_modules_partner_fk`
+// (Story 12.2), which ties `(pariwar_id, partner_id)` to a SAME-Pariwar `marketplace_partners` row.
 //
 // ── NOT in this table (deliberately) ──────────────────────────────────────────────────────────────
-// `commission_terms` (→ 12.2: admin-only home, PRD "never public", the trust-deed "disclosed" tension),
+// `commission_terms` (Story 12.2 stores ⛔ commission data — `2026-11-01-433` QE6 (A), amending `-427` QE5 /
+// `-429`; re-trigger: OQ-4 answered by the Panel, OR the first PRODUCTION publish, OR Story 12.3's create-story),
 // FR-64's `target_url_or_form` external CTA (Not addressed), lead delivery status (→ 12.5's entity).
 //
 // Naming discipline (architecture L3663-3677): DB columns snake_case, TS fields camelCase, table
@@ -45,6 +50,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -53,6 +59,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -61,6 +68,7 @@ import type { ModuleId, PariwarId, PartnerId } from '../ids/index.js';
 // `import type` is erased at runtime, so schema → marketplace creates ⛔ runtime cycle (QE2). Do NOT turn
 // this into a value import.
 import type { EligibilityFilterV1, ModuleBrandingBundle, ScopeFilterV1 } from '../marketplace/filters.js';
+import { marketplacePartners } from './marketplace_partners.js';
 
 /**
  * The module lifecycle (QE6) — the pgEnum source (`CREATE TYPE marketplace_module_state`).
@@ -96,9 +104,9 @@ export const marketplaceModules = pgTable(
   {
     // The module's canonical id == its events_log stream_id. Caller-minted, ⛔ default (QE15).
     moduleId: uuid('module_id').primaryKey().$type<ModuleId>(),
-    // Tenant key. NOT NULL, ⛔ FK (G17 / QE4).
+    // Tenant key. NOT NULL, ⛔ FK to a `pariwars` table (there is none — G17 / QE4); part of the partner FK below.
     pariwarId: uuid('pariwar_id').notNull().$type<PariwarId>(),
-    // ⛔ FK — partner identity is Story 12.2's.
+    // A SAME-Pariwar `marketplace_partners` row — `marketplace_modules_partner_fk` (Story 12.2, QE3).
     partnerId: uuid('partner_id').notNull().$type<PartnerId>(),
 
     // ── The immutable manifest content (I2) ──
@@ -139,7 +147,19 @@ export const marketplaceModules = pgTable(
     index('marketplace_modules_pariwar_id_idx').on(t.pariwarId),
     // 12.2's per-(tenant, state) admin list and 12.3's active-module shelf scan.
     index('marketplace_modules_pariwar_state_idx').on(t.pariwarId, t.currentState),
-    // ── The ONLY DB-side content rules (QE5) ──
+    // ── Story 12.2 (`2026-11-01-433`) — keys, ⛔ content rules ──
+    // The target of the publication FK (`marketplace_module_publications_module_fk`, QE4).
+    unique('marketplace_modules_pariwar_module_unique').on(t.pariwarId, t.moduleId),
+    // A module names a partner of its OWN Pariwar (QE3 (A)). ⛔ CASCADE / SET NULL: an FK action that updates this
+    // table runs WITHOUT the writer guard and the 0193 trigger rejects it (P0001).
+    foreignKey({
+      name: 'marketplace_modules_partner_fk',
+      columns: [t.pariwarId, t.partnerId],
+      foreignColumns: [marketplacePartners.pariwarId, marketplacePartners.partnerId],
+    }),
+    // The 5-minute activation sweep's due scan (QE7 (A); 12.1 C2 (d)).
+    index('marketplace_modules_scheduled_valid_from_idx').on(t.validFrom).where(sql`current_state = 'scheduled'`),
+    // ── The DB-side content rules (QE5) ──
     check('marketplace_modules_window', sql`${t.validUntil} > ${t.validFrom}`),
     check('marketplace_modules_capacity_positive', sql`${t.slotCapacity} > 0`),
     check(

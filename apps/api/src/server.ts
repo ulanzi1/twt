@@ -75,6 +75,7 @@ import { registerHelpdeskModule } from './modules/helpdesk/index.js';
 import { registerMemberDataRightsModule } from './modules/member-data-rights/index.js';
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
+import { registerMarketplaceModule } from './modules/marketplace/index.js';
 import { registerSurveyModule } from './modules/surveys/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerModerationAppealRoutes } from './modules/member-moderation-appeals/routes.js';
@@ -406,6 +407,9 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // window — nothing is enqueued, no worker activates or archives a banner, and nothing fans out
   // (banners are in-app, NOT channel-dispatched).
   registerBannerModule(app, deps);
+  // Story 12.2 (`2026-11-01-433`) — the admin MODULE surface (author a partner offer as a draft, partners, publish by a
+  // non-author with step-up, withdraw). `module.manage`; the first production caller of the 12.1 primitive. ⛔ Member route.
+  registerMarketplaceModule(app, deps);
   registerSurveyModule(app, deps);
   // Story 10.10 — the FR-56 member-moderation surface: suspend / terminate / restore with
   // registry-driven reason codes, a MANDATORY Tier-1-encrypted rationale, full attribution and —

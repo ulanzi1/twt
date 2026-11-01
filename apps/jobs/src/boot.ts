@@ -134,6 +134,11 @@ import { registerClaimCorrectionReminderWorkers } from './scheduler/claim-correc
 import { registerClaimCorrectionClosureWorkers } from './scheduler/claim-correction-closure.js';
 import { registerClaimCertificateReminderWorkers } from './scheduler/claim-certificate-reminders.js';
 import { registerContactLadderWorkers } from './scheduler/claim-contact-ladder.js';
+import {
+  DEFAULT_MODULE_ACTIVATION_CRON,
+  MODULE_ACTIVATION_TZ,
+  registerModuleActivationCron,
+} from './scheduler/module-activation.js';
 import { registerContactLadderWhatsappWorkers } from './scheduler/claim-contact-ladder-whatsapp.js';
 import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from './scheduler/claim-peer-mesh-requests.js';
 import { registerClaimPeerMeshWaReminderWorkers } from './scheduler/claim-peer-mesh-wa-reminders.js';
@@ -175,6 +180,8 @@ const VACUUM_TZ = 'Asia/Kolkata';
 // Daily DigiLocker cert refresh (Story 3.3b, AC5.2). Cadence is operations policy (IST).
 const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT_CERT_REFRESH_CRON;
 // Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
+// Story 12.2 (QE7 (A)) — the 5-minute partner-module activation sweep.
+const MODULE_ACTIVATION_CRON = process.env['MODULE_ACTIVATION_CRON'] ?? DEFAULT_MODULE_ACTIVATION_CRON;
 const RENEWAL_LIFECYCLE_CRON =
   process.env['MEMBER_RENEWAL_LIFECYCLE_CRON'] ?? DEFAULT_RENEWAL_LIFECYCLE_CRON;
 // Data-export hygiene vacuum (Story 3.11, AC5). Cadence is operations policy (IST).
@@ -264,6 +271,11 @@ async function main(): Promise<void> {
       `[jobs] DIGILOCKER_CERT_REFRESH_CRON must be a 5-field cron expression (got "${CERT_REFRESH_CRON}")`,
     );
   }
+  if (!/^(\S+\s+){4}\S+$/.test(MODULE_ACTIVATION_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] MODULE_ACTIVATION_CRON must be a 5-field cron expression (got "${MODULE_ACTIVATION_CRON}")`,
+    );
+  }
   if (!/^(\S+\s+){4}\S+$/.test(RENEWAL_LIFECYCLE_CRON.trim())) {
     throw new RangeError(
       `[jobs] MEMBER_RENEWAL_LIFECYCLE_CRON must be a 5-field cron expression (got "${RENEWAL_LIFECYCLE_CRON}")`,
@@ -327,6 +339,10 @@ async function main(): Promise<void> {
   // connection (the member lock) while its audit line commits on a second one. On the shared pool above another cron holding
   // the other connection would starve that audit and lose the STOP; the tick is sequential, so two connections are its peak.
   const { db: waWebhookDb, pool: waWebhookPool } = createDb(connectionString, { max: 2, logger: false });
+  // Story 12.2 (QE7 (A)) — the module-activation sweep's OWN pool: a candidate's scope transaction holds one connection while
+  // its audit intent / compensating line commits on another ([[project_jobs_pool_two_connection_starvation]]); max 3 leaves
+  // the scan headroom. ⛔ The shared max-2 pool above.
+  const { pool: moduleActivationPool } = createDb(connectionString, { max: 3, logger: false });
 
   // ── Data-export KMS deps (Story 3.11) — the FIRST apps/jobs crypto wiring ──────
   // Resolve the Argon2id pepper (fake-KMS mode derives the KEK from it; live mode ignores it) via the
@@ -380,6 +396,7 @@ async function main(): Promise<void> {
     }
     await pool.end().catch((err: unknown) => logError('pool-end', err));
     await waWebhookPool.end().catch((err: unknown) => logError('wa-webhook-pool-end', err));
+    await moduleActivationPool.end().catch((err: unknown) => logError('module-activation-pool-end', err));
     console.info('[jobs] shutdown complete');
     process.exit(process.exitCode ?? 0);
   }
@@ -491,6 +508,15 @@ async function main(): Promise<void> {
       // Story 6.37d (WS10 / WS11) — the FULL jobs KMS deps: the claim branch hashes in the ladder's space with the same hmacKeyRef.
       { pool: waWebhookPool, db: waWebhookDb, enc: jobsEncryption },
       { cron: WA_WEBHOOK_PROCESSOR_CRON, tz: WA_WEBHOOK_PROCESSOR_TZ },
+    );
+
+    // ── Partner-module activation sweep (Story 12.2, `2026-11-01-433` QE7 (A)) ──
+    // Every 5 minutes: a `scheduled` module whose start time has come goes `active` (actor system). Refuses — with ONE
+    // `module_activation.rls_bound_role` alarm — when the pool's role cannot read across Pariwars (roster Row 26).
+    await registerModuleActivationCron(
+      boss,
+      { pool: moduleActivationPool },
+      { cron: MODULE_ACTIVATION_CRON, tz: MODULE_ACTIVATION_TZ },
     );
 
     // ── Telegram inbound-update processor + opt-in stale-PENDING sweep (Story 5.5, AC4/AC8/AC10) ──
@@ -922,6 +948,7 @@ async function main(): Promise<void> {
     await boss.stop({ graceful: false }).catch(() => undefined);
     await pool.end().catch(() => undefined);
     await waWebhookPool.end().catch(() => undefined);
+    await moduleActivationPool.end().catch(() => undefined);
     throw err;
   }
 

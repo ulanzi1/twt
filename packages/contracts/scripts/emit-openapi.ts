@@ -5118,6 +5118,166 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 12.2 — the admin module surface (`2026-11-01-433`) ─────────────────────────────────────────────────────────────
+// Every route is `module.manage` (pariwar dimension; `pariwar_admin` + super_admin). Writes need `Idempotency-Key`; ids are
+// SERVER-minted. Publish ALSO needs the admin step-up `module_publish` and a NON-author (the tone gate). Nothing reaches a
+// member from these routes (the shelf is Story 12.3's).
+const {
+  CreateModulePartnerRequest: CreateModulePartnerRequestSchema,
+  AuthorModuleRequest: AuthorModuleRequestSchema,
+  PublishModuleRequest: PublishModuleRequestSchema,
+  WithdrawModuleRequest: WithdrawModuleRequestSchema,
+  ModuleListQuery: ModuleListQuerySchema,
+  ModulePartnerListQuery: ModulePartnerListQuerySchema,
+  ModulePartnerResponse: ModulePartnerResponseSchema,
+  ModulePartnerListResponse: ModulePartnerListResponseSchema,
+  ModuleScopeOptionsResponse: ModuleScopeOptionsResponseSchema,
+  ModuleListResponse: ModuleListResponseSchema,
+  ModuleDetailResponse: ModuleDetailResponseSchema,
+  AuthorModuleResponse: AuthorModuleResponseSchema,
+  PublishModuleResponse: PublishModuleResponseSchema,
+  WithdrawModuleResponse: WithdrawModuleResponseSchema,
+} = await import('../src/modules/index.js');
+const ModulePartnerComponent = ModulePartnerResponseSchema.openapi('ModulePartner');
+const ModulePartnerListComponent = ModulePartnerListResponseSchema.openapi('ModulePartnerList');
+const ModuleScopeOptionsComponent = ModuleScopeOptionsResponseSchema.openapi('ModuleScopeOptions');
+const ModuleListComponent = ModuleListResponseSchema.openapi('ModuleList');
+const ModuleDetailComponent = ModuleDetailResponseSchema.openapi('ModuleDetail');
+const AuthorModuleComponent = AuthorModuleResponseSchema.openapi('AuthorModuleResult');
+const PublishModuleComponent = PublishModuleResponseSchema.openapi('PublishModuleResult');
+const WithdrawModuleComponent = WithdrawModuleResponseSchema.openapi('WithdrawModuleResult');
+const modulesPariwar = z.object({ pariwarId: z.string().uuid() });
+const modulesModule = modulesPariwar.extend({ moduleId: z.string().uuid() });
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/modules',
+  summary: "The Pariwar's partner modules, newest first (cursor)",
+  description:
+    '`module.manage`. `?state=`, `?limit=` (1–200, default 50), `?cursor=` (the previous page\'s opaque `next_cursor`; a malformed ' +
+    'one is 400 `module.cursor_invalid`).',
+  tags: ['modules'],
+  request: { params: modulesPariwar, query: ModuleListQuerySchema },
+  responses: {
+    200: { description: 'A page', content: jsonOf(ModuleListComponent) },
+    400: errorResponse('Invalid input · module.cursor_invalid'),
+    403: errorResponse('Missing module.manage'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/modules/scope-options',
+  summary: 'The places a module audience may name',
+  description:
+    '`module.manage`. The geo tree in force (states; districts with their state), or — with no tree — the listed workplace ' +
+    'districts (at most 200, `districts_truncated`). A value over 120 characters is offered as unusable, never truncated.',
+  tags: ['modules'],
+  request: { params: modulesPariwar },
+  responses: {
+    200: { description: 'The options', content: jsonOf(ModuleScopeOptionsComponent) },
+    403: errorResponse('Missing module.manage'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/modules/partners',
+  summary: "The Pariwar's partners, A–Z",
+  description: '`module.manage`. `?limit=` 1–200 (default 200); no cursor.',
+  tags: ['modules'],
+  request: { params: modulesPariwar, query: ModulePartnerListQuerySchema },
+  responses: {
+    200: { description: 'The partners', content: jsonOf(ModulePartnerListComponent) },
+    403: errorResponse('Missing module.manage'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/modules/partners',
+  summary: 'Register a partner',
+  description:
+    '`module.manage`; `Idempotency-Key`. The id is server-minted; a replay returns the same partner. The English name is unique ' +
+    'per Pariwar ignoring case; the Hindi name must hold Hindi text.',
+  tags: ['modules'],
+  request: { params: modulesPariwar, body: { content: jsonOf(CreateModulePartnerRequestSchema), required: true } },
+  responses: {
+    201: { description: 'Registered', content: jsonOf(ModulePartnerComponent) },
+    400: errorResponse('Invalid input · module.idempotency_key_required'),
+    403: errorResponse('Missing module.manage'),
+    409: errorResponse('module_partner.name_taken · module.idempotency_in_progress'),
+    422: errorResponse('module_partner.name_invalid'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/modules',
+  summary: 'Author a module as a draft',
+  description:
+    '`module.manage`; `Idempotency-Key`. The id is server-minted; a replay returns the same id. Every audience value must be a ' +
+    'recorded place of the Pariwar (the geo tree, or with no tree the listed workplace districts); `state` needs a tree with ' +
+    'states. The draft is immutable — a correction is a withdraw and a new draft.',
+  tags: ['modules'],
+  request: { params: modulesPariwar, body: { content: jsonOf(AuthorModuleRequestSchema), required: true } },
+  responses: {
+    201: { description: 'The draft', content: jsonOf(AuthorModuleComponent) },
+    400: errorResponse('Invalid input · module.idempotency_key_required'),
+    403: errorResponse('Missing module.manage'),
+    409: errorResponse('module.idempotency_in_progress'),
+    422: errorResponse(
+      'module.manifest_invalid · module.window_ended · module.partner_unknown · module.state_scope_requires_geo_tree · module.scope_value_unknown',
+    ),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/modules/{moduleId}',
+  summary: 'One module (admin shape)',
+  description:
+    '`module.manage`. The manifest, the partner names, the author, `authored_by_viewer`, the publication (or null) and ' +
+    '`lead_count`.',
+  tags: ['modules'],
+  request: { params: modulesModule },
+  responses: {
+    200: { description: 'The module', content: jsonOf(ModuleDetailComponent) },
+    403: errorResponse('Missing module.manage'),
+    404: errorResponse('module.not_found'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/modules/{moduleId}/publish',
+  summary: 'Publish a draft (a non-author, with step-up)',
+  description:
+    '`module.manage`; `Idempotency-Key`; admin step-up `module_publish`. Three ticks, each `true`. The publisher must not be the ' +
+    'author (409 `tone_review.required`). A start date in the future schedules the module (`module.scheduled`); otherwise it ' +
+    'goes live (`module.activated`).',
+  tags: ['modules'],
+  request: { params: modulesModule, body: { content: jsonOf(PublishModuleRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Published', content: jsonOf(PublishModuleComponent) },
+    400: errorResponse('Invalid input · module.idempotency_key_required'),
+    403: errorResponse('Missing module.manage, or the step-up (auth.step_up_required)'),
+    404: errorResponse('module.not_found'),
+    409: errorResponse(
+      'tone_review.required · module.not_draft · module.window_ended · module.already_published · module.concurrent_change · module.idempotency_in_progress',
+    ),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/modules/{moduleId}/withdraw',
+  summary: 'Withdraw a module',
+  description:
+    '`module.manage`; `Idempotency-Key`. Body `{}`. Archives a draft, scheduled or active module (`trustee_archived`). No step-up.',
+  tags: ['modules'],
+  request: { params: modulesModule, body: { content: jsonOf(WithdrawModuleRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Withdrawn', content: jsonOf(WithdrawModuleComponent) },
+    400: errorResponse('Invalid input · module.idempotency_key_required'),
+    403: errorResponse('Missing module.manage'),
+    404: errorResponse('module.not_found'),
+    409: errorResponse('module.illegal_transition · module.concurrent_change · module.idempotency_in_progress'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

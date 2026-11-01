@@ -214,6 +214,19 @@ import {
   type NewsPostListResponse as NewsPostList,
   type CreateDraftRequest as NewsCreateDraftBody,
   type UpdateDraftRequest as NewsUpdateDraftBody,
+  // Story 12.2 — the admin MODULE surface DTOs (partner offers: wizard, partners, publish, withdraw).
+  AuthorModuleResponse,
+  ModuleDetailResponse,
+  ModuleListResponse,
+  ModulePartnerListResponse,
+  ModulePartnerResponse,
+  ModuleScopeOptionsResponse,
+  PublishModuleResponse,
+  WithdrawModuleResponse,
+  type AuthorModuleRequest as AuthorModuleBody,
+  type CreateModulePartnerRequest as CreateModulePartnerBody,
+  type ModuleState,
+  type PublishModuleRequest as PublishModuleBody,
   // Story 10.9 — the Banner/Popup admin authoring surface DTOs.
   BannerResponse,
   BannerListResponse,
@@ -3510,4 +3523,49 @@ export function directQuestionnaireVersion(body: QuestionnaireDirectRequest, ide
 }
 export function revertQuestionnairePariwar(body: QuestionnaireRevertRequest, idempotencyKey: string) {
   return qvPost(`${QV_GLOBAL}/revert`, QuestionnaireStepResponse, body, idempotencyKey);
+}
+
+// ── Story 12.2 (`2026-11-01-433`) — the admin MODULE surface (partner offers) ─────────────────────────────────────────────
+// Tenant routes under `/p/:pariwarId/modules` (gated by `module.manage` — the server is the boundary). Every write carries an
+// Idempotency-Key the CALLER mints once per user intent and REUSES on a retry (the wizard: once per wizard session). Publish
+// needs the admin step-up `module_publish` (a 403 `auth.step_up_required` is the signal to run it).
+
+const modulesBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/modules`;
+const modulePost = <T>(path: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, body: unknown, idempotencyKey: string): Promise<T> =>
+  apiFetch(path, schema, { method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey } });
+
+/** One page of the Pariwar's modules, newest first; pass the previous page's `next_cursor` back as `cursor`. */
+export function listModules(pariwarId: string, opts: { state?: ModuleState; cursor?: string; limit?: number } = {}) {
+  const q = new URLSearchParams();
+  if (opts.state !== undefined) q.set('state', opts.state);
+  if (opts.limit !== undefined) q.set('limit', String(opts.limit));
+  if (opts.cursor !== undefined) q.set('cursor', opts.cursor);
+  const qs = q.toString();
+  return apiFetch(qs === '' ? modulesBase(pariwarId) : `${modulesBase(pariwarId)}?${qs}`, ModuleListResponse);
+}
+/** One module, admin shape (manifest, partner names, author, `authored_by_viewer`, publication, `lead_count`). */
+export function getModuleDetail(pariwarId: string, moduleId: string) {
+  return apiFetch(`${modulesBase(pariwarId)}/${encodeURIComponent(moduleId)}`, ModuleDetailResponse);
+}
+/** The places an audience may name (the geo tree, or with no tree the listed workplace districts). */
+export function getModuleScopeOptions(pariwarId: string) {
+  return apiFetch(`${modulesBase(pariwarId)}/scope-options`, ModuleScopeOptionsResponse);
+}
+/** The Pariwar's partners, A–Z (at most 200). */
+export function listModulePartners(pariwarId: string) {
+  return apiFetch(`${modulesBase(pariwarId)}/partners`, ModulePartnerListResponse);
+}
+export function createModulePartner(pariwarId: string, body: CreateModulePartnerBody, idempotencyKey: string) {
+  return modulePost(`${modulesBase(pariwarId)}/partners`, ModulePartnerResponse, body, idempotencyKey);
+}
+/** Author a module as a DRAFT — the id is server-minted; a replay with the same key returns the same id. */
+export function authorModule(pariwarId: string, body: AuthorModuleBody, idempotencyKey: string) {
+  return modulePost(modulesBase(pariwarId), AuthorModuleResponse, body, idempotencyKey);
+}
+export function publishModule(pariwarId: string, moduleId: string, body: PublishModuleBody, idempotencyKey: string) {
+  return modulePost(`${modulesBase(pariwarId)}/${encodeURIComponent(moduleId)}/publish`, PublishModuleResponse, body, idempotencyKey);
+}
+/** Withdraw (archive) a module. The body is `{}` — Fastify answers 400 to an EMPTY JSON body (QE15). */
+export function withdrawModule(pariwarId: string, moduleId: string, idempotencyKey: string) {
+  return modulePost(`${modulesBase(pariwarId)}/${encodeURIComponent(moduleId)}/withdraw`, WithdrawModuleResponse, {}, idempotencyKey);
 }

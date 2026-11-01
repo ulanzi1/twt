@@ -342,3 +342,63 @@ export class ModuleLeadDuplicateError extends Error {
     super(`lead id ${leadId} is already used — refused on module ${moduleId}`);
   }
 }
+
+// ── Story 12.2 refusals (`2026-11-01-433` QE18) ────────────────────────────────────────────────────
+// Typed, ⛔ HTTP — the 12.2 route's `mapModuleError` maps them (404 / 409 / 422 / 400). The first four are PRE-CHECKS:
+// the route raises them on its write transaction BEFORE the audit wrapper, so a refusal writes ⛔ audit line (TR4).
+
+/** The manifest names a partner that is not registered in THIS Pariwar (→ 422 `module.partner_unknown`). */
+export class ModulePartnerUnknownError extends Error {
+  public readonly name = 'ModulePartnerUnknownError';
+  public constructor(public readonly partnerId: string) {
+    super(`partner ${partnerId} is not registered in this Pariwar`);
+  }
+}
+
+/**
+ * A `state` audience was requested where the Pariwar's geo tree in force has ⛔ `state` node — or there is ⛔ tree at all
+ * (`-429` C11: the wizard refuses `state` scope where there is no tree) (→ 422 `module.state_scope_requires_geo_tree`).
+ */
+export class ModuleScopeRequiresGeoTreeError extends Error {
+  public readonly name = 'ModuleScopeRequiresGeoTreeError';
+  public constructor() {
+    super('a state audience needs a published geo tree with states');
+  }
+}
+
+/**
+ * One or more audience values are not a recorded place of this Pariwar: ⛔ a `state` / `district` node of the tree in
+ * force, or (with ⛔ tree) ⛔ a listed workplace district (QE5; → 422 `module.scope_value_unknown`). `values` are the
+ * admin's own input, ⛔ PII.
+ */
+export class ModuleScopeValueUnknownError extends Error {
+  public readonly name = 'ModuleScopeValueUnknownError';
+  public constructor(
+    public readonly scope: 'state' | 'district',
+    public readonly values: readonly string[],
+  ) {
+    super(`${String(values.length)} ${scope} value(s) are not a recorded place of this Pariwar`);
+  }
+}
+
+/** A partner display name breaks the QE12 rules (→ 422 `module_partner.name_invalid`). Wraps the ZodError's issues. */
+export class ModulePartnerNameInvalidError extends Error {
+  public readonly name = 'ModulePartnerNameInvalidError';
+  public readonly issues: readonly ZodIssue[];
+  public constructor(public readonly zodError: ZodError) {
+    super(
+      `partner display name is invalid: ${zodError.issues
+        .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+        .join('; ')}`,
+    );
+    this.issues = zodError.issues;
+  }
+}
+
+/** A list cursor failed the STRICT decode (QE16, as amended) — raised in JS BEFORE any SQL (→ 400 `module.cursor_invalid`). */
+export class ModuleCursorInvalidError extends Error {
+  public readonly name = 'ModuleCursorInvalidError';
+  public constructor(public readonly reason: string) {
+    super(`module list cursor is invalid: ${reason}`);
+  }
+}

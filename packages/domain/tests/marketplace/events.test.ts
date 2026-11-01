@@ -240,3 +240,11 @@ describe('ModuleLeadSubmittedPayloadSchema', () => {
     expect(ModuleLeadSubmittedPayloadSchema.safeParse(p).success).toBe(false);
   });
 });
+
+// Story 12.2 (`2026-11-01-433` QE12; AC10; TR16) — the WRITE-only display rules did ⛔ tighten the SHARED payload schema:
+// `foldModuleProjection` re-parses stored genesis payloads, so a vector the 12.2 write rules REFUSE must still parse here.
+describe('Story 12.2 — ModuleAuthoredPayloadSchema is unchanged by QE12', () => {
+  it('a Hindi name with no Devanagari letter (refused at WRITE since 12.2) still parses as a genesis payload', () => {
+    expect(ModuleAuthoredPayloadSchema.safeParse(authored({ name_hi: 'LIC' })).success).toBe(true);
+  });
+});

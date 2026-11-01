@@ -812,7 +812,18 @@ export function permissionKey(value: string): PermissionKey {
 // on any: its `state` ceiling can ⛔ never satisfy a `pariwar`-dimension check — an INERT grant (scope.ts §RANK-ORDER;
 // [[project_rbac_geo_scope_containment]]); ⛔ NOT `trustee_panel` (the trust-wide Panel as per-version approver is Q8 B,
 // ⛔ taken). `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 56 as const;
+//
+// ⭐ Story 12.2 (author-commit `2026-11-01-433` QE2; `-210` cl.2 puts a key OUTSIDE the delegated enum-mint class, so it is
+// recorded there with its holder set) — 56 → 57, ONE key (74 → 75): `module.manage` — pariwar-dimension; `pariwar_admin`
+// (+ derived super_admin). Gates every Story 12.2 module route: author a partner offer as a `draft`, register a partner,
+// publish (a NON-author, with step-up — the key doubles as the surface's tone-review key, the `banner.manage` /
+// `news.manage` variance) and withdraw. Any module may target the whole Pariwar, so only Pariwar-wide authority may author
+// one. ⛔ NOT `district_admin` / `state_trustee` (a narrower grant is INERT against a pariwar key — scope.ts §RANK-ORDER),
+// ⛔ NOT `trustee_panel`. ACCEPTANCE CONDITION for a narrower grant (recorded, ⛔ built): a module gains a server-derived geo
+// scope AND the gate moves to that dimension, checking EVERY scope value with `rbac.checkPermission` + the request's tree
+// resolver. 56 / 74 READ LIVE at `36b489c9` (v57 was contested by 14-3 / 6-39 / 6-22 — none had committed it).
+// `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 57 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1412,6 +1423,9 @@ export const SEED_PERMISSION_KEYS = [
   // Story 6.33 (QE6 (A), QE7) — MAKE LIVE for one Pariwar or all, modify at make-live, add directly, revert a Pariwar.
   // global-dimension (`requireGlobalPermission`); `super_admin` ONLY (derived — ⛔ `roles.ts` const).
   'questionnaire.publish',
+  // Story 12.2 (`2026-11-01-433` QE2) — author, publish (a non-author, step-up) and withdraw a partner module; register a
+  // partner. pariwar-dimension; `pariwar_admin` (+ derived super_admin). Doubles as the surface's tone-review key.
+  'module.manage',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

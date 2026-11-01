@@ -852,7 +852,8 @@ export const nomineeLinkId = uuidBrand('NomineeLinkId');
 // `ModuleId` is a partner module's canonical id AND its events_log stream_id (the SIXTH event-derived-state
 // primitive). Like `HelpdeskTicketId` it has no natural key, and unlike it there is ⛔ DB default: the CALLER
 // mints it and passes it to `marketplace.authorModule` (QE15), so the intent audit line can name it first.
-// `PartnerId` addresses the partner a module belongs to; partner identity is Story 12.2's (⛔ FK in 12.1).
+// `PartnerId` addresses the partner a module belongs to — a `marketplace_partners` row of the SAME Pariwar, enforced by
+// the composite `marketplace_modules_partner_fk` (Story 12.2, `2026-11-01-433` QE3).
 // `ModuleLeadId` is the caller-minted idempotency key of ONE `module.lead_submitted` (QE8). The shared
 // validator lower-cases, which is what makes the two text-keyed `events_log` lead indexes (0193) case-safe.
 
@@ -861,7 +862,7 @@ export type ModuleId = Brand<'ModuleId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ModuleId`. */
 export const moduleId = uuidBrand('ModuleId');
 
-/** The partner a module is offered by (`marketplace_modules.partner_id`; ⛔ FK until Story 12.2). */
+/** The partner a module is offered by (`marketplace_modules.partner_id` → `marketplace_partners` via `marketplace_modules_partner_fk`). */
 export type PartnerId = Brand<'PartnerId'>;
 /** Smart constructor: validates UUID shape, returns a branded `PartnerId`. */
 export const partnerId = uuidBrand('PartnerId');

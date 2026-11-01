@@ -134,6 +134,18 @@ path uses `withCompensatingAudit` (the canonical helper) and the other ~49 audit
 but a future handler that writes a bare `audit.writeAuditEntry` is caught (revert-sanity
 verified on `claims.dpdpa-consent.handlers.ts`). No claim file needs an exemption.
 
+⭐ **Story 12.2 (2026-11-01, `2026-11-01-433`) — the Epic-12 module surface** (`apps/api/src/modules/marketplace`,
+`packages/domain/src/marketplace`) is scanned by THIS invariant ONLY (`MARKETPLACE_ROOTS` in `check.ts`); the
+constant-time-compare invariant does ⛔ run there (the surface verifies no secret — it would pass vacuously). Every module /
+partner write in the routes pairs through `withCompensatingAudit`; the domain primitive never audits (12.1 QE15). Teeth
+(revert-sanity, 2026-11-01): a bare `audit.writeAuditEntry(...)` planted in `apps/api/src/modules/marketplace/` turned
+`pnpm access-wrapper:check` RED (exit 1, one finding), and green again once removed. ⚠ The invariant matches the NAMESPACE
+call shape only — a direct `writeAuditEntry(...)` import planted in `packages/domain/src/marketplace/` was ⛔ flagged
+(the pre-existing heuristic limit); the domain's no-audit-wrapper rule is pinned by
+`packages/domain/tests/marketplace/no-audit-wrapper-in-domain.test.ts` (QE22). ⚠ The activation sweep
+(`apps/jobs/src/scheduler/module-activation.ts`) is ⛔ scanned — `apps/jobs` is outside this gate; its own test pins its
+audit pairing.
+
 ## Per-epic scope-extension convention (AI-6-1)
 
 Expanding this gate's scan scope is complete only when at least one invariant has **meaningful

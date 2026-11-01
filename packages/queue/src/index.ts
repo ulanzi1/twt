@@ -560,6 +560,12 @@ export const QUEUE_NAMES = {
    * (the `announcement_channel_posts` record — ⛔ `singletonKey`, which dedupes nothing). Job class B.
    */
   ANNOUNCEMENT_CHANNEL_POST: 'announcement.channel.post',
+  /**
+   * The 5-minute partner-module ACTIVATION sweep (Story 12.2, `2026-11-01-433` QE7 (A); 12.1 C2 (b)): turns each `scheduled`
+   * module whose start time has come `active` (actor `system`). A cron tick with an empty payload — ⛔ a per-module delayed
+   * job (a job lost between COMMIT and enqueue would leave a module scheduled forever). Job class C.
+   */
+  MODULE_ACTIVATION: 'module.activation',
 } as const;
 
 /** Union of the registered queue names. */

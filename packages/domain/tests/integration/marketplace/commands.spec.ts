@@ -46,6 +46,7 @@ import {
   expectRowMatchesStream,
   manifestInput,
   newLeadId,
+  seedPartner,
   newMemberId,
   newModuleId,
   rowOf,
@@ -68,9 +69,19 @@ async function authored(
 ): Promise<ModuleId> {
   const id = newModuleId();
   const now = await txNow(client);
-  await authorModule(client, { ...base(id), manifest: manifestInput(now, o.manifest) });
+  await authorModule(client, { ...base(id), manifest: await manifestFor(client, now, PARIWAR_A, o.manifest) });
   if (o.activate) await activateModule(client, base(id));
   return id;
+}
+
+/** The manifest fixture naming a fresh SAME-Pariwar partner (Story 12.2 — `marketplace_modules_partner_fk`). */
+async function manifestFor(
+  client: pg.PoolClient,
+  now: Date,
+  pariwar: string = PARIWAR_A,
+  o: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  return manifestInput(now, { partner_id: await seedPartner(client, pariwar), ...o });
 }
 
 /** The test transaction is still usable (a refusal rolled back its own savepoint). */
@@ -106,7 +117,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
     await enterAppScope(client, PARIWAR_A);
     const id = newModuleId();
     const now = await txNow(client);
-    const input = manifestInput(now);
+    const input = await manifestFor(client, now);
     const auditId = randomUUID();
 
     const res = await authorModule(client, { ...base(id), auditId, manifest: input });
@@ -156,7 +167,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
     await enterAppScope(client, PARIWAR_A);
     const now = await txNow(client);
     const id = newModuleId();
-    const past = manifestInput(now, {
+    const past = await manifestFor(client, now, PARIWAR_A, {
       valid_from: new Date(now.getTime() - 2 * HOUR_MS).toISOString(),
       valid_until: now.toISOString(),
     });
@@ -164,7 +175,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
     await expectTxUsable(client);
     expect(await streamTypes(client, id)).toEqual([]);
     // The default fixture's valid_from is an hour in the past.
-    await expect(authorModule(client, { ...base(newModuleId()), manifest: manifestInput(now) })).resolves.toMatchObject({
+    await expect(authorModule(client, { ...base(newModuleId()), manifest: await manifestFor(client, now) })).resolves.toMatchObject({
       state: 'draft',
     });
   });
@@ -175,7 +186,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
     const id = newModuleId();
     const now = await txNow(client);
     await expect(
-      authorModule(client, { ...base(id), manifest: manifestInput(now, { scope_filter: { version: 1, scope: 'role', values: ['x'] } }) }),
+      authorModule(client, { ...base(id), manifest: await manifestFor(client, now, PARIWAR_A, { scope_filter: { version: 1, scope: 'role', values: ['x'] } }) }),
     ).rejects.toBeInstanceOf(ModuleManifestInvalidError);
     expect(await streamTypes(client, id)).toEqual([]);
   });
@@ -185,7 +196,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
     await enterAppScope(client, PARIWAR_A);
     const id = await authored(client);
     const now = await txNow(client);
-    await expect(authorModule(client, { ...base(id), manifest: manifestInput(now) })).rejects.toBeInstanceOf(
+    await expect(authorModule(client, { ...base(id), manifest: await manifestFor(client, now) })).rejects.toBeInstanceOf(
       ModuleGenesisAlreadyExistsError,
     );
     await expectTxUsable(client);
@@ -194,7 +205,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
       projectModuleGenesis(client, {
         pariwarId: A,
         moduleId: id,
-        manifest: parseModuleManifest(manifestInput(now)),
+        manifest: parseModuleManifest(await manifestFor(client, now)),
         auditId: randomUUID(),
         actor: 'system',
         actorId: null,
@@ -209,7 +220,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — authoring (AC5, AC7)', (
     await enterAppScope(client, PARIWAR_A);
     const now = await txNow(client);
     await expect(
-      authorModule(client, { ...base(newModuleId(), { pariwarId: B }), manifest: manifestInput(now) }),
+      authorModule(client, { ...base(newModuleId(), { pariwarId: B }), manifest: await manifestFor(client, now) }),
     ).rejects.toMatchObject({ cause: expect.objectContaining({ code: '42501' }) });
     await expectTxUsable(client);
   });
@@ -365,7 +376,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — the I11 actor rules (AC5
     // A member cannot author, schedule, activate or archive.
     const memberBase = (m: ModuleId) => base(m, { actor: 'member', actorId: member });
     const fresh = newModuleId();
-    await expect(authorModule(client, { ...memberBase(fresh), manifest: manifestInput(now) })).rejects.toBeInstanceOf(
+    await expect(authorModule(client, { ...memberBase(fresh), manifest: await manifestFor(client, now) })).rejects.toBeInstanceOf(
       ModuleProjectorInputError,
     );
     expect(await streamTypes(client, fresh)).toEqual([]);
@@ -572,7 +583,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — across tenants (RP5)', (
   async function moduleInB(client: pg.PoolClient): Promise<ModuleId> {
     await enterAppScope(client, PARIWAR_B);
     const id = newModuleId();
-    await authorModule(client, { ...base(id, { pariwarId: B }), manifest: manifestInput(await txNow(client)) });
+    await authorModule(client, { ...base(id, { pariwarId: B }), manifest: await manifestFor(client, await txNow(client), PARIWAR_B) });
     await activateModule(client, base(id, { pariwarId: B }));
     return id;
   }
@@ -596,7 +607,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — across tenants (RP5)', (
     const typesInB = await streamTypes(client, idB);
 
     await enterAppScope(client, PARIWAR_A);
-    await expect(authorModule(client, { ...base(idB), manifest: manifestInput(await txNow(client)) })).rejects.toBeInstanceOf(
+    await expect(authorModule(client, { ...base(idB), manifest: await manifestFor(client, await txNow(client)) })).rejects.toBeInstanceOf(
       ModuleGenesisAlreadyExistsError,
     );
     await expectTxUsable(client);

@@ -15,7 +15,7 @@ every finding. The v1.3 pass re-traced every G fact at `36b489c9`: the only reli
 re-check at Task 0.1.
 Re-locate by FUNCTION, never by line.
 
-STATUS: review (2026-11-01 — v1.12; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.12 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
+STATUS: review (2026-11-01 — v1.13; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.13 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
 carry FIVE real asks (QE3, QE6, QE7, QE9, QE17); BigDev answers them at Task 0.2 and the author-commit lands ALONE at
 Task 0.3 BEFORE any code** ([[feedback_governance_commits_precede_implementation]]). If an ASK is answered with a
 non-recommended option, Task 0.3 rewrites the dependent ACs / Tasks / Invariants first (the map is in Task 0.3).
@@ -34,6 +34,8 @@ records.** Round 2 reviews the committed production slice next.
 ⭐ **v1.11 (2026-11-01): code review round 2, chunk A — decision `2026-11-01-435` (`ac1ddad3`, DN3 + DN4), code `497c69e4`;
 DN5 / DN6 open (from the patch-diff review). Chunks B and C of round 2 are next.**
 ⭐ **v1.12 (2026-11-01): DN5 / DN6 / DN7 resolved — decisions `-436` (`a5b23c89`) and `-437` (`60dbcf00`), code `77ea3906`.**
+⭐ **v1.13 (2026-11-01): code review round 2 COMPLETE (chunks B / C, code `ea408af3` + `550307be`), two real-browser passes, `ci:local` 37/37 on a
+fresh database at `550307be`. Next: push, open the PR (BigDev's instruction).**
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 the G / QE prose and historical Change Log rows) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In the Names table, Policy meaning, ACs, Invariants,
@@ -67,7 +69,7 @@ Story 6.32 only" — it is NOT a standing rule; a merge-order departure needs it
   **`2026-11-01m`** (relabelled `c` → `g` in v1.2, `g` → `m` in v1.3), **`2026-11-01n`** (v1.4), **`2026-11-01o`**
   (v1.5 — the Task 0.2 answers), **`2026-11-01p`** (v1.6 — the author-commit), **`2026-11-01q`** (v1.7 — Task 0.1 re-grep +
   Task 0.4, the `-433` records), **`2026-11-01r`** (v1.8 — dev-story complete, row → review), **`2026-11-01s`** (v1.9 —
-  code review round 1 committed; `s` re-grepped free on every ref and worktree), **`2026-11-01t`** (v1.10 — `-434`), **`2026-11-01u`** (v1.11 — round 2 chunk A) and **`2026-11-01v`** (v1.12 — DN5–DN7);
+  code review round 1 committed; `s` re-grepped free on every ref and worktree), **`2026-11-01t`** (v1.10 — `-434`), **`2026-11-01u`** (v1.11 — round 2 chunk A), **`2026-11-01v`** (v1.12 — DN5–DN7) and **`2026-11-01w`** (v1.13 — round 2 complete);
   re-grep and relabel again at landing if needed.
 - Roster: highest Row 45 (14-3 and 6-39 both plan 46). This story adds NO row (QE19); it appends a dated note to Row 26
   (QE7 (A) only; QE19, Task 0.4).
@@ -727,7 +729,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
     `ApiError` (`new ApiError(status, code, message, details)` — ⛔ 422 subclass exists); `withCompensatingAudit` has
     already written `_rolled_back` (it rethrows), so mapping inside `mutate` or in the outer `catch` both keep the line.
     The central mapper is ⛔ touched. The pre-check refusals are typed domain errors (Task 3) mapped by the SAME
-    function, so every row below — the pre-check ones included — is a row of `mapModuleError`.
+    function, so every row below — the pre-check ones included — is a row of `mapModuleError`. ⚠ CORRECTED 2026-11-01 (code review round 2, RB7 / PT18): the publish pre-checks `module.not_draft` / `module.window_ended`, the detail read's `module.not_found` and the idempotency rows are raised in the handler — only the two publish pre-checks pass THROUGH `mapModuleError`; the others never reach it.
 
   | Domain error / condition | HTTP | code |
   |---|---|---|
@@ -932,7 +934,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
       audience, window and places — the audience and status lines are EXACTLY the Policy-meaning strings (members-all;
       the state / district list; "No status restriction …"; the left-or-erased line; "An audience that matches no member
       reaches nobody."); "Create draft" posts with an Idempotency-Key minted once per wizard session (reused on
-      retry); a 422 maps each issue back to its step. "Start a corrected copy" pre-fills from an existing module.
+      retry) ⚠ SUPERSEDED 2026-11-01 by code review RP18: a key per request BODY (`attemptKey` — kept while the answers are unchanged, a new one when they change); recorded at RC19; a 422 maps each issue back to its step. "Start a corrected copy" pre-fills from an existing module.
 12. **AC12 — admin detail + publish.** The detail page shows state, the manifest in plain language, author, publication,
     and the line *"Members cannot see offers yet. The member offer shelf comes in a later release."* Publish shows three
     required ticks — "I have reviewed this copy against every section of the TWT tone-review checklist (voice; register;
@@ -1163,7 +1165,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         (`auth/admin/admin-auth.repo.ts`) with a fallback label when it returns null or the id is null (NEVER a 500);
         `authored_by_viewer` = (author id is null) OR (author id = `request.requestContext.actorId`).
   - [x] 5.3 `errors.ts`: `mapModuleError` — EVERY row of the QE18 table, including the five 12.2 classes and
-        `ModuleStateDirectWriteError` → 500 `module.state_direct_write_rejected` (logged at error); unit-tested row by row.
+        `ModuleStateDirectWriteError` → 500 `module.state_direct_write_rejected` (logged at error); unit-tested row by row. ⚠ CORRECTED 2026-11-01 (code review round 2, RB7 / PT18): the publish pre-checks `module.not_draft` / `module.window_ended`, the detail read's `module.not_found` and the idempotency rows are raised in the handler — only the two publish pre-checks pass THROUGH `mapModuleError`; the others never reach it.
   - [x] 5.4 Register in `server.ts`.
 - [x] **Task 6 — job (AC9; per QE7).** (A): `QUEUE_NAMES.MODULE_ACTIVATION`; `apps/jobs/src/scheduler/
       module-activation.ts` — `runModuleActivationTick(deps)` (QE7 (A): the Row 26 guard first —
@@ -1565,6 +1567,98 @@ Evidence:
   marketplace unit + integration + policy sets 624; the whole admin suite 1,661; the API admin-module spec + errors unit 54; jobs
   `module-activation` 6. NOT run yet: `pnpm ci:local`, the real-browser pass.
 
+### Review Findings — round 2, chunks B (API / jobs / contracts / gate scripts) and C (admin UI) (2026-11-01, `bmad-code-review 12.2`)
+
+Scope: `36b489c9..4729805c` — chunk B `apps/api apps/jobs packages/contracts scripts` (3,295 diff lines; `openapi/v1.yaml` checked by
+reading — in sync), chunk C `apps/admin` (3,625). Six layers in parallel, read-only (Blind / Edge / Auditor per chunk), told every earlier
+finding, patch and dismissal. 18 + 3 + 2 (B) and 18 + 10 + 7 (C) raw → 30 distinct patches, 0 decision-needed, 0 new deferrals (RD3 gains a
+trigger), 21 dismissed. No HIGH. Applied under BigDev's *"…If there were any finding apply it…"*.
+
+Chunk B — patches:
+- [x] [Review][Patch] **RB1 — The detail read hard-codes `hindi_reviewed` / `partner_agreement_confirmed: true` instead of reading the row (LOW — blind)** — read `publication.*` (the DB CHECK makes them true, but the response must not assert what it did not read) [apps/api/src/modules/marketplace/handlers.ts `get`]
+- [x] [Review][Patch] **RB2 — `accent_color_hex` lacks the `?? null` its sibling `logo_object_key` has; the strict response DTO would 500 on a bundle missing the key (LOW — blind)** [handlers.ts `get`]
+- [x] [Review][Patch] **RB3 — The OpenAPI omits the 401 (`requireAdminSession`) and the scope hook's 404 on every route, and withdraw's / author's reachable 409 codes (LOW — blind+edge)** — add them in `emit-openapi.ts`, re-emit `openapi/v1.yaml` [packages/contracts/scripts/emit-openapi.ts]
+- [x] [Review][Patch] **RB4 — AC2's "nothing written" leg asserts only on the audit table, so an UNAUDITED write by a denied admin would pass (LOW — blind)** — assert partner / module / event row counts as RP12 does [apps/api/tests/integration/marketplace-admin.spec.ts]
+- [x] [Review][Patch] **RB5 — The contracts sync guard does not pin the eligibility clause kinds, `MAX_ELIGIBILITY_CLAUSES` or the `unusable_reason` set the response DTO re-declares (LOW — auditor; AC13 / TR12)** — a new clause kind within `version: 1` would 500 the detail GET with CI green [packages/contracts/tests/modules.test.ts]
+- [x] [Review][Patch] **RB6 — The sweep's `failed` log carries only `err.name` (pg's `DatabaseError.name` is `"error"`) and no Pariwar; the `failed` branch is untested (LOW — edge)** — log `pariwarId` and the SQLSTATE found through `cause`; a stubbed `failed` test that also proves the loop continues [apps/jobs/src/scheduler/module-activation.ts; apps/jobs/tests/module-activation.test.ts]
+- [x] [Review][Patch] **RB7 — `errors.ts`'s header (and the Completion Note) say `mapModuleError` owns "EVERY row of the QE18 table … the pre-check refusals included"; the publish pre-checks (`not_draft`, `window_ended`) and the idempotency rows are raised in the handler (LOW — blind+auditor, family 10)** — reword to what is true [apps/api/src/modules/marketplace/errors.ts]
+- [x] [Review][Patch] **RB8 — RD3's trigger list misses the reachable one: the API process dies between the key claim and its settle, leaving the key `pending` for 24 h, so the wizard's / picker's same-key retry answers 409 `idempotency_in_progress` ("wait a moment") all day (LOW — edge; blind on the handler header's publish / withdraw-only list)** — record it in RD3 and the handler header (records + comment; the `takeOver` remedy stays RD3's owner's)
+
+Chunk C — patches:
+- [x] [Review][Patch] **RC1 — After Create draft nothing is announced and focus is left on `<body>` (MED — the browser pass, edge, auditor; family 13(d))** — navigate with a `created` flag; the detail page focuses its heading on first data and puts "Draft created." in its always-mounted live region [ModuleWizard.tsx; ModulesRoute.tsx; ModuleDetailPage.tsx]
+- [x] [Review][Patch] **RC2 — Focus falls to `<body>` when the step-up panel opens (the pressed button disables), when it is cancelled, and when a publish / withdraw / held retry fails; a non-422 Create failure too (MED — blind+edge+auditor, family 13(d))** — focus the panel's first control when it opens; return focus to the heading (or the pressing control) on cancel and in every catch [ModuleDetailPage.tsx; ModuleWizard.tsx]
+- [x] [Review][Patch] **RC3 — Registering a partner (success) and Cancel unmount the focused control; the new partner is selected silently (LOW — edge+auditor, family 13(d))** — focus the select after success, the "Register a new partner" button after Cancel [PartnerPicker.tsx]
+- [x] [Review][Patch] **RC4 — A registration still in flight overwrites a partner the admin has since picked from the list (MED — blind; RP27 covered only unmount)** — the select's change bumps the generation [PartnerPicker.tsx]
+- [x] [Review][Patch] **RC5 — The partner select shows "Choose a partner" for a chosen id the options do not list (a refetch failure after registering; a corrected copy's partner past 200), while Next is enabled and the summary drops the partner line (LOW — blind+edge)** — a fallback option and summary line [PartnerPicker.tsx; ModuleWizard.tsx]
+- [x] [Review][Patch] **RC6 — Leaving the wizard while Create is in flight still navigates the admin to the new draft from wherever they went (LOW — edge; TR5's guard)** — a mounted / generation ref [ModuleWizard.tsx]
+- [x] [Review][Patch] **RC7 — A corrected copy whose source failed to load unlocks a blank wizard, then a later refetch pre-fills OVER what the admin typed (LOW — blind+edge; new evidence beyond RP20)** — the admin's first edit wins (no later pre-fill), and a failed source keeps the fields locked with Try again [ModuleWizard.tsx]
+- [x] [Review][Patch] **RC8 — After 422 `module.scope_value_unknown` the scope options are never refetched and `details.values` is ignored, so the refused place still looks valid (LOW — edge+auditor; new evidence beyond RP21)** — refetch the options and name the refused places [ModuleWizard.tsx; derive.ts]
+- [x] [Review][Patch] **RC9 — After 409 `module_partner.name_taken` ("choose it from the list") the list is not refetched (LOW — edge)** [PartnerPicker.tsx]
+- [x] [Review][Patch] **RC10 — The summary leaves out step (f) (the lead hand-off address and the secret name), so a typo goes unreviewed into an immutable draft (LOW — blind)** [ModuleWizard.tsx]
+- [x] [Review][Patch] **RC11 — A fast double activation of Publish / Withdraw sends two writes with different keys before `busy` renders (LOW — blind)** — a synchronous in-flight guard [ModuleDetailPage.tsx]
+- [x] [Review][Patch] **RC12 — "Load more" unmounts under focus on the last page and the new rows are not announced; a failed next page shows the whole-list error over the rows (LOW — blind+edge)** [ModulesPage.tsx]
+- [x] [Review][Patch] **RC13 — "No offers yet." under a state filter in a Pariwar that has offers (LOW — edge)** — "No offers in this state." [ModulesPage.tsx; i18n-en.ts]
+- [x] [Review][Patch] **RC14 — The partner picker's "Loading…" and disabled Try again come back on every later refetch after one earlier failure (`errorUpdateCount` never resets) (LOW — blind)** [PartnerPicker.tsx]
+- [x] [Review][Patch] **RC15 — Create / Publish / Withdraw stay busy until EVERY module query refetches (the invalidation promise is returned from `onSuccess`) (LOW — blind)** [apps/admin/src/api/hooks.ts]
+- [x] [Review][Patch] **RC16 — Copy: "1 members registered interest"; the "goes live at its opening time" line stays after the offer is Live; "Only members in these statuses: " with nothing ticked (LOW — blind+auditor)** [i18n-en.ts; derive.ts; ModuleDetailPage.tsx]
+- [x] [Review][Patch] **RC17 — Notices not tied to their controls: the G18 note at step (b), the India-time line at step (d), the scope truncation / reach notes; "No place matches the search." not live (LOW — auditor, family 13(d))** — `aria-describedby` / polite status [ModuleWizard.tsx; ScopePicker.tsx]
+- [x] [Review][Patch] **RC18 — The detail page's partner line renders the Hindi name without `lang="hi"` (LOW — blind+auditor; WCAG 3.1.2)** [ModuleDetailPage.tsx]
+- [x] [Review][Patch] **RC19 — AC11 still says the Idempotency-Key is "minted once per wizard session" (RP18 changed it); the File List still calls two committed test files "untracked" (LOW — auditor, family 10)** — dated pointer at AC11; File List corrected (records)
+
+Dismissed (21), each checked against the tree or the records: the same key with a different body (RD2); the access-wrapper gate not proving the domain never audits (round 1, and the QE22 test — RP40); withdraw with no pre-read writing an audit pair for a foreign id (round 1 — AC7 / QE10; the line records the caller's own attempt with the id they sent); a closed-window `scheduled` module never archived (carried C2 → 12.6); a failing candidate retried forever (RD1); per-process sweep concurrency and the BYPASSRLS write path (the command's row lock; G13 / Row 26); the scope options' clock (round 1); the self-computed tone hash (immutable rows — QE4); the trigger-error code on a 500 (the house precedent); `actorRole: null` (round 1); a session naming a deleted user (the scope hook still answers 404 — no grant); one-click withdraw (AC7 / QE10, the browser pass); same-named districts (the geo tree forbids them); the stale page after a lost write response (round 1); the publish body's literal `true` ticks (the contract's literal; the button is the gate); the normaliser keeping ZWJ / ZWNJ (`-436`); the session-error redirect (the app-wide route-gate pattern); a conditionally mounted reason paragraph (it is Next's `aria-describedby`, not an announcement); three weak-test notes already covered elsewhere (the withdraw step-up mock, the prefill test's scope, the 422 same-key retry — the key-per-body behaviour is tested in derive).
+
+#### Round 2 chunks B / C — patches applied, and their patch-diff reviews (2026-11-01)
+
+Applied by two implementers in parallel on disjoint paths (chunk B: `apps/api`, `apps/jobs`, `packages/contracts`, `openapi`; chunk C:
+`apps/admin`), each with RED-then-GREEN or a mutation check (backup → mutate → restore → `cmp`), then reviewed as a PATCH diff by fresh
+read-only layers until a round found only LOW items. Code commit: the one after `4729805c` (see the Change Log, v1.13).
+
+- **Chunk B (RB1–RB7):** RB1 has NO red (the row's CHECKs make a false tick unstorable; a broken invariant now throws instead of asserting
+  `true`). RB2: a raw-updated bundle without the key answered 500, now 200 `null`. RB3: 401 (`auth.session_required` / `auth.session_expired`)
+  and the scope hook's 404 `pariwar.not_found` on all eight routes; ⚠ the finding's suggested 409 codes for author / withdraw were checked
+  UNREACHABLE (the genesis maps 23505 to `ModuleGenesisAlreadyExistsError`; a server-minted id cannot collide; `archiveModule` has no
+  `trustee_archived` guard) and were NOT added — the round-2 finding over-reached; the reasoning sits in `emit-openapi.ts`. RB4: an unaudited
+  partner insert before the permission hook fails the new counts, passed the old audit-only test. RB5: a runtime
+  `MODULE_SCOPE_OPTION_UNUSABLE_REASONS` tuple added to `scope-options.ts` (behaviour unchanged) so the sync guard has something to compare;
+  five mutations caught. RB6: the log carries `pariwarId` and `sqlstate` (via `pgSqlstateOf`); a stubbed test proves the loop continues.
+  RB7: header reworded.
+- **Chunk C (RC1–RC18):** 46 new tests (33 RED first), 36 mutations caught.
+
+Patch-diff review 1 (Blind; Edge + Auditor) — no HIGH, no regressions; fixed as PT1–PT18:
+- [x] PT1 (MED) the partner picker showed "could not load" + Try again over a WORKING list after a failed background refetch — only with no data now.
+- [x] PT2 (MED) late results (Load more, registration, the created heading) stole focus from where the admin had moved — `focus.ts` `focusIfUnclaimed`.
+- [x] PT3 (MED) the post-write button lock could be skipped or stick (`!isError`, wall-clock stamps) — see PU4 for its final shape.
+- [x] PT4 the held step-up retry left focus on `<body>`; PT5 the panel autofocus skips disabled controls (no RED possible — the panel remounts per hold); PT6 checked, left: no non-user `set()` runs before the source loads.
+- [x] PT7 a 404 corrected-copy source offers "Start a blank offer"; PT8 focus after a successful source retry; PT9 an empty last page announces "No more offers."; PT10 `?created` announces only for the viewer's own draft; PT11 route-level tests (`modules-route.test.tsx`, memory history, the real routes); PT12 a list pick during a registration closes the form at once; PT13 the Hindi preview fallback; PT14 the refused-place list is bounded.
+- [x] PT15 OpenAPI 400s (params are validated before the hooks — a malformed `pariwarId` is 400 even unauthenticated); PT16 the AC2 counts cover BOTH Pariwars (an unaudited write into the second passed the RB4 version); PT17 the contracts guard comment narrowed and the clause's states enum compared; PT18 `errors.ts` header: only publish's two pre-checks pass through the mapper.
+
+Patch-diff review 2 (combined, on the PT delta) — no HIGH / MED; four LOW fixed as PU1–PU4 (tests written first: 11 RED, 13 mutations caught):
+- [x] PU1 "Start a blank offer" left focus on `<body>` — a one-shot `blank` flag focuses the new wizard's step heading; `replace: true`.
+- [x] PU2 a malformed `?from=` dead-ended on Try again — `validateModuleNewSearch` drops a non-UUID `from`, re-validated in the route (the router merges the parent's raw search otherwise — found while fixing), and a 400 is treated like the 404.
+- [x] PU3 a window-focus refetch flipped the 404 block and unmounted its focused button; PT8 ran only on the click path — the not-found state is sticky; the heading focus is an effect on the source's late arrival.
+- [x] PU4 the PT3 test could flake on a millisecond roll-over — the lock is now `awaitingRefresh && detail.isFetching` (ends when the post-write read settles, success or failure; no timestamps); the implementer declined the reviewer's count-snapshot because a refresh that lands before the snapshot would stall it.
+
+**Real-browser pass 2 (2026-11-01, same recipe, throwaway `twt-12-2-browser` :5461, removed afterwards)** at the PT1–PT18 tree, i.e. BEFORE PU1–PU4 (which are covered by jsdom and route tests only): registering a
+partner moved focus to the partner select (RC3); the summary showed the hand-off fields (RC10); Create draft → the detail page with focus on
+the heading, the live region "Draft created." and the URL without `?created` (RC1); the publisher hand-typing `?created=true` on that draft got
+no announcement and the flag dropped (PT10); Publish → the step-up panel with focus on "Send the code" (RC2); Cancel → focus on the heading
+(RC2); Publish → send → code → Verify → Live, "Published.", focus on the heading, Withdraw re-enabled once the refresh landed (PT4; PT3's lock, since reshaped by PU4).
+Observed, NOT changed: pressing "Send the code" in the SHARED `StepUpPanel` drops focus to `<body>` — deferred as RD8 (`deferred-work.md`). Not
+covered: "Load more" (the seeded list is one page), a screen reader, keyboard-only navigation end to end.
+
+#### `ci:local` on the round-2 tree (2026-11-01)
+
+- Run 1 at `4729805c` on the story container `twt-12-2-pg` (:5451): **37 / 37 green** — but the fix implementers began editing midway,
+  so it attests the committed state only loosely.
+- Run 2 at `ea408af3` (:5451): **35 / 37** — `microcopy` (the tone gate flags "does not count" in a `ModuleDetailPage.tsx` COMMENT —
+  reworded in `550307be`) and `integration-tests` (`announcement-activity-read.spec.ts`, Story 5.14 — see below).
+- Run 3 at `550307be` (:5451): **36 / 37** — the same announcement spec only.
+- Run 4 at `550307be` on a FRESH container `twt-12-2-ci2` (:5462): **37 / 37 green, first run** — the AC13 / AC14 attestation for this tree.
+- The announcement spec, diagnosed (not a 12.2 regression — nothing in 12.2's diff touches cycles or announcements): it reads the latest 2
+  cycles of the shared `PARIWAR_A` in a 15-day window; run 2 left seven committed `cycle_freeze_commits` rows there (`trustee-actor-1`,
+  12:22–12:23 UTC) that persist and outrank the spec's own cycles, so it stays red on :5451 until they age out. No row was deleted; the
+  writer was not pinned down. A fresh Pariwar in that spec is the durable fix (Story 5.14's area).
+
 ## Dev Notes
 
 ### Current state (what this story changes, what must be preserved)
@@ -1784,7 +1878,7 @@ the API tests and the admin UI (each reported back; their work is in the one cod
   display schemas (code points compared numerically — ⛔ invisible character in source); `errors.ts` += the five classes.
 - **Contracts** — `packages/contracts/src/modules/{enums,dto,index}.ts` (+ the two list-query schemas, shared by the route
   and OpenAPI); eight OpenAPI paths; `partners/README.md` dated note.
-- **API** — `apps/api/src/modules/marketplace/` (eight routes; I2's write shape; `mapModuleError` = every QE18 row).
+- **API** — `apps/api/src/modules/marketplace/` (eight routes; I2's write shape; `mapModuleError` = every QE18 row). ⚠ CORRECTED 2026-11-01 (code review round 2, RB7 / PT18): the publish pre-checks `module.not_draft` / `module.window_ended`, the detail read's `module.not_found` and the idempotency rows are raised in the handler — only the two publish pre-checks pass THROUGH `mapModuleError`; the others never reach it.
 - **Jobs** — `apps/jobs/src/scheduler/module-activation.ts` (`*/5 * * * *` IST, own `max: 3` pool, `localConcurrency: 1`,
   the Row 26 guard first, exported `activateDueModule`); `QUEUE_NAMES.MODULE_ACTIVATION`.
 - **Access-wrapper gate** — `MARKETPLACE_ROOTS` under the compensating-audit invariant ONLY.
@@ -1880,7 +1974,7 @@ New:
 - `apps/jobs/src/scheduler/module-activation.ts`, `apps/jobs/tests/module-activation.test.ts`
 - `apps/admin/src/modules/marketplace/{ModulesPage,ModuleWizard,ModuleDetailPage,PartnerPicker,ScopePicker}.tsx`,
   `apps/admin/src/modules/marketplace/{derive,i18n-en,index}.ts`, `apps/admin/src/routes/ModulesRoute.tsx`
-- `apps/admin/tests/{marketplace-derive.test.ts,module-wizard.test.tsx,module-detail.test.tsx,modules-page.test.tsx}`; added by the code review (RP35, untracked until committed): `apps/admin/tests/{partner-picker.test.tsx,scope-picker.test.tsx}`
+- `apps/admin/tests/{marketplace-derive.test.ts,module-wizard.test.tsx,module-detail.test.tsx,modules-page.test.tsx}`; added by the code review (RP35; committed in `465a2ac8`): `apps/admin/tests/{partner-picker.test.tsx,scope-picker.test.tsx}`
 
 Modified:
 - `packages/domain/migrations/meta/_journal.json`; `packages/domain/src/{ids/index.ts,policies/index.ts,schema/index.ts}`;
@@ -1903,6 +1997,7 @@ Modified:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.13 | Code review round 2, chunks B and C (six read-only layers at `4729805c`, no HIGH): RB1–RB8, RC1–RC19, then two patch-diff reviews (PT1–PT18, PU1–PU4) until only LOW remained; code `ea408af3` + `550307be` (a tone-gate comment). A second real-browser pass (RC1 / RC2 / RC3 / RC10 / PT4 / PT10); RD3 gains the process-death trigger; RD8 (the shared `StepUpPanel` drops focus after "Send the code") deferred. `ci:local` 37 / 37 on a FRESH database at `550307be` (the story container is red only on a Story 5.14 spec its leftover rows break — diagnosed above). Row stays `review`; ledger `2026-11-01w`. |
 | 2026-11-01 | v1.12 | DN5 + DN6 (BigDev *"1"*, read as both option 1 — Decision `2026-11-01-436`, `a5b23c89`) and DN7 (*"DN7 1"* — Decision `2026-11-01-437`, `60dbcf00`), each committed ALONE before the code `77ea3906`; three patch-diff review passes (PS1 HIGH keycap hole fixed, PS2–PS5); a residual recorded (text symbol + U+FE0F + skin tone). ADR-0044 fourth dated line. Not run: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01v`. Not pushed. |
 | 2026-11-01 | v1.11 | Code review round 2, chunk A (`bmad-code-review 12.2`): 16 raw → 13 distinct — DN3 + DN4 (BigDev: *"DN3 1, DN4 1"* — Decision `2026-11-01-435`, committed ALONE as `ac1ddad3`), RP36–RP41, 5 dismissed; *"apply all patches"* → code `497c69e4` after a patch-diff review (28 raw → 16: PQ1–PQ9 fixed, DN5 / DN6 open, RD7 deferred, 4 dismissed). ADR-0044 gets a third dated line (`-435`). `deferred-work.md`: the R3D1 line (RP36), RD7. Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01u`. Not pushed. |
 | 2026-11-01 | v1.10 | BigDev: *"Write the QE12 narrowing into -433 and ADR-0044"* — author-commit `2026-11-01-434` committed ALONE as `e6f30675` (after the code it records, `465a2ac8`): DN1 + DN2 + RP1's display-text rules; amends `-433` QE12 (not edited in place) and ADR-0044 D3 / D4 in part (dated line + Changelog row); RPD1 not triggered. QE12's two dated pointers, the chunk A "Open after this round" line and the Completion Note now cite `-434`. Its "Not covered" names round 2's visible look-alike finding (under triage). Row stays `review`; ledger `2026-11-01t`. Not pushed. |

@@ -15,14 +15,15 @@ every finding. The v1.3 pass re-traced every G fact at `36b489c9`: the only reli
 re-check at Task 0.1.
 Re-locate by FUNCTION, never by line.
 
-STATUS: ready-for-dev (2026-11-01 — v1.4). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
+STATUS: ready-for-dev (2026-11-01 — v1.5). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
 carry FIVE real asks (QE3, QE6, QE7, QE9, QE17); BigDev answers them at Task 0.2 and the author-commit lands ALONE at
 Task 0.3 BEFORE any code** ([[feedback_governance_commits_precede_implementation]]). If an ASK is answered with a
 non-recommended option, Task 0.3 rewrites the dependent ACs / Tasks / Invariants first (the map is in Task 0.3).
 ⭐ **v1.4 (2026-11-01): the five ASKs are ANSWERED — all AS RECOMMENDED — and QE16 is AMENDED by BigDev (strict
-base64url cursor validation), both recorded verbatim in Task 0.2.** The Task 0.3 rewrite map is NOT triggered. Still
-owed before code: BigDev's one-line acceptance of the other sixteen recommendations (QE1, QE2, QE4, QE5, QE8, QE10–QE15,
-QE18–QE22) at Task 0.2, then the author-commit ALONE (Task 0.3) and the records (Task 0.4).
+base64url cursor validation), both recorded verbatim in Task 0.2.** The Task 0.3 rewrite map is NOT triggered.
+⭐ **v1.5 (2026-11-01): the other sixteen recommendations are ACCEPTED as recommended (BigDev, verbatim in Task 0.2) ⇒
+Task 0.2 is DONE and QE1–QE22 are all answered.** Still owed before code: the author-commit ALONE (Task 0.3), then the
+records (Task 0.4).
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 the G / QE prose and historical Change Log rows) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In the Names table, Policy meaning, ACs, Invariants,
@@ -53,7 +54,8 @@ Story 6.32 only" — it is NOT a standing rule; a merge-order departure needs it
 - Ledger: top of BOTH ledgers on `main` = `2026-11-01l` (11b.5a took `h`, `j`, `k`, `l`). Committed elsewhere: `b`
   (6-22); `c` (13-2, 14-3); `d` (13-2, 6-22); `e` (13-2, 14-3); `f` (6-22); `g` (13-2 `e6758a66`, 01:22:20 — BEFORE
   v1.2's relabel at 01:25:18, so v1.2's `g` collided the moment it was taken); `i` (13-2) ⇒ this story's entries are
-  **`2026-11-01m`** (relabelled `c` → `g` in v1.2, `g` → `m` in v1.3) and **`2026-11-01n`** (v1.4, Task 0.2 answers);
+  **`2026-11-01m`** (relabelled `c` → `g` in v1.2, `g` → `m` in v1.3), **`2026-11-01n`** (v1.4) and **`2026-11-01o`**
+  (v1.5 — the Task 0.2 answers);
   re-grep and relabel again at landing if needed.
 - Roster: highest Row 45 (14-3 and 6-39 both plan 46). This story adds NO row (QE19); it appends a dated note to Row 26
   (QE7 (A) only; QE19, Task 0.4).
@@ -390,7 +392,7 @@ handled under QE6.
   reaches nobody today ([[project_lock_in_never_ends_no_active_members]]). `pending-valid` means: the lock-in ended with
   identity ⛔ verified, awaiting a trustee (`state.ts`: "unverified → pending-valid (awaits trustee)").
 
-## ⚖️ Build decisions QE1–QE22 (PROPOSED — BigDev answers at Task 0.2)
+## ⚖️ Build decisions QE1–QE22 (ANSWERED 2026-11-01 — every one AS RECOMMENDED, QE16 AMENDED; Task 0.2)
 
 Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev may accept in one line.
 
@@ -950,14 +952,13 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         Re-verify G1 (signatures; the shared name schemas), G3, G6 (both twins' COMMIT placement), G8, G9, G13
         (`twt_service` grants), G14 (`ACCESS_SURFACE_ROOTS` feeds both invariants), G17. Run 0.1 again at each numbered
         commit.
-  - [ ] 0.2 Put QE1–QE22 to BigDev with the five ASKs first (QE3, QE6, QE7, QE9, QE17). Record the answer verbatim.
-        ⭐ **PARTLY DONE (2026-11-01, during `bmad-create-story validate 12.2`).** BigDev, verbatim:
+  - [x] 0.2 Put QE1–QE22 to BigDev with the five ASKs first (QE3, QE6, QE7, QE9, QE17). Record the answer verbatim.
+        ⭐ **DONE (2026-11-01, during `bmad-create-story validate 12.2`), in two answers.** First, BigDev, verbatim:
         *"QE16 needs the strict base64url validation amendment before the implementation begins.
         QE3, QE6, QE7, QE9, QE17 AS RECOMMENDED."* ⇒ QE3 (A), QE6 (A), QE7 (A), QE9 confirmed, QE17 confirmed — the
-        Task 0.3 rewrite map is NOT triggered; QE16 AMENDED (the strict decode, written into QE16 in v1.4). ⚠ STILL
-        OWED here: BigDev's acceptance of the other sixteen recommendations (QE1, QE2, QE4, QE5, QE8, QE10–QE15,
-        QE18–QE22) — not given yet, so not recorded as given ([[feedback_record_unattested_no_backfill]]). Tick 0.2
-        only once that is recorded.
+        Task 0.3 rewrite map is NOT triggered; QE16 AMENDED (the strict decode, written into QE16 in v1.4). Then,
+        BigDev, verbatim: *"rest of the QEs as recommended"* ⇒ QE1, QE2, QE4, QE5, QE8, QE10–QE15 and QE18–QE22
+        ACCEPTED as recommended (QE16 as amended). The author-commit (0.3) records QE1–QE22 from these two answers.
   - [ ] 0.3 Author-commit `≥ -433` (re-grep): QE1–QE22 as answered, the §0 table, the key + holder set, the explicit
         amendments of `-427` QE5 AND `-429` (QE6 — each quoted in full), the amendment of `-429` C11 in part (QE5 — C11
         quoted in full), the ADR-0044 amendment set (QE20 — D5 both sentences, D2, D3 / D4, Consequences, Alternatives),
@@ -1374,6 +1375,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.5 | BigDev at Task 0.2 (verbatim): *"rest of the QEs as recommended"* — QE1, QE2, QE4, QE5, QE8, QE10–QE15 and QE18–QE22 ACCEPTED as recommended (QE16 as amended in v1.4). Task 0.2 ticked; every QE answered; the QE section heading now reads ANSWERED. Next: Task 0.3 (author-commit ≥ `-433`, ALONE), Task 0.4 (records). Ledger `2026-11-01o`. No code. |
 | 2026-11-01 | v1.4 | BigDev at Task 0.2 (verbatim): *"QE16 needs the strict base64url validation amendment before the implementation begins. QE3, QE6, QE7, QE9, QE17 AS RECOMMENDED."* The five ASKs are marked ANSWERED as recommended (QE3 (A), QE6 (A), QE7 (A), QE9 / QE17 confirmed; the Task 0.3 map not triggered); the other sixteen recommendations still await acceptance (Task 0.2 left unticked). QE16 AMENDED: a STRICT base64url decode in five ordered steps — URL-safe alphabet only, no padding / whitespace, length 1–256 and `% 4 !== 1`; a canonical re-encode round-trip; fatal UTF-8; a plain object with exactly `c` / `m` (both strings) whose text equals its canonical `JSON.stringify` (duplicate keys rejected) — each on Node v22 behaviour verified in session; encoder pinned (no padding). AC8, TR25 and the `read-cursor.test.ts` vectors follow it. Ledger `2026-11-01n`. No code. |
 | 2026-11-01 | v1.3 | Third validate pass (three read-only verifiers at `36b489c9`; 6 critical / 15 should-add / 15 nits — ALL applied on BigDev's "all"; then a fresh-context review of the PATCH diff found 16 defects the edits introduced (I10 grep unpassable as worded, Task 10 grep list, G13 twin misquote, stale `baseline_commit` / G heading, Row 26 (a) is a closure criterion not an option, no error class for the publish not-found pre-check, RPD4's I6 leg, the QE7 answer map, 22009, the test-heading count rule, two more stale `pariwar_id` comments, and wording) — all fixed; overlong lines left as is). Branch REBASED from `3d6b46c5` onto `36b489c9` (38 commits; 11b.5a landed; ledger-only conflicts). **Critical:** ledger `g` → `m` (13-2 took `g` 3 min before v1.2); Task 0.4 mints NO fourth closure label (`-210` cl.2) — built legs get a dated status line, Task 10 closes LEG by leg, RPD4's grep legs + D10-1.4's `partners/` leg deferred, `role`/`cohort` stays "Not addressed"; QE20's ADR-0044 amendment covers D5 sentence 2 + Consequences + Alternatives; the sweep's roster dependence is Row 26 `jobs-db-role` (NOT Row 24 (b)) — `canReadAcrossPariwars` guard + a dated Row 26 note; G18 — four eligibility statuses have no member (no `lock_in_expired` producer) — wizard notice, `pending-valid` relabelled, carried to 12.3; cursor range-checked in JS (shape-valid out-of-range values answered 500). **Should-add:** NUMBERS refreshed (`-432` / `0194` on main; v57 contested by three, key count LIVE); `ScopeFilterV1Schema`; `try` opens right after `openScopeTx` (TR22); paging specs in a fresh Pariwar; exported `activateDueModule`; withdraw body `{}`; `-429` C11 AMENDED (not "read"); the unlisted-district sentence; QE6 (A) re-trigger adds the first production publish (deed 20(i)), (B) quotes ¶B.5; Task 0.3 map completed (QE6 (B), QE3 / QE7 dependants, FOUR indexes); `schema/marketplace_modules.ts` edits; `⛔` removed from Policy meaning / Names; Policy-meaning strings pinned in AC11 / Task 8.2 / tests; a super admin must hold a grant IN the Pariwar; publication cleanup order; FK actions `NO ACTION`. **Nits:** G13 callback, `storableText` kept, RI-check xmin wording, scope `at`, `mapModuleError` rethrows unchanged, QE21 drift cost, cross-Pariwar publish 404, `-103` status, §0 edge 4 verbatim, variances, carried homes, `events.test.ts` / I10 tests, RVD5 split, G9 optional fields, 6-39 numbers relative. |
 | 2026-11-01 | v1.2 | Re-validated by three read-only verifiers (facts; DB / transaction feasibility; coverage + governance); every finding applied. **Critical:** plain-word negations throughout ACs / Invariants / Tasks / Dev Notes (the glyph register now confines `⛔` to G / QE prose); Task 0.4 uses "Homed in Story 12.2 (QE-n)" and Task 10 flips each to "Closed by `<sha>`"; ledger relabelled `2026-11-01c` → `g` (c–f committed first on 13-2 / 14-3 / 6-22) and the NUMBERS block refreshed (the merge-order migration rule withdrawn — `-415` was a one-off). **Design:** NEW `pageModulesForPariwar` (12.1 `listModulesForPariwar` + `read.spec.ts` untouched); cursor validated in JS before SQL; `partner_id` `.uuid()` in the DTO (TR19); partner-name parse as a PURE pre-check; five named 12.2 error classes + `ModuleStateDirectWriteError` in the QE18 table; `authored_by_viewer` in the detail DTO; null-author publish denied (I4, TR21); `displayOf` NOT copied, display names via `getDisplayName` with a fallback; sweep `mutate` = `withPariwarScope` (no `closeScopeTx` in jobs) and skip writes two audit lines; scope pre-check ordering (`safeParse` first); response schemas required for the pagination gate; five-index list; negative `twt_service` grant leg; migration lock levels; AC8 split into API + domain-live legs; own-id assertions + partner seeding in every new spec (TR20). **Records:** QE6 amends `-427` QE5 as well as `-429`; the later deed objects draft v4 (no "disclosed") recorded; ADR-0044 D5 amended in part / D2 clarified (QE20); QE9 grounded on ADR-0019 with `-422` Q1 A disclosed as a contrast; the C11 no-tree reading recorded; Policy meaning reach line + Niyamavali carry-over reason; C12, C2 (d)/(e) + cost, D10-1.4 legs, tone-checklist routing row added to Task 0.4; new carries (§3.7 redaction → 12.5, partners cap, district rename residual, narrower-grant condition, single-admin); variances (CTA destination, admin step-up stub); UI strings made verbatim (opening line, single-admin, members-cannot-see-yet; tick text covers checklist §5). Fact fixes: checklist has five sections; `withCompensatingAudit` defined in the domain; 0007 login is a provisioning comment; `z.literal(true)` precedent = memorial `calledBack`; helper sources per spec; `adminStepUpDelivery`; five 12.1 specs; second `PartnerId` comment. |

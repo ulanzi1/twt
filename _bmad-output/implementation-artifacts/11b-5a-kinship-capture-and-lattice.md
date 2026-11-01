@@ -39,7 +39,7 @@ It exists only in the MAIN checkout, git-ignored. Cite its sections by number; �
 
 # Story 11b.5a: Kinship — Capture, Review and the Public `<KinshipLattice>`
 
-Status: review
+Status: done
 
 ## ⭐ GLYPH REGISTER — read this before any clause below
 
@@ -1353,7 +1353,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, worktree `.claude/worktre
     `MEMORIAL_AUTHORSHIP_ENABLED` stays off; ⛔ no Row 41 criterion marked MET; v4 is ⛔ never live unless rows 11b-5b and 11b-5c are `done`.
   - ⚠ **AC13 not met yet:** four `ci:local` runs, each 35 / 36 with a different load-class red (Debug Log) — a clean 36 / 36 on one run
     is owed before `done`.
-  - **Not done here (by design):** the Task 1.2 (iii) DISCHARGED annotations — owed when this row is `done` ON MAIN; the take-down screen
+  - **Not done here (by design):** the Task 1.2 (iii) DISCHARGED annotations — owed when this row is `done` ON MAIN [✅ WRITTEN 2026-11-01 at landing — the four `deferred-work.md` items that read *"closes when 11b-5a is `done` on main"*]; the take-down screen
     shows singular English labels (operator chrome; the page uses the plurals) — recorded, ⛔ changed.
 - 2026-11-01 — Code review (`bmad-code-review 11b.5a`) and its fix-round review: 20 + 7 patches applied (uncommitted), deferrals RD1–RD17 in `deferred-work.md`. **New staff-facing admin strings for BigDev's next copy pass** (⭐ round 3, RP38 — the list was incomplete; ADD: `memorial.detail.kinship`, `.kinshipRelative`, `.kinshipInPhoto`, `.inPhoto`, `.kinshipLeftOut`, `memorial.decide.kinship`, `.kinshipLeaveOut`, the three problem sentences `kinship_without_list` / `kinship_index_out_of_range` / `kinship_order`, the KL15 confirm's added second sentence *"Record the decision again to confirm."*, and the helpline line `takedown.drive.kinshipUnavailable`)**:** `memorial.detail.partUnavailable` ("Part of this version could not be read right now.") and `memorial.detail.partUnavailableForm` ("Part of this version could not be read right now, so it cannot be decided yet.") in `apps/admin/src/modules/memorial-review/i18n-en.ts`. Task 9 (a clean `ci:local` 36 / 36 on the committed tree) stays OPEN; the live-DB legs added by the review are unexecuted.
 
@@ -1522,6 +1522,7 @@ Code commits `9c695ef1`…`b61e2b37` (Tasks 2–8) + `50b7a2b6` (the `ci:local` 
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v2.16 | **LANDED on `main` by fast-forward** (BigDev: *"land it"*): PR #319 MERGED 2026-11-01T03:31:23Z, `3d6b46c5..3a1762f0`, SHAs unchanged (⛔ squash, ⛔ merge commit). GitHub CI on the PR head `3a1762f0`: 37 / 37 success. The landing push skipped `ci:local` (every commit already on origin). `main`'s `code-escrow-mirror` failed on its known cause (*"MIRROR_DESTINATION_URL is unset — Story 0.3 Task 8"*) — ⛔ this story's. Row `review` → **`done`**; the Task 1.2 (iii) DISCHARGED annotations written in `deferred-work.md` (four items). ⚠ NOTHING IS LIVE: launch-gate Row 41 stays `open` (rows 11b-5b / 11b-5c, the non-author Hindi review, the architecture amendment, counsel on the declaration, a TalkBack pass). Ledger `2026-11-01l`. |
 | 2026-11-01 | v2.15 | **AC13 MET** — `pnpm ci:local` **37 / 37 on the first run** at `e8c197c5`, on a recreated `twt-11b5a-pg` (:5481; RP40 — the old DB lacked `0193`); the integration job ran `kinship.spec.ts` 28 / 28, `family-memorial-render.spec.ts` 11 / 11, `memorial-policy-regression.spec.ts` 70 / 70. Task 9 ticked (the Task 1.2 (iii) DISCHARGED annotations stay owed until `done` is on `main`). Pushed; PR opened (BigDev: *"yes recreate the db and run ci:local then open pr"*). Row stays `review` until it lands. Ledger `2026-11-01k`. |
 | 2026-11-01 | v2.14 | **Code review round 3** (`bmad-code-review 11b.5a`, option 1 — the full rebased diff, three chunks × three layers, 9 / 9): 51 raw → 52 distinct → 4 decision-needed (DN1–DN3 copy, DN4 records — all RESOLVED by BigDev 2026-11-01: *"DN1 a, DN2 fix now, DN3 b, DN4 b"*), 14 patch (RP28–RP41, applied, uncommitted — BigDev: *"apply any findings, I will make decision later if required"*), 2 defer (RD18, RD19), 33 dismissed; no Panel question. AC6 annotated SUBSTITUTED (RP39); Task 9 carries RP40 (recreate the 5481 DB before the owed run). Then the patch diff reviewed adversarially (BigDev: *"also run the adversarial review on patches applied"*; 3 / 3): PP1–PP10 applied (incl. a syntax error RP32 introduced, RP30 narrowed to iOS, the pin made a stem match), DN4 raised, 8 dismissed. Nothing committed. |
 | 2026-11-01 | v2.13 | **Rebased onto `origin/main` `3d6b46c5`** (Story 12.1 landed with migration `0193`): 32 commits replayed, conflicts hand-resolved in the ledger (both lists), `.decision-log.md`, the migration journal (idx 193 then 194, `when` increasing) and `deferred-work.md`; `main`'s entries verified byte-identical. Six ledger labels relabelled (SHA map 3 / label map 3). Backup: branch `backup/11b-5a-pre-rebase-3-2026-11-01` (`612bd498`). `pnpm ci:local` NOT yet run on the rebased tree (Task 9). |

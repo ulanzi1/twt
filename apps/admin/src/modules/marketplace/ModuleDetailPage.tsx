@@ -77,7 +77,7 @@ export function ModuleDetailPage({
   // A write has succeeded and its refresh has not landed: the page still shows the OLD state, so the write buttons stay off (a
   // second press would only meet a 409). The result no longer waits for that refresh (RC15). The write's own `onSuccess` starts
   // the refresh BEFORE `mutateAsync` resolves, so "the refresh has landed" is simply "the detail read is no longer fetching" —
-  // a success or a failure, and only one that comes after the write (an error from before it does not count — PT3). ⛔ Wall-clock
+  // a success or a failure, and only one that comes after the write (an error from before the write is ignored — PT3). ⛔ Wall-clock
   // timestamps: a refresh can settle in the same millisecond as the write's result (PU4).
   const [awaitingRefresh, setAwaitingRefresh] = useState(false);
   useEffect(() => {

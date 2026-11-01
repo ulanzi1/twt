@@ -170,7 +170,7 @@ export function HelplineCertificateReplacement({
             />
             {/* An unknown state reads as a dash (the refusal list's posture) — ⛔ never guessed. */}
             {certificateClaimOption(
-                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state),
+                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state, c.closed_member_alive),
                   formatIst(c.created_at),
                 )}
           </label>

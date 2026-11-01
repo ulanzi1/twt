@@ -1007,7 +1007,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
 - [x] **Task 5 — Peer-mesh (AC11)** — DL11's fragment in `peer-mesh-read.ts` (alias `f`); the one-line swap in
       `peerMeshEligibleMemberSql`; `peer-mesh-request.ts` IMPORTS it; the fence's `gateSqlCopies` `peer-mesh-read.ts: 2`; the residual named
       in `known-people.ts`'s accepted-cost comment (comment-only edit there).
-- [ ] **Task 6 — Surfaces (AC13)** — `apps/admin/src/api/client.ts` functions + `api/hooks.ts` hooks (copy `postDeathCertificateReview` /
+- [x] **Task 6 — Surfaces (AC13)** — `apps/admin/src/api/client.ts` functions + `api/hooks.ts` hooks (copy `postDeathCertificateReview` /
       `usePostDeathCertificateReview`, `useDeathCertificateClaimsForMember`); `FraudInvestigationPanel.tsx` (DL7's read, the shared
       `StepUpPanel`); `HelplineFraudFlag` in `HelplineClaimPage`; the `/p/$pariwarId/fraud-investigations` route + list;
       `closedClaimStateLabel`'s new argument at all four call sites; copy in each module's `i18n-en.ts`; component tests; `pnpm
@@ -1270,6 +1270,19 @@ hand).**
   Test `fraud-peer-mesh.spec.ts` (control first; released ⇒ askable + `eligible`; guilty / un-found ⇒ `peer_reported_deceased`;
   `knownPeopleCallerSql` still false for the released member — the residual pinned). Existing peer-mesh / known-people /
   member-links specs green (domain 261, jobs 251); fence 26.
+- **Task 6 (AC13) — 2026-11-01.** Admin: client + hooks (five calls); `FraudInvestigationPanel.tsx` in the verifier console
+  (behind a disclosure — opening is the audited read, closing forgets it; the flag read-only; the finding form with ⛔
+  pre-selected radios, note required, refusals in words, the shared `StepUpPanel` holding the write and re-running it with the
+  SAME ids, the other standing claims after a finding, an always-mounted `role="status"`); `HelplineFraudFlag.tsx` mounted in
+  `HelplineClaimPage` (every claim naming the member, flag with a required note, `step_id` minted when the form opens); the
+  `/p/$pariwarId/fraud-investigations` work-list route + nav link; `closedClaimStateLabel` gains `closedMemberAlive` (WINS) at
+  all four call sites; copy in each module's `i18n-en.ts`. Tests `apps/admin/tests/fraud-investigation.test.tsx` 9; the admin
+  suite 1741 green before them; `pnpm microcopy:check` green; admin `tsc` + eslint clean.
+  ⚠ **The real-browser pass is UN-ATTESTED** ([[feedback_record_unattested_no_backfill]]): the ONE probe (a static page on
+  `127.0.0.1:5199`, served and fetched by `curl`) could not run — the Chrome extension answered *"Browser extension is not
+  connected"* and `list_connected_browsers` returned ⛔ browser. Nothing was faked; roster Row 47 leg (e) carries it
+  (BigDev by hand, or a later session with a connected browser). The work-list view is ⛔ component-rendered (it needs the
+  router); its scope is proven over HTTP.
 
 ### File List
 
@@ -1346,6 +1359,27 @@ hand).**
 - `packages/domain/src/member/known-people.ts`
 - `apps/api/tests/unit/erasure-and-death-report-fence.test.ts`
 - `packages/domain/tests/integration/claim/fraud-peer-mesh.spec.ts` (new)
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/claim-verification/FraudInvestigationPanel.tsx` (new)
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/helpline-claims/HelplineFraudFlag.tsx` (new)
+- `apps/admin/src/modules/helpline-claims/HelplineClaimPage.tsx`
+- `apps/admin/src/modules/helpline-claims/i18n-en.ts`
+- `apps/admin/src/modules/helpline-claims/HelplineAppeal.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineCertificateReplacement.tsx`
+- `apps/admin/src/modules/helpline-claims/HelplineClaimContact.tsx`
+- `apps/admin/src/routes/NomineeRefusalsRoute.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/src/routes/FraudInvestigationsRoute.tsx` (new)
+- `apps/admin/src/routes/RootLayout.tsx`
+- `apps/admin/src/routes/login-next.ts`
+- `apps/admin/src/router.tsx`
+- `apps/admin/tests/fraud-investigation.test.tsx` (new)
+- `apps/admin/tests/suspicion-refusal-helpline-appeal.test.tsx`
+- `apps/admin/tests/helpline-certificate-replacement.test.tsx`
+- `apps/admin/tests/helpline-claim-contact.test.tsx`
+- `apps/admin/tests/withheld-note.test.tsx`
 
 ## Change Log
 

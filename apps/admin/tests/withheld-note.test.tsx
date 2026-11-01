@@ -118,8 +118,8 @@ describe('the two remaining hosts — the refusals list (Pattern A) and the R9 v
     const OTHER = '22222222-2222-4222-8222-222222222222';
     const list: NomineeRefusalListResponse = {
       items: [
-        { claim_case_id: CLAIM, deceased_member_id: OTHER, claim_state: 'denied', refused_at: '2026-10-01T00:00:00.000Z', refused_by_display: 'Anita', rationale: { state: 'withheld', reason: 'own_visit' }, closed_holder_refused: false },
-        { claim_case_id: OTHER, deceased_member_id: CLAIM, claim_state: 'denied', refused_at: '2026-10-02T00:00:00.000Z', refused_by_display: 'Ravi', rationale: { state: 'readable', value: 'REFUSAL-NOTE' }, closed_holder_refused: false },
+        { claim_case_id: CLAIM, deceased_member_id: OTHER, claim_state: 'denied', refused_at: '2026-10-01T00:00:00.000Z', refused_by_display: 'Anita', rationale: { state: 'withheld', reason: 'own_visit' }, closed_holder_refused: false, closed_member_alive: false },
+        { claim_case_id: OTHER, deceased_member_id: CLAIM, claim_state: 'denied', refused_at: '2026-10-02T00:00:00.000Z', refused_by_display: 'Ravi', rationale: { state: 'readable', value: 'REFUSAL-NOTE' }, closed_holder_refused: false, closed_member_alive: false },
       ],
     };
     getNomineeRefusals.mockResolvedValue(list);

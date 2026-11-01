@@ -36,6 +36,7 @@ import { QuestionnaireVersionsRoute } from './routes/QuestionnaireVersionsRoute.
 import { WorkplaceRequestsRoute } from './routes/WorkplaceRequestsRoute.js';
 import { WorkplacesRoute } from './routes/WorkplacesRoute.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
+import { FraudInvestigationsRoute } from './routes/FraudInvestigationsRoute.js';
 import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
@@ -362,6 +363,13 @@ const nomineeRefusalsRoute = createRoute({
   component: NomineeRefusalsRoute,
 });
 
+// Story 6.22 (DL10 (iv)) — the District Admin's work-list of claims flagged for a fraud investigation.
+const fraudInvestigationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/fraud-investigations',
+  component: FraudInvestigationsRoute,
+});
+
 // Story 6.20 (AC7) — the Pariwar Admin's queue of NOMINEE corrections awaiting step 2.
 const nomineeCorrectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -482,6 +490,7 @@ const routeTree = rootRoute.addChildren([
   workplaceRequestsRoute,
   escalationsPickerRoute,
   nomineeRefusalsRoute,
+  fraudInvestigationsRoute,
   nomineeCorrectionsRoute,
   cycleFreezeRoute,
   r9VotingRoute,

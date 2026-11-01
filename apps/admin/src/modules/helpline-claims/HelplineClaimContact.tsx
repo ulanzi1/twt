@@ -246,7 +246,7 @@ export function HelplineClaimContact({
               data-testid={`helpline-contact-claim-${c.claim_case_id}`}
             />
             {certificateClaimOption(
-                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state),
+                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state, c.closed_member_alive),
                   formatIst(c.created_at),
                 )}
           </label>

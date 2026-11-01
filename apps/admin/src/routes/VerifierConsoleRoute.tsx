@@ -49,6 +49,7 @@ import {
   nomineeDeterminationErrorMessage,
   nomineeDeterminationRequiredMessage,
 } from '../modules/claim-verification/nominee-errors.js';
+import { FraudInvestigationPanel } from '../modules/claim-verification/FraudInvestigationPanel.js';
 
 export { nomineeCorrectionErrorMessage, nomineeDeterminationErrorMessage, nomineeDeterminationRequiredMessage };
 import {
@@ -603,6 +604,9 @@ export function VerifierConsoleRoute(): ReactElement {
                 ) : null}
               </section>
             ) : null}
+            {/* Story 6.22 (DL7, DL10 (i)) — the fraud investigation: the helpline's flag, and the District Admin's finding.
+                A fresh mount per claim — ⛔ a carried-over finding form or a step-up hold. */}
+            <FraudInvestigationPanel key={claimCaseId} pariwarId={pariwarId} claimCaseId={claimCaseId} />
             {/* Story 6.18 (AC2/AC3) — the nominee name check, behind a disclosure. */}
             <section className="mt-4 border-t pt-4">
               <button

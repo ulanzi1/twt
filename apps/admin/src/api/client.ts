@@ -356,6 +356,13 @@ import {
   InitiateAppealResponse,
   DeathCertificateHistoryResponse,
   DeathCertificateReviewWriteResponse,
+  type FraudFindingRequest,
+  FraudFindingResponse,
+  type FraudFlagRequest,
+  FraudFlagResponse,
+  FraudInvestigationResponse,
+  MemberFraudClaimsResponse,
+  OpenFraudInvestigationsResponse,
   type DeathCertificateReviewRequest,
   ClaimDocumentUploadResponse,
   RecordNomineeBankResponse,
@@ -2112,6 +2119,41 @@ export function getDeathCertificateClaimsForMember(pariwarId: string, memberId: 
     `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members/${encodeURIComponent(memberId)}/death-certificate/claims`,
     DeathCertificateHelplineClaimsResponse,
   );
+}
+
+// ── Story 6.22 — the fraud register's investigation ──────────────────────────────────────────────────────────────
+/** The helpline: EVERY claim naming the member the operator found and read back, with each one's investigation status. */
+export function getMemberFraudClaims(pariwarId: string, memberId: string) {
+  return apiFetch(
+    `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members/${encodeURIComponent(memberId)}/fraud-investigation/claims`,
+    MemberFraudClaimsResponse,
+  );
+}
+
+/** The helpline operator FLAGS a claim (a retry with the same `step_id` replays). */
+export function postFraudFlag(pariwarId: string, claimCaseId: string, body: FraudFlagRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/fraud-investigation/flag`, FraudFlagResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** The console read: the investigation's steps (notes withheld unless the viewer may record the finding). Audited. */
+export function getFraudInvestigation(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/fraud-investigation`, FraudInvestigationResponse);
+}
+
+/** The District Admin's FINDING — behind `FRAUD_FINDING_STEP_UP_CONTEXT` (a retry with the same ids replays). */
+export function postFraudFinding(pariwarId: string, claimCaseId: string, body: FraudFindingRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/fraud-investigation/finding`, FraudFindingResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/** The District Admin's work-list: flagged claims with no finding yet, in their districts. */
+export function getOpenFraudInvestigations(pariwarId: string) {
+  return apiFetch(`/api/v1/p/${encodeURIComponent(pariwarId)}/admin/fraud-investigations`, OpenFraudInvestigationsResponse);
 }
 
 // ── Story 6.24a RF14 (b) — the helpline appeal screen (`claim.file`) ──────────────────────────────────────────────

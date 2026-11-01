@@ -106,7 +106,7 @@ export function HelplineAppeal({
             <li key={c.claim_case_id} className="flex flex-col gap-1 text-sm" data-testid={`helpline-appeal-claim-${c.claim_case_id}`}>
               <span className="font-medium">
                 {certificateClaimOption(
-                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state),
+                  closedClaimStateLabel(c.closed_holder_refused, c.claim_state, c.closed_member_alive),
                   formatIst(c.created_at),
                 )}
               </span>

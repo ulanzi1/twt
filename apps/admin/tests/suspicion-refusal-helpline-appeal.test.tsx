@@ -41,7 +41,7 @@ async function settleQueuedWork(): Promise<void> {
 }
 
 function row(id: string, over: Partial<HelplineAppealClaimsResponse['claims'][number]> = {}): HelplineAppealClaimsResponse['claims'][number] {
-  return { claim_case_id: id, claim_state: 'denied', created_at: '2026-09-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null, closed_holder_refused: false, ...over };
+  return { claim_case_id: id, claim_state: 'denied', created_at: '2026-09-01T00:00:00.000Z', eligibility: 'can_appeal', appeal_until: null, closed_holder_refused: false, closed_member_alive: false, ...over };
 }
 
 describe('<HelplineAppeal>', () => {

@@ -76,7 +76,7 @@ function NomineeRefusalsView(): ReactElement {
                 {/* ⛔ Never the raw state code (code review 2026-09-24b); an unknown state reads as a dash.
                     Story 6.28 (OP10) — a `closed` row whose HOLDING claim was itself later refused/closed
                     reads the neutral "may file again" copy, like the other OP10 helpline surfaces. */}
-                <dd>{closedClaimStateLabel(item.closed_holder_refused, item.claim_state)}</dd>
+                <dd>{closedClaimStateLabel(item.closed_holder_refused, item.claim_state, item.closed_member_alive)}</dd>
               </dl>
               <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs">
                 <dt className="opacity-70">{t.refusedBy}</dt>

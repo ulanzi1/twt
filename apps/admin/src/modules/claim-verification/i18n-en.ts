@@ -730,6 +730,9 @@ export const verifierConsoleEn = {
       // ⭐ Story 6.28 (OP10; Q3 A's promise) — a closed claim whose HOLDING claim was since refused / closed (the read's
       // `closed_holder_refused`): the family may file again.
       closedHolderRefused: 'Closed — the other claim for this death was later refused; the family may file again',
+      // ⭐ Story 6.22 (DL10 (iii) / (v); BigDev reviewed the words verbatim) — a closed claim whose member was FOUND ALIVE (its
+      // own investigation's finding, or that of the claim holding it). WINS over `closedHolderRefused`.
+      closedMemberAlive: 'Closed — the member was found alive',
     },
     // The same 409 met on a TRUSTEE surface (the cycle freeze, R9 voting) — the State Trustee cannot
     // determine; they need to know the District Admin must (e.g. after a correction superseded it).
@@ -1089,7 +1092,87 @@ export function verifierReasonCodeLabel(code: string): string {
  * at four render sites (`HelplineAppeal`, `HelplineCertificateReplacement`, `HelplineClaimContact`,
  * `NomineeRefusalsRoute`).
  */
-export function closedClaimStateLabel(closedHolderRefused: boolean, claimState: string): string {
-  const labels: Record<string, string> = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
-  return closedHolderRefused ? verifierConsoleEn.nomineeDeclaration.refusals.closedHolderRefused : labels[claimState] ?? '—';
+export function closedClaimStateLabel(closedHolderRefused: boolean, claimState: string, closedMemberAlive: boolean): string {
+  const t = verifierConsoleEn.nomineeDeclaration.refusals;
+  const labels: Record<string, string> = t.claimStateLabels;
+  // ⭐ Story 6.22 (DL10 (iii)) — "found alive" WINS: the member being alive is the truth of every claim for that death.
+  if (closedMemberAlive) return t.closedMemberAlive;
+  return closedHolderRefused ? t.closedHolderRefused : labels[claimState] ?? '—';
 }
+
+/**
+ * ⭐ Story 6.22 — the fraud investigation's console panel and the District Admin's work-list (DL7, DL10 (i) / (iv)). English
+ * only (admin copy is per module). ⛔ Never a raw code: every refusal has its words here.
+ */
+export const fraudInvestigationEn = {
+  heading: 'Investigation — is the member alive?',
+  show: 'Show the investigation',
+  hide: 'Hide the investigation',
+  audited: 'Opening this shows staff notes; each look is recorded.',
+  loading: 'Loading the investigation…',
+  loadError: 'The investigation could not be loaded just now.',
+  notFlagged: 'This claim has not been flagged. The helpline flags a claim when someone says the member is alive.',
+  step: {
+    flagged: 'Flagged by the helpline',
+    found_innocent: 'Finding: innocent — the member was not part of the false claim',
+    found_guilty: 'Finding: guilty — the member took part in the false claim',
+  } as Record<string, string>,
+  by: 'by',
+  on: 'on',
+  proof: 'Confirmed alive',
+  aliveConfirmation: {
+    in_person: 'in person',
+    video_call: 'by video call',
+    ground_inspection: 'at a ground inspection',
+  } as Record<string, string>,
+  note: 'Note',
+  noteWithheld: 'Only a District Admin for this district can read the notes.',
+  noteAnonymized: 'This note was removed when the member’s data was erased.',
+  noteUnreadable: 'This note could not be shown just now.',
+  youFlagged: 'You flagged this claim, so another District Admin must record the finding.',
+  form: {
+    legend: 'Record the finding',
+    intro: 'Record a finding only after the member has been confirmed alive. A finding closes the claim, and only one is ever recorded.',
+    outcomeLegend: 'Finding',
+    outcome: {
+      innocent: 'Innocent — the member was not part of it',
+      guilty: 'Guilty — the member took part in it',
+    } as Record<string, string>,
+    aliveLegend: 'How was the member confirmed alive?',
+    noteLabel: 'Note (required)',
+    noteHelp: 'Say who saw the member, where and when. This note is kept with the claim.',
+    submit: 'Record the finding',
+    submitting: 'Recording…',
+    incomplete: 'Choose a finding, how the member was confirmed alive, and write a note.',
+  },
+  result: {
+    closed: 'The finding is recorded and the claim is closed.',
+    committed: 'The finding is recorded. This claim was already approved or paid, so it was not closed.',
+    alreadyClosed: 'The finding is recorded. This claim was already closed.',
+    otherClaims: 'Other claims still keep this member’s death recorded:',
+    noOtherClaims: 'No other claim keeps this member’s death recorded.',
+  },
+  refusal: {
+    'fraud_investigation.finder_is_flagger': 'You flagged this claim, so another District Admin must record the finding.',
+    'fraud_investigation.not_flagged': 'This claim has not been flagged, so a finding cannot be recorded yet.',
+    'fraud_investigation.already_found': 'A finding is already recorded on this claim.',
+    'fraud_investigation.step_conflict': 'This form was already used for another step. Reload the page and try again.',
+    'fraud_investigation.missing_note': 'Write a note before recording the finding.',
+    'fraud_investigation.missing_alive_confirmation': 'Choose how the member was confirmed alive.',
+    'fraud_investigation.claim_not_found': 'This claim could not be found.',
+    'admin.display_name_missing': 'Your account has no display name yet, so it cannot record a finding. Ask the Super Admin.',
+  } as Record<string, string>,
+  refusalGeneric: 'The finding could not be recorded just now.',
+  workList: {
+    nav: 'Flagged claims',
+    heading: 'Claims flagged for investigation',
+    intro: 'The helpline flagged these claims because someone says the member is alive. Open one to record the finding.',
+    loading: 'Loading flagged claims…',
+    loadError: 'The flagged claims could not be loaded just now.',
+    forbidden: 'Only a District Admin can see this list.',
+    empty: 'No claim is waiting for a finding in your districts.',
+    flaggedOn: 'Flagged on',
+    filedOn: 'claim filed on',
+    open: 'Open the claim',
+  },
+} as const;

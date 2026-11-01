@@ -29,7 +29,7 @@ function claim(over: Partial<DeathCertificateHelplineClaimStatus> = {}): DeathCe
     replacement_reason: 'unclear_date',
     upload_allowed: true,
     reassurance: 'not_refused',
-    closed_holder_refused: false,
+    closed_holder_refused: false, closed_member_alive: false,
     ...over,
   };
 }

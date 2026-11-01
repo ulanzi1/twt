@@ -2514,6 +2514,65 @@ export function useDeathCertificateClaimsForMember(pariwarId: string, memberId: 
   });
 }
 
+// ── Story 6.22 — the fraud register's investigation ──────────────────────────────────────────────────────────────
+export const memberFraudClaimsKey = (pariwarId: string, memberId: string) => ['member-fraud-claims', pariwarId, memberId] as const;
+export const fraudInvestigationKey = (pariwarId: string, claimCaseId: string) => ['fraud-investigation', pariwarId, claimCaseId] as const;
+export const openFraudInvestigationsKey = (pariwarId: string) => ['open-fraud-investigations', pariwarId] as const;
+
+/** The helpline's list of every claim naming the SELECTED member — only once the read-back is confirmed. */
+export function useMemberFraudClaims(pariwarId: string, memberId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: memberFraudClaimsKey(pariwarId, memberId ?? ''),
+    queryFn: () => api.getMemberFraudClaims(pariwarId, memberId as string),
+    enabled: Boolean(memberId) && enabled,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** The helpline operator's flag. Refreshes the member's list (and the console's read of that claim). */
+export function useFlagClaimForFraud(pariwarId: string, memberId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ claimCaseId, body }: { claimCaseId: string; body: Parameters<typeof api.postFraudFlag>[2] }) =>
+      api.postFraudFlag(pariwarId, claimCaseId, body),
+    onSettled: (_data, _err, vars) => {
+      void qc.invalidateQueries({ queryKey: memberFraudClaimsKey(pariwarId, memberId ?? '') });
+      void qc.invalidateQueries({ queryKey: fraudInvestigationKey(pariwarId, vars.claimCaseId) });
+    },
+  });
+}
+
+/** The console read — fetched ONLY while the panel is open (a holder's read decrypts and is audited). */
+export function useFraudInvestigation(pariwarId: string, claimCaseId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: fraudInvestigationKey(pariwarId, claimCaseId),
+    queryFn: () => api.getFraudInvestigation(pariwarId, claimCaseId),
+    enabled,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/** The District Admin's finding. Refreshes the investigation, the console packet and the work-list. */
+export function useRecordFraudFinding(pariwarId: string, claimCaseId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postFraudFinding>[2]) => api.postFraudFinding(pariwarId, claimCaseId, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: fraudInvestigationKey(pariwarId, claimCaseId) });
+      void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) });
+      void qc.invalidateQueries({ queryKey: openFraudInvestigationsKey(pariwarId) });
+    },
+  });
+}
+
+/** The District Admin's work-list. */
+export function useOpenFraudInvestigations(pariwarId: string) {
+  return useQuery({
+    queryKey: openFraudInvestigationsKey(pariwarId),
+    queryFn: () => api.getOpenFraudInvestigations(pariwarId),
+  });
+}
+
 // ── Story 6.24a RF14 (b) — the helpline appeal screen ─────────────────────────────────────────────────────────────
 
 export const helplineAppealClaimsKey = (pariwarId: string, memberId: string) =>

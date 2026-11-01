@@ -29,3 +29,8 @@ export function allowedNextPariwarId(next: unknown): string | null {
   const m = NOMINEE_REFUSALS_PATH.exec(next);
   return m ? m[1]! : null;
 }
+
+/** Story 6.22 (DL10 (iv)) — the District Admin's work-list of claims flagged for investigation. */
+export function fraudInvestigationsPath(pariwarId: string): string {
+  return `/p/${pariwarId.toLowerCase()}/fraud-investigations`;
+}

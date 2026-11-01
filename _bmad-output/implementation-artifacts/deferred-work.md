@@ -39,6 +39,11 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **An intake attempt parked beside a claim later found-alive-closed stays `pending` for ever** [6.22 DL9 (f); `icp.ts`
   `overrideIntakeAttempt`] — it has ⛔ candidate and cannot be overridden onto a `closed` claim; it stays as history (the RF2 precedent,
   *"the attempt row stays as history"*). A named residual, pinned by a 6.22 test. Trigger: a staff report of a stuck attempt.
+- **The real-browser pass of the 6.22 staff surfaces is UN-ATTESTED** [`FraudInvestigationPanel.tsx`, `HelplineFraudFlag.tsx`,
+  `FraudInvestigationsRoute.tsx`] — 2026-11-01 (`bmad-dev-story 6.22`, Task 6): the Chrome extension answered *"Browser extension is
+  not connected"* and ⛔ browser was listed; ⛔ pass was run and ⛔ result is claimed. Proven instead: the component tests (9) and the
+  HTTP spec (11). Owner BigDev (by hand) or a later session with a connected browser; trigger: roster Row 47 leg (e) — before the
+  first production investigation step.
 
 ---
 

@@ -4,6 +4,7 @@
 // route-level error boundary (§4.9) wraps the outlet so a thrown render error
 // degrades to a recoverable message instead of a blank screen.
 
+import { fraudInvestigationEn } from '../modules/claim-verification/i18n-en.js';
 import { Link, Outlet, useNavigate, useParams, useRouter } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
@@ -99,6 +100,13 @@ function TopBar(): ReactElement {
               data-testid="nav-correction-queue"
             >
               {correctionChaseEn.queue.nav}
+            </Link>
+          )}
+          {/* Story 6.22 (DL10 (iv)) — the District Admin's work-list of claims flagged for investigation; ⛔ a flag would
+              otherwise reach no one (the console is entered by claim id). The server's key check is the boundary. */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/fraud-investigations" params={{ pariwarId }} className="text-sm underline" data-testid="nav-fraud-investigations">
+              {fraudInvestigationEn.workList.nav}
             </Link>
           )}
           {/* Story 6.19c (AC8c) — the closure's queues, linked INSIDE a Pariwar context (`deferred-work.md` 6.18 chunk 3):

@@ -43,7 +43,7 @@ describe.skipIf(!hasDatabase)('marketplace partners (Story 12.2 AC3)', () => {
     const auditId = randomUUID();
     const id = toPartnerId(randomUUID());
     const row = await createPartner(client, {
-      ...parsePartnerDisplayNames({ displayNameEn: '  LIC  ', displayNameHi: ' एलआईसी ' }),
+      ...parsePartnerDisplayNames({ displayNameEn: ' LIC ', displayNameHi: ' एलआईसी ' }),
       pariwarId: toPariwarId(p),
       partnerId: id,
       actorId,
@@ -72,7 +72,7 @@ describe.skipIf(!hasDatabase)('marketplace partners (Story 12.2 AC3)', () => {
     expect(await listPartnersForPariwar(bindScopedDb(client), toPariwarId(p), { limit: -1 })).toHaveLength(1);
   });
 
-  it('another Pariwar’s partner reads as null — under its own scope too (RLS + the explicit predicate)', async () => {
+  it('another Pariwar’s partner reads as null under twt_app (RLS — the explicit predicate is the RLS-bypassed test below)', async () => {
     const { client } = getTx();
     const p = randomUUID();
     const other = randomUUID();
@@ -82,6 +82,31 @@ describe.skipIf(!hasDatabase)('marketplace partners (Story 12.2 AC3)', () => {
     const db = bindScopedDb(client);
     expect(await getPartner(db, toPariwarId(p), foreign.partnerId)).toBeNull();
     expect(await getPartner(db, toPariwarId(other), foreign.partnerId)).toBeNull(); // RLS hides it under scope p
+  });
+
+  // 12.2 code review round 2 (RP37): under twt_app, RLS alone hides the other Pariwar's row, so the explicit
+  // `pariwar_id` predicate in getPartner / listPartnersForPariwar could be deleted with the suite green. Here RLS is
+  // BYPASSED (the test's own superuser — the jobs login's shape): only the predicate is left to refuse.
+  it('RP37: getPartner and listPartnersForPariwar keep their explicit pariwar_id predicate with RLS bypassed', async () => {
+    const { client } = getTx();
+    const p = randomUUID();
+    const other = randomUUID();
+    await enterAppScope(client, other);
+    const foreign = await register(client, other, 'Aardvark Bank');
+    await enterAppScope(client, p);
+    const own = await register(client, p, 'Beta Bank');
+
+    await client.query('RESET ROLE');
+    const bypass = await client.query<{ bypass: boolean }>(
+      'SELECT (rolsuper OR rolbypassrls) AS bypass FROM pg_roles WHERE rolname = current_user',
+    );
+    expect(bypass.rows[0]!.bypass, 'the test role must bypass RLS, or this leg isolates nothing').toBe(true);
+
+    const db = bindScopedDb(client);
+    expect(await getPartner(db, toPariwarId(p), foreign.partnerId)).toBeNull();
+    expect(await getPartner(db, toPariwarId(other), own.partnerId)).toBeNull();
+    expect((await getPartner(db, toPariwarId(other), foreign.partnerId))?.partnerId).toBe(foreign.partnerId); // positive control
+    expect((await listPartnersForPariwar(db, toPariwarId(p))).map((r) => r.partnerId)).toEqual([own.partnerId]);
   });
 
   it('"LIC" then "lic" in ONE Pariwar → 23505 marketplace_partners_pariwar_name_en_unique; another Pariwar may reuse it', async () => {

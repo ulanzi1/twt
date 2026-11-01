@@ -54,7 +54,7 @@ describe('parseModuleManifest — accepted vectors (frozen)', () => {
   });
 
   it('trims the bilingual text', () => {
-    const m = parseModuleManifest(manifest({ name_en: '  LIC term plan  ', description_hi: ' विवरण ' }));
+    const m = parseModuleManifest(manifest({ name_en: ' LIC term plan ', description_hi: ' विवरण ' }));
     expect(m.nameEn).toBe('LIC term plan');
     expect(m.descriptionHi).toBe('विवरण');
   });
@@ -553,8 +553,8 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
   });
 
   it('mixed Latin + Devanagari passes the Hindi schema, and values are trimmed', () => {
-    expect(marketplace.moduleDisplayNameHiSchema.parse('  LIC टर्म प्लान  ')).toBe('LIC टर्म प्लान');
-    expect(marketplace.moduleDisplayNameEnSchema.parse('  LIC term plan ')).toBe('LIC term plan');
+    expect(marketplace.moduleDisplayNameHiSchema.parse(' LIC टर्म प्लान ')).toBe('LIC टर्म प्लान');
+    expect(marketplace.moduleDisplayNameEnSchema.parse(' LIC term plan ')).toBe('LIC term plan');
   });
 
   it('keeps 12.1 lengths: name 120 / 121, description 2000 / 2001', () => {
@@ -566,6 +566,118 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
 
   it('keeps 12.1’s storableText refine (an unpaired surrogate is refused)', () => {
     expect(marketplace.moduleDisplayNameEnSchema.safeParse(`ab${String.fromCharCode(0xd800)}cd`).success).toBe(false);
+  });
+
+  // 12.2 code review round 2 — DN3 (`-435`, BigDev "DN3 1"): VISIBLE look-alikes. Each of these read like an ordinary
+  // value yet differed in the partner-name unique index `lower(display_name_en)`.
+  const allSix = (): Array<[string, typeof marketplace.moduleDisplayNameEnSchema, (s: string) => string]> => [
+    ['moduleDisplayNameEn', marketplace.moduleDisplayNameEnSchema, (s) => `HDFC${s}home`],
+    ['moduleDisplayNameHi', marketplace.moduleDisplayNameHiSchema, (s) => `गृह${s}ऋण`],
+    ['moduleDisplayDescriptionEn', marketplace.moduleDisplayDescriptionEnSchema, (s) => `HDFC${s}home`],
+    ['moduleDisplayDescriptionHi', marketplace.moduleDisplayDescriptionHiSchema, (s) => `गृह${s}ऋण`],
+    ['partnerDisplayNameEn', marketplace.partnerDisplayNameEnSchema, (s) => `HDFC${s}home`],
+    ['partnerDisplayNameHi', marketplace.partnerDisplayNameHiSchema, (s) => `गृह${s}ऋण`],
+  ];
+
+  it.each([
+    ['NO-BREAK SPACE U+00A0', 0x00a0],
+    ['OGHAM SPACE MARK U+1680', 0x1680],
+    ['EN QUAD U+2000', 0x2000],
+    ['EM QUAD U+2001', 0x2001],
+    ['EN SPACE U+2002', 0x2002],
+    ['EM SPACE U+2003', 0x2003],
+    ['THREE-PER-EM SPACE U+2004', 0x2004],
+    ['FOUR-PER-EM SPACE U+2005', 0x2005],
+    ['SIX-PER-EM SPACE U+2006', 0x2006],
+    ['FIGURE SPACE U+2007', 0x2007],
+    ['PUNCTUATION SPACE U+2008', 0x2008],
+    ['THIN SPACE U+2009', 0x2009],
+    ['HAIR SPACE U+200A', 0x200a],
+    ['NARROW NO-BREAK SPACE U+202F', 0x202f],
+    ['MEDIUM MATHEMATICAL SPACE U+205F', 0x205f],
+    ['IDEOGRAPHIC SPACE U+3000', 0x3000],
+  ])('DN3: refuses %s inside every display schema (only U+0020 is a space)', (_l, code) => {
+    for (const [name, schema, wrap] of allSix()) {
+      expect(schema.safeParse(wrap(cp(code))).success, name).toBe(false);
+      expect(schema.safeParse(wrap(' ')).success, `${name} (U+0020 control)`).toBe(true);
+    }
+  });
+
+  it('DN3: the list above is EVERY space separator (Zs) but U+0020 — the sixteen of Unicode 15', () => {
+    const zs: number[] = [];
+    for (let c = 0; c <= 0xffff; c += 1) if (c !== 0x20 && /\p{Zs}/u.test(String.fromCharCode(c))) zs.push(c);
+    expect(zs).toEqual([0x00a0, 0x1680, ...Array.from({ length: 11 }, (_, i) => 0x2000 + i), 0x202f, 0x205f, 0x3000]);
+  });
+
+  it('DN3: a value that is not NFC is refused; its NFC form is accepted', () => {
+    const nfdEn = `Cafe${cp(0x0301)} Care`;
+    expect(nfdEn).not.toBe(nfdEn.normalize('NFC'));
+    for (const schema of [
+      marketplace.moduleDisplayNameEnSchema,
+      marketplace.moduleDisplayDescriptionEnSchema,
+      marketplace.partnerDisplayNameEnSchema,
+    ]) {
+      expect(schema.safeParse(nfdEn).success).toBe(false);
+      expect(schema.safeParse(nfdEn.normalize('NFC')).success).toBe(true);
+    }
+    // The precomposed nukta letters U+0958–U+095F are NOT NFC-stable: NFC writes them as letter + U+093C (`-435` Consequence 1).
+    const precomposed = `${cp(0x095e)}ायदा`;
+    expect(precomposed).not.toBe(precomposed.normalize('NFC'));
+    for (const schema of [
+      marketplace.moduleDisplayNameHiSchema,
+      marketplace.moduleDisplayDescriptionHiSchema,
+      marketplace.partnerDisplayNameHiSchema,
+    ]) {
+      expect(schema.safeParse(precomposed).success).toBe(false);
+      expect(schema.safeParse(precomposed.normalize('NFC')).success).toBe(true);
+    }
+  });
+
+  it('DN3: two spaces in a row are refused anywhere in a NAME (edges too — the raw value), and kept in a description', () => {
+    for (const schema of [marketplace.moduleDisplayNameEnSchema, marketplace.partnerDisplayNameEnSchema]) {
+      expect(schema.safeParse('LIC  Housing').success).toBe(false);
+      expect(schema.safeParse('  LIC Housing').success).toBe(false);
+      expect(schema.safeParse('LIC Housing  ').success).toBe(false);
+      expect(schema.parse(' LIC Housing ')).toBe('LIC Housing');
+    }
+    for (const schema of [marketplace.moduleDisplayNameHiSchema, marketplace.partnerDisplayNameHiSchema]) {
+      expect(schema.safeParse('एलआईसी  हाउसिंग').success).toBe(false);
+      expect(schema.safeParse('एलआईसी हाउसिंग').success).toBe(true);
+    }
+    expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse('Line one.  Line two.').success).toBe(true);
+    expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse('पहली पंक्ति।  दूसरी पंक्ति।').success).toBe(true);
+  });
+
+  // DN4 (`-435`, BigDev "DN4 1"): a ZWJ joining two emoji is allowed in the English MODULE texts; the English partner name
+  // stays strict (DN1's reason — the unique index). Built from code points: the source carries no invisible character (TR15).
+  const ZWJ = cp(0x200d);
+  const FAMILY = [0x1f468, 0x200d, 0x1f469, 0x200d, 0x1f467].map(cp).join('');
+  const HEALTH_WORKER = [0x1f469, 0x200d, 0x2695, 0xfe0f].map(cp).join('');
+  const HEALTH_WORKER_TONE = [0x1f469, 0x1f3fd, 0x200d, 0x2695, 0xfe0f].map(cp).join('');
+  const RAINBOW_FLAG = [0x1f3f3, 0xfe0f, 0x200d, 0x1f308].map(cp).join('');
+
+  it('DN4: a ZWJ emoji sequence is ACCEPTED in an English module name and description, REFUSED in the English partner name', () => {
+    for (const emoji of [FAMILY, HEALTH_WORKER, HEALTH_WORKER_TONE, RAINBOW_FLAG]) {
+      const v = `Cover for the whole family ${emoji}`;
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success, v).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(v).success, v).toBe(true);
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(v).success, v).toBe(false);
+    }
+  });
+
+  it('DN4: a ZWJ NOT between two emoji, and any ZWNJ, stay refused in the English module texts', () => {
+    const man = cp(0x1f468);
+    const notBetweenEmoji = [`LIC${ZWJ}${man}`, `${man}${ZWJ}LIC`, `LIC ${man}${ZWJ}`, `${ZWJ}${man} LIC`, `L${ZWJ}IC`];
+    for (const v of [...notBetweenEmoji, `LIC ${man}${cp(0x200c)}${man}`]) {
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(false);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(false);
+    }
+  });
+
+  it('DN4: the joiner refusal names the character in words an admin can act on', () => {
+    const r = marketplace.partnerDisplayNameEnSchema.safeParse(`L${ZWJ}IC`);
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toMatch(/invisible joining character/);
   });
 
   it('parseModuleManifest USES them: a Hindi name with no Devanagari is ModuleManifestInvalidError at path name_hi', () => {

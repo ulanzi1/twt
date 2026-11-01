@@ -41,6 +41,25 @@ describe.skipIf(!hasDatabase)('marketplace_partners RLS policy regression', () =
     expect(r.rows[0]).toEqual({ s: true, i: true, u: false, d: false });
   });
 
+  // 12.2 code review round 2 (RP38) — AC1's columns, NOT NULLs and DEFAULTs, read from the catalog: the migration is
+  // hand-written and the drizzle snapshot is frozen, so a dropped NOT NULL or DEFAULT would otherwise pass every test.
+  it('AC1: the columns, in order, every one NOT NULL, with their defaults (RP38)', async () => {
+    const { client } = getTx();
+    const cols = await client.query<{ column_name: string; data_type: string; is_nullable: string; column_default: string | null }>(
+      `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'marketplace_partners' ORDER BY ordinal_position`,
+    );
+    expect(cols.rows).toEqual([
+      { column_name: 'partner_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'pariwar_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'display_name_en', data_type: 'text', is_nullable: 'NO', column_default: null },
+      { column_name: 'display_name_hi', data_type: 'text', is_nullable: 'NO', column_default: null },
+      { column_name: 'created_by_actor_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'audit_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'created_at', data_type: 'timestamp with time zone', is_nullable: 'NO', column_default: 'now()' },
+    ]);
+  });
+
   it('positive: SELECT under scope A returns A’s partner and ⛔ B’s', async () => {
     const { client } = getTx();
     const [a, b] = await seedBoth(client);

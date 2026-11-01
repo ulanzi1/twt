@@ -57,6 +57,21 @@ describe('PartnerPicker', () => {
     expect(screen.queryByTestId('partner-form')).toBeNull();
   });
 
+  it('DN3: pasted names are cleaned before they are sent (no-break space, doubled space, non-NFC)', { timeout: 20_000 }, async () => {
+    const cp = (n: number): string => String.fromCodePoint(n);
+    createModulePartner.mockResolvedValue(created);
+    const { onChange } = await openForm();
+    fireEvent.change(screen.getByTestId('partner-name-en'), { target: { value: `LIC${cp(0x00a0)}Housing  Cafe${cp(0x0301)}` } });
+    fireEvent.change(screen.getByTestId('partner-name-hi'), { target: { value: `एलआईसी${cp(0x202f)}हाउसिंग` } });
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(CREATED));
+    expect(createModulePartner).toHaveBeenCalledWith(
+      PARIWAR,
+      { display_name_en: `LIC Housing Caf${cp(0x00e9)}`, display_name_hi: 'एलआईसी हाउसिंग' },
+      expect.any(String),
+    );
+  });
+
   it('RP18: unchanged names keep the Idempotency-Key across a failed attempt; an EDITED name mints a new one', { timeout: 20_000 }, async () => {
     createModulePartner
       .mockRejectedValueOnce(new ApiError(502, 'internal.error', 'down'))
@@ -83,6 +98,26 @@ describe('PartnerPicker', () => {
     await openForm();
     fireEvent.click(screen.getByTestId('partner-save'));
     expect(await screen.findByTestId('partner-error')).toHaveTextContent(t('module.partner.nameTaken'));
+  });
+
+  // Patch-diff review (round 2): the fixed copy ("each needs letters…") does not describe a joiner or a doubled space, so
+  // the server's own reason is shown, naming the field; the fixed copy stays the fallback.
+  it('a 422 name refusal shows the server’s reason for the named field; without an issue, the fixed copy', { timeout: 20_000 }, async () => {
+    const reason = 'must not contain an invisible joining character (it is usually copied in with pasted text)';
+    createModulePartner.mockRejectedValue(
+      new ApiError(422, 'module_partner.name_invalid', 'invalid', { issues: [{ path: ['display_name_en'], message: reason }] }),
+    );
+    await openForm();
+    fireEvent.click(screen.getByTestId('partner-save'));
+    const error = await screen.findByTestId('partner-error');
+    expect(error).toHaveTextContent(t('module.partner.nameEn'));
+    expect(error).toHaveTextContent(reason);
+    expect(error).not.toHaveTextContent(t('module.partner.nameInvalid'));
+
+    createModulePartner.mockRejectedValue(new ApiError(422, 'module_partner.name_invalid', 'invalid', {}));
+    fireEvent.change(screen.getByTestId('partner-name-en'), { target: { value: 'LIC2' } });
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(screen.getByTestId('partner-error')).toHaveTextContent(t('module.partner.nameInvalid')));
   });
 
   it('RP27: a registration still in flight when the picker is LEFT never selects anything', { timeout: 20_000 }, async () => {

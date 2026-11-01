@@ -23,6 +23,7 @@ import {
   issueToStep,
   leadWarning,
   moduleErrorGuidance,
+  normaliseDisplayText,
   reachesNoMemberYet,
   toAuthorRequest,
   toIsoOrNull,
@@ -207,6 +208,41 @@ describe('time, the request and the 422 mapping', () => {
       scope_filter: { version: 1, scope: 'members-all' },
       slot_capacity: null,
     });
+  });
+
+  // DN3 (`-435` item 2): the client cleans pasted text so the server's refusals (non-NFC, a space other than U+0020, a
+  // doubled space in a name) are not met by an ordinary paste. Built from code points — no invisible character in source.
+  it('DN3: normaliseDisplayText — NFC, every other space separator → U+0020, a run of spaces → one in a NAME only', () => {
+    const cp = (n: number): string => String.fromCodePoint(n);
+    const pasted = `Cafe${cp(0x0301)}${cp(0x00a0)}Care${cp(0x202f)}${cp(0x3000)}plan  2026\r\nnext`;
+    expect(normaliseDisplayText(pasted, 'description')).toBe(`Caf${cp(0x00e9)} Care  plan  2026\nnext`);
+    expect(normaliseDisplayText(`LIC${cp(0x00a0)}Housing  Finance`, 'name')).toBe('LIC Housing Finance');
+    // The precomposed nukta letters are not NFC-stable; NFC writes letter + U+093C (`-435` Consequence 1).
+    expect(normaliseDisplayText(`${cp(0x095e)}ायदा`, 'name')).toBe(`${cp(0x092b)}${cp(0x093c)}ायदा`);
+    const r = toAuthorRequest({ ...full(), nameEn: `HDFC${cp(0x00a0)}home  loan`, nameHi: `गृह${cp(0x2009)}ऋण` });
+    expect(r.name_en).toBe('HDFC home loan');
+    expect(r.name_hi).toBe('गृह ऋण');
+  });
+
+  it('DN3: the wizard sends its DESCRIPTIONS cleaned too — other spaces → U+0020, NFC — and keeps their doubled spaces', () => {
+    const cp = (n: number): string => String.fromCodePoint(n);
+    const r = toAuthorRequest({
+      ...full(),
+      descriptionEn: `One.${cp(0x00a0)} Two.  Cafe${cp(0x0301)}`,
+      descriptionHi: `पहली।${cp(0x202f)} दूसरी ${cp(0x095e)}ायदा`,
+    });
+    expect(r.description_en).toBe(`One.  Two.  Caf${cp(0x00e9)}`);
+    expect(r.description_hi).toBe(`पहली।  दूसरी ${cp(0x092b)}${cp(0x093c)}ायदा`);
+  });
+
+  it('step (a) judges length on the SENT text: NFC can lengthen a Hindi name, collapsing spaces can shorten a name', () => {
+    const cp = (n: number): string => String.fromCodePoint(n);
+    // 120 precomposed nukta letters are 120 code units as typed and 240 once sent (NFC: letter + U+093C).
+    expect(validateStep(step('a'), { ...full(), nameHi: cp(0x095e).repeat(120) })).toBe(t('module.reason.nameTooLong'));
+    // 123 as typed, 83 once its doubled spaces collapse — the server would accept it, so the wizard must too.
+    const spaced = `LIC${'  x'.repeat(40)}`;
+    expect(spaced.length).toBe(123);
+    expect(validateStep(step('a'), { ...full(), nameEn: spaced })).toBeNull();
   });
 
   it('validateStep — each step’s reasons; a complete state has no invalid step', () => {

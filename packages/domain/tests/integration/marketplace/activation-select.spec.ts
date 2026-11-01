@@ -18,12 +18,22 @@ import { enterAppScope } from '../_helpers.js';
 import { HOUR_MS, manifestInput, newModuleId, seedPartner, txNow } from './_fixtures.js';
 
 const P = toPariwarId(randomUUID());
+// RP39 (12.2 code review round 2): a SECOND Pariwar — the scan is unscoped by design (QE7 (A)), and a tenant filter added
+// to it would otherwise fail nothing here.
+const Q = toPariwarId(randomUUID());
 const LEAD_MS = 2_000;
+const DAY_MS = 24 * HOUR_MS;
 
 describe.skipIf(!hasDatabase)('selectDueScheduledModules — the due scan (AC9)', { timeout: 20_000 }, () => {
   let pool: pg.Pool;
   let partnerId: string;
+  let partnerQ: string;
   const created: ModuleId[] = [];
+  // RP39's pair, kept OUT of `created` so `mine()` and the other legs see only P's four modules. Both windows open a DAY
+  // ahead, so no real-clock tick (the jobs suite's live sweep shares the database) can activate them, and no other leg's
+  // instant sees them; at T0+1d ONE scan must return both Pariwars.
+  const pFar = newModuleId(); // P's, scheduled, [T0+1d, T0+2d)
+  const qModule = newModuleId(); // Q's, scheduled, [T0+1d, T0+2d)
   // Filled in beforeAll, in ONE transaction (so they share a `now()` = T0).
   let t0: Date;
   const opensSoon = newModuleId(); // scheduled, [T0+2s, T0+1h)
@@ -37,6 +47,7 @@ describe.skipIf(!hasDatabase)('selectDueScheduledModules — the due scan (AC9)'
     const c = await pool.connect();
     try {
       partnerId = await seedPartner(c, P);
+      partnerQ = await seedPartner(c, Q);
       await c.query('BEGIN');
       await enterAppScope(c, P);
       t0 = await txNow(c);
@@ -53,6 +64,12 @@ describe.skipIf(!hasDatabase)('selectDueScheduledModules — the due scan (AC9)'
       await author(activeNow, -HOUR_MS, HOUR_MS);
       await activateModule(c, base(activeNow));
       await author(draftLater, LEAD_MS, HOUR_MS);
+      await authorModule(c, { ...base(pFar), manifest: manifestInput(t0, { partner_id: partnerId, valid_from: iso(DAY_MS), valid_until: iso(2 * DAY_MS) }) });
+      await scheduleModule(c, base(pFar));
+      await enterAppScope(c, Q);
+      const baseQ = { pariwarId: Q, moduleId: qModule, auditId: randomUUID(), actor: 'operator' as const, actorId: randomUUID() };
+      await authorModule(c, { ...baseQ, manifest: manifestInput(t0, { partner_id: partnerQ, valid_from: iso(DAY_MS), valid_until: iso(2 * DAY_MS) }) });
+      await scheduleModule(c, { ...baseQ, auditId: randomUUID() });
       await c.query('COMMIT');
     } catch (e) {
       await c.query('ROLLBACK').catch(() => undefined);
@@ -68,9 +85,9 @@ describe.skipIf(!hasDatabase)('selectDueScheduledModules — the due scan (AC9)'
     try {
       await admin.query('BEGIN');
       await admin.query("SET LOCAL session_replication_role = 'replica'");
-      await admin.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1)', [created]);
-      await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [created]);
-      await admin.query('DELETE FROM marketplace_partners WHERE partner_id = $1', [partnerId]);
+      await admin.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1)', [[...created, pFar, qModule]]);
+      await admin.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [[...created, pFar, qModule]]);
+      await admin.query('DELETE FROM marketplace_partners WHERE partner_id = ANY($1)', [[partnerId, partnerQ]]);
       await admin.query('COMMIT');
     } catch (e) {
       await admin.query('ROLLBACK').catch(() => undefined);
@@ -95,6 +112,12 @@ describe.skipIf(!hasDatabase)('selectDueScheduledModules — the due scan (AC9)'
     const rows = (await selectDueScheduledModules(pool, { asOf: at })).filter((m) => m.moduleId === opensSoon);
     expect(rows[0]).toMatchObject({ pariwarId: P, moduleId: opensSoon });
     expect(rows[0]!.validFrom.getTime()).toBe(at.getTime());
+  });
+
+  it('RP39: the scan is cross-Pariwar — ONE scan returns a due module of each of two Pariwars, each with its own pariwar_id', async () => {
+    const due = await selectDueScheduledModules(pool, { asOf: new Date(t0.getTime() + DAY_MS) });
+    expect(due.find((m) => m.moduleId === pFar)).toMatchObject({ pariwarId: P });
+    expect(due.find((m) => m.moduleId === qModule)).toMatchObject({ pariwarId: Q });
   });
 
   it('a scheduled module whose valid_until has passed is ⛔ selected (it stays scheduled for 12.6 — C2 (c))', async () => {

@@ -206,7 +206,18 @@ export const moduleDescriptionSchema = storableText(z.string().trim().min(1).max
 //     letter-or-digit rule below while the value looked blank (RP1);
 //   - ⭐ U+200C / U+200D (ZWNJ / ZWJ) are ALLOWED in a `*_hi` value only — Devanagari conjunct control. In a `*_en` value
 //     they are ⛔ allowed: "LIC" and "L"+ZWJ+"IC" read identically yet differ in the partner-name unique index (DN1 —
-//     BigDev narrowed QE12 for English text, 12.2 code review round 1);
+//     BigDev narrowed QE12 for English text, 12.2 code review round 1; `-434`). ⭐ EXCEPT (DN4, `-435`): in an English
+//     MODULE name or description a ZWJ is allowed BETWEEN TWO EMOJI (the family, health-worker and rainbow-flag emoji are
+//     ZWJ sequences) — the code point before it (past any U+FE0F and skin-tone modifier) and the one after it are both
+//     `\p{Extended_Pictographic}`. Module texts carry no unique index, so DN1's reason does not reach them; the English
+//     PARTNER name stays strict;
+//   - ⛔ (DN3, `-435`) a value that is not in Unicode NFC — "Café" with a combining accent and "Café" with the composed é
+//     read identically yet differ in the partner-name unique index. REFUSED, ⛔ rewritten: the server stores exactly what
+//     was submitted and signed off; the admin client normalises before sending (`derive.ts` `normaliseDisplayText`);
+//   - ⛔ (DN3) every space separator but U+0020 — a no-break space (U+00A0, what a PDF or word-processor paste carries),
+//     U+202F, U+2000–U+200A, U+205F, U+1680, U+3000;
+//   - ⛔ (DN3) in a NAME (module or partner, either language): two or more spaces in a row — on the RAW value like every
+//     rule here, edges included (`-435` item 1(c); the admin client collapses runs, so only another caller meets it);
 //   - at least one letter or digit (a blank-looking value is refused);
 //   - a `*_hi` value must hold at least one Devanagari LETTER (Story 2.1: member-facing copy needs Hindi) — "LIC टर्म
 //     प्लान" passes; "LIC" and "LIC ।" (a danda is punctuation) are refused.
@@ -230,15 +241,37 @@ const DISPLAY_REFUSED_FORMAT_CHARS: ReadonlySet<number> = new Set([
  */
 const FORMAT_CHARACTER = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
 const LINE_OR_PARAGRAPH_SEPARATOR = /[\p{Zl}\p{Zp}]/u;
+const SPACE_SEPARATOR = /\p{Zs}/u;
 const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 const DEVANAGARI_LETTER = /(?=\p{Script=Devanagari})\p{L}/u;
+const PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
+const EMOJI_MODIFIER = /\p{Emoji_Modifier}/u;
+
+/**
+ * Where ZWNJ / ZWJ may appear: `any` (the `*_hi` schemas — conjunct control), `between-emoji` (the English MODULE texts — a
+ * ZWJ joining two emoji only, DN4), `none` (the English partner name — DN1).
+ */
+type JoinerRule = 'any' | 'between-emoji' | 'none';
+
+interface DisplayTextRules {
+  allowLineFeed: boolean;
+  requireDevanagari: boolean;
+  joiners: JoinerRule;
+  /** A NAME refuses two spaces in a row (DN3); a description may keep them. */
+  refuseDoubledSpace: boolean;
+}
+
+/** True iff the ZWJ at `chars[i]` joins two emoji: a pictograph before it (past U+FE0F / skin tones) and one after it. */
+function zwjJoinsTwoEmoji(chars: readonly string[], i: number): boolean {
+  let j = i - 1;
+  while (j >= 0 && (chars[j]?.codePointAt(0) === 0xfe0f || EMOJI_MODIFIER.test(chars[j] ?? ''))) j -= 1;
+  return PICTOGRAPHIC.test(chars[j] ?? '') && PICTOGRAPHIC.test(chars[i + 1] ?? '');
+}
 
 /** The first QE12 rule `raw` breaks, as a message — or null. */
-function displayTextRefusal(
-  raw: string,
-  o: { allowLineFeed: boolean; requireDevanagari: boolean; allowJoiners: boolean },
-): string | null {
-  for (const ch of raw) {
+function displayTextRefusal(raw: string, o: DisplayTextRules): string | null {
+  const chars = [...raw];
+  for (const [i, ch] of chars.entries()) {
     const c = ch.codePointAt(0) ?? 0;
     if ((c <= 0x1f || c === 0x7f) && !(o.allowLineFeed && c === 0x0a)) {
       return o.allowLineFeed
@@ -247,23 +280,30 @@ function displayTextRefusal(
     }
     if (c >= 0x80 && c <= 0x9f) return 'must not contain a control character';
     if (DISPLAY_REFUSED_FORMAT_CHARS.has(c)) return 'must not contain an invisible or text-direction character';
-    // ZWNJ / ZWJ are Cf, so they are decided BEFORE the generic Cf rule: kept for a `*_hi` value, refused in a `*_en` one.
+    // ZWNJ / ZWJ are Cf, so they are decided BEFORE the generic Cf rule: kept for a `*_hi` value, refused in a `*_en` one
+    // except a ZWJ joining two emoji in an English module text (DN4).
     if (c === 0x200c || c === 0x200d) {
-      if (!o.allowJoiners) return 'must not contain a zero-width joiner or non-joiner';
+      const allowed = o.joiners === 'any' || (o.joiners === 'between-emoji' && c === 0x200d && zwjJoinsTwoEmoji(chars, i));
+      if (!allowed) return 'must not contain an invisible joining character (it is usually copied in with pasted text)';
       continue;
     }
     // The text / emoji PRESENTATION selectors are default-ignorable too, but a heart or a tick mark needs them (DN2, option 2).
     if (c === 0xfe0e || c === 0xfe0f) continue;
     if (FORMAT_CHARACTER.test(ch)) return 'must not contain an invisible or text-direction character';
     if (LINE_OR_PARAGRAPH_SEPARATOR.test(ch)) return 'must not contain a line or paragraph separator';
+    if (c !== 0x20 && SPACE_SEPARATOR.test(ch)) return 'must use ordinary spaces only (not a no-break or other special space)';
   }
+  if (raw !== raw.normalize('NFC')) {
+    return 'must be in Unicode normal form NFC (the admin console converts text itself; another caller must normalise first)';
+  }
+  if (o.refuseDoubledSpace && raw.includes('  ')) return 'must not contain two spaces in a row';
   if (!LETTER_OR_DIGIT.test(raw)) return 'must contain at least one letter or digit';
   if (o.requireDevanagari && !DEVANAGARI_LETTER.test(raw)) return 'must contain Hindi (Devanagari) text';
   return null;
 }
 
 /** A write-only display-text schema: the QE12 rules on the RAW string, then the 12.1 storage rules (trim + length). */
-function displayText(max: number, o: { allowLineFeed: boolean; requireDevanagari: boolean; allowJoiners: boolean }) {
+function displayText(max: number, o: DisplayTextRules) {
   return z
     .string()
     .superRefine((raw, ctx) => {
@@ -274,17 +314,47 @@ function displayText(max: number, o: { allowLineFeed: boolean; requireDevanagari
 }
 
 /** A module's English name at WRITE (QE12). Same length as `moduleNameSchema` (trim, 1–120). */
-export const moduleDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false, allowJoiners: false });
+export const moduleDisplayNameEnSchema = displayText(120, {
+  allowLineFeed: false,
+  requireDevanagari: false,
+  joiners: 'between-emoji',
+  refuseDoubledSpace: true,
+});
 /** A module's Hindi name at WRITE (QE12) — must hold a Devanagari letter. */
-export const moduleDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true, allowJoiners: true });
+export const moduleDisplayNameHiSchema = displayText(120, {
+  allowLineFeed: false,
+  requireDevanagari: true,
+  joiners: 'any',
+  refuseDoubledSpace: true,
+});
 /** A module's English description at WRITE (QE12) — a line feed is allowed. Same length as `moduleDescriptionSchema`. */
-export const moduleDisplayDescriptionEnSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: false, allowJoiners: false });
+export const moduleDisplayDescriptionEnSchema = displayText(2000, {
+  allowLineFeed: true,
+  requireDevanagari: false,
+  joiners: 'between-emoji',
+  refuseDoubledSpace: false,
+});
 /** A module's Hindi description at WRITE (QE12) — a line feed is allowed; must hold a Devanagari letter. */
-export const moduleDisplayDescriptionHiSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: true, allowJoiners: true });
+export const moduleDisplayDescriptionHiSchema = displayText(2000, {
+  allowLineFeed: true,
+  requireDevanagari: true,
+  joiners: 'any',
+  refuseDoubledSpace: false,
+});
 /** A partner's English display name (QE3 / QE12) — trim, 1–120; unique per Pariwar, case-insensitively (the DB). */
-export const partnerDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false, allowJoiners: false });
+export const partnerDisplayNameEnSchema = displayText(120, {
+  allowLineFeed: false,
+  requireDevanagari: false,
+  joiners: 'none',
+  refuseDoubledSpace: true,
+});
 /** A partner's Hindi display name (QE3 / QE12) — trim, 1–120; must hold a Devanagari letter. */
-export const partnerDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true, allowJoiners: true });
+export const partnerDisplayNameHiSchema = displayText(120, {
+  allowLineFeed: false,
+  requireDevanagari: true,
+  joiners: 'any',
+  refuseDoubledSpace: true,
+});
 /** `integer` column (int4) — capped at its maximum so a huge value is a manifest error, ⛔ a 22003. */
 export const moduleSlotCapacitySchema = z.number().int().positive().max(2_147_483_647).nullable();
 

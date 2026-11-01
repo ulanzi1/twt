@@ -21,6 +21,7 @@ import {
   getModuleAuthorActorId,
   getModuleStateAt,
   listModulesForPariwar,
+  pageModulesForPariwar,
 } from '../../../src/marketplace/read.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
@@ -182,6 +183,32 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
     const later = new Date(Date.now() + 60_000);
     expect(await getModuleStateAt(db, A, aId, later)).toBe('active');
     expect(await getModuleStateAt(db, B, aId, later)).toBe('draft'); // A's stream seen from B: the empty fold
+  });
+
+  // 12.2 code review round 2 (RP37) — the same RLS-bypassed leg for `pageModulesForPariwar`, the admin list 12.2 added. Two
+  // FRESH Pariwars, both authored in this transaction (so both sort first by created_at): with the predicate deleted, the
+  // other Pariwar's module would be on the first page.
+  it('RP37: pageModulesForPariwar keeps its explicit pariwar_id predicate with RLS bypassed', async () => {
+    const { client } = getTx();
+    const mine = toPariwarId(randomUUID());
+    const theirs = toPariwarId(randomUUID());
+    await enterAppScope(client, theirs);
+    const theirId = newModuleId();
+    await authorModule(client, { ...base(theirs, theirId), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, theirs) }) });
+    await enterAppScope(client, mine);
+    const myId = newModuleId();
+    await authorModule(client, { ...base(mine, myId), manifest: manifestInput(await txNow(client), { partner_id: await seedPartner(client, mine) }) });
+
+    await client.query('RESET ROLE');
+    const bypass = await client.query<{ bypass: boolean }>(
+      'SELECT (rolsuper OR rolbypassrls) AS bypass FROM pg_roles WHERE rolname = current_user',
+    );
+    expect(bypass.rows[0]!.bypass, 'the test role must bypass RLS, or this leg isolates nothing').toBe(true);
+
+    const db = bindScopedDb(client);
+    const page = await pageModulesForPariwar(db, mine, { limit: LIST_MODULES_MAX_LIMIT });
+    expect(page.items.map((m) => m.moduleId)).toEqual([myId]);
+    expect((await pageModulesForPariwar(db, theirs)).items.map((m) => m.moduleId)).toEqual([theirId]); // positive control
   });
 });
 

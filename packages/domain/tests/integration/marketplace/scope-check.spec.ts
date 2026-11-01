@@ -178,4 +178,25 @@ describe.skipIf(!hasDatabase)('assertScopeValuesRecorded — the author-time C11
     expect([...found]).toEqual(['Patna']);
     expect([...(await findListedWorkplaceDistricts(bindScopedDb(client), p, []))]).toEqual([]);
   });
+
+  // 12.2 code review round 2 (RP37): the test above seeds no other Pariwar, so its "own-Pariwar" half was untested. Here
+  // another Pariwar lists a district and RLS is BYPASSED (the test's own superuser): only the explicit predicate refuses it.
+  it('RP37: findListedWorkplaceDistricts keeps its explicit pariwar_id predicate with RLS bypassed', async () => {
+    const { client } = getTx();
+    const other = toPariwarId(randomUUID());
+    await enterAppScope(client, other);
+    await listDistricts(client, other, ['Nalanda']);
+    const { p } = await fresh(client);
+    await listDistricts(client, p, ['Patna']);
+
+    await client.query('RESET ROLE');
+    const bypass = await client.query<{ bypass: boolean }>(
+      'SELECT (rolsuper OR rolbypassrls) AS bypass FROM pg_roles WHERE rolname = current_user',
+    );
+    expect(bypass.rows[0]!.bypass, 'the test role must bypass RLS, or this leg isolates nothing').toBe(true);
+
+    const db = bindScopedDb(client);
+    expect([...(await findListedWorkplaceDistricts(db, p, ['Patna', 'Nalanda']))]).toEqual(['Patna']);
+    expect([...(await findListedWorkplaceDistricts(db, other, ['Patna', 'Nalanda']))]).toEqual(['Nalanda']); // positive control
+  });
 });

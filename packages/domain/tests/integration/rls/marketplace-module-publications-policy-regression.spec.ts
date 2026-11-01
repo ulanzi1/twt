@@ -52,6 +52,27 @@ describe.skipIf(!hasDatabase)('marketplace_module_publications RLS policy regres
     expect(r.rows[0]).toEqual({ s: true, i: true, u: false, d: false });
   });
 
+  // 12.2 code review round 2 (RP38) — AC1's columns, NOT NULLs and DEFAULTs, read from the catalog: the migration is
+  // hand-written and the drizzle snapshot is frozen, so a dropped NOT NULL or DEFAULT would otherwise pass every test.
+  it('AC1: the columns, in order, every one NOT NULL, with their defaults (RP38)', async () => {
+    const { client } = getTx();
+    const cols = await client.query<{ column_name: string; data_type: string; is_nullable: string; column_default: string | null }>(
+      `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'marketplace_module_publications' ORDER BY ordinal_position`,
+    );
+    expect(cols.rows).toEqual([
+      { column_name: 'module_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'pariwar_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'published_event_type', data_type: 'text', is_nullable: 'NO', column_default: null },
+      { column_name: 'tone_signoff_content_hash', data_type: 'text', is_nullable: 'NO', column_default: null },
+      { column_name: 'reviewed_by_actor_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      { column_name: 'reviewed_at', data_type: 'timestamp with time zone', is_nullable: 'NO', column_default: 'now()' },
+      { column_name: 'hindi_reviewed', data_type: 'boolean', is_nullable: 'NO', column_default: null },
+      { column_name: 'partner_agreement_confirmed', data_type: 'boolean', is_nullable: 'NO', column_default: null },
+      { column_name: 'audit_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+    ]);
+  });
+
   it('isolation: scope A sees its publication and ⛔ B’s; scope B symmetric', async () => {
     const { client } = getTx();
     const [a, b] = await seedBoth(client);

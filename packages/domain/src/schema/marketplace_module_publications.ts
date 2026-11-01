@@ -7,8 +7,8 @@
 // module's state or to the event, and `recordModulePublication` does not check either.
 //
 // ── Why its own table (C12) ───────────────────────────────────────────────────────────────────────
-// `marketplace_modules` is IMMUTABLE apart from its projected columns (the 0193 whole-row trigger — 12.1 I2), so mutable
-// presentation / review data lives beside it. It is also the tone sign-off's persistence: Story 2.2 makes the CONSUMER own
+// `marketplace_modules` is IMMUTABLE apart from its projected columns (the 0193 whole-row trigger — 12.1 I2), so data that
+// arrives AFTER authoring (the review sign-off) lives beside it — in a row that is itself insert-only (below), ⛔ mutable. It is also the tone sign-off's persistence: Story 2.2 makes the CONSUMER own
 // it (ADR-0019), and this is the "published by" record 12.3's card may read.
 //
 // ── INSERT-ONLY + tenant-safe (I7) ────────────────────────────────────────────────────────────────

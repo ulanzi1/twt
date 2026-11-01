@@ -20,7 +20,7 @@ function refusalPaths(input: { displayNameEn: unknown; displayNameHi: unknown })
 
 describe('parsePartnerDisplayNames (QE12)', () => {
   it('accepts and TRIMS a valid pair', () => {
-    expect(parsePartnerDisplayNames({ displayNameEn: '  LIC  ', displayNameHi: ' एलआईसी ' })).toEqual({
+    expect(parsePartnerDisplayNames({ displayNameEn: ' LIC ', displayNameHi: ' एलआईसी ' })).toEqual({
       displayNameEn: 'LIC',
       displayNameHi: 'एलआईसी',
     });

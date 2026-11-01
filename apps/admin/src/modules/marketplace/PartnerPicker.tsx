@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { attemptKey, useCreateModulePartner, useModulePartners, type AttemptKey } from '../../api/hooks.js';
-import { moduleErrorGuidance } from './derive.js';
+import { moduleErrorGuidance, normaliseDisplayText, partnerIssueMessage } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 
 export interface PartnerPickerProps {
@@ -38,7 +38,12 @@ export function PartnerPicker({ pariwarId, value, onChange }: PartnerPickerProps
   );
 
   const onRegister = async (): Promise<void> => {
-    const body = { display_name_en: nameEn, display_name_hi: nameHi };
+    // Pasted names are cleaned as the wizard cleans its texts (DN3, `-435` item 2): the server refuses a no-break space,
+    // a doubled space or non-NFC text in a partner name, which is permanent once registered.
+    const body = {
+      display_name_en: normaliseDisplayText(nameEn, 'name'),
+      display_name_hi: normaliseDisplayText(nameHi, 'name'),
+    };
     const startedAt = generation.current;
     try {
       const created = await create.mutateAsync({ body, idempotencyKey: attemptKey(attempt, body) });
@@ -132,7 +137,10 @@ export function PartnerPicker({ pariwarId, value, onChange }: PartnerPickerProps
           </div>
           {create.isError ? (
             <p role="alert" className="text-xs text-status-fail-fg" data-testid="partner-error">
-              {create.error instanceof ApiError ? moduleErrorGuidance(create.error.code) : t('module.partner.error')}
+              {create.error instanceof ApiError
+                ? ((create.error.code === 'module_partner.name_invalid' ? partnerIssueMessage(create.error.details) : null) ??
+                  moduleErrorGuidance(create.error.code))
+                : t('module.partner.error')}
             </p>
           ) : null}
         </div>

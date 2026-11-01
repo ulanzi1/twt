@@ -184,6 +184,11 @@ const MAX_PLACES = 2_147_483_647;
 /** The request DTO's cap on the lead hand-off address; a longer one is an unmapped 400, so the UI stops it first (RP26). */
 const MAX_LEAD_URL = 4_096;
 
+/** The length the server measures: the sent (normalised) text, trimmed. */
+function sentLength(v: string, kind: 'name' | 'description'): number {
+  return normaliseDisplayText(v, kind).trim().length;
+}
+
 /** The first reason step `step` cannot be left yet, or null. Mirrors only what the admin can see; the domain decides. */
 export function validateStep(step: number, s: WizardState): string | null {
   switch (WIZARD_STEPS[step]) {
@@ -191,10 +196,14 @@ export function validateStep(step: number, s: WizardState): string | null {
       if (s.partnerId === null) return t('module.reason.partner');
       if (s.nameEn.trim() === '') return t('module.reason.nameEn');
       if (s.nameHi.trim() === '') return t('module.reason.nameHi');
-      if (s.nameEn.trim().length > 120 || s.nameHi.trim().length > 120) return t('module.reason.nameTooLong');
+      // Lengths are judged on the text that is SENT (NFC can lengthen it — a precomposed nukta letter becomes two code
+      // units; collapsing spaces shortens a name), the same string the server measures.
+      if (sentLength(s.nameEn, 'name') > 120 || sentLength(s.nameHi, 'name') > 120) return t('module.reason.nameTooLong');
       if (s.descriptionEn.trim() === '') return t('module.reason.descriptionEn');
       if (s.descriptionHi.trim() === '') return t('module.reason.descriptionHi');
-      if (s.descriptionEn.trim().length > 2000 || s.descriptionHi.trim().length > 2000) return t('module.reason.descriptionTooLong');
+      if (sentLength(s.descriptionEn, 'description') > 2000 || sentLength(s.descriptionHi, 'description') > 2000) {
+        return t('module.reason.descriptionTooLong');
+      }
       return null;
     }
     case 'b':
@@ -241,9 +250,20 @@ export function firstInvalidStep(s: WizardState): number | null {
 
 // ── Request / prefill ─────────────────────────────────────────────────────────────────────────────────
 
-/** CRLF (and a lone CR) → LF: the domain refuses U+000D in display text; the admin's line breaks become LF (QE12). */
-function normaliseNewlines(v: string): string {
-  return v.replace(/\r\n?/g, '\n');
+/**
+ * Display text as the domain accepts it, so pasted text just works (QE12; DN3, `-435` item 2): CRLF (and a lone CR) → LF;
+ * every space separator but U+0020 (a no-break space from a PDF or word-processor paste, a thin space, …) → U+0020; Unicode
+ * NFC; and in a NAME, a run of spaces → one. The server REFUSES each of these rather than rewriting them, so this is the
+ * only place the admin's text is changed, and a member's card shows the same thing (HTML collapses a run of spaces).
+ * ⚠ ONLY these: any other character the server refuses (a tab, a soft hyphen, a zero-width space, U+2028, …) is sent as
+ * typed and refused with the server's reason — `-435` item 2 cleans exactly the DN3 look-alikes.
+ */
+export function normaliseDisplayText(v: string, kind: 'name' | 'description'): string {
+  const text = v
+    .replace(/\r\n?/g, '\n')
+    .replace(/(?! )\p{Zs}/gu, ' ')
+    .normalize('NFC');
+  return kind === 'name' ? text.replace(/ {2,}/g, ' ') : text;
 }
 
 export function eligibilityFilterOf(s: WizardState): ModuleEligibilityFilterDto {
@@ -264,16 +284,16 @@ function orderedStates(states: readonly ModuleEligibilityMemberState[]): ModuleE
 }
 
 /**
- * The author request. Texts keep their content (the domain trims and judges them); line breaks become LF; scope values
+ * The author request. Texts keep their content (the domain trims and judges them), cleaned by `normaliseDisplayText`; scope values
  * are sent EXACTLY as picked (TR7); the window as UTC `Z` instants. ⛔ `module_id` (server-minted), ⛔ `branding_bundle`.
  */
 export function toAuthorRequest(s: WizardState): AuthorModuleRequest {
   return {
     partner_id: s.partnerId ?? '',
-    name_en: normaliseNewlines(s.nameEn),
-    name_hi: normaliseNewlines(s.nameHi),
-    description_en: normaliseNewlines(s.descriptionEn),
-    description_hi: normaliseNewlines(s.descriptionHi),
+    name_en: normaliseDisplayText(s.nameEn, 'name'),
+    name_hi: normaliseDisplayText(s.nameHi, 'name'),
+    description_en: normaliseDisplayText(s.descriptionEn, 'description'),
+    description_hi: normaliseDisplayText(s.descriptionHi, 'description'),
     eligibility_filter: eligibilityFilterOf(s),
     scope_filter: scopeFilterOf(s),
     valid_from: toIsoOrNull(s.validFrom) ?? '',
@@ -356,6 +376,26 @@ export function issueMessage(path: readonly (string | number)[] | undefined, mes
   return field === null
     ? t('module.wizard.issue', { message })
     : t('module.wizard.issueField', { field: t(FIELD_LABEL[field]!), message });
+}
+
+const PARTNER_FIELD_LABEL: Record<string, string> = {
+  display_name_en: 'module.partner.nameEn',
+  display_name_hi: 'module.partner.nameHi',
+};
+
+/**
+ * The partner form's sentence for a 422 `module_partner.name_invalid`: the server's own reason, naming the field (so a
+ * refusal the fixed copy does not describe — an invisible joining character, a doubled space — reaches the admin, `-435`
+ * item 4). Null when the refusal carries no usable issue (the caller falls back to the fixed copy).
+ */
+export function partnerIssueMessage(details: unknown): string | null {
+  const first = (details as { issues?: { path?: unknown[]; message?: unknown }[] } | undefined)?.issues?.[0];
+  if (first === undefined || typeof first.message !== 'string') return null;
+  const head = first.path?.[0];
+  const label = typeof head === 'string' ? PARTNER_FIELD_LABEL[head] : undefined;
+  return label === undefined
+    ? t('module.wizard.issue', { message: first.message })
+    : t('module.wizard.issueField', { field: t(label), message: first.message });
 }
 
 /** A refusal code (no issue path) → the step to return to, or null. */

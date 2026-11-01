@@ -7315,6 +7315,7 @@ So that I see relevant partner offers without irrelevant noise.
 > - **The commission-disclosure question re-triggers here** (QE6 (A); `-433` A1 / A2): ⛔ commission data is stored; at this story's create-story (the first time a member sees an offer) route "is the fee arrangement disclosed to the member?" to the Panel from the template, unless OQ-4 or a production publish triggered it first.
 > - **Reach facts the shelf must not read as bugs:** an orphaned scope value (a tree amended after authoring) reaches nobody; a member whose newest posting carries an unlisted / retired district spelling is in no district audience; four eligibility statuses (`active`, `pending-valid`, `active-in-grace`, `lapsed-unpaid`) have ⛔ member until `member.lock_in_expired` has a producer (row `3-14`). The shelf may report them.
 > - **RVD2:** this story's lead route is the first LEAD caller — `submitModuleLead`'s internal retry turns a stream drift into a loop (`-433` QE21's re-trigger).
+> - **(12.2 code review, deferred RD5) The admin console's "no member can be in these statuses yet" copy** — `NO_MEMBER_YET_STATUSES`, the wizard notice and warning, and the detail-page warning name the same four statuses as the point above; when row `3-14-lock-in-expiry-producer` lands (or at this story's create-story, whichever is first) they must change with the shelf's handling.
 
 ### Story 12.4: Grief-Context Module Shelf Suppression — State-Machine-Enforced + Structural-Not-Cosmetic Invariant `[GOVERNANCE]`
 
@@ -7397,6 +7398,7 @@ So that modules don't linger on shelves past their valid window or after slot ex
 > ⭐ **INHERITED FROM 12.2 (Decision `2026-11-01-433`; `deferred-work.md` "Deferred from: story 12-2-…").**
 > - **Activation is OWNED by 12.2** (QE7 (A)): a 5-minute pg-boss sweep (`apps/jobs/src/scheduler/module-activation.ts`) turns a `scheduled` module `active` once `valid_from` has passed — this story does ⛔ build the `scheduled → active` emitter (C2 (b) is being built by 12.2).
 > - **Still this story's:** archive at `valid_until` (incl. a `scheduled` module whose `valid_until` passed — the 12.2 sweep never selects it, C2 (c)), slot-exhaustion archive (C2 (a)), the `(valid_until) WHERE current_state <> 'archived'` index, the reason-precedence rule, `module.restored` (C3) and RVD5's archive leg.
+> - **(12.2 code review, deferred RD4) A scheduled window shorter than the 5-minute sweep tick can be skipped entirely and sit `scheduled`** — decide here, with the expiry rule, whether a minimum window at author or publish time is the guard (`deferred-work.md` "Deferred from: code review of 12-2-…").
 > - **Built by 12.2:** the `(valid_from) WHERE current_state = 'scheduled'` partial index, and `GRANT SELECT, UPDATE ON marketplace_modules TO twt_service`. Recorded cost now: a past-start offer goes live up to 5 minutes late (⛔ a day); a past-`valid_until` offer still stalls until this story's sweep.
 
 ---

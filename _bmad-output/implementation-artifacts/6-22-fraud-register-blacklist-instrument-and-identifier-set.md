@@ -881,7 +881,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST, no code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `91ea2c81` is an ancestor of HEAD (rebase if `origin/main` moved — ledger-only conflicts, branch on
+  - [x] 0.1 `git fetch origin`; confirm `91ea2c81` is an ancestor of HEAD (rebase if `origin/main` moved — ledger-only conflicts, branch on
         top, [[project_rebase_ledger_conflict_separator]]); `git diff --name-only 91ea2c81 origin/main -- apps packages scripts` — re-derive
         G1–G21 if anything moved (⚠ 6.39 touches `assertClaimApprovable`, `CLAIM_EVENT_TYPES`, the catalog and the migrations); `git log
         91ea2c81..origin/main -- .decision-log.md _bmad-output docs/launch-gate-inventory` — read any new entry; re-read TR10's numbers
@@ -891,6 +891,12 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         finding exists (DL16); (v) the closure core's exported entry points and `endLiveProcesses`' inputs (DL3 step 6); (vi) the 6.23a
         label's reason and new trigger (DL16); (vii) the jobs `*-no-decision.test.ts` table lists (DL1). Check `ListAgents` + the branch
         before every commit ([[feedback_concurrent_review_agents_mutate_tree]]).
+        - **2026-11-01 — DONE at `91ea2c81`** (`origin/main` unmoved — ⛔ rebase; G1–G21 stand). Numbers re-read on every branch:
+          ⛔ sibling has taken any yet (6.39 / 14-3 / 13-2 sit at `-430`, `0193`, v56) — next free stays `-438`, `0196`, v58, Row 46
+          (reserved by 6.39 / 14-3 in their files — Task 0.5 re-reads), ledger `ab`. Results in the Debug Log: (i) ✅; (ii) ✅ seven
+          readers, each an exact kind equality — ⛔ "any finding" reader; (iii) ✅ four callers, three handlers; (iv) **6.23b EA10 —
+          UNREACHABLE both ways; ⛔ anchor fix exists to build** (the third outcome — BigDev confirms at Task 0.4); 6.36 W2 — unreachable
+          by N4; (v) ✅; (vi) recorded; (vii) two `DECISION_TABLE_NAMES` lists.
   - [x] 0.2 Put DL1–DL17 to BigDev (DL0's split is answered). Specifically: DL3's `alive_confirmation` values (built pending PQ9); DL6's
         table; DL10 (iii)'s label verbatim and (v)'s label for a claim held by a fraud-closed claim; DL10 (iv)'s work-list; DL16's 6.23b EA10
         choice (fix here, or explicit deferral with owner + trigger). Record the answers here.
@@ -904,11 +910,15 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
           Task 0.1 (iv) re-traces it; if the fix is a small change to the 90-day anchor it is BUILT here (*"Closed by 6.22 DLn"*, with
           its own Task and AC leg added then), otherwise it gets *"Resolved via explicit deferral"* naming owner and trigger. ⭐ BigDev
           CONFIRMS which, from the re-trace, BEFORE Task 0.4's decision entry is written. Task 0.2 complete.
-  - [ ] 0.3 Draft ONE routing note from the template (by path, not copied):
+  - [x] 0.3 Draft ONE routing note from the template (by path, not copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-22-fraud-register-first-half.md` — PQ1–PQ9 + TL1–TL2;
         plain-English question first, THE ONE FACT, options with an honest cost on EACH, evidence LAST; E4 commands run. Status: WRITTEN, not
         sent (BigDev sends). Non-blocking for build and merge; PQ1 blocks the guilty arm's GO-LIVE, PQ7 the flag's, PQ8 the close's, PQ9 the
         finding's; PQ3–PQ6 gate `6-22d`'s build.
+        - **2026-11-01 — WRITTEN, ⛔ NOT SENT:** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md`
+          — Q1–Q9 (= PQ1–PQ9) + "Told" 1–5 (= TL1 (i)–(iv), TL2); every option costed; suggestions as the PQs; E4 run 2026-11-01 at
+          `91ea2c81` — every command returns the cited text (the approval-check grep EMPTY by design; the re-file grep corrected to
+          `readRefileGuard` → `closedClosureIdOf` after it first returned empty).
   - [ ] 0.4 ⭐ FIRST, BigDev confirms DL16's EA10 closure from Task 0.1 (iv)'s re-trace. Decision entry (AUTHOR-COMMIT, the next free number across branches — `-438` at `91ea2c81`; READ LIVE): DL0–DL17 as answered;
         the two keys (outside `-210`'s delegated mint); cites `-238`, `-240`, `-261` D3 A, `-425` 6.38 DL4 / DL7; declares the scope split
         (`6-22b`, `6-22c`, `6-22d`, named); DECLARES the guilty arm's kept locks and sticky-frozen account as a narrowing of `-423` Q1 (b) /
@@ -1113,7 +1123,59 @@ code; notify a claimant or nominee; add any member-facing screen.
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) — `bmad-dev-story 6.22`, in the story's own worktree.
+
 ### Debug Log References
+
+**Task 0.1 — traces at `91ea2c81` (2026-11-01; two read-only agents for (ii) / (iv) / (vi) / (vii), each load-bearing claim re-read by
+hand).**
+- (i) `peerMeshEligibleMemberSql` (`peer-mesh-read.ts`) still calls `namedByClaimSql` directly (`AND NOT ${namedByClaimSql(…)}`), and
+  `peer-mesh-request.ts` `readPeerMeshRequestEligibility` inlines `namedByClaimSql(…) AS reported_deceased` — DL11's two swap points.
+- (ii) Seven readers of `claim_nominee_findings`, all in `packages/domain/src` (⛔ in `apps/api/src` / `apps/jobs/src`): `approval-warnings.ts`
+  × 3 (`readClaimApprovalWarnings`, `readClaimApprovalWarningsSlice`, `getClaimWarningAnchor`), `death-report.ts` `isDeathReportStanding`,
+  `peer-mesh-read.ts` `resolvePeerMeshFilingCut` — each `f.kind = 'member_found_innocent'`; `nominee-effective.ts` `readRaw` × 2 — each
+  `kind = 'nominee_disqualified'`. ⛔ Reader filters on "any finding", `<>`, `ne(` or `notInArray` — DL2's new kind moves none of them.
+- (iii) `closedClaimStateLabel(closedHolderRefused, claimState)` (`claim-verification/i18n-en.ts`) — exactly four callers:
+  `HelplineCertificateReplacement.tsx`, `HelplineAppeal.tsx`, `HelplineClaimContact.tsx`, `NomineeRefusalsRoute.tsx`;
+  `readClosedHolderRefusedBulk` — exactly three handlers: `claims.death-certificate.handlers.ts`, `claims.nominee-declaration.handlers.ts`,
+  `claims.appeal.handlers.ts`. G9 stands.
+- (iv-a) **6.23b EA10 — both row-`6-22` mechanisms are UNREACHABLE; ⛔ anchor fix exists to build.** (1) The round-2 append (*"the 90-day
+  anchor moves LATER, and a `recent_nominee_change` key can appear"*) has the direction wrong: `first_filed_at` = the earliest filing among
+  claims with ⛔ innocence finding; a finding only REMOVES a claim, so the anchor only moves LATER; `isRecentNomineeChange(effectiveAt,
+  anchor)` = `istDateOf(effectiveAt) >= anchor − 90` with ⛔ upper bound, so a later anchor yields a SUBSET of the keys — keys vanish,
+  ⛔ appear. Findings are never withdrawn (GRANT SELECT, INSERT; N2). The ratified record already says so: `-279` A7 *"the anchor only
+  moves LATER (which RE[MOVES 90-day keys])"*; and `-278` NW3 / `-339` RF1 C rule the later anchor. (2) The parent mechanism (a member
+  declare after the release) needs a claim still awaiting approval while the member is unlocked — but any such claim with ⛔ finding keeps
+  `isDeathReportStanding` TRUE (declare 409), and a found claim in an approvable state is CLOSED by DL3 (N4); only an `approved` /
+  `settled` claim is released-and-open, and neither has a later approval gate. ⇒ Proposed closure: *"Closed by 6.22 — unreachable (the
+  anchor only moves later, `-279` A7; a released member has ⛔ claim awaiting approval, N4); a domain test pins it"* — the pin: approve C2
+  with reasons, find C1 innocent, assert C2's keys ⊆ before and ⛔ late key listed. The 6.26b append under the same item (the determination
+  arm compares two transaction-start `now()`s) is ⛔ 6.22's (⛔ determination written) — *"Not addressed by 6.22"*, its trigger kept.
+  ⚠ This is NEITHER of BigDev's two named outcomes (build a small anchor fix / explicit deferral) — BigDev confirms at Task 0.4.
+- (iv-b) **6.36 round-2 W2 — unreachable by N4.** `resolvePeerMeshFilingCut` is called only by `runClaimPeerMeshSelect`
+  (`apps/jobs/src/claim-peer-mesh.ts`), which locks the claim and returns before the cut unless it is `documents_pending`; DL3 writes the
+  finding and `claim.closed` in ONE transaction under the claim row (`documents_pending` is closable), so the select never sees an
+  innocence-lifted `documents_pending` claim; a selection made before the finding is stored, never re-derived (`-340`). ⇒ *"Closed by 6.22
+  N4 / DL3 — unreachable"*, contingent on N4 as built (AC4's one-transaction leg). The one-line guard in `resolvePeerMeshFilingCut` would be
+  a new reading of `-339` — ⛔ built.
+- (v) Closure core (`suspicion-refusal-persist.ts`) — exported: `acquireSuspicionReversalLockForClaim`, `closeClaimsHeldBySuspicionAppeal`,
+  `closeClaimsOfPaidDeath`, `closeClaimIfDeathPaid`; private: `closeOtherClaimsOfDeath`, `closeLockedClaim(client, db, input: Pick<…,
+  'pariwarId' | 'causeClaimCaseId' | 'trigger' | 'actor' | 'actorId' | 'auditId'>, row)` (always writes `held_by_claim_case_id`),
+  `endLiveProcesses(client, db, pariwarId, held: ClaimRow)` — (1) open appeal → `closed`, (2) live Stage-2 panel superseded, (3) live R9
+  session + `routed_to_r9` superseded, (4) live correction return superseded + open run ended `decided`. The "every intake-key taker" list
+  is in `acquireSuspicionReversalLockForClaim`'s doc. DL3 step 6 stands.
+- (vi) 6.23a — `listAppliedCorrectionLabels` (`approval-warnings.ts`) reads every `nominee_corrections` `applied` row for the MEMBER (⛔
+  claim-state or finding filter), so a correction applied under a claim later found innocent labels that version *"corrected after the
+  death"* on the member's history — including on a later genuine claim's timeline. Reason it is ⛔ addressed: the words are ratified copy
+  (`-262` FQ1; NW4 — ⛔ reworded) and DL17 keeps copy changes out. New trigger: the first production innocence finding on a claim under
+  which a nominee correction was applied (or a Panel question on the wording, whichever first); owner the Panel. ⛔ `6-22c` (a
+  disqualification means the death happened — the label stays true there).
+- (vii) `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts` and `claim-suspicion-staff-email-no-decision.test.ts` — each a
+  `DECISION_TABLE_NAMES` array (`… 'claim_death_certificate_reviews', 'claim_correction_closures', 'claim_ground_inspections', …`);
+  `'claim_fraud_investigation_steps'` goes after `'claim_ground_inspections'` in both; their "the table list is REAL" leg needs
+  `claimFraudInvestigationSteps` exported from the schema barrel. `claim-correction-closure-` / `claim-certificate-reminder-no-decision`
+  list function names (`DECISION_WRITERS` / `FORBIDDEN`) — the finding writers' names may be added there (Task 1.2 decides).
+  `claim_nominee_findings` itself is on ⛔ list.
 
 ### Completion Notes List
 
@@ -1129,3 +1191,4 @@ code; notify a claimant or nominee; add any member-facing screen.
 | 2026-11-01 | 1.3 | Re-validated by `bmad-create-story validate 6.22` at `origin/main` `91ea2c81` (Stories 11b.5a + 12.2 landed; the branch REBASED from `3d6b46c5`, ledger-only conflict) — five read-only verifiers (governance + records; claim / closure substrate; overlay / peer-mesh / erasure; RBAC / routes / surfaces; the footgun catalogue), each critical re-read by hand; BigDev: "all". The guilty freeze is now STICKY on `claim.member_found_guilty` (excluding the close missed a `denied_no_appeal` stream and an already-closed claim; the pure evaluator never sees a payload) and `-147` cl. 3's standing fence is recorded as FIRING; N5 / N7 retitled to what is true (an `approved` claim found innocent is not stopped; the leaf and the overlay already differ for terminal claims). G8 was false — DL5 now lists EVERY state in the shipped `listLiveClaimsForDeceasedMember` shape; the flag is PARIWAR-dimension (the district resolver reads a claim id); new reads for the console panel (uniform withholding, audited decrypt) and a District Admin work-list; `closed_member_alive` computed from the steps table in the three handlers, incl. a claim held by a fraud-closed claim (OP10's reachable direction). DL2's CHECK keeps `IS NOT NULL`; the other-claims list shares the leaf's fragment (`listStandingDeathReports`); the closer's input and trigger set are discriminated; the override door's refusals are mapped (no 500); the whole migration hand-authored (⛔ `db:generate`). Governance: `-304`'s line is a reading, not a ruling; `-210` (not `-195`) keeps keys and the closure vocabulary out of the delegation; proof of life is PQ9 (not told); PQ8 cites `-318` Q3 A and who a text would reach (the filer) — its suggested (a) moves to B; PQ5 cites `-422` Q1 A; every option costed; DL16 uses only the three labels, and the 40P01 / correction-race items close as unreachable. Also: fence mechanics (count map, alias `f`), lock-key case, replay-first idempotence, realistic seeding (no `forceClaimState`; KYC / identity rows; the GUC), the microcopy gate (TR16), audits incl. `_rejected`, numbers re-read (`-438` / `0196` / v58 / ledger `y` next). Ledger `2026-11-01y`. |
 | 2026-11-01 | 1.4 | Task 0.2, in part — BigDev: *"DL1-DL16 accepted as written."* Recorded under Task 0.2; the Build-decisions heading updated. Open: DL17 (scope fence) and DL16's 6.23b EA10 choice. No decision entry, no code. Ledger `2026-11-01z`. |
 | 2026-11-01 | 1.5 | Task 0.2 complete — BigDev: DL17 accepted as written; DL16's 6.23b EA10 row: re-trace at Task 0.1 (iv), then build here if a small anchor fix, else an explicit deferral — BigDev confirms before Task 0.4. Ledger `2026-11-01aa`. |
+| 2026-11-01 | 1.6 | `bmad-dev-story 6.22` — Task 0.1 (traces at `91ea2c81`; `origin/main` unmoved; numbers unchanged) and Task 0.3 (the routing note WRITTEN, ⛔ sent) complete. Task 0.1 (iv): 6.23b EA10 is UNREACHABLE by construction (the anchor only moves later — `-279` A7) — ⛔ fix to build; awaits BigDev's confirmation of its closure before Task 0.4. No decision entry, no code. Ledger `2026-11-01ab`. |

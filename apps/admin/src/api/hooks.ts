@@ -2839,7 +2839,10 @@ export function useQuestionnaireChainAct() {
 
 // ── Story 12.2 (`2026-11-01-433`) — the admin MODULE surface ─────────────────────────────────────────────────────────────
 // Per-feature keys under `['modules', pariwarId]`; every write invalidates the Pariwar's module reads. Writes are driven with
-// `mutateAsync` by the pages (TR5 — per-call `mutate` callbacks fire for the latest call only).
+// `mutateAsync` by the pages (TR5 — per-call `mutate` callbacks fire for the latest call only). Create / publish / withdraw do
+// NOT return the invalidation from `onSuccess`: a returned promise is awaited, so the button would stay busy (and the result
+// unannounced) until every active module read had refetched (review RC15). Registering a partner still awaits its one list
+// read — the select needs the new partner's name before it is chosen.
 
 const modulesRoot = (pariwarId: string) => ['modules', pariwarId] as const;
 export const modulesListKey = (pariwarId: string, state: import('@twt/contracts').ModuleState | null) =>
@@ -2892,7 +2895,9 @@ export function useAuthorModule(pariwarId: string) {
   return useMutation({
     mutationFn: (input: { body: import('@twt/contracts').AuthorModuleRequest; idempotencyKey: string }) =>
       api.authorModule(pariwarId, input.body, input.idempotencyKey),
-    onSuccess: () => qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) });
+    },
   });
 }
 
@@ -2906,7 +2911,9 @@ export function usePublishModule(pariwarId: string, moduleId: string) {
         { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true },
         input.idempotencyKey,
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) });
+    },
   });
 }
 
@@ -2914,6 +2921,8 @@ export function useWithdrawModule(pariwarId: string, moduleId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { idempotencyKey: string }) => api.withdrawModule(pariwarId, moduleId, input.idempotencyKey),
-    onSuccess: () => qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) });
+    },
   });
 }

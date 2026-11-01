@@ -17,8 +17,13 @@ const EN: Record<string, string> = {
   'module.list.filter': 'Show',
   'module.list.filter.all': 'All offers',
   'module.list.empty': 'No offers yet.',
+  'module.list.emptyFiltered': 'No offers in this state.',
   'module.list.error': 'Could not load the offers. Try refreshing the page.',
   'module.list.more': 'Load more',
+  'module.list.moreShown': '{n} more offers shown.',
+  'module.list.moreShownOne': '1 more offer shown.',
+  'module.list.noMore': 'No more offers.',
+  'module.list.moreError': 'Could not load more offers. Try again.',
   'module.list.open': 'Open',
   'module.list.openNamed': 'Open {name}',
   'module.list.window': '{from} – {until}',
@@ -40,6 +45,8 @@ const EN: Record<string, string> = {
     'Your answers stay on this page until you press Create draft. Reloading or leaving the page loses them.',
   'module.wizard.loadingFrom': 'Loading the offer to copy…',
   'module.wizard.loadFromError': 'Could not load the offer to copy.',
+  'module.wizard.fromNotFound': 'The offer to copy was not found in this Pariwar. You can start a blank offer instead.',
+  'module.wizard.startBlank': 'Start a blank offer',
   'module.wizard.back': 'Back',
   'module.wizard.next': 'Next',
   'module.wizard.create': 'Create draft',
@@ -83,6 +90,7 @@ const EN: Record<string, string> = {
   'module.partner.nameTaken': 'A partner with this English name is already registered. Choose it from the list.',
   'module.partner.nameInvalid': 'Check both names: each needs letters, and the Hindi name needs Hindi text.',
   'module.partner.error': 'Could not register the partner. Try again.',
+  'module.partner.notListed': 'The chosen partner (not in the list shown here)',
 
   // ── Step (b) ──
   'module.eligibility.all': 'All statuses',
@@ -182,6 +190,9 @@ const EN: Record<string, string> = {
   'module.error.partner_unknown': 'That partner is not registered in this Pariwar. Choose another partner.',
   'module.error.state_scope_requires_geo_tree': 'A state audience needs a published place list with states. Choose another audience.',
   'module.error.scope_value_unknown': 'Some chosen places are not recorded for this Pariwar any more. Choose them again.',
+  'module.error.scope_value_unknown_named':
+    'These chosen places are not recorded for this Pariwar any more: {places}. Remove them, then choose again.',
+  'module.error.placesAndMore': '{places}; and {n} more',
   'module.error.not_draft': 'Only a draft can be published. Reload the page.',
   'module.error.already_published': 'This offer has already been published. Reload the page.',
   'module.error.illegal_transition': 'This offer cannot be withdrawn from its current state. Reload the page.',
@@ -198,7 +209,8 @@ const EN: Record<string, string> = {
   'module.detail.membersCannotSee': 'Members cannot see offers yet. The member offer shelf comes in a later release.',
   'module.detail.state': 'State: {state}',
   'module.detail.author': 'Written by {name}',
-  'module.detail.partner': 'Partner: {en} / {hi}',
+  // The Hindi name follows this text in its own `lang="hi"` element (RC18), so it is not a token here.
+  'module.detail.partner': 'Partner: {en} /',
   'module.detail.leadUrl': 'Lead hand-off address: {url}',
   'module.detail.secretName': 'Signing key secret name: {name}',
   'module.detail.notPublished': 'Not published yet.',
@@ -212,6 +224,7 @@ const EN: Record<string, string> = {
   'module.detail.publish': 'Publish',
   'module.detail.publishing': 'Publishing…',
   'module.detail.published': 'Published.',
+  'module.detail.created': 'Draft created.',
   'module.detail.authorCannotPublish': 'Another admin must review and publish this offer — you wrote it.',
   'module.detail.singleAdmin':
     'A Pariwar with only one admin cannot publish an offer: another admin, or a super admin granted in this Pariwar, must review and publish it.',
@@ -225,6 +238,8 @@ const EN: Record<string, string> = {
     'An offer cannot be edited. To correct it, withdraw it and start a corrected copy, which is a new draft.',
   'module.detail.leadWarning':
     '{n} members registered interest in this offer. A corrected copy starts with all places free; those members can register again, and the partner may receive a second lead for the same member.',
+  'module.detail.leadWarningOne':
+    '1 member registered interest in this offer. A corrected copy starts with all places free; that member can register again, and the partner may receive a second lead for the same member.',
 };
 
 /** Resolve a chrome key, substituting `{token}`s. Throws on an unknown key or a missing parameter. */

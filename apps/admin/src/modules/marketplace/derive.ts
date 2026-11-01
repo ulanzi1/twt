@@ -13,7 +13,9 @@ import type {
   ModuleDetailResponse,
   ModuleEligibilityFilterDto,
   ModuleEligibilityMemberState,
+  ModulePublicationDto,
   ModuleScopeFilterDto,
+  ModuleState,
 } from '@twt/contracts';
 import { MODULE_ELIGIBILITY_MEMBER_STATES } from '@twt/contracts';
 
@@ -173,7 +175,23 @@ export function describePlaces(capacity: number | null): string {
 
 /** The C10 warning, shown before Withdraw and before "Start a corrected copy" when members registered interest. */
 export function leadWarning(leadCount: number): string | null {
-  return leadCount > 0 ? t('module.detail.leadWarning', { n: leadCount }) : null;
+  if (leadCount <= 0) return null;
+  return leadCount === 1 ? t('module.detail.leadWarningOne') : t('module.detail.leadWarning', { n: leadCount });
+}
+
+/**
+ * The publication line. "Goes live at its opening time" is said only while the offer is still `scheduled`: once it is live
+ * or archived that sentence is no longer true, whichever event published it (RC16).
+ */
+export function describePublication(
+  publication: Pick<ModulePublicationDto, 'published_event_type' | 'reviewer_display_name' | 'reviewed_at'> | null,
+  currentState: ModuleState,
+): string {
+  if (publication === null) return t('module.detail.notPublished');
+  const params = { name: publication.reviewer_display_name, at: formatIst(publication.reviewed_at) };
+  return publication.published_event_type === 'module.scheduled' && currentState === 'scheduled'
+    ? t('module.detail.publishedScheduled', params)
+    : t('module.detail.publishedActive', params);
 }
 
 // ── Validation (per step — Next is disabled with the reason shown) ────────────────────────────────────
@@ -402,6 +420,23 @@ export function partnerIssueMessage(details: unknown): string | null {
   return label === undefined
     ? t('module.wizard.issue', { message: first.message })
     : t('module.wizard.issueField', { field: t(label), message: first.message });
+}
+
+/** How many refused places the banner names before "and n more" (up to 200 can be refused at once — PT14). */
+const NAMED_PLACES = 5;
+
+/**
+ * The banner for a 422 `module.scope_value_unknown`: it names the refused places (`details.values` — the admin's own input)
+ * so the admin can find them — the first five, then "and n more"; without usable values, the fixed sentence (RC8, PT14).
+ */
+export function scopeUnknownMessage(details: unknown): string {
+  const values = (details as { values?: unknown } | undefined)?.values;
+  if (!Array.isArray(values) || values.length === 0 || !values.every((v): v is string => typeof v === 'string')) {
+    return t('module.error.scope_value_unknown');
+  }
+  const named = values.slice(0, NAMED_PLACES).join('; ');
+  const places = values.length > NAMED_PLACES ? t('module.error.placesAndMore', { places: named, n: values.length - NAMED_PLACES }) : named;
+  return t('module.error.scope_value_unknown_named', { places });
 }
 
 /** A refusal code (no issue path) → the step to return to, or null. */

@@ -92,9 +92,16 @@ export async function activateDueModule(
   } catch (err) {
     const outcome = marketplace.classifyActivationOutcome(err);
     if (outcome === 'failed') {
+      // The Pariwar and the SQLSTATE found by walking `cause` (12.2 review RB6): pg's `DatabaseError.name` is `"error"` and
+      // drizzle wraps it, so `err.name` alone says nothing. Ids and a code only (⛔ the message — it can carry bound values).
       console.error(
         '[jobs] module-activation: activation failed — the next tick retries it',
-        JSON.stringify({ moduleId, error: err instanceof Error ? err.name : 'unknown' }),
+        JSON.stringify({
+          pariwarId,
+          moduleId,
+          error: err instanceof Error ? err.name : 'unknown',
+          sqlstate: marketplace.pgSqlstateOf(err),
+        }),
       );
     }
     return outcome;

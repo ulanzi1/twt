@@ -4,7 +4,8 @@
 // exact value emitted); the 422 issue → its step; the Idempotency-Key per Create ATTEMPT (kept while the answers are unchanged,
 // new after an edit).
 
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { focusManager, QueryClientProvider } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ModuleScopeOptionsResponse } from '@twt/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,6 +34,7 @@ const { ModuleWizard } = await import('../src/modules/marketplace/ModuleWizard.j
 const { resolveEn: t } = await import('../src/modules/marketplace/i18n-en.js');
 const { ApiError } = await import('../src/api/client.js');
 const { describeInstant, describeWindow, toIsoOrNull } = await import('../src/modules/marketplace/derive.js');
+const { createQueryClient } = await import('../src/api/hooks.js');
 
 const LONG = 'x'.repeat(125);
 function options(over: Partial<ModuleScopeOptionsResponse> = {}): ModuleScopeOptionsResponse {
@@ -354,5 +356,279 @@ describe('ModuleWizard (AC11)', () => {
     fireEvent.click(screen.getByTestId('wizard-create'));
     await waitFor(() => expect(authorModule).toHaveBeenCalledTimes(1));
     expect(authorModule.mock.calls[0]![1]).toMatchObject({ slot_capacity: 25 });
+  });
+});
+
+describe('ModuleWizard — code review round 2 (chunk C)', () => {
+  const OTHER_PARTNER = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+  const source = (over: Record<string, unknown> = {}) => ({
+    partner_id: PARTNER,
+    name_en: 'Old name',
+    name_hi: 'पुराना',
+    description_en: 'd',
+    description_hi: 'द',
+    eligibility_filter: { version: 1, clauses: [] },
+    scope_filter: { version: 1, scope: 'members-all' },
+    valid_from: '2026-11-05T05:00:00.000Z',
+    valid_until: '2026-12-05T05:00:00.000Z',
+    slot_capacity: null,
+    lead_handoff_url: 'https://x.example/y',
+    lead_handoff_signing_key_secret_name: 'k',
+    ...over,
+  });
+
+  it('RC2: a Create failure that is not a 422 moves focus from the Create button to the step heading', { timeout: 30_000 }, async () => {
+    authorModule.mockRejectedValueOnce(new ApiError(500, 'internal.error', 'down'));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await fillAll();
+    screen.getByTestId('wizard-create').focus();
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    expect(await screen.findByTestId('wizard-issue')).toHaveTextContent(t('module.error.generic'));
+    expect(screen.getByTestId('wizard-step-heading')).toHaveFocus();
+  });
+
+  it('RC6: leaving the wizard while Create is in flight does not navigate to the new draft', { timeout: 30_000 }, async () => {
+    let resolveCreate: (v: unknown) => void = () => undefined;
+    authorModule.mockReturnValue(new Promise((r) => { resolveCreate = r; }));
+    const onCreated = vi.fn();
+    const view = renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={onCreated} />);
+    await fillAll();
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    await waitFor(() => expect(authorModule).toHaveBeenCalledTimes(1));
+    view.unmount(); // the admin went elsewhere
+    resolveCreate({ module_id: MODULE, state: 'draft' });
+    await new Promise((r) => setTimeout(r, 30));
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it('RC7: a corrected copy whose source failed to load stays LOCKED with Try again; the retry pre-fills', { timeout: 20_000 }, async () => {
+    let resolveRetry: (v: unknown) => void = () => undefined;
+    getModuleDetail.mockRejectedValueOnce(new ApiError(500, 'internal.error', 'down')).mockReturnValueOnce(new Promise((r) => { resolveRetry = r; }));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
+    expect(await screen.findByText(t('module.wizard.loadFromError'))).toBeInTheDocument();
+    expect(screen.getByTestId('wizard-step-a')).toBeDisabled(); // ⛔ a blank wizard a later pre-fill would overwrite
+    fireEvent.click(screen.getByTestId('wizard-from-retry'));
+    await waitFor(() => expect(screen.getByTestId('wizard-from-retry')).toBeDisabled()); // mounted while the retry runs (PU3)
+    expect(screen.getByTestId('wizard-step-a')).toBeDisabled();
+    resolveRetry(source());
+    await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
+    expect(screen.getByTestId('wizard-step-a')).toBeEnabled();
+    expect(screen.queryByTestId('wizard-from-retry')).toBeNull();
+  });
+
+  it('RC7: once pre-filled, the admin’s edits are never overwritten by a later read of the source', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValueOnce(source()).mockResolvedValue(source({ name_en: 'Changed at the source' }));
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
+    fireEvent.change(screen.getByTestId('field-name-en'), { target: { value: 'Typed by the admin' } });
+    await act(async () => {
+      await client.refetchQueries();
+    });
+    expect(getModuleDetail).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('field-name-en')).toHaveValue('Typed by the admin');
+  });
+
+  it('RC8: a 422 module.scope_value_unknown re-reads the places and names the refused ones', { timeout: 30_000 }, async () => {
+    authorModule.mockRejectedValueOnce(new ApiError(422, 'module.scope_value_unknown', 'unknown', { scope: 'district', values: ['Patna '] }));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await fillAll();
+    const readsBefore = getModuleScopeOptions.mock.calls.length;
+    // The re-read no longer lists the refused place.
+    getModuleScopeOptions.mockResolvedValue(options({ districts: [{ value: 'Gaya', state: null, usable: true, unusable_reason: null }], districts_truncated: false }));
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    const issue = await screen.findByTestId('wizard-issue');
+    expect(issue.textContent).toBe(t('module.error.scope_value_unknown_named', { places: 'Patna ' }));
+    expect(screen.getByTestId('wizard-step-heading')).toHaveTextContent(t('module.wizard.step.c'));
+    await waitFor(() => expect(getModuleScopeOptions.mock.calls.length).toBeGreaterThan(readsBefore));
+    // The refused place now shows as "not in the list" with its Remove button (RP21).
+    expect(await screen.findByTestId('scope-not-listed')).toHaveTextContent('Patna');
+  });
+
+  it('RC10: the summary shows the lead hand-off address and the secret name as they will be sent', { timeout: 30_000 }, async () => {
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await fillAll();
+    const handoff = screen.getByTestId('summary-handoff');
+    expect(handoff).toHaveTextContent(t('module.detail.leadUrl', { url: 'https://leads.partner.example/hdfc' }));
+    expect(handoff).toHaveTextContent(t('module.detail.secretName', { name: 'hdfc-signing-key' }));
+  });
+
+  it('RC5: a chosen partner the list does not show is still shown — in the select and on the summary', { timeout: 30_000 }, async () => {
+    getModuleDetail.mockResolvedValue(source({ partner_id: OTHER_PARTNER }));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
+    await screen.findByRole('option', { name: 'HDFC / एचडीएफसी' });
+    expect(screen.getByTestId('partner-select')).toHaveDisplayValue(t('module.partner.notListed'));
+    for (let i = 0; i < 6; i += 1) next();
+    expect(screen.getByTestId('wizard-summary')).toHaveTextContent(t('module.summary.partner', { name: t('module.partner.notListed') }));
+  });
+
+  it('RC15: Create hands back the id without waiting for the other module reads to refresh', { timeout: 30_000 }, async () => {
+    authorModule.mockResolvedValue({ module_id: MODULE, state: 'draft' });
+    const onCreated = vi.fn();
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={onCreated} />);
+    await fillAll();
+    // Every later read hangs: a Create that awaited the invalidation would never finish.
+    getModuleScopeOptions.mockReturnValue(new Promise(() => undefined));
+    listModulePartners.mockReturnValue(new Promise(() => undefined));
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(MODULE));
+  });
+
+  it('RC16 / RC17: "Only these statuses" says nothing about statuses until one is ticked; the G18 note describes the status list', { timeout: 20_000 }, async () => {
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await toScopeStep(); // answers (b) with "All statuses" — go back to change it
+    fireEvent.click(screen.getByTestId('wizard-back'));
+    expect(screen.getByTestId('eligibility-sentence')).toHaveTextContent(t('module.eligibility.none'));
+    fireEvent.click(screen.getByTestId('eligibility-only'));
+    expect(screen.queryByTestId('eligibility-sentence')).toBeNull(); // ⛔ "Only members in these statuses: " with nothing after it
+    expect(screen.getByRole('list', { name: t('module.eligibility.statusesLabel') })).toHaveAccessibleDescription(t('module.eligibility.noMemberYet'));
+    fireEvent.click(screen.getByTestId('eligibility-state-lock-in'));
+    expect(screen.getByTestId('eligibility-sentence')).toHaveTextContent(
+      t('module.eligibility.onlyThese', { statuses: t('module.status.lock-in') }),
+    );
+  });
+
+  it('RC17: each time field is described by its India-time line', { timeout: 30_000 }, async () => {
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await toScopeStep();
+    fireEvent.click(screen.getByTestId('scope-kind-members-all'));
+    next();
+    fireEvent.change(screen.getByTestId('field-validFrom'), { target: { value: '2026-11-05T10:30' } });
+    const shown = describeInstant(toIsoOrNull('2026-11-05T10:30')!);
+    expect(screen.getByTestId('field-validFrom')).toHaveAccessibleDescription(`${shown.ist} · ${shown.browser}`);
+    expect(screen.getByTestId('field-validUntil')).not.toHaveAttribute('aria-describedby'); // nothing typed, nothing to describe
+  });
+});
+
+describe('ModuleWizard — patch-diff review of round 2 (PT)', () => {
+  const OTHER_PARTNER = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+  const source = (over: Record<string, unknown> = {}) => ({
+    partner_id: PARTNER,
+    name_en: 'Old name',
+    name_hi: 'पुराना',
+    description_en: 'd',
+    description_hi: 'द',
+    eligibility_filter: { version: 1, clauses: [] },
+    scope_filter: { version: 1, scope: 'members-all' },
+    valid_from: '2026-11-05T05:00:00.000Z',
+    valid_until: '2026-12-05T05:00:00.000Z',
+    slot_capacity: null,
+    lead_handoff_url: 'https://x.example/y',
+    lead_handoff_signing_key_secret_name: 'k',
+    ...over,
+  });
+
+  it('PT7: a source that is not found offers a blank offer — not a Try again that cannot help', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockRejectedValue(new ApiError(404, 'module.not_found', 'not found'));
+    const onStartBlank = vi.fn();
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} onStartBlank={onStartBlank} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('module.wizard.fromNotFound'));
+    expect(screen.queryByTestId('wizard-from-retry')).toBeNull();
+    fireEvent.click(screen.getByTestId('wizard-start-blank'));
+    expect(onStartBlank).toHaveBeenCalledTimes(1);
+    expect(t('module.wizard.startBlank')).toBe('Start a blank offer');
+    expect(t('module.wizard.fromNotFound')).toBe('The offer to copy was not found in this Pariwar. You can start a blank offer instead.');
+  });
+
+  it('PT8: a successful Try again moves focus from the vanishing button to the step heading', { timeout: 20_000 }, async () => {
+    let resolveRetry: (v: unknown) => void = () => undefined;
+    getModuleDetail.mockRejectedValueOnce(new ApiError(500, 'internal.error', 'down')).mockReturnValueOnce(new Promise((r) => { resolveRetry = r; }));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
+    const retry = await screen.findByTestId('wizard-from-retry');
+    retry.focus();
+    fireEvent.click(retry);
+    resolveRetry(source());
+    await waitFor(() => expect(screen.queryByTestId('wizard-from-retry')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('wizard-step-heading')).toHaveFocus());
+  });
+
+  it('PT13: the Hindi preview names a not-listed partner too (in English, marked so)', { timeout: 30_000 }, async () => {
+    getModuleDetail.mockResolvedValue(source({ partner_id: OTHER_PARTNER }));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
+    await screen.findByRole('option', { name: 'HDFC / एचडीएफसी' });
+    for (let i = 0; i < 6; i += 1) next();
+    const line = within(screen.getByTestId('preview-hi')).getByText(t('module.partner.notListed'));
+    expect(line).toHaveAttribute('lang', 'en');
+  });
+});
+
+describe('ModuleWizard — final review (PU)', () => {
+  const source = (over: Record<string, unknown> = {}) => ({
+    partner_id: PARTNER,
+    name_en: 'Old name',
+    name_hi: 'पुराना',
+    description_en: 'd',
+    description_hi: 'द',
+    eligibility_filter: { version: 1, clauses: [] },
+    scope_filter: { version: 1, scope: 'members-all' },
+    valid_from: '2026-11-05T05:00:00.000Z',
+    valid_until: '2026-12-05T05:00:00.000Z',
+    slot_capacity: null,
+    lead_handoff_url: 'https://x.example/y',
+    lead_handoff_signing_key_secret_name: 'k',
+    ...over,
+  });
+  const refocusWindow = (): void => {
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+  };
+
+  it('PU1: a wizard opened by "Start a blank offer" focuses its step heading on mount and reports it once', { timeout: 20_000 }, async () => {
+    const onMountFocused = vi.fn();
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} focusOnMount onMountFocused={onMountFocused} />);
+    expect(screen.getByTestId('wizard-step-heading')).toHaveFocus();
+    expect(onMountFocused).toHaveBeenCalledTimes(1);
+  });
+
+  it('PU1: an ordinary wizard does not move focus on mount', { timeout: 20_000 }, async () => {
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    expect(screen.getByTestId('wizard-step-heading')).not.toHaveFocus();
+  });
+
+  it('PU2: a 400 for the source (a malformed id) is "not found" — a blank offer, not a Try again that cannot succeed', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockRejectedValue(new ApiError(400, 'request.validation', 'bad id'));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId="not-a-uuid" onCreated={vi.fn()} onStartBlank={vi.fn()} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('module.wizard.fromNotFound'));
+    expect(screen.getByTestId('wizard-start-blank')).toBeInTheDocument();
+    expect(screen.queryByTestId('wizard-from-retry')).toBeNull();
+  });
+
+  it('PU3: "not found" is sticky — a window-focus refetch neither turns it into "Loading…" nor unmounts the focused button', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockRejectedValueOnce(new ApiError(404, 'module.not_found', 'not found')).mockReturnValue(new Promise(() => undefined));
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} onStartBlank={vi.fn()} />);
+    const blank = await screen.findByTestId('wizard-start-blank');
+    blank.focus();
+    refocusWindow();
+    await waitFor(() => expect(getModuleDetail).toHaveBeenCalledTimes(2)); // the refetch is running
+    expect(screen.getByTestId('wizard-start-blank')).toBe(blank);
+    expect(blank).toHaveFocus();
+    expect(screen.getByRole('alert')).toHaveTextContent(t('module.wizard.fromNotFound'));
+    expect(screen.queryByText(t('module.wizard.loadingFrom'))).toBeNull();
+    expect(screen.getByTestId('wizard-step-a')).toBeDisabled();
+  });
+
+  it('PU3: a source that loads on a window-focus refetch (not via Try again) also moves focus to the step heading', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockRejectedValueOnce(new ApiError(500, 'internal.error', 'down')).mockResolvedValue(source());
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
+    const retry = await screen.findByTestId('wizard-from-retry');
+    retry.focus();
+    refocusWindow();
+    await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-heading')).toHaveFocus());
+  });
+
+  it('PU3: a source that loads first time moves no focus', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(source());
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
+    expect(screen.getByTestId('wizard-step-heading')).not.toHaveFocus();
   });
 });

@@ -215,6 +215,19 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     const moduleId = await authored(pa.client, p, partnerId);
     const da = await actorWithId(p, 'district_admin', 'district', 'Patna', 'Dev (District Admin)');
     const c = da.client;
+    // 12.2 review RB4: "nothing written" is asserted on every table a route writes, not on the audit table alone — an
+    // UNAUDITED write by a denied admin would pass an audit-only check (the RP12 counts). Review PT16: per PARIWAR, for P
+    // AND for Q (the cross-tenant leg below writes against Q), and every audit line of the Pariwar, not only the actor's.
+    const counts = async (x: string) => ({
+      partners: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_partners WHERE pariwar_id = $1', [x])).rows[0].n as number,
+      modules: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_modules WHERE pariwar_id = $1', [x])).rows[0].n as number,
+      publications: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_module_publications WHERE pariwar_id = $1', [x])).rows[0].n as number,
+      events: (await td.pool.query('SELECT count(*)::int AS n FROM events_log WHERE pariwar_id = $1', [x])).rows[0].n as number,
+      audit: (await td.pool.query('SELECT count(*)::int AS n FROM audit_log_entries WHERE pariwar_id = $1', [x])).rows[0].n as number,
+    });
+    const q = freshPariwar();
+    const before = await counts(p);
+    const beforeQ = await counts(q);
     const calls = [
       () => c.inject({ method: 'GET', url: M(p) }),
       () => c.inject({ method: 'GET', url: `${M(p)}/scope-options` }),
@@ -235,11 +248,12 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     for (const r of denials) expect(errOf(r).code).toBe(denialCode);
 
     // The Pariwar admin of P on ANOTHER Pariwar (no grant there) — the scope hook's 404, on reads and writes alike.
-    const q = freshPariwar();
     expect((await pa.client.inject({ method: 'GET', url: M(q) })).statusCode).toBe(404);
     expect((await post(pa.client, `${M(q)}/partners`, { display_name_en: 'LIC', display_name_hi: 'एलआईसी' })).statusCode).toBe(404);
     // Nothing was written by the refused calls.
     expect((await moduleAudit(p)).filter((a) => a.actor_id === da.userId)).toEqual([]);
+    expect(await counts(p)).toEqual(before);
+    expect(await counts(q)).toEqual(beforeQ);
   });
 
   // Review round 1, RP12 (checklist family 3, per mutation route). The questionnaire twin's RV11 is the house standard:
@@ -300,6 +314,39 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
 
     expect(await counts()).toEqual(before);
     expect((await td.pool.query('SELECT current_state FROM marketplace_modules WHERE module_id = $1', [open])).rows[0]).toEqual({ current_state: 'draft' });
+  });
+
+  // Review PT15: the OpenAPI documents 400 on all eight routes because Fastify validates the path params BEFORE the session
+  // and scope hooks — a malformed pariwarId is 400 `request.validation` even with NO session (⛔ a 401), and a non-UUID
+  // moduleId is 400 for a signed-in admin (⛔ the scope hook's or the read's 404).
+  it('PT15: a malformed pariwarId is 400 request.validation on all eight routes before the session gate; a non-UUID moduleId is 400', async () => {
+    const anon = makeClient(app);
+    const bad = '/api/v1/p/not-a-uuid/modules';
+    const mid = randomUUID();
+    const noSession = [
+      anon.inject({ method: 'GET', url: bad }),
+      anon.inject({ method: 'GET', url: `${bad}/scope-options` }),
+      anon.inject({ method: 'GET', url: `${bad}/partners` }),
+      post(anon, `${bad}/partners`, { display_name_en: 'LIC', display_name_hi: 'एलआईसी' }),
+      post(anon, bad, manifest(randomUUID())),
+      anon.inject({ method: 'GET', url: `${bad}/${mid}` }),
+      post(anon, `${bad}/${mid}/publish`, TICKS),
+      post(anon, `${bad}/${mid}/withdraw`, {}),
+    ];
+    for (const r of await Promise.all(noSession)) {
+      expect(r.statusCode, r.body).toBe(400);
+      expect(errOf(r).code).toBe('request.validation');
+    }
+    const p = freshPariwar();
+    const { client } = await pariwarAdmin(p);
+    for (const r of [
+      await client.inject({ method: 'GET', url: `${M(p)}/not-a-uuid` }),
+      await post(client, `${M(p)}/not-a-uuid/publish`, TICKS),
+      await post(client, `${M(p)}/not-a-uuid/withdraw`, {}),
+    ]) {
+      expect(r.statusCode, r.body).toBe(400);
+      expect(errOf(r).code).toBe('request.validation');
+    }
   });
 
   // ── Idempotency (QE13 / QE18) — the rows the unit-test header says are pinned over HTTP (review round 1, RP13) ──────────
@@ -1004,6 +1051,29 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect(errOf(r).code).toBe('module.not_found');
     expect((json(await qa.client.inject({ method: 'GET', url: M(q) }))['items'] as { module_id: string }[]).some((i) => i.module_id === id)).toBe(false);
     expect((await author.client.inject({ method: 'GET', url: `${M(p)}/${randomUUID()}` })).statusCode).toBe(404);
+  });
+
+  // 12.2 review RB2: `accent_color_hex` takes the `?? null` its sibling has. A stored bundle WITHOUT the key (written past
+  // the domain's parse — here by a trigger-less UPDATE) must read as null, ⛔ a strict-response-DTO 500.
+  it('RB2: a stored branding bundle missing accent_color_hex reads as null in the detail (200, ⛔ a 500)', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const id = await authored(admin.client, p, await partner(admin.client, p));
+    const c = await td.pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'"); // past the 0193 whole-row trigger (a test-only write)
+      await c.query(`UPDATE marketplace_modules SET branding_bundle = branding_bundle - 'accent_color_hex' WHERE module_id = $1`, [id]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+    expect((await td.pool.query('SELECT branding_bundle FROM marketplace_modules WHERE module_id = $1', [id])).rows[0]).toEqual({
+      branding_bundle: { version: 1, logo_object_key: null },
+    });
+    const r = await admin.client.inject({ method: 'GET', url: `${M(p)}/${id}` });
+    expect(r.statusCode, r.body).toBe(200);
+    expect(json(r)['branding_bundle']).toEqual({ version: 1, logo_object_key: null, accent_color_hex: null });
   });
 });
 

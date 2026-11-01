@@ -17,10 +17,14 @@
 //   ⛔ `displayOf` (the questionnaire twin's fail-closed display-name read): the module commands take ⛔ display name.
 //   ⚠ Accepted residual (QE13): an ambiguous COMMIT, or a `recordResult` failure after COMMIT, releases the key and the
 //   retry creates a second draft — harmless (a draft reaches nobody); the memorial read-back shape is ⛔ copied. It is NOT
-//   harmless for the other two writes (12.2 review RP16 / deferred RD3): a PUBLISH retried after that window answers 409
+//   harmless for the other three writes (12.2 review RP16 / deferred RD3): a PUBLISH retried after that window answers 409
 //   `module.not_draft` for a publish that happened, and the `tone_review.signoff` line (emitted after `tenantWrite` returns)
-//   is never written — the durable publication row survives; a WITHDRAW retry answers 409 `module.illegal_transition`. If the
-//   single, swallowed `release` also fails, a same-key retry is 409 `module.idempotency_in_progress` until the 24 h TTL.
+//   is never written — the durable publication row survives; a WITHDRAW retry answers 409 `module.illegal_transition`; a
+//   PARTNER CREATE retry mints a new id and answers 409 `module_partner.name_taken` for a partner that was registered
+//   (12.2 review RB8). The key is left claimed with ⛔ result — so a same-key retry, on ANY of the four writes, is 409
+//   `module.idempotency_in_progress` ("wait a moment") until the 24 h TTL — when the single, swallowed `release` also
+//   fails, AND when the API process dies between the key's claim and its settle (`recordResult` / `release`; RB8). The
+//   `takeOver` remedy stays RD3's owner's.
 //
 // ── Actors (QE14) ──────────────────────────────────────────────────────────────────────────────────────
 // Every write is `actor: 'operator'`, `actorId` = the session's `users` id. `trustee_archived` under `operator` is legal.
@@ -95,6 +99,13 @@ function payloadHash(shape: Record<string, unknown>): string {
 
 function iso(d: Date): string {
   return d.toISOString();
+}
+
+// A publication tick as STORED (12.2 review RB1): the response states what the row holds, never a hard-coded `true`. The
+// row's CHECKs make a false tick unstorable, so a false one here is a broken invariant — a 500, never a `true` it did not read.
+function storedTick(value: boolean, column: string): true {
+  if (value !== true) throw new Error(`[marketplace] a publication row holds ${column} = ${String(value)} — its CHECK should forbid it`);
+  return value;
 }
 
 function toSummary(m: ModuleRow): z.input<typeof ModuleListResponse>['items'][number] {
@@ -292,7 +303,8 @@ export function createMarketplaceHandlers(deps: AppDeps) {
       branding_bundle: {
         version: 1,
         logo_object_key: (m.brandingBundle.logo_object_key as string | null | undefined) ?? null,
-        accent_color_hex: m.brandingBundle.accent_color_hex,
+        // `?? null` like its sibling (12.2 review RB2): a stored bundle without the key reads as null, never a strict-DTO 500.
+        accent_color_hex: (m.brandingBundle.accent_color_hex as string | null | undefined) ?? null,
       },
       current_state: m.currentState,
       archive_reason: m.archiveReason,
@@ -308,8 +320,8 @@ export function createMarketplaceHandlers(deps: AppDeps) {
               published_event_type: publication.publishedEventType,
               reviewer_display_name: reviewerDisplay ?? UNNAMED_ADMIN_LABEL,
               reviewed_at: iso(publication.reviewedAt),
-              hindi_reviewed: true,
-              partner_agreement_confirmed: true,
+              hindi_reviewed: storedTick(publication.hindiReviewed, 'hindi_reviewed'),
+              partner_agreement_confirmed: storedTick(publication.partnerAgreementConfirmed, 'partner_agreement_confirmed'),
               tone_signoff_content_hash: publication.toneSignoffContentHash,
             },
       lead_count: leadCount,

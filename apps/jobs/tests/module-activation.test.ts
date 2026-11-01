@@ -73,6 +73,56 @@ describe('module-activation — registration and pool (unit)', () => {
   });
 });
 
+// 12.2 review RB6: the `failed` branch, STUBBED (no DB). A pg error's own `name` is `"error"`, so the log carries the
+// Pariwar and the SQLSTATE found by walking `cause` (`marketplace.pgSqlstateOf`) — and one failure never ends the tick.
+describe('module-activation — a failed candidate (unit, stubbed pool)', () => {
+  const P1 = '0f8fad5b-d9cb-469f-a165-70867728950e';
+  const M1 = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
+  const P2 = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+  const M2 = '9b2f1c3e-5d4a-4b6c-8e7f-0a1b2c3d4e5f';
+
+  it('logs pariwarId + moduleId + the SQLSTATE under `cause`, and the loop runs the next candidate', async () => {
+    // The drizzle shape: a wrapper whose `cause` is pg's DatabaseError (`name` "error", a SQLSTATE, a severity).
+    const pgError = Object.assign(new Error('terminating connection due to administrator command'), {
+      name: 'error',
+      code: '57P01',
+      severity: 'FATAL',
+    });
+    const failures: unknown[] = [Object.assign(new Error('Failed query: BEGIN'), { cause: pgError }), new Error('not a pg error')];
+    const connect = vi.fn(async () => {
+      throw failures.shift();
+    });
+    const pool = {
+      query: vi.fn(async (text: string) =>
+        text.includes('rolbypassrls')
+          ? { rows: [{ ok: true }], rowCount: 1 }
+          : {
+              rows: [
+                { pariwar_id: P1, module_id: M1, valid_from: new Date(0), valid_until: new Date(8.64e15) },
+                { pariwar_id: P2, module_id: M2, valid_from: new Date(0), valid_until: new Date(8.64e15) },
+              ],
+              rowCount: 2,
+            },
+      ),
+      connect,
+    } as unknown as pg.Pool;
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    try {
+      expect(await runModuleActivationTick({ pool })).toEqual({ refused: false, selected: 2, activated: 0, skipped: 0, failed: 2 });
+      expect(connect).toHaveBeenCalledTimes(2); // the SECOND candidate ran after the first failed
+      const lines = error.mock.calls.filter((c) => String(c[0]).includes('module-activation: activation failed'));
+      expect(lines.map((c) => JSON.parse(String(c[1])) as unknown)).toEqual([
+        { pariwarId: P1, moduleId: M1, error: 'Error', sqlstate: '57P01' },
+        { pariwarId: P2, moduleId: M2, error: 'Error', sqlstate: null },
+      ]);
+    } finally {
+      error.mockRestore();
+      info.mockRestore();
+    }
+  });
+});
+
 describe.skipIf(!hasDatabase)('module-activation — live ticks (own pool, own commits)', { timeout: 30_000 }, () => {
   let created: ReturnType<typeof createDb>;
   let pool: pg.Pool;

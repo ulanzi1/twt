@@ -5148,6 +5148,15 @@ const PublishModuleComponent = PublishModuleResponseSchema.openapi('PublishModul
 const WithdrawModuleComponent = WithdrawModuleResponseSchema.openapi('WithdrawModuleResult');
 const modulesPariwar = z.object({ pariwarId: z.string().uuid() });
 const modulesModule = modulesPariwar.extend({ moduleId: z.string().uuid() });
+// 12.2 review RB3: the two refusals of the guard ahead of `module.manage`, on EVERY route — the admin session gate
+// (`requireAdminSession`) and the scope hook (no grant in this Pariwar: 404, so a tenant cannot be probed). Every route
+// validates its path params (and a query / body where it has one) BEFORE those hooks, so a malformed `pariwarId` /
+// `moduleId` or an out-of-range `limit` is 400 `request.validation` on every route, signed in or not (review PT15). The 409 lists
+// were checked against `mapModuleError` and are complete: author's `module.concurrent_change` is unreachable (the genesis
+// maps its 23505 to `module.already_exists`), `module.already_exists` needs a server-minted id to collide (QE18), and
+// withdraw's `module.archive_not_allowed` has no guard for `trustee_archived`.
+const modulesNoSession = errorResponse('No admin session · auth.session_required · auth.session_expired');
+const modulesNoGrant = 'No grant for this Pariwar (pariwar.not_found — the scope hook; distinct from the 403)';
 registry.registerPath({
   method: 'get',
   path: '/api/v1/p/{pariwarId}/modules',
@@ -5160,7 +5169,9 @@ registry.registerPath({
   responses: {
     200: { description: 'A page', content: jsonOf(ModuleListComponent) },
     400: errorResponse('Invalid input · module.cursor_invalid'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
+    404: errorResponse(modulesNoGrant),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 registry.registerPath({
@@ -5174,7 +5185,10 @@ registry.registerPath({
   request: { params: modulesPariwar },
   responses: {
     200: { description: 'The options', content: jsonOf(ModuleScopeOptionsComponent) },
+    400: errorResponse('Invalid input'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
+    404: errorResponse(modulesNoGrant),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 registry.registerPath({
@@ -5186,7 +5200,10 @@ registry.registerPath({
   request: { params: modulesPariwar, query: ModulePartnerListQuerySchema },
   responses: {
     200: { description: 'The partners', content: jsonOf(ModulePartnerListComponent) },
+    400: errorResponse('Invalid input'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
+    404: errorResponse(modulesNoGrant),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 registry.registerPath({
@@ -5201,7 +5218,9 @@ registry.registerPath({
   responses: {
     201: { description: 'Registered', content: jsonOf(ModulePartnerComponent) },
     400: errorResponse('Invalid input · module.idempotency_key_required'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
+    404: errorResponse(modulesNoGrant),
     409: errorResponse('module_partner.name_taken · module.idempotency_in_progress'),
     422: errorResponse('module_partner.name_invalid'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
@@ -5219,7 +5238,9 @@ registry.registerPath({
   responses: {
     201: { description: 'The draft', content: jsonOf(AuthorModuleComponent) },
     400: errorResponse('Invalid input · module.idempotency_key_required'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
+    404: errorResponse(modulesNoGrant),
     409: errorResponse('module.idempotency_in_progress'),
     422: errorResponse(
       'module.manifest_invalid · module.window_ended · module.partner_unknown · module.state_scope_requires_geo_tree · module.scope_value_unknown',
@@ -5237,8 +5258,10 @@ registry.registerPath({
   request: { params: modulesModule },
   responses: {
     200: { description: 'The module', content: jsonOf(ModuleDetailComponent) },
+    400: errorResponse('Invalid input'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
-    404: errorResponse('module.not_found'),
+    404: errorResponse(`${modulesNoGrant} · module.not_found`),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 registry.registerPath({
@@ -5254,8 +5277,9 @@ registry.registerPath({
   responses: {
     200: { description: 'Published', content: jsonOf(PublishModuleComponent) },
     400: errorResponse('Invalid input · module.idempotency_key_required'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage, or the step-up (auth.step_up_required)'),
-    404: errorResponse('module.not_found'),
+    404: errorResponse(`${modulesNoGrant} · module.not_found`),
     409: errorResponse(
       'tone_review.required · module.not_draft · module.window_ended · module.already_published · module.concurrent_change · module.idempotency_in_progress',
     ),
@@ -5272,8 +5296,9 @@ registry.registerPath({
   responses: {
     200: { description: 'Withdrawn', content: jsonOf(WithdrawModuleComponent) },
     400: errorResponse('Invalid input · module.idempotency_key_required'),
+    401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
-    404: errorResponse('module.not_found'),
+    404: errorResponse(`${modulesNoGrant} · module.not_found`),
     409: errorResponse('module.illegal_transition · module.concurrent_change · module.idempotency_in_progress'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

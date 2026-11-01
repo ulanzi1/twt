@@ -172,3 +172,122 @@ describe('PartnerPicker', () => {
     expect(screen.queryByTestId('partner-retry')).toBeNull(); // gone once it has succeeded
   });
 });
+
+describe('PartnerPicker — code review round 2 (chunk C)', () => {
+  it('RC3: after a registration focus goes to the select (showing the new partner); after Cancel, to "Register a new partner"', { timeout: 20_000 }, async () => {
+    createModulePartner.mockResolvedValue(created);
+    const { onChange } = await openForm();
+    listModulePartners.mockResolvedValue({ items: [created] }); // the refreshed list holds the new partner
+    screen.getByTestId('partner-save').focus();
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(CREATED));
+    expect(screen.getByTestId('partner-select')).toHaveFocus();
+
+    fireEvent.click(screen.getByTestId('partner-new'));
+    screen.getByTestId('partner-cancel').focus();
+    fireEvent.click(screen.getByTestId('partner-cancel'));
+    expect(screen.getByTestId('partner-new')).toHaveFocus();
+  });
+
+  it('RC4: a registration still in flight never replaces a partner the admin has since picked from the list', { timeout: 20_000 }, async () => {
+    let resolveCreate: (v: unknown) => void = () => undefined;
+    createModulePartner.mockReturnValue(new Promise((r) => { resolveCreate = r; }));
+    const { onChange } = await openForm();
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(createModulePartner).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByTestId('partner-select'), { target: { value: EXISTING } });
+    expect(onChange).toHaveBeenLastCalledWith(EXISTING);
+    resolveCreate(created);
+    await settle();
+    expect(onChange).not.toHaveBeenCalledWith(CREATED);
+  });
+
+  it('RC5: a chosen id the list does not show is shown as such, never as "Choose a partner"', { timeout: 20_000 }, async () => {
+    renderWithClient(<PartnerPicker pariwarId={PARIWAR} value={CREATED} onChange={vi.fn()} />);
+    await screen.findByRole('option', { name: 'HDFC / एचडीएफसी' });
+    expect(screen.getByTestId('partner-select')).toHaveDisplayValue(t('module.partner.notListed'));
+    expect(screen.getByTestId('partner-select')).toHaveValue(CREATED);
+  });
+
+  it('RC9: "already registered — choose it from the list" re-reads the list', { timeout: 20_000 }, async () => {
+    createModulePartner.mockRejectedValue(new ApiError(409, 'module_partner.name_taken', 'taken'));
+    await openForm();
+    await waitFor(() => expect(listModulePartners).toHaveBeenCalledTimes(1));
+    listModulePartners.mockResolvedValue({ items: [created] });
+    fireEvent.click(screen.getByTestId('partner-save'));
+    expect(await screen.findByTestId('partner-error')).toHaveTextContent(t('module.partner.nameTaken'));
+    await waitFor(() => expect(listModulePartners).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('option', { name: 'LIC / एलआईसी' })).toBeInTheDocument();
+  });
+
+  it('RC14: once the list has loaded, a later refresh does not bring back "Loading…" and a disabled Try again', { timeout: 20_000 }, async () => {
+    listModulePartners.mockReset();
+    listModulePartners
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ items: [{ partner_id: EXISTING, display_name_en: 'HDFC', display_name_hi: 'एचडीएफसी', created_at: '2026-11-01T00:00:00.000Z' }] })
+      .mockReturnValue(new Promise(() => undefined)); // the later refresh hangs
+    createModulePartner.mockResolvedValue(created);
+    const onChange = vi.fn();
+    renderWithClient(<PartnerPicker pariwarId={PARIWAR} value={null} onChange={onChange} />);
+    fireEvent.click(await screen.findByTestId('partner-retry'));
+    await screen.findByRole('option', { name: 'HDFC / एचडीएफसी' });
+    // A registration refreshes the list (the refresh hangs).
+    fireEvent.click(screen.getByTestId('partner-new'));
+    fireEvent.change(screen.getByTestId('partner-name-en'), { target: { value: 'LIC' } });
+    fireEvent.change(screen.getByTestId('partner-name-hi'), { target: { value: 'एलआईसी' } });
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(listModulePartners).toHaveBeenCalledTimes(3));
+    expect(screen.queryByTestId('partner-retry')).toBeNull();
+    expect(screen.queryByText(t('module.loading'))).toBeNull();
+  });
+});
+
+describe('PartnerPicker — patch-diff review of round 2 (PT)', () => {
+  it('PT1: a FAILED refresh over a loaded list shows no load error and no Try again — the select keeps working', { timeout: 20_000 }, async () => {
+    createModulePartner.mockResolvedValue(created);
+    const { onChange } = await openForm();
+    await screen.findByRole('option', { name: 'HDFC / एचडीएफसी' });
+    listModulePartners.mockRejectedValue(new Error('boom')); // the refresh after registering fails
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(CREATED));
+    await waitFor(() => expect(listModulePartners).toHaveBeenCalledTimes(2));
+    await settle();
+    expect(screen.queryByText(t('module.partner.loadError'))).toBeNull();
+    expect(screen.queryByTestId('partner-retry')).toBeNull();
+    expect(screen.getByRole('option', { name: 'HDFC / एचडीएफसी' })).toBeInTheDocument();
+  });
+
+  it('PT2: a registration that finishes after the admin moved focus out of the picker does not take it back', { timeout: 20_000 }, async () => {
+    let resolveCreate: (v: unknown) => void = () => undefined;
+    createModulePartner.mockReturnValue(new Promise((r) => { resolveCreate = r; }));
+    const elsewhere = document.createElement('input');
+    document.body.appendChild(elsewhere);
+    try {
+      const { onChange } = await openForm();
+      fireEvent.click(screen.getByTestId('partner-save'));
+      await waitFor(() => expect(createModulePartner).toHaveBeenCalledTimes(1));
+      elsewhere.focus(); // e.g. the offer-name field below the picker
+      resolveCreate(created);
+      await waitFor(() => expect(onChange).toHaveBeenCalledWith(CREATED));
+      expect(elsewhere).toHaveFocus();
+    } finally {
+      elsewhere.remove();
+    }
+  });
+
+  it('PT12: picking from the list while a registration is in flight closes the form and clears it; the late result selects nothing', { timeout: 20_000 }, async () => {
+    let resolveCreate: (v: unknown) => void = () => undefined;
+    createModulePartner.mockReturnValue(new Promise((r) => { resolveCreate = r; }));
+    const { onChange } = await openForm();
+    fireEvent.click(screen.getByTestId('partner-save'));
+    await waitFor(() => expect(createModulePartner).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByTestId('partner-select'), { target: { value: EXISTING } });
+    expect(screen.queryByTestId('partner-form')).toBeNull();
+    resolveCreate(created);
+    await settle();
+    expect(onChange).not.toHaveBeenCalledWith(CREATED);
+    fireEvent.click(screen.getByTestId('partner-new'));
+    expect(screen.getByTestId('partner-name-en')).toHaveValue('');
+    expect(screen.getByTestId('partner-name-hi')).toHaveValue('');
+  });
+});

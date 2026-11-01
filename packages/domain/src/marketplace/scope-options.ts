@@ -32,12 +32,16 @@ import { MAX_SCOPE_VALUE_LENGTH, type ScopeFilterV1 } from './filters.js';
 /** The no-tree district list's page — `pageWorkplaceDistricts`' own cap (⛔ a second page exists). */
 const SCOPE_OPTION_DISTRICTS_LIMIT = 200;
 
+/** Why a place is offered but cannot be chosen — the tuple the contracts sync-guard pins (12.2 review RB5). */
+export const MODULE_SCOPE_OPTION_UNUSABLE_REASONS = ['too_long'] as const;
+export type ModuleScopeOptionUnusableReason = (typeof MODULE_SCOPE_OPTION_UNUSABLE_REASONS)[number];
+
 /** One place the picker offers. `state` is the district's parent state (a tree district only), else null. */
 export interface ModuleScopeOption {
   readonly value: string;
   readonly state: string | null;
   readonly usable: boolean;
-  readonly unusableReason: 'too_long' | null;
+  readonly unusableReason: ModuleScopeOptionUnusableReason | null;
 }
 
 /** What the scope step of the wizard may offer (QE5). A single object — ⛔ a collection. */

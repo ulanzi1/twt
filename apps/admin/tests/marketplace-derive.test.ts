@@ -11,7 +11,9 @@ import { attemptKey, type AttemptKey } from '../src/api/hooks.js';
 import {
   codeToStep,
   describeEligibility,
+  describePublication,
   eligibilityStatesOf,
+  formatIst,
   issueFieldName,
   issueMessage,
   describeInstant,
@@ -25,6 +27,7 @@ import {
   moduleErrorGuidance,
   normaliseDisplayText,
   reachesNoMemberYet,
+  scopeUnknownMessage,
   toAuthorRequest,
   toIsoOrNull,
   validateStep,
@@ -397,5 +400,50 @@ describe('review round 1 (chunk C) — derivations', () => {
       if (was === undefined) delete process.env['TZ'];
       else process.env['TZ'] = was;
     }
+  });
+});
+
+describe('review round 2 (chunk C) — derivations', () => {
+  it('RC16: leadWarning says "1 member" for one, "{n} members" for more', () => {
+    expect(leadWarning(1)).toBe(t('module.detail.leadWarningOne'));
+    expect(leadWarning(2)).toBe(t('module.detail.leadWarning', { n: 2 }));
+  });
+
+  it('RC16: the publication line says "goes live at its opening time" only while the offer is scheduled', () => {
+    const p = { published_event_type: 'module.scheduled' as const, reviewer_display_name: 'Ravi', reviewed_at: '2026-11-02T05:00:00.000Z' };
+    const at = formatIst(p.reviewed_at);
+    expect(describePublication(null, 'draft')).toBe(t('module.detail.notPublished'));
+    expect(describePublication(p, 'scheduled')).toBe(t('module.detail.publishedScheduled', { name: 'Ravi', at }));
+    expect(describePublication(p, 'active')).toBe(t('module.detail.publishedActive', { name: 'Ravi', at }));
+    expect(describePublication(p, 'archived')).toBe(t('module.detail.publishedActive', { name: 'Ravi', at }));
+  });
+
+  it('RC8: a scope_value_unknown refusal names the refused places; without usable values, the fixed sentence', () => {
+    expect(scopeUnknownMessage({ scope: 'district', values: ['Patna', 'Gaya'] })).toBe(
+      t('module.error.scope_value_unknown_named', { places: 'Patna; Gaya' }),
+    );
+    expect(t('module.error.scope_value_unknown_named', { places: 'Patna; Gaya' })).toBe(
+      'These chosen places are not recorded for this Pariwar any more: Patna; Gaya. Remove them, then choose again.',
+    );
+    expect(scopeUnknownMessage({ values: [] })).toBe(t('module.error.scope_value_unknown'));
+    expect(scopeUnknownMessage(undefined)).toBe(t('module.error.scope_value_unknown'));
+    expect(scopeUnknownMessage({ values: [1, 2] })).toBe(t('module.error.scope_value_unknown'));
+  });
+
+  it('RC1 / RC5: the new sentences', () => {
+    expect(t('module.detail.created')).toBe('Draft created.');
+    expect(t('module.partner.notListed')).toBe('The chosen partner (not in the list shown here)');
+    expect(t('module.list.moreError')).toBe('Could not load more offers. Try again.');
+  });
+});
+
+describe('patch-diff review of round 2 (PT) — derivations', () => {
+  it('PT14: the scope_value_unknown banner names the first five places, then "and n more"', () => {
+    const seven = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    expect(scopeUnknownMessage({ values: seven })).toBe(
+      t('module.error.scope_value_unknown_named', { places: t('module.error.placesAndMore', { places: 'A; B; C; D; E', n: 2 }) }),
+    );
+    expect(t('module.error.placesAndMore', { places: 'A; B; C; D; E', n: 2 })).toBe('A; B; C; D; E; and 2 more');
+    expect(scopeUnknownMessage({ values: seven.slice(0, 5) })).toBe(t('module.error.scope_value_unknown_named', { places: 'A; B; C; D; E' }));
   });
 });

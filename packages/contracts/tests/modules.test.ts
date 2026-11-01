@@ -19,8 +19,10 @@ import {
   MODULE_PUBLISH_STEP_UP_CONTEXT,
   MODULE_SCOPE_KINDS,
   MODULE_STATES,
+  ModuleEligibilityFilterDto,
   ModuleListResponse,
   ModuleScopeFilterDto,
+  ModuleScopeOptionDto,
   PublishModuleRequest,
   WithdrawModuleRequest,
 } from '../src/modules/index.js';
@@ -37,6 +39,37 @@ describe('modules contract ↔ domain sync-guard', () => {
     expect([...MODULE_SCOPE_KINDS]).toEqual(marketplace.ScopeFilterV1Schema.options.map((o) => o.shape.scope.value));
     expect(MODULE_MAX_SCOPE_VALUES).toBe(marketplace.MAX_SCOPE_VALUES);
     expect(MODULE_MAX_SCOPE_VALUE_LENGTH).toBe(marketplace.MAX_SCOPE_VALUE_LENGTH);
+  });
+
+  // 12.2 review RB5: the response DTOs RE-DECLARE the eligibility grammar and the unusable reasons, so a clause kind or a
+  // reason added in the domain within `version: 1` would fail the strict response serializer (a 500 on the detail GET /
+  // the scope options) with CI green. Compared, each read off the live schema objects: the clause KINDS, the clause CAP,
+  // the `member_state_in` clause's STATES enum, and the unusable REASONS. NOT compared: the other refinements (the
+  // domain's uniqueness checks, `.min(1)`, field-level bounds) — a stricter domain cannot 500 the response.
+  it('the detail DTO\'s eligibility clause kinds, clause cap and member states equal the domain EligibilityFilterV1 (RB5)', () => {
+    // The DTO declares v1's ONE clause as a plain object; a second kind makes it a union, and this line with it.
+    const dtoClause = ModuleEligibilityFilterDto.shape.clauses.element;
+    expect([dtoClause.shape.kind.value]).toEqual(marketplace.EligibilityClauseSchema.options.map((o) => o.shape.kind.value));
+    // Review PT17: the states the clause may name — the DTO's own enum against the domain clause's (under its `superRefine`).
+    expect([...dtoClause.shape.states.element.options]).toEqual([
+      ...marketplace.MemberStateInClauseSchema.shape.states.innerType().element.options,
+    ]);
+    expect(ModuleEligibilityFilterDto.shape.clauses._def.maxLength?.value).toBe(marketplace.MAX_ELIGIBILITY_CLAUSES);
+    // The domain's array sits under its uniqueness `superRefine` (a ZodEffects).
+    expect(marketplace.EligibilityFilterV1Schema.shape.clauses.innerType()._def.maxLength?.value).toBe(marketplace.MAX_ELIGIBILITY_CLAUSES);
+  });
+
+  it('the scope option DTO\'s unusable_reason enum equals the domain\'s reasons (RB5)', () => {
+    const reason = ModuleScopeOptionDto.shape.unusable_reason;
+    expect(reason.isNullable()).toBe(true);
+    expect([...reason.unwrap().options]).toEqual([...marketplace.MODULE_SCOPE_OPTION_UNUSABLE_REASONS]);
+    // …and the domain's builder emits only those (a too-long place, and a usable one).
+    const built = marketplace.buildModuleScopeOptions(null, { items: ['Patna', 'x'.repeat(MODULE_MAX_SCOPE_VALUE_LENGTH + 1)], hasMore: false });
+    for (const o of built.districts) {
+      const wire = { value: o.value, state: o.state, usable: o.usable, unusable_reason: o.unusableReason };
+      expect(ModuleScopeOptionDto.safeParse(wire).success).toBe(true);
+    }
+    expect(built.districts.map((o) => o.unusableReason).sort()).toEqual([null, 'too_long'].sort());
   });
 
   it('the district sources are exactly what buildModuleScopeOptions can return', () => {

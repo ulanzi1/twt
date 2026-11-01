@@ -10,11 +10,17 @@
 //
 // Each CLICK is a new intent and mints a new Idempotency-Key. Only the held step-up retry reuses its click's key (the write it
 // retries is the same request); a second click after a lost response is a new write and is told, by the server's 409, to
-// reload (review RP34 — this header used to say every retry reuses the key).
+// reload (review RP34 — this header used to say every retry reuses the key). A synchronous in-flight guard stops a fast
+// double activation from sending two writes before `busy` renders (RC11).
+//
+// The page's OWN actions do not leave focus on <body> (RC1, RC2, PT4 — family 13(d)): the step-up panel takes focus when it
+// opens; Cancel, the held retry and every write's result return it to the heading. Arriving from "Create draft" (the admin's
+// own draft) announces it and focuses the heading, unless the admin has already moved focus elsewhere (PT2, PT10). A change
+// made elsewhere (another admin publishing, seen on a refresh) can still unmount the publish form under focus.
 
 import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { newIdempotencyKey, useModuleDetail, usePublishModule, useWithdrawModule } from '../../api/hooks.js';
@@ -22,14 +28,15 @@ import { holdKey, holdOnce, needsStepUp, StepUpPanel, type PendingWrite } from '
 import {
   describeEligibility,
   describePlaces,
+  describePublication,
   describeScope,
   describeWindow,
   eligibilityStatesOf,
-  formatIst,
   leadWarning,
   moduleErrorGuidance,
   reachesNoMemberYet,
 } from './derive.js';
+import { focusIfUnclaimed } from './focus.js';
 import { resolveEn as t } from './i18n-en.js';
 
 export interface ModuleDetailPageProps {
@@ -37,13 +44,24 @@ export interface ModuleDetailPageProps {
   moduleId: string;
   onBack: () => void;
   onStartCorrectedCopy: (moduleId: string) => void;
+  /** The admin has just created this draft in the wizard: announce it and focus the heading once the offer has loaded (RC1). */
+  created?: boolean;
+  /** Called once "Draft created." has been shown, so the route can drop its flag (a reload does not announce it again). */
+  onCreatedShown?: () => void;
 }
 
 function stateLabel(m: ModuleDetailResponse): string {
   return t(`module.state.${m.current_state}`);
 }
 
-export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrectedCopy }: ModuleDetailPageProps): ReactElement {
+export function ModuleDetailPage({
+  pariwarId,
+  moduleId,
+  onBack,
+  onStartCorrectedCopy,
+  created = false,
+  onCreatedShown,
+}: ModuleDetailPageProps): ReactElement {
   const detail = useModuleDetail(pariwarId, moduleId);
   const publish = usePublishModule(pariwarId, moduleId);
   const withdraw = useWithdrawModule(pariwarId, moduleId);
@@ -52,6 +70,38 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const holdSeq = useRef(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const stepUpRef = useRef<HTMLDivElement>(null);
+  // Set synchronously on a Publish / Withdraw click and cleared when that write settles (RC11).
+  const inFlight = useRef(false);
+  const createdShown = useRef(false);
+  // A write has succeeded and its refresh has not landed: the page still shows the OLD state, so the write buttons stay off (a
+  // second press would only meet a 409). The result no longer waits for that refresh (RC15). The write's own `onSuccess` starts
+  // the refresh BEFORE `mutateAsync` resolves, so "the refresh has landed" is simply "the detail read is no longer fetching" —
+  // a success or a failure, and only one that comes after the write (an error from before it does not count — PT3). ⛔ Wall-clock
+  // timestamps: a refresh can settle in the same millisecond as the write's result (PU4).
+  const [awaitingRefresh, setAwaitingRefresh] = useState(false);
+  useEffect(() => {
+    if (awaitingRefresh && !detail.isFetching) setAwaitingRefresh(false);
+  }, [awaitingRefresh, detail.isFetching]);
+
+  useEffect(() => {
+    if (!created || createdShown.current || detail.data === undefined) return;
+    createdShown.current = true;
+    // Only the admin's own new draft is announced: `?created=true` typed or kept on another offer says nothing (PT10). The flag
+    // is dropped either way.
+    if (detail.data.current_state === 'draft' && detail.data.authored_by_viewer) {
+      setMessage({ kind: 'ok', text: t('module.detail.created') });
+      focusIfUnclaimed(headingRef.current);
+    }
+    onCreatedShown?.();
+  }, [created, detail.data, onCreatedShown]);
+
+  // The pressed Publish button is disabled while the write is held, so the panel takes focus when it opens (RC2) — its first
+  // ENABLED control (PT5).
+  useEffect(() => {
+    if (pending === null) return;
+    stepUpRef.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]):not([type=hidden])')?.focus();
+  }, [pending]);
 
   if (detail.isLoading) return <p role="status">{t('module.loading')}</p>;
   // The error REPLACES the page only when there is nothing to show: a failed background refetch (window focus — the admin
@@ -65,13 +115,15 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
   }
   const m = detail.data;
   const warning = leadWarning(m.lead_count);
-  const busy = publish.isPending || withdraw.isPending || pending !== null;
+  const refreshing = awaitingRefresh && detail.isFetching;
+  const busy = publish.isPending || withdraw.isPending || pending !== null || refreshing;
   const canWithdraw = m.current_state !== 'archived';
 
   const runPublish = async (idempotencyKey: string, retried: boolean): Promise<void> => {
     setMessage(null);
     try {
       await publish.mutateAsync({ idempotencyKey });
+      setAwaitingRefresh(true);
       setMessage({ kind: 'ok', text: t('module.detail.published') });
       headingRef.current?.focus(); // the form that held focus is about to unmount (RP32)
     } catch (err) {
@@ -79,6 +131,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
         if (retried) {
           // The held retry is run ONCE; a second step-up demand is an error, ⛔ another hold.
           setMessage({ kind: 'error', text: t('module.detail.stepUpAgain') });
+          headingRef.current?.focus(); // the panel that held focus has unmounted (RC2)
           return;
         }
         holdSeq.current += 1;
@@ -88,6 +141,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
         return;
       }
       setMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code, 'detail') : t('module.error.generic') });
+      headingRef.current?.focus(); // the pressed button (or the panel) was disabled or unmounted under focus (RC2)
     }
   };
 
@@ -95,11 +149,22 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
     setMessage(null);
     try {
       await withdraw.mutateAsync({ idempotencyKey: newIdempotencyKey() });
+      setAwaitingRefresh(true);
       setMessage({ kind: 'ok', text: t('module.detail.withdrawn') });
       headingRef.current?.focus(); // the Withdraw button that held focus is about to unmount (RP32)
     } catch (err) {
       setMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code, 'detail') : t('module.error.generic') });
+      headingRef.current?.focus(); // the pressed button was disabled under focus (RC2)
     }
+  };
+
+  // ONE write per activation: the ref is set before any render can disable the button (RC11).
+  const once = (run: () => Promise<void>) => (): void => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    void run().finally(() => {
+      inFlight.current = false;
+    });
   };
 
   const allTicked = ticks.tone && ticks.hindi && ticks.partner;
@@ -126,7 +191,9 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
       <p className="text-sm" data-testid="module-detail-author">
         {t('module.detail.author', { name: m.author_display_name })}
       </p>
-      <p className="text-sm">{t('module.detail.partner', { en: m.partner_display_name_en, hi: m.partner_display_name_hi })}</p>
+      <p className="text-sm" data-testid="module-detail-partner">
+        {t('module.detail.partner', { en: m.partner_display_name_en })} <span lang="hi">{m.partner_display_name_hi}</span>
+      </p>
 
       <div className="flex flex-col gap-1 rounded border p-3">
         <p className="font-semibold">{m.name_en}</p>
@@ -159,12 +226,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
       <p className="text-xs">{t('module.detail.secretName', { name: m.lead_handoff_signing_key_secret_name })}</p>
 
       <p className="text-sm" data-testid="module-detail-publication">
-        {m.publication === null
-          ? t('module.detail.notPublished')
-          : t(m.publication.published_event_type === 'module.scheduled' ? 'module.detail.publishedScheduled' : 'module.detail.publishedActive', {
-              name: m.publication.reviewer_display_name,
-              at: formatIst(m.publication.reviewed_at),
-            })}
+        {describePublication(m.publication, m.current_state)}
       </p>
 
       {m.current_state === 'draft' ? (
@@ -197,7 +259,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
             className="w-fit rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
             disabled={m.authored_by_viewer || !allTicked || busy}
             aria-describedby={m.authored_by_viewer ? 'module-publish-author' : undefined}
-            onClick={() => void runPublish(newIdempotencyKey(), false)}
+            onClick={once(() => runPublish(newIdempotencyKey(), false))}
             data-testid="module-publish-button"
           >
             {publish.isPending ? t('module.detail.publishing') : t('module.detail.publish')}
@@ -206,14 +268,22 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
       ) : null}
 
       {pending !== null ? (
-        <StepUpPanel
-          key={holdKey(pending)}
-          context={MODULE_PUBLISH_STEP_UP_CONTEXT}
-          pending={pending}
-          onDone={() => setPending(null)}
-          onCancel={() => setPending(null)}
-          testId="module-step-up"
-        />
+        <div ref={stepUpRef}>
+          <StepUpPanel
+            key={holdKey(pending)}
+            context={MODULE_PUBLISH_STEP_UP_CONTEXT}
+            pending={pending}
+            onDone={() => {
+              setPending(null);
+              headingRef.current?.focus(); // the Verify button unmounts with the panel while the held write is retried (PT4)
+            }}
+            onCancel={() => {
+              setPending(null);
+              headingRef.current?.focus(); // the Cancel button unmounts with the panel (RC2)
+            }}
+            testId="module-step-up"
+          />
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-2 rounded border p-3" data-testid="module-correct">
@@ -225,7 +295,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
         ) : null}
         <div className="flex gap-2">
           {canWithdraw ? (
-            <button type="button" className="rounded border px-3 py-1 text-sm disabled:opacity-50" disabled={busy} onClick={() => void runWithdraw()} data-testid="module-withdraw">
+            <button type="button" className="rounded border px-3 py-1 text-sm disabled:opacity-50" disabled={busy} onClick={once(runWithdraw)} data-testid="module-withdraw">
               {withdraw.isPending ? t('module.detail.withdrawing') : t('module.detail.withdraw')}
             </button>
           ) : null}

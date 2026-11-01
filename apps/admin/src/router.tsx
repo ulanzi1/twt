@@ -40,7 +40,7 @@ import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
 import { BannersRoute } from './routes/BannersRoute.js';
-import { ModuleDetailRoute, ModuleNewRoute, ModulesRoute, validateModuleNewSearch } from './routes/ModulesRoute.js';
+import { ModuleDetailRoute, ModuleNewRoute, ModulesRoute, validateModuleDetailSearch, validateModuleNewSearch } from './routes/ModulesRoute.js';
 import { SurveysRoute } from './routes/SurveysRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
 import { CustomFieldsRoute } from './routes/CustomFieldsRoute.js';
@@ -199,8 +199,8 @@ const bannersRoute = createRoute({
 });
 
 // Story 12.2 — the tenant-scoped partner-offer (module) console: the list, the authoring wizard (`?from=` pre-fills a
-// corrected copy) and one module (publish by a non-author with step-up; withdraw). The static `new` segment outranks the
-// `$moduleId` param.
+// corrected copy) and one module (publish by a non-author with step-up; withdraw; `?created=true` right after Create draft).
+// The static `new` segment outranks the `$moduleId` param.
 const modulesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/modules',
@@ -217,6 +217,7 @@ const moduleNewRoute = createRoute({
 const moduleDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/modules/$moduleId',
+  validateSearch: validateModuleDetailSearch,
   component: ModuleDetailRoute,
 });
 

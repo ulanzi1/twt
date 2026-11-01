@@ -1,8 +1,15 @@
 // The module surface's error mapper — Story 12.2 (`2026-11-01-433` QE18; Task 5.3).
 //
-// The 12.1 domain errors carry ⛔ HTTP ("the 12.2 / 12.3 / 12.6 routes map them"); this is 12.2's mapping, EVERY row of
-// the QE18 table — the pre-check refusals included (they are typed domain errors too). `withCompensatingAudit` RETHROWS
-// after writing its `_rolled_back` line, so mapping here (in the handler's outer `catch`) keeps the compensating line. The
+// The 12.1 domain errors carry ⛔ HTTP ("the 12.2 / 12.3 / 12.6 routes map them"); this is 12.2's mapping of the QE18
+// table's DOMAIN-ERROR rows — the author / partner pre-check refusals included, because they throw typed domain errors
+// (`ModulePartnerUnknownError`, the two scope errors, `ModulePartnerNameInvalidError`; publish's unknown id is
+// `ModuleGenesisMissingError`). NOT every row (12.2 review RB7 / PT18): the handler raises some rows itself as an `ApiError`.
+// Publish's `module.not_draft` / `module.window_ended` pre-checks are thrown inside the write's `try`, so they pass THROUGH
+// this mapper unchanged (the rows below answer the same codes when the COMMAND refuses: a concurrent publish that lost the
+// row lock, or the defensive window check). The detail read's `module.not_found` and the idempotency rows
+// (`module.idempotency_key_required`, `module.idempotency_in_progress`) are raised OUTSIDE it — they never reach this
+// mapper. `withCompensatingAudit` RETHROWS after writing its `_rolled_back` line, so mapping here (in the handler's outer
+// `catch`) keeps the compensating line. The
 // central mapper is ⛔ touched: anything not in the table — `ToneReviewRequiredError`, an `ApiError`, `StepUpRequiredError`,
 // a bug — is rethrown UNCHANGED for it to answer (409 `tone_review.required`; an unknown error → 500).
 //

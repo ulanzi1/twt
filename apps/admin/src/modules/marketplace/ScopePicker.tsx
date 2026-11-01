@@ -4,6 +4,8 @@
 // its listed workplace districts. A kind with no places is HIDDEN, with its reason; an option over 120 characters is
 // shown DISABLED with its reason (⛔ truncated — a truncated value would match nobody). The picker emits the option's
 // EXACT `value` (TR7 — ⛔ its rendered label, ⛔ trimmed, ⛔ case-changed). `role` / `cohort` are not offered (QE17).
+// The truncation and reach notes describe the group (`aria-describedby`), and "No place matches the search." is spoken from an
+// always-mounted polite status (RC17).
 
 import type { ModuleScopeOptionDto, ModuleScopeOptionsResponse } from '@twt/contracts';
 import { useMemo, useRef, useState, type ReactElement } from 'react';
@@ -38,6 +40,15 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
   const kindList = kind === 'state' ? options.states : kind === 'district' ? options.districts : [];
   const notListed = kind === 'state' || kind === 'district' ? values.filter((v) => !kindList.some((o) => o.value === v)) : [];
 
+  // The notes that describe the group — only those on screen (a dangling id would describe nothing).
+  const describedBy = [
+    kind === 'district' && options.districts_truncated ? 'scope-truncated-note' : null,
+    kind === 'state' || kind === 'district' ? 'scope-no-district-note' : null,
+    kind === 'district' ? 'scope-unlisted-district-note' : null,
+  ]
+    .filter((id): id is string => id !== null)
+    .join(' ');
+
   const pickKind = (k: ScopeKind): void => {
     setSearch('');
     // Switching kind drops the other kind's values — a state and a district list never mix.
@@ -49,7 +60,7 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
   };
 
   return (
-    <fieldset className="flex flex-col gap-2" data-testid="scope-picker">
+    <fieldset className="flex flex-col gap-2" aria-describedby={describedBy === '' ? undefined : describedBy} data-testid="scope-picker">
       <legend className="text-sm font-medium">{t('module.wizard.step.c')}</legend>
       <label className="flex items-center gap-2 text-sm">
         <input type="radio" name="scope-kind" checked={kind === 'members-all'} onChange={() => pickKind('members-all')} data-testid="scope-kind-members-all" />
@@ -85,7 +96,7 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
             {kind === 'district' && options.district_source === 'workplace_districts' ? t('module.scope.sourceWorkplaces') : t('module.scope.sourceTree')}
           </p>
           {kind === 'district' && options.districts_truncated ? (
-            <p className="text-xs" role="note" data-testid="scope-truncated">
+            <p className="text-xs" role="note" id="scope-truncated-note" data-testid="scope-truncated">
               {t('module.scope.truncated', { n: options.districts.length })}
             </p>
           ) : null}
@@ -120,8 +131,10 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
               </ul>
             </div>
           ) : null}
+          <p className="text-xs" role="status" data-testid="scope-no-match">
+            {shown.length === 0 ? t('module.scope.noMatch') : null}
+          </p>
           <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" data-testid="scope-options">
-            {shown.length === 0 ? <li className="text-xs">{t('module.scope.noMatch')}</li> : null}
             {shown.map((o) => (
               <li key={`${o.state ?? ''}|${o.value}`}>
                 <label className="flex items-center gap-2 text-sm">
@@ -139,11 +152,11 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
             ))}
           </ul>
           {/* The reach consequences of a state / district audience (Policy meaning). */}
-          <p className="text-xs" data-testid="scope-no-district-line">
+          <p className="text-xs" id="scope-no-district-note" data-testid="scope-no-district-line">
             {t('module.audience.noDistrict')}
           </p>
           {kind === 'district' ? (
-            <p className="text-xs" data-testid="scope-unlisted-district-line">
+            <p className="text-xs" id="scope-unlisted-district-note" data-testid="scope-unlisted-district-line">
               {t('module.audience.unlistedDistrict')}
             </p>
           ) : null}

@@ -4,7 +4,7 @@
 // tone_review.required → the author sentence; the C10 warning at lead_count 3; withdraw sends no body of its own (the
 // fetcher sends `{}`).
 
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { focusManager } from '@tanstack/react-query';
 import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse } from '@twt/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,6 +34,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 const { ModuleDetailPage } = await import('../src/modules/marketplace/ModuleDetailPage.js');
 const { resolveEn: t } = await import('../src/modules/marketplace/i18n-en.js');
 const { ApiError } = await import('../src/api/client.js');
+const { formatIst } = await import('../src/modules/marketplace/derive.js');
 
 function detail(over: Partial<ModuleDetailResponse> = {}): ModuleDetailResponse {
   return {
@@ -280,6 +281,254 @@ describe('ModuleDetailPage (AC12)', () => {
     render();
     expect(await screen.findByTestId('module-detail-error')).toHaveTextContent(t('module.error.forbidden')); // RP22, end to end
     expect(screen.queryByTestId('module-detail')).toBeNull();
+  });
+});
+
+describe('ModuleDetailPage — code review round 2 (chunk C)', () => {
+  const publication = (type: 'module.scheduled' | 'module.activated') => ({
+    published_event_type: type,
+    reviewer_display_name: 'Ravi',
+    reviewed_at: '2026-11-02T05:00:00.000Z',
+    hindi_reviewed: true as const,
+    partner_agreement_confirmed: true as const,
+    tone_signoff_content_hash: 'a'.repeat(64),
+  });
+
+  it('RC1: arriving from Create draft announces "Draft created." in the live region and focuses the heading — once', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail({ authored_by_viewer: true })); // the admin's own new draft (PT10)
+    const onCreatedShown = vi.fn();
+    renderWithClient(
+      <ModuleDetailPage pariwarId={PARIWAR} moduleId={MODULE} created onCreatedShown={onCreatedShown} onBack={vi.fn()} onStartCorrectedCopy={vi.fn()} />,
+    );
+    const live = await screen.findByTestId('module-detail-live');
+    await waitFor(() => expect(live).toHaveTextContent(t('module.detail.created')));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
+    expect(onCreatedShown).toHaveBeenCalledTimes(1); // the route clears its flag, so a reload does not announce it again
+  });
+
+  it('RC1: without the flag nothing is announced and focus is not moved', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    render();
+    const live = await screen.findByTestId('module-detail-live');
+    expect(live).toBeEmptyDOMElement();
+    expect(screen.getByRole('heading', { level: 1 })).not.toHaveFocus();
+  });
+
+  it('RC2: the step-up panel takes focus when it opens; Cancel returns it to the heading', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    publishModule.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'step up'));
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    const panel = await screen.findByTestId('module-step-up');
+    await waitFor(() => expect(within(panel).getAllByRole('button')[0]).toHaveFocus());
+    fireEvent.click(screen.getByTestId('module-step-up-cancel'));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
+  });
+
+  it('RC2: a refused publish, a refused withdraw and a failed held retry each leave focus on the heading', { timeout: 30_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    publishModule.mockRejectedValueOnce(new ApiError(409, 'module.concurrent_change', 'race'));
+    withdrawModule.mockRejectedValueOnce(new ApiError(409, 'module.illegal_transition', 'no'));
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    const heading = screen.getByRole('heading', { level: 1 });
+    screen.getByTestId('module-publish-button').focus();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    await screen.findByText(t('module.error.concurrent_change'));
+    expect(heading).toHaveFocus();
+
+    screen.getByTestId('module-withdraw').focus();
+    fireEvent.click(screen.getByTestId('module-withdraw'));
+    await screen.findByText(t('module.error.illegal_transition'));
+    expect(heading).toHaveFocus();
+
+    // The held retry: the panel's Verify button unmounts with the panel, and the retried write fails.
+    publishModule.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'step up'));
+    requestStepUp.mockResolvedValue({});
+    verifyStepUp.mockResolvedValue({});
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    await screen.findByTestId('module-step-up');
+    fireEvent.click(screen.getByText(/send/i, { selector: 'button' }));
+    fireEvent.change(await screen.findByTestId('module-step-up-code'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByTestId('module-step-up-verify'));
+    await screen.findByText(t('module.detail.stepUpAgain'));
+    expect(heading).toHaveFocus();
+  });
+
+  it('RC11: a fast double activation of Publish or Withdraw sends ONE write', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    publishModule.mockReturnValue(new Promise(() => undefined));
+    withdrawModule.mockReturnValue(new Promise(() => undefined));
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    const button = screen.getByTestId('module-publish-button');
+    // Both presses land in ONE act scope, so no render (and no `busy`) comes between them — a fast double activation.
+    act(() => {
+      button.click();
+      button.click();
+    });
+    await waitFor(() => expect(publishModule).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(publishModule).toHaveBeenCalledTimes(1);
+  });
+
+  it('RC11: the same guard covers Withdraw', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail({ current_state: 'active' }));
+    withdrawModule.mockReturnValue(new Promise(() => undefined));
+    render();
+    const button = await screen.findByTestId('module-withdraw');
+    act(() => {
+      button.click();
+      button.click();
+    });
+    await waitFor(() => expect(withdrawModule).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(withdrawModule).toHaveBeenCalledTimes(1);
+  });
+
+  it('RC15: "Published." does not wait for the page’s refresh — and Publish stays off until the refreshed offer arrives', { timeout: 20_000 }, async () => {
+    let resolveRefresh: (v: unknown) => void = () => undefined;
+    getModuleDetail.mockResolvedValueOnce(detail()).mockReturnValue(new Promise((r) => { resolveRefresh = r; }));
+    publishModule.mockResolvedValue({ module_id: MODULE, state: 'scheduled', published_event_type: 'module.scheduled' });
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    await waitFor(() => expect(screen.getByTestId('module-detail-live')).toHaveTextContent(t('module.detail.published')));
+    expect(getModuleDetail).toHaveBeenCalledTimes(2); // the refresh is still running
+    expect(screen.getByTestId('module-publish-button')).toBeDisabled(); // a second press would only meet a 409
+    expect(screen.getByTestId('module-publish-button')).toHaveTextContent(t('module.detail.publish'));
+    resolveRefresh(detail({ current_state: 'scheduled', publication: publication('module.scheduled') }));
+    await waitFor(() => expect(screen.queryByTestId('module-publish')).toBeNull());
+  });
+
+  it('RC16: one registered member is "1 member", not "1 members"', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail({ current_state: 'active', lead_count: 1 }));
+    render();
+    expect(await screen.findByTestId('module-lead-warning')).toHaveTextContent(t('module.detail.leadWarningOne'));
+    expect(t('module.detail.leadWarningOne')).toBe(
+      '1 member registered interest in this offer. A corrected copy starts with all places free; that member can register again, and the partner may receive a second lead for the same member.',
+    );
+  });
+
+  it.each([
+    ['scheduled', true],
+    ['active', false],
+    ['archived', false],
+  ] as const)('RC16: "goes live at its opening time" only while the offer is scheduled (%s)', { timeout: 20_000 }, async (state, shown) => {
+    getModuleDetail.mockResolvedValue(detail({ current_state: state, publication: publication('module.scheduled') }));
+    render();
+    const line = await screen.findByTestId('module-detail-publication');
+    const key = shown ? 'module.detail.publishedScheduled' : 'module.detail.publishedActive';
+    expect(line.textContent).toBe(t(key, { name: 'Ravi', at: formatIst('2026-11-02T05:00:00.000Z') }));
+  });
+
+  it('RC18: the partner’s Hindi name is marked lang="hi"', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    render();
+    const line = await screen.findByTestId('module-detail-partner');
+    expect(line).toHaveTextContent(t('module.detail.partner', { en: 'HDFC' }));
+    const hi = within(line).getByText('एचडीएफसी');
+    expect(hi).toHaveAttribute('lang', 'hi');
+    expect(line).not.toHaveAttribute('lang'); // the English half stays English
+  });
+});
+
+describe('ModuleDetailPage — patch-diff review of round 2 (PT)', () => {
+  const renderCreated = (onCreatedShown = vi.fn()) =>
+    renderWithClient(
+      <ModuleDetailPage pariwarId={PARIWAR} moduleId={MODULE} created onCreatedShown={onCreatedShown} onBack={vi.fn()} onStartCorrectedCopy={vi.fn()} />,
+    );
+
+  it('PT2: a late first load does not take focus from where the admin has moved it — the draft is still announced', { timeout: 20_000 }, async () => {
+    let resolveDetail: (v: unknown) => void = () => undefined;
+    getModuleDetail.mockReturnValue(new Promise((r) => { resolveDetail = r; }));
+    const elsewhere = document.createElement('input');
+    document.body.appendChild(elsewhere);
+    try {
+      renderCreated();
+      elsewhere.focus();
+      resolveDetail(detail({ authored_by_viewer: true }));
+      await waitFor(() => expect(screen.getByTestId('module-detail-live')).toHaveTextContent(t('module.detail.created')));
+      expect(elsewhere).toHaveFocus();
+    } finally {
+      elsewhere.remove();
+    }
+  });
+
+  it.each([
+    ['another admin’s draft', { authored_by_viewer: false }],
+    ['an offer that is no longer a draft', { authored_by_viewer: true, current_state: 'scheduled' as const }],
+  ])('PT10: `?created=true` on %s announces nothing and moves no focus — the flag is still dropped', { timeout: 20_000 }, async (_l, over) => {
+    getModuleDetail.mockResolvedValue(detail(over));
+    const onCreatedShown = vi.fn();
+    renderCreated(onCreatedShown);
+    const live = await screen.findByTestId('module-detail-live');
+    await waitFor(() => expect(onCreatedShown).toHaveBeenCalledTimes(1));
+    expect(live).toBeEmptyDOMElement();
+    expect(screen.getByRole('heading', { level: 1 })).not.toHaveFocus();
+  });
+
+  it('PT3: an error from BEFORE the write does not re-enable Publish on the old state; only a later result does', { timeout: 20_000 }, async () => {
+    let resolveRefresh: (v: unknown) => void = () => undefined;
+    getModuleDetail
+      .mockResolvedValueOnce(detail())
+      .mockRejectedValueOnce(new ApiError(500, 'internal.error', 'down')) // a background refresh fails: error WITH data
+      .mockReturnValue(new Promise((r) => { resolveRefresh = r; })); // the post-write refresh is still running
+    publishModule.mockResolvedValue({ module_id: MODULE, state: 'scheduled', published_event_type: 'module.scheduled' });
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await screen.findByTestId('module-detail-refresh-error');
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    await waitFor(() => expect(screen.getByTestId('module-detail-live')).toHaveTextContent(t('module.detail.published')));
+    expect(screen.getByTestId('module-publish-button')).toBeDisabled();
+    resolveRefresh(detail({ current_state: 'scheduled' }));
+    await waitFor(() => expect(screen.queryByTestId('module-publish')).toBeNull());
+  });
+
+  it('PT3 / PU4: a refresh that FAILS after the write re-enables the buttons (the server is the judge of a second press)', { timeout: 20_000 }, async () => {
+    // The post-write refresh is rejected only once "Published." is on screen, through a deferred — never in the same tick as
+    // the write's result, so the outcome cannot depend on which millisecond each lands in (PU4).
+    let rejectRefresh: (e: unknown) => void = () => undefined;
+    getModuleDetail.mockResolvedValueOnce(detail()).mockReturnValue(new Promise((_r, j) => { rejectRefresh = j; }));
+    publishModule.mockResolvedValue({ module_id: MODULE, state: 'scheduled', published_event_type: 'module.scheduled' });
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    await waitFor(() => expect(screen.getByTestId('module-detail-live')).toHaveTextContent(t('module.detail.published')));
+    expect(screen.getByTestId('module-publish-button')).toBeDisabled(); // still waiting for the post-write result
+    rejectRefresh(new ApiError(500, 'internal.error', 'down'));
+    await screen.findByTestId('module-detail-refresh-error');
+    await waitFor(() => expect(screen.getByTestId('module-publish-button')).toBeEnabled());
+  });
+
+  it('PT4: once the code is verified, focus goes to the heading while the held write is retried', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    publishModule.mockRejectedValueOnce(new ApiError(403, 'auth.step_up_required', 'step up')).mockReturnValue(new Promise(() => undefined));
+    requestStepUp.mockResolvedValue({});
+    verifyStepUp.mockResolvedValue({});
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    await screen.findByTestId('module-step-up');
+    fireEvent.click(screen.getByText(/send/i, { selector: 'button' }));
+    fireEvent.change(await screen.findByTestId('module-step-up-code'), { target: { value: '123456' } });
+    screen.getByTestId('module-step-up-verify').focus();
+    fireEvent.click(screen.getByTestId('module-step-up-verify'));
+    await waitFor(() => expect(publishModule).toHaveBeenCalledTimes(2)); // the retry hangs
+    expect(screen.queryByTestId('module-step-up')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
   });
 });
 

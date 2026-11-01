@@ -81,3 +81,27 @@ describe('ScopePicker', () => {
     expect(screen.getByTestId('scope-chosen')).toHaveAttribute('aria-live', 'polite');
   });
 });
+
+describe('ScopePicker — code review round 2 (chunk C)', () => {
+  it('RC17: the truncation and reach notes describe the picker’s group', () => {
+    render(<ScopePicker options={{ ...OPTIONS, districts_truncated: true }} kind="district" values={[]} onChange={vi.fn()} />);
+    const group = screen.getByRole('group', { name: t('module.wizard.step.c') });
+    expect(group).toHaveAccessibleDescription(
+      [t('module.scope.truncated', { n: 2 }), t('module.audience.noDistrict'), t('module.audience.unlistedDistrict')].join(' '),
+    );
+  });
+
+  it('RC17: a state audience is described by the one note that applies to it', () => {
+    render(<ScopePicker options={OPTIONS} kind="state" values={[]} onChange={vi.fn()} />);
+    expect(screen.getByRole('group', { name: t('module.wizard.step.c') })).toHaveAccessibleDescription(t('module.audience.noDistrict'));
+  });
+
+  it('RC17: "No place matches the search." is a polite status that is mounted before it is needed', () => {
+    render(<Harness kind="district" />);
+    const status = screen.getByTestId('scope-no-match');
+    expect(status).toHaveAttribute('role', 'status');
+    expect(status).toBeEmptyDOMElement();
+    fireEvent.change(screen.getByTestId('scope-search'), { target: { value: 'zzz' } });
+    expect(status).toHaveTextContent(t('module.scope.noMatch'));
+  });
+});

@@ -98,3 +98,96 @@ describe('ModulesPage (AC8)', () => {
     expect(screen.getByRole('button', { name: 'Open Offer 2' })).toBeInTheDocument();
   });
 });
+
+describe('ModulesPage — code review round 2 (chunk C)', () => {
+  it('RC12: after "Load more", focus moves to the first new row and the new rows are announced', { timeout: 20_000 }, async () => {
+    listModules
+      .mockResolvedValueOnce({ items: [row(1), row(2)], next_cursor: 'CURSOR-1' })
+      .mockResolvedValueOnce({ items: [row(3), row(4)], next_cursor: null });
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    const more = await screen.findByTestId('modules-more');
+    more.focus();
+    fireEvent.click(more);
+    await waitFor(() => expect(screen.getByTestId(`module-open-${row(3).module_id}`)).toHaveFocus()); // the button unmounted
+    expect(screen.getByTestId('modules-status')).toHaveTextContent(t('module.list.moreShown', { n: 2 }));
+    expect(t('module.list.moreShown', { n: 2 })).toBe('2 more offers shown.');
+  });
+
+  it('RC12: one new row is "1 more offer shown."', { timeout: 20_000 }, async () => {
+    listModules
+      .mockResolvedValueOnce({ items: [row(1)], next_cursor: 'CURSOR-1' })
+      .mockResolvedValueOnce({ items: [row(2)], next_cursor: 'CURSOR-2' });
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    fireEvent.click(await screen.findByTestId('modules-more'));
+    await waitFor(() => expect(screen.getByTestId('modules-status')).toHaveTextContent(t('module.list.moreShownOne')));
+    expect(t('module.list.moreShownOne')).toBe('1 more offer shown.');
+  });
+
+  it('RC12: a failed next page keeps the rows and says so beside "Load more" — not the whole-list error', { timeout: 20_000 }, async () => {
+    listModules
+      .mockResolvedValueOnce({ items: [row(1), row(2)], next_cursor: 'CURSOR-1' })
+      .mockRejectedValueOnce(new ApiError(500, 'internal.error', 'down'));
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    fireEvent.click(await screen.findByTestId('modules-more'));
+    expect(await screen.findByTestId('modules-more-error')).toHaveTextContent(t('module.list.moreError'));
+    expect(screen.getByTestId('modules-more-error')).toHaveAttribute('role', 'alert');
+    expect(screen.queryByTestId('modules-error')).toBeNull();
+    expect(screen.getAllByText(/^Offer \d$/)).toHaveLength(2);
+    expect(screen.getByTestId('modules-more')).toBeEnabled(); // the admin can try again
+  });
+
+  it('RC13: an empty result under a state filter says "No offers in this state."', { timeout: 20_000 }, async () => {
+    listModules.mockImplementation((_p: string, o: { state?: string }) =>
+      Promise.resolve(o.state === undefined ? { items: [row(1)], next_cursor: null } : { items: [], next_cursor: null }),
+    );
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    await screen.findByText('Offer 1');
+    fireEvent.change(screen.getByTestId('modules-state-filter'), { target: { value: 'archived' } });
+    expect(await screen.findByTestId('modules-empty')).toHaveTextContent(t('module.list.emptyFiltered'));
+    expect(t('module.list.emptyFiltered')).toBe('No offers in this state.');
+  });
+});
+
+describe('ModulesPage — patch-diff review of round 2 (PT)', () => {
+  it('PT2: a page that arrives after the admin moved focus elsewhere does not take it back', { timeout: 20_000 }, async () => {
+    let resolveNext: (v: unknown) => void = () => undefined;
+    listModules
+      .mockResolvedValueOnce({ items: [row(1)], next_cursor: 'CURSOR-1' })
+      .mockReturnValueOnce(new Promise((r) => { resolveNext = r; }));
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    const more = await screen.findByTestId('modules-more');
+    more.focus();
+    fireEvent.click(more);
+    const filter = screen.getByTestId('modules-state-filter');
+    filter.focus(); // the admin moved on while the page loaded
+    resolveNext({ items: [row(2)], next_cursor: null });
+    await waitFor(() => expect(screen.getByTestId('modules-status')).toHaveTextContent(t('module.list.moreShownOne')));
+    expect(filter).toHaveFocus();
+  });
+
+  it('PT2: when "Load more" stays (more pages) and still holds focus, focus moves on to the first new row', { timeout: 20_000 }, async () => {
+    listModules
+      .mockResolvedValueOnce({ items: [row(1)], next_cursor: 'CURSOR-1' })
+      .mockResolvedValueOnce({ items: [row(2)], next_cursor: 'CURSOR-2' });
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    const more = await screen.findByTestId('modules-more');
+    more.focus();
+    fireEvent.click(more);
+    await waitFor(() => expect(screen.getByTestId(`module-open-${row(2).module_id}`)).toHaveFocus());
+    expect(screen.getByTestId('modules-more')).toBeInTheDocument(); // the button did not unmount — it started the action
+  });
+
+  it('PT9: an EMPTY last page says "No more offers." and moves focus to the page heading', { timeout: 20_000 }, async () => {
+    listModules
+      .mockResolvedValueOnce({ items: [row(1)], next_cursor: 'CURSOR-1' })
+      .mockResolvedValueOnce({ items: [], next_cursor: null });
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    const more = await screen.findByTestId('modules-more');
+    more.focus();
+    fireEvent.click(more);
+    await waitFor(() => expect(screen.getByTestId('modules-status')).toHaveTextContent(t('module.list.noMore')));
+    expect(screen.queryByTestId('modules-more')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
+    expect(t('module.list.noMore')).toBe('No more offers.');
+  });
+});

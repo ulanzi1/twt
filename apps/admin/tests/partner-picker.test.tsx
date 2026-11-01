@@ -72,6 +72,17 @@ describe('PartnerPicker', () => {
     );
   });
 
+  it('DN5: a name made only of characters the cleaning removes keeps Register disabled', { timeout: 20_000 }, async () => {
+    await openForm();
+    fireEvent.change(screen.getByTestId('partner-name-en'), { target: { value: String.fromCodePoint(0x200b, 0x00ad) } });
+    expect(screen.getByTestId('partner-save')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('partner-name-en'), { target: { value: 'LIC' } });
+    fireEvent.change(screen.getByTestId('partner-name-hi'), { target: { value: String.fromCodePoint(0x2060, 0xfeff) } });
+    expect(screen.getByTestId('partner-save')).toBeDisabled();
+    fireEvent.change(screen.getByTestId('partner-name-hi'), { target: { value: 'एलआईसी' } });
+    expect(screen.getByTestId('partner-save')).toBeEnabled();
+  });
+
   it('RP18: unchanged names keep the Idempotency-Key across a failed attempt; an EDITED name mints a new one', { timeout: 20_000 }, async () => {
     createModulePartner
       .mockRejectedValueOnce(new ApiError(502, 'internal.error', 'down'))

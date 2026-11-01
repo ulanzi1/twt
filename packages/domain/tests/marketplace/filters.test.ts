@@ -486,15 +486,17 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
   });
 
   // DN2 (BigDev: option 2): U+FE0F / U+FE0E are the emoji / text PRESENTATION selectors. They are default-ignorable too, but stay
-  // ALLOWED so a heart or a tick mark still works in a name or a description. The one residual look-alike is "LIC" + U+FE0F.
-  it('DN2: U+FE0F / U+FE0E stay ACCEPTED in every display schema (an emoji with a presentation selector)', () => {
+  // allowed RIGHT AFTER their symbol so a heart or a tick mark still works (`-436` narrowed DN2's "anywhere"; its S3 closed the
+  // "LIC" + U+FE0F look-alike — the DN6 tests below).
+  it('DN2: U+FE0F / U+FE0E right after a heart are ACCEPTED in every display schema', () => {
     for (const code of [0xfe0f, 0xfe0e]) {
       const heart = `Care ${cp(0x2764)}${cp(code)}`;
       expect(marketplace.moduleDisplayNameEnSchema.safeParse(heart).success).toBe(true);
       expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(heart).success).toBe(true);
       expect(marketplace.partnerDisplayNameEnSchema.safeParse(heart).success).toBe(true);
-      expect(marketplace.moduleDisplayNameHiSchema.safeParse(hi(cp(code))).success).toBe(true);
-      expect(marketplace.partnerDisplayNameHiSchema.safeParse(hi(cp(code))).success).toBe(true);
+      // (`-436`: the selector must follow the symbol — a Hindi value carries it after a heart, not between letters.)
+      expect(marketplace.moduleDisplayNameHiSchema.safeParse(`गृह ऋण ${cp(0x2764)}${cp(code)}`).success).toBe(true);
+      expect(marketplace.partnerDisplayNameHiSchema.safeParse(`गृह ऋण ${cp(0x2764)}${cp(code)}`).success).toBe(true);
     }
   });
 
@@ -672,6 +674,89 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
       expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(false);
       expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(false);
     }
+  });
+
+  // DN6 (`-436`, BigDev "1" read as DN6 1), narrowed by DN7 (`-437`): a presentation selector only right after a symbol with a
+  // text and an emoji form, or completing a keycap — never after a skin tone (the DN7 block). After a letter or a space it
+  // draws nothing — "LIC" + U+FE0F was a second "LIC" partner.
+  it.each([
+    ['after a letter', (sel: string) => `LIC${sel}`],
+    ['between two spaces (a hidden doubled space)', (sel: string) => `LIC ${sel} Housing`],
+    ['at the start', (sel: string) => `${sel}LIC`],
+    ['after a Devanagari letter', (sel: string) => `एलआईसी${sel}`],
+    // A keycap base with NO U+20E3 draws as the bare digit / sign (patch-diff review, round 2: "digit outside a keycap").
+    ['after a digit with no keycap mark', (sel: string) => `Plan 1${sel}`],
+    ['after a digit, mid-word', (sel: string) => `3${sel}M`],
+    ['after # with no keycap mark', (sel: string) => `LIC #${sel}`],
+  ])('DN6: U+FE0F / U+FE0E %s are refused in every display schema', (_l, build) => {
+    for (const sel of [cp(0xfe0f), cp(0xfe0e)]) {
+      const v = build(sel);
+      const hindi = /\p{Script=Devanagari}/u.test(v);
+      for (const [name, schema] of allSix()) {
+        if (hindi !== name.endsWith('Hi')) continue; // each value goes to the schemas of its own language
+        const r = schema.safeParse(v);
+        expect(r.success, `${name} ${JSON.stringify(v)}`).toBe(false);
+        expect(r.error?.issues[0]?.message, `${name} — refused for THIS rule`).toMatch(/emoji style character except right after its emoji/);
+      }
+    }
+  });
+
+  it('DN6 / DN7: a selector right after a symbol with a text and an emoji form, or completing a keycap, is accepted', () => {
+    const keycapOne = [0x31, 0xfe0f, 0x20e3].map(cp).join('');
+    const tick = `${cp(0x2714)}${cp(0xfe0f)}`;
+    for (const v of [`Care ${cp(0x2764)}${cp(0xfe0f)}`, `Done ${tick}`, `Plan ${keycapOne}`, `Text ${cp(0x2764)}${cp(0xfe0e)}`]) {
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(true);
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(true);
+    }
+    expect(marketplace.moduleDisplayNameEnSchema.safeParse(`Pride ${RAINBOW_FLAG}`).success).toBe(true);
+    // Keycaps on # and *, text symbols with an emoji selector, and ZWJ sequences whose selector follows a LATER element.
+    const keycap = (base: number): string => [base, 0xfe0f, 0x20e3].map(cp).join('');
+    const seq = (...cps: number[]): string => cps.map(cp).join('');
+    for (const v of [`Call ${keycap(0x23)}`, `Star ${keycap(0x2a)}`, `Brand ${seq(0x2122, 0xfe0f)}`, `Mark ${seq(0x00a9, 0xfe0f)}`]) {
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(v).success, JSON.stringify(v)).toBe(true);
+    }
+    const healthWorkerNeutral = seq(0x1f9d1, 0x200d, 0x2695, 0xfe0f);
+    const transFlag = seq(0x1f3f3, 0xfe0f, 0x200d, 0x26a7, 0xfe0f);
+    const walkingRight = seq(0x1f6b6, 0x200d, 0x27a1, 0xfe0f);
+    for (const v of [healthWorkerNeutral, transFlag, walkingRight]) {
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(`Cover ${v}`).success, JSON.stringify(v)).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(`बीमा ${v}`).success, JSON.stringify(v)).toBe(true);
+    }
+  });
+
+  // DN7 (`-437`, BigDev "DN7 1"): a selector only where it CHANGES the look. After an emoji that already draws as emoji, a
+  // skin tone or an unassigned code point it draws nothing — "LIC 😀" + U+FE0F would be a second "LIC 😀".
+  it.each([
+    ['after an emoji-default emoji', [0x1f600, 0xfe0f]],
+    ['after a skin-toned emoji', [0x1f44d, 0x1f3fd, 0xfe0f]],
+    ['after a letter + skin tone', [0x43, 0x1f3fd, 0xfe0f]],
+    ['after a skin tone at the start', [0x1f3fd, 0xfe0f]],
+    ['after an unassigned pictographic code point', [0x1fc00, 0xfe0f]],
+    ['a second selector after a keycap', [0x23, 0xfe0f, 0x20e3, 0xfe0f]],
+  ])('DN7: a selector %s is refused (it changes nothing a reader sees)', (_l, cps) => {
+    const r = marketplace.partnerDisplayNameEnSchema.safeParse(`LIC ${(cps as number[]).map(cp).join('')}`);
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toMatch(/emoji style character except right after its emoji/);
+  });
+
+  // `-437` item 2: the property set is EXACTLY the code points whose "X + U+FE0F" is a recommended emoji, and every one of them
+  // is accepted. `\p{RGI_Emoji}` needs the `v` flag (Node 20+), built at run time.
+  it('DN7: every code point whose "X + U+FE0F" is a recommended emoji is accepted — and only those are text-default symbols', () => {
+    const rgi = new RegExp('^\\p{RGI_Emoji}$', 'v');
+    const isTextDefault = (x: string): boolean => /\p{Emoji}/u.test(x) && !/\p{Emoji_Presentation}/u.test(x) && !/[0-9#*]/.test(x);
+    const recommended: number[] = [];
+    const textDefault: number[] = [];
+    for (let c = 0; c <= 0x1ffff; c += 1) {
+      if (c >= 0xd800 && c <= 0xdfff) continue;
+      const x = cp(c);
+      if (rgi.test(`${x}${cp(0xfe0f)}`)) recommended.push(c);
+      if (isTextDefault(x)) textDefault.push(c);
+    }
+    expect(recommended.length).toBeGreaterThan(200);
+    expect(textDefault).toEqual(recommended);
+    const refused = recommended.filter((c) => !marketplace.partnerDisplayNameEnSchema.safeParse(`Mark ${cp(c)}${cp(0xfe0f)}`).success);
+    expect(refused.map((c) => c.toString(16))).toEqual([]);
   });
 
   it('DN4: the joiner refusal names the character in words an admin can act on', () => {

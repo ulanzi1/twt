@@ -125,7 +125,11 @@ export function PartnerPicker({ pariwarId, value, onChange }: PartnerPickerProps
             <button
               type="button"
               className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-              disabled={create.isPending || nameEn.trim() === '' || nameHi.trim() === ''}
+              disabled={
+                create.isPending ||
+                normaliseDisplayText(nameEn, 'name').trim() === '' ||
+                normaliseDisplayText(nameHi, 'name').trim() === ''
+              }
               onClick={() => void onRegister()}
               data-testid="partner-save"
             >

@@ -224,6 +224,16 @@ describe('time, the request and the 422 mapping', () => {
     expect(r.name_hi).toBe('गृह ऋण');
   });
 
+  // DN5 (`-436` item 1, BigDev "1" read as DN5 1): the other invisible paste artefacts are cleaned too.
+  it('DN5: a tab → space; U+2028 / U+2029 / U+0085 → LF in a description, space in a name; soft hyphen, ZWSP, BOM, word joiner removed', () => {
+    const cp = (n: number): string => String.fromCodePoint(n);
+    const pasted = `LIC${cp(0x09)}Hou${cp(0x00ad)}sing${cp(0x2028)}Fi${cp(0x200b)}nance${cp(0x2029)}Pl${cp(0xfeff)}an${cp(0x0085)}Go${cp(0x2060)}ld`;
+    expect(normaliseDisplayText(pasted, 'description')).toBe('LIC Housing\nFinance\nPlan\nGold');
+    expect(normaliseDisplayText(pasted, 'name')).toBe('LIC Housing Finance Plan Gold');
+    // Removed BEFORE the collapse: a soft hyphen between two spaces cannot leave a doubled space in a name.
+    expect(normaliseDisplayText(`LIC ${cp(0x00ad)} Housing${cp(0x09)} ${cp(0x2028)}Plan`, 'name')).toBe('LIC Housing Plan');
+  });
+
   it('DN3: the wizard sends its DESCRIPTIONS cleaned too — other spaces → U+0020, NFC — and keeps their doubled spaces', () => {
     const cp = (n: number): string => String.fromCodePoint(n);
     const r = toAuthorRequest({
@@ -233,6 +243,14 @@ describe('time, the request and the 422 mapping', () => {
     });
     expect(r.description_en).toBe(`One.  Two.  Caf${cp(0x00e9)}`);
     expect(r.description_hi).toBe(`पहली।  दूसरी ${cp(0x092b)}${cp(0x093c)}ायदा`);
+  });
+
+  it('DN5: step (a) treats a value made only of characters the cleaning removes as EMPTY', () => {
+    const cp = (n: number): string => String.fromCodePoint(n);
+    expect(validateStep(step('a'), { ...full(), nameEn: `${cp(0x200b)}${cp(0x00ad)}` })).toBe(t('module.reason.nameEn'));
+    expect(validateStep(step('a'), { ...full(), nameHi: `${cp(0x00ad)}${cp(0x2060)}` })).toBe(t('module.reason.nameHi'));
+    expect(validateStep(step('a'), { ...full(), descriptionEn: `${cp(0x200b)}${cp(0xfeff)}` })).toBe(t('module.reason.descriptionEn'));
+    expect(validateStep(step('a'), { ...full(), descriptionHi: `${cp(0x2060)}${cp(0xfeff)}` })).toBe(t('module.reason.descriptionHi'));
   });
 
   it('step (a) judges length on the SENT text: NFC can lengthen a Hindi name, collapsing spaces can shorten a name', () => {

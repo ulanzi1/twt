@@ -194,13 +194,14 @@ export function validateStep(step: number, s: WizardState): string | null {
   switch (WIZARD_STEPS[step]) {
     case 'a': {
       if (s.partnerId === null) return t('module.reason.partner');
-      if (s.nameEn.trim() === '') return t('module.reason.nameEn');
-      if (s.nameHi.trim() === '') return t('module.reason.nameHi');
-      // Lengths are judged on the text that is SENT (NFC can lengthen it — a precomposed nukta letter becomes two code
-      // units; collapsing spaces shortens a name), the same string the server measures.
+      // Empty and length are judged on the text that is SENT: a value made only of characters the cleaning removes (a
+      // zero-width space, a soft hyphen) is empty (DN5).
+      if (sentLength(s.nameEn, 'name') === 0) return t('module.reason.nameEn');
+      if (sentLength(s.nameHi, 'name') === 0) return t('module.reason.nameHi');
+      // (NFC can lengthen the sent text — a precomposed nukta letter becomes two code units; collapsing shortens a name.)
       if (sentLength(s.nameEn, 'name') > 120 || sentLength(s.nameHi, 'name') > 120) return t('module.reason.nameTooLong');
-      if (s.descriptionEn.trim() === '') return t('module.reason.descriptionEn');
-      if (s.descriptionHi.trim() === '') return t('module.reason.descriptionHi');
+      if (sentLength(s.descriptionEn, 'description') === 0) return t('module.reason.descriptionEn');
+      if (sentLength(s.descriptionHi, 'description') === 0) return t('module.reason.descriptionHi');
       if (sentLength(s.descriptionEn, 'description') > 2000 || sentLength(s.descriptionHi, 'description') > 2000) {
         return t('module.reason.descriptionTooLong');
       }
@@ -255,13 +256,18 @@ export function firstInvalidStep(s: WizardState): number | null {
  * every space separator but U+0020 (a no-break space from a PDF or word-processor paste, a thin space, …) → U+0020; Unicode
  * NFC; and in a NAME, a run of spaces → one. The server REFUSES each of these rather than rewriting them, so this is the
  * only place the admin's text is changed, and a member's card shows the same thing (HTML collapses a run of spaces).
- * ⚠ ONLY these: any other character the server refuses (a tab, a soft hyphen, a zero-width space, U+2028, …) is sent as
- * typed and refused with the server's reason — `-435` item 2 cleans exactly the DN3 look-alikes.
+ * ALSO (DN5, `-436` item 1) the other invisible paste artefacts: a tab → a space; U+2028 / U+2029 / U+0085 → a line feed in
+ * a description, a space in a name; U+00AD (soft hyphen), U+200B (zero-width space), U+FEFF (BOM) and U+2060 (word joiner)
+ * removed — all before the collapse, so a removed character cannot leave a doubled space. Any OTHER character the server
+ * refuses is sent as typed and refused with the server's reason.
  */
 export function normaliseDisplayText(v: string, kind: 'name' | 'description'): string {
   const text = v
     .replace(/\r\n?/g, '\n')
+    .replace(/[\u2028\u2029\u0085]/g, kind === 'description' ? '\n' : ' ')
+    .replace(/\t/g, ' ')
     .replace(/(?! )\p{Zs}/gu, ' ')
+    .replace(/[\u00AD\u200B\uFEFF\u2060]/g, '')
     .normalize('NFC');
   return kind === 'name' ? text.replace(/ {2,}/g, ' ') : text;
 }

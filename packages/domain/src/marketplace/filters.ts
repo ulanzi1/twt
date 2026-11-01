@@ -199,8 +199,10 @@ export const moduleDescriptionSchema = storableText(z.string().trim().min(1).max
 //   - ⛔ (DN2, BigDev: option 2) EVERY other default-ignorable code point — Unicode's own invisible set, wider than Cf: the
 //     combining grapheme joiner U+034F, the variation selectors U+FE00–FE0D and U+E0100–E01EF, the Mongolian free variation
 //     selectors U+180B–180D, U+17B4 / U+17B5, … — and the Braille blank U+2800. EXCEPT U+FE0E / U+FE0F (the text / emoji
-//     PRESENTATION selectors), which stay allowed so a heart or a tick mark still works; the one residual look-alike is
-//     "LIC" + U+FE0F. (The ground-inspection note rule made the same move: a fix-diff review found `\p{Cf}` insufficient.)
+//     PRESENTATION selectors) only where they change the look: right after a symbol with a text AND an emoji form, or
+//     completing a keycap — so a heart, a tick mark or a keycap still works (DN6 `-436`, narrowed by DN7 `-437`: anywhere
+//     else a selector draws nothing, and "LIC" + U+FE0F was a second "LIC" partner). (The ground-inspection note rule made
+//     the same move: `\p{Cf}` was insufficient.)
 //   - ⛔ the line / paragraph separators U+2028 / U+2029 (the C0 / C1 rule above never covered them);
 //   - ⛔ the four Hangul fillers U+115F, U+1160, U+3164, U+FFA0 — LETTERS (Lo) that draw nothing, so they satisfied the
 //     letter-or-digit rule below while the value looked blank (RP1);
@@ -246,6 +248,8 @@ const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 const DEVANAGARI_LETTER = /(?=\p{Script=Devanagari})\p{L}/u;
 const PICTOGRAPHIC = /\p{Extended_Pictographic}/u;
 const EMOJI_MODIFIER = /\p{Emoji_Modifier}/u;
+const EMOJI = /\p{Emoji}/u;
+const EMOJI_PRESENTATION = /\p{Emoji_Presentation}/u;
 
 /**
  * Where ZWNJ / ZWJ may appear: `any` (the `*_hi` schemas — conjunct control), `between-emoji` (the English MODULE texts — a
@@ -259,6 +263,26 @@ interface DisplayTextRules {
   joiners: JoinerRule;
   /** A NAME refuses two spaces in a row (DN3); a description may keep them. */
   refuseDoubledSpace: boolean;
+}
+
+/** A keycap sequence's base: 0–9, `#`, `*` (base + U+FE0F + U+20E3). */
+function isKeycapBase(ch: string | undefined): boolean {
+  const c = ch?.codePointAt(0) ?? -1;
+  return (c >= 0x30 && c <= 0x39) || c === 0x23 || c === 0x2a;
+}
+
+/**
+ * True iff the presentation selector at `chars[i]` CHANGES how a symbol looks (DN7, `-437`): it follows a symbol that has both
+ * a text and an emoji form — `\p{Emoji}` but NOT `\p{Emoji_Presentation}` (❤, ✔, ™, ©, ⚕, ♀, ➡ …; exactly the code points
+ * whose "X + U+FE0F" is a recommended emoji) — or completes a keycap: a base 0–9 # * FOLLOWED by U+20E3. After a letter, a
+ * digit outside a keycap, a space, an emoji that already draws as emoji, a skin tone or an unassigned code point it draws
+ * nothing, so "LIC 😀" + U+FE0F would be a second "LIC 😀".
+ */
+function selectorStylesSymbol(chars: readonly string[], i: number): boolean {
+  const prev = chars[i - 1];
+  if (prev === undefined) return false;
+  if (isKeycapBase(prev)) return chars[i + 1]?.codePointAt(0) === 0x20e3;
+  return EMOJI.test(prev) && !EMOJI_PRESENTATION.test(prev);
 }
 
 /** True iff the ZWJ at `chars[i]` joins two emoji: a pictograph before it (past U+FE0F / skin tones) and one after it. */
@@ -287,8 +311,14 @@ function displayTextRefusal(raw: string, o: DisplayTextRules): string | null {
       if (!allowed) return 'must not contain an invisible joining character (it is usually copied in with pasted text)';
       continue;
     }
-    // The text / emoji PRESENTATION selectors are default-ignorable too, but a heart or a tick mark needs them (DN2, option 2).
-    if (c === 0xfe0e || c === 0xfe0f) continue;
+    // The text / emoji PRESENTATION selectors are default-ignorable too, but a heart, a tick mark or a keycap needs one right
+    // after its symbol (DN2; DN6 `-436`; DN7 `-437`). Anywhere else a selector draws nothing — "LIC" + U+FE0F would be a
+    // second "LIC".
+    if (c === 0xfe0e || c === 0xfe0f) {
+      if (selectorStylesSymbol(chars, i)) continue;
+      // The message `-437` item 3 records (round 2's wording).
+      return 'must not contain an emoji style character except right after its emoji (it is usually copied in with pasted text)';
+    }
     if (FORMAT_CHARACTER.test(ch)) return 'must not contain an invisible or text-direction character';
     if (LINE_OR_PARAGRAPH_SEPARATOR.test(ch)) return 'must not contain a line or paragraph separator';
     if (c !== 0x20 && SPACE_SEPARATOR.test(ch)) return 'must use ordinary spaces only (not a no-break or other special space)';

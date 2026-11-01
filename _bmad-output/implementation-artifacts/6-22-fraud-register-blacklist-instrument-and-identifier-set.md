@@ -1278,11 +1278,11 @@ hand).**
   `/p/$pariwarId/fraud-investigations` work-list route + nav link; `closedClaimStateLabel` gains `closedMemberAlive` (WINS) at
   all four call sites; copy in each module's `i18n-en.ts`. Tests `apps/admin/tests/fraud-investigation.test.tsx` 9; the admin
   suite 1741 green before them; `pnpm microcopy:check` green; admin `tsc` + eslint clean.
-  ⚠ **The real-browser pass is UN-ATTESTED** ([[feedback_record_unattested_no_backfill]]): the ONE probe (a static page on
-  `127.0.0.1:5199`, served and fetched by `curl`) could not run — the Chrome extension answered *"Browser extension is not
-  connected"* and `list_connected_browsers` returned ⛔ browser. Nothing was faked; roster Row 47 leg (e) carries it
-  (BigDev by hand, or a later session with a connected browser). The work-list view is ⛔ component-rendered (it needs the
-  router); its scope is proven over HTTP.
+  ⚠ The FIRST probe found ⛔ browser (*"Browser extension is not connected"*, ⛔ browser listed) and the pass was recorded
+  un-attested; BigDev then connected the browser (*"browser connected now"*) and the probe loaded. ✅ **The real-browser pass
+  RAN, 2026-11-01** (the [[project_admin_browser_pass_launcher]] recipe — a throwaway launcher on the story DB :5451, admin Vite
+  :3001, a cookie helper; the launcher file deleted afterwards): the helpline operator found the member (Member ID), confirmed the read-back, met the empty-note refusal in words, flagged the claim (the row → *"Flagged — waiting for a District Admin"*, the status line announced); a VERIFIER opened the console's investigation — the flag shown, its note WITHHELD, ⛔ form; the District Admin opened the work-list (the claim listed), opened it into the console, read the operator's note, chose innocent + video call + a note, met the step-up HOLD (*"Waiting to save: Record the finding"*), sent and verified the code — the held write re-ran: the innocent step shown, *"The finding is recorded and the claim is closed"*, *"No other claim keeps this member's death recorded"*; the DB held EXACTLY one finding row, one found step and `claim.closed` (`fraud_finding_innocent`) — ⛔ double write; the operator's helpline then read the claim *"Closed — A finding is recorded"*. ⚠ ⛔ reached in the browser: the *"Closed — the member was found alive"* LABEL (it renders only in the multi-claim pickers / refusal lists, which a one-claim member does not populate) — proven by the component test and the API leg (`closed_member_alive: true`). The work-list view is ⛔ component-rendered (it
+  needs the router); its scope is proven over HTTP.
 
 ### File List
 

@@ -44,6 +44,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   not connected"* and ⛔ browser was listed; ⛔ pass was run and ⛔ result is claimed. Proven instead: the component tests (9) and the
   HTTP spec (11). Owner BigDev (by hand) or a later session with a connected browser; trigger: roster Row 47 leg (e) — before the
   first production investigation step.
+  - *Appended 2026-11-01 (the same session, after BigDev connected the browser):* ✅ **Closed by the 6.22 real-browser pass** —
+    flag → verifier's withheld view → work-list → finding through the step-up hold → closed; the found-alive LABEL itself was
+    ⛔ reached in the browser (one-claim member) and stays proven by the component + API tests. Story 6.22's Completion Notes
+    (Task 6) hold the walk-through.
 
 ---
 

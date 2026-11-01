@@ -15,7 +15,7 @@ every finding. The v1.3 pass re-traced every G fact at `36b489c9`: the only reli
 re-check at Task 0.1.
 Re-locate by FUNCTION, never by line.
 
-STATUS: review (2026-11-01 — v1.11; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.11 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
+STATUS: review (2026-11-01 — v1.12; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.12 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
 carry FIVE real asks (QE3, QE6, QE7, QE9, QE17); BigDev answers them at Task 0.2 and the author-commit lands ALONE at
 Task 0.3 BEFORE any code** ([[feedback_governance_commits_precede_implementation]]). If an ASK is answered with a
 non-recommended option, Task 0.3 rewrites the dependent ACs / Tasks / Invariants first (the map is in Task 0.3).
@@ -33,6 +33,7 @@ records.** Round 2 reviews the committed production slice next.
 `-433` QE12 and ADR-0044 D3 / D4 in part.**
 ⭐ **v1.11 (2026-11-01): code review round 2, chunk A — decision `2026-11-01-435` (`ac1ddad3`, DN3 + DN4), code `497c69e4`;
 DN5 / DN6 open (from the patch-diff review). Chunks B and C of round 2 are next.**
+⭐ **v1.12 (2026-11-01): DN5 / DN6 / DN7 resolved — decisions `-436` (`a5b23c89`) and `-437` (`60dbcf00`), code `77ea3906`.**
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 the G / QE prose and historical Change Log rows) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In the Names table, Policy meaning, ACs, Invariants,
@@ -66,7 +67,7 @@ Story 6.32 only" — it is NOT a standing rule; a merge-order departure needs it
   **`2026-11-01m`** (relabelled `c` → `g` in v1.2, `g` → `m` in v1.3), **`2026-11-01n`** (v1.4), **`2026-11-01o`**
   (v1.5 — the Task 0.2 answers), **`2026-11-01p`** (v1.6 — the author-commit), **`2026-11-01q`** (v1.7 — Task 0.1 re-grep +
   Task 0.4, the `-433` records), **`2026-11-01r`** (v1.8 — dev-story complete, row → review), **`2026-11-01s`** (v1.9 —
-  code review round 1 committed; `s` re-grepped free on every ref and worktree), **`2026-11-01t`** (v1.10 — `-434`) and **`2026-11-01u`** (v1.11 — round 2 chunk A);
+  code review round 1 committed; `s` re-grepped free on every ref and worktree), **`2026-11-01t`** (v1.10 — `-434`), **`2026-11-01u`** (v1.11 — round 2 chunk A) and **`2026-11-01v`** (v1.12 — DN5–DN7);
   re-grep and relabel again at landing if needed.
 - Roster: highest Row 45 (14-3 and 6-39 both plan 46). This story adds NO row (QE19); it appends a dated note to Row 26
   (QE7 (A) only; QE19, Task 0.4).
@@ -1514,11 +1515,55 @@ test passes (6). NOT run: the full `pnpm ci:local` gate (37 jobs) and a real-bro
 - [x] [Review][Patch] **PQ7 — `toAuthorRequest`'s description wiring was untested (LOW — auditor)** — a test sends NBSP / NFD / precomposed nukta descriptions and checks doubled spaces are kept
 - [x] [Review][Patch] **PQ8 — 9 of the 16 refused space separators were tested (LOW — auditor)** — all 16, plus a guard that the list equals every `Zs` but U+0020
 - [x] [Review][Patch] **PQ9 — The NFC refusal said "retype or paste it again", which reproduces the same text (LOW — blind)** — it now says the admin console converts text and another caller must normalise first
-- [ ] [Review][Decision] **DN5 — Should the admin client also clean the OTHER paste artefacts the server refuses? (LOW — blind+edge)** — a tab (copying two spreadsheet cells into an `<input>` keeps it), U+00AD soft hyphen and U+2028 (Word / PDF pastes), U+200B, U+FEFF, U+0085 are sent unchanged and refused (now with the server's reason, PQ2). `-435` item 2 cleans exactly the DN3 set, so cleaning more departs from it. Options: (1, recommended) clean them too — tab → space, U+2028 / U+2029 / U+0085 → LF in a description and a space in a name, drop U+00AD / U+200B / U+FEFF / U+2060 — as a new entry superseding `-435` item 2; cost: the client removes characters the admin pasted (all invisible). (2) leave it; cost: an admin meets a 422 for a character they cannot see, now with a reason that names it. Not routed (§0: a validation rule).
-- [ ] [Review][Decision] **DN6 — The emoji allowances are broader than "emoji" (LOW — blind+edge)** — (a) `\p{Extended_Pictographic}` includes ©, ®, ™, ‼ and unassigned code points, so "©" + ZWJ + "™" passes an English module text (executed); (b) U+FE0F is allowed anywhere, so "LIC" + U+FE0F stays a second "LIC" partner (`-434`'s recorded residual) and "LIC" + space + U+FE0F + space + "Housing" looks like a doubled space yet passes. Options: (1, recommended) allow U+FE0F only right after a pictographic character or a keycap base (0–9, #, *), in every schema; keep the ZWJ rule as `-435` has it and record (a) as a residual (module texts carry no unique index); cost: a stray U+FE0F after a letter is refused. (2) also require each ZWJ to sit inside a recognised emoji (`Intl.Segmenter` + `\p{RGI_Emoji}`); cost: an emoji newer than the server's Unicode data is refused until Node updates. (3) record both as residuals; cost: the partner-name look-alike stays. Not routed (§0). A change is a new entry superseding `-434` / `-435` in part.
+- [x] [Review][Patch] **DN5 — Should the admin client also clean the OTHER paste artefacts the server refuses? (LOW — blind+edge) — RESOLVED by BigDev (verbatim: "1", given to the DN5 / DN6 menu and read by the session as DN5 1, DN6 1 — stated to BigDev and in the entry): Decision `2026-11-01-436` (`a5b23c89`), built in `77ea3906`** — a tab (copying two spreadsheet cells into an `<input>` keeps it), U+00AD soft hyphen and U+2028 (Word / PDF pastes), U+200B, U+FEFF, U+0085 are sent unchanged and refused (now with the server's reason, PQ2). `-435` item 2 cleans exactly the DN3 set, so cleaning more departs from it. Options: (1, recommended) clean them too — tab → space, U+2028 / U+2029 / U+0085 → LF in a description and a space in a name, drop U+00AD / U+200B / U+FEFF / U+2060 — as a new entry superseding `-435` item 2; cost: the client removes characters the admin pasted (all invisible). (2) leave it; cost: an admin meets a 422 for a character they cannot see, now with a reason that names it. Not routed (§0: a validation rule).
+- [x] [Review][Patch] **DN6 — The emoji allowances are broader than "emoji" (LOW — blind+edge) — RESOLVED as option 1 by the same "1" (`-436`; its flagged reading extends the rule to U+FE0E), then NARROWED by DN7 (`-437`, BigDev "DN7 1"); built in `77ea3906`** — (a) `\p{Extended_Pictographic}` includes ©, ®, ™, ‼ and unassigned code points, so "©" + ZWJ + "™" passes an English module text (executed); (b) U+FE0F is allowed anywhere, so "LIC" + U+FE0F stays a second "LIC" partner (`-434`'s recorded residual) and "LIC" + space + U+FE0F + space + "Housing" looks like a doubled space yet passes. Options: (1, recommended) allow U+FE0F only right after a pictographic character or a keycap base (0–9, #, *), in every schema; keep the ZWJ rule as `-435` has it and record (a) as a residual (module texts carry no unique index); cost: a stray U+FE0F after a letter is refused. (2) also require each ZWJ to sit inside a recognised emoji (`Intl.Segmenter` + `\p{RGI_Emoji}`); cost: an emoji newer than the server's Unicode data is refused until Node updates. (3) record both as residuals; cost: the partner-name look-alike stays. Not routed (§0). A change is a new entry superseding `-434` / `-435` in part.
 - [x] [Review][Defer] **RD7 — The display-text rules have no database backstop (LOW — auditor, family 5)** — deferred, recorded in `deferred-work.md` (owner none yet; re-trigger: a partner writer that skips `parsePartnerDisplayNames`, or the go-live review).
 
 Dismissed (4): U+2800 passing the doubled-space rule (it is refused outright — `DISPLAY_REFUSED_FORMAT_CHARS`; the blind layer could not see that set); the tone hash built from raw text (`moduleToneContentHash` runs on the server over the STORED module, `handlers.ts` publish); other assertions on the old joiner message (none outside build output); a U+FE0E text-presentation heart in a ZWJ sequence and the tag-character flags being refused (not recommended emoji sequences; the flags are `-435`'s recorded residual).
+
+#### Round 2 — DN5 / DN6 / DN7 built, and their patch-diff reviews (2026-11-01 — BigDev: *"1"*, then *"apply all patches"*, then *"DN7 1"*)
+
+Order of commits: decision `-436` (`a5b23c89`) ALONE → the first build reviewed (uncommitted) → decision `-437` (`60dbcf00`) ALONE → code
+`77ea3906` (DN5 + DN6 as narrowed by DN7, with the review fixes below). BigDev's later instruction for this step, verbatim: *"run adversarial
+review on patches applied if you think another round will find anything high. If there were any finding apply it, then verify in browser and
+after that if any thing pending complete it, if not open pr."*
+
+- **DN5 (`-436` item 1)** — `normaliseDisplayText` also: tab → space; U+2028 / U+2029 / U+0085 → LF (description) or space (name); U+00AD,
+  U+200B, U+FEFF, U+2060 removed — before NFC and the collapse. Step (a) and the partner picker's Register button judge EMPTINESS on the
+  cleaned text (the patch-diff re-review: an invisible-only value passed the client and met a server 422).
+- **DN6 + DN7 (`-436` item 2, narrowed by `-437`)** — `selectorStylesSymbol`: U+FE0F / U+FE0E only right after a code point that is
+  `\p{Emoji}` and NOT `\p{Emoji_Presentation}` (not a keycap base), or after a keycap base with U+20E3 following. The message is the one
+  `-437` item 3 records ("an emoji style character except right after its emoji") — an interim wording was put back to it (PS3).
+
+Patch-diff reviews of this step (three passes: Blind; Edge + Auditor; then a re-review of each fixed build, read-only):
+- [x] [Review][Patch] **PS1 — A selector after a digit, `#` or `*` with NO U+20E3 was accepted, so "Plan 1" + U+FE0F was a second "Plan 1" — it broke `-436` Consequence 2 (HIGH — blind+edge+auditor, executed)** — the keycap branch requires U+20E3; refused vectors added.
+- [x] [Review][Patch] **PS2 — The refusal tests did not assert the REASON; positives lacked #️⃣ / *️⃣ / ™️ / ©️ and ZWJ sequences whose selector follows a later element (LOW — blind)** — both added.
+- [x] [Review][Patch] **PS3 — The interim refusal message did not match `-437` item 3 (MED — re-review, governance)** — the code uses the recorded wording; the tests match it.
+- [x] [Review][Patch] **PS4 — An invisible-only value passed the client's empty check (LOW — re-review, executed)** — emptiness on the cleaned text, tested for all four wizard texts and both partner names.
+- [x] [Review][Patch] **PS5 — A stale DN2 test title / comment still called "LIC" + U+FE0F a residual, and the DN6 comment still allowed a skin tone (LOW)** — reworded to cite `-436` S3 and `-437`.
+- [x] [Review][Decision → resolved] **DN7 — A selector after an emoji that already draws as emoji (😀), after a skin tone, or after an unassigned code point draws nothing yet passed (MED — edge+auditor)** — BigDev: *"DN7 1"* → Decision `2026-11-01-437`.
+
+Recorded residual (accepted, not a defect): a TEXT-default symbol + U+FE0F + skin tone ("☝" + U+FE0F + a skin tone) is accepted — it complies
+with `-437` item 1, is not a recommended emoji, and some renderers may draw it like the toned emoji. Module texts carry no unique index; a
+partner name with it would differ from one without.
+
+Dismissed (5): a line feed left in a NAME by the client (the name fields are `<input>`, which strip line breaks — unreachable); the client not
+removing a stranded selector, and other artefacts (U+000B, LRM / RLM, …) — `-436` "Not covered" (the server's reason is shown); a `g`-flag
+`lastIndex` hazard (no regex here has `g` or `y`); a U+FE0E text heart inside a ZWJ sequence (not a recommended sequence).
+
+Evidence:
+- RED: the DN6 refusals failed against `497c69e4`'s rules; the DN7 refusals (😀 / 👍🏽 / unassigned + U+FE0F) failed against the DN6
+  build; the DN5 cleaning test against the CRLF-only cleaner; each empty-check test against a raw `.trim()`.
+- Mutants: the keycap U+20E3 requirement, the skin-tone branch, the old "selector anywhere", "not Emoji_Presentation" dropped — each
+  caught; the re-review's harness ran 12 mutants of `selectorStylesSymbol`, all caught.
+- Unicode data (re-review, executed): every fully- / minimally-qualified and component entry of `emoji-test.txt` 16.0 and 17.0, inside
+  English and Hindi values in all six schemas — none refused by the selector rule; the only refusals are the tag flags and ZWJ in the
+  English partner name (older rules). Of Unicode 17's 742 standard variation sequences, 328 are refused: 24 digit / # / * + selector
+  without U+20E3 (`-436` Consequence 2) and the 152 emoji-default symbols with either selector (`-437` item 1 and "Not covered"). The
+  207-code-point equality of `-437` item 2 holds over U+0000–U+10FFFF.
+- Verified at `77ea3906` on `twt-12-2-pg` (:5451): `tsc --noEmit` 0 (domain, admin, API); ESLint 0 on changed files; the domain
+  marketplace unit + integration + policy sets 624; the whole admin suite 1,661; the API admin-module spec + errors unit 54; jobs
+  `module-activation` 6. NOT run yet: `pnpm ci:local`, the real-browser pass.
 
 ## Dev Notes
 
@@ -1839,6 +1884,7 @@ Modified:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.12 | DN5 + DN6 (BigDev *"1"*, read as both option 1 — Decision `2026-11-01-436`, `a5b23c89`) and DN7 (*"DN7 1"* — Decision `2026-11-01-437`, `60dbcf00`), each committed ALONE before the code `77ea3906`; three patch-diff review passes (PS1 HIGH keycap hole fixed, PS2–PS5); a residual recorded (text symbol + U+FE0F + skin tone). ADR-0044 fourth dated line. Not run: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01v`. Not pushed. |
 | 2026-11-01 | v1.11 | Code review round 2, chunk A (`bmad-code-review 12.2`): 16 raw → 13 distinct — DN3 + DN4 (BigDev: *"DN3 1, DN4 1"* — Decision `2026-11-01-435`, committed ALONE as `ac1ddad3`), RP36–RP41, 5 dismissed; *"apply all patches"* → code `497c69e4` after a patch-diff review (28 raw → 16: PQ1–PQ9 fixed, DN5 / DN6 open, RD7 deferred, 4 dismissed). ADR-0044 gets a third dated line (`-435`). `deferred-work.md`: the R3D1 line (RP36), RD7. Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01u`. Not pushed. |
 | 2026-11-01 | v1.10 | BigDev: *"Write the QE12 narrowing into -433 and ADR-0044"* — author-commit `2026-11-01-434` committed ALONE as `e6f30675` (after the code it records, `465a2ac8`): DN1 + DN2 + RP1's display-text rules; amends `-433` QE12 (not edited in place) and ADR-0044 D3 / D4 in part (dated line + Changelog row); RPD1 not triggered. QE12's two dated pointers, the chunk A "Open after this round" line and the Completion Note now cite `-434`. Its "Not covered" names round 2's visible look-alike finding (under triage). Row stays `review`; ledger `2026-11-01t`. Not pushed. |
 | 2026-11-01 | v1.9 | Code review round 1 COMMITTED (`bmad-code-review 12.2`; BigDev: *"1"* — commit round 1, then round 2): code `465a2ac8` (DN1, DN2, RP1–RP35 with RP7 reverted by PP1, PP1–PP4; 30 files, two new admin test files). Records: the three chunk sections and the patch-diff review (DN1–DN2 resolved by BigDev, RP1–RP35, PP1–PP5, deferrals RD1–RD6), QE12's dated WIDENED / NARROWED pointers, `deferred-work.md`, `epics.md` (RD4 / RD5 under 12.6 / 12.3), roster Row 26 (`0195`). The QE12 narrowing is still in NO governance document (`-433`, ADR-0044 say "allowed"). Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01s`. Not pushed. |

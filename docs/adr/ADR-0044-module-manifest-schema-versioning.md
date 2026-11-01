@@ -76,6 +76,11 @@ the grammars growing additively inside `version: 1` and every breaking change ta
    part):* the display rules ALSO refuse a value that is not NFC, every space separator but U+0020, and (in a name) two spaces
    in a row; a ZWJ joining two emoji is allowed in the English MODULE texts (the English partner name stays strict). Still
    write-only, still before anything was stored — RPD1's re-trigger is NOT met. The two lines above stay true for their periods.
+   ⭐ *Amended in part 2026-11-01 by `2026-11-01-436` and `2026-11-01-437` (Story 12.2 code review round 2, DN5–DN7):* an
+   emoji presentation selector (U+FE0F / U+FE0E) is allowed only right after a symbol with both a text and an emoji form
+   (`\p{Emoji}`, not `\p{Emoji_Presentation}`) or completing a keycap — `-434`'s "anywhere" exception is narrowed and its
+   "LIC" + U+FE0F residual closed. (The admin client's extra cleaning, `-436` item 1, is not a schema rule.) Still write-only and
+   before anything was stored — RPD1's re-trigger is NOT met.
 5. **Where the rules live.** The DB enforces only six named CHECKs (the window, positive capacity, the capacity/places
    pair and range, the archive-reason pair, the v1 pin). Every other content rule is validated once, at write, by
    `marketplace.parseModuleManifest`, and the genesis payload schema reuses the same field schemas.
@@ -154,3 +159,4 @@ the grammars growing additively inside `version: 1` and every breaking change ta
 | 2026-11-01 | (⛔ flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-433` (Story 12.2 QE20, A4): dated lines at D2, D3 / D4, D5 (both sentences), Alternatives (revise event; role / cohort) and Consequences (`commission_terms`) |
 | 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-434` (Story 12.2 code review DN1 + DN2, A2): a second dated line at D3 / D4 — QE12's display rules tightened (ZWJ / ZWNJ `*_hi` only; every other invisible code point refused except U+FE0E / U+FE0F) |
 | 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-435` (Story 12.2 code review DN3 + DN4): a third dated line at D3 / D4 — NFC, U+0020 the only space, no doubled space in a name; ZWJ between two emoji in the English module texts |
+| 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commits `2026-11-01-436` / `-437` (Story 12.2 code review DN6 + DN7): a fourth dated line at D3 / D4 — a presentation selector only where it changes the look |

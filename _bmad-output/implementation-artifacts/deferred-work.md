@@ -4,6 +4,44 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 6-22-fraud-register-blacklist-instrument-and-identifier-set.md — Task 0.5 (2026-11-01)
+
+> Decision `2026-11-01-438` (author-commit). The routing note `trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md`
+> is WRITTEN and ⛔ SENT — every Q below is open, owner the Panel, trigger its ruling. Story 6.22's DL16 closures (6.38, 6.20, 6.23a,
+> 6.23b EA10, 6.36 W2 / NE9, 6.21, 12.1 C4, PM1) are written as dated lines at the story's close (Task 7), ⛔ here.
+
+- **Q1 (PQ1) — a member found ALIVE but GUILTY keeps every death lock and a frozen account** [`-438` item 6 — a DECLARED narrowing of
+  `-423` Q1 (b) / `-424` Q2 (a); `death-report.ts` `isDeathReportStanding` unchanged; `member/overlay.ts` the sticky freeze] — built B
+  (lift on innocence only), suggested B. ⚠ A member WRONGLY found guilty stays locked for ever (⛔ appeal against a finding, ⛔ second
+  finding on that claim) — asked inside Q1. The 6.38 helpdesk sentence (*"only a finding that the member is alive lifts it"*) changes
+  with the ruling. Carries `-147` cl. 3's re-examination (`-438`). ⚠ GO-LIVE condition for the guilty arm. Trigger: Q1's ruling.
+- **Q2 (PQ2) — the nominee of a guilty member: banned automatically or only on a finding of their own** — built neither; suggested B.
+  Lands in row `6-22b`. Trigger: Q2's ruling.
+- **Q3–Q6 (PQ3–PQ6) — may a mobile number bar; what a barred joiner is told; who is "the State Trustee" who imposes; does "Trust-wide"
+  end other memberships** — built nothing; suggested C, B, A, A. ⚠ They gate row `6-22d`'s BUILD. Trigger: their rulings.
+- **Q7 (PQ7) — an open fraud flag gates nothing; a flagged claim can be approved and paid before a finding** [`assertClaimApprovable`
+  has ⛔ flag check] — built C, suggested B (the `-263` FQ10 warning shape). ⚠ GO-LIVE condition for the flag. Trigger: Q7's ruling.
+- **Q8 (PQ8) — a claim closed because the member is alive: ⛔ notice, ⛔ appeal, re-filing allowed; staff see *"Closed — the member was
+  found alive"*** — built (a) B, (b) B, (c) A; suggested (a) B, (b) B, (c) B. As built the same filer can file again at once and re-lock
+  the released member. ⚠ GO-LIVE condition for the close. Trigger: Q8's ruling.
+- **Q9 (PQ9) — the proof of life a finding requires** — built `in_person | video_call | ground_inspection` (`FRAUD_ALIVE_CONFIRMATIONS`),
+  suggested `in_person | video_call`. ⚠ GO-LIVE condition for the finding. Trigger: Q9's ruling.
+- **Row `6-22b`'s counsel question is OWED and ⛔ WRITTEN** [`-238` counsel gate (a) §17(1)(c) indefinite retention about NON-members,
+  (b) whether a UID token is obtainable, (c) Aadhaar Data Vault obligations; ⛔ counsel-question file exists] — the Panel was told twice
+  the register *"waits on legal advice"*. Owner BigDev (writes) / counsel. Trigger: row `6-22b`'s create-story — its FIRST task.
+- **A released member is still "reported" outside peer-mesh** [`-438` item 11; `member/known-people.ts` `namedByClaimSql` — "People who
+  know me", the unavailable prompts, `listRequestsNamingMe` / `answerKnownPersonRequest`, `nominee/member-links.ts` × 5] — a member found
+  innocent re-enters the peer-mesh five (DL11) but keeps being treated as reported dead by known-people and nominee links. A NAMED
+  residual, ⛔ addressed. Trigger: a story touching `namedByClaimSql`, or a member report of it.
+- **A GUILTY member's later death reports skip the intake door for ever** [6.22 DL9 (c); `claim/icp.ts` `tryConverge`] — the guilty
+  claim stands in the leaf; it is `closed`, so ⛔ a convergence candidate; a new report mints a fresh claim with ⛔ door. Resolved via
+  explicit deferral to row `6-22d` (a door keyed on a standing ban). Trigger: `6-22d`'s create-story.
+- **An intake attempt parked beside a claim later found-alive-closed stays `pending` for ever** [6.22 DL9 (f); `icp.ts`
+  `overrideIntakeAttempt`] — it has ⛔ candidate and cannot be overridden onto a `closed` claim; it stays as history (the RF2 precedent,
+  *"the attempt row stays as history"*). A named residual, pinned by a 6.22 test. Trigger: a staff report of a stuck attempt.
+
+---
+
 ## Deferred from: code review of 12-2-admin-module-targeting-wizard.md (2026-11-01)
 
 > Round 1, chunk A (the domain / DB layer and the records). Chunks B (contracts, API, jobs, gate scripts) and C (admin UI) were reviewed afterwards: RD2–RD4 came from B, RD5–RD6 from C. RD7 came from round 2 (chunk A's patch-diff review).

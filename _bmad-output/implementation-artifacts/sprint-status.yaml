@@ -1,3 +1,4 @@
+# last_updated: 2026-11-01ac (STORY 6.22 — TASK 0 COMPLETE: BigDev on 6.23b EA10 *"Closed, test pins it"* (unreachable by construction — `-279` A7; Task 2.4 gains the pin). Decision `2026-11-01-438` (author-commit) committed ALONE as `8ce9f87b`: DL0–DL17 as answered; keys `claim.flag_fraud` (pariwar, helpline_operator) + `claim.record_fraud_finding` (district, district_admin, step-up) minted; the guilty arm a DECLARED narrowing of `-423` Q1 (b) / `-424` Q2 (a) pending Q1; `-147` cl. 3 re-examined (rides Q1); Q7 / Q8 / Q9 built sides; supersedes nothing. Rows `6-22d-fraud-register-refer-impose-lift-and-member-ban`, `6-22b-fraud-register-identifier-set-and-filer-bans` (counsel-gated), `6-22c-disqualified-nominee-and-proof-of-succession` minted backlog with DL0's lists verbatim; `deferred-work.md` Task 0.5 section; roster Row 47 `fraud-register-finding-live` (Row 46 is 6.39's); `epics.md` Story 6.22. Row 6-22 ready-for-dev -> in-progress. Story v1.7. ⛔ Code yet.)
 # last_updated: 2026-11-01ab (STORY 6.22 — `bmad-dev-story 6.22` in its own worktree: Task 0.1 DONE at `91ea2c81` (`origin/main` unmoved — ⛔ rebase; numbers unchanged on every branch: next free `-438` / `0196` / v58 / ledger `ab`) and Task 0.3 DONE — the ONE routing note `trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md` WRITTEN, ⛔ NOT SENT (BigDev sends; Q1–Q9 + Told 1–5; E4 run). Task 0.1 (iv): 6.23b EA10's row-6-22 mechanisms are UNREACHABLE (the 90-day anchor only moves LATER — `-279` A7 — so keys vanish, ⛔ appear; a released member has ⛔ claim awaiting approval) — ⛔ anchor fix to build; proposed closure 'Closed by 6.22 — unreachable, a test pins it' — BigDev confirms BEFORE Task 0.4. 6.36 W2 unreachable by N4. Story v1.6. Row stays ready-for-dev (Task 0.6 moves it). ⛔ Decision, ⛔ code.)
 # last_updated: 2026-11-01aa (STORY 6.22 — Task 0.2 COMPLETE: BigDev accepted DL17 as written (DL1–DL16 already accepted, `2026-11-01z`); DL16's 6.23b EA10 row = re-trace then decide — Task 0.1 (iv) re-traces it; a small 90-day-anchor fix is built here ("Closed by 6.22 DLn"), else "Resolved via explicit deferral" with owner + trigger; BigDev confirms which BEFORE Task 0.4. Story v1.5. Next: Task 0.1 (on `bmad-dev-story`), then the EA10 confirm, then Task 0.4 (decision `-438` at `91ea2c81` — READ LIVE). Row `6-22-…` stays ready-for-dev. ⛔ Decision, ⛔ code. Not pushed.)
 # last_updated: 2026-11-01z (STORY 6.22 — Task 0.2 IN PART: BigDev *"DL1-DL16 accepted as written."* Recorded under Task 0.2 in story v1.4 (DL3's `alive_confirmation` built set pending PQ9; DL6 flag pariwar / finding district + step-up; DL10 (iii) / (v) label verbatim; DL10 (iv) work-list). OPEN: DL17 (scope fence) and DL16's 6.23b EA10 choice (fix here, or explicit deferral with owner + trigger) — Task 0.2 stays unticked. Row `6-22-…` stays ready-for-dev. ⛔ Decision, ⛔ code. Not pushed.)
@@ -21420,7 +21421,51 @@ development_status:
   # Life Events writes — lift ONLY on this row's `member_found_innocent` finding; until it lands a living member wrongly reported can ⛔
   # do any of them. This row OWES the guilty arm (`-238` cl. 4–5) and must decide whether it releases those locks (`-423` Q1 (b)'s
   # "closed because the member is alive" covers it), and DL7's two residual edges — see `deferred-work.md` (Story 6.38 — Task 0.5).
-  6-22-fraud-register-blacklist-instrument-and-identifier-set: ready-for-dev
+  6-22-fraud-register-blacklist-instrument-and-identifier-set: in-progress
+  # ⭐ 2026-11-01 — STORY 6.22 BUILDS THIS ROW'S FIRST HALF (`2026-11-01-438`, author-commit; DL0 split — BigDev *"Split: new row
+  # 6-22d"*): the flag (helpline operator), the District Admin's innocent / guilty finding (proof of life required; finder ≠ flagger),
+  # the release, the false claim CLOSED through the closure core. The PM1 pointer above: the peer-mesh exclusion FOLLOWS the release
+  # (DL11); "People who know me" and nominee links do ⛔ (a named residual). The 6.38 pointer: the guilty arm keeps the locks — a
+  # DECLARED narrowing of `-423` Q1 (b) / `-424` Q2 (a), put to the Panel as Q1 (routing note 2026-11-01, WRITTEN, ⛔ sent). The rest
+  # of this row splits into the three rows below. The key is ⛔ renamed (four decisions and six story files cite it).
+  # ⭐ Minted 2026-11-01 by `2026-11-01-438` item 1 (Story 6.22 DL0). ⛔ No story file yet — each flips via bmad-create-story.
+  # DL0, verbatim: the refer → impose → lift chain with DECLINE arms, the termination through `moderateMember`, the ban table, the bar
+  # at joining, the register page and the member screen. Gated on PQ3 (a mobile cannot bar automatically under `-240` cl. 3 as ruled),
+  # PQ5 (who "the State Trustee" is), PQ6 (Trust-wide reach) and an actor-separation design (`super_admin` derives refer + impose + lift
+  # — `-240` cl. 5's named collapse; the 10.22 precedent `ModerationAppealAdjudicatorExcludedError`). (PQ4 — what a barred joiner is
+  # told — also lands here.)
+  # ⭐ ITS TRACE LIST (DL0, carried verbatim — ⛔ built by 6.22): a banned member never reaches sign-up (OTP verify issues a continuation
+  # only when `memberships.length === 0`, and erasure keeps the identity row) — what they meet is login (`auth.member_terminated` only
+  # under `termination_access_block`, default OFF); one `moderateMember` transaction with suspend + terminate TIES on `acted_at` /
+  # `created_at` and `resolveMembersByMobile`'s latest-act `ORDER BY` falls to a random uuid (the terminate needs a strictly later `now`);
+  # the terminate handler's session revocation is IN the transaction and its notice / audit are private closures (extract, do not copy);
+  # `rejoinPermittedAt` (`addTwelveMonths`, apps/api), `r7aRestorationsUsedSnapshot`, `actorDisplay` and the handler-only plaintext
+  # guards are inputs; the 12-month lock is per-Pariwar and a same-Pariwar re-join after it lapses is 409 `auth.member_already_exists`;
+  # there is ONE member-creation path (`signupCreate` → `insertMemberIdentity`) and no mobile-change writer; the terminate fields are
+  # inline in `ModerationStrip.tsx`; `pariwar_admin` already holds `member.moderate`; the geo resolver now exists (Story 1.18, ADR-0038)
+  # — re-trace `-240` Consequence 5's rank-order wall.
+  # ALSO OWED HERE (6.22 DL9 (c)): a GUILTY member's later death reports skip the intake door for ever (the guilty claim stands in the
+  # leaf; it is `closed`, so not a candidate; a new report mints a fresh claim with no door) — a door keyed on a standing ban. And the
+  # member-stream events (6.22 emits none). Mints its own permission keys in a recorded decision (`-210`).
+  6-22d-fraud-register-refer-impose-lift-and-member-ban: backlog
+  # ⭐ Minted 2026-11-01 by `2026-11-01-438` item 1 (Story 6.22 DL0). ⚠ COUNSEL-GATED (`-238` (a)–(c)) — counsel has ⛔ been asked.
+  # ⛔ No story file yet.
+  # DL0, verbatim: the PAN / Aadhaar-token collection, the PAN-verification service (`-240` author-commit (a)–(d)), the bar at FILING on
+  # an exact identifier + the human review on a name / DOB / father's-name match (`-240` cl. 2–3, incl. *"caught at the moment they come
+  # forward to claim"*), bans on nominees and claimants (PQ2), the post-death-rewrite and fake-certificate investigations whose guilty
+  # are FILERS (`-240` cl. 6), and the `-240` cl. 1 deletion (excluding certificates — `-243`; the cascade trap, G14; and whether
+  # innocent-outcome investigation NOTES fall in it — DL15). ⭐ Its FIRST task is to WRITE the counsel question (G15) — not written today.
+  # ALSO: who may originate a flag on a claim about a member who DID die (`-238` "NOT covered (iii)" — the post-death originator, to be
+  # put to the Panel); the 6.21 `claim_documents` CASCADE item (6.22 DL16 — resolved via explicit deferral here).
+  6-22b-fraud-register-identifier-set-and-filer-bans: backlog
+  # ⭐ Minted 2026-11-01 by `2026-11-01-438` item 1 (Story 6.22 DL0). ⛔ No story file yet.
+  # DL0, verbatim: the `nominee_disqualified` producer (6.20's D17(c) re-rank is built, no caller; G2 (c)), the State Trustee's payment
+  # on proof of succession (`-240` cl. 4), and a claim already `approved` / `settled` when the member is found alive (N4, N5 — a drive
+  # raised for a living member; an innocent member's account overlay left ON by it, N7).
+  # ALSO (6.22 DL9 (a), DL12): an `approved` / `settled` claim released by innocence stays a convergence candidate; the disqualifier
+  # writer's defects (`recordNomineeDisqualificationFinding` — untargeted conflict, `Db` not a client, ⛔ claim event, ⛔ state window, ⛔
+  # rank-exists check) are fixed with its producer.
+  6-22c-disqualified-nominee-and-proof-of-succession: backlog
   # ⭐ Opened 2026-09-28 by `2026-09-28-261` / `-262` / `-263` (the Panel's answers to the 6.20 confirmation note + eleven follow-ups,
   # Dhiraj Rahul + Kalpana Bharti). ⛔ None reopens 6.20 (`done`). ⛔ No story file yet — each flips via bmad-create-story.
   #   6-23 — D1 B (warn on a post-death version) · FQ1 B (a correction is LABELLED, not warned) · FQ2 A (approve over the warning = reason + note)

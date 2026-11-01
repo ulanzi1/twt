@@ -43,7 +43,7 @@ traps (TR1–TR16); **AC1–AC14**.
 
 # Story 6.22: The Fraud Register, First Half — Staff Investigate a Death Claim Filed Against a Living Member; an Innocent Member Is Released at Once and the False Claim Is Closed
 
-Status: ready-for-dev
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled on 2026-09-21 that a death claim filed against a member who is **alive**
 > must not lock that member for life: an **investigation** finds the member **innocent** or **guilty**, and there is no third outcome
@@ -880,7 +880,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST, no code** ([[feedback_governance_commits_precede_implementation]])
+- [x] **Task 0 — Governance FIRST, no code** ([[feedback_governance_commits_precede_implementation]])
   - [x] 0.1 `git fetch origin`; confirm `91ea2c81` is an ancestor of HEAD (rebase if `origin/main` moved — ledger-only conflicts, branch on
         top, [[project_rebase_ledger_conflict_separator]]); `git diff --name-only 91ea2c81 origin/main -- apps packages scripts` — re-derive
         G1–G21 if anything moved (⚠ 6.39 touches `assertClaimApprovable`, `CLAIM_EVENT_TYPES`, the catalog and the migrations); `git log
@@ -919,7 +919,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
           — Q1–Q9 (= PQ1–PQ9) + "Told" 1–5 (= TL1 (i)–(iv), TL2); every option costed; suggestions as the PQs; E4 run 2026-11-01 at
           `91ea2c81` — every command returns the cited text (the approval-check grep EMPTY by design; the re-file grep corrected to
           `readRefileGuard` → `closedClosureIdOf` after it first returned empty).
-  - [ ] 0.4 ⭐ FIRST, BigDev confirms DL16's EA10 closure from Task 0.1 (iv)'s re-trace. Decision entry (AUTHOR-COMMIT, the next free number across branches — `-438` at `91ea2c81`; READ LIVE): DL0–DL17 as answered;
+  - [x] 0.4 ⭐ FIRST, BigDev confirms DL16's EA10 closure from Task 0.1 (iv)'s re-trace. Decision entry (AUTHOR-COMMIT, the next free number across branches — `-438` at `91ea2c81`; READ LIVE): DL0–DL17 as answered;
         the two keys (outside `-210`'s delegated mint); cites `-238`, `-240`, `-261` D3 A, `-425` 6.38 DL4 / DL7; declares the scope split
         (`6-22b`, `6-22c`, `6-22d`, named); DECLARES the guilty arm's kept locks and sticky-frozen account as a narrowing of `-423` Q1 (b) /
         `-424` Q2 (a) pending PQ1; RECORDS `-147` cl. 3's re-examination — the fence fires (a guilty finding is a new reason the freeze
@@ -927,7 +927,12 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         and any policy question routed inside PQ1; records that the flag gates nothing (PQ7), that a found-alive close sends no message and
         has no appeal (PQ8), and the built proof-of-life set (PQ9) as BUILT SIDES pending rulings, not as decisions; keeps the ruled
         two-actor chain (operator flags, District Admin finds); supersedes no ratified entry. Committed ALONE, first.
-  - [ ] 0.5 Records: the three rows `6-22b-…` / `6-22c-…` / `6-22d-…` in `sprint-status.yaml` (backlog, with comment blocks carrying DL0's
+        - **2026-11-01 — BigDev, EA10:** *"Closed, test pins it"* (the re-trace's third outcome — ⛔ fix exists to build; Task 2.4 gains
+          the pin). **Decision `2026-11-01-438` committed ALONE as `8ce9f87b`** — DL0–DL17 as answered; the two keys minted; the split;
+          the guilty arm DECLARED a narrowing of `-423` Q1 (b) / `-424` Q2 (a) (both quoted in full) pending Q1; `-147` cl. 3 re-examined —
+          predicate gains the sticky leg only, the `-146` sentence stays true, the question rides Q1; Q7 / Q8 / Q9 recorded as BUILT SIDES;
+          the two-actor chain kept; EA10 and W2 closure words fixed (item 12); supersedes nothing.
+  - [x] 0.5 Records: the three rows `6-22b-…` / `6-22c-…` / `6-22d-…` in `sprint-status.yaml` (backlog, with comment blocks carrying DL0's
         lists verbatim — `6-22d`'s trace list included); `deferred-work.md` — PQ1–PQ9 open, the `6-22b` counsel question owed, DL11's
         residual, DL9 (c) and (f); a go-live roster row or legs in `docs/launch-gate-inventory/inventory-roster.md` (READ the roster first —
         Row 46 is reserved by 6.39 and 14-3; take the next free row of the same shape): (a) PQ1 ruled and reflected (the guilty arm; the 6.38
@@ -935,7 +940,13 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         ruled and built (notice, appeal, re-filing, the staff label); (d) PQ9 ruled and the built set matched; (e) 6.22's browser pass
         attested; (f) `6-22b`'s counsel question SENT; (g) 6.38 round-2 D1 (c); a retention-matrix row for `claim_fraud_investigation_steps`.
         An `epics.md` entry for Story 6.22 (none today — 6.20's `> ⚠ Minted by…` header shape).
-  - [ ] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
+        - **2026-11-01 — DONE:** rows `6-22d-…` / `6-22b-…` / `6-22c-…` minted `backlog` in `sprint-status.yaml` with DL0's lists
+          verbatim (+ `6-22d`'s trace list, DL9 (c), the disqualifier's defects); `deferred-work.md` — a "Story 6-22 — Task 0.5" section
+          (Q1–Q9 open, the counsel question owed, DL11's residual, DL9 (c) / (f)); roster **Row 47** `fraud-register-finding-live` (Row 46
+          is 6.39's, re-read on every branch) — legs (a)–(g) as listed + (h) the retention-matrix row (OUT-OF-REPO — architecture §2.12, the
+          6.20 precedent: carried as a leg, ⛔ written here); `epics.md` — Story 6.22 after 6.38, the minted-header shape.
+  - [x] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
+        - **2026-11-01 — DONE:** ledger `2026-11-01ac`; row `6-22` → `in-progress`; YAML parsed after the prepend.
 - [ ] **Task 1 — The records (AC1)**
   - [ ] 1.1 The findings migration (DL2) ALONE, hand-written — the rank CHECK keeps `IS NOT NULL`; `CLAIM_NOMINEE_FINDING_KINDS`,
         `MEMBER_FINDING_UNIQUE_PREDICATE` and the schema file's `uniqueIndex`; the fence allow-list unchanged (the schema file is on it).
@@ -964,7 +975,9 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         triggers — tuple, payload map, reducer arms, registry, counts.
   - [ ] 2.4 Tests: AC2 (with the PQ1-named leg), AC3 (the PQ7-named domain leg), AC4 (domain half), AC5, AC6 (the test-held finding client
         for the intake race), AC7 (the three-reader equivalence test, with its positive control), AC8, AC9 (the holder-direction leg + the
-        raw-insert guard leg). Seed claim states through `claimAt` / `emitClaim`
+        raw-insert guard leg). ⭐ The 6.23b EA10 pin (BigDev, Task 0.4; `-438` item 12): approve C2 with reasons over its keys, record
+        innocence on an EARLIER claim C1 of the same member, assert C2's warning keys are a SUBSET of before and ⛔ late key is queued
+        (`correction-queue-read.ts` `lateArm`) — named for `-279` A7. Seed claim states through `claimAt` / `emitClaim`
         (`packages/domain/tests/integration/claim/_one-payment-fixtures.ts`), ⛔ `forceClaimState` (TR3).
 - [ ] **Task 3 — The override door and convergence (AC10)** — DL9 (b) in `overrideIntakeAttempt` (closed-against error + the door);
       `overrideConvergence`'s catch maps both (`translateClaimIntakeRefused(err, { withReason: true })` + the new code); DL9 (e) the
@@ -1181,6 +1194,14 @@ hand).**
 
 ### File List
 
+- `.decision-log.md` (Decision `2026-11-01-438`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md` (new)
+- `_bmad-output/planning-artifacts/epics.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `docs/launch-gate-inventory/inventory-roster.md` (Row 47)
+- `_bmad-output/implementation-artifacts/6-22-fraud-register-blacklist-instrument-and-identifier-set.md`
+
 ## Change Log
 
 | Date | Version | Change |
@@ -1192,3 +1213,4 @@ hand).**
 | 2026-11-01 | 1.4 | Task 0.2, in part — BigDev: *"DL1-DL16 accepted as written."* Recorded under Task 0.2; the Build-decisions heading updated. Open: DL17 (scope fence) and DL16's 6.23b EA10 choice. No decision entry, no code. Ledger `2026-11-01z`. |
 | 2026-11-01 | 1.5 | Task 0.2 complete — BigDev: DL17 accepted as written; DL16's 6.23b EA10 row: re-trace at Task 0.1 (iv), then build here if a small anchor fix, else an explicit deferral — BigDev confirms before Task 0.4. Ledger `2026-11-01aa`. |
 | 2026-11-01 | 1.6 | `bmad-dev-story 6.22` — Task 0.1 (traces at `91ea2c81`; `origin/main` unmoved; numbers unchanged) and Task 0.3 (the routing note WRITTEN, ⛔ sent) complete. Task 0.1 (iv): 6.23b EA10 is UNREACHABLE by construction (the anchor only moves later — `-279` A7) — ⛔ fix to build; awaits BigDev's confirmation of its closure before Task 0.4. No decision entry, no code. Ledger `2026-11-01ab`. |
+| 2026-11-01 | 1.7 | Task 0 complete — BigDev on EA10: *"Closed, test pins it"* (Task 2.4 gains the pin). Decision `2026-11-01-438` committed ALONE (`8ce9f87b`). Records: rows `6-22b` / `6-22c` / `6-22d` minted (backlog, DL0 verbatim); `deferred-work.md` Task 0.5 section; roster Row 47 `fraud-register-finding-live` (legs (a)–(h)); `epics.md` Story 6.22. Row `6-22` → in-progress; Status → in-progress. No code. Ledger `2026-11-01ac`. |

@@ -4085,6 +4085,34 @@ checked once per death; lock-in, lapsed, grace and suspended members filed as to
 WHY with a read-back prompt, the app ONE calm message with ⛔ reason on screen or wire; see (the in-app and off-portal exports) and ask
 (the data-rights ticket + the staff correction record) fenced OPEN after a death is reported for a member ⛔ withdrawn; ⛔ migration, ⛔ new audit type, ⛔ new nominee surface.
 
+### Story 6.22: The Fraud Register, First Half — Staff Investigate a Death Claim Filed Against a Living Member; an Innocent Member Is Released at Once and the False Claim Is Closed `[PRIMITIVE]` `[SURFACE]`
+
+> ⚠ **Minted by Trustee ruling, ⛔ not by the original epic plan** — the row `6-22-fraud-register-blacklist-instrument-and-identifier-set`
+> was opened on **2026-09-21** by [`-238`](../../.decision-log.md#decision-2026-09-21-238) Consequence 1 and
+> [`-240`](../../.decision-log.md#decision-2026-09-21-240) Consequence 4 (Trustee-ratified, DR + KB), with ⛔ `epics.md` entry until
+> now. Its first half is built under [`-438`](../../.decision-log.md#decision-2026-11-01-438) (author-commit, 2026-11-01), which SPLIT
+> the rest into rows `6-22b` (the identifier set and filer bans — counsel-gated), `6-22c` (the disqualified nominee and proof of
+> succession) and `6-22d` (refer → impose → lift and the member ban). `epic-6-retrospective` is `done`; adding a story here is the same
+> deliberate act as Stories 6.17, 6.18 and 6.20 — ⛔ do not "correct" the placement and ⛔ do not flip the retrospective back. Nine
+> edges are routed as ONE non-blocking note (Q1–Q9, WRITTEN 2026-11-01); four are go-live conditions (roster Row 47).
+
+As a member who has been wrongly reported dead, and the helpline operator and District Admin who look into such a report,
+I want a recorded investigation that ends in one of the two findings the Panel ruled — and only once the member has been confirmed alive:
+innocent, which releases every lock on the member at once and closes the false claim; or guilty, which closes the false claim and records
+the finding the Pariwar Admin will later refer,
+so that a living member is no longer frozen out of their own record for ever by someone else's lie, and a claim found to be about a
+living member is stopped.
+
+**Acceptance Criteria (in brief — the full set is in
+`_bmad-output/implementation-artifacts/6-22-fraud-register-blacklist-instrument-and-identifier-set.md`):** the helpline operator flags a
+claim (any state, once — pariwar-dimension key `claim.flag_fraud`); a DIFFERENT person, the District Admin (`claim.record_fraud_finding`,
+district, step-up), records innocent or guilty with a note and a proof of life, only on a flagged claim, at most one finding per claim;
+innocent ⇒ every death lock on the member lifts (nominee, erasure, withdrawal, Life Events, the intake door) unless another claim still
+stands, and the claim is CLOSED through the closure core (its live processes ended); guilty ⇒ the claim closed, the locks KEPT and the
+account held frozen in all three overlay readers (a declared narrowing, Q1); an `approved` / `settled` claim keeps its state (row
+`6-22c`); a member found innocent re-enters the peer-mesh five; the override refuses a closed claim; staff see *"Closed — the member was
+found alive"*; ⛔ notice, ⛔ appeal, ⛔ ban, ⛔ identifier, ⛔ member-facing screen.
+
 ---
 
 ## Epic 7: Pool Engine & Cycle Spawn

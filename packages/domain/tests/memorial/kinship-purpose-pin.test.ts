@@ -8,8 +8,10 @@
 // Scanned: EVERY source file under `packages/*` and `apps/*` (not a fixed list of roots — a new `hooks/` or `store/` folder is covered
 // the day it appears), plus the repo-root `scripts/` and `infra/`. ⛔ Not scanned: tests, `openapi/`, `_bmad-output`, migrations (the
 // migration is named by its own file). The guarded names are the list's COLUMN (`kinship_ciphertext`), its domain property
-// (`kinshipOmissions`, `kinshipLeftOut`) and its HELPERS (`parseMemorialKinship`, `MemorialKinshipListSchema`, `groupMemorialKinship`)
-// — a file that decodes or groups the list without naming a column is the same reuse. The allow-list was built from the pasted grep
+// (`kinshipOmissions`, `kinshipLeftOut`), the submissions table, and every identifier carrying one of the list's STEMS (`GUARDED`
+// below — round 3, RP28: its schemas, helpers, row types and the public view's field) — a file that decodes, groups, labels or
+// draws the list without naming a column is the same reuse. ⚠ ⛔ Pinnable: a bare `.kinship` property read off an API response or
+// a draft (too generic a word — RD15's class). The allow-list was built from the pasted grep
 // at Task 8 (2026-10-31) and re-checked when the helpers were added (review 2026-11-01) — every user at that commit is covered, or
 // this pin would fail on `main`. A walker that meets a symlink skips it (⛔ never `statSync` through it — a dangling `ios/Pods` link once
 // crashed a sibling walker).
@@ -22,9 +24,17 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
-/** The guarded identifiers (AC10). */
+/**
+ * The guarded identifiers (AC10): the column, the domain property and the table as whole words; RP28 — and ANY identifier that
+ * CONTAINS one of the list's own stems, ⛔ a hand-picked few: `MemorialKinship` (the entry and row schemas — a re-parse with
+ * `MemorialKinshipEntrySchema.array()` is the same reuse — and `parse…` / `group…` / `public…` / `useMemorialKinship…`),
+ * `memorialKinship` (the plaintext, label and draft helpers), `MEMORIAL_KINSHIP_` (the relations, the caps, the label keys),
+ * `KinshipRow` (`SahyogVivranKinshipRow`, `MemorialDraftKinshipRow`, …), `kinshipLatticeRows` / `KinshipLatticeRow` (the render
+ * helper and its row type) and `familyMemorialKinship` (the public view's field) — a stem match, ⛔ a word match. ⛔ The bare
+ * component name `KinshipLattice`: it names a component, ⛔ the data (11a's `shradhanjali/` sample shares it).
+ */
 const GUARDED =
-  /\b(kinship_ciphertext|kinshipCiphertext|MEMORIAL_KINSHIP_RELATIONS|kinshipLeftOut|kinship_omissions|kinshipOmissions|parseMemorialKinship|MemorialKinshipListSchema|groupMemorialKinship|memorialSubmissions|memorial_submissions)\b/;
+  /\b(kinship_ciphertext|kinshipCiphertext|kinshipLeftOut|kinship_omissions|kinshipOmissions|memorialSubmissions|memorial_submissions)\b|MemorialKinship|memorialKinship|MEMORIAL_KINSHIP_|KinshipRow|kinshipLatticeRows|KinshipLatticeRow|familyMemorialKinship/;
 
 /** The memorial's own paths — repo-relative, `**` = any depth. */
 const ALLOWED: readonly string[] = [
@@ -174,8 +184,31 @@ describe('AC10 — the family list is used for nothing else (`-428` item 1)', ()
       ['apps/jobs/src/decode.mts', 'parseMemorialKinship(text);'],
       ['scripts/gate.cjs', 'MemorialKinshipListSchema.parse(x);'],
       ['apps/admin/src/x.jsx', 'row.kinshipOmissions;'],
+      // RP28 — the families, ⛔ only the names listed before the widening.
+      ['apps/public/src/pages/og-card.ts', 'MemorialKinshipEntrySchema.array().parse(body.kinship);'],
+      ['apps/jobs/src/label.ts', 'memorialKinshipLabelKey(row.relation, 2);'],
+      ['apps/api/src/modules/share/x.ts', 'publicMemorialKinship(entries, []);'],
+      ['apps/public/src/pages/sitemap.ts', 'kinshipLatticeRows(view, t);'],
+      ['packages/domain/src/claim/caps.ts', 'MEMORIAL_KINSHIP_MAX_ENTRIES;'],
+      ['apps/mobile/hooks/use-list.ts', 'export const x = useMemorialKinshipRows();'],
+      ['apps/public/src/pages/share.ts', 'const rows = view.familyMemorialKinship;'],
+      ['apps/mobile/hooks/use-rows.ts', 'let r: MemorialDraftKinshipRow[] = [];'],
+      ['apps/public/src/pages/clean.ts', 'const kinship = 1; // a bare word is ⛔ a guarded name'],
     ]);
-    expect(purposeViolations(planted)).toEqual(['apps/admin/src/x.jsx', 'apps/jobs/src/decode.mts', 'apps/mobile/hooks/use-family.ts', 'scripts/gate.cjs']);
+    expect(purposeViolations(planted)).toEqual([
+      'apps/admin/src/x.jsx',
+      'apps/api/src/modules/share/x.ts',
+      'apps/jobs/src/decode.mts',
+      'apps/jobs/src/label.ts',
+      'apps/mobile/hooks/use-family.ts',
+      'apps/mobile/hooks/use-list.ts',
+      'apps/mobile/hooks/use-rows.ts',
+      'apps/public/src/pages/og-card.ts',
+      'apps/public/src/pages/share.ts',
+      'apps/public/src/pages/sitemap.ts',
+      'packages/domain/src/claim/caps.ts',
+      'scripts/gate.cjs',
+    ]);
     for (const rel of planted.keys()) expect(SOURCE.test(rel), rel).toBe(true);
   });
 

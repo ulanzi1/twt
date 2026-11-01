@@ -326,7 +326,7 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     const EN: readonly (readonly [string, string])[] = [
       [
         "When you press Send, you, as the nominee, give the Trust permission to show these words, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read.",
-        "When you press Send, you, as the nominee, give the Trust permission to show these words, the family list if you added one, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read, and to members in the app.",
+        "When you press Send, you, as the nominee, give the Trust permission to show these words, the family list if you added one, and the photo if you added one, on this member's Sahyog Vivran page (which anyone with its link can read) and to members in the app.",
       ],
       [
         'It may leave out a sentence or the photo, and will tell you why, but it will never change your words.',
@@ -348,7 +348,7 @@ describe('MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS (AC4)', () => {
     const HI: readonly (readonly [string, string])[] = [
       [
         'भेजें दबाने पर आप, नॉमिनी के रूप में, ट्रस्ट को यह अनुमति देते हैं कि ये शब्द, और अगर आपने फ़ोटो जोड़ी है तो वह भी, इस सदस्य के सहयोग विवरण पेज पर दिखाए जाएँ, जिसे उसका लिंक रखने वाला कोई भी पढ़ सकता है।',
-        "जब आप 'भेजें' (Send) पर क्लिक करते हैं, तो नॉमिनी के तौर पर आप ट्रस्ट को यह अनुमति देते हैं कि वह इन शब्दों, परिवार की सूची (यदि आपने जोड़ी है), और फोटो (यदि आपने जोड़ी है) को इस सदस्य के 'सहयोग विवरण' (Sahyog Vivran) पेज पर दिखाए। इस पेज को कोई भी व्यक्ति, जिसके पास इसका लिंक हो, देख सकता है; साथ ही, ऐप में मौजूद अन्य सदस्य भी इसे देख सकते हैं।",
+        "जब आप 'भेजें' (Send) दबाते हैं, तो नॉमिनी के तौर पर आप ट्रस्ट को यह अनुमति देते हैं कि वह इन शब्दों, परिवार की सूची (यदि आपने जोड़ी है), और फ़ोटो (यदि आपने जोड़ी है) को इस सदस्य के 'सहयोग विवरण' (Sahyog Vivran) पेज पर दिखाए। इस पेज को कोई भी व्यक्ति, जिसके पास इसका लिंक हो, देख सकता है; साथ ही, ऐप में मौजूद अन्य सदस्य भी इसे देख सकते हैं।",
       ],
       [
         'वह कोई वाक्य या फ़ोटो छोड़ सकता है, और आपको इसका कारण बताएगा, पर आपके शब्द कभी नहीं बदलेगा।',

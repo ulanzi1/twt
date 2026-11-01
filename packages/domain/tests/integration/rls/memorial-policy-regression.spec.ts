@@ -14,8 +14,8 @@
 //     scrub in scope and reaches no other tenant's row.
 //   · the foreign keys — the composite supersede FK (the chain stays inside ONE pool), `supersedes_uq` (linear), the pool's
 //     single root, the pool / claim / deceased-member FKs, and the decisions' / withdrawals' composite FK to the submission.
-//   · every CHECK (thirteen: five on the submissions — 0183 adds the Send key's shape — four on the decisions, four on the
-//     withdrawals — 0187 adds the `helpline` pair, Story 11b.4a Trap 7), each with a violating row that names the ONE constraint it trips, and a legal row of the same shape
+//   · every CHECK (fourteen: five on the submissions — 0183 adds the Send key's shape — five on the decisions — 0194 adds the
+//     family list's omissions, Story 11b.5a — four on the withdrawals — 0187 adds the `helpline` pair, Story 11b.4a Trap 7), each with a violating row that names the ONE constraint it trips, and a legal row of the same shape
 //     that still inserts — plus the JSON-null spans `memorial_omissions_valid` once passed (R18).
 //   · the column grants — a sweep of EVERY column: UPDATE is admitted on the five ciphertext columns and refused (42501) on
 //     all the others; ⛔ no DELETE.

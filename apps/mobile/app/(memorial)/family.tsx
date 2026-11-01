@@ -20,11 +20,16 @@
 // announced.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Platform, ScrollView } from 'react-native'
+import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, Input, Paragraph, XStack, YStack } from 'tamagui'
 
-import { MEMORIAL_KINSHIP_MAX_ENTRIES, MEMORIAL_KINSHIP_RELATIONS, type MemorialKinshipRelation } from '@twt/contracts'
+import {
+  MEMORIAL_KINSHIP_MAX_ENTRIES,
+  MEMORIAL_KINSHIP_RELATIONS,
+  isMemorialTextBlank,
+  type MemorialKinshipRelation,
+} from '@twt/contracts'
 import { useLocale } from '@twt/i18n/react'
 
 import { MemorialHeader } from '../../components/memorial-authorship/MemorialHeader'
@@ -44,6 +49,7 @@ import {
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
 import { loadMemorialDraft, memorialPhotoUri, saveMemorialDraft, type MemorialDraft } from '../../lib/memorial-draft'
 import { useMemorialT } from '../../lib/memorial-i18n'
+import { announcementPlan } from '../../lib/death-certificate-announce'
 import { useSession } from '../../lib/session-context'
 
 export default function MemorialFamilyScreen(): React.ReactElement {
@@ -118,6 +124,14 @@ export default function MemorialFamilyScreen(): React.ReactElement {
 
   function next(): void {
     if (!memorialKinshipRowsReady(rows)) {
+      // RP30 — a SECOND press while the line already shows changes nothing on screen, so the hook (keyed on the text) does not
+      // fire: on iOS the press would be silent — no navigation, no word. Spoken here on the platforms the plan announces a
+      // live-region line on (iOS); ⛔ on Android, where TalkBack re-reads the standing live region at a press (the 6.36f D1
+      // device session — [[project_android_live_region_reread_on_rerender]]) and a call here would be spoken twice. ⚠ Android's
+      // repeat is ⛔ checked on a device (Row 41's TalkBack pass).
+      if (incomplete && announcementPlan(Platform.OS, 'error').iosAnnounce) {
+        AccessibilityInfo.announceForAccessibility(t('family.row_incomplete'))
+      }
       setIncomplete(true)
       return
     }
@@ -207,7 +221,7 @@ export default function MemorialFamilyScreen(): React.ReactElement {
                       style={{ minHeight: 44 }}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: row.inPhoto === true }}
-                      accessibilityLabel={row.name === '' ? t('family.in_photo') : t('family.in_photo_a11y', { name: row.name })}
+                      accessibilityLabel={isMemorialTextBlank(row.name) ? t('family.in_photo') : t('family.in_photo_a11y', { name: row.name })}
                       testID={`memorial-family-in-photo-${i}`}
                       onPress={() =>
                         setRow(i, row.inPhoto === true ? { ...(row.relation === undefined ? {} : { relation: row.relation }), name: row.name } : { ...row, inPhoto: true })
@@ -219,7 +233,9 @@ export default function MemorialFamilyScreen(): React.ReactElement {
                   <Button
                     style={{ minHeight: 44 }}
                     accessibilityRole="button"
-                    accessibilityLabel={row.name === '' ? t('family.remove_empty_a11y') : t('family.remove_a11y', { name: row.name })}
+                    // RP31 — a BLANK name (spaces only, `isMemorialTextBlank` — the same test that makes the row unfinished) falls
+                    // back to copy 2.15 too, ⛔ "Remove ␣␣ from the list".
+                    accessibilityLabel={isMemorialTextBlank(row.name) ? t('family.remove_empty_a11y') : t('family.remove_a11y', { name: row.name })}
                     testID={`memorial-family-remove-${i}`}
                     onPress={() => {
                       setOpenRow(null)

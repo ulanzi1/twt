@@ -127,8 +127,8 @@ const KINSHIP_PLURAL_RELATIONS: ReadonlySet<MemorialKinshipRelation> = new Set<M
 
 /**
  * The `memorial` namespace key of a row's relation label (KL9 — the ONE home): `kinship.<code>`, or `kinship.<code>_plural`
- * when the row holds two or more names and the relation has a plural (copy 5.2 — the Hindi plural keys carry the same word as
- * the singular: *पुत्र · अमित, राहुल*).
+ * when the row holds two or more names and the relation has a plural (copy 5.2 — a masculine Hindi plural key carries the same
+ * word as the singular: *पुत्र · अमित, राहुल*; the five feminine ones their plural form: *पुत्रियाँ · सुनीता, मीरा* — round 3, DN1).
  */
 export function memorialKinshipLabelKey(relation: MemorialKinshipRelation, nameCount: number): string {
   return nameCount >= 2 && KINSHIP_PLURAL_RELATIONS.has(relation) ? `kinship.${relation}_plural` : `kinship.${relation}`;

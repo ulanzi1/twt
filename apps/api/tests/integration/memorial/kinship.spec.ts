@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { encryptMemorialField } from '../../../src/modules/memorial/memorial-crypto.js';
 import { hasDatabase, type TestApp } from '../_setup.js';
 import {
+  CURRENT_VERSION,
   createReviewHarness,
   handover,
   jpegWithGps,
@@ -132,6 +133,33 @@ describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real
     expect((await view(w2)).kinship).toBeNull();
     // The audit lines carry ⛔ name and ⛔ digest of the list.
     expect(JSON.stringify(t.auditSink.events.slice(before))).not.toContain('अमि');
+    // RP32 — "has_kinship only", PROVEN: each Send's intent hash equals the one recomputed from the handler's canonical shape with
+    // `has_kinship` as it should be — dropping the key fails both, and the TWO Sends (true, then false) catch a hard-coded value.
+    // ⚠ The shape is copied from the handler (as the decide leg's is): a new key there fails this leg too, on purpose.
+    const sendHash = (sw: MemorialWorld, recipient: string, hasKinship: boolean): string =>
+      createHash('sha256')
+        .update(
+          canonicalJsonStringify({
+            pool_id: sw.poolId,
+            has_photo: false,
+            has_kinship: hasKinship,
+            keep_previous_photo: false,
+            authorisation_copy_version: CURRENT_VERSION,
+            authorisation_locale: 'hi',
+            handover_recipient: recipient,
+          }),
+        )
+        .digest('hex');
+    for (const [sw, id, hasKinship] of [[w, r.body.submissionId, true], [w2, r2.body.submissionId, false]] as const) {
+      const [sub] = await rows<{ handover_recipient: string }>(t, `SELECT handover_recipient FROM memorial_submissions WHERE submission_id = $1`, [id]);
+      const intents = await rows<{ request_payload_hash: string }>(
+        t,
+        `SELECT request_payload_hash FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'memorial.submission.create' AND resource_locator = $2`,
+        [sw.pariwarId, `memorial-pool:${sw.poolId}`],
+      );
+      expect(intents).toHaveLength(1);
+      expect(intents[0]!.request_payload_hash).toBe(sendHash(sw, sub!.handover_recipient, hasKinship));
+    }
   });
 
   it('AC6 / KL16 — the member view: the list as SENT (ticks included), kinshipLeftOut, guardianDeclaration true under v4', async () => {
@@ -223,7 +251,7 @@ describe.skipIf(!hasDatabase)('Story 11b.5a — the family list through the real
     expect(v3.guardianDeclaration).toBe(false);
   });
 
-  it('⭐ AC7 / AC15 — the public wire: grouped surviving rows, each name isolated; ⛔ index, ⛔ reason, ⛔ inPhoto, ⛔ count; the page with a left-out entry equals the page that never listed it', async () => {
+  it('⭐ AC7 / AC15 — the public wire: grouped surviving rows, a name with a direction control isolated; ⛔ index, ⛔ reason, ⛔ inPhoto, ⛔ count; the wire’s `kinship` with a left-out entry equals the wire’s `kinship` of a list that never held it', async () => {
     // A: interleaved list, the second son left out.
     const a = await world();
     const ra = await send(t, a, [...sendFields(), ...photoParts(), kinshipPart(LIST)]);

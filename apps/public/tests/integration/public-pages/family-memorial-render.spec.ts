@@ -288,11 +288,15 @@ describe.skipIf(!hasDatabase)('Story 11b.4a — the family memorial on the BUILT
   it('⭐ AC7 — ⛔ nothing of the list reaches <head>; an unknown row key sends the page to its outage state (the guard, ⛔ a leak)', async () => {
     memorialState = { words: WORDS, photo: null, kinship: KINSHIP };
     const ok = await page();
+    expect(ok.status).toBe(200);
     expect(bodyOf(ok.html)).toContain('Sunita Devi');
     expect(headOf(ok.html)).not.toContain('Sunita Devi');
     expect(headOf(ok.html)).not.toContain('Rahul');
     memorialState = { words: WORDS, photo: null, kinship: [{ relation: 'wife', names: ['Sunita Devi'], inPhoto: true }] };
     const leaked = await page();
+    // RP33 — the OUTAGE state itself (the title claims it): the guard refuses the body ⇒ 503 and the outage copy — ⛔ merely "no name".
+    expect(leaked.status).toBe(503);
+    expect(leaked.html).toContain('We could not load this drive just now');
     expect(leaked.html).not.toContain('Sunita Devi');
     expect(leaked.html).not.toContain('inPhoto');
   });

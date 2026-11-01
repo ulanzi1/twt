@@ -14,7 +14,7 @@
 // ⭐ Story 11b.5a (KL10 — ONE decrypt rule, the code's "Trap 4"): the family list (`kinship_ciphertext`) follows the words — a
 // sentinel, a bad envelope, unparsable JSON or a schema failure ⇒ the WHOLE memorial is `null` (⛔ never "no list but the memorial
 // stays" — that would be a second rule); a KMS outage rethrows. It parses with THE schema the Send used (so a ticked list is
-// valid), is grouped by the ONE helper (`inPhoto` dropped) and each name is bidi-isolated (`publicMemorialKinship`).
+// valid), is grouped by the ONE helper (`inPhoto` dropped) and each name goes through `isolateMemorialBidi` (`publicMemorialKinship` — a name holding a direction control is wrapped; RD19).
 
 import type { PublicSahyogVivranFamilyMemorial } from '@twt/contracts';
 import { memorial, member as memberDomain, type Db, type ids } from '@twt/domain';

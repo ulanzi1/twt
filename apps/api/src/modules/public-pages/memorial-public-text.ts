@@ -106,8 +106,9 @@ export function publicMemorialText(input: {
 /**
  * ⭐ Story 11b.5a (KL10 / KL11) — the family list EXACTLY as the public page shows it: the entries the Trust kept, grouped by the
  * ONE helper (`groupMemorialKinship` — the fourteen's order, the family's order within a relation, ⛔ `inPhoto`), each NAME
- * isolated by `isolateMemorialBidi` (an unclosed RLO in one name would otherwise reorder every later name in the same `<dd>`;
- * `dir="auto"` isolates rows, ⛔ names). The ONE function both consumers call — the page and the helpline's drive view — so the
+ * through `isolateMemorialBidi` (an unclosed RLO in one name would otherwise reorder every later name in the same `<dd>`;
+ * `dir="auto"` isolates rows, ⛔ names). ⚠ It wraps only a name holding a direction CONTROL — a right-to-left-script name with
+ * none is left as is, and as a row's first name it sets the row's direction (RD19, round 3). The ONE function both consumers call — the page and the helpline's drive view — so the
  * two cannot drift. ⛔ No index, ⛔ no reason, ⛔ no count of left-out entries leaves it.
  */
 export function publicMemorialKinship(

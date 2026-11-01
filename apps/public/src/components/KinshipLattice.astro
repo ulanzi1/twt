@@ -7,7 +7,8 @@
 // Mother keep the singular — the names joined by `, `, ⛔ no "and").
 // ⭐ Dumb: it asks the matrix ⛔ nothing and decides ⛔ nothing — `planFamilyMemorial` gates it and `kinshipLatticeRows` labels the
 // rows; it renders what it is given through `{}` interpolation (⛔ `set:html`). Each `<dd dir="auto">` isolates its ROW; the API
-// already isolated each NAME. Spacing only, as static inline token styles here (⛔ a styled wrapper in `FamilyMemorial.astro` — its
+// ran each NAME through `isolateMemorialBidi`, which wraps only a name holding a direction CONTROL (RP34 — a right-to-left-script
+// name with none is drawn as is, and as a row's FIRST name it sets the `<dd>` right-to-left: RD19). Spacing only, as static inline token styles here (⛔ a styled wrapper in `FamilyMemorial.astro` — its
 // exact-three-styles pin), ⛔ a class (`apps/public` has ⛔ Tailwind pipeline — 11b.5 MV5), ⛔ a `<style>`.
 // ⭐ Body-only: ⛔ nothing here reaches <head>, Open Graph, a share card or a sitemap. ⛔ No `lang` (the family's language is ⛔ recorded).
 import type { KinshipLatticeRow } from '../lib/family-memorial.js';

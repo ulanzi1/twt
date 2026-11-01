@@ -236,7 +236,7 @@ export function createMemorialTakedownHandlers(deps: AppDeps) {
             request.log.warn({ errorName: err instanceof Error ? err.name : typeof err }, 'memorial-takedown: photo url failed');
           }
         }
-        // The SAME rows the public page gets (`publicMemorialKinship` — grouped, left-out entries absent, each name isolated;
+        // The SAME rows the public page gets (`publicMemorialKinship` — grouped, left-out entries absent, each name through `isolateMemorialBidi`;
         // ⛔ never an `inPhoto` tick). `[]` for ⛔ no list; `null` when the list could not be read.
         let kinship: { relation: MemorialKinshipRelation; names: string[] }[] | null = [];
         if (s.kinshipCiphertext !== null) {

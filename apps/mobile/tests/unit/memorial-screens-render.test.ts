@@ -3705,6 +3705,34 @@ describe('Story 11b.5a — the family screen (AC2)', () => {
     expect(mock.push).toHaveBeenCalledWith('/(memorial)/preview')
   })
 
+  // RP30 — the line is already on screen at the second press, so nothing changes for the hook (keyed on the text): on iOS the
+  // press would be silent. iOS speaks it once per repeat; Android ⛔ (TalkBack re-reads the standing live region at a press —
+  // a call here would double it; device-checked in 6.36f D1, ⛔ for this screen).
+  it.each(ALL_LOCALES.flatMap((l) => (['ios', 'android'] as const).map((os) => [l, os] as const)))(
+    '%s / %s: RP30 — a SECOND Next on an unfinished row is spoken again on iOS (⛔ a silent press); Android leaves it to the live region',
+    (locale, os) => {
+      mock.os = os
+      saveMemorialDraft('m-1', 'pool-1', { kinship: [{ name: 'बिना रिश्ते' }] })
+      renderIn(MemorialFamilyScreen, locale)
+      const line = tr('family.row_incomplete', locale)
+      fireEvent.click(screen.getByTestId('memorial-family-next'))
+      const first = announced().filter((a) => a === line).length
+      expect(first).toBe(os === 'ios' ? 1 : 0) // the first press: the hook on iOS, the live region on Android
+      fireEvent.click(screen.getByTestId('memorial-family-next'))
+      fireEvent.click(screen.getByTestId('memorial-family-next'))
+      expect(announced().filter((a) => a === line)).toHaveLength(os === 'ios' ? first + 2 : 0)
+      expect(mock.push).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['hi', 'en'] as const)('%s: RP31 — a BLANK name (spaces only) falls back to copy 2.15 / the plain tick label, ⛔ the name', (locale) => {
+    mock.view = resend()
+    saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, kinship: [{ relation: 'son', name: '   ' }] })
+    renderIn(MemorialFamilyScreen, locale)
+    expect(screen.getByTestId('memorial-family-remove-0')).toHaveAttribute('aria-label', tr('family.remove_empty_a11y', locale))
+    expect(screen.getByTestId('memorial-family-in-photo-0')).toHaveAttribute('aria-label', tr('family.in_photo', locale))
+  })
+
   it.each(['hi', 'en'] as const)('%s: ⭐ KL15 — the "In the photo" tick shows ONLY when the Send will carry a photo; it is a checkbox with its state', (locale) => {
     saveMemorialDraft('m-1', 'pool-1', { kinship: [{ relation: 'son', name: 'परीक्षा-पुत्र' }] })
     const { unmount } = renderIn(MemorialFamilyScreen, locale)
@@ -3992,6 +4020,22 @@ describe('Story 11b.5a — the family screen (AC2)', () => {
       expect(d.keepPreviousPhoto).toBe(true)
       expect(d.kinship).toEqual(LIST) // the ticks stay: the screen already held "the photo I sent before"
       expect(d.altText).toBe('नया विवरण') // and the next save wrote the screen's choices (X1), not the press alone
+    })
+
+    // RP29 — a failed save here skips the focus re-read (V9 (a)), so the screen still holds the list; the family then removed it on
+    // the family screen ("Continue without a list"). A photo change must ⛔ write the screen's stale list back.
+    it('RP29 — after a FAILED save, a photo change does ⛔ bring back a list the family removed elsewhere', () => {
+      mock.view = resend()
+      saveMemorialDraft('m-1', 'pool-1', { keepPreviousPhoto: true, altText: 'विवरण', kinship: LIST })
+      renderIn(MemorialPhotoScreen, 'en')
+      mock.failWrites = true
+      fireEvent.change(screen.getByTestId('memorial-alt-text'), { target: { value: 'नया विवरण' } }) // this save FAILS
+      mock.failWrites = false
+      saveMemorialDraft('m-1', 'pool-1', { kinship: undefined }) // the family screen: "Continue without a list"
+      fireEvent.click(screen.getByText(tr('photo.without', 'en'))) // a CHANGE (previous → none)
+      const d = loadMemorialDraft('m-1', 'pool-1')
+      expect(d.keepPreviousPhoto).toBe(false)
+      expect(d.kinship).toBeUndefined()
     })
   })
 })

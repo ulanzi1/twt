@@ -103,7 +103,11 @@ const EN: Record<string, string> = {
   'memorial.reason.accuses_someone_of_wrongdoing': 'Accuses someone of wrongdoing',
   'memorial.reason.against_the_law': 'Against the law',
   'memorial.reason.identifies_a_child': 'Names or shows a child',
-  // ── Story 11b.5a — the family list (KL6 / KL12 / KL15 / KL16; copy 4.4 approved 2026-10-31) ──────────────────────────────
+  // ── Story 11b.5a — the family list (KL6 / KL12 / KL15 / KL16) ──────────────────────────────────────────────────────────────
+  // RP38 — APPROVED (2026-10-31): copy 4.4 (the declared child label + the guidance), the KL16 banner, the KL15 confirm's FIRST
+  // sentence, and the fourteen `memorial.kinship.<code>` relation labels (KL3 / Q-copy-1). ⏳ AWAITING BigDev's staff-copy pass: the
+  // `memorial.detail.*` / `memorial.decide.*` strings of this block, the three `kinship_*` problem sentences below, and the confirm's
+  // second sentence ("Record the decision again to confirm.") — listed in the story's Completion Notes.
   'memorial.detail.kinship': 'The family list, as sent',
   'memorial.detail.kinshipRelative': 'Each relation is the person’s relation to the member who died.',
   'memorial.detail.kinshipInPhoto': 'In the photo (ticked by the family)',

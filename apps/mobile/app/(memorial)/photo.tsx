@@ -189,9 +189,11 @@ export default function MemorialPhotoScreen(): React.ReactElement {
   }
 
   // Story 11b.5a (KL15) — the family list with every tick cleared, read FRESH from the phone's storage (the list is the family
-  // screen's; this screen only lets go of the ticks).
+  // screen's; this screen only lets go of the ticks). RP29 — ONLY the stored list: "no list" stored is a real state (the family
+  // pressed "Continue without a list"), ⛔ a miss to fill from what this screen holds — after a failed save here (V9 (a) skips the
+  // focus re-read) the screen's copy is STALE, and falling back to it wrote the removed list back into the draft.
   function clearedTicks(): MemorialDraft['kinship'] {
-    return memorialKinshipClearTicks(loadMemorialDraft(mid, drive).kinship ?? draft.kinship)
+    return memorialKinshipClearTicks(loadMemorialDraft(mid, drive).kinship)
   }
 
   function without(): void {

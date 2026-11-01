@@ -21,8 +21,8 @@
 // retry (Confirm off then — X3).
 // Story 11b.5a (KL9) — the family list is shown EXACTLY as the public page will draw it: the Send's own rows
 // (`memorialKinshipForSend` — what the Send carries), grouped by the ONE helper (`groupMemorialKinship`), labelled from the ONE
-// home (`memorial.kinship.<code>`, English plurals for two or more names), each name bidi-isolated (`isolateMemorialBidi`, per
-// name — the API does the same before the public wire). ⛔ Styled beyond the existing preview (11b.5 MV6). When the draft has
+// home (`memorial.kinship.<code>`, English plurals for two or more names), each name through `isolateMemorialBidi` (per
+// name — the API does the same before the public wire; it wraps only a name holding a direction CONTROL — RD19). ⛔ Styled beyond the existing preview (11b.5 MV6). When the draft has
 // ⛔ list but the version before had one, a line says so — else a re-send to fix one word would take the list off the page.
 
 import { useCallback, useRef, useState } from 'react'

@@ -145,12 +145,15 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
   },
   // v4 — Story 11b.5a (see "v4's basis" above): v3 with exactly the five marked sentences of Q-copy-3 changed (① the list and
   // both places; ② a name may be left out; ③ the declaration, in place of v3's child sentence; ⑤B a named person's own name;
-  // ④ the list among the grounds, the child ground narrowed). ① Hindi is BigDev's own wording (kept verbatim) — so its Hindi
-  // review needs a reviewer who is ⛔ not BigDev (Row 41 (a) / (s)). `hiReviewed: false`.
+  // ④ the list among the grounds, the child ground narrowed). ① Hindi is BigDev's own wording — so its Hindi
+  // review needs a reviewer who is ⛔ not BigDev (Row 41 (a) / (s)). `hiReviewed: false`. ⭐ 2026-11-01 (code review round 3,
+  // DN2 — BigDev: "fix now", before v4 is ever live): ① Hindi "पर क्लिक करते हैं" → "दबाते हैं" (③ and the English say "press") and
+  // "फोटो" → "फ़ोटो" (every other line); ① English "…can read, and to members in the app" → "(which anyone with its link can read)
+  // and to members in the app" (the permission is to show it on the page AND to members — the clause no longer hangs off "read").
   '2026-10-31.v4-pending-hi-review': {
     en:
       'When you press Send, you, as the nominee, give the Trust permission to show these words, the family list if you added ' +
-      "one, and the photo if you added one, on this member's Sahyog Vivran page, which anyone with its link can read, and to " +
+      "one, and the photo if you added one, on this member's Sahyog Vivran page (which anyone with its link can read) and to " +
       'members in the app. The Trust will read them before anyone else does. It may leave out a sentence, a name from the list, ' +
       'or the photo, and will tell you why, but it will never change your words or the names you wrote. By pressing Send you ' +
       'also confirm: for every child you have named or who is in the photo, you are their parent or lawful guardian, or you ' +
@@ -161,8 +164,8 @@ export const MEMORIAL_SUBMISSION_AUTHORISATION_VERSIONS: Readonly<Record<string,
       'only if something in the words, the list or the photo speaks against a person by name, says that someone did something ' +
       'wrong, may be against the law, or names or shows a child this confirmation does not cover.',
     hi:
-      "जब आप 'भेजें' (Send) पर क्लिक करते हैं, तो नॉमिनी के तौर पर आप ट्रस्ट को यह अनुमति देते हैं कि वह इन शब्दों, परिवार की " +
-      "सूची (यदि आपने जोड़ी है), और फोटो (यदि आपने जोड़ी है) को इस सदस्य के 'सहयोग विवरण' (Sahyog Vivran) पेज पर दिखाए। इस " +
+      "जब आप 'भेजें' (Send) दबाते हैं, तो नॉमिनी के तौर पर आप ट्रस्ट को यह अनुमति देते हैं कि वह इन शब्दों, परिवार की " +
+      "सूची (यदि आपने जोड़ी है), और फ़ोटो (यदि आपने जोड़ी है) को इस सदस्य के 'सहयोग विवरण' (Sahyog Vivran) पेज पर दिखाए। इस " +
       'पेज को कोई भी व्यक्ति, जिसके पास इसका लिंक हो, देख सकता है; साथ ही, ऐप में मौजूद अन्य सदस्य भी इसे देख सकते हैं। किसी ' +
       'और के देखने से पहले ट्रस्ट इनका अवलोकन करेगा। वह कोई वाक्य, सूची का कोई नाम या फ़ोटो छोड़ सकता है, और आपको इसका कारण ' +
       'बताएगा, पर आपके शब्द या आपके लिखे नाम कभी नहीं बदलेगा। भेजें दबाकर आप यह भी पुष्टि करते हैं: आपने जिस भी बच्चे का नाम ' +

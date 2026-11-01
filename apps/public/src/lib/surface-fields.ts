@@ -650,7 +650,7 @@ export interface SahyogVivranFamilyMemorialView {
   readonly familyMemorialPhotoAltText: string | null;
   /**
    * Story 11b.5a (`2026-10-31-428` item 1) — the family list, ALREADY grouped by relation in the fourteen's display order, left-out
-   * entries absent, each name bidi-isolated by the API. `[]` ⇔ ⛔ list (or every entry left out) — then ⛔ heading and ⛔ `<dl>`.
+   * entries absent, each name through the API's `isolateMemorialBidi` (a name holding a direction CONTROL is wrapped; ⛔ others — RD19). `[]` ⇔ ⛔ list (or every entry left out) — then ⛔ heading and ⛔ `<dl>`.
    */
   readonly familyMemorialKinship: readonly SahyogVivranKinshipRow[];
 }

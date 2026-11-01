@@ -366,4 +366,22 @@ describe('the label keys (KL9 — the ONE home; copy 5.2)', () => {
       }
     });
   }
+
+  // Round 3, DN1 (BigDev 2026-11-01, "DN1 a") — the Hindi plural label of a FEMININE relation is its plural form (two daughters
+  // read *पुत्रियाँ · सुनीता, मीरा*, ⛔ *पुत्री · …*); a masculine one keeps the singular word, which reads correctly for one or more.
+  it('hi: the five feminine plurals differ from their singular; the five masculine ones carry the same word', () => {
+    const hi = readCatalog('hi');
+    expect(
+      Object.fromEntries(['daughter', 'sister', 'sons_daughter', 'daughters_daughter', 'daughter_in_law'].map((r) => [r, hi[`kinship.${r}_plural`]])),
+    ).toEqual({
+      daughter: 'पुत्रियाँ',
+      sister: 'बहनें',
+      sons_daughter: 'पौत्रियाँ',
+      daughters_daughter: 'नातिनें',
+      daughter_in_law: 'पुत्रवधुएँ',
+    });
+    for (const r of ['son', 'brother', 'sons_son', 'daughters_son', 'son_in_law']) {
+      expect(hi[`kinship.${r}_plural`], r).toBe(hi[`kinship.${r}`]);
+    }
+  });
 });

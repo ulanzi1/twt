@@ -96,7 +96,7 @@ export const MemorialTakedownDriveResponse = z
         altText: z.string().nullable(),
         /**
          * Story 11b.5a (KL11) — the family list as the public page shows it: grouped by relation, left-out entries absent with ⛔ no
-         * trace, each name bidi-isolated (the SAME helper as the page). `[]` when the version has ⛔ no list or every entry was left
+         * trace, each name through `isolateMemorialBidi` (the SAME helper as the page — it wraps a name holding a direction control; RD19). `[]` when the version has ⛔ no list or every entry was left
          * out; `null` on a decrypt failure (as `words`). ⛔ Never an `inPhoto` tick.
          */
         kinship: z.array(MemorialKinshipRowOutput).nullable(),

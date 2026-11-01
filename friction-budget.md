@@ -3063,11 +3063,15 @@ they meet is still Row 56's few short questions:
 **Story 11b.5a disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, ⛔ no row amended; `2026-10-31-426` / `-428` /
 `-431`):** the memorial flow gains ONE screen between the photo and the preview — the family list (`apps/mobile/app/(memorial)/family.tsx`,
 with `photo.tsx` / `preview.tsx` / `outcome.tsx` and the draft) — and the public memorial gains `<KinshipLattice>`
-(`apps/public/src/components/KinshipLattice.astro`). The payer is the one Row 64 already names — the nominee writing the memorial —
-and what they meet is ⛔ heavier than Row 64's flow:
+(`apps/public/src/components/KinshipLattice.astro`). The payer is the one Row 64 already names — the nominee writing the memorial.
+⚠ *Corrected 2026-11-01 (code review round 3, RP36 — this paragraph first said the flow was "⛔ heavier"; KL8 records the cost):*
+what they meet IS heavier than Row 64's flow: ONE more screen that every nominee passes (both photo-screen exits now lead to it),
+costing at least one press — *"Continue without a list"* — even for a family that lists no one; what is ON it is optional, as is,
+when a photo is sent, an "In the photo" tick per listed person. The screen itself is NOT optional; the memorial it sits in IS (Row 64's
+category is `optional` — a nominee need never write one), so the disposition stands: Row 64's row carries the cost ⇒ ⛔ a new row, and Row 64's own cell is ⛔ amended — this dated entry is the record of the screen (BigDev 2026-11-01, round 3 DN4 b):
 1. ⭐ **The list is OPTIONAL, always.** It starts empty, ⛔ pre-filled; *"Continue without a list"* and *"Next"* both go on; ⛔ nothing
    on it is required. A row left half-filled asks the family to finish it or remove it (copy 2.11) — ⛔ a refusal of the Send.
-2. ⛔ **No new tick, code or wait.** The guardian declaration (`-426`) is sentence ③ of the permission the nominee ALREADY accepts by
+2. ⛔ **No new REQUIRED tick, code or wait** (the optional "In the photo" ticks are the one new tick — above). The guardian declaration (`-426`) is sentence ③ of the permission the nominee ALREADY accepts by
    pressing Send (the v4 text) — the same press, the same handover code Row 64 records. The "In the photo" ticks are optional and
    shown only when a photo is sent.
 3. **The public page:** ⛔ no `<style>` block and ⛔ no script are added — the lattice's spacing is inline token styles in the

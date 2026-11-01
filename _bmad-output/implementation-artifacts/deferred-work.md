@@ -4,6 +4,20 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review round 3 of 11b-5a-kinship-capture-and-lattice.md (2026-11-01)
+
+Round 3 (`bmad-code-review 11b.5a`, option 1 — the full diff after the rebase onto `3d6b46c5`). 14 patches (RP28–RP41), 3 copy decisions for BigDev (DN1–DN3) and 2 deferrals; none is a Panel question. Full record: the story's `### Review Findings — round 3`.
+
+- **RD18 — Three family-screen changes are not announced (checklist 13 (d))** [`apps/mobile/app/(memorial)/family.tsx` "Start from the list I sent", Remove]
+  - "Start from the list I sent" fills 1–20 rows and its own (focused) button disappears; Remove unmounts the focused row. Nothing is spoken. The repeated-"Next" half was patched (RP30, approved copy); these two need NEW accessibility copy (BigDev's approval).
+  - Trigger: Story 11b.8's accessibility audit, together with RD6 / RD16.
+- **RD19 — A row whose FIRST name is in a right-to-left script draws its names in reverse order** [`apps/api/src/modules/public-pages/memorial-public-text.ts:119`; `apps/public/src/components/KinshipLattice.astro`; the mobile preview]
+  - `isolateMemorialBidi` wraps only a name holding a direction control, and `<dd dir="auto">` takes the row's direction from the first strong character: *"اسلم, Amit, Rahul"* renders right-aligned as *"Amit, Rahul ,اسلم"* — the first-listed person read last. The mobile preview probably agrees (native text also takes a paragraph's direction from its first strong character) — ⛔ checked on a device.
+  - Fix: always wrap each list name in FSI…PDI (then the `<dd>` stays left-to-right and the family's order holds) — it changes the wire bytes, the helpline view and pinned test strings.
+  - Trigger: Story 11b.8, a reported reversed row, or the next change to `publicMemorialKinship`.
+
+---
+
 ## Deferred from: code review (fix round) of 11b-5a-kinship-capture-and-lattice.md (2026-11-01)
 
 Review of the uncommitted patch round for RP1–RP20 (`bmad-code-review 11b.5a`, option 2). 7 patches and 6 deferrals (DN1 was decision-needed and BigDev deferred it as RD17); none is a Panel question. Full record: the story's `### Review Findings — fix-round review`.

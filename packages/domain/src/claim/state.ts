@@ -193,6 +193,17 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.nominee_lock_released':
       return state;
 
+    // ANNOTATION: the helpline operator FLAGGED the claim for a fraud investigation (Story 6.22 — the 38th event;
+    // `2026-09-21-238` cl. 3). It gates NOTHING (the built side of the Panel's Q7) — identity from any state.
+    case 'claim.fraud_flagged':
+      return state;
+
+    // ANNOTATION: the District Admin found the member GUILTY (Story 6.22 — the 39th event; `-238` cl. 4). ⛔ Never a
+    // lifecycle state: the claim is closed by a SEPARATE `claim.closed` (`fraud_finding_guilty`) when closable. The
+    // account overlay's STICKY freeze reads this type (`member/overlay.ts`). Identity.
+    case 'claim.member_found_guilty':
+      return state;
+
     // ANNOTATION: the District Admin ACCEPTED or REJECTED the current death certificate (Story 6.21a —
     // the 35th event; `2026-09-20-235` Y, `2026-09-20-236` BB). ⛔ A rejection is ⛔ NOT a denial: the
     // family is asked for another certificate and the claim WAITS (invariant 2). So there is ⛔ no edge to

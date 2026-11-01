@@ -76,7 +76,7 @@ import { members } from '../schema/members.js';
 // ⚠ VALUE imports (event-type string constants), ⛔ not types — `overlay.ts` is the AUTHORITY on
 // which claim events freeze and unfreeze, and re-spelling them here is how the two drift apart.
 // ⛔ No cycle: `overlay.ts` does not import this module.
-import { ACCOUNT_FREEZE_EVENT_TYPE, ACCOUNT_UNFREEZE_EVENT_TYPES } from './overlay.js';
+import { ACCOUNT_FREEZE_EVENT_TYPE, ACCOUNT_UNFREEZE_EVENT_TYPES, stickyFrozenMemberSql } from './overlay.js';
 import type { MemberLifecycleState } from './state.js';
 
 /**
@@ -128,8 +128,14 @@ export const DIRECTORY_EXCLUDED_MODERATION_ACTIONS = ['suspend', 'terminate'] as
  * ⚠ `DISTINCT ON` requires the `ORDER BY` to LEAD with the `DISTINCT ON` expression or Postgres
  * raises 42P10 ([[project_contribution_fact_projection_substrate]]) — hence `ORDER BY e.stream_id`
  * first, and the recency keys after it.
+ *
+ * ⭐ Story 6.22 (DL13, N7) — AND ⛔ STICKY freeze: a member found GUILTY of taking part in a false report of
+ * their own death stays OFF the directory whatever followed the finding on that claim (`overlay.ts`
+ * `stickyFrozenMemberSql` — the same leg `listAccountFrozenMemberIds` ORs in; `-147` cl. 3 re-examined in
+ * `2026-11-01-438`).
  */
-const NOT_DECEASED = (now: Date) => sql`NOT EXISTS (
+const NOT_DECEASED = (now: Date) => sql`(NOT ${stickyFrozenMemberSql(sql`"members"."member_id"::text`, now)}
+  AND NOT EXISTS (
     SELECT 1 FROM (
       SELECT DISTINCT ON (e.stream_id) e.event_type AS latest_type
         FROM events_log e
@@ -142,7 +148,7 @@ const NOT_DECEASED = (now: Date) => sql`NOT EXISTS (
        ORDER BY e.stream_id, e.occurred_at DESC, e.event_version DESC
     ) latest_per_claim
     WHERE latest_per_claim.latest_type = ${ACCOUNT_FREEZE_EVENT_TYPE}
-  )`;
+  ))`;
 
 /** One public-directory row, as the substrate holds it. ⛔ The name is CIPHERTEXT, not a name. */
 export interface DirectoryRosterEntry {

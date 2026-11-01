@@ -133,6 +133,8 @@ export * from './one-payment-per-death.js';
 // per-death reversal key; and the two leaves it needs without an import cycle (`appeal-lock.ts` is re-exported through
 // `appeal-persist.ts`, `appeal-panel-session.ts` through `appeal-panel-persist.ts`).
 export * from './suspicion-refusal-persist.js';
+// Story 6.22 — the fraud register's investigation: the helpline operator's flag and the District Admin's finding.
+export * from './fraud-investigation-persist.js';
 // Story 6.24b (`2026-10-08-295` RB8, RB10) — the SUSPICION NOTICES' domain half: the three selectors, the claim-row lock and
 // its re-check, the recipients (`readRefusedFilerRecipient`) and the notice-row claim / finalise / expire helpers. A WRITE
 // module (⛔ an NW1 entry); ⛔ nothing here decrypts.

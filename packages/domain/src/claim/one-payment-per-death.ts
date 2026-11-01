@@ -460,6 +460,14 @@ export async function readOtherClaimVisits(db: Db, pariwarId: PariwarId, claimCa
 const HOLDER_REFUSED_SLICE = 500;
 
 /**
+ * ⭐ Story 6.22 (DL13) — the `claim.closed` triggers OP10's held-by join must ⛔ read: a claim closed by its OWN
+ * investigation's finding carries ⛔ `held_by_claim_case_id` (the NULL already never joins — this guard is DEFENSIVE). Spelled
+ * here, ⛔ imported from `events.ts` (`events.ts` → `nominee-name-check.ts` → this module would be a runtime init cycle —
+ * [[project_type_only_import_cycle_trap]]); a test pins it EQUAL to `CLAIM_CLOSED_FRAUD_TRIGGERS`.
+ */
+export const OP10_EXCLUDED_CLOSE_TRIGGERS = ['fraud_finding_innocent', 'fraud_finding_guilty'] as const;
+
+/**
  * ⭐ OP10 (`2026-10-11-318` Q3 A's promise) — of MANY claims, the `closed` ones whose HOLDING claim (`claim.closed`'s
  * `held_by_claim_case_id` — the claim that went ahead) has since been REFUSED or CLOSED, so the staff label reads "the
  * other claim … was later refused; the family may file again" instead of "… goes ahead". ONE statement per ≤ 500 ids;
@@ -489,6 +497,7 @@ export async function readClosedHolderRefusedBulk(db: Db, pariwarId: PariwarId, 
             WHERE op_e.pariwar_id = op_c.pariwar_id
               AND op_e.stream_id = op_c.claim_case_id
               AND op_e.event_type = 'claim.closed'
+              AND COALESCE(op_e.payload ->> 'trigger', '') NOT IN (${sql.join(OP10_EXCLUDED_CLOSE_TRIGGERS.map((t) => sql`${t}`), sql`, `)})
               AND op_h.current_state IN ('denied', 'closed')
          )
          AND NOT EXISTS (
@@ -498,6 +507,53 @@ export async function readClosedHolderRefusedBulk(db: Db, pariwarId: PariwarId, 
               AND op_l.deceased_member_id = op_c.deceased_member_id
               AND op_l.claim_case_id <> op_c.claim_case_id
               AND op_l.current_state NOT IN ('denied', 'closed')
+         )
+    `);
+    for (const r of result.rows ?? []) out.add(r.claim_case_id.toLowerCase());
+  }
+  return out;
+}
+
+/**
+ * ⭐ Story 6.22 (DL10 (iii) / (v)) — of MANY claims, the `closed` ones whose member was FOUND ALIVE, so the staff label reads
+ * *"Closed — the member was found alive"* (the label WINS over OP10's "… later refused; the family may file again"):
+ *   · (iii) the claim's OWN investigation carries a found step (`claim_fraud_investigation_steps` — the STEP table, ⛔ the
+ *     close trigger and ⛔ the finding kind: a claim closed BEFORE its finding has ⛔ fraud `claim.closed`);
+ *   · (v) the claim was closed `held_by` a claim whose investigation carries one (OP10's reachable REVERSE direction — the
+ *     member being alive is the truth of every claim for that death).
+ * ONE statement per ≤ 500 ids; lower-case ids. ⛔ No PII. Called under the same `underSavepoint` as
+ * {@link readClosedHolderRefusedBulk} by the three helpline handlers (degrading to an empty set).
+ */
+export async function readClosedMemberAliveBulk(db: Db, pariwarId: PariwarId, claimCaseIds: readonly string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const unique = [...new Set(claimCaseIds.map((id) => id.toLowerCase()))];
+  for (let i = 0; i < unique.length; i += HOLDER_REFUSED_SLICE) {
+    const slice = unique.slice(i, i + HOLDER_REFUSED_SLICE);
+    const result = await db.execute<{ claim_case_id: string }>(sql`
+      SELECT ma_c.claim_case_id::text AS claim_case_id
+        FROM claims ma_c
+       WHERE ma_c.pariwar_id = ${pariwarId}
+         AND ma_c.claim_case_id IN (${sql.join(slice.map((id) => sql`${id}::uuid`), sql`, `)})
+         AND ma_c.current_state = 'closed'
+         AND (
+           EXISTS (
+             SELECT 1
+               FROM claim_fraud_investigation_steps ma_s
+              WHERE ma_s.pariwar_id = ma_c.pariwar_id
+                AND ma_s.claim_case_id = ma_c.claim_case_id
+                AND ma_s.step IN ('found_innocent', 'found_guilty')
+           )
+           OR EXISTS (
+             SELECT 1
+               FROM events_log ma_e
+               JOIN claim_fraud_investigation_steps ma_hs
+                 ON ma_hs.pariwar_id = ma_e.pariwar_id
+                AND ma_hs.claim_case_id = (ma_e.payload ->> 'held_by_claim_case_id')::uuid
+                AND ma_hs.step IN ('found_innocent', 'found_guilty')
+              WHERE ma_e.pariwar_id = ma_c.pariwar_id
+                AND ma_e.stream_id = ma_c.claim_case_id
+                AND ma_e.event_type = 'claim.closed'
+           )
          )
     `);
     for (const r of result.rows ?? []) out.add(r.claim_case_id.toLowerCase());

@@ -922,3 +922,39 @@ export class ClaimIntakeRefusedError extends Error {
     super(`[claim-door] a claim cannot be filed for member ${deceasedMemberId} (${reason})`);
   }
 }
+
+// ── Story 6.22 — the fraud register's investigation (the flag and the finding) ─────────────────────────
+
+/** Why a fraud-investigation step was refused (Story 6.22 DL3 / DL4). Each is its own API code
+ *  `fraud_investigation.<reason>`; ⛔ one of them is a denial of the claim. */
+export type FraudInvestigationRefusalReason =
+  /** ⛔ such claim in this Pariwar. → 404. */
+  | 'claim_not_found'
+  /** The claim already carries a flag under a DIFFERENT step id (DL4). → 409. */
+  | 'already_flagged'
+  /** A finding needs a flag first (N1). → 409. */
+  | 'not_flagged'
+  /** The claim already carries a finding — one investigation per claim, ever (N1, N2). → 409. */
+  | 'already_found'
+  /** The finder is the person who flagged it — the ruled chain is TWO people (`-238` cl. 3; DL3 step 2). → 409. */
+  | 'finder_is_flagger'
+  /** The step id was already used for a DIFFERENT step on this claim (a replay must repeat the request). → 409. */
+  | 'step_conflict'
+  /** A step needs its note (N1). → 400. */
+  | 'missing_note'
+  /** A finding needs HOW the member was confirmed alive (N1; the Panel's Q9). → 400. */
+  | 'missing_alive_confirmation'
+  /** A step is attributed to a named human ([[project_admin_display_name_attribution]]). → 409. */
+  | 'missing_display';
+
+/** Story 6.22 — a flag or a finding cannot be recorded on this claim. The API maps `reason` to its status and code. */
+export class FraudInvestigationRefusedError extends Error {
+  public readonly name = 'FraudInvestigationRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: FraudInvestigationRefusalReason,
+    detail: string,
+  ) {
+    super(`[fraud-investigation] claim ${claimCaseId}: ${reason} — ${detail}`);
+  }
+}

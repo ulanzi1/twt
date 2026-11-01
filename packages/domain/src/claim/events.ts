@@ -659,13 +659,29 @@ export const ClaimDeniedNoAppealPayloadSchema = requireIdentityTransition({
 });
 
 /**
- * The two reasons a claim is CLOSED (`claim.closed`'s `trigger`):
+ * The reasons a claim is CLOSED BY ANOTHER CLAIM of the same death (`claim.closed`'s `trigger` — the HELD arm, which
+ * carries `held_by_claim_case_id`):
  *   · `suspicion_appeal_allowed` — Story 6.24a RF4 / RF6: another claim of the death won its suspicion appeal;
  *   · `death_already_finally_approved` — Story 6.28 OP4 (`2026-10-11-318` Q1 A): another claim of the death's PAYMENT is
  *     committed (`held_by_claim_case_id` = that claim). ⛔ NEVER texted (Q3 A) — the `-291` Q2 B closure text selects
  *     `suspicion_appeal_allowed` ONLY (`suspicion-notice.ts`).
  */
-export const CLAIM_CLOSED_TRIGGERS = ['suspicion_appeal_allowed', 'death_already_finally_approved'] as const;
+export const CLAIM_CLOSED_HELD_TRIGGERS = ['suspicion_appeal_allowed', 'death_already_finally_approved'] as const;
+export type ClaimClosedHeldTrigger = (typeof CLAIM_CLOSED_HELD_TRIGGERS)[number];
+
+/**
+ * ⭐ Story 6.22 (DL13; `2026-11-01-438` item 9) — the reasons a claim is closed BY ITS OWN INVESTIGATION's finding that the
+ * member it names is ALIVE (the FRAUD arm — ⛔ `held_by_claim_case_id`; it carries the `finding_id`):
+ *   · `fraud_finding_innocent` — the District Admin found the member innocent (`-238` cl. 1);
+ *   · `fraud_finding_guilty` — found guilty (`-238` cl. 4); the claim is closed so it can never be paid.
+ * ⚠ Named so they do ⛔ spell a finding kind (the erasure / death-report source fence). ⛔ Never texted (the built side of
+ * the Panel's Q8 (a)). OP10 (`one-payment-per-death.ts`) excludes them from its held-by join.
+ */
+export const CLAIM_CLOSED_FRAUD_TRIGGERS = ['fraud_finding_innocent', 'fraud_finding_guilty'] as const;
+export type ClaimClosedFraudTrigger = (typeof CLAIM_CLOSED_FRAUD_TRIGGERS)[number];
+
+/** Every `claim.closed` trigger — the held arm and the fraud arm. */
+export const CLAIM_CLOSED_TRIGGERS = [...CLAIM_CLOSED_HELD_TRIGGERS, ...CLAIM_CLOSED_FRAUD_TRIGGERS] as const;
 export type ClaimClosedTrigger = (typeof CLAIM_CLOSED_TRIGGERS)[number];
 
 /**
@@ -675,21 +691,37 @@ export type ClaimClosedTrigger = (typeof CLAIM_CLOSED_TRIGGERS)[number];
  * (⛔ not an annotation): every CLOSABLE state → `closed` (`isClaimClosable` — every state but `settled`, `approved` and
  * `closed` itself; Story 6.28 OP13 made `state_trustee_approved` closable). ⛔ Not a denial, ⛔ not appealable, ⛔ never a
  * 6.19c closures row, ⛔ never `denied_no_appeal`. Emitted ONLY through the closure core in `suspicion-refusal-persist.ts`
- * (`closeClaimsHeldBySuspicionAppeal`, `closeClaimsOfPaidDeath`, `closeClaimIfDeathPaid`). `held_by_claim_case_id` = the
- * reversed claim / the payment-committed claim. ⛔ Not a new event — `CLAIM_EVENT_TYPES` stays 36. Non-PII.
+ * (`closeClaimsHeldBySuspicionAppeal`, `closeClaimsOfPaidDeath`, `closeClaimIfDeathPaid` and — Story 6.22 —
+ * `closeClaimOnFraudFinding`). `held_by_claim_case_id` = the reversed claim / the payment-committed claim. ⛔ Not a new
+ * event — `CLAIM_EVENT_TYPES` stays 36. Non-PII.
+ * ⭐ Story 6.22 (DL13) — DISCRIMINATED on `trigger`: a HELD trigger REQUIRES `held_by_claim_case_id` (OP10 reads it); a
+ * FRAUD trigger carries ⛔ `held_by_claim_case_id` (filling it with the claim's own id would make OP10 label the claim
+ * "the other claim … was later refused; the family may file again" — TR6) and carries the `finding_id` instead. Both keep
+ * `deceased_member_id` REQUIRED (the overlay matches on it).
  * PINNED SEAM (the `claim.settled` precedent): it UNFREEZES this claim's stream in the account-frozen overlay
  * (`member/overlay.ts` ACCOUNT_UNFREEZE_EVENT_TYPES), whose query matches by `payload ->> 'deceased_member_id'` — so it
  * MUST carry `deceased_member_id` (an id, ⛔ no PII). The member stays frozen while the reversed claim is live.
  */
-export const ClaimClosedPayloadSchema = z
-  .object({
-    ...auditShape,
-    to_state: z.literal('closed'),
-    trigger: z.enum(CLAIM_CLOSED_TRIGGERS),
-    held_by_claim_case_id: z.string().uuid(),
-    deceased_member_id: z.string().uuid(),
-  })
-  .strict();
+export const ClaimClosedPayloadSchema = z.discriminatedUnion('trigger', [
+  z
+    .object({
+      ...auditShape,
+      to_state: z.literal('closed'),
+      trigger: z.enum(CLAIM_CLOSED_HELD_TRIGGERS),
+      held_by_claim_case_id: z.string().uuid(),
+      deceased_member_id: z.string().uuid(),
+    })
+    .strict(),
+  z
+    .object({
+      ...auditShape,
+      to_state: z.literal('closed'),
+      trigger: z.enum(CLAIM_CLOSED_FRAUD_TRIGGERS),
+      finding_id: z.string().uuid(),
+      deceased_member_id: z.string().uuid(),
+    })
+    .strict(),
+]);
 
 // ── Story 6.20 — the nominee declaration history (two IDENTITY annotations) ───────────────────
 
@@ -725,6 +757,34 @@ export const ClaimNomineeLockReleasedPayloadSchema = requireIdentityTransition({
   finding_id: z.string().uuid(),
 });
 
+// ── Story 6.22 — the fraud register's investigation (two IDENTITY annotations) ───────────────────
+
+/**
+ * The helpline operator FLAGGED this claim for a fraud investigation — the claim may be about a member who is ALIVE
+ * (`2026-09-21-238` cl. 3 *"operator flags"*; Story 6.22 DL4). The 38th claim event. An IDENTITY annotation: the
+ * `flagged` row in `claim_fraud_investigation_steps` and this event are written in ONE transaction; ⛔ no state.
+ * ⚠ The flag gates NOTHING (the built side of the Panel's Q7) — ⛔ no approval gate reads it.
+ * ⛔ No PII: the step's id only (the operator's note lives encrypted in the row).
+ */
+export const ClaimFraudFlaggedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  step_id: z.string().uuid(),
+});
+
+/**
+ * The District Admin, having confirmed the member ALIVE, found them GUILTY of taking part in the false report of their own
+ * death (`2026-09-21-238` cl. 4; Story 6.22 DL3). The 39th claim event. An IDENTITY annotation written with the
+ * `member_found_guilty` row, on EVERY guilty finding — closable claim or not.
+ * ⭐ THE STICKY FREEZE (DL13; N7): a claim stream carrying this type reads account-FROZEN in all three overlay readers
+ * whatever follows it (`member/overlay.ts` `ACCOUNT_STICKY_FREEZE_EVENT_TYPE`) — so it MUST carry `deceased_member_id`
+ * (the overlay matches on it; `projectClaimState` does ⛔ add it). ⛔ No PII: ids only.
+ */
+export const ClaimMemberFoundGuiltyPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  finding_id: z.string().uuid(),
+  deceased_member_id: z.string().uuid(),
+});
+
 // ── Story 6.21a — the death certificate's clear-date rule (ONE identity annotation) ───────────────
 
 /**
@@ -747,7 +807,7 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
   supersedes_review_id: z.string().uuid().nullable(),
 });
 
-// ── The 36-event vocabulary + the type→schema map (single source) ─────────────
+// ── The 39-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -778,7 +838,11 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
 // every CLOSABLE state to the new terminal `closed`, emitted when another claim of the death wins its suspicion appeal.
 // It unfreezes its stream (the overlay); it is ⛔ never a denial.
 // Story 6.36 adds the 37th — `claim.peer_mesh_none_to_ask` (SW25), a LIFECYCLE TRANSITION (`documents_pending →
-// verification_in_progress`, the pinged edge) emitted when nobody can be asked, so the claim goes on to the inspection.)
+// verification_in_progress`, the pinged edge) emitted when nobody can be asked, so the claim goes on to the inspection.
+// Story 6.22 adds the 38th and 39th — `claim.fraud_flagged` (DL4) and `claim.member_found_guilty` (DL3), both IDENTITY
+// annotations with a no-op reducer: the helpline operator's flag (it gates nothing — the Panel's Q7) and the District
+// Admin's guilty finding (the overlay's STICKY freeze reads it). `claim.closed` gains the two FRAUD triggers — ⛔ a new
+// event.)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -793,6 +857,8 @@ export const CLAIM_EVENT_TYPES = [
   'claim.nominee_name_checked',
   'claim.nominee_determination_recorded',
   'claim.nominee_lock_released',
+  'claim.fraud_flagged',
+  'claim.member_found_guilty',
   'claim.death_certificate_reviewed',
   'claim.dpdpa_consent_recorded',
   'claim.dpdpa_consent_revoked',
@@ -820,11 +886,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.closed',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 37 claim events). */
+/** The dotted `claim.*` event-type literal union (the 39 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 37 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 39 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -842,6 +908,8 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.nominee_name_checked': ClaimNomineeNameCheckedPayloadSchema,
   'claim.nominee_determination_recorded': ClaimNomineeDeterminationRecordedPayloadSchema,
   'claim.nominee_lock_released': ClaimNomineeLockReleasedPayloadSchema,
+  'claim.fraud_flagged': ClaimFraudFlaggedPayloadSchema,
+  'claim.member_found_guilty': ClaimMemberFoundGuiltyPayloadSchema,
   'claim.death_certificate_reviewed': ClaimDeathCertificateReviewedPayloadSchema,
   'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
   'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,

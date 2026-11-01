@@ -44,7 +44,7 @@ import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
 import type pg from 'pg';
 
 import { bindScopedDb, type Db } from '../db.js';
-import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
+import type { ClaimId, ClaimNomineeFindingId, MemberId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
 import { claims, type ClaimRow } from '../schema/claims.js';
 import { claimAppeals } from '../schema/claim_appeals.js';
@@ -54,7 +54,7 @@ import { appealAdvisoryLockKey } from './appeal-lock.js';
 import { readLiveAppealPanelSession, supersedeAppealPanelSession } from './appeal-panel-session.js';
 import { endCorrectionRun, readOpenCorrectionRun } from './correction-chase.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
-import type { ClaimClosedTrigger, ClaimEventActor } from './events.js';
+import type { ClaimClosedFraudTrigger, ClaimClosedHeldTrigger, ClaimEventActor } from './events.js';
 import { projectClaimState, type ProjectClaimStateResult } from './project.js';
 import {
   r9VotingAdvisoryLockKey,
@@ -121,7 +121,9 @@ export interface CloseClaimsHeldBySuspicionAppealResult {
  * `overrideIntakeAttempt`, `recordRefileConfirmation`, `reviseDecision`, `acquireNomineeDeclarationLock`, the three
  * reversal writers (through this helper) and — Story 6.38, `2026-10-30-423` — the two erasure handlers (through
  * `member/rtbf-legality.ts` `acquireErasureLocks`, intake key BEFORE the rtbf key) and the withdrawal / Life Events /
- * medical guards (through `death-report-lock.ts` `lockAndReadDeathReport`) — takes it FIRST, or after ONE unlocked read;
+ * medical guards (through `death-report-lock.ts` `lockAndReadDeathReport`) and — Story 6.22 — the fraud finding
+ * (`fraud-investigation-persist.ts` `recordFraudFinding`, then `takeClaimClosureKeys` and the row) and the member-finding
+ * writers (`nominee-lock.ts`) — takes it FIRST, or after ONE unlocked read;
  * none holds a lock on entry.
  */
 export async function acquireSuspicionReversalLockForClaim(
@@ -190,7 +192,8 @@ interface CloseOtherClaimsOfDeathInput {
   readonly deceasedMemberId: MemberId;
   /** The claim the closure is ABOUT (`held_by_claim_case_id`) — ⛔ never walked itself. */
   readonly causeClaimCaseId: ClaimId;
-  readonly trigger: ClaimClosedTrigger;
+  /** A HELD trigger only (Story 6.22 DL3) — ⛔ a held closer can ⛔ emit a fraud trigger with a `held_by`. */
+  readonly trigger: ClaimClosedHeldTrigger;
   readonly actor: ClaimEventActor;
   readonly actorId: string | null;
   readonly auditId?: string;
@@ -240,9 +243,7 @@ async function closeOtherClaimsOfDeath(client: pg.PoolClient, input: CloseOtherC
   const held: ClaimId[] = [];
   for (const { claimCaseId } of others) {
     // Key-then-row, in the order every writer of these keys uses (Trap 8 / 40P01).
-    await takeKey(client, appealAdvisoryLockKey(input.pariwarId, claimCaseId));
-    await takeKey(client, r9VotingAdvisoryLockKey(input.pariwarId, claimCaseId));
-    await takeKey(client, stateTrusteeDecisionAdvisoryLockKey(input.pariwarId, claimCaseId));
+    await takeClaimClosureKeys(client, input.pariwarId, claimCaseId);
     const [row] = await db
       .select()
       .from(claims)
@@ -264,14 +265,41 @@ async function closeOtherClaimsOfDeath(client: pg.PoolClient, input: CloseOtherC
   return { closed, notClosed, held };
 }
 
+/**
+ * ⭐ ONE CLAIM's keys, in the closure core's order — `appeal:` → `r9:` → trustee (Trap 8 / 40P01) — taken BEFORE its row.
+ * The death's INTAKE key comes before all three (the caller takes it). Exported so a writer that closes its OWN claim
+ * (Story 6.22's `recordFraudFinding`) keeps the order in this one place.
+ * ⚠ TR11 — the three keys hash the ids RAW (unlike `intakeAdvisoryLockKey`): pass a branded / DB-read id, ⛔ a raw request
+ * string — a differently-cased id is a SECOND lock (and `endCorrectionRun` re-takes the trustee key with the row's id).
+ */
+export async function takeClaimClosureKeys(client: pg.PoolClient, pariwarId: PariwarId, claimCaseId: ClaimId): Promise<void> {
+  await takeKey(client, appealAdvisoryLockKey(pariwarId, claimCaseId));
+  await takeKey(client, r9VotingAdvisoryLockKey(pariwarId, claimCaseId));
+  await takeKey(client, stateTrusteeDecisionAdvisoryLockKey(pariwarId, claimCaseId));
+}
+
+/**
+ * Why `claim.closed` is emitted — DISCRIMINATED (Story 6.22 DL3 / DL13): another claim of the death HOLDS this one (a held
+ * trigger + its `causeClaimCaseId`, written as `held_by_claim_case_id`), or this claim's OWN investigation found the member
+ * alive (a fraud trigger + its `findingId`, ⛔ `held_by_claim_case_id` — TR6).
+ */
+type CloseLockedClaimInput = {
+  readonly pariwarId: PariwarId;
+  readonly actor: ClaimEventActor;
+  readonly actorId: string | null;
+  readonly auditId?: string;
+} & (
+  | { readonly trigger: ClaimClosedHeldTrigger; readonly causeClaimCaseId: ClaimId }
+  | { readonly trigger: ClaimClosedFraudTrigger; readonly findingId: ClaimNomineeFindingId }
+);
+
 /** End the claim's live processes and emit `claim.closed`. The caller holds the claim's row (and, ⛔ in self-mode, its keys). */
-async function closeLockedClaim(
-  client: pg.PoolClient,
-  db: Db,
-  input: Pick<CloseOtherClaimsOfDeathInput, 'pariwarId' | 'causeClaimCaseId' | 'trigger' | 'actor' | 'actorId' | 'auditId'>,
-  row: ClaimRow,
-): Promise<ProjectClaimStateResult> {
+async function closeLockedClaim(client: pg.PoolClient, db: Db, input: CloseLockedClaimInput, row: ClaimRow): Promise<ProjectClaimStateResult> {
   await endLiveProcesses(client, db, input.pariwarId, row);
+  const cause =
+    'findingId' in input
+      ? { trigger: input.trigger, finding_id: input.findingId }
+      : { trigger: input.trigger, held_by_claim_case_id: input.causeClaimCaseId };
   return projectClaimState(client, {
     claimCaseId: row.claimCaseId,
     pariwarId: input.pariwarId,
@@ -282,9 +310,8 @@ async function closeLockedClaim(
     payload: {
       from_state: row.currentState,
       to_state: 'closed',
-      trigger: input.trigger,
+      ...cause,
       actor: input.actor,
-      held_by_claim_case_id: input.causeClaimCaseId,
       deceased_member_id: row.deceasedMemberId,
     },
     actorId: input.actorId,
@@ -402,6 +429,62 @@ export async function closeClaimIfDeathPaid(client: pg.PoolClient, input: CloseC
       pariwarId: input.pariwarId,
       causeClaimCaseId: paid,
       trigger: DEATH_ALREADY_FINALLY_APPROVED_TRIGGER,
+      actor: input.actor,
+      actorId: input.actorId,
+      ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),
+    },
+    row,
+  );
+  return { closed: true, eventVersion: closedEvent.eventVersion };
+}
+
+// ── Story 6.22 — a claim closed by its OWN investigation's finding (DL3 step 6) ───────────────────────
+
+export interface CloseClaimOnFraudFindingInput {
+  readonly pariwarId: PariwarId;
+  readonly claimCaseId: ClaimId;
+  readonly trigger: ClaimClosedFraudTrigger;
+  /** The member finding just written (the payload's `finding_id`). */
+  readonly findingId: ClaimNomineeFindingId;
+  readonly actor: ClaimEventActor;
+  readonly actorId: string;
+  readonly auditId?: string;
+}
+
+/**
+ * `closed: false` — `already_closed` (closed earlier, e.g. a suspicion closure: the finding is recorded, the claim is ⛔
+ * closed again) or `committed` (`approved` / `settled` — ⛔ never moved, Trap 16; row `6-22c`).
+ */
+export type CloseClaimOnFraudFindingResult =
+  | { readonly closed: false; readonly reason: 'already_closed' | 'committed' }
+  | { readonly closed: true; readonly eventVersion: number };
+
+/**
+ * ⭐ Story 6.22 (DL3 step 6; `2026-11-01-438` item 3) — SELF-MODE: close THIS claim because its own investigation found the
+ * member it names ALIVE (innocent or guilty), with its live processes ended. A sibling of {@link closeClaimIfDeathPaid}: ⛔ no
+ * key is taken here — the caller (`recordFraudFinding`) already holds the death's intake key, this claim's
+ * {@link takeClaimClosureKeys} and its row, in that order (taking them AFTER the row would invert it).
+ */
+export async function closeClaimOnFraudFinding(
+  client: pg.PoolClient,
+  input: CloseClaimOnFraudFindingInput,
+): Promise<CloseClaimOnFraudFindingResult> {
+  const db = bindScopedDb(client);
+  const [row] = await db
+    .select()
+    .from(claims)
+    .where(and(eq(claims.pariwarId, input.pariwarId), eq(claims.claimCaseId, input.claimCaseId)))
+    .limit(1);
+  if (!row) throw new Error(`[suspicion-refusal-persist] closeClaimOnFraudFinding: claim ${input.claimCaseId} not found under its own lock`);
+  if (row.currentState === 'closed') return { closed: false, reason: 'already_closed' };
+  if (!isClaimClosable(row.currentState)) return { closed: false, reason: 'committed' };
+  const closedEvent = await closeLockedClaim(
+    client,
+    db,
+    {
+      pariwarId: input.pariwarId,
+      trigger: input.trigger,
+      findingId: input.findingId,
       actor: input.actor,
       actorId: input.actorId,
       ...(input.auditId !== undefined ? { auditId: input.auditId } : {}),

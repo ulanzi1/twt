@@ -17,12 +17,15 @@
 // @twt/events.loadEvents — domain cannot import @twt/events (the cycle); see
 // claim/project.ts header. The stream is small per claim.
 
-import { and, asc, desc, eq, lte, notInArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lte, notInArray, type SQL, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId } from '../ids/index.js';
+import { clampLimit } from '../pagination.js';
+import { claimFraudInvestigationSteps } from '../schema/claim_fraud_investigation_steps.js';
 import { eventsLog } from '../schema/events_log.js';
 import { claims, type ClaimRow } from '../schema/claims.js';
+import { memberPostings } from '../schema/member_postings.js';
 import { type ClaimLifecycleState, replayClaimState } from './state.js';
 import { standingSuspicionRefusalSql } from './suspicion-refusal.js';
 
@@ -169,13 +172,154 @@ export async function listLiveClaimsForDeceasedMember(
   return db
     .select({ claimCaseId: claims.claimCaseId, currentState: claims.currentState, createdAt: claims.createdAt })
     .from(claims)
-    .where(
-      and(
-        eq(claims.pariwarId, pariwarId),
-        eq(claims.deceasedMemberId, deceasedMemberId),
-        notInArray(claims.currentState, [...excluded]),
-      ),
-    )
+    .where(and(claimsNamingMemberWhere(pariwarId, deceasedMemberId), notInArray(claims.currentState, [...excluded])))
     .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))
     .limit(10);
+}
+
+/** The claims of THIS Pariwar that name the member as the deceased — the per-member reads' shared `where`. */
+function claimsNamingMemberWhere(pariwarId: PariwarId, deceasedMemberId: MemberId): SQL {
+  return and(eq(claims.pariwarId, pariwarId), eq(claims.deceasedMemberId, deceasedMemberId))!;
+}
+
+// ── Story 6.22 — the fraud investigation's two lists (DL5, DL10 (iv)) ───────────────────────────────────
+
+/** Where a claim's investigation stands — read from the STEP table (⛔ the finding kind — TR2). */
+export type FraudInvestigationStatus = 'none' | 'flagged' | 'found';
+
+/** The helpline's per-member list: ⛔ more than this, newest first. */
+export const FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT = 20;
+export const FRAUD_FLAG_CLAIMS_MAX_LIMIT = 50;
+
+export interface ClaimNamingMemberForFraudFlag {
+  readonly claimCaseId: ClaimId;
+  readonly currentState: string;
+  readonly filedAt: Date;
+  readonly investigation: FraudInvestigationStatus;
+}
+
+/**
+ * ⭐ Story 6.22 (DL5) — EVERY claim naming the member as the deceased, in EVERY state (the leaf's own scope — the shipped
+ * helpline reads drop `settled` / `denied`, so a member locked by a `denied` false claim would never appear), newest first,
+ * with where each claim's investigation stands. ⛔ PII — ids, states, dates (TR14). The helpline operator reaches it only
+ * for the member they have FOUND and read back.
+ */
+export async function listClaimsNamingMemberForFraudFlag(
+  db: Db,
+  pariwarId: PariwarId,
+  deceasedMemberId: MemberId,
+  opts: { readonly limit?: number } = {},
+): Promise<ClaimNamingMemberForFraudFlag[]> {
+  const limit = clampLimit(opts.limit, { default: FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT, cap: FRAUD_FLAG_CLAIMS_MAX_LIMIT });
+  const rows = await db
+    .select({ claimCaseId: claims.claimCaseId, currentState: claims.currentState, createdAt: claims.createdAt })
+    .from(claims)
+    .where(claimsNamingMemberWhere(pariwarId, deceasedMemberId))
+    .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))
+    .limit(limit);
+  if (rows.length === 0) return [];
+  const steps = await db
+    .select({ claimCaseId: claimFraudInvestigationSteps.claimCaseId, step: claimFraudInvestigationSteps.step })
+    .from(claimFraudInvestigationSteps)
+    .where(
+      and(
+        eq(claimFraudInvestigationSteps.pariwarId, pariwarId),
+        inArray(
+          claimFraudInvestigationSteps.claimCaseId,
+          rows.map((r) => r.claimCaseId),
+        ),
+      ),
+    );
+  const status = new Map<string, FraudInvestigationStatus>();
+  for (const s of steps) {
+    const key = String(s.claimCaseId).toLowerCase();
+    if (s.step === 'flagged') {
+      if (!status.has(key)) status.set(key, 'flagged');
+    } else {
+      status.set(key, 'found');
+    }
+  }
+  return rows.map((r) => ({
+    claimCaseId: r.claimCaseId,
+    currentState: r.currentState,
+    filedAt: r.createdAt,
+    investigation: status.get(String(r.claimCaseId).toLowerCase()) ?? 'none',
+  }));
+}
+
+export const OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT = 50;
+export const OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT = 200;
+
+export interface OpenFraudInvestigation {
+  readonly claimCaseId: ClaimId;
+  readonly currentState: string;
+  readonly claimFiledAt: Date;
+  readonly flaggedAt: Date;
+  /** The deceased member's latest posting district — the row's authorization scope (`null` ⇒ dropped by `isVisible`). */
+  readonly district: string | null;
+}
+
+/**
+ * ⭐ Story 6.22 (DL10 (iv)) — the District Admin's WORK-LIST: claims FLAGGED with ⛔ finding yet, oldest flag first, each
+ * inside the caller's scope (`isVisible` — the route passes `rbac.hasPermission(claim.record_fraud_finding)` at the row's
+ * district, the per-claim gate's own predicate). The filter runs BEFORE the page limit (keyset batches — the correction
+ * queue's shape), so a District Admin's own rows are never crowded out by rows they cannot see. ⛔ PII.
+ */
+export async function listOpenFraudInvestigations(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: { readonly limit?: number; readonly isVisible?: (row: { readonly district: string | null }) => boolean } = {},
+): Promise<OpenFraudInvestigation[]> {
+  const pageSize = clampLimit(opts.limit, { default: OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT, cap: OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT });
+  const scanBatch = Math.max(pageSize, OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT);
+  const out: OpenFraudInvestigation[] = [];
+  let after: { flaggedAtExact: string; claimCaseId: string } | null = null;
+  for (;;) {
+    const cursor: SQL = after === null ? sql`TRUE` : sql`(f.acted_at, f.claim_case_id) > (${after.flaggedAtExact}::timestamptz, ${after.claimCaseId}::uuid)`;
+    const batch = await db.execute<{
+      claim_case_id: string;
+      current_state: string;
+      created_at: Date | string;
+      flagged_at: Date | string;
+      flagged_at_exact: string;
+      district: string | null;
+    }>(sql`
+      SELECT c.claim_case_id::text AS claim_case_id, c.current_state, c.created_at,
+             f.acted_at AS flagged_at, f.acted_at::text AS flagged_at_exact,
+             (SELECT p.district
+                FROM ${memberPostings} p
+               WHERE p.member_id = c.deceased_member_id AND p.pariwar_id = c.pariwar_id
+               ORDER BY p.created_at DESC, p.posting_id DESC
+               LIMIT 1) AS district
+        FROM claim_fraud_investigation_steps f
+        JOIN claims c ON c.pariwar_id = f.pariwar_id AND c.claim_case_id = f.claim_case_id
+       WHERE f.pariwar_id = ${pariwarId}
+         AND f.step = 'flagged'
+         AND NOT EXISTS (
+           SELECT 1 FROM claim_fraud_investigation_steps fs
+            WHERE fs.pariwar_id = f.pariwar_id
+              AND fs.claim_case_id = f.claim_case_id
+              AND fs.step IN ('found_innocent', 'found_guilty')
+         )
+         AND ${cursor}
+       ORDER BY f.acted_at ASC, f.claim_case_id ASC
+       LIMIT ${scanBatch}
+    `);
+    const rows = batch.rows ?? [];
+    if (rows.length === 0) break;
+    const last = rows[rows.length - 1]!;
+    after = { flaggedAtExact: last.flagged_at_exact, claimCaseId: last.claim_case_id };
+    for (const r of rows) {
+      if (opts.isVisible && !opts.isVisible({ district: r.district })) continue;
+      out.push({
+        claimCaseId: r.claim_case_id as ClaimId,
+        currentState: r.current_state,
+        claimFiledAt: r.created_at instanceof Date ? r.created_at : new Date(r.created_at),
+        flaggedAt: r.flagged_at instanceof Date ? r.flagged_at : new Date(r.flagged_at),
+        district: r.district,
+      });
+    }
+    if (out.length >= pageSize || rows.length < scanBatch) break;
+  }
+  return out.slice(0, pageSize);
 }

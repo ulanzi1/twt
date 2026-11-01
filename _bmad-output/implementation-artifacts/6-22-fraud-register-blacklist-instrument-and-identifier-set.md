@@ -957,23 +957,23 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         lists (Task 0.1 (vii)).
   - [x] 1.3 Live-DB tests for AC1 (copy `tests/integration/rls/claim-death-certificate-policy-regression.spec.ts` and the 6.21a reviews
         spec).
-- [ ] **Task 2 — The writers (AC2, AC4–AC9)**
-  - [ ] 2.1 DL12 on `recordMemberInnocenceFinding` (targeted conflict on the predicate, re-read on a 0-row conflict, one unlocked read then
+- [x] **Task 2 — The writers (AC2, AC4–AC9)**
+  - [x] 2.1 DL12 on `recordMemberInnocenceFinding` (targeted conflict on the predicate, re-read on a 0-row conflict, one unlocked read then
         the intake key then `lockClaimRow`); `recordMemberGuiltFinding` beside it in `nominee-lock.ts`; `listStandingDeathReports` in
         `death-report.ts` sharing the leaf's fragment — existing tests stay green with no assertion weakened.
-  - [ ] 2.2 The closure core (DL3 step 6, DL13): `closeLockedClaim`'s discriminated input; `CLAIM_CLOSED_HELD_TRIGGERS` /
+  - [x] 2.2 The closure core (DL3 step 6, DL13): `closeLockedClaim`'s discriminated input; `CLAIM_CLOSED_HELD_TRIGGERS` /
         `CLAIM_CLOSED_FRAUD_TRIGGERS`; the exported fraud closer (`endLiveProcesses`); the discriminated `ClaimClosedPayloadSchema`; OP10's
         defensive guard; the registry text. The STICKY freeze (DL13): `ACCOUNT_STICKY_FREEZE_EVENT_TYPE` + its SQL fragment exported from
         `member/overlay.ts`, used by `evaluateAccountOverlay` (per-stream flag; `OVERLAY_EVENT_TYPES`), `getMemberAccountOverlay`,
         `member/directory-read.ts` `NOT_DECEASED` and `listAccountFrozenMemberIds`; the overlay header's consumer list corrected (G20) and
         the swap point named (DL8); `packages/domain/tests/member/overlay.test.ts` gains the sticky cases.
-  - [ ] 2.3 `fraud-investigation-persist.ts`: `flagClaimForFraudInvestigation` (replay on the same `step_id`), `recordFraudFinding` (DL3
+  - [x] 2.3 `fraud-investigation-persist.ts`: `flagClaimForFraudInvestigation` (replay on the same `step_id`), `recordFraudFinding` (DL3
         steps 1–6 — the replay first; never spelling a finding kind, TR2); `readClosedMemberAliveBulk` beside
         `readClosedHolderRefusedBulk` (steps table + the `held_by` holder leg, DL10 (iii) / (v)); `FRAUD_ALIVE_CONFIRMATIONS`; DL5's
         reader in `claim/read.ts` and DL10 (iv)'s work-list read (`clampLimit`); this writer added to
         `acquireSuspicionReversalLockForClaim`'s "every intake-key taker" list; errors in `claim/errors.ts`; the two annotations + two
         triggers — tuple, payload map, reducer arms, registry, counts.
-  - [ ] 2.4 Tests: AC2 (with the PQ1-named leg), AC3 (the PQ7-named domain leg), AC4 (domain half), AC5, AC6 (the test-held finding client
+  - [x] 2.4 Tests: AC2 (with the PQ1-named leg), AC3 (the PQ7-named domain leg), AC4 (domain half), AC5, AC6 (the test-held finding client
         for the intake race), AC7 (the three-reader equivalence test, with its positive control), AC8, AC9 (the holder-direction leg + the
         raw-insert guard leg). ⭐ The 6.23b EA10 pin (BigDev, Task 0.4; `-438` item 12): approve C2 with reasons over its keys, record
         innocence on an EARLIER claim C1 of the same member, assert C2's warning keys are a SUBSET of before and ⛔ late key is queued
@@ -1204,6 +1204,38 @@ hand).**
   the story DB (:5451, fresh container `twt-622-pg`); the RLS folder + nominee-lock / determination specs 1299/1299; fence 26/26; domain
   `tsc` clean; `db:check`, `schema:test`, `schema:check` green.
 
+- **Task 2 (domain — AC2, AC3's Q7 leg, AC4 domain half, AC5, AC6, AC7, AC8, AC9; the EA10 pin) — 2026-11-01.**
+  `nominee-lock.ts` — DL12 on the innocence writer (one unlocked read → intake key → row; targeted conflict on
+  `MEMBER_FINDING_UNIQUE_PREDICATE`; a same-id/kind retry REPLAYS with the original annotation's version) and
+  `recordMemberGuiltFinding` beside it; both return `{ eventVersion, replayed }`. `death-report.ts` — `listStandingDeathReports`.
+  `events.ts` / `state.ts` / `registry.ts` — `claim.fraud_flagged` + `claim.member_found_guilty` (39 events), the trigger split
+  (`CLAIM_CLOSED_HELD_TRIGGERS` / `CLAIM_CLOSED_FRAUD_TRIGGERS`), `ClaimClosedPayloadSchema` a discriminated union. The closure
+  core — `closeLockedClaim`'s input discriminated, `closeOtherClaimsOfDeath` takes held triggers only, `takeClaimClosureKeys`
+  (the per-claim key order, exported once), `closeClaimOnFraudFinding` (self-mode). `overlay.ts` / `directory-read.ts` — the
+  STICKY freeze (`ACCOUNT_STICKY_FREEZE_EVENT_TYPE`, `stickyFrozenMemberSql`), the header's reader list corrected (G20) and the
+  PQ1 swap point named. `one-payment-per-death.ts` — OP10's defensive guard + `readClosedMemberAliveBulk`. `read.ts` —
+  `listClaimsNamingMemberForFraudFlag` (DL5) and `listOpenFraudInvestigations` (DL10 (iv), `isVisible` before the limit).
+  `fraud-investigation-persist.ts` — the flag, the finding (DL3 steps 1–6), `listFraudInvestigationSteps` (DL7); errors
+  `FraudInvestigationRefusedError`. Tests: `fraud-investigation.spec.ts` 21, `fraud-investigation-concurrency.spec.ts` 5,
+  `member/overlay-three-readers.spec.ts` 1 (seven members, positive control), `fraud-closed-payload.test.ts` 6, the overlay unit
+  sticky cases 6, the EA10 pin in `approval-warnings.spec.ts`; the two event pins moved (37 → 39; `STORY_6_22_CLAIM_EVENTS`).
+  Mutation checks, each RED then restored: the evaluator's sticky branch; the directory's and the frozen list's sticky legs;
+  OP10's guard; `readClosedMemberAliveBulk`'s holder leg; the row before the closure keys; the finding's own intake key removed.
+  Whole domain suite on the story DB: 7567 passed / 484 files.
+  ⚠ **Recorded deviations from the story text** (each the smallest true reading; none changes behaviour the ACs ask for):
+  (1) AC2 says `git diff` shows `isDeathReportStanding`'s body unchanged — sharing the leaf's SQL with
+  `listStandingDeathReports` (N3: ⛔ a second copy) means the WHERE moved, VERBATIM, into one private fragment both call; the
+  predicate is byte-identical and the fence's count for the file stays 1. (2) `listStandingDeathReports` is bounded by a fixed
+  `STANDING_DEATH_REPORTS_LIMIT = 20`, ⛔ `clampLimit` — the leaf may import only `drizzle-orm`, `db`, `ids` (the fence's TR1).
+  (3) DL13 puts the sticky type into `OVERLAY_EVENT_TYPES`; it is in the evaluator's read list only — the set-based folds keep a
+  freeze/unfreeze IN-list (`FREEZE_FOLD_EVENT_TYPES`), so a guilty annotation can never become a stream's "latest" event and
+  silently drop a freeze; both SQL readers OR `stickyFrozenMemberSql` in. (4) OP10's guard spells the two fraud triggers locally
+  (`OP10_EXCLUDED_CLOSE_TRIGGERS`) — importing `events.ts` there is a runtime init cycle; a test pins equality. (5) The fraud
+  `claim.closed` payload carries `finding_id` (the replay reads it). (6) AC6's "remove the finding's intake key ⇒ RED": DL12's
+  inner writer ALSO takes the key (after the row), so a plain race stays green; the ORDER is pinned instead by a NOWAIT probe —
+  while the finding waits on a key it holds ⛔ the claim row — and that mutation goes RED (AC5's row-before-key mutation too).
+  (7) AC6's second-intake race runs at the domain level (`tryConverge`); its HTTP twin is Task 4's.
+
 ### File List
 
 - `.decision-log.md` (Decision `2026-11-01-438`)
@@ -1228,6 +1260,27 @@ hand).**
 - `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
 - `apps/jobs/tests/claim-suspicion-staff-email-no-decision.test.ts`
 - `packages/domain/tests/integration/rls/claim-fraud-investigation-policy-regression.spec.ts` (new)
+- `packages/domain/src/claim/nominee-lock.ts`
+- `packages/domain/src/claim/death-report.ts`
+- `packages/domain/src/claim/events.ts`
+- `packages/domain/src/claim/state.ts`
+- `packages/domain/src/claim/errors.ts`
+- `packages/domain/src/claim/suspicion-refusal-persist.ts`
+- `packages/domain/src/claim/one-payment-per-death.ts`
+- `packages/domain/src/claim/read.ts`
+- `packages/domain/src/claim/fraud-investigation-persist.ts` (new)
+- `packages/domain/src/claim/index.ts`
+- `packages/domain/src/member/overlay.ts`
+- `packages/domain/src/member/directory-read.ts`
+- `packages/events/src/registry.ts`
+- `packages/domain/tests/integration/claim/fraud-investigation.spec.ts` (new)
+- `packages/domain/tests/integration/claim/fraud-investigation-concurrency.spec.ts` (new)
+- `packages/domain/tests/integration/member/overlay-three-readers.spec.ts` (new)
+- `packages/domain/tests/claim/fraud-closed-payload.test.ts` (new)
+- `packages/domain/tests/member/overlay.test.ts`
+- `packages/domain/tests/claim/dpdpa-consent-events.test.ts`
+- `packages/domain/tests/claim/nominee-name-check-events.test.ts`
+- `packages/domain/tests/integration/claim/approval-warnings.spec.ts`
 
 ## Change Log
 

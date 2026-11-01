@@ -9,7 +9,7 @@
 //     → account-frozen = true (since `occurred_at`),
 //   · claim-case resolution (`claim.settled` / `claim.denied_no_appeal`, configurable
 //     policy) → overlay removed.
-// Load-bearing for Module Shelf suppression (Epic 12 Story 12.4) + future consumers.
+// Intended for Module Shelf suppression (Epic 12 Story 12.4 — ⛔ built yet) + future consumers.
 //
 // ── ⭐ THE SEAM IS LIVE. ⛔ THIS COMMENT USED TO SAY IT WAS NOT. ───────────────
 // Claim events live on CLAIM streams (one stream per claim, Story 6.x) and reference
@@ -32,15 +32,29 @@
 // THE TREE, and this one made a correct-looking predicate wrong. If you wire a new
 // consumer to this module, re-read this paragraph before you trust any "not yet" here.
 //
-// ⚠ CONSUMERS THAT MUST STAY OBSERVATIONALLY EQUIVALENT TO `evaluateAccountOverlay`:
-//   · `member/directory-read.ts` → `NOT_DECEASED` (the set-based form, for ONE query
-//     over a whole page — it cannot call this per-member evaluator without an N+1).
-//   · `listAccountFrozenMemberIds` below (Story 5.8b, FS4 (d)) — the SAME set-based fold as
-//     `NOT_DECEASED`, over an explicit member list: the degraded-mode bridge's cycle-open child
-//     omits the text for a member whose death has been reported (ONE read per job).
+// ⚠ THE THREE READERS THAT MUST STAY OBSERVATIONALLY EQUIVALENT (corrected 2026-11-01, Story 6.22 — G20):
+//   · `evaluateAccountOverlay` / `getMemberAccountOverlay` below — the per-member evaluator. ⚠ `getMemberAccountOverlay` has
+//     ⛔ production caller today (tests only); the Module Shelf (12.4) is unbuilt.
+//   · `member/directory-read.ts` → `NOT_DECEASED` (the set-based form, for ONE query over a whole page — the PUBLIC Member
+//     Directory; it cannot call this per-member evaluator without an N+1).
+//   · `listAccountFrozenMemberIds` below (Story 5.8b, FS4 (d)) — the SAME set-based fold as `NOT_DECEASED`, over an explicit
+//     member list: the degraded-mode bridge's cycle-open child omits the text for a member whose death has been reported.
+//   (`pool/sahyog-vivran-read.ts` only cites the constant in a comment.) ONE test runs all three over the same members
+//   (`packages/domain/tests/integration/member/overlay-three-readers.spec.ts`).
 // ⭐ "Change one, check the other."
+//
+// ⭐ THE STICKY FREEZE (Story 6.22 DL13, N7; `2026-11-01-438` item 9 — the ONE home of this mechanism). A claim stream that
+// carries `claim.member_found_guilty` (the member, confirmed alive, was found GUILTY of taking part in the false report of
+// their own death) reads FROZEN whatever follows it on that stream — `claim.closed`, `claim.denied_no_appeal`,
+// `claim.settled`. It cannot be a last-wins freeze: the annotation and the close share one transaction's `now()` and the
+// close's higher version wins; and a guilty finding on a `denied` claim already unfrozen by `claim.denied_no_appeal`, or on
+// a claim already `closed`, emits ⛔ close at all. So: ONE constant (`ACCOUNT_STICKY_FREEZE_EVENT_TYPE`) read by the
+// evaluator (a per-stream flag) and ONE SQL fragment (`stickyFrozenMemberSql`) OR-ed into both set-based readers — all three
+// or none (the 11a.3 incident is the cost of one reader drifting). `ACCOUNT_UNFREEZE_EVENT_TYPES` is unchanged.
+// ⭐ THE PQ1 SWAP POINT: if the Panel rules Q1 A (a guilty member's locks lift), this constant and fragment are REMOVED in
+// the SAME change that adds the guilty kind to `claim/death-report.ts`'s leaf — the two flip TOGETHER.
 
-import { and, asc, inArray, lte, sql } from 'drizzle-orm';
+import { and, asc, inArray, lte, type SQL, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { MemberId } from '../ids/index.js';
@@ -54,8 +68,33 @@ export const ACCOUNT_FREEZE_EVENT_TYPE = 'claim.intake_initiated';
  *  while ANY other stream (the reversed claim) is unresolved. */
 export const ACCOUNT_UNFREEZE_EVENT_TYPES = ['claim.settled', 'claim.denied_no_appeal', 'claim.closed'] as const;
 
-/** The overlay-relevant claim event types (freeze + unfreeze). */
-const OVERLAY_EVENT_TYPES = [ACCOUNT_FREEZE_EVENT_TYPE, ...ACCOUNT_UNFREEZE_EVENT_TYPES];
+/**
+ * ⭐ Story 6.22 (DL13) — the claim event that makes its stream's freeze STICKY: a stream carrying it reads frozen whatever
+ * follows (see the header). The payload carries `deceased_member_id` (`ClaimMemberFoundGuiltyPayloadSchema`).
+ */
+export const ACCOUNT_STICKY_FREEZE_EVENT_TYPE = 'claim.member_found_guilty';
+
+/** The last-wins fold's types (freeze + unfreeze) — the set-based readers' IN-list. ⛔ The sticky type: it is a separate leg. */
+const FREEZE_FOLD_EVENT_TYPES = [ACCOUNT_FREEZE_EVENT_TYPE, ...ACCOUNT_UNFREEZE_EVENT_TYPES];
+
+/** Every overlay-relevant claim event type the per-member evaluator reads (the fold's + the sticky one). */
+const OVERLAY_EVENT_TYPES = [...FREEZE_FOLD_EVENT_TYPES, ACCOUNT_STICKY_FREEZE_EVENT_TYPE];
+
+/**
+ * ⭐ Story 6.22 (DL13) — the set-based STICKY leg, ONCE: does a `claim.member_found_guilty` event at or before `at` name the
+ * member (`memberIdText` — a text SQL expression)? `scope` adds a tenant predicate on the alias `sticky_e` where the caller's
+ * reader needs one (`listAccountFrozenMemberIds` — its pool bypasses RLS). OR-ed into `NOT_DECEASED` and
+ * `listAccountFrozenMemberIds`; the evaluator's per-stream flag is its pure twin.
+ */
+export function stickyFrozenMemberSql(memberIdText: SQL, at: Date, scope?: SQL): SQL {
+  return sql`EXISTS (
+      SELECT 1
+        FROM events_log sticky_e
+       WHERE sticky_e.event_type = ${ACCOUNT_STICKY_FREEZE_EVENT_TYPE}
+         AND lower(sticky_e.payload ->> 'deceased_member_id') = lower(${memberIdText})
+         AND sticky_e.occurred_at <= ${at}${scope === undefined ? sql`` : sql` AND ${scope}`}
+    )`;
+}
 
 /** A minimal claim-lifecycle event the overlay evaluator folds over. */
 export interface AccountOverlayEventInput {
@@ -97,28 +136,45 @@ const DEFAULT_STREAM_KEY = '__default__';
  * single claim's `settled`/`denied_no_appeal` no longer clears a freeze another claim still
  * needs. Events with no `streamId` fold into one group → identical to the pre-6.4 last-wins
  * behaviour (single-claim callers + DB-free unit tests are unaffected).
+ *
+ * ⭐ Story 6.22 (DL13) — a stream that has seen {@link ACCOUNT_STICKY_FREEZE_EVENT_TYPE} stays frozen whatever follows; its
+ * `frozenSince` stays the stream's last FREEZE instant (the intake), or the sticky event's own instant when the fold saw
+ * ⛔ freeze on that stream.
  */
 export function evaluateAccountOverlay(
   events: readonly AccountOverlayEventInput[],
 ): AccountOverlay {
-  // Per-claim last-wins fold (events arrive in a deterministic total order).
-  const perStream = new Map<string, { frozen: boolean; since: Date | null }>();
+  // Per-claim last-wins fold (events arrive in a deterministic total order), plus the sticky flag.
+  const perStream = new Map<
+    string,
+    { frozen: boolean; since: Date | null; lastFreezeAt: Date | null; stickyAt: Date | null }
+  >();
   for (const e of events) {
     const key = e.streamId ?? DEFAULT_STREAM_KEY;
+    const s = perStream.get(key) ?? { frozen: false, since: null, lastFreezeAt: null, stickyAt: null };
     if (e.type === ACCOUNT_FREEZE_EVENT_TYPE) {
-      perStream.set(key, { frozen: true, since: e.occurredAt });
+      s.frozen = true;
+      s.since = e.occurredAt;
+      s.lastFreezeAt = e.occurredAt;
+    } else if (e.type === ACCOUNT_STICKY_FREEZE_EVENT_TYPE) {
+      if (s.stickyAt === null) s.stickyAt = e.occurredAt;
     } else if ((ACCOUNT_UNFREEZE_EVENT_TYPES as readonly string[]).includes(e.type)) {
-      perStream.set(key, { frozen: false, since: null });
+      s.frozen = false;
+      s.since = null;
+    } else {
+      continue;
     }
+    perStream.set(key, s);
   }
 
-  // Aggregate: frozen iff ANY claim stream is currently frozen; frozenSince = earliest active.
+  // Aggregate: frozen iff ANY claim stream is currently frozen (or sticky); frozenSince = earliest active.
   let accountFrozen = false;
   let frozenSince: Date | null = null;
   for (const s of perStream.values()) {
-    if (s.frozen && s.since !== null) {
+    const since = s.frozen && s.since !== null ? s.since : s.stickyAt !== null ? (s.lastFreezeAt ?? s.stickyAt) : null;
+    if (since !== null) {
       accountFrozen = true;
-      if (frozenSince === null || s.since < frozenSince) frozenSince = s.since;
+      if (frozenSince === null || since < frozenSince) frozenSince = since;
     }
   }
   return { accountFrozen, frozenSince };
@@ -175,6 +231,7 @@ export async function listAccountFrozenMemberIds(
   at: Date,
 ): Promise<ReadonlySet<string>> {
   if (memberIds.length === 0) return new Set();
+  const ids = sql.param(memberIds.map((m) => m.toLowerCase()));
   const result = await db.execute<{ member_id: string }>(sql`
     SELECT DISTINCT latest_per_claim.member_id
       FROM (
@@ -183,12 +240,17 @@ export async function listAccountFrozenMemberIds(
                e.event_type AS latest_type
           FROM events_log e
          WHERE e.pariwar_id = current_setting('app.pariwar_id')::uuid
-           AND e.event_type IN (${sql.join(OVERLAY_EVENT_TYPES.map((t) => sql`${t}`), sql`, `)})
-           AND lower(e.payload ->> 'deceased_member_id') = ANY(${sql.param(memberIds.map((m) => m.toLowerCase()))}::text[])
+           AND e.event_type IN (${sql.join(FREEZE_FOLD_EVENT_TYPES.map((t) => sql`${t}`), sql`, `)})
+           AND lower(e.payload ->> 'deceased_member_id') = ANY(${ids}::text[])
            AND e.occurred_at <= ${at}
          ORDER BY lower(e.payload ->> 'deceased_member_id'), e.stream_id, e.occurred_at DESC, e.event_version DESC
       ) latest_per_claim
      WHERE latest_per_claim.latest_type = ${ACCOUNT_FREEZE_EVENT_TYPE}
+    UNION
+    -- ⭐ Story 6.22 — the STICKY leg (a guilty finding keeps the stream frozen whatever followed it).
+    SELECT asked.member_id
+      FROM unnest(${ids}::text[]) AS asked(member_id)
+     WHERE ${stickyFrozenMemberSql(sql`asked.member_id`, at, sql`sticky_e.pariwar_id = current_setting('app.pariwar_id')::uuid`)}
   `);
   return new Set((result.rows ?? []).map((r) => r.member_id));
 }

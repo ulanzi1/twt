@@ -28,8 +28,11 @@ import {
   addApprovalWarningReason,
   adjudicateClaim,
   escalateClaim,
+  flagClaimForFraudInvestigation,
   getClaimWarningAnchor,
   isPostDeathVersion,
+  listClaimsUnderCorrection,
+  recordFraudFinding,
   lateKeysUncoveredFor,
   projectClaimState,
   readClaimApprovalWarnings,
@@ -39,7 +42,15 @@ import {
   uncoveredKeys,
   versionStandsAt,
 } from '../../../src/claim/index.js';
-import { claimId as toClaimId, memberId as toMemberId, pariwarId as toPariwarId, type ClaimId, type PariwarId } from '../../../src/ids/index.js';
+import {
+  claimFraudInvestigationStepId as toStepId,
+  claimId as toClaimId,
+  claimNomineeFindingId as toFindingId,
+  memberId as toMemberId,
+  pariwarId as toPariwarId,
+  type ClaimId,
+  type PariwarId,
+} from '../../../src/ids/index.js';
 import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration-history.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
@@ -52,6 +63,7 @@ import {
   seedNomineeDetermination,
   seedNomineeNameCheck,
 } from '../_helpers.js';
+import { claimAt } from './_one-payment-fixtures.js';
 
 const DA = 'd1d1d1d1-0000-4000-8000-000000000001';
 const PA = 'a1a1a1a1-0000-4000-8000-000000000002';
@@ -273,6 +285,29 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       expect(after.kinds).toEqual([]);
       expect((await getClaimWarningAnchor(tx, pid, cid)).getTime()).toBe(after.anchorFiledAt.getTime());
       expect(after.anchorFiledAt.getTime()).toBeGreaterThan(w.anchorFiledAt.getTime());
+    });
+
+    it('⭐ Story 6.22 — the 6.23b EA10 pin (`-279` A7): C2 APPROVED over its key; the fraud finding releases the EARLIER C1 ⇒ C2\'s keys only SHRINK and ⛔ late key is queued', async () => {
+      const ctx = await claimWith({ declaredAt: [daysAgo(150)] });
+      const c1 = await claimAt(ctx.client, ctx.pid, ctx.mid, 'denied', { bare: true });
+      await ctx.client.query(`UPDATE claims SET created_at = now() - interval '100 days' WHERE claim_case_id = $1`, [c1]);
+      const before = await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid);
+      expect(before.kinds).toContain('recent_nominee_change'); // 150 days back is 50 days before C1's filing
+      expect((await approve(ctx, { warningReasonCode: GENERIC })).decision.outcome).toBe('approved');
+
+      // The PRODUCTION writer releases C1 — the helpline operator's flag, then a different District Admin's finding.
+      const base = { claimCaseId: c1, pariwarId: ctx.pid, noteCiphertext: 'enc:v1:note', actor: 'operator' as const };
+      await flagClaimForFraudInvestigation(ctx.client, { ...base, stepId: toStepId(randomUUID()), actorId: SA, actorDisplay: 'Helpline Operator' });
+      await recordFraudFinding(ctx.client, {
+        ...base, outcome: 'innocent', aliveConfirmation: 'in_person', stepId: toStepId(randomUUID()),
+        findingId: toFindingId(randomUUID()), actorId: DA, actorDisplay: 'Anita (District Admin)',
+      });
+
+      const after = await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid);
+      expect(after.anchorFiledAt.getTime()).toBeGreaterThan(before.anchorFiledAt.getTime()); // the anchor only moves LATER
+      expect(after.keys.filter((k) => !before.keys.includes(k))).toEqual([]); // ⛔ a key appears
+      expect(after.kinds).not.toContain('recent_nominee_change');
+      expect((await listClaimsUnderCorrection(ctx.tx, ctx.pid)).map((r) => r.claimCaseId)).not.toContain(ctx.cid);
     });
   });
 

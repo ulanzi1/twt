@@ -257,6 +257,18 @@ export const EVENT_TYPE_REGISTRY = {
       'The nominee-declaration LOCK this claim created was RELEASED on an investigation finding the member INNOCENT (2026-09-21-238 cl.1, the release route) — annotation event (the 34th claim event); identity transition (state unchanged, never a lifecycle state); carries finding_id only, NO PII. No production caller until row 6-22 (the fraud register) supplies the finding (Story 6.20).',
     schema: claim.ClaimNomineeLockReleasedPayloadSchema,
   },
+  'claim.fraud_flagged': {
+    type: 'claim.fraud_flagged',
+    description:
+      'The helpline operator FLAGGED this claim for a fraud investigation — it may be about a member who is ALIVE (2026-09-21-238 cl.3, "operator flags") — annotation event (the 38th claim event); identity transition (state unchanged); carries step_id only, NO PII (the note lives encrypted in claim_fraud_investigation_steps). It gates nothing: no approval gate reads it (pending the Panel, Q7) (Story 6.22).',
+    schema: claim.ClaimFraudFlaggedPayloadSchema,
+  },
+  'claim.member_found_guilty': {
+    type: 'claim.member_found_guilty',
+    description:
+      "The District Admin, having confirmed the member ALIVE, found them GUILTY of taking part in the false report of their own death (2026-09-21-238 cl.4) — annotation event (the 39th claim event); identity transition (state unchanged — a closable claim is closed by a separate claim.closed with trigger fraud_finding_guilty); carries finding_id + deceased_member_id, NO PII. The account-frozen overlay's STICKY freeze: a stream carrying it reads frozen whatever follows it (Story 6.22).",
+    schema: claim.ClaimMemberFoundGuiltyPayloadSchema,
+  },
   'claim.death_certificate_reviewed': {
     type: 'claim.death_certificate_reviewed',
     description:
@@ -396,7 +408,7 @@ export const EVENT_TYPE_REGISTRY = {
   'claim.closed': {
     type: 'claim.closed',
     description:
-      'Closed because another claim for the same death was refused on suspicion of a post-death nominee change and its appeal was ALLOWED (Story 6.24a, `2026-10-07-292` RF4 — the 36th claim event; `trigger: suspicion_appeal_allowed`), or because another claim for the same death has its payment committed (Story 6.28 OP4, `2026-10-11-319`; `trigger: death_already_finally_approved`). A TRANSITION from every closable state (all but settled / approved / closed — Story 6.28 OP13 made state_trustee_approved closable) to the terminal `closed`; ⛔ not a denial, ⛔ not appealable, ⛔ never a 6.19c closures row. Non-PII (held_by_claim_case_id + deceased_member_id); clears this stream in the account-frozen overlay.',
+      'Closed because another claim for the same death was refused on suspicion of a post-death nominee change and its appeal was ALLOWED (Story 6.24a, `2026-10-07-292` RF4 — the 36th claim event; `trigger: suspicion_appeal_allowed`), or because another claim for the same death has its payment committed (Story 6.28 OP4, `2026-10-11-319`; `trigger: death_already_finally_approved`). A TRANSITION from every closable state (all but settled / approved / closed — Story 6.28 OP13 made state_trustee_approved closable) to the terminal `closed`; ⛔ not a denial, ⛔ not appealable, ⛔ never a 6.19c closures row. Story 6.22 (DL13) adds the FRAUD triggers fraud_finding_innocent / fraud_finding_guilty — the investigation of this very claim found the member it names ALIVE: the payload is DISCRIMINATED on trigger (a held trigger requires held_by_claim_case_id; a fraud trigger carries none and carries finding_id). Non-PII (held_by_claim_case_id or finding_id + deceased_member_id); clears this stream in the account-frozen overlay — except a stream carrying claim.member_found_guilty, which stays frozen (the sticky freeze).',
     schema: claim.ClaimClosedPayloadSchema,
   },
   // ── Story 7.1 — pool.* lifecycle vocabulary (the pool-object state machine) ──

@@ -210,13 +210,12 @@ export async function listClaimsNamingMemberForFraudFlag(
   deceasedMemberId: MemberId,
   opts: { readonly limit?: number } = {},
 ): Promise<ClaimNamingMemberForFraudFlag[]> {
-  const limit = clampLimit(opts.limit, { default: FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT, cap: FRAUD_FLAG_CLAIMS_MAX_LIMIT });
   const rows = await db
     .select({ claimCaseId: claims.claimCaseId, currentState: claims.currentState, createdAt: claims.createdAt })
     .from(claims)
     .where(claimsNamingMemberWhere(pariwarId, deceasedMemberId))
     .orderBy(desc(claims.createdAt), desc(claims.claimCaseId))
-    .limit(limit);
+    .limit(clampLimit(opts.limit, { default: FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT, cap: FRAUD_FLAG_CLAIMS_MAX_LIMIT }));
   if (rows.length === 0) return [];
   const steps = await db
     .select({ claimCaseId: claimFraudInvestigationSteps.claimCaseId, step: claimFraudInvestigationSteps.step })

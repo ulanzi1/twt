@@ -37,7 +37,8 @@ describe('Story 6.22 — fraud-investigation contracts', () => {
     expect(FraudFindingRequest.safeParse(finding).success).toBe(true);
     expect(FraudFindingRequest.safeParse({ ...finding, alive_confirmation: 'phone_call' }).success).toBe(false);
     expect(FraudFindingRequest.safeParse({ ...finding, outcome: 'inconclusive' }).success).toBe(false);
-    const { alive_confirmation: _, ...noProof } = finding;
+    const noProof: Record<string, unknown> = { ...finding };
+    delete noProof['alive_confirmation'];
     expect(FraudFindingRequest.safeParse(noProof).success).toBe(true);
   });
 

@@ -48,7 +48,8 @@ describe('Story 6.22 — `claim.closed` is discriminated on its trigger', () => 
   });
 
   it('every arm keeps deceased_member_id REQUIRED (the overlay matches on it); an unknown trigger is refused', () => {
-    const { deceased_member_id: _, ...noMember } = { ...base('fraud_finding_guilty'), finding_id: randomUUID() };
+    const noMember: Record<string, unknown> = { ...base('fraud_finding_guilty'), finding_id: randomUUID() };
+    delete noMember['deceased_member_id'];
     expect(ClaimClosedPayloadSchema.safeParse(noMember).success).toBe(false);
     expect(ClaimClosedPayloadSchema.safeParse({ ...base('closed_because_alive'), finding_id: randomUUID() }).success).toBe(false);
   });

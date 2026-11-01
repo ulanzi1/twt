@@ -43,7 +43,7 @@ traps (TR1–TR16); **AC1–AC14**.
 
 # Story 6.22: The Fraud Register, First Half — Staff Investigate a Death Claim Filed Against a Living Member; an Innocent Member Is Released at Once and the False Claim Is Closed
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled on 2026-09-21 that a death claim filed against a member who is **alive**
 > must not lock that member for life: an **investigation** finds the member **innocent** or **guilty**, and there is no third outcome
@@ -1012,7 +1012,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
       `StepUpPanel`); `HelplineFraudFlag` in `HelplineClaimPage`; the `/p/$pariwarId/fraud-investigations` route + list;
       `closedClaimStateLabel`'s new argument at all four call sites; copy in each module's `i18n-en.ts`; component tests; `pnpm
       microcopy:check` (TR16); the browser pass (or un-attested).
-- [ ] **Task 7 — Close** — DL15 anonymize (the sentinel) + AC14's pins; DL16's dated lines in `deferred-work.md` (the table's exact words);
+- [x] **Task 7 — Close** — DL15 anonymize (the sentinel) + AC14's pins; DL16's dated lines in `deferred-work.md` (the table's exact words);
       the code comments that say "no producer until 6-22" re-worded (G17 — grep `6-22` across `apps` `packages`); the 6.38 helpdesk sentence
       (G9) is left AS SHIPPED and its change tracked by the PQ1 roster leg (true for every member until a guilty finding exists in
       production); after every doc-block edit (the leaf header, `icp.ts`'s two blocks, `known-people.ts`, the overlay header, G17's
@@ -1283,6 +1283,21 @@ hand).**
   RAN, 2026-11-01** (the [[project_admin_browser_pass_launcher]] recipe — a throwaway launcher on the story DB :5451, admin Vite
   :3001, a cookie helper; the launcher file deleted afterwards): the helpline operator found the member (Member ID), confirmed the read-back, met the empty-note refusal in words, flagged the claim (the row → *"Flagged — waiting for a District Admin"*, the status line announced); a VERIFIER opened the console's investigation — the flag shown, its note WITHHELD, ⛔ form; the District Admin opened the work-list (the claim listed), opened it into the console, read the operator's note, chose innocent + video call + a note, met the step-up HOLD (*"Waiting to save: Record the finding"*), sent and verified the code — the held write re-ran: the innocent step shown, *"The finding is recorded and the claim is closed"*, *"No other claim keeps this member's death recorded"*; the DB held EXACTLY one finding row, one found step and `claim.closed` (`fraud_finding_innocent`) — ⛔ double write; the operator's helpline then read the claim *"Closed — A finding is recorded"*. ⚠ ⛔ reached in the browser: the *"Closed — the member was found alive"* LABEL (it renders only in the multi-claim pickers / refusal lists, which a one-claim member does not populate) — proven by the component test and the API leg (`closed_member_alive: true`). The work-list view is ⛔ component-rendered (it
   needs the router); its scope is proven over HTTP.
+- **Task 7 (close — AC14, DL15, DL16, G17) — 2026-11-01 / 02.** `anonymize.ts` scrubs every step's note to the sentinel (keyed on
+  the reported member), the three pins moved 31 → 32 / 28 → 29 / 27 → 28, the live leg as `twt_app`
+  (`fraud-investigation-rtbf.spec.ts`); DL16's dated lines written under each item in `deferred-work.md` (the three labels only;
+  EA10 per BigDev's *"Closed, test pins it"*) and the PM1 pointer line in row `6-22`'s block; G17's stale "no producer until 6-22"
+  comments re-worded (`events.ts`, `peer-mesh-read.ts`, the registry, four test comments); ⛔ `**/` in any edited file.
+  **`ci:local` — 37 / 37 GREEN** on a FRESH container (`twt-622-pg`, DB `twt_dev`, :5451) on the tree of this commit. The FIRST
+  run (also fresh) was 34 / 37: `domain-invariants` (DL5's list read clamped into a local, ⛔ inline — the accessor gate wants
+  `.limit(clampLimit(…))`) and `lint` (two unused `_` destructures in this story's tests) — both fixed; and `test (unit)` (four
+  admin specs — `ground-inspection-page`, `helpline-claim-page`) that passed 53 / 53 run alone and green in the second full run
+  (the known unit=4 oversubscription — [[project_ci_local_concurrency_oversubscription]]).
+- **Summary.** The investigation is built to its finding: the helpline flags, a DIFFERENT person (the District Admin) finds,
+  with a note, a proof of life and a step-up; innocent releases every death lock and closes the claim through the closure core;
+  guilty closes it, keeps the locks and the frozen account (a declared narrowing — Panel Q1); the override door and the merge
+  re-check; peer-mesh follows the release; the staff surfaces; erasure. Governance first (`-438` alone), the routing note WRITTEN
+  ⛔ sent, rows `6-22b` / `6-22c` / `6-22d`, roster Row 47 (leg (e) met by the browser pass). Deviations (1)–(12) above.
 
 ### File List
 
@@ -1354,6 +1369,14 @@ hand).**
 - `apps/api/tests/unit/audit-log-sink.test.ts`
 - `apps/api/tests/integration/claims/fraud-investigation-routes.spec.ts` (new)
 - `scripts/claim-adjudication-human-actor-invariant/check.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/integration/claim/fraud-investigation-rtbf.spec.ts` (new)
+- `apps/api/tests/integration/_death-report-fixture.ts`
+- `apps/api/tests/integration/nominee/nominee-lock.spec.ts`
+- `packages/domain/tests/integration/claim/peer-mesh-workplace-snapshot.spec.ts`
+- `packages/domain/tests/integration/claim/nominee-determination.spec.ts`
+- `docs/launch-gate-inventory/inventory-roster.md` (Row 47 leg (e))
 - `packages/domain/src/claim/peer-mesh-read.ts`
 - `packages/domain/src/claim/peer-mesh-request.ts`
 - `packages/domain/src/member/known-people.ts`
@@ -1393,3 +1416,4 @@ hand).**
 | 2026-11-01 | 1.5 | Task 0.2 complete — BigDev: DL17 accepted as written; DL16's 6.23b EA10 row: re-trace at Task 0.1 (iv), then build here if a small anchor fix, else an explicit deferral — BigDev confirms before Task 0.4. Ledger `2026-11-01aa`. |
 | 2026-11-01 | 1.6 | `bmad-dev-story 6.22` — Task 0.1 (traces at `91ea2c81`; `origin/main` unmoved; numbers unchanged) and Task 0.3 (the routing note WRITTEN, ⛔ sent) complete. Task 0.1 (iv): 6.23b EA10 is UNREACHABLE by construction (the anchor only moves later — `-279` A7) — ⛔ fix to build; awaits BigDev's confirmation of its closure before Task 0.4. No decision entry, no code. Ledger `2026-11-01ab`. |
 | 2026-11-01 | 1.7 | Task 0 complete — BigDev on EA10: *"Closed, test pins it"* (Task 2.4 gains the pin). Decision `2026-11-01-438` committed ALONE (`8ce9f87b`). Records: rows `6-22b` / `6-22c` / `6-22d` minted (backlog, DL0 verbatim); `deferred-work.md` Task 0.5 section; roster Row 47 `fraud-register-finding-live` (legs (a)–(h)); `epics.md` Story 6.22. Row `6-22` → in-progress; Status → in-progress. No code. Ledger `2026-11-01ac`. |
+| 2026-11-02 | 1.8 | `bmad-dev-story 6.22` — Tasks 1–7 BUILT: the records (0196, 0197), the writers (flag, finding, closure, sticky freeze, OP10, reads), the override door, keys v58 + API, peer-mesh, the staff surfaces, erasure; the real-browser pass RAN (BigDev connected the browser — roster Row 47 (e) met); DL16 closures and G17 re-wording written; `ci:local` 37 / 37 on a fresh container. Twelve recorded deviations (Completion Notes). Status → review; row `6-22` → review. Ledger `2026-11-02a`. |

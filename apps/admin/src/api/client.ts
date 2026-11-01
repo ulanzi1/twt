@@ -3527,8 +3527,10 @@ export function revertQuestionnairePariwar(body: QuestionnaireRevertRequest, ide
 
 // ── Story 12.2 (`2026-11-01-433`) — the admin MODULE surface (partner offers) ─────────────────────────────────────────────
 // Tenant routes under `/p/:pariwarId/modules` (gated by `module.manage` — the server is the boundary). Every write carries an
-// Idempotency-Key the CALLER mints once per user intent and REUSES on a retry (the wizard: once per wizard session). Publish
-// needs the admin step-up `module_publish` (a 403 `auth.step_up_required` is the signal to run it).
+// Idempotency-Key the CALLER mints per write ATTEMPT and REUSES on a retry of the SAME request (the wizard and the partner picker:
+// unchanged answers keep the key, an edit mints a new one — `attemptKey` in hooks.ts; publish and withdraw: one per click, reused
+// only by the held step-up retry). Publish needs the admin step-up `module_publish` (a 403 `auth.step_up_required` is the signal
+// to run it).
 
 const modulesBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/modules`;
 const modulePost = <T>(path: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, body: unknown, idempotencyKey: string): Promise<T> =>

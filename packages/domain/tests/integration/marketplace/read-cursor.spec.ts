@@ -105,6 +105,9 @@ describe.skipIf(!hasDatabase)('pageModulesForPariwar — keyset paging on the ex
       }
       await c.query('COMMIT');
       return { ids, cursors };
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
     } finally {
       c.release();
     }
@@ -151,6 +154,9 @@ describe.skipIf(!hasDatabase)('pageModulesForPariwar — keyset paging on the ex
       expect(zero.items).toHaveLength(1);
       expect(zero.nextCursor).not.toBeNull();
       await c.query('COMMIT');
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
     } finally {
       c.release();
     }
@@ -166,6 +172,9 @@ describe.skipIf(!hasDatabase)('pageModulesForPariwar — keyset paging on the ex
       expect(rows.map((r) => r.moduleId)).toEqual(expectedOrder());
       expect(await listModulesForPariwar(bindScopedDb(c), P, { limit: 2 })).toHaveLength(2);
       await c.query('COMMIT');
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
     } finally {
       c.release();
     }

@@ -58,9 +58,9 @@ export function ModuleNewRoute(): ReactElement {
   const { from } = useSearch({ from: '/p/$pariwarId/modules/new' });
   return (
     <ModulesGateView status={status}>
-      {/* `key` — a corrected copy of ANOTHER module starts a fresh wizard session (a fresh Idempotency-Key). */}
+      {/* `key` — a corrected copy of ANOTHER module (or another Pariwar) starts a fresh wizard session (a fresh attempt). */}
       <ModuleWizard
-        key={from ?? 'new'}
+        key={`${pariwarId}:${from ?? 'new'}`}
         pariwarId={pariwarId}
         fromModuleId={from ?? null}
         onCreated={(moduleId) => void navigate({ to: '/p/$pariwarId/modules/$moduleId', params: { pariwarId, moduleId } })}
@@ -75,7 +75,10 @@ export function ModuleDetailRoute(): ReactElement {
   const { pariwarId, moduleId } = useParams({ from: '/p/$pariwarId/modules/$moduleId' });
   return (
     <ModulesGateView status={status}>
+      {/* `key` — the ticks, a held step-up retry and the result message are component state; a reused route instance must not carry
+          them to another offer (RP25). */}
       <ModuleDetailPage
+        key={`${pariwarId}:${moduleId}`}
         pariwarId={pariwarId}
         moduleId={moduleId}
         onBack={() => void navigate({ to: '/p/$pariwarId/modules', params: { pariwarId } })}

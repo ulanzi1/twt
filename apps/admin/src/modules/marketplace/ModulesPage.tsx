@@ -48,13 +48,17 @@ export function ModulesPage({ pariwarId, onNew, onOpen }: ModulesPageProps): Rea
         </label>
       </div>
 
-      {modules.isLoading ? <p role="status">…</p> : null}
+      {/* ONE always-mounted status region holds both "Loading…" and "No offers yet.": a status node that arrives already holding
+          its text is announced unreliably, and the two used to replace each other (RP32 / PU2). */}
+      <div role="status" data-testid="modules-status">
+        {modules.isLoading ? <p>{t('module.loading')}</p> : null}
+        {modules.isSuccess && items.length === 0 ? <p data-testid="modules-empty">{t('module.list.empty')}</p> : null}
+      </div>
       {modules.isError ? (
         <p role="alert" data-testid="modules-error">
           {modules.error instanceof ApiError && modules.error.status === 403 ? t('module.error.forbidden') : modules.error instanceof ApiError ? moduleErrorGuidance(modules.error.code) : t('module.list.error')}
         </p>
       ) : null}
-      {modules.isSuccess && items.length === 0 ? <p data-testid="modules-empty">{t('module.list.empty')}</p> : null}
 
       <ul className="flex flex-col gap-2" data-testid="modules-list">
         {items.map((m) => (
@@ -69,7 +73,13 @@ export function ModulesPage({ pariwarId, onNew, onOpen }: ModulesPageProps): Rea
             <span className="text-xs" data-testid={`module-state-${m.module_id}`}>
               {t(`module.state.${m.current_state}`)}
             </span>
-            <button type="button" className="text-sm underline" onClick={() => onOpen(m.module_id)} data-testid={`module-open-${m.module_id}`}>
+            <button
+              type="button"
+              className="text-sm underline"
+              aria-label={t('module.list.openNamed', { name: m.name_en })}
+              onClick={() => onOpen(m.module_id)}
+              data-testid={`module-open-${m.module_id}`}
+            >
               {t('module.list.open')}
             </button>
           </li>

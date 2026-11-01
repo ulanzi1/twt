@@ -123,7 +123,8 @@ export function registerMarketplaceRoutes(app: FastifyInstance, deps: AppDeps): 
     '/api/v1/p/:pariwarId/modules/:moduleId/publish',
     {
       schema: { params: ModuleParam, body: PublishModuleRequest, response: { 200: PublishModuleResponse }, tags: [TAG] },
-      // The step-up is checked LAST — after the session, the scope and the key (the workplaces / memorial order).
+      // The step-up is checked AFTER the session and the scope, but BEFORE the handler — so before the Idempotency-Key, which
+      // `tenantWrite` reads inside the handler (12.2 review RP16: this comment used to put the key before the step-up).
       preHandler: [...guard, requireStepUp(deps, MODULE_PUBLISH_STEP_UP_CONTEXT)],
     },
     h.publish,

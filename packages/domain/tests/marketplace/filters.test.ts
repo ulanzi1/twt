@@ -383,6 +383,39 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
   const en = (ch: string): string => `HDFC${ch}home`;
   const hi = (ch: string): string => `गृह${ch}ऋण`;
 
+  // 12.2 code review round 1 (RP1). The four Hangul fillers are LETTERS (category Lo) that draw nothing, so the
+  // letter-or-digit rule alone let a blank-looking name through; U+2028 / U+2029 are line / paragraph separators the
+  // control-character rule (C0 / C1 only) never covered; the rest are format characters (category Cf) outside the
+  // bidi / zero-width list. All are numeric code points — the source carries no invisible character (TR15).
+  const FILLERS = [0x115f, 0x1160, 0x3164, 0xffa0];
+  function reviewRound1Refused(): Array<[string, number]> {
+    return [
+      ['Hangul filler U+115F', 0x115f],
+      ['Hangul jungseong filler U+1160', 0x1160],
+      ['Hangul filler U+3164', 0x3164],
+      ['halfwidth Hangul filler U+FFA0', 0xffa0],
+      ['LINE SEPARATOR U+2028', 0x2028],
+      ['PARAGRAPH SEPARATOR U+2029', 0x2029],
+      ['Mongolian vowel separator U+180E', 0x180e],
+      ['function application U+2061', 0x2061],
+      ['invisible plus U+2064', 0x2064],
+      ['deprecated format U+206A', 0x206a],
+      ['deprecated format U+206F', 0x206f],
+      ['interlinear annotation anchor U+FFF9', 0xfff9],
+      ['tag letter A U+E0041', 0xe0041],
+      ['cancel tag U+E007F', 0xe007f],
+      // DN2 (BigDev: option 2) — the rest of Unicode's default-ignorable set, which `\p{Cf}` does not cover, and the Braille
+      // blank. Each makes a name that reads identically to one without it, and a partner row can never be corrected.
+      ['combining grapheme joiner U+034F', 0x034f],
+      ['Khmer inherent vowel U+17B4', 0x17b4],
+      ['Mongolian free variation selector U+180B', 0x180b],
+      ['variation selector-1 U+FE00', 0xfe00],
+      ['variation selector-14 U+FE0D', 0xfe0d],
+      ['variation selector-17 U+E0100', 0xe0100],
+      ['Braille blank U+2800', 0x2800],
+    ];
+  }
+
   const refused: Array<[string, number]> = [
     ['NUL', 0x0000],
     ['TAB', 0x0009],
@@ -408,6 +441,7 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
     ['WJ U+2060', 0x2060],
     ['BOM U+FEFF', 0xfeff],
     ['SHY U+00AD', 0x00ad],
+    ...reviewRound1Refused(),
   ];
 
   it.each(refused)('refuses %s inside every one of the four module display schemas', (_l, code) => {
@@ -431,6 +465,74 @@ describe('Story 12.2 — QE12 display-text rules (write-only schemas)', () => {
       const v = `क्${cp(code)}ष`;
       expect(marketplace.moduleDisplayNameHiSchema.safeParse(v).success).toBe(true);
       expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(v).success).toBe(true);
+      expect(marketplace.partnerDisplayNameHiSchema.safeParse(v).success).toBe(true);
+    }
+  });
+
+  // (The Hindi half — ZWJ / ZWNJ still ACCEPTED in the `*_hi` schemas — is the test just above.)
+  it('DN1: ZWJ / ZWNJ are REFUSED in every English display schema (a look-alike duplicate partner)', () => {
+    for (const code of [0x200c, 0x200d]) {
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(en(cp(code))).success).toBe(false);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(en(cp(code))).success).toBe(false);
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(en(cp(code))).success).toBe(false);
+    }
+  });
+
+  it('RP1: every round-1 refusal holds in both partner schemas too', () => {
+    for (const [, code] of reviewRound1Refused()) {
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(en(cp(code))).success).toBe(false);
+      expect(marketplace.partnerDisplayNameHiSchema.safeParse(hi(cp(code))).success).toBe(false);
+    }
+  });
+
+  // DN2 (BigDev: option 2): U+FE0F / U+FE0E are the emoji / text PRESENTATION selectors. They are default-ignorable too, but stay
+  // ALLOWED so a heart or a tick mark still works in a name or a description. The one residual look-alike is "LIC" + U+FE0F.
+  it('DN2: U+FE0F / U+FE0E stay ACCEPTED in every display schema (an emoji with a presentation selector)', () => {
+    for (const code of [0xfe0f, 0xfe0e]) {
+      const heart = `Care ${cp(0x2764)}${cp(code)}`;
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(heart).success).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(heart).success).toBe(true);
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(heart).success).toBe(true);
+      expect(marketplace.moduleDisplayNameHiSchema.safeParse(hi(cp(code))).success).toBe(true);
+      expect(marketplace.partnerDisplayNameHiSchema.safeParse(hi(cp(code))).success).toBe(true);
+    }
+  });
+
+  // The wider refusal must not catch real text: matras, nukta, virama, danda, Devanagari digits, the rupee sign, curly quotes, an
+  // en dash, emoji and a ZWJ inside a Devanagari conjunct (still allowed in `*_hi`).
+  it('DN2: ordinary Hindi and English copy is still accepted', () => {
+    const hindi = [
+      'एचडीएफसी बैंक गृह ऋण',
+      'क्ष त्र ज्ञ श्री',
+      'ऑफ़र: ₹५ लाख तक का ऋण।',
+      `क्${cp(0x200d)}ष और क्${cp(0x200c)}ष`,
+      'बीमा – 5% की छूट',
+    ];
+    const english = ['HDFC home loan', 'LIC term plan (2026) – 5% off', 'Rahul’s “best” offer: ₹5 lakh', `Care ${cp(0x2764)}${cp(0xfe0f)} insurance`, `Win ${cp(0x1f389)} a prize`];
+    for (const v of hindi) {
+      expect(marketplace.moduleDisplayNameHiSchema.safeParse(v).success, v).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionHiSchema.safeParse(v).success, v).toBe(true);
+      expect(marketplace.partnerDisplayNameHiSchema.safeParse(v).success, v).toBe(true);
+    }
+    for (const v of english) {
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(v).success, v).toBe(true);
+      expect(marketplace.moduleDisplayDescriptionEnSchema.safeParse(v).success, v).toBe(true);
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(v).success, v).toBe(true);
+    }
+  });
+
+  it('DN2: the other selectors are refused even next to a letter, in the English AND the Hindi schemas', () => {
+    for (const code of [0x034f, 0xfe00, 0x180b, 0x2800]) {
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(`LIC${cp(code)}`).success).toBe(false);
+      expect(marketplace.partnerDisplayNameHiSchema.safeParse(`एलआईसी${cp(code)}`).success).toBe(false);
+    }
+  });
+
+  it('RP1: a name made only of fillers is refused (it looked blank and passed the letter rule)', () => {
+    for (const code of FILLERS) {
+      expect(marketplace.partnerDisplayNameEnSchema.safeParse(cp(code)).success).toBe(false);
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(cp(code).repeat(3)).success).toBe(false);
+      expect(marketplace.moduleDisplayNameEnSchema.safeParse(`${cp(code)}LIC${cp(code)}`).success).toBe(false);
     }
   });
 

@@ -7,9 +7,13 @@
 import type { ModuleDetailResponse } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
+import { attemptKey, type AttemptKey } from '../src/api/hooks.js';
 import {
   codeToStep,
   describeEligibility,
+  eligibilityStatesOf,
+  issueFieldName,
+  issueMessage,
   describeInstant,
   describePlaces,
   describeScope,
@@ -269,5 +273,75 @@ describe('time, the request and the 422 mapping', () => {
       secretName: 'k',
     });
     expect(toIsoOrNull(s.validFrom)).toBe('2026-11-05T05:00:00.000Z');
+  });
+});
+
+// ── Code review round 1, chunk C ──────────────────────────────────────────────────────────────────────
+
+describe('review round 1 (chunk C) — derivations', () => {
+  it('RP22: the API’s permission-denied code `authz.forbidden` has its own sentence (it was keyed `auth.forbidden`, which nothing emits)', () => {
+    expect(moduleErrorGuidance('authz.forbidden')).toBe(t('module.error.forbidden'));
+    expect(moduleErrorGuidance('authz.forbidden', 'detail')).toBe(t('module.error.forbidden'));
+    expect(moduleErrorGuidance('auth.forbidden')).toBe(t('module.error.generic')); // the old, dead key is gone
+  });
+
+  it('RP24: `module.window_ended` has two sentences — the wizard can edit a closing time, the detail page cannot', () => {
+    expect(moduleErrorGuidance('module.window_ended')).toBe(t('module.error.window_ended'));
+    expect(moduleErrorGuidance('module.window_ended', 'wizard')).toBe(t('module.error.window_ended'));
+    expect(moduleErrorGuidance('module.window_ended', 'detail')).toBe(t('module.error.window_ended_detail'));
+    expect(moduleErrorGuidance('module.window_ended', 'detail')).not.toBe(moduleErrorGuidance('module.window_ended'));
+    // Every other code reads the same on both surfaces.
+    expect(moduleErrorGuidance('module.not_draft', 'detail')).toBe(moduleErrorGuidance('module.not_draft'));
+  });
+
+  it('RP26: the lead address is capped at the DTO’s 4096 characters, with its own reason', () => {
+    const base = { ...emptyWizardState(), secretName: 'k' };
+    const url = (n: number): string => `https://x.example/${'a'.repeat(n - 'https://x.example/'.length)}`;
+    expect(validateStep(step('f'), { ...base, leadHandoffUrl: url(4096) })).toBeNull();
+    expect(validateStep(step('f'), { ...base, leadHandoffUrl: url(4097) })).toBe(t('module.reason.leadUrlTooLong'));
+  });
+
+  it('RP28: `eligibilityStatesOf` reads the statuses a filter names (none for "no restriction")', () => {
+    expect(eligibilityStatesOf({ version: 1, clauses: [] })).toEqual([]);
+    expect(eligibilityStatesOf({ version: 1, clauses: [{ kind: 'member_state_in', states: ['active', 'lock-in'] }] })).toEqual(['active', 'lock-in']);
+    expect(reachesNoMemberYet(eligibilityStatesOf({ version: 1, clauses: [{ kind: 'member_state_in', states: ['active'] }] }))).toBe(true);
+    expect(reachesNoMemberYet(eligibilityStatesOf({ version: 1, clauses: [] }))).toBe(false);
+  });
+
+  it('RP31: a 422 issue on a single-input field is named in the banner; any other path gets the plain sentence', () => {
+    expect(issueFieldName(['name_hi'])).toBe('name_hi');
+    expect(issueFieldName(['lead_handoff_signing_key_secret_name'])).toBe('lead_handoff_signing_key_secret_name');
+    expect(issueFieldName(['scope_filter', 'values', 3])).toBeNull(); // several inputs — no single field to mark
+    expect(issueFieldName([])).toBeNull();
+    expect(issueFieldName(undefined)).toBeNull();
+    expect(issueMessage(['name_hi'], 'must contain Hindi')).toBe(t('module.wizard.issueField', { field: t('module.field.nameHi'), message: 'must contain Hindi' }));
+    expect(issueMessage(['eligibility_filter'], 'bad')).toBe(t('module.wizard.issue', { message: 'bad' }));
+  });
+
+  it('RP18: `attemptKey` keeps its key for an unchanged body, mints a new one for a changed body or a cleared attempt', () => {
+    const ref: { current: AttemptKey | null } = { current: null };
+    const first = attemptKey(ref, { a: 1, b: 'x' });
+    expect(first).toEqual(expect.any(String));
+    expect(attemptKey(ref, { a: 1, b: 'x' })).toBe(first); // a genuine retry replays
+    expect(attemptKey(ref, { a: 2, b: 'x' })).not.toBe(first); // an edit is a new attempt…
+    const second = ref.current!.key;
+    expect(attemptKey(ref, { a: 2, b: 'x' })).toBe(second); // …which then keeps ITS key
+    ref.current = null; // cleared after a success or a cancel
+    expect(attemptKey(ref, { a: 2, b: 'x' })).not.toBe(second);
+  });
+
+  it('RP35: `toIsoOrNull` reads a datetime-local value in the BROWSER zone (a UTC-parsing regression changes the instant)', () => {
+    const was = process.env['TZ'];
+    try {
+      process.env['TZ'] = 'Asia/Kolkata'; // UTC+05:30, no DST
+      expect(toIsoOrNull('2026-11-05T10:30')).toBe('2026-11-05T05:00:00.000Z');
+      process.env['TZ'] = 'America/New_York'; // UTC-05:00 on this date
+      expect(toIsoOrNull('2026-11-05T10:30')).toBe('2026-11-05T15:30:00.000Z');
+      process.env['TZ'] = 'UTC';
+      expect(toIsoOrNull('2026-11-05T10:30')).toBe('2026-11-05T10:30:00.000Z');
+    } finally {
+      if (was === undefined) delete process.env['TZ'];
+      else process.env['TZ'] = was;
+    }
   });
 });

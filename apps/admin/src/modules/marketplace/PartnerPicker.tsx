@@ -1,13 +1,15 @@
 // The partner picker — Story 12.2 step (a) (QE3 (A)): choose one of the Pariwar's registered partners, or register a new
 // one inline. A partner is IMMUTABLE (a misspelt one is registered again), so the hint says so. The registration's
-// Idempotency-Key is minted once per registration attempt and REUSED on a retry of that attempt (cleared on success or
-// Cancel). The new partner is selected once it exists.
+// Idempotency-Key belongs to the current ATTEMPT: the same two names keep their key (a retry whose first response was lost
+// replays the same partner), an EDITED name mints a new one — the server replays the first recorded result for a key, and a
+// partner can never be corrected afterwards (review RP18). The key is cleared on success or Cancel. The new partner is
+// selected once it exists, unless this picker has been left in the meantime (RP27).
 
 import type { ReactElement } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { newIdempotencyKey, useCreateModulePartner, useModulePartners } from '../../api/hooks.js';
+import { attemptKey, useCreateModulePartner, useModulePartners, type AttemptKey } from '../../api/hooks.js';
 import { moduleErrorGuidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 
@@ -23,30 +25,36 @@ export function PartnerPicker({ pariwarId, value, onChange }: PartnerPickerProps
   const [adding, setAdding] = useState(false);
   const [nameEn, setNameEn] = useState('');
   const [nameHi, setNameHi] = useState('');
-  const keyRef = useRef<string | null>(null);
+  const attempt = useRef<AttemptKey | null>(null);
   const generation = useRef(0);
 
+  // Leaving the picker (Next, or a step change) ends any registration still in flight: its late result must not replace
+  // the partner the admin chose in the meantime (RP27).
+  useEffect(
+    () => () => {
+      generation.current += 1;
+    },
+    [],
+  );
+
   const onRegister = async (): Promise<void> => {
-    keyRef.current ??= newIdempotencyKey();
+    const body = { display_name_en: nameEn, display_name_hi: nameHi };
     const startedAt = generation.current;
     try {
-      const created = await create.mutateAsync({
-        body: { display_name_en: nameEn, display_name_hi: nameHi },
-        idempotencyKey: keyRef.current,
-      });
-      if (generation.current !== startedAt) return; // cancelled while in flight (TR5)
-      keyRef.current = null;
+      const created = await create.mutateAsync({ body, idempotencyKey: attemptKey(attempt, body) });
+      if (generation.current !== startedAt) return; // cancelled, or the picker was left, while in flight (TR5)
+      attempt.current = null;
       setAdding(false);
       setNameEn('');
       setNameHi('');
       onChange(created.partner_id);
     } catch {
-      // Shown below from `create.error`; the key is kept so a retry is the SAME attempt.
+      // Shown below from `create.error`; unchanged names keep the key, so a retry is the SAME attempt.
     }
   };
   const onCancel = (): void => {
     generation.current += 1;
-    keyRef.current = null;
+    attempt.current = null;
     setAdding(false);
     create.reset();
   };
@@ -72,7 +80,26 @@ export function PartnerPicker({ pariwarId, value, onChange }: PartnerPickerProps
           ))}
         </select>
       </label>
-      {partners.isError ? <p role="alert" className="text-xs text-status-fail-fg">{t('module.partner.loadError')}</p> : null}
+      {partners.isError || (partners.errorUpdateCount > 0 && partners.isFetching) ? (
+        <div className="flex flex-col gap-1">
+          {partners.isError ? (
+            <p role="alert" className="text-xs text-status-fail-fg">{t('module.partner.loadError')}</p>
+          ) : (
+            <p role="status" className="text-xs">{t('module.loading')}</p>
+          )}
+          {/* A failed load leaves nothing to choose and `retry: false`; a reload would lose every answer (RP23). The button stays
+              mounted (disabled) while the retry runs, because v5 clears `isError` as soon as a data-less refetch starts (PU3). */}
+          <button
+            type="button"
+            className="w-fit text-sm underline disabled:opacity-50"
+            disabled={partners.isFetching}
+            onClick={() => void partners.refetch()}
+            data-testid="partner-retry"
+          >
+            {t('module.retry')}
+          </button>
+        </div>
+      ) : null}
       {partners.isSuccess && items.length === 0 ? <p className="text-xs">{t('module.partner.none')}</p> : null}
       {!adding ? (
         <button type="button" className="w-fit text-sm underline" onClick={() => setAdding(true)} data-testid="partner-new">

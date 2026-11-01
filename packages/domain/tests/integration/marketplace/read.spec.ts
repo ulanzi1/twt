@@ -16,7 +16,9 @@ import { activateModule, archiveModule, authorModule, submitModuleLead } from '.
 import {
   LIST_MODULES_DEFAULT_LIMIT,
   LIST_MODULES_MAX_LIMIT,
+  countModuleLeads,
   getModule,
+  getModuleAuthorActorId,
   getModuleStateAt,
   listModulesForPariwar,
 } from '../../../src/marketplace/read.js';
@@ -109,6 +111,48 @@ describe.skipIf(!hasDatabase)('marketplace reads — isolation and the capped li
     // constant it is testing moves with a mutation of it).
     expect(LIST_MODULES_DEFAULT_LIMIT).toBe(50);
     expect(await listModulesForPariwar(bindScopedDb(client), A)).toHaveLength(50);
+  });
+
+  // Story 12.2 review round 1, RP6 (checklist family 7). `lead_count` is the C10 withdraw warning's number; every other
+  // test reads it at 0 (no lead route exists yet), where a wrong event type or stream filter would ALSO return 0.
+  it('RP6: countModuleLeads counts THIS module’s module.lead_submitted events — 2 / 0 — and is bound to the Pariwar and the stream', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const partner = await seedPartner(client, PARIWAR_A);
+    const now = await txNow(client);
+    const withLeads = newModuleId();
+    const withoutLeads = newModuleId();
+    for (const id of [withLeads, withoutLeads]) {
+      await authorModule(client, { ...base(A, id), manifest: manifestInput(now, { partner_id: partner }) });
+      await activateModule(client, base(A, id));
+    }
+    for (let n = 0; n < 2; n += 1) {
+      const member = newMemberId();
+      await submitModuleLead(client, { ...base(A, withLeads), actor: 'member', actorId: member, memberId: member, leadId: newLeadId() });
+    }
+    const db = bindScopedDb(client);
+    expect(await countModuleLeads(db, A, withLeads)).toBe(2);
+    expect(await countModuleLeads(db, A, withoutLeads)).toBe(0); // same Pariwar, a different stream
+    expect(await countModuleLeads(db, B, withLeads)).toBe(0); // the same stream asked for under another Pariwar
+    expect(await countModuleLeads(db, A, newModuleId())).toBe(0); // an unknown stream
+  });
+
+  it('RP6: getModuleAuthorActorId is the genesis actor — later events by others do not change it; null for a system genesis, another Pariwar, or an unknown module', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const partner = await seedPartner(client, PARIWAR_A);
+    const now = await txNow(client);
+    const human = newModuleId();
+    const humanInput = base(A, human);
+    await authorModule(client, { ...humanInput, manifest: manifestInput(now, { partner_id: partner }) });
+    await activateModule(client, base(A, human)); // a DIFFERENT actor id — the author of record must not move
+    const system = newModuleId();
+    await authorModule(client, { ...base(A, system), actor: 'system', actorId: null, manifest: manifestInput(now, { partner_id: partner }) });
+    const db = bindScopedDb(client);
+    expect(await getModuleAuthorActorId(db, A, human)).toBe(humanInput.actorId);
+    expect(await getModuleAuthorActorId(db, A, system)).toBeNull();
+    expect(await getModuleAuthorActorId(db, B, human)).toBeNull();
+    expect(await getModuleAuthorActorId(db, A, newModuleId())).toBeNull();
   });
 
   // RP10 (e) — every other cross-tenant leg here runs under twt_app, so RLS alone returns nothing and the explicit

@@ -16,7 +16,11 @@
 //   `recordToneReviewSignoff` and the idempotency `recordResult` run AFTER the wrapper returns.
 //   ⛔ `displayOf` (the questionnaire twin's fail-closed display-name read): the module commands take ⛔ display name.
 //   ⚠ Accepted residual (QE13): an ambiguous COMMIT, or a `recordResult` failure after COMMIT, releases the key and the
-//   retry creates a second draft — harmless (a draft reaches nobody); the memorial read-back shape is ⛔ copied.
+//   retry creates a second draft — harmless (a draft reaches nobody); the memorial read-back shape is ⛔ copied. It is NOT
+//   harmless for the other two writes (12.2 review RP16 / deferred RD3): a PUBLISH retried after that window answers 409
+//   `module.not_draft` for a publish that happened, and the `tone_review.signoff` line (emitted after `tenantWrite` returns)
+//   is never written — the durable publication row survives; a WITHDRAW retry answers 409 `module.illegal_transition`. If the
+//   single, swallowed `release` also fails, a same-key retry is 409 `module.idempotency_in_progress` until the 24 h TTL.
 //
 // ── Actors (QE14) ──────────────────────────────────────────────────────────────────────────────────────
 // Every write is `actor: 'operator'`, `actorId` = the session's `users` id. `trustee_archived` under `operator` is legal.
@@ -75,8 +79,18 @@ const EMPTY_BRANDING_BUNDLE = { version: 1, logo_object_key: null, accent_color_
 
 type ModuleRow = schema.MarketplaceModule;
 
+// TOTAL (12.2 review RP10): the shape can be an admin's raw, not yet domain-validated body, and the canonical encoder throws
+// on a non-finite number (`1e999` parses to Infinity and passes `z.number()`) or an absurdly deep nesting. A throw here
+// happens while the audit-intent arguments are built — a 500 with no audit line where the domain's own parse answers 422 —
+// so an unencodable shape hashes to a fixed marker instead and the domain gets to refuse it.
 function payloadHash(shape: Record<string, unknown>): string {
-  return createHash('sha256').update(canonicalJsonStringify(shape), 'utf8').digest('hex');
+  let canonical: string;
+  try {
+    canonical = canonicalJsonStringify(shape);
+  } catch {
+    canonical = canonicalJsonStringify({ unhashable: true });
+  }
+  return createHash('sha256').update(canonical, 'utf8').digest('hex');
 }
 
 function iso(d: Date): string {

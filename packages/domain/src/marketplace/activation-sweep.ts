@@ -60,9 +60,12 @@ export async function selectDueScheduledModules(
 }
 
 /**
- * PURE. How the job counts a failed activation: a racing withdraw (`ModuleIllegalTransitionError` — the module is no
- * longer `scheduled`) or a window that closed between scan and lock (`ModuleOutsideWindowError`) is `skipped` — the row
- * will never be re-selected; anything else is `failed` (logged; the next tick retries it).
+ * PURE. How the job counts a failed activation: a racing withdraw (`ModuleIllegalTransitionError` — the LOCKED cache row is
+ * no longer `scheduled`) or a window that closed between scan and lock (`ModuleOutsideWindowError`) is `skipped` — the row
+ * will never be re-selected: the scan requires `current_state = 'scheduled'` and `valid_until > now()`, and each of these two
+ * causes changes one of them. Anything else is `failed` (logged per module; the next tick retries it). Cache / stream drift
+ * (12.1 RVD2 — no repair path yet) is `failed`, not `skipped`: the stream-head check in `projectModuleTransition` throws
+ * `ModuleStreamConcurrencyError`, so a drifted module is logged and retried on every tick (deferred RD1).
  */
 export function classifyActivationOutcome(err: unknown): 'skipped' | 'failed' {
   return err instanceof ModuleIllegalTransitionError || err instanceof ModuleOutsideWindowError ? 'skipped' : 'failed';

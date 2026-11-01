@@ -84,6 +84,9 @@ describe('decodeModuleCursor refuses (ModuleCursorInvalidError)', () => {
     ['an upper-case m', b64(JSON.stringify({ c: C, m: M.toUpperCase() }))],
     ['a non-UUID m', b64(JSON.stringify({ c: C, m: 'module-1' }))],
     ['an m with surrounding space', b64(JSON.stringify({ c: C, m: ` ${M}` }))],
+    // RP2: TextDecoder strips a leading EF BB BF by default, and the re-encode check one step earlier compares the RAW
+    // bytes — so without `ignoreBOM: true` this was a second, accepted spelling of the canonical cursor.
+    ['a UTF-8 BOM before the canonical JSON', raw([0xef, 0xbb, 0xbf, ...Buffer.from(JSON.stringify({ c: C, m: M }), 'utf8')])],
   ])('%s', (_l, s) => {
     expectInvalid(s);
   });
@@ -92,11 +95,15 @@ describe('decodeModuleCursor refuses (ModuleCursorInvalidError)', () => {
     // "YQ" is the canonical encoding of "a"; "YR" decodes to the same byte with non-zero trailing bits.
     expect(Buffer.from('YR', 'base64url').toString('utf8')).toBe('a');
     expectInvalid('YR');
-    // …and on a real cursor: bump the last character within the same 6-bit group's unused bits.
-    const last = good[good.length - 1]!;
+    // …and on a real cursor: `good` is 80 bytes ⇒ 107 characters (% 4 === 3), so its last character carries 2 unused bits
+    // and exactly 3 sibling characters decode to the SAME bytes. Derive them (no index arithmetic that can run off the
+    // alphabet) and assert the premise — if `good` ever changes shape this fails loudly instead of asserting nothing.
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-    const bumped = good.slice(0, -1) + alphabet[alphabet.indexOf(last) + 1];
-    if (Buffer.from(bumped, 'base64url').equals(Buffer.from(good, 'base64url'))) expectInvalid(bumped);
+    const goodBytes = Buffer.from(good, 'base64url');
+    const stem = good.slice(0, -1);
+    const siblings = [...alphabet].filter((ch) => ch !== good.slice(-1) && Buffer.from(stem + ch, 'base64url').equals(goodBytes));
+    expect(siblings).toHaveLength(3);
+    for (const ch of siblings) expectInvalid(stem + ch);
   });
 
   it('bytes that are invalid UTF-8 are refused (⛔ silently replaced by U+FFFD)', () => {

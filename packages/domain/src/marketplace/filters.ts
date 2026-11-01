@@ -194,23 +194,50 @@ export const moduleDescriptionSchema = storableText(z.string().trim().min(1).max
 //     client normalises CRLF → LF before sending);
 //   - ⛔ C1 controls (U+0080–U+009F);
 //   - ⛔ bidi controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069) — they reorder what a reader sees;
-//   - ⛔ invisible formatters U+200B, U+2060, U+FEFF, U+00AD;
-//   - ⭐ U+200C / U+200D (ZWNJ / ZWJ) are ALLOWED — Devanagari conjunct control;
+//   - ⛔ invisible formatters U+200B, U+2060, U+FEFF, U+00AD — and, since code review round 1 (RP1), EVERY other format
+//     character (Unicode category Cf: U+180E, U+2061–2064, U+206A–206F, U+FFF9–FFFB, the tag block U+E0000–E007F, …);
+//   - ⛔ (DN2, BigDev: option 2) EVERY other default-ignorable code point — Unicode's own invisible set, wider than Cf: the
+//     combining grapheme joiner U+034F, the variation selectors U+FE00–FE0D and U+E0100–E01EF, the Mongolian free variation
+//     selectors U+180B–180D, U+17B4 / U+17B5, … — and the Braille blank U+2800. EXCEPT U+FE0E / U+FE0F (the text / emoji
+//     PRESENTATION selectors), which stay allowed so a heart or a tick mark still works; the one residual look-alike is
+//     "LIC" + U+FE0F. (The ground-inspection note rule made the same move: a fix-diff review found `\p{Cf}` insufficient.)
+//   - ⛔ the line / paragraph separators U+2028 / U+2029 (the C0 / C1 rule above never covered them);
+//   - ⛔ the four Hangul fillers U+115F, U+1160, U+3164, U+FFA0 — LETTERS (Lo) that draw nothing, so they satisfied the
+//     letter-or-digit rule below while the value looked blank (RP1);
+//   - ⭐ U+200C / U+200D (ZWNJ / ZWJ) are ALLOWED in a `*_hi` value only — Devanagari conjunct control. In a `*_en` value
+//     they are ⛔ allowed: "LIC" and "L"+ZWJ+"IC" read identically yet differ in the partner-name unique index (DN1 —
+//     BigDev narrowed QE12 for English text, 12.2 code review round 1);
 //   - at least one letter or digit (a blank-looking value is refused);
 //   - a `*_hi` value must hold at least one Devanagari LETTER (Story 2.1: member-facing copy needs Hindi) — "LIC टर्म
 //     प्लान" passes; "LIC" and "LIC ।" (a danda is punctuation) are refused.
 // Code points are compared NUMERICALLY (⛔ escapes in a regex class), so the source carries ⛔ invisible character (TR15).
 
-/** Bidi controls (the Trojan-Source set) and invisible formatters — refused anywhere in display text. */
+/**
+ * Bidi controls (the Trojan-Source set), invisible formatters and the Hangul fillers — refused anywhere in display text.
+ * The fillers and the Braille blank are the only members that are not format characters: the fillers are letters (Lo) that
+ * draw nothing, and U+2800 is a symbol (So) that draws nothing.
+ */
 const DISPLAY_REFUSED_FORMAT_CHARS: ReadonlySet<number> = new Set([
   0x061c, 0x200e, 0x200f, 0x202a, 0x202b, 0x202c, 0x202d, 0x202e, 0x2066, 0x2067, 0x2068, 0x2069,
   0x200b, 0x2060, 0xfeff, 0x00ad,
+  0x115f, 0x1160, 0x3164, 0xffa0,
+  0x2800,
 ]);
+/**
+ * Every other invisible code point — the format characters (Cf) AND Unicode's wider default-ignorable set (the combining
+ * grapheme joiner, the variation selectors, the Mongolian selectors, …). A property class, so a code point Unicode adds
+ * later is refused without an edit. `\p{Cf}` alone missed the variation selectors and the grapheme joiner (DN2).
+ */
+const FORMAT_CHARACTER = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+const LINE_OR_PARAGRAPH_SEPARATOR = /[\p{Zl}\p{Zp}]/u;
 const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 const DEVANAGARI_LETTER = /(?=\p{Script=Devanagari})\p{L}/u;
 
 /** The first QE12 rule `raw` breaks, as a message — or null. */
-function displayTextRefusal(raw: string, o: { allowLineFeed: boolean; requireDevanagari: boolean }): string | null {
+function displayTextRefusal(
+  raw: string,
+  o: { allowLineFeed: boolean; requireDevanagari: boolean; allowJoiners: boolean },
+): string | null {
   for (const ch of raw) {
     const c = ch.codePointAt(0) ?? 0;
     if ((c <= 0x1f || c === 0x7f) && !(o.allowLineFeed && c === 0x0a)) {
@@ -220,6 +247,15 @@ function displayTextRefusal(raw: string, o: { allowLineFeed: boolean; requireDev
     }
     if (c >= 0x80 && c <= 0x9f) return 'must not contain a control character';
     if (DISPLAY_REFUSED_FORMAT_CHARS.has(c)) return 'must not contain an invisible or text-direction character';
+    // ZWNJ / ZWJ are Cf, so they are decided BEFORE the generic Cf rule: kept for a `*_hi` value, refused in a `*_en` one.
+    if (c === 0x200c || c === 0x200d) {
+      if (!o.allowJoiners) return 'must not contain a zero-width joiner or non-joiner';
+      continue;
+    }
+    // The text / emoji PRESENTATION selectors are default-ignorable too, but a heart or a tick mark needs them (DN2, option 2).
+    if (c === 0xfe0e || c === 0xfe0f) continue;
+    if (FORMAT_CHARACTER.test(ch)) return 'must not contain an invisible or text-direction character';
+    if (LINE_OR_PARAGRAPH_SEPARATOR.test(ch)) return 'must not contain a line or paragraph separator';
   }
   if (!LETTER_OR_DIGIT.test(raw)) return 'must contain at least one letter or digit';
   if (o.requireDevanagari && !DEVANAGARI_LETTER.test(raw)) return 'must contain Hindi (Devanagari) text';
@@ -227,7 +263,7 @@ function displayTextRefusal(raw: string, o: { allowLineFeed: boolean; requireDev
 }
 
 /** A write-only display-text schema: the QE12 rules on the RAW string, then the 12.1 storage rules (trim + length). */
-function displayText(max: number, o: { allowLineFeed: boolean; requireDevanagari: boolean }) {
+function displayText(max: number, o: { allowLineFeed: boolean; requireDevanagari: boolean; allowJoiners: boolean }) {
   return z
     .string()
     .superRefine((raw, ctx) => {
@@ -238,17 +274,17 @@ function displayText(max: number, o: { allowLineFeed: boolean; requireDevanagari
 }
 
 /** A module's English name at WRITE (QE12). Same length as `moduleNameSchema` (trim, 1–120). */
-export const moduleDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false });
+export const moduleDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false, allowJoiners: false });
 /** A module's Hindi name at WRITE (QE12) — must hold a Devanagari letter. */
-export const moduleDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true });
+export const moduleDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true, allowJoiners: true });
 /** A module's English description at WRITE (QE12) — a line feed is allowed. Same length as `moduleDescriptionSchema`. */
-export const moduleDisplayDescriptionEnSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: false });
+export const moduleDisplayDescriptionEnSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: false, allowJoiners: false });
 /** A module's Hindi description at WRITE (QE12) — a line feed is allowed; must hold a Devanagari letter. */
-export const moduleDisplayDescriptionHiSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: true });
+export const moduleDisplayDescriptionHiSchema = displayText(2000, { allowLineFeed: true, requireDevanagari: true, allowJoiners: true });
 /** A partner's English display name (QE3 / QE12) — trim, 1–120; unique per Pariwar, case-insensitively (the DB). */
-export const partnerDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false });
+export const partnerDisplayNameEnSchema = displayText(120, { allowLineFeed: false, requireDevanagari: false, allowJoiners: false });
 /** A partner's Hindi display name (QE3 / QE12) — trim, 1–120; must hold a Devanagari letter. */
-export const partnerDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true });
+export const partnerDisplayNameHiSchema = displayText(120, { allowLineFeed: false, requireDevanagari: true, allowJoiners: true });
 /** `integer` column (int4) — capped at its maximum so a huge value is a manifest error, ⛔ a 22003. */
 export const moduleSlotCapacitySchema = z.number().int().positive().max(2_147_483_647).nullable();
 

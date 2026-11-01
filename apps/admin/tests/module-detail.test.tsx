@@ -4,7 +4,8 @@
 // tone_review.required → the author sentence; the C10 warning at lead_count 3; withdraw sends no body of its own (the
 // fetcher sends `{}`).
 
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
 import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse } from '@twt/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -97,6 +98,8 @@ describe('ModuleDetailPage (AC12)', () => {
     expect(await screen.findByTestId('module-publish-author')).toHaveTextContent(t('module.detail.authorCannotPublish'));
     expect(screen.getByTestId('module-publish-single-admin')).toHaveTextContent(t('module.detail.singleAdmin'));
     expect(screen.getByTestId('module-publish-button')).toBeDisabled();
+    // RP33 — `toHaveAccessibleDescription` RESOLVES the id, so a dangling aria-describedby fails (a bare attribute check would not).
+    expect(screen.getByTestId('module-publish-button')).toHaveAccessibleDescription(t('module.detail.authorCannotPublish'));
     expect(screen.getByTestId('module-tick-tone')).toBeDisabled();
   });
 
@@ -174,6 +177,109 @@ describe('ModuleDetailPage (AC12)', () => {
     expect(requestStepUp).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('module-corrected-copy'));
     expect(onCopy).toHaveBeenCalledWith(MODULE);
+  });
+
+  // ── Code review round 1, chunk C ────────────────────────────────────────────────────────────────────
+
+  it('RP24: publishing a draft whose window has lapsed says to withdraw and copy — not to "choose a later closing time"', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    publishModule.mockRejectedValue(new ApiError(409, 'module.window_ended', 'ended'));
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    const message = await screen.findByTestId('module-detail-message');
+    expect(message).toHaveTextContent(t('module.error.window_ended_detail'));
+    expect(message).not.toHaveTextContent(t('module.error.window_ended'));
+    expect(message).toHaveAttribute('role', 'alert');
+  });
+
+  it('RP28: the page the publisher reads says the offer "reaches no member for now" when every ticked status is a no-member one', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(
+      detail({ eligibility_filter: { version: 1, clauses: [{ kind: 'member_state_in', states: ['active', 'lapsed-unpaid'] }] } }),
+    );
+    render();
+    expect(await screen.findByTestId('module-detail-reaches-no-member')).toHaveTextContent(t('module.eligibility.reachesNoMember'));
+  });
+
+  it.each([
+    ['one ticked status can have a member', { version: 1, clauses: [{ kind: 'member_state_in', states: ['active', 'lock-in'] }] }],
+    ['no status restriction', { version: 1, clauses: [] }],
+  ] as const)('RP28: no "reaches no member" warning when %s', { timeout: 20_000 }, async (_label, filter) => {
+    getModuleDetail.mockResolvedValue(detail({ eligibility_filter: filter as unknown as ModuleDetailResponse['eligibility_filter'] }));
+    render();
+    await screen.findByTestId('module-detail-eligibility');
+    expect(screen.queryByTestId('module-detail-reaches-no-member')).toBeNull();
+  });
+
+  it('an archived offer offers neither Publish nor Withdraw — only a corrected copy', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail({ current_state: 'archived', archive_reason: 'trustee_archived' }));
+    render();
+    await screen.findByTestId('module-detail');
+    expect(screen.queryByTestId('module-publish')).toBeNull();
+    expect(screen.queryByTestId('module-withdraw')).toBeNull();
+    expect(screen.getByTestId('module-corrected-copy')).toBeInTheDocument();
+  });
+
+  it('RP32: a withdraw is announced in an always-mounted live region and focus moves to the page heading', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail({ current_state: 'active' }));
+    withdrawModule.mockResolvedValue({ module_id: MODULE, state: 'archived' });
+    render();
+    const live = await screen.findByTestId('module-detail-live');
+    expect(live).toHaveAttribute('role', 'status');
+    expect(live).toBeEmptyDOMElement(); // mounted BEFORE the result, so the result is announced when it arrives
+    fireEvent.click(screen.getByTestId('module-withdraw'));
+    await waitFor(() => expect(live).toHaveTextContent(t('module.detail.withdrawn')));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
+  });
+
+  it('a refused withdraw shows the mapped sentence as an alert', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail({ current_state: 'active' }));
+    withdrawModule.mockRejectedValue(new ApiError(409, 'module.illegal_transition', 'no'));
+    render();
+    fireEvent.click(await screen.findByTestId('module-withdraw'));
+    const message = await screen.findByTestId('module-detail-message');
+    expect(message).toHaveTextContent(t('module.error.illegal_transition'));
+    expect(message).toHaveAttribute('role', 'alert');
+  });
+
+  it('Cancel on the held publish drops the hold: no second write, the panel is gone, Publish is available again', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(detail());
+    publishModule.mockRejectedValue(new ApiError(403, 'auth.step_up_required', 'step up'));
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    fireEvent.click(screen.getByTestId('module-publish-button'));
+    const panel = await screen.findByTestId('module-step-up');
+    fireEvent.click(screen.getByTestId('module-step-up-cancel'));
+    expect(panel).not.toBeInTheDocument();
+    expect(publishModule).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('module-publish-button')).toBeEnabled();
+  });
+
+  it('RP19: a failed background refetch keeps the loaded page, the ticks and the panel — and says it may be out of date', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValueOnce(detail()).mockRejectedValue(new ApiError(500, 'internal.error', 'down'));
+    render();
+    await screen.findByTestId('module-publish');
+    tickAll();
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true); // the admin comes back from reading the OTP
+    });
+    await waitFor(() => expect(getModuleDetail).toHaveBeenCalledTimes(2));
+    const note = await screen.findByTestId('module-detail-refresh-error');
+    expect(note).toHaveTextContent(t('module.detail.refreshError'));
+    expect(note).toHaveAttribute('role', 'alert'); // PU1: the only signal that the publish page is stale is announced as an alert
+    expect(screen.queryByTestId('module-detail-error')).toBeNull();
+    expect(screen.getByTestId('module-publish')).toBeInTheDocument();
+    expect(screen.getByTestId('module-tick-tone')).toBeChecked();
+  });
+
+  it('a failed FIRST load shows the error in place of the page', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockRejectedValue(new ApiError(403, 'authz.forbidden', 'no'));
+    render();
+    expect(await screen.findByTestId('module-detail-error')).toHaveTextContent(t('module.error.forbidden')); // RP22, end to end
+    expect(screen.queryByTestId('module-detail')).toBeNull();
   });
 });
 

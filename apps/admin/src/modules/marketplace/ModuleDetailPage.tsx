@@ -8,7 +8,9 @@
 // "Start a corrected copy" opens the wizard pre-filled; both it and Withdraw are preceded by the C10 warning when members
 // registered interest. ⛔ Partner colour anywhere (C5).
 //
-// Each write's Idempotency-Key is minted once per user intent and REUSED by its retry (the held step-up retry included).
+// Each CLICK is a new intent and mints a new Idempotency-Key. Only the held step-up retry reuses its click's key (the write it
+// retries is the same request); a second click after a lost response is a new write and is told, by the server's 409, to
+// reload (review RP34 — this header used to say every retry reuses the key).
 
 import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse } from '@twt/contracts';
 import type { ReactElement } from 'react';
@@ -22,9 +24,11 @@ import {
   describePlaces,
   describeScope,
   describeWindow,
+  eligibilityStatesOf,
   formatIst,
   leadWarning,
   moduleErrorGuidance,
+  reachesNoMemberYet,
 } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 
@@ -47,12 +51,15 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
   const [pending, setPending] = useState<PendingWrite<'publish'>>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const holdSeq = useRef(0);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
-  if (detail.isLoading) return <p role="status">…</p>;
-  if (detail.isError || detail.data === undefined) {
+  if (detail.isLoading) return <p role="status">{t('module.loading')}</p>;
+  // The error REPLACES the page only when there is nothing to show: a failed background refetch (window focus — the admin
+  // leaves the tab to read the OTP — or the refresh after a write) keeps the loaded page, the step-up panel and the result (RP19).
+  if (detail.data === undefined) {
     return (
       <p role="alert" data-testid="module-detail-error">
-        {detail.error instanceof ApiError ? moduleErrorGuidance(detail.error.code) : t('module.detail.loadError')}
+        {detail.error instanceof ApiError ? moduleErrorGuidance(detail.error.code, 'detail') : t('module.detail.loadError')}
       </p>
     );
   }
@@ -66,6 +73,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
     try {
       await publish.mutateAsync({ idempotencyKey });
       setMessage({ kind: 'ok', text: t('module.detail.published') });
+      headingRef.current?.focus(); // the form that held focus is about to unmount (RP32)
     } catch (err) {
       if (needsStepUp(err)) {
         if (retried) {
@@ -79,7 +87,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
         );
         return;
       }
-      setMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code) : t('module.error.generic') });
+      setMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code, 'detail') : t('module.error.generic') });
     }
   };
 
@@ -88,8 +96,9 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
     try {
       await withdraw.mutateAsync({ idempotencyKey: newIdempotencyKey() });
       setMessage({ kind: 'ok', text: t('module.detail.withdrawn') });
+      headingRef.current?.focus(); // the Withdraw button that held focus is about to unmount (RP32)
     } catch (err) {
-      setMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code) : t('module.error.generic') });
+      setMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code, 'detail') : t('module.error.generic') });
     }
   };
 
@@ -100,7 +109,14 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
       <button type="button" className="w-fit text-sm underline" onClick={onBack} data-testid="module-detail-back">
         {t('module.detail.back')}
       </button>
-      <h1 className="text-xl font-semibold">{m.name_en}</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="text-xl font-semibold outline-none">
+        {m.name_en}
+      </h1>
+      {detail.isError ? (
+        <p role="alert" className="text-sm" data-testid="module-detail-refresh-error">
+          {t('module.detail.refreshError')}
+        </p>
+      ) : null}
       <p className="text-sm" data-testid="module-detail-members-cannot-see">
         {t('module.detail.membersCannotSee')}
       </p>
@@ -131,6 +147,12 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
           <li key={line}>{line}</li>
         ))}
       </ul>
+      {/* The publisher never sees wizard step (b), so the G18 warning is repeated here (RP28 — checklist family 11). */}
+      {reachesNoMemberYet(eligibilityStatesOf(m.eligibility_filter)) ? (
+        <p role="note" className="text-sm text-status-fail-fg" data-testid="module-detail-reaches-no-member">
+          {t('module.eligibility.reachesNoMember')}
+        </p>
+      ) : null}
       <p className="text-sm">{describeWindow(m.valid_from, m.valid_until)}</p>
       <p className="text-sm">{describePlaces(m.slot_capacity)}</p>
       <p className="text-xs break-all">{t('module.detail.leadUrl', { url: m.lead_handoff_url })}</p>
@@ -150,7 +172,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
           <h2 className="font-medium">{t('module.detail.publishHeading')}</h2>
           {m.authored_by_viewer ? (
             <>
-              <p className="text-sm" role="note" data-testid="module-publish-author">
+              <p className="text-sm" role="note" id="module-publish-author" data-testid="module-publish-author">
                 {t('module.detail.authorCannotPublish')}
               </p>
               <p className="text-sm" data-testid="module-publish-single-admin">
@@ -174,6 +196,7 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
             type="button"
             className="w-fit rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
             disabled={m.authored_by_viewer || !allTicked || busy}
+            aria-describedby={m.authored_by_viewer ? 'module-publish-author' : undefined}
             onClick={() => void runPublish(newIdempotencyKey(), false)}
             data-testid="module-publish-button"
           >
@@ -212,8 +235,16 @@ export function ModuleDetailPage({ pariwarId, moduleId, onBack, onStartCorrected
         </div>
       </div>
 
-      {message !== null ? (
-        <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? 'text-sm text-status-fail-fg' : 'text-sm'} data-testid="module-detail-message">
+      {/* An ALWAYS-mounted live region: a `role="status"` node that arrives already holding its text is announced unreliably (RP32). */}
+      <div role="status" aria-live="polite" data-testid="module-detail-live">
+        {message !== null && message.kind === 'ok' ? (
+          <p className="text-sm" data-testid="module-detail-message">
+            {message.text}
+          </p>
+        ) : null}
+      </div>
+      {message !== null && message.kind === 'error' ? (
+        <p role="alert" className="text-sm text-status-fail-fg" data-testid="module-detail-message">
           {message.text}
         </p>
       ) : null}

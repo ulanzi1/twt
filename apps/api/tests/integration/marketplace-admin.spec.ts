@@ -74,7 +74,8 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       await c.query('DELETE FROM workplace_districts WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('COMMIT');
       if (createdUserIds.length > 0) {
-        await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1)`, [createdUserIds]);
+        // By the `user_id` column too: RP12 rewrites a session's `sess.userId` to a stranger's, so the JSON key no longer matches.
+        await c.query(`DELETE FROM admin_sessions WHERE sess ->> 'userId' = ANY($1) OR user_id = ANY($1::uuid[])`, [createdUserIds]);
         await c.query(`DELETE FROM role_grants WHERE user_id = ANY($1)`, [createdUserIds]);
         await c.query(`DELETE FROM users WHERE id = ANY($1)`, [createdUserIds]);
       }
@@ -224,7 +225,14 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       () => post(c, `${M(p)}/${moduleId}/publish`, TICKS),
       () => post(c, `${M(p)}/${moduleId}/withdraw`, {}),
     ];
-    for (const call of calls) expect((await call()).statusCode).toBe(403);
+    // Review round 1, RP11: publish ALSO answers 403 when the step-up is missing, so the status alone cannot tell a dropped
+    // permission check from the step-up gate. Every response must carry the SAME permission-denial code, never the step-up one.
+    const denials: Awaited<ReturnType<(typeof calls)[number]>>[] = [];
+    for (const call of calls) denials.push(await call());
+    for (const r of denials) expect(r.statusCode, r.body).toBe(403);
+    const denialCode = errOf(denials[0]!).code;
+    expect(denialCode).not.toBe('auth.step_up_required');
+    for (const r of denials) expect(errOf(r).code).toBe(denialCode);
 
     // The Pariwar admin of P on ANOTHER Pariwar (no grant there) — the scope hook's 404, on reads and writes alike.
     const q = freshPariwar();
@@ -234,11 +242,119 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect((await moduleAudit(p)).filter((a) => a.actor_id === da.userId)).toEqual([]);
   });
 
+  // Review round 1, RP12 (checklist family 3, per mutation route). The questionnaire twin's RV11 is the house standard:
+  // POSITIVE CONTROLS first (the same clients DO write on every route, so a refusal is the actor / tenant boundary and not a
+  // session that never took), then a TAMPERED session — its userId rewritten to a stranger's — must get EXACTLY 404 (a 401
+  // would pass without ever reaching the scope hook) on every mutation route, with nothing written; and an admin with NO grant
+  // in the Pariwar gets 404 on all eight routes. A non-human or system actor is not constructible on this surface: every route
+  // sits behind the admin session guard and nothing else authenticates.
+  it('RP12 / family 3: a TAMPERED session is EXACTLY 404 on all four mutation routes with nothing written; an admin with NO grant is 404 on all eight', async () => {
+    const p = freshPariwar();
+    const author = await pariwarAdmin(p);
+    const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
+    // ⭐ POSITIVE CONTROLS — every mutation route writes for these very clients.
+    const partnerId = await partner(author.client, p);
+    const toPublish = await authored(author.client, p, partnerId);
+    await elevate(publisher.client, 'module_publish');
+    expect((await post(publisher.client, `${M(p)}/${toPublish}/publish`, TICKS)).statusCode).toBe(200);
+    const toWithdraw = await authored(author.client, p, partnerId);
+    expect((await post(author.client, `${M(p)}/${toWithdraw}/withdraw`, {})).statusCode).toBe(200);
+    // The open draft the refused sessions will try to act on; the publisher HOLDS a fresh step-up, so a 404 is not the elevation.
+    const open = await authored(author.client, p, partnerId);
+    await elevate(publisher.client, 'module_publish');
+
+    const outsider = await pariwarAdmin(freshPariwar(), 'Omar (Other Pariwar)');
+    const counts = async () => ({
+      partners: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_partners WHERE pariwar_id = $1', [p])).rows[0].n as number,
+      modules: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_modules WHERE pariwar_id = $1', [p])).rows[0].n as number,
+      publications: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_module_publications WHERE pariwar_id = $1', [p])).rows[0].n as number,
+      events: (await moduleEvents(p)).length,
+      audit: (await moduleAudit(p)).length,
+    });
+    const before = await counts();
+
+    // An admin with NO grant in P: 404 on every route, reads and writes alike (the module routes name P's real open draft).
+    const noGrant = [
+      outsider.client.inject({ method: 'GET', url: M(p) }),
+      outsider.client.inject({ method: 'GET', url: `${M(p)}/scope-options` }),
+      outsider.client.inject({ method: 'GET', url: `${M(p)}/partners` }),
+      post(outsider.client, `${M(p)}/partners`, { display_name_en: 'Outsider Ltd', display_name_hi: 'आउटसाइडर' }),
+      post(outsider.client, M(p), manifest(partnerId)),
+      outsider.client.inject({ method: 'GET', url: `${M(p)}/${open}` }),
+      post(outsider.client, `${M(p)}/${open}/publish`, TICKS),
+      post(outsider.client, `${M(p)}/${open}/withdraw`, {}),
+    ];
+    for (const r of await Promise.all(noGrant)) expect(r.statusCode, r.body).toBe(404);
+
+    // TAMPER both sessions: the session row now names a user who holds no grant in P.
+    for (const who of [author, publisher]) {
+      await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE user_id = $2`, [randomUUID(), who.userId]);
+    }
+    const tampered = [
+      post(author.client, `${M(p)}/partners`, { display_name_en: 'Tamper Ltd', display_name_hi: 'टैम्पर' }),
+      post(author.client, M(p), manifest(partnerId)),
+      post(publisher.client, `${M(p)}/${open}/publish`, TICKS),
+      post(author.client, `${M(p)}/${open}/withdraw`, {}),
+    ];
+    for (const r of await Promise.all(tampered)) expect(r.statusCode, r.body).toBe(404); // EXACTLY 404, ⛔ a 401
+
+    expect(await counts()).toEqual(before);
+    expect((await td.pool.query('SELECT current_state FROM marketplace_modules WHERE module_id = $1', [open])).rows[0]).toEqual({ current_state: 'draft' });
+  });
+
+  // ── Idempotency (QE13 / QE18) — the rows the unit-test header says are pinned over HTTP (review round 1, RP13) ──────────
+
+  it('RP13: an Idempotency-Key over 200 characters → 400 module.idempotency_key_required (⛔ a 500), nothing written; exactly 200 is accepted', async () => {
+    const p = freshPariwar();
+    const { client } = await pariwarAdmin(p);
+    const names = { display_name_en: 'Long Key Ltd', display_name_hi: 'लॉन्ग की' };
+    const tooLong = await post(client, `${M(p)}/partners`, names, 'k'.repeat(201));
+    expect(tooLong.statusCode).toBe(400);
+    expect(errOf(tooLong).code).toBe('module.idempotency_key_required');
+    expect(((await client.inject({ method: 'GET', url: `${M(p)}/partners` })).body)).toContain('"items":[]');
+    expect((await post(client, `${M(p)}/partners`, names, 'k'.repeat(200))).statusCode).toBe(201);
+  });
+
+  it('RP13: two concurrent requests with the SAME Idempotency-Key write ONE module — the second is the recorded replay or 409 module.idempotency_in_progress', async () => {
+    const p = freshPariwar();
+    const { client } = await pariwarAdmin(p);
+    const partnerId = await partner(client, p);
+    const key = randomUUID();
+    // Which of the two claims the key first, and whether the loser arrives before or after the result is recorded, is
+    // timing; the assertions hold for every interleaving.
+    const rs = await Promise.all([post(client, M(p), manifest(partnerId), key), post(client, M(p), manifest(partnerId), key)]);
+    const created = rs.filter((r) => r.statusCode === 201);
+    expect(created.length, rs.map((r) => r.body).join(' | ')).toBeGreaterThanOrEqual(1);
+    for (const r of rs.filter((x) => x.statusCode !== 201)) {
+      expect(r.statusCode, r.body).toBe(409);
+      expect(errOf(r).code).toBe('module.idempotency_in_progress');
+    }
+    expect(new Set(created.map((r) => json(r)['module_id'])).size).toBe(1);
+    expect((await moduleEvents(p)).filter((e) => e.event_type === 'module.authored')).toHaveLength(1);
+    // Once settled, the key replays the SAME module.
+    expect(json(await post(client, M(p), manifest(partnerId), key))['module_id']).toBe(json(created[0]!)['module_id']);
+  });
+
+  it('RP13: a withdraw replayed with the same key returns the recorded 200 and writes ONE archive event and ONE audit line', async () => {
+    const p = freshPariwar();
+    const { client } = await pariwarAdmin(p);
+    const id = await authored(client, p, await partner(client, p));
+    const key = randomUUID();
+    const first = await post(client, `${M(p)}/${id}/withdraw`, {}, key);
+    expect(first.statusCode, first.body).toBe(200);
+    const replay = await post(client, `${M(p)}/${id}/withdraw`, {}, key);
+    expect(replay.statusCode, replay.body).toBe(200);
+    expect(json(replay)).toEqual(json(first));
+    expect((await moduleEvents(p)).filter((e) => e.stream_id === id).map((e) => e.event_type)).toEqual(['module.authored', 'module.archived']);
+    const lines = (await moduleAudit(p)).filter((a) => a.resource_locator === `module/${id}`).map((a) => a.action);
+    expect(lines).toEqual(['module.authored', 'module.archived']); // no second intent, no _rolled_back
+  });
+
   // ── AC3 ─────────────────────────────────────────────────────────────────────────────────────────────
 
   it('AC3: partners — 201 with a server-minted id; replay → the same partner; A–Z by lower(name); duplicate name any case → 409', async () => {
     const p = freshPariwar();
-    const { client } = await pariwarAdmin(p);
+    const { client, userId } = await pariwarAdmin(p);
     const key = randomUUID();
     const first = await post(client, `${M(p)}/partners`, { display_name_en: 'Zeta Insurance', display_name_hi: 'ज़ेटा बीमा' }, key);
     expect(first.statusCode).toBe(201);
@@ -262,6 +378,11 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     const created = (await moduleAudit(p)).filter((a) => a.action === 'module_partner.created');
     expect(created).toHaveLength(4); // three created + the duplicate's intent line
     expect((await moduleAudit(p)).filter((a) => a.action === 'module_partner.created_rolled_back')).toHaveLength(1);
+    // Review round 1, RP15: the line names the partner and the ACTING admin (the actor id, QE14) — a count alone would not.
+    const firstId = json(first)['partner_id'] as string;
+    expect((await moduleAudit(p)).filter((a) => a.resource_locator === `module_partner/${firstId}`)).toEqual([
+      { action: 'module_partner.created', resource_locator: `module_partner/${firstId}`, actor_id: userId },
+    ]);
   });
 
   it('AC3: a QE12 name refusal → 422 module_partner.name_invalid with issue paths and NO audit line', async () => {
@@ -438,6 +559,32 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect(await moduleEvents(p)).toEqual([]);
   });
 
+  // Review round 1, RP10. `JSON.stringify` cannot produce Infinity, so the body is sent as RAW text: `1e999` parses to
+  // Infinity, which `z.number()` accepts but the audit-intent hash (canonical JSON) cannot serialise — it used to throw
+  // while the intent arguments were built, a 500 with no audit line, where the domain's own rule answers 422.
+  it('RP10: a non-finite slot_capacity (raw 1e999) → 422 module.manifest_invalid at slot_capacity, ⛔ a 500, with the intent + _rolled_back pair', async () => {
+    const p = freshPariwar();
+    const { client } = await pariwarAdmin(p);
+    const partnerId = await partner(client, p);
+    const raw = JSON.stringify(manifest(partnerId)).replace('"slot_capacity":10', '"slot_capacity":1e999');
+    expect(raw).toContain('1e999');
+    const r = await client.inject({
+      method: 'POST',
+      url: M(p),
+      headers: { 'content-type': 'application/json', 'idempotency-key': randomUUID() },
+      payload: raw,
+    });
+    expect(r.statusCode, r.body).toBe(422);
+    const e = errOf(r);
+    expect(e.code).toBe('module.manifest_invalid');
+    expect((e.details?.['issues'] as { path: string[] }[]).map((i) => i.path)).toContainEqual(['slot_capacity']);
+    expect((await moduleAudit(p)).map((a) => a.action).filter((a) => a.startsWith('module.'))).toEqual([
+      'module.authored',
+      'module.authored_rolled_back',
+    ]);
+    expect(await moduleEvents(p)).toEqual([]);
+  });
+
   it('AC5: valid_until ≤ now() → 422 module.window_ended', async () => {
     const p = freshPariwar();
     const { client } = await pariwarAdmin(p);
@@ -582,7 +729,8 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
     const partnerId = await partner(author.client, p);
     const live = await authored(author.client, p, partnerId);
-    const closing = await authored(author.client, p, partnerId, { valid_until: new Date(Date.now() + 1500).toISOString() });
+    // Review round 1, RP17: 3 s on the CLIENT clock (was 1.5 s) so a slow author call under load cannot answer 422 before the test starts.
+    const closing = await authored(author.client, p, partnerId, { valid_until: new Date(Date.now() + 3000).toISOString() });
     await elevate(publisher.client, 'module_publish');
     expect((await post(publisher.client, `${M(p)}/${live}/publish`, TICKS)).statusCode).toBe(200);
     const before = (await moduleAudit(p)).length;
@@ -598,13 +746,105 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect(foreign.statusCode).toBe(404);
     expect(errOf(foreign).code).toBe('module.not_found');
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 3200));
     const ended = await post(publisher.client, `${M(p)}/${closing}/publish`, TICKS);
     expect(ended.statusCode).toBe(409);
     expect(errOf(ended).code).toBe('module.window_ended');
 
     expect((await moduleAudit(p)).length).toBe(before);
     expect(await publicationRows(closing)).toEqual([]);
+  });
+
+  // Review round 1, RP5 (checklist family 2 — concurrency proven live). The route's `getModule` pre-read takes NO lock;
+  // the command's `FOR UPDATE` does. So a loser is stopped either at the pre-read (the winner already committed) or at
+  // the lock (it re-reads the state) — and which one a given race hits is timing. Every assertion below therefore holds
+  // for BOTH timings: the loser's code, the end state, the single publication row / event / sign-off, and the audit
+  // balance (intent lines minus `_rolled_back` lines = the one that published). Several rounds make a lock-path race likely.
+  it('AC6 / checklist 2: two admins publish the SAME draft at once → ONE 200 and ONE 409 module.not_draft; ONE publication row, ONE publish event, ONE sign-off', async () => {
+    const p = freshPariwar();
+    const author = await pariwarAdmin(p);
+    const first = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
+    const second = await pariwarAdmin(p, 'Meena (Pariwar Admin)');
+    const partnerId = await partner(author.client, p);
+    for (let round = 0; round < 3; round += 1) {
+      const id = await authored(author.client, p, partnerId);
+      await elevate(first.client, 'module_publish');
+      await elevate(second.client, 'module_publish');
+      const results = await Promise.all([first, second].map((a) => post(a.client, `${M(p)}/${id}/publish`, TICKS)));
+      expect(results.map((r) => r.statusCode).sort(), results.map((r) => r.body).join(' | ')).toEqual([200, 409]);
+      expect(errOf(results.find((r) => r.statusCode === 409)!).code).toBe('module.not_draft');
+      const winner = [first, second][results.findIndex((r) => r.statusCode === 200)]!;
+
+      const rows = await publicationRows(id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ pariwar_id: p, published_event_type: 'module.activated', reviewed_by_actor_id: winner.userId });
+      expect((await moduleEvents(p)).filter((e) => e.stream_id === id).map((e) => [e.event_type, e.actor_id])).toEqual([
+        ['module.authored', author.userId],
+        ['module.activated', winner.userId],
+      ]);
+      const lines = (await moduleAudit(p)).filter((a) => a.resource_locator === `module/${id}`);
+      const intents = lines.filter((a) => a.action === 'module.activated').length;
+      const rolledBack = lines.filter((a) => a.action === 'module.activated_rolled_back').length;
+      expect(intents - rolledBack).toBe(1);
+      expect(td.toneReviewAuditSink.ofType('tone_review.signoff').filter((ev) => ev.resourceLocator === `module/${id}`)).toHaveLength(1);
+    }
+  });
+
+  it('AC6 / AC7 / checklist 2: publish and withdraw of the same draft at once → a consistent end state (a publication row IFF the publish won; no gap in the stream)', async () => {
+    const p = freshPariwar();
+    const author = await pariwarAdmin(p);
+    const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
+    const partnerId = await partner(author.client, p);
+    for (let round = 0; round < 4; round += 1) {
+      const id = await authored(author.client, p, partnerId);
+      await elevate(publisher.client, 'module_publish');
+      const [pub, wd] = await Promise.all([
+        post(publisher.client, `${M(p)}/${id}/publish`, TICKS),
+        author.client.inject({ method: 'POST', url: `${M(p)}/${id}/withdraw`, ...EMPTY_JSON, headers: { ...EMPTY_JSON.headers, 'idempotency-key': randomUUID() } }),
+      ]);
+      // Withdraw is legal from a draft AND from an active module, so it succeeds whichever of the two takes the lock first.
+      expect(wd.statusCode, wd.body).toBe(200);
+      expect([200, 409], pub.body).toContain(pub.statusCode);
+      if (pub.statusCode === 409) expect(errOf(pub).code).toBe('module.not_draft');
+      const published = pub.statusCode === 200;
+      expect(await publicationRows(id)).toHaveLength(published ? 1 : 0);
+      expect((await moduleEvents(p)).filter((e) => e.stream_id === id).map((e) => e.event_type)).toEqual(
+        published ? ['module.authored', 'module.activated', 'module.archived'] : ['module.authored', 'module.archived'],
+      );
+      const row = (await td.pool.query('SELECT current_state FROM marketplace_modules WHERE module_id = $1', [id])).rows[0];
+      expect(row).toEqual({ current_state: 'archived' });
+    }
+  });
+
+  // Review round 1, RP14 (checklist family 8). The race test's "a publication row IFF published" stays green if the row's
+  // insert is moved OUTSIDE the publish transaction; this does not. A row pre-seeded for a DRAFT makes
+  // `recordModulePublication` hit the module_id primary key (23505) AFTER the command has already written its event and its
+  // state change — so, if the three share one transaction, the event and the state change are rolled back with it.
+  it('RP14 / family 8: the publication row is part of the publish transaction — a row that cannot be written leaves the module a DRAFT with ⛔ publish event', async () => {
+    const p = freshPariwar();
+    const author = await pariwarAdmin(p);
+    const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
+    const id = await authored(author.client, p, await partner(author.client, p));
+    const seededReviewer = randomUUID();
+    await td.pool.query(
+      `INSERT INTO marketplace_module_publications
+         (module_id, pariwar_id, published_event_type, tone_signoff_content_hash, reviewed_by_actor_id, hindi_reviewed, partner_agreement_confirmed, audit_id)
+       VALUES ($1, $2, 'module.activated', $3, $4, true, true, $5)`,
+      [id, p, 'a'.repeat(64), seededReviewer, randomUUID()],
+    );
+    await elevate(publisher.client, 'module_publish');
+    const r = await post(publisher.client, `${M(p)}/${id}/publish`, TICKS);
+    expect(r.statusCode, r.body).toBe(409);
+    expect(errOf(r).code).toBe('module.already_published');
+
+    expect((await td.pool.query('SELECT current_state FROM marketplace_modules WHERE module_id = $1', [id])).rows[0]).toEqual({ current_state: 'draft' });
+    expect((await moduleEvents(p)).filter((e) => e.stream_id === id).map((e) => e.event_type)).toEqual(['module.authored']);
+    const lines = (await moduleAudit(p)).filter((a) => a.resource_locator === `module/${id}`).map((a) => a.action);
+    expect(lines).toEqual(['module.authored', 'module.activated', 'module.activated_rolled_back']);
+    const rows = await publicationRows(id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ reviewed_by_actor_id: seededReviewer }); // the seeded row, untouched
+    expect(td.toneReviewAuditSink.ofType('tone_review.signoff').filter((ev) => ev.resourceLocator === `module/${id}`)).toHaveLength(0);
   });
 
   // ── AC7 ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -628,7 +868,16 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       expect(json(r)).toEqual({ module_id: id, state: 'archived' });
       const row = (await td.pool.query('SELECT current_state, archive_reason FROM marketplace_modules WHERE module_id = $1', [id])).rows[0];
       expect(row).toEqual({ current_state: 'archived', archive_reason: 'trustee_archived' });
-      expect((await moduleAudit(p)).filter((a) => a.resource_locator === `module/${id}` && a.action === 'module.archived')).toHaveLength(1);
+      // Review round 1, RP15: the audit line AND the event name the withdrawing admin; the event is `operator`, reason `trustee_archived`.
+      expect((await moduleAudit(p)).filter((a) => a.resource_locator === `module/${id}` && a.action === 'module.archived')).toEqual([
+        { action: 'module.archived', resource_locator: `module/${id}`, actor_id: author.userId },
+      ]);
+      const archived = (await td.pool.query(`SELECT actor_id, payload FROM events_log WHERE stream_id = $1 AND event_type = 'module.archived'`, [id])).rows[0] as {
+        actor_id: string;
+        payload: Json;
+      };
+      expect(archived.actor_id).toBe(author.userId);
+      expect(archived.payload['actor']).toBe('operator');
     }
     const twice = await post(author.client, `${M(p)}/${draft}/withdraw`, {});
     expect(twice.statusCode).toBe(409);

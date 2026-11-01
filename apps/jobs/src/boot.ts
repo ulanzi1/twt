@@ -179,9 +179,9 @@ const VACUUM_CRON = process.env['IDEMPOTENCY_VACUUM_CRON'] ?? '0 * * * *';
 const VACUUM_TZ = 'Asia/Kolkata';
 // Daily DigiLocker cert refresh (Story 3.3b, AC5.2). Cadence is operations policy (IST).
 const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT_CERT_REFRESH_CRON;
-// Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
 // Story 12.2 (QE7 (A)) — the 5-minute partner-module activation sweep.
 const MODULE_ACTIVATION_CRON = process.env['MODULE_ACTIVATION_CRON'] ?? DEFAULT_MODULE_ACTIVATION_CRON;
+// Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
 const RENEWAL_LIFECYCLE_CRON =
   process.env['MEMBER_RENEWAL_LIFECYCLE_CRON'] ?? DEFAULT_RENEWAL_LIFECYCLE_CRON;
 // Data-export hygiene vacuum (Story 3.11, AC5). Cadence is operations policy (IST).

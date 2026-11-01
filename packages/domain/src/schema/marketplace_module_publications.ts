@@ -2,8 +2,9 @@
 //
 // ONE row per published module: who signed the copy off, against which content hash, and which publish event it went with
 // (`module.scheduled` for a future start, `module.activated` otherwise). Written by `marketplace.recordModulePublication`
-// in the SAME transaction as the publish event (I2), so a module is never published without its record, nor recorded
-// without its event.
+// in the SAME transaction as the publish event (I2). ⚠ That pairing is the PUBLISH ROUTE's guarantee (it runs the
+// command, the record and the COMMIT inside one `mutate` — AC6), ⛔ the database's: nothing here couples the row to the
+// module's state or to the event, and `recordModulePublication` does not check either.
 //
 // ── Why its own table (C12) ───────────────────────────────────────────────────────────────────────
 // `marketplace_modules` is IMMUTABLE apart from its projected columns (the 0193 whole-row trigger — 12.1 I2), so mutable

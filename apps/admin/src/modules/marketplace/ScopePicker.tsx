@@ -6,7 +6,7 @@
 // EXACT `value` (TR7 — ⛔ its rendered label, ⛔ trimmed, ⛔ case-changed). `role` / `cohort` are not offered (QE17).
 
 import type { ModuleScopeOptionDto, ModuleScopeOptionsResponse } from '@twt/contracts';
-import { useMemo, useState, type ReactElement } from 'react';
+import { useMemo, useRef, useState, type ReactElement } from 'react';
 
 import type { ScopeKind } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
@@ -24,6 +24,7 @@ function optionLabel(o: ModuleScopeOptionDto): string {
 
 export function ScopePicker({ options, kind, values, onChange }: ScopePickerProps): ReactElement {
   const [search, setSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
   const statesAvailable = options.states.length > 0;
   const districtsAvailable = options.districts.length > 0;
   const needle = search.trim().toLowerCase();
@@ -31,6 +32,11 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
     const list = kind === 'state' ? options.states : kind === 'district' ? options.districts : [];
     return needle === '' ? list : list.filter((o) => o.value.toLowerCase().includes(needle) || (o.state ?? '').toLowerCase().includes(needle));
   }, [kind, options.states, options.districts, needle]);
+
+  // Chosen values the current options do not list (a corrected copy of a module whose district was since removed, or lies past
+  // the first 200 shown): they have no checkbox, yet they count and are sent, so they are listed here and can be removed (RP21).
+  const kindList = kind === 'state' ? options.states : kind === 'district' ? options.districts : [];
+  const notListed = kind === 'state' || kind === 'district' ? values.filter((v) => !kindList.some((o) => o.value === v)) : [];
 
   const pickKind = (k: ScopeKind): void => {
     setSearch('');
@@ -85,11 +91,35 @@ export function ScopePicker({ options, kind, values, onChange }: ScopePickerProp
           ) : null}
           <label className="flex flex-col text-xs">
             {t('module.scope.search')}
-            <input className="rounded border px-2 py-1 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} data-testid="scope-search" />
+            <input ref={searchRef} className="rounded border px-2 py-1 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} data-testid="scope-search" />
           </label>
-          <p className="text-xs" data-testid="scope-chosen">
+          <p className="text-xs" aria-live="polite" data-testid="scope-chosen">
             {t('module.scope.chosen', { n: values.length })}
           </p>
+          {notListed.length > 0 ? (
+            <div className="flex flex-col gap-1 text-xs" data-testid="scope-not-listed">
+              <p>{t('module.scope.notListed')}</p>
+              <ul className="flex flex-col gap-1">
+                {notListed.map((v) => (
+                  <li key={v} className="flex items-center gap-2">
+                    <span>{v}</span>
+                    {/* The row (or the whole box, for the last one) unmounts under the button, so focus goes to the search field (PU3). */}
+                    <button
+                      type="button"
+                      className="underline"
+                      onClick={() => {
+                        toggle(v);
+                        searchRef.current?.focus();
+                      }}
+                      data-testid={`scope-remove-${v}`}
+                    >
+                      {t('module.scope.removeNamed', { value: v })}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" data-testid="scope-options">
             {shown.length === 0 ? <li className="text-xs">{t('module.scope.noMatch')}</li> : null}
             {shown.map((o) => (

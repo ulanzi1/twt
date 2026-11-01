@@ -16,6 +16,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 
 const { ModulesPage } = await import('../src/modules/marketplace/ModulesPage.js');
 const { resolveEn: t } = await import('../src/modules/marketplace/i18n-en.js');
+const { ApiError } = await import('../src/api/client.js');
 
 function row(n: number, over: Partial<ModuleSummaryResponse> = {}): ModuleSummaryResponse {
   return {
@@ -34,7 +35,11 @@ function row(n: number, over: Partial<ModuleSummaryResponse> = {}): ModuleSummar
   };
 }
 
-beforeEach(() => listModules.mockReset());
+// Braces matter: `mockReset()` RETURNS the mock, and Vitest runs a function returned from `beforeEach` as teardown — which would
+// call `listModules(...)` after every test, and surface a rejecting mock as an unhandled rejection (review RP35).
+beforeEach(() => {
+  listModules.mockReset();
+});
 
 describe('ModulesPage (AC8)', () => {
   it('"Load more" passes the previous page’s next_cursor; it disappears on the last page', { timeout: 20_000 }, async () => {
@@ -66,5 +71,30 @@ describe('ModulesPage (AC8)', () => {
     listModules.mockResolvedValue({ items: [], next_cursor: null });
     renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
     expect(await screen.findByTestId('modules-empty')).toHaveTextContent(t('module.list.empty'));
+    // RP32 / PU2: ONE always-mounted status region holds both the loading and the empty text (neither arrives as its own node).
+    expect(screen.getByTestId('modules-status')).toHaveAttribute('role', 'status');
+    expect(screen.getByTestId('modules-status')).toContainElement(screen.getByTestId('modules-empty'));
+  });
+
+  // The list page keys on the 403 STATUS, not the code, so this does not exercise the `authz.forbidden` mapping — that is pinned
+  // in marketplace-derive.test.ts and by the detail page’s first-load test (RP22).
+  it('RP35: a non-holder (403) is told they lack permission on the list page', { timeout: 20_000 }, async () => {
+    listModules.mockRejectedValue(new ApiError(403, 'authz.forbidden', 'no'));
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    expect(await screen.findByTestId('modules-error')).toHaveTextContent(t('module.error.forbidden'));
+  });
+
+  it('RP35: a failure that is not an API answer gets the list sentence', { timeout: 20_000 }, async () => {
+    listModules.mockImplementation(() => Promise.reject(new TypeError('network')));
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    expect(await screen.findByTestId('modules-error')).toHaveTextContent(t('module.list.error'));
+  });
+
+  it('RP33: each row’s Open button is named for its offer, and the loading text says so', { timeout: 20_000 }, async () => {
+    listModules.mockResolvedValue({ items: [row(1), row(2)], next_cursor: null });
+    renderWithClient(<ModulesPage pariwarId={PARIWAR} onNew={vi.fn()} onOpen={vi.fn()} />);
+    expect(screen.getByRole('status')).toHaveTextContent(t('module.loading'));
+    expect(await screen.findByRole('button', { name: 'Open Offer 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Offer 2' })).toBeInTheDocument();
   });
 });

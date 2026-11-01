@@ -20,7 +20,12 @@ const EN: Record<string, string> = {
   'module.list.error': 'Could not load the offers. Try refreshing the page.',
   'module.list.more': 'Load more',
   'module.list.open': 'Open',
+  'module.list.openNamed': 'Open {name}',
   'module.list.window': '{from} – {until}',
+
+  // ── Shared ──
+  'module.loading': 'Loading…',
+  'module.retry': 'Try again',
 
   // ── States ──
   'module.state.draft': 'Draft',
@@ -48,6 +53,7 @@ const EN: Record<string, string> = {
   'module.wizard.step.f': 'Partner hand-off',
   'module.wizard.step.summary': 'Summary',
   'module.wizard.issue': 'Please fix: {message}',
+  'module.wizard.issueField': 'Please fix “{field}”: {message}',
 
   // ── Step (a) ──
   'module.field.partner': 'Partner',
@@ -93,6 +99,7 @@ const EN: Record<string, string> = {
   'module.eligibility.noMemberYet':
     'No member can be in these statuses yet: Lock-in over — waiting for a trustee to check identity; Active; Active (grace period); Lapsed (unpaid). The step that ends the lock-in period is not built yet.',
   'module.eligibility.reachesNoMember': 'This offer reaches no member for now.',
+  'module.eligibility.statusesLabel': 'Membership statuses',
 
   // ── Step (c) ──
   'module.scope.members-all': 'Every member of the Pariwar',
@@ -110,6 +117,8 @@ const EN: Record<string, string> = {
   'module.scope.sourceWorkplaces': 'Districts from the Pariwar’s listed workplace districts.',
   'module.scope.inState': '{district} ({state})',
   'module.scope.chosen': '{n} chosen',
+  'module.scope.notListed': 'Chosen, but not in the list shown here (it may have been removed, or be past the first 200):',
+  'module.scope.removeNamed': 'Remove {value}',
   'module.scope.loadError': 'Could not load the places.',
   'module.reason.scopeKind': 'Choose the audience.',
   'module.reason.scopeValues': 'Choose at least one place.',
@@ -138,6 +147,7 @@ const EN: Record<string, string> = {
   'module.secret.copy': 'The Secret Manager secret must exist before leads are sent (a later release). This is its NAME, never the key.',
   'module.reason.leadUrl': 'Enter the lead hand-off address.',
   'module.reason.leadUrlHttps': 'The address must start with https://.',
+  'module.reason.leadUrlTooLong': 'The address can be at most 4096 characters.',
   'module.reason.secretName': 'Enter the secret name.',
   'module.reason.secretNameShape': 'A secret name uses only letters, digits, - and _ (at most 255).',
 
@@ -167,6 +177,8 @@ const EN: Record<string, string> = {
   // ── Errors (the create / publish / withdraw codes) ──
   'module.error.manifest_invalid': 'Some offer details are not valid. The step with the problem is shown.',
   'module.error.window_ended': 'The offer window has already ended. Choose a later closing time.',
+  'module.error.window_ended_detail':
+    'The offer window has already ended, so this draft cannot be published. Withdraw it, then start a corrected copy with a later closing time.',
   'module.error.partner_unknown': 'That partner is not registered in this Pariwar. Choose another partner.',
   'module.error.state_scope_requires_geo_tree': 'A state audience needs a published place list with states. Choose another audience.',
   'module.error.scope_value_unknown': 'Some chosen places are not recorded for this Pariwar any more. Choose them again.',
@@ -182,6 +194,7 @@ const EN: Record<string, string> = {
   // ── Detail page ──
   'module.detail.back': 'All offers',
   'module.detail.loadError': 'Could not load this offer.',
+  'module.detail.refreshError': 'Could not refresh this offer. What you see may be out of date.',
   'module.detail.membersCannotSee': 'Members cannot see offers yet. The member offer shelf comes in a later release.',
   'module.detail.state': 'State: {state}',
   'module.detail.author': 'Written by {name}',
@@ -203,7 +216,7 @@ const EN: Record<string, string> = {
   'module.detail.singleAdmin':
     'A Pariwar with only one admin cannot publish an offer: another admin, or a super admin granted in this Pariwar, must review and publish it.',
   'module.detail.stepUpLabel': 'publish this offer',
-  'module.detail.stepUpAgain': 'The confirmation code was not accepted for publishing. Start again.',
+  'module.detail.stepUpAgain': 'The extra confirmation did not cover publishing this offer. Press Publish to start again.',
   'module.detail.withdraw': 'Withdraw this offer',
   'module.detail.withdrawing': 'Withdrawing…',
   'module.detail.withdrawn': 'Withdrawn.',

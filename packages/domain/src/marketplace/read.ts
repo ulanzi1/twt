@@ -144,7 +144,9 @@ function createdAtInRange(m: RegExpExecArray): boolean {
  * `toString('utf8')` turns bad UTF-8 into U+FFFD, and `JSON.parse` keeps the LAST of duplicate keys (TR25). So, in order:
  *   1. a string of 1–256 characters in the URL-safe alphabet only (⛔ `=`, ⛔ `+` / `/`, ⛔ whitespace), `length % 4 !== 1`;
  *   2. the bytes re-encode to EXACTLY `s` (canonical — rejects non-zero trailing bits and anything the decoder skipped);
- *   3. the bytes are valid UTF-8 (`fatal: true`);
+ *   3. the bytes are valid UTF-8 (`fatal: true`), and a leading BOM stays IN the text (`ignoreBOM: true` — the default strips
+ *      EF BB BF, which the re-encode check above cannot see, so `BOM + canonical JSON` was a second accepted spelling; kept in
+ *      the text it fails step 4 as "not json");
  *   4. the JSON is a plain object with EXACTLY the keys `c`, `m` (in that order), both strings, whose text equals the
  *      canonical `JSON.stringify({ c, m })` (rejects duplicate / reordered keys, whitespace, escape variants);
  *   5. `c` is a Postgres `timestamptz` text with every field in range (⛔ `infinity` / `now` / `epoch`, ⛔ `2026-13-01`);
@@ -164,7 +166,7 @@ export function decodeModuleCursor(s: unknown): ModuleListCursor {
   if (bytes.toString('base64url') !== str) fail('not canonical base64url');
   let text = '';
   try {
-    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     fail('not utf-8');
   }

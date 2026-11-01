@@ -7,7 +7,7 @@
 // a plain Error — is rethrown UNCHANGED (the SAME instance) for the central mapper.
 
 import { ModuleStateDirectWriteError, marketplace, toneReview } from '@twt/domain';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { ApiError } from '../../src/http-errors.js';
@@ -127,8 +127,16 @@ describe('mapModuleError — the QE18 table, row by row', () => {
   });
 
   it('ModuleStateDirectWriteError → 500 module.state_direct_write_rejected (a bug, logged)', () => {
-    const e = mapped(new ModuleStateDirectWriteError('unguarded UPDATE'), 'publish');
-    expect([e.statusCode, e.code]).toEqual([500, 'module.state_direct_write_rejected']);
+    // The title promises "logged" (12.2 review RP15): spy on the log, and silence it for the run.
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const e = mapped(new ModuleStateDirectWriteError('unguarded UPDATE'), 'publish');
+      expect([e.statusCode, e.code]).toEqual([500, 'module.state_direct_write_rejected']);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(String(spy.mock.calls[0]?.[0])).toContain('direct write rejected');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

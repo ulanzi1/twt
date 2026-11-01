@@ -110,8 +110,10 @@ describe.skipIf(!hasDatabase)('selectDueScheduledModules — the due scan (AC9)'
   });
 
   it('a limit is clamped (⛔ LIMIT 0 = no rows; ⛔ a negative limit = all rows)', async () => {
+    // At `at` two modules are due (`opensSoon`, `shortWindow`), and `clampLimit` raises any non-positive limit to 1 —
+    // so EXACTLY one row. `<= 1` could not fail on the very regression named above (LIMIT 0 returns zero rows).
     const at = new Date(t0.getTime() + LEAD_MS);
-    expect((await selectDueScheduledModules(pool, { asOf: at, limit: 0 })).length).toBeLessThanOrEqual(1);
-    expect((await selectDueScheduledModules(pool, { asOf: at, limit: -5 })).length).toBeLessThanOrEqual(1);
+    expect(await selectDueScheduledModules(pool, { asOf: at, limit: 0 })).toHaveLength(1);
+    expect(await selectDueScheduledModules(pool, { asOf: at, limit: -5 })).toHaveLength(1);
   });
 });

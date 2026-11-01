@@ -599,6 +599,25 @@ export function newIdempotencyKey(): string {
   return `dt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+/** One write attempt's key and the exact request body it was minted for (see {@link attemptKey}). */
+export interface AttemptKey {
+  readonly sig: string;
+  readonly key: string;
+}
+
+/**
+ * The Idempotency-Key for a write whose body can still be edited between attempts (Story 12.2 review RP18). The server
+ * replays the FIRST recorded result for a key it has already succeeded under, whatever the new body says — so a key kept
+ * across an edit would silently drop that edit whenever the first attempt succeeded but its 2xx never reached the browser.
+ * An UNCHANGED body keeps its key (a genuine retry still replays, which is the point of the key); a CHANGED body gets a new
+ * one. `ref` holds the current attempt; set it to null to start a fresh attempt (after a success or a cancel).
+ */
+export function attemptKey(ref: { current: AttemptKey | null }, body: unknown): string {
+  const sig = JSON.stringify(body);
+  if (ref.current === null || ref.current.sig !== sig) ref.current = { sig, key: newIdempotencyKey() };
+  return ref.current.key;
+}
+
 /** The Pariwar's current drive target (+ the `version` the form echoes back). */
 export function useDriveTarget(pariwarId: string) {
   return useQuery({

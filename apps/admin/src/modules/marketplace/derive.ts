@@ -135,6 +135,12 @@ export function reachesNoMemberYet(states: readonly ModuleEligibilityMemberState
   return states.length > 0 && states.every((s) => NO_MEMBER_YET_STATUSES.includes(s));
 }
 
+/** The statuses a filter names (empty for "no status restriction"). */
+export function eligibilityStatesOf(filter: ModuleEligibilityFilterDto): ModuleEligibilityMemberState[] {
+  const clause = filter.clauses.find((c) => c.kind === 'member_state_in');
+  return clause === undefined ? [] : [...clause.states];
+}
+
 /** The eligibility sentences: the status line, then the left-or-erased line (12.1 `-429` A4 + C9 — 12.3's check). */
 export function describeEligibility(filter: ModuleEligibilityFilterDto): string[] {
   const clause = filter.clauses.find((c) => c.kind === 'member_state_in');
@@ -175,6 +181,8 @@ export function leadWarning(leadCount: number): string | null {
 const SECRET_NAME = /^[A-Za-z0-9_-]{1,255}$/;
 const POSITIVE_INT = /^[1-9][0-9]{0,9}$/;
 const MAX_PLACES = 2_147_483_647;
+/** The request DTO's cap on the lead hand-off address; a longer one is an unmapped 400, so the UI stops it first (RP26). */
+const MAX_LEAD_URL = 4_096;
 
 /** The first reason step `step` cannot be left yet, or null. Mirrors only what the admin can see; the domain decides. */
 export function validateStep(step: number, s: WizardState): string | null {
@@ -216,6 +224,7 @@ export function validateStep(step: number, s: WizardState): string | null {
     case 'f':
       if (s.leadHandoffUrl.trim() === '') return t('module.reason.leadUrl');
       if (!s.leadHandoffUrl.trim().startsWith('https://')) return t('module.reason.leadUrlHttps');
+      if (s.leadHandoffUrl.trim().length > MAX_LEAD_URL) return t('module.reason.leadUrlTooLong');
       if (s.secretName.trim() === '') return t('module.reason.secretName');
       if (!SECRET_NAME.test(s.secretName.trim())) return t('module.reason.secretNameShape');
       return null;
@@ -321,6 +330,34 @@ export function issueToStep(path: readonly (string | number)[]): number {
   return WIZARD_STEPS.indexOf(step ?? 'summary');
 }
 
+/** The copy key of each request field's label, for naming the field a 422 issue points at (RP31). */
+const FIELD_LABEL: Record<string, string> = {
+  partner_id: 'module.field.partner',
+  name_en: 'module.field.nameEn',
+  name_hi: 'module.field.nameHi',
+  description_en: 'module.field.descriptionEn',
+  description_hi: 'module.field.descriptionHi',
+  valid_from: 'module.field.validFrom',
+  valid_until: 'module.field.validUntil',
+  slot_capacity: 'module.field.places',
+  lead_handoff_url: 'module.field.leadUrl',
+  lead_handoff_signing_key_secret_name: 'module.field.secretName',
+};
+
+/** The request field a 422 issue's path starts at, when it is one with a single input on screen; else null. */
+export function issueFieldName(path: readonly (string | number)[] | undefined): string | null {
+  const head = path?.[0];
+  return typeof head === 'string' && head in FIELD_LABEL ? head : null;
+}
+
+/** The banner sentence for a 422 issue: it names the field when the field has a label of its own. */
+export function issueMessage(path: readonly (string | number)[] | undefined, message: string): string {
+  const field = issueFieldName(path);
+  return field === null
+    ? t('module.wizard.issue', { message })
+    : t('module.wizard.issueField', { field: t(FIELD_LABEL[field]!), message });
+}
+
 /** A refusal code (no issue path) → the step to return to, or null. */
 export function codeToStep(code: string): number | null {
   const step: WizardStep | undefined = (
@@ -334,8 +371,13 @@ export function codeToStep(code: string): number | null {
   return step === undefined ? null : WIZARD_STEPS.indexOf(step);
 }
 
-/** What to tell the admin for a refusal code (a code with no own sentence gets the generic one). */
-export function moduleErrorGuidance(code: string): string {
+/**
+ * What to tell the admin for a refusal code (a code with no own sentence gets the generic one). `surface` is where the
+ * sentence is shown: the wizard can send the admin back to edit a closing time, the detail page cannot (a draft is immutable),
+ * so there `module.window_ended` points at withdraw-and-copy instead (RP24).
+ */
+export function moduleErrorGuidance(code: string, surface: 'wizard' | 'detail' = 'wizard'): string {
+  if (surface === 'detail' && code === 'module.window_ended') return t('module.error.window_ended_detail');
   const own: Record<string, string> = {
     'module.manifest_invalid': 'module.error.manifest_invalid',
     'module.window_ended': 'module.error.window_ended',
@@ -351,7 +393,8 @@ export function moduleErrorGuidance(code: string): string {
     'module_partner.name_taken': 'module.partner.nameTaken',
     'module_partner.name_invalid': 'module.partner.nameInvalid',
     'tone_review.required': 'module.detail.authorCannotPublish',
-    'auth.forbidden': 'module.error.forbidden',
+    // The API's permission-denied code is `authz.forbidden` (this row was keyed `auth.forbidden`, which nothing emits — RP22).
+    'authz.forbidden': 'module.error.forbidden',
   };
   return t(own[code] ?? 'module.error.generic');
 }

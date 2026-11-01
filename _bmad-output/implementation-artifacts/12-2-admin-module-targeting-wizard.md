@@ -1838,7 +1838,26 @@ the listed workplace districts (`-429` C11 amended, QE5).
   refuse them. QE12's text allowed both for Devanagari conjuncts, so this is a narrowing of the build decision made by BigDev's answer to DN1, recorded here and as a dated pointer at QE12 — it is NOT recorded in any governance document (`.decision-log.md` `-433` and ADR-0044 still say "allowed"), so it stays an unratified departure until BigDev authorises an amendment. The same
   round (RP1) also refuses every other format character (Cf), U+2028 / U+2029 and the four Hangul fillers in every display schema, and (DN2, BigDev's answer "2") every other default-ignorable code point and the Braille blank, except the emoji / text presentation selectors U+FE0E / U+FE0F — also in no governance document yet. ⭐ Since v1.10 both are recorded: author-commit `2026-11-01-434` (`e6f30675`) amends `-433` QE12, with a dated line at ADR-0044 D3 / D4.
 
-**NOT done / un-attested:** no real-browser pass of the admin wizard was done (unit / RTL tests only — so there was no real screen reader, no
+**⭐ Real-browser pass DONE 2026-11-01 at `667c6d74` (BigDev: *"…then verify in browser…"*)** — Chrome (Claude in Chrome) against the
+real API (`buildServer`, fake WebAuthn, real passkey routes) on a THROWAWAY Postgres (`twt-12-2-browser`, :5461, all 195 migrations),
+admin Vite on :3001, one fresh Pariwar with two `pariwar_admin`s (author "Asha", publisher "Ravi") and three listed workplace districts;
+the launcher, cookie helper and container were removed afterwards. Walked and checked: the list's empty state → New offer; a partner
+registered from a pasted-style name "LIC" + NBSP + "Housing" + two spaces + "Finance" was STORED as `LIC Housing Finance` (hex, single
+U+0020 — DN3's client cleaning); a partner name with a hidden ZWJ was refused with the alert "Please fix “Partner name (English)”: must
+not contain an invisible joining character …" (PQ2 — and NO audit line was written); step 1 → 7 with focus moving to each step heading
+(RP30), the eligibility notice and live sentence, the no-tree audience (state offered as unavailable), district options from the
+workplace list, the real `datetime-local` widgets with India and computer time, a fixed 50 places, the hand-off fields, the bilingual
+summary; Create draft (an English description with a family ZWJ emoji and a CRLF — stored with LF, emoji intact — DN4); the author's
+Publish DISABLED and described by "you wrote it" (QE9 / RP33); the publisher's three ticks → the step-up panel → the OTP (read from the
+launcher's capture) → Live, "Published by Ravi (Publisher)", live region "Published.", focus to the heading (RP32); the DB held one
+`module.activated` publication row (64-hex hash, both ticks), the stream `authored` → `activated`, audit `module_partner.created` /
+`module.authored` / `module.activated`; Withdraw (one click, no step-up — AC7 / QE10) → "Withdrawn or ended", "Withdrawn."; Start a
+corrected copy → the wizard pre-filled (partner, names, description with its emoji and line break). No console error on reload.
+Observed, not changed: after Create draft the new detail page leaves focus on `<body>` (the write-time focus of RP32 applies to the
+detail page's own writes) — carried to round 2 chunk C's review. NOT covered by this pass: a screen reader, keyboard-only navigation,
+a network failure mid-write, a scheduled (future-start) publish and the 5-minute sweep.
+
+**NOT done / un-attested (as written at `89add5ee`; the browser half is superseded by the pass above):** no real-browser pass of the admin wizard was done (unit / RTL tests only — so there was no real screen reader, no
 real keyboard focus order, no real `datetime-local` widget, and no real step-up OTP round trip); `ModulesRoute.tsx` (session gate,
 `?from=`, the three route keys), the router wiring (`router.tsx`, `validateModuleNewSearch`) and the `nav-modules` link in
 `RootLayout.tsx` have no test of their own (corrected by the code review, chunk C, RP35 — the notes used to disclose only the

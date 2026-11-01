@@ -947,12 +947,18 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance first (AC0).** ⭐ Do NOT write code before 0.1–0.3 are done and in the Debug Log.
-  - [ ] 0.1 `git fetch origin`; rebase on `origin/main` if it moved. Re-grep NUMBERS on every ref and worktree (decision
+- [x] **Task 0 — governance first (AC0).** ⭐ Do NOT write code before 0.1–0.3 are done and in the Debug Log.
+  - [x] 0.1 `git fetch origin`; rebase on `origin/main` if it moved. Re-grep NUMBERS on every ref and worktree (decision
         id, migration + journal `when`, `PERMISSION_CATALOG_VERSION` + key count, ledger letter in BOTH ledgers).
         Re-verify G1 (signatures; the shared name schemas), G3, G6 (both twins' COMMIT placement), G8, G9, G13
         (`twt_service` grants), G14 (`ACCESS_SURFACE_ROOTS` feeds both invariants), G17. Run 0.1 again at each numbered
         commit.
+        ⭐ **DONE (2026-11-01):** re-grepped — `origin/main` = `36b489c9`, unmoved (no rebase); decision `-433` taken
+        (`f95f7ae6`, this branch only; main tops at `-432`, siblings at `-430`); migration `0195` free (main tops at
+        `0194_memorial-kinship`, `when` 1796355600039; ⛔ sibling has committed a higher one, ⛔ worktree holds an untracked
+        one); `PERMISSION_CATALOG_VERSION = 56` / 74 keys on every ref ⇒ v57 free (still contested — re-read at Task 1);
+        ledger letters `m`–`p` are this story's, `q` next (13-2 tops at `i`, 14-3 `e`, 6-22 `f`); G1 re-verified
+        (signatures, the shared `moduleNameSchema` / `moduleDescriptionSchema` feed `ModuleAuthoredPayloadSchema`).
   - [x] 0.2 Put QE1–QE22 to BigDev with the five ASKs first (QE3, QE6, QE7, QE9, QE17). Record the answer verbatim.
         ⭐ **DONE (2026-11-01, during `bmad-create-story validate 12.2`), in two answers.** First, BigDev, verbatim:
         *"QE16 needs the strict base64url validation amendment before the implementation begins.
@@ -1027,6 +1033,11 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         `twt_service` SELECT, UPDATE grant, the zero-row failure mode under an RLS-bound posture and the guard (QE19); NO
         new row,
         NO new closure leg.
+        ⭐ **DONE (2026-11-01):** one records commit (story v1.7, ledger `2026-11-01q`) — `deferred-work.md` (dated
+        "being built" lines on 12.2's legs; the real deferrals labelled "Resolved via explicit deferral"; `role`/`cohort`
+        stays "Not addressed" + the D8 line; `commission_terms` re-pointed to `-433` A1 / A2; a NEW "Deferred from: story
+        12-2-…" section), `epics.md` (INHERITED FROM 12.2 under 12.3 / 12.5 / 12.6; the 12.2 note re-pointed), ADR-0044
+        (six dated amendment lines + a Changelog row), the tone-checklist "Partner module" row, the roster Row 26 note.
 - [ ] **Task 1 — permission (AC2).** `permissions.ts` (history comment, version +1, `'module.manage'` with a comment
       naming 12.2 and the inert-narrower-grant acceptance condition), `roles.ts` (`pariwar_admin`), the two rbac tests.
 - [ ] **Task 2 — migration + schema + RLS (AC1).**
@@ -1381,6 +1392,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.7 | `bmad-dev-story` started: Task 0.1 DONE (re-grep — `origin/main` `36b489c9` unmoved; `0195` / v57 free; ledger `q` next; G1 re-verified) and Task 0.4 DONE (the `-433` records: `deferred-work.md` legs + a 12-2 carried section, epics.md INHERITED FROM 12.2 ×3, ADR-0044 amendment lines ×6, tone-checklist routing row, roster Row 26 note) — Task 0 complete. Row `ready-for-dev` → `in-progress`. Ledger `2026-11-01q`. No code. |
 | 2026-11-01 | v1.6 | Task 0.3 DONE (BigDev: *"write the author-commit"*): Decision `2026-11-01-433` committed ALONE as `f95f7ae6` — QE1–QE22 as answered (QE16 amended), §0, the key `module.manage`, amendments A1–A4 each quoted in full. Next: Task 0.4 (records), then Task 1. Ledger `2026-11-01p`. No code. |
 | 2026-11-01 | v1.5 | BigDev at Task 0.2 (verbatim): *"rest of the QEs as recommended"* — QE1, QE2, QE4, QE5, QE8, QE10–QE15 and QE18–QE22 ACCEPTED as recommended (QE16 as amended in v1.4). Task 0.2 ticked; every QE answered; the QE section heading now reads ANSWERED. Next: Task 0.3 (author-commit ≥ `-433`, ALONE), Task 0.4 (records). Ledger `2026-11-01o`. No code. |
 | 2026-11-01 | v1.4 | BigDev at Task 0.2 (verbatim): *"QE16 needs the strict base64url validation amendment before the implementation begins. QE3, QE6, QE7, QE9, QE17 AS RECOMMENDED."* The five ASKs are marked ANSWERED as recommended (QE3 (A), QE6 (A), QE7 (A), QE9 / QE17 confirmed; the Task 0.3 map not triggered); the other sixteen recommendations still await acceptance (Task 0.2 left unticked). QE16 AMENDED: a STRICT base64url decode in five ordered steps — URL-safe alphabet only, no padding / whitespace, length 1–256 and `% 4 !== 1`; a canonical re-encode round-trip; fatal UTF-8; a plain object with exactly `c` / `m` (both strings) whose text equals its canonical `JSON.stringify` (duplicate keys rejected) — each on Node v22 behaviour verified in session; encoder pinned (no padding). AC8, TR25 and the `read-cursor.test.ts` vectors follow it. Ledger `2026-11-01n`. No code. |

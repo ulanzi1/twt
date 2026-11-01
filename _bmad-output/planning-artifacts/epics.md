@@ -7283,6 +7283,7 @@ So that module creation is structured + scope-respecting + audit-logged.
 
 > ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; `deferred-work.md` "Deferred from: story 12-1-…").** The manifest primitive this wizard writes is built (`packages/domain/src/marketplace/`, ⛔ `packages/marketplace`).
 > - **`commission_terms` is THIS story's** (FR-64/66): choose an admin-only home (PRD "never public"; OQ-4 open). ⚠ The trust deed's Clause 7.2(i) says partner arrangements must be "**disclosed**". Reconcile it, or route it (§0: what the Trust discloses).
+>   ⭐ *2026-11-01 — SUPERSEDED by Decision `2026-11-01-433` (A1, amending `-427` QE5; A2, amending `-429`'s trust-deed bullet): 12.2 chooses ⛔ home and stores ⛔ commission data; the disclosure question is DEFERRED to QE6's re-trigger, ⛔ answered.*
 > - **`role` / `cohort` are ABSENT from `ScopeFilterV1`** (refused at write). If this wizard must target by them, it meets `2026-08-13-103` D8's condition; raise the attribute WITH that requirement. Built arms: `members-all` / `state` / `district`. **C11:** pick `state` / `district` values from the Pariwar's geo tree; refuse `state` where there is no tree.
 > - The manifest is immutable after `module.authored` (⛔ revise event; ADR-0044). If the wizard needs server-side drafts, add a draft-only `module.revised` arm. **C10:** a correction re-authors, which resets places and lets earlier registrants register again — warn before re-authoring a module that has leads.
 > - **Publish with a future `valid_from` emits `module.scheduled`, ⛔ `module.activated`.** Nothing yet activates a `scheduled` module (C2 (b)) — if this story owns publishing, it may own that too.
@@ -7308,6 +7309,12 @@ So that I see relevant partner offers without irrelevant noise.
 > - **C9 — the shelf filter is ⛔ an authorization.** The lead route re-checks scope, eligibility, member state (refuse `withdrawn` / `anonymized`) and 12.4's grief suppression server-side, before `marketplace.checkModuleLeadAllowed` / `submitModuleLead`. Those run as caller-wrapped: pre-check BEFORE `withCompensatingAudit`, then the command with `{ …, auditId }`. The lead id is caller-minted and idempotent (a replay returns `{ replayed: true }`); one place per member per module.
 > - **I11 / C13:** a lead's actor is the member themself (`actor: 'member'`, `actorId === memberId`, from the member session). An operator-assisted lead is NOT supported.
 > - ⚠ **C6 + C8:** the privacy policy §6 names ⛔ partners, and an RTBF can never remove a member↔offer link. Route the data and retention basis BEFORE the first production caller. The data export must learn to find lead events on the module stream. **C5:** partner colours never touch the shelf chrome. **C12:** a curated rank goes in its own table.
+
+> ⭐ **INHERITED FROM 12.2 (Decision `2026-11-01-433`; `deferred-work.md` "Deferred from: story 12-2-…").** The admin wizard and the publish step are built; nothing reached a member before this story. These bind this story:
+> - **The card's brand asset is the partner NAME** from `marketplace_partners` (`display_name_en` / `display_name_hi`, per-Pariwar); `branding_bundle` is all-null — the **partner logo upload is this story's** (QE8). **C5** still binds the card. `marketplace_module_publications` is the "published by" record (reviewer, content hash, confirmations).
+> - **The commission-disclosure question re-triggers here** (QE6 (A); `-433` A1 / A2): ⛔ commission data is stored; at this story's create-story (the first time a member sees an offer) route "is the fee arrangement disclosed to the member?" to the Panel from the template, unless OQ-4 or a production publish triggered it first.
+> - **Reach facts the shelf must not read as bugs:** an orphaned scope value (a tree amended after authoring) reaches nobody; a member whose newest posting carries an unlisted / retired district spelling is in no district audience; four eligibility statuses (`active`, `pending-valid`, `active-in-grace`, `lapsed-unpaid`) have ⛔ member until `member.lock_in_expired` has a producer (row `3-14`). The shelf may report them.
+> - **RVD2:** this story's lead route is the first LEAD caller — `submitModuleLead`'s internal retry turns a stream drift into a loop (`-433` QE21's re-trigger).
 
 ### Story 12.4: Grief-Context Module Shelf Suppression — State-Machine-Enforced + Structural-Not-Cosmetic Invariant `[GOVERNANCE]`
 
@@ -7360,6 +7367,12 @@ So that partner systems receive valid leads with provenance, and partner integra
 > - **C10** — if the endpoint or key moves to a partner entity, this story owns relaxing 12.1's NOT NULL columns.
 > - Lead delivery status (`delivered | pending_retry | failed_delivery`) is this story's entity, ⛔ a module column.
 
+> ⭐ **INHERITED FROM 12.2 (Decision `2026-11-01-433`; `deferred-work.md` "Deferred from: story 12-2-…").**
+> - **Secret Manager existence / resolution at send** is this story's (QE11): 12.2 validates the signing-key secret NAME for shape only.
+> - **Partner endpoint / key on the partner entity:** 12.2's `marketplace_partners` row carries names only; if they move there, this story owns relaxing the module's NOT NULL columns (C10).
+> - **Architecture §3.7's lead envelope** ("scope-redacted to partner-allowed fields per FR-66 wizard") — 12.2 builds ⛔ field allow-list; carried with C6. **§3.7 "Partner contract evolution: versioned per-partner"** has ⛔ home — carried with C7.
+> - **RVD2:** the first LEAD caller is where a stream drift becomes a loop (`-433` QE21's re-trigger).
+
 ### Story 12.6: Time-Bombed Module Lifecycle + Auto-Archive `[CONSUMER]`
 
 As Solo Builder authoring the module-archive lifecycle,
@@ -7380,6 +7393,11 @@ So that modules don't linger on shelves past their valid window or after slot ex
 > - **(c)** Also archive `draft` / `scheduled` modules once `now() ≥ valid_until`. 12.1's window is half-open, so `valid_until < now()` above is compatible.
 > - **(d)** There is ⛔ `pariwars` table, so use a cross-tenant indexed candidate scan (the `member/renewal-scheduler.ts` shape) with its own partial indexes, plus a rule for which reason wins. Cost if daily: an offer can stall for up to a day.
 > - **C3 — `module.restored`** is ⛔ in 12.1's vocabulary (`archived` is terminal). Decide its target state, the real grace window, and restore after `valid_until_reached` / at 0 places. A new value is judged by §0 on its own. Every transition takes the module row lock first (12.1 I10).
+
+> ⭐ **INHERITED FROM 12.2 (Decision `2026-11-01-433`; `deferred-work.md` "Deferred from: story 12-2-…").**
+> - **Activation is OWNED by 12.2** (QE7 (A)): a 5-minute pg-boss sweep (`apps/jobs/src/scheduler/module-activation.ts`) turns a `scheduled` module `active` once `valid_from` has passed — this story does ⛔ build the `scheduled → active` emitter (C2 (b) is being built by 12.2).
+> - **Still this story's:** archive at `valid_until` (incl. a `scheduled` module whose `valid_until` passed — the 12.2 sweep never selects it, C2 (c)), slot-exhaustion archive (C2 (a)), the `(valid_until) WHERE current_state <> 'archived'` index, the reason-precedence rule, `module.restored` (C3) and RVD5's archive leg.
+> - **Built by 12.2:** the `(valid_from) WHERE current_state = 'scheduled'` partial index, and `GRANT SELECT, UPDATE ON marketplace_modules TO twt_service`. Recorded cost now: a past-start offer goes live up to 5 minutes late (⛔ a day); a past-`valid_until` offer still stalls until this story's sweep.
 
 ---
 

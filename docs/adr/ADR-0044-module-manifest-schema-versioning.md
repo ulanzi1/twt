@@ -45,6 +45,10 @@ the grammars growing additively inside `version: 1` and every breaking change ta
    audit-replayable from its stream alone.
 2. **One Pariwar (QE4).** `pariwar_id uuid NOT NULL`, with ⛔ foreign key (there is ⛔ `pariwars` table). Re-trigger: the
    v2 cross-Pariwar manifest.
+   ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* D2 CLARIFIED, ⛔ changed — there is still ⛔ `pariwars`
+   FK. Story 12.2 adds the composite FK `marketplace_modules_partner_fk (pariwar_id, partner_id) → marketplace_partners
+   (pariwar_id, partner_id)`, of which `pariwar_id` is a part; it targets the per-Pariwar partner registry, so a module
+   can never name another Pariwar's partner (FK checks run as the owner and ignore RLS).
 3. **Row-level version.** `manifest_schema_version smallint NOT NULL` with `CONSTRAINT
    marketplace_modules_manifest_schema_version_v1 CHECK (manifest_schema_version = 1)`. A v2 manifest is a migration
    that relaxes this CHECK together with a new parser arm and a new genesis payload schema — ⛔ a silent reinterpretation
@@ -54,9 +58,24 @@ the grammars growing additively inside `version: 1` and every breaking change ta
    `version: 1`. They grow ADDITIVELY within `version: 1` (a new scope, a new clause kind, a new optional-by-absence
    member of a union). A change that would make an existing stored value mean something different — or stop parsing —
    is `version: 2`. Values match byte-for-byte; an empty or unknown audience means nobody.
+   ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* D3 / D4 RECORD the tightenings made BEFORE any module
+   was stored (code review R4-7: top-level fields under D3, grammars under D4) — Story 12.1's RV3 (the lead URL rules),
+   RV5 (NUL / unpaired surrogates refused), RV7 (the window rule shared with the genesis payload), RP1 (the URL's
+   canonical form), R3-4 (instants in UTC years, offsets), R3-6 (RFC 3986 URL characters) and R4-1 (the year floor 2000);
+   and Story 12.2's QE12 WRITE-ONLY display rules (C0 / C1 / bidi / invisible-formatter characters refused, ZWJ / ZWNJ
+   allowed, a letter or digit required, a Devanagari letter in every `*_hi` field). None stops a STORED value parsing
+   (there was none). The first tightening AFTER 12.2 ships of a schema the genesis payload re-parses is RPD1's
+   re-trigger (a narrow `{ slot_capacity }` read in the fold, or `version: 2`).
 5. **Where the rules live.** The DB enforces only six named CHECKs (the window, positive capacity, the capacity/places
    pair and range, the archive-reason pair, the v1 pin). Every other content rule is validated once, at write, by
    `marketplace.parseModuleManifest`, and the genesis payload schema reuses the same field schemas.
+   ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* D5 sentence 1 — the DB ALSO enforces the composite
+   partner FK `marketplace_modules_partner_fk` and the unique `marketplace_modules_pariwar_module_unique (pariwar_id,
+   module_id)` (the target of the publication record's composite FK); still ⛔ content CHECK beyond the six.
+   ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* D5 sentence 2 — BOTH halves no longer hold: QE12's
+   display-text rules live in WRITE-ONLY schemas used by `parseModuleManifest` that the genesis payload does ⛔ reuse (it
+   keeps 12.1's laxer, tolerant field schemas — the stricter write rules are a subset), and QE5's scope-value membership
+   (every value equals a recorded place) is checked at the 12.2 route, ⛔ by `parseModuleManifest`.
 
 ## Alternatives considered
 
@@ -68,9 +87,13 @@ the grammars growing additively inside `version: 1` and every breaking change ta
   need to read "the manifest as of the lead". Archive-and-reauthor costs a reset of places and lets a member register
   again on the new module (carried to 12.2's wizard as a warning, C10). Re-trigger: Story 12.2, if editing proves
   necessary — it would be a new event and an amendment of this ADR.
+  ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* Story 12.2 needs ⛔ editing — a correction is Withdraw +
+  "Start a corrected copy" (QE1). The re-trigger is now: the first surface needing server-side save-as-you-go.
 - **Declared-and-empty `role` / `cohort` scopes (the banners / news shape).** Rejected (confirmed at `-427`): a scope
   value nobody can resolve is a trap for the wizard and the shelf. Decision `2026-08-13-103` D8's re-trigger stands
   unchanged: the first surface that must target members by role or cohort — which Story 12.2 MAY be.
+  ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* checked by Story 12.2 — condition NOT met (QE17: ⛔
+  first partner needs role / cohort targeting); D8's re-trigger is unchanged.
 - **An unversioned grammar.** Rejected: the shelf (12.3) evaluates these values long after they were written; without
   a version a later grammar change silently reinterprets stored modules.
 
@@ -90,6 +113,9 @@ the grammars growing additively inside `version: 1` and every breaking change ta
 - **Failure modes accepted.** `commission_terms`, FR-64's external `target_url_or_form` CTA and a `module.restored`
   event are ⛔ in v1 (carried to 12.2 / no owner / 12.6). A capped module stays `active` at 0 places until an archive is
   emitted (C2).
+  ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* `commission_terms` is ⛔ stored by 12.2 either (QE6 (A);
+  `-433` A1 / A2) — it moves to QE6's re-trigger: OQ-4 answered by the Panel, OR the first PRODUCTION publish of a module,
+  OR Story 12.3's create-story, whichever comes first.
 - **Migration / pivot path.** A v2 manifest: relax the v1 CHECK, add a v2 parser arm + genesis payload schema, leave
   every v1 row and stream as written. A cross-Pariwar manifest: a successor ADR (this one's Decision 2 is its
   re-trigger).
@@ -115,3 +141,4 @@ the grammars growing additively inside `version: 1` and every breaking change ta
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
 | 2026-10-31 | (initial draft) | BigDev (Solo Builder) | Authored under Story 12.1 (author-commit `2026-10-31-427` / `-429`); the reserved slot `ADR-NNNN-module-manifest-schema-versioning` flipped `slot-reserved-pre-write` → `drafted` |
+| 2026-11-01 | (⛔ flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-433` (Story 12.2 QE20, A4): dated lines at D2, D3 / D4, D5 (both sentences), Alternatives (revise event; role / cohort) and Consequences (`commission_terms`) |

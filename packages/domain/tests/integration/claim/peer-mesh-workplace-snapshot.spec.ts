@@ -848,7 +848,7 @@ describe.skipIf(!hasDatabase)('Story 6.36 — the workplace_named_v1 snapshot (A
   });
 
   describe('the anchor — RF1 C (`2026-10-16-339`): the death\'s FIRST filing, unless an innocence finding lifts a claim', () => {
-    /** An innocence finding (`-238`) on `claimCaseId`, as the superuser (its producer, row 6-22, is unbuilt). */
+    /** An innocence finding (`-238`) on `claimCaseId`, as the superuser (seeded raw — its production producer is Story 6.22's finding). */
     async function foundInnocent(p: string, claimCaseId: string): Promise<void> {
       const { client } = getTx();
       await client.query(

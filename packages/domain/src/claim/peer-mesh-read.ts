@@ -288,9 +288,10 @@ export interface PeerMeshFilingAnchor extends PeerMeshFilingCut {
  * claim that carries a `member_found_innocent` finding (`-238`; the SAME filter `death-report.ts` defines — Story 6.38,
  * `2026-10-30-423` — a read-only copy named in that story's source fence); two claims
  * filed at the same instant break by `claim_case_id`. Our reading (⛔ ratified): a refused, closed or appealed claim
- * still anchors; only the innocence finding lifts one. Until the fraud register (row 6-22) writes that finding, this
- * behaves exactly as option A. When every such claim carries the finding, the claim being selected for counts from its
- * own filing and is its own anchor (defensive — unreachable today). ⭐ `2026-10-16-340` call 1: the anchor claim's id is
+ * still anchors; only the innocence finding lifts one — written, since Story 6.22, by the District Admin's finding, which
+ * CLOSES a closable claim in the same transaction. When every such claim carries the finding, the claim being selected
+ * for counts from its own filing and is its own anchor (6.36 W2: the select job then finds that claim `closed`, ⛔
+ * `documents_pending`, so a later anchor is unreachable — Story 6.22 N4). ⭐ `2026-10-16-340` call 1: the anchor claim's id is
  * returned beside the cut — it salts the ranking, so a refile asks the same people. A read of `claims` and
  * `claim_nominee_findings` only (⛔ decrypt, ⛔ KMS); both have Pariwar-wide `FOR SELECT TO twt_app` policies.
  */

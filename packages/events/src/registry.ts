@@ -254,7 +254,7 @@ export const EVENT_TYPE_REGISTRY = {
   'claim.nominee_lock_released': {
     type: 'claim.nominee_lock_released',
     description:
-      'The nominee-declaration LOCK this claim created was RELEASED on an investigation finding the member INNOCENT (2026-09-21-238 cl.1, the release route) — annotation event (the 34th claim event); identity transition (state unchanged, never a lifecycle state); carries finding_id only, NO PII. No production caller until row 6-22 (the fraud register) supplies the finding (Story 6.20).',
+      'The nominee-declaration LOCK this claim created was RELEASED on an investigation finding the member INNOCENT (2026-09-21-238 cl.1, the release route) — annotation event (the 34th claim event); identity transition (state unchanged, never a lifecycle state); carries finding_id only, NO PII. Its producer is the fraud-investigation finding of the District Admin (Story 6.22); the release route is from Story 6.20.',
     schema: claim.ClaimNomineeLockReleasedPayloadSchema,
   },
   'claim.fraud_flagged': {

@@ -502,7 +502,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — the determination + the effective 
 
   // ── D17(c) — the disqualified primary (AC11(iv)) ──────────────────────────────────────────────
   it('⭐⭐ AC11(iv) — a test-seeded DISQUALIFICATION of rank 1 re-ranks the survivor to rank 1 at 100%, and stales the check', async () => {
-    // ⚠ The finding is TEST-SEEDED: its producer is row 6-22 (the fraud register), unbuilt. ⛔ Never a
+    // ⚠ The finding is TEST-SEEDED (its production producer is Story 6.22's finding chain). ⛔ Never a
     // District Admin mark — a D6-valid determination CANNOT produce {2} (D17(c), v0.6).
     const { client, tx, cid, mid } = await setup();
     await declare(tx, mid, 2, LONG_BEFORE);

@@ -202,7 +202,8 @@ export function raceFirstIntake<R>(
   );
 }
 
-/** Release the claim by an innocence finding (`-238` cl.1) — TEST-SEEDED: its producer is row 6-22, unbuilt. */
+/** Release the claim by an innocence finding (`-238` cl.1) — TEST-SEEDED through the writer directly (its production producer,
+ *  Story 6.22's `recordFraudFinding`, also needs a flag and a different finder — the gates under test only READ the finding). */
 export async function findInnocent(t: TestDeps, pariwarId: string, claimCaseId: string): Promise<void> {
   await inScope(t, pariwarId, (s) =>
     claim.recordMemberInnocenceFinding(s.client, {

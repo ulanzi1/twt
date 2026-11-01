@@ -9,7 +9,7 @@
 //     `nominee.locked_claim_filed`, in EVERY state (after a denial, after settlement — the lock is ⛔ not
 //     windowed, `-242` c.2), tenant-scoped (another Pariwar's claim is a miss), and the status read says
 //     `locked: true`. ⭐ The RELEASE route (`-238` cl.1): an innocence finding unlocks, and a declare
-//     then succeeds. ⚠ The finding is TEST-SEEDED — its producer is row 6-22, unbuilt.
+//     then succeeds. ⚠ The finding is TEST-SEEDED through the writer (its production producer is Story 6.22's finding chain).
 //   · ⭐ "the lock survives a denial and waits for the finding" — designed behaviour (`-238`), ⛔ never a
 //     defect: a denial ALONE never releases it.
 //   · D9 — a RE-declaration outside the signup wizard needs a fresh `nominee_change` step-up on BOTH

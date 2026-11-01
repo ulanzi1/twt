@@ -749,7 +749,7 @@ export const ClaimNomineeDeterminationRecordedPayloadSchema = requireIdentityTra
  * INNOCENT (`2026-09-21-238` cl.1 — the release route, option B; AC2). The 34th claim event. An IDENTITY
  * annotation: the finding row and this event are written in ONE transaction; ⛔ no lifecycle state
  * (AC10), the claim stays wherever it is.
- * ⚠ ⛔ NO PRODUCTION CALLER until row `6-22` (the fraud register) supplies the finding
+ * ⭐ Its producer is Story 6.22 — the District Admin's innocence finding (`fraud-investigation-persist.ts` `recordFraudFinding`) supplies the finding
  * (`2026-09-21-241` §6). ⛔ No PII: the finding's id only.
  */
 export const ClaimNomineeLockReleasedPayloadSchema = requireIdentityTransition({

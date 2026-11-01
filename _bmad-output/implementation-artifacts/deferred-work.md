@@ -249,6 +249,7 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   - The `account-frozen` overlay LIFTS on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4).
   - Keying suppression instead on the durable "a claim was ever filed" fact (`claim/nominee-lock.ts`) would suppress a LIVING member after an erroneous claim; nominee-lock has ⛔ production release until row 6-22. That IS a new reason in `2026-08-21-147` cl.3's widened sense ⇒ **the re-examination is MANDATORY at 12.4**. Routing depends on what it finds.
   - ⭐ Trigger: Story 12.4's create-story.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Not addressed by 6.22 (owner 12.4) — its premise is stale: 6.22 is now the production release.
 - **C5 — partner colours never touch the shelf chrome** [12.1 QE5; UX "Module Shelf Partner Brand Integration"] → **Stories 12.2 / 12.3**. `branding_bundle.accent_color_hex` is only for a partner-dedicated detail page. ⭐ Trigger: either story's create-story.
   - 2026-11-01 — Closed by `89add5ee` (12.2's leg — I10, QE8: 12.2's half — `branding_bundle` is written all-null (⛔ accent colour field) and ⛔ partner colour reaches any 12.2 surface). 12.3's half (the card) is unchanged.
 - **C6 — ⚠ partner data sharing has ⛔ basis on record (Panel / counsel)** [12.1 §0 edge 5] → **Stories 12.3 / 12.5, BEFORE any member data leaves**.
@@ -367,6 +368,7 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   nothing to lift the lock with; (b) closure wording for `-423` Q1 (b) must stay "mechanism built, lift deferred to 6-22", never "Q1 (b)
   closed"; (c) the go-live list should carry it (merge is not go-live; nothing is live). Trigger: 6-22's create-story, or a go-live
   checklist.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* (b) innocence arm Closed by 6.22 DL3; guilty-alive arm Resolved via explicit deferral — PQ1 written, ⛔ not sent; owner the Panel; trigger PQ1's ruling. (c) Not addressed by 6.22 — a go-live leg (Task 0.5): roster Row 47 leg (g).
 - **D2 — An OTP is spent before a permanent refusal appears** [`apps/api/src/modules/withdrawal/handlers.ts` `assertWithdrawable` — the route's
   `requireMemberStepUp` runs before the handler's death-report guard; `apps/mobile/app/(withdrawal)/index.tsx`;
   `apps/mobile/app/(life-events)/medical.tsx`] — a refused withdrawal / medical change costs an OTP SMS first; withdrawal's catch
@@ -397,11 +399,13 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   released claim can still be a non-terminal convergence candidate (a new report CONVERGES onto it, ⛔ meets the door), and a `pending`
   intake attempt parked beside a claim later released can still be overridden by `overrideIntakeAttempt` with ⛔ door. Trigger: 6-22's
   create-story.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Closed by 6.22 DL3 (the innocence release) and DL9 (a) / (b) (closable claims leave the candidates; the override door). The guilty arm — Resolved via explicit deferral: PQ1, written and ⛔ not sent; owner the Panel; trigger PQ1's ruling. DL7 (a) for `approved` / `settled` — Resolved via explicit deferral to `6-22c`.
 - **The in-app data export's step-up does ⛔ prove the person exporting is the nominee** [Decision `2026-10-31-425` DL12 (ii);
   `apps/api/src/modules/data-export/routes.ts` — the `data_export` step-up code goes to the DECEASED'S mobile] — after a death is
   reported, whoever holds the deceased's session (Ravi mode) can export the record; moving the export to the `claim_handover` code would
   cost a falsely-reported LIVING member their own export with ⛔ release until 6-22 — a cost ⛔ put to the Panel. A recorded risk, ⛔ built.
   Trigger: any change to `data-export/routes.ts`, or a Panel question on who may SEE a dead member's record.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Not addressed by 6.22.
 - **Two obligations outside the code: the privacy policy, and counsel** [`-423` Consequences 2 · 3] — (a) the draft privacy policy
   (outside this repository) must say, before members agree to it, that the person a member nominated may SEE and ask to CORRECT the
   record after death, ⛔ erase it (`-423` Q2 A) — BigDev and counsel own the wording; (b) counsel confirms the law allows the Trust to
@@ -1345,6 +1349,7 @@ Recorded at Story 6.36e Task 0.4 (`_bmad-output/implementation-artifacts/6-36e-n
   `redeclared`). ⭐ Trigger: a correction of a linked rank observed, or a story that reads links
   after filing.
   - *Appended 2026-10-26 (Story 6.36f Task 0.4, [`-407`](../../.decision-log.md#decision-2026-10-26-407)):* the marks path INHERITS this (`-407` MK11) — reachable for a save only after an innocence unlock, which has ⛔ production caller today. ⛔ Fixed.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* NE9 and the 6.36f `-407` append — Not addressed by 6.22 — trigger reached (an innocence unlock now has a production caller); new trigger: the first production innocence finding on a member whose declaration carries a linked rank that a staff correction moved.
 
 ---
 
@@ -2998,6 +3003,7 @@ Recorded under `2026-10-04-278` (EA1–EA9), as amended by `-279` (A1–A6, A10,
     transaction-START `now()`s (`nd.decided_at > v.decided_at`): a re-determination whose transaction began before an approval but
     committed after it reads as EARLIER ⇒ its late key is ⛔ listed (the race `-288` K3 closed for the inspection arm with
     `clock_timestamp()`). ⛔ Not changed here. ⭐ Trigger: the same `6-22` work, or a held claim reported unlisted.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* BigDev, *"Closed, test pins it"*: Closed by 6.22 — unreachable by construction: an innocence finding only moves the 90-day anchor LATER (`-279` A7), so a `recent_nominee_change` key can vanish, ⛔ appear; and a released member has ⛔ claim still awaiting approval (an unfound claim keeps the declaration locked; a found approvable claim is closed with its finding). A domain test pins it (`approval-warnings.spec.ts`, the EA10 pin). The 6.26b append (the determination arm's two transaction-start clocks) — Not addressed by 6.22 (⛔ determination written); its trigger kept.
 - **A FAILED refetch after a 409 hides the whole approval surface** [`apps/admin/src/modules/r9-voting/R9CasePanel.tsx`,
   `apps/admin/src/modules/correction-closure/EscalationPanel.tsx`] — both branch on `isError` before `data`, so TanStack's kept data is
   ignored: the R9 panel disappears and the escalation form unmounts, losing the typed note and pick (`ListStates` and
@@ -3042,6 +3048,7 @@ are ⛔ not here — they are Story 6.23b's (go-live coupling (1) of 6.23a).
 - **The FQ1 label's words say *"corrected after the death"* even on a correction made under a claim later RELEASED as
   filed against a living member** (6.20 AC2's innocence finding — ⛔ no production caller until row `6-22`). The words are
   ratified copy (`-262` FQ1) and are ⛔ not reworded (NW4). ⭐ Trigger: row `6-22`'s first production release.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Not addressed by 6.22 — trigger reached (row `6-22`'s first production release); reason and new trigger recorded. Reason: the words are ratified copy (`-262` FQ1; NW4 — ⛔ reworded) and 6.22 changes ⛔ copy (DL17); `listAppliedCorrectionLabels` labels every applied correction on the MEMBER, so a correction made under a claim later found innocent also reads "after the death" on a later genuine claim's timeline. New trigger: the first production innocence finding on a claim under which a nominee correction was applied, or a Panel question on the wording — whichever first; owner the Panel.
 - **⚠ A concealment-flagged claim is still approvable with ⛔ no reason (fact 1).** `concealment_flag_override` is only
   PERMITTED on an approve; ⛔ no rule requires it. The Panel was offered this in the Q1–Q3 note and did ⛔ not take it up
   (`-277` "does NOT cover"). ⛔ Not built, ⛔ not owed. ⭐ Trigger: a Panel instruction.
@@ -3224,6 +3231,7 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 
 - "Current" death certificate is ordered by the upload HANDLER's wall clock (`uploadedAt`, `apps/api/src/modules/claims/claims.documents.handlers.ts`, compared in `apps/jobs/src/claim-ocr-parity.ts`). Across API instances, clock skew larger than the gap between two uploads keeps the later upload non-current with no signal. Negligible under NTP; revisit if uploads ever run multi-region (a DB- or queue-side ordering removes it).
 - A future `-240` cl.1 closure-time deletion of `claim_documents` rows would CASCADE (`ON DELETE cascade`, migration 0122) into every kept `claim_death_certificate_uploads` row and every review, contrary to `-243`. No production path deletes `claim_documents` today (traced 2026-09-26). A trap for whoever builds that deletion.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Resolved via explicit deferral to `6-22b` (its `-240` cl. 1 deletion; trigger: that row's create-story).
 - After an RTBF erasure, the nominee determination can proceed only if the District Admin RE-ACCEPTS the certificate, which writes a fresh Tier-1 date ciphertext for an erased member; `recordDeathCertificateReview` has no erased-member check. Rides on go-live coupling (3′) — counsel's basis for keeping certificate data against an erasure request (`-243`).
 - After a stale-code 409 the verifier console keeps showing `reviewCertificate.error` ("reload") on the refreshed form until the next submit or a claim change (`apps/admin/src/routes/VerifierConsoleRoute.tsx`). Cosmetic; unverified in a browser.
 
@@ -3259,6 +3267,7 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 ## Deferred from: adversarial review of the applied 6-20 patches (2026-09-24b)
 
 - A correction whose projection is NOT touched (its target is not the rank's head) appends the member event BEFORE its version, while a declare writes its versions BEFORE its event ⇒ a correction racing a declare for the same member could deadlock (40P01 → 500; only 23505 is mapped) [`packages/domain/src/claim/nominee-correction-persist.ts`] — ⛔ unreachable today: a declare after a claim needs the lock RELEASED, and the release (an innocence finding) has no production producer until `6-22`; the pre-patch order had the same event→version shape. Revisit with `6-22` (map 40P01 to `concurrent`, or align the orders).
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Closed by 6.22 DL3 — unreachable: every released claim is `closed` or `approved` / `settled`, all outside the correction window.
 - The helpline's read of a selected member's live claims (`GET …/admin/members/:memberId/nominee-corrections/claims`) writes ⛔ no audit line, and its read-back gate is client-side only [`apps/api/src/modules/claims/claims.nominee-declaration.routes.ts`] — metadata only (ids, states, instants), on the raise key, the pending-queue precedent (also unaudited); an audit line needs a new type in the counted audit catalog. Revisit if the read ever carries PII or the operator surface gets a server-side read-back record.
   - ⚠ **ANNOTATED (⛔ not closed), 2026-09-26 (Story 6.21b Task 8):** the SIBLING helpline read this story adds —
     `GET …/admin/members/:memberId/death-certificate/claims` — DOES write an audit line
@@ -3298,7 +3307,9 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 - A correction applied under one claim is invisible to another concurrently-live claim for the same deceased (and a determination can commit against a version that landed mid-write, different claim-row locks) [`packages/domain/src/claim/nominee-correction-persist.ts:372-381`, `nominee-effective.ts:236-245`] — deferred: D7 ties a correction to ONE claim and D17 makes determinations per-claim by design; the residual (two non-terminal claims for one death via convergence override / >30-day window) is recorded, not patched
   - ⭐ **2026-10-11 — Story 6.28 / `2026-10-11-319`: ⛔ NOT ADDRESSED.** Two live claims for one death stay possible (OP11 widens, not narrows, convergence — a >30-day refile now joins instead of minting, but an override-apart claim is still a second live claim); 6.28 only bounds their PAYMENT (no second claim can pass the final vote once one has, and the other is closed once payment begins) — it does ⛔ nothing about a correction on one being invisible to the other while both remain open. Re-trigger unchanged.
 - The 6-22 finding writers: `recordNomineeDisqualificationFinding` takes a `Db`, emits no claim event, has no state window and no rank-exists check; both writers use an untargeted `onConflictDoNothing()` (a PK collision reads as "duplicate") and a same-id retry is not idempotent [`packages/domain/src/claim/nominee-lock.ts:160`, `:194`, `:214`] — deferred to Story 6-22 (no production caller until then)
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* (a) / (b) Closed by 6.22 DL12; the disqualifier half — Resolved via explicit deferral to `6-22c` (trigger: its producer).
 - After an innocence release, a correction can still be raised/approved on the released claim and races a member declare (the correction path does not hold the D3 lock) [`packages/domain/src/claim/nominee-correction-persist.ts:300-306`] — deferred to Story 6-22 (the release has no production caller)
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Closed by 6.22 DL3 — unreachable: every released claim is `closed` or `approved` / `settled`, all outside `NOMINEE_CORRECTION_WINDOW_STATES`.
 - DB-level cross-table coherence is writer-enforced only: item `pariwar_id` vs its determination/version, version `pariwar_id` vs the member, correction target/applied vs member+rank, no FK on `nominee_determinations.deceased_member_id`; four FK columns unindexed; the append-only trigger's `pg_trigger_depth() > 1` exemption admits any trigger, not only the `members` cascade [`packages/domain/migrations/0119_nominee-declaration-history.sql:38`, `:118`, `:182-230`] — deferred, defence-in-depth hardening; RLS scopes every row and the writers validate
 - `-239` inheritance source: an appeal-overturned refusal is never superseded, so it stays in the refusal list and still passes its inspection on; the source filter falls back to an older refusal when the newest has no completed inspection [`packages/domain/src/claim/nominee-refusal-read.ts:65-76`, `:98-121`] — deferred, needs the appeal-outcome state mapping; a refile after an overturn is improbable
   - *Appended 2026-10-08 (Story 6.24a, `2026-10-07-292` RF8):* ✅ **PARTLY DISCHARGED — the APPROVAL input only.**
@@ -13764,6 +13775,7 @@ explicitly disclosed by the commit's own comments — ⛔ none blocks `11b-17`, 
   `resolvePeerMeshFilingCut`] — when the claim being selected for is itself innocence-lifted while a later claim for the same
   death exists, it anchors at the later filing and reads past its own filing day. Unreachable: nothing writes
   `member_found_innocent` before row 6-22, and neither `-339` nor `-340` covers the case. ⭐ Trigger: row 6-22.
+  - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Closed by 6.22 DL3 / N4 — unreachable: the finding and the close commit together under the claim row; the peer-mesh select job checks `documents_pending` under the same lock.
 - **W3 — Someone already asked who LATER files for the same death keeps their live ask** [`peer-mesh-read.ts`
   `peerMeshEligibleMemberSql`] — `-340` call 2 is applied at selection only; ⛔ re-check on a sent ping or a reply.
   ⭐ Trigger: 6.27c's send-time re-check (it reuses the predicate).

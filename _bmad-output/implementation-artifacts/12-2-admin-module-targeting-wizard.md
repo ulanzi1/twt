@@ -15,7 +15,7 @@ every finding. The v1.3 pass re-traced every G fact at `36b489c9`: the only reli
 re-check at Task 0.1.
 Re-locate by FUNCTION, never by line.
 
-STATUS: review (2026-11-01 — v1.13; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.13 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
+STATUS: done (2026-11-01 — v1.14; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.14 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
 carry FIVE real asks (QE3, QE6, QE7, QE9, QE17); BigDev answers them at Task 0.2 and the author-commit lands ALONE at
 Task 0.3 BEFORE any code** ([[feedback_governance_commits_precede_implementation]]). If an ASK is answered with a
 non-recommended option, Task 0.3 rewrites the dependent ACs / Tasks / Invariants first (the map is in Task 0.3).
@@ -36,6 +36,8 @@ DN5 / DN6 open (from the patch-diff review). Chunks B and C of round 2 are next.
 ⭐ **v1.12 (2026-11-01): DN5 / DN6 / DN7 resolved — decisions `-436` (`a5b23c89`) and `-437` (`60dbcf00`), code `77ea3906`.**
 ⭐ **v1.13 (2026-11-01): code review round 2 COMPLETE (chunks B / C, code `ea408af3` + `550307be`), two real-browser passes, `ci:local` 37/37 on a
 fresh database at `550307be`. Next: push, open the PR (BigDev's instruction).**
+⭐ **v1.14 (2026-11-01): LANDED on `main` by fast-forward (BigDev: *"go ahead"*) — PR #320 merged 2026-11-01T14:09:28Z,
+`36b489c9..d8ca7628`, 26 commits, SHAs unchanged; GitHub CI 37 / 37 on the PR head. Row `review` → `done`.**
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 the G / QE prose and historical Change Log rows) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In the Names table, Policy meaning, ACs, Invariants,
@@ -83,7 +85,7 @@ C = carried (inherited from 12.1, or carried onward from here).
 
 # Story 12.2: Admin Module-Targeting Wizard `[SURFACE]`
 
-Status: review
+Status: done
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1997,6 +1999,7 @@ Modified:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.14 | LANDED (BigDev: *"go ahead"*): PR #320 merged by fast-forward `36b489c9..d8ca7628` (26 commits, SHAs unchanged, ⛔ merge commit, ⛔ squash); GitHub CI 37 / 37 on `d8ca7628`; the pre-push `ci:local` 37 / 37 on a fresh container at the branch push (a first push was refused by the hook on known failure #18 — Story 5.14's announcement spec on a second run per database — and re-pushed against a fresh container; ⛔ `SKIP_CI_LOCAL`). Status → done; row → `done`; ledger `2026-11-01x`. |
 | 2026-11-01 | v1.13 | Code review round 2, chunks B and C (six read-only layers at `4729805c`, no HIGH): RB1–RB8, RC1–RC19, then two patch-diff reviews (PT1–PT18, PU1–PU4) until only LOW remained; code `ea408af3` + `550307be` (a tone-gate comment). A second real-browser pass (RC1 / RC2 / RC3 / RC10 / PT4 / PT10); RD3 gains the process-death trigger; RD8 (the shared `StepUpPanel` drops focus after "Send the code") deferred. `ci:local` 37 / 37 on a FRESH database at `550307be` (the story container is red only on a Story 5.14 spec its leftover rows break — diagnosed above). Row stays `review`; ledger `2026-11-01w`. |
 | 2026-11-01 | v1.12 | DN5 + DN6 (BigDev *"1"*, read as both option 1 — Decision `2026-11-01-436`, `a5b23c89`) and DN7 (*"DN7 1"* — Decision `2026-11-01-437`, `60dbcf00`), each committed ALONE before the code `77ea3906`; three patch-diff review passes (PS1 HIGH keycap hole fixed, PS2–PS5); a residual recorded (text symbol + U+FE0F + skin tone). ADR-0044 fourth dated line. Not run: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01v`. Not pushed. |
 | 2026-11-01 | v1.11 | Code review round 2, chunk A (`bmad-code-review 12.2`): 16 raw → 13 distinct — DN3 + DN4 (BigDev: *"DN3 1, DN4 1"* — Decision `2026-11-01-435`, committed ALONE as `ac1ddad3`), RP36–RP41, 5 dismissed; *"apply all patches"* → code `497c69e4` after a patch-diff review (28 raw → 16: PQ1–PQ9 fixed, DN5 / DN6 open, RD7 deferred, 4 dismissed). ADR-0044 gets a third dated line (`-435`). `deferred-work.md`: the R3D1 line (RP36), RD7. Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01u`. Not pushed. |

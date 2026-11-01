@@ -324,6 +324,7 @@ export function createAppealHandlers(deps: AppDeps) {
       let ok = false;
       let rows: claim.HelplineAppealEligibilityRow[];
       let holderRefused = new Set<string>();
+      let memberAlive = new Set<string>();
       try {
         rows = await claim.listHelplineAppealEligibility(tx.tx, ctx.pariwarId, memberIdBrand);
         ok = true;
@@ -331,12 +332,17 @@ export function createAppealHandlers(deps: AppDeps) {
         // only (the staff label text) — a failed read degrades to "no holder-refused" rather than 500ing the
         // whole helpline list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos` — under a SAVEPOINT (code review
         // round 3): ⛔ never COMMIT an aborted transaction with `ok = true`.
-        holderRefused = await underSavepoint(tx.client, 'helpline_appeal_closed_holder_refused', () =>
-          claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, rows.map((r) => r.claimCaseId)),
-        ).catch((err: unknown) => {
-          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'helpline appeal list: closed-holder-refused read unavailable');
-          return new Set<string>();
-        });
+        // ⭐ Story 6.22 (DL10 (iii) / (v)) — AND the closed claims whose member was FOUND ALIVE, in the SAME savepoint.
+        ({ holderRefused, memberAlive } = await underSavepoint(tx.client, 'helpline_appeal_closed_holder_refused', async () => {
+          const claimIds = rows.map((r) => r.claimCaseId);
+          return {
+            holderRefused: await claim.readClosedHolderRefusedBulk(tx.tx, ctx.pariwarId, claimIds),
+            memberAlive: await claim.readClosedMemberAliveBulk(tx.tx, ctx.pariwarId, claimIds),
+          };
+        }).catch((err: unknown) => {
+          request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'helpline appeal list: closed-claim label reads unavailable');
+          return { holderRefused: new Set<string>(), memberAlive: new Set<string>() };
+        }));
       } finally {
         await closeScopeTx(tx, ok);
       }
@@ -355,6 +361,7 @@ export function createAppealHandlers(deps: AppDeps) {
           eligibility: r.eligibility,
           appeal_until: r.appealUntil,
           closed_holder_refused: holderRefused.has(r.claimCaseId.toLowerCase()),
+          closed_member_alive: memberAlive.has(r.claimCaseId.toLowerCase()),
         })),
       };
     },

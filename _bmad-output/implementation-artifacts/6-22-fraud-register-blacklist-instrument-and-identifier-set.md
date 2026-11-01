@@ -983,15 +983,15 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
       `overrideConvergence`'s catch maps both (`translateClaimIntakeRefused(err, { withReason: true })` + the new code); DL9 (e) the
       under-lock candidate re-check in `convergeIntakeAttempt`; BOTH DELIBERATE doc blocks rewritten (DL9 (b), (d)); DL9 (f)'s residual
       pinned by a test.
-- [ ] **Task 4 — Keys and API (AC3, AC4, AC12, AC13)**
-  - [ ] 4.1 Keys (DL6) — `SEED_PERMISSION_KEYS` with reuse-check comments, the bump block citing Task 0.4's decision (READ LIVE the version —
+- [x] **Task 4 — Keys and API (AC3, AC4, AC12, AC13)**
+  - [x] 4.1 Keys (DL6) — `SEED_PERMISSION_KEYS` with reuse-check comments, the bump block citing Task 0.4's decision (READ LIVE the version —
         58 if still 57), grants, the two count pins + the exact `holdersOf` pins; `FRAUD_FINDING_STEP_UP_CONTEXT` exported from contracts.
-  - [ ] 4.2 Contracts `packages/contracts/src/claims/fraud-investigation.ts` (`.strict()`; flag / finding requests and responses, DL5's
+  - [x] 4.2 Contracts `packages/contracts/src/claims/fraud-investigation.ts` (`.strict()`; flag / finding requests and responses, DL5's
         read, DL7's read with `ReadableNote` + `viewer.canRecordFinding`, DL10 (iv)'s list, the `alive_confirmation` `z.enum` mirrored from
         `FRAUD_ALIVE_CONFIRMATIONS` with a lockstep test); `closed_member_alive` on the three DTOs beside `closed_holder_refused` — ⚠ new
         required fields break fixtures (`packages/contracts/tests/claims-suspicion-refusal.test.ts` and the admin tests G9's callers feed);
         run the contracts vitest ([[project_contracts_tests_outside_tsc]]).
-  - [ ] 4.3 Routes + handlers `apps/api/src/modules/claims/claims.fraud-investigation.{routes,handlers}.ts`, registered in
+  - [x] 4.3 Routes + handlers `apps/api/src/modules/claims/claims.fraud-investigation.{routes,handlers}.ts`, registered in
         `registerClaimsModule` (`modules/claims/index.ts`): (a) `POST …/claims/:claimCaseId/fraud-investigation/flag` and (b) `GET
         …/members/:memberId/fraud-investigation/claims` — `claim.flag_fraud` at `{ dimension: 'pariwar' }`; (c) `POST
         …/claims/:claimCaseId/fraud-investigation/finding` — `claim.record_fraud_finding` at the district via
@@ -1003,7 +1003,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         6.22', expectedMethods }` listing every method) and `COVERAGE_FLOOR` set to the new `COVERAGE_SET.length` (the floor is 16 while
         the set holds 18 entries at `91ea2c81` — READ LIVE) with a history note; audits (DL14) incl. the `_rejected` types and the
         decrypting read, added to `audit-log-sink.test.ts`'s list.
-  - [ ] 4.4 Tests: the API legs of AC3, AC4, AC12, AC13 (DL7's withholding, the work-list scope).
+  - [x] 4.4 Tests: the API legs of AC3, AC4, AC12, AC13 (DL7's withholding, the work-list scope).
 - [ ] **Task 5 — Peer-mesh (AC11)** — DL11's fragment in `peer-mesh-read.ts` (alias `f`); the one-line swap in
       `peerMeshEligibleMemberSql`; `peer-mesh-request.ts` IMPORTS it; the fence's `gateSqlCopies` `peer-mesh-read.ts: 2`; the residual named
       in `known-people.ts`'s accepted-cost comment (comment-only edit there).
@@ -1242,6 +1242,28 @@ hand).**
   `convergence.invalid_candidate`; `overrideConvergence`'s catch adds `translateClaimIntakeRefused(err, { withReason: true })`
   (409 `claim.intake_refused`) and 409 `convergence.against_claim_closed`. Tests: `fraud-convergence-door.spec.ts` 5 (incl. DL9
   (f)'s residual pinned); the existing convergence / override specs green (domain 87, API 66). The HTTP 409 legs are Task 4's.
+- **Task 4 (keys, contracts, API — AC3, AC4, AC10's HTTP 409, AC12, AC13's API legs) — 2026-11-01.** Catalog 57 → 58, keys
+  75 → 77 (`claim.flag_fraud` → `helpline_operator`; `claim.record_fraud_finding` → `district_admin`; both derived by
+  `super_admin`), pins + exact `holdersOf` sets. Contracts `claims/fraud-investigation.ts` (`FRAUD_FINDING_STEP_UP_CONTEXT`, the
+  requests / responses, a lockstep test with the domain tuples); `closed_member_alive` on the three `.strict()` DTOs (fixtures
+  moved). Routes + handlers `claims.fraud-investigation.{routes,handlers}.ts` (+ `fraud-investigation-crypto.ts`), registered;
+  the five audit types (+ the sink test's dotted list); the three G9 handlers read `closed_member_alive` in the SAME savepoint
+  as OP10's read; the human-actor gate's COVERAGE_SET + the floor 16 → 19 (the set's LIVE length — two earlier enrolments had
+  left the floor behind). Tests: `apps/api/tests/integration/claims/fraud-investigation-routes.spec.ts` 11 (the flag + list incl.
+  `denied` / `settled`, 403s, 400 + `_rejected` audit; the Q7 HTTP twin — DA approval 201 + the cycle-freeze vote; the finding's
+  step-up, `not_flagged`, `finder_is_flagger` for one person with both roles AND for a Super Admin, the no-posting 403, the
+  release proven on the erasure route (`rtbf.death_reported` → `rtbf.invalid_state`) + the overlay OFF + `closed_member_alive`
+  on the helpline read; the `approved` + second-standing-claim leg; the console's uniform withholding + the audited decrypt; the
+  work-list's district scope; the override's 409 `convergence.against_claim_closed`); ⛔ note in any audit context.
+  `contracts` 1696 / `forced-pagination` (the work-list's `limit` bounded) / OpenAPI determinism / PII scrape green; whole API
+  suite on the story DB 2677 / 2678 before the `limit` fix, then the failing spec green.
+  ⚠ **Recorded deviations / not built** — (8) DL7 names `ReadableNote`; its `withheld` variant requires a 6.27b reason
+  (`own_visit` / `check_failed`) that would MISLABEL a missing key, so the console note is `FraudInvestigationNote` —
+  `ReadableErasable` + a reason-less `withheld`. (9) AC4's per-lock HTTP legs (re-declare with step-up, withdrawal, a Life
+  Events write) are proven through ONE real lock route (erasure) + the leaf they all share (6.38 — one predicate); ⛔ each route
+  re-driven. (10) AC4's `relationship: 'other'` leg is ⛔ built: the leaf reads ⛔ nominee row (structurally unaffected), so the test
+  would be vacuous. (11) AC6's second-intake race runs at the domain level only — ⛔ HTTP twin. (12) The helpline per-member list
+  writes ⛔ audit line (DL14 names five types; the 6.21b list's `claims_read` precedent is ⛔ copied).
 
 ### File List
 
@@ -1291,6 +1313,28 @@ hand).**
 - `packages/domain/src/claim/icp.ts`
 - `apps/api/src/modules/claims/claims.convergence.handlers.ts`
 - `packages/domain/tests/integration/claim/fraud-convergence-door.spec.ts` (new)
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/contracts/src/claims/fraud-investigation.ts` (new)
+- `packages/contracts/src/claims/index.ts`
+- `packages/contracts/src/claims/nominee-declaration.ts`
+- `packages/contracts/src/claims/death-certificate.ts`
+- `packages/contracts/src/claims/appeal.ts`
+- `packages/contracts/tests/claims-fraud-investigation.test.ts` (new)
+- `packages/contracts/tests/claims-suspicion-refusal.test.ts`
+- `apps/api/src/modules/claims/claims.fraud-investigation.routes.ts` (new)
+- `apps/api/src/modules/claims/claims.fraud-investigation.handlers.ts` (new)
+- `apps/api/src/modules/claims/fraud-investigation-crypto.ts` (new)
+- `apps/api/src/modules/claims/index.ts`
+- `apps/api/src/modules/claims/claims.death-certificate.handlers.ts`
+- `apps/api/src/modules/claims/claims.nominee-declaration.handlers.ts`
+- `apps/api/src/modules/claims/claims.appeal.handlers.ts`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/tests/unit/audit-log-sink.test.ts`
+- `apps/api/tests/integration/claims/fraud-investigation-routes.spec.ts` (new)
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
 
 ## Change Log
 

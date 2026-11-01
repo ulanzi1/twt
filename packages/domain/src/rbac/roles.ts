@@ -123,6 +123,10 @@ const CLAIM_APPROVE_NOMINEE_CORRECTION_PARIWAR = permissionKey('claim.approve_no
 const CLAIM_RAISE_NOMINEE_CORRECTION = permissionKey('claim.raise_nominee_correction');
 // Story 6.21a (D13, Decision `2026-09-25-244`) — the District Admin's death-certificate REVIEW (district).
 const CLAIM_REVIEW_DEATH_CERTIFICATE = permissionKey('claim.review_death_certificate');
+// Story 6.22 (`2026-11-01-438` item 5) — the fraud register's investigation: the helpline operator FLAGS (pariwar), the
+// District Admin FINDS (district, step-up). Two different people — `-238` cl. 3; the domain refuses the same actor.
+const CLAIM_FLAG_FRAUD = permissionKey('claim.flag_fraud');
+const CLAIM_RECORD_FRAUD_FINDING = permissionKey('claim.record_fraud_finding');
 // Story 6.19b (keys (1) and (7), Decision `2026-09-28-265` §2) — the posted-letter record (+ the letter form's address
 // read) and the "who must act" change, both district-dimension, `district_admin` ONLY. See permissions.ts.
 const CLAIM_RECORD_CORRECTION_LETTER = permissionKey('claim.record_correction_letter');
@@ -552,6 +556,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_REQUEST_CORRECTION_CLOSURE,
       CLAIM_CONFIRM_REFILE,
       CLAIM_RECORD_NO_CORRECTION_NEEDED,
+      // Story 6.22 — the FINDING on a flagged claim (district; step-up). ⛔ The flag: that is the helpline operator's.
+      CLAIM_RECORD_FRAUD_FINDING,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
@@ -756,6 +762,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 6.20 (D7, CC2 — `2026-09-21-237` cl.3) — RAISE a nominee correction on the family's behalf.
       // Checked at `dimension: 'pariwar'`. ⛔ Raising is not approving: the two approvals are the District
       // Admin's and the Pariwar Admin's keys, which this role does not hold.
+      // Story 6.22 — the FLAG (pariwar). ⛔ The finding: that is the District Admin's (`-238` cl. 3).
+      CLAIM_FLAG_FRAUD,
       CLAIM_RAISE_NOMINEE_CORRECTION,
       // Story 6.19c (key (6), `-254`) — CONFIRM A RE-FILE after a closure for no response, with a note. Checked PER
       // REQUEST at `dimension: 'pariwar'` for this role (the `resolveQueueScopeStash` precedent). ⛔ Not `claim.file`.

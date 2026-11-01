@@ -211,6 +211,9 @@ export const DeathCertificateHelplineClaimStatus = z
     /** ⛔ No `certificate_token` here — the in-flight marker is a member-app-only concept (D5). */
     /** ⭐ Story 6.28 (OP10) — a `closed` claim whose HOLDING claim was since refused / closed (the family may file again). */
     closed_holder_refused: z.boolean(),
+    /** ⭐ Story 6.22 (DL10 (iii) / (v)) — a `closed` claim whose member was FOUND ALIVE (its own investigation's finding, or
+     *  that of the claim holding it). WINS over `closed_holder_refused` in the staff label. */
+    closed_member_alive: z.boolean(),
   })
   .strict();
 export type DeathCertificateHelplineClaimStatus = z.output<typeof DeathCertificateHelplineClaimStatus>;

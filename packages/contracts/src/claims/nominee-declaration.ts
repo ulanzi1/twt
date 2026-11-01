@@ -369,6 +369,9 @@ export const NomineeRefusalItem = z
     // death paid) can appear here as `closed` — the SAME "closed, holding claim later refused — the family
     // may file again" variant the other OP10 helpline surfaces carry.
     closed_holder_refused: z.boolean(),
+    /** ⭐ Story 6.22 (DL10 (iii) / (v)) — a `closed` claim whose member was FOUND ALIVE (its own investigation's finding, or
+     *  that of the claim holding it). WINS over `closed_holder_refused` in the staff label. */
+    closed_member_alive: z.boolean(),
   })
   .strict();
 export type NomineeRefusalItem = z.output<typeof NomineeRefusalItem>;

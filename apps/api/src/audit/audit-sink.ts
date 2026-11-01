@@ -611,6 +611,16 @@ export type AuthAuditEventType =
   | 'admin_claim.death_certificate_reviewed'
   | 'admin_claim.death_certificate_review_rejected'
   | 'admin_death_certificate.history_read'
+  // ── Story 6.22 (DL14) — the fraud register's investigation. ids, the outcome, `alive_confirmation` and reason codes ONLY
+  // (⛔ never a note, ⛔ never a name — N6). Every refusal is its `_rejected` line with the reason code.
+  //   fraud_flagged / fraud_flag_rejected — the helpline operator's flag (`claim.flag_fraud`).
+  //   fraud_finding_recorded / fraud_finding_rejected — the District Admin's finding (`claim.record_fraud_finding`, step-up).
+  //   fraud_notes_read — the console read DECRYPTED the investigation's notes (a holder of the finding key).
+  | 'admin_claim.fraud_flagged'
+  | 'admin_claim.fraud_flag_rejected'
+  | 'admin_claim.fraud_finding_recorded'
+  | 'admin_claim.fraud_finding_rejected'
+  | 'admin_claim.fraud_notes_read'
   // ── Story 6.21b (D5) — the helpline's read of the SELECTED member's live claims + their status ──
   // ids and status codes ONLY (⛔ never a note/date/reviewer). `admin_death_certificate.claims_read`
   // does ⛔ NOT close 6.20's "the helpline live-claims read writes no audit line" deferral — that

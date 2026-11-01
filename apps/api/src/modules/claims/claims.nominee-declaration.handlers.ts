@@ -765,11 +765,17 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
       // surfaces carry. Decision SUPPORT only (the staff label text) — a failed read degrades to "no
       // holder-refused" rather than 500ing the list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos` — under a
       // SAVEPOINT (code review round 3), so a swallowed SQL error ⛔ never leaves the request tx aborted.
-      const holderRefused = await underSavepoint(scopeTx.client, 'nominee_refusals_closed_holder_refused', () =>
-        claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, rows.map((r) => r.claimCaseId)),
-      ).catch((err: unknown) => {
-        request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'nominee refusals: closed-holder-refused read unavailable');
-        return new Set<string>();
+      // ⭐ Story 6.22 (DL10 (iii) / (v)) — AND the closed claims whose member was FOUND ALIVE, in the SAME savepoint (both
+      // degrade together); `closed_member_alive` WINS over `closed_holder_refused` in the label.
+      const { holderRefused, memberAlive } = await underSavepoint(scopeTx.client, 'nominee_refusals_closed_holder_refused', async () => {
+        const claimIds = rows.map((r) => r.claimCaseId);
+        return {
+          holderRefused: await claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, claimIds),
+          memberAlive: await claimDomain.readClosedMemberAliveBulk(scopeTx.tx, pariwarId, claimIds),
+        };
+      }).catch((err: unknown) => {
+        request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'nominee refusals: closed-claim label reads unavailable');
+        return { holderRefused: new Set<string>(), memberAlive: new Set<string>() };
       });
       // ⭐ Story 6.27b code review round 2 (V6 — AC7's D1 B + V1 A) — a refusal's rationale (the District Admin's DENIAL
       // note) is a staff note on its claim: WITHHELD (`null`, ⛔ never decrypted, ⛔ not a placeholder) on a claim whose
@@ -800,6 +806,7 @@ export function createNomineeDeclarationHandlers(deps: AppDeps) {
               ? null
               : await readable(() => decryptVerifierRationale(r.rationaleCiphertext!, p, enc), request.log, 'refusal_rationale', r.claimCaseId),
           closed_holder_refused: holderRefused.has(r.claimCaseId.toLowerCase()),
+          closed_member_alive: memberAlive.has(r.claimCaseId.toLowerCase()),
         });
       }
       emitAuthAudit(deps, request, 'admin_nominee_refusal.list_read', {

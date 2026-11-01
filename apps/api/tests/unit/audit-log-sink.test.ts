@@ -71,6 +71,10 @@ describe('authEventToAuditInput', () => {
       'password_reset.request', 'password_reset.consume',
       'step_up.send', 'step_up.consume', 'step_up.failure',
       'scope.change', 'authz.denied',
+      // Story 6.22 (DL14) — the fraud investigation's lines.
+      'admin_claim.fraud_flagged', 'admin_claim.fraud_flag_rejected',
+      'admin_claim.fraud_finding_recorded', 'admin_claim.fraud_finding_rejected',
+      'admin_claim.fraud_notes_read',
     ];
     for (const type of types) {
       expect(authEventToAuditInput(evt({ type })).action).toMatch(DOTTED_ACTION);

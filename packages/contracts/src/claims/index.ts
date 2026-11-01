@@ -106,3 +106,7 @@ export * from './one-payment-per-death.js';
 export * from './peer-request.js';
 // Story 6.32 — the inspector's questionnaire for the family at the ground inspection (reuses the neighbours' served shape).
 export * from './ground-inspection-questionnaire.js';
+// Story 6.22 — the fraud register's investigation: the flag, the finding (behind FRAUD_FINDING_STEP_UP_CONTEXT), the console
+// read (notes withheld uniformly), the helpline's per-member list and the District Admin's work-list. `alive_confirmation`
+// is value-aligned with @twt/domain's FRAUD_ALIVE_CONFIRMATIONS (lockstep-pinned).
+export * from './fraud-investigation.js';

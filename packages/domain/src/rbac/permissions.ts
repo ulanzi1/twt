@@ -823,7 +823,20 @@ export function permissionKey(value: string): PermissionKey {
 // scope AND the gate moves to that dimension, checking EVERY scope value with `rbac.checkPermission` + the request's tree
 // resolver. 56 / 74 READ LIVE at `36b489c9` (v57 was contested by 14-3 / 6-39 / 6-22 — none had committed it).
 // `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 57 as const;
+//
+// ⭐ Story 6.22 (author-commit `2026-11-01-438` item 5; `-210` keeps a key OUTSIDE the delegated enum-mint class, so both
+// are recorded there with their holder sets) — 57 → 58, TWO keys (75 → 77), ONE bump: the fraud register's investigation.
+//   · `claim.flag_fraud` — PARIWAR-dimension (the house shape for a pariwar-ceiling operator key: `claim.file`,
+//     `claim.raise_nominee_correction`; ⛔ resolver); `helpline_operator` (+ derived super_admin). Gates the flag AND the
+//     helpline's per-member list of the claims naming a member (DL5). `-238` cl. 3 *"operator flags"*.
+//   · `claim.record_fraud_finding` — DISTRICT-dimension (the deceased's server-derived posting district —
+//     `resolveNomineeNameCheckDistrict()`); `district_admin` (+ derived super_admin); step-up `FRAUD_FINDING_STEP_UP_CONTEXT`.
+//     Gates the finding (innocent / guilty), the District Admin's work-list, and the console read's note un-withholding.
+//     `-238` cl. 3 *"District Admin verifies and confirms"*.
+// `super_admin` derives BOTH — the domain refuses the same ACTOR for the flag and the finding
+// (`fraud_investigation.finder_is_flagger`), which also bites one person granted both roles. 57 / 75 READ LIVE at `91ea2c81`
+// (v58 contested by 6.39 / 14-3 — neither had committed it). `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 58 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1426,6 +1439,15 @@ export const SEED_PERMISSION_KEYS = [
   // Story 12.2 (`2026-11-01-433` QE2) — author, publish (a non-author, step-up) and withdraw a partner module; register a
   // partner. pariwar-dimension; `pariwar_admin` (+ derived super_admin). Doubles as the surface's tone-review key.
   'module.manage',
+  // Story 6.22 (`2026-11-01-438` item 5) — the helpline operator FLAGS a death claim as possibly about a LIVING member, and
+  // lists the claims naming a member they have found and read back. pariwar-dimension; `helpline_operator`. REUSE CHECK —
+  // ⛔ `claim.file` (filing a claim is ⛔ doubting one), ⛔ `claim.raise_nominee_correction` (a different act and record).
+  'claim.flag_fraud',
+  // Story 6.22 (`2026-11-01-438` item 5) — the District Admin's FINDING (innocent / guilty) on a flagged claim, with step-up;
+  // their work-list; the console's note un-withholding. district-dimension; `district_admin`. REUSE CHECK — ⛔ `claim.verify`
+  // (the console's READ key, which a verifier holds too), ⛔ `claim.approve` (a finding is ⛔ an approval or a denial),
+  // ⛔ `claim.review_death_certificate` (a certificate verdict is ⛔ an investigation's outcome).
+  'claim.record_fraud_finding',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

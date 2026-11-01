@@ -471,6 +471,8 @@ export const HelplineAppealClaimsResponse = z
           appeal_until: CalendarDate.nullable(),
           /** ⭐ Story 6.28 (OP10) — a `closed` claim whose HOLDING claim was since refused / closed. */
           closed_holder_refused: z.boolean(),
+          /** ⭐ Story 6.22 (DL10 (iii) / (v)) — a `closed` claim whose member was FOUND ALIVE; WINS over `closed_holder_refused`. */
+          closed_member_alive: z.boolean(),
         })
         .strict(),
     ),

@@ -252,6 +252,17 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     expect(holdersOf('claim.raise_nominee_correction')).toEqual(['helpline_operator', 'super_admin']);
   });
 
+  it('Story 6.22 (`2026-11-01-438` item 5) — the flag is the helpline operator\'s, the finding the District Admin\'s (+ derived super_admin)', () => {
+    const holdersOf = (key: string): string[] =>
+      defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+    // `-238` cl. 3 — "operator flags → District Admin verifies and confirms": two keys, two holders.
+    expect(holdersOf('claim.flag_fraud')).toEqual(['helpline_operator', 'super_admin']);
+    expect(holdersOf('claim.record_fraud_finding')).toEqual(['district_admin', 'super_admin']);
+  });
+
   it('Story 6.19b (keys (1) and (7)) — claim.record_correction_letter and claim.change_correction_must_act have ONE holder each, district_admin (+ derived super_admin)', () => {
     for (const key of ['claim.record_correction_letter', 'claim.change_correction_must_act']) {
       const holders = defaultRoleBundles

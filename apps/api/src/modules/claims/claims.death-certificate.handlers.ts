@@ -394,11 +394,17 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
       // member claims list, matching OP14 (b)'s `readFinallyApprovedElsewhereDtos` — under a SAVEPOINT (code review
       // round 3): a swallowed SQL error would otherwise leave the request tx aborted, and the per-claim status reads
       // below would then fail with 25P02.
-      const holderRefused = await underSavepoint(scopeTx.client, 'member_claims_closed_holder_refused', () =>
-        claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, liveClaims.map((c) => c.claimCaseId)),
-      ).catch((err: unknown) => {
-        request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'member claims list: closed-holder-refused read unavailable');
-        return new Set<string>();
+      // ⭐ Story 6.22 (DL10 (iii) / (v)) — AND the closed claims whose member was FOUND ALIVE, in the SAME savepoint (both
+      // degrade together); `closed_member_alive` WINS over `closed_holder_refused` in the label.
+      const { holderRefused, memberAlive } = await underSavepoint(scopeTx.client, 'member_claims_closed_holder_refused', async () => {
+        const claimIds = liveClaims.map((c) => c.claimCaseId);
+        return {
+          holderRefused: await claimDomain.readClosedHolderRefusedBulk(scopeTx.tx, pariwarId, claimIds),
+          memberAlive: await claimDomain.readClosedMemberAliveBulk(scopeTx.tx, pariwarId, claimIds),
+        };
+      }).catch((err: unknown) => {
+        request.log.warn({ err: err instanceof Error ? err.name : 'unknown' }, 'member claims list: closed-claim label reads unavailable');
+        return { holderRefused: new Set<string>(), memberAlive: new Set<string>() };
       });
       const claims = await Promise.all(
         liveClaims.map(async (c) => {
@@ -417,6 +423,7 @@ export function createDeathCertificateHandlers(deps: AppDeps) {
             upload_allowed: result.uploadAllowed,
             reassurance: result.reassurance,
             closed_holder_refused: holderRefused.has(c.claimCaseId.toLowerCase()),
+            closed_member_alive: memberAlive.has(c.claimCaseId.toLowerCase()),
           };
         }),
       );

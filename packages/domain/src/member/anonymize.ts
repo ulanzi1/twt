@@ -52,6 +52,7 @@ import { memberNomineeVersions } from '../schema/member_nominee_versions.js';
 import { nomineeCorrections } from '../schema/nominee_corrections.js';
 import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
+import { claimFraudInvestigationSteps } from '../schema/claim_fraud_investigation_steps.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
 import { claimGroundInspectionDiscrepancyNotes } from '../schema/claim_ground_inspection_discrepancies.js';
@@ -63,7 +64,7 @@ import { workplaceRequests } from '../schema/workplace_requests.js';
 import { memorialReviewDecisions } from '../schema/memorial_review_decisions.js';
 import { memorialSubmissions } from '../schema/memorial_submissions.js';
 import { memorialWithdrawals } from '../schema/memorial_withdrawals.js';
-import { MEMORIAL_FIELD_CLASS } from '../encryption/field-classes.js';
+import { CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS, MEMORIAL_FIELD_CLASS } from '../encryption/field-classes.js';
 import { eraseKnownPeopleLinks } from './known-people.js';
 // Story 6.36e — the nominee marks' erasure arm, imported DIRECTLY (⛔ the `nominee/` barrel — `member/` ↔ `nominee/` init order).
 import { eraseNomineeLinks } from '../nominee/member-links.js';
@@ -323,6 +324,18 @@ export async function anonymizeMember(
       acceptedDateIndex: null,
     })
     .where(eq(claimDeathCertificateReviews.deceasedMemberId, memberId));
+
+  // ── ⭐ Story 6.22 (DL15) — the fraud investigation's STEPS, keyed on the REPORTED member (the 6.21a pattern): the
+  // helpline operator's flag note and the District Admin's finding note → sentinel (the column is NOT NULL — ⛔ a NULL).
+  // The step, the proof of life, the attribution and the finding link are governance history, kept. The column-level
+  // UPDATE grant + the per-command UPDATE policy exist for exactly this (0197). Reachable only for an INNOCENT member who
+  // is `withdrawn` or `terminated` (a guilty member stays erasure-locked — the leaf, Q1). ⚠ `-240` cl. 1: a note may describe
+  // the FILER — whether innocent-outcome notes fall in row `6-22b`'s deletion is recorded there.
+  const fraudSentinel = await encSentinel(pariwarId, CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS, enc);
+  await client
+    .update(claimFraudInvestigationSteps)
+    .set({ noteCiphertext: fraudSentinel })
+    .where(eq(claimFraudInvestigationSteps.deceasedMemberId, memberId));
 
   // ── ⭐ Story 6.23a (NW13, Trap 14) — the APPROVAL-OVER-WARNING record, keyed on the DECEASED member (the
   // `nominee_determinations` shape — ⛔ never a subquery inside this UPDATE): a late-warning reason's Tier-1 note →

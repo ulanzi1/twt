@@ -36,8 +36,8 @@ story's; another story's is written `6.38 DL7`, `6.20 D8`.
 NUMBERS: not claimed by this file — every number it takes is "the next free one" at the commit that takes it, READ LIVE across every
 branch and worktree (TR10 holds the 2026-11-01 snapshot).
 
-LETTERS: **G** = found facts (G1–G21); **N** = invariants (N1–N7); **DL** = build decisions (DL0–DL17 — DL0's split ANSWERED; DL1–DL16
-ACCEPTED as written 2026-11-01; DL17 and DL16's EA10 row open at Task 0.2); **PQ** = Panel questions (PQ1–PQ9) + **TL** = lines the note TELLS the Panel (TL1–TL2); **TR** =
+LETTERS: **G** = found facts (G1–G21); **N** = invariants (N1–N7); **DL** = build decisions (DL0–DL17 — ALL ANSWERED at Task 0.2,
+2026-11-01; DL16's EA10 row re-trace-then-decide); **PQ** = Panel questions (PQ1–PQ9) + **TL** = lines the note TELLS the Panel (TL1–TL2); **TR** =
 traps (TR1–TR16); **AC1–AC14**.
 -->
 
@@ -417,7 +417,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
   fraud-closed claim (no closures row) as the death's most recent terminal claim, masking a 6.19c closed-for-no-response guard on an
   earlier claim.
 
-## Build decisions — DL0 answered; DL1–DL16 ACCEPTED as written (BigDev, 2026-11-01); DL17 + DL16's EA10 row open (Task 0.2)
+## Build decisions — ANSWERED (BigDev, 2026-11-01, Task 0.2): DL0 split; DL1–DL17 accepted as written; DL16's EA10 row re-trace-then-decide
 
 - **DL0 — SCOPE: the investigation to its finding; three new rows. ⭐ The split is ANSWERED (BigDev, validate 2026-11-01: *"Split: new row
   6-22d"*).** This story builds the flag, both findings, the release and the close. Three new rows (Task 0.5):
@@ -671,7 +671,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
   | 6.20 chunk 1 — "The 6-22 finding writers" | *"(a) / (b) Closed by 6.22 DL12; the disqualifier half — Resolved via explicit deferral to `6-22c` (trigger: its producer)"*; the correction race on a released claim — *"Closed by 6.22 DL3 — unreachable: every released claim is `closed` or `approved` / `settled`, all outside `NOMINEE_CORRECTION_WINDOW_STATES`"*. (G2 (d) is this story's own finding — nothing to close.) |
   | "adversarial review of the applied 6-20 patches (2026-09-24b)" (the 40P01 item — a correction racing a declare) | *"Closed by 6.22 DL3 — unreachable: every released claim is `closed` or `approved` / `settled`, all outside the correction window"*. |
   | 6.23a — the *"corrected after the death"* label | *"Not addressed by 6.22 — trigger reached (row `6-22`'s first production release); reason and new trigger recorded"* (Task 0.1 (vi)). |
-  | 6.23b EA10 — the second row-6-22 mechanism (reachable for an OPEN later claim) | BigDev chooses at Task 0.2 (re-traced at Task 0.1 (iv)): *"Closed by 6.22 DLn"* if built here, else *"Resolved via explicit deferral"* naming owner and trigger. |
+  | 6.23b EA10 — the second row-6-22 mechanism (reachable for an OPEN later claim) | ANSWERED (BigDev, Task 0.2): re-traced at Task 0.1 (iv); a small anchor fix ⇒ built here, *"Closed by 6.22 DLn"*; otherwise *"Resolved via explicit deferral"* naming owner and trigger — BigDev confirms which before Task 0.4. |
   | 6.36 round-2 W2 | re-traced at Task 0.1 (iv), then one of the three labels. |
   | 6.36e NE9 / the 6.36f `-407` append | *"Not addressed by 6.22 — trigger reached; new trigger named"*. |
   | 6.38 DL12 (ii) (the export's step-up) | *"Not addressed by 6.22"*. |
@@ -891,7 +891,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         finding exists (DL16); (v) the closure core's exported entry points and `endLiveProcesses`' inputs (DL3 step 6); (vi) the 6.23a
         label's reason and new trigger (DL16); (vii) the jobs `*-no-decision.test.ts` table lists (DL1). Check `ListAgents` + the branch
         before every commit ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL17 to BigDev (DL0's split is answered). Specifically: DL3's `alive_confirmation` values (built pending PQ9); DL6's
+  - [x] 0.2 Put DL1–DL17 to BigDev (DL0's split is answered). Specifically: DL3's `alive_confirmation` values (built pending PQ9); DL6's
         table; DL10 (iii)'s label verbatim and (v)'s label for a claim held by a fraud-closed claim; DL10 (iv)'s work-list; DL16's 6.23b EA10
         choice (fix here, or explicit deferral with owner + trigger). Record the answers here.
         - **2026-11-01 — BigDev: *"DL1-DL16 accepted as written."*** DL1–DL16 stand as written in v1.3, including: DL3's
@@ -900,12 +900,16 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
           claim held by a fraud-closed claim; DL10 (iv)'s District Admin work-list. ⚠ STILL OPEN: **DL17** (the scope fence — not in
           the accepted range) and **DL16's 6.23b EA10 row**, which as written leaves the choice open (fix here, or explicit deferral
           with owner + trigger) — Task 0.2 stays unticked until both are answered.
+        - **2026-11-01 — BigDev, both open items:** DL17 — *accepted as written*. DL16's 6.23b EA10 row — *re-trace, then decide*:
+          Task 0.1 (iv) re-traces it; if the fix is a small change to the 90-day anchor it is BUILT here (*"Closed by 6.22 DLn"*, with
+          its own Task and AC leg added then), otherwise it gets *"Resolved via explicit deferral"* naming owner and trigger. ⭐ BigDev
+          CONFIRMS which, from the re-trace, BEFORE Task 0.4's decision entry is written. Task 0.2 complete.
   - [ ] 0.3 Draft ONE routing note from the template (by path, not copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-6-22-fraud-register-first-half.md` — PQ1–PQ9 + TL1–TL2;
         plain-English question first, THE ONE FACT, options with an honest cost on EACH, evidence LAST; E4 commands run. Status: WRITTEN, not
         sent (BigDev sends). Non-blocking for build and merge; PQ1 blocks the guilty arm's GO-LIVE, PQ7 the flag's, PQ8 the close's, PQ9 the
         finding's; PQ3–PQ6 gate `6-22d`'s build.
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — `-438` at `91ea2c81`; READ LIVE): DL0–DL17 as answered;
+  - [ ] 0.4 ⭐ FIRST, BigDev confirms DL16's EA10 closure from Task 0.1 (iv)'s re-trace. Decision entry (AUTHOR-COMMIT, the next free number across branches — `-438` at `91ea2c81`; READ LIVE): DL0–DL17 as answered;
         the two keys (outside `-210`'s delegated mint); cites `-238`, `-240`, `-261` D3 A, `-425` 6.38 DL4 / DL7; declares the scope split
         (`6-22b`, `6-22c`, `6-22d`, named); DECLARES the guilty arm's kept locks and sticky-frozen account as a narrowing of `-423` Q1 (b) /
         `-424` Q2 (a) pending PQ1; RECORDS `-147` cl. 3's re-examination — the fence fires (a guilty finding is a new reason the freeze
@@ -1124,3 +1128,4 @@ code; notify a claimant or nominee; add any member-facing screen.
 | 2026-11-01 | 1.2 | BigDev's four checks (*"check these"*), each verified in the repo and the decision log, then fixed. (1) A flagged claim could be approved and paid before a finding — the "no claim is ever paid" promise is withdrawn; what an open flag does to approval is now PQ7 (the Panel's own rule for a neighbour's *"they have not died"* is a WARNING, `-263` FQ10; built C, a go-live condition). (2) No notice / no appeal on a found-alive close was a TOLD line — it is now PQ8 (`-291` Q2 B texts a claimant whose claim is closed under her; a suspicion refusal is appealable 90 days), with re-filing added (a released member can be re-locked by a new filing). (3) The District Admin could flag AND find — the flag is now the helpline operator's alone (the ruled two-actor chain) plus a `finder_is_flagger` 409 for `super_admin`. (4) A guilty close unfroze the account (public directory "Active") while the death lock stood — the guilty trigger no longer unfreezes, in all three overlay readers (N7, TR15), one swap point with PQ1. |
 | 2026-11-01 | 1.3 | Re-validated by `bmad-create-story validate 6.22` at `origin/main` `91ea2c81` (Stories 11b.5a + 12.2 landed; the branch REBASED from `3d6b46c5`, ledger-only conflict) — five read-only verifiers (governance + records; claim / closure substrate; overlay / peer-mesh / erasure; RBAC / routes / surfaces; the footgun catalogue), each critical re-read by hand; BigDev: "all". The guilty freeze is now STICKY on `claim.member_found_guilty` (excluding the close missed a `denied_no_appeal` stream and an already-closed claim; the pure evaluator never sees a payload) and `-147` cl. 3's standing fence is recorded as FIRING; N5 / N7 retitled to what is true (an `approved` claim found innocent is not stopped; the leaf and the overlay already differ for terminal claims). G8 was false — DL5 now lists EVERY state in the shipped `listLiveClaimsForDeceasedMember` shape; the flag is PARIWAR-dimension (the district resolver reads a claim id); new reads for the console panel (uniform withholding, audited decrypt) and a District Admin work-list; `closed_member_alive` computed from the steps table in the three handlers, incl. a claim held by a fraud-closed claim (OP10's reachable direction). DL2's CHECK keeps `IS NOT NULL`; the other-claims list shares the leaf's fragment (`listStandingDeathReports`); the closer's input and trigger set are discriminated; the override door's refusals are mapped (no 500); the whole migration hand-authored (⛔ `db:generate`). Governance: `-304`'s line is a reading, not a ruling; `-210` (not `-195`) keeps keys and the closure vocabulary out of the delegation; proof of life is PQ9 (not told); PQ8 cites `-318` Q3 A and who a text would reach (the filer) — its suggested (a) moves to B; PQ5 cites `-422` Q1 A; every option costed; DL16 uses only the three labels, and the 40P01 / correction-race items close as unreachable. Also: fence mechanics (count map, alias `f`), lock-key case, replay-first idempotence, realistic seeding (no `forceClaimState`; KYC / identity rows; the GUC), the microcopy gate (TR16), audits incl. `_rejected`, numbers re-read (`-438` / `0196` / v58 / ledger `y` next). Ledger `2026-11-01y`. |
 | 2026-11-01 | 1.4 | Task 0.2, in part — BigDev: *"DL1-DL16 accepted as written."* Recorded under Task 0.2; the Build-decisions heading updated. Open: DL17 (scope fence) and DL16's 6.23b EA10 choice. No decision entry, no code. Ledger `2026-11-01z`. |
+| 2026-11-01 | 1.5 | Task 0.2 complete — BigDev: DL17 accepted as written; DL16's 6.23b EA10 row: re-trace at Task 0.1 (iv), then build here if a small anchor fix, else an explicit deferral — BigDev confirms before Task 0.4. Ledger `2026-11-01aa`. |

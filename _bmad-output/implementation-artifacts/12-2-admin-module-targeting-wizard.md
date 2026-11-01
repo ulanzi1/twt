@@ -70,7 +70,7 @@ C = carried (inherited from 12.1, or carried onward from here).
 
 # Story 12.2: Admin Module-Targeting Wizard `[SURFACE]`
 
-Status: ready-for-dev
+Status: review
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1004,7 +1004,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
           12.6 (Task 0.4's C2 entries say so);
         - QE9 (not confirmed) → stop; the single-admin question is routed per §0;
         - QE17 (a partner needs role / cohort) → the story returns to create-story.
-  - [ ] 0.4 Records (one commit), using [[feedback_closure_language_precision]]. ⚠ The closure vocabulary is exactly
+  - [x] 0.4 Records (one commit), using [[feedback_closure_language_precision]]. ⚠ The closure vocabulary is exactly
         THREE labels — "Closed by [edit]" / "Resolved via explicit deferral" / "Not addressed" — and it is NOT delegated
         (`-210` cl.2, Trustee-ratified), so Task 0.4 mints NO fourth label. It runs BEFORE any code, so it NEVER writes
         "Closed by":
@@ -1038,14 +1038,14 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         stays "Not addressed" + the D8 line; `commission_terms` re-pointed to `-433` A1 / A2; a NEW "Deferred from: story
         12-2-…" section), `epics.md` (INHERITED FROM 12.2 under 12.3 / 12.5 / 12.6; the 12.2 note re-pointed), ADR-0044
         (six dated amendment lines + a Changelog row), the tone-checklist "Partner module" row, the roster Row 26 note.
-- [ ] **Task 1 — permission (AC2).** `permissions.ts` (history comment, version +1, `'module.manage'` with a comment
+- [x] **Task 1 — permission (AC2).** `permissions.ts` (history comment, version +1, `'module.manage'` with a comment
       naming 12.2 and the inert-narrower-grant acceptance condition), `roles.ts` (`pariwar_admin`), the two rbac tests.
-- [ ] **Task 2 — migration + schema + RLS (AC1).**
-  - [ ] 2.1 `schema/marketplace_partners.ts`, `schema/marketplace_module_publications.ts` (header: insert-only, C12,
+- [x] **Task 2 — migration + schema + RLS (AC1).**
+  - [x] 2.1 `schema/marketplace_partners.ts`, `schema/marketplace_module_publications.ts` (header: insert-only, C12,
         QE3 / QE4), exported from `schema/index.ts`; `policies/marketplace-partners-rls.ts`,
         `policies/marketplace-module-publications-rls.ts` (named select / insert policies, NOT `for: 'all'`), exported from
         `policies/index.ts`.
-  - [ ] 2.2 HAND-AUTHOR the migration (do NOT run `db:generate`; `--> statement-breakpoint`; hand-add the
+  - [x] 2.2 HAND-AUTHOR the migration (do NOT run `db:generate`; `--> statement-breakpoint`; hand-add the
         `_journal.json` entry with a `when` greater than every sibling's and a trailing newline), in this order:
         `marketplace_partners` (+ uniques, unique index, grants, RLS, policies); `marketplace_modules_pariwar_module_unique`;
         `marketplace_module_publications` (+ composite FK, CHECKs, grants, RLS, policies); `marketplace_modules_partner_fk`
@@ -1060,7 +1060,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         streams first (superuser, `session_replication_role = replica`); fresh containers and CI are unaffected.
         (Naming: the repo's composite uniques mostly end `_uq` (0142 / 0143); this story keeps `_unique` for the names
         above — consistent with 12.1's `_pkey` / `_idx` set and with every reference in this file.)
-  - [ ] 2.3 Update BOTH stale comments in `ids/index.ts`: the `PartnerId` brand's "⛔ FK until Story 12.2" and the
+  - [x] 2.3 Update BOTH stale comments in `ids/index.ts`: the `PartnerId` brand's "⛔ FK until Story 12.2" and the
         nearby "partner identity is Story 12.2's (⛔ FK in 12.1)" → name `marketplace_modules_partner_fk`. ALSO edit the
         Drizzle file `schema/marketplace_modules.ts` so it mirrors the DB (it declares its `index(...)` / `check(...)`
         extras today): `unique('marketplace_modules_pariwar_module_unique').on(t.pariwarId, t.moduleId)`,
@@ -1071,7 +1071,7 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         the FK), the `commission_terms` "→ 12.2: admin-only home" line (→ the `-NNN` QE6 re-trigger), and "The ONLY
         DB-side content rules" (add the FK + unique), and the two `pariwar_id` "⛔ FK" lines (header + column) — clarify:
         NO `pariwars` FK; it is part of `marketplace_modules_partner_fk` (QE20's D2 reasoning).
-  - [ ] 2.4 Fix the 12.1 live specs (G17):
+  - [x] 2.4 Fix the 12.1 live specs (G17):
         - (a) `_fixtures.ts`: `rawInsertParams(id, pariwarId, { partnerId })` and `manifestInput(now, { partner_id })`
           REQUIRE a partner of the SAME Pariwar — the random default is REMOVED, so a missing seed fails loudly (this
           also fixes the RLS spec, which imports them); add a raw-insert VARIANT that sets `created_at` explicitly (AC8);
@@ -1089,44 +1089,44 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
           (assert its `WHERE`); the trigger test (`NOT tgisinternal`) is unchanged (RI triggers are internal);
         - (e) `rls/marketplace-modules-policy-regression.spec.ts`: a same-Pariwar partner per raw insert;
         - (f) run ALL FIVE marketplace live specs AND the RLS spec green.
-- [ ] **Task 3 — domain (AC3–AC5, AC8–AC10).** All under `packages/domain/src/marketplace/`, exported via `index.ts`.
-  - [ ] 3.1 `filters.ts`: ADD the QE12 write-only schemas + `partnerDisplayName{En,Hi}Schema`; `parseModuleManifest` uses
+- [x] **Task 3 — domain (AC3–AC5, AC8–AC10).** All under `packages/domain/src/marketplace/`, exported via `index.ts`.
+  - [x] 3.1 `filters.ts`: ADD the QE12 write-only schemas + `partnerDisplayName{En,Hi}Schema`; `parseModuleManifest` uses
         them. Do NOT edit `moduleNameSchema`, `moduleDescriptionSchema` or `events.ts` (TR16). Write every code point as
         a `\uXXXX` escape and scan the file after writing (TR15).
-  - [ ] 3.2 `partners.ts`: a PURE `parsePartnerDisplayNames({ displayNameEn, displayNameHi })` (the partner schemas →
+  - [x] 3.2 `partners.ts`: a PURE `parsePartnerDisplayNames({ displayNameEn, displayNameHi })` (the partner schemas →
         parsed values, or throws `ModulePartnerNameInvalidError` with issue paths) — the handler calls it as a PRE-CHECK
         (QE18); `createPartner(client, { pariwarId, partnerId, displayNameEn, displayNameHi, actorId, auditId })` takes
         ALREADY-PARSED values (it re-asserts nothing that could refuse inside `mutate`, beyond the DB unique);
         `listPartnersForPariwar(db, pariwarId, { limit? })` (clamp inline), `getPartner(db, pariwarId, partnerId)`.
-  - [ ] 3.3 `publication.ts`: `moduleResourceLocator(id) = 'module/<id>'`, `moduleToneContentHash(module, partner)`,
+  - [x] 3.3 `publication.ts`: `moduleResourceLocator(id) = 'module/<id>'`, `moduleToneContentHash(module, partner)`,
         `recordModulePublication(client, { module, publishedEventType, reviewedBy, hindiReviewed,
         partnerAgreementConfirmed, contentHash, auditId })` (`pariwarId` from `module`), `getModulePublication(db,
         pariwarId, moduleId)`.
-  - [ ] 3.4 `read.ts`: the NEW `pageModulesForPariwar` + `encodeModuleCursor` / `decodeModuleCursor` (QE16 — JS
+  - [x] 3.4 `read.ts`: the NEW `pageModulesForPariwar` + `encodeModuleCursor` / `decodeModuleCursor` (QE16 — JS
         validation BEFORE SQL; `ModuleCursorInvalidError`); leave `listModulesForPariwar` UNCHANGED;
         `getModuleAuthorActorId(db, pariwarId, moduleId)` (the genesis event's `actor_id`, `string | null`);
         `countModuleLeads(db, pariwarId, moduleId)` (`module.lead_submitted` on this stream).
-  - [ ] 3.5 `scope-options.ts`: pure `buildModuleScopeOptions`, `listModuleScopeOptions`, `findListedWorkplaceDistricts`
+  - [x] 3.5 `scope-options.ts`: pure `buildModuleScopeOptions`, `listModuleScopeOptions`, `findListedWorkplaceDistricts`
         (QE5), plus `assertScopeValuesRecorded(db, pariwarId, scopeFilter, at)` — called only with a filter that already
         passed `ScopeFilterV1Schema.safeParse` — throwing `ModuleScopeRequiresGeoTreeError` / `ModuleScopeValueUnknownError`.
-  - [ ] 3.6 (QE7 (A)) `activation-sweep.ts`: `selectDueScheduledModules` + `classifyActivationOutcome` ONLY (I11).
-  - [ ] 3.7 `errors.ts`: ADD `ModulePartnerUnknownError`, `ModuleScopeRequiresGeoTreeError`,
+  - [x] 3.6 (QE7 (A)) `activation-sweep.ts`: `selectDueScheduledModules` + `classifyActivationOutcome` ONLY (I11).
+  - [x] 3.7 `errors.ts`: ADD `ModulePartnerUnknownError`, `ModuleScopeRequiresGeoTreeError`,
         `ModuleScopeValueUnknownError`, `ModulePartnerNameInvalidError`, `ModuleCursorInvalidError` (the 12.1 shape —
         typed, NO HTTP status; their wire codes are QE18's).
-- [ ] **Task 4 — contracts (AC13).** `packages/contracts/src/modules/{enums,dto,index}.ts`: re-declared tuples (states,
+- [x] **Task 4 — contracts (AC13).** `packages/contracts/src/modules/{enums,dto,index}.ts`: re-declared tuples (states,
       archive reasons, eligibility states, scope kinds), `MODULE_PUBLISH_STEP_UP_CONTEXT`, SHAPE-only request DTOs
       (QE18 — incl. `partner_id: z.string().uuid()`; the withdraw body `z.object({}).strict()` — QE15), response DTOs (`.strict()`, snake_case; the detail DTO carries
       `author_display_name`, `authored_by_viewer: boolean`, `publication` (with `reviewer_display_name`) | `null`,
       `lead_count`), the list `{ items, next_cursor }`; export from `src/index.ts`; a contracts test for tuple sync; a
       dated note in `partners/README.md` (QE3). Register OpenAPI paths in `scripts/emit-openapi.ts`; regenerate the
       repo-root `openapi/v1.yaml`.
-- [ ] **Task 5 — API (AC2–AC8).** `apps/api/src/modules/marketplace/`:
-  - [ ] 5.1 `routes.ts`: the G7 chain with `module.manage`; publish adds `requireStepUp(deps,
+- [x] **Task 5 — API (AC2–AC8).** `apps/api/src/modules/marketplace/`:
+  - [x] 5.1 `routes.ts`: the G7 chain with `module.manage`; publish adds `requireStepUp(deps,
         MODULE_PUBLISH_STEP_UP_CONTEXT)`. Routes: `GET /modules` (`state?`, `limit` ≤ 200, `cursor?`), `GET
         /modules/:moduleId` (uuid param), `GET /modules/scope-options`, `GET /modules/partners` (`limit` 1–200) and
         `POST /modules/partners`, `POST /modules`, `POST /modules/:moduleId/publish`, `POST /modules/:moduleId/withdraw`.
         EVERY route declares its `200` response schema (the forced-pagination gate examines only routes that do — G7).
-  - [ ] 5.2 `handlers.ts`: reads on `request.scopeTx`. Writes via a LOCAL `tenantWrite` — COPY the questionnaire shape
+  - [x] 5.2 `handlers.ts`: reads on `request.scopeTx`. Writes via a LOCAL `tenantWrite` — COPY the questionnaire shape
         and its local `releaseHookTx`; do NOT import them, and do NOT call `displayOf` (the module commands take no
         display name; it would fail writes closed) — with: the QE13 key namespaces; `openScopeTx` → the QE18 pre-checks
         on that SAME transaction (partner names via `parsePartnerDisplayNames`; scope via `safeParse` then
@@ -1151,10 +1151,10 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
         **Detail read:** `author_display_name` / `reviewer_display_name` via `getDisplayName(deps.pool, id)`
         (`auth/admin/admin-auth.repo.ts`) with a fallback label when it returns null or the id is null (NEVER a 500);
         `authored_by_viewer` = (author id is null) OR (author id = `request.requestContext.actorId`).
-  - [ ] 5.3 `errors.ts`: `mapModuleError` — EVERY row of the QE18 table, including the five 12.2 classes and
+  - [x] 5.3 `errors.ts`: `mapModuleError` — EVERY row of the QE18 table, including the five 12.2 classes and
         `ModuleStateDirectWriteError` → 500 `module.state_direct_write_rejected` (logged at error); unit-tested row by row.
-  - [ ] 5.4 Register in `server.ts`.
-- [ ] **Task 6 — job (AC9; per QE7).** (A): `QUEUE_NAMES.MODULE_ACTIVATION`; `apps/jobs/src/scheduler/
+  - [x] 5.4 Register in `server.ts`.
+- [x] **Task 6 — job (AC9; per QE7).** (A): `QUEUE_NAMES.MODULE_ACTIVATION`; `apps/jobs/src/scheduler/
       module-activation.ts` — `runModuleActivationTick(deps)` (QE7 (A): the Row 26 guard first —
       `smsDelivery.canReadAcrossPariwars(tickPool)`, false ⇒ ONE `module_activation.rls_bound_role` alarm through the
       `claim-contact-ladder.ts` `alarmOf` / `onAlarm` shape and the tick ends (QE19); then `selectDueScheduledModules`;
@@ -1163,32 +1163,32 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
       'Asia/Kolkata' })` — the 5-field cron check is the regex in `apps/jobs/src/boot.ts` (the renewal registrar has
       none); `localConcurrency: 1` follows `wa-webhook-processor.ts` (pg-boss `^12` hands the handler an ARRAY of jobs);
       its own `max: 3` pool created in `boot.ts`; wired in `boot.ts`.
-- [ ] **Task 7 — access-wrapper gate (AC13).** Split the root list so the compensating-audit invariant scans
+- [x] **Task 7 — access-wrapper gate (AC13).** Split the root list so the compensating-audit invariant scans
       `[...ACCESS_SURFACE_ROOTS, ...MARKETPLACE_ROOTS]` while the constant-time-compare invariant keeps
       `ACCESS_SURFACE_ROOTS` (it would pass vacuously on marketplace). `MARKETPLACE_ROOTS = ['apps/api/src/modules/
       marketplace', 'packages/domain/src/marketplace']` — DIRECTORIES only (a file root throws ENOTDIR). The job file
       `apps/jobs/src/scheduler/module-activation.ts` is NOT scanned — say so in the README line. Record the
       revert-sanity RED → green.
-- [ ] **Task 8 — admin UI (AC11, AC12).**
-  - [ ] 8.1 Fetchers in the CENTRAL `apps/admin/src/api/client.ts` and hooks in `apps/admin/src/api/hooks.ts` (per-feature
+- [x] **Task 8 — admin UI (AC11, AC12).**
+  - [x] 8.1 Fetchers in the CENTRAL `apps/admin/src/api/client.ts` and hooks in `apps/admin/src/api/hooks.ts` (per-feature
         query keys; writes via `mutateAsync` — [[project_tanstack_mutate_callbacks_latest_only]]; the Idempotency-Key
         minted once per user intent and REUSED on retry; the withdraw fetcher sends `body: JSON.stringify({})` — QE15).
-  - [ ] 8.2 `apps/admin/src/modules/marketplace/`: `ModulesPage.tsx` (list, state filter, "Load more" cursor),
+  - [x] 8.2 `apps/admin/src/modules/marketplace/`: `ModulesPage.tsx` (list, state filter, "Load more" cursor),
         `ModuleWizard.tsx` (steps a–f + summary), `ModuleDetailPage.tsx` (publish / withdraw / corrected copy),
         `PartnerPicker.tsx` (select or create inline), `ScopePicker.tsx`, `i18n-en.ts` holding EVERY ordered string:
         AC11's opening line, state labels, the step (b) no-member-yet notice and its reaches-no-member warning, the
         role/cohort line, BOTH scope sentences (no district; unlisted district), the truncation notice, the Summary's
         audience / status sentences (the Policy-meaning strings) and the QE11 secret copy; AC12's three tick texts, the author sentence, the single-admin line and the "members cannot see offers
         yet" line; the C10 warning (QE15).
-  - [ ] 8.3 Routes: `src/routes/ModulesRoute.tsx` (session gate views, the `BannersRoute` shape) + three `createRoute`s
+  - [x] 8.3 Routes: `src/routes/ModulesRoute.tsx` (session gate views, the `BannersRoute` shape) + three `createRoute`s
         in `router.tsx` + a Pariwar-scoped nav link in `RootLayout.tsx` (ungated client-side; the server's 403 is the
         boundary).
-  - [ ] 8.4 `derive.ts` (pure, tested): `describeEligibility`, `describeScope`, `describeWindow` (IST + the browser
+  - [x] 8.4 `derive.ts` (pure, tested): `describeEligibility`, `describeScope`, `describeWindow` (IST + the browser
         zone), `describePlaces`, `validateStep(n, state)`, `toAuthorRequest(state)` (CRLF → LF), `fromModule(module)`
         (the corrected-copy prefill), `issueToStep(path)`, `moduleErrorGuidance(code)`, `toIsoOrNull` (a copy of the
         private banners helper).
-- [ ] **Task 9 — tests.** Per Testing standards. Every assertion names a code / error class.
-- [ ] **Task 10 — verify + records (AC14).** `pnpm ci:local` on a fresh container (`DATABASE_URL` = the story port on
+- [x] **Task 9 — tests.** Per Testing standards. Every assertion names a code / error class.
+- [x] **Task 10 — verify + records (AC14).** `pnpm ci:local` on a fresh container (`DATABASE_URL` = the story port on
       EVERY push — [[project_prepush_hook_inherits_5432]]); Completion Notes: I1 / I8 / I9 / I10 / I11 greps, the variance list,
       the RPD4 re-statement of 12.1's I6; in `deferred-work.md`, replace each 12.2 LEG's dated "being built by Story
       12.2" line (Task 0.4) with "Closed by `<sha>` (12.2's leg: …)" naming the code commit — every OTHER leg of the
@@ -1382,16 +1382,131 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story`, 2026-11-01 — with three forked sub-agents for the domain tests,
+the API tests and the admin UI (each reported back; their work is in the one code commit).
+
 ### Debug Log References
+
+- Task 0.1 (re-grep, 2026-11-01): `origin/main` = `36b489c9` unmoved; decision `-433` ours; migration `0195` free (main
+  tops at `0194`, `when` 1796355600039; no sibling committed one) → journal `when` 1796442000040; catalog v56 / 74 keys on
+  every ref → v57 / 75; ledger `q` (records) and `r` (this entry). G1 re-verified against the 12.1 source.
+- Records commit `78b3671e` (Task 0.4) landed BEFORE any code; code commit `89add5ee`.
+- The worktree had ⛔ `node_modules` — the first tool runs resolved packages from the MAIN checkout above it; a
+  `pnpm install --frozen-lockfile` in the worktree fixed it before any test result was relied on.
+- Story DB: own container `twt-12-2-pg` (:5451, DB `twt_dev`, migrated from scratch, `timezone UTC`). CI DB:
+  `twt-12-2-ci-pg` (:5452), recreated fresh for the second `ci:local`.
+- A fixture regex turned `manifestFor`'s own `manifestInput(...)` into a recursive call (every `commands.spec` leg timed out
+  at 5 s) — fixed before any commit.
 
 ### Completion Notes List
 
+**What was built (QE1–QE22 as answered, QE16 as amended):**
+- **Migration `0195`** — `marketplace_partners` (per-Pariwar, insert-only, `(pariwar_id, partner_id)` unique as the FK
+  target, `(pariwar_id, lower(display_name_en))` unique index) and `marketplace_module_publications` (PK `module_id`,
+  composite FK to the module, CHECKs on event type / hash / both ticks); `marketplace_modules` gains a
+  `(pariwar_id, module_id)` unique, the COMPOSITE `marketplace_modules_partner_fk`, the partial
+  `marketplace_modules_scheduled_valid_from_idx` and `GRANT SELECT, UPDATE … TO twt_service` — ⛔ a column; the 0193
+  trigger and `GUARDED_COLUMNS` untouched (I7). RLS ENABLE + FORCE, named select / insert policies.
+- **RBAC** — `module.manage` (pariwar; `pariwar_admin` + super_admin), catalog 56 → 57, 74 → 75 keys, 13 roles (I9).
+- **Domain** — `partners.ts`, `publication.ts`, `scope-options.ts`, `activation-sweep.ts` (scan + classify ONLY — I11);
+  `read.ts` += `pageModulesForPariwar` / `encodeModuleCursor` / `decodeModuleCursor` (the five-step STRICT decode) /
+  `getModuleAuthorActorId` / `countModuleLeads` (`listModulesForPariwar` unchanged); `filters.ts` += the QE12 WRITE-ONLY
+  display schemas (code points compared numerically — ⛔ invisible character in source); `errors.ts` += the five classes.
+- **Contracts** — `packages/contracts/src/modules/{enums,dto,index}.ts` (+ the two list-query schemas, shared by the route
+  and OpenAPI); eight OpenAPI paths; `partners/README.md` dated note.
+- **API** — `apps/api/src/modules/marketplace/` (eight routes; I2's write shape; `mapModuleError` = every QE18 row).
+- **Jobs** — `apps/jobs/src/scheduler/module-activation.ts` (`*/5 * * * *` IST, own `max: 3` pool, `localConcurrency: 1`,
+  the Row 26 guard first, exported `activateDueModule`); `QUEUE_NAMES.MODULE_ACTIVATION`.
+- **Access-wrapper gate** — `MARKETPLACE_ROOTS` under the compensating-audit invariant ONLY.
+- **Admin** — `apps/admin/src/modules/marketplace/` (wizard a–f + Summary, detail + publish / withdraw / corrected copy,
+  list with "Load more", partner + scope pickers, `derive.ts`, `i18n-en.ts`), `ModulesRoute.tsx`, three routes, nav link.
+
+**Tests (all green):** domain unit 614 in `tests/marketplace` + `tests/rbac` (+37 QE12 vectors, 50 cursor vectors, …);
+domain live 122 across the 13 marketplace + RLS files (seven NEW, six 12.1 files updated for the partner FK); contracts
+sync-guard 10; API unit `mapModuleError` 21; API integration `marketplace-admin.spec.ts` 25 (AC2–AC8 + the AC13 route-table
+leg), `login-wall` 5 + `forced-pagination` 6 green; jobs `module-activation.test.ts` 6; admin 48 new (derive 31, wizard 6,
+detail 8, list 3), whole admin suite 91 files / 1,618.
+
+**AC14 — `pnpm ci:local` on a FRESH container:** run 1 (fresh `twt-12-2-ci-pg`) = 36/37 — `integration-tests` red on ONE
+test, `apps/api/tests/integration/medical/medical-disclose.spec.ts` (`expected 'enc:v1:…' not to contain 'ckd'`): the KNOWN
+random-base64 substring collision (a 3-letter needle inside a random envelope); 21/21 three times in isolation on the same
+DB; this branch has ⛔ diff in medical code. Run 2 (container RECREATED fresh) = **37/37 green, `ci:local exit=0`** (domain
+7,441, jobs 1,968, api 2,656 integration tests). Both runs are stated; run 2 is the AC14 evidence.
+
+**AC14 greps (on `89add5ee`'s tree):** I1 — ⛔ file under `apps/` references `marketplaceModules`; I8 —
+`submitModuleLead` / `checkModuleLeadAllowed` have ⛔ caller outside `packages/domain/src/marketplace` (tests excluded); I9 —
+the permissions diff is exactly `56 → 57` and `+ 'module.manage'`; I10 — ⛔ `commission` identifier in the migration, the two
+new schema files or the contracts DTOs (one hit, a doc-comment line in `dto.ts` saying commission terms are NOT accepted —
+comments are excluded); I11 — ⛔ `withCompensatingAudit(` call under `packages/domain/src/marketplace/` (also the QE22 test).
+
+**AC13 gate teeth:** a bare `audit.writeAuditEntry(...)` planted in `apps/api/src/modules/marketplace/` turned
+`pnpm access-wrapper:check` RED (exit 1), green once removed. ⚠ A DIRECT `writeAuditEntry(...)` import planted in
+`packages/domain/src/marketplace/` was ⛔ flagged — the scanner matches the namespace shape only (pre-existing; recorded in
+`deferred-work.md`, "Not addressed"). The API fork also proved the I4 leg's teeth (the null-author deny disabled ⇒ 200 ⇒ red).
+
+**RPD4 — 12.1's I6 re-stated (QE22):** the LEAD commands (`submitModuleLead`, `checkModuleLeadAllowed`) have ⛔ production
+caller; author / schedule / activate / archive now do (the 12.2 routes and the sweep).
+
+**Variances from the epic / PRD (as the story lists them):** publish emits `module.scheduled` for a future start; the
+"structured rule expression preview" is a plain-language sentence; PRD §4.9's `user` / `block` scopes absent; `role` /
+`cohort` absent (QE17); "national" = `members-all` of one Pariwar; `commission_terms` not stored (QE6); branding all-null
+(QE8); the signing key is a Secret Manager NAME; step (g)'s review is on the detail page by a non-author; partners are
+per-Pariwar tenant routes; `module.manage` doubles as the review key; the "trustee" persona holds ⛔ key (QE2); FR-66's "CTA
+destination" is the lead hand-off URL only; admin step-up delivery is the house-wide always-stub; the no-tree scope source is
+the listed workplace districts (`-429` C11 amended, QE5).
+
+**Choices made in build (within the ACs):**
+- A null-author publish is denied with `ToneReviewRequiredError` reason `signoff-missing` and `authoredBy: 'unknown'` (the
+  gate's denial type has no "author unknown" reason); its `publish_blocked` line carries `reason: 'author-unknown'`.
+- A duplicate partner name fails on the DB unique INSIDE the wrapper, so it leaves an intent + `module_partner.created_rolled_back`
+  pair (by design — the name-RULE refusal is the pre-check that writes nothing).
+- The admin pages take navigation callbacks; the route file navigates. A held publish retries ONCE; a second step-up demand
+  shows an error.
+
+**NOT done / un-attested:** ⛔ a real-browser pass of the admin wizard (unit / RTL tests only); `ModulesRoute.tsx` (session
+gate, `?from=`) has no test of its own. Nothing is pushed.
+
 ### File List
+
+New:
+- `packages/domain/migrations/0195_marketplace-partners-and-publications.sql`
+- `packages/domain/src/schema/marketplace_partners.ts`, `packages/domain/src/schema/marketplace_module_publications.ts`
+- `packages/domain/src/policies/marketplace-partners-rls.ts`, `packages/domain/src/policies/marketplace-module-publications-rls.ts`
+- `packages/domain/src/marketplace/{partners,publication,scope-options,activation-sweep}.ts`
+- `packages/domain/tests/marketplace/{scope-options,publication,read-cursor,partners,no-audit-wrapper-in-domain,activation-outcome}.test.ts`
+- `packages/domain/tests/integration/marketplace/{partners,publication,read-cursor,scope-check,activation-select}.spec.ts`
+- `packages/domain/tests/integration/rls/marketplace-partners-policy-regression.spec.ts`,
+  `packages/domain/tests/integration/rls/marketplace-module-publications-policy-regression.spec.ts`
+- `packages/contracts/src/modules/{enums,dto,index}.ts`, `packages/contracts/tests/modules.test.ts`
+- `apps/api/src/modules/marketplace/{errors,handlers,routes,index}.ts`
+- `apps/api/tests/unit/marketplace-errors.test.ts`, `apps/api/tests/integration/marketplace-admin.spec.ts`
+- `apps/jobs/src/scheduler/module-activation.ts`, `apps/jobs/tests/module-activation.test.ts`
+- `apps/admin/src/modules/marketplace/{ModulesPage,ModuleWizard,ModuleDetailPage,PartnerPicker,ScopePicker}.tsx`,
+  `apps/admin/src/modules/marketplace/{derive,i18n-en,index}.ts`, `apps/admin/src/routes/ModulesRoute.tsx`
+- `apps/admin/tests/{marketplace-derive.test.ts,module-wizard.test.tsx,module-detail.test.tsx,modules-page.test.tsx}`
+
+Modified:
+- `packages/domain/migrations/meta/_journal.json`; `packages/domain/src/{ids/index.ts,policies/index.ts,schema/index.ts}`;
+  `packages/domain/src/schema/marketplace_modules.ts`; `packages/domain/src/rbac/{permissions,roles}.ts`;
+  `packages/domain/src/marketplace/{errors,filters,index,read}.ts`
+- `packages/domain/tests/rbac/{permissions,roles}.test.ts`; `packages/domain/tests/marketplace/{filters,events}.test.ts`;
+  `packages/domain/tests/integration/marketplace/{_fixtures.ts,commands.spec.ts,commands-clock.spec.ts,module-stream-concurrency.spec.ts,projector-trigger.spec.ts,read.spec.ts}`;
+  `packages/domain/tests/integration/rls/marketplace-modules-policy-regression.spec.ts`
+- `packages/contracts/src/index.ts`, `packages/contracts/src/partners/README.md`, `packages/contracts/scripts/emit-openapi.ts`,
+  `openapi/v1.yaml`
+- `packages/queue/src/index.ts`
+- `apps/api/src/server.ts`; `apps/jobs/src/boot.ts`
+- `apps/admin/src/api/{client,hooks}.ts`, `apps/admin/src/router.tsx`, `apps/admin/src/routes/RootLayout.tsx`
+- `scripts/access-wrapper-invariants/{check.ts,README.md}`, `docs/access-wrapper-invariants.md`
+- Records: `_bmad-output/implementation-artifacts/deferred-work.md` (Task 0.4 + Task 10), `_bmad-output/planning-artifacts/epics.md`,
+  `docs/adr/ADR-0044-module-manifest-schema-versioning.md`, `docs/tone-review-checklist.md`,
+  `docs/launch-gate-inventory/inventory-roster.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`, this story file
 
 ### Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.8 | `bmad-dev-story` COMPLETE: Tasks 1–10 done; code commit `89add5ee` (migration `0195`, `module.manage` v57, domain, contracts + OpenAPI, eight API routes, the 5-minute activation sweep, the access-wrapper roots, the admin wizard / detail / list); `ci:local` 37/37 on a fresh container (run 2; run 1 red only on the known medical-disclose `ckd` collision). `deferred-work.md`: 13 "being built" legs → "Closed by `89add5ee`"; one new "Not addressed" item (the gate's namespace-shape limit). Status → review; row → `review`; ledger `2026-11-01r`. Not pushed. |
 | 2026-11-01 | v1.7 | `bmad-dev-story` started: Task 0.1 DONE (re-grep — `origin/main` `36b489c9` unmoved; `0195` / v57 free; ledger `q` next; G1 re-verified) and Task 0.4 DONE (the `-433` records: `deferred-work.md` legs + a 12-2 carried section, epics.md INHERITED FROM 12.2 ×3, ADR-0044 amendment lines ×6, tone-checklist routing row, roster Row 26 note) — Task 0 complete. Row `ready-for-dev` → `in-progress`. Ledger `2026-11-01q`. No code. |
 | 2026-11-01 | v1.6 | Task 0.3 DONE (BigDev: *"write the author-commit"*): Decision `2026-11-01-433` committed ALONE as `f95f7ae6` — QE1–QE22 as answered (QE16 amended), §0, the key `module.manage`, amendments A1–A4 each quoted in full. Next: Task 0.4 (records), then Task 1. Ledger `2026-11-01p`. No code. |
 | 2026-11-01 | v1.5 | BigDev at Task 0.2 (verbatim): *"rest of the QEs as recommended"* — QE1, QE2, QE4, QE5, QE8, QE10–QE15 and QE18–QE22 ACCEPTED as recommended (QE16 as amended in v1.4). Task 0.2 ticked; every QE answered; the QE section heading now reads ANSWERED. Next: Task 0.3 (author-commit ≥ `-433`, ALONE), Task 0.4 (records). Ledger `2026-11-01o`. No code. |

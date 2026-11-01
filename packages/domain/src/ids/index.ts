@@ -810,6 +810,15 @@ export type DeathCertificateReviewId = Brand<'DeathCertificateReviewId'>;
 /** Smart constructor: validates UUID shape, returns a branded `DeathCertificateReviewId`. */
 export const deathCertificateReviewId = uuidBrand('DeathCertificateReviewId');
 
+/**
+ * Per-row address of one fraud-investigation step (`claim_fraud_investigation_steps.step_id` — Story 6.22, DL1): the
+ * helpline operator's flag or the District Admin's finding. PRODUCER-SUPPLIED (⛔ default) so a retried request with the
+ * same id replays instead of writing twice.
+ */
+export type ClaimFraudInvestigationStepId = Brand<'ClaimFraudInvestigationStepId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClaimFraudInvestigationStepId`. */
+export const claimFraudInvestigationStepId = uuidBrand('ClaimFraudInvestigationStepId');
+
 // ── Workplace ids (Story 6.36a, Task 1; `2026-10-14-330` SW2, SW3, SW9) ───────────────────────────
 // Three NEW branded ids, each a ROW address (⛔ an event stream id):
 //   · `WorkplaceId` — one school or office on a Pariwar's list (`workplaces.workplace_id`); a posting names it.

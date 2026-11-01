@@ -213,6 +213,9 @@ export * from './claim_documents.js';
 // most one live per claim; one-way supersession). Both append-only, tenant-isolated.
 export * from './claim_death_certificate_uploads.js';
 export * from './claim_death_certificate_reviews.js';
+// Story 6.22 (0197) — the fraud register's investigation record: one append-only row per step of one claim's
+// investigation (the helpline operator's flag; the District Admin's innocent / guilty finding). Tenant-isolated.
+export * from './claim_fraud_investigation_steps.js';
 // Story 6.19a — the claim's CONTACT RECORD: `claim_contacts` (one per claim — the claimant side and the filer's
 // per-claim agreement, D15) + `claim_contact_nominees` (one per nominee VERSION — the Tier-1 postal address and
 // the claimant-to-nominee relationship, D5 / D16). Tenant-isolated; SELECT / INSERT / UPDATE, ⛔ no DELETE.

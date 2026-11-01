@@ -268,6 +268,14 @@ export const NOMINEE_CORRECTION_FIELD_CLASS = 'nominee_correction';
 export const DEATH_CERTIFICATE_REVIEW_FIELD_CLASS = 'death_certificate_review';
 
 /**
+ * Field-class namespace for the fraud investigation's Tier-1 notes (Story 6.22, DL1 / DL15) — the helpline operator's
+ * flag note and the District Admin's finding note (`claim_fraud_investigation_steps.note_ciphertext`). Declared ONCE in
+ * `@twt/domain` `encryption` (the erasure scrub binds the same value); re-exported here. ⛔ NEVER in an event, a log line
+ * or an audit context.
+ */
+export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = encryptionRuntime.CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS;
+
+/**
  * Story 6.23a (NW13, NW14) — the APPROVAL-OVER-WARNING record's Tier-1 field class. The late-warning reason's note
  * (`claim_warning_approvals.note_ciphertext`) is encrypted under this before the domain writer. Matches
  * `piiColumn(1, 'claim_warning_approval')`. ⛔ NEVER in an event / audit line / log / the console packet. The note is

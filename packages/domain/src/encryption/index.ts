@@ -68,6 +68,8 @@ export {
   ANSWER_CODE_INDEX_FIELD_CLASS,
   // Story 11b.4 (MA5 / MA15) — the family memorial's Tier-1 class (the words, the alt text, the reviewer's notes).
   MEMORIAL_FIELD_CLASS,
+  // Story 6.22 (DL1 / DL15) — the fraud investigation's flag and finding notes.
+  CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS,
   type FieldCryptoDeps,
 } from './field-classes.js';
 export {

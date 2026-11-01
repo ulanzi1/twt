@@ -1366,6 +1366,20 @@
       "when": 1796442000040,
       "tag": "0195_marketplace-partners-and-publications",
       "breakpoints": true
+    },
+    {
+      "idx": 196,
+      "version": "7",
+      "when": 1796528400041,
+      "tag": "0196_claim-nominee-findings-guilty-kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 197,
+      "version": "7",
+      "when": 1796614800042,
+      "tag": "0197_claim-fraud-investigation-steps",
+      "breakpoints": true
     }
   ]
 }

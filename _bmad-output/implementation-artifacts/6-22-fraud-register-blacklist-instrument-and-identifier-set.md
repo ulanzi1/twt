@@ -947,15 +947,15 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
           6.20 precedent: carried as a leg, ⛔ written here); `epics.md` — Story 6.22 after 6.38, the minted-header shape.
   - [x] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
         - **2026-11-01 — DONE:** ledger `2026-11-01ac`; row `6-22` → `in-progress`; YAML parsed after the prepend.
-- [ ] **Task 1 — The records (AC1)**
-  - [ ] 1.1 The findings migration (DL2) ALONE, hand-written — the rank CHECK keeps `IS NOT NULL`; `CLAIM_NOMINEE_FINDING_KINDS`,
+- [x] **Task 1 — The records (AC1)**
+  - [x] 1.1 The findings migration (DL2) ALONE, hand-written — the rank CHECK keeps `IS NOT NULL`; `CLAIM_NOMINEE_FINDING_KINDS`,
         `MEMBER_FINDING_UNIQUE_PREDICATE` and the schema file's `uniqueIndex`; the fence allow-list unchanged (the schema file is on it).
-  - [ ] 1.2 `claim_fraud_investigation_steps` (DL1): schema file, barrel, RLS policy file + `policies/index.ts`, branded id (house shape),
+  - [x] 1.2 `claim_fraud_investigation_steps` (DL1): schema file, barrel, RLS policy file + `policies/index.ts`, branded id (house shape),
         the field-class constant in `encryption/field-classes.ts`, re-exported from `apps/api/src/context.ts`; the migration HAND-AUTHORED
         whole in 0122's order (both unique indexes, the NULL-safe coherence CHECK, the `no action` FK, grants, ENABLE / FORCE RLS, `CREATE
         POLICY` by hand, the guard naming every frozen column, the TRUNCATE trigger) — ⛔ `db:generate`; the jobs `*-no-decision.test.ts`
         lists (Task 0.1 (vii)).
-  - [ ] 1.3 Live-DB tests for AC1 (copy `tests/integration/rls/claim-death-certificate-policy-regression.spec.ts` and the 6.21a reviews
+  - [x] 1.3 Live-DB tests for AC1 (copy `tests/integration/rls/claim-death-certificate-policy-regression.spec.ts` and the 6.21a reviews
         spec).
 - [ ] **Task 2 — The writers (AC2, AC4–AC9)**
   - [ ] 2.1 DL12 on `recordMemberInnocenceFinding` (targeted conflict on the predicate, re-read on a 0-row conflict, one unlocked read then
@@ -1192,6 +1192,18 @@ hand).**
 
 ### Completion Notes List
 
+- **Task 1 (AC1) — 2026-11-01.** Migrations `0196_claim-nominee-findings-guilty-kind` (DL2 alone: kind + rank CHECKs re-added, 0119's
+  `IS NOT NULL` kept; the one-innocence index replaced by `claim_nominee_findings_one_member_finding_per_claim_uq`) and
+  `0197_claim-fraud-investigation-steps` (DL1, hand-authored whole in 0122's order — two unique indexes, NULL-safe coherence CHECK,
+  `NO ACTION` finding FK, `GRANT UPDATE ("note_ciphertext")`, per-command policies, the guard naming all ten frozen columns, TRUNCATE
+  refused); journal `when` 1796528400041 / 1796614800042 (⚠ 6.39 plans `0196` — whichever lands second renumbers). Schema:
+  `MEMBER_FINDING_UNIQUE_PREDICATE` (one constant: index + writers), `CLAIM_NOMINEE_FINDING_KINDS` + `member_found_guilty`,
+  `claim_fraud_investigation_steps.ts` (`FRAUD_INVESTIGATION_STEPS`, `FRAUD_ALIVE_CONFIRMATIONS`), RLS file + barrels, branded
+  `ClaimFraudInvestigationStepId`, `CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS` (field-classes.ts, re-exported by `apps/api/src/context.ts`).
+  The two jobs `DECISION_TABLE_NAMES` lists gained the table. Tests: `rls/claim-fraud-investigation-policy-regression.spec.ts` 13/13 on
+  the story DB (:5451, fresh container `twt-622-pg`); the RLS folder + nominee-lock / determination specs 1299/1299; fence 26/26; domain
+  `tsc` clean; `db:check`, `schema:test`, `schema:check` green.
+
 ### File List
 
 - `.decision-log.md` (Decision `2026-11-01-438`)
@@ -1201,6 +1213,21 @@ hand).**
 - `_bmad-output/implementation-artifacts/deferred-work.md`
 - `docs/launch-gate-inventory/inventory-roster.md` (Row 47)
 - `_bmad-output/implementation-artifacts/6-22-fraud-register-blacklist-instrument-and-identifier-set.md`
+- `packages/domain/migrations/0196_claim-nominee-findings-guilty-kind.sql` (new)
+- `packages/domain/migrations/0197_claim-fraud-investigation-steps.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/claim_nominee_findings.ts`
+- `packages/domain/src/schema/claim_fraud_investigation_steps.ts` (new)
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/policies/claim-fraud-investigation-rls.ts` (new)
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/encryption/field-classes.ts`
+- `packages/domain/src/encryption/index.ts`
+- `apps/api/src/context.ts`
+- `apps/jobs/tests/claim-suspicion-notice-no-decision.test.ts`
+- `apps/jobs/tests/claim-suspicion-staff-email-no-decision.test.ts`
+- `packages/domain/tests/integration/rls/claim-fraud-investigation-policy-regression.spec.ts` (new)
 
 ## Change Log
 

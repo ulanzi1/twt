@@ -78,6 +78,8 @@ const DECISION_TABLE_NAMES = [
   'claim_death_certificate_reviews',
   'claim_correction_closures',
   'claim_ground_inspections',
+  // ⭐ Story 6.22 — the fraud investigation's flag and finding steps.
+  'claim_fraud_investigation_steps',
   'cycle_freeze_commits',
   'nominee_determinations',
   'nominee_determination_items',

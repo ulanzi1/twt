@@ -111,6 +111,14 @@ export const ANSWER_CODE_INDEX_FIELD_CLASS = 'answer_code';
 export const MEMORIAL_FIELD_CLASS = 'memorial';
 
 /**
+ * ⭐ NEW (Story 6.22, DL1 / DL15) — the fraud investigation's Tier-1 field class: the helpline operator's flag note and
+ * the District Admin's finding note (`claim_fraud_investigation_steps.note_ciphertext`). Keys on the claim's REAL
+ * `pariwarId`; matches `piiColumn(1, CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS)`. Declared ONCE here — the API's handlers
+ * (through `apps/api/src/context.ts`'s re-export) and `anonymizeMember`'s scrub both bind it. ⛔ Never re-declare it.
+ */
+export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = 'claim_fraud_investigation';
+
+/**
  * Envelope-encryption + blind-index key material for the member PII families. Structurally identical
  * to `apps/api`'s `EncryptionDeps` and `apps/jobs`'s `JobsEncryptionDeps` (both are
  * `{ kms, kekRef, hmacKeyRef }` over these same domain types), so BOTH apps pass their own bundle

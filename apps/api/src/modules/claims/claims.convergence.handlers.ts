@@ -35,7 +35,7 @@ import type { AuthAuditEventType } from '../../audit/audit-sink.js';
 import type { AppDeps } from '../../context.js';
 import { ConflictError, NotFoundError } from '../../http-errors.js';
 import { emitAuthAudit } from '../auth/shared/audit.js';
-import { translateRefileRequiresConfirmation } from './claims.service.js';
+import { translateClaimIntakeRefused, translateRefileRequiresConfirmation } from './claims.service.js';
 
 /**
  * The resolution endpoints (confirmMerge/overrideConvergence) are channel-agnostic — the SAME
@@ -126,15 +126,24 @@ export function createConvergenceHandlers(deps: AppDeps) {
         );
       }
 
-      const result = await claim.convergeIntakeAttempt(scopeTx.client, {
-        intakeAttemptId: attemptId,
-        pariwarId,
-        deceasedMemberId: attempt.deceasedMemberId,
-        canonicalClaimCaseId: claimCaseId,
-        intakeChannel: attempt.intakeChannel,
-        resolvedByActor: operatorId,
-        auditId,
-      });
+      let result: Awaited<ReturnType<typeof claim.convergeIntakeAttempt>>;
+      try {
+        result = await claim.convergeIntakeAttempt(scopeTx.client, {
+          intakeAttemptId: attemptId,
+          pariwarId,
+          deceasedMemberId: attempt.deceasedMemberId,
+          canonicalClaimCaseId: claimCaseId,
+          intakeChannel: attempt.intakeChannel,
+          resolvedByActor: operatorId,
+          auditId,
+        });
+      } catch (err) {
+        // ⭐ Story 6.22 DL9 (e) — the candidate re-read UNDER the intake lock: a finding closed the claim after the read above.
+        if (err instanceof claim.IntakeMergeTargetNotCandidateError) {
+          throw new ConflictError('Target claim is not a valid convergence candidate for this attempt', 'convergence.invalid_candidate');
+        }
+        throw err;
+      }
 
       // Only fire the audit line on an ACTUAL merge — a re-submitted merge of an
       // already-converged attempt (`result.merged === false`) is an idempotent no-op and must
@@ -203,6 +212,12 @@ export function createConvergenceHandlers(deps: AppDeps) {
       } catch (err) {
         // ⭐ Story 6.19c (AC15, T9) — the override MINTS too, so it is guarded like `tryConverge`: a 409, ⛔ a 500.
         translateRefileRequiresConfirmation(err);
+        // ⭐ Story 6.22 DL9 (b) — the override's door: the claim door's refusal (with its reason — staff see it, as at the
+        // helpline intake) and a `closed` against-claim, each a 409, ⛔ a 500.
+        translateClaimIntakeRefused(err, { withReason: true });
+        if (err instanceof claim.IntakeOverrideAgainstClosedClaimError) {
+          throw new ConflictError('The claim this attempt was parked beside is closed', 'convergence.against_claim_closed');
+        }
         throw err;
       }
 

@@ -979,7 +979,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         innocence on an EARLIER claim C1 of the same member, assert C2's warning keys are a SUBSET of before and ⛔ late key is queued
         (`correction-queue-read.ts` `lateArm`) — named for `-279` A7. Seed claim states through `claimAt` / `emitClaim`
         (`packages/domain/tests/integration/claim/_one-payment-fixtures.ts`), ⛔ `forceClaimState` (TR3).
-- [ ] **Task 3 — The override door and convergence (AC10)** — DL9 (b) in `overrideIntakeAttempt` (closed-against error + the door);
+- [x] **Task 3 — The override door and convergence (AC10)** — DL9 (b) in `overrideIntakeAttempt` (closed-against error + the door);
       `overrideConvergence`'s catch maps both (`translateClaimIntakeRefused(err, { withReason: true })` + the new code); DL9 (e) the
       under-lock candidate re-check in `convergeIntakeAttempt`; BOTH DELIBERATE doc blocks rewritten (DL9 (b), (d)); DL9 (f)'s residual
       pinned by a test.
@@ -1235,6 +1235,13 @@ hand).**
   inner writer ALSO takes the key (after the row), so a plain race stays green; the ORDER is pinned instead by a NOWAIT probe —
   while the finding waits on a key it holds ⛔ the claim row — and that mutation goes RED (AC5's row-before-key mutation too).
   (7) AC6's second-intake race runs at the domain level (`tryConverge`); its HTTP twin is Task 4's.
+- **Task 3 (AC10) — 2026-11-01.** `icp.ts` — `overrideIntakeAttempt` under the intake lock refuses a `closed` against-claim
+  (`IntakeOverrideAgainstClosedClaimError`) and, when ⛔ report stands, runs `resolveClaimIntakeDoor` (the `tryConverge` (1b)
+  shape); `convergeIntakeAttempt` re-reads the candidate under the lock (`IntakeMergeTargetNotCandidateError`); BOTH
+  DELIBERATE doc blocks rewritten. `claims.convergence.handlers.ts` — `confirmMerge` maps the re-check to 409
+  `convergence.invalid_candidate`; `overrideConvergence`'s catch adds `translateClaimIntakeRefused(err, { withReason: true })`
+  (409 `claim.intake_refused`) and 409 `convergence.against_claim_closed`. Tests: `fraud-convergence-door.spec.ts` 5 (incl. DL9
+  (f)'s residual pinned); the existing convergence / override specs green (domain 87, API 66). The HTTP 409 legs are Task 4's.
 
 ### File List
 
@@ -1281,6 +1288,9 @@ hand).**
 - `packages/domain/tests/claim/dpdpa-consent-events.test.ts`
 - `packages/domain/tests/claim/nominee-name-check-events.test.ts`
 - `packages/domain/tests/integration/claim/approval-warnings.spec.ts`
+- `packages/domain/src/claim/icp.ts`
+- `apps/api/src/modules/claims/claims.convergence.handlers.ts`
+- `packages/domain/tests/integration/claim/fraud-convergence-door.spec.ts` (new)
 
 ## Change Log
 

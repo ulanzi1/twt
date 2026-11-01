@@ -958,3 +958,21 @@ export class FraudInvestigationRefusedError extends Error {
     super(`[fraud-investigation] claim ${claimCaseId}: ${reason} — ${detail}`);
   }
 }
+
+/** Story 6.22 DL9 (b) — the convergence OVERRIDE's against-claim is `closed` (a finding found the member alive, or another
+ *  closure): ⛔ separate claim is minted beside a closed one through the override. → 409 `convergence.against_claim_closed`. */
+export class IntakeOverrideAgainstClosedClaimError extends Error {
+  public readonly name = 'IntakeOverrideAgainstClosedClaimError';
+  public constructor(public readonly againstClaimCaseId: string) {
+    super(`[convergence] the override's against-claim ${againstClaimCaseId} is closed`);
+  }
+}
+
+/** Story 6.22 DL9 (e) — under the intake lock, the merge's canonical claim is ⛔ longer a convergence candidate (a finding
+ *  closed it after the handler's unlocked read): the channel is ⛔ merged into it. → 409 `convergence.invalid_candidate`. */
+export class IntakeMergeTargetNotCandidateError extends Error {
+  public readonly name = 'IntakeMergeTargetNotCandidateError';
+  public constructor(public readonly canonicalClaimCaseId: string) {
+    super(`[convergence] claim ${canonicalClaimCaseId} is no longer a convergence candidate`);
+  }
+}

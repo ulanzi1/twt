@@ -32,7 +32,6 @@ import type pg from 'pg';
 import { addCalendarDays, istDateOf, istMidnightAt } from '../cycle-calendar/holiday-resolver.js';
 import { bindScopedDb, type Db } from '../db.js';
 import type { ClaimId, MemberId, PariwarId, PeerMeshPingId, PeerMeshSelectionId } from '../ids/index.js';
-import { namedByClaimSql } from '../member/known-people.js';
 import { clampLimit } from '../pagination.js';
 import {
   PEER_MESH_LINK_CODE_PATTERN,
@@ -44,7 +43,7 @@ import type { PeerMeshSource } from '../schema/claim_peer_mesh_selections.js';
 import { getMemberMobileCiphertext } from '../wa-opt-in/read.js';
 import { answerWindowSql, isClaimInAnswerWindow } from './answer-window.js';
 import { CORRECTION_SEND_LEASE_MS } from './correction-reminder-record.js';
-import { type PeerMeshNomineeMatch, peerMeshEligibleMemberSql, peerMeshNomineeMatchSql } from './peer-mesh-read.js';
+import { type PeerMeshNomineeMatch, peerMeshEligibleMemberSql, peerMeshNomineeMatchSql, standingReportNamesSql } from './peer-mesh-read.js';
 import { SUSPICION_NOTICE_SEND_CONFIG_DETAILS, SUSPICION_NOTICE_SMS_ERROR_CLASSES, suspicionNoticeDetail } from './suspicion-notice.js';
 
 /** The sweep's page size cap. */
@@ -191,7 +190,7 @@ export async function readPeerMeshRequestEligibility(
   }>(sql`
     SELECT ${peerMeshEligibleMemberSql(m, { deceasedMemberId, nomineeMatch })} AS eligible,
            pr_m.state::text <> 'active' AS not_active,
-           ${namedByClaimSql(sql`pr_m.pariwar_id`, sql`pr_m.member_id`)} AS reported_deceased,
+           ${standingReportNamesSql(sql`pr_m.pariwar_id`, sql`pr_m.member_id`)} AS reported_deceased,
            NOT EXISTS (SELECT 1 FROM member_identities pr_i WHERE pr_i.pariwar_id = pr_m.pariwar_id AND pr_i.member_id = pr_m.member_id)
              AS no_identity,
            (EXISTS (SELECT 1 FROM claims pr_c WHERE pr_c.pariwar_id = pr_m.pariwar_id AND pr_c.deceased_member_id = ${deceasedMemberId}

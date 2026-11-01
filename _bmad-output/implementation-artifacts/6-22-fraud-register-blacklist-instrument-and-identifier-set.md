@@ -1004,7 +1004,7 @@ and the sticky freeze flip TOGETHER (one swap point, DL8).
         the set holds 18 entries at `91ea2c81` — READ LIVE) with a history note; audits (DL14) incl. the `_rejected` types and the
         decrypting read, added to `audit-log-sink.test.ts`'s list.
   - [x] 4.4 Tests: the API legs of AC3, AC4, AC12, AC13 (DL7's withholding, the work-list scope).
-- [ ] **Task 5 — Peer-mesh (AC11)** — DL11's fragment in `peer-mesh-read.ts` (alias `f`); the one-line swap in
+- [x] **Task 5 — Peer-mesh (AC11)** — DL11's fragment in `peer-mesh-read.ts` (alias `f`); the one-line swap in
       `peerMeshEligibleMemberSql`; `peer-mesh-request.ts` IMPORTS it; the fence's `gateSqlCopies` `peer-mesh-read.ts: 2`; the residual named
       in `known-people.ts`'s accepted-cost comment (comment-only edit there).
 - [ ] **Task 6 — Surfaces (AC13)** — `apps/admin/src/api/client.ts` functions + `api/hooks.ts` hooks (copy `postDeathCertificateReview` /
@@ -1264,6 +1264,12 @@ hand).**
   re-driven. (10) AC4's `relationship: 'other'` leg is ⛔ built: the leaf reads ⛔ nominee row (structurally unaffected), so the test
   would be vacuous. (11) AC6's second-intake race runs at the domain level only — ⛔ HTTP twin. (12) The helpline per-member list
   writes ⛔ audit line (DL14 names five types; the 6.21b list's `claims_read` precedent is ⛔ copied).
+- **Task 5 (AC11) — 2026-11-01.** `peer-mesh-read.ts` — `standingReportNamesSql` (the leaf's predicate as a fragment, alias
+  `f`), swapped into `peerMeshEligibleMemberSql`'s one line; `peer-mesh-request.ts` imports it for `reported_deceased`; the
+  fence's `gateSqlCopies` `peer-mesh-read.ts: 2`; `known-people.ts`'s accepted-cost comment names the residual (comment-only).
+  Test `fraud-peer-mesh.spec.ts` (control first; released ⇒ askable + `eligible`; guilty / un-found ⇒ `peer_reported_deceased`;
+  `knownPeopleCallerSql` still false for the released member — the residual pinned). Existing peer-mesh / known-people /
+  member-links specs green (domain 261, jobs 251); fence 26.
 
 ### File List
 
@@ -1335,6 +1341,11 @@ hand).**
 - `apps/api/tests/unit/audit-log-sink.test.ts`
 - `apps/api/tests/integration/claims/fraud-investigation-routes.spec.ts` (new)
 - `scripts/claim-adjudication-human-actor-invariant/check.ts`
+- `packages/domain/src/claim/peer-mesh-read.ts`
+- `packages/domain/src/claim/peer-mesh-request.ts`
+- `packages/domain/src/member/known-people.ts`
+- `apps/api/tests/unit/erasure-and-death-report-fence.test.ts`
+- `packages/domain/tests/integration/claim/fraud-peer-mesh.spec.ts` (new)
 
 ## Change Log
 

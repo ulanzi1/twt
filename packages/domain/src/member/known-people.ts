@@ -116,7 +116,10 @@ export function knownPersonEligibleSql(m: SQL, callerMemberId: MemberId): SQL {
  * AC10): an `active` member (`m`) whom ⛔ claim (in any state) names as the deceased. ⭐ The claim half is
  * `2026-10-15-333` call 1: death is an overlay, ⛔ never a `members.state`, so `active` alone let the family holding a
  * dead member's phone act AS them. ⚠ A living member wrongly reported dead stays out after the claim is rejected — the
- * same "any state" rule the target side applies (recorded cost).
+ * same "any state" rule the target side applies (recorded cost). ⚠ Story 6.22 (DL11) — and stays out after an INNOCENCE
+ * finding releases them too: only the peer-mesh selection follows the release (`claim/peer-mesh-read.ts`
+ * `standingReportNamesSql`); here, the unavailable prompts, the namer side and nominee links keep `namedByClaimSql` — a
+ * NAMED residual (`deferred-work.md`, Story 6.22 Task 0.5).
  */
 export function knownPeopleCallerSql(m: SQL): SQL {
   return sql`(${m}.state = 'active' AND NOT ${namedByClaimSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)})`;

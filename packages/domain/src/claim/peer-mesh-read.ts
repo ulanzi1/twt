@@ -39,7 +39,6 @@ import {
   type PeerMeshSelectionId,
   type WorkplaceId,
 } from '../ids/index.js';
-import { namedByClaimSql } from '../member/known-people.js';
 import { eventsLog } from '../schema/events_log.js';
 import { members } from '../schema/members.js';
 import { memberPostings } from '../schema/member_postings.js';
@@ -464,7 +463,9 @@ export function peerMeshNomineeMatchSql(m: SQL, match: PeerMeshNomineeMatch): SQ
  *   · `members.state = 'active'` ONLY — ⚠ `active-in-grace` is ⛔ asked (`-333` call 2 (d)), unlike 6.36b's
  *     `knownPersonEligibleSql` (which admits it). Keep the two separate (6.36b's deferred W5 rests on this). An erased
  *     member is kept out HERE (`anonymized`) — ⛔ by the identity row (erasure RETAINS the blind index);
- *   · ⛔ a claim (in ANY state) naming them as the deceased (6.36b's `namedByClaimSql` — the same meaning);
+ *   · ⛔ a death report naming them that STANDS — a claim in ANY state that ⛔ innocence finding released (Story 6.22 DL11,
+ *     `2026-11-01-438` item 11 — the exclusion FOLLOWS the release, PM1's pointer; {@link standingReportNamesSql}). ⚠ Only
+ *     here: "People who know me" and nominee links keep 6.36b's `namedByClaimSql` (any claim) — a named residual;
  *   · an identity row exists (an `active` member always has a normalised mobile; ⛔ KMS);
  *   · ⛔ the deceased; ⛔ anyone who REPORTED this death in the Pariwar, through any channel — the claimant of ANY claim,
  *     in any state (`2026-10-16-340` call 2: SW23's *"the claimant"* widened from the claim being selected for to the
@@ -484,9 +485,29 @@ export function peerMeshNomineeMatchSql(m: SQL, match: PeerMeshNomineeMatch): SQ
  * (no family-link data — the deferred item stays open) — ⭐ 2026-10-23 (`-386`): NARROWED — a relative who is a declared
  * nominee, matched by number, is now excluded; other relatives stay eligible.
  */
+/**
+ * ⭐ Story 6.22 (DL11) — "a death report naming the member STANDS": a claim naming them as the deceased, in ANY state, that ⛔
+ * `member_found_innocent` finding has released — `isDeathReportStanding`'s predicate as a SQL FRAGMENT (a fragment cannot call
+ * the leaf's async boolean). ⚠ A read-only copy the source fence COUNTS (this file's allowance is 2): the findings alias MUST
+ * be `f`. `peer-mesh-request.ts` IMPORTS it — ⛔ never inlined there (it is ⛔ on the fence's literal list).
+ */
+export function standingReportNamesSql(pariwarId: SQL, memberId: SQL): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM claims sr_c
+     WHERE sr_c.pariwar_id = ${pariwarId}
+       AND sr_c.deceased_member_id = ${memberId}
+       AND NOT EXISTS (
+         SELECT 1
+           FROM claim_nominee_findings f
+          WHERE f.pariwar_id = sr_c.pariwar_id
+            AND f.claim_case_id = sr_c.claim_case_id
+            AND f.kind = 'member_found_innocent'
+       ))`;
+}
+
 export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusions): SQL {
   return sql`(${m}.state = 'active'
-    AND NOT ${namedByClaimSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)}
+    AND NOT ${standingReportNamesSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)}
     AND EXISTS (SELECT 1 FROM member_identities pm_i WHERE pm_i.pariwar_id = ${m}.pariwar_id AND pm_i.member_id = ${m}.member_id)
     AND ${m}.member_id <> ${x.deceasedMemberId}
     AND NOT EXISTS (

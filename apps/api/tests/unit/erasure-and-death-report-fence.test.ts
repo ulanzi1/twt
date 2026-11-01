@@ -428,7 +428,8 @@ describe('Story 6.38 — the erasure act and the one death-report predicate (sou
     expect(gateSqlCopies(tree)).toEqual({
       [DEATH_REPORT]: 1,
       'packages/domain/src/claim/approval-warnings.ts': 3,
-      'packages/domain/src/claim/peer-mesh-read.ts': 1,
+      // Story 6.22 (DL11) — `standingReportNamesSql` (the peer-mesh selection follows the release): 1 → 2.
+      'packages/domain/src/claim/peer-mesh-read.ts': 2,
     });
   });
 
@@ -446,7 +447,7 @@ describe('Story 6.38 — the erasure act and the one death-report predicate (sou
       [
         DEATH_REPORT,
         'packages/domain/src/claim/approval-warnings.ts', // read-only copy × 3
-        'packages/domain/src/claim/peer-mesh-read.ts', // read-only copy × 1
+        'packages/domain/src/claim/peer-mesh-read.ts', // read-only copy × 2 (Story 6.22 — `standingReportNamesSql`)
         'packages/domain/src/claim/nominee-lock.ts', // `recordMemberInnocenceFinding` — the WRITER (an insert, ⛔ a gate)
         'packages/domain/src/schema/claim_nominee_findings.ts', // the kind enum + its partial unique index
       ].sort(),

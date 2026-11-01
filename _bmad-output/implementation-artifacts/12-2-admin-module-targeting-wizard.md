@@ -15,7 +15,7 @@ every finding. The v1.3 pass re-traced every G fact at `36b489c9`: the only reli
 re-check at Task 0.1.
 Re-locate by FUNCTION, never by line.
 
-STATUS: review (2026-11-01 — v1.9; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.9 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
+STATUS: review (2026-11-01 — v1.10; the notes through v1.6 are HISTORY, kept oldest first, and the v1.7–v1.10 notes follow them). ⭐ **Task 0 runs FIRST in `bmad-dev-story`: the build decisions QE1–QE22
 carry FIVE real asks (QE3, QE6, QE7, QE9, QE17); BigDev answers them at Task 0.2 and the author-commit lands ALONE at
 Task 0.3 BEFORE any code** ([[feedback_governance_commits_precede_implementation]]). If an ASK is answered with a
 non-recommended option, Task 0.3 rewrites the dependent ACs / Tasks / Invariants first (the map is in Task 0.3).
@@ -29,6 +29,8 @@ Task 0.2 is DONE and QE1–QE22 are all answered.**
 (v1.8) — the "still owed" sentence above is HISTORY.** The code review's findings are in `### Review Findings` under Tasks.
 ⭐ **v1.9 (2026-11-01): code review round 1 (chunks A / B / C and the patch-diff review) COMMITTED — code `465a2ac8`, then these
 records.** Round 2 reviews the committed production slice next.
+⭐ **v1.10 (2026-11-01): the QE12 narrowing (DN1 + DN2) is recorded — author-commit `2026-11-01-434` (`e6f30675`), amending
+`-433` QE12 and ADR-0044 D3 / D4 in part.**
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 the G / QE prose and historical Change Log rows) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In the Names table, Policy meaning, ACs, Invariants,
@@ -61,8 +63,8 @@ Story 6.32 only" — it is NOT a standing rule; a merge-order departure needs it
   v1.2's relabel at 01:25:18, so v1.2's `g` collided the moment it was taken); `i` (13-2) ⇒ this story's entries are
   **`2026-11-01m`** (relabelled `c` → `g` in v1.2, `g` → `m` in v1.3), **`2026-11-01n`** (v1.4), **`2026-11-01o`**
   (v1.5 — the Task 0.2 answers), **`2026-11-01p`** (v1.6 — the author-commit), **`2026-11-01q`** (v1.7 — Task 0.1 re-grep +
-  Task 0.4, the `-433` records), **`2026-11-01r`** (v1.8 — dev-story complete, row → review) and **`2026-11-01s`** (v1.9 —
-  code review round 1 committed; `s` re-grepped free on every ref and worktree);
+  Task 0.4, the `-433` records), **`2026-11-01r`** (v1.8 — dev-story complete, row → review), **`2026-11-01s`** (v1.9 —
+  code review round 1 committed; `s` re-grepped free on every ref and worktree) and **`2026-11-01t`** (v1.10 — `-434`);
   re-grep and relabel again at landing if needed.
 - Roster: highest Row 45 (14-3 and 6-39 both plan 46). This story adds NO row (QE19); it appends a dated note to Row 26
   (QE7 (A) only; QE19, Task 0.4).
@@ -621,8 +623,8 @@ Five are real **ASKs** (⭐ ASK). The rest carry a recommendation that BigDev ma
       admin client normalises CRLF → LF before sending);
     - refuse C1 controls (U+0080–U+009F);
     - refuse bidi controls (U+061C, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069);
-    - refuse invisible formatters U+200B, U+2060, U+FEFF, U+00AD; ⚠ WIDENED 2026-11-01 by code review RP1 and DN2 (BigDev's answer "2"): every other format character (Cf) and every other default-ignorable code point is refused too — except U+FE0E / U+FE0F — as are U+2028 / U+2029, the Braille blank U+2800 and the four Hangul fillers; NOT yet recorded in `.decision-log.md` `-433` or ADR-0044;
-    - ⭐ ALLOW U+200C / U+200D (ZWNJ / ZWJ — Devanagari conjunct control); ⚠ NARROWED 2026-11-01 by code review DN1 (BigDev's answer "1"): allowed in the `*_hi` schemas ONLY, refused in the `*_en` ones — NOT yet recorded in `.decision-log.md` `-433` or ADR-0044;
+    - refuse invisible formatters U+200B, U+2060, U+FEFF, U+00AD; ⚠ WIDENED 2026-11-01 by code review RP1 and DN2 (BigDev's answer "2"): every other format character (Cf) and every other default-ignorable code point is refused too — except U+FE0E / U+FE0F — as are U+2028 / U+2029, the Braille blank U+2800 and the four Hangul fillers; recorded (v1.10) by author-commit `2026-11-01-434`, which amends `-433` QE12 and ADR-0044 D3 / D4 in part;
+    - ⭐ ALLOW U+200C / U+200D (ZWNJ / ZWJ — Devanagari conjunct control); ⚠ NARROWED 2026-11-01 by code review DN1 (BigDev's answer "1"): allowed in the `*_hi` schemas ONLY, refused in the `*_en` ones — recorded (v1.10) by author-commit `2026-11-01-434`;
     - require at least one letter or digit (`/[\p{L}\p{N}]/u`) — a blank-looking value is refused;
     - `*_hi` fields must contain at least one Devanagari LETTER: `/(?=\p{Script=Devanagari})\p{L}/u` — "LIC टर्म
       प्लान" passes; "LIC" and "LIC ।" (danda only) are refused (Story 2.1: member-facing copy needs Hindi).
@@ -1265,7 +1267,7 @@ exits 0 on the ten changed TypeScript files; the domain marketplace unit + integ
 API admin-module spec plus `marketplace-errors.test.ts` pass (48); the jobs `module-activation` test passes (6). NOT run:
 the full `pnpm ci:local` gate (37 jobs) — run it before the push.
 
-Open after this round: the QE12 narrowing is NOT recorded in any governance document. `.decision-log.md` `-433`, ADR-0044 (its "ZWJ / ZWNJ allowed" line) and QE12 itself (a dated pointer there now says so) all still say ZWNJ / ZWJ are allowed, so the shipped code departs from three ratified texts until BigDev authorises an amendment. Chunks B and C were reviewed afterwards (below).
+Open after this round: the QE12 narrowing is NOT recorded in any governance document. `.decision-log.md` `-433`, ADR-0044 (its "ZWJ / ZWNJ allowed" line) and QE12 itself (a dated pointer there now says so) all still say ZWNJ / ZWJ are allowed, so the shipped code departs from three ratified texts until BigDev authorises an amendment. Chunks B and C were reviewed afterwards (below). ⭐ CLOSED 2026-11-01 (v1.10): BigDev — *"Write the QE12 narrowing into -433 and ADR-0044"* — author-commit `2026-11-01-434` (`e6f30675`) amends `-433` QE12 (`-433` itself is not edited) and adds a dated line at ADR-0044 D3 / D4.
 
 ### Review Findings — round 1, chunk B: the API / jobs / contracts layer (2026-11-01, `bmad-code-review 12.2`)
 
@@ -1706,7 +1708,7 @@ the listed workplace districts (`-429` C11 amended, QE5).
 - **QE12 narrowed for English text (code review round 1, DN1 — BigDev, verbatim: "1").** U+200C / U+200D (ZWNJ / ZWJ) are
   accepted in the `*_hi` display schemas ONLY; the three `*_en` schemas (module name, module description, partner name) now
   refuse them. QE12's text allowed both for Devanagari conjuncts, so this is a narrowing of the build decision made by BigDev's answer to DN1, recorded here and as a dated pointer at QE12 — it is NOT recorded in any governance document (`.decision-log.md` `-433` and ADR-0044 still say "allowed"), so it stays an unratified departure until BigDev authorises an amendment. The same
-  round (RP1) also refuses every other format character (Cf), U+2028 / U+2029 and the four Hangul fillers in every display schema, and (DN2, BigDev's answer "2") every other default-ignorable code point and the Braille blank, except the emoji / text presentation selectors U+FE0E / U+FE0F — also in no governance document yet.
+  round (RP1) also refuses every other format character (Cf), U+2028 / U+2029 and the four Hangul fillers in every display schema, and (DN2, BigDev's answer "2") every other default-ignorable code point and the Braille blank, except the emoji / text presentation selectors U+FE0E / U+FE0F — also in no governance document yet. ⭐ Since v1.10 both are recorded: author-commit `2026-11-01-434` (`e6f30675`) amends `-433` QE12, with a dated line at ADR-0044 D3 / D4.
 
 **NOT done / un-attested:** no real-browser pass of the admin wizard was done (unit / RTL tests only — so there was no real screen reader, no
 real keyboard focus order, no real `datetime-local` widget, and no real step-up OTP round trip); `ModulesRoute.tsx` (session gate,
@@ -1754,6 +1756,7 @@ Modified:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-01 | v1.10 | BigDev: *"Write the QE12 narrowing into -433 and ADR-0044"* — author-commit `2026-11-01-434` committed ALONE as `e6f30675` (after the code it records, `465a2ac8`): DN1 + DN2 + RP1's display-text rules; amends `-433` QE12 (not edited in place) and ADR-0044 D3 / D4 in part (dated line + Changelog row); RPD1 not triggered. QE12's two dated pointers, the chunk A "Open after this round" line and the Completion Note now cite `-434`. Its "Not covered" names round 2's visible look-alike finding (under triage). Row stays `review`; ledger `2026-11-01t`. Not pushed. |
 | 2026-11-01 | v1.9 | Code review round 1 COMMITTED (`bmad-code-review 12.2`; BigDev: *"1"* — commit round 1, then round 2): code `465a2ac8` (DN1, DN2, RP1–RP35 with RP7 reverted by PP1, PP1–PP4; 30 files, two new admin test files). Records: the three chunk sections and the patch-diff review (DN1–DN2 resolved by BigDev, RP1–RP35, PP1–PP5, deferrals RD1–RD6), QE12's dated WIDENED / NARROWED pointers, `deferred-work.md`, `epics.md` (RD4 / RD5 under 12.6 / 12.3), roster Row 26 (`0195`). The QE12 narrowing is still in NO governance document (`-433`, ADR-0044 say "allowed"). Not run on this tree: `ci:local`, a real-browser pass. Row stays `review`; ledger `2026-11-01s`. Not pushed. |
 | 2026-11-01 | v1.8 | `bmad-dev-story` COMPLETE: Tasks 1–10 done; code commit `89add5ee` (migration `0195`, `module.manage` v57, domain, contracts + OpenAPI, eight API routes, the 5-minute activation sweep, the access-wrapper roots, the admin wizard / detail / list); `ci:local` 37/37 on a fresh container (run 2; run 1 red only on the known medical-disclose `ckd` collision). `deferred-work.md`: 13 "being built" legs → "Closed by `89add5ee`"; one new "Not addressed" item (the gate's namespace-shape limit). Status → review; row → `review`; ledger `2026-11-01r`. Not pushed. |
 | 2026-11-01 | v1.7 | `bmad-dev-story` started: Task 0.1 DONE (re-grep — `origin/main` `36b489c9` unmoved; `0195` / v57 free; ledger `q` next; G1 re-verified) and Task 0.4 DONE (the `-433` records: `deferred-work.md` legs + a 12-2 carried section, epics.md INHERITED FROM 12.2 ×3, ADR-0044 amendment lines ×6, tone-checklist routing row, roster Row 26 note) — Task 0 complete. Row `ready-for-dev` → `in-progress`. Ledger `2026-11-01q`. No code. |

@@ -496,30 +496,46 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
    lists ONLY the DL5 migration, `migrations/meta/_journal.json`, `schema/claim_documents.ts`, `schema/claim_death_certificate_uploads.ts`
    (comment-only), `member/anonymize.ts` and `schema/claim_fraud_investigation_steps.ts` (comment-only, DL6 — DL0 A only), the D8 spec
    and the new guard spec; and `git grep -niP "\bpan_|_pan\b|aadhaar_(number|token|hash)|uid_token|father_?name" -- packages apps`
-   (⚠ `-P`: this machine's `git grep -E` ignores `\b` and matches nothing — TR10) returns exactly the two baseline hits
-   (`aadhaar_number` in `custom-fields/frozen-governance.test.ts` and `frozen-governance.spec.ts`) and nothing else; record the output.
+   (⚠ `-P`: this machine's `git grep -E` ignores `\b` and matches nothing — TR10) returns exactly the FOUR baseline hits — the
+   custom-field forbidden-label vocabulary: one comment in `custom-fields/frozen-governance.ts` (`pan_number`), two fixtures in
+   `tests/custom-fields/frozen-governance.test.ts` (`aadhaar_number`, `member_pan`), one in
+   `tests/integration/custom-fields/frozen-governance.spec.ts` (`aadhaar_number`) — and nothing else; record the output.
 8. **AC8 — The story's own Policy-meaning note stands** (no predicate here) and the DRAFTED predicate sentence is carried, verbatim, into
    row `6-22e`'s comment block so its build re-checks it.
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST, no code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `b7b43c47` is an ancestor of HEAD (rebase onto a moved `origin/main` — ledger-only conflicts,
+  - [x] 0.1 `git fetch origin`; confirm `b7b43c47` is an ancestor of HEAD (rebase onto a moved `origin/main` — ledger-only conflicts,
         branch on top, [[project_rebase_ledger_conflict_separator]]); `git diff --name-only b7b43c47 origin/main -- apps packages scripts`
         — re-derive G3, G8, G10–G13 if anything under `claim/`, `schema/claim_documents*`, `kyc/`, `anonymize.ts` or `migrations/` moved;
         `git log b7b43c47..origin/main -- .decision-log.md _bmad-output docs` — read any new entry (⚠ a counsel return or a Panel ruling
         on the 6.22 note changes PQ2's framing). Re-read TR4's numbers on EVERY branch and worktree. CHECK LIVE W5's commencement date (a
         notified change moves C1's "before commencement" half). `ListAgents` + `git branch --show-current` before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL0–DL7 to BigDev, specifically: DL0's option; DL1's C1–C8 wording (C8 in or out); DL2's design (PAN only — the PQ5
+        ⭐ 2026-11-02 — DONE: `origin/main` = `b7b43c47` (unmoved; ancestor of HEAD; ⛔ code or governance diff); decision `-440` free on
+        every ref and all six worktrees; migration top `0198`; ledger letters to `02d` (this branch); W5's commencement re-checked
+        (13 May 2027; ⛔ notified amendment at the 2026-09-28 tracker — re-check before SENDING the counsel question).
+  - [x] 0.2 Put DL0–DL7 to BigDev, specifically: DL0's option; DL1's C1–C8 wording (C8 in or out); DL2's design (PAN only — the PQ5
         narrowing; father's name); DL5's option. Record the answers here verbatim.
-  - [ ] 0.3 ⭐ **THE ROW'S FIRST TASK — WRITE the counsel question** (DL1) as answered. Re-run every W-fact's source once (a dead link or a
+        ⭐ 2026-11-02 — BigDev: *"DL0–DL7 accepted as written"* ⇒ DL0 **A** (the build moves to `6-22e`); DL1 C1–C8 as worded, **C8 in**;
+        DL2 (i)–(vi) as written (PAN only, put to the Panel as PQ5; father's name collected for the human review); DL3 as written; DL4 as
+        written; DL5 **A** (the BEFORE DELETE guard); DL6's labels and words as written; DL7's fence as written.
+  - [x] 0.3 ⭐ **THE ROW'S FIRST TASK — WRITE the counsel question** (DL1) as answered. Re-run every W-fact's source once (a dead link or a
         changed rule is corrected in the file, with a dated line saying what moved — [[feedback_record_unattested_no_backfill]]); list
         the URLs. WRITTEN, ⛔ sent.
-  - [ ] 0.4 WRITE the Panel note (DL3) from the template by path; run the template's §E4 commands; WRITTEN, ⛔ sent. Re-read
+        ⭐ 2026-11-02 — WRITTEN: `_bmad-output/planning-artifacts/counsel-question-2026-11-02-fraud-register-identifier-set.md` —
+        questions 1–8 (= C1–C8, C8 in), the DL2 design in *The situation*, the W-facts as "our own understanding", the sources with
+        URLs (re-read 2026-11-02; the ITD statistics PDF, the RBI's own copy and post-September Gazette notices ⛔ reached — named in
+        the file). ⛔ Sent.
+  - [x] 0.4 WRITE the Panel note (DL3) from the template by path; run the template's §E4 commands; WRITTEN, ⛔ sent. Re-read
         [[feedback_told_line_must_not_carry_panel_choice]]: TL1–TL3 choose nothing, and none says counsel "is asked". Commit the counsel
         question and the note TOGETHER as `records(6.22b): counsel question + Panel note — WRITTEN, ⛔ sent` BEFORE Task 0.5 (the
         decision cites their paths).
+        ⭐ 2026-11-02 — WRITTEN: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-02-6-22b-identifier-set.md` — the
+        note's Q1–Q5 = PQ1–PQ5, *Told* 1–3 = TL1–TL3, the 6.22 note's Q2 referenced with a send-together line, the send order (counsel
+        question first or with it). Template §E4 RUN — two drafted results were WRONG before running (command 3 returns FOUR lines, ⛔
+        two — which also corrected AC7's baseline) and are corrected from the real output. ⛔ Sent.
   - [ ] 0.5 Decision entry (DL4) — the next free number READ LIVE; committed ALONE as `governance(6.22b): …`.
   - [ ] 0.6 Records (DL0, DL6): the new row (DL0 A) with its comment block; every DL6 line except the code comments (Task 1.2);
         `epics.md` 6.22b; ⛔ a ledger entry here — the create wrote `2026-11-02c`, and the next one is written at the story's close

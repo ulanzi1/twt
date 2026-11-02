@@ -536,10 +536,19 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
         note's Q1–Q5 = PQ1–PQ5, *Told* 1–3 = TL1–TL3, the 6.22 note's Q2 referenced with a send-together line, the send order (counsel
         question first or with it). Template §E4 RUN — two drafted results were WRONG before running (command 3 returns FOUR lines, ⛔
         two — which also corrected AC7's baseline) and are corrected from the real output. ⛔ Sent.
-  - [ ] 0.5 Decision entry (DL4) — the next free number READ LIVE; committed ALONE as `governance(6.22b): …`.
-  - [ ] 0.6 Records (DL0, DL6): the new row (DL0 A) with its comment block; every DL6 line except the code comments (Task 1.2);
+  - [x] 0.5 Decision entry (DL4) — the next free number READ LIVE; committed ALONE as `governance(6.22b): …`.
+        ⭐ 2026-11-02 — DONE: Decision `2026-11-02-440` (author-commit) committed ALONE as `8c088b76` (`-440` re-grepped free on every
+        ref and worktree; `origin/main` `b7b43c47`).
+  - [x] 0.6 Records (DL0, DL6): the new row (DL0 A) with its comment block; every DL6 line except the code comments (Task 1.2);
         `epics.md` 6.22b; ⛔ a ledger entry here — the create wrote `2026-11-02c`, and the next one is written at the story's close
         (Task 2.3, [[project_sprint_status_ledger]]). Commit as `records(6.22b): …`.
+        ⭐ 2026-11-02 — DONE: row `6-22e-fraud-register-identifier-collection-filer-bans-and-deletion` minted `backlog` (scope verbatim
+        from `-438` item 1, the gates, the drafted predicate verbatim, E1–E10 verbatim; rows 306 → 307, plain `yaml.safe_load`); the
+        `6-22b` block's dated pointer; `deferred-work.md` — the counsel-question item and the nominee-ban (Q2) item, each a dated
+        line in DL6's words; roster Row 47 — (f)'s WRITTEN half in `closure_evidence_link`, one dated notes line covering leg (h) and
+        the notes' *"carry their own go-live conditions"*; `epics.md` — the 6.22 blockquote's pointer and a Story 6.22b entry.
+        ⚠ DL6's 6.21 CASCADE line (*"Closed by 6.22b DL5 …"*) is ⛔ written here — it names an edit that does not exist yet; Task 1.5
+        writes it once the guard is built ([[feedback_closure_language_precision]]).
 - [ ] **Task 1 — The certificate guard (DL5; AC4, AC5)** — skip with a banner if DL5 C ([[project_story_automator_ops]]: an unchecked
       box means "correctly not done").
   - [ ] 1.1 Migration `<next free>_claim-documents-death-certificate-delete-guard.sql`, HAND-WRITTEN (⛔ `db:generate` — drizzle
@@ -561,6 +570,9 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
         hand and recorded in the Debug Log.
   - [ ] 1.4 TR1: keep the D8 test's assertion (the determination's review link becomes NULL); fire its DELETE from a pg_temp trigger
         (TR1's recipe) — ⛔ delete the claim instead (the determination cascades away with it), ⛔ `ALTER TABLE … DISABLE TRIGGER`.
+  - [ ] 1.5 Once 1.1–1.4 are green: append DL6's line under `deferred-work.md`'s 6.21 item *"A future `-240` cl.1 closure-time
+        deletion of `claim_documents` rows would CASCADE"* — *"Closed by 6.22b DL5 — a guard refuses deleting a death certificate's
+        row except with its claim."* (dated, naming the migration).
 - [ ] **Task 2 — Verification and close (AC5–AC8)**
   - [ ] 2.1 `pnpm typecheck` (turbo), the domain integration suite, then `ci:local` on a FRESH container with `DATABASE_URL` set to it
         ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]] #18).

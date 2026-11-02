@@ -456,6 +456,7 @@ Four items the round-2 review (baseline `b7b43c47`, HEAD `99010844`) found real 
   with the ruling. Carries `-147` cl. 3's re-examination (`-438`). ⚠ GO-LIVE condition for the guilty arm. Trigger: Q1's ruling.
 - **Q2 (PQ2) — the nominee of a guilty member: banned automatically or only on a finding of their own** — built neither; suggested B.
   Lands in row `6-22b`. Trigger: Q2's ruling.
+  - *Appended 2026-11-02 (Story 6.22b Task 0.6; `2026-11-02-440` item 1):* Resolved via explicit deferral to `6-22e` (DL0); the question is the 6.22 note's Q2, ⛔ re-asked.
 - **Q3–Q6 (PQ3–PQ6) — may a mobile number bar; what a barred joiner is told; who is "the State Trustee" who imposes; does "Trust-wide"
   end other memberships** — built nothing; suggested C, B, A, A. ⚠ They gate row `6-22d`'s BUILD. Trigger: their rulings.
 - **Q7 (PQ7) — an open fraud flag gates nothing; a flagged claim can be approved and paid before a finding** [`assertClaimApprovable`
@@ -468,6 +469,7 @@ Four items the round-2 review (baseline `b7b43c47`, HEAD `99010844`) found real 
 - **Row `6-22b`'s counsel question is OWED and ⛔ WRITTEN** [`-238` counsel gate (a) §17(1)(c) indefinite retention about NON-members,
   (b) whether a UID token is obtainable, (c) Aadhaar Data Vault obligations; ⛔ counsel-question file exists] — the Panel was told twice
   the register *"waits on legal advice"*. Owner BigDev (writes) / counsel. Trigger: row `6-22b`'s create-story — its FIRST task.
+  - *Appended 2026-11-02 (Story 6.22b Task 0.6; `2026-11-02-440` item 2):* WRITTEN 2026-11-02 (`_bmad-output/planning-artifacts/counsel-question-2026-11-02-fraud-register-identifier-set.md`), ⛔ sent — owner BigDev (sends); trigger: the send. Not addressed: the answer.
 - **A released member is still "reported" outside peer-mesh** [`-438` item 11; `member/known-people.ts` `namedByClaimSql` — "People who
   know me", the unavailable prompts, `listRequestsNamingMe` / `answerKnownPersonRequest`, `nominee/member-links.ts` × 5] — a member found
   innocent re-enters the peer-mesh five (DL11) but keeps being treated as reported dead by known-people and nominee links. A NAMED

@@ -4097,6 +4097,9 @@ WHY with a read-back prompt, the app ONE calm message with ⛔ reason on screen 
 > succession) and `6-22d` (refer → impose → lift and the member ban). `epic-6-retrospective` is `done`; adding a story here is the same
 > deliberate act as Stories 6.17, 6.18 and 6.20 — ⛔ do not "correct" the placement and ⛔ do not flip the retrospective back. Nine
 > edges are routed as ONE non-blocking note (Q1–Q9, WRITTEN 2026-11-01); four are go-live conditions (roster Row 47).
+>
+> ⭐ 2026-11-02 — `6-22b` writes the questions and the certificate guard; the build moved to `6-22e` (6.22b DL0,
+> [`-440`](../../.decision-log.md#decision-2026-11-02-440) item 1).
 
 As a member who has been wrongly reported dead, and the helpline operator and District Admin who look into such a report,
 I want a recorded investigation that ends in one of the two findings the Panel ruled — and only once the member has been confirmed alive:
@@ -4114,6 +4117,32 @@ stands, and the claim is CLOSED through the closure core (its live processes end
 account held frozen in all three overlay readers (a declared narrowing, Q1); an `approved` / `settled` claim keeps its state (row
 `6-22c`); a member found innocent re-enters the peer-mesh five; the override refuses a closed claim; staff see *"Closed — the member was
 found alive"*; ⛔ notice, ⛔ appeal, ⛔ ban, ⛔ identifier, ⛔ member-facing screen.
+
+### Story 6.22b: The Fraud Register's Identifier Set — Counsel's Question Written First, the Panel's Five Questions Put, and a Death Certificate's Record Made Undeletable `[GOVERNANCE]` `[PRIMITIVE]`
+
+> ⚠ **Minted by an author-commit splitting a Trustee-ruled row, ⛔ not by the original epic plan** — the row
+> `6-22b-fraud-register-identifier-set-and-filer-bans` was minted on **2026-11-01** by
+> [`-438`](../../.decision-log.md#decision-2026-11-01-438) item 1 (Story 6.22 DL0), carrying the counsel-gated identifier set of
+> [`-238`](../../.decision-log.md#decision-2026-09-21-238) cl. 6 and [`-240`](../../.decision-log.md#decision-2026-09-21-240) cl. 1–3, 6.
+> [`-440`](../../.decision-log.md#decision-2026-11-02-440) (author-commit, 2026-11-02) keeps here only the questions and one
+> counsel-free guard, and moves the build to row `6-22e-fraud-register-identifier-collection-filer-bans-and-deletion` (⚠ counsel-gated).
+> `epic-6-retrospective` is `done`; this placement is deliberate, as for 6.22 — do not "correct" it. Five edges are routed as ONE
+> non-blocking note (Q1–Q5, WRITTEN 2026-11-02); eight questions go to counsel in ONE letter (WRITTEN 2026-11-02). Both ⛔ sent.
+
+As the Trust, which the Panel has told to keep a register of people found to have committed fraud on a death claim and to bar them from
+filing again — and as the families who file those claims,
+I want the legal question that gates the register written down and ready to send to counsel, the choices the rulings leave open put to
+the Panel, and the one certificate trap closed now,
+so that nothing is collected from a grieving family, kept about a stranger, or used to bar anyone until the Trust knows it may lawfully
+do so — and the build that follows is built on answers, not on a design that may not be possible.
+
+**Acceptance Criteria (in brief — the full set is in
+`_bmad-output/implementation-artifacts/6-22b-fraud-register-identifier-set-and-filer-bans.md`):** the counsel question (eight questions,
+the PAN-only design stated, research given as "our understanding") and the Panel note (Q1–Q5, Told 1–3) are WRITTEN and ⛔ sent; the
+decision is committed alone before any code; a `BEFORE DELETE` guard on `claim_documents` refuses deleting a `death_certificate` row
+except in the cascade from its claim (`-243` cl. 2), proven live as superuser with its message, controls that pass, and the D8 test kept
+without DDL on a shared table; row `6-22e` minted with the scope, the gates, the trace list and the drafted predicate; ⛔ identifier
+column, contract, copy, port or flag; ⛔ bar, ban, deletion or member-facing change.
 
 ### Story 6.39: Before Any Drive Opens, Staff Check That the Person Who Died Is the Member — When Nobody Has Checked Their Identity — and That the Joining Fee Was Paid Before the Death `[PRIMITIVE]` `[SURFACE]`
 

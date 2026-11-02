@@ -21627,6 +21627,7 @@ development_status:
   # innocent-outcome investigation NOTES fall in it — DL15). ⭐ Its FIRST task is to WRITE the counsel question (G15) — not written today.
   # ALSO: who may originate a flag on a claim about a member who DID die (`-238` "NOT covered (iii)" — the post-death originator, to be
   # put to the Panel); the 6.21 `claim_documents` CASCADE item (6.22 DL16 — resolved via explicit deferral here).
+  # ⭐ 2026-11-02 — story file `6-22b-fraud-register-identifier-set-and-filer-bans.md` exists (the *"No story file yet"* line above is stale); questions written (counsel question + Panel note, WRITTEN, ⛔ sent); the build moved to `6-22e` (DL0, `2026-11-02-440` item 1). `6-22b` builds only the certificate guard (`-440` item 5).
   6-22b-fraud-register-identifier-set-and-filer-bans: ready-for-dev
   # ⭐ Minted 2026-11-01 by `2026-11-01-438` item 1 (Story 6.22 DL0). ⛔ No story file yet.
   # DL0, verbatim: the `nominee_disqualified` producer (6.20's D17(c) re-rank is built, no caller; G2 (c)), the State Trustee's payment
@@ -21636,6 +21637,53 @@ development_status:
   # writer's defects (`recordNomineeDisqualificationFinding` — untargeted conflict, `Db` not a client, ⛔ claim event, ⛔ state window, ⛔
   # rank-exists check) are fixed with its producer.
   6-22c-disqualified-nominee-and-proof-of-succession: backlog
+  # ⭐ Minted 2026-11-02 by `2026-11-02-440` item 1 (Story 6.22b DL0 A — BigDev *"DL0–DL7 accepted as written"*). ⚠ COUNSEL-GATED (`-238`
+  # (a)–(c)) — ⛔ build before counsel's answers are recorded. ⛔ No story file yet — flips via bmad-create-story.
+  # SCOPE, verbatim from `-438` item 1 (row `6-22b`'s, moved whole): *"PAN / Aadhaar-token collection, the PAN service, the bar at
+  # filing, bans on nominees and claimants (Q2), the post-death investigations whose guilty are filers (`-240` cl. 6), the `-240` cl. 1
+  # deletion"* — with `-440` item 1's gloss: the bar at filing on an exact identifier and the human review on a name / date-of-birth /
+  # father's-name match (`-240` cl. 2–3).
+  # GATES: counsel questions 1–7 (`counsel-question-2026-11-02-fraud-register-identifier-set.md`, WRITTEN, ⛔ sent) answered and
+  # recorded; the Panel's Q1–Q5 (`trustee-panel-routing-note-2026-11-02-6-22b-identifier-set.md`, WRITTEN, ⛔ sent) ruled; the 6.22
+  # note's Q2 (a guilty member's nominee) ruled. The DESIGN put to counsel is `-440` item 4 — proposed, ⛔ adopted (item 4 (i), PAN only,
+  # narrows `-238` cl. 6 ⇒ Q5).
+  # POLICY MEANING (AI-10-1) — DRAFTED by 6.22b, verbatim; re-check against the Niyamavali and re-write with the build: *"If an
+  # investigation has found that you took part in a false death claim, you cannot file — or be paid on — another death claim with the
+  # Trust, under any number, for as long as the ban stands; a claim from someone whose name, date of birth and father's name only
+  # resemble yours is held for a person to check, never refused on the resemblance alone."*
+  # ITS TRACE LIST — Story 6.22b's E1–E10, verbatim (a bare `Gn` / `Nn` there is 6.22b's):
+  # - **E1 — Where the bar sits.** Intake carries no claimant identity and the filer is not authenticated as themselves (G3, G4); the door
+  #   (`claim/intake-door.ts` `resolveClaimIntakeDoor`) keys on the DECEASED and runs once per death. A filer bar fits the CONTACT step
+  #   (`writeClaimContact`, after the mint) or a new pre-intake step — and "refuse" vs "hold for review" is PQ2 / `-240` cl. 3's.
+  # - **E2 — Every mint path.** `tryConverge` (first report, same-channel 3b, cross-channel 3c) and `overrideIntakeAttempt` both mint; a bar
+  #   must cover all, and a merged attempt (`convergeIntakeAttempt`) brings a second filer onto one claim.
+  # - **E3 — The index.** A Trust-wide keyed HMAC blind index (a NEW field class in a GLOBAL namespace — global like the login mobile index's
+  #   `MEMBER_IDENTITY_NAMESPACE` (`encryption/field-classes.ts`), but ⛔ reusing it; ⛔ per-Pariwar like the claim-side
+  #   `CLAIM_CONTACT_MOBILE_FIELD_CLASS` (run under the claim's `pariwarId` in `correction-crypto.ts`), whose comment explains why a
+  #   claim-side index must never reuse the login hash — it would make rows joinable to a member's identity); batch-audit rules
+  #   ([[project_kms_audit_per_hmac_global_lock]]); erasure keeps it only where `-240` cl. 1 keeps the record.
+  # - **E4 — The PAN port.** The port in `packages/contracts` (the usual home — G7) or `packages/platform-adapters/src/pan-verification/`
+  #   (the `bank-ifsc-lookup` shape), an in-memory stub + vendor adapter, selection in
+  #   `deps.ts`, a boundary gate like `scripts/kyc-provider-boundary/`; the vendor named in a recorded decision and the processor inventory
+  #   (G15); fail mode per PQ2; decide whether production may ever run on the fixture (G7 — today an absent secret selects it).
+  # - **E5 — Fuzzy-name copy** (`-240` author-commit (b)): a "did not match" result is member-facing at the worst moment — UX-DR55's three
+  #   parts (what, what next, helpline), `pnpm microcopy:check` + `pnpm i18n:check`, en + hi in `packages/i18n/locales/*/claim.json`.
+  # - **E6 — The post-death investigation** (PQ4): a NEW subject (the filer), ⛔ a reuse of `claim_fraud_investigation_steps`'
+  #   `found_guilty` (G8 — it would freeze the dead member); its outcomes, originator and finder per PQ4; the `-239` denial and the forged-
+  #   certificate warnings (G10) are where the discovery happens.
+  # - **E7 — The deletion** (PQ3, C7): a SCRUB, ⛔ a row DELETE (every guard admits only cascades — G13): Tier-1 → sentinel / NULL, the blind
+  #   index → NULL, column `GRANT UPDATE` + a per-command UPDATE policy + the guard function REPLACED whole ([[project_append_only_guard_names_erasure_columns]]);
+  #   blobs deleted after COMMIT, best-effort (the `anonymize.ts` memorial-photo precedent); a new audit type, and an audit path for a JOB
+  #   (none exists); a trigger event for "the claim closed with no finding" (none exists — G11); `claim_contacts`, `claim_contact_nominees`,
+  #   `claim_nominee_bank_accounts` are in scope ONLY if the Panel / counsel read "identity documents" that wide — ⛔ assume it. Certificates
+  #   never (`-243`; DL5's guard).
+  # - **E8 — Erasure** for every new Tier-1 column (`member/anonymize.ts`; *"a Tier-1 column that is NOT in this file SURVIVES an erasure"*;
+  #   `rtbf-anonymize.test.ts` counts tables) and a retention-matrix row (out of repo — a roster leg).
+  # - **E9 — One ban table, shared with `6-22d`.** `-238` NOT covered (ii): the ban keys on an IDENTIFIER, ⛔ `member_id`; `6-22d` builds the
+  #   MEMBER ban. Design them together or the Trust holds two registers.
+  # - **E10 — The nominee** (the 6.22 note's Q2): a nominee is *"caught at the moment they come forward to claim"* (`-240` cl. 2) — but a
+  #   nominee never authenticates (G5); "coming forward" today is the payee's bank details typed by the filer.
+  6-22e-fraud-register-identifier-collection-filer-bans-and-deletion: backlog
   # ⭐ Opened 2026-09-28 by `2026-09-28-261` / `-262` / `-263` (the Panel's answers to the 6.20 confirmation note + eleven follow-ups,
   # Dhiraj Rahul + Kalpana Bharti). ⛔ None reopens 6.20 (`done`). ⛔ No story file yet — each flips via bmad-create-story.
   #   6-23 — D1 B (warn on a post-death version) · FQ1 B (a correction is LABELLED, not warned) · FQ2 A (approve over the warning = reason + note)

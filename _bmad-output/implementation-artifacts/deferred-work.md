@@ -4,6 +4,21 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, round 2 — the full diff (2026-11-02)
+
+- **RD8 — the sticky freeze adds a second un-indexed `events_log` payload scan to the directory predicate** [`packages/domain/src/member/overlay.ts`
+  `stickyFrozenMemberSql`; `packages/domain/src/member/directory-read.ts` `NOT_DECEASED`] — NOT ADDRESSED (pre-existing shape). `NOT_DECEASED`
+  already runs a correlated `events_log` scan on `lower(payload ->> 'deceased_member_id')` per directory row with no expression index (migration
+  0001 indexes `(pariwar_id, stream_id, event_version)` and `(pariwar_id, occurred_at)` only); 6.22 adds one more `EXISTS` of the same shape.
+  Unmeasured. Trigger: the Member Directory going live (Row 17) or any directory latency report — EXPLAIN with a seeded `events_log`
+  ([[project_explain_index_cond_single_element_trap]]) and consider one expression index serving both legs.
+- **RD9 — the helpline APPEAL list's `closed_member_alive` and `closed_holder_refused` are false by construction** [`apps/api/src/modules/claims/claims.appeal.handlers.ts`;
+  `packages/domain/src/claim/appeal-eligibility.ts` `HELPLINE_APPEAL_LISTED_STATES`] — NOT ADDRESSED (pre-existing since 6.28 for
+  `closed_holder_refused`; 6.22 added the second bit beside it). The list carries only `denied` / `appeal_stage_*` claims, and both bulk reads
+  answer only for `closed` claims, so both bits are always `false` on that response and `HelplineAppeal.tsx`'s closed-label arm never
+  renders. Harmless today; found while pinning `closed_member_alive` over HTTP (6.22 round 2, R2-2). Trigger: the next change to that
+  list's states or to its DTO — either drop the two bits from the response or list closed claims deliberately.
+
 ## Deferred from: patch-diff review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, the three chunks' patches together (2026-11-02)
 
 - **RD5 — widening `step` in row `6-22d` must widen the generated `finding_kind` in step** [`claim_fraud_investigation_steps` (migration 0198);
@@ -11,7 +26,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   without a matching branch gets a NULL `finding_kind`, and a MATCH SIMPLE foreign key then enforces nothing for that row — silently. Not a defect
   today: three step values, all mapped. Trigger: row `6-22d` widens `FRAUD_INVESTIGATION_STEPS` — extend the `CASE` (SQL and TS together), add a
   CHECK that `finding_id` and `finding_kind` are NULL together, and a test that walks the tuple.
-- **RD7 — five small staff-facing rough edges seen in the 2026-11-02 browser pass (none fixed; none a regression of this story)** — (1) the work-list's Open buttons are named from state + filed date, so two claims in the same state filed in the same minute get IDENTICAL accessible names; (2) the red "Choose a finding, …" / "Write a note before flagging." line stays on screen after the form is complete, until the next submit (the `aria-invalid` marks do clear); (3) the finding's result line sits BELOW the other-claims block in reading order; (4) a GUILTY result reads "No other claim keeps this member's death recorded." directly above "The member's record stays locked." — both true under the declared narrowing (Panel Q1), but a reader may find the pair puzzling: a copy question for the Q1 ruling; (5) the OLDER banner "Another claim for this death (claim …) has been paid. This claim should be closed." still shows on claim A AFTER the finding closed it, because the other claim is merely `approved` (payment committed, not paid) — it predates 6.22 and is keyed to the payment-committed state, not to anything this story changed. Trigger: the next pass over the staff verifier console's wording, or the Panel's Q1 / Q7 rulings.
+- **RD7 — five small staff-facing rough edges seen in the 2026-11-02 browser pass (none fixed; none a regression of this story)** — (1) the work-list's Open buttons are named from state + filed date, so two claims in the same state filed in the same minute get IDENTICAL accessible names; (2) the red "Choose a finding, …" / "Write a note before flagging." line stays on screen after the form is complete, until the next submit (the `aria-invalid` marks do clear); (3) the finding's result line sits BELOW the other-claims block in reading order; (4) a GUILTY result reads "No other claim keeps this member's death recorded." directly above "The member's record stays locked." — both true under the declared narrowing (Panel Q1), but a reader may find the pair puzzling: a copy question for the Q1 ruling; (5) the OLDER banner "Another claim for this death (claim …) has been paid. This claim should be closed." still shows on claim A AFTER the finding closed it, because the other claim is merely `approved` (payment committed, not paid) — it predates 6.22 and is keyed to the payment-committed state, not to anything this story changed. Trigger: the next pass over the staff verifier console's wording, or the Panel's Q1 / Q7 rulings. ⚠ *[Filing note 2026-11-02, 6.22 code review round 2 R2-15 (d): RD7 came from the post-commit browser pass (story v1.13, "Verification after the commits"), ⛔ the patch-diff review it is filed under; left in place so its id keeps resolving.]*
 - **RD6 — the focus-on-status pattern (RC5) is un-attested with a screen reader** [`FraudInvestigationPanel.tsx`, `HelplineFraudFlag.tsx`] — focus
   moves onto an element that is also a `role="status"` live region receiving new text in the same commit; some readers may speak the result twice.
   No assistive technology was run in the review session: carried as a RISK, ⛔ asserted either way. Trigger: the real-browser re-run roster Row 47
@@ -77,6 +92,9 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **An intake attempt parked beside a claim later found-alive-closed stays `pending` for ever** [6.22 DL9 (f); `icp.ts`
   `overrideIntakeAttempt`] — it has ⛔ candidate and cannot be overridden onto a `closed` claim; it stays as history (the RF2 precedent,
   *"the attempt row stays as history"*). A named residual, pinned by a 6.22 test. Trigger: a staff report of a stuck attempt.
+  ⚠ *Widened 2026-11-02 (6.22 code review round 2, R2-5):* the same holds beside a claim CLOSED for ANY reason (a suspicion-appeal close, a
+  death already finally approved, …) — the override refuses every `closed` against-claim (`-438` item 8's words), so such an attempt also
+  stays `pending` as history; the family's NEW report mints a claim as before. Pinned for a non-fraud close too.
 - **The real-browser pass of the 6.22 staff surfaces is UN-ATTESTED** [`FraudInvestigationPanel.tsx`, `HelplineFraudFlag.tsx`,
   `FraudInvestigationsRoute.tsx`] — 2026-11-01 (`bmad-dev-story 6.22`, Task 6): the Chrome extension answered *"Browser extension is
   not connected"* and ⛔ browser was listed; ⛔ pass was run and ⛔ result is claimed. Proven instead: the component tests (9) and the

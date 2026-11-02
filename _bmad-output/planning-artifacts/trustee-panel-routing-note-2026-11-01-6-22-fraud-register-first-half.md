@@ -53,7 +53,7 @@ claim before staff are sure (Q7), what the family is told after (Q8), and what h
 
 On 30 and 31 October you ruled that a member reported dead may erase their data, and may leave the Trust, once *"the report [is] closed
 because the member is alive"*. A member found **guilty** — who took part in a false report of their own death — is alive, and we close
-their false claim so it can never be paid. So your words, read literally, lift their locks too.
+their false claim — unless it had already been approved or paid, which this build does not stop (see Q7). So your words, read literally, lift their locks too.
 
 **The one fact:** lifting means a member just found to have faked their own death could have their data **erased** and **leave** the Trust
 before any ban exists — and erased data cannot be banned later.
@@ -61,7 +61,7 @@ before any ban exists — and erased data cannot be banned later.
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
 | **A** | **Lift on either finding** — your words as written. | A member found guilty is treated like an innocent one: they may leave, erase their data, and they appear on the public Member Directory as an ordinary member again. | They may erase and leave before the ban (Q3–Q6) is built. The Trust's own record of what they did could be erased with them. |
-| **B** | **Lift on innocence only** (as built — our suggestion). A guilty member's claim is closed so nothing is paid, but their record stays as it was while the report stood: they cannot leave or erase, and they stay off the public Member Directory. | Nothing changes for an innocent member. A guilty member stays locked until the ban is decided. | It narrows your 30 and 31 October words, which is why it comes back to you. A member **wrongly** found guilty stays locked for ever: as built there is no appeal against a finding, and a claim can have only one finding. |
+| **B** | **Lift on innocence only** (as built — our suggestion). A guilty member's claim is closed (unless it had already been approved or paid — see Q7), but their record stays as it was while the report stood: they cannot leave or erase, and they stay off the public Member Directory. | Nothing changes for an innocent member. A guilty member stays locked until the ban is decided. | It narrows your 30 and 31 October words, which is why it comes back to you. A member **wrongly** found guilty stays locked for ever: as built there is no appeal against a finding, and a claim can have only one finding. |
 | **C** | **Lift on guilt only once the ban is imposed or declined.** | As B until the ban is decided; then the member is either banned or released. | The ban is not built yet, so until it is, C behaves exactly as B. |
 
 **Our reading:** **B** — **because** your September ruling keeps the records of the guilty (*"only the guilty are kept"*), and lifting the
@@ -179,7 +179,7 @@ ever. ⚠ The flag must not go live while C stands.
 
 # Q8 — After the finding: is the family told, may they appeal, may they file again?
 
-When the investigation confirms the member is alive, the claim is closed. No ruling covers what follows. You have ruled both ways on
+When the investigation confirms the member is alive, the claim is closed (unless it had already been approved or paid — see Q7). No ruling covers what follows. You have ruled both ways on
 telling a family their claim was closed: when an appeal closes a nominee's claim, she is texted once (*"Your claim for [member] has been
 closed. Please call the helpline."*); when a claim is closed because another claim for the same death goes ahead, no text is sent and the
 app shows the claim as closed.
@@ -260,6 +260,8 @@ finding must not go live until this is ruled and the built list matches it.
   family is not told, that staff decide what proof is enough). Each decides who is paid or told, so each is now a question.
 - **Corrected in this note:** an earlier draft promised that *"no claim on a living member is ever paid"*. That was false — a flagged claim
   can be paid before the finding (Q7), and a claim already approved when the member is found alive is not stopped. Both are now stated.
+  A second pass (the code review of 2 November) found the same promise still written in three guilty-member sentences — Q1's opening, option
+  B's row and the closing summary — and corrected them: a guilty member's claim is closed **unless it had already been approved or paid**. A third pass (the review of those corrections) made the innocent-member sentences in Q8 and the closing summary say the same.
   An earlier draft also let the District Admin both flag and find; that would have narrowed your two-person chain, so the flag is now the
   helpline's alone (Told, 5).
 - **Still uncertain:** whether your 30 October words *"closed because the member is alive"* were meant to reach a guilty member at all — Q1
@@ -271,8 +273,8 @@ finding must not go live until this is ruled and the built list matches it.
 
 Someone can report a member dead while the member is alive — by mistake, or to collect money. Today that member is frozen out of their own
 record for ever. We are building the investigation you ruled on: the helpline flags the claim; a District Admin, a different person,
-confirms the member is alive and finds them innocent or guilty. An innocent member is released at once and the false claim is closed. A
-guilty member's claim is also closed, so nothing is ever paid on it.
+confirms the member is alive and finds them innocent or guilty. An innocent member is released at once and the false claim is closed (unless it had
+already been approved or paid — Q7). A guilty member's claim is also closed — on the same condition, which this build does not stop (Q7).
 
 We suggest: a guilty member stays locked until the ban is decided, so they cannot erase their record and leave (Q1 B); a nominee is barred
 only if found to have taken part (Q2 B); no ban by mobile number, which strangers inherit (Q3 C); a barred person is told only to call the

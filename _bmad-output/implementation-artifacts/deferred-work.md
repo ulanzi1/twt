@@ -4,6 +4,43 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: patch-diff review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, the three chunks' patches together (2026-11-02)
+
+- **RD5 — widening `step` in row `6-22d` must widen the generated `finding_kind` in step** [`claim_fraud_investigation_steps` (migration 0198);
+  `schema/claim_fraud_investigation_steps.ts`] — the generated column's `CASE` has no `ELSE`, so a new FOUND step value added to the TEXT CHECK
+  without a matching branch gets a NULL `finding_kind`, and a MATCH SIMPLE foreign key then enforces nothing for that row — silently. Not a defect
+  today: three step values, all mapped. Trigger: row `6-22d` widens `FRAUD_INVESTIGATION_STEPS` — extend the `CASE` (SQL and TS together), add a
+  CHECK that `finding_id` and `finding_kind` are NULL together, and a test that walks the tuple.
+- **RD6 — the focus-on-status pattern (RC5) is un-attested with a screen reader** [`FraudInvestigationPanel.tsx`, `HelplineFraudFlag.tsx`] — focus
+  moves onto an element that is also a `role="status"` live region receiving new text in the same commit; some readers may speak the result twice.
+  No assistive technology was run in the review session: carried as a RISK, ⛔ asserted either way. Trigger: the real-browser re-run roster Row 47
+  (e) already owes — add one pass with a screen reader on the console panel and on the helpline flag.
+
+---
+
+## Deferred from: code review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, chunk B (2026-11-02)
+
+- **RD2 — both lists are silently bounded** [`claims.fraud-investigation.handlers.ts` `getMemberClaims` / `getOpenInvestigations`; `claim/read.ts`] — the
+  helpline's per-member list returns the newest 20 (the route has no `limit`; the cap of 50 is unreachable) and the District Admin's work-list 50
+  (cap 200) oldest-first; no `truncated` flag, no cursor. More than 20 claims naming one member needs repeated re-filing (PQ8 (c)); the work-list
+  head clears as it is worked. An old UNRELEASED claim beyond the newest 20 cannot be flagged from the UI. Trigger: the Panel's ruling on re-filing
+  (PQ8), or a member with more than 20 claims — then a `truncated` flag on both responses, with the admin's `.strict()` parse changed alongside.
+- **RD3 — a persisted `_rejected` audit row cannot recover its reason** [`apps/api/src/audit/audit-log-sink.ts`] — `audit_log_entries` keeps the
+  action, a resource locator and a hash of the context; `statusForAuthEvent` maps only `.failure` to a non-200 status. Every `_rejected` type
+  shares this; the reason is visible on the in-memory sink the tests read. Trigger: a change to the audit store's shape.
+- **RD4 — the human-actor gate credits `resolveQueueScopeStash` as a "scope" hook** [`scripts/claim-adjudication-human-actor-invariant/lib.ts`
+  `categoryFromName`] — any identifier containing "scope" counts, so removing the real `scopeResolutionHook` from a route that also uses
+  `resolveQueueScopeStash` would not turn the gate red. Pre-existing; five claims route files; the route fails closed at run time (401 without a
+  `scopeTx`). Trigger: the next change to the gate's `lib.ts`.
+
+## Deferred from: code review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, chunk A (2026-11-02)
+
+- **RD1 — the two member-finding writers are exported and carry none of the chain's controls** [`claim/nominee-lock.ts`
+  `recordMemberInnocenceFinding` / `recordMemberGuiltFinding`; in the package barrel] — they write the release (or the sticky freeze) with
+  no flag, no finder-is-not-flagger check and no proof of life, because those controls live in `recordFraudFinding`; the source fence pins
+  their kind spelling (TR2), not their callers. The only non-test caller today is `recordFraudFinding` (grep), so nothing is reachable. The
+  shape is 6.20's (it exported the writer with no producer). Trigger: any second importer — then a caller fence (a grep gate) or un-export.
+
 ## Deferred from: story 6-22-fraud-register-blacklist-instrument-and-identifier-set.md — Task 0.5 (2026-11-01)
 
 > Decision `2026-11-01-438` (author-commit). The routing note `trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md`

@@ -61,7 +61,8 @@ export function FraudInvestigationsView({ pariwarId }: { pariwarId: string }): R
         <ul className="mt-4 flex flex-col gap-3" data-testid="fraud-investigations-list">
           {items.map((item) => (
             <li key={item.claim_case_id} className="rounded border p-3 text-sm" data-testid={`fraud-investigations-item-${item.claim_case_id}`}>
-              <p className="font-medium">{labels[item.claim_state] ?? '—'}</p>
+              {/* ⛔ The trigger-blind staff label ("another claim … goes ahead", G9) is FALSE for a claim a guilty finding closed. */}
+              <p className="font-medium">{item.claim_state === 'closed' ? fraudInvestigationEn.result.closedPlain : (labels[item.claim_state] ?? '—')}</p>
               <p className="text-xs">
                 {t.flaggedOn} {formatIst(item.flagged_at)} · {t.filedOn} {formatIst(item.claim_filed_at)}
               </p>
@@ -69,6 +70,7 @@ export function FraudInvestigationsView({ pariwarId }: { pariwarId: string }): R
                 type="button"
                 className="mt-2 rounded border px-3 py-1 text-sm"
                 data-testid={`fraud-investigations-open-${item.claim_case_id}`}
+                aria-label={`${t.open}: ${item.claim_state === 'closed' ? fraudInvestigationEn.result.closedPlain : (labels[item.claim_state] ?? '—')}, ${t.filedOn} ${formatIst(item.claim_filed_at)}`}
                 onClick={() => void navigate({ to: '/p/$pariwarId/claims/$claimCaseId/verify', params: { pariwarId, claimCaseId: item.claim_case_id } })}
               >
                 {t.open}

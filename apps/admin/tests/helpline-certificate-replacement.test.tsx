@@ -97,6 +97,17 @@ describe('<HelplineCertificateReplacement>', () => {
     await waitFor(() => expect(screen.getByTestId('helpline-certificate-status')).toBeInTheDocument());
   });
 
+  it('⭐ Story 6.22 (DL10 (iii)) — the picker reads `closed_member_alive`: a claim closed because the member was FOUND ALIVE says so; its sibling does not', async () => {
+    mocked.getDeathCertificateClaimsForMember.mockResolvedValueOnce({
+      member_id: MEMBER_ID,
+      claims: [claim({ claim_case_id: CLAIM_A }), claim({ claim_case_id: CLAIM_B, claim_state: 'closed', closed_member_alive: true })],
+    });
+    renderWithClient(<HelplineCertificateReplacement pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    const alive = (await screen.findByTestId(`helpline-certificate-claim-${CLAIM_B}`)).closest('label')!;
+    expect(alive).toHaveTextContent('Closed — the member was found alive');
+    expect(screen.getByTestId(`helpline-certificate-claim-${CLAIM_A}`).closest('label')!.textContent).not.toContain('found alive');
+  });
+
   it('a successful send shows "sent, being processed" and hides the upload control until the claim/server changes', async () => {
     const missingClaim = claim({ status: 'missing', replacement_reason: null });
     mocked.getDeathCertificateClaimsForMember.mockResolvedValueOnce({ member_id: MEMBER_ID, claims: [missingClaim] });

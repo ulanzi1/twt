@@ -1108,9 +1108,11 @@ export const fraudInvestigationEn = {
   heading: 'Investigation — is the member alive?',
   show: 'Show the investigation',
   hide: 'Hide the investigation',
-  audited: 'Opening this shows staff notes; each look is recorded.',
+  // Honest for EVERY viewer: a District Admin's look decrypts and is recorded; anyone else is shown a placeholder and nothing is recorded.
+  audited: 'If you may read the staff notes, opening this shows them, and each look is recorded.',
   loading: 'Loading the investigation…',
   loadError: 'The investigation could not be loaded just now.',
+  refreshError: 'The investigation could not be refreshed just now. What is shown may be out of date.',
   notFlagged: 'This claim has not been flagged. The helpline flags a claim when someone says the member is alive.',
   step: {
     flagged: 'Flagged by the helpline',
@@ -1132,7 +1134,11 @@ export const fraudInvestigationEn = {
   youFlagged: 'You flagged this claim, so another District Admin must record the finding.',
   form: {
     legend: 'Record the finding',
-    intro: 'Record a finding only after the member has been confirmed alive. A finding closes the claim, and only one is ever recorded.',
+    intro:
+      'Record a finding only after the member has been confirmed alive. A finding closes the claim unless it is already approved or paid, and only one is ever recorded.',
+    // Shown BEFORE the write when the claim is `approved` / `settled` (N5): the finding stands but does not stop the claim.
+    committedWarning:
+      'This claim is already approved or paid. A finding will be recorded, but it will not stop the claim — it may still be paid.',
     outcomeLegend: 'Finding',
     outcome: {
       innocent: 'Innocent — the member was not part of it',
@@ -1142,13 +1148,26 @@ export const fraudInvestigationEn = {
     noteLabel: 'Note (required)',
     noteHelp: 'Say who saw the member, where and when. This note is kept with the claim.',
     submit: 'Record the finding',
+    // Restates the chosen outcome on the irreversible button (RC1).
+    submitOutcome: { innocent: 'Record: found innocent', guilty: 'Record: found guilty' } as Record<string, string>,
     submitting: 'Recording…',
     incomplete: 'Choose a finding, how the member was confirmed alive, and write a note.',
   },
   result: {
-    closed: 'The finding is recorded and the claim is closed.',
-    committed: 'The finding is recorded. This claim was already approved or paid, so it was not closed.',
-    alreadyClosed: 'The finding is recorded. This claim was already closed.',
+    // Each names the OUTCOME recorded (RC1) — a guilty finding must never read like a release.
+    closedInnocent: 'Recorded: found innocent. The claim is closed.',
+    closedGuilty: 'Recorded: found guilty. The claim is closed.',
+    committedInnocent: 'Recorded: found innocent. This claim was already approved or paid, so it was NOT closed and it may still be paid.',
+    committedGuilty: 'Recorded: found guilty. This claim was already approved or paid, so it was NOT closed and it may still be paid.',
+    alreadyClosedInnocent: 'Recorded: found innocent. This claim was already closed.',
+    alreadyClosedGuilty: 'Recorded: found guilty. This claim was already closed.',
+    notClosedInnocent: 'Recorded: found innocent. This claim was not closed.',
+    notClosedGuilty: 'Recorded: found guilty. This claim was not closed.',
+    // Decision `-438` item 6 (the declared narrowing, put to the Panel as PQ1): a guilty member stays locked.
+    guiltyStaysLocked: 'The member’s record stays locked.',
+    // `replayed: true` — the server already held this finding; what was submitted this time was not written.
+    replayed: 'This finding had already been recorded, so the first submission stands and nothing new was written.',
+    closedPlain: 'Closed',
     otherClaims: 'Other claims still keep this member’s death recorded:',
     noOtherClaims: 'No other claim keeps this member’s death recorded.',
   },
@@ -1160,6 +1179,9 @@ export const fraudInvestigationEn = {
     'fraud_investigation.missing_note': 'Write a note before recording the finding.',
     'fraud_investigation.missing_alive_confirmation': 'Choose how the member was confirmed alive.',
     'fraud_investigation.claim_not_found': 'This claim could not be found.',
+    // A retriable 409 (a claim-stream race): the form keeps the same ids, so sending it again cannot record a second finding.
+    'fraud_investigation.concurrent': 'The claim changed while the finding was being recorded. Check it and send the form again — it cannot be recorded twice.',
+    'fraud_investigation.missing_display': 'Your account has no display name yet, so it cannot record a finding. Ask the Super Admin.',
     'admin.display_name_missing': 'Your account has no display name yet, so it cannot record a finding. Ask the Super Admin.',
   } as Record<string, string>,
   refusalGeneric: 'The finding could not be recorded just now.',

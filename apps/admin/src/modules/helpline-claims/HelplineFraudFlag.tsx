@@ -5,13 +5,18 @@
 // flaggable — the shipped helpline reads drop `settled` / `denied`), with where each one's investigation stands. ⛔ No
 // claimant name, ⛔ no note on the list — ids, states and dates only.
 //
-// ⚠ DELIBERATE — the read-back gate is CLIENT-SIDE ONLY (the D5 precedent `<HelplineCertificateReplacement>` records).
-// The flag's `step_id` is minted when the form OPENS, so a retry of the same submission replays (⛔ a second flag).
+// ⚠ DELIBERATE — the read-back gate is CLIENT-SIDE ONLY (the D5 precedent `<HelplineCertificateReplacement>` records). WHY it is safe:
+// the gate protects the operator's SCRIPT (confirm who is on the phone before showing a member's claims), ⛔ the data — the server
+// authorizes the list and the flag itself (`claim.flag_fraud`, Pariwar dimension) and AUDITS every list read (`fraud_claims_read`),
+// so a bypassed gate widens nothing the operator's key does not already allow. RE-EXAMINE when the server learns the read-back (a
+// session-bound member selection), at which point this gate should call it.
+// The flag's `step_id` is minted when the form OPENS (an event handler, ⛔ render), so a retry of the same submission replays (⛔ a second flag).
 
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { useFlagClaimForFraud, useMemberFraudClaims } from '../../api/hooks.js';
+import { newUuid } from '../../api/new-uuid.js';
 import { formatIst } from '../claim-verification/NomineeDeclarationPanel.js';
 import { verifierConsoleEn } from '../claim-verification/i18n-en.js';
 import { certificateClaimOption, resolveEn } from './i18n-en.js';
@@ -25,8 +30,16 @@ function stateWords(state: string): string {
 
 /** A flag refusal in words — ⛔ never a raw code. */
 function flagRefusal(err: unknown): string {
-  if (err instanceof ApiError && err.code === 'fraud_investigation.already_flagged') return resolveEn('helpline.fraud.refusal.already_flagged');
-  if (err instanceof ApiError && err.code === 'fraud_investigation.missing_note') return resolveEn('helpline.fraud.noteRequired');
+  if (err instanceof ApiError) {
+    if (err.code === 'fraud_investigation.already_flagged') return resolveEn('helpline.fraud.refusal.already_flagged');
+    if (err.code === 'fraud_investigation.missing_note') return resolveEn('helpline.fraud.noteRequired');
+    if (err.code === 'fraud_investigation.claim_not_found') return resolveEn('helpline.fraud.refusal.claim_not_found');
+    if (err.code === 'fraud_investigation.concurrent') return resolveEn('helpline.fraud.refusal.concurrent');
+    // The open form's step id is already spent: resending it can never succeed. Cancel + re-open mints a new one (PD6).
+    if (err.code === 'fraud_investigation.step_conflict') return resolveEn('helpline.fraud.refusal.step_conflict');
+    // PERMANENT (a retry cannot succeed) — said so, ⛔ "just now".
+    if (err.code === 'admin.display_name_missing') return resolveEn('helpline.fraud.refusal.display_name_missing');
+  }
   return resolveEn('helpline.fraud.refusal.generic');
 }
 
@@ -53,14 +66,18 @@ export function HelplineFraudFlag({
   const [form, setForm] = useState<OpenForm | null>(null);
   const [note, setNote] = useState('');
   const [incomplete, setIncomplete] = useState(false);
-  const [flaggedClaim, setFlaggedClaim] = useState<string | null>(null);
+  // WHICH claim was flagged, in words: the status line changes with every flag, so a second one is announced again.
+  const [flagged, setFlagged] = useState<{ readonly claimCaseId: string; readonly label: string } | null>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   // A member switch closes the form and forgets the outcome.
   useEffect(() => {
     setForm(null);
     setNote('');
     setIncomplete(false);
-    setFlaggedClaim(null);
+    setFlagged(null);
     flag.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `flag.reset` is stable; only the member matters here
   }, [memberId]);
@@ -75,13 +92,24 @@ export function HelplineFraudFlag({
       { claimCaseId, body: { step_id: stepId, note } },
       {
         onSuccess: () => {
-          setFlaggedClaim(claimCaseId);
+          const c = claims.find((x) => x.claim_case_id === claimCaseId);
+          setFlagged({ claimCaseId, label: c ? certificateClaimOption(stateWords(c.claim_state), formatIst(c.filed_at)) : '' });
           setForm(null);
           setNote('');
         },
       },
     );
   };
+
+  // The form that held the focus unmounts on success: move focus to the line that says what happened (family 13 (d)).
+  useEffect(() => {
+    if (flagged !== null) statusRef.current?.focus();
+  }, [flagged]);
+
+  // Opening the form hides the Flag button that was just pressed: move focus to the note, so the next keystroke is the caller's words (PD7).
+  useEffect(() => {
+    if (form !== null) noteRef.current?.focus();
+  }, [form]);
 
   let body: ReactElement;
   if (!ready) {
@@ -116,20 +144,23 @@ export function HelplineFraudFlag({
       <ul className="flex flex-col gap-3">
         {claims.map((c) => {
           const open = form?.claimCaseId === c.claim_case_id;
+          const rowLabel = certificateClaimOption(stateWords(c.claim_state), formatIst(c.filed_at));
           return (
             <li key={c.claim_case_id} className="flex flex-col gap-1 text-sm" data-testid={`helpline-fraud-claim-${c.claim_case_id}`}>
-              <span className="font-medium">{certificateClaimOption(stateWords(c.claim_state), formatIst(c.filed_at))}</span>
+              <span className="font-medium">{rowLabel}</span>
               <span data-testid={`helpline-fraud-status-${c.claim_case_id}`}>{resolveEn(`helpline.fraud.status.${c.investigation}`)}</span>
               {c.investigation === 'none' && !open ? (
                 <button
                   type="button"
                   className="self-start rounded border px-3 py-1"
                   disabled={form !== null || flag.isPending}
+                  aria-label={`${resolveEn('helpline.fraud.flag')}: ${rowLabel}`}
                   onClick={() => {
                     flag.reset();
+                    setFlagged(null);
                     setNote('');
                     setIncomplete(false);
-                    setForm({ claimCaseId: c.claim_case_id, stepId: crypto.randomUUID() });
+                    setForm({ claimCaseId: c.claim_case_id, stepId: newUuid() });
                   }}
                   data-testid={`helpline-fraud-open-${c.claim_case_id}`}
                 >
@@ -153,8 +184,10 @@ export function HelplineFraudFlag({
                     className="rounded border p-2"
                     rows={3}
                     maxLength={2000}
+                    ref={noteRef}
                     value={note}
                     aria-describedby="helpline-fraud-note-help"
+                    aria-invalid={incomplete && note.trim() === ''}
                     onChange={(e) => setNote(e.target.value)}
                     data-testid="helpline-fraud-note"
                   />
@@ -175,7 +208,14 @@ export function HelplineFraudFlag({
                     <button type="submit" className="rounded border px-3 py-1" disabled={flag.isPending} data-testid="helpline-fraud-submit">
                       {resolveEn(flag.isPending ? 'helpline.fraud.submitting' : 'helpline.fraud.submit')}
                     </button>
-                    <button type="button" className="underline" disabled={flag.isPending} onClick={() => setForm(null)}>
+                    <button type="button" className="underline" disabled={flag.isPending} onClick={() => {
+                        setForm(null);
+                        setNote(''); // the typed caller note is ⛔ kept once the form is abandoned
+                        setIncomplete(false);
+                        flag.reset();
+                        headingRef.current?.focus(); // the Cancel button unmounts with the form: focus lands on the section, ⛔ the page body (PD7)
+                      }}
+                    >
                       {resolveEn('helpline.fraud.cancel')}
                     </button>
                   </div>
@@ -190,12 +230,14 @@ export function HelplineFraudFlag({
 
   return (
     <section aria-label={resolveEn('helpline.fraud.heading')} className="flex flex-col gap-2 rounded border p-4" data-testid="helpline-fraud">
-      <h2 className="text-sm font-semibold">{resolveEn('helpline.fraud.heading')}</h2>
+      <h2 tabIndex={-1} ref={headingRef} className="text-sm font-semibold">
+        {resolveEn('helpline.fraud.heading')}
+      </h2>
       <p className="text-xs text-gray-600">{resolveEn('helpline.fraud.intro')}</p>
       {body}
       {/* Always mounted, so a screen reader hears the outcome when it lands (6.38 R4 P1). */}
-      <p role="status" className="text-sm" data-testid="helpline-fraud-status">
-        {flaggedClaim !== null ? resolveEn('helpline.fraud.flagged') : ''}
+      <p role="status" tabIndex={-1} ref={statusRef} className="text-sm" data-testid="helpline-fraud-status">
+        {flagged !== null ? `${resolveEn('helpline.fraud.flagged')} ${flagged.label}`.trim() : ''}
       </p>
     </section>
   );

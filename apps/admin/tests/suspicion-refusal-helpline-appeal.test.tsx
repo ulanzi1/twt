@@ -264,4 +264,21 @@ describe('<AppealStageControls> — Story 6.24a, the 90-day date on a `-239` ref
     expect(screen.getByTestId(`helpline-appeal-claim-${ENDED}`)).toHaveTextContent(labels.closedHolderRefused);
     expect(labels.claimStateLabels['closed']).not.toMatch(/won its appeal/);
   });
+
+  it('⭐ Story 6.22 (DL10 (iii)) — the site reads `closed_member_alive`: a claim closed because the member was FOUND ALIVE says so, and it WINS over "holder refused"', async () => {
+    const ALIVE = '77777777-7777-4777-8777-777777777777';
+    mocked.getHelplineAppealClaims.mockResolvedValue({
+      member_id: MEMBER_ID,
+      claims: [
+        row(CAN, { claim_state: 'closed', eligibility: 'not_appealable' }), // the CONTROL: same state, not found alive
+        row(ALIVE, { claim_state: 'closed', eligibility: 'not_appealable', closed_holder_refused: true, closed_member_alive: true }),
+      ],
+    });
+    renderWithClient(<HelplineAppeal pariwarId="p1" memberId={MEMBER_ID} identityConfirmed={true} />);
+    await waitFor(() => expect(screen.getByTestId(`helpline-appeal-claim-${ALIVE}`)).toBeInTheDocument());
+    const labels = verifierConsoleEn.nomineeDeclaration.refusals;
+    expect(screen.getByTestId(`helpline-appeal-claim-${ALIVE}`)).toHaveTextContent(labels.closedMemberAlive);
+    expect(screen.getByTestId(`helpline-appeal-claim-${ALIVE}`).textContent).not.toContain(labels.closedHolderRefused);
+    expect(screen.getByTestId(`helpline-appeal-claim-${CAN}`).textContent).not.toContain(labels.closedMemberAlive);
+  });
 });

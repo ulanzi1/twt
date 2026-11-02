@@ -107,6 +107,18 @@ describe('<HelplineClaimContact>', () => {
     expect(mocked.getClaimContactPresence).not.toHaveBeenCalledWith('p1', '33333333-3333-3333-3333-333333333333');
   });
 
+  it('⭐ Story 6.22 (DL10 (iii)) — the picker reads `closed_member_alive` (a LISTED claim carrying it says so; the site filters out closed claims, so the argument is wiring, not a reachable state)', async () => {
+    const LIVE_B = '44444444-4444-4444-8444-444444444444';
+    const row = (id: string, alive: boolean) => ({
+      claim_case_id: id, claim_state: 'verification_in_progress', created_at: '2026-09-01T00:00:00.000Z', status: 'awaiting_review' as const,
+      replacement_reason: null, upload_allowed: false, reassurance: null, closed_holder_refused: false, closed_member_alive: alive,
+    });
+    mocked.getDeathCertificateClaimsForMember.mockResolvedValue({ member_id: MEMBER_ID, claims: [row(CLAIM_A, false), row(LIVE_B, true)] });
+    renderCard();
+    expect((await screen.findByTestId(`helpline-contact-claim-${LIVE_B}`)).closest('label')).toHaveTextContent('Closed — the member was found alive');
+    expect(screen.getByTestId(`helpline-contact-claim-${CLAIM_A}`).closest('label')!.textContent).not.toContain('found alive');
+  });
+
   it('⭐ shows what the approval still needs, and ⛔ never fetches the plaintext until asked', async () => {
     renderCard();
     expect(await screen.findByTestId('helpline-contact-missing')).toHaveTextContent(/has not yet given the nominees’ postal addresses/);

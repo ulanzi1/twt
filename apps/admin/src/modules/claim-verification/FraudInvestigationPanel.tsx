@@ -8,13 +8,19 @@
 // re-runs it with the SAME ids (a retry replays, ⛔ a second finding).
 //
 // ⛔ It shows the other claims that still keep the member's death recorded only AFTER a finding, from the write's answer.
+//
+// Code review 2026-11-02 (chunk C): the wording is honest about what a finding does (it does ⛔ close an approved or paid claim,
+// and a GUILTY finding keeps the member locked — the result names the outcome it recorded); the ids are minted on the first
+// SUBMIT, ⛔ at render (`crypto.randomUUID` is secure-context-gated — a throw at render would take down the whole console);
+// the success line takes focus; a refresh that fails keeps what is on screen.
 
 import { FRAUD_FINDING_STEP_UP_CONTEXT, type FraudFindingResponse, type FraudInvestigationNote } from '@twt/contracts';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { fraudInvestigationKey, useFraudInvestigation, useRecordFraudFinding } from '../../api/hooks.js';
+import { newUuid } from '../../api/new-uuid.js';
 import { holdOnce, needsStepUp, StepUpPanel, type PendingWrite } from '../workplaces/StepUpPanel.js';
 import { formatIst } from './NomineeDeclarationPanel.js';
 import { fraudInvestigationEn as t, verifierConsoleEn } from './i18n-en.js';
@@ -22,21 +28,41 @@ import { fraudInvestigationEn as t, verifierConsoleEn } from './i18n-en.js';
 const OUTCOMES = ['innocent', 'guilty'] as const;
 const ALIVE = ['in_person', 'video_call', 'ground_inspection'] as const;
 
+/** An approved or settled claim is COMMITTED: a finding is recorded but does not stop it (N5, DL3 step 6). */
+const COMMITTED_STATES: ReadonlySet<string> = new Set(['approved', 'settled']);
+
 function NoteText({ note }: { note: FraudInvestigationNote }): ReactElement {
-  if (note.state === 'readable') return <span>{note.value}</span>;
+  // A note is free text of up to 2,000 characters: keep its line breaks.
+  if (note.state === 'readable') return <span className="whitespace-pre-wrap">{note.value}</span>;
   const words = note.state === 'withheld' ? t.noteWithheld : note.state === 'anonymized' ? t.noteAnonymized : t.noteUnreadable;
   return <span className="italic">{words}</span>;
 }
 
-/** A finding refusal in words — ⛔ never a raw code. */
+/** A finding refusal in words — ⛔ never a raw code. An OWN property only: a code such as `constructor` is no copy. */
 function refusalWords(err: unknown): string {
-  if (err instanceof ApiError && t.refusal[err.code] !== undefined) return t.refusal[err.code]!;
+  if (err instanceof ApiError && Object.prototype.hasOwnProperty.call(t.refusal, err.code)) return t.refusal[err.code]!;
   return t.refusalGeneric;
 }
 
-function resultWords(r: FraudFindingResponse): string {
-  if (r.closed) return t.result.closed;
-  return r.not_closed_reason === 'committed' ? t.result.committed : t.result.alreadyClosed;
+/** What the write did, in words: the OUTCOME recorded, whether the claim closed, and — for guilty — that the member stays locked. */
+export function resultWords(r: FraudFindingResponse): string {
+  const guilty = r.outcome === 'guilty';
+  const base = r.closed
+    ? guilty
+      ? t.result.closedGuilty
+      : t.result.closedInnocent
+    : r.not_closed_reason === 'committed'
+      ? guilty
+        ? t.result.committedGuilty
+        : t.result.committedInnocent
+      : r.not_closed_reason === 'already_closed'
+        ? guilty
+          ? t.result.alreadyClosedGuilty
+          : t.result.alreadyClosedInnocent
+        : guilty
+          ? t.result.notClosedGuilty
+          : t.result.notClosedInnocent;
+  return [base, guilty ? t.result.guiltyStaysLocked : null, r.replayed ? t.result.replayed : null].filter(Boolean).join(' ');
 }
 
 export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId: string; claimCaseId: string }): ReactElement {
@@ -48,16 +74,27 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
   const [alive, setAlive] = useState<(typeof ALIVE)[number] | null>(null);
   const [note, setNote] = useState('');
   const [incomplete, setIncomplete] = useState(false);
-  // Minted ONCE per form: a retry (after a step-up, or a lost response) sends the same ids and REPLAYS.
-  const [ids] = useState(() => ({ stepId: crypto.randomUUID(), findingId: crypto.randomUUID() }));
+  // Minted ONCE, on the first send (⛔ at render): a retry (after a step-up, or a lost response) sends the same ids and REPLAYS.
+  const idsRef = useRef<{ stepId: string; findingId: string } | null>(null);
   const [pending, setPending] = useState<PendingWrite>(null);
   const [result, setResult] = useState<FraudFindingResponse | null>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
+
+  // The form that held the focus unmounts on success: move focus to the line that says what happened (family 13 (d)).
+  useEffect(() => {
+    if (result !== null) statusRef.current?.focus();
+  }, [result]);
 
   const send = (body: { outcome: (typeof OUTCOMES)[number]; alive: (typeof ALIVE)[number]; note: string }) => {
+    idsRef.current ??= { stepId: newUuid(), findingId: newUuid() };
+    const ids = idsRef.current;
     record.mutate(
       { step_id: ids.stepId, finding_id: ids.findingId, outcome: body.outcome, alive_confirmation: body.alive, note: body.note },
       {
-        onSuccess: (r) => setResult(r),
+        onSuccess: (r) => {
+          setResult(r);
+          setNote(''); // the Tier-1 note is ⛔ kept in state once it is written
+        },
         onError: (err) => {
           if (!needsStepUp(err)) return;
           setPending(holdOnce({ owner: 'finding', id: Date.now(), label: t.form.submit, retry: () => send(body) }));
@@ -77,8 +114,11 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
 
   const data = read.data;
   const flag = data?.steps.find((s) => s.step === 'flagged');
+  const found = data?.steps.some((s) => s.step !== 'flagged') ?? false;
+  const committed = data !== undefined && COMMITTED_STATES.has(data.claim_state);
   const formLocked = record.isPending || pending !== null || result !== null;
   const shownError = record.isError && !needsStepUp(record.error) ? refusalWords(record.error) : null;
+  const labels: Record<string, string> = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
 
   return (
     <section className="mt-4 border-t pt-4" data-testid="fraud-investigation-section">
@@ -98,12 +138,18 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
       <p className="text-xs">{t.audited}</p>
       {!open ? null : read.isLoading ? (
         <p data-testid="fraud-investigation-loading">{t.loading}</p>
-      ) : read.isError || !data ? (
+      ) : !data ? (
+        // Only when there is NOTHING to show: a failed refresh with data in hand keeps the data (below).
         <p role="alert" data-testid="fraud-investigation-error">
           {t.loadError}
         </p>
       ) : (
         <div className="mt-2 flex flex-col gap-3 text-sm">
+          {read.isError ? (
+            <p role="alert" className="text-xs" data-testid="fraud-investigation-refresh-error">
+              {t.refreshError}
+            </p>
+          ) : null}
           {data.steps.length === 0 ? <p data-testid="fraud-investigation-not-flagged">{t.notFlagged}</p> : null}
           <ol className="flex flex-col gap-2" data-testid="fraud-investigation-steps">
             {data.steps.map((s) => (
@@ -124,16 +170,29 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
               </li>
             ))}
           </ol>
-          {flag && data.viewer.is_flagger ? <p data-testid="fraud-investigation-you-flagged">{t.youFlagged}</p> : null}
+          {flag && data.viewer.is_flagger && !found ? <p data-testid="fraud-investigation-you-flagged">{t.youFlagged}</p> : null}
           {data.viewer.can_record_finding && result === null ? (
             <fieldset className="flex flex-col gap-2 rounded border p-3" data-testid="fraud-finding-form" disabled={formLocked}>
               <legend className="font-semibold">{t.form.legend}</legend>
               <p className="text-xs">{t.form.intro}</p>
+              {committed ? (
+                <p role="note" className="text-xs font-medium" data-testid="fraud-finding-committed-warning">
+                  {t.form.committedWarning}
+                </p>
+              ) : null}
               <fieldset className="flex flex-col gap-1" data-testid="fraud-finding-outcomes">
                 <legend>{t.form.outcomeLegend}</legend>
                 {OUTCOMES.map((o) => (
                   <label key={o} className="flex items-center gap-2">
-                    <input type="radio" name="fraud-finding-outcome" value={o} checked={outcome === o} onChange={() => setOutcome(o)} data-testid={`fraud-finding-outcome-${o}`} />
+                    <input
+                      type="radio"
+                      name="fraud-finding-outcome"
+                      value={o}
+                      checked={outcome === o}
+                      aria-invalid={incomplete && outcome === null}
+                      onChange={() => setOutcome(o)}
+                      data-testid={`fraud-finding-outcome-${o}`}
+                    />
                     {t.form.outcome[o]}
                   </label>
                 ))}
@@ -142,7 +201,15 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
                 <legend>{t.form.aliveLegend}</legend>
                 {ALIVE.map((a) => (
                   <label key={a} className="flex items-center gap-2">
-                    <input type="radio" name="fraud-finding-alive" value={a} checked={alive === a} onChange={() => setAlive(a)} data-testid={`fraud-finding-alive-${a}`} />
+                    <input
+                      type="radio"
+                      name="fraud-finding-alive"
+                      value={a}
+                      checked={alive === a}
+                      aria-invalid={incomplete && alive === null}
+                      onChange={() => setAlive(a)}
+                      data-testid={`fraud-finding-alive-${a}`}
+                    />
                     {t.aliveConfirmation[a]}
                   </label>
                 ))}
@@ -157,6 +224,7 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
                 maxLength={2000}
                 value={note}
                 aria-describedby="fraud-finding-note-help"
+                aria-invalid={incomplete && note.trim() === ''}
                 onChange={(e) => setNote(e.target.value)}
                 data-testid="fraud-finding-note"
               />
@@ -169,7 +237,7 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
                 </p>
               ) : null}
               <button type="button" className="self-start rounded border px-3 py-1" onClick={submit} data-testid="fraud-finding-submit">
-                {record.isPending ? t.form.submitting : t.form.submit}
+                {record.isPending ? t.form.submitting : outcome !== null ? t.form.submitOutcome[outcome] : t.form.submit}
               </button>
             </fieldset>
           ) : null}
@@ -195,14 +263,12 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
                 <>
                   <p>{t.result.otherClaims}</p>
                   <ul className="ml-4 list-disc">
-                    {result.other_standing_claims.map((c) => {
-                      const labels: Record<string, string> = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
-                      return (
-                        <li key={c.claim_case_id}>
-                          {labels[c.claim_state] ?? '—'} · {formatIst(c.filed_at)}
-                        </li>
-                      );
-                    })}
+                    {result.other_standing_claims.map((c) => (
+                      <li key={c.claim_case_id}>
+                        {/* ⛔ The trigger-blind staff label ("another claim … goes ahead", G9) — it is FALSE for a claim a guilty finding closed. */}
+                        {c.claim_state === 'closed' ? t.result.closedPlain : (labels[c.claim_state] ?? '—')} · {formatIst(c.filed_at)}
+                      </li>
+                    ))}
                   </ul>
                 </>
               )}
@@ -210,8 +276,8 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
           ) : null}
         </div>
       )}
-      {/* Always mounted, so a screen reader hears the outcome when it lands (6.38 R4 P1). */}
-      <p role="status" className="text-sm" data-testid="fraud-finding-status">
+      {/* Always mounted, so a screen reader hears the outcome when it lands (6.38 R4 P1); it takes focus on success (the form unmounts). */}
+      <p role="status" tabIndex={-1} ref={statusRef} className="text-sm" data-testid="fraud-finding-status">
         {result !== null ? resultWords(result) : ''}
       </p>
     </section>

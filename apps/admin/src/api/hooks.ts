@@ -850,16 +850,25 @@ export function useForgetNomineeNameCheck(pariwarId: string, claimCaseId: string
   };
 }
 
+// ⭐ Story 6.22 (code review 2026-11-02, RC3): the fraud console read DECRYPTS staff notes and the helpline's per-member list is audited
+// (RB9) — both are on-demand audited reads; their keys are defined HERE, above the set (a `const` used before its definition is a TDZ throw).
+export const memberFraudClaimsKey = (pariwarId: string, memberId: string) => ['member-fraud-claims', pariwarId, memberId] as const;
+export const fraudInvestigationKey = (pariwarId: string, claimCaseId: string) => ['fraud-investigation', pariwarId, claimCaseId] as const;
+
 /**
  * ⭐ Story 6.27b (review S2) — the predicate every BROAD invalidation passes, so it can ⛔ never refetch an on-demand,
- * AUDITED read: the neighbours' answers (`claim-peer-answers`) and the nominee name check (`nominee-name-check`). Each
- * fetch decrypts a living person's PII and writes an audit line that must mean a human LOOKED — an open disclosure
- * refetched as a side effect of an UNRELATED write (e.g. "Close this claim") is a read nobody performed. A write that
- * really changes one of them invalidates it by its OWN key (the name-check writes), a deliberate act by the same human.
+ * AUDITED read: the neighbours' answers (`claim-peer-answers`), the nominee name check (`nominee-name-check`) and — Story 6.22 —
+ * the fraud console read (`fraud-investigation`, which decrypts staff notes) and the helpline's per-member list
+ * (`member-fraud-claims`). Each fetch decrypts a living person's PII or a staff note and writes an audit line that must mean a
+ * human LOOKED — an open disclosure refetched as a side effect of an UNRELATED write (e.g. "Close this claim") is a read nobody
+ * performed. A write that really changes one of them invalidates it by its OWN key (the name-check writes, the fraud writes), a
+ * deliberate act by the same human.
  */
 const AUDITED_ON_DEMAND_READ_PREFIXES: ReadonlySet<unknown> = new Set([
   claimPeerAnswersKey('', '')[0],
   nomineeNameCheckKey('', '')[0],
+  fraudInvestigationKey('', '')[0],
+  memberFraudClaimsKey('', '')[0],
 ]);
 export function isNotAnAuditedOnDemandRead(query: Query): boolean {
   return !AUDITED_ON_DEMAND_READ_PREFIXES.has(query.queryKey[0]);
@@ -2515,8 +2524,6 @@ export function useDeathCertificateClaimsForMember(pariwarId: string, memberId: 
 }
 
 // ── Story 6.22 — the fraud register's investigation ──────────────────────────────────────────────────────────────
-export const memberFraudClaimsKey = (pariwarId: string, memberId: string) => ['member-fraud-claims', pariwarId, memberId] as const;
-export const fraudInvestigationKey = (pariwarId: string, claimCaseId: string) => ['fraud-investigation', pariwarId, claimCaseId] as const;
 export const openFraudInvestigationsKey = (pariwarId: string) => ['open-fraud-investigations', pariwarId] as const;
 
 /** The helpline's list of every claim naming the SELECTED member — only once the read-back is confirmed. */
@@ -2526,6 +2533,8 @@ export function useMemberFraudClaims(pariwarId: string, memberId: string | null,
     queryFn: () => api.getMemberFraudClaims(pariwarId, memberId as string),
     enabled: Boolean(memberId) && enabled,
     refetchOnWindowFocus: false,
+    // An AUDITED read (RB9): a reconnect must not perform a look nobody asked for (`useClaimPeerAnswers` is the precedent).
+    refetchOnReconnect: false,
   });
 }
 
@@ -2538,6 +2547,7 @@ export function useFlagClaimForFraud(pariwarId: string, memberId: string | null)
     onSettled: (_data, _err, vars) => {
       void qc.invalidateQueries({ queryKey: memberFraudClaimsKey(pariwarId, memberId ?? '') });
       void qc.invalidateQueries({ queryKey: fraudInvestigationKey(pariwarId, vars.claimCaseId) });
+      void qc.invalidateQueries({ queryKey: openFraudInvestigationsKey(pariwarId) }); // a flagged claim joins the District Admin's work-list
     },
   });
 }
@@ -2549,6 +2559,8 @@ export function useFraudInvestigation(pariwarId: string, claimCaseId: string, en
     queryFn: () => api.getFraudInvestigation(pariwarId, claimCaseId),
     enabled,
     refetchOnWindowFocus: false,
+    // A holder's read DECRYPTS and is AUDITED: a network reconnect must not perform a look nobody asked for (RC3).
+    refetchOnReconnect: false,
   });
 }
 
@@ -2557,7 +2569,11 @@ export function useRecordFraudFinding(pariwarId: string, claimCaseId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.postFraudFinding>[2]) => api.postFraudFinding(pariwarId, claimCaseId, body),
-    onSuccess: () => {
+    // On SETTLE (RC3), ⛔ only on success: a refusal that proves the panel is stale (`already_found`, `not_flagged`,
+    // `finder_is_flagger`, `step_conflict`, `concurrent`) must refresh it, else the form is still offered and the other admin's
+    // finding unseen. A step-up HOLD wrote nothing and the same write is about to be re-sent: ⛔ a refresh (a decrypting, audited read).
+    onSettled: (_data, error) => {
+      if (error instanceof ApiError && error.code === 'auth.step_up_required') return;
       void qc.invalidateQueries({ queryKey: fraudInvestigationKey(pariwarId, claimCaseId) });
       void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId) });
       void qc.invalidateQueries({ queryKey: openFraudInvestigationsKey(pariwarId) });

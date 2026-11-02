@@ -19,7 +19,7 @@ import { useForm } from 'react-hook-form';
 
 import * as api from '../api/client.js';
 import { sessionKey } from '../api/hooks.js';
-import { allowedNextPariwarId } from './login-next.js';
+import { allowedNextReturn } from './login-next.js';
 
 // The Cloudflare Turnstile widget (api.js) is the ONE admin-side vendor touch-point
 // (Story 1.13, AC-5). It mirrors `@twt/edge`'s TURNSTILE_WIDGET_SCRIPT_URL but is NOT
@@ -137,11 +137,11 @@ export function LoginPage(): ReactElement {
 
   async function completeLogin(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: sessionKey });
-    // Story 6.25 (RE9 A) — return to the nominee-refusal list the staff email linked to, IFF `next` is EXACTLY its allowlisted
-    // relative path (`login-next.ts`); anything else lands on the default page as before (⛔ an open redirect).
-    const pariwarId = allowedNextPariwarId(search.next ?? null);
-    if (pariwarId !== null) {
-      void navigate({ to: '/p/$pariwarId/nominee-refusals', params: { pariwarId } });
+    // Story 6.25 (RE9 A) — return to the nominee-refusal list the staff email linked to (Story 6.22: or the fraud work-list), IFF `next`
+    // is EXACTLY an allowlisted relative path (`login-next.ts`); anything else lands on the default page as before (⛔ an open redirect).
+    const back = allowedNextReturn(search.next ?? null);
+    if (back !== null) {
+      void navigate({ to: back.to, params: { pariwarId: back.pariwarId } });
       return;
     }
     void navigate({ to: '/audit/integrity' });

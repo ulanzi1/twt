@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultParseSearch, defaultStringifySearch } from '@tanstack/react-router';
 
-import { allowedNextPariwarId, nomineeRefusalsPath, validateLoginSearch } from '../src/routes/login-next.js';
+import { allowedNextPariwarId, allowedNextReturn, fraudInvestigationsPath, nomineeRefusalsPath, validateLoginSearch } from '../src/routes/login-next.js';
 import { renderWithClient } from './_helpers.js';
 
 const P = '2b7c0a4e-5d1f-4e8a-9c3b-1f2e3d4c5b6a';
@@ -94,6 +94,45 @@ describe('the allowlist (⛔ an open redirect)', () => {
     ]) {
       expect(allowedNextPariwarId(bad), String(bad)).toBeNull();
     }
+  });
+});
+
+describe('⭐ Story 6.22 (code review RC10) — the fraud work-list is the SECOND allowlisted return (⛔ an open redirect)', () => {
+  it('both allowlisted routes return their destination and Pariwar; the nominee-only function is UNCHANGED', () => {
+    expect(allowedNextReturn(nomineeRefusalsPath(P))).toEqual({ to: '/p/$pariwarId/nominee-refusals', pariwarId: P });
+    expect(allowedNextReturn(fraudInvestigationsPath(P))).toEqual({ to: '/p/$pariwarId/fraud-investigations', pariwarId: P });
+    expect(allowedNextPariwarId(fraudInvestigationsPath(P))).toBeNull(); // the old function still knows ONLY the refusal list
+  });
+
+  it('the SAME hostile inputs are refused for the new path as for the old one', () => {
+    for (const route of ['nominee-refusals', 'fraud-investigations']) {
+      for (const bad of [
+        undefined,
+        null,
+        42,
+        '',
+        `https://evil.example/p/${P}/${route}`,
+        `//evil.example/p/${P}/${route}`,
+        `/p/${P}/${route}?x=1`,
+        `/p/${P}/${route}/`,
+        `/p/${P}/${route}/../../audit`,
+        `/p/${P.toUpperCase()}/${route}`,
+        `/p/${P}x/${route}`,
+        `/p/not-a-uuid/${route}`,
+        `\\/p/${P}/${route}`,
+        `javascript:alert(1)//p/${P}/${route}`,
+      ]) {
+        expect(allowedNextReturn(bad), `${route}: ${String(bad)}`).toBeNull();
+      }
+    }
+    expect(allowedNextReturn(`/p/${P}/fraud-investigations-extra`)).toBeNull();
+    expect(allowedNextReturn(`/p/${P}/nominee-corrections`)).toBeNull();
+    expect(allowedNextReturn('/audit/integrity')).toBeNull();
+  });
+
+  it('⭐ a signed-out District Admin who opened the work-list signs in and lands ON it', async () => {
+    window.history.replaceState(null, '', `/login?next=${encodeURIComponent(fraudInvestigationsPath(P))}`);
+    expect(await signIn()).toEqual({ to: '/p/$pariwarId/fraud-investigations', params: { pariwarId: P } });
   });
 });
 

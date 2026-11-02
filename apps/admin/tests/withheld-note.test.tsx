@@ -130,6 +130,25 @@ describe('the two remaining hosts — the refusals list (Pattern A) and the R9 v
     expect(notes[1]).toHaveTextContent('REFUSAL-NOTE');
   });
 
+  it('<NomineeRefusalsRoute> — Story 6.22 (DL10 (iii)): the row reads `closed_member_alive` and it WINS over "holder refused"', async () => {
+    getSession.mockResolvedValue({ userId: ACTOR, nationalGrants: [] });
+    const OTHER = '22222222-2222-4222-8222-222222222222';
+    const item = (id: string, over: Record<string, unknown>) => ({
+      claim_case_id: id, deceased_member_id: OTHER, claim_state: 'closed', refused_at: '2026-10-01T00:00:00.000Z', refused_by_display: 'Anita',
+      rationale: { state: 'readable', value: 'NOTE' }, closed_holder_refused: false, closed_member_alive: false, ...over,
+    });
+    const ALIVE = '99999999-9999-4999-8999-999999999999';
+    getNomineeRefusals.mockResolvedValue({
+      items: [item(CLAIM, {}), item(ALIVE, { closed_holder_refused: true, closed_member_alive: true })],
+    } as NomineeRefusalListResponse);
+    wrap(<NomineeRefusalsRoute />);
+    await screen.findAllByTestId('nominee-refusal-note');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain(t.nomineeDeclaration.refusals.closedMemberAlive);
+    expect(text.split(t.nomineeDeclaration.refusals.closedMemberAlive)).toHaveLength(2); // exactly ONE row says it (the control row does not)
+    expect(text).not.toContain(t.nomineeDeclaration.refusals.closedHolderRefused);
+  });
+
   it('<R9VotingPage> — a WITHHELD vote rationale in the votes-by-trustee transcript says "that claim" (Y4; ⛔ blank)', async () => {
     getR9Queue.mockResolvedValue({ pariwar_id: PARIWAR, items: [] });
     const VOTE = '88888888-8888-4888-8888-888888888888';

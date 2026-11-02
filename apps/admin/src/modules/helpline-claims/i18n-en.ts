@@ -226,6 +226,12 @@ const EN: Record<string, string> = {
   'helpline.fraud.flagged': 'The claim is flagged. A District Admin will look into it.',
   'helpline.fraud.refusal.already_flagged': 'This claim is already flagged.',
   'helpline.fraud.refusal.generic': 'The claim could not be flagged just now.',
+  'helpline.fraud.refusal.claim_not_found': 'This claim could not be found.',
+  // A retriable 409 (a claim-stream race): the flag's step id is kept, so sending it again cannot flag twice.
+  'helpline.fraud.refusal.concurrent': 'The claim changed while it was being flagged. Send it again — it cannot be flagged twice.',
+  // PERMANENT until the Super Admin acts — a retry cannot succeed.
+  'helpline.fraud.refusal.step_conflict': 'This form was already used for another step. Cancel it and open the form again.',
+  'helpline.fraud.refusal.display_name_missing': 'Your account has no display name yet, so it cannot flag a claim. Ask the Super Admin.',
   // The refusal lines (C6) — never a raw error code.
   'helpline.certificate.refusal.certificate_accepted':
     "This claim's death certificate has already been accepted. Another one can't be sent.",

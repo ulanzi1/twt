@@ -18,6 +18,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
   answer only for `closed` claims, so both bits are always `false` on that response and `HelplineAppeal.tsx`'s closed-label arm never
   renders. Harmless today; found while pinning `closed_member_alive` over HTTP (6.22 round 2, R2-2). Trigger: the next change to that
   list's states or to its DTO — either drop the two bits from the response or list closed claims deliberately.
+- **RD10 — the verifier console, after a staff user loses all access to the Pariwar mid-session, says "Temporarily unavailable … Try again shortly"
+  and "This claim is resolved"** [`apps/admin/src/routes/VerifierConsoleRoute.tsx` the `console_.isError` branch; `VerificationDecisionStrip.tsx`
+  the historical arm] — NOT ADDRESSED (pre-existing; seen in the 6.22 round-2 browser pass, 2026-11-02). Every route then answers 404
+  `pariwar.not_found`, which is not `isForbidden`, so the console shows the transient line, and the decision strip, with no packet, reads an
+  `intake_pending` claim as resolved. Both are false; nothing is written. Trigger: the next change to the verifier console's error states —
+  treat a 404 on the console read as "no access" and render ⛔ decision strip without a packet.
 
 ## Deferred from: patch-diff review of 6-22-fraud-register-blacklist-instrument-and-identifier-set.md, the three chunks' patches together (2026-11-02)
 

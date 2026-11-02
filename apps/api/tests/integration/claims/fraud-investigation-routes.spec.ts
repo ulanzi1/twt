@@ -17,6 +17,7 @@ import * as service from '../../../src/modules/auth/admin/admin-auth.service.js'
 import * as memberAuthRepo from '../../../src/modules/auth/member/member-auth.repo.js';
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { buildServer } from '../../../src/server.js';
+import { encryptFraudInvestigationNote } from '../../../src/modules/claims/fraud-investigation-crypto.js';
 import { fileClaim, inScope, seedLifecycleMember } from '../_death-report-fixture.js';
 import { seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
@@ -61,12 +62,13 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
     await td.pool.end();
   });
 
-  async function authenticate(displayName: string): Promise<{ client: Client; userId: string }> {
+  /** `displayName === null` ⇒ an admin with NO `users.display_name` (the attribution snapshot cannot be resolved — family 8). */
+  async function authenticate(displayName: string | null): Promise<{ client: Client; userId: string }> {
     const email = `fi-${randomUUID()}@example.test`;
     const password = 'CorrectHorseBatteryStaple9';
     const userId = await service.createAdminAccount(deps, { email, password });
     createdUserIds.push(userId);
-    await service.setAdminDisplayName(deps, userId, displayName);
+    if (displayName !== null) await service.setAdminDisplayName(deps, userId, displayName);
     const credentialId = `cred-${userId}`;
     fakeWebauthn.nextRegistration = { verified: true, credential: { id: credentialId, publicKey: 'pk', counter: 0 } };
     fakeWebauthn.nextAuthentication = { verified: true, newCounter: 1 };
@@ -85,8 +87,8 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
   type Staff = { client: Client; userId: string };
 
   /** A staff member holding `roles` (several ⇒ one PERSON granted each) in the world's Pariwar / district. */
-  async function staff(w: World, roles: readonly Role[], district = w.district): Promise<Staff> {
-    const a = await authenticate(`${roles.join('+')} ${randomUUID().slice(0, 4)}`);
+  async function staff(w: World, roles: readonly Role[], district = w.district, displayName?: string | null): Promise<Staff> {
+    const a = await authenticate(displayName === undefined ? `${roles.join('+')} ${randomUUID().slice(0, 4)}` : displayName);
     for (const role of roles) {
       const [dim, value] =
         role === 'district_admin' || role === 'verifier' ? ['district', district] : role === 'super_admin' ? ['global', null] : ['pariwar', w.pariwarId];
@@ -150,6 +152,12 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
   ];
 
   const claimUrl = (w: World, cid = w.claimCaseId) => `/api/v1/p/${w.pariwarId}/admin/claims/${cid}`;
+  const flagUrl = (w: World, cid = w.claimCaseId) => `${claimUrl(w, cid)}/fraud-investigation/flag`;
+  const findUrl = (w: World, cid = w.claimCaseId) => `${claimUrl(w, cid)}/fraud-investigation/finding`;
+  const consoleUrl = (w: World, cid = w.claimCaseId) => `${claimUrl(w, cid)}/fraud-investigation`;
+  const memberListUrl = (w: World) => `/api/v1/p/${w.pariwarId}/admin/members/${w.memberId}/fraud-investigation/claims`;
+  const workListUrl = (w: World) => `/api/v1/p/${w.pariwarId}/admin/fraud-investigations`;
+  const stepRows = async (cid: string) => (await td.pool.query<{ step: string }>('SELECT step FROM claim_fraud_investigation_steps WHERE claim_case_id = $1 ORDER BY acted_at', [cid])).rows.map((r) => r.step);
   const flagOf = (a: Staff, w: World, body: Json = {}, cid = w.claimCaseId) =>
     a.client.inject({ method: 'POST', url: `${claimUrl(w, cid)}/fraud-investigation/flag`, payload: { step_id: randomUUID(), note: FLAG_NOTE, ...body } });
   const findOf = (a: Staff, w: World, body: Json = {}, cid = w.claimCaseId) =>
@@ -289,8 +297,12 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
       for (const roles of [['district_admin'], ['super_admin']] as const) {
         const a = await staff(w, roles);
-        await stepUp(a, FRAUD_FINDING_STEP_UP_CONTEXT).catch(() => undefined);
-        expect((await findOf(a, w)).statusCode, roles[0]).toBe(403);
+        // The step-up is DONE (⛔ swallowed), so the refusal below cannot be the missing step-up: it is the null district.
+        await stepUp(a, FRAUD_FINDING_STEP_UP_CONTEXT);
+        const res = await findOf(a, w);
+        expect(res.statusCode, roles[0]).toBe(403);
+        expect(errCode(res), roles[0]).not.toBe('auth.step_up_required');
+        expect(await stepRows(w.claimCaseId), roles[0]).toEqual(['flagged']);
       }
     });
 
@@ -400,6 +412,318 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       });
       expect(res.statusCode).toBe(409);
       expect(errCode(res)).toBe('convergence.against_claim_closed');
+    });
+  });
+
+  // ── Code review 2026-11-02, chunk B — RB1: access ─────────────────────────────────────────────────────────────────────
+  describe('RB1 — access: the layers that guard the five routes', () => {
+    /** One request per route, each with a body that would be VALID — so a refusal is the guard's, ⛔ the schema's. */
+    const fiveRoutes = (w: World): [string, string, Json?][] => [
+      ['POST', flagUrl(w), { step_id: randomUUID(), note: FLAG_NOTE }],
+      ['POST', findUrl(w), { step_id: randomUUID(), finding_id: randomUUID(), outcome: 'innocent', alive_confirmation: 'in_person', note: FINDING_NOTE }],
+      ['GET', consoleUrl(w)],
+      ['GET', memberListUrl(w)],
+      ['GET', workListUrl(w)],
+    ];
+
+    it('⭐ WITHOUT a session every route is 401', async () => {
+      const w = await world();
+      const anonymous = makeClient(app);
+      for (const [method, url, payload] of fiveRoutes(w)) {
+        const res = await anonymous.inject({ method: method as 'GET' | 'POST', url, ...(payload ? { payload } : {}) });
+        expect(res.statusCode, `${method} ${url}`).toBe(401);
+      }
+      expect(await stepRows(w.claimCaseId)).toEqual([]);
+    });
+
+    it('⭐ a TAMPERED session naming a non-human actor is EXACTLY 404 on every route (⛔ a write), with a positive control', async () => {
+      const w = await world();
+      const both = await staff(w, ['helpline_operator', 'district_admin']);
+      // POSITIVE CONTROL first — the untampered session reaches the three reads.
+      for (const url of [consoleUrl(w), memberListUrl(w), workListUrl(w)]) {
+        expect((await both.client.inject({ method: 'GET', url })).statusCode, url).toBe(200);
+      }
+      await td.pool.query(`UPDATE admin_sessions SET sess = jsonb_set(sess, '{userId}', to_jsonb($1::text)) WHERE sess ->> 'userId' = $2`, [randomUUID(), both.userId]);
+      for (const [method, url, payload] of fiveRoutes(w)) {
+        const res = await both.client.inject({ method: method as 'GET' | 'POST', url, ...(payload ? { payload } : {}) });
+        expect(res.statusCode, `${method} ${url}`).toBe(404);
+      }
+      expect(await stepRows(w.claimCaseId)).toEqual([]);
+    });
+
+    it('⭐ WITHOUT the key: every other role is 403 (one code, ⛔ a write) — a verifier cannot flag, find, or list; an operator cannot read the console; a District Admin cannot flag or list', async () => {
+      const w = await world();
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201); // so a finding has something to refuse about
+      const op = await staff(w, ['helpline_operator']);
+      const da = await staff(w, ['district_admin']);
+      const verifier = await staff(w, ['verifier']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      await stepUp(verifier, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const [flag, find, consoleRead, list, work] = fiveRoutes(w);
+      const attempts: [string, Staff, [string, string, Json?]][] = [
+        ['operator → console', op, consoleRead!],
+        ['operator → finding', op, find!],
+        ['district admin → flag', da, flag!],
+        ['district admin → member list', da, list!],
+        ['verifier → flag', verifier, flag!],
+        ['verifier → finding', verifier, find!],
+        ['verifier → member list', verifier, list!],
+        ['verifier → work-list', verifier, work!],
+      ];
+      const codes = new Set<string>();
+      for (const [label, who, [method, url, payload]] of attempts) {
+        const res = await who.client.inject({ method: method as 'GET' | 'POST', url, ...(payload ? { payload } : {}) });
+        expect(res.statusCode, label).toBe(403);
+        codes.add(errCode(res));
+      }
+      expect([...codes], 'one denial code, ⛔ a step-up or schema refusal in disguise').toHaveLength(1);
+      expect([...codes][0]).not.toBe('auth.step_up_required');
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged']);
+    });
+
+    it('⭐ CROSS-DISTRICT: a District Admin and a verifier of ANOTHER district are 403 on the finding and the console read; the claim\'s own district reaches them', async () => {
+      const w = await world();
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const elsewhere = `D-OTHER-${randomUUID().slice(0, 6)}`;
+      const otherDa = await staff(w, ['district_admin'], elsewhere);
+      const otherVerifier = await staff(w, ['verifier'], elsewhere);
+      await stepUp(otherDa, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const refusedFind = await findOf(otherDa, w);
+      expect(refusedFind.statusCode).toBe(403);
+      expect(errCode(refusedFind)).not.toBe('auth.step_up_required');
+      for (const who of [otherDa, otherVerifier]) {
+        const res = await who.client.inject({ method: 'GET', url: consoleUrl(w) });
+        expect(res.statusCode).toBe(403);
+        expect(res.body).not.toContain(FLAG_NOTE);
+      }
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged']);
+      // POSITIVE CONTROL — the claim's own district.
+      const da = await staff(w, ['district_admin']);
+      expect((await da.client.inject({ method: 'GET', url: consoleUrl(w) })).statusCode).toBe(200);
+    });
+
+    it('⭐ CROSS-PARIWAR: staff of X reach NONE of Y\'s five routes (⛔ a body naming the claim); the same client reaches X', async () => {
+      const x = await world();
+      const y = await world();
+      expect((await flagOf(await staff(y, ['helpline_operator']), y)).statusCode).toBe(201);
+      const both = await staff(x, ['helpline_operator', 'district_admin']);
+      await stepUp(both, FRAUD_FINDING_STEP_UP_CONTEXT);
+      for (const [method, url, payload] of fiveRoutes(y)) {
+        const res = await both.client.inject({ method: method as 'GET' | 'POST', url, ...(payload ? { payload } : {}) });
+        expect([403, 404], `${method} ${url}`).toContain(res.statusCode);
+        expect(res.body).not.toContain(y.claimCaseId);
+        expect(res.body).not.toContain(FLAG_NOTE);
+      }
+      expect(await stepRows(y.claimCaseId)).toEqual(['flagged']);
+      expect((await both.client.inject({ method: 'GET', url: consoleUrl(x) })).statusCode).toBe(200); // POSITIVE CONTROL
+    });
+  });
+
+  // ── RB2 — the GUILTY arm over HTTP (the PQ1 go-live arm) ─────────────────────────────────────────────────────────────
+  describe('RB2 — a GUILTY finding over HTTP', () => {
+    it('⭐ 201, the claim CLOSED, the audit says `guilty`, and the member stays LOCKED — erasure is still `rtbf.death_reported` and the account stays frozen', async () => {
+      const w = await world();
+      const memberToken = signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'test-device' }, 15 * 60 * 1000);
+      const erase = async () => {
+        await memberAuthRepo.insertElevation(deps.pool, { memberId: w.memberId, actionContext: 'rtbf', elevatedUntil: new Date(Date.now() + 5 * 60 * 1000) });
+        const res = await app.inject({ method: 'POST', url: '/api/v1/member/rtbf', payload: {}, headers: { origin: 'http://localhost:3001', authorization: `Bearer ${memberToken}` } });
+        return errCode(res);
+      };
+      expect(await erase()).toBe('rtbf.death_reported');
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const res = await findOf(da, w, { outcome: 'guilty', alive_confirmation: 'ground_inspection' });
+      expect(res.statusCode, res.body).toBe(201);
+      expect(res.json()).toMatchObject({ outcome: 'guilty', closed: true, not_closed_reason: null, replayed: false });
+      expect(await stateOf(w.claimCaseId)).toBe('closed');
+      // PQ1 (built B): a GUILTY member is ⛔ released — a ruling of A flips both of these two lines.
+      expect(await erase()).toBe('rtbf.death_reported');
+      const overlay = await inScope(td, w.pariwarId, (s) => memberDomain.getMemberAccountOverlay(s.tx, ids.memberId(w.memberId), new Date()));
+      expect(overlay.accountFrozen).toBe(true);
+      const kinds = await td.pool.query<{ kind: string }>('SELECT kind FROM claim_nominee_findings WHERE claim_case_id = $1', [w.claimCaseId]);
+      expect(kinds.rows.map((r) => r.kind)).toEqual(['member_found_guilty']);
+      const [recorded] = auditsFor('admin_claim.fraud_finding_recorded', w.claimCaseId);
+      expect(recorded?.context).toMatchObject({ outcome: 'guilty', alive_confirmation: 'ground_inspection', closed: true });
+      // The helpline's claim read labels the fraud-closed claim `closed_member_alive`.
+      const op = await staff(w, ['helpline_operator']);
+      const helpline = await op.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/members/${w.memberId}/death-certificate/claims` });
+      const row = (helpline.json() as { claims: Json[] }).claims.find((c) => c.claim_case_id === w.claimCaseId);
+      expect(row).toMatchObject({ closed_member_alive: true });
+    });
+  });
+
+  // ── RB3 — the finding / flag / console behaviours the first pass left unproven ──────────────────────────────────────
+  describe('RB3 — replay, refusals, audits and the console read', () => {
+    it('⭐ a finding REPLAYS (200, `replayed: true`, ⛔ a second audit); a second finding is `already_found`; the flag\'s step id is `step_conflict`', async () => {
+      const w = await world();
+      const op = await staff(w, ['helpline_operator']);
+      const flagStep = randomUUID();
+      expect((await flagOf(op, w, { step_id: flagStep })).statusCode).toBe(201);
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const ids1 = { step_id: randomUUID(), finding_id: randomUUID() };
+      const first = await findOf(da, w, ids1);
+      expect(first.statusCode).toBe(201);
+      const again = await findOf(da, w, ids1);
+      expect(again.statusCode).toBe(200);
+      expect(again.json()).toMatchObject({ replayed: true, step_id: ids1.step_id, finding_id: ids1.finding_id, closed: true });
+      expect(auditsFor('admin_claim.fraud_finding_recorded', w.claimCaseId)).toHaveLength(1); // the replay wrote ⛔ audit
+      expect((await td.pool.query(`SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'claim.closed'`, [w.claimCaseId])).rowCount).toBe(1);
+      const second = await findOf(da, w);
+      expect(second.statusCode).toBe(409);
+      expect(errCode(second)).toBe('fraud_investigation.already_found');
+      const conflict = await findOf(da, w, { step_id: flagStep });
+      expect(conflict.statusCode).toBe(409);
+      expect(errCode(conflict)).toBe('fraud_investigation.step_conflict');
+      expect(auditsFor('admin_claim.fraud_finding_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(
+        expect.arrayContaining(['already_found', 'step_conflict']),
+      );
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged', 'found_innocent']);
+    });
+
+    it('a flag on an UNKNOWN claim is 404 `claim_not_found`; the flag audit fires ONCE and ⛔ on a replay', async () => {
+      const w = await world();
+      const op = await staff(w, ['helpline_operator']);
+      const unknown = randomUUID();
+      const missing = await flagOf(op, w, {}, unknown);
+      expect(missing.statusCode).toBe(404);
+      expect(errCode(missing)).toBe('fraud_investigation.claim_not_found');
+      expect(auditsFor('admin_claim.fraud_flag_rejected', unknown).map((e) => (e.context as Json).reason)).toEqual(['claim_not_found']);
+      const stepId = randomUUID();
+      expect((await flagOf(op, w, { step_id: stepId })).statusCode).toBe(201);
+      expect((await flagOf(op, w, { step_id: stepId })).statusCode).toBe(200);
+      const flagged = auditsFor('admin_claim.fraud_flagged', w.claimCaseId);
+      expect(flagged).toHaveLength(1);
+      expect(flagged[0]!.context).toMatchObject({ step_id: stepId, claim_state: 'intake_pending' });
+      expect(JSON.stringify(flagged)).not.toContain(FLAG_NOTE);
+    });
+
+    it('a claim ALREADY `closed` keeps its state: the finding is 201 with `not_closed_reason: already_closed`', async () => {
+      const w = await world();
+      await drive(w, w.claimCaseId, [
+        ...TO_REVIEW,
+        ['verifier_review', 'closed', 'claim.closed', { trigger: 'suspicion_appeal_allowed', held_by_claim_case_id: randomUUID(), deceased_member_id: w.memberId }],
+      ]);
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const res = await findOf(da, w);
+      expect(res.statusCode).toBe(201);
+      expect(res.json()).toMatchObject({ closed: false, not_closed_reason: 'already_closed' });
+      expect((await td.pool.query(`SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'claim.closed'`, [w.claimCaseId])).rowCount).toBe(1);
+    });
+
+    it('⭐ the console: TWO steps are withheld together for a verifier and readable together for a District Admin (one rule, ⛔ per-step hiding); `no-store` when notes are decrypted; the flagger sees `is_flagger`', async () => {
+      const w = await world();
+      const both = await staff(w, ['helpline_operator', 'district_admin']); // one PERSON: the flagger who also holds the finding key
+      expect((await flagOf(both, w)).statusCode).toBe(201);
+      const asFlagger = await both.client.inject({ method: 'GET', url: consoleUrl(w) });
+      expect(asFlagger.json()).toMatchObject({ viewer: { is_flagger: true, can_record_finding: false } });
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      expect((await findOf(da, w)).statusCode).toBe(201);
+
+      const verifier = await staff(w, ['verifier']);
+      const v = await verifier.client.inject({ method: 'GET', url: consoleUrl(w) });
+      expect((v.json() as { steps: Json[] }).steps.map((x) => x.note)).toEqual([{ state: 'withheld' }, { state: 'withheld' }]);
+      expect(v.body).not.toContain(FLAG_NOTE);
+      expect(v.body).not.toContain(FINDING_NOTE);
+
+      const d = await da.client.inject({ method: 'GET', url: consoleUrl(w) });
+      expect(d.headers['cache-control']).toBe('no-store'); // RB7 — decrypted Tier-1 notes are ⛔ cached
+      const body = d.json() as { steps: { step: string; note: Json }[]; viewer: Json };
+      expect(body.steps.map((x) => [x.step, x.note])).toEqual([
+        ['flagged', { state: 'readable', value: FLAG_NOTE }],
+        ['found_innocent', { state: 'readable', value: FINDING_NOTE }],
+      ]);
+      expect(body.viewer).toMatchObject({ can_record_finding: false, is_flagger: false });
+      const reads = auditsFor('admin_claim.fraud_notes_read', w.claimCaseId);
+      expect(reads).toHaveLength(2); // the flagger-with-the-key read (1 step) and this one (2 steps)
+      expect(reads.map((r) => (r.context as Json).step_count).sort()).toEqual([1, 2]);
+    });
+
+    it('the console\'s `anonymized` (the RTBF sentinel, stored as an envelope) and `unreadable` (a broken envelope) note states', async () => {
+      const w = await world();
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const da = await staff(w, ['district_admin']);
+      const noteOf = async () => ((await da.client.inject({ method: 'GET', url: consoleUrl(w) })).json() as { steps: { note: Json }[] }).steps[0]!.note;
+      expect(await noteOf()).toEqual({ state: 'readable', value: FLAG_NOTE }); // the CONTROL
+      const sentinel = await encryptFraudInvestigationNote(memberDomain.ANONYMIZED_SENTINEL, w.pariwarId, deps.encryption);
+      await td.pool.query(`UPDATE claim_fraud_investigation_steps SET note_ciphertext = $1 WHERE claim_case_id = $2`, [sentinel, w.claimCaseId]);
+      expect(await noteOf()).toEqual({ state: 'anonymized' });
+      await td.pool.query(`UPDATE claim_fraud_investigation_steps SET note_ciphertext = 'not-an-envelope' WHERE claim_case_id = $1`, [w.claimCaseId]);
+      expect(await noteOf()).toEqual({ state: 'unreadable' });
+    });
+  });
+
+  // ── RB4 — a missing display name BLOCKS (checklist family 8) ─────────────────────────────────────────────────────────
+  describe('RB4 — an actor with NO display name is refused before the domain, and STILL audited', () => {
+    it('⭐ the flag: 409 `admin.display_name_missing`, a `_rejected` audit (`missing_display`), ⛔ a step', async () => {
+      const w = await world();
+      const nameless = await staff(w, ['helpline_operator'], w.district, null);
+      const res = await flagOf(nameless, w);
+      expect(res.statusCode).toBe(409);
+      expect(errCode(res)).toBe('admin.display_name_missing');
+      expect(auditsFor('admin_claim.fraud_flag_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['missing_display']);
+      expect(await stepRows(w.claimCaseId)).toEqual([]);
+      // The CONTROL: a named operator flags the same claim.
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+    });
+
+    it('⭐ the finding: the same — nothing written, the claim stays open', async () => {
+      const w = await world();
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const nameless = await staff(w, ['district_admin'], w.district, null);
+      await stepUp(nameless, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const res = await findOf(nameless, w);
+      expect(res.statusCode).toBe(409);
+      expect(errCode(res)).toBe('admin.display_name_missing');
+      expect(auditsFor('admin_claim.fraud_finding_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['missing_display']);
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged']);
+      expect(await stateOf(w.claimCaseId)).not.toBe('closed');
+      // The CONTROL (patch-diff review PD13): a NAMED District Admin records the finding on the same claim — so the refusal above was the
+      // missing name, ⛔ a claim that could not be found.
+      const named = await staff(w, ['district_admin']);
+      await stepUp(named, FRAUD_FINDING_STEP_UP_CONTEXT);
+      expect((await findOf(named, w)).statusCode).toBe(201);
+      expect(await stateOf(w.claimCaseId)).toBe('closed');
+    });
+  });
+
+  // ── RB9 — the helpline's per-member list is audited; RB11 — a visually empty note is no note ─────────────────────────
+  describe('RB9 / RB11', () => {
+    it('⭐ RB9 — the helpline\'s per-member list writes ONE `fraud_claims_read` line: the member id and a count, ⛔ a state, ⛔ a name', async () => {
+      const w = await world();
+      const op = await staff(w, ['helpline_operator']);
+      const before = td.auditSink.ofType('admin_claim.fraud_claims_read').length;
+      expect((await op.client.inject({ method: 'GET', url: memberListUrl(w) })).statusCode).toBe(200);
+      const lines = td.auditSink.ofType('admin_claim.fraud_claims_read').slice(before).filter((e) => (e.context as Json | undefined)?.member_id === w.memberId.toLowerCase());
+      expect(lines).toHaveLength(1);
+      expect(lines[0]!.context).toEqual({ member_id: w.memberId.toLowerCase(), claim_count: 1 });
+      expect(lines[0]!.resourceLocator).toBe(`member:${w.memberId.toLowerCase()}`);
+    });
+
+    it.each([
+      ['zero-width spaces', '\u200B\u200C\u200D'],
+      ['braille blanks', '\u2800\u2800'],
+      ['a Hangul filler (a LETTER that draws nothing)', '\u3164'],
+    ])('⭐ RB11 — a note of %s is `missing_note` (400, audited) on BOTH routes', async (_label, blank) => {
+      const w = await world();
+      const op = await staff(w, ['helpline_operator']);
+      const flagRes = await flagOf(op, w, { note: blank });
+      expect(flagRes.statusCode).toBe(400);
+      expect(errCode(flagRes)).toBe('fraud_investigation.missing_note');
+      expect(auditsFor('admin_claim.fraud_flag_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['missing_note']); // audited (PD13)
+      expect(await stepRows(w.claimCaseId)).toEqual([]);
+      expect((await flagOf(op, w)).statusCode).toBe(201); // the CONTROL: a real note flags
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const findRes = await findOf(da, w, { note: blank });
+      expect(findRes.statusCode).toBe(400);
+      expect(errCode(findRes)).toBe('fraud_investigation.missing_note');
+      expect(auditsFor('admin_claim.fraud_finding_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['missing_note']); // audited (PD13)
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged']);
     });
   });
 });

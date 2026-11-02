@@ -31,7 +31,10 @@ export type FraudFindingOutcome = z.output<typeof FraudFindingOutcome>;
 export const FraudInvestigationStatus = z.enum(['none', 'flagged', 'found']);
 export type FraudInvestigationStatus = z.output<typeof FraudInvestigationStatus>;
 
-/** A staff note on the wire IN: Tier-1 at rest. ⛔ No `.min(1)` — an empty note reaches the writer's own audited `missing_note`. */
+/**
+ * A staff note on the wire IN: Tier-1 at rest. ⛔ No `.min(1)` — an empty or visually-empty note is refused by the HANDLER (before it
+ * is encrypted: an empty plaintext does ⛔ encrypt to empty) as the audited 400 `fraud_investigation.missing_note`, ⛔ a bare Zod 400.
+ */
 const NoteIn = z.string().trim().max(2000);
 
 // ── The flag (DL4) ───────────────────────────────────────────────────────────────────────────────────
@@ -67,7 +70,7 @@ export const FraudFindingRequest = z
     /** Client-minted — the finding record's own id. */
     finding_id: z.string().uuid(),
     outcome: FraudFindingOutcome,
-    /** OPTIONAL on the wire: a missing one reaches the writer's own audited `missing_alive_confirmation` (→ 400). */
+    /** OPTIONAL on the wire: a missing one is refused by the HANDLER as the audited 400 `fraud_investigation.missing_alive_confirmation`. */
     alive_confirmation: FraudAliveConfirmation.optional(),
     note: NoteIn,
   })
@@ -186,7 +189,12 @@ export const OpenFraudInvestigationsResponse = z
   .strict();
 export type OpenFraudInvestigationsResponse = z.output<typeof OpenFraudInvestigationsResponse>;
 
-/** Every error code the fraud-investigation routes answer with — closed (the admin maps each to copy). */
+/**
+ * Every `fraud_investigation.*` code the routes can answer with — the domain's nine refusal reasons plus `concurrent` (a
+ * `ClaimStreamConcurrencyError`, a retriable 409). Pinned to the handlers' `translateFraudRefusal` by `apps/api/tests/unit/fraud-investigation-error-codes.test.ts`,
+ * so a new reason cannot become an unlisted code. ⚠ The generic `admin.display_name_missing` (409) is ⛔ one of them: the handler's display-name
+ * check throws it before the writer is reached, so the domain's own `missing_display` is a backstop the HTTP path normally never shows.
+ */
 export const FRAUD_INVESTIGATION_ERROR_CODES = [
   'fraud_investigation.claim_not_found',
   'fraud_investigation.already_flagged',
@@ -197,5 +205,6 @@ export const FRAUD_INVESTIGATION_ERROR_CODES = [
   'fraud_investigation.missing_note',
   'fraud_investigation.missing_alive_confirmation',
   'fraud_investigation.missing_display',
+  'fraud_investigation.concurrent',
 ] as const;
 export type FraudInvestigationErrorCode = (typeof FRAUD_INVESTIGATION_ERROR_CODES)[number];

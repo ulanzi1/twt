@@ -616,11 +616,14 @@ export type AuthAuditEventType =
   //   fraud_flagged / fraud_flag_rejected — the helpline operator's flag (`claim.flag_fraud`).
   //   fraud_finding_recorded / fraud_finding_rejected — the District Admin's finding (`claim.record_fraud_finding`, step-up).
   //   fraud_notes_read — the console read DECRYPTED the investigation's notes (a holder of the finding key).
+  //   fraud_claims_read — the helpline's per-member list of EVERY claim naming the member (code review 2026-11-02, RB9: the 6.21b
+  //   `claims_read` precedent; ids and counts only).
   | 'admin_claim.fraud_flagged'
   | 'admin_claim.fraud_flag_rejected'
   | 'admin_claim.fraud_finding_recorded'
   | 'admin_claim.fraud_finding_rejected'
   | 'admin_claim.fraud_notes_read'
+  | 'admin_claim.fraud_claims_read'
   // ── Story 6.21b (D5) — the helpline's read of the SELECTED member's live claims + their status ──
   // ids and status codes ONLY (⛔ never a note/date/reviewer). `admin_death_certificate.claims_read`
   // does ⛔ NOT close 6.20's "the helpline live-claims read writes no audit line" deferral — that

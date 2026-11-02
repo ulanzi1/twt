@@ -74,7 +74,7 @@ describe('authEventToAuditInput', () => {
       // Story 6.22 (DL14) — the fraud investigation's lines.
       'admin_claim.fraud_flagged', 'admin_claim.fraud_flag_rejected',
       'admin_claim.fraud_finding_recorded', 'admin_claim.fraud_finding_rejected',
-      'admin_claim.fraud_notes_read',
+      'admin_claim.fraud_notes_read', 'admin_claim.fraud_claims_read',
     ];
     for (const type of types) {
       expect(authEventToAuditInput(evt({ type })).action).toMatch(DOTTED_ACTION);

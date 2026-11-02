@@ -14,7 +14,7 @@
 //     race spec (`packages/domain/tests/integration/member/erasure-intake-race.spec.ts`) proves the HELPER; THIS pins, textually,
 //     that the HANDLERS call it — reverting either to the old rtbf-key-only lock turns it red.
 //   · N1 — the gate SQL (`f.kind = 'member_found_innocent'` inside a `NOT EXISTS`) appears ONLY in `claim/death-report.ts`,
-//     plus a NAMED allow-list of read-only copies (`approval-warnings.ts` × 3, `peer-mesh-read.ts` × 1). Because that
+//     plus a NAMED allow-list of read-only copies (`approval-warnings.ts` × 3, `peer-mesh-read.ts` × 2). Because that
 //     structural match names one spelling (an alias, a `LEFT JOIN … IS NULL`, a Drizzle `notExists` all escape it), the
 //     LITERAL `'member_found_innocent'` (any quote, and the `CLAIM_NOMINEE_FINDING_KINDS` tuple) is pinned too: it may be named
 //     only by the files on a named list. ⚠ Wider, ⛔ proof — a kind reached through some other constant still escapes it.

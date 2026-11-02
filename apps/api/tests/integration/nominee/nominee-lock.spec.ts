@@ -316,7 +316,7 @@ describe.skipIf(!hasDatabase)('Story 6.20 — nominee history, the lock at the f
 
   it('⭐⭐ AC2 / AC11(ii) — the RELEASE route: an INNOCENCE finding unlocks, and a declare then succeeds', async () => {
     // `2026-09-21-238` cl.1 (option B) — a claim filed against a member who is ALIVE ⛔ must not lock
-    // them for life. ⚠ The finding is TEST-SEEDED: its producer is row 6-22 (the fraud register).
+    // them for life. ⚠ The finding is TEST-SEEDED through the writer (its production producer is Story 6.22's `recordFraudFinding`).
     const t = await createTestApp();
     try {
       const { memberId, pariwarId } = await seedMember(t, 'active');

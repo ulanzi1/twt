@@ -51,6 +51,13 @@ const FORBIDDEN = [
   'writeCorrectionMark',
   'recordDeathCertificateReview',
   'recordNomineeDetermination',
+  // ⭐ Story 6.22 (code review 2026-11-02, RB10) — the fraud register's writers: the files this fence scans ⛔ flag, ⛔ find, ⛔ release a member.
+  // ⚠ Scope (patch-diff review PD13): only the files listed above. No fence reads `apps/jobs` as a whole, so ANOTHER job calling these writers would not be seen.
+  'flagClaimForFraudInvestigation',
+  'recordFraudFinding',
+  'recordMemberInnocenceFinding',
+  'recordMemberGuiltFinding',
+  'closeClaimOnFraudFinding',
   'projectClaimState',
   'appendEvent',
   // ⭐ 6.24a — the closure, the appeal writers and the reversal key (the notices READ RF1 and the closing event, ⛔ more).
@@ -78,8 +85,9 @@ const DECISION_TABLE_NAMES = [
   'claim_death_certificate_reviews',
   'claim_correction_closures',
   'claim_ground_inspections',
-  // ⭐ Story 6.22 — the fraud investigation's flag and finding steps.
+  // ⭐ Story 6.22 — the fraud investigation's flag and finding steps, and the member finding that carries the release.
   'claim_fraud_investigation_steps',
+  'claim_nominee_findings',
   'cycle_freeze_commits',
   'nominee_determinations',
   'nominee_determination_items',
@@ -130,6 +138,15 @@ describe('⛔ Invariant 4 — the staff email calls ⛔ decision writer, emits �
       ['delete', 'await client.query(`DELETE FROM claim_appeal_panel_votes WHERE claim_case_id = $1`, [id]);'],
       ['merge', 'await client.query(`MERGE INTO claim_verifier_decisions d USING x ON true WHEN MATCHED THEN DO NOTHING`);'],
       ['truncate', 'await client.query(`TRUNCATE TABLE nominee_determinations`);'],
+      // ⭐ Story 6.22 (RB10) — the fraud register: each writer by NAME, and the two tables by WRITE form.
+      ['flagClaimForFraudInvestigation', 'await claim.flagClaimForFraudInvestigation(client, input);'],
+      ['recordFraudFinding', 'await claim.recordFraudFinding(client, input);'],
+      ['recordMemberInnocenceFinding', 'await claim.recordMemberInnocenceFinding(client, input);'],
+      ['recordMemberGuiltFinding', 'await claim.recordMemberGuiltFinding(client, input);'],
+      ['closeClaimOnFraudFinding', 'await closeClaimOnFraudFinding(client, input);'],
+      ['insert', 'await client.query(`INSERT INTO claim_nominee_findings (finding_id) VALUES ($1)`, [id]);'],
+      ['update', 'await client.query(`UPDATE claim_fraud_investigation_steps SET note_ciphertext = $1`, [x]);'],
+      ['drizzle', 'await db.insert(claimNomineeFindings).values(row);'],
       ['insert', "await client.query(`INSERT INTO admin_credentials (user_id) VALUES ($1)`, [id]);"],
       ['update', "await client.query(`UPDATE users SET status = 'active' WHERE id = $1`, [id]);"],
       ['delete', 'await client.query(`DELETE FROM role_grants WHERE user_id = $1`, [id]);'],

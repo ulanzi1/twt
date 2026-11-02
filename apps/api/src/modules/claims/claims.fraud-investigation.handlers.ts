@@ -14,6 +14,7 @@
 // ⛔ No Tier-1 in an audit context, a log line or an event (N6): ids, the outcome, `alive_confirmation`, reason codes.
 
 import { claim as claimDomain, ids, member as memberDomain, rbac } from '@twt/domain';
+import { isMemorialTextBlank } from '@twt/contracts';
 import type {
   FraudFindingRequest,
   FraudFindingResponse,
@@ -62,8 +63,19 @@ async function resolveDisplay(deps: AppDeps, actorId: string): Promise<string> {
 
 const locator = (claimCaseId: string) => `claim:${claimCaseId.toLowerCase()}`;
 
-/** A refusal the WRITER owns, onto HTTP: 404 / 400 / 409 `fraud_investigation.<reason>` — ⛔ never a 500. */
-function translate(err: unknown): never {
+/**
+ * Does the note carry a visible character? `trim()` strips ordinary whitespace but ⛔ U+200B-U+200D, U+2060, U+2800 or the Hangul
+ * fillers (U+115F, U+1160, U+3164, U+FFA0 — LETTERS that draw nothing), so a note of those would satisfy "every step carries a note"
+ * while being empty to a reader. The repo's ONE blank rule already handles all of them (strip the invisible class, then require a
+ * letter, number, punctuation or symbol — the memorial's `isMemorialTextBlank`), so it is reused, ⛔ copied (code review 2026-11-02, RB11).
+ */
+export const hasVisibleText = (note: string): boolean => !isMemorialTextBlank(note);
+
+/**
+ * A refusal the WRITER owns, onto HTTP: 404 / 400 / 409 `fraud_investigation.<reason>` — ⛔ never a 500. EXPORTED so a unit test can turn
+ * every domain reason into its wire code and pin `FRAUD_INVESTIGATION_ERROR_CODES` to it (RB6).
+ */
+export function translateFraudRefusal(err: unknown): never {
   if (err instanceof claimDomain.FraudInvestigationRefusedError) {
     const code = `fraud_investigation.${err.reason}`;
     if (err.reason === 'claim_not_found') throw new NotFoundError('Claim not found', code);
@@ -78,7 +90,11 @@ function translate(err: unknown): never {
   throw err;
 }
 
-/** The bounded reason a refusal is audited with — in lockstep with `translate`'s codes; ⛔ never a message with data. */
+/**
+ * The bounded reason a refusal is audited with: the writer's reason, `concurrent`, or `missing_display` for the handler's own
+ * `AdminDisplayNameMissingError` — whose WIRE code is the generic `admin.display_name_missing`, ⛔ `fraud_investigation.missing_display`.
+ * ⛔ Never a message with data.
+ */
 function auditReason(err: unknown): string {
   if (err instanceof claimDomain.FraudInvestigationRefusedError) return err.reason;
   if (err instanceof claimDomain.ClaimStreamConcurrencyError) return 'concurrent';
@@ -142,8 +158,8 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
       let failure: unknown;
       try {
         const actorDisplay = await resolveDisplay(deps, actorId);
-        // An empty PLAINTEXT note is caught here, before it is encrypted (an empty plaintext does ⛔ encrypt to empty).
-        if (body.note.trim() === '') {
+        // An empty or visually-empty PLAINTEXT note is caught here, before it is encrypted (an empty plaintext does ⛔ encrypt to empty).
+        if (!hasVisibleText(body.note)) {
           throw new claimDomain.FraudInvestigationRefusedError(claimCaseId, 'missing_note', 'every step carries a note');
         }
         const noteCiphertext = await encryptFraudInvestigationNote(body.note, p, enc);
@@ -175,7 +191,7 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
           context: { claim_case_id: claimCaseId.toLowerCase(), reason: auditReason(failure) },
         });
         if (failure instanceof AdminDisplayNameMissingError) throw failure;
-        return translate(failure);
+        return translateFraudRefusal(failure);
       }
       if (!result.replayed) {
         emitAuditBestEffort(deps, request, 'admin_claim.fraud_flagged', {
@@ -191,9 +207,18 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
 
     /** (b) GET — every claim naming the member the operator has found and read back, in EVERY state. ⛔ PII. */
     async getMemberClaims(request: FastifyRequest): Promise<MemberFraudClaimsResponse> {
-      const { scopeTx, pariwarId } = scopeOf(request);
+      const { scopeTx, actorId, pariwarId } = scopeOf(request);
       const { memberId } = request.params as { memberId: string };
-      const rows = await claimDomain.listClaimsNamingMemberForFraudFlag(scopeTx.tx, pariwarId, ids.memberId(memberId));
+      const memberIdBrand = ids.memberId(memberId);
+      const rows = await claimDomain.listClaimsNamingMemberForFraudFlag(scopeTx.tx, pariwarId, memberIdBrand);
+      // ⭐ Audited like its 6.21b sibling (`admin_death_certificate.claims_read`) — code review 2026-11-02, RB9: this list shows EVERY claim
+      // naming ANY member of the Pariwar, in every state, to any `claim.flag_fraud` holder. The member id and a count — ⛔ a state, ⛔ a name.
+      emitAuditBestEffort(deps, request, 'admin_claim.fraud_claims_read', {
+        actorId,
+        pariwarId: scopeTx.pariwarId,
+        resourceLocator: `member:${memberIdBrand}`,
+        context: { member_id: memberIdBrand, claim_count: rows.length },
+      });
       return {
         claims: rows.map((r) => ({
           claim_case_id: String(r.claimCaseId).toLowerCase(),
@@ -215,7 +240,7 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
       let failure: unknown;
       try {
         const actorDisplay = await resolveDisplay(deps, actorId);
-        if (body.note.trim() === '') {
+        if (!hasVisibleText(body.note)) {
           throw new claimDomain.FraudInvestigationRefusedError(claimCaseId, 'missing_note', 'every step carries a note');
         }
         if (body.alive_confirmation === undefined) {
@@ -258,7 +283,7 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
           },
         });
         if (failure instanceof AdminDisplayNameMissingError) throw failure;
-        return translate(failure);
+        return translateFraudRefusal(failure);
       }
       const notClosedReason = result.close.closed ? null : result.close.reason;
       if (!result.replayed) {
@@ -296,7 +321,7 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
     },
 
     /** (d) GET — the console read: the steps; every note WITHHELD unless the viewer holds the finding key here (uniform). */
-    async getInvestigation(request: FastifyRequest): Promise<FraudInvestigationResponse> {
+    async getInvestigation(request: FastifyRequest, reply: FastifyReply): Promise<FraudInvestigationResponse> {
       const { scopeTx, actorId, pariwarId } = scopeOf(request);
       const { claimCaseId } = request.params as { claimCaseId: string };
       const claimRow = await claimDomain.getClaimCase(scopeTx.tx, pariwarId, ids.claimId(claimCaseId));
@@ -316,6 +341,10 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
           note: holder ? await readNote(deps, request, s.noteCiphertext, scopeTx.pariwarId, claimCaseId) : ({ state: 'withheld' } as const),
         })),
       );
+      if (holder) {
+        // Decrypted Tier-1 notes: ⛔ cached by a browser or a proxy (the sibling decrypting reads set it too — RB7).
+        void reply.header('cache-control', 'no-store');
+      }
       if (holder && steps.length > 0) {
         emitAuditBestEffort(deps, request, 'admin_claim.fraud_notes_read', {
           actorId,

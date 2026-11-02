@@ -938,7 +938,7 @@ export type FraudInvestigationRefusalReason =
   | 'already_found'
   /** The finder is the person who flagged it — the ruled chain is TWO people (`-238` cl. 3; DL3 step 2). → 409. */
   | 'finder_is_flagger'
-  /** The step id was already used for a DIFFERENT step on this claim (a replay must repeat the request). → 409. */
+  /** The step id was already used for a DIFFERENT step on this claim, or for a step of ANOTHER claim or Pariwar (a replay must repeat the request). → 409. */
   | 'step_conflict'
   /** A step needs its note (N1). → 400. */
   | 'missing_note'

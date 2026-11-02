@@ -24,7 +24,10 @@ import {
   assertClaimApprovable,
   flagClaimForFraudInvestigation,
   isDeathReportStanding,
+  isNomineeDeclarationLocked,
+  listOpenFraudInvestigations,
   listStandingDeathReports,
+  lockAndReadDeathReport,
   readClosedHolderRefusedBulk,
   readClosedMemberAliveBulk,
   recordFraudFinding,
@@ -43,6 +46,7 @@ import {
   type PariwarId,
 } from '../../../src/ids/index.js';
 import { getMemberAccountOverlay } from '../../../src/member/overlay.js';
+import { resolveRtbfLegality } from '../../../src/member/rtbf-legality.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, driveClaimTo, enterAppScope, seedNomineeNameCheck } from '../_helpers.js';
 import { claimAt } from './_one-payment-fixtures.js';
@@ -192,6 +196,49 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation: flag, fin
       expect(await refusal(find(client, cid, 'innocent'))).toBe('already_found');
       expect(await refusal(find(client, cid, 'guilty'))).toBe('already_found');
     });
+
+    it('RA10 — an UNKNOWN outcome is refused BEFORE any write: ⛔ it takes the guilty writer, ⛔ a finding row, ⛔ an event', async () => {
+      const { client } = getTx();
+      await enterAppScope(client, PID);
+      const { cid } = await openClaim(client);
+      await flag(client, cid);
+      const before = (await eventsOf(client, cid)).length;
+      await expect(find(client, cid, 'maybe' as never)).rejects.toThrow(/unknown outcome maybe/);
+      await expect(find(client, cid, undefined as never)).rejects.toThrow(/unknown outcome undefined/);
+      expect((await eventsOf(client, cid)).length).toBe(before);
+      const { rows } = await client.query<{ n: number }>('SELECT count(*)::int AS n FROM claim_nominee_findings WHERE claim_case_id = $1', [cid]);
+      expect(rows[0]!.n).toBe(0);
+      expect(await stepsOf(client, cid)).toEqual([{ step: 'flagged', alive: null, finding: null }]);
+    });
+
+    it('RA11 — a step id already used on ANOTHER claim is `step_conflict` (⛔ a raw 23505) for the flag AND the finding', async () => {
+      const { client } = getTx();
+      await enterAppScope(client, PID);
+      const one = await openClaim(client);
+      const two = await openClaim(client);
+      const stepId = toStepId(randomUUID());
+      await flag(client, one.cid, { stepId });
+
+      // The flag: the replay lookup is per claim, so only the insert meets the global primary key. The failing insert aborts the
+      // statement's transaction state, so each leg runs under a SAVEPOINT the CALLER rolls back to (exactly what the API's scope
+      // transaction does for any refusal).
+      // ⚠ (code review PD8) What this test pins is the MAPPED REASON for both writers, and the control below. It does ⛔ prove that nothing
+      // partial survives: the finding row and the annotation event are written BEFORE the step insert collides, but `ROLLBACK TO SAVEPOINT`
+      // removes them whether or not the error was mapped, so an assertion on their absence AFTER the rollback holds with the fix deleted.
+      // That the failed call leaves nothing behind is the caller's rollback, not this writer's code — and is not separately tested here.
+      await client.query('SAVEPOINT collide_flag');
+      expect(await refusal(flag(client, two.cid, { stepId }))).toBe('step_conflict');
+      await client.query('ROLLBACK TO SAVEPOINT collide_flag');
+
+      // The finding collides the same way (its step insert is step 5, after the member-finding row and annotation, before the close).
+      await flag(client, two.cid);
+      await client.query('SAVEPOINT collide_find');
+      expect(await refusal(find(client, two.cid, 'innocent', { stepId }))).toBe('step_conflict');
+      await client.query('ROLLBACK TO SAVEPOINT collide_find');
+
+      // The CONTROL: the same claim with a fresh step id is accepted — so the refusals above were the collision, ⛔ a broken claim.
+      expect((await find(client, two.cid, 'innocent')).close).toEqual({ closed: true });
+    });
   });
 
   describe('AC4 — innocent: released and closed', () => {
@@ -298,6 +345,32 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation: flag, fin
       expect(await isDeathReportStanding(tx, PID, toMemberId(mid))).toBe(true);
       expect(await frozen(client, mid)).toBe(true);
     });
+
+    it('⭐ RA13 / AC2 — the leaf\'s CONSUMERS for a member found GUILTY: erasure is `death_reported`, the nominee declaration is locked, the withdrawal / Life Events gate reads "reported" — and for an INNOCENT member every one releases (the control)', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PID);
+      const innocent = await openClaim(client);
+      const guilty = await openClaim(client);
+      await flag(client, innocent.cid);
+      await flag(client, guilty.cid);
+      // The three DOMAIN gates every consumer calls: the erasure resolver (`resolveRtbfLegality` — `rtbf.death_reported`), the
+      // nominee-declaration lock (6.20), and the lock-then-read the withdrawal and Life Events handlers take. A `withdrawn`
+      // member is the erasure resolver's input here: a standing report refuses it BEFORE its legal `withdrawn` route.
+      const gates = async (mid: string) => ({
+        erasure: (await resolveRtbfLegality(tx, PID, toMemberId(mid), 'withdrawn')).kind,
+        nomineeDeclarationLocked: await isNomineeDeclarationLocked(tx, PID, toMemberId(mid)),
+        withdrawalAndLifeEventsGateReadsReported: await lockAndReadDeathReport(client, PID, toMemberId(mid)),
+      });
+      const reported = { erasure: 'death_reported', nomineeDeclarationLocked: true, withdrawalAndLifeEventsGateReadsReported: true };
+      expect(await gates(innocent.mid)).toEqual(reported); // before any finding both members are locked — the control's starting point
+      expect(await gates(guilty.mid)).toEqual(reported);
+
+      await find(client, innocent.cid, 'innocent');
+      await find(client, guilty.cid, 'guilty');
+      expect(await gates(innocent.mid)).toEqual({ erasure: 'legal', nomineeDeclarationLocked: false, withdrawalAndLifeEventsGateReadsReported: false });
+      // PQ1 (built B) — a ruling of A flips this to the innocent row.
+      expect(await gates(guilty.mid)).toEqual(reported);
+    });
   });
 
   describe('AC8 — idempotence and targeted conflicts', () => {
@@ -343,6 +416,29 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation: flag, fin
     });
   });
 
+  describe('RA12 — a member finding recorded OUTSIDE the investigation (the writer\'s `duplicate` and `replayed` branches)', () => {
+    it('a DIFFERENT finding id ⇒ `already_found`; the SAME finding id ⇒ `already_found`; ⛔ found step, ⛔ close, ⛔ new event — and the claim STAYS on the work-list', async () => {
+      const { client, tx } = getTx();
+      await enterAppScope(client, PID);
+      const { cid } = await openClaim(client);
+      await flag(client, cid);
+      // The low-level writer called DIRECTLY — what a seeded row or a future second caller would do. It has ONE production
+      // caller today (`recordFraudFinding`), so this state is not reachable through the API; it is pinned, not endorsed.
+      const outside = toFindingId(randomUUID());
+      await recordMemberInnocenceFinding(client, { claimCaseId: cid, pariwarId: PID, findingId: outside, actorId: DA, actorDisplay: 'District Admin', actor: 'operator' });
+      const before = (await eventsOf(client, cid)).length;
+
+      expect(await refusal(find(client, cid, 'innocent'))).toBe('already_found'); // another finding id: the inner writer's `duplicate`
+      expect(await refusal(find(client, cid, 'innocent', { findingId: outside }))).toBe('already_found'); // the same id: its replay
+
+      expect(await stepsOf(client, cid)).toEqual([{ step: 'flagged', alive: null, finding: null }]);
+      expect(await stateOf(client, cid)).toBe('verifier_review');
+      expect((await eventsOf(client, cid)).length).toBe(before);
+      // The residual, pinned: nothing can close this investigation through the finding writer, so it stays listed.
+      expect((await listOpenFraudInvestigations(tx, PID, { isVisible: () => true })).map((r) => r.claimCaseId)).toContain(cid);
+    });
+  });
+
   describe('AC2 — the leaf and its list', () => {
     it('`listStandingDeathReports` lists exactly what `isDeathReportStanding` counts (a released claim dropped; ANY other state kept)', async () => {
       const { client, tx } = getTx();
@@ -379,24 +475,32 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation: flag, fin
       expect(await readClosedHolderRefusedBulk(tx, PID, [r])).toEqual(new Set([r]));
     });
 
-    it('the defensive guard — a raw `claim.closed` carrying a FRAUD trigger AND a `held_by` is ⛔ labelled holder-refused', async () => {
+    // ⭐ The SAME raw payload shape twice (RA9): with a HELD trigger the claim IS labelled holder-refused — the control, which
+    // proves the raw insert and the forced `closed` state really reach OP10's join — and with a FRAUD trigger it is NOT. Only
+    // the trigger differs, so the second result is the guard, ⛔ a claim that never reached the join.
+    it.each([
+      ['a HELD trigger (the control) — IS labelled holder-refused', 'suspicion_appeal_allowed', true],
+      ['a FRAUD trigger AND a `held_by` — is ⛔ labelled holder-refused (the defensive guard)', 'fraud_finding_innocent', false],
+    ] as const)('the defensive guard — a raw `claim.closed` carrying %s', async (_label, trigger, labelled) => {
       const { client, tx } = getTx();
       await enterAppScope(client, PID);
       const mid = randomUUID();
       const holder = await claimAt(client, PID, mid, 'denied');
       const x = toClaimId(randomUUID());
       await driveClaimTo(client, PID, x, mid, 'verifier_review');
-      // Raw insert past the schema (the projector would refuse this payload) — the only way to prove the guard.
-      await client.query(
+      // Raw insert past the schema (the projector would refuse the fraud payload) — the only way to prove the guard.
+      const inserted = await client.query(
         `INSERT INTO events_log (stream_id, pariwar_id, event_type, payload, event_version)
          SELECT $1, $2, 'claim.closed', $3::jsonb, max(event_version) + 1 FROM events_log WHERE stream_id = $1`,
-        [x, PID, JSON.stringify({ from_state: 'verifier_review', to_state: 'closed', trigger: 'fraud_finding_innocent', actor: 'system', held_by_claim_case_id: holder, deceased_member_id: mid })],
+        [x, PID, JSON.stringify({ from_state: 'verifier_review', to_state: 'closed', trigger, actor: 'system', held_by_claim_case_id: holder, deceased_member_id: mid })],
       );
+      expect(inserted.rowCount).toBe(1);
       await client.query('RESET ROLE');
       await client.query("SET LOCAL app.claim_state_writer = 'on'");
-      await client.query("UPDATE claims SET current_state = 'closed' WHERE claim_case_id = $1", [x]);
+      const forced = await client.query("UPDATE claims SET current_state = 'closed' WHERE claim_case_id = $1", [x]);
+      expect(forced.rowCount).toBe(1); // the claim really is `closed` — else an empty result below proves nothing
       await enterAppScope(client, PID);
-      expect(await readClosedHolderRefusedBulk(tx, PID, [x])).toEqual(new Set());
+      expect(await readClosedHolderRefusedBulk(tx, PID, [x])).toEqual(labelled ? new Set([x]) : new Set());
     });
 
     it('a sibling claim of the same death keeps its OP10 behaviour; the `-291` Q2 B closure text ⛔ selects a fraud close', async () => {

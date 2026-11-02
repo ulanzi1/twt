@@ -19,7 +19,7 @@
 // INSERT); a finding is ⛔ never edited.
 
 import { sql } from 'drizzle-orm';
-import { index, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, pgTable, smallint, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import type { ClaimId, ClaimNomineeFindingId, PariwarId } from '../ids/index.js';
 import { claims } from './claims.js';
@@ -33,6 +33,17 @@ export type ClaimNomineeFindingKind = (typeof CLAIM_NOMINEE_FINDING_KINDS)[numbe
  * byte as the migration's `WHERE`. ⛔ Restate it elsewhere — the member-finding writers import this.
  */
 export const MEMBER_FINDING_UNIQUE_PREDICATE = sql`kind IN ('member_found_innocent', 'member_found_guilty')`;
+
+/**
+ * The member finding's KIND for each investigation OUTCOME — the one place a kind is spelled for the steps table's generated
+ * `finding_kind` column (migration 0198). It lives HERE, with the other kind spellings, because the source fence (TR2) names
+ * the files allowed to spell a finding kind and `claim_fraud_investigation_steps.ts` is ⛔ one of them: it builds its column
+ * expression from this map. ⛔ Not a release rule — which kinds release is the leaf's and its copies' (`death-report.ts`).
+ */
+export const MEMBER_FINDING_KIND_BY_OUTCOME = {
+  innocent: 'member_found_innocent',
+  guilty: 'member_found_guilty',
+} as const satisfies Record<string, ClaimNomineeFindingKind>;
 
 export const claimNomineeFindings = pgTable(
   'claim_nominee_findings',
@@ -60,6 +71,8 @@ export const claimNomineeFindings = pgTable(
     uniqueIndex('claim_nominee_findings_one_disqualification_per_rank_uq')
       .on(t.claimCaseId, t.rank)
       .where(sql`kind = 'nominee_disqualified'`),
+    // The composite FK's target (migration 0198): a fraud-investigation step points at its own claim's finding of its own kind.
+    unique('claim_nominee_findings_finding_claim_kind_uq').on(t.findingId, t.claimCaseId, t.kind),
   ],
 );
 

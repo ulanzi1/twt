@@ -286,7 +286,9 @@ CREATE INDEX "nominee_corrections_member_idx" ON "nominee_corrections" USING btr
 CREATE UNIQUE INDEX "nominee_corrections_one_open_per_claim_rank_uq" ON "nominee_corrections" USING btree ("claim_case_id", "rank") WHERE step IN ('da_pending', 'pa_pending');--> statement-breakpoint
 
 -- ══ claim_nominee_findings (AC2 release, D17(c)) — Story 6-22's findings, consumed here ═══════════
--- ⚠ ⛔ No production writer until row 6-22 lands (`2026-09-21-241` §6).
+-- ⚠ The production writers landed with Story 6-22 (`2026-09-21-241` §6): `recordMemberInnocenceFinding` /
+-- `recordMemberGuiltFinding` in `claim/nominee-lock.ts`, called only by `recordFraudFinding`. (Comment-only edit,
+-- 2026-11-02 — this line once read "No production writer until row 6-22 lands"; the statements below are unchanged.)
 CREATE TABLE "claim_nominee_findings" (
 	"finding_id" uuid PRIMARY KEY NOT NULL,
 	"claim_case_id" uuid NOT NULL,

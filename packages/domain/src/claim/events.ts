@@ -693,7 +693,7 @@ export type ClaimClosedTrigger = (typeof CLAIM_CLOSED_TRIGGERS)[number];
  * 6.19c closures row, ⛔ never `denied_no_appeal`. Emitted ONLY through the closure core in `suspicion-refusal-persist.ts`
  * (`closeClaimsHeldBySuspicionAppeal`, `closeClaimsOfPaidDeath`, `closeClaimIfDeathPaid` and — Story 6.22 —
  * `closeClaimOnFraudFinding`). `held_by_claim_case_id` = the reversed claim / the payment-committed claim. ⛔ Not a new
- * event — `CLAIM_EVENT_TYPES` stays 36. Non-PII.
+ * event — at 6.24a the vocabulary stayed at 36 (it has grown since; the current list is {@link CLAIM_EVENT_TYPES}). Non-PII.
  * ⭐ Story 6.22 (DL13) — DISCRIMINATED on `trigger`: a HELD trigger REQUIRES `held_by_claim_case_id` (OP10 reads it); a
  * FRAUD trigger carries ⛔ `held_by_claim_case_id` (filling it with the claim's own id would make OP10 label the claim
  * "the other claim … was later refused; the family may file again" — TR6) and carries the `finding_id` instead. Both keep

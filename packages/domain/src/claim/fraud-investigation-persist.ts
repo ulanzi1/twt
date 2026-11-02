@@ -96,6 +96,19 @@ async function eventVersionOf(db: Db, claimCaseId: ClaimId, eventType: string, k
 
 const sameId = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
+/** The steps table's primary key — `step_id` is producer-supplied and the key is global (across claims AND Pariwars). */
+const STEPS_PRIMARY_KEY = 'claim_fraud_investigation_steps_pkey';
+
+/**
+ * A producer-supplied `step_id` that already exists on ANOTHER claim or Pariwar: the replay lookup is per claim and
+ * RLS-scoped, so only the insert meets the global key. Surfaced as a typed `step_conflict`, ⛔ a raw 23505 (a 500). The
+ * transaction is already aborted at that point — the caller rolls back, exactly as for any other refusal thrown here.
+ */
+function isStepIdCollision(err: unknown): boolean {
+  const e = err as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+  return (e.code ?? e.cause?.code) === '23505' && (e.constraint ?? e.cause?.constraint) === STEPS_PRIMARY_KEY;
+}
+
 // ── The flag (DL4) ──────────────────────────────────────────────────────────────────────────────────
 
 export interface FlagClaimForFraudInvestigationInput extends StepActor {
@@ -120,8 +133,10 @@ export interface FlagClaimForFraudInvestigationResult {
 /**
  * ⭐ DL4 — the helpline operator FLAGS a claim (any state) as possibly about a member who is ALIVE. Writes the `flagged`
  * step and the `claim.fraud_flagged` annotation in ONE transaction, under the claim's row lock. A retry with the SAME step
- * id replays the original result; a flag under a DIFFERENT step id on a flagged claim is `already_flagged`. It changes ⛔
- * state and gates ⛔ approval (N5).
+ * id REPLAYS: it writes nothing and returns the recorded flag's event version, with `claimState` read from the claim's
+ * CURRENT row (so a replay after a later close reports `closed`, not the state at the first call); a flag under a
+ * DIFFERENT step id on a flagged claim is `already_flagged`. A step id already used on another claim or Pariwar is
+ * `step_conflict`. It changes ⛔ state and gates ⛔ approval (N5).
  */
 export async function flagClaimForFraudInvestigation(
   client: pg.PoolClient,
@@ -144,18 +159,23 @@ export async function flagClaimForFraudInvestigation(
     throw new FraudInvestigationRefusedError(input.claimCaseId, 'already_flagged', 'this claim is already flagged');
   }
 
-  await db.insert(claimFraudInvestigationSteps).values({
-    stepId: input.stepId,
-    claimCaseId: row.claimCaseId,
-    pariwarId: input.pariwarId,
-    deceasedMemberId: row.deceasedMemberId,
-    step: 'flagged',
-    findingId: null,
-    aliveConfirmation: null,
-    noteCiphertext: input.noteCiphertext,
-    actorId: input.actorId,
-    actorDisplay: input.actorDisplay,
-  });
+  try {
+    await db.insert(claimFraudInvestigationSteps).values({
+      stepId: input.stepId,
+      claimCaseId: row.claimCaseId,
+      pariwarId: input.pariwarId,
+      deceasedMemberId: row.deceasedMemberId,
+      step: 'flagged',
+      findingId: null,
+      aliveConfirmation: null,
+      noteCiphertext: input.noteCiphertext,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  } catch (err) {
+    if (isStepIdCollision(err)) throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id is already used');
+    throw err;
+  }
   const projected = await projectClaimState(client, {
     claimCaseId: row.claimCaseId,
     pariwarId: input.pariwarId,
@@ -220,8 +240,9 @@ export interface RecordFraudFindingResult {
  * ⭐ DL3 — the District Admin's finding on a FLAGGED claim: innocent (the member is released at once) or guilty (the
  * locks are kept and the account stays frozen — a declared narrowing pending the Panel's Q1). Steps:
  *   1. ONE unlocked read of the claim's deceased member; the intake key; this claim's closure keys; the claim row;
- *   2. REPLAY first (a found step with this step id and outcome ⇒ the original result, ⛔ write); then a flag must exist,
- *      ⛔ found step yet, and the finder ⛔ the flagger;
+ *   2. REPLAY first (a found step with this step id and outcome ⇒ the recorded finding, ⛔ write — `close.reason` and
+ *      `otherStandingClaims` are re-derived from the claim's CURRENT row, so a replay after a later change reports the
+ *      state now); then a flag must exist, ⛔ found step yet, and the finder ⛔ the flagger;
  *   3. the proof of life is required;
  *   4. the member finding (`nominee-lock.ts` — innocent or guilty);
  *   5. the `found_*` step;
@@ -229,6 +250,11 @@ export interface RecordFraudFindingResult {
  * ⛔ It moves no money and no pool (N5).
  */
 export async function recordFraudFinding(client: pg.PoolClient, input: RecordFraudFindingInput): Promise<RecordFraudFindingResult> {
+  // ⚠ FIRST, before any write: anything but the two outcomes would take the guilty writer below and write the finding row
+  // and the sticky annotation before the step insert failed — a programmer error (the contract enum stops it at the API).
+  if (!(FRAUD_FINDING_OUTCOMES as readonly string[]).includes(input.outcome)) {
+    throw new Error(`[fraud-investigation] unknown outcome ${String(input.outcome)} — ${FRAUD_FINDING_OUTCOMES.join(' | ')} only`);
+  }
   requireNoteAndDisplay(input.claimCaseId, input.noteCiphertext, input.actorDisplay);
   if (!(FRAUD_ALIVE_CONFIRMATIONS as readonly string[]).includes(input.aliveConfirmation)) {
     throw new FraudInvestigationRefusedError(input.claimCaseId, 'missing_alive_confirmation', 'how the member was confirmed alive');
@@ -294,18 +320,23 @@ export async function recordFraudFinding(client: pg.PoolClient, input: RecordFra
   }
 
   // (5) The found step.
-  await db.insert(claimFraudInvestigationSteps).values({
-    stepId: input.stepId,
-    claimCaseId: row.claimCaseId,
-    pariwarId: input.pariwarId,
-    deceasedMemberId: row.deceasedMemberId,
-    step: FOUND_STEP[input.outcome],
-    findingId: input.findingId,
-    aliveConfirmation: input.aliveConfirmation,
-    noteCiphertext: input.noteCiphertext,
-    actorId: input.actorId,
-    actorDisplay: input.actorDisplay,
-  });
+  try {
+    await db.insert(claimFraudInvestigationSteps).values({
+      stepId: input.stepId,
+      claimCaseId: row.claimCaseId,
+      pariwarId: input.pariwarId,
+      deceasedMemberId: row.deceasedMemberId,
+      step: FOUND_STEP[input.outcome],
+      findingId: input.findingId,
+      aliveConfirmation: input.aliveConfirmation,
+      noteCiphertext: input.noteCiphertext,
+      actorId: input.actorId,
+      actorDisplay: input.actorDisplay,
+    });
+  } catch (err) {
+    if (isStepIdCollision(err)) throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id is already used');
+    throw err;
+  }
 
   // (6) Close a closable claim through the closure core.
   const closed = await closeClaimOnFraudFinding(client, {
@@ -375,7 +406,7 @@ export interface FraudInvestigationStepRecord {
   readonly actedAt: Date;
 }
 
-/** ⭐ DL7 — the claim's investigation steps, in order (flag first). At most three rows exist per claim (the indexes). */
+/** ⭐ DL7 — the claim's investigation steps, in order (flag first). At most two rows exist per claim: the flag, then ONE found step (the two unique indexes). */
 export async function listFraudInvestigationSteps(
   db: Db,
   pariwarId: PariwarId,

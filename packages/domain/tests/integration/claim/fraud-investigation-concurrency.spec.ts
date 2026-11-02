@@ -21,6 +21,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { appealAdvisoryLockKey } from '../../../src/claim/appeal-lock.js';
 import {
+  AppealNotDeniedError,
+  FraudInvestigationRefusedError,
   flagClaimForFraudInvestigation,
   initiateAppeal,
   intakeAdvisoryLockKey,
@@ -179,8 +181,9 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the finding\'s lock order (two con
     const b = await openTx(pid);
     const finding = settle(find(b.client, pid, cid.toUpperCase()));
     await waitUntilBlocked(b.backendPid);
-    // ⭐ The intake key comes FIRST: while the finding waits on it, it holds ⛔ the claim row (DL12's inner writer also
-    // takes the key — but AFTER the row; without the finding's own key first this probe fails with 55P03).
+    // ⭐ The intake key comes FIRST: while the finding waits on it, it holds ⛔ the claim row. (DL12's inner writer takes
+    // the key too — but by then the OUTER writer already holds the row, so only the outer writer's own key-first order
+    // keeps the row free here; without it this probe fails with 55P03.)
     const probe = await openTx(pid);
     const rowFree = await probe.client.query('SELECT 1 FROM claims WHERE claim_case_id = $1 FOR UPDATE NOWAIT', [cid]).then(
       () => true,
@@ -253,8 +256,13 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the finding\'s lock order (two con
     await a.commit();
     const out = await appeal;
     await b.rollback();
+    // ⭐ REFUSED BY ITS OWN STATE GUARD — the appeal writer's `AppealNotDeniedError`, naming the state the finding left. A bare
+    // "it failed" (or "it was not a deadlock") would also pass on a TypeError, a missing claim or a lock timeout (RA7).
     expect(out.ok).toBe(false);
-    expect((out as { error: { code?: string } }).error.code).not.toBe('40P01');
+    const refusal = (out as { error: unknown }).error;
+    expect(refusal).toBeInstanceOf(AppealNotDeniedError);
+    expect((refusal as AppealNotDeniedError).currentState).toBe('closed');
+    expect((refusal as { code?: string }).code).not.toBe('40P01');
     expect(await stateOf(pid, cid)).toBe('closed');
   });
 
@@ -277,5 +285,112 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the finding\'s lock order (two con
     expect(await stateOf(pid, cid)).toBe('closed');
     const journeys = await onOwnTx(pid, async (c) => (await c.query<{ status: string }>('SELECT status FROM claim_appeals WHERE claim_case_id = $1', [cid])).rows);
     expect(journeys.map((j) => j.status)).toEqual(['closed']);
+  });
+
+  // ── EXACTLY ONCE under concurrency (checklist family 2; code review 2026-11-02, RA6) ────────────────────────────────
+  // Every race below holds the first writer's transaction OPEN, starts the second on another connection, waits until that
+  // backend is blocked on a lock (⛔ a sleep), then commits the first. "Exactly one write, N-1 idempotent no-ops or typed
+  // refusals, one event" is read back from the tables and the event stream — not inferred from the return values.
+
+  /** The rows and events an investigation of ONE claim leaves behind. */
+  const ledger = (pid: PariwarId, cid: string) =>
+    onOwnTx(pid, async (c) => {
+      const n = async (text: string) => Number((await c.query<{ n: string }>(text, [cid])).rows[0]!.n);
+      const events = (type: string) => n(`SELECT count(*) AS n FROM events_log WHERE stream_id = $1 AND event_type = '${type}'`);
+      return {
+        flagSteps: await n("SELECT count(*) AS n FROM claim_fraud_investigation_steps WHERE claim_case_id = $1 AND step = 'flagged'"),
+        foundSteps: await n("SELECT count(*) AS n FROM claim_fraud_investigation_steps WHERE claim_case_id = $1 AND step IN ('found_innocent', 'found_guilty')"),
+        memberFindings: await n("SELECT count(*) AS n FROM claim_nominee_findings WHERE claim_case_id = $1 AND kind IN ('member_found_innocent', 'member_found_guilty')"),
+        flaggedEvents: await events('claim.fraud_flagged'),
+        releasedEvents: await events('claim.nominee_lock_released'),
+        guiltyEvents: await events('claim.member_found_guilty'),
+        closedEvents: await events('claim.closed'),
+      };
+    });
+
+  const findWith = (c: pg.PoolClient, pid: PariwarId, cid: string, over: { outcome: 'innocent' | 'guilty'; stepId: ReturnType<typeof toStepId>; findingId: ReturnType<typeof toFindingId> }) =>
+    recordFraudFinding(c, {
+      claimCaseId: cid as ClaimId, pariwarId: pid, aliveConfirmation: 'in_person', noteCiphertext: 'enc:v1:find',
+      actorId: DA, actorDisplay: 'District Admin', actor: 'operator', ...over,
+    });
+  const flagWith = (c: pg.PoolClient, pid: PariwarId, cid: ClaimId, stepId: ReturnType<typeof toStepId>) =>
+    flagClaimForFraudInvestigation(c, {
+      claimCaseId: cid, pariwarId: pid, stepId, noteCiphertext: 'enc:v1:flag', actorId: OPERATOR, actorDisplay: 'Helpline Operator', actor: 'operator',
+    });
+
+  /** A claim with a real member lifecycle, NOT yet flagged. */
+  async function unflaggedClaim(pid: PariwarId): Promise<ClaimId> {
+    const mid = randomUUID();
+    await onOwnTx(pid, async (c) => seedOpenMemberStream(bindScopedDb(c), pid, mid), { superuser: true });
+    return onOwnTx(pid, (c) => claimAt(c, pid, mid, 'verifier_review', { bare: true }));
+  }
+
+  /** Run `first` in an open transaction, start `second` on another connection, wait until it BLOCKS, commit `first`. */
+  async function race<A, B>(pid: PariwarId, first: (c: pg.PoolClient) => Promise<A>, second: (c: pg.PoolClient) => Promise<B>) {
+    const a = await openTx(pid);
+    const firstValue = await first(a.client);
+    const b = await openTx(pid);
+    const pending = settle(second(b.client));
+    await waitUntilBlocked(b.backendPid);
+    await a.commit();
+    const out = await pending;
+    if (out.ok) await b.commit();
+    else await b.rollback();
+    return { firstValue, out };
+  }
+
+  const refusalReason = (out: { ok: false; error: unknown }) => {
+    expect(out.error).toBeInstanceOf(FraudInvestigationRefusedError);
+    return (out.error as FraudInvestigationRefusedError).reason;
+  };
+
+  it('RA6 — the SAME finding submitted twice at once: one writes, the other REPLAYS (same version) — one finding, one found step, one release, one close', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const { cid } = await flaggedClaim(pid);
+    const same = { outcome: 'innocent' as const, stepId: toStepId(randomUUID()), findingId: toFindingId(randomUUID()) };
+    const { firstValue, out } = await race(pid, (c) => findWith(c, pid, cid, same), (c) => findWith(c, pid, cid, same));
+    if (!out.ok) throw out.error;
+    expect(firstValue.replayed).toBe(false);
+    expect(out.value.replayed).toBe(true);
+    expect(out.value.eventVersion).toBe(firstValue.eventVersion);
+    expect(await ledger(pid, cid)).toEqual({
+      flagSteps: 1, foundSteps: 1, memberFindings: 1, flaggedEvents: 1, releasedEvents: 1, guiltyEvents: 0, closedEvents: 1,
+    });
+  });
+
+  it('RA6 — an INNOCENT and a GUILTY finding on one claim at once: the first wins, the second is `already_found` — no guilty row, no guilty event', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const { cid } = await flaggedClaim(pid);
+    const { out } = await race(
+      pid,
+      (c) => findWith(c, pid, cid, { outcome: 'innocent', stepId: toStepId(randomUUID()), findingId: toFindingId(randomUUID()) }),
+      (c) => findWith(c, pid, cid, { outcome: 'guilty', stepId: toStepId(randomUUID()), findingId: toFindingId(randomUUID()) }),
+    );
+    expect(out.ok).toBe(false);
+    expect(refusalReason(out as { ok: false; error: unknown })).toBe('already_found');
+    expect(await ledger(pid, cid)).toEqual({
+      flagSteps: 1, foundSteps: 1, memberFindings: 1, flaggedEvents: 1, releasedEvents: 1, guiltyEvents: 0, closedEvents: 1,
+    });
+  });
+
+  it('RA6 — two flags with DIFFERENT step ids at once: the first writes, the second is `already_flagged` — one flag step, one flag event', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const cid = await unflaggedClaim(pid);
+    const { out } = await race(pid, (c) => flagWith(c, pid, cid, toStepId(randomUUID())), (c) => flagWith(c, pid, cid, toStepId(randomUUID())));
+    expect(out.ok).toBe(false);
+    expect(refusalReason(out as { ok: false; error: unknown })).toBe('already_flagged');
+    expect(await ledger(pid, cid)).toMatchObject({ flagSteps: 1, flaggedEvents: 1, foundSteps: 0, memberFindings: 0 });
+  });
+
+  it('RA6 — the SAME flag submitted twice at once: one writes, the other REPLAYS — one flag step, one flag event', { timeout: TIMEOUT }, async () => {
+    const pid = freshPariwar();
+    const cid = await unflaggedClaim(pid);
+    const stepId = toStepId(randomUUID());
+    const { firstValue, out } = await race(pid, (c) => flagWith(c, pid, cid, stepId), (c) => flagWith(c, pid, cid, stepId));
+    if (!out.ok) throw out.error;
+    expect(firstValue.replayed).toBe(false);
+    expect(out.value.replayed).toBe(true);
+    expect(out.value.eventVersion).toBe(firstValue.eventVersion);
+    expect(await ledger(pid, cid)).toMatchObject({ flagSteps: 1, flaggedEvents: 1 });
   });
 });

@@ -8,8 +8,13 @@
 //
 // ⭐ THE PQ1 SWAP POINT (Story 6.22 DL8, N7; `2026-11-01-438` item 6): a GUILTY finding (`member_found_guilty`) releases ⛔
 // claim here — a DECLARED narrowing of `-423` Q1 (b) / `-424` Q2 (a), put to the Panel as Q1. If Q1 is ruled A (lift on
-// either finding), the change is ONE kind in the fragment below + the source fence's allow-list, AND removing the ONE
-// sticky-freeze constant in `member/overlay.ts` (`ACCOUNT_STICKY_FREEZE_EVENT_TYPE`) — the two flip TOGETHER.
+// either finding), the release rule changes in SIX hand-written SQL copies of `f.kind = 'member_found_innocent'` — ⛔ one —
+// and the sticky-freeze constant goes with them: (1) the fragment below; (2) `approval-warnings.ts` × 3 (the first-filed
+// anchor in the single read, in the bulk read, and in `getClaimWarningAnchor`); (3) `peer-mesh-read.ts` × 2 (`standingReportNamesSql`
+// and the filing anchor in `resolvePeerMeshFilingCut`); (4) remove the ONE sticky-freeze constant in `member/overlay.ts`
+// (`ACCOUNT_STICKY_FREEZE_EVENT_TYPE`) — the leaf and the sticky freeze flip TOGETHER; (5) the source fence's per-file counts.
+// `tests/integration/claim/release-rule-agreement.spec.ts` asks all six the same question and goes red if ONE is changed
+// alone: change its single `stands()` line first, then make every copy follow it (code review 2026-11-02, RA2).
 //
 // ⭐ Every gate that asks "has this member's death been reported?" calls THIS function — the nominee-declaration lock
 // (Story 6.20), the erasure lock (`member/rtbf-legality.ts`), the claim door (`tryConverge`), withdrawal and the member's own

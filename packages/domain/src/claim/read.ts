@@ -263,11 +263,22 @@ export interface OpenFraudInvestigation {
  * inside the caller's scope (`isVisible` — the route passes `rbac.hasPermission(claim.record_fraud_finding)` at the row's
  * district, the per-claim gate's own predicate). The filter runs BEFORE the page limit (keyset batches — the correction
  * queue's shape), so a District Admin's own rows are never crowded out by rows they cannot see. ⛔ PII.
+ *
+ * ⚠ `isVisible` is REQUIRED: this reads across every district of the Pariwar, and a reader that could be called without a
+ * scope predicate would return all of them (the code review of 2026-11-02, RA8). A caller that really wants every row
+ * passes `() => true` and says so.
+ *
+ * ⚠ DELIBERATE: the district below breaks a `created_at` tie on `posting_id DESC` (the audience-read idiom of
+ * `peer-mesh-read.ts` and `member-geo/resolve.ts`), while the per-claim gate's `getMemberPostingLatest` orders by
+ * `created_at DESC` alone and is documented as deliberately nondeterministic on a tie (Story 1.19 D3, `2026-08-13-103`;
+ * "closing it is its own story"). The two can therefore name different districts only for a member with two postings
+ * written in one transaction — then the gate, not this list, is the nondeterministic side, and the worst case is a listed
+ * item whose finding is refused. Re-examine when `getMemberPostingLatest` gains its tie-break.
  */
 export async function listOpenFraudInvestigations(
   db: Db,
   pariwarId: PariwarId,
-  opts: { readonly limit?: number; readonly isVisible?: (row: { readonly district: string | null }) => boolean } = {},
+  opts: { readonly limit?: number; readonly isVisible: (row: { readonly district: string | null }) => boolean },
 ): Promise<OpenFraudInvestigation[]> {
   const pageSize = clampLimit(opts.limit, { default: OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT, cap: OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT });
   const scanBatch = Math.max(pageSize, OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT);
@@ -309,7 +320,7 @@ export async function listOpenFraudInvestigations(
     const last = rows[rows.length - 1]!;
     after = { flaggedAtExact: last.flagged_at_exact, claimCaseId: last.claim_case_id };
     for (const r of rows) {
-      if (opts.isVisible && !opts.isVisible({ district: r.district })) continue;
+      if (!opts.isVisible({ district: r.district })) continue;
       out.push({
         claimCaseId: r.claim_case_id as ClaimId,
         currentState: r.current_state,

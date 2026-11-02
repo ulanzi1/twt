@@ -762,9 +762,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 6.20 (D7, CC2 — `2026-09-21-237` cl.3) — RAISE a nominee correction on the family's behalf.
       // Checked at `dimension: 'pariwar'`. ⛔ Raising is not approving: the two approvals are the District
       // Admin's and the Pariwar Admin's keys, which this role does not hold.
+      CLAIM_RAISE_NOMINEE_CORRECTION,
       // Story 6.22 — the FLAG (pariwar). ⛔ The finding: that is the District Admin's (`-238` cl. 3).
       CLAIM_FLAG_FRAUD,
-      CLAIM_RAISE_NOMINEE_CORRECTION,
       // Story 6.19c (key (6), `-254`) — CONFIRM A RE-FILE after a closure for no response, with a note. Checked PER
       // REQUEST at `dimension: 'pariwar'` for this role (the `resolveQueueScopeStash` precedent). ⛔ Not `claim.file`.
       CLAIM_CONFIRM_REFILE,

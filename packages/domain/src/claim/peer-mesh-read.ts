@@ -458,6 +458,28 @@ export function peerMeshNomineeMatchSql(m: SQL, match: PeerMeshNomineeMatch): SQ
 }
 
 /**
+ * ⭐ Story 6.22 (DL11) — "a death report naming the member STANDS": a claim naming them as the deceased, in ANY state, that ⛔
+ * `member_found_innocent` finding has released — `isDeathReportStanding`'s predicate as a SQL FRAGMENT (a fragment cannot call
+ * the leaf's async boolean). ⚠ A read-only copy the source fence COUNTS (this file's allowance is 2): the findings alias MUST
+ * be `f`. `peer-mesh-request.ts` IMPORTS it — ⛔ never inlined there (it is ⛔ on the fence's literal list).
+ * ⚠ One of SIX hand-written copies of the release rule — the swap list is in `death-report.ts`'s PQ1 paragraph, and
+ * `release-rule-agreement.spec.ts` fails if this copy and the leaf disagree.
+ */
+export function standingReportNamesSql(pariwarId: SQL, memberId: SQL): SQL {
+  return sql`EXISTS (
+    SELECT 1 FROM claims sr_c
+     WHERE sr_c.pariwar_id = ${pariwarId}
+       AND sr_c.deceased_member_id = ${memberId}
+       AND NOT EXISTS (
+         SELECT 1
+           FROM claim_nominee_findings f
+          WHERE f.pariwar_id = sr_c.pariwar_id
+            AND f.claim_case_id = sr_c.claim_case_id
+            AND f.kind = 'member_found_innocent'
+       ))`;
+}
+
+/**
  * ⭐ THE ONE predicate for who may be ASKED about a death (6.36a SW23; PM1 (i)) — the snapshot uses it, and 6.27c's
  * send-time re-check MUST reuse it (keeping PM1's decrypt-time `no_sendable_number` check beside it). `m` is a
  * `members` row:
@@ -486,26 +508,6 @@ export function peerMeshNomineeMatchSql(m: SQL, match: PeerMeshNomineeMatch): SQ
  * (no family-link data — the deferred item stays open) — ⭐ 2026-10-23 (`-386`): NARROWED — a relative who is a declared
  * nominee, matched by number, is now excluded; other relatives stay eligible.
  */
-/**
- * ⭐ Story 6.22 (DL11) — "a death report naming the member STANDS": a claim naming them as the deceased, in ANY state, that ⛔
- * `member_found_innocent` finding has released — `isDeathReportStanding`'s predicate as a SQL FRAGMENT (a fragment cannot call
- * the leaf's async boolean). ⚠ A read-only copy the source fence COUNTS (this file's allowance is 2): the findings alias MUST
- * be `f`. `peer-mesh-request.ts` IMPORTS it — ⛔ never inlined there (it is ⛔ on the fence's literal list).
- */
-export function standingReportNamesSql(pariwarId: SQL, memberId: SQL): SQL {
-  return sql`EXISTS (
-    SELECT 1 FROM claims sr_c
-     WHERE sr_c.pariwar_id = ${pariwarId}
-       AND sr_c.deceased_member_id = ${memberId}
-       AND NOT EXISTS (
-         SELECT 1
-           FROM claim_nominee_findings f
-          WHERE f.pariwar_id = sr_c.pariwar_id
-            AND f.claim_case_id = sr_c.claim_case_id
-            AND f.kind = 'member_found_innocent'
-       ))`;
-}
-
 export function peerMeshEligibleMemberSql(m: SQL, x: PeerMeshEligibilityExclusions): SQL {
   return sql`(${m}.state = 'active'
     AND NOT ${standingReportNamesSql(sql`${m}.pariwar_id`, sql`${m}.member_id`)}

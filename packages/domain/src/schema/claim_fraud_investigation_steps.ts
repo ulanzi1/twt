@@ -23,12 +23,12 @@
 //     Panel's Q9 decides which suffice — the built set is a go-live condition).
 
 import { sql } from 'drizzle-orm';
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { foreignKey, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS } from '../encryption/field-classes.js';
 import { piiColumn } from '../encryption/column.js';
 import type { ClaimFraudInvestigationStepId, ClaimId, ClaimNomineeFindingId, MemberId, PariwarId } from '../ids/index.js';
-import { claimNomineeFindings } from './claim_nominee_findings.js';
+import { MEMBER_FINDING_KIND_BY_OUTCOME, claimNomineeFindings } from './claim_nominee_findings.js';
 import { claims } from './claims.js';
 
 /** The steps of one claim's investigation. ⛔ No third outcome (`-238` cl. 4). `6-22d` widens it (a TEXT CHECK — ⛔ `ALTER TYPE`). */
@@ -57,11 +57,17 @@ export const claimFraudInvestigationSteps = pgTable(
     // The member the claim names as deceased (the `claims.deceased_member_id` cache — ⛔ FK). The RTBF scrub keys on it.
     deceasedMemberId: uuid('deceased_member_id').notNull().$type<MemberId>(),
     step: text('step').notNull().$type<FraudInvestigationStep>(),
-    // Set iff a found step. `ON DELETE no action` (the default) — ⛔ `restrict`, which would fail a `claims` delete
-    // before both cascades run.
-    findingId: uuid('finding_id')
-      .$type<ClaimNomineeFindingId>()
-      .references(() => claimNomineeFindings.findingId),
+    // Set iff a found step. Tied to its OWN claim's finding of the matching kind by the composite FK below (migration 0198) —
+    // `ON DELETE no action` (the default), ⛔ `restrict`, which would fail a `claims` delete before both cascades run.
+    findingId: uuid('finding_id').$type<ClaimNomineeFindingId>(),
+    // GENERATED from `step` (migration 0198) — the kind of finding this step must point at: `found_innocent` →
+    // `member_found_innocent`, `found_guilty` → `member_found_guilty`, `flagged` → NULL. ⛔ Never written (Postgres refuses).
+    // (The kinds come from `MEMBER_FINDING_KIND_BY_OUTCOME`, ⛔ spelled here — the source fence allows only the findings schema.)
+    findingKind: text('finding_kind').generatedAlwaysAs(
+      sql.raw(
+        `CASE step WHEN 'found_innocent' THEN '${MEMBER_FINDING_KIND_BY_OUTCOME.innocent}' WHEN 'found_guilty' THEN '${MEMBER_FINDING_KIND_BY_OUTCOME.guilty}' END`,
+      ),
+    ),
     // Set iff a found step (the coherence CHECK).
     aliveConfirmation: text('alive_confirmation').$type<FraudAliveConfirmation>(),
     noteCiphertext: piiColumn(1, CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS)('note_ciphertext').notNull(),
@@ -70,6 +76,13 @@ export const claimFraudInvestigationSteps = pgTable(
     actedAt: timestamp('acted_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   },
   (t) => [
+    // A found step points at ITS OWN claim's finding, of the matching kind (migration 0198; MATCH SIMPLE — a `flagged` step's
+    // NULL `finding_id` / `finding_kind` leaves it unconstrained).
+    foreignKey({
+      name: 'claim_fraud_investigation_steps_finding_claim_kind_fk',
+      columns: [t.findingId, t.claimCaseId, t.findingKind],
+      foreignColumns: [claimNomineeFindings.findingId, claimNomineeFindings.claimCaseId, claimNomineeFindings.kind],
+    }),
     index('claim_fraud_investigation_steps_pariwar_id_idx').on(t.pariwarId),
     index('claim_fraud_investigation_steps_deceased_member_idx').on(t.pariwarId, t.deceasedMemberId),
     // Each step at most once per claim (N1).

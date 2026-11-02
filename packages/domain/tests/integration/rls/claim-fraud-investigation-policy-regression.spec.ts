@@ -1,5 +1,5 @@
-// Migrations 0196 + 0197 — the guilty member finding and the fraud investigation STEPS table: RLS + DB-level backstops
-// (Story 6.22, Task 1.3 / AC1; DL1, DL2; N1, N2).
+// Migrations 0196 + 0197 + 0198 — the guilty member finding, the fraud investigation STEPS table, and the step-to-finding tie:
+// RLS + DB-level backstops (Story 6.22, Task 1.3 / AC1; DL1, DL2; N1, N2; code review 2026-11-02 RA5).
 //
 // ⚠ These assert the CONSTRAINTS DIRECTLY — ⛔ never inferred through the finding writers. Each backstop the writers
 // reason from ("one investigation per claim, ever"; "two outcomes only") gets its own red here.
@@ -8,6 +8,7 @@
 //   · at most ONE member finding per claim, of EITHER kind (0196's widened partial unique index — N2);
 //   · the rank coherence CHECK keeps 0119's `IS NOT NULL` (a NULL-rank disqualification is still refused);
 //   · each step at most once per claim, and at most ONE found step of either kind (N1);
+//   · a found step points at ITS OWN claim's finding, of ITS OWN kind (0198's composite FK on a generated `finding_kind`);
 //   · the steps' coherence CHECK is NULL-safe (a found step without its finding or proof of life is refused);
 //   · the steps are append-only for EVERY role, the table owner included — only the note may be scrubbed, and only the
 //     `claims` cascade deletes (it runs through BOTH tables).
@@ -118,7 +119,7 @@ async function failure(client: ReturnType<typeof getTx>['client'], attempt: () =
   return err;
 }
 
-describe.skipIf(!hasDatabase)('migrations 0196 + 0197 — the guilty finding + the fraud investigation steps: RLS + DB backstops', { timeout: 20000 }, () => {
+describe.skipIf(!hasDatabase)('migrations 0196 + 0197 + 0198 — the guilty finding + the fraud investigation steps: RLS + DB backstops', { timeout: 20000 }, () => {
   setupLiveDb();
 
   it('FORCE ROW LEVEL SECURITY is enabled on the steps table (the catalog guard)', async () => {
@@ -218,7 +219,9 @@ describe.skipIf(!hasDatabase)('migrations 0196 + 0197 — the guilty finding + t
     expect(pgCode(again)).toBe('23505');
     expect(pgConstraint(again)).toBe('claim_fraud_investigation_steps_one_step_per_claim_uq');
     // A guilty finding row cannot be written beside the innocent one (0196) — so plant the found_guilty step on a
-    // DIFFERENT claim's guilty finding to reach the steps' own index.
+    // DIFFERENT claim's guilty finding to reach the steps' own index. (Since 0198 that row also violates the composite FK, but
+    // a unique violation is raised at the insert and the FK is checked at the end of the statement — so the INDEX is what
+    // refuses it here. The index is also reached with the FK out of the way, in the 0198 test below.)
     const other = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: memberId, currentState: 'verification_in_progress' });
     const [g] = await tx.insert(schema.claimNomineeFindings).values(finding(other, { kind: 'member_found_guilty' })).returning();
     const both = await failure(client, () =>
@@ -228,6 +231,107 @@ describe.skipIf(!hasDatabase)('migrations 0196 + 0197 — the guilty finding + t
     );
     expect(pgCode(both)).toBe('23505');
     expect(pgConstraint(both)).toBe('claim_fraud_investigation_steps_one_finding_per_claim_uq');
+  });
+
+  it('⭐ 0198 — a found step points at ITS OWN claim\'s finding (23503): another claim\'s finding is refused, and its own is accepted', async () => {
+    const { tx, client, claimCaseId, memberId } = await seedClaimInScope();
+    const other = await seedClaim(tx, PARIWAR_A, { deceasedMemberId: memberId, currentState: 'verification_in_progress' });
+    const [foreign] = await tx.insert(schema.claimNomineeFindings).values(finding(other)).returning();
+    const [own] = await tx.insert(schema.claimNomineeFindings).values(finding(claimCaseId)).returning();
+    const foundStep = (findingId: string) => step(claimCaseId, memberId, { step: 'found_innocent', findingId: findingId as never, aliveConfirmation: 'in_person' });
+
+    const refused = await failure(client, () => tx.insert(schema.claimFraudInvestigationSteps).values(foundStep(foreign!.findingId)));
+    expect(pgCode(refused)).toBe('23503');
+    expect(pgConstraint(refused)).toBe('claim_fraud_investigation_steps_finding_claim_kind_fk');
+    // The control: the same step on its OWN claim's finding goes in — else the refusal above could be any FK.
+    const accepted = await tx.insert(schema.claimFraudInvestigationSteps).values(foundStep(own!.findingId)).returning();
+    expect(accepted).toHaveLength(1);
+  });
+
+  it('⭐ 0198 — a found step points at a finding of ITS OWN KIND (23503): found_innocent on a guilty finding is refused; found_guilty on it is accepted', async () => {
+    const { tx, client, claimCaseId, memberId } = await seedClaimInScope();
+    const [guilty] = await tx.insert(schema.claimNomineeFindings).values(finding(claimCaseId, { kind: 'member_found_guilty' })).returning();
+    const foundStep = (kind: 'found_innocent' | 'found_guilty') =>
+      step(claimCaseId, memberId, { step: kind, findingId: guilty!.findingId, aliveConfirmation: 'in_person' });
+
+    const refused = await failure(client, () => tx.insert(schema.claimFraudInvestigationSteps).values(foundStep('found_innocent')));
+    expect(pgCode(refused)).toBe('23503');
+    expect(pgConstraint(refused)).toBe('claim_fraud_investigation_steps_finding_claim_kind_fk');
+    const [accepted] = await tx.insert(schema.claimFraudInvestigationSteps).values(foundStep('found_guilty')).returning();
+    expect(accepted!.findingKind).toBe('member_found_guilty');
+  });
+
+  it('⭐ RA12 — the TS tuple and the SQL CHECK name the SAME proofs of life: every `FRAUD_ALIVE_CONFIRMATIONS` value is accepted, one outside it is refused by the CHECK (23514)', async () => {
+    // The tuple, `@twt/contracts`' z.enum (lockstep-tested there) and 0197's CHECK list are three copies; a Panel ruling on Q9
+    // that changes the set must change all three, and this is the leg that reaches the database.
+    for (const value of schema.FRAUD_ALIVE_CONFIRMATIONS) {
+      const { client } = getTx();
+      await client.query('RESET ROLE');
+      const { tx, claimCaseId, memberId } = await seedClaimInScope();
+      const [f] = await tx.insert(schema.claimNomineeFindings).values(finding(claimCaseId)).returning();
+      const [row] = await tx
+        .insert(schema.claimFraudInvestigationSteps)
+        .values(step(claimCaseId, memberId, { step: 'found_innocent', findingId: f!.findingId, aliveConfirmation: value }))
+        .returning();
+      expect(row!.aliveConfirmation, value).toBe(value);
+    }
+    const { tx, client, claimCaseId, memberId } = await seedClaimInScope();
+    const [f] = await tx.insert(schema.claimNomineeFindings).values(finding(claimCaseId)).returning();
+    const err = await failure(client, () =>
+      tx
+        .insert(schema.claimFraudInvestigationSteps)
+        .values(step(claimCaseId, memberId, { step: 'found_innocent', findingId: f!.findingId, aliveConfirmation: 'phone_call' as never })),
+    );
+    expect(pgCode(err)).toBe('23514');
+    expect(pgConstraint(err)).toBe('claim_fraud_investigation_steps_alive_confirmation_check');
+
+    // The OTHER direction (code review PD12 (c)): everything above shows the CHECK admits each tuple value and refuses ONE stranger; a
+    // CHECK that also admitted `video_chat` would pass it. The constraint holds nothing but the proof-of-life list, so its literals,
+    // read from the catalog, must be exactly the tuple.
+    const { rows } = await getTx().client.query<{ def: string }>(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'claim_fraud_investigation_steps_alive_confirmation_check' AND conrelid = '${STEPS}'::regclass`,
+    );
+    expect(rows).toHaveLength(1);
+    const literals = [...rows[0]!.def.matchAll(/'([^']+)'/g)].map((m) => m[1]!).sort();
+    expect(literals).toEqual([...schema.FRAUD_ALIVE_CONFIRMATIONS].sort());
+  });
+
+  it('0198 — `finding_kind` is GENERATED from `step`: NULL for a flag, never writable (428C9)', async () => {
+    const { tx, client, claimCaseId, memberId } = await seedClaimInScope();
+    const [flag] = await tx.insert(schema.claimFraudInvestigationSteps).values(step(claimCaseId, memberId)).returning();
+    expect(flag!.findingKind).toBeNull();
+    const err = await failure(client, () =>
+      client.query(
+        `INSERT INTO ${STEPS} (step_id, claim_case_id, pariwar_id, deceased_member_id, step, note_ciphertext, actor_id, actor_display, finding_kind)
+         VALUES ($1, $2, $3, $4, 'flagged', 'enc:v1:note', 'a', 'A', 'member_found_innocent')`,
+        [randomUUID(), claimCaseId, PARIWAR_A, memberId],
+      ),
+    );
+    expect(pgCode(err)).toBe('428C9');
+  });
+
+  it('0198 — the steps\' own one-found-step-per-claim index refuses a second found step (23505) where no foreign key stands in front of it — on a TEMP CLONE', async () => {
+    // The composite FK refuses a mismatched second found step first (23503, above), so the index is reached only without it. ⚠ (code review
+    // PD11) That is done on a `pg_temp` CLONE, ⛔ by dropping the FK on the shared table: `ALTER TABLE … DROP CONSTRAINT` holds ACCESS
+    // EXCLUSIVE on the steps (and SHARE ROW EXCLUSIVE on the findings) until the harness rolls back, in a database other specs share (the
+    // house precedent for test-only DDL is `_inspection-discrepancy-fixtures.ts`). `LIKE … INCLUDING ALL` copies the columns, the generated
+    // `finding_kind`, the CHECKs and the unique indexes (under new names) — and NOT the foreign keys or the triggers.
+    const { client } = getTx();
+    await client.query('RESET ROLE');
+    await client.query(`CREATE TEMP TABLE fraud_steps_clone (LIKE ${STEPS} INCLUDING ALL)`);
+    const insert = (claim: string, stepName: string, findingId: string) =>
+      client.query(
+        `INSERT INTO pg_temp.fraud_steps_clone (step_id, claim_case_id, pariwar_id, deceased_member_id, step, finding_id, alive_confirmation, note_ciphertext, actor_id, actor_display)
+         VALUES ($1, $2, $3, $4, $5, $6, 'video_call', 'enc:v1:note', 'a', 'A')`,
+        [randomUUID(), claim, PARIWAR_A, randomUUID(), stepName, findingId],
+      );
+    const claimA = randomUUID();
+    await insert(claimA, 'found_innocent', randomUUID());
+    // The CONTROL: a found step of ANOTHER claim is accepted — so the refusal below is about the SAME claim, ⛔ the clone being unusable.
+    await insert(randomUUID(), 'found_guilty', randomUUID());
+    // A different `step` value, so the (claim, step) index does not apply: only the partial one-finding-per-claim index can refuse this.
+    const err = await failure(client, () => insert(claimA, 'found_guilty', randomUUID()));
+    expect(pgCode(err)).toBe('23505');
   });
 
   it('⛔ twt_app cannot UPDATE any step column but the note (column-level grant, 42501); the note can be scrubbed', async () => {

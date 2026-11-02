@@ -2,6 +2,7 @@
 //
 //   · the District Admin's WORK-LIST view and route — the list, its plain "Closed" label, the Open link's target, the empty /
 //     forbidden / error branches, the 401 redirect to sign-in (with the `next` the sign-in now FOLLOWS — RC10);
+//     the viewer's OWN flag shown with "another District Admin must record the finding" (R2-6); the empty line a `status` (R2-10);
 //   · the nav entry — shown inside a Pariwar, ⛔ at the top level (the server's key check is the boundary, like its siblings);
 //   · `newUuid` — a v4 UUID built from `getRandomValues` when `crypto.randomUUID` is missing (RC6).
 //
@@ -64,8 +65,8 @@ beforeEach(() => {
 
 describe('the work-list view', () => {
   const items = [
-    { claim_case_id: A, claim_state: 'verifier_review', claim_filed_at: FILED, flagged_at: FLAGGED },
-    { claim_case_id: B, claim_state: 'closed', claim_filed_at: FILED, flagged_at: FLAGGED },
+    { claim_case_id: A, claim_state: 'verifier_review', claim_filed_at: FILED, flagged_at: FLAGGED, is_flagger: false },
+    { claim_case_id: B, claim_state: 'closed', claim_filed_at: FILED, flagged_at: FLAGGED, is_flagger: false },
   ];
 
   it('⭐ lists each flagged claim — its state, both dates — and a `closed` one plainly "Closed" (⛔ the trigger-blind "another claim … goes ahead")', async () => {
@@ -96,17 +97,32 @@ describe('the work-list view', () => {
     getOpenFraudInvestigations.mockResolvedValueOnce({ items: [] });
     const first = renderWithClient(<FraudInvestigationsView pariwarId={PARIWAR} />);
     expect(await screen.findByTestId('fraud-investigations-empty')).toHaveTextContent(t.workList.empty);
+    expect(screen.getByRole('status')).toHaveTextContent(t.workList.empty); // R2-10 — announced, ⛔ a bare line
     first.unmount();
 
     getOpenFraudInvestigations.mockRejectedValueOnce(new ApiError(403, 'auth.forbidden', 'x'));
     const second = renderWithClient(<FraudInvestigationsView pariwarId={PARIWAR} />);
     expect(await screen.findByTestId('fraud-investigations-forbidden')).toHaveTextContent(t.workList.forbidden);
+    expect(screen.getByRole('alert')).toHaveTextContent(t.workList.forbidden); // R2-11
     expect(screen.queryByTestId('fraud-investigations-list')).toBeNull();
     second.unmount();
 
     getOpenFraudInvestigations.mockRejectedValueOnce(new ApiError(500, 'http.internal', 'x'));
     renderWithClient(<FraudInvestigationsView pariwarId={PARIWAR} />);
     expect(await screen.findByTestId('fraud-investigations-error')).toHaveTextContent(t.workList.loadError);
+    expect(screen.getByRole('alert')).toHaveTextContent(t.workList.loadError); // R2-11
+  });
+
+  it('⭐ a claim the VIEWER flagged is SHOWN with "another District Admin must record the finding" — ⛔ hidden; ⛔ that line on anyone else\'s (R2-6)', async () => {
+    getOpenFraudInvestigations.mockResolvedValue({ items: [{ ...items[0]!, is_flagger: true }, items[1]!] });
+    renderWithClient(<FraudInvestigationsView pariwarId={PARIWAR} />);
+    const mine = await screen.findByTestId(`fraud-investigations-item-${A}`);
+    expect(screen.getByTestId(`fraud-investigations-you-flagged-${A}`)).toHaveTextContent(t.youFlagged);
+    expect(mine).toHaveTextContent(t.youFlagged);
+    expect(screen.getByTestId(`fraud-investigations-open-${A}`)).toBeInTheDocument(); // still listed, still openable
+    const theirs = screen.getByTestId(`fraud-investigations-item-${B}`);
+    expect(screen.queryByTestId(`fraud-investigations-you-flagged-${B}`)).toBeNull();
+    expect(theirs.textContent).not.toContain(t.youFlagged);
   });
 
   it('⭐ a 401 sends the admin to sign-in, asking to come BACK to this list (the `next` the sign-in now follows)', async () => {

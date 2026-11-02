@@ -11,7 +11,8 @@
 //   AC7 (domain half) — guilty ⇒ `member_found_guilty` + its annotation (carrying `deceased_member_id`), closed
 //         `fraud_finding_guilty`, the leaf still TRUE and the account still frozen.
 //   AC8 — a same-step retry replays (same version, ⛔ new event); a different finding id on a found claim is refused; a planted
-//         primary-key collision surfaces as 23505 (⛔ "duplicate") — for BOTH member-finding writers.
+//         primary-key collision surfaces as 23505 (⛔ "duplicate") — for BOTH member-finding writers; the replay key is the step
+//         id AND the finding id AND the actor — a mismatch on either is `step_conflict`, for the finding AND the flag (R2-4).
 //   AC9 — OP10: a claim held by a claim later fraud-closed reads `closed_member_alive`; the defensive trigger guard; a sibling's
 //         OP10 behaviour unchanged; the `-291` Q2 B closure text ⛔ selects a fraud close.
 
@@ -388,6 +389,51 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation: flag, fin
       expect(await refusal(find(client, cid, outcome))).toBe('already_found');
       // The same step id with the OTHER outcome is a different step — ⛔ a replay.
       expect(await refusal(recordFraudFinding(client, { ...input, outcome: outcome === 'innocent' ? 'guilty' : 'innocent' }))).toBe('step_conflict');
+    });
+
+    // R2-4 — the replay key is the step id AND the finding id AND the actor; the step id alone answered 200 `replayed`.
+    it.each(['innocent', 'guilty'] as const)('R2-4 %s: the same step id with a DIFFERENT finding id, or from ANOTHER actor, is `step_conflict` and writes ⛔ — the same actor (any case) and ids still replay', async (outcome) => {
+      const { client } = getTx();
+      await enterAppScope(client, PID);
+      const { cid } = await openClaim(client);
+      await flag(client, cid);
+      const input = findInput(cid, outcome);
+      const first = await recordFraudFinding(client, input);
+      const written = async () => ({
+        events: (await eventsOf(client, cid)).length,
+        steps: await stepsOf(client, cid),
+        findings: (await client.query<{ id: string }>('SELECT finding_id::text AS id FROM claim_nominee_findings WHERE claim_case_id = $1', [cid])).rows,
+      });
+      const before = await written();
+      expect(before.findings).toEqual([{ id: input.findingId }]); // the control: the one finding row the comparison below holds still
+
+      const otherFinding = toFindingId(randomUUID());
+      expect(await refusal(recordFraudFinding(client, { ...input, findingId: otherFinding }))).toBe('step_conflict');
+      expect(await refusal(recordFraudFinding(client, { ...input, actorId: 'e7e7e7e7-0000-4000-8000-000000000003' }))).toBe('step_conflict');
+      expect(await written()).toEqual(before);
+
+      // A RAW upper-case cast (⛔ through the brand, which lower-cases): the comparison itself must be case-insensitive.
+      const upperFinding = input.findingId.toUpperCase() as typeof input.findingId;
+      const again = await recordFraudFinding(client, { ...input, actorId: DA.toUpperCase(), findingId: upperFinding });
+      expect(again).toMatchObject({ replayed: true, eventVersion: first.eventVersion, findingId: input.findingId });
+      expect(await written()).toEqual(before);
+    });
+
+    it('R2-4 — the FLAG: the same step id from ANOTHER actor is `step_conflict` and writes ⛔; the same actor (any case) still replays', async () => {
+      const { client } = getTx();
+      await enterAppScope(client, PID);
+      const { cid } = await openClaim(client);
+      const stepId = toStepId(randomUUID());
+      const first = await flag(client, cid, { stepId });
+      const before = { events: (await eventsOf(client, cid)).length, steps: await stepsOf(client, cid) };
+      expect(before.steps).toEqual([{ step: 'flagged', alive: null, finding: null }]); // the control
+
+      expect(await refusal(flag(client, cid, { stepId, actorId: 'e7e7e7e7-0000-4000-8000-000000000003' }))).toBe('step_conflict');
+      expect({ events: (await eventsOf(client, cid)).length, steps: await stepsOf(client, cid) }).toEqual(before);
+
+      const again = await flag(client, cid, { stepId, actorId: OPERATOR.toUpperCase() });
+      expect(again).toMatchObject({ stepId, replayed: true, eventVersion: first.eventVersion });
+      expect({ events: (await eventsOf(client, cid)).length, steps: await stepsOf(client, cid) }).toEqual(before);
     });
 
     it.each([

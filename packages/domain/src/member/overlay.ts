@@ -47,10 +47,12 @@
 // carries `claim.member_found_guilty` (the member, confirmed alive, was found GUILTY of taking part in the false report of
 // their own death) reads FROZEN whatever follows it on that stream — `claim.closed`, `claim.denied_no_appeal`,
 // `claim.settled`. It cannot be a last-wins freeze: the annotation and the close share one transaction's `now()` and the
-// close's higher version wins; and a guilty finding on a `denied` claim already unfrozen by `claim.denied_no_appeal`, or on
-// a claim already `closed`, emits ⛔ close at all. So: ONE constant (`ACCOUNT_STICKY_FREEZE_EVENT_TYPE`) read by the
-// evaluator (a per-stream flag) and ONE SQL fragment (`stickyFrozenMemberSql`) OR-ed into both set-based readers — all three
-// or none (the 11a.3 incident is the cost of one reader drifting). `ACCOUNT_UNFREEZE_EVENT_TYPES` is unchanged.
+// close's higher version wins (a `denied` claim — even one already unfrozen by `claim.denied_no_appeal` — is CLOSABLE, so
+// its guilty finding DOES emit that close, after the annotation); and a guilty finding on a claim already `closed` emits
+// ⛔ close at all, so the stream's EARLIER close would otherwise stand (R2-14 (a) — `CLAIM_NOT_CLOSABLE_STATES` is
+// `settled` / `approved` / `closed`). So: ONE constant (`ACCOUNT_STICKY_FREEZE_EVENT_TYPE`) read by the evaluator (a
+// per-stream flag) and ONE SQL fragment (`stickyFrozenMemberSql`) OR-ed into both set-based readers — all three or none
+// (the 11a.3 incident is the cost of one reader drifting). `ACCOUNT_UNFREEZE_EVENT_TYPES` is unchanged.
 // ⭐ THE PQ1 SWAP POINT: if the Panel rules Q1 A (a guilty member's locks lift), this constant and fragment are REMOVED in
 // the SAME change that adds the guilty kind to `claim/death-report.ts`'s leaf — the two flip TOGETHER.
 

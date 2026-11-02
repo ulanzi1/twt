@@ -4,7 +4,7 @@
 //       claim DOOR answers — a member who never joined is refused (`ClaimIntakeRefusedError`), as at intake;
 //   (e) a MERGE confirmed after a finding closed the canonical claim is refused UNDER the intake lock;
 //   (f) an attempt parked `pending` beside a claim later found-alive-closed has ⛔ candidate — it stays `pending` (the residual,
-//       pinned);
+//       pinned); the override refuses a claim closed by a NON-fraud trigger too (RF6 / OP4 — every `closed`, R2-5);
 //   (a) a closable claim released by the finding is ⛔ longer a candidate (it is `closed`).
 
 import { randomUUID } from 'node:crypto';
@@ -32,7 +32,7 @@ import {
 } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
-import { claimAt } from './_one-payment-fixtures.js';
+import { claimAt, emitClaim } from './_one-payment-fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 const PID = PARIWAR_A as PariwarId;
@@ -93,6 +93,35 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the override door and the merge re
     expect(rows).toHaveLength(1);
     expect(await attemptStatus(client, attemptId)).toBe('pending');
   });
+
+  // R2-5 — the door refuses EVERY `closed` against-claim, ⛔ only a fraud close (`-438` item 8's generality): an RF6 or OP4
+  // closure leaves the attempt with ⛔ candidate and ⛔ override — the residual is "a claim later CLOSED (any trigger)".
+  it.each(['suspicion_appeal_allowed', 'death_already_finally_approved'] as const)(
+    '(b) + (f) R2-5 — the override onto a claim CLOSED by a NON-fraud trigger (`%s`) is refused — ⛔ ledger row, ⛔ new claim, the attempt stays `pending`',
+    async (trigger) => {
+      const { client } = getTx();
+      await enterAppScope(client, PID);
+      const mid = randomUUID();
+      const { cid, attemptId } = await claimWithPendingAttempt(client, mid, 'verifier_review');
+      await emitClaim(client, PID, cid, mid, 'verifier_review', 'closed', 'claim.closed', {
+        trigger, held_by_claim_case_id: randomUUID(), deceased_member_id: mid,
+      });
+      // The control: the claim IS closed, by THIS trigger, and ⛔ fraud finding touched it.
+      const { rows: closedBy } = await client.query<{ s: string; t: string }>(
+        `SELECT c.current_state::text AS s, e.payload ->> 'trigger' AS t
+           FROM claims c JOIN events_log e ON e.stream_id = c.claim_case_id AND e.event_type = 'claim.closed'
+          WHERE c.claim_case_id = $1`,
+        [cid],
+      );
+      expect(closedBy).toEqual([{ s: 'closed', t: trigger }]);
+      await expect(override(client, mid, attemptId, cid)).rejects.toBeInstanceOf(IntakeOverrideAgainstClosedClaimError);
+      const { rows } = await client.query('SELECT 1 FROM claims WHERE deceased_member_id = $1', [mid]);
+      expect(rows).toHaveLength(1);
+      const { rows: ledger } = await client.query('SELECT 1 FROM convergence_overrides WHERE intake_attempt_id = $1', [attemptId]);
+      expect(ledger).toHaveLength(0);
+      expect(await attemptStatus(client, attemptId)).toBe('pending');
+    },
+  );
 
   it('(b) onto an `approved` claim released by innocence (⛔ report stands) the DOOR answers — a member who never joined is refused', async () => {
     const { client } = getTx();

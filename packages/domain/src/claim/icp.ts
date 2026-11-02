@@ -605,8 +605,10 @@ export interface OverrideIntakeAttemptResult {
  * member alive, or another closure, ended it; ⛔ separate claim is minted beside it), and (2) when ⛔ report stands — an
  * attempt parked beside an `approved` claim later released by innocence — runs the claim door exactly as `tryConverge`'s
  * (1b) does (a refusal is `ClaimIntakeRefusedError`, which the handler maps to 409 `claim.intake_refused`, ⛔ a 500).
- * Residual (DL9 (f)): an attempt parked `pending` beside a claim that is later found-alive-CLOSED has ⛔ candidate and cannot be
- * overridden onto it — it stays `pending` as history (the RF2 precedent).
+ * Residual (DL9 (f); R2-5): an attempt parked `pending` beside a claim that is later CLOSED for ANY reason (a fraud finding, a
+ * suspicion-appeal close, a death already finally approved, …) has ⛔ candidate and cannot be overridden onto it — the refusal
+ * in (1) is every `closed`, ⛔ only a found-alive one. It stays `pending` as history (the RF2 precedent); the family's NEW
+ * report mints a claim as before (re-filing and one-payment-per-death unchanged).
  */
 export async function overrideIntakeAttempt(
   client: pg.PoolClient,

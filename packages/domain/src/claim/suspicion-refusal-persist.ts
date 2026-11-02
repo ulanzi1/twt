@@ -266,6 +266,13 @@ async function closeOtherClaimsOfDeath(client: pg.PoolClient, input: CloseOtherC
 }
 
 /**
+ * The trigger the held closer ACCEPTS — derived from the function's own parameter (⛔ the alias), so the compile-time pin
+ * in `fraud-closed-payload.test.ts` goes red if `closeOtherClaimsOfDeath` is ever widened to a fraud trigger (R2-12). A
+ * TYPE only — the walk itself stays module-private.
+ */
+export type CloseOtherClaimsOfDeathTrigger = Parameters<typeof closeOtherClaimsOfDeath>[1]['trigger'];
+
+/**
  * ⭐ ONE CLAIM's keys, in the closure core's order — `appeal:` → `r9:` → trustee (Trap 8 / 40P01) — taken BEFORE its row.
  * The death's INTAKE key comes before all three (the caller takes it). Exported so a writer that closes its OWN claim
  * (Story 6.22's `recordFraudFinding`) keeps the order in this one place.

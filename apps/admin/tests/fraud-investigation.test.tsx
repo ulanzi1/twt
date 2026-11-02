@@ -13,6 +13,9 @@
 //   · `closedClaimStateLabel`: "found alive" WINS over "holder refused"; the existing labels otherwise;
 //   · code review 2026-11-02 (chunk C): the honest wording (RC1), error copy (RC2), refresh on a stale refusal (RC3), a failed refresh
 //     keeps the result (RC4), focus and announcements (RC5), ids with no `crypto.randomUUID` (RC6), state hygiene (RC7).
+//   · code review round 2 (2026-11-02): a lost response offers ONE check that re-sends the same body (R2-3); a 403 that is not a
+//     step-up says a retry cannot succeed (R2-7); a stale helpline form closes (R2-8) and the read-back gate resets it (R2-9); every
+//     refusal is found by its `alert` role and every outcome by its `status` role (R2-11).
 
 import { QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -112,6 +115,7 @@ describe('<FraudInvestigationPanel>', () => {
     fireEvent.click(screen.getByTestId('fraud-finding-outcome-innocent'));
     fireEvent.click(screen.getByTestId('fraud-finding-submit'));
     expect(await screen.findByTestId('fraud-finding-incomplete')).toHaveTextContent(t.form.incomplete);
+    expect(screen.getByRole('alert')).toHaveTextContent(t.form.incomplete); // R2-11 — an ALERT, ⛔ a bare line
     expect(mocked.postFraudFinding).not.toHaveBeenCalled();
   });
 
@@ -131,7 +135,8 @@ describe('<FraudInvestigationPanel>', () => {
 
     mocked.postFraudFinding.mockRejectedValueOnce(new ApiError(409, 'fraud_investigation.finder_is_flagger', 'x'));
     fireEvent.click(screen.getByTestId('fraud-finding-submit'));
-    const refused = await screen.findByTestId('fraud-finding-refused');
+    const refused = await screen.findByRole('alert'); // R2-11 — the refusal is an ALERT
+    expect(refused).toHaveAttribute('data-testid', 'fraud-finding-refused');
     expect(refused).toHaveTextContent(t.refusal['fraud_investigation.finder_is_flagger']!);
     expect(refused.textContent).not.toContain('fraud_investigation.');
 
@@ -141,7 +146,7 @@ describe('<FraudInvestigationPanel>', () => {
     });
     fireEvent.click(screen.getByTestId('fraud-finding-submit'));
     expect(await screen.findByTestId('fraud-finding-other-claims')).toHaveTextContent(t.result.otherClaims);
-    expect(screen.getByTestId('fraud-finding-status')).toHaveTextContent(t.result.closedInnocent);
+    expect(screen.getByRole('status')).toHaveTextContent(t.result.closedInnocent); // R2-11 — the always-mounted STATUS
     // The same ids on every attempt — a retry replays, ⛔ a second finding.
     const bodies = mocked.postFraudFinding.mock.calls.map((c) => c[2]);
     expect(new Set(bodies.map((b) => b.step_id)).size).toBe(1);
@@ -162,11 +167,12 @@ describe('<HelplineFraudFlag>', () => {
     fireEvent.click(screen.getByTestId(`helpline-fraud-open-${CLAIM}`));
     fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
     expect(await screen.findByTestId('helpline-fraud-incomplete')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(resolveEn('helpline.fraud.noteRequired')); // R2-11 — an ALERT
     expect(mocked.postFraudFlag).not.toHaveBeenCalled();
     mocked.postFraudFlag.mockResolvedValue({ claim_case_id: CLAIM, step_id: OTHER, claim_state: 'denied', replayed: false });
     fireEvent.change(screen.getByTestId('helpline-fraud-note'), { target: { value: 'His wife called: he is at home.' } });
     fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
-    await waitFor(() => expect(screen.getByTestId('helpline-fraud-status')).toHaveTextContent(resolveEn('helpline.fraud.flagged')));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(resolveEn('helpline.fraud.flagged'))); // R2-11 — the STATUS
     expect(mocked.postFraudFlag).toHaveBeenCalledWith('p1', CLAIM, expect.objectContaining({ note: 'His wife called: he is at home.' }));
   });
 
@@ -464,6 +470,7 @@ describe('<FraudInvestigationPanel> — the read (RC4, RC7, RC9)', () => {
     mocked.postFraudFinding.mockResolvedValueOnce(answer({ other_standing_claims: [{ claim_case_id: OTHER, claim_state: 'denied', filed_at: AT }] }));
     fireEvent.click(screen.getByTestId('fraud-finding-submit'));
     expect(await screen.findByTestId('fraud-investigation-refresh-error')).toHaveTextContent(t.refreshError);
+    expect(screen.getByRole('alert')).toHaveTextContent(t.refreshError); // R2-11 — an ALERT, and the only one
     expect(screen.getByTestId('fraud-finding-other-claims')).toHaveTextContent(t.result.otherClaims);
     expect(screen.getByTestId('fraud-investigation-steps')).toBeInTheDocument();
     expect(screen.queryByTestId('fraud-investigation-error')).toBeNull();
@@ -561,6 +568,7 @@ describe('<HelplineFraudFlag> — code review 2026-11-02 (RC2, RC5, RC7, RC9)', 
     await openForm();
     fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
     const refused = await screen.findByTestId('helpline-fraud-refused');
+    expect(within(screen.getByTestId('helpline-fraud-form')).getByRole('alert')).toBe(refused); // R2-11 — the refusal is an ALERT
     expect(refused).toHaveTextContent(resolveEn(key));
     expect(refused.textContent).not.toContain(resolveEn('helpline.fraud.refusal.generic'));
     expect(refused.textContent).not.toContain('fraud_investigation.');
@@ -757,5 +765,198 @@ describe('which caches a fraud write refreshes (RC3, PD10)', () => {
     fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
     await waitFor(() => expect(screen.getByTestId('helpline-fraud-status')).toHaveTextContent(resolveEn('helpline.fraud.flagged')));
     expect(asked()).toEqual([memberFraudClaimsKey('p1', MEMBER), fraudInvestigationKey('p1', CLAIM), openFraudInvestigationsKey('p1')].map(keyText).sort());
+  });
+});
+
+// ── Code review round 2, 2026-11-02 ─────────────────────────────────────────────────────────────────────────────────────────
+
+describe('<FraudInvestigationPanel> — a lost response (R2-3)', () => {
+  beforeEach(() => {
+    mocked.getFraudInvestigation.mockReset();
+    mocked.postFraudFinding.mockReset();
+  });
+
+  const recorded = (): FraudInvestigationResponse =>
+    investigation({ steps: [flaggedStep(), foundStep({ state: 'readable', value: 'Seen.' })], viewer: { can_record_finding: false, is_flagger: false } });
+
+  it.each([
+    ['a dropped connection (⛔ an ApiError)', () => new TypeError('Failed to fetch')],
+    ['a 502', () => new ApiError(502, 'http.bad_gateway', 'x')],
+  ])('⭐ %s, and the refresh shows the finding: ⛔ "just now" beside it; ONE check re-sends the SAME body and ids; the replay shows the other claims', async (_label, lost) => {
+    mocked.getFraudInvestigation.mockResolvedValueOnce(investigation());
+    mocked.getFraudInvestigation.mockResolvedValue(recorded());
+    await openPanel();
+    fillIn('guilty', 'in_person', 'Seen at home by the block officer.');
+    expect(screen.queryByTestId('fraud-finding-check')).toBeNull(); // the CONTROL: ⛔ check before anything was sent
+    mocked.postFraudFinding.mockRejectedValueOnce(lost());
+    fireEvent.click(screen.getByTestId('fraud-finding-submit'));
+    await waitFor(() => expect(screen.queryByTestId('fraud-finding-form')).toBeNull()); // the refresh shows the finding: the form goes
+    expect(screen.getByRole('alert')).toHaveTextContent(t.lostResponse.nowRecorded);
+    expect(screen.getByTestId('fraud-investigation-section').textContent).not.toContain(t.refusalGeneric);
+    expect(screen.getAllByRole('button', { name: t.lostResponse.check })).toHaveLength(1);
+
+    mocked.postFraudFinding.mockResolvedValueOnce(
+      answer({ outcome: 'guilty', replayed: true, other_standing_claims: [{ claim_case_id: OTHER, claim_state: 'denied', filed_at: AT }] }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: t.lostResponse.check }));
+    expect(await screen.findByTestId('fraud-finding-other-claims')).toHaveTextContent(t.result.otherClaims);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(t.result.closedGuilty);
+    expect(status).toHaveTextContent(t.result.replayed);
+    expect(mocked.postFraudFinding).toHaveBeenCalledTimes(2);
+    const [first, second] = mocked.postFraudFinding.mock.calls.map((c) => c[2]);
+    expect(second).toEqual(first); // the same step_id, finding_id, outcome, proof and note — ⛔ new ids
+    expect(first).toMatchObject({ outcome: 'guilty', alive_confirmation: 'in_person', note: 'Seen at home by the block officer.' });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByTestId('fraud-finding-check')).toBeNull();
+  });
+
+  it('⭐ when the refresh shows ⛔ finding, the generic line stays beside the check, the form is LOCKED (⛔ an edited resend — PT1), and the check sends what was sent', async () => {
+    mocked.getFraudInvestigation.mockResolvedValue(investigation());
+    await openPanel();
+    fillIn('innocent', 'video_call', 'First words.');
+    expect(screen.getByTestId('fraud-finding-form')).not.toBeDisabled(); // the CONTROL: open before the failure
+    mocked.postFraudFinding.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    fireEvent.click(screen.getByTestId('fraud-finding-submit'));
+    await waitFor(() => expect(mocked.getFraudInvestigation).toHaveBeenCalledTimes(2)); // the refresh ran, and found ⛔ finding
+    expect(await screen.findByRole('alert')).toHaveTextContent(t.refusalGeneric);
+    expect(screen.getByTestId('fraud-finding-form')).toBeDisabled(); // ⛔ an edit, ⛔ a Submit under the same ids
+    expect(screen.getByTestId('fraud-finding-outcome-guilty')).toBeDisabled();
+    expect(screen.getByTestId('fraud-finding-submit')).toBeDisabled();
+    mocked.postFraudFinding.mockResolvedValueOnce(answer());
+    fireEvent.click(screen.getByRole('button', { name: t.lostResponse.check }));
+    await screen.findByTestId('fraud-finding-other-claims');
+    const [first, second] = mocked.postFraudFinding.mock.calls.map((c) => c[2]);
+    expect(second).toEqual(first);
+    expect(second!.outcome).toBe('innocent');
+  });
+
+  it('a TYPED refusal offers ⛔ check (it says what happened)', async () => {
+    mocked.getFraudInvestigation.mockResolvedValue(investigation());
+    await openPanel();
+    fillIn();
+    mocked.postFraudFinding.mockRejectedValueOnce(new ApiError(409, 'fraud_investigation.concurrent', 'x'));
+    fireEvent.click(screen.getByTestId('fraud-finding-submit'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(t.refusal['fraud_investigation.concurrent']!);
+    expect(screen.queryByTestId('fraud-finding-check')).toBeNull();
+  });
+});
+
+describe('<FraudInvestigationPanel> — a 403 that is not a step-up (R2-7), and the read failure (R2-11)', () => {
+  beforeEach(() => {
+    mocked.getFraudInvestigation.mockReset();
+    mocked.postFraudFinding.mockReset();
+  });
+
+  it.each(['authz.forbidden', 'auth.forbidden'])('⭐ a 403 `%s` on submit says a retry cannot succeed — ⛔ "just now", ⛔ the check action', async (code) => {
+    mocked.getFraudInvestigation.mockResolvedValue(investigation());
+    await openPanel();
+    fillIn();
+    mocked.postFraudFinding.mockRejectedValueOnce(new ApiError(403, code, 'x'));
+    fireEvent.click(screen.getByTestId('fraud-finding-submit'));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(t.refusalForbidden);
+    expect(alert.textContent).not.toContain(t.refusalGeneric);
+    expect(screen.queryByTestId('fraud-finding-check')).toBeNull();
+    expect(screen.queryByTestId('fraud-finding-step-up')).toBeNull();
+  });
+
+  it('a read that fails with nothing in hand is an ALERT', async () => {
+    mocked.getFraudInvestigation.mockRejectedValue(new Error('network down'));
+    renderWithClient(<FraudInvestigationPanel pariwarId="p1" claimCaseId={CLAIM} />);
+    fireEvent.click(screen.getByTestId('fraud-investigation-disclosure'));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveAttribute('data-testid', 'fraud-investigation-error');
+    expect(alert).toHaveTextContent(t.loadError);
+  });
+});
+
+describe('<HelplineFraudFlag> — code review round 2 (R2-7, R2-8, R2-9, R2-11)', () => {
+  beforeEach(() => {
+    mocked.getMemberFraudClaims.mockReset();
+    mocked.postFraudFlag.mockReset();
+  });
+
+  const row = (investigation_: 'none' | 'flagged'): MemberFraudClaimsResponse => ({
+    claims: [{ claim_case_id: CLAIM, claim_state: 'denied', filed_at: AT, investigation: investigation_ }],
+  });
+  async function openAndType(): Promise<void> {
+    fireEvent.click(await screen.findByTestId(`helpline-fraud-open-${CLAIM}`));
+    fireEvent.change(screen.getByTestId('helpline-fraud-note'), { target: { value: 'Caller says he is alive.' } });
+  }
+  /** Rendered under ONE client, so a `rerender` keeps the cache (the page re-renders the section, ⛔ remounts it). */
+  function renderFlag(identityConfirmed: boolean): (next: boolean) => void {
+    const client = createQueryClient();
+    const ui = (confirmed: boolean) => (
+      <QueryClientProvider client={client}>
+        <HelplineFraudFlag pariwarId="p1" memberId={MEMBER} identityConfirmed={confirmed} />
+      </QueryClientProvider>
+    );
+    const r = render(ui(identityConfirmed));
+    return (next) => r.rerender(ui(next));
+  }
+
+  it.each(['authz.forbidden', 'auth.forbidden'])('⭐ a 403 `%s` on the flag says a retry cannot succeed — ⛔ "just now"', async (code) => {
+    mocked.getMemberFraudClaims.mockResolvedValue(row('none'));
+    mocked.postFraudFlag.mockRejectedValue(new ApiError(403, code, 'x'));
+    renderWithClient(<HelplineFraudFlag pariwarId="p1" memberId={MEMBER} identityConfirmed={true} />);
+    await openAndType();
+    fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(resolveEn('helpline.fraud.refusal.forbidden'));
+    expect(alert.textContent).not.toContain(resolveEn('helpline.fraud.refusal.generic'));
+  });
+
+  it('⭐ after `already_flagged` the refreshed row is `flagged`: the form CLOSES (⛔ resendable), and the refusal stays on the row', async () => {
+    mocked.getMemberFraudClaims.mockResolvedValueOnce(row('none'));
+    mocked.getMemberFraudClaims.mockResolvedValue(row('flagged'));
+    mocked.postFraudFlag.mockRejectedValue(new ApiError(409, 'fraud_investigation.already_flagged', 'x'));
+    renderWithClient(<HelplineFraudFlag pariwarId="p1" memberId={MEMBER} identityConfirmed={true} />);
+    await openAndType();
+    fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
+    await waitFor(() => expect(screen.getByTestId(`helpline-fraud-status-${CLAIM}`)).toHaveTextContent(resolveEn('helpline.fraud.status.flagged')));
+    await waitFor(() => expect(screen.queryByTestId('helpline-fraud-form')).toBeNull());
+    expect(screen.queryByTestId('helpline-fraud-submit')).toBeNull();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveAttribute('data-testid', `helpline-fraud-row-refused-${CLAIM}`);
+    expect(alert).toHaveTextContent(resolveEn('helpline.fraud.refusal.already_flagged'));
+    expect(within(screen.getByTestId(`helpline-fraud-claim-${CLAIM}`)).getByRole('alert')).toBe(alert); // on THAT row
+    expect(screen.getByRole('heading', { name: resolveEn('helpline.fraud.heading') })).toHaveFocus(); // ⛔ the page body
+    expect(mocked.postFraudFlag).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ losing the read-back for the SAME member forgets the "flagged" line; a re-confirm brings ⛔ it back', async () => {
+    mocked.getMemberFraudClaims.mockResolvedValue(row('none'));
+    mocked.postFraudFlag.mockResolvedValue({ claim_case_id: CLAIM, step_id: OTHER, claim_state: 'denied', replayed: false });
+    const confirm = renderFlag(true);
+    await openAndType();
+    fireEvent.click(screen.getByTestId('helpline-fraud-submit'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(resolveEn('helpline.fraud.flagged'))); // the CONTROL
+    confirm(false);
+    expect(screen.getByTestId('helpline-fraud-need-member')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('');
+    confirm(true);
+    await screen.findByTestId(`helpline-fraud-status-${CLAIM}`);
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
+  it('⭐ losing the read-back for the SAME member closes the open form — the Flag button is back on a re-confirm (the note\'s reset is ⛔ observable here: opening the form clears it anyway)', async () => {
+    mocked.getMemberFraudClaims.mockResolvedValue(row('none'));
+    const confirm = renderFlag(true);
+    await openAndType();
+    expect(screen.getByTestId('helpline-fraud-note')).toHaveValue('Caller says he is alive.'); // the CONTROL
+    confirm(false);
+    expect(screen.queryByTestId('helpline-fraud-form')).toBeNull();
+    confirm(true);
+    fireEvent.click(await screen.findByTestId(`helpline-fraud-open-${CLAIM}`)); // the Flag button is back: the form was closed
+    expect(screen.getByTestId('helpline-fraud-note')).toHaveValue('');
+  });
+
+  it('a list that fails to load is an ALERT (R2-11)', async () => {
+    mocked.getMemberFraudClaims.mockRejectedValue(new Error('network down'));
+    renderWithClient(<HelplineFraudFlag pariwarId="p1" memberId={MEMBER} identityConfirmed={true} />);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveAttribute('data-testid', 'helpline-fraud-error');
+    expect(alert).toHaveTextContent(resolveEn('helpline.fraud.error'));
   });
 });

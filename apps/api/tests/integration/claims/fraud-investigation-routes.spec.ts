@@ -1,7 +1,9 @@
 // Story 6.22 — the fraud register's investigation over HTTP (Task 4.4): AC3 (the flag + the helpline's list + the Q7 HTTP
 // twin), AC4 (the finding: refusals, step-up, the release proven on a real lock route, the approved claim), AC10 (the
 // override door's 409s), AC12 (audits — ⛔ note in any context), AC13 (the console read's uniform withholding, the
-// work-list's district scope, `closed_member_alive` on the helpline read). Live DB.
+// work-list's district scope, `closed_member_alive` on the helpline read). Code review round 2: a finding refused AFTER its
+// writes leaves nothing (R2-1), `closed_member_alive` on the nominee-refusals and helpline-appeal lists (R2-2), the work-list's
+// `is_flagger` (R2-6). Live DB.
 //
 // Members are seeded through REAL events (`seedLifecycleMember` — TR3); claims through the projector (⛔ `forceClaimState` —
 // the finding's replay would reset it).
@@ -211,8 +213,12 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       const w = await world({ posted: false });
       for (const roles of [['district_admin'], ['verifier'], ['pariwar_admin']] as const) {
         const a = await staff(w, roles);
-        expect((await flagOf(a, w)).statusCode, roles[0]).toBe(403);
+        const res = await flagOf(a, w);
+        expect(res.statusCode, roles[0]).toBe(403);
+        // R2-13 (b) — the CODE too (the RB1 one-code block's), so a 403 of another kind (CSRF, a step-up) cannot pass for it.
+        expect(errCode(res), roles[0]).toBe('authz.forbidden');
       }
+      expect(await stepRows(w.claimCaseId)).toEqual([]);
       const op = await staff(w, ['helpline_operator']);
       const empty = await flagOf(op, w, { note: '   ' });
       expect(empty.statusCode).toBe(400);
@@ -261,14 +267,23 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
   describe('AC4 — the finding', () => {
     it('step-up first (⛔ written without it); un-flagged ⇒ 409; ⛔ proof of life / ⛔ note ⇒ 400; the flagger (one person with BOTH roles) ⇒ 409', async () => {
       const w = await world();
+      // `not_flagged` needs a claim nobody flagged — a second claim of the SAME death (the same district, so the refusal is
+      // the chain's, ⛔ the district gate's).
+      const unflagged = await fileClaim(td, w.pariwarId, w.memberId);
+      const both = await staff(w, ['helpline_operator', 'district_admin']);
+      expect((await flagOf(both, w)).statusCode).toBe(201);
       const da = await staff(w, ['district_admin']);
+      // R2-13 (c) — on a FLAGGED claim that this District Admin COULD find (⛔ the flagger), so "⛔ written" below can fail:
+      // without the step-up gate this request would write the finding, the release and the found step.
       const noStep = await findOf(da, w);
       expect(noStep.statusCode).toBe(403);
       expect(errCode(noStep)).toBe('auth.step_up_required');
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged']);
+      expect((await td.pool.query('SELECT 1 FROM claim_nominee_findings WHERE claim_case_id = $1', [w.claimCaseId])).rowCount).toBe(0);
+      expect(await stateOf(w.claimCaseId)).toBe('intake_pending');
       await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
-      expect(errCode(await findOf(da, w))).toBe('fraud_investigation.not_flagged');
-      const both = await staff(w, ['helpline_operator', 'district_admin']);
-      expect((await flagOf(both, w)).statusCode).toBe(201);
+      expect(errCode(await findOf(da, w, {}, unflagged))).toBe('fraud_investigation.not_flagged');
+      expect(auditsFor('admin_claim.fraud_finding_rejected', unflagged).map((e) => (e.context as Json).reason)).toEqual(['not_flagged']);
       await stepUp(both, FRAUD_FINDING_STEP_UP_CONTEXT);
       const self = await findOf(both, w);
       expect(self.statusCode).toBe(409);
@@ -280,7 +295,7 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       const steps = await td.pool.query('SELECT step FROM claim_fraud_investigation_steps WHERE claim_case_id = $1', [w.claimCaseId]);
       expect(steps.rows.map((r) => r.step)).toEqual(['flagged']);
       expect(auditsFor('admin_claim.fraud_finding_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(
-        expect.arrayContaining(['not_flagged', 'finder_is_flagger', 'missing_alive_confirmation', 'missing_note']),
+        expect.arrayContaining(['finder_is_flagger', 'missing_alive_confirmation', 'missing_note']),
       );
     });
 
@@ -386,6 +401,24 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       expect(items).toContain(w.claimCaseId);
       expect(items).not.toContain(elsewhere.claimCaseId);
       expect((await (await staff(w, ['helpline_operator'])).client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/fraud-investigations` })).statusCode).toBe(403);
+    });
+
+    it('⭐ R2-6 — a row the VIEWER flagged says `is_flagger: true` and is ⛔ hidden (a Super Admin holds both keys); another District Admin reads `false`', async () => {
+      const w = await world();
+      const sa = await staff(w, ['super_admin']);
+      expect((await flagOf(sa, w)).statusCode).toBe(201);
+      const rowFor = async (who: Staff) => {
+        const res = await who.client.inject({ method: 'GET', url: workListUrl(w) });
+        expect(res.statusCode).toBe(200);
+        return (res.json() as { items: Json[] }).items.find((i) => i.claim_case_id === w.claimCaseId);
+      };
+      const own = await rowFor(sa);
+      expect(own).toMatchObject({ is_flagger: true }); // listed — ⛔ dropped — and labelled
+      expect(Object.keys(own!).sort()).toEqual(['claim_case_id', 'claim_filed_at', 'claim_state', 'flagged_at', 'is_flagger']);
+      expect(await rowFor(await staff(w, ['district_admin']))).toMatchObject({ is_flagger: false });
+      // The label tells the truth: the flagger's finding IS refused, the other District Admin's is not.
+      await stepUp(sa, FRAUD_FINDING_STEP_UP_CONTEXT);
+      expect(errCode(await findOf(sa, w))).toBe('fraud_investigation.finder_is_flagger');
     });
   });
 
@@ -582,6 +615,52 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       expect(await stepRows(w.claimCaseId)).toEqual(['flagged', 'found_innocent']);
     });
 
+    // R2-1 — the refusal above reuses the claim's OWN flag step id, so it is refused at the replay check, before any write.
+    // A step id held by ANOTHER claim is invisible to that check (the steps are read per claim): `recordFraudFinding` writes
+    // the member finding and the release annotation (its step 4) and only THEN meets the global key at the step insert
+    // (step 5). The rollback is the handler's `closeScopeTx(scopeTx, ok)` alone — this proves it.
+    it('⭐ R2-1 — a finding refused AFTER its writes (a step id ANOTHER claim holds) is 409 `step_conflict` and leaves NOTHING: ⛔ finding row, ⛔ release, ⛔ found step; erasure still `rtbf.death_reported`', async () => {
+      const other = await world(); // claim A — another death, its own Pariwar
+      const w = await world(); // claim B — the one under test
+      const taken = randomUUID();
+      expect((await flagOf(await staff(other, ['helpline_operator']), other, { step_id: taken })).statusCode).toBe(201);
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const memberToken = signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'test-device' }, 15 * 60 * 1000);
+      const erase = async () => {
+        await memberAuthRepo.insertElevation(deps.pool, { memberId: w.memberId, actionContext: 'rtbf', elevatedUntil: new Date(Date.now() + 5 * 60 * 1000) });
+        const res = await app.inject({ method: 'POST', url: '/api/v1/member/rtbf', payload: {}, headers: { origin: 'http://localhost:3001', authorization: `Bearer ${memberToken}` } });
+        return errCode(res);
+      };
+      expect(await erase()).toBe('rtbf.death_reported');
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+
+      const res = await findOf(da, w, { step_id: taken }); // innocent — had it committed, the member would be RELEASED
+      expect(res.statusCode, res.body).toBe(409);
+      expect(errCode(res)).toBe('fraud_investigation.step_conflict');
+      expect(auditsFor('admin_claim.fraud_finding_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['step_conflict']);
+      expect(auditsFor('admin_claim.fraud_finding_recorded', w.claimCaseId)).toHaveLength(0);
+      // ⛔ The step-4 writes survived the refusal:
+      expect((await td.pool.query('SELECT 1 FROM claim_nominee_findings WHERE claim_case_id = $1', [w.claimCaseId])).rowCount).toBe(0);
+      const released = await td.pool.query(`SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_lock_released'`, [w.claimCaseId]);
+      expect(released.rowCount).toBe(0);
+      expect(await stepRows(w.claimCaseId)).toEqual(['flagged']);
+      expect(await stateOf(w.claimCaseId)).toBe('intake_pending');
+      expect(await erase()).toBe('rtbf.death_reported'); // the member is still LOCKED
+      // …and A's step is untouched (still A's flag).
+      const a = await td.pool.query<{ claim_case_id: string; step: string }>('SELECT claim_case_id::text, step FROM claim_fraud_investigation_steps WHERE step_id = $1', [taken]);
+      expect(a.rows).toEqual([{ claim_case_id: other.claimCaseId, step: 'flagged' }]);
+
+      // The CONTROL — the same request with a FRESH step id commits, and DOES release the member: so the refusal above
+      // really had writes to roll back (an innocent finding releases), ⛔ a request that could never have written.
+      const ok = await findOf(da, w);
+      expect(ok.statusCode, ok.body).toBe(201);
+      expect((await td.pool.query('SELECT 1 FROM claim_nominee_findings WHERE claim_case_id = $1', [w.claimCaseId])).rowCount).toBe(1);
+      // … and the release event the refusal leg found absent IS written here (patch-diff PT9: its positive partner).
+      expect((await td.pool.query(`SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'claim.nominee_lock_released'`, [w.claimCaseId])).rowCount).toBe(1);
+      expect(await erase()).toBe('rtbf.invalid_state');
+    });
+
     it('a flag on an UNKNOWN claim is 404 `claim_not_found`; the flag audit fires ONCE and ⛔ on a replay', async () => {
       const w = await world();
       const op = await staff(w, ['helpline_operator']);
@@ -654,6 +733,71 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the fraud investigation routes (li
       expect(await noteOf()).toEqual({ state: 'anonymized' });
       await td.pool.query(`UPDATE claim_fraud_investigation_steps SET note_ciphertext = 'not-an-envelope' WHERE claim_case_id = $1`, [w.claimCaseId]);
       expect(await noteOf()).toEqual({ state: 'unreadable' });
+    });
+  });
+
+  // ── R2-2 — `closed_member_alive` on the two OTHER helpline producers (the death-certificate read is pinned above) ─────
+  describe('R2-2 — `closed_member_alive` on the nominee-refusals list and the helpline appeal list', () => {
+    /** A `-239` refusal (`domain/_suspicion-refusal-fixtures.ts`'s `refusedClaim`, over the projector): `claim.verifier_denied`
+     *  plus its LIVE decision row — the row is what the refusals list reads, ⛔ the denial's own grounding. */
+    async function refuse(w: World, cid: string): Promise<void> {
+      await drive(w, cid, [...TO_REVIEW, ['verifier_review', 'denied', 'claim.verifier_denied', { actor: 'operator' }]]);
+      await td.pool.query(
+        `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display)
+         VALUES ($1, $2, 'denied', 'post_death_nominee_change', NULL, $3, 'Anita (District Admin)')`,
+        [cid, w.pariwarId, randomUUID()],
+      );
+    }
+    /** `denied` → `closed` HELD BY `holder` (RF6's trigger — the OP10 shape `readClosedMemberAliveBulk`'s reverse leg reads). */
+    const closeHeldBy = (w: World, cid: string, holder: string) =>
+      drive(w, cid, [['denied', 'closed', 'claim.closed', { trigger: 'suspicion_appeal_allowed', held_by_claim_case_id: holder, deceased_member_id: w.memberId }]]);
+
+    it('⭐ the refusals list: a refusal fraud-closed ITSELF and one closed HELD BY a claim later fraud-closed read `true` (⛔ before the finding); a closed refusal held by an un-found claim and a standing one read `false`', async () => {
+      const w = await world();
+      const c = w.claimCaseId; // C — refused, then flagged and FOUND (its own close)
+      const [r, k, d] = [await fileClaim(td, w.pariwarId, w.memberId), await fileClaim(td, w.pariwarId, w.memberId), await fileClaim(td, w.pariwarId, w.memberId)];
+      for (const cid of [c, r, k, d]) await refuse(w, cid);
+      await closeHeldBy(w, r, c); // R — closed held by C (C is later fraud-closed: the holder direction)
+      await closeHeldBy(w, k, d); // K — the CONTROL: closed held by D, which nobody finds
+      const pa = await staff(w, ['pariwar_admin']);
+      const aliveById = async () => {
+        const res = await pa.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/nominee-refusals` });
+        expect(res.statusCode, res.body).toBe(200);
+        return Object.fromEntries((res.json() as { items: Json[] }).items.map((i) => [i.claim_case_id, [i.claim_state, i.closed_member_alive]]));
+      };
+      // BEFORE the finding — every row `false` (so the flip below is the finding's, ⛔ the seed's).
+      expect(await aliveById()).toEqual({ [c]: ['denied', false], [r]: ['closed', false], [k]: ['closed', false], [d]: ['denied', false] });
+
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      const found = await findOf(da, w);
+      expect(found.statusCode, found.body).toBe(201);
+      expect(found.json()).toMatchObject({ closed: true });
+
+      expect(await aliveById()).toEqual({ [c]: ['closed', true], [r]: ['closed', true], [k]: ['closed', false], [d]: ['denied', false] });
+    });
+
+    // ⚠ The helpline APPEAL list lists `denied` and `appeal_stage_*` claims ONLY (`HELPLINE_APPEAL_LISTED_STATES`), and
+    // `readClosedMemberAliveBulk` answers for `closed` claims only — so on THIS producer `closed_member_alive: true` is
+    // unreachable by construction (as is `closed_holder_refused: true`). What CAN be pinned: a fraud-closed claim is ⛔
+    // listed, and the listed refusal of the same death carries the field as `false`.
+    it('the helpline appeal list: the fraud-closed claim is ⛔ listed (its state is not an appeal state); the same death\'s standing refusal reads `closed_member_alive: false`', async () => {
+      const w = await world();
+      const d = await fileClaim(td, w.pariwarId, w.memberId);
+      await refuse(w, d);
+      expect((await flagOf(await staff(w, ['helpline_operator']), w)).statusCode).toBe(201);
+      const da = await staff(w, ['district_admin']);
+      await stepUp(da, FRAUD_FINDING_STEP_UP_CONTEXT);
+      expect((await findOf(da, w)).statusCode).toBe(201);
+      expect(await stateOf(w.claimCaseId)).toBe('closed');
+
+      const op = await staff(w, ['helpline_operator']);
+      const res = await op.client.inject({ method: 'GET', url: `/api/v1/p/${w.pariwarId}/admin/members/${w.memberId}/appeals` });
+      expect(res.statusCode, res.body).toBe(200);
+      const claims = (res.json() as { claims: Json[] }).claims;
+      expect(claims.map((x) => x.claim_case_id)).toEqual([d]);
+      expect(claims[0]).toMatchObject({ claim_state: 'denied', closed_member_alive: false, closed_holder_refused: false });
     });
   });
 

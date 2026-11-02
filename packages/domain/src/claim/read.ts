@@ -256,6 +256,8 @@ export interface OpenFraudInvestigation {
   readonly flaggedAt: Date;
   /** The deceased member's latest posting district — the row's authorization scope (`null` ⇒ dropped by `isVisible`). */
   readonly district: string | null;
+  /** The FLAG step's actor — the route compares it to the caller (R2-6: a row the viewer flagged, which they can ⛔ finish). */
+  readonly flaggerActorId: string;
 }
 
 /**
@@ -293,9 +295,10 @@ export async function listOpenFraudInvestigations(
       flagged_at: Date | string;
       flagged_at_exact: string;
       district: string | null;
+      flagger_actor_id: string;
     }>(sql`
       SELECT c.claim_case_id::text AS claim_case_id, c.current_state, c.created_at,
-             f.acted_at AS flagged_at, f.acted_at::text AS flagged_at_exact,
+             f.acted_at AS flagged_at, f.acted_at::text AS flagged_at_exact, f.actor_id AS flagger_actor_id,
              (SELECT p.district
                 FROM ${memberPostings} p
                WHERE p.member_id = c.deceased_member_id AND p.pariwar_id = c.pariwar_id
@@ -327,6 +330,7 @@ export async function listOpenFraudInvestigations(
         claimFiledAt: r.created_at instanceof Date ? r.created_at : new Date(r.created_at),
         flaggedAt: r.flagged_at instanceof Date ? r.flagged_at : new Date(r.flagged_at),
         district: r.district,
+        flaggerActorId: r.flagger_actor_id,
       });
     }
     if (out.length >= pageSize || rows.length < scanBatch) break;

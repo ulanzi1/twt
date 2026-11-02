@@ -229,9 +229,12 @@ const EN: Record<string, string> = {
   'helpline.fraud.refusal.claim_not_found': 'This claim could not be found.',
   // A retriable 409 (a claim-stream race): the flag's step id is kept, so sending it again cannot flag twice.
   'helpline.fraud.refusal.concurrent': 'The claim changed while it was being flagged. Send it again — it cannot be flagged twice.',
-  // PERMANENT until the Super Admin acts — a retry cannot succeed.
+  // The open form's step id is already spent — fixed by Cancel + re-open, which mints a new one.
   'helpline.fraud.refusal.step_conflict': 'This form was already used for another step. Cancel it and open the form again.',
+  // PERMANENT until the Super Admin acts — a retry cannot succeed.
   'helpline.fraud.refusal.display_name_missing': 'Your account has no display name yet, so it cannot flag a claim. Ask the Super Admin.',
+  // Any 403 (the operator's key revoked since the page loaded): a retry cannot succeed (R2-7).
+  'helpline.fraud.refusal.forbidden': 'You can no longer act on this claim here. Reload the page.',
   // The refusal lines (C6) — never a raw error code.
   'helpline.certificate.refusal.certificate_accepted':
     "This claim's death certificate has already been accepted. Another one can't be sent.",

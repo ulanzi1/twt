@@ -1,7 +1,8 @@
 // Story 6.22 — the finding's LOCK ORDER as true two-connection races (own-committing). AC5, AC6; DL3 step 1, DL12 (d).
 //
-//   AC6 (a) — the death's INTAKE key held elsewhere ⇒ the finding WAITS (`pg_stat_activity`, ⛔ a sleep); an UPPER-case
-//             claim id reaches the same key.
+//   AC6 (a) — the death's INTAKE key held elsewhere ⇒ the finding WAITS (`pg_stat_activity`, ⛔ a sleep), holding ⛔ the
+//             claim row while it does (the intake key FIRST). The ids' case is irrelevant here BY CONSTRUCTION
+//             (`intakeAdvisoryLockKey` and the brand both lower-case — R2-13 (a)); AC6 (b) is the discriminating TR11 test.
 //   AC6 (b) — the claim's `appeal:` key is built from the DB ROW's id (TR11): held under the lower-case id, a finding sent
 //             with the UPPER-case id still waits — and, while it waits, it holds ⛔ the claim row (the keys come BEFORE the
 //             row — AC5's 40P01 order, proven with a NOWAIT probe rather than a timing race).
@@ -173,7 +174,9 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the finding\'s lock order (two con
     return { cid, mid };
   }
 
-  it('AC6 (a) — the INTAKE key held elsewhere ⇒ the finding WAITS, then commits; an UPPER-case claim id reaches the same key', { timeout: TIMEOUT }, async () => {
+  // R2-13 (a) — the upper-case ids below cannot fail this test for a CASE reason (the key and the brand both lower-case): it
+  // proves the ORDER (intake key before the row). The case-sensitive leg is AC6 (b) (TR11 — the key built from the ROW's id).
+  it('AC6 (a) — the INTAKE key held elsewhere ⇒ the finding WAITS holding ⛔ the claim row (the intake key FIRST), then commits — the same intake key whatever the ids\' case (by construction)', { timeout: TIMEOUT }, async () => {
     const pid = freshPariwar();
     const { cid, mid } = await flaggedClaim(pid);
     const holder = await openTx(pid);

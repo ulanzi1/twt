@@ -63,6 +63,9 @@ async function resolveDisplay(deps: AppDeps, actorId: string): Promise<string> {
 
 const locator = (claimCaseId: string) => `claim:${claimCaseId.toLowerCase()}`;
 
+/** Did THIS caller flag it? Case-insensitive — ONE comparison for the console's `viewer.is_flagger` and the work-list's (R2-6). */
+const isFlaggedBy = (flaggerActorId: string, actorId: string) => flaggerActorId.toLowerCase() === actorId.toLowerCase();
+
 /**
  * Does the note carry a visible character? `trim()` strips ordinary whitespace but ⛔ U+200B-U+200D, U+2060, U+2800 or the Hangul
  * fillers (U+115F, U+1160, U+3164, U+FFA0 — LETTERS that draw nothing), so a note of those would satisfy "every step carries a note"
@@ -330,7 +333,7 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
       const holder = await holdsFindingKeyAt(request, request.nomineeNameCheckDistrict ?? null);
       const flag = steps.find((s) => s.step === 'flagged');
       const found = steps.some((s) => s.step !== 'flagged');
-      const isFlagger = flag !== undefined && flag.actorId.toLowerCase() === actorId.toLowerCase();
+      const isFlagger = flag !== undefined && isFlaggedBy(flag.actorId, actorId);
 
       const views = await Promise.all(
         steps.map(async (s) => ({
@@ -380,6 +383,10 @@ export function createFraudInvestigationHandlers(deps: AppDeps) {
           claim_state: r.currentState,
           claim_filed_at: r.claimFiledAt.toISOString(),
           flagged_at: r.flaggedAt.toISOString(),
+          // R2-6 — a row the CALLER flagged (a Super Admin holds both keys; one person may hold both roles) is labelled,
+          // ⛔ dropped: another District Admin must record its finding (`finder_is_flagger`), and a lone Super Admin
+          // must still see that it exists.
+          is_flagger: isFlaggedBy(r.flaggerActorId, actorId),
         })),
       };
     },

@@ -39,6 +39,9 @@ function flagRefusal(err: unknown): string {
     if (err.code === 'fraud_investigation.step_conflict') return resolveEn('helpline.fraud.refusal.step_conflict');
     // PERMANENT (a retry cannot succeed) — said so, ⛔ "just now".
     if (err.code === 'admin.display_name_missing') return resolveEn('helpline.fraud.refusal.display_name_missing');
+    // Any other 403 (the key revoked since the page loaded): a retry cannot succeed, so ⛔ "just now" (R2-7). The flag route
+    // takes no step-up; the guard keeps a step-up 403, were one ever sent, out of this line.
+    if (err.status === 403 && err.code !== 'auth.step_up_required') return resolveEn('helpline.fraud.refusal.forbidden');
   }
   return resolveEn('helpline.fraud.refusal.generic');
 }
@@ -72,15 +75,39 @@ export function HelplineFraudFlag({
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  // A member switch closes the form and forgets the outcome.
+  // R2-8 — the refusal that closed a row's form (below), kept on THAT row so the operator sees why the form went.
+  const [rowRefusal, setRowRefusal] = useState<{ readonly claimCaseId: string; readonly words: string } | null>(null);
+  // The LAST refusal, recorded in the write's own `onError` (patch-diff PT7) — ⛔ read from `flag.isError` when the refreshed list
+  // lands, which would depend on which of the two settled first.
+  const lastRefusalRef = useRef<{ readonly claimCaseId: string; readonly words: string } | null>(null);
+
+  // A member switch — or losing the read-back for the SAME member (R2-9) — closes the form and forgets the note and the outcome;
+  // ⛔ a re-confirm brings them back.
   useEffect(() => {
     setForm(null);
     setNote('');
     setIncomplete(false);
     setFlagged(null);
+    setRowRefusal(null);
+    lastRefusalRef.current = null;
     flag.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `flag.reset` is stable; only the member matters here
-  }, [memberId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `flag.reset` is stable; only the member and the read-back matter here
+  }, [memberId, ready]);
+
+  // R2-8 — a row that is no longer `none` (the refresh after a 409 `already_flagged`, or another operator's flag) takes ⛔ flag:
+  // its form closes (every resend would be the same 409), and the refusal stays on the row.
+  const formClaim = form === null ? undefined : claims.find((x) => x.claim_case_id === form.claimCaseId);
+  const formStale = formClaim !== undefined && formClaim.investigation !== 'none';
+  useEffect(() => {
+    if (!formStale || form === null) return;
+    const last = lastRefusalRef.current;
+    setRowRefusal(last !== null && last.claimCaseId === form.claimCaseId ? last : null);
+    setForm(null);
+    setNote(''); // the typed caller note is ⛔ kept once the form is gone
+    setIncomplete(false);
+    headingRef.current?.focus(); // the form that held the focus unmounts: focus lands on the section, ⛔ the page body (PD7)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the row turns stale; `form` is read at that moment
+  }, [formStale]);
 
   const submit = (claimCaseId: string, stepId: string) => {
     if (note.trim() === '') {
@@ -88,9 +115,13 @@ export function HelplineFraudFlag({
       return;
     }
     setIncomplete(false);
+    lastRefusalRef.current = null;
     flag.mutate(
       { claimCaseId, body: { step_id: stepId, note } },
       {
+        onError: (err) => {
+          lastRefusalRef.current = { claimCaseId, words: flagRefusal(err) };
+        },
         onSuccess: () => {
           const c = claims.find((x) => x.claim_case_id === claimCaseId);
           setFlagged({ claimCaseId, label: c ? certificateClaimOption(stateWords(c.claim_state), formatIst(c.filed_at)) : '' });
@@ -158,6 +189,8 @@ export function HelplineFraudFlag({
                   onClick={() => {
                     flag.reset();
                     setFlagged(null);
+                    setRowRefusal(null);
+                    lastRefusalRef.current = null;
                     setNote('');
                     setIncomplete(false);
                     setForm({ claimCaseId: c.claim_case_id, stepId: newUuid() });
@@ -167,7 +200,13 @@ export function HelplineFraudFlag({
                   {resolveEn('helpline.fraud.flag')}
                 </button>
               ) : null}
-              {open && form ? (
+              {rowRefusal?.claimCaseId === c.claim_case_id ? (
+                <p role="alert" className="text-red-700" data-testid={`helpline-fraud-row-refused-${c.claim_case_id}`}>
+                  {rowRefusal.words}
+                </p>
+              ) : null}
+              {/* Only while the row can still be flagged (R2-8): a stale `open` is closed by the effect above. */}
+              {open && form && c.investigation === 'none' ? (
                 <form
                   className="flex flex-col gap-2 rounded border p-3"
                   onSubmit={(e) => {

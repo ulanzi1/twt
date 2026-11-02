@@ -7,7 +7,8 @@
 //   · both keep `deceased_member_id` REQUIRED (the overlay matches on it);
 //   · `OP10_EXCLUDED_CLOSE_TRIGGERS` (spelled in `one-payment-per-death.ts` to dodge an import cycle) EQUALS
 //     `CLAIM_CLOSED_FRAUD_TRIGGERS`;
-//   · a held closer cannot be handed a fraud trigger (the TYPE — `ClaimClosedHeldTrigger`).
+//   · a held closer cannot be handed a fraud trigger (the TYPE of `closeOtherClaimsOfDeath`'s own parameter — ⛔ the alias,
+//     which would stay green if the function were widened; R2-12).
 
 import { randomUUID } from 'node:crypto';
 
@@ -21,6 +22,7 @@ import {
   type ClaimClosedHeldTrigger,
 } from '../../src/claim/events.js';
 import { OP10_EXCLUDED_CLOSE_TRIGGERS } from '../../src/claim/one-payment-per-death.js';
+import type { CloseOtherClaimsOfDeathTrigger } from '../../src/claim/suspicion-refusal-persist.js';
 
 const base = (trigger: string) => ({
   from_state: 'verifier_review',
@@ -58,9 +60,13 @@ describe('Story 6.22 — `claim.closed` is discriminated on its trigger', () => 
     expect([...CLAIM_CLOSED_TRIGGERS].sort()).toEqual([...CLAIM_CLOSED_HELD_TRIGGERS, ...CLAIM_CLOSED_FRAUD_TRIGGERS].sort());
     expect(CLAIM_CLOSED_HELD_TRIGGERS.filter((t) => (CLAIM_CLOSED_FRAUD_TRIGGERS as readonly string[]).includes(t))).toEqual([]);
     expect([...OP10_EXCLUDED_CLOSE_TRIGGERS]).toEqual([...CLAIM_CLOSED_FRAUD_TRIGGERS]);
-    // ⛔ A fraud trigger is not a held trigger (the held closer's input type) — a compile-time pin.
+    // ⛔ A fraud trigger cannot be handed to the held closer — a compile-time pin on `closeOtherClaimsOfDeath`'s OWN parameter
+    // (R2-12: the alias alone stayed green when the function was widened to `ClaimClosedTrigger`).
     // @ts-expect-error a fraud trigger cannot be handed to a held closer
-    const held: ClaimClosedHeldTrigger = 'fraud_finding_innocent';
+    const held: CloseOtherClaimsOfDeathTrigger = 'fraud_finding_innocent';
     expect(held).toBe('fraud_finding_innocent');
+    // …and the parameter accepts every held trigger (the pin is ⛔ vacuous — e.g. a parameter narrowed to `never`).
+    const everyHeld: readonly CloseOtherClaimsOfDeathTrigger[] = CLAIM_CLOSED_HELD_TRIGGERS satisfies readonly ClaimClosedHeldTrigger[];
+    expect(everyHeld).toEqual(CLAIM_CLOSED_HELD_TRIGGERS);
   });
 });

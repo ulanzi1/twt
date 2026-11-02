@@ -54,7 +54,8 @@ export function FraudInvestigationsView({ pariwarId }: { pariwarId: string }): R
           {t.loadError}
         </p>
       ) : items.length === 0 ? (
-        <p data-testid="fraud-investigations-empty" className="mt-4 text-sm">
+        // Announced, like its siblings' empty states (`NomineeRefusalsRoute`; R2-10).
+        <p role="status" data-testid="fraud-investigations-empty" className="mt-4 text-sm">
           {t.empty}
         </p>
       ) : (
@@ -66,6 +67,13 @@ export function FraudInvestigationsView({ pariwarId }: { pariwarId: string }): R
               <p className="text-xs">
                 {t.flaggedOn} {formatIst(item.flagged_at)} · {t.filedOn} {formatIst(item.claim_filed_at)}
               </p>
+              {/* R2-6 — one person may hold both keys: a claim the VIEWER flagged is theirs to see, ⛔ to find. Shown, ⛔ hidden (a
+                  lone Super Admin must still see that it exists). */}
+              {item.is_flagger ? (
+                <p className="mt-1 text-xs" data-testid={`fraud-investigations-you-flagged-${item.claim_case_id}`}>
+                  {fraudInvestigationEn.youFlagged}
+                </p>
+              ) : null}
               <button
                 type="button"
                 className="mt-2 rounded border px-3 py-1 text-sm"

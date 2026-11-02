@@ -60,9 +60,11 @@ describe('Story 6.22 — fraud-investigation contracts', () => {
     const member = { claims: [{ claim_case_id: UUID, claim_state: 'denied', filed_at: AT, investigation: 'none' }] };
     expect(MemberFraudClaimsResponse.safeParse(member).success).toBe(true);
     expect(MemberFraudClaimsResponse.safeParse({ claims: [{ ...member.claims[0], claimant_name: 'X' }] }).success).toBe(false);
-    const list = { items: [{ claim_case_id: UUID, claim_state: 'verifier_review', claim_filed_at: AT, flagged_at: AT }] };
+    const list = { items: [{ claim_case_id: UUID, claim_state: 'verifier_review', claim_filed_at: AT, flagged_at: AT, is_flagger: false }] };
     expect(OpenFraudInvestigationsResponse.safeParse(list).success).toBe(true);
     expect(OpenFraudInvestigationsResponse.safeParse({ items: [{ ...list.items[0], district: 'Patna' }] }).success).toBe(false);
+    // R2-6 — `is_flagger` is REQUIRED (a server that forgot it would render every row as finishable).
+    expect(OpenFraudInvestigationsResponse.safeParse({ items: [{ ...list.items[0], is_flagger: undefined }] }).success).toBe(false);
     const read = {
       claim_case_id: UUID,
       claim_state: 'verifier_review',

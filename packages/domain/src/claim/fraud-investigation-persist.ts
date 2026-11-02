@@ -114,7 +114,7 @@ function isStepIdCollision(err: unknown): boolean {
 export interface FlagClaimForFraudInvestigationInput extends StepActor {
   readonly claimCaseId: ClaimId;
   readonly pariwarId: PariwarId;
-  /** Producer-supplied — a retry with the same id REPLAYS. */
+  /** Producer-supplied — a retry with the same id BY THE SAME ACTOR replays; ⛔ by another actor ⇒ `step_conflict` (R2-4). */
   readonly stepId: ClaimFraudInvestigationStepId;
   /** Tier-1 — the operator's note, encrypted by the caller under `CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS`. */
   readonly noteCiphertext: string;
@@ -132,11 +132,12 @@ export interface FlagClaimForFraudInvestigationResult {
 
 /**
  * ⭐ DL4 — the helpline operator FLAGS a claim (any state) as possibly about a member who is ALIVE. Writes the `flagged`
- * step and the `claim.fraud_flagged` annotation in ONE transaction, under the claim's row lock. A retry with the SAME step
- * id REPLAYS: it writes nothing and returns the recorded flag's event version, with `claimState` read from the claim's
- * CURRENT row (so a replay after a later close reports `closed`, not the state at the first call); a flag under a
- * DIFFERENT step id on a flagged claim is `already_flagged`. A step id already used on another claim or Pariwar is
- * `step_conflict`. It changes ⛔ state and gates ⛔ approval (N5).
+ * step and the `claim.fraud_flagged` annotation in ONE transaction, under the claim's row lock. ⭐ THE REPLAY KEY is the
+ * step id AND the actor (case-insensitive — R2-4): a retry with the SAME step id by the SAME actor REPLAYS — it writes
+ * nothing and returns the recorded flag's event version, with `claimState` read from the claim's CURRENT row (so a
+ * replay after a later close reports `closed`, not the state at the first call); a flag under a DIFFERENT step id on a
+ * flagged claim is `already_flagged`. The same step id from ANOTHER actor, or a step id already used on another claim or
+ * Pariwar, is `step_conflict`. It changes ⛔ state and gates ⛔ approval (N5).
  */
 export async function flagClaimForFraudInvestigation(
   client: pg.PoolClient,
@@ -151,6 +152,10 @@ export async function flagClaimForFraudInvestigation(
   const same = steps.find((s) => sameId(s.stepId, input.stepId));
   if (same) {
     if (same.step !== 'flagged') throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id is a finding');
+    // ⛔ A replay from ANOTHER actor (R2-4): the step id alone is not the replay key — answered `step_conflict`, ⛔ a 200.
+    if (!sameId(same.actorId, input.actorId)) {
+      throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id was used by another actor');
+    }
     const version = await eventVersionOf(db, row.claimCaseId, 'claim.fraud_flagged', 'step_id', same.stepId);
     if (version === null) throw new Error(`[fraud-investigation] flag ${same.stepId} is recorded but its event is missing`);
     return { stepId: same.stepId, claimState: row.currentState, deceasedMemberId: row.deceasedMemberId, eventVersion: version, replayed: true };
@@ -209,7 +214,7 @@ export interface RecordFraudFindingInput extends StepActor {
   readonly outcome: FraudFindingOutcome;
   /** HOW the member was confirmed alive — required (N1; the Panel's Q9 decides which suffice). */
   readonly aliveConfirmation: FraudAliveConfirmation;
-  /** Producer-supplied — a retry with the same step id (and outcome) REPLAYS. */
+  /** Producer-supplied — a retry with the same step id, outcome, finding id AND actor REPLAYS; else `step_conflict` (R2-4). */
   readonly stepId: ClaimFraudInvestigationStepId;
   /** Producer-supplied — the member finding's own id. */
   readonly findingId: ClaimNomineeFindingId;
@@ -240,9 +245,11 @@ export interface RecordFraudFindingResult {
  * ⭐ DL3 — the District Admin's finding on a FLAGGED claim: innocent (the member is released at once) or guilty (the
  * locks are kept and the account stays frozen — a declared narrowing pending the Panel's Q1). Steps:
  *   1. ONE unlocked read of the claim's deceased member; the intake key; this claim's closure keys; the claim row;
- *   2. REPLAY first (a found step with this step id and outcome ⇒ the recorded finding, ⛔ write — `close.reason` and
- *      `otherStandingClaims` are re-derived from the claim's CURRENT row, so a replay after a later change reports the
- *      state now); then a flag must exist, ⛔ found step yet, and the finder ⛔ the flagger;
+ *   2. REPLAY first — ⭐ THE REPLAY KEY is the step id, the outcome, the finding id AND the actor (ids case-insensitive —
+ *      R2-4): all four match ⇒ the recorded finding, ⛔ write (`close.reason` and `otherStandingClaims` are re-derived
+ *      from the claim's CURRENT row, so a replay after a later change reports the state now); the same step id with any
+ *      of the other three different ⇒ `step_conflict`, ⛔ a replay; then a flag must exist, ⛔ found step yet, and the
+ *      finder ⛔ the flagger;
  *   3. the proof of life is required;
  *   4. the member finding (`nominee-lock.ts` — innocent or guilty);
  *   5. the `found_*` step;
@@ -281,6 +288,14 @@ export async function recordFraudFinding(client: pg.PoolClient, input: RecordFra
   if (same) {
     if (same.step !== FOUND_STEP[input.outcome] || same.findingId === null) {
       throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id was used for a different step');
+    }
+    // ⛔ The step id alone is not the replay key (R2-4): a different finding id would return the ORIGINAL finding and drop
+    // the request's id, note and proof; a different actor would be answered 200 before `finder_is_flagger`, unaudited.
+    if (!sameId(same.findingId, input.findingId)) {
+      throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id was used for a different finding');
+    }
+    if (!sameId(same.actorId, input.actorId)) {
+      throw new FraudInvestigationRefusedError(input.claimCaseId, 'step_conflict', 'that step id was used by another actor');
     }
     return replayFinding(db, input, row, same.stepId, same.findingId);
   }

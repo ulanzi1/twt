@@ -1185,6 +1185,15 @@ export const fraudInvestigationEn = {
     'admin.display_name_missing': 'Your account has no display name yet, so it cannot record a finding. Ask the Super Admin.',
   } as Record<string, string>,
   refusalGeneric: 'The finding could not be recorded just now.',
+  // Any 403 other than the step-up (a grant revoked, or the claim moved district, since the page loaded): a retry cannot succeed (R2-7).
+  refusalForbidden: 'You can no longer act on this claim here. Reload the page.',
+  // R2-3 — a failure that says nothing about whether the finding was written (a lost response, a 5xx).
+  lostResponse: {
+    // Replaces the generic line once the refreshed investigation shows a finding.
+    nowRecorded: 'A finding is now recorded on this claim. Check what was recorded to see the result.',
+    checkHelp: 'This sends the same finding again. If it was already recorded, you are shown what was recorded; it is never recorded twice.',
+    check: 'Check what was recorded',
+  },
   workList: {
     nav: 'Flagged claims',
     heading: 'Claims flagged for investigation',

@@ -13,6 +13,10 @@
 // and a GUILTY finding keeps the member locked — the result names the outcome it recorded); the ids are minted on the first
 // SUBMIT, ⛔ at render (`crypto.randomUUID` is secure-context-gated — a throw at render would take down the whole console);
 // the success line takes focus; a refresh that fails keeps what is on screen.
+//
+// Code review round 2 (2026-11-02): an untyped failure (a lost response, a 5xx) offers ONE "check" action that re-sends the
+// last body under the same ids, and ⛔ "could not be recorded" once the refresh shows a finding (R2-3); any other 403 says a
+// retry cannot succeed (R2-7).
 
 import { FRAUD_FINDING_STEP_UP_CONTEXT, type FraudFindingResponse, type FraudInvestigationNote } from '@twt/contracts';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,11 +42,21 @@ function NoteText({ note }: { note: FraudInvestigationNote }): ReactElement {
   return <span className="italic">{words}</span>;
 }
 
-/** A finding refusal in words — ⛔ never a raw code. An OWN property only: a code such as `constructor` is no copy. */
-function refusalWords(err: unknown): string {
-  if (err instanceof ApiError && Object.prototype.hasOwnProperty.call(t.refusal, err.code)) return t.refusal[err.code]!;
-  return t.refusalGeneric;
+/**
+ * A finding refusal in words — ⛔ never a raw code. An OWN property only: a code such as `constructor` is no copy. `null` = no
+ * typed refusal: the failure says NOTHING about whether the finding was written (a lost response, a 5xx), so the caller shows
+ * the generic line and the "check" action (R2-3). The step-up 403 never reaches here (`needsStepUp` is tested first).
+ */
+function refusalWords(err: unknown): string | null {
+  if (!(err instanceof ApiError)) return null;
+  if (Object.prototype.hasOwnProperty.call(t.refusal, err.code)) return t.refusal[err.code]!;
+  // Any other 403 (a grant revoked, or the deceased's posting moved district, since the page loaded): a retry cannot succeed, so
+  // ⛔ "just now" (R2-7).
+  if (err.status === 403) return t.refusalForbidden;
+  return null;
 }
+
+type FindingBody = { outcome: (typeof OUTCOMES)[number]; alive: (typeof ALIVE)[number]; note: string };
 
 /** What the write did, in words: the OUTCOME recorded, whether the claim closed, and — for guilty — that the member stays locked. */
 export function resultWords(r: FraudFindingResponse): string {
@@ -76,6 +90,9 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
   const [incomplete, setIncomplete] = useState(false);
   // Minted ONCE, on the first send (⛔ at render): a retry (after a step-up, or a lost response) sends the same ids and REPLAYS.
   const idsRef = useRef<{ stepId: string; findingId: string } | null>(null);
+  // What was LAST sent with those ids: the "check" action re-sends exactly it (R2-3) — ⛔ what the form says now, which an edit
+  // may have changed (a different body under the same ids is `step_conflict`).
+  const lastSentRef = useRef<FindingBody | null>(null);
   const [pending, setPending] = useState<PendingWrite>(null);
   const [result, setResult] = useState<FraudFindingResponse | null>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
@@ -85,15 +102,17 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
     if (result !== null) statusRef.current?.focus();
   }, [result]);
 
-  const send = (body: { outcome: (typeof OUTCOMES)[number]; alive: (typeof ALIVE)[number]; note: string }) => {
+  const send = (body: FindingBody) => {
     idsRef.current ??= { stepId: newUuid(), findingId: newUuid() };
     const ids = idsRef.current;
+    lastSentRef.current = body;
     record.mutate(
       { step_id: ids.stepId, finding_id: ids.findingId, outcome: body.outcome, alive_confirmation: body.alive, note: body.note },
       {
         onSuccess: (r) => {
           setResult(r);
           setNote(''); // the Tier-1 note is ⛔ kept in state once it is written
+          lastSentRef.current = null; // … ⛔ in the re-send ref either
         },
         onError: (err) => {
           if (!needsStepUp(err)) return;
@@ -116,8 +135,17 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
   const flag = data?.steps.find((s) => s.step === 'flagged');
   const found = data?.steps.some((s) => s.step !== 'flagged') ?? false;
   const committed = data !== undefined && COMMITTED_STATES.has(data.claim_state);
-  const formLocked = record.isPending || pending !== null || result !== null;
-  const shownError = record.isError && !needsStepUp(record.error) ? refusalWords(record.error) : null;
+  const failed = record.isError && !needsStepUp(record.error);
+  const typedRefusal = failed ? refusalWords(record.error) : null;
+  // R2-3 — an UNTYPED failure (a dropped response, a 502) may have been written: the refresh after it then shows a found step, the
+  // form goes, and "could not be recorded just now" beside the recorded finding would be false. ONE action re-sends the SAME body
+  // under the SAME ids — a finding already written answers 200 `replayed` with the other claims; one that was not is written now.
+  const lastSent = lastSentRef.current;
+  const canCheck = failed && typedRefusal === null && lastSent !== null && result === null;
+  // … and while it is offered the FORM is locked (patch-diff PT1): if the refresh failed too, the form is still on screen, and an
+  // edited outcome sent under the same ids would be `step_conflict` — a refusal that hides a finding already written.
+  const formLocked = record.isPending || pending !== null || result !== null || canCheck;
+  const shownError = !failed ? null : (typedRefusal ?? (found ? t.lostResponse.nowRecorded : t.refusalGeneric));
   const labels: Record<string, string> = verifierConsoleEn.nomineeDeclaration.refusals.claimStateLabels;
 
   return (
@@ -254,6 +282,20 @@ export function FraudInvestigationPanel({ pariwarId, claimCaseId }: { pariwarId:
             <p role="alert" className="text-red-700" data-testid="fraud-finding-refused">
               {shownError}
             </p>
+          ) : null}
+          {canCheck && lastSent !== null ? (
+            <div className="flex flex-col gap-1" data-testid="fraud-finding-check">
+              <p className="text-xs">{t.lostResponse.checkHelp}</p>
+              <button
+                type="button"
+                className="self-start rounded border px-3 py-1"
+                disabled={record.isPending || pending !== null}
+                onClick={() => send(lastSent)}
+                data-testid="fraud-finding-check-button"
+              >
+                {t.lostResponse.check}
+              </button>
+            </div>
           ) : null}
           {result !== null ? (
             <div data-testid="fraud-finding-other-claims">

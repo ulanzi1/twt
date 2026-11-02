@@ -172,7 +172,11 @@ export type MemberFraudClaimsResponse = z.output<typeof MemberFraudClaimsRespons
 
 // ── The District Admin's work-list (DL10 (iv)) ───────────────────────────────────────────────────────
 
-/** `GET …/admin/fraud-investigations` — flagged claims with ⛔ finding yet, in the viewer's districts. */
+/**
+ * `GET …/admin/fraud-investigations` — flagged claims with ⛔ finding yet, in the viewer's districts. `is_flagger` (R2-6):
+ * the VIEWER flagged this claim, so another District Admin must record its finding (`finder_is_flagger`) — the row is
+ * ⛔ hidden for it (a lone Super Admin must still see the claim exists).
+ */
 export const OpenFraudInvestigationsResponse = z
   .object({
     items: z.array(
@@ -182,6 +186,7 @@ export const OpenFraudInvestigationsResponse = z
           claim_state: z.string(),
           claim_filed_at: z.string().datetime(),
           flagged_at: z.string().datetime(),
+          is_flagger: z.boolean(),
         })
         .strict(),
     ),

@@ -308,6 +308,12 @@ describe.skipIf(!hasDatabase)('Story 6.23a — the nominee-change warnings at th
       expect(after.keys.filter((k) => !before.keys.includes(k))).toEqual([]); // ⛔ a key appears
       expect(after.kinds).not.toContain('recent_nominee_change');
       expect((await listClaimsUnderCorrection(ctx.tx, ctx.pid)).map((r) => r.claimCaseId)).not.toContain(ctx.cid);
+      // R2-13 (e) — the POSITIVE CONTROL, on the SAME claim in the SAME post-finding state: the queue really scans it (a live
+      // approval, `verifier_approved`) — a genuinely late key (a NEW open claim of the death ⇒ `other_claim_for_death`, which
+      // the approval row did ⛔ cover) lists it at once. So the `not.toContain` above CAN fail — the reader is ⛔ blind to it.
+      const c3 = await claimAt(ctx.client, ctx.pid, ctx.mid, 'verifier_review', { bare: true });
+      expect(uncoveredKeys(await readClaimApprovalWarnings(ctx.tx, ctx.pid, ctx.cid))).toEqual([`other_claim_for_death:${c3}`]);
+      expect((await listClaimsUnderCorrection(ctx.tx, ctx.pid)).map((r) => r.claimCaseId)).toContain(ctx.cid);
     });
   });
 

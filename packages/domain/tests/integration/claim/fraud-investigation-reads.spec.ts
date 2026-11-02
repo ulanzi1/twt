@@ -1,5 +1,5 @@
-// Story 6.22 — the new READS and WRITERS' own Pariwar scoping, with RLS OUT OF THE WAY (RA4), and the work-list reader's keyset
-// loop (RA8). Live DB.
+// Story 6.22 — the new READS and WRITERS' own Pariwar scoping, with RLS OUT OF THE WAY (RA4), the work-list reader's keyset
+// loop (RA8), and both lists' DL5 limit clamp at the cap (R2-13 (d)). Live DB.
 //
 // ⚠ RLS MASKS THE TENANT PREDICATE (TR4). A cross-Pariwar test run as `twt_app` passes whether or not the SQL carries its own
 // `pariwar_id` filter, because the policy hides the other tenant's rows first. So the legs below run as the SUPERUSER — before
@@ -12,8 +12,11 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import {
+  FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT,
+  FRAUD_FLAG_CLAIMS_MAX_LIMIT,
   FraudInvestigationRefusedError,
   OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT,
+  OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT,
   flagClaimForFraudInvestigation,
   isDeathReportStanding,
   listClaimsNamingMemberForFraudFlag,
@@ -173,5 +176,57 @@ describe.skipIf(!hasDatabase)('Story 6.22 — the District Admin work-list: keys
     // @ts-expect-error the scope predicate is required: this reader spans every district of the Pariwar
     void (() => listOpenFraudInvestigations(tx, A, {}));
     expect(true).toBe(true);
+  });
+});
+
+// R2-13 (d) — DL5's clamp was untested: each reader is seeded PAST its cap (cap + 1 rows), so an unclamped `limit` would
+// return them all. The constants are pinned too.
+describe.skipIf(!hasDatabase)('Story 6.22 — the two fraud lists clamp their `limit` at the cap (DL5; R2-13 (d))', { timeout: 30000 }, () => {
+  setupLiveDb();
+
+  it('`listClaimsNamingMemberForFraudFlag`: default 20, a huge limit clamped to 50, ⛔ below 1', async () => {
+    const { tx } = getTx();
+    expect([FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT, FRAUD_FLAG_CLAIMS_MAX_LIMIT]).toEqual([20, 50]);
+    const mid = randomUUID();
+    for (let i = 0; i < FRAUD_FLAG_CLAIMS_MAX_LIMIT + 1; i += 1) await seedClaim(tx, A, { deceasedMemberId: mid, currentState: 'verifier_review' });
+    await enterAppScope(getTx().client, A);
+
+    const list = (limit?: number) => listClaimsNamingMemberForFraudFlag(tx, A, toMemberId(mid), limit === undefined ? {} : { limit });
+    const capped = await list(10_000);
+    expect(capped).toHaveLength(FRAUD_FLAG_CLAIMS_MAX_LIMIT);
+    expect(await list()).toEqual(capped.slice(0, FRAUD_FLAG_CLAIMS_DEFAULT_LIMIT));
+    expect(await list(0)).toHaveLength(1);
+    expect(await list(-1)).toHaveLength(1);
+    // The CONTROL: the member really has cap + 1 claims — the 50 above is the clamp, ⛔ the fixture.
+    const { rows } = await getTx().client.query<{ n: number }>('SELECT count(*)::int AS n FROM claims WHERE deceased_member_id = $1', [mid]);
+    expect(rows[0]!.n).toBe(FRAUD_FLAG_CLAIMS_MAX_LIMIT + 1);
+  });
+
+  it('`listOpenFraudInvestigations`: default 50, a huge limit clamped to 200, ⛔ below 1', async () => {
+    const { tx } = getTx();
+    expect([OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT, OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT]).toEqual([50, 200]);
+    const base = Date.parse('2026-03-01T00:00:00Z');
+    const total = OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT + 1;
+    const flagged: string[] = [];
+    for (let i = 0; i < total; i += 1) {
+      const mid = randomUUID();
+      const cid = await seedClaim(tx, A, { deceasedMemberId: mid, currentState: 'verifier_review' });
+      await tx.insert(schema.claimFraudInvestigationSteps).values(stepRow(A, cid, mid, { actedAt: new Date(base + i * 60_000) }));
+      flagged.push(cid);
+    }
+    await enterAppScope(getTx().client, A);
+
+    const list = (limit?: number) =>
+      listOpenFraudInvestigations(tx, A, { ...(limit === undefined ? {} : { limit }), isVisible: () => true }).then((r) => r.map((x) => x.claimCaseId));
+    // Oldest flag first — so a page of N is the first N seeded (the clamp cuts the NEWEST off).
+    expect(await list(10_000)).toEqual(flagged.slice(0, OPEN_FRAUD_INVESTIGATIONS_MAX_LIMIT));
+    expect(await list()).toEqual(flagged.slice(0, OPEN_FRAUD_INVESTIGATIONS_DEFAULT_LIMIT));
+    expect(await list(0)).toEqual(flagged.slice(0, 1));
+    // The CONTROL: cap + 1 open investigations really exist — the 200 above is the clamp, ⛔ the fixture.
+    const { rows } = await getTx().client.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM claim_fraud_investigation_steps WHERE pariwar_id = $1 AND step = 'flagged'",
+      [A],
+    );
+    expect(rows[0]!.n).toBe(total);
   });
 });

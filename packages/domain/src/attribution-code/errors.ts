@@ -6,7 +6,11 @@
 // and a caller `instanceof`s them from there. The unset / malformed scope errors are REUSED from `../errors.js`
 // (`PariwarScopeMissingError`, `InvalidPariwarScopeError`) — ⛔ a copy here.
 
-/** A code that is not exactly six ASCII digits, or is on the deny-list (AT5). Thrown BEFORE any statement is sent. */
+/**
+ * A code that is not exactly six ASCII digits, or is on the deny-list (AT5). `resolveAttribution` throws it BEFORE any
+ * statement is sent; `allocateAttributionCode` throws it for an injected `generate`'s draw, after the scope guard and the
+ * held-code read (review R2-9).
+ */
 export class InvalidAttributionCodeError extends Error {
   public readonly name = 'InvalidAttributionCodeError';
   public readonly code = 'attribution_code.invalid';

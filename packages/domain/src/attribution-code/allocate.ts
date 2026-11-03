@@ -4,7 +4,8 @@
 // `db.transaction()` would COMMIT the caller's tx early (TR1) — hence raw SAVEPOINT SQL per attempt, the shape of
 // `telegram-opt-in/write.ts` `createPendingOptIn`. First, once: a worker who already holds a code is refused before any draw
 // (review R3 — else a captured or held candidate could burn every attempt and misreport an exhaustion). Per attempt: draw →
-// (an injected `generate` only) format / deny-list check → skip a candidate a member already TYPED in this Pariwar (AT4 — those
+// format / deny-list check of the draw (every draw; the default generator cannot fail it, so it guards an injected `generate`)
+// → skip a candidate a member already TYPED in this Pariwar (AT4 — those
 // strings predate every holder) → INSERT under a savepoint, RELEASED on both paths (review R6 — `ROLLBACK TO` keeps it).
 // A 23505 is matched by CONSTRAINT NAME (⛔ any 23505): the code's own unique ⇒ redraw; the worker's unique (a concurrent
 // allocation committed after the pre-check) ⇒ `FieldWorkerAlreadyHasAttributionCodeError`; anything else is rethrown.
@@ -41,7 +42,10 @@ export interface AllocateAttributionCodeInput {
 export interface AllocateAttributionCodeOptions {
   /** Draws before giving up — an integer in 1..32 (default `ATTRIBUTION_CODE_MAX_ATTEMPTS`). */
   maxAttempts?: number;
-  /** TEST SEAM ONLY (AT9) — forces clashes. The API door does ⛔ forward it; the reach fence fails any non-test caller. */
+  /**
+   * TEST SEAM ONLY (AT9) — forces clashes. The API door does ⛔ forward it (it passes a fresh `{ maxAttempts }` literal — pinned);
+   * the reach fence fails an ALLOWED file that names `generate` and any importer of the door that carries a `generate` key.
+   */
   generate?: () => string;
 }
 

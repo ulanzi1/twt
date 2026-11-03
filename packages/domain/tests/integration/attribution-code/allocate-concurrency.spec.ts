@@ -8,7 +8,10 @@
 //     ⇒ the waiter takes the code on attempt 1;
 //   · the same worker, two different codes — the waiter's pre-check sees nothing (the holder is uncommitted), its INSERT BLOCKS
 //     on the worker unique; holder COMMITs ⇒ `FieldWorkerAlreadyHasAttributionCodeError` (⛔ a retry, ⛔ an exhaustion), and
-//     the waiter's tx is still usable (CONTROL: it allocates another worker and commits).
+//     the waiter's tx is still usable (CONTROL: it allocates another worker and commits), with ⛔ allocator savepoint left on it;
+//   · a NON-unique failure inside the INSERT — the waiter BLOCKS on the holder's uncommitted entry and its `lock_timeout` fires
+//     (55P03) — is rethrown as THAT error (⛔ a redraw, ⛔ an exhaustion), the savepoint is gone and the tx is still usable
+//     (review R2-7: the `throw err` exit of the allocator's `catch`).
 // ⭐ "BLOCKS" is PROVED from the server (`pg_blocking_pids`), ⛔ inferred from a timer. Every held tx is ended in a `finally`.
 // Committed rows go to a FRESH Pariwar (⛔ PARIWAR_A); the append-only rows leave in `afterAll` under replica mode (the guard
 // triggers are fixture-cleanup-only bypassed, as in the precedent).
@@ -22,7 +25,8 @@ import { setPariwarScope } from '../../../src/db.js';
 import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { FieldWorkerId } from '../../../src/ids/index.js';
 import { attributionCode } from '../../../src/index.js';
-import { scripted } from './_fixtures.js';
+import { pgSqlstateOf } from '../../../src/marketplace/errors.js';
+import { expectNoAllocatorSavepoint, scripted } from './_fixtures.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
@@ -182,6 +186,7 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
           expect(error).toBeInstanceOf(attributionCode.FieldWorkerAlreadyHasAttributionCodeError);
           expect(error).toMatchObject({ pariwarId: PARIWAR, fieldWorkerId: w });
           expect(g.draws()).toBe(1);
+          await expectNoAllocatorSavepoint(waiter); // the worker-unique exit RELEASEs too (review R2-7)
           // ⛔ "no row survived" (vacuous after ROLLBACK TO SAVEPOINT) — the CONTROL: the same tx allocates and commits.
           const ok = await attributionCode.allocateAttributionCode(
             waiter,
@@ -193,6 +198,47 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
         },
       );
       expect(await committed(w, control)).toEqual({ [w]: '731122', [control]: '731120' });
+    },
+    TIMEOUT,
+  );
+
+  it(
+    'a NON-unique failure inside the INSERT (the waiter BLOCKS, its lock_timeout fires ⇒ 55P03) is rethrown as that error — ⛔ a redraw, ⛔ an exhaustion — and no allocator savepoint remains (CONTROL: the same tx allocates)',
+    async () => {
+      const [w1, w2, control] = [worker(), worker(), worker()];
+      const g = scripted('731130', '731131');
+      const holder = await begin();
+      const waiter = await begin();
+      let waiterOpen = true;
+      try {
+        await attributionCode.allocateAttributionCode(holder, { pariwarId: PARIWAR, fieldWorkerId: w1 }, { generate: scripted('731130').generate });
+        await waiter.query("SET LOCAL lock_timeout = '600ms'");
+        const [holderPid, waiterPid] = [await pidOf(holder), await pidOf(waiter)]; // ⭐ before the race — a busy client queues
+        const raced = attributionCode.allocateAttributionCode(waiter, { pariwarId: PARIWAR, fieldWorkerId: w2 }, { generate: g.generate }).then(
+          (value) => ({ value }),
+          (error: unknown) => ({ error }),
+        );
+        // ⭐ the holder is NOT ended: the waiter must be blocked by it until ITS OWN timeout fires.
+        expect(await blockedBy(waiterPid, holderPid, 2000)).toBe(true);
+        const outcome = await raced;
+        expect('value' in outcome).toBe(false);
+        const error = (outcome as { error: unknown }).error;
+        expect(pgSqlstateOf(error)).toBe('55P03'); // lock_not_available — the ORIGINAL error
+        expect(error).not.toBeInstanceOf(attributionCode.AttributionCodeAllocationExhaustedError);
+        expect(error).not.toBeInstanceOf(attributionCode.FieldWorkerAlreadyHasAttributionCodeError);
+        expect(g.draws()).toBe(1); // ⛔ a redraw
+        await expectNoAllocatorSavepoint(waiter);
+        // The CONTROL: the waiter's tx is still usable and commits.
+        expect(
+          await attributionCode.allocateAttributionCode(waiter, { pariwarId: PARIWAR, fieldWorkerId: control }, { generate: scripted('731132').generate }),
+        ).toMatchObject({ code: '731132', attempts: 1 });
+        await end(waiter, true);
+        waiterOpen = false;
+      } finally {
+        await end(holder, false).catch(() => undefined);
+        if (waiterOpen) await end(waiter, false).catch(() => undefined);
+      }
+      expect(await committed(w1, w2, control)).toEqual({ [control]: '731132' });
     },
     TIMEOUT,
   );

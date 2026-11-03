@@ -17,7 +17,8 @@
 -- ⭐ (2) `attribution_code_allocation_flags` — the durable trustee-review flag (AT7): who pressed "Add Field Worker" (`actor_id`
 --   + the Story 6.11 R5 `actor_display` snapshot — ⛔ blank) and how many draws were tried. ⛔ `field_worker_id` (that
 --   registration rolled back). ⛔ Stamp trigger (nothing compares `flagged_at`).
--- ⭐ BOTH tables are APPEND-ONLY for EVERY role: GRANT SELECT, INSERT only (⛔ UPDATE / DELETE) + a trigger refusing UPDATE /
+-- ⭐ BOTH tables are APPEND-ONLY for every role that can issue DML on them (a DDL-capable owner can still drop the guard):
+-- GRANT SELECT, INSERT only (⛔ UPDATE / DELETE) + a trigger refusing UPDATE /
 -- DELETE row-wise and TRUNCATE statement-wise (the 0192 shape — I3). RLS ENABLE + FORCE, PER-COMMAND tenant policies (SELECT /
 -- INSERT — ⛔ `FOR ALL`) — policies/field-worker-attribution-codes-rls.ts, policies/attribution-code-allocation-flags-rls.ts.
 -- ⛔ PII. ⛔ Change to `member_attribution` (AC9).
@@ -76,7 +77,7 @@ CREATE TRIGGER field_worker_attribution_codes_stamp
   BEFORE INSERT ON field_worker_attribution_codes
   FOR EACH ROW EXECUTE FUNCTION field_worker_attribution_codes_stamp();--> statement-breakpoint
 
--- ── (1) + (2) append-only, for EVERY role (the owner included) ──────────────────────────────────────────────────────────
+-- ── (1) + (2) append-only, for every role that can issue DML (the owner included; ⛔ DDL — it can drop the trigger) ─────
 CREATE FUNCTION attribution_code_reject_mutation()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN

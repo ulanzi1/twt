@@ -9,16 +9,11 @@ import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId } from '../.
 import { attributionCode } from '../../../src/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { caught, expectSqlRejected, seedCapture, seedCode, scripted } from './_fixtures.js';
+import { caught, expectNoAllocatorSavepoint, seedCapture, seedCode, scripted } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const B = toPariwarId(PARIWAR_B);
 const worker = () => toFieldWorkerId(randomUUID());
-
-/** ⛔ allocator savepoint is left on the caller's tx (review R6): RELEASE of the name finds none ⇒ 3B001. */
-async function expectNoAllocatorSavepoint(client: Parameters<typeof expectSqlRejected>[0]): Promise<void> {
-  await expectSqlRejected(client, 'RELEASE SAVEPOINT allocate_attribution_code', [], '3B001');
-}
 
 describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
   setupLiveDb();

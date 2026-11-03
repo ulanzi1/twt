@@ -5,7 +5,7 @@ import type pg from 'pg';
 import { describe, expect, it } from 'vitest';
 
 import type { Db } from '../../src/db.js';
-import type { FieldWorkerId, PariwarId } from '../../src/ids/index.js';
+import type { FieldWorkerId, PariwarId, UserId } from '../../src/ids/index.js';
 import { attributionCode } from '../../src/index.js';
 
 declare const pool: pg.Pool;
@@ -13,6 +13,7 @@ declare const db: Db;
 declare const client: pg.PoolClient;
 declare const pariwarId: PariwarId;
 declare const fieldWorkerId: FieldWorkerId;
+declare const actorId: UserId;
 
 // Never invoked — exists for the compiler only.
 function compileOnly(): void {
@@ -32,6 +33,10 @@ function compileOnly(): void {
   void attributionCode.listAllocationFlags(db, { pariwarId });
   // @ts-expect-error a pool is ⛔ a client
   void attributionCode.listAllocationFlags(pool, { pariwarId });
+  // @ts-expect-error a pool is ⛔ a client (review R2-6 — the fifth exported DB function)
+  void attributionCode.flagAllocationExhausted(pool, { pariwarId, attempts: 8, actorId, actorDisplay: 'Asha Verma' });
+  // @ts-expect-error a Drizzle Db is ⛔ a client (review R2-6)
+  void attributionCode.flagAllocationExhausted(db, { pariwarId, attempts: 8, actorId, actorDisplay: 'Asha Verma' });
   // @ts-expect-error `asOf` is required
   void attributionCode.resolveAttribution(client, { code: '482913', pariwarId });
   // @ts-expect-error a JS Date is ⛔ an `asOf` (AT4 (c) — the instant stays in the database)

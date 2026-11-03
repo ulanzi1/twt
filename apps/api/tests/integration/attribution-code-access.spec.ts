@@ -1,8 +1,9 @@
 // The API door — the RUNTIME proof (Story 13.2, Task 6.4; AC10; AT8 v2 iii; AT7). Live DB.
 //
 // A fake request carrying `requestContext.pariwarId = A` and a `ScopeTx` opened by the real `openScopeTx` (twt_app, scoped):
-// A + A resolves; A + B ⇒ AttributionPariwarScopeMismatchError BEFORE any SQL (the G9a gap — a member handler that opened its
-// tx from config — caught); no `pariwarId` / no `actorId` ⇒ the loud 500; the flag row records the AUTHENTICATED actor and
+// A + A resolves; A + B ⇒ AttributionPariwarScopeMismatchError (the G9a gap — a member handler that opened its tx from config —
+// caught); and BEFORE any SQL for EVERY scoped wrapper, proved with a client that throws on any query (no database needed — review
+// R2-1); no `pariwarId` / no `actorId` ⇒ the loud 500; the flag row records the AUTHENTICATED actor and
 // their `users.display_name`; no display name ⇒ AdminDisplayNameMissingError and ⛔ row; the flag survives the caller's rollback.
 // ⚠ The flag wrapper COMMITS append-only rows that never leave the shared DB (TR12): every flag leg uses a fresh randomUUID()
 // Pariwar and asserts by `flag_id` / that Pariwar — ⛔ a global count. Every other leg rolls its ScopeTx back.
@@ -11,7 +12,7 @@ import { randomUUID } from 'node:crypto';
 
 import { ids } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { AdminDisplayNameMissingError } from '../../src/http-errors.js';
 import {
@@ -29,6 +30,36 @@ import { buildTestDeps, hasDatabase, type TestDeps } from './_setup.js';
 
 const fakeRequest = (ctx: { pariwarId?: string; actorId?: string }): FastifyRequest =>
   ({ requestContext: { traceId: 't-13-2', ...ctx } }) as unknown as FastifyRequest;
+
+/** A `ScopeTx` for `pariwarId` whose client rejects EVERY query; `query` records whether any SQL was sent. */
+function poisonedScopeTx(pariwarId: string): { scopeTx: ScopeTx; query: ReturnType<typeof vi.fn> } {
+  const query = vi.fn(() => Promise.reject(new Error('SQL was sent')));
+  return { scopeTx: { client: { query, release: () => undefined }, pariwarId, scopeSet: true } as unknown as ScopeTx, query };
+}
+
+describe('attribution-code API door — the Pariwar pre-check runs before ANY SQL, in every scoped wrapper (AC10; review R2-1)', () => {
+  const A = randomUUID();
+  const B = randomUUID();
+  const w = ids.fieldWorkerId(randomUUID());
+  const wrappers: Array<[string, (r: FastifyRequest, s: ScopeTx) => Promise<unknown>]> = [
+    ['resolveAttributionForRequest', (r, s) => resolveAttributionForRequest(r, s, { code: '482913', asOf: 'now' })],
+    ['readAttributionCodeForRequest', (r, s) => readAttributionCodeForRequest(r, s, { fieldWorkerId: w })],
+    ['allocateAttributionCodeForRequest', (r, s) => allocateAttributionCodeForRequest(r, s, { fieldWorkerId: w })],
+    ['listAllocationFlagsForRequest', (r, s) => listAllocationFlagsForRequest(r, s, {})],
+  ];
+
+  it.each(wrappers)('%s: a ScopeTx scoped to ANOTHER Pariwar ⇒ AttributionPariwarScopeMismatchError and ⛔ statement sent', async (_name, call) => {
+    const { scopeTx, query } = poisonedScopeTx(B);
+    await expect(call(fakeRequest({ pariwarId: A }), scopeTx)).rejects.toBeInstanceOf(AttributionPariwarScopeMismatchError);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it.each(wrappers)('%s: CONTROL — the poison is live: a ScopeTx scoped to the request’s Pariwar DOES reach SQL', async (_name, call) => {
+    const { scopeTx, query } = poisonedScopeTx(A);
+    await expect(call(fakeRequest({ pariwarId: A }), scopeTx)).rejects.toThrow('SQL was sent');
+    expect(query).toHaveBeenCalled();
+  });
+});
 
 describe.skipIf(!hasDatabase)('attribution-code API door (AC10)', () => {
   let td: TestDeps;
@@ -79,7 +110,7 @@ describe.skipIf(!hasDatabase)('attribution-code API door (AC10)', () => {
     });
   });
 
-  it('A-request + B-ScopeTx ⇒ AttributionPariwarScopeMismatchError BEFORE any SQL (the G9a gap, caught at the door)', async () => {
+  it('A-request + B-ScopeTx ⇒ AttributionPariwarScopeMismatchError for every scoped wrapper (the G9a gap, caught at the door — on a real tx)', async () => {
     const A = randomUUID();
     const B = randomUUID();
     await inScope(B, async (s) => {
@@ -93,15 +124,6 @@ describe.skipIf(!hasDatabase)('attribution-code API door (AC10)', () => {
       );
       await expect(listAllocationFlagsForRequest(req, s, {})).rejects.toBeInstanceOf(AttributionPariwarScopeMismatchError);
     });
-    // "before any SQL": a ScopeTx whose client throws on ANY query still yields the mismatch.
-    const poisoned = {
-      client: { query: () => Promise.reject(new Error('SQL was sent')), release: () => undefined },
-      pariwarId: B,
-      scopeSet: true,
-    } as unknown as ScopeTx;
-    await expect(resolveAttributionForRequest(fakeRequest({ pariwarId: A }), poisoned, { code: '482913', asOf: 'now' })).rejects.toBeInstanceOf(
-      AttributionPariwarScopeMismatchError,
-    );
   });
 
   it('⛔ requestContext.pariwarId ⇒ the loud 500 (a plain Error, ⛔ an ApiError) — for every wrapper', async () => {

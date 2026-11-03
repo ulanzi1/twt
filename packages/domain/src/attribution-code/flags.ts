@@ -44,6 +44,15 @@ export async function flagAllocationExhausted(
   return row.flagId;
 }
 
+/**
+ * One flag as the trustee surface reads it (Story 13.4, C3; review R2-3, checklist family 6): the admin's `actorDisplay`
+ * snapshot (Story 6.11 R5), ⛔ the raw `actor_id` or the Pariwar — the read model is field-picked here, not by each caller.
+ */
+export type AttributionCodeAllocationFlagView = Pick<
+  AttributionCodeAllocationFlagRow,
+  'flagId' | 'attempts' | 'actorDisplay' | 'flaggedAt'
+>;
+
 export interface ListAllocationFlagsInput {
   pariwarId: PariwarId;
   /** Page size — an integer, clamped to 1..200 (default 50). */
@@ -59,11 +68,16 @@ export interface ListAllocationFlagsInput {
 export async function listAllocationFlags(
   client: pg.PoolClient,
   input: ListAllocationFlagsInput,
-): Promise<AttributionCodeAllocationFlagRow[]> {
+): Promise<AttributionCodeAllocationFlagView[]> {
   if (input.limit !== undefined && !Number.isInteger(input.limit)) throw new RangeError('limit must be an integer');
   await assertTxBoundScope(client, input.pariwarId);
   return bindScopedDb(client)
-    .select()
+    .select({
+      flagId: attributionCodeAllocationFlags.flagId,
+      attempts: attributionCodeAllocationFlags.attempts,
+      actorDisplay: attributionCodeAllocationFlags.actorDisplay,
+      flaggedAt: attributionCodeAllocationFlags.flaggedAt,
+    })
     .from(attributionCodeAllocationFlags)
     .where(eq(attributionCodeAllocationFlags.pariwarId, input.pariwarId))
     .orderBy(desc(attributionCodeAllocationFlags.flaggedAt), desc(attributionCodeAllocationFlags.flagId))

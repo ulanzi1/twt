@@ -98,7 +98,7 @@ export async function listAllocationFlagsForRequest(
   request: FastifyRequest,
   scopeTx: ScopeTx,
   options: { limit?: number },
-): Promise<Awaited<ReturnType<typeof attributionCode.listAllocationFlags>>> {
+): Promise<attributionCode.AttributionCodeAllocationFlagView[]> {
   const { pariwarId } = authenticatedScope(request);
   assertScopeTxIsRequestScope(scopeTx, pariwarId);
   return attributionCode.listAllocationFlags(scopeTx.client, { pariwarId, limit: options.limit });

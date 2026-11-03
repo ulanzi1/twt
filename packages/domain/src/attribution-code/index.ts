@@ -29,6 +29,7 @@ export {
 export {
   flagAllocationExhausted,
   listAllocationFlags,
+  type AttributionCodeAllocationFlagView,
   type FlagAllocationExhaustedInput,
   type ListAllocationFlagsInput,
 } from './flags.js';

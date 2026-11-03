@@ -55,6 +55,20 @@ describe.skipIf(!hasDatabase)('allocation flags (AC7)', () => {
     expect(await attributionCode.listAllocationFlags(client, { pariwarId: p, limit: -1 })).toHaveLength(1); // ⛔ LIMIT -1 bypass
   });
 
+  it('listAllocationFlags returns the FIELD-PICKED view — flag id, attempts, display name, instant — ⛔ the raw actor id or the Pariwar (review R2-3, checklist family 6)', async () => {
+    const { client } = getTx();
+    const p = toPariwarId(randomUUID());
+    await enterAppScope(client, p);
+    const a = actor();
+    const id = await attributionCode.flagAllocationExhausted(client, { pariwarId: p, attempts: 5, actorId: a, actorDisplay: 'Asha Verma' });
+    const mine = (await attributionCode.listAllocationFlags(client, { pariwarId: p })).find((f) => f.flagId === id);
+    expect(mine).toBeDefined();
+    expect(Object.keys(mine!).sort()).toEqual(['actorDisplay', 'attempts', 'flagId', 'flaggedAt']);
+    expect(mine).toMatchObject({ flagId: id, attempts: 5, actorDisplay: 'Asha Verma' });
+    expect(mine!.flaggedAt).toBeInstanceOf(Date);
+    expect(JSON.stringify(mine)).not.toContain(a); // the raw actor id is nowhere in the view
+  });
+
   it('a non-integer limit (NaN, ±Infinity, 2.5) ⇒ RangeError BEFORE any statement — ⛔ an unbounded read (review R4: NaN survives clampLimit and Drizzle drops the LIMIT)', async () => {
     const { client } = getTx();
     const p = toPariwarId(randomUUID());

@@ -31,6 +31,11 @@ export async function expectSqlRejected(
   if (constraint !== undefined) expect(caught!.constraint).toBe(constraint);
 }
 
+/** ⛔ allocator savepoint is left on the caller's tx (review R6): RELEASE of the name finds none ⇒ 3B001. */
+export async function expectNoAllocatorSavepoint(client: pg.PoolClient): Promise<void> {
+  await expectSqlRejected(client, 'RELEASE SAVEPOINT allocate_attribution_code', [], '3B001');
+}
+
 /** Await `fn` expecting a rejection; returns the error. The domain functions leave the caller's tx usable on a pure / guard error. */
 export async function caught(fn: () => Promise<unknown>): Promise<unknown> {
   try {

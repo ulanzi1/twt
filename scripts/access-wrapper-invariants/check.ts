@@ -115,6 +115,14 @@ const ACCESS_SURFACE_ROOTS = [...CHANNEL_ROOTS, ...CLAIM_ROOTS];
  */
 const MARKETPLACE_ROOTS = ['apps/api/src/modules/marketplace', 'packages/domain/src/marketplace'];
 
+/**
+ * Story 13.1 (Task 9; AC11) — the field-worker surface: the registration route (the first production caller of the field-worker
+ * primitive — its write pairs through `withCompensatingAudit`) and the domain primitive (which must NEVER call it — QE14).
+ * Scanned by the COMPENSATING-AUDIT invariant ONLY (its own const — ⛔ an edit of `MARKETPLACE_ROOTS`): the surface verifies ⛔
+ * secret, so the constant-time-compare invariant would pass vacuously. DIRECTORIES only (a file root throws ENOTDIR).
+ */
+const FIELD_WORKER_ROOTS = ['apps/api/src/modules/field-worker', 'packages/domain/src/field-worker'];
+
 function collectTsFiles(absDir: string, acc: string[]): void {
   for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
@@ -180,8 +188,8 @@ function main(): void {
     formatSecretCompareFinding,
   );
   const compensatingAudit = runInvariant(
-    'AI-5-3/6-1 compensating-audit mechanization (channel + claim + module surface)',
-    [...ACCESS_SURFACE_ROOTS, ...MARKETPLACE_ROOTS],
+    'AI-5-3/6-1 compensating-audit mechanization (channel + claim + module + field-worker surface)',
+    [...ACCESS_SURFACE_ROOTS, ...MARKETPLACE_ROOTS, ...FIELD_WORKER_ROOTS],
     scanCompensatingAuditInvariant,
     formatCompensatingAuditFinding,
   );
@@ -191,7 +199,7 @@ function main(): void {
   if (allLines.length === 0) {
     console.log('  ✓ validity entrypoints fail closed on an omitted caller');
     console.log('  ✓ every verification context (channel + claim) uses a constant-time secret compare');
-    console.log('  ✓ every mutation+audit pairing (channel + claim + module) flows through withCompensatingAudit\n');
+    console.log('  ✓ every mutation+audit pairing (channel + claim + module + field-worker) flows through withCompensatingAudit\n');
     console.log('✓ access-wrapper-invariants gate passed');
     return;
   }

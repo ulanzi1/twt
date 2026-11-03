@@ -26,6 +26,7 @@ import {
 } from '../../src/modules/field-worker/attribution-code-access.js';
 import { closeScopeTx, openScopeTx } from '../../src/modules/multi-tenant/scope-tx.js';
 import type { ScopeTx } from '../../src/types.js';
+import { registerTestFieldWorker } from './_field-worker-fixture.js';
 import { buildTestDeps, hasDatabase, type TestDeps } from './_setup.js';
 
 const fakeRequest = (ctx: { pariwarId?: string; actorId?: string }): FastifyRequest =>
@@ -94,8 +95,9 @@ describe.skipIf(!hasDatabase)('attribution-code API door (AC10)', () => {
 
   it('A-request + A-ScopeTx: allocate, then resolve and read the holder (and a forwarded `generate` is ⛔ honoured)', async () => {
     const A = randomUUID();
-    const w = ids.fieldWorkerId(randomUUID());
     await inScope(A, async (s) => {
+      // Story 13.1 (the 0200 FK): the holder is a REAL worker of this Pariwar, registered in the same (rolled-back) tx.
+      const w = await registerTestFieldWorker(s.client, A);
       const req = fakeRequest({ pariwarId: A });
       // A caller cannot smuggle the test seam through the door's opts (AT9): a deny-listed generator is ignored.
       const allocated = await allocateAttributionCodeForRequest(req, s, { fieldWorkerId: w }, {

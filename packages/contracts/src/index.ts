@@ -283,3 +283,7 @@ export * from './questionnaire-versions/index.js';
 // audience options (geo tree / listed workplace districts), the cursor list + detail, publish (a non-author, step-up
 // `module_publish`) and withdraw. Tuples drift-guarded against @twt/domain by tests/modules.test.ts. ⛔ Member shape.
 export * from './modules/index.js';
+// Story 13.1 (`2026-11-03-441` / `-442`) — register a FIELD WORKER (`POST /api/v1/p/:pariwarId/field-workers`,
+// `field_worker.register`, district dimension): a shape-only request and a 201 that carries ⛔ attribution code (QE22). The
+// state / KYC tuples are drift-guarded against @twt/domain by tests/field-workers.test.ts.
+export * from './field-workers/index.js';

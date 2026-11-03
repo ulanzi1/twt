@@ -146,6 +146,14 @@ call shape only — a direct `writeAuditEntry(...)` import planted in `packages/
 (`apps/jobs/src/scheduler/module-activation.ts`) is ⛔ scanned — `apps/jobs` is outside this gate; its own test pins its
 audit pairing.
 
+⭐ **Story 13.1 (2026-11-03, `2026-11-03-442`) — the field-worker surface** (`apps/api/src/modules/field-worker`,
+`packages/domain/src/field-worker`) is scanned by THIS invariant ONLY, through its OWN const `FIELD_WORKER_ROOTS` in `check.ts`
+(⛔ an edit of `MARKETPLACE_ROOTS`); the constant-time-compare invariant does ⛔ run there (the surface verifies no secret). The
+registration route's one write pairs through `withCompensatingAudit`; the domain primitive never audits (QE14 — pinned by
+`packages/domain/tests/field-worker/no-audit-wrapper-in-domain.test.ts`). Teeth (revert-sanity, 2026-11-03): a bare
+`audit.writeAuditEntry(...)` planted in `apps/api/src/modules/field-worker/` turned `pnpm access-wrapper:check` RED, and green
+again once removed (the story's Debug Log). The same namespace-shape limit as Story 12.2's applies.
+
 ## Per-epic scope-extension convention (AI-6-1)
 
 Expanding this gate's scan scope is complete only when at least one invariant has **meaningful

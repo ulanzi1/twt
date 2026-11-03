@@ -10558,6 +10558,32 @@ components:
         - module_id
         - state
       additionalProperties: false
+    RegisterFieldWorkerResult:
+      type: object
+      properties:
+        field_worker_id:
+          type: string
+          format: uuid
+        district:
+          type: string
+        current_state:
+          type: string
+          enum:
+            - pending_kyc
+            - active
+            - suspended
+            - terminated
+        kyc_status:
+          type: string
+          enum:
+            - pending
+            - completed
+      required:
+        - field_worker_id
+        - district
+        - current_state
+        - kyc_status
+      additionalProperties: false
   parameters: {}
 paths:
   /api/v1/_meta/health:
@@ -18861,6 +18887,89 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: module.illegal_transition · module.concurrent_change · module.idempotency_in_progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/p/{pariwarId}/field-workers:
+    post:
+      summary: Register a field worker and allocate their attribution code
+      description: "`field_worker.register` (district dimension — the body's `district`, compared byte for byte); `Idempotency-Key`. The id is server-minted; a replay returns the recorded response. `district` must be a LISTED district of the Pariwar (the geo tree in force, or with no tree the listed workplace districts). The worker starts `pending_kyc`; the code is allocated in the same transaction and is NOT returned."
+      tags:
+        - field-workers
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: pariwarId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 1000
+                mobile:
+                  type: string
+                  maxLength: 64
+                district:
+                  type: string
+                  maxLength: 200
+              required:
+                - name
+                - mobile
+                - district
+              additionalProperties: false
+      responses:
+        "201":
+          description: Registered (pending_kyc)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterFieldWorkerResult"
+        "400":
+          description: Invalid input (request.validation) · field_worker.idempotency_key_required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: No admin session · auth.session_required · auth.session_expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Missing field_worker.register
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: No grant for this Pariwar (pariwar.not_found — the scope hook; distinct from the 403)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: field_worker.mobile_already_registered · admin.display_name_missing · field_worker.idempotency_in_progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: field_worker.name_invalid · field_worker.mobile_invalid · field_worker.district_unknown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: field_worker.code_allocation_exhausted
           content:
             application/json:
               schema:

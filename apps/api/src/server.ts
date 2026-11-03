@@ -76,6 +76,7 @@ import { registerMemberDataRightsModule } from './modules/member-data-rights/ind
 import { registerNewsBlogModule } from './modules/news-blog/index.js';
 import { registerBannerModule } from './modules/banners/index.js';
 import { registerMarketplaceModule } from './modules/marketplace/index.js';
+import { registerFieldWorkerModule } from './modules/field-worker/index.js';
 import { registerSurveyModule } from './modules/surveys/index.js';
 import { registerMemberModerationRoutes } from './modules/member-moderation/routes.js';
 import { registerModerationAppealRoutes } from './modules/member-moderation-appeals/routes.js';
@@ -410,6 +411,8 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // Story 12.2 (`2026-11-01-433`) — the admin MODULE surface (author a partner offer as a draft, partners, publish by a
   // non-author with step-up, withdraw). `module.manage`; the first production caller of the 12.1 primitive. ⛔ Member route.
   registerMarketplaceModule(app, deps);
+  // Story 13.1 — register a field worker (`field_worker.register`, district dimension) + allocate their attribution code.
+  registerFieldWorkerModule(app, deps);
   registerSurveyModule(app, deps);
   // Story 10.10 — the FR-56 member-moderation surface: suspend / terminate / restore with
   // registry-driven reason codes, a MANDATORY Tier-1-encrypted rationale, full attribution and —

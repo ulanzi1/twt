@@ -110,6 +110,7 @@ three mechanized slices, each scanned over the code its commitment is about:
 - **(f)** over the channel surface (`packages/channels/src` + the `apps/api` channel entrypoints: `channel-webhooks`, `wa-opt-in`, `telegram-opt-in`, `channel-config`, `degraded-mode`, `device-token`, `announcement-channels` — Story 5.14) **and the claim surface** (`apps/api/src/modules/{claims,nominee}`, `packages/domain/src/claim`) — the constant-time secret-compare slice.
 - **(g)** over the SAME channel **+ claim** surface — the compensating-audit mechanization slice (AI-5-3 / ADR-0030).
 - **(g)** (compensating-audit) ALSO over the **Epic-12 module surface** (`apps/api/src/modules/marketplace`, `packages/domain/src/marketplace`) — Story 12.2, 2026-11-01; ⛔ (f) there (no secret is verified on that surface). See the gate README's Story 12.2 paragraph for the teeth proof and the namespace-shape limit.
+- **(g)** (compensating-audit) ALSO over the **field-worker surface** (`apps/api/src/modules/field-worker`, `packages/domain/src/field-worker`) — Story 13.1, 2026-11-03, its own `FIELD_WORKER_ROOTS`; ⛔ (f) there (no secret is verified on that surface). See the gate README's Story 13.1 paragraph for the teeth proof.
 
 This closes the AI-4-3 → AI-5-1 → AI-5-3 → **AI-6-1** chain the Epic-4/5/6 retros flagged (I-1,
 "you can build the gate and still miss the target"): each new mechanized slice — and each

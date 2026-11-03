@@ -5303,6 +5303,40 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 13.1 — register a FIELD WORKER (`2026-11-03-441` / `-442`) ──────────────────────────────────────────────────────
+// ONE route, gated on `field_worker.register` at the DISTRICT dimension (the body's reporting district): held by
+// `district_admin` (its own district) and `pariwar_admin` (any district of its Pariwar — the fill-in) + super_admin. The worker's
+// row and their 6-digit attribution code are written in ONE transaction; the 201 carries ⛔ code (QE22 — it is read only after
+// approval, Story 13.1a / 13.1b). The body is shape-only (400 `request.validation` runs BEFORE the guards); the content rules
+// are 422s. Nothing here reaches a member.
+const {
+  RegisterFieldWorkerRequest: RegisterFieldWorkerRequestSchema,
+  RegisterFieldWorkerResponse: RegisterFieldWorkerResponseSchema,
+} = await import('../src/field-workers/index.js');
+const RegisterFieldWorkerComponent = RegisterFieldWorkerResponseSchema.openapi('RegisterFieldWorkerResult');
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers',
+  summary: 'Register a field worker and allocate their attribution code',
+  description:
+    '`field_worker.register` (district dimension — the body\'s `district`, compared byte for byte); `Idempotency-Key`. The id is ' +
+    'server-minted; a replay returns the recorded response. `district` must be a LISTED district of the Pariwar (the geo tree in ' +
+    'force, or with no tree the listed workplace districts). The worker starts `pending_kyc`; the code is allocated in the same ' +
+    'transaction and is NOT returned.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), body: { content: jsonOf(RegisterFieldWorkerRequestSchema), required: true } },
+  responses: {
+    201: { description: 'Registered (pending_kyc)', content: jsonOf(RegisterFieldWorkerComponent) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
+    401: errorResponse('No admin session · auth.session_required · auth.session_expired'),
+    403: errorResponse('Missing field_worker.register'),
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found — the scope hook; distinct from the 403)'),
+    409: errorResponse('field_worker.mobile_already_registered · admin.display_name_missing · field_worker.idempotency_in_progress'),
+    422: errorResponse('field_worker.name_invalid · field_worker.mobile_invalid · field_worker.district_unknown'),
+    503: errorResponse('field_worker.code_allocation_exhausted'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

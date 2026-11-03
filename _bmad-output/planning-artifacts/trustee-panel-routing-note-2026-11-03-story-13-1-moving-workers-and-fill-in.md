@@ -1,7 +1,8 @@
 # Trustee Panel routing note — which District Admin a field worker reports to and who may change it, the same worker in two Pariwars, and whether the Pariwar Admin's fill-in is enforced, and who approves a registered field worker (four questions, all non-blocking)
 
-> **Status: DRAFTED 2026-11-03 for BigDev to send — ⛔ NOT yet sent.** Nothing here is recorded as asked of, or shown to, the Panel until
-> BigDev sends it ([[feedback_shown_to_panel_means_sent]]). Written by Story 13.1 (`13-1-field-worker-identity-lifecycle-state-machine`)
+> **Status: SENT by BigDev and ANSWERED — recorded as [`2026-11-03-443`](../../.decision-log.md#decision-2026-11-03-443).** Drafted
+> 2026-11-03 by Story 13.1; the version put was the one committed in `88243907` (BigDev); the date it was sent and the date the Panel ruled were not given to the session.
+> **As put in the note** (kept unedited below): Written by Story 13.1 (`13-1-field-worker-identity-lifecycle-state-machine`)
 > as the follow-up to your ruling [`2026-11-03-441`](../../.decision-log.md#decision-2026-11-03-441) and to BigDev's account of how field
 > workers actually work. **All four questions are non-blocking:** the build goes ahead on our suggestions, and no screen or route for any of
 > them exists yet.
@@ -24,10 +25,19 @@ kept** (`-441`).
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — recorded as `2026-11-03-443`
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **Ruled by DR and KB, relayed by BigDev — verbatim:**
+> *"by DR and KB*
+> *Q1 A, Q2 C, Q3 A, Q4 A"*
+>
+> ⭐ **Question 1: A** — by consent between the two District Admins, or directly by a Pariwar Admin. **Question 2: C** — a new
+> registration now, plus a link between a person's records later (NOT our suggestion, A). **Question 3: A** — the fill-in is not
+> enforced; the log records which authorisation allowed each act. **Question 4: A** — the District Admin registers, the Pariwar Admin
+> approves, and does both if the District Admin is not available. ⚠ NOT covered: when and by whom the link is built and what may be
+> shared between Pariwars (a later decision, back to the Panel with that work); the permission keys' names — see the decision entry.
+>
+> ⭐ Everything **below this block is kept UNEDITED** — it is the question as it was put ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

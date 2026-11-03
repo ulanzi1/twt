@@ -1,10 +1,11 @@
 // member_attribution write accessor — Story 3.6b (Task 2; D2 / R5).
 //
 // The Reference Code port-seam capture: insert ONE row storing the optional 6-digit code as
-// `attribution_source`. NO registry validation, NO field-worker FK resolution (Epic 13 is not built —
-// D2). Runs its INSERT DIRECTLY on the passed (scoped) `db` (the member-PII write precedent). NO HTTP,
-// NO audit, NO event — the handler writes the Story 1.10 audit line (no lifecycle event is minted; the
-// member vocabulary is frozen — R5).
+// `attribution_source`. NO registry validation, NO field-worker FK resolution (D2). (Story 13.2, 2026-11-03: the
+// field-worker code registry and its Pariwar-scoped lookup now exist in `../attribution-code/` — this capture is STILL
+// unvalidated; Story 13.8 wires the lookup into signup, through the API door.) Runs its INSERT DIRECTLY on the passed
+// (scoped) `db` (the member-PII write precedent). NO HTTP, NO audit, NO event — the handler writes the Story 1.10 audit
+// line (no lifecycle event is minted; the member vocabulary is frozen — R5).
 
 import type { Db } from '../db.js';
 import type { MemberId, PariwarId } from '../ids/index.js';

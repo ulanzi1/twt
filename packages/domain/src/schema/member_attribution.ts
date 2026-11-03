@@ -1,13 +1,16 @@
 // `member_attribution` — the Reference Code PORT SEAM (Story 3.6b, Task 1/2; D2 / R5).
 //
 // At signup a member may optionally paste a 6-digit Reference Code from a field-worker introducer
-// (FR-82). Epic 13's field-worker allocation registry is NOT built, so v1 CAPTURES-AND-DEFERS: the
+// (FR-82). Epic 13's field-worker allocation registry was NOT built when this landed, so v1 CAPTURES-AND-DEFERS: the
 // code is format-checked (6 numeric digits, at the contract) and stored here as `attribution_source`
 // with NO validation against an allocation registry (none exists), NO `attributed_to_fieldworker_id`
 // resolution, and NO rejection of "unknown" codes. The eventual Epic-13 validation + adopter-chain
 // attribution + commission flow (FR-87, v2) backfill/consume `attribution_source` when that epic
 // activates. NO `member.reference_code.captured` lifecycle event is minted (the 14-event member
 // vocabulary is frozen — R5); the capture is recorded via a Story 1.10 audit line only.
+// ⭐ Story 13.2 (2026-11-03): the registry and its Pariwar-scoped lookup now EXIST in `../attribution-code/` (codes table
+// `field_worker_attribution_codes`, migration 0199). This capture is STILL unvalidated and un-resolved — Story 13.8 wires the
+// lookup into signup (through the API door), resolving each capture as of its own `captured_at`.
 //
 // ── NO FK to any field-worker / Epic-13 table (D2) ────────────────────────────────────────────────
 // There is deliberately no FK on `attribution_source` — the registry it would reference does not

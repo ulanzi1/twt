@@ -294,3 +294,7 @@ export * from './marketplace-modules-rls.js';
 // only — both tables are insert-only).
 export * from './marketplace-partners-rls.js';
 export * from './marketplace-module-publications-rls.js';
+// Story 13.2 (0199) — field_worker_attribution_codes + attribution_code_allocation_flags tenant-isolation policies (select /
+// insert only, ⛔ `FOR ALL` — both tables are append-only).
+export * from './field-worker-attribution-codes-rls.js';
+export * from './attribution-code-allocation-flags-rls.js';

@@ -383,6 +383,46 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     expect((await client.query(`UPDATE member_wa_opt_in_codes SET attempts = 1 WHERE code_hash = $1`, [hashes[PARIWAR_B]])).rowCount).toBe(0);
     expect((await client.query(`SELECT 1 FROM member_wa_opt_in_codes WHERE code_hash = $1`, [hashes[PARIWAR_A]])).rows).toHaveLength(1);
   });
+
+  // Story 13.2 (Task 6.2; AC8; migration 0199) — the attribution-code registry: the SAME code held in each tenant (I1 — a
+  // cross-Pariwar collision is permitted). ⭐ Probed by the CODE too — under A it reaches A's holder only.
+  it('field_worker_attribution_codes (scoped) — A scope sees only A codes, never B (by tenant key and by the shared code)', async () => {
+    const { client } = getTx();
+    const holders: Record<string, string> = {};
+    for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
+      holders[pariwar] = randomUUID();
+      await client.query(
+        `INSERT INTO field_worker_attribution_codes (pariwar_id, field_worker_id, code, allocation_attempts) VALUES ($1, $2, '731010', 1)`,
+        [pariwar, holders[pariwar]],
+      );
+    }
+    await enterAppScope(client, PARIWAR_A);
+    const all = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM field_worker_attribution_codes`);
+    expect(all.rows.length).toBeGreaterThan(0);
+    expect(all.rows.every((r) => r.pariwar_id === PARIWAR_A)).toBe(true);
+    expect((await client.query(`SELECT 1 FROM field_worker_attribution_codes WHERE pariwar_id = $1`, [PARIWAR_B])).rows).toHaveLength(0);
+    const byCode = await client.query<{ field_worker_id: string }>(`SELECT field_worker_id FROM field_worker_attribution_codes WHERE code = '731010'`);
+    expect(byCode.rows.map((r) => r.field_worker_id)).toEqual([holders[PARIWAR_A]]);
+  });
+
+  // Story 13.2 (Task 6.2; AC8; migration 0199) — the allocation-exhaustion flags: one per tenant.
+  it('attribution_code_allocation_flags (scoped) — A scope sees only A flags, never B', async () => {
+    const { client } = getTx();
+    const flags: Record<string, string> = {};
+    for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
+      flags[pariwar] = randomUUID();
+      await client.query(
+        `INSERT INTO attribution_code_allocation_flags (flag_id, pariwar_id, attempts, actor_id, actor_display) VALUES ($1, $2, 8, $3, 'Asha Verma')`,
+        [flags[pariwar], pariwar, randomUUID()],
+      );
+    }
+    await enterAppScope(client, PARIWAR_A);
+    const all = await client.query<{ pariwar_id: string }>(`SELECT pariwar_id FROM attribution_code_allocation_flags`);
+    expect(all.rows.length).toBeGreaterThan(0);
+    expect(all.rows.every((r) => r.pariwar_id === PARIWAR_A)).toBe(true);
+    expect((await client.query(`SELECT 1 FROM attribution_code_allocation_flags WHERE flag_id = $1`, [flags[PARIWAR_B]])).rows).toHaveLength(0);
+    expect((await client.query(`SELECT 1 FROM attribution_code_allocation_flags WHERE flag_id = $1`, [flags[PARIWAR_A]])).rows).toHaveLength(1);
+  });
 });
 
 describe.skipIf(!hasDatabase)('Pariwar-Passport carve-out (EXPECTED cross-readable exception)', () => {

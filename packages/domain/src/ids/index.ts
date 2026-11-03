@@ -880,3 +880,25 @@ export const partnerId = uuidBrand('PartnerId');
 export type ModuleLeadId = Brand<'ModuleLeadId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ModuleLeadId`. */
 export const moduleLeadId = uuidBrand('ModuleLeadId');
+
+// ── Story 13.2 — the field-worker attribution-code registry ids (§Naming "branding mandatory on a new ID's first PR") ──
+// `FieldWorkerId` names the holder of a code. Story 13.1 owns the `field_workers` table and adds the composite FK
+// (AT2 — the codes table carries the id; `field_workers` carries ⛔ code column); until then the id is un-FK'd (the pool
+// primitive's `cycle_id` precedent). `AttributionCodeId` is the per-row address of one permanent code
+// (`field_worker_attribution_codes.attribution_code_id`); `AttributionCodeFlagId` addresses one allocation-exhaustion flag
+// (`attribution_code_allocation_flags.flag_id`). All three are UUIDs, so all reuse the shared `uuidBrand` validator.
+
+/** The field worker who holds an attribution code (Story 13.1's `field_workers` row; un-FK'd until 13.1 — AT2). */
+export type FieldWorkerId = Brand<'FieldWorkerId'>;
+/** Smart constructor: validates UUID shape, returns a branded `FieldWorkerId`. */
+export const fieldWorkerId = uuidBrand('FieldWorkerId');
+
+/** Per-row address of a permanent attribution code (`field_worker_attribution_codes.attribution_code_id`). */
+export type AttributionCodeId = Brand<'AttributionCodeId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AttributionCodeId`. */
+export const attributionCodeId = uuidBrand('AttributionCodeId');
+
+/** Per-row address of an allocation-exhaustion flag (`attribution_code_allocation_flags.flag_id`). */
+export type AttributionCodeFlagId = Brand<'AttributionCodeFlagId'>;
+/** Smart constructor: validates UUID shape, returns a branded `AttributionCodeFlagId`. */
+export const attributionCodeFlagId = uuidBrand('AttributionCodeFlagId');

@@ -348,6 +348,12 @@ export * as helpdesk from './helpdesk/index.js';
 // cache — + the five module.* events + the closed, versioned filter grammars). ⛔ production caller in 12.1
 // (I6): the wizard / shelf / sweep are Stories 12.2 / 12.3 / 12.6.
 export * as marketplace from './marketplace/index.js';
+// Story 13.2 (the first Epic-13 story built) — the field-worker ATTRIBUTION-CODE registry `[PRIMITIVE]`: one permanent
+// Pariwar-scoped 6-digit code per field worker (append-only `field_worker_attribution_codes`, migration 0199), the random
+// allocator with collision retry + the durable exhaustion flag, and the ONE lookup `resolveAttribution` that cannot run without
+// a Pariwar (AT8 v2: a transaction-bound client whose scope must equal it). ⚠ Reachable from `apps/*` ONLY through the API
+// door `apps/api/src/modules/field-worker/attribution-code-access.ts` — the repo-wide reach fence enforces it.
+export * as attributionCode from './attribution-code/index.js';
 // Story 10.5 — the News/Blog `[SURFACE]` workflow module: a mutable-`status` post lifecycle
 // (Decision 1 — NOT event-derived-state) wired to the shipped tone-review gate (approve), the
 // Story 1.10 audit, and the `alert_published` dispatch fan-out (publish). Full module under the

@@ -49,6 +49,7 @@ import {
   seedRoleGrant,
   seedUser,
 } from '../_helpers.js';
+import { seedFieldWorker } from '../attribution-code/_fixtures.js';
 
 describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', () => {
   setupLiveDb();
@@ -390,7 +391,7 @@ describe.skipIf(!hasDatabase)('cross-Pariwar adversarial leak (RLS-enforced)', (
     const { client } = getTx();
     const holders: Record<string, string> = {};
     for (const pariwar of [PARIWAR_A, PARIWAR_B]) {
-      holders[pariwar] = randomUUID();
+      holders[pariwar] = await seedFieldWorker(client, pariwar); // ⭐ a REAL holder per tenant — Story 13.1 (the 0200 FK)
       await client.query(
         `INSERT INTO field_worker_attribution_codes (pariwar_id, field_worker_id, code, allocation_attempts) VALUES ($1, $2, '731010', 1)`,
         [pariwar, holders[pariwar]],

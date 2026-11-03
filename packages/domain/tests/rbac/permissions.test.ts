@@ -240,9 +240,11 @@ describe('PERMISSION_CATALOG', () => {
     // 57 at Story 12.2 +1 (module.manage — the partner-module surface; `2026-11-01-433` QE2; 74 -> 75 keys).
     // 58 at Story 6.22 +2 (claim.flag_fraud / claim.record_fraud_finding — the fraud register's investigation;
     // `2026-11-01-438` item 5; ONE bump for the two; 75 -> 77 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(58);
+    // 59 at Story 13.1 +1 (field_worker.register — register a field worker; the Panel's `2026-11-03-441` Q1 A, the key's
+    // shape `-442` QE10; 77 -> 78 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(59);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(77);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(78);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

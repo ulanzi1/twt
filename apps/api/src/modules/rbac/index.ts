@@ -17,6 +17,8 @@ import { ADMIN_GLOBAL_NAMESPACE, type AppDeps } from '../../context.js';
 import type { ScopeTx } from '../../types.js';
 
 interface RoleGrantRow {
+  /** `role_grants.id` — carried onto `EffectiveGrant.grantId` so an authorization snapshot can name the row (Story 13.1 QE18 (e)). */
+  id: string;
   pariwar_id: string;
   role: string;
   scope_dimension: rbac.ScopeDimension;
@@ -37,7 +39,7 @@ export async function loadActorGrants(
     throw new Error('[rbac] refused to load grants: pariwar scope not set (W9-CR1.6 guard)');
   }
   const res = await scopeTx.client.query<RoleGrantRow>(
-    `SELECT pariwar_id, role, scope_dimension, scope_value
+    `SELECT id, pariwar_id, role, scope_dimension, scope_value
        FROM role_grants
       WHERE user_id = $1`,
     [actorId],
@@ -47,6 +49,7 @@ export async function loadActorGrants(
     role: r.role,
     scopeDimension: r.scope_dimension,
     scopeValue: r.scope_value,
+    grantId: r.id,
   }));
 }
 
@@ -148,7 +151,11 @@ export function requirePermissionHook(
     const dimension = opts.resolveDimension ? opts.resolveDimension(request) : fixedDimension;
     const value = opts.resolveValue ? opts.resolveValue(request) : scopeTx.pariwarId;
 
-    rbac.requirePermission(
+    // ⭐ Story 13.1 (QE18 (c)) — the guard RETURNS the verified authorization; it is stored per KEY on a FRESH per-request
+    // object (⛔ `decorateRequest('authorizations', {})` — Fastify 5 rejects a reference default, and it would be shared by
+    // every request). A handler that records who authorized an act passes THIS object on and ⛔ never recomputes it from
+    // `request.scopeGrants` (TR13).
+    const authorization = rbac.requirePermission(
       {
         actorId,
         grants,
@@ -162,6 +169,7 @@ export function requirePermissionHook(
         resolver: geoTreeResolverForRequest(request),
       },
     );
+    (request.authorizations ??= {})[key] = authorization;
   };
 }
 
@@ -187,7 +195,7 @@ export async function loadGlobalActorGrants(
   actorId: string,
 ): Promise<rbac.EffectiveGrant[]> {
   const res = await pool.query<RoleGrantRow>(
-    `SELECT pariwar_id, role, scope_dimension, scope_value
+    `SELECT id, pariwar_id, role, scope_dimension, scope_value
        FROM role_grants
       WHERE user_id = $1`,
     [actorId],
@@ -197,6 +205,7 @@ export async function loadGlobalActorGrants(
     role: r.role,
     scopeDimension: r.scope_dimension,
     scopeValue: r.scope_value,
+    grantId: r.id,
   }));
 }
 

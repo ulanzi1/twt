@@ -882,13 +882,13 @@ export type ModuleLeadId = Brand<'ModuleLeadId'>;
 export const moduleLeadId = uuidBrand('ModuleLeadId');
 
 // ── Story 13.2 — the field-worker attribution-code registry ids (§Naming "branding mandatory on a new ID's first PR") ──
-// `FieldWorkerId` names the holder of a code. Story 13.1 owns the `field_workers` table and adds the composite FK
-// (AT2 — the codes table carries the id; `field_workers` carries ⛔ code column); until then the id is un-FK'd (the pool
-// primitive's `cycle_id` precedent). `AttributionCodeId` is the per-row address of one permanent code
+// `FieldWorkerId` names the holder of a code. Story 13.1 owns the `field_workers` table and added the composite FK
+// (AT2 — the codes table carries the id; `field_workers` carries ⛔ code column) in migration 0200; it is also the
+// `field_workers` primary key and the worker's `events_log` stream id. `AttributionCodeId` is the per-row address of one permanent code
 // (`field_worker_attribution_codes.attribution_code_id`); `AttributionCodeFlagId` addresses one allocation-exhaustion flag
 // (`attribution_code_allocation_flags.flag_id`). All three are UUIDs, so all reuse the shared `uuidBrand` validator.
 
-/** The field worker who holds an attribution code (Story 13.1's `field_workers` row; un-FK'd until 13.1 — AT2). */
+/** A field worker — Story 13.1's `field_workers` row (and the holder of an attribution code — the 0200 composite FK). */
 export type FieldWorkerId = Brand<'FieldWorkerId'>;
 /** Smart constructor: validates UUID shape, returns a branded `FieldWorkerId`. */
 export const fieldWorkerId = uuidBrand('FieldWorkerId');

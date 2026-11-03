@@ -15,6 +15,10 @@
 // ⭐ "BLOCKS" is PROVED from the server (`pg_blocking_pids`), ⛔ inferred from a timer. Every held tx is ended in a `finally`.
 // Committed rows go to a FRESH Pariwar (⛔ PARIWAR_A); the append-only rows leave in `afterAll` under replica mode (the guard
 // triggers are fixture-cleanup-only bypassed, as in the precedent).
+// ⭐ Story 13.1 (the 0200 FK): every holder is a REAL `field_workers` row of the fresh Pariwar, seeded and COMMITTED on its own
+// connection by `seedFieldWorker` (an owner-role INSERT — ⛔ the projector, which would append to `events_log`). The `afterAll`
+// removes the code rows FIRST (they reference the workers), then exactly the workers this suite created — both under replica mode
+// (`field_workers` refuses DELETE for every role otherwise, I10).
 
 import { randomUUID } from 'node:crypto';
 
@@ -22,20 +26,37 @@ import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { setPariwarScope } from '../../../src/db.js';
-import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
+import { pariwarId as toPariwarId } from '../../../src/ids/index.js';
 import type { FieldWorkerId } from '../../../src/ids/index.js';
 import { attributionCode } from '../../../src/index.js';
 import { pgSqlstateOf } from '../../../src/marketplace/errors.js';
-import { expectNoAllocatorSavepoint, scripted } from './_fixtures.js';
+import { expectNoAllocatorSavepoint, scripted, seedFieldWorker } from './_fixtures.js';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const hasDatabase = Boolean(DATABASE_URL);
 const PARIWAR = toPariwarId(randomUUID()); // ⭐ a fresh tenant — committed rows never pollute PARIWAR_A
 const TIMEOUT = 20_000;
-const worker = (): FieldWorkerId => toFieldWorkerId(randomUUID());
 
 describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connection races (own-committing)', () => {
   let pool: pg.Pool;
+  const seededWorkers: FieldWorkerId[] = []; // ⭐ the cleanup deletes exactly these (⛔ by count, ⛔ a broad predicate)
+
+  /** A REAL, COMMITTED worker in the fresh Pariwar (Story 13.1 — the 0200 FK refuses a made-up holder). */
+  async function worker(): Promise<FieldWorkerId> {
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      const w = await seedFieldWorker(c, PARIWAR); // fresh mobile_blind_index per call
+      await c.query('COMMIT');
+      seededWorkers.push(w);
+      return w;
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
+    } finally {
+      c.release();
+    }
+  }
 
   beforeAll(() => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 6 });
@@ -47,7 +68,10 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
       await c.query('BEGIN');
       // Replica mode disables triggers — including the append-only guard — for fixture cleanup ONLY.
       await c.query("SET LOCAL session_replication_role = 'replica'");
+      // Codes FIRST (they reference the workers), then the workers this suite seeded — `field_workers_no_delete` is bypassed by
+      // replica mode only.
       await c.query('DELETE FROM field_worker_attribution_codes WHERE pariwar_id = $1', [PARIWAR]);
+      await c.query('DELETE FROM field_workers WHERE pariwar_id = $1 AND field_worker_id = ANY($2::uuid[])', [PARIWAR, seededWorkers]);
       await c.query('COMMIT');
     } finally {
       c.release();
@@ -130,7 +154,7 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
   it(
     'the same code: the waiter BLOCKS; the holder commits ⇒ the waiter’s 23505 redraws on attempt 2 and commits — two rows, two codes',
     async () => {
-      const [w1, w2] = [worker(), worker()];
+      const [w1, w2] = [await worker(), await worker()];
       const g = scripted('731100', '731101');
       await raceAgainstHolder(
         (holder) =>
@@ -152,7 +176,7 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
   it(
     'the same code: the holder ROLLS BACK ⇒ the waiter takes that code on attempt 1 (⛔ a redraw)',
     async () => {
-      const [w1, w2] = [worker(), worker()];
+      const [w1, w2] = [await worker(), await worker()];
       const g = scripted('731110', '731111');
       await raceAgainstHolder(
         (holder) =>
@@ -174,7 +198,7 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
   it(
     'the same worker: the waiter’s pre-check passes, its INSERT BLOCKS; the holder commits ⇒ FieldWorkerAlreadyHasAttributionCodeError (⛔ retried) — and the waiter’s tx is still usable (CONTROL)',
     async () => {
-      const [w, control] = [worker(), worker()];
+      const [w, control] = [await worker(), await worker()];
       const g = scripted('731120', '731121');
       await raceAgainstHolder(
         (holder) =>
@@ -205,7 +229,7 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
   it(
     'a NON-unique failure inside the INSERT (the waiter BLOCKS, a third connection CANCELS it ⇒ 57014) is rethrown as that error — ⛔ a redraw, ⛔ an exhaustion — and no allocator savepoint remains (CONTROL: the same tx allocates)',
     async () => {
-      const [w1, w2, control] = [worker(), worker(), worker()];
+      const [w1, w2, control] = [await worker(), await worker(), await worker()];
       const g = scripted('731130', '731131');
       let holder: pg.PoolClient | undefined;
       let waiter: pg.PoolClient | undefined;

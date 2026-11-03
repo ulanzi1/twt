@@ -836,7 +836,21 @@ export function permissionKey(value: string): PermissionKey {
 // `super_admin` derives BOTH — the domain refuses the same ACTOR for the flag and the finding
 // (`fraud_investigation.finder_is_flagger`), which also bites one person granted both roles. 57 / 75 READ LIVE at `91ea2c81`
 // (v58 contested by 6.39 / 14-3 — neither had committed it). `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 58 as const;
+//
+// ⭐ Story 13.1 (the Panel's ruling `2026-11-03-441` Q1 A — *"District Admin may add a field worker … Pariwar Admin will
+// fill in"*; the key's per-act SHAPE and `district` dimension are the author-commit `2026-11-03-442` QE10; a `-059` B(3)
+// field-worker permission, ratified with its feature set) — 58 → 59, ONE key (77 → 78): `field_worker.register` —
+// DISTRICT-dimension (the target is the worker's REPORTING district from the request body — QE9 / QE17; a `district`
+// grant covers ONLY its own district, a `pariwar` grant every in-tenant district — scope.ts rule 5); `district_admin` (the
+// Panel's primary manager — its own district) and `pariwar_admin` (the fill-in — any district) (+ derived super_admin).
+// Gates the ONE route that registers a worker and allocates their attribution code. ⛔ NOT `state_trustee` (its bundle
+// lacks it — with a geo tree a state grant CAN reach a district target, so the refusal is the bundle, ⛔ inertness), ⛔ NOT
+// `trustee_panel` (not ruled), ⛔ NOT the `field_worker` role (its own-read key is Story 13.3's, C1). Every OTHER field-worker
+// act gets its own key from the story that builds its route (13.1a approval / code read; 13.1c move / suspend / reactivate
+// / terminate; 13.1d move requests). REUSE CHECK — ⛔ `pariwar.provision`, `member.moderate` / `member.suspend`,
+// `module.manage`, `workplace.manage`, `known_people.run_campaign`. 58 / 77 READ LIVE at `268d86b5` (⚠ 14-3 holds a `<CAT>`
+// placeholder — the bump is +1 from whatever `main` holds when this lands). `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 59 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1448,6 +1462,11 @@ export const SEED_PERMISSION_KEYS = [
   // (the console's READ key, which a verifier holds too), ⛔ `claim.approve` (a finding is ⛔ an approval or a denial),
   // ⛔ `claim.review_death_certificate` (a certificate verdict is ⛔ an investigation's outcome).
   'claim.record_fraud_finding',
+  // Story 13.1 (`2026-11-03-441` Q1 A; `-442` QE10) — REGISTER a field worker (the person a 6-digit attribution code belongs
+  // to) and allocate their code. district-dimension (the worker's reporting district, from the body — QE9);
+  // `district_admin` (own district) and `pariwar_admin` (any district — the fill-in) (+ derived super_admin). ⚠ The same
+  // string is also the genesis event's `trigger` payload value (QE6) — a permission key and an event value; keep them apart.
+  'field_worker.register',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

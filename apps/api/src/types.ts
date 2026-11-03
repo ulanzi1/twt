@@ -49,6 +49,10 @@ declare module 'fastify' {
     scopeTx?: ScopeTx;
     /** The actor's effective grants in the active Pariwar (loaded by scope-resolution). */
     scopeGrants?: readonly rbac.EffectiveGrant[];
+    /** Story 13.1 (QE18 (c)) — the VERIFIED authorization each `requirePermissionHook` gate produced, keyed by permission
+     *  key. Created per request on the first gate (`??= {}`), ⛔ a decorated default. A handler that records who authorized
+     *  an act passes `request.authorizations[key]` on unchanged — ⛔ never a recomputation from `scopeGrants` (TR13). */
+    authorizations?: Record<string, rbac.VerifiedAuthorization>;
     /** Story 1.18 — the active Pariwar's in-force GEO TREE, loaded ONCE by scope-resolution
      *  alongside `scopeGrants` and consumed SYNCHRONOUSLY by every downstream permission gate.
      *  ⭐ `null` means this Pariwar has published NO tree — a first-class answer, not a degraded

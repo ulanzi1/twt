@@ -276,6 +276,15 @@ export const DEATH_CERTIFICATE_REVIEW_FIELD_CLASS = 'death_certificate_review';
 export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = encryptionRuntime.CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS;
 
 /**
+ * The field worker's Tier-1 field class (Story 13.1, QE4) — the worker's name and mobile (`field_workers.name_ciphertext`,
+ * `field_workers.mobile_ciphertext`), and the keyed-hash class of the worker's mobile (`field_workers.mobile_blind_index`),
+ * disjoint from the member login hash. Declared ONCE in `@twt/domain` `encryption`; re-exported here. ⛔ NEVER in an event,
+ * a log line or an audit context.
+ */
+export const FIELD_WORKER_FIELD_CLASS = encryptionRuntime.FIELD_WORKER_FIELD_CLASS;
+export const FIELD_WORKER_MOBILE_FIELD_CLASS = encryptionRuntime.FIELD_WORKER_MOBILE_FIELD_CLASS;
+
+/**
  * Story 6.23a (NW13, NW14) — the APPROVAL-OVER-WARNING record's Tier-1 field class. The late-warning reason's note
  * (`claim_warning_approvals.note_ciphertext`) is encrypted under this before the domain writer. Matches
  * `piiColumn(1, 'claim_warning_approval')`. ⛔ NEVER in an event / audit line / log / the console packet. The note is

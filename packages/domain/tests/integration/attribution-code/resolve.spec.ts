@@ -16,7 +16,7 @@ import {
 import { attributionCode } from '../../../src/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppRoleNoScope, enterAppScope } from '../_helpers.js';
-import { caught, seedCapture, seedCode } from './_fixtures.js';
+import { caught, seedCapture, seedCode, seedFieldWorker } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const B = toPariwarId(PARIWAR_B);
@@ -59,7 +59,7 @@ describe.skipIf(!hasDatabase)('resolveAttribution (AC5 / AC8)', () => {
   it('the stamp: an INSERT as twt_app supplying allocated_at = 2000-01-01 stores the DB clock instead (⛔ backdating)', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const w = randomUUID();
+    const w = await seedFieldWorker(client, PARIWAR_A); // ⭐ a REAL holder — Story 13.1 (the 0200 FK); the seed steps out of twt_app and back
     await client.query(
       `INSERT INTO field_worker_attribution_codes (pariwar_id, field_worker_id, code, allocation_attempts, allocated_at)
          VALUES ($1, $2, '482915', 1, '2000-01-01 00:00:00+00')`,
@@ -76,7 +76,7 @@ describe.skipIf(!hasDatabase)('resolveAttribution (AC5 / AC8)', () => {
   it("'now' ⇒ the holder for a code allocated earlier in the test; an un-held code ⇒ null", async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const w = toFieldWorkerId(randomUUID());
+    const w = await seedFieldWorker(client, PARIWAR_A); // ⭐ a REAL holder — Story 13.1 (the 0200 FK)
     const { code } = await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w });
     expect(await attributionCode.resolveAttribution(client, { code, pariwarId: A, asOf: 'now' })).toBe(w);
     const unheld = code === '482916' ? '482917' : '482916';
@@ -200,7 +200,7 @@ describe.skipIf(!hasDatabase)('readAttributionCodeForFieldWorker (AC6)', () => {
   it('returns the worker’s code + allocated_at; null for a worker with none; scope-checked', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
-    const w = toFieldWorkerId(randomUUID());
+    const w = await seedFieldWorker(client, PARIWAR_A); // ⭐ a REAL holder — Story 13.1 (the 0200 FK)
     const { code } = await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w });
     const held = await attributionCode.readAttributionCodeForFieldWorker(client, { pariwarId: A, fieldWorkerId: w });
     expect(held?.code).toBe(code);

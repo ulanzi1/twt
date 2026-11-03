@@ -1,22 +1,40 @@
 // `allocateAttributionCode` — live-DB (Story 13.2, Task 6.1; AC4 / AC8; AT3 / AT4 / AT6 / AT9; I1 / I2 / I5). Per-test ROLLBACK.
 
-import { randomUUID } from 'node:crypto';
-
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { setPariwarScope } from '../../../src/db.js';
-import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId } from '../../../src/ids/index.js';
+import { pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { attributionCode } from '../../../src/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { caught, expectNoAllocatorSavepoint, seedCapture, seedCode, scripted } from './_fixtures.js';
+import { caught, expectNoAllocatorSavepoint, seedCapture, seedCode, seedFieldWorker, scripted } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const B = toPariwarId(PARIWAR_B);
-const worker = () => toFieldWorkerId(randomUUID());
+
+// ⭐ Story 13.1 (the 0200 FK): a code's holder must be a REAL `field_workers` row of the SAME Pariwar, so a made-up id is
+// refused 23503. Each test gets a POOL of real workers, seeded as the owner inside its rolled-back tx (⛔ committed) — `worker()`
+// stays synchronous for the inline call sites; `worker(B)` draws from Pariwar B's pool.
+const POOL_SIZE: Record<string, number> = { [PARIWAR_A]: 10, [PARIWAR_B]: 2 };
+let pools: Record<string, FieldWorkerId[]> = {};
+const worker = (p: string = A): FieldWorkerId => {
+  const next = pools[p]?.shift();
+  if (next === undefined) throw new Error(`worker(): the seeded pool for Pariwar ${p} is exhausted — raise POOL_SIZE`);
+  return next;
+};
 
 describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
   setupLiveDb();
+  // Registered AFTER setupLiveDb, so the per-test tx is already open (⛔ before enterAppScope — the seed is owner-role).
+  beforeEach(async () => {
+    const { client } = getTx();
+    pools = {};
+    for (const [p, n] of Object.entries(POOL_SIZE)) {
+      const seeded: FieldWorkerId[] = [];
+      for (let i = 0; i < n; i += 1) seeded.push(await seedFieldWorker(client, p));
+      pools[p] = seeded;
+    }
+  });
 
   it('allocates a six-digit code on the first draw and returns it with the DB-stamped instant', async () => {
     const { client } = getTx();
@@ -112,7 +130,7 @@ describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
     await enterAppScope(client, PARIWAR_A);
     const a = await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: worker() }, { generate: scripted('731004').generate });
     await setPariwarScope(client, PARIWAR_B);
-    const b = await attributionCode.allocateAttributionCode(client, { pariwarId: B, fieldWorkerId: worker() }, { generate: scripted('731004').generate });
+    const b = await attributionCode.allocateAttributionCode(client, { pariwarId: B, fieldWorkerId: worker(B) }, { generate: scripted('731004').generate });
     expect([a.code, b.code]).toEqual(['731004', '731004']);
   });
 
@@ -179,7 +197,7 @@ describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const g = scripted('602120');
-    const err = await caught(() => attributionCode.allocateAttributionCode(client, { pariwarId: B, fieldWorkerId: worker() }, { generate: g.generate }));
+    const err = await caught(() => attributionCode.allocateAttributionCode(client, { pariwarId: B, fieldWorkerId: worker(B) }, { generate: g.generate }));
     expect(err).toBeInstanceOf(attributionCode.AttributionPariwarScopeMismatchError);
     expect(err).toMatchObject({ expectedPariwarId: B, scopedPariwarId: PARIWAR_A });
     expect(g.draws()).toBe(0);

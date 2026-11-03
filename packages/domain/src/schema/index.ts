@@ -519,3 +519,8 @@ export * from './marketplace_module_publications.js';
 // Reachable from `apps/*` only through the API door (`apps/api/src/modules/field-worker/attribution-code-access.ts`).
 export * from './field_worker_attribution_codes.js';
 export * from './attribution_code_allocation_flags.js';
+// Story 13.1 (0200) — the field-worker primitive substrate: `field_workers` (the SEVENTH event-derived-state primitive — a
+// Pariwar-scoped worker identity (Tier-1 name + mobile, a disjoint mobile blind index) + the projector-only lifecycle cache,
+// guarded by the whole-row DB trigger (migration 0200) + the field-worker-state-invariant CI gate; field_worker_state +
+// field_worker_kyc_status + field_worker_reason_code pgEnums). 0200 also adds 13.2's composite FK onto this table.
+export * from './field_workers.js';

@@ -6,6 +6,11 @@
 // the guard's structured 403 denial + the injectable audit seam (the seam fires on
 // deny, never on allow; the actual FR-47 sink is Story 1.10).
 
+import fs from 'node:fs';
+import path from 'node:path';
+
+import ts from 'typescript';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,8 +19,13 @@ import {
   type AuthorizationDenial,
 } from '../../src/errors.js';
 import {
+  PERMISSION_CATALOG_VERSION,
+  authorize,
+  authorizingGrant,
   checkPermission,
   hasPermission,
+  isVerifiedAuthorization,
+  matchingGrantRole,
   requirePermission,
   type AuthzContext,
   type EffectiveGrant,
@@ -808,5 +818,216 @@ describe('hasPermission — Story 10.18: member.moderate pariwar gate + verifier
       { pariwarId: PARIWAR_A, role: 'auditor', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
     ];
     expect(hasPermission(grants, 'member.moderate', pariwarResource)).toBe(false);
+  });
+});
+
+// ── Story 13.1 (QE18, AC9) — the VERIFIED authorization result ───────────────────────────────────────
+
+describe('Story 13.1 — authorizingGrant / authorize / VerifiedAuthorization (QE18)', () => {
+  const G = {
+    superA: { pariwarId: PARIWAR_A, role: 'super_admin', scopeDimension: 'global', scopeValue: null },
+    pariwarA: { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_A },
+    pariwarBadValue: { pariwarId: PARIWAR_A, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: PARIWAR_B },
+    districtPatna: { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+    districtGlobal: { pariwarId: PARIWAR_A, role: 'district_admin', scopeDimension: 'global', scopeValue: null },
+    stateBihar: { pariwarId: PARIWAR_A, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' },
+    blockOne: { pariwarId: PARIWAR_A, role: 'block_admin', scopeDimension: 'block', scopeValue: 'Block-1' },
+    unknownRole: { pariwarId: PARIWAR_A, role: 'nonexistent_role', scopeDimension: 'district', scopeValue: 'Patna' },
+    fieldWorkerSelf: { pariwarId: PARIWAR_A, role: 'field_worker', scopeDimension: 'self', scopeValue: ACTOR },
+  } satisfies Record<string, EffectiveGrant>;
+
+  // The existing matrix above, as (grants, key, resource, ctx) cases — allow AND deny paths.
+  const MATRIX: readonly (readonly [string, EffectiveGrant[], string, ResourceLocator, Partial<AuthzContext>?])[] = [
+    ['global cross-Pariwar', [G.superA], 'claim.approve', resource({ pariwarId: PARIWAR_B })],
+    ['district exact node', [G.districtPatna], 'claim.approve', resource()],
+    ['pariwar in-tenant geo', [G.pariwarA], 'member.suspend', resource({ value: 'AnyDistrict' })],
+    ['state without resolver', [G.stateBihar], 'claim.approve', resource()],
+    ['state with resolver', [G.stateBihar], 'claim.approve', resource(), { resolver: BIHAR_TREE }],
+    ['unknown key', [G.districtPatna], 'claim.delete', resource()],
+    ['malformed key', [G.districtPatna], 'not a key', resource()],
+    ['no grant', [], 'claim.approve', resource()],
+    ['cross-Pariwar', [G.districtPatna], 'claim.approve', resource({ pariwarId: PARIWAR_B })],
+    ['exact-node mismatch', [G.districtPatna], 'claim.approve', resource({ value: 'Vaishali' })],
+    ['unresolved locator', [G.districtPatna], 'claim.approve', resource({ value: null })],
+    ['unresolved locator, global', [G.superA], 'claim.approve', resource({ value: null })],
+    ['inconsistent Pariwar locator', [G.pariwarA], 'pariwar.amend_rule', resource({ dimension: 'pariwar', value: PARIWAR_B })],
+    ['malformed grant scope', [G.pariwarBadValue], 'member.suspend', resource()],
+    ['ceiling exceeded', [G.districtGlobal], 'claim.approve', resource({ pariwarId: PARIWAR_B })],
+    ['unknown role', [G.unknownRole], 'claim.approve', resource()],
+    ['role lacks key', [G.blockOne], 'claim.approve', resource({ dimension: 'block', value: 'Block-1' })],
+    ['empty bundle', [G.fieldWorkerSelf], 'claim.approve', resource({ dimension: 'self', value: ACTOR })],
+    ['field_worker.register — district own', [G.districtPatna], 'field_worker.register', resource()],
+    ['field_worker.register — district other', [G.districtPatna], 'field_worker.register', resource({ value: 'Vaishali' })],
+    ['field_worker.register — pariwar any', [G.pariwarA], 'field_worker.register', resource({ value: 'Gaya' })],
+    ['field_worker.register — state with tree', [G.stateBihar], 'field_worker.register', resource(), { resolver: BIHAR_TREE }],
+    ['mixed: deny then allow', [G.blockOne, G.unknownRole, G.districtPatna], 'claim.approve', resource()],
+  ];
+
+  it('hasPermission and authorize AGREE on every case (allowed ⇔ a result, denied ⇔ null)', () => {
+    let allows = 0;
+    for (const [name, grants, key, res, ctx] of MATRIX) {
+      const allowed = hasPermission(grants, key, res, ctx);
+      const result = authorize({ actorId: ACTOR, grants, key, resource: res }, ctx);
+      expect(result !== null, name).toBe(allowed);
+      expect(authorizingGrant(grants, key, res, ctx) !== null, name).toBe(allowed);
+      if (allowed) allows += 1;
+    }
+    // Non-vacuity: the matrix carries both directions.
+    expect(allows).toBeGreaterThanOrEqual(6);
+    expect(MATRIX.length - allows).toBeGreaterThanOrEqual(12);
+  });
+
+  it('matchingGrantRole (re-pointed) and authorizingGrant(…)?.role AGREE on every case', () => {
+    for (const [name, grants, key, res, ctx] of MATRIX) {
+      expect(matchingGrantRole(grants, key, res, ctx), name).toBe(authorizingGrant(grants, key, res, ctx)?.role ?? null);
+    }
+  });
+
+  it('two satisfying grants ⇒ the MORE SPECIFIC, whichever order they are loaded in', () => {
+    const ctx = { resolver: BIHAR_TREE };
+    const sets: EffectiveGrant[][] = [
+      [G.superA, G.pariwarA, G.districtPatna],
+      [G.districtPatna, G.pariwarA, G.superA],
+      [G.pariwarA, G.superA, G.districtPatna],
+    ];
+    for (const grants of sets) {
+      expect(authorize({ actorId: ACTOR, grants, key: 'field_worker.register', resource: resource() }, ctx)?.role).toBe('district_admin');
+    }
+    expect(authorize({ actorId: ACTOR, grants: [G.superA, G.pariwarA], key: 'field_worker.register', resource: resource() })?.role).toBe('pariwar_admin');
+    expect(authorize({ actorId: ACTOR, grants: [G.pariwarA, G.superA], key: 'field_worker.register', resource: resource() })?.role).toBe('pariwar_admin');
+  });
+
+  it('a SAME-dimension tie is broken deterministically (role, scope value, grant id) — never by load order', () => {
+    const a: EffectiveGrant = { ...G.pariwarA, grantId: 'aaaaaaaa-0000-4000-8000-000000000001' };
+    const b: EffectiveGrant = { ...G.pariwarA, grantId: 'bbbbbbbb-0000-4000-8000-000000000002' };
+    expect(authorizingGrant([a, b], 'field_worker.register', resource())?.grantId).toBe(a.grantId);
+    expect(authorizingGrant([b, a], 'field_worker.register', resource())?.grantId).toBe(a.grantId);
+  });
+
+  it('the result is VERIFIED; an object literal with the same fields is NOT', () => {
+    const result = authorize({ actorId: ACTOR, grants: [G.districtPatna], key: 'field_worker.register', resource: resource() });
+    expect(result).not.toBeNull();
+    expect(isVerifiedAuthorization(result)).toBe(true);
+    const literal = JSON.parse(JSON.stringify(result)) as unknown;
+    expect(literal).toEqual(result);
+    expect(isVerifiedAuthorization(literal)).toBe(false);
+    expect(isVerifiedAuthorization({ ...result! })).toBe(false);
+    expect(isVerifiedAuthorization(null)).toBe(false);
+    expect(isVerifiedAuthorization('field_worker.register')).toBe(false);
+  });
+
+  it('the result is DEEP-FROZEN: assigning to any field — of it, its grant or its target — throws in strict mode', () => {
+    const result = authorize({ actorId: ACTOR, grants: [G.districtPatna], key: 'field_worker.register', resource: resource() })!;
+    expect(Object.isFrozen(result) && Object.isFrozen(result.grant) && Object.isFrozen(result.target)).toBe(true);
+    const r = result as unknown as Record<string, unknown> & { grant: Record<string, unknown>; target: Record<string, unknown> };
+    expect(() => {
+      r.role = 'pariwar_admin';
+    }).toThrow(TypeError);
+    expect(() => {
+      r.grant.value = 'Vaishali';
+    }).toThrow(TypeError);
+    expect(() => {
+      r.target.value = 'Vaishali';
+    }).toThrow(TypeError);
+    expect(result.role).toBe('district_admin');
+  });
+
+  it('carries the act: key, role, the RESOURCE Pariwar, the params actor, the grant tuple (+ grantId), the target, the catalog version', () => {
+    const grant: EffectiveGrant = { ...G.districtPatna, grantId: 'cccccccc-0000-4000-8000-000000000003' };
+    const result = authorize({ actorId: ACTOR, grants: [grant], key: 'field_worker.register', resource: resource() });
+    expect(result).toEqual({
+      permissionKey: 'field_worker.register',
+      role: 'district_admin',
+      pariwarId: PARIWAR_A,
+      actorId: ACTOR,
+      grant: { dimension: 'district', value: 'Patna', grantId: grant.grantId },
+      target: { dimension: 'district', value: 'Patna' },
+      catalogVersion: PERMISSION_CATALOG_VERSION,
+    });
+    // A test-built grant without an id ⇒ no grantId key at all.
+    const bare = authorize({ actorId: ACTOR, grants: [G.districtPatna], key: 'field_worker.register', resource: resource() })!;
+    expect('grantId' in bare.grant).toBe(false);
+  });
+
+  it('a GLOBAL grant: grant.value is null and pariwarId is the RESOURCE’s (⛔ the grant’s home Pariwar); a global GATE has target.value null', () => {
+    const inB = authorize({ actorId: ACTOR, grants: [G.superA], key: 'field_worker.register', resource: resource({ pariwarId: PARIWAR_B }) })!;
+    expect(inB.grant).toEqual({ dimension: 'global', value: null });
+    expect(inB.pariwarId).toBe(PARIWAR_B);
+    const globalGate = authorize({
+      actorId: ACTOR,
+      grants: [G.superA],
+      key: 'questionnaire.publish',
+      resource: { dimension: 'global', value: null, pariwarId: '00000000-0000-0000-0000-000000000000' },
+    })!;
+    expect(globalGate.target).toEqual({ dimension: 'global', value: null });
+  });
+
+  it('requirePermission RETURNS the verified result on allow (seam silent) and throws exactly as before on deny (seam fires)', () => {
+    const denials: AuthorizationDenial[] = [];
+    const ctx = { onAuthorizationDenied: (d: AuthorizationDenial) => denials.push(d) };
+    const ok = requirePermission({ actorId: ACTOR, grants: [G.districtPatna], key: 'field_worker.register', resource: resource() }, ctx);
+    expect(isVerifiedAuthorization(ok)).toBe(true);
+    expect(ok.actorId).toBe(ACTOR);
+    expect(denials).toEqual([]);
+    expect(() =>
+      requirePermission({ actorId: ACTOR, grants: [G.districtPatna], key: 'field_worker.register', resource: resource({ value: 'Vaishali' }) }, ctx),
+    ).toThrow(AuthorizationDeniedError);
+    expect(denials).toEqual([
+      { actorId: ACTOR, permissionKey: 'field_worker.register', requiredScope: 'district', targetLocator: { dimension: 'district', value: 'Vaishali' } },
+    ]);
+  });
+
+  it('checkPermission is UNCHANGED: { ok: true } exactly, no result attached', () => {
+    expect(checkPermission({ actorId: ACTOR, grants: [G.districtPatna], key: 'field_worker.register', resource: resource() })).toEqual({ ok: true });
+  });
+});
+
+// ── Story 13.1 (QE18 (e), AC9) — the source fence on `authorize(` callers ──────────────────────────────
+
+describe('Story 13.1 — `authorize(` is called only by check.ts, the apps/api field-worker fixture and test files', () => {
+  it('scans apps/*/src, packages/*/src and every tests tree; the only hits are the allowed files', () => {
+    const repoRoot = path.resolve(__dirname, '../../../..');
+    const roots = ['apps', 'packages'];
+    const hits: string[] = [];
+    let scanned = 0;
+    const walk = (dir: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.turbo') continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx|mts|cts|js|mjs|astro)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+          scanned += 1;
+          const text = fs.readFileSync(full, 'utf8');
+          if (!text.includes('authorize')) continue;
+          // A CALL whose callee is the identifier `authorize` or a property access `….authorize` (`rbac.authorize(`) — read
+          // on the TypeScript AST, so a COMMENT or a string ("decrypt-AFTER-authorize (…)") never matches. `.astro` files
+          // are scanned as TS text (their frontmatter is TS).
+          const sf = ts.createSourceFile(full, text, ts.ScriptTarget.Latest, true, full.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+          let called = false;
+          const visit = (node: ts.Node): void => {
+            if (ts.isCallExpression(node)) {
+              const callee = node.expression;
+              if (
+                (ts.isIdentifier(callee) && callee.text === 'authorize') ||
+                (ts.isPropertyAccessExpression(callee) && callee.name.text === 'authorize')
+              ) {
+                called = true;
+              }
+            }
+            if (!called) ts.forEachChild(node, visit);
+          };
+          visit(sf);
+          if (called) hits.push(path.relative(repoRoot, full));
+        }
+      }
+    };
+    for (const r of roots) walk(path.join(repoRoot, r));
+    const allowed = (f: string): boolean =>
+      f === 'packages/domain/src/rbac/check.ts' ||
+      f === 'apps/api/tests/integration/_field-worker-fixture.ts' ||
+      /\.(test|spec)\.tsx?$/.test(f);
+    expect(scanned).toBeGreaterThan(1500); // non-vacuity: the walk reached the trees
+    expect(hits.filter((f) => !allowed(f))).toEqual([]);
+    expect(hits).toContain('packages/domain/src/rbac/check.ts'); // the fence sees the real caller
   });
 });

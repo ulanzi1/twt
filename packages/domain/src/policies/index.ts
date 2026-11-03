@@ -298,3 +298,6 @@ export * from './marketplace-module-publications-rls.js';
 // insert only, ⛔ `FOR ALL` — both tables are append-only).
 export * from './field-worker-attribution-codes-rls.js';
 export * from './attribution-code-allocation-flags-rls.js';
+// Story 13.1 (0200) — field_workers tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`, ⛔ DELETE — a worker row
+// is never deleted, I10). The field_workers_state_write_guard trigger is ORTHOGONAL.
+export * from './field-workers-rls.js';

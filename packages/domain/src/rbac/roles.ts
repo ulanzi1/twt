@@ -328,6 +328,12 @@ const QUESTIONNAIRE_APPROVE = permissionKey('questionnaire.approve');
 // granted to pariwar_admin (+ super_admin auto). ⛔ state_trustee / district_admin / trustee_panel: a narrower grant is INERT
 // against a pariwar key (the `banner.manage` precedent); the acceptance condition for one is in permissions.ts.
 const MODULE_MANAGE = permissionKey('module.manage');
+// Story 13.1 (`2026-11-03-441` Q1 A; `-442` QE10) — register a field worker and allocate their attribution code,
+// district-dimension (the worker's reporting district). Granted to district_admin (the Panel's primary manager — its own
+// district) AND pariwar_admin (the fill-in — any district in its Pariwar) (+ super_admin auto). ⛔ state_trustee /
+// trustee_panel / the `field_worker` role. Both holders may always act (the fill-in is ⛔ enforced — `-443` Q3 A); the
+// genesis event's `authorization` snapshot records which grant passed (QE18).
+const FIELD_WORKER_REGISTER = permissionKey('field_worker.register');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -502,6 +508,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       QUESTIONNAIRE_APPROVE,
       // Story 12.2 (QE2) — author, publish (a non-author) and withdraw partner modules; register partners.
       MODULE_MANAGE,
+      // Story 13.1 (QE10) — register a field worker in ANY district of the Pariwar (the fill-in, `-441`).
+      FIELD_WORKER_REGISTER,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -558,6 +566,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_RECORD_NO_CORRECTION_NEEDED,
       // Story 6.22 — the FINDING on a flagged claim (district; step-up). ⛔ The flag: that is the helpline operator's.
       CLAIM_RECORD_FRAUD_FINDING,
+      // Story 13.1 (QE10) — register a field worker in the District Admin's OWN district (the Panel's primary manager, `-441`).
+      FIELD_WORKER_REGISTER,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.

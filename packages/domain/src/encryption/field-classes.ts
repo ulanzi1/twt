@@ -129,3 +129,21 @@ export interface FieldCryptoDeps {
   readonly kekRef: import('./kms-provider.js').KmsKeyRef;
   readonly hmacKeyRef: import('./kms-provider.js').KmsKeyRef;
 }
+
+/**
+ * ⭐ NEW (Story 13.1, QE4) — the FIELD WORKER's Tier-1 field class: the worker's name and mobile
+ * (`field_workers.name_ciphertext`, `field_workers.mobile_ciphertext`). Keys on the worker's REAL `pariwarId`; matches
+ * `piiColumn(1, FIELD_WORKER_FIELD_CLASS)`. A field worker is ⛔ a member, so this is ⛔ any member class. Declared ONCE
+ * here; `apps/api/src/context.ts` re-exports it. ⛔ Never re-declare it.
+ */
+export const FIELD_WORKER_FIELD_CLASS = 'field_worker';
+
+/**
+ * ⭐ NEW (Story 13.1, QE4) — the keyed-hash class of a field worker's NORMALISED E.164 mobile
+ * (`field_workers.mobile_blind_index`, the one-live-worker-per-mobile-per-Pariwar index), bound to the worker's REAL
+ * `pariwarId`. ⛔ DELIBERATELY ⛔ NOT `MEMBER_MOBILE_FIELD_CLASS` under `MEMBER_IDENTITY_NAMESPACE`: that hash IS
+ * `member_identities.mobile_blind_index`, the member login key — using it here would make every worker row joinable to a
+ * member's login. A distinct class under a real tenant keeps the two hash spaces disjoint (the
+ * `CLAIM_CONTACT_MOBILE_FIELD_CLASS` precedent). ⛔ Never re-declare it.
+ */
+export const FIELD_WORKER_MOBILE_FIELD_CLASS = 'field_worker_mobile';

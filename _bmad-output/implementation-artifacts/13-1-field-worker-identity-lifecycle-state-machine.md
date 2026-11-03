@@ -1790,6 +1790,36 @@ _(filled by `bmad-dev-story`)_
   Panel (gate); counsel (Story 0.13)"; legs (a)–(i): (a), (b), (c), (d) MET; (e) partly — the matrix owner not yet told; (f), (g),
   (h), (i) OPEN; (h)'s owner row `13-1a`).
 
+**(b) Tasks 1, 2, 8 and 10 (1) — 2026-11-03, on `:5470`.**
+- Task 1: `FIELD_WORKER_FIELD_CLASS` / `FIELD_WORKER_MOBILE_FIELD_CLASS` in `encryption/field-classes.ts` (+ index, + `context.ts`
+  re-exports); `apps/api/src/modules/field-worker/field-worker-crypto.ts`. RED: `fieldWorkerMobileIndex` pointed at
+  `mobileBlindIndex` (the member login hash) ⇒ 2 of 4 `field-worker-crypto.test.ts` legs fail; reverted ⇒ 4 / 4.
+- Task 2: `schema/field_workers.ts`, `policies/field-workers-rls.ts`, migration `0200_field-workers.sql` (journal idx 200,
+  `when` 1796874000045), the Drizzle `foreignKey()` on `schema/field_worker_attribution_codes.ts`, comment-only edits in
+  `ids/index.ts`. Applied to the story DB only (TR2). Specs: `rls/field-workers-policy-regression.spec.ts` (AC1, 12),
+  `field-worker/schema-trigger.spec.ts` (AC2, 15), `field-worker/composite-fk.spec.ts` (AC7, 7). RED (the guard function
+  `CREATE OR REPLACE`d on `:5470` without the rule, then restored from the migration text): without (t) ⇒ the I6 leg fails;
+  without (e′) ⇒ the district-coincidence leg fails; restored ⇒ 15 / 15. AC7's recorded SQLSTATEs: owner DELETE ⇒ P0001
+  (the row trigger fires before the FK is asked); plain owner TRUNCATE ⇒ 0A000; `TRUNCATE … CASCADE` after
+  `lockTruncateSetNowait` ⇒ **P0001** from `field_workers_no_truncate` (this table's trigger fires before the child's 23000).
+- Task 8: `rbac/check.ts` — the per-grant test extracted to the private `grantAuthorizes`, shared by `hasPermission` and the
+  new `authorizingGrant`; `authorize` issues the deep-frozen, WeakSet-registered `VerifiedAuthorization`; `requirePermission`
+  returns it; `checkPermission` untouched. `matchingGrantRole` re-pointed (one line). `field_worker.register` minted (58 → 59,
+  77 → 78 keys), granted to `district_admin` + `pariwar_admin`. API: `loadActorGrants` / `loadGlobalActorGrants` select `id` →
+  `grantId`; `requirePermissionHook` stores `(request.authorizations ??= {})[key]`; `types.ts` types it. Tests:
+  `tests/rbac/check.test.ts` (+11 legs incl. the AST source fence on `authorize(` — 2,000+ files scanned, floor 1,500; a
+  first REGEX version flagged two COMMENTS, so the fence reads the TypeScript AST), `permissions.test.ts`, `roles.test.ts` (+5);
+  `apps/api/tests/unit/rbac-hook-authorizations.test.ts` (5). Every existing RBAC test passes UNCHANGED (202 / 202 in
+  `tests/rbac`, `matching-grant.test.ts` untouched). RED: a planted `rbac.authorize(` in `apps/api/src` ⇒ the fence fails; an
+  unfrozen `grant` ⇒ the freeze leg fails; `authorizingGrant` without the sort ⇒ 4 legs fail (two of them `matching-grant`'s
+  own); the hook's store line removed ⇒ 3 of 5 hook legs fail. All restored.
+- Task 10 (1): `seedFieldWorker` in `tests/integration/attribution-code/_fixtures.ts` (owner INSERT under the writer var,
+  role-aware, fresh blind index); `seedCode` seeds a real holder by default (the replica arm included). The six 13.2 specs
+  repaired (delegated to a sub-agent with exact rules, reviewed): 26 failures (23503 and the "no FK" pin) ⇒ 91 / 91, twice in
+  a row (`allocate-concurrency.spec.ts` commits and cleans both tables under replica, codes first); 0 rows left in either
+  table. The door file is NOT edited — its header's "no route uses it yet" stays stale until Task 7 (the door's export pin).
+  Reach fence 122 / 122 with no ALLOWED-list edit.
+
 ### Completion Notes List
 
 _(empty)_

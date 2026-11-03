@@ -38,9 +38,10 @@ import {
   type AuthorizationDenial,
   type ErrorResponseShape,
 } from '../errors.js';
-import { isCatalogKey } from './permissions.js';
+import { PERMISSION_CATALOG_VERSION, isCatalogKey, type PermissionKey } from './permissions.js';
 import { bundleForRole, defaultRoleBundles, type RoleBundle } from './roles.js';
 import {
+  SCOPE_DIMENSIONS,
   denyDeeperGeoResolver,
   scopeContains,
   scopeWithinCeiling,
@@ -61,6 +62,12 @@ export interface EffectiveGrant {
   role: string;
   scopeDimension: ScopeDimension;
   scopeValue: string | null;
+  /**
+   * Story 13.1 (QE18 (e)) — the `role_grants.id` this grant was loaded from, so an authorization SNAPSHOT can point at the
+   * row. Set by the API loaders (`loadActorGrants` / `loadGlobalActorGrants`); absent for a test-built grant. It takes no
+   * part in the check, and a row may later be deleted — the snapshot's tuple, ⛔ the id, is the record.
+   */
+  grantId?: string;
 }
 
 /**
@@ -141,6 +148,46 @@ function isGrantScopeWellFormed(grant: EffectiveGrant): boolean {
 }
 
 /**
+ * Story 13.1 (QE18 (a)) — THE per-grant test, extracted out of `hasPermission` so `hasPermission` and `authorizingGrant`
+ * share ONE predicate and "allowed" and "which grant" can never disagree. Private: the key is already a catalog key and
+ * the locator already resolved (the callers check both first, fail-closed).
+ */
+function grantAuthorizes(
+  grant: EffectiveGrant,
+  key: PermissionKey,
+  resource: ResourceLocator,
+  target: TargetLocator,
+  lookup: (role: string) => RoleBundle | undefined,
+  resolver: GeoTreeResolver,
+): boolean {
+  if (!isGrantScopeWellFormed(grant)) return false;
+
+  // Active-Pariwar filter: a non-global grant only applies in its own Pariwar
+  // (cross-scope inheritance forbidden, §3.13). A `global` grant (Super Admin)
+  // applies cross-Pariwar by design.
+  if (grant.scopeDimension !== 'global' && grant.pariwarId !== resource.pariwarId) {
+    return false;
+  }
+
+  const bundle = lookup(grant.role);
+  if (!bundle) return false; // unknown role carries no permissions → fail-closed
+
+  if (!scopeWithinCeiling(grant.scopeDimension, bundle.scopeCeiling)) {
+    return false;
+  }
+
+  // The role must carry the key AND the grant's scope must contain the target.
+  if (!bundle.permissions.includes(key)) {
+    return false;
+  }
+  return scopeContains(
+    { dimension: grant.scopeDimension, value: grant.scopeValue },
+    target,
+    resolver,
+  );
+}
+
+/**
  * PURE fail-closed predicate: does the actor (via `grants`) hold `key` at a scope
  * that covers `resource`? Resolves effective grants → filters by active Pariwar →
  * matches the key in the role's bundle → checks scope containment. Returns `false`
@@ -164,37 +211,113 @@ export function hasPermission(
   const target: TargetLocator = { dimension: resource.dimension, value: resource.value };
 
   for (const grant of grants) {
-    if (!isGrantScopeWellFormed(grant)) continue;
-
-    // Active-Pariwar filter: a non-global grant only applies in its own Pariwar
-    // (cross-scope inheritance forbidden, §3.13). A `global` grant (Super Admin)
-    // applies cross-Pariwar by design.
-    if (grant.scopeDimension !== 'global' && grant.pariwarId !== resource.pariwarId) {
-      continue;
-    }
-
-    const bundle = lookup(grant.role);
-    if (!bundle) continue; // unknown role carries no permissions → fail-closed
-
-    if (!scopeWithinCeiling(grant.scopeDimension, bundle.scopeCeiling)) {
-      continue;
-    }
-
-    // The role must carry the key AND the grant's scope must contain the target.
-    if (!bundle.permissions.includes(key)) {
-      continue;
-    }
-    if (
-      scopeContains(
-        { dimension: grant.scopeDimension, value: grant.scopeValue },
-        target,
-        resolver,
-      )
-    ) {
-      return true;
-    }
+    if (grantAuthorizes(grant, key, resource, target, lookup, resolver)) return true;
   }
   return false;
+}
+
+/**
+ * The deterministic order in which `authorizingGrant` asks the grants: the MOST SPECIFIC dimension first — the reverse of
+ * `SCOPE_DIMENSIONS`' broad→narrow order, so `district` before `state` before `pariwar`, `global` last (the order
+ * `matchingGrantRole` has used since Story 6.19b, `-270`) — then, ONLY among grants of the SAME dimension, by role, scope
+ * value and grant id (code-unit order), so the answer does not depend on the order the grants were loaded in
+ * (`loadActorGrants` has no `ORDER BY`).
+ */
+function compareGrantSpecificity(a: EffectiveGrant, b: EffectiveGrant): number {
+  const bySpecificity = SCOPE_DIMENSIONS.indexOf(b.scopeDimension) - SCOPE_DIMENSIONS.indexOf(a.scopeDimension);
+  if (bySpecificity !== 0) return bySpecificity;
+  const byText = (x: string | null | undefined, y: string | null | undefined): number =>
+    x === y ? 0 : (x ?? '') < (y ?? '') ? -1 : 1;
+  return byText(a.role, b.role) || byText(a.scopeValue, b.scopeValue) || byText(a.grantId, b.grantId);
+}
+
+/**
+ * Story 13.1 (QE18 (b)) — PURE: the grant that AUTHORIZES `key` on `resource` — when several do, the most specific (see
+ * `compareGrantSpecificity`) — or `null` exactly when `hasPermission` denies (the same predicate, the same fail-closed
+ * pre-checks). The repo's ONE answer to "which grant authorized": `matchingGrantRole` delegates here (TR13).
+ * ⛔ It authorizes nothing by itself — a caller that needs a RECORD of the authorization uses `authorize` (via
+ * `requirePermission`), which also binds the actor.
+ */
+export function authorizingGrant(
+  grants: readonly EffectiveGrant[],
+  key: string,
+  resource: ResourceLocator,
+  ctx?: Partial<AuthzContext>,
+): EffectiveGrant | null {
+  if (!isCatalogKey(key)) return null;
+  if (!isResourceLocatorResolved(resource)) return null;
+
+  const { bundles, resolver } = resolveContext(ctx);
+  const lookup = bundleLookup(bundles);
+  const target: TargetLocator = { dimension: resource.dimension, value: resource.value };
+
+  for (const grant of [...grants].sort(compareGrantSpecificity)) {
+    if (grantAuthorizes(grant, key, resource, target, lookup, resolver)) return grant;
+  }
+  return null;
+}
+
+/**
+ * Story 13.1 (QE18) — a VERIFIED authorization RESULT: what authorized ONE act at ONE moment, produced only by the RBAC
+ * check (`authorize`, called by `requirePermission`) — ⛔ a handler's assertion. A snapshot: it does not change when the
+ * grant is later revoked, the role renamed or the catalog bumped. DEEP-FROZEN and registered in a module-private WeakSet,
+ * so an object literal with the same fields is NOT verified (`isVerifiedAuthorization`) and a verified one cannot be
+ * edited after the check. `pariwarId` is the RESOURCE's Pariwar (⛔ the grant's — a global grant carries its home
+ * Pariwar); `grant.value` / `target.value` are `null` iff global.
+ */
+export interface VerifiedAuthorization {
+  readonly permissionKey: string;
+  readonly role: string;
+  readonly pariwarId: string;
+  readonly actorId: string;
+  readonly grant: {
+    readonly dimension: ScopeDimension;
+    readonly value: string | null;
+    readonly grantId?: string;
+  };
+  readonly target: {
+    readonly dimension: ScopeDimension;
+    readonly value: string | null;
+  };
+  readonly catalogVersion: number;
+}
+
+/** Every result `authorize` issued — identity, ⛔ contents (the freeze protects the contents). */
+const VERIFIED_AUTHORIZATIONS = new WeakSet<object>();
+
+/** Was `value` issued by `authorize` — ⛔ merely shaped like one? */
+export function isVerifiedAuthorization(value: unknown): value is VerifiedAuthorization {
+  return typeof value === 'object' && value !== null && VERIFIED_AUTHORIZATIONS.has(value);
+}
+
+/**
+ * Story 13.1 (QE18 (b)) — run the check and, when it passes, ISSUE the `VerifiedAuthorization` for it: `authorizingGrant`
+ * picks the grant, the actor comes from `params.actorId`, the Pariwar from `params.resource.pariwarId`. `null` exactly
+ * when `hasPermission` denies. ⛔ It fires no denial seam and throws nothing — `requirePermission` is the guard.
+ * ⚠ PURE over the grants it is given, so a caller could pass fabricated grants: its callers are pinned by a source fence
+ * (`check.ts` itself, `apps/api/tests/integration/_field-worker-fixture.ts`, and test files only).
+ */
+export function authorize(
+  params: RequirePermissionParams,
+  ctx?: Partial<AuthzContext>,
+): VerifiedAuthorization | null {
+  const grant = authorizingGrant(params.grants, params.key, params.resource, ctx);
+  if (grant === null) return null;
+  const result: VerifiedAuthorization = Object.freeze({
+    permissionKey: params.key,
+    role: grant.role,
+    pariwarId: params.resource.pariwarId,
+    actorId: params.actorId,
+    grant: Object.freeze(
+      grant.grantId === undefined
+        ? { dimension: grant.scopeDimension, value: grant.scopeValue }
+        : { dimension: grant.scopeDimension, value: grant.scopeValue, grantId: grant.grantId },
+    ),
+    target: Object.freeze({ dimension: params.resource.dimension, value: params.resource.value }),
+    catalogVersion: PERMISSION_CATALOG_VERSION,
+  });
+  VERIFIED_AUTHORIZATIONS.add(result);
+  return result;
 }
 
 /** Parameters for the `requirePermission` guard (the epic-named entry point). */
@@ -226,7 +349,8 @@ function denialOf(params: RequirePermissionParams): AuthorizationDenial {
 }
 
 /**
- * THE GUARD (AC-4). The epic-named entry point. Calls `hasPermission`; on a deny
+ * THE GUARD (AC-4). The epic-named entry point. Calls `hasPermission` (since Story 13.1, through `authorize` — the same
+ * predicate) and RETURNS the `VerifiedAuthorization` on an allow (QE18 (c) — every existing caller ignores it); on a deny
  * it (1) fires the injectable audit seam, then (2) throws a typed
  * `AuthorizationDeniedError` carrying the structured 403 denial. Framework-agnostic
  * — the Story-1.9 HTTP adapter catches the throw and maps it to a 403
@@ -239,10 +363,11 @@ function denialOf(params: RequirePermissionParams): AuthorizationDenial {
 export function requirePermission(
   params: RequirePermissionParams,
   ctx?: Partial<AuthzContext>,
-): void {
+): VerifiedAuthorization {
   const resolved = resolveContext(ctx);
-  if (hasPermission(params.grants, params.key, params.resource, resolved)) {
-    return;
+  const authorization = authorize(params, resolved);
+  if (authorization !== null) {
+    return authorization;
   }
   const denial = denialOf(params);
   resolved.onAuthorizationDenied(denial);

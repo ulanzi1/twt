@@ -9,19 +9,23 @@ import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId, userId as toUserId } from '../../../src/ids/index.js';
+import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId, userId as toUserId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { attributionCode } from '../../../src/index.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
-import { caught } from './_fixtures.js';
+import { caught, seedFieldWorker } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 
-/** Each exported DB function, called with `handle` (cast past the type — the type test proves it does ⛔ compile). */
-const CALLS: ReadonlyArray<[string, (handle: pg.PoolClient) => Promise<unknown>]> = [
-  ['allocateAttributionCode', (h) => attributionCode.allocateAttributionCode(h, { pariwarId: A, fieldWorkerId: toFieldWorkerId(randomUUID()) })],
+/**
+ * Each exported DB function, called with `handle` (cast past the type — the type test proves it does ⛔ compile) and a worker id.
+ * ⭐ Story 13.1 (the 0200 FK): the succeeding leg passes a REAL seeded worker (its allocate INSERTs); the Pool / no-BEGIN legs are
+ * refused by the handle check BEFORE any statement, so a made-up id never reaches the FK there.
+ */
+const CALLS: ReadonlyArray<[string, (handle: pg.PoolClient, worker: FieldWorkerId) => Promise<unknown>]> = [
+  ['allocateAttributionCode', (h, w) => attributionCode.allocateAttributionCode(h, { pariwarId: A, fieldWorkerId: w })],
   ['resolveAttribution', (h) => attributionCode.resolveAttribution(h, { code: '482913', pariwarId: A, asOf: 'now' })],
-  ['readAttributionCodeForFieldWorker', (h) => attributionCode.readAttributionCodeForFieldWorker(h, { pariwarId: A, fieldWorkerId: toFieldWorkerId(randomUUID()) })],
+  ['readAttributionCodeForFieldWorker', (h, w) => attributionCode.readAttributionCodeForFieldWorker(h, { pariwarId: A, fieldWorkerId: w })],
   ['flagAllocationExhausted', (h) => attributionCode.flagAllocationExhausted(h, { pariwarId: A, attempts: 8, actorId: toUserId(randomUUID()), actorDisplay: 'Asha Verma' })],
   ['listAllocationFlags', (h) => attributionCode.listAllocationFlags(h, { pariwarId: A })],
 ];
@@ -47,7 +51,7 @@ describe.skipIf(!hasDatabase)('transaction-bound handle (AT8 v2 i)', () => {
 
   for (const [name, call] of CALLS) {
     it(`${name}: a pg.Pool ⇒ AttributionCodeRequiresTransactionError (not_a_client)`, async () => {
-      const err = await caught(() => call(pool! as unknown as pg.PoolClient));
+      const err = await caught(() => call(pool! as unknown as pg.PoolClient, toFieldWorkerId(randomUUID())));
       expect(err).toBeInstanceOf(attributionCode.AttributionCodeRequiresTransactionError);
       expect(err).toMatchObject({ reason: 'not_a_client' });
     });
@@ -56,7 +60,7 @@ describe.skipIf(!hasDatabase)('transaction-bound handle (AT8 v2 i)', () => {
       const c = await pool!.connect();
       try {
         await c.query(`SET app.pariwar_id = '${PARIWAR_A}'`);
-        const err = await caught(() => call(c));
+        const err = await caught(() => call(c, toFieldWorkerId(randomUUID())));
         expect(err).toBeInstanceOf(attributionCode.AttributionCodeRequiresTransactionError);
         expect(err).toMatchObject({ reason: 'no_transaction' });
       } finally {
@@ -67,8 +71,9 @@ describe.skipIf(!hasDatabase)('transaction-bound handle (AT8 v2 i)', () => {
 
     it(`${name}: the scoped tx client ⇒ succeeds`, async () => {
       const { client } = getTx();
+      const w = await seedFieldWorker(client, PARIWAR_A); // owner-role, before the scope
       await enterAppScope(client, PARIWAR_A);
-      await expect(call(client)).resolves.not.toThrow();
+      await expect(call(client, w)).resolves.not.toThrow();
     });
   }
 

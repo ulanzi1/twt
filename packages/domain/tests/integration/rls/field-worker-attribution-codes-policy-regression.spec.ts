@@ -2,24 +2,22 @@
 // with a test"; the flags table's sibling is attribution-code-allocation-flags-policy-regression.spec.ts). Mirrors
 // marketplace-partners-policy-regression: the columns from the catalog (the migration is hand-written), the SELECT + INSERT grant
 // only, positive / negative isolation, the withCheck 42501, the fail-closed probe, FORCE RLS + exactly the per-command policies,
-// the named UNIQUEs (⛔ `UNIQUE (code)`, ⛔ FK — AT2), every CHECK BY NAME, and append-only for EVERY role (UPDATE / DELETE /
+// the named UNIQUEs (⛔ `UNIQUE (code)`) + the composite FK Story 13.1 added (0200), every CHECK BY NAME, and append-only for EVERY role (UPDATE / DELETE /
 // TRUNCATE refused by the guard triggers as the owner). Live DB only.
-
-import { randomUUID } from 'node:crypto';
 
 import type pg from 'pg';
 import { describe, expect, it } from 'vitest';
 
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppRoleNoScope, enterAppScope, lockTruncateSetNowait } from '../_helpers.js';
-import { expectSqlRejected } from '../attribution-code/_fixtures.js';
+import { expectSqlRejected, seedFieldWorker } from '../attribution-code/_fixtures.js';
 
 const CODES = 'field_worker_attribution_codes';
 const INSERT_CODE = `INSERT INTO field_worker_attribution_codes (pariwar_id, field_worker_id, code, allocation_attempts) VALUES ($1, $2, $3, $4)`;
 const APPEND_ONLY = '23000'; // integrity_constraint_violation — the guard trigger
 
 async function seedCodeRow(client: pg.PoolClient, pariwar: string, code = '731020'): Promise<string> {
-  const w = randomUUID();
+  const w = await seedFieldWorker(client, pariwar); // ⭐ a REAL holder of the SAME Pariwar — Story 13.1 (the 0200 FK)
   await client.query(INSERT_CODE, [pariwar, w, code, 1]);
   return w;
 }
@@ -47,15 +45,27 @@ describe.skipIf(!hasDatabase)('field_worker_attribution_codes RLS policy regress
     ]);
   });
 
-  it('AC1: ⛔ FK on field_worker_id (AT2 — Story 13.1 adds it); the two named UNIQUEs and ⛔ a UNIQUE on code alone (I1)', async () => {
+  it('AC1: the composite FK on (pariwar_id, field_worker_id) → field_workers now EXISTS (AT2 — Story 13.1, 0200); the two named UNIQUEs and ⛔ a UNIQUE on code alone (I1)', async () => {
     const { client } = getTx();
-    const r = await client.query<{ conname: string; def: string }>(
-      `SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid = $1::regclass AND contype IN ('u', 'f') ORDER BY conname`,
+    // `pg_get_constraintdef` omits the default `ON DELETE NO ACTION` ⇒ the referenced table and the delete action come from the
+    // catalog columns (`confdeltype = 'a'` is NO ACTION).
+    const r = await client.query<{ conname: string; contype: string; def: string; ref: string | null; on_delete: string | null }>(
+      `SELECT conname, contype, pg_get_constraintdef(oid) AS def,
+              CASE WHEN contype = 'f' THEN confrelid::regclass::text END AS ref,
+              CASE WHEN contype = 'f' THEN confdeltype::text END AS on_delete
+         FROM pg_constraint WHERE conrelid = $1::regclass AND contype IN ('u', 'f') ORDER BY conname`,
       [CODES],
     );
     expect(r.rows).toEqual([
-      { conname: 'field_worker_attribution_codes_field_worker_uq', def: 'UNIQUE (field_worker_id)' },
-      { conname: 'field_worker_attribution_codes_pariwar_code_uq', def: 'UNIQUE (pariwar_id, code)' },
+      { conname: 'field_worker_attribution_codes_field_worker_uq', contype: 'u', def: 'UNIQUE (field_worker_id)', ref: null, on_delete: null },
+      { conname: 'field_worker_attribution_codes_pariwar_code_uq', contype: 'u', def: 'UNIQUE (pariwar_id, code)', ref: null, on_delete: null },
+      {
+        conname: 'field_worker_attribution_codes_worker_fk',
+        contype: 'f',
+        def: 'FOREIGN KEY (pariwar_id, field_worker_id) REFERENCES field_workers(pariwar_id, field_worker_id)',
+        ref: 'field_workers',
+        on_delete: 'a',
+      },
     ]);
   });
 
@@ -102,18 +112,22 @@ describe.skipIf(!hasDatabase)('field_worker_attribution_codes RLS policy regress
 
   it('an INSERT under the own scope succeeds; one for another tenant is rejected by withCheck (42501)', async () => {
     const { client } = getTx();
+    // ⭐ REAL holders in each Pariwar (Story 13.1, the 0200 FK) — seeded as the owner — so the B leg is refused by RLS withCheck
+    // (42501), ⛔ by the FK (23503).
+    const [wa, wb] = [await seedFieldWorker(client, PARIWAR_A), await seedFieldWorker(client, PARIWAR_B)];
     await enterAppScope(client, PARIWAR_A);
-    await client.query(INSERT_CODE, [PARIWAR_A, randomUUID(), '731021', 1]);
-    await expectSqlRejected(client, INSERT_CODE, [PARIWAR_B, randomUUID(), '731022', 1], '42501');
+    await client.query(INSERT_CODE, [PARIWAR_A, wa, '731021', 1]);
+    await expectSqlRejected(client, INSERT_CODE, [PARIWAR_B, wb, '731022', 1], '42501');
   });
 
   it('fail-closed: twt_app with NO scope sees zero rows and cannot insert', async () => {
     const { client } = getTx();
     await seedCodeRow(client, PARIWAR_A);
+    const w = await seedFieldWorker(client, PARIWAR_A); // a REAL code-less holder (Story 13.1, the 0200 FK) — only RLS refuses
     await enterAppRoleNoScope(client);
     await client.query("SELECT set_config('app.pariwar_id', '', true)");
     expect((await client.query(`SELECT 1 FROM ${CODES}`)).rows).toHaveLength(0);
-    await expectSqlRejected(client, INSERT_CODE, [PARIWAR_A, randomUUID(), '731023', 1], '42501');
+    await expectSqlRejected(client, INSERT_CODE, [PARIWAR_A, w, '731023', 1], '42501');
   });
 
   it('as twt_app: UPDATE and DELETE are refused (42501 — ⛔ grant)', async () => {
@@ -127,7 +141,8 @@ describe.skipIf(!hasDatabase)('field_worker_attribution_codes RLS policy regress
   it('⭐ I3 as the OWNER role: the guard triggers refuse UPDATE, DELETE and TRUNCATE (23000)', async () => {
     const { client } = getTx();
     const w = await seedCodeRow(client, PARIWAR_A);
-    await expectSqlRejected(client, `UPDATE ${CODES} SET field_worker_id = $2 WHERE field_worker_id = $1`, [w, randomUUID()], APPEND_ONLY);
+    const other = await seedFieldWorker(client, PARIWAR_A); // a REAL target (Story 13.1, the 0200 FK) — only the guard refuses
+    await expectSqlRejected(client, `UPDATE ${CODES} SET field_worker_id = $2 WHERE field_worker_id = $1`, [w, other], APPEND_ONLY);
     await expectSqlRejected(client, `DELETE FROM ${CODES} WHERE field_worker_id = $1`, [w], APPEND_ONLY);
     for (const t of [CODES]) {
       await lockTruncateSetNowait(client, t); // ⛔ wait on a parallel spec's lock while holding ours
@@ -146,7 +161,9 @@ describe.skipIf(!hasDatabase)('field_worker_attribution_codes RLS policy regress
 
   it('AC1 CHECKs BY NAME, as the OWNER role (so RLS 42501 cannot fire first): format, deny-list, attempts', async () => {
     const { client } = getTx();
-    const ins = (code: string, attempts = 1) => [PARIWAR_A, randomUUID(), code, attempts];
+    // ONE real holder (Story 13.1, the 0200 FK): every refused INSERT rolls back to its savepoint, so the last one admits it.
+    const w = await seedFieldWorker(client, PARIWAR_A);
+    const ins = (code: string, attempts = 1) => [PARIWAR_A, w, code, attempts];
     await expectSqlRejected(client, INSERT_CODE, ins('12345'), '23514', 'field_worker_attribution_codes_code_format_check');
     await expectSqlRejected(client, INSERT_CODE, ins('1234567'), '23514', 'field_worker_attribution_codes_code_format_check');
     await expectSqlRejected(client, INSERT_CODE, ins('१२३४५६'), '23514', 'field_worker_attribution_codes_code_format_check');
@@ -160,8 +177,10 @@ describe.skipIf(!hasDatabase)('field_worker_attribution_codes RLS policy regress
   it('AC1 UNIQUEs BY NAME: a second code row for one worker ⇒ 23505 …_field_worker_uq; the same code twice in one Pariwar ⇒ 23505 …_pariwar_code_uq', async () => {
     const { client } = getTx();
     const w = await seedCodeRow(client, PARIWAR_A, '731026');
+    // REAL holders (Story 13.1, the 0200 FK): a second A worker for the code clash, a B worker for the cross-Pariwar admit.
+    const [wa2, wb] = [await seedFieldWorker(client, PARIWAR_A), await seedFieldWorker(client, PARIWAR_B)];
     await expectSqlRejected(client, INSERT_CODE, [PARIWAR_A, w, '731027', 1], '23505', 'field_worker_attribution_codes_field_worker_uq');
-    await expectSqlRejected(client, INSERT_CODE, [PARIWAR_A, randomUUID(), '731026', 1], '23505', 'field_worker_attribution_codes_pariwar_code_uq');
-    await client.query(INSERT_CODE, [PARIWAR_B, randomUUID(), '731026', 1]); // another Pariwar — permitted (I1)
+    await expectSqlRejected(client, INSERT_CODE, [PARIWAR_A, wa2, '731026', 1], '23505', 'field_worker_attribution_codes_pariwar_code_uq');
+    await client.query(INSERT_CODE, [PARIWAR_B, wb, '731026', 1]); // another Pariwar — permitted (I1)
   });
 });

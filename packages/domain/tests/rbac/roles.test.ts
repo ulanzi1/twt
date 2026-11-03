@@ -19,7 +19,7 @@ import {
   type SeededRole,
 } from '../../src/rbac/roles.js';
 import { hasPermission } from '../../src/rbac/check.js';
-import { SCOPE_DIMENSIONS } from '../../src/rbac/scope.js';
+import { SCOPE_DIMENSIONS, type GeoTreeResolver } from '../../src/rbac/scope.js';
 
 const SEEDED_ROLES: SeededRole[] = [
   'super_admin',
@@ -261,6 +261,8 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     // `-238` cl. 3 — "operator flags → District Admin verifies and confirms": two keys, two holders.
     expect(holdersOf('claim.flag_fraud')).toEqual(['helpline_operator', 'super_admin']);
     expect(holdersOf('claim.record_fraud_finding')).toEqual(['district_admin', 'super_admin']);
+    // Story 13.1 (`-441` Q1 A) — the District Admin (own district) and the Pariwar Admin (the fill-in).
+    expect(holdersOf('field_worker.register')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
   });
 
   it('Story 6.19b (keys (1) and (7)) — claim.record_correction_letter and claim.change_correction_must_act have ONE holder each, district_admin (+ derived super_admin)', () => {
@@ -1029,5 +1031,55 @@ describe('Story 12.2 — `module.manage` (`2026-11-01-433` QE2)', () => {
     expect(hasPermission([pa], 'module.manage', resource)).toBe(true);
     expect(hasPermission([other], 'module.manage', resource)).toBe(false);
     expect(hasPermission([{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }], 'module.manage', resource)).toBe(false);
+  });
+});
+
+
+describe('Story 13.1 — `field_worker.register` (`2026-11-03-441` Q1 A; `-442` QE10)', () => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const holders = (key: string) =>
+    defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+  const at = (district: string) => ({ pariwarId: P, dimension: 'district', value: district }) as const;
+  // Patna ∈ Bihar — a geo tree in force, under which a state grant CAN reach a district target (scope.ts rule 5).
+  const BIHAR: GeoTreeResolver = {
+    contains: (a, d) => a.dimension === 'state' && a.value === 'Bihar' && (d.value === 'Patna' || d.value === 'Gaya'),
+  };
+
+  it('held by district_admin + pariwar_admin + derived super_admin ONLY — ⛔ state_trustee / trustee_panel / field_worker', () => {
+    expect(holders('field_worker.register')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+    for (const role of ['state_trustee', 'trustee_panel', 'field_worker'] as const) {
+      expect((bundleForRole(role)!.permissions as readonly string[]).includes('field_worker.register'), role).toBe(false);
+    }
+  });
+
+  it('the `field_worker` bundle stays EMPTY (I14) — its own-read key is Story 13.3’s', () => {
+    expect(bundleForRole('field_worker')!.permissions).toEqual([]);
+    expect(bundleForRole('field_worker')!.scopeCeiling).toBe('self');
+  });
+
+  it('POSITIVE: a district_admin grant AUTHORIZES at its OWN district and FAILS at another (exact bytes)', () => {
+    const da = { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' } as const;
+    expect(hasPermission([da], 'field_worker.register', at('Patna'))).toBe(true);
+    expect(hasPermission([da], 'field_worker.register', at('Gaya'))).toBe(false);
+    expect(hasPermission([da], 'field_worker.register', at('patna'))).toBe(false);
+    expect(hasPermission([da], 'field_worker.register', at('Patna '))).toBe(false);
+  });
+
+  it('POSITIVE: a pariwar_admin grant authorizes at ANY district of its Pariwar (the fill-in); ⛔ another Pariwar', () => {
+    const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+    for (const d of ['Patna', 'Gaya', 'Anything']) expect(hasPermission([pa], 'field_worker.register', at(d)), d).toBe(true);
+    const other = '22222222-2222-2222-2222-222222222222';
+    expect(hasPermission([{ ...pa, pariwarId: other, scopeValue: other }], 'field_worker.register', at('Patna'))).toBe(false);
+  });
+
+  it('⛔ state_trustee is refused because its BUNDLE lacks the key — WITH and WITHOUT a geo tree in force', () => {
+    const st = { pariwarId: P, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' } as const;
+    expect(hasPermission([st], 'field_worker.register', at('Patna'))).toBe(false);
+    expect(hasPermission([st], 'field_worker.register', at('Patna'), { resolver: BIHAR })).toBe(false);
+    // CONTROL: the same grant DOES reach Patna under the tree for a key its bundle holds — so the refusal above is the bundle.
+    expect(hasPermission([st], 'claim.approve', at('Patna'), { resolver: BIHAR })).toBe(true);
   });
 });

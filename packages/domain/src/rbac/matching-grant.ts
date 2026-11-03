@@ -12,9 +12,11 @@
 // ⛔ It authorises NOTHING: call it only after the route's own gate passed; `null` means ⛔ no grant matched.
 // ⚠ Pass the SAME `ctx` (resolver included) the route's own gate used — a bare-context re-check is ⛔ not
 // guaranteed to be "the same predicate" the doc above claims, even if it happens to agree today.
+// ⭐ Story 13.1 (QE18, TR13) — RE-POINTED to `check.ts` `authorizingGrant`, the repo's ONE answer to "which grant
+// authorized" (the same order, plus a deterministic tie-break among grants of the SAME dimension — role, scope value,
+// grant id — where the answer used to follow the caller's array order). Signature and answers otherwise unchanged.
 
-import { type AuthzContext, type EffectiveGrant, type ResourceLocator, hasPermission } from './check.js';
-import { SCOPE_DIMENSIONS } from './scope.js';
+import { type AuthzContext, type EffectiveGrant, type ResourceLocator, authorizingGrant } from './check.js';
 
 /** The role of a grant that holds `key` at a scope covering `resource` — most specific scope first, then `global` — or `null`. */
 export function matchingGrantRole(
@@ -23,10 +25,5 @@ export function matchingGrantRole(
   resource: ResourceLocator,
   ctx?: Partial<AuthzContext>,
 ): string | null {
-  const specificity = (g: EffectiveGrant): number => SCOPE_DIMENSIONS.indexOf(g.scopeDimension);
-  const ordered = [...grants].sort((a, b) => specificity(b) - specificity(a));
-  for (const grant of ordered) {
-    if (hasPermission([grant], key, resource, ctx)) return grant.role;
-  }
-  return null;
+  return authorizingGrant(grants, key, resource, ctx)?.role ?? null;
 }

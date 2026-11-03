@@ -58,7 +58,7 @@ LETTERS: G = found facts · AT = build decisions · I = invariants · TR = traps
 
 # Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## What this story is, in one paragraph
 
@@ -703,9 +703,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance first (AC0).** ⭐ **0.1 runs FIRST in `bmad-dev-story`. Do NOT write code before 0.1 is done
+- [x] **Task 0 — governance first (AC0).** ⭐ **0.1 runs FIRST in `bmad-dev-story`. Do NOT write code before 0.1 is done
   and its greps are in the Debug Log.**
-  - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved. Re-grep NUMBERS across main, every worktree and
+  - [x] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved. Re-grep NUMBERS across main, every worktree and
     every branch (`git for-each-ref` + `git ls-tree … packages/domain/migrations/`): highest migration + journal `when`
     (take the next free number ≥ `0199`; ⚠ a later `when` on a sibling's migration makes drizzle skip the other on a
     shared DB — set this migration's `when` above every sibling's); newest decision id; `PERMISSION_CATALOG_VERSION`;
@@ -713,7 +713,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     (AT2's FK may then be added here instead); (S2) `member_attribution` changed shape; (S3) any branch references `attributionCode` under
     `apps/*/src` or adds a third `requestContext.pariwarId` writer (the AT8 v2 gates would fail on rebase); (S4) a decision mentioning field workers or attribution has
     landed; (S5) member signup has gone live, or any record shows attribution codes handed out outside this registry.
-  - [ ] 0.2 BigDev answers AT1–AT10 **and Q-S5** — *"Has any field-worker code been, or will any be, handed out by
+  - [x] 0.2 BigDev answers AT1–AT10 **and Q-S5** — *"Has any field-worker code been, or will any be, handed out by
     hand before Story 13.1 ships, and will member signup go live before 13.1?"* — verbatim into Debug Log (a).
     ✅ **Q-S5 ANSWERED 2026-11-01 (create-story pass), BigDev: *"Answer is no to both"*** — AT4 stands; dev re-confirms
     S5 at 0.1 only. ✅ **AT1–AT7, AT9, AT10 ANSWERED 2026-11-01, BigDev: *"AT1-AT10 as recommended, except AT8"*.**
@@ -721,10 +721,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     hardened v1.4, amended v1.5 on BigDev's eight items, validated + amended v1.6). ⇒ 0.2 is COMPLETE: every AT is ⭐ as
     written; the dev copies these answers into Debug Log (a) only. If any later answer departs from ⭐, update the ACs and
     Tasks BEFORE coding ([[feedback_spec_edits_must_propagate_to_tasks]]).
-  - [ ] 0.3 ⛔ No decision entry is needed (all AT decisions are author-level, §0). If BigDev asks for one, stage it in the
+  - [x] 0.3 ⛔ No decision entry is needed (all AT decisions are author-level, §0). If BigDev asks for one, stage it in the
     scratchpad, insert above the newest `### Decision`, verify additive-only, and commit it ALONE before code
     ([[feedback_governance_commits_precede_implementation]]).
-  - [ ] 0.4 Carry the seam where each sibling's author will read it (C1–C6) — BEFORE code:
+  - [x] 0.4 Carry the seam where each sibling's author will read it (C1–C6) — BEFORE code:
     - `epics.md`: a dated block *"⭐ INHERITED FROM 13.2 (2026-11-01)"* directly under the AC of Story 13.1 (C1 + C2 in
       full, plus C6), 13.3 (C5), 13.4 (C3), 13.5 and 13.8 (C4). ⛔ Edit any epic's original AC text — the block sits under it
       ([[feedback_supersede_never_reinterpret]]). Each block says the obligation is HOMED there, ⛔ closed.
@@ -996,6 +996,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.2`, 2026-11-03.
+
 ### Debug Log References
 
 (a) Task 0.2 answers, verbatim — **Q-S5** (2026-11-01, during create-story, asked as *"Has any field-worker code been, or
@@ -1018,6 +1020,23 @@ verbatim: *"apply all findings once the other verifiers report"* ⇒ every findi
 (Change Log), incl. the two optional design points (the `allocated_at` stamp trigger; the `actor_display` snapshot,
 decided per the ratified Story 6.11 R5 rule — block, ⛔ fallback). AT8 v2 and AT4 (c) remained ⏳ at v1.6.
 **v1.7** (2026-11-03): BigDev, verbatim: *"both design approved."* ⇒ AT8 v2 and AT4 (c) APPROVED as written in v1.6; every AT is now answered.
+
+(0) **Task 0.1 greps (2026-11-03, dev-story, before any code).** `git fetch origin`: `origin/main` = `b7b43c47` =
+this branch's merge-base ⇒ ⛔ rebase needed. Across every `refs/heads` + `refs/remotes` ref and every worktree's working
+copy: highest migration `0198_claim-fraud-step-ties-its-finding` (⛔ ref or worktree holds `0199`+); max journal `when`
+on any ref `1796701200043` ⇒ this story takes **`0199_field-worker-attribution-codes.sql`**, `when` **`1796787600044`**
+(re-check at the rebase-before-push). Newest decision: `2026-11-02-439` on main, `-440` on `story/6-22b-…` only (0 hits
+for field worker / attribution in `-440`) ⇒ ⛔ decision entry (0.3). `PERMISSION_CATALOG_VERSION = 58` (unchanged).
+Ledger: main `2026-11-02b`; `6-22b` `-02c`/`-02d`; this branch `-03a`/`-03b` ⇒ the completion entry is `2026-11-03c`.
+STOPS: (S1) ⛔ `field_workers` table, `packages/field-worker*` or `modules/field-worker/` on any ref — clear; (S2)
+`member_attribution.ts` / `0027` untouched `3d6b46c5..origin/main` — clear; (S3) ⛔ `\battributionCode\b` in any
+branch's `apps/*/src`; `requestContext.pariwarId` writers in `apps/api/src` are exactly `scope-resolution/index.ts` +
+`member-session-guard.ts`, ⛔ `Object.assign`/`Reflect.set`/`defineProperty` on a context, the only `.requestContext =`
+is `request-context/index.ts` — clear; ⛔ session-level `SET app.pariwar_id` writer in `apps/*/src` / `packages/*/src`;
+(S4) ⛔ new decision on field workers / attribution — clear; (S5) nothing is live; ⛔ record of hand-issued codes —
+clear. Scan count re-recorded: **1,829** files in **19** trees (unchanged from v1.6). Task 0.4: the five `epics.md`
+INHERITED blocks (13.1, 13.3, 13.4, 13.5, 13.8) and the `deferred-work.md` C1–C6 section exist as v1.6 wrote them; v1.7
+moved no C item ⇒ ⛔ amendment.
 
 ### Completion Notes List
 

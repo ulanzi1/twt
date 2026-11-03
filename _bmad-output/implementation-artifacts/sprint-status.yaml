@@ -22631,7 +22631,7 @@ development_status:
   # ==========================================================================
   epic-13: in-progress
   13-1-field-worker-identity-lifecycle-state-machine: backlog
-  13-2-6-digit-attribution-code-generation-per-pariwar: ready-for-dev
+  13-2-6-digit-attribution-code-generation-per-pariwar: in-progress
   13-3-field-worker-mobile-first-dispatch-app-field-worker-dispatch-scheduler: backlog
   13-4-attribution-analytics-dashboard: backlog
   13-5-commission-payment-trigger-qualified-acquisition-gated-tds-194h-deduction: backlog

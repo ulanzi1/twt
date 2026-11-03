@@ -7470,6 +7470,171 @@ So that field-worker state is event-derived + audit-replayable.
 > - **C6 — this story is the ONLY issuer of codes (added 13.2 v1.3).** 13.2's as-of rule (a code credits only captures made at or after its allocation) makes signup-before-registry harmless, but no software can see a code handed out OUTSIDE the registry. ⭐ Task 0 re-asks BigDev *"has any code been handed out by hand?"* before this registration flow goes live (13.2's Q-S5 was *"no"* on 2026-11-01), and no copy or runbook tells a field worker a code before the allocation commits.
 > - **C7 — route review of the door (added by 13.2's code review round 2, R2-8; (c) added v1.11).** ⚠ NOT ADDRESSED in 13.2 — carried, ⛔ closed. The reach fence exempts only a door importer under `apps/api/src`; it cannot see (a) an `apps/api/src` file that imports a door wrapper and re-exports the local binding in a second statement (when that file's path lacks `attribution-code`), (b) a SHORT relative import of `apps/api/src` from `apps/public` (`../../../api/src/…` — the lint ban is `^(?:\.\./)+(?:packages|apps)/`, which does ⛔ match `../api/`), nor (c) a write that carries `pariwarId` into `requestContextStorage.run(…)` or another call the writer pin cannot see (it is syntactic: indirect forms such as `Object['assign']`, an aliased `Object`, a spread argument or a variable key are ⛔ covered). No such file exists at `99010844`. Story 13.1's route review checks: ⛔ re-export of a door wrapper; ⛔ relative import of `apps/api/src` from `apps/public` / `apps/jobs`; ⛔ a new writer of the request context's Pariwar. Trigger: Story 13.1 create-story.
 
+> ⭐ **VARIANCE FROM THE ACs ABOVE (2026-11-03, `bmad-create-story 13.1`; story `13-1-field-worker-identity-lifecycle-state-machine`, QE1 / QE5 / QE6 / QE8 / QE9 / QE16).** The story is built as its build decisions say, ⛔ as the AC wording reads — recorded here so this block does not mislead the next reader; the AC text above is ⛔ rewritten. QE1–QE16 are APPROVED by BigDev (2026-11-03, in session; the decision entry is the story's Task 0.3); the ASKs Q-2…Q-4 are still open (Q-1 and Q-5 were RULED by the Panel — `2026-11-03-441`).
+> - **No `attribution_code` column on `field_workers`** (13.2 AT2 / C1 above); the FK lives on 13.2's table, ⛔ on `field_workers`.
+> - **`packages/field-worker-lifecycle` → `packages/domain/src/field-worker/`** (QE1) — no package before a second consumer; `@twt/events` depends on `@twt/domain`.
+> - **`field_worker.kyc-completed` → `field_worker.kyc_completed`** (QE6) — the four newest primitives use single-dot snake_case. The state labels stay `pending_kyc | active | suspended | terminated` (QE16).
+> - **A route the AC does not mention** (QE9): `POST /api/v1/p/:pariwarId/field-workers`, the registry's first caller (13.2 C1). The other five transitions get commands but ⛔ a route here — their routes are Stories 13.1a (approval) and 13.1c (move, suspend, reactivate, terminate), minted 2026-11-03 (13.1's ASK Q-2).
+> - **A District Admin may add a field worker; the Pariwar Admin fills in** (the Panel, `2026-11-03-441`): the registration route's key is gated at `dimension: 'district'` (a `pariwar`-gated key would have left a District Admin's grant inert) and `field_workers` carries the worker's CURRENT `district`, which changes when a worker is moved (QE17, revised and approved 2026-11-03: field workers rotate between districts every few months) — by a SEVENTH event, `field_worker.posted` (the epic named six). The Panel also said to keep the full log of a field worker.
+> - **One permission key per act** (QE10): the registration route's key is `field_worker.register`; the suspend / terminate keys are 13.6's, and the other lifecycle routes' keys belong to their owner (C5). **Reason codes** are the five NEUTRAL values (QE12) — `conduct_concern`, `conduct` and `fraud_confirmed` are 13.6's to add.
+> - **Name and mobile** are Tier-1 ciphertext (the mobile also a Tier-2 index in a disjoint field class) and appear in ⛔ any event payload (QE4).
+> - **Column names:** the AC's `state` is `current_state` and its `name` / `mobile` are `name_ciphertext` / `mobile_ciphertext` (+ a Tier-2 `mobile_blind_index`); `registered_by_user_id` / `registered_by_display` are added (the 6.11 R5 snapshot).
+> - **`kyc_status`** is an operator-recorded attestation only (QE8): no existing KYC machinery applies to a non-member, and no PAN or bank detail is captured.
+> - **The date of termination is the actual last day** (QE20, BigDev 2026-11-03): the `terminated` event carries `ended_on`, projected into a nullable `ended_on` column (`CHECK ((current_state = 'terminated') = (ended_on IS NOT NULL))`) — the clock of the 8-year removal the recruitment form ("Application for Field Worker", version 1) promises.
+> - **The registration response carries no code** (QE22, BigDev 2026-11-03: "Approve QE22 - yes"): the 201 is `{ field_worker_id, district, current_state, kyc_status }`; the code is still allocated in the same transaction but is read only after approval (Story 13.1a's audited read; Story 13.1b's SMS). The AC above lists no response, so this is a build decision, not a variance from a written AC.
+> - **Registration is not approval** (QE21, BigDev 2026-11-03): the District Admin registers (`pending_kyc`), the Pariwar Admin approves; the Pariwar Admin does both if the District Admin is unavailable. The approval route, an audited code read for the by-hand case, the SMS that sends the worker their code, and the screens are NOT built here — they are Stories 13.1a (approval, code read, screens) and 13.1b (the SMS), minted 2026-11-03 (13.1's carried item C9), and who approves is the Panel's (Q-9, non-blocking).
+> - **The legal basis and notice for a non-member's data are ⛔ covered by any ratified text** (Privacy Policy §1: Members, nominees, claimants) — a go-live fence — but workers submit a physical form and accept the organization's terms BEFORE registration (BigDev, 2026-11-03), so the footing and notice are those documents'. BigDev checked the form (2026-11-03): it tells the worker the Trust keeps their name and mobile electronically while they are employed and removes them 8 years after the date of termination, states the purposes and records the worker's agreement (BigDev: "yes it states"; the form unseen) — the story's ASK Q-3, MET on BigDev's word; counsel is asked only the classification, the 8 years and erasure before them.
+
+### Story 13.1a: A Pariwar Admin Approves the Field Worker a District Admin Registered, and an Admin Can Give the Worker Their Code by Hand — With the Screens That Register, Approve and Show It `[SURFACE]`
+
+> ⚠ **Added 2026-11-03** by BigDev (*"mint 13-1a, 13-1b, 13-1c"*), answering Story 13.1's ASK Q-2. The row is
+> `13-1a-field-worker-approval-and-code-hand-over` (`backlog`). Source: Story 13.1's Q-2 RECOMMENDATION, QE21, QE22, Q-9 and carried item
+> C9 (`_bmad-output/implementation-artifacts/13-1-field-worker-identity-lifecycle-state-machine.md`; `deferred-work.md` "Deferred from:
+> story 13-1-…"). **BigDev's process (2026-11-03):** a field worker applies on a physical form ("Application for Field Worker", version
+> 1), is interviewed (their identity is checked there) and is recruited; the District Admin REGISTERS them in the platform, the Pariwar
+> Admin APPROVES them, and if there is no District Admin the Pariwar Admin does both. The worker's code reaches them only once approved
+> — by SMS (Story 13.1b), or by hand on their request (this story). **This is the CRITICAL PATH to go-live:** until a worker can be
+> approved, nobody is credited. Needs Story 13.1 LANDED (it calls 13.1's commands) and 13.2's door. **The gate:** who may approve is the
+> Panel's (13.1 Q-9, Question 4 of the follow-up note, unsent at the time of writing); whether one person may both register and approve
+> is Q-8. Its create-story re-checks that gate — if the Panel has answered, build to the answer; if not, build to the suggested default
+> (the Pariwar Admin approves) and record it as a non-blocking confirm.
+
+As a Pariwar Admin, I want to approve a field worker the District Admin has registered — and, when a worker has not received their
+code, to read it out to them on their request — so that a worker is credited only after a second officer has approved them, and no
+code reaches anyone before that.
+
+**Acceptance Criteria (in brief):**
+- **Approving.** A Pariwar Admin approves a registered worker (`pending_kyc`) in a district their grant covers. Approval confirms the
+  identity check done at the interview and activates the worker, by calling 13.1's `kyc_completed` and `activated` commands — in ONE
+  transaction if BigDev nods 13.1 QE21 B2, which its create-story asks. The log records who approved and the authorization snapshot
+  (13.1 QE18). A worker who is not awaiting approval, who belongs to another Pariwar, or whose district is outside the approver's
+  grant is refused. When there is no District Admin the Pariwar Admin registers and approves; the system does not stop one person doing
+  both (13.1 Q-8, default A).
+- **Giving the code by hand.** A District Admin (own district) or a Pariwar Admin reads an ACTIVE worker's code through 13.2's door
+  (`readAttributionCodeForRequest`). A worker who has not been approved is refused — no code before approval. Every read writes one
+  audit line naming who read it; the code and the mobile are in no log.
+- **Screens.** A District Admin registers a worker (name, mobile, district); the Pariwar Admin sees the workers awaiting approval and
+  approves; an admin finds a worker and shows their code. Names and mobiles are decrypted only for these screens, and each decrypt is
+  audited.
+
+**Open design questions for create-story:** 13.1 QE21 B2 (the approval records identity confirmed and activated together) vs the
+registrar attesting identity; 13.1 QE22 is DECIDED (BigDev, 2026-11-03: the registration response withholds the code), so this story's read
+is the ONLY way an admin sees it; the per-act keys (`field_worker.approve`, the code-read key), their holders and their `district`
+dimension (13.1 QE10, QE17); the decrypt-on-read decision for the lists (13.1 C5, and 13.4's C6 for the analytics list); whether the
+screens show a worker whose SMS failed so the admin knows to give the code by hand (13.1b feeds this).
+
+### Story 13.1b: A Newly Approved Field Worker Is Sent Their Code by SMS — Only After the Approval Has Committed `[CONSUMER]`
+
+> ⚠ **Added 2026-11-03** by BigDev (*"mint 13-1a, 13-1b, 13-1c"*), answering Story 13.1's ASK Q-2. The row is
+> `13-1b-field-worker-code-by-sms` (`backlog`). Source: Story 13.1's Q-2 RECOMMENDATION and carried item C9 (c). **NOT on the critical
+> path:** the by-hand path (Story 13.1a) is already sanctioned, so go-live does not wait for it. **Long-lead item, outside the repo —
+> start now:** register the DLT template. **TRACED 2026-11-03:** the platform sends SMS for step-up and handover OTPs and (Story 6.37) a
+> MSG91 adapter behind an SMS seam, but has NO sender for a recipient who is not a member and NO template for a code message, and DLT
+> delivers only approved text ([[project_dlt_only_approved_text_is_delivered]] — ask what happens if DLT rejects the wording). The
+> worker's mobile is Tier-1 ciphertext and 13.1's AC10 forbids any decrypt in the registration route, so this is the first story that
+> needs a purpose-limited decrypt of it. Needs Story 13.1a (the approval and its event) and a go-live roster leg: the form's stated
+> purposes must cover "to send the worker their code" (13.1 Q-3 — BigDev confirms the form states the purposes; their wording is not recorded, so this story re-checks that it reaches texting the code).
+
+As a field worker whom the Pariwar Admin has just approved, I want my code sent to my phone by SMS, so that I can start sharing it
+without waiting for an admin to read it to me.
+
+**Acceptance Criteria (in brief):**
+- **After the commit, never before.** One SMS carrying the worker's code goes to their registered mobile only once the approval has
+  committed. A worker who is not approved is never sent one.
+- **A failed send never undoes an approval.** The approval stands; the failure is visible to the admins (13.1a) so the code can be given
+  by hand.
+- **The number is touched for this purpose only.** The mobile is decrypted for the send alone, with one audit line, and appears in no
+  log; the code is in no log either.
+- **Approved text only.** The message is a registered DLT template; the sender, the template and the language are named in the roster
+  row.
+
+**Open design questions for create-story:** an after-commit send in the approval handler vs a sweep over `field_worker.activated`
+events (at-most-once vs at-least-once; a duplicate SMS vs a missed one — a missed one is recoverable by hand); where a
+non-member-recipient sender lives; the template wording and language, and what Hindi / English the worker gets; what the send costs
+and who bears it; whether a worker can ask for the SMS again, or that is only ever a by-hand read; the DPDP notice leg (13.1 Q-3).
+
+### Story 13.1c: A Pariwar Admin Moves a Field Worker Directly; a Field Worker Is Suspended, Reactivated or Terminated — and Everything That Has Happened to Their Record Can Be Read `[SURFACE]`
+
+> ⚠ **Added 2026-11-03** by BigDev (*"mint 13-1a, 13-1b, 13-1c"*), answering Story 13.1's ASK Q-2; **narrowed the same day** when Story 13.1d
+> was minted. The row is `13-1c-field-worker-moves-suspension-and-termination` (`backlog`). Source: Story 13.1's Q-2 RECOMMENDATION, QE17,
+> QE19, QE20 and carried items C4, C5; the Panel's ruling `2026-11-03-441` (*"Keep the full log of field worker"*). Field workers ROTATE
+> between districts every few months and will move between Pariwars (BigDev, 2026-11-03), but are NOT restricted to a district: a school
+> near a boundary should not cost a second trip, so a code works anywhere in the Pariwar and the district is the REPORTING district — whose
+> District Admin manages the worker (13.1 QE17). Changing it keeps one worker and one code; a move to another Pariwar is a new registration
+> there (13.1 QE19). Needs Story 13.1 LANDED. **Not here:** the District-Admin-to-District-Admin move REQUEST (open, accept, refuse with a
+> reason) and EVERY notice — Story 13.1d's. **The gates:** WHO may change a worker's reporting district is the Panel's (13.1 Q-6 — BigDev's
+> rule and the suggested default: by consent between the two District Admins (13.1d), or directly by a Pariwar Admin); the terminate route
+> does NOT ship before Story 13.6 records its C4 (is termination reversible, is there an appeal, is a re-registered terminated mobile
+> surfaced to the registering admin) — if this story is created first it ships the rest and leaves terminate to 13.6. **Carried here,
+> unowned until it is built:** the 8-YEAR REMOVAL of a terminated worker's name and mobile that the recruitment form promises (13.1 C5,
+> QE20's `ended_on` is its clock) — nothing is due before eight years after the first termination, but an owner must be named before the
+> first terminate route reaches a real worker.
+
+As a Pariwar Admin — and, for suspending, reactivating and ending a worker, the District Admin who manages them — I want to move a field
+worker directly when the Trust needs it, suspend or reactivate them, record that they have left, and read everything that has happened to
+their record, so that a worker keeps one identity and one code across districts and nothing about them is lost.
+
+**Acceptance Criteria (in brief):**
+- **Moving directly (a Pariwar Admin only).** A route calls 13.1's `postFieldWorker` command for a district listed for the Pariwar, with a
+  REQUIRED reason, either `at_worker_request` or `reassigned` (a Pariwar Admin is not blocked from either), under a per-act key held by
+  `pariwar_admin` only; the gate's target is either end of the move (a Pariwar grant covers both) and the log records which passed (13.1
+  QE17). The same district, or a terminated worker, is refused; the worker's code and history are unchanged; credit follows the worker's
+  lifecycle state, not their district; a suspended worker who is moved stays suspended for the same reason. The move ends any request still
+  pending for the worker (13.1d) and may be used to settle a refused or unanswered one.
+- **Suspending and reactivating.** A per-act key gated on the worker's CURRENT district; the neutral reasons only (13.1 QE12); a
+  suspended worker's code stops being credited (13.1's `acceptsNewAttributions`).
+- **Terminating** (once 13.6's C4 is recorded): with `ended_on`, the actual last day (13.1 QE20); a terminated registration is final.
+- **Reading the log.** A worker's whole event history — what was done, by whom, under which authorization snapshot, with which reason —
+  can be read by the admins who may act on them. The log holds no name or mobile (13.1 QE4), so no decrypt is needed to read it.
+
+**Open design questions for create-story:** whether `registered_in_error` needs a terminate route earlier than 13.6's C4; the per-act
+keys and their holders (13.1 QE10); how a stale current-district target after a concurrent move is told to the caller; what a worker who
+moved from another Pariwar (a new registration) shows about their past; who owns the 8-year removal and whether this story builds its
+anonymize command.
+
+### Story 13.1d: A District Admin Asks Another to Take On or Release a Field Worker, and the Other Accepts or Refuses With a Reason — and the District Admins Are Told by Email and in the Admin Console `[PRIMITIVE]` `[SURFACE]`
+
+> ⚠ **Added 2026-11-03** by BigDev (*"Yes to all four, mint 13-1d"*), refining Story 13.1's Q-6. The row is
+> `13-1d-field-worker-move-requests-and-notices` (`backlog`). Source: Story 13.1's QE17, Q-6 and carried item C10. BigDev: *"I think request
+> should be made by sending District Admin to receiving District Admin. There should be mechanism to accept or refuse with reason."* —
+> then four points, all yes: EITHER District Admin may open a request (so a worker who asked the receiving District Admin is not sent
+> away); the refusal reason is from a FIXED list, never free text; an unanswered request goes to the Pariwar Admin after 7 days; and this
+> row. Needs Story 13.1 LANDED (the acceptance calls its `postFieldWorker` command); independent of 13.1c — the notices consume the events,
+> so they cover a Pariwar Admin's direct move too. **The gate:** WHO may change a worker's reporting district is the Panel's (13.1 Q-6,
+> Question 1 of an unsent note — BigDev's consent rule is its suggested option A); this story's create-story re-checks the gate.
+
+As a District Admin, I want to ask the District Admin of another district to take on, or release, a field worker who has asked to move,
+and to accept or refuse such a request with a reason, so that a worker never changes who manages them without the officer at the other
+end having agreed — and so that both of us are told when it happens.
+
+**Acceptance Criteria (in brief):**
+- **Opening.** A District Admin at EITHER end — the one the worker is leaving, or the one they are joining — opens a request for a worker
+  who has asked to move; the reason is `at_worker_request` (a District Admin may give no other — anything else is a Pariwar Admin's direct
+  move, 13.1c). A terminated worker, the worker's own district, or a worker who already has a pending request is refused.
+- **Responding.** The District Admin at the OTHER end accepts or refuses. ACCEPT executes the move: 13.1's `postFieldWorker` in the same
+  transaction, under the accepting District Admin's verified authorization (13.1 AC5: the target is the destination or the current
+  district); if the worker has been moved meanwhile, the acceptance fails cleanly and the request is marked stale. REFUSE needs a reason
+  from a fixed list — suggested `no_capacity`, `work_not_needed_here`, `request_incomplete`, `other`, pinned at create-story, never free
+  text; the worker stays where they are.
+- **Withdrawing.** The opener withdraws a pending request.
+- **Unanswered.** A request left unanswered for 7 days is escalated to the Pariwar Admin by a sweep job — NEVER accepted by default; a
+  Pariwar Admin resolves it by moving the worker directly (13.1c) or closing it. A request to a district with no District Admin goes
+  straight to the Pariwar Admin.
+- **Notices — by BOTH email AND in-app.** The counterpart District Admin is told of a request; the opener of the answer — accepted, or
+  refused with its reason; the Pariwar Admin of an escalation; and BOTH District Admins of a move a Pariwar Admin makes, except the one who
+  made it. No recipient ⇒ nothing is sent; a failed send never undoes a move or a response.
+- **The record.** Every request, answer, refusal and reason is kept (the Panel, `-441`: keep the full log) and readable by the District
+  Admins at either end and by the Pariwar Admin.
+
+**Open design questions for create-story:** where the request lifecycle lives — a stream of its own, like the helpdesk and alert primitives,
+or a table — and whether refusals also enter the worker's own stream; the refusal list; the escalation sweep (`apps/jobs`); the email
+(TRACED 2026-11-03: the platform has NO notice to a District Admin — Story 6.25's staff-email child mails Pariwar Admins, decrypting the
+Tier-1 admin email under a fenced allowlist, ADR-0040, so a recipient resolver, a template, an outbox row per event and recipient and a new
+fence entry) and the in-app notice (no admin notice list or unread marker exists in `apps/admin`; the precedent is Story 6.20 D14's
+Pariwar Admin refusal surface — a notification, never an approval step); whether a notice names the worker (a purpose-limited, audited
+decrypt of the name); a second request for the same worker to a different district while one is pending; what ends a pending request when
+the worker is moved or ended by another route.
+
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
 As Solo Builder authoring the attribution code allocation system,
@@ -7512,6 +7677,10 @@ So that I can work effectively without a desktop or back-office tools.
 > ⭐ **INHERITED FROM 13.2 (2026-11-01, amended v1.6 2026-11-03; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C5).** HOMED here, ⛔ closed. 13.2 (implemented — LANDED on main, PR #322) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(client, { code, pariwarId, asOf: { captureId } | 'now' }) → field_worker_id` — the holder only if the code was allocated at or before that capture's persisted `captured_at` (compared in SQL at full µs precision; ⛔ JS timestamp) — on a transaction-bound `pg.PoolClient`, reachable from `apps/*` only through the API door `apps/api/src/modules/field-worker/attribution-code-access.ts` (wrappers take a `ScopeTx`; a repo-wide reach fence enforces the door). The door enforces Pariwar CONTEXT only — each calling route owns its AUTHORIZATION.
 > - **C5 — "my attribution code"** reads `readAttributionCodeForRequest` (13.2's API door, `apps/api/src/modules/field-worker/attribution-code-access.ts`) under `field_worker_self` scope. The permission key it needs is the Panel's to ratify (`2026-06-21-059` amendment B(3)). Every route that touches a code — any shape, any key name — calls the door, which takes the Pariwar only from the authenticated request (13.2 v1.3, AT8 v2); ⛔ import `attributionCode` anywhere else (CI fails); a response / DTO field is ⛔ named `attributionCode` either (the fence fires on the name — 13.2 v1.6).
 
+> ⭐ **INHERITED FROM 13.1 (2026-11-03, `bmad-create-story 13.1`; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: story 13-1-…"; C1).** HOMED here, ⛔ closed. 13.1 (created, ready-for-dev — ⛔ built yet; its build decisions QE1–QE16 are APPROVED by BigDev (2026-11-03, in session; the decision entry is pending), but ASKs Q-2…Q-4 are still OPEN (Q-1 and Q-5 were RULED by the Panel — decision `2026-11-03-441`), so a claim in this block that rests on one says so) builds `packages/domain/src/field-worker/`, table `field_workers` (name / mobile as Tier-1 ciphertext, ⛔ a code column), the lifecycle `pending_kyc → active ⇄ suspended → terminated` derived from `events_log`, `fieldWorker.acceptsNewAttributions(state)` and `getFieldWorkerStateAt`, the composite FK on 13.2's table, and ONE admin registration route.
+> - **C1 — the worker's own login and scope.** No route creates a `users` row or a `role_grants` row today (only `scripts/provision-admin.ts`); `users.identity_type` has ONE value (`admin`); ARCH §2.3 requires email + password + a passkey for "Vikram-class field-worker dispatch". The `field_worker_self` scope has NO live consumer: `rbac/scope.ts`'s `self` branch says to raise it WITH a live requirement — this story is it. *Inference, not fact:* a grant `(role='field_worker', scope_dimension='self', scope_value=<field_worker_id>)` links a principal to a worker without a `user_id` column. The worker's own-read permission key is B(3)-literal (`2026-06-21-059`). Tell a worker their code only after activation (13.1 QE11) — a runbook line this story carries; and "activate" needs a production path first (13.1 ASK Q-2).
+> - **C8 — a field worker's second job (13.1 G17 / C8).** A field worker also visits claimants (UX spec: "Field worker will visit you"; the ground-inspection loop node cross-cuts this story; Story 6.7 and `2026-08-13-104`'s follow-up deferred ground-inspection dispatch "to Epic 12", which is now the Module Shelf). 13.1's `acceptsNewAttributions` is the CREDITING predicate only — dispatch needs its own, and 13.1's lifecycle state revokes nothing and gates no dispatch until this story wires it. This story decides whether a worker sees their own state and reason code. A worker's CURRENT district is now on `field_workers` and changes when the worker is moved (13.1 QE17, revised 2026-11-03 — workers rotate between districts every few months; from the Panel's ruling `2026-11-03-441`); a block or anything finer is ⛔, and 13.1's guard makes any later column immutable by default — adding one means `CREATE OR REPLACE` of the guard function.
+
 ### Story 13.4: Attribution Analytics Dashboard `[SURFACE]`
 
 As a Pariwar admin or trustee monitoring field-worker performance,
@@ -7529,6 +7698,10 @@ So that field-worker effectiveness is visible without exposing per-member PII in
 > ⭐ **INHERITED FROM 13.2 (2026-11-01, amended v1.6 2026-11-03, v1.11 2026-11-03; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C3).** HOMED here, ⛔ closed. 13.2 (implemented — LANDED on main, PR #322) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(client, { code, pariwarId, asOf: { captureId } | 'now' }) → field_worker_id` — the holder only if the code was allocated at or before that capture's persisted `captured_at` (compared in SQL at full µs precision; ⛔ JS timestamp) — on a transaction-bound `pg.PoolClient`, reachable from `apps/*` only through the API door `apps/api/src/modules/field-worker/attribution-code-access.ts` (wrappers take a `ScopeTx`; a repo-wide reach fence enforces the door). The door enforces Pariwar CONTEXT only — each calling route owns its AUTHORIZATION.
 > - **C3 — "permanent unallocation flagged for trustee review" becomes TRUE here.** 13.2 writes the flag (`attribution_code_allocation_flags`) and the door's `listAllocationFlagsForRequest` reads it (⛔ `attributionCode.listAllocationFlags` — the reach fence); render `actor_display` (the 6.11 R5 snapshot), ⛔ a raw actor id; ⛔ surface renders it until this dashboard does (expected frequency ≈ 0 — eight straight clashes in a 10⁶ space). ⚠ The read model is FIELD-PICKED (13.2 review R2-3): `listAllocationFlagsForRequest` returns `{ flagId, attempts, actorDisplay, flaggedAt }` — ⛔ `actorId`, ⛔ `pariwarId`; 13.4 widens the view in the domain accessor if it shows a need. D3 (no keyset cursor, no idempotency key) is also 13.4's.
 > - **D3 (deferred by 13.2's code review round 2).** The flag list has no keyset cursor (the 200-row cap hides older flags) and flags have no idempotency key (a retried registration adds another). Expected volume ≈ 0 (AT6: eight clashes ≈ 10⁻¹⁶). Decide here.
+
+> ⭐ **INHERITED FROM 13.1 (2026-11-03, `bmad-create-story 13.1`; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: story 13-1-…"; C6).** HOMED here, ⛔ closed. 13.1 (created, ready-for-dev — ⛔ built yet; its build decisions QE1–QE16 are APPROVED by BigDev (2026-11-03, in session; the decision entry is pending), but ASKs Q-2…Q-4 are still OPEN (Q-1 and Q-5 were RULED by the Panel — decision `2026-11-03-441`), so a claim in this block that rests on one says so) builds the `field_workers` table and lifecycle (see the block under Story 13.3).
+> - **C6 — the worker list read.** Per-worker identity (name, mobile) is Tier-1 ciphertext in `field_workers`; the dashboard's aggregates are operator-tier and its drill-down decrypts on read — that decrypt policy is THIS story's (13.1 builds `listFieldWorkersForPariwar` returning ciphertext-free columns only). The 13.2 allocation-flag list (its C3 / D3) is rendered here too.
+> - **C8 (cont.) — "field workers by Pariwar/district".** `field_workers` carries the CURRENT `district` (13.1 QE17 revised: it changes when a worker is moved, and the history is in the worker's event stream) — this dashboard's "by district" grouping reads it, and a per-district history reads the stream; a BLOCK column does not exist, and adding one means `CREATE OR REPLACE` of 13.1's guard function.
 
 ### Story 13.5: Commission Payment Trigger — Qualified-Acquisition-Gated + TDS §194H Deduction `[CONSUMER]`
 
@@ -7553,6 +7726,12 @@ So that commissions disburse only after canonical financial-truth confirmation a
 > - **C4 — backfilling Story 3.6b's captured Reference Codes.** `member_attribution.attribution_source` holds unvalidated 6-digit strings typed before any code existed. Resolve each row whose `attribution_source` is 6-digit (other FR-82 forms are the adopter chain) with `asOf: { captureId: <its attributionId> }` — the comparison runs in SQL on the persisted `captured_at` (⛔ read it into JS); 13.2's as-of rule then credits ⛔ capture that predates its code, whatever the rollout order. A backfill JOB has no request: it needs a `twt_service` grant on `field_worker_attribution_codes` (none today; under it the explicit `pariwar_id` predicate is the only Pariwar filter) and a REVIEWED entry in 13.2's reach-fence allow-list naming its own Pariwar source.
 > - **D2 / D4 (deferred by 13.2's code review round 2).** D2: the AT4 probe in `allocateAttributionCode` reads `member_attribution WHERE pariwar_id = $1 AND attribution_source = $2` with no index on `(pariwar_id, attribution_source)`; 13.2's AC9 barred touching `member_attribution` — run `EXPLAIN` at real volumes when this story first reads `member_attribution` by code. D4: the reach fence scans `apps/*/src` + `packages/*/src` only (not `scripts/`, `apps/mobile`, `.mjs`/`.cjs`) — extend it if the backfill job lives in a script; a request-less caller needs its own named Pariwar source anyway.
 
+> ⭐ **INHERITED FROM 13.1 (2026-11-03, `bmad-create-story 13.1`; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: story 13-1-…"; C3).** HOMED here, ⛔ closed. 13.1 (created, ready-for-dev — ⛔ built yet; its build decisions QE1–QE16 are APPROVED by BigDev (2026-11-03, in session; the decision entry is pending), but ASKs Q-2…Q-4 are still OPEN (Q-1 and Q-5 were RULED by the Panel — decision `2026-11-03-441`), so a claim in this block that rests on one says so) builds the `field_workers` table and lifecycle (see the block under Story 13.3).
+> - **C3 — what "KYC complete" means for a WORKER.** 13.1's `kyc_status` is an operator-recorded attestation only (QE8): no document, PAN or bank detail, no provider. PAN and a payee bank account (TDS §194H needs the PAN — PRD §4.14) have ⛔ capture point or table anywhere (re-grepped 2026-11-03); their tier, retention (ARCH §2.12 names the row, the matrix is outside the repo) and basis are this story's, with 13.1's ASK Q-3 (no ratified text covers a non-member contractor's data). 
+> - **C3 (cont.) — what a suspension or termination does to money already earned.** No PRD / architecture / epic text says; it is the Panel's (what the Trust owes a person). 13.1's lifecycle state moves ⛔ any commission right.
+> - **Observations for this story's create-story (⛔ fixes here):** the AC cites events `kyc.completed` and `vyawastha_shulk.paid`, which do not exist (the real ones are `member.kyc_completed` and a `member.vyawastha_shulk_*` family); Story 5.1's alert primitive requires a `member_id`, so a worker's statement cannot be sent through it as written.
+> - **C2 — the backfill's worker-state check (13.1 QE11).** When this story resolves a STORED capture (C4 below), it asks `getFieldWorkerStateAt(db, pariwarId, id, { captureId })` — the worker's state when the member typed the code, compared IN SQL at microsecond precision (⛔ a JS `Date`) — in addition to 13.2's code-as-of-capture rule; they are two separate checks. 13.1's `active`-only rule is SETTLED as the build rule (QE11, BigDev 2026-11-03) and CONFIRMED by the Panel (`2026-11-03-441`). The ordering of that read is a PREFIX of the stream by `event_version` cut at the first event stamped after the capture, ties included — ⛔ a per-event timestamp filter (13.1 AC10).
+
 ### Story 13.6: Field Worker Anti-Fraud Throttling — Assistive-Not-Auto-Punitive Invariant `[GOVERNANCE]`
 
 As Solo Builder authoring anti-fraud safeguards for the attribution system,
@@ -7574,6 +7753,10 @@ So that legitimate field workers are not silently suppressed and all consequenti
 **And** acceptable heuristic actions: soft throttling (slow but don't stop attribution); flag for review; alert admin queue; record the signal for trustee analytics
 **And** legitimate field workers in dense localities, shared-device environments, or school-campus signups are not silently suppressed; their cases route to human review where context is acknowledged
 **And** the philosophy is documented: TWT's anti-fraud posture is human-governed + dignity-preserving + non-black-box; heuristics assist humans, never replace them
+
+> ⭐ **INHERITED FROM 13.1 (2026-11-03, `bmad-create-story 13.1`; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: story 13-1-…"; C4).** HOMED here, ⛔ closed. 13.1 (created, ready-for-dev — ⛔ built yet; its build decisions QE1–QE16 are APPROVED by BigDev (2026-11-03, in session; the decision entry is pending), but ASKs Q-2…Q-4 are still OPEN (Q-1 and Q-5 were RULED by the Panel — decision `2026-11-03-441`), so a claim in this block that rests on one says so) builds the `field_workers` table and lifecycle (see the block under Story 13.3).
+> - **C4 — the primitive already refuses a machine author.** 13.1's I7: all six lifecycle events are recorded by a human actor (`operator` / `trustee`) with a non-null `actorId`; `system` is refused in the command, the payload schema and the projector — so a heuristic cannot suspend or terminate a worker through the primitive. A later automated actor is a new decision.
+> - **C4 (cont.) — still this story's.** There is NO worker-scoped moderation pipeline: Story 10.10 is member-scoped (`member.moderate`, events on the member's stream). Decide, BEFORE any termination route exists: whether `terminated` is reversible (13.1 makes it final for that registration — a re-engaged worker is a NEW registration with a new code), who hears an appeal, and the reason-code vocabulary — 13.1 ships only the NEUTRAL values (suspend `under_review`, `at_worker_request`; terminate `left_voluntarily`, `inactive`, `registered_in_error`), and THIS story adds the labelling values (`conduct_concern`, `conduct`, `fraud_confirmed`) together with the writer that uses them, by `ALTER TYPE … ADD VALUE`, under its own governance check. It also mints the suspend / terminate permission keys (13.1 mints only `field_worker.register`). Per the Panel (`2026-11-03-441`) the District Admin is the intended manager of field workers, with the Pariwar Admin filling in: gate those keys on the worker's CURRENT district (13.1 QE17 — it changes when a worker is moved), and keep the full log of a field worker. Also decide whether re-registration of a terminated worker's mobile should be SHOWN to the registering admin (13.1 allows it silently, inside one Pariwar); a cross-Pariwar block is a trustee decision. 13.1's C5 says to build NO terminate route (or a suspend route one would follow) before this is recorded.
 
 ### Story 13.7: `<InviteShareSheet>` with v1 Caps + FR-87 v1-M Promotion + No-Dark-Pattern-Virality Invariant `[SURFACE]`
 
@@ -7618,6 +7801,9 @@ So that the trust knows my chain origin (for Phase B future activation) without 
 > ⭐ **INHERITED FROM 13.2 (2026-11-01, amended v1.6 2026-11-03, v1.11 2026-11-03; story `13-2-6-digit-attribution-code-generation-per-pariwar`, AT2–AT8; `deferred-work.md` "Deferred from: story 13-2-…"; C2, C4).** HOMED here, ⛔ closed. 13.2 (implemented — LANDED on main, PR #322) builds the code registry: `packages/domain/src/attribution-code/` (⛔ a package), table `field_worker_attribution_codes` (one permanent code per field worker, `UNIQUE (pariwar_id, code)`, append-only, ⛔ reused / reassigned), `resolveAttribution(client, { code, pariwarId, asOf: { captureId } | 'now' }) → field_worker_id` — the holder only if the code was allocated at or before that capture's persisted `captured_at` (compared in SQL at full µs precision; ⛔ JS timestamp) — on a transaction-bound `pg.PoolClient`, reachable from `apps/*` only through the API door `apps/api/src/modules/field-worker/attribution-code-access.ts` (wrappers take a `ScopeTx`; a repo-wide reach fence enforces the door). The door enforces Pariwar CONTEXT only — each calling route owns its AUTHORIZATION.
 > - **C2 / C4 — the first consumer that records an attribution at signup.** INSERT the capture, then `resolveAttributionForRequest(request, scopeTx, { code, asOf: { captureId: <the new row's attributionId> } })` in the same `ScopeTx` — ONLY for a 6-digit code (13.2 v1.6) (13.2's API door — the Pariwar comes from the member session, never the request body; ⛔ read `captured_at` into JS); apply FR-85's deactivated-code rejection from 13.1's lifecycle state (⛔ in the lookup); see C4 under Story 13.5 for pre-registry captures. The member's `referenceCode` contract (`^\d{6}$`) does ⛔ yet accept FR-82's username / eHRMS form or UX §7's member-ID deep link — this story's adopter chain needs that widened.
 > - **D2 (deferred by 13.2's code review round 2).** See Story 13.5's block: the AT4 probe's missing `member_attribution(pariwar_id, attribution_source)` index is decided with `EXPLAIN` when a story first reads `member_attribution` by code — this one, if it lands first.
+
+> ⭐ **INHERITED FROM 13.1 (2026-11-03, `bmad-create-story 13.1`; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: story 13-1-…"; C2).** HOMED here, ⛔ closed. 13.1 (created, ready-for-dev — ⛔ built yet; its build decisions QE1–QE16 are APPROVED by BigDev (2026-11-03, in session; the decision entry is pending), but ASKs Q-2…Q-4 are still OPEN (Q-1 and Q-5 were RULED by the Panel — decision `2026-11-03-441`), so a claim in this block that rests on one says so) builds the `field_workers` table and lifecycle (see the block under Story 13.3).
+> - **C2 — FR-85 is applied HERE, from 13.1's state.** Call `fieldWorker.acceptsNewAttributions(state)` (true for `active` only — 13.1 QE11, SETTLED by BigDev 2026-11-03 and CONFIRMED by the Panel, `2026-11-03-441`) on the worker `resolveAttributionForRequest` returned (13.2 C2: it returns the HOLDER, ⛔ the holder's eligibility). When resolving a STORED capture (13.5's backfill), ask `getFieldWorkerStateAt(db, pariwarId, id, { captureId })` — the worker's state when the member typed the code, compared IN SQL at microsecond precision (⛔ a JS `Date`) — in addition to 13.2's code-as-of-capture rule; they are two separate checks. A not-credited code must ⛔ block or delay a signup. Whether and how a member is told is a PANEL question this story raises (it discloses a third person's status — template §0); a known-but-not-credited code must ⛔ reuse Story 3.6's unknown-code rejection copy ("Please ask your introducer for the correct code or skip"), which delays the member — send nothing, or neutral wording. Policy meaning for the member: *"who introduced you never changes what you are covered for."*
 
 ---
 

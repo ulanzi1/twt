@@ -1,0 +1,58 @@
+# Question for counsel — what a field worker is, and how long the Trust keeps their name and mobile number
+
+**From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-03, **REVISED three times on 2026-11-03** — after BigDev explained how
+field workers are recruited, after BigDev checked the form (Story 13.1, Q-3), and after BigDev confirmed that the form states the purposes
+and records the worker's agreement · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as asked until BigDev sends it.
+**Roster:** the go-live row for field-worker registration — not yet created (Story 13.1 Task 0.4); this note answers its legs for the
+classification, retention and erasure. The footing and notice leg is met by the form, so it is not asked.
+
+---
+
+## What BigDev has already established (so it is not asked again)
+
+**Recruitment.** A person applies on a **physical form**, is **interviewed**, and is recruited after **accepting the terms the organization
+lays down**. **The identity check is performed in the interview.** Only then does a Trust administrator register them in the platform.
+
+**What the form says** (BigDev's check, 2026-11-03; the session has not seen the form): the Trust keeps the worker's **name and mobile
+number electronically, for as long as they are employed, and removes them 8 years after the date of termination.**
+
+**Also on the form** (BigDev, 2026-11-03, asked whether it states the purposes for which the Trust uses the name and number and records
+the worker's agreement: *"yes it states"*): the **purposes** are stated and the worker's **agreement is recorded**. The session has not seen
+the form, so the **wording** of the purposes is not recorded here. **The form is "Application for Field Worker", version 1.** The footing
+and the notice are therefore the form's, and are **not asked** below.
+
+## The situation, in brief
+
+**Nothing below is live yet** — no field worker can be registered through the system, and no code has been issued through it.
+
+Registering a field worker records their **name and mobile number** (stored encrypted), gives them a **six-digit code** to share with the
+teachers they recruit, and keeps a record of which members that code introduced. The worker is **not a member, a nominee or a claimant** —
+the three kinds of person the Trust's draft privacy policy covers. Later stories add a payment (tax deducted at source on commission, a PAN
+and bank account from the worker) and the worker's own login; **those are not asked here.**
+
+The product plan describes field workers as **independent contractors, not employees**, with provident-fund and insurance contributions
+"if treated as employment", and the counsel engagement scope lists the classification as open. **The form, however, speaks of the worker
+being "employed".**
+
+We keep the **code**, the **record of which members it introduced** and a **log of what was done to the worker's record** (it holds no name
+or number) permanently as the Trust's own record; only the **name and number** are the personal data the 8-year promise concerns.
+
+We have **not formed a view** on any of these.
+
+## The questions
+
+1. **The classification.** The form speaks of the worker being "employed"; the product plan treats them as independent contractors. Which
+   are they, for the Trust's purposes — and does the word on the form matter, or does the substance of the engagement decide?
+2. **The 8 years.** The form promises removal 8 years after the date of termination. Is that a sound period for a worker's name and
+   mobile number — what legal or tax need does it rest on — and does the same period apply to (a) the paper form and (b) the platform
+   record?
+3. **Erasure before the 8 years are up.** If a former field worker asks for their name and number to be erased in, say, year two, does
+   the Trust's promise to keep them (and any legal need behind it) allow it to refuse — and what must go and what may stay: the code, the
+   introductions credited to it, any payment record, the paper form?
+
+## What we need back
+
+A short written answer to each question that is sent. It will be recorded as a decision; once the roster row exists it answers the counsel
+half of its legs for the classification (question 1), retention (question 2) and erasure (question 3). The footing and notice are settled
+by the form, on BigDev's confirmation. If any answer depends on facts we have not given — including what the form's purposes say, which we
+have not seen — please say which.

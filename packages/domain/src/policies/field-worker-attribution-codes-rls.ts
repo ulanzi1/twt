@@ -1,5 +1,5 @@
 // RLS policy declarations for the attribution-code registry (Story 13.2, AC1) — migration 0199.
-// `field_worker_attribution_codes`: SELECT + INSERT, PER-COMMAND (⛔ `FOR ALL`, ⛔ an UPDATE or DELETE leg) — the table is append-only for every role
+// `field_worker_attribution_codes`: SELECT + INSERT, PER-COMMAND (⛔ `FOR ALL`, ⛔ an UPDATE or DELETE leg) — the table is append-only for every role (a guard trigger — replica mode or DDL is the only bypass)
 // (0199's grant + guard triggers; I3).
 
 import { sql } from 'drizzle-orm';

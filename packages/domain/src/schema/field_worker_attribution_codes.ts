@@ -2,7 +2,7 @@
 // 0199 (hand-authored — the GRANT, the per-command policies, FORCE RLS, the CHECKs and the three triggers live there).
 //
 // ⭐ ONE PERMANENT 6-digit code per field worker, unique INSIDE a Pariwar (I1 — two Pariwars may hand out the same digits;
-// ⛔ `UNIQUE (code)`), at most one code per worker, ever (I2). APPEND-ONLY for every role (I3): a code is ⛔ freed, ⛔ reused,
+// ⛔ `UNIQUE (code)`), at most one code per worker, ever (I2). APPEND-ONLY for every role (I3 — a trigger, so the owner and a superuser too; only replica mode or DDL bypasses it): a code is ⛔ freed, ⛔ reused,
 // ⛔ reassigned — FR-85 keeps a deactivated worker's existing attributions, so one code must never mean two workers (AT3).
 // `allocated_at` is the DATABASE's clock, re-stamped by a `BEFORE INSERT` trigger whatever the writer supplied (I7 — a code
 // credits only captures at or after it; ⛔ backdating).

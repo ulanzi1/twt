@@ -1,5 +1,5 @@
 // RLS policy declarations for the allocation-exhaustion flags (Story 13.2, AC2) — migration 0199.
-// `attribution_code_allocation_flags`: SELECT + INSERT, PER-COMMAND (⛔ `FOR ALL`, ⛔ an UPDATE or DELETE leg) — the table is append-only for every role
+// `attribution_code_allocation_flags`: SELECT + INSERT, PER-COMMAND (⛔ `FOR ALL`, ⛔ an UPDATE or DELETE leg) — the table is append-only for every role (a guard trigger — replica mode or DDL is the only bypass)
 // (0199's grant + guard triggers; I3).
 
 import { sql } from 'drizzle-orm';

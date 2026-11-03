@@ -9,9 +9,9 @@
 //   · the same worker, two different codes — the waiter's pre-check sees nothing (the holder is uncommitted), its INSERT BLOCKS
 //     on the worker unique; holder COMMITs ⇒ `FieldWorkerAlreadyHasAttributionCodeError` (⛔ a retry, ⛔ an exhaustion), and
 //     the waiter's tx is still usable (CONTROL: it allocates another worker and commits), with ⛔ allocator savepoint left on it;
-//   · a NON-unique failure inside the INSERT — the waiter BLOCKS on the holder's uncommitted entry and its `lock_timeout` fires
-//     (55P03) — is rethrown as THAT error (⛔ a redraw, ⛔ an exhaustion), the savepoint is gone and the tx is still usable
-//     (review R2-7: the `throw err` exit of the allocator's `catch`).
+//   · a NON-unique failure inside the INSERT — the waiter BLOCKS on the holder's uncommitted entry and a THIRD connection then
+//     cancels it (`pg_cancel_backend` ⇒ 57014; ⛔ a timer in the test) — is rethrown as THAT error (⛔ a redraw, ⛔ an
+//     exhaustion), the savepoint is gone and the tx is still usable (review R2-7: the `throw err` exit of the allocator's `catch`).
 // ⭐ "BLOCKS" is PROVED from the server (`pg_blocking_pids`), ⛔ inferred from a timer. Every held tx is ended in a `finally`.
 // Committed rows go to a FRESH Pariwar (⛔ PARIWAR_A); the append-only rows leave in `afterAll` under replica mode (the guard
 // triggers are fixture-cleanup-only bypassed, as in the precedent).
@@ -203,29 +203,32 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
   );
 
   it(
-    'a NON-unique failure inside the INSERT (the waiter BLOCKS, its lock_timeout fires ⇒ 55P03) is rethrown as that error — ⛔ a redraw, ⛔ an exhaustion — and no allocator savepoint remains (CONTROL: the same tx allocates)',
+    'a NON-unique failure inside the INSERT (the waiter BLOCKS, a third connection CANCELS it ⇒ 57014) is rethrown as that error — ⛔ a redraw, ⛔ an exhaustion — and no allocator savepoint remains (CONTROL: the same tx allocates)',
     async () => {
       const [w1, w2, control] = [worker(), worker(), worker()];
       const g = scripted('731130', '731131');
-      const holder = await begin();
-      const waiter = await begin();
-      let waiterOpen = true;
+      let holder: pg.PoolClient | undefined;
+      let waiter: pg.PoolClient | undefined;
+      let raced: Promise<{ value?: unknown; error?: unknown }> | undefined;
       try {
+        holder = await begin();
+        waiter = await begin();
         await attributionCode.allocateAttributionCode(holder, { pariwarId: PARIWAR, fieldWorkerId: w1 }, { generate: scripted('731130').generate });
-        await waiter.query("SET LOCAL lock_timeout = '600ms'");
         const [holderPid, waiterPid] = [await pidOf(holder), await pidOf(waiter)]; // ⭐ before the race — a busy client queues
-        const raced = attributionCode.allocateAttributionCode(waiter, { pariwarId: PARIWAR, fieldWorkerId: w2 }, { generate: g.generate }).then(
+        raced = attributionCode.allocateAttributionCode(waiter, { pariwarId: PARIWAR, fieldWorkerId: w2 }, { generate: g.generate }).then(
           (value) => ({ value }),
           (error: unknown) => ({ error }),
         );
-        // ⭐ the holder is NOT ended: the waiter must be blocked by it until ITS OWN timeout fires.
-        expect(await blockedBy(waiterPid, holderPid, 2000)).toBe(true);
+        // ⭐ the holder is NOT ended: the waiter's INSERT is blocked on the holder's uncommitted entry (server truth) …
+        expect(await blockedBy(waiterPid, holderPid)).toBe(true);
+        // … until a THIRD connection cancels it — a non-unique failure with ⛔ a timer anywhere in the test (57014, query_canceled).
+        const cancelled = await pool.query<{ ok: boolean }>('SELECT pg_cancel_backend($1) AS ok', [waiterPid]);
+        expect(cancelled.rows[0]?.ok).toBe(true);
         const outcome = await raced;
         expect('value' in outcome).toBe(false);
-        const error = (outcome as { error: unknown }).error;
-        expect(pgSqlstateOf(error)).toBe('55P03'); // lock_not_available — the ORIGINAL error
-        expect(error).not.toBeInstanceOf(attributionCode.AttributionCodeAllocationExhaustedError);
-        expect(error).not.toBeInstanceOf(attributionCode.FieldWorkerAlreadyHasAttributionCodeError);
+        expect(pgSqlstateOf(outcome.error)).toBe('57014'); // the ORIGINAL error
+        expect(outcome.error).not.toBeInstanceOf(attributionCode.AttributionCodeAllocationExhaustedError);
+        expect(outcome.error).not.toBeInstanceOf(attributionCode.FieldWorkerAlreadyHasAttributionCodeError);
         expect(g.draws()).toBe(1); // ⛔ a redraw
         await expectNoAllocatorSavepoint(waiter);
         // The CONTROL: the waiter's tx is still usable and commits.
@@ -233,10 +236,13 @@ describe.skipIf(!hasDatabase)('Story 13.2 — allocateAttributionCode two-connec
           await attributionCode.allocateAttributionCode(waiter, { pariwarId: PARIWAR, fieldWorkerId: control }, { generate: scripted('731132').generate }),
         ).toMatchObject({ code: '731132', attempts: 1 });
         await end(waiter, true);
-        waiterOpen = false;
+        waiter = undefined;
       } finally {
-        await end(holder, false).catch(() => undefined);
-        if (waiterOpen) await end(waiter, false).catch(() => undefined);
+        // In order: release the holder (this un-blocks a still-pending waiter), let the allocator settle, THEN end the waiter —
+        // ⛔ a ROLLBACK interleaved with the allocator's own statements.
+        if (holder) await end(holder, false).catch(() => undefined);
+        if (raced) await raced;
+        if (waiter) await end(waiter, false).catch(() => undefined);
       }
       expect(await committed(w1, w2, control)).toEqual({ [control]: '731132' });
     },

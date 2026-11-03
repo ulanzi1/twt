@@ -6,7 +6,7 @@
 // `field_worker_id`: the worker row rolled back too, so that id names nothing. `actor_id` is the authenticated admin who pressed
 // "Add Field Worker"; `actor_display` is the Story 6.11 R5 snapshot of their `users.display_name`, resolved server-side at
 // write (⛔ fallback to email / id / role) — in from the start, because an append-only table can never backfill it. Story 13.4
-// renders `actor_display` to trustees (C3). APPEND-ONLY for every role. TENANT-ISOLATED; RLS in
+// renders `actor_display` to trustees (C3). APPEND-ONLY for every role (a trigger, so the owner and a superuser too; only replica mode or DDL bypasses it). TENANT-ISOLATED; RLS in
 // policies/attribution-code-allocation-flags-rls.ts.
 
 import { sql } from 'drizzle-orm';

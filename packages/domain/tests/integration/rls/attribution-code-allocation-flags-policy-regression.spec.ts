@@ -1,7 +1,7 @@
 // attribution_code_allocation_flags RLS policy-regression — Story 13.2 (Task 6.2; AC2 / AC8; architecture "every RLS policy ships
 // with a test"; the codes table's sibling is field-worker-attribution-codes-policy-regression.spec.ts). The columns from the
 // catalog, the SELECT + INSERT grant only, positive / negative isolation, the withCheck 42501, the fail-closed probe, FORCE RLS +
-// exactly the per-command policies, the (pariwar_id, flagged_at) index, both CHECKs BY NAME, and append-only for EVERY role.
+// exactly the per-command policies, the (pariwar_id, flagged_at) index, both CHECKs BY NAME, and append-only for EVERY role (the trigger fires for the superuser too; replica mode is the fixture-cleanup bypass).
 // Live DB only.
 
 import { randomUUID } from 'node:crypto';

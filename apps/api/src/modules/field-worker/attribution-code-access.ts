@@ -13,7 +13,9 @@
 // server-resolved `users.display_name` (Story 6.11 R5 — a missing name blocks, ⛔ fallback).
 // ⭐ The six domain error classes are re-exported BY NAME so a caller can `instanceof` them and read `.attempts` without naming
 // `attributionCode` (which the fence forbids). The export list is PINNED to these eleven names; the shape is pinned too
-// (parameter names / types / option keys, `request` reached only through `authenticatedScope`, ⛔ `generate`).
+// (parameter names / types / option keys, `request` reached only through `authenticatedScope`, ⛔ `generate`, and — review R2-1 —
+// each scoped wrapper's first two statements: the `const` Pariwar binding from `authenticatedScope(request)` and the
+// `assertScopeTxIsRequestScope` pre-check, with `scopeTx` read only as that assertion's argument and as `.client`).
 
 import { attributionCode, ids } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';

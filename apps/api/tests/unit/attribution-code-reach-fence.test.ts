@@ -16,12 +16,13 @@
 //       else; ⛔ `getRequestContext`; ⛔ `generate` (AT9 — the allocate call gets a fresh `{ maxAttempts }` literal). Each scoped
 //       wrapper opens with `const { pariwarId } = authenticatedScope(request)` then `assertScopeTxIsRequestScope(scopeTx, pariwarId)`,
 //       and reads `scopeTx` ONLY as that assertion's argument and as `.client` — the Pariwar is ⛔ taken from the caller's
-//       `ScopeTx` (review R2-1). AT9 also covers every door IMPORTER: none names a `generate` key (review R2-4).
+//       `ScopeTx` (review R2-1). The binding is a `const`; a `pariwarId` property in a wrapper must BE that binding; the flag
+//       wrapper's `openScopeTx(deps, pariwarId)` takes it too. AT9 also covers every door IMPORTER: none names a `generate` key (review R2-4).
 //  (iv) the authenticated-Pariwar WRITER PIN over `apps/api/src` — the files that assign `pariwarId` on ANY receiver are exactly
 //       the member-session guard and the scope-resolution hook (G9b) — an `Object.assign` / `Reflect.set` / `defineProperty(ies)` call
 //       that names a `pariwarId` key counts on ANY target (review R2-2); ⛔ `Object.assign` / `Reflect.set` / `defineProperty` on a
 //       request context (incl. `x['requestContext']`, a `const` alias or a destructured alias of one); a context REPLACEMENT — `.requestContext =`,
-//       `['requestContext'] =`, or a `requestContext` key / name given to those three calls — only in the request-context
+//       `['requestContext'] =`, or a `requestContext` key / name given to those five calls — only in the request-context
 //       middleware (review R2).
 // ⚠ Turbo's LOCAL cache skips `@twt/api#test` when only a non-dependency workspace (apps/public, apps/admin, …) changed; GitHub CI
 // has no turbo cache and is the backstop. A new entry in ALLOWED (e.g. C4's backfill job) is a REVIEWED edit here.
@@ -206,9 +207,10 @@ function generateHits(file: string, text: string): number {
 }
 
 /**
- * AT9 (review R2-4) — a file that IMPORTS the API door must ⛔ carry a `generate` key (`{ generate: … }`, `{ generate }`,
- * `{ 'generate': … }`): the allocator's test seam must not ride through the door's `opts` (typed `{ maxAttempts? }`, but a cast
- * would carry it). Pre-filtered on the door's file name, so only importers are parsed.
+ * AT9 (review R2-4) — a file that IMPORTS the API door must ⛔ mention `generate` at all, as an identifier or as a string
+ * (`{ generate: … }`, `{ generate }`, `{ generate() {} }`, `{ ['generate']: … }`, `o.generate = …`, `const { generate } = …`): the
+ * allocator's test seam must not ride through the door's `opts` (typed `{ maxAttempts? }`, but a cast would carry it). As strict
+ * as the ALLOWED-file check (`generateHits`). Pre-filtered on the door's file name, so only importers are parsed.
  */
 function doorImporterGenerateHits(file: string, text: string): number {
   if (!text.includes('attribution-code-access')) return 0;
@@ -218,13 +220,7 @@ function doorImporterGenerateHits(file: string, text: string): number {
   const visit = (node: ts.Node): void => {
     const spec = moduleSpecifierOf(node);
     if (spec !== null && resolvesToDoor(file, spec)) importsDoor = true;
-    if (
-      (ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node)) &&
-      (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) &&
-      node.name.text === 'generate'
-    ) {
-      n += 1;
-    }
+    if ((ts.isIdentifier(node) || ts.isStringLiteralLike(node)) && node.text === 'generate') n += 1;
     ts.forEachChild(node, visit);
   };
   visit(sf);
@@ -345,6 +341,7 @@ function doorViolations(text: string): string[] {
   // flag wrapper (it opens its own scope) takes both names from `authenticatedScope(request)` the same way.
   const authenticatedDestructure = (st: ts.Statement | undefined, names: readonly string[]): boolean => {
     if (st === undefined || !ts.isVariableStatement(st) || st.declarationList.declarations.length !== 1) return false;
+    if ((st.declarationList.flags & ts.NodeFlags.Const) === 0) return false; // a `let` could be reassigned to another Pariwar
     const d = st.declarationList.declarations[0]!;
     if (!ts.isObjectBindingPattern(d.name) || d.initializer === undefined) return false;
     const bound = d.name.elements.map((el) => (el.propertyName === undefined && ts.isIdentifier(el.name) ? el.name.text : '<renamed>')).sort();
@@ -391,6 +388,27 @@ function doorViolations(text: string): string[] {
   const flagFn = fns.get('flagAllocationExhaustedForRequest');
   if (flagFn?.body !== undefined && !authenticatedDestructure(flagFn.body.statements[0], ['pariwarId', 'actorId'])) {
     v.push('flagAllocationExhaustedForRequest: first statement is not const { pariwarId, actorId } = authenticatedScope(request)');
+  }
+  // Only the binding is ever handed on: every `pariwarId:` property in a wrapper is that identifier (a shorthand is), and the flag
+  // wrapper opens its scope with `openScopeTx(deps, pariwarId)`.
+  for (const name of Object.keys(WRAPPERS)) {
+    const fn = fns.get(name);
+    if (fn?.body === undefined) continue;
+    const visitProps = (node: ts.Node): void => {
+      if (
+        ts.isPropertyAssignment(node) &&
+        (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) &&
+        node.name.text === 'pariwarId' &&
+        !(ts.isIdentifier(node.initializer) && node.initializer.text === 'pariwarId')
+      ) {
+        v.push(`${name}: a pariwarId property that is not the authenticated binding: ${node.getText().slice(0, 60)}`);
+      }
+      if (name === 'flagAllocationExhaustedForRequest' && ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'openScopeTx') {
+        if (!(node.arguments.length === 2 && node.arguments[1]!.getText() === 'pariwarId')) v.push(`${name}: openScopeTx is not given (deps, pariwarId)`);
+      }
+      ts.forEachChild(node, visitProps);
+    };
+    visitProps(fn.body);
   }
 
   // `authenticatedScope`: private, one `request` parameter, reads ONLY `request.requestContext.{pariwarId,actorId}`.
@@ -470,7 +488,15 @@ const ASSIGN_OPS = new Set([
 
 const unwrap = (e: ts.Expression): ts.Expression => {
   let cur = e;
-  while (ts.isNonNullExpression(cur) || ts.isParenthesizedExpression(cur) || ts.isAsExpression(cur)) cur = cur.expression;
+  while (
+    ts.isNonNullExpression(cur) ||
+    ts.isParenthesizedExpression(cur) ||
+    ts.isAsExpression(cur) ||
+    ts.isSatisfiesExpression(cur) ||
+    ts.isTypeAssertionExpression(cur)
+  ) {
+    cur = cur.expression;
+  }
   return cur;
 };
 const isPariwarIdTarget = (e: ts.Expression): boolean => {
@@ -504,13 +530,24 @@ const isContextMember = (e: ts.Expression): boolean => {
     (ts.isElementAccessExpression(t) && ts.isStringLiteralLike(t.argumentExpression) && t.argumentExpression.text === 'requestContext')
   );
 };
-/** A request context: the name, a member access, `getRequestContext()`, or a local ALIAS bound to one of those (review R2). */
+/**
+ * A request context: the name, a member access, `getRequestContext()`, `requestContextStorage.getStore()`, either side of a
+ * `??` / `||` / `&&`, or a local ALIAS bound to one of those (review R2).
+ */
 const isContextRef = (e: ts.Expression, aliases: ReadonlySet<string>): boolean => {
   const t = unwrap(e);
   return (
     (ts.isIdentifier(t) && (t.text === 'requestContext' || aliases.has(t.text))) ||
     isContextMember(t) ||
-    (ts.isCallExpression(t) && ts.isIdentifier(t.expression) && t.expression.text === 'getRequestContext')
+    (ts.isCallExpression(t) && ts.isIdentifier(t.expression) && t.expression.text === 'getRequestContext') ||
+    (ts.isCallExpression(t) &&
+      ts.isPropertyAccessExpression(t.expression) &&
+      t.expression.name.text === 'getStore' &&
+      ts.isIdentifier(t.expression.expression) &&
+      t.expression.expression.text === 'requestContextStorage') ||
+    (ts.isBinaryExpression(t) &&
+      [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken].includes(t.operatorToken.kind) &&
+      (isContextRef(t.left, aliases) || isContextRef(t.right, aliases)))
   );
 };
 /** `{ requestContext: … }` / `{ requestContext }` / `'requestContext'` — a call argument that REPLACES the context on its target. */
@@ -525,9 +562,10 @@ const namesContextKey = (e: ts.Expression | undefined): boolean => {
 };
 
 /** `'pariwarId'` / `{ pariwarId: … }` / `{ pariwarId }` / `{ ['pariwarId']: … }` — a call argument that WRITES a `pariwarId` key on its target. */
-const namesPariwarKey = (e: ts.Expression | undefined): boolean => {
+const namesPariwarKey = (e: ts.Expression | undefined, patches?: ReadonlySet<string>): boolean => {
   if (e === undefined) return false;
   const t = unwrap(e);
+  if (patches !== undefined && ts.isIdentifier(t) && patches.has(t.text)) return true; // `const patch = { pariwarId }; Object.assign(ctx, patch)`
   if (ts.isStringLiteralLike(t)) return t.text === 'pariwarId';
   return (
     ts.isObjectLiteralExpression(t) &&
@@ -557,8 +595,9 @@ function contextAliases(sf: ts.SourceFile): Set<string> {
         aliases.add(node.name.text);
         grew = true;
       }
-      // Review R2-2 — a destructured alias: `const { requestContext: ctx } = request` (the `{ requestContext }` form is the name itself).
-      if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name)) {
+      // Review R2-2 — a destructured alias, in a declaration or a PARAMETER: `const { requestContext: ctx } = request` (the
+      // `{ requestContext }` form is the name itself).
+      if ((ts.isVariableDeclaration(node) || ts.isParameter(node)) && ts.isObjectBindingPattern(node.name)) {
         for (const el of node.name.elements) {
           if (
             el.propertyName !== undefined &&
@@ -572,6 +611,17 @@ function contextAliases(sf: ts.SourceFile): Set<string> {
           }
         }
       }
+      // An alias ASSIGNED after its declaration: `let ctx; ctx = request.requestContext`.
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isIdentifier(node.left) &&
+        !aliases.has(node.left.text) &&
+        isContextRef(node.right, aliases)
+      ) {
+        aliases.add(node.left.text);
+        grew = true;
+      }
       ts.forEachChild(node, visit);
     };
     visit(sf);
@@ -579,11 +629,25 @@ function contextAliases(sf: ts.SourceFile): Set<string> {
   return aliases;
 }
 
+/** The names a file binds to an object literal that WRITES a `pariwarId` key (`const patch = { pariwarId: p }`). */
+function pariwarPatches(sf: ts.SourceFile): Set<string> {
+  const out = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer !== undefined && namesPariwarKey(node.initializer)) {
+      out.add(node.name.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return out;
+}
+
 /** The three writer-pin findings for one source: `pariwarId` writes, context mutations, `.requestContext =` assignments. */
 function writerFindings(file: string, text: string): { pariwarId: number; mutation: number; contextAssign: number } {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, scriptKindOf(file));
   const f = { pariwarId: 0, mutation: 0, contextAssign: 0 };
   const aliases = contextAliases(sf);
+  const patches = pariwarPatches(sf);
   const visit = (node: ts.Node): void => {
     if (ts.isBinaryExpression(node) && ASSIGN_OPS.has(node.operatorToken.kind)) {
       if (isPariwarIdTarget(node.left) || (node.operatorToken.kind === ts.SyntaxKind.EqualsToken && patternWritesPariwarId(node.left))) {
@@ -600,7 +664,9 @@ function writerFindings(file: string, text: string): { pariwarId: number; mutati
         else if (callee === 'Object.assign' ? node.arguments.slice(1).some(namesContextKey) : namesContextKey(second)) f.contextAssign += 1;
         // Review R2-2 — a `pariwarId` key written through the call on ANY target (a parameter, a holder's field, a fresh object):
         // `Object.assign(ctx, { pariwarId })`, `Reflect.set(ctx, 'pariwarId', p)`, `Object.defineProperties(ctx, { pariwarId: … })`.
-        if (callee === 'Object.assign' ? node.arguments.slice(1).some(namesPariwarKey) : namesPariwarKey(second)) f.pariwarId += 1;
+        if (callee === 'Object.assign' ? node.arguments.slice(1).some((a) => namesPariwarKey(a, patches)) : namesPariwarKey(second, patches)) {
+          f.pariwarId += 1;
+        }
       }
     }
     ts.forEachChild(node, visit);
@@ -640,7 +706,9 @@ describe('Story 13.2 AT8 v2 (ii) — the repo-wide reach fence', () => {
   it('AT9 — ⛔ ALLOWED file outside the module mentions `generate` (the allocator test seam), and ⛔ importer of the door carries a `generate` key', () => {
     for (const f of ALLOWED) expect(generateHits(f, read(f)), f).toBe(0);
     const importers = outside.filter((f) => f.startsWith(DOOR_CALLER_TREE) && f !== DOOR);
-    expect(importers.length).toBeGreaterThan(100); // non-vacuous: the whole API tree is walked
+    // ⚠ This floor proves the API tree was walked, ⛔ that an importer was scanned: no route imports the door yet (13.1 is its first
+    // caller), so the planted bites below are what exercise `doorImporterGenerateHits`.
+    expect(importers.length).toBeGreaterThan(100);
     for (const f of importers) expect(doorImporterGenerateHits(f, read(f)), f).toBe(0);
   });
 
@@ -722,6 +790,10 @@ describe('Story 13.2 AT8 v2 (ii) — the repo-wide reach fence', () => {
     ['a `generate` property', `await allocateAttributionCodeForRequest(r, s, o, { maxAttempts: 2, generate: () => '482913' } as never);`],
     ['a shorthand `generate`', `const generate = () => '482913'; await allocateAttributionCodeForRequest(r, s, o, { generate } as never);`],
     ["a quoted 'generate' key", `await allocateAttributionCodeForRequest(r, s, o, { 'generate': g } as never);`],
+    ['a method shorthand', `await allocateAttributionCodeForRequest(r, s, o, { generate() { return '482913'; } } as never);`],
+    ['a computed string key', `await allocateAttributionCodeForRequest(r, s, o, { ['generate']: g } as never);`],
+    ['an assignment onto the options', `const opts = {}; (opts as never as { generate: unknown }).generate = g;`],
+    ['a destructured seam', `const { generate } = seam; void generate;`],
   ])('AT9 bite (review R2-4) — a door importer carrying %s is caught', (_label, call) => {
     const src = `import { allocateAttributionCodeForRequest } from './attribution-code-access.js';\n${call}`;
     expect(doorImporterGenerateHits('apps/api/src/modules/field-worker/planted.routes.ts', src)).toBeGreaterThan(0);
@@ -770,22 +842,58 @@ describe('Story 13.2 AT8 v2 (iii) — the API door’s positive shape', () => {
     ['a wrapper taking a pg.Pool', () => mutate('  request: FastifyRequest,\n  scopeTx: ScopeTx,\n  options: { fieldWorkerId: ids.FieldWorkerId },\n  opts', '  request: FastifyRequest,\n  scopeTx: pg.Pool,\n  options: { fieldWorkerId: ids.FieldWorkerId },\n  opts')],
     ['the flag wrapper taking an actorId option', () => mutate('options: { attempts: number },', 'options: { attempts: number; actorId: string },')],
     ['authenticatedScope exported', () => mutate('function authenticatedScope(', 'export function authenticatedScope(')],
-    // Review R2-1 — the Pariwar's provenance.
-    ['the pre-check dropped', () => mutate(PARIWAR_LINE, '  const { pariwarId } = authenticatedScope(request);\n  return attributionCode.resolveAttribution(')],
-    [
-      'the Pariwar read from the caller’s ScopeTx (the authenticated one discarded)',
-      () =>
-        mutate(
-          PARIWAR_LINE,
-          '  authenticatedScope(request);\n  const pariwarId = ids.pariwarId(scopeTx.pariwarId);\n  assertScopeTxIsRequestScope(scopeTx, pariwarId);\n  return attributionCode.resolveAttribution(',
-        ),
-    ],
-    ['scopeTx.pariwarId read after the pre-check', () => mutate('assertScopeTxIsRequestScope(scopeTx, pariwarId);\n  return attributionCode.resolveAttribution(', 'assertScopeTxIsRequestScope(scopeTx, pariwarId);\n  void scopeTx.pariwarId;\n  return attributionCode.resolveAttribution(')],
-    ['scopeTx handed whole to the domain', () => mutate('attributionCode.resolveAttribution(scopeTx.client,', 'attributionCode.resolveAttribution(scopeTx as never,')],
-    ['the pre-check made the SECOND of a different pair', () => mutate(PARIWAR_LINE, '  const { pariwarId } = authenticatedScope(request);\n  assertScopeTxIsRequestScope(scopeTx, ids.pariwarId(scopeTx.pariwarId));\n  return attributionCode.resolveAttribution(')],
-    ['the flag wrapper taking the Pariwar from elsewhere', () => mutate('const { pariwarId, actorId } = authenticatedScope(request);', 'const actorId = authenticatedScope(request).actorId;\n  const pariwarId = ids.pariwarId(String(options.attempts));')],
   ])('BITE — %s ⇒ a violation', (_label, make) => {
     expect(doorViolations(make())).not.toEqual([]);
+  });
+
+  // ── Review R2-1 — the Pariwar's PROVENANCE, one bite per sub-rule PER wrapper (the first round mutated `resolve…` alone) ─────
+  const wrapperSource = (name: string): string => {
+    const start = door.indexOf(`export async function ${name}(`);
+    expect(start, `wrapper present: ${name}`).toBeGreaterThanOrEqual(0);
+    return door.slice(start, door.indexOf('\n}\n', start) + 3);
+  };
+  const mutateWrapper = (name: string, edit: (w: string) => string): string => {
+    const w = wrapperSource(name);
+    const m = edit(w);
+    expect(m, `${name}: the bite changed the wrapper`).not.toBe(w);
+    return door.replace(w, m);
+  };
+  const swap = (w: string, from: string, to: string): string => {
+    expect(w.includes(from), `anchor present: ${from}`).toBe(true);
+    return w.replace(from, to);
+  };
+  const BIND = '  const { pariwarId } = authenticatedScope(request);\n';
+  const PRE = '  assertScopeTxIsRequestScope(scopeTx, pariwarId);\n';
+  const PROVENANCE: Array<[string, (w: string) => string]> = [
+    ['the pre-check dropped', (w) => swap(w, PRE, '')],
+    [
+      'the Pariwar read from the caller’s ScopeTx (the authenticated one discarded)',
+      (w) => swap(w, BIND + PRE, `  authenticatedScope(request);\n  const pariwarId = ids.pariwarId(scopeTx.pariwarId);\n${PRE}`),
+    ],
+    ['scopeTx.pariwarId read after the pre-check', (w) => swap(w, PRE, `${PRE}  void scopeTx.pariwarId;\n`)],
+    ["scopeTx['pariwarId'] read after the pre-check", (w) => swap(w, PRE, `${PRE}  void scopeTx['pariwarId'];\n`)],
+    ['scopeTx handed whole to the domain', (w) => swap(w, 'scopeTx.client', 'scopeTx as never')],
+    ['the pre-check on a different pair', (w) => swap(w, PRE, '  assertScopeTxIsRequestScope(scopeTx, ids.pariwarId(scopeTx.pariwarId));\n')],
+    ['the pre-check on a different ScopeTx', (w) => swap(w, PRE, '  assertScopeTxIsRequestScope(options as never, pariwarId);\n')],
+    ['a `let` binding (reassignable)', (w) => swap(w, BIND, BIND.replace('const', 'let'))],
+    ['a renamed binding', (w) => swap(w, BIND, '  const { pariwarId: p } = authenticatedScope(request);\n  const pariwarId = p;\n')],
+    ['a pariwarId property that is not the binding', (w) => swap(w, PRE, `${PRE}  void { pariwarId: ids.pariwarId(String(options)) };\n`)],
+  ];
+  it.each(SCOPED_WRAPPERS.flatMap((name) => PROVENANCE.map(([label, edit]) => [name, label, edit] as const)))(
+    'BITE (review R2-1) — %s: %s ⇒ a violation',
+    (name, _label, edit) => {
+      expect(doorViolations(mutateWrapper(name, edit))).not.toEqual([]);
+    },
+  );
+
+  const FLAG = 'flagAllocationExhaustedForRequest';
+  it.each([
+    ['a `let` binding', (w: string) => swap(w, 'const { pariwarId, actorId } =', 'let { pariwarId, actorId } =')],
+    ['a renamed binding', (w: string) => swap(w, 'const { pariwarId, actorId } =', 'const { pariwarId: p, actorId } =')],
+    ['openScopeTx given another Pariwar', (w: string) => swap(w, 'openScopeTx(deps, pariwarId)', 'openScopeTx(deps, ids.pariwarId(String(options.attempts)))')],
+    ['the domain call given another Pariwar', (w: string) => swap(w, '      pariwarId,\n      attempts', '      pariwarId: ids.pariwarId(String(options.attempts)),\n      attempts')],
+  ])('BITE (review R2-1) — the flag wrapper: %s ⇒ a violation', (_label, edit) => {
+    expect(doorViolations(mutateWrapper(FLAG, edit))).not.toEqual([]);
   });
 });
 
@@ -843,6 +951,24 @@ describe('Story 13.2 AT8 v2 (iv) — the authenticated-Pariwar writer pin (apps/
     expect(
       writerFindings('apps/api/src/modules/member/planted.ts', "const { requestContext: ctx } = request; Reflect.set(ctx, 'traceId', v);").mutation,
     ).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['a `satisfies` literal on a parameter', 'function bind(ctx, p) { Object.assign(ctx, { pariwarId: p } satisfies Partial<C>); }'],
+    ['a patch variable on a parameter', 'function bind(ctx, p) { const patch = { pariwarId: p }; Object.assign(ctx, patch); }'],
+  ])('BITE (review R2-2, second round) — a `pariwarId` write via %s is caught as a writer', (_label, src) => {
+    expect(writerFindings('apps/api/src/modules/member/planted.ts', src).pariwarId).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['`satisfies` on the context', 'Object.assign(request.requestContext satisfies RC, { traceId: t });'],
+    ['an angle-bracket assertion on the context', 'Object.assign(<RC>request.requestContext, { traceId: t });'],
+    ['a destructured PARAMETER alias', "function f({ requestContext: ctx }: Req, v) { Reflect.set(ctx, 'traceId', v); }"],
+    ['an alias assigned after its declaration', "let ctx; ctx = request.requestContext; Reflect.set(ctx, 'traceId', v);"],
+    ['an alias through ??', "const ctx = request.requestContext ?? fallback; Reflect.set(ctx, 'traceId', v);"],
+    ['the AsyncLocalStorage store', 'Object.assign(requestContextStorage.getStore()!, { traceId: t });'],
+  ])('BITE (review R2-2, second round) — a context mutation via %s is caught', (_label, src) => {
+    expect(writerFindings('apps/api/src/modules/member/planted.ts', src).mutation).toBeGreaterThan(0);
   });
 
   it('BITE — request.requestContext = { …ctx, pariwarId } outside the request-context middleware is caught', () => {

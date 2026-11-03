@@ -514,7 +514,8 @@ export * from './marketplace_modules.js';
 export * from './marketplace_partners.js';
 export * from './marketplace_module_publications.js';
 // Story 13.2 (0199) — the field-worker attribution-code registry: one permanent Pariwar-scoped 6-digit code per field worker
-// + the durable allocation-exhaustion flags (both append-only for every role — grant + guard triggers; tenant-isolated).
+// + the durable allocation-exhaustion flags (both append-only for every role — grant + guard triggers, bypassed only by replica
+// mode or DDL; tenant-isolated).
 // Reachable from `apps/*` only through the API door (`apps/api/src/modules/field-worker/attribution-code-access.ts`).
 export * from './field_worker_attribution_codes.js';
 export * from './attribution_code_allocation_flags.js';

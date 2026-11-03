@@ -58,7 +58,7 @@ LETTERS: G = found facts · AT = build decisions · I = invariants · TR = traps
 
 # Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
-Status: review
+Status: in-progress
 
 ## What this story is, in one paragraph
 
@@ -832,6 +832,97 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - [x] **Task 7 — close.** `pnpm ci:local` with `DATABASE_URL` = the story DB port (⚠ the shell's `DATABASE_URL` points at
   `:5432`); File List; Change Log; row `ready-for-dev → in-progress → review` in `sprint-status.yaml` via the SAFE
   prepend.
+
+### Review Findings
+
+**2026-11-03 — full code review, baseline `b7b43c47`, HEAD `65803c39`.** Three independent layers
+(Blind Hunter, Edge Case Hunter, Acceptance Auditor), followed by verification and deduplication. **0 decision-needed,
+7 patch, 0 defer, 1 dismissed.** Engineering decisions only; the Panel-routing §0 gate sends nothing to trustees.
+Findings remain OPEN; no production code or tests changed during this review.
+
+**Disposition (2026-11-03):** BigDev selected **2 — Leave as action items**. R1–R7 remain unchecked;
+0 fixes applied, 0 deferred. Story and sprint row move `review` → `in-progress` because the findings remain unresolved.
+
+- [ ] [Review][Patch] **R1 / P2 — Restrict the door-import exemption to sanctioned API callers.**
+  [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:114`] — `resolvesToDoor` exempts callers in ANY tree.
+  An unauthenticated `apps/public/src/pages/*.ts` endpoint can import `resolveAttributionForRequest`, build a request
+  context from `ACTIVE_PARIWAR_ID` and a matching scoped transaction, and pass the fence. The writer pin scans only
+  `apps/api/src`; the runtime helper checks values, not their provenance. This violates AC10 / I4 / AT8's stated
+  exclusion of public pages. Restrict the exemption to API source callers and add positive controls for public / other
+  workspace imports of the door. **Verified:** the actual scanner returns `reachHits: []` for a synthetic public
+  endpoint importing the door; the real door-shape check also returns `[]`. No such public endpoint exists today.
+  Sources: blind + auditor.
+- [ ] [Review][Patch] **R2 / P2 — Detect replacement of the request context through element access.**
+  [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:419`] —
+  `request['requestContext'] = { ...request.requestContext, pariwarId: suppliedValue }` returns zero findings:
+  the replacement check recognizes only `PropertyAccessExpression`, while the `pariwarId` here is an object-literal
+  key. This evades AC10's context-replacement pin, allowing a later API handler to replace the authenticated scope
+  and call the door with a transaction opened for its chosen Pariwar. Normalize literal element access and add a bite
+  test. A related boundary, `const ctx = request.requestContext; Object.assign(ctx, { pariwarId: suppliedValue })`,
+  also returns zero findings; cover the straightforward alias form or explicitly enforce its exclusion. **Verified:**
+  both snippets return `{ pariwarId: 0, mutation: 0, contextAssign: 0 }` from the actual scanner. Source: blind.
+- [ ] [Review][Patch] **R3 / P2 — Report an existing worker's allocation before candidate skipping/retry.**
+  [`packages/domain/src/attribution-code/allocate.ts:90`] — a candidate already captured is skipped before the worker
+  UNIQUE can be checked; drawing the worker's own held code can hit the code UNIQUE first and retry. With
+  `maxAttempts: 1`, a second allocation therefore reports `AttributionCodeAllocationExhaustedError` instead of AC8's
+  `FieldWorkerAlreadyHasAttributionCodeError`, sending the caller down the permanent trustee-flag path. Check for an
+  existing allocation under the scope before drawing, and retain constraint handling for concurrent inserts.
+  Add existing-worker + captured-candidate and existing-worker + own-code tests. **Verified live, rollback-only:**
+  allocate `482913` for W, allocate it again for W with one attempt ⇒ `AttributionCodeAllocationExhaustedError`.
+  Sources: blind + edge + auditor.
+- [ ] [Review][Patch] **R4 / P2 — Keep a non-finite list limit from removing pagination.**
+  [`packages/domain/src/attribution-code/flags.ts:64`] — `limit: Number.NaN` survives the shared `clampLimit` as NaN;
+  Drizzle then omits `LIMIT` altogether. The new accessor can load every flag in the Pariwar despite AC7's 200-row cap.
+  Reject or normalize non-finite limits before the inline clamp and add a generated-SQL or live-DB regression check.
+  The shared helper's weakness predates this branch, but the unbounded flag accessor is introduced here and can be
+  fixed locally without widening scope. **Verified:** a recording client invoking the actual accessor captures the
+  SELECT ending in `flagged_at DESC, flag_id DESC`, with no `LIMIT`. Source: edge.
+- [ ] [Review][Patch] **R5 / P2 — Add the required two-connection allocation-race proof.**
+  [`packages/domain/tests/integration/attribution-code/allocate.spec.ts:18`] — every allocation test uses one
+  `getTx()` connection. Sequential forced collisions prove savepoint recovery, but not two transactions competing
+  for the code or worker UNIQUE. Load-bearing-invariant checklist family 2 explicitly requires a true live race for
+  touched concurrency behavior; uniqueness by construction alone does not satisfy that proof requirement. Add
+  independent-client races for the same `(pariwar, code)` and the same worker, asserting the committed row counts,
+  the winner/loser outcomes required by this primitive, and the losing transaction's usability. No worker redelivery
+  or event is demanded here (neither exists under AT10). This is a verification gap, not evidence that PostgreSQL's
+  UNIQUE enforcement is broken. Source: root acceptance-lens triage.
+- [ ] [Review][Patch] **R6 / P3 — Release each failed attempt's savepoint after rolling back to it.**
+  [`packages/domain/src/attribution-code/allocate.ts:112`] — `ROLLBACK TO SAVEPOINT` retains that savepoint.
+  A retry pushes another with the same name; success releases only the newest, and exhaustion/error leaves the
+  failed attempts' savepoints until the caller ends its transaction. Repeated allocations in one caller transaction
+  accumulate subtransaction bookkeeping. Release after rollback before continuing or rethrowing, and cover the
+  balanced lifecycle. **Verified live, rollback-only:** after the one-attempt exhaustion in R3, an explicit
+  `RELEASE SAVEPOINT allocate_attribution_code` succeeds. Bounded by attempts per call and reclaimed at transaction
+  end; no permanent connection leak is claimed. Source: blind.
+- [ ] [Review][Patch] **R7 / P3 — Make allocator behavior tests deterministic where freshness is assumed.**
+  [`packages/domain/tests/integration/attribution-code/allocate.spec.ts:58`] — the exhaustion CONTROL draws a real
+  random code while `482913` is held, then requires `attempts === 1`; a legitimate collision makes a correct
+  allocator fail the test (roughly one in a million). The duplicate-worker test likewise draws the first code
+  randomly before assuming scripted candidates are fresh. Use explicitly distinct injected candidates in these
+  behavior tests; keep random draws in the generator tests. Source: blind.
+
+**Validation during review:** the existing reach/door/writer suite passed **42/42** (1,841 files / 19 trees);
+domain attribution-code unit suites passed **7/7**; the allocation / resolve / handle / flags and two dedicated RLS
+suites passed **72/72** on the story DB `:5452`; the API-door integration suite passed **6/6**. The database run was
+retried outside the sandbox after connection `EPERM`; the successful run exercised the DB, not skipped suites.
+The existing `ci:local 37/37` remains the implementation's recorded result; the full pipeline was not repeated in
+this review. Reproductions lived under `/private/tmp/twt-13-2-*`; the durable evidence and triggers are recorded above.
+
+**Dismissed:** the proposed final-newline regex issue — the actual `^[0-9]{6}$` expression returns false for
+`482913\n` in this runtime. The approved insert-vs-commit temporal residual, caller-owned authorization, absent
+field-worker FK/state checks, and the internal flag row accessor are not new defects and are not action items.
+
+**Load-bearing-invariant lens (touched families only):**
+
+| Family | Verdict |
+|---|---|
+| 2 — concurrency / redelivery | **REAL GAP: R5**, two-client allocation races absent. Sequential recovery is covered by `allocate.spec.ts`; worker redelivery/event behavior is not constructible here. |
+| 3 — tenant / actor boundaries | **REAL GAP: R1 / R2** in static boundary enforcement. Existing `resolve.spec.ts`, `handle.spec.ts`, both RLS specs and `attribution-code-access.spec.ts` cover explicit scope, cross-Pariwar denial and actor snapshots. |
+| 5 — DB backstops | **covered-by-test:** both `*-policy-regression.spec.ts` suites directly assert grants, ENABLE/FORCE RLS, CHECKs, uniqueness and mutation triggers; deferred FK is explicit AT2. |
+| 6 — projections / snapshots | **covered-by-construction:** immutable flag display snapshots; explicit allocation/holder read selections; flag list is an internal accessor with no external projection shipped. |
+| 8 — audit / attribution | **covered-by-test:** API flag-survival and missing-display tests; separate durable flag commit required by AT7, no event required under approved AT10. |
+| 9 — deliberate bypasses | **covered-by-construction:** authorization owned by future callers, deferred holder eligibility/FK and request-less backfill entry are explicitly documented and carried. |
+| 10 — closure honesty | **covered-by-construction:** sibling work remains carried; R1–R7 remain open and existing passing tests are not claimed to cover them. |
 
 ## Dev Notes
 

@@ -12,7 +12,7 @@ the `3d6b46c5..b7b43c47` delta (94 commits) touches none of this story's touch-p
 `ids/index.ts`, `schema/index.ts`, `policies/index.ts`, `rbac/roles.ts` and `rbac/permissions.ts`. Perishable — re-check
 at Task 0.1. Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: review (v1.11 — code review round 2 R2-1…R2-10 applied and committed on the story branch, the patch diff then reviewed adversarially and its findings applied; ⛔ pushed, ⛔ landed on main; was ready-for-dev at v1.7 — ALL build decisions ANSWERED; v1.7 records BigDev's approval of AT8 v2 + AT4 (c) as written in v1.6; created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
+STATUS: done (v1.11 — LANDED on main by fast-forward, PR #322, `b7b43c47..ae4d9737`; code review round 2 R2-1…R2-10 applied, the patch diff then reviewed adversarially and its findings applied; was ready-for-dev at v1.7 — ALL build decisions ANSWERED; v1.7 records BigDev's approval of AT8 v2 + AT4 (c) as written in v1.6; created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
@@ -58,7 +58,7 @@ LETTERS: G = found facts · AT = build decisions · I = invariants · TR = traps
 
 # Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 ## What this story is, in one paragraph
 

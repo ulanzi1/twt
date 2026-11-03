@@ -10,7 +10,12 @@ PINNED: `268d86b5` = `origin/main` (ledger 2026-11-03g — Story 13.2 LANDED, PR
 passes, then the author's own greps; every NEGATIVE — "no `kyc_status`", "no PAN capture", "`identity_type` has one value",
 "no route creates a principal" — was re-grepped by hand). Perishable — re-check at Task 0.1. Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.17 — VALIDATED a third time at `268d86b5` by four fresh-context read-only verifiers (code claims;
+STATUS: ready-for-dev (v1.18 — THE PANEL RULED on the follow-up note (decision `2026-11-03-443`, by DR and KB, `af503b43`): Q-6 A
+(consent, or a Pariwar Admin directly), Q-7 C (a new registration now, a link between the person's records LATER — carried as C11, no
+row), Q-8 A (the fill-in is not enforced; the log records the authorisation), Q-9 A (the District Admin registers, the Pariwar Admin
+approves, and does both if the District Admin is not available). Each matches its build default, so NO AC, Task or Invariant changes.
+Q-6…Q-9 are DISCHARGED; only the counsel question is still unsent.)
+v1.17 — VALIDATED a third time at `268d86b5` by four fresh-context read-only verifiers (code claims;
 database + domain; governance + consistency; API + RBAC + tests); every finding applied on BigDev's "apply all findings" — see
 the Change Log. ⭐ GOVERNANCE IS DONE: decision `2026-11-03-441` (the Panel's ruling, `0f66848b`) and the author-commit
 `2026-11-03-442` (QE1–QE22, Q-2, Q-3, Q-4, `eb2106fe`) are COMMITTED, each alone, and the story was amended to them (`db88b8fe`).
@@ -104,8 +109,8 @@ NUMBERS — traced 2026-11-03 across main, every worktree and the local refs. RE
   lower `when` behind a higher one is skipped by drizzle on a shared DB). ⚠ `0200` is CONTENDED: `story/6-22b-…` planned `0199`
   and must renumber, `story/14-3-…` holds a `<MIG>` placeholder, `story/6-39-…` plans three. The number follows the MERGE order.
 - Decisions: main holds up to `2026-11-02-439`; `-440` is minted on `story/6-22b-…` (not landed). `-441` (the Panel's ruling on
-  Q-1 / Q-5, `0f66848b`) and `-442` (this story's author-commit, `eb2106fe`) are COMMITTED on this branch ⇒ any NEW decision this
-  story writes takes ≥ `-443` (re-grep every ref first). No decision `-431`…`-440` mentions field workers or attribution.
+  Q-1 / Q-5, `0f66848b`), `-442` (this story's author-commit, `eb2106fe`) and `-443` (the Panel's ruling on Q-6…Q-9, `af503b43`) are
+  COMMITTED on this branch ⇒ any NEW decision this story writes takes ≥ `-444` (re-grep every ref first). No decision `-431`…`-440` mentions field workers or attribution.
 - RBAC: `PERMISSION_CATALOG_VERSION = 58` at the pin. This story moves it by exactly ONE: the Panel ruled (`-441`) that a District
   Admin and a Pariwar Admin may add a field worker, so the key is minted. ⚠ CONTENDED: `story/14-3-…` mints `breach.manage` with a
   `<CAT>` placeholder — the bump is +1 from whatever `main` holds when this lands (58 → 59 today; 59 → 60 if 14.3 lands first).
@@ -244,6 +249,7 @@ electronically while they are employed and removes them 8 years after the date o
 | Decision `2026-10-30-422` Consequence 1; `2026-11-01-438` DL6 | `-422`: "`-421` QE5 (A), QE6 (A) and QE7 (a) are CONFIRMED by the Panel as built — ⛔ change to the build." `-438` DL6: "Two permission keys MINTED here (outside `-210`'s delegated mint …; the `-421` QE6 / `-433` QE2 precedent): `claim.flag_fraud` (dimension pariwar; seeded `helpline_operator` …) and `claim.record_fraud_finding` (dimension district; seeded `district_admin` …)" | the Panel once confirmed an author-commit key "as built"; `-438` minted a key for a B(3) role (`helpline_operator`) the same way — evidence for Q-1 |
 | Decision `2026-11-03-441` (Trustee-ratified) — Q1 / Q2 | "by DR and KB / Q1 - Go with option A and also  District Admin may add a field worker. The goal is District Admin will manage field workers, however if District Admin is unable to discharge his duties for any reason, including District Admin is yet to Join, Pariwar Admin will fill in. Keep the full log of field worker. / Q2 A" | RULED — §0 edges 4 and 11, QE10, QE17, QE18, I15 |
 | Decision `2026-11-03-442` (author-commit, `eb2106fe`) | QE1–QE22 and Q-2 / Q-3 / Q-4 as recorded; §0 (3): the key's HOLDERS are ratified by `-441`, its `district` dimension is the author's; **Supersedes** `-441` build reading item 2 ("later acts gate against the current district") for a MOVE only | committed — the build record |
+| Decision `2026-11-03-443` (Trustee-ratified, `af503b43`) — Q1…Q4 of the follow-up note | "by DR and KB / Q1 A, Q2 C, Q3 A, Q4 A" | RULED — Q-6 A (QE17), Q-7 C (QE19, C11), Q-8 A (QE18), Q-9 A (QE21) |
 | Decision `2026-09-29-270` (Story 6.19b) | `rbac.matchingGrantRole` — the role of the grant that authorised an act: most specific scope first (`district` → `state` → `pariwar`), `global` last | built — QE18's `authorize` uses its order (TR13) |
 | Trust Deed Cl. 20(h) (draft, NOT executed, binds nothing — private repo `twt-legal`, cited by clause only); PRD §11 and OQ-5 | Deed: the clause is the Trustees' power over the Trust's service providers (appointing, paying and removing them) — read it in the private copy before relying on it. PRD §11: Trust Staff own "field-worker dispatch coordination"; OQ-5 (the recruitment plan) — *Owner:* "Trustee Panel + Solo Builder" | evidence for Q-1 and §0 edge 4 — who may add / remove the people the Trust pays |
 | Privacy Policy §1 (private copy, cited by section only) | §1 scopes the Data Fiduciary's duty to Members, nominees and claimants | draft policy — field workers are outside it |
@@ -384,7 +390,8 @@ is SETTLED (BigDev, 2026-11-03: *"approved and settled — the implementation ru
 and the Pariwar Admin fills in; the full log is kept. That changes QE10 (holders and dimension, applied below) and adds QE17 (the
 worker's district) and QE18 (the acting role in the log). BigDev then APPROVED QE17 — REVISED the same day because workers rotate
 between districts — and QE19 (a Pariwar move is a new registration); QE18 (the authorization snapshot in the log) was APPROVED too, with two conditions — see QE18. A follow-up Panel note (Q-6 who may change the District Admin a
-worker reports to, Q-7 the same person across Pariwars, Q-8 whether the fill-in is enforced, Q-9 who approves) is DRAFTED, ⛔ sent. Q-2, Q-3 and Q-4 are ANSWERED (v1.12).
+worker reports to, Q-7 the same person across Pariwars, Q-8 whether the fill-in is enforced, Q-9 who approves) was SENT and RULED —
+decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED (v1.12).
 
 - **QE1 — Home. ⭐ `packages/domain/src/field-worker/`, ⛔ `packages/field-worker-lifecycle`.** The epic names the package; 13.2's C1
   asks to "re-weigh" it against [[feedback_no_premature_package]]. There is no second consumer, and G1's reasons (globs, gates,
@@ -640,7 +647,7 @@ worker reports to, Q-7 the same person across Pariwars, Q-8 whether the fill-in 
   QE12's post list. It lives in the EVENT only: it is NOT projected into `state_reason_code` (which stays non-null iff the state is
   suspended or terminated), and the fold's `reasonCode` ignores `posted`, so a suspended worker who is moved keeps their suspension
   reason.
-  **Who may move (the routes' — 13.1c and 13.1d; the Panel's — Q-6, REWRITTEN a third time).** BigDev's rule, settled in steps on
+  **Who may move (the routes' — 13.1c and 13.1d; the Panel's — Q-6, RULED A by `-443`: this rule, as built).** BigDev's rule, settled in steps on
   2026-11-03: a worker's reporting district changes only (a) by CONSENT between the two District Admins, or (b) by a Pariwar Admin
   directly. (a) The District Admin at EITHER end — the one the worker is leaving or the one they are joining — OPENS a request, at
   the worker's request (the only reason a District Admin may give); the District Admin at the OTHER end ACCEPTS it or REFUSES it
@@ -728,10 +735,13 @@ worker reports to, Q-7 the same person across Pariwars, Q-8 whether the fill-in 
   RBAC test passes unchanged, `matching-grant.test.ts` included — none of its cases ties within one dimension). It is
   behaviour-preserving, not "untouched": every `requirePermissionHook` caller (132 calls in 62 files at `268d86b5` — re-count at
   Task 0.1) now also records its result, and `hasPermission`'s 29 callers in 20 files outside `rbac/` run the extracted predicate. Whether a Pariwar Admin should be BLOCKED while a District Admin is in
-  post is the Panel's and was not ruled (Q-8).
+  post was the Panel's: RULED — Q-8 A (`-443`): not blocked; both can always act and the log records which authorisation allowed
+  each act — this snapshot, as built.
 
-- **QE19 — A worker who moves to another Pariwar is a NEW registration there. APPROVED by BigDev 2026-11-03 (drafted for the
-  Panel as Q-7 — not sent).** BigDev (2026-11-03): workers will also move between Pariwars. The landed foundation makes the Pariwar the unit of
+- **QE19 — A worker who moves to another Pariwar is a NEW registration there. APPROVED by BigDev 2026-11-03; the Panel RULED
+  Q-7 C (`-443`): a new registration NOW, plus a link between the person's records LATER (not our suggestion, A).** So this
+  decision stands as built and is the first half of the Panel's answer; the link is carried as C11 (no row) — build nothing that
+  forecloses it, and nothing that builds it. BigDev (2026-11-03): workers will also move between Pariwars. The landed foundation makes the Pariwar the unit of
   a worker's record, not a column to edit: 13.2's registry gives a worker ONE permanent code (`UNIQUE (field_worker_id)`), codes are
   unique only WITHIN a Pariwar (`UNIQUE (pariwar_id, code)`), a member enters a code in their OWN Pariwar and the lookup is
   tenant-scoped, every table is per-Pariwar RLS-isolated, and the mobile blind index is keyed per Pariwar so two Pariwars cannot even
@@ -739,8 +749,9 @@ worker reports to, Q-7 the same person across Pariwars, Q-8 whether the fill-in 
   larger capability" and leaves it out. So here too: a worker who moves is registered afresh by the new Pariwar's District Admin or
   Pariwar Admin (a new id, a new code, a first district), and the old record is left as it is — active, or ended by its own
   Pariwar's admins for a reason that fits. Nothing in this story links the two. Cost, recorded: two records and two codes for one
-  person; no single history; a person-level view or one commission statement across records (13.5 pays by PAN) needs a LATER link,
-  which is a cross-Pariwar identity question and the Panel's (Q-7). Nothing here forecloses it.
+  person; no single history; a person-level view or one commission statement across records (13.5 pays by PAN) needs the LATER link
+  the Panel chose (Q-7 C) — when it is built, what it joins and what may be shared between Pariwars return to the Panel with that work
+  (C11). Nothing here forecloses it.
 
 - **QE20 — The date of termination is the ACTUAL LAST DAY, supplied by the admin. APPROVED by BigDev 2026-11-03 ("actual last day is
   fine").** Shape (the author's): the `terminated` payload carries `ended_on`, and it is PROJECTED into a nullable `date` column
@@ -781,8 +792,9 @@ worker reports to, Q-7 the same person across Pariwars, Q-8 whether the fill-in 
   the worker's CURRENT district) and the screens are Story 13.1a's; the commands exist here and are called by tests. BigDev's words
   are "if the District Admin is not available" — wider than "no District Admin holds the district", which is all the system can
   detect (Q-8). When the Pariwar Admin does both, the system does not stop the same person registering and approving (Q-8,
-  default A). Who may approve is Panel-adjacent — it decides who is credited — and is drafted for the Panel as Question 4 of the
-  follow-up note (Q-9, not sent). No AC or Task changes.
+  default A). Who may approve was Panel-adjacent — it decides who is credited — and the Panel RULED Q-9 A (`-443`): the District Admin
+  registers, the Pariwar Admin approves, and does both if the District Admin is not available — BigDev's process, as built. No AC or
+  Task changes.
 - **QE22 — The registration response does NOT show the code. APPROVED by BigDev 2026-11-03 ("Approve QE22 - yes"), option (B).** BigDev (2026-11-03): the code reaches
   the worker BY SMS once they are in the system, and an admin gives it by hand only on the worker's request. As built (QE9) the 201
   shows the code to the registering admin, who could tell the worker BEFORE approval — the very gap QE11 warns of (a signup before
@@ -860,7 +872,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   code). Without it no worker can be credited (Q-5 A), so 13.8's first signup would credit nobody. **13-1b — the SMS of the code
   (parallel, NOT on the critical path):** the by-hand path is already sanctioned by the process, so go-live need not wait for it; but
   DLT approval of a new template is an external wait, so START THE TEMPLATE REGISTRATION NOW. **13-1c — moving and ending workers
-  (soon after go-live):** the move route (`posted`; who may change a worker's reporting district is Q-6), suspend and reactivate, terminate with the actual last day
+  (soon after go-live):** the move route (`posted`; who may change a worker's reporting district is Q-6 — since RULED A, `-443`), suspend and reactivate, terminate with the actual last day
   (`ended_on`, QE20) — which waits for 13.6's reversibility and appeal decision (C4) — and the READ of the full log; the 8-year removal
   is later still (the first is due 8 years after the first termination) and needs an owner, not yet a row. *Why not fold it all into
   13.1:* the primitive and the registration route are the foundation the rest build on; the SMS carries an external wait; and 13.1 is
@@ -927,7 +939,9 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 
 - **Q-6 — Who may change the District Admin a field worker reports to (the Panel's; NON-BLOCKING for the build — added 2026-11-03,
   REWRITTEN three times the same day after BigDev's corrections). DRAFTED as Question 1 of
-  `trustee-panel-routing-note-2026-11-03-story-13-1-moving-workers-and-fill-in.md` — ⛔ sent.**
+  `trustee-panel-routing-note-2026-11-03-story-13-1-moving-workers-and-fill-in.md`. ✅ DISCHARGED — SENT and RULED A by the Panel,
+  decision `2026-11-03-443` (by DR and KB): by consent, or a Pariwar Admin directly — the build default, as built.** The text below
+  is the ask as it stood (kept, not deleted).
   BigDev: workers are NOT to be restricted to a district (a school near a boundary should not cost a second trip), so the district is
   who the worker REPORTS to; it changes only when the worker asks, by consent between the two District Admins — or directly by a
   Pariwar Admin when the Trust needs it — without loading the Pariwar Admin with routine moves. *Plain question:* "Who may change
@@ -940,7 +954,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   District Admin can send a worker to, or take one from, another without agreement (the earlier suggestion, now superseded by (A)).
   No route calls the move command until 13.1c / 13.1d build theirs, so nothing goes live unruled; the build waits for no answer and
   proceeds on (A).
-- **Q-7 — A worker who moves to another Pariwar (the Panel's; NON-BLOCKING for the build — added 2026-11-03). DRAFTED as Question 2 of the same note — ⛔ sent.** *Plain question:* "A
+- **Q-7 — A worker who moves to another Pariwar (the Panel's; NON-BLOCKING for the build — added 2026-11-03). Question 2 of the same note. ✅ DISCHARGED — RULED C (`-443`): a new registration now, plus a link between the person's records
+  later — NOT our suggestion (A). The build is QE19 as built; the link is C11 (no row). The text below is the ask as it stood.** *Plain question:* "A
   field worker who has worked for one Pariwar moves to another: is that the same worker, with the same code and history, or a new
   registration in the new Pariwar?" *The one deciding fact:* whether the Trust treats the person as ONE across Pariwars — which
   would let one Pariwar's record of them be seen from another's, and decides whether they hold one code or one per Pariwar.
@@ -951,7 +966,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   QE19.
 
 - **Q-8 — Is the Pariwar Admin's fill-in enforced? (the Panel's; NON-BLOCKING for the build — added 2026-11-03; QE18). DRAFTED as
-  Question 3 of the same note — ⛔ sent.** *Plain question:* "You said the Pariwar Admin fills in when the District Admin cannot do the
+  Question 3 of the same note. ✅ DISCHARGED — RULED A (`-443`): both can always act and the log records which authorisation allowed
+  each act (QE18, as built). The text below is the ask as it stood.** *Plain question:* "You said the Pariwar Admin fills in when the District Admin cannot do the
   job, for any reason. Should the system stop a Pariwar Admin from adding or managing field workers while a District Admin is in
   post — or trust them and record who did what?" *The one deciding fact:* whether the system can know a District Admin is "unable"
   — it cannot, except that none has joined. *Options.* **(A) ⭐** both can always act and the log records the authorization that passed (QE18) —
@@ -960,8 +976,10 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   until a Super Admin steps in. **(C)** a Pariwar Admin acts after recording a reason, which the log keeps — cost: friction, and the
   reason is the Pariwar Admin's own word.
 
-- **Q-9 — Who approves a registered field worker? (the Panel's; NON-BLOCKING for the build — added 2026-11-03).** DRAFTED as Question 4
-  of `trustee-panel-routing-note-2026-11-03-story-13-1-moving-workers-and-fill-in.md` — ⛔ sent. BigDev's process: the District Admin
+- **Q-9 — Who approves a registered field worker? (the Panel's; NON-BLOCKING for the build — added 2026-11-03).** Question 4
+  of `trustee-panel-routing-note-2026-11-03-story-13-1-moving-workers-and-fill-in.md`. ✅ DISCHARGED — RULED A (`-443`, on the
+  "not available" wording — BigDev confirmed that version was put): the District Admin registers, the Pariwar Admin approves, and
+  does both if the District Admin is not available (QE21; Story 13.1a builds the approval). The text below is the ask as it stood. BigDev's process: the District Admin
   REGISTERS, the Pariwar Admin APPROVES, and the Pariwar Admin does both "if District Admin is not available" (BigDev's words — the
   system can detect only that no District Admin holds the district, Q-8). `-441` named the
   District Admin as the manager and the Pariwar Admin as the fill-in; a Pariwar Admin who APPROVES the District Admin's registrations
@@ -1256,7 +1274,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
         (the form "Application for Field Worker", version 1, states the purposes and records the worker's agreement — BigDev's word, the form
         unseen), Q-4 (No), QE17–QE20 and QE22 (APPROVED) and QE21 (ANSWERED: the District Admin registers, the Pariwar Admin approves; the B2
         nod is 13.1a's). Still do Task 0.1's re-verification, and STOP if any of those has since changed. The Panel's follow-up note
-        (Q-6…Q-9) and the counsel question are NOT gates for this build; they gate go-live legs and the later routes. QE1–QE16 are ALREADY answered (2026-11-03, in session: as listed ⭐, with QE10 =
+        (Q-6…Q-9) is RULED (`-443`: Q1 A, Q2 C, Q3 A, Q4 A — each the build default); the counsel question is NOT a gate for this
+        build; it gates go-live legs. QE1–QE16 are ALREADY answered (2026-11-03, in session: as listed ⭐, with QE10 =
         `field_worker.register`, QE11 = `active` only and QE12 = the neutral reason values), and Q-1 and Q-5 are RULED by the Panel
         (`-441`) — this task does not re-ask them.
   - [x] 0.3 **DONE 2026-11-03 — do NOT re-commit or re-write either entry.** The Panel's ruling is decision `2026-11-03-441`,
@@ -1613,6 +1632,14 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   makes `postFieldWorker` refuse every key outside the move-key list (QE17). The notices go by email AND in-app and are CONSUMERS of the events, so
   they cover a Pariwar Admin's direct move too — see QE17 for the trace (neither channel exists for District Admins today). Needs
   this story landed; independent of 13.1c.
+- **C11 → NO ROW YET (BigDev, 2026-11-03: carry it, no row) — the link between one person's records in two Pariwars.** The Panel
+  ruled Q-7 C (`-443`): a worker who moves to another Pariwar is a new registration there NOW (QE19, built here), plus a link
+  between the person's records LATER — "a later piece of work and a later decision about what may be shared between Pariwars". Not
+  decided: when it is built, who builds it, what it joins — a person, a PAN (13.5), a mobile (the mobile index is keyed per Pariwar,
+  so two Pariwars cannot match the same person today) — and what one Pariwar may see of another's record; the sharing question
+  returns to the Panel with that work. Likely first need: Story 13.5's one commission statement across Pariwars (it pays by PAN).
+  13.1 builds no link and nothing that forecloses one: a `field_worker_id` is never reused, and a terminated or moved-away
+  registration is kept, not deleted (I10, I15). Mirrored under 13.1 and 13.5 in `epics.md` and in `deferred-work.md`.
 
 ### Testing standards
 
@@ -1664,11 +1691,12 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 - `_bmad-output/implementation-artifacts/13-2-6-digit-attribution-code-generation-per-pariwar.md` (AT1–AT10, C1–C7, TR1–TR14) and
   `12-1-module-manifest-schema-module-lifecycle-state-machine.md` / `12-2-admin-module-targeting-wizard.md` (the twin and the route template).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`.
-- `.decision-log.md` — `2026-11-03-441` (the Panel's ruling); `2026-11-03-442` (this story's author-commit); `2026-06-21-059`
+- `.decision-log.md` — `2026-11-03-441` (the Panel's ruling); `2026-11-03-442` (this story's author-commit); `2026-11-03-443`
+  (the Panel's ruling on Q-6…Q-9); `2026-06-21-059`
   amendment B(3); `2026-09-08-210` cl.2; `2026-11-01-433` QE2; `2026-10-30-421` QE6 / QE14; `2026-10-30-422` Consequence 1;
   `2026-11-01-438` DL6; `2026-08-13-105` D4; `2026-09-29-270` (`matchingGrantRole`).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-03-story-13-1-field-worker-key-and-credit.md` (SENT, ruled) and
-  `…-moving-workers-and-fill-in.md` (DRAFT, not sent); `counsel-question-2026-11-03-field-worker-data-basis.md` (DRAFT, not sent).
+  `…-moving-workers-and-fill-in.md` (SENT, ruled — `-443`); `counsel-question-2026-11-03-field-worker-data-basis.md` (DRAFT, not sent).
 - Code: `apps/api/src/modules/field-worker/attribution-code-access.ts`; `apps/api/tests/unit/attribution-code-reach-fence.test.ts`;
   `packages/domain/src/attribution-code/`; `packages/domain/src/marketplace/`; `apps/api/src/modules/marketplace/{routes,handlers}.ts`;
   `packages/domain/src/rbac/{check,matching-grant,scope}.ts`; `apps/api/src/modules/rbac/index.ts`;
@@ -1697,6 +1725,16 @@ _(empty)_
 
 ### Change Log
 
+- **v1.18 (2026-11-03)** — THE PANEL RULED on the follow-up note, relayed by BigDev: *"by DR and KB / Q1 A, Q2 C, Q3 A, Q4 A"* —
+  recorded as decision `2026-11-03-443` (committed alone, `af503b43`, with the note's ruling block). BigDev confirmed the Panel
+  ruled on the note as revised in v1.17 (`093a39ce`: Question 4 A reads "if the District Admin is not available"). Q-6 A (consent,
+  or a Pariwar Admin directly), Q-8 A (the fill-in not enforced; the log records the authorisation) and Q-9 A (the District Admin
+  registers, the Pariwar Admin approves) MATCH the build defaults QE17, QE18 and QE21. Q-7 C is NOT our suggestion: a new
+  registration now (QE19, as built) plus a link between the person's records later — carried as C11 with no row (BigDev: "Carry it,
+  no row"). NO AC, Task or Invariant changed. Edited: the header, NUMBERS (next decision ≥ `-444`), the Sources table, the QE
+  status paragraph, QE17, QE18, QE19, QE21, Q-6…Q-9 (DISCHARGED, text kept), the Q-2 recommendation line, Task 0.2, C11, References.
+  Companions: `epics.md` (13.1 VARIANCE, 13.1a / 13.1c / 13.1d gates MET, 13.5 INHERITED gains C11), `deferred-work.md` (header
+  and C11), ledger `2026-11-03j`. No code.
 - **v1.17 (2026-11-03)** — VALIDATED a third time (`bmad-create-story validate 13.1`) by four fresh-context read-only verifiers at
   `268d86b5` (code claims; database + domain; governance + consistency; API + RBAC + tests): 1 critical, 9 high, ~20 medium, ~10 low
   after de-duplication, each substantive one re-checked in the repo by the author. BigDev: "apply all findings once the other verifiers

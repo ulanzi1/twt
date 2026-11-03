@@ -12,7 +12,7 @@ the `3d6b46c5..b7b43c47` delta (94 commits) touches none of this story's touch-p
 `ids/index.ts`, `schema/index.ts`, `policies/index.ts`, `rbac/roles.ts` and `rbac/permissions.ts`. Perishable — re-check
 at Task 0.1. Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.7 — ALL build decisions ANSWERED; v1.7 records BigDev's approval of AT8 v2 + AT4 (c) as written in v1.6; created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
+STATUS: done (v1.10 — code review round 2 R2-1…R2-10 applied, suites green on the story DB `:5452`, ⛔ committed; was ready-for-dev at v1.7 — ALL build decisions ANSWERED; v1.7 records BigDev's approval of AT8 v2 + AT4 (c) as written in v1.6; created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
@@ -58,7 +58,7 @@ LETTERS: G = found facts · AT = build decisions · I = invariants · TR = traps
 
 # Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 ## What this story is, in one paragraph
 
@@ -354,7 +354,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
       another). House precedent: `helpdesk/project.ts` `projectTicketGenesis(client: pg.PoolClient, …)`, which binds
       Drizzle internally with `bindScopedDb(client)`.
       **ORDER inside every exported function (v1.6):** (0) PURE argument checks, with ⛔ statement sent — `code` format ⇒
-      `InvalidAttributionCodeError`; `asOf` shape ⇒ `TypeError`; `maxAttempts` ⇒ `RangeError`; then (1) the private
+      `InvalidAttributionCodeError`; `asOf` shape ⇒ `TypeError`; `maxAttempts` (and, v1.10 review R4, a given flag-list `limit`) ⇒ `RangeError`; then (1) the private
       `assertTxBoundScope(client, pariwarId)`; then (2) the module's own SQL. "⛔ a query" anywhere in this story means ⛔
       statement is sent at all. `assertTxBoundScope`:
       1. rejects a `pg.Pool` (or anything without a `release` function) ⇒ `AttributionCodeRequiresTransactionError` —
@@ -600,6 +600,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    error ⇒ rethrown. **And** after `maxAttempts` (default 8, override `1..32` else `RangeError`) without success ⇒
    `AttributionCodeAllocationExhaustedError { pariwarId, attempts }`. **And** it checks `maxAttempts` (pure, ⛔ SQL) and
    then asserts the scope equals `pariwarId` (as AC5) BEFORE any statement of its own (the AT8 v2 (i) ORDER).
+   **And (v1.10 — review R3 / R6; the AC now matches the code)** after the scope assertion and BEFORE any draw it reads the
+   worker's existing code once (explicit `pariwar_id`) ⇒ `FieldWorkerAlreadyHasAttributionCodeError` with 0 draws; and every failed
+   attempt's savepoint is `RELEASE`d after its `ROLLBACK TO` — no allocator savepoint outlives the call.
 5. **AC5 — the lookup.** `resolveAttribution(client, { code, pariwarId, asOf })` returns the holder's `FieldWorkerId` when
    the code is held in the Pariwar AND `allocated_at <= <the asOf instant>` compared IN SQL at full `timestamptz`
    precision; otherwise `null`. `asOf` is REQUIRED and is exactly `{ captureId: MemberAttributionId }` (the instant is
@@ -624,6 +627,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    signature is `clampLimit(limit, { default, cap })` (`packages/domain/src/pagination.ts`), and the domain-accessor gate
    (`scripts/domain-accessor-invariants/lib.ts`) accepts only an integer literal or an inline `clampLimit(...)` in a
    Drizzle `.limit()` — it cannot see a raw-SQL `LIMIT $n`, so ⛔ raw SQL for this read — both with the scope assertion.
+   **And (v1.10 — review R4 / R2-3)** a `limit` that is given but not an integer (NaN, ±Infinity, 2.5) ⇒ `RangeError` BEFORE any
+   statement (`clampLimit` passes NaN through and Drizzle then drops the `LIMIT`); the read is FIELD-PICKED —
+   `{ flagId, attempts, actorDisplay, flaggedAt }`, ⛔ `actor_id`, ⛔ `pariwar_id` (`AttributionCodeAllocationFlagView`).
    **And (AC4–AC7)** every exported DB function takes `client: pg.PoolClient` and runs `assertTxBoundScope` first (AT8 v2
    i): a `pg.Pool`, or a client outside a transaction block, ⇒ `AttributionCodeRequiresTransactionError`; every statement
    then runs on that same client.
@@ -843,6 +849,8 @@ Findings remain OPEN; no production code or tests changed during this review.
 **Disposition (2026-11-03):** BigDev selected **2 — Leave as action items**. R1–R7 remain unchecked;
 0 fixes applied, 0 deferred. Story and sprint row move `review` → `in-progress` because the findings remain unresolved.
 
+**Resolution of the Disposition above (added v1.10; the text above is round 1 as written):** R1–R7 were fixed in `620d44dc` (v1.9) and are `[x]`; the row went `in-progress` → `review`. The two REAL GAPs in the family table below (R5; R1 / R2) are closed by those fixes — round 2 re-audited them.
+
 - [x] [Review][Patch] **R1 / P2 — Restrict the door-import exemption to sanctioned API callers.**
   [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:114`] — `resolvesToDoor` exempts callers in ANY tree.
   An unauthenticated `apps/public/src/pages/*.ts` endpoint can import `resolveAttributionForRequest`, build a request
@@ -923,6 +931,183 @@ field-worker FK/state checks, and the internal flag row accessor are not new def
 | 8 — audit / attribution | **covered-by-test:** API flag-survival and missing-display tests; separate durable flag commit required by AT7, no event required under approved AT10. |
 | 9 — deliberate bypasses | **covered-by-construction:** authorization owned by future callers, deferred holder eligibility/FK and request-less backfill entry are explicitly documented and carried. |
 | 10 — closure honesty | **covered-by-construction:** sibling work remains carried; R1–R7 remain open and existing passing tests are not claimed to cover them. |
+
+#### Code review round 2 — the full diff (2026-11-03)
+
+**2026-11-03 — code review round 2, full diff, baseline `b7b43c47`, HEAD `99010844`.** Three independent layers — Blind Hunter
+(the diff alone), Edge Case Hunter (diff + project read access, with the R1–R7 fix sub-diff `65803c39..HEAD` pointed out),
+Acceptance Auditor (diff + this story at v1.9 + the load-bearing-invariant checklist) — all three completed. Every claim was
+traced against the code before triage. **0 decision-needed, 10 patch, 4 defer, 20 dismissed.** All ten patches are P3/P4:
+hardening of gates and tests, comment accuracy and record hygiene — **no acceptance criterion is broken and no reachable
+defect was found in the shipped code paths.** Each of R1–R7 has a real fix and a test that fails on the violation it
+names (Auditor, re-read by the reviewer in `allocate.ts`, `resolve.ts`, `flags.ts`, the door and the fence/pin code).
+
+**Evidence run by the reviewer:** the fence suite alone — `env -u DATABASE_URL pnpm exec vitest run
+tests/unit/attribution-code-reach-fence.test.ts` — passed **52/52 in 3.6 s** (slowest test 2.6 s; `apps/api`
+`testTimeout` is 20000). ⛔ DB-backed suites and `ci:local` were NOT re-run: `37/37` remains the implementation's recorded
+claim. ⛔ No production code or test was changed by this review.
+
+**Panel-routing §0 gate:** nothing routes to the Trustee Panel. The Auditor tagged AT3 / AT4 (c) / AT5 (who a code credits)
+and AT7 (`actor_display` in a trustee-facing flag list) `PANEL-SHAPED?`. Stripped of clause ids: AT3/AT4 (c)/AT5 were put to
+and ANSWERED by BigDev (Q-S5 2026-11-01; v1.7 approval 2026-11-03) and change nothing a person sees or is owed before
+13.5; the admin-name snapshot is the ratified 6.11 R5 convention. Engineering decisions only.
+
+**Resolution (2026-11-03, v1.10) — BigDev: "1", Apply every patch.** R2-1…R2-10 are applied and checked off; RED / GREEN in the
+Debug Log (e), what each did in the Completion Notes. Where the fix differs from the "Fix:" line above: R2-1 pins the wrapper
+SHAPE (the first two statements, `scopeTx` read only as the assertion's argument and `.client`) rather than a call graph, and its
+runtime legs are un-gated (a poisoned client needs no database) with a CONTROL leg that proves the poison is live; R2-2 counts a
+`pariwarId` key written through any of the five calls on ANY target as a **writer** (it joins the "exactly the two files" pin),
+and does ⛔ cover an `AsyncLocalStorage` write such as `store.run({ ...getRequestContext(), pariwarId }, next)` — a residual, ⛔
+claimed covered; R2-3 drops `actor_id` AND `pariwar_id` from the view (13.4 may add `actorId` back if it shows a need); R2-7's
+rethrow leg uses a `lock_timeout` (55P03) on a blocked INSERT, because no non-unique INSERT failure can be forced on the shared
+table without DDL. ⛔ Committed — the round-2 changes are in the working tree only.
+
+- [x] [Review][Patch] **R2-1 / P3 — Pin the door's Pariwar pre-check for every scoped wrapper, statically and at runtime.**
+  [`apps/api/src/modules/field-worker/attribution-code-access.ts:51` `assertScopeTxIsRequestScope`;
+  `apps/api/tests/unit/attribution-code-reach-fence.test.ts:261` `doorViolations`] — AC10 / AT8 v2 (iii): the Pariwar comes
+  ONLY from the authenticated request and a mis-scoped `ScopeTx` is refused "before any SQL". **(a) Runtime:** only
+  `resolveAttributionForRequest` has a poisoned-client leg proving no statement runs before the pre-check; for read /
+  allocate / list the B-transaction leg passes with the pre-check deleted, because the domain guard throws the same class
+  after a SAVEPOINT probe and a `current_setting` read. **(b) Static:** `doorViolations` pins the exports, parameter
+  names / types / option keys, that `request` is read only through `authenticatedScope`, and the allocate options literal —
+  it does ⛔ require a wrapper to CALL `assertScopeTxIsRequestScope`, nor that the `pariwarId` handed to the domain function
+  is the one `authenticatedScope` returned. A wrapper that keeps `authenticatedScope(request);` as a discarded statement and
+  passes `ids.pariwarId(scopeTx.pariwarId)` is green statically — the Pariwar is then the caller's `ScopeTx`'s (the G9a gap,
+  TR4) — and only the DB-gated A-request / B-ScopeTx legs would catch it. **Fix:** add the poisoned-client leg to the other
+  three scoped wrappers; add a door-shape rule + bite test — each scoped wrapper takes `pariwarId` from
+  `authenticatedScope(request)`, calls `assertScopeTxIsRequestScope(scopeTx, pariwarId)` before any other statement, and
+  passes only that binding. Sources: blind + auditor.
+- [x] [Review][Patch] **R2-2 / P3 — Writer pin: count a `pariwarId` write made through `Object.assign` / `Reflect.set` /
+  `defineProperty(ies)` on ANY target.** [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:462` `writerFindings`,
+  `:418` `isContextRef`, `:427` `namesContextKey`] — AT8 v2 (iv) pins "`pariwarId` on ANY receiver", but the call forms are
+  matched by TARGET: only `requestContext`, `request.requestContext`, `getRequestContext()` or a tracked `const` alias counts
+  as a mutation, and the key check looks only for `requestContext`. Not seen: `function bind(ctx, p) { Object.assign(ctx,
+  { pariwarId: p }); }` and `Reflect.set(ctx, 'pariwarId', p)` (`ctx` is a parameter, not an alias),
+  `Object.assign(holder.ctx, …)`, a destructured alias (`const { requestContext: ctx } = request`), and
+  `Reflect.defineProperty` / `Object.defineProperties` (not in the callee list). A plain `ctx.pariwarId = p` IS caught.
+  **Verified by reading the code:** all three counters stay 0 for those shapes. The stricter rule is not red on day one — no
+  `Object.assign|Reflect.set|defineProperty` near `pariwarId` / `requestContext` exists in `apps/api/src`. **Fix:** for those
+  callees also count any argument that is an object literal with a `pariwarId` key (or the string `'pariwarId'`) whatever the
+  target; add the two missing callees and the destructured-alias form; one bite test each. No instance exists today; the three
+  layers raised it independently. Sources: blind + edge + auditor.
+- [x] [Review][Patch] **R2-3 / P3 — Field-pick the flag list read model (checklist family 6, REAL GAP).**
+  [`packages/domain/src/attribution-code/flags.ts:66` `listAllocationFlags` `.select()`;
+  `apps/api/src/modules/field-worker/attribution-code-access.ts:97` `listAllocationFlagsForRequest`] — `.select()` returns every
+  column (including `actor_id`), and the door's return type is `Awaited<ReturnType<…>>`, so the raw actor id reaches every
+  caller of the door. AT7 / C3 say the trustee surface renders `actor_display`, ⛔ a raw actor id (6.11 R5); today that is a
+  convention carried to 13.4 and nothing in code. Round 1's family-6 verdict ("internal accessor, no external projection") no
+  longer holds now that the door exports the read. **Fix:** an explicit column list (`flagId`, `attempts`, `actorDisplay`,
+  `flaggedAt`; keep `actorId` only if 13.4 shows it needs it — decided there), an explicit return type on the door wrapper,
+  and `flags.spec.ts` updated. Source: auditor.
+- [x] [Review][Patch] **R2-4 / P3 — AT9's fence check covers only the ALLOWED files, and the stated justification is false.**
+  [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:516` and `:189` `generateHits`;
+  `packages/domain/src/attribution-code/allocate.ts:44`] — AT9: "the reach fence fails any non-test file outside the module that
+  passes `generate`". The check runs over `ALLOWED` only; the Completion Notes justify that with "every other file outside the
+  module is already a REACH violation" — untrue for door importers under `apps/api/src`, which R1 / TR13 deliberately exempt.
+  Compensating controls hold today: the door passes a fresh `{ maxAttempts }` literal (pinned), its `opts` is typed
+  `{ maxAttempts?: number }`, and the API live leg proves nothing is forwarded — a cast could still carry `generate` through a
+  door importer's call. **Fix:** extend `generateHits` to door importers (an object-literal property named `generate` in an
+  argument to `allocateAttributionCodeForRequest`) with a bite test — or amend AT9's wording and the note to the scope actually
+  enforced — and correct the `generate` doc comment (R2-9 c). Sources: auditor + blind.
+- [x] [Review][Patch] **R2-5 / P3 — Reach fence: treat a string literal equal to `attributionCode` as REACH.**
+  [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:130` `scanCode`] — `domain['attributionCode']` is caught (the
+  `element:` rule); `const { ['attributionCode']: x } = domain` and `Reflect.get(domain, 'attributionCode')` are not
+  (`NAMES_RE` does not hold the namespace and the identifier rule never sees a string); the Edge Case Hunter's probe returned
+  zero hits. **Fix:** in `scanCode`, any `StringLiteralLike` whose text EQUALS `attributionCode` is a hit (equality, ⛔ `\b`, so
+  `attributionCodeId` is not); positive controls for the two forms. A variable key (`domain[k]`) is not statically decidable and
+  stays out of scope. No such string literal exists in the scanned trees today (grep), so the rule is not red on day one.
+  Source: edge.
+- [x] [Review][Patch] **R2-6 / P3 — The type-level proof omits `flagAllocationExhausted`.**
+  [`packages/domain/tests/attribution-code/types.test.ts:32`] — AC8 / AT8 v2 (i) / Task 6.5: every exported DB function takes
+  `client: pg.PoolClient`. The file carries `@ts-expect-error` lines for four of the five (resolve, allocate, read, list) and none
+  for `flagAllocationExhausted`; RED proof #9 widened only `resolveAttribution`; `handle.spec.ts` covers a `Pool` at runtime but
+  not a Drizzle `Db`. Widening that one signature to `pg.PoolClient | Db` would stay green. (The domain `tsconfig` includes
+  `tests/**/*`, so the existing lines ARE enforced.) **Fix:** the Pool and Db `@ts-expect-error` lines for
+  `flagAllocationExhausted`; extend the RED proof. Source: auditor.
+- [x] [Review][Patch] **R2-7 / P3 — Two exits of the allocator's `catch` have no test, one of them added by R6.**
+  [`packages/domain/src/attribution-code/allocate.ts:127–135`; `tests/integration/attribution-code/allocate.spec.ts:49,63`;
+  `allocate-concurrency.spec.ts`] — AC4 ("any other error ⇒ rethrown"), R6 ("cover the balanced lifecycle"), checklist family 2.
+  `expectNoAllocatorSavepoint` runs on the forced-clash and exhaustion legs only: the worker-unique exit (race leg 3) shows the
+  transaction stays usable but does not assert the savepoint was released, and the non-23505 `throw err` branch is untested
+  (reachable only through infrastructure errors such as a 40P01 in a future multi-allocation transaction; C1 plans none).
+  **Fix:** assert `expectNoAllocatorSavepoint` after the worker-unique exit; add a rethrow leg that forces a non-unique error
+  inside the INSERT (e.g. `SET LOCAL ROLE` to a role without INSERT ⇒ `42501`) and asserts that the ORIGINAL error propagates and
+  no savepoint remains. Sources: auditor + blind.
+- [x] [Review][Patch] **R2-8 / P3 — Give the R1 residual a home (checklist family 10, closure honesty).**
+  [`_bmad-output/implementation-artifacts/deferred-work.md`; `_bmad-output/planning-artifacts/epics.md` Story 13.1 block] — the
+  Completion Notes disclose that an `apps/api/src` file which imports a wrapper and re-exports the local binding in a second
+  statement is not caught, and that if that file's path lacks `attribution-code` a public page could import it unflagged
+  ("13.1's route review is the backstop"). Neither `deferred-work.md` nor the `epics.md` blocks carry that backstop: disclosed,
+  but owned by no one. Reachable only by a SHORT relative path (`../../../api/src/…` from `apps/public/src/pages`) — the lint ban
+  is `^(?:\.\./)+(?:packages|apps)/` (`packages/eslint-config-twt/index.js`, verified), which does ⛔ match `../api/`. No such file
+  exists today. **Fix:** a named row under 13.1's carried items — "route review: no re-export of a door wrapper; no relative
+  import of `apps/api/src` from `apps/public`" — worded "not addressed here", ⛔ "closed". Source: auditor.
+- [x] [Review][Patch] **R2-9 / P4 — Comments that claim more than the code does.** (a)
+  [`packages/domain/src/attribution-code/errors.ts:9`] `InvalidAttributionCodeError` — "Thrown BEFORE any statement is sent": true
+  for `resolveAttribution`, false for `allocateAttributionCode`, where it is thrown after `assertTxBoundScope` (SAVEPOINT + scope
+  read) and the held-code SELECT. (b) [`allocate.ts:7`] the header says the format / deny-list check is for "an injected
+  `generate` only"; it runs on every draw (harmless defence in depth). (c) [`allocate.ts:44`] the `generate` doc says "the reach
+  fence fails any non-test caller" — see R2-4. (d) [`packages/domain/migrations/0199_field-worker-attribution-codes.sql:20,79`]
+  "append-only for EVERY role (the owner included)" — a DDL-capable owner can `DISABLE TRIGGER` / `DROP TRIGGER`, and the repo's own
+  specs bypass the guard with `session_replication_role = 'replica'`; say "for every role that can issue DML on the table".
+  Comment-only edits (the migration is not yet on `main`; never regenerate it). Sources: blind + auditor.
+- [x] [Review][Patch] **R2-10 / P4 — Record drift after the round-1 fixes.** [this file; `deferred-work.md`; `epics.md`] —
+  (a) AC4 and AC7 text (and AT8 (i)'s list of pure checks) were not updated for R3's pre-check, R6's `RELEASE` or R4's `RangeError`
+  on a non-integer `limit` (verified: none is mentioned in AC1–AC10), while the Change Log says "⛔ change to any AC"; (b) the File
+  List omits `epics.md` and `deferred-work.md` (verified: 0 mentions; both are in the branch diff); (c) the file-head
+  `STATUS: ready-for-dev (v1.7 …)` comment and `deferred-work.md`'s "Story 13.2 (ready-for-dev …)" line are stale; (d) the round-1
+  "Disposition … R1–R7 remain unchecked; 0 fixes applied" and its family table ("REAL GAP: R5", "R1 / R2") carry no resolution note
+  although R1–R7 are `[x]` and fixed in `620d44dc`; (e) `epics.md`'s Story 13.2 AC carries no variance note for AT3 ("active codes"
+  narrowed to all codes ever), AT2 (link direction) and AT4 (c) (`asOf`) — only the sibling blocks are annotated (Auditor; ⚠ not
+  re-checked by the reviewer). **Fix:** dated notes and a File List line — ⛔ rewriting the round-1 text
+  ([[feedback_supersede_never_reinterpret]]). Source: auditor.
+- [x] [Review][Defer] `clampLimit(NaN)` returns NaN, so Drizzle drops the `LIMIT` and a caller forwarding an unvalidated number
+  reads unbounded [`packages/domain/src/pagination.ts:34`] — deferred, pre-existing. This story guards locally (R4); the helper is
+  shared and has its own exhaustive unit test, so a `Number.isFinite` guard there is a cross-cutting change.
+- [x] [Review][Defer] The AT4 probe has no supporting index on `member_attribution(pariwar_id, attribution_source)`
+  [`packages/domain/src/attribution-code/allocate.ts:101`] — deferred. AC9 bars any change to `member_attribution` here, even an
+  index. Today the probe is a `pariwar_id`-prefix range scan on `member_attribution_pariwar_member_idx` with a heap filter, once per
+  draw (typically once), on a rare admin action. Decide with `EXPLAIN` at real volumes in 13.8 / 13.5, the stories that read
+  `member_attribution` by code.
+- [x] [Review][Defer] The flag list has no cursor (the 200-row cap hides older flags) and flags have no idempotency key (a retried
+  registration adds another) [`packages/domain/src/attribution-code/flags.ts:59`, `:28`] — deferred to 13.4 (C3 owns the surface).
+  Expected volume ≈ 0 (AT6: eight clashes ≈ 10⁻¹⁶).
+- [x] [Review][Defer] Reach-fence scan scope: repo-root `scripts/` (`provision-admin.ts` and `seed-placeholder-tc.ts` import
+  `@twt/domain`), `apps/*/scripts`, `apps/mobile`, and the file kinds `.mjs` / `.cjs` / `.jsx` / `.cts` / `.mdx`
+  [`apps/api/tests/unit/attribution-code-reach-fence.test.ts:64` `EXTENSIONS`, `:67` `trees`] — deferred to C4 (a request-less
+  backfill is where scripts first matter, and it needs its own named Pariwar source anyway). The scope is the ratified AT8 v2
+  (`apps/*/src` + `packages/*/src`); 0 files of those kinds exist in the scanned trees (verified); scripts are operator tooling
+  with owner credentials outside the request path; mobile ships no `pg`.
+
+**Dismissed (20) — recorded so they are not re-raised.** *False:* the Blind Hunter's "flag wrapper double-closes the scope tx and
+masks the COMMIT error" — `closeScopeTx` returns early on `closed`, rethrows a failed COMMIT once and releases once in `finally`.
+*Spec-declared:* the fence skipped by turbo's local cache (AT8 v2 text: "⛔ add turbo `inputs` in this story"; GitHub CI has no turbo
+cache); the deny-list size and lockstep (AT5, BigDev-answered); the `actor_display` retention + `btrim` check (the repo's pattern in
+0182 / 0187 / 0092; no admin-erasure scrub path exists; 6.11 R5); `allocatedAt` as a millisecond `Date` (the only credit comparison
+is in SQL by `captureId`, I7); the `'now'` predicate being always true (AT4 (c) names the DB clock; harmless). *Handled
+elsewhere:* a closed `ScopeTx` (the domain's SAVEPOINT probe refuses outside a transaction block); the existence oracle / orphan rows
+from `UNIQUE (field_worker_id)` without an FK (needs a guessed UUID; 13.1's composite FK + ownership check land before any route
+can call this); `types.test.ts` "vacuous at runtime" (the domain `tsconfig` includes `tests/**/*`); fence test cost (measured
+3.6 s vs a 20 s timeout); the flag path's second pool connection (C1 requires an independent transaction; exhaustion ≈ 10⁻¹⁶); a
+flag `attempts` outside 1..32 (callers pass `error.attempts`, validated by `maxAttempts`); the allocator `catch` masking the original
+error on a dead connection. *Noise:* journal `when` "future-dated" (the repo's synthetic +1 day convention; 0198 is
+`1796701200043`); unused `ids.attributionCodeId` / row type (prepared for 13.1); `+=` missing from `ASSIGN_OPS`; the `⛔` glyph
+register; the five-fold INHERITED paragraph in `epics.md`; the low-value missing-test list; the Auditor's `PANEL-SHAPED?` tag
+(see the §0 gate above).
+
+**Load-bearing-invariant lens (touched families only, round 2):**
+
+| Family | Verdict |
+|---|---|
+| 2 — concurrency / redelivery | **covered-by-test:** `allocate-concurrency.spec.ts` (three blocking legs, each with a CONTROL) and the forced-clash leg; redelivery / events not constructible (AT10). Caveat R2-7. |
+| 3 — tenant / actor boundaries | **covered-by-test:** `resolve.spec`, the owner-role legs, `attribution-code-access.spec`, both RLS specs, `cross-pariwar-leak.spec`. Caveats R2-1, R2-2. |
+| 5 — DB backstops | **covered-by-test:** both `*-policy-regression.spec.ts` suites; deny-list lockstep in `exports.test.ts`. |
+| 6 — projections / snapshots | **REAL GAP (low): R2-3.** The snapshot half (`actor_display`, append-only) is covered-by-construction. |
+| 8 — audit / attribution | **covered-by-test** (flag attribution, missing display name); the allocation audit / event pair is not written here by AT10 (ratified), registration auditing is 13.1's. |
+| 9 — deliberate bypasses | **covered-by-construction:** the door header documents caller-owned authorization; the race spec documents its replica-mode cleanup. |
+| 10 — closure honesty | **REAL GAP (low): R2-8, R2-10.** |
+| 11 — policy meaning | **covered-by-construction:** the member-facing sentence is stated and checked; no member-gating predicate added. |
+| 12 — cross-member ownership | **covered-by-test** for the Pariwar ownership of `captureId`; member-level ownership is not constructible at this primitive (no member identity is an input) — carried to the caller (C2). |
 
 ## Dev Notes
 
@@ -1188,6 +1373,24 @@ container: **`ci:local PASSED — 37 job(s) green`** — incl. `lint`, `typechec
 job(s) green`** on the first run; `@twt/domain` 7,698 passed / 1 skipped (+5: the R3, R4 and three R5 legs), `@twt/api` 2,778
 passed / 1 skipped (+10 fence tests); the fence printed `scanned 1841 files in 19 trees`.
 
+(e) **Code review round 2 R2-1…R2-10 (2026-11-03, review continuation, story DB `:5452`).** RED by scripted mutation, each file
+restored byte-identical afterwards. Fence: R2-5 string rule off ⇒ 1 failed (the positive controls); R2-4 importer check off ⇒ 3
+failed; R2-2 pariwar-key rule off ⇒ 9 failed, destructured-alias tracking off ⇒ 1 failed; R2-1 provenance rule off ⇒ 5 failed.
+Live-DB: R2-7 worker-unique exit without its `RELEASE` ⇒ 2 failed (the amended race leg 3 and the new lock-timeout leg); the
+non-unique exit swallowed (`continue`) ⇒ 1 failed (the new leg); R2-3 bare `.select()` ⇒ 1 failed; R2-1 pre-check removed from
+`readAttributionCodeForRequest` ⇒ 1 failed, from `listAllocationFlagsForRequest` ⇒ 1 failed; R2-6 `flagAllocationExhausted`
+widened to `pg.PoolClient | Db` ⇒ `tsc` TS2578 "Unused '@ts-expect-error'" at `types.test.ts`. GREEN: fence **72/72** (was 52);
+`attribution-code-access.spec.ts` **14** (+8: four poisoned wrappers × {mismatch ⇒ ⛔ statement, CONTROL ⇒ statement}); the domain
+attribution-code unit + live-DB suites, both RLS regression specs and `cross-pariwar-leak` **108/108** (11 files) on `:5452`;
+full `@twt/domain` without a database 3,721 passed / 3,980 skipped / 0 failed; full `@twt/api` without a database 924 passed /
+1,883 skipped / 0 failed. `turbo run typecheck lint` for `@twt/domain` + `@twt/api` (32 tasks with dependencies) green; the 21
+`*:test` + `*:check` invariant gates of `ci:local` (schema, benefit, microcopy, domain-invariants, member-state, claim-state,
+claim-canonical-id, claim-adjudication-human-actor, kyc-provider, dlt-typed-variables, access-wrapper, pool-state,
+pool-support-category, pool-bound-payment, sahyog-vivran-financial-truth, alert-state, helpdesk-state, marketplace-module-state,
+governance-boundary, custom-field, survey-advisory) and `db:check` green; the fence printed `scanned 1841 files in 19 trees`.
+⛔ NOT re-run: the full `pnpm ci:local` (37 jobs — a second run on this container would also meet known failure #18 and needs a
+fresh one); ⛔ the `37/37` of v1.9 therefore does not cover the round-2 changes.
+
 ### Completion Notes List
 
 - **What was built (2026-11-03, `bmad-dev-story`).** The domain module `packages/domain/src/attribution-code/` (namespace
@@ -1244,6 +1447,37 @@ passed / 1 skipped (+10 fence tests); the fence printed `scanned 1841 files in 1
   - ✅ Resolved review finding [P3]: **R7** — the exhaustion CONTROL and the duplicate-worker first allocation use scripted
     distinct codes; random draws stay in the generator tests and the first-allocation leg.
 
+- **Code review round 2 R2-1…R2-10 resolved (2026-11-03, review continuation; RED / GREEN in Debug Log (e)).**
+  - ✅ Resolved review finding [P3]: **R2-1** — `doorViolations` now requires every scoped wrapper to open with `const { pariwarId }
+    = authenticatedScope(request)` then `assertScopeTxIsRequestScope(scopeTx, pariwarId)` and to read `scopeTx` only as that
+    assertion's argument and as `.client` (the flag wrapper: `const { pariwarId, actorId } = authenticatedScope(request)`); six
+    bite cases. At runtime a poisoned-client leg + a CONTROL leg per scoped wrapper, un-gated (no database).
+  - ✅ Resolved review finding [P3]: **R2-2** — `Object.assign` / `Reflect.set` / `Object.defineProperty` / `Reflect.defineProperty`
+    / `Object.defineProperties` naming a `pariwarId` key (object-literal key, shorthand, computed string key, or the string
+    argument) count as a `pariwarId` writer on ANY target; a destructured alias `const { requestContext: ctx } = request` is
+    tracked. Nine + one bite cases, three negatives. ⚠ Residual, ⛔ claimed covered: a write that carries `pariwarId` into an
+    `AsyncLocalStorage` `run(…)` or any other call is not a pattern the pin can see.
+  - ✅ Resolved review finding [P3]: **R2-3** — `listAllocationFlags` selects `{ flagId, attempts, actorDisplay, flaggedAt }`
+    (`AttributionCodeAllocationFlagView`, exported as a type); the door's return type is explicit; a live-DB test pins the key set
+    and that the raw actor id is nowhere in the view.
+  - ✅ Resolved review finding [P3]: **R2-4** — `doorImporterGenerateHits` (a `generate` property / shorthand / quoted key in a
+    file that imports the door; pre-filtered on the door's file name) runs over every `apps/api/src` file; three bite cases and
+    two negatives; the `generate` doc comment says what the fence enforces.
+  - ✅ Resolved review finding [P3]: **R2-5** — a string literal equal to `attributionCode` is REACH (equality, ⛔ `\b`); two
+    positive controls and a negative (`attributionCodeId`).
+  - ✅ Resolved review finding [P3]: **R2-6** — Pool and Db `@ts-expect-error` lines for `flagAllocationExhausted`.
+  - ✅ Resolved review finding [P3]: **R2-7** — `expectNoAllocatorSavepoint` moved to `_fixtures.ts`; asserted after the
+    worker-unique exit; a new race leg blocks the waiter on the holder's uncommitted code, lets the waiter's `lock_timeout` fire
+    (55P03), and asserts the ORIGINAL error, one draw, no savepoint, and a CONTROL allocation that commits.
+  - ✅ Resolved review finding [P3]: **R2-8** — carried item **C7** (Story 13.1's route review of the door) added to
+    `deferred-work.md` and to 13.1's INHERITED block in `epics.md`, worded "not addressed here".
+  - ✅ Resolved review finding [P4]: **R2-9** — `errors.ts`, the `allocate.ts` header and `generate` doc, and the `0199` header
+    comments (comment-only; the schema TS headers carry no such phrase) say what the code does.
+  - ✅ Resolved review finding [P4]: **R2-10** — AC4 / AC7 / AT8 (i) text amended to the built behaviour, File List completed,
+    STATUS head and the `deferred-work.md` / `epics.md` "ready-for-dev" labels corrected, a dated resolution note under round 1's
+    Disposition, and a dated variance note under Story 13.2's own AC in `epics.md` (AT3, AT2, AT4 (c)). Round 1's text is ⛔
+    rewritten.
+
 ### File List
 
 New:
@@ -1277,10 +1511,25 @@ Modified by the review fixes R1–R7 (all files above):
 - `packages/domain/tests/integration/attribution-code/allocate.spec.ts` (R3, R6, R7), `…/flags.spec.ts` (R4)
 - `apps/api/tests/unit/attribution-code-reach-fence.test.ts` (R1, R2)
 
+Modified by the round-2 fixes R2-1…R2-10 (all files above):
+- `packages/domain/src/attribution-code/flags.ts` (R2-3), `…/index.ts` (R2-3 type export), `…/allocate.ts` (R2-4 doc, R2-9),
+  `…/errors.ts` (R2-9)
+- `packages/domain/migrations/0199_field-worker-attribution-codes.sql` (R2-9 d — header COMMENTS only)
+- `apps/api/src/modules/field-worker/attribution-code-access.ts` (R2-3 — the explicit return type)
+- `apps/api/tests/unit/attribution-code-reach-fence.test.ts` (R2-1 b, R2-2, R2-4, R2-5)
+- `apps/api/tests/integration/attribution-code-access.spec.ts` (R2-1 a)
+- `packages/domain/tests/attribution-code/types.test.ts` (R2-6)
+- `packages/domain/tests/integration/attribution-code/_fixtures.ts`, `…/allocate.spec.ts`, `…/allocate-concurrency.spec.ts`,
+  `…/flags.spec.ts` (R2-3, R2-7)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (C7; the stale "ready-for-dev" label), `_bmad-output/planning-artifacts/epics.md`
+  (C7 under 13.1; the stale labels; the variance note under Story 13.2's AC) — both also modified by the branch since Task 0.4 and
+  omitted from the list above until v1.10.
+
 ## Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-03 | 1.10 | Code review round 2 applied — 10 items resolved (R2-1…R2-10; BigDev: "1", Apply every patch); 0 decision-needed, 4 deferred (`deferred-work.md`), 20 dismissed. The door's Pariwar pre-check is pinned statically (the wrapper shape) and at runtime (a poisoned-client leg per scoped wrapper, no database); the writer pin counts a `pariwarId` key written through the five call forms on any target; AT9's `generate` check covers door importers; a string `attributionCode` is REACH; the flag list is a field-picked view; the type leg covers `flagAllocationExhausted`; the allocator's worker-unique and non-unique exits are tested (race leg + a `lock_timeout` leg); carried item C7; comment and record drift fixed. AC4 / AC7 / AT8 (i) text amended to the built behaviour (R3, R4, R6, R2-3) — ⛔ new behaviour beyond R2-3's view. Fence 72/72 (+20); domain attribution-code + RLS suites 108/108 on `:5452`; typecheck, lint and 21 invariant gates green; ⛔ full `ci:local` re-run. ⛔ Committed. |
 | 2026-11-03 | 1.9 | Addressed code review findings — 7 items resolved (R1–R7; Date: 2026-11-03). Door-import exemption limited to `apps/api/src` importers (⛔ re-exports); writer pin covers element access, `const` aliases and `requestContext`-key replacements; allocator pre-checks the worker's existing code and releases each failed savepoint; non-integer flag-list `limit` ⇒ `RangeError`; two-connection race spec; scripted codes where freshness is assumed. RED 5 + 11, GREEN 56 + 52; `ci:local` 37/37 on a fresh container. Status in-progress → review. ⛔ change to any AC. |
 | 2026-11-03 | 1.8 | `bmad-dev-story 13.2` — IMPLEMENTED. Task 0 greps recorded (migration `0199`, `when` `1796787600044`; ⛔ decision; catalog 58; ledger `2026-11-03c`; S1–S5 clear). Domain module + migration 0199 + RLS + triggers; the API door; the reach fence / door-shape / writer-pin gate (1,841 files, 19 trees); domain live-DB + unit, fence and API live-DB tests; 22 RED proofs; `ci:local` on a fresh container. Status ready-for-dev → in-progress → review. ⛔ change to any AC. |
 | 2026-11-03 | 1.7 | BigDev: *"both design approved."* ⇒ AT8 v2 (gate the call: domain door on a transaction-bound client + repo-wide reach fence + API door + authenticated-Pariwar writer pin) and AT4 (c) (a code credits only captures at or after its DB-stamped allocation, compared in SQL at µs precision) APPROVED as written in v1.6. Task 0.2 complete; §AT heading, AT8 v2, AT4 (c), Debug Log (a) updated. ⛔ change to any AC or Task. |

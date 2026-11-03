@@ -12,7 +12,7 @@ the `3d6b46c5..b7b43c47` delta (94 commits) touches none of this story's touch-p
 `ids/index.ts`, `schema/index.ts`, `policies/index.ts`, `rbac/roles.ts` and `rbac/permissions.ts`. Perishable — re-check
 at Task 0.1. Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.6 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
+STATUS: ready-for-dev (v1.7 — ALL build decisions ANSWERED; v1.7 records BigDev's approval of AT8 v2 + AT4 (c) as written in v1.6; created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
@@ -226,7 +226,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - **G11 — the cross-Pariwar leak suite.** `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts` has
   a block per tenant table (e.g. `member_wa_opt_in_codes`); a new tenant table adds a block.
 
-## ⚖️ Build decisions AT1–AT10 (⭐ = recommended) — PROPOSED for BigDev at Task 0.2
+## ⚖️ Build decisions AT1–AT10 (⭐ = recommended) — ALL ANSWERED (AT1–AT7, AT9, AT10 on 2026-11-01; AT8 v2 + AT4 (c) on 2026-11-03, as written in v1.6)
 
 - **AT1 — Home.** ⭐ `packages/domain/src/attribution-code/` (`index.ts`, `code.ts`, `allocate.ts`, `resolve.ts`,
   `flags.ts`, `errors.ts`, `tx-guard.ts` — `assertTxBoundScope` is exported from `tx-guard.ts` for the module's own files
@@ -263,7 +263,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     `member_attribution`, so each candidate scans the Pariwar's rows — fine at admin "Add Field Worker" rate; ⛔ add an
     index (AC9). The race: a capture whose tx is concurrent with the allocation may commit AFTER it yet carry an EARLIER
     `captured_at` (`defaultNow()` = its tx start) — AT4 (c) makes that case deterministic.
-  - **AT4 (c) — the ROLLOUT SEQUENCING GUARANTEE (v1.3; v1.5 — the comparison never leaves the database).** AT4 (a)
+  - **AT4 (c) — the ROLLOUT SEQUENCING GUARANTEE (v1.3; v1.5 — the comparison never leaves the database; ✅ APPROVED
+    2026-11-03 as written in v1.6, BigDev: *"both design approved."*).** AT4 (a)
     alone rests on a promise about ORDER (signup ⛔ live before 13.1; Q-S5). ⭐ Make correctness independent of rollout
     order: **a code credits its holder only for a capture made AT OR AFTER the code was allocated.**
     - **The instant is named, ⛔ passed.** `resolveAttribution` takes a REQUIRED `asOf` that is one of exactly two forms:
@@ -331,8 +332,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   - ⛔ (b) a system-origin helpdesk ticket — needs a subject, a new category and a routing-policy version bump (G7) for
     a ~10⁻¹⁶ event.
   - ⛔ (c) an audit line only — a counter, ⛔ a review item: it does not meet "flagged for trustee review".
-- **AT8 v2 — "No API endpoint allows attribution-code lookup without Pariwar context" (v1.3, PROPOSED — BigDev:
-  *"AT1-AT10 as recommended, except AT8. I want you to come up with better proposal for AT8"*).**
+- **AT8 v2 — "No API endpoint allows attribution-code lookup without Pariwar context" (v1.3; ✅ APPROVED 2026-11-03 as written in v1.6 — BigDev:
+  *"AT1-AT10 as recommended, except AT8. I want you to come up with better proposal for AT8"*; then *"both design approved."*).**
   - **Why v1.2's rule was replaced.** It inspected route SHAPES — key names in the request schema plus which guards a
     route carries — and both of BigDev's findings hold:
     - *Member rule ⟂ G9a.* Rule (a) passed any route that has `MEMBER_SESSION_GUARD` and no `pariwarId` key, on the
@@ -716,9 +717,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     hand before Story 13.1 ships, and will member signup go live before 13.1?"* — verbatim into Debug Log (a).
     ✅ **Q-S5 ANSWERED 2026-11-01 (create-story pass), BigDev: *"Answer is no to both"*** — AT4 stands; dev re-confirms
     S5 at 0.1 only. ✅ **AT1–AT7, AT9, AT10 ANSWERED 2026-11-01, BigDev: *"AT1-AT10 as recommended, except AT8"*.**
-    ⏳ **AT8 v2 and AT4 (c) — PROPOSED v1.3, hardened v1.4, amended v1.5 on BigDev's eight items; awaiting BigDev's
-    final word** (all written in response to BigDev's messages). If any answer departs from ⭐, update the ACs and Tasks
-    BEFORE coding ([[feedback_spec_edits_must_propagate_to_tasks]]).
+    ✅ **AT8 v2 and AT4 (c) ANSWERED 2026-11-03, BigDev: *"both design approved."*** — approved as written in v1.6 (proposed v1.3,
+    hardened v1.4, amended v1.5 on BigDev's eight items, validated + amended v1.6). ⇒ 0.2 is COMPLETE: every AT is ⭐ as
+    written; the dev copies these answers into Debug Log (a) only. If any later answer departs from ⭐, update the ACs and
+    Tasks BEFORE coding ([[feedback_spec_edits_must_propagate_to_tasks]]).
   - [ ] 0.3 ⛔ No decision entry is needed (all AT decisions are author-level, §0). If BigDev asks for one, stage it in the
     scratchpad, insert above the newest `### Decision`, verify additive-only, and commit it ALONE before code
     ([[feedback_governance_commits_precede_implementation]]).
@@ -1014,7 +1016,8 @@ it in terms of the precision actually preserved by the implementation."* ⇒ all
 **v1.6** (2026-11-03): BigDev invoked *"validate 13.2 and rebase"*; after the first verifier reports arrived, BigDev,
 verbatim: *"apply all findings once the other verifiers report"* ⇒ every finding of the four verifiers applied in v1.6
 (Change Log), incl. the two optional design points (the `allocated_at` stamp trigger; the `actor_display` snapshot,
-decided per the ratified Story 6.11 R5 rule — block, ⛔ fallback). AT8 v2 and AT4 (c) remain ⏳ awaiting BigDev's final word.
+decided per the ratified Story 6.11 R5 rule — block, ⛔ fallback). AT8 v2 and AT4 (c) remained ⏳ at v1.6.
+**v1.7** (2026-11-03): BigDev, verbatim: *"both design approved."* ⇒ AT8 v2 and AT4 (c) APPROVED as written in v1.6; every AT is now answered.
 
 ### Completion Notes List
 
@@ -1024,6 +1027,7 @@ decided per the ratified Story 6.11 R5 rule — block, ⛔ fallback). AT8 v2 and
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-03 | 1.7 | BigDev: *"both design approved."* ⇒ AT8 v2 (gate the call: domain door on a transaction-bound client + repo-wide reach fence + API door + authenticated-Pariwar writer pin) and AT4 (c) (a code credits only captures at or after its DB-stamped allocation, compared in SQL at µs precision) APPROVED as written in v1.6. Task 0.2 complete; §AT heading, AT8 v2, AT4 (c), Debug Log (a) updated. ⛔ change to any AC or Task. |
 | 2026-11-03 | 1.6 | REBASED onto `b7b43c47` (94 commits: 11b.5a, 12.2, 6.22 landed; ledger `-01d` relabelled `-01ad`). THIRD validation — four read-only verifiers (main delta / code claims / adversarial / footguns + checklist); S1–S5 all clear; BigDev: *"apply all findings"*. **High:** REACH exempts the door's importers and matches WHOLE identifiers on AST nodes (incl. `ImportTypeNode` qualifiers and binding elements); the door re-exports the six error classes (eleven pinned exports) so 13.1 can `instanceof` them; ALLOWED split into a module PREFIX (exempt from must-match) + exact files. **Medium:** NUMBERS re-traced (migration ≥ `0199`, contended with 6-22b; decisions ≥ `-441`; catalog 58; ledger `2026-11-03a`); scan count 1,829 / 19 trees — dot-directories (`.well-known` public routes) and `.d.ts` now included, plus a positive control; check ORDER (pure → guard → SQL); the `{ captureId }` statement written out (LEFT JOIN from `ma`); writer-pin destructuring = assignment expressions only; `actor_display` snapshot on the flag table (6.11 R5; `AdminDisplayNameMissingError`, ⛔ fallback); `BEFORE INSERT` stamp trigger on `allocated_at` (⛔ backdating); test-handle, three-member, replica-role seeding and committed-row rules; sibling INHERITED blocks name the door's calls. **Low:** `ScopeTx` lives in `apps/api/src/types.ts`; `clampLimit(limit, opts)` inline in Drizzle; reuse `assertPariwarScopeSet` and the exported `uniqueViolationConstraint`; duck-typed Pool check (`pg` value import lint-banned); only `25P01` mapped; `createDb().db`; G2's `FOR ALL` policy; three "Epic 12" comments; `attributionId`; `positiveIntEnv`; turbo caveat; TR5; savepoint CONTROL; named CHECK legs; AI-6-1 recorded; the two stale doc-blocks amended (Task 5a); 6-digit-only consumers; DTO naming; Task 6.1 lists every AC8 leg; export pin enumerated. TR11–TR14. |
 | 2026-11-01 | 1.5 | BigDev's focused v1.5 (eight items, ⛔ a redesign), all applied. (1) AT8 (i): every exported DB function takes `client: pg.PoolClient` (precedent `projectTicketGenesis`) and runs `assertTxBoundScope` first — rejects a `pg.Pool`, proves a transaction block with a SAVEPOINT probe (`25P01` ⇒ `AttributionCodeRequiresTransactionError`), reads the scope on THAT client — so assertion and query share one connection by construction; new Task 3a. (2) AT8 (iii): the four in-transaction wrappers take `scopeTx: ScopeTx` and pre-check its Pariwar; the flag wrapper owns its tx end to end; types pinned by the door-shape gate. (3) Authorization stated as the CALLER's (13.1's route: admin session → scope → the Panel-ratified field-worker key); the flag records only `requestContext.actorId`, ⛔ actor option. (4) AT8 (ii): REACH widened to the bare identifier from any source + `export *` from `@twt/domain`; synthetic tests for alias / namespace / element / type-level `import()` / dynamic `import()` / `require` / path forms / intermediate re-exports; scan count RECORDED (1,785 files in 19 trees at `3d6b46c5`; floor 1,600). (5)–(6) AT4 (c): `date_trunc` and `asOf: Date` REMOVED — `asOf` is `{ captureId }` (the persisted `captured_at`, joined in the same statement) or `'now'` (`clock_timestamp()`); ⛔ JS timestamp in the comparison; signup and backfill pass `{ captureId }`. (7) AC8: before / equal / after legs within one millisecond (`.123455` / `.123456` / `.123457`, seeded as SQL literals), capture-mismatch legs, and the transaction-bound-handle legs (Pool, no-`BEGIN` + session `SET`, `@ts-expect-error`). (8) I7: strict at-or-after, at Postgres's microsecond precision, same-µs counts as "at". Carried blocks updated (asOf form, ScopeTx, authorization). |
 | 2026-11-01 | 1.4 | Second fresh-context validation (of v1.3): 1 critical / 3 high / 4 medium / 6 low, all applied. AT8 v2 HARDENED — (ii) is now ONE repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; REACH covers the namespace, paths, schema symbols, SQL table names and the domain function names; exact allow-list; precedent `family-account-reach-fence.test.ts`) — v1.3 missed the unauthenticated `apps/public` server and schema / raw-SQL / wrapper bypasses; (iii) door shape is POSITIVE (request reached only through `authenticatedScope`), names + option keys pinned, `opts` without `generate`, unset actor ⇒ 500; (iv) writer pin covers any receiver / element access / compound / destructuring, plus `Object.assign` and `.requestContext =` rules. AT4 (c) at MILLISECOND granularity (`date_trunc`), `asOf` is a DB instant (incl. `clock_timestamp()` for capture-less lookups), positive leg + TR10, insert-vs-commit residual stated. AC2 NARROWED note; I6/I7 order; AC9 wording; G9 marked historical; TR4c; carried blocks show `asOf`. Turbo-cache local-rerun limit noted. AT8 v2 and AT4 (c) still PROPOSED. |

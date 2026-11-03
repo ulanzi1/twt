@@ -1,16 +1,18 @@
 ---
-baseline_commit: 3d6b46c5
+baseline_commit: b7b43c47
 ---
 
 <!--
-PINNED: `3d6b46c5` = `origin/main` (ledger 2026-11-01a — Story 12.1 landed). The story lives on branch
-`story/13-2-6-digit-attribution-code-generation-per-pariwar` in its OWN worktree
-(`.claude/worktrees/13-2-6-digit-attribution-code-generation-per-pariwar`, fast-forwarded `4e57fa42` → `beae5116` →
-`3d6b46c5`). Every `apps/` / `packages/` / `scripts/` claim was traced at `beae5116` and the 12.1 delta
-(`beae5116..3d6b46c5`, the module-marketplace primitive) touches none of them. Perishable — re-check at Task 0.1.
-Re-locate by FUNCTION, ⛔ by line.
+PINNED: `b7b43c47` = `origin/main` (ledger 2026-11-02b — Story 6.22 landed; 11b.5a and 12.2 landed between `3d6b46c5`
+and it). The story lives on branch `story/13-2-6-digit-attribution-code-generation-per-pariwar` in its OWN worktree
+(`.claude/worktrees/13-2-6-digit-attribution-code-generation-per-pariwar`; fast-forwarded `4e57fa42` → `beae5116` →
+`3d6b46c5`, then REBASED onto `b7b43c47` on 2026-11-03 — backup `backup/13-2-pre-rebase-2026-11-03`). Every `apps/` /
+`packages/` / `scripts/` claim was traced at `beae5116`/`3d6b46c5` and RE-VERIFIED at `b7b43c47` by the v1.6 validation:
+the `3d6b46c5..b7b43c47` delta (94 commits) touches none of this story's touch-points except additive lines in
+`ids/index.ts`, `schema/index.ts`, `policies/index.ts`, `rbac/roles.ts` and `rbac/permissions.ts`. Perishable — re-check
+at Task 0.1. Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.5 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items — ⛔ a redesign).
+STATUS: ready-for-dev (v1.6 — created v1.0 by `bmad-create-story 13.2`, validated v1.1 by one fresh-context checker; v1.2 records Q-S5; v1.3 records AT1–AT10 and PROPOSES AT8 v2 + AT4 (c); v1.4 applies a second fresh-context validation of v1.3; v1.5 applies BigDev's eight focused items; v1.6 applies a THIRD validation (four read-only verifiers at `b7b43c47`, BigDev: *"apply all findings"*) — ⛔ a redesign).
 
 §0 GATE (whose decision each edge is): every build decision below (AT1–AT10) is the AUTHOR's — none changes what a
 member sees, a disclosure, or a consent basis; none supersedes a ratified clause. ⇒ ⛔ nothing routes to the Trustee
@@ -29,19 +31,26 @@ GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes · ⭐ = action / e
 ADDRESSING RULE: never cite file:NNN into `.decision-log.md`, `deferred-work.md`, `epics.md` or `sprint-status.yaml` —
 cite by decision id / heading / row block. Code is cited by path + FUNCTION.
 
-NUMBERS (traced 2026-11-01 across main + every worktree + every branch — RE-GREP at Task 0.1 AND again at the
-rebase-before-push):
-- Migrations: main's highest is `0193_marketplace-modules` (12.1, LANDED; journal `when` 1796269200038);
-  `0194_memorial-kinship` is TAKEN on story/11b-5a (`when` 1796355600039). ⚠ `0195` is CONTENDED: ready-for-dev
-  siblings `14-3` (plans `0195_breach-incidents`) and `6-22` (plans "≥ 0195") want it too. ⇒ this story's migration is
-  written below as `NNNN_field-worker-attribution-codes.sql` — take the next free number at Task 0.1, re-check at
-  rebase, and set its journal `when` ABOVE every sibling's (a lower `when` behind a higher one is skipped by drizzle on
-  a shared DB).
-- Decisions: main holds up to `2026-10-31-430`; `-431`/`-432` exist on story/11b-5a. ⇒ this story needs ⛔ no decision
-  entry (Task 0.3); if one becomes necessary, take ≥ `-433` and re-grep.
-- RBAC: `PERMISSION_CATALOG_VERSION = 56` — ⛔ unchanged by this story.
-- Ledger: main's newest is `2026-11-01a`; story/6-22 is at `2026-11-01b` ⇒ take the next free `2026-11-01` letter at each
-  commit (re-grep every worktree).
+NUMBERS (re-traced 2026-11-03 at `b7b43c47` across main + all 352 refs + every worktree — RE-GREP at Task 0.1 AND
+again at the rebase-before-push):
+- Migrations: main's highest is `0198_claim-fraud-step-ties-its-finding` (Story 6.22, LANDED; journal idx 198, `when`
+  1796701200043); `0194` (11b.5a), `0195` (12.2) and `0196`–`0198` (6.22) have all LANDED; idx 140 is still the only
+  journal gap. No ref or worktree holds a migration above `0198`. ⚠ `0199` is CONTENDED: `story/6-22b-…` plans its
+  certificate-guard migration as the next free number (`0199` in its G16), `14-3` holds a `<MIG>` placeholder, `6-39`
+  plans three. ⇒ this story's migration is written below as `NNNN_field-worker-attribution-codes.sql` — take the next
+  free number ≥ `0199` at Task 0.1, re-check at rebase, and set its journal `when` ABOVE every sibling's (house step
+  +86400001 ⇒ `1796787600044` if `0199` is still free; a lower `when` behind a higher one is skipped by drizzle on a
+  shared DB).
+- Decisions: main holds up to `2026-11-02-439` (`-431`/`-432` 11b.5a, `-433`–`-437` 12.2, `-438`/`-439` 6.22, all
+  landed); `-440` is minted on `story/6-22b-…` (⛔ landed). ⇒ this story needs ⛔ no decision entry (Task 0.3); if one
+  becomes necessary, take ≥ `-441` and re-grep. ⛔ decision `-431`…`-440` mentions field workers or attribution (the only
+  "commission" is `-433`'s marketplace-partner commission).
+- RBAC: `PERMISSION_CATALOG_VERSION = 58` (77 keys at `b7b43c47`; 57 = `module.manage`, 58 = the two claim-fraud keys)
+  — ⛔ changed by this story. The `field_worker` bundle is still `permissions: []`.
+- Ledger: main's newest is `2026-11-02b`; `story/6-22b-…` holds `2026-11-02c`/`-02d` (⛔ landed); ⛔ `2026-11-03*` line on
+  any ref ⇒ this story's next entry is `2026-11-03a` (re-grep every worktree at each commit). ⚠ This branch's
+  `2026-11-01c` and `-01e` are ALSO held by `story/14-3-…` (different content) — whichever of 13.2 / 14.3 lands second
+  relabels. This branch's former `-01d` was RELABELLED `-01ad` at the 2026-11-03 rebase (`main` holds `-01d`, Story 6.22).
 - Roster / ADR: none.
 
 LETTERS: G = found facts · AT = build decisions · I = invariants · TR = traps · C = carried to a sibling story.
@@ -70,14 +79,15 @@ foreign key** (AT2).
 | Domain module | `packages/domain/src/attribution-code/` (namespace export `attributionCode`) |
 | Codes table | `field_worker_attribution_codes` (Drizzle `fieldWorkerAttributionCodes`) |
 | Flag table | `attribution_code_allocation_flags` (Drizzle `attributionCodeAllocationFlags`) |
-| Migration | `NNNN_field-worker-attribution-codes.sql` (next free number ≥ `0195`, taken at Task 0.1 — NUMBERS) |
+| Migration | `NNNN_field-worker-attribution-codes.sql` (next free number ≥ `0199`, taken at Task 0.1 — NUMBERS) |
+| Transaction guard (module-private) | `assertTxBoundScope(client, pariwarId)` in `attribution-code/tx-guard.ts` (Task 3a) |
 | New brands | `FieldWorkerId`, `AttributionCodeId`, `AttributionCodeFlagId` (`packages/domain/src/ids/index.ts`) |
 | Generator | `generateAttributionCode()` |
 | Allocator | `allocateAttributionCode(client, { pariwarId, fieldWorkerId }, opts?)` — `client: pg.PoolClient` in a tx (AT8 v2 i) |
 | Lookup | `resolveAttribution(client, { code, pariwarId, asOf: { captureId } \| 'now' }) → FieldWorkerId \| null` (AT4 (c)) |
-| API door (the ONLY `apps/*` user of the module) | `apps/api/src/modules/field-worker/attribution-code-access.ts` (AT8 v2) |
+| API door (the ONLY `apps/*` user of the module) | `apps/api/src/modules/field-worker/attribution-code-access.ts` (AT8 v2) — five wrappers + the six error classes re-exported by name |
 | Holder read | `readAttributionCodeForFieldWorker(client, { pariwarId, fieldWorkerId })` |
-| Flag write / read | `flagAllocationExhausted(client, …)` / `listAllocationFlags(client, { pariwarId, limit? })` |
+| Flag write / read | `flagAllocationExhausted(client, { pariwarId, attempts, actorId, actorDisplay })` / `listAllocationFlags(client, { pariwarId, limit? })` |
 | Retry default | `ATTRIBUTION_CODE_MAX_ATTEMPTS = 8` |
 
 ## Story
@@ -140,28 +150,35 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   Reference Code"* is **already true** of every captured row. ⛔ This story does ⛔ not touch that path.
 - **G2 — `member_attribution` holds UNVALIDATED 6-digit strings.** `packages/domain/src/schema/member_attribution.ts` —
   `attribution_source text NOT NULL`, `pariwar_id`, `captured_at`, `UNIQUE(member_id)`, ⛔ no FK on the code; migration
-  `0027_vyawastha-shulk-receipts.sql` grants `SELECT, INSERT` with RLS ENABLE + FORCE and a SELECT policy on `pariwar_id`
-  (so the AT4 read is permitted under `twt_app`). Every row captured before this registry exists names a code that no
+  `0027_vyawastha-shulk-receipts.sql` grants `SELECT, INSERT` with RLS ENABLE + FORCE, a SELECT policy on `pariwar_id`
+  and a PERMISSIVE `FOR ALL` write policy (`member_attribution_tenant_isolation_write`) on the same predicate — ⛔
+  RESTRICTIVE or member-scoped policy (verified live in `pg_policies`), so the AT4 read and the `{ captureId }` join are
+  permitted to ANY `twt_app` tx scoped to the Pariwar, admin or member. The policies live in the migration only (⛔ policy
+  file). Captured codes have ⛔ `(pariwar_id, attribution_source)` index (only `(pariwar_id, member_id)`).
+  `captured_at` is `DEFAULT now()` (tx start — ⛔ `clock_timestamp()`; verified live). Every row captured before this registry exists names a code that no
   field worker held — ⛔ code was handed out by hand outside this system (Q-S5, BigDev 2026-11-01: *"Answer is no to
   both"*; §0). Nothing is live (member signup has ⛔ gone live), so today the table holds no production rows.
 - **G3 — there is no field-worker table, package, permission key or endpoint.** The RBAC role exists with nothing in it:
   `packages/domain/src/rbac/roles.ts` (`field_worker`: `permissions: []`, `scopeCeiling: 'self'`, comment *"Dispatch keys
   land Epic 12"*) and `packages/contracts/src/rbac/roles.ts`. ⚠ That "Epic 12" (and the `permissions.ts` catalog
-  doc-block's *"`field_worker` is likewise DEFERRED to Epic 12"*) records Decision `2026-08-13-104`'s open follow-up —
+  doc-block's *"`field_worker` is likewise DEFERRED to Epic 12"*, and the second `permissions.ts` comment beside
+  `PERMISSION_CATALOG_VERSION`, *"`field_worker` grant deferred to Epic 12."* — THREE comments in all) records Decision `2026-08-13-104`'s open follow-up —
   *"`field_worker` ground inspection remains deferred to Epic 12"* — a deferral of ground-inspection DISPATCH, ⛔ of
   Epic 13's attribution. ⛔ Rewrite either comment ([[feedback_supersede_never_reinterpret]]). No `field-worker*` package
   exists.
 - **G4 — there is no `pariwars` table.** `pariwar_id` is an unconstrained uuid everywhere; scope is `SET LOCAL
   app.pariwar_id` (`setPariwarScope` / `assertPariwarScopeSet` in `packages/domain/src/db.ts`; `openScopeTx` in
-  `apps/api/src/modules/multi-tenant/scope-tx.ts`). v1 launches with ONE Pariwar (`DEFAULT_SIGNUP_PARIWAR_ID`,
-  `apps/api/src/config.ts`), but the model and the test fixtures (`PARIWAR_A/B`, `packages/domain/tests/integration/_helpers.ts`)
+  `apps/api/src/modules/multi-tenant/scope-tx.ts`). v1 launches with ONE Pariwar (the `DEFAULT_SIGNUP_PARIWAR_ID` ENV var,
+  read as `config.defaultSignupPariwarId` in `apps/api/src/config.ts` — ⛔ a constant), but the model and the test fixtures (`PARIWAR_A/B`, `packages/domain/tests/integration/_helpers.ts`)
   are multi-Pariwar.
 - **G5 — the collision-retry precedent.** `packages/domain/src/telegram-opt-in/write.ts` (`createPendingOptIn`):
   `MAX_CODE_RETRIES = 5`; per attempt `SAVEPOINT` → insert → `RELEASE`, on error `ROLLBACK TO SAVEPOINT`, read the
   violated constraint via `uniqueViolationConstraint(err)` (walks drizzle's `.cause` chain), regenerate **only** on the
   code's own unique constraint, rethrow anything else; raw SAVEPOINT SQL because a nested `db.transaction()` commits the
-  caller's tx early. ⚠ Match the **constraint name**, never any 23505 (review RP11, `questionnaire-versions/write.ts`
-  `isUniqueViolation` comment).
+  caller's tx early. ⚠ Match the **constraint name**, never any 23505 (review RP11 — the comment on
+  `questionnaire-versions/write.ts` `isNumberingCollision`). An EXPORTED `uniqueViolationConstraint` now exists in
+  `packages/domain/src/marketplace/errors.ts` (private copies in `telegram-opt-in/write.ts`, `wa-opt-in/write.ts`,
+  `contribution/write.ts`) — import it rather than copy a fifth.
 - **G6 — the randomness precedents.** `apps/api/src/modules/auth/shared/otp.ts` (`generateOtp`):
   `String(randomInt(0, 10 ** OTP_DIGITS)).padStart(OTP_DIGITS, '0')` — leading zeros kept. Domain generators use
   `node:crypto` (`randomBytes` + rejection sampling, `telegram-opt-in/code.ts`); ⛔ `Math.random` anywhere.
@@ -170,7 +187,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   'system'`) but need a subject, a category and a routing-policy version; audit lines are counters, ⛔ a queue.
   Purpose-built review queues are the house pattern (`reconciliation/reconciliation-review-read.ts`, `memorial/review.ts`).
 - **G8 — no generic config store.** Thresholds are domain constants (`WA_OPT_IN_CODE_MAX_SENDS`, `MAX_CODE_RETRIES`) or
-  API env via `intEnv` (`apps/api/src/config.ts`) passed through `deps.config`.
+  API env via the private `intEnv` / `positiveIntEnv` helpers (`apps/api/src/config.ts`) passed through `deps.config`.
+  ⚠ `intEnv` accepts 0 and fractions; `positiveIntEnv` is the one a retry count wants.
 - **G9 — the route-scan precedent (HISTORICAL since v1.3 — AT8 v2 does ⛔ use it; kept so the reasoning in AT8 v2's "why
   v1.2's rule was replaced" can be checked).** `apps/api/src/route-registry.ts` (`collectRoutes` / `getCollectedRoutes` — each
   entry exposes the raw Zod `schema`, so a key-walk is feasible) + `apps/api/tests/integration/login-wall.spec.ts` (every
@@ -188,7 +206,11 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   (`DEFAULT_SIGNUP_PARIWAR_ID`), a header or a literal and no route-shape check would see it.
 - **G9b — exactly TWO code sites write `requestContext.pariwarId`:** `requireMemberSession` (from the verified JWT) and
   `scopeResolutionHook` (after the `role_grants` check). `requestContextHook` (`apps/api/src/middleware/request-context/index.ts`)
-  initialises the context as `{ traceId }` — ⛔ Pariwar. (grep of `apps/api/src` at `3d6b46c5`.) ⇒ `requestContext.pariwarId`,
+  initialises the context as `{ traceId }` — ⛔ Pariwar. (grep of `apps/api/src` at `3d6b46c5`, re-verified at
+  `b7b43c47`: exactly `scope-resolution/index.ts` `request.requestContext.pariwarId = pariwarId` and
+  `member-session-guard.ts`; ⛔ `Object.assign` / `Reflect.set` / `Object.defineProperty` / `enterWith` on a context;
+  the ONLY `.requestContext =` is in `request-context/index.ts`; `getRequestContext()` exists there. The 72
+  `{ … pariwarId … } =` patterns in 21 `apps/api/src` files are all `const`/`let` DECLARATIONS binding a local — ⛔ writers.) ⇒ `requestContext.pariwarId`,
   when set, is ALWAYS an authenticated Pariwar — the fact AT8 v2 builds on.
 - **G10 — the migration house style.** STATEMENT ORDER from `0178_member-wa-opt-in-codes.sql`: header "never
   regenerate"; referenced-UNIQUE → CREATE → FK → CHECKs → GRANT → ENABLE → FORCE → POLICY → indexes → trigger; every
@@ -196,7 +218,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   `pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid`, ⛔ `FOR ALL`; ⛔ DELETE granted. ⚠ 0178's guard
   is `BEFORE UPDATE` only (it grants a column UPDATE) — the APPEND-ONLY precedent is
   `0192_questionnaire-versions.sql` (`questionnaire_chain_reject_mutation()`, `BEFORE UPDATE OR DELETE … FOR EACH ROW`
-  **plus** a `BEFORE TRUNCATE` statement trigger; also `0188_degraded-bridge-sms.sql`). Drizzle policies in `packages/domain/src/policies/<table>-rls.ts`
+  **plus** a `BEFORE TRUNCATE` statement trigger; also `0188_degraded-bridge-sms.sql`, which ALSO carries a `BEFORE
+  INSERT … _stamp` trigger setting `NEW.changed_at := clock_timestamp()` — *"the DB's clock, ⛔ the writer's"* — the
+  precedent for AC1's stamp trigger, v1.6). Drizzle policies in `packages/domain/src/policies/<table>-rls.ts`
   (`pgPolicy(...).link(table)`, `to: appRole`); both exported from `schema/index.ts` / `policies/index.ts`. Journal:
   `packages/domain/migrations/meta/_journal.json` (idx 140 is a pre-existing gap).
 - **G11 — the cross-Pariwar leak suite.** `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts` has
@@ -205,7 +229,8 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 ## ⚖️ Build decisions AT1–AT10 (⭐ = recommended) — PROPOSED for BigDev at Task 0.2
 
 - **AT1 — Home.** ⭐ `packages/domain/src/attribution-code/` (`index.ts`, `code.ts`, `allocate.ts`, `resolve.ts`,
-  `flags.ts`, `errors.ts`), re-exported as `export * as attributionCode` from `packages/domain/src/index.ts`.
+  `flags.ts`, `errors.ts`, `tx-guard.ts` — `assertTxBoundScope` is exported from `tx-guard.ts` for the module's own files
+  and ⛔ re-exported from `index.ts`), re-exported as `export * as attributionCode` from `packages/domain/src/index.ts`.
   - ⛔ (b) a new `packages/attribution-code` / `packages/field-worker-lifecycle` — no second consumer exists today
     ([[feedback_no_premature_package]]); architecture places the API surface at `apps/api/src/modules/field-worker/`,
     which is 13.3's, ⛔ this story's.
@@ -252,8 +277,12 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
       MICROSECOND precision; a JS `Date` holds milliseconds (`new Date('… 12:00:00.123999+00')` → `.123Z`). ⇒ ⛔ JS
       timestamp is ever an input to the comparison: the instant stays in the database, and the comparison is exact at
       the precision Postgres keeps (I7). ⛔ `date_trunc`, ⛔ `asOf: Date`.
+    - **Who stamps `allocated_at` (v1.6).** A `BEFORE INSERT` stamp trigger sets `NEW.allocated_at :=
+      clock_timestamp()` whatever the writer supplied (the `0188` precedent, G10) — so ⛔ `twt_app` INSERT can BACKDATE a
+      code and defeat this rule; the reach fence is ⛔ the only guard. (`captured_at` on `member_attribution` is 3.6b's,
+      ⛔ touched — AC9.)
     - **Consumers (v1.5, BigDev item 6):** signup (13.8) INSERTs the `member_attribution` row, takes its returned
-      `attribution_id`, and resolves with `{ captureId }` in the same tx; a backfill (C4) resolves each row with its own
+      `attributionId` (the `MemberAttributionRow` field; column `attribution_id`), and resolves with `{ captureId }` in the same tx; a backfill (C4) resolves each row with its own
       `{ captureId }`. Neither ever reads `captured_at` into JS. (The 3.6b capture write `insertMemberAttribution`
       already returns the row; 13.8 reads its id from it.)
     - signup going live before 13.1 becomes HARMLESS — every pre-registry capture predates every allocation, so it
@@ -280,14 +309,21 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   - ⛔ (c) a letters/Crockford alphabet — FR-82 and the shipped contract (G1) say *6-digit numeric*.
 - **AT6 — "Configurable threshold".** ⭐ (a) exported default `ATTRIBUTION_CODE_MAX_ATTEMPTS = 8` with an optional
   `opts.maxAttempts` override, validated as an integer in `1..32` (else `RangeError`); the future caller (13.1's
-  registration handler) may wire it from `deps.config` via `intEnv` — ⛔ this story adds no env var. Arithmetic: with *N*
+  registration handler) may wire it from `deps.config` via `positiveIntEnv` (⛔ `intEnv`, which accepts 0 and fractions; the
+  domain's `1..32` check is the backstop) — ⛔ this story adds no env var. Arithmetic: with *N*
   codes in a Pariwar a draw clashes with probability ≈ *N*/10⁶; at *N* = 10,000 eight straight clashes ≈ 10⁻¹⁶. ⇒
   "permanent unallocation" is reachable only by a broken generator or an exhausted space — exactly what a flag is for.
   - ⛔ (b) a per-Pariwar config table — a store with no second key in it.
 - **AT7 — "Flagged for trustee review".** ⭐ (a) exhaustion throws `AttributionCodeAllocationExhaustedError { pariwarId,
   attempts }`, and a **durable, append-only flag row** in `attribution_code_allocation_flags` (`flag_id`, `pariwar_id`,
-  `attempts`, `actor_id` — the admin who pressed "Add Field Worker" — and `flagged_at`) is written by
-  `flagAllocationExhausted(client, …)`. A flag written inside the failing tx would roll back with it, and on an admin
+  `attempts`, `actor_id` — the admin who pressed "Add Field Worker" — `actor_display` and `flagged_at`) is written by
+  `flagAllocationExhausted(client, …)`. ⭐ `actor_display` (v1.6) is the Story 6.11 R5 snapshot of that admin's
+  `users.display_name`, resolved SERVER-SIDE at write time by the door (`getDisplayName`,
+  `apps/api/src/modules/auth/admin/admin-auth.repo.ts`) — the house rule for every admin-attribution surface (precedent
+  `0192`'s `authored_by_display` / `actor_display`): a missing / empty name ⇒ `AdminDisplayNameMissingError`
+  (`apps/api/src/http-errors.ts`, 409), ⛔ fallback to the email, the UUID, a role label or client input. The table is
+  append-only, so a display column added later could never be backfilled — it is in from the start. C3's trustee
+  surface renders `actor_display`, ⛔ a raw actor id. A flag written inside the failing tx would roll back with it, and on an admin
   `/p/:pariwarId` route the handler does ⛔ own that tx (G9a) ⇒ the flag is written in a SEPARATE
   `openScopeTx(deps, pariwarId)` that commits independently — built into the API door's
   `flagAllocationExhaustedForRequest` (AT8 v2 iii); the caller calls it in its catch, then rethrows (C1). `listAllocationFlags(client, { pariwarId, limit? })` is the read the trustee surface renders (C3). ⛔ No `field_worker_id` on the flag: the registration that failed rolled back,
@@ -312,19 +348,30 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     enforced, each non-vacuous today:
     - **(i) the domain door — on ONE transaction-bound connection (v1.5, BigDev item 1).** Every exported DB function
       of the module takes `client: pg.PoolClient` — a single checked-out connection — ⛔ a Drizzle `Db` (which may be
-      pool-bound: `createDb()` and `bindScopedDb(client)` return the same `Db` type, so the type cannot tell them apart,
+      pool-bound: `createDb().db` and `bindScopedDb(client)` are the same `Db` type, so the type cannot tell them apart,
       and on a pool each statement may run on a DIFFERENT connection — the scope assertion on one, the query on
       another). House precedent: `helpdesk/project.ts` `projectTicketGenesis(client: pg.PoolClient, …)`, which binds
-      Drizzle internally with `bindScopedDb(client)`. Each function's FIRST step is a private `assertTxBoundScope(client,
-      pariwarId)`:
+      Drizzle internally with `bindScopedDb(client)`.
+      **ORDER inside every exported function (v1.6):** (0) PURE argument checks, with ⛔ statement sent — `code` format ⇒
+      `InvalidAttributionCodeError`; `asOf` shape ⇒ `TypeError`; `maxAttempts` ⇒ `RangeError`; then (1) the private
+      `assertTxBoundScope(client, pariwarId)`; then (2) the module's own SQL. "⛔ a query" anywhere in this story means ⛔
+      statement is sent at all. `assertTxBoundScope`:
       1. rejects a `pg.Pool` (or anything without a `release` function) ⇒ `AttributionCodeRequiresTransactionError` —
-         the runtime backstop to the type;
+         the runtime backstop to the type. DUCK-TYPED: `typeof (client as { release?: unknown }).release !== 'function'`;
+         ⛔ `instanceof pg.Pool` (a VALUE import of `pg` is lint-banned outside `**/db.ts`, test-utils and tests —
+         `packages/eslint-config-twt/index.js`, `allowTypeImports: true`; `import type pg` is fine);
       2. proves the connection is INSIDE a transaction block: `SAVEPOINT attribution_code_tx_guard` then `RELEASE
          SAVEPOINT attribution_code_tx_guard` — outside a transaction Postgres raises `25P01` ("SAVEPOINT can only be
-         used in transaction blocks") ⇒ `AttributionCodeRequiresTransactionError` (so a session-level `SET
-         app.pariwar_id` leaking on a pooled connection cannot satisfy the check);
-      3. reads `current_setting('app.pariwar_id', true)` on THAT client: unset ⇒ `PariwarScopeMissingError`; non-UUID ⇒
-         `InvalidPariwarScopeError`; different ⇒ `AttributionPariwarScopeMismatchError`.
+         used in transaction blocks", verified live) ⇒ `AttributionCodeRequiresTransactionError`. ONLY `25P01` is mapped;
+         any other probe error (e.g. `25P02` — the caller's tx is already aborted) is RETHROWN unchanged. So a
+         session-level `SET app.pariwar_id` on a pooled connection cannot satisfy the check OUTSIDE a transaction;
+         inside one, the residual is a leaked session-level value under a `BEGIN` with no `SET LOCAL` — ⛔ writer of a
+         session-level `app.pariwar_id` exists in `apps/*/src` or `packages/*/src` today (grep at `b7b43c47`);
+      3. REUSES `assertPariwarScopeSet(client)` (`packages/domain/src/db.ts` — reads `current_setting('app.pariwar_id',
+         true)` on THAT client: unset ⇒ `PariwarScopeMissingError`; non-UUID ⇒ `InvalidPariwarScopeError`; returns the
+         value) — ⛔ re-implement it — then compares lower-cased: `scoped.toLowerCase() !== pariwarId.toLowerCase()` ⇒
+         `AttributionPariwarScopeMismatchError` (`setPariwarScope` and `uuidBrand` lower-case, but a raw-string cast
+         could differ).
       Every subsequent statement runs on the same `client` (Drizzle via `bindScopedDb(client)`, raw SQL via
       `client.query`). ⇒ the scope assertion and the query use the same connection BY CONSTRUCTION. The lookup
       filters `WHERE "pariwar_id" = $1 AND "code" = $2` explicitly. `resolveAttribution` is the only export keyed by
@@ -336,25 +383,43 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
       raw SQL, or a wrapper in another package / domain module). House precedent: `apps/api/tests/unit/family-account-reach-fence.test.ts`
       (one REACH pattern, scanned TREES, an EXACT allow-list, comments stripped, a planted-importer positive control —
       its header records the same lesson: *"the first version scanned `apps/api/src` alone"*).
-      - **REACH:** the identifier `attributionCode` in ANY import / export specifier, property access or element access,
-        from ANY module source (so an alias at import, `domain.attributionCode` after `import * as domain`, a type-level
-        `import('@twt/domain').attributionCode`, a dynamic `(await import('@twt/domain')).attributionCode`, a CommonJS
-        `require('@twt/domain').attributionCode`, and a name passed on through an intermediate barrel all count); an
-        `export * from '@twt/domain'` / `export * as X from '@twt/domain'` in any file outside ALLOWED (a barrel that
-        would re-export the namespace without naming it — ⛔ such file exists today); any import path containing
-        `attribution-code`; `fieldWorkerAttributionCodes`; `attributionCodeAllocationFlags`;
-        `field_worker_attribution_codes`; `attribution_code_allocation_flags`; and the domain function names
-        `resolveAttribution`, `allocateAttributionCode`, `readAttributionCodeForFieldWorker`, `flagAllocationExhausted`,
-        `listAllocationFlags`.
+      - **REACH (v1.6 — matched on AST NODES and WHOLE identifiers, ⛔ substrings):**
+        - any `Identifier` node whose text is EXACTLY `attributionCode`, wherever it appears — import / export
+          specifier (name or `propertyName`), property access, `QualifiedName` (incl. an `ImportTypeNode` qualifier such
+          as `import('@twt/domain').attributionCode.X`, and a `typeof` query), binding-element name or `propertyName`
+          (`const { attributionCode } = await import(…)` / `= require(…)`), shorthand property;
+        - any string-literal element-access argument `'attributionCode'` (`d['attributionCode']`);
+        - an `export * from '@twt/domain'` / `export * as X from '@twt/domain'` in any file outside ALLOWED (a barrel
+          that would re-export the namespace without naming it — ⛔ such file exists today);
+        - any module-specifier string (static import / export, dynamic `import()`, `require()`) containing
+          `attribution-code` — ⭐ EXCEPT one that resolves to the API door `apps/api/src/modules/field-worker/attribution-code-access.ts`:
+          the door is the sanctioned entry, so ITS importers (13.1 / 13.3 / 13.8 routes) are ⛔ in REACH;
+        - the WHOLE identifiers or string / template-literal text `fieldWorkerAttributionCodes`,
+          `attributionCodeAllocationFlags`, `field_worker_attribution_codes`, `attribution_code_allocation_flags`, and
+          the domain function names `resolveAttribution`, `allocateAttributionCode`, `readAttributionCodeForFieldWorker`,
+          `flagAllocationExhausted`, `listAllocationFlags` — matched as `\b<name>\b`, so the door's
+          `resolveAttributionForRequest` and `ids/index.ts`'s `attributionCodeId` do ⛔ match.
+        - ⚠ Consequence for siblings: a wire / DTO field must ⛔ be named `attributionCode` (use `referenceCode` /
+          `code`) — the fence fires on the NAME; renaming the field is cheaper than a reviewed fence edit (C2 / C5).
       - **TREES:** every `apps/*/src` and every `packages/*/src` — enumerated from the workspace directories at run time
-        (⛔ a hard-coded list), files `.ts`, `.tsx`, `.mts`, `.js`, `.astro`.
-      - **ALLOWED (exact):** the module's own files `packages/domain/src/attribution-code/*.ts`; the two schema files and
-        `schema/index.ts`; the two policy files and `policies/index.ts`; `packages/domain/src/index.ts` (the namespace
-        export); and the API door `apps/api/src/modules/field-worker/attribution-code-access.ts`. Inside
-        `packages/domain/src`, ⛔ other module may import `../attribution-code/` (that would be a second door).
-      - **Positive controls:** a planted importer in `apps/public/src/pages/*.astro`, in `packages/validity-service/src`,
-        a `schema.fieldWorkerAttributionCodes` read, a raw-SQL `field_worker_attribution_codes`, and a `../attribution-code/`
-        import from another domain module — each caught; a COMMENTED mention ⛔.
+        (⛔ a hard-coded list), files `.ts`, `.tsx`, `.mts`, `.js`, `.astro`, INCLUDING `.d.ts`. ⚠ The walker descends
+        into DOT-directories — `apps/public/src/pages/.well-known/*.ts` are live UNAUTHENTICATED endpoints — and skips
+        ONLY `node_modules`; ⛔ copy `scripts/access-wrapper-invariants/check.ts` `collectTsFiles`' dot-entry skip.
+      - **ALLOWED — two lists (v1.6):** (a) `MODULE_DIR = 'packages/domain/src/attribution-code/'`, a PATH PREFIX exempt
+        from the REACH scan AND from the staleness check (`code.ts`, `errors.ts`, `tx-guard.ts` name nothing in REACH, so
+        an exact two-way `toEqual` over them — the precedent's assertion — would go red on write); (b) the EXACT files,
+        each of which must exist and match REACH (a stale entry fails): the two schema files and `schema/index.ts`; the
+        two policy files and `policies/index.ts`; `packages/domain/src/index.ts` (the namespace export); and the API door
+        `apps/api/src/modules/field-worker/attribution-code-access.ts`. Inside `packages/domain/src`, ⛔ other module may
+        import `../attribution-code/` (that would be a second door).
+      - **Positive controls:** a planted importer in `apps/public/src/pages/*.astro`, one under
+        `apps/public/src/pages/.well-known/` (v1.6), one in `packages/validity-service/src`, a
+        `schema.fieldWorkerAttributionCodes` read, a raw-SQL `field_worker_attribution_codes`, a `../attribution-code/`
+        import from another domain module, and a planted `instanceof attributionCode.AttributionCodeAllocationExhaustedError`
+        in a non-door file — each caught; a COMMENTED mention ⛔. **Negative controls (v1.6):** a planted
+        `apps/api/src/modules/field-worker/planted.routes.ts` importing `{ resolveAttributionForRequest,
+        AttributionCodeAllocationExhaustedError } from './attribution-code-access.js'` ⛔ flagged; `ids/index.ts`'s
+        `attributionCodeId` ⛔ flagged; `const { pariwarId } = request.requestContext` ⛔ flagged by (iv).
       - **Synthetic bite tests for the supported import forms (v1.5, BigDev item 4)** — each a planted source the fence
         must flag: `import { attributionCode as ac } from '@twt/domain'`; `import * as d from '@twt/domain'; d.attributionCode`;
         `d['attributionCode']`; `type T = import('@twt/domain').attributionCode.X` (the repo already uses
@@ -365,26 +430,40 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
         '@twt/domain'` (A flagged) and file B `export * from '@twt/domain'` (B flagged) and file C `import { attributionCode }
         from './b.js'` (C flagged); plus the earlier controls. Negative controls: a comment, a string in an unrelated
         error message that is ⛔ an import, and an ALLOWED file — ⛔ flagged.
-      - **Floor and the RECORDED scan count:** at the pin (`3d6b46c5`) the TREES hold **1,785** files of the scanned
-        extensions — `packages/domain/src` 732, `apps/api/src` 371, `packages/contracts/src` 215, `apps/admin/src` 210,
-        `apps/jobs/src` 71, `apps/public/src` 37, `packages/channels/src` 36, `packages/ui/src` 31,
+      - **Floor and the RECORDED scan count (re-recorded v1.6):** at `b7b43c47` the TREES hold **1,829** files of the
+        scanned extensions — `packages/domain/src` 743, `apps/api/src` 379, `apps/admin/src` 225, `packages/contracts/src`
+        220, `apps/jobs/src` 72, `apps/public/src` 41, `packages/channels/src` 36, `packages/ui/src` 31,
         `packages/platform-adapters/src` 23, `packages/validity-service/src` 14, `packages/niyamavali-engine/src` 12,
         `packages/i18n/src` 8, `packages/bank-parsers/src` 6, `packages/measured-validation/src` 6, `packages/events/src` 5,
-        `packages/tokens/src` 3, `packages/api-client/src` 2, `packages/edge/src` 2, `packages/queue/src` 1 (`apps/mobile`
-        has ⛔ `src/` — it ships ⛔ `pg`, the existing Metro boundary). The fence asserts ≥ **1,600** files scanned and
-        ≥ **19** trees found, and prints the count; the dev re-records both numbers at Task 0.1 and in the Debug Log.
+        `packages/tokens/src` 3, `packages/api-client/src` 2, `packages/edge/src` 2, `packages/queue/src` 1 — counted by
+        `find apps/*/src packages/*/src -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.mts' -o -name '*.js' -o -name
+        '*.astro' \) -not -path '*/node_modules/*'`, ⛔ other exclusion (`apps/mobile` and `packages/eslint-config-twt` have
+        ⛔ `src/`; mobile ships ⛔ `pg`, the existing Metro boundary). ⚠ v1.5's 1,785 at `3d6b46c5` had silently left out
+        2 `.d.ts` files and the 2 `.well-known` routes (the literal count at that pin was 1,789) — the reason TREES now
+        says "dot-directories included". The fence asserts ≥ **1,600** files scanned and ≥ **19** trees found, and prints
+        the count; the dev re-records both numbers at Task 0.1 and in the Debug Log.
         Every ALLOWED file must exist and match REACH (a stale allow-list entry fails).
       - The AT9 rule rides here too: ⛔ file outside `packages/domain/src/attribution-code/` and test trees passes `generate`.
     - **(iii) the API door** — `apps/api/src/modules/field-worker/attribution-code-access.ts`, exporting EXACTLY these five
-      wrappers with EXACTLY these option keys (pinned by name and key):
+      wrappers with EXACTLY these option keys (pinned by name and key) **plus (v1.6) the module's six error classes
+      re-exported BY NAME** — `InvalidAttributionCodeError`, `AttributionPariwarScopeMismatchError`,
+      `FieldWorkerAlreadyHasAttributionCodeError`, `AttributionCodeAllocationExhaustedError`,
+      `AttributionCodeRequiresTransactionError`, `AttributionCaptureMismatchError` — so a caller can `instanceof` them (the
+      house pattern: 55 `instanceof <ns>.<X>Error` sites in `apps/api/src/modules/*/handlers.ts`), read `.attempts`, and
+      map them to HTTP statuses WITHOUT naming `attributionCode` (which the fence forbids). The export pin is exactly
+      those ELEVEN names; ⛔ other export:
       `resolveAttributionForRequest(request, scopeTx, { code, asOf })`, `readAttributionCodeForRequest(request, scopeTx,
       { fieldWorkerId })`, `allocateAttributionCodeForRequest(request, scopeTx, { fieldWorkerId }, opts?: { maxAttempts?:
       number })` (⛔ `generate` — AT9), `listAllocationFlagsForRequest(request, scopeTx, { limit? })`, and
       `flagAllocationExhaustedForRequest(deps, request, { attempts })` (opens and commits its OWN
-      `openScopeTx(deps, <request's Pariwar>)` — the C1 separate-tx rule, built in).
+      `openScopeTx(deps, <request's Pariwar>)` — the C1 separate-tx rule, built in — and resolves the actor's
+      `actor_display` with `getDisplayName(deps.pool, actorId)` BEFORE opening it; ⛔ name ⇒ `AdminDisplayNameMissingError`,
+      ⛔ fallback, ⛔ flag row (AT7, Story 6.11 R5)).
       - **Transaction-bound through every wrapper (v1.5, BigDev item 2).** The four wrappers that run in the caller's
-        transaction take `scopeTx: ScopeTx` (`apps/api/src/modules/multi-tenant/scope-tx.ts` — `{ client, tx, pariwarId }`,
-        opened by `openScopeTx`: BEGIN → `SET LOCAL ROLE twt_app` → scope) — ⛔ a bare `Db`, ⛔ a `pg.Pool`, ⛔
+        transaction take `scopeTx: ScopeTx` (the interface in `apps/api/src/types.ts` — `{ client, tx, pariwarId,
+        scopeSet, closed? }`; ⚠ `scope-tx.ts` only `import type`s it and does ⛔ re-export it, so import the type from
+        `types.ts`; opened by `openScopeTx(deps: AppDeps, pariwarId: string)` / closed by `closeScopeTx(scopeTx, commit:
+        boolean)` in `apps/api/src/modules/multi-tenant/scope-tx.ts`: BEGIN → `SET LOCAL ROLE twt_app` → scope) — ⛔ a bare `Db`, ⛔ a `pg.Pool`, ⛔
         `deps.db` — and pass `scopeTx.client` to the domain. Admin routes pass `request.scopeTx` (opened by
         `scopeResolutionHook`); member handlers pass the `ScopeTx` they opened. Each wrapper first checks
         `scopeTx.pariwarId === <the authenticated Pariwar>` (else `AttributionPariwarScopeMismatchError`, before any SQL)
@@ -400,7 +479,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
         `flagAllocationExhaustedForRequest` takes ⛔ actor option (the pinned option keys are `{ attempts }` only) and
         passes `requestContext.actorId` — set by `requireAdminSession` / `requireMemberSession` — as the domain's
         `actorId`; the domain function `flagAllocationExhausted` is reachable only through the door (the reach fence), so
-        ⛔ caller can supply a different actor. Unset actor ⇒ the loud 500.
+        ⛔ caller can supply a different actor. Unset actor ⇒ the loud 500. The `actor_display` snapshot is resolved the
+        same way, server-side from that actor id (⛔ caller input); an actor with no `users.display_name` (incl. a member
+        id — the flag is an ADMIN path) ⇒ `AdminDisplayNameMissingError`.
       - **POSITIVE shape rule** (⛔ a deny-list): the `request` parameter is used ONLY by passing it to ONE private helper,
         `authenticatedScope(request)`, which reads `request.requestContext.pariwarId` and `request.requestContext.actorId`
         and nothing else; ⛔ other property access on `request`, ⛔ element access, ⛔ destructuring, ⛔ passing `request`
@@ -411,9 +492,12 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     - **(iv) the authenticated-Pariwar writer pin** (`apps/api/src`): the set of files containing ANY assignment or
       compound assignment (`=`, `??=`, `||=`, `&&=`) whose target is a property access OR element access named
       `pariwarId` — on ANY receiver (`request.requestContext`, an alias `ctx`, `getRequestContext()!`, `x['pariwarId']`)
-      — or a destructuring assignment that writes a `pariwarId` property, is EXACTLY
+      — or a destructuring assignment EXPRESSION whose target pattern writes a PROPERTY ACCESS named `pariwarId`
+      (`({ pariwarId: ctx.pariwarId } = o)`), is EXACTLY
       `{ modules/auth/shared/member-session-guard.ts, middleware/scope-resolution/index.ts }` (G9b; two today, so the pin
-      is non-vacuous, and ⛔ fewer than two passes). Also: ⛔ `Object.assign` / `Reflect.set` / `Object.defineProperty`
+      is non-vacuous, and ⛔ fewer than two passes). ⚠ Variable DECLARATIONS (`const { pariwarId } = …`) and a shorthand
+      `({ pariwarId } = o)` write a LOCAL and do ⛔ count — `apps/api/src` holds 72 such declarations in 21 files today,
+      so a rule that flags any binding pattern containing `pariwarId` is red on day one. Also: ⛔ `Object.assign` / `Reflect.set` / `Object.defineProperty`
       whose target is `requestContext`, `request.requestContext` or `getRequestContext()`, anywhere in `apps/api/src`;
       and assignment TO a `.requestContext` property only in `middleware/request-context/index.ts`.
   - **What the four links prove together, for ANY endpoint, page or job and ANY key name:** the module and its tables
@@ -424,11 +508,14 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     and ⛔ public page can reach it at all ((ii)).
   - **Where the gates live.** (ii) and (iv) and the (iii) shape rule: `apps/api/tests/unit/attribution-code-reach-fence.test.ts`,
     TypeScript-AST via the `typescript` devDependency of `apps/api` (for `.astro`, scan the frontmatter / script text
-    with the same REACH regex after comment-stripping — the precedent's approach). ⚠ Like the precedent, it reads other
-    workspaces, so a LOCAL `ci:local` re-run is skipped by turbo's cache when only another workspace changed (`@twt/api#test`
-    uses default inputs); GitHub CI has no turbo cache and is the backstop. ⛔ add turbo `inputs` in this story.
+    with the same REACH matching after comment-stripping — the precedent's approach). ⚠ Like the precedent, it reads other
+    workspaces. `test` `dependsOn: ["^build"]` and `@twt/domain` / `@twt/contracts` have `build` scripts, so a change in an
+    UPSTREAM dependency does re-run `@twt/api#test`; but a change ONLY in a non-dependency workspace (`apps/public`,
+    `apps/admin`, `apps/jobs`, most `packages/*`) is skipped by turbo's local cache. GitHub CI has no turbo cache and is
+    the backstop. ⛔ add turbo `inputs` in this story.
   - **Bite tests** (synthetic sources, unit): for (ii) — each positive control above, an alias import, `domain.attributionCode`,
-    a re-export, a path import; for (iii) — a `pariwarId` param, a `pariwar` option key, a `request.body` read, a
+    a re-export, a path import, a `.well-known` importer, the `ImportTypeNode` / binding-element forms (v1.6); for (iii)
+    — an extra export beyond the eleven pinned names, a `pariwarId` param, a `pariwar` option key, a `request.body` read, a
     `request['body']` read, `const { body } = request`, `request` passed to a helper, `getRequestContext()`, a forwarded
     `generate`; for (iv) — a third writer via `ctx.pariwarId = …`, `getRequestContext()!.pariwarId = …`,
     `x['pariwarId'] = …`, `??=`, `Object.assign(request.requestContext, { pariwarId })`, `({ pariwarId: ctx.pariwarId } = o)`,
@@ -436,7 +523,10 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   - **The runtime proof (live-DB, `apps/api/tests/integration/attribution-code-access.spec.ts`):** a fake request with
     `requestContext.pariwarId = A` and a tx scoped to A resolves A's holder; the same request with a tx scoped to B ⇒
     `AttributionPariwarScopeMismatchError` (the G9a gap, caught); `requestContext` without `pariwarId` ⇒ the loud 500;
-    the flag wrapper without `actorId` ⇒ the loud 500; the flag wrapper's row survives the caller's rollback.
+    the flag wrapper without `actorId` ⇒ the loud 500; the flag wrapper for an admin with no display name ⇒
+    `AdminDisplayNameMissingError` and ⛔ row; the flag wrapper's row survives the caller's rollback (⚠ a COMMITTED,
+    append-only row on the shared DB — use a fresh `randomUUID()` Pariwar for that leg and assert by the returned
+    `flag_id`, ⛔ by count; see Testing standards).
   - **Cost:** one small API file with no route caller yet (13.1 / 13.3 / 13.8 are its callers — C1, C5, C2) and one
     static test file. ⛔ Middleware change, ⛔ route scan, ⛔ Zod walker, ⛔ pinned route list. A future request-less
     caller (C4's backfill job) is a REVIEWED addition to the fence's ALLOWED list, with its own named Pariwar source.
@@ -469,8 +559,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - **I7** — A code credits its holder only for a capture at or after its allocation — STRICTLY: `resolveAttribution`
   returns the holder iff `allocated_at <= captured_at` (or `<= clock_timestamp()` for `'now'`), evaluated by Postgres on
   the two stored `timestamptz` values at the precision Postgres keeps them — MICROSECONDS — with ⛔ truncation and ⛔ JS
-  `Date` in between (AT4 (c)). Two instants in the same microsecond count as "at" (credited). Correctness ⛔ depends on
-  the order in which signup and the registry go live.
+  `Date` in between (AT4 (c)). Two instants in the same microsecond count as "at" (credited). `allocated_at` is the
+  DATABASE's clock, stamped by a `BEFORE INSERT` trigger (⛔ writer-supplied, v1.6). Correctness ⛔ depends on the order in
+  which signup and the registry go live.
 
 ## Acceptance Criteria
 
@@ -487,11 +578,13 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    `allocation_attempts BETWEEN 1 AND 32`; **and** `GRANT SELECT, INSERT … TO twt_app` only; RLS ENABLE + FORCE;
    per-command `SELECT` and `INSERT` policies on `pariwar_id` (G10 shape); **and** a `BEFORE UPDATE OR DELETE … FOR EACH
    ROW` guard trigger plus a `BEFORE TRUNCATE` statement trigger, both raising `integrity_constraint_violation` (I3; the
-   `0192` shape).
+   `0192` shape); **and (v1.6)** a `BEFORE INSERT … FOR EACH ROW` stamp trigger setting `NEW.allocated_at :=
+   clock_timestamp()` whatever the INSERT supplied (I7; the `0188` `_stamp` shape).
 2. **AC2 — the flag table.** **Given** the same migration, **then** `attribution_code_allocation_flags` exists with
    `flag_id uuid PK DEFAULT gen_random_uuid()`, `pariwar_id uuid NOT NULL`, `attempts smallint NOT NULL CHECK (attempts BETWEEN 1 AND 32)`,
-   `actor_id uuid NOT NULL`, `flagged_at timestamptz NOT NULL DEFAULT clock_timestamp()`; same grant / RLS / guard-trigger
-   posture as AC1; an index on `("pariwar_id","flagged_at")`.
+   `actor_id uuid NOT NULL`, `actor_display text NOT NULL CHECK (length(btrim(actor_display)) > 0)` (v1.6 — the 6.11 R5
+   snapshot, AT7), `flagged_at timestamptz NOT NULL DEFAULT clock_timestamp()`; same grant / RLS / guard-trigger posture
+   as AC1 (⛔ stamp trigger needed — nothing compares `flagged_at`); an index on `("pariwar_id","flagged_at")`.
 3. **AC3 — the generator.** `generateAttributionCode()` returns a string matching `^[0-9]{6}$`, drawn with
    `node:crypto` `randomInt`, never a deny-listed value; ⛔ `Math.random` anywhere in the module (a unit test greps the
    module source). A unit test over 20,000 draws asserts: every draw matches the format, none is deny-listed, and at least
@@ -504,24 +597,32 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    `field_worker_attribution_codes_pariwar_code_uq` ⇒ `ROLLBACK TO SAVEPOINT` and redraw; a 23505 on
    `field_worker_attribution_codes_field_worker_uq` ⇒ `FieldWorkerAlreadyHasAttributionCodeError` (⛔ retry); any other
    error ⇒ rethrown. **And** after `maxAttempts` (default 8, override `1..32` else `RangeError`) without success ⇒
-   `AttributionCodeAllocationExhaustedError { pariwarId, attempts }`. **And** it first asserts the scope equals
-   `pariwarId` (as AC5).
+   `AttributionCodeAllocationExhaustedError { pariwarId, attempts }`. **And** it checks `maxAttempts` (pure, ⛔ SQL) and
+   then asserts the scope equals `pariwarId` (as AC5) BEFORE any statement of its own (the AT8 v2 (i) ORDER).
 5. **AC5 — the lookup.** `resolveAttribution(client, { code, pariwarId, asOf })` returns the holder's `FieldWorkerId` when
    the code is held in the Pariwar AND `allocated_at <= <the asOf instant>` compared IN SQL at full `timestamptz`
    precision; otherwise `null`. `asOf` is REQUIRED and is exactly `{ captureId: MemberAttributionId }` (the instant is
    that row's persisted `captured_at`, read in the same statement; the row must be in the Pariwar and its
    `attribution_source` must equal `code`, else `AttributionCaptureMismatchError`) or `'now'` (`clock_timestamp()` in
    the same statement); anything else ⇒ `TypeError`. ⛔ JS `Date` is an input to the comparison (AT4 (c), I7).
-   **And** a `code` not matching `^[0-9]{6}$` ⇒ `InvalidAttributionCodeError` (⛔ a query). **And** unset scope ⇒
+   **And** a `code` not matching `^[0-9]{6}$` ⇒ `InvalidAttributionCodeError` (⛔ statement sent — the pure checks run
+   BEFORE `assertTxBoundScope`, AT8 v2 (i) ORDER; so a bad code on a `pg.Pool` throws `InvalidAttributionCodeError`).
+   **And** for `{ captureId }`: no `member_attribution` row with that id IN the Pariwar, or one whose
+   `attribution_source` ≠ `code` ⇒ `AttributionCaptureMismatchError`; a capture that matches but whose code is un-held
+   or allocated AFTER it ⇒ `null` (the one-statement shape is in Task 5). **And** unset scope ⇒
    `PariwarScopeMissingError`; a non-UUID scope ⇒ `InvalidPariwarScopeError`; scope ≠ `pariwarId` ⇒
    `AttributionPariwarScopeMismatchError`. **And** the SQL filters on
    BOTH `pariwar_id` and `code`. **And** there is ⛔ any other exported function that reads by `code`.
 6. **AC6 — the holder read.** `readAttributionCodeForFieldWorker(client, { pariwarId, fieldWorkerId })` returns `{ code,
    allocatedAt } | null` with the same scope assertion — the read 13.3's "my code" screen and 13.1 use instead of a
    column (AT2).
-7. **AC7 — the flag.** `flagAllocationExhausted(client, { pariwarId, attempts, actorId })` inserts one flag row and returns
-   its id; `listAllocationFlags(client, { pariwarId, limit? })` returns them ordered `flagged_at DESC, flag_id DESC`, the
-   limit clamped with `clampLimit({ default, cap })` (the domain-accessor gate) — both with the scope assertion.
+7. **AC7 — the flag.** `flagAllocationExhausted(client, { pariwarId, attempts, actorId, actorDisplay })` inserts one flag
+   row and returns its id (an empty / blank `actorDisplay` ⇒ the DB CHECK; the door never passes one — AT7);
+   `listAllocationFlags(client, { pariwarId, limit? })` returns them ordered `flagged_at DESC, flag_id DESC` through
+   Drizzle (`bindScopedDb(client)`) with `.limit(clampLimit(opts.limit, { default: 50, cap: 200 }))` INLINE — the real
+   signature is `clampLimit(limit, { default, cap })` (`packages/domain/src/pagination.ts`), and the domain-accessor gate
+   (`scripts/domain-accessor-invariants/lib.ts`) accepts only an integer literal or an inline `clampLimit(...)` in a
+   Drizzle `.limit()` — it cannot see a raw-SQL `LIMIT $n`, so ⛔ raw SQL for this read — both with the scope assertion.
    **And (AC4–AC7)** every exported DB function takes `client: pg.PoolClient` and runs `assertTxBoundScope` first (AT8 v2
    i): a `pg.Pool`, or a client outside a transaction block, ⇒ `AttributionCodeRequiresTransactionError`; every statement
    then runs on that same client.
@@ -532,13 +633,24 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
      TR10) all inside the SAME millisecond — `.123455` (BEFORE), `.123456` (EQUAL), `.123457` (AFTER) — resolving with
      `{ captureId }` gives `null`, the holder, the holder. (v1.4's `date_trunc` would have credited `.123455` — this leg
      fails on it.) Seed the `allocated_at` and `captured_at` values with `timestamptz` LITERALS in SQL, ⛔ through a JS
-     `Date` (which would round them to the millisecond and make the three legs identical). Plus: a capture whose `attribution_source` ≠ `code` ⇒ `AttributionCaptureMismatchError`; a
+     `Date` (which would round them to the millisecond and make the three legs identical). ⚠ (v1.6) The AC1 stamp trigger
+     overwrites a supplied `allocated_at`: seed the code row as the OWNER role inside the test tx under `SET LOCAL
+     session_replication_role = 'replica'`, then `SET LOCAL session_replication_role = 'origin'` BEFORE `enterAppScope`
+     (precedent `nominee/nominee-history-concurrency.spec.ts`; ⛔ `ALTER TABLE … DISABLE TRIGGER` on the shared table).
+     ⚠ `member_attribution` is `UNIQUE (member_id)` ⇒ three captures need THREE members (`seedMember`, before
+     `enterAppScope`), each capture inserted by raw `client.query` with its `captured_at` literal
+     (`insertMemberAttribution` takes ⛔ `capturedAt`). **And** a leg proves the stamp: an INSERT as `twt_app` supplying
+     `allocated_at = '2000-01-01'` stores the DB clock instead. Plus: a capture whose `attribution_source` ≠ `code` ⇒ `AttributionCaptureMismatchError`; a
      `captureId` from ANOTHER Pariwar ⇒ `AttributionCaptureMismatchError` (as the owner role too, so RLS is not what
      catches it); `'now'` ⇒ the holder for a code allocated earlier in the test;
-   - **transaction-bound handle (v1.5, BigDev item 7):** for EACH exported DB function — passed the test `pg.Pool`
-     (cast past the type) ⇒ `AttributionCodeRequiresTransactionError`; passed a checked-out client with ⛔ `BEGIN`, even
-     after a session-level `SET app.pariwar_id = '<A>'` on it, ⇒ `AttributionCodeRequiresTransactionError` (the
-     SAVEPOINT probe); passed the scoped tx client ⇒ succeeds. A type-level test (`// @ts-expect-error`) proves a
+   - **transaction-bound handle (v1.5, BigDev item 7):** for EACH exported DB function — passed a `pg.Pool` (cast past
+     the type) ⇒ `AttributionCodeRequiresTransactionError`; passed a checked-out client with ⛔ `BEGIN`, even after a
+     session-level `SET app.pariwar_id = '<A>'` on it, ⇒ `AttributionCodeRequiresTransactionError` (the SAVEPOINT probe);
+     passed the scoped tx client (`getTx().client`) ⇒ succeeds. ⚠ (v1.6) `setupLiveDb` keeps its pool private: the spec
+     creates its OWN `new pg.Pool({ connectionString: DATABASE_URL })` for the Pool and no-`BEGIN` legs, checks out a
+     client for that leg only, and ends with `finally { await c.query('RESET app.pariwar_id'); c.release(true); }`
+     (DESTROY, ⛔ return a connection with a leaked session GUC to a pool — `enterAppRoleNoScope` fail-closed probes
+     expect an unset scope); `pool.end()` in `afterAll`. A type-level test (`// @ts-expect-error`) proves a
      `pg.Pool` and a Drizzle `Db` do ⛔ compile as the `client` argument;
    - the SAME code seeded in `PARIWAR_A` (worker W1) and `PARIWAR_B` (worker W2) resolves to W1 under A and to W2 under
      B — and both INSERTs succeed (cross-Pariwar collision permitted, I1);
@@ -548,23 +660,33 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
      that fails if the explicit `pariwar_id` predicate is dropped (as `twt_app`, FORCE RLS hides B's row anyway);
    - a forced clash (`opts.generate` returns a held code, then a fresh one) ⇒ success on attempt 2, `attempts = 2`;
    - a generator that always returns a held code ⇒ `AttributionCodeAllocationExhaustedError` after exactly `maxAttempts`
-     draws, and **the caller's transaction is still usable** afterwards (savepoints rolled back cleanly);
+     draws, and **the caller's transaction is still usable** afterwards — proved by a CONTROL: `allocateAttributionCode`
+     for a SECOND worker in the same tx succeeds (⛔ assert "no row survived" — vacuous after `ROLLBACK TO SAVEPOINT`);
    - a candidate equal to a seeded `member_attribution.attribution_source` in the Pariwar is skipped (AT4); the same
      string seeded in ANOTHER Pariwar is ⛔ skipped;
    - a second allocation for the same worker ⇒ `FieldWorkerAlreadyHasAttributionCodeError`;
    - as `twt_app`: `UPDATE` and `DELETE` on both tables are refused; as the owner role the guard triggers refuse
-     `UPDATE`, `DELETE` and `TRUNCATE`; a hand INSERT of `'123456'` or `'12345'` fails its CHECK;
+     `UPDATE`, `DELETE` and `TRUNCATE`; as the OWNER role (so RLS 42501 cannot fire first), a hand INSERT of `'12345'` ⇒
+     23514 on the FORMAT check and of `'123456'` ⇒ 23514 on the DENY-LIST check — each assertion names its constraint;
    - the reach fence and the door are AC10;
    - **plus** a block in `cross-pariwar-leak.spec.ts` for each new table (G11) and an RLS policy-regression spec per
      table under `tests/integration/rls/`.
 9. **AC9 — nothing else moves.** ⛔ No endpoint, ⛔ permission key, ⛔ `PERMISSION_CATALOG_VERSION` bump, ⛔ change to
    `member_attribution` (columns, grants, policies, ⛔ even an index) or the vyawastha-shulk confirm path, ⛔ event type,
-   ⛔ env var, ⛔ mobile/admin UI, ⛔ edit to the `rbac/roles.ts` / `permissions.ts` "Epic 12" comments (G3), ⛔ change to
-   `requireMemberSession`, `scopeResolutionHook` or `requestContextHook`. The ONE production file outside `packages/domain`:
+   ⛔ env var, ⛔ mobile/admin UI, ⛔ edit to the three `rbac/roles.ts` / `permissions.ts` "Epic 12" comments (G3), ⛔ change
+   to `requireMemberSession`, `scopeResolutionHook` or `requestContextHook`. ⭐ ONE comment-only exception (v1.6): the
+   doc-blocks that become FALSE when this story lands — `packages/domain/src/schema/member_attribution.ts` (*"Epic 13's
+   field-worker allocation registry is NOT built"*) and `packages/domain/src/payment/attribution-write.ts` (*"Epic 13 is
+   not built"*) — are amended to point at `attribution-code/` (the registry and `resolveAttribution` now exist; the
+   capture itself is STILL unvalidated, and resolution is wired by 13.8) — ⛔ code, column, grant or policy change.
+   ⛔ access-wrapper gate extension (AI-6-1, `scripts/access-wrapper-invariants/README.md`): the surface has no audit write
+   and no secret compare, so every invariant there would be vacuous for the wrong reason — the reach fence (AT8 v2) is
+   this surface's gate; recorded here as the AI-6-1 decision. The ONE production file outside `packages/domain`:
    the API door `apps/api/src/modules/field-worker/attribution-code-access.ts` (AT8 v2 iii) — no route uses it yet.
    `pnpm ci:local` passes with `DATABASE_URL` set to the story's own DB port.
 10. **AC10 — the API door and its gates (AT8 v2 iii–iv).** **Given** `attribution-code-access.ts`, **then** it exports
-   EXACTLY the five request-bound wrappers and option keys pinned in AT8 v2 (iii), each reaching `request` only through
+   EXACTLY the five request-bound wrappers and option keys pinned in AT8 v2 (iii) plus the six error classes re-exported
+   by name (eleven exports, ⛔ other), each wrapper reaching `request` only through
    the private `authenticatedScope(request)` (unset Pariwar — or unset actor for the flag wrapper — ⇒ loud 500), and
    ⛔ `generate` through the door; **and** `apps/api/tests/unit/attribution-code-reach-fence.test.ts` enforces (ii) the
    repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; exact allow-list; floors), (iii) the
@@ -573,7 +695,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
    `apps/api/tests/integration/attribution-code-access.spec.ts` proves: A-request + A-`ScopeTx` ⇒ resolves; A-request +
    B-`ScopeTx` ⇒ `AttributionPariwarScopeMismatchError` before any SQL; no `requestContext.pariwarId` ⇒ 500; flag wrapper
    without `actorId` ⇒ 500; the flag row's `actor_id` = `requestContext.actorId` (the authenticated actor, ⛔ a caller
-   value); the flag wrapper's row survives the caller's rollback. The door-shape gate pins `scopeTx: ScopeTx` as the
+   value) and its `actor_display` = that admin's `users.display_name`; an admin with ⛔ display name ⇒
+   `AdminDisplayNameMissingError` and ⛔ row; the flag wrapper's row survives the caller's rollback (fresh `randomUUID()`
+   Pariwar, asserted by `flag_id`). The door-shape gate pins `scopeTx: ScopeTx` as the
    second parameter of the four in-transaction wrappers (⛔ `Db`, ⛔ `pg.Pool`).
 
 ## Tasks / Subtasks
@@ -582,7 +706,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   and its greps are in the Debug Log.**
   - [ ] 0.1 `git fetch origin`; rebase onto `origin/main` if it moved. Re-grep NUMBERS across main, every worktree and
     every branch (`git for-each-ref` + `git ls-tree … packages/domain/migrations/`): highest migration + journal `when`
-    (take the next free number ≥ `0195`; ⚠ a later `when` on a sibling's migration makes drizzle skip the other on a
+    (take the next free number ≥ `0199`; ⚠ a later `when` on a sibling's migration makes drizzle skip the other on a
     shared DB — set this migration's `when` above every sibling's); newest decision id; `PERMISSION_CATALOG_VERSION`;
     newest ledger letter. **STOP** and report if: (S1) a `field_workers` table or `field-worker*` package has landed
     (AT2's FK may then be added here instead); (S2) `member_attribution` changed shape; (S3) any branch references `attributionCode` under
@@ -615,12 +739,12 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     `attempts`), `AttributionCodeRequiresTransactionError`, `AttributionCaptureMismatchError`. Reuse
     `PariwarScopeMissingError` and `InvalidPariwarScopeError` from `packages/domain/src/errors.ts` (⛔ `db.ts`).
 - [ ] **Task 2 — schema + migration + RLS + guard (AC1, AC2).**
-  - [ ] 2.1 `schema/field_worker_attribution_codes.ts`, `schema/attribution_code_allocation_flags.ts`; export from
-    `schema/index.ts`.
+  - [ ] 2.1 `schema/field_worker_attribution_codes.ts`, `schema/attribution_code_allocation_flags.ts` (incl.
+    `actor_display` — AC2); export from `schema/index.ts`.
   - [ ] 2.2 `policies/field-worker-attribution-codes-rls.ts`, `policies/attribution-code-allocation-flags-rls.ts`
     (SELECT + INSERT, `to: appRole`); export from `policies/index.ts`.
   - [ ] 2.3 Hand-write `NNNN_field-worker-attribution-codes.sql` in the 0178 statement order, with the 0192 guard +
-    TRUNCATE triggers (G10); ⛔ `db:generate`. Header comment: the AT2 seam (*"13.1 adds the composite FK; ⛔ add a code
+    TRUNCATE triggers and the 0188-shaped `BEFORE INSERT` stamp trigger on `allocated_at` (G10, AC1); ⛔ `db:generate`. Header comment: the AT2 seam (*"13.1 adds the composite FK; ⛔ add a code
     column to field_workers"*). Deny-list
     CHECK as `code NOT IN (…)` with the 20 literals, in LOCKSTEP with the TS constant (a unit test compares them by
     reading the migration file).
@@ -628,33 +752,63 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - [ ] **Task 3 — generator (AC3).** `attribution-code/code.ts`: `ATTRIBUTION_CODE_LENGTH = 6`,
   `ATTRIBUTION_CODE_PATTERN`, `ATTRIBUTION_CODE_DENYLIST` (frozen, 20 entries), `isDenylistedAttributionCode`,
   `generateAttributionCode()` (redraw while deny-listed). Unit tests in `packages/domain/tests/attribution-code/code.test.ts`.
-- [ ] **Task 3a — the transaction-bound guard (AC4–AC7, AT8 v2 i).** `attribution-code/tx-guard.ts`: private
-  `assertTxBoundScope(client, pariwarId)` — reject a `pg.Pool` / anything without `release`; `SAVEPOINT
-  attribution_code_tx_guard` + `RELEASE` (map `25P01` to `AttributionCodeRequiresTransactionError`); read
-  `current_setting('app.pariwar_id', true)` on the same client (missing / invalid / mismatch errors). Every exported DB
-  function calls it FIRST, then binds Drizzle with `bindScopedDb(client)` (precedent `helpdesk/project.ts`
-  `projectTicketGenesis`). ⛔ function accepts a `Db`.
+- [ ] **Task 3a — the transaction-bound guard (AC4–AC7, AT8 v2 i).** `attribution-code/tx-guard.ts` (module-private —
+  ⛔ re-exported from `index.ts`): `assertTxBoundScope(client, pariwarId)` — DUCK-TYPED reject of anything without a
+  `release` function (⛔ `instanceof pg.Pool`: a value import of `pg` is lint-banned here); `SAVEPOINT
+  attribution_code_tx_guard` + `RELEASE` (map ONLY `25P01` to `AttributionCodeRequiresTransactionError`; rethrow
+  anything else, e.g. `25P02`); then `const scoped = await assertPariwarScopeSet(client)` (REUSED from `db.ts` — missing /
+  invalid errors) and a lower-cased comparison ⇒ `AttributionPariwarScopeMismatchError`. Every exported DB function runs
+  its PURE argument checks first (code format, `asOf` shape, `maxAttempts` — ⛔ statement), THEN this guard, THEN binds
+  Drizzle with `bindScopedDb(client)` (precedent `helpdesk/project.ts` `projectTicketGenesis`). ⛔ function accepts a `Db`.
 - [ ] **Task 4 — allocator (AC4).** `attribution-code/allocate.ts` (takes `client`), shape of `telegram-opt-in/write.ts`
-  `createPendingOptIn` (G5): raw `SAVEPOINT allocate_attribution_code`, constraint-name matching, `uniqueViolationConstraint`
-  copied locally or lifted (⛔ match any 23505). The AT4 `EXISTS` read on `member_attribution` (`pariwar_id` + 
+  `createPendingOptIn` (G5): raw `SAVEPOINT allocate_attribution_code`, constraint-name matching via the EXPORTED
+  `uniqueViolationConstraint` in `packages/domain/src/marketplace/errors.ts` (⛔ a fifth private copy; ⛔ match any 23505). The AT4 `EXISTS` read on `member_attribution` (`pariwar_id` + 
   `attribution_source`) per candidate. `ATTRIBUTION_CODE_MAX_ATTEMPTS = 8`; `opts.maxAttempts` range check.
 - [ ] **Task 5 — lookup, holder read, flags (AC5, AC6, AC7).** `resolve.ts`: `resolveAttribution(client, …)` with the
-  required `asOf` union — `{ captureId }` joins `member_attribution ma` IN THE SAME STATEMENT (`ma.attribution_id =
-  $captureId AND ma.pariwar_id = $pariwarId`, and `ma.attribution_source = $code` checked — a missing row or a different
-  code ⇒ `AttributionCaptureMismatchError`) with predicate `fwac.allocated_at <= ma.captured_at`; `'now'` uses
-  `fwac.allocated_at <= clock_timestamp()`; any other `asOf` ⇒ `TypeError`; ⛔ JS timestamp in the comparison, ⛔
-  `date_trunc`. `readAttributionCodeForFieldWorker(client, …)`. `flags.ts` (`flagAllocationExhausted(client, …)`,
-  `listAllocationFlags(client, …)` with `clampLimit`). All via Task 3a's guard. `index.ts` + `export * as attributionCode`
-  in `packages/domain/src/index.ts`.
+  required `asOf` union. ⭐ `{ captureId }` — ONE statement DRIVEN FROM `ma` (v1.6; an INNER JOIN with every predicate in
+  `WHERE` returns zero rows for both "no capture" and "not held / held later", and so cannot tell mismatch from `null`):
+  ```sql
+  SELECT ma.attribution_source = $code AS code_match, fwac.field_worker_id
+    FROM member_attribution ma
+    LEFT JOIN field_worker_attribution_codes fwac
+      ON fwac.pariwar_id = $pariwarId AND fwac.code = $code AND fwac.allocated_at <= ma.captured_at
+   WHERE ma.attribution_id = $captureId AND ma.pariwar_id = $pariwarId
+  ```
+  0 rows ⇒ `AttributionCaptureMismatchError`; `code_match` false ⇒ `AttributionCaptureMismatchError`; else
+  `field_worker_id` (null = not held, or held only from a later instant). `'now'` uses `fwac.allocated_at <=
+  clock_timestamp()`; any other `asOf` ⇒ `TypeError`; ⛔ JS timestamp in the comparison, ⛔ `date_trunc`.
+  `readAttributionCodeForFieldWorker(client, …)`. `flags.ts` (`flagAllocationExhausted(client, { …, actorDisplay })`,
+  `listAllocationFlags(client, …)` via Drizzle with an INLINE `.limit(clampLimit(opts.limit, { default: 50, cap: 200 }))`
+  — AC7). All via Task 3a's guard. `index.ts` + `export * as attributionCode` in `packages/domain/src/index.ts`.
+- [ ] **Task 5a — the two stale doc-blocks (AC9 exception, comment only).** Amend the headers of
+  `schema/member_attribution.ts` and `payment/attribution-write.ts` ("Epic 13 … NOT built") to say the registry and
+  `resolveAttribution` now exist in `attribution-code/`, that the capture is still unvalidated, and that 13.8 wires the
+  resolution. ⛔ other change to either file.
 - [ ] **Task 6 — the proofs (AC8).**
   - [ ] 6.1 Live-DB specs (`tests/integration/attribution-code/allocate.spec.ts`, `resolve.spec.ts`, `flags.spec.ts`)
-    with `setupLiveDb` / `getTx` / `enterAppScope`, `PARIWAR_A/B`. ⚠ Seed `member_attribution` rows with a real member
-    (FK) — reuse an existing member-seed helper.
+    with `setupLiveDb` / `getTx` (`packages/domain/src/test-utils/integration-setup.ts` — `getTx()` gives `{ tx: Db,
+    client: pg.PoolClient }` already inside `BEGIN`; pass `client` to the domain) / `enterAppScope`, `PARIWAR_A/B`
+    (`packages/domain/tests/integration/_helpers.ts`). ⚠ Seed `member_attribution` rows with real members (FK) via
+    `seedMember(tx, PARIWAR_A, …)` BEFORE `enterAppScope` — one member per capture (`UNIQUE (member_id)`). Write EVERY
+    AC8 leg, named in the spec titles: same-pair stability; the three sub-ms legs (BEFORE / EQUAL / AFTER, seeded as SQL
+    literals under `session_replication_role = 'replica'` — AC8); the stamp leg (backdated INSERT is re-stamped); the two
+    capture-mismatch legs (different code; other Pariwar as owner); `'now'`; the transaction-bound-handle legs (own pool,
+    no-`BEGIN` + session `SET`, `release(true)`); the cross-Pariwar collision; the scope-mismatch leg; the owner-role
+    predicate leg; forced clash; exhaustion + the second-worker CONTROL; AT4 skip in-Pariwar / ⛔ cross-Pariwar; second
+    allocation; the grant / trigger legs; the two named-CHECK legs. Domain flag specs assert membership and relative
+    order of THEIR OWN rows, ⛔ absolute counts (rows inside `setupLiveDb`'s tx roll back, but a sibling API spec's
+    committed flags do not). The `@ts-expect-error` type test: `packages/domain/tests/attribution-code/types.test.ts`
+    (domain `tsconfig` includes `tests/**`, so `typecheck` runs it).
   - [ ] 6.2 `tests/integration/multi-tenant/cross-pariwar-leak.spec.ts` blocks + `tests/integration/rls/` regression
     specs for both tables.
-  - [ ] 6.3 Unit: `tests/attribution-code/exports.test.ts` (pinned export list), deny-list ↔ migration lockstep test.
+  - [ ] 6.3 Unit: `tests/attribution-code/exports.test.ts` — the namespace's EXACT export list: `generateAttributionCode`,
+    `allocateAttributionCode`, `resolveAttribution`, `readAttributionCodeForFieldWorker`, `flagAllocationExhausted`,
+    `listAllocationFlags`, `isDenylistedAttributionCode`, the constants `ATTRIBUTION_CODE_LENGTH`,
+    `ATTRIBUTION_CODE_PATTERN`, `ATTRIBUTION_CODE_DENYLIST`, `ATTRIBUTION_CODE_MAX_ATTEMPTS`, and the six error classes
+    (⛔ `assertTxBoundScope`); deny-list ↔ migration lockstep test.
     (The v1.3 domain-only `boundary.test.ts` is FOLDED into the repo-wide reach fence, 6.4.)
-  - [ ] 6.4 **The API door (AC10).** `apps/api/src/modules/field-worker/attribution-code-access.ts` (the five wrappers);
+  - [ ] 6.4 **The API door (AC10).** `apps/api/src/modules/field-worker/attribution-code-access.ts` (the five wrappers +
+    the six error classes re-exported by name; the flag wrapper resolves `actor_display` via `getDisplayName`);
     `apps/api/tests/unit/attribution-code-reach-fence.test.ts` — modelled on `family-account-reach-fence.test.ts` (REACH /
     TREES / exact ALLOWED / comment-stripping / positive control), with TypeScript-AST for the door shape and the writer
     pin (reuse the parsing approach of `scripts/access-wrapper-invariants/lib.ts`, ⛔ import from `scripts/`); every bite
@@ -668,7 +822,11 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
     delete the SAVEPOINT probe from `assertTxBoundScope` (⇒ the no-`BEGIN` + session-`SET` leg fails); widen a domain
     function's `client` parameter to `Db | pg.PoolClient` (⇒ the `@ts-expect-error` test fails); make a wrapper accept
     `tx: Db` (⇒ the door-shape pin fails); let the flag wrapper take an `actorId` option (⇒ the option-key pin fails).
-    Record the reach fence's printed scan count beside 1,785.
+    (v1.6) Remove `ROLLBACK TO SAVEPOINT allocate_attribution_code` (⇒ the second-worker CONTROL fails 25P02); drop the
+    stamp trigger (⇒ the backdated-INSERT leg fails); add the dot-entry skip to the walker (⇒ the `.well-known` control
+    fails); make the `{ captureId }` statement an INNER JOIN (⇒ the un-held-code leg throws instead of `null`); fall back
+    to the actor id when the display name is missing (⇒ the `AdminDisplayNameMissingError` leg fails). Record the reach
+    fence's printed scan count beside 1,829.
 - [ ] **Task 7 — close.** `pnpm ci:local` with `DATABASE_URL` = the story DB port (⚠ the shell's `DATABASE_URL` points at
   `:5432`); File List; Change Log; row `ready-for-dev → in-progress → review` in `sprint-status.yaml` via the SAFE
   prepend.
@@ -680,6 +838,9 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - **`member_attribution` + the confirm handler (G1, G2)** — READ-ONLY to this story. AT4 reads it; ⛔ change its
   columns, grants, RLS, or the SAVEPOINT capture. Its RTBF behaviour (kept on erasure, `member/anonymize.ts`) and the
   data-export section (`data-export/assemble.ts`) are untouched — ⚠ the export sections are strict-parsed: ⛔ add a key.
+  ONLY the header doc-blocks of `schema/member_attribution.ts` and `payment/attribution-write.ts` change (Task 5a). The
+  new tables hold ⛔ member data, so ⛔ `member/anonymize.ts` / `data-export/assemble.ts` change; field-worker erasure is
+  13.1's (C1). The flag table's `actor_display` is controlled staff-attribution data (6.11 R5), plaintext by that rule.
 - **`rbac/roles.ts` `field_worker`** — stays `permissions: []`; its comments stay as they are (G3, AC9).
 - **`requireMemberSession` / `scopeResolutionHook` / `requestContextHook`** — UNCHANGED; the writer pin (AT8 v2 iv) only
   reads them. A future change that adds a third `requestContext.pariwarId` writer fails CI by design and must be reviewed.
@@ -702,7 +863,7 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   the reach fence's ALLOWED list with its own named Pariwar source (C4), ⛔ an optional argument on the request door.
 - **TR4c — the unauthenticated public server is a DB client too.** `apps/public` opens its own `twt_app` scope from config
   (`withPublicScope`). Any fence that skips `apps/public` — or `.astro` files — is not a fence (AT8 v2 ii).
-- **TR5 — `\d` vs `[0-9]`.** JS `\d` without the `u` flag is ASCII; Postgres `~ '\d'` can match other digits under some
+- **TR5 — `\d` vs `[0-9]`.** JS `\d` is ASCII in every regex mode; Postgres `~ '\d'` can match other digits under some
   locales — use `[0-9]` in SQL.
 - **TR6 — the deny-list lives in two places (TS constant + SQL CHECK).** The lockstep test is the only thing keeping them
   equal.
@@ -716,6 +877,16 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   rolled-back tx, so a capture seeded with the default always sorts before an allocation's `clock_timestamp()` and
   resolves to `null`. Set `captured_at` EXPLICITLY (`clock_timestamp()`) for the positive leg (AC8); 13.8's same-tx
   capture-then-resolve has the same trap.
+- **TR11 — the stamp trigger eats seeded `allocated_at` values (v1.6).** Seed sub-ms code rows as the owner under `SET
+  LOCAL session_replication_role = 'replica'` and switch back to `'origin'` before `enterAppScope`; ⛔ `ALTER TABLE …
+  DISABLE TRIGGER` on a shared table.
+- **TR12 — committed, append-only rows never leave the shared DB (v1.6).** The flag wrapper commits its own tx and the
+  table's guards block cleanup, so any spec leg that exercises it uses a fresh `randomUUID()` Pariwar and asserts by id,
+  ⛔ by count (memory: shared-DB pollution, #18).
+- **TR13 — the door's callers import a path containing `attribution-code` (v1.6).** REACH exempts specifiers that resolve
+  to the door; a fence written without that exemption makes 13.1's first route red.
+- **TR14 — the order of checks (v1.6).** Pure argument checks → `assertTxBoundScope` → SQL. A test that passes a bad code
+  on a `pg.Pool` expects `InvalidAttributionCodeError`.
 
 ### Carried to sibling stories (C) — HOMED (⛔ closed) in `deferred-work.md` and under each sibling in `epics.md` (Task 0.4)
 
@@ -729,26 +900,37 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   13.1's (v1.5): its route runs `requireAdminSession` → `scopeResolutionHook` → `requirePermissionHook(<the field-worker
   key, Panel-ratified under `-059` B(3)>)` BEFORE either call — the door enforces Pariwar context only. The flag's
   `actor_id` is ALWAYS the authenticated `requestContext.actorId` (the door takes no actor input). The flag's `actor_id` is NOT NULL ⇒ a system / bulk registration
-  path (none planned) would need a decision on whose id it records. The `field_worker.registered` payload may carry
-  `attributionCodeId`. 13.1's `packages/field-worker-lifecycle` home should be re-weighed against
+  path (none planned) would need a decision on whose id it records. ⭐ (v1.6) 13.1 resolves the admin's
+  `users.display_name` FIRST (it needs it for its own "added by" attribution under 6.11 R5), so the flag path is never the
+  first to discover a missing name; the flag wrapper still re-resolves it server-side and throws
+  `AdminDisplayNameMissingError` if absent. 13.1 catches the module's errors by `instanceof` on the classes the DOOR
+  re-exports (`import { AttributionCodeAllocationExhaustedError, … } from './attribution-code-access.js'`) — ⛔ via
+  `attributionCode.*` (the fence) — and reads `.attempts` from it. If it wires `maxAttempts` from env, use
+  `positiveIntEnv`. The `field_worker.registered` payload may carry `attributionCodeId`. 13.1's `packages/field-worker-lifecycle` home should be re-weighed against
   [[feedback_no_premature_package]] (13.1's call).
 - **C2 → 13.1 + the first attribution consumer (13.8 / signup wiring).** `resolveAttribution` returns the HOLDER (I6).
   FR-85 — *"new attributions on deactivated code rejected"* — is a check on 13.1's lifecycle state, made by whoever
   records an attribution, ⛔ by this lookup. The signup consumer INSERTs the `member_attribution` row, then calls
   `resolveAttributionForRequest(request, scopeTx, { code, asOf: { captureId: <the new row's attribution_id> } })` in the
-  same `ScopeTx` — ⛔ it never reads `captured_at` into JS (AT4 (c)). It owns its route's authorization (the member
-  session) — the door checks ⛔ permission.
-- **C3 → 13.4 (attribution analytics / trustee surface).** Render `listAllocationFlags` to trustees; until then a flag is
-  recorded but ⛔ seen (expected frequency ≈ 0, AT6).
+  same `ScopeTx` — ⛔ it never reads `captured_at` into JS (AT4 (c)); the new row's id is `MemberAttributionRow.attributionId`.
+  It owns its route's authorization (the member session) — the door checks ⛔ permission. ⚠ (v1.6) Call the door ONLY for
+  a 6-digit `attribution_source`: FR-82's other forms (member username / eHRMS — the adopter chain) would throw
+  `InvalidAttributionCodeError` and are ⛔ this lookup. A wire / DTO field is ⛔ named `attributionCode` (the fence fires on
+  the name — use `referenceCode` / `code`).
+- **C3 → 13.4 (attribution analytics / trustee surface).** Render the flags to trustees through the door's
+  `listAllocationFlagsForRequest` (⛔ `attributionCode.listAllocationFlags` — the fence), showing `actor_display`, ⛔ a raw
+  actor id (6.11 R5); until then a flag is recorded but ⛔ seen (expected frequency ≈ 0, AT6).
 - **C4 → 13.5 / 13.8 (backfill of 3.6b captures).** A backfill resolves each `member_attribution` row with
   `asOf: { captureId: <that row's attribution_id> }` — the comparison runs in SQL on the persisted `captured_at` at full
   precision; ⛔ it reads `captured_at` into JS — the as-of rule (AT4 (c), I7) then credits ⛔ capture that predates its code, whatever the rollout
   order (with the AT4 (c) insert-vs-commit residual). A backfill JOB has no request: it needs (1) a `twt_service` grant
   on the codes table (none today) — under which the explicit `pariwar_id` predicate is the only Pariwar filter (TR3) —
-  and (2) a REVIEWED entry in the reach fence's ALLOWED list naming its own Pariwar source (TR4b).
+  and (2) a REVIEWED entry in the reach fence's ALLOWED list naming its own Pariwar source (TR4b). It resolves ONLY rows
+  whose `attribution_source` is 6-digit (other FR-82 forms are the adopter chain — v1.6).
 - **C5 → 13.3 (field-worker app).** FR-53's "my own code" reads `readAttributionCodeForRequest` (the API door) under
   `field_worker_self` scope; the permission key it needs is the Panel's to ratify (`-059` B(3)). Every route that touches a
-  code — any shape, any key name — goes through the door (AT8 v2).
+  code — any shape, any key name — goes through the door (AT8 v2). A response / DTO field is ⛔ named `attributionCode`
+  (the fence fires on the name — v1.6).
 - **C6 → 13.1 (the one human premise left).** AT4 (c) makes signup-before-registry harmless; it cannot see a code handed
   out OUTSIDE the registry. 13.1's "Add Field Worker" is the ONLY issuer of codes: 13.1's Task 0 re-asks Q-S5's first
   half (*"has any code been handed out by hand?"*) before its registration flow goes live, and its runbook / UI copy
@@ -759,17 +941,20 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
 - Unit: `packages/domain/tests/**/*.test.ts`; live-DB: `packages/domain/tests/integration/**/*.spec.ts`, self-skipping on
   `!hasDatabase`, per-test rolled-back tx (`setupLiveDb`); API integration: `apps/api/tests/integration/`.
 - Every guard gets a RED proof (Task 6.5). Every scan gets a non-vacuity floor.
+- COMMITTED rows (only the flag wrapper's API leg commits) live forever on the shared DB: fresh `randomUUID()` Pariwar,
+  assert by `flag_id`, ⛔ counts (TR12). Every other leg runs inside `setupLiveDb`'s rolled-back tx.
 - `pnpm ci:local` (`scripts/ci-local.sh`) with `DATABASE_URL` set; integration tests only run when it is.
 
 ### Project Structure Notes
 
-- New: `packages/domain/src/attribution-code/{index,code,allocate,resolve,flags,errors}.ts`;
+- New: `packages/domain/src/attribution-code/{index,code,allocate,resolve,flags,errors,tx-guard}.ts`;
   `packages/domain/src/schema/{field_worker_attribution_codes,attribution_code_allocation_flags}.ts`;
   `packages/domain/src/policies/{field-worker-attribution-codes-rls,attribution-code-allocation-flags-rls}.ts`;
   `packages/domain/migrations/NNNN_field-worker-attribution-codes.sql`;
   `apps/api/src/modules/field-worker/attribution-code-access.ts`; tests as in Task 6.
 - Modified: `packages/domain/src/{index,ids/index,schema/index,policies/index}.ts`; `migrations/meta/_journal.json`;
-  `cross-pariwar-leak.spec.ts`;
+  `cross-pariwar-leak.spec.ts`; the header COMMENTS of `schema/member_attribution.ts` and `payment/attribution-write.ts`
+  (Task 5a);
   `sprint-status.yaml`. (`epics.md` and `deferred-work.md` were written by the create-story pass — Task 0.4.)
 - Variance from the epic, with reason: link direction (AT2), uniqueness over all codes (AT3), no package (AT1), the
   required `asOf` on `resolveAttribution` (AT4 (c)), and the CI proof as a call gate rather than a route scan (AT8 v2).
@@ -797,7 +982,13 @@ predicate; its own Policy-meaning note must re-ask — for the field worker's pa
   (the reach-fence precedent, AT8 v2 ii); `apps/api/src/modules/auth/shared/member-session-guard.ts`;
   `apps/api/src/middleware/{scope-resolution,request-context}/index.ts`; `apps/public/src/lib/db.server.ts`;
   `packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts`;
-  `packages/domain/src/rbac/roles.ts`.
+  `packages/domain/src/rbac/roles.ts`; (v1.6) `apps/api/src/types.ts` (`ScopeTx`); `packages/domain/src/pagination.ts`
+  (`clampLimit`); `scripts/domain-accessor-invariants/lib.ts`; `packages/domain/src/marketplace/errors.ts`
+  (`uniqueViolationConstraint`); `packages/domain/migrations/0188_degraded-bridge-sms.sql` (stamp trigger);
+  `apps/api/src/modules/auth/admin/admin-auth.repo.ts` (`getDisplayName`); `apps/api/src/http-errors.ts`
+  (`AdminDisplayNameMissingError`); `packages/domain/src/test-utils/integration-setup.ts`;
+  `packages/domain/tests/integration/nominee/nominee-history-concurrency.spec.ts` (`session_replication_role` seeding);
+  `packages/eslint-config-twt/index.js` (the `pg` value-import ban).
 
 ## Dev Agent Record
 
@@ -820,6 +1011,10 @@ millisecond-truncation false-positive. Preserve timestamp precision through the 
 signup and backfill consumers use the persisted captured_at at sufficient precision. 7. AC8: add the before/equal/after
 sub-millisecond tests and a transaction-bound-handle test. 8. I7: retain the strict at-or-after invariant, but express
 it in terms of the precision actually preserved by the implementation."* ⇒ all eight applied in v1.5 (Change Log).
+**v1.6** (2026-11-03): BigDev invoked *"validate 13.2 and rebase"*; after the first verifier reports arrived, BigDev,
+verbatim: *"apply all findings once the other verifiers report"* ⇒ every finding of the four verifiers applied in v1.6
+(Change Log), incl. the two optional design points (the `allocated_at` stamp trigger; the `actor_display` snapshot,
+decided per the ratified Story 6.11 R5 rule — block, ⛔ fallback). AT8 v2 and AT4 (c) remain ⏳ awaiting BigDev's final word.
 
 ### Completion Notes List
 
@@ -829,6 +1024,7 @@ it in terms of the precision actually preserved by the implementation."* ⇒ all
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-03 | 1.6 | REBASED onto `b7b43c47` (94 commits: 11b.5a, 12.2, 6.22 landed; ledger `-01d` relabelled `-01ad`). THIRD validation — four read-only verifiers (main delta / code claims / adversarial / footguns + checklist); S1–S5 all clear; BigDev: *"apply all findings"*. **High:** REACH exempts the door's importers and matches WHOLE identifiers on AST nodes (incl. `ImportTypeNode` qualifiers and binding elements); the door re-exports the six error classes (eleven pinned exports) so 13.1 can `instanceof` them; ALLOWED split into a module PREFIX (exempt from must-match) + exact files. **Medium:** NUMBERS re-traced (migration ≥ `0199`, contended with 6-22b; decisions ≥ `-441`; catalog 58; ledger `2026-11-03a`); scan count 1,829 / 19 trees — dot-directories (`.well-known` public routes) and `.d.ts` now included, plus a positive control; check ORDER (pure → guard → SQL); the `{ captureId }` statement written out (LEFT JOIN from `ma`); writer-pin destructuring = assignment expressions only; `actor_display` snapshot on the flag table (6.11 R5; `AdminDisplayNameMissingError`, ⛔ fallback); `BEFORE INSERT` stamp trigger on `allocated_at` (⛔ backdating); test-handle, three-member, replica-role seeding and committed-row rules; sibling INHERITED blocks name the door's calls. **Low:** `ScopeTx` lives in `apps/api/src/types.ts`; `clampLimit(limit, opts)` inline in Drizzle; reuse `assertPariwarScopeSet` and the exported `uniqueViolationConstraint`; duck-typed Pool check (`pg` value import lint-banned); only `25P01` mapped; `createDb().db`; G2's `FOR ALL` policy; three "Epic 12" comments; `attributionId`; `positiveIntEnv`; turbo caveat; TR5; savepoint CONTROL; named CHECK legs; AI-6-1 recorded; the two stale doc-blocks amended (Task 5a); 6-digit-only consumers; DTO naming; Task 6.1 lists every AC8 leg; export pin enumerated. TR11–TR14. |
 | 2026-11-01 | 1.5 | BigDev's focused v1.5 (eight items, ⛔ a redesign), all applied. (1) AT8 (i): every exported DB function takes `client: pg.PoolClient` (precedent `projectTicketGenesis`) and runs `assertTxBoundScope` first — rejects a `pg.Pool`, proves a transaction block with a SAVEPOINT probe (`25P01` ⇒ `AttributionCodeRequiresTransactionError`), reads the scope on THAT client — so assertion and query share one connection by construction; new Task 3a. (2) AT8 (iii): the four in-transaction wrappers take `scopeTx: ScopeTx` and pre-check its Pariwar; the flag wrapper owns its tx end to end; types pinned by the door-shape gate. (3) Authorization stated as the CALLER's (13.1's route: admin session → scope → the Panel-ratified field-worker key); the flag records only `requestContext.actorId`, ⛔ actor option. (4) AT8 (ii): REACH widened to the bare identifier from any source + `export *` from `@twt/domain`; synthetic tests for alias / namespace / element / type-level `import()` / dynamic `import()` / `require` / path forms / intermediate re-exports; scan count RECORDED (1,785 files in 19 trees at `3d6b46c5`; floor 1,600). (5)–(6) AT4 (c): `date_trunc` and `asOf: Date` REMOVED — `asOf` is `{ captureId }` (the persisted `captured_at`, joined in the same statement) or `'now'` (`clock_timestamp()`); ⛔ JS timestamp in the comparison; signup and backfill pass `{ captureId }`. (7) AC8: before / equal / after legs within one millisecond (`.123455` / `.123456` / `.123457`, seeded as SQL literals), capture-mismatch legs, and the transaction-bound-handle legs (Pool, no-`BEGIN` + session `SET`, `@ts-expect-error`). (8) I7: strict at-or-after, at Postgres's microsecond precision, same-µs counts as "at". Carried blocks updated (asOf form, ScopeTx, authorization). |
 | 2026-11-01 | 1.4 | Second fresh-context validation (of v1.3): 1 critical / 3 high / 4 medium / 6 low, all applied. AT8 v2 HARDENED — (ii) is now ONE repo-wide reach fence (every `apps/*/src` + `packages/*/src`, incl. `.astro`; REACH covers the namespace, paths, schema symbols, SQL table names and the domain function names; exact allow-list; precedent `family-account-reach-fence.test.ts`) — v1.3 missed the unauthenticated `apps/public` server and schema / raw-SQL / wrapper bypasses; (iii) door shape is POSITIVE (request reached only through `authenticatedScope`), names + option keys pinned, `opts` without `generate`, unset actor ⇒ 500; (iv) writer pin covers any receiver / element access / compound / destructuring, plus `Object.assign` and `.requestContext =` rules. AT4 (c) at MILLISECOND granularity (`date_trunc`), `asOf` is a DB instant (incl. `clock_timestamp()` for capture-less lookups), positive leg + TR10, insert-vs-commit residual stated. AC2 NARROWED note; I6/I7 order; AC9 wording; G9 marked historical; TR4c; carried blocks show `asOf`. Turbo-cache local-rerun limit noted. AT8 v2 and AT4 (c) still PROPOSED. |
 | 2026-11-01 | 1.3 | BigDev: AT1–AT10 as recommended EXCEPT AT8, plus three findings. Both AT8 findings CONFIRMED in the code (G9a extended: member handlers open their own scoped tx; G9b added: exactly two `requestContext.pariwarId` writers). AT8 REPLACED by v2 — gate the call, not the route shape: domain door + domain boundary scan + ONE API door (`attribution-code-access.ts`) + a pin on the two authenticated-Pariwar writers; the route scan, Zod walker, pinned route list and `SCOPE_RESOLUTION_HOOK` marker are DROPPED. AT4 (c) ADDED — the rollout sequencing guarantee: required `asOf`, a code credits only captures at/after its allocation (I7). New AC10; AC5 / AC8 / AC9 / Tasks 5–6 / TR4–TR4b / C1 / C4 / C5 updated; C6 added. AT8 v2 and AT4 (c) PROPOSED. |

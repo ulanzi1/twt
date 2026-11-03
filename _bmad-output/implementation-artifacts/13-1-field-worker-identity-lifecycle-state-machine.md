@@ -137,7 +137,7 @@ TR = traps · C = carried to a sibling story.
 
 # Story 13.1: Field Worker Identity + Lifecycle State Machine `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: review
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1383,19 +1383,19 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       payload's `authorization` schema (Task 3), the commands that refuse an unverified authorization (Tasks 5 / 6), their tests, the
       route (Task 7) and the `apps/api` fixture (Task 10 (2)) all need `rbac.authorize` / `VerifiedAuthorization` and a catalog that
       contains `field_worker.register` (`hasPermission` refuses a key outside the catalog).
-- [ ] **Task 3 — events + registry (AC3).** `field-worker/events.ts` with the "PINNED SEAM" delimiter comment; payload schemas (SEVEN events: the genesis payload carries the `authorization` snapshot and `district`, the `posted` payload the snapshot and both districts — QE17, QE18; the snapshot's schema is `.strict()`); the
+- [x] **Task 3 — events + registry (AC3).** `field-worker/events.ts` with the "PINNED SEAM" delimiter comment; payload schemas (SEVEN events: the genesis payload carries the `authorization` snapshot and `district`, the `posted` payload the snapshot and both districts — QE17, QE18; the snapshot's schema is `.strict()`); the
       registry entries; the coverage test (clone `module-registry-coverage.test.ts`, but define the clone's OWN description template —
       the twin also asserts description strings that name the MODULE stream and Story 12.1, and fails on the first run otherwise); run
       the AC3 greps.
-- [ ] **Task 4 — reducer (AC4).** `field-worker/state.ts`, `nextFieldWorkerState`, `foldFieldWorkerProjection`, `toFieldWorkerEvent`; the `posted` arms (same-state, from `pending_kyc` / `active` / `suspended`, never `terminated`); the fold also derives `district` and `endedOn`.
-- [ ] **Task 5 — projector (AC2, AC5).** `field-worker/project.ts`: `projectFieldWorkerGenesis`, `projectFieldWorkerTransition` (copy the
+- [x] **Task 4 — reducer (AC4).** `field-worker/state.ts`, `nextFieldWorkerState`, `foldFieldWorkerProjection`, `toFieldWorkerEvent`; the `posted` arms (same-state, from `pending_kyc` / `active` / `suspended`, never `terminated`); the fold also derives `district` and `endedOn`.
+- [x] **Task 5 — projector (AC2, AC5).** `field-worker/project.ts`: `projectFieldWorkerGenesis`, `projectFieldWorkerTransition` (copy the
       SHIPPED `marketplace/project.ts`: the transition takes `lockedRow` from its command, checks the stream HEAD equals
       `lockedRow.stateEventVersion` (else `FieldWorkerStreamConcurrencyError`), cross-validates `from_state` / `to_state` and, for
       `posted`, `from_district` against `lockedRow` (QE13), appends at version + 1, then the guarded UPDATE with
       `SET LOCAL app.field_worker_state_writer` — NOT a whole-stream replay; a `posted` event writes `district` in that same guarded UPDATE; the genesis wraps itself in a SAVEPOINT and maps the
       partial-unique 23505 BY CONSTRAINT NAME in its row-INSERT catch — the PK, `field_workers_pariwar_worker_uq` and the stream-version
       unique all map to `FieldWorkerGenesisAlreadyExistsError`).
-- [ ] **Task 6 — commands, reads, errors (AC5, AC6, AC10).** `field-worker/{commands,read,errors,index}.ts` (the reads project the row to
+- [x] **Task 6 — commands, reads, errors (AC5, AC6, AC10).** `field-worker/{commands,read,errors,index}.ts` (the reads project the row to
       `FieldWorkerView` — drop the three PII columns in the SELECT list, not after the fetch); copy the SHIPPED
       `marketplace/commands.ts` lock / SAVEPOINT shape. There is NO retry loop (the module's is lead-specific): do not copy it. IMPORT
       the shared helpers — `uniqueViolationConstraint`, `pgMessageOf`, `pgSqlstateOf`, `STREAM_VERSION_CONSTRAINT` from
@@ -1414,7 +1414,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `isFieldWorkerStateDirectWriteError`), everything else through the `fieldWorker` namespace. `registerFieldWorker`'s input carries `district` (QE17) and `authorization` (QE18, a `VerifiedAuthorization`) — written at genesis;
       `district` is later changed only by `postFieldWorker(client, { …, toDistrict, reasonCode, authorization })`, which checks the district DIFFERS (whether it
       is LISTED is the caller's, via `assertDistrictRecorded`); `read.ts` also holds `assertDistrictRecorded` (QE17).
-- [ ] **Task 7 — contracts, route, handlers (AC8, AC12, AC13) — UNCONDITIONAL, the Panel having ruled (`-441`).** ⭐ Task 8
+- [x] **Task 7 — contracts, route, handlers (AC8, AC12, AC13) — UNCONDITIONAL, the Panel having ruled (`-441`).** ⭐ Task 8
       (the key and the RBAC core) is already done — see the ORDER line after Task 2. Contracts: DTOs under `packages/contracts/src/field-workers/` (shape only,
       QE9); RE-DECLARE `FIELD_WORKER_STATES` / `FIELD_WORKER_KYC_STATUSES` in `packages/contracts/src/field-workers/enums.ts` and
       NEVER import `@twt/domain` there (a domain import leaks `pg` into the browser / Metro bundles —
@@ -1464,12 +1464,12 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       ADDITIVE: every existing RBAC test passes unchanged. `packages/domain/src/rbac` and `apps/api/src/modules/rbac` are governance-boundary
       roots — a reviewed edit, no feature flag. Tests build a real context and call the real check; there is no test-only way to mint a
       verified result.
-- [ ] **Task 9 — gate (AC11).** Copy `scripts/marketplace-module-state-invariant/` → `scripts/field-worker-state-invariant/`; rename
+- [x] **Task 9 — gate (AC11).** Copy `scripts/marketplace-module-state-invariant/` → `scripts/field-worker-state-invariant/`; rename
       the table and the allowlist, and set `GUARDED_COLUMNS` to the eight I1 columns (`currentState`, `stateEventVersion`,
       `kycStatus`, `stateReasonCode`, `district`, `endedOn`, `auditId`, `updatedAt` — the twin's set is table-specific); wire
       `package.json`, `ci-local.sh`, `ci.yml`; add a `FIELD_WORKER_ROOTS` const to the compensating-audit gate (and its `main` label
       string) + README + `docs/access-wrapper-invariants.md`; record the revert-sanity check.
-- [ ] **Task 10 — repair 13.2's specs (AC7).** ⭐ Land the DOMAIN-side repairs
+- [x] **Task 10 — repair 13.2's specs (AC7).** ⭐ Land the DOMAIN-side repairs
       in the same commit as Task 2's migration, so no commit leaves 13.2's live-DB suites red; the `apps/api` repair needs
       `registerFieldWorker` and lands with Task 6 (until then do not push — the pre-push hook runs `ci:local`). (1) Domain: add
       `seedFieldWorker` to the shared attribution-code fixtures UNDER `packages/domain/tests/` — NEVER `packages/domain/src/test-utils/`,
@@ -1490,7 +1490,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       check the exact signature Task 8 produced; the cross-Pariwar leak block needs a
       worker — and an authorization — in BOTH PARIWAR_A and PARIWAR_B. The domain `seedFieldWorker` (owner INSERT) needs none of this. Update every spec in G4; in `allocate-concurrency.spec.ts` seed COMMITTED workers and clean both tables
       in `afterAll` under replica mode, codes first.
-- [ ] **Task 11 — tests (AC2–AC13).** Unit: state, events, errors, no-audit-wrapper-in-domain, acceptsNewAttributions, commands-guards (I13's
+- [x] **Task 11 — tests (AC2–AC13).** Unit: state, events, errors, no-audit-wrapper-in-domain, acceptsNewAttributions, commands-guards (I13's
       statement order, with its RED proof — AC6). Live-DB: commands, projector-trigger, concurrency (AC6), reads incl. the AC10
       ordering contract (own-committing: the inversion, the tie, µs order, `'now'`), composite FK, RLS regression, cross-Pariwar-leak
       block. API: the registration spec incl.
@@ -1500,7 +1500,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       committed concurrent move — ⇒ `FieldWorkerAuthorizationStaleError`; the row's `district` equals the last event's
       `to_district`) and AC6 (e). Also: the delete / truncate trigger legs (AC2, AC7), the IST `ended_on` bounds (QE20's two proofs) and the malformed-date guard (0b),
       and the `authorize` source-fence and freeze legs (AC9). Every guard gets a RED proof; every scan a non-vacuity floor.
-- [ ] **Task 12 — records and full gate (AC14).** Dev Agent Record, File List, Change Log; the story's completion ledger entry (the next
+- [x] **Task 12 — records and full gate (AC14).** Dev Agent Record, File List, Change Log; the story's completion ledger entry (the next
       free letter after `k`, re-grepped across every ref) prepended to BOTH ledgers in `sprint-status.yaml` — the top comment block and the `last_updated: >-` key
       block — by the safe-prepend pattern (read first, size guard, verify the YAML afterwards); `pnpm ci:local` on a fresh container;
       run the `decision-flow-sync` skill after the decision lands.
@@ -1763,7 +1763,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 
 ### Agent Model Used
 
-_(filled by `bmad-dev-story`)_
+Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one sub-agent (the six 13.2 spec repairs, Task 10 (1)), reviewed.
 
 ### Debug Log References
 
@@ -1820,16 +1820,130 @@ _(filled by `bmad-dev-story`)_
   table. The door file is NOT edited — its header's "no route uses it yet" stays stale until Task 7 (the door's export pin).
   Reach fence 122 / 122 with no ALLOWED-list edit.
 
+**(c) Tasks 3–7, 9, 10 (2), 11 — 2026-11-03, on `:5470`.**
+- Tasks 3–6 (domain): `field-worker/{events,state,project,commands,read,errors,index}.ts`; `fieldWorker` namespace + the top-level
+  direct-write set in `domain/src/index.ts`; seven registry entries + `packages/events/tests/field-worker-registry-coverage.test.ts`
+  (its OWN description template). AC3 greps: no test pins the registry COUNT (93 → 100 entries); the only `toHaveLength(100)` hit
+  is `peer-mesh-reply.spec.ts`'s answers, unrelated. Unit: `tests/field-worker/{state,events,no-audit-wrapper-in-domain,commands-guards}.test.ts`
+  (53). Live: `tests/integration/field-worker/{commands,projector-trigger,read,stream-concurrency}.spec.ts` + the Task 2 specs (108 in all).
+- RED proofs (each restored and re-run green): I13 — an `events_log` read planted before the row lock in `runLockedTransition`
+  ⇒ 6 of 31 `commands-guards` legs fail; AC10 — the prefix cut replaced by a per-event filter ⇒ the INVERSION leg (a) fails;
+  `>` replaced by `>=` ⇒ the TIE leg (b) fails. The inversion's precondition (v3's stamp earlier than v2's) is asserted in the leg.
+- AC6: `stream-concurrency.spec.ts` 7 / 7, run twice in a row; 0 `field_workers` rows and 0 `field_worker.*` events left after
+  each run. (a) and (e1) are probabilistic smokes (6 rounds); (e3)'s stale ordering was observed (no fallback warning printed).
+  No race ended in 40P01 / 40001.
+- Task 7 (API): `apps/api/src/modules/field-worker/{routes,handlers,errors,index}.ts`, registered in `server.ts`; contracts
+  `packages/contracts/src/field-workers/` (+ the barrel, `tests/field-workers.test.ts`); `emit-openapi.ts` entry, `openapi/v1.yaml`
+  regenerated by `pnpm contracts:emit-openapi` (+109 lines), `contracts:check-openapi-determinism` green. Tests:
+  `tests/integration/field-worker/registration.spec.ts` (10 — (a)–(h), (k), AC13), `registration-exhaustion.spec.ts` (3 — (i), the
+  flag-failure leg and a control), `tests/unit/field-worker-errors.test.ts` (22 — (j)), `tests/unit/field-worker-handler-identity.test.ts`
+  (2 — (g); RED: the handler passing `{ ...authorization }` ⇒ the `toBe` leg fails; restored). The (d) concurrent loser is FORCED:
+  the request is observed WAITING on a lock in `pg_stat_activity` before the seed commits. The 422 district leg asserts NO
+  `encryptDek` / `computeHmac` call.
+- ⚠ `String.prototype.isWellFormed` is ES2024 and the lib is ES2022, so the unpaired-surrogate rule is a small code-unit loop
+  (`hasUnpairedSurrogate`, numeric literals — no escape can land raw on disk).
+- Task 10 (2): `apps/api/tests/integration/_field-worker-fixture.ts` (registers through the public command with a real
+  `rbac.authorize` result); only ONE leg of `attribution-code-access.spec.ts` inserts a code — it now registers a real worker in
+  the same rolled-back tx; 14 / 14.
+- Task 9: `scripts/field-worker-state-invariant/` (copied from the marketplace gate; `GUARDED_COLUMNS` = the eight I1 columns;
+  `lib.test.ts` 28 — a FLAGGED `.set` and `.values` leg for EACH of the eight, `district` in every write form); wired in
+  `package.json`, `ci-local.sh`, `ci.yml` (`ci.yml` parses). Revert-sanity: a `db.update(fieldWorkers).set({ district })` planted in
+  `field-worker/read.ts` ⇒ the check FAILS (1 finding, `read.ts:224`); removed ⇒ passes. `FIELD_WORKER_ROOTS` in
+  `scripts/access-wrapper-invariants/check.ts` (both labels), its README and `docs/access-wrapper-invariants.md`; revert-sanity: a
+  bare `audit.writeAuditEntry(...)` planted in `apps/api/src/modules/field-worker/` ⇒ RED (1 finding); removed ⇒ green; its own
+  tests 34 / 34.
+- AC12 — the route review of the door (C7), at the branch head:
+  - (a) `grep -rnE "export .* from '.*attribution-code-access" apps/*/src packages/*/src --include='*.ts' --include='*.tsx'` ⇒
+    EMPTY (exit 1); over the whole of `apps packages` ⇒ the two expected fixture STRINGS in
+    `apps/api/tests/unit/attribution-code-reach-fence.test.ts`. No door wrapper is bound to a name exported in a second statement
+    (`grep` of `*ForRequest` outside the door finds only the unrelated `resolvePoolNamePresentationModeForRequest`).
+  - (b) `grep -rnE "from '(\.\./)+api/src" apps/public apps/jobs` ⇒ EMPTY.
+  - (c) `grep -rn "requestContextStorage\|enterWith\|AsyncLocalStorage" apps/api/src` ⇒ only
+    `middleware/request-context/index.ts` (9 lines) and the COMMENT at `apps/api/src/types.ts:5` — both as at the baseline; no
+    `.pariwarId =` and no `Object.assign(…, { pariwarId })` in `apps/api/src/modules/field-worker` or the fixture (exit 1).
+  - The reach fence passes (122 / 122) with NO edit to its ALLOWED list. The door file is NOT edited, so its header ("⛔ Route
+    uses it yet") is now STALE — left so, as the story directs (Dev Notes).
+- ⚠ VARIANCE (AC9's source fence): the `authorize(` fence's allowed set names `check.ts`, `apps/api/tests/integration/_field-worker-fixture.ts`
+  and `*.test.ts` / `*.spec.ts`. Its first full-suite run flagged `packages/domain/tests/integration/field-worker/_fixtures.ts` —
+  the DOMAIN twin of the apps/api fixture (a test-tree file calling `rbac.authorize` for the same reason). It is added to the
+  allowed set by EXACT path (⛔ a widened rule) and named in `check.ts`'s doc comment; nothing under `src/` calls `authorize(`
+  except `check.ts`.
+- Typecheck (20 / 20), lint (20 / 20), `apps/api` unit (959 + 1 skipped), domain unit (3,777 + 1 skipped), contracts (1,701),
+  events (43) — green.
+
+**(d) Task 12 — the full gate (AC14), 2026-11-03.**
+- Run 1 — fresh container `twt-131-ci-pg` (`:5471`, DB `twt_dev`), code head `ce80bd64`: 37 of 38 jobs green; `integration-tests`
+  RED on ONE leg, `packages/domain/tests/integration/claim/peer-mesh-wa-reminder.spec.ts` > "R1 — the marker rechecks WR5's 72-hour
+  deadline … a slow decrypt/hash crossing it" (`expected 'marked' to be 'late'` — a fixed 7 s sleep racing a DB-clock deadline
+  under full-suite load). Story 6.31's file; 13.1 touches nothing it reads. Alone on the same DB: 36 / 36, twice. Turbo
+  `--concurrency=1` then STOPPED, so `@twt/api` and five more packages never ran; re-running those on the same `:5471` DB with
+  `--continue`: all green except 2 legs of `apps/api/tests/integration/pool-fixed-amount/fixed-amount.spec.ts`, which pass 16 / 16
+  on `:5470` with the same 13.1 code — state committed by run 1 on that container (the [[project_known_livedb_test_failures]]
+  class). Not a 13.1 regression; recorded, not hidden.
+- Run 2 — a SECOND fresh container `twt-131-ci2-pg` (`:5472`), the same code head `ce80bd64`: **`ci:local PASSED — 38 job(s)
+  green`** (37 at `268d86b5` + `field-worker-state-invariant`); integration phase domain 7,835 passed + 1 skipped, api 2,902 + 1
+  skipped. Both throwaway containers removed afterwards; `twt-131-pg` (`:5470`) is the story's working DB.
+- Typecheck and the OpenAPI determinism job are inside that run (green).
+
 ### Completion Notes List
 
-_(empty)_
+- Built the SEVENTH event-derived-state primitive, `packages/domain/src/field-worker/` (namespace `fieldWorker`): the
+  `field_workers` table (migration `0200` — Tier-1 name + mobile, a Tier-2 mobile index in the disjoint `field_worker_mobile`
+  space, eight projected columns behind a whole-row guard trigger with its own terminal / KYC / district rules, row DELETE and
+  statement TRUNCATE refused for every role, per-command RLS) and 13.2's composite FK onto it; seven `field_worker.*` events
+  (human actors only, no PII, the `authorization` snapshot on `registered` / `posted`); the reducer + fold + `acceptsNewAttributions`
+  (`active` only); the projector; seven commands with QE5's guard order (IST `ended_on` bounds computed in SQL); PII-free reads,
+  the duplicate-mobile pre-check, `assertDistrictRecorded`, and the as-of read `getFieldWorkerStateAt` (prefix cut in SQL, µs).
+- The RBAC core gained ONE shared per-grant predicate, `authorizingGrant`, and `authorize` → a deep-frozen, WeakSet-registered
+  `VerifiedAuthorization`; `requirePermission` returns it and `requirePermissionHook` stores it per key; `matchingGrantRole` now
+  delegates to `authorizingGrant`. `field_worker.register` minted (catalog 58 → 59), held by `district_admin` + `pariwar_admin`.
+  Every existing RBAC test passes unchanged.
+- The ONE route, `POST /api/v1/p/:pariwarId/field-workers` (district-gated on the body's reporting district), registers a worker
+  and allocates their attribution code through 13.2's door in one transaction; the 201 carries no code (QE22); exhaustion flags
+  in its own transaction and answers 503.
+- Gates: `field-worker-state-invariant` (new CI job — `ci:local` grows by one), `FIELD_WORKER_ROOTS` in the compensating-audit
+  gate. 13.2's specs repaired to seed real workers. Roster Row 48 is the go-live fence (legs (e)–(i) open). Nothing is live.
+- Not done here (by design): no screen, no other lifecycle route, no decrypt, no worker login (13.1a–13.1d, 13.3). The
+  `decision-flow-sync` skill is for when the decisions LAND on `main` (`-441`…`-444` are on this branch; no new decision was
+  written by this run).
 
 ### File List
 
-_(empty)_
+apps/api/src/context.ts · apps/api/src/modules/field-worker/{errors,field-worker-crypto,handlers,index,routes}.ts (new) ·
+apps/api/src/modules/rbac/index.ts · apps/api/src/server.ts · apps/api/src/types.ts ·
+apps/api/tests/integration/_field-worker-fixture.ts (new) · apps/api/tests/integration/attribution-code-access.spec.ts ·
+apps/api/tests/integration/field-worker/{_registration-harness.ts,registration.spec.ts,registration-exhaustion.spec.ts} (new) ·
+apps/api/tests/unit/{field-worker-crypto,field-worker-errors,field-worker-handler-identity,rbac-hook-authorizations}.test.ts (new) ·
+packages/contracts/src/field-workers/{dto,enums,index}.ts (new) · packages/contracts/src/index.ts · packages/contracts/scripts/emit-openapi.ts ·
+packages/contracts/tests/field-workers.test.ts (new) · openapi/v1.yaml (generated) ·
+packages/domain/migrations/0200_field-workers.sql (new) · packages/domain/migrations/meta/_journal.json ·
+packages/domain/src/encryption/{field-classes,index}.ts · packages/domain/src/field-worker/{commands,errors,events,index,project,read,state}.ts (new) ·
+packages/domain/src/ids/index.ts (comment) · packages/domain/src/index.ts · packages/domain/src/policies/field-workers-rls.ts (new) ·
+packages/domain/src/policies/index.ts · packages/domain/src/rbac/{check,matching-grant,permissions,roles}.ts ·
+packages/domain/src/schema/field_workers.ts (new) · packages/domain/src/schema/field_worker_attribution_codes.ts · packages/domain/src/schema/index.ts ·
+packages/domain/tests/field-worker/{commands-guards,events,no-audit-wrapper-in-domain,state}.test.ts (new) ·
+packages/domain/tests/integration/attribution-code/{_fixtures.ts,allocate-concurrency.spec.ts,allocate.spec.ts,handle.spec.ts,resolve.spec.ts} ·
+packages/domain/tests/integration/field-worker/{_fixtures.ts,commands.spec.ts,composite-fk.spec.ts,projector-trigger.spec.ts,read.spec.ts,schema-trigger.spec.ts,stream-concurrency.spec.ts} (new) ·
+packages/domain/tests/integration/multi-tenant/cross-pariwar-leak.spec.ts ·
+packages/domain/tests/integration/rls/field-worker-attribution-codes-policy-regression.spec.ts ·
+packages/domain/tests/integration/rls/field-workers-policy-regression.spec.ts (new) ·
+packages/domain/tests/rbac/{check,permissions,roles}.test.ts · packages/events/src/registry.ts ·
+packages/events/tests/field-worker-registry-coverage.test.ts (new) · scripts/field-worker-state-invariant/{README.md,check.ts,lib.ts,lib.test.ts} (new) ·
+scripts/access-wrapper-invariants/{check.ts,README.md} · docs/access-wrapper-invariants.md · scripts/ci-local.sh · package.json ·
+.github/workflows/ci.yml · docs/launch-gate-inventory/inventory-roster.md (Row 48) ·
+_bmad-output/implementation-artifacts/13-1-field-worker-identity-lifecycle-state-machine.md · _bmad-output/implementation-artifacts/sprint-status.yaml
 
 ### Change Log
 
+- **v1.20 (2026-11-03) — IMPLEMENTED (`bmad-dev-story 13.1`).** Task 0.1 re-verified at `268d86b5` (migration `0200`, catalog 58 →
+  59, roster Row 48, ledger `l`; 0 orphan codes; no recorded answer changed); Task 0.4 roster Row 48 `field-worker-registration-live`.
+  Built: migration `0200_field-workers.sql` + the `field_workers` schema / RLS + 13.2's composite FK; the `fieldWorker` primitive
+  (seven events, reducer, projector, seven commands, reads, as-of read); the RBAC core's `authorizingGrant` / `authorize` /
+  `VerifiedAuthorization` and the hook's stored result; `field_worker.register`; the registration route + contracts + OpenAPI; the
+  `field-worker-state-invariant` gate and `FIELD_WORKER_ROOTS`; 13.2's specs repaired. Every guard RED-proved (Debug Log (b)–(c)).
+  One recorded VARIANCE: the `authorize(` source fence also names the domain field-worker test fixture, by exact path (Debug Log
+  (c)). `ci:local` 38 / 38 on a fresh container (Debug Log (d)). Status → review; row `13-1` in-progress → review. Nothing is live
+  (Row 48 gates go-live).
 - **v1.19 (2026-11-03)** — the v1.17 / v1.18 PATCH (`9c0050fc..7fefe8dc`) and the `-442` fixup were reviewed by three fresh
   read-only reviewers (technical; governance; consistency) — BigDev: "run the review of the fix diff", then "apply all" — ALL
   applied. GOVERNANCE, BEFORE PUSH (autosquashed fixups; each squash left the tree byte-identical): `-441`'s verbatim quote restored to

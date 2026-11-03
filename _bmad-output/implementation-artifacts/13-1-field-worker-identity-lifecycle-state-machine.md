@@ -10,18 +10,27 @@ PINNED: `268d86b5` = `origin/main` (ledger 2026-11-03g — Story 13.2 LANDED, PR
 passes, then the author's own greps; every NEGATIVE — "no `kyc_status`", "no PAN capture", "`identity_type` has one value",
 "no route creates a principal" — was re-grepped by hand). Perishable — re-check at Task 0.1. Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (v1.18 — THE PANEL RULED on the follow-up note (decision `2026-11-03-443`, by DR and KB, `af503b43`): Q-6 A
+STATUS: ready-for-dev (v1.19 — the v1.17 / v1.18 PATCH was reviewed by three fresh read-only reviewers (technical; governance;
+consistency) and every finding applied on BigDev's "apply all". Before push, three unpushed decision commits were corrected by
+autosquashed fixups (the tree after each squash was byte-identical to before): `-441`'s verbatim quote restored to "yet to be Join";
+`-442` QE18 RESTORED to its v1.16 text (the v1.17 design is not folded into it) and its pre-push corrections disclosed; `-443`'s
+readings narrowed to the options' own words. The author's later QE amendments are a NEW entry, `-444` (`86274245`), committed alone.
+Final SHAs: `-441` `93b7e419`, `-442` `6a3172e4`, v1.16 `9c0050fc`, v1.17 `88243907`, `-443` `7cd400f2`, v1.18 `7fefe8dc`, `-444`
+`86274245`. ⭐ `authorize` now takes `requirePermission`'s actor-bearing params; a shared pure `authorizingGrant` picks the grant and
+`matchingGrantRole` is re-pointed to IT.)
+v1.18 — THE PANEL RULED on the follow-up note (decision `2026-11-03-443`, by DR and KB, `7cd400f2`): Q-6 A
 (consent, or a Pariwar Admin directly), Q-7 C (a new registration now, a link between the person's records LATER — carried as C11, no
 row), Q-8 A (the fill-in is not enforced; the log records the authorisation), Q-9 A (the District Admin registers, the Pariwar Admin
-approves, and does both if the District Admin is not available). Each matches its build default, so NO AC, Task or Invariant changes.
+approves, and does both if the District Admin is not available). Q-6 A, Q-8 A and Q-9 A match their build defaults; Q-7 C keeps the
+build (a new registration, QE19) and adds a LATER link, carried as C11 — so NO AC or Invariant changes.
 Q-6…Q-9 are DISCHARGED; only the counsel question is still unsent.)
 v1.17 — VALIDATED a third time at `268d86b5` by four fresh-context read-only verifiers (code claims;
 database + domain; governance + consistency; API + RBAC + tests); every finding applied on BigDev's "apply all findings" — see
-the Change Log. ⭐ GOVERNANCE IS DONE: decision `2026-11-03-441` (the Panel's ruling, `0f66848b`) and the author-commit
-`2026-11-03-442` (QE1–QE22, Q-2, Q-3, Q-4, `eb2106fe`) are COMMITTED, each alone, and the story was amended to them (`db88b8fe`).
+the Change Log. ⭐ GOVERNANCE IS DONE: decision `2026-11-03-441` (the Panel's ruling, `93b7e419`) and the author-commit
+`2026-11-03-442` (QE1–QE22, Q-2, Q-3, Q-4, `6a3172e4`) are COMMITTED, each alone, and the story was amended to them (`9c0050fc`).
 Nothing this build waits on is open. Task 0.1 runs first; Task 0.4 (the roster row) is the only governance step left before code.
 ⭐ EVERY VERSION PARAGRAPH BELOW IS HISTORY: where one says a decision entry is "not written", an item is "PROPOSED", "awaiting
-BigDev" or "open", or that `bmad-dev-story` "MUST STOP at Task 0.2", it is superseded by the line above.
+BigDev" or "open", or that `bmad-dev-story` "MUST STOP at Task 0.2", it is superseded by the v1.19, v1.18 and v1.17 paragraphs above.
 v1.16 — BigDev REPLACED the move rule with CONSENT (2026-11-03): a District Admin no longer records a move alone;
 one District Admin (EITHER end) opens a request at the worker's request and the other ACCEPTS or REFUSES it with a reason from a fixed
 list; unanswered for 7 days it goes to the Pariwar Admin, never accepted by default; a Pariwar Admin may also move a worker directly,
@@ -109,17 +118,18 @@ NUMBERS — traced 2026-11-03 across main, every worktree and the local refs. RE
   lower `when` behind a higher one is skipped by drizzle on a shared DB). ⚠ `0200` is CONTENDED: `story/6-22b-…` planned `0199`
   and must renumber, `story/14-3-…` holds a `<MIG>` placeholder, `story/6-39-…` plans three. The number follows the MERGE order.
 - Decisions: main holds up to `2026-11-02-439`; `-440` is minted on `story/6-22b-…` (not landed). `-441` (the Panel's ruling on
-  Q-1 / Q-5, `0f66848b`), `-442` (this story's author-commit, `eb2106fe`) and `-443` (the Panel's ruling on Q-6…Q-9, `af503b43`) are
-  COMMITTED on this branch ⇒ any NEW decision this story writes takes ≥ `-444` (re-grep every ref first). No decision `-431`…`-440` mentions field workers or attribution.
+  Q-1 / Q-5, `93b7e419`), `-442` (this story's author-commit, `6a3172e4`) and `-443` (the Panel's ruling on Q-6…Q-9, `7cd400f2`) are
+  COMMITTED on this branch, and `-444` (the author-commit amending `-442`'s QEs, `86274245`) ⇒ any NEW decision this story writes
+  takes ≥ `-445` (re-grep every ref first). No decision `-431`…`-440` mentions field workers or attribution.
 - RBAC: `PERMISSION_CATALOG_VERSION = 58` at the pin. This story moves it by exactly ONE: the Panel ruled (`-441`) that a District
   Admin and a Pariwar Admin may add a field worker, so the key is minted. ⚠ CONTENDED: `story/14-3-…` mints `breach.manage` with a
   `<CAT>` placeholder — the bump is +1 from whatever `main` holds when this lands (58 → 59 today; 59 → 60 if 14.3 lands first).
 - Ledger — TWO ledgers live in `sprint-status.yaml`: the top `# last_updated:` comment block (newest `2026-11-03g`) and the YAML key
   `last_updated: >-` block (newest `2026-11-03e`; 13.2's `f` / `g` went to the top block only). No other ref holds a `2026-11-03*`
   line ⇒ this story's entry is `2026-11-03h`; the create-story pass wrote it to the top block and a short `h` line to the key
-  block; the v1.17 validation took `2026-11-03i`. Task 12 does the same for its own entry (re-grep the letter first).
+  block; the v1.17 validation took `2026-11-03i`, v1.18 `2026-11-03j` and v1.19 `2026-11-03k`. Task 12 does the same for its own entry (re-grep the letter first).
 - ADR: highest `ADR-0044`; this story proposes none. Roster (`docs/launch-gate-inventory/inventory-roster.md`, highest row on main
-  `47` — re-grep the next free number): one go-live-fence row is proposed at Task 0.4 (Q-3 and seven more legs; 46 is reserved by 6.39 / 14.3 — take ≥ 48 unless 46 is confirmed free); Q-2 may ask BigDev to mint a sprint row.
+  `47` — re-grep the next free number): one go-live-fence row is proposed at Task 0.4 (nine legs, (a)–(i); 46 is reserved by 6.39 / 14.3 — take ≥ 48 unless 46 is confirmed free).
 
 LETTERS: G = found facts · QE = build decisions (APPROVED 2026-11-03) · Q = asks that are BigDev's / the Panel's · I = invariants ·
 TR = traps · C = carried to a sibling story.
@@ -159,9 +169,10 @@ story's most important finding.
 | Brand | `FieldWorkerId` / `ids.fieldWorkerId` — ALREADY exists (13.2). ⛔ mint a second one |
 | Guard session var | `app.field_worker_state_writer` |
 | Trigger fn / trigger | `field_workers_reject_unguarded_state_write()` / `field_workers_state_write_guard` (BEFORE INSERT OR UPDATE … FOR EACH ROW) |
+| Delete / truncate guard (I10) | `field_workers_reject_delete()` / `field_workers_no_delete` (BEFORE DELETE FOR EACH ROW) and `field_workers_no_truncate` (BEFORE TRUNCATE FOR EACH STATEMENT) — P0001 with the direct-write prefix |
 | Direct-write error | `FieldWorkerStateDirectWriteError`, `FIELD_WORKER_STATE_DIRECT_WRITE_CODE = 'field_worker.state_direct_write_rejected'`, `…_MESSAGE_PREFIX = 'field_workers direct write rejected'`, SQLSTATE `P0001` |
 | RLS policies | `field_workers_tenant_isolation_{select,insert,update}` (per-command, ⛔ `FOR ALL`) |
-| Named constraints | `field_workers_pariwar_worker_uq` (the FK target, C1), `field_workers_pariwar_mobile_live_uq` (partial), `_state_reason_pair`, `_active_needs_kyc`, `_registered_by_display_nonblank`, `_district_nonblank`, `_ended_on_pair` |
+| Named constraints | `field_workers_pariwar_worker_uq` (the FK target, C1), `field_workers_pariwar_mobile_live_uq` (partial), `_state_reason_pair`, `_state_reason_subset`, `_active_needs_kyc`, `_registered_by_display_nonblank`, `_district_nonblank`, `_ended_on_pair` |
 | New composite FK (on 13.2's table) | `field_worker_attribution_codes_worker_fk` — `(pariwar_id, field_worker_id)` → `field_workers`, `ON DELETE NO ACTION` |
 | Events (single-dot snake_case) | `field_worker.registered`, `.kyc_completed`, `.activated`, `.suspended`, `.reactivated`, `.terminated`, `.posted` (the seventh — a move to another district, QE17; ⛔ the epic's `kyc-completed`, QE6) |
 | Projector fns (the only writers; not re-exported) | `projectFieldWorkerGenesis`, `projectFieldWorkerTransition` (`field-worker/project.ts`) |
@@ -169,7 +180,7 @@ story's most important finding.
 | FR-85 contract for callers | `acceptsNewAttributions(state)` (pure) · `getFieldWorker` · `listFieldWorkersForPariwar` (both return `FieldWorkerView` — ⛔ the three PII columns) · `getFieldWorkerStateAt` |
 | Duplicate-mobile accessor and constants | `findLiveFieldWorkerByMobileIndex` (`field-worker/read.ts`; filters `current_state <> 'terminated'` — the partial index's predicate — with an explicit `pariwar_id`) · `FIELD_WORKER_PKEY_CONSTRAINT = 'field_workers_pkey'` · `FIELD_WORKER_MOBILE_LIVE_CONSTRAINT = 'field_workers_pariwar_mobile_live_uq'` (Task 6) |
 | District (QE17 — approved: the REPORTING district — whose District Admin manages the worker, NOT a work area; changed only by `field_worker.posted`, which carries a required reason) | `field_workers.district` — text NOT NULL, a LISTED district; CHECK `field_workers_district_nonblank`; `assertDistrictRecorded` (`field-worker/read.ts`); `FieldWorkerDistrictUnknownError` → 422 `field_worker.district_unknown` |
-| Authorization snapshot in the log (QE18, approved) | event payload key `authorization` = `{ permission_key, role, grant: { dimension, value, grant_id? }, target: { dimension, value }, catalog_version }` on `registered` and `posted`; produced ONLY by the RBAC check (`rbac.requirePermission` → `VerifiedAuthorization`), carried on `request.authorizations[key]`, never recomputed |
+| Authorization snapshot in the log (QE18, approved) | event payload key `authorization` = `{ permission_key, role, grant: { dimension, value /* null iff global */, grant_id? }, target: { dimension, value }, catalog_version }` on `registered` and `posted`; produced ONLY by the RBAC check (`rbac.requirePermission` → `VerifiedAuthorization`), carried on `request.authorizations[key]`, never recomputed |
 | Tier-2 field class (new) | `FIELD_WORKER_MOBILE_FIELD_CLASS = 'field_worker_mobile'`; Tier-1 class `FIELD_WORKER_FIELD_CLASS = 'field_worker'` (`encryption/field-classes.ts`) |
 | Route | `POST /api/v1/p/:pariwarId/field-workers` — handlers/routes in `apps/api/src/modules/field-worker/` |
 | Permission key (QE10 approved; holders RATIFIED by the Panel, `-441`) | `field_worker.register` — `district` dimension (value = the worker's district, QE17); held by `district_admin` (own district) and `pariwar_admin` (any district in its Pariwar — the fill-in) (+ `super_admin` derived). No other field-worker key is minted here: every other per-act key is minted by the story that builds its route — approval and the code read by 13.1a (C9); the direct move, suspend, reactivate and terminate by 13.1c (terminate waits on 13.6's C4); opening and answering a move request by 13.1d (C10). 13.6 adds only the labelling reason values. ⚠ `field_worker.register` is also the genesis event's `trigger` string (QE6) — two different things (a permission key vs an event-payload value); never conflate them in a test or a grep |
@@ -248,8 +259,8 @@ electronically while they are employed and removes them 8 years after the date o
 | Decision `2026-11-01-433` QE2; `2026-10-30-421` QE6 / QE14 (A) | `module.manage` was recorded by an AUTHOR-COMMIT (BigDev) — "the key `module.manage` is the author's, RECORDED here"; `-421` built the re-homed-actor calls on the recommendation and put them to the Panel as a NON-BLOCKING confirm | author-commit precedents |
 | Decision `2026-10-30-422` Consequence 1; `2026-11-01-438` DL6 | `-422`: "`-421` QE5 (A), QE6 (A) and QE7 (a) are CONFIRMED by the Panel as built — ⛔ change to the build." `-438` DL6: "Two permission keys MINTED here (outside `-210`'s delegated mint …; the `-421` QE6 / `-433` QE2 precedent): `claim.flag_fraud` (dimension pariwar; seeded `helpline_operator` …) and `claim.record_fraud_finding` (dimension district; seeded `district_admin` …)" | the Panel once confirmed an author-commit key "as built"; `-438` minted a key for a B(3) role (`helpline_operator`) the same way — evidence for Q-1 |
 | Decision `2026-11-03-441` (Trustee-ratified) — Q1 / Q2 | "by DR and KB / Q1 - Go with option A and also  District Admin may add a field worker. The goal is District Admin will manage field workers, however if District Admin is unable to discharge his duties for any reason, including District Admin is yet to Join, Pariwar Admin will fill in. Keep the full log of field worker. / Q2 A" | RULED — §0 edges 4 and 11, QE10, QE17, QE18, I15 |
-| Decision `2026-11-03-442` (author-commit, `eb2106fe`) | QE1–QE22 and Q-2 / Q-3 / Q-4 as recorded; §0 (3): the key's HOLDERS are ratified by `-441`, its `district` dimension is the author's; **Supersedes** `-441` build reading item 2 ("later acts gate against the current district") for a MOVE only | committed — the build record |
-| Decision `2026-11-03-443` (Trustee-ratified, `af503b43`) — Q1…Q4 of the follow-up note | "by DR and KB / Q1 A, Q2 C, Q3 A, Q4 A" | RULED — Q-6 A (QE17), Q-7 C (QE19, C11), Q-8 A (QE18), Q-9 A (QE21) |
+| Decision `2026-11-03-442` (author-commit, `6a3172e4`) | QE1–QE22 and Q-2 / Q-3 / Q-4 as recorded; §0 (3): the key's HOLDERS are ratified by `-441`, its `district` dimension is the author's; **Supersedes** `-441` build reading item 2 ("later acts gate against the current district") for a MOVE only | committed — the build record |
+| Decision `2026-11-03-443` (Trustee-ratified, `7cd400f2`) — Q1…Q4 of the follow-up note | "by DR and KB / Q1 A, Q2 C, Q3 A, Q4 A" | RULED — Q-6 A (QE17), Q-7 C (QE19, C11), Q-8 A (QE18), Q-9 A (QE21) |
 | Decision `2026-09-29-270` (Story 6.19b) | `rbac.matchingGrantRole` — the role of the grant that authorised an act: most specific scope first (`district` → `state` → `pariwar`), `global` last | built — QE18's `authorize` uses its order (TR13) |
 | Trust Deed Cl. 20(h) (draft, NOT executed, binds nothing — private repo `twt-legal`, cited by clause only); PRD §11 and OQ-5 | Deed: the clause is the Trustees' power over the Trust's service providers (appointing, paying and removing them) — read it in the private copy before relying on it. PRD §11: Trust Staff own "field-worker dispatch coordination"; OQ-5 (the recruitment plan) — *Owner:* "Trustee Panel + Solo Builder" | evidence for Q-1 and §0 edge 4 — who may add / remove the people the Trust pays |
 | Privacy Policy §1 (private copy, cited by section only) | §1 scopes the Data Fiduciary's duty to Members, nominees and claimants | draft policy — field workers are outside it |
@@ -384,7 +395,7 @@ electronically while they are employed and removes them 8 years after the date o
 decisions as listed, with QE10 choosing the per-act registration key and QE12 choosing neutral reason codes."* So every ⭐ below is the build
 decision, **except** QE10 (the per-act key `field_worker.register`, not `field_worker.manage`) and QE12 (the neutral reason
 values — five at approval, a sixth, `reassigned`, added for `posted` on 2026-11-03 — not the starter list). The answers are recorded
-in decision `2026-11-03-442` (committed alone, `eb2106fe`); `-441` is the Panel's ruling (`0f66848b`). ✅ QE11 (`active`-only)
+in decision `2026-11-03-442` (committed alone, `6a3172e4`); `-441` is the Panel's ruling (`93b7e419`). ✅ QE11 (`active`-only)
 is SETTLED (BigDev, 2026-11-03: *"approved and settled — the implementation rule is active only"*) and the Panel CONFIRMED it
 (Question 2 A, `-441`). ✅ The Panel RULED on Q-1 (`-441`, by DR and KB): a District Admin may add a field worker (the intended manager)
 and the Pariwar Admin fills in; the full log is kept. That changes QE10 (holders and dimension, applied below) and adds QE17 (the
@@ -435,7 +446,7 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   | `current_state` | `field_worker_state` NOT NULL — **projected** | |
   | `state_event_version` | bigint NOT NULL (`mode: 'number'`) — **projected** | |
   | `kyc_status` | `field_worker_kyc_status` NOT NULL — **projected** | `CHECK (current_state <> 'active' OR kyc_status = 'completed')` `field_workers_active_needs_kyc` |
-  | `state_reason_code` | `field_worker_reason_code` NULL — **projected** | `CHECK ((current_state IN ('suspended','terminated')) = (state_reason_code IS NOT NULL))` `field_workers_state_reason_pair` |
+  | `state_reason_code` | `field_worker_reason_code` NULL — **projected** | `CHECK ((current_state IN ('suspended','terminated')) = (state_reason_code IS NOT NULL))` `field_workers_state_reason_pair`; `CHECK ((current_state <> 'suspended' OR state_reason_code IN ('under_review','at_worker_request')) AND (current_state <> 'terminated' OR state_reason_code IN ('left_voluntarily','inactive','registered_in_error')))` `field_workers_state_reason_subset` (13.6 replaces it, QE12) |
   | `audit_id` | uuid NOT NULL, ⛔ FK — **projected** | the audit line of the MOST RECENT transition |
   | `updated_at` | timestamptz NOT NULL default `now()` — **projected** | SET to `now()` on every transition |
 
@@ -461,15 +472,17 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   ⛔ `to !== from` (12.1 TR1). A DB CHECK `field_workers_active_needs_kyc` says `current_state <> 'active' OR kyc_status = 'completed'`.
 
   **Guard order in EVERY command (pinned by a test).** (0) The actor and `actorId`, and — on `register` and `post` — the
-  authorization's provenance (`isVerifiedAuthorization`), its Pariwar and actor (equal to the command's) and its permission key /
-  dimension — pure, BEFORE the row lock — else `FieldWorkerProjectorInputError`. Then, under the lock: (1) the row exists in this Pariwar — else `FieldWorkerGenesisMissingError`;
+  authorization's provenance (`isVerifiedAuthorization`), its Pariwar and actor (equal to the command's), its dimension, and — for
+  `register` only — its permission key and target — pure, BEFORE the row lock — else `FieldWorkerProjectorInputError`; (0b) for
+  `terminated`, `ended_on` is present, matches `^\d{4}-\d{2}-\d{2}$` and is a real calendar date — pure, BEFORE the lock, else
+  `FieldWorkerEndedOnInvalidError` (never `FieldWorkerProjectorInputError`, and never sent to SQL). Then, under the lock: (1) the row exists in this Pariwar — else `FieldWorkerGenesisMissingError`;
   (2) the (state, event) pair is legal per this table — else `FieldWorkerIllegalTransitionError` (this covers anything out of
   `terminated` AND a repeated `kyc_completed` on an `active` worker); (3) the KYC guard — `FieldWorkerKycAlreadyCompletedError`
   (reachable only from `pending_kyc`) or `FieldWorkerKycNotCompletedError`; (3b) for `posted`, the new district differs from the current one — else
   `FieldWorkerDistrictUnchangedError`; (3c) for `posted`, the authorization's district `target` is `toDistrict` or the LOCKED row's
-  `district` — else `FieldWorkerAuthorizationStaleError` (a concurrent move changed the district after the gate passed); (4) the
-  reason (suspend, terminate AND post) — else `FieldWorkerReasonInvalidError`; (5) for `terminated`, the `ended_on` bounds (QE20) —
-  else `FieldWorkerEndedOnInvalidError`.
+  `district` — else `FieldWorkerAuthorizationStaleError` (a concurrent move, or a caller bug — the command cannot tell which); (4) the
+  reason (suspend, terminate AND post) — else `FieldWorkerReasonInvalidError`; (5) for `terminated`, the IST bounds (QE20) — else
+  `FieldWorkerEndedOnInvalidError`.
   So `terminate` with a bad reason on a terminated worker is an illegal transition, not a bad reason.
 - **QE6 — Events. ⭐** SEVEN names — the epic's six plus `field_worker.posted` (QE17, approved 2026-11-03) — single-dot snake_case (G8); ⛔ the epic's `kyc-completed`. Payloads are `.strict()` Zod, snake_case,
   and carry NO PII: genesis `{ from_state: null, to_state, trigger, actor, authorization, district }` (`authorization`: the QE18 snapshot; `district`: QE17 — the stream must
@@ -509,9 +522,11 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   given, so this check is the only thing that stops a junk district. Required
   `Idempotency-Key` (missing, empty or over 200 characters ⇒ 400 `field_worker.idempotency_key_required`; the same key still in
   flight ⇒ 409 `field_worker.idempotency_in_progress` — rename every `module.*` literal in the helpers copied from 12.2).
-  Order inside the claim: mint `fieldWorkerId` → content-validate `name` and `mobile` (422) → resolve the admin's `display_name` (absent ⇒ `AdminDisplayNameMissingError`,
-  ⛔ fallback, BEFORE any write or audit line) → `openScopeTx` → `try` → `assertDistrictRecorded(tx, pariwarId, district, at)` with
-  `at` = this transaction's own `SELECT now()` (as 12.2's `assertScopeValuesRecorded` caller does; compared byte for byte; 422
+  12.2's `tenantWrite` (`marketplace/handlers.ts`) opens the scope transaction BEFORE it calls `run`, inside `withIdempotency`, and
+  wraps `run` in its `try` / `finally closeScopeTx(false)` — copy it UNCHANGED (renaming `module.*` and the mapper). The `run` body, in
+  order: mint `fieldWorkerId` → content-validate `name` and `mobile` (422) → resolve the admin's `display_name` (absent ⇒ `AdminDisplayNameMissingError`,
+  no fallback, BEFORE any write or audit line) → `assertDistrictRecorded(ctx.scopeTx.tx, pariwarId, district, at)` with
+  `at` = `SELECT now()` on `ctx.scopeTx.client` (as 12.2's `assertScopeValuesRecorded` caller does; compared byte for byte; 422
   `field_worker.district_unknown`) — BEFORE any KMS call, so an unlisted district costs no encrypt → encrypt name + mobile, compute
   the mobile HMAC (the KMS calls run with the transaction open and idle — accepted, one short round trip each) → duplicate-mobile
   pre-check on that tx — `fieldWorker.findLiveFieldWorkerByMobileIndex(db, pariwarId, mobileBlindIndex)` → id or null, with an
@@ -520,14 +535,14 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   runs `registerFieldWorker` (genesis) THEN `allocateAttributionCodeForRequest(request, scopeTx, { fieldWorkerId })` on the
   SAME tx, then COMMITS. On `AttributionCodeAllocationExhaustedError` (caught by `instanceof` on the class the DOOR re-exports,
   reading `.attempts` from it): `try { await flagAllocationExhaustedForRequest(deps, request, { attempts }) } catch (flagErr) {
-  console.error('[field-worker] exhaustion flag failed', { code: pgSqlstateOf(flagErr) }) }` then rethrow the ORIGINAL exhaustion
+  console.error('[field-worker] exhaustion flag failed', { code: marketplace.pgSqlstateOf(flagErr) }) }` (`marketplace` from `@twt/domain` — nothing in `apps/api/src` imports it yet) then rethrow the ORIGINAL exhaustion
   error — a failing flag write (a DB error, a display name removed meanwhile) never replaces the 503 ⇒ the
   compensating audit writes `field_worker.registered_rolled_back`, the tx rolls back, the response is 503
   `field_worker.code_allocation_exhausted`. Response 201: `{ field_worker_id, district, current_state, kyc_status }` — NO code (QE22, APPROVED 2026-11-03): the code is
   allocated here, in the same transaction, but is read only after approval — by 13.1b's SMS and 13.1a's audited read — so no
   copy tells anyone a code before the worker is approved and the allocation has committed (C9; 13.2's C6). Do not wire `maxAttempts` from env (default 8; YAGNI).
-  12.2's `tenantWrite` (`marketplace/handlers.ts`) opens the scope transaction FIRST, inside `withIdempotency`; copy it with THIS
-  `run` body (the order above), and copy `requireIdempotencyKey`, `releaseHookTx` and `namespace(pariwarId, actorId)` as they are.
+  The transaction is open, and idle, during the validation, the display-name read and the KMS calls — accepted. Copy
+  `requireIdempotencyKey`, `releaseHookTx` and `namespace(pariwarId, actorId)` as they are.
   Do NOT trim or NFC-normalise `district` in the handler: the gate compared the raw body bytes, and the command refuses a genesis
   whose district differs from `authorization.target.value` (AC5) — a normalised value would turn a valid request into a 500.
   `allocateAttributionCodeForRequest` returns `{ attributionCodeId, code, allocatedAt, attempts }` (the handler never copies `code` or
@@ -598,7 +613,8 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
 - **QE13 — Concurrency and lock order. ⭐ As 12.1 I10:** every transition first takes `SELECT … FROM field_workers WHERE
   field_worker_id = $1 AND pariwar_id = $2 FOR UPDATE`, then checks guards against the locked row, then calls `projectFieldWorkerTransition`,
   passing the locked row in as `lockedRow { currentState, stateEventVersion, kycStatus, stateReasonCode, district, endedOn,
-  registeredOn }` — ONE `FIELD_WORKER_GUARD_COLUMNS` list read `FOR UPDATE` (the twin's `MODULE_GUARD_COLUMNS` shape), with
+  registeredOn }` — ONE `FIELD_WORKER_GUARD_COLUMNS` list read `FOR UPDATE` (the twin's `MODULE_GUARD_COLUMNS` shape; the lock's
+  SELECT list — NOT the gate's `GUARDED_COLUMNS`, AC11), with
   `registeredOn` = `(created_at AT TIME ZONE 'Asia/Kolkata')::date::text` and `endedOn` = `ended_on::text`: the guards read
   `district` (3b, 3c) and the registration day (QE20), and `posted`, `kyc_completed` and `activated` carry `state_reason_code`
   forward unchanged. The projector cross-validates `from_state` / `to_state` against `lockedRow` AND, for `posted`,
@@ -701,31 +717,38 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   not change when the grant is later revoked, the role renamed or the catalog bumped. The actor is `events_log.actor_id` and the
   Pariwar `events_log.pariwar_id` (not duplicated); the object is `.strict()` and holds no personal data.
   **How it is verified (the author's mechanism for the two conditions).** (a) ONE predicate: in the RBAC core
-  (`packages/domain/src/rbac/check.ts`) the per-grant test is extracted out of `hasPermission` and BOTH `hasPermission` and a new
-  `authorize` call it, so "allowed" and "which grant" cannot disagree. (b) `authorize` returns the authorizing grant — when several
-  pass, the MOST SPECIFIC in the order the repo ALREADY uses: `rbac.matchingGrantRole` (`rbac/matching-grant.ts`, Story 6.19b,
-  `-270`; seven callers in `apps/api/src/modules/claims/`) sorts by the reverse of `SCOPE_DIMENSIONS` — `district` before `state`
-  before `pariwar`, `global` last. `authorize` keeps that order and adds a deterministic tie-break ONLY among grants of the same
-  dimension (role, scope value, grant id), so the answer is the same whichever order the grants were loaded in; `matchingGrantRole`
-  is re-pointed to `authorize(...)?.role ?? null`, so the repo keeps ONE answer to "which grant authorized" (TR13). The result is a
+  (`packages/domain/src/rbac/check.ts`) the per-grant test is extracted out of `hasPermission` into ONE private predicate that
+  `hasPermission` and a new PURE helper `authorizingGrant(grants, key, resource, ctx?): EffectiveGrant | null` both call, so
+  "allowed" and "which grant" cannot disagree. (b) `authorizingGrant` picks the authorizing grant — when several pass, the MOST
+  SPECIFIC in the order the repo ALREADY uses: `rbac.matchingGrantRole` (`rbac/matching-grant.ts`, Story 6.19b, `-270`; six callers
+  in `apps/api/src/modules/claims/`) sorts by the reverse of `SCOPE_DIMENSIONS` — `district` before `state` before `pariwar`,
+  `global` last. It keeps that order and adds a deterministic tie-break ONLY among grants of the same dimension (role, scope value,
+  grant id), so the answer is the same whichever order the grants were loaded in. `matchingGrantRole` is re-pointed to
+  `authorizingGrant(grants, key, resource, ctx)?.role ?? null` — its signature unchanged, so its six callers are untouched — and the
+  repo keeps ONE answer to "which grant authorized" (TR13). `authorize(params: RequirePermissionParams, ctx?):
+  VerifiedAuthorization | null` takes `requirePermission`'s own `{ actorId, grants, key, resource }`, calls `authorizingGrant` and
+  builds the result — `actorId` from `params.actorId`, `pariwarId` from `params.resource.pariwarId`. `matchingGrantRole` has no actor,
+  so it never mints a `VerifiedAuthorization`. The result is a
   `VerifiedAuthorization` issued only inside `check.ts`, DEEP-FROZEN (`Object.freeze` on it, its `grant` and its `target` — a WeakSet
   proves identity, not contents, so an unfrozen object could be edited after the check and still pass) and registered in a
   module-private WeakSet (`isVerifiedAuthorization`), so an object literal with the same fields is NOT verified. Its shape:
   `{ readonly permissionKey; readonly role; readonly pariwarId /* the RESOURCE's Pariwar — never the grant's: a global grant carries its
   home Pariwar */; readonly actorId; readonly grant: { dimension, value: string | null /* null iff global */, grantId?: string };
-  readonly target: { dimension, value: string }; readonly catalogVersion }`. The command maps it to the snake_case payload snapshot;
+  readonly target: { dimension, value: string | null /* null iff the gate is global — requireGlobalPermission */ }; readonly
+  catalogVersion }` (the EVENT snapshot's `target.value` stays a non-null string — AC3 — because both field-worker acts are
+  district-gated). The command maps it to the snake_case payload snapshot;
   `pariwarId` and `actorId` are NOT written to the payload (they are `events_log.pariwar_id` / `actor_id`). (c) `requirePermission`
   returns it (it returned nothing) and `requirePermissionHook` stores it with `(request.authorizations ??= {})[key] = result` — a fresh
-  object per request; ⛔ `decorateRequest('authorizations', {})`, which Fastify 5 rejects for a reference default and which would share
+  object per request; never `decorateRequest('authorizations', {})`, which Fastify 5 rejects for a reference default and which would share
   one object across requests. `checkPermission` is NOT changed (no caller needs the grant, and `check.test.ts` pins
   `toEqual({ ok: true })`). The handler passes THAT stored result to the domain and NEVER recomputes it from `request.scopeGrants`.
   (d) The domain commands that carry it refuse (`FieldWorkerProjectorInputError`) anything that is not a verified result, whose
-  `pariwarId` or `actorId` differs from the command's, or whose key / dimension / target is not this act's (AC5; a `posted` target
-  made stale by a concurrent move is `FieldWorkerAuthorizationStaleError` instead). (e) `EffectiveGrant` gains an optional `grantId`
+  `pariwarId` or `actorId` differs from the command's, or whose key / dimension (or, for `register`, target) is not this act's
+  (AC5); a `posted` target is judged UNDER THE LOCK (QE5 guard 3c) and any mismatch is `FieldWorkerAuthorizationStaleError`. (e) `EffectiveGrant` gains an optional `grantId`
   (`role_grants.id`) so the record can point at the row; `loadActorGrants` and `loadGlobalActorGrants`
   (`apps/api/src/modules/rbac/index.ts`) select `id`. ⚠ `authorize` is PURE over the grants it is given — a caller could pass
   fabricated grants: a source-fence unit test pins that `authorize(` is called only from `check.ts` (`requirePermission`),
-  `matching-grant.ts` and test files. The precedent is decision `2026-08-13-105` D4: "the
+  `apps/api/tests/integration/_field-worker-fixture.ts` and `*.test.ts` / `*.spec.ts` files. The precedent is decision `2026-08-13-105` D4: "the
   grant that actually authorized", not "the first grant in the tenant". `posted` carries it from day one (QE17); the other five events
   when their routes are built (C5).
   **Costs, recorded.** The snapshot records the role and grant that PASSED, not the role's permission list then in force (the Super
@@ -750,19 +773,26 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   Pariwar Admin (a new id, a new code, a first district), and the old record is left as it is — active, or ended by its own
   Pariwar's admins for a reason that fits. Nothing in this story links the two. Cost, recorded: two records and two codes for one
   person; no single history; a person-level view or one commission statement across records (13.5 pays by PAN) needs the LATER link
-  the Panel chose (Q-7 C) — when it is built, what it joins and what may be shared between Pariwars return to the Panel with that work
-  (C11). Nothing here forecloses it.
+  the Panel chose (Q-7 C) — when it is built and what it joins are BigDev's to schedule; what may be shared between Pariwars returns
+  to the Panel with that work (C11). Nothing here forecloses it.
 
 - **QE20 — The date of termination is the ACTUAL LAST DAY, supplied by the admin. APPROVED by BigDev 2026-11-03 ("actual last day is
   fine").** Shape (the author's): the `terminated` payload carries `ended_on`, and it is PROJECTED into a nullable `date` column
   `ended_on` with `CHECK ((current_state = 'terminated') = (ended_on IS NOT NULL))` (`field_workers_ended_on_pair`), so the 8-year
   removal is a plain query on a column; the command refuses an `ended_on` that is missing, in the future, or before the day the worker
-  was registered (`FieldWorkerEndedOnInvalidError`, command-only). ⭐ Both bounds are IST DAYS judged IN SQL on the locked row,
-  never in JS: `$ended_on::date <= (now() AT TIME ZONE 'Asia/Kolkata')::date` and `$ended_on::date >= (created_at AT TIME ZONE
-  'Asia/Kolkata')::date` (the house `IST_TODAY` pattern, `member/known-people.ts`; a UTC "today" would make a same-day termination
-  impossible between 00:00 and 05:30 IST). The payload's `ended_on` is `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)` plus a calendar
-  check; the column is read as text (QE4). `terminateFieldWorker`'s statement order is therefore SAVEPOINT → LOCK → NOW → HEAD →
-  APPEND (the twin's RP4 shape). A test runs the bounds at 00:30 IST (`created_at` seeded as the owner). The original reasoning follows. The recruitment form
+  was registered (`FieldWorkerEndedOnInvalidError`, command-only). ⭐ Both bounds are IST DAYS computed IN SQL: the NOW step is
+  `SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS ist_today` (the TRANSACTION-START clock, the same as `occurred_at` — the
+  `IST_TODAY` idea from `member/known-people.ts`, but NOT that constant, which uses `clock_timestamp()`; do not import it), and
+  `lockedRow.registeredOn` is `(created_at AT TIME ZONE 'Asia/Kolkata')::date::text` (QE13). The guard compares the validated
+  `ended_on` with them as `YYYY-MM-DD` strings (string order = calendar order): `endedOn <= istToday && endedOn >= registeredOn`. No
+  JS `Date` is involved; a UTC "today" would make a same-day termination impossible between 00:00 and 05:30 IST. A missing or
+  malformed `ended_on` (`z.string().regex(/^\d{4}-\d{2}-\d{2}$/)` plus a calendar check) is refused in guard (0b), BEFORE any SQL;
+  the column is read as text (QE4). `terminateFieldWorker`'s statement order is therefore SAVEPOINT → LOCK → NOW → HEAD → APPEND (the
+  twin's RP4 shape). PROOF: the UPPER bound at 00:30 IST in the stub-client unit test (the NOW step returns an `ist_today` one day
+  ahead of the UTC date; `ended_on` = that IST date is accepted); the LOWER bound live — register through `registerFieldWorker`, then
+  under `session_replication_role = 'replica'` UPDATE that row's `created_at` to 00:30 IST of an IST day D (19:00 UTC of D−1), then
+  `terminate` with `ended_on` = D−1 ⇒ `FieldWorkerEndedOnInvalidError` and `ended_on` = D ⇒ accepted (an owner-INSERTed row has no
+  genesis event, so `terminate` would fail its HEAD check). The original reasoning follows. The recruitment form
   promises the worker that their name and mobile number are removed 8 years after the DATE OF TERMINATION (BigDev, 2026-11-03). The
   `terminated` event's `occurred_at` is when the admin RECORDED it, not when the engagement ended: a termination recorded two months
   late would delete two months late — past the promise. So the `terminated` payload would carry `ended_on` (a date; not in the
@@ -1025,9 +1055,9 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 
 ## Acceptance Criteria
 
-0. **AC0 — governance first. MET 2026-11-03 except Task 0.1 and Task 0.4.** `-441` (`0f66848b`) and `-442` (`eb2106fe`) are
-   committed, each ALONE, before any code; the story, `epics.md` and `deferred-work.md` are amended to them (`db88b8fe`, v1.16;
-   re-validated v1.17). Before code: Task 0.1's re-verification is in the Debug Log (STOP if any recorded answer has since changed),
+0. **AC0 — governance first. MET 2026-11-03 except Task 0.1 and Task 0.4.** `-441` (`93b7e419`), `-442` (`6a3172e4`), `-443`
+   (`7cd400f2`) and `-444` (`86274245`) are committed, each ALONE, before any code; the story, `epics.md` and `deferred-work.md` are
+   amended to them (`9c0050fc` v1.16, `88243907` v1.17, `7fefe8dc` v1.18, then v1.19). Before code: Task 0.1's re-verification is in the Debug Log (STOP if any recorded answer has since changed),
    and the go-live roster row exists (Task 0.4). No AC may still state a value an answer changed; the `epics.md` INHERITED / VARIANCE
    blocks and the `deferred-work.md` C-items are re-read and still true.
 1. **AC1 — table.** Given the new migration is applied, then `field_workers` has exactly the columns, types, NOT NULLs, defaults, named
@@ -1067,20 +1097,20 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
    the RBAC check (an object literal carrying the same fields is refused, and assigning to any field of a verified result throws in
    strict mode — it is frozen), whose `pariwarId` (the RESOURCE's) or `actorId` differs from the command's, or whose key, dimension or
    `target` is not this act's — `register`: key `field_worker.register`, dimension `district` and target `{ district, the genesis
-   district }` (byte-equal); `post`: dimension `district` and target `{ district, toDistrict }` OR `{ district, the worker's current
-   district }` — either end of the move, whichever the gate passed (QE17). A `post` whose verified target matched an end at the gate
-   but matches NEITHER `toDistrict` nor the LOCKED row's `district` (a concurrent move) ⇒ `FieldWorkerAuthorizationStaleError`, no
-   event. Until 13.1c / 13.1d mint the move keys, `post` accepts any verified district-dimension key (its tests use
+   district }` (byte-equal); `post`: dimension `district` (checked at guard 0). A `post`'s TARGET is judged ONLY under the lock (QE5
+   guard 3c): a target equal to `toDistrict` or to the LOCKED row's `district` is accepted — either end of the move, whichever the
+   gate passed (QE17); ANY other target ⇒ `FieldWorkerAuthorizationStaleError`, no event (a concurrent move, or a caller bug — the
+   command cannot tell which). Until 13.1c / 13.1d mint the move keys, `post` accepts any verified district-dimension key (its tests use
    `field_worker.register`); the minting story makes it refuse every key outside the move-key list in the same commit (QE17, C5, C10).
    The projector refuses a `posted` whose `from_district` differs from the locked row's (`FieldWorkerProjectorInputError`). `posted`
    with a reason missing or outside QE12's post list ⇒ `FieldWorkerReasonInvalidError`
    (after the district-unchanged and stale-target guards, QE5's order); a `posted` on a suspended worker leaves `state_reason_code` as it was (the pair
    CHECK stays valid). `terminateFieldWorker` REFUSES (`FieldWorkerEndedOnInvalidError`,
-   command-only) an `ended_on` that is missing, malformed, is after today or before the day the worker was registered — both IST
-   days, judged in SQL (QE20; a leg runs at 00:30 IST); the terminated row's `ended_on` equals the event's.
+   command-only) an `ended_on` that is missing or malformed (guard 0b, before any SQL), after today, or before the day the worker was
+   registered — both IST days, computed in SQL (QE20; the 00:30 IST proofs are QE20's); the terminated row's `ended_on` equals the event's.
 6. **AC6 — concurrency (I13).** Twin: `module-stream-concurrency.spec.ts`. Own pool and REAL commits (a race needs real concurrent
    COMMITs); cleanup by the ids the suite created, under `session_replication_role = 'replica'` (`events_log` is append-only). The
-   lock-order races (a, b, d, e) run at READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001 (QE13, TR6),
+   lock-order races (a, b, d, e) run at READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001 (QE13),
    which is not the behaviour under test; ONLY the genesis race (c) runs at REPEATABLE READ, with the snapshot pinned BEFORE the
    barrier so both racers see an empty stream. Read every error code as `err.code ?? err.cause?.code`; no race may end in 40P01
    or 40001.
@@ -1114,53 +1144,66 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
    (`pg_get_constraintdef` omits `ON DELETE NO ACTION`, so assert `confdeltype = 'a'` from `pg_constraint` separately).
    A code for a worker that does not exist in that Pariwar is refused (23503); a code for a worker in ANOTHER Pariwar is refused;
    NO leg runs under `session_replication_role = 'replica'` (replica disables the FK's RI trigger). Deletion, by role: as `twt_app`,
-   a DELETE and a TRUNCATE of `field_workers` ⇒ 42501 (no grant — refused before any lock); as the OWNER, a DELETE ⇒ P0001 from this
+   a DELETE and a TRUNCATE of `field_workers` ⇒ 42501 (no grant; TRUNCATE is refused before any lock, DELETE after a
+   RowExclusiveLock); as the OWNER, a DELETE ⇒ P0001 from this
    story's `BEFORE DELETE` trigger (I10); a plain `TRUNCATE field_workers` ⇒ 0A000 (referenced by a foreign key — checked before any
    trigger); and `TRUNCATE field_workers CASCADE` ⇒ P0001 from this story's `BEFORE TRUNCATE` trigger (the named table's trigger fires
-   before the cascaded child's; record the actual SQLSTATE in the Debug Log). ⚠ The CASCADE leg MUST lock first:
-   `await lockTruncateSetNowait(client, 'field_workers')` (`tests/integration/_helpers.ts` — one `LOCK … NOWAIT` over the whole FK
+   before the cascaded child's; record the actual SQLSTATE in the Debug Log). ⚠ The CASCADE leg MUST lock first, inside `BEGIN … ROLLBACK` on one PoolClient (the helper issues a SAVEPOINT):
+   `await client.query('BEGIN'); await lockTruncateSetNowait(client, 'field_workers'); <TRUNCATE … CASCADE ⇒ P0001>; ROLLBACK` (`tests/integration/_helpers.ts` — one `LOCK … NOWAIT` over the whole FK
    set, with retry), never a bare TRUNCATE: a CASCADE locks parent then child, while 13.2's specs in parallel forks insert into the
    child and then take the parent through the FK check — the opposite order, a deadlock on every full domain run (TR14). Every 13.2 spec listed in G4
    is updated to seed a real worker (a shared fixture) and is green; the policy-regression pin is rewritten to expect two UNIQUEs
    plus the named FK; nothing in 13.2's behaviour changes.
-8. **AC8 — registration route (QE9; C1, C2, C6, C7) — UNCONDITIONAL, the Panel having ruled (`-441`).** Given a `pariwar_admin` with
-   a display name and a listed `district`: a valid request returns 201 with
-   `{ field_worker_id, district, current_state, kyc_status }` (`pending_kyc` / `pending`) and NO code (QE22); the worker row, the `field_worker.registered` event, the audit line
-   and the code row all exist after commit; a replay with the same `Idempotency-Key` returns the recorded response — which also
-   carries no `code` key or value — and creates nothing; the same mobile again, sequentially (the pre-check) ⇒ 409 with no
-   `field_worker.registered*` audit line — a concurrent loser that fails inside the transaction instead leaves its intent line and a
-   `field_worker.registered_rolled_back` line, FORCED deterministically: the test opens its own owner-role transaction (writer var
-   on) and INSERTs an UNCOMMITTED live row with the same `(pariwar_id, mobile_blind_index)` (same field class and HMAC key), fires the
-   request (its pre-check cannot see the uncommitted row, so it blocks on the partial unique index), waits until `pg_stat_activity`
-   shows the request waiting on a lock, then COMMITs; assert 409 `field_worker.mobile_already_registered`, the intent row and its
-   `_rolled_back` row (by `resource_locator`), and no event for the request's id; no session ⇒ 401; no grant in the
-   Pariwar ⇒ 404; a grant without the key (and a `state_trustee` grant) ⇒ 403; a `district_admin` of the SAME district ⇒ 201 with
-   genesis `authorization.role = 'district_admin'`; a `district_admin` of ANOTHER district ⇒ 403; a `pariwar_admin` for any listed district ⇒
-   201 with `authorization.role = 'pariwar_admin'` (the fill-in); in EVERY 201 the genesis event's `authorization` EQUALS
-   `{ permission_key: 'field_worker.register', role, grant: { dimension, value, grant_id }, target: { dimension: 'district', value:
-   <the body's district> }, catalog_version: PERMISSION_CATALOG_VERSION }`, with role, dimension, value and `grant_id` read back from
-   the `role_grants` row the TEST seeded (its `id` included) — and a HANDLER unit test (domain command stubbed) asserts the object
-   passed to `registerFieldWorker` is IDENTICAL (`toBe`) to `request.authorizations['field_worker.register']` (an `app.inject` test
-   cannot read the request); an actor holding BOTH a `district_admin` grant at that district and a `pariwar_admin` grant is recorded as
-   `district_admin` (the most specific), and a global `super_admin` as `super_admin` (its `role_grants` row seeded with `pariwar_id` =
-   the test Pariwar — the scope hook loads grants under RLS — and `scope_dimension = 'global'`; its snapshot's `grant.value` is
-   null); an unlisted district ⇒ 422 `field_worker.district_unknown`, no row / event / code / `field_worker.registered*` audit line
-   written, and no KMS call made (the district check precedes the encrypt — QE9); a missing or non-string `district` ⇒ 400 `request.validation`; a missing `Idempotency-Key` ⇒
-   400 `field_worker.idempotency_key_required`; an admin with no display name ⇒ 409
-   `admin.display_name_missing` and nothing written; an exhaustion (the door's `allocateAttributionCodeForRequest` mocked to throw the re-exported class; the flag
-   wrapper a SPY over the real one — `vi.fn(actual.flagAllocationExhaustedForRequest)`) ⇒ the flag wrapper is called once with the
-   thrown `.attempts`, exactly ONE flag row is committed (append-only — clean it up) and no worker, event or code row is, the response
-   is 503, and `field_worker.registered_rolled_back` exists; a second leg makes the flag wrapper REJECT and still gets 503 (QE9); an
-   invalid mobile ⇒ 422 `field_worker.mobile_invalid`, an invalid name ⇒ 422 `field_worker.name_invalid`, nothing written.
-   "Nothing written", in every refusal leg, means no `field_workers` row, no `field_worker.*` event, no code row and no
-   `field_worker.registered*` audit line for the attempt — the KMS system audit rows are never asserted (TR5).
-   Every 401 / 403 / 404 leg sends a VALID body (a bad body gets 400 `request.validation` before the guards run). Every error row
-   the REGISTRATION route can raise (the 409 mobile / display-name / in-progress, the 400 key and validation, the 422 pair, the
-   503) is asserted over HTTP at least once; the rows only a command can raise are asserted in a mapper unit test
-   (`apps/api/tests/unit/field-worker-errors.test.ts`, twin: `marketplace-errors.test.ts`), marked "no route yet — 13.1a / 13.1c / 13.1d". The response contains no key named
-   `attributionCode` and no `code`, and the allocated code's VALUE is nowhere in its body (the test reads the code through the door and
-   asserts the serialized body does not contain it); the plaintext name / mobile appear in no audit row, log or event — on the success path AND on every
-   refusal path (409 / 422 / 503 bodies and messages included).
+8. **AC8 — registration route (QE9; C1, C2, C6, C7) — UNCONDITIONAL, the Panel having ruled (`-441`).** Each leg below is asserted
+   over HTTP unless it says otherwise. "Nothing written", in every refusal leg, means no `field_workers` row, no `field_worker.*`
+   event, no code row and no `field_worker.registered*` audit line for the attempt — the KMS system audit rows are never asserted
+   (TR5). Every 401 / 403 / 404 leg sends a VALID body (a bad body gets 400 `request.validation` before the guards run).
+   - (a) **Success.** Given a `pariwar_admin` with a display name and a listed `district`: a valid request returns 201 with
+     `{ field_worker_id, district, current_state, kyc_status }` (`pending_kyc` / `pending`) and NO code (QE22); the worker row, the
+     `field_worker.registered` event, the audit line and the code row all exist after commit.
+   - (b) **Replay.** The same `Idempotency-Key` returns the recorded response — which also carries no `code` key or value — and
+     creates nothing.
+   - (c) **Duplicate mobile, sequential.** The same mobile again (the pre-check) ⇒ 409 `field_worker.mobile_already_registered`
+     with no `field_worker.registered*` audit line.
+   - (d) **Duplicate mobile, concurrent loser — FORCED deterministically.** A loser that fails inside the transaction leaves its
+     intent line and a `field_worker.registered_rolled_back` line. The test opens its own owner-role transaction (writer var on) and
+     INSERTs an UNCOMMITTED live row with the same `(pariwar_id, mobile_blind_index)` (same field class and HMAC key), fires the
+     request (its pre-check cannot see the uncommitted row, so it blocks on the partial unique index), waits until
+     `pg_stat_activity` shows the request waiting on a lock, then COMMITs. Assert 409 `field_worker.mobile_already_registered`, the
+     intent row and its `_rolled_back` row — found by `pariwar_id` = the test's fresh Pariwar and `action` IN
+     (`field_worker.registered`, `field_worker.registered_rolled_back`), each exactly one, with the same `field_worker/<id>`
+     `resource_locator` (the id is minted server-side and the 409 carries none) — and no `field_worker.*` event in that Pariwar
+     except the seeded row's.
+   - (e) **Guards.** No session ⇒ 401; no grant in the Pariwar ⇒ 404; a grant without the key (and a `state_trustee` grant) ⇒ 403;
+     a `district_admin` of the SAME district ⇒ 201 with genesis `authorization.role = 'district_admin'`; a `district_admin` of
+     ANOTHER district ⇒ 403; a `pariwar_admin` for any listed district ⇒ 201 with `authorization.role = 'pariwar_admin'` (the
+     fill-in).
+   - (f) **The snapshot.** In EVERY 201 the genesis event's `authorization` EQUALS `{ permission_key: 'field_worker.register', role,
+     grant: { dimension, value, grant_id }, target: { dimension: 'district', value: <the body's district> }, catalog_version:
+     PERMISSION_CATALOG_VERSION }`, with role, dimension, value and `grant_id` read back from the `role_grants` row the TEST seeded
+     (its `id` included). An actor holding BOTH a `district_admin` grant at that district and a `pariwar_admin` grant is recorded as
+     `district_admin` (the most specific), and a global `super_admin` as `super_admin` (its `role_grants` row seeded with
+     `pariwar_id` = the test Pariwar — the scope hook loads grants under RLS — and `scope_dimension = 'global'`; its snapshot's
+     `grant.value` is null).
+   - (g) **Handler identity (a unit test, domain command stubbed).** The object passed to `registerFieldWorker` is IDENTICAL (`toBe`)
+     to `request.authorizations['field_worker.register']` — an `app.inject` test cannot read the request.
+   - (h) **Content and request errors.** An unlisted district ⇒ 422 `field_worker.district_unknown`, nothing written and no KMS call
+     made (the district check precedes the encrypt — QE9); a missing or non-string `district` ⇒ 400 `request.validation`; a missing
+     `Idempotency-Key` ⇒ 400 `field_worker.idempotency_key_required`; an admin with no display name ⇒ 409
+     `admin.display_name_missing`, nothing written; an invalid mobile ⇒ 422 `field_worker.mobile_invalid`, an invalid name ⇒ 422
+     `field_worker.name_invalid`, nothing written.
+   - (i) **Exhaustion.** The door's `allocateAttributionCodeForRequest` mocked to throw the re-exported class; the flag wrapper a SPY
+     over the real one (`vi.fn(actual.flagAllocationExhaustedForRequest)`) ⇒ the flag wrapper is called once with the thrown
+     `.attempts`, exactly ONE flag row is committed (append-only — clean it up) and no worker, event or code row is, the response is
+     503, and `field_worker.registered_rolled_back` exists. A second leg makes the flag wrapper REJECT and still gets 503 (QE9).
+   - (j) **Coverage of the error table.** Every error row the REGISTRATION route can raise (the 409 mobile / display-name /
+     in-progress, the 400 key and validation, the 422s, the 503) is asserted over HTTP at least once; the rows only a command can
+     raise are asserted in a mapper unit test (`apps/api/tests/unit/field-worker-errors.test.ts`, twin: `marketplace-errors.test.ts`),
+     marked "no route yet — 13.1a / 13.1c / 13.1d".
+   - (k) **No code, no PII.** The response contains no key named `attributionCode` and no `code`, and the allocated code's VALUE is
+     nowhere in its body (the test reads the code through the door and asserts the serialized body does not contain it); the
+     plaintext name / mobile appear in no audit row, log or event — on the success path AND on every refusal path (409 / 422 / 503
+     bodies and messages included).
 9. **AC9 — RBAC (I14).** Catalog version and key count move by exactly one (the key is `field_worker.register`, QE10: `district`
    dimension, held by `district_admin`, `pariwar_admin` + the derived `super_admin`); the grant list, the non-holder legs
    (`state_trustee` is refused because its bundle lacks the key — asserted 403 both WITH and WITHOUT a geo tree in force, since with
@@ -1171,13 +1214,14 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
    `emit-openapi.ts` as prose); `openapi/v1.yaml` is regenerated by the repo script (`pnpm contracts:emit-openapi`), never edited
    by hand; the route is registered in `server.ts`. The RBAC CORE change (QE18) is tested in `tests/rbac/check.test.ts`: `hasPermission` and
    `authorize` AGREE on every case in the existing matrix (allowed ⇔ a result, denied ⇔ none); with two satisfying grants the MORE
-   SPECIFIC is returned whichever order they are loaded in; `matchingGrantRole` (re-pointed to `authorize`) and `authorize(...)?.role`
-   AGREE on every case in `tests/rbac/matching-grant.test.ts` and `check.test.ts`, and `matching-grant.test.ts` passes unchanged; the
+   SPECIFIC is returned whichever order they are loaded in; `matchingGrantRole` (re-pointed to `authorizingGrant`) and
+   `authorizingGrant(...)?.role` AGREE on every case in `tests/rbac/matching-grant.test.ts` and `check.test.ts`, and `matching-grant.test.ts` passes unchanged; the
    result passes `isVerifiedAuthorization`, an object literal with the same fields does NOT, and assigning to any field of the result
    (or of its `grant` / `target`) throws in strict mode; a global grant's result has `grant.value === null` and `pariwarId` = the
    resource's; `requirePermission` still fires the denial seam and throws exactly as before; `checkPermission` is unchanged
-   (`toEqual({ ok: true })` still passes); a source-fence unit test pins that `authorize(` is called only from `check.ts`,
-   `matching-grant.ts` and test files. The HOOK storing the result on `request.authorizations[key]` (a fresh object per request) is
+   (`toEqual({ ok: true })` still passes); the result's `actorId` equals the params' and its `target.value` is null for a global
+   gate; a source-fence unit test pins that `authorize(` is called only from `check.ts`,
+   `apps/api/tests/integration/_field-worker-fixture.ts` and `*.test.ts` / `*.spec.ts` files. The HOOK storing the result on `request.authorizations[key]` (a fresh object per request) is
    asserted in `apps/api/tests/unit/rbac-hook-authorizations.test.ts` — the hook lives in `apps/api/src/modules/rbac/index.ts`, which
    `packages/domain/tests` cannot import (a fake request with `scopeTx` / `scopeGrants` set, the real hook, the real check).
 10. **AC10 — FR-85 contract (QE11).** `acceptsNewAttributions` is true for `active` only (all four states asserted) — QE11's
@@ -1217,8 +1261,9 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
     committed — so at that edge a signup made before activation committed IS credited (the Policy-meaning note says so). The replay is the event-sourced, replayable answer (I4): say so in the doc comment, copy
     `getModuleStateAt`'s CLOCK DOMAIN caveat, and do NOT "fix" it with `clock_timestamp()`.
     The spec (own-committing, TR10) proves each rule, every instant carried by a CAPTURE: the test seeds `member_attribution`
-    rows as the OWNER role with an explicit `captured_at` literal computed IN SQL from the events' own stamps (13.2's `seedCapture`
-    shape in `resolve.spec.ts`) and passes `{ captureId }`. (a) the INVERSION, the twin's RV1 shape — register; open a `slow`
+    rows as the OWNER role with an explicit `captured_at` literal computed IN SQL from the events' own stamps (13.2's
+    `seedCapture(tx, client, pariwarId, code, capturedAt?)` in `tests/integration/attribution-code/_fixtures.ts` — compute the stamp IN
+    SQL, e.g. `SELECT (occurred_at + interval '1 microsecond')::text …`, and pass that text as `capturedAt`) and passes `{ captureId }`. (a) the INVERSION, the twin's RV1 shape — register; open a `slow`
     transaction FIRST; commit `kyc_completed` (v2, the later stamp) from another connection; then `activated` on `slow` (v3, the
     EARLIER stamp); a capture at just past v3's own stamp answers `pending_kyc` (the prefix {v1}), NOT `active`, and one at just past
     v2's answers `active` — with the precondition asserted (v3's stamp is earlier than v2's); (b) the TIE and the microsecond order —
@@ -1238,8 +1283,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
     `lib.test.ts` has a FLAGGED leg for EACH outside the allowlist (`field-worker/project.ts` → the two projector functions) —
     `district` in each of the twin's write forms — and zero findings for the legitimate projector writes; a revert-sanity check is
     recorded. The compensating-audit gate gains a separate `FIELD_WORKER_ROOTS` const (`apps/api/src/modules/field-worker`,
-    `packages/domain/src/field-worker`) — not an edit of `MARKETPLACE_ROOTS` — with the label string in
-    `scripts/access-wrapper-invariants/check.ts` `main` updated, plus its README and `docs/access-wrapper-invariants.md`.
+    `packages/domain/src/field-worker`) — not an edit of `MARKETPLACE_ROOTS` — with BOTH label strings in
+    `scripts/access-wrapper-invariants/check.ts` `main` updated (the `runInvariant` label and the success line), plus its README and `docs/access-wrapper-invariants.md`.
 12. **AC12 — route review of the door (C7).** A recorded manual review (the commands AND their output in
     the Debug Log — an "is empty" test would be red at the baseline, see the hits below) shows, at the PR head: (a) no `apps/*/src`
     or `packages/*/src` file re-exports a door wrapper — `grep -rnE "export .* from '.*attribution-code-access" apps/*/src
@@ -1253,7 +1298,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
     appears on any object in field-worker code, the Task 1 helper included (the 13.2 writer pin sees `.pariwarId =` on any receiver
     and `Object.assign` with a `pariwarId` key on any target, but NOT the carriers C7 (c) names). The reach fence passes WITHOUT any
     edit to its ALLOWED list.
-13. **AC13 — privacy and logging (I8).** A test registers a worker with a recognisable name and mobile and
+13. **AC13 — privacy and logging (I8).** A unit test proves the `field_worker_mobile` and `member_mobile` field classes give
+    DIFFERENT blind indexes for the same number (the disjoint hash spaces, Task 1). A test registers a worker with a recognisable name and mobile and
     asserts neither appears in `events_log.payload`, any `audit_log` row, the idempotency record's stored result, or the captured
     logger output (`buildServer(deps, { logStream })` — test-only, honoured only when `nodeEnv === 'test'`, the 6.19b precedent —
     plus a `console.error` spy) — and repeats the assertion for each refusal (409 duplicate, 422, 503 exhaustion): the response body,
@@ -1274,16 +1320,18 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
         (the form "Application for Field Worker", version 1, states the purposes and records the worker's agreement — BigDev's word, the form
         unseen), Q-4 (No), QE17–QE20 and QE22 (APPROVED) and QE21 (ANSWERED: the District Admin registers, the Pariwar Admin approves; the B2
         nod is 13.1a's). Still do Task 0.1's re-verification, and STOP if any of those has since changed. The Panel's follow-up note
-        (Q-6…Q-9) is RULED (`-443`: Q1 A, Q2 C, Q3 A, Q4 A — each the build default); the counsel question is NOT a gate for this
+        (Q-6…Q-9) is RULED (`-443`: Q1 A, Q3 A, Q4 A — the build defaults; Q2 C — the build as it stands plus a later link, C11); the counsel question is NOT a gate for this
         build; it gates go-live legs. QE1–QE16 are ALREADY answered (2026-11-03, in session: as listed ⭐, with QE10 =
         `field_worker.register`, QE11 = `active` only and QE12 = the neutral reason values), and Q-1 and Q-5 are RULED by the Panel
         (`-441`) — this task does not re-ask them.
-  - [x] 0.3 **DONE 2026-11-03 — do NOT re-commit or re-write either entry.** The Panel's ruling is decision `2026-11-03-441`,
-        committed ALONE with its note's ruling block in `0f66848b`. The author-commit is decision `2026-11-03-442` (QE1–QE22, Q-2, Q-3,
+  - [x] 0.3 **DONE 2026-11-03 — do NOT re-commit or re-write any of the four entries.** The Panel's ruling is decision `2026-11-03-441`,
+        committed ALONE with its note's ruling block in `93b7e419`. The author-commit is decision `2026-11-03-442` (QE1–QE22, Q-2, Q-3,
         Q-4; Q-1 and Q-5 cited to `-441`; its **Supersedes** line replaces `-441` build-reading item 2 for a MOVE only), committed ALONE in
-        `eb2106fe`. The story amendment (v1.16), `epics.md` 13.1a–13.1d, `deferred-work.md` C1–C10 and ledger `2026-11-03h` are in
-        `db88b8fe`; the v1.17 validation pass is the next records commit. At Task 0.1, RE-READ both entries: if any recorded answer has
-        since changed, STOP and ask BigDev. Any later governance entry takes ≥ `-443` (re-grep every ref first). A recorded answer that
+        `6a3172e4`. The story amendment (v1.16), `epics.md` 13.1a–13.1d, `deferred-work.md` C1–C10 and ledger `2026-11-03h` are in
+        `9c0050fc`. The Panel's ruling on the follow-up note (Q-6…Q-9) is decision `2026-11-03-443`, committed ALONE in `7cd400f2`; the
+        author-commit amending `-442`'s QEs is decision `2026-11-03-444`, committed ALONE in `86274245`. The later story amendments are
+        `88243907` (v1.17), `7fefe8dc` (v1.18) and the v1.19 records commit. At Task 0.1, RE-READ all four entries: if any recorded
+        answer has since changed, STOP and ask BigDev. Any later governance entry takes ≥ `-445` (re-grep every ref first). A recorded answer that
         the ACs contradict is a silent override by the dev agent ([[feedback_spec_edits_must_propagate_to_tasks]]).
   - [ ] 0.4 Go-live fence. Add ONE row to `docs/launch-gate-inventory/inventory-roster.md` (`### Row N — <slug>`, bullet format;
         re-grep the number: the highest on main is 47 and 46 is reserved by 6.39 and 14.3 — take ≥ 48 unless 46 is confirmed free;
@@ -1300,7 +1348,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
         leg (h)'s owner. Add one more leg: (i) the Panel's confirm of each field-worker permission key 13.1a / 13.1c / 13.1d mint
         (`-059` B(3) via `-441` — each added by its own story). Re-read the `deferred-work.md` "Deferred from: story 13-1-…" section,
         the Story 13.1a–13.1d entries and the INHERITED blocks under 13.3 / 13.4 / 13.5 / 13.6 / 13.8 in `epics.md`.
-- [ ] **Task 1 — encryption classes.** Add `FIELD_WORKER_FIELD_CLASS = 'field_worker'` and `FIELD_WORKER_MOBILE_FIELD_CLASS =
+- [ ] **Task 1 — encryption classes (AC13).** Add `FIELD_WORKER_FIELD_CLASS = 'field_worker'` and `FIELD_WORKER_MOBILE_FIELD_CLASS =
       'field_worker_mobile'` to `encryption/field-classes.ts` with a doc comment in the `CLAIM_CONTACT_MOBILE_FIELD_CLASS` style (the
       disjoint-space reason), exported through `encryption/index.ts` AND re-exported from `apps/api/src/context.ts` beside the other
       field classes (the claim-contact crypto helper imports them from there). Add the API-side helper that normalises, encrypts and
@@ -1378,7 +1426,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `request.authorizations['field_worker.register']` — the VERIFIED result the gate stored (QE18) — to `registerFieldWorker` and never
       recomputes it from `request.scopeGrants`; the compensating-audit intent sets `actorRole: authorization.role` and
       `hashShape: { field_worker_id, district }` (QE9), never a second computation (decision `2026-08-13-105` D4: "the grant that
-      actually authorized"); copy 12.2's `tenantWrite` with QE9's `run` body (district check before the KMS calls);
+      actually authorized"); copy 12.2's `tenantWrite` UNCHANGED (it opens the transaction before `run`) with QE9's `run` body (district check before the KMS calls);
       rename every `module.*` literal in the helpers copied from 12.2. The route's `registerPath` lists its responses (the 12.2
       `/modules` POST shape): 201; 400 `request.validation` · `field_worker.idempotency_key_required`; 401; 403 "Missing
       field_worker.register"; 404 `pariwar.not_found`; 409 `field_worker.mobile_already_registered` · `admin.display_name_missing` ·
@@ -1400,16 +1448,18 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `Story 12.2 — module.manage…` `describe`), and the key's prose mention in `packages/contracts/scripts/emit-openapi.ts`. There
       is no contracts permission mirror to update (AC9). Do not touch the stale "Epic 12" comments (G15).
       **THE RBAC CORE (QE18)** — in `packages/domain/src/rbac/check.ts` extract the per-grant test out of `hasPermission` into ONE
-      private predicate that BOTH `hasPermission` and a new `authorize(grants, key, resource, ctx?): VerifiedAuthorization | null`
-      call; `authorize` returns the authorizing grant in `matchingGrantRole`'s order (most specific dimension first, `global` last;
-      ties within one dimension by role, scope value, then grant id) as a DEEP-FROZEN `VerifiedAuthorization` of QE18 (b)'s shape,
-      issued only inside `check.ts` and registered in a module-private WeakSet (`isVerifiedAuthorization`); RE-POINT
-      `rbac/matching-grant.ts` `matchingGrantRole` to `authorize(...)?.role ?? null` (or record in the Debug Log why it must stay
-      separate) and run `tests/rbac/matching-grant.test.ts` plus the claims callers' specs; `requirePermission` returns the result (it
-      returned nothing; its 6 direct callers ignore the return); `checkPermission` is NOT changed; `EffectiveGrant` gains an optional
+      private predicate that `hasPermission` uses, plus an exported PURE `authorizingGrant(grants, key, resource, ctx?):
+      EffectiveGrant | null` (most specific dimension first, `global` last; ties within one dimension by role, scope value, then grant
+      id). Add `authorize(params: RequirePermissionParams, ctx?): VerifiedAuthorization | null`, which calls `authorizingGrant` and
+      builds the DEEP-FROZEN `VerifiedAuthorization` of QE18 (b)'s shape — `actorId` from `params.actorId`, `pariwarId` from
+      `params.resource.pariwarId` — issued only inside `check.ts` and registered in a module-private WeakSet
+      (`isVerifiedAuthorization`); RE-POINT `rbac/matching-grant.ts` `matchingGrantRole` to `authorizingGrant(grants, key, resource,
+      ctx)?.role ?? null` (its signature is unchanged) and run `tests/rbac/matching-grant.test.ts` plus the six claims callers'
+      specs; `requirePermission` calls `authorize(params, resolved)` and returns the result (it returned nothing; its 6 direct
+      callers ignore the return); `checkPermission` is NOT changed; `EffectiveGrant` gains an optional
       `grantId`, and `loadActorGrants` and `loadGlobalActorGrants` (`apps/api/src/modules/rbac/index.ts`) select `id`;
       `requirePermissionHook` stores the result with `(request.authorizations ??= {})[key] = result` (typed in
-      `apps/api/src/types.ts`; ⛔ `decorateRequest` with an object default), tested in
+      `apps/api/src/types.ts`; never `decorateRequest` with an object default), tested in
       `apps/api/tests/unit/rbac-hook-authorizations.test.ts`; plus the source-fence unit test on `authorize(` callers (AC9). Strictly
       ADDITIVE: every existing RBAC test passes unchanged. `packages/domain/src/rbac` and `apps/api/src/modules/rbac` are governance-boundary
       roots — a reviewed edit, no feature flag. Tests build a real context and call the real check; there is no test-only way to mint a
@@ -1434,9 +1484,10 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `twt_app`, so no owner-role seed) — add `apps/api/tests/integration/_field-worker-fixture.ts` calling
       `fieldWorker.registerFieldWorker(client, …)` with dummy ciphertext strings, a random `auditId` and `actorId`, a non-blank
       `registeredByDisplay` and `district`, and an `authorization` minted by the REAL check (AC5 refuses anything else; there is no
-      test-only mint): `rbac.authorize([{ pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P }],
-      'field_worker.register', { dimension: 'district', value: <district>, pariwarId: P })` (non-null asserted; `actorId` the
-      fixture's own) — check the exact `authorize` / `ResourceLocator` signature Task 8 produced; the cross-Pariwar leak block needs a
+      test-only mint): `rbac.authorize({ actorId: <the fixture's actorId>, grants: [{ pariwarId: P, role: 'pariwar_admin',
+      scopeDimension: 'pariwar', scopeValue: P }], key: 'field_worker.register', resource: { dimension: 'district', value:
+      <district>, pariwarId: P } })` (non-null asserted; pass the SAME `actorId` to `registerFieldWorker`, or AC5 refuses it) —
+      check the exact signature Task 8 produced; the cross-Pariwar leak block needs a
       worker — and an authorization — in BOTH PARIWAR_A and PARIWAR_B. The domain `seedFieldWorker` (owner INSERT) needs none of this. Update every spec in G4; in `allocate-concurrency.spec.ts` seed COMMITTED workers and clean both tables
       in `afterAll` under replica mode, codes first.
 - [ ] **Task 11 — tests (AC2–AC13).** Unit: state, events, errors, no-audit-wrapper-in-domain, acceptsNewAttributions, commands-guards (I13's
@@ -1445,12 +1496,12 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       block. API: the registration spec incl.
       the privacy leg. The `posted` legs live in the commands and projector-trigger specs (a move with each of the two reasons; a move with no reason or an unknown one ⇒ `FieldWorkerReasonInvalidError`; a repeat;
       a move after the worker is ended; a move of a SUSPENDED worker leaves `state_reason_code` untouched; a verified authorization
-      whose target is the destination district, or the current district, is accepted, and one whose target is any OTHER district is refused; a target made stale by a
-      committed concurrent move ⇒ `FieldWorkerAuthorizationStaleError`; the row's `district` equals the last event's
-      `to_district`) and AC6 (e). Also: the delete / truncate trigger legs (AC2, AC7), the IST `ended_on` bounds at 00:30 IST (QE20),
+      whose target is the destination district, or the current district, is accepted, and one whose target is any OTHER district — or is made stale by a
+      committed concurrent move — ⇒ `FieldWorkerAuthorizationStaleError`; the row's `district` equals the last event's
+      `to_district`) and AC6 (e). Also: the delete / truncate trigger legs (AC2, AC7), the IST `ended_on` bounds (QE20's two proofs) and the malformed-date guard (0b),
       and the `authorize` source-fence and freeze legs (AC9). Every guard gets a RED proof; every scan a non-vacuity floor.
 - [ ] **Task 12 — records and full gate (AC14).** Dev Agent Record, File List, Change Log; the story's completion ledger entry (the next
-      free letter after `i`, re-grepped across every ref) prepended to BOTH ledgers in `sprint-status.yaml` — the top comment block and the `last_updated: >-` key
+      free letter after `k`, re-grepped across every ref) prepended to BOTH ledgers in `sprint-status.yaml` — the top comment block and the `last_updated: >-` key
       block — by the safe-prepend pattern (read first, size guard, verify the YAML afterwards); `pnpm ci:local` on a fresh container;
       run the `decision-flow-sync` skill after the decision lands.
 
@@ -1469,9 +1520,11 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 - **`rbac/roles.ts` `field_worker`** — stays `permissions: []`, `scopeCeiling: 'self'`.
 - **`requireMemberSession` / `scopeResolutionHook` / `requestContextHook`** — unchanged; the 13.2 writer pin only reads them.
 - **`events_log`** — gains seven event types (the epic's six plus `field_worker.posted`) and no index.
-- **The RBAC core** (`rbac/check.ts`, `rbac/matching-grant.ts`, `apps/api/src/modules/rbac/index.ts`) — gains `authorize` and the
-  stored result; `hasPermission`, `requirePermission`'s throw, `checkPermission` and `matchingGrantRole`'s answers are PRESERVED
-  (every existing RBAC and claims test passes unchanged).
+- **The RBAC core** (`rbac/check.ts`, `rbac/matching-grant.ts`, `apps/api/src/modules/rbac/index.ts`) — gains `authorizingGrant`,
+  `authorize` and the stored result; `hasPermission`, `requirePermission`'s throw and `checkPermission` are PRESERVED, and
+  `matchingGrantRole`'s answers are preserved wherever exactly one grant per dimension holds the key — a same-dimension tie,
+  previously resolved by `role_grants` heap order (`loadActorGrants` has no `ORDER BY`), is now deterministic (role, value, id).
+  Every existing RBAC and claims test passes unchanged (none ties within one dimension).
 - **`apps/api/src/modules/field-worker/`** — gains routes beside the door.
 
 ### ⚠ Traps (TR)
@@ -1527,10 +1580,10 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 
 - **TR13 — the authorization result belongs to the CHECK, not the handler.** The permission checks return a boolean, `void` or
   `{ ok }` — never a grant — but the repo ALREADY answers "which grant authorized": `rbac.matchingGrantRole` (Story 6.19b, `-270`;
-  pinned by `tests/rbac/matching-grant.test.ts`; seven callers in `apps/api/src/modules/claims/`) re-asks `hasPermission` one grant at
-  a time, most specific scope first, `global` last. Do NOT write a second rule: QE18's `authorize` uses that order (adding only a
-  same-dimension tie-break), `hasPermission` shares its predicate, and `matchingGrantRole` is re-pointed to it — one answer
-  everywhere. A handler that recomputes the role from `request.scopeGrants` can disagree with the gate (a different
+  pinned by `tests/rbac/matching-grant.test.ts`; six callers in `apps/api/src/modules/claims/`) re-asks `hasPermission` one grant at
+  a time, most specific scope first, `global` last. Do NOT write a second rule: the shared pure `authorizingGrant` uses that order (adding only a
+  same-dimension tie-break), `hasPermission` shares its predicate, `authorize` wraps it with the actor, and `matchingGrantRole` is
+  re-pointed to it — one answer everywhere. A handler that recomputes the role from `request.scopeGrants` can disagree with the gate (a different
   resolver, a different order) and would write a FALSE record into an append-only log. Pass the stashed `request.authorizations[key]`.
   The snapshot records the role and grant that passed, NOT the role's permission list then in force (bundles are editable, FR-44),
   and a `grant_id` may point at a row later deleted — the tuple is the record. The audit line's `actorRole` (null in most handlers) is
@@ -1594,8 +1647,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   and its accept / refuse, and every notice, are Story 13.1d's (C10).
 - **C6 → 13.4.** The dashboard reads workers through the domain accessor; per-worker identity is operator-tier; the 13.2 flag list (its
   C3 / D3) is rendered there with `actor_display`.
-- **C7 → the first go-live.** The roster row's legs (Task 0.4 (a)–(h)): (a) and (d) are MET by `-441` (the Panel's ruling on the key and its
-  confirm of Q-5); also MET — (b) Q-3's footing and notice (BigDev: the form states the purposes and records the agreement) and (c) Q-4's hand-issued-codes premise (No); retention is CONFIRMED from the form; still open — the erasure path, the contractor classification, and a production path to `activated` (Story 13.1a).
+- **C7 → the first go-live.** The roster row's legs (Task 0.4 (a)–(i)): (a) and (d) are MET by `-441` (the Panel's ruling on the key and its
+  confirm of Q-5); also MET — (b) Q-3's footing and notice (BigDev: the form states the purposes and records the agreement) and (c) Q-4's hand-issued-codes premise (No); retention is CONFIRMED from the form; still open — the erasure path, the contractor classification, a production path to `activated` (Story 13.1a), and (i) the Panel's confirm of each key 13.1a / 13.1c / 13.1d mint.
   Also tell 14.3: its breach-readiness story (branch `story/14-3-dpo-breach-reporting-operational-readiness` — re-check when it lands)
   keeps a list of people-holding tables (nominees, known people, claim contacts, workplace requests); `field_workers` is one it does
   not name.
@@ -1633,13 +1686,14 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   they cover a Pariwar Admin's direct move too — see QE17 for the trace (neither channel exists for District Admins today). Needs
   this story landed; independent of 13.1c.
 - **C11 → NO ROW YET (BigDev, 2026-11-03: carry it, no row) — the link between one person's records in two Pariwars.** The Panel
-  ruled Q-7 C (`-443`): a worker who moves to another Pariwar is a new registration there NOW (QE19, built here), plus a link
+  ruled Q-7 C (`-443`): a worker who moves to another Pariwar is a new registration there NOW (QE19, the build default here), plus a link
   between the person's records LATER — "a later piece of work and a later decision about what may be shared between Pariwars". Not
-  decided: when it is built, who builds it, what it joins — a person, a PAN (13.5), a mobile (the mobile index is keyed per Pariwar,
+  decided: when it is built and who builds it (BigDev's scheduling), what it joins — a person, a PAN (13.5), a mobile (the mobile index is keyed per Pariwar,
   so two Pariwars cannot match the same person today) — and what one Pariwar may see of another's record; the sharing question
   returns to the Panel with that work. Likely first need: Story 13.5's one commission statement across Pariwars (it pays by PAN).
   13.1 builds no link and nothing that forecloses one: a `field_worker_id` is never reused, and a terminated or moved-away
-  registration is kept, not deleted (I10, I15). Mirrored under 13.1 and 13.5 in `epics.md` and in `deferred-work.md`.
+  registration is kept, not deleted (I10, I15 — the row and its id; the name and mobile are still removed 8 years after termination,
+  C5). Written "13.1 C11" in cross-file citations (`deferred-work.md` already holds a C11 of Story 12.1's). Mirrored under 13.1 and 13.5 in `epics.md` and in `deferred-work.md`.
 
 ### Testing standards
 
@@ -1725,13 +1779,35 @@ _(empty)_
 
 ### Change Log
 
+- **v1.19 (2026-11-03)** — the v1.17 / v1.18 PATCH (`9c0050fc..7fefe8dc`) and the `-442` fixup were reviewed by three fresh
+  read-only reviewers (technical; governance; consistency) — BigDev: "run the review of the fix diff", then "apply all" — ALL
+  applied. GOVERNANCE, BEFORE PUSH (autosquashed fixups; each squash left the tree byte-identical): `-441`'s verbatim quote restored to
+  "yet to be Join" (the relay's word); `-442` QE18 RESTORED to its v1.16 text — the v1.17 fixup had folded later design into an
+  entry whose record is v1.16 — with three missing quotes added and its pre-push corrections disclosed; `-443`'s readings narrowed to
+  the options' own words and its citations re-pointed; NEW author-commit `-444` (`86274245`) records the later QE amendments (QE5,
+  QE10, QE11, QE13, QE18, QE20). SHAs re-mapped throughout. HIGH: `authorize(params: RequirePermissionParams, ctx?)` takes the actor
+  and wraps a shared pure `authorizingGrant`, and `matchingGrantRole` is re-pointed to that helper with its signature unchanged
+  (v1.17's `authorize(grants, key, resource)` had no actor, so the fixture could never pass AC5) — QE18, AC9, Task 8, Task 10 (2),
+  TR13, Dev Notes; Task 0.3 and AC0 name all four decisions and the next id ≥ `-445`. MEDIUM: a `post` target is judged only under
+  the lock and any mismatch is `FieldWorkerAuthorizationStaleError` (QE5, QE18 (d), AC5, Task 11); `ended_on` uses the
+  transaction-start IST clock (not the `IST_TODAY` constant, which is `clock_timestamp()`), compared as `YYYY-MM-DD` text, malformed
+  refused in guard (0b) before SQL, with an upper-bound stub proof and a lower-bound live proof (QE5, QE20, AC5); QE9 copies
+  `tenantWrite` unchanged (it opens the transaction before `run`); AC8's concurrent loser is found by Pariwar and action; the
+  snapshot's `target.value` may be null for a global gate; `field_workers_state_reason_subset` in QE4 and Names; Q-7 C is no longer
+  called a build default (header, Task 0.2). LOW: ledger letters and roster legs (a)–(i); delete / truncate trigger names; the
+  snapshot's nullable `grant.value` in Names; AC6's stray TR6; Task 1 tagged AC13 with a disjoint-hash test; "six callers"; the
+  `matchingGrantRole` tie behaviour stated; the DELETE lock wording; `lockTruncateSetNowait` inside `BEGIN … ROLLBACK`;
+  `marketplace.pgSqlstateOf`; `seedCapture`'s real file; both label strings; no bare ⛔ in Task 8; the HISTORY line; the
+  `GUARD_COLUMNS` homonym; AC8 split into (a)–(k); "13.1 C11" in cross-file citations; C11's 8-year note. Companions: `epics.md`
+  (the 13.1a gate's Q-8 / Q-9 attribution; 13.1 C11 marked no owner), `deferred-work.md` (header with `-444`; 13.1 C11), ledger
+  `2026-11-03k` (and `i` / `j` corrected). No code.
 - **v1.18 (2026-11-03)** — THE PANEL RULED on the follow-up note, relayed by BigDev: *"by DR and KB / Q1 A, Q2 C, Q3 A, Q4 A"* —
-  recorded as decision `2026-11-03-443` (committed alone, `af503b43`, with the note's ruling block). BigDev confirmed the Panel
-  ruled on the note as revised in v1.17 (`093a39ce`: Question 4 A reads "if the District Admin is not available"). Q-6 A (consent,
+  recorded as decision `2026-11-03-443` (committed alone, `7cd400f2`, with the note's ruling block). BigDev confirmed the Panel
+  ruled on the note as revised in v1.17 (`88243907`: Question 4 A reads "if the District Admin is not available"). Q-6 A (consent,
   or a Pariwar Admin directly), Q-8 A (the fill-in not enforced; the log records the authorisation) and Q-9 A (the District Admin
   registers, the Pariwar Admin approves) MATCH the build defaults QE17, QE18 and QE21. Q-7 C is NOT our suggestion: a new
   registration now (QE19, as built) plus a link between the person's records later — carried as C11 with no row (BigDev: "Carry it,
-  no row"). NO AC, Task or Invariant changed. Edited: the header, NUMBERS (next decision ≥ `-444`), the Sources table, the QE
+  no row"). NO AC requirement or Invariant changed; Task 0.2 was brought up to date. Edited: the header, NUMBERS (next decision ≥ `-444`), the Sources table, the QE
   status paragraph, QE17, QE18, QE19, QE21, Q-6…Q-9 (DISCHARGED, text kept), the Q-2 recommendation line, Task 0.2, C11, References.
   Companions: `epics.md` (13.1 VARIANCE, 13.1a / 13.1c / 13.1d gates MET, 13.5 INHERITED gains C11), `deferred-work.md` (header
   and C11), ledger `2026-11-03j`. No code.
@@ -1739,8 +1815,8 @@ _(empty)_
   `268d86b5` (code claims; database + domain; governance + consistency; API + RBAC + tests): 1 critical, 9 high, ~20 medium, ~10 low
   after de-duplication, each substantive one re-checked in the repo by the author. BigDev: "apply all findings once the other verifiers
   report" — ALL applied, with the author's recommendation on the three choices (drop `{ instant }`; fix `-442` before push; one owner
-  per key). (0) BEFORE this edit, the unpushed decision `-442` was corrected by a fixup squashed into its own commit (now `eb2106fe`;
-  the story commit is now `db88b8fe`): §0 (3) said `-441` ratified the key's `district` dimension — the Panel ratified the HOLDERS
+  per key). (0) BEFORE this edit, the unpushed decision `-442` was corrected by a fixup squashed into its own commit (now `6a3172e4`;
+  the story commit is now `9c0050fc`): §0 (3) said `-441` ratified the key's `district` dimension — the Panel ratified the HOLDERS
   only, the dimension is the author's; BigDev's v1.13 words, missing from its verbatim list, were added from the session record, and
   "What do you say?" restored to the v1.16 quote; QE21's "when there is no District Admin" became BigDev's "if the District Admin is
   not available"; QE18 names `matchingGrantRole`'s order and `checkPermission` unchanged. CRITICAL: Task 0.3 told the dev to commit
@@ -1819,7 +1895,7 @@ _(empty)_
   Pariwar Admin) or `reassigned` (a Pariwar Admin only). It lives in the event only: `state_reason_code` is untouched, and the fold's
   `reasonCode` ignores `posted`, so a suspended worker who is moved keeps their suspension reason. (3) A MOVE gates on the DESTINATION
   district (AC5's target); suspend, reactivate and terminate still gate on the CURRENT district. This supersedes `-441`'s build
-  reading for the move only — Task 0.3's author-commit says so; `-441` is committed (`0f66848b`) and is NOT edited. (4) 13.1c mints TWO
+  reading for the move only — Task 0.3's author-commit says so; `-441` is committed (`93b7e419`) and is NOT edited. (4) 13.1c mints TWO
   per-act keys, one per reason, `reassigned` held by `pariwar_admin` only; the route maps reason to key; 13.1 mints neither. (5) QE12
   gains a sixth neutral value, `reassigned`. (6) Q-6 and Question 1 of the unsent Panel note REWRITTEN; the note's §0, stake, trust,
   plain-English and evidence text follow. (7) Edited: QE5 (row + guard order), QE6, QE12, QE17, AC3, AC4, AC5, the Names enum row and

@@ -120,7 +120,8 @@ step that proves nothing the log does not already show. You can reject this read
 **In one sentence:** a field worker applies on a form, is interviewed (their identity is checked there) and is recruited; then someone
 registers them in the system, and then someone approves them — after which sign-ups under their code are credited to them. BigDev's
 process is: the **District Admin registers and the Pariwar Admin approves**, and if the District Admin is not available the **Pariwar
-Admin does both**. Is that who should approve?
+Admin does both** (the system can detect only that no District Admin holds the district — "not available" is wider; see Question 3).
+Is that who should approve?
 
 **Why it cannot be decided without you:** your last ruling made the District Admin the manager of field workers and the Pariwar Admin the
 fill-in; a Pariwar Admin who *approves* the District Admin's registrations is a different role — a check on them — and approval decides
@@ -135,7 +136,7 @@ nobody credits their own recruit alone — except in the case where the Pariwar 
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **The District Admin registers; the Pariwar Admin approves; if there is no District Admin, the Pariwar Admin does both.** *BigDev's process; our suggestion.* | A worker is creditable only after a second officer approves. | Two steps. When the Pariwar Admin does both there is no second pair of eyes, and the system does not stop the same person registering and approving. |
+| **A** | **The District Admin registers; the Pariwar Admin approves; if the District Admin is not available, the Pariwar Admin does both** (the system can detect only that no District Admin holds the district — see Question 3). *BigDev's process; our suggestion.* | A worker is creditable only after a second officer approves. | Two steps. When the Pariwar Admin does both there is no second pair of eyes, and the system does not stop the same person registering and approving. |
 | **B** | **The District Admin registers and approves.** | A worker is creditable as soon as their own District Admin has registered them. | No second officer, and no check by someone with a wider view. Fastest. |
 | **C** | **Only the Pariwar Admin registers and approves.** | District Admins can only recommend. | It takes away what you ruled in `-441` — that the District Admin manages field workers. |
 
@@ -156,17 +157,25 @@ how BigDev describes the Trust already working. You can reject this reading and 
 
 # How much to trust this note
 
-- **Earlier versions of this question:** the build was first planned on the assumption that a field worker belongs to one district for
-  life, so a move would have meant ending the worker and registering a new one — a new code every few months. BigDev corrected that the
-  same day (workers rotate between districts and move between Pariwars). Questions 1 and 2 exist because of that correction.
-  BigDev then corrected Question 1 itself the same day: a worker must not be restricted to a district (a school near a boundary would
-  cost a second trip), so the district is who the worker *reports to*, it changes only when the worker asks or the Pariwar Admin needs it,
-  and the Pariwar Admin should not carry the routine moves. This note puts that version of the question.
+- **Earlier versions of this question** (all on 2026-11-03, none sent to you):
+  1. The build was first planned on the assumption that a field worker belongs to one district for life, so a move would have meant
+     ending the worker and registering a new one — a new code every few months. That was wrong: workers rotate between districts and
+     move between Pariwars (BigDev). Questions 1 and 2 exist because of that correction.
+  2. BigDev then corrected Question 1 itself: a worker must not be restricted to a district (a school near a boundary would cost a
+     second trip), so the district is who the worker *reports to*. That version had the change made only when the worker asks or the
+     Pariwar Admin needs it, with the Pariwar Admin kept out of routine moves.
+  3. BigDev then refined it three more times the same day. First, the Pariwar Admin may give either reason — the version before had
+     not let a Pariwar Admin record "at the worker's request". Second, the District Admin a worker is leaving may act too — our earlier
+     suggestion, now option C (either District Admin records the change alone); it was wrong because one District Admin could then
+     send a worker to, or take one from, another without the other agreeing. Finally, the change was made a request by one District
+     Admin and an acceptance or refusal by the other (option A).
+  This note puts that last version.
 - **Corrected in this note:** none beyond the above.
-- **Decided by BigDev, not by us:** a Pariwar Admin is not blocked from recording "at the worker's request" (they may record either
-  reason); a request may be opened by either District Admin; a refusal's reason comes from a fixed list; an unanswered request goes to
-  the Pariwar Admin after 7 days; and both District Admins are told, by email and in the admin console.
-- **Still uncertain:** whether the Pariwar Admin who registers a worker when there is no District Admin may also approve them (BigDev's
+- **BigDev's rule — built as the default and put to you as Question 1 option A (not decided until you answer):** a Pariwar Admin is not
+  blocked from recording "at the worker's request" (they may record either reason); a request may be opened by either District Admin;
+  a refusal's reason comes from a fixed list; an unanswered request goes to the Pariwar Admin after 7 days; and both District Admins
+  are told, by email and in the admin console.
+- **Still uncertain:** whether the Pariwar Admin who registers a worker if the District Admin is not available may also approve them (BigDev's
   process says yes; the system will not stop it); whether a worker who moves to another Pariwar fills in a new form and is interviewed again (BigDev's account is
   that workers are recruited by a physical form, an interview and acceptance of the organization's terms; we do not know whether that is
   done afresh per Pariwar); what "a district" is in a Pariwar that has no published geography (we use the districts the Pariwar lists);
@@ -179,7 +188,7 @@ how BigDev describes the Trust already working. You can reject this reading and 
 Field workers do not stay in one place. They report to a district's District Admin for a few months until the work is done, then to the next
 (they may still visit a school across a boundary — a code works anywhere in the Pariwar), so the Trust does not have to hire and train someone
 new each time; some will move between Pariwars as well. We built the system to follow your last
-ruling — the District Admin manages field workers, the Pariwar Admin fills in — and we need three things from you. First, who may change the
+ruling — the District Admin manages field workers, the Pariwar Admin fills in — and we need four things from you. First, who may change the
 District Admin a worker reports to — a worker is free to recruit anywhere in the Pariwar, so this only decides who manages them: we suggest
 that when the worker asks, one District Admin opens a request and the other accepts or refuses it with a reason, with the Pariwar Admin
 able to move a worker directly and to settle a dispute, so the Pariwar Admin is not loaded with routine changes. Second, when a worker moves to another Pariwar: we suggest it is a new registration there, with a new code
@@ -188,7 +197,7 @@ joining them up would be a later decision. Third, your "fill-in": we suggest the
 who acted, because the system has no way to tell that a District Admin is unable; the alternative is to stop the Pariwar Admin when a
 District Admin is in post, which would also stop them when that District Admin is on leave. Fourth, how a worker is taken on: they apply on a form and are interviewed, with their identity checked there; we suggest the District
 Admin registers them and the Pariwar Admin approves — and approval is what makes sign-ups under their code count — with the Pariwar
-Admin doing both when there is no District Admin. Nothing is blocked on any of these.
+Admin doing both if the District Admin is not available. Nothing is blocked on any of these.
 
 ⇒ If this section and the evidence below ever disagree, the **evidence is the record**.
 

@@ -295,7 +295,8 @@ export function isVerifiedAuthorization(value: unknown): value is VerifiedAuthor
  * picks the grant, the actor comes from `params.actorId`, the Pariwar from `params.resource.pariwarId`. `null` exactly
  * when `hasPermission` denies. ⛔ It fires no denial seam and throws nothing — `requirePermission` is the guard.
  * ⚠ PURE over the grants it is given, so a caller could pass fabricated grants: its callers are pinned by a source fence
- * (`check.ts` itself, `apps/api/tests/integration/_field-worker-fixture.ts`, and test files only).
+ * (`check.ts` itself, the two field-worker test fixtures — `apps/api/tests/integration/_field-worker-fixture.ts` and
+ * `packages/domain/tests/integration/field-worker/_fixtures.ts` — and test files only).
  */
 export function authorize(
   params: RequirePermissionParams,

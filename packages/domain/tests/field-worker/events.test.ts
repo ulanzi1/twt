@@ -19,6 +19,9 @@ const AUTH = {
   target: { dimension: 'district', value: 'Patna' },
   catalog_version: 59,
 };
+/** `o` without `key` (a payload missing one required field). */
+const without = (o: Record<string, unknown>, key: string): Record<string, unknown> => Object.fromEntries(Object.entries(o).filter(([k]) => k !== key));
+
 const VALID: Record<(typeof FIELD_WORKER_EVENT_TYPES)[number], Record<string, unknown>> = {
   'field_worker.registered': { from_state: null, to_state: 'pending_kyc', trigger: 'field_worker.register', actor: 'operator', authorization: AUTH, district: 'Patna' },
   'field_worker.kyc_completed': { from_state: 'pending_kyc', to_state: 'pending_kyc', trigger: 't', actor: 'operator' },
@@ -56,8 +59,7 @@ describe('the seven payloads (AC3)', () => {
   it('QE12: each reason list is its own — `reassigned` is not a suspension reason, `under_review` not a termination one, a post needs a reason', () => {
     expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS['field_worker.suspended'].safeParse({ ...VALID['field_worker.suspended'], reason_code: 'reassigned' }).success).toBe(false);
     expect(FieldWorkerTerminatedPayloadSchema.safeParse({ ...VALID['field_worker.terminated'], reason_code: 'under_review' }).success).toBe(false);
-    const { reason_code: _r, ...noReason } = VALID['field_worker.posted'];
-    expect(FieldWorkerPostedPayloadSchema.safeParse(noReason).success).toBe(false);
+    expect(FieldWorkerPostedPayloadSchema.safeParse(without(VALID['field_worker.posted'], 'reason_code')).success).toBe(false);
     expect(FieldWorkerPostedPayloadSchema.safeParse({ ...VALID['field_worker.posted'], reason_code: 'at_worker_request' }).success).toBe(true);
     expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS['field_worker.activated'].safeParse({ ...VALID['field_worker.activated'], reason_code: 'inactive' }).success).toBe(false);
   });
@@ -78,8 +80,7 @@ describe('the seven payloads (AC3)', () => {
 
   it('the genesis carries a non-blank district and the authorization snapshot', () => {
     expect(FieldWorkerRegisteredPayloadSchema.safeParse({ ...VALID['field_worker.registered'], district: '  ' }).success).toBe(false);
-    const { authorization: _a, ...noAuth } = VALID['field_worker.registered'];
-    expect(FieldWorkerRegisteredPayloadSchema.safeParse(noAuth).success).toBe(false);
+    expect(FieldWorkerRegisteredPayloadSchema.safeParse(without(VALID['field_worker.registered'], 'authorization')).success).toBe(false);
   });
 });
 

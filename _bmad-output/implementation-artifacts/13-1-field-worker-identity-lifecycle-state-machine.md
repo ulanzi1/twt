@@ -1348,21 +1348,21 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
         leg (h)'s owner. Add one more leg: (i) the Panel's confirm of each field-worker permission key 13.1a / 13.1c / 13.1d mint
         (`-059` B(3) via `-441` — each added by its own story). Re-read the `deferred-work.md` "Deferred from: story 13-1-…" section,
         the Story 13.1a–13.1d entries and the INHERITED blocks under 13.3 / 13.4 / 13.5 / 13.6 / 13.8 in `epics.md`.
-- [ ] **Task 1 — encryption classes (AC13).** Add `FIELD_WORKER_FIELD_CLASS = 'field_worker'` and `FIELD_WORKER_MOBILE_FIELD_CLASS =
+- [x] **Task 1 — encryption classes (AC13).** Add `FIELD_WORKER_FIELD_CLASS = 'field_worker'` and `FIELD_WORKER_MOBILE_FIELD_CLASS =
       'field_worker_mobile'` to `encryption/field-classes.ts` with a doc comment in the `CLAIM_CONTACT_MOBILE_FIELD_CLASS` style (the
       disjoint-space reason), exported through `encryption/index.ts` AND re-exported from `apps/api/src/context.ts` beside the other
       field classes (the claim-contact crypto helper imports them from there). Add the API-side helper that normalises, encrypts and
       indexes a field worker's name and mobile, at `apps/api/src/modules/field-worker/field-worker-crypto.ts`. Twins: `apps/api/src/modules/claims/claim-contact-crypto.ts` for the Tier-1 encrypt (it
       has no blind index and no normalise) and `packages/domain/src/claim/correction-crypto.ts` (`correctionNumberHash`, the
       `claim_contact_mobile` class) for the HMAC — the helper is a hybrid of the two.
-- [ ] **Task 2 — schema, policies, migration (AC1, AC2, AC7).**
-  - [ ] 2.1 `schema/field_workers.ts` (+ `schema/index.ts`), `policies/field-workers-rls.ts` (+ `policies/index.ts`). No `$type` on the
+- [x] **Task 2 — schema, policies, migration (AC1, AC2, AC7).**
+  - [x] 2.1 `schema/field_workers.ts` (+ `schema/index.ts`), `policies/field-workers-rls.ts` (+ `policies/index.ts`). No `$type` on the
         branded id except `FieldWorkerId`; `ended_on` is `date('ended_on', { mode: 'string' })` (QE4). Do not write the literals `fieldWorkerAttributionCodes` or `field_worker_attribution_codes`
         as an identifier or a string in any `.ts` here — run the reach fence (TR3). ALSO declare the composite FK in the Drizzle table
         `schema/field_worker_attribution_codes.ts` with `foreignKey({ name: 'field_worker_attribution_codes_worker_fk', columns: [t.pariwarId, t.fieldWorkerId], foreignColumns:
         [fieldWorkers.pariwarId, fieldWorkers.fieldWorkerId] }).onDelete('no action')` (the house style: `member_wa_opt_in_codes.ts`,
         `marketplace_modules.ts`); that file is already in the fence's ALLOWED list.
-  - [ ] 2.2 Hand-author `NNNN_field-workers.sql` in the G14 order: header ("never regenerate"; ⚠ the FK add scans 13.2's table — TR2);
+  - [x] 2.2 Hand-author `NNNN_field-workers.sql` in the G14 order: header ("never regenerate"; ⚠ the FK add scans 13.2's table — TR2);
         pgEnums; `field_workers` (incl. `district`, QE17, and the nullable `ended_on`, QE20); CHECKs (incl. `field_workers_district_nonblank` and `field_workers_ended_on_pair`); the FK-target UNIQUE; GRANT SELECT, INSERT, UPDATE; ENABLE/FORCE RLS; the three policies; the
         partial unique index; the guard trigger function and trigger — COPY `0193_marketplace-modules.sql`'s
         `marketplace_modules_reject_unguarded_state_write` (genesis-shape check on INSERT; the strictly-increasing version rule;
@@ -1379,7 +1379,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
         only `session_replication_role = 'replica'` bypasses them;
         THEN `ALTER TABLE field_worker_attribution_codes ADD CONSTRAINT … FOREIGN KEY … ON DELETE NO ACTION`. Add the journal entry by
         hand with a trailing newline and a `when` above every sibling's.
-- [ ] ⭐ **ORDER: do Task 8 (the RBAC core + the key) NEXT, right after Task 2 and BEFORE Tasks 3–7 and 10 (2).** The event
+- [x] ⭐ **ORDER: do Task 8 (the RBAC core + the key) NEXT, right after Task 2 and BEFORE Tasks 3–7 and 10 (2).** The event
       payload's `authorization` schema (Task 3), the commands that refuse an unverified authorization (Tasks 5 / 6), their tests, the
       route (Task 7) and the `apps/api` fixture (Task 10 (2)) all need `rbac.authorize` / `VerifiedAuthorization` and a catalog that
       contains `field_worker.register` (`hasPermission` refuses a key outside the catalog).
@@ -1440,7 +1440,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `attribution_code_allocation_flags` up in `afterAll`); the mock path from `apps/api/tests` is
       `../../src/modules/field-worker/attribution-code-access.js`, which the fence does not scan — the door forwards no `generate`
       seam, by design. Run the AC12 review before opening the PR.
-- [ ] **Task 8 — RBAC (AC9); do it right after Task 2 (the ORDER line).** `rbac/permissions.ts` (append
+- [x] **Task 8 — RBAC (AC9); do it right after Task 2 (the ORDER line).** `rbac/permissions.ts` (append
       `'field_worker.register'` to `SEED_PERMISSION_KEYS` — catalog entries are bare strings; the `district` dimension lives in the
       route's `requirePermissionHook` option, so write it and the holders in a comment, the `claim.record_fraud_finding` comment
       shape — `PERMISSION_CATALOG_VERSION` N → N+1 (58 → 59 at the pin; re-grep, 14.3 contends) and its version-history comment), `rbac/roles.ts` (a const + the `district_admin` list AND the `pariwar_admin` list),

@@ -5,7 +5,7 @@
 // `mobile_ciphertext`, `mobile_blind_index`) in the SELECT LIST — ⛔ dropped after the fetch. ⛔ No function here decrypts a
 // worker's data: decrypt-on-read is Story 13.3's / 13.4's decision (C1, C6).
 
-import { and, asc, desc, eq, getTableColumns, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { UUID_REGEX, type Db } from '../db.js';
 import { geoTreeVersionInForce } from '../geo-tree/registry.js';
@@ -22,17 +22,24 @@ export const LIST_FIELD_WORKERS_DEFAULT_LIMIT = 50;
 /** `listFieldWorkersForPariwar`'s hard cap (forced pagination). */
 export const LIST_FIELD_WORKERS_MAX_LIMIT = 200;
 
-/** The columns a `FieldWorkerView` carries — every column EXCEPT the three PII ones; `ended_on` as text (QE4). */
-const {
-  nameCiphertext: _nameCiphertext,
-  mobileCiphertext: _mobileCiphertext,
-  mobileBlindIndex: _mobileBlindIndex,
-  endedOn: _endedOn,
-  ...VIEW_COLUMNS_BASE
-} = getTableColumns(fieldWorkers);
+/**
+ * The columns a `FieldWorkerView` carries — every column EXCEPT the three PII ones (`name_ciphertext`, `mobile_ciphertext`,
+ * `mobile_blind_index`), listed one by one so a column added later is NOT read by default; `ended_on` as text (QE4).
+ */
 const FIELD_WORKER_VIEW_COLUMNS = {
-  ...VIEW_COLUMNS_BASE,
+  fieldWorkerId: fieldWorkers.fieldWorkerId,
+  pariwarId: fieldWorkers.pariwarId,
+  registeredByUserId: fieldWorkers.registeredByUserId,
+  registeredByDisplay: fieldWorkers.registeredByDisplay,
+  createdAt: fieldWorkers.createdAt,
+  currentState: fieldWorkers.currentState,
+  stateEventVersion: fieldWorkers.stateEventVersion,
+  kycStatus: fieldWorkers.kycStatus,
+  stateReasonCode: fieldWorkers.stateReasonCode,
+  district: fieldWorkers.district,
   endedOn: sql<string | null>`${fieldWorkers.endedOn}::text`.as('ended_on'),
+  auditId: fieldWorkers.auditId,
+  updatedAt: fieldWorkers.updatedAt,
 };
 
 /**

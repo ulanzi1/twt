@@ -984,7 +984,7 @@ describe('Story 13.1 — authorizingGrant / authorize / VerifiedAuthorization (Q
 
 // ── Story 13.1 (QE18 (e), AC9) — the source fence on `authorize(` callers ──────────────────────────────
 
-describe('Story 13.1 — `authorize(` is called only by check.ts, the apps/api field-worker fixture and test files', () => {
+describe('Story 13.1 — `authorize(` is called only by check.ts, the two field-worker test fixtures and test files', () => {
   it('scans apps/*/src, packages/*/src and every tests tree; the only hits are the allowed files', () => {
     const repoRoot = path.resolve(__dirname, '../../../..');
     const roots = ['apps', 'packages'];
@@ -1025,6 +1025,8 @@ describe('Story 13.1 — `authorize(` is called only by check.ts, the apps/api f
     const allowed = (f: string): boolean =>
       f === 'packages/domain/src/rbac/check.ts' ||
       f === 'apps/api/tests/integration/_field-worker-fixture.ts' ||
+      // The DOMAIN twin of that fixture (a test-tree file, the same kind — named exactly, ⛔ a widened rule; Debug Log (c)).
+      f === 'packages/domain/tests/integration/field-worker/_fixtures.ts' ||
       /\.(test|spec)\.tsx?$/.test(f);
     expect(scanned).toBeGreaterThan(1500); // non-vacuity: the walk reached the trees
     expect(hits.filter((f) => !allowed(f))).toEqual([]);

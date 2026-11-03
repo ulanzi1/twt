@@ -89,7 +89,7 @@ describe('mapFieldWorkerError — everything else is rethrown UNCHANGED (500 thr
     ['FieldWorkerCaptureNotFoundError', new fieldWorker.FieldWorkerCaptureNotFoundError(PID, FW)],
     ['FieldWorkerAlreadyHasAttributionCodeError (door)', new FieldWorkerAlreadyHasAttributionCodeError(PID, FW as never)],
     ['AttributionPariwarScopeMismatchError (door)', new AttributionPariwarScopeMismatchError(PID, FW)],
-    ['AttributionCodeRequiresTransactionError (door)', new AttributionCodeRequiresTransactionError('a Pool')],
+    ['AttributionCodeRequiresTransactionError (door)', new AttributionCodeRequiresTransactionError('not_a_client')],
     ['a plain Error (a KMS failure)', new Error('KMS unavailable')],
   ])('%s', (_n, err) => {
     expect(thrown(err)).toBe(err);

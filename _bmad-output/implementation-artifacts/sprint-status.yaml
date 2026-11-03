@@ -22645,7 +22645,7 @@ development_status:
   # Epic 13: Growth — Field-Worker Attribution & Member Invite Loop
   # ==========================================================================
   epic-13: in-progress
-  13-1-field-worker-identity-lifecycle-state-machine: ready-for-dev
+  13-1-field-worker-identity-lifecycle-state-machine: in-progress
   # ⭐ 2026-11-03 ADDED by BigDev ("mint 13-1a, 13-1b, 13-1c", answering Story 13.1's ASK Q-2): the three stories that finish what 13.1
   # (the primitive + ONE registration route) leaves unreachable. BigDev's process: the District Admin recruits and REGISTERS, the Pariwar
   # Admin APPROVES (the Pariwar Admin does both if there is no District Admin); the code reaches the worker BY SMS only once approved, and

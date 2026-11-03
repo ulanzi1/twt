@@ -1310,8 +1310,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance first (AC0).** ⭐ **0.1 runs FIRST in `bmad-dev-story`. Write no code before 0.1's greps are in the Debug Log.**
-  - [ ] 0.1 `git fetch origin`; rebase on `origin/main` if it moved. Re-grep NUMBERS (decision id, migration + journal `when`, ADR,
+- [x] **Task 0 — governance first (AC0).** ⭐ **0.1 runs FIRST in `bmad-dev-story`. Write no code before 0.1's greps are in the Debug Log.**
+  - [x] 0.1 `git fetch origin`; rebase on `origin/main` if it moved. Re-grep NUMBERS (decision id, migration + journal `when`, ADR,
         `PERMISSION_CATALOG_VERSION`, ledger letter in BOTH ledgers) across every ref and worktree. Re-verify G2, G3, G4, G5, G7, G8.
         Run this query on the story's DB and record the count: `SELECT count(*) FROM field_worker_attribution_codes` — if > 0, list the
         orphans (TR2) before the migration is written. Confirm the actor model: `events_log` has NO `actor` column — only `actor_id uuid`
@@ -1333,7 +1333,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
         `88243907` (v1.17), `7fefe8dc` (v1.18) and the v1.19 records commit. At Task 0.1, RE-READ all four entries: if any recorded
         answer has since changed, STOP and ask BigDev. Any later governance entry takes ≥ `-445` (re-grep every ref first). A recorded answer that
         the ACs contradict is a silent override by the dev agent ([[feedback_spec_edits_must_propagate_to_tasks]]).
-  - [ ] 0.4 Go-live fence. Add ONE row to `docs/launch-gate-inventory/inventory-roster.md` (`### Row N — <slug>`, bullet format;
+  - [x] 0.4 Go-live fence. Add ONE row to `docs/launch-gate-inventory/inventory-roster.md` (`### Row N — <slug>`, bullet format;
         re-grep the number: the highest on main is 47 and 46 is reserved by 6.39 and 14.3 — take ≥ 48 unless 46 is confirmed free;
         `owner`: "Trustee Panel (gate); counsel (Story 0.13)", the Row 19 shape). Its closure legs, each marked open or met with the
         decision id that met it: (a) the Panel's ruling on the key — MET by `2026-11-03-441` (B(3) says additions are "ratified
@@ -1767,7 +1767,28 @@ _(filled by `bmad-dev-story`)_
 
 ### Debug Log References
 
-_(Task 0.1's greps go here first.)_
+**(a) Task 0.1 — re-verification, 2026-11-03, BEFORE any code (`bmad-dev-story 13.1`, worktree at `3cff2d4c`).**
+- `git fetch origin`: `origin/main` = `268d86b5` = this branch's merge-base ⇒ no rebase needed.
+- NUMBERS, every ref + every worktree: migrations — main's highest `0199` (journal idx 199, `when` 1796787600044); `story/6-22b-…`
+  holds 0195–0198 (renumbers on rebase), `14-3` / `6-39` hold nothing ≥ 0193 in their trees ⇒ this story takes **`0200`**, `when`
+  **`1796874000045`**. Decisions — main `-439`, `6-22b` `-440`, this branch `-441`…`-444` ⇒ any new entry ≥ `-445` (none is
+  written). `PERMISSION_CATALOG_VERSION` — main 58, `6-22b` 58, `14-3` / `6-39` 56 ⇒ **58 → 59**. ADR — none proposed. Roster —
+  highest Row 47 on main and every branch, Row 46 reserved (6.39 / 14.3) ⇒ **Row 48**. Ledger — `2026-11-03a…g` on main,
+  `h…k` on this branch only, no other ref or worktree holds a `2026-11-03*` letter ⇒ the completion entry is **`2026-11-03l`**.
+- G2 (the 13.2 module, the door, `FieldWorkerId` in `ids/index.ts`), G3 (eleven door exports — five wrappers + six classes), G4
+  (the 13.2 spec list — plus two unit files that only name the module, `tests/attribution-code/{types,exports}.test.ts`, and
+  `wa-opt-in-codes.spec.ts` which matches only on `seedCode`, unrelated), G5 (`identity_type` = `['admin']`; `field_worker` bundle
+  `permissions: []`), G7 (no `kyc_status` anywhere — only `api-client`'s `kycStatus()`), G8 (93 registry entries; the domain
+  import line unchanged) — all RE-VERIFIED. `requirePermissionHook(` = 132 calls in 62 files; `hasPermission(` = 29 calls outside
+  `rbac/` — unchanged from the story.
+- The four decision entries (`-441`…`-444`) are on this branch, unchanged since their commits; no later entry touches field
+  workers ⇒ NO recorded answer has changed; no STOP.
+- Story DB: own container `twt-131-pg` (`postgres:16-alpine`, `:5470`, database named `twt_dev`), `pnpm db:migrate` to 0199.
+  `SELECT count(*) FROM field_worker_attribution_codes` ⇒ **0** (no orphans — TR2 clear). `events_log` actor columns ⇒ `actor_id`
+  only (no `actor` column) ⇒ the actor KIND is a payload key; no `events_log` change.
+- Task 0.4: **Row 48 `field-worker-registration-live`** appended to `docs/launch-gate-inventory/inventory-roster.md` (owner "Trustee
+  Panel (gate); counsel (Story 0.13)"; legs (a)–(i): (a), (b), (c), (d) MET; (e) partly — the matrix owner not yet told; (f), (g),
+  (h), (i) OPEN; (h)'s owner row `13-1a`).
 
 ### Completion Notes List
 

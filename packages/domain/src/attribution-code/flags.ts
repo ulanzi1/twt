@@ -46,15 +46,21 @@ export async function flagAllocationExhausted(
 
 export interface ListAllocationFlagsInput {
   pariwarId: PariwarId;
-  /** Page size, clamped to 1..200 (default 50). */
+  /** Page size — an integer, clamped to 1..200 (default 50). */
   limit?: number;
 }
 
-/** The Pariwar's flags, newest first (`flagged_at DESC, flag_id DESC`). */
+/**
+ * The Pariwar's flags, newest first (`flagged_at DESC, flag_id DESC`).
+ *
+ * @throws RangeError  `limit` is given but is not an integer (⛔ statement sent) — `clampLimit` passes NaN through, and Drizzle
+ *                     then drops the LIMIT altogether (review R4).
+ */
 export async function listAllocationFlags(
   client: pg.PoolClient,
   input: ListAllocationFlagsInput,
 ): Promise<AttributionCodeAllocationFlagRow[]> {
+  if (input.limit !== undefined && !Number.isInteger(input.limit)) throw new RangeError('limit must be an integer');
   await assertTxBoundScope(client, input.pariwarId);
   return bindScopedDb(client)
     .select()

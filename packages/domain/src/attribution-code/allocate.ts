@@ -2,10 +2,13 @@
 //
 // Runs in the CALLER's scoped transaction (Story 13.1's "Add Field Worker", through the API door) and opens none: a nested
 // `db.transaction()` would COMMIT the caller's tx early (TR1) — hence raw SAVEPOINT SQL per attempt, the shape of
-// `telegram-opt-in/write.ts` `createPendingOptIn`. Per attempt: draw → (an injected `generate` only) format / deny-list check →
-// skip a candidate a member already TYPED in this Pariwar (AT4 — those strings predate every holder) → INSERT under a savepoint.
-// A 23505 is matched by CONSTRAINT NAME (⛔ any 23505): the code's own unique ⇒ redraw; the worker's unique ⇒
-// `FieldWorkerAlreadyHasAttributionCodeError`; anything else is rethrown. ⛔ Event (AT10 — the append-only row IS the record).
+// `telegram-opt-in/write.ts` `createPendingOptIn`. First, once: a worker who already holds a code is refused before any draw
+// (review R3 — else a captured or held candidate could burn every attempt and misreport an exhaustion). Per attempt: draw →
+// (an injected `generate` only) format / deny-list check → skip a candidate a member already TYPED in this Pariwar (AT4 — those
+// strings predate every holder) → INSERT under a savepoint, RELEASED on both paths (review R6 — `ROLLBACK TO` keeps it).
+// A 23505 is matched by CONSTRAINT NAME (⛔ any 23505): the code's own unique ⇒ redraw; the worker's unique (a concurrent
+// allocation committed after the pre-check) ⇒ `FieldWorkerAlreadyHasAttributionCodeError`; anything else is rethrown.
+// ⛔ Event (AT10 — the append-only row IS the record).
 
 import { and, eq, sql } from 'drizzle-orm';
 import type pg from 'pg';
@@ -57,7 +60,7 @@ export interface AllocatedAttributionCode {
  * @throws AttributionCodeRequiresTransactionError / PariwarScopeMissingError / InvalidPariwarScopeError /
  *         AttributionPariwarScopeMismatchError      the handle or its scope (`assertTxBoundScope`).
  * @throws InvalidAttributionCodeError                an injected `generate` returned a malformed or deny-listed code.
- * @throws FieldWorkerAlreadyHasAttributionCodeError  the worker already holds a code (⛔ retried).
+ * @throws FieldWorkerAlreadyHasAttributionCodeError  the worker already holds a code — before any draw, or a concurrent one won (⛔ retried).
  * @throws AttributionCodeAllocationExhaustedError    every draw clashed — the caller flags it in its own tx and rethrows (C1).
  */
 export async function allocateAttributionCode(
@@ -75,6 +78,19 @@ export async function allocateAttributionCode(
   // (1) One connection, in a transaction, scoped to this Pariwar.
   await assertTxBoundScope(client, input.pariwarId);
   const db = bindScopedDb(client);
+
+  // (2) The worker's one code (I2) — checked once, before any draw (explicit `pariwar_id`: RLS is ⛔ the filter, TR3).
+  const held = await db
+    .select({ one: sql<number>`1` })
+    .from(fieldWorkerAttributionCodes)
+    .where(
+      and(
+        eq(fieldWorkerAttributionCodes.pariwarId, input.pariwarId),
+        eq(fieldWorkerAttributionCodes.fieldWorkerId, input.fieldWorkerId),
+      ),
+    )
+    .limit(1);
+  if (held.length > 0) throw new FieldWorkerAlreadyHasAttributionCodeError(input.pariwarId, input.fieldWorkerId);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const candidate = generate();
@@ -110,6 +126,7 @@ export async function allocateAttributionCode(
       return { ...row, attempts: attempt };
     } catch (err) {
       await client.query('ROLLBACK TO SAVEPOINT allocate_attribution_code');
+      await client.query('RELEASE SAVEPOINT allocate_attribution_code');
       const constraint = uniqueViolationConstraint(err);
       if (constraint === PARIWAR_CODE_UQ) continue;
       if (constraint === FIELD_WORKER_UQ) {

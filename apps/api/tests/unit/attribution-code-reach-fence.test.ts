@@ -5,7 +5,8 @@
 //       `.js` `.astro`, `.d.ts` included; DOT-directories included — `apps/public/src/pages/.well-known/*.ts` are live
 //       UNAUTHENTICATED routes; only `node_modules` skipped). A file REACHES the registry if it names the namespace
 //       (`attributionCode`, any identifier position, or `x['attributionCode']`), re-exports `@twt/domain` wholesale, imports a
-//       path containing `attribution-code` (⭐ EXCEPT the API door — its importers are the sanctioned route callers, TR13), or names
+//       path containing `attribution-code` (⭐ EXCEPT the API door imported from `apps/api/src` — its importers there are the
+//       sanctioned route callers, TR13; a door import from any other tree, or a RE-EXPORT of the door, is REACH — review R1), or names
 //       a table / schema symbol / domain function as a WHOLE identifier or string text. Exactly the module directory (a prefix)
 //       and the ALLOWED files may. Precedent: family-account-reach-fence.test.ts (*"the first version scanned `apps/api/src`
 //       alone"*).
@@ -14,7 +15,9 @@
 //       else; ⛔ `getRequestContext`; ⛔ `generate` (AT9 — the allocate call gets a fresh `{ maxAttempts }` literal).
 //  (iv) the authenticated-Pariwar WRITER PIN over `apps/api/src` — the files that assign `pariwarId` on ANY receiver are exactly
 //       the member-session guard and the scope-resolution hook (G9b); ⛔ `Object.assign` / `Reflect.set` / `defineProperty` on a
-//       request context; `.requestContext =` only in the request-context middleware.
+//       request context (incl. `x['requestContext']` and a `const` alias of one); a context REPLACEMENT — `.requestContext =`,
+//       `['requestContext'] =`, or a `requestContext` key / name given to those three calls — only in the request-context
+//       middleware (review R2).
 // ⚠ Turbo's LOCAL cache skips `@twt/api#test` when only a non-dependency workspace (apps/public, apps/admin, …) changed; GitHub CI
 // has no turbo cache and is the backstop. A new entry in ALLOWED (e.g. C4's backfill job) is a REVIEWED edit here.
 
@@ -110,6 +113,9 @@ function moduleSpecifierOf(node: ts.Node): string | null {
   return null;
 }
 
+/** The door's sanctioned importers live in the API (review R1 — a public page or a job importing it bypasses the session hooks). */
+const DOOR_CALLER_TREE = 'apps/api/src/';
+
 /** A relative specifier that resolves to the API door (any of `.js` / `.ts` / extension-less). */
 function resolvesToDoor(file: string, spec: string): boolean {
   if (!spec.startsWith('.')) return false;
@@ -144,7 +150,9 @@ function scanCode(file: string, text: string, kind: ts.ScriptKind): string[] {
       hits.push('barrel:@twt/domain');
     }
     const spec = moduleSpecifierOf(node);
-    if (spec !== null && spec.includes('attribution-code') && !resolvesToDoor(file, spec)) hits.push(`path:${spec}`);
+    const sanctionedDoorImport =
+      spec !== null && file.startsWith(DOOR_CALLER_TREE) && !ts.isExportDeclaration(node) && resolvesToDoor(file, spec);
+    if (spec !== null && spec.includes('attribution-code') && !sanctionedDoorImport) hits.push(`path:${spec}`);
     ts.forEachChild(node, visit);
   };
   visit(sf);
@@ -398,31 +406,78 @@ function patternWritesPariwarId(e: ts.Expression): boolean {
   if (ts.isArrayLiteralExpression(t)) return t.elements.some((el) => isPariwarIdTarget(el) || patternWritesPariwarId(el));
   return false;
 }
-const isContextRef = (e: ts.Expression): boolean => {
+/** `x.requestContext` or `x['requestContext']` (review R2 — a literal element access is the same property). */
+const isContextMember = (e: ts.Expression): boolean => {
   const t = unwrap(e);
   return (
-    (ts.isIdentifier(t) && t.text === 'requestContext') ||
     (ts.isPropertyAccessExpression(t) && t.name.text === 'requestContext') ||
+    (ts.isElementAccessExpression(t) && ts.isStringLiteralLike(t.argumentExpression) && t.argumentExpression.text === 'requestContext')
+  );
+};
+/** A request context: the name, a member access, `getRequestContext()`, or a local ALIAS bound to one of those (review R2). */
+const isContextRef = (e: ts.Expression, aliases: ReadonlySet<string>): boolean => {
+  const t = unwrap(e);
+  return (
+    (ts.isIdentifier(t) && (t.text === 'requestContext' || aliases.has(t.text))) ||
+    isContextMember(t) ||
     (ts.isCallExpression(t) && ts.isIdentifier(t.expression) && t.expression.text === 'getRequestContext')
   );
 };
+/** `{ requestContext: … }` / `{ requestContext }` / `'requestContext'` — a call argument that REPLACES the context on its target. */
+const namesContextKey = (e: ts.Expression | undefined): boolean => {
+  if (e === undefined) return false;
+  const t = unwrap(e);
+  if (ts.isStringLiteralLike(t)) return t.text === 'requestContext';
+  return (
+    ts.isObjectLiteralExpression(t) &&
+    t.properties.some((p) => p.name !== undefined && (ts.isIdentifier(p.name) || ts.isStringLiteralLike(p.name)) && p.name.text === 'requestContext')
+  );
+};
+
+/** The names a file binds to a request context (`const ctx = request.requestContext`, `= getRequestContext()!`, chained aliases). */
+function contextAliases(sf: ts.SourceFile): Set<string> {
+  const aliases = new Set<string>();
+  let grew = true;
+  while (grew) {
+    grew = false;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer !== undefined &&
+        !aliases.has(node.name.text) &&
+        isContextRef(node.initializer, aliases)
+      ) {
+        aliases.add(node.name.text);
+        grew = true;
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sf);
+  }
+  return aliases;
+}
 
 /** The three writer-pin findings for one source: `pariwarId` writes, context mutations, `.requestContext =` assignments. */
 function writerFindings(file: string, text: string): { pariwarId: number; mutation: number; contextAssign: number } {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, scriptKindOf(file));
   const f = { pariwarId: 0, mutation: 0, contextAssign: 0 };
+  const aliases = contextAliases(sf);
   const visit = (node: ts.Node): void => {
     if (ts.isBinaryExpression(node) && ASSIGN_OPS.has(node.operatorToken.kind)) {
       if (isPariwarIdTarget(node.left) || (node.operatorToken.kind === ts.SyntaxKind.EqualsToken && patternWritesPariwarId(node.left))) {
         f.pariwarId += 1;
       }
-      const left = unwrap(node.left);
-      if (ts.isPropertyAccessExpression(left) && left.name.text === 'requestContext') f.contextAssign += 1;
+      if (isContextMember(node.left)) f.contextAssign += 1;
     }
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
       const callee = `${node.expression.expression.text}.${node.expression.name.text}`;
-      const first = node.arguments[0];
-      if (['Object.assign', 'Reflect.set', 'Object.defineProperty'].includes(callee) && first !== undefined && isContextRef(first)) f.mutation += 1;
+      const [first, second] = node.arguments;
+      if (['Object.assign', 'Reflect.set', 'Object.defineProperty'].includes(callee)) {
+        if (first !== undefined && isContextRef(first, aliases)) f.mutation += 1;
+        // ⛔ replace the context on its holder: Object.assign(request, { requestContext }), Reflect.set(request, 'requestContext', …).
+        else if (callee === 'Object.assign' ? node.arguments.slice(1).some(namesContextKey) : namesContextKey(second)) f.contextAssign += 1;
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -495,6 +550,16 @@ describe('Story 13.2 AT8 v2 (ii) — the repo-wide reach fence', () => {
       ['apps/api/src/reexport-b.ts', `export * from '@twt/domain';`],
       ['apps/api/src/reexport-b2.ts', `export * as dom from '@twt/domain';`],
       ['apps/api/src/reexport-c.ts', `import { attributionCode } from './reexport-b.js';`],
+      // Review R1 — the door imported OUTSIDE apps/api/src (an unauthenticated public endpoint, a job, a package), or re-exported.
+      [
+        'apps/public/src/pages/planted-door.ts',
+        `import { resolveAttributionForRequest } from '../../../api/src/modules/field-worker/attribution-code-access.js';`,
+      ],
+      ['apps/public/src/pages/.well-known/planted-door.ts', `const m = await import('../../../../api/src/modules/field-worker/attribution-code-access');`],
+      ['apps/jobs/src/planted-door.ts', `import { listAllocationFlagsForRequest } from '../../api/src/modules/field-worker/attribution-code-access.js';`],
+      ['packages/validity-service/src/planted-door.ts', `import type { ScopeTx } from '../../../apps/api/src/modules/field-worker/attribution-code-access.js';`],
+      ['apps/api/src/modules/field-worker/index.ts', `export { resolveAttributionForRequest } from './attribution-code-access.js';`],
+      ['apps/api/src/modules/field-worker/index2.ts', `export * from './attribution-code-access.js';`],
     ];
     for (const [file, src] of planted) expect(reachHits(file, src), `${file}: ${src}`).not.toEqual([]);
   });
@@ -600,6 +665,26 @@ describe('Story 13.2 AT8 v2 (iv) — the authenticated-Pariwar writer pin (apps/
     expect(writerFindings('apps/api/src/modules/member/planted.ts', 'request.requestContext = { ...ctx, pariwarId };').contextAssign).toBe(1);
   });
 
+  it.each([
+    ["request['requestContext'] = { …, pariwarId: v }", "request['requestContext'] = { ...request.requestContext, pariwarId: suppliedValue };"],
+    ['Object.assign(request, { requestContext: … })', 'Object.assign(request, { requestContext: { ...ctx, pariwarId: v } });'],
+    ['Object.assign(request, { requestContext })', 'Object.assign(request, { requestContext });'],
+    ["Reflect.set(request, 'requestContext', …)", "Reflect.set(request, 'requestContext', { ...ctx, pariwarId: v });"],
+    ["Object.defineProperty(request, 'requestContext', …)", "Object.defineProperty(request, 'requestContext', { value: c });"],
+  ])('BITE (review R2) — a context REPLACEMENT via %s is caught', (_label, src) => {
+    expect(writerFindings('apps/api/src/modules/member/planted.ts', src).contextAssign).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['Object.assign(ctx, …) on a const alias', 'const ctx = request.requestContext; Object.assign(ctx, { pariwarId: suppliedValue });'],
+    ["an alias of request['requestContext']", "const ctx = request['requestContext']; Reflect.set(ctx, 'pariwarId', v);"],
+    ['an alias of getRequestContext()!', "const c = getRequestContext()!; Object.defineProperty(c, 'pariwarId', { value: v });"],
+    ['a chained alias', 'const a = request.requestContext; const b = a; Object.assign(b, { pariwarId: v });'],
+    ["Object.assign(request['requestContext'], …)", "Object.assign(request['requestContext'], { pariwarId: v });"],
+  ])('BITE (review R2) — a context mutation via %s is caught', (_label, src) => {
+    expect(writerFindings('apps/api/src/modules/member/planted.ts', src).mutation).toBeGreaterThan(0);
+  });
+
   it('NEGATIVE — declarations and shorthand destructuring write a LOCAL and are ⛔ counted', () => {
     for (const src of [
       'const { pariwarId } = request.requestContext;',
@@ -607,6 +692,9 @@ describe('Story 13.2 AT8 v2 (iv) — the authenticated-Pariwar writer pin (apps/
       '({ pariwarId } = o);',
       'const pariwarId = request.requestContext.pariwarId;',
       'if (ctx.pariwarId === x) {}',
+      // An alias that is only READ, and Object.assign on an unrelated target.
+      'const ctx = request.requestContext; void ctx.actorId;',
+      'const ctx = request.requestContext; Object.assign(out, { traceId: ctx.traceId });',
     ]) {
       expect(writerFindings('apps/api/src/modules/member/planted.ts', src), src).toEqual({ pariwarId: 0, mutation: 0, contextAssign: 0 });
     }

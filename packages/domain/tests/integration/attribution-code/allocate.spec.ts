@@ -9,11 +9,16 @@ import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId } from '../.
 import { attributionCode } from '../../../src/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { caught, seedCapture, seedCode, scripted } from './_fixtures.js';
+import { caught, expectSqlRejected, seedCapture, seedCode, scripted } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const B = toPariwarId(PARIWAR_B);
 const worker = () => toFieldWorkerId(randomUUID());
+
+/** ⛔ allocator savepoint is left on the caller's tx (review R6): RELEASE of the name finds none ⇒ 3B001. */
+async function expectNoAllocatorSavepoint(client: Parameters<typeof expectSqlRejected>[0]): Promise<void> {
+  await expectSqlRejected(client, 'RELEASE SAVEPOINT allocate_attribution_code', [], '3B001');
+}
 
 describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
   setupLiveDb();
@@ -41,6 +46,7 @@ describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
     const r = await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: worker() }, { generate: g.generate });
     expect(r).toMatchObject({ code: '482914', attempts: 2 });
     expect(g.draws()).toBe(2);
+    await expectNoAllocatorSavepoint(client); // the failed attempt's savepoint was released too (R6)
   });
 
   it('exhaustion: a generator that always clashes ⇒ AttributionCodeAllocationExhaustedError after exactly maxAttempts draws — and the caller’s tx is still usable (CONTROL: a second worker allocates)', async () => {
@@ -54,9 +60,15 @@ describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
     expect(err).toBeInstanceOf(attributionCode.AttributionCodeAllocationExhaustedError);
     expect(err).toMatchObject({ pariwarId: A, attempts: 3 });
     expect(g.draws()).toBe(3);
-    // ⛔ "no row survived" (vacuous after ROLLBACK TO SAVEPOINT) — the CONTROL: the same tx still works.
-    const ok = await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: worker() });
-    expect(ok.attempts).toBe(1);
+    await expectNoAllocatorSavepoint(client); // ⛔ three stale savepoints (R6)
+    // ⛔ "no row survived" (vacuous after ROLLBACK TO SAVEPOINT) — the CONTROL: the same tx still works. A scripted fresh code
+    // (⛔ a random draw, which could legitimately hit the held one — R7).
+    const ok = await attributionCode.allocateAttributionCode(
+      client,
+      { pariwarId: A, fieldWorkerId: worker() },
+      { generate: scripted('482914').generate },
+    );
+    expect(ok).toMatchObject({ code: '482914', attempts: 1 });
   });
 
   it('the default is 8 draws', async () => {
@@ -113,11 +125,28 @@ describe.skipIf(!hasDatabase)('allocateAttributionCode (AC4)', () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const w = worker();
-    await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w });
+    await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w }, { generate: scripted('602117').generate });
     const g = scripted('602118', '602119');
     const err = await caught(() => attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w }, { generate: g.generate }));
     expect(err).toBeInstanceOf(attributionCode.FieldWorkerAlreadyHasAttributionCodeError);
-    expect(g.draws()).toBe(1);
+    expect(g.draws()).toBe(0); // refused before any draw (R3)
+  });
+
+  it('R3: an existing holder drawing ITS OWN code, or a code a member typed, with maxAttempts 1 ⇒ FieldWorkerAlreadyHasAttributionCodeError (⛔ an exhaustion, ⛔ a trustee flag)', async () => {
+    const { tx, client } = getTx();
+    await seedCapture(tx, client, PARIWAR_A, '602131');
+    await enterAppScope(client, PARIWAR_A);
+    const w = worker();
+    await attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w }, { generate: scripted('602130').generate });
+    for (const candidate of ['602130', '602131']) {
+      const g = scripted(candidate);
+      const err = await caught(() =>
+        attributionCode.allocateAttributionCode(client, { pariwarId: A, fieldWorkerId: w }, { maxAttempts: 1, generate: g.generate }),
+      );
+      expect(err, candidate).toBeInstanceOf(attributionCode.FieldWorkerAlreadyHasAttributionCodeError);
+      expect(err).toMatchObject({ pariwarId: A, fieldWorkerId: w });
+      expect(g.draws()).toBe(0);
+    }
   });
 
   it('an injected generate returning a malformed or deny-listed code ⇒ InvalidAttributionCodeError (⛔ a raw 23514)', async () => {

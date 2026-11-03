@@ -55,6 +55,19 @@ describe.skipIf(!hasDatabase)('allocation flags (AC7)', () => {
     expect(await attributionCode.listAllocationFlags(client, { pariwarId: p, limit: -1 })).toHaveLength(1); // ⛔ LIMIT -1 bypass
   });
 
+  it('a non-integer limit (NaN, ±Infinity, 2.5) ⇒ RangeError BEFORE any statement — ⛔ an unbounded read (review R4: NaN survives clampLimit and Drizzle drops the LIMIT)', async () => {
+    const { client } = getTx();
+    const p = toPariwarId(randomUUID());
+    await enterAppScope(client, p);
+    for (const limit of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 2.5]) {
+      await expect(attributionCode.listAllocationFlags(client, { pariwarId: p, limit }), String(limit)).rejects.toBeInstanceOf(RangeError);
+      // A non-client: the pure check still fires first (TR14).
+      await expect(attributionCode.listAllocationFlags({} as never, { pariwarId: p, limit })).rejects.toBeInstanceOf(RangeError);
+    }
+    await attributionCode.flagAllocationExhausted(client, { pariwarId: p, attempts: 8, actorId: actor(), actorDisplay: 'Asha Verma' });
+    expect(await attributionCode.listAllocationFlags(client, { pariwarId: p, limit: 1 })).toHaveLength(1); // the tx is still usable
+  });
+
   it('ties on flagged_at break by flag_id DESC', async () => {
     const { client } = getTx();
     const p = randomUUID();

@@ -152,6 +152,14 @@ export {
   MODULE_STATE_DIRECT_WRITE_MESSAGE_PREFIX,
   isModuleStateDirectWriteError,
 } from './marketplace/errors.js';
+// Field-worker direct-write rejection (Story 13.1, Task 6). Surfaced at the top level — the pool / module trio shape — so
+// an apps/api error mapper imports the class + code constant directly; the full primitive is under `fieldWorker`.
+export {
+  FieldWorkerStateDirectWriteError,
+  FIELD_WORKER_STATE_DIRECT_WRITE_CODE,
+  FIELD_WORKER_STATE_DIRECT_WRITE_MESSAGE_PREFIX,
+  isFieldWorkerStateDirectWriteError,
+} from './field-worker/errors.js';
 // Story 11b.13 — the per-Pariwar DRIVE TARGET typed errors. Surfaced at the top level for one
 // specific reason: `apps/api/src/middleware/error-mapping/index.ts` matches on the CLASS, and every
 // one of these MUST be registered there.
@@ -354,6 +362,12 @@ export * as marketplace from './marketplace/index.js';
 // a Pariwar (AT8 v2: a transaction-bound client whose scope must equal it). ⚠ Reachable from `apps/*` ONLY through the API
 // door `apps/api/src/modules/field-worker/attribution-code-access.ts` — the repo-wide reach fence enforces it.
 export * as attributionCode from './attribution-code/index.js';
+// Story 13.1 — the FIELD WORKER primitive: the SEVENTH event-derived-state primitive (field_workers — a Pariwar-scoped
+// worker identity, Tier-1 name + mobile, and the projector-only lifecycle `pending_kyc → active ⇄ suspended → terminated`
+// with a projected REPORTING district — + the seven field_worker.* events + the FR-85 predicate `acceptsNewAttributions`).
+// Its one production caller is the registration route (`POST /api/v1/p/:pariwarId/field-workers`); the other lifecycle
+// routes are Stories 13.1a / 13.1c / 13.1d.
+export * as fieldWorker from './field-worker/index.js';
 // Story 10.5 — the News/Blog `[SURFACE]` workflow module: a mutable-`status` post lifecycle
 // (Decision 1 — NOT event-derived-state) wired to the shipped tone-review gate (approve), the
 // Story 1.10 audit, and the `alert_published` dispatch fan-out (publish). Full module under the

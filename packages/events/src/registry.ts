@@ -20,7 +20,7 @@
 // @twt/domain, so importing them here is the legal direction (domain must NOT
 // import contracts/events). Each record key equals its `type` string.
 
-import { alert, claim, contribution, helpdesk, marketplace, member, pool, reconciliation } from '@twt/domain';
+import { alert, claim, contribution, fieldWorker, helpdesk, marketplace, member, pool, reconciliation } from '@twt/domain';
 import type { z } from 'zod';
 
 export interface EventTypeRegistryEntry {
@@ -667,5 +667,53 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       '`module.archived` (draft | scheduled | active → archived) on the MODULE stream (stream_id = module_id) (Story 12.1). Terminal in 12.1; carries the archive reason. No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
     schema: marketplace.ModuleArchivedPayloadSchema,
+  },
+  // ── Story 13.1 — field_worker.* vocabulary (the SEVENTH event-derived-state primitive's own stream) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/field-worker/events.ts) — appended on the FIELD WORKER stream
+  // (stream_id = field_worker_id; caller-minted, no DB default). 13.1 authors the complete reducer and registers ALL seven
+  // types, each written by `projectFieldWorkerGenesis` / `projectFieldWorkerTransition` through a 13.1 command. Only
+  // `field_worker.registered` has a production emitter in 13.1 (the registration route); the others' routes are Stories
+  // 13.1a / 13.1c / 13.1d — ⚠ an owner named here is an ASSERTION NOTHING VERIFIES until those stories build their emitters.
+  'field_worker.registered': {
+    type: 'field_worker.registered',
+    description:
+      '`field_worker.registered` ((none) → pending_kyc) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). The genesis: carries the authorization snapshot (QE18) and the first REPORTING district (QE17). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1 registration route (POST /api/v1/p/:pariwarId/field-workers).',
+    schema: fieldWorker.FieldWorkerRegisteredPayloadSchema,
+  },
+  'field_worker.kyc_completed': {
+    type: 'field_worker.kyc_completed',
+    description:
+      '`field_worker.kyc_completed` (pending_kyc → pending_kyc) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A same-state event: an operator confirms they have verified this person (QE8). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1a (unverified until built).',
+    schema: fieldWorker.FieldWorkerKycCompletedPayloadSchema,
+  },
+  'field_worker.activated': {
+    type: 'field_worker.activated',
+    description:
+      '`field_worker.activated` (pending_kyc → active) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Guarded: identity verification recorded (I5). Activation makes the worker creditable (acceptsNewAttributions). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1a (unverified until built).',
+    schema: fieldWorker.FieldWorkerActivatedPayloadSchema,
+  },
+  'field_worker.suspended': {
+    type: 'field_worker.suspended',
+    description:
+      '`field_worker.suspended` (active → suspended) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Carries a neutral suspension reason (QE12). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1c (unverified until built).',
+    schema: fieldWorker.FieldWorkerSuspendedPayloadSchema,
+  },
+  'field_worker.reactivated': {
+    type: 'field_worker.reactivated',
+    description:
+      '`field_worker.reactivated` (suspended → active) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). The way back from a suspension; the reason is cleared. Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1c (unverified until built).',
+    schema: fieldWorker.FieldWorkerReactivatedPayloadSchema,
+  },
+  'field_worker.terminated': {
+    type: 'field_worker.terminated',
+    description:
+      '`field_worker.terminated` (pending_kyc | active | suspended → terminated) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Terminal; carries a neutral termination reason and ended_on, the actual last day (QE20). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1c (unverified until built).',
+    schema: fieldWorker.FieldWorkerTerminatedPayloadSchema,
+  },
+  'field_worker.posted': {
+    type: 'field_worker.posted',
+    description:
+      '`field_worker.posted` (pending_kyc | active | suspended → the same state) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A move of REPORTING district (QE17): the authorization snapshot, both districts and a post reason. Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surfaces are Stories 13.1c / 13.1d (unverified until built).',
+    schema: fieldWorker.FieldWorkerPostedPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

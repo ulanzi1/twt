@@ -21,6 +21,7 @@ import { resolveEn as memorialReviewEn } from '../modules/memorial-review/i18n-e
 import { resolveEn as memorialTakedownEn } from '../modules/memorial-takedown/i18n-en.js';
 import { workplaceRequestsEn, workplacesEn } from '../modules/workplaces/i18n-en.js';
 import { resolveEn as modulesEn } from '../modules/marketplace/i18n-en.js';
+import { resolveEn as fieldWorkersEn } from '../modules/field-workers/i18n-en.js';
 
 function TopBar(): ReactElement {
   const session = useSession();
@@ -144,6 +145,13 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/modules" params={{ pariwarId }} className="text-sm underline" data-testid="nav-modules">
               {modulesEn('module.list.title')}
+            </Link>
+          )}
+          {/* Story 13.1a — UNGATED inside a Pariwar context: the field-worker keys are district / Pariwar grants (⛔ in
+              `nationalGrants`); the server's 403 is the boundary, and each page links to the other two (AD11). */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/field-workers" params={{ pariwarId }} className="text-sm underline" data-testid="nav-field-workers">
+              {fieldWorkersEn('fw.nav')}
             </Link>
           )}
           {pariwarId && canManageWarningReasons && (

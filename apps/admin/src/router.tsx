@@ -42,6 +42,9 @@ import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
 import { BannersRoute } from './routes/BannersRoute.js';
 import { ModuleDetailRoute, ModuleNewRoute, ModulesRoute, validateModuleDetailSearch, validateModuleNewSearch } from './routes/ModulesRoute.js';
+import { FieldWorkerApprovalsRoute } from './routes/FieldWorkerApprovalsRoute.js';
+import { FieldWorkerFindRoute } from './routes/FieldWorkerFindRoute.js';
+import { FieldWorkerRegisterRoute } from './routes/FieldWorkerRegisterRoute.js';
 import { SurveysRoute } from './routes/SurveysRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
 import { CustomFieldsRoute } from './routes/CustomFieldsRoute.js';
@@ -220,6 +223,26 @@ const moduleDetailRoute = createRoute({
   path: '/p/$pariwarId/modules/$moduleId',
   validateSearch: validateModuleDetailSearch,
   component: ModuleDetailRoute,
+});
+
+// Story 13.1a — the field-worker console: find a worker and show their code (the nav link's target), register a worker, and the
+// workers awaiting approval. The static `register` / `approvals` segments are their own routes.
+const fieldWorkersFindRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/field-workers',
+  component: FieldWorkerFindRoute,
+});
+
+const fieldWorkersRegisterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/field-workers/register',
+  component: FieldWorkerRegisterRoute,
+});
+
+const fieldWorkersApprovalsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/field-workers/approvals',
+  component: FieldWorkerApprovalsRoute,
 });
 
 // Story 10.15 — the tenant-scoped survey/poll console (list + authoring editor + the aggregate
@@ -472,6 +495,9 @@ const routeTree = rootRoute.addChildren([
   modulesRoute,
   moduleNewRoute,
   moduleDetailRoute,
+  fieldWorkersFindRoute,
+  fieldWorkersRegisterRoute,
+  fieldWorkersApprovalsRoute,
   surveysRoute,
   reportsRoute,
   featureFlagsRoute,

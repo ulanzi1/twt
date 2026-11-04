@@ -391,6 +391,17 @@ import {
   type QuestionnaireRevertRequest,
   type QuestionnaireVersionKind,
 } from '@twt/contracts';
+// Story 13.1a — the field-worker console (register, approve, find a worker and read their code).
+import {
+  ApproveFieldWorkerResponse,
+  FieldWorkerCodeResponse,
+  FieldWorkerDistrictsResponse,
+  FieldWorkerIdentityResponse,
+  FieldWorkerListResponse,
+  RegisterFieldWorkerResponse,
+  type FieldWorkerState,
+  type RegisterFieldWorkerRequest,
+} from '@twt/contracts';
 import { z } from 'zod';
 
 /** A typed transport error — carries the HTTP status + the server's error code. */
@@ -3612,4 +3623,48 @@ export function publishModule(pariwarId: string, moduleId: string, body: Publish
 /** Withdraw (archive) a module. The body is `{}` — Fastify answers 400 to an EMPTY JSON body (QE15). */
 export function withdrawModule(pariwarId: string, moduleId: string, idempotencyKey: string) {
   return modulePost(`${modulesBase(pariwarId)}/${encodeURIComponent(moduleId)}/withdraw`, WithdrawModuleResponse, {}, idempotencyKey);
+}
+
+// ── Story 13.1a (`2026-11-04-446`, `-447`) — the FIELD-WORKER console ──────────────────────────────────────────────────────
+// Tenant routes under `/p/:pariwarId/field-workers`; the server is the boundary (`field_worker.view` / `.approve` / `.read_code`,
+// district-dimension — the session carries no district grant, AD11). The registration's Idempotency-Key is minted per SUBMISSION
+// ATTEMPT by the page (`attemptKey`); the approval's per CLICK. Names and mobiles arrive decrypted for the screen that shows them
+// and are kept by nobody else: the identity and the code reads answer `no-store`.
+
+const fieldWorkersBase = (pariwarId: string): string => `/api/v1/p/${encodeURIComponent(pariwarId)}/field-workers`;
+
+/** The Pariwar's recorded districts (for the pickers) — `districts_truncated` past 200. */
+export function getFieldWorkerDistricts(pariwarId: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/districts`, FieldWorkerDistrictsResponse);
+}
+/** One page of workers in ONE state (names decrypted), optionally of one district; pass `next_cursor` back as `cursor`. */
+export function listFieldWorkers(pariwarId: string, opts: { state: FieldWorkerState; district?: string; cursor?: string }) {
+  const q = new URLSearchParams({ state: opts.state });
+  if (opts.district !== undefined) q.set('district', opts.district);
+  if (opts.cursor !== undefined) q.set('cursor', opts.cursor);
+  return apiFetch(`${fieldWorkersBase(pariwarId)}?${q.toString()}`, FieldWorkerListResponse);
+}
+/** One worker's identity — the name and the FULL mobile decrypted (an audited read). */
+export function getFieldWorkerIdentity(pariwarId: string, fieldWorkerId: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}`, FieldWorkerIdentityResponse);
+}
+/** Register a worker (`pending_kyc`). The 201 carries the id and NO code. */
+export function registerFieldWorker(pariwarId: string, body: RegisterFieldWorkerRequest, idempotencyKey: string) {
+  return apiFetch(fieldWorkersBase(pariwarId), RegisterFieldWorkerResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** Approve a worker (identity confirmed + activated, one step). The body is `{}` — Fastify answers 400 to an EMPTY JSON body. */
+export function approveFieldWorker(pariwarId: string, fieldWorkerId: string, idempotencyKey: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/approve`, ApproveFieldWorkerResponse, {
+    method: 'POST',
+    body: '{}',
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** An ACTIVE worker's code, to read out to them — each call is a fresh audited read; the caller keeps the value in component state only. */
+export function readFieldWorkerCode(pariwarId: string, fieldWorkerId: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/code`, FieldWorkerCodeResponse, { cache: 'no-store' });
 }

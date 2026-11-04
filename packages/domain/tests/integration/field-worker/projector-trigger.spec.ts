@@ -38,14 +38,27 @@ async function locked(client: pg.PoolClient, id: string): Promise<FieldWorkerLoc
   };
 }
 
-const input = (id: FieldWorkerId, lockedRow: FieldWorkerLockedRow, eventType: string, payload: Record<string, unknown>) => ({
+/** QE6's computed trigger per type (`events.ts` refuses any other value since review R3-16). */
+const TRIGGER: Record<string, (p: Record<string, unknown>) => string> = {
+  'field_worker.kyc_completed': () => 'field_worker.kyc_complete',
+  'field_worker.terminated': (p) => `field_worker.terminate:${String(p['reason_code'])}`,
+  'field_worker.posted': () => 'field_worker.post',
+};
+
+const input = (
+  id: FieldWorkerId,
+  lockedRow: FieldWorkerLockedRow,
+  eventType: string,
+  payload: Record<string, unknown>,
+  who: { actor?: string; actorId?: string | null } = {},
+) => ({
   pariwarId: A,
   fieldWorkerId: id,
   eventType: eventType as never,
-  payload: { trigger: 't', actor: 'operator', ...payload },
+  payload: { trigger: TRIGGER[eventType]?.(payload) ?? 'field_worker.unknown', actor: 'operator', ...payload },
   auditId: randomUUID(),
-  actor: 'operator' as const,
-  actorId: ACTOR,
+  actor: (who.actor ?? 'operator') as 'operator',
+  actorId: (who.actorId === undefined ? ACTOR : who.actorId) as string,
   lockedRow,
 });
 
@@ -67,11 +80,42 @@ describe.skipIf(!hasDatabase)('projectFieldWorkerTransition, direct (AC2, AC5)',
     await enterAppScope(client, PARIWAR_A);
     const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
     const row = { ...(await locked(client, id)), stateEventVersion: 5 };
-    await client.query('SAVEPOINT drift');
+    // ⛔ a savepoint (review R3-11): read the stream BEFORE any rollback, or "nothing appended" holds by construction. The drift is
+    // refused before any statement fails, so the transaction stays usable without one.
     expect(await caught(() => projectFieldWorkerTransition(client, input(id, row, 'field_worker.kyc_completed', { from_state: 'pending_kyc', to_state: 'pending_kyc' })))).toBeInstanceOf(
       FieldWorkerStreamConcurrencyError,
     );
-    await client.query('ROLLBACK TO SAVEPOINT drift');
+    expect(await streamTypes(client, id)).toEqual(['field_worker.registered']);
+  });
+
+  // Review R3-14 — a from/to mismatch the payload SCHEMA accepts (a termination may come from `active`), so ONLY the projector's own
+  // cross-check against the locked row can refuse it; read before any rollback (R3-11).
+  it('a from_state the schema allows but the LOCKED ROW contradicts ⇒ ProjectorInputError (the cross-check, not the schema), nothing appended', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
+    const row = await locked(client, id); // pending_kyc
+    const err = await caught(() =>
+      projectFieldWorkerTransition(client, input(id, row, 'field_worker.terminated', { from_state: 'active', to_state: 'terminated', reason_code: 'inactive', ended_on: '2026-11-01' })),
+    );
+    expect(err).toBeInstanceOf(FieldWorkerProjectorInputError);
+    expect((err as Error).message).toMatch(/disagree with the locked row/);
+    expect(await streamTypes(client, id)).toEqual(['field_worker.registered']);
+  });
+
+  // Review R3-15 — the projector's OWN human-actor check (QE7's third place): every command calls the same check first, so only a direct
+  // call reaches it. `actorId: null` is caught ONLY here (the payload never carries the actor id; `events_log.actor_id` NULL means "system").
+  it('the projector’s own actor check: a system actor; an operator with NO actorId ⇒ ProjectorInputError, nothing appended', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
+    const row = await locked(client, id);
+    const kycPayload = { from_state: 'pending_kyc', to_state: 'pending_kyc' };
+    for (const who of [{ actor: 'system' }, { actorId: null }, { actorId: '' }]) {
+      const err = await caught(() => projectFieldWorkerTransition(client, input(id, row, 'field_worker.kyc_completed', { ...kycPayload, actor: who.actor ?? 'operator' }, who)));
+      expect(err, JSON.stringify(who)).toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect((err as Error).message, JSON.stringify(who)).toMatch(/QE7/);
+    }
     expect(await streamTypes(client, id)).toEqual(['field_worker.registered']);
   });
 

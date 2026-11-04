@@ -101,12 +101,14 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
       'field_workers_pariwar_worker_uq',
       'field_workers_pkey',
     ]);
+    // Review R3-17 — the column list EXACTLY (the text between `using btree` and the predicate / the end), ⛔ a prefix match a third column passes.
+    const columnsOf = (def: string): string => normalise(def).replace(/^.* using btree /, '').replace(/ where .*$/, '');
     const live = byName.get('field_workers_pariwar_mobile_live_uq')!;
     expect(live.uniq).toBe(true);
-    expect(normalise(live.def)).toContain('using btree pariwar_id, mobile_blind_index');
+    expect(columnsOf(live.def)).toBe('pariwar_id, mobile_blind_index');
     // Postgres adds a `::field_worker_state` cast to the literal — strip it before comparing the predicate.
     expect(normalise(live.pred!.replace(/::field_worker_state/g, ''))).toBe("current_state <> 'terminated'");
-    expect(normalise(byName.get('field_workers_pariwar_state_idx')!.def)).toContain('using btree pariwar_id, current_state');
+    expect(columnsOf(byName.get('field_workers_pariwar_state_idx')!.def)).toBe('pariwar_id, current_state');
     expect(byName.get('field_workers_pariwar_state_idx')!.pred).toBeNull();
   });
 

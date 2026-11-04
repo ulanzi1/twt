@@ -7,7 +7,10 @@
 //     assignment, namespaced table, computed key);
 //   - the FULL guarded `.set({ … })` written directly inside `projectFieldWorkerTransition` (and the genesis `.values({ … })`
 //     inside `projectFieldWorkerGenesis`) produce ZERO findings after `isAllowlistedWrite`;
-//   - the same write moved into an inner named helper of project.ts is FLAGGED (lexical, ⛔ whole-file).
+//   - the same write moved into an inner named helper of project.ts is FLAGGED (lexical, ⛔ whole-file) — and, since review R3-27,
+//     into ANY function-like node (a callback, an object-property arrow), and a payload or table the scanner cannot read (a
+//     variable, a spread, a cast, an alias, a split chain) is itself a finding. The "the scan still SEES the projector write" floor is
+//     in `check.ts` (it needs the real tree).
 
 import { describe, expect, it } from 'vitest';
 
@@ -66,6 +69,51 @@ describe('scanFieldWorkerStateWrites — gate teeth', () => {
     });
   });
 
+  // Review R3-27 — the shapes the copied scanner did NOT see (replayed by the Edge Case Hunter: each gave 0 findings).
+  describe('the shapes a literal-only scanner missed — each is now a finding', () => {
+    it.each([
+      ['a variable payload', 'const patch = { district: d }; return db.update(fieldWorkers).set(patch);', /unverifiable shape/],
+      ['a spread payload', 'return db.update(fieldWorkers).set({ ...patch });', /unverifiable shape/],
+      ['a spread beside a clean key', 'return db.update(fieldWorkers).set({ nameCiphertext: n, ...patch });', /unverifiable shape/],
+      ['a variable .values payload', 'return db.insert(fieldWorkers).values(row);', /unverifiable shape/],
+      ['a bulk .values with a spread element', 'return db.insert(fieldWorkers).values([...rows]);', /unverifiable shape/],
+      ['a cast table', "return db.update(fieldWorkers as any).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a parenthesised table', "return db.update((fieldWorkers)).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a non-null table', "return db.update(fieldWorkers!).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a const alias of the table', "const t = fieldWorkers; return db.update(t).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a SPLIT chain', "const q = db.update(fieldWorkers); return q.set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a split chain held awaited', "const q = db.update(fieldWorkers).where(w); return (q).set({ kycStatus: k });", /UPDATE to a projected column/],
+      ['an upsert set keyed as a STRING', "return db.insert(fieldWorkers).values({ fieldWorkerId: w }).onConflictDoUpdate({ target: t, 'set': { district: 'Gaya' } });", /upsert of a projected column/],
+      ['an upsert set written SHORTHAND', 'return db.insert(fieldWorkers).values({ fieldWorkerId: w }).onConflictDoUpdate({ target: t, set });', /unverifiable/],
+      // Review R4-7 — members whose key or value the scanner cannot read.
+      ['a NON-literal computed key', "return db.update(fieldWorkers).set({ [k]: 'Gaya' });", /unverifiable shape/],
+      ['a getter', "return db.update(fieldWorkers).set({ get district() { return 'Gaya'; } });", /unverifiable shape/],
+      ['a method member', 'return db.update(fieldWorkers).set({ toJSON() { return x; } });', /unverifiable shape/],
+      // Review R4-8 — aliases and chains the declaration-only collector missed.
+      ['a REASSIGNED chain', "let q = db.select(); q = db.update(fieldWorkers); return q.set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['an alias by ASSIGNMENT', "let t; t = fieldWorkers; return db.update(t).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a destructured table alias', "const { fieldWorkers: fw } = schema; return db.update(fw).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a literal element-access table', "return db.update(schema['fieldWorkers']).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a literal element-access METHOD', "return db.update(fieldWorkers)['set']({ district: 'Gaya' });", /UPDATE to a projected column/],
+      ['a literal element-access update', "return db['update'](fieldWorkers).set({ district: 'Gaya' });", /UPDATE to a projected column/],
+    ])('FLAGS %s', (_label, body, detail) => {
+      const f = scanFieldWorkerStateWrites('packages/domain/src/x/write.ts', wrap(body));
+      expect(f.length, body).toBeGreaterThanOrEqual(1);
+      expect(f.map((x) => x.detail).join(' | ')).toMatch(detail);
+    });
+
+    it('FLAGS a write under an IMPORT alias of the table', () => {
+      const src = "import { fieldWorkers as fw } from '../schema/field_workers.js';\nexport function q(db: any) { return db.update(fw).set({ district: 'Gaya' }); }\n";
+      expect(scanFieldWorkerStateWrites('f.ts', src)).toHaveLength(1);
+    });
+
+    it('PASSES a variable payload on ANOTHER table, and a clean literal on this one (no false positive)', () => {
+      expect(scanFieldWorkerStateWrites('f.ts', wrap('return db.update(marketplaceModules).set(patch);'))).toHaveLength(0);
+      expect(scanFieldWorkerStateWrites('f.ts', wrap("return db.update(fieldWorkers).set({ nameCiphertext: 'x' });"))).toHaveLength(0);
+      expect(scanFieldWorkerStateWrites('f.ts', wrap("return db.update(fieldWorkers).set({ ['nameCiphertext']: 'x', [`mobileCiphertext`]: 'y' });"))).toHaveLength(0); // literal computed keys stay readable
+    });
+  });
+
   it('PASSES a write to an identity column only (the DB trigger, ⛔ this gate, owns I2)', () => {
     expect(scanFieldWorkerStateWrites('f.ts', wrap("return db.update(fieldWorkers).set({ nameCiphertext: 'x' });"))).toHaveLength(0);
   });
@@ -111,6 +159,20 @@ describe('the projector allowlist — function-scoped, lexical', () => {
     const f = scanFieldWorkerStateWrites(PROJECT_FILE, src);
     expect(f).toHaveLength(1);
     expect(f[0]!.enclosingFunction).toBe('writeRow');
+    expect(isAllowlistedWrite(f[0]!, ALLOWLIST)).toBe(false);
+  });
+
+  // Review R3-27 — every function-like node is a boundary: a callback or an object-property arrow inside a projector body is NOT the
+  // projector's own write (the copied walk climbed past them to `projectFieldWorkerTransition` and allow-listed them).
+  it.each([
+    ['an anonymous callback', "  await Promise.all(rows.map(async () => db.update(fieldWorkers).set({ district: 'Gaya' })));\n", '<anonymous>'],
+    ['an object-property arrow', "  const h = { writeRow: async () => db.update(fieldWorkers).set({ district: 'Gaya' }) };\n  await h.writeRow();\n", 'writeRow'],
+    ['a function expression passed on', "  await run(async function () { await db.update(fieldWorkers).set({ district: 'Gaya' }); });\n", '<anonymous>'],
+  ])('the same write in %s inside a projector body is FLAGGED', (_label, body, name) => {
+    const src = `export async function projectFieldWorkerTransition(db: any) {\n${body}}\n`;
+    const f = scanFieldWorkerStateWrites(PROJECT_FILE, src);
+    expect(f).toHaveLength(1);
+    expect(f[0]!.enclosingFunction).toBe(name);
     expect(isAllowlistedWrite(f[0]!, ALLOWLIST)).toBe(false);
   });
 

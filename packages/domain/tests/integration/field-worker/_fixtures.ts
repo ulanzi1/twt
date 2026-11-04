@@ -69,11 +69,6 @@ export async function pgErrorOf(fn: () => Promise<unknown>): Promise<{ code?: st
   throw new Error('expected a rejection');
 }
 
-// ── Command-level helpers (the projector path — these APPEND to events_log; per-test ROLLBACK specs only, or clean up
-//    under replica mode in an own-committing spec) ──
-
-
-
 /** A VERIFIED `field_worker.register` result for `actorId` at `district` in `pariwarId` — minted by the REAL check (QE18). */
 export function registerAuthorization(pariwarId: string, district: string, actorId: string): VerifiedAuthorization {
   const result = authorize({
@@ -85,6 +80,9 @@ export function registerAuthorization(pariwarId: string, district: string, actor
   if (result === null) throw new Error('registerAuthorization: the real check refused a pariwar_admin grant');
   return result;
 }
+
+// ── Command-level helpers (the projector path — these APPEND to events_log; per-test ROLLBACK specs only, or clean up
+//    under replica mode in an own-committing spec) ──
 
 /** Register a worker through `registerFieldWorker` (the genesis projector) on `client`, already scoped to `pariwarId`. */
 export async function registerReal(

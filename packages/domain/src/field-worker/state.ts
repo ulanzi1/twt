@@ -24,16 +24,28 @@
 // ── TERMINAL `terminated` (QE5, I6) ───────────────────────────────────────────────────────────────
 // No event leaves it — `posted` included. A worker taken back is a NEW registration (a new id, a new code).
 
+import { z } from 'zod';
+
 import { defineStateMachine, type StateMachine } from '../state-machine.js';
 import type { eventsLog } from '../schema/events_log.js';
 import type { FieldWorkerKycStatus, FieldWorkerReasonCode, FieldWorkerState } from '../schema/field_workers.js';
 import {
-  FieldWorkerPostedPayloadSchema,
-  FieldWorkerRegisteredPayloadSchema,
-  FieldWorkerTerminatedPayloadSchema,
+  fieldWorkerDistrictSchema,
+  fieldWorkerEndedOnSchema,
   fieldWorkerSuspendReasonSchema,
+  fieldWorkerTerminateReasonSchema,
   type FieldWorkerEventType,
 } from './events.js';
+
+/**
+ * What the FOLD reads from each payload — ONLY the fields it projects (review R4-10). ⛔ The full write schemas: since R3-16 they pin the
+ * `trigger` audit note to today's exact text, so a stored event written under another trigger text (a later rename) would fail them and
+ * fold its district / reason / last day to null — silently, while the row keeps the real value (an I4 divergence with no signal). The
+ * WRITE path (the projector) still parses the full strict schema (I8). Unknown keys are ignored here, never refused.
+ */
+const FoldRegisteredSchema = z.object({ district: fieldWorkerDistrictSchema });
+const FoldTerminatedSchema = z.object({ reason_code: fieldWorkerTerminateReasonSchema, ended_on: fieldWorkerEndedOnSchema });
+const FoldPostedSchema = z.object({ to_district: fieldWorkerDistrictSchema });
 
 export {
   FIELD_WORKER_KYC_STATUSES,
@@ -140,7 +152,7 @@ export function foldFieldWorkerProjection(rows: readonly FieldWorkerReplayEvent[
 
   for (const row of rows) {
     if (row.type === 'field_worker.registered') {
-      const parsed = FieldWorkerRegisteredPayloadSchema.safeParse(row.payload);
+      const parsed = FoldRegisteredSchema.safeParse(row.payload);
       district = parsed.success ? parsed.data.district : null;
       continue;
     }
@@ -160,14 +172,14 @@ export function foldFieldWorkerProjection(rows: readonly FieldWorkerReplayEvent[
         reasonCode = null;
         break;
       case 'field_worker.terminated': {
-        const parsed = FieldWorkerTerminatedPayloadSchema.safeParse(row.payload);
+        const parsed = FoldTerminatedSchema.safeParse(row.payload);
         reasonCode = parsed.success ? parsed.data.reason_code : null;
         endedOn = parsed.success ? parsed.data.ended_on : null;
         break;
       }
       case 'field_worker.posted': {
         // The reason of a posting lives in the EVENT only — a suspended worker who is moved keeps their suspension reason.
-        const parsed = FieldWorkerPostedPayloadSchema.safeParse(row.payload);
+        const parsed = FoldPostedSchema.safeParse(row.payload);
         if (parsed.success) district = parsed.data.to_district;
         break;
       }

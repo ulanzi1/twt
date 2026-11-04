@@ -5319,8 +5319,9 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/field-workers',
   summary: 'Register a field worker and allocate their attribution code',
   description:
-    '`field_worker.register` (district dimension — the body\'s `district`, compared byte for byte); `Idempotency-Key`. The id is ' +
-    'server-minted; a replay returns the recorded response. `district` must be a LISTED district of the Pariwar (the geo tree in ' +
+    '`field_worker.register` (district dimension — the body\'s `district`, the worker\'s REPORTING district, compared byte for byte); ' +
+    '`Idempotency-Key`. The id is server-minted; a replay returns the recorded response. The reporting district (`district`) must be ' +
+    'a LISTED district of the Pariwar (the geo tree in ' +
     'force, or with no tree the listed workplace districts). The worker starts `pending_kyc`; the code is allocated in the same ' +
     'transaction and is NOT returned.',
   tags: ['field-workers'],

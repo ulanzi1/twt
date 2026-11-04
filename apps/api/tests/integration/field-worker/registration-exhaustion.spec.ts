@@ -7,6 +7,7 @@
 //   · the flag wrapper is called once with the thrown `.attempts`; exactly ONE flag row; ⛔ worker, event or code row; 503;
 //     the `field_worker.registered` intent and its `_rolled_back` line;
 //   · a second leg makes the flag wrapper REJECT — still 503 (a failing flag write never replaces the exhaustion).
+//   · TR9 (review R3-2): after the 503 the SAME Idempotency-Key runs again and registers — the key was released, ⛔ the 503 recorded.
 
 import { randomUUID } from 'node:crypto';
 
@@ -61,7 +62,17 @@ describe.skipIf(!hasDatabase)('Story 13.1 — registration when the code space i
     const { client } = await h.actor(p, 'pariwar_admin', 'pariwar', p);
     allocate.mockRejectedValueOnce(new door.AttributionCodeAllocationExhaustedError(p, 8));
     flag.mockClear();
-    const r = await h.register(client, p, { name: NAME, mobile: MOBILE_DIGITS, district: 'Patna' }, randomUUID());
+    const key = randomUUID();
+    const consoleError = vi.spyOn(console, 'error');
+    let r: Awaited<ReturnType<Harness['register']>>;
+    let errorCalls: string[];
+    try {
+      r = await h.register(client, p, { name: NAME, mobile: MOBILE_DIGITS, district: 'Patna' }, key);
+    } finally {
+      // Review R4-1 — COPY the calls before restoring: vitest 2's `mockRestore` resets the spy, so `mock.calls` read after it is always [].
+      errorCalls = consoleError.mock.calls.map((c) => JSON.stringify(c));
+      consoleError.mockRestore();
+    }
     expect(r.statusCode, r.body).toBe(503);
     expect(errOf(r).code).toBe('field_worker.code_allocation_exhausted');
     expect(flag).toHaveBeenCalledTimes(1);
@@ -72,11 +83,18 @@ describe.skipIf(!hasDatabase)('Story 13.1 — registration when the code space i
     expect(s.codes).toEqual([]);
     expect(s.flags).toEqual([{ attempts: 8, actor_display: 'Asha Verma' }]);
     expect(s.audit.map((a) => a.action)).toEqual(['field_worker.registered', 'field_worker.registered_rolled_back']);
-    // AC13 on the 503: neither the body nor the _rolled_back row carries the name or the mobile.
-    for (const text of [r.body, ...s.audit.map((a) => a.t)]) {
+    // AC13 on the 503: neither the body, the _rolled_back row, console.error nor the server log carries the name or the mobile
+    // (review R3-4 — the logs were not swept before).
+    const logged = [errorCalls.join('\n'), h.logs()];
+    for (const text of [r.body, ...s.audit.map((a) => a.t), ...logged]) {
       expect(text).not.toContain('Recognisable');
       expect(text).not.toContain(MOBILE_DIGITS);
     }
+    // TR9 (review R3-2): the 503 RELEASED the key and was NOT recorded as the replayable result — the SAME key, sent again with the
+    // door no longer failing, RUNS again and registers (201), it does not replay a 503 or answer 409 "in progress".
+    const retry = await h.register(client, p, { name: NAME, mobile: MOBILE_DIGITS, district: 'Patna' }, key);
+    expect(retry.statusCode, retry.body).toBe(201);
+    expect((await state(p)).workers).toHaveLength(1);
   });
 
   it('the flag write itself FAILS ⇒ still 503 field_worker.code_allocation_exhausted (the original error is rethrown), no flag row', async () => {
@@ -86,13 +104,22 @@ describe.skipIf(!hasDatabase)('Story 13.1 — registration when the code space i
     allocate.mockRejectedValueOnce(new door.AttributionCodeAllocationExhaustedError(p, 8));
     flag.mockRejectedValueOnce(new Error('flag write failed'));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let errorCalls: string[];
     try {
       const r = await h.register(client, p, { name: NAME, mobile: '9812345671', district: 'Patna' }, randomUUID());
       expect(r.statusCode, r.body).toBe(503);
       expect(errOf(r).code).toBe('field_worker.code_allocation_exhausted');
       expect(consoleError.mock.calls.some((c) => c[0] === '[field-worker] exhaustion flag failed')).toBe(true);
+      expect(JSON.stringify(r.body)).not.toMatch(/Recognisable|9812345671/);
     } finally {
+      errorCalls = consoleError.mock.calls.map((c) => JSON.stringify(c)); // before the restore resets them (review R4-1)
       consoleError.mockRestore();
+    }
+    // AC13 (review R4-1): THIS is the 503 leg where `console.error` fires — sweep it. Non-vacuity: the flag-failed line IS among the copied calls.
+    expect(errorCalls.some((c) => c.includes('exhaustion flag failed'))).toBe(true);
+    for (const text of [errorCalls.join('\n'), h.logs()]) {
+      expect(text).not.toContain('Recognisable');
+      expect(text).not.toContain('9812345671');
     }
     const s = await state(p);
     expect(s.flags).toEqual([]);

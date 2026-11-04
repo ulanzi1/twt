@@ -1,7 +1,9 @@
 // The seven field-worker commands against the live DB — Story 13.1 (AC5; QE5, QE7, QE12, QE13, QE17, QE18, QE20; I4–I7).
-// Per-test ROLLBACK, as twt_app under the Pariwar's scope (RLS is live). After EVERY successful command the row equals the
-// fold of its stream (I4). Every refusal: its typed error, no event, the row unchanged — and the CONTROL that the caller's
-// transaction is still usable ([[feedback_assertion_after_savepoint_rollback_is_vacuous]]).
+// Per-test ROLLBACK, as twt_app under the Pariwar's scope (RLS is live) — except the one OWNER-role leg that pins the lock's
+// explicit `pariwar_id` (review R3-21). After EVERY successful command the row equals the fold of its stream (I4). Every
+// refusal on an EXISTING worker: its typed error, no event, the row unchanged — and the CONTROL that the caller's transaction
+// is still usable (`expectRefusedCleanly`; [[feedback_assertion_after_savepoint_rollback_is_vacuous]]). A refusal on an id
+// with no row asserts no event and no row (review R3-22).
 
 import { randomUUID } from 'node:crypto';
 
@@ -140,6 +142,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
       () => suspendFieldWorker(client, { ...staff(id), reasonCode: 'under_review' }),
       () => terminateFieldWorker(client, { ...staff(id), reasonCode: 'bogus', endedOn: '2026-11-01' }), // (2) beats (4)
       () => postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Gaya', ACTOR) }),
+      () => recordFieldWorkerKycCompleted(client, staff(id)), // review R3-22 — the title says ANYTHING
     ]) {
       expect(await caught(run)).toBeInstanceOf(FieldWorkerIllegalTransitionError);
     }
@@ -150,9 +153,14 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const done = await workerIn(client, 'kyc_done');
+    const doneBefore = await rowOf(client, done);
     expect(await caught(() => recordFieldWorkerKycCompleted(client, staff(done)))).toBeInstanceOf(FieldWorkerKycAlreadyCompletedError);
+    await expectRefusedCleanly(client, done, doneBefore, ['field_worker.registered', 'field_worker.kyc_completed']); // review R3-22
     const active = await workerIn(client, 'active');
+    const activeBefore = await rowOf(client, active);
+    const activeTypes = await streamTypes(client, active);
     expect(await caught(() => recordFieldWorkerKycCompleted(client, staff(active)))).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    await expectRefusedCleanly(client, active, activeBefore, activeTypes);
     const pending = await workerIn(client, 'pending_kyc');
     const before = await rowOf(client, pending);
     expect(await caught(() => activateFieldWorker(client, staff(pending)))).toBeInstanceOf(FieldWorkerKycNotCompletedError);
@@ -168,16 +176,33 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     expect(await caught(() => activateFieldWorker(client, staff(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
   });
 
+  // Review R3-21 — the leg above runs as twt_app under A's scope, so RLS alone hides B's row: it passes with the lock's
+  // `AND pariwar_id = $2` deleted. As the OWNER (RLS bypassed, 13.2 TR3) only that predicate keeps A's command off B's worker —
+  // without it the lock would find B's pending row and answer KycNotCompleted, not GenesisMissing.
+  it('the row lock carries its OWN pariwar_id — as the OWNER role (RLS bypassed), a command for Pariwar A on B’s worker ⇒ GenesisMissing, B untouched', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_B);
+    const inB = await registerReal(client, PARIWAR_B, { actorId: ACTOR });
+    await client.query('RESET ROLE'); // the owner — RLS is NOT the filter
+    expect(await caught(() => activateFieldWorker(client, staff(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
+    expect(await caught(() => recordFieldWorkerKycCompleted(client, staff(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
+    expect(await streamTypes(client, inB)).toEqual(['field_worker.registered']);
+    expect((await rowOf(client, inB)).kyc_status).toBe('pending');
+  });
+
   it('QE7: a system / member actor or a null actorId on any command ⇒ ProjectorInputError', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const id = await workerIn(client, 'active');
+    const before = await rowOf(client, id);
+    const types = await streamTypes(client, id);
     for (const bad of [{ actor: 'system' }, { actor: 'member' }, { actorId: null }]) {
       expect(await caught(() => suspendFieldWorker(client, { ...staff(id), reasonCode: 'under_review', ...bad } as never))).toBeInstanceOf(
         FieldWorkerProjectorInputError,
       );
     }
     await expectRowMatchesStream(client, id);
+    await expectRefusedCleanly(client, id, before, types); // review R4-13
   });
 
   it('QE12: suspend / terminate / post reasons from their own lists — else ReasonInvalid', async () => {
@@ -204,18 +229,24 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const id = await workerIn(client, 'active');
+    const before = await rowOf(client, id);
+    const types = await streamTypes(client, id);
     expect(
       await caught(() => postFieldWorker(client, { ...staff(id), toDistrict: 'Patna', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Patna', ACTOR) })),
     ).toBeInstanceOf(FieldWorkerDistrictUnchangedError);
     expect(
       await caught(() => postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Nalanda', ACTOR) })),
     ).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+    await expectRefusedCleanly(client, id, before, types); // review R3-22
     // A target made stale by a committed move: authorized at the OLD district (Patna), the worker since moved to Gaya.
     const stale = registerAuthorization(PARIWAR_A, 'Patna', ACTOR);
     await postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Gaya', ACTOR) });
+    const afterMove = await rowOf(client, id);
+    const afterMoveTypes = await streamTypes(client, id);
     expect(await caught(() => postFieldWorker(client, { ...staff(id), toDistrict: 'Nalanda', reasonCode: 'reassigned', authorization: stale }))).toBeInstanceOf(
       FieldWorkerAuthorizationStaleError,
     );
+    await expectRefusedCleanly(client, id, afterMove, afterMoveTypes); // review R4-13
     expect((await rowOf(client, id)).district).toBe('Gaya');
     await expectRowMatchesStream(client, id);
   });
@@ -245,6 +276,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
         FieldWorkerProjectorInputError,
       );
       expect(await streamTypes(client, id)).toEqual([]);
+      expect(await rowOf(client, id)).toBeUndefined(); // review R3-22 — the title says "no row" too
     }
   });
 
@@ -280,9 +312,11 @@ describe.skipIf(!hasDatabase)('QE20 — the LOWER bound, live (the registration 
     await client.query("UPDATE field_workers SET created_at = '2026-10-14 19:00:00+00' WHERE field_worker_id = $1", [id]);
     await client.query("SET LOCAL session_replication_role = 'origin'");
     await enterAppScope(client, PARIWAR_A);
+    const before = await rowOf(client, id);
     const err = await caught(() => terminateFieldWorker(client, { ...staff(id), reasonCode: 'inactive', endedOn: '2026-10-14' }));
     expect(err).toBeInstanceOf(FieldWorkerEndedOnInvalidError);
     expect(err).toMatchObject({ reason: 'before_registration' });
+    await expectRefusedCleanly(client, id, before, ['field_worker.registered']); // review R4-13
     await terminateFieldWorker(client, { ...staff(id), reasonCode: 'inactive', endedOn: '2026-10-15' });
     expect((await rowOf(client, id)).ended_on).toBe('2026-10-15');
   });
@@ -292,6 +326,8 @@ describe.skipIf(!hasDatabase)('QE20 — the LOWER bound, live (the registration 
     await enterAppScope(client, PARIWAR_A);
     const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
     const tomorrow = (await client.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date + 1)::text AS d")).rows[0]!.d;
+    const before = await rowOf(client, id);
     expect(await caught(() => terminateFieldWorker(client, { ...staff(id), reasonCode: 'inactive', endedOn: tomorrow }))).toMatchObject({ reason: 'in_future' });
+    await expectRefusedCleanly(client, id, before, ['field_worker.registered']); // review R4-13
   });
 });

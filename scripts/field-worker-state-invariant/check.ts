@@ -2,8 +2,8 @@
 //
 // field-worker-state-invariant CI gate (Story 13.1 I1): `field_workers`' eight projected
 // columns are a replay-derived cache writable ONLY by the event-replay projector. Scans
-// packages/domain/src/**/*.ts and fails (exit 1, naming file + line) on any write outside the projector
-// allowlist. Twin of scripts/marketplace-module-state-invariant/check.ts.
+// packages/domain/src/**/*.{ts,mts,cts,tsx} and fails (exit 1, naming file + line) on any write outside the projector
+// allowlist — and on a scan that did not SEE the allowlisted writers write (review R3-27: no vacuous pass). Twin of scripts/marketplace-module-state-invariant/check.ts.
 //
 // ⚠ The SCAN_ROOT MUST cover packages/domain/src, where field-worker/project.ts and any accidental writer
 // live (the Epic-5 retro H-1 heed — "build the gate and still miss the target"). Teeth proven by the
@@ -45,7 +45,7 @@ function collectTsFiles(absDir: string, acc: string[]): void {
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
     const abs = path.join(absDir, entry.name);
     if (entry.isDirectory()) collectTsFiles(abs, acc);
-    else if (entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) {
+    else if (entry.isFile() && /\.(ts|mts|cts|tsx)$/.test(entry.name) && !/\.d\.(ts|mts|cts)$/.test(entry.name)) {
       acc.push(abs);
     }
   }
@@ -85,14 +85,36 @@ function main(): void {
   );
 
   const findings: FieldWorkerStateWriteFinding[] = [];
+  const allowlistedSeen = new Set<string>();
   for (const abs of files) {
     const rel = path.relative(repoRoot, abs).split(path.sep).join('/');
     const src = fs.readFileSync(abs, 'utf8');
     for (const finding of scanFieldWorkerStateWrites(rel, src)) {
-      if (isAllowlistedWrite(finding, ALLOWLIST)) continue; // the projector's own guarded write
+      if (isAllowlistedWrite(finding, ALLOWLIST)) {
+        // Review R4-9 — only a READABLE guarded write is the projector's own: an unverifiable shape inside an allow-listed function is
+        // REPORTED (the gate cannot see what it writes), and does not count as "seen" for the non-vacuity floor below.
+        if (finding.detail.includes('unverifiable shape')) {
+          findings.push(finding);
+          continue;
+        }
+        allowlistedSeen.add(`${finding.file}#${finding.enclosingFunction ?? ''}`);
+        continue;
+      }
       findings.push(finding);
     }
   }
+
+  // Review R3-27 — the gate must still SEE its target: every allowlisted writer must be found writing at least once. If the
+  // projector's write moved to a shape the scanner cannot read, the scan would see NO write anywhere and pass vacuously.
+  const unseen = ALLOWLIST.flatMap((e) => [...e.functions].map((fn) => `${e.file}#${fn}`)).filter((k) => !allowlistedSeen.has(k));
+  if (unseen.length > 0) {
+    console.error(
+      `✗ field-worker-state-invariant gate: the scan did NOT see the allowlisted writer(s) ${unseen.join(', ')} write — the ` +
+        "projector's write has left a shape the scanner can read (or moved), so a clean scan would prove nothing; refusing to pass",
+    );
+    process.exit(1);
+  }
+  console.log(`▸ Non-vacuity — the scan saw every allowlisted writer write (${[...allowlistedSeen].join(', ')})\n`);
 
   console.log('▸ Findings');
   if (findings.length === 0) {

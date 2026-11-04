@@ -222,14 +222,15 @@ const TRANSITION_SAVEPOINT = 'field_worker_transition';
 
 /**
  * SAVEPOINT → lock → (1) present → (2) legal → `guard(row)` (3…5) → build the payload → project, inside one savepoint.
- * `guard` may run SQL (terminate's NOW step) and returns the payload's extra keys.
+ * `guard` may run SQL (terminate's NOW step) and returns the payload's extra keys. `trigger` is a constant, or is computed FROM
+ * those keys — so a reason reaches the trigger only once its guard has VALIDATED it (review R3-20: ⛔ `String(<raw input>)`).
  */
 async function runLockedTransition(
   client: pg.PoolClient,
   i: FieldWorkerCommandBase,
   eventType: FieldWorkerTransitionEventType,
   guard: (row: FieldWorkerLockedRow) => Promise<Record<string, unknown>> | Record<string, unknown>,
-  trigger: string,
+  trigger: string | ((extraPayload: Record<string, unknown>) => string),
 ): Promise<FieldWorkerTransitionResult> {
   await client.query(`SAVEPOINT ${TRANSITION_SAVEPOINT}`);
   try {
@@ -238,12 +239,13 @@ async function runLockedTransition(
     const toState = nextFieldWorkerState(row.currentState, eventType);
     if (toState === null) throw new FieldWorkerIllegalTransitionError(i.fieldWorkerId, row.currentState, eventType);
     const extraPayload = await guard(row);
+    const triggerValue = typeof trigger === 'string' ? trigger : trigger(extraPayload);
 
     const result = await projectFieldWorkerTransition(client, {
       pariwarId: i.pariwarId,
       fieldWorkerId: i.fieldWorkerId,
       eventType,
-      payload: { from_state: row.currentState, to_state: toState, trigger, actor: i.actor, ...extraPayload },
+      payload: { from_state: row.currentState, to_state: toState, trigger: triggerValue, actor: i.actor, ...extraPayload },
       auditId: i.auditId,
       actor: i.actor,
       actorId: i.actorId,
@@ -311,7 +313,7 @@ export async function suspendFieldWorker(
     i,
     'field_worker.suspended',
     () => ({ reason_code: assertReason('field_worker.suspended', i.reasonCode, FIELD_WORKER_SUSPEND_REASONS) }),
-    `field_worker.suspend:${String(i.reasonCode)}`,
+    (extra) => `field_worker.suspend:${extra['reason_code'] as string}`,
   );
 }
 
@@ -347,7 +349,7 @@ export async function terminateFieldWorker(
       if (i.endedOn < row.registeredOn) throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'before_registration');
       return { reason_code: reasonCode, ended_on: i.endedOn };
     },
-    `field_worker.terminate:${String(i.reasonCode)}`,
+    (extra) => `field_worker.terminate:${extra['reason_code'] as string}`,
   );
 }
 

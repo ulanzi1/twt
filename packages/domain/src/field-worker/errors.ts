@@ -110,14 +110,22 @@ export class FieldWorkerKycNotCompletedError extends Error {
   }
 }
 
-/** A reason missing, unknown, or from the wrong list for the event (suspend, terminate or post — QE12). */
+/**
+ * A reason missing, unknown, or from the wrong list for the event (suspend, terminate or post — QE12). ⛔ The value itself — in
+ * the message OR a field (review R3-20): an INVALID reason is by definition not a reason code but whatever the caller sent (free
+ * text — a name, a number), and this class promises ids, states, event types, codes and districts only (I8). `received` says what
+ * KIND of value arrived; building it never throws (⛔ `JSON.stringify` / `String` of the value).
+ */
 export class FieldWorkerReasonInvalidError extends Error {
   public readonly name = 'FieldWorkerReasonInvalidError';
+  public readonly received: 'missing' | 'not_a_string' | 'not_in_the_list';
   public constructor(
     public readonly eventType: string,
-    public readonly reasonCode: unknown,
+    reasonCode: unknown,
   ) {
-    super(`reason ${JSON.stringify(reasonCode ?? null)} is not a valid reason for '${eventType}'`);
+    const received = reasonCode === undefined || reasonCode === null ? 'missing' : typeof reasonCode !== 'string' ? 'not_a_string' : 'not_in_the_list';
+    super(`the reason (${received}) is not a valid reason for '${eventType}'`);
+    this.received = received;
   }
 }
 

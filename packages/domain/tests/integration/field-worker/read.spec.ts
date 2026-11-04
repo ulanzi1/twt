@@ -218,10 +218,12 @@ describe.skipIf(!hasDatabase)('field-worker reads (per-test ROLLBACK)', () => {
       expect(JSON.stringify(view)).not.toContain('enc:v1:');
       expect(view).toMatchObject({ district: 'Gaya', currentState: 'pending_kyc', endedOn: null, registeredByUserId: ACTOR });
     }
-    // Type-level: the PII keys are not on the view type.
+    // Type-level (review R5): `NoPii` is `never` iff none of the PII keys is a key of the view. The annotation below stops
+    // COMPILING — `tsc` covers `tests/**` — the moment one is added. (An empty array assigned to the keys' union cannot fail:
+    // `[]` is assignable to any array type.)
     type NoPii = Extract<keyof FieldWorkerView, 'nameCiphertext' | 'mobileCiphertext' | 'mobileBlindIndex'>;
-    const none: NoPii[] = [];
-    expect(none).toEqual([]);
+    const noPiiKeyOnTheView: [NoPii] extends [never] ? true : false = true;
+    expect(noPiiKeyOnTheView).toBe(true);
   });
 
   it('every read carries an explicit pariwar_id — as the OWNER role (RLS bypassed), Pariwar A’s reads never return B’s worker', async () => {
@@ -238,14 +240,28 @@ describe.skipIf(!hasDatabase)('field-worker reads (per-test ROLLBACK)', () => {
     expect(await findLiveFieldWorkerByMobileIndex(db, toPariwarId(PARIWAR_B), 'shared-index')).toBe(inB);
   });
 
-  it('listFieldWorkersForPariwar is capped (200) and refuses a non-integer limit with RangeError (⛔ NaN dropping the LIMIT)', async () => {
+  it('listFieldWorkersForPariwar is capped (200) with 201 rows present, defaults to 50, and refuses a non-integer limit with RangeError (⛔ NaN dropping the LIMIT)', async () => {
     const { client } = getTx();
     const p = randomUUID();
     await enterAppScope(client, p);
-    for (let i = 0; i < 3; i += 1) await registerReal(client, p, { actorId: ACTOR });
+    // Review R5 — ONE MORE than the cap, so `limit: 100_000` returning exactly 200 can only be the clamp (three rows proved
+    // nothing: they come back whether or not a clamp exists). One set-based insert, as the projector would write them: the
+    // projected columns only behind the guard trigger's writer setting. Review R2-7: the LITERAL values 200 and 50 are asserted
+    // (AC10's cap and the default page) — ⛔ the exported constants, which would let the cap drift to 2000 and still pass.
+    await client.query("SET LOCAL app.field_worker_state_writer = 'on'");
+    await client.query(
+      `INSERT INTO field_workers (field_worker_id, pariwar_id, name_ciphertext, mobile_ciphertext, mobile_blind_index, registered_by_user_id,
+                                  registered_by_display, current_state, state_event_version, kyc_status, district, audit_id)
+         SELECT gen_random_uuid(), $1, 'enc:v1:x', 'enc:v1:y', 'idx-' || g, $2, 'Seed', 'pending_kyc', 1, 'pending', 'Patna', gen_random_uuid()
+           FROM generate_series(1, $3::int) AS g`,
+      [p, ACTOR, 201],
+    );
+    await client.query('RESET app.field_worker_state_writer');
     const db = bindScopedDb(client);
-    expect(await listFieldWorkersForPariwar(db, toPariwarId(p), { limit: 2 })).toHaveLength(2);
-    expect(await listFieldWorkersForPariwar(db, toPariwarId(p), { limit: 100_000 })).toHaveLength(3);
+    const P = toPariwarId(p);
+    expect(await listFieldWorkersForPariwar(db, P, { limit: 100_000 })).toHaveLength(200);
+    expect(await listFieldWorkersForPariwar(db, P)).toHaveLength(50);
+    expect(await listFieldWorkersForPariwar(db, P, { limit: 2 })).toHaveLength(2);
     for (const limit of [Number.NaN, 1.5, Number.POSITIVE_INFINITY]) {
       expect(await caught(() => listFieldWorkersForPariwar(db, toPariwarId(p), { limit }))).toBeInstanceOf(RangeError);
     }

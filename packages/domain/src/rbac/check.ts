@@ -296,7 +296,10 @@ export function isVerifiedAuthorization(value: unknown): value is VerifiedAuthor
  * when `hasPermission` denies. ⛔ It fires no denial seam and throws nothing — `requirePermission` is the guard.
  * ⚠ PURE over the grants it is given, so a caller could pass fabricated grants: its callers are pinned by a source fence
  * (`check.ts` itself, the two field-worker test fixtures — `apps/api/tests/integration/_field-worker-fixture.ts` and
- * `packages/domain/tests/integration/field-worker/_fixtures.ts` — and test files only).
+ * `packages/domain/tests/integration/field-worker/_fixtures.ts` — and test files only). ⚠ `requirePermission` RETURNS this
+ * result and is just as pure, so a SECOND fence (review R3-29, BigDev 2026-11-04) flags every USE of `requirePermission`'s
+ * return value outside `check.ts` and the rbac hook (`apps/api/src/modules/rbac/index.ts`) — its other callers DROP it. Both
+ * fences are drift guards against an honest mistake, not a security boundary (a dynamic reference is invisible to them).
  */
 export function authorize(
   params: RequirePermissionParams,

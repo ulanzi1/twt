@@ -20,9 +20,22 @@ const AUTH = {
   target: { dimension: 'district', value: 'Patna' },
   catalog_version: 59,
 };
-const base = { trigger: 't', actor: 'operator' as const };
+/** The trigger each command computes (QE6; the WRITE schemas in `events.ts` refuse any other value since review R3-16 — the FOLD ignores it, R4-10). */
+const TRIGGER: Record<string, (p: Record<string, unknown>) => string> = {
+  'field_worker.registered': () => 'field_worker.register',
+  'field_worker.kyc_completed': () => 'field_worker.kyc_complete',
+  'field_worker.activated': () => 'field_worker.activate',
+  'field_worker.suspended': (p) => `field_worker.suspend:${String(p['reason_code'])}`,
+  'field_worker.reactivated': () => 'field_worker.reactivate',
+  'field_worker.terminated': (p) => `field_worker.terminate:${String(p['reason_code'])}`,
+  'field_worker.posted': () => 'field_worker.post',
+};
 let v = 0;
-const ev = (type: string, payload: Record<string, unknown>): FieldWorkerReplayEvent => ({ type, payload: { ...base, ...payload }, eventVersion: ++v });
+const ev = (type: string, payload: Record<string, unknown>): FieldWorkerReplayEvent => ({
+  type,
+  payload: { trigger: TRIGGER[type]!(payload), actor: 'operator', ...payload },
+  eventVersion: ++v,
+});
 const registered = (district = 'Patna') => ev('field_worker.registered', { from_state: null, to_state: 'pending_kyc', authorization: AUTH, district });
 const kyc = () => ev('field_worker.kyc_completed', { from_state: 'pending_kyc', to_state: 'pending_kyc' });
 const activated = () => ev('field_worker.activated', { from_state: 'pending_kyc', to_state: 'active' });
@@ -34,6 +47,26 @@ const posted = (state: string, from_district: string, to_district: string, reaso
   ev('field_worker.posted', { from_state: state, to_state: state, authorization: AUTH, from_district, to_district, reason_code });
 
 describe('the transition table and the reducer AGREE on every (state × event type) pair (AC4)', () => {
+  // Review R3-13 — the table and the reducer read the SAME constant, so "agree" alone is true by construction; QE5's ten arms are
+  // written out HERE, independently, so a wrong arm fails whatever the count.
+  it('the table IS QE5’s ten arms — written out literally, independent of the source', () => {
+    const arms = (rows: ReadonlyArray<{ from: string; event: string; to: string }>) => rows.map((r) => `${r.from} --${r.event}--> ${r.to}`).sort();
+    expect(arms(FIELD_WORKER_TRANSITION_TABLE)).toEqual(
+      arms([
+        { from: 'pending_kyc', event: 'field_worker.kyc_completed', to: 'pending_kyc' },
+        { from: 'pending_kyc', event: 'field_worker.activated', to: 'active' },
+        { from: 'active', event: 'field_worker.suspended', to: 'suspended' },
+        { from: 'suspended', event: 'field_worker.reactivated', to: 'active' },
+        { from: 'pending_kyc', event: 'field_worker.posted', to: 'pending_kyc' },
+        { from: 'active', event: 'field_worker.posted', to: 'active' },
+        { from: 'suspended', event: 'field_worker.posted', to: 'suspended' },
+        { from: 'pending_kyc', event: 'field_worker.terminated', to: 'terminated' },
+        { from: 'active', event: 'field_worker.terminated', to: 'terminated' },
+        { from: 'suspended', event: 'field_worker.terminated', to: 'terminated' },
+      ]),
+    );
+  });
+
   it('nextFieldWorkerState returns the arm’s `to` or null — for all 4 × 7 pairs', () => {
     let legal = 0;
     for (const state of FIELD_WORKER_STATES) {
@@ -85,6 +118,15 @@ describe('foldFieldWorkerProjection — pure, never throws (AC4, I4)', () => {
     });
   });
 
+  // Review R4-10 — the fold reads ONLY the fields it projects: a stored event whose `trigger` is not today's text (a later rename) still folds
+  // its district, reason and last day — it must not silently null them while the row keeps the real value.
+  it('an event whose trigger is NOT today’s text still folds its district, reason and last day (the fold ignores the audit note)', () => {
+    v = 0;
+    const renamed = (e: FieldWorkerReplayEvent): FieldWorkerReplayEvent => ({ ...e, payload: { ...(e.payload as object), trigger: 'field_worker.renamed_later' } });
+    const s = [renamed(registered('Patna')), kyc(), activated(), renamed(posted('active', 'Patna', 'Gaya')), renamed(terminated('active', 'left_voluntarily', '2026-10-31'))];
+    expect(foldFieldWorkerProjection(s)).toEqual({ state: 'terminated', version: 5, kycStatus: 'completed', reasonCode: 'left_voluntarily', district: 'Gaya', endedOn: '2026-10-31' });
+  });
+
   it('the LAST posted event wins the district', () => {
     v = 0;
     const s = [registered('Patna'), posted('pending_kyc', 'Patna', 'Gaya'), posted('pending_kyc', 'Gaya', 'Nalanda')];
@@ -95,7 +137,7 @@ describe('foldFieldWorkerProjection — pure, never throws (AC4, I4)', () => {
     v = 0;
     const junk: FieldWorkerReplayEvent[] = [
       { type: 'field_worker.registered', payload: null, eventVersion: 1 },
-      { type: 'field_worker.activated', payload: 'x', eventVersion: 2 }, // inapplicable from pending_kyc (KYC is a command guard, the fold applies the arm)
+      { type: 'field_worker.activated', payload: 'x', eventVersion: 2 }, // APPLIED: the arm is legal from pending_kyc (KYC is a command guard, not the fold's) — the junk payload is simply never read
       { type: 'field_worker.suspended', payload: { reason_code: 'bogus' }, eventVersion: 3 },
       { type: 'field_worker.unknown', payload: {}, eventVersion: 4 },
     ];

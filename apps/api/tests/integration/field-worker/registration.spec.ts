@@ -6,7 +6,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { rbac } from '@twt/domain';
+import { idempotency, rbac } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { fieldWorkerMobileIndex } from '../../../src/modules/field-worker/field-worker-crypto.js';
@@ -118,7 +118,9 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
     const index = await fieldWorkerMobileIndex(`+91${MOBILE_DIGITS}`, p, h.deps.encryption);
     const seededId = randomUUID();
     const owner = await h.td.pool.connect();
+    let loserBody = '';
     try {
+      const ownerPid = (await owner.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
       await owner.query('BEGIN');
       await owner.query("SET LOCAL app.field_worker_state_writer = 'on'");
       await owner.query(
@@ -128,11 +130,14 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
         [seededId, p, index, randomUUID(), randomUUID()],
       );
       const pending = h.register(client, p, body());
-      // Wait until the request is WAITING on a lock (its pre-check could not see the uncommitted row).
+      // Wait until the request is WAITING on a lock (its pre-check could not see the uncommitted row) — blocked by THIS owner, in
+      // THIS database (review R3-6: an unfiltered probe matched any blocked `field_workers` insert on the shared cluster).
       let waiting = false;
       for (let i = 0; i < 200 && !waiting; i += 1) {
         const r = await h.td.pool.query(
-          "SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE 'insert into \"field_workers\"%'",
+          `SELECT 1 FROM pg_stat_activity
+            WHERE datname = current_database() AND $1 = ANY(pg_blocking_pids(pid)) AND query ILIKE 'insert into "field_workers"%'`,
+          [ownerPid],
         );
         waiting = (r.rowCount ?? 0) > 0;
         if (!waiting) await new Promise((resolve) => setTimeout(resolve, 25));
@@ -142,6 +147,7 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
       const r = await pending;
       expect(r.statusCode, r.body).toBe(409);
       expect(errOf(r).code).toBe('field_worker.mobile_already_registered');
+      loserBody = r.body;
     } finally {
       await owner.query('ROLLBACK').catch(() => undefined);
       owner.release();
@@ -153,6 +159,9 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
     expect(w.audit[0]!.resource_locator).not.toBe(`field_worker/${seededId}`);
     expect(w.events).toEqual([]); // the seeded row was a raw insert — no event; the loser's genesis rolled back
     expect(w.workers.map((x) => x.field_worker_id)).toEqual([seededId]);
+    // AC13 (review R3-4): this is the ONE 409 that writes a `_rolled_back` row — its body, both audit rows and the logs carry no PII.
+    expectNoPii(loserBody);
+    expectNoPii(await everything(p));
   });
 
   it('(e) the guards: no session 401; no grant in the Pariwar 404; a grant without the key 403; state_trustee 403 (with and without a tree)', async () => {
@@ -161,7 +170,8 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
     expect((await h.register(makeClient(h.app), p, body())).statusCode).toBe(401);
     const elsewhere = h.freshPariwar();
     const outsider = await h.actor(elsewhere, 'pariwar_admin', 'pariwar', elsewhere);
-    expect((await h.register(outsider.client, p, body())).statusCode).toBe(404);
+    const r404 = await h.register(outsider.client, p, body());
+    expect([r404.statusCode, errOf(r404).code]).toEqual([404, 'pariwar.not_found']); // review R3-3: the code, not only the status
     const helpline = await h.actor(p, 'helpline_operator', 'pariwar', p);
     const r403 = await h.register(helpline.client, p, body());
     expect(r403.statusCode).toBe(403);
@@ -193,7 +203,11 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
       catalog_version: rbac.PERMISSION_CATALOG_VERSION,
     });
     const other = await h.register(da.client, p, body('Gaya', { mobile: '9876500001' }));
-    expect(other.statusCode).toBe(403);
+    // Review R3-3 — the code, and NOTHING written for the refused attempt: still exactly the one Patna registration.
+    expect([other.statusCode, errOf(other).code]).toEqual([403, 'authz.forbidden']);
+    const w = await written(p);
+    expect([w.workers.length, w.events.length, w.codes.length, w.audit.length]).toEqual([1, 1, 1, 1]);
+    expect(w.workers.map((x) => x.district)).toEqual(['Patna']);
   });
 
   it('(f) a pariwar_admin (the fill-in) ⇒ pariwar_admin; BOTH grants ⇒ district_admin (the most specific); a GLOBAL super_admin ⇒ super_admin with grant.value null', async () => {
@@ -209,10 +223,19 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
     expect(rs.statusCode, rs.body).toBe(201);
     const auths = (await written(p)).events.map((e) => e.payload['authorization'] as Json);
     expect(auths.map((a) => a['role'])).toEqual(['pariwar_admin', 'district_admin', 'super_admin']);
-    expect(auths[0]!['grant']).toEqual({ dimension: 'pariwar', value: p, grant_id: pa.grantId });
-    expect(auths[1]!['grant']).toEqual({ dimension: 'district', value: 'Patna', grant_id: bothDistrictGrant });
-    expect(auths[2]!['grant']).toEqual({ dimension: 'global', value: null, grant_id: sa.grantId });
-    for (const a of auths) expect(a['target']).toMatchObject({ dimension: 'district' });
+    // AC8 (f) — the WHOLE snapshot in every 201 (review R3-3: the target's value, the key and the catalog version too).
+    const snapshot = (role: string, grant: Json, district: string): Json => ({
+      permission_key: 'field_worker.register',
+      role,
+      grant,
+      target: { dimension: 'district', value: district },
+      catalog_version: rbac.PERMISSION_CATALOG_VERSION,
+    });
+    expect(auths).toEqual([
+      snapshot('pariwar_admin', { dimension: 'pariwar', value: p, grant_id: pa.grantId }, 'Gaya'),
+      snapshot('district_admin', { dimension: 'district', value: 'Patna', grant_id: bothDistrictGrant }, 'Patna'),
+      snapshot('super_admin', { dimension: 'global', value: null, grant_id: sa.grantId }, 'Patna'),
+    ]);
     // The audit line's actorRole is the SAME role (one source — QE18).
     expect((await written(p)).audit.map((a) => a.actor_role)).toEqual(['pariwar_admin', 'district_admin', 'super_admin']);
   });
@@ -224,18 +247,26 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
     const encrypt = vi.spyOn(h.deps.encryption.kms, 'encryptDek');
     const hmac = vi.spyOn(h.deps.encryption.kms, 'computeHmac');
     try {
-      for (const district of ['Nowhere', 'patna', 'Patna ']) {
+      // The last: NUL (review R4). The Pariwar has no geo tree, so the district is bound as an IN parameter, which Postgres
+      // refuses for NUL (22021) — it must still be the 422, not a 500. The character is BUILT, ⛔ written as an escape.
+      for (const district of ['Nowhere', 'patna', 'Patna ', `Pat${String.fromCharCode(0)}na`]) {
         const r = await h.register(client, p, body(district));
         expect(r.statusCode, district).toBe(422);
         expect(errOf(r).code).toBe('field_worker.district_unknown');
       }
       expect(encrypt).not.toHaveBeenCalled();
       expect(hmac).not.toHaveBeenCalled();
+      await expectNothingWritten(p);
+      // CONTROL (review R3-5): the SAME spies see a LISTED district's two encrypts and one keyed hash — so "not called" above means
+      // the check ran first, not that the spies are deaf.
+      const ok = await h.register(client, p, body('Patna'));
+      expect(ok.statusCode, ok.body).toBe(201);
+      expect(encrypt).toHaveBeenCalledTimes(2);
+      expect(hmac).toHaveBeenCalledTimes(1);
     } finally {
       encrypt.mockRestore();
       hmac.mockRestore();
     }
-    await expectNothingWritten(p);
   });
 
   it('(h) request and content errors: a missing / non-string district 400; no Idempotency-Key 400; a bad mobile 422; a bad name 422; no display name 409 — nothing written', async () => {
@@ -245,7 +276,7 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
     const missing = await h.register(client, p, { name: NAME, mobile: MOBILE });
     expect([missing.statusCode, errOf(missing).code]).toEqual([400, 'request.validation']);
     const numeric = await h.register(client, p, body('Patna', { district: 5 }));
-    expect(numeric.statusCode).toBe(400);
+    expect([numeric.statusCode, errOf(numeric).code]).toEqual([400, 'request.validation']); // review R3-3
     const noKey = await h.register(client, p, body(), null);
     expect([noKey.statusCode, errOf(noKey).code]).toEqual([400, 'field_worker.idempotency_key_required']);
     for (const mobile of ['12345', 'not a number', '+1 555 0100']) {
@@ -256,10 +287,60 @@ describe.skipIf(!hasDatabase)('Story 13.1 — register a field worker through HT
       const r = await h.register(client, p, body('Patna', { name }));
       expect([r.statusCode, errOf(r).code], JSON.stringify(name).slice(0, 20)).toEqual([422, 'field_worker.name_invalid']);
     }
+    // Review R6 and R2-1 — a name that reads as blank, or hides or re-orders what an operator reads, is refused: no event renames a
+    // worker, so it would be sealed for good. Each is labelled (R2-5 — a failure must name its leg); built, ⛔ escapes.
+    const cp = (...c: number[]): string => String.fromCodePoint(...c);
+    const hiddenNames: ReadonlyArray<readonly [string, string]> = [
+      ['a zero-width space alone', cp(0x200b)],
+      ['the Hangul filler alone (a letter by category)', cp(0x3164)],
+      ['a bidi override inside a name', `Asha${cp(0x202e)}Rani`],
+      ['a line separator inside a name', `Asha${cp(0x2028)}Rani`],
+      ['a zero-width space between letters', `Asha${cp(0x200b)}Rani`],
+      ['a tag character after a letter', `Asha${cp(0xe0041)}`],
+      ['a Braille blank after a letter (review R3-1)', `Asha${cp(0x2800, 0x2800)}`],
+      ['a replacement character inside a name (review R3-1)', `Asha${cp(0xfffd)}Rani`],
+      ['eight stacked combining marks (review R3-10)', `x${cp(0x301).repeat(8)}`],
+    ];
+    for (const [label, name] of hiddenNames) {
+      const r = await h.register(client, p, body('Patna', { name }));
+      expect([r.statusCode, errOf(r).code], label).toEqual([422, 'field_worker.name_invalid']);
+    }
     const unnamed = await h.actor(p, 'pariwar_admin', 'pariwar', p, null);
     const r409 = await h.register(unnamed.client, p, body());
     expect([r409.statusCode, errOf(r409).code]).toEqual([409, 'admin.display_name_missing']);
     await expectNothingWritten(p);
+  });
+
+  it('(j) the Idempotency-Key: the SAME key still in flight ⇒ 409 field_worker.idempotency_in_progress, nothing written; over 200 characters ⇒ 400; exactly 200 ⇒ 201 (review R1)', async () => {
+    const p = h.freshPariwar();
+    await h.listDistrict(p, 'Patna');
+    const { client, userId } = await h.actor(p, 'pariwar_admin', 'pariwar', p);
+    // IN FLIGHT: the key is claimed and has NO recorded result yet — what a concurrent first request leaves behind.
+    const key = randomUUID();
+    const claimKey = `field_worker.register:${p}:${userId}:${key}`;
+    const store = idempotency.createKeyedStore(h.td.pool);
+    expect(await store.claim(claimKey, 3600)).toBe('acquired');
+    try {
+      const inFlight = await h.register(client, p, body(), key);
+      expect(inFlight.statusCode, inFlight.body).toBe(409);
+      expect(errOf(inFlight).code).toBe('field_worker.idempotency_in_progress');
+      await expectNothingWritten(p);
+      // CONTROL: once a result is recorded, the SAME key replays it — so the 409 above is the no-result branch, nothing else.
+      const recorded = { field_worker_id: randomUUID(), district: 'Patna', current_state: 'pending_kyc', kyc_status: 'pending' };
+      await store.recordResult(claimKey, recorded);
+      const replay = await h.register(client, p, body(), key);
+      expect(replay.statusCode, replay.body).toBe(201);
+      expect(json(replay)).toEqual(recorded);
+      await expectNothingWritten(p);
+    } finally {
+      await h.td.pool.query('DELETE FROM idempotency_keys WHERE key = $1', [claimKey]);
+    }
+    // THE LENGTH BOUND: 201 characters is refused before any claim; 200 is the longest accepted.
+    const tooLong = await h.register(client, p, body(), 'k'.repeat(201));
+    expect([tooLong.statusCode, errOf(tooLong).code]).toEqual([400, 'field_worker.idempotency_key_required']);
+    await expectNothingWritten(p);
+    const longest = await h.register(client, p, body(), 'k'.repeat(200));
+    expect(longest.statusCode, longest.body).toBe(201);
   });
 
   it('(k) / AC13: the name and mobile appear in NO event payload, audit row, idempotency result, server log or console.error — success AND refusals', async () => {

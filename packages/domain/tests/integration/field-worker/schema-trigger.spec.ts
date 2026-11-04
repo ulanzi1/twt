@@ -1,6 +1,8 @@
 // The 0200 write guard and CHECKs, by raw SQL — Story 13.1 (AC2; I1–I3, I6, I10). Owner role (RLS cannot answer first),
-// per-test ROLLBACK. Every trigger refusal is P0001 with the direct-write PREFIX; every CHECK is 23514 BY NAME. The
-// projector-driven legs (a real transition, I4) live in `projector-trigger.spec.ts`.
+// per-test ROLLBACK. Every trigger refusal is P0001 with the direct-write PREFIX AND the refusing RULE's own text (review
+// R3-12: every RAISE shares the prefix, so a prefix-only match could not tell which rule fired — with the writer flag lost,
+// rule (a) would answer every guarded leg); every CHECK is 23514 BY NAME. The projector-driven legs (a real transition, I4)
+// live in `projector-trigger.spec.ts`.
 
 import { randomUUID } from 'node:crypto';
 
@@ -19,8 +21,21 @@ import {
   rawInsertParams,
 } from './_fixtures.js';
 
-/** Run `text`, expect P0001 with the direct-write prefix; the tx stays usable (a savepoint). */
-async function expectDirectWrite(client: pg.PoolClient, text: string, params: unknown[]): Promise<void> {
+/** Each trigger rule's distinguishing text — a fragment of its RAISE message in migration 0200 (review R3-12). */
+const RULE = {
+  unguardedInsert: 'only the event-replay projector may create',
+  unguardedUpdate: 'only the event-replay projector may update',
+  genesisShape: 'a genesis INSERT must be',
+  terminated: 'a terminated field worker is never updated',
+  identity: 'identity is immutable',
+  version: 'state_event_version must strictly increase',
+  kycBackwards: 'kyc_status never goes completed -> pending',
+  districtCoincides: 'a district change must not coincide',
+  delete: 'a field-worker row is never deleted',
+} as const;
+
+/** Run `text`, expect P0001 with the direct-write prefix and `rule`'s text; the tx stays usable (a savepoint). */
+async function expectDirectWrite(client: pg.PoolClient, text: string, params: unknown[], rule: string): Promise<void> {
   await client.query('SAVEPOINT expect_direct_write');
   let caught: { code?: string; message?: string } | null = null;
   try {
@@ -33,6 +48,7 @@ async function expectDirectWrite(client: pg.PoolClient, text: string, params: un
   expect(caught, `expected P0001 from: ${text}`).not.toBeNull();
   expect(caught!.code).toBe('P0001');
   expect(caught!.message).toMatch(new RegExp(`^${DIRECT_WRITE_PREFIX}`));
+  expect(caught!.message, `the refusing rule for: ${text}`).toContain(rule);
 }
 
 /** A genesis row as the owner, guarded. */
@@ -54,7 +70,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
   it('I1: an UNGUARDED INSERT is refused — CONTROL: the same INSERT guarded succeeds', async () => {
     const { client } = getTx();
     const id = randomUUID();
-    await expectDirectWrite(client, RAW_INSERT_SQL, rawInsertParams(id, PARIWAR_A));
+    await expectDirectWrite(client, RAW_INSERT_SQL, rawInsertParams(id, PARIWAR_A), RULE.unguardedInsert);
     await client.query(GUARD_ON);
     await client.query(RAW_INSERT_SQL, rawInsertParams(id, PARIWAR_A));
     expect((await rowOf(client, id)).current_state).toBe('pending_kyc');
@@ -64,7 +80,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
     const { client } = getTx();
     const id = await seed(client);
     for (const set of ['audit_id = gen_random_uuid()', "kyc_status = 'completed', state_event_version = 2", "registered_by_display = 'X'"]) {
-      await expectDirectWrite(client, `UPDATE field_workers SET ${set} WHERE field_worker_id = $1`, [id]);
+      await expectDirectWrite(client, `UPDATE field_workers SET ${set} WHERE field_worker_id = $1`, [id], RULE.unguardedUpdate);
     }
   });
 
@@ -77,17 +93,19 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
       ['version', rawInsertParams(randomUUID(), PARIWAR_A, { stateEventVersion: 2 })],
       ['blank district', rawInsertParams(randomUUID(), PARIWAR_A, { district: '   ' })],
     ];
-    for (const [, params] of cases) await expectDirectWrite(client, RAW_INSERT_SQL, params);
+    for (const [, params] of cases) await expectDirectWrite(client, RAW_INSERT_SQL, params, RULE.genesisShape);
     // A reason or an ended_on at genesis — the INSERT column list carries neither, so add them.
     await expectDirectWrite(
       client,
       RAW_INSERT_SQL.replace('district, audit_id)', 'district, audit_id, state_reason_code)').replace('$12)', "$12, 'under_review')"),
       rawInsertParams(randomUUID(), PARIWAR_A),
+      RULE.genesisShape,
     );
     await expectDirectWrite(
       client,
       RAW_INSERT_SQL.replace('district, audit_id)', 'district, audit_id, ended_on)').replace('$12)', "$12, '2026-11-01')"),
       rawInsertParams(randomUUID(), PARIWAR_A),
+      RULE.genesisShape,
     );
   });
 
@@ -102,7 +120,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
       "registered_by_display = 'Someone Else'",
       "created_at = now() - interval '1 day'",
     ]) {
-      await expectDirectWrite(client, `UPDATE field_workers SET ${set}, state_event_version = 2 WHERE field_worker_id = $1`, [id]);
+      await expectDirectWrite(client, `UPDATE field_workers SET ${set}, state_event_version = 2 WHERE field_worker_id = $1`, [id], RULE.identity);
     }
   });
 
@@ -110,7 +128,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
     const { client } = getTx();
     const id = await seed(client);
     await client.query(GUARD_ON);
-    await expectDirectWrite(client, "UPDATE field_workers SET kyc_status = 'completed', state_event_version = 1 WHERE field_worker_id = $1", [id]);
+    await expectDirectWrite(client, "UPDATE field_workers SET kyc_status = 'completed', state_event_version = 1 WHERE field_worker_id = $1", [id], RULE.version);
     await client.query("UPDATE field_workers SET kyc_status = 'completed', state_event_version = 2 WHERE field_worker_id = $1", [id]);
     expect((await rowOf(client, id)).kyc_status).toBe('completed');
   });
@@ -120,7 +138,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
     const id = await seed(client);
     await guardedUpdate(client, id, "kyc_status = 'completed', state_event_version = 2");
     await client.query(GUARD_ON);
-    await expectDirectWrite(client, "UPDATE field_workers SET kyc_status = 'pending', state_event_version = 3 WHERE field_worker_id = $1", [id]);
+    await expectDirectWrite(client, "UPDATE field_workers SET kyc_status = 'pending', state_event_version = 3 WHERE field_worker_id = $1", [id], RULE.kycBackwards);
   });
 
   it('I3 (e′): a district change together with a state / kyc / reason / ended_on change is refused — CONTROL: a district-only move passes', async () => {
@@ -133,12 +151,12 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
       "current_state = 'suspended', state_reason_code = 'under_review'",
       "current_state = 'terminated', state_reason_code = 'inactive', ended_on = '2026-11-01'",
     ]) {
-      await expectDirectWrite(client, `UPDATE field_workers SET district = 'Gaya', ${extra}, state_event_version = 4 WHERE field_worker_id = $1`, [id]);
+      await expectDirectWrite(client, `UPDATE field_workers SET district = 'Gaya', ${extra}, state_event_version = 4 WHERE field_worker_id = $1`, [id], RULE.districtCoincides);
     }
     // kyc: from a fresh pending row.
     const fresh = await seed(client);
     await client.query(GUARD_ON);
-    await expectDirectWrite(client, "UPDATE field_workers SET district = 'Gaya', kyc_status = 'completed', state_event_version = 2 WHERE field_worker_id = $1", [fresh]);
+    await expectDirectWrite(client, "UPDATE field_workers SET district = 'Gaya', kyc_status = 'completed', state_event_version = 2 WHERE field_worker_id = $1", [fresh], RULE.districtCoincides);
     // CONTROL — the district alone.
     await client.query("UPDATE field_workers SET district = 'Gaya', state_event_version = 4 WHERE field_worker_id = $1", [id]);
     expect((await rowOf(client, id)).district).toBe('Gaya');
@@ -155,15 +173,16 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
       "district = 'Gaya'",
       'updated_at = now()',
     ]) {
-      await expectDirectWrite(client, `UPDATE field_workers SET ${set}, state_event_version = 3 WHERE field_worker_id = $1`, [id]);
+      await expectDirectWrite(client, `UPDATE field_workers SET ${set}, state_event_version = 3 WHERE field_worker_id = $1`, [id], RULE.terminated);
     }
   });
 
   it('I10: a DELETE as the OWNER is refused by the BEFORE DELETE trigger (P0001)', async () => {
     const { client } = getTx();
     const id = await seed(client);
-    await expectDirectWrite(client, 'DELETE FROM field_workers WHERE field_worker_id = $1', [id]);
-    expect(await rowOf(client, id)).toBeDefined();
+    await expectDirectWrite(client, 'DELETE FROM field_workers WHERE field_worker_id = $1', [id], RULE.delete);
+    // ⛔ "the row survived" here (review R3-11): `expectDirectWrite` has already rolled back to its savepoint, so the row would be
+    // back even had the DELETE succeeded — the P0001 with the delete rule's own text IS the proof.
   });
 });
 

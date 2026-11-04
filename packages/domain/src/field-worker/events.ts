@@ -56,8 +56,19 @@ export const fieldWorkerSuspendReasonSchema = z.enum(FIELD_WORKER_SUSPEND_REASON
 export const fieldWorkerTerminateReasonSchema = z.enum(FIELD_WORKER_TERMINATE_REASONS);
 export const fieldWorkerPostReasonSchema = z.enum(FIELD_WORKER_POST_REASONS);
 
-/** Freeform human-readable audit note — the commands COMPUTE it (⛔ caller input), e.g. `field_worker.suspend:<reason>`. */
-const triggerSchema = z.string().min(1).max(200);
+/**
+ * The audit note naming the COMMAND that wrote the event (QE6) — the commands COMPUTE it (⛔ caller input). ⛔ Free text (review
+ * R3-16): each event type accepts only its command's value — `field_worker.suspend` / `.terminate` carry a reason as a `:<reason>`
+ * suffix drawn from that event's own reason list (ANY reason of the list — the schema does not bind it to `reason_code`; the commands
+ * build both from the one validated value — R4-14) — so no name or number can ride into the append-only stream here. The FOLD ignores
+ * this field (`state.ts`, review R4-10): a later trigger rename must never change a replayed fact.
+ */
+function triggerOf<const T extends string>(command: T) {
+  return z.literal(command);
+}
+function triggerWithReason<const T extends string>(command: T, reasons: readonly [string, ...string[]]) {
+  return z.enum(reasons.map((r) => `${command}:${r}`) as [string, ...string[]]);
+}
 
 /**
  * A REPORTING district (QE17) as it is stored: non-blank, bounded. Whether it is a LISTED district of the Pariwar is the
@@ -123,7 +134,7 @@ export const FieldWorkerRegisteredPayloadSchema = z
   .object({
     from_state: z.null(),
     to_state: z.literal('pending_kyc'),
-    trigger: triggerSchema,
+    trigger: triggerOf('field_worker.register'),
     actor: fieldWorkerActorSchema,
     authorization: FieldWorkerAuthorizationSnapshotSchema,
     district: fieldWorkerDistrictSchema,
@@ -137,7 +148,7 @@ export const FieldWorkerKycCompletedPayloadSchema = z
   .object({
     from_state: z.literal('pending_kyc'),
     to_state: z.literal('pending_kyc'),
-    trigger: triggerSchema,
+    trigger: triggerOf('field_worker.kyc_complete'),
     actor: fieldWorkerActorSchema,
   })
   .strict();
@@ -148,7 +159,7 @@ export const FieldWorkerActivatedPayloadSchema = z
   .object({
     from_state: z.literal('pending_kyc'),
     to_state: z.literal('active'),
-    trigger: triggerSchema,
+    trigger: triggerOf('field_worker.activate'),
     actor: fieldWorkerActorSchema,
   })
   .strict();
@@ -159,7 +170,7 @@ export const FieldWorkerSuspendedPayloadSchema = z
   .object({
     from_state: z.literal('active'),
     to_state: z.literal('suspended'),
-    trigger: triggerSchema,
+    trigger: triggerWithReason('field_worker.suspend', FIELD_WORKER_SUSPEND_REASONS),
     actor: fieldWorkerActorSchema,
     reason_code: fieldWorkerSuspendReasonSchema,
   })
@@ -171,7 +182,7 @@ export const FieldWorkerReactivatedPayloadSchema = z
   .object({
     from_state: z.literal('suspended'),
     to_state: z.literal('active'),
-    trigger: triggerSchema,
+    trigger: triggerOf('field_worker.reactivate'),
     actor: fieldWorkerActorSchema,
   })
   .strict();
@@ -184,7 +195,7 @@ export const FieldWorkerTerminatedPayloadSchema = z
   .object({
     from_state: z.enum(['pending_kyc', 'active', 'suspended']),
     to_state: z.literal('terminated'),
-    trigger: triggerSchema,
+    trigger: triggerWithReason('field_worker.terminate', FIELD_WORKER_TERMINATE_REASONS),
     actor: fieldWorkerActorSchema,
     reason_code: fieldWorkerTerminateReasonSchema,
     ended_on: fieldWorkerEndedOnSchema,
@@ -202,7 +213,7 @@ export const FieldWorkerPostedPayloadSchema = z
   .object({
     from_state: z.enum(['pending_kyc', 'active', 'suspended']),
     to_state: z.enum(['pending_kyc', 'active', 'suspended']),
-    trigger: triggerSchema,
+    trigger: triggerOf('field_worker.post'),
     actor: fieldWorkerActorSchema,
     authorization: FieldWorkerAuthorizationSnapshotSchema,
     from_district: fieldWorkerDistrictSchema,

@@ -17,6 +17,9 @@ import { fieldWorkers, type FieldWorkerState } from '../schema/field_workers.js'
 import { FieldWorkerCaptureNotFoundError, FieldWorkerDistrictUnknownError } from './errors.js';
 import { foldFieldWorkerProjection, type FieldWorkerProjection } from './state.js';
 
+/** The NUL character — the one code point a Postgres text parameter cannot carry (built, ⛔ written as an escape). */
+const NUL = String.fromCharCode(0);
+
 /** `listFieldWorkersForPariwar`'s default page size. */
 export const LIST_FIELD_WORKERS_DEFAULT_LIMIT = 50;
 /** `listFieldWorkersForPariwar`'s hard cap (forced pagination). */
@@ -127,9 +130,13 @@ export async function findLiveFieldWorkerByMobileIndex(
  * `assertScopeValuesRecorded` makes (⛔ that function, ⛔ its error). Compared BYTE FOR BYTE (TR12: a Pariwar Admin's grant
  * covers ANY string, so this is the only data-quality guard).
  *
+ * ⚠ A district holding the NUL character is refused as unknown BEFORE any read (review R4): Postgres cannot bind NUL in a text
+ * parameter (22021 ⇒ an unmapped 500), the no-tree branch binds the district as one, and no LISTED district can contain it.
+ *
  * @throws FieldWorkerDistrictUnknownError
  */
 export async function assertDistrictRecorded(db: Db, pariwarId: PariwarId, district: string, at: Date): Promise<void> {
+  if (district.includes(NUL)) throw new FieldWorkerDistrictUnknownError(pariwarId);
   const tree = await geoTreeVersionInForce(db, pariwarId, at);
   const listed =
     tree !== null

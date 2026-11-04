@@ -130,22 +130,25 @@ const staff = { pariwarId: P, fieldWorkerId: FW, auditId: AUDIT, actor: 'operato
 describe('I13 — the row lock comes before any events_log read or append (RP4 shape)', () => {
   const ORDER = ['SAVEPOINT', 'LOCK', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE'];
 
+  // The last column: QE6's COMPUTED trigger — asserted on the appended payload (review R3-16: a typo'd or dropped `:<reason>` was green).
   it.each([
-    ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, {}],
-    ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, {}],
-    ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { reasonCode: 'under_review' }],
-    ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, {}],
-    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') }],
-  ])('%s: SAVEPOINT → LOCK → HEAD → APPEND → UPDATE', async (_label, command, row, extra) => {
-    const { client, calls } = stub(row);
+    ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, {}, 'field_worker.kyc_complete'],
+    ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, {}, 'field_worker.activate'],
+    ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { reasonCode: 'under_review' }, 'field_worker.suspend:under_review'],
+    ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, {}, 'field_worker.reactivate'],
+    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') }, 'field_worker.post'],
+  ])('%s: SAVEPOINT → LOCK → HEAD → APPEND → UPDATE, and the command’s computed trigger', async (_label, command, row, extra, trigger) => {
+    const { client, calls, payloads } = stub(row);
     await (command() as (c: pg.PoolClient, i: unknown) => Promise<unknown>)(client, { ...staff, ...extra });
     expect(calls).toEqual(ORDER);
+    expect(JSON.parse(String(payloads[0]))).toMatchObject({ trigger });
   });
 
-  it('terminate: SAVEPOINT → LOCK → NOW → HEAD → APPEND → UPDATE (QE20 reads the IST day under the lock)', async () => {
-    const { client, calls } = stub();
+  it('terminate: SAVEPOINT → LOCK → NOW → HEAD → APPEND → UPDATE (QE20 reads the IST day under the lock), trigger field_worker.terminate:inactive', async () => {
+    const { client, calls, payloads } = stub();
     await terminateFieldWorker(client, { ...staff, reasonCode: 'inactive', endedOn: '2026-11-02' });
     expect(calls).toEqual(['SAVEPOINT', 'LOCK', 'NOW', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE']);
+    expect(JSON.parse(String(payloads[0]))).toMatchObject({ trigger: 'field_worker.terminate:inactive', reason_code: 'inactive' });
   });
 
   it('register: SAVEPOINT → EXISTING → APPEND → INSERT ROW (no lock — the race is the 23505)', async () => {
@@ -198,10 +201,11 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
   });
 
   it('(2): anything out of terminated — `posted` included', async () => {
-    const { client } = stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31' });
+    const { client, calls } = stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31' });
     await expect(postFieldWorker(client, { ...staff, toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') })).rejects.toBeInstanceOf(
       FieldWorkerIllegalTransitionError,
     );
+    await refused(calls); // review R3-22 — its siblings asserted nothing appended; this one did not
   });
 
   it('(3): kyc twice ⇒ KycAlreadyCompleted; activate before KYC ⇒ KycNotCompleted', async () => {
@@ -247,6 +251,21 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
     await expect(terminateFieldWorker(stub().client, { ...staff, reasonCode: 'bogus', endedOn: '2026-12-31' })).rejects.toBeInstanceOf(
       FieldWorkerReasonInvalidError,
     );
+  });
+
+  // Review R3-20 — an INVALID reason is whatever the caller sent: it must reach neither the message nor a field, and a value that cannot be
+  // stringified must still be the TYPED error (the trigger is built only after the reason is validated).
+  it('(4) a free-text reason never appears in the error; a BigInt or a null-prototype object is still ReasonInvalid', async () => {
+    const freeText = 'Ramesh Kumar 9876543210 asked to stop';
+    const err = (await suspendFieldWorker(stub().client, { ...staff, reasonCode: freeText }).catch((e: unknown) => e)) as FieldWorkerReasonInvalidError;
+    expect(err).toBeInstanceOf(FieldWorkerReasonInvalidError);
+    expect(err.received).toBe('not_in_the_list');
+    expect(JSON.stringify({ ...err, message: err.message })).not.toMatch(/Ramesh|9876543210/);
+    for (const odd of [10n, Object.create(null) as unknown]) {
+      const e = await terminateFieldWorker(stub().client, { ...staff, reasonCode: odd as string, endedOn: '2026-11-01' }).catch((x: unknown) => x);
+      expect(e).toBeInstanceOf(FieldWorkerReasonInvalidError);
+      expect((e as FieldWorkerReasonInvalidError).received).toBe('not_a_string');
+    }
   });
 });
 
@@ -309,12 +328,33 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
     ['an object LITERAL with the same fields (⛔ verified)', { ...authAt('Patna') }],
     ['another Pariwar’s result', authAt('Patna', { pariwarId: OTHER_P })],
     ['another actor’s result', authAt('Patna', { actorId: '99999999-9999-4999-8999-999999999999' })],
-    ['the wrong key (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
+    // `authAt` forces `module.manage` to the PARIWAR dimension, so this leg is refused by the DIMENSION check, not the key check.
+    ['the wrong DIMENSION (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
     ['another district than the genesis', authAt('Gaya')],
   ])('register refuses an authorization that is %s — no statement sent', async (_label, authorization) => {
     const { client, calls } = stub();
     await expect(registerFieldWorker(client, { ...staff, ...registerInput, authorization: authorization as VerifiedAuthorization })).rejects.toBeInstanceOf(
       FieldWorkerProjectorInputError,
+    );
+    expect(calls).toEqual([]);
+  });
+
+  // Review R2 — the KEY check itself. A VERIFIED, district-dimension, same-Pariwar, same-actor, same-target authorization for a
+  // key that is NOT `field_worker.register` passes every check before it, so only the key check can refuse it. (`claim.record_fraud_finding`
+  // is a district-dimension key `district_admin` holds — permissions.ts / roles.ts.)
+  it('register refuses a VERIFIED district-dimension authorization for ANOTHER key — the key check, not the dimension check; no statement sent', async () => {
+    const otherKey = authorize({
+      actorId: STAFF,
+      grants: [{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }],
+      key: 'claim.record_fraud_finding',
+      resource: { dimension: 'district', value: 'Patna', pariwarId: P },
+    });
+    // Control: the result is a real verified one for the genesis's district — so it is the KEY that is wrong, nothing else.
+    expect(otherKey).not.toBeNull();
+    expect(otherKey).toMatchObject({ permissionKey: 'claim.record_fraud_finding', pariwarId: P, actorId: STAFF, target: { dimension: 'district', value: 'Patna' } });
+    const { client, calls } = stub();
+    await expect(registerFieldWorker(client, { ...staff, ...registerInput, authorization: otherKey! })).rejects.toThrow(
+      /the authorization is for 'claim\.record_fraud_finding', not this act/,
     );
     expect(calls).toEqual([]);
   });

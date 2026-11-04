@@ -984,44 +984,345 @@ describe('Story 13.1 — authorizingGrant / authorize / VerifiedAuthorization (Q
 
 // ── Story 13.1 (QE18 (e), AC9) — the source fence on `authorize(` callers ──────────────────────────────
 
-describe('Story 13.1 — `authorize(` is called only by check.ts, the two field-worker test fixtures and test files', () => {
-  it('scans apps/*/src, packages/*/src and every tests tree; the only hits are the allowed files', () => {
+/**
+ * Review R7 / R2-3 — does this source REACH `authorize`? Read on the TypeScript AST, so a COMMENT or a string ("decrypt-AFTER-
+ * authorize (…)") never matches. Not only a plain call (`authorize(…)`, `rbac.authorize(…)`): every STATICALLY VISIBLE way to hold a
+ * REFERENCE to it that a call-only scan misses — an import specifier whose IMPORTED name is `authorize` (an alias included), an
+ * export specifier (`export { authorize as mint } from …`), a `.authorize` property read that is not a call, element access with the
+ * string, a destructured binding whose key is `authorize` (bare, a string literal or a computed literal), an ASSIGNMENT destructuring
+ * with that key (`({ authorize: m } = rbac)` — review R3-26) and `Reflect.get` / `Object.getOwnPropertyDescriptor` with the LITERAL
+ * name (R3-26). ⚠ What NO static fence can see: a DYNAMIC key (`rbac[k]`, `Reflect.get(rbac, name)`) — this fence is a drift guard
+ * against an honest mistake, not a security boundary. `.astro` files are scanned as TS text (their frontmatter is TS).
+ */
+/** `node` with any wrapping parentheses removed. */
+function unparen(node: ts.Expression): ts.Expression {
+  let n = node;
+  while (ts.isParenthesizedExpression(n)) n = n.expression;
+  return n;
+}
+
+/** The text of a property name that is an identifier, a string literal or a computed literal — else null. */
+function staticKeyOf(name: ts.PropertyName | ts.Identifier): string | null {
+  const keyed = ts.isComputedPropertyName(name) ? name.expression : name;
+  return ts.isIdentifier(keyed) || ts.isStringLiteralLike(keyed) ? keyed.text : null;
+}
+
+/** An object-literal ASSIGNMENT pattern (`({ … } = x)`), nested patterns included, that names `key`. */
+function assignmentPatternNames(pattern: ts.Expression, key: string): boolean {
+  const p = unparen(pattern);
+  if (ts.isArrayLiteralExpression(p)) return p.elements.some((e) => assignmentPatternNames(e, key));
+  if (!ts.isObjectLiteralExpression(p)) return false;
+  return p.properties.some((prop) => {
+    if (ts.isShorthandPropertyAssignment(prop)) return prop.name.text === key;
+    if (ts.isPropertyAssignment(prop)) return staticKeyOf(prop.name) === key || assignmentPatternNames(prop.initializer, key);
+    return false;
+  });
+}
+
+/**
+ * A LITERAL reflective read of `name`: `Reflect.get(x, 'name')`, `Reflect.getOwnPropertyDescriptor(x, 'name')`,
+ * `Object.getOwnPropertyDescriptor(x, 'name')` — the `Reflect` / `Object` reached bare, through `globalThis` / `window` / `self`,
+ * and the method by name or by a literal element access (`Reflect['get']`) — reviews R3-26 and R4-6.
+ */
+function isLiteralReflectiveRead(node: ts.Node, name: string): boolean {
+  if (!ts.isCallExpression(node)) return false;
+  const arg = node.arguments[1];
+  if (arg === undefined || !ts.isStringLiteralLike(arg) || arg.text !== name) return false;
+  const callee = unparen(node.expression);
+  let method: string | null = null;
+  let target: ts.Expression | null = null;
+  if (ts.isPropertyAccessExpression(callee)) {
+    method = callee.name.text;
+    target = unparen(callee.expression);
+  } else if (ts.isElementAccessExpression(callee) && ts.isStringLiteralLike(callee.argumentExpression)) {
+    method = callee.argumentExpression.text;
+    target = unparen(callee.expression);
+  }
+  if (method === null || target === null) return false;
+  const holder = ts.isIdentifier(target)
+    ? target.text
+    : ts.isPropertyAccessExpression(target) && ts.isIdentifier(target.expression) && ['globalThis', 'window', 'self'].includes(target.expression.text)
+      ? target.name.text
+      : null;
+  if (holder === 'Reflect') return method === 'get' || method === 'getOwnPropertyDescriptor';
+  if (holder === 'Object') return method === 'getOwnPropertyDescriptor';
+  return false;
+}
+
+/** An assignment destructuring that names `key`: `({ … } = x)`, and the for-of / for-in assignment form `for ({ … } of xs)` (R4-6). */
+function assignmentDestructures(node: ts.Node, key: string): boolean {
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) return assignmentPatternNames(node.left, key);
+  if ((ts.isForOfStatement(node) || ts.isForInStatement(node)) && !ts.isVariableDeclarationList(node.initializer)) {
+    return assignmentPatternNames(node.initializer as ts.Expression, key);
+  }
+  return false;
+}
+
+function reachesAuthorize(fileName: string, text: string): boolean {
+  if (!text.includes('authorize')) return false;
+  const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, fileName.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  let reached = false;
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'authorize') {
+      reached = true; // authorize(…)
+    } else if (ts.isPropertyAccessExpression(node) && node.name.text === 'authorize') {
+      reached = true; // rbac.authorize(…), or the property read `const a = rbac.authorize`
+    } else if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) && node.argumentExpression.text === 'authorize') {
+      reached = true; // rbac['authorize'](…)
+    } else if (ts.isImportSpecifier(node) && ((node.propertyName ?? node.name) as ts.Identifier).text === 'authorize') {
+      reached = true; // import { authorize } / import { authorize as mint }
+    } else if (ts.isExportSpecifier(node) && ((node.propertyName ?? node.name) as ts.Identifier).text === 'authorize') {
+      reached = true; // export { authorize } from … / export { authorize as mint } from …
+    } else if (ts.isBindingElement(node)) {
+      const key = node.propertyName ?? node.name;
+      const keyed = ts.isComputedPropertyName(key) ? key.expression : key;
+      // const { authorize } = rbac / { authorize: mint } / { 'authorize': mint } / { ['authorize']: mint }
+      if ((ts.isIdentifier(keyed) || ts.isStringLiteralLike(keyed)) && keyed.text === 'authorize') reached = true;
+    } else if (assignmentDestructures(node, 'authorize')) {
+      reached = true; // ({ authorize: m } = rbac) / ({ 'authorize': m } = rbac) — R3-26; for ({ authorize: m } of [rbac]) — R4-6
+    } else if (isLiteralReflectiveRead(node, 'authorize')) {
+      reached = true; // Reflect.get / getOwnPropertyDescriptor with the literal — R3-26; via globalThis / Reflect['get'] — R4-6
+    }
+    if (!reached) ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return reached;
+}
+
+describe('Review R7 / R2-3 — the fence recognises every STATICALLY visible way to reach `authorize`, and only those', () => {
+  const file = 'apps/api/src/some/file.ts';
+  it.each([
+    ['a plain call', "import { authorize } from './check.js'; authorize({});"],
+    // The call-expression branch ALONE (no import specifier, no binding to match first): a local function of that name.
+    ['a bare call of a function named authorize that is not imported', 'function authorize(): void {} authorize();'],
+    ['a RE-EXPORT under an alias', "export { authorize as mint } from './check.js';"],
+    ['a plain re-export by name', "export { authorize } from './check.js';"],
+    ['a destructuring key written as a STRING literal', "import { rbac } from '@twt/domain'; const { 'authorize': mint } = rbac; mint({});"],
+    ['a destructuring key written as a COMPUTED literal', "import { rbac } from '@twt/domain'; const { ['authorize']: mint } = rbac; mint({});"],
+    ['a namespace call', "import { rbac } from '@twt/domain'; rbac.authorize({});"],
+    ['an ALIASED import', "import { authorize as mint } from './check.js'; mint({});"],
+    ['a property read that is not a call', "import { rbac } from '@twt/domain'; const a = rbac.authorize; a({});"],
+    ['element access with the string', "import { rbac } from '@twt/domain'; rbac['authorize']({});"],
+    ['a destructured binding', "import { rbac } from '@twt/domain'; const { authorize } = rbac; authorize({});"],
+    ['a RENAMED destructured binding', "import { rbac } from '@twt/domain'; const { authorize: mint } = rbac; mint({});"],
+    // Review R3-26 — the two forms the R2-3 fence missed (replayed by two reviewers).
+    ['an ASSIGNMENT destructuring with a renamed key', "import { rbac } from '@twt/domain'; let m; ({ authorize: m } = rbac); m({});"],
+    ['an ASSIGNMENT destructuring with a STRING key', "import { rbac } from '@twt/domain'; let m; ({ 'authorize': m } = rbac); m({});"],
+    ['a NESTED assignment destructuring', "import * as d from '@twt/domain'; let m; ({ rbac: { authorize: m } } = d); m({});"],
+    ['Reflect.get with the LITERAL name', "import { rbac } from '@twt/domain'; const m = Reflect.get(rbac, 'authorize'); m({});"],
+    ['Object.getOwnPropertyDescriptor with the LITERAL name', "import { rbac } from '@twt/domain'; const m = Object.getOwnPropertyDescriptor(rbac, 'authorize')!.value; m({});"],
+    // Review R4-6 — four literal-key forms of the same kind.
+    ['a for-of ASSIGNMENT destructuring', "import { rbac } from '@twt/domain'; let m; for ({ authorize: m } of [rbac]) m({});"],
+    ['Reflect.get reached through globalThis', "import { rbac } from '@twt/domain'; const m = globalThis.Reflect.get(rbac, 'authorize'); m({});"],
+    ["Reflect['get'] with the literal", "import { rbac } from '@twt/domain'; const m = Reflect['get'](rbac, 'authorize'); m({});"],
+    ['Reflect.getOwnPropertyDescriptor with the literal', "import { rbac } from '@twt/domain'; const m = Reflect.getOwnPropertyDescriptor(rbac, 'authorize')!.value; m({});"],
+  ])('flags %s', (_label, source) => {
+    expect(reachesAuthorize(file, source)).toBe(true);
+  });
+
+  it.each([
+    ['a comment', '// authorize( is called by check.ts only\nexport const x = 1;'],
+    ['a string', "export const s = 'decrypt-AFTER-authorize (the gate)';"],
+    ['a different identifier', 'export const authorized = true; export function authorizeLater(): void {}'],
+    ['`export *` — a barrel names no reference (its USE sites are what the fence flags)', "export * from './check.js';"],
+    ['a local variable that merely HAS the name, bound from ANOTHER key', 'const { a: authorize } = obj;'],
+    ['an assignment destructuring of ANOTHER key into a variable of that name', 'let authorize; ({ a: authorize } = obj);'],
+    ['Reflect.get of another literal', "const m = Reflect.get(rbac, 'authorized');"],
+  ])('does not flag %s', (_label, source) => {
+    expect(reachesAuthorize(file, source)).toBe(false);
+  });
+
+  // KNOWN blind spot, pinned so it is stated, not assumed: a dynamic key is invisible to any static scan.
+  it('KNOWN BLIND SPOT — a dynamic key is NOT flagged (no static fence sees it; the fence is a drift guard, not a security boundary)', () => {
+    expect(reachesAuthorize(file, "import { rbac } from '@twt/domain'; const k = ['auth', 'orize'].join(''); rbac[k]({});")).toBe(false);
+  });
+});
+
+/** The trees both source fences walk (review R3-25: the ROOT `scripts/` and `tests/` too, not only the workspaces). */
+const FENCE_ROOTS = ['apps', 'packages', 'scripts', 'tests'] as const;
+/** Directories neither fence walks — dependencies and BUILD OUTPUT (a bundled copy of `check.ts` would be a false hit — review R4-11). */
+const FENCE_SKIPPED_DIRS = new Set(['node_modules', 'dist', '.turbo', 'coverage', 'build', '.next', 'out']);
+
+/**
+ * Walk every source file of the fence trees (`.ts` … `.astro`, ⛔ `.d.ts`), calling `visit(rel, text)`. A root that is ABSENT (a sparse
+ * checkout) is skipped, ⛔ an ENOENT (review R4-11); the per-root file counts are returned for the floors.
+ */
+function walkFenceTrees(repoRoot: string, visit: (rel: string, text: string) => void): Partial<Record<(typeof FENCE_ROOTS)[number], number>> {
+  const scannedIn: Partial<Record<(typeof FENCE_ROOTS)[number], number>> = {};
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (FENCE_SKIPPED_DIRS.has(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(ts|tsx|mts|cts|js|mjs|cjs|astro)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+        const rel = path.relative(repoRoot, full);
+        const top = rel.split(path.sep)[0] as (typeof FENCE_ROOTS)[number];
+        scannedIn[top] = (scannedIn[top] ?? 0) + 1;
+        visit(rel, fs.readFileSync(full, 'utf8'));
+      }
+    }
+  };
+  for (const r of FENCE_ROOTS) if (fs.existsSync(path.join(repoRoot, r))) walk(path.join(repoRoot, r));
+  return scannedIn;
+}
+
+/**
+ * Review R3-29 (BigDev 2026-11-04, R3-DN2 "1"), widened by R4-4 / R4-5 — how does this source TREAT `requirePermission`?
+ * `requirePermission` is as pure as `authorize` and returns the same `VerifiedAuthorization`, so a caller with made-up grants could mint
+ * one through it. Its long-standing callers call it as a GUARD and drop the result; only the rbac hook stores it.
+ * `used` — the result is kept, or the function is reachable under ANOTHER name: a call whose value is kept (assigned, returned, passed,
+ * spread, property-read, `await`ed into anything but a bare statement); a `.requirePermission` / `['requirePermission']` read that is not
+ * a call; a bare `requirePermission` reference that is not a callee (`const g = requirePermission`, `.call` / `.apply` / `.bind`,
+ * `(0, requirePermission)(p)`, `[x].map(requirePermission)`, `{ requirePermission }` passed on, `export default`); a RENAMING import or
+ * re-export (`requirePermission as rp`); a renaming / string-keyed destructuring (declaration or assignment); a literal `Reflect.get`.
+ * `discardedCalls` — the guard calls (a bare statement, `await …;`, `void …;`), counted in the AST so the floor sees real callers, ⛔
+ * comments (R4-5). Not flagged: a plain import / re-export by the same name, a function declaration, a type query.
+ * ⚠ Blind spot (as the `authorize` fence's): a DYNAMIC key.
+ */
+function analyseRequirePermission(fileName: string, text: string): { used: boolean; discardedCalls: number } {
+  const NAME = 'requirePermission';
+  if (!text.includes(NAME)) return { used: false, discardedCalls: 0 };
+  const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, fileName.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const isCallee = (n: ts.Node): boolean => (ts.isCallExpression(n.parent) || ts.isNewExpression(n.parent)) && n.parent.expression === n;
+  const discarded = (call: ts.Node): boolean => {
+    let n: ts.Node = call;
+    while (ts.isParenthesizedExpression(n.parent) || ts.isAwaitExpression(n.parent) || ts.isVoidExpression(n.parent)) {
+      if (ts.isVoidExpression(n.parent)) return true;
+      n = n.parent;
+    }
+    return ts.isExpressionStatement(n.parent);
+  };
+  let used = false;
+  let discardedCalls = 0;
+  /** A reference (a property read, an element access, a bare identifier) — a discarded call counts, anything else is a USE. */
+  const reference = (ref: ts.Node): void => {
+    if (isCallee(ref) && ts.isCallExpression(ref.parent) && discarded(ref.parent)) discardedCalls += 1;
+    else used = true;
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isPropertyAccessExpression(node) && node.name.text === NAME) {
+      reference(node);
+    } else if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) && node.argumentExpression.text === NAME) {
+      reference(node);
+    } else if (ts.isIdentifier(node) && node.text === NAME) {
+      const parent = node.parent;
+      if (ts.isPropertyAccessExpression(parent) && parent.name === node) {
+        // the `.requirePermission` NAME — handled at the property access
+      } else if (ts.isImportSpecifier(parent) || ts.isExportSpecifier(parent)) {
+        if (parent.propertyName !== undefined && parent.name.text !== NAME) used = true; // a RENAMING import / re-export
+      } else if (ts.isFunctionDeclaration(parent) || ts.isTypeQueryNode(parent) || ts.isQualifiedName(parent)) {
+        // its own declaration, or a type position
+      } else if (ts.isBindingElement(parent)) {
+        if (parent.propertyName !== undefined) used = true; // `{ requirePermission: m }` — a rename (the bound name is m)
+      } else if (ts.isPropertyAssignment(parent) && parent.name === node) {
+        // a property KEY of that name (`{ requirePermission: … }` as data) — its value is visited on its own
+      } else {
+        reference(node); // a callee (counted or a use), or ANY other use of the bare function
+      }
+    } else if (ts.isBindingElement(node) && node.propertyName !== undefined && ts.isStringLiteralLike(node.propertyName) && node.propertyName.text === NAME) {
+      used = true; // const { 'requirePermission': m } = rbac
+    } else if (assignmentDestructures(node, NAME) || isLiteralReflectiveRead(node, NAME)) {
+      used = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return { used, discardedCalls };
+}
+
+const usesRequirePermissionResult = (fileName: string, text: string): boolean => analyseRequirePermission(fileName, text).used;
+
+describe('Review R3-29 / R4-4 — the fence recognises a USE of requirePermission’s result (or the function under another name), and only that', () => {
+  const file = 'apps/api/src/some/file.ts';
+  it.each([
+    ['an assigned result', "import { rbac } from '@twt/domain'; const a = rbac.requirePermission(p);"],
+    ['a returned result', "import { rbac } from '@twt/domain'; function f() { return rbac.requirePermission(p); }"],
+    ['a result passed on', "import { rbac, fieldWorker } from '@twt/domain'; register(c, { authorization: rbac.requirePermission(p) });"],
+    ['an awaited result kept', "import { requirePermission } from './check.js'; async function f() { const a = await requirePermission(p); }"],
+    ['a bare-imported call whose result is kept', "import { requirePermission } from './check.js'; const a = requirePermission(p);"],
+    ['a property read of the result', "import { rbac } from '@twt/domain'; const r = rbac.requirePermission(p).role;"],
+    ['an alias of the function', "import { rbac } from '@twt/domain'; const f = rbac.requirePermission; f(p);"],
+    // Review R4-4 — the forms the R3-29 fence missed (probed by three reviewers).
+    ['a RENAMING import', "import { requirePermission as rp } from './check.js'; rp(p);"],
+    ['a RENAMING re-export', "export { requirePermission as rp } from './check.js';"],
+    ['export default', "import { requirePermission } from './check.js'; export default requirePermission;"],
+    ['a bare-identifier alias', "import { requirePermission } from './check.js'; const g = requirePermission; g(p);"],
+    ['.call', "import { requirePermission } from './check.js'; const a = requirePermission.call(undefined, p);"],
+    ['.apply on the namespace member', "import { rbac } from '@twt/domain'; rbac.requirePermission.apply(undefined, [p]);"],
+    ['.bind', "import { requirePermission } from './check.js'; const g = requirePermission.bind(null);"],
+    ['a comma-expression call', "import { requirePermission } from './check.js'; const a = (0, requirePermission)(p);"],
+    ['the function passed as a value', "import { requirePermission } from './check.js'; [p].map(requirePermission);"],
+    ['a shorthand property passed on', "import { requirePermission } from './check.js'; run({ requirePermission }, p);"],
+    ['element access with the literal, result kept', "import { rbac } from '@twt/domain'; const a = rbac['requirePermission'](p);"],
+    ['Reflect.get with the literal', "import { rbac } from '@twt/domain'; const g = Reflect.get(rbac, 'requirePermission'); g(p);"],
+    ['a renaming destructured binding', "import { rbac } from '@twt/domain'; const { requirePermission: m } = rbac; m(p);"],
+    ['a string-keyed destructured binding', "import { rbac } from '@twt/domain'; const { 'requirePermission': m } = rbac; m(p);"],
+    ['an ASSIGNMENT destructuring', "import { rbac } from '@twt/domain'; let m; ({ requirePermission: m } = rbac); m(p);"],
+  ])('flags %s', (_label, source) => {
+    expect(usesRequirePermissionResult(file, source)).toBe(true);
+  });
+
+  it.each([
+    ['a bare call statement (the guard)', "import { rbac } from '@twt/domain'; rbac.requirePermission(p);"],
+    ['a bare imported call statement', "import { requirePermission } from './check.js'; requirePermission(p);"],
+    ['a bare await statement', "import { rbac } from '@twt/domain'; async function f() { await rbac.requirePermission(p); }"],
+    ['a void statement', "import { rbac } from '@twt/domain'; void rbac.requirePermission(p);"],
+    ['a multi-line bare call inside a block', "import { rbac } from '@twt/domain'; function g() { if (x) {\n rbac.requirePermission(\n p,\n ctx,\n );\n } }"],
+    ['a bare element-access call statement', "import { rbac } from '@twt/domain'; rbac['requirePermission'](p);"],
+    ['the hook factory (another name)', "import { requirePermissionHook } from './index.js'; const h = requirePermissionHook(deps, 'k');"],
+    ['an import or a comment', "// const a = requirePermission(p)\nimport { requirePermission } from './check.js';"],
+    ['a plain re-export by the same name', "export { requirePermission } from './check.js';"],
+    ['a type query', "import { requirePermission } from './check.js'; type F = typeof requirePermission;"],
+  ])('does not flag %s', (_label, source) => {
+    expect(usesRequirePermissionResult(file, source)).toBe(false);
+  });
+
+  it('counts DISCARDED guard calls in the AST — a call, never a comment (review R4-5)', () => {
+    expect(analyseRequirePermission(file, "import { rbac } from '@twt/domain'; rbac.requirePermission(p); requirePermission(q);").discardedCalls).toBe(2);
+    expect(analyseRequirePermission(file, '/** the chain [session, scope, requirePermission(view)] has run */ export const x = 1;').discardedCalls).toBe(0);
+  });
+});
+
+describe('Review R3-29 — requirePermission’s RESULT is used only by check.ts and the rbac hook (and test files)', () => {
+  it('scans the same trees as the authorize fence; every other caller DROPS the result — and the scan SEES those callers, in the AST', () => {
     const repoRoot = path.resolve(__dirname, '../../../..');
-    const roots = ['apps', 'packages'];
+    const hits: string[] = [];
+    const guardCallers: string[] = [];
+    const allowed = (f: string): boolean =>
+      f === 'packages/domain/src/rbac/check.ts' || f === 'apps/api/src/modules/rbac/index.ts' || /\.(test|spec)\.tsx?$/.test(f);
+    walkFenceTrees(repoRoot, (rel, text) => {
+      const a = analyseRequirePermission(rel, text);
+      if (a.used) hits.push(rel);
+      if (a.discardedCalls > 0 && !allowed(rel)) guardCallers.push(rel);
+    });
+    expect(hits.filter((f) => !allowed(f))).toEqual([]);
+    expect(hits).toContain('apps/api/src/modules/rbac/index.ts'); // the fence sees the one real keeper
+    // Non-vacuity (review R4-5): the long-standing GUARD callers — FOUR at 2026-11-04, seen as discarded CALLS in the AST (three files
+    // that only mention it in a comment no longer count) — are named, so losing sight of one turns this red.
+    expect(guardCallers.sort()).toEqual(
+      expect.arrayContaining([
+        'apps/api/src/modules/member-moderation/handlers.ts',
+        'apps/api/src/modules/rules/index.ts',
+        'apps/api/src/modules/workplaces/routes.ts',
+        'packages/validity-service/src/redaction.ts',
+      ]),
+    );
+  });
+});
+
+describe('Story 13.1 — `authorize(` is called only by check.ts, the two field-worker test fixtures and test files', () => {
+  it('scans apps/, packages/ and the ROOT scripts/ and tests/ trees; the only hits are the allowed files', () => {
+    const repoRoot = path.resolve(__dirname, '../../../..');
+    // Review R3-25 — the root `scripts/` (e.g. `provision-admin.ts`, run against production, imports the domain) and `tests/` too;
+    // R4-11 — one shared walk: an absent root is skipped, build output is not walked.
     const hits: string[] = [];
     let scanned = 0;
-    const walk = (dir: string): void => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.turbo') continue;
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (/\.(ts|tsx|mts|cts|js|mjs|astro)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
-          scanned += 1;
-          const text = fs.readFileSync(full, 'utf8');
-          if (!text.includes('authorize')) continue;
-          // A CALL whose callee is the identifier `authorize` or a property access `….authorize` (`rbac.authorize(`) — read
-          // on the TypeScript AST, so a COMMENT or a string ("decrypt-AFTER-authorize (…)") never matches. `.astro` files
-          // are scanned as TS text (their frontmatter is TS).
-          const sf = ts.createSourceFile(full, text, ts.ScriptTarget.Latest, true, full.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
-          let called = false;
-          const visit = (node: ts.Node): void => {
-            if (ts.isCallExpression(node)) {
-              const callee = node.expression;
-              if (
-                (ts.isIdentifier(callee) && callee.text === 'authorize') ||
-                (ts.isPropertyAccessExpression(callee) && callee.name.text === 'authorize')
-              ) {
-                called = true;
-              }
-            }
-            if (!called) ts.forEachChild(node, visit);
-          };
-          visit(sf);
-          if (called) hits.push(path.relative(repoRoot, full));
-        }
-      }
-    };
-    for (const r of roots) walk(path.join(repoRoot, r));
+    const scannedIn = walkFenceTrees(repoRoot, (rel, text) => {
+      scanned += 1;
+      if (reachesAuthorize(rel, text)) hits.push(rel);
+    });
+    expect(scannedIn.scripts, 'the walk reached the root scripts/ tree').toBeGreaterThan(20);
+    // The root `tests/` holds only READMEs today (2026-11-04) — walked so the first spec placed there is scanned; no floor until then.
     const allowed = (f: string): boolean =>
       f === 'packages/domain/src/rbac/check.ts' ||
       f === 'apps/api/tests/integration/_field-worker-fixture.ts' ||

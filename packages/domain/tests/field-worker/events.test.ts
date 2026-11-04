@@ -24,12 +24,12 @@ const without = (o: Record<string, unknown>, key: string): Record<string, unknow
 
 const VALID: Record<(typeof FIELD_WORKER_EVENT_TYPES)[number], Record<string, unknown>> = {
   'field_worker.registered': { from_state: null, to_state: 'pending_kyc', trigger: 'field_worker.register', actor: 'operator', authorization: AUTH, district: 'Patna' },
-  'field_worker.kyc_completed': { from_state: 'pending_kyc', to_state: 'pending_kyc', trigger: 't', actor: 'operator' },
-  'field_worker.activated': { from_state: 'pending_kyc', to_state: 'active', trigger: 't', actor: 'trustee' },
-  'field_worker.suspended': { from_state: 'active', to_state: 'suspended', trigger: 't', actor: 'operator', reason_code: 'under_review' },
-  'field_worker.reactivated': { from_state: 'suspended', to_state: 'active', trigger: 't', actor: 'operator' },
-  'field_worker.terminated': { from_state: 'active', to_state: 'terminated', trigger: 't', actor: 'operator', reason_code: 'inactive', ended_on: '2026-11-01' },
-  'field_worker.posted': { from_state: 'active', to_state: 'active', trigger: 't', actor: 'operator', authorization: AUTH, from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' },
+  'field_worker.kyc_completed': { from_state: 'pending_kyc', to_state: 'pending_kyc', trigger: 'field_worker.kyc_complete', actor: 'operator' },
+  'field_worker.activated': { from_state: 'pending_kyc', to_state: 'active', trigger: 'field_worker.activate', actor: 'trustee' },
+  'field_worker.suspended': { from_state: 'active', to_state: 'suspended', trigger: 'field_worker.suspend:under_review', actor: 'operator', reason_code: 'under_review' },
+  'field_worker.reactivated': { from_state: 'suspended', to_state: 'active', trigger: 'field_worker.reactivate', actor: 'operator' },
+  'field_worker.terminated': { from_state: 'active', to_state: 'terminated', trigger: 'field_worker.terminate:inactive', actor: 'operator', reason_code: 'inactive', ended_on: '2026-11-01' },
+  'field_worker.posted': { from_state: 'active', to_state: 'active', trigger: 'field_worker.post', actor: 'operator', authorization: AUTH, from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' },
 };
 
 describe('the seven payloads (AC3)', () => {
@@ -47,6 +47,27 @@ describe('the seven payloads (AC3)', () => {
       for (const key of ['name', 'mobile', 'name_ciphertext', 'mobile_ciphertext', 'mobile_blind_index', 'phone', 'pariwar_id', 'field_worker_id']) {
         expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], [key]: 'x' }).success, `${t} + ${key}`).toBe(false);
       }
+    }
+  });
+
+  // Review R3-16 — `trigger` is ⛔ free text: each type takes exactly its command's value (QE6), a reason suffix only from its own list.
+  it('I8 / QE6: `trigger` is the command’s computed value — free text, another type’s value or a reason from another list is refused', () => {
+    const refused: ReadonlyArray<readonly [(typeof FIELD_WORKER_EVENT_TYPES)[number], string]> = [
+      ['field_worker.registered', 'Vikram Kumar registered by phone'],
+      ['field_worker.kyc_completed', 'field_worker.activate'],
+      ['field_worker.activated', 'field_worker.activate '],
+      ['field_worker.suspended', 'field_worker.suspend:Ramesh asked'],
+      ['field_worker.suspended', 'field_worker.suspend:inactive'], // a TERMINATION reason
+      ['field_worker.suspended', 'field_worker.suspend'],
+      ['field_worker.reactivated', 't'],
+      ['field_worker.terminated', 'field_worker.terminate:under_review'], // a SUSPENSION reason
+      ['field_worker.posted', 'field_worker.post:reassigned'],
+    ];
+    for (const [t, trigger] of refused) {
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], trigger }).success, `${t} ${trigger}`).toBe(false);
+    }
+    for (const r of ['under_review', 'at_worker_request']) {
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS['field_worker.suspended'].safeParse({ ...VALID['field_worker.suspended'], trigger: `field_worker.suspend:${r}`, reason_code: r }).success, r).toBe(true);
     }
   });
 

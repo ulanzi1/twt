@@ -5307,7 +5307,7 @@ registry.registerPath({
 // ONE route, gated on `field_worker.register` at the DISTRICT dimension (the body's reporting district): held by
 // `district_admin` (its own district) and `pariwar_admin` (any district of its Pariwar — the fill-in) + super_admin. The worker's
 // row and their 6-digit attribution code are written in ONE transaction; the 201 carries ⛔ code (QE22 — it is read only after
-// approval, Story 13.1a / 13.1b). The body is shape-only (400 `request.validation` runs BEFORE the guards); the content rules
+// approval, through Story 13.1a's audited code route below or 13.1b's SMS). The body is shape-only (400 `request.validation` runs BEFORE the guards); the content rules
 // are 422s. Nothing here reaches a member.
 const {
   RegisterFieldWorkerRequest: RegisterFieldWorkerRequestSchema,

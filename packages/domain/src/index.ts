@@ -365,8 +365,8 @@ export * as attributionCode from './attribution-code/index.js';
 // Story 13.1 — the FIELD WORKER primitive: the SEVENTH event-derived-state primitive (field_workers — a Pariwar-scoped
 // worker identity, Tier-1 name + mobile, and the projector-only lifecycle `pending_kyc → active ⇄ suspended → terminated`
 // with a projected REPORTING district — + the seven field_worker.* events + the FR-85 predicate `acceptsNewAttributions`).
-// Its one production caller is the registration route (`POST /api/v1/p/:pariwarId/field-workers`); the other lifecycle
-// routes are Stories 13.1a / 13.1c / 13.1d.
+// Its production callers are the registration route (`POST /api/v1/p/:pariwarId/field-workers`, Story 13.1) and Story 13.1a's
+// approval and reads (`…/:fieldWorkerId/approve`, the list, the identity, the code); the other lifecycle routes are 13.1c / 13.1d.
 export * as fieldWorker from './field-worker/index.js';
 // Story 10.5 — the News/Blog `[SURFACE]` workflow module: a mutable-`status` post lifecycle
 // (Decision 1 — NOT event-derived-state) wired to the shipped tone-review gate (approve), the

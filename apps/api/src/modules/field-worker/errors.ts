@@ -8,7 +8,7 @@
 // failure, a bug — is rethrown UNCHANGED for the central mapper to answer 500.
 //
 // The rows ONLY A COMMAND can raise (illegal transition, KYC, reason, not found, stream conflict, district unchanged,
-// authorization stale, ended_on) had NO route in Story 13.1. Story 13.1a's approval now reaches four of them (illegal
+// authorization stale, ended_on) had NO route in Story 13.1. Story 13.1a's approval now reaches six of them (illegal
 // transition, the two KYC rows, not found, stream conflict, authorization stale); the rest wait for 13.1c / 13.1d. They are
 // mapped here once, so every route inherits one mapping, and asserted by `field-worker-errors.test.ts`.
 //

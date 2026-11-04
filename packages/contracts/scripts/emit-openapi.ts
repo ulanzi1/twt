@@ -5338,6 +5338,124 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 13.1a — APPROVE a field worker, read their code by hand, and the reads the screens need (`2026-11-04-446` AD5, `-447`) ──
+// Three keys, all DISTRICT-dimension: `field_worker.approve` (pariwar_admin), `field_worker.read_code` and `field_worker.view`
+// (district_admin for its own district, pariwar_admin for any) + super_admin. A per-worker route's target is the worker's CURRENT
+// district (a pre-gate loader); an unknown worker, another Pariwar's or one outside the grant is the SAME 403 (no existence
+// oracle). Every read of a name, a mobile or a code writes an audit line naming the officer BEFORE anything is released, and
+// answers `Cache-Control: no-store`. Nothing here reaches a member.
+const {
+  FieldWorkerParams: FieldWorkerParamsSchema,
+  ApproveFieldWorkerRequest: ApproveFieldWorkerRequestSchema,
+  ApproveFieldWorkerResponse: ApproveFieldWorkerResponseSchema,
+  FieldWorkerCodeResponse: FieldWorkerCodeResponseSchema,
+  FieldWorkerListQuery: FieldWorkerListQuerySchema,
+  FieldWorkerListResponse: FieldWorkerListResponseSchema,
+  FieldWorkerIdentityResponse: FieldWorkerIdentityResponseSchema,
+  FieldWorkerDistrictsResponse: FieldWorkerDistrictsResponseSchema,
+} = await import('../src/field-workers/index.js');
+const fieldWorkersNoSession = errorResponse('No admin session · auth.session_required · auth.session_expired');
+const fieldWorkersNoGrant = errorResponse('No grant for this Pariwar (pariwar.not_found — the scope hook; distinct from the 403)');
+const fieldWorkersDecrypt = {
+  500: errorResponse('field_worker.identity_unreadable (a stored value cannot be read — an integrity fault; retry never helps)'),
+  503: errorResponse('field_worker.decrypt_unavailable (the key service is unavailable — retry shortly)'),
+};
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/districts',
+  summary: "The Pariwar's recorded districts (for the field-worker screens' pickers)",
+  description:
+    'Session + a grant in this Pariwar; no permission key (district names are not personal data; each action is gated by its own ' +
+    'route). The geo tree in force\'s district nodes, else the listed workplace districts — the same two sources registration ' +
+    'checks. Sorted by UTF-16 code unit, exact values. `districts_truncated` is true past 200 listed districts (the screens then ' +
+    'take an exact typed district).',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }) },
+  responses: {
+    200: { description: 'The districts', content: jsonOf(FieldWorkerDistrictsResponseSchema.openapi('FieldWorkerDistricts')) },
+    401: fieldWorkersNoSession,
+    404: fieldWorkersNoGrant,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers',
+  summary: 'List field workers in one state (a keyset page, names decrypted)',
+  description:
+    '`field_worker.view` — at the district dimension against `district` when given (byte for byte), at the pariwar dimension when ' +
+    'not (so a District Admin must name a district they hold). Ordered `created_at DESC, field_worker_id DESC`; `limit` 1–25 ' +
+    '(default 20); `cursor` from the previous page. Each item carries the decrypted NAME and no mobile. One audit line naming the ' +
+    'officer and the page\'s worker ids is written before any name is decrypted. `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerListQuerySchema },
+  responses: {
+    200: { description: 'A page', content: jsonOf(FieldWorkerListResponseSchema.openapi('FieldWorkerList')) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.cursor_invalid'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.view for the named district (or, with no district, for the whole Pariwar)'),
+    404: fieldWorkersNoGrant,
+    ...fieldWorkersDecrypt,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}',
+  summary: "One field worker's identity (name and full mobile decrypted)",
+  description:
+    '`field_worker.view` at the worker\'s CURRENT district. The list item plus the full normalised `mobile` and the approving ' +
+    'officer\'s display name. One audit line naming the officer is written before the decrypt; a worker moved between the gate and ' +
+    'the read is refused (409 field_worker.authorization_stale). `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema },
+  responses: {
+    200: { description: 'The worker', content: jsonOf(FieldWorkerIdentityResponseSchema.openapi('FieldWorkerIdentity')) },
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.view for the worker\'s district — also an unknown worker or another Pariwar\'s (no existence oracle)'),
+    404: fieldWorkersNoGrant,
+    409: errorResponse('field_worker.authorization_stale'),
+    ...fieldWorkersDecrypt,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/approve',
+  summary: 'Approve a registered field worker (identity confirmed and activated, in one step)',
+  description:
+    '`field_worker.approve` (pariwar_admin) at the worker\'s CURRENT district; `Idempotency-Key` (the worker id is in its namespace). ' +
+    'Body `{}`. Records `field_worker.kyc_completed` then `field_worker.activated` in ONE transaction, both carrying the verified ' +
+    'authorization; the approving officer\'s display name is kept on the worker. A worker not awaiting approval is a 409.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(ApproveFieldWorkerRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Approved (active)', content: jsonOf(ApproveFieldWorkerResponseSchema.openapi('ApproveFieldWorkerResult')) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.approve for the worker\'s district — also an unknown worker or another Pariwar\'s'),
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found) · field_worker.not_found (a lost race only)'),
+    409: errorResponse(
+      'field_worker.illegal_transition · field_worker.authorization_stale · field_worker.idempotency_in_progress · admin.display_name_missing',
+    ),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/code',
+  summary: "Read an ACTIVE field worker's code, to read it out to them",
+  description:
+    '`field_worker.read_code` at the worker\'s CURRENT district. Only while the worker is `active` (409 field_worker.code_not_available ' +
+    'otherwise, with `current_state` in the details, and no audit line). One audit line naming the officer is written before the code ' +
+    'is released; the worker row is held (FOR SHARE) across the check and the read. `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema },
+  responses: {
+    200: { description: 'The code', content: jsonOf(FieldWorkerCodeResponseSchema.openapi('FieldWorkerCode')) },
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_code for the worker\'s district — also an unknown worker or another Pariwar\'s'),
+    404: fieldWorkersNoGrant,
+    409: errorResponse('field_worker.code_not_available · field_worker.authorization_stale'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

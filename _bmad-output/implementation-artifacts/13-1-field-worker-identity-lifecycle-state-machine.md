@@ -137,7 +137,7 @@ TR = traps · C = carried to a sibling story.
 
 # Story 13.1: Field Worker Identity + Lifecycle State Machine `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1514,7 +1514,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 - [x] **Task 12 — records and full gate (AC14).** Dev Agent Record, File List, Change Log; the story's completion ledger entry (the next
       free letter after `k`, re-grepped across every ref) prepended to BOTH ledgers in `sprint-status.yaml` — the top comment block and the `last_updated: >-` key
       block — by the safe-prepend pattern (read first, size guard, verify the YAML afterwards); `pnpm ci:local` on a fresh container (done once, at `ce80bd64`).
-- [ ] **Task 12, last clause (split out by review R9) — run the `decision-flow-sync` skill when decisions `-441`…`-444` LAND on `main`.** NOT done:
+- [ ] **Task 12, last clause (split out by review R9) — run the `decision-flow-sync` skill when decisions `-441`…`-444` LAND on `main`.** [2026-11-04: they — and `-445` — LANDED on `main` (`e27351d6`, PR #323); the sync is still NOT run — the next step.] NOT done:
       they are on this branch only; the checked box above does not cover it.
 - [x] **Re-run `pnpm ci:local` on a FRESH container before push (review round 1).** The 38 / 38 in Debug Log (d) is for `ce80bd64`; R1–R10 changed
       code and tests after it. ✅ DONE 2026-11-04: **38 / 38 green at `347f998e`** (after rounds 1–4) on a fresh `postgres:16-alpine` container (`:5473`,
@@ -2840,6 +2840,11 @@ packages/domain/tests/integration/rls/field-workers-policy-regression.spec.ts ·
 _bmad-output/planning-artifacts/epics.md (13.1c / 13.1d: the D7 block) · _bmad-output/implementation-artifacts/{deferred-work.md (D5–D8),sprint-status.yaml (ledger 2026-11-04d)}.
 
 ### Change Log
+
+- **v1.26 (2026-11-04) — LANDED; decision `2026-11-04-445` recorded.** BigDev: *"make decision log entry, and land it"*. Decision `2026-11-04-445` (author-commit, committed ALONE `e27351d6`) records the
+  review-round amendments of `-442` QE6, QE9 (×4), QE13 and QE18 (e) and corrects `-444` Consequence 2 — the "⛔ decision-log entry (BigDev's call)" notes in v1.21–v1.25 and the ledger are DISCHARGED by it.
+  `pnpm ci:local` PASSED 38 / 38 at `e27351d6` on a fresh container (the decision log is a gate input). `main` fast-forwarded `268d86b5..e27351d6`; PR #323 MERGED. Status `review` → **done**.
+  Still open: the `decision-flow-sync` run (Task 12's last clause); `6-22b` / `14-3` / `6-39` renumber their migrations after `0200`; Row 48 gates go-live — nothing is live.
 
 - **v1.25 (2026-11-04) — CODE REVIEW round 4 (the round-3 fix diff), patches applied.** Three fresh layers on the isolated fix diff (24 files): 1 decision-needed, 14 patch, 1 defer, 6
   dismissed; BigDev resolved R4-DN1 ("1" ⇒ R4-15) and chose "apply every patch". R4-1 the 503 `console.error` sweep made real (it read a reset spy — mine) and the flag-fails leg swept;

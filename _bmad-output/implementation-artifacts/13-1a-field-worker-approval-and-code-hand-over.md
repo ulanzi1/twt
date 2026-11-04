@@ -11,7 +11,7 @@ PINNED: `06bab925` = `origin/main` (ledger 2026-11-04g - Story 13.1 LANDED, PR #
 Every NEGATIVE ("nothing decrypts a field worker's columns", "no field-worker screen exists", "the door checks no worker state")
 was re-grepped. Perishable - re-check at Task 0.1. Re-locate by FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.2, 2026-11-04). BigDev ANSWERED Q-1..Q-5 on 2026-11-04 (his words are in the Change Log, v1.1): every answer is the
+STATUS: ready-for-dev (v1.3, 2026-11-04). GOVERNANCE IS DONE - decision `2026-11-04-446` (`218a7424`) and the roster lines + the Panel draft (`1c3b6bce`) are committed, each before any code; the dev agent starts at Task 0.1 (re-verify at the then-current tip), then Task 1. BigDev ANSWERED Q-1..Q-5 on 2026-11-04 (his words are in the Change Log, v1.1): every answer is the
 author's recommendation, so the build decisions AD1-AD14 STAND UNCHANGED. Only Q-1..Q-5 (AD2, AD6, AD8, AD9, AD13) were put to him as asks; the other
 nine are the author's, recorded on his instruction to write the decision entry ("all, commit and write the decision entry") - he may still change them
 before the code that depends on them. The entry that records them is decision `2026-11-04-446` (Task 0.3), committed alone, before any code
@@ -612,7 +612,7 @@ prefix every `ci:local` and `git push` with the story's `DATABASE_URL` port ([[p
 ([[project_prettier_not_enforced]]).
 
 - [ ] **Task 0 - Preflight and governance (AC: 13)** - runs FIRST; writes no code.
-  - [ ] 0.0 Commit this story file and the create-story record edits (`epics.md`, `deferred-work.md`, `sprint-status.yaml`) as ONE `records(13.1a)` commit on the story branch, BEFORE anything
+  - [x] 0.0 DONE (`b4ecfcfb`): Commit this story file and the create-story record edits (`epics.md`, `deferred-work.md`, `sprint-status.yaml`) as ONE `records(13.1a)` commit on the story branch, BEFORE anything
     else - the create-story pass left them uncommitted (nothing was committed without BigDev asking).
   - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor 06bab925 HEAD`; `git diff --name-only 06bab925..origin/main -- packages apps scripts` (a code claim re-derived at the NEW tip, not
     inherited - the pin being valid and the claims being current are two facts). Re-grep the NUMBERS block (next free migration and its `when`, the highest decision id, `PERMISSION_CATALOG_VERSION`,
@@ -620,13 +620,13 @@ prefix every `ci:local` and `git push` with the story's `DATABASE_URL` port ([[p
     Check `git branch -a` + the open worktrees for another branch that edits `packages/domain/src/field-worker/` or `apps/admin/src/router.tsx`.
   - [x] 0.2 DONE 2026-11-04: BigDev answered Q-1..Q-5, each the recommended option; his words are in the Change Log (v1.1); no AD changed. The code-start gate is now Task 0.3 (the decision
     entry, committed alone) - still no code before it.
-  - [ ] 0.3 Write the decision entry (>= `-446`; re-grep every ref) in `.decision-log.md` and commit it ALONE with the `governance:` prefix and the Co-Authored-By line: an author-commit
+  - [x] 0.3 DONE (`218a7424`, decision `2026-11-04-446`, committed alone): Write the decision entry (>= `-446`; re-grep every ref) in `.decision-log.md` and commit it ALONE with the `governance:` prefix and the Co-Authored-By line: an author-commit
     (BigDev) recording AD1-AD14, the answers, the three keys and their holders, the Panel's non-blocking confirm, and "supersedes nothing". Cite `-441`, `-442`, `-443`, `-444`, `-445`, `-059` B(3),
     `-210` cl.2 by clause. Try the write first; if it is refused, ask once ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.4 Append dated lines under Row 48 (`docs/launch-gate-inventory/inventory-roster.md`): under leg (h) - the production path to `activated` is DECIDED (decision `-446`, row `13-1a`) and NOT BUILT; the leg stays
+  - [x] 0.4 DONE (`1c3b6bce`): Append dated lines under Row 48 (`docs/launch-gate-inventory/inventory-roster.md`): under leg (h) - the production path to `activated` is DECIDED (decision `-446`, row `13-1a`) and NOT BUILT; the leg stays
     OPEN until the approval route is deployed with go-live evidence (merge is not go-live) - Task 11 changes the line to "built" when it is; under leg (i) - the three keys `field_worker.approve`, `field_worker.read_code`, `field_worker.view` (decided in `-446`, minted by Task 3, built on the default), the
     Panel's confirm outstanding and its note drafted (Task 0.5), not sent. No new row. Commit it as its OWN `governance:` commit right after the decision's (AC13: the decision is committed ALONE), still before any code.
-  - [ ] 0.5 Draft the Panel's NON-BLOCKING confirm note from `trustee-panel-routing-note-TEMPLATE.md` (copy; delete the guidance blocks): section 0 answered first (the keys' HOLDERS are ruled; the Panel is asked
+  - [x] 0.5 DONE (`1c3b6bce`; `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-04-story-13-1a-field-worker-keys-confirm.md`, NOT sent): Draft the Panel's NON-BLOCKING confirm note from `trustee-panel-routing-note-TEMPLATE.md` (copy; delete the guidance blocks): section 0 answered first (the keys' HOLDERS are ruled; the Panel is asked
     only to confirm three keys under `-059` B(3), a disclosure to the Trust's own officers); the plain sentence, the ONE deciding fact, options with an honest cost each, what is at stake ("live today:
     nothing; blocked: nothing; if nothing is decided: go-live waits on Row 48 (i)"), how much to trust the note, evidence last. DRAFTED, NOT SENT - BigDev sends it.
 
@@ -886,5 +886,6 @@ prefix every `ci:local` and `git push` with the story's `DATABASE_URL` port ([[p
 | Version | Date | Note |
 |---|---|---|
 | v1.0 | 2026-11-04 | Created by `bmad-create-story 13.1a` on `story/13-1a-field-worker-approval-and-code-hand-over` (its own worktree, from `origin/main` `06bab925`). Three read-only research passes (domain + database; API + RBAC + gates; the admin web app) and the author's own reads. The headline finding: 13.1's `kyc_completed` and `activated` carry no authorization snapshot, so the epic's "the log records who approved and the authorization snapshot" needs a domain change (AD3). Build decisions AD1-AD14 and asks Q-1..Q-5 await BigDev (Task 0.2); the keys' Panel confirm is drafted at Task 0.5. Validated ONCE by a fresh-context read-only checker (19 findings: 3 HIGH, 8 MEDIUM, 1 LOW-MEDIUM, 7 LOW; each HIGH re-verified by the author against the code; all applied - see the `2026-11-04h` ledger entry). Not validated a second time. |
+| v1.3 | 2026-11-04 | GOVERNANCE COMMITTED, on `story/13-1a-field-worker-approval-and-code-hand-over`, nothing pushed (BigDev: "all, commit and write the decision entry"): `b4ecfcfb` the story and its record edits (Task 0.0); `218a7424` decision `2026-11-04-446`, ALONE (Task 0.3); `1c3b6bce` Row 48 legs (h) and (i) dated lines and the Panel's key-confirm note, DRAFTED and NOT sent (Tasks 0.4, 0.5). The decision entry says plainly that only Q-1..Q-5 were put to BigDev one by one. Tasks 0.0, 0.2-0.5 ticked; Task 0.1 is the dev agent's first act. No AD, AC or Task text changed. |
 | v1.2 | 2026-11-04 | Precision pass before the first commit: only Q-1..Q-5 were put to BigDev as asks (AD2, AD6, AD8, AD9, AD13); AD1, AD3, AD4, AD5, AD7, AD10-AD12 and AD14 are the author's, recorded on BigDev's instruction ("all, commit and write the decision entry") - the status text, the AD section heading and Task 0.4 now say so, and Task 0.4's line for leg (h) says DECIDED, not built. No AD, AC or Task changed. |
 | v1.1 | 2026-11-04 | BigDev ANSWERED Q-1..Q-5 (Task 0.2), verbatim: "Q1 - Yes / Q2 - yes / Q3 - show decrypted name / Q4 - yes enough / Q5 - yes". Q-1 A (approve = identity confirmed AND activated, one step), Q-2 A (the three keys and holders as AD6), Q-3 A (names decrypted in the list, AD9), Q-4 A (a plain audited read is enough - no step-up), Q-5 A (the code is readable only while `active`). Every answer is the recommendation: AD1-AD14 and every AC / Task are UNCHANGED; only status text moved (header, the AD and ASKs sections, Task 0.2). Not yet done: the decision entry (>= `-446`, Task 0.3), the roster lines (0.4), the Panel confirm draft (0.5), the commit of the story and its record edits (0.0). |

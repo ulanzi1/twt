@@ -4,6 +4,50 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 13-1-field-worker-identity-lifecycle-state-machine, round 4 — the round-3 fix diff (2026-11-04)
+
+Review of the round-3 patches (24 files, 1,873 lines) — 1 decision-needed, 14 patch, 1 defer, 6 dismissed (the story's `#### Review Findings — round 4`).
+
+- **D9 — The runtime's Node / ICU version decides which names `\p{Cn}` refuses, and production's Node is unpinned.** `apps/api/src/modules/field-worker/handlers.ts` refuses unassigned code points (`\p{Cn}`, Story 13.1 R3-1); V8's property tables follow its ICU. `apps/api/Dockerfile:6` is `FROM node:22-alpine` (a floating tag) while CI pins `node-version: 22.12.0` (`.github/workflows/ci.yml:57`) — so a letter assigned in a recent Unicode (e.g. Tolong Siki U+11DB0, Unicode 17 — Kurukh, Jharkhand) can be a 201 on one deploy and a 422 on the next, and CI does not run the runtime production runs. Owner: NONE YET (deployment). Fix: pin the runtime image to the CI Node version, or log `process.versions.unicode` at boot. Re-trigger: the next runtime-image change, or a name refused in production that passes locally.
+
+---
+
+## Deferred from: code review of story 13-1-field-worker-identity-lifecycle-state-machine, round 3 — chunks G2, G1, G4 (2026-11-04)
+
+The rest of the full-branch review (G2 commands + reads, G1 persistence + primitive, G4 RBAC core + gates) — 1 decision-needed, 18 patch, 4 defer, 27 dismissed (the story's `#### Review Findings — round 3: chunks G2 …`).
+
+- **D5 — Error `cause` fields carry the driver error into the logs.** `FieldWorkerPersistError` / `FieldWorkerProjectorInputError` (`packages/domain/src/field-worker/errors.ts`) keep the raw drizzle / pg error as a public `cause`; on an unhandled 500 `apps/api/src/middleware/error-mapping/index.ts:690` logs `{ err: error }`, and pino's `err` serializer includes own enumerable properties — so the bound params (Tier-1 ciphertext, the mobile blind index — an equality oracle) and a 23505's `DETAIL` (the blind index) can reach the log. Pre-existing pattern: 12.2's `ModulePersistError` has the same shape, and so may other primitives. The fix belongs in ONE place (a non-enumerable `cause` in every primitive's persist error, or a redacting `err` serializer). Owner: NONE YET. Re-trigger: a log-hygiene pass, or the first unhandled persist error seen in a log.
+- **D6 — The other `*-state-invariant` gates share 13.1 R3-27's blind spots.** `scripts/*-state-invariant/lib.ts` (the marketplace twin and its siblings) do not see a `.set(patch)` / spread / aliased or cast table / split chain, allow-list anonymous callbacks inside a projector body, and have no "the projector's own writes were seen" floor. 13.1 fixes its own copy (R3-27), so the copies now diverge. Owner: NONE YET. Re-trigger: the next story that adds a `*-state-invariant` gate, or a refactor that changes a projector's write shape.
+- **D7 — Stories 13.1c / 13.1d: a move has no expected-from-district guard.** `postFieldWorker` (`packages/domain/src/field-worker/commands.ts`) judges the authorization's target under the row lock (either end), but a move whose authorization names the DESTINATION does not say which SOURCE it expected — two concurrent moves both fulfil, serialised by the lock (spec (e2), by design today). Together with the any-district-key acceptance already carried (13.1 X3, C5, C10), 13.1c / 13.1d — which mint the move keys — must decide whether a move names its expected source (a stale-source refusal). Homed under 13.1c / 13.1d in `epics.md`.
+- **D8 — FORCE RLS with policies only `TO twt_app`: a non-superuser owner sees zero `field_workers` rows.** `packages/domain/migrations/0200_field-workers.sql` — an owner-run UPDATE (the retention scrub, an erasure job, any maintenance migration) on managed Postgres, where the owner is not a superuser and lacks BYPASSRLS, would silently match nothing. Unreachable in 13.1 (no owner-run writer; the test owner is a superuser). Re-trigger: the first migration or job that UPDATEs `field_workers` as the owner — it must run as a role a policy names, or add a policy for it.
+
+---
+
+## Deferred from: code review of story 13-1-field-worker-identity-lifecycle-state-machine, round 3 — the whole branch, chunk G3 (2026-11-04)
+
+Full-branch review (baseline `268d86b5` → the working tree), chunked; chunk G3 = the API route + contracts — 1 decision-needed, 9 patch, 1 defer, 12 dismissed (the story's `#### Review Findings — round 3`).
+
+- **D4 — The keyed idempotency store: a replay after the TTL answers "in progress" for a request that COMPLETED.** `packages/domain/src/idempotency/keyed-store.ts` `claim` leaves a completed-but-expired row in place and returns `already_claimed` (its comment: "still readable by getResult until the vacuum runs"), but `getResult` filters `expires_at >= now` and returns `null` — so every keyed-store handler (`field-worker/handlers.ts:147-150`, the 12.2 twin, the drive-target routes) answers 409 `*.idempotency_in_progress` ("please wait and retry") for a write that finished more than 24 h ago, and waiting never helps. The comment contradicts the code. Pre-existing; not 13.1's file. Same family as RD3 (12.2) and the drive-target "pass-2 softening" — `inspect` / `takeOver` are the remedy, owned with RD3. Owner: NONE YET. Re-trigger: a report of a stale "in progress", or RD3's owner.
+
+---
+
+## Deferred from: code review of story 13-1-field-worker-identity-lifecycle-state-machine, round 2 — the fix diff (2026-11-04)
+
+Review of the patch applied after round 1 — 0 decision-needed, 11 patch, 1 defer, 9 dismissed (the story's `#### Review Findings — round 2`).
+
+- **D3 — Story 13.2's door file / a story that owns it: the 503 exhaustion path holds the registration's scope-transaction connection while the flag write takes two more.** `flagAllocationExhaustedForRequest` (`apps/api/src/modules/field-worker/attribution-code-access.ts:123,125` — Story 13.2's file, its export list pinned) resolves the display name (`getDisplayName(deps.pool, …)`) and opens its OWN scope transaction from the same pool while the registration's is still held (`handlers.ts` catches the exhaustion inside `mutate`, QE9). Under pool saturation the flag write can time out and is swallowed (`console.error`, QE9), so the trustee never sees the flag. Rare: it needs a Pariwar's 6-digit code space exhausted AND a saturated pool at the same moment. Not fixed in 13.1 — QE9 gives the flag its own committed transaction and the file is not 13.1's to edit. The fix is a pre-read display name passed in, or flagging after the registration's transaction closes. In dev / CI `servicePool` is `pool`, so `withCompensatingAudit` also draws a second connection from it on every registration there.
+
+---
+
+## Deferred from: code review of story 13-1-field-worker-identity-lifecycle-state-machine (2026-11-04)
+
+Full-diff review, baseline `268d86b5`, HEAD `e4f88150` — 0 decision-needed, 10 patch, 2 defer, 15 dismissed (the story's `### Review Findings`).
+
+- **D1 — Story 13.1a: `listFieldWorkersForPariwar` has no cursor, and its ordering has no index.** `packages/domain/src/field-worker/read.ts` caps at 200 (`clampLimit`, as AC10 specifies) with no offset or keyset, so a Pariwar with more than 200 workers cannot be enumerated through it; `ORDER BY created_at DESC, field_worker_id DESC` is not served by `field_workers_pariwar_state_idx` (`(pariwar_id, current_state)`, migration `0200`). No consumer exists until 13.1a's screens. Owner: 13.1a — add keyset paging and the matching index with the first screen that lists workers.
+- **D2 — Refactor candidate (no row): extract the savepoint / constraint / district helpers `marketplace` exports.** `packages/domain/src/field-worker/*` imports `rollbackToSavepoint`, `STREAM_VERSION_CONSTRAINT`, `findListedWorkplaceDistricts` (and `apps/api` uses `marketplace.pgSqlstateOf`) from `marketplace`; 13.2's `allocate.ts` / `tx-guard.ts` did first. A refactor in `marketplace` now breaks two consumers. QE1 rules ⛔ a package, and no behaviour is wrong — the `feedback_no_premature_package` trigger ("extract once a 2nd consumer exists") has arguably fired, so the extraction is BigDev's to schedule as its own change.
+
+---
+
 ## Deferred from: story 13-1-field-worker-identity-lifecycle-state-machine (create-story, 2026-11-03)
 
 Carried items C1–C11 of Story 13.1 (created, ready-for-dev — not built yet). Decisions `-441` (93b7e419) and `-442` (6a3172e4) are committed: the author-commit `2026-11-03-442` records the build decisions QE1–QE22 and the answers Q-2 (BigDev minted rows 13-1a…13-1d on 2026-11-03), Q-3 (the form states the purposes and records the agreement) and Q-4 (No); `2026-11-03-441` RULED Q-1 and Q-5 (a District Admin may add a field worker, the Pariwar Admin fills in, the full log is kept, `active`-only credit confirmed). The Panel questions Q-6…Q-9 are RULED in `2026-11-03-443` (Q1 A, Q2 C, Q3 A, Q4 A — each the build default except Q2 C, which adds a later link: 13.1 C11); decision `-444` (86274245) amends `-442`'s QE5, QE10, QE11, QE13, QE18 and QE20 from the story's later validation (v1.17–v1.19); the counsel question (three questions: the contractor-or-employee classification, whether 8 years is sound, and erasure before it) is DRAFTED, not sent. Nothing is still open for the 13.1 build. Each item is HOMED in its trigger story, not closed — a dated "INHERITED FROM 13.1" block sits under that story's AC in `epics.md` (13.3, 13.4, 13.5, 13.6, 13.8), and the minted rows carry the rest: C5 → 13.1c, C9 → 13.1a / 13.1b, C10 → 13.1d; C7 is homed in the story file (no story). 13.1 builds `packages/domain/src/field-worker/`, table `field_workers` (name / mobile as Tier-1 ciphertext, ⛔ a code column), the lifecycle `pending_kyc → active ⇄ suspended → terminated` derived from `events_log`, `fieldWorker.acceptsNewAttributions(state)` / `getFieldWorkerStateAt`, the composite FK on 13.2's `field_worker_attribution_codes`, and ONE admin registration route (the registry's first caller).

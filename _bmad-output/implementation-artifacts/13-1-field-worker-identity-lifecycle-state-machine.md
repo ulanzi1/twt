@@ -516,16 +516,17 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   z.string().max(64)`, `district: z.string().max(200)`. A Zod failure is 400 `request.validation`, raised in the validation phase BEFORE the preHandler hooks
   (12.2 `routes.ts`), so a content rule in the DTO would answer an unauthenticated caller with 400 instead of 401 / 403 / 404. The
   CONTENT rules run in the HANDLER — after the guards, inside the idempotency claim, before any KMS call — and throw typed errors
-  mapped to 422: `name` NFC-normalised, trimmed, 1–120 characters, no control characters, no NUL or unpaired surrogate (422
+  mapped to 422: `name` NFC-normalised, trimmed, 1–120 characters, no control characters, no NUL or unpaired surrogate, no INVISIBLE character — no line or paragraph separator, no private-use code point, no default-ignorable code point (zero-width and filler characters, bidi controls, the word joiner, the soft hyphen, the BOM, tag characters, variation selectors) EXCEPT ZWNJ, ZWJ, LRM and RLM, which real names carry — and at least one letter (⚠ amended by review R6 and again by R2-1, 2026-11-04 — see the Review Findings; ⚠ amended a THIRD time by review round 3, R3-1 / R3-10, 2026-11-04: ALSO no format (`Cf`) or unassigned (`Cn`) code point, no U+2800 or U+FFFD, no combining mark at the start or after whitespace, no run of 8 or more combining marks (BigDev, R3-DN1); ALM (U+061C) joins the allowed four; ⚠ amended a FOURTH time by review round 4, 2026-11-04: also no U+FFFC (R4-3); the two mark rules are judged with the five allowed invisibles REMOVED, so one between marks or before a mark no longer hides them (R4-2); and each allowed invisible sits BETWEEN two other characters — never first, never last, never next to another (BigDev, R4-DN1 "1"; R4-15), with ONE exception found while building it: a final ZWJ right after a virama is allowed (the legacy encodings of the Malayalam chillu and the Bengali khanda ta end a word that way — option 1 as written would have refused those real names; BigDev may overrule)) (422
   `field_worker.name_invalid`); `mobile` through `normalizeMobile` (null ⇒ 422 `field_worker.mobile_invalid`); `district` must be a LISTED district of the Pariwar
   (`assertDistrictRecorded`, QE17 ⇒ 422 `field_worker.district_unknown`) — a Pariwar Admin's grant covers ANY string the gate is
   given, so this check is the only thing that stops a junk district. Required
   `Idempotency-Key` (missing, empty or over 200 characters ⇒ 400 `field_worker.idempotency_key_required`; the same key still in
   flight ⇒ 409 `field_worker.idempotency_in_progress` — rename every `module.*` literal in the helpers copied from 12.2).
   12.2's `tenantWrite` (`marketplace/handlers.ts`) opens the scope transaction BEFORE it calls `run`, inside `withIdempotency`, and
-  wraps `run` in its `try` / `finally closeScopeTx(false)` — copy it UNCHANGED (renaming `module.*` and the mapper). The `run` body, in
-  order: mint `fieldWorkerId` → content-validate `name` and `mobile` (422) → resolve the admin's `display_name` (absent ⇒ `AdminDisplayNameMissingError`,
-  no fallback, BEFORE any write or audit line) → `assertDistrictRecorded(ctx.scopeTx.tx, pariwarId, district, at)` with
+  wraps `run` in its `try` / `finally closeScopeTx(false)` — copy it UNCHANGED (⚠ ONE variance since review R3, 2026-11-04: a `prepare` step before `openScopeTx`) (renaming `module.*` and the mapper). The `prepare` step (inside the claim,
+  BEFORE the transaction opens), in order: content-validate `name` and `mobile` (422) → resolve the admin's `display_name` (absent ⇒
+  `AdminDisplayNameMissingError`, no fallback, BEFORE any write or audit line). Then the `run` body, in order: mint `fieldWorkerId` →
+  `assertDistrictRecorded(ctx.scopeTx.tx, pariwarId, district, at)` with
   `at` = `SELECT now()` on `ctx.scopeTx.client` (as 12.2's `assertScopeValuesRecorded` caller does; compared byte for byte; 422
   `field_worker.district_unknown`) — BEFORE any KMS call, so an unlisted district costs no encrypt → encrypt name + mobile, compute
   the mobile HMAC (the KMS calls run with the transaction open and idle — accepted, one short round trip each) → duplicate-mobile
@@ -541,7 +542,7 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   `field_worker.code_allocation_exhausted`. Response 201: `{ field_worker_id, district, current_state, kyc_status }` — NO code (QE22, APPROVED 2026-11-03): the code is
   allocated here, in the same transaction, but is read only after approval — by 13.1b's SMS and 13.1a's audited read — so no
   copy tells anyone a code before the worker is approved and the allocation has committed (C9; 13.2's C6). Do not wire `maxAttempts` from env (default 8; YAGNI).
-  The transaction is open, and idle, during the validation, the display-name read and the KMS calls — accepted. Copy
+  The transaction is open, and idle, during the district check and the KMS calls — accepted (the content rules and the display-name read run in `prepare`, BEFORE it opens — review R3). Copy
   `requireIdempotencyKey`, `releaseHookTx` and `namespace(pariwarId, actorId)` as they are.
   Do NOT trim or NFC-normalise `district` in the handler: the gate compared the raw body bytes, and the command refuses a genesis
   whose district differs from `authorization.target.value` (AC5) — a normalised value would turn a valid request into a 500.
@@ -748,14 +749,14 @@ decision `2026-11-03-443`: Q1 A, Q2 C, Q3 A, Q4 A. Q-2, Q-3 and Q-4 are ANSWERED
   (`role_grants.id`) so the record can point at the row; `loadActorGrants` and `loadGlobalActorGrants`
   (`apps/api/src/modules/rbac/index.ts`) select `id`. ⚠ `authorize` is PURE over the grants it is given — a caller could pass
   fabricated grants: a source-fence unit test pins that `authorize(` is called only from `check.ts` (`requirePermission`),
-  `apps/api/tests/integration/_field-worker-fixture.ts` and `*.test.ts` / `*.spec.ts` files. The precedent is decision `2026-08-13-105` D4: "the
+  `apps/api/tests/integration/_field-worker-fixture.ts` and `*.test.ts` / `*.spec.ts` files (⚠ VARIANCE, review R10: AND `packages/domain/tests/integration/field-worker/_fixtures.ts`, by exact path — Debug Log (c); review R7: the fence flags EVERY reference to `authorize` — an alias, a property read, element access, a destructured binding — not only a call) (⚠ AMENDED by review round 3, R3-29 — BigDev, 2026-11-04, R3-DN2 "1": `requirePermission` RETURNS the same result and is just as pure, so a SECOND fence flags every USE of its return value outside `check.ts` and the rbac hook `apps/api/src/modules/rbac/index.ts` (and test files) — its other callers drop it; both fences walk `apps/`, `packages/` and the ROOT `scripts/` / `tests/` (R3-25) and recognise an assignment destructuring and a literal `Reflect.get` (R3-26); a drift guard, ⛔ a security boundary) [⚠ CORRECTED by review round 4, R4-4: as written at R3-29 the SECOND fence did NOT recognise those forms, nor an import alias, `.call` / `.apply` / `.bind`, a literal element access or the function passed as a value — it does now; both fences also see a for-of assignment pattern and a `Reflect` reached through `globalThis` or `['get']` (R4-6), skip an absent root and build output (R4-11), and the second's floor counts DISCARDED CALLS in the AST, the four real guard callers named (R4-5)]. The precedent is decision `2026-08-13-105` D4: "the
   grant that actually authorized", not "the first grant in the tenant". `posted` carries it from day one (QE17); the other five events
   when their routes are built (C5).
   **Costs, recorded.** The snapshot records the role and grant that PASSED, not the role's permission list then in force (the Super
   Admin can edit bundles — FR-44 — and that edit is not traced here). A `grant_id` may point at a row later deleted, so the tuple, not
   the id, is the record. An actor holding both a district and a pariwar grant is logged as the District Admin even if they meant to
   fill in (most specific wins). The RBAC core is a governance-boundary root: this is a reviewed, strictly ADDITIVE edit (every existing
-  RBAC test passes unchanged, `matching-grant.test.ts` included — none of its cases ties within one dimension). It is
+  RBAC test passes unchanged, `matching-grant.test.ts` included — none of its cases ties within one dimension) [⚠ CORRECTED by review round 4, R4-12: except the version / count pins Task 8 bumps (`permissions.test.ts` 58 → 59, 77 → 78) and one assertion added inside an existing `roles.test.ts` `it`]. It is
   behaviour-preserving, not "untouched": every `requirePermissionHook` caller (132 calls in 62 files at `268d86b5` — re-count at
   Task 0.1) now also records its result, and `hasPermission`'s 29 callers in 20 files outside `rbac/` run the extracted predicate. Whether a Pariwar Admin should be BLOCKED while a District Admin is in
   post was the Panel's: RULED — Q-8 A (`-443`): not blocked; both can always act and the log records which authorisation allowed
@@ -1041,6 +1042,9 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
 - **I10** — A worker row is never deleted, by ANY role: `twt_app` has no DELETE grant; a row-level `BEFORE DELETE` and a
   statement-level `BEFORE TRUNCATE` trigger on `field_workers` refuse every role (only `session_replication_role = 'replica'`, the
   fixture cleanup, bypasses them — Task 2.2); and the composite FK is `ON DELETE NO ACTION`. Erasure is an UPDATE (C5), never a DELETE.
+  (⚠ NARROWED by review round 3, R3-18: every role's DML — the table OWNER can still `ALTER TABLE … DISABLE TRIGGER` without superuser, and
+  Postgres forbids that only with event triggers; DDL is outside I10. The `0200` header comment says "EVERY role" too — left unedited, the
+  migration is applied on the story DB, so this record carries the correction.)
 - **I11** — Registration creates the worker row AND the code in ONE transaction; if either step fails neither survives; an
   exhaustion flag is committed on its own and the registration still rolls back.
 - **I12** — This story changes no member-facing behaviour and moves no commission right: no member state, no `account-frozen`
@@ -1138,7 +1142,9 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
    Honest scope: (a) is a probabilistic SMOKE — the interleaving is not forced (the twin says so too). I13's ORDER is pinned
    DETERMINISTICALLY by a unit test per command — a stub client records the statements and asserts SAVEPOINT → LOCK → HEAD →
    APPEND (`terminate`: SAVEPOINT → LOCK → NOW → HEAD → APPEND, for QE20's IST bounds), then the guarded UPDATE (the twin: `tests/marketplace/commands-guards.test.ts`, RP4) — and that test carries a RED proof
-   (swap the lock and the append, watch it fail, revert; recorded in the Debug Log).
+   (swap the lock and the append, watch it fail, revert; recorded in the Debug Log) (⚠ VARIANCE, review round 3, R3-24: the recorded proof PLANTS an
+   `events_log` read before the row lock in `runLockedTransition` — 6 legs fail, Debug Log (c) — rather than swapping the two; it proves the same
+   property, "the lock comes before ANY `events_log` statement", at least as strongly).
 7. **AC7 — composite FK and 13.2 interop (C1).** The same migration adds `field_worker_attribution_codes_worker_fk`
    `FOREIGN KEY (pariwar_id, field_worker_id) REFERENCES field_workers (pariwar_id, field_worker_id) ON DELETE NO ACTION`
    (`pg_get_constraintdef` omits `ON DELETE NO ACTION`, so assert `confdeltype = 'a'` from `pg_constraint` separately).
@@ -1201,7 +1207,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
      raise are asserted in a mapper unit test (`apps/api/tests/unit/field-worker-errors.test.ts`, twin: `marketplace-errors.test.ts`),
      marked "no route yet — 13.1a / 13.1c / 13.1d".
    - (k) **No code, no PII.** The response contains no key named `attributionCode` and no `code`, and the allocated code's VALUE is
-     nowhere in its body (the test reads the code through the door and asserts the serialized body does not contain it); the
+     nowhere in its body (the test reads the code through the door and asserts the serialized body does not contain it — ⚠ VARIANCE, review R2-11: the spec reads it by raw SQL, `written()`, not through the door; the assertion's strength is unchanged); the
      plaintext name / mobile appear in no audit row, log or event — on the success path AND on every refusal path (409 / 422 / 503
      bodies and messages included).
 9. **AC9 — RBAC (I14).** Catalog version and key count move by exactly one (the key is `field_worker.register`, QE10: `district`
@@ -1213,15 +1219,17 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
    contracts permission mirror: `packages/contracts/src/rbac/permissions.ts` is a schema only, and the key appears in
    `emit-openapi.ts` as prose); `openapi/v1.yaml` is regenerated by the repo script (`pnpm contracts:emit-openapi`), never edited
    by hand; the route is registered in `server.ts`. The RBAC CORE change (QE18) is tested in `tests/rbac/check.test.ts`: `hasPermission` and
-   `authorize` AGREE on every case in the existing matrix (allowed ⇔ a result, denied ⇔ none); with two satisfying grants the MORE
+   `authorize` AGREE on every case in the existing matrix (⚠ CORRECTED, review round 3, R3-28: a REPRESENTATIVE matrix — 18 re-typed existing-style
+   cases + 5 new — not the existing 71 calls; agreement holds BY CONSTRUCTION, one shared predicate `grantAuthorizes`) (allowed ⇔ a result, denied ⇔ none); with two satisfying grants the MORE
    SPECIFIC is returned whichever order they are loaded in; `matchingGrantRole` (re-pointed to `authorizingGrant`) and
-   `authorizingGrant(...)?.role` AGREE on every case in `tests/rbac/matching-grant.test.ts` and `check.test.ts`, and `matching-grant.test.ts` passes unchanged; the
+   `authorizingGrant(...)?.role` AGREE on every case in `tests/rbac/matching-grant.test.ts` and `check.test.ts` (⚠ CORRECTED, R3-28: `matchingGrantRole` IS
+   `authorizingGrant(...)?.role ?? null`, so that agreement leg cannot fail — by construction; `matching-grant.test.ts` passing unchanged is the real regression half), and `matching-grant.test.ts` passes unchanged; the
    result passes `isVerifiedAuthorization`, an object literal with the same fields does NOT, and assigning to any field of the result
    (or of its `grant` / `target`) throws in strict mode; a global grant's result has `grant.value === null` and `pariwarId` = the
    resource's; `requirePermission` still fires the denial seam and throws exactly as before; `checkPermission` is unchanged
    (`toEqual({ ok: true })` still passes); the result's `actorId` equals the params' and its `target.value` is null for a global
    gate; a source-fence unit test pins that `authorize(` is called only from `check.ts`,
-   `apps/api/tests/integration/_field-worker-fixture.ts` and `*.test.ts` / `*.spec.ts` files. The HOOK storing the result on `request.authorizations[key]` (a fresh object per request) is
+   `apps/api/tests/integration/_field-worker-fixture.ts` and `*.test.ts` / `*.spec.ts` files (⚠ VARIANCE, review R10 / R7 — see QE18 (e) above). The HOOK storing the result on `request.authorizations[key]` (a fresh object per request) is
    asserted in `apps/api/tests/unit/rbac-hook-authorizations.test.ts` — the hook lives in `apps/api/src/modules/rbac/index.ts`, which
    `packages/domain/tests` cannot import (a fake request with `scopeTx` / `scopeGrants` set, the real hook, the real check).
 10. **AC10 — FR-85 contract (QE11).** `acceptsNewAttributions` is true for `active` only (all four states asserted) — QE11's
@@ -1426,7 +1434,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `request.authorizations['field_worker.register']` — the VERIFIED result the gate stored (QE18) — to `registerFieldWorker` and never
       recomputes it from `request.scopeGrants`; the compensating-audit intent sets `actorRole: authorization.role` and
       `hashShape: { field_worker_id, district }` (QE9), never a second computation (decision `2026-08-13-105` D4: "the grant that
-      actually authorized"); copy 12.2's `tenantWrite` UNCHANGED (it opens the transaction before `run`) with QE9's `run` body (district check before the KMS calls);
+      actually authorized"); copy 12.2's `tenantWrite` (it opens the transaction before `run`) PLUS a `prepare` step that runs before it opens — review R3, 2026-11-04 — with QE9's `prepare` body (the content rules, the display name) and `run` body (district check before the KMS calls);
       rename every `module.*` literal in the helpers copied from 12.2. The route's `registerPath` lists its responses (the 12.2
       `/modules` POST shape): 201; 400 `request.validation` · `field_worker.idempotency_key_required`; 401; 403 "Missing
       field_worker.register"; 404 `pariwar.not_found`; 409 `field_worker.mobile_already_registered` · `admin.display_name_missing` ·
@@ -1461,7 +1469,8 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       `requirePermissionHook` stores the result with `(request.authorizations ??= {})[key] = result` (typed in
       `apps/api/src/types.ts`; never `decorateRequest` with an object default), tested in
       `apps/api/tests/unit/rbac-hook-authorizations.test.ts`; plus the source-fence unit test on `authorize(` callers (AC9). Strictly
-      ADDITIVE: every existing RBAC test passes unchanged. `packages/domain/src/rbac` and `apps/api/src/modules/rbac` are governance-boundary
+      ADDITIVE: every existing RBAC test passes unchanged (⚠ CORRECTED, review round 3, R3-28: except the version / count pins this task bumps —
+      `permissions.test.ts` 58 → 59 and 77 → 78 — and one assertion added inside an existing `roles.test.ts` `it`). `packages/domain/src/rbac` and `apps/api/src/modules/rbac` are governance-boundary
       roots — a reviewed edit, no feature flag. Tests build a real context and call the real check; there is no test-only way to mint a
       verified result.
 - [x] **Task 9 — gate (AC11).** Copy `scripts/marketplace-module-state-invariant/` → `scripts/field-worker-state-invariant/`; rename
@@ -1500,10 +1509,790 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       committed concurrent move — ⇒ `FieldWorkerAuthorizationStaleError`; the row's `district` equals the last event's
       `to_district`) and AC6 (e). Also: the delete / truncate trigger legs (AC2, AC7), the IST `ended_on` bounds (QE20's two proofs) and the malformed-date guard (0b),
       and the `authorize` source-fence and freeze legs (AC9). Every guard gets a RED proof; every scan a non-vacuity floor.
+      ⚠ CORRECTED by review R8 (2026-11-04): RED proofs exist for the guards listed in Debug Log (b)–(c) and (e); the others are covered by a green
+      test only — see Debug Log (e) and Change Log v1.21. "Every guard" overclaimed.
 - [x] **Task 12 — records and full gate (AC14).** Dev Agent Record, File List, Change Log; the story's completion ledger entry (the next
       free letter after `k`, re-grepped across every ref) prepended to BOTH ledgers in `sprint-status.yaml` — the top comment block and the `last_updated: >-` key
-      block — by the safe-prepend pattern (read first, size guard, verify the YAML afterwards); `pnpm ci:local` on a fresh container;
-      run the `decision-flow-sync` skill after the decision lands.
+      block — by the safe-prepend pattern (read first, size guard, verify the YAML afterwards); `pnpm ci:local` on a fresh container (done once, at `ce80bd64`).
+- [ ] **Task 12, last clause (split out by review R9) — run the `decision-flow-sync` skill when decisions `-441`…`-444` LAND on `main`.** NOT done:
+      they are on this branch only; the checked box above does not cover it.
+- [ ] **Re-run `pnpm ci:local` on a FRESH container before push (review round 1).** The 38 / 38 in Debug Log (d) is for `ce80bd64`; R1–R10 changed
+      code and tests after it.
+- [ ] **Before `db:migrate` runs `0200` on any SHARED developer DB (`:5432`, `:5433`, … — review round 3, R3-19), count the orphans there:**
+      `SELECT count(*) FROM field_worker_attribution_codes c WHERE NOT EXISTS (SELECT 1 FROM field_workers w WHERE w.field_worker_id = c.field_worker_id)`
+      — before `0200` the table does not exist, so in practice: `SELECT count(*) FROM field_worker_attribution_codes`. If > 0, the composite FK refuses
+      the migration; apply the `0200` header's remedy first. UN-ATTESTED today (Debug Log (a)'s 0 was a fresh container).
+
+### Review Findings
+
+**2026-11-04 — full code review, baseline `268d86b5`, HEAD `e4f88150`** (`story/13-1-field-worker-identity-lifecycle-state-machine`, its own
+worktree; ONE pass over the whole diff, not chunked — BigDev). Three independent layers, all read-only, launched in parallel: Blind Hunter (the
+code diff only), Edge Case Hunter (the diff + the repo), Acceptance Auditor (the diff + this story + decisions `-441`…`-444` + the AI-6-5
+checklist). No layer failed. 30 raw findings → 27 after de-duplication; every claim that carried weight was then re-checked against the tree and
+this story before it was classified. **0 decision-needed, 10 patch, 2 defer, 15 dismissed.** Engineering and record-keeping only: the Panel-routing
+§0 gate sends nothing to trustees (the one disclosure-shaped candidate — the 409 across districts — is this story's own ACCEPTED disclosure; see X9).
+Findings are OPEN; this review changed no production code, test or migration (it edited this section and `deferred-work.md` only).
+
+**How much to trust this.** The Auditor found no violation of an AC in the code itself: the guard order, the IST bounds in SQL, the prefix-cut as-of read,
+the frozen `VerifiedAuthorization`, the district gate, no code in the 201 and the 13.2 repairs all match the amended QE5 / QE10 / QE11 / QE13 / QE18 /
+QE20. What it and the other layers found is test and evidence gaps, one runtime failure mode (R3), one reachable 500 (R4) and closure wording. Not
+established by me: whether 12.2's twin shares R3's shape; whether the catalog key the Auditor names in R2 is held at the district dimension (confirm
+before using it); the Auditor's list of guards with no recorded RED proof (R8) — it is the Auditor's read of Debug Log (b)–(c).
+
+**AI-6-5 checklist families the diff touches** (the Auditor's verdicts, with my adjustments): 1 state-machine totality, 4 payload completeness, 5 DB-level
+backstops, 11 policy meaning, 12 cross-member ownership — covered-by-test or by construction. 2 concurrency / idempotency — covered, **REAL GAP: R1**.
+3 tenant and actor boundary — covered, **except the authorization KEY half of `registerFieldWorker`: REAL GAP, R2** (my adjustment of the Auditor's
+"covered"). 6 projection discipline — runtime half covered, type-level half vacuous (R5). 8 audit-after-mutation — covered (registration by test; the six
+other commands take a REQUIRED `auditId`). 9 deliberate-vs-oversight — covered (the cross-tenant PK signal has its DELIBERATE block); R10 is wording.
+10 closure honesty — **REAL GAP (low): R8, R9**. Families 7 and 13 are untouched.
+
+- [x] [Review][Patch] **R1 — The 409 `field_worker.idempotency_in_progress` row and the over-200-character `Idempotency-Key` 400 are asserted nowhere.**
+  [`apps/api/src/modules/field-worker/handlers.ts:113-119`, `:95-100`] — Auditor; re-grepped: no `in_progress` / `idempotency_in` literal in any
+  field-worker file under `apps/api/tests`, and `field-worker-handler-identity.test.ts` stubs `claim` as `'claimed'` only. AC8 (j) requires every error row
+  the registration route can raise — it names "the 409 mobile / display-name / in-progress" — to be asserted over HTTP at least once; QE9 names both rows.
+  Deleting the `already_claimed` branch, or mis-spelling its code, turns no test red. Checklist family 2 **REAL GAP**. Fix: a handler-level leg (stub
+  `claim → 'already_claimed'` with `getResult → null` ⇒ 409 with that code; with a stored result ⇒ it replays) and an over-200-character key leg ⇒ 400
+  `field_worker.idempotency_key_required`; RED-prove by deleting the branch.
+- [x] [Review][Patch] **R2 — `registerFieldWorker`'s authorization KEY guard has no test that can fail.**
+  [`packages/domain/src/field-worker/commands.ts:155-157`; `packages/domain/tests/field-worker/commands-guards.test.ts:46-51`, `:312`] — Auditor; re-checked
+  in the source. AC5: the command refuses an authorization "whose key, dimension or target is not this act's". The only wrong-key leg passes
+  `module.manage`, which `authAt` forces to the PARIWAR dimension (`:51`), so it is refused by the dimension check at `commands.ts:152` and the key check at
+  `:155` is never reached; no leg passes a different district-dimension key, and `registration` / `commands.spec` use only `field_worker.register`.
+  Deleting `:155-157` turns nothing red, and the leg's label ("the wrong key") is misleading. Family 3 **REAL GAP** (the authorization half). Fix: a leg
+  with a district-dimension key that is not `field_worker.register` (the Auditor suggests `claim.record_fraud_finding`, held by `district_admin` — confirm
+  it) ⇒ `FieldWorkerProjectorInputError` naming the key; relabel the `module.manage` leg "wrong dimension"; RED-prove by deleting `:155-157`.
+- [x] [Review][Patch] **R3 — Registration holds one pool connection while it waits for a second from the same pool.**
+  [`apps/api/src/modules/field-worker/handlers.ts:155`, `:189`, `:232`] — Blind + Edge; confirmed in the code. `openScopeTx` takes `deps.pool.connect()`
+  (`scope-tx.ts:36`); `run` then calls `getDisplayName(deps.pool, …)` (`:189`) — a SECOND connection from the SAME pool (max 10, connect timeout 10 s,
+  `packages/domain/src/db.ts:68`) while the first is held. As many concurrent registrations as the pool has connections each hold one and wait for another:
+  nothing progresses until the connect timeout, then every in-flight registration is a 500 (the key is released, so a retry is safe). Partial saturation by
+  other routes degrades the same way in a smaller form. QE9 accepts the transaction being open and idle during the display-name read and the KMS calls; it does
+  not say the read takes a second connection, and "accepted idle" does not cover hold-and-wait. Reachability is low (an admin-only, low-volume route); the failure
+  mode is not. Fix: resolve `registeredByDisplay` BEFORE `openScopeTx`, inside the idempotency claim, with the content rules first so QE9's error order is
+  unchanged (422 name, 422 mobile, 409 no display name, then 422 district inside the transaction) — or read it on `ctx.scopeTx.client` if `twt_app` may read
+  `users.display_name`. The exhaustion-flag path (`:232`: its own committed transaction, up to two more connections) is rare and stays as specified; say so in
+  its comment. Keep leg (h) (no display name ⇒ 409, nothing written). The KMS-calls-while-idle half of the Blind finding is the story's accepted cost (QE9).
+- [x] [Review][Patch] **R4 — A `district` containing U+0000 is a 500, not the 422 QE9 promises, when the Pariwar has no geo tree.**
+  [`apps/api/src/modules/field-worker/handlers.ts:192-194`; `packages/domain/src/field-worker/read.ts:132-139`; `packages/contracts/src/field-workers/dto.ts:30`]
+  — Edge; reachability confirmed. The DTO is shape only (`z.string().max(200)`, QE9) and a `pariwar_admin` / global grant passes the gate with ANY string. With no
+  geo tree in force, `assertDistrictRecorded` falls to `findListedWorkplaceDistricts` (`marketplace/scope-options.ts:117-134`), which binds the district as an
+  `IN` parameter; a string holding the NUL character makes Postgres refuse the parameter (22021) ⇒ an unmapped 500, a rolled-back transaction, a released
+  key. QE9: "this check is the only thing that stops a junk district". A District Admin cannot reach it (the gate compares exact bytes); the name path already
+  refuses NUL. Fix: before `assertDistrictRecorded`, a district holding NUL throws `FieldWorkerDistrictUnknownError` (422 `field_worker.district_unknown`);
+  a live-DB leg — a Pariwar with no geo tree, a `pariwar_admin`, a district with NUL ⇒ 422, nothing written; RED-prove by removing the guard.
+- [x] [Review][Patch] **R5 — Two AC10 assertions cannot fail.**
+  [`packages/domain/tests/integration/field-worker/read.spec.ts:221-224`, `:241-248`] — Auditor; confirmed by reading. AC10: the view omits the PII columns
+  ("a type-level and a runtime assertion") and `listFieldWorkersForPariwar` is capped. (a) `const none: NoPii[] = []; expect(none).toEqual([])` passes
+  whatever `FieldWorkerView` holds — an empty array is assignable to any array type. (b) "is capped (200)" seeds 3 rows, so `limit: 100_000` returning 3 is true
+  with no clamp at all and `limit: 2` returns 2 either way. The runtime half of (a) (`Object.keys` + no `enc:v1:`) and the `domain-accessor-invariants` gate
+  (which requires `clampLimit`) are real, so nothing is unprotected today — but both tests claim more than they prove (family 6, type-level half). Fix: (a) an
+  assertion that fails to COMPILE when a PII key appears (e.g. `expectTypeOf<NoPii>().toBeNever()`) — first confirm `packages/domain/tests` is type-checked
+  (contracts tests are not: `project_contracts_tests_outside_tsc`), else drop the claim; (b) prove the clamp (more than 200 rows by direct insert, or a unit test
+  of the clamp the accessor calls) or retitle the leg to what it asserts.
+- [x] [Review][Patch] **R6 — The name rule accepts a name nobody can read and a direction-spoofed one, and the registry has no rename.**
+  [`apps/api/src/modules/field-worker/handlers.ts:72-79`] — Blind + Edge. The code follows QE9 exactly (NFC, trim, 1–120 code points, no `\p{Cc}`, no unpaired
+  surrogate), so this is a gap in QE9, not a deviation from it. A name made only of zero-width or filler characters (U+200B, U+3164) passes as 1–120
+  "characters", and the bidi-override controls (U+202A–U+202E, U+2066–U+2069) are accepted. None of the seven events renames a worker and `terminated` is final,
+  so a blank-looking or spoofed name is sealed for good and shown to operators by 13.1a's screens. Reachability: any admin pasting a name. Fix: require at
+  least one `\p{L}` and refuse the bidi controls. ⚠ Do NOT refuse all `\p{Cf}`, as the Blind layer suggests: U+200D (ZWJ) and U+200C (ZWNJ) are legitimate
+  inside Indic and Persian names. Amend QE9's rule text in this story in the same change (QE9 is a BigDev-approved build decision recorded in `-442`; log the
+  amendment as an author-commit if BigDev wants it in the decision log). Tests: each refusal, plus a control — a name containing ZWJ registers.
+- [x] [Review][Patch] **R7 — The `authorize(` source fence is bypassed by an alias.**
+  [`packages/domain/tests/rbac/check.test.ts:1007-1019`] — Blind; confirmed. QE18 (e) / AC9 say `authorize(` "is called only from" `check.ts` and test files.
+  The fence matches a CALL whose callee is the identifier `authorize` or a property access ending `.authorize`; `import { authorize as mint }`,
+  `const a = rbac.authorize; a(…)` and `rbac['authorize'](…)` are not seen. `authorize` is pure over caller-supplied grants and exported, so this fence is the
+  only barrier to minting a `VerifiedAuthorization` from fabricated grants. Reachability is low (a deliberate rename) but the fence claims "only". Fix: also
+  flag an import specifier whose IMPORTED name is `authorize` (an alias included), any non-call read of a `.authorize` property, and element access with the
+  string `authorize`; RED-prove each with a planted file. The Blind finding's other points (the `> 1500` floor; a second module instance) are dismissed:
+  the floor holds on a full checkout, the second instance is hypothetical.
+- [x] [Review][Patch] **R8 — "Every guard RED-proved" overclaims.**
+  [this story: Task 11 (`[x]`); Change Log v1.20] — Auditor; family 10 **REAL GAP** (low). Task 11 says "Every guard gets a RED proof" and the Change Log says
+  "Every guard RED-proved (Debug Log (b)–(c))". Debug Log (b)–(c) records about thirteen proofs (I13 order, AC10 prefix and tie, the crypto class, trigger rules,
+  the `authorize(` fence, freeze, the `authorizingGrant` sort, the hook store, handler identity, two gate reverts). Per the Auditor it records none for trigger
+  rules (c) and (d′), guards (0b), 3b, 3c, 4 and 5, `verifiedSnapshot`'s Pariwar / actor / key checks, the projector's `from_district` check, the QE7 checks or
+  `resolveValue`'s fail-closed leg — and R2 shows one of those guards has no test at all. Fix: rewrite the sentence to the exact list that was RED-proved, name the
+  guards covered by a green test only, and add the proofs R1, R2, R4 and R7 bring.
+- [x] [Review][Patch] **R9 — Task 12 is `[x]` with one clause not done.**
+  [this story: Task 12] — Auditor. The last clause, "run the `decision-flow-sync` skill after the decision lands", is described in the Completion Notes as for when
+  `-441`…`-444` LAND on `main` — they are on this branch. The checkbox reads complete. Fix: split that clause onto its own unchecked line ("on landing") so a reader
+  of the checkbox does not read it as done (closure language: done vs deferred vs not addressed).
+- [x] [Review][Patch] **R10 — AC9 / QE18 (e) still state the old fence set.**
+  [this story: AC9 and QE18 (e); `packages/domain/tests/rbac/check.test.ts:1025-1030`] — Auditor. The built allowed set also names
+  `packages/domain/tests/integration/field-worker/_fixtures.ts` (the domain twin of the apps/api fixture), by exact path. It is disclosed as a VARIANCE in Debug
+  Log (c) and Change Log v1.20, but AC9 / QE18 (e) and decisions `-442` / `-444` still list the old set. Engineering — a test fence's allow-list is not the
+  Panel's, and a new decision for it would be over-governance: the decisions are history and the VARIANCE note is the supersession. Fix: one pointer sentence in
+  AC9 and in QE18 (e) — "+ the domain fixture, VARIANCE, Debug Log (c)".
+- [x] [Review][Defer] **D1 — `listFieldWorkersForPariwar` has no cursor, and its ordering is not served by an index.**
+  [`packages/domain/src/field-worker/read.ts`; migration `0200`, `field_workers_pariwar_state_idx`] — Blind. Capped at 200 (`clampLimit`, as AC10 specifies)
+  with no offset or cursor, so a Pariwar with more than 200 workers cannot be enumerated through it; `ORDER BY created_at DESC, field_worker_id DESC` is not
+  served by the `(pariwar_id, current_state)` index. Deferred — no consumer until Story 13.1a's screens; owned by 13.1a (keyset paging and the matching index
+  with the first screen that lists workers). Written to `deferred-work.md`.
+- [x] [Review][Defer] **D2 — The primitive imports marketplace's savepoint, constraint and district helpers.**
+  [`packages/domain/src/field-worker/{commands,project,errors,read}.ts`; `apps/api/src/modules/field-worker/handlers.ts:234`] — Blind. It imports
+  `rollbackToSavepoint`, `STREAM_VERSION_CONSTRAINT`, `findListedWorkplaceDistricts` and `pgSqlstateOf` from `marketplace`; a refactor there breaks this module.
+  Not a defect: QE1 rules ⛔ a package and 13.2's `allocate.ts` / `tx-guard.ts` already set the precedent. The `feedback_no_premature_package` trigger ("extract
+  once a 2nd consumer exists") has arguably fired (13.2's registry and this primitive). Deferred — extraction is a refactor for its own change; no behaviour
+  changes. Written to `deferred-work.md`.
+
+**Dismissed (15)** — listed so the triage can be audited; none is in the findings above:
+
+- X1 — Blind: commit-then-`recordResult` window in the idempotency flow. The ratified idempotent-write shape (`personal-event-handlers`); the residual — a lost
+  201 costs the worker id, not a code — is TR11, and a retry meets the mobile pre-check / index (409), never a duplicate.
+- X2 — Blind: the writer GUC and the static gate are bypassable. The gate is the copied twin of `marketplace-module-state-invariant` (same `SCAN_ROOT`, same
+  detection); `lib.ts` itself says it is the STATIC guard and the trigger is the independent runtime guard — "different layers". The GUC protects against
+  accident, not malice.
+- X3 — Blind: `postFieldWorker` accepts any verified district-dimension key; "either end" of a move. No caller outside tests (grep); carried in
+  `deferred-work.md` C5 / C10 to 13.1c / 13.1d; the "either end" target is ratified (AC5; `-443` Q-6 A — consent is 13.1d).
+- X4 — Blind: `grantId` is optional; the snapshot can be stale. Both production grant loaders set `grantId: r.id` (`apps/api/src/modules/rbac/index.ts:52`,
+  `:208`); the snapshot is the gate-time truth — the same window every gated route has.
+- X5 — Blind + Edge: a reused `Idempotency-Key` with a different body replays the first 201. TR15 — an accepted residual "as in 12.2" (a plain hash of a 10-digit
+  mobile can be brute-forced), homed in 13.1a (one key per submission; show the returned id).
+- X6 — Blind: the race tests are probabilistic. AC6 says so ("(a) is a probabilistic SMOKE"); I13's order is pinned by the deterministic per-command unit test.
+- X7 — Blind: the `pg_stat_activity` lock probe could match another session. The repo runs tests with `--concurrency=1`; a false match would weaken the proof
+  (the pre-check would 409 anyway), not fail it. Optional hardening: `datname = current_database()`.
+- X8 — Blind: the fold, a duplicate `registered`, the corrupt-stream test. Unreachable: genesis is "the stream is empty" (`projectFieldWorkerGenesis`) plus the
+  unique stream version; the corrupt-stream leg is checklist family 1's "reducer stays TOTAL"; the table's CHECK fails closed.
+- X9 — Blind: the 409 `mobile_already_registered` tells a District Admin a live worker with that mobile exists elsewhere in the Pariwar. This story's own
+  ACCEPTED disclosure (QE4's text: without the refusal, credit splits across two codes). §0, citations stripped: a yes/no "already registered" to staff of the
+  same Trust, with no name, district or id. The reviewer's own call, not the Panel's.
+- X10 — Blind: the direct-write error is mapped to a 500 with its code; `console.error`. The 12.2 twin maps `ModuleStateDirectWriteError` identically
+  (`marketplace/errors.ts:82-86`); the `console.error` line is QE9's verbatim text (SQLSTATE only).
+- X11 — Blind: OpenAPI omits the `Idempotency-Key` header parameter. House convention: `openapi/v1.yaml` declares no `in: header` parameter anywhere; every route
+  describes the header in prose.
+- X12 — Blind: the grant comparator is not antisymmetric for null vs ''. `isGrantScopeWellFormed` (`check.ts:143-148`) rejects a null scope for every non-global
+  grant and a non-null scope for a global one, so the two never both pass the predicate within a dimension; the comparator only orders, it never grants.
+- X13 — Blind: the migration adds the cross-table FK with a full validating scan. Documented in the migration header; Task 0.1 re-verified 0 orphan code rows;
+  nothing is live.
+- X14 — Blind: the new CI job may not be in an aggregate required check. No aggregate job exists: all 14 invariant gates are standalone `needs: install` jobs
+  and the new one matches; required-check settings live outside the repo.
+- X15 — Auditor: AC8 (k) reads the code by raw SQL, not "through the door". The assertion's strength is unchanged; the wording differs.
+
+**Resolution (2026-11-04) — BigDev chose "1 — Apply every patch"; the text above is the review as written.** R1–R10 are applied and checked
+off; D1 and D2 stay deferred and X1–X15 stand. ⚠ **UNCOMMITTED and UNPUSHED**: the patch is in this worktree's working tree. ⚠ **`ci:local` has NOT
+been re-run** — the 38 / 38 in Debug Log (d) is for `ce80bd64`, before these edits. What each patch BUILT, where it differs from the finding as
+written, and how it was proved (every RED proof restored from a saved copy and re-run green; live legs on `twt-131-pg`, `:5470`):
+
+- **R1** — unit legs in `field-worker-handler-identity.test.ts` (a controllable store stub: in flight ⇒ 409; a CONTROL replays the recorded result;
+  a missing / empty / blank / 201-character key ⇒ 400 before any claim; 200 is the boundary) AND the HTTP leg `(j)` in `registration.spec.ts` (a real
+  claim with no result ⇒ 409; the control replays it; 201 characters ⇒ 400; 200 ⇒ 201). The store's fresh-claim value is `'acquired'` — the original
+  stub said `'claimed'`, which the handler never compares to. RED: a typo in the code plus the bound at 2000 ⇒ the in-flight and the 201-character legs
+  fail; the no-result throw deleted ⇒ the in-flight leg fails.
+- **R2** — one leg in `commands-guards.test.ts`: a VERIFIED district-dimension authorization for `claim.record_fraud_finding` (a real `district_admin`
+  result; control: not null, the genesis's Pariwar, actor and target) ⇒ `FieldWorkerProjectorInputError` "is for 'claim.record_fraud_finding', not this
+  act"; the old `module.manage` leg is relabelled "wrong DIMENSION". RED: with the key check deleted the command did not throw — it REGISTERED the worker.
+- **R3** — `tenantWrite` gained a `prepare` step that runs inside the claim BEFORE `openScopeTx`; the content rules and the display-name read moved into
+  it (QE9's error order is unchanged: 422 name, 422 mobile, 409 no display name, then 422 district inside the transaction). ⚠ A VARIANCE from "copy 12.2's
+  `tenantWrite` UNCHANGED" (QE9, Task 7), recorded in the handler's header. A refused body now opens no scope transaction. The exhaustion-flag path is
+  unchanged (its own committed transaction) — ⚠ NARROWED by round 2 (R2-2): only THIS handler's display-name read left the transaction; the 503 flag path and, in dev / CI, `withCompensatingAudit` (`servicePool` IS `pool`) still take a second connection from the same pool — deferred, D3. Legs: the display name is read BEFORE `openScopeTx` (call order, both asserted to have run); a bad name,
+  a bad mobile and a missing display name open none; a bad name never costs the read. RED: the old order fails all four.
+- **R4** — the guard went into the DOMAIN function `assertDistrictRecorded` (`read.ts`), not the handler, so the 13.1c / 13.1d move routes inherit it: a
+  district holding NUL ⇒ `FieldWorkerDistrictUnknownError` before any read. Legs: a DB-free test whose `db` is a Proxy that throws on any use (plus a
+  control that a normal district reaches it), and the live (h) loop gains the NUL district on the no-geo-tree path ⇒ 422. RED: both fail without it.
+- **R5** — (a) a conditional-type annotation that stops COMPILING if a PII key joins `FieldWorkerView` (RED: adding `nameCiphertext` ⇒ `TS2322` in
+  `read.spec.ts`); (b) the cap leg seeds 201 rows with one set-based insert and asserts 200 / the default 50 / 2. RED: with the clamp removed it fails
+  with "expected a length of 200 but got 201".
+- **R6** — `normalizeFieldWorkerName`: no bidi embedding / override / isolate (U+202A–U+202E, U+2066–U+2069) and at least one VISIBLE letter.
+  ⚠ **CORRECTION to R6 as written:** U+3164 and the other Hangul fillers (U+115F, U+1160, U+FFA0) are LETTERS by Unicode category, so "at least one
+  `\p{L}`" would have let a filler-only name through — the first draft of the fix did, and the new tests caught it. The built rule strips the
+  default-ignorable code points (`\p{Default_Ignorable_Code_Point}`) before the letter test: ZWJ / ZWNJ inside a real name stay legal, the directional
+  marks stay legal, and a name of zero-width or filler characters is refused. QE9's rule text is amended to match (in QE9 itself; amended again by R2-1). ⛔ No decision-log entry was
+  written — QE9 is the build decision recorded in `-442`; BigDev can have one. Tests: a new DB-free `field-worker-name.test.ts` (35 legs, every special
+  character BUILT from its code point) and the (h) HTTP loop. RED: without the rule 20 legs fail; with plain `\p{L}` the four filler legs fail.
+- **R7** — the fence scan is now a pure function, `reachesAuthorize`, that also flags an import specifier whose IMPORTED name is `authorize` (an alias
+  included), a `.authorize` property read that is not a call, element access with the string and a destructured binding; ten new legs pin each form and
+  three negatives (a comment, a string, a different identifier). It found NO new hit in the real repo. RED (call-only detection): four legs fail — the
+  alias, the property read, element access and the renamed destructure; the plain call, the namespace call and the un-renamed destructure are caught by a
+  call-only scan too, because they call `authorize` by name.
+- **R8** — Task 11 carries the correction; Change Log v1.21 supersedes v1.20's sentence; Debug Log (e) lists what was RED-proved.
+- **R9** — Task 12's last clause is split onto its own unchecked line, and an unchecked line is added for the fresh-container `ci:local` this patch still owes.
+- **R10** — AC9 and QE18 (e) now point at the widened fence set (the domain fixture, and every reference to `authorize`, not only a call).
+
+#### Review Findings — round 2: the FIX DIFF (2026-11-04)
+
+**2026-11-04 — code review of the patch, baseline `e4f88150` + the uncommitted working tree** (BigDev: "re-run code review", then "go, launch all three").
+Three FRESH layers, read-only, in parallel, on the code and test diff only (9 files, 774 lines; the records went to the Auditor alone): Blind Hunter (the
+diff only), Edge Case Hunter (the diff + the repo; it never saw round 1's findings), Acceptance Auditor (the diff + this story + its Resolution block as
+CLAIMS to falsify + the checklist). No layer failed. 29 raw findings → 21 unique; the claims that carried weight were re-checked before classifying (the
+rule and the fence were REPLAYED on the reviewers' cases with `node`; the flag path, the stale story lines and `epics.md` were read). **0 decision-needed,
+11 patch, 1 defer, 9 dismissed.** The Panel-routing §0 gate sends nothing to trustees. The patch is still UNCOMMITTED.
+
+**What round 2 found, in one breath.** The code does what the Resolution says for R1–R7 and breaks no AC, QE, TR or invariant (the Auditor re-derived R1–R7 and
+the counts: 35 name legs, 10 fence legs, 7 unit + 1 HTTP idempotency legs). Three things are bigger than a nit: R6's rule is only HALF the hygiene it set out to
+give (P1); R3 is narrower than its record says (P2); R7's fence is not "every reference" (P3). The rest is closure wording that I wrote and the records now
+contradict (P8, P10, P11), one deferral that was never homed (P9), and small test hygiene. Not established by me: the Auditor's remark that the HTTP leg
+`(j)` proves the in-flight branch does not release the claim "because a later `recordResult` would throw" — I did not read `recordResult`; P4 makes it moot.
+
+**Checklist families touched** (the Auditor's verdicts): 2 concurrency / idempotency, 3 tenant and actor boundary, 5 DB-level backstops, 6 projection
+discipline, 8 audit-after-mutation — covered-by-test (3 with the fence hole, P3; 2 with R3's residual, P2). 10 closure honesty — **REAL GAP (low): P8, P9,
+P10** (the Auditor's F6 is dismissed: Y8).
+
+- [x] [Review][Patch] **R2-1 (P1) — The name rule still accepts every invisible character inside a name that has a letter.**
+  [`apps/api/src/modules/field-worker/handlers.ts:94-95`, `apps/api/tests/unit/field-worker-name.test.ts`] — Blind + Edge; REPLAYED. With the shipped rule these are ALL
+  ACCEPTED: U+2028 / U+2029 between letters (line / paragraph separators — `\p{Zl}` / `\p{Zp}`, not `\p{Cc}`, and `trim()` strips only the edges); ZWSP between
+  letters and trailing (`trim()` does not strip it); the word joiner U+2060, the soft hyphen U+00AD, the BOM U+FEFF inside; the TAG characters U+E0020–U+E007F
+  (invisible — they can carry hidden ASCII); private-use code points; and ONE letter plus 119 invisible characters (the 120 limit counts them). R6 refused only
+  the name made of nothing else. A name is sealed for good (no rename event), shown to operators by 13.1a, and a hidden payload rides in it. Reachability: any
+  admin pasting a name. Fix (my defaults — BigDev may widen or narrow the allowance): refuse `\p{Zl}`, `\p{Zp}`, `\p{Co}` and EVERY default-ignorable code point
+  EXCEPT U+200C (ZWNJ), U+200D (ZWJ), U+200E (LRM) and U+200F (RLM), which real Indic, Persian and Urdu names carry; keep "at least one `\p{L}`". That subsumes the
+  bidi range and the strip-before-letter-test (a Hangul filler is default-ignorable, so it is refused outright) — `BIDI_CONTROL` and the `.replace` go. The
+  variation selectors (U+FE00–U+FE0F) become refused: say so in the comment. Amend QE9's text again; tests: one leg per class above, the four allowed marks
+  as controls, the HTTP loop gains U+2028 and a ZWSP-between-letters name; RED-prove each.
+- [x] [Review][Patch] **R2-2 (P2) — R3 is narrower than its record says, and the comment R3 promised was never written.**
+  [`apps/api/src/modules/field-worker/handlers.ts:265-274`, `field-worker-handler-identity.test.ts` (the R3 `describe` title), the Resolution R3 bullet, ledger
+  `2026-11-04a`, Change Log v1.21] — Blind + Edge + Auditor; confirmed. Only the DISPLAY-NAME read left the transaction. On the exhaustion path
+  `flagAllocationExhaustedForRequest` still reads the display name (`getDisplayName(deps.pool, …)`) and opens a SECOND scope transaction
+  (`attribution-code-access.ts:123,125`) while the registration's scope transaction is held; and in dev / CI `servicePool` IS `pool` (`context.ts`), so
+  `withCompensatingAudit(deps.servicePool, …)` draws a second connection from the same pool on EVERY registration there. Round 1's R3 said "say so in its
+  comment" — no comment exists. The test title says "no second pool connection while the scope transaction holds one" but asserts only the CALL ORDER of one read,
+  and the ledger says "pool hold-and-wait removed". True for the display-name read in a production config with a separate service pool; not true on the 503
+  path or in a single-pool config. Fix: the comment at the flag path (what holds a connection and why it stays — QE9 gives the flag its OWN committed
+  transaction, and the door file is 13.2's, not edited here — D3); retitle the test to what it asserts ("the display-name read opens before / outside the scope
+  transaction"); reword the Resolution R3 bullet, the ledger and v1.21 to "removed for the display-name read; the 503 flag path and a single-pool dev / CI keep it".
+- [x] [Review][Patch] **R2-3 (P3) — The `authorize` fence is not "every reference", and a bare local call is not pinned.**
+  [`packages/domain/tests/rbac/check.test.ts` (`reachesAuthorize` and its `describe`), the AC9 / QE18 (e) pointers] — Blind + Edge + Auditor; REPLAYED. NOT flagged:
+  `export { authorize as mint } from './check.js'` and the plain `export { authorize } from`; `const { 'authorize': mint } = rbac`; `const { ['authorize']: m } = rbac`; and
+  a dynamic key `rbac[k]`. The barrel never names `authorize` (it `export *`s), so an `ExportSpecifier` rule flags no existing file. Separately, every positive leg that
+  has a bare `authorize({})` also has an import specifier or binding that matches first, so deleting the call-expression branch fails no leg (that branch is what
+  catches a local function named `authorize`). Reachability is low (a deliberate rename) but the title, the comment and R10's pointer claim completeness. Fix: flag an
+  `ExportSpecifier` whose imported name is `authorize`, and a binding element whose key is a string literal or a computed literal `authorize`; add legs for each and
+  a bare-local-function leg; NAME what no static fence can see (a dynamic key); reword the title, the comment and the AC9 / QE18 (e) pointers to "every STATICALLY
+  visible reference"; RED-prove each new leg.
+- [x] [Review][Patch] **R2-4 (P4) — The in-flight unit leg never asserts the claim was not released.**
+  [`apps/api/tests/unit/field-worker-handler-identity.test.ts`, "a key still IN FLIGHT"] — Blind. A request that did not win the claim must not release it, or a duplicate runs
+  while the first is in flight. The leg asserts `recordResult` was not called, not `release`. Fix: `expect(calls.store.release).not.toHaveBeenCalled()` in the in-flight
+  leg and in the replay control; RED-prove by making the `already_claimed` branch release.
+- [x] [Review][Patch] **R2-5 (P5) — The bidi assertion label prints `U+41`.**
+  [`apps/api/tests/integration/field-worker/registration.spec.ts`, the `blankOrSpoofed` loop] — Blind. The label is the FIRST code point of the name, which for
+  the `Asha…Rani` case is `A`, so a failure would not identify the bidi leg. Fix: explicit labels for the three names.
+- [x] [Review][Patch] **R2-6 (P6) — A queued `mockResolvedValueOnce(null)` can leak into the next test.**
+  [`apps/api/tests/unit/field-worker-handler-identity.test.ts`, "QE9’s order is kept"] — Blind + Auditor. The leg queues a `null` the passing path never consumes
+  (`getDisplayName` is correctly not called) and drains it only on its last line; if an assertion above fails, the line is skipped and the `null` becomes the next
+  test's display name (`afterEach` uses `mockClear`, which does not drain a once-queue). The restore also hard-codes `'Asha Verma'`. Fix: reset `getDisplayName` to
+  its default in `afterEach` and drop the manual restore.
+- [x] [Review][Patch] **R2-7 (P7) — The list-cap leg checks the constants against themselves.**
+  [`packages/domain/tests/integration/field-worker/read.spec.ts`, the cap leg] — Blind. The title says 200 and 50; the assertions use `LIST_FIELD_WORKERS_MAX_LIMIT` and
+  `…_DEFAULT_LIMIT`, so a cap drifting to 2000 passes (it seeds one more than whatever the constant is). Fix: assert the literal values 200 and 50 (and seed 201).
+- [x] [Review][Patch] **R2-8 (P8) — QE9, Task 7 and the Resolution still describe the pre-R3 shape.**
+  [this story: QE9's `run`-body order (lines 527-528) and its "The transaction is open, and idle, during the validation, the display-name read and the KMS calls"
+  (line 544); Task 7 ("copy 12.2's `tenantWrite` UNCHANGED … with QE9's `run` body", line 1429); the Resolution R6 bullet's "(below)"] — Auditor; confirmed. Only a parenthetical
+  was added at line 526. A sibling copying the shape from the story gets the order R3 removed, and a spec that says the transaction is idle during the display-name
+  read is no longer true. Family 10 **REAL GAP** (low). Fix: move the content rules and the display-name read to a `prepare` step in QE9's order list; the idle sentence
+  names only the district check and the KMS calls; Task 7 names the `prepare` step; "(below)" → "(QE9)".
+- [x] [Review][Patch] **R2-9 (P9) — D1 is "owned by 13.1a" but not homed where 13.1a's author reads.**
+  [`_bmad-output/planning-artifacts/epics.md`, under Story 13.1a] — Auditor; confirmed. The story's own convention writes a carried item to `deferred-work.md` AND under the sibling in
+  `epics.md`, and 13.2's review homed its defers there (`72c8543a`). 13.1a already carries dated "INHERITED FROM 13.1" blocks; D1 has none. Family 10 **REAL GAP** (low). Fix: one
+  dated "INHERITED FROM 13.1 (code review, 2026-11-04)" block under 13.1a for D1 (keyset paging and the matching index with the first listing screen).
+- [x] [Review][Patch] **R2-10 (P10) — The ledger and the Completion Notes claim a RED proof for R8–R10.**
+  [`sprint-status.yaml` (both `2026-11-04a` lines), this story's Completion Notes] — Auditor; confirmed, and mine. Both say "R1–R10 APPLIED, each … RED-proved then green" / "ten patches are
+  applied and proved". R8–R10 are record edits and cannot be RED-proved; Debug Log (e) lists proofs for R1–R7 only — the same overclaim R8 corrected one line earlier. Family 10 **REAL GAP**
+  (low). Fix: "R1–R7 each RED-proved then green; R8–R10 are record edits" in both ledger lines, the Completion Notes and the Resolution; also the ledger's "hold-and-wait removed" (R2-2).
+- [x] [Review][Patch] **R2-11 (P11) — AC8 (k) says the test reads the code "through the door"; it reads it by raw SQL, with no VARIANCE note.**
+  [this story: AC8 (k); `registration.spec.ts` `written()`] — Auditor's DISAGREEMENT with round 1's X15, accepted. I dismissed it as wording; R10 patched a comparable test-wording drift one finding
+  later, so the treatment is inconsistent. The assertion's strength is unchanged. Fix: a one-line VARIANCE pointer in AC8 (k), as R10 did.
+- [x] [Review][Defer] **D3 — The 503 exhaustion path holds the registration's scope-transaction connection while the flag write takes two more.**
+  [`apps/api/src/modules/field-worker/handlers.ts:265-274`; `attribution-code-access.ts:123,125`] — Blind + Edge + Auditor. `flagAllocationExhaustedForRequest` resolves the display name and opens its own
+  scope transaction from the same pool while the request's is held; under pool saturation the flag write can time out, is swallowed (`console.error`, QE9) and the trustee never sees the flag. Rare:
+  it needs a Pariwar's 6-digit space exhausted AND a saturated pool at the same moment. Deferred, not fixed here: QE9 prescribes the flag in its OWN committed transaction, and
+  `attribution-code-access.ts` is Story 13.2's door file (its export list is pinned) — the fix is to pass a pre-read display name in, or to flag after the registration's transaction closes, in a story
+  that owns that file. Written to `deferred-work.md`; the comment R2-2 adds names it.
+
+**Dismissed (9)** — listed so the triage can be audited:
+
+- Y1 — Blind: a too-long key reports `field_worker.idempotency_key_required`. QE9 specifies exactly that: "missing, empty or over 200 characters ⇒ 400 `field_worker.idempotency_key_required`".
+- Y2 — Blind: the `.astro` claim has no test. The walk treated `.astro` as TS text before the patch; R7 moved that behaviour into a function unchanged.
+- Y3 — Blind: the NUL guard sits at one call site, not the command boundary. The documented caller contract (`RegisterFieldWorkerInput.district`: "LISTED — the caller ran `assertDistrictRecorded`") makes it the one
+  place a route validates a district, and it is the place 13.1c / 13.1d inherit; the Auditor confirmed no LISTED district can hold NUL (Postgres text and JSONB cannot store it).
+- Y4 — Blind: the type-level PII assertion cannot fail at runtime and names three columns. It fails under `tsc` (the domain tsconfig includes `tests/**`, verified); the SELECT list is explicit
+  ("listed one by one so a column added later is NOT read by default"), which is the structural protection; the runtime half covers values.
+- Y5 — Blind: the `post` wrong-key leg is really a dimension leg. Its title says "non-district"; `post` accepts any verified district-dimension key until 13.1c / 13.1d mint the move keys (X3; `deferred-work.md` C5 / C10).
+- Y6 — Blind: leg `(j)` copies the claim-key format. Coupling, not vacuity: a namespace change makes the 409 leg fail loudly.
+- Y7 — Auditor: `dto.ts:25` states the old name rule. It never listed the control-character rule ("NFC, trimmed, 1–120 characters") and does not contradict the amended rule.
+- Y8 — Auditor: defers are ticked `[x]` like done items, and the section opens with "Findings are OPEN". `[x] … [Defer]` is the format this review skill mandates for a deferral, and the opening line follows 13.2's pattern with a Resolution block after it.
+- Y9 — Auditor: R6's "a name containing ZWJ registers" control is unit-level only. The unit control proves the rule's narrowness; the HTTP success path is leg (a); a ZWJ-specific HTTP leg adds no code path.
+
+Round 1's X1–X14 and D2: no disagreement (the Auditor re-checked X4, X10, X11, X12, X14 against the tree). X15 is re-opened as R2-11; D1's deferral stands and its homing is R2-9.
+
+**Resolution of round 2 (2026-11-04) — BigDev chose "1 — Apply every patch"; the text above is round 2 as written.** R2-1…R2-11 are applied and checked
+off; D3 and Y1–Y9 stand. ⚠ **STILL UNCOMMITTED and UNPUSHED**, ⚠ **`ci:local` STILL not re-run** since `ce80bd64`. What each patch BUILT, where it differs from the
+finding as written, and how it was proved (every RED proof restored from a saved copy and re-run green; live legs on `twt-131-pg`, `:5470`):
+
+- **R2-1** — the rule is now: no control character, no unpaired surrogate, NO INVISIBLE CHARACTER — `\p{Zl}`, `\p{Zp}`, `\p{Co}` and every default-ignorable code point
+  EXCEPT ZWNJ, ZWJ, LRM and RLM (the allow-list is the numbers 0x200c–0x200f, built, ⛔ written as escapes) — and at least one `\p{L}`. `BIDI_CONTROL` and the
+  strip-before-the-letter-test are GONE: the bidi controls and the Hangul fillers are default-ignorable, so the one rule refuses them. QE9's text is amended again. The
+  variation selectors are now refused (a one-line allowance if a real name ever needs one). ⚠ **A mistake of mine, caught by the first run:** my first test claimed a
+  TRAILING U+2028, U+2029 or U+FEFF "survives `trim()`" — `trim()` strips all three at the edge, so the stored name is the bare name; the legs now say that, and the other
+  eleven classes are refused trailing. Tests: `field-worker-name.test.ts` 35 → 68 legs (one per class, between and trailing, the tag-character hidden payload, one letter + 119
+  invisibles, the four allowed marks as controls); the (h) HTTP loop is six labelled hidden names. RED: round 1's rule fails 28 legs; no `Zl` / `Zp` / `Co` fails 4; an empty
+  allow-list fails 5; live, round 1's rule lets the new names through with a 201.
+- **R2-2** — the comment at the flag path now names the residual (the flag wrapper's second connection, `servicePool` IS `pool` in dev / CI, the door file is 13.2's — D3); the
+  test `describe` is retitled to what it asserts (the ORDER of the display-name read) with a comment saying what it does not prove; the Resolution R3 bullet carries a NARROWED
+  note; both ledger `2026-11-04a` lines carry a CORRECTED note. No code behaviour changed.
+- **R2-3** — the fence also flags an `ExportSpecifier` named `authorize` and a binding whose key is a string or computed literal `authorize`; the doc comment, the `describe`
+  title and the AC9 / QE18 (e) wording say "STATICALLY visible", and a dynamic key (`rbac[k]`) is named as the blind spot and pinned by its own leg. 82 → 90 legs: five new flags (one of them
+  the bare-local-function leg), two negatives (`export *`, a local variable bound from another key) and the blind-spot leg. It found NO new hit in the real repo. RED: no export branch
+  fails 2; bare-identifier-only binding keys fails 2; the call-expression branch deleted fails the bare-call leg AND the repo scan's "sees the real caller" assertion — that
+  branch was load-bearing and, until now, pinned by nothing.
+- **R2-4** — the in-flight leg and the replay control assert `release` was not called. RED: releasing in the `already_claimed` branch fails both.
+- **R2-5** — the (h) hidden-name loop is labelled by case, not by the first code point.
+- **R2-6** — `afterEach` resets the display-name mock to its default and the manual restore is gone. The leak is LATENT with today's leg order (the next leg queues its own
+  `null`), so I made it observable with two throwaway legs: with the old `afterEach` the next leg sees `null`, with the new one it sees the default; the legs are removed.
+- **R2-7** — the cap leg asserts the literal 200 and 50 and seeds 201. RED: with the cap at 2000 and the default at 500 it fails with "a length of 200 but got 201".
+- **R2-8** — QE9's order list names a `prepare` step and a `run` body, the idle sentence names only the district check and the KMS calls, Task 7 names the `prepare` step, and
+  "(below)" now says where.
+- **R2-9** — `epics.md` carries a dated "INHERITED FROM 13.1 (2026-11-04)" block for D1 at the end of 13.1a's section — the first one under 13.1a itself.
+- **R2-10** — the Completion Notes say R1–R7 were RED-proved and R8–R10 are record edits; the ledger carries a CORRECTED note.
+- **R2-11** — AC8 (k) carries a VARIANCE pointer (the spec reads the code by raw SQL).
+
+#### Review Findings — round 3: the WHOLE BRANCH, chunked — chunk G3 (the API route + contracts) (2026-11-04)
+
+**2026-11-04 — full-branch review, baseline `268d86b5` → the working tree (HEAD `e4f88150` + the uncommitted round-1 / round-2 patches)**
+(BigDev: "B: full branch, chunked", first chunk "G3 API route", then "go, launch all three"). The branch is ~7,000 code + test lines, so it is reviewed in
+four groups — **G3** API route + contracts (THIS section), **G2** commands + reads, **G1** persistence + primitive, **G4** RBAC core + gates — each a later run,
+numbered on from here (`R3-n`; ⚠ not round 1's `R3`, the `prepare` variance). G3 = 23 files, +1,810 lines (the `apps/api` field-worker module, `context` /
+`server` / `types`, contracts `field-workers/*`, the OpenAPI emitter + `openapi/v1.yaml`, and their tests). Three FRESH layers, read-only, in parallel: Blind
+Hunter (the diff only), Edge Case Hunter (the diff + the repo, ⛔ the story), Acceptance Auditor (the diff + this story + `-441`…`-444` + the AI-6-5 checklist; the
+round-1 / round-2 Resolution blocks as CLAIMS to falsify). No layer failed. 29 raw → 23 unique; the load-bearing claims were re-checked before classifying
+(the name rule REPLAYED with my own `node` probe; `closeScopeTx`, the keyed store's `getResult`, the global rate limit, the 12.2 twin's accepted residuals,
+`registrationDistrict`'s callers and the OpenAPI header convention were READ). **1 decision-needed, 9 patch, 1 defer, 12 dismissed.** The Panel-routing §0
+gate sends nothing to trustees (the decision is an engineering threshold — BigDev's). Findings are OPEN.
+
+**How much to trust this.** The Auditor tried to falsify R1, R3, R4, R2-1, R2-2, R2-4, R2-6 and QE18 (c) / QE22 / TR7 / TR8 / TR12 against the code and
+every one HELD; it found no code deviation from QE9, QE17, QE18, QE22 or the Errors table. What is left is the name rule's third gap (R3-1, R3-DN1), one
+TRAP with no test (R3-2, TR9), AC8 / AC13 legs that assert less than the AC says, two fragile test legs, and one closure sentence. Not established by me: the
+Edge Hunter's claim that U+FFF9–U+FFFB HIDE text in "many renderers" (they are refused either way by R3-1); the Auditor's "regenerated, never hand-edited"
+OpenAPI check was NOT run (it rewrites `openapi/v1.yaml` in place — a read-only reviewer may not).
+
+**AI-6-5 checklist families G3 touches** (the Auditor's verdicts, confirmed): 3 tenant and actor boundary, 6 projection discipline, 8 audit-after-mutation, 9
+deliberate-vs-oversight, 12 cross-member ownership — covered-by-test or by construction. 2 concurrency / idempotency — covered, **REAL GAP: R3-2** (TR9).
+4 payload completeness — covered for `district_admin`, partial for the other holders and by construction through the domain's guard 0 (R3-3). 5 DB-level
+backstops — not constructible for the name / mobile content rules (Tier-1 ciphertext carries no CHECK). 10 closure honesty — **REAL GAP (low): R3-7.**
+Families 1, 7, 11, 13 — not in this chunk.
+
+- [x] [Review][Decision] **R3-DN1 — Should the name rule cap stacked combining marks?** ⭐ **RESOLVED 2026-11-04 — BigDev: "1" = cap at 8 or more CONSECUTIVE
+  combining marks (refuse `\p{M}{8,}`) ⇒ becomes patch R3-10.** Edge + Blind; REPLAYED: `A` followed by 119 × U+0301 (a "Zalgo"
+  name that overdraws the rows above and below it on 13.1a's screens) is ACCEPTED, and it is sealed for good (no rename event). A cap on CONSECUTIVE marks
+  (`\p{M}{N,}`) fixes it, but `N` is a threshold the rule's stated intent does not settle: real orthographies stack marks — Devanagari a nukta + a vowel sign + a
+  chandrabindu (3), Vietnamese 2, and Tibetan's subjoined consonants are `Mn`, so a Tibetan stack plus its vowel can reach 4–5 (names from Sikkim and Ladakh). Too low a
+  cap refuses a real name; none leaves the overdraw. Engineering, not the Panel's (§0: no change to what anyone is told or owed). Options in the summary to BigDev.
+- [x] [Review][Patch] **R3-1 (Medium) — The name rule still accepts characters that draw nothing or corrupt the name: `Cf` outside Default_Ignorable, U+2800, unassigned
+  code points and noncharacters, U+FFFD, a leading or orphaned combining mark — and refuses ALM, the Arabic twin of the allowed LRM / RLM.**
+  [`apps/api/src/modules/field-worker/handlers.ts:65`, `:71`, `:102-111`; `apps/api/tests/unit/field-worker-name.test.ts`] — Edge + Blind; REPLAYED by me (`scratchpad/13-1-r3/verify-name.mjs`).
+  ACCEPTED today: `Asha` + U+2800 U+2800 (BRAILLE PATTERN BLANK, `So` — the classic filler bypass); `Asha` + U+FFF9 … U+FFFA … U+FFFB (interlinear annotation
+  controls, `Cf` but not default-ignorable); `Asha` + U+0600 (an Arabic number sign, `Cf`); `Asha` + U+FFFD (the replacement character — what a client sends after
+  mis-decoding a Devanagari name); `Asha` + U+FFFE and `Asha` + U+0378 (`Cn`); a name that starts with, or has after a space, a combining mark. REFUSED today: `Asha` + U+061C
+  (ALM — default-ignorable, not on the allow-list, although the comment's own reason for LRM / RLM, "right-to-left names", is its reason too). The handler's doc says
+  "nothing invisible". Reachability: any admin pasting a name; nothing upstream blocks it (the DTO is `max(1000)` only). Fix: refuse `\p{Cf}` (the allow-list still
+  applies — ZWNJ, ZWJ, LRM and RLM are `Cf`), `\p{Cn}`, U+FFFD and U+2800 (BUILT with `String.fromCodePoint`, ⛔ written as escapes — memory: escapes land raw);
+  refuse a combining mark at the start of the trimmed name or after whitespace (`^\p{M}`, `\s\p{M}`); add U+061C to `NAME_ALLOWED_INVISIBLE`; amend QE9's name
+  text (the third amendment — the record already says the decision-log entry is BigDev's call). Tests: one leg per class, ALM as a control with the four existing
+  marks, the HTTP (h) loop gains U+2800 and U+FFFD; RED-prove against the round-2 rule.
+- [x] [Review][Patch] **R3-2 (Medium) — TR9 has no test: a failed registration RELEASES the key, and a failure is never RECORDED as the replayable result.**
+  [`apps/api/src/modules/field-worker/handlers.ts:152-160`; `apps/api/tests/unit/field-worker-handler-identity.test.ts`; `apps/api/tests/integration/field-worker/registration-exhaustion.spec.ts`]
+  — Auditor; confirmed by grep: `release` appears in the G3 tests only as `expect(calls.store.release).not.toHaveBeenCalled()` (`:172`, `:184`); every refusal leg and every
+  exhaustion leg uses a FRESH `randomUUID()` key, and no leg re-sends a key after a 422 / 409 / 503. TR9: *"A rolled-back registration must also roll back the idempotency
+  claim. `withIdempotency` releases the key on failure; do not record a failed (503) response as the replayable result."* Deleting the `finally` release, or recording
+  before `run` resolves, turns nothing red. Family 2 **REAL GAP**. Fix: unit — on a 422 (prepare throws) and on a `run` throw, `release` called ONCE with the claim key
+  and `recordResult` NOT called; HTTP — after the 503, the SAME key with the door un-mocked ⇒ 201 (it ran again, not a replayed 503). RED-prove by deleting the release.
+- [x] [Review][Patch] **R3-3 (Low) — AC8 legs assert less than AC8 says.**
+  [`apps/api/tests/integration/field-worker/registration.spec.ts:164`, `:195`, `:215`, `:249`] — Auditor; confirmed by reading. AC8 (f): *"In EVERY 201 the genesis event's
+  `authorization` EQUALS `{ permission_key: 'field_worker.register', role, grant: {…}, target: { dimension: 'district', value: <the body's district> }, catalog_version:
+  PERMISSION_CATALOG_VERSION }`"*; the preamble: *"'Nothing written', in every refusal leg"*. Only the `district_admin` leg asserts the whole object; the `pariwar_admin`,
+  both-grants and `super_admin` legs `toMatchObject({ dimension: 'district' })` on `target` (`:215`) — `target.value`, `permission_key` and `catalog_version` unasserted.
+  The cross-district 403 (`:195`) asserts the status only — no nothing-written, no code; the 404 (`:164`) does not assert `pariwar.not_found`; the non-string district 400
+  (`:249`) does not assert `request.validation`. Correct by construction today (the domain's guard 0 refuses a wrong key / target), so this is a test gap. Fix: full
+  `toEqual` in every 201 leg; nothing-written + the code in the three refusal legs.
+- [x] [Review][Patch] **R3-4 (Low) — The AC13 PII sweep misses the concurrent loser's `_rolled_back` row and the 503's logs.**
+  [`registration.spec.ts` legs (d), (k); `registration-exhaustion.spec.ts:76`] — Auditor; confirmed. AC13: *"repeats the assertion for each refusal (409 duplicate, 422, 503
+  exhaustion): the response body, the error message and the `_rolled_back` audit row carry neither value"*. The only 409 that WRITES a `_rolled_back` row is the
+  concurrent loser (d), and (d) never sweeps it; (k) sweeps the sequential 409, which writes none. The 503 leg sweeps the body and audit rows, not `console.error` /
+  the server log. Low risk (every message is static). Fix: sweep (d)'s two audit rows; spy `console.error` + capture the log in the 503 leg.
+- [x] [Review][Patch] **R3-5 (Low) — The (h) "NO KMS call" leg has no positive control.**
+  [`registration.spec.ts:220-241`] — Blind + Edge + Auditor. The spies on `encryptDek` / `computeHmac` DO intercept today (`envelope.ts:64`, `blind-index.ts:36` call those
+  methods on the same `deps.encryption.kms`), but nothing shows them firing, so a KMS wrapper or a batched HMAC (memory: KMS audit per HMAC) leaves the leg green whatever the
+  order. Fix: in the same `try`, a listed district ⇒ 201 with `encryptDek` called twice and `computeHmac` once.
+- [x] [Review][Patch] **R3-6 (Low) — Leg (d)'s lock-wait probe matches ANY session in the cluster.**
+  [`registration.spec.ts:131-140`] — Blind + Edge; confirmed. `wait_event_type = 'Lock' AND query ILIKE 'insert into "field_workers"%'` has no `datname` and no blocker
+  filter; under a parallel `ci:local` a domain field-worker spec's blocked insert satisfies it, the owner COMMITs before this request reaches its insert, the pre-check
+  sees the row and answers 409 with NO audit lines ⇒ the leg fails intermittently (memory: parallel-load flakes). Fix: `AND datname = current_database() AND $1 =
+  ANY(pg_blocking_pids(pid))` with `$1` the owner's `pg_backend_pid()`.
+- [x] [Review][Patch] **R3-7 (Low) — Change Log v1.21 says `resolveValue`'s fail-closed leg is "covered by green tests"; no test calls it.**
+  [`apps/api/src/modules/field-worker/routes.ts:31`; this story, Change Log v1.21] — Auditor; confirmed by grep: `registrationDistrict` is referenced only at `routes.ts:47`
+  (and `dist/`). What protects it is the core null-deny (`check.ts:138`, green in `check.test.ts`) and the DTO (a non-string district is a 400 before the hooks) — by
+  construction. Family 10 **REAL GAP** (low). Fix: a two-line unit test (`registrationDistrict` of a string ⇒ it; of a number / missing body ⇒ `null`) and the v1.21 sentence
+  corrected by a dated note (⛔ rewritten).
+- [x] [Review][Patch] **R3-8 (Low) — A name leg's title claims it tests the length bound; it cannot reach it.**
+  [`apps/api/tests/unit/field-worker-name.test.ts:123-125`] — Blind; confirmed. "ONE letter plus 119 invisible characters (the 120 limit counts them) is refused" sends exactly 120
+  code points — inside the bound — so the ZWSP rule refuses it; the bound itself is pinned at `:59-64`. Fix: retitle to what it proves (a name that is all but one letter invisible
+  is refused by the invisible rule), or send 121 to make it a bound leg.
+- [x] [Review][Patch] **R3-9 (Nit) — The OpenAPI description does not say "reporting district".**
+  [`packages/contracts/scripts/emit-openapi.ts:5323`; `openapi/v1.yaml` (regenerated)] — Auditor. QE17: *"every comment, DTO description and screen label says 'reporting district'"*;
+  the route description says "`district` must be a LISTED district of the Pariwar". Fix: "the worker's REPORTING district — it must be a LISTED district…", then regenerate (⛔ hand-edit).
+- [x] [Review][Patch] **R3-10 (Low; from R3-DN1, BigDev "1") — Refuse a name with 8 or more CONSECUTIVE combining marks.**
+  [`apps/api/src/modules/field-worker/handlers.ts:102-111`; `field-worker-name.test.ts`] — `\p{M}{8,}` on the NFC-normalised, trimmed name ⇒ `null` (422
+  `field_worker.name_invalid`). 8 is above every real orthography's stack (Devanagari ~3, Vietnamese 2, Tibetan subjoined consonant + vowel ~4–5). Folds into R3-1's QE9
+  amendment. Tests: 7 marks after a letter ACCEPTED, 8 REFUSED, a real Tibetan stacked syllable and a Devanagari nukta + vowel + chandrabindu ACCEPTED as controls; RED-prove.
+- [x] [Review][Defer] **D4 — A replay after the 24 h TTL answers 409 "in progress — wait and retry" for a request that COMPLETED.**
+  [`packages/domain/src/idempotency/keyed-store.ts:21-23` vs `:240-254`; `handlers.ts:147-150`] — deferred, pre-existing. Edge; confirmed by reading: `claim` leaves a completed-but-expired row
+  in place ("still readable by getResult until the vacuum runs" ⇒ `already_claimed`), but `getResult` filters `expires_at >= now` ⇒ `null` ⇒ 409 `field_worker.idempotency_in_progress`,
+  whose advice cannot work. The store's own comment contradicts its code; every keyed-store caller has it (12.2's twin's RB8 / RD3 and the drive-target "pass-2 softening" are the same
+  family). Not 13.1's file; `takeOver` / `inspect` are RD3's owner's remedy. Written to `deferred-work.md`.
+
+**Dismissed (12)** — listed so the triage can be audited:
+
+- Z1 — Blind: a `recordResult` failure after COMMIT releases the key and loses the 201. The accepted residual: TR11 (a lost 201 costs the worker's id, not a code), 12.2's RB8.
+- Z2 — Blind: the key is not bound to the body. RD2 (`deferred-work.md`, no owner) and 13.1 C9's "13.1a's screen MUST mint one key per submission".
+- Z3 — Blind + Edge: a crash between claim and settle wedges the key. It self-heals at the TTL (`claim` path (b)); the false copy is RD3's (the drive-target pass-2 softening).
+- Z4 — Blind: the duplicate-mobile 409 crosses districts, unaudited. QE4's ACCEPTED disclosure (round 1's X9); the probe costs KMS calls and the global rate limit applies.
+- Z5 — Blind: the transaction is idle across three KMS calls. QE9: "the KMS calls run with the transaction open and idle — accepted".
+- Z6 — Blind: `releaseHookTx` clears `scopeSet` first, so `closeScopeTx` might no-op. It is keyed on `closed`, ⛔ `scopeSet` — and its comment names this exact helper shape (`scope-tx.ts:58-65`).
+- Z7 — Blind: the `state_trustee` "with a tree" leg proves no containment. AC8 (e) specifies exactly that leg ("refused because its bundle LACKS the key … asserted 403 both WITH and WITHOUT a geo tree").
+- Z8 — Blind: `requestPayloadHash` covers a random id. QE9's `hashShape` is `{ field_worker_id, district }` by design (a mobile's SHA-256 is brute-forceable).
+- Z9 — Blind: OpenAPI does not declare the `Idempotency-Key` header, nor the direct-write 500. No route in `openapi/v1.yaml` declares it as a parameter (the convention is the description); 500s are the central mapper's.
+- Z10 — Blind: the direct-write 500 logs only the code. The 12.2 twin's shape; the code-only log is the PII-safe choice and the class is a BUG signal.
+- Z11 — Blind: the exhaustion flag runs while the request's connection is held. D3 (round 2), unchanged.
+- Z12 — Blind: no rate limit on the route. `@fastify/rate-limit` is registered `global: true` (`plugins/rate-limit/index.ts:121-122`).
+
+**Resolution of round 3, chunk G3 (2026-11-04) — BigDev resolved R3-DN1 with "1" (cap at 8+) and chose "1 — Apply every patch"; the text above is the review as written.** R3-1…R3-10 are
+applied and checked off; D4 and Z1–Z12 stand. ⚠ **STILL UNCOMMITTED and UNPUSHED**, ⚠ **`ci:local` STILL not re-run** since `ce80bd64`, ⚠ **G2, G1, G4 not yet reviewed**. How each was
+proved (every RED file restored from a saved copy and `cmp`-checked; live legs on `twt-131-pg`, `:5470` — Debug Log (g)):
+
+- **R3-1 + R3-10** — `NAME_INVISIBLE` gains `\p{Cf}` and `\p{Cn}`; `NAME_REFUSED` (U+2800, U+FFFD, numbers); ALM added to `NAME_ALLOWED_INVISIBLE`; `NAME_ORPHAN_MARK` (`(?:^|\s)\p{M}`) and
+  `NAME_MARK_RUN_TOO_LONG` (built from `FIELD_WORKER_NAME_MAX_MARK_RUN = 7`). ⚠ `\p{Cn}` follows the running Node's Unicode version (said in the comment). QE9's text amended a third time. Tests: 68 → 93
+  name legs (nine refused classes between letters and trailing, the hiding annotation, orphan marks, the 7 / 8 / 119 boundary with the 7 pinned as a literal, four real-name controls — ALM,
+  a Tibetan stack, a Devanagari three-mark stack, a decomposed Vietnamese name); the HTTP (h) loop gains a Braille blank, a U+FFFD and 8 stacked marks. RED: round 2's rule fails 22 unit legs and the live leg.
+- **R3-2** — unit: a failure in `prepare` (422) and in `run` (the pre-check 409) each RELEASE once by the claim key and record nothing; a success control records and releases nothing. Live: after the
+  503 the SAME key registers (201). RED: no release ⇒ both unit legs and the live retry; recording a failure ⇒ both unit legs.
+- **R3-3** — every 201 in (f) asserts the WHOLE snapshot; the cross-district 403 asserts `authz.forbidden` and that only the Patna registration exists; the 404 asserts `pariwar.not_found`; the
+  non-string 400 `request.validation`. Green; not RED-proved.
+- **R3-4** — (d) sweeps its body and everything the Pariwar wrote, its `_rolled_back` row included; the 503 leg sweeps `console.error` and the server log. Green; not RED-proved. [⚠ CORRECTED by review round 4, R4-1: the 503 leg's `console.error` half could NOT fail — the spy was read after `mockRestore`, which resets it in vitest 2; the calls are now copied first, and the flag-fails leg (where `console.error` fires) is swept too.]
+- **R3-5** — the (h) unlisted-district leg ends with a listed district: 201, `encryptDek` ×2, `computeHmac` ×1 on the same spies. RED: a deaf spy fails it.
+- **R3-6** — the probe: `datname = current_database() AND <owner pid> = ANY(pg_blocking_pids(pid))`. Green; a flake fix cannot be RED-proved on demand.
+- **R3-7** — `registrationDistrict`: four unit legs (a string verbatim, a number, no district, no body). RED: passing a number through fails 1. Change Log v1.21 carries a dated CORRECTED note.
+- **R3-8** — the leg is retitled to what it proves (inside the bound; the invisible rule refuses it).
+- **R3-9** — the route description says "REPORTING district"; `openapi/v1.yaml` regenerated (one line), the determinism check green.
+
+#### Review Findings — round 3: chunks G2 (commands + reads), G1 (persistence + primitive), G4 (RBAC core + gates) (2026-11-04)
+
+**2026-11-04 — the remaining three chunks of the full-branch review, launched together** (BigDev: "go, launch all three and remaining chunk all at once"). Baseline
+`268d86b5` → the working tree (incl. the round-1 / round-2 / round-3-G3 patches). Nine FRESH read-only layers in parallel, three per chunk: **G2** 11 files, 2,495 lines
+(`field-worker/{commands,read,errors,index}.ts` + tests); **G1** 30 files, 3,001 lines (migration `0200`, schema, RLS, `events` / `state` / `project`, the registry, field classes,
+the 13.2 spec repairs); **G4** 20 files, 1,635 lines (the RBAC core, the rbac hook, the `field-worker-state-invariant` gate, the access-wrapper change, CI wiring, Row 48, the RBAC
+tests and the `authorize` fence). The four chunks cover every code / test file on the branch exactly once (checked). Every layer ran with `DATABASE_URL` unset (no DB). No layer
+failed. 68 raw → 50 unique; the weighty claims were READ against the tree before classifying (`requirePermission`'s return and QE18 (c) / (e); pino's `err` logging and the
+twin `ModulePersistError`; the projector's insert columns; `state.test`'s agreement leg; the trigger RAISE texts; the fixtures' guard use). **1 decision-needed, 18 patch, 4 defer,
+27 dismissed.** §0: nothing to trustees — the one decision is QE18's engineering contract (BigDev's); the Auditor confirmed `field_worker.register`'s holders match `-441` verbatim.
+
+**How much to trust this.** The three Auditors found NO AC, QE, TR, invariant or ratified-decision violation in G1, G2 or G4's code, and confirmed (by reading or by running
+DB-free suites) R2, R4, R5, R2-3 (82 → 90 fence legs, no repo hit), R2-7, the 38-job `ci:local`, Row 48 (a)–(d), the trigger's eight columns and v1.21's "covered by green tests"
+list for rules (c) / (d′) and the G2 guards. The two Edge Case Hunters for G1 and G2 found NO production-reachable edge. What is left: ONE design gap in QE18 (R3-DN2), test
+legs that cannot fail or assert less than they claim, the static gate's and the fence's blind spots, the trigger field's free text, and closure wording. Not established by me:
+the G1 Auditor's "PLAUSIBLE" on Debug Log (b)'s RED proofs for (t) / (e′) (not re-run); remote sibling journals (no layer ran `git fetch`).
+
+**AI-6-5 checklist families** (the Auditors' verdicts, confirmed): 1 state-machine totality — covered (but R3-13: the table test is tautological). 2 concurrency — covered (G2's
+probabilistic legs have deterministic twins). 3 tenant / actor — covered, **REAL GAP (low): R3-15, R3-21**. 4 payload completeness — covered, **REAL GAP (low): R3-16**. 5 DB
+backstops — covered (transition legality is NOT in the DB, by design — Task 2.2). 6 projection — covered. 8 audit — covered. 9 deliberate-vs-oversight — covered, **REAL GAP
+(low): R3-25, R3-26** (and R3-DN2). 10 closure honesty — **REAL GAP (low): R3-18, R3-19, R3-22, R3-24, R3-28**. 11 policy meaning, 12 cross-member — covered. 7, 13 untouched.
+
+- [x] [Review][Decision] **R3-DN2 (G4, Medium) — `requirePermission` now RETURNS a `VerifiedAuthorization` minted from whatever grants it is given, and nothing fences it.** ⭐ **RESOLVED 2026-11-04 — BigDev: "1" = fence the RESULT ⇒ patch R3-29.** — Blind +
+  Edge (G4); confirmed by reading. QE18 (c): *"`requirePermission` returns it (it returned nothing)"*; QE18 (e): *"`authorize` is PURE over the grants it is given — a caller could pass
+  fabricated grants: a source-fence unit test pins that `authorize(` is called only from `check.ts` (`requirePermission`) …"*. The fence pins `authorize` — but `requirePermission` is
+  the same purity one call up, public (`rbac.requirePermission`, exported from `@twt/domain`), called today by six production files with caller-supplied grants (e.g.
+  `packages/validity-service/src/redaction.ts:65`, `apps/api/src/modules/rules/index.ts:129` — all ignore the return), and its result passes `isVerifiedAuthorization`, which
+  `registerFieldWorker` / `postFieldWorker` accept (`commands.ts:143`). So `rbac.requirePermission({ actorId, grants: [<a made-up super_admin grant>], key: 'field_worker.register',
+  resource })` mints a genuine-looking record. No src file does it; it is a drift-guard hole the spec's own fence design left (`check.ts:261`, `:297` say "produced only by the RBAC
+  check"). Engineering (§0: the snapshot's MEANING to an auditor does not change; the question is which code may mint it). Options in the summary.
+- [x] [Review][Patch] **R3-11 (G1, Low) — Two "nothing survived" assertions run AFTER a `ROLLBACK TO SAVEPOINT` and cannot fail.**
+  [`packages/domain/tests/integration/field-worker/projector-trigger.spec.ts:74-75`; `schema-trigger.spec.ts:165-166`] — Blind + Edge (G1); confirmed (memory: post-savepoint
+  assertion vacuous). The drift leg reads the stream after `ROLLBACK TO SAVEPOINT drift`; the I10 DELETE leg checks the row after `expectDirectWrite` rolled back. Fix: read the
+  stream BEFORE the rollback (the drift throws before any SQL error, so the transaction is usable); drop the row line (the P0001 assertion is the proof) or assert it without a savepoint.
+- [x] [Review][Patch] **R3-12 (G1, Medium) — Every trigger leg matches only the SHARED message prefix, so no leg can tell which rule refused it.**
+  [`schema-trigger.spec.ts:35` (`expectDirectWrite`)] — Blind (G1); confirmed against the RAISE texts in `0200`: all start "field_workers direct write rejected —", four rules share
+  "(Story 13.1 I3)". If the writer flag stopped taking effect, rule (a) would refuse every guarded leg with the same prefix and the (b), (c), (d′), (e′) and I3-genesis legs would stay
+  green without exercising their rule. Fix: `expectDirectWrite(…, fragment)` asserting each rule's distinguishing text ("must strictly increase", "never goes completed -> pending",
+  "must not coincide", "identity is immutable", "a genesis INSERT must be", "never updated", "never deleted"); RED-prove one by switching the flag off in a guarded leg.
+- [x] [Review][Patch] **R3-13 (G1, Low) — The "table and reducer AGREE" test compares the transition list with itself.**
+  [`packages/domain/tests/field-worker/state.test.ts:37-49`; `state.ts:80-92`] — Blind (G1); confirmed: `FIELD_WORKER_TRANSITION_TABLE` and `nextFieldWorkerState` both read
+  `FIELD_WORKER_TRANSITIONS`; only `legal === 10` and four named pairs can fail, so a wrong arm (e.g. `reactivated` → `pending_kyc`) with the count kept passes. AC4's "agree" is
+  untested. Fix: a LITERAL expected list of the ten arms (QE5) `toEqual` the table; fix the "inapplicable" comment in the never-throws leg (it is applied). RED: one arm's `to` changed.
+- [x] [Review][Patch] **R3-14 (G1, Low) — The projector's `from_state` / `to_state` cross-check has no test that can fail.**
+  [`packages/domain/src/field-worker/project.ts` (the `p['from_state'] !== fromState` check); `projector-trigger.spec.ts`] — Auditor (G1); confirmed. QE13: *"The projector
+  cross-validates `from_state` / `to_state` against `lockedRow` … — else `FieldWorkerProjectorInputError`"*. The only leg (`kyc_completed` with `from_state: 'active'`) is refused by
+  the payload schema's literal first [⚠ CORRECTED by review round 4, R4-14: wrong — in `project.ts` the cross-check runs BEFORE the schema parse, so the old leg reached it; the gap was that DELETING the check left it green, the schema refusing next]. Fix: a mismatch the schema accepts (`terminated { from_state: 'active' }` on a `pending_kyc` row) ⇒ `FieldWorkerProjectorInputError`, nothing
+  appended (read before any rollback — R3-11); RED-prove by deleting the check.
+- [x] [Review][Patch] **R3-15 (G1, Low) — The projector's own human-actor check is reached by no test — and v1.21 lists "the QE7 checks" as green-tested.**
+  [`project.ts` (`assertFieldWorkerActor`, genesis and transition); `projector-trigger.spec.ts`] — Auditor (G1); confirmed: every non-human-actor leg goes through a command, which calls the
+  same check first. For a transition, `actorId: null` is caught ONLY here (`events_log.actor_id` NULL means "system"). Family 3 **REAL GAP** (low). Fix: projector-direct legs (`actor:
+  'system'`; `operator` with `actorId: null`) ⇒ `FieldWorkerProjectorInputError`, nothing appended; a dated CORRECTED note on v1.21; RED-prove.
+- [x] [Review][Patch] **R3-16 (G1 + G2, Low) — The events' `trigger` field is free text, and none of the six transition triggers is pinned.**
+  [`packages/domain/src/field-worker/events.ts:60`; `commands.ts:284`, `:299`, `:314`, `:321`, `:350`, `:388`] — Blind (G1) + Auditor (G2); confirmed. `triggerSchema =
+  z.string().min(1).max(200)` contradicts the header's I8 ("free text is ⛔ allowed anywhere"); QE6's computed values (`field_worker.kyc_complete`, `.activate`, `.suspend:<reason>`,
+  `.reactivate`, `.terminate:<reason>`, `.post`) are asserted nowhere but the genesis's. Unreachable with free text today (the projector is not exported; commands compute it), but a
+  name in a `trigger` would sit in an append-only stream that survives erasure. Family 4 **REAL GAP** (low). Fix: a per-event-type pattern (the reason part limited to that event's reason
+  enum); assert `payload.trigger` in the I13 `it.each` and the terminate leg; RED-prove with a typo'd trigger.
+- [x] [Review][Patch] **R3-17 (G1, Nit) — The AC1 index checks match only the START of the column list.**
+  [`packages/domain/tests/integration/rls/field-workers-policy-regression.spec.ts` (`toContain('using btree pariwar_id, mobile_blind_index')` and the list index)] — Auditor (G1). AC1:
+  *"compare the column list and the predicate"*. A third column passes. Fix: compare the normalised text between `btree` and `where` exactly.
+- [x] [Review][Patch] **R3-18 (G1, records) — Debug Log (b) says the policy spec has 12 legs (it has 11 and never had 12); "refused for EVERY role" overstates I10.**
+  [this story: Debug Log (b), I10, Completion Notes; the `0200` header comment] — Auditor (G1). The owner can `ALTER TABLE … DISABLE TRIGGER` without superuser; nothing in Postgres
+  forbids that short of event triggers. Fix: dated corrections — "11"; "every role's DML (an owner can still disable the trigger — DDL is outside I10)"; the migration comment reworded (a
+  comment, so no checksum risk on the story DB — re-check that drizzle hashes the file and, if it does, leave the SQL file alone and correct the record only).
+- [x] [Review][Patch] **R3-19 (G1, records) — "0 orphan code rows" was measured on a fresh container that could not hold any; the real exposure is unmeasured.**
+  [this story: Debug Log (a), v1.20, round 1's X13] — Auditor (G1); confirmed. TR2's risk is a SHARED developer DB that ever ran `allocate-concurrency.spec.ts` to a crash. Carried as an
+  UN-ATTESTED risk (memory: record, never back-fill): a dated note on Debug Log (a) and a new unchecked Task line — count `field_worker_attribution_codes` rows with no worker on EACH
+  shared DB before `db:migrate` runs `0200` there (the migration header's remedy applies).
+- [x] [Review][Patch] **R3-20 (G2, Low) — `FieldWorkerReasonInvalidError` echoes the raw, caller-supplied reason in its message, and the trigger is built from it before validation.**
+  [`packages/domain/src/field-worker/errors.ts` (the `JSON.stringify(reasonCode …)` constructor); `commands.ts:314`, `:350`] — Blind + Edge (G2); confirmed. The header (I8) promises
+  messages carry "only ids, states, event types, reason codes and districts"; an INVALID reason is by definition not a code (free text — a name, a number). The API maps it to static
+  text, so HTTP is safe; a log of the domain error is not. `JSON.stringify(10n)` / `String(Object.create(null))` throw untyped (types forbid them — weaker leg). Fix: no value in the
+  message (`typeof` and length at most); build the trigger AFTER `assertReason`; a leg with a long free-text reason asserting the message holds none of it.
+- [x] [Review][Patch] **R3-21 (G2, Low) — No test pins the command lock's explicit `AND pariwar_id = $2`.**
+  [`commands.ts:106`; `packages/domain/tests/integration/field-worker/commands.spec.ts:162-169`] — Blind + Auditor (G2); confirmed. The only cross-Pariwar command leg runs as
+  `twt_app` under A's scope, so RLS alone hides B's row; deleting the predicate leaves it green. `read.ts`'s header: *"RLS is ⛔ the only filter — an owner-role caller bypasses it, 13.2
+  TR3"*. Family 3 **REAL GAP** (low). Fix: a leg as the OWNER (`RESET ROLE`) calling `activateFieldWorker` with `pariwarId: A` on B's worker ⇒ `GenesisMissing`; RED-prove by deleting it.
+- [x] [Review][Patch] **R3-22 (G2, Low) — `commands.spec.ts` claims more than its legs assert.**
+  [`commands.spec.ts:3`, `:131`, `:223-249`; `packages/domain/tests/field-worker/commands-guards.test.ts:200-205`] — Blind + Auditor (G2); confirmed. The header says every refusal
+  asserts "its typed error, no event, the row unchanged" — `expectRefusedCleanly` runs in three legs only; the "ANYTHING out of terminated" loop omits `recordFieldWorkerKycCompleted`;
+  the QE18 leg's title says "no event, no row" and checks events only; the unit "out of terminated" leg skips `refused(calls)`. Fix: `expectRefusedCleanly` in every refusal leg (or the
+  header narrowed), the kyc leg added, the row asserted, `refused(calls)` added.
+- [x] [Review][Patch] **R3-23 (G2, Nit) — `_fixtures.ts` has a section banner with nothing under it.** [`packages/domain/tests/integration/field-worker/_fixtures.ts:72-75`] — Blind (G2). Fix: move or drop it.
+- [x] [Review][Patch] **R3-24 (G2, records) — The I13 RED proof differs from what AC6 asks for, with no VARIANCE note.** [this story: AC6, Debug Log (c)] — Auditor (G2). AC6 says
+  "swap the lock and the append"; Debug Log (c) records a planted `events_log` read before the lock (at least as strong). Fix: one VARIANCE line.
+- [x] [Review][Patch] **R3-25 (G4, Low) — The `authorize` fence never scans the root `scripts/` or `tests/` trees — `scripts/provision-admin.ts` (run against production) imports the domain.**
+  [`packages/domain/tests/rbac/check.test.ts:1060` (`const roots = ['apps', 'packages']`)] — Auditor + Blind (G4); confirmed. The test's own title says "every tests tree". Family 9 **REAL
+  GAP** (low). Fix: add `scripts` and `tests` to the roots, raise the floor, RED-prove with a planted file.
+- [x] [Review][Patch] **R3-26 (G4, Low) — The fence misses an ASSIGNMENT destructuring and a literal `Reflect.get(rbac, 'authorize')`.**
+  [`check.test.ts:996-1020` (`reachesAuthorize`)] — Edge + Auditor (G4); REPLAYED by both: `({ authorize: m } = rbac)` and `({ 'authorize': m } = rbac)` ⇒ not flagged; the doc says
+  "every STATICALLY visible way" and names only the DYNAMIC `Reflect.get` as blind. Fix: flag a `PropertyAssignment` / shorthand keyed `authorize` on the left of `=`, and a `Reflect.get` /
+  `Object.getOwnPropertyDescriptor` whose 2nd argument is the literal; legs for each; RED-prove.
+- [x] [Review][Patch] **R3-27 (G4, Low) — The `field-worker-state-invariant` gate can lose sight of its own target and stay green.**
+  [`scripts/field-worker-state-invariant/{lib,check}.ts`, `README.md`] — Blind + Edge + Auditor (G4); REPLAYED by the Edge Hunter: `.set(patch)`, `.set({ ...patch })`, an import alias
+  (`fieldWorkers as fw`), `fieldWorkers as any`, a split chain, a string / shorthand `set` in `onConflictDoUpdate` ⇒ 0 findings; an anonymous callback or object-property arrow inside a
+  projector body is allow-listed; the only non-vacuity floor is a file count, so if the projector's own two writes went to a `.set(patch)` shape the gate would see NO write and pass; `.ts`
+  only. The DB trigger still refuses at runtime (I1's second half). Fix: unwrap `as` / parentheses / non-null in `tableNameOf`; resolve import aliases; a `.set` / `.values` on a
+  `fieldWorkers` chain whose argument is not an object literal or holds a spread is a finding ("unverifiable shape"); stop at EVERY function-like node (anonymous ⇒ `<anonymous>`); FAIL
+  unless each allow-listed projector function is seen writing at least once; scan `.mts` / `.cts` / `.tsx` too; the README names what it still cannot see (raw SQL — the trigger's; roots
+  outside `packages/domain/src` — house convention, round 1's X2). New `lib.test` legs per shape; RED-prove the non-vacuity floor.
+- [x] [Review][Patch] **R3-28 (G4, records) — AC9's "every case in the existing matrix" and "every existing RBAC test passes unchanged" overclaim.**
+  [this story: AC9, QE18 Costs, Task 8, Debug Log (b), Completion Notes; `check.test.ts:840`, `:719-723`] — Auditor (G4); confirmed. The agreement MATRIX is a re-typed 18 + 5 subset of
+  the 71 existing calls, and the `matchingGrantRole` leg cannot fail (`matchingGrantRole` IS `authorizingGrant(...)?.role ?? null`); `permissions.test.ts` changes two pins (58 → 59,
+  77 → 78) and `roles.test.ts` gains an assertion inside an existing `it`. Agreement holds BY CONSTRUCTION (one shared predicate). Fix: dated corrections — "a representative matrix;
+  agreement by construction"; "existing RBAC tests pass unchanged except the version / count pins Task 8 bumps"; drop the tautological leg's claim.
+- [x] [Review][Patch] **R3-29 (G4, Medium; from R3-DN2, BigDev "1") — Fence the RESULT of `requirePermission`.**
+  [`packages/domain/tests/rbac/check.test.ts` (the fence); `packages/domain/src/rbac/check.ts` (the doc); this story QE18 (e)] — a source-fence leg flags every `requirePermission(`
+  call whose RETURN VALUE is used (assigned, returned, passed, awaited into a binding, spread, property-read — anything but a bare expression statement or a bare `await`
+  statement) outside `packages/domain/src/rbac/check.ts` and `apps/api/src/modules/rbac/index.ts` (the hook), and outside `*.test.ts` / `*.spec.ts`; same roots as R3-25. The six
+  existing callers drop it, so the real repo stays clean (asserted: the scan sees them and flags none). Legs: `const a = rbac.requirePermission(…)`, `return requirePermission(…)`,
+  `f(requirePermission(…))`, `const a = await …` ⇒ flagged; a bare call / bare `await` ⇒ not. QE18 (e) amended (dated); the `check.ts` doc says what is fenced. RED-prove.
+- [x] [Review][Defer] **D5 — A persist / projector error's `cause` holds the driver error — bound params (Tier-1 ciphertext, the mobile blind index) and a 23505 detail — and pino logs it on an
+  unhandled 500.** [`packages/domain/src/field-worker/errors.ts` (`FieldWorkerPersistError`, `FieldWorkerProjectorInputError`); `apps/api/src/middleware/error-mapping/index.ts:690`
+  (`request.log.error({ err: error }, 'unhandled error')`)] — deferred, pre-existing pattern. Blind (G1, G2); confirmed: `cause` is a public own property, so pino's `err` serializer
+  includes it; 12.2's `ModulePersistError` has the identical shape. Not plaintext (Tier-1 is ciphertext), but the blind index is an equality oracle for a mobile. Fix belongs in one
+  place for every primitive (a non-enumerable `cause`, or a redacting serializer). Written to `deferred-work.md`.
+- [x] [Review][Defer] **D6 — The other `*-state-invariant` gates share R3-27's blind spots.** [`scripts/*-state-invariant/lib.ts` — the marketplace twin and its siblings] — deferred,
+  pre-existing. R3-27 fixes 13.1's copy; AC11 made it a faithful copy of the twin, so the twins now diverge until someone ports the fix. Written to `deferred-work.md`.
+- [x] [Review][Defer] **D7 — A move (`posted`) has no expected-from-district guard, and takes ANY verified district key at either end — for 13.1c / 13.1d.** [`commands.ts:367-383`] —
+  deferred, homed. Blind + Edge (G2). Round 1's X3 and C5 / C10 cover the key; the lost update (a concurrent move changes the SOURCE while the authorization names the destination — both
+  fulfil, serialised by the lock, spec (e2)) is NEW: 13.1c / 13.1d mint the move keys and must decide whether a move names its expected source. Written to `deferred-work.md` and under
+  13.1c / 13.1d in `epics.md`.
+- [x] [Review][Defer] **D8 — Under FORCE RLS with policies only `TO twt_app`, a NON-superuser owner sees zero rows — an owner-run UPDATE (the eight-year scrub, any maintenance job) would
+  match nothing, silently.** [`packages/domain/migrations/0200_field-workers.sql:84-87`] — deferred. Blind (G1); the Edge Hunter confirmed the zero-row behaviour (it is what makes an owner
+  DELETE harmless). Not reachable in 13.1 (no owner-run writer; the test owner is a superuser). Trigger: the first migration or job that UPDATEs `field_workers` as the owner (the erasure /
+  retention work, C-items) must run as a role a policy names, or add one. Written to `deferred-work.md`.
+
+**Dismissed (27)** — listed so the triage can be audited:
+
+- W1 — G1 Blind: the projector trusts `lockedRow`'s non-event columns. `lockedRow` IS the command's own `SELECT … FOR UPDATE` and `project.ts` is not exported (Edge G1 confirmed).
+- W2 — G1 Blind: the trigger does not enforce the transition graph or a +1 version step. By design — Task 2.2 puts legality in the reducer; the DB holds the shape (Auditor G1).
+- W3 — G1 Blind: the snapshot is not bound to the act's district / key. The command's `verifiedSnapshot` checks key, dimension and (register) target; `posted` judges under the lock (QE5 3c, R2).
+- W4 — G1 Blind: a genesis INSERT may backdate `created_at`. The projector's INSERT does not set it (grep: no `created_at` in `project.ts`), so `DEFAULT now()`; only the projector inserts.
+- W5 — G1 Blind: the fold accepts streams the DB forbids. "Pure, never throws" is AC4 / I4's contract; the DB and the commands refuse those streams.
+- W6 — G1 Blind: `kyc_completed` repeatable. The command refuses it (`FieldWorkerKycAlreadyCompletedError`, guard 3).
+- W7 — G1 Blind: `seedFieldWorker` clobbers the caller's guard. No spec seeds after turning the guard on (grep).
+- W8 — G1 Blind: the writer flag is a convention. The 0193 precedent, backed by the AST gate; stated in the migration header.
+- W9 — G2 Blind: `post` accepts any district key at either end. Round 1's X3 / C5 / C10; the new half is D7.
+- W10 — G2 Blind: register / post trust the caller to check the district is listed. The documented caller contract (round 2's Y3).
+- W11 — G2 Blind: the list has no cursor. D1 (13.1a).
+- W12 — G2 Blind: the as-of read folds every event on the stream id. Genesis refuses a non-empty stream; ids are UUIDs (Edge G2).
+- W13 — G2 Blind: a capture before genesis reads `pending_kyc` v0; a NULL `captured_at`. Contract point 6 (and `acceptsNewAttributions` is false); the NULL is unreachable (no hard delete — Edge G2).
+- W14 — G2 Blind: READ COMMITTED is a comment. Documented; no REPEATABLE READ caller exists.
+- W15 — G2 Blind: a rollback failure replaces the original error. False — `rollbackToSavepoint` swallows its own failure and the original is rethrown (Edge G2).
+- W16 — G2 Blind: the probabilistic stale-move race can pass without the stale case. Its deterministic twin (`commands.spec.ts` QE17) pins the outcome; AC6 says so.
+- W17 — G2 Blind: "today" computed once for six rounds. A run crossing IST midnight is accepted by the leg's own bounds; not a product bug.
+- W18 — G2 Blind: the direct-write error's message reaches the client. The API maps it to a static 500 text (G3, `errors.ts`).
+- W19 — G4 Blind: allowed fixtures could re-export `authorize`. No src file imports a test file (grep); one that did would be its own defect.
+- W20 — G4 Blind: `isVerifiedAuthorization` is not act-bound. QE18 (d): the commands re-check key, dimension, Pariwar, actor and target (R2 pinned the key).
+- W21 — G4 Blind: a second gate for the same key overwrites the first. One gate per key per route; the hook keeps every key (Edge G4).
+- W22 — G4 Blind: the fresh-object test runs without Fastify. QE18 (c) forbids `decorateRequest('authorizations', …)` and none exists (grep).
+- W23 — G4 Blind: the gate scans only `packages/domain/src`. House convention for every `*-state-invariant` gate (round 1's X2); the README now says so (R3-27).
+- W24 — G4 Blind: `matchingGrantRole` answers change for same-dimension ties. QE18 (b) adds the tie-break by design; the old answer was unordered DB rows (Edge G4).
+- W25 — G4 Blind: `catalogVersion` 59 could collide with a sibling's. A sibling that rebases onto this adds a key and its own count / version pins fail until it bumps.
+- W26 — G4 Blind: the new CI job may not be a required check. No aggregate job exists; it `needs: install` like its siblings (Edge G4).
+- W27 — G4 Blind: two copies of `@twt/domain` would split the WeakSet. No `exports` map, one source entry (Edge G4).
+
+**Resolution of round 3, chunks G2 / G1 / G4 (2026-11-04) — BigDev resolved R3-DN2 with "1" (fence the result ⇒ R3-29) and chose "1 — Apply every patch"; the text
+above is the review as written.** R3-11…R3-29 are applied and checked off; D5–D8 and W1–W27 stand. ⚠ **STILL UNCOMMITTED and UNPUSHED**, ⚠ **`ci:local` STILL not re-run**
+since `ce80bd64` (owed, on a fresh container). The whole branch has now been reviewed (G1–G4). How each was proved — every RED file restored from a saved copy and `cmp`-checked,
+every planted probe deleted; live legs on `twt-131-pg` (`:5470`), `DATABASE_URL` set on the command; DB-free legs with it UNSET (Debug Log (h)):
+
+- **R3-11** — the drift leg reads the stream with NO savepoint (the drift throws before any SQL error); the I10 DELETE leg's "row survived" line is gone (comment says why). Not RED-provable (it
+  removes a vacuous assertion).
+- **R3-12** — `expectDirectWrite(…, rule)` asserts each rule's own RAISE text (`RULE` map: nine fragments). RED: the writer flag OFF in the version leg ⇒ rule (a) answers ⇒ the leg fails.
+- **R3-13** — `state.test.ts` pins QE5's ten arms as a LITERAL list; the "inapplicable" comment corrected. RED: `reactivated → pending_kyc` ⇒ the literal leg (and the full-life fold) fail.
+- **R3-14** — a `terminated { from_state: 'active' }` on a `pending_kyc` row (the schema accepts it) ⇒ `FieldWorkerProjectorInputError` "disagree with the locked row", nothing
+  appended. RED: the cross-check deleted ⇒ fails.
+- **R3-15** — projector-direct legs: `actor: 'system'`, `actorId: null`, `actorId: ''` ⇒ `FieldWorkerProjectorInputError` (QE7), nothing appended; v1.21 carries a dated CORRECTED
+  note. RED: the transition's `assertFieldWorkerActor` call deleted ⇒ fails.
+- **R3-16** — `events.ts`: `trigger` is `triggerOf(<command>)` (a literal) or `triggerWithReason(<command>, <that event's reason list>)` per type — ⛔ free text; `commands-guards`
+  asserts every command's computed trigger; `events.test` refuses free text, another type's value, a cross-list reason, a missing suffix; the `state.test` / `events.test` /
+  projector fixtures carry real triggers (the fold PARSES payloads, so `'t'` would now fold to nulls). RED: a typo'd `field_worker.activated` trigger ⇒ the guards leg fails; the
+  free-text schema back ⇒ the events leg fails.
+- **R3-17** — the AC1 index checks compare the EXACT column list. Green; a strengthened assertion, not RED-proved (it would need a schema change).
+- **R3-18** — dated corrections: Debug Log (b) "12" ⇒ 11; I10 and the Completion Notes "every role" ⇒ "every role's DML" (the owner can disable the trigger). ⛔ The `0200` SQL comment —
+  the migration is applied on the story DB; the record carries the correction instead (as the finding allowed).
+- **R3-19** — Debug Log (a)'s "0 orphans" carries an UN-ATTESTED note, and a new unchecked Task line orders the orphan count on every SHARED DB before `0200` runs there.
+- **R3-20** — `FieldWorkerReasonInvalidError` keeps NO value — message and fields carry `received: missing | not_a_string | not_in_the_list` only; `runLockedTransition` takes the trigger as a
+  constant OR a function of the guard's (validated) payload, so suspend / terminate build it from `reason_code` after `assertReason`. RED: the raw value back in the message ⇒ the new
+  leg (a free-text reason with a name and a number; a BigInt; a null-prototype object — both still the typed error) fails.
+- **R3-21** — an OWNER-role leg (`RESET ROLE`): Pariwar A's `activate` / `kyc` on B's worker ⇒ `GenesisMissing`, B untouched. RED: the lock's `AND pariwar_id = $2` deleted ⇒ ONLY this
+  leg fails (the old twt_app leg stayed green — the finding, shown).
+- **R3-22** — `commands.spec.ts`: the header narrowed to what holds; `expectRefusedCleanly` added to the KYC-twice, KYC-on-active and QE17 refusals; `recordFieldWorkerKycCompleted` added to
+  the "ANYTHING out of terminated" loop; the QE18 leg asserts no row; the unit "out of terminated" leg asserts `refused(calls)`. Green.
+- **R3-23** — the `_fixtures.ts` banner moved to the helpers it names.
+- **R3-24** — AC6 carries a VARIANCE line (the planted-read RED proof).
+- **R3-25** — both fences walk `FENCE_ROOTS = apps, packages, scripts, tests` (`.cjs` too); a floor of > 20 files in `scripts/` (the root `tests/` holds only READMEs today — walked, no floor).
+  RED: a planted `scripts/zz-r3-fence-probe.ts` calling `rbac.authorize` ⇒ the scan fails; the probe deleted.
+- **R3-26** — the `authorize` fence flags an ASSIGNMENT destructuring (renamed, string-keyed, nested) and `Reflect.get` / `Object.getOwnPropertyDescriptor` with the literal; five flag
+  legs, two negatives; 90 → 97 legs [⚠ R4-14: `check.test.ts`'s TOTAL after R3-26, not the fence's own describe]. RED: the assignment branch removed ⇒ 3 legs fail.
+- **R3-27** — the gate: tables matched through parentheses / `as` / `!` / `satisfies`, import and `const` aliases and split chains; a variable / call / spread payload (and a shorthand or
+  string-keyed upsert `set`) is an "unverifiable shape" finding; EVERY function-like node is a boundary (`<anonymous>` for a callback, the key for an object-property arrow); `check.ts`
+  FAILS unless each allow-listed projector function is seen writing; `.mts` / `.cts` / `.tsx` scanned; README "What it still cannot see". `lib.test` 28 → 46. The real repo: green, both
+  projector writes seen. RED: the HEAD scanner ⇒ 17 of the 18 new legs fail; the projector's UPDATE renamed out of sight ⇒ the gate exits 1 ("did NOT see … write").
+- **R3-28** — dated corrections on AC9 (a representative matrix; the `matchingGrantRole` leg by construction), Task 8 and the Completion Notes ("except the version / count pins").
+- **R3-29** — `usesRequirePermissionResult`: a call whose value is kept (assigned, returned, passed, awaited into a binding, property-read) or a `.requirePermission` alias is flagged
+  outside `check.ts`, the rbac hook and test files; seven flag legs, seven negatives (bare / awaited / void / multi-line statements, the hook factory, an import or comment), and a repo
+  scan that SEES the hook as the one keeper and the long-standing guard callers (≥ 5, `validity-service/redaction.ts` named) as droppers. QE18 (e) and `check.ts`'s doc amended (dated).
+  RED: a planted `scripts/` file keeping `rbac.requirePermission(…)`'s result ⇒ the scan fails; the probe deleted.
+
+#### Review Findings — round 4: the round-3 FIX DIFF (2026-11-04)
+
+**2026-11-04 — code review of the round-3 patches** (BigDev: "2, then open pr"). The fix diff was ISOLATED exactly: each chunk diff recorded its files as the round-3
+layers saw them, so `268d86b5` + `g1`…`g4.diff` reconstructs the reviewed tree, and the fix diff is that tree → the working tree — 24 files, 1,873 lines, +793 / −175
+(`scratchpad/13-1-r3/fix-r3.diff`; all four chunk diffs applied cleanly; the 24 files are exactly the ones round 3 touched). Three FRESH read-only layers, `DATABASE_URL`
+unset: Blind Hunter (the diff only), Edge Case Hunter (the diff + the repo; probes in its own scratch dir), Acceptance Auditor (the diff + v1.24's round-3 Resolutions as
+CLAIMS to falsify). No layer failed. 35 raw → 22 unique; the two Mediums were found independently by two and three layers and REPLAYED by me (`scratchpad/13-1-r3/zalgo.mjs`;
+the Edge Hunter's vitest 2.1.9 probe for `mockRestore`). **1 decision-needed, 14 patch, 1 defer, 6 dismissed.** §0: nothing to trustees (an engineering threshold).
+
+**How much to trust this.** The Auditor re-ran the counts (93 name legs, domain 3,839, api 1,119, `check.test` 112, `lib.test` 46, the gate's two seen writers, 11 policy legs) — all
+match — and found 21 of the round-3 claims HELD (incl. R3-12's nine fragments against the RAISE texts, R3-21's owner leg not vacuous, R3-16's triggers equal to QE6's list). What did
+NOT hold: R3-10 / R3-1's mark rules are bypassed through the five ALLOWED invisibles (R4-2); R3-4's 503 `console.error` sweep cannot fail (R4-1 — a mistake of mine: I read the spy
+after restoring it); R3-29's fence misses forms the amended QE18 (e) says both fences catch, and its floor is met by comments (R4-4, R4-5); R3-28 was applied to part of what it named
+(R4-12). The rest is the gate's and the fences' remaining static gaps, one latent replay coupling R3-16 introduced (R4-10), and closure wording.
+
+**AI-6-5 checklist families the fix diff touches** (the Auditor's verdicts, confirmed): 1, 2, 3, 4 — covered-by-test. 5 DB backstops — no DB backstop is possible for the name (Tier-1
+ciphertext); **REAL GAP in the app-layer rule: R4-2**. 6 projection — covered; **latent: R4-10**. 8 audit / PII — **REAL GAP: R4-1**. 9 deliberate-vs-oversight — **REAL GAP: R4-4**
+(and R4-6 … R4-9). 10 closure honesty — **REAL GAP: R4-1, R4-5, R4-12, R4-13, R4-14**. 7, 11, 12, 13 untouched.
+
+- [x] [Review][Decision] **R4-DN1 — How far should the five ALLOWED invisibles (ZWNJ, ZWJ, LRM, RLM, ALM) be constrained?** ⭐ **RESOLVED 2026-11-04 — BigDev: "1" = never first or last, never two in a row ⇒ patch R4-15.** — Blind + Auditor; REPLAYED: `'A'` + 119 × ZWJ (or LRM, or ALM)
+  is ACCEPTED — a 120-code-point name that reads "A", sealed for good. Round 2 allowed the five ANYWHERE and any number of times because real names carry them (Indic conjuncts:
+  virama + ZWJ / ZWNJ; right-to-left names: a directional mark); a constraint must not refuse those. Engineering (§0 — BigDev's, the R3-DN1 kind). Options in the summary.
+- [x] [Review][Patch] **R4-1 (Medium) — R3-4's 503 `console.error` sweep cannot fail: the spy is restored before its calls are read.**
+  [`apps/api/tests/integration/field-worker/registration-exhaustion.spec.ts:66-85`] — Blind + Edge + Auditor; PROVED by the Edge Hunter on the repo's vitest 2.1.9 (`mockRestore` → `mockReset` →
+  `mock.calls` = []). Mine. And the leg where `console.error` actually FIRES (the flag write rejects, `:97-115`) has no PII sweep at all. Fix: copy the calls inside the `try` before
+  `mockRestore`; sweep the flag-fails leg too, with a non-vacuity check that it logged; correct the R3-4 Resolution by a dated note.
+- [x] [Review][Patch] **R4-2 (Medium) — The 8-mark cap and the orphan-mark rule are bypassed through the allowed invisibles.**
+  [`apps/api/src/modules/field-worker/handlers.ts` (`NAME_ORPHAN_MARK`, `NAME_MARK_RUN_TOO_LONG`)] — Blind + Edge + Auditor; REPLAYED: `'x'` + (7 × U+0301 + ZWJ) × 14 (113 code points, 98 marks,
+  ONE grapheme) ACCEPTED; `'Asha '` + ZWJ + U+0301 + `'Rani'` and ZWJ + U+0301 + `'Asha'` ACCEPTED. The rules test raw adjacency; an allowed invisible between marks, or before a mark,
+  hides it. Fix: run both mark tests on the name with the five allowed invisibles REMOVED (the intent of R3-10 / R3-1 is unambiguous); legs per bypass; RED against the R3 rule.
+- [x] [Review][Patch] **R4-3 (Low) — U+FFFC OBJECT REPLACEMENT CHARACTER still passes — the same "corrupt placeholder" class as the refused U+FFFD.** [`handlers.ts` (`NAME_REFUSED`)] — Edge;
+  REPLAYED. Fix: add 0xfffc; a leg.
+- [x] [Review][Patch] **R4-4 (Low-Medium) — The `requirePermission`-result fence misses forms the amended QE18 (e) says both fences catch.**
+  [`packages/domain/tests/rbac/check.test.ts` (`usesRequirePermissionResult`); this story QE18 (e)] — Blind + Edge + Auditor; probed by all three: NOT flagged — an import alias
+  (`import { requirePermission as rp } …; const a = rp(p)`), a bare-identifier alias (`const g = requirePermission`), `.call` / `.apply` / `.bind`, `rbac['requirePermission'](p)`,
+  `Reflect.get(rbac, 'requirePermission')`, an assignment destructuring, a shorthand `{ requirePermission }` passed on, `(0, requirePermission)(p)`, a renaming re-export, `export default`.
+  QE18 (e)'s amendment says "both fences … recognise an assignment destructuring and a literal `Reflect.get`" — false for the second. Fix: flag a renaming import / export specifier,
+  `export default`, ANY bare-identifier reference that is not a discarded call's callee / an import / a declaration, the literal element access, the literal `Reflect.get` /
+  `getOwnPropertyDescriptor`, an assignment or binding destructuring keyed `requirePermission`; legs per form; the doc's blind-spot list made true.
+- [x] [Review][Patch] **R4-5 (Low) — R3-29's non-vacuity floor is met only by matches inside COMMENTS.** [`check.test.ts` (`callers`, `toBeGreaterThanOrEqual(5)`)] — Blind + Edge + Auditor;
+  confirmed: three of the seven "callers" are doc comments; the real guard callers are FOUR (`member-moderation/handlers.ts`, `workplaces/routes.ts`, `rules/index.ts`,
+  `validity-service/src/redaction.ts`), below the floor, and a regex cannot show the AST saw a DISCARDED call. Fix: count discarded calls in the AST; pin the four files by name; the
+  "six" comment corrected.
+- [x] [Review][Patch] **R4-6 (Low) — The `authorize` fence still misses four literal-key forms of R3-26's kind.** [`check.test.ts` (`reachesAuthorize`)] — Blind + Edge: `for ({ authorize: m } of [rbac])`,
+  `globalThis.Reflect.get(rbac, 'authorize')`, `Reflect['get'](rbac, 'authorize')`, `Reflect.getOwnPropertyDescriptor(rbac, 'authorize')`. Fix: the for-of / for-in initializer pattern; a
+  `Reflect` / `Object` callee reached through `globalThis` or a literal element access; `Reflect.getOwnPropertyDescriptor`; legs.
+- [x] [Review][Patch] **R4-7 (Low) — The state gate counts a non-literal COMPUTED key, an accessor or a method member as "clean".** [`scripts/field-worker-state-invariant/lib.ts` (`payloadShape`)] —
+  Blind + Edge; probed: `.set({ [k]: 'Gaya' })` and `{ get district() {…} }` ⇒ 0 findings, contradicting the README's "an unreadable payload is a finding". Fix: those members ⇒ "unverifiable"; legs.
+- [x] [Review][Patch] **R4-8 (Low) — The gate's alias and split-chain tracking sees only declaration initialisers.** [`lib.ts` (`collectTableNames`, `isTableRef`)] — Blind + Edge; probed: a
+  reassignment (`q = db.update(fieldWorkers)`), `let t; t = fieldWorkers`, `const { fieldWorkers: fw } = schema`, `db.update(schema['fieldWorkers'])`, `db.update(fieldWorkers)['set'](…)` ⇒ 0
+  findings. Fix: collect from `x = …` assignments and binding patterns keyed `fieldWorkers`; treat a literal element access like a property access (table and method); the README's "still
+  cannot see" names what remains (a chain returned by a helper, a dynamic key).
+- [x] [Review][Patch] **R4-9 (Low) — The gate's non-vacuity floor is satisfied by ANY allowlisted finding — an "unverifiable" one included.** [`scripts/field-worker-state-invariant/check.ts`] —
+  Blind. If the projector's guarded `.set({ … })` became `.set(patch)`, its unverifiable finding would be allow-listed AND count as "seen". Fix: only a READABLE guarded write counts as seen;
+  an unverifiable shape inside an allowlisted function is reported, not passed.
+- [x] [Review][Patch] **R4-10 (Low, latent) — R3-16 made the I4 fold depend on the exact `trigger` text.** [`packages/domain/src/field-worker/state.ts:143`, `:163`, `:170`] — Blind + Edge + Auditor:
+  the fold `safeParse`s the WHOLE write schema, so a stored event whose trigger is not today's exact value folds `district` / `reasonCode` / `endedOn` to null — silently (the fold never
+  throws) — while the row keeps the real value: an I4 divergence with no signal, reachable on any future trigger rename. Not reachable today (every producer emits the accepted value).
+  Fix: the fold parses with `trigger` OMITTED (the write path stays strict — I8); a leg: an off-text trigger still folds its district / reason / last day.
+- [x] [Review][Patch] **R4-11 (Low) — The fences error on a missing root and walk build output.** [`check.test.ts` (both walks)] — Blind: a sparse checkout without root `tests/` throws ENOENT;
+  `coverage`, `build`, `.next`, `out` are walked (a bundled copy of `check.ts` would be a false hit). Fix: skip a missing root; skip those directories.
+- [x] [Review][Patch] **R4-12 (Low, records) — R3-28 corrected AC9, Task 8 and the Completion Notes but not QE18 Costs, Debug Log (b) or the Dev Notes line it also named.** [this story: QE18
+  Costs ("every existing RBAC test passes unchanged, `matching-grant.test.ts` included"), Debug Log (b) ("Every existing RBAC test passes UNCHANGED (202 / 202 …"), Dev Notes ("Every existing
+  RBAC and claims test passes unchanged")] — Auditor. Fix: the same dated correction in each.
+- [x] [Review][Patch] **R4-13 (Low) — `commands.spec.ts`'s narrowed header still claims more than three legs assert.** [`packages/domain/tests/integration/field-worker/commands.spec.ts` (the QE7 leg; the
+  stale-after-move refusal; the two `ended_on` legs)] — Auditor. Fix: `expectRefusedCleanly` in each.
+- [x] [Review][Patch] **R4-14 (Nit, comments / records) — five wordings.** `events.ts`'s trigger comment ("exactly its command's value" — a suspend / terminate trigger takes ANY reason of its list; the
+  commands bind it to `reason_code`); "fence 97 / 90 → 97" is `check.test.ts`'s total after R3-26, not the fence's legs; R3-1's combined control holds four marks, ALM tested apart; R3-14's premise
+  ("refused by the payload schema's literal first") was wrong — the cross-check runs FIRST in `project.ts`, so the old leg reached it (the new leg and its RED still hold); `state.test.ts`'s two
+  comments on whether the fold reads payloads (it parses `registered` / `terminated` / `posted`, never `activated`). Fix: dated corrections / reworded comments.
+- [x] [Review][Patch] **R4-15 (Low; from R4-DN1, BigDev "1") — An allowed invisible is never the first or last character of the name and never next to another.**
+  [`apps/api/src/modules/field-worker/handlers.ts`; `field-worker-name.test.ts`] — after NFC + trim, a name whose first or last code point is one of the five, or that holds two of the five
+  in a row, is refused (422 `field_worker.name_invalid`). Every real use sits BETWEEN two other characters (a conjunct joiner between a virama and a letter; a directional mark beside the
+  text it steers). QE9 amended a FOURTH time. Tests: `A` + 119 × ZWJ / LRM / ALM, a leading and a trailing mark, two in a row ⇒ refused; the existing real-name controls (`Ra`+ZWNJ+`ni`, Hindi with
+  virama + ZWJ, the Arabic ALM name, the combined four-mark name) still accepted; RED-prove.
+- [x] [Review][Defer] **D9 — Which names `\p{Cn}` refuses depends on the running Node's ICU, and production's Node is unpinned.** [`apps/api/Dockerfile:6` (`FROM node:22-alpine`, floating);
+  `.github/workflows/ci.yml:57` (`node-version: 22.12.0`)] — deferred, infra. Edge: Tolong Siki U+11DB0 (Unicode 17; Kurukh, Jharkhand) is accepted on the local 22.22.2 and `Cn` on an older ICU,
+  so one deploy can 201 a name the next 422s. Not 13.1's file; pinning the runtime image is a deployment decision. Written to `deferred-work.md`.
+
+**Dismissed (6):**
+
+- V1 — Blind: `projector-trigger.spec.ts`'s fallback `'field_worker.unknown'` trigger could make a leg pass for the wrong reason. Never used — every leg's type is in the map (Edge).
+- V2 — Blind: the `actor: 'system'` projector leg may be answered by the schema. `assertFieldWorkerActor` runs FIRST (`project.ts:296`), before the schema parse (Edge); the leg asserts "QE7".
+- V3 — Blind: removing `FieldWorkerReasonInvalidError.reasonCode` breaks consumers. None reads it; the API maps by class (Edge).
+- V4 — Blind: the leak test copies only enumerable fields. No non-enumerable carrier exists; a `cause` is D5's.
+- V5 — Blind: the gate's alias tables are file-wide, so a shadowed name over-approximates. A false POSITIVE fails loud (Edge).
+- V6 — Blind: the strict `trigger` freezes command strings into history. Intended on the WRITE path (I8 — no free text in an append-only stream); the replay half is R4-10.
+
+**Resolution of round 4 (2026-11-04) — BigDev resolved R4-DN1 with "1" (⇒ R4-15) and chose "1 — Apply every patch".** R4-1…R4-15 are applied and checked off; D9 and V1–V6
+stand. ⚠ **R4-15 departs from option 1 in ONE place, disclosed:** a FINAL ZWJ right after a virama is allowed — building it showed "never last" would refuse real names (the
+legacy encodings of the Malayalam chillu and the Bengali khanda ta end a word with virama + ZWJ); the exception is ten viramas, named. BigDev may overrule. ⚠ A thing of mine
+caught TWICE in this round (memory: escapes land raw): typing a real-name example put a RAW U+200C into this story and a RAW U+200D into a test label — both found by the
+added-line scan and removed. How each was proved (RED files restored from saved copies and `cmp`-checked; the planted `scripts/coverage/` probe deleted; live on `:5470`):
+
+- **R4-1** — the 503 leg copies `console.error`'s calls BEFORE `mockRestore`; the flag-fails leg (where it fires) is swept, with a non-vacuity check that the flag-failed line was
+  captured; the R3-4 Resolution carries a dated CORRECTED note. RED: the handler's flag-failure line made to log the name ⇒ the leg fails.
+- **R4-2** — `withoutAllowedInvisibles(name)` is what the orphan and run rules judge. RED: the rules on the raw name ⇒ 4 of the 5 new legs fail (the fifth — a LEADING LRM — is now also
+  refused by R4-15).
+- **R4-3** — U+FFFC joins `NAME_REFUSED`. RED: removed ⇒ 2 legs.
+- **R4-4** — `analyseRequirePermission` replaces the R3-29 visitor: a kept result, a renaming import / re-export, `export default`, any bare reference that is not a discarded callee
+  (`.call` / `.apply` / `.bind`, a comma call, a value, a shorthand), a literal element access, a literal `Reflect.get`, a renaming or string-keyed destructuring ⇒ flagged; 15 new flag
+  legs, 3 new negatives. QE18 (e) carries a dated CORRECTED note. RED: bare references not judged ⇒ 7 legs.
+- **R4-5** — the floor counts DISCARDED calls in the AST and names the four real guard callers; a leg shows a comment counts 0. RED: calls not counted ⇒ 2 legs (incl. the repo scan).
+- **R4-6** — `assignmentDestructures` (incl. for-of / for-in) and `isLiteralReflectiveRead` (bare / `globalThis` / `window` / `self`, `.get` or `['get']`, `getOwnPropertyDescriptor`)
+  are shared by both fences; 4 new legs. RED: no for-of form ⇒ 1.
+- **R4-7** — a non-literal computed key, an accessor or a method member ⇒ "unverifiable"; literal computed keys stay readable (a control).
+- **R4-8** — aliases and chains from plain assignments and from binding patterns keyed `fieldWorkers`; a literal element access for the table and for the method. The README's "still
+  cannot see" names a helper-built chain, a dynamic key and per-file (⛔ per-scope) tracking. R4-7 + R4-8 RED: the round-3 scanner ⇒ 9 of the 9 new legs fail (`lib.test` 46 → 55).
+- **R4-9** — an "unverifiable" write inside an allow-listed function is REPORTED and does not count as seen. Shown on the real tree: an unverifiable `.set(patchProbe)` planted in
+  `projectFieldWorkerTransition` ⇒ the gate exits 1; with R4-9 reverted the same plant PASSES (the old gate waved it through).
+- **R4-10** — the fold reads only `district` / `reason_code` + `ended_on` / `to_district` (`Fold*Schema`), ⛔ the write schemas; a leg folds a stream whose triggers were "renamed later".
+  RED: the trigger re-coupled into the fold's posted read ⇒ the leg fails.
+- **R4-11** — one `walkFenceTrees` for both fences: an absent root is skipped, `coverage` / `build` / `.next` / `out` are not walked. RED: a probe in `scripts/coverage/` is skipped
+  (green); with `coverage` walked ⇒ the scan fails; the probe deleted.
+- **R4-12** — QE18 Costs, Debug Log (b) and the Dev Notes line carry the same dated correction as R3-28's.
+- **R4-13** — `expectRefusedCleanly` in the QE7 leg, the stale-after-move refusal and both `ended_on` legs. Green.
+- **R4-14** — the `events.ts` trigger comment (any reason of the list; the fold ignores it), "90 → 97" labelled as the file total, R3-14's premise corrected, the state.test comments.
+- **R4-15** — `misplacedAllowedInvisible`: never first, never last (but a ZWJ after a virama), never two in a row; the combined control's RLM moved inside; 8 refusal legs and three
+  real-name controls (a Hindi conjunct, a Malayalam name ending in a legacy chillu, a Bengali legacy khanda ta). QE9 amended a FOURTH time. RED: no placement rule ⇒ 8 legs; no virama
+  allowance ⇒ the 2 legacy controls.
 
 ## Dev Notes
 
@@ -1524,7 +2313,7 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
   `authorize` and the stored result; `hasPermission`, `requirePermission`'s throw and `checkPermission` are PRESERVED, and
   `matchingGrantRole`'s answers are preserved wherever exactly one grant per dimension holds the key — a same-dimension tie,
   previously resolved by `role_grants` heap order (`loadActorGrants` has no `ORDER BY`), is now deterministic (role, value, id).
-  Every existing RBAC and claims test passes unchanged (none ties within one dimension).
+  Every existing RBAC and claims test passes unchanged (none ties within one dimension) [⚠ CORRECTED by review round 4, R4-12: except Task 8's version / count pins and one added `roles.test.ts` assertion].
 - **`apps/api/src/modules/field-worker/`** — gains routes beside the door.
 
 ### ⚠ Traps (TR)
@@ -1784,7 +2573,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one s
 - The four decision entries (`-441`…`-444`) are on this branch, unchanged since their commits; no later entry touches field
   workers ⇒ NO recorded answer has changed; no STOP.
 - Story DB: own container `twt-131-pg` (`postgres:16-alpine`, `:5470`, database named `twt_dev`), `pnpm db:migrate` to 0199.
-  `SELECT count(*) FROM field_worker_attribution_codes` ⇒ **0** (no orphans — TR2 clear). `events_log` actor columns ⇒ `actor_id`
+  `SELECT count(*) FROM field_worker_attribution_codes` ⇒ **0** (no orphans — TR2 clear) [⚠ CORRECTED by review round 3, R3-19: measured on a
+  container JUST created and migrated to 0199, which cannot hold an orphan — this proves nothing about TR2's real exposure, a SHARED developer DB that
+  ever ran `allocate-concurrency.spec.ts` to a crash. UN-ATTESTED; carried as the Task line "count orphans on each shared DB before `0200`"]. `events_log` actor columns ⇒ `actor_id`
   only (no `actor` column) ⇒ the actor KIND is a payload key; no `events_log` change.
 - Task 0.4: **Row 48 `field-worker-registration-live`** appended to `docs/launch-gate-inventory/inventory-roster.md` (owner "Trustee
   Panel (gate); counsel (Story 0.13)"; legs (a)–(i): (a), (b), (c), (d) MET; (e) partly — the matrix owner not yet told; (f), (g),
@@ -1796,7 +2587,7 @@ Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one s
   `mobileBlindIndex` (the member login hash) ⇒ 2 of 4 `field-worker-crypto.test.ts` legs fail; reverted ⇒ 4 / 4.
 - Task 2: `schema/field_workers.ts`, `policies/field-workers-rls.ts`, migration `0200_field-workers.sql` (journal idx 200,
   `when` 1796874000045), the Drizzle `foreignKey()` on `schema/field_worker_attribution_codes.ts`, comment-only edits in
-  `ids/index.ts`. Applied to the story DB only (TR2). Specs: `rls/field-workers-policy-regression.spec.ts` (AC1, 12),
+  `ids/index.ts`. Applied to the story DB only (TR2). Specs: `rls/field-workers-policy-regression.spec.ts` (AC1, 12 [⚠ CORRECTED by review round 3, R3-18: 11 — the file has one commit and never had 12]),
   `field-worker/schema-trigger.spec.ts` (AC2, 15), `field-worker/composite-fk.spec.ts` (AC7, 7). RED (the guard function
   `CREATE OR REPLACE`d on `:5470` without the rule, then restored from the migration text): without (t) ⇒ the I6 leg fails;
   without (e′) ⇒ the district-coincidence leg fails; restored ⇒ 15 / 15. AC7's recorded SQLSTATEs: owner DELETE ⇒ P0001
@@ -1809,7 +2600,7 @@ Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one s
   `grantId`; `requirePermissionHook` stores `(request.authorizations ??= {})[key]`; `types.ts` types it. Tests:
   `tests/rbac/check.test.ts` (+11 legs incl. the AST source fence on `authorize(` — 2,000+ files scanned, floor 1,500; a
   first REGEX version flagged two COMMENTS, so the fence reads the TypeScript AST), `permissions.test.ts`, `roles.test.ts` (+5);
-  `apps/api/tests/unit/rbac-hook-authorizations.test.ts` (5). Every existing RBAC test passes UNCHANGED (202 / 202 in
+  `apps/api/tests/unit/rbac-hook-authorizations.test.ts` (5). Every existing RBAC test passes UNCHANGED [⚠ CORRECTED by review round 4, R4-12: except Task 8's version / count pins and one added assertion] (202 / 202 in
   `tests/rbac`, `matching-grant.test.ts` untouched). RED: a planted `rbac.authorize(` in `apps/api/src` ⇒ the fence fails; an
   unfrozen `grant` ⇒ the freeze leg fails; `authorizingGrant` without the sort ⇒ 4 legs fail (two of them `matching-grant`'s
   own); the hook's store line removed ⇒ 3 of 5 hook legs fail. All restored.
@@ -1885,19 +2676,95 @@ Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one s
   skipped. Both throwaway containers removed afterwards; `twt-131-pg` (`:5470`) is the story's working DB.
 - Typecheck and the OpenAPI determinism job are inside that run (green).
 
+**(e) Code review round 1 — 2026-11-04 — patches R1–R10 applied (BigDev: "apply every patch").**
+- Database: `twt-131-pg` (`:5470`, DB `twt_dev`, user `twt_dev_app`) — this story's own container, migrated through `0200`, 0 `field_workers` rows
+  before and after. The shell's default `DATABASE_URL` is `:5432` and was OVERRIDDEN on every live command; it was never used.
+- RED proofs (each source file restored byte-for-byte from a saved copy, then re-run green): R1 ×3 (a typo in the in-progress code and the bound at
+  2000; the no-result throw deleted), R2 (key check deleted ⇒ the command REGISTERED the worker), R3 (the old order ⇒ four legs fail, "expected 33 to
+  be less than 32"), R4 (unit ×4 and the live (h) leg), R5a (`TS2322` in `read.spec.ts`), R5b ("expected a length of 200 but got 201" — a first
+  attempt with a mistyped replacement did not parse, proved nothing, and was redone), R6 (rule deleted ⇒ 20 legs; plain `\p{L}` ⇒ the four filler
+  legs; the live (h) loop), R7 (call-only detection ⇒ four legs). An earlier batch of R1 / R3 runs used a wrong test path and printed nothing — it was
+  discarded and redone.
+- ⚠ A trap hit and fixed: the bidi range written as backslash-u escapes in an edit landed as RAW bidi control characters in `handlers.ts` —
+  typecheck cannot see it; a character scan caught it and the regex is now built from `String.fromCharCode`. Every changed file was re-scanned for
+  invisible, bidi and control characters: clean. (`deferred-work.md` holds ONE pre-existing NUL byte, line 13439 — it is at HEAD, not from this
+  review; left alone.)
+- After the patches: typecheck and lint green for `@twt/domain` and `@twt/api`; gates `field-worker-state:check` and `:test` (28),
+  `domain-invariants:check`, `access-wrapper:check` green; unit suites with `DATABASE_URL` unset — `@twt/api` 93 files / 1,054 tests, `@twt/domain`
+  213 files / 3,806 tests, no failed file; live on `:5470` — domain `tests/integration/field-worker` plus the two field-worker RLS specs, 8 files /
+  77 tests; api `tests/integration/field-worker`, 2 files / 14 tests — all green.
+- NOT run: the full `pnpm ci:local` (Task 12's open line). The fix diff has NOT been reviewed by a fresh reader.
+
+**(f) Code review round 2 — 2026-11-04 — the fix diff reviewed, patches R2-1…R2-11 applied (BigDev: "re-run code review", "go, launch all three", "apply every patch").**
+- Review: three fresh read-only layers on the 774-line code and test diff (Blind Hunter; Edge Case Hunter, which never saw round 1's findings; Acceptance Auditor, which got the
+  Resolution block as claims to falsify). 29 raw → 21 unique: 0 decision-needed, 11 patch, 1 defer, 9 dismissed. I replayed the name rule and the fence on the reviewers' cases
+  with `node` before classifying, and read the flag path, the stale story lines and `epics.md`.
+- Database: the same `twt-131-pg` (`:5470`), 0 `field_workers` rows before and after; the shell's `:5432` overridden on every live command.
+- RED proofs (each file restored byte-for-byte from a saved copy, then re-run green): R2-1 ×4 (round 1's rule ⇒ 28 legs; no `Zl` / `Zp` / `Co` ⇒ 4; empty allow-list ⇒ 5; the live
+  HTTP loop against round 1's rule), R2-3 ×3 (export branch ⇒ 2; binding keys ⇒ 2; call branch deleted ⇒ the bare-call leg and the repo scan), R2-4 (a release in the
+  `already_claimed` branch ⇒ 2), R2-6 (a leak probe: the old `afterEach` fails it, the new one passes — the probe legs removed), R2-7 (the cap at 2000 ⇒ "a length of 200 but got
+  201"). R2-2 is a comment and wording; R2-5 a label; R2-8…R2-11 record edits — none can be RED-proved, and none is claimed to have been.
+- ⚠ Two things of mine caught on the way: the first R2-1 test run failed three legs because I had asserted that a TRAILING U+2028, U+2029 or U+FEFF survives `trim()` (it does not; fixed
+  in the test, not the rule); and a RED edit I wrote for the fence carried a convoluted `.replace()` that I replaced with the plain string. The Resolution's own count of the
+  fence legs was also wrong once (nine for eight) and was corrected against the measured 82 → 90.
+- After the patches: typecheck and lint green for `@twt/domain` and `@twt/api`; gates `field-worker-state:check` and `:test` (28), `domain-invariants:check`, `access-wrapper:check`
+  green; unit suites with `DATABASE_URL` unset — `@twt/api` 93 files / 1,087 tests (+33: the name legs), `@twt/domain` 213 files / 3,814 tests (+8: the fence legs), no failed file;
+  live on `:5470` — domain `tests/integration/field-worker` plus the two field-worker RLS specs, 8 files / 77 tests; api `tests/integration/field-worker`, 2 files / 14 tests — all green.
+- NOT run: the full `pnpm ci:local`. The round-2 fix diff has NOT been reviewed by a fresh reader.
+
+**(g) Code review round 3, chunk G3 — 2026-11-04 — the whole branch, chunked; G3 (the API route + contracts) reviewed and its patches applied (BigDev: "B: full branch, chunked", "G3 API route", "go, launch all three", R3-DN1 "1", "apply every patch").**
+- Review: three fresh read-only layers on G3's 2,158-line diff (`268d86b5` → the working tree, 23 files). 29 raw → 23 unique: 1 decision-needed (resolved: cap 8+), 9 patch (+1 from the decision), 1 defer,
+  12 dismissed. I replayed the name rule (`scratchpad/13-1-r3/verify-name.mjs`) and read `closeScopeTx`, the keyed store's `getResult`, the rate-limit plugin, the 12.2 twin's residuals and the OpenAPI header convention first.
+- Database: `twt-131-pg` (`:5470`) for every live leg, `DATABASE_URL` set on the command. ⚠ **A slip of mine:** one `pnpm --filter @twt/api test` ran with the SHELL's `DATABASE_URL` (`:5432`,
+  a local Postgres behind on schema — 189 migrations, no `field_workers`): 426 integration legs failed there and the passing ones may have left fresh-UUID test rows in that dev DB.
+  Read-only check after: no `field_workers` table, so migration `0200` did NOT reach it (the API vitest config runs no migrations). The memory rule ("every live command names its port") was the one broken.
+- RED proofs (each file restored byte-for-byte from a saved copy, `cmp`-checked, then re-run green): R3-1 / R3-10 ×5 unit (round 2's rule ⇒ 22 legs; no `Cf` ⇒ 9; no mark cap ⇒ 1; ALM off the
+  allow-list ⇒ 1; no orphan-mark check ⇒ 1) + live (round 2's rule ⇒ the (h) content leg); R3-2 ×3 (no release ⇒ the two unit legs AND the live exhaustion retry; a failure recorded as the
+  result ⇒ the two unit legs); R3-5 (a deaf spy ⇒ the live control); R3-7 (`registrationDistrict` passing a number through ⇒ 1). R3-3, R3-4 and R3-6 are STRENGTHENED assertions, green, not
+  RED-proved; R3-8 a retitle; R3-9 a description (regenerated, determinism check green).
+- After: typecheck + lint green for `@twt/api` and `@twt/contracts`; `@twt/api` with `DATABASE_URL` unset 93 files / 1,119 tests (+32: 25 name legs, 7 handler / `registrationDistrict`
+  legs), `@twt/contracts` 96 / 1,701; live on `:5470` api `tests/integration/field-worker` 2 files / 14 tests; the raw-invisible scan of every added line clean. `@twt/domain` untouched by G3.
+- NOT run: the full `pnpm ci:local`. Chunks G2, G1 and G4 are NOT yet reviewed. [⚠ Superseded by (h): they are now reviewed and patched.]
+
+**(h) Code review round 3, chunks G2 / G1 / G4 — 2026-11-04 — the rest of the branch reviewed together and its patches applied (BigDev: "go, launch all three and remaining chunk all at once", R3-DN2 "1", "apply every patch").**
+- Review: nine fresh read-only layers in parallel (three per chunk), every one with `DATABASE_URL` UNSET (no DB); G2 2,495 / G1 3,001 / G4 1,635 diff lines; the four chunks cover every
+  code / test file on the branch exactly once (checked by a set difference). 68 raw → 50 unique: 1 decision-needed (resolved: fence the result), 18 patch (+1 from the decision), 4 defer,
+  27 dismissed. I READ `requirePermission`'s return against QE18 (c) / (e), pino's `err` logging and the twin `ModulePersistError`, the projector's insert columns, `state.test`'s
+  agreement leg, the trigger RAISE texts and the fixtures' guard use before classifying.
+- Database: `twt-131-pg` (`:5470`) for every live leg, `DATABASE_URL` on the command; DB-free legs with it UNSET — no `:5432` slip this time.
+- RED proofs (each file restored from a saved copy and `cmp`-checked; each planted probe deleted): R3-12, R3-13, R3-14, R3-15, R3-16 ×2, R3-20, R3-21, R3-25, R3-26, R3-27 ×2, R3-29. Not
+  RED-proved, and not claimed: R3-11 (removes vacuous lines), R3-17 and R3-22 (strengthened assertions, green), R3-23 (a banner), R3-18 / R3-19 / R3-24 / R3-28 (record edits).
+- After: typecheck + lint green for `@twt/domain` and `@twt/api`; gates `field-worker-state:check` (both projector writes SEEN) and `:test` (46), `domain-invariants:check`,
+  `access-wrapper:check`, `governance-boundary:check` green; unit suites with `DATABASE_URL` unset — `@twt/domain` 213 files / 3,839 tests (+25), `@twt/api` 93 / 1,119, `@twt/events`
+  6 / 30; live on `:5470` — domain field-worker + both field-worker RLS specs + attribution-code + cross-pariwar-leak, 14 files / 160 tests; api field-worker + attribution-code-access,
+  3 files / 28 tests; the raw-invisible scan of every added line clean.
+- ⚠ A thing of mine caught on the way: an `it.each` title used a second `%s` that printed the command FUNCTION, not the trigger — retitled.
+- NOT run: the full `pnpm ci:local` (owed, on a fresh container).
+
+**(i) Code review round 4 — 2026-11-04 — the round-3 fix diff reviewed and its patches applied (BigDev: "2, then open pr", R4-DN1 "1", "apply every patch").**
+- Review: the fix diff ISOLATED by reconstruction (`268d86b5` + the four chunk diffs ⇒ the tree the round-3 layers saw; that tree → the working tree = 24 files, 1,873 lines);
+  three fresh read-only layers, `DATABASE_URL` unset; 35 raw → 22 unique: 1 decision-needed (resolved ⇒ R4-15), 14 patch, 1 defer (D9), 6 dismissed. The two Mediums replayed by me
+  (`scratchpad/13-1-r3/zalgo.mjs`) and by the Edge Hunter's vitest 2.1.9 probe.
+- RED proofs: R4-1, R4-2, R4-3, R4-4, R4-5, R4-6, R4-7 + R4-8 (the round-3 scanner), R4-9 (shown both ways on the real tree), R4-10, R4-11, R4-15 ×2. Not RED-proved: R4-12, R4-14
+  (records / comments), R4-13 (strengthened assertions, green).
+- After: typecheck + lint (`@twt/domain`, `@twt/api`); gates `field-worker-state:check` / `:test` (55), `domain-invariants`, `access-wrapper`, `governance-boundary` green; unit with
+  `DATABASE_URL` unset — domain 3,863 (+24), api 1,137 (+18: the name legs), events 30; live on `:5470` — domain 160, api 28; the added-line scan clean (after the two raw characters
+  of mine it caught were removed).
+- NOT run yet: the full `pnpm ci:local` on a fresh container — next, before the push.
+
 ### Completion Notes List
 
 - Built the SEVENTH event-derived-state primitive, `packages/domain/src/field-worker/` (namespace `fieldWorker`): the
   `field_workers` table (migration `0200` — Tier-1 name + mobile, a Tier-2 mobile index in the disjoint `field_worker_mobile`
   space, eight projected columns behind a whole-row guard trigger with its own terminal / KYC / district rules, row DELETE and
-  statement TRUNCATE refused for every role, per-command RLS) and 13.2's composite FK onto it; seven `field_worker.*` events
+  statement TRUNCATE refused for every role's DML [R3-18: the owner can disable the trigger — DDL], per-command RLS) and 13.2's composite FK onto it; seven `field_worker.*` events
   (human actors only, no PII, the `authorization` snapshot on `registered` / `posted`); the reducer + fold + `acceptsNewAttributions`
   (`active` only); the projector; seven commands with QE5's guard order (IST `ended_on` bounds computed in SQL); PII-free reads,
   the duplicate-mobile pre-check, `assertDistrictRecorded`, and the as-of read `getFieldWorkerStateAt` (prefix cut in SQL, µs).
 - The RBAC core gained ONE shared per-grant predicate, `authorizingGrant`, and `authorize` → a deep-frozen, WeakSet-registered
   `VerifiedAuthorization`; `requirePermission` returns it and `requirePermissionHook` stores it per key; `matchingGrantRole` now
   delegates to `authorizingGrant`. `field_worker.register` minted (catalog 58 → 59), held by `district_admin` + `pariwar_admin`.
-  Every existing RBAC test passes unchanged.
+  Every existing RBAC test passes unchanged (⚠ CORRECTED by review round 3, R3-28: except the version / count pins Task 8 bumps and one added assertion).
 - The ONE route, `POST /api/v1/p/:pariwarId/field-workers` (district-gated on the body's reporting district), registers a worker
   and allocates their attribution code through 13.2's door in one transaction; the 201 carries no code (QE22); exhaustion flags
   in its own transaction and answers 503.
@@ -1906,6 +2773,22 @@ Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one s
 - Not done here (by design): no screen, no other lifecycle route, no decrypt, no worker login (13.1a–13.1d, 13.3). The
   `decision-flow-sync` skill is for when the decisions LAND on `main` (`-441`…`-444` are on this branch; no new decision was
   written by this run).
+- Review round 1 (2026-11-04): the full-diff review's ten patches are applied (R1–R7 each RED-proved then green; R8–R10 are record edits — Debug Log (e)); two items are deferred (D1 → 13.1a, D2 →
+  BigDev). QE9's name rule is amended (no bidi controls, at least one VISIBLE letter) and `tenantWrite` gained a `prepare` step — both recorded as
+  variances above. Status stays `review`: the patch is uncommitted, `ci:local` is owed, and no fresh reader has seen the fix diff.
+- Review round 2 (2026-11-04): the fix diff was reviewed by three fresh layers and its eleven patches are applied (RED-proved: R2-1, R2-3, R2-4, R2-6
+  and R2-7; comment, label and record edits that cannot be: R2-2, R2-5 and R2-8…R2-11 — Debug Log (f)); one item is deferred (D3 — the 503 flag path's second connection, in 13.2's door file).
+  QE9's name rule is amended a second time (no invisible character); AC8 (k) and AC9 / QE18 (e) carry variance pointers. Status stays `review`.
+- Review round 3, chunk G3 (2026-11-04): the whole branch is reviewed in four chunks; G3 (the API route + contracts) found 1 decision (BigDev: refuse 8+ stacked marks), 10 patches — all applied
+  (RED-proved: R3-1, R3-2, R3-5, R3-7, R3-10; strengthened assertions: R3-3, R3-4, R3-6; a retitle and a description: R3-8, R3-9 — Debug Log (g)) — and 1 deferral (D4 — the keyed store's
+  expired-result "in progress", pre-existing). QE9's name rule is amended a THIRD time. Status stays `review`.
+- Review round 3, chunks G2 / G1 / G4 (2026-11-04): 1 decision (BigDev: fence `requirePermission`'s RESULT — R3-29), 19 patches applied (RED-proved: R3-12, 13, 14, 15, 16, 20, 21, 25,
+  26, 27, 29; the rest strengthened assertions or record edits — Debug Log (h)), 4 deferrals (D5 error `cause` in logs; D6 the twin gates' blind spots; D7 the move's expected source →
+  13.1c / 13.1d; D8 FORCE RLS vs a non-superuser owner). QE18 (e) is amended; the event `trigger` is no longer free text. The WHOLE branch has now had a fresh full review. Status stays
+  `review` — `ci:local` on a fresh container and the commits are next.
+- Review round 4 (2026-11-04): the round-3 fix diff reviewed — 1 decision (BigDev: allowed invisibles between two characters ⇒ R4-15, with a disclosed virama + ZWJ exception), 15
+  patches applied (RED-proved R4-1…R4-11 except R4-12 / R4-13 / R4-14, and R4-15), 1 deferral (D9 — the runtime Node / ICU is unpinned). QE9 amended a FOURTH time; QE18 (e)
+  corrected. Status stays `review`.
 
 ### File List
 
@@ -1933,8 +2816,77 @@ scripts/access-wrapper-invariants/{check.ts,README.md} · docs/access-wrapper-in
 .github/workflows/ci.yml · docs/launch-gate-inventory/inventory-roster.md (Row 48) ·
 _bmad-output/implementation-artifacts/13-1-field-worker-identity-lifecycle-state-machine.md · _bmad-output/implementation-artifacts/sprint-status.yaml
 
+Review round 1 (2026-11-04) also touched: apps/api/src/modules/field-worker/handlers.ts · packages/domain/src/field-worker/read.ts ·
+apps/api/tests/integration/field-worker/registration.spec.ts · apps/api/tests/unit/field-worker-handler-identity.test.ts (rewritten) ·
+apps/api/tests/unit/field-worker-name.test.ts (new) · packages/domain/tests/field-worker/{commands-guards,district-guard (new)}.test.ts ·
+packages/domain/tests/integration/field-worker/read.spec.ts · packages/domain/tests/rbac/check.test.ts ·
+_bmad-output/implementation-artifacts/deferred-work.md.
+Review round 2 (2026-11-04) also touched: apps/api/src/modules/field-worker/handlers.ts · apps/api/tests/unit/{field-worker-handler-identity,field-worker-name}.test.ts ·
+apps/api/tests/integration/field-worker/registration.spec.ts · packages/domain/tests/rbac/check.test.ts · packages/domain/tests/integration/field-worker/read.spec.ts ·
+_bmad-output/planning-artifacts/epics.md (13.1a: the D1 block) · _bmad-output/implementation-artifacts/{deferred-work.md (D3),sprint-status.yaml (ledger 2026-11-04b)}.
+Review round 3, chunk G3 (2026-11-04) also touched: apps/api/src/modules/field-worker/handlers.ts (the name rule) · packages/contracts/scripts/emit-openapi.ts · openapi/v1.yaml (regenerated) ·
+apps/api/tests/unit/{field-worker-name,field-worker-handler-identity}.test.ts · apps/api/tests/integration/field-worker/{registration,registration-exhaustion}.spec.ts ·
+_bmad-output/implementation-artifacts/{deferred-work.md (D4),sprint-status.yaml (ledger 2026-11-04c)}.
+Review round 4 (2026-11-04) also touched: apps/api/src/modules/field-worker/handlers.ts · apps/api/tests/unit/field-worker-name.test.ts ·
+apps/api/tests/integration/field-worker/registration-exhaustion.spec.ts · packages/domain/src/field-worker/{state,events}.ts · packages/domain/tests/field-worker/state.test.ts ·
+packages/domain/tests/integration/field-worker/commands.spec.ts · packages/domain/tests/rbac/check.test.ts · scripts/field-worker-state-invariant/{lib.ts,check.ts,lib.test.ts,README.md} ·
+_bmad-output/implementation-artifacts/{deferred-work.md (D9),sprint-status.yaml (ledger 2026-11-04e)}.
+Review round 3, chunks G2 / G1 / G4 (2026-11-04) also touched: packages/domain/src/field-worker/{commands,errors,events}.ts · packages/domain/src/rbac/check.ts (doc) ·
+packages/domain/tests/field-worker/{commands-guards,events,state}.test.ts · packages/domain/tests/integration/field-worker/{_fixtures.ts,commands.spec.ts,projector-trigger.spec.ts,schema-trigger.spec.ts} ·
+packages/domain/tests/integration/rls/field-workers-policy-regression.spec.ts · packages/domain/tests/rbac/check.test.ts · scripts/field-worker-state-invariant/{lib.ts,check.ts,lib.test.ts,README.md} ·
+_bmad-output/planning-artifacts/epics.md (13.1c / 13.1d: the D7 block) · _bmad-output/implementation-artifacts/{deferred-work.md (D5–D8),sprint-status.yaml (ledger 2026-11-04d)}.
+
 ### Change Log
 
+- **v1.25 (2026-11-04) — CODE REVIEW round 4 (the round-3 fix diff), patches applied.** Three fresh layers on the isolated fix diff (24 files): 1 decision-needed, 14 patch, 1 defer, 6
+  dismissed; BigDev resolved R4-DN1 ("1" ⇒ R4-15) and chose "apply every patch". R4-1 the 503 `console.error` sweep made real (it read a reset spy — mine) and the flag-fails leg swept;
+  R4-2 the mark rules see through the allowed invisibles (a 98-mark name had passed); R4-3 U+FFFC refused; R4-4 / R4-5 / R4-6 / R4-11 both fences — the second's missed forms, an AST
+  floor naming the four real guard callers, four more literal forms, a shared walk that skips an absent root and build output; R4-7 / R4-8 / R4-9 the state gate — unreadable members,
+  assignment / binding / element-access aliases, an unverifiable projector write reported; R4-10 the fold ignores `trigger`; R4-12 / R4-14 record and comment corrections; R4-13 three
+  refusal legs; R4-15 an allowed invisible sits between two characters (one disclosed exception: a final ZWJ after a virama). QE9 amended a FOURTH time; QE18 (e) CORRECTED. D9 in
+  `deferred-work.md`. UNCOMMITTED; `ci:local` NOT re-run since `ce80bd64`; Status stays `review`.
+
+- **v1.24 (2026-11-04) — CODE REVIEW round 3, chunks G2 / G1 / G4 (the rest of the full-branch review), patches applied.** Nine fresh layers (three per chunk), 1 decision-needed, 18 patch,
+  4 defer, 27 dismissed; BigDev resolved R3-DN2 ("1" — fence `requirePermission`'s result ⇒ R3-29) and chose "apply every patch". The three Auditors found NO AC, QE, invariant or ratified-
+  decision violation in G1 / G2 / G4's code. Applied: R3-11 two post-savepoint assertions; R3-12 trigger legs assert the refusing rule; R3-13 the ten arms literal; R3-14 / R3-15 the projector's
+  from/to and actor checks reached; R3-16 the event `trigger` per-type, ⛔ free text, and every computed trigger pinned; R3-17 exact index columns; R3-18 / R3-19 record corrections (11 legs;
+  "every role's DML"; the orphan count UN-ATTESTED + a Task line); R3-20 no raw reason in the error, the trigger built after validation; R3-21 the lock's `pariwar_id` pinned as the owner;
+  R3-22 / R3-23 / R3-24 spec claims, a banner, an AC6 VARIANCE; R3-25 / R3-26 the `authorize` fence's roots and two missed forms; R3-27 the state gate's blind spots and a non-vacuity floor;
+  R3-28 AC9 / Task 8 overclaims; R3-29 the second fence. QE18 (e) AMENDED (dated). D5–D8 in `deferred-work.md`; D7 also under 13.1c / 13.1d in `epics.md`. UNCOMMITTED; `ci:local` NOT re-run
+  since `ce80bd64`; Status stays `review`.
+
+- **v1.23 (2026-11-04) — CODE REVIEW round 3, chunk G3 (the whole branch, chunked: G3 = the API route + contracts), patches applied.** Three fresh layers on G3's 2,158-line diff: 1
+  decision-needed, 9 patch, 1 defer, 12 dismissed; BigDev resolved R3-DN1 ("1" — refuse 8+ consecutive combining marks ⇒ R3-10) and chose "apply every patch". R3-1 + R3-10 QE9's name rule
+  AMENDED a THIRD time — also no `Cf` / `Cn`, no U+2800 / U+FFFD, no mark without a base, no run of 8+ marks; ALM allowed (the round-2 rule let U+2800, the interlinear annotation controls,
+  U+FFFD, noncharacters and a 119-mark Zalgo name through); R3-2 TR9 tested (release on failure, never record a failure — unit, and the live retry after a 503); R3-3 AC8 (f) whole snapshot in
+  every 201, codes and nothing-written on the 403 / 404 / 400 legs; R3-4 the AC13 sweep covers the concurrent loser's rows and the 503's logs; R3-5 the no-KMS leg has a positive control;
+  R3-6 leg (d)'s lock probe filtered by database and blocker; R3-7 `registrationDistrict` tested and v1.21's sentence CORRECTED; R3-8 a misleading title; R3-9 "reporting district" in
+  the OpenAPI description. D4 (the keyed store's expired-result 409) is in `deferred-work.md`. G2, G1, G4 still to review. UNCOMMITTED; `ci:local` NOT re-run since `ce80bd64`; Status stays `review`.
+
+- **v1.22 (2026-11-04) — CODE REVIEW round 2 (the fix diff), patches applied.** Three fresh layers reviewed the v1.21 patch: 0 decision-needed, 11 patch, 1 defer, 9 dismissed; BigDev
+  chose "apply every patch". R2-1 QE9's name rule AMENDED again — no invisible character (line / paragraph separators, private-use, every default-ignorable code point except ZWNJ, ZWJ,
+  LRM, RLM) and at least one letter; round 1's bidi regex and strip-then-test are gone (v1.21's R6 rule let U+2028, ZWSP between letters, tag characters and private-use through);
+  R2-2 the flag path's residual is commented and the R3 wording NARROWED (only the display-name read left the transaction — v1.21's "pool hold-and-wait removed" overclaimed);
+  R2-3 the `authorize` fence flags export specifiers and string / computed-literal binding keys, and says "statically visible"; R2-4 the in-flight leg asserts `release` is not called;
+  R2-5 labels; R2-6 the mock reset in `afterEach`; R2-7 the cap leg asserts the literal 200 and 50; R2-8 QE9's order list, its idle sentence and Task 7 describe the `prepare` step;
+  R2-9 D1 is homed in `epics.md` under 13.1a; R2-10 v1.21's "each RED-proved" corrected (R1–R7 were; R8–R10 are record edits); R2-11 AC8 (k) carries a VARIANCE pointer. D3 (the 503
+  flag path's second connection — Story 13.2's door file) is in `deferred-work.md`. UNCOMMITTED; `ci:local` NOT re-run since `ce80bd64`; Status stays `review`.
+- **v1.21 (2026-11-04) — CODE REVIEW round 1, patches applied.** Full-diff review (Blind Hunter, Edge Case Hunter, Acceptance Auditor): 0
+  decision-needed, 10 patch, 2 defer, 15 dismissed; BigDev chose "apply every patch". R1 the idempotency in-flight 409 and the key-length bounds
+  asserted (unit and HTTP); R2 `registerFieldWorker`'s key guard tested; R3 `tenantWrite` gains a `prepare` step before `openScopeTx` (a VARIANCE
+  from "copy 12.2's UNCHANGED"); R4 `assertDistrictRecorded` refuses NUL; R5 the two vacuous AC10 assertions made real; R6 QE9's name rule amended —
+  no bidi controls, at least one VISIBLE letter (the Hangul fillers are letters by category); R7 the `authorize` fence flags every reference; R8 the
+  "every guard RED-proved" sentence of v1.20 and Task 11 is SUPERSEDED by this one: RED proofs exist for the guards listed in Debug Log (b)–(c) and
+  (e), and the Auditor reports none recorded for trigger rules (c) and (d′), guards (0b), 3b, 3c, 4 and 5, `verifiedSnapshot`'s Pariwar / actor checks,
+  the projector's `from_district` check, the QE7 checks and `resolveValue`'s fail-closed leg — those are covered by green tests only (the Auditor's
+  reading of Debug Log (b)–(c), not independently re-verified) [⚠ CORRECTED 2026-11-04 by review round 3, R3-7: `resolveValue`'s fail-closed leg
+  (`registrationDistrict`) had NO test — it was protected by construction (the DTO 400s a non-string district before the hooks; the core denies a
+  null target, green in `check.test.ts`); a unit test now exists] [⚠ CORRECTED 2026-11-04 by review round 3, R3-15 / R3-14: "the QE7 checks"
+  held for the COMMANDS' copy only — the PROJECTOR's own actor check (QE7's third place; the only guard on a transition's `actorId: null`) and its
+  `from_state` / `to_state` cross-check had no test that could fail (every leg went through a command, or the payload schema refused first);
+  projector-direct legs now exist]; R9 Task 12's `decision-flow-sync` clause split out, unchecked; R10 AC9 / QE18 (e)
+  point at the widened fence. D1 (list cursor and index) is carried to 13.1a and D2 (marketplace helper extraction) is BigDev's to schedule — both in
+  `deferred-work.md`. UNCOMMITTED; `ci:local` NOT re-run since `ce80bd64`; Status stays `review`.
 - **v1.20 (2026-11-03) — IMPLEMENTED (`bmad-dev-story 13.1`).** Task 0.1 re-verified at `268d86b5` (migration `0200`, catalog 58 →
   59, roster Row 48, ledger `l`; 0 orphan codes; no recorded answer changed); Task 0.4 roster Row 48 `field-worker-registration-live`.
   Built: migration `0200_field-workers.sql` + the `field_workers` schema / RLS + 13.2's composite FK; the `fieldWorker` primitive

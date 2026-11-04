@@ -7532,6 +7532,9 @@ is the ONLY way an admin sees it; the per-act keys (`field_worker.approve`, the 
 dimension (13.1 QE10, QE17); the decrypt-on-read decision for the lists (13.1 C5, and 13.4's C6 for the analytics list); whether the
 screens show a worker whose SMS failed so the admin knows to give the code by hand (13.1b feeds this).
 
+> ⭐ **INHERITED FROM 13.1 (2026-11-04, `bmad-code-review 13.1`, round 1; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: code review of story 13-1-… (2026-11-04)"; D1).** HOMED here, ⛔ closed. 13.1 is IMPLEMENTED on its own branch and in review — ⛔ landed.
+> - **D1 — the worker list has no cursor, and its ordering has no index.** 13.1's `listFieldWorkersForPariwar` (`packages/domain/src/field-worker/read.ts`) is capped at 200 (`clampLimit`, 13.1's AC10) with a default page of 50 and NO offset or cursor, so a Pariwar with more than 200 workers cannot be enumerated through it; its `ORDER BY created_at DESC, field_worker_id DESC` is not served by `field_workers_pariwar_state_idx` (`(pariwar_id, current_state)`, migration `0200`). This story's "workers awaiting approval" screen is the first consumer: add keyset paging (on `created_at, field_worker_id`) and the matching index WITH the first screen that lists workers. ⛔ Raising the cap instead — it is a forced-pagination guard (AC10), not a tuning knob.
+
 ### Story 13.1b: A Newly Approved Field Worker Is Sent Their Code by SMS — Only After the Approval Has Committed `[CONSUMER]`
 
 > ⚠ **Added 2026-11-03** by BigDev (*"mint 13-1a, 13-1b, 13-1c"*), answering Story 13.1's ASK Q-2. The row is
@@ -7614,6 +7617,9 @@ holders of the suspend, reactivate, terminate and log-read keys (13.1 QE10); how
 the admin; what a worker who moved from another Pariwar (a new registration) shows about their past; who owns the 8-year removal and
 whether this story builds its anonymize command.
 
+> ⭐ **INHERITED FROM 13.1 (2026-11-04, `bmad-code-review 13.1`, round 3, chunk G2; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: code review of story 13-1-… round 3 — chunks G2, G1, G4"; D7).** HOMED here AND under 13.1d, ⛔ closed. 13.1 is IMPLEMENTED on its own branch and in review — ⛔ landed.
+> - **D7 — a move has no expected-from-district guard.** 13.1's `postFieldWorker` judges the authorization's target under the row lock and accepts it at EITHER end; a move whose authorization names the destination does not say which SOURCE it expected, so two concurrent moves both fulfil, serialised by the lock (13.1 spec (e2), by design today). With the any-district-key acceptance already carried (13.1 X3, C5, C10), the story that mints the move keys must decide whether a move names its expected source and is refused (409 `field_worker.authorization_stale`, or a new code) when the worker has moved meanwhile.
+
 ### Story 13.1d: A District Admin Asks Another to Take On or Release a Field Worker, and the Other Accepts or Refuses With a Reason — and the District Admins Are Told by Email and in the Admin Console `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-11-03** by BigDev (*"Yes to all four, mint 13-1d"*), refining Story 13.1's Q-6. The row is
@@ -7668,6 +7674,9 @@ fence entry) and the in-app notice (no admin notice list or unread marker exists
 Pariwar Admin refusal surface — a notification, never an approval step); whether a notice names the worker (a purpose-limited, audited
 decrypt of the name); a second request for the same worker to a different district while one is pending; what ends a pending request when
 the worker is moved or ended by another route.
+
+> ⭐ **INHERITED FROM 13.1 (2026-11-04, `bmad-code-review 13.1`, round 3, chunk G2; story `13-1-field-worker-identity-lifecycle-state-machine`; `deferred-work.md` "Deferred from: code review of story 13-1-… round 3 — chunks G2, G1, G4"; D7).** HOMED here AND under 13.1c, ⛔ closed. 13.1 is IMPLEMENTED on its own branch and in review — ⛔ landed.
+> - **D7 — a move has no expected-from-district guard.** 13.1's `postFieldWorker` judges the authorization's target under the row lock and accepts it at EITHER end; a move whose authorization names the destination does not say which SOURCE it expected, so two concurrent moves both fulfil, serialised by the lock (13.1 spec (e2), by design today). With the any-district-key acceptance already carried (13.1 X3, C5, C10), the story that mints the move keys must decide whether a move names its expected source and is refused (409 `field_worker.authorization_stale`, or a new code) when the worker has moved meanwhile.
 
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 

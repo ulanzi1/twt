@@ -12,11 +12,15 @@
 // takes the already-normalised values. Each call fires one KMS audit line (TR5: three per registration, asynchronous).
 //
 // ⛔ NEVER log a plaintext or a decrypted value; ⛔ never put one in an event payload, an audit line or an error body (I8).
-// No function here decrypts: decrypt-on-read is Story 13.3's / 13.4's decision (AC10).
+// Story 13.1a adds the DECRYPT (`decryptFieldWorkerField`) for its audited reads (AD9) — called only AFTER the caller has
+// written its actor-naming audit line (AD7) and released the hook's transaction (a KMS round trip must not hold a pooled
+// connection — the `moderation-crypto.ts` placement note). It classifies its OWN failures (decision `-447` item 4).
+// ⛔ Error classes here (13.1's handler unit test mocks this module with ONE export — TR10): they live in `errors.ts`.
 
 import { encryption } from '@twt/domain';
 
 import { FIELD_WORKER_FIELD_CLASS, FIELD_WORKER_MOBILE_FIELD_CLASS, type EncryptionDeps } from '../../context.js';
+import { FieldWorkerDecryptUnavailableError, FieldWorkerIdentityUnreadableError } from './errors.js';
 
 /** The three stored strings of a worker's identity — what `registerFieldWorker` writes. */
 export interface SealedFieldWorkerIdentity {
@@ -54,4 +58,48 @@ export async function sealFieldWorkerIdentity(
   const mobileCiphertext = await encryptFieldWorkerField(identity.mobileE164, pariwarId, enc);
   const mobileBlindIndex = await fieldWorkerMobileIndex(identity.mobileE164, pariwarId, enc);
   return { nameCiphertext, mobileCiphertext, mobileBlindIndex };
+}
+
+/**
+ * Story 13.1a (AD9; decision `-447` item 4) — decrypt ONE stored field-worker value (a name or a mobile) to UTF-8 text, with the
+ * failure classified by WHERE it happened (⛔ by message text):
+ *   · `parseEnvelope` fails (local, synchronous) — the stored value is not an envelope ⇒ `FieldWorkerIdentityUnreadableError('envelope')`;
+ *   · the KMS `decryptDek` fails — the key service, or the way to it ⇒ `FieldWorkerDecryptUnavailableError` (retry helps);
+ *   · the key UNWRAPPED but local AES-GCM authentication fails — tampered or corrupt ciphertext ⇒
+ *     `FieldWorkerIdentityUnreadableError('authentication')` (retry never helps — review R8: the moderation helper's split
+ *     would have called this a KMS outage).
+ * Whether `decryptDek` resolved is observed through a wrapper on the provider (a Proxy: the provider may be a class whose
+ * methods use `this`). The shared primitive is not changed. ⛔ The plaintext in any log or error.
+ */
+export async function decryptFieldWorkerField(serialized: string, pariwarId: string, enc: EncryptionDeps): Promise<string> {
+  let envelope: ReturnType<typeof encryption.parseEnvelope>;
+  try {
+    envelope = encryption.parseEnvelope(serialized);
+  } catch {
+    throw new FieldWorkerIdentityUnreadableError('envelope');
+  }
+  // `decryptTier1` refuses an unknown AAD shape BEFORE the KMS call — a stored-value fault, ⛔ a key-service one.
+  if (envelope.aadShape !== 'v1') throw new FieldWorkerIdentityUnreadableError('envelope');
+  let unwrapped = false;
+  const target = enc.kms;
+  const kms = new Proxy(target, {
+    get(t, prop) {
+      const value: unknown = Reflect.get(t, prop, t);
+      if (prop === 'decryptDek' && typeof value === 'function') {
+        return async (...args: unknown[]) => {
+          const dek: unknown = await (value as (...a: unknown[]) => Promise<unknown>).apply(t, args);
+          unwrapped = true;
+          return dek;
+        };
+      }
+      return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(t) : value;
+    },
+  });
+  try {
+    const bytes = await encryption.decryptTier1(envelope, { pariwarId, fieldClass: FIELD_WORKER_FIELD_CLASS }, kms, enc.kekRef);
+    return Buffer.from(bytes).toString('utf-8');
+  } catch {
+    if (unwrapped) throw new FieldWorkerIdentityUnreadableError('authentication');
+    throw new FieldWorkerDecryptUnavailableError();
+  }
 }

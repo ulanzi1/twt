@@ -8,8 +8,13 @@
 // failure, a bug — is rethrown UNCHANGED for the central mapper to answer 500.
 //
 // The rows ONLY A COMMAND can raise (illegal transition, KYC, reason, not found, stream conflict, district unchanged,
-// authorization stale, ended_on) have NO route in Story 13.1 — "no route yet — 13.1a / 13.1c / 13.1d". They are mapped
-// here once, so the routes that call those commands inherit one mapping, and asserted by `field-worker-errors.test.ts`.
+// authorization stale, ended_on) had NO route in Story 13.1. Story 13.1a's approval now reaches four of them (illegal
+// transition, the two KYC rows, not found, stream conflict, authorization stale); the rest wait for 13.1c / 13.1d. They are
+// mapped here once, so every route inherits one mapping, and asserted by `field-worker-errors.test.ts`.
+//
+// Story 13.1a adds three rows of its own (the "Errors" table): the list's malformed cursor (400), and the decrypt's two
+// failures kept APART (decision `-447` item 4) — a stored value that cannot be read (500: an integrity fault, retry never
+// helps) and a key-service fault (503: retry helps). Neither message names a field, a worker or an id.
 //
 // ⛔ A worker's name or mobile in any message or detail (I8) — codes and ids only.
 
@@ -17,6 +22,33 @@ import { fieldWorker, FieldWorkerStateDirectWriteError } from '@twt/domain';
 
 import { ApiError } from '../../http-errors.js';
 import { AttributionCodeAllocationExhaustedError } from './attribution-code-access.js';
+
+/**
+ * Story 13.1a (`-447` item 4) — a stored worker identity that cannot be read: an UNPARSEABLE envelope, or one that parses and
+ * whose key unwraps but which fails local authenticated decryption (AES-GCM — tampered or corrupt). Retry never helps. → 500.
+ * Lives HERE, ⛔ in `field-worker-crypto.ts` (13.1's handler unit test mocks that module with ONE export — TR10).
+ */
+export class FieldWorkerIdentityUnreadableError extends Error {
+  public readonly name = 'FieldWorkerIdentityUnreadableError';
+  public constructor(public readonly stage: 'envelope' | 'authentication') {
+    super(`a stored field-worker value cannot be read (${stage})`);
+  }
+}
+
+/** Story 13.1a (`-447` item 4) — the key service failed (or could not be reached) while unwrapping a worker's key. → 503. */
+export class FieldWorkerDecryptUnavailableError extends Error {
+  public readonly name = 'FieldWorkerDecryptUnavailableError';
+  public constructor() {
+    super('the key service could not decrypt a field-worker value');
+  }
+}
+
+/** Story 13.1a (AD8) — the 409 for a code asked of a worker who is not `active`; `current_state` rides the details (⛔ PII). */
+export function codeNotAvailableError(currentState: string): ApiError {
+  return new ApiError(409, 'field_worker.code_not_available', 'This field worker has no code to give out in their current state', {
+    current_state: currentState,
+  });
+}
 
 /**
  * Map a domain error to its transport error and THROW it; rethrow anything else unchanged. ⛔ Returns.
@@ -33,7 +65,19 @@ export function mapFieldWorkerError(err: unknown): never {
     // The flag was attempted first (QE9); a failing flag write never replaces this answer.
     throw new ApiError(503, 'field_worker.code_allocation_exhausted', 'No attribution code could be allocated just now — please try again later');
   }
-  // ── No route yet — 13.1a / 13.1c / 13.1d ──
+  // ── Story 13.1a's own rows ──
+  if (err instanceof fieldWorker.FieldWorkerCursorInvalidError) {
+    throw new ApiError(400, 'field_worker.cursor_invalid', 'The list position is not valid — start the list again');
+  }
+  if (err instanceof FieldWorkerIdentityUnreadableError) {
+    // An integrity incident, meant to be loud (AD9): logged by class and stage only.
+    console.error('[field-worker] a stored identity could not be read', JSON.stringify({ stage: err.stage }));
+    throw new ApiError(500, 'field_worker.identity_unreadable', "This field worker's stored details cannot be read. Do not approve; tell the maintainer.");
+  }
+  if (err instanceof FieldWorkerDecryptUnavailableError) {
+    throw new ApiError(503, 'field_worker.decrypt_unavailable', 'The key service is unavailable just now — please try again shortly');
+  }
+  // ── Rows a COMMAND raises (the approval route — 13.1a — reaches the first six; the others wait for 13.1c / 13.1d) ──
   if (err instanceof fieldWorker.FieldWorkerIllegalTransitionError) {
     throw new ApiError(409, 'field_worker.illegal_transition', 'This field worker cannot be changed from their current state');
   }

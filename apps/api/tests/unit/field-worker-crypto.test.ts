@@ -15,7 +15,9 @@ import {
   MEMBER_MOBILE_FIELD_CLASS,
   type EncryptionDeps,
 } from '../../src/context.js';
+import { FieldWorkerDecryptUnavailableError, FieldWorkerIdentityUnreadableError } from '../../src/modules/field-worker/errors.js';
 import {
+  decryptFieldWorkerField,
   fieldWorkerMobileIndex,
   sealFieldWorkerIdentity,
 } from '../../src/modules/field-worker/field-worker-crypto.js';
@@ -89,5 +91,55 @@ describe('sealFieldWorkerIdentity', () => {
       enc.kekRef,
     );
     expect(Buffer.from(name).toString('utf-8')).toBe(NAME);
+  });
+});
+
+// ── Story 13.1a (AD9; decision `-447` item 4 — review R8) — the decrypt CLASSIFIES its own failures by where they happen ──
+describe('decryptFieldWorkerField — the round trip and the three failure kinds (no DB)', () => {
+  const P = '11111111-1111-4111-8111-111111111111';
+
+  it('round-trips a sealed name and mobile (UTF-8, a Devanagari name included)', async () => {
+    const sealed = await sealFieldWorkerIdentity({ name: 'विक्रम कुमार', mobileE164: MOBILE }, P, enc);
+    expect(await decryptFieldWorkerField(sealed.nameCiphertext, P, enc)).toBe('विक्रम कुमार');
+    expect(await decryptFieldWorkerField(sealed.mobileCiphertext, P, enc)).toBe(MOBILE);
+  });
+
+  it('an UNPARSEABLE stored value ⇒ FieldWorkerIdentityUnreadableError(envelope), with NO KMS call', async () => {
+    let calls = 0;
+    const counted: EncryptionDeps = { ...enc, kms: new Proxy(enc.kms, { get: (t, k) => (k === 'decryptDek' ? (...a: unknown[]) => { calls += 1; return (t.decryptDek as (...x: unknown[]) => unknown)(...a); } : Reflect.get(t, k, t)) }) };
+    for (const bad of ['enc:v1:fixture-name', 'plaintext', 'enc:v1:' + Buffer.from('{"x":1}').toString('base64')]) {
+      const err = await decryptFieldWorkerField(bad, P, counted).catch((e: unknown) => e);
+      expect(err, bad).toBeInstanceOf(FieldWorkerIdentityUnreadableError);
+      expect((err as FieldWorkerIdentityUnreadableError).stage).toBe('envelope');
+    }
+    expect(calls).toBe(0);
+  });
+
+  it('a well-formed envelope whose CIPHERTEXT was altered: parse OK, KMS OK, AES-GCM fails ⇒ FieldWorkerIdentityUnreadableError(authentication) — ⛔ a KMS outage', async () => {
+    const sealed = await sealFieldWorkerIdentity({ name: NAME, mobileE164: MOBILE }, P, enc);
+    const body = JSON.parse(Buffer.from(sealed.nameCiphertext.slice('enc:v1:'.length), 'base64').toString('utf-8')) as Record<string, string>;
+    const ct = Buffer.from(body['ciphertext']!, 'base64');
+    ct[0] = ct[0]! ^ 0x01;
+    const altered = 'enc:v1:' + Buffer.from(JSON.stringify({ ...body, ciphertext: ct.toString('base64') }), 'utf-8').toString('base64');
+    const err = await decryptFieldWorkerField(altered, P, enc).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(FieldWorkerIdentityUnreadableError);
+    expect((err as FieldWorkerIdentityUnreadableError).stage).toBe('authentication');
+    // Another Pariwar's context fails the same way (the AAD binds the Pariwar) — still an integrity answer, never a plaintext.
+    const wrongTenant = await decryptFieldWorkerField(sealed.nameCiphertext, '22222222-2222-4222-8222-222222222222', enc).catch((e: unknown) => e);
+    expect(wrongTenant).toBeInstanceOf(Error);
+    expect(String(wrongTenant)).not.toContain(NAME);
+  });
+
+  it('the KMS fails (unwrap rejected / unreachable) ⇒ FieldWorkerDecryptUnavailableError (503 — retry helps); the provider keeps its `this`', async () => {
+    const sealed = await sealFieldWorkerIdentity({ name: NAME, mobileE164: MOBILE }, P, enc);
+    class FailingKms {
+      public readonly label = 'failing';
+      public async decryptDek(): Promise<Uint8Array> {
+        if (this.label !== 'failing') throw new TypeError('lost this');
+        throw new Error('UNAVAILABLE: kms');
+      }
+    }
+    const err = await decryptFieldWorkerField(sealed.nameCiphertext, P, { ...enc, kms: new FailingKms() as unknown as EncryptionDeps['kms'] }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(FieldWorkerDecryptUnavailableError);
   });
 });

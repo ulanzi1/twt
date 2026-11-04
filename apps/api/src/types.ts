@@ -77,6 +77,10 @@ declare module 'fastify' {
      *  the claim is absent in this Pariwar or the deceased has no resolvable posting district → the
      *  district gate fails closed (403), so the boundary never leaks a claim's existence. */
     nomineeNameCheckDistrict?: string | null;
+    /** Story 13.1a (AD4 a) — the FIELD WORKER's CURRENT reporting district, stashed by `loadFieldWorkerGateDistrict` so the per-worker
+     *  routes' (synchronous) district `resolveValue` can read it. `null` when the worker is absent in this Pariwar → the district gate
+     *  fails closed (403) for everyone, so the boundary never leaks a worker's existence. */
+    fieldWorkerGateDistrict?: string | null;
     /**
      * Story 6.18 (AC11) — the scope the CORRECTION-QUEUE list route gates this caller at.
      *

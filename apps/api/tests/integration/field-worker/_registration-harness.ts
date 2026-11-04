@@ -1,5 +1,6 @@
 // The shared harness of the field-worker registration specs — Story 13.1 (AC8, AC13). Two spec files use it (the exhaustion
-// legs need a FILE-WIDE `vi.mock` of the door, so they live apart).
+// legs need a FILE-WIDE `vi.mock` of the door, so they live apart). Story 13.1a EXTENDS it with one helper per new route
+// (`approve`, `code`, `identity`, `list`, `districts`) and `registered`; its approval / code-read / reads specs use it too.
 //
 // ⚠ OWN-COMMITTING: the route COMMITS inside `mutate`, so every 201 leaves append-only rows (`events_log`, the code, audit
 // lines) on the shared DB. Every test uses a FRESH `randomUUID()` Pariwar, asserts by its own ids (⛔ counts), and `cleanup`
@@ -33,6 +34,14 @@ export interface Harness {
   listDistrict: (p: string, ...names: string[]) => Promise<void>;
   seedTree: (p: string, nodes: Json[]) => Promise<void>;
   register: (c: Client, p: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  // ── Story 13.1a — the five new routes (the same Client / Pariwar conventions) ──
+  approve: (c: Client, p: string, id: string, key?: string | null, body?: string) => ReturnType<Client['inject']>;
+  code: (c: Client, p: string, id: string) => ReturnType<Client['inject']>;
+  identity: (c: Client, p: string, id: string) => ReturnType<Client['inject']>;
+  list: (c: Client, p: string, query: Record<string, string>) => ReturnType<Client['inject']>;
+  districts: (c: Client, p: string) => ReturnType<Client['inject']>;
+  /** Register through the route as `c` and return the new worker's id (asserts the 201). */
+  registered: (c: Client, p: string, body: Json) => Promise<string>;
   cleanup: () => Promise<void>;
 }
 
@@ -99,6 +108,24 @@ export async function createHarness(): Promise<Harness> {
   const register = (c: Client, p: string, body: Json, key: string | null = randomUUID()) =>
     c.inject({ method: 'POST', url: `/api/v1/p/${p}/field-workers`, payload: body, headers: key === null ? {} : { 'idempotency-key': key } });
 
+  const approve = (c: Client, p: string, id: string, key: string | null = randomUUID(), body = '{}') =>
+    c.inject({
+      method: 'POST',
+      url: `/api/v1/p/${p}/field-workers/${id}/approve`,
+      payload: body,
+      headers: { 'content-type': 'application/json', ...(key === null ? {} : { 'idempotency-key': key }) },
+    });
+  const code = (c: Client, p: string, id: string) => c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/${id}/code` });
+  const identity = (c: Client, p: string, id: string) => c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/${id}` });
+  const list = (c: Client, p: string, query: Record<string, string>) =>
+    c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers?${new URLSearchParams(query).toString()}` });
+  const districts = (c: Client, p: string) => c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/districts` });
+  async function registered(c: Client, p: string, body: Json): Promise<string> {
+    const r = await register(c, p, body);
+    expect(r.statusCode, r.body).toBe(201);
+    return (JSON.parse(r.body) as { field_worker_id: string }).field_worker_id;
+  }
+
   async function cleanup(): Promise<void> {
     await app.close();
     const c = await td.pool.connect();
@@ -124,7 +151,7 @@ export async function createHarness(): Promise<Harness> {
     await td.pool.end();
   }
 
-  return { td, deps, app, logs: () => logged, freshPariwar, actor, addGrant, listDistrict, seedTree, register, cleanup };
+  return { td, deps, app, logs: () => logged, freshPariwar, actor, addGrant, listDistrict, seedTree, register, approve, code, identity, list, districts, registered, cleanup };
 }
 
 export const json = (r: { body: string }): Json => JSON.parse(r.body) as Json;

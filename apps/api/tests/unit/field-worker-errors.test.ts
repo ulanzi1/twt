@@ -2,8 +2,8 @@
 //
 // Row by row over EVERY row `mapFieldWorkerError` owns. The registration route's own rows (the 409 mobile / display-name /
 // in-progress, the 400 key and validation, the 422s, the 503) are ALSO pinned over HTTP in
-// `tests/integration/field-worker/registration*.spec.ts`; the rows ONLY A COMMAND can raise have "no route yet — 13.1a / 13.1c
-// / 13.1d" and are pinned HERE. Anything outside the table — a `FieldWorkerProjectorInputError`, a `FieldWorkerPersistError`,
+// `tests/integration/field-worker/registration*.spec.ts`; the rows ONLY A COMMAND can raise are pinned HERE — Story 13.1a's
+// approval reaches six of them (and its `approval.spec.ts` pins them over HTTP too), the rest wait for 13.1c / 13.1d. Anything outside the table — a `FieldWorkerProjectorInputError`, a `FieldWorkerPersistError`,
 // the door's programming errors, a plain Error, an `ApiError` — is rethrown UNCHANGED (the SAME instance). ⛔ PII in any message.
 
 import { fieldWorker, FieldWorkerStateDirectWriteError } from '@twt/domain';
@@ -16,7 +16,12 @@ import {
   AttributionPariwarScopeMismatchError,
   FieldWorkerAlreadyHasAttributionCodeError,
 } from '../../src/modules/field-worker/attribution-code-access.js';
-import { mapFieldWorkerError } from '../../src/modules/field-worker/errors.js';
+import {
+  FieldWorkerDecryptUnavailableError,
+  FieldWorkerIdentityUnreadableError,
+  codeNotAvailableError,
+  mapFieldWorkerError,
+} from '../../src/modules/field-worker/errors.js';
 
 const FW = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
 const PID = '0f8fad5b-d9cb-469f-a165-70867728950e';
@@ -53,7 +58,9 @@ describe('mapFieldWorkerError — the registration route’s rows', () => {
   });
 });
 
-describe('mapFieldWorkerError — the rows only a COMMAND can raise (no route yet — 13.1a / 13.1c / 13.1d)', () => {
+// Story 13.1a — the approval route now REACHES the first six rows below (illegal transition, the two KYC rows, not found, stream
+// conflict, authorization stale — the last also from the reads, `-447` item 1); the others still have no route (13.1c / 13.1d).
+describe('mapFieldWorkerError — the rows a COMMAND raises (the approval reaches illegal_transition … authorization_stale; the rest wait for 13.1c / 13.1d)', () => {
   it.each([
     ['FieldWorkerIllegalTransitionError', new fieldWorker.FieldWorkerIllegalTransitionError(FW, 'terminated', 'field_worker.activated'), 409, 'field_worker.illegal_transition'],
     ['FieldWorkerKycAlreadyCompletedError', new fieldWorker.FieldWorkerKycAlreadyCompletedError(FW), 409, 'field_worker.kyc_already_completed'],
@@ -79,6 +86,40 @@ describe('mapFieldWorkerError — the rows only a COMMAND can raise (no route ye
     } finally {
       log.mockRestore();
     }
+  });
+});
+
+describe('mapFieldWorkerError — Story 13.1a’s own rows (the "Errors" table)', () => {
+  it('FieldWorkerCursorInvalidError ⇒ 400 field_worker.cursor_invalid (the reason, ⛔ the cursor, in the message)', () => {
+    const e = mapped(new fieldWorker.FieldWorkerCursorInvalidError('keys'));
+    expect([e.statusCode, e.code]).toEqual([400, 'field_worker.cursor_invalid']);
+  });
+
+  it.each([
+    ['an unparseable envelope', 'envelope' as const],
+    ['a tampered envelope (AES-GCM authentication failed — review R8)', 'authentication' as const],
+  ])('FieldWorkerIdentityUnreadableError (%s) ⇒ 500 field_worker.identity_unreadable — retry never helps; logged by stage only', (_n, stage) => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const e = mapped(new FieldWorkerIdentityUnreadableError(stage));
+      expect([e.statusCode, e.code]).toEqual([500, 'field_worker.identity_unreadable']);
+      expect(e.message).toMatch(/Do not approve/);
+      expect(JSON.stringify(log.mock.calls)).toContain(stage);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('FieldWorkerDecryptUnavailableError ⇒ 503 field_worker.decrypt_unavailable — retry helps', () => {
+    const e = mapped(new FieldWorkerDecryptUnavailableError());
+    expect([e.statusCode, e.code]).toEqual([503, 'field_worker.decrypt_unavailable']);
+    expect(e.message).toMatch(/try again/);
+  });
+
+  it('codeNotAvailableError ⇒ 409 field_worker.code_not_available with details.current_state, passed THROUGH unchanged', () => {
+    const err = codeNotAvailableError('suspended');
+    expect(thrown(err)).toBe(err);
+    expect([err.statusCode, err.code, err.details]).toEqual([409, 'field_worker.code_not_available', { current_state: 'suspended' }]);
   });
 });
 

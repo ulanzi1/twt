@@ -2,10 +2,9 @@
 // caller of the field-worker primitive AND of Story 13.2's attribution-code registry (through the door, C1).
 //
 // ── THE WRITE: 12.2's `tenantWrite` SHAPE (`module.*` → `field_worker.*`), with ONE variance — review R3 ──────────
-//   `requireIdempotencyKey` → `releaseHookTx` (commit + detach the hook's READ tx — TR7) → `withIdempotency` (claim; a replay
-//   returns the RECORDED result; a failure RELEASES the key — TR9) → `prepare` (⚠ the variance: NO transaction is open yet)
-//   → `openScopeTx` (bare BEGIN = READ COMMITTED; `SET LOCAL ROLE twt_app`) → `run` inside `try` → `finally { closeScopeTx(false) }`
-//   (a no-op once committed) → `mapFieldWorkerError`.
+//   (the helpers moved to `write-support.ts` in Story 13.1a, unchanged) `requireIdempotencyKey` → `releaseHookTx` → `withIdempotency`
+//   → `prepare` (⚠ the variance: NO transaction is open yet) → `openScopeTx` → `run` → `finally { closeScopeTx(false) }` →
+//   `mapFieldWorkerError`.
 // `prepare`, in order (QE9): the CONTENT rules (422 name / mobile — after the guards, before any KMS call) → the admin's
 //   `display_name` (absent ⇒ 409, ⛔ fallback, BEFORE any write). It runs BEFORE `openScopeTx` because the display-name read
 //   takes a connection from the SAME pool the scope transaction holds one of: with as many concurrent registrations as the pool
@@ -22,32 +21,29 @@
 //
 // ── What leaves this handler (I8, QE22) ─────────────────────────────────────────────────────────────────────────
 // The 201 is `{ field_worker_id, district, current_state, kyc_status }` — ⛔ the code (allocated here, read only after approval
-// by Story 13.1a / 13.1b), ⛔ a name, ⛔ a mobile. The audit intent's `resourceLocator` is `field_worker/<id>`, its `hashShape`
+// through Story 13.1a's audited code route or 13.1b's SMS), ⛔ a name, ⛔ a mobile. The audit intent's `resourceLocator` is `field_worker/<id>`, its `hashShape`
 // `{ field_worker_id, district }` (a SHA-256 of a 10-digit mobile can be brute-forced), its `actorRole` the VERIFIED
 // authorization's role — the object the gate stored, passed on unchanged and ⛔ recomputed (QE18, TR13). The district is ⛔
 // trimmed or normalised: the gate compared the raw body bytes and the command refuses a genesis whose district differs from the
 // authorization's target (TR12).
 
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 import type { RegisterFieldWorkerRequest, RegisterFieldWorkerResponse } from '@twt/contracts';
-import { audit, canonicalJsonStringify, encryption, fieldWorker, idempotency, ids, marketplace } from '@twt/domain';
+import { audit, encryption, fieldWorker, ids, marketplace } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import type { AppDeps } from '../../context.js';
-import { AdminDisplayNameMissingError, ApiError, BadRequestError, ConflictError, UnauthorizedError } from '../../http-errors.js';
-import type { ScopeTx } from '../../types.js';
+import { AdminDisplayNameMissingError, ApiError } from '../../http-errors.js';
 import { getDisplayName } from '../auth/admin/admin-auth.repo.js';
-import { closeScopeTx, openScopeTx } from '../multi-tenant/scope-tx.js';
+import { closeScopeTx } from '../multi-tenant/scope-tx.js';
 import {
   AttributionCodeAllocationExhaustedError,
   allocateAttributionCodeForRequest,
   flagAllocationExhaustedForRequest,
 } from './attribution-code-access.js';
-import { mapFieldWorkerError } from './errors.js';
 import { sealFieldWorkerIdentity } from './field-worker-crypto.js';
-
-const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+import { createFieldWorkerWriteSupport, payloadHash } from './write-support.js';
 
 /** The ONE permission key this surface gates on (QE10, catalog v59). ⚠ Also the genesis event's `trigger` value. */
 export const FIELD_WORKER_REGISTER_KEY = 'field_worker.register';
@@ -172,101 +168,9 @@ export function normalizeFieldWorkerName(raw: string): string | null {
   return name;
 }
 
-// TOTAL (12.2 review RP10): an unencodable shape hashes to a fixed marker, ⛔ a throw while the audit intent is built.
-function payloadHash(shape: Record<string, unknown>): string {
-  let canonical: string;
-  try {
-    canonical = canonicalJsonStringify(shape);
-  } catch {
-    canonical = canonicalJsonStringify({ unhashable: true });
-  }
-  return createHash('sha256').update(canonical, 'utf8').digest('hex');
-}
-
 export function createFieldWorkerHandlers(deps: AppDeps) {
-  const idempotencyStore = idempotency.createKeyedStore(deps.pool);
-
-  function requireIdempotencyKey(request: FastifyRequest): string {
-    const raw = request.headers['idempotency-key'];
-    const key = typeof raw === 'string' ? raw.trim() : '';
-    if (key === '' || key.length > 200) throw new BadRequestError('An Idempotency-Key header is required', 'field_worker.idempotency_key_required');
-    return key;
-  }
-
-  /** The scope-resolution hook's READ transaction ends BEFORE the write opens its own (the 12.2 copy). */
-  async function releaseHookTx(request: FastifyRequest): Promise<void> {
-    const hookTx = request.scopeTx;
-    if (!hookTx?.scopeSet) return;
-    hookTx.scopeSet = false;
-    await closeScopeTx(hookTx, true).catch(() => undefined);
-    // Detached, so nothing later in this request can reach a client that is back in the pool.
-    request.scopeTx = undefined;
-  }
-
-  /** Claim the key; a replay returns the RECORDED response; a claim with ⛔ result yet is 409 in progress. */
-  async function withIdempotency<T>(idemKey: string, run: () => Promise<T>): Promise<T> {
-    const outcome = await idempotencyStore.claim(idemKey, IDEMPOTENCY_TTL_SECONDS);
-    if (outcome === 'already_claimed') {
-      const stored = await idempotencyStore.getResult(idemKey);
-      if (stored !== null) return stored as T;
-      throw new ConflictError('A request with this Idempotency-Key is already in progress — please wait and retry', 'field_worker.idempotency_in_progress');
-    }
-    let settled = false;
-    try {
-      const out = await run();
-      await idempotencyStore.recordResult(idemKey, (out ?? { done: true }) as unknown as Record<string, unknown>);
-      settled = true;
-      return out;
-    } finally {
-      if (!settled) await idempotencyStore.release(idemKey).catch(() => undefined);
-    }
-  }
-
-  interface WriteCtx {
-    readonly scopeTx: ScopeTx;
-    readonly pariwarId: string;
-    readonly actorId: string;
-    readonly traceId: string | null;
-  }
-
-  /** What `prepare` sees: no transaction exists yet, so no `scopeTx`. */
-  type PrepareCtx = Omit<WriteCtx, 'scopeTx' | 'traceId'>;
-
-  /**
-   * A tenant write: claim → `prepare` (NO transaction open — review R3) → its own scope transaction → `run` (pre-checks, then
-   * the audited mutation) → ROLLBACK if `run` did not COMMIT. `namespace` builds the key's prefix (TR8 — the store is global,
-   * so tenant operations are namespaced). What `prepare` returns is handed to `run`.
-   */
-  async function tenantWrite<T, Pre>(
-    request: FastifyRequest,
-    namespace: (pariwarId: string, actorId: string) => string,
-    prepare: (ctx: PrepareCtx) => Promise<Pre>,
-    run: (ctx: WriteCtx, pre: Pre) => Promise<T>,
-  ): Promise<T> {
-    const scopeTx0 = request.scopeTx;
-    const actorId = request.requestContext.actorId;
-    if (!scopeTx0 || !actorId) throw new UnauthorizedError('Authentication required', 'auth.session_required');
-    const pariwarId = scopeTx0.pariwarId;
-    const traceId = request.requestContext.traceId ?? null;
-    const key = requireIdempotencyKey(request);
-    await releaseHookTx(request);
-    return withIdempotency(`${namespace(pariwarId, actorId)}:${key}`, async () => {
-      let pre: Pre;
-      try {
-        pre = await prepare({ pariwarId, actorId });
-      } catch (err) {
-        return mapFieldWorkerError(err);
-      }
-      const scopeTx = await openScopeTx(deps, pariwarId);
-      try {
-        return await run({ scopeTx, pariwarId, actorId, traceId }, pre);
-      } catch (err) {
-        return mapFieldWorkerError(err);
-      } finally {
-        await closeScopeTx(scopeTx, false); // a no-op once the mutation committed
-      }
-    });
-  }
+  // The keyed-write helpers live in `write-support.ts` (Story 13.1a Task 5.1 — extracted, behaviour unchanged).
+  const { tenantWrite } = createFieldWorkerWriteSupport(deps);
 
   /** `POST /api/v1/p/:pariwarId/field-workers` — register a worker and allocate their code in ONE transaction (QE9). */
   async function register(request: FastifyRequest, reply: FastifyReply) {

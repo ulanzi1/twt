@@ -428,3 +428,23 @@ export async function getFieldWorkerStateAt(
   const prefix = firstAfter === -1 ? rows : rows.slice(0, firstAfter);
   return foldFieldWorkerProjection(prefix.map((r) => ({ type: r.type, payload: r.payload, eventVersion: r.eventVersion })));
 }
+
+/**
+ * Story 13.1a (AD8; decision `-447` item 1 — review R2 / R3) — the code route's eligibility read: the worker's state and district,
+ * with the row locked `FOR SHARE` on the caller's (READ COMMITTED) transaction. The lock is held until that transaction ends, so a
+ * concurrent suspend, terminate or move — each takes the row `FOR UPDATE` — waits until the code has been read on the SAME
+ * transaction: the `active` check and the district check cannot go stale between this read and the door's. `null` for an unknown
+ * worker or another Pariwar's. Under twt_app the lock needs the UPDATE grant and policy (13.1's commands use the same).
+ */
+export async function lockFieldWorkerForCodeRead(
+  db: Db,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+): Promise<{ readonly currentState: FieldWorkerState; readonly district: string } | null> {
+  const rows = await db
+    .select({ currentState: fieldWorkers.currentState, district: fieldWorkers.district })
+    .from(fieldWorkers)
+    .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
+    .for('share');
+  return rows[0] ?? null;
+}

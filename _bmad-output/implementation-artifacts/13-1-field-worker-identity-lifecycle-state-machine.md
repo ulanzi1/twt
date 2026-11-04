@@ -1516,8 +1516,9 @@ The rows only a COMMAND can raise — `illegal_transition`, `kyc_already_complet
       block — by the safe-prepend pattern (read first, size guard, verify the YAML afterwards); `pnpm ci:local` on a fresh container (done once, at `ce80bd64`).
 - [ ] **Task 12, last clause (split out by review R9) — run the `decision-flow-sync` skill when decisions `-441`…`-444` LAND on `main`.** NOT done:
       they are on this branch only; the checked box above does not cover it.
-- [ ] **Re-run `pnpm ci:local` on a FRESH container before push (review round 1).** The 38 / 38 in Debug Log (d) is for `ce80bd64`; R1–R10 changed
-      code and tests after it.
+- [x] **Re-run `pnpm ci:local` on a FRESH container before push (review round 1).** The 38 / 38 in Debug Log (d) is for `ce80bd64`; R1–R10 changed
+      code and tests after it. ✅ DONE 2026-11-04: **38 / 38 green at `347f998e`** (after rounds 1–4) on a fresh `postgres:16-alpine` container (`:5473`,
+      database `twt_dev`), run by the pre-push hook — Debug Log (i). Pushed; PR #323.
 - [ ] **Before `db:migrate` runs `0200` on any SHARED developer DB (`:5432`, `:5433`, … — review round 3, R3-19), count the orphans there:**
       `SELECT count(*) FROM field_worker_attribution_codes c WHERE NOT EXISTS (SELECT 1 FROM field_workers w WHERE w.field_worker_id = c.field_worker_id)`
       — before `0200` the table does not exist, so in practice: `SELECT count(*) FROM field_worker_attribution_codes`. If > 0, the composite FK refuses
@@ -2750,7 +2751,9 @@ Claude Opus 5.5 (`claude-opus-5-5`) via `bmad-dev-story 13.1`, 2026-11-03; one s
 - After: typecheck + lint (`@twt/domain`, `@twt/api`); gates `field-worker-state:check` / `:test` (55), `domain-invariants`, `access-wrapper`, `governance-boundary` green; unit with
   `DATABASE_URL` unset — domain 3,863 (+24), api 1,137 (+18: the name legs), events 30; live on `:5470` — domain 160, api 28; the added-line scan clean (after the two raw characters
   of mine it caught were removed).
-- NOT run yet: the full `pnpm ci:local` on a fresh container — next, before the push.
+- NOT run yet: the full `pnpm ci:local` on a fresh container — next, before the push. [⚠ Superseded the same day: `ci:local` PASSED 38 / 38 at `347f998e`
+  (code `444fd883` + records `347f998e`) on a FRESH container `twt-131-ci-pg` (`:5473`, database `twt_dev`, removed after), run by the pre-push hook with `DATABASE_URL` set on
+  the command (⛔ the shell's `:5432`); the branch pushed with an explicit refspec (its upstream had been `origin/main`) and now tracks `origin/story/13-1-…`; PR #323 opened.]
 
 ### Completion Notes List
 

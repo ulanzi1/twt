@@ -20,7 +20,7 @@ import { mapFieldWorkerWriteError, projectFieldWorkerTransition, type FieldWorke
 import { pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
-import { caught, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { approveAuthorization, caught, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const ACTOR = randomUUID();
@@ -41,9 +41,21 @@ async function locked(client: pg.PoolClient, id: string): Promise<FieldWorkerLoc
 /** QE6's computed trigger per type (`events.ts` refuses any other value since review R3-16). */
 const TRIGGER: Record<string, (p: Record<string, unknown>) => string> = {
   'field_worker.kyc_completed': () => 'field_worker.kyc_complete',
+  'field_worker.activated': () => 'field_worker.activate',
   'field_worker.terminated': (p) => `field_worker.terminate:${String(p['reason_code'])}`,
   'field_worker.posted': () => 'field_worker.post',
 };
+
+/** Story 13.1a AD3 — `kyc_completed` / `activated` payloads carry the approval's authorization snapshot (a worker in Patna). */
+const approve = approveAuthorization(PARIWAR_A, 'Patna', ACTOR);
+const APPROVE_SNAPSHOT = {
+  permission_key: approve.permissionKey,
+  role: approve.role,
+  grant: { dimension: approve.grant.dimension, value: approve.grant.value },
+  target: { dimension: 'district', value: 'Patna' },
+  catalog_version: approve.catalogVersion,
+};
+const APPROVAL_TYPES = new Set(['field_worker.kyc_completed', 'field_worker.activated']);
 
 const input = (
   id: FieldWorkerId,
@@ -55,11 +67,17 @@ const input = (
   pariwarId: A,
   fieldWorkerId: id,
   eventType: eventType as never,
-  payload: { trigger: TRIGGER[eventType]?.(payload) ?? 'field_worker.unknown', actor: 'operator', ...payload },
+  payload: {
+    trigger: TRIGGER[eventType]?.(payload) ?? 'field_worker.unknown',
+    actor: 'operator',
+    ...(APPROVAL_TYPES.has(eventType) ? { authorization: APPROVE_SNAPSHOT } : {}),
+    ...payload,
+  },
   auditId: randomUUID(),
   actor: (who.actor ?? 'operator') as 'operator',
   actorId: (who.actorId === undefined ? ACTOR : who.actorId) as string,
   lockedRow,
+  ...(eventType === 'field_worker.activated' ? { approvedByDisplay: 'Meera Pariwar-Admin' } : {}),
 });
 
 describe.skipIf(!hasDatabase)('projectFieldWorkerTransition, direct (AC2, AC5)', () => {
@@ -138,6 +156,29 @@ describe.skipIf(!hasDatabase)('projectFieldWorkerTransition, direct (AC2, AC5)',
     }
     expect(await caught(() => projectFieldWorkerTransition(client, input(id, row, 'field_worker.registered', {})))).toBeInstanceOf(FieldWorkerGenesisAlreadyExistsError);
     expect(await streamTypes(client, id)).toEqual(['field_worker.registered']);
+  });
+
+  // Story 13.1a AD3 / `-447` item 2 — a direct call that skips the commands still cannot write an approval without its snapshot or approver.
+  it('kyc_completed / activated WITHOUT the authorization snapshot ⇒ ProjectorInputError; activated without an approver name, or an approver on another type ⇒ ProjectorInputError', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
+    const row = await locked(client, id);
+    const noAuth = { ...input(id, row, 'field_worker.kyc_completed', { from_state: 'pending_kyc', to_state: 'pending_kyc' }) };
+    noAuth.payload = Object.fromEntries(Object.entries(noAuth.payload).filter(([k]) => k !== 'authorization')) as typeof noAuth.payload;
+    expect(await caught(() => projectFieldWorkerTransition(client, noAuth))).toBeInstanceOf(FieldWorkerProjectorInputError);
+    const approverOnKyc = { ...input(id, row, 'field_worker.kyc_completed', { from_state: 'pending_kyc', to_state: 'pending_kyc' }), approvedByDisplay: 'Meera' };
+    expect(await caught(() => projectFieldWorkerTransition(client, approverOnKyc))).toBeInstanceOf(FieldWorkerProjectorInputError);
+    expect(((await caught(() => projectFieldWorkerTransition(client, approverOnKyc))) as Error).message).toMatch(/belongs to field_worker\.activated only/);
+    expect(await streamTypes(client, id)).toEqual(['field_worker.registered']);
+    // CONTROL — the snapshot-carrying kyc_completed is accepted; then activated without an approver name is refused, with one it passes.
+    await projectFieldWorkerTransition(client, input(id, row, 'field_worker.kyc_completed', { from_state: 'pending_kyc', to_state: 'pending_kyc' }));
+    const afterKyc = await locked(client, id);
+    const noName = { ...input(id, afterKyc, 'field_worker.activated', { from_state: 'pending_kyc', to_state: 'active' }), approvedByDisplay: undefined };
+    expect(((await caught(() => projectFieldWorkerTransition(client, noName))) as Error).message).toMatch(/display name is missing/);
+    await projectFieldWorkerTransition(client, input(id, afterKyc, 'field_worker.activated', { from_state: 'pending_kyc', to_state: 'active' }));
+    expect((await client.query('SELECT approved_by_display FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]).toEqual({ approved_by_display: 'Meera Pariwar-Admin' });
+    await expectRowMatchesStream(client, id);
   });
 
   it('the trigger’s rejection is detected and surfaced as the typed FieldWorkerStateDirectWriteError (message prefixed, no PII)', async () => {

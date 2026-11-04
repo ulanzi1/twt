@@ -850,7 +850,22 @@ export function permissionKey(value: string): PermissionKey {
 // / terminate; 13.1d move requests). REUSE CHECK — ⛔ `pariwar.provision`, `member.moderate` / `member.suspend`,
 // `module.manage`, `workplace.manage`, `known_people.run_campaign`. 58 / 77 READ LIVE at `268d86b5` (⚠ 14-3 holds a `<CAT>`
 // placeholder — the bump is +1 from whatever `main` holds when this lands). `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 59 as const;
+//
+// ⭐ Story 13.1a (author-commit `2026-11-04-446` AD6, BigDev's Q-2 "yes"; WHO approves is the Panel's `2026-11-03-443` Q4 A;
+// each a `-059` B(3) field-worker permission — built on the default, the Panel's NON-BLOCKING confirm outstanding, roster
+// Row 48 leg (i)) — 59 → 60, THREE keys (78 → 81), ONE bump: `field_worker.approve` (approve a registered worker — records
+// `kyc_completed` + `activated` in one transaction; `pariwar_admin` ONLY), `field_worker.read_code` (read an ACTIVE worker's
+// attribution code by hand, audited) and `field_worker.view` (the worker list with decrypted names, one worker's identity with
+// the mobile; audited) — the last two `district_admin` (own district) and `pariwar_admin` (any district). All three
+// DISTRICT-dimension (the target is the worker's CURRENT reporting district, read by a pre-gate loader; the list gates at
+// `pariwar` when no district is named — AD4) (+ derived super_admin). ⛔ NOT `state_trustee` (its bundle lacks them),
+// `trustee_panel`, `helpline_operator`, nor the `field_worker` role (its own-read key is 13.3's). The THIRD key exists because
+// the reads need a gate: `register` conflates adding with seeing, `read_code` seeing people with seeing codes, `approve` would
+// lock the District Admin out of their own workers. REUSE CHECK — ⛔ `field_worker.register` (adds a worker), `member.*`
+// (members), `module.manage`, `workplace.manage`, `known_people.run_campaign`, `pariwar.provision`. 59 / 78 READ LIVE at
+// `99a01805` (⚠ 14-3 holds a `<CAT>` placeholder — +1 / +3 from whatever `main` holds when this lands). `defaultRoleBundles`
+// stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 60 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1467,6 +1482,17 @@ export const SEED_PERMISSION_KEYS = [
   // `district_admin` (own district) and `pariwar_admin` (any district — the fill-in) (+ derived super_admin). ⚠ The same
   // string is also the genesis event's `trigger` payload value (QE6) — a permission key and an event value; keep them apart.
   'field_worker.register',
+  // Story 13.1a (`2026-11-04-446` AD6; WHO is `-443` Q4 A) — APPROVE a registered worker (`pending_kyc` → `active`: records
+  // `kyc_completed` and `activated` in ONE transaction). district-dimension (the worker's current district); `pariwar_admin`
+  // ONLY (+ derived super_admin).
+  'field_worker.approve',
+  // Story 13.1a (AD6, AD8) — READ an ACTIVE worker's attribution code by hand, to read it out to them; one audit line per read.
+  // district-dimension; `district_admin` (own district) and `pariwar_admin` (any) (+ derived super_admin).
+  'field_worker.read_code',
+  // Story 13.1a (AD6, AD9) — SEE field workers: the list (decrypted names, ≤ 25 a page) and one worker's identity (+ the
+  // mobile); one audit line per read. district-dimension (the list: `pariwar` when no district is named); `district_admin`
+  // (own district) and `pariwar_admin` (any) (+ derived super_admin).
+  'field_worker.view',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

@@ -37,7 +37,7 @@ import {
 } from '../../../src/field-worker/errors.js';
 import { pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { DATABASE_URL, hasDatabase } from '../../../src/test-utils/integration-setup.js';
-import { expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { approval, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
 
 const PARIWAR = randomUUID();
 const P = toPariwarId(PARIWAR);
@@ -97,6 +97,8 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
   });
 
   const base = (id: FieldWorkerId) => ({ pariwarId: P, fieldWorkerId: id, auditId: randomUUID(), actor: 'operator' as const, actorId: ACTOR });
+  /** Story 13.1a AD3 — the two approval commands take a verified `field_worker.approve` result (+ the approver's name). */
+  const approve = (id: FieldWorkerId) => ({ ...base(id), ...approval(PARIWAR, 'Patna', ACTOR) });
 
   async function begin(client: pg.PoolClient, isolation: 'READ COMMITTED' | 'REPEATABLE READ'): Promise<void> {
     await client.query('BEGIN');
@@ -113,8 +115,8 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
       const id = await registerReal(client, PARIWAR, { actorId: ACTOR });
       created.push(id);
       if (state === 'active') {
-        await recordFieldWorkerKycCompleted(client, base(id));
-        await activateFieldWorker(client, base(id));
+        await recordFieldWorkerKycCompleted(client, approve(id));
+        await activateFieldWorker(client, approve(id));
       }
       await client.query('COMMIT');
       return id;
@@ -186,8 +188,8 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
     const id = await committedWorker('pending_kyc');
     const arrive = barrier();
     const results = await Promise.allSettled([
-      racer(arrive, (c) => recordFieldWorkerKycCompleted(c, base(id))),
-      racer(arrive, (c) => recordFieldWorkerKycCompleted(c, base(id))),
+      racer(arrive, (c) => recordFieldWorkerKycCompleted(c, approve(id))),
+      racer(arrive, (c) => recordFieldWorkerKycCompleted(c, approve(id))),
     ]);
     const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);

@@ -672,8 +672,10 @@ export const EVENT_TYPE_REGISTRY = {
   // Payload schemas live in @twt/domain (packages/domain/src/field-worker/events.ts) — appended on the FIELD WORKER stream
   // (stream_id = field_worker_id; caller-minted, no DB default). 13.1 authors the complete reducer and registers ALL seven
   // types, each written by `projectFieldWorkerGenesis` / `projectFieldWorkerTransition` through a 13.1 command. Only
-  // `field_worker.registered` has a production emitter in 13.1 (the registration route); the others' routes are Stories
-  // 13.1a / 13.1c / 13.1d — ⚠ an owner named here is an ASSERTION NOTHING VERIFIES until those stories build their emitters.
+  // `field_worker.registered` has a production emitter in 13.1 (the registration route); `field_worker.kyc_completed` and
+  // `field_worker.activated` have one in Story 13.1a (the approval route, `POST .../field-workers/:fieldWorkerId/approve`, which
+  // writes the two in ONE transaction — built, so these two owners are no longer an assertion); the others' routes are Stories
+  // 13.1c / 13.1d — ⚠ an owner named here is an ASSERTION NOTHING VERIFIES until those stories build their emitters.
   'field_worker.registered': {
     type: 'field_worker.registered',
     description:
@@ -683,13 +685,13 @@ export const EVENT_TYPE_REGISTRY = {
   'field_worker.kyc_completed': {
     type: 'field_worker.kyc_completed',
     description:
-      '`field_worker.kyc_completed` (pending_kyc → pending_kyc) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A same-state event: an operator confirms they have verified this person (QE8). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1a (unverified until built).',
+      '`field_worker.kyc_completed` (pending_kyc → pending_kyc) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A same-state event: the approving officer accepts the identity check done at the interview (QE8; Story 13.1a AD2). Carries the authorization snapshot of the approval (key field_worker.approve — 13.1a AD3). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1a approval route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/approve), in one transaction with field_worker.activated.',
     schema: fieldWorker.FieldWorkerKycCompletedPayloadSchema,
   },
   'field_worker.activated': {
     type: 'field_worker.activated',
     description:
-      '`field_worker.activated` (pending_kyc → active) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Guarded: identity verification recorded (I5). Activation makes the worker creditable (acceptsNewAttributions). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1a (unverified until built).',
+      '`field_worker.activated` (pending_kyc → active) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Guarded: identity verification recorded (I5). Activation makes the worker creditable (acceptsNewAttributions). Carries the same authorization snapshot as the kyc_completed before it (Story 13.1a AD3). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1a approval route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/approve), after field_worker.kyc_completed in the same transaction.',
     schema: fieldWorker.FieldWorkerActivatedPayloadSchema,
   },
   'field_worker.suspended': {

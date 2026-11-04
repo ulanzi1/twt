@@ -6,7 +6,8 @@
 //     → HEAD → APPEND (QE20's IST bounds read the clock under the lock);
 //   - QE5's guard ORDER, case by case — and that guards (0) / (0b) run BEFORE ANY statement;
 //   - QE20's UPPER bound at 00:30 IST (the NOW step returns an IST day one ahead of the UTC date);
-//   - QE18: an unverified, foreign or wrong-key authorization is refused with NO statement sent.
+//   - QE18: an unverified, foreign or wrong-key authorization is refused with NO statement sent — on `register`, `post` and
+//     (Story 13.1a AD3) the approval's `kyc_completed` / `activated`, whose stale target (3d) is judged under the lock.
 
 import { describe, expect, it } from 'vitest';
 import type pg from 'pg';
@@ -126,14 +127,18 @@ function stub(over: Partial<StubRow> | null = {}, opts: { istToday?: string } = 
 }
 
 const staff = { pariwarId: P, fieldWorkerId: FW, auditId: AUDIT, actor: 'operator' as const, actorId: STAFF };
+/** Story 13.1a AD3 — a VERIFIED `field_worker.approve` result (pariwar_admin) at `district`. */
+const approveAt = (district: string, over: { actorId?: string; pariwarId?: string } = {}) => authAt(district, { ...over, key: 'field_worker.approve' });
+/** What both approval commands take: the authorization (the stub row is in Patna) and the approver's display name (`-447` item 2). */
+const approver = { ...staff, authorization: approveAt('Patna'), approvedByDisplay: 'Meera Pariwar-Admin' };
 
 describe('I13 — the row lock comes before any events_log read or append (RP4 shape)', () => {
   const ORDER = ['SAVEPOINT', 'LOCK', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE'];
 
   // The last column: QE6's COMPUTED trigger — asserted on the appended payload (review R3-16: a typo'd or dropped `:<reason>` was green).
   it.each([
-    ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, {}, 'field_worker.kyc_complete'],
-    ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, {}, 'field_worker.activate'],
+    ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, approver, 'field_worker.kyc_complete'],
+    ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, approver, 'field_worker.activate'],
     ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { reasonCode: 'under_review' }, 'field_worker.suspend:under_review'],
     ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, {}, 'field_worker.reactivate'],
     ['posted', () => postFieldWorker, {} as Partial<StubRow>, { toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') }, 'field_worker.post'],
@@ -182,13 +187,13 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
 
   it('(1) no row in this Pariwar ⇒ FieldWorkerGenesisMissingError', async () => {
     const { client, calls } = stub(null);
-    await expect(activateFieldWorker(client, staff)).rejects.toBeInstanceOf(FieldWorkerGenesisMissingError);
+    await expect(activateFieldWorker(client, approver)).rejects.toBeInstanceOf(FieldWorkerGenesisMissingError);
     await refused(calls);
   });
 
   it('(2) BEATS (3): kyc_completed on an ACTIVE worker ⇒ IllegalTransition, ⛔ KycAlreadyCompleted', async () => {
     const { client, calls } = stub({ state: 'active', kyc: 'completed' });
-    await expect(recordFieldWorkerKycCompleted(client, staff)).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    await expect(recordFieldWorkerKycCompleted(client, approver)).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
     await refused(calls);
   });
 
@@ -209,10 +214,45 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
   });
 
   it('(3): kyc twice ⇒ KycAlreadyCompleted; activate before KYC ⇒ KycNotCompleted', async () => {
-    await expect(recordFieldWorkerKycCompleted(stub({ state: 'pending_kyc', kyc: 'completed' }).client, staff)).rejects.toBeInstanceOf(
+    await expect(recordFieldWorkerKycCompleted(stub({ state: 'pending_kyc', kyc: 'completed' }).client, approver)).rejects.toBeInstanceOf(
       FieldWorkerKycAlreadyCompletedError,
     );
-    await expect(activateFieldWorker(stub({ state: 'pending_kyc', kyc: 'pending' }).client, staff)).rejects.toBeInstanceOf(FieldWorkerKycNotCompletedError);
+    await expect(activateFieldWorker(stub({ state: 'pending_kyc', kyc: 'pending' }).client, approver)).rejects.toBeInstanceOf(FieldWorkerKycNotCompletedError);
+  });
+
+  // Story 13.1a AD3 — (3d): the approval's target must be the LOCKED row's district; judged AFTER (2) and (3), under the lock.
+  it('(3d) kyc_completed / activated: a target that is not the LOCKED district ⇒ AuthorizationStale, after the lock, nothing appended', async () => {
+    const stale = { ...approver, authorization: approveAt('Gaya') };
+    for (const [command, row] of [
+      [recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' }],
+      [activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' }],
+    ] as const) {
+      const { client, calls } = stub(row as Partial<StubRow>);
+      await expect((command as (c: pg.PoolClient, i: unknown) => Promise<unknown>)(client, stale)).rejects.toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      expect(calls.slice(0, 2)).toEqual(['SAVEPOINT', 'LOCK']); // judged UNDER the lock — the gate read the district before it
+      await refused(calls);
+    }
+  });
+
+  it('(2) BEATS (3d) and (3) BEATS (3d): a stale target on an ACTIVE worker ⇒ IllegalTransition; on a KYC-done worker ⇒ KycAlreadyCompleted / KycNotCompleted', async () => {
+    const stale = { ...approver, authorization: approveAt('Gaya') };
+    await expect(recordFieldWorkerKycCompleted(stub({ state: 'active', kyc: 'completed' }).client, stale)).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    await expect(recordFieldWorkerKycCompleted(stub({ state: 'pending_kyc', kyc: 'completed' }).client, stale)).rejects.toBeInstanceOf(FieldWorkerKycAlreadyCompletedError);
+    await expect(activateFieldWorker(stub({ state: 'pending_kyc', kyc: 'pending' }).client, stale)).rejects.toBeInstanceOf(FieldWorkerKycNotCompletedError);
+  });
+
+  it('the approval pair writes the SAME authorization snapshot (key field_worker.approve, target = the locked district) on both events', async () => {
+    const kyc = stub({ state: 'pending_kyc', kyc: 'pending' });
+    await recordFieldWorkerKycCompleted(kyc.client, approver);
+    const act = stub({ state: 'pending_kyc', kyc: 'completed' });
+    await activateFieldWorker(act.client, approver);
+    const expected = { permission_key: 'field_worker.approve', role: 'pariwar_admin', grant: { dimension: 'pariwar', value: P }, target: { dimension: 'district', value: 'Patna' } };
+    const k = JSON.parse(String(kyc.payloads[0]));
+    const a = JSON.parse(String(act.payloads[0]));
+    expect(k.authorization).toMatchObject(expected);
+    expect(a.authorization).toEqual(k.authorization);
+    expect(a).not.toHaveProperty('approved_by_display'); // a ROW column (`-447` item 2) — ⛔ a payload key
+    expect(JSON.stringify(a)).not.toContain('Meera');
   });
 
   it('(3b) BEATS (3c) BEATS (4) for a post', async () => {
@@ -309,8 +349,8 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
   ])('QE7: %s ⇒ FieldWorkerProjectorInputError on EVERY command, nothing sent', async (_label, bad) => {
     const commands: ((c: pg.PoolClient) => Promise<unknown>)[] = [
       (c) => registerFieldWorker(c, { ...staff, ...registerInput, authorization: authAt('Patna'), ...bad } as never),
-      (c) => recordFieldWorkerKycCompleted(c, { ...staff, ...bad } as never),
-      (c) => activateFieldWorker(c, { ...staff, ...bad } as never),
+      (c) => recordFieldWorkerKycCompleted(c, { ...approver, ...bad } as never),
+      (c) => activateFieldWorker(c, { ...approver, ...bad } as never),
       (c) => suspendFieldWorker(c, { ...staff, reasonCode: 'under_review', ...bad } as never),
       (c) => reactivateFieldWorker(c, { ...staff, ...bad } as never),
       (c) => terminateFieldWorker(c, { ...staff, reasonCode: 'inactive', endedOn: '2026-11-01', ...bad } as never),
@@ -365,6 +405,45 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
       await expect(
         postFieldWorker(client, { ...staff, toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authorization as VerifiedAuthorization }),
       ).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  // Story 13.1a AD3 — the approval's two commands accept ONLY a verified `field_worker.approve` result, judged with NO statement sent.
+  it.each([
+    ['missing', undefined],
+    ['an object LITERAL with the same fields (⛔ verified)', { ...approveAt('Patna') }],
+    ['another Pariwar’s result', approveAt('Patna', { pariwarId: OTHER_P })],
+    ['another actor’s result', approveAt('Patna', { actorId: '99999999-9999-4999-8999-999999999999' })],
+    ['the wrong DIMENSION (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
+    ['field_worker.register — the REGISTRAR’s key (a verified, district-dimension, same-target result)', authAt('Patna')],
+  ])('kyc_completed and activated refuse an authorization that is %s — no statement sent', async (_label, authorization) => {
+    for (const command of [recordFieldWorkerKycCompleted, activateFieldWorker]) {
+      const { client, calls } = stub({ state: 'pending_kyc', kyc: 'pending' });
+      await expect(command(client, { ...approver, authorization: authorization as VerifiedAuthorization })).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it('kyc_completed and activated refuse a VERIFIED district-dimension result for ANOTHER key by the KEY check — no statement sent', async () => {
+    const otherKey = authorize({
+      actorId: STAFF,
+      grants: [{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }],
+      key: 'claim.record_fraud_finding',
+      resource: { dimension: 'district', value: 'Patna', pariwarId: P },
+    });
+    expect(otherKey).toMatchObject({ permissionKey: 'claim.record_fraud_finding', pariwarId: P, actorId: STAFF, target: { dimension: 'district', value: 'Patna' } });
+    for (const command of [recordFieldWorkerKycCompleted, activateFieldWorker]) {
+      const { client, calls } = stub({ state: 'pending_kyc', kyc: 'pending' });
+      await expect(command(client, { ...approver, authorization: otherKey! })).rejects.toThrow(/the authorization is for 'claim\.record_fraud_finding', not this act/);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it('activated refuses a missing or blank approver display name (6.11 R5 — no fallback) — no statement sent', async () => {
+    for (const approvedByDisplay of [undefined, '', '   ']) {
+      const { client, calls } = stub({ state: 'pending_kyc', kyc: 'completed' });
+      await expect(activateFieldWorker(client, { ...approver, approvedByDisplay: approvedByDisplay as string })).rejects.toThrow(/display name is missing/);
       expect(calls).toEqual([]);
     }
   });

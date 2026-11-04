@@ -19,13 +19,21 @@ const AUTH = {
   target: { dimension: 'district', value: 'Patna' },
   catalog_version: 59,
 };
+/** Story 13.1a AD3 — the approval's snapshot (a pariwar_admin grant, key `field_worker.approve`). */
+const APPROVE_AUTH = {
+  permission_key: 'field_worker.approve',
+  role: 'pariwar_admin',
+  grant: { dimension: 'pariwar', value: '11111111-1111-4111-8111-111111111111' },
+  target: { dimension: 'district', value: 'Patna' },
+  catalog_version: 60,
+};
 /** `o` without `key` (a payload missing one required field). */
 const without = (o: Record<string, unknown>, key: string): Record<string, unknown> => Object.fromEntries(Object.entries(o).filter(([k]) => k !== key));
 
 const VALID: Record<(typeof FIELD_WORKER_EVENT_TYPES)[number], Record<string, unknown>> = {
   'field_worker.registered': { from_state: null, to_state: 'pending_kyc', trigger: 'field_worker.register', actor: 'operator', authorization: AUTH, district: 'Patna' },
-  'field_worker.kyc_completed': { from_state: 'pending_kyc', to_state: 'pending_kyc', trigger: 'field_worker.kyc_complete', actor: 'operator' },
-  'field_worker.activated': { from_state: 'pending_kyc', to_state: 'active', trigger: 'field_worker.activate', actor: 'trustee' },
+  'field_worker.kyc_completed': { from_state: 'pending_kyc', to_state: 'pending_kyc', trigger: 'field_worker.kyc_complete', actor: 'operator', authorization: APPROVE_AUTH },
+  'field_worker.activated': { from_state: 'pending_kyc', to_state: 'active', trigger: 'field_worker.activate', actor: 'trustee', authorization: APPROVE_AUTH },
   'field_worker.suspended': { from_state: 'active', to_state: 'suspended', trigger: 'field_worker.suspend:under_review', actor: 'operator', reason_code: 'under_review' },
   'field_worker.reactivated': { from_state: 'suspended', to_state: 'active', trigger: 'field_worker.reactivate', actor: 'operator' },
   'field_worker.terminated': { from_state: 'active', to_state: 'terminated', trigger: 'field_worker.terminate:inactive', actor: 'operator', reason_code: 'inactive', ended_on: '2026-11-01' },
@@ -97,6 +105,14 @@ describe('the seven payloads (AC3)', () => {
       expect(FieldWorkerTerminatedPayloadSchema.safeParse({ ...VALID['field_worker.terminated'], ended_on: bad }).success, bad).toBe(false);
     }
     for (const good of ['2024-02-29', '2026-11-01', '2026-12-31']) expect(isCalendarDateString(good), good).toBe(true);
+  });
+
+  // Story 13.1a AD3 — the approval's two events now REQUIRE the snapshot (13.1 QE18's "other five events when their routes are built").
+  it('kyc_completed and activated REQUIRE the authorization snapshot; ⛔ an approver name key in the payload', () => {
+    for (const t of ['field_worker.kyc_completed', 'field_worker.activated'] as const) {
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(without(VALID[t], 'authorization')).success, t).toBe(false);
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], approved_by_display: 'Meera' }).success, t).toBe(false);
+    }
   });
 
   it('the genesis carries a non-blank district and the authorization snapshot', () => {

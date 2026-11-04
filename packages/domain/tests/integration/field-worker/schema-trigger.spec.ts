@@ -32,6 +32,7 @@ const RULE = {
   kycBackwards: 'kyc_status never goes completed -> pending',
   districtCoincides: 'a district change must not coincide',
   delete: 'a field-worker row is never deleted',
+  approver: 'approved_by_display is set once', // Story 13.1a — 0201 rule (f)
 } as const;
 
 /** Run `text`, expect P0001 with the direct-write prefix and `rule`'s text; the tx stays usable (a savepoint). */
@@ -145,7 +146,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
     const { client } = getTx();
     const id = await seed(client);
     await guardedUpdate(client, id, "kyc_status = 'completed', state_event_version = 2");
-    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3");
+    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3, approved_by_display = 'Raw Approver'");
     await client.query(GUARD_ON);
     for (const extra of [
       "current_state = 'suspended', state_reason_code = 'under_review'",
@@ -203,7 +204,7 @@ describe.skipIf(!hasDatabase)('field_workers CHECKs, by name (AC2 — 23514)', (
   it('_state_reason_pair: suspended without a reason; a reason on an active worker', async () => {
     const { client, id } = await seeded();
     await guardedUpdate(client, id, "kyc_status = 'completed', state_event_version = 2");
-    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3");
+    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3, approved_by_display = 'Raw Approver'");
     await client.query(GUARD_ON);
     await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'suspended', state_event_version = 4 WHERE field_worker_id = $1", [id], '23514', 'field_workers_state_reason_pair');
     await expectSqlRejected(client, "UPDATE field_workers SET state_reason_code = 'under_review', state_event_version = 4 WHERE field_worker_id = $1", [id], '23514', 'field_workers_state_reason_pair');
@@ -212,7 +213,7 @@ describe.skipIf(!hasDatabase)('field_workers CHECKs, by name (AC2 — 23514)', (
   it('_state_reason_subset: `reassigned` stored as a suspension reason; `under_review` as a termination reason', async () => {
     const { client, id } = await seeded();
     await guardedUpdate(client, id, "kyc_status = 'completed', state_event_version = 2");
-    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3");
+    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3, approved_by_display = 'Raw Approver'");
     await client.query(GUARD_ON);
     await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'suspended', state_reason_code = 'reassigned', state_event_version = 4 WHERE field_worker_id = $1", [id], '23514', 'field_workers_state_reason_subset');
     await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'terminated', state_reason_code = 'under_review', ended_on = '2026-11-01', state_event_version = 4 WHERE field_worker_id = $1", [id], '23514', 'field_workers_state_reason_subset');
@@ -240,5 +241,68 @@ describe.skipIf(!hasDatabase)('field_workers CHECKs, by name (AC2 — 23514)', (
     await expectSqlRejected(client, RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { mobileBlindIndex: 'same-mobile' }), '23505', 'field_workers_pariwar_mobile_live_uq');
     await client.query("UPDATE field_workers SET current_state = 'terminated', state_reason_code = 'registered_in_error', ended_on = '2026-11-01', state_event_version = 2 WHERE field_worker_id = $1", [first]);
     await client.query(RAW_INSERT_SQL, rawInsertParams(randomUUID(), PARIWAR_A, { mobileBlindIndex: 'same-mobile' }));
+  });
+});
+
+
+// Story 13.1a (migration 0201; decision `-447` item 2) — the approver's display name: set ONCE, by the approval write only.
+describe.skipIf(!hasDatabase)('field_workers.approved_by_display (0201 — rule (f) and two CHECKs)', () => {
+  setupLiveDb();
+
+  async function kycDone(client: pg.PoolClient): Promise<string> {
+    const id = await seed(client);
+    await guardedUpdate(client, id, "kyc_status = 'completed', state_event_version = 2");
+    return id;
+  }
+
+  it('a genesis INSERT with an approver is refused (the genesis shape) — CONTROL: the column is NULL after a genesis', async () => {
+    const { client } = getTx();
+    const id = await seed(client);
+    expect((await rowOf(client, id)).approved_by_display).toBeNull();
+    await client.query(GUARD_ON);
+    const bad = randomUUID();
+    await expectDirectWrite(
+      client,
+      RAW_INSERT_SQL.replace('audit_id)', 'audit_id, approved_by_display)').replace('$12)', "$12, 'Too Early')"),
+      rawInsertParams(bad, PARIWAR_A),
+      RULE.genesisShape,
+    );
+  });
+
+  it('rule (f): the approver may be set ONLY in the pending_kyc → active write — set on a kyc-only write, on a suspend, renamed or cleared ⇒ refused', async () => {
+    const { client } = getTx();
+    const id = await kycDone(client);
+    await client.query(GUARD_ON);
+    // On the kyc-only write (state stays pending_kyc) — rule (f) answers before the CHECK.
+    await expectDirectWrite(client, "UPDATE field_workers SET approved_by_display = 'Early', state_event_version = 3 WHERE field_worker_id = $1", [id], RULE.approver);
+    // CONTROL — the approval write sets it.
+    await client.query("UPDATE field_workers SET current_state = 'active', approved_by_display = 'Meera', state_event_version = 3 WHERE field_worker_id = $1", [id]);
+    expect((await rowOf(client, id)).approved_by_display).toBe('Meera');
+    for (const set of ["approved_by_display = 'Renamed'", 'approved_by_display = NULL', "current_state = 'suspended', state_reason_code = 'under_review', approved_by_display = 'Other'"]) {
+      await expectDirectWrite(client, `UPDATE field_workers SET ${set}, state_event_version = 4 WHERE field_worker_id = $1`, [id], RULE.approver);
+    }
+    // A later transition that leaves it alone passes, and keeps it.
+    await client.query("UPDATE field_workers SET current_state = 'suspended', state_reason_code = 'under_review', state_event_version = 4 WHERE field_worker_id = $1", [id]);
+    expect((await rowOf(client, id)).approved_by_display).toBe('Meera');
+  });
+
+  it('_approved_by_state: an activation WITHOUT an approver ⇒ 23514 by name (NOT VALID still checks every new write)', async () => {
+    const { client } = getTx();
+    const id = await kycDone(client);
+    await client.query(GUARD_ON);
+    await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'active', state_event_version = 3 WHERE field_worker_id = $1", [id], '23514', 'field_workers_approved_by_state');
+  });
+
+  it('_approved_by_display_nonblank: a blank approver ⇒ 23514 by name', async () => {
+    const { client } = getTx();
+    const id = await kycDone(client);
+    await client.query(GUARD_ON);
+    await expectSqlRejected(
+      client,
+      "UPDATE field_workers SET current_state = 'active', approved_by_display = '   ', state_event_version = 3 WHERE field_worker_id = $1",
+      [id],
+      '23514',
+      'field_workers_approved_by_display_nonblank',
+    );
   });
 });

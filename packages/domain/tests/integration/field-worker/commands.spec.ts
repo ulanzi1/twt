@@ -35,11 +35,13 @@ import {
 import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { caught, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { approval, caught, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const ACTOR = randomUUID();
 const staff = (id: FieldWorkerId) => ({ pariwarId: A, fieldWorkerId: id, auditId: randomUUID(), actor: 'operator' as const, actorId: ACTOR });
+/** Story 13.1a AD3 — the two approval commands take a verified `field_worker.approve` result (+ the approver's name, `-447` item 2). */
+const approve = (id: FieldWorkerId, district = 'Patna') => ({ ...staff(id), ...approval(PARIWAR_A, district, ACTOR) });
 
 async function rowOf(client: pg.PoolClient, id: string) {
   return (
@@ -62,9 +64,9 @@ async function expectRefusedCleanly(client: pg.PoolClient, id: string, before: u
 async function workerIn(client: pg.PoolClient, state: 'pending_kyc' | 'kyc_done' | 'active' | 'suspended' | 'terminated'): Promise<FieldWorkerId> {
   const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
   if (state === 'pending_kyc') return id;
-  await recordFieldWorkerKycCompleted(client, staff(id));
+  await recordFieldWorkerKycCompleted(client, approve(id));
   if (state === 'kyc_done') return id;
-  await activateFieldWorker(client, staff(id));
+  await activateFieldWorker(client, approve(id));
   if (state === 'active') return id;
   if (state === 'suspended') {
     await suspendFieldWorker(client, { ...staff(id), reasonCode: 'under_review' });
@@ -98,16 +100,16 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);
     const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
-    await recordFieldWorkerKycCompleted(client, staff(id));
+    await recordFieldWorkerKycCompleted(client, approve(id));
     await expectRowMatchesStream(client, id);
-    await activateFieldWorker(client, staff(id));
+    await activateFieldWorker(client, approve(id));
     await expectRowMatchesStream(client, id);
     await suspendFieldWorker(client, { ...staff(id), reasonCode: 'at_worker_request' });
     await expectRowMatchesStream(client, id);
     await postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Gaya', ACTOR) });
     expect(await rowOf(client, id)).toMatchObject({ current_state: 'suspended', state_reason_code: 'at_worker_request', district: 'Gaya' });
     await expectRowMatchesStream(client, id);
-    await reactivateFieldWorker(client, staff(id));
+    await reactivateFieldWorker(client, approve(id));
     expect(await rowOf(client, id)).toMatchObject({ current_state: 'active', state_reason_code: null });
     await expectRowMatchesStream(client, id);
     // A target equal to the CURRENT district (the sending end) is accepted too.
@@ -137,12 +139,12 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const before = await rowOf(client, id);
     const types = await streamTypes(client, id);
     for (const run of [
-      () => activateFieldWorker(client, staff(id)),
-      () => reactivateFieldWorker(client, staff(id)),
+      () => activateFieldWorker(client, approve(id)),
+      () => reactivateFieldWorker(client, approve(id)),
       () => suspendFieldWorker(client, { ...staff(id), reasonCode: 'under_review' }),
       () => terminateFieldWorker(client, { ...staff(id), reasonCode: 'bogus', endedOn: '2026-11-01' }), // (2) beats (4)
       () => postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Gaya', ACTOR) }),
-      () => recordFieldWorkerKycCompleted(client, staff(id)), // review R3-22 — the title says ANYTHING
+      () => recordFieldWorkerKycCompleted(client, approve(id)), // review R3-22 — the title says ANYTHING
     ]) {
       expect(await caught(run)).toBeInstanceOf(FieldWorkerIllegalTransitionError);
     }
@@ -154,16 +156,16 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await enterAppScope(client, PARIWAR_A);
     const done = await workerIn(client, 'kyc_done');
     const doneBefore = await rowOf(client, done);
-    expect(await caught(() => recordFieldWorkerKycCompleted(client, staff(done)))).toBeInstanceOf(FieldWorkerKycAlreadyCompletedError);
+    expect(await caught(() => recordFieldWorkerKycCompleted(client, approve(done)))).toBeInstanceOf(FieldWorkerKycAlreadyCompletedError);
     await expectRefusedCleanly(client, done, doneBefore, ['field_worker.registered', 'field_worker.kyc_completed']); // review R3-22
     const active = await workerIn(client, 'active');
     const activeBefore = await rowOf(client, active);
     const activeTypes = await streamTypes(client, active);
-    expect(await caught(() => recordFieldWorkerKycCompleted(client, staff(active)))).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    expect(await caught(() => recordFieldWorkerKycCompleted(client, approve(active)))).toBeInstanceOf(FieldWorkerIllegalTransitionError);
     await expectRefusedCleanly(client, active, activeBefore, activeTypes);
     const pending = await workerIn(client, 'pending_kyc');
     const before = await rowOf(client, pending);
-    expect(await caught(() => activateFieldWorker(client, staff(pending)))).toBeInstanceOf(FieldWorkerKycNotCompletedError);
+    expect(await caught(() => activateFieldWorker(client, approve(pending)))).toBeInstanceOf(FieldWorkerKycNotCompletedError);
     await expectRefusedCleanly(client, pending, before, ['field_worker.registered']);
   });
 
@@ -172,8 +174,8 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await enterAppScope(client, PARIWAR_B);
     const inB = await registerReal(client, PARIWAR_B, { actorId: ACTOR });
     await enterAppScope(client, PARIWAR_A);
-    expect(await caught(() => activateFieldWorker(client, staff(toFieldWorkerId(randomUUID()))))).toBeInstanceOf(FieldWorkerGenesisMissingError);
-    expect(await caught(() => activateFieldWorker(client, staff(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
+    expect(await caught(() => activateFieldWorker(client, approve(toFieldWorkerId(randomUUID()))))).toBeInstanceOf(FieldWorkerGenesisMissingError);
+    expect(await caught(() => activateFieldWorker(client, approve(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
   });
 
   // Review R3-21 — the leg above runs as twt_app under A's scope, so RLS alone hides B's row: it passes with the lock's
@@ -184,8 +186,8 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await enterAppScope(client, PARIWAR_B);
     const inB = await registerReal(client, PARIWAR_B, { actorId: ACTOR });
     await client.query('RESET ROLE'); // the owner — RLS is NOT the filter
-    expect(await caught(() => activateFieldWorker(client, staff(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
-    expect(await caught(() => recordFieldWorkerKycCompleted(client, staff(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
+    expect(await caught(() => activateFieldWorker(client, approve(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
+    expect(await caught(() => recordFieldWorkerKycCompleted(client, approve(inB)))).toBeInstanceOf(FieldWorkerGenesisMissingError);
     expect(await streamTypes(client, inB)).toEqual(['field_worker.registered']);
     expect((await rowOf(client, inB)).kyc_status).toBe('pending');
   });
@@ -291,7 +293,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     );
     expect(await streamTypes(client, loser)).toEqual([]);
     // Terminated ⇒ the mobile may register again (a new id).
-    await recordFieldWorkerKycCompleted(client, staff(id));
+    await recordFieldWorkerKycCompleted(client, approve(id));
     await terminateFieldWorker(client, { ...staff(id), reasonCode: 'registered_in_error', endedOn: await istToday(client) });
     const again = await registerReal(client, PARIWAR_A, { mobileBlindIndex: 'dup-mobile', actorId: ACTOR });
     expect(again).not.toBe(id);
@@ -329,5 +331,56 @@ describe.skipIf(!hasDatabase)('QE20 — the LOWER bound, live (the registration 
     const before = await rowOf(client, id);
     expect(await caught(() => terminateFieldWorker(client, { ...staff(id), reasonCode: 'inactive', endedOn: tomorrow }))).toMatchObject({ reason: 'in_future' });
     await expectRefusedCleanly(client, id, before, ['field_worker.registered']); // review R4-13
+  });
+});
+
+// Story 13.1a AD2 / AD3 / TR4 — the approval: `kyc_completed` then `activated`, on ONE client in ONE transaction, under ONE verified
+// `field_worker.approve` result. (The as-of cut over the pair — both in or both out — is `read.spec.ts` (b).)
+describe.skipIf(!hasDatabase)('the approval pair in ONE transaction (Story 13.1a AD2, AD3; TR3, TR4)', () => {
+  setupLiveDb();
+
+  it('two events at n+1 and n+2 with EQUAL occurred_at, the SAME authorization snapshot; the row active / completed with its approver; I4', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR, district: 'Gaya' });
+    const one = approval(PARIWAR_A, 'Gaya', ACTOR); // ONE object for both commands
+    const kyc = await recordFieldWorkerKycCompleted(client, { ...staff(id), authorization: one.authorization });
+    const act = await activateFieldWorker(client, { ...staff(id), ...one });
+    expect([kyc.eventVersion, act.eventVersion]).toEqual([2, 3]);
+    expect(act).toMatchObject({ fromState: 'pending_kyc', state: 'active', kycStatus: 'completed', district: 'Gaya' });
+    const events = (
+      await client.query<{ event_type: string; event_version: string; occurred_at: Date; payload: { authorization: unknown } }>(
+        "SELECT event_type, event_version, occurred_at, payload FROM events_log WHERE stream_id = $1 AND event_version > 1 ORDER BY event_version",
+        [id],
+      )
+    ).rows;
+    expect(events.map((e) => e.event_type)).toEqual(['field_worker.kyc_completed', 'field_worker.activated']);
+    expect(events[0]!.occurred_at.getTime()).toBe(events[1]!.occurred_at.getTime()); // TR3 — the transaction-start now()
+    expect(events[0]!.payload.authorization).toEqual(events[1]!.payload.authorization);
+    expect(events[0]!.payload.authorization).toMatchObject({ permission_key: 'field_worker.approve', role: 'pariwar_admin', target: { dimension: 'district', value: 'Gaya' } });
+    expect((await client.query('SELECT approved_by_display FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]).toEqual({ approved_by_display: 'Meera Pariwar-Admin' });
+    await expectRowMatchesStream(client, id);
+  });
+
+  it('TR4: a failed SECOND command rolls back only ITS savepoint — the kyc event is still in the open transaction until the CALLER rolls back; then nothing survives (control: a re-approval succeeds)', async () => {
+    const { client } = getTx();
+    await enterAppScope(client, PARIWAR_A);
+    const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
+    await client.query('SAVEPOINT caller_tx'); // stands in for the handler's scope transaction
+    await recordFieldWorkerKycCompleted(client, approve(id));
+    // The second command fails UNDER the lock (a stale target), so its own savepoint is the only thing it rolls back.
+    const err = await caught(() => activateFieldWorker(client, approve(id, 'Nalanda')));
+    expect(err).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+    // The half-approved worker IS in the open transaction — the reason the handler must let the error propagate.
+    expect(await streamTypes(client, id)).toEqual(['field_worker.registered', 'field_worker.kyc_completed']);
+    expect(await rowOf(client, id)).toMatchObject({ current_state: 'pending_kyc', kyc_status: 'completed' });
+    await client.query('ROLLBACK TO SAVEPOINT caller_tx');
+    expect(await streamTypes(client, id)).toEqual(['field_worker.registered']);
+    expect(await rowOf(client, id)).toMatchObject({ current_state: 'pending_kyc', kyc_status: 'pending', v: 1 });
+    // CONTROL — the same worker approves cleanly afterwards, so the rollback (not a broken row) is what emptied the stream.
+    await recordFieldWorkerKycCompleted(client, approve(id));
+    await activateFieldWorker(client, approve(id));
+    expect(await streamTypes(client, id)).toEqual(['field_worker.registered', 'field_worker.kyc_completed', 'field_worker.activated']);
+    await expectRowMatchesStream(client, id);
   });
 });

@@ -71,3 +71,5 @@ over new files alone proves nothing (`[[feedback_gate_scope_semantic_coverage]]`
 ⚠ A NEW projected column (a sibling story's) joins `GUARDED_COLUMNS` here AND migration 0200's
 trigger exclusion chain in the same change — otherwise the trigger refuses every guarded UPDATE of
 it, or this gate stops watching it (Story 13.1 C8 (c)).
+Story 13.1a did this for `approvedByDisplay` (migration 0201 replaces the guard function; its rule
+(f) lets the approval set it once).

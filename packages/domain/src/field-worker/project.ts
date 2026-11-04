@@ -10,6 +10,8 @@
 //     whole-stream replay (12.1 rejected the helpdesk replay-then-append order — it deadlocks). ONE lock order everywhere:
 //     row lock → `events_log` append → row UPDATE (I13).
 // I4 (row = fold of the stream) is proven by a TEST that folds the stream, ⛔ by this projector replaying.
+// `approved_by_display` (Story 13.1a, `-447` item 2) is written here too, on `field_worker.activated` only, from the command's
+// input — a staff attribution snapshot like `registered_by_display`, outside the fold.
 //
 // ⛔ Re-exported from the barrel: the seven commands are the public write entry points (they take the row lock and check
 // the guards the projector assumes). Specs import this file directly. ⛔ `withCompensatingAudit` here (QE14) — the
@@ -266,6 +268,12 @@ export interface ProjectFieldWorkerTransitionInput {
   actor: 'operator' | 'trustee';
   actorId: string;
   lockedRow: FieldWorkerLockedRow;
+  /**
+   * `field_worker.activated` ONLY, and REQUIRED there: the approving admin's `users.display_name` (6.11 R5; Story 13.1a,
+   * decision `-447` item 2) — written to `approved_by_display`, a ROW column ⛔ in the payload (⛔ derivable from the stream:
+   * like `registered_by_display`, it is outside the I4 fold). Any other event type refuses it.
+   */
+  approvedByDisplay?: string;
 }
 
 export interface FieldWorkerTransitionResult {
@@ -324,6 +332,14 @@ export async function projectFieldWorkerTransition(
   }
   if (input.eventType === 'field_worker.posted' && p['from_district'] !== lockedRow.district) {
     throw new FieldWorkerProjectorInputError('[field_worker.posted] payload from_district disagrees with the locked row’s district');
+  }
+
+  const isActivation = input.eventType === 'field_worker.activated';
+  if (isActivation && (typeof input.approvedByDisplay !== 'string' || input.approvedByDisplay.trim().length === 0)) {
+    throw new FieldWorkerProjectorInputError("[field_worker.activated] the approving admin's display name is missing (6.11 R5 — no fallback)");
+  }
+  if (!isActivation && input.approvedByDisplay !== undefined) {
+    throw new FieldWorkerProjectorInputError(`[${input.eventType}] approvedByDisplay belongs to field_worker.activated only`);
   }
 
   const parsed = FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[input.eventType].safeParse(input.payload);
@@ -393,6 +409,8 @@ export async function projectFieldWorkerTransition(
           endedOn,
           auditId: input.auditId,
           updatedAt: sql`now()`,
+          // Set ONCE, by the approval (the 0201 trigger refuses any other change of it).
+          ...(isActivation ? { approvedByDisplay: input.approvedByDisplay } : {}),
         })
         .where(and(eq(fieldWorkers.fieldWorkerId, input.fieldWorkerId), eq(fieldWorkers.pariwarId, input.pariwarId)))
         .returning({ fieldWorkerId: fieldWorkers.fieldWorkerId });

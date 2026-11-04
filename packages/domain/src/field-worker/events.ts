@@ -143,24 +143,30 @@ export const FieldWorkerRegisteredPayloadSchema = z
 export type FieldWorkerRegisteredPayload = z.infer<typeof FieldWorkerRegisteredPayloadSchema>;
 
 /** `field_worker.kyc_completed`: `pending_kyc` → `pending_kyc` — a SAME-STATE event (QE8: an operator confirms they have
- *  verified this person). Owner: Story 13.1a's approval. */
+ *  verified this person — Story 13.1a AD2: the APPROVING officer accepts the identity check done at the interview). Emitted by
+ *  Story 13.1a's approval route, in ONE transaction with `field_worker.activated`, and carries the SAME authorization snapshot
+ *  (13.1 QE18 — "the other five events when their routes are built"; 13.1a AD3: key `field_worker.approve`). */
 export const FieldWorkerKycCompletedPayloadSchema = z
   .object({
     from_state: z.literal('pending_kyc'),
     to_state: z.literal('pending_kyc'),
     trigger: triggerOf('field_worker.kyc_complete'),
     actor: fieldWorkerActorSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema,
   })
   .strict();
 export type FieldWorkerKycCompletedPayload = z.infer<typeof FieldWorkerKycCompletedPayloadSchema>;
 
-/** `field_worker.activated`: `pending_kyc` → `active` (guarded: KYC completed). Owner: Story 13.1a. */
+/** `field_worker.activated`: `pending_kyc` → `active` (guarded: KYC completed). Emitted by Story 13.1a's approval route,
+ *  after `field_worker.kyc_completed` in the same transaction, with the same authorization snapshot (13.1a AD3). ⛔ The approving
+ *  admin's display name: that is a ROW column (`approved_by_display`, decision `-447` item 2), never a payload field. */
 export const FieldWorkerActivatedPayloadSchema = z
   .object({
     from_state: z.literal('pending_kyc'),
     to_state: z.literal('active'),
     trigger: triggerOf('field_worker.activate'),
     actor: fieldWorkerActorSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema,
   })
   .strict();
 export type FieldWorkerActivatedPayload = z.infer<typeof FieldWorkerActivatedPayloadSchema>;

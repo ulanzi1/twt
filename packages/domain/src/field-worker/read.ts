@@ -3,18 +3,21 @@
 // Every read carries an EXPLICIT `pariwar_id` predicate (RLS is ⛔ the only filter — an owner-role caller bypasses it, 13.2
 // TR3). The worker reads return a `FieldWorkerView` that OMITS the three PII columns (`name_ciphertext`,
 // `mobile_ciphertext`, `mobile_blind_index`) in the SELECT LIST — ⛔ dropped after the fetch. ⛔ No function here decrypts a
-// worker's data: decrypt-on-read is Story 13.3's / 13.4's decision (C1, C6).
+// worker's data. Story 13.1a adds the ONLY two reads that return ciphertext — `pageFieldWorkersForPariwar` (the name) and
+// `getFieldWorkerSealedIdentity` (the name and the mobile) — for the API layer's audited decrypt-on-read (13.1a AD7, AD9); the
+// worker's own read is still Story 13.3's (C1).
 
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { UUID_REGEX, type Db } from '../db.js';
-import { geoTreeVersionInForce } from '../geo-tree/registry.js';
+import { geoTreeVersionInForce, type GeoTreeInForce } from '../geo-tree/registry.js';
 import type { FieldWorkerId, MemberAttributionId, PariwarId } from '../ids/index.js';
 import { findListedWorkplaceDistricts } from '../marketplace/scope-options.js';
 import { clampLimit } from '../pagination.js';
 import { eventsLog } from '../schema/events_log.js';
 import { fieldWorkers, type FieldWorkerState } from '../schema/field_workers.js';
-import { FieldWorkerCaptureNotFoundError, FieldWorkerDistrictUnknownError } from './errors.js';
+import { pageWorkplaceDistricts } from '../member/workplace.js';
+import { FieldWorkerCaptureNotFoundError, FieldWorkerCursorInvalidError, FieldWorkerDistrictUnknownError } from './errors.js';
 import { foldFieldWorkerProjection, type FieldWorkerProjection } from './state.js';
 
 /** The NUL character — the one code point a Postgres text parameter cannot carry (built, ⛔ written as an escape). */
@@ -140,9 +143,201 @@ export async function assertDistrictRecorded(db: Db, pariwarId: PariwarId, distr
   const tree = await geoTreeVersionInForce(db, pariwarId, at);
   const listed =
     tree !== null
-      ? tree.document.nodes.some((n) => n.dimension === 'district' && n.value === district)
+      ? treeDistricts(tree).includes(district)
       : (await findListedWorkplaceDistricts(db, pariwarId, [district])).has(district);
   if (!listed) throw new FieldWorkerDistrictUnknownError(pariwarId);
+}
+
+/** The `district` node values of a tree in force — the ONE place `assertDistrictRecorded` and `listRecordedDistricts` read them. */
+function treeDistricts(tree: GeoTreeInForce): string[] {
+  return tree.document.nodes.filter((n) => n.dimension === 'district').map((n) => n.value);
+}
+
+/** The no-tree branch's cap — `pageWorkplaceDistricts`' own ceiling (13.1a AC8; ⛔ a second page). */
+export const RECORDED_DISTRICTS_LIMIT = 200;
+
+/**
+ * Story 13.1a (AC8) — the Pariwar's RECORDED districts at `at`, for the screens' pickers: the geo tree's `district` nodes when a
+ * tree is in force, else the LISTED workplace districts — the SAME two sources `assertDistrictRecorded` judges (so every value
+ * returned passes it). Sorted by UTF-16 code unit (`a < b` — 12.2's `byValue`, locale-free), de-duplicated, exact bytes
+ * (I11). `truncated` is true when the no-tree list holds more than `RECORDED_DISTRICTS_LIMIT` (the tree branch never is); the
+ * screens then also take an exact typed district (`-447` item 5). Not personal data.
+ */
+export async function listRecordedDistricts(db: Db, pariwarId: PariwarId, at: Date): Promise<{ districts: string[]; truncated: boolean }> {
+  const tree = await geoTreeVersionInForce(db, pariwarId, at);
+  const source =
+    tree !== null ? { items: treeDistricts(tree), hasMore: false } : await pageWorkplaceDistricts(db, pariwarId, { limit: RECORDED_DISTRICTS_LIMIT });
+  const districts = [...new Set(source.items)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return { districts, truncated: source.hasMore };
+}
+
+// ── Story 13.1a — the keyset page and the sealed identity (AD9, AD10; decision `-447` items 1, 3) ──────────────────────
+// ⚠ `getFieldWorker` / `listFieldWorkersForPariwar` / `FieldWorkerView` above are UNCHANGED (13.1's read.spec pins them). The
+// two reads below are the ONLY ones that return CIPHERTEXT — for the API layer's audited decrypt (13.1a AD7, AD9). The cursor
+// code is a copy of `marketplace/read.ts`'s strict decoder (the 4th copy — extraction is BigDev's to schedule, 13.1a C4).
+
+/** `pageFieldWorkersForPariwar`'s default page size (13.1a AD10). */
+export const PAGE_FIELD_WORKERS_DEFAULT_LIMIT = 20;
+/** Its ceiling — a bulk-PII guard (each row is a decrypted name on an officer's screen), ⚠ ⛔ a tuning knob. */
+export const PAGE_FIELD_WORKERS_MAX_LIMIT = 25;
+
+/** A keyset position: the row's EXACT `created_at::text` (µs — ⛔ a JS `Date`, which keeps ms only) + its id. */
+export interface FieldWorkerListCursor {
+  readonly createdAtExact: string;
+  readonly fieldWorkerId: FieldWorkerId;
+}
+
+/** One page row: the PII-free view, the NAME ciphertext only (⛔ the mobile — the list never carries one, AD9), the exact stamp. */
+export interface FieldWorkerListRow {
+  readonly view: FieldWorkerView;
+  readonly nameCiphertext: string;
+  readonly createdAtExact: string;
+}
+
+/** The longest cursor `decodeFieldWorkerCursor` accepts (a server-built one is ~110 characters). */
+export const FIELD_WORKER_CURSOR_MAX_LENGTH = 256;
+
+/** `created_at::text` as Postgres writes it (ISO DateStyle). Shape ONLY — every field is range-checked separately. */
+const CREATED_AT_TEXT = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(\.\d{1,6})?([+-])(\d{2})(?::(\d{2}))?(?::(\d{2}))?$/;
+const LOWER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const BASE64URL = /^[A-Za-z0-9_-]+$/;
+
+/** The opaque cursor for a page's last row: base64url (⛔ padding) of the CANONICAL `{"c":…,"w":…}`. */
+export function encodeFieldWorkerCursor(c: FieldWorkerListCursor): string {
+  return Buffer.from(JSON.stringify({ c: c.createdAtExact, w: c.fieldWorkerId }), 'utf8').toString('base64url');
+}
+
+/** True iff every field of a `CREATED_AT_TEXT` match is in range — a shape-valid `2026-02-30 …` would 22008 at the cast. */
+function createdAtInRange(m: RegExpExecArray): boolean {
+  const n = (i: number): number => (m[i] === undefined ? 0 : Number(m[i]));
+  const [year, month, day, hour, minute, second] = [n(1), n(2), n(3), n(4), n(5), n(6)];
+  if (year < 2000 || year > 9999 || month < 1 || month > 12) return false;
+  if (day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return false;
+  if (hour > 23 || minute > 59 || second > 59) return false;
+  return n(9) <= 15 && n(10) <= 59 && n(11) <= 59;
+}
+
+/**
+ * Decode a list cursor STRICTLY, in JS, BEFORE any SQL — `marketplace/read.ts` `decodeModuleCursor`'s five steps, with the
+ * keys `c`, `w`: the URL-safe alphabet and a canonical re-encode; fatal UTF-8 with the BOM kept in the text; a plain object
+ * with EXACTLY `c`, `w` in that order whose text is the canonical `JSON.stringify`; `c` a `timestamptz` text in range; `w` a
+ * lower-case UUID. A cast failure on the read transaction would abort it and answer 500 — hence all of this.
+ *
+ * @throws FieldWorkerCursorInvalidError
+ */
+export function decodeFieldWorkerCursor(s: unknown): FieldWorkerListCursor {
+  const fail = (reason: string): never => {
+    throw new FieldWorkerCursorInvalidError(reason);
+  };
+  if (typeof s !== 'string' || s.length < 1 || s.length > FIELD_WORKER_CURSOR_MAX_LENGTH) fail('length');
+  const str = s as string;
+  if (!BASE64URL.test(str) || str.length % 4 === 1) fail('alphabet');
+  const bytes = Buffer.from(str, 'base64url');
+  if (bytes.toString('base64url') !== str) fail('not canonical base64url');
+  let text = '';
+  try {
+    text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    fail('not utf-8');
+  }
+  let obj: unknown;
+  try {
+    obj = JSON.parse(text);
+  } catch {
+    fail('not json');
+  }
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) fail('not an object');
+  const rec = obj as Record<string, unknown>;
+  const keys = Object.keys(rec);
+  if (keys.length !== 2 || keys[0] !== 'c' || keys[1] !== 'w') fail('keys');
+  const c = rec['c'];
+  const w = rec['w'];
+  if (typeof c !== 'string' || typeof w !== 'string') fail('field types');
+  if (text !== JSON.stringify({ c, w })) fail('not canonical json');
+  const match = CREATED_AT_TEXT.exec(c as string);
+  if (match === null || !createdAtInRange(match)) fail('created_at');
+  if (!LOWER_UUID.test(w as string)) fail('field worker id');
+  return { createdAtExact: c as string, fieldWorkerId: w as FieldWorkerId };
+}
+
+/**
+ * Story 13.1a (AD10) — a page of this Pariwar's workers in ONE state, optionally of ONE district (byte-equal — I11), in the
+ * list order `created_at DESC, field_worker_id DESC`, AFTER a keyset position compared IN SQL on the exact `created_at::text`
+ * (⛔ OFFSET). Served by `field_workers_pariwar_state_created_idx` (0201) with no Sort. Over-fetches one row for `nextCursor`.
+ * `after` MUST come from `decodeFieldWorkerCursor`. A non-integer `limit` throws `RangeError`; the size is `clampLimit`-ed
+ * (default 20, ceiling 25). Returns the NAME ciphertext only.
+ */
+export async function pageFieldWorkersForPariwar(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: { state: FieldWorkerState; district?: string; after?: FieldWorkerListCursor; limit?: number },
+): Promise<{ items: FieldWorkerListRow[]; nextCursor: string | null }> {
+  if (opts.limit !== undefined && !Number.isInteger(opts.limit)) {
+    throw new RangeError(`pageFieldWorkersForPariwar: limit must be an integer, got ${String(opts.limit)}`);
+  }
+  const limit = clampLimit(opts.limit, { default: PAGE_FIELD_WORKERS_DEFAULT_LIMIT, cap: PAGE_FIELD_WORKERS_MAX_LIMIT });
+  const conds = [eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.currentState, opts.state)];
+  if (opts.district !== undefined) conds.push(eq(fieldWorkers.district, opts.district));
+  if (opts.after !== undefined) {
+    conds.push(
+      sql`(${fieldWorkers.createdAt}, ${fieldWorkers.fieldWorkerId}) < (${opts.after.createdAtExact}::timestamptz, ${opts.after.fieldWorkerId}::uuid)`,
+    );
+  }
+  const rows = await db
+    .select({
+      ...FIELD_WORKER_VIEW_COLUMNS,
+      nameCiphertext: fieldWorkers.nameCiphertext,
+      createdAtExact: sql<string>`${fieldWorkers.createdAt}::text`,
+    })
+    .from(fieldWorkers)
+    .where(and(...conds))
+    .orderBy(desc(fieldWorkers.createdAt), desc(fieldWorkers.fieldWorkerId))
+    .limit(clampLimit(limit + 1, { default: PAGE_FIELD_WORKERS_DEFAULT_LIMIT + 1, cap: PAGE_FIELD_WORKERS_MAX_LIMIT + 1 }));
+  const items = rows.slice(0, limit).map(({ nameCiphertext, createdAtExact, ...view }) => ({ view, nameCiphertext, createdAtExact }));
+  const last = items[items.length - 1];
+  return {
+    items,
+    nextCursor:
+      rows.length > limit && last !== undefined
+        ? encodeFieldWorkerCursor({ createdAtExact: last.createdAtExact, fieldWorkerId: last.view.fieldWorkerId })
+        : null,
+  };
+}
+
+/** One worker's sealed identity — the view, the approver snapshot (`-447` item 2) and the TWO ciphertexts (13.1a AD9). */
+export interface FieldWorkerSealedIdentity {
+  readonly view: FieldWorkerView;
+  readonly approvedByDisplay: string | null;
+  readonly nameCiphertext: string;
+  readonly mobileCiphertext: string;
+}
+
+/**
+ * Story 13.1a (AD9; decision `-447` item 1) — one worker's sealed identity, ONLY while the worker is still in `district` (the
+ * district the caller's gate passed, byte-equal): the row the read discloses is the row the authorization covered, on ONE
+ * statement — a worker moved after the gate's loader read returns null here, never another district's data. `null` for an
+ * unknown worker, another Pariwar's, or one no longer in `district`.
+ */
+export async function getFieldWorkerSealedIdentity(
+  db: Db,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+  opts: { district: string },
+): Promise<FieldWorkerSealedIdentity | null> {
+  const rows = await db
+    .select({
+      ...FIELD_WORKER_VIEW_COLUMNS,
+      approvedByDisplay: fieldWorkers.approvedByDisplay,
+      nameCiphertext: fieldWorkers.nameCiphertext,
+      mobileCiphertext: fieldWorkers.mobileCiphertext,
+    })
+    .from(fieldWorkers)
+    .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId), eq(fieldWorkers.district, opts.district)))
+    .limit(1);
+  const r = rows[0];
+  if (r === undefined) return null;
+  const { approvedByDisplay, nameCiphertext, mobileCiphertext, ...view } = r;
+  return { view, approvedByDisplay, nameCiphertext, mobileCiphertext };
 }
 
 // ── The as-of read (QE11, AC10) ────────────────────────────────────────────────────────────────────

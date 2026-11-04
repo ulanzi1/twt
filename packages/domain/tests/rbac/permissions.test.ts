@@ -242,9 +242,11 @@ describe('PERMISSION_CATALOG', () => {
     // `2026-11-01-438` item 5; ONE bump for the two; 75 -> 77 keys).
     // 59 at Story 13.1 +1 (field_worker.register — register a field worker; the Panel's `2026-11-03-441` Q1 A, the key's
     // shape `-442` QE10; 77 -> 78 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(59);
+    // 60 at Story 13.1a +3 (field_worker.approve / .read_code / .view — approve a worker, read their code by hand, see workers;
+    // `2026-11-04-446` AD6; ONE bump for the three; 78 -> 81 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(60);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(78);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(81);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

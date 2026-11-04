@@ -334,6 +334,14 @@ const MODULE_MANAGE = permissionKey('module.manage');
 // trustee_panel / the `field_worker` role. Both holders may always act (the fill-in is ⛔ enforced — `-443` Q3 A); the
 // genesis event's `authorization` snapshot records which grant passed (QE18).
 const FIELD_WORKER_REGISTER = permissionKey('field_worker.register');
+// Story 13.1a (`2026-11-04-446` AD6) — approve a registered worker (district-dimension). Granted to pariwar_admin ONLY (the
+// Panel's `-443` Q4 A: the Pariwar Admin approves) (+ super_admin auto). ⛔ district_admin (it registers; a second officer approves).
+const FIELD_WORKER_APPROVE = permissionKey('field_worker.approve');
+// Story 13.1a (AD6) — read an ACTIVE worker's code by hand, and see workers (the list + one worker's identity), both
+// district-dimension. Granted to district_admin (own district) AND pariwar_admin (any) (+ super_admin auto). ⛔ state_trustee /
+// trustee_panel / helpline_operator / the `field_worker` role.
+const FIELD_WORKER_READ_CODE = permissionKey('field_worker.read_code');
+const FIELD_WORKER_VIEW = permissionKey('field_worker.view');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -510,6 +518,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       MODULE_MANAGE,
       // Story 13.1 (QE10) — register a field worker in ANY district of the Pariwar (the fill-in, `-441`).
       FIELD_WORKER_REGISTER,
+      // Story 13.1a (AD6) — approve a worker (the Panel's second officer, `-443` Q4 A); read a code; see workers — any district.
+      FIELD_WORKER_APPROVE,
+      FIELD_WORKER_READ_CODE,
+      FIELD_WORKER_VIEW,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -568,6 +580,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_RECORD_FRAUD_FINDING,
       // Story 13.1 (QE10) — register a field worker in the District Admin's OWN district (the Panel's primary manager, `-441`).
       FIELD_WORKER_REGISTER,
+      // Story 13.1a (AD6) — read a worker's code and see workers in the District Admin's OWN district. ⛔ Approve (Pariwar Admin only).
+      FIELD_WORKER_READ_CODE,
+      FIELD_WORKER_VIEW,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.

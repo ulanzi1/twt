@@ -81,6 +81,26 @@ export function registerAuthorization(pariwarId: string, district: string, actor
   return result;
 }
 
+/**
+ * A VERIFIED `field_worker.approve` result (Story 13.1a AD3) for `actorId` at `district` in `pariwarId` — minted by the REAL check
+ * from a pariwar_admin grant. ⚠ This file is exempt from the `authorize` fence BY EXACT PATH: keep the helper here (TR20).
+ */
+export function approveAuthorization(pariwarId: string, district: string, actorId: string): VerifiedAuthorization {
+  const result = authorize({
+    actorId,
+    grants: [{ pariwarId, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pariwarId }],
+    key: 'field_worker.approve',
+    resource: { dimension: 'district', value: district, pariwarId },
+  });
+  if (result === null) throw new Error('approveAuthorization: the real check refused a pariwar_admin grant');
+  return result;
+}
+
+/** The approval inputs both commands take, for a worker in `district` (13.1a AD3; `-447` item 2). */
+export function approval(pariwarId: string, district: string, actorId: string): { authorization: VerifiedAuthorization; approvedByDisplay: string } {
+  return { authorization: approveAuthorization(pariwarId, district, actorId), approvedByDisplay: 'Meera Pariwar-Admin' };
+}
+
 // ── Command-level helpers (the projector path — these APPEND to events_log; per-test ROLLBACK specs only, or clean up
 //    under replica mode in an own-committing spec) ──
 

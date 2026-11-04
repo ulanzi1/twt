@@ -36,12 +36,17 @@ describe('EVENT_TYPE_REGISTRY — field_worker.* coverage', () => {
     }
   });
 
-  it('only field_worker.registered names a 13.1 production emitter; the other six say they have none yet', () => {
+  // Story 13.1a (AC4) — kyc_completed and activated now HAVE an emitter (the approval route); the other four still say they have none.
+  it('field_worker.registered names the 13.1 registration route; kyc_completed and activated the 13.1a approval route; the other four say they have none yet', () => {
     const rows = EVENT_TYPE_REGISTRY as Record<string, { description: string } | undefined>;
+    const approval = new Set(['field_worker.kyc_completed', 'field_worker.activated']);
     for (const type of fieldWorker.FIELD_WORKER_EVENT_TYPES) {
       const d = rows[type]!.description;
       if (type === 'field_worker.registered') expect(d).toContain('Emitted by the Story 13.1 registration route');
-      else expect(d).toContain('No production emitter in 13.1');
+      else if (approval.has(type)) {
+        expect(d, type).toContain('Emitted by the Story 13.1a approval route');
+        expect(d, type).not.toContain('No production emitter');
+      } else expect(d, type).toContain('No production emitter in 13.1');
     }
   });
 

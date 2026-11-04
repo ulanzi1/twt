@@ -114,6 +114,11 @@ export const fieldWorkers = pgTable(
     endedOn: date('ended_on', { mode: 'string' }),
     // The audit line of the MOST RECENT transition. ⛔ FK.
     auditId: uuid('audit_id').notNull(),
+    // Story 13.1a (decision `-447` item 2) — the APPROVING admin's `users.display_name` at the approval (6.11 R5; plaintext
+    // staff attribution, ⛔ fallback). Written ONCE, by the projector on `field_worker.activated` (`pending_kyc → active`);
+    // NULL until then. ⛔ In any payload and ⛔ in the I4 fold (like `registered_by_display`). The 0201 trigger refuses any
+    // other write of it; the two CHECKs below tie it to the state.
+    approvedByDisplay: text('approved_by_display'),
     // PROJECTED: set to `now()` on every transition.
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   },
@@ -125,8 +130,9 @@ export const fieldWorkers = pgTable(
     uniqueIndex('field_workers_pariwar_mobile_live_uq')
       .on(t.pariwarId, t.mobileBlindIndex)
       .where(sql`current_state <> 'terminated'`),
-    // The list read (`listFieldWorkersForPariwar`).
-    index('field_workers_pariwar_state_idx').on(t.pariwarId, t.currentState),
+    // The keyset list read (`pageFieldWorkersForPariwar`, Story 13.1a AD10 — 13.1's carried D1): `(pariwar_id, current_state)`
+    // then the page order `created_at DESC, field_worker_id DESC`. Replaced 0200's `field_workers_pariwar_state_idx` (a strict prefix).
+    index('field_workers_pariwar_state_created_idx').on(t.pariwarId, t.currentState, t.createdAt.desc(), t.fieldWorkerId.desc()),
     check(
       'field_workers_state_reason_pair',
       sql`(${t.currentState} IN ('suspended', 'terminated')) = (${t.stateReasonCode} IS NOT NULL)`,
@@ -140,6 +146,12 @@ export const fieldWorkers = pgTable(
     check('field_workers_registered_by_display_nonblank', sql`length(btrim(${t.registeredByDisplay})) > 0`),
     check('field_workers_district_nonblank', sql`length(btrim(${t.district})) > 0`),
     check('field_workers_ended_on_pair', sql`(${t.currentState} = 'terminated') = (${t.endedOn} IS NOT NULL)`),
+    // Story 13.1a (0201): a worker awaiting approval has no approver; an active or suspended one has one; a blank one never.
+    check('field_workers_approved_by_display_nonblank', sql`${t.approvedByDisplay} IS NULL OR length(btrim(${t.approvedByDisplay})) > 0`),
+    check(
+      'field_workers_approved_by_state',
+      sql`(${t.currentState} <> 'pending_kyc' OR ${t.approvedByDisplay} IS NULL) AND (${t.currentState} NOT IN ('active', 'suspended') OR ${t.approvedByDisplay} IS NOT NULL)`,
+    ),
   ],
 );
 

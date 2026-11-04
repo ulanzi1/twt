@@ -47,6 +47,7 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
       ['ended_on', 'date', 'YES'],
       ['audit_id', 'uuid', 'NO'],
       ['updated_at', 'timestamptz', 'NO'],
+      ['approved_by_display', 'text', 'YES'], // Story 13.1a (0201) — the approver, NULL until the approval
     ]);
     const defaults = Object.fromEntries(r.rows.filter((c) => c.column_default !== null).map((c) => [c.column_name, c.column_default]));
     // ⛔ default on the id (caller-minted, QE3); only the two timestamps default to now().
@@ -75,6 +76,8 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
     );
     expect(r.rows.map((c) => [c.conname, c.contype])).toEqual([
       ['field_workers_active_needs_kyc', 'c'],
+      ['field_workers_approved_by_display_nonblank', 'c'], // Story 13.1a (0201)
+      ['field_workers_approved_by_state', 'c'], // Story 13.1a (0201) — NOT VALID (its header)
       ['field_workers_district_nonblank', 'c'],
       ['field_workers_ended_on_pair', 'c'],
       ['field_workers_pariwar_worker_uq', 'u'],
@@ -84,9 +87,10 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
       ['field_workers_state_reason_subset', 'c'],
     ]);
     expect(r.rows.find((c) => c.conname === 'field_workers_pariwar_worker_uq')!.def).toBe('UNIQUE (pariwar_id, field_worker_id)');
+    expect(r.rows.find((c) => c.conname === 'field_workers_approved_by_state')!.def).toMatch(/ NOT VALID$/);
   });
 
-  it('AC1: the partial unique mobile index (column list + predicate, normalised) and the list index', async () => {
+  it('AC1: the partial unique mobile index (column list + predicate, normalised) and the keyset list index (Story 13.1a AD10)', async () => {
     const { client } = getTx();
     const r = await client.query<{ indexname: string; def: string; uniq: boolean; pred: string | null }>(
       `SELECT c.relname AS indexname, pg_get_indexdef(i.indexrelid) AS def, i.indisunique AS uniq,
@@ -97,7 +101,7 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
     const byName = new Map(r.rows.map((x) => [x.indexname, x]));
     expect([...byName.keys()]).toEqual([
       'field_workers_pariwar_mobile_live_uq',
-      'field_workers_pariwar_state_idx',
+      'field_workers_pariwar_state_created_idx',
       'field_workers_pariwar_worker_uq',
       'field_workers_pkey',
     ]);
@@ -108,8 +112,9 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
     expect(columnsOf(live.def)).toBe('pariwar_id, mobile_blind_index');
     // Postgres adds a `::field_worker_state` cast to the literal — strip it before comparing the predicate.
     expect(normalise(live.pred!.replace(/::field_worker_state/g, ''))).toBe("current_state <> 'terminated'");
-    expect(columnsOf(byName.get('field_workers_pariwar_state_idx')!.def)).toBe('pariwar_id, current_state');
-    expect(byName.get('field_workers_pariwar_state_idx')!.pred).toBeNull();
+    // Story 13.1a AD10 (0201) — the keyset index replaced 0200's `(pariwar_id, current_state)`; its DESC suffixes are part of the match.
+    expect(columnsOf(byName.get('field_workers_pariwar_state_created_idx')!.def)).toBe('pariwar_id, current_state, created_at desc, field_worker_id desc');
+    expect(byName.get('field_workers_pariwar_state_created_idx')!.pred).toBeNull();
   });
 
   it('AC1: twt_app holds SELECT, INSERT, UPDATE — ⛔ DELETE, ⛔ TRUNCATE; RLS is ENABLE + FORCE with three per-command policies', async () => {

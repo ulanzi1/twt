@@ -35,7 +35,7 @@ export interface FieldWorkerStateWriteFinding {
 }
 
 const FIELD_WORKERS_TABLE = 'fieldWorkers';
-/** The eight PROJECTED columns (I1) — see migration 0200's trigger exclusion chain. A new projected column joins this
+/** The eight PROJECTED columns (I1) + the approver (13.1a, 0201) — see migration 0201's trigger exclusion chain. A new projected column joins this
  *  set AND the trigger's chain in the same change (C8 (c) — `CREATE OR REPLACE` of the guard function). */
 const GUARDED_COLUMNS = new Set([
   'currentState',
@@ -46,6 +46,7 @@ const GUARDED_COLUMNS = new Set([
   'endedOn',
   'auditId',
   'updatedAt',
+  'approvedByDisplay', // Story 13.1a (0201) — the approver, set once by the projector on `field_worker.activated`
 ]);
 
 /** `expr` without the wrappers that do not change WHICH object it is: parentheses, `as`, `<T>`, `!`, `satisfies`. */

@@ -35,7 +35,7 @@ import {
 } from '../../../src/ids/index.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
-import { caught, registerReal } from './_fixtures.js';
+import { approval, caught, registerReal } from './_fixtures.js';
 
 const ACTOR = randomUUID();
 
@@ -46,6 +46,8 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
   let pool: pg.Pool;
   const created: string[] = [];
   const base = (id: FieldWorkerId) => ({ pariwarId: P, fieldWorkerId: id, auditId: randomUUID(), actor: 'operator' as const, actorId: ACTOR });
+  /** Story 13.1a AD3 — the two approval commands take a verified `field_worker.approve` result (+ the approver's name). */
+  const approve = (id: FieldWorkerId) => ({ ...base(id), ...approval(PARIWAR, 'Patna', ACTOR) });
 
   beforeAll(() => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4, ssl: false });
@@ -126,9 +128,9 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     await slow.query('BEGIN');
     await slow.query('SELECT now()');
     // …commit kyc_completed from another connection (v2 — the LATER stamp)…
-    await committed((c) => recordFieldWorkerKycCompleted(c, base(id)));
+    await committed((c) => recordFieldWorkerKycCompleted(c, approve(id)));
     // …then activate on SLOW (v3 — the EARLIER stamp).
-    await committed((c) => activateFieldWorker(c, base(id)), slow);
+    await committed((c) => activateFieldWorker(c, approve(id)), slow);
     const [v1, v2, v3] = await stamps(id);
     // The precondition: the inversion really happened.
     expect((await pool.query<{ inverted: boolean }>('SELECT $1::timestamptz < $2::timestamptz AS inverted', [v3, v2])).rows[0]!.inverted).toBe(true);
@@ -144,8 +146,8 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     const id = await committed((c) => registerReal(c, PARIWAR, { actorId: ACTOR }));
     created.push(id);
     await committed(async (c) => {
-      await recordFieldWorkerKycCompleted(c, base(id));
-      await activateFieldWorker(c, base(id));
+      await recordFieldWorkerKycCompleted(c, approve(id));
+      await activateFieldWorker(c, approve(id));
     });
     await committed((c) => suspendFieldWorker(c, { ...base(id), reasonCode: 'under_review' }));
     const [, , , v4] = await stamps(id);
@@ -168,9 +170,9 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
       }
     };
     await check();
-    await committed((c) => recordFieldWorkerKycCompleted(c, base(id)));
+    await committed((c) => recordFieldWorkerKycCompleted(c, approve(id)));
     await check();
-    await committed((c) => activateFieldWorker(c, base(id)));
+    await committed((c) => activateFieldWorker(c, approve(id)));
     await check();
     await committed((c) => suspendFieldWorker(c, { ...base(id), reasonCode: 'at_worker_request' }));
     await check();

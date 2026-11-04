@@ -27,7 +27,8 @@ const PROJECT_FILE = 'packages/domain/src/field-worker/project.ts';
 const ALLOWLIST: readonly AllowlistEntry[] = [
   { file: PROJECT_FILE, functions: new Set(['projectFieldWorkerGenesis', 'projectFieldWorkerTransition']) },
 ];
-const EIGHT = ['currentState', 'stateEventVersion', 'kycStatus', 'stateReasonCode', 'district', 'endedOn', 'auditId', 'updatedAt'] as const;
+// Story 13.1a (0201) adds `approvedByDisplay` — the approver, set once by the projector; the gate watches it like the eight.
+const EIGHT = ['currentState', 'stateEventVersion', 'kycStatus', 'stateReasonCode', 'district', 'endedOn', 'auditId', 'updatedAt', 'approvedByDisplay'] as const;
 
 describe('scanFieldWorkerStateWrites — gate teeth', () => {
   it.each(EIGHT)('FLAGS .update(fieldWorkers).set({ %s }) outside the allowlist', (col) => {

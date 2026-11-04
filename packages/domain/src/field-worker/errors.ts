@@ -246,3 +246,15 @@ export class FieldWorkerCaptureNotFoundError extends Error {
     super(`capture ${captureId} is not a member_attribution row of Pariwar ${pariwarId}`);
   }
 }
+
+/**
+ * Story 13.1a (AD10) — a field-worker list cursor that is forged, malformed, truncated or of the wrong shape, refused BEFORE
+ * any SQL (`decodeFieldWorkerCursor` — a failed cast would abort the read transaction). `reason` names the failed check, ⛔ the
+ * cursor's text. → 400 `field_worker.cursor_invalid`.
+ */
+export class FieldWorkerCursorInvalidError extends Error {
+  public readonly name = 'FieldWorkerCursorInvalidError';
+  public constructor(public readonly reason: string) {
+    super(`field-worker list cursor is invalid: ${reason}`);
+  }
+}

@@ -11,9 +11,11 @@
 // ⚠ The caller's transaction must be READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001.
 //
 // ── Guard order, in EVERY command (QE5; pinned by a test) ─────────────────────────────────────────
-//   (0)  actor + actorId (QE7) — and, on `register` and `post`, the authorization's PROVENANCE (a VERIFIED result of the
-//        RBAC check), its Pariwar and actor (= the command's), its dimension (`district`) — and, for `register` only, its
-//        key and target — pure, BEFORE the lock ⇒ `FieldWorkerProjectorInputError`;
+//   (0)  actor + actorId (QE7) — and, on `register`, `kyc_completed`, `activated` and `post`, the authorization's PROVENANCE
+//        (a VERIFIED result of the RBAC check), its Pariwar and actor (= the command's), its dimension (`district`) — and its
+//        KEY on `register` (`field_worker.register`, + the target) and on `kyc_completed` / `activated` (`field_worker.approve`,
+//        Story 13.1a AD3) — and, on `activated`, a non-blank `approvedByDisplay` (13.1a, decision `-447` item 2) — pure,
+//        BEFORE the lock ⇒ `FieldWorkerProjectorInputError`;
 //   (0b) `terminate`: `ended_on` present, `YYYY-MM-DD`, a real date — pure ⇒ `FieldWorkerEndedOnInvalidError`;
 //   under the lock:
 //   (1)  the row exists in this Pariwar ⇒ `FieldWorkerGenesisMissingError`;
@@ -22,6 +24,8 @@
 //   (3)  the KYC guard ⇒ `FieldWorkerKycAlreadyCompletedError` / `FieldWorkerKycNotCompletedError`;
 //   (3b) `post`: the district differs ⇒ `FieldWorkerDistrictUnchangedError`;
 //   (3c) `post`: the authorization targets `toDistrict` or the LOCKED district ⇒ `FieldWorkerAuthorizationStaleError`;
+//   (3d) `kyc_completed` / `activated`: the authorization targets the LOCKED district (13.1a AD3 — the gate read the district
+//        BEFORE the lock; a concurrent move would write a false target into an append-only log) ⇒ `FieldWorkerAuthorizationStaleError`;
 //   (4)  the reason (suspend, terminate, post) ⇒ `FieldWorkerReasonInvalidError`;
 //   (5)  `terminate`: the IST bounds — not after today, not before the registration day ⇒ `FieldWorkerEndedOnInvalidError`.
 
@@ -65,6 +69,9 @@ export type { FieldWorkerTransitionResult, ProjectFieldWorkerGenesisResult } fro
 
 /** The ONE permission key whose verified result `registerFieldWorker` accepts (QE10). */
 export const FIELD_WORKER_REGISTER_PERMISSION_KEY = 'field_worker.register';
+
+/** The ONE permission key whose verified result `recordFieldWorkerKycCompleted` and `activateFieldWorker` accept (Story 13.1a AD3, AD6). */
+export const FIELD_WORKER_APPROVE_PERMISSION_KEY = 'field_worker.approve';
 
 /** What every command takes. Human only: `actor` ∈ {operator, trustee}, `actorId` non-null (QE7). */
 export interface FieldWorkerCommandBase {
@@ -224,6 +231,7 @@ const TRANSITION_SAVEPOINT = 'field_worker_transition';
  * SAVEPOINT → lock → (1) present → (2) legal → `guard(row)` (3…5) → build the payload → project, inside one savepoint.
  * `guard` may run SQL (terminate's NOW step) and returns the payload's extra keys. `trigger` is a constant, or is computed FROM
  * those keys — so a reason reaches the trigger only once its guard has VALIDATED it (review R3-20: ⛔ `String(<raw input>)`).
+ * `approvedByDisplay` is `activate`'s row-only snapshot (13.1a, `-447` item 2) — ⛔ a payload key.
  */
 async function runLockedTransition(
   client: pg.PoolClient,
@@ -231,6 +239,7 @@ async function runLockedTransition(
   eventType: FieldWorkerTransitionEventType,
   guard: (row: FieldWorkerLockedRow) => Promise<Record<string, unknown>> | Record<string, unknown>,
   trigger: string | ((extraPayload: Record<string, unknown>) => string),
+  approvedByDisplay?: string,
 ): Promise<FieldWorkerTransitionResult> {
   await client.query(`SAVEPOINT ${TRANSITION_SAVEPOINT}`);
   try {
@@ -250,6 +259,7 @@ async function runLockedTransition(
       actor: i.actor,
       actorId: i.actorId,
       lockedRow: row,
+      ...(approvedByDisplay === undefined ? {} : { approvedByDisplay }),
     });
     await client.query(`RELEASE SAVEPOINT ${TRANSITION_SAVEPOINT}`);
     return result;
@@ -266,39 +276,72 @@ function assertReason<T extends string>(eventType: FieldWorkerEventType, reason:
   return reason as T;
 }
 
+/** What the approval's two commands take (Story 13.1a AD3): the VERIFIED `field_worker.approve` result the gate stored. */
+export interface ApproveFieldWorkerCommandInput extends FieldWorkerCommandBase {
+  /** `request.authorizations['field_worker.approve']`, passed on unchanged — ⛔ a recomputation. ONE object for both commands. */
+  authorization: VerifiedAuthorization;
+}
+
+/** (3d) — the approval's target must be the LOCKED row's district (13.1a AD3). */
+function assertApprovalTarget(i: FieldWorkerCommandBase, authorization: FieldWorkerAuthorizationSnapshot, row: FieldWorkerLockedRow): void {
+  if (authorization.target.value !== row.district) throw new FieldWorkerAuthorizationStaleError(i.fieldWorkerId, authorization.target.value);
+}
+
 /**
- * `pending_kyc → pending_kyc`, `kyc_status → completed` — an operator confirms they have verified this person (QE8).
- * @throws FieldWorkerKycAlreadyCompletedError (+ the shared guards).
+ * `pending_kyc → pending_kyc`, `kyc_status → completed` — the approving officer accepts the identity check done at the interview
+ * (QE8; Story 13.1a AD2). Carries the verified `field_worker.approve` authorization (AD3).
+ * @throws FieldWorkerKycAlreadyCompletedError, FieldWorkerAuthorizationStaleError (+ the shared guards).
  */
 export async function recordFieldWorkerKycCompleted(
   client: pg.PoolClient,
-  i: FieldWorkerCommandBase,
+  i: ApproveFieldWorkerCommandInput,
 ): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.kyc_completed', i.actor, i.actorId);
+  const authorization = verifiedSnapshot('field_worker.kyc_completed', i.authorization, i, {
+    permissionKey: FIELD_WORKER_APPROVE_PERMISSION_KEY,
+  });
   return runLockedTransition(
     client,
     i,
     'field_worker.kyc_completed',
     (row) => {
       if (row.kycStatus === 'completed') throw new FieldWorkerKycAlreadyCompletedError(i.fieldWorkerId);
-      return {};
+      assertApprovalTarget(i, authorization, row);
+      return { authorization };
     },
     'field_worker.kyc_complete',
   );
 }
 
-/** `pending_kyc → active`, only once KYC is recorded (I5). @throws FieldWorkerKycNotCompletedError. */
-export async function activateFieldWorker(client: pg.PoolClient, i: FieldWorkerCommandBase): Promise<FieldWorkerTransitionResult> {
+export interface ActivateFieldWorkerInput extends ApproveFieldWorkerCommandInput {
+  /** The approving admin's `users.display_name`, read server-side at the act (6.11 R5; 13.1a `-447` item 2) — ⛔ a fallback. */
+  approvedByDisplay: string;
+}
+
+/**
+ * `pending_kyc → active`, only once KYC is recorded (I5). Carries the verified `field_worker.approve` authorization (13.1a AD3)
+ * and writes the approver's display-name snapshot to the row (`-447` item 2).
+ * @throws FieldWorkerKycNotCompletedError, FieldWorkerAuthorizationStaleError (+ the shared guards).
+ */
+export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFieldWorkerInput): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.activated', i.actor, i.actorId);
+  const authorization = verifiedSnapshot('field_worker.activated', i.authorization, i, {
+    permissionKey: FIELD_WORKER_APPROVE_PERMISSION_KEY,
+  });
+  if (typeof i.approvedByDisplay !== 'string' || i.approvedByDisplay.trim().length === 0) {
+    throw new FieldWorkerProjectorInputError("[field_worker.activated] the approving admin's display name is missing (6.11 R5 — no fallback)");
+  }
   return runLockedTransition(
     client,
     i,
     'field_worker.activated',
     (row) => {
       if (row.kycStatus !== 'completed') throw new FieldWorkerKycNotCompletedError(i.fieldWorkerId);
-      return {};
+      assertApprovalTarget(i, authorization, row);
+      return { authorization };
     },
     'field_worker.activate',
+    i.approvedByDisplay,
   );
 }
 

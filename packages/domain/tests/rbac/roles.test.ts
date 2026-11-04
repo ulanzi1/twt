@@ -263,6 +263,10 @@ describe('defaultRoleBundles — the seeded roles (FR-46)', () => {
     expect(holdersOf('claim.record_fraud_finding')).toEqual(['district_admin', 'super_admin']);
     // Story 13.1 (`-441` Q1 A) — the District Admin (own district) and the Pariwar Admin (the fill-in).
     expect(holdersOf('field_worker.register')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+    // Story 13.1a (`2026-11-04-446` AD6; `-443` Q4 A) — the Pariwar Admin approves; both officers read a code and see workers.
+    expect(holdersOf('field_worker.approve')).toEqual(['pariwar_admin', 'super_admin']);
+    expect(holdersOf('field_worker.read_code')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+    expect(holdersOf('field_worker.view')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
   });
 
   it('Story 6.19b (keys (1) and (7)) — claim.record_correction_letter and claim.change_correction_must_act have ONE holder each, district_admin (+ derived super_admin)', () => {
@@ -1081,5 +1085,68 @@ describe('Story 13.1 — `field_worker.register` (`2026-11-03-441` Q1 A; `-442` 
     expect(hasPermission([st], 'field_worker.register', at('Patna'), { resolver: BIHAR })).toBe(false);
     // CONTROL: the same grant DOES reach Patna under the tree for a key its bundle holds — so the refusal above is the bundle.
     expect(hasPermission([st], 'claim.approve', at('Patna'), { resolver: BIHAR })).toBe(true);
+  });
+});
+
+
+describe('Story 13.1a — `field_worker.approve` / `.read_code` / `.view` (`2026-11-04-446` AD6; WHO approves: `-443` Q4 A)', () => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const OTHER = '22222222-2222-2222-2222-222222222222';
+  const holders = (key: string) =>
+    defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+  const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
+  const BIHAR: GeoTreeResolver = {
+    contains: (a, d) => a.dimension === 'state' && a.value === 'Bihar' && (d.value === 'Patna' || d.value === 'Gaya'),
+  };
+  const da = { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' } as const;
+  const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+  const sa = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+
+  it('the holders, exactly — approve: pariwar_admin (+ super_admin); read_code and view: district_admin + pariwar_admin (+ super_admin)', () => {
+    expect(holders('field_worker.approve')).toEqual(['pariwar_admin', 'super_admin']);
+    expect(holders('field_worker.read_code')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+    expect(holders('field_worker.view')).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+    for (const role of ['state_trustee', 'trustee_panel', 'helpline_operator', 'field_worker'] as const) {
+      for (const key of ['field_worker.approve', 'field_worker.read_code', 'field_worker.view']) {
+        expect((bundleForRole(role)!.permissions as readonly string[]).includes(key), `${role} ${key}`).toBe(false);
+      }
+    }
+    expect(bundleForRole('field_worker')!.permissions).toEqual([]);
+    expect(defaultRoleBundles).toHaveLength(13);
+  });
+
+  it('approve: POSITIVE for pariwar_admin at any district and super_admin; ⛔ district_admin even in its OWN district; ⛔ another Pariwar', () => {
+    for (const d of ['Patna', 'Gaya']) expect(hasPermission([pa], 'field_worker.approve', at(d)), d).toBe(true);
+    expect(hasPermission([sa], 'field_worker.approve', at('Patna'))).toBe(true);
+    expect(hasPermission([da], 'field_worker.approve', at('Patna'))).toBe(false);
+    expect(hasPermission([{ ...pa, pariwarId: OTHER, scopeValue: OTHER }], 'field_worker.approve', at('Patna'))).toBe(false);
+  });
+
+  it.each(['field_worker.read_code', 'field_worker.view'])('%s: POSITIVE for district_admin in its OWN district (exact bytes) and FAILS in another; pariwar_admin anywhere; super_admin', (key) => {
+    expect(hasPermission([da], key, at('Patna'))).toBe(true);
+    expect(hasPermission([da], key, at('Gaya'))).toBe(false);
+    expect(hasPermission([da], key, at('patna'))).toBe(false);
+    for (const d of ['Patna', 'Gaya']) expect(hasPermission([pa], key, at(d)), d).toBe(true);
+    expect(hasPermission([sa], key, at('Gaya'))).toBe(true);
+    expect(hasPermission([{ ...pa, pariwarId: OTHER, scopeValue: OTHER }], key, at('Patna'))).toBe(false);
+  });
+
+  it('view at the PARIWAR dimension (the list with no district named, AD4 b): pariwar_admin passes; a district_admin grant does NOT', () => {
+    const pariwarTarget = { pariwarId: P, dimension: 'pariwar', value: P } as const;
+    expect(hasPermission([pa], 'field_worker.view', pariwarTarget)).toBe(true);
+    expect(hasPermission([da], 'field_worker.view', pariwarTarget)).toBe(false);
+  });
+
+  it.each(['field_worker.approve', 'field_worker.read_code', 'field_worker.view'])('%s: ⛔ state_trustee (its BUNDLE lacks it, with and without a geo tree), trustee_panel, helpline_operator, field_worker', (key) => {
+    const st = { pariwarId: P, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' } as const;
+    expect(hasPermission([st], key, at('Patna'))).toBe(false);
+    expect(hasPermission([st], key, at('Patna'), { resolver: BIHAR })).toBe(false);
+    expect(hasPermission([st], 'claim.approve', at('Patna'), { resolver: BIHAR })).toBe(true); // CONTROL: the tree reaches Patna
+    for (const role of ['trustee_panel', 'helpline_operator'] as const) {
+      expect(hasPermission([{ pariwarId: P, role, scopeDimension: 'pariwar', scopeValue: P }], key, at('Patna')), role).toBe(false);
+    }
   });
 });

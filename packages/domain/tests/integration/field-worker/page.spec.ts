@@ -146,7 +146,9 @@ describe.skipIf(!hasDatabase)('pageFieldWorkersForPariwar — the keyset page (A
 describe.skipIf(!hasDatabase)('the keyset query uses field_workers_pariwar_state_created_idx with NO Sort (AD10 — EXPLAIN, seeded + ANALYZE)', () => {
   setupLiveDb();
 
-  it('≥ 2,000 rows over ≥ 8 Pariwars and all four states: an index scan on the new index, no Sort node — first page AND a cursor page; a district page uses the index too', async () => {
+  // 20,000 rows (~625 per Pariwar and state): at ~40 rows a range the planner rightly prefers a bitmap scan + a tiny Sort (seen once
+  // under the full ci:local run), so the proof seeds a volume where the ordered index scan is the plan that matters.
+  it('≥ 2,000 rows (20,000) over ≥ 8 Pariwars and all four states: an index scan on the new index, no Sort node — first page AND a cursor page; a district page uses the index too', async () => {
     const { client } = getTx();
     const pariwars = Array.from({ length: 8 }, () => randomUUID());
     await client.query("SET LOCAL session_replication_role = 'replica'");
@@ -155,7 +157,7 @@ describe.skipIf(!hasDatabase)('the keyset query uses field_workers_pariwar_state
                                   registered_by_display, created_at, current_state, state_event_version, kyc_status, state_reason_code,
                                   district, ended_on, audit_id, approved_by_display)
        SELECT gen_random_uuid(), ($1::uuid[])[1 + (g % 8)], 'enc:v1:n', 'enc:v1:m', 'idx-' || g || '-' || gen_random_uuid(), gen_random_uuid(), 'Asha',
-              timestamptz '2026-01-01 00:00:00+00' + (g || ' minutes')::interval,
+              timestamptz '2026-01-01 00:00:00+00' + (g || ' seconds')::interval,
               s.state::field_worker_state, 1,
               (CASE WHEN s.state = 'pending_kyc' THEN 'pending' ELSE 'completed' END)::field_worker_kyc_status,
               (CASE s.state WHEN 'suspended' THEN 'under_review' WHEN 'terminated' THEN 'inactive' END)::field_worker_reason_code,
@@ -163,7 +165,7 @@ describe.skipIf(!hasDatabase)('the keyset query uses field_workers_pariwar_state
               CASE WHEN s.state = 'terminated' THEN date '2026-11-01' END,
               gen_random_uuid(),
               CASE WHEN s.state = 'pending_kyc' THEN NULL ELSE 'Meera' END
-         FROM generate_series(1, 2400) AS g
+         FROM generate_series(1, 20000) AS g
          CROSS JOIN LATERAL (SELECT (ARRAY['pending_kyc','active','suspended','terminated'])[1 + ((g / 8) % 4)] AS state) s`,
       [pariwars],
     );
@@ -178,7 +180,7 @@ describe.skipIf(!hasDatabase)('the keyset query uses field_workers_pariwar_state
     const order = ' ORDER BY created_at DESC, field_worker_id DESC LIMIT 21';
     for (const [sql, params] of [
       [base + order, [pariwars[0], 'active']],
-      [base + ` AND (created_at, field_worker_id) < ($3::timestamptz, $4::uuid)` + order, [pariwars[2], 'active', '2026-01-01 20:00:00+00', randomUUID()]],
+      [base + ` AND (created_at, field_worker_id) < ($3::timestamptz, $4::uuid)` + order, [pariwars[2], 'active', '2026-01-01 04:00:00+00', randomUUID()]],
     ] as const) {
       const text = await plan(sql, [...params]);
       expect(text, text).toContain('field_workers_pariwar_state_created_idx');

@@ -1,8 +1,12 @@
 # Trustee Panel routing note — Story 13.1a: three field-worker permissions, for the Panel to confirm
 
-> ## ⏳ AWAITING PANEL RULING — DRAFTED, NOT SENT
+> ## ⏳ AWAITING PANEL RULING — SENT (reported by BigDev, 2026-11-05)
 >
-> **Nothing is recorded here yet.** BigDev sends this note. When the Panel rules, transcribe the ruling into this block **and** into
+> **SENT.** BigDev told the session on 2026-11-05 that this note has been sent. ⚠ NOT recorded anywhere in the repo: the channel, the time, and whether the text sent is
+> identical to this file (the draft as committed at `1c3b6bce` and corrected at `b82094e8`) — the file below is kept as DRAFTED. Review round 2 amended AD10 and the Find
+> screen (decision `-448`); neither touches who holds a key, so this note's question is unchanged.
+>
+> **No ruling is recorded here yet.** When the Panel rules, transcribe the ruling into this block **and** into
 > `.decision-log.md` as a new decision id. Everything below is then kept **unedited** as the question **as it was put**
 > ([[feedback_supersede_never_reinterpret]]).
 >

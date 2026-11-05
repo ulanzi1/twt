@@ -24,8 +24,10 @@ import { ApiError } from '../../http-errors.js';
 import { AttributionCodeAllocationExhaustedError } from './attribution-code-access.js';
 
 /**
- * Story 13.1a (`-447` item 4) — a stored worker identity that cannot be read: an UNPARSEABLE envelope, or one that parses and
- * whose key unwraps but which fails local authenticated decryption (AES-GCM — tampered or corrupt). Retry never helps. → 500.
+ * Story 13.1a (`-447` item 4) — a stored worker identity that cannot be read: an UNPARSEABLE envelope, one whose wrapped key the
+ * key service rejects as THIS envelope's fault (gRPC INVALID_ARGUMENT — corrupt, or sealed under another Pariwar / class /
+ * KEK), or one whose key unwraps but which fails local authenticated decryption (AES-GCM — tampered or corrupt). Retry never
+ * helps. → 500.
  * Lives HERE, ⛔ in `field-worker-crypto.ts` (13.1's handler unit test mocks that module with ONE export — TR10).
  */
 export class FieldWorkerIdentityUnreadableError extends Error {

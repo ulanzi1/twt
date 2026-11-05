@@ -20,8 +20,8 @@
 //      failure writes only the kyc twin; a second-command failure writes BOTH twins and the whole transaction rolls back.
 //   ⚠ TR4 — a failed second command rolls back only ITS savepoint: the error MUST propagate (⛔ catch, ⛔ retry) so the
 //   `finally closeScopeTx(false)` rolls the first command back too. A half-approved worker is never committed (I2).
-// The 200 is built from the SECOND command's RETURN value (13.1 RB1). ⛔ The word that names how codes are made appears in
-// this file (the reach fence's AT9 — TR9).
+// The 200 is built from the SECOND command's RETURN value (13.1 RB1). Do NOT write the word that names how codes are made
+// anywhere in this file, not even in a comment: the reach fence (AT9, TR9) rejects it in any file that touches the door.
 
 import type { ApproveFieldWorkerResponse } from '@twt/contracts';
 import { audit, fieldWorker, ids } from '@twt/domain';

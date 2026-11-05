@@ -24,7 +24,12 @@ vi.mock('@twt/domain', async (importOriginal) => {
       ...actual.audit,
       withCompensatingAudit: vi.fn(async (pool: Parameters<typeof actual.audit.withCompensatingAudit>[0], args: Parameters<typeof actual.audit.withCompensatingAudit>[1]) => {
         if (args.auditIntent.action === 'field_worker.code_read') {
-          if (hooks.failIntent) throw new Error('forced: the audit intent write failed');
+          if (hooks.failIntent) {
+            // The REAL wrapper, on a pool that cannot connect: `writeAuditEntry` throws inside it, so what the leg proves is the
+            // wrapper's own order (intent first, `mutate` never reached) — not a mock that throws before calling it (CR24).
+            const downPool = { connect: async () => { throw new Error('forced: the audit pool is down'); } } as unknown as typeof pool;
+            return actual.audit.withCompensatingAudit(downPool, args);
+          }
           if (hooks.pause !== null) {
             const pause = hooks.pause;
             return actual.audit.withCompensatingAudit(pool, {
@@ -49,6 +54,7 @@ vi.mock('../../../src/modules/field-worker/attribution-code-access.js', async (i
 const { fieldWorker, ids } = await import('@twt/domain');
 const { hasDatabase } = await import('../_setup.js');
 const { moveTestFieldWorker } = await import('../_field-worker-fixture.js');
+const { payloadHash } = await import('../../../src/modules/field-worker/write-support.js');
 const { readAttributionCodeForRequest } = await import('../../../src/modules/field-worker/attribution-code-access.js');
 const { createHarness, errOf, json } = await import('./_registration-harness.js');
 type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -158,6 +164,10 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
       hooks.failIntent = false;
     }
     expect(doorSpy).not.toHaveBeenCalled();
+    expect(await codeLines(p, id)).toEqual([]); // no intent line, no compensating twin: nothing was written
+    // CONTROL — with the pool up the same request reads the door (the spy is live) and writes its line.
+    expect((await h.code(admin.client, p, id)).statusCode).toBe(200);
+    expect(doorSpy).toHaveBeenCalledTimes(1);
   });
 
   it('an ACTIVE worker the door returns null for ⇒ 500 (an integrity fault — never a made-up code)', async () => {
@@ -165,7 +175,20 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
     doorSpy.mockResolvedValueOnce(null);
     const r = await h.code(admin.client, p, id);
     expect(r.statusCode).toBe(500);
+    expect(r.body).not.toContain(await storedCode(id));
     expect(r.body).not.toMatch(/"code":"\d{6}"/);
+    // The intent line was written FIRST and the failure compensated it (CR24): the ledger never claims a read that gave nothing.
+    expect((await codeLines(p, id)).map((l) => l.action)).toEqual(['field_worker.code_read', 'field_worker.code_read_rolled_back']);
+  });
+
+  it('CR18 — the audit line’s hash input is exactly { field_worker_id, district }: it equals the hash of that shape, and a shape that also holds the code does not match', async () => {
+    const { p, admin, id } = await activeWorker();
+    expect((await h.code(admin.client, p, id)).statusCode).toBe(200);
+    const stored = (
+      await h.td.pool.query<{ request_payload_hash: string }>("SELECT request_payload_hash FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'field_worker.code_read'", [p])
+    ).rows.map((x) => x.request_payload_hash);
+    expect(stored).toEqual([payloadHash({ field_worker_id: id, district: 'Patna' })]);
+    expect(payloadHash({ field_worker_id: id, district: 'Patna', code: await storedCode(id) })).not.toBe(stored[0]);
   });
 
   it('the holders: a District Admin of the worker’s district, a Pariwar Admin, a super_admin ⇒ 200; a District Admin of another district, a caller without the key ⇒ 403; unknown / other-Pariwar ⇒ the same 403', async () => {

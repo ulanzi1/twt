@@ -9,8 +9,9 @@ import { fieldWorker, ids, rbac } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { makeClient, hasDatabase } from '../_setup.js';
-import { moveTestFieldWorker } from '../_field-worker-fixture.js';
-import { createHarness, errOf, json, type Harness, type Json } from './_registration-harness.js';
+import { approveTestFieldWorker, moveTestFieldWorker } from '../_field-worker-fixture.js';
+import { payloadHash } from '../../../src/modules/field-worker/write-support.js';
+import { createHarness, errOf, json, waitForBlockedBy, type Harness, type Json } from './_registration-harness.js';
 
 const NAME = 'Approvable Distinctive-Surname';
 const MOBILE_DIGITS = '9876501234';
@@ -100,6 +101,16 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
     const w = await row(id);
     expect(w).toMatchObject({ current_state: 'active', kyc_status: 'completed', approved_by_display: 'Meera Approver', audit_id: lines[1]!.id });
 
+    // CR18 (AC5 / AD7): each line’s hash input is exactly { field_worker_id, district } — equal to the hash of that shape; a shape that also
+    // holds a name or a mobile would hash differently (a digest of a payload holding personal data passes a literal-search sweep).
+    const stored = await q<{ action: string; request_payload_hash: string }>(
+      "SELECT action, request_payload_hash FROM audit_log_entries WHERE pariwar_id = $1 AND action IN ('field_worker.kyc_completed', 'field_worker.activated') ORDER BY seq",
+      [p],
+    );
+    expect(stored.map((x) => x.request_payload_hash)).toEqual([payloadHash({ field_worker_id: id, district: 'Patna' }), payloadHash({ field_worker_id: id, district: 'Patna' })]);
+    expect(payloadHash({ field_worker_id: id, district: 'Patna', name: NAME })).not.toBe(stored[0]!.request_payload_hash);
+    expect(payloadHash({ field_worker_id: id, district: 'Patna', mobile: `+91${MOBILE_DIGITS}` })).not.toBe(stored[0]!.request_payload_hash);
+
     // No name, mobile or code in a payload, an audit row, the idempotency record, the response or the logs.
     const codeRow = await q<{ code: string }>('SELECT code FROM field_worker_attribution_codes WHERE field_worker_id = $1', [id]);
     const sweep = [
@@ -137,7 +148,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
     }
   });
 
-  it('AC2 (b): an unknown id, another Pariwar’s worker, a worker the caller cannot reach ⇒ the SAME 403 (no existence oracle) — a Pariwar Admin included', async () => {
+  it('AC2 (b): an unknown id, another Pariwar’s worker, and a District Admin of ANOTHER district ⇒ the SAME 403 (no existence oracle) — a Pariwar Admin included', async () => {
     const { p, admin } = await setup();
     const other = await setup();
     const unknown = await h.approve(admin.client, p, randomUUID());
@@ -146,7 +157,14 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       expect(r.statusCode, r.body).toBe(403);
       expect(errOf(r).code).toBe(errOf(unknown).code);
     }
-    // A District Admin of Gaya cannot reach a Patna worker either — and a district_admin bundle lacks the key anyway (c).
+    // A District Admin of Gaya cannot reach a Patna worker either: the SAME 403 (a district_admin bundle lacks the key anyway — (c) —
+    // so this is the answer, not the reason; what matters is that it does not differ from the unknown-id answer).
+    const gayaAdmin = await h.actor(p, 'district_admin', 'district', 'Gaya');
+    const patnaWorker = await h.registered(admin.client, p, body('Patna', '+919876508888'));
+    const other_district = await h.approve(gayaAdmin.client, p, patnaWorker);
+    expect(other_district.statusCode, other_district.body).toBe(403);
+    expect(errOf(other_district).code).toBe(errOf(unknown).code);
+    expect((await events(patnaWorker)).map((e) => e.event_type)).toEqual(['field_worker.registered']);
     expect((await events(other.id)).map((e) => e.event_type)).toEqual(['field_worker.registered']);
   });
 
@@ -231,10 +249,63 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
     const loser = results.find((r) => r.statusCode === 409)!;
     expect(errOf(loser).code).toBe('field_worker.illegal_transition');
     expect((await events(id)).map((e) => e.event_type)).toEqual(['field_worker.registered', 'field_worker.kyc_completed', 'field_worker.activated']);
-    // A loser that reached the first command (the lock race) wrote ONLY the kyc twin — never an `activated` line for an act not attempted.
+    // Two requests can serialize (the loser's pre-read sees `active`: it wrote NOTHING) or race (it reached the first command and wrote
+    // the kyc intent + its twin) — both are legal, and the forced race is the next test. What holds in BOTH: one `activated` line
+    // and never an `activated_rolled_back` (an act not attempted), and every kyc intent beyond the winner's has its twin.
     const actions = (await approvalAudit(p, id)).map((l) => l.action);
     expect(actions.filter((a) => a === 'field_worker.activated')).toHaveLength(1);
     expect(actions).not.toContain('field_worker.activated_rolled_back');
+    expect(actions.filter((a) => a === 'field_worker.kyc_completed')).toHaveLength(1 + actions.filter((a) => a === 'field_worker.kyc_completed_rolled_back').length);
+  });
+
+  // CR21 (a) — Task 6.2's loser, FORCED: it passes the pre-read (the winner has not committed), parks on the first command's row lock,
+  // and wakes to an `active` worker. Its kyc intent is written, the first command refuses, and ONLY the kyc twin follows.
+  it('AC3 (b), forced: the loser reaches the FIRST command and waits on the row lock while another approval commits ⇒ 409 illegal_transition, ONLY the kyc twin, no `activated` line from it', async () => {
+    const { p, admin, id } = await setup();
+    const winner = await h.td.pool.connect();
+    try {
+      await winner.query('BEGIN');
+      await approveTestFieldWorker(winner, p, ids.fieldWorkerId(id)); // the winner's pair: holds the row lock until COMMIT, writes no audit line
+      const pid = (await winner.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      const pending = h.approve(admin.client, p, id);
+      await waitForBlockedBy(h.td.pool, pid);
+      await winner.query('COMMIT');
+      const r = await pending;
+      expect(r.statusCode, r.body).toBe(409);
+      expect(errOf(r).code).toBe('field_worker.illegal_transition');
+    } finally {
+      winner.release();
+    }
+    expect((await events(id)).map((e) => e.event_type)).toEqual(['field_worker.registered', 'field_worker.kyc_completed', 'field_worker.activated']);
+    expect((await approvalAudit(p, id)).map((l) => l.action)).toEqual(['field_worker.kyc_completed', 'field_worker.kyc_completed_rolled_back']);
+  });
+
+  // CR21 (b) — the same key while the first request is IN FLIGHT, on two live connections (the unit test uses a stubbed store).
+  it('AC2 (e), in flight: the same key sent while the first request is parked on the row lock ⇒ 409 field_worker.idempotency_in_progress and nothing written; the first then completes and the key replays its 200', async () => {
+    const { p, admin, id } = await setup();
+    const key = randomUUID();
+    const holder = await h.td.pool.connect();
+    let first: ReturnType<typeof h.approve>;
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT 1 FROM field_workers WHERE field_worker_id = $1 FOR UPDATE', [id]); // parks the first request on its first command
+      const pid = (await holder.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      first = h.approve(admin.client, p, id, key);
+      await waitForBlockedBy(h.td.pool, pid);
+      const second = await h.approve(admin.client, p, id, key);
+      expect(second.statusCode, second.body).toBe(409);
+      expect(errOf(second).code).toBe('field_worker.idempotency_in_progress');
+      expect((await events(id)).length).toBe(1); // neither request has written an event yet
+      await holder.query('COMMIT');
+    } finally {
+      holder.release();
+    }
+    const done = await first;
+    expect(done.statusCode, done.body).toBe(200);
+    expect((await events(id)).length).toBe(3);
+    const replay = await h.approve(admin.client, p, id, key);
+    expect(json(replay)).toEqual(json(done)); // the claim was kept and then recorded
+    expect((await events(id)).length).toBe(3);
   });
 
   it('AC3 (c): the worker MOVED between the gate and the command (the move commits while the request waits on the row lock) ⇒ 409 field_worker.authorization_stale, nothing written; the kyc intent has its twin', async () => {
@@ -244,14 +315,9 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       await mover.query('BEGIN');
       await moveTestFieldWorker(mover, p, ids.fieldWorkerId(id), 'Gaya'); // holds the row lock until COMMIT
       const pending = h.approve(admin.client, p, id);
-      // Wait until the request is blocked on the row lock (its loader read the COMMITTED district — Patna — and passed the gate).
-      for (let i = 0; i < 100; i += 1) {
-        const waiting = await h.td.pool.query(
-          "SELECT count(*)::int AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE '%FROM field_workers%FOR UPDATE%'",
-        );
-        if ((waiting.rows[0] as { n: number }).n > 0) break;
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
+      // Wait until THIS request is blocked on the mover's row lock (its loader read the COMMITTED district — Patna — and passed the
+      // gate). Throws on timeout and matches only a backend blocked by the mover (CR22).
+      await waitForBlockedBy(h.td.pool, (await mover.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid);
       await mover.query('COMMIT');
       const r = await pending;
       expect(r.statusCode, r.body).toBe(409);

@@ -11,6 +11,7 @@
 import { randomUUID } from 'node:crypto';
 import { PassThrough } from 'node:stream';
 
+import type { Pool } from 'pg';
 import { expect } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
@@ -152,6 +153,22 @@ export async function createHarness(): Promise<Harness> {
   }
 
   return { td, deps, app, logs: () => logged, freshPariwar, actor, addGrant, listDistrict, seedTree, register, approve, code, identity, list, districts, registered, cleanup };
+}
+
+/**
+ * Wait until some backend is blocked by the transaction running as `blockerPid` (`pg_blocking_pids`) — a race leg holds a row lock on
+ * a connection it owns and needs to know the REQUEST is parked behind it. ⛔ Not "any backend waiting on a lock in the shared
+ * database" (another spec file's waiter would satisfy that), and ⛔ never a silent fall-through: it THROWS on timeout, so a
+ * request that never reached the lock fails the leg instead of turning it into a sleep (review round 2, CR22).
+ */
+export async function waitForBlockedBy(pool: Pool, blockerPid: number, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const r = await pool.query<{ n: number }>('SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))', [blockerPid]);
+    if (r.rows[0]!.n > 0) return;
+    if (Date.now() > deadline) throw new Error(`no backend became blocked by backend ${blockerPid} within ${timeoutMs} ms`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 export const json = (r: { body: string }): Json => JSON.parse(r.body) as Json;

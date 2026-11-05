@@ -90,6 +90,13 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
     requirePermissionHook(deps, key, { dimension: 'district', resolveValue: fieldWorkerGateDistrict }),
   ];
 
+  // DELIBERATE (checklist family 9): NO permission key on this route — a session plus a grant in this Pariwar is the whole gate.
+  // WHY: it returns only the Pariwar's recorded district NAMES (curated labels: the geo tree's district nodes, or the listed
+  // workplace districts — never member-typed text), which the register screen's picker needs before the officer has chosen
+  // anything a key could gate on (AD4(c), AC8, decision `-446` item 4). No worker, mobile or count is in the response, so there
+  // is nothing to audit or withhold. RE-EXAMINE when: (a) the response gains a per-district count or anything about a worker;
+  // (b) a role whose holders must not see the district list gets a grant in a Pariwar (the floor is "any grant here", so it
+  // admits every role — Story 13.3 gives the field-worker role a Pariwar grant); (c) a district name can be member-typed.
   r.get(
     '/api/v1/p/:pariwarId/field-workers/districts',
     {

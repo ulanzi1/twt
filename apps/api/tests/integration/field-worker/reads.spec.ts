@@ -14,6 +14,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 const hooks = vi.hoisted(() => ({
   afterLoad: null as null | (() => Promise<void>),
   order: [] as string[],
+  /** An audit action whose intent write must FAIL: the REAL wrapper is handed a pool that cannot connect (CR17). */
+  breakAudit: null as null | string,
 }));
 
 vi.mock('@twt/domain', async (importOriginal) => {
@@ -35,15 +37,18 @@ vi.mock('@twt/domain', async (importOriginal) => {
     },
     audit: {
       ...actual.audit,
-      withCompensatingAudit: vi.fn(async (pool: Parameters<typeof actual.audit.withCompensatingAudit>[0], args: Parameters<typeof actual.audit.withCompensatingAudit>[1]) =>
-        actual.audit.withCompensatingAudit(pool, {
+      withCompensatingAudit: vi.fn(async (pool: Parameters<typeof actual.audit.withCompensatingAudit>[0], args: Parameters<typeof actual.audit.withCompensatingAudit>[1]) => {
+        // A pool that cannot connect: `writeAuditEntry` throws inside the REAL wrapper, so what is proven is the wrapper's own
+        // fail-closed order (intent first, `mutate` never reached) — not a mock that throws before calling it.
+        const downPool = { connect: async () => { throw new Error('forced: the audit pool is down'); } } as unknown as typeof pool;
+        return actual.audit.withCompensatingAudit(hooks.breakAudit === args.auditIntent.action ? downPool : pool, {
           ...args,
           mutate: async (ctx) => {
             hooks.order.push(`mutate:${args.auditIntent.action}`);
             return args.mutate(ctx);
           },
-        }),
-      ),
+        });
+      }),
     },
   };
 });
@@ -51,6 +56,8 @@ vi.mock('@twt/domain', async (importOriginal) => {
 const { fieldWorker, ids } = await import('@twt/domain');
 const { hasDatabase, makeClient } = await import('../_setup.js');
 const { moveTestFieldWorker } = await import('../_field-worker-fixture.js');
+const { payloadHash } = await import('../../../src/modules/field-worker/write-support.js');
+const { getCollectedRoutes } = await import('../../../src/route-registry.js');
 const { createHarness, errOf, json } = await import('./_registration-harness.js');
 type Harness = Awaited<ReturnType<typeof createHarness>>;
 
@@ -73,6 +80,12 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
         [p, action],
       )
       .then((r) => r.rows);
+
+  /** The stored `request_payload_hash` of every audit line of `action` in the Pariwar, in order (CR18). */
+  const auditHashes = (p: string, action: string) =>
+    h.td.pool
+      .query<{ request_payload_hash: string }>('SELECT request_payload_hash FROM audit_log_entries WHERE pariwar_id = $1 AND action = $2 ORDER BY seq', [p, action])
+      .then((r) => r.rows.map((x) => x.request_payload_hash));
 
   async function pariwar(districts: string[] = ['Patna', 'Gaya']) {
     const p = h.freshPariwar();
@@ -162,6 +175,44 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
       const at = hooks.order.indexOf('mutate:field_worker.list_viewed');
       expect(at).toBeGreaterThanOrEqual(0);
       expect(hooks.order.indexOf('decrypt')).toBeGreaterThan(at);
+    });
+
+    // CR17 — the REAL wrapper, handed a pool that cannot connect: the intent line cannot be written, so nothing may be decrypted.
+    it('CR17 — a FAILED audit write releases NOTHING: with the audit pool down the list answers 5xx, makes no key-service call, returns no name and leaves no line — CONTROL: with the pool up it decrypts', async () => {
+      const { p, admin } = await pariwar();
+      await reg(h, admin.client, p, 'Unaudited List-Worker');
+      const kms = h.deps.encryption.kms;
+      const down = vi.spyOn(kms, 'decryptDek');
+      hooks.breakAudit = 'field_worker.list_viewed';
+      try {
+        const r = await h.list(admin.client, p, { state: 'pending_kyc' });
+        expect(r.statusCode, r.body).toBeGreaterThanOrEqual(500);
+        expect(r.body).not.toMatch(/Unaudited/);
+        expect(down).not.toHaveBeenCalled();
+      } finally {
+        hooks.breakAudit = null;
+        down.mockRestore();
+      }
+      expect(await lines(p, 'field_worker.list_viewed')).toEqual([]);
+      const up = vi.spyOn(kms, 'decryptDek');
+      try {
+        const ok = await h.list(admin.client, p, { state: 'pending_kyc' });
+        expect(ok.statusCode, ok.body).toBe(200);
+        expect(ok.body).toMatch(/Unaudited/);
+        expect(up).toHaveBeenCalled();
+      } finally {
+        up.mockRestore();
+      }
+    });
+
+    it('CR18 — the audit line’s hash input is exactly { state, district, limit, cursor }: it equals the hash of that shape, and a shape that also holds a name does not match', async () => {
+      const { p, admin } = await pariwar();
+      await reg(h, admin.client, p, 'Hash Shape-Worker');
+      const r = await h.list(admin.client, p, { state: 'pending_kyc', district: 'Patna', limit: '7' });
+      expect(r.statusCode, r.body).toBe(200);
+      const stored = await auditHashes(p, 'field_worker.list_viewed');
+      expect(stored).toEqual([payloadHash({ state: 'pending_kyc', district: 'Patna', limit: 7, cursor: null })]);
+      expect(payloadHash({ state: 'pending_kyc', district: 'Patna', limit: 7, cursor: null, name: 'Hash Shape-Worker' })).not.toBe(stored[0]);
     });
 
     it('the cursor walks every row exactly once with a registration BETWEEN pages; two pages write two lines with their own ids', async () => {
@@ -264,6 +315,34 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
         expect(r.body).not.toMatch(/Faulty/);
       }
     });
+    // CR21 (c) / Task 8.2 — "a key-service fault on ONE row of 25": a FULL page, the fault in the middle. The whole response fails (no partial
+    // names, no cursor), and the page stops asking the key service once it has failed (the concurrent claims after it are not all issued).
+    it('CR21 — on a FULL page of 25, a key-service fault on the 13th decrypt fails the WHOLE page (503, no name, no cursor) and the remaining decrypts are not all attempted', async () => {
+      const { p, admin } = await pariwar();
+      for (let i = 0; i < 25; i += 1) await reg(h, admin.client, p, `Fullpage Worker-${String(i).padStart(2, '0')}`);
+      const kms = h.deps.encryption.kms;
+      const real = kms.decryptDek.bind(kms);
+      let n = 0;
+      const spy = vi.spyOn(kms, 'decryptDek').mockImplementation(async (...args: Parameters<typeof kms.decryptDek>) => {
+        n += 1;
+        if (n === 13) throw new Error('kms unavailable');
+        return real(...args);
+      });
+      try {
+        const r = await h.list(admin.client, p, { state: 'pending_kyc', limit: '25' });
+        expect(r.statusCode, r.body).toBe(503);
+        expect(errOf(r).code).toBe('field_worker.decrypt_unavailable');
+        expect(r.body).not.toMatch(/Fullpage|next_cursor/);
+        expect(n).toBeGreaterThanOrEqual(13);
+        expect(n, 'every one of the 25 decrypts was still attempted after the failure').toBeLessThan(25);
+      } finally {
+        spy.mockRestore();
+      }
+      // CONTROL — the same page with the key service healthy returns all 25 names.
+      const ok = await h.list(admin.client, p, { state: 'pending_kyc', limit: '25' });
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect((json(ok) as { items: unknown[] }).items).toHaveLength(25);
+    });
   });
 
   describe('the identity (AC7)', () => {
@@ -313,6 +392,63 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
       expect(errOf(r).code).toBe('field_worker.identity_unreadable');
     });
 
+    it('CR17 — the line is written BEFORE the first decrypt (the name and the mobile): the read’s mutate starts, then the KMS is called', async () => {
+      const { p, admin } = await pariwar();
+      const id = await reg(h, admin.client, p, 'Order Identity-Worker');
+      hooks.order.length = 0;
+      const kms = h.deps.encryption.kms;
+      const original = kms.decryptDek.bind(kms);
+      const spy = vi.spyOn(kms, 'decryptDek').mockImplementation(async (...args: Parameters<typeof kms.decryptDek>) => {
+        hooks.order.push('decrypt');
+        return original(...args);
+      });
+      try {
+        expect((await h.identity(admin.client, p, id)).statusCode).toBe(200);
+      } finally {
+        spy.mockRestore();
+      }
+      const at = hooks.order.indexOf('mutate:field_worker.identity_viewed');
+      expect(at).toBeGreaterThanOrEqual(0);
+      expect(hooks.order.filter((x) => x === 'decrypt').length).toBeGreaterThanOrEqual(2); // the name AND the mobile
+      expect(hooks.order.indexOf('decrypt')).toBeGreaterThan(at);
+    });
+
+    it('CR17 — a FAILED audit write releases NOTHING: with the audit pool down the identity answers 5xx, makes no key-service call, returns no name or mobile and leaves no line — CONTROL: with the pool up it decrypts', async () => {
+      const { p, admin } = await pariwar();
+      const id = await reg(h, admin.client, p, 'Unaudited Identity-Worker');
+      const kms = h.deps.encryption.kms;
+      const down = vi.spyOn(kms, 'decryptDek');
+      hooks.breakAudit = 'field_worker.identity_viewed';
+      try {
+        const r = await h.identity(admin.client, p, id);
+        expect(r.statusCode, r.body).toBeGreaterThanOrEqual(500);
+        expect(r.body).not.toMatch(/Unaudited|\+91/);
+        expect(down).not.toHaveBeenCalled();
+      } finally {
+        hooks.breakAudit = null;
+        down.mockRestore();
+      }
+      expect(await lines(p, 'field_worker.identity_viewed')).toEqual([]);
+      const up = vi.spyOn(kms, 'decryptDek');
+      try {
+        const ok = await h.identity(admin.client, p, id);
+        expect(ok.statusCode, ok.body).toBe(200);
+        expect(up).toHaveBeenCalled();
+      } finally {
+        up.mockRestore();
+      }
+    });
+
+    it('CR18 — the audit line’s hash input is exactly { field_worker_id, district }: it equals the hash of that shape, and a shape that also holds a name or a mobile does not match', async () => {
+      const { p, admin } = await pariwar();
+      const id = await reg(h, admin.client, p, 'Hash Identity-Worker');
+      expect((await h.identity(admin.client, p, id)).statusCode).toBe(200);
+      const stored = await auditHashes(p, 'field_worker.identity_viewed');
+      expect(stored).toEqual([payloadHash({ field_worker_id: id, district: 'Patna' })]);
+      expect(payloadHash({ field_worker_id: id, district: 'Patna', name: 'Hash Identity-Worker' })).not.toBe(stored[0]);
+      expect(payloadHash({ field_worker_id: id, district: 'Patna', mobile: '+919876540000' })).not.toBe(stored[0]);
+    });
+
     it('R2 — a MOVE committed between the gate’s loader and the read ⇒ 409 field_worker.authorization_stale, no line, nothing decrypted', async () => {
       const { p, admin } = await pariwar();
       const id = await reg(h, admin.client, p, 'Moving Identity-Worker');
@@ -333,6 +469,35 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
       expect(errOf(r).code).toBe('field_worker.authorization_stale');
       expect(r.body).not.toMatch(/Moving/);
       expect(await lines(p, 'field_worker.identity_viewed')).toEqual([]);
+    });
+  });
+
+  // CR20 (AD5) — the three personal-data reads are on the named `read` tier. The test environment sets every tier's ceiling to the same
+  // large number, so a value comparison between tiers would pass vacuously; what CAN fail is the drift the finding names — the
+  // `config: { rateLimit }` line dropped in a refactor (the route silently falls back to the global ceiling).
+  describe('the rate limits (AD5)', () => {
+    it('CR20 — list, identity and code each declare ONE shared `read` rate-limit config wired to the read ceiling and the per-session key; approve and districts declare none (the global ceiling only)', () => {
+      const routes = getCollectedRoutes(h.app);
+      expect(routes.length, 'the collected route table is empty — the registry is not installed on this app').toBeGreaterThan(0);
+      const base = '/api/v1/p/:pariwarId/field-workers';
+      const cfg = (method: string, url: string) => {
+        const r = routes.find((x) => x.method === method && x.url === url);
+        expect(r, `route not found: ${method} ${url}`).toBeDefined();
+        return (r!.config as { rateLimit?: { max?: unknown; keyGenerator?: unknown } } | undefined)?.rateLimit;
+      };
+      const list = cfg('GET', base);
+      const identity = cfg('GET', `${base}/:fieldWorkerId`);
+      const code = cfg('GET', `${base}/:fieldWorkerId/code`);
+      expect(list, 'GET field-workers declares no rateLimit').toBeDefined();
+      expect(identity, 'GET field-workers/:id declares no rateLimit').toBeDefined();
+      expect(code, 'GET field-workers/:id/code declares no rateLimit').toBeDefined();
+      expect(identity).toBe(list); // ONE `namedRateLimits(deps).read` object per module registration — object identity, not a value
+      expect(code).toBe(list);
+      expect(list!.max).toBe(h.deps.config.readRateMax);
+      expect(typeof list!.keyGenerator).toBe('function'); // per SESSION, not per IP
+      // Parity with registration (13.1): these two inherit only the global per-IP ceiling. Recorded, not endorsed — a change here is a decision.
+      expect(cfg('POST', `${base}/:fieldWorkerId/approve`)).toBeUndefined();
+      expect(cfg('GET', `${base}/districts`)).toBeUndefined();
     });
   });
 

@@ -13,8 +13,13 @@ const EN: Record<string, string> = {
   // ── Shared ──
   'fw.loading': 'Loading…',
   'fw.retry': 'Try again',
+  // The 403 line differs by screen (review CR11): what a refusal means depends on what the admin was doing.
   'fw.noAccess': 'You do not have access to this. A District Admin can act only in their own district; approving is for a Pariwar Admin.',
+  'fw.noAccessRegister': 'You do not have access to register workers here. A District Admin can register only in their own district.',
+  'fw.noAccessFind': 'You do not have access to this district’s workers. Choose a district you manage, or ask a Pariwar Admin.',
+  'fw.noAccessCode': 'You do not have access to give out this worker’s code. A District Admin can do this only in their own district.',
   'fw.noAccessDistrict': 'Choose a district you manage. Only a Pariwar Admin can see every district at once.',
+  'fw.forName': 'for {name}',
   'fw.signIn': 'Your session has ended. Redirecting to sign in…',
   'fw.unknownError': 'Something went wrong ({code}). Try again; if it keeps happening, tell the maintainer.',
   'fw.state.pending_kyc': 'Awaiting approval',
@@ -46,7 +51,7 @@ const EN: Record<string, string> = {
   'fw.register.mobileRequired': 'Enter the worker’s mobile number.',
 
   // ── Errors (the registration's codes) ──
-  'fw.err.keyRequired': 'The request was incomplete. Press Register again.',
+  'fw.err.keyRequired': 'The request was incomplete. Try again.',
   'fw.err.inProgress': 'This is still being processed. Wait a moment and try again.',
   'fw.err.mobileTaken': 'A field worker with this mobile number is already registered in this Pariwar.',
   'fw.err.nameInvalid': 'This name cannot be used. Use letters, without symbols that do not show.',
@@ -55,6 +60,11 @@ const EN: Record<string, string> = {
   'fw.err.codesExhausted': 'No code could be set aside just now. Try again later.',
   'fw.err.displayName': 'Your admin account has no display name yet, so this cannot be recorded. Ask the maintainer to add one.',
   'fw.err.validation': 'Something in the form is not valid. Check each field.',
+  'fw.err.notFound': 'This worker could not be found. Reload the list and try again.',
+  'fw.err.changedMeanwhile': 'This worker was changed at the same moment by someone else. Reload and try again.',
+  'fw.err.kycNotDone': 'The identity check could not be recorded for this worker. Reload the list and try again.',
+  'fw.err.cursorInvalid': 'The list position is no longer valid. Load the list again.',
+  'fw.err.rateLimited': 'Too many requests just now. Wait a moment and try again.',
 
   // ── Awaiting approval ──
   'fw.approvals.title': 'Workers awaiting approval',
@@ -63,41 +73,48 @@ const EN: Record<string, string> = {
   'fw.approvals.review': 'Review',
   'fw.approvals.reviewNamed': 'Review {name}',
   'fw.approvals.approve': 'Approve',
-  'fw.approvals.approveNamed': 'Approve {name}',
   'fw.approvals.approving': 'Approving…',
   'fw.approvals.approved': '{name} is approved and active.',
+  'fw.approvals.failedNamed': 'Could not approve {name}. {reason}',
   'fw.approvals.alreadyDone': 'This worker is already approved, or is no longer awaiting approval.',
   'fw.approvals.moved': 'This worker was moved to another district meanwhile. Reload and try again.',
   'fw.approvals.close': 'Close',
 
   // ── Shared list ──
-  'fw.list.error': 'Could not load the workers.',
   'fw.list.more': 'Load more',
   'fw.list.moreShown': '{n} more workers shown.',
   'fw.list.moreShownOne': '1 more worker shown.',
   'fw.list.noMore': 'No more workers.',
   'fw.list.moreError': 'Could not load more workers. Try again.',
+  'fw.list.refreshError': 'Could not refresh the workers. The list below may be out of date.',
   'fw.list.keyUnavailable': 'The key service is unavailable just now. Try again shortly.',
   'fw.list.unreadable': 'A worker’s stored details cannot be read. Do not approve; tell the maintainer.',
 
   // ── Detail ──
   'fw.detail.title': 'Worker details',
   'fw.detail.mobile': 'Mobile',
+  'fw.detail.state': 'Status',
+  'fw.detail.registration': 'Registration',
+  'fw.detail.approval': 'Approval',
   'fw.detail.approvedBy': 'Approved by {name}',
 
   // ── Find a worker ──
   'fw.find.title': 'Find a worker',
-  'fw.find.intro': 'Choose a district to see its active workers. Show a worker’s code only to read it to them, when they ask.',
+  'fw.find.intro':
+    'Choose a district to see its active workers. Check a worker’s details with them first, then show their code, only to read it to them when they ask. Each look at the details or the code is recorded.',
+  'fw.find.check': 'Check details',
   'fw.find.chooseFirst': 'Choose a district to see its workers.',
   'fw.find.empty': 'No active workers in this district.',
 
   // ── The code ──
   'fw.code.show': 'Show code',
-  'fw.code.showNamed': 'Show the code of {name}',
   'fw.code.hide': 'Hide code',
   'fw.code.loading': 'Fetching the code…',
   'fw.code.readAloud': 'For reading to the worker only. It hides itself after a minute, and each look is recorded.',
   'fw.code.label': 'Code: {spelled}',
+  // The persistent live region — ⛔ never the digits (review CR6).
+  'fw.code.liveShown': 'Code shown for {name}. It hides in {seconds} seconds.',
+  'fw.code.liveHidden': 'Code hidden.',
   'fw.code.notApproved': 'This worker is not approved yet, so they have no code to give.',
   'fw.code.suspended': 'This worker is suspended. Their code cannot be given out until they are reinstated.',
   'fw.code.ended': 'This worker’s engagement has ended. Their code is not given out.',

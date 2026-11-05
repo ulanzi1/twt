@@ -7,4 +7,4 @@ export { FindWorkerPage } from './FindWorkerPage.js';
 export { RegisterFieldWorkerPage } from './RegisterFieldWorkerPage.js';
 export { WorkerDetail } from './WorkerDetail.js';
 export { codeUnavailableText, fieldWorkerGuidance, spellDigits } from './derive.js';
-export { FIELD_WORKER_EN_KEYS, resolveEn as fieldWorkersEn } from './i18n-en.js';
+export { FIELD_WORKER_EN_KEYS } from './i18n-en.js';

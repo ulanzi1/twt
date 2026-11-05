@@ -3003,14 +3003,22 @@ export function useWithdrawModule(pariwarId: string, moduleId: string) {
 }
 
 // ── Story 13.1a — the FIELD-WORKER console ───────────────────────────────────────────────────────────────────────────────
-// ⛔ Hooks for the registration and the code read: the register page calls `api.registerFieldWorker` itself so no submitted name or
+// ⛔ NO hook for the registration or the code read: the register page calls `api.registerFieldWorker` itself so no submitted name or
 // mobile is kept in TanStack's MutationCache after the page is left (review R5), and the code reveal calls `api.readFieldWorkerCode`
 // itself so a code never enters any cache (AD13; review R4 — a generation token drops a late answer). The list pages hold NAMES while
-// open (the default `gcTime: 0` drops them on unmount); the identity query is removed on close.
+// open (the client default `gcTime: 0` drops them on unmount); the identity query is removed on close, on approve and when another
+// worker or district is chosen (WorkerDetail, ApprovalsPage, FindWorkerPage).
+//
+// ⛔ EXPLICITLY OPTED OUT OF BACKGROUND REFETCHING — the list and the identity reads (the `useNomineeNameCheck` trap; review CR2).
+// Every list page DECRYPTS up to 25 names and every identity read the name and the full mobile, each with an audit line: on the
+// client defaults a window focus or a reconnect would write those lines and spend those decrypts with nobody having asked (an
+// infinite list re-walks every loaded page). ⛔ Do not remove these flags to "keep it fresh": a list is refreshed by the approval
+// that changes it, or by the admin's own "Try again".
 
 const fieldWorkersRoot = (pariwarId: string) => ['field-workers', pariwarId] as const;
 export const fieldWorkersListKey = (pariwarId: string, state: import('@twt/contracts').FieldWorkerState, district: string | null) =>
-  [...fieldWorkersRoot(pariwarId), 'list', state, district ?? '*'] as const;
+  // ⛔ NOT `district ?? '*'`: a typed district `*` would share the all-districts entry (review CR13). The two shapes cannot collide.
+  [...fieldWorkersRoot(pariwarId), 'list', state, district === null ? (['all'] as const) : (['district', district] as const)] as const;
 export const fieldWorkerIdentityKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'identity', fieldWorkerId] as const;
 
 export function useFieldWorkerDistricts(pariwarId: string) {
@@ -3031,24 +3039,38 @@ export function useFieldWorkers(pariwarId: string, state: import('@twt/contracts
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled,
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
-/** One worker's identity, ONLY while a panel shows it (`fieldWorkerId` null = closed). */
-export function useFieldWorkerIdentity(pariwarId: string, fieldWorkerId: string | null) {
+/** One worker's identity — the panel mounts this hook only while it is open. */
+export function useFieldWorkerIdentity(pariwarId: string, fieldWorkerId: string) {
   return useQuery({
-    queryKey: fieldWorkerIdentityKey(pariwarId, fieldWorkerId ?? ''),
-    queryFn: () => api.getFieldWorkerIdentity(pariwarId, fieldWorkerId!),
-    enabled: fieldWorkerId !== null,
+    queryKey: fieldWorkerIdentityKey(pariwarId, fieldWorkerId),
+    queryFn: () => api.getFieldWorkerIdentity(pariwarId, fieldWorkerId),
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 
-/** Approve — the variables are an id and a key (⛔ a name or mobile); the lists refresh on success. */
+/**
+ * Approve — the variables are an id and a key (⛔ a name or mobile). The lists refresh in the background: ⛔ the mutation does NOT
+ * wait for the refresh (the approval has committed; the button must leave "Approving…" then — review CR9). A 409 that says the
+ * list is stale (already approved, or moved to another district) refreshes it too.
+ */
 export function useApproveFieldWorker(pariwarId: string) {
   const qc = useQueryClient();
+  const refreshLists = (): void => {
+    void qc.invalidateQueries({ queryKey: [...fieldWorkersRoot(pariwarId), 'list'] });
+  };
   return useMutation({
     mutationFn: (input: { fieldWorkerId: string; idempotencyKey: string }) => api.approveFieldWorker(pariwarId, input.fieldWorkerId, input.idempotencyKey),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...fieldWorkersRoot(pariwarId), 'list'] }),
+    onSuccess: refreshLists,
+    onError: (err) => {
+      if (err instanceof ApiError && (err.code === 'field_worker.illegal_transition' || err.code === 'field_worker.authorization_stale')) refreshLists();
+    },
   });
 }

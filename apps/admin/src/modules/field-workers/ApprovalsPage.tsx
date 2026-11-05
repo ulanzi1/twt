@@ -6,50 +6,88 @@
 // The approve button mints a key PER CLICK (its body is `{}`) and REUSES it only to retry that same click (TR6); `mutateAsync` per
 // act (TR12 — per-call `mutate` callbacks fire for the latest call only). Success announces the approval and the row leaves the list
 // (the list is refreshed); a 409 `illegal_transition` reads "already approved or no longer awaiting" (TR5).
+//
+// An approval can finish while the admin is reading ANOTHER worker's panel (review CR9): the panel is closed and the heading focused
+// ONLY when the finished worker is the open one; a failure for a worker whose panel is not open is said in a banner by the list.
+// A failed approval of the open worker moves focus to the heading (AC11 (d)). The identity read of a finished worker is removed.
 
+import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useRef, useState } from 'react';
 
-import { newIdempotencyKey, useApproveFieldWorker, useFieldWorkers } from '../../api/hooks.js';
+import { fieldWorkerIdentityKey, newIdempotencyKey, useApproveFieldWorker, useFieldWorkers } from '../../api/hooks.js';
 import { DistrictPicker } from './DistrictPicker.js';
 import { FieldWorkerNav } from './FieldWorkerNav.js';
 import { WorkerDetail } from './WorkerDetail.js';
 import { WorkerList } from './WorkerList.js';
 import { fieldWorkerGuidance, type Guidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { useSignInRedirect } from './sign-in.js';
+
+/** `banner`: the failed worker's panel was not open when it failed, so the words are said by the list instead. */
+type Problem = Guidance & { forId: string; name: string; banner: boolean };
 
 export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElement {
+  const qc = useQueryClient();
   const [district, setDistrict] = useState<string | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpenState] = useState<string | null>(null);
   const [announce, setAnnounce] = useState<string | null>(null);
-  const [problem, setProblem] = useState<(Guidance & { forId: string }) | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const list = useFieldWorkers(pariwarId, 'pending_kyc', district);
   const approve = useApproveFieldWorker(pariwarId);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  // The panel open NOW — an approval that finishes late compares against this, not against the render it was clicked in.
+  const openRef = useRef<string | null>(null);
+  const reviewButtons = useRef(new Map<string, HTMLElement>());
   // The key of the click being retried — kept ONLY while that click's result is a retryable failure.
   const retryKey = useRef<{ forId: string; key: string } | null>(null);
   const inFlight = useRef(false);
+  useSignInRedirect(problem?.signIn === true);
+
+  const setOpen = (id: string | null): void => {
+    openRef.current = id;
+    setOpenState(id);
+  };
+  /** No decrypted identity outlives its panel: the explicit removal (the client's `gcTime: 0` is only the backstop). */
+  const forget = (id: string | null): void => {
+    if (id !== null) qc.removeQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, id) });
+  };
+  // The Close button (WorkerDetail) has already removed the identity; the page puts focus back where the admin pressed Review.
+  const closePanel = (): void => {
+    const was = openRef.current;
+    setOpen(null);
+    setProblem((p) => (p?.banner === true ? p : null));
+    if (was !== null) reviewButtons.current.get(was)?.focus();
+  };
 
   const doApprove = async (fieldWorkerId: string, name: string): Promise<void> => {
     if (inFlight.current) return;
     const key = retryKey.current?.forId === fieldWorkerId ? retryKey.current.key : newIdempotencyKey();
     retryKey.current = { forId: fieldWorkerId, key };
     inFlight.current = true;
+    setApprovingId(fieldWorkerId);
     setProblem(null);
     setAnnounce(null);
     try {
       await approve.mutateAsync({ fieldWorkerId, idempotencyKey: key });
       retryKey.current = null;
-      setOpen(null);
+      forget(fieldWorkerId);
       setAnnounce(t('fw.approvals.approved', { name }));
-      headingRef.current?.focus();
+      if (openRef.current === fieldWorkerId) {
+        setOpen(null);
+        headingRef.current?.focus();
+      }
     } catch (err) {
-      const g = fieldWorkerGuidance(err);
+      const g = fieldWorkerGuidance(err, 'approvals');
       if (!g.retryable) retryKey.current = null;
-      setProblem({ ...g, forId: fieldWorkerId });
+      const isOpen = openRef.current === fieldWorkerId;
+      setProblem({ ...g, forId: fieldWorkerId, name, banner: !isOpen });
+      if (isOpen) headingRef.current?.focus();
     } finally {
       inFlight.current = false;
+      setApprovingId(null);
     }
   };
 
@@ -65,12 +103,19 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
           {announce}
         </p>
       )}
+      {problem?.banner === true && (
+        <p role="alert" className="rounded p-2 text-sm text-status-fail-fg" data-testid="fw-approvals-banner-error">
+          {t('fw.approvals.failedNamed', { name: problem.name, reason: problem.text })}
+        </p>
+      )}
       <DistrictPicker
         pariwarId={pariwarId}
         value={district}
         onChange={(d) => {
+          forget(openRef.current);
           setDistrict(d);
           setOpen(null);
+          setProblem((p) => (p?.banner === true ? p : null));
         }}
         allowAll
         testId="fw-approvals-district"
@@ -83,14 +128,24 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
         empty={t('fw.approvals.empty')}
         headingRef={listHeadingRef}
         noAccessText={district === null ? t('fw.noAccessDistrict') : t('fw.noAccess')}
+        surface="approvals"
+        filterKey={JSON.stringify(district)}
         testId="fw-approvals-list"
         action={(item, register) => (
           <button
             type="button"
-            ref={register}
+            ref={(el) => {
+              register(el);
+              if (el === null) reviewButtons.current.delete(item.field_worker_id);
+              else reviewButtons.current.set(item.field_worker_id, el);
+            }}
             className="rounded border px-3 py-1 text-sm"
             onClick={() => {
-              setProblem(null);
+              // Pressed again on the worker already open: nothing to do. Replacing the panel with itself would empty its identity
+              // from the cache while it stays mounted, and the next render would read (and audit) it anew.
+              if (openRef.current === item.field_worker_id) return;
+              forget(openRef.current);
+              setProblem((p) => (p?.banner === true ? p : null));
               setOpen(item.field_worker_id);
             }}
             aria-label={t('fw.approvals.reviewNamed', { name: item.name })}
@@ -101,10 +156,10 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
         )}
       />
       {open !== null && (
-        <WorkerDetail key={open} pariwarId={pariwarId} fieldWorkerId={open} onClose={() => setOpen(null)}>
+        <WorkerDetail key={open} pariwarId={pariwarId} fieldWorkerId={open} onClose={closePanel}>
           {(name) => (
             <div className="flex flex-col gap-2">
-              {problem !== null && problem.forId === open && (
+              {problem !== null && !problem.banner && problem.forId === open && (
                 <p role="alert" className="text-sm text-status-fail-fg" data-testid="fw-approvals-error">
                   {problem.text}
                 </p>
@@ -113,11 +168,11 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
                 type="button"
                 className="self-start rounded bg-black px-3 py-1 text-sm text-white"
                 onClick={() => void doApprove(open, name)}
-                disabled={approve.isPending}
-                aria-label={t('fw.approvals.approveNamed', { name })}
+                disabled={approvingId !== null}
                 data-testid="fw-approvals-approve"
               >
-                {approve.isPending ? t('fw.approvals.approving') : problem?.retryable && problem.forId === open ? t('fw.retry') : t('fw.approvals.approve')}
+                {approvingId === open ? t('fw.approvals.approving') : problem?.retryable && problem.forId === open ? t('fw.retry') : t('fw.approvals.approve')}
+                <span className="sr-only"> {t('fw.forName', { name })}</span>
               </button>
             </div>
           )}

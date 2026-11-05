@@ -9,7 +9,6 @@
 // mobile after the page is left (review R5). The typed values live in component state only and go with the page.
 
 import type { RegisterFieldWorkerResponse } from '@twt/contracts';
-import { useNavigate } from '@tanstack/react-router';
 import type { FormEvent, ReactElement } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 
@@ -19,9 +18,9 @@ import { DistrictPicker } from './DistrictPicker.js';
 import { FieldWorkerNav } from './FieldWorkerNav.js';
 import { fieldWorkerGuidance, stateLabel, type Guidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { useSignInRedirect } from './sign-in.js';
 
 export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): ReactElement {
-  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [district, setDistrict] = useState<string | null>(null);
@@ -36,6 +35,7 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
   const nameId = useId();
   const mobileId = useId();
   const errorId = useId();
+  useSignInRedirect(problem?.signIn === true);
 
   useEffect(() => {
     mounted.current = true;
@@ -71,9 +71,7 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
         inFlight.current = false;
         if (!mounted.current) return;
         setSubmitting(false);
-        const g = fieldWorkerGuidance(err);
-        if (g.signIn) void navigate({ to: '/login' });
-        setProblem(g);
+        setProblem(fieldWorkerGuidance(err, 'register'));
         headingRef.current?.focus();
       },
     );
@@ -121,7 +119,7 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
           )}
           {problem?.noAccess === true && (
             <p role="alert" className="text-sm text-status-fail-fg" data-testid="fw-register-no-access">
-              {t('fw.noAccess')}
+              {problem.text}
             </p>
           )}
           <div className="flex flex-col gap-1">

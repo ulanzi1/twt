@@ -20,6 +20,16 @@ export interface Guidance {
   readonly retryable?: boolean;
 }
 
+/** Where the admin was when the server refused — the 403 line says what THAT action needs (review CR11). */
+export type Surface = 'register' | 'approvals' | 'find' | 'code';
+
+const NO_ACCESS_KEY: Record<Surface, string> = {
+  register: 'fw.noAccessRegister',
+  approvals: 'fw.noAccess',
+  find: 'fw.noAccessFind',
+  code: 'fw.noAccessCode',
+};
+
 const BY_CODE: Record<string, () => Guidance> = {
   'field_worker.idempotency_key_required': () => ({ text: t('fw.err.keyRequired'), retryable: true }),
   'field_worker.idempotency_in_progress': () => ({ text: t('fw.err.inProgress'), retryable: true }),
@@ -34,19 +44,31 @@ const BY_CODE: Record<string, () => Guidance> = {
   'field_worker.authorization_stale': () => ({ text: t('fw.approvals.moved') }),
   'field_worker.decrypt_unavailable': () => ({ text: t('fw.list.keyUnavailable'), retryable: true }),
   'field_worker.identity_unreadable': () => ({ text: t('fw.list.unreadable') }),
+  'field_worker.not_found': () => ({ text: t('fw.err.notFound') }),
+  'field_worker.stream_conflict': () => ({ text: t('fw.err.changedMeanwhile'), retryable: true }),
+  'field_worker.kyc_already_completed': () => ({ text: t('fw.approvals.alreadyDone') }),
+  'field_worker.kyc_not_completed': () => ({ text: t('fw.err.kycNotDone') }),
+  'field_worker.cursor_invalid': () => ({ text: t('fw.err.cursorInvalid'), retryable: true }),
 };
 
 /** The guidance for any caught error. An unknown code still says something useful and names the code. */
-export function fieldWorkerGuidance(error: unknown): Guidance {
+export function fieldWorkerGuidance(error: unknown, surface: Surface = 'approvals'): Guidance {
   if (error instanceof ApiError) {
     if (error.status === 401) return { text: t('fw.signIn'), signIn: true };
-    if (error.status === 403) return { text: t('fw.noAccess'), noAccess: true };
+    if (error.status === 403) return { text: t(NO_ACCESS_KEY[surface]), noAccess: true };
+    // A 429 carries the rate limiter's own code, not ours: the status decides, and waiting is the cure.
+    if (error.status === 429) return { text: t('fw.err.rateLimited'), retryable: true };
     const known = BY_CODE[error.code];
     if (known !== undefined) return known();
     return { text: t('fw.unknownError', { code: error.code }), retryable: error.status >= 500 };
   }
   // A network failure (no status) — the same attempt may be retried with the same key.
   return { text: t('fw.unknownError', { code: 'network' }), retryable: true };
+}
+
+/** True when the error is a 401 — the screen then goes to sign-in (`useSignInRedirect`). */
+export function needsSignIn(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
 }
 
 /** The 409 `code_not_available` copy, by the worker's state (AD13). */

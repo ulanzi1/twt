@@ -5,18 +5,30 @@
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../src/api/client.js';
-import { codeUnavailableText, fieldWorkerGuidance, spellDigits, stateLabel } from '../src/modules/field-workers/derive.js';
+import { codeUnavailableText, fieldWorkerGuidance, needsSignIn, spellDigits, stateLabel, type Surface } from '../src/modules/field-workers/derive.js';
 import { FIELD_WORKER_EN_KEYS, resolveEn as t } from '../src/modules/field-workers/i18n-en.js';
 
 describe('the copy (i18n-en.ts)', () => {
   it('every key resolves with its parameters and leaves no stray brace', () => {
     expect(FIELD_WORKER_EN_KEYS.length).toBeGreaterThan(40);
-    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3' };
+    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60 };
     for (const key of FIELD_WORKER_EN_KEYS) {
       const text = t(key, params);
       expect(text, key).not.toMatch(/[{}]/);
       expect(text.length, key).toBeGreaterThan(0);
     }
+  });
+
+  it('the finder’s copy (CR1, -448): "Check details" is a key of its own; the intro lists ACTIVE workers, puts the details before the code and says each look is recorded', () => {
+    expect(FIELD_WORKER_EN_KEYS).toContain('fw.find.check');
+    expect(t('fw.find.check')).toBe('Check details');
+    const intro = t('fw.find.intro');
+    expect(intro).toMatch(/active workers/);
+    expect(intro).toMatch(/recorded/);
+    expect(intro.indexOf('details')).toBeGreaterThan(-1);
+    expect(intro.indexOf('details')).toBeLessThan(intro.indexOf('code'));
+    // The old wording sent the officer straight to the code.
+    expect(intro).not.toMatch(/^Choose a district to see its active workers\. Show a worker/);
   });
 
   it('an unknown key or a missing parameter THROWS (never a key-as-text page)', () => {
@@ -41,6 +53,15 @@ describe('fieldWorkerGuidance — every code of AC11 (a), (b), (c)', () => {
     [409, 'field_worker.authorization_stale', 'fw.approvals.moved', undefined, false],
     [503, 'field_worker.decrypt_unavailable', 'fw.list.keyUnavailable', undefined, true],
     [500, 'field_worker.identity_unreadable', 'fw.list.unreadable', undefined, false],
+    // Review CR11 — the codes the screens could not name (the server's own words never reach the page).
+    [404, 'field_worker.not_found', 'fw.err.notFound', undefined, false],
+    [409, 'field_worker.stream_conflict', 'fw.err.changedMeanwhile', undefined, true],
+    [409, 'field_worker.kyc_already_completed', 'fw.approvals.alreadyDone', undefined, false],
+    [409, 'field_worker.kyc_not_completed', 'fw.err.kycNotDone', undefined, false],
+    [400, 'field_worker.cursor_invalid', 'fw.err.cursorInvalid', undefined, true],
+    // A 429 carries the rate limiter's own code (or `http.429`): the STATUS decides, and it is retryable.
+    [429, 'http.429', 'fw.err.rateLimited', undefined, true],
+    [429, 'rate_limit.exceeded', 'fw.err.rateLimited', undefined, true],
   ])('%i %s', (status, code, key, field, retryable) => {
     const out = g(status, code);
     expect(out.text).toBe(t(key));
@@ -54,6 +75,39 @@ describe('fieldWorkerGuidance — every code of AC11 (a), (b), (c)', () => {
     expect(g(500, 'something.new').text).toContain('something.new');
     expect(g(500, 'something.new').retryable).toBe(true);
     expect(fieldWorkerGuidance(new TypeError('Failed to fetch'))).toMatchObject({ retryable: true });
+  });
+});
+
+describe('the 403 line depends on the screen (review CR11)', () => {
+  const forbidden = new ApiError(403, 'auth.forbidden', 'no');
+  const KEYS: Record<Surface, string> = {
+    register: 'fw.noAccessRegister',
+    approvals: 'fw.noAccess',
+    find: 'fw.noAccessFind',
+    code: 'fw.noAccessCode',
+  };
+
+  it.each(Object.entries(KEYS))('%s ⇒ %s, and it is a no-access guidance', (surface, key) => {
+    expect(fieldWorkerGuidance(forbidden, surface as Surface)).toMatchObject({ noAccess: true, text: t(key) });
+  });
+
+  it('the four lines are four different sentences, and none of the non-approval ones sends the admin to "approving"', () => {
+    const texts = Object.values(KEYS).map((k) => t(k));
+    expect(new Set(texts).size).toBe(4);
+    for (const key of ['fw.noAccessRegister', 'fw.noAccessFind', 'fw.noAccessCode']) expect(t(key)).not.toMatch(/approv/i);
+  });
+
+  it('"Press Register again" never reaches an approve: the key-required line names no screen', () => {
+    expect(t('fw.err.keyRequired')).not.toMatch(/register/i);
+  });
+});
+
+describe('needsSignIn', () => {
+  it('is true for a 401 only', () => {
+    expect(needsSignIn(new ApiError(401, 'auth.session_required', 'x'))).toBe(true);
+    expect(needsSignIn(new ApiError(403, 'auth.forbidden', 'x'))).toBe(false);
+    expect(needsSignIn(new TypeError('Failed to fetch'))).toBe(false);
+    expect(needsSignIn(null)).toBe(false);
   });
 });
 

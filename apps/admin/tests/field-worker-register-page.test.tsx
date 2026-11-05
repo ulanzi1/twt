@@ -3,11 +3,14 @@
 //     body mints a new one; success clears it; a double click sends ONCE;
 //   · every registration code maps to its guidance, a field error to its field (`aria-invalid` + `aria-describedby`); 403 ⇒ the
 //     no-access line; 401 ⇒ sign in; a 201 shows the returned id and "awaiting approval", and "Register another" starts afresh;
-//   · a truncated district list offers an exact typed district, sent byte for byte (R9);
+//   · a truncated district list offers an exact typed district, sent byte for byte (R9): the field keeps what was typed, the page
+//     is told on blur / Enter — never per keystroke (review CR3); a failed districts read offers Retry;
+//   · the page links to the other two pages (AC11 (d)); a 401 goes to sign-in once;
 //   · leaving the page keeps NO submitted name or mobile in TanStack's caches (R5).
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -169,10 +172,12 @@ describe('the outcomes (AC11 (a))', () => {
     await fill();
     registerFieldWorker.mockRejectedValueOnce(new ApiError(403, 'auth.forbidden', 'no'));
     submit();
-    expect((await screen.findByTestId('fw-register-no-access')).textContent).toBe(t('fw.noAccess'));
+    // Review CR11: the register screen's own words — not the approvals page's "approving is for a Pariwar Admin".
+    expect((await screen.findByTestId('fw-register-no-access')).textContent).toBe(t('fw.noAccessRegister'));
     registerFieldWorker.mockRejectedValueOnce(new ApiError(401, 'auth.session_required', 'no'));
     submit();
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
 
   it('a missing field is caught before any request', async () => {
@@ -191,10 +196,104 @@ describe('R9 — a truncated district list offers an exact typed district', () =
     fireEvent.change(screen.getByTestId('fw-register-mobile'), { target: { value: '9876543210' } });
     await screen.findByTestId('fw-register-district-truncated');
     fireEvent.change(screen.getByTestId('fw-register-district-typed'), { target: { value: 'D204 East ' } });
+    // The page learns the district when the admin LEAVES the field (review CR3) — the submit click does that in a browser.
+    fireEvent.blur(screen.getByTestId('fw-register-district-typed'));
     registerFieldWorker.mockResolvedValueOnce({ ...created, district: 'D204 East ' });
     submit();
     await screen.findByTestId('fw-register-done');
     expect(registerFieldWorker.mock.calls[0]![1]).toMatchObject({ district: 'D204 East ' });
+  });
+});
+
+describe('CR3 — the typed district keeps what is typed and is committed on blur / Enter', () => {
+  const TRUNCATED = { districts: ['Nagpur', 'Patna'], districts_truncated: true };
+
+  it('typing "Nagpur Rural" one character at a time (Nagpur is LISTED) keeps the whole text; the body carries it byte for byte', async () => {
+    getFieldWorkerDistricts.mockResolvedValue(TRUNCATED);
+    const user = userEvent.setup();
+    renderPage();
+    const typed = (await screen.findByTestId('fw-register-district-typed')) as HTMLInputElement;
+    await user.type(typed, 'Nagpur');
+    // Nothing is committed per keystroke: "Nagpur" is a LISTED district, yet the select still shows no choice.
+    expect((screen.getByTestId('fw-register-district') as HTMLSelectElement).value).toBe('');
+    await user.type(typed, ' Rural');
+    // The old derived value blanked the box at the sixth character: it must show every character.
+    expect(typed.value).toBe('Nagpur Rural');
+    expect((screen.getByTestId('fw-register-district') as HTMLSelectElement).value).toBe('');
+    await user.type(screen.getByTestId('fw-register-name'), 'Ramesh Kumar');
+    await user.type(screen.getByTestId('fw-register-mobile'), '9876543210');
+    registerFieldWorker.mockResolvedValueOnce({ ...created, district: 'Nagpur Rural' });
+    await user.click(screen.getByTestId('fw-register-submit')); // leaving the field commits it
+    await screen.findByTestId('fw-register-done');
+    expect(registerFieldWorker).toHaveBeenCalledTimes(1);
+    expect(registerFieldWorker.mock.calls[0]![1]).toEqual({ name: 'Ramesh Kumar', mobile: '9876543210', district: 'Nagpur Rural' });
+  });
+
+  it('Enter commits the typed district and does NOT submit the form (no race with the commit)', async () => {
+    getFieldWorkerDistricts.mockResolvedValue(TRUNCATED);
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByTestId('fw-register-name'), 'Ramesh Kumar');
+    await user.type(screen.getByTestId('fw-register-mobile'), '9876543210');
+    await user.type(await screen.findByTestId('fw-register-district-typed'), 'Nagpur Rural{Enter}');
+    expect(registerFieldWorker).not.toHaveBeenCalled();
+    registerFieldWorker.mockResolvedValueOnce({ ...created, district: 'Nagpur Rural' });
+    submit();
+    await screen.findByTestId('fw-register-done');
+    expect(registerFieldWorker.mock.calls[0]![1]).toMatchObject({ district: 'Nagpur Rural' });
+  });
+
+  it('choosing from the select clears the typed text and replaces the district; tabbing through an EMPTY typed field keeps a chosen one', async () => {
+    getFieldWorkerDistricts.mockResolvedValue(TRUNCATED);
+    const user = userEvent.setup();
+    renderPage();
+    const typed = (await screen.findByTestId('fw-register-district-typed')) as HTMLInputElement;
+    await user.type(typed, 'Nagpur Rural');
+    await user.tab();
+    const select = screen.getByTestId('fw-register-district') as HTMLSelectElement;
+    await user.selectOptions(select, 'Patna');
+    expect(typed.value).toBe('');
+    expect(select.selectedOptions[0]!.textContent).toBe('Patna');
+    typed.focus();
+    await user.tab(); // a blur with nothing typed
+    expect(select.selectedOptions[0]!.textContent).toBe('Patna');
+  });
+
+  it('the typed field stops at the district limit (200) and is described by the hint AND by the field error', async () => {
+    getFieldWorkerDistricts.mockResolvedValue(TRUNCATED);
+    renderPage();
+    const typed = await screen.findByTestId('fw-register-district-typed');
+    expect(typed.getAttribute('maxlength')).toBe('200');
+    await fill('Ramesh Kumar', '9876543210', 'Patna');
+    registerFieldWorker.mockRejectedValueOnce(new ApiError(422, 'field_worker.district_unknown', 'no'));
+    submit();
+    const error = await screen.findByTestId('fw-register-error');
+    const described = (typed.getAttribute('aria-describedby') ?? '').split(' ');
+    expect(described).toContain(error.id);
+    expect(described.length).toBe(2); // the hint, then the error
+    expect(typed.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('a failed districts read offers Retry, and Retry reads them again (the form is not a dead end)', async () => {
+    getFieldWorkerDistricts.mockRejectedValueOnce(new ApiError(503, 'http.503', 'down')).mockResolvedValueOnce({ districts: ['Gaya', 'Patna'], districts_truncated: false });
+    renderPage();
+    expect((await screen.findByRole('alert')).textContent).toContain(t('fw.district.loadError'));
+    fireEvent.click(screen.getByRole('button', { name: t('fw.retry') }));
+    await screen.findByRole('option', { name: 'Patna' });
+    expect(getFieldWorkerDistricts).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('fw-register-district-retry')).toBeNull();
+  });
+});
+
+describe('AC11 (d) — the page links to the other two pages', () => {
+  it('"Awaiting approval" and "Find a worker" are links to their routes; "Register a worker" (this page) is not offered', () => {
+    renderPage();
+    expect(screen.getByTestId('fw-nav-approvals').getAttribute('href')).toBe('/p/$pariwarId/field-workers/approvals');
+    expect(screen.getByTestId('fw-nav-approvals').textContent).toBe(t('fw.nav.approvals'));
+    expect(screen.getByTestId('fw-nav-find').getAttribute('href')).toBe('/p/$pariwarId/field-workers');
+    expect(screen.getByTestId('fw-nav-find').textContent).toBe(t('fw.nav.find'));
+    expect(screen.queryByTestId('fw-nav-register')).toBeNull();
+    expect(screen.getByRole('navigation', { name: t('fw.nav.label') })).toBeTruthy();
   });
 });
 

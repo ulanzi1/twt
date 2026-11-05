@@ -143,13 +143,12 @@ describe.skipIf(!hasDatabase)('pageFieldWorkersForPariwar — the keyset page (A
   });
 });
 
-describe.skipIf(!hasDatabase)('the keyset query uses field_workers_pariwar_state_created_idx with NO Sort (AD10 — EXPLAIN, seeded + ANALYZE)', () => {
+describe.skipIf(!hasDatabase)('the keyset query vs field_workers_pariwar_created_idx (AD10 as amended by -448 — EXPLAIN of the statement the function REALLY sends, seeded + ANALYZE)', () => {
   setupLiveDb();
 
   // 20,000 rows (~625 per Pariwar and state): at ~40 rows a range the planner rightly prefers a bitmap scan + a tiny Sort (seen once
   // under the full ci:local run), so the proof seeds a volume where the ordered index scan is the plan that matters.
-  it('≥ 2,000 rows (20,000) over ≥ 8 Pariwars and all four states: an index scan on the new index, no Sort node — first page AND a cursor page; a district page uses the index too', async () => {
-    const { client } = getTx();
+  async function seedBigTable(client: pg.PoolClient): Promise<string[]> {
     const pariwars = Array.from({ length: 8 }, () => randomUUID());
     await client.query("SET LOCAL session_replication_role = 'replica'");
     await client.query(
@@ -173,24 +172,69 @@ describe.skipIf(!hasDatabase)('the keyset query uses field_workers_pariwar_state
     await client.query('ANALYZE field_workers');
     const states = await client.query<{ n: string }>('SELECT count(DISTINCT current_state) AS n FROM field_workers WHERE pariwar_id = ANY($1)', [pariwars]);
     expect(Number(states.rows[0]!.n)).toBe(4);
+    return pariwars;
+  }
 
-    const plan = async (sql: string, params: unknown[]): Promise<string> =>
-      (await client.query<{ 'QUERY PLAN': string }>(`EXPLAIN ${sql}`, params)).rows.map((r) => r['QUERY PLAN']).join('\n');
-    const base = `SELECT field_worker_id FROM field_workers WHERE pariwar_id = $1 AND current_state = $2`;
-    const order = ' ORDER BY created_at DESC, field_worker_id DESC LIMIT 21';
-    for (const [sql, params] of [
-      [base + order, [pariwars[0], 'active']],
-      [base + ` AND (created_at, field_worker_id) < ($3::timestamptz, $4::uuid)` + order, [pariwars[2], 'active', '2026-01-01 04:00:00+00', randomUUID()]],
-    ] as const) {
-      const text = await plan(sql, [...params]);
-      expect(text, text).toContain('field_workers_pariwar_state_created_idx');
-      expect(text, text).not.toMatch(/\bSort\b/);
+  // ⭐ EXPLAIN the statement `pageFieldWorkersForPariwar` REALLY sends (CR8): a recording wrapper on the client captures the SQL
+  // and the bound values the driver is handed, and that text is explained — so a change to the function's ORDER BY, cursor
+  // predicate or filters changes what these tests judge. (A hand-copied `SELECT … ORDER BY …` stays green through any such change.)
+  function realPlans(client: pg.PoolClient) {
+    const sent: Array<{ text: string; values: unknown[] }> = [];
+    const spy = new Proxy(client, {
+      get(target, prop) {
+        if (prop === 'query') {
+          return (q: unknown, v?: unknown[]) => {
+            const object = typeof q === 'string' ? undefined : (q as { text: string; values?: unknown[] });
+            sent.push({ text: object?.text ?? (q as string), values: object?.values ?? v ?? [] });
+            return (target.query as (...a: unknown[]) => unknown).call(target, q, v);
+          };
+        }
+        const value: unknown = Reflect.get(target, prop, target);
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    /** Run the real function for `pariwar` under `role`, return the plan of the one statement it sent. `owner` bypasses RLS;
+     *  `app` is `twt_app` with the Pariwar scope — the role and policies the API runs it under. */
+    return async (role: 'owner' | 'app', pariwar: string, opts: Parameters<typeof pageFieldWorkersForPariwar>[2]): Promise<{ statement: string; plan: string }> => {
+      await client.query('RESET ROLE');
+      if (role === 'app') await enterAppScope(client, pariwar);
+      sent.length = 0;
+      await pageFieldWorkersForPariwar(bindScopedDb(spy), toPariwarId(pariwar), opts);
+      const selects = sent.filter((s) => /^\s*select\b/i.test(s.text) && s.text.includes('"field_workers"'));
+      expect(selects, JSON.stringify(sent.map((s) => s.text))).toHaveLength(1);
+      const { text, values } = selects[0]!;
+      const plan = (await client.query<{ 'QUERY PLAN': string }>(`EXPLAIN ${text}`, values)).rows.map((r) => r['QUERY PLAN']).join('\n');
+      return { statement: text, plan };
+    };
+  }
+
+  const FIRST = { state: 'active' } as const;
+  const CURSOR = { state: 'active', after: { createdAtExact: '2026-01-01 04:00:00+00', fieldWorkerId: toFieldWorkerId(randomUUID()) } } as const;
+  const DISTRICT = { state: 'pending_kyc', district: 'Gaya' } as const;
+
+  // ⭐ THE ROLE MATTERS (review CR35, decision `-448`). The API runs this as `twt_app` under row-level security; the table owner
+  // bypasses it. With the index first specified — (pariwar_id, current_state, created_at …) — the owner got an ordered index scan
+  // (planner cost ~61) while `twt_app` got a bitmap scan of the `pariwar_id` prefix plus a SORT (~1,276): `current_state = $n`
+  // is an enum comparison, `enum_eq` is not leakproof, so beneath the policy qual it cannot be an index condition. The index is
+  // now (pariwar_id, created_at DESC, field_worker_id DESC) with the state and district as FILTERS, and BOTH roles are judged, for
+  // every form the screens send — the first page, a cursor page and a district page.
+  it.each([
+    ['the table OWNER (row-level security bypassed)', 'owner'],
+    ['twt_app (row-level security on — what the API runs)', 'app'],
+  ] as const)('AS %s the real statement is an ordered index scan on the amended index with NO Sort — first page, cursor page AND district page', async (_label, role) => {
+    const { client } = getTx();
+    const pariwars = await seedBigTable(client);
+    const planOf = realPlans(client);
+    const first = await planOf(role, pariwars[0]!, FIRST);
+    const cursor = await planOf(role, pariwars[2]!, CURSOR);
+    const district = await planOf(role, pariwars[1]!, DISTRICT);
+    for (const { statement, plan } of [first, cursor, district]) {
+      // The captured text IS the list query (its order is the one the cursor depends on), not some other statement.
+      expect(statement.toLowerCase()).toContain('order by "field_workers"."created_at" desc, "field_workers"."field_worker_id" desc');
+      expect(plan, plan).toContain('field_workers_pariwar_created_idx');
+      expect(plan, plan).toMatch(/Index Scan/);
+      expect(plan, plan).not.toMatch(/\bSort\b/);
     }
-    // ⚠ AD10's recorded cost: `district` is a FILTER on the index range, not an index column — the planner may answer a district
-    // page with a bitmap scan of the (pariwar, state) range plus a small Sort (here ~75 rows). It still reads the new index; add
-    // `district` to the index if a Pariwar outgrows that (AD10).
-    const districtPlan = await plan(base + ` AND district = $3` + order, [pariwars[1], 'pending_kyc', 'Gaya']);
-    expect(districtPlan, districtPlan).toContain('field_workers_pariwar_state_created_idx');
   });
 });
 

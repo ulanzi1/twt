@@ -1,15 +1,24 @@
 -- Migration 0201 — field_workers: the keyset list index and the approver's display name (Story 13.1a, Tasks 2.2 and 6;
--- AD10; decision 2026-11-04-447 item 2).
+-- AD10; decision 2026-11-04-447 item 2; the index AMENDED by decision 2026-11-05-448 item 1).
 --
 -- ⚠ DO NOT REGENERATE with `db:generate` (the 0021+ discipline, 0084's header): the drizzle snapshot is frozen at 0020,
 -- so a regenerate emits a bloated catch-up migration and can raise 42P07. HAND-AUTHORED; it carries ONLY this story's
 -- DDL. No snapshot file. ⛔ Edit 0200.
 --
--- (1) THE INDEX (AD10 — 13.1's carried D1). `pageFieldWorkersForPariwar` reads `WHERE pariwar_id = $1 AND current_state = $2
---     [AND district = $3] [AND (created_at, field_worker_id) < ($c, $w)] ORDER BY created_at DESC, field_worker_id DESC
---     LIMIT n + 1`. The new index serves the equality prefix AND the order, so the page is an index range scan with no Sort.
---     0200's `field_workers_pariwar_state_idx (pariwar_id, current_state)` is a strict prefix of it and is DROPPED. `district`
---     is a filter on the range, not an index column — fine for the hundreds of workers a Pariwar holds.
+-- (1) THE INDEX (AD10 — 13.1's carried D1; AMENDED by decision 2026-11-05-448 item 1). `pageFieldWorkersForPariwar` reads
+--     `WHERE pariwar_id = $1 AND current_state = $2 [AND district = $3] [AND (created_at, field_worker_id) < ($c, $w)]
+--     ORDER BY created_at DESC, field_worker_id DESC LIMIT n + 1`. The index is (pariwar_id, created_at DESC,
+--     field_worker_id DESC): `pariwar_id` is the equality prefix, the rest is the page order, and `current_state` and
+--     `district` are FILTERS on that range, not index columns.
+--     ⚠ NOT (pariwar_id, current_state, created_at …) as AD10 first had it. Under `twt_app` (what the API runs, row-level
+--     security on) an enum comparison cannot be an index condition — `enum_eq` is not leakproof — so that index served only its
+--     `pariwar_id` prefix and the page Sorted (measured on 20,000 rows: planner cost ~1,276, against ~61 for a role that
+--     bypasses RLS and so never saw it). This shape is an ordered index scan with no Sort under `twt_app` for the first page,
+--     a cursor page AND a district page. Cost: a page walks the Pariwar's entries newest first and discards other states' rows
+--     until it has n + 1 — fine for the hundreds of workers a Pariwar holds; it grows with the Pariwar, not with the table.
+--     Proof: `page.spec.ts` EXPLAINs the statement the function really sends, as the owner AND as `twt_app`.
+--     0200's `field_workers_pariwar_state_idx (pariwar_id, current_state)` is DROPPED: its `pariwar_id` prefix is served by the
+--     new index, and its `current_state` column cannot be an index condition under the policy either.
 --
 -- (2) `approved_by_display` (decision `-447` item 2; Story 6.11 R5): the APPROVING admin's `users.display_name`, snapshotted at
 --     the approval — plaintext staff attribution (⛔ a worker's personal data), ⛔ fallback. NULL until the approval. Written
@@ -30,7 +39,11 @@
 --     specs holds active / suspended rows written before this column existed, and a validated ADD would fail there with
 --     23514. NOT VALID still checks every row INSERTed or UPDATEd from now on. ⛔ VALIDATE it in a later migration until those
 --     rows can be ruled out (they never exist in production — nothing is live, roster Row 48).
-CREATE INDEX "field_workers_pariwar_state_created_idx" ON "field_workers" USING btree ("pariwar_id","current_state","created_at" DESC,"field_worker_id" DESC);--> statement-breakpoint
+--     ⚠ NOT VALID also means such a developer row can never be UPDATEd again: every later write re-checks the new tuple, so
+--     a suspend / reactivate / terminate / move of it fails 23514 (the API shows a 500), and rule (f) forbids setting the
+--     approver outside the approval, so there is no repair path BY DESIGN. RESET the developer database (drop it and
+--     re-migrate). Production and CI hold no such row.
+CREATE INDEX "field_workers_pariwar_created_idx" ON "field_workers" USING btree ("pariwar_id","created_at" DESC,"field_worker_id" DESC);--> statement-breakpoint
 DROP INDEX "field_workers_pariwar_state_idx";--> statement-breakpoint
 ALTER TABLE "field_workers" ADD COLUMN "approved_by_display" text;--> statement-breakpoint
 ALTER TABLE "field_workers" ADD CONSTRAINT "field_workers_approved_by_display_nonblank" CHECK ("field_workers"."approved_by_display" IS NULL OR length(btrim("field_workers"."approved_by_display")) > 0);--> statement-breakpoint

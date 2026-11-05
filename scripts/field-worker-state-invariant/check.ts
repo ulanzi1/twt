@@ -1,7 +1,7 @@
 // scripts/field-worker-state-invariant/check.ts
 //
-// field-worker-state-invariant CI gate (Story 13.1 I1): `field_workers`' eight projected
-// columns are a replay-derived cache writable ONLY by the event-replay projector. Scans
+// field-worker-state-invariant CI gate (Story 13.1 I1): `field_workers`' eight projected columns, and since Story 13.1a
+// the approver (`approved_by_display`), are a replay-derived cache writable ONLY by the event-replay projector. Scans
 // packages/domain/src/**/*.{ts,mts,cts,tsx} and fails (exit 1, naming file + line) on any write outside the projector
 // allowlist — and on a scan that did not SEE the allowlisted writers write (review R3-27: no vacuous pass). Twin of scripts/marketplace-module-state-invariant/check.ts.
 //
@@ -26,7 +26,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../..');
 const SCAN_ROOT = 'packages/domain/src';
 
-// The legitimate writers of the eight projected columns: the event-replay projector's
+// The legitimate writers of the guarded columns (the eight projected + the approver): the event-replay projector's
 // `projectFieldWorkerGenesis` (the genesis INSERT) + `projectFieldWorkerTransition` (every transition's UPDATE).
 // Allowlisted by FILE + FUNCTION NAME (⛔ the whole file) so a future addition to project.ts that writes
 // from a DIFFERENT function — or from an inner named helper — is still flagged. Each new legitimate writer

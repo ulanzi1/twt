@@ -1,8 +1,8 @@
 // scripts/field-worker-state-invariant/lib.test.ts — the gate's TEETH (Story 13.1 AC11).
 //
 // The known-bad fixtures live HERE (the helpdesk / pool / module practice), ⛔ in packages/domain/src: a write outside the
-// allowlist → a finding, for EACH of the eight projected columns. The AC11 legs:
-//   - `.set({ <column> })` outside the allowlist is FLAGGED for every one of the eight — and `district`, the column a move
+// allowlist → a finding, for EACH guarded column (the eight projected + the approver). The AC11 legs:
+//   - `.set({ <column> })` outside the allowlist is FLAGGED for every guarded column — and `district`, the column a move
 //     changes, is FLAGGED in EACH write form (`.set`, `.values`, bulk `.values([…])`, `onConflictDoUpdate`, direct
 //     assignment, namespaced table, computed key);
 //   - the FULL guarded `.set({ … })` written directly inside `projectFieldWorkerTransition` (and the genesis `.values({ … })`
@@ -27,17 +27,17 @@ const PROJECT_FILE = 'packages/domain/src/field-worker/project.ts';
 const ALLOWLIST: readonly AllowlistEntry[] = [
   { file: PROJECT_FILE, functions: new Set(['projectFieldWorkerGenesis', 'projectFieldWorkerTransition']) },
 ];
-// Story 13.1a (0201) adds `approvedByDisplay` — the approver, set once by the projector; the gate watches it like the eight.
-const EIGHT = ['currentState', 'stateEventVersion', 'kycStatus', 'stateReasonCode', 'district', 'endedOn', 'auditId', 'updatedAt', 'approvedByDisplay'] as const;
+// Story 13.1a (0201) adds `approvedByDisplay` — the approver, set once by the projector; the gate watches it like the other eight.
+const GUARDED = ['currentState', 'stateEventVersion', 'kycStatus', 'stateReasonCode', 'district', 'endedOn', 'auditId', 'updatedAt', 'approvedByDisplay'] as const;
 
 describe('scanFieldWorkerStateWrites — gate teeth', () => {
-  it.each(EIGHT)('FLAGS .update(fieldWorkers).set({ %s }) outside the allowlist', (col) => {
+  it.each(GUARDED)('FLAGS .update(fieldWorkers).set({ %s }) outside the allowlist', (col) => {
     const f = scanFieldWorkerStateWrites('packages/domain/src/x/write.ts', wrap(`return db.update(fieldWorkers).set({ ${col}: v });`));
     expect(f).toHaveLength(1);
     expect(isAllowlistedWrite(f[0]!, ALLOWLIST)).toBe(false);
   });
 
-  it.each(EIGHT)('FLAGS .insert(fieldWorkers).values({ %s }) outside the allowlist (a genesis outside the projector)', (col) => {
+  it.each(GUARDED)('FLAGS .insert(fieldWorkers).values({ %s }) outside the allowlist (a genesis outside the projector)', (col) => {
     const f = scanFieldWorkerStateWrites('f.ts', wrap(`return db.insert(fieldWorkers).values({ fieldWorkerId: w, ${col}: v });`));
     expect(f).toHaveLength(1);
     expect(f[0]!.detail).toMatch(/INSERT \(create-time\) write/);

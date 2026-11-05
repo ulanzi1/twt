@@ -109,7 +109,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Gaya', ACTOR) });
     expect(await rowOf(client, id)).toMatchObject({ current_state: 'suspended', state_reason_code: 'at_worker_request', district: 'Gaya' });
     await expectRowMatchesStream(client, id);
-    await reactivateFieldWorker(client, approve(id));
+    await reactivateFieldWorker(client, staff(id));
     expect(await rowOf(client, id)).toMatchObject({ current_state: 'active', state_reason_code: null });
     await expectRowMatchesStream(client, id);
     // A target equal to the CURRENT district (the sending end) is accepted too.
@@ -140,7 +140,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const types = await streamTypes(client, id);
     for (const run of [
       () => activateFieldWorker(client, approve(id)),
-      () => reactivateFieldWorker(client, approve(id)),
+      () => reactivateFieldWorker(client, staff(id)),
       () => suspendFieldWorker(client, { ...staff(id), reasonCode: 'under_review' }),
       () => terminateFieldWorker(client, { ...staff(id), reasonCode: 'bogus', endedOn: '2026-11-01' }), // (2) beats (4)
       () => postFieldWorker(client, { ...staff(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR_A, 'Gaya', ACTOR) }),

@@ -129,6 +129,10 @@ function stub(over: Partial<StubRow> | null = {}, opts: { istToday?: string } = 
 const staff = { pariwarId: P, fieldWorkerId: FW, auditId: AUDIT, actor: 'operator' as const, actorId: STAFF };
 /** Story 13.1a AD3 — a VERIFIED `field_worker.approve` result (pariwar_admin) at `district`. */
 const approveAt = (district: string, over: { actorId?: string; pariwarId?: string } = {}) => authAt(district, { ...over, key: 'field_worker.approve' });
+/** CR25 — the RIGHT key checked at the PARIWAR dimension (a Pariwar Admin holds both keys): isolates the dimension check, which
+ *  `authAt('…', { key: 'module.manage' })` cannot (that leg has a wrong key AND a wrong dimension). */
+const keyAtPariwar = (key: string): VerifiedAuthorization =>
+  authorize({ actorId: STAFF, grants: [PARIWAR_ADMIN], key, resource: { dimension: 'pariwar', value: P, pariwarId: P } })!;
 /** What both approval commands take: the authorization (the stub row is in Patna) and the approver's display name (`-447` item 2). */
 const approver = { ...staff, authorization: approveAt('Patna'), approvedByDisplay: 'Meera Pariwar-Admin' };
 
@@ -368,8 +372,9 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
     ['an object LITERAL with the same fields (⛔ verified)', { ...authAt('Patna') }],
     ['another Pariwar’s result', authAt('Patna', { pariwarId: OTHER_P })],
     ['another actor’s result', authAt('Patna', { actorId: '99999999-9999-4999-8999-999999999999' })],
-    // `authAt` forces `module.manage` to the PARIWAR dimension, so this leg is refused by the DIMENSION check, not the key check.
-    ['the wrong DIMENSION (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
+    // `authAt` forces `module.manage` to the PARIWAR dimension, so this leg has a wrong key AND a wrong dimension; the next row isolates the dimension.
+    ['a wrong key AND a wrong dimension (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
+    ['the RIGHT key at the wrong DIMENSION (field_worker.register, pariwar-dimension)', keyAtPariwar('field_worker.register')],
     ['another district than the genesis', authAt('Gaya')],
   ])('register refuses an authorization that is %s — no statement sent', async (_label, authorization) => {
     const { client, calls } = stub();
@@ -415,7 +420,8 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
     ['an object LITERAL with the same fields (⛔ verified)', { ...approveAt('Patna') }],
     ['another Pariwar’s result', approveAt('Patna', { pariwarId: OTHER_P })],
     ['another actor’s result', approveAt('Patna', { actorId: '99999999-9999-4999-8999-999999999999' })],
-    ['the wrong DIMENSION (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
+    ['a wrong key AND a wrong dimension (module.manage, pariwar-dimension)', authAt('Patna', { key: 'module.manage' })],
+    ['the RIGHT key at the wrong DIMENSION (field_worker.approve, pariwar-dimension)', keyAtPariwar('field_worker.approve')],
     ['field_worker.register — the REGISTRAR’s key (a verified, district-dimension, same-target result)', authAt('Patna')],
   ])('kyc_completed and activated refuse an authorization that is %s — no statement sent', async (_label, authorization) => {
     for (const command of [recordFieldWorkerKycCompleted, activateFieldWorker]) {

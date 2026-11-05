@@ -2,7 +2,8 @@
 
 The static authoring-time CI gate for **Story 13.1 I1**: the eight PROJECTED columns of
 `field_workers` — `current_state`, `state_event_version`, `kyc_status`, `state_reason_code`, `district`, `ended_on`,
-`audit_id`, `updated_at` — are a **replay-derived cache** that may be written
+`audit_id`, `updated_at` — and, since Story 13.1a (migration 0201), the approver `approved_by_display` (nine guarded columns
+in all) are a **replay-derived cache** that may be written
 ONLY by the event-replay projector (`packages/domain/src/field-worker/project.ts`:
 `projectFieldWorkerGenesis` / `projectFieldWorkerTransition`). Any other code path that writes one lets the
 cache diverge from the worker's `events_log` stream — their state, KYC status, reason, REPORTING district, last day,
@@ -39,7 +40,7 @@ the method (`schema['fieldWorkers']`, `db['update'](…)`, `…['set'](…)` —
 ⭐ **An unreadable payload is a finding** (review R3-27): a `.set` / `.values` / upsert `set` on a `fieldWorkers` chain whose
 payload is a variable, a call or a spread (`.set(patch)`, `.set({ ...patch })`, `.values(rows)`) — or an object holding a
 NON-literal computed key, an accessor or a method (`{ [k]: v }`, `{ get district() {…} }` — review R4-7) — is flagged "unverifiable
-shape": the gate cannot prove it leaves the eight columns alone, so it does not assume so. ⭐ That holds INSIDE the projector too
+shape": the gate cannot prove it leaves the guarded columns alone, so it does not assume so. ⭐ That holds INSIDE the projector too
 (review R4-9): an unverifiable write in an allow-listed function is REPORTED, not allow-listed, and does not count as "seen".
 
 ### What it still cannot see

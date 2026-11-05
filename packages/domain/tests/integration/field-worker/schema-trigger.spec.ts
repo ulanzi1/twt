@@ -293,6 +293,28 @@ describe.skipIf(!hasDatabase)('field_workers.approved_by_display (0201 — rule 
     await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'active', state_event_version = 3 WHERE field_worker_id = $1", [id], '23514', 'field_workers_approved_by_state');
   });
 
+  // CR26 — the CHECK's other two arms. The trigger's rule (f) answers first on every guarded path, so each arm is reached with
+  // the triggers off (`session_replication_role = 'replica'`, the owner role), and each has its CONTROL: the same write with the
+  // value the arm demands is accepted — so the refusal is the CHECK's, not a different constraint's.
+  it('_approved_by_state, arm `pending_kyc ⇒ NULL`: an approver on a pending_kyc row ⇒ 23514 by name — CONTROL: NULL is accepted', async () => {
+    const { client } = getTx();
+    const id = await seed(client);
+    await client.query("SET LOCAL session_replication_role = 'replica'");
+    await expectSqlRejected(client, "UPDATE field_workers SET approved_by_display = 'Early' WHERE field_worker_id = $1", [id], '23514', 'field_workers_approved_by_state');
+    await client.query('UPDATE field_workers SET approved_by_display = NULL WHERE field_worker_id = $1', [id]);
+    expect((await rowOf(client, id)).approved_by_display).toBeNull();
+  });
+
+  it('_approved_by_state, arm `suspended ⇒ NOT NULL`: a suspended row without an approver ⇒ 23514 by name — CONTROL: with one it is accepted', async () => {
+    const { client } = getTx();
+    const id = await kycDone(client);
+    await client.query("SET LOCAL session_replication_role = 'replica'");
+    const suspend = "UPDATE field_workers SET current_state = 'suspended', state_reason_code = 'under_review', state_event_version = 3";
+    await expectSqlRejected(client, `${suspend} WHERE field_worker_id = $1`, [id], '23514', 'field_workers_approved_by_state');
+    await client.query(`${suspend}, approved_by_display = 'Meera' WHERE field_worker_id = $1`, [id]);
+    expect(await rowOf(client, id)).toMatchObject({ current_state: 'suspended', approved_by_display: 'Meera' });
+  });
+
   it('_approved_by_display_nonblank: a blank approver ⇒ 23514 by name', async () => {
     const { client } = getTx();
     const id = await kycDone(client);

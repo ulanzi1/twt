@@ -2,7 +2,8 @@
 //
 // Pure scanner for the Story 13.1 I1 invariant: `field_workers`' eight PROJECTED columns —
 // `current_state`, `state_event_version`, `kyc_status`, `state_reason_code`, `district`, `ended_on`, `audit_id`,
-// `updated_at` — are a replay-derived cache and may be written ONLY by the event-replay projector
+// `updated_at` — and, since Story 13.1a (migration 0201), the approver `approved_by_display` (nine guarded columns in all) —
+// are a replay-derived cache and may be written ONLY by the event-replay projector
 // (packages/domain/src/field-worker/project.ts: `projectFieldWorkerGenesis` / `projectFieldWorkerTransition`). Any
 // OTHER code path that writes one lets the cache diverge from the event-sourced source of truth. Twin of
 // scripts/marketplace-module-state-invariant/lib.ts (copied, renamed, and its column set replaced by the eight I1 columns
@@ -10,12 +11,12 @@
 //
 // FLAGGED write forms (AST-detected — a `.set({ district })` substring in a comment/string never
 // matches): `.update(fieldWorkers).set({ … })`, bare/bulk `.insert(fieldWorkers).values({ … })`,
-// `…onConflictDoUpdate({ set: { … } })`, and `fieldWorkers.<column> = …`, for EACH of the eight columns.
+// `…onConflictDoUpdate({ set: { … } })`, and `fieldWorkers.<column> = …`, for EACH guarded column.
 // The Drizzle FIELD names are camelCase; the table matches bare (`fieldWorkers`), namespaced
 // (`schema.fieldWorkers`), wrapped (`(fieldWorkers)`, `fieldWorkers as any`, `fieldWorkers!`), under an import alias
 // (`fieldWorkers as fw`) or a `const` alias, and through a SPLIT chain (`const q = db.update(fieldWorkers); q.set(…)`).
 // ⭐ A `.set` / `.values` / upsert `set` on a `fieldWorkers` chain whose payload the scanner CANNOT read — a variable, a call,
-// a spread — is itself a finding ("unverifiable shape", review R3-27): the gate cannot prove it leaves the eight columns alone.
+// a spread — is itself a finding ("unverifiable shape", review R3-27): the gate cannot prove it leaves the guarded columns alone.
 // ⚠ What it still cannot see: raw SQL (the trigger's), a dynamic table or method key, a chain built or returned by a HELPER
 // (`withWhere(db.update(fieldWorkers)).set(…)`, `upd().set(…)`), and roots outside `packages/domain/src` (house convention for every
 // `*-state-invariant` gate). Aliases are tracked per FILE, ⛔ per scope — a shadowed name only over-approximates (a loud false positive).

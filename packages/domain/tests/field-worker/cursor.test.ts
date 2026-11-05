@@ -65,4 +65,14 @@ describe('pageFieldWorkersForPariwar — refusals made BEFORE any statement', ()
     }
     expect(sent).toEqual([]);
   });
+
+  it('a district holding the NUL character ⇒ an empty page, no statement sent (Postgres cannot bind NUL in text: 22021 aborts the transaction — CR30)', async () => {
+    const sent: unknown[] = [];
+    const db = new Proxy({}, { get: (_t, prop) => (...args: unknown[]) => { sent.push([prop, args]); throw new Error('no SQL expected'); } });
+    const nul = String.fromCharCode(0);
+    for (const district of [nul, `Patna${nul}`, `${nul}Patna`, `Pa${nul}tna`]) {
+      await expect(pageFieldWorkersForPariwar(db as never, pariwarId('11111111-1111-1111-1111-111111111111'), { state: 'active', district })).resolves.toEqual({ items: [], nextCursor: null });
+    }
+    expect(sent).toEqual([]);
+  });
 });

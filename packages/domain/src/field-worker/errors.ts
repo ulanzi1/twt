@@ -196,15 +196,17 @@ export class FieldWorkerProjectorInputError extends Error {
   }
 }
 
-/** A `posted` whose VERIFIED authorization targets neither `toDistrict` nor the LOCKED row's `district` — a concurrent
- *  move changed it after the gate, or a caller bug (the command cannot tell which) (QE5 guard 3c, QE17). */
+/** A VERIFIED authorization whose target district no longer matches the worker's LOCKED row — a concurrent move changed it
+ *  after the gate, or a caller bug (the command cannot tell which). Thrown by `posted` (the target is neither `toDistrict` nor
+ *  the row's `district`; QE5 guard 3c, QE17), by the approval commands (13.1a guard 3d) and by the API's identity and by-hand
+ *  code reads (13.1a `-447` items 1 and 3). */
 export class FieldWorkerAuthorizationStaleError extends Error {
   public readonly name = 'FieldWorkerAuthorizationStaleError';
   public constructor(
     public readonly fieldWorkerId: string,
     public readonly targetDistrict: string | null,
   ) {
-    super(`field worker ${fieldWorkerId}: the authorization targets a district that is neither end of this move`);
+    super(`field worker ${fieldWorkerId}: the authorization targets a district the worker is not in at the moment of the write`);
   }
 }
 

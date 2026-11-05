@@ -263,7 +263,10 @@ export function decodeFieldWorkerCursor(s: unknown): FieldWorkerListCursor {
 /**
  * Story 13.1a (AD10) — a page of this Pariwar's workers in ONE state, optionally of ONE district (byte-equal — I11), in the
  * list order `created_at DESC, field_worker_id DESC`, AFTER a keyset position compared IN SQL on the exact `created_at::text`
- * (⛔ OFFSET). Served by `field_workers_pariwar_state_created_idx` (0201) with no Sort. Over-fetches one row for `nextCursor`.
+ * (⛔ OFFSET). Served in index order, with no Sort, by `field_workers_pariwar_created_idx` (0201: `pariwar_id`, then the page order)
+ * for the first page, a cursor page AND a district page, as the table owner AND as `twt_app` under RLS — `current_state` and
+ * `district` are filters on that range (an enum comparison cannot be an index condition under RLS; review CR35, decision `-448`;
+ * `page.spec.ts` EXPLAINs this very statement). A rare state walks more of the Pariwar's entries. Over-fetches one row for `nextCursor`.
  * `after` MUST come from `decodeFieldWorkerCursor`. A non-integer `limit` throws `RangeError`; the size is `clampLimit`-ed
  * (default 20, ceiling 25). Returns the NAME ciphertext only.
  */
@@ -275,6 +278,9 @@ export async function pageFieldWorkersForPariwar(
   if (opts.limit !== undefined && !Number.isInteger(opts.limit)) {
     throw new RangeError(`pageFieldWorkersForPariwar: limit must be an integer, got ${String(opts.limit)}`);
   }
+  // A NUL can never match a stored district (Postgres `text` holds none) and binding one aborts the transaction (22021) —
+  // the same guard `assertDistrictRecorded` has; an empty page, ⛔ a statement (review round 2, CR30).
+  if (opts.district !== undefined && opts.district.includes(NUL)) return { items: [], nextCursor: null };
   const limit = clampLimit(opts.limit, { default: PAGE_FIELD_WORKERS_DEFAULT_LIMIT, cap: PAGE_FIELD_WORKERS_MAX_LIMIT });
   const conds = [eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.currentState, opts.state)];
   if (opts.district !== undefined) conds.push(eq(fieldWorkers.district, opts.district));

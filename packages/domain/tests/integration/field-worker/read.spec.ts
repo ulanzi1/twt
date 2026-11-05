@@ -155,6 +155,25 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     expect(await withCapture(PARIWAR, at(v4!, '-1 microsecond'), stateAt(id))).toMatchObject({ state: 'active', reasonCode: null });
   });
 
+  // CR27 (Task 1.4, I2) — the approval's two events are one transaction, so they carry ONE stamp. A cut at that stamp includes
+  // BOTH (the tie counts) and a cut one microsecond before excludes BOTH: the as-of read never shows a half-approved worker
+  // (`pending_kyc` with the identity check completed, or `active` with it pending).
+  it('(b) the approval PAIR shares one stamp: a cut AT it sees both events, 1 µs before it sees neither — never one of them', async () => {
+    const id = await committed((c) => registerReal(c, PARIWAR, { actorId: ACTOR }));
+    created.push(id);
+    await committed(async (c) => {
+      await recordFieldWorkerKycCompleted(c, approve(id));
+      await activateFieldWorker(c, approve(id));
+    });
+    const [v1, v2, v3] = await stamps(id);
+    // The precondition: the tie really exists (one transaction ⇒ one now()), so the cut can land on it.
+    expect(v2).toBeDefined();
+    expect(v3).toBe(v2);
+    expect(v2! > v1!).toBe(true);
+    expect(await withCapture(PARIWAR, at(v2!), stateAt(id))).toMatchObject({ state: 'active', kycStatus: 'completed', version: 3 });
+    expect(await withCapture(PARIWAR, at(v2!, '-1 microsecond'), stateAt(id))).toMatchObject({ state: 'pending_kyc', kycStatus: 'pending', version: 1 });
+  });
+
   it("(c) 'now' equals the stored projection in every state", async () => {
     const id = await committed((c) => registerReal(c, PARIWAR, { actorId: ACTOR }));
     created.push(id);

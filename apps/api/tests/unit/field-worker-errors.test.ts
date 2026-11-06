@@ -97,6 +97,7 @@ describe('mapFieldWorkerError — Story 13.1a’s own rows (the "Errors" table)'
 
   it.each([
     ['an unparseable envelope', 'envelope' as const],
+    ['an envelope the key service refused (`-449`)', 'key_rejected' as const],
     ['a tampered envelope (AES-GCM authentication failed — review R8)', 'authentication' as const],
   ])('FieldWorkerIdentityUnreadableError (%s) ⇒ 500 field_worker.identity_unreadable — retry never helps; logged by stage only', (_n, stage) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);

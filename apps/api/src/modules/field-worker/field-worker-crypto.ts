@@ -22,7 +22,11 @@ import { encryption } from '@twt/domain';
 import { FIELD_WORKER_FIELD_CLASS, FIELD_WORKER_MOBILE_FIELD_CLASS, type EncryptionDeps } from '../../context.js';
 import { FieldWorkerDecryptUnavailableError, FieldWorkerIdentityUnreadableError } from './errors.js';
 
-/** gRPC `INVALID_ARGUMENT` — the same status `kyc/name-render.ts` reads as "the key service rejected THIS envelope". */
+/**
+ * gRPC `INVALID_ARGUMENT` — the same status `kyc/name-render.ts` reads as "the key service rejected THIS envelope". ⚠ UN-ATTESTED
+ * against the live service (`-449`; `name-render.ts` records the same premise): if Cloud KMS answers otherwise, a corrupt row stays a
+ * 503, which fails closed.
+ */
 const GRPC_INVALID_ARGUMENT = 3;
 
 /** The three stored strings of a worker's identity — what `registerFieldWorker` writes. */
@@ -64,12 +68,13 @@ export async function sealFieldWorkerIdentity(
 }
 
 /**
- * Story 13.1a (AD9; decision `-447` item 4) — decrypt ONE stored field-worker value (a name or a mobile) to UTF-8 text, with the
+ * Story 13.1a (AD9; decisions `-447` item 4, `-449`) — decrypt ONE stored field-worker value (a name or a mobile) to UTF-8 text, with the
  * failure classified by WHERE it happened (⛔ by message text):
  *   · `parseEnvelope` fails (local, synchronous) — the stored value is not an envelope ⇒ `FieldWorkerIdentityUnreadableError('envelope')`;
  *   · the KMS `decryptDek` rejects THIS envelope — gRPC `code: 3` (INVALID_ARGUMENT: a corrupt wrapped key, or one sealed under
- *     another Pariwar, field class or KEK) ⇒ `FieldWorkerIdentityUnreadableError('authentication')` (retry never helps; the
- *     same split `kyc/name-render.ts` makes — review round 2, CR7);
+ *     another Pariwar, field class or KEK) ⇒ `FieldWorkerIdentityUnreadableError('key_rejected')` (retry never helps; the
+ *     same split `kyc/name-render.ts` makes — review CR7, recorded by `-449`, its premise un-attested). The cost `-449` accepts: a
+ *     SYSTEMIC code 3 (a mis-set key reference) reads the same for every row, so the log keeps it apart from tampering;
  *   · the KMS `decryptDek` fails any other way — the key service, or the way to it ⇒ `FieldWorkerDecryptUnavailableError`
  *     (retry helps);
  *   · the key UNWRAPPED but local AES-GCM authentication fails — tampered or corrupt ciphertext ⇒
@@ -107,9 +112,10 @@ export async function decryptFieldWorkerField(serialized: string, pariwarId: str
     return Buffer.from(bytes).toString('utf-8');
   } catch (err) {
     if (unwrapped) throw new FieldWorkerIdentityUnreadableError('authentication');
-    // gRPC INVALID_ARGUMENT — Cloud KMS's answer for a malformed ciphertext or an AAD mismatch (the fake provider throws it too).
+    // gRPC INVALID_ARGUMENT — the fake provider throws it for a malformed ciphertext or an AAD mismatch; Cloud KMS is expected to,
+    // un-attested (`GRPC_INVALID_ARGUMENT`).
     if (typeof err === 'object' && err !== null && (err as { code?: unknown }).code === GRPC_INVALID_ARGUMENT) {
-      throw new FieldWorkerIdentityUnreadableError('authentication');
+      throw new FieldWorkerIdentityUnreadableError('key_rejected');
     }
     throw new FieldWorkerDecryptUnavailableError();
   }

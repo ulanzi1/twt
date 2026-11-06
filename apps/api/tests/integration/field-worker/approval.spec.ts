@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeClient, hasDatabase } from '../_setup.js';
 import { approveTestFieldWorker, moveTestFieldWorker } from '../_field-worker-fixture.js';
 import { payloadHash } from '../../../src/modules/field-worker/write-support.js';
-import { createHarness, errOf, json, waitForBlockedBy, type Harness, type Json } from './_registration-harness.js';
+import { createHarness, errOf, json, releaseHolder, waitForBlockedBy, type Harness, type Json } from './_registration-harness.js';
 
 const NAME = 'Approvable Distinctive-Surname';
 const MOBILE_DIGITS = '9876501234';
@@ -148,7 +148,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
     }
   });
 
-  it('AC2 (b): an unknown id, another Pariwar’s worker, and a District Admin of ANOTHER district ⇒ the SAME 403 (no existence oracle) — a Pariwar Admin included', async () => {
+  it('AC2 (b): an unknown id and another Pariwar’s worker ⇒ the SAME 403 (no existence oracle), and a District Admin (no key) gets that same 403', async () => {
     const { p, admin } = await setup();
     const other = await setup();
     const unknown = await h.approve(admin.client, p, randomUUID());
@@ -157,8 +157,8 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       expect(r.statusCode, r.body).toBe(403);
       expect(errOf(r).code).toBe(errOf(unknown).code);
     }
-    // A District Admin of Gaya cannot reach a Patna worker either: the SAME 403 (a district_admin bundle lacks the key anyway — (c) —
-    // so this is the answer, not the reason; what matters is that it does not differ from the unknown-id answer).
+    // The bundle lacks the key — (c) — so this leg proves NOTHING about district scope: it proves the refusal does not differ from
+    // the unknown-id answer.
     const gayaAdmin = await h.actor(p, 'district_admin', 'district', 'Gaya');
     const patnaWorker = await h.registered(admin.client, p, body('Patna', '+919876508888'));
     const other_district = await h.approve(gayaAdmin.client, p, patnaWorker);
@@ -166,6 +166,22 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
     expect(errOf(other_district).code).toBe(errOf(unknown).code);
     expect((await events(patnaWorker)).map((e) => e.event_type)).toEqual(['field_worker.registered']);
     expect((await events(other.id)).map((e) => e.event_type)).toEqual(['field_worker.registered']);
+  });
+
+  // CR54 — the district check itself: a holder of the KEY whose grant does not contain the worker's district. (`pariwar_admin` may be
+  // granted below its ceiling; the leg above cannot show this, a `district_admin` bundle lacks the key.)
+  it('AC2 (b): a key holder whose grant is another district cannot reach the worker ⇒ the SAME 403, nothing written — CONTROL: the same role granted the worker’s district approves', async () => {
+    const { p, admin, id } = await setup();
+    const unknown = await h.approve(admin.client, p, randomUUID());
+    const gaya = await h.actor(p, 'pariwar_admin', 'district', 'Gaya');
+    const refused = await h.approve(gaya.client, p, id);
+    expect(refused.statusCode, refused.body).toBe(403);
+    expect(errOf(refused).code).toBe(errOf(unknown).code);
+    expect((await events(id)).map((e) => e.event_type)).toEqual(['field_worker.registered']);
+    expect(await approvalAudit(p, id)).toEqual([]);
+    const patna = await h.actor(p, 'pariwar_admin', 'district', 'Patna');
+    const approved = await h.approve(patna.client, p, id);
+    expect(approved.statusCode, approved.body).toBe(200);
   });
 
   it('AC2 (c): a District Admin (bundle lacks the key), a caller with no grant here (404), no session (401) ⇒ refused, nothing written', async () => {
@@ -274,7 +290,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       expect(r.statusCode, r.body).toBe(409);
       expect(errOf(r).code).toBe('field_worker.illegal_transition');
     } finally {
-      winner.release();
+      await releaseHolder(winner);
     }
     expect((await events(id)).map((e) => e.event_type)).toEqual(['field_worker.registered', 'field_worker.kyc_completed', 'field_worker.activated']);
     expect((await approvalAudit(p, id)).map((l) => l.action)).toEqual(['field_worker.kyc_completed', 'field_worker.kyc_completed_rolled_back']);
@@ -298,7 +314,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       expect((await events(id)).length).toBe(1); // neither request has written an event yet
       await holder.query('COMMIT');
     } finally {
-      holder.release();
+      await releaseHolder(holder);
     }
     const done = await first;
     expect(done.statusCode, done.body).toBe(200);
@@ -323,7 +339,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       expect(r.statusCode, r.body).toBe(409);
       expect(errOf(r).code).toBe('field_worker.authorization_stale');
     } finally {
-      mover.release();
+      await releaseHolder(mover);
     }
     expect((await events(id)).map((e) => e.event_type)).toEqual(['field_worker.registered', 'field_worker.posted']);
     expect((await approvalAudit(p, id)).map((l) => l.action)).toEqual(['field_worker.kyc_completed', 'field_worker.kyc_completed_rolled_back']);

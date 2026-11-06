@@ -9,6 +9,7 @@
 
 import { randomUUID } from 'node:crypto';
 
+import type { PoolClient } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const hooks = vi.hoisted(() => ({
@@ -56,7 +57,7 @@ const { hasDatabase } = await import('../_setup.js');
 const { moveTestFieldWorker } = await import('../_field-worker-fixture.js');
 const { payloadHash } = await import('../../../src/modules/field-worker/write-support.js');
 const { readAttributionCodeForRequest } = await import('../../../src/modules/field-worker/attribution-code-access.js');
-const { createHarness, errOf, json } = await import('./_registration-harness.js');
+const { createHarness, errOf, json, releaseHolder, waitForBlockedBy, waitUntilBlocked } = await import('./_registration-harness.js');
 type Harness = Awaited<ReturnType<typeof createHarness>>;
 
 const doorSpy = vi.mocked(readAttributionCodeForRequest);
@@ -104,14 +105,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
     }
   }
 
-  async function waitForLockWaiter(pattern: string): Promise<void> {
-    for (let i = 0; i < 100; i += 1) {
-      const r = await h.td.pool.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE $1", [pattern]);
-      if ((r.rows[0] as { n: number }).n > 0) return;
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    throw new Error(`no backend waited on a lock for ${pattern}`);
-  }
+  const pidOf = async (c: PoolClient): Promise<number> => (await c.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
 
   it('an ACTIVE worker: 200 { field_worker_id, code } with no-store; EXACTLY ONE code_read line naming the actor and role, written before the read; the door IS called; the code is in no audit row and no log', async () => {
     const { p, admin, id } = await activeWorker();
@@ -225,13 +219,13 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
         reasonCode: 'under_review',
       }); // holds FOR UPDATE until COMMIT
       const pending = h.code(admin.client, p, id);
-      await waitForLockWaiter('%from "field_workers"%for share%');
+      await waitForBlockedBy(h.td.pool, await pidOf(suspender));
       await suspender.query('COMMIT');
       const r = await pending;
       expect(r.statusCode, r.body).toBe(409);
       expect(errOf(r).code).toBe('field_worker.code_not_available');
     } finally {
-      suspender.release();
+      await releaseHolder(suspender);
     }
     expect(doorSpy).not.toHaveBeenCalled();
     expect(await codeLines(p, id)).toEqual([]);
@@ -244,6 +238,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
     hooks.pause = async () => {
       // Inside `mutate` — the intent line is written, the door not yet read. A suspend now must block on the row.
       await suspender.query('BEGIN');
+      const suspenderPid = await pidOf(suspender);
       suspended = fieldWorker.suspendFieldWorker(suspender, {
         pariwarId: ids.pariwarId(p),
         fieldWorkerId: ids.fieldWorkerId(id),
@@ -252,7 +247,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
         auditId: randomUUID(),
         reasonCode: 'under_review',
       });
-      await waitForLockWaiter('%FROM field_workers WHERE field_worker_id%FOR UPDATE%');
+      await waitUntilBlocked(h.td.pool, suspenderPid);
     };
     try {
       const r = await h.code(admin.client, p, id);
@@ -262,7 +257,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
       await suspender.query('COMMIT');
     } finally {
       hooks.pause = null;
-      suspender.release();
+      await releaseHolder(suspender);
     }
     const state = await h.td.pool.query('SELECT current_state FROM field_workers WHERE field_worker_id = $1', [id]);
     expect(state.rows[0]).toEqual({ current_state: 'suspended' });
@@ -277,13 +272,13 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
       await mover.query('BEGIN');
       await moveTestFieldWorker(mover, p, ids.fieldWorkerId(id), 'Gaya');
       const pending = h.code(daPatna.client, p, id);
-      await waitForLockWaiter('%from "field_workers"%for share%');
+      await waitForBlockedBy(h.td.pool, await pidOf(mover));
       await mover.query('COMMIT');
       const r = await pending;
       expect(r.statusCode, r.body).toBe(409);
       expect(errOf(r).code).toBe('field_worker.authorization_stale');
     } finally {
-      mover.release();
+      await releaseHolder(mover);
     }
     expect(doorSpy).not.toHaveBeenCalled();
     expect(await codeLines(p, id)).toEqual([]);

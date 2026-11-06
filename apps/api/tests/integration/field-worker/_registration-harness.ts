@@ -11,7 +11,7 @@
 import { randomUUID } from 'node:crypto';
 import { PassThrough } from 'node:stream';
 
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import { expect } from 'vitest';
 
 import type { AppDeps } from '../../../src/context.js';
@@ -169,6 +169,23 @@ export async function waitForBlockedBy(pool: Pool, blockerPid: number, timeoutMs
     if (Date.now() > deadline) throw new Error(`no backend became blocked by backend ${blockerPid} within ${timeoutMs} ms`);
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
+}
+
+/** Wait until the backend `pid` is blocked — for a blocker the test has no handle on (the request's own connection). Throws on timeout. */
+export async function waitUntilBlocked(pool: Pool, pid: number, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const r = await pool.query<{ blocked: boolean }>('SELECT cardinality(pg_blocking_pids($1)) > 0 AS blocked', [pid]);
+    if (r.rows[0]!.blocked) return;
+    if (Date.now() > deadline) throw new Error(`backend ${pid} was not blocked within ${timeoutMs} ms`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+/** A lock holder's `finally` (CR40): a failure before its COMMIT must not hand the pool an open transaction and its row lock. */
+export async function releaseHolder(c: PoolClient): Promise<void> {
+  await c.query('ROLLBACK').catch(() => undefined);
+  c.release(true);
 }
 
 export const json = (r: { body: string }): Json => JSON.parse(r.body) as Json;

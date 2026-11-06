@@ -115,7 +115,7 @@ describe('decryptFieldWorkerField — the round trip and the three failure kinds
     expect(calls).toBe(0);
   });
 
-  it('a well-formed envelope whose CIPHERTEXT was altered: parse OK, KMS OK, AES-GCM fails ⇒ FieldWorkerIdentityUnreadableError(authentication) — ⛔ a KMS outage', async () => {
+  it('a well-formed envelope whose CIPHERTEXT was altered: parse OK, KMS OK, AES-GCM fails ⇒ FieldWorkerIdentityUnreadableError(authentication), not a KMS outage', async () => {
     const sealed = await sealFieldWorkerIdentity({ name: NAME, mobileE164: MOBILE }, P, enc);
     const body = JSON.parse(Buffer.from(sealed.nameCiphertext.slice('enc:v1:'.length), 'base64').toString('utf-8')) as Record<string, string>;
     const ct = Buffer.from(body['ciphertext']!, 'base64');
@@ -128,11 +128,11 @@ describe('decryptFieldWorkerField — the round trip and the three failure kinds
     // envelope") — an integrity answer too, never "retry shortly" and never a plaintext (review round 2, CR7).
     const wrongTenant = await decryptFieldWorkerField(sealed.nameCiphertext, '22222222-2222-4222-8222-222222222222', enc).catch((e: unknown) => e);
     expect(wrongTenant).toBeInstanceOf(FieldWorkerIdentityUnreadableError);
-    expect((wrongTenant as FieldWorkerIdentityUnreadableError).stage).toBe('authentication');
+    expect((wrongTenant as FieldWorkerIdentityUnreadableError).stage).toBe('key_rejected');
     expect(String(wrongTenant)).not.toContain(NAME);
   });
 
-  it('a CORRUPT wrapped key (the KMS rejects the envelope, gRPC code 3) ⇒ FieldWorkerIdentityUnreadableError(authentication) — ⛔ a KMS outage (CR7)', async () => {
+  it('a CORRUPT wrapped key (the KMS rejects the envelope, gRPC code 3) ⇒ FieldWorkerIdentityUnreadableError(key_rejected), not a KMS outage and not tampering (CR7, -449)', async () => {
     const sealed = await sealFieldWorkerIdentity({ name: NAME, mobileE164: MOBILE }, P, enc);
     const body = JSON.parse(Buffer.from(sealed.nameCiphertext.slice('enc:v1:'.length), 'base64').toString('utf-8')) as Record<string, string>;
     const dek = Buffer.from(body['encryptedDek']!, 'base64');
@@ -140,7 +140,7 @@ describe('decryptFieldWorkerField — the round trip and the three failure kinds
     const corrupt = 'enc:v1:' + Buffer.from(JSON.stringify({ ...body, encryptedDek: dek.toString('base64') }), 'utf-8').toString('base64');
     const err = await decryptFieldWorkerField(corrupt, P, enc).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(FieldWorkerIdentityUnreadableError);
-    expect((err as FieldWorkerIdentityUnreadableError).stage).toBe('authentication');
+    expect((err as FieldWorkerIdentityUnreadableError).stage).toBe('key_rejected');
   });
 
   it('a KMS failure with a NON-3 status (or none) stays a 503-class FieldWorkerDecryptUnavailableError (CR7 control)', async () => {

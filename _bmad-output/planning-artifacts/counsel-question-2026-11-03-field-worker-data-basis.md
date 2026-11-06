@@ -20,7 +20,7 @@ number electronically, for as long as they are employed, and removes them 8 year
 **Also on the form** (BigDev, 2026-11-03, asked whether it states the purposes for which the Trust uses the name and number and records
 the worker's agreement: *"yes it states"*): the **purposes** are stated and the worker's **agreement is recorded**. The session has not seen
 the form, so the **wording** of the purposes is not recorded here. **The form is "Application for Field Worker", version 1.** The footing
-and the notice for holding the data are therefore the form's, and are **not asked** below; whether the same purposes reach a text of the worker's code is asked at question 5.
+and the notice for holding the data are therefore the form's, and are **not asked** below. Whether the form's purposes reach a text of the worker's code is on BigDev's word and is not asked; question 5 asks only whether the text needs separate consent beyond the form.
 
 ## The situation, in brief
 

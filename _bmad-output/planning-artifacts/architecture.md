@@ -2405,7 +2405,7 @@ fallback SMS.
 > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450` — author-commit) — a further direct DLT SMS to an explicit number, for a
 > field worker's own code. ⭐ Annotated, not rewritten.** Story 13.1b would text a newly approved field worker their attribution code, once,
 > through the generic core (`prepareDltSms` + `sendPreparedDltSms`) with its own template registry; a missing template id fails **closed**;
-> it is an outbox row written in the approval transaction, not a `dispatch()` caller. This is put to the Panel as a non-blocking confirm (BigDev's Q-6 A; a probable widening, not a settled one) (note
+> it is an outbox row written in the approval transaction, not a `dispatch()` caller. This is to be put to the Panel as a non-blocking confirm (drafted, not sent; BigDev's Q-6 A; a probable widening, not a settled one; note
 > `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) - not ruled; a ruling is
 > recorded here as a further annotation. Nothing here changes what §3.4 says, and the text is not live: its go-live is roster Row 49.
 

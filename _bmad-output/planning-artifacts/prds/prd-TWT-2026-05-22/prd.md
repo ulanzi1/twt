@@ -1079,7 +1079,7 @@ TSCT-cohort honor channel; fire-and-forget mirror of alerts.
   > **dropped**: each message is one claim's, to named recipients, through its own DLT template (⛔ not `dispatch()`, ⛔ not an
   > `Alert`). ⚠ Go-live gated on counsel (M, S — launch-gate rows 18, 19) and on DLT registration.
   > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450` — author-commit). Annotated, not rewritten.** A text sending a newly
-  > approved field worker their own code is NOT on this list. It is put to the Panel as a non-blocking confirm (BigDev's Q-6 A; a probable widening, not a settled one) (note `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) -
+  > approved field worker their own code is NOT on this list. It is to be put to the Panel as a non-blocking confirm (drafted, not sent; BigDev's Q-6 A; a probable widening, not a settled one; note `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) -
   > not ruled; a ruling is recorded here as a further annotation. Go-live: launch-gate Row 49.
 - Vernacular video alerts (WI-16) — v2.
 - TTS regional language read-aloud (WI-15) — v3.
@@ -1244,7 +1244,7 @@ The trust touches multiple regulatory regimes despite the "facilitator, not inte
 - GST registration trigger threshold (likely required from launch given module commissions).
 - DPDPA Data Fiduciary registration (when MeitY thresholds are clarified; tracking is needed).
 - **TRAI compliance — partial.** Bulk-DLT compliance de-scoped (no bulk-alert SMS). **DLT-transactional (PE/OE) registration required** for OTP-SMS, step-up-OTP-SMS, transactional-fallback-SMS, and degraded-mode cycle-open-bridge SMS — committed as operational prerequisite (architecture §2.2, §3.4). In-app notification rules may apply where notification content overlaps with regulated categories.
-  > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450`). Annotated, not rewritten.** This list names four uses; a field worker's code text is not one. See §4.10's annotation of the same date: put to the Panel as a confirm, not sent, not ruled.
+  > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450`). Annotated, not rewritten.** This list names four uses; a field worker's code text is not one. See §4.10's annotation of the same date: to be put to the Panel as a confirm (drafted, not sent), not ruled.
 - Consumer Protection Act 2019 — trust's "service" is in scope; internal appeal flow (FR-43A) is the mitigation.
 
 **Owner:** Legal counsel + Trustee Panel. **Blocker for:** trust account opening, Phase 0 → Phase 1 transition. See OQ-7 (DPO timing) and OQ-16 (regulatory surface sign-off).

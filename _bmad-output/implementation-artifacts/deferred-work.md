@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 13-1b-field-worker-code-by-sms, round 3 - the whole branch, code chunks G1-G3 (2026-11-06)
+
+- **CB56 - The code SMS tick can reject if the alarm sink throws, though its header says it always resolves.** [`apps/jobs/src/scheduler/field-worker-code-sms.ts`: `runFieldWorkerCodeSmsTick`, the `rls_bound_role` alarm and its catch's `sweepFailed`, and the per-row lapse alarms] Not reachable while `onAlarm` is unwired at boot (`console.warn` does not throw). When Row 32 (h) / Row 49 (j) wire alarms to a person, that sink's contract (never throws, or every call site guards it) is decided there.
+- **CB57 - No jobs sweep stops claiming when a shutdown begins.** [`apps/jobs/src/boot.ts` `shutdown()` (`shuttingDown` is boot-local); every `register*Cron` handler] A code SMS row claimed during the 30 s drain and then killed ends `exhausted:outcome_unknown` (`not_confirmed`), AD3's accepted "killed process". A stop predicate passed to every sweep is cross-cutting, not this story's.
+- **CB58 - `emit-openapi` writes every nullable enum as `type: [string, "null"]` with an enum that has no `null`.** [`packages/contracts/scripts/emit-openapi.ts`; `openapi/v1.yaml` (`code_sms_status`, and the earlier `liveCodeDelivery`-style fields)] Under OAS 3.1 `enum` is checked on its own, so a validator generated from the file rejects `null`. The server validates with Zod and is not affected. Fix in the emitter, for all of them at once.
+- **CB59 - `settleFieldWorkerCodeSms` accepts any grammar-valid detail for any final outcome.** [`packages/domain/src/field-worker/code-sms.ts` `settleFieldWorkerCodeSms`, `deriveFieldWorkerCodeSmsStatus`] A bare `unknown:<x>` or a null `detail` on `error` reads `not_delivered`; AD12's one prefix rule lives in the sweep (`settleSend`) alone. Not reachable: the only writer wraps every send-side unknown. Same family as CB10 (the rules enforced in application code alone); take them together.
+- **CB60 - The SMS detail grammars bar a contiguous digit run only.** [the 0202 `detail` CHECK (six digits); `claim.sanitizeSmsGatewayCode` in `packages/domain/src/claim/suspicion-notice.ts` (seven digits), and every send table that stores its output] The token class allows `.`, `_` and `-`, so a separated number (`98123-45678`) passes. Reaching it needs MSG91 to put a formatted number in its error-CODE field (`classifySmsError`). Pre-existing on every SMS kind since 6.19b.
+
 ## Deferred from: code review of story 13-1b-field-worker-code-by-sms, round 1 - chunk C, the records (2026-11-06)
 
 Reviewed the records and governance files of `d555f75d..` the working tree. Nobody ran the live-DB specs. The one item below is real and not patched by this review; the 10 patches (CB23-CB32) are in the story's "Review Findings - round 1, chunk C".

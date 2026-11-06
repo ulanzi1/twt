@@ -449,7 +449,7 @@ is 174 characters and 23 (hi) 176 (**3 Unicode segments** each); at typical valu
 be 2 parts sent GSM-7; provisioned Unicode it is 3). ⇒ per member per bridged cycle, **≈ 2 segments, 3 at most** — and ONE declaration texts
 a whole Pariwar each cycle while it stands. ⚠ The per-segment price is ⛔ recorded (Row 40 (d); Row 43 (e)).
 
-⭐ **A field worker's code (templates 25–26, Story 13.1b — dated 2026-11-06):** ONE transactional DLT SMS per worker, ever (`-450` AD15). Rendered with a 6-digit
+⭐ **A field worker's code (templates 25–26, Story 13.1b — dated 2026-11-06):** ONE DLT SMS per worker, ever (`-450` AD15); its category (Transactional or Service) is roster Row 49 (a)'s to record, not assumed here (code review CB55). Rendered with a 6-digit
 code: 26 (en) is 107 characters, GSM-7, **1 segment**; 25 (hi) is 118 characters, Unicode, **2 segments** (67 per part). The Trust bears it (`-450` Q-3). PINNED from the
 real registry by its own `it` in `sms-segment-cost.test.ts`. ⚠ The per-segment price is ⛔ recorded (Row 49 (h)).
 

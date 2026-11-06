@@ -6,7 +6,7 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ## Deferred from: story 13-1b-field-worker-code-by-sms (create-story, 2026-11-06)
 
-Carried items C1–C7 of Story 13.1b (created, ready-for-dev — not built; AD1–AD16 accepted by BigDev with AD12 amended; Q-1…Q-4, Q-6, Q-7 answered, Q-5 open). 13.1b builds: the due row in the approval transaction, the jobs sweep (at most once, the 5.11b generic core), CRQID kind `fw`, DLT templates 25 / 26 (registered text, ⛔ submitted), and `code_sms_status` on the worker list. Each item below is HOMED, not closed.
+Carried items C1–C7 of Story 13.1b (created, ready-for-dev — not built; AD1–AD16 accepted by BigDev with AD12 amended; Q-1…Q-7 answered; decision `2026-11-06-450`). 13.1b builds: the due row in the approval transaction, the jobs sweep (at most once, the 5.11b generic core), CRQID kind `fw`, DLT templates 25 / 26 (registered text, ⛔ submitted), and `code_sms_status` on the worker list. Each item below is HOMED, not closed.
 
 - **C1 — Story 13.1c: whether the worker's history shows the code SMS.** The rows and the audit line are kept for it; no prune job is built and `-441` did not rule on these rows; no event records a send. Dated block under 13.1c in `epics.md`. Trigger: 13.1c create-story.
 - **C2 — No story: a "not delivered" filter.** The signal shows on `WorkerList`, which the Find screen fills only once a district is chosen, so nobody can list every worker whose code did not arrive. Not built because recovery starts with the worker asking (BigDev's process). Trigger: an officer asks, or Row 49 (g)'s device pass shows it is needed.

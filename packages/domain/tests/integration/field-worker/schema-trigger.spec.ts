@@ -301,8 +301,8 @@ describe.skipIf(!hasDatabase)('field_workers.approved_by_display (0201 — rule 
     const id = await seed(client);
     await client.query("SET LOCAL session_replication_role = 'replica'");
     await expectSqlRejected(client, "UPDATE field_workers SET approved_by_display = 'Early' WHERE field_worker_id = $1", [id], '23514', 'field_workers_approved_by_state');
+    // The control is that this does not throw: the row was already NULL, so reading it back would prove nothing.
     await client.query('UPDATE field_workers SET approved_by_display = NULL WHERE field_worker_id = $1', [id]);
-    expect((await rowOf(client, id)).approved_by_display).toBeNull();
   });
 
   it('_approved_by_state, arm `suspended ⇒ NOT NULL`: a suspended row without an approver ⇒ 23514 by name — CONTROL: with one it is accepted', async () => {

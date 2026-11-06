@@ -113,7 +113,7 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
     // Postgres adds a `::field_worker_state` cast to the literal — strip it before comparing the predicate.
     expect(normalise(live.pred!.replace(/::field_worker_state/g, ''))).toBe("current_state <> 'terminated'");
     // Story 13.1a AD10 (0201, amended by decision 2026-11-05-448) — the keyset index replaced 0200's `(pariwar_id, current_state)`; its DESC
-    // suffixes are part of the match, and `current_state` is ⛔ a column of it (an enum filter is not an index condition under RLS).
+    // suffixes are part of the match, and `current_state` is not a column of it (an enum filter is not an index condition under RLS).
     expect(columnsOf(byName.get('field_workers_pariwar_created_idx')!.def)).toBe('pariwar_id, created_at desc, field_worker_id desc');
     expect(byName.get('field_workers_pariwar_created_idx')!.pred).toBeNull();
   });

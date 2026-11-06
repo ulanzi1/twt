@@ -13,10 +13,10 @@
 --     ⚠ NOT (pariwar_id, current_state, created_at …) as AD10 first had it. Under `twt_app` (what the API runs, row-level
 --     security on) an enum comparison cannot be an index condition — `enum_eq` is not leakproof — so that index served only its
 --     `pariwar_id` prefix and the page Sorted (measured on 20,000 rows: planner cost ~1,276, against ~61 for a role that
---     bypasses RLS and so never saw it). This shape is an ordered index scan with no Sort under `twt_app` for the first page,
---     a cursor page AND a district page. Cost: a page walks the Pariwar's entries newest first and discards other states' rows
+--     bypasses RLS and so never saw it). At ~2,500 rows a Pariwar this shape is an ordered index scan with no Sort under
+--     `twt_app` for all four forms the screens send (a far smaller Pariwar may plan a small Sort). Cost: a page walks the Pariwar's entries newest first and discards other states' rows
 --     until it has n + 1 — fine for the hundreds of workers a Pariwar holds; it grows with the Pariwar, not with the table.
---     Proof: `page.spec.ts` EXPLAINs the statement the function really sends, as the owner AND as `twt_app`.
+--     Proof: `page.spec.ts` EXPLAINs the statement the function really sends, as the superuser AND as `twt_app`.
 --     0200's `field_workers_pariwar_state_idx (pariwar_id, current_state)` is DROPPED: its `pariwar_id` prefix is served by the
 --     new index, and its `current_state` column cannot be an index condition under the policy either.
 --

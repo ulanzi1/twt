@@ -132,7 +132,7 @@ export const fieldWorkers = pgTable(
       .where(sql`current_state <> 'terminated'`),
     // The keyset list read (`pageFieldWorkersForPariwar`, Story 13.1a AD10 — 13.1's carried D1, amended by decision
     // 2026-11-05-448): `pariwar_id` equality, then the page order `created_at DESC, field_worker_id DESC`. `current_state` and
-    // `district` are FILTERS, ⛔ index columns: beneath row-level security an enum comparison cannot be an index condition
+    // `district` are FILTERS, not index columns: beneath row-level security an enum comparison cannot be an index condition
     // (`enum_eq` is not leakproof), so a `current_state` column here made the page Sort under `twt_app`. Replaced 0200's
     // `field_workers_pariwar_state_idx`.
     index('field_workers_pariwar_created_idx').on(t.pariwarId, t.createdAt.desc(), t.fieldWorkerId.desc()),

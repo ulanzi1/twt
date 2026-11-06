@@ -1,7 +1,7 @@
 // Field-worker read accessors — Story 13.1 (QE4, QE11, QE17; AC10).
 //
-// Every read carries an EXPLICIT `pariwar_id` predicate (RLS is ⛔ the only filter — an owner-role caller bypasses it, 13.2
-// TR3). The worker reads return a `FieldWorkerView` that OMITS the three PII columns (`name_ciphertext`,
+// Every read carries an EXPLICIT `pariwar_id` predicate (RLS is ⛔ the only filter — a superuser bypasses it, 13.2 TR3;
+// `-449`: under FORCE a plain owner does not). The worker reads return a `FieldWorkerView` that OMITS the three PII columns (`name_ciphertext`,
 // `mobile_ciphertext`, `mobile_blind_index`) in the SELECT LIST — ⛔ dropped after the fetch. ⛔ No function here decrypts a
 // worker's data. Story 13.1a adds the ONLY two reads that return ciphertext — `pageFieldWorkersForPariwar` (the name) and
 // `getFieldWorkerSealedIdentity` (the name and the mobile) — for the API layer's audited decrypt-on-read (13.1a AD7, AD9); the
@@ -263,8 +263,9 @@ export function decodeFieldWorkerCursor(s: unknown): FieldWorkerListCursor {
 /**
  * Story 13.1a (AD10) — a page of this Pariwar's workers in ONE state, optionally of ONE district (byte-equal — I11), in the
  * list order `created_at DESC, field_worker_id DESC`, AFTER a keyset position compared IN SQL on the exact `created_at::text`
- * (⛔ OFFSET). Served in index order, with no Sort, by `field_workers_pariwar_created_idx` (0201: `pariwar_id`, then the page order)
- * for the first page, a cursor page AND a district page, as the table owner AND as `twt_app` under RLS — `current_state` and
+ * (⛔ OFFSET). Served in index order by `field_workers_pariwar_created_idx` (0201: `pariwar_id`, then the page order), measured with
+ * no Sort at ~2,500 rows a Pariwar for all four forms (first, cursor, district, district + cursor), as the superuser AND as `twt_app`
+ * under RLS; a far smaller Pariwar may rightly plan a bitmap scan and a small Sort — `current_state` and
  * `district` are filters on that range (an enum comparison cannot be an index condition under RLS; review CR35, decision `-448`;
  * `page.spec.ts` EXPLAINs this very statement). A rare state walks more of the Pariwar's entries. Over-fetches one row for `nextCursor`.
  * `after` MUST come from `decodeFieldWorkerCursor`. A non-integer `limit` throws `RangeError`; the size is `clampLimit`-ed
@@ -279,7 +280,7 @@ export async function pageFieldWorkersForPariwar(
     throw new RangeError(`pageFieldWorkersForPariwar: limit must be an integer, got ${String(opts.limit)}`);
   }
   // A NUL can never match a stored district (Postgres `text` holds none) and binding one aborts the transaction (22021) —
-  // the same guard `assertDistrictRecorded` has; an empty page, ⛔ a statement (review round 2, CR30).
+  // the same guard `assertDistrictRecorded` has; an empty page and no statement (review round 2, CR30).
   if (opts.district !== undefined && opts.district.includes(NUL)) return { items: [], nextCursor: null };
   const limit = clampLimit(opts.limit, { default: PAGE_FIELD_WORKERS_DEFAULT_LIMIT, cap: PAGE_FIELD_WORKERS_MAX_LIMIT });
   const conds = [eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.currentState, opts.state)];

@@ -1,5 +1,5 @@
 // Story 13.1a (AD10; AC6, AC7, AC8; I7, I11) — the keyset page, the sealed identity and the recorded districts, live.
-// Per-test ROLLBACK. Rows are seeded as the OWNER with explicit `created_at` literals (one transaction has one `now()`, 13.1
+// Per-test ROLLBACK. Rows are seeded as the superuser with explicit `created_at` literals (one transaction has one `now()`, 13.1
 // TR10 — an ordering assertion on default stamps would compare ties only), under the writer guard (the 0200/0201 trigger
 // requires the genesis shape on INSERT, so the non-genesis states are seeded under `session_replication_role = 'replica'`,
 // which the CHECKs still bind). RLS legs drop to twt_app with `enterAppScope`.
@@ -31,7 +31,7 @@ interface SeedRow {
   readonly createdAt: string;
 }
 
-/** Seed one worker in ANY state as the owner (replica mode skips the genesis-shape trigger; the CHECKs still hold). */
+/** Seed one worker in ANY state as the superuser (replica mode skips the genesis-shape trigger; the CHECKs still hold). */
 async function seedWorker(client: pg.PoolClient, pariwarId: string, r: SeedRow): Promise<string> {
   const id = r.id ?? randomUUID();
   const state = r.state ?? 'pending_kyc';
@@ -193,9 +193,9 @@ describe.skipIf(!hasDatabase)('the keyset query vs field_workers_pariwar_created
         return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value;
       },
     });
-    /** Run the real function for `pariwar` under `role`, return the plan of the one statement it sent. `owner` bypasses RLS;
+    /** Run the real function for `pariwar` under `role`, return the plan of the one statement it sent. `superuser` bypasses RLS;
      *  `app` is `twt_app` with the Pariwar scope — the role and policies the API runs it under. */
-    return async (role: 'owner' | 'app', pariwar: string, opts: Parameters<typeof pageFieldWorkersForPariwar>[2]): Promise<{ statement: string; plan: string }> => {
+    return async (role: 'superuser' | 'app', pariwar: string, opts: Parameters<typeof pageFieldWorkersForPariwar>[2]): Promise<{ statement: string; plan: string }> => {
       await client.query('RESET ROLE');
       if (role === 'app') await enterAppScope(client, pariwar);
       sent.length = 0;
@@ -211,30 +211,36 @@ describe.skipIf(!hasDatabase)('the keyset query vs field_workers_pariwar_created
   const FIRST = { state: 'active' } as const;
   const CURSOR = { state: 'active', after: { createdAtExact: '2026-01-01 04:00:00+00', fieldWorkerId: toFieldWorkerId(randomUUID()) } } as const;
   const DISTRICT = { state: 'pending_kyc', district: 'Gaya' } as const;
+  // What "Load more" sends on the Find screen.
+  const DISTRICT_CURSOR = { state: 'active', district: 'Gaya', after: CURSOR.after } as const;
 
-  // ⭐ THE ROLE MATTERS (review CR35, decision `-448`). The API runs this as `twt_app` under row-level security; the table owner
-  // bypasses it. With the index first specified — (pariwar_id, current_state, created_at …) — the owner got an ordered index scan
+  // ⭐ THE ROLE MATTERS (review CR35, decisions `-448`, `-449`). The API runs this as `twt_app` under row-level security; the
+  // superuser these tests connect as bypasses it (a plain owner would not: 0200 sets FORCE). With the index first specified — (pariwar_id, current_state, created_at …) — the superuser got an ordered index scan
   // (planner cost ~61) while `twt_app` got a bitmap scan of the `pariwar_id` prefix plus a SORT (~1,276): `current_state = $n`
   // is an enum comparison, `enum_eq` is not leakproof, so beneath the policy qual it cannot be an index condition. The index is
   // now (pariwar_id, created_at DESC, field_worker_id DESC) with the state and district as FILTERS, and BOTH roles are judged, for
-  // every form the screens send — the first page, a cursor page and a district page.
+  // every form the screens send — the first page, a cursor page, a district page and a district cursor page. ⚠ At this volume
+  // (~2,500 rows a Pariwar): a far smaller Pariwar may rightly plan a bitmap scan and a small Sort.
   it.each([
-    ['the table OWNER (row-level security bypassed)', 'owner'],
+    ['the SUPERUSER (row-level security bypassed)', 'superuser'],
     ['twt_app (row-level security on — what the API runs)', 'app'],
-  ] as const)('AS %s the real statement is an ordered index scan on the amended index with NO Sort — first page, cursor page AND district page', async (_label, role) => {
+  ] as const)('AS %s the real statement is an ordered index scan on the amended index with NO Sort — first page, cursor page, district page AND district cursor page', async (_label, role) => {
     const { client } = getTx();
     const pariwars = await seedBigTable(client);
     const planOf = realPlans(client);
     const first = await planOf(role, pariwars[0]!, FIRST);
     const cursor = await planOf(role, pariwars[2]!, CURSOR);
     const district = await planOf(role, pariwars[1]!, DISTRICT);
-    for (const { statement, plan } of [first, cursor, district]) {
+    const districtCursor = await planOf(role, pariwars[3]!, DISTRICT_CURSOR);
+    for (const { statement, plan } of [first, cursor, district, districtCursor]) {
       // The captured text IS the list query (its order is the one the cursor depends on), not some other statement.
       expect(statement.toLowerCase()).toContain('order by "field_workers"."created_at" desc, "field_workers"."field_worker_id" desc');
       expect(plan, plan).toContain('field_workers_pariwar_created_idx');
       expect(plan, plan).toMatch(/Index Scan/);
       expect(plan, plan).not.toMatch(/\bSort\b/);
     }
+    // A cursor that fell back to a Filter would walk the Pariwar's rows from the top on every "Load more" (CR51).
+    for (const { plan } of [cursor, districtCursor]) expect(plan, plan).toMatch(/Index Cond:.*created_at/);
   });
 });
 

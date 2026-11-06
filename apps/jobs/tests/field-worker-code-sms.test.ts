@@ -18,6 +18,7 @@ import { ALERT_SMS_FINALISE_BACKOFF_MS } from '../src/scheduler/alert-sms-send.j
 import { CORRECTION_SEND_TIMEOUT_MS, type ClaimCorrectionSmsResult } from '../src/scheduler/claim-dlt-sms-send.js';
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { FIELD_WORKER_CODE_SMS_TEMPLATES } from '../src/scheduler/field-worker-code-sms-templates.js';
+import { codeOnly } from './_code-only.js';
 import {
   DEFAULT_FIELD_WORKER_CODE_SMS_CRON,
   FIELD_WORKER_CODE_SMS_AUDIT_ACTION,
@@ -290,14 +291,12 @@ const kmsDown = (): Partial<FieldWorkerCodeSmsDeps> => ({
 });
 
 /**
- * A source file's CODE: block and line comments stripped, so a comment can neither satisfy a pin nor trip one (review finding CB17). Limit: a
- * string literal that itself opens a block comment would swallow code up to the next close. Every pin that reads through this also asserts
- * that something it requires is present, so that failure is loud, not silent.
+ * A source file's CODE (review findings CB17 and CB34): comments removed by the compiler's parser, types erased, layout normalised. The first
+ * version used two regexes, and a line comment holding `/*` deleted real code; see `_code-only.ts`. The layout is the printer's, so every pin
+ * that reads this is whitespace-tolerant.
  */
 function codeOf(relativeToTests: string): string {
-  return readFileSync(fileURLToPath(new URL(relativeToTests, import.meta.url)), 'utf-8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|\s)\/\/.*$/gm, '$1');
+  return codeOnly(readFileSync(fileURLToPath(new URL(relativeToTests, import.meta.url)), 'utf-8'));
 }
 
 beforeEach(() => {
@@ -843,11 +842,14 @@ describe('AC4 (o) — settle', () => {
   });
 
   // Review finding CB18 (d): every leg above passes `[0, 0]`, so the branch that actually waits was never run.
-  it('⭐ the pause between tries is really waited: a throw, then [1, 1] ms, and the second try lands', async () => {
+  it('⭐ the pause between tries is really waited: a throw, then a 1 ms timer, and the second try lands', async () => {
     const row = await seed();
     h.faults.settleThrows = 1;
+    // Review finding CB41 (a): without this, deleting the wait left the test green. The spy calls through; `afterEach` restores it.
+    const timers = vi.spyOn(globalThis, 'setTimeout');
     const { deps: d, alarms } = deps({ finaliseBackoffMs: [1, 1] });
     await runFieldWorkerCodeSmsTick(d);
+    expect(timers.mock.calls.some(([handler, ms]) => typeof handler === 'function' && ms === 1), 'a 1 ms timer was set for the pause').toBe(true);
     expect(entries('settle')).toEqual(['settle:accepted', 'settle:accepted']);
     expect(row.outcome).toBe('accepted');
     expect(alarms).toEqual([]);
@@ -894,6 +896,9 @@ describe('AC6 — dark is honest', () => {
     expect(alarms).toHaveLength(1);
   });
 
+  // Review finding CB41 (e): like "a final row is ⛔ claimed", this leg runs on the FAKE claim, which only ever picks `due` rows, so it cannot
+  // fail on a regression in the real claim's `WHERE outcome = 'due'`. The real proof is the live reactivation legs (AC3 (a), (b)) and the
+  // domain claim legs; what this leg shows is that the SWEEP never revives a finished row itself.
   it('⭐ later provisioning the id sends nothing for that row: it is ⛔ claimable', async () => {
     const row = await seed();
     await runFieldWorkerCodeSmsTick(deps({ resolveConfig: () => Promise.resolve(null) }).deps);
@@ -968,8 +973,9 @@ describe('AC8 — nothing leaks', () => {
   /** A scenario arranges the faults on the seeded row, and may hand back deps to override. */
   type Arrange = (row: FakeRow) => void | Partial<FieldWorkerCodeSmsDeps> | Promise<void | Partial<FieldWorkerCodeSmsDeps>>;
   /**
-   * Review finding CB6: where a scenario names the seeded row's end, the run must reach it. Without that a scenario that no longer produces
-   * its fault would still pass the sentinel check, because a run that does nothing leaks nothing.
+   * Review findings CB6 and CB41: EVERY scenario names the seeded row's end, and the type makes the third element required, so a scenario that
+   * omits it does not compile. Without an end a scenario that no longer produces its fault would still pass the sentinel check, because a run
+   * that does nothing leaks nothing.
    */
   type Ends = { readonly outcome: string; readonly detail: string | RegExp | null };
   const UNKNOWN = 'exhausted:outcome_unknown';
@@ -982,7 +988,7 @@ describe('AC8 — nothing leaks', () => {
   });
   // Review finding CB16: EVERY scenario names the seeded row's end. A crash or a lost settle leaves the row `attempting` for the lease; a release
   // files it `due`; a claim fault never touches it.
-  const SCENARIOS: readonly (readonly [string, Arrange, Ends?])[] = [
+  const SCENARIOS: readonly (readonly [string, Arrange, Ends])[] = [
     ['accepted', () => undefined, { outcome: 'accepted', detail: null }],
     [
       'a timeout',
@@ -1089,8 +1095,23 @@ describe('AC8 — nothing leaks', () => {
     ],
   ];
 
-  // Objects, not tuples: `it.each` infers a union from a tuple with an optional element, and `ends` loses its type.
+  // Objects rather than tuples, so the case names interpolate `$label`.
   const CASES = SCENARIOS.map(([label, arrange, ends]) => ({ label, arrange, ends }));
+
+  // Review findings CB12 and CB35: `JSON.stringify(new Error('x'))` is `{}` (message and stack are not enumerable), so an Error passed to a
+  // console method would carry its message past this check. A replacer that kept only name, message and stack fixed that and opened another
+  // hole: it dropped what the default had kept (own enumerable properties such as pg's `detail`) and never saw `cause` or an AggregateError's
+  // `errors`. This writes out EVERY own property of an Error, enumerable or not, wherever the Error sits; the nested Errors it reaches go
+  // through the same replacer. It takes its arguments as a tuple because the key is not needed (the lint config allows no unused
+  // parameters). The canary tests below feed it a sentinel in each shape.
+  const errorsInFull = (...kv: [string, unknown]): unknown => {
+    const v = kv[1];
+    if (!(v instanceof Error)) return v;
+    const own: Record<string, unknown> = { name: v.name };
+    for (const key of Object.getOwnPropertyNames(v)) own[key] = (v as unknown as Record<string, unknown>)[key];
+    return own;
+  };
+  const everything = (parts: unknown): string => JSON.stringify(parts, errorsInFull);
 
   it.each(CASES)('⭐ $label: neither sentinel in any console line, alarm, audit field or row', async ({ label, arrange, ends }) => {
     const captured: unknown[][] = [];
@@ -1106,43 +1127,54 @@ describe('AC8 — nothing leaks', () => {
     });
     // The fake's own columns for the worker's sealed mobile and code row are not the send row's: blanked, the rest is asserted.
     const rows = h.rows.map((r) => ({ ...r, mobileCiphertext: '', code: '' }));
-    // Review finding CB12: `JSON.stringify(new Error('x'))` is `{}` (message and stack are not enumerable), so an Error passed to a console method
-    // would carry its message past this check. The replacer writes an Error out in full, wherever it sits in what was captured. It takes its
-    // arguments as a tuple because the key is not needed (the lint config allows no unused parameters).
-    const errorsInFull = (...kv: [string, unknown]): unknown => {
-      const v = kv[1];
-      return v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v;
-    };
-    const out = JSON.stringify({ captured, alarms, audit: h.auditLines, rows, thrown: String(thrown) }, errorsInFull);
+    const out = everything({ captured, alarms, audit: h.auditLines, rows, thrown: String(thrown) });
     expect(out).not.toContain(CODE);
     expect(out).not.toContain(MOBILE);
     expect(out).not.toContain(MOBILE.slice(1));
     // Non-vacuity: the capture saw the run, and a scenario that names an end reached it.
     expect(h.log).toContain('guard');
     for (const lapsed of h.lapsed) expect(alarms.join(' '), `${label}: the lapse alarm names ${lapsed.sendId}`).toContain(lapsed.sendId);
-    if (ends !== undefined) {
-      expect(seeded.outcome, `${label}: the row's outcome`).toBe(ends.outcome);
-      if (ends.detail instanceof RegExp) expect(seeded.detail ?? '', `${label}: the row's detail`).toMatch(ends.detail);
-      else expect(seeded.detail, `${label}: the row's detail`).toBe(ends.detail);
-    }
+    expect(seeded.outcome, `${label}: the row's outcome`).toBe(ends.outcome);
+    if (ends.detail instanceof RegExp) expect(seeded.detail ?? '', `${label}: the row's detail`).toMatch(ends.detail);
+    else expect(seeded.detail, `${label}: the row's detail`).toBe(ends.detail);
+  });
+
+  // Review finding CB35: the check is only as good as what it can SEE. Each shape below carries the sentinel, and the check must find it.
+  it.each([
+    { label: 'an Error’s message', make: (s: string): unknown => new Error(`bound ${s}`) },
+    { label: 'an Error’s cause (an Error)', make: (s: string): unknown => new Error('x', { cause: new Error(s) }) },
+    { label: 'an Error’s cause (a string)', make: (s: string): unknown => new Error('x', { cause: s }) },
+    { label: 'an AggregateError’s errors', make: (s: string): unknown => new AggregateError([new Error(s)], 'x') },
+    { label: 'an own property of an Error (pg’s `detail`)', make: (s: string): unknown => Object.assign(new Error('duplicate key'), { code: '23505', detail: s }) },
+    { label: 'an Error inside an object inside an array', make: (s: string): unknown => [{ failed: new Error(s) }] },
+  ])('⭐ canary: the sentinel check sees the sentinel in $label', ({ make }) => {
+    expect(everything([make(CODE)])).toContain(CODE);
+    expect(everything([make(MOBILE)])).toContain(MOBILE);
+  });
+
+  it('⭐ canary control: an Error without a sentinel is not reported', () => {
+    expect(everything([new Error('x', { cause: new Error('y') }), Object.assign(new Error('z'), { detail: 'q' })])).not.toContain(CODE);
   });
 });
 
-// Review finding CB6 (AC5): the live leg proves "state and events_log unchanged, `GET .../code` still 200" for ONE outcome (a gateway 500).
-// For the rest of the Outcomes table this is the standing proof: the sweep reaches the worker only through the one read, the decrypt and the
-// send record's accessors (the domain half pins that those write one table), and it names no event writer. Any other call fails here.
+// Review findings CB6 and CB36 (AC5): the live leg proves "state and events_log unchanged, `GET .../code` still 200" for ONE outcome (a gateway
+// 500). For the rest of the Outcomes table this is a standing SOURCE pin, and it proves exactly this and no more: the sweep takes only these
+// names from `@twt/domain` (the import list is pinned, so a new module is a visible change); it never aliases, destructures or reaches a
+// namespace through `?.` or `[`; it never calls a write method on the handles of its scope; and its code names no event writer. A write made by
+// code the sweep CALLS (the domain half's concern, which pins that its accessors write one table) is not seen here, and neither is a write
+// through a module this scan does not know: a new import fails the first test and is then reviewed.
 describe('AC5 — the sweep has no write path to a worker’s state or the event log', () => {
-  // CODE only (CB17): the header comment names `activateFieldWorker` (the approval, which writes the row) and says so.
+  // CODE only (CB17, CB34): the header comment names `activateFieldWorker` (the approval, which writes the row) and says so.
   const source = codeOf('../src/scheduler/field-worker-code-sms.ts');
-  // The import is removed before the bare-name check; imports are what the first test pins.
-  const body = source.replace(/import[^;]*;/g, '');
-  const domainImport = /import\s*\{([^}]*)\}\s*from\s*'@twt\/domain'/.exec(source)?.[1] ?? '';
+  // The import statements are removed before the bare-name checks; the first test pins the import itself.
+  const body = source.replace(/^import\b[^;]*;/gm, '');
+  const domainImport = /import\s*\{([^}]*)\}\s*from\s*['"]@twt\/domain['"]/.exec(source)?.[1] ?? '';
   const imported = domainImport
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s !== '' && !s.startsWith('type '))
     .sort();
-  const membersOf = (ns: string): Set<string> => new Set([...body.matchAll(new RegExp(`\\b${ns}\\.([A-Za-z_]+)`, 'g'))].map((m) => m[1]!));
+  const membersOf = (ns: string): Set<string> => new Set([...body.matchAll(new RegExp(`\\b${ns}\\s*\\.\\s*([A-Za-z_]+)`, 'g'))].map((m) => m[1]!));
 
   /** Every member of every `@twt/domain` namespace the sweep may touch. A new one is a decision: this list changes in the same commit. */
   const SURFACE: Readonly<Record<string, readonly string[]>> = {
@@ -1166,17 +1198,20 @@ describe('AC5 — the sweep has no write path to a worker’s state or the event
     claim: ['resolvePariwarDefaultLocale', 'PeerRequestLocaleMissingError'],
     smsDelivery: ['canReadAcrossPariwars'],
     audit: ['withCompensatingAudit'],
+    ids: ['pariwarId', 'fieldWorkerId'], // pure brand constructors (CB36: they were not in the list)
   };
 
-  it('⭐ it takes exactly these names from `@twt/domain`, and a namespace is never aliased, destructured or passed on bare', () => {
+  it('⭐ it takes exactly these names from `@twt/domain`, and a namespace is never aliased, destructured, optional-chained or indexed', () => {
     expect(imported, 'non-vacuity: the import was read').toEqual(
       ['attributionCode', 'audit', 'canonicalJsonStringify', 'claim', 'fieldWorker', 'ids', 'smsDelivery', 'withPariwarScope'].sort(),
     );
     for (const ns of ['fieldWorker', 'attributionCode', 'smsDelivery']) {
-      expect(body.match(new RegExp(`\\b${ns}\\b(?!\\.)`, 'g')) ?? [], `${ns} used bare (aliased or destructured)`).toEqual([]);
+      expect(body.match(new RegExp(`\\b${ns}\\b(?!\\s*\\.)`, 'g')) ?? [], `${ns} used bare (aliased or destructured)`).toEqual([]);
     }
     // `claim` and `audit` are ordinary words in the log strings, so look for the shapes an alias or a pass-on takes.
     expect(body).not.toMatch(/[=(,]\s*(?:claim|audit)\s*[;,)]/);
+    // Optional chaining and computed access hide a member name from the scan; none is used on any namespace (CB36).
+    expect(body).not.toMatch(/\b(?:fieldWorker|attributionCode|claim|smsDelivery|audit|ids)\s*(?:\?\.|\[)/);
   });
 
   it.each(Object.entries(SURFACE).map(([ns, members]) => ({ ns, members })))(
@@ -1191,13 +1226,22 @@ describe('AC5 — the sweep has no write path to a worker’s state or the event
         claim: ['resolvePariwarDefaultLocale'],
         smsDelivery: ['canReadAcrossPariwars'],
         audit: ['withCompensatingAudit'],
+        ids: ['pariwarId', 'fieldWorkerId'],
       };
       for (const m of mustUse[ns] ?? []) expect(used.has(m), `${ns}.${m} is called`).toBe(true);
     },
   );
 
+  it('⭐ it calls no write method on the handles of its scope or its pool (CB36)', () => {
+    expect(body, 'non-vacuity: the scope is opened').toContain('withPariwarScope(');
+    expect(body).not.toMatch(/\b(?:db|client|pool)\s*\??\.\s*(?:insert|update|delete|execute|query|connect|transaction)\b/);
+  });
+
   it('⭐ it names no event writer and no transition, in any case', () => {
-    expect(source).not.toMatch(/events_log|appendEvent|runLockedTransition|activateFieldWorker|insert\s+into|update\s+"?field_workers/i);
+    expect(source, 'non-vacuity: the file was read').toContain('runFieldWorkerCodeSmsTick');
+    expect(source).not.toMatch(
+      /events_log|eventsLog|appendEvent|runLockedTransition|activateFieldWorker|\binsert\s+into|\bupdate\s+"?(?:public\.)?"?field_workers|\bdelete\s+from|\btruncate\b|\bmerge\s+into/i,
+    );
   });
 });
 
@@ -1229,7 +1273,7 @@ describe('AD3 — the lease', () => {
 // Review finding CB1 (2026-11-06) — Task 5.4's registration and `boot.ts` wiring were pinned by nothing; this is the shape of its twin's pins
 // (`module-activation.test.ts`, "registration and pool"). The live legs inject their own pool and never reach `boot.ts` (TR10).
 describe('Task 5.4 — registration and boot wiring', () => {
-  it('⭐ creates the queue, works it ONE tick at a time, schedules every minute in IST, and a delivered job runs a real tick', async () => {
+  it('⭐ creates the queue, works it ONE tick at a time, schedules every minute in IST, and a job under an RLS-bound login answers `refused`', async () => {
     const createQueue = vi.fn<(name: string) => Promise<void>>(() => Promise.resolve());
     const work = vi.fn<(name: string, opts: unknown, handler: unknown) => Promise<string>>(() => Promise.resolve('worker-id'));
     const schedule = vi.fn<(name: string, cron: string, data: unknown, opts: unknown) => Promise<void>>(() => Promise.resolve());
@@ -1248,12 +1292,31 @@ describe('Task 5.4 — registration and boot wiring', () => {
     expect(entries('guard')).toEqual(['guard']);
   });
 
+  // Review finding CB41 (b): the leg above reaches only the refused path (`claimed: 0`, one job). This one opens the guard, has a due row, and
+  // delivers TWO jobs: the handler runs ONE real tick and counts both jobs (`jobs.length`, not a literal 1).
+  it('⭐ a delivered batch of two jobs runs ONE real tick: the due row is sent and both jobs are counted', async () => {
+    const row = await seed();
+    const work = vi.fn<(name: string, opts: unknown, handler: unknown) => Promise<string>>(() => Promise.resolve('worker-id'));
+    const boss = {
+      createQueue: vi.fn<(name: string) => Promise<void>>(() => Promise.resolve()),
+      work,
+      schedule: vi.fn<(name: string, cron: string, data: unknown, opts: unknown) => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Parameters<typeof registerFieldWorkerCodeSmsCron>[0];
+    await registerFieldWorkerCodeSmsCron(boss, deps().deps);
+    const handler = work.mock.calls[0]![2] as (jobs: unknown[]) => Promise<unknown>;
+    await expect(handler([{}, {}])).resolves.toEqual({ jobs: 2, refused: false, lapsed: 0, claimed: 1 });
+    expect(row.outcome).toBe('accepted');
+  });
+
   it('⭐ boot.ts gives the sweep its OWN max:3 pool (⛔ the shared max:2 pool), ends it at BOTH shutdown sites, registers it AFTER the pre-flight is built with the alert seam’s deps, and checks the cron shape', () => {
-    // CODE only, whitespace-normalised (CB17): a comment can neither satisfy these nor trip them, and a reformat does not break them.
+    // CODE only, whitespace-normalised (CB17, CB34): a comment can neither satisfy these nor trip them, and a reformat that keeps the tokens
+    // does not break them. The `createDb` pin needs its options as written, and `.end()` is counted, not named by site.
     const boot = codeOf('../src/boot.ts').replace(/\s+/g, ' ');
     expect(boot).toMatch(/const \{ pool: fieldWorkerCodeSmsPool \} = createDb\( ?connectionString, \{ max: 3, logger: false \} ?\)/);
     expect(boot.match(/fieldWorkerCodeSmsPool ?\.end\(\)/g)).toHaveLength(2);
     expect(boot).toMatch(/FIELD_WORKER_CODE_SMS_CRON must be a 5-field cron expression/);
+    // CB41 (e): the env var must be READ into the constant that reaches the schedule (the `cron:` part below pins the other end).
+    expect(boot).toMatch(/const FIELD_WORKER_CODE_SMS_CRON = process\.env\[['"]FIELD_WORKER_CODE_SMS_CRON['"]\] \?\? DEFAULT_FIELD_WORKER_CODE_SMS_CRON/);
     const preflightAt = boot.indexOf('const smsPreflight =');
     const at = boot.indexOf('await registerFieldWorkerCodeSmsCron(');
     expect(preflightAt, 'the pre-flight is built in boot').toBeGreaterThan(-1);

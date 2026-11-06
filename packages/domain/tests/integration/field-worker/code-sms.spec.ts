@@ -348,15 +348,25 @@ describe.skipIf(!hasDatabase)('the claim, the backoff and the lapse (own-committ
   it('⭐ TR11 — a released row whose backoff has passed goes BEHIND an older-updated waiting row, whatever its `created_at` says', async () => {
     const waiting = await seedRow({ updatedAgoMs: 3_000_000_000 }); // never claimed: created = updated
     const released = await seedRow({ updatedAgoMs: 2_900_000_000, createdAgoMs: 3_100_000_000, attemptCount: 1 });
-    expect((await claimMine())?.sendId, 'the waiting row first: its `updated_at` is the older').toBe(waiting);
-    expect((await claimMine())?.sendId, 'then the released row, which is eligible').toBe(released);
-    expect(await claimMine()).toBeNull();
-    await finish(waiting);
-    await finish(released);
+    try {
+      expect((await claimMine())?.sendId, 'the waiting row first: its `updated_at` is the older').toBe(waiting);
+      expect((await claimMine())?.sendId, 'then the released row, which is eligible').toBe(released);
+      expect(await claimMine()).toBeNull();
+    } finally {
+      // Review finding CB42: in a `finally`, so a failed `expect` does not leave two `due` rows, the OLDEST in the table and in `mine`, for every
+      // later test's `claimMine()` to return.
+      await finish(waiting);
+      await finish(released);
+    }
   });
 
   // The tie-break: two rows with the SAME `updated_at` are claimed in `send_id` order. `session_replication_role = 'replica'` (as this file's
   // cleanup uses) lets the owner pool copy one timestamp onto the other without tripping the guard trigger.
+  // ⚠ Review finding CB42 - WHAT THIS LEG CAN AND CANNOT DETECT: the partial index on `(updated_at, send_id)` may hand tied rows back in
+  // `send_id` order even if the ORDER BY loses `send_id`, and otherwise the heap order (a, then b) is compared with a random UUID order, so the
+  // leg catches that mutation in about half of the runs at best. The DETERMINISTIC pin is the source pin in
+  // `tests/field-worker/code-sms.test.ts` ("the statement orders by updated_at then send_id"); this leg shows only that a tie is claimed in
+  // `send_id` order against a real database. WRITTEN, NOT RUN.
   it('⭐ TR11 — equal `updated_at` falls back to `send_id`', async () => {
     const a = await seedRow({ updatedAgoMs: 3_200_000_000 });
     const b = await seedRow({ updatedAgoMs: 3_200_000_000 });
@@ -373,10 +383,13 @@ describe.skipIf(!hasDatabase)('the claim, the backoff and the lapse (own-committ
       c.release();
     }
     const [first, second] = [a, b].sort();
-    expect((await claimMine())?.sendId).toBe(first);
-    expect((await claimMine())?.sendId).toBe(second);
-    await finish(a);
-    await finish(b);
+    try {
+      expect((await claimMine())?.sendId).toBe(first);
+      expect((await claimMine())?.sendId).toBe(second);
+    } finally {
+      await finish(a);
+      await finish(b);
+    }
   });
 
   it('⭐ AC4 (b) the lapse: `attempting` past the lease ends `exhausted:outcome_unknown`; inside it is left alone', async () => {

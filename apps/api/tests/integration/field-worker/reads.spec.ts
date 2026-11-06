@@ -594,7 +594,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
       expect(listB[0]!['code_sms_status']).toBe('not_delivered');
     });
 
-    it('⭐ ONE statement, not one per item: a page of three costs one status read', async () => {
+    it('⭐ the handler asks for the page’s statuses ONCE, with the page’s three ids (the wiring; one SQL statement is proved without a database)', async () => {
       const { p, admin } = await pariwar();
       for (const name of ['One Worker', 'Two Worker', 'Three Worker']) {
         const id = await h.registered(admin.client, p, { name, mobile: nextMobile(), district: 'Patna' });

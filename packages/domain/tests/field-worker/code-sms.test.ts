@@ -13,6 +13,7 @@ import {
   releaseFieldWorkerCodeSms,
 } from '../../src/field-worker/code-sms.js';
 import { FIELD_WORKER_CODE_SMS_OUTCOMES, FIELD_WORKER_CODE_SMS_STATUSES } from '../../src/schema/field_worker_code_sms_sends.js';
+import { codeOnly } from '../_code-only.js';
 
 const of = (outcome: (typeof FIELD_WORKER_CODE_SMS_OUTCOMES)[number], detail: string | null = null, report: 'delivered' | 'undelivered' | null = null) =>
   deriveFieldWorkerCodeSmsStatus({ outcome, detail, report });
@@ -93,15 +94,41 @@ describe('deriveFieldWorkerCodeSmsStatus (AD12)', () => {
 // for the whole Outcomes table: these accessors are the only writers the sweep has, and they write one table. The worker's state and the event
 // log are therefore unreachable from any outcome. A source scan, in the manner of the reach fence's: it fails when a writer is added elsewhere.
 describe('AC5 — the send record is the only table these accessors write', () => {
+  // Review findings CB17, CB34, CB36: CODE only (the compiler's parser strips comments, so a comment can neither trip nor satisfy it), any case,
+  // a quoted or schema-qualified table name, and a row lock (`FOR UPDATE`, `FOR NO KEY UPDATE`) or an upsert (`DO UPDATE SET`) is not a write
+  // target. What it cannot see is named below: a write made by code this file CALLS.
+  const code = codeOnly(readFileSync(fileURLToPath(new URL('../../src/field-worker/code-sms.ts', import.meta.url)), 'utf-8'));
+
   it('⭐ every INSERT, UPDATE and DELETE in code-sms.ts names `field_worker_code_sms_sends`', () => {
-    // Review finding CB17: CODE only (a comment can neither trip nor satisfy it), any case, an optional quote on the table name, and `FOR UPDATE`
-    // (a row lock, not a write) excluded.
-    const code = readFileSync(fileURLToPath(new URL('../../src/field-worker/code-sms.ts', import.meta.url)), 'utf-8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/(^|\s)\/\/.*$/gm, '$1');
-    const targets = [...code.matchAll(/(?:\binsert\s+into|(?<!\bfor\s+)\bupdate|\bdelete\s+from)\s+"?([a-z_]+)"?/gi)].map((m) => m[1]!.toLowerCase());
+    const targets = [
+      ...code.matchAll(
+        /(?:\binsert\s+into|(?<!\bfor\s+)(?<!\bfor\s+no\s+key\s+)(?<!\bdo\s+)\bupdate|\bdelete\s+from)\s+(?:"?[a-z_]+"?\s*\.\s*)?"?([a-z_]+)"?/gi,
+      ),
+    ].map((m) => m[1]!.toLowerCase());
     expect(targets.length, 'non-vacuity: the enqueue, the claim, the settle, the release and the lapse').toBeGreaterThanOrEqual(5);
     expect(new Set(targets)).toEqual(new Set(['field_worker_code_sms_sends']));
+  });
+
+  it('⭐ and it writes by no other route: no query builder, no interpolated table name, no TRUNCATE or MERGE', () => {
+    expect(code, 'non-vacuity: the file was read').toContain('claimNextFieldWorkerCodeSms');
+    expect(code).not.toMatch(/\.\s*(?:insert|update|delete)\s*\(/);
+    expect(code).not.toMatch(/\b(?:into|update|from)\s+\$\{/i);
+    expect(code).not.toMatch(/\b(?:truncate|merge\s+into)\b/i);
+  });
+});
+
+// Review finding CB42 (TR11): the live legs that prove the claim ORDER against a database are WRITTEN, NOT RUN, and the tie-break leg cannot
+// always tell (the partial index on `(updated_at, send_id)` may hand tied rows back in `send_id` order whatever the ORDER BY says). This is the
+// deterministic complement that needs no database: the claim statement itself.
+describe('claimNextFieldWorkerCodeSms — the statement orders by updated_at then send_id (a source pin)', () => {
+  it('⭐ ORDER BY updated_at, send_id; ⛔ created_at; FOR UPDATE SKIP LOCKED; LIMIT 1', () => {
+    const source = codeOnly(readFileSync(fileURLToPath(new URL('../../src/field-worker/code-sms.ts', import.meta.url)), 'utf-8'));
+    const claim = /export async function claimNextFieldWorkerCodeSms[\s\S]*?\n}\n/.exec(source)?.[0] ?? '';
+    expect(claim.length, 'non-vacuity: the function was found').toBeGreaterThan(200);
+    expect(claim).toMatch(/order\s+by\s+updated_at\s*,\s*send_id\b/i);
+    expect(claim).not.toMatch(/order\s+by\s+created_at/i);
+    expect(claim).toMatch(/for\s+update\s+skip\s+locked/i);
+    expect(claim).toMatch(/\blimit\s+1\b/i);
   });
 });
 
@@ -109,12 +136,12 @@ describe('AC5 — the send record is the only table these accessors write', () =
 // `RELEASE_DETAIL` to let any other class back to `due` would send a row whose text the gateway took a second time.
 describe('releaseFieldWorkerCodeSms — only a detail that proves the gateway was not reached', () => {
   const KEY = { pariwarId: 'p', sendId: 's', claimToken: 't' } as const;
-  const stub = () => {
+  const stub = (rowCount = 1) => {
     const sql: string[] = [];
     const q = {
       query: (text: string) => {
         sql.push(text);
-        return Promise.resolve({ rowCount: 1, rows: [] });
+        return Promise.resolve({ rowCount, rows: [] });
       },
     } as never;
     return { q, sql };
@@ -149,10 +176,24 @@ describe('releaseFieldWorkerCodeSms — only a detail that proves the gateway wa
     expect(sql).toEqual([]);
   });
 
-  it('refuses a raw gateway word the grammar does not allow, before any SQL', async () => {
+  // Review finding CB41 (d): the grammar guard and the release set are two checks. A raw gateway word is refused by BOTH, so it cannot tell them
+  // apart; `rate_limited:123456` passes the release set and fails only the grammar (a six-digit run is barred from a stored detail).
+  it('refuses a raw gateway word the grammar does not allow, before any SQL, as a grammar fault', async () => {
     const { q, sql } = stub();
-    await expect(releaseFieldWorkerCodeSms(q, { ...KEY, detail: 'api_unavailable:timeout' })).rejects.toThrow();
+    await expect(releaseFieldWorkerCodeSms(q, { ...KEY, detail: 'api_unavailable:timeout' })).rejects.toThrow(/outside the grammar/);
     expect(sql).toEqual([]);
+  });
+
+  it('refuses a detail the release set allows but the stored grammar bars (a six-digit run), before any SQL', async () => {
+    const { q, sql } = stub();
+    await expect(releaseFieldWorkerCodeSms(q, { ...KEY, detail: 'rate_limited:123456' })).rejects.toThrow(/outside the grammar/);
+    expect(sql).toEqual([]);
+  });
+
+  it('answers false when the claim was lost (the compare-and-set updated no row)', async () => {
+    const { q, sql } = stub(0);
+    await expect(releaseFieldWorkerCodeSms(q, { ...KEY, detail: 'api_unavailable:kms' })).resolves.toBe(false);
+    expect(sql).toHaveLength(1);
   });
 
   it.each(RELEASABLE)('releases %s, in one statement (the control: the refusals above are not a stub that refuses everything)', async (detail) => {

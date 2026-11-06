@@ -814,7 +814,8 @@ describe('AC8 — nothing leaks', () => {
     await runFieldWorkerCodeSmsTick(d).catch((e: unknown) => {
       thrown = e;
     });
-    const rows = h.rows.map(({ mobileCiphertext: _sealed, code: _code, ...rest }) => rest);
+    // The fake's own columns for the worker's sealed mobile and code row are not the send row's: blanked, the rest is asserted.
+    const rows = h.rows.map((r) => ({ ...r, mobileCiphertext: '', code: '' }));
     const out = JSON.stringify({ captured, alarms, audit: h.auditLines, rows, thrown: String(thrown) });
     expect(out).not.toContain(CODE);
     expect(out).not.toContain(MOBILE);

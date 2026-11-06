@@ -96,8 +96,8 @@ describe('Story 13.1a DTOs', () => {
   });
 
   it('Story 13.1b (AD12) — `code_sms_status` is REQUIRED and nullable, inside the enum; `detail`, `provider_message_id` and `locale` are refused', () => {
-    const { code_sms_status: _dropped, ...missing } = item;
-    expect(FieldWorkerListItem.safeParse(missing).success).toBe(false);
+    const without = <T extends object>(o: T): Partial<T> => Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'code_sms_status')) as Partial<T>;
+    expect(FieldWorkerListItem.safeParse(without(item)).success).toBe(false);
     for (const status of [...FIELD_WORKER_CODE_SMS_STATUSES, null]) {
       expect(FieldWorkerListItem.safeParse({ ...item, code_sms_status: status }).success, String(status)).toBe(true);
     }
@@ -106,8 +106,7 @@ describe('Story 13.1a DTOs', () => {
     }
     for (const key of ['detail', 'provider_message_id', 'locale']) expect(FieldWorkerListItem.safeParse({ ...item, [key]: 'x' }).success, key).toBe(false);
     const identity = { ...item, mobile: '+919876543210', approved_by_display: null };
-    const { code_sms_status: _alsoDropped, ...identityMissing } = identity;
-    expect(FieldWorkerIdentityResponse.safeParse(identityMissing).success).toBe(false);
+    expect(FieldWorkerIdentityResponse.safeParse(without(identity)).success).toBe(false);
     expect(FieldWorkerIdentityResponse.safeParse({ ...identity, detail: 'x' }).success).toBe(false);
   });
 

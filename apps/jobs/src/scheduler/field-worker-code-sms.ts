@@ -230,7 +230,8 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
   ): Promise<boolean> =>
     record(
       (client) => fieldWorker.settleFieldWorkerCodeSms(client, { pariwarId, sendId, claimToken, outcome, detail, ...opts }),
-      outcome,
+      // Code review R4-1: the detail rides in the record's own alarm, because a missed write suppresses the caller's (CB45); it is in the grammar.
+      detail === null ? outcome : `${outcome} (${detail})`,
       opts.providerMessageId,
     );
 
@@ -359,7 +360,7 @@ export async function runFieldWorkerCodeSmsTick(deps: FieldWorkerCodeSmsDeps): P
     if (!(await smsDelivery.canReadAcrossPariwars(deps.pool))) {
       alarm(
         '[jobs] field-worker-code-sms: field_worker_code_sms.rls_bound_role — the pool role cannot read across Pariwars (roster Row 26); ' +
-          '⛔ swept — a due code text stays due until it can; once it can, one older than the max age (24 h) is ended expired and an officer reads the code by hand',
+          '⛔ swept — a code text stays as it is until it can: then a due one older than the max age is ended expired, and one left mid-send is ended outcome-unknown; an officer reads the code by hand',
       );
       return { refused: true, lapsed: 0, claimed: 0 };
     }

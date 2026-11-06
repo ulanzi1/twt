@@ -79,11 +79,14 @@ describe.skipIf(!hasDatabase)('the send row guard trigger (AC4 (g))', { timeout:
   it.each(FINALS)('⭐ %s is FROZEN: every update is refused, a metadata touch included', async (final) => {
     const { client } = getTx();
     const sendId = await seedRow(client, final);
+    // Code review R4-7: the seed is checked BEFORE any savepoint, so this read can fail (CB48 removed the vacuous one after the refusals).
+    const { rows } = await client.query<{ outcome: string }>(`SELECT outcome FROM ${TABLE} WHERE send_id = $1`, [sendId]);
+    expect(rows[0]?.outcome).toBe(final);
     await refused(client, sendId, `updated_at = clock_timestamp()`, /a finished row/);
     await refused(client, sendId, `outcome = 'due'`, /a finished row/);
     await refused(client, sendId, `detail = 'no_code'`, /a finished row/);
     await refused(client, sendId, `attempt_count = 0`, /a finished row/);
-    // ⛔ A read of the outcome here: it runs after every ROLLBACK TO SAVEPOINT and cannot fail (CB48). The refusals above are the proof.
+    // ⛔ A read of the outcome HERE: it would run after every ROLLBACK TO SAVEPOINT and could not fail (CB48). The refusals are the proof.
   });
 
   const IDENTITY = [

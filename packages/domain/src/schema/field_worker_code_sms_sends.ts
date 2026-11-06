@@ -42,7 +42,7 @@ export type FieldWorkerCodeSmsStatus = (typeof FIELD_WORKER_CODE_SMS_STATUSES)[n
 
 /**
  * ⭐ The GRAMMAR of `detail`: every value the sweep writes, ⛔ anything else (⛔ a space, ⛔ `+`, ⛔ a run of 6+ digits, so neither a
- * code nor a mobile can rest here written as digits — TR9; ⚠ one split by `.`, `_`, `-` or a letter is not barred, as on every SMS kind:
+ * code nor a mobile can rest here as a contiguous run of digits — TR9; ⚠ one split by `.`, `_`, `-` or a letter is not barred, as on every SMS kind:
  * code review CB52, deferred CB60). A gateway `<code>` is `[A-Za-z0-9_.-]{1,64}`. ⚠ LOCKSTEP with
  * `field_worker_code_sms_sends_detail_vocabulary_check` (0202; the policy spec pins the two equal) and asserted by the writers.
  * ⛔ Backslashes — the same string must read the same in a JS `RegExp` and a PG ARE.

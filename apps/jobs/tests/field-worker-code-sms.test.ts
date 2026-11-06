@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_POOL_CONNECTION_TIMEOUT_MS, canonicalJsonStringify, encryption, fieldWorker } from '@twt/domain';
-import type { SmsAppClient } from '@twt/channels';
+import { SMS_GATEWAY_TIMEOUT_MS, type SmsAppClient } from '@twt/channels';
 import { QUEUE_NAMES } from '@twt/queue';
 import type pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -910,13 +910,52 @@ describe('AD3 — a settle that did not land is ⛔ announced as an end', () => 
     { label: 'an alarmed send end', arrange: async () => { await seed(); h.answer = () => Promise.resolve(finalError('auth:http_401')); return {}; } },
   ];
 
-  it.each(SITES)('⭐ $label: ONE alarm, the record’s own "already moved on", and no "ended" claim', async ({ arrange }) => {
+  // R4-1: the record's own alarm carries the DETAIL, because the caller's alarm (which named it) is the one suppressed.
+  const DETAIL: Readonly<Record<string, string>> = {
+    'the ceiling': 'exhausted:attempts',
+    'no passport row': 'config:pariwar_locale_missing',
+    'no code row': 'no_code',
+    'a prepare refusal': 'config:dlt_template_id_missing',
+    'an unreadable mobile': 'identity_unreadable:envelope',
+    'an alarmed send end': 'auth:http_401',
+  };
+
+  it.each(SITES)('⭐ $label: ONE alarm, the record’s own "already moved on", naming the detail, and no "ended" claim', async ({ label, arrange }) => {
     const over = await arrange();
     h.faults.settleMovedOn = true;
     const { deps: d, alarms } = deps(over);
     await runFieldWorkerCodeSmsTick(d);
     expect(entries('settle').length, 'non-vacuity: the site reached its settle').toBeGreaterThan(0);
     expect(alarms).toEqual([expect.stringContaining('the row had already moved on')]);
+    expect(alarms[0]).toContain(DETAIL[label]);
+  });
+
+  // R4-3: the other miss — every try throws — at an alarmed site: the record's "could not be written" names the detail, ⛔ "ended".
+  it.each(SITES)('⭐ $label, every try throwing: ONE alarm, "could not be written", naming the detail', async ({ label, arrange }) => {
+    const over = await arrange();
+    h.faults.settleThrows = 9;
+    const { deps: d, alarms } = deps(over);
+    await runFieldWorkerCodeSmsTick(d);
+    expect(alarms).toEqual([expect.stringContaining('its record could not be written')]);
+    expect(alarms[0]).toContain(DETAIL[label]);
+  });
+
+  // R4-2: a missed settle at a tick-ending site still ENDS the tick: the next row would meet the same bad key or credential.
+  it.each([
+    { label: 'key_rejected', over: () => kmsRejects() },
+    { label: 'auth:*', over: () => { h.answer = () => Promise.resolve(finalError('auth:http_401')); return {}; } },
+  ])('⭐ $label with a missed settle (moved on, then all throwing) still ends the tick: the next row is ⛔ claimed', async ({ over }) => {
+    for (const miss of ['movedOn', 'throws'] as const) {
+      h.rows.length = 0;
+      h.faults = {};
+      await seed();
+      const later = await seed();
+      if (miss === 'movedOn') h.faults.settleMovedOn = true;
+      else h.faults.settleThrows = 9;
+      const result = await runFieldWorkerCodeSmsTick(deps(over()).deps);
+      expect(result.claimed, miss).toBe(1);
+      expect(later.outcome, miss).toBe('due');
+    }
   });
 
   it('control: the same site whose settle lands says "ended"', async () => {
@@ -1261,13 +1300,15 @@ describe('AC5 — the sweep has no write path to a worker’s state or the event
     expect(imported, 'non-vacuity: the import was read').toEqual(
       ['attributionCode', 'audit', 'canonicalJsonStringify', 'claim', 'fieldWorker', 'ids', 'smsDelivery', 'withPariwarScope'].sort(),
     );
-    // CB47: every module it loads, by every route (a second statement, `import * as`, a subpath, a dynamic import, `require`).
+    // CB47 / R4-4: every module it loads by a static import (a second statement, `import * as`, a subpath), and no other route: no
+    // re-export (`export ... from`), dynamic `import(`, `require(` or `createRequire`. What is checked is exactly this list.
     const modules = [...source.matchAll(/^import\b[^;]*?from\s*['"]([^'"]+)['"]\s*;/gm)].map((m) => m[1]!);
     expect(source.match(/^import\b/gm) ?? [], 'every import statement has a `from`').toHaveLength(modules.length);
     expect(modules.sort()).toEqual(
       ['node:crypto', '@twt/domain', '@twt/queue', './alert-sms-send.js', './claim-dlt-sms-send.js', './field-worker-code-sms-templates.js'].sort(),
     );
-    expect(body).not.toMatch(/\bimport\s*\(|\brequire\s*\(/);
+    expect(body).not.toMatch(/\bimport\s*\(|\brequire\s*\(|\bcreateRequire\b/);
+    expect(source).not.toMatch(/^export\b[^;]*?\bfrom\s*['"]/m);
     for (const ns of ['fieldWorker', 'attributionCode', 'smsDelivery']) {
       expect(body.match(new RegExp(`\\b${ns}\\b(?!\\s*\\.)`, 'g')) ?? [], `${ns} used bare (aliased or destructured)`).toEqual([]);
     }
@@ -1310,11 +1351,12 @@ describe('AC5 — the sweep has no write path to a worker’s state or the event
 
 describe('AD3 — the lease', () => {
   it('⭐ it stands above the sum of the bounded terms (read connect 10, Secret Manager 10, pre-flight 9, audit connect 10, send 10, settle 31)', () => {
-    // Code review CB46: the pool's REAL connect timeout, as the twin's pin reads it (`alert-sms-send.test.ts`), ⛔ a copy. The Secret Manager
-    // (10 s) and pre-flight (9 s) bounds have no exported constant, so they stay literals, named in the title.
+    // Code review CB46 / R4-5: the REAL bounds, as the twin's pin reads them (`alert-sms-send.test.ts`), ⛔ copies: the pool's connect timeout
+    // (the sweep's pool is `createDb` with no override) and the pre-flight's template read (`SMS_GATEWAY_TIMEOUT_MS`). The Secret Manager
+    // bound (10 s) has no exported constant and stays a literal, named in the title.
     const CONNECT_MS = DEFAULT_POOL_CONNECTION_TIMEOUT_MS;
     const settle = (ALERT_SMS_FINALISE_BACKOFF_MS.length + 1) * CONNECT_MS + ALERT_SMS_FINALISE_BACKOFF_MS.reduce((a, b) => a + b, 0);
-    const sum = CONNECT_MS + 10_000 + 9_000 + CONNECT_MS + CORRECTION_SEND_TIMEOUT_MS + settle;
+    const sum = CONNECT_MS + 10_000 + SMS_GATEWAY_TIMEOUT_MS + CONNECT_MS + CORRECTION_SEND_TIMEOUT_MS + settle;
     expect(sum).toBeLessThan(fieldWorker.FIELD_WORKER_CODE_SMS_LEASE_MS);
     expect(fieldWorker.FIELD_WORKER_CODE_SMS_LEASE_MS).toBe(300_000);
     expect(sum).toBeGreaterThan(80_000);

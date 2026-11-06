@@ -11,7 +11,7 @@
 -- ⭐ TWO CLOCKS (AD3). The lease and the release backoff are judged on `updated_at`, the max age on `created_at`, which ⛔ a release
 -- moves — both `clock_timestamp()`, so two rows in one transaction do not tie ([[project_db_clock_ordering_tests_tie]]).
 -- ⭐ THE DETAIL GRAMMAR IS NOT THE ALERT ONE: it bars a run of SIX digits (the alert grammar bars seven), so neither a code nor a mobile
--- can rest in `detail` WRITTEN AS DIGITS (TR9). ⚠ A number split by `.`, `_`, `-` or a letter is not barred: the token class allows
+-- can rest in `detail` as a CONTIGUOUS run of digits (TR9). ⚠ A number split by `.`, `_`, `-` or a letter is not barred: the token class allows
 -- them, as every SMS kind's does (code review CB52; the shared grammar is deferred as CB60).
 -- ⚠ LOCKSTEP with `FIELD_WORKER_CODE_SMS_DETAIL_PATTERN` (schema/field_worker_code_sms_sends.ts).
 -- ⭐ A FINISHED ROW IS FROZEN (0155's shape), and the trigger also refuses a change to an IDENTITY column on EVERY update, closing the

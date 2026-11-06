@@ -71,7 +71,7 @@ The text, as drafted, in Hindi or English by the Pariwar's default language (the
   - Whether the plan's list binds a text to someone who is not a member. That is the author's reading, and it is the point on which you may simply say this was not yours to rule.
   - Whether the note behind your first November ruling is word for word the version we hold: the record says only that BigDev sent it. For your second, BigDev named the version. The keys note as sent is not recorded as identical to its draft.
   - The read-out itself depends on your answer to the keys note, which has no recorded ruling yet.
-  - The build exists only on the story's own branch: it is not merged and not live, and it has run only against fakes and a test database, never a real gateway or a real handset. No text has ever been sent. Every statement about what happens is read from that code and its tests.
+  - The build exists only on the story's own branch: it is not merged and not live *(dated 2026-11-07: MERGED to `main` by fast-forward, PR #325, `d555f75d..546c57d1`; still NOT live: roster Row 49 gates every text, and no template id is set)*, and it has run only against fakes and a test database, never a real gateway or a real handset. No text has ever been sent. Every statement about what happens is read from that code and its tests.
   - Nobody preparing this note has seen the recruitment form.
 
 ---
@@ -128,7 +128,7 @@ The note behind the 13.1a keys confirm, as committed (reported sent 2026-11-05; 
 
 ## E3 — What the code actually does
 
-- **Built on the story's branch, not merged and not live.** The table, the sweep and both templates exist on `story/13-1b-field-worker-code-by-sms` (first in `9a5fc4e8`). When this note was first written (committed in `a23db233`, on top of `479d7694`) they did not exist, and none of them is on `main` (E4).
+- **Built on the story's branch, not merged and not live.** *(Dated 2026-11-07: MERGED to `main`, PR #325, `546c57d1`; NOT live. On `main` the first two E4 counts below now read 9 and 2, not 0 and 0.)* The table, the sweep and both templates exist on `story/13-1b-field-worker-code-by-sms` (first in `9a5fc4e8`). When this note was first written (committed in `a23db233`, on top of `479d7694`) they did not exist, and none of them is on `main` (E4).
 - **Nothing can be sent.** BigDev, 2026-11-06: *"Trust will be registered. It's not yet registered."* The DLT sheet reads NOT STARTED, and no date is given.
 - **What is built (read from the code and its tests on the branch; nothing here has run against a real gateway):** the approval records the text as due; a job sends it at most once, re-checking the worker is active; an unset template id fails closed, so nothing goes out until a template is approved. Under option C the id stays unset, but until the build is changed each approval still records a text as due, raises one alarm and shows "not delivered".
 - **Traced, not inferred:** no route or command changes a stored field-worker mobile; an officer who can see a worker's status can also read the code (`field_worker.view` and `field_worker.read_code` have the same holders).
@@ -158,6 +158,7 @@ grep -n 'What this ratifies that was a reading' .decision-log.md
 git fetch origin   # first: origin/main below must be current
 # the build is on the story's branch and not on main, the templates included
 # (expect 0 and 0 on main; on the branch at 28fb846d the counts were 9 and 2 - re-count at the tip you send from)
+# (dated 2026-11-07: after the merge, PR #325, origin/main reads 9 and 2)
 git ls-tree -r origin/main --name-only | grep -c 'field-worker-code-sms\|field_worker_code_sms'
 git show origin/main:docs/launch-gate-inventory/dlt-template-requests-6-19.md | grep -c '^| 25 |'
 git ls-files | grep -c 'field-worker-code-sms\|field_worker_code_sms'

@@ -33,7 +33,10 @@ export interface FieldWorkerCodeSmsTemplate {
   readonly slots: readonly DltSlot[];
 }
 
-/** The `{code}` slot — six digits, typed numeric (AD9). `text` in the registry, digits on the wire: a leading zero is a real digit. */
+/**
+ * The `{code}` slot — six digits, declared numeric at registration (AD9; sheet rows 25 and 26) and sent as a string of digits, so our request
+ * keeps a leading zero. Whether MSG91 and the carrier keep it is not proved by anything in this repo: roster Row 49 (e), G9.
+ */
 export const CODE_SLOT: DltSlot = { name: 'code', type: 'numeric', maxLength: 6, label: 'attribution code' };
 
 /** The Secret Manager name of the text's template id. */

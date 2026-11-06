@@ -703,8 +703,9 @@ export class PeerRequestLocaleMissingError extends Error {
  * The Pariwar's default language (`pariwar_passport.locale_default`, NOT NULL) — for the senders' per-Pariwar CONFIG checks
  * (📌 Story 6.35 LS8: the old body of `resolvePeerRequestLocale`), and, Story 13.1b (AD10), as the LANGUAGE of a field worker's code
  * text, because nothing records a worker's own. A member recipient's language is `resolvePeerRequestLocale`'s.
- * @throws PeerRequestLocaleMissingError  the Pariwar has ⛔ passport — a data gap (the jobs child HOLDS); any other throw is a
- *   failed read (the jobs child retries)
+ * @throws PeerRequestLocaleMissingError  the Pariwar has ⛔ passport — a data gap (the peer-mesh jobs child HOLDS; Story 13.1b's code
+ *   sweep ENDS the row `config:pariwar_locale_missing`, because the text is sent once and never held); any other throw is a failed read
+ *   (the jobs child retries)
  */
 export async function resolvePariwarDefaultLocale(db: Db, pariwarId: PariwarId): Promise<'hi' | 'en'> {
   const { rows } = await db.execute<{ locale_default: string }>(sql`

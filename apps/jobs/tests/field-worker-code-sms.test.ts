@@ -4,11 +4,13 @@
 // proves each entry can appear. The timing of the backoff is the domain spec's: a fake claim proves nothing about it. The connection
 // held across the decrypt is the live leg's: a plain object has no `totalCount`. No real SMS can run: the gateway is faked.
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { encryption, fieldWorker } from '@twt/domain';
+import { canonicalJsonStringify, encryption, fieldWorker } from '@twt/domain';
 import type { SmsAppClient } from '@twt/channels';
+import { QUEUE_NAMES } from '@twt/queue';
 import type pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -17,8 +19,11 @@ import { CORRECTION_SEND_TIMEOUT_MS, type ClaimCorrectionSmsResult } from '../sr
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { FIELD_WORKER_CODE_SMS_TEMPLATES } from '../src/scheduler/field-worker-code-sms-templates.js';
 import {
+  DEFAULT_FIELD_WORKER_CODE_SMS_CRON,
   FIELD_WORKER_CODE_SMS_AUDIT_ACTION,
   FIELD_WORKER_CODE_SMS_TICK_MAX,
+  FIELD_WORKER_CODE_SMS_TZ,
+  registerFieldWorkerCodeSmsCron,
   runFieldWorkerCodeSmsTick,
   settleSend,
   type FieldWorkerCodeSmsDeps,
@@ -265,6 +270,36 @@ function deps(over: Partial<FieldWorkerCodeSmsDeps> = {}): Run {
 /** Log entries of `what`, by prefix. */
 const entries = (what: string): string[] => h.log.filter((e) => e.startsWith(what));
 
+/** A Secret Manager fault whose message holds BOTH sentinels. gRPC 14 is a transient; 7 (PERMISSION_DENIED) is a final config fault. */
+const secretFault = (code: number): Partial<FieldWorkerCodeSmsDeps> => ({
+  resolveConfig: () => Promise.reject(Object.assign(new Error(`bound value ${MOBILE} ${CODE}`), { code })),
+});
+
+/** A KMS whose `decryptDek` is unavailable (gRPC 14), its message holding BOTH sentinels. */
+const kmsDown = (): Partial<FieldWorkerCodeSmsDeps> => ({
+  encryption: {
+    kekRef: enc.kekRef,
+    kms: new Proxy(enc.kms, {
+      get(t, prop) {
+        if (prop === 'decryptDek') return () => Promise.reject(Object.assign(new Error(`bound value ${MOBILE} ${CODE}`), { code: 14 }));
+        const value: unknown = Reflect.get(t, prop, t);
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(t) : value;
+      },
+    }),
+  },
+});
+
+/**
+ * A source file's CODE: block and line comments stripped, so a comment can neither satisfy a pin nor trip one (review finding CB17). Limit: a
+ * string literal that itself opens a block comment would swallow code up to the next close. Every pin that reads through this also asserts
+ * that something it requires is present, so that failure is loud, not silent.
+ */
+function codeOf(relativeToTests: string): string {
+  return readFileSync(fileURLToPath(new URL(relativeToTests, import.meta.url)), 'utf-8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|\s)\/\/.*$/gm, '$1');
+}
+
 beforeEach(() => {
   h.rows.length = 0;
   h.log.length = 0;
@@ -328,6 +363,10 @@ describe('AC7 — one successful attempt, in order', () => {
   it('⭐ exactly ONE audit line: the system, the locator, a hash over ids only, ⛔ a trace', async () => {
     const row = await seed();
     await runFieldWorkerCodeSmsTick(deps().deps);
+    // Review finding CB13: the hash is of the ids and of nothing else (AD5). A digest of the mobile or of the six-digit code would also be 64 hex
+    // characters, and a six-digit code's digest can be recovered offline, so the shape alone proves nothing.
+    const sha256 = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
+    const idsOnly = sha256(canonicalJsonStringify({ field_worker_id: row.fieldWorkerId, send_id: row.sendId }));
     expect(h.auditLines).toEqual([
       {
         pariwarId: PARIWAR,
@@ -335,10 +374,13 @@ describe('AC7 — one successful attempt, in order', () => {
         actorRole: 'system',
         action: FIELD_WORKER_CODE_SMS_AUDIT_ACTION,
         resourceLocator: `field_worker/${row.fieldWorkerId}`,
-        requestPayloadHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+        requestPayloadHash: idsOnly,
         traceId: null,
       },
     ]);
+    for (const secret of [MOBILE, CODE, canonicalJsonStringify({ mobile: MOBILE }), canonicalJsonStringify({ code: CODE })]) {
+      expect(h.auditLines[0]!['requestPayloadHash'], 'not a digest of the mobile or the code').not.toBe(sha256(secret));
+    }
     expect(FIELD_WORKER_CODE_SMS_AUDIT_ACTION).toBe('field_worker.code_sms_mobile_decrypted');
   });
 
@@ -402,6 +444,9 @@ describe('AC3 — never to the wrong person', () => {
     expect(alarms).toEqual([]);
   });
 
+  // Review finding CB21 (e): the fake claim below only ever picks `due` rows, so this leg cannot fail on a regression in the REAL claim's
+  // `WHERE outcome = 'due'`. That is proved live (`field-worker-code-sms-live.test.ts`, AC3 (a) and (b): reactivate, tick, the row stays
+  // `skipped_not_active`) and by the domain claim legs. What this leg does show is that the sweep never revives a finished row itself.
   it('a final row is ⛔ claimed: a later reactivation sends nothing', async () => {
     const row = await seed({ outcome: 'skipped_not_active', workerState: 'active' });
     await runFieldWorkerCodeSmsTick(deps().deps);
@@ -472,6 +517,7 @@ describe('the Outcomes table', () => {
     const { deps: d, alarms } = deps();
     const result = await runFieldWorkerCodeSmsTick(d);
     expect(h.rows.find((r) => r.sendId === row.sendId)).toMatchObject({ detail: 'rate_limited:http_429', attemptCount: 1 });
+    expect(entries('release')).toEqual(['release']);
     expect(result.claimed).toBe(1);
     expect(later.outcome).toBe('due');
     expect(entries('gateway')).toEqual(['gateway']);
@@ -490,6 +536,7 @@ describe('the Outcomes table', () => {
     });
     await runFieldWorkerCodeSmsTick(deps({ encryption: { kms, kekRef: enc.kekRef } }).deps);
     expect(h.rows.find((r) => r.sendId === row.sendId)).toMatchObject({ detail: 'api_unavailable:kms' });
+    expect(entries('release')).toEqual(['release']); // the fake files a released row under `released`, so `detail` alone cannot say it was released (CB21)
     expect(entries('gateway')).toEqual([]);
     expect(entries('audit')).toEqual(['audit', 'audit:rolled_back']);
   });
@@ -498,6 +545,7 @@ describe('the Outcomes table', () => {
     const row = await seed();
     await runFieldWorkerCodeSmsTick(deps({ resolveConfig: () => Promise.reject(Object.assign(new Error('x'), { code: 14 })) }).deps);
     expect(h.rows.find((r) => r.sendId === row.sendId)).toMatchObject({ detail: 'config_unavailable:secret_manager' });
+    expect(entries('release')).toEqual(['release']);
     expect(entries('audit')).toEqual([]);
   });
 
@@ -507,6 +555,7 @@ describe('the Outcomes table', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await runFieldWorkerCodeSmsTick(deps().deps);
     expect(h.rows.find((r) => r.sendId === row.sendId)).toMatchObject({ detail: 'api_unavailable:db' });
+    expect(entries('release')).toEqual(['release']);
     const logged = spy.mock.calls.flat().join(' ');
     expect(logged).toContain(row.sendId);
     expect(logged).toContain('Error');
@@ -563,6 +612,75 @@ describe('the Outcomes table', () => {
   });
 });
 
+// Review finding CB18 (a): "any release ends the tick" has five call sites in the sweep, and only the rate limit and the ceiling seeded a SECOND
+// row, so `await release(...); return 'next'` at any other site was green. A spec rationale is behind it: a KMS or Secret Manager outage would
+// otherwise cost one decrypt and one audit line per row, twenty a tick.
+describe('Outcomes — any release ends the tick, at every call site', () => {
+  const CASES = [
+    {
+      label: 'a failed audit write',
+      detail: 'api_unavailable:audit',
+      arrange: (): Partial<FieldWorkerCodeSmsDeps> => {
+        h.faults.audit = new Error('audit log down');
+        return {};
+      },
+    },
+    { label: 'a KMS transient', detail: 'api_unavailable:kms', arrange: kmsDown },
+    { label: 'a Secret Manager transient', detail: 'config_unavailable:secret_manager', arrange: () => secretFault(14) },
+    {
+      label: 'a database fault in the read',
+      detail: 'api_unavailable:db',
+      arrange: (): Partial<FieldWorkerCodeSmsDeps> => {
+        h.faults.read = new Error('down');
+        return {};
+      },
+    },
+    {
+      label: 'a gateway rate limit',
+      detail: 'rate_limited:http_429',
+      arrange: (): Partial<FieldWorkerCodeSmsDeps> => {
+        h.answer = () => Promise.resolve(transient('rate_limited:http_429'));
+        return {};
+      },
+    },
+  ];
+
+  it.each(CASES)('$label releases the row, ends the tick, and leaves the next row untouched', async ({ detail, arrange }) => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const first = await seed();
+    const later = await seed();
+    const { deps: d } = deps(arrange());
+    const result = await runFieldWorkerCodeSmsTick(d);
+    expect(entries('release')).toEqual(['release']);
+    expect(first).toMatchObject({ outcome: 'due', detail });
+    expect(later).toMatchObject({ outcome: 'due', attemptCount: 0 });
+    expect(result.claimed).toBe(1);
+  });
+});
+
+// Review finding CB18 (b): these two ends go on to the next row (Outcomes, "What ends the tick"). Each leg above seeded ONE row, so
+// `return 'end_tick'` at either site was green.
+describe('Outcomes — the ends that go on to the next row', () => {
+  it('a Pariwar with no passport row ends `config:pariwar_locale_missing` for each row, and the tick goes on', async () => {
+    const a = await seed();
+    const b = await seed();
+    h.faults.localeMissing = true;
+    const result = await runFieldWorkerCodeSmsTick(deps().deps);
+    expect(a).toMatchObject({ outcome: 'error', detail: 'config:pariwar_locale_missing' });
+    expect(b).toMatchObject({ outcome: 'error', detail: 'config:pariwar_locale_missing' });
+    expect(result.claimed).toBe(2);
+  });
+
+  it('a worker who is not active ends `skipped_not_active`, and the next row is sent', async () => {
+    const a = await seed({ workerState: 'suspended' });
+    const b = await seed();
+    const result = await runFieldWorkerCodeSmsTick(deps().deps);
+    expect(a.outcome).toBe('skipped_not_active');
+    expect(b.outcome).toBe('accepted');
+    expect(result.claimed).toBe(2);
+  });
+});
+
 describe('AC4 (k) — the ceiling', () => {
   it('⭐ a release on attempt MAX_ATTEMPTS is final `exhausted:attempts`, ONE alarm, and ends the tick', async () => {
     const row = await seed({ attemptCount: fieldWorker.FIELD_WORKER_CODE_SMS_MAX_ATTEMPTS - 1 });
@@ -593,6 +711,16 @@ describe('AC4 (h), (m) — the loop', () => {
     const result = await runFieldWorkerCodeSmsTick(deps({ tickMax: 3 }).deps);
     expect(result.claimed).toBe(3);
     expect(h.rows.filter((r) => r.outcome === 'accepted')).toHaveLength(3);
+    expect(h.rows.filter((r) => r.outcome === 'due')).toHaveLength(1);
+  });
+
+  // Review finding CB15: the leg above passes `tickMax` and the constant is only compared to 20, so `deps.tickMax ?? TICK_MAX` could become
+  // `?? Infinity` and a backlog would run unbounded decrypts and audit lines in one tick, green.
+  it('⭐ with NO `tickMax` a backlog still stops at the default', async () => {
+    for (let i = 0; i < FIELD_WORKER_CODE_SMS_TICK_MAX + 1; i += 1) await seed();
+    const result = await runFieldWorkerCodeSmsTick(deps().deps);
+    expect(result.claimed).toBe(FIELD_WORKER_CODE_SMS_TICK_MAX);
+    expect(h.rows.filter((r) => r.outcome === 'accepted')).toHaveLength(FIELD_WORKER_CODE_SMS_TICK_MAX);
     expect(h.rows.filter((r) => r.outcome === 'due')).toHaveLength(1);
   });
 
@@ -713,6 +841,33 @@ describe('AC4 (o) — settle', () => {
     expect(row.outcome).toBe('attempting');
     expect(alarms).toEqual([expect.stringContaining('could not be written')]);
   });
+
+  // Review finding CB18 (d): every leg above passes `[0, 0]`, so the branch that actually waits was never run.
+  it('⭐ the pause between tries is really waited: a throw, then [1, 1] ms, and the second try lands', async () => {
+    const row = await seed();
+    h.faults.settleThrows = 1;
+    const { deps: d, alarms } = deps({ finaliseBackoffMs: [1, 1] });
+    await runFieldWorkerCodeSmsTick(d);
+    expect(entries('settle')).toEqual(['settle:accepted', 'settle:accepted']);
+    expect(row.outcome).toBe('accepted');
+    expect(alarms).toEqual([]);
+  });
+
+  // The source comment in `record()` says why `say` sits outside the `try`: the compare-and-set has COMPLETED, so a throwing alarm sink must not
+  // make the loop retry it. Moving `say` inside the `try` would run the settle three times.
+  it('⭐ an alarm sink that throws, after a settle that lost, ⛔ re-runs the settle; the tick still resolves', async () => {
+    const row = await seed();
+    h.faults.settleMovedOn = true;
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { deps: d } = deps({
+      onAlarm: () => {
+        throw new Error('the sink is down');
+      },
+    });
+    await expect(runFieldWorkerCodeSmsTick(d)).resolves.toMatchObject({ claimed: 1 });
+    expect(entries('settle')).toEqual(['settle:accepted']);
+    expect(row.outcome).toBe('attempting');
+  });
 });
 
 describe('AC6 — dark is honest', () => {
@@ -728,6 +883,17 @@ describe('AC6 — dark is honest', () => {
     expect(entries('release')).toEqual([]);
   });
 
+  // Review finding CB18 (c), AD10: "it is never texted in the other language". The harness's Pariwar language is `en`; only the `hi` id is set.
+  it('⭐ a language whose template id is unset is ⛔ texted in the other: the row ends `config:dlt_template_id_missing`', async () => {
+    const row = await seed();
+    const hiOnly = FIELD_WORKER_CODE_SMS_TEMPLATES.hi.dltTemplateIdConfigKey;
+    const { deps: d, alarms } = deps({ resolveConfig: (key) => Promise.resolve(key === hiOnly ? TEMPLATE_ID : null) });
+    await runFieldWorkerCodeSmsTick(d);
+    expect(row).toMatchObject({ outcome: 'error', detail: 'config:dlt_template_id_missing', locale: 'en' });
+    expect(entries('gateway')).toEqual([]);
+    expect(alarms).toHaveLength(1);
+  });
+
   it('⭐ later provisioning the id sends nothing for that row: it is ⛔ claimable', async () => {
     const row = await seed();
     await runFieldWorkerCodeSmsTick(deps({ resolveConfig: () => Promise.resolve(null) }).deps);
@@ -738,9 +904,9 @@ describe('AC6 — dark is honest', () => {
   });
 
   it('⭐ the sweep does not name the fixture provider: prepare is the only route (TR7)', () => {
-    const source = readFileSync(fileURLToPath(new URL('../src/scheduler/field-worker-code-sms.ts', import.meta.url)), 'utf-8');
+    const source = codeOf('../src/scheduler/field-worker-code-sms.ts');
     expect(source).not.toContain('createSmsProvider');
-    expect(source).toContain('prepareDltSms');
+    expect(source).toContain('await prepareDltSms(');
   });
 });
 
@@ -751,6 +917,18 @@ describe('settleSend — classify first, sanitise second', () => {
     ['rate_limited:', { kind: 'release', detail: 'rate_limited:unknown' }],
   ])('a transient %s keeps its class: still released', (detail, expected) => {
     expect(settleSend(transient(detail))).toEqual(expected);
+  });
+
+  // Review finding CB19 (b): the sweep's token limit is its own constant, tied to the stored grammar's {1,64} only by this test. Widening it makes
+  // `assertDetail` throw, the settle is swallowed three times, and a definite failure ends up read as "may have arrived".
+  it('⭐ a gateway token is kept at 64 characters and replaced at 65, and the kept one is inside the stored grammar', () => {
+    const at64 = 'a'.repeat(64);
+    const at65 = 'a'.repeat(65);
+    expect(settleSend(finalError(`auth:${at64}`))).toMatchObject({ detail: `auth:${at64}` });
+    expect(fieldWorker.isFieldWorkerCodeSmsDetail(`auth:${at64}`)).toBe(true);
+    expect(settleSend(finalError(`auth:${at65}`))).toMatchObject({ detail: 'auth:unknown' });
+    expect(fieldWorker.isFieldWorkerCodeSmsDetail(`auth:${at65}`)).toBe(false);
+    expect(settleSend(transient(`rate_limited:${at65}`))).toEqual({ kind: 'release', detail: 'rate_limited:unknown' });
   });
 
   it('`api_unavailable:<six digits>` keeps its `exhausted:` word', () => {
@@ -787,41 +965,239 @@ describe('settleSend — classify first, sanitise second', () => {
 });
 
 describe('AC8 — nothing leaks', () => {
-  const SCENARIOS: readonly (readonly [string, () => void])[] = [
-    ['accepted', () => undefined],
-    ['a timeout', () => { h.answer = () => Promise.resolve(transient('api_unavailable:timeout')); }],
-    ['a gateway word holding the code', () => { h.answer = () => Promise.resolve(finalError(`auth:${CODE}`)); }],
-    ['an unknown word holding the mobile', () => { h.answer = () => Promise.resolve(finalError(`unknown:${MOBILE}`)); }],
-    ['a rate limit', () => { h.answer = () => Promise.resolve(transient('rate_limited:http_429')); }],
-    ['a read fault', () => { h.faults.read = new Error(`bound value ${MOBILE} ${CODE}`); }],
-    ['an audit fault', () => { h.faults.audit = new Error(`bound value ${MOBILE} ${CODE}`); }],
-    ['a render crash', () => { h.faults.renderThrows = true; }],
-    ['a send crash', () => { h.answer = () => Promise.reject(new Error(`bound value ${MOBILE} ${CODE}`)); }],
-    ['a settle that always throws', () => { h.faults.settleThrows = 9; }],
-    ['a settle that lost', () => { h.faults.settleMovedOn = true; }],
-    ['a claim fault', () => { h.faults.claim = new Error(`bound value ${MOBILE} ${CODE}`); }],
+  /** A scenario arranges the faults on the seeded row, and may hand back deps to override. */
+  type Arrange = (row: FakeRow) => void | Partial<FieldWorkerCodeSmsDeps> | Promise<void | Partial<FieldWorkerCodeSmsDeps>>;
+  /**
+   * Review finding CB6: where a scenario names the seeded row's end, the run must reach it. Without that a scenario that no longer produces
+   * its fault would still pass the sentinel check, because a run that does nothing leaks nothing.
+   */
+  type Ends = { readonly outcome: string; readonly detail: string | RegExp | null };
+  const UNKNOWN = 'exhausted:outcome_unknown';
+  const word = (outcome: 'rejected_invalid_number' | 'rejected_unreachable', detail: string): ClaimCorrectionSmsResult => ({
+    kind: 'final',
+    outcome,
+    providerMessageId: null,
+    detail,
+    alarm: false,
+  });
+  // Review finding CB16: EVERY scenario names the seeded row's end. A crash or a lost settle leaves the row `attempting` for the lease; a release
+  // files it `due`; a claim fault never touches it.
+  const SCENARIOS: readonly (readonly [string, Arrange, Ends?])[] = [
+    ['accepted', () => undefined, { outcome: 'accepted', detail: null }],
+    [
+      'a timeout',
+      () => { h.answer = () => Promise.resolve(transient('api_unavailable:timeout')); },
+      { outcome: 'error', detail: `${UNKNOWN}:api_unavailable:timeout` },
+    ],
+    [
+      'a gateway word holding the code',
+      () => { h.answer = () => Promise.resolve(finalError(`auth:${CODE}`)); },
+      { outcome: 'error', detail: 'auth:unknown' },
+    ],
+    [
+      'an unknown word holding the mobile',
+      () => { h.answer = () => Promise.resolve(finalError(`unknown:${MOBILE}`)); },
+      { outcome: 'error', detail: `${UNKNOWN}:unknown:unknown` },
+    ],
+    [
+      'a rate limit',
+      () => { h.answer = () => Promise.resolve(transient('rate_limited:http_429')); },
+      { outcome: 'due', detail: 'rate_limited:http_429' },
+    ],
+    [
+      'a read fault',
+      () => { h.faults.read = new Error(`bound value ${MOBILE} ${CODE}`); },
+      { outcome: 'due', detail: 'api_unavailable:db' },
+    ],
+    [
+      'an audit fault',
+      () => { h.faults.audit = new Error(`bound value ${MOBILE} ${CODE}`); },
+      { outcome: 'due', detail: 'api_unavailable:audit' },
+    ],
+    ['a render crash', () => { h.faults.renderThrows = true; }, { outcome: 'attempting', detail: null }],
+    [
+      'a send crash',
+      () => { h.answer = () => Promise.reject(new Error(`bound value ${MOBILE} ${CODE}`)); },
+      { outcome: 'attempting', detail: null },
+    ],
+    ['a settle that always throws', () => { h.faults.settleThrows = 9; }, { outcome: 'attempting', detail: null }],
+    ['a settle that lost', () => { h.faults.settleMovedOn = true; }, { outcome: 'attempting', detail: null }],
+    [
+      'a claim fault',
+      () => { h.faults.claim = new Error(`bound value ${MOBILE} ${CODE}`); },
+      { outcome: 'due', detail: null },
+    ],
+    // ── CB6: the end states the sentinel sweep did not run through the tick ──
+    ['a worker who is not active', (row) => { row.workerState = 'suspended'; }, { outcome: 'skipped_not_active', detail: null }],
+    ['no worker row', (row) => { row.workerState = null; }, { outcome: 'error', detail: 'no_code' }],
+    ['no code row', (row) => { row.code = null; }, { outcome: 'error', detail: 'no_code' }],
+    ['a Pariwar with no passport row', () => { h.faults.localeMissing = true; }, { outcome: 'error', detail: 'config:pariwar_locale_missing' }],
+    ['a stored mobile that is not an envelope', (row) => { row.mobileCiphertext = 'not an envelope'; }, { outcome: 'error', detail: 'identity_unreadable:envelope' }],
+    [
+      'a tampered stored mobile',
+      async (row) => {
+        row.mobileCiphertext = await tampered(MOBILE);
+      },
+      { outcome: 'error', detail: 'identity_unreadable:authentication' },
+    ],
+    ['a KMS transient, its message holding both', () => kmsDown(), { outcome: 'due', detail: 'api_unavailable:kms' }],
+    ['a Secret Manager transient, its message holding both', () => secretFault(14), { outcome: 'due', detail: 'config_unavailable:secret_manager' }],
+    ['a final Secret Manager fault, its message holding both', () => secretFault(7), { outcome: 'error', detail: /^config:secret_manager_[a-z_]+$/ }],
+    ['no template id', () => ({ resolveConfig: () => Promise.resolve(null) }), { outcome: 'error', detail: 'config:dlt_template_id_missing' }],
+    [
+      'a template refusal word holding the code',
+      () => { h.answer = () => Promise.resolve(finalError(`dlt_template_not_approved:${CODE}`)); },
+      { outcome: 'error', detail: 'dlt_template_not_approved:unknown' },
+    ],
+    [
+      'the send’s messaging failure',
+      () => { h.answer = () => Promise.resolve(finalError('config:sms_messaging_unavailable')); },
+      { outcome: 'error', detail: `${UNKNOWN}:unknown:sms_messaging_unavailable` },
+    ],
+    [
+      'an accept with no request id',
+      () => { h.answer = () => Promise.resolve({ kind: 'final', outcome: 'accepted', providerMessageId: null, detail: null } as ClaimCorrectionSmsResult); },
+      { outcome: 'error', detail: `${UNKNOWN}:unknown:no_request_id` },
+    ],
+    [
+      'an invalid-number word holding the code',
+      () => { h.answer = () => Promise.resolve(word('rejected_invalid_number', `invalid_number:${CODE}`)); },
+      { outcome: 'rejected_invalid_number', detail: 'invalid_number:unknown' },
+    ],
+    [
+      'a carrier-reject word holding the mobile',
+      () => { h.answer = () => Promise.resolve(word('rejected_unreachable', `carrier_reject:${MOBILE}`)); },
+      { outcome: 'rejected_unreachable', detail: 'carrier_reject:unknown' },
+    ],
+    [
+      'the ceiling: a release on the last attempt',
+      (row) => {
+        row.attemptCount = fieldWorker.FIELD_WORKER_CODE_SMS_MAX_ATTEMPTS - 1;
+        h.answer = () => Promise.resolve(transient('rate_limited:http_429'));
+      },
+      { outcome: 'error', detail: 'exhausted:attempts' },
+    ],
+    [
+      'a lapse of two rows (the seeded row is unaffected and goes on to be sent)',
+      () => {
+        h.lapsed = [
+          { sendId: 'send-lapsed-a', pariwarId: PARIWAR, detail: UNKNOWN },
+          { sendId: 'send-lapsed-b', pariwarId: PARIWAR, detail: 'exhausted:expired' },
+        ];
+      },
+      { outcome: 'accepted', detail: null },
+    ],
   ];
 
-  it.each(SCENARIOS)('⭐ %s: neither sentinel in any console line, alarm, audit field or row', async (_label, arrange) => {
+  // Objects, not tuples: `it.each` infers a union from a tuple with an optional element, and `ends` loses its type.
+  const CASES = SCENARIOS.map(([label, arrange, ends]) => ({ label, arrange, ends }));
+
+  it.each(CASES)('⭐ $label: neither sentinel in any console line, alarm, audit field or row', async ({ label, arrange, ends }) => {
     const captured: unknown[][] = [];
     for (const m of ['log', 'info', 'warn', 'error', 'debug'] as const) {
       vi.spyOn(console, m).mockImplementation((...a: unknown[]) => void captured.push(a));
     }
-    await seed();
-    arrange();
-    const { deps: d, alarms } = deps();
+    const seeded = await seed();
+    const override = await arrange(seeded);
+    const { deps: d, alarms } = deps(override ?? {});
     let thrown: unknown = null;
     await runFieldWorkerCodeSmsTick(d).catch((e: unknown) => {
       thrown = e;
     });
     // The fake's own columns for the worker's sealed mobile and code row are not the send row's: blanked, the rest is asserted.
     const rows = h.rows.map((r) => ({ ...r, mobileCiphertext: '', code: '' }));
-    const out = JSON.stringify({ captured, alarms, audit: h.auditLines, rows, thrown: String(thrown) });
+    // Review finding CB12: `JSON.stringify(new Error('x'))` is `{}` (message and stack are not enumerable), so an Error passed to a console method
+    // would carry its message past this check. The replacer writes an Error out in full, wherever it sits in what was captured. It takes its
+    // arguments as a tuple because the key is not needed (the lint config allows no unused parameters).
+    const errorsInFull = (...kv: [string, unknown]): unknown => {
+      const v = kv[1];
+      return v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v;
+    };
+    const out = JSON.stringify({ captured, alarms, audit: h.auditLines, rows, thrown: String(thrown) }, errorsInFull);
     expect(out).not.toContain(CODE);
     expect(out).not.toContain(MOBILE);
     expect(out).not.toContain(MOBILE.slice(1));
-    // Non-vacuity: the capture saw the run.
+    // Non-vacuity: the capture saw the run, and a scenario that names an end reached it.
     expect(h.log).toContain('guard');
+    for (const lapsed of h.lapsed) expect(alarms.join(' '), `${label}: the lapse alarm names ${lapsed.sendId}`).toContain(lapsed.sendId);
+    if (ends !== undefined) {
+      expect(seeded.outcome, `${label}: the row's outcome`).toBe(ends.outcome);
+      if (ends.detail instanceof RegExp) expect(seeded.detail ?? '', `${label}: the row's detail`).toMatch(ends.detail);
+      else expect(seeded.detail, `${label}: the row's detail`).toBe(ends.detail);
+    }
+  });
+});
+
+// Review finding CB6 (AC5): the live leg proves "state and events_log unchanged, `GET .../code` still 200" for ONE outcome (a gateway 500).
+// For the rest of the Outcomes table this is the standing proof: the sweep reaches the worker only through the one read, the decrypt and the
+// send record's accessors (the domain half pins that those write one table), and it names no event writer. Any other call fails here.
+describe('AC5 — the sweep has no write path to a worker’s state or the event log', () => {
+  // CODE only (CB17): the header comment names `activateFieldWorker` (the approval, which writes the row) and says so.
+  const source = codeOf('../src/scheduler/field-worker-code-sms.ts');
+  // The import is removed before the bare-name check; imports are what the first test pins.
+  const body = source.replace(/import[^;]*;/g, '');
+  const domainImport = /import\s*\{([^}]*)\}\s*from\s*'@twt\/domain'/.exec(source)?.[1] ?? '';
+  const imported = domainImport
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s !== '' && !s.startsWith('type '))
+    .sort();
+  const membersOf = (ns: string): Set<string> => new Set([...body.matchAll(new RegExp(`\\b${ns}\\.([A-Za-z_]+)`, 'g'))].map((m) => m[1]!));
+
+  /** Every member of every `@twt/domain` namespace the sweep may touch. A new one is a decision: this list changes in the same commit. */
+  const SURFACE: Readonly<Record<string, readonly string[]>> = {
+    fieldWorker: [
+      'claimNextFieldWorkerCodeSms',
+      'lapseFieldWorkerCodeSms',
+      'settleFieldWorkerCodeSms',
+      'releaseFieldWorkerCodeSms',
+      'getFieldWorkerForCodeSms',
+      'decryptFieldWorkerField',
+      'FieldWorkerDecryptDeps',
+      'FieldWorkerIdentityUnreadableError',
+      'FieldWorkerDecryptUnavailableError',
+      'ClaimedFieldWorkerCodeSms',
+      'LapsedFieldWorkerCodeSms',
+      'FieldWorkerCodeSmsFinalOutcome',
+      'FIELD_WORKER_CODE_SMS_MAX_ATTEMPTS',
+      'FIELD_WORKER_CODE_SMS_OUTCOME_UNKNOWN_PREFIX',
+    ],
+    attributionCode: ['readAttributionCodeForFieldWorker'], // READS only: the header says so, and this makes it so (CB17)
+    claim: ['resolvePariwarDefaultLocale', 'PeerRequestLocaleMissingError'],
+    smsDelivery: ['canReadAcrossPariwars'],
+    audit: ['withCompensatingAudit'],
+  };
+
+  it('⭐ it takes exactly these names from `@twt/domain`, and a namespace is never aliased, destructured or passed on bare', () => {
+    expect(imported, 'non-vacuity: the import was read').toEqual(
+      ['attributionCode', 'audit', 'canonicalJsonStringify', 'claim', 'fieldWorker', 'ids', 'smsDelivery', 'withPariwarScope'].sort(),
+    );
+    for (const ns of ['fieldWorker', 'attributionCode', 'smsDelivery']) {
+      expect(body.match(new RegExp(`\\b${ns}\\b(?!\\.)`, 'g')) ?? [], `${ns} used bare (aliased or destructured)`).toEqual([]);
+    }
+    // `claim` and `audit` are ordinary words in the log strings, so look for the shapes an alias or a pass-on takes.
+    expect(body).not.toMatch(/[=(,]\s*(?:claim|audit)\s*[;,)]/);
+  });
+
+  it.each(Object.entries(SURFACE).map(([ns, members]) => ({ ns, members })))(
+    '⭐ $ns: the sweep names only its allowed members, and each reaches the call it is there for',
+    ({ ns, members }) => {
+      const used = membersOf(ns);
+      expect([...used].filter((m) => !members.includes(m))).toEqual([]);
+      // Non-vacuity: the scan sees real uses, so a clean answer is not an empty one.
+      const mustUse: Record<string, string[]> = {
+        fieldWorker: ['claimNextFieldWorkerCodeSms', 'lapseFieldWorkerCodeSms', 'settleFieldWorkerCodeSms', 'releaseFieldWorkerCodeSms'],
+        attributionCode: ['readAttributionCodeForFieldWorker'],
+        claim: ['resolvePariwarDefaultLocale'],
+        smsDelivery: ['canReadAcrossPariwars'],
+        audit: ['withCompensatingAudit'],
+      };
+      for (const m of mustUse[ns] ?? []) expect(used.has(m), `${ns}.${m} is called`).toBe(true);
+    },
+  );
+
+  it('⭐ it names no event writer and no transition, in any case', () => {
+    expect(source).not.toMatch(/events_log|appendEvent|runLockedTransition|activateFieldWorker|insert\s+into|update\s+"?field_workers/i);
   });
 });
 
@@ -841,5 +1217,73 @@ describe('AD3 — the lease', () => {
     for (let attempt = 1; attempt < fieldWorker.FIELD_WORKER_CODE_SMS_MAX_ATTEMPTS; attempt += 1) waited += 2 ** (attempt - 1);
     expect(waited).toBe(511);
     expect(waited * 60_000).toBeLessThan(fieldWorker.FIELD_WORKER_CODE_SMS_MAX_AGE_MS);
+  });
+
+  // Review finding CB15: AD3 says 24 hours. "Greater than 8.5 hours" let it drift to days (a burst of stale texts after an outage) or to a
+  // few hours (rows expiring inside the ten-attempt window) unseen.
+  it('the max age is exactly AD3’s 24 hours', () => {
+    expect(fieldWorker.FIELD_WORKER_CODE_SMS_MAX_AGE_MS).toBe(24 * 3_600_000);
+  });
+});
+
+// Review finding CB1 (2026-11-06) — Task 5.4's registration and `boot.ts` wiring were pinned by nothing; this is the shape of its twin's pins
+// (`module-activation.test.ts`, "registration and pool"). The live legs inject their own pool and never reach `boot.ts` (TR10).
+describe('Task 5.4 — registration and boot wiring', () => {
+  it('⭐ creates the queue, works it ONE tick at a time, schedules every minute in IST, and a delivered job runs a real tick', async () => {
+    const createQueue = vi.fn<(name: string) => Promise<void>>(() => Promise.resolve());
+    const work = vi.fn<(name: string, opts: unknown, handler: unknown) => Promise<string>>(() => Promise.resolve('worker-id'));
+    const schedule = vi.fn<(name: string, cron: string, data: unknown, opts: unknown) => Promise<void>>(() => Promise.resolve());
+    const boss = { createQueue, work, schedule } as unknown as Parameters<typeof registerFieldWorkerCodeSmsCron>[0];
+    await registerFieldWorkerCodeSmsCron(boss, deps().deps);
+    expect(DEFAULT_FIELD_WORKER_CODE_SMS_CRON).toBe('* * * * *');
+    expect(FIELD_WORKER_CODE_SMS_TZ).toBe('Asia/Kolkata');
+    expect(QUEUE_NAMES.FIELD_WORKER_CODE_SMS).toBe('field_worker.code_sms');
+    expect(createQueue).toHaveBeenCalledWith(QUEUE_NAMES.FIELD_WORKER_CODE_SMS);
+    expect(work).toHaveBeenCalledWith(QUEUE_NAMES.FIELD_WORKER_CODE_SMS, { localConcurrency: 1 }, expect.any(Function));
+    expect(schedule).toHaveBeenCalledWith(QUEUE_NAMES.FIELD_WORKER_CODE_SMS, '* * * * *', {}, { tz: 'Asia/Kolkata' });
+    // The handler is the tick, not a stub: under an RLS-bound login it answers `refused`, with the pg-boss ARRAY of jobs counted.
+    const handler = work.mock.calls[0]![2] as (jobs: unknown[]) => Promise<unknown>;
+    h.faults.guard = false;
+    await expect(handler([{}])).resolves.toEqual({ jobs: 1, refused: true, lapsed: 0, claimed: 0 });
+    expect(entries('guard')).toEqual(['guard']);
+  });
+
+  it('⭐ boot.ts gives the sweep its OWN max:3 pool (⛔ the shared max:2 pool), ends it at BOTH shutdown sites, registers it AFTER the pre-flight is built with the alert seam’s deps, and checks the cron shape', () => {
+    // CODE only, whitespace-normalised (CB17): a comment can neither satisfy these nor trip them, and a reformat does not break them.
+    const boot = codeOf('../src/boot.ts').replace(/\s+/g, ' ');
+    expect(boot).toMatch(/const \{ pool: fieldWorkerCodeSmsPool \} = createDb\( ?connectionString, \{ max: 3, logger: false \} ?\)/);
+    expect(boot.match(/fieldWorkerCodeSmsPool ?\.end\(\)/g)).toHaveLength(2);
+    expect(boot).toMatch(/FIELD_WORKER_CODE_SMS_CRON must be a 5-field cron expression/);
+    const preflightAt = boot.indexOf('const smsPreflight =');
+    const at = boot.indexOf('await registerFieldWorkerCodeSmsCron(');
+    expect(preflightAt, 'the pre-flight is built in boot').toBeGreaterThan(-1);
+    expect(at, 'the cron is registered in boot').toBeGreaterThan(-1);
+    expect(at, 'registered AFTER smsPreflight exists (G15), not beside registerModuleActivationCron').toBeGreaterThan(preflightAt);
+    const tzAt = boot.indexOf('tz: FIELD_WORKER_CODE_SMS_TZ', at);
+    expect(tzAt, 'the registration call is delimited by its options').toBeGreaterThan(at);
+    const call = boot.slice(at, tzAt + 'tz: FIELD_WORKER_CODE_SMS_TZ'.length);
+    for (const part of [
+      'pool: fieldWorkerCodeSmsPool',
+      'encryption: jobsEncryption',
+      'smsAppClient: contributionProviders.smsAppClient',
+      'resolveConfig: resolveSmsDltConfig',
+      '...(smsPreflight !== undefined ? { smsPreflight } : {})',
+      // CB17 (e): the env var must actually reach the schedule, and so must the zone.
+      'cron: FIELD_WORKER_CODE_SMS_CRON',
+      'tz: FIELD_WORKER_CODE_SMS_TZ',
+    ]) {
+      expect(call, part).toContain(part);
+    }
+  });
+
+  it('⭐ the options a caller passes reach the schedule: a cron and a zone other than the defaults are used as given', async () => {
+    const schedule = vi.fn<(name: string, cron: string, data: unknown, opts: unknown) => Promise<void>>(() => Promise.resolve());
+    const boss = {
+      createQueue: vi.fn<(name: string) => Promise<void>>(() => Promise.resolve()),
+      work: vi.fn<(name: string, opts: unknown, handler: unknown) => Promise<string>>(() => Promise.resolve('worker-id')),
+      schedule,
+    } as unknown as Parameters<typeof registerFieldWorkerCodeSmsCron>[0];
+    await registerFieldWorkerCodeSmsCron(boss, deps().deps, { cron: '*/5 * * * *', tz: 'UTC' });
+    expect(schedule).toHaveBeenCalledWith(QUEUE_NAMES.FIELD_WORKER_CODE_SMS, '*/5 * * * *', {}, { tz: 'UTC' });
   });
 });

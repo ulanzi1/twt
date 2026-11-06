@@ -269,7 +269,10 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
     expect(gw.mine(sendId)).toHaveLength(1);
   });
 
-  it('⭐ AC1 (a) — an approval that rolls back leaves no row, and a tick sends nothing', async () => {
+  // Review finding CB21 (a): the title used to add "and a tick sends nothing", and this leg runs no tick. With no row there is nothing for a tick
+  // to send; the "no send before the COMMIT" half is the leg above (a tick runs while the approval is uncommitted), and the row itself is
+  // forced to roll back through HTTP in `approval-atomicity.spec.ts` (AC1 (a)).
+  it('⭐ AC1 (a) — an approval that rolls back leaves no row', async () => {
     const pid = await pariwar();
     const id = await register(pid, '592014');
     const c = await pool.connect();

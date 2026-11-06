@@ -88,6 +88,11 @@ export interface ClaimedFieldWorkerCodeSms {
  * `updated_at`, then `send_id`, so a released row goes behind every waiting row (TR11: oldest-first would keep it at the head for a day),
  * and a released row is not claimable until its backoff has passed. The MATERIALIZED CTE keeps `SKIP LOCKED LIMIT 1` honest
  * ([[project_in_subquery_limit_skip_locked_overclaim]]): one statement, so the claim commits on its own on a pool.
+ *
+ * DELIBERATE (checklist family 9): this reads and claims EVERY Pariwar's `due` rows on a handle the caller supplies - the sweep's own pool,
+ * which bypasses RLS. Rationale: the sweep is one platform-wide job with no request to take a Pariwar from, and the row it returns holds ids
+ * only. The caller checks `smsDelivery.canReadAcrossPariwars` first (an RLS-bound login would claim nothing and say nothing). Re-examine if
+ * this is ever called from a request path, or when the sweep moves to an RLS-bound login (roster Row 26; Row 49 (f)).
  */
 export async function claimNextFieldWorkerCodeSms(q: Queryable, input: { readonly claimToken: string }): Promise<ClaimedFieldWorkerCodeSms | null> {
   const { rows } = await q.query<{ send_id: string; pariwar_id: string; field_worker_id: string; attempt_count: number }>(
@@ -174,6 +179,10 @@ export interface LapsedFieldWorkerCodeSms {
  * ⭐ Every tick, first — ONE statement over every Pariwar, both clocks on `clock_timestamp()`: `attempting` past the lease (judged on
  * `updated_at`) and `due` past the max age (judged on `created_at`, ⛔ `updated_at`). The options exist for tests only, because the DB clock
  * cannot be backdated by an update.
+ *
+ * DELIBERATE (checklist family 9): one statement over EVERY Pariwar's rows on a handle the caller supplies (the sweep's own pool, which
+ * bypasses RLS). Rationale: a lapse is a platform-wide clock, not any tenant's act, and it returns ids and a closed word only. The caller
+ * checks `canReadAcrossPariwars` first, as for the claim. Re-examine under the same triggers: a request-path caller, or an RLS-bound login.
  */
 export async function lapseFieldWorkerCodeSms(
   q: Queryable,

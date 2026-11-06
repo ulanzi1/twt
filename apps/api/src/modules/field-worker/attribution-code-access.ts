@@ -1,6 +1,6 @@
 // THE API DOOR to the attribution-code registry — Story 13.2 (Task 6.4; AC10; AT8 v2 iii). The ONLY `apps/api` file that names
-// `attributionCode`; the one other `apps/*` file is Story 13.1b's reviewed job, `apps/jobs/src/scheduler/field-worker-code-sms.ts`, which has
-// no request to take a Pariwar from (the repo-wide reach fence, apps/api/tests/unit/attribution-code-reach-fence.test.ts). ⛔ Route uses it yet:
+// `attributionCode` (the repo-wide reach fence, apps/api/tests/unit/attribution-code-reach-fence.test.ts); the one other `apps/*` file is
+// Story 13.1b's reviewed job, `apps/jobs/src/scheduler/field-worker-code-sms.ts`, which has no request to take a Pariwar from. ⛔ Route uses it yet:
 // Story 13.1 ("Add Field Worker" — allocate, flag), 13.3 ("my code" — read), 13.4 (trustee flags — list) and 13.8 (signup —
 // resolve) are its callers.
 //

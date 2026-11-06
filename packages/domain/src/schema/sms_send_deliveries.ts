@@ -19,7 +19,7 @@ export type SmsDeliveryState = (typeof SMS_DELIVERY_STATES)[number];
 export const smsSendDeliveries = pgTable(
   'sms_send_deliveries',
   {
-    /** `cr` | `ce` | `sn` | `pm` | `as` — the send table, by KIND (DR3; `as` Story 5.11b). */
+    /** `cr` | `ce` | `sn` | `pm` | `as` | `fw` — the send table, by KIND (DR3; `as` Story 5.11b; `fw` Story 13.1b). */
     sendKind: text('send_kind').notNull().$type<(typeof SMS_SEND_KINDS)[number]>(),
     /** The send row's uuid (⛔ FK — a kind-discriminated id across six tables; DR5). */
     sendRowId: uuid('send_row_id').notNull(),

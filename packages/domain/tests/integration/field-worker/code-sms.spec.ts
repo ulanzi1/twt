@@ -341,6 +341,44 @@ describe.skipIf(!hasDatabase)('the claim, the backoff and the lapse (own-committ
     for (const id of released) await finish(id);
   });
 
+  // Review finding CB14 (TR11, AD3 "a release sets updated_at, so a released row goes behind every waiting row"). In every leg above each seeded row
+  // has `created_at` equal to `updated_at`, and in (j) the released rows are still inside their backoff, so `ORDER BY created_at, send_id` passed
+  // them all. Here the released row is OLDEST by `created_at` and NEWEST by `updated_at`, with its one-minute backoff long past, so it is eligible:
+  // only the real key puts the waiting row first. ⚠ WRITTEN, NOT RUN: no database was available to the review that added it.
+  it('⭐ TR11 — a released row whose backoff has passed goes BEHIND an older-updated waiting row, whatever its `created_at` says', async () => {
+    const waiting = await seedRow({ updatedAgoMs: 3_000_000_000 }); // never claimed: created = updated
+    const released = await seedRow({ updatedAgoMs: 2_900_000_000, createdAgoMs: 3_100_000_000, attemptCount: 1 });
+    expect((await claimMine())?.sendId, 'the waiting row first: its `updated_at` is the older').toBe(waiting);
+    expect((await claimMine())?.sendId, 'then the released row, which is eligible').toBe(released);
+    expect(await claimMine()).toBeNull();
+    await finish(waiting);
+    await finish(released);
+  });
+
+  // The tie-break: two rows with the SAME `updated_at` are claimed in `send_id` order. `session_replication_role = 'replica'` (as this file's
+  // cleanup uses) lets the owner pool copy one timestamp onto the other without tripping the guard trigger.
+  it('⭐ TR11 — equal `updated_at` falls back to `send_id`', async () => {
+    const a = await seedRow({ updatedAgoMs: 3_200_000_000 });
+    const b = await seedRow({ updatedAgoMs: 3_200_000_000 });
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      await c.query(`UPDATE ${TABLE} SET updated_at = (SELECT updated_at FROM ${TABLE} WHERE send_id = $1) WHERE send_id = $2`, [a, b]);
+      await c.query('COMMIT');
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
+    } finally {
+      c.release();
+    }
+    const [first, second] = [a, b].sort();
+    expect((await claimMine())?.sendId).toBe(first);
+    expect((await claimMine())?.sendId).toBe(second);
+    await finish(a);
+    await finish(b);
+  });
+
   it('⭐ AC4 (b) the lapse: `attempting` past the lease ends `exhausted:outcome_unknown`; inside it is left alone', async () => {
     const stale = await seedRow({ updatedAgoMs: FIELD_WORKER_CODE_SMS_LEASE_MS + 5_000, outcome: 'attempting', claimToken: 't' });
     const fresh = await seedRow({ updatedAgoMs: FIELD_WORKER_CODE_SMS_LEASE_MS - 60_000, outcome: 'attempting', claimToken: 't' });

@@ -358,6 +358,11 @@ export interface FieldWorkerForCodeSms {
  * Story 13.1b (AD4, AC7) — one worker's state and sealed mobile, for the sweep's audited decrypt. A plain read, ⛔ `FOR SHARE`: 13.1a's
  * lock held `active` through an audit line on a second connection, which on a jobs pool is the starvation trap (AD4 accepts the seconds
  * after it). The `pariwar_id` predicate is the ONLY Pariwar filter here: the sweep's scope sets ⛔ role (G3).
+ *
+ * DELIBERATE (checklist family 9): two bypasses of the 13.1a read's protections, both in AD4 and `-450`. (1) No `FOR SHARE`, so a suspension
+ * landing between this read and the gateway call does not stop the text. (2) The Pariwar predicate is explicit and nothing else bounds it.
+ * Re-examine (1) when Story 13.1c ships a suspend route, because until then no worker can leave `active` in that window; re-examine (2) if
+ * the sweep's scope ever sets a role.
  */
 export async function getFieldWorkerForCodeSms(db: Db, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<FieldWorkerForCodeSms | null> {
   const rows = await db

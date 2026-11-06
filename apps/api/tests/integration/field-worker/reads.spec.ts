@@ -562,18 +562,36 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
         ['approved_by_display', 'code_sms_status', 'created_at', 'current_state', 'district', 'field_worker_id', 'kyc_status', 'mobile', 'name', 'registered_by_display'].sort(),
       );
       await sendRow(p, id, { outcome: 'error', detail: 'exhausted:outcome_unknown:api_unavailable:timeout' });
-      const body = (await h.identity(admin.client, p, id)).body;
-      expect(body).not.toContain('exhausted');
-      expect(body).not.toContain('timeout');
+      // Review finding CB21 (c): an absence assertion is only meaningful against a SUCCESSFUL body that shows the row was read. The status is the
+      // landing control: had the read ignored the replaced row, the body would still contain neither word.
+      const after = await h.identity(admin.client, p, id);
+      expect(after.statusCode, after.body).toBe(200);
+      expect((json(after) as Record<string, unknown>)['code_sms_status']).toBe('not_confirmed');
+      expect(after.body).not.toContain('exhausted');
+      expect(after.body).not.toContain('timeout');
     });
 
-    it('⭐ another Pariwar’s row is invisible: a same-id worker of B reads nothing in A', async () => {
+    // Review finding CB6: this leg used to list an EMPTY Pariwar A after approving a worker in B, which cannot fail (worker ids are unique, so
+    // a row of B never keys a worker of A). The cross-Pariwar proof of the status read is the domain leg `code-sms.spec.ts` ("another
+    // Pariwar", including the RLS-free handle). What this leg can show is the shape a leak would take: each list holds its own worker and
+    // that worker's OWN status, with the two statuses made different and a non-empty list as the control. CB21 (b): it cannot fail on a
+    // dropped `pariwar_id` predicate, so its title claims no more than that.
+    it('⭐ each Pariwar’s list carries its own worker and that worker’s own status', async () => {
       const a = await pariwar();
       const b = await pariwar();
+      const inA = await h.registered(a.admin.client, a.p, { name: 'Own Worker', mobile: nextMobile(), district: 'Patna' });
+      expect((await h.approve(a.admin.client, a.p, inA)).statusCode).toBe(200);
       const inB = await h.registered(b.admin.client, b.p, { name: 'Other Worker', mobile: nextMobile(), district: 'Patna' });
       expect((await h.approve(b.admin.client, b.p, inB)).statusCode).toBe(200);
-      const list = await h.list(a.admin.client, a.p, { state: 'active' });
-      expect((json(list) as { items: unknown[] }).items).toEqual([]);
+      await sendRow(b.p, inB, { outcome: 'error', detail: 'exhausted:attempts' });
+      const itemsOf = async (who: typeof a): Promise<Record<string, unknown>[]> =>
+        (json(await h.list(who.admin.client, who.p, { state: 'active' })) as { items: Record<string, unknown>[] }).items;
+      const listA = await itemsOf(a);
+      expect(listA.map((i) => i['field_worker_id']), 'A lists exactly its own worker (the control: the list is not empty)').toEqual([inA]);
+      expect(listA[0]!['code_sms_status']).toBe('sending');
+      const listB = await itemsOf(b);
+      expect(listB.map((i) => i['field_worker_id'])).toEqual([inB]);
+      expect(listB[0]!['code_sms_status']).toBe('not_delivered');
     });
 
     it('⭐ ONE statement, not one per item: a page of three costs one status read', async () => {
@@ -582,12 +600,18 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
         const id = await h.registered(admin.client, p, { name, mobile: nextMobile(), district: 'Patna' });
         expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
       }
+      // Review finding CB20: this is the WIRING check (the handler calls the accessor once, with the page's three ids). That the accessor sends ONE
+      // SQL statement for them is proved without a database in `packages/domain/tests/field-worker/code-sms.test.ts`. The spy calls through and is
+      // restored, so it cannot leak into a later test's call counts.
       const spy = vi.spyOn(fieldWorker, 'getFieldWorkerCodeSmsStatuses');
-      spy.mockClear();
-      const r = await h.list(admin.client, p, { state: 'active' });
-      expect((json(r) as { items: unknown[] }).items).toHaveLength(3);
-      expect(spy).toHaveBeenCalledTimes(1);
-      expect((spy.mock.calls[0]![2] as string[]).length).toBe(3);
+      try {
+        const r = await h.list(admin.client, p, { state: 'active' });
+        expect((json(r) as { items: unknown[] }).items).toHaveLength(3);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect((spy.mock.calls[0]![2] as string[]).length).toBe(3);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 

@@ -2,7 +2,7 @@
 
 **From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-03, **REVISED three times on 2026-11-03** — after BigDev explained how
 field workers are recruited, after BigDev checked the form (Story 13.1, Q-3), and after BigDev confirmed that the form states the purposes
-and records the worker's agreement · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as asked until BigDev sends it.
+and records the worker's agreement · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as asked until BigDev sends it. **Extended 2026-11-06 (Story 13.1b, Task 0.4):** questions 4 to 6 added.
 **Roster:** the go-live row for field-worker registration — not yet created (Story 13.1 Task 0.4); this note answers its legs for the
 classification, retention and erasure. The footing and notice leg is met by the form, so it is not asked.
 
@@ -50,9 +50,13 @@ We have **not formed a view** on any of these.
    the Trust's promise to keep them (and any legal need behind it) allow it to refuse — and what must go and what may stay: the code, the
    introductions credited to it, any payment record, the paper form?
 
+4. **Giving a worker's number and code to the text-message company.** The platform would pass a worker's mobile number and six-digit code to MSG91, the SMS gateway, to deliver one text. The clearance on record for MSG91 names member names and mobiles only. May MSG91 process a worker's number and code, and does any copy MSG91 keeps sit with the form's promise to remove the number 8 years after termination?
+5. **Whether the text needs separate consent.** BigDev reads the form's purposes as reaching this text; nobody preparing this question has seen the form, and its wording is not recorded. Does the TRAI service-implicit basis reach someone who is not the Trust's customer, or is separate consent needed?
+6. **A text that reaches the wrong person.** The number is typed by an officer from the form, and nothing verifies it. If it is mistyped, a stranger receives a code; the text names nobody. Is that a personal-data breach the Trust must report?
+
 ## What we need back
 
 A short written answer to each question that is sent. It will be recorded as a decision; once the roster row exists it answers the counsel
-half of its legs for the classification (question 1), retention (question 2) and erasure (question 3). The footing and notice are settled
+half of its legs for the classification (question 1), retention (question 2) and erasure (question 3), and questions 4 to 6 answer roster Row 49 (c) and (d). The footing and notice for holding the data are settled
 by the form, on BigDev's confirmation. If any answer depends on facts we have not given — including what the form's purposes say, which we
 have not seen — please say which.

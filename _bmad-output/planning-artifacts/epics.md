@@ -360,6 +360,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 - **AR-54:** Dokploy — Live-cycle fallback path required (architecture §5.10).
 - **AR-55:** Bank statement intake — parser shipping schedule gates Phase 2 statewide rollout (not Phase 1 single-district).
 - **AR-56:** Regulatory gates — Indian Trust Act registration (Bihar), 12A/12AB, GST (likely required from launch given module commissions), 80G (Phase 2/3 readiness), DPDPA Data Fiduciary registration, CPA 2019 internal appeal flow (FR-43A), RBI/UPI rate-limit workaround via dual nominee accounts, TDS §194H on field-worker commission, DLT-transactional (PE/OE) registration for OTP-SMS / step-up-OTP-SMS / transactional-fallback-SMS / degraded-mode bridge SMS.
+  > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450`). Annotated, not rewritten.** AR-56's list of DLT-transactional texts does not include a field worker's code text. It is a Panel question (note `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) - not ruled; a ruling is recorded here as a further annotation.
 
 **Cross-cutting concerns (architecture §Cross-Cutting Concerns)**
 

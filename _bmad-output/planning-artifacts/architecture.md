@@ -2402,6 +2402,13 @@ fallback SMS.
 > Row 44. ⭐ ⇒ this DISCHARGES the two 2026-10-23 annotations' *"still owed"* (their place in this section; `-389` G13). ⛔ A bulk-alert
 > channel (RA-29): no SMS is sent.
 
+> ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450` — author-commit) — a further direct DLT SMS to an explicit number, for a
+> field worker's own code. ⭐ Annotated, not rewritten.** Story 13.1b would text a newly approved field worker their attribution code, once,
+> through the generic core (`prepareDltSms` + `sendPreparedDltSms`) with its own template registry; a missing template id fails **closed**;
+> it is an outbox row written in the approval transaction, not a `dispatch()` caller. This is a Panel question (note
+> `trustee-panel-routing-note-2026-11-06-story-13-1b-field-worker-code-by-sms-confirm.md`, not sent) - not ruled; a ruling is
+> recorded here as a further annotation. Nothing here changes what §3.4 says, and the text is not live: its go-live is roster Row 49.
+
 #### 3.5 Telephony integration — Helpline Operator console (Persona #7)
 
 **Scope demarcation.** This section covers telephony / CTI only — inbound call

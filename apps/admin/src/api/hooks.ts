@@ -3013,12 +3013,13 @@ export function useWithdrawModule(pariwarId: string, moduleId: string) {
 // Every list page DECRYPTS up to 25 names and every identity read the name and the full mobile, each with an audit line: on the
 // client defaults a window focus or a reconnect would write those lines and spend those decrypts with nobody having asked (an
 // infinite list re-walks every loaded page). ⛔ Do not remove these flags to "keep it fresh": a list is refreshed by the approval
-// that changes it, or by the admin's own "Try again".
+// that changes it, by a 409 that says it is stale (`fieldWorkerListIsStale`), or by the admin's own "Try again".
 
 const fieldWorkersRoot = (pariwarId: string) => ['field-workers', pariwarId] as const;
 export const fieldWorkersListKey = (pariwarId: string, state: import('@twt/contracts').FieldWorkerState, district: string | null) =>
   // ⛔ NOT `district ?? '*'`: a typed district `*` would share the all-districts entry (review CR13). The two shapes cannot collide.
   [...fieldWorkersRoot(pariwarId), 'list', state, district === null ? (['all'] as const) : (['district', district] as const)] as const;
+export const fieldWorkerListsKey = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'list'] as const;
 export const fieldWorkerIdentityKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'identity', fieldWorkerId] as const;
 
 export function useFieldWorkerDistricts(pariwarId: string) {
@@ -3049,6 +3050,9 @@ export function useFieldWorkerIdentity(pariwarId: string, fieldWorkerId: string)
   return useQuery({
     queryKey: fieldWorkerIdentityKey(pariwarId, fieldWorkerId),
     queryFn: () => api.getFieldWorkerIdentity(pariwarId, fieldWorkerId),
+    // Set here, not left to the client default: since review CR2 this is the only thing that drops a decrypted identity when the
+    // panel unmounts by a route change (review CR48).
+    gcTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -3056,21 +3060,29 @@ export function useFieldWorkerIdentity(pariwarId: string, fieldWorkerId: string)
   });
 }
 
+/** The 409s that say the list on screen is stale: the worker was already approved, or moved to another district. */
+export function fieldWorkerListIsStale(err: unknown): boolean {
+  return (
+    err instanceof ApiError &&
+    (err.code === 'field_worker.illegal_transition' || err.code === 'field_worker.kyc_already_completed' || err.code === 'field_worker.authorization_stale')
+  );
+}
+
 /**
  * Approve — the variables are an id and a key (⛔ a name or mobile). The lists refresh in the background: ⛔ the mutation does NOT
  * wait for the refresh (the approval has committed; the button must leave "Approving…" then — review CR9). A 409 that says the
- * list is stale (already approved, or moved to another district) refreshes it too.
+ * list is stale (`fieldWorkerListIsStale`) refreshes it too.
  */
 export function useApproveFieldWorker(pariwarId: string) {
   const qc = useQueryClient();
   const refreshLists = (): void => {
-    void qc.invalidateQueries({ queryKey: [...fieldWorkersRoot(pariwarId), 'list'] });
+    void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
   };
   return useMutation({
     mutationFn: (input: { fieldWorkerId: string; idempotencyKey: string }) => api.approveFieldWorker(pariwarId, input.fieldWorkerId, input.idempotencyKey),
     onSuccess: refreshLists,
     onError: (err) => {
-      if (err instanceof ApiError && (err.code === 'field_worker.illegal_transition' || err.code === 'field_worker.authorization_stale')) refreshLists();
+      if (fieldWorkerListIsStale(err)) refreshLists();
     },
   });
 }

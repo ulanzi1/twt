@@ -8,13 +8,13 @@
 // ⛔ The removal is in the explicit handlers (the Close button here; the approval in `ApprovalsPage`; a switch to another worker or
 // another district in either page), NOT in an effect cleanup: a cleanup runs on StrictMode's simulated unmount too, which destroyed
 // the in-flight query and made the remount read the identity a second time — a second audit line and a second decrypt for one click
-// (review CR2). The client's `gcTime: 0` drops the query when the panel unmounts for any other reason.
+// (review CR2). The hook's own `gcTime: 0` drops the query when the panel unmounts for any other reason (review CR48).
 
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 
-import { fieldWorkerIdentityKey, useFieldWorkerIdentity } from '../../api/hooks.js';
+import { fieldWorkerIdentityKey, fieldWorkerListIsStale, fieldWorkerListsKey, useFieldWorkerIdentity } from '../../api/hooks.js';
 import { fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel, type Surface } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
@@ -39,22 +39,48 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
     headingRef.current?.focus();
   }, []);
 
+  // The worker moved meanwhile: the row that opened this panel is stale too, and nothing else refreshes it (review CR47).
+  const staleList = identity.isError && fieldWorkerListIsStale(identity.error);
+  useEffect(() => {
+    if (staleList) void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
+  }, [staleList, qc, pariwarId]);
+
   const close = (): void => {
     qc.removeQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, fieldWorkerId) });
     onClose();
   };
 
   const w = identity.data;
+  const g = identity.isError ? fieldWorkerGuidance(identity.error, surface) : null;
   return (
     <section className="flex flex-col gap-2 rounded border p-3" aria-labelledby={`fw-detail-${fieldWorkerId}`} data-testid="fw-detail">
       <h2 id={`fw-detail-${fieldWorkerId}`} ref={headingRef} tabIndex={-1} className="text-lg font-semibold outline-none">
         {t('fw.detail.title')}
       </h2>
-      {identity.isLoading && <p role="status">{t('fw.loading')}</p>}
-      {identity.isError && (
-        <p role="alert" className="text-status-fail-fg" data-testid="fw-detail-error">
-          {fieldWorkerGuidance(identity.error, surface).text}
-        </p>
+      {/* Mounted with the panel, and it says when the details arrive: on the Find screen that is the moment "Show code" appears (review CR39). */}
+      <div role="status" data-testid="fw-detail-status">
+        {/* `isPending`, not `isLoading`: a retry while offline is pending and paused, and must not leave an empty panel (review CR57). */}
+        {identity.isPending && <p>{t('fw.loading')}</p>}
+        {w !== undefined && <p className="sr-only">{t('fw.detail.loaded')}</p>}
+      </div>
+      {g !== null && (
+        <div role="alert" className="flex flex-col gap-2 text-status-fail-fg">
+          <p data-testid="fw-detail-error">{g.text}</p>
+          {g.retryable === true && (
+            <button
+              type="button"
+              className="self-start underline"
+              onClick={() => {
+                // The refetch unmounts this button: focus stays in the panel (review CR42).
+                headingRef.current?.focus();
+                void identity.refetch();
+              }}
+              data-testid="fw-detail-retry"
+            >
+              {t('fw.retry')}
+            </button>
+          )}
+        </div>
       )}
       {w !== undefined && (
         <>

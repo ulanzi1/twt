@@ -15,10 +15,12 @@
 // it back to Show when focus was inside this reveal or on the page body (the swapped buttons unmount under it), and leave it alone
 // when the admin has gone elsewhere. The buttons' names CONTAIN their visible text; the worker's name is a hidden suffix.
 
+import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import * as api from '../../api/client.js';
+import { fieldWorkerListIsStale, fieldWorkerListsKey } from '../../api/hooks.js';
 import { focusIfUnclaimed } from '../marketplace/focus.js';
 import { codeUnavailableText, fieldWorkerGuidance, spellDigits, type Guidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
@@ -36,6 +38,7 @@ export interface CodeRevealProps {
 type View = { kind: 'idle' } | { kind: 'loading' } | { kind: 'shown'; code: string } | { kind: 'refused'; text: string; signIn: boolean };
 
 export function CodeReveal({ pariwarId, fieldWorkerId, workerName }: CodeRevealProps): ReactElement {
+  const qc = useQueryClient();
   const [view, setView] = useState<View>({ kind: 'idle' });
   const [live, setLive] = useState('');
   const epochRef = useRef(0);
@@ -99,6 +102,7 @@ export function CodeReveal({ pariwarId, fieldWorkerId, workerName }: CodeRevealP
       (err: unknown) => {
         if (epochRef.current !== epoch) return;
         const g: Guidance = fieldWorkerGuidance(err, 'code');
+        if (fieldWorkerListIsStale(err)) void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) }); // review CR47
         setLive('');
         setView({ kind: 'refused', text: codeUnavailableText(err) ?? g.text, signIn: g.signIn === true });
       },

@@ -50,7 +50,7 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
     openRef.current = id;
     setOpenState(id);
   };
-  /** No decrypted identity outlives its panel: the explicit removal (the client's `gcTime: 0` is only the backstop). */
+  /** No decrypted identity outlives its panel: the explicit removal (the hook's `gcTime: 0` is only the backstop). */
   const forget = (id: string | null): void => {
     if (id !== null) qc.removeQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, id) });
   };
@@ -59,7 +59,8 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
     const was = openRef.current;
     setOpen(null);
     setProblem((p) => (p?.banner === true ? p : null));
-    if (was !== null) reviewButtons.current.get(was)?.focus();
+    // The row may have left the list while the panel was open: a 409 refreshes it (review CR46).
+    if (was !== null) (reviewButtons.current.get(was) ?? headingRef.current)?.focus();
   };
 
   const doApprove = async (fieldWorkerId: string, name: string): Promise<void> => {
@@ -98,11 +99,14 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
       </h1>
       <FieldWorkerNav pariwarId={pariwarId} current="approvals" />
       <p className="text-sm">{t('fw.approvals.intro')}</p>
-      {announce !== null && (
-        <p role="status" className="rounded bg-status-ok-bg p-2 text-sm text-status-ok-fg" data-testid="fw-approvals-announce">
-          {announce}
-        </p>
-      )}
+      {/* Mounted empty: a status node that arrives already holding its text is announced unreliably, and a late approval has only this. */}
+      <div role="status" data-testid="fw-approvals-status">
+        {announce !== null && (
+          <p className="rounded bg-status-ok-bg p-2 text-sm text-status-ok-fg" data-testid="fw-approvals-announce">
+            {announce}
+          </p>
+        )}
+      </div>
       {problem?.banner === true && (
         <p role="alert" className="rounded p-2 text-sm text-status-fail-fg" data-testid="fw-approvals-banner-error">
           {t('fw.approvals.failedNamed', { name: problem.name, reason: problem.text })}
@@ -128,7 +132,6 @@ export function ApprovalsPage({ pariwarId }: { pariwarId: string }): ReactElemen
         empty={t('fw.approvals.empty')}
         headingRef={listHeadingRef}
         noAccessText={district === null ? t('fw.noAccessDistrict') : t('fw.noAccess')}
-        surface="approvals"
         filterKey={JSON.stringify(district)}
         testId="fw-approvals-list"
         action={(item, register) => (

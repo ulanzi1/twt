@@ -18,6 +18,8 @@ export interface Guidance {
   readonly signIn?: boolean;
   /** Retrying the SAME attempt can help (keep the key). */
   readonly retryable?: boolean;
+  /** The same request can never work; loading the list from its first page can (a cursor the server refused). */
+  readonly reload?: boolean;
 }
 
 /** Where the admin was when the server refused — the 403 line says what THAT action needs (review CR11). */
@@ -48,7 +50,7 @@ const BY_CODE: Record<string, () => Guidance> = {
   'field_worker.stream_conflict': () => ({ text: t('fw.err.changedMeanwhile'), retryable: true }),
   'field_worker.kyc_already_completed': () => ({ text: t('fw.approvals.alreadyDone') }),
   'field_worker.kyc_not_completed': () => ({ text: t('fw.err.kycNotDone') }),
-  'field_worker.cursor_invalid': () => ({ text: t('fw.err.cursorInvalid'), retryable: true }),
+  'field_worker.cursor_invalid': () => ({ text: t('fw.err.cursorInvalid'), reload: true }),
 };
 
 /** The guidance for any caught error. An unknown code still says something useful and names the code. */

@@ -1,14 +1,14 @@
 // Story 13.1a code review round 2 (CR2, CR10, CR16 (c), (f)) — the identity panel (`WorkerDetail`) on its own:
 //   · it reads the identity EXACTLY ONCE — also inside <StrictMode>, whose simulated unmount used to destroy the in-flight query
 //     (the cleanup removed it) and make the remount read — and audit — a second time;
-//   · Close removes the identity from the cache BY ITSELF: the client here has an infinite `gcTime`, so only the explicit removal
-//     can empty the cache (a `gcTime: 0` client would pass without it);
+//   · Close removes the identity from the cache BY ITSELF, in the tick of the press: the hook's own `gcTime: 0` (review CR48) only
+//     empties it a timer later, and that backstop has its own leg;
 //   · the term / description pairs are right (the state is a description of "Status", not a term), and the "Approved by" line
 //     renders when the identity carries an approver (the finder opens it for an ACTIVE worker — `-448` — and its own test proves
 //     that flow; this is the panel's unit proof).
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode, useEffect, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -23,6 +23,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
 
 const { WorkerDetail } = await import('../src/modules/field-workers/index.js');
 const { resolveEn: t } = await import('../src/modules/field-workers/i18n-en.js');
+const { ApiError } = await import('../src/api/client.js');
 
 const P = '11111111-1111-4111-8111-111111111111';
 const W = '00000000-0000-4000-8000-000000000001';
@@ -99,9 +100,9 @@ describe('CR2 — one click, one audited read', () => {
     expect((await screen.findByTestId('fw-detail-mobile')).textContent).toBe('+919876500010');
     expect(identityEntries(qc)).toHaveLength(1); // NON-VACUITY: it is held while the panel is open
     fireEvent.click(screen.getByTestId('fw-detail-close'));
+    expect(identityEntries(qc)).toHaveLength(0); // same tick: the handler's removal, not the hook's `gcTime: 0` timer (review CR48)
     await screen.findByTestId('closed');
     expect(closed).toHaveBeenCalledTimes(1);
-    expect(identityEntries(qc)).toHaveLength(0);
     expect(JSON.stringify(qc.getQueryCache().getAll().map((q) => q.state.data))).not.toContain('+919876500010');
   });
 });
@@ -167,5 +168,93 @@ describe('CR16 (f) — the "Approved by" line', () => {
     expect(screen.queryByTestId('fw-detail-approved-by')).toBeNull();
     expect(screen.queryByText(t('fw.detail.approval'))).toBeNull();
     await waitFor(() => expect(getFieldWorkerIdentity).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('review round 3 — the fix diff', () => {
+  const renderDetail = (qc: QueryClient = keepingClient()) => {
+    render(
+      <QueryClientProvider client={qc}>
+        <WorkerDetail pariwarId={P} fieldWorkerId={W} onClose={() => undefined} />
+      </QueryClientProvider>,
+    );
+    return qc;
+  };
+
+  it('CR39 — one status region, there from the start, says loading and then that the details have loaded', async () => {
+    let resolve!: (v: ReturnType<typeof identity>) => void;
+    getFieldWorkerIdentity.mockReturnValueOnce(new Promise((r) => (resolve = r)));
+    renderDetail();
+    const region = screen.getByTestId('fw-detail-status');
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent).toBe(t('fw.loading'));
+    await act(async () => resolve(identity()));
+    await waitFor(() => expect(region.textContent).toBe(t('fw.detail.loaded')));
+    expect(screen.getByTestId('fw-detail-status')).toBe(region);
+    expect(region.textContent).not.toContain('Ramesh Kumar'); // the line carries no identity
+  });
+
+  it('CR42 — a retryable failure offers Try again: it keeps focus in the panel and reads once more', async () => {
+    getFieldWorkerIdentity.mockRejectedValueOnce(new ApiError(503, 'field_worker.decrypt_unavailable', 'down'));
+    renderDetail();
+    const retry = await screen.findByTestId('fw-detail-retry');
+    retry.focus();
+    fireEvent.click(retry);
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: t('fw.detail.title') }));
+    await screen.findByTestId('fw-detail-mobile');
+    expect(getFieldWorkerIdentity).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('fw-detail-retry')).toBeNull();
+  });
+
+  it('CR57 — a retry while offline says it is loading, not an empty panel, and finishes on reconnect', async () => {
+    getFieldWorkerIdentity.mockRejectedValueOnce(new ApiError(503, 'field_worker.decrypt_unavailable', 'down'));
+    renderDetail();
+    const retry = await screen.findByTestId('fw-detail-retry');
+    act(() => onlineManager.setOnline(false));
+    try {
+      fireEvent.click(retry);
+      await waitFor(() => expect(screen.getByTestId('fw-detail-status').textContent).toBe(t('fw.loading')));
+      expect(getFieldWorkerIdentity).toHaveBeenCalledTimes(1); // paused: nothing was sent
+    } finally {
+      act(() => onlineManager.setOnline(true));
+    }
+    await screen.findByTestId('fw-detail-mobile');
+    expect(getFieldWorkerIdentity).toHaveBeenCalledTimes(2);
+  });
+
+  it('CR42 — a failure retrying cannot help offers no Try again', async () => {
+    getFieldWorkerIdentity.mockRejectedValueOnce(new ApiError(500, 'field_worker.identity_unreadable', 'no'));
+    renderDetail();
+    expect((await screen.findByTestId('fw-detail-error')).textContent).toBe(t('fw.list.unreadable'));
+    expect(screen.queryByTestId('fw-detail-retry')).toBeNull();
+  });
+
+  it.each([
+    ['field_worker.authorization_stale', 409, 1],
+    ['field_worker.decrypt_unavailable', 503, 0],
+  ])('CR47 — %s (%i) on the identity read invalidates the lists this many times: %i', async (code, status, times) => {
+    const qc = keepingClient();
+    const refresh = vi.spyOn(qc, 'invalidateQueries');
+    getFieldWorkerIdentity.mockRejectedValueOnce(new ApiError(status, code, 'no'));
+    renderDetail(qc);
+    await screen.findByTestId('fw-detail-error');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(refresh).toHaveBeenCalledTimes(times); // outside a `waitFor`, which would stop at the first match
+    if (times === 1) expect(refresh).toHaveBeenCalledWith({ queryKey: ['field-workers', P, 'list'] });
+  });
+
+  it('CR48 — the hook itself drops a decrypted identity on an unmount no handler saw, whatever the client’s default', async () => {
+    const qc = keepingClient();
+    const { unmount } = render(
+      <QueryClientProvider client={qc}>
+        <WorkerDetail pariwarId={P} fieldWorkerId={W} onClose={() => undefined} />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId('fw-detail-mobile');
+    expect(identityEntries(qc)).toHaveLength(1);
+    unmount();
+    await waitFor(() => expect(identityEntries(qc)).toHaveLength(0));
   });
 });

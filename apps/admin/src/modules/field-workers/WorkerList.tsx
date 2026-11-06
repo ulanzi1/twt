@@ -17,7 +17,7 @@ import type { MouseEvent, ReactElement, ReactNode, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { focusIfUnclaimed } from '../marketplace/focus.js';
-import { fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel, type Surface } from './derive.js';
+import { fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -29,14 +29,12 @@ export interface WorkerListProps {
   action: (item: FieldWorkerListItem, register: (el: HTMLElement | null) => void) => ReactNode;
   /** A 403 on the list — the page's own words (a District Admin who chose "All districts" is told to choose one). */
   noAccessText: string;
-  /** What the other 4xx / 5xx words say depends on the screen (the 403 line is `noAccessText`). */
-  surface: Surface;
   /** Changes whenever the list's filter does: it clears the "n more shown" line and drops a "Load more" answer still in flight. */
   filterKey: string;
   testId: string;
 }
 
-export function WorkerList({ query, empty, headingRef, action, noAccessText, surface, filterKey, testId }: WorkerListProps): ReactElement {
+export function WorkerList({ query, empty, headingRef, action, noAccessText, filterKey, testId }: WorkerListProps): ReactElement {
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   const hasData = query.data !== undefined;
   const [revealed, setRevealed] = useState<{ firstId: string | null; n: number } | null>(null);
@@ -78,10 +76,22 @@ export function WorkerList({ query, empty, headingRef, action, noAccessText, sur
     });
   };
 
+  // The guidance decides on EVERY path, rows or no rows: "Do not approve; tell the maintainer" and a lost permission must not read
+  // as "Try again" because a page before them happened to load (review CR38).
+  const g = query.isError ? fieldWorkerGuidance(query.error) : null;
+  const said = g === null ? null : g.noAccess === true ? noAccessText : g.text;
+  const retryable = g?.retryable === true;
   const failed = query.isError && !hasData;
-  const g = failed ? fieldWorkerGuidance(query.error, surface) : null;
   // A refresh that failed over rows the admin already has (a failed next page is said beside "Load more" instead).
   const refreshFailed = query.isRefetchError && !query.isFetchNextPageError;
+  // "Load the list again": it keeps its error while it runs, so the refused-cursor words would mount a second alert (review CR55).
+  const rewalking = g?.reload === true && query.isFetching;
+
+  // A refetch clears a failed next page at once: the button pressed unmounts, and focus must not fall to the body.
+  const reload = (): void => {
+    headingRef.current?.focus();
+    void query.refetch();
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -94,22 +104,29 @@ export function WorkerList({ query, empty, headingRef, action, noAccessText, sur
           </p>
         )}
       </div>
-      {g !== null && (
+      {failed && (
         <div role="alert" className="flex flex-col gap-2 text-status-fail-fg" data-testid={`${testId}-error`}>
-          <p>{g.noAccess ? noAccessText : g.text}</p>
-          {g.retryable && (
+          <p>{said}</p>
+          {retryable && (
             <button type="button" className="self-start underline" onClick={() => void query.refetch()}>
               {t('fw.retry')}
             </button>
           )}
         </div>
       )}
-      {refreshFailed && (
+      {refreshFailed && !rewalking && (
         <div role="alert" className="flex flex-col gap-2 text-sm text-status-fail-fg" data-testid={`${testId}-refresh-error`}>
-          <p>{t('fw.list.refreshError')}</p>
-          <button type="button" className="self-start underline" onClick={() => void query.refetch()}>
-            {t('fw.retry')}
-          </button>
+          <p>{retryable ? t('fw.list.refreshError') : said}</p>
+          {retryable && (
+            <button type="button" className="self-start underline" onClick={() => void query.refetch()}>
+              {t('fw.retry')}
+            </button>
+          )}
+          {g?.reload === true && (
+            <button type="button" className="self-start underline" onClick={reload}>
+              {t('fw.retry')}
+            </button>
+          )}
         </div>
       )}
       {items.length > 0 && (
@@ -132,12 +149,25 @@ export function WorkerList({ query, empty, headingRef, action, noAccessText, sur
         </ul>
       )}
       {query.isFetchNextPageError && (
-        <p role="alert" className="text-sm text-status-fail-fg" data-testid={`${testId}-more-error`}>
-          {t('fw.list.moreError')}
-        </p>
+        <div role="alert" className="flex flex-col gap-2 text-sm text-status-fail-fg" data-testid={`${testId}-more-error`}>
+          <p>{retryable ? t('fw.list.moreError') : said}</p>
+          {g?.reload === true && (
+            <button type="button" className="self-start underline" onClick={reload}>
+              {t('fw.retry')}
+            </button>
+          )}
+        </div>
       )}
       {query.hasNextPage && (
-        <button type="button" className="self-start rounded border px-3 py-1 text-sm" onClick={loadMore} disabled={query.isFetchingNextPage} data-testid={`${testId}-more`}>
+        // A next page cancels a refresh in flight (review CR41), and one that succeeds over a FAILED refresh clears its warning and
+        // appends to stale pages (review CR53). Only a retryable failure of the next page itself leaves the button live.
+        <button
+          type="button"
+          className="self-start rounded border px-3 py-1 text-sm"
+          onClick={loadMore}
+          disabled={query.isFetching || (query.isError && !(query.isFetchNextPageError && retryable))}
+          data-testid={`${testId}-more`}
+        >
           {query.isFetchingNextPage ? t('fw.loading') : t('fw.list.more')}
         </button>
       )}

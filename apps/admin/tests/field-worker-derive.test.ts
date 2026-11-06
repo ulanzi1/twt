@@ -58,7 +58,7 @@ describe('fieldWorkerGuidance — every code of AC11 (a), (b), (c)', () => {
     [409, 'field_worker.stream_conflict', 'fw.err.changedMeanwhile', undefined, true],
     [409, 'field_worker.kyc_already_completed', 'fw.approvals.alreadyDone', undefined, false],
     [409, 'field_worker.kyc_not_completed', 'fw.err.kycNotDone', undefined, false],
-    [400, 'field_worker.cursor_invalid', 'fw.err.cursorInvalid', undefined, true],
+    [400, 'field_worker.cursor_invalid', 'fw.err.cursorInvalid', undefined, false],
     // A 429 carries the rate limiter's own code (or `http.429`): the STATUS decides, and it is retryable.
     [429, 'http.429', 'fw.err.rateLimited', undefined, true],
     [429, 'rate_limit.exceeded', 'fw.err.rateLimited', undefined, true],

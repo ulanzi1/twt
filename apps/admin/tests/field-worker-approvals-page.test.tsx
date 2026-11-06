@@ -149,7 +149,8 @@ describe('the list and the district choice', () => {
 
 describe('Review and Approve', () => {
   it('Review opens the identity (name, FULL mobile); closing it REMOVES the identity from the cache', async () => {
-    // A client with an infinite gcTime: the removal is the page's own act (with `gcTime: 0` this would pass without it).
+    // A client with an infinite gcTime, and the check in the tick of the press: the removal is the page's own act, before the hook's
+    // `gcTime: 0` (review CR48) can run a timer later.
     const qc = keepingClient();
     renderPage(qc);
     fireEvent.click((await screen.findAllByTestId('fw-approvals-review'))[0]!);
@@ -157,8 +158,8 @@ describe('Review and Approve', () => {
     expect(getFieldWorkerIdentity).toHaveBeenCalledWith(P, item(1).field_worker_id);
     expect(identityEntries(qc)).toHaveLength(1); // NON-VACUITY: held while the panel is open
     fireEvent.click(screen.getByTestId('fw-detail-close'));
-    await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
     expect(identityEntries(qc)).toHaveLength(0);
+    await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
     expect(JSON.stringify(qc.getQueryCache().getAll().map((q) => q.state.data))).not.toContain('+919876500010');
   });
 
@@ -185,18 +186,24 @@ describe('Review and Approve', () => {
     renderPage(qc);
     await openReview(0, '+919876500010');
     approveFieldWorker.mockResolvedValueOnce(approved(1));
+    // The approval resolves asynchronously, so no tick can separate the page's removal from the hook's timer: the call is observed.
+    const removed = vi.spyOn(qc, 'removeQueries');
     fireEvent.click(screen.getByTestId('fw-approvals-approve'));
     await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
+    expect(removed).toHaveBeenCalledWith({ queryKey: ['field-workers', P, 'identity', item(1).field_worker_id] });
+    removed.mockRestore();
     expect(identityEntries(qc)).toHaveLength(0);
     // Another worker: the previous identity goes, the new one is held.
     listFieldWorkers.mockResolvedValue({ items: [item(1, 'Ramesh Kumar'), item(2, 'Sita Devi')], next_cursor: null });
     await openReview(0, '+919876500010');
     expect(identityEntries(qc)).toHaveLength(1);
     fireEvent.click(screen.getAllByTestId('fw-approvals-review')[1]!);
+    expect(identityEntries(qc).map((q) => q.queryKey[3])).not.toContain(item(1).field_worker_id); // same tick: the handler
     await waitFor(() => expect(screen.getByTestId('fw-detail-mobile').textContent).toBe('+919876500020'));
     expect(identityEntries(qc).map((q) => q.queryKey[3])).toEqual([item(2).field_worker_id]);
     // Another district: the panel closes and its identity goes.
     await chooseDistrict('Patna');
+    expect(identityEntries(qc)).toHaveLength(0); // same tick: the handler
     await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
     expect(identityEntries(qc)).toHaveLength(0);
   });
@@ -425,7 +432,7 @@ describe('CR9 — an approval that finishes late', () => {
     expect(document.activeElement).not.toBe(screen.getByRole('heading', { level: 1 }));
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: t('fw.detail.title') })); // where B’s panel put it
     expect((screen.getByTestId('fw-approvals-approve') as HTMLButtonElement).disabled).toBe(false);
-    // The identity of the approved worker left the cache (the explicit removal), and the list was refreshed.
+    // The list was refreshed: the approved worker's row is gone.
     await waitFor(() => expect(screen.queryByText('Ramesh Kumar')).toBeNull());
   });
 
@@ -472,6 +479,7 @@ describe('CR9 — an approval that finishes late', () => {
 
   it.each([
     ['field_worker.illegal_transition', 'fw.approvals.alreadyDone'],
+    ['field_worker.kyc_already_completed', 'fw.approvals.alreadyDone'],
     ['field_worker.authorization_stale', 'fw.approvals.moved'],
   ])('a 409 %s refreshes the stale list', async (code, key) => {
     renderPage();
@@ -482,8 +490,8 @@ describe('CR9 — an approval that finishes late', () => {
     fireEvent.click(screen.getByTestId('fw-approvals-approve'));
     expect((await screen.findByTestId('fw-approvals-error')).textContent).toBe(t(key));
     await waitFor(() => expect(listFieldWorkers).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.queryByTestId('fw-approvals-list-row')).not.toBeNull());
-    expect(within(screen.getByTestId('fw-approvals-list')).queryByText('Ramesh Kumar')).toBeNull();
+    // In the `waitFor`: the old rows satisfy "a row exists" at once, so a check after it would race the refresh (review CR50).
+    await waitFor(() => expect(within(screen.getByTestId('fw-approvals-list')).queryByText('Ramesh Kumar')).toBeNull());
   });
 
   it('a retryable failure for a worker whose panel was not open keeps the key for that worker’s "Try again"', async () => {
@@ -574,5 +582,72 @@ describe('CR6 — the buttons’ names contain their visible text', () => {
     const button = screen.getByRole('button', { name: `${t('fw.approvals.approve')} ${t('fw.forName', { name: 'Sita Devi' })}` });
     expect(button.hasAttribute('aria-label')).toBe(false);
     expect(button.textContent).toContain(t('fw.approvals.approve'));
+  });
+});
+
+describe('review round 3 — the fix diff', () => {
+  it('CR39 — the status region is mounted empty, before the approval, and the approval is said inside it', async () => {
+    renderPage();
+    await openReview(0, '+919876500010');
+    const region = screen.getByTestId('fw-approvals-status');
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent).toBe('');
+    approveFieldWorker.mockResolvedValueOnce(approved(1));
+    fireEvent.click(screen.getByTestId('fw-approvals-approve'));
+    await waitFor(() => expect(region.textContent).toBe(t('fw.approvals.approved', { name: 'Ramesh Kumar' })));
+    expect(screen.getByTestId('fw-approvals-status')).toBe(region); // the same node, not a new one holding its text
+  });
+
+  it('CR38 — a refresh that fails on an unreadable worker says so, with no "Try again"', async () => {
+    renderPage();
+    await openReview(0, '+919876500010');
+    approveFieldWorker.mockResolvedValueOnce(approved(1));
+    listFieldWorkers.mockRejectedValueOnce(new ApiError(500, 'field_worker.identity_unreadable', 'no'));
+    fireEvent.click(screen.getByTestId('fw-approvals-approve'));
+    const alert = await screen.findByTestId('fw-approvals-list-refresh-error');
+    expect(alert.textContent).toBe(t('fw.list.unreadable'));
+    expect(within(alert).queryByRole('button')).toBeNull();
+    expect(screen.getByText('Sita Devi')).toBeTruthy(); // the rows are kept
+  });
+
+  it('CR41 — "Load more" cannot be pressed while the refresh after an approval is in flight', async () => {
+    listFieldWorkers.mockResolvedValueOnce({ items: [item(1, 'Ramesh Kumar')], next_cursor: 'c1' });
+    renderPage();
+    await openReview(0, '+919876500010');
+    const hung = deferred<{ items: never[]; next_cursor: null }>();
+    listFieldWorkers.mockReturnValueOnce(hung.promise);
+    approveFieldWorker.mockResolvedValueOnce(approved(1));
+    fireEvent.click(screen.getByTestId('fw-approvals-approve'));
+    await screen.findByTestId('fw-approvals-announce');
+    expect((screen.getByTestId('fw-approvals-list-more') as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => hung.resolve({ items: [], next_cursor: null }));
+  });
+
+  it('CR46 — Close after a 409 took the row off the list puts focus on the heading', async () => {
+    renderPage();
+    await openReview(0, '+919876500010');
+    approveFieldWorker.mockRejectedValueOnce(new ApiError(409, 'field_worker.illegal_transition', 'no'));
+    listFieldWorkers.mockResolvedValue({ items: [item(2, 'Sita Devi')], next_cursor: null });
+    fireEvent.click(screen.getByTestId('fw-approvals-approve'));
+    await waitFor(() => expect(within(screen.getByTestId('fw-approvals-list')).queryByText('Ramesh Kumar')).toBeNull());
+    const close = screen.getByTestId('fw-detail-close');
+    close.focus(); // the 409 put focus on the heading: only a press from Close can prove where it lands
+    fireEvent.click(close);
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 }));
+  });
+
+  it('CR53 — after a FAILED refresh "Load more" is refused: a next page would clear the warning and append to stale pages; Try again frees it', async () => {
+    listFieldWorkers.mockResolvedValueOnce({ items: [item(1, 'Ramesh Kumar'), item(2, 'Sita Devi')], next_cursor: 'c1' });
+    renderPage();
+    await openReview(0, '+919876500010');
+    approveFieldWorker.mockResolvedValueOnce(approved(1));
+    listFieldWorkers.mockRejectedValueOnce(new ApiError(503, 'field_worker.decrypt_unavailable', 'down'));
+    fireEvent.click(screen.getByTestId('fw-approvals-approve'));
+    const alert = await screen.findByTestId('fw-approvals-list-refresh-error');
+    expect((screen.getByTestId('fw-approvals-list-more') as HTMLButtonElement).disabled).toBe(true);
+    listFieldWorkers.mockResolvedValueOnce({ items: [item(2, 'Sita Devi')], next_cursor: 'c2' });
+    fireEvent.click(within(alert).getByRole('button', { name: t('fw.retry') }));
+    await waitFor(() => expect(screen.queryByTestId('fw-approvals-list-refresh-error')).toBeNull());
+    await waitFor(() => expect((screen.getByTestId('fw-approvals-list-more') as HTMLButtonElement).disabled).toBe(false));
   });
 });

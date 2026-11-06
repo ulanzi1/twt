@@ -92,6 +92,7 @@ const EN: Record<string, string> = {
 
   // ── Detail ──
   'fw.detail.title': 'Worker details',
+  'fw.detail.loaded': 'Worker details loaded.',
   'fw.detail.mobile': 'Mobile',
   'fw.detail.state': 'Status',
   'fw.detail.registration': 'Registration',

@@ -12,11 +12,13 @@
 // select clears the typed text. Enter commits and does NOT submit a form around the picker: a submit in the same breath would
 // race the commit and could register under the previous district.
 
-import type { KeyboardEvent, ReactElement } from 'react';
+import type { FocusEvent, KeyboardEvent, ReactElement } from 'react';
 import { useId, useRef, useState } from 'react';
 
 import { useFieldWorkerDistricts } from '../../api/hooks.js';
+import { needsSignIn } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { useSignInRedirect } from './sign-in.js';
 
 // The options' values are the districts' INDICES (⛔ the names: no sentinel string can be guaranteed unlike every district).
 const NONE = '';
@@ -46,6 +48,7 @@ export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, i
   // What the page was last told from the typed field: a blur with nothing new typed (a Tab through the field) must not clear
   // a district the admin chose from the select.
   const committed = useRef('');
+  useSignInRedirect(districts.isError && needsSignIn(districts.error));
   const list = districts.data?.districts ?? [];
   const truncated = districts.data?.districts_truncated === true;
   const listed = value !== null && list.includes(value);
@@ -56,8 +59,15 @@ export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, i
     committed.current = typed;
     onChange(typed === '' ? null : typed);
   };
+  const onTypedBlur = (e: FocusEvent<HTMLInputElement>): void => {
+    // The window lost focus and the input did not (the admin went to check a spelling): nothing was chosen (review CR44).
+    if (document.activeElement === e.currentTarget) return;
+    commitTyped();
+  };
   const onTypedKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key !== 'Enter') return;
+    // An Enter that confirms IME composition (Hindi input) is not a choice of district (review CR44). Safari ends the composition
+    // before that keydown, so only its key code 229 says so (review CR57).
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing || e.keyCode === 229) return;
     e.preventDefault();
     commitTyped();
   };
@@ -88,7 +98,7 @@ export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, i
         ))}
       </select>
       {districts.isLoading && <p role="status" className="text-xs">{t('fw.loading')}</p>}
-      {districts.isError && (
+      {districts.isError && districts.data === undefined && (
         <div role="alert" className="flex flex-col gap-1 text-xs text-status-fail-fg">
           <p>{t('fw.district.loadError')}</p>
           <button type="button" className="self-start underline" onClick={() => void districts.refetch()} data-testid={`${testId}-retry`}>
@@ -110,7 +120,7 @@ export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, i
             aria-describedby={describedBy === undefined ? hintId : `${hintId} ${describedBy}`}
             aria-invalid={invalid || undefined}
             onChange={(e) => setTyped(e.target.value)}
-            onBlur={commitTyped}
+            onBlur={onTypedBlur}
             onKeyDown={onTypedKeyDown}
             data-testid={`${testId}-typed`}
           />

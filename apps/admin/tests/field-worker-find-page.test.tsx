@@ -296,7 +296,7 @@ describe('CR1 — "Check details" opens the audited identity panel FIRST; "Show 
       fireEvent.click(checkFor(W1));
       const error = await screen.findByTestId('fw-detail-error');
       expect(error.textContent).toBe(words);
-      expect(error.getAttribute('role')).toBe('alert');
+      expect(error.closest('[role="alert"]')).not.toBeNull();
       expect(showCodeButtons()).toHaveLength(0);
       expect(screen.queryByTestId(`fw-code-${W1}`)).toBeNull();
       expect(screen.queryByTestId('fw-detail-mobile')).toBeNull();
@@ -326,8 +326,9 @@ describe('CR1 — "Check details" opens the audited identity panel FIRST; "Show 
       fireEvent.click(showFor(W1));
       await waitFor(() => expect(digits()).toBe('042719'));
       fireEvent.click(screen.getByTestId('fw-detail-close'));
-      await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
+      // In the same tick as the press: the handler's removal, which the hook's `gcTime: 0` timer (review CR48) has not yet run behind.
       expect(identityEntries(qc)).toHaveLength(0);
+      await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
       expect(digits()).toBeNull();
       expect(screen.queryByTestId(`fw-code-${W1}`)).toBeNull();
       expect(JSON.stringify(qc.getQueryCache().getAll().map((q) => q.state.data))).not.toContain('+919876500010');
@@ -338,7 +339,9 @@ describe('CR1 — "Check details" opens the audited identity panel FIRST; "Show 
       const { qc } = await renderWithDistrict(keepingClient());
       await openPanel(W1);
       expect(identityEntries(qc).map((q) => q.queryKey[3])).toEqual([W1]);
-      await openPanel(W2);
+      fireEvent.click(checkFor(W2));
+      expect(identityEntries(qc).map((q) => q.queryKey[3])).not.toContain(W1); // same tick: the handler, not the gc timer (CR48)
+      await waitFor(() => expect(screen.getByTestId('fw-detail-mobile').textContent).toBe(MOBILE[W2]));
       expect(screen.getAllByTestId('fw-detail')).toHaveLength(1);
       expect(identityEntries(qc).map((q) => q.queryKey[3])).toEqual([W2]);
       expect(JSON.stringify(qc.getQueryCache().getAll().map((q) => q.state.data))).not.toContain('+919876500010');
@@ -350,8 +353,8 @@ describe('CR1 — "Check details" opens the audited identity panel FIRST; "Show 
       await openPanel(W1);
       expect(identityEntries(qc)).toHaveLength(1);
       await chooseDistrict('Gaya');
+      expect(identityEntries(qc)).toHaveLength(0); // same tick: the handler, not the gc timer (CR48)
       await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
-      expect(identityEntries(qc)).toHaveLength(0);
       expect(showCodeButtons()).toHaveLength(0);
     });
 
@@ -515,7 +518,11 @@ describe('R4 — a late answer never restores a cleared code', () => {
     readFieldWorkerCode.mockReturnValueOnce(d1.promise);
     fireEvent.click(showFor(W1)); // W1 in flight
     await openPanel(W2); // the panel is replaced: W1’s reveal is gone
+    const started = vi.spyOn(globalThis, 'setTimeout');
     await act(async () => d1.resolve({ field_worker_id: W1, code: '111111' }));
+    // The reveal is unmounted, so its digits could not show either way: the token is observed by the timer it stops (review CR50).
+    expect(started.mock.calls.filter((c) => c[1] === CODE_VISIBLE_MS)).toHaveLength(0);
+    started.mockRestore();
     expect(screen.queryByText('111111')).toBeNull();
     expect(document.body.innerHTML).not.toContain('111111');
     expect(digits()).toBeNull();
@@ -531,7 +538,10 @@ describe('R4 — a late answer never restores a cleared code', () => {
     readFieldWorkerCode.mockReturnValueOnce(d.promise);
     fireEvent.click(showFor(W1));
     fireEvent.click(screen.getByTestId('fw-detail-close'));
+    const started = vi.spyOn(globalThis, 'setTimeout');
     await act(async () => d.resolve({ field_worker_id: W1, code: '333333' }));
+    expect(started.mock.calls.filter((c) => c[1] === CODE_VISIBLE_MS)).toHaveLength(0); // review CR50, as above
+    started.mockRestore();
     expect(document.body.innerHTML).not.toContain('333333');
     expect(screen.queryByTestId('fw-detail')).toBeNull();
   });
@@ -940,5 +950,158 @@ describe('CR10 — the finder announces and focuses by name', () => {
       </QueryClientProvider>,
     );
     expect(screen.getByRole('heading', { level: 1 }).hasAttribute('tabindex')).toBe(false);
+  });
+});
+
+describe('review round 3 — the fix diff', () => {
+  const unreadable = () => new ApiError(500, 'field_worker.identity_unreadable', 'no');
+
+  it('CR38 — a failed "Load more" says what the server said when retrying cannot help: no "Try again", Load more refused', async () => {
+    listFieldWorkers.mockResolvedValueOnce({ items: [row(W1, 'Ramesh Kumar')], next_cursor: 'c1' });
+    await renderWithDistrict();
+    listFieldWorkers.mockRejectedValueOnce(unreadable());
+    fireEvent.click(screen.getByTestId('fw-find-list-more'));
+    const alert = await screen.findByTestId('fw-find-list-more-error');
+    expect(alert.textContent).toBe(t('fw.list.unreadable'));
+    expect(within(alert).queryByRole('button')).toBeNull();
+    expect((screen.getByTestId('fw-find-list-more') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('CR38 — a 403 on a later page uses the page’s own no-access words', async () => {
+    listFieldWorkers.mockResolvedValueOnce({ items: [row(W1, 'Ramesh Kumar')], next_cursor: 'c1' });
+    await renderWithDistrict();
+    listFieldWorkers.mockRejectedValueOnce(new ApiError(403, 'auth.forbidden', 'no'));
+    fireEvent.click(screen.getByTestId('fw-find-list-more'));
+    expect((await screen.findByTestId('fw-find-list-more-error')).textContent).toBe(t('fw.noAccessFind'));
+  });
+
+  it('CR38, CR55 — a cursor the server refused is never re-sent: Try again re-walks the loaded pages, focus stays on the list, one alert at a time', async () => {
+    listFieldWorkers
+      .mockResolvedValueOnce({ items: [row(W1, 'Ramesh Kumar')], next_cursor: 'c1' })
+      .mockResolvedValueOnce({ items: [row(W2, 'Sita Devi')], next_cursor: 'c2' });
+    await renderWithDistrict();
+    fireEvent.click(screen.getByTestId('fw-find-list-more'));
+    await screen.findByText('Sita Devi');
+    await waitFor(() => expect((screen.getByTestId('fw-find-list-more') as HTMLButtonElement).disabled).toBe(false));
+    listFieldWorkers.mockRejectedValueOnce(new ApiError(400, 'field_worker.cursor_invalid', 'no'));
+    fireEvent.click(screen.getByTestId('fw-find-list-more'));
+    const alert = await screen.findByTestId('fw-find-list-more-error');
+    expect(alert.textContent).toContain(t('fw.err.cursorInvalid'));
+    expect((screen.getByTestId('fw-find-list-more') as HTMLButtonElement).disabled).toBe(true);
+    expect(listFieldWorkers).toHaveBeenLastCalledWith(P, { state: 'active', district: 'Patna', cursor: 'c2' });
+
+    const firstPage = deferred<{ items: ReturnType<typeof row>[]; next_cursor: string }>();
+    listFieldWorkers.mockReturnValueOnce(firstPage.promise).mockResolvedValueOnce({ items: [row(W2, 'Sita Devi')], next_cursor: 'c9' });
+    const retry = within(alert).getByRole('button', { name: t('fw.retry') });
+    retry.focus();
+    fireEvent.click(retry);
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2, name: t('fw.find.title') }));
+    await waitFor(() => expect(screen.queryByTestId('fw-find-list-more-error')).toBeNull()); // the re-walk has started
+    expect(screen.queryByTestId('fw-find-list-refresh-error')).toBeNull(); // and no second alert while it runs
+    await act(async () => firstPage.resolve({ items: [row(W1, 'Ramesh Kumar')], next_cursor: 'c8' }));
+    await waitFor(() => expect((screen.getByTestId('fw-find-list-more') as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByTestId('fw-find-list-refresh-error')).toBeNull();
+    expect(listFieldWorkers.mock.calls.slice(3).map((c) => (c[1] as { cursor?: string }).cursor)).toEqual([undefined, 'c8']); // fresh cursors, never `c2`
+  });
+
+  it('CR53 — a re-walk refused again still has a way out: words, Try again, and "Load more" refused', async () => {
+    listFieldWorkers.mockResolvedValueOnce({ items: [row(W1, 'Ramesh Kumar')], next_cursor: 'c1' });
+    await renderWithDistrict();
+    listFieldWorkers.mockRejectedValueOnce(new ApiError(400, 'field_worker.cursor_invalid', 'no'));
+    fireEvent.click(screen.getByTestId('fw-find-list-more'));
+    const first = await screen.findByTestId('fw-find-list-more-error');
+    listFieldWorkers.mockRejectedValueOnce(new ApiError(400, 'field_worker.cursor_invalid', 'no'));
+    fireEvent.click(within(first).getByRole('button', { name: t('fw.retry') }));
+    const alert = await screen.findByTestId('fw-find-list-refresh-error');
+    expect(alert.textContent).toContain(t('fw.err.cursorInvalid'));
+    expect((screen.getByTestId('fw-find-list-more') as HTMLButtonElement).disabled).toBe(true);
+    listFieldWorkers.mockResolvedValueOnce({ items: [row(W1, 'Ramesh Kumar')], next_cursor: 'c7' });
+    fireEvent.click(within(alert).getByRole('button', { name: t('fw.retry') }));
+    await waitFor(() => expect((screen.getByTestId('fw-find-list-more') as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByTestId('fw-find-list-refresh-error')).toBeNull();
+  });
+
+  it('CR46 — Close when the row has left the list puts focus on the list heading, not on the body', async () => {
+    const { qc } = await renderWithDistrict();
+    await openPanel(W1);
+    listFieldWorkers.mockResolvedValue({ items: [row(W2, 'Sita Devi')], next_cursor: null });
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: ['field-workers', P, 'list'] });
+    });
+    await waitFor(() => expect(screen.queryByRole('button', { name: checkName('Ramesh Kumar') })).toBeNull());
+    fireEvent.click(screen.getByTestId('fw-detail-close'));
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2, name: t('fw.find.title') }));
+  });
+
+  it('CR47 — a 409 authorization_stale on the code read refreshes the list; a 409 for another reason does not', async () => {
+    await renderWithDistrict();
+    await openPanel(W1);
+    expect(listFieldWorkers).toHaveBeenCalledTimes(1);
+    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.code_not_available', 'no', { current_state: 'suspended' }));
+    fireEvent.click(showFor(W1));
+    await screen.findByTestId('fw-code-refused');
+    expect(listFieldWorkers).toHaveBeenCalledTimes(1);
+    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.authorization_stale', 'moved'));
+    fireEvent.click(showFor(W1));
+    await waitFor(() => expect(listFieldWorkers).toHaveBeenCalledTimes(2));
+  });
+
+  describe('the typed district (CR44) and the districts read (CR45)', () => {
+    const renderTruncated = () => {
+      getFieldWorkerDistricts.mockResolvedValue({ districts: ['Nagpur', 'Patna'], districts_truncated: true });
+      const qc = createQueryClient();
+      render(
+        <QueryClientProvider client={qc}>
+          <FindWorkerPage pariwarId={P} />
+        </QueryClientProvider>,
+      );
+      return qc;
+    };
+
+    it('the window losing focus commits nothing; really leaving the field does', async () => {
+      const user = userEvent.setup();
+      renderTruncated();
+      const typed = (await screen.findByTestId('fw-find-district-typed')) as HTMLInputElement;
+      await user.type(typed, 'Nagp');
+      expect(document.activeElement).toBe(typed);
+      fireEvent.blur(typed); // what a window blur does: the event fires and `activeElement` stays
+      expect(listFieldWorkers).not.toHaveBeenCalled();
+      await user.tab();
+      await waitFor(() => expect(listFieldWorkers).toHaveBeenCalledWith(P, { state: 'active', district: 'Nagp' }));
+    });
+
+    it('an Enter that confirms IME composition commits nothing; the next Enter does', async () => {
+      renderTruncated();
+      const typed = (await screen.findByTestId('fw-find-district-typed')) as HTMLInputElement;
+      fireEvent.change(typed, { target: { value: 'नागपुर' } });
+      fireEvent.keyDown(typed, { key: 'Enter', isComposing: true });
+      fireEvent.keyDown(typed, { key: 'Enter', keyCode: 229 }); // Safari: the composition has ended, the key code says what this Enter was
+      expect(listFieldWorkers).not.toHaveBeenCalled();
+      fireEvent.keyDown(typed, { key: 'Enter' });
+      await waitFor(() => expect(listFieldWorkers).toHaveBeenCalledWith(P, { state: 'active', district: 'नागपुर' }));
+    });
+
+    it('a background refresh that fails leaves the working select alone', async () => {
+      const qc = renderTruncated();
+      await screen.findByRole('option', { name: 'Patna' });
+      getFieldWorkerDistricts.mockRejectedValueOnce(new ApiError(503, 'x', 'down'));
+      await act(async () => {
+        await qc.refetchQueries({ queryKey: ['field-workers', P, 'districts'] });
+        await new Promise((resolve) => setTimeout(resolve, 20)); // the observers are told on a later tick
+      });
+      expect(qc.getQueryState(['field-workers', P, 'districts'])?.status).toBe('error'); // NON-VACUITY: the refresh really failed
+      expect(screen.queryByTestId('fw-find-district-retry')).toBeNull();
+      expect(screen.getByRole('option', { name: 'Patna' })).toBeTruthy();
+    });
+
+    it('a 401 on the districts read goes to sign-in', async () => {
+      getFieldWorkerDistricts.mockRejectedValue(new ApiError(401, 'auth.session_required', 'no'));
+      render(
+        <QueryClientProvider client={createQueryClient()}>
+          <FindWorkerPage pariwarId={P} />
+        </QueryClientProvider>,
+      );
+      await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
+    });
   });
 });

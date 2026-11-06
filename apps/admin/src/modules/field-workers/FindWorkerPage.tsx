@@ -37,7 +37,7 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
     openRef.current = id;
     setOpenState(id);
   };
-  /** No decrypted identity outlives its panel: the explicit removal (the client's `gcTime: 0` is only the backstop). */
+  /** No decrypted identity outlives its panel: the explicit removal (the hook's `gcTime: 0` is only the backstop). */
   const forget = (id: string | null): void => {
     if (id !== null) qc.removeQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, id) });
   };
@@ -45,7 +45,8 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
   const closePanel = (): void => {
     const was = openRef.current;
     setOpen(null);
-    if (was !== null) checkButtons.current.get(was)?.focus();
+    // The row may have left the list while the panel was open (review CR46).
+    if (was !== null) (checkButtons.current.get(was) ?? listHeadingRef.current)?.focus();
   };
 
   return (
@@ -74,7 +75,6 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
         empty={t('fw.find.empty')}
         headingRef={listHeadingRef}
         noAccessText={t('fw.noAccessFind')}
-        surface="find"
         filterKey={JSON.stringify(district)}
         testId="fw-find-list"
         action={(item, register) => (

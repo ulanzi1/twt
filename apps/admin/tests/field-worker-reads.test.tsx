@@ -35,6 +35,7 @@ const identity = (over: Record<string, unknown> = {}) => ({
   kyc_status: 'pending',
   registered_by_display: 'Asha Verma',
   created_at: '2026-11-04T05:00:00.000Z',
+  code_sms_status: null,
   mobile: '+919876500010',
   approved_by_display: null,
   ...over,
@@ -140,6 +141,34 @@ describe('CR10 — what the panel says', () => {
       [t('fw.detail.state'), t('fw.state.pending_kyc')],
       [t('fw.detail.registration'), `${t('fw.registeredBy', { name: 'Asha Verma' })} · ${t('fw.registeredOn', { date: '4 Nov 2026' })}`],
     ]);
+  });
+});
+
+describe('Story 13.1b (AD12) — the code SMS pair', () => {
+  it('⭐ renders as its own term / description pair, in the words of the status', async () => {
+    getFieldWorkerIdentity.mockResolvedValue(identity({ current_state: 'active', kyc_status: 'completed', code_sms_status: 'not_confirmed' }));
+    render(
+      <QueryClientProvider client={keepingClient()}>
+        <WorkerDetail pariwarId={P} fieldWorkerId={W} onClose={() => undefined} />
+      </QueryClientProvider>,
+    );
+    const line = await screen.findByTestId('fw-detail-code-sms');
+    expect(line.textContent).toBe(t('fw.codeSms.not_confirmed'));
+    expect(line.tagName).toBe('DD');
+    expect(line.previousElementSibling?.textContent).toBe(t('fw.detail.codeSms'));
+    expect(line.closest('[aria-live]')).toBeNull();
+  });
+
+  it('`null` renders neither the term nor the description', async () => {
+    getFieldWorkerIdentity.mockResolvedValue(identity({ code_sms_status: null }));
+    render(
+      <QueryClientProvider client={keepingClient()}>
+        <WorkerDetail pariwarId={P} fieldWorkerId={W} onClose={() => undefined} />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId('fw-detail-mobile');
+    expect(screen.queryByTestId('fw-detail-code-sms')).toBeNull();
+    expect(screen.queryByText(t('fw.detail.codeSms'))).toBeNull();
   });
 });
 

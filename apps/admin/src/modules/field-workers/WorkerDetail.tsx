@@ -15,7 +15,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 
 import { fieldWorkerIdentityKey, fieldWorkerListIsStale, fieldWorkerListsKey, useFieldWorkerIdentity } from '../../api/hooks.js';
-import { fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel, type Surface } from './derive.js';
+import { codeSmsLine, fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel, type Surface } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -52,6 +52,7 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
 
   const w = identity.data;
   const g = identity.isError ? fieldWorkerGuidance(identity.error, surface) : null;
+  const codeSms = w === undefined ? null : codeSmsLine(w.code_sms_status);
   return (
     <section className="flex flex-col gap-2 rounded border p-3" aria-labelledby={`fw-detail-${fieldWorkerId}`} data-testid="fw-detail">
       <h2 id={`fw-detail-${fieldWorkerId}`} ref={headingRef} tabIndex={-1} className="text-lg font-semibold outline-none">
@@ -101,6 +102,12 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
               <>
                 <dt className="font-medium">{t('fw.detail.approval')}</dt>
                 <dd data-testid="fw-detail-approved-by">{t('fw.detail.approvedBy', { name: w.approved_by_display })}</dd>
+              </>
+            )}
+            {codeSms !== null && (
+              <>
+                <dt className="font-medium">{t('fw.detail.codeSms')}</dt>
+                <dd data-testid="fw-detail-code-sms">{codeSms}</dd>
               </>
             )}
           </dl>

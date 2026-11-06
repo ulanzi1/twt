@@ -74,7 +74,7 @@ const EN: Record<string, string> = {
   'fw.approvals.reviewNamed': 'Review {name}',
   'fw.approvals.approve': 'Approve',
   'fw.approvals.approving': 'Approving…',
-  'fw.approvals.approved': '{name} is approved and active.',
+  'fw.approvals.approved': '{name} is approved and active. Find a worker shows whether their code text arrived.',
   'fw.approvals.failedNamed': 'Could not approve {name}. {reason}',
   'fw.approvals.alreadyDone': 'This worker is already approved, or is no longer awaiting approval.',
   'fw.approvals.moved': 'This worker was moved to another district meanwhile. Reload and try again.',
@@ -98,6 +98,12 @@ const EN: Record<string, string> = {
   'fw.detail.registration': 'Registration',
   'fw.detail.approval': 'Approval',
   'fw.detail.approvedBy': 'Approved by {name}',
+  'fw.detail.codeSms': 'Code text',
+  'fw.codeSms.sending': 'Code SMS: sending',
+  'fw.codeSms.sent': 'Code SMS: sent, not yet confirmed',
+  'fw.codeSms.delivered': 'Code SMS: delivered',
+  'fw.codeSms.not_delivered': 'Code SMS not delivered - give the code by hand when they ask',
+  'fw.codeSms.not_confirmed': 'Code SMS outcome unknown, it may have arrived - give the code by hand when they ask',
 
   // ── Find a worker ──
   'fw.find.title': 'Find a worker',

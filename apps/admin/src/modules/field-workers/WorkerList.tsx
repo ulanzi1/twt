@@ -17,7 +17,7 @@ import type { MouseEvent, ReactElement, ReactNode, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { focusIfUnclaimed } from '../marketplace/focus.js';
-import { fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel } from './derive.js';
+import { codeSmsLine, fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -131,21 +131,30 @@ export function WorkerList({ query, empty, headingRef, action, noAccessText, fil
       )}
       {items.length > 0 && (
         <ul className="flex flex-col divide-y rounded border" data-testid={testId}>
-          {items.map((item) => (
-            <li key={item.field_worker_id} className="flex flex-wrap items-center justify-between gap-2 p-2" data-testid={`${testId}-row`}>
-              <div className="flex flex-col">
-                <span className="font-medium">{item.name}</span>
-                <span className="text-xs">
-                  {item.district} · {stateLabel(item.current_state)} · {t('fw.registeredBy', { name: item.registered_by_display })} ·{' '}
-                  {t('fw.registeredOn', { date: formatIstDate(item.created_at) })}
-                </span>
-              </div>
-              {action(item, (el) => {
-                if (el === null) actions.current.delete(item.field_worker_id);
-                else actions.current.set(item.field_worker_id, el);
-              })}
-            </li>
-          ))}
+          {items.map((item) => {
+            // Story 13.1b (AD12) — as of when this list loaded. Static text in a row: ⛔ a live region. The words carry it, ⛔ colour alone.
+            const codeSms = codeSmsLine(item.code_sms_status);
+            return (
+              <li key={item.field_worker_id} className="flex flex-wrap items-center justify-between gap-2 p-2" data-testid={`${testId}-row`}>
+                <div className="flex flex-col">
+                  <span className="font-medium">{item.name}</span>
+                  <span className="text-xs">
+                    {item.district} · {stateLabel(item.current_state)} · {t('fw.registeredBy', { name: item.registered_by_display })} ·{' '}
+                    {t('fw.registeredOn', { date: formatIstDate(item.created_at) })}
+                  </span>
+                  {codeSms !== null && (
+                    <span className="text-xs" data-testid={`${testId}-code-sms`}>
+                      {codeSms}
+                    </span>
+                  )}
+                </div>
+                {action(item, (el) => {
+                  if (el === null) actions.current.delete(item.field_worker_id);
+                  else actions.current.set(item.field_worker_id, el);
+                })}
+              </li>
+            );
+          })}
         </ul>
       )}
       {query.isFetchNextPageError && (

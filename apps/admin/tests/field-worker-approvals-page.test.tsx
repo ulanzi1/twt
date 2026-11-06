@@ -54,6 +54,7 @@ const item = (n: number, name = `Worker ${n}`) => ({
   kyc_status: 'pending',
   registered_by_display: 'Asha Verma',
   created_at: '2026-11-04T05:00:00.000Z',
+  code_sms_status: null,
 });
 const NAMES: Record<number, string> = { 1: 'Ramesh Kumar', 2: 'Sita Devi' };
 const identityOf = (n: number) => ({ ...item(n, NAMES[n]), mobile: `+9198765000${n}0`, approved_by_display: null });
@@ -117,6 +118,12 @@ describe('the list and the district choice', () => {
     expect(screen.getByTestId('fw-nav-register')).toBeTruthy();
     expect(screen.getByTestId('fw-nav-find')).toBeTruthy();
     expect(screen.queryByTestId('fw-nav-approvals')).toBeNull();
+  });
+
+  it('Story 13.1b — `null` renders nothing on the Awaiting-approval list', async () => {
+    renderPage();
+    await screen.findByText('Ramesh Kumar');
+    expect(screen.queryByText(/Code SMS/)).toBeNull();
   });
 
   it('a 403 with "All districts" ⇒ "choose a district you manage"; choosing a district asks for it exactly', async () => {

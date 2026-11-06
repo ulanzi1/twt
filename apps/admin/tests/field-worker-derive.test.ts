@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../src/api/client.js';
-import { codeUnavailableText, fieldWorkerGuidance, needsSignIn, spellDigits, stateLabel, type Surface } from '../src/modules/field-workers/derive.js';
+import { codeSmsLine, codeUnavailableText, fieldWorkerGuidance, needsSignIn, spellDigits, stateLabel, type Surface } from '../src/modules/field-workers/derive.js';
 import { FIELD_WORKER_EN_KEYS, resolveEn as t } from '../src/modules/field-workers/i18n-en.js';
 
 describe('the copy (i18n-en.ts)', () => {
@@ -34,6 +34,35 @@ describe('the copy (i18n-en.ts)', () => {
   it('an unknown key or a missing parameter THROWS (never a key-as-text page)', () => {
     expect(() => t('fw.nope')).toThrow(/unknown key/);
     expect(() => t('fw.approvals.approved')).toThrow(/needs the parameter 'name'/);
+  });
+});
+
+describe('Story 13.1b (AD12, Q-7) — the code SMS line, per value', () => {
+  it.each([
+    ['sending', 'Code SMS: sending'],
+    ['sent', 'Code SMS: sent, not yet confirmed'],
+    ['delivered', 'Code SMS: delivered'],
+    ['not_delivered', 'Code SMS not delivered - give the code by hand when they ask'],
+    ['not_confirmed', 'Code SMS outcome unknown, it may have arrived - give the code by hand when they ask'],
+  ] as const)('%s reads as AD12 writes it', (status, line) => {
+    expect(codeSmsLine(status)).toBe(line);
+  });
+
+  it('`null` renders nothing', () => {
+    expect(codeSmsLine(null)).toBeNull();
+  });
+
+  it('⭐ TR13 — `undefined` is REFUSED: a fixture missing the key must fail, not pass as `null`', () => {
+    expect(() => codeSmsLine(undefined as unknown as null)).toThrow(/no code_sms_status/);
+  });
+
+  it('⭐ `not_confirmed` does not state as fact what nobody knows; `not_delivered` does not say "may have"', () => {
+    expect(codeSmsLine('not_confirmed')).toMatch(/may have arrived/);
+    expect(codeSmsLine('not_delivered')).not.toMatch(/may have/);
+  });
+
+  it('the approval message stays true while the SMS is dark: it names no text as sent', () => {
+    expect(t('fw.approvals.approved', { name: 'Asha' })).toBe('Asha is approved and active. Find a worker shows whether their code text arrived.');
   });
 });
 

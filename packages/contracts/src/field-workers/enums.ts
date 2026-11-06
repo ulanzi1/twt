@@ -15,3 +15,8 @@ export type FieldWorkerState = z.output<typeof FieldWorkerState>;
 export const FIELD_WORKER_KYC_STATUSES = ['pending', 'completed'] as const;
 export const FieldWorkerKycStatus = z.enum(FIELD_WORKER_KYC_STATUSES);
 export type FieldWorkerKycStatus = z.output<typeof FieldWorkerKycStatus>;
+
+/** Story 13.1b (AD12) — what an officer reads about the worker's code text: five words; `null` on the wire is a worker with no row. */
+export const FIELD_WORKER_CODE_SMS_STATUSES = ['sending', 'sent', 'delivered', 'not_delivered', 'not_confirmed'] as const;
+export const FieldWorkerCodeSmsStatus = z.enum(FIELD_WORKER_CODE_SMS_STATUSES);
+export type FieldWorkerCodeSmsStatus = z.output<typeof FieldWorkerCodeSmsStatus>;

@@ -5,7 +5,14 @@
 // district dimension). ⛔ A code in any response (QE22). Story 13.1a adds the approval, the audited by-hand code read (the ONE
 // schema with a `code`), the list, one worker's identity and the districts read. The other lifecycle routes are Stories 13.1c / 13.1d.
 
-export { FIELD_WORKER_STATES, FieldWorkerState, FIELD_WORKER_KYC_STATUSES, FieldWorkerKycStatus } from './enums.js';
+export {
+  FIELD_WORKER_CODE_SMS_STATUSES,
+  FieldWorkerCodeSmsStatus,
+  FIELD_WORKER_STATES,
+  FieldWorkerState,
+  FIELD_WORKER_KYC_STATUSES,
+  FieldWorkerKycStatus,
+} from './enums.js';
 
 export {
   RegisterFieldWorkerRequest,

@@ -90,6 +90,8 @@ export function createFieldWorkerReadHandlers(deps: AppDeps) {
         limit,
       });
       const pariwarId = scopeTx.pariwarId;
+      // Story 13.1b (AD12) — ONE keyed statement beside the page's, on the hook transaction (⛔ a join in the page statement: its EXPLAIN is pinned).
+      const smsStatuses = await fieldWorker.getFieldWorkerCodeSmsStatuses(scopeTx.client, pariwarId, page.items.map((i) => i.view.fieldWorkerId));
       await releaseHookTx(request);
       const out = await audit.withCompensatingAudit(deps.servicePool, {
         auditIntent: {
@@ -117,6 +119,7 @@ export function createFieldWorkerReadHandlers(deps: AppDeps) {
               kyc_status: i.view.kycStatus,
               registered_by_display: i.view.registeredByDisplay,
               created_at: i.view.createdAt.toISOString(),
+              code_sms_status: smsStatuses.get(i.view.fieldWorkerId) ?? null,
             })),
             next_cursor: page.nextCursor,
           };
@@ -139,6 +142,7 @@ export function createFieldWorkerReadHandlers(deps: AppDeps) {
       const sealed = await fieldWorker.getFieldWorkerSealedIdentity(scopeTx.tx, ids.pariwarId(scopeTx.pariwarId), fieldWorkerId, { district });
       if (sealed === null) throw new fieldWorker.FieldWorkerAuthorizationStaleError(fieldWorkerId, district);
       const pariwarId = scopeTx.pariwarId;
+      const smsStatuses = await fieldWorker.getFieldWorkerCodeSmsStatuses(scopeTx.client, pariwarId, [fieldWorkerId]);
       await releaseHookTx(request);
       const out = await audit.withCompensatingAudit(deps.servicePool, {
         auditIntent: {
@@ -162,6 +166,7 @@ export function createFieldWorkerReadHandlers(deps: AppDeps) {
             kyc_status: v.kycStatus,
             registered_by_display: v.registeredByDisplay,
             created_at: v.createdAt.toISOString(),
+            code_sms_status: smsStatuses.get(fieldWorkerId) ?? null,
             mobile,
             approved_by_display: sealed.approvedByDisplay,
           };

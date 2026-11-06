@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-const failSecond = vi.hoisted(() => ({ on: false, calls: 0 }));
+const failSecond = vi.hoisted(() => ({ on: false, after: false, calls: 0 }));
 
 vi.mock('@twt/domain', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@twt/domain')>();
@@ -19,7 +19,10 @@ vi.mock('@twt/domain', async (importOriginal) => {
       activateFieldWorker: vi.fn(async (...args: Parameters<typeof actual.fieldWorker.activateFieldWorker>) => {
         failSecond.calls += 1;
         if (failSecond.on) throw new Error('forced: the second approval command failed');
-        return actual.fieldWorker.activateFieldWorker(...args);
+        const out = await actual.fieldWorker.activateFieldWorker(...args);
+        // Story 13.1b AC1 (a) — AFTER the command wrote the event and the `due` row, on the same transaction.
+        if (failSecond.after) throw new Error('forced: a failure after the second approval command');
+        return out;
       }),
     },
   };
@@ -37,6 +40,27 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the approval is atomic (AC3 a; TR
   });
   afterAll(async () => {
     await h.cleanup();
+  });
+
+  const sendRows = (id: string) =>
+    h.td.pool.query<{ outcome: string }>('SELECT outcome FROM field_worker_code_sms_sends WHERE field_worker_id = $1', [id]).then((r) => r.rows);
+
+  it('⭐ Story 13.1b AC1 (a) — a failure AFTER the command wrote the `due` row ⇒ 500, NO row, NO `activated` event; CONTROL: a fresh key approves and the row exists', async () => {
+    const p = h.freshPariwar();
+    await h.listDistrict(p, 'Patna');
+    const admin = await h.actor(p, 'pariwar_admin', 'pariwar', p, 'Meera Approver');
+    const id = await h.registered(admin.client, p, { name: 'Rollback Test-Worker', mobile: '+919876512346', district: 'Patna' });
+
+    failSecond.after = true;
+    const r = await h.approve(admin.client, p, id, randomUUID());
+    failSecond.after = false;
+    expect(r.statusCode, r.body).toBe(500);
+    expect(await sendRows(id)).toEqual([]);
+    const ev = await h.td.pool.query<{ event_type: string }>('SELECT event_type FROM events_log WHERE stream_id = $1 ORDER BY event_version', [id]);
+    expect(ev.rows.map((e) => e.event_type)).toEqual(['field_worker.registered']);
+
+    expect((await h.approve(admin.client, p, id, randomUUID())).statusCode).toBe(200);
+    expect(await sendRows(id)).toEqual([{ outcome: 'due' }]);
   });
 
   it('a failure of activateFieldWorker AFTER kyc_completed was appended ⇒ 500; NEITHER event persists; the row is unchanged; BOTH intent lines have their twins — CONTROL: the same worker then approves', async () => {
@@ -68,5 +92,6 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the approval is atomic (AC3 a; TR
     const ok = await h.approve(admin.client, p, id, randomUUID());
     expect(ok.statusCode, ok.body).toBe(200);
     expect(json(ok)).toMatchObject({ current_state: 'active', kyc_status: 'completed' });
+    expect(await sendRows(id)).toEqual([{ outcome: 'due' }]); // Story 13.1b AC1 — the control's row: the helper below is not blind
   });
 });

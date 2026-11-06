@@ -1,6 +1,8 @@
 // Pure derivations for the field-worker screens — Story 13.1a (Task 9.2; AC11). An API error code → the guidance the screen shows,
 // and where a field error belongs; the code spelled digit by digit for a screen reader (AD13). No React, no fetch.
 
+import type { FieldWorkerCodeSmsStatus } from '@twt/contracts';
+
 import { ApiError } from '../../api/client.js';
 import { resolveEn as t } from './i18n-en.js';
 
@@ -91,6 +93,23 @@ export function spellDigits(code: string): string {
 /** A worker state's label. */
 export function stateLabel(state: string): string {
   return t(`fw.state.${state}`);
+}
+
+const CODE_SMS_KEY = {
+  sending: 'fw.codeSms.sending',
+  sent: 'fw.codeSms.sent',
+  delivered: 'fw.codeSms.delivered',
+  not_delivered: 'fw.codeSms.not_delivered',
+  not_confirmed: 'fw.codeSms.not_confirmed',
+} as const satisfies Record<FieldWorkerCodeSmsStatus, string>;
+
+/**
+ * What an officer reads about the worker's code text (Story 13.1b AD12); `null` renders nothing: a worker with no send row. TOTAL over the
+ * enum (`satisfies`). ⛔ `undefined`: the admin tests mock the client, so a fixture missing the key would otherwise pass as `null` (TR13).
+ */
+export function codeSmsLine(status: FieldWorkerCodeSmsStatus | null): string | null {
+  if (status === undefined) throw new Error('codeSmsLine: the list item has no code_sms_status');
+  return status === null ? null : t(CODE_SMS_KEY[status]);
 }
 
 /** A server instant as an India date (the console's convention), e.g. "4 Nov 2026". */

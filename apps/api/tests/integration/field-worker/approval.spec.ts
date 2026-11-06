@@ -125,6 +125,56 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
     expect(sweep).not.toContain(codeRow[0]!.code);
   });
 
+  const sendRows = (id: string) =>
+    q<{ outcome: string; attempt_count: number; activated_audit_id: string }>(
+      'SELECT outcome, attempt_count, activated_audit_id FROM field_worker_code_sms_sends WHERE field_worker_id = $1',
+      [id],
+    );
+
+  it('⭐ Story 13.1b AC1: the approval records ONE `due` row, attempt 0, naming the `field_worker.activated` audit line; the response is 13.1a’s, unchanged (I4)', async () => {
+    const { p, admin, id } = await setup();
+    expect(await sendRows(id)).toEqual([]); // (d) a `pending_kyc` worker has no row
+    const r = await h.approve(admin.client, p, id);
+    expect(r.statusCode, r.body).toBe(200);
+    expect(json(r)).toEqual({ field_worker_id: id, district: 'Patna', current_state: 'active', kyc_status: 'completed' });
+    const lines = await approvalAudit(p, id);
+    expect(lines.map((l) => l.action)).toEqual(['field_worker.kyc_completed', 'field_worker.activated']);
+    expect(await sendRows(id)).toEqual([{ outcome: 'due', attempt_count: 0, activated_audit_id: lines[1]!.id }]);
+  });
+
+  it('⭐ Story 13.1b AC1 (b): a replay of the same key adds no row', async () => {
+    const { p, admin, id } = await setup();
+    const key = randomUUID();
+    expect((await h.approve(admin.client, p, id, key)).statusCode).toBe(200);
+    const first = await sendRows(id);
+    expect(first).toHaveLength(1);
+    expect((await h.approve(admin.client, p, id, key)).statusCode).toBe(200);
+    expect(await sendRows(id)).toEqual(first);
+  });
+
+  it('⭐ Story 13.1b AC1 (c): two concurrent approvals, the loser’s 409 adds no row', async () => {
+    const { p, admin, id } = await setup();
+    const responses = await Promise.all([h.approve(admin.client, p, id), h.approve(admin.client, p, id)]);
+    expect(responses.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    expect(await sendRows(id)).toHaveLength(1);
+  });
+
+  it('⭐ Story 13.1b AC5: a failed send never undoes the approval, and the by-hand read still answers 200 with an audit line', async () => {
+    const { p, admin, id } = await setup();
+    expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
+    const detail = 'exhausted:outcome_unknown:api_unavailable:timeout';
+    await h.td.pool.query(
+      `UPDATE field_worker_code_sms_sends SET outcome = 'error', detail = $2, updated_at = clock_timestamp() WHERE field_worker_id = $1`,
+      [id, detail],
+    );
+    expect(await row(id)).toMatchObject({ current_state: 'active', kyc_status: 'completed' });
+    const code = await h.code(admin.client, p, id);
+    expect(code.statusCode, code.body).toBe(200);
+    const held = await q<{ code: string }>('SELECT code FROM field_worker_attribution_codes WHERE field_worker_id = $1', [id]);
+    expect(json(code)).toEqual({ field_worker_id: id, code: held[0]!.code });
+    expect((await q('SELECT 1 FROM audit_log_entries WHERE pariwar_id = $1 AND action = $2', [p, 'field_worker.code_read'])).length).toBeGreaterThanOrEqual(1);
+  });
+
   it('AC2 (a): a worker NOT awaiting approval — active, suspended, terminated — ⇒ 409 field_worker.illegal_transition, no event and NO audit line from the refusal', async () => {
     for (const target of ['active', 'suspended', 'terminated'] as const) {
       const { p, admin, id } = await setup();

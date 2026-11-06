@@ -11,6 +11,7 @@ import {
   ApproveFieldWorkerRequest,
   ApproveFieldWorkerResponse,
   FIELD_WORKER_KYC_STATUSES,
+  FIELD_WORKER_CODE_SMS_STATUSES,
   FIELD_WORKER_STATES,
   FieldWorkerCodeResponse,
   FieldWorkerDistrictsResponse,
@@ -27,6 +28,7 @@ describe('field-workers contract ↔ domain sync-guard', () => {
   it('the state and KYC tuples equal the domain tuples', () => {
     expect([...FIELD_WORKER_STATES]).toEqual([...schema.FIELD_WORKER_STATES]);
     expect([...FIELD_WORKER_KYC_STATUSES]).toEqual([...schema.FIELD_WORKER_KYC_STATUSES]);
+    expect([...FIELD_WORKER_CODE_SMS_STATUSES]).toEqual([...schema.FIELD_WORKER_CODE_SMS_STATUSES]);
   });
 });
 
@@ -65,7 +67,7 @@ describe('RegisterFieldWorkerResponse (QE22)', () => {
 // in the identity (⛔ the list item), and the list query's bounds (`limit` 1–25 coerced from a string; a NUL district refused).
 describe('Story 13.1a DTOs', () => {
   const ID = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
-  const item = { field_worker_id: ID, name: 'Ramesh', district: 'Patna', current_state: 'pending_kyc', kyc_status: 'pending', registered_by_display: 'Asha Verma', created_at: '2026-11-04T10:15:30.123Z' };
+  const item = { field_worker_id: ID, name: 'Ramesh', district: 'Patna', current_state: 'pending_kyc', kyc_status: 'pending', registered_by_display: 'Asha Verma', created_at: '2026-11-04T10:15:30.123Z', code_sms_status: null };
 
   it('ApproveFieldWorkerRequest is `{}` strictly; the response carries the four keys and nothing else', () => {
     expect(ApproveFieldWorkerRequest.safeParse({}).success).toBe(true);
@@ -91,6 +93,22 @@ describe('Story 13.1a DTOs', () => {
     expect(FieldWorkerIdentityResponse.safeParse(identity).success).toBe(true);
     expect(FieldWorkerIdentityResponse.safeParse({ ...identity, code: '042719' }).success).toBe(false);
     expect(FieldWorkerIdentityResponse.safeParse(item).success).toBe(false); // the mobile is required there
+  });
+
+  it('Story 13.1b (AD12) — `code_sms_status` is REQUIRED and nullable, inside the enum; `detail`, `provider_message_id` and `locale` are refused', () => {
+    const { code_sms_status: _dropped, ...missing } = item;
+    expect(FieldWorkerListItem.safeParse(missing).success).toBe(false);
+    for (const status of [...FIELD_WORKER_CODE_SMS_STATUSES, null]) {
+      expect(FieldWorkerListItem.safeParse({ ...item, code_sms_status: status }).success, String(status)).toBe(true);
+    }
+    for (const status of ['accepted', 'error', 'due', '', 0]) {
+      expect(FieldWorkerListItem.safeParse({ ...item, code_sms_status: status }).success, String(status)).toBe(false);
+    }
+    for (const key of ['detail', 'provider_message_id', 'locale']) expect(FieldWorkerListItem.safeParse({ ...item, [key]: 'x' }).success, key).toBe(false);
+    const identity = { ...item, mobile: '+919876543210', approved_by_display: null };
+    const { code_sms_status: _alsoDropped, ...identityMissing } = identity;
+    expect(FieldWorkerIdentityResponse.safeParse(identityMissing).success).toBe(false);
+    expect(FieldWorkerIdentityResponse.safeParse({ ...identity, detail: 'x' }).success).toBe(false);
   });
 
   it('FieldWorkerListQuery: state required; limit 1–25 coerced from a STRING; a NUL or empty district refused; strict', () => {

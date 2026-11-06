@@ -475,6 +475,122 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
   // CR20 (AD5) — the three personal-data reads are on the named `read` tier. The test environment sets every tier's ceiling to the same
   // large number, so a value comparison between tiers would pass vacuously; what CAN fail is the drift the finding names — the
   // `config: { rateLimit }` line dropped in a refactor (the route silently falls back to the global ceiling).
+  describe('Story 13.1b — the code SMS signal (AC10; AD12)', () => {
+    const TABLE = 'field_worker_code_sms_sends';
+    /** Replace the worker's row with this shape, by raw INSERT (a finished row is frozen; `detail` is ⛔ an UPDATE away). */
+    async function sendRow(p: string, id: string, o: { outcome: string; detail?: string | null; pmid?: string | null }): Promise<string> {
+      const c = await h.td.pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query("SET LOCAL session_replication_role = 'replica'");
+        await c.query(`DELETE FROM ${TABLE} WHERE field_worker_id = $1`, [id]);
+        const claim = o.outcome === 'attempting' ? 'claim' : null;
+        const { rows } = await c.query<{ send_id: string }>(
+          `INSERT INTO ${TABLE} (pariwar_id, field_worker_id, activated_audit_id, outcome, detail, provider_message_id, claim_token)
+           VALUES ($1, $2, gen_random_uuid(), $3, $4, $5, $6) RETURNING send_id`,
+          [p, id, o.outcome, o.detail ?? null, o.pmid ?? null, claim],
+        );
+        await c.query('COMMIT');
+        return rows[0]!.send_id;
+      } finally {
+        c.release();
+      }
+    }
+    const report = (p: string, sendId: string, state: 'delivered' | 'undelivered') =>
+      h.td.pool.query(
+        `INSERT INTO sms_send_deliveries (send_kind, send_row_id, pariwar_id, request_id, delivery_state, status_code, first_reported_at, reported_at)
+         VALUES ('fw', $1, $2, 'req1', $3, '1', now(), now())`,
+        [sendId, p, state],
+      );
+
+    const TABLE_ROWS = [
+      ['due', { outcome: 'due' }, null, 'sending'],
+      ['attempting', { outcome: 'attempting' }, null, 'sending'],
+      ['accepted, no report yet', { outcome: 'accepted', pmid: 'req1' }, null, 'sent'],
+      ['accepted, delivered', { outcome: 'accepted', pmid: 'req1' }, 'delivered', 'delivered'],
+      ['accepted, undelivered', { outcome: 'accepted', pmid: 'req1' }, 'undelivered', 'not_delivered'],
+      ['rejected_invalid_number', { outcome: 'rejected_invalid_number', detail: 'invalid_number:bad_length' }, null, 'not_delivered'],
+      ['rejected_unreachable', { outcome: 'rejected_unreachable', detail: 'carrier_reject:dnd' }, null, 'not_delivered'],
+      ['skipped_not_active', { outcome: 'skipped_not_active' }, null, 'not_delivered'],
+      ['a dark template', { outcome: 'error', detail: 'config:dlt_template_id_missing' }, null, 'not_delivered'],
+      ['prepare’s messaging fault', { outcome: 'error', detail: 'config:sms_messaging_unavailable' }, null, 'not_delivered'],
+      ['the send’s messaging fault', { outcome: 'error', detail: 'exhausted:outcome_unknown:unknown:sms_messaging_unavailable' }, null, 'not_confirmed'],
+      ['a timeout', { outcome: 'error', detail: 'exhausted:outcome_unknown:api_unavailable:timeout' }, null, 'not_confirmed'],
+      ['a killed process', { outcome: 'error', detail: 'exhausted:outcome_unknown' }, null, 'not_confirmed'],
+      ['the ceiling', { outcome: 'error', detail: 'exhausted:attempts' }, null, 'not_delivered'],
+    ] as const;
+
+    it.each(TABLE_ROWS)('⭐ %s reads the same in the list and the identity', async (_label, row, reported, status) => {
+      const { p, admin } = await pariwar();
+      const id = await h.registered(admin.client, p, { name: 'Signal Worker', mobile: nextMobile(), district: 'Patna' });
+      expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
+      const sendId = await sendRow(p, id, row);
+      if (reported !== null) await report(p, sendId, reported);
+      const before = (await lines(p, 'field_worker.list_viewed')).length;
+      const list = await h.list(admin.client, p, { state: 'active', district: 'Patna' });
+      expect(list.statusCode, list.body).toBe(200);
+      const item = (json(list) as { items: Record<string, unknown>[] }).items[0]!;
+      expect(item['code_sms_status']).toBe(status);
+      expect((await lines(p, 'field_worker.list_viewed')).length).toBe(before + 1); // the list's audit line count is unchanged
+      const identity = await h.identity(admin.client, p, id);
+      expect(identity.statusCode, identity.body).toBe(200);
+      expect((json(identity) as Record<string, unknown>)['code_sms_status']).toBe(status);
+    });
+
+    it('⭐ a worker with no row is `null`, on a real awaiting-approval list and identity', async () => {
+      const { p, admin } = await pariwar();
+      const id = await reg(h, admin.client, p, 'Awaiting Worker');
+      const list = await h.list(admin.client, p, { state: 'pending_kyc' });
+      const item = (json(list) as { items: Record<string, unknown>[] }).items[0]!;
+      expect(item).toHaveProperty('code_sms_status', null);
+      const r = await h.identity(admin.client, p, id);
+      expect(json(r)).toHaveProperty('code_sms_status', null);
+    });
+
+    it('⭐ a real approval reads `sending`; `code_sms_status` is the ONLY field added: ⛔ detail, ⛔ provider id, ⛔ locale, and the list still carries no mobile', async () => {
+      const { p, admin } = await pariwar();
+      const id = await h.registered(admin.client, p, { name: 'Sending Worker', mobile: nextMobile(), district: 'Patna' });
+      expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
+      const list = await h.list(admin.client, p, { state: 'active' });
+      const item = (json(list) as { items: Record<string, unknown>[] }).items[0]!;
+      expect(item['code_sms_status']).toBe('sending');
+      expect(Object.keys(item).sort()).toEqual(
+        ['code_sms_status', 'created_at', 'current_state', 'district', 'field_worker_id', 'kyc_status', 'name', 'registered_by_display'].sort(),
+      );
+      const r = await h.identity(admin.client, p, id);
+      expect(Object.keys(json(r)).sort()).toEqual(
+        ['approved_by_display', 'code_sms_status', 'created_at', 'current_state', 'district', 'field_worker_id', 'kyc_status', 'mobile', 'name', 'registered_by_display'].sort(),
+      );
+      await sendRow(p, id, { outcome: 'error', detail: 'exhausted:outcome_unknown:api_unavailable:timeout' });
+      const body = (await h.identity(admin.client, p, id)).body;
+      expect(body).not.toContain('exhausted');
+      expect(body).not.toContain('timeout');
+    });
+
+    it('⭐ another Pariwar’s row is invisible: a same-id worker of B reads nothing in A', async () => {
+      const a = await pariwar();
+      const b = await pariwar();
+      const inB = await h.registered(b.admin.client, b.p, { name: 'Other Worker', mobile: nextMobile(), district: 'Patna' });
+      expect((await h.approve(b.admin.client, b.p, inB)).statusCode).toBe(200);
+      const list = await h.list(a.admin.client, a.p, { state: 'active' });
+      expect((json(list) as { items: unknown[] }).items).toEqual([]);
+    });
+
+    it('⭐ ONE statement, not one per item: a page of three costs one status read', async () => {
+      const { p, admin } = await pariwar();
+      for (const name of ['One Worker', 'Two Worker', 'Three Worker']) {
+        const id = await h.registered(admin.client, p, { name, mobile: nextMobile(), district: 'Patna' });
+        expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
+      }
+      const spy = vi.spyOn(fieldWorker, 'getFieldWorkerCodeSmsStatuses');
+      spy.mockClear();
+      const r = await h.list(admin.client, p, { state: 'active' });
+      expect((json(r) as { items: unknown[] }).items).toHaveLength(3);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect((spy.mock.calls[0]![2] as string[]).length).toBe(3);
+    });
+  });
+
   describe('the rate limits (AD5)', () => {
     it('CR20 — list, identity and code each declare ONE shared `read` rate-limit config wired to the read ceiling and the per-session key; approve and districts declare none (the global ceiling only)', () => {
       const routes = getCollectedRoutes(h.app);

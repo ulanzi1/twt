@@ -19,7 +19,7 @@ import { z } from 'zod';
 
 import { Cursor } from '../_common/pagination.js';
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
-import { FieldWorkerKycStatus, FieldWorkerState } from './enums.js';
+import { FieldWorkerCodeSmsStatus, FieldWorkerKycStatus, FieldWorkerState } from './enums.js';
 
 /** Register a field worker (Idempotency-Key header required). The id is SERVER-minted. */
 export const RegisterFieldWorkerRequest = z
@@ -111,6 +111,8 @@ export const FieldWorkerListItem = z
     kyc_status: FieldWorkerKycStatus,
     registered_by_display: z.string(),
     created_at: Iso8601Datetime,
+    /** Story 13.1b (AD12) — the code text, as of this read; `null` ⇒ no row (not yet approved, or approved before the story). ⛔ Its detail. */
+    code_sms_status: FieldWorkerCodeSmsStatus.nullable(),
   })
   .strict();
 export type FieldWorkerListItem = z.output<typeof FieldWorkerListItem>;

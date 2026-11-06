@@ -72,6 +72,7 @@ const row = (id: string, name: string) => ({
   kyc_status: 'completed',
   registered_by_display: 'Asha Verma',
   created_at: '2026-11-04T05:00:00.000Z',
+  code_sms_status: null,
 });
 const identityOf = (id: string) => ({ ...row(id, NAME[id]!), mobile: MOBILE[id]!, approved_by_display: 'Meera Rao' });
 
@@ -168,6 +169,25 @@ describe('the finder', () => {
     expect(listFieldWorkers).toHaveBeenCalledWith(P, { state: 'active', district: 'Patna' });
     expect(screen.getByTestId('fw-nav-register')).toBeTruthy();
     expect(screen.getByTestId('fw-nav-approvals')).toBeTruthy();
+  });
+
+  it.each([
+    ['sending', 'fw.codeSms.sending'],
+    ['sent', 'fw.codeSms.sent'],
+    ['delivered', 'fw.codeSms.delivered'],
+    ['not_delivered', 'fw.codeSms.not_delivered'],
+    ['not_confirmed', 'fw.codeSms.not_confirmed'],
+  ])('⭐ Story 13.1b (AC10) — a row whose text is `%s` shows its line, as static text in the row', async (status, key) => {
+    listFieldWorkers.mockResolvedValue({ items: [{ ...row(W1, NAME[W1]!), code_sms_status: status }], next_cursor: null });
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <FindWorkerPage pariwarId={P} />
+      </QueryClientProvider>,
+    );
+    await chooseDistrict('Patna');
+    const line = await screen.findByText(t(key));
+    expect(line.closest('li')?.textContent).toContain(NAME[W1]);
+    expect(line.closest('[role="status"]')).toBeNull();
   });
 
   it('a 403 on a district ⇒ the finder’s own no-access line (review CR11)', async () => {

@@ -5385,7 +5385,8 @@ registry.registerPath({
     '`field_worker.view` — at the district dimension against `district` when given (byte for byte), at the pariwar dimension when ' +
     'not (so a District Admin must name a district they hold). Ordered `created_at DESC, field_worker_id DESC`; `limit` 1–25 ' +
     '(default 20); `cursor` from the previous page. Each item carries the decrypted NAME and no mobile. One audit line naming the ' +
-    'officer and the page\'s worker ids is written before any name is decrypted. `Cache-Control: no-store`.',
+    'officer and the page\'s worker ids is written before any name is decrypted. `code_sms_status` says what became of the worker\'s ' +
+    'code text, as of this read: `null` when there is no send row. `Cache-Control: no-store`.',
   tags: ['field-workers'],
   request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerListQuerySchema },
   responses: {

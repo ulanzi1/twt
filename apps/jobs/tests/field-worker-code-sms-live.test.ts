@@ -304,7 +304,10 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
   it('⭐ AC3 (a) — terminated before the tick: the same', async () => {
     const pid = await pariwar();
     const { id, sendId } = await approved(pid, '592016');
-    const today = new Date().toISOString().slice(0, 10);
+    // Round 4 / ci:local (R4-19): the command judges `ended_on` against the IST date on the DB clock, so the test takes TODAY from the same
+    // place; the UTC date is a day behind from 00:00 to 05:30 IST, and `ended_on` then falls before registration (it failed at 01:10 IST).
+    const { rows: ist } = await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d");
+    const today = ist[0]!.d;
     await withPariwarScope(pool, pid, (_db, client) =>
       fieldWorker.terminateFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), reasonCode: 'inactive', endedOn: today }),
     );
@@ -324,7 +327,10 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
     const inGateway = new Promise<void>((resolve) => {
       entered = resolve;
     });
-    const gw = gateway(() => {
+    // R4-20: only THIS row is held; a foreign row a tick meets is answered at once, so neither tick can wait out the send timeout on it
+    // (in the 01:10 IST run a row left `due` by the failed leg above was held too, and A's own send timed out while B waited).
+    const gw = gateway((m) => {
+      if (m.correlationId !== `fw${hex(sendId)}`) return Promise.resolve('req-other');
       entered();
       return held;
     });

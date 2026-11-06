@@ -49,7 +49,7 @@ NUMBERS - traced 2026-11-04 across `origin/main`, every worktree and every local
 
 # Story 13.1a: A Pariwar Admin Approves the Field Worker a District Admin Registered, and an Admin Can Give the Worker Their Code by Hand - With the Screens That Register, Approve and Show It `[SURFACE]`
 
-Status: review
+Status: done
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1159,6 +1159,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1a`, 2026-11-04, on the 
 
 | Version | Date | Note |
 |---|---|---|
+| v1.15 | 2026-11-06 | LANDED on `main` by fast-forward (PR #324, `06bab925..43295489`). `pnpm ci:local` 38 / 38 at `43295489` on a fresh container; GitHub CI 38 / 38. Row -> `done`. Open: `decision-flow-sync`, the Panel's keys-confirm ruling (go-live only), the un-attested KMS premise; no browser pass since round 2. |
 | v1.14 | 2026-11-06 | First `ci:local` run failed two jobs (the push's database URL; a focus-after-digits test race from round 2, fixed); recorded in round 4's disposition. Row stays `review`. |
 | v1.13 | 2026-11-06 | BigDev: "1" (apply every patch). CR53-CR59 APPLIED, RED-proved, verified on :5461; `-449` corrected by amending its unpushed commit (`50642900` -> `e4ca7981`); round 3 disposition corrected in place with dated notes; pointers added (Names table, Task 5.2, the OWNER lines). Row stays `review`. |
 | v1.12 | 2026-11-06 | `bmad-code-review 13.1a` round 4, the round 3 fix diff (uncommitted, against `e4ca7981`): 0 decision-needed, 7 patch (CR53-CR59: 2 MEDIUM, 5 LOW), 1 defer (CR60, to 13.1c), 13 dismissed, no HIGH. Findings written; nothing applied, committed or pushed. Row stays `review`. |

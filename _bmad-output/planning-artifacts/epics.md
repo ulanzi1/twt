@@ -7542,6 +7542,8 @@ screens show a worker whose SMS failed so the admin knows to give the code by ha
 
 ### Story 13.1b: A Newly Approved Field Worker Is Sent Their Code by SMS — Only After the Approval Has Committed `[CONSUMER]`
 
+> ⭐ **BUILT ON THE BRANCH (2026-11-06, `bmad-dev-story 13.1b`; row `13-1b-field-worker-code-by-sms` → `review`; NOT merged, NOT live).** As decided in `2026-11-06-450`. An outbox row written by `activateFieldWorker` in the approval's transaction, a per-minute at-most-once sweep over the generic DLT path, the delivery kind `fw`, templates 25 / 26 unsubmitted, and `code_sms_status` on the worker list and identity. Nothing goes out until roster Row 49 closes; the Trust is not yet registered. The Panel confirm is written, not sent. ci:local 38/38 at `a2040674`.
+
 > ⚠ **Added 2026-11-03** by BigDev (*"mint 13-1a, 13-1b, 13-1c"*), answering Story 13.1's ASK Q-2. The row is
 > `13-1b-field-worker-code-by-sms` (`backlog`). Source: Story 13.1's Q-2 RECOMMENDATION and carried item C9 (c). **NOT on the critical
 > path:** the by-hand path (Story 13.1a) is already sanctioned, so go-live does not wait for it. **Long-lead item, outside the repo —
@@ -7570,6 +7572,8 @@ events (at-most-once vs at-least-once; a duplicate SMS vs a missed one — a mis
 non-member-recipient sender lives; the template wording and language, and what Hindi / English the worker gets; what the send costs
 and who bears it; whether a worker can ask for the SMS again, or that is only ever a by-hand read; the DPDP notice leg (13.1 Q-3).
 
+> ✅ **Closed by Story 13.1b (2026-11-06) — the block below, on the branch only:** the send, the signal and the list line are built; see the note under this story's heading.
+>
 > ⭐ **INHERITED FROM 13.1a (2026-11-04, `bmad-create-story 13.1a`; story `13-1a-field-worker-approval-and-code-hand-over`; `deferred-work.md` "Deferred from: story 13-1a-… (create-story, 2026-11-04)"; C1).** HOMED here, ⛔ closed. 13.1a is created, not built.
 > - **C1 — the approval is this story's trigger, and a failed send must be VISIBLE.** The trigger is the `field_worker.activated` event written by 13.1a's approval route (it now carries the verified `authorization`, 13.1a AD3). 13.1a's worker list deliberately shows NO "code not delivered" signal — no producer exists; this story adds the signal AND the list column that shows it, so an admin knows to give the code by hand (13.1a's audited code read, `GET …/field-workers/:fieldWorkerId/code`). The send needs a purpose-limited, audited decrypt of the mobile: reuse 13.1a's `decryptFieldWorkerField` and its audit shape (an actor-naming `withCompensatingAudit` line written BEFORE the decrypt; a KMS fault is a failure, never a blank). The form's stated purposes must reach "to text the worker their code" (13.1 Q-3). Trigger: 13.1b create-story.
 

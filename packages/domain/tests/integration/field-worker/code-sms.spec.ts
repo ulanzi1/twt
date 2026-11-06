@@ -216,7 +216,7 @@ describe.skipIf(!hasDatabase)('the claim, the backoff and the lapse (own-committ
     }
   });
 
-  /** A committed row aged by raw INSERT. The clocks are minutes ago. Sorted FAR behind every foreign row's `updated_at`, by `ageDays`. */
+  /** A committed row aged by raw INSERT: `updatedAgoMs` / `createdAgoMs` before now. An old `updated_at` sorts it FIRST (the header; CB49). */
   async function seedRow(o: { updatedAgoMs: number; createdAgoMs?: number; attemptCount?: number; outcome?: string; claimToken?: string | null }): Promise<string> {
     const c = await pool.connect();
     try {

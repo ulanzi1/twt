@@ -1,8 +1,9 @@
 // The `field_worker_code_sms_sends_guard_update` trigger — Story 13.1b (Task 1.4; AC4 (g); AD8). Every allowed move lands, every refused
 // move is refused, every finished outcome is frozen, and each identity column refuses a change on a LIVE row. It binds the superuser this
-// spec runs as, which is the proof it binds "every role at default settings". ⭐ Each refused leg has a landing sibling, because an
-// assertion after a savepoint rollback proves nothing on its own ([[feedback_assertion_after_savepoint_rollback_is_vacuous]]): the control
-// is the same row, the same statement shape, with a legal value. Live DB only; per-test ROLLBACK (setupLiveDb).
+// spec runs as, which is the proof it binds "every role at default settings". ⭐ Each refused leg on a LIVE row has a landing sibling, because
+// an assertion after a savepoint rollback proves nothing on its own ([[feedback_assertion_after_savepoint_rollback_is_vacuous]]): the control
+// is the same row, the same statement shape, with a legal value. A FINISHED row has no legal update, so the frozen legs can have no sibling:
+// each is proved by the refusal itself, its SQLSTATE and its own message (code review CB48). Live DB only; per-test ROLLBACK (setupLiveDb).
 
 import { randomUUID } from 'node:crypto';
 
@@ -26,11 +27,6 @@ async function seedRow(client: Client, outcome: string): Promise<string> {
     [sendId, PARIWAR_A, worker, randomUUID(), outcome, outcome === 'accepted' ? 'abc' : null],
   );
   return sendId;
-}
-
-async function outcomeOf(client: Client, sendId: string): Promise<string> {
-  const { rows } = await client.query<{ outcome: string }>(`SELECT outcome FROM ${TABLE} WHERE send_id = $1`, [sendId]);
-  return rows[0]!.outcome;
 }
 
 async function refused(client: Client, sendId: string, set: string, message: RegExp): Promise<void> {
@@ -87,7 +83,7 @@ describe.skipIf(!hasDatabase)('the send row guard trigger (AC4 (g))', { timeout:
     await refused(client, sendId, `outcome = 'due'`, /a finished row/);
     await refused(client, sendId, `detail = 'no_code'`, /a finished row/);
     await refused(client, sendId, `attempt_count = 0`, /a finished row/);
-    expect(await outcomeOf(client, sendId)).toBe(final);
+    // ⛔ A read of the outcome here: it runs after every ROLLBACK TO SAVEPOINT and cannot fail (CB48). The refusals above are the proof.
   });
 
   const IDENTITY = [

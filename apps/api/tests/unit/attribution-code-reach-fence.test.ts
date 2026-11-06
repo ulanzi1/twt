@@ -29,6 +29,8 @@
 // ⭐ Story 13.1b (AD7, decision `-450`) — the FIRST such entry: `apps/jobs/src/scheduler/field-worker-code-sms.ts`, the code SMS sweep. A job has
 // no request, so it cannot use the door. Its NAMED Pariwar source is the claimed send row's `pariwar_id`, passed to `withPariwarScope`, and
 // `assertTxBoundScope` re-proves it on the connection (its live test runs that for real). It READS one worker's code; ⛔ allocate, ⛔ resolve.
+// RE-EXAMINE this entry (code review CB50, checklist family 9) when roster Row 26 / Row 49 (f) moves the sweep to an RLS-bound jobs login
+// (the Pariwar source then rests on RLS as well as the predicate), or when a second job needs a code (13.2 C4's door for jobs, not a 2nd entry).
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';

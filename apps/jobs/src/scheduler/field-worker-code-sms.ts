@@ -191,8 +191,9 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
    * AD3 — the twin's `finalise`, in full, for a settle and a release alike: a THROW is retried after each pause; a `false` is ⛔ retried, the
    * row moved on; a `false` after an earlier throw is worded as unconfirmed, because that try may have committed; when every try throws,
    * alarm with the send id and, on an accept, the gateway's request id, the only handle on that text. The row is left to its lease.
+   * It answers whether OUR write landed, so a caller says "ended" only then (code review CB45): each miss has already alarmed here.
    */
-  const record = async (write: (client: pg.PoolClient) => Promise<boolean>, answered: string, requestId?: string): Promise<void> => {
+  const record = async (write: (client: pg.PoolClient) => Promise<boolean>, answered: string, requestId?: string): Promise<boolean> => {
     const pauses = deps.finaliseBackoffMs ?? ALERT_SMS_FINALISE_BACKOFF_MS;
     const handle = requestId === undefined ? '' : ` (gateway request ${requestId})`;
     let threw = false;
@@ -216,28 +217,29 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
             : `the row had already moved on (the record lost) — the send ended ${answered}${handle}`,
         );
       }
-      return;
+      return wrote;
     }
     say(`the send ended ${answered} but its record could not be written [${lastFault}] — it is left to its lease${handle}`);
+    return false;
   };
 
   const settle = async (
     outcome: fieldWorker.FieldWorkerCodeSmsFinalOutcome,
     detail: string | null,
     opts: { readonly locale?: schema.FieldWorkerCodeSmsLocale; readonly providerMessageId?: string } = {},
-  ): Promise<void> => {
-    await record(
+  ): Promise<boolean> =>
+    record(
       (client) => fieldWorker.settleFieldWorkerCodeSms(client, { pariwarId, sendId, claimToken, outcome, detail, ...opts }),
       outcome,
       opts.providerMessageId,
     );
-  };
 
   /** AD3 — back to `due`, or, on attempt `MAX_ATTEMPTS`, final: the ceiling bounds a stuck row. Either way the tick ends. */
   const release = async (detail: string, locale?: schema.FieldWorkerCodeSmsLocale): Promise<Next> => {
     if (row.attemptCount >= fieldWorker.FIELD_WORKER_CODE_SMS_MAX_ATTEMPTS) {
-      await settle('error', 'exhausted:attempts', locale === undefined ? {} : { locale });
-      say(`the text was not sent after ${row.attemptCount} attempts (last ${detail}) — ended exhausted:attempts; an officer reads the code by hand`);
+      if (await settle('error', 'exhausted:attempts', locale === undefined ? {} : { locale })) {
+        say(`the text was not sent after ${row.attemptCount} attempts (last ${detail}) — ended exhausted:attempts; an officer reads the code by hand`);
+      }
       return 'end_tick';
     }
     await record((client) => fieldWorker.releaseFieldWorkerCodeSms(client, { pariwarId, sendId, claimToken, detail }), `released (${detail})`);
@@ -259,8 +261,9 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
     });
   } catch (err) {
     if (err instanceof claim.PeerRequestLocaleMissingError) {
-      await settle('error', 'config:pariwar_locale_missing');
-      say('the Pariwar has no passport row, so no language — ended config:pariwar_locale_missing');
+      if (await settle('error', 'config:pariwar_locale_missing')) {
+        say('the Pariwar has no passport row, so no language — ended config:pariwar_locale_missing');
+      }
       return 'next';
     }
     console.error('[jobs] field-worker-code-sms: the read failed', JSON.stringify({ sendId, error: errorName(err) }));
@@ -271,8 +274,7 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
     return 'next';
   }
   if (read.kind === 'no_code') {
-    await settle('error', 'no_code');
-    say('an integrity fault: no worker or no code for a claimed row — ended no_code');
+    if (await settle('error', 'no_code')) say('an integrity fault: no worker or no code for a claimed row — ended no_code');
     return 'next';
   }
   const { mobileCiphertext, code, locale } = read;
@@ -289,8 +291,9 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
   if (prep.kind === 'transient') return release(prep.detail, locale);
   if (prep.kind === 'final') {
     const detail = refusalDetail(prep.detail);
-    await settle('error', detail, { locale });
-    say(`the text cannot be prepared (${detail}) — ended, ⛔ sent later (AD13); an officer reads the code by hand`);
+    if (await settle('error', detail, { locale })) {
+      say(`the text cannot be prepared (${detail}) — ended, ⛔ sent later (AD13); an officer reads the code by hand`);
+    }
     return 'next';
   }
   const { prepared } = prep;
@@ -317,9 +320,12 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
     });
   } catch (err) {
     if (err instanceof fieldWorker.FieldWorkerIdentityUnreadableError) {
-      await settle('error', `identity_unreadable:${err.stage}`, { locale });
-      say(`the stored mobile cannot be read (${err.stage}) — ended; an officer reads the code by hand`);
-      return 'next';
+      if (await settle('error', `identity_unreadable:${err.stage}`, { locale })) {
+        say(`the stored mobile cannot be read (${err.stage}) — ended; an officer reads the code by hand`);
+      }
+      // Code review CB44 (BigDev, option A): a key the KMS rejects for this row is rejected for EVERY row when the key reference is wrong
+      // (`-449`), so the next row would fare the same, as after `auth:*`: end the tick. A corrupt envelope or a failed tag is this row's alone.
+      return err.stage === 'key_rejected' ? 'end_tick' : 'next';
     }
     if (err instanceof fieldWorker.FieldWorkerDecryptUnavailableError) return release('api_unavailable:kms', locale);
     console.error('[jobs] field-worker-code-sms: the audit line failed', JSON.stringify({ sendId, error: errorName(err) }));
@@ -332,11 +338,11 @@ async function processRow(deps: FieldWorkerCodeSmsDeps, row: fieldWorker.Claimed
   // ── (f) settle, or release ──
   const settled = settleSend(core);
   if (settled.kind === 'release') return release(settled.detail, locale);
-  await settle(settled.outcome, settled.detail, {
+  const landed = await settle(settled.outcome, settled.detail, {
     locale,
     ...(settled.providerMessageId === undefined ? {} : { providerMessageId: settled.providerMessageId }),
   });
-  if (settled.alarm) say(`the send ended ${settled.outcome} (${settled.detail ?? 'no detail'}) — ⛔ re-sent; an officer reads the code by hand`);
+  if (settled.alarm && landed) say(`the send ended ${settled.outcome} (${settled.detail ?? 'no detail'}) — ⛔ re-sent; an officer reads the code by hand`);
   return settled.next;
 }
 
@@ -353,7 +359,7 @@ export async function runFieldWorkerCodeSmsTick(deps: FieldWorkerCodeSmsDeps): P
     if (!(await smsDelivery.canReadAcrossPariwars(deps.pool))) {
       alarm(
         '[jobs] field-worker-code-sms: field_worker_code_sms.rls_bound_role — the pool role cannot read across Pariwars (roster Row 26); ' +
-          '⛔ swept — a due code text stays due until it can',
+          '⛔ swept — a due code text stays due until it can, or until it expires at the max age (24 h); then an officer reads the code by hand',
       );
       return { refused: true, lapsed: 0, claimed: 0 };
     }

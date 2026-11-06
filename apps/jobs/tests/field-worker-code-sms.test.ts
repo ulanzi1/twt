@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { canonicalJsonStringify, encryption, fieldWorker } from '@twt/domain';
+import { DEFAULT_POOL_CONNECTION_TIMEOUT_MS, canonicalJsonStringify, encryption, fieldWorker } from '@twt/domain';
 import type { SmsAppClient } from '@twt/channels';
 import { QUEUE_NAMES } from '@twt/queue';
 import type pg from 'pg';
@@ -283,6 +283,20 @@ const kmsDown = (): Partial<FieldWorkerCodeSmsDeps> => ({
     kms: new Proxy(enc.kms, {
       get(t, prop) {
         if (prop === 'decryptDek') return () => Promise.reject(Object.assign(new Error(`bound value ${MOBILE} ${CODE}`), { code: 14 }));
+        const value: unknown = Reflect.get(t, prop, t);
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(t) : value;
+      },
+    }),
+  },
+});
+
+/** A KMS that rejects the key (gRPC 3, INVALID_ARGUMENT): `decryptFieldWorkerField` reads it as `key_rejected` (`-449`). */
+const kmsRejects = (): Partial<FieldWorkerCodeSmsDeps> => ({
+  encryption: {
+    kekRef: enc.kekRef,
+    kms: new Proxy(enc.kms, {
+      get(t, prop) {
+        if (prop === 'decryptDek') return () => Promise.reject(Object.assign(new Error('the key was rejected'), { code: 3 }));
         const value: unknown = Reflect.get(t, prop, t);
         return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(t) : value;
       },
@@ -594,6 +608,18 @@ describe('the Outcomes table', () => {
     expect(later.outcome).toBe('accepted');
   });
 
+  // Code review CB44 (BigDev, option A): a mis-set key reference makes the KMS reject EVERY row's key (`-449`), so the next row fares the same.
+  it('⭐ `identity_unreadable:key_rejected` is final and alarmed, and ENDS the tick: the next row is ⛔ claimed', async () => {
+    const row = await seed();
+    const later = await seed();
+    const { deps: d, alarms } = deps(kmsRejects());
+    const result = await runFieldWorkerCodeSmsTick(d);
+    expect(row).toMatchObject({ outcome: 'error', detail: 'identity_unreadable:key_rejected' });
+    expect(alarms).toEqual([expect.stringContaining('(key_rejected)')]);
+    expect(later.outcome).toBe('due');
+    expect(result.claimed).toBe(1);
+  });
+
   it('a proven pre-flight fault is refused by prepare: final, ⛔ audit; an unproven one sends, with ONE alarm in the twin’s words', async () => {
     const memo = (ok: boolean, reason: string) => ({ memo: { get: () => Promise.resolve(ok ? { ok: true } : { ok: false, transient: false, reason }) } as never, readsWithSendKey: true });
     const proven = await seed();
@@ -869,6 +895,35 @@ describe('AC4 (o) — settle', () => {
     await expect(runFieldWorkerCodeSmsTick(d)).resolves.toMatchObject({ claimed: 1 });
     expect(entries('settle')).toEqual(['settle:accepted']);
     expect(row.outcome).toBe('attempting');
+  });
+});
+
+// Code review CB45 (AD3): `record` has already alarmed when OUR write did not land ("already moved on"), so the caller says "ended <detail>"
+// only when it did. Before the patch each of these sites said "ended" as fact as well: two alarms, the second stating an end nobody wrote.
+describe('AD3 — a settle that did not land is ⛔ announced as an end', () => {
+  const SITES: ReadonlyArray<{ readonly label: string; readonly arrange: () => Promise<Partial<FieldWorkerCodeSmsDeps>> }> = [
+    { label: 'the ceiling', arrange: async () => { await seed({ attemptCount: fieldWorker.FIELD_WORKER_CODE_SMS_MAX_ATTEMPTS - 1 }); h.answer = () => Promise.resolve(transient('rate_limited:http_429')); return {}; } },
+    { label: 'no passport row', arrange: async () => { await seed(); h.faults.localeMissing = true; return {}; } },
+    { label: 'no code row', arrange: async () => { await seed({ code: null }); return {}; } },
+    { label: 'a prepare refusal', arrange: async () => { await seed(); return { resolveConfig: () => Promise.resolve(null) }; } },
+    { label: 'an unreadable mobile', arrange: async () => { await seed({ mobileCiphertext: 'not an envelope' }); return {}; } },
+    { label: 'an alarmed send end', arrange: async () => { await seed(); h.answer = () => Promise.resolve(finalError('auth:http_401')); return {}; } },
+  ];
+
+  it.each(SITES)('⭐ $label: ONE alarm, the record’s own "already moved on", and no "ended" claim', async ({ arrange }) => {
+    const over = await arrange();
+    h.faults.settleMovedOn = true;
+    const { deps: d, alarms } = deps(over);
+    await runFieldWorkerCodeSmsTick(d);
+    expect(entries('settle').length, 'non-vacuity: the site reached its settle').toBeGreaterThan(0);
+    expect(alarms).toEqual([expect.stringContaining('the row had already moved on')]);
+  });
+
+  it('control: the same site whose settle lands says "ended"', async () => {
+    await seed({ code: null });
+    const { deps: d, alarms } = deps();
+    await runFieldWorkerCodeSmsTick(d);
+    expect(alarms).toEqual([expect.stringContaining('ended no_code')]);
   });
 });
 
@@ -1162,7 +1217,8 @@ describe('AC8 — nothing leaks', () => {
 // names from `@twt/domain` (the import list is pinned, so a new module is a visible change); it never aliases, destructures or reaches a
 // namespace through `?.` or `[`; it never calls a write method on the handles of its scope; and its code names no event writer. A write made by
 // code the sweep CALLS (the domain half's concern, which pins that its accessors write one table) is not seen here, and neither is a write
-// through a module this scan does not know: a new import fails the first test and is then reviewed.
+// through a module this scan does not know: a new import fails the first test and is then reviewed. Every import statement is pinned, not
+// only the first from `@twt/domain` (code review CB47: a second statement, a subpath or another module passed unseen).
 describe('AC5 — the sweep has no write path to a worker’s state or the event log', () => {
   // CODE only (CB17, CB34): the header comment names `activateFieldWorker` (the approval, which writes the row) and says so.
   const source = codeOf('../src/scheduler/field-worker-code-sms.ts');
@@ -1205,6 +1261,13 @@ describe('AC5 — the sweep has no write path to a worker’s state or the event
     expect(imported, 'non-vacuity: the import was read').toEqual(
       ['attributionCode', 'audit', 'canonicalJsonStringify', 'claim', 'fieldWorker', 'ids', 'smsDelivery', 'withPariwarScope'].sort(),
     );
+    // CB47: every module it loads, by every route (a second statement, `import * as`, a subpath, a dynamic import, `require`).
+    const modules = [...source.matchAll(/^import\b[^;]*?from\s*['"]([^'"]+)['"]\s*;/gm)].map((m) => m[1]!);
+    expect(source.match(/^import\b/gm) ?? [], 'every import statement has a `from`').toHaveLength(modules.length);
+    expect(modules.sort()).toEqual(
+      ['node:crypto', '@twt/domain', '@twt/queue', './alert-sms-send.js', './claim-dlt-sms-send.js', './field-worker-code-sms-templates.js'].sort(),
+    );
+    expect(body).not.toMatch(/\bimport\s*\(|\brequire\s*\(/);
     for (const ns of ['fieldWorker', 'attributionCode', 'smsDelivery']) {
       expect(body.match(new RegExp(`\\b${ns}\\b(?!\\s*\\.)`, 'g')) ?? [], `${ns} used bare (aliased or destructured)`).toEqual([]);
     }
@@ -1247,7 +1310,9 @@ describe('AC5 — the sweep has no write path to a worker’s state or the event
 
 describe('AD3 — the lease', () => {
   it('⭐ it stands above the sum of the bounded terms (read connect 10, Secret Manager 10, pre-flight 9, audit connect 10, send 10, settle 31)', () => {
-    const CONNECT_MS = 10_000;
+    // Code review CB46: the pool's REAL connect timeout, as the twin's pin reads it (`alert-sms-send.test.ts`), ⛔ a copy. The Secret Manager
+    // (10 s) and pre-flight (9 s) bounds have no exported constant, so they stay literals, named in the title.
+    const CONNECT_MS = DEFAULT_POOL_CONNECTION_TIMEOUT_MS;
     const settle = (ALERT_SMS_FINALISE_BACKOFF_MS.length + 1) * CONNECT_MS + ALERT_SMS_FINALISE_BACKOFF_MS.reduce((a, b) => a + b, 0);
     const sum = CONNECT_MS + 10_000 + 9_000 + CONNECT_MS + CORRECTION_SEND_TIMEOUT_MS + settle;
     expect(sum).toBeLessThan(fieldWorker.FIELD_WORKER_CODE_SMS_LEASE_MS);

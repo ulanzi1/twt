@@ -28,7 +28,7 @@ RECIPIENT (`-387` LS10 (b)): an unset id (or a failed pre-flight) for ONE locale
 ⭐ *Dated note, 2026-11-06 (Story 13.1b, [`-450`](../../.decision-log.md#decision-2026-11-06-450)):* **templates 25–26** (one text to a newly approved field worker, carrying their code) gate the
 **real** sends of Story 13.1b, and are gated on **`inventory-roster.md` Row 49** (`field-worker-code-sms-live`), ALL of it. ⛔ **Do not provision the ids of 25–26 until Row 49 says so.**
 Unset, every due row ends `config:dlt_template_id_missing`, the admin list reads "not delivered" and an officer reads the code to the worker on request. ⛔ It never sends later (`-450` Q-4).
-BigDev, 2026-11-06, verbatim: *"Trust will be registered. It's not yet registered."* So no Principal Entity registration exists and no template on this sheet can be submitted yet (Row 30's dated line).
+BigDev, 2026-11-06, verbatim: *"Trust will be registered. It's not yet registered."* Read as the answer to whether a Principal Entity registration exists (the reply could instead mean the Trust's own legal registration), no Principal Entity registration exists and no template on this sheet can be submitted yet (Row 30's dated line).
 
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.

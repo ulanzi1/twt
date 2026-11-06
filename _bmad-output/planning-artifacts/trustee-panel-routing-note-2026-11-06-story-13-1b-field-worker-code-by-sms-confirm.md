@@ -10,21 +10,22 @@
 > ([[feedback_supersede_never_reinterpret]]).
 >
 > **This question is NON-BLOCKING.** The build of Story 13.1b goes ahead on the answer we recommend (option A). What waits for the
-> Panel is switching the text on (roster Row 49, leg (l)). Nothing is live today. Registering and approving field workers does not wait
+> Panel is switching the text on (the go-live checklist's item for your confirm). Nothing is live today. Registering and approving field workers does not wait
 > for this note: an officer reading the code out is the route already built, and its permission is before you in the keys note.
 
 ---
 
 ## §0 — THE GATE: is this the Panel's decision at all?
 
-**Probably yes, and narrowly.** Stripped of citations, the question is: *may the Trust text a field worker their own code when they are approved, when the plan you approved lists what text messages are for, this is not on that list, and you were told an officer would tell the worker?* Extending a ratified plan is yours. BigDev chose this text in an author-commit (`-442`), and nobody has asked you.
+**Probably yes, and narrowly.** Stripped of citations, the question is: *may the Trust text a field worker their own code when they are approved, when the plan you approved lists what text messages are for, this is not on that list, and you were told an officer would tell the worker?* Extending a ratified plan is yours. BigDev chose this text without putting it to you, and recorded the choice in the decision log; nobody has asked you.
 
 There is a real argument that it is not yours: that list sits under bulk alerts to members, and a field worker is not a member. That is why this is a confirm, and why you may tell us it was never your question.
 
 **Not asked here, because each has another owner:**
-- How the text is built, retried and recorded: the author's (`-450`).
+- How the text is built, retried and recorded: the author's.
+- What the line an officer sees on screen looks like: the author's. Whether anyone is TOLD when a text fails is a different question, and it IS asked (options A and B).
 - The language and the words: BigDev's. They are shown so you can see what would go out.
-- Whether the recruitment form's purposes reach this text: on BigDev's word they do (nobody preparing this note has seen the form). Whether the Trust needs separate consent, whether the text-message company (MSG91) may handle a worker's number and code, and whether a text to a mistyped number is a notifiable breach: counsel's (roster Row 49 (c), (d)).
+- Whether the recruitment form's purposes reach this text: on BigDev's word they do (nobody preparing this note has seen the form). Whether the Trust needs separate consent, whether the text-message company (MSG91) may handle a worker's number and code, and whether a text to a mistyped number is a notifiable breach: counsel's (the go-live checklist names them).
 
 ---
 
@@ -36,7 +37,7 @@ There is a real argument that it is not yours: that list sits under bulk alerts 
 
 ## The one fact that decides it
 
-**You were told an officer gives the worker the code: *"the Pariwar Admin tells the worker."*** A later note to you says an officer reads it *"to them when they ask."* Neither mentions a text message. This adds a second route, which goes out without an officer choosing to send it. If you are content for a worker to receive their own code directly, the rest follows. If you meant an officer to stay between the Trust and the worker, it does not.
+**You were told an officer gives the worker the code: *"the Pariwar Admin tells the worker."*** A later note to you, as drafted, says an officer reads it *"to them when they ask."* Neither mentions a text message. This adds a second route, which goes out without an officer choosing to send it. If you are content for a worker to receive their own code directly, the rest follows. If you meant an officer to stay between the Trust and the worker, it does not.
 
 ---
 
@@ -46,11 +47,11 @@ The text, as drafted, in Hindi or English by the Pariwar's default language (the
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Confirm the text, as being built.** One text, when a Pariwar Admin approves the worker. It is never sent again. An officer can still read the code out. No officer is told if it fails. *Our suggestion.* | The worker gets their code without having to ask. If the text fails, they hear nothing, not even that they were approved, until they ask an officer. An officer can see the result only by looking the worker up, and sometimes the screen can only say the outcome is unknown. The approver is told on screen where to look. | A number mistyped from the form sends the code to a stranger; the screen then says "delivered", and nothing can correct a stored number today. Whether that is a breach the Trust must report is counsel's question, not yet answered. A worker approved before the text is switched on never gets one, even later. A worker who never asks may never learn they were approved. A worker suspended in the seconds as it goes may still get it. One paid text per registration (two billed parts in Hindi), borne by the Trust; the price is not recorded. |
+| **A** | **Confirm the text, as being built.** One text, when a Pariwar Admin approves the worker. It is never sent again. An officer can still read the code out. No officer is told if it fails. *Our suggestion.* | The worker gets their code without having to ask. If the text fails, they hear nothing, not even that they were approved, until they ask an officer. An officer can see the result only by looking the worker up, and sometimes the screen can only say the outcome is unknown. The approver is told on screen where to look. | A number mistyped from the form sends the code to a stranger; the screen then says "delivered", and nothing can correct a stored number today. Whether that is a breach the Trust must report is counsel's question, not yet answered. A worker approved before the text is switched on never gets one, even later. A worker who never asks may never learn they were approved. A worker suspended in the seconds just before the text goes may still receive it. One paid text per registration (two billed parts in Hindi), borne by the Trust; the price is not recorded. |
 | **B** | **Confirm the text, and tell the officers when one fails.** | As A, but the District Admin and the Pariwar Admin are told when a text fails, so someone can reach the worker. | Costs of A, except that a failure is seen. It needs a new notice nobody has built. A District Admin has no notice channel today, and the work that would build one has not started, so the text would wait until it is built. |
-| **C** | **Do not confirm. An officer tells the worker, as you were told.** | Nothing changes from what you were told. Every worker hears their code from an officer, by asking. | The worker has no notice of their approval unless an officer gives one. Every worker waits on an officer, which is what the text was meant to avoid. No text goes and nothing needs undoing, but the sending work goes unused, and the officers' screens need a small change so they stop showing a text as "not delivered". |
+| **C** | **Do not confirm. An officer tells the worker, as you were told.** | Nothing changes from what you were told. Every worker hears their code from an officer, by asking. | The worker has no notice of their approval unless an officer gives one. Every worker waits on an officer, which is what the text was meant to avoid. No text is sent, but the work does not stop there: the sending work is already built, and until a follow-up change is made every approval still records a text as due, raises an alarm, and shows that worker as "not delivered" on the officer's screen. The follow-up is not small: it reaches the approval itself, the field the screens read, two screens and the approval message, and nobody has scheduled it yet. |
 
-**Our reading:** **A** — **because** the code is the worker's own and is made to be shared with teachers, the text carries no name, and an officer reading it out stays available when it fails. You can reject this reading and still use the table. If the cost that matters most to you is a worker left unaware, **B** answers it, at the price of a later start.
+**Our reading:** **A** — **because** the code is the worker's own and is made to be shared with teachers, the text carries no name, and an officer reading it out stays available to a worker who asks when it fails (that route is itself waiting for your answer to the keys note). You can reject this reading and still use the table. If the cost that matters most to you is a worker left unaware, **B** answers it, at the price of a later start.
 
 ---
 
@@ -65,19 +66,19 @@ The text, as drafted, in Hindi or English by the Pariwar's default language (the
 # How much to trust this note
 
 - **Earlier versions of this question:** the story's first version said no question was owed. A check found the plan's list and the words you were told, and that was corrected. A second version overstated the precedent, counting two rulings as new uses of text when they had changed the conditions on a use already listed. That was corrected too (E1). BigDev's rule to send the text was recorded on 3 November, before the keys note was written; that note did not mention it.
-- **Corrected in this note:** one independent review before it was finished. It found we had called option C free when it is not, had left out that a worker approved before the text is switched on never gets one, and had said every new use of text came to you when one (the closure notice) did not. All are corrected above.
+- **Corrected in this note:** one independent review before it was finished. It found we had called option C free when it is not, had left out that a worker approved before the text is switched on never gets one, and had said every new use of text came to you when one (the closure notice) did not. All are corrected above. After the build landed on the branch (2026-11-06), the story's code review found three places still saying nothing was built: the last "still uncertain" bullet below, the first bullet of E3, and the expected counts in E4 (which now return 9 and 2 on the branch, not 0 and 0). All three are corrected. What the Panel is asked does not turn on whether the code exists, so nothing in the question changed. The note was still unsent, so it was corrected in place. A later review of the records (2026-11-06) found more, all corrected the same way: option C's cost had understated what happens until a follow-up change is made, a sentence in A's cost was not a sentence, the plain-English section implied that an officer follows up a failed text when nobody is told, the recommendation did not say that the read-out route is itself unruled, the meeting section carried decision and checklist ids, the note's own origin was given against the wrong commit, and it did not say that the decision which first set the closure text carries a "confirmed by" marker pointing at a Panel ruling that, read closely, did not cover it (E1 now says so).
 - **Still uncertain:**
   - Whether the plan's list binds a text to someone who is not a member. That is the author's reading, and it is the point on which you may simply say this was not yours to rule.
   - Whether the note behind your first November ruling is word for word the version we hold: the record says only that BigDev sent it. For your second, BigDev named the version. The keys note as sent is not recorded as identical to its draft.
   - The read-out itself depends on your answer to the keys note, which has no recorded ruling yet.
-  - Nothing here is built. Every statement about what would happen is the plan, read from the story, and no text has ever been sent.
+  - The build exists only on the story's own branch: it is not merged and not live, and it has run only against fakes and a test database, never a real gateway or a real handset. No text has ever been sent. Every statement about what happens is read from that code and its tests.
   - Nobody preparing this note has seen the recruitment form.
 
 ---
 
 # In plain English
 
-When you decided who may add a field worker, we told you the Pariwar Admin would tell the worker their code. Since then, BigDev has decided the code should also go by text once a worker is approved, with an officer reading it out if the text does not arrive. That is not what you were told, and new uses of text messages have come to you before. So we are asking, rather than assuming.
+When you decided who may add a field worker, we told you the Pariwar Admin would tell the worker their code. BigDev has also decided that the code should go by text once a worker is approved, with an officer still able to read it out when a worker asks. If the text does not arrive, nobody is told, and the worker has to ask. That is not what you were told, and new uses of text messages have come to you before. So we are asking, rather than assuming.
 
 We suggest you confirm it. The code is the worker's own and is meant to be passed on, and the text names nobody. You should know the costs: if an officer mistyped the number, a stranger gets a code and the screen looks as if all went well; and if a text fails, no officer is told, so a worker could wait without knowing they were approved. A worker approved before the text is switched on never gets one. If that second cost matters to you, choose B. If you would rather an officer stayed between the Trust and the worker, choose C. Either way, nothing has gone out and nothing can yet. If this section and the evidence below ever disagree, the evidence is the record.
 
@@ -100,7 +101,7 @@ followed by four uses: the canonical OTP channel, step-up OTP, the per-member tr
 
 > **F7 widens the approved plan** — PRD §4.10
 
-**Uses added since, each Trustee-ratified:** `-255` F7 and `-259` (people who may not be members), `-262` FQ7 B, `-291` Q2 B, `-293` item 1 B, `-303` Q1 A. **Two more rulings moved a listed use's gate, not the list:** `-390` Q1 B and `-414` Q1 A (members). They are not additions and are not counted as such. **Not ruled:** the closure text (templates 3, 4) is `2026-09-28-265` D23, an author-commit; the Panel saw it only in passing in the `-260` note, G3 (*"A closure already sends one."*).
+**Uses added since, each Trustee-ratified:** `-255` F7 and `-259` (people who may not be members), `-262` FQ7 B, `-291` Q2 B, `-293` item 1 B, `-303` Q1 A. **Two more rulings moved a listed use's gate, not the list:** `-390` Q1 B and `-414` Q1 A (members). They are not additions and are not counted as such. **Not ruled:** the closure text (templates 3, 4) is `2026-09-28-265` D23, an author-commit; the Panel saw it only in passing in the `-260` note, G3 (*"A closure already sends one."*). **A reader who greps will find that `-265`'s own D23 row is marked "confirmed by `-260` G3 (A)".** What G3 ruled was *"NO NEW MESSAGE after a Super Admin refusal or approval"*, and its text says *"The closure notice (a closure only) is unaffected."* So the marker covers the no-new-text half of D23; the closure text itself stays the author's.
 
 **What the Panel was told.** The routing note behind `2026-11-03-441`, option A, "What changes for a person":
 
@@ -127,9 +128,9 @@ The note behind the 13.1a keys confirm, as committed (reported sent 2026-11-05; 
 
 ## E3 — What the code actually does
 
-- **Nothing is built.** At `2e7fecfa` the table, the sweep and both templates do not exist (E4).
+- **Built on the story's branch, not merged and not live.** The table, the sweep and both templates exist on `story/13-1b-field-worker-code-by-sms` (first in `9a5fc4e8`). When this note was first written (committed in `a23db233`, on top of `479d7694`) they did not exist, and none of them is on `main` (E4).
 - **Nothing can be sent.** BigDev, 2026-11-06: *"Trust will be registered. It's not yet registered."* The DLT sheet reads NOT STARTED, and no date is given.
-- **What will be built (an inference from the story, not yet code):** the approval records the text as due; a job sends it at most once, re-checking the worker is active; an unset template id fails closed, so nothing goes out until a template is approved. Under option C the id stays unset, but until the build is changed each approval still records a text as due, raises one alarm and shows "not delivered".
+- **What is built (read from the code and its tests on the branch; nothing here has run against a real gateway):** the approval records the text as due; a job sends it at most once, re-checking the worker is active; an unset template id fails closed, so nothing goes out until a template is approved. Under option C the id stays unset, but until the build is changed each approval still records a text as due, raises one alarm and shows "not delivered".
 - **Traced, not inferred:** no route or command changes a stored field-worker mobile; an officer who can see a worker's status can also read the code (`field_worker.view` and `field_worker.read_code` have the same holders).
 
 ## E4 — Commands to re-verify every claim
@@ -154,7 +155,10 @@ grep -n 'F7 widens the approved plan' .decision-log.md
 # QE22 is not in -443's list
 grep -n 'What this ratifies that was a reading' .decision-log.md
 
-# nothing is built, the templates included (expect 0, 0 until the story's Tasks 1, 4 and 5 land)
+# the build is on the story's branch and not on main, the templates included
+# (expect 0 and 0 on main; on the branch at 28fb846d the counts were 9 and 2 - re-count at the tip you send from)
+git ls-tree -r origin/main --name-only | grep -c 'field-worker-code-sms\|field_worker_code_sms'
+git show origin/main:docs/launch-gate-inventory/dlt-template-requests-6-19.md | grep -c '^| 25 |'
 git ls-files | grep -c 'field-worker-code-sms\|field_worker_code_sms'
 grep -c '^| 25 |' docs/launch-gate-inventory/dlt-template-requests-6-19.md
 
@@ -167,7 +171,7 @@ grep -n 'read only once the worker is approved' .decision-log.md
 grep -n 'FIELD_WORKER_READ_CODE\|FIELD_WORKER_VIEW' packages/domain/src/rbac/roles.ts
 grep -n -E "\.(get|post|put|patch|delete)\(" apps/api/src/modules/field-worker/routes.ts
 
-# the go-live leg this confirm closes (EMPTY until the story's Task 0.4: do not send before it lands)
+# the go-live leg this confirm closes (Row 49 exists: expect the heading and its legs; an EMPTY result means the row is missing, so do not send)
 grep -n 'field-worker-code-sms-live' docs/launch-gate-inventory/inventory-roster.md
 ```
 

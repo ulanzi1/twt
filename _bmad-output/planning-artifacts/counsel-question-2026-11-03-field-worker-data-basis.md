@@ -1,10 +1,11 @@
-# Question for counsel — what a field worker is, and how long the Trust keeps their name and mobile number
+# Question for counsel — what a field worker is, how long the Trust keeps their name and mobile number, and whether the Trust may text them their code
 
 **From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-03, **REVISED three times on 2026-11-03** — after BigDev explained how
 field workers are recruited, after BigDev checked the form (Story 13.1, Q-3), and after BigDev confirmed that the form states the purposes
 and records the worker's agreement · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as asked until BigDev sends it. **Extended 2026-11-06 (Story 13.1b, Task 0.4):** questions 4 to 6 added.
-**Roster:** the go-live row for field-worker registration — not yet created (Story 13.1 Task 0.4); this note answers its legs for the
-classification, retention and erasure. The footing and notice leg is met by the form, so it is not asked.
+**Roster:** Row 48 (field-worker registration) and Row 49 (the code text, Story 13.1b). Questions 1 to 3 answer Row 48's legs for the
+classification, retention and erasure; questions 4 to 6 answer Row 49's (c) and (d). The footing and notice for HOLDING the data are met by
+the form, on BigDev's word, so they are not asked; what is left for texting the worker their code is questions 4 to 6.
 
 ---
 
@@ -19,7 +20,7 @@ number electronically, for as long as they are employed, and removes them 8 year
 **Also on the form** (BigDev, 2026-11-03, asked whether it states the purposes for which the Trust uses the name and number and records
 the worker's agreement: *"yes it states"*): the **purposes** are stated and the worker's **agreement is recorded**. The session has not seen
 the form, so the **wording** of the purposes is not recorded here. **The form is "Application for Field Worker", version 1.** The footing
-and the notice are therefore the form's, and are **not asked** below.
+and the notice for holding the data are therefore the form's, and are **not asked** below; whether the same purposes reach a text of the worker's code is asked at question 5.
 
 ## The situation, in brief
 
@@ -56,7 +57,7 @@ We have **not formed a view** on any of these.
 
 ## What we need back
 
-A short written answer to each question that is sent. It will be recorded as a decision; once the roster row exists it answers the counsel
-half of its legs for the classification (question 1), retention (question 2) and erasure (question 3), and questions 4 to 6 answer roster Row 49 (c) and (d). The footing and notice for holding the data are settled
+A short written answer to each question that is sent. It will be recorded as a decision; it answers the counsel
+half of Row 48's legs for the classification (question 1), retention (question 2) and erasure (question 3), and questions 4 to 6 answer roster Row 49 (c) and (d). The footing and notice for holding the data are settled
 by the form, on BigDev's confirmation. If any answer depends on facts we have not given — including what the form's purposes say, which we
 have not seen — please say which.

@@ -35,6 +35,7 @@ import type { FieldWorkerId, PariwarId } from '../ids/index.js';
 import { rollbackToSavepoint } from '../marketplace/project.js';
 import { isVerifiedAuthorization, type VerifiedAuthorization } from '../rbac/check.js';
 import type { FieldWorkerKycStatus, FieldWorkerReasonCode, FieldWorkerState } from '../schema/field_workers.js';
+import { enqueueFieldWorkerCodeSms } from './code-sms.js';
 import {
   FieldWorkerEndedOnInvalidError,
   FieldWorkerAuthorizationStaleError,
@@ -320,7 +321,10 @@ export interface ActivateFieldWorkerInput extends ApproveFieldWorkerCommandInput
 
 /**
  * `pending_kyc → active`, only once KYC is recorded (I5). Carries the verified `field_worker.approve` authorization (13.1a AD3)
- * and writes the approver's display-name snapshot to the row (`-447` item 2).
+ * and writes the approver's display-name snapshot to the row (`-447` item 2). ⭐ Story 13.1b (AD1): it also records the worker's
+ * code SMS as DUE, on the caller's client AFTER the transition's savepoint, so the row and the event commit or roll back together
+ * and no later caller of this command can forget it (the ONE writer of `field_worker.activated`). ⛔ `ON CONFLICT`: this transition
+ * happens once in a worker's life, so a second row is a broken invariant and fails the caller's transaction loudly.
  * @throws FieldWorkerKycNotCompletedError, FieldWorkerAuthorizationStaleError (+ the shared guards).
  */
 export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFieldWorkerInput): Promise<FieldWorkerTransitionResult> {
@@ -331,7 +335,7 @@ export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFiel
   if (typeof i.approvedByDisplay !== 'string' || i.approvedByDisplay.trim().length === 0) {
     throw new FieldWorkerProjectorInputError("[field_worker.activated] the approving admin's display name is missing (6.11 R5 — no fallback)");
   }
-  return runLockedTransition(
+  const result = await runLockedTransition(
     client,
     i,
     'field_worker.activated',
@@ -343,6 +347,8 @@ export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFiel
     'field_worker.activate',
     i.approvedByDisplay,
   );
+  await enqueueFieldWorkerCodeSms(client, { pariwarId: i.pariwarId, fieldWorkerId: i.fieldWorkerId, activatedAuditId: i.auditId });
+  return result;
 }
 
 /** `active → suspended`, with a suspension reason (QE12). @throws FieldWorkerReasonInvalidError. */

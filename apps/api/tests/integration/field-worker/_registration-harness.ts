@@ -136,6 +136,8 @@ export async function createHarness(): Promise<Harness> {
       const streams = (await c.query<{ id: string }>('SELECT field_worker_id AS id FROM field_workers WHERE pariwar_id = ANY($1)', [createdPariwars])).rows.map((r) => r.id);
       await c.query('DELETE FROM field_worker_attribution_codes WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM attribution_code_allocation_flags WHERE pariwar_id = ANY($1)', [createdPariwars]);
+      // Story 13.1b — before the workers: replica mode disables the FK, so a `due` row would outlive them for a later sweep to find.
+      await c.query('DELETE FROM field_worker_code_sms_sends WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM field_workers WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1) AND stream_id = ANY($2)', [createdPariwars, streams]);
       await c.query('DELETE FROM geo_tree_versions WHERE pariwar_id = ANY($1)', [createdPariwars]);

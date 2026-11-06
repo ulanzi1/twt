@@ -61,6 +61,7 @@ export const REGISTRY_FILES: readonly string[] = [
   'apps/jobs/src/scheduler/suspicion-notice-sms-templates.ts',
   'apps/jobs/src/scheduler/peer-mesh-sms-templates.ts',
   'apps/jobs/src/scheduler/contribution-sms-templates.ts',
+  'apps/jobs/src/scheduler/field-worker-code-sms-templates.ts',
 ];
 
 /** Rule (iii) only — files that may hold the template-id prefix without being a registry. */

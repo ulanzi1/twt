@@ -566,6 +566,12 @@ export const QUEUE_NAMES = {
    * job (a job lost between COMMIT and enqueue would leave a module scheduled forever). Job class C.
    */
   MODULE_ACTIVATION: 'module.activation',
+  /**
+   * The per-minute field-worker CODE SMS sweep (Story 13.1b, `2026-11-06-450` AD2): sends each `due` row of
+   * `field_worker_code_sms_sends` at most once. A cron tick with an empty payload — ⛔ a per-worker job (the row is the outbox:
+   * a job lost between COMMIT and enqueue would lose the text). Job class C.
+   */
+  FIELD_WORKER_CODE_SMS: 'field_worker.code_sms',
 } as const;
 
 /** Union of the registered queue names. */

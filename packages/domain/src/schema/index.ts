@@ -524,3 +524,6 @@ export * from './attribution_code_allocation_flags.js';
 // guarded by the whole-row DB trigger (migration 0200) + the field-worker-state-invariant CI gate; field_worker_state +
 // field_worker_kyc_status + field_worker_reason_code pgEnums). 0200 also adds 13.2's composite FK onto this table.
 export * from './field_workers.js';
+// Story 13.1b (0202) — the field-worker code SMS send record: one row per worker id, the outbox the approval writes and the sweep's
+// at-most-once record of the one text (ids only; a finished row is frozen by a guard trigger; tenant-isolated).
+export * from './field_worker_code_sms_sends.js';

@@ -1,0 +1,4 @@
+{
+  "$comment.sms": "Story 13.1b (`2026-11-06-450` AD9, Q-2): sms.code is the one text a newly approved field worker gets, carrying their code. BigDev's words. One variable, no name, no link, no word about pay or employment. The registered DLT text is this string with {code} as the DLT variable marker (templates 25, 26); it is proved through the real t() by apps/jobs/tests/field-worker-code-sms-templates.test.ts, so a change here is a change to a registered template. The Hindi still needs its review, Row 49 (b).",
+  "sms.code": "TWT: you are approved as a field worker. Your code is {code}. Give this code to the teachers you introduce."
+}

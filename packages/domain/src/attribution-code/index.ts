@@ -1,6 +1,7 @@
 // Barrel for the field-worker attribution-code registry — Story 13.2 (Task 5; AT1). Re-exported from @twt/domain as the
 // `attributionCode` namespace (see ../index.ts). ⚠ Reachable from `apps/*` ONLY through the API door
-// `apps/api/src/modules/field-worker/attribution-code-access.ts` — the repo-wide reach fence
+// `apps/api/src/modules/field-worker/attribution-code-access.ts` and Story 13.1b's one reviewed job
+// (`apps/jobs/src/scheduler/field-worker-code-sms.ts`) — the repo-wide reach fence
 // (apps/api/tests/unit/attribution-code-reach-fence.test.ts, AT8 v2 ii) fails any other importer, and ⛔ other domain module
 // imports `../attribution-code/`. The export list is PINNED (tests/attribution-code/exports.test.ts); `assertTxBoundScope`
 // (tx-guard.ts) is module-private and ⛔ re-exported here.

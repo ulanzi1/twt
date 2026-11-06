@@ -84,6 +84,8 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
     try {
       await admin.query('BEGIN');
       await admin.query("SET LOCAL session_replication_role = 'replica'");
+      // Story 13.1b — first: replica mode disables the FK, so a worker's `due` row would outlive them for a later sweep to find.
+      await admin.query('DELETE FROM field_worker_code_sms_sends WHERE pariwar_id = $1', [PARIWAR]);
       await admin.query('DELETE FROM field_workers WHERE pariwar_id = $1 AND field_worker_id = ANY($2)', [PARIWAR, created]);
       await admin.query('DELETE FROM events_log WHERE pariwar_id = $1 AND stream_id = ANY($2)', [PARIWAR, created]);
       await admin.query('COMMIT');

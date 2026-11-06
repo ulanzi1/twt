@@ -141,8 +141,8 @@ describe('DR6 — the matching rule, row by row (AC6)', () => {
     }
   });
 
-  it('row 4 — `sn` / `pm` / (Story 5.11b) `as` rows have ⛔ purpose and are SMS; a `ce` row is an SMS only as `family_sms` or (Story 6.37c) `ladder_sms`', async () => {
-    for (const kind of ['sn', 'pm', 'as']) {
+  it('row 4 — `sn` / `pm` / (Story 5.11b) `as` / (Story 13.1b) `fw` rows have ⛔ purpose and are SMS; a `ce` row is an SMS only as `family_sms` or (Story 6.37c) `ladder_sms`', async () => {
+    for (const kind of ['sn', 'pm', 'as', 'fw']) {
       expect(await decideSmsReport(claimed({ crqid: `${kind}${HEX}` }), T0, lookupOf(send({ purpose: null })))).toMatchObject({ matchState: 'matched' });
     }
     expect(await decideSmsReport(claimed({ crqid: `ce${HEX}` }), T0, lookupOf(send()))).toMatchObject({ matchState: 'matched' });
@@ -285,7 +285,7 @@ describe('the silence check (code review round 2)', () => {
     const pool = fakePool((text) => {
       if (text.includes('rolbypassrls')) return { rows: [{ ok: true }] };
       if (text.includes("match_state = 'otp'")) throw Object.assign(new Error('boom'), { code: '57014' });
-      return { rows: [{ cr: '3', ce: '0', sn: '0', pm: '0', as: '0' }] };
+      return { rows: [{ cr: '3', ce: '0', sn: '0', pm: '0', as: '0', fw: '0' }] };
     });
     const alarms: string[] = [];
     const lines: string[] = [];

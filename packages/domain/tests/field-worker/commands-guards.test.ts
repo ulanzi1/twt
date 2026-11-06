@@ -74,6 +74,7 @@ function classify(text: string): string {
   if (t.startsWith('SELECT max(event_version)')) return 'HEAD';
   if (/^insert into "events_log"/i.test(t)) return 'APPEND';
   if (/^insert into "field_workers"/i.test(t)) return 'INSERT ROW';
+  if (t.startsWith('INSERT INTO field_worker_code_sms_sends')) return 'ENQUEUE';
   if (/^update "field_workers"/i.test(t)) return 'UPDATE';
   if (t.startsWith('SET LOCAL app.field_worker_state_writer')) return t.includes("'on'") ? 'GUARD ON' : 'GUARD OFF';
   return `OTHER: ${t.slice(0, 40)}`;
@@ -138,18 +139,20 @@ const approver = { ...staff, authorization: approveAt('Patna'), approvedByDispla
 
 describe('I13 — the row lock comes before any events_log read or append (RP4 shape)', () => {
   const ORDER = ['SAVEPOINT', 'LOCK', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE'];
+  /** Story 13.1b (AD1) — `activated` alone records the code SMS, on the caller's client, AFTER the savepoint. The other four are `ORDER`: the proof they enqueue nothing. */
+  const ACTIVATED_ORDER = [...ORDER, 'ENQUEUE'];
 
   // The last column: QE6's COMPUTED trigger — asserted on the appended payload (review R3-16: a typo'd or dropped `:<reason>` was green).
   it.each([
-    ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, approver, 'field_worker.kyc_complete'],
-    ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, approver, 'field_worker.activate'],
-    ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { reasonCode: 'under_review' }, 'field_worker.suspend:under_review'],
-    ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, {}, 'field_worker.reactivate'],
-    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') }, 'field_worker.post'],
-  ])('%s: SAVEPOINT → LOCK → HEAD → APPEND → UPDATE, and the command’s computed trigger', async (_label, command, row, extra, trigger) => {
+    ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, approver, 'field_worker.kyc_complete', ORDER],
+    ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, approver, 'field_worker.activate', ACTIVATED_ORDER],
+    ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { reasonCode: 'under_review' }, 'field_worker.suspend:under_review', ORDER],
+    ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, {}, 'field_worker.reactivate', ORDER],
+    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') }, 'field_worker.post', ORDER],
+  ])('%s: SAVEPOINT → LOCK → HEAD → APPEND → UPDATE, and the command’s computed trigger', async (_label, command, row, extra, trigger, order) => {
     const { client, calls, payloads } = stub(row);
     await (command() as (c: pg.PoolClient, i: unknown) => Promise<unknown>)(client, { ...staff, ...extra });
-    expect(calls).toEqual(ORDER);
+    expect(calls).toEqual(order);
     expect(JSON.parse(String(payloads[0]))).toMatchObject({ trigger });
   });
 

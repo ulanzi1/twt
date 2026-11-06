@@ -301,3 +301,5 @@ export * from './attribution-code-allocation-flags-rls.js';
 // Story 13.1 (0200) — field_workers tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`, ⛔ DELETE — a worker row
 // is never deleted, I10). The field_workers_state_write_guard trigger is ORTHOGONAL.
 export * from './field-workers-rls.js';
+// Story 13.1b (0202) — field_worker_code_sms_sends tenant-isolation policies (select / insert only, ⛔ `FOR ALL`: `twt_app` cannot move a row).
+export * from './field-worker-code-sms-sends-rls.js';

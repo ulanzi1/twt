@@ -602,8 +602,8 @@ describe('createSmsAppClient — local refusals, ⛔ request (6.37 AC4; MG4, MG8
     },
   );
 
-  it('6.37b DR3 / DR11 — every kind in the grammar is sent, an OTP `ot…` and (Story 5.11b) an alert SMS `as…` included', async () => {
-    for (const kind of ['cr', 'ce', 'sn', 'pm', 'as', 'ot']) {
+  it('6.37b DR3 / DR11 — every kind in the grammar is sent, an OTP `ot…`, (Story 5.11b) an alert SMS `as…` and (Story 13.1b) a worker’s code SMS `fw…` included', async () => {
+    for (const kind of ['cr', 'ce', 'sn', 'pm', 'as', 'fw', 'ot']) {
       const fetchImpl = answering(200, { type: 'success', message: 'abc' });
       const correlationId = `${kind}${CRQID.slice(2)}`;
       await createSmsAppClient(config, fetchImpl).messaging().send({ ...message, correlationId });

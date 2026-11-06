@@ -125,6 +125,11 @@ import {
 import { buildContributionProviderResolver, resolveChannelSecret, resolveSmsDltConfig } from './scheduler/contribution-providers.js';
 import { createAlertSmsSender } from './scheduler/alert-sms-send.js';
 import {
+  DEFAULT_FIELD_WORKER_CODE_SMS_CRON,
+  FIELD_WORKER_CODE_SMS_TZ,
+  registerFieldWorkerCodeSmsCron,
+} from './scheduler/field-worker-code-sms.js';
+import {
   createAnnouncementPoster,
   createAnnouncementPostTrigger,
   enqueueAnnouncementCycle,
@@ -181,6 +186,7 @@ const VACUUM_TZ = 'Asia/Kolkata';
 const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT_CERT_REFRESH_CRON;
 // Story 12.2 (QE7 (A)) — the 5-minute partner-module activation sweep.
 const MODULE_ACTIVATION_CRON = process.env['MODULE_ACTIVATION_CRON'] ?? DEFAULT_MODULE_ACTIVATION_CRON;
+const FIELD_WORKER_CODE_SMS_CRON = process.env['FIELD_WORKER_CODE_SMS_CRON'] ?? DEFAULT_FIELD_WORKER_CODE_SMS_CRON;
 // Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
 const RENEWAL_LIFECYCLE_CRON =
   process.env['MEMBER_RENEWAL_LIFECYCLE_CRON'] ?? DEFAULT_RENEWAL_LIFECYCLE_CRON;
@@ -276,6 +282,11 @@ async function main(): Promise<void> {
       `[jobs] MODULE_ACTIVATION_CRON must be a 5-field cron expression (got "${MODULE_ACTIVATION_CRON}")`,
     );
   }
+  if (!/^(\S+\s+){4}\S+$/.test(FIELD_WORKER_CODE_SMS_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] FIELD_WORKER_CODE_SMS_CRON must be a 5-field cron expression (got "${FIELD_WORKER_CODE_SMS_CRON}")`,
+    );
+  }
   if (!/^(\S+\s+){4}\S+$/.test(RENEWAL_LIFECYCLE_CRON.trim())) {
     throw new RangeError(
       `[jobs] MEMBER_RENEWAL_LIFECYCLE_CRON must be a 5-field cron expression (got "${RENEWAL_LIFECYCLE_CRON}")`,
@@ -343,6 +354,9 @@ async function main(): Promise<void> {
   // its audit intent / compensating line commits on another ([[project_jobs_pool_two_connection_starvation]]); max 3 leaves
   // the scan headroom. ⛔ The shared max-2 pool above.
   const { pool: moduleActivationPool } = createDb(connectionString, { max: 3, logger: false });
+  // Story 13.1b (AD2, AD5) — the field-worker code SMS sweep's OWN pool, the same reasoning: the claim, each scope transaction and
+  // the audit lines all run here, sequentially, and ⛔ connection is held across the decrypt or the gateway call.
+  const { pool: fieldWorkerCodeSmsPool } = createDb(connectionString, { max: 3, logger: false });
 
   // ── Data-export KMS deps (Story 3.11) — the FIRST apps/jobs crypto wiring ──────
   // Resolve the Argon2id pepper (fake-KMS mode derives the KEK from it; live mode ignores it) via the
@@ -397,6 +411,7 @@ async function main(): Promise<void> {
     await pool.end().catch((err: unknown) => logError('pool-end', err));
     await waWebhookPool.end().catch((err: unknown) => logError('wa-webhook-pool-end', err));
     await moduleActivationPool.end().catch((err: unknown) => logError('module-activation-pool-end', err));
+    await fieldWorkerCodeSmsPool.end().catch((err: unknown) => logError('field-worker-code-sms-pool-end', err));
     console.info('[jobs] shutdown complete');
     process.exit(process.exitCode ?? 0);
   }
@@ -695,6 +710,20 @@ async function main(): Promise<void> {
           readsWithSendKey: contributionProviders.smsPreflightReadsWithSendKey,
         }
       : undefined;
+    // ⭐ Story 13.1b (AD2) — HERE, not beside the module-activation cron: its SMS deps are composed as the alert seam's, and neither
+    // `contributionProviders` nor `smsPreflight` exists before this point. Refuses, with ONE `rls_bound_role` alarm, under a login
+    // that cannot read across Pariwars (roster Row 26; Row 49 (f) is the login's grants). Every minute: each `due` text at most once.
+    await registerFieldWorkerCodeSmsCron(
+      boss,
+      {
+        pool: fieldWorkerCodeSmsPool,
+        encryption: jobsEncryption,
+        smsAppClient: contributionProviders.smsAppClient,
+        resolveConfig: resolveSmsDltConfig,
+        ...(smsPreflight !== undefined ? { smsPreflight } : {}),
+      },
+      { cron: FIELD_WORKER_CODE_SMS_CRON, tz: FIELD_WORKER_CODE_SMS_TZ },
+    );
     // ⭐ Story 5.11b (FS19) — built ABOVE the contribution deps (it needs only `contributionProviders`): the alert SMS seam reads
     // the SAME memo (fail open — G15).
     const contributionNotifyDeps = {
@@ -949,6 +978,7 @@ async function main(): Promise<void> {
     await pool.end().catch(() => undefined);
     await waWebhookPool.end().catch(() => undefined);
     await moduleActivationPool.end().catch(() => undefined);
+    await fieldWorkerCodeSmsPool.end().catch(() => undefined);
     throw err;
   }
 

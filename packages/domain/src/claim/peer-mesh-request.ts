@@ -700,8 +700,9 @@ export class PeerRequestLocaleMissingError extends Error {
 }
 
 /**
- * The Pariwar's default language (`pariwar_passport.locale_default`, NOT NULL) — for the senders' per-Pariwar CONFIG checks only
- * (📌 Story 6.35 LS8: the old body of `resolvePeerRequestLocale`). A recipient's language is `resolvePeerRequestLocale`'s.
+ * The Pariwar's default language (`pariwar_passport.locale_default`, NOT NULL) — for the senders' per-Pariwar CONFIG checks
+ * (📌 Story 6.35 LS8: the old body of `resolvePeerRequestLocale`), and, Story 13.1b (AD10), as the LANGUAGE of a field worker's code
+ * text, because nothing records a worker's own. A member recipient's language is `resolvePeerRequestLocale`'s.
  * @throws PeerRequestLocaleMissingError  the Pariwar has ⛔ passport — a data gap (the jobs child HOLDS); any other throw is a
  *   failed read (the jobs child retries)
  */

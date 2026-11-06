@@ -6,7 +6,7 @@
 // the jobs correlator's, the projection (DR2) the api handler's. Every function takes its clock as an argument (`now`)
 // so a test controls DR6's schedule and DR12's windows.
 //
-// ⚠ I2 — the send tables (four claim tables + Story 5.11b's `alert_sms_sends`) are READ here (one per-kind SELECT, and the
+// ⚠ I2 — the send tables (four claim tables + Story 5.11b's `alert_sms_sends` + Story 13.1b's `field_worker_code_sms_sends`) are READ here (one per-kind SELECT, and the
 // silence counts), ⛔ ever written.
 
 import { and, eq, inArray } from 'drizzle-orm';
@@ -202,7 +202,7 @@ export interface SmsSendRowFacts {
   readonly providerMessageId: string | null;
   /**
    * `purpose` of a correction (`cr`) or certificate (`ce`) row — both tables hold staff rows beside their SMS rows; null for
-   * suspicion notices, pings and alert SMS sends (all of their rows are SMS). ⚠ `ce` read its real purpose since code review round 2 (it was
+   * suspicion notices, pings, alert SMS sends and field-worker code sends (all of their rows are SMS). ⚠ `ce` read its real purpose since code review round 2 (it was
    * `NULL::text`, so a report naming a certificate STAFF row reached DR6 row 7 instead of row 4).
    */
   readonly purpose: string | null;
@@ -215,6 +215,8 @@ const LOOKUP: Record<SmsSendRowKind, string> = {
   pm: `SELECT pariwar_id, send_outcome AS outcome, provider_message_id, NULL::text AS purpose FROM claim_peer_mesh_pings WHERE ping_id = $1`,
   // Story 5.11b (FS22) — the alert SMS send record (0184).
   as: `SELECT pariwar_id, outcome, provider_message_id, NULL::text AS purpose FROM alert_sms_sends WHERE send_id = $1`,
+  // Story 13.1b (AD11) — the field-worker code SMS send record (0202).
+  fw: `SELECT pariwar_id, outcome, provider_message_id, NULL::text AS purpose FROM field_worker_code_sms_sends WHERE send_id = $1`,
 };
 
 /**
@@ -222,7 +224,7 @@ const LOOKUP: Record<SmsSendRowKind, string> = {
  *
  * DELIBERATE (code review round 2): a CROSS-TENANT read with ⛔ Pariwar scope — the report names a send, and the send row is
  * where its Pariwar is learned. It needs a role that bypasses RLS (jobs' service pool today — F21). Under an RLS-bound role
- * (roster Row 26's leading option: `SET LOCAL ROLE twt_app`) the five send tables return ⛔ row and this returns null
+ * (roster Row 26's leading option: `SET LOCAL ROLE twt_app`) the six send tables return ⛔ row and this returns null
  * EXACTLY as for a missing send — every report would retry 72 h and settle `unmatched:no_row` with ⛔ error. The jobs
  * correlator therefore checks {@link canReadAcrossPariwars} first and refuses to run. Re-examine when Row 26 closes.
  */
@@ -316,7 +318,7 @@ export const SMS_SILENCE_WINDOW = { olderThanHours: 48, newerThanDays: 7 } as co
  * `claim_correction_reminders` counts only its SMS purposes (`family_sms`, `closure_notice`, and — Story 6.37c — a
  * delivery ladder's `ladder_sms`; a `staff_push` holds an FCM id and ⛔ CRQID), `claim_certificate_reminders` its
  * `family_sms` and `ladder_sms`; pings by `send_outcome` / `send_updated_at`; Story 5.11b — the alert SMS sends (`as`, every row
- * an SMS). Reads ONLY (I2).
+ * an SMS); Story 13.1b — the field-worker code sends (`fw`, every row an SMS). Reads ONLY (I2).
  */
 export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Date }): Promise<Record<SmsSendRowKind, number>> {
   // DELIBERATE — cross-tenant, as {@link lookupSendForCorrelation}: under an RLS-bound role every count is a silent 0 (DR12's
@@ -326,7 +328,7 @@ export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Da
   const silent = (kind: SmsSendRowKind, idCol: string) => `
       NOT EXISTS (SELECT 1 FROM sms_send_deliveries d WHERE d.send_kind = '${kind}' AND d.send_row_id = s.${idCol})
       AND NOT EXISTS (SELECT 1 FROM sms_delivery_report_inbox i WHERE i.crqid = '${kind}' || replace(s.${idCol}::text, '-', ''))`;
-  const { rows } = await q.query<{ cr: string; ce: string; sn: string; pm: string; as: string }>(
+  const { rows } = await q.query<{ cr: string; ce: string; sn: string; pm: string; as: string; fw: string }>(
     `SELECT
        (SELECT count(*) FROM claim_correction_reminders s
          WHERE s.purpose IN ('family_sms', 'closure_notice', 'ladder_sms') AND s.outcome = 'accepted' AND s.updated_at ${window}
@@ -338,11 +340,13 @@ export async function countSilentSmsSends(q: Queryable, opts: { readonly now: Da
        (SELECT count(*) FROM claim_peer_mesh_pings s
          WHERE s.send_outcome = 'accepted' AND s.send_updated_at ${window} AND ${silent('pm', 'ping_id')}) AS pm,
        (SELECT count(*) FROM alert_sms_sends s
-         WHERE s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('as', 'send_id')}) AS "as"`,
+         WHERE s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('as', 'send_id')}) AS "as",
+       (SELECT count(*) FROM field_worker_code_sms_sends s
+         WHERE s.outcome = 'accepted' AND s.updated_at ${window} AND ${silent('fw', 'send_id')}) AS fw`,
     [opts.now],
   );
   const r = rows[0]!;
-  return { cr: Number(r.cr), ce: Number(r.ce), sn: Number(r.sn), pm: Number(r.pm), as: Number(r.as) };
+  return { cr: Number(r.cr), ce: Number(r.ce), sn: Number(r.sn), pm: Number(r.pm), as: Number(r.as), fw: Number(r.fw) };
 }
 
 /** DR11 — the login / step-up code reports settled in `[from, to)`, counted by result (⛔ an id). */

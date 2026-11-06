@@ -5,8 +5,9 @@
 // ⛔ HTTP; the API maps them (`apps/api/src/modules/field-worker/errors.ts`). ⛔ A message carries a worker's name or
 // mobile (I8) — only ids, states, event types, reason codes and districts.
 //
-// Only the direct-write set (`FieldWorkerStateDirectWriteError` + its code + its message prefix + its detector) is
-// surfaced at the @twt/domain TOP level — the pool / module shape. Everything else is reached through `fieldWorker`.
+// Only the direct-write set (`FieldWorkerStateDirectWriteError` + its code + its message prefix + its detector) and the two decrypt
+// failures (Story 13.1b, AD6 — the API re-exports them by name) are surfaced at the @twt/domain TOP level — the pool / module shape.
+// Everything else is reached through `fieldWorker`.
 // The pg walkers are IMPORTED from marketplace/errors.ts (⛔ a sixth copy of `findPgError` — Task 6).
 
 import type { ErrorResponseShape } from '../errors.js';
@@ -57,6 +58,29 @@ export function isFieldWorkerStateDirectWriteError(err: unknown): boolean {
     pgSqlstateOf(err) === FIELD_WORKER_STATE_DIRECT_WRITE_SQLSTATE &&
     pgMessageOf(err).startsWith(FIELD_WORKER_STATE_DIRECT_WRITE_MESSAGE_PREFIX)
   );
+}
+
+// ── The decrypt's two failures (Story 13.1a, moved by Story 13.1b — AD6) ────────────────────────────────
+
+/**
+ * Story 13.1a (`-447` item 4, `-449`) — a stored worker identity that cannot be read: an UNPARSEABLE envelope, one whose wrapped key
+ * the key service refuses (gRPC INVALID_ARGUMENT, expected for one corrupt or sealed under another Pariwar / class / KEK;
+ * ⚠ un-attested against the live service), or one whose key unwraps but which fails local authenticated decryption (AES-GCM — tampered or corrupt). Retry never
+ * helps. → 500.
+ */
+export class FieldWorkerIdentityUnreadableError extends Error {
+  public readonly name = 'FieldWorkerIdentityUnreadableError';
+  public constructor(public readonly stage: 'envelope' | 'key_rejected' | 'authentication') {
+    super(`a stored field-worker value cannot be read (${stage})`);
+  }
+}
+
+/** Story 13.1a (`-447` item 4) — the key service failed (or could not be reached) while unwrapping a worker's key. → 503. */
+export class FieldWorkerDecryptUnavailableError extends Error {
+  public readonly name = 'FieldWorkerDecryptUnavailableError';
+  public constructor() {
+    super('the key service could not decrypt a field-worker value');
+  }
 }
 
 // ── Constraint names the genesis maps BY NAME (⛔ by any 23505). Keep IN SYNC with migration 0200. ──

@@ -18,32 +18,15 @@
 //
 // ⛔ A worker's name or mobile in any message or detail (I8) — codes and ids only.
 
-import { fieldWorker, FieldWorkerStateDirectWriteError } from '@twt/domain';
+import { FieldWorkerDecryptUnavailableError, FieldWorkerIdentityUnreadableError, fieldWorker, FieldWorkerStateDirectWriteError } from '@twt/domain';
 
 import { ApiError } from '../../http-errors.js';
 import { AttributionCodeAllocationExhaustedError } from './attribution-code-access.js';
 
-/**
- * Story 13.1a (`-447` item 4, `-449`) — a stored worker identity that cannot be read: an UNPARSEABLE envelope, one whose wrapped key
- * the key service refuses (gRPC INVALID_ARGUMENT, expected for one corrupt or sealed under another Pariwar / class / KEK;
- * ⚠ un-attested against the live service), or one whose key unwraps but which fails local authenticated decryption (AES-GCM — tampered or corrupt). Retry never
- * helps. → 500.
- * Lives HERE, ⛔ in `field-worker-crypto.ts` (13.1's handler unit test mocks that module with ONE export — TR10).
- */
-export class FieldWorkerIdentityUnreadableError extends Error {
-  public readonly name = 'FieldWorkerIdentityUnreadableError';
-  public constructor(public readonly stage: 'envelope' | 'key_rejected' | 'authentication') {
-    super(`a stored field-worker value cannot be read (${stage})`);
-  }
-}
-
-/** Story 13.1a (`-447` item 4) — the key service failed (or could not be reached) while unwrapping a worker's key. → 503. */
-export class FieldWorkerDecryptUnavailableError extends Error {
-  public readonly name = 'FieldWorkerDecryptUnavailableError';
-  public constructor() {
-    super('the key service could not decrypt a field-worker value');
-  }
-}
+// Story 13.1b (AD6) — the decrypt and its two failures moved to `@twt/domain`. Re-exported BY NAME, so `instanceof`, the mapper below
+// and every test that names them as a type are unchanged. ⛔ In `field-worker-crypto.ts` (13.1's handler unit test mocks that module
+// with ONE export — TR10).
+export { FieldWorkerDecryptUnavailableError, FieldWorkerIdentityUnreadableError };
 
 /** Story 13.1a (AD8) — the 409 for a code asked of a worker who is not `active`; `current_state` rides the details (⛔ PII). */
 export function codeNotAvailableError(currentState: string): ApiError {

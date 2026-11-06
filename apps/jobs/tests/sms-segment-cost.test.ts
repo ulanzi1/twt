@@ -25,6 +25,7 @@ import { DEFAULT_LOCALE, formatCurrency, t, type Locale } from '@twt/i18n';
 import { describe, expect, it } from 'vitest';
 
 import { renderContributionSms, smsPoolLabel } from '../src/scheduler/contribution-sms-templates.js';
+import { renderFieldWorkerCodeSms } from '../src/scheduler/field-worker-code-sms-templates.js';
 import { SHEET } from './_dlt-template-sheet.js';
 
 // ⚠ The namespace is the THIRD argument's `namespace` field — an OPTIONS OBJECT, not a positional
@@ -247,3 +248,17 @@ describe('Story 5.8b — the bridge text at its LONGEST values is 3 Unicode part
   });
 });
 
+describe('Story 13.1b (AD15) — a field worker’s code text: the sheet’s figures, pinned from the real registry', () => {
+  // `000000` is on the deny-list, so no worker holds it: it is here as six digits, the code's only length.
+  it('26 (en) — 107 characters, GSM-7, ONE part', () => {
+    expect(measure(renderFieldWorkerCodeSms('en', '000000'))).toEqual({ encoding: 'GSM-7', units: 107, segments: 1 });
+  });
+
+  it('25 (hi) — 118 characters, Unicode, TWO parts (67 per part)', () => {
+    expect(measure(renderFieldWorkerCodeSms('hi', '000000'))).toEqual({ encoding: 'UCS-2', units: 118, segments: 2 });
+  });
+
+  it('the sheet states those figures', () => {
+    expect(SHEET).toMatch(/26 \(en\) is 107 characters, GSM-7, \*\*1 segment\*\*; 25 \(hi\) is 118 characters, Unicode, \*\*2 segments\*\*/);
+  });
+});

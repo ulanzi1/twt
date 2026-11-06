@@ -25,6 +25,11 @@ whose language's id is unset (`config:dlt_template_id_missing:<locale>`) and ⛔
 RECIPIENT (`-387` LS10 (b)): an unset id (or a failed pre-flight) for ONE locale makes only the neighbours whose language it is WAIT —
 ⛔ texted in the other language, ⛔ the Pariwar held; both locales unusable still holds the Pariwar. Kept as written.
 
+⭐ *Dated note, 2026-11-06 (Story 13.1b, [`-450`](../../.decision-log.md#decision-2026-11-06-450)):* **templates 25–26** (one text to a newly approved field worker, carrying their code) gate the
+**real** sends of Story 13.1b, and are gated on **`inventory-roster.md` Row 49** (`field-worker-code-sms-live`), ALL of it. ⛔ **Do not provision the ids of 25–26 until Row 49 says so.**
+Unset, every due row ends `config:dlt_template_id_missing`, the admin list reads "not delivered" and an officer reads the code to the worker on request. ⛔ It never sends later (`-450` Q-4).
+BigDev, 2026-11-06, verbatim: *"Trust will be registered. It's not yet registered."* So no Principal Entity registration exists and no template on this sheet can be submitted yet (Row 30's dated line).
+
 **Why it is started early:** DLT content-template registration has an external lead time, per template, per locale. Hindi is Unicode — a
 shorter per-segment length.
 
@@ -51,7 +56,7 @@ shorter per-segment length.
   R1; the pre-flight passes a GSM-7 text on a UNICODE template with the logged note `sms_type_unicode_for_gsm7`). Templates 8, 10 and 12
   carry the same name variables and stay Normal as before — an OPEN question (roster Row 32 (d); `deferred-work.md`). ⚠ *Dated note,
   2026-10-28 (Story 5.8b, [`-415`](../../.decision-log.md#decision-2026-10-28-415) FS15 (a)):* **template 24 (en) is Unicode too**, like 14 — its family-name values may be
-  Devanagari — so 23 AND 24 are both Unicode; (4) mark the version
+  Devanagari — so 23 AND 24 are both Unicode. *Dated note, 2026-11-06 (Story 13.1b):* template 25 (hi) is Unicode and template 26 (en) is Normal: its only variable is digits; (4) mark the version
   **default**; (5) leave MSG91's URL shortener OFF and put the app-link domain on its *"Skip URL"* list (the adapter also sends
   `short_url` "0"); (6) put MSG91's OWN template id (24 characters, ⛔ the DLT TE id) into the template's config key — ⚠ for the
   two OTP templates (15, 16) only, until row 6-37b (delivery reports) is `done`: ⛔ a claim-text id (1–14) is set before then, even
@@ -97,7 +102,7 @@ shorter per-segment length.
 - **≥ 30 % of the template fixed**, counted against every variable at its ceiling — formally a condition of the more-than-three-variables
   clause, applied here to EVERY template (the conservative reading). Every template 1–16 passes (lowest: 13–14 — 14 (en) at 34.7 %, 13 (hi) at 40.0 %; then 7–12 at 44–60 %; 1–6 and 15–16 at 87–91 % —
   re-derived 2026-10-22 with the checker's own arithmetic for Story 6.37e's two 30-letter boxes). Templates 23–24: 24 (en) at 48.3 %,
-  23 (hi) at 48.9 % (the real `checkDltTemplateShape` on Story 5.8b's words, 2026-10-27; re-run on the registry at Story 5.8b Task 7).
+  23 (hi) at 48.9 % (the real `checkDltTemplateShape` on Story 5.8b's words, 2026-10-27; re-run on the registry at Story 5.8b Task 7). Templates 25–26 (Story 13.1b, dated 2026-11-06): 94–95 %, one variable of six digits.
 - **⛔ Another type for `{member}` / `{date}`** — the claim texts' words are ratified; a type that needs a different text (a date type, a
   shorter name) is a text change and goes back through the §0 gate.
   ⚠ *Dated note, 2026-10-22 (row 6-37e, [`2026-10-22-377`](../../.decision-log.md#decision-2026-10-22-377)):* the shorter name form for an over-long name (`-359` / `-362` B —
@@ -149,6 +154,8 @@ by the alert SMS rung; provisioning `sms.dlt.template_id.<category>` still does 
 | 22 | Payment still not confirmed — pending match, escalated (`-389` FS1 (d)) | en | 5.11 | `sms.dlt.template_id.contribution.payment_not_confirmed.en` | 1 alphanumeric (pool name or letter code, ≤ 30) | TWT: we still have not been able to confirm your payment for pool ##pool##. Please check or retry in the app. |
 | 23 | Degraded-mode cycle-open bridge — a cycle opens on a declared Pariwar (`-414` Q1 A, `-415` FS1 (a)) | hi | 5.8b | `sms.dlt.template_id.contribution.cycle_open_bridge.hi` | 1 alphanumeric (pool name or letter code, ≤ 30) · 2 alphanumeric (family name — first part, ≤ 30) · 3 alphanumeric (family name — second part, ≤ 30) | TWT: आपका पूल ##pool## खुल गया है, ##member1####member2## के परिवार के सहयोग हेतु। सुविधानुसार ऐप खोलकर योगदान करें। |
 | 24 | Degraded-mode cycle-open bridge — a cycle opens on a declared Pariwar (`-414` Q1 A, `-415` FS1 (a)) | en | 5.8b | `sms.dlt.template_id.contribution.cycle_open_bridge.en` | 1 alphanumeric (pool name or letter code, ≤ 30) · 2 alphanumeric (family name — first part, ≤ 30) · 3 alphanumeric (family name — second part, ≤ 30) | TWT: your pool ##pool## is open, in support of ##member1####member2##'s family. Please open the app to contribute. |
+| 25 | A newly approved field worker's code (`-442`, `-450`) | hi | 13.1b | `sms.dlt.template_id.field_worker.code.hi` | 1 numeric (attribution code, ≤ 6) | TWT: फील्ड वर्कर के रूप में आपको स्वीकृति मिल गई है। आपका कोड ##code## है। जिन शिक्षकों को आप जोड़ें, उन्हें यह कोड दें। |
+| 26 | A newly approved field worker's code (`-442`, `-450`) | en | 13.1b | `sms.dlt.template_id.field_worker.code.en` | 1 numeric (attribution code, ≤ 6) | TWT: you are approved as a field worker. Your code is ##code##. Give this code to the teachers you introduce. |
 
 ⚠ A template registered before the wording is final must be re-registered if a word changes: the send must match the registered text
 exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30)** — below; ⭐ **5–6's too (Story 6.19d, 2026-10-03)** — below them;
@@ -157,6 +164,8 @@ exactly. ⭐ **Templates 1–4's wording is now written (Story 6.19b, 2026-09-30
 wording is the section after 15–16's. The heading above is kept as written.
 ⭐ *Dated note, 2026-10-28 (Story 5.8b):* templates **23–24** (the degraded-mode cycle-open bridge, `-415` FS1 (a)) were added after 22 —
 their wording is the section after 17–22's.
+
+⭐ *Dated note, 2026-11-06 (Story 13.1b):* templates **25–26** (a newly approved field worker's code, `-450`) were added after 24, Hindi first, as every pair since 13–14.
 
 ## The wording of templates 1–4 (Story 6.19b — the text to register)
 
@@ -335,6 +344,28 @@ proves the real `t()` renders EXACTLY the text below and that this sheet carries
 | 23 | TWT: आपका पूल {#var#} खुल गया है, {#var#}{#var#} के परिवार के सहयोग हेतु। सुविधानुसार ऐप खोलकर योगदान करें। |
 | 24 | TWT: your pool {#var#} is open, in support of {#var#}{#var#}'s family. Please open the app to contribute. |
 
+## The wording of templates 25–26 (Story 13.1b — the text to register)
+
+⛔ **Do not provision the ids of 25–26 until roster Row 49 (`field-worker-code-sms-live`) says so** — set each id only after the operator
+confirms that template's approval (`-349` decision 1's shape). A worker approved before the id is set gets ⛔ this text later: the row ends
+`error`, and the by-hand read is the recovery (`-450` Q-4).
+
+ONE text per registration, to the number on the worker's application, once a Pariwar Admin has approved them and only while they are still
+`active` at the send; ⛔ sent again on request (`-450` Q-3). A district move sends nothing; a new registration is a new worker, a new code and a
+new text. The words are BigDev's, answered 2026-11-06 (`-450` Q-2). *"TWT:"* is the only name. ⛔ No name (a mistyped number must not reveal
+one), ⛔ a link, ⛔ a helpline, ⛔ a word implying employment, pay or commission. The Hindi still needs its review, the term for "field worker"
+included (Row 49 (b)): it has no precedent in the app's Hindi. One variable, **`code`**: six digits, typed numeric. ⚠ One code in ten begins
+with `0`: whether the provider keeps it is Row 49 (e), and the device proof uses such a code (Row 49 (g)). The copy is `sms.code` in
+`packages/i18n/locales/{en,hi}/field_worker.json`; the registry is `apps/jobs/src/scheduler/field-worker-code-sms-templates.ts`, and
+`apps/jobs/tests/field-worker-code-sms-templates.test.ts` proves the real `t()` renders EXACTLY the text below and that this sheet carries it.
+In MSG91 (setup step (3)): **25 Unicode, 26 Normal**. The language is the Pariwar's default (`-450` Q-1), so an id unset for that language
+ends the row; it is ⛔ texted in the other.
+
+| # | Registered text |
+|---|---|
+| 25 | TWT: फील्ड वर्कर के रूप में आपको स्वीकृति मिल गई है। आपका कोड {#var#} है। जिन शिक्षकों को आप जोड़ें, उन्हें यह कोड दें। |
+| 26 | TWT: you are approved as a field worker. Your code is {#var#}. Give this code to the teachers you introduce. |
+
 ## The per-Pariwar helpline number (D33(b), `-269` §5)
 
 | Config key | Holds | Unset ⇒ |
@@ -418,6 +449,10 @@ is 174 characters and 23 (hi) 176 (**3 Unicode segments** each); at typical valu
 be 2 parts sent GSM-7; provisioned Unicode it is 3). ⇒ per member per bridged cycle, **≈ 2 segments, 3 at most** — and ONE declaration texts
 a whole Pariwar each cycle while it stands. ⚠ The per-segment price is ⛔ recorded (Row 40 (d); Row 43 (e)).
 
+⭐ **A field worker's code (templates 25–26, Story 13.1b — dated 2026-11-06):** ONE transactional DLT SMS per worker, ever (`-450` AD15). Rendered with a 6-digit
+code: 26 (en) is 107 characters, GSM-7, **1 segment**; 25 (hi) is 118 characters, Unicode, **2 segments** (67 per part). The Trust bears it (`-450` Q-3). PINNED from the
+real registry by its own `it` in `sms-segment-cost.test.ts`. ⚠ The per-segment price is ⛔ recorded (Row 49 (h)).
+
 ## URL whitelisting (Story 6.30, -312 AL3)
 
 ⭐ Since 1 Oct 2024 (TRAI) an SMS carrying a URL that is ⛔ not whitelisted against the sender's header is REJECTED. Only the FIXED part of
@@ -453,6 +488,7 @@ When STPL / SmartPing rejects a template or asks for different words:
 | every Hindi text | the author's, under a review row | The author re-words it; the new Hindi goes back through its review row (Rows 20, 21, 23, 28) before it is re-registered. |
 | 17–22, English and Hindi | the author's; en + hi reviewed by BigDev 2026-10-23 | A rejection goes back to the author, who re-words it to DLT's requirement; the new words go back through roster Row 40 (b) (a changed word re-opens the review) before it is re-registered. |
 | 23–24, English and Hindi | BigDev's words (the pool-open words reviewed 2026-10-23), ⛔ the Panel's — the Panel ruled that the text is sent (`-414`), ⛔ its words | A rejection goes back to BigDev, who re-words it to DLT's requirement; the new Hindi goes back through Row 43 (b) before it is re-registered. A change that drops or splits the family's name goes back through the §0 gate (`-180` Q1). |
+| 25–26, English and Hindi | BigDev's (`-450` Q-2), ⛔ the Panel's | A rejection goes back to BigDev, who re-words it to DLT's requirement; the new Hindi goes back through roster Row 49 (b) before it is re-registered. No claim flow depends on it: until an approved id is set the by-hand read stands. |
 
 In every case: record the rejection, the new words and the approval in the Record below, update the wording section above and the
 copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id only after the operator confirms the approval.
@@ -474,3 +510,4 @@ copy in `packages/i18n/locales/{en,hi}/` to the approved words, and set the id o
 | 2026-10-23 | 17–22 | ⭐ Wording, typed `{#var#}` slots (alphanumeric `pool` ≤ 30 · alphanumeric `date` ≤ 10; none on 19–20), config keys `sms.dlt.template_id.contribution.<message>.<locale>` and the MSG91 form written (Story 5.11, `2026-10-23-389` FS1 (d), FS4 (a), FS13 (a), FS16 (b); reach `2026-10-23-390` Q1 B); their cost line, rejection line and the TV6 note added. ⛔ Still not submitted. ⛔ **Do not provision the ids of 17–22 until roster Row 40 says so**; set each id only after the operator confirms that template's approval | Story 5.11 | `contribution-sms-templates.ts` |
 | 2026-10-28 | 23–24 | ⭐ Wording, typed `{#var#}` slots (alphanumeric `pool` ≤ 30 · alphanumeric `member1` / `member2` ≤ 30 each), config keys `sms.dlt.template_id.contribution.cycle_open_bridge.<locale>`, the MSG91 form, the exigency line, the fixed shares and a cost line written (Story 5.8b Task 0.4; `2026-10-28-414` Q1 A / Q2 A; `2026-10-28-415` FS1 (a), FS15 (a) — BOTH Unicode). ⛔ Not submitted — Row 43. Segment figures to be pinned from the real registry at Story 5.8b Task 7 | Story 5.8b | `contribution-sms-templates.ts` (Task 1) |
 | 2026-10-28 | 23–24 | Segment figures PINNED from the real registry (Story 5.8b Task 7): 24 (en) 174 with a Latin or a Devanagari family name, 23 (hi) 176 — 3 Unicode parts each at the longest values; 114–126 (2 parts) at typical values. The cost paragraph above says so. ⛔ Not submitted — Row 43 | Story 5.8b | `apps/jobs/tests/sms-segment-cost.test.ts` |
+| 2026-11-06 | 25–26 | ⭐ Wording, the typed slot (numeric `code` ≤ 6), config keys `sms.dlt.template_id.field_worker.code.<locale>`, the MSG91 form, the cost line (26: 107 characters, 1 part; 25: 118 characters, 2 parts) and a rejection row written (Story 13.1b; BigDev's words, `-450` Q-2). ⛔ Not submitted: BigDev, 2026-11-06, *"Trust will be registered. It's not yet registered."* | Story 13.1b | `field-worker-code-sms-templates.ts`; roster Row 49 |

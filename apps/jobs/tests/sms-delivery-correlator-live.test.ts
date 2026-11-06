@@ -30,7 +30,7 @@ const H72 = 72 * 60;
 const rid = () => randomUUID().replace(/-/g, '').slice(0, 24);
 const hex = (uuid: string) => uuid.replace(/-/g, '');
 
-type Kind = 'cr' | 'ce' | 'sn' | 'pm' | 'as';
+type Kind = 'cr' | 'ce' | 'sn' | 'pm' | 'as' | 'fw';
 const TABLE: Record<Kind, { table: string; id: string }> = {
   cr: { table: 'claim_correction_reminders', id: 'reminder_id' },
   ce: { table: 'claim_certificate_reminders', id: 'reminder_id' },
@@ -38,6 +38,8 @@ const TABLE: Record<Kind, { table: string; id: string }> = {
   pm: { table: 'claim_peer_mesh_pings', id: 'ping_id' },
   // Story 5.11b (FS22) — the alert SMS send record (0184).
   as: { table: 'alert_sms_sends', id: 'send_id' },
+  // Story 13.1b (AD11) — the field-worker code SMS send record (0202).
+  fw: { table: 'field_worker_code_sms_sends', id: 'send_id' },
 };
 
 describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlator (live DB, own-committing)', { timeout: 60_000 }, () => {
@@ -46,6 +48,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   const members: string[] = [];
   const requestIds: string[] = [];
   const sendRows: { kind: Kind; id: string }[] = [];
+  const fieldWorkerIds: string[] = [];
   /** Story 5.11b — the alerts the `as` rows hang off (deleted after their rows). */
   const alertIds: string[] = [];
 
@@ -99,6 +102,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   ): Promise<string> {
     const pariwarId = o.pariwarId ?? PARIWAR;
     if (kind === 'as') return alertSendRow(pariwarId, o);
+    if (kind === 'fw') return codeSendRow(pariwarId, o);
     let ctx = ctxs.find((c) => c.pariwarId === pariwarId && (kind !== 'sn' || c.snPurposes.length > 0));
     ctx ??= await newClaim(pariwarId);
     const outcome = o.outcome === undefined ? 'accepted' : o.outcome;
@@ -192,6 +196,41 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       [pariwarId, alertId, randomUUID(), outcome, o.detail ?? null, pmid, o.updatedAt ?? T0],
     );
     sendRows.push({ kind: 'as', id: rows[0]!.send_id });
+    return rows[0]!.send_id;
+  }
+
+  /** Story 13.1b — an `fw` row, as the sweep would leave it, over a real worker (its composite FK; 0200 admits only a genesis-shaped INSERT). */
+  async function codeSendRow(
+    pariwarId: string,
+    o: { outcome?: string | null; providerMessageId?: string | null; updatedAt?: Date; detail?: string | null },
+  ): Promise<string> {
+    const outcome = o.outcome === undefined ? 'accepted' : o.outcome;
+    const pmid = o.providerMessageId === undefined ? (outcome === 'accepted' ? rid() : null) : o.providerMessageId;
+    const worker = randomUUID();
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL app.field_worker_state_writer = 'on'");
+      await c.query(
+        `INSERT INTO field_workers (field_worker_id, pariwar_id, name_ciphertext, mobile_ciphertext, mobile_blind_index, registered_by_user_id,
+                                    registered_by_display, current_state, state_event_version, kyc_status, district, audit_id)
+         VALUES ($1, $2, 'enc:v1:n', 'enc:v1:m', $3, $4, 'Seed Admin', 'pending_kyc', 1, 'pending', 'Patna', $5)`,
+        [worker, pariwarId, `idx-${worker}`, randomUUID(), randomUUID()],
+      );
+      await c.query('COMMIT');
+    } catch (err) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw err;
+    } finally {
+      c.release();
+    }
+    fieldWorkerIds.push(worker);
+    const { rows } = await pool.query<{ send_id: string }>(
+      `INSERT INTO field_worker_code_sms_sends (pariwar_id, field_worker_id, activated_audit_id, outcome, detail, provider_message_id, claim_token, locale, attempt_count, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'claim', 'hi', 1, $7) RETURNING send_id`,
+      [pariwarId, worker, randomUUID(), outcome, o.detail ?? null, pmid, o.updatedAt ?? T0],
+    );
+    sendRows.push({ kind: 'fw', id: rows[0]!.send_id });
     return rows[0]!.send_id;
   }
 
@@ -296,6 +335,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
   // leg's alarms. Clear them between tests (patch-diff review #10) — the legs below can then assert their alarms EXACTLY again.
   afterEach(async () => {
     if (alertIds.length > 0) await pool.query('DELETE FROM alert_sms_sends WHERE alert_id = ANY($1)', [alertIds]);
+    if (fieldWorkerIds.length > 0) await pool.query('DELETE FROM field_worker_code_sms_sends WHERE field_worker_id = ANY($1)', [fieldWorkerIds]);
   });
 
   afterAll(async () => {
@@ -308,6 +348,18 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       if (alertIds.length > 0) {
         await pool.query('DELETE FROM alert_sms_sends WHERE alert_id = ANY($1)', [alertIds]);
         await pool.query('DELETE FROM alerts WHERE alert_id = ANY($1)', [alertIds]);
+      }
+      if (fieldWorkerIds.length > 0) {
+        const c = await pool.connect();
+        try {
+          await c.query('BEGIN');
+          await c.query("SET LOCAL session_replication_role = 'replica'");
+          await c.query('DELETE FROM field_worker_code_sms_sends WHERE field_worker_id = ANY($1)', [fieldWorkerIds]);
+          await c.query('DELETE FROM field_workers WHERE field_worker_id = ANY($1)', [fieldWorkerIds]);
+          await c.query('COMMIT');
+        } finally {
+          c.release();
+        }
       }
       await cleanupClaims(pool, claims, members);
     } finally {
@@ -442,6 +494,55 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       expect(await inboxRow(r)).toMatchObject({ match_state: 'other_attempt', match_detail: 'as' });
       expect(alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.second_request_for_one_send:as (count 1)']);
       expect(await deliveries('as', id)).toEqual([]);
+    });
+
+    it('⭐ Story 13.1b (AC9) — an `fw` report: `accepted` ⇒ matched (send_kind `fw`, under its own Pariwar only); `attempting` ⇒ retried (row 6), then matched once settled', async () => {
+      const accepted = await sendRow('fw');
+      const ra = await inbox({ crqid: `fw${hex(accepted)}`, requestId: (await pmidOf('fw', accepted))!, status: '1' });
+      const inFlight = await sendRow('fw', { outcome: 'attempting' });
+      const req = rid();
+      const rf = await inbox({ crqid: `fw${hex(inFlight)}`, requestId: req, status: '1' });
+      await tick(at(1));
+      expect(await inboxRow(ra)).toMatchObject({ match_state: 'matched', match_detail: 'delivered' });
+      expect(await scopedDeliveries('fw', accepted, PARIWAR)).toEqual([expect.objectContaining({ send_kind: 'fw', delivery_state: 'delivered' })]);
+      expect(await scopedDeliveries('fw', accepted, OTHER_PARIWAR)).toEqual([]);
+      expect(await inboxRow(rf)).toMatchObject({ match_state: 'pending' });
+      await pool.query(`UPDATE field_worker_code_sms_sends SET outcome = 'accepted', provider_message_id = $2 WHERE send_id = $1`, [inFlight, req]);
+      await tick(at(2));
+      expect(await inboxRow(rf)).toMatchObject({ match_state: 'matched', match_detail: 'delivered' });
+    });
+
+    it('⭐ Story 13.1b (AC9, DR6) — `undelivered` is absorbing on an `fw` row: a later `delivered` report does not overwrite it', async () => {
+      const id = await sendRow('fw');
+      const req = (await pmidOf('fw', id))!;
+      await inbox({ crqid: `fw${hex(id)}`, requestId: req, status: '2' });
+      await tick(at(1));
+      expect(await deliveries('fw', id)).toEqual([expect.objectContaining({ delivery_state: 'undelivered' })]);
+      await inbox({ crqid: `fw${hex(id)}`, requestId: req, status: '1' });
+      await tick(at(2));
+      expect(await deliveries('fw', id)).toEqual([expect.objectContaining({ delivery_state: 'undelivered' })]);
+    });
+
+    it('Story 13.1b (AC9) — a report for an unknown `fw` row behaves as every other kind: retried, then unmatched:no_row at 72 h', async () => {
+      const r = await inbox({ crqid: `fw${hex(randomUUID())}`, status: '1' });
+      await tick(at(1));
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'pending' });
+      const { alarms } = await tick(at(H72 + 1));
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'unmatched', match_detail: 'no_row' });
+      expect(alarms).toContainEqual(expect.stringContaining('sms_report.unmatched:fw'));
+    });
+
+    it.each([
+      ['due', 'rate_limited:http_429'],
+      ['error', 'exhausted:outcome_unknown:api_unavailable:timeout'],
+      ['error', 'exhausted:outcome_unknown'],
+    ])('⭐ Story 13.1b (AC9, G18) — a report for an `fw` row that is %s (%s) ⇒ other_attempt:fw + the second-request alarm; ⛔ delivery', async (outcome, detail) => {
+      const id = await sendRow('fw', { outcome, detail });
+      const r = await inbox({ crqid: `fw${hex(id)}`, status: '1' });
+      const { alarms } = await tick(at(1));
+      expect(await inboxRow(r)).toMatchObject({ match_state: 'other_attempt', match_detail: 'fw' });
+      expect(alarms).toEqual(['[jobs] sms-delivery-correlator: sms_report.second_request_for_one_send:fw (count 1)']);
+      expect(await deliveries('fw', id)).toEqual([]);
     });
 
     it('(8) ⭐ each kind MATCHED — the cr reminder, the cr closure notice, ce, sn, pm — readable under its OWN Pariwar only', async () => {
@@ -719,6 +820,9 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         // Review C3-P17: the widened write regex below names `alert_sms_sends`, but no `as` row was ever correlated here — it matched nothing.
         { kind: 'as' as const, id: await sendRow('as') },
         { kind: 'as' as const, id: await sendRow('as', { outcome: 'attempting' }) },
+        // Story 13.1b — correlated here, or the widened regex below matches nothing (the C3-P17 lesson).
+        { kind: 'fw' as const, id: await sendRow('fw') },
+        { kind: 'fw' as const, id: await sendRow('fw', { outcome: 'attempting' }) },
       ];
       const snapshot = async () => {
         const out: string[] = [];
@@ -742,7 +846,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
         if ('delivered_at' in row) expect(row.delivered_at).toBeNull();
       }
       const writes = rec.statements.filter((s) =>
-        /\b(UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+(claim_(correction_reminders|certificate_reminders|suspicion_notices|peer_mesh_pings)|alert_sms_sends)\b/i.test(s),
+        /\b(UPDATE|INSERT\s+INTO|DELETE\s+FROM)\s+(claim_(correction_reminders|certificate_reminders|suspicion_notices|peer_mesh_pings)|alert_sms_sends|field_worker_code_sms_sends)\b/i.test(s),
       );
       expect(writes).toEqual([]);
       expect(rec.statements.some((s) => /FROM claim_correction_reminders WHERE reminder_id/.test(s))).toBe(true); // it DID read
@@ -762,6 +866,7 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       silent.push({ kind: 'sn', id: await sendRow('sn', { updatedAt: hoursAgo(49) }) });
       silent.push({ kind: 'pm', id: await sendRow('pm', { updatedAt: hoursAgo(49) }) });
       silent.push({ kind: 'as', id: await sendRow('as', { updatedAt: hoursAgo(49) }) }); // Story 5.11b (FS22)
+      silent.push({ kind: 'fw', id: await sendRow('fw', { updatedAt: hoursAgo(49) }) }); // Story 13.1b (AC9)
       // ⛔ counted:
       const reported = await sendRow('cr', { updatedAt: hoursAgo(50) });
       await inbox({ crqid: `cr${hex(reported)}`, status: '0' }); // ANY report carrying its CRQID (even an unmatched one)
@@ -775,6 +880,12 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       await sendRow('as', { outcome: 'error', updatedAt: hoursAgo(49) }); // not accepted
       const asReported = await sendRow('as', { updatedAt: hoursAgo(50) });
       await inbox({ crqid: `as${hex(asReported)}`, status: '0' }); // a report carrying its CRQID (even an unmatched one)
+      // Story 13.1b — the `fw` subquery's OWN exclusions.
+      await sendRow('fw', { updatedAt: hoursAgo(47) });
+      await sendRow('fw', { updatedAt: hoursAgo(24 * 8) });
+      await sendRow('fw', { outcome: 'error', updatedAt: hoursAgo(49) });
+      const fwReported = await sendRow('fw', { updatedAt: hoursAgo(50) });
+      await inbox({ crqid: `fw${hex(fwReported)}`, status: '0' });
       const asDelivered = await sendRow('as', { updatedAt: hoursAgo(60) });
       await smsDelivery.upsertSmsSendDelivery(pool, {
         pariwarId: PARIWAR,
@@ -801,10 +912,10 @@ describe.skipIf(!hasDatabase)('Story 6.37b — the SMS delivery-report correlato
       const alarms: string[] = [];
       const lines: string[] = [];
       const out = await runSmsDeliverySilenceCheck({ pool, now: () => NOW, onAlarm: (m) => alarms.push(m), log: (m) => lines.push(m) });
-      expect(out.silent).toEqual({ cr: 2, ce: 1, sn: 1, pm: 1, as: 1 });
+      expect(out.silent).toEqual({ cr: 2, ce: 1, sn: 1, pm: 1, as: 1, fw: 1 });
       expect(alarms).toHaveLength(1); // EXACTLY the silence alarm — the `afterEach` leaves no stale `attempting` row to add another
-      expect(alarms[0]).toContain('sms_report.silence:6');
-      expect(alarms[0]).toContain('cr 2, ce 1, sn 1, pm 1, as 1');
+      expect(alarms[0]).toContain('sms_report.silence:7');
+      expect(alarms[0]).toContain('cr 2, ce 1, sn 1, pm 1, as 1, fw 1');
       for (const s of silent) expect(alarms[0]).not.toContain(hex(s.id));
       expect(lines).toHaveLength(1);
     });

@@ -26,6 +26,9 @@
 //       middleware (review R2).
 // ⚠ Turbo's LOCAL cache skips `@twt/api#test` when only a non-dependency workspace (apps/public, apps/admin, …) changed; GitHub CI
 // has no turbo cache and is the backstop. A new entry in ALLOWED (e.g. C4's backfill job) is a REVIEWED edit here.
+// ⭐ Story 13.1b (AD7, decision `-450`) — the FIRST such entry: `apps/jobs/src/scheduler/field-worker-code-sms.ts`, the code SMS sweep. A job has
+// no request, so it cannot use the door. Its NAMED Pariwar source is the claimed send row's `pariwar_id`, passed to `withPariwarScope`, and
+// `assertTxBoundScope` re-proves it on the connection (its live test runs that for real). It READS one worker's code; ⛔ allocate, ⛔ resolve.
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -51,6 +54,7 @@ const ALLOWED = [
   'packages/domain/src/policies/index.ts',
   'packages/domain/src/index.ts',
   DOOR,
+  'apps/jobs/src/scheduler/field-worker-code-sms.ts',
 ] as const;
 const NAMESPACE = 'attributionCode';
 /** Matched as WHOLE identifiers, or `\b<name>\b` in string / template text — so `resolveAttributionForRequest` and `attributionCodeId` do ⛔. */

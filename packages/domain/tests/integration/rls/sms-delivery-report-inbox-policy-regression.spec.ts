@@ -218,6 +218,8 @@ describe.skipIf(!hasDatabase)('sms_delivery_report_inbox — migration 0167 + RL
     ['sms_delivery_report_inbox_crqid_check', { crqid: `CR${CRQID.slice(2)}` }, { crqid: `ot${CRQID.slice(2)}` }],
     // Story 5.11b (0184) — the alert SMS kind `as`; ⛔ a kind outside the grammar.
     ['sms_delivery_report_inbox_crqid_check', { crqid: `xx${CRQID.slice(2)}` }, { crqid: `as${CRQID.slice(2)}` }],
+    // Story 13.1b (0202) — a worker's code SMS kind `fw`.
+    ['sms_delivery_report_inbox_crqid_check', { crqid: `fx${CRQID.slice(2)}` }, { crqid: `fw${CRQID.slice(2)}` }],
     ['sms_delivery_report_inbox_status_code_check', { status_code: 'x' }, { status_code: '25' }],
     ['sms_delivery_report_inbox_event_name_check', { event_name: 'a b' }, { event_name: 'On_Report' }],
     ['sms_delivery_report_inbox_failure_reason_check', { failure_reason: 'x'.repeat(201) }, { failure_reason: 'x'.repeat(200) }],

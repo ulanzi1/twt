@@ -9,8 +9,9 @@
 //
 // ── What a report may change (I1, I2) ───────────────────────────────────────────────────────────────────────────
 // ONLY `sms_send_deliveries` (DR6 row 8) and the inbox row itself. The send tables (four claim tables + Story 5.11b's
-// `alert_sms_sends`, kind `as`) are READ by one primary-key lookup and ⛔ ever written (their freezes — 0155, 0166, 0184 —
-// stay untouched). An `as` row takes the generic rows: `attempting` ⇒ row 6 (retry); `deferred` / `error` ⇒ row 7. ⛔ A predicate that decides a send, a closure,
+// `alert_sms_sends`, kind `as` + Story 13.1b's `field_worker_code_sms_sends`, kind `fw`) are READ by one primary-key lookup and ⛔ ever
+// written (their freezes — 0155, 0166, 0184, 0202 — stay untouched). An `as` row takes the generic rows: `attempting` ⇒ row 6 (retry);
+// `deferred` / `error` ⇒ row 7; so does an `fw` row, with `due` in `deferred`'s place. ⛔ A predicate that decides a send, a closure,
 // reach or letter-eligibility reads `sms_send_deliveries` in this story — the Panel-ruled reader is Story 6.37c's
 // delivery ladder (`claim-contact-ladder.ts`; the chase readers' B1 mapping, `applyConcludedLadderMapping`).
 //

@@ -28,7 +28,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1b: A Newly Approved Field Worker Is Sent Their Code by SMS - Only After the Approval Has Committed `[CONSUMER]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 

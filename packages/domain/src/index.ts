@@ -159,6 +159,8 @@ export {
   FIELD_WORKER_STATE_DIRECT_WRITE_CODE,
   FIELD_WORKER_STATE_DIRECT_WRITE_MESSAGE_PREFIX,
   isFieldWorkerStateDirectWriteError,
+  FieldWorkerDecryptUnavailableError,
+  FieldWorkerIdentityUnreadableError,
 } from './field-worker/errors.js';
 // Story 11b.13 — the per-Pariwar DRIVE TARGET typed errors. Surfaced at the top level for one
 // specific reason: `apps/api/src/middleware/error-mapping/index.ts` matches on the CLASS, and every

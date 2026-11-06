@@ -3,9 +3,10 @@
 // Every read carries an EXPLICIT `pariwar_id` predicate (RLS is ⛔ the only filter — a superuser bypasses it, 13.2 TR3;
 // `-449`: under FORCE a plain owner does not). The worker reads return a `FieldWorkerView` that OMITS the three PII columns (`name_ciphertext`,
 // `mobile_ciphertext`, `mobile_blind_index`) in the SELECT LIST — ⛔ dropped after the fetch. ⛔ No function here decrypts a
-// worker's data. Story 13.1a adds the ONLY two reads that return ciphertext — `pageFieldWorkersForPariwar` (the name) and
-// `getFieldWorkerSealedIdentity` (the name and the mobile) — for the API layer's audited decrypt-on-read (13.1a AD7, AD9); the
-// worker's own read is still Story 13.3's (C1).
+// worker's data. Story 13.1a adds two reads that return ciphertext — `pageFieldWorkersForPariwar` (the name) and
+// `getFieldWorkerSealedIdentity` (the name and the mobile) — for the API layer's audited decrypt-on-read (13.1a AD7, AD9), and Story
+// 13.1b a third, `getFieldWorkerForCodeSms` (the mobile alone), for the sweep's audited decrypt; the worker's own read is still
+// Story 13.3's (C1).
 
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
 
@@ -173,8 +174,8 @@ export async function listRecordedDistricts(db: Db, pariwarId: PariwarId, at: Da
 
 // ── Story 13.1a — the keyset page and the sealed identity (AD9, AD10; decision `-447` items 1, 3) ──────────────────────
 // ⚠ `getFieldWorker` / `listFieldWorkersForPariwar` / `FieldWorkerView` above are UNCHANGED (13.1's read.spec pins them). The
-// two reads below are the ONLY ones that return CIPHERTEXT — for the API layer's audited decrypt (13.1a AD7, AD9). The cursor
-// code is a copy of `marketplace/read.ts`'s strict decoder (the 4th copy — extraction is BigDev's to schedule, 13.1a C4).
+// two reads below return CIPHERTEXT for the API layer's audited decrypt (13.1a AD7, AD9); the only other one is
+// `getFieldWorkerForCodeSms`, the sweep's (13.1b). The cursor code is a copy of `marketplace/read.ts`'s strict decoder (the 4th copy — extraction is BigDev's to schedule, 13.1a C4).
 
 /** `pageFieldWorkersForPariwar`'s default page size (13.1a AD10). */
 export const PAGE_FIELD_WORKERS_DEFAULT_LIMIT = 20;
@@ -345,6 +346,26 @@ export async function getFieldWorkerSealedIdentity(
   if (r === undefined) return null;
   const { approvedByDisplay, nameCiphertext, mobileCiphertext, ...view } = r;
   return { view, approvedByDisplay, nameCiphertext, mobileCiphertext };
+}
+
+/** What the code SMS sweep may know of a worker before it sends (Story 13.1b, AD4): the state, and the sealed mobile. ⛔ The name. */
+export interface FieldWorkerForCodeSms {
+  readonly currentState: FieldWorkerState;
+  readonly mobileCiphertext: string;
+}
+
+/**
+ * Story 13.1b (AD4, AC7) — one worker's state and sealed mobile, for the sweep's audited decrypt. A plain read, ⛔ `FOR SHARE`: 13.1a's
+ * lock held `active` through an audit line on a second connection, which on a jobs pool is the starvation trap (AD4 accepts the seconds
+ * after it). The `pariwar_id` predicate is the ONLY Pariwar filter here: the sweep's scope sets ⛔ role (G3).
+ */
+export async function getFieldWorkerForCodeSms(db: Db, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<FieldWorkerForCodeSms | null> {
+  const rows = await db
+    .select({ currentState: fieldWorkers.currentState, mobileCiphertext: fieldWorkers.mobileCiphertext })
+    .from(fieldWorkers)
+    .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 // ── The as-of read (QE11, AC10) ────────────────────────────────────────────────────────────────────

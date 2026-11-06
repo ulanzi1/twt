@@ -35,6 +35,16 @@ export const CONTRIBUTION_CATALOG: Readonly<Record<'hi' | 'en', Readonly<Record<
   ) as Record<string, string>,
 };
 
+/** The raw `field_worker.json` catalogues (flat keys) — Story 13.1b's `sms.code` lives here. */
+export const FIELD_WORKER_CATALOG: Readonly<Record<'hi' | 'en', Readonly<Record<string, string>>>> = {
+  hi: JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../../packages/i18n/locales/hi/field_worker.json', import.meta.url)), 'utf-8'),
+  ) as Record<string, string>,
+  en: JSON.parse(
+    readFileSync(fileURLToPath(new URL('../../../packages/i18n/locales/en/field_worker.json', import.meta.url)), 'utf-8'),
+  ) as Record<string, string>,
+};
+
 /** The `{param}` names an i18n value interpolates, in order (the resolver's own token shape). */
 export function i18nParamNames(value: string): string[] {
   return [...value.matchAll(/\{(\w+)\}/g)].map((m) => m[1] as string);

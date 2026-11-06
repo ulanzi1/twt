@@ -56,15 +56,15 @@ export async function runSmsDeliverySilenceCheck(deps: SmsDeliverySilenceDeps): 
   const crossTenant = await smsDelivery.canReadAcrossPariwars(deps.pool);
   // BOTH counts before any line (code review round 2): a failed second query after the alarm would make pg-boss's retry
   // raise the same alarm twice.
-  const silent = crossTenant ? await smsDelivery.countSilentSmsSends(deps.pool, { now }) : { cr: 0, ce: 0, sn: 0, pm: 0, as: 0 };
+  const silent = crossTenant ? await smsDelivery.countSilentSmsSends(deps.pool, { now }) : { cr: 0, ce: 0, sn: 0, pm: 0, as: 0, fw: 0 };
   const staleAlertSends = crossTenant ? await smsDelivery.countStaleAlertSmsSends(deps.pool, { now }) : 0;
   const otp = await smsDelivery.countOtpDeliveryReports(deps.pool, { from: new Date(now.getTime() - DAY_MS), to: now });
-  const silentTotal = silent.cr + silent.ce + silent.sn + silent.pm + silent.as;
+  const silentTotal = silent.cr + silent.ce + silent.sn + silent.pm + silent.as + silent.fw;
   if (!crossTenant) alarm('[jobs] sms-delivery-silence: sms_report.rls_bound_role — ⛔ silence counted');
   if (silentTotal > 0) {
     alarm(
       `[jobs] sms-delivery-silence: sms_report.silence:${silentTotal} — accepted texts 48 h–7 days old with ⛔ delivery report ` +
-        `(cr ${silent.cr}, ce ${silent.ce}, sn ${silent.sn}, pm ${silent.pm}, as ${silent.as}); check MSG91's webhook (paused?), ` +
+        `(cr ${silent.cr}, ce ${silent.ce}, sn ${silent.sn}, pm ${silent.pm}, as ${silent.as}, fw ${silent.fw}); check MSG91's webhook (paused?), ` +
         `the account balance and the CRQID (roster Row 33)`,
     );
   }

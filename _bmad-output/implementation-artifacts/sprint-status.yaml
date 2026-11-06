@@ -22704,7 +22704,7 @@ development_status:
   # 2026-11-06h: Q-5 ANSWERED (v1.4); the Trust is not yet registered on DLT, so Row 49 (a) starts blocked; `-450` committed.
   # 2026-11-06i: the Panel confirm is WRITTEN, not sent; send only after Row 49 exists (Task 0.4).
   # 2026-11-06j: Tasks 0.4, 0.5 done: Row 49 appended, annotations in; the confirm can now be sent; no code yet.
-  13-1b-field-worker-code-by-sms: ready-for-dev
+  13-1b-field-worker-code-by-sms: in-progress
   13-1c-field-worker-moves-suspension-and-termination: backlog
   # ⭐ 2026-11-03 13-1d ADDED by BigDev ("Yes to all four, mint 13-1d"): the DISTRICT-ADMIN-TO-DISTRICT-ADMIN move REQUEST (a District Admin at
   # either end opens it at the worker's request; the other accepts or refuses with a reason from a fixed list; 7 days unanswered => the

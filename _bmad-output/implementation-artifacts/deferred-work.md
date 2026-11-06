@@ -4,6 +4,19 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 13-1b-field-worker-code-by-sms (create-story, 2026-11-06)
+
+Carried items C1–C7 of Story 13.1b (created, ready-for-dev — not built; AD1–AD16 are the author's, Q-1–Q-7 open with BigDev). 13.1b builds: the due row in the approval transaction, the jobs sweep (at most once, the 5.11b generic core), CRQID kind `fw`, DLT templates 25 / 26 (registered text, ⛔ submitted), and `code_sms_status` on the worker list. Each item below is HOMED, not closed.
+
+- **C1 — Story 13.1c: whether the worker's history shows the code SMS.** The rows and the audit line are kept for it; no prune job is built and `-441` did not rule on these rows; no event records a send. Dated block under 13.1c in `epics.md`. Trigger: 13.1c create-story.
+- **C2 — No story: a "not delivered" filter.** The signal shows on `WorkerList`, which the Find screen fills only once a district is chosen, so nobody can list every worker whose code did not arrive. Not built because recovery starts with the worker asking (BigDev's process). Trigger: an officer asks, or Row 49 (g)'s device pass shows it is needed.
+- **C3 — Story 14.3: the incident inventory.** Extends 13.1a C6: a new processor flow (MSG91 receives a worker's mobile and code), a new decrypt site in jobs, and `field_worker_code_sms_sends`, which holds no name, mobile or code. Whether a text to a mistyped number is a breach is Row 49 (d). Trigger: 14.3 dev.
+- **C4 — Whoever fixes the Trust's name.** Templates 25 / 26 carry "TWT:" and re-register with the others (Row 30 note 2; [[project_legal_name_pending]]). Trigger: the registered name.
+- **C5 — Story 13.5: its notice to a worker.** Its epic AC says the worker "receives notification via Story 5.1", but `dispatch()` cannot reach a worker. It needs the generic DLT path and its own send row. Dated block under 13.5 in `epics.md`. Trigger: 13.5 create-story.
+- **C6 — Story 13.1d: its notices.** Its C2 cites `decryptFieldWorkerField`, which 13.1b moves to `@twt/domain`; its audit-first shape holds, but its actor does not, since a job has none. Dated block under 13.1d in `epics.md`. Trigger: 13.1d create-story.
+- **C7 — Story 13.1c: the `skipped_not_active` line.** "Give the code by hand when they ask" would show on a worker whose by-hand read answers 409, once suspend exists. Change it with CR60's fix. Dated block under 13.1c in `epics.md`. Trigger: 13.1c create-story.
+- **Correction, not a carried item (traced 2026-11-06).** 13.1 C9 (c) in this file and in the 13.1 story say the platform has "NO sender for a non-member recipient". That is stale: `prepareDltSms` + `sendPreparedDltSms` text an explicit number. The gaps are a send row, a CRQID kind, a registry entry and a recorded language. This file's site is marked by 13.1b's Task 8.2 when it lands; the 13.1 story file is history and stays as written.
+
 ## Deferred from: code review of story 13-1a-field-worker-approval-and-code-hand-over, round 4 — the round 3 fix diff (2026-11-06)
 
 - **CR60 — for Story 13.1c: a 409 `field_worker.code_not_available` should refresh the Find list.** Find lists `active` workers; once 13.1c can suspend or terminate one, "Show code" on a row that has left that state answers this 409 and leaves the row on screen until the district changes or the page reloads. Nothing can reach it before 13.1c ships those routes. `fieldWorkerListIsStale` deliberately leaves the code out, and a Find test pins that as "a 409 for another reason": 13.1c changes both.

@@ -784,7 +784,8 @@ describe('CR6 — the digits, the live region, the focus and the names', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     pressShow(W1);
     await waitFor(() => expect(digits()).toBe('042719'));
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: hideName('Ramesh Kumar') }));
+    // In a `waitFor`: the digits commit first and the focus move is an effect after them, which a loaded machine runs later (ci:local).
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: hideName('Ramesh Kumar') })));
     act(() => {
       vi.advanceTimersByTime(CODE_VISIBLE_MS + 1000);
     });
@@ -821,7 +822,7 @@ describe('CR6 — the digits, the live region, the focus and the names', () => {
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: t('fw.detail.title') }));
     pressShow(W2);
     await waitFor(() => expect(digits()).toBe('555123'));
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: hideName('Sita Devi') }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: hideName('Sita Devi') }))); // as above
   });
 
   it('a refused read says so with role=alert and leaves the live region empty', async () => {

@@ -359,7 +359,7 @@ export async function runFieldWorkerCodeSmsTick(deps: FieldWorkerCodeSmsDeps): P
     if (!(await smsDelivery.canReadAcrossPariwars(deps.pool))) {
       alarm(
         '[jobs] field-worker-code-sms: field_worker_code_sms.rls_bound_role — the pool role cannot read across Pariwars (roster Row 26); ' +
-          '⛔ swept — a due code text stays due until it can, or until it expires at the max age (24 h); then an officer reads the code by hand',
+          '⛔ swept — a due code text stays due until it can; once it can, one older than the max age (24 h) is ended expired and an officer reads the code by hand',
       );
       return { refused: true, lapsed: 0, claimed: 0 };
     }

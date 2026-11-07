@@ -1,6 +1,8 @@
 # Trustee Panel routing note — Story 13.1c: when a field worker's work ends (a wrong ending, coming back, a returning number, going silent, death), credit while a worker is suspended, and five field-worker permissions (seven questions, all non-blocking)
 
-> ## ⏳ AWAITING PANEL RULING — DRAFTED 2026-11-07 (second draft, same day), ⛔ NOT SENT
+> ## ⏳ AWAITING PANEL RULING — SENT (reported by BigDev, 2026-11-07)
+>
+> **SENT.** BigDev told the session on 2026-11-07 that this note has been sent to the Panel (*"note sent to panel"*). ⚠ NOT recorded anywhere in the repo: the channel, the time, and whether the text sent is identical to this file (the draft as committed at `01cbba52`, unchanged since) — the file below is kept as DRAFTED.
 >
 > **Nothing is recorded here yet.** When the Panel rules, transcribe the ruling into this block **and** into `.decision-log.md` as a new
 > decision id. Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
@@ -10,7 +12,7 @@
 > for a signup waits on Question 6; the permissions go live only once Question 7 is confirmed. Nothing is live today.
 >
 > ⚠ Before sending: run the E4 commands. This note cites the author-commit `2026-11-07-453`, which exists only once Story 13.1c's Task 0.3
-> is committed — if E4 finds it missing, do not send.
+> is committed — if E4 finds it missing, do not send. *(`-453` was committed `490510d9` before BigDev reported the note sent. E4's first command was RUN only after that report — it returns 1; the other E4 commands were last run on the second draft, before `-453` existed. Whether E4 was re-run before sending is NOT recorded.)*
 
 ---
 

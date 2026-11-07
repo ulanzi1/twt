@@ -9,8 +9,8 @@ created from `origin/main` on 2026-11-07. Every `apps/` / `packages/` claim was 
 research passes - the domain commands and stream; the API routes, RBAC and admin module; the governance trail - then the author's own reads of `state.ts`,
 the attribution door and the 13.1a / 13.1b stories). Perishable - re-check at Task 0.1. Re-locate by FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.5, 2026-11-07; validated; Tasks 0.0, 0.2-0.6 done; Q-1..Q-5 ANSWERED by BigDev: "Q1 C, Q2-Q5 A" - Task 0.2 done). The Panel note (Task 0.6) is
-DRAFTED, NOT sent. No code before Task 0.3 (the decision entry, committed ALONE). Nothing is committed: this pass wrote this file, the Panel note and the
+STATUS: ready-for-dev (v1.6, 2026-11-07; validated; Tasks 0.0, 0.2-0.6 done; Q-1..Q-5 ANSWERED by BigDev: "Q1 C, Q2-Q5 A" - Task 0.2 done). The Panel note (Task 0.6) is
+SENT (reported by BigDev, 2026-11-07), NOT ruled. No code before Task 0.3 (the decision entry, committed ALONE). Nothing is committed: this pass wrote this file, the Panel note and the
 record edits listed in Task 0.0 - committed `01cbba52`; decision `-453` `490510d9`; Row 50 and row `13-1e` `0b329bb4`; Task 0.5's annotations in the commit that records v1.5. Next: Task 0.1, then code.
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
@@ -119,7 +119,7 @@ Quotes are word-for-word; typographic dashes are written as ASCII hyphens; "..."
 1 an ending made wrongly - undo and appeal; 2 a worker who comes back - same record and code or a fresh start; 3 a returning number shown
 (1-3 = Q-2 A's 13.1 C4, split); 4 a worker who goes silent; 5 a worker who dies (4-5 added by BigDev); 6 credit during a suspension (Q-3 A);
 7 the key confirm (Q-5 A). The terminate route's go-live waits on 1-5 (Row 50 (b)). DRAFTED 2026-11-07: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md`,
-NOT sent. It is non-blocking: it gates go-live (Row 50), never the build.**
+SENT 2026-11-07 (reported by BigDev; channel and time not recorded), NOT ruled. It is non-blocking: it gates go-live (Row 50), never the build.**
 
 ## Names at a glance
 
@@ -498,7 +498,7 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
   - [x] 0.6 ONE Panel note DRAFTED 2026-11-07 from the template: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md`
     - seven questions (Q-2's C4 split in three: a wrong ending's undo / appeal, a worker who comes back, a returning number; going silent and death,
     added by BigDev; credit during a suspension: Q-3; the five keys: Q-5), each with section 0 answered, the deciding fact, honest
-    costs on every option, evidence last. NOT sent; it is called sent only when BigDev says it went ([[feedback_shown_to_panel_means_sent]]); re-run its
+    costs on every option, evidence last. SENT - BigDev, 2026-11-07: "note sent to panel"; it is called sent only when BigDev says it went ([[feedback_shown_to_panel_means_sent]]); re-run its
     E4 commands before sending (the decision id `-453` it cites exists only after Task 0.3). Non-blocking. A ruling is its own decision entry plus dated
     lines at Row 50 and Row 48 (i).
 
@@ -649,3 +649,4 @@ _(none yet)_
 | 2026-11-07 | 1.3 | The Panel note REWRITTEN before sending (BigDev: "yes, rewrite question 1 and add silent and death", after challenging Question 1 with an employee who resigns and rejoins a year later). Question 1 had mixed a person who left and comes back (not an appeal) with a person ended wrongly: now 1 (a wrong ending: undo a slip, appeal a dispute), 2 (coming back: old record and code, or new), 3 (a returning number shown); added 4 (a worker who goes silent: a 90-day warning, officer decides, never automatic) and 5 (death: its own reason, on the officer's word); 6 credit during a suspension; 7 the keys. Seven questions; suggestions 1 A, 2 A, 3 A, 4 A, 5 A, 6 C, 7 A - the author's, not BigDev's. Row 50 (b) now waits on Questions 1-5, each build-needing answer with a ROW. Still DRAFTED, NOT sent. No AC or Task of the build changed: the route ships the three neutral reasons; "died" / "could not be reached" are built only if the Panel chooses them. |
 | 2026-11-07 | 1.4 | Governance committed on the story branch: Task 0.0 records `01cbba52`; Task 0.3 decision `2026-11-07-453` ALONE `490510d9` (BigDev: "commit records and write decision 453") - it supersedes FOUR author / BigDev texts, not two: writing it found `-442`'s "terminate waits on Story 13.6's C4" and Story 13.6's INHERITED C4 lines besides 13.1 C5 and the 13.1c epic line (AD2 and Task 0.5 updated); Task 0.4 (BigDev: "go ahead with task 0.4") `0b329bb4` - roster Row 50 `field-worker-lifecycle-live` (a)-(e), (c) MET; dated lines at Row 48 (f), (i); row `13-1e-field-worker-eight-year-removal: backlog` and its `epics.md` stub; ledger `2026-11-07g`. Task 0.6's note: DRAFTED, NOT sent. Next: Task 0.5, then Task 0.1's re-check and code. |
 | 2026-11-07 | 1.5 | Task 0.5 (BigDev: "go ahead with task 0.5"): `epics.md` annotated, nothing edited - under Story 13.1c, the answers, the supersession of its "does NOT ship" line by `-453` (with the other three texts), Row 50 (b) in its place, and the seven-question note (DRAFTED, NOT sent); under Story 13.6's INHERITED C4, its two "before 13.1c's terminate route ships" lines superseded, C4 put to the Panel from 13.1c, 13.6 RECORDS the answer. Task 0.5's own text said to write that the route is "BUILT": written as DECIDED, not built, because no code exists. |
+| 2026-11-07 | 1.6 | BigDev: "note sent to panel" - the seven-question Panel note is SENT (as committed at `01cbba52`; channel, time and whether the sent text is identical are NOT recorded). Recorded in the note's AWAITING block (the rest kept as drafted), dated lines at Row 50 and Row 48 (i), `deferred-work.md` C2, the `epics.md` 13.6 annotation (a dated pointer, nothing edited) and ledger `2026-11-07i`. No ruling; every Row 50 leg but (c) stays open. |

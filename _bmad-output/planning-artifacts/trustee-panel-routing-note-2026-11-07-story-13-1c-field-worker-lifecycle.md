@@ -1,18 +1,20 @@
 # Trustee Panel routing note — Story 13.1c: when a field worker's work ends (a wrong ending, coming back, a returning number, going silent, death), credit while a worker is suspended, and five field-worker permissions (seven questions, all non-blocking)
 
-> ## ⏳ AWAITING PANEL RULING — SENT (reported by BigDev, 2026-11-07)
+> ## ✅ PANEL RULED — recorded as `2026-11-07-454`
 >
-> **SENT.** BigDev told the session on 2026-11-07 that this note has been sent to the Panel (*"note sent to panel"*). ⚠ NOT recorded anywhere in the repo: the channel, the time, and whether the text sent is identical to this file (the draft as committed at `01cbba52`, unchanged since) — the file below is kept as DRAFTED.
+> **Relayed by BigDev in session, 2026-11-07, verbatim:** *"by DR and KB / Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A"*. **Ratifying trustees:** DR + KB.
 >
-> **Nothing is recorded here yet.** When the Panel rules, transcribe the ruling into this block **and** into `.decision-log.md` as a new
-> decision id. Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> | Question | Ruling | Our suggestion? |
+> |---|---|---|
+> | 1 — an ending made wrongly | **A** — the Pariwar Admin undoes a mistaken ending (same code; both acts in the history); a disputed one may be appealed to the Pariwar Admin, or to the Trustee Panel if a Pariwar Admin ended the worker | yes |
+> | 2 — a worker who comes back | **B** — a new registration and a new code, linked to the old record | ⭐ **no** (we suggested A) |
+> | 3 — a returning number | **A** — shown to the registering officer, as information only | yes |
+> | 4 — a worker who goes silent | **A** — a warning to the District Admin after a set time with no new teacher; ended only after the officer has tried to reach them | yes |
+> | 5 — a worker who dies | **A** — its own reason, "died", on the officer's word, with the date of death | yes |
+> | 6 — credit to a suspended worker | **C** — under review: held, credited if cleared; at the worker's own request: not credited | yes |
+> | 7 — the five permissions | **A** — confirmed as built | yes |
 >
-> **Every question is NON-BLOCKING.** Story 13.1c is built on the defaults described below. What waits for the Panel is going live
-> (roster Row 50): ending a worker reaches no real worker before Questions 1–5 are answered; the first story that credits a field worker
-> for a signup waits on Question 6; the permissions go live only once Question 7 is confirmed. Nothing is live today.
->
-> ⚠ Before sending: run the E4 commands. This note cites the author-commit `2026-11-07-453`, which exists only once Story 13.1c's Task 0.3
-> is committed — if E4 finds it missing, do not send. *(`-453` was committed `490510d9` before BigDev reported the note sent. E4's first command was RUN only after that report — it returns 1; the other E4 commands were last run on the second draft, before `-453` existed. Whether E4 was re-run before sending is NOT recorded.)*
+> ⚠ **Not ruled** (see `-454`): the period in Question 4 (the option said "we suggest 90 days"; the ruling named no period); a suspension reason "could not be reached" (in our reading, not in option A); credit for the time a wrongly-ended worker was ended (our reading under Question 6, not in option C); money already earned. The note was SENT as committed at `01cbba52` (reported by BigDev, 2026-11-07; channel and time not recorded). **Everything below is kept UNEDITED as the questions as put.**
 
 ---
 

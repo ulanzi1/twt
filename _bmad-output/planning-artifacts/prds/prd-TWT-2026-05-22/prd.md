@@ -1172,6 +1172,8 @@ Commission earned only on **all three** of: KYC complete + ₹110 paid + first v
 
 Field worker can be deactivated; existing attributions preserved; new attributions on deactivated code rejected.
 
+> ⚠ **ANNOTATION 2026-11-07 (Story `13-1c`, decision `2026-11-07-454`, Trustee-ratified) — ⭐ Annotated, ⛔ not rewritten.** For a field worker SUSPENDED `under_review`, a new signup on their code is HELD, not rejected, and credited to them if they are cleared (reactivated) — the Panel's Q6 C. If a suspension is a "deactivation", that narrows this requirement for that one case; for a suspension at the worker's own request and for an ENDED worker, the sentence above stands. The credit recorder (Stories 13.8 / 13.5) builds the held credit.
+
 #### FR-86: Anti-fraud throttling on attribution code `[v1-S]`
 
 Code usage > X/day or > Y unique devices → flag for trustee review. X, Y thresholds set by trustee.

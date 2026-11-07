@@ -26,7 +26,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1c: A Pariwar Admin Moves a Field Worker Directly; a Field Worker Is Suspended, Reactivated or Terminated - and Everything That Has Happened to Their Record Can Be Read `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -504,7 +504,7 @@ only in this worktree, grep `docs/legal` by ABSOLUTE path ([[feedback_worktree_s
 `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[project_prepush_hook_inherits_5432]]) on a FRESH container; hand-format,
 never `prettier --write` ([[project_prettier_not_enforced]]); first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
 
-- [ ] **Task 0 - Preflight and governance (AC: 12)** - runs FIRST; writes no code.
+- [x] **Task 0 - Preflight and governance (AC: 12)** - runs FIRST; writes no code.
   - [x] 0.0 (`01cbba52`) Commit this story file and the create-story record edits (`epics.md` note under Story 13.1c, `deferred-work.md` lines, `sprint-status.yaml`
     row + ledger `2026-11-07d`) as ONE `records(13.1c)` commit on the story branch, when BigDev asks.
   - [x] 0.1 `git fetch origin`; `git merge-base --is-ancestor bb4d8620 HEAD`; `git diff --name-only bb4d8620..origin/main -- packages apps scripts docs/launch-gate-inventory`.
@@ -591,8 +591,8 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
 
 - [x] **Task 7 - Gate** - `ci:local` on a FRESH container through the push ([[project_known_livedb_test_failures]], #18 needs a fresh DB).
 
-- [ ] **Task 8 - Browser pass (AC: 10)**
-  - [ ] 8.1 In the dev Mac's Chrome: move a worker, suspend, reactivate, end an active one (left voluntarily), a pending one (registered in error) and
+- [x] **Task 8 - Browser pass (AC: 10)**
+  - [x] 8.1 In the dev Mac's Chrome: move a worker, suspend, reactivate, end an active one (left voluntarily), a pending one (registered in error) and
     one with "Died" (see the date relabel "Date of death"; choose "Stopped working" first and see its line), read a history, and see a District Admin of
     another district refused. Record what ran and what did not.
 
@@ -734,10 +734,27 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1c`, 2026-11-07, in the 
   a 5000 ms timeout under load (collection 2224 s; turbo then cancelled admin / api / jobs). It passes 3/3 alone; the unit job
   re-run alone (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`, same tree) was 37/37 tasks green. The oversubscription
   class ([[project_ci_local_concurrency_oversubscription]]). The push's own `ci:local` is still to run.
-- **Task 8 - browser pass: NOT YET RUN.** The Mac's Chrome loaded the `127.0.0.1` probe at the start of the session; when the pass
-  began, the only connected browser was a Windows one (`isLocal: false`), and the probe (still served, `curl` fetches it) showed an
-  error page. Waiting on BigDev to reconnect the Mac's Chrome ([[project_agent_chrome_cannot_reach_localhost]]). The launcher, the
-  helper and Vite are prepared (scratchpad; nothing in the tree).
+- **Task 8 - browser pass: RAN 2026-11-07** in the dev Mac's Chrome ("Devs MacBook Air", macOS) once BigDev reconnected it ("chrome
+  connected"; earlier in the session only a Windows browser was connected and the probe failed). Against `f311243b`: a throwaway
+  launcher (API :3000 on a fresh `:5481`, four workers registered and three approved through the real routes; three officers by real
+  passkey flows), admin Vite :3001, a cookie helper (loopback only). Observed: as the Pariwar Admin on Find, Patna / Active - an active
+  worker offers Move / Suspend / End; Suspend's reason select took focus, Confirm disabled until "Under review" was chosen; the panel
+  turned Suspended with Move / Reactivate / End and the network showed the suspend POST and a list refresh, NO second identity read;
+  Move offered only Gaya / Nalanda (Patna excluded) and the reasons "At the worker's request" / "Reassigned by the Trust"; moved to
+  Gaya, still Suspended; "Show history" read the log only on the click: Registered, Identity check accepted, Approved, Suspended
+  (Reason: Under review), Moved (From Patna to Gaya), each with the time in India and "by Meera Pariwar-Admin, Pariwar Admin". As the
+  PATNA District Admin: Gaya's list 403 with the no-access line; the moved worker gone from Patna. As the GAYA District Admin:
+  Reactivate (no reason; Confirm focused; Enter) -> Active, one POST; Move -> 403 and "Only a Pariwar Admin can move a worker
+  directly.", the worker stayed in Gaya. As the Pariwar Admin: End's confirm showed the finality line and the four reasons; "Stopped
+  working" showed the try-to-reach line; "Died" relabelled the date "Date of death" and "Left" restored "Last day"; a future date of
+  death answered the ended_on line (422), today ended Gopal Yadav (Died), the panel said Ended with no actions; his history read
+  "Reason: Died | Date of death: 2026-11-07"; Sita Devi ended "Left"; Mohan Lal on "Waiting for approval" offered Move / End and ended
+  "Registered by mistake"; "Ended" listed all three. Server side: the rows, each event's own key and role (the reactivate
+  `district_admin`), one audit line per act plus the 422's intent and twin; the refused move wrote nothing; the API log (129 lines)
+  holds no worker name or mobile. ⚠ After a usage limit stopped the `find` tool, the selects of the three endings were set by
+  JavaScript (the native value setter + a `change` event) and Confirm by `.click()` - synthetic events on the real page, not
+  physical clicks; the earlier acts used real clicks. Not exercised in the browser: a 5xx retry (RTL only). Everything torn down;
+  nothing of the pass is in the tree.
 - **Variances / choices to review:** (1) the log's `limit` is CLAMPED to 100 by a `preprocess` (AC8) while the OpenAPI still declares
   `maximum: 100` (the forced-pagination guard reads a bound); (2) the `ended_on` bounds are judged by the command inside `mutate`,
   so a 422 `ended_on_invalid` writes the intent and its `_rolled_back` twin (TR2's case), asserted as such - every refusal the
@@ -782,4 +799,5 @@ Records: this story file; `_bmad-output/implementation-artifacts/{deferred-work.
 | 2026-11-07 | 1.7 | The Panel RULED (BigDev relayed: "by DR and KB / Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A") - decision `2026-11-07-454` committed ALONE `98cebb74` (Trustee-ratified). Q2 B was NOT our suggestion: a returning worker gets a new code, linked to the old record. Row 50 (a) and (d) MET; (b)'s answers recorded, its rows OPEN (an undo and appeal record, the link, the shown-number line, the silence warning, the reason "died" - BigDev's scheduling); Row 48 (i): 13.1c's contribution discharged. 13.6's C4 RECORDED. Not ruled: Q4's period, a "could not be reached" reason, credit for a wrongly-ended worker's gap, money already earned. PRD FR-85 annotated (the under-review hold). No AC of this story changed yet: the build still ships the three neutral reasons; whether "died" (and the rest) joins THIS story is the open scheduling question. |
 | 2026-11-07 | 1.8 | BigDev: "yes, apply the split" - decision `2026-11-07-455` (author-commit, alone `608f9faf`) amends `-453` AD1 / AD2 / AD11. **This story gains the reason `died`** (`-454` Q5 A): on the officer's word, `ended_on` = the date of death; TWO hand-authored migrations (`0203` ADD VALUE alone; `0204` the reason-subset CHECK by `::text` - TR12); AD2, AD8 ("Died", "Date of death"), AD11, I5, AC6 (g), Tasks 2.0 / 3.1 / 5.2, Project Structure. **Not here:** the undo, appeal record, link and shown number - row `13-1f` (C2), whose undo + appeal gate this route's go-live (Row 50 (f), new); the silence warning - 13.8 (C5, new; its period not ruled); the held credit - 13.8 / 13.5 (C3). Row 50 (b) MET. |
 | 2026-11-07 | 1.9 | Validated a second time (`bmad-create-story validate 13.1c`, at `2852318f`; `origin/main` still `bb4d8620`, no `packages/` / `apps/` change; `0203` / `0204` free on every branch; BigDev: "all" - 13 items applied). **`died` goes LAST in `FIELD_WORKER_REASON_CODES`** (`ADD VALUE` appends; `field-workers-policy-regression.spec.ts:67` pins the enum order) - G5, AD11, Task 2.0. **AC10 names the FOUR reasons**, the "Date of death" relabel and the `-454` Q4 A line. **Policy meaning** rewritten to the Panel's ruled sentence (`-454` Q6 C, Q1 A, Q2 B), with "this story builds none of it; `acceptsNewAttributions` is not edited". **Q4 A binds `inactive` here:** End's confirm shows "End a worker for this only after you have tried to reach them." (AD2, AD8, Task 5.2) - a line, no attestation. Rulings table gains `-454` Q1 / Q4 / Q5 / Q6 / Q7 and `-455`; the opening paragraph, section 0 edges 2-4, cost (a), AD2, AD5, AD12 and Project Structure read as RULED (gate Row 50 (f); keys confirmed; undo / appeal in `13-1f`). Header NUMBERS (next decision `-456`, ledger `2026-11-07l`, Row 50 appended). `schema-trigger.spec.ts` gains `died`-as-suspension refused (AC6 (g)); AC6 (g)'s RED proof is a development-time mutation; AD10 (c)'s ground narrowed (the text tells a worker their own code); Task 0.1 renumbers on collision; Task 8.1 ends one "Died"; C2 carries three facts to `13-1f` (the mobile index on undo, the ender's role, the log's event type) - also in `deferred-work.md`. No AC of the build changed beyond AC6 (g) and AC10; nothing went to the Panel. |
+| 2026-11-07 | 1.11 | Task 8.1 ran in the Mac's Chrome after BigDev reconnected it (move, suspend, reactivate by the current district's District Admin, the three endings incl. "Died", the history, a District Admin of another district refused, Move refused to a District Admin). All tasks done; Status -> `review`; row -> `review`. |
 | 2026-11-07 | 1.10 | `bmad-dev-story 13.1c`: Tasks 0.1-7 done (six code commits `7575ce9f`..`f311243b`, nothing pushed); Task 8 (the browser pass) NOT YET RUN - the Mac's Chrome dropped and only a Windows browser was connected. `ci:local` at `f311243b` on a fresh container: 37/38, `test (unit)` failed on an untouched spec's load timeout (`db.test.ts`); the unit job re-run alone 37/37. Status stays `in-progress` until Task 8. `deferred-work.md`: CB9 / 13.1b C7 / C1 and 13.1a CR60 BUILT on the branch (close on landing); CR33's re-trigger confirmed. |

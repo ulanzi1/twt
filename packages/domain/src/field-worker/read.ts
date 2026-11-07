@@ -6,7 +6,7 @@
 // worker's data. Story 13.1a adds two reads that return ciphertext — `pageFieldWorkersForPariwar` (the name) and
 // `getFieldWorkerSealedIdentity` (the name and the mobile) — for the API layer's audited decrypt-on-read (13.1a AD7, AD9), and Story
 // 13.1b a third, `getFieldWorkerForCodeSms` (the mobile alone), for the sweep's audited decrypt; the worker's own read is still
-// Story 13.3's (C1).
+// Story 13.3's (C1). Story 13.1c adds the worker's LOG read (`listFieldWorkerEvents`) — the event stream, which holds no personal data.
 
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
 
@@ -17,6 +17,7 @@ import { findListedWorkplaceDistricts } from '../marketplace/scope-options.js';
 import { clampLimit } from '../pagination.js';
 import { eventsLog } from '../schema/events_log.js';
 import { fieldWorkers, type FieldWorkerState } from '../schema/field_workers.js';
+import { users } from '../schema/users.js';
 import { pageWorkplaceDistricts } from '../member/workplace.js';
 import { FieldWorkerCaptureNotFoundError, FieldWorkerCursorInvalidError, FieldWorkerDistrictUnknownError } from './errors.js';
 import { foldFieldWorkerProjection, type FieldWorkerProjection } from './state.js';
@@ -363,6 +364,10 @@ export interface FieldWorkerForCodeSms {
  * landing between this read and the gateway call does not stop the text. (2) The Pariwar predicate is explicit and nothing else bounds it.
  * Re-examine (1) when Story 13.1c ships a suspend route, because until then no worker can leave `active` in that window; re-examine (2) if
  * the sweep's scope ever sets a role.
+ * ⭐ RE-EXAMINED 2026-11-07 by Story 13.1c (AD10 (c)), which ships suspend AND terminate: (1) is RE-ACCEPTED, unchanged (13.1b AD4). A
+ * suspension or an ending in the seconds between this read and the gateway call can still let the text go; the text only tells the worker
+ * their own code, and what a signup on that code earns while the worker is not `active` is the credit recorder's under `-454` Q6 C (held
+ * for `under_review`), not the text's — for an ended worker, nothing. The sweep is ⛔ touched.
  */
 export async function getFieldWorkerForCodeSms(db: Db, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<FieldWorkerForCodeSms | null> {
   const rows = await db
@@ -371,6 +376,113 @@ export async function getFieldWorkerForCodeSms(db: Db, pariwarId: PariwarId, fie
     .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
     .limit(1);
   return rows[0] ?? null;
+}
+
+// ── The worker's log (Story 13.1c AD7; `-441` "Keep the full log of field worker") ─────────────────────
+
+/** `listFieldWorkerEvents`'s default page size. */
+export const LIST_FIELD_WORKER_EVENTS_DEFAULT_LIMIT = 50;
+/** `listFieldWorkerEvents`'s hard cap (a worker has seven event types; real streams are short). */
+export const LIST_FIELD_WORKER_EVENTS_MAX_LIMIT = 100;
+
+/**
+ * One event of a worker's stream, as the log shows it (AD7). Every field an event does not carry is `null`. ⛔ A name, a mobile or a
+ * code — the payloads hold none (13.1 QE4). `actorDisplayName` is the officer's CURRENT `users.display_name`, read at READ time (a
+ * variance from 6.11 R5's snapshot, so no staff name enters the append-only log); NULL or blank ⇒ `null`, ⛔ an email fallback.
+ * `role`, `permissionKey`, `grant` and `targetDistrict` come from the payload's authorization snapshot (every event carries one since
+ * 13.1a AD3 / 13.1c AD3; a stream written before them exists only in test databases).
+ */
+export interface FieldWorkerLogEntry {
+  readonly eventVersion: number;
+  readonly eventType: string;
+  /** `events_log.occurred_at` (the transaction START) as an ISO-8601 instant. Order by `eventVersion`, ⛔ by this (TR4). */
+  readonly occurredAt: string;
+  readonly actorUserId: string | null;
+  readonly actorDisplayName: string | null;
+  readonly role: string | null;
+  readonly permissionKey: string | null;
+  readonly grant: { readonly dimension: string; readonly value: string | null } | null;
+  readonly targetDistrict: string | null;
+  readonly reasonCode: string | null;
+  readonly fromDistrict: string | null;
+  readonly toDistrict: string | null;
+  readonly endedOn: string | null;
+}
+
+/** One page of the log, and the `after` that reads the next one (`null` when this page is the last). */
+export interface FieldWorkerLogPage {
+  readonly items: readonly FieldWorkerLogEntry[];
+  readonly nextAfter: number | null;
+}
+
+/** `value` if it is a string, else `null` — the payload is JSON read back; a field an event lacks is `null`. */
+function str(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+/**
+ * Story 13.1c (AD7) — a page of one worker's WHOLE event stream, in `event_version` order: keyset on `event_version > afterVersion`
+ * (default 0), `clampLimit`-ed (default 50, cap 100). `null` iff no `field_workers` row exists for (pariwar, id) — the existence check
+ * of `getFieldWorkerStateAt`. The log FOLLOWS the worker: a worker moved A → B shows the events from A too (`-441`'s "full log"). Runs on
+ * the caller's (hook) transaction; it writes nothing, decrypts nothing, and needs no audit line (AD7). The officer's name is a LEFT JOIN
+ * to `users` (readable under `twt_app` — `users_global_access`, 0005).
+ * @throws RangeError  `afterVersion` is not a non-negative integer, or `limit` is not an integer (⛔ statement sent).
+ */
+export async function listFieldWorkerEvents(
+  db: Db,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+  opts: { afterVersion?: number; limit?: number } = {},
+): Promise<FieldWorkerLogPage | null> {
+  const after = opts.afterVersion ?? 0;
+  if (!Number.isSafeInteger(after) || after < 0) throw new RangeError('afterVersion must be a non-negative integer');
+  const limit = clampLimit(opts.limit, { default: LIST_FIELD_WORKER_EVENTS_DEFAULT_LIMIT, cap: LIST_FIELD_WORKER_EVENTS_MAX_LIMIT });
+
+  const exists = await db
+    .select({ one: sql<number>`1` })
+    .from(fieldWorkers)
+    .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
+    .limit(1);
+  if (exists.length === 0) return null;
+
+  const rows = await db
+    .select({
+      eventVersion: eventsLog.eventVersion,
+      eventType: eventsLog.eventType,
+      occurredAt: eventsLog.occurredAt,
+      actorId: eventsLog.actorId,
+      payload: eventsLog.payload,
+      displayName: users.displayName,
+    })
+    .from(eventsLog)
+    .leftJoin(users, eq(users.id, eventsLog.actorId))
+    .where(and(eq(eventsLog.pariwarId, pariwarId), eq(eventsLog.streamId, fieldWorkerId), sql`${eventsLog.eventVersion} > ${after}`))
+    .orderBy(asc(eventsLog.eventVersion))
+    .limit(limit + 1);
+
+  const items = rows.slice(0, limit).map((r): FieldWorkerLogEntry => {
+    const p = (typeof r.payload === 'object' && r.payload !== null ? r.payload : {}) as Record<string, unknown>;
+    const a = (typeof p['authorization'] === 'object' && p['authorization'] !== null ? p['authorization'] : null) as Record<string, unknown> | null;
+    const g = (a !== null && typeof a['grant'] === 'object' && a['grant'] !== null ? a['grant'] : null) as Record<string, unknown> | null;
+    const t = (a !== null && typeof a['target'] === 'object' && a['target'] !== null ? a['target'] : null) as Record<string, unknown> | null;
+    const name = r.displayName ?? null;
+    return {
+      eventVersion: Number(r.eventVersion),
+      eventType: r.eventType,
+      occurredAt: new Date(r.occurredAt).toISOString(),
+      actorUserId: r.actorId ?? null,
+      actorDisplayName: name !== null && name.trim() !== '' ? name : null,
+      role: a === null ? null : str(a['role']),
+      permissionKey: a === null ? null : str(a['permission_key']),
+      grant: g === null || typeof g['dimension'] !== 'string' ? null : { dimension: g['dimension'], value: str(g['value']) },
+      targetDistrict: t === null ? null : str(t['value']),
+      reasonCode: str(p['reason_code']),
+      fromDistrict: str(p['from_district']),
+      toDistrict: str(p['to_district']),
+      endedOn: str(p['ended_on']),
+    };
+  });
+  return { items, nextAfter: rows.length > limit ? items[items.length - 1]!.eventVersion : null };
 }
 
 // ── The as-of read (QE11, AC10) ────────────────────────────────────────────────────────────────────

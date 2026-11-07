@@ -11,21 +11,26 @@
 // ⚠ The caller's transaction must be READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001.
 //
 // ── Guard order, in EVERY command (QE5; pinned by a test) ─────────────────────────────────────────
-//   (0)  actor + actorId (QE7) — and, on `register`, `kyc_completed`, `activated` and `post`, the authorization's PROVENANCE
-//        (a VERIFIED result of the RBAC check), its Pariwar and actor (= the command's), its dimension (`district`) — and its
-//        KEY on `register` (`field_worker.register`, + the target) and on `kyc_completed` / `activated` (`field_worker.approve`,
-//        Story 13.1a AD3) — and, on `activated`, a non-blank `approvedByDisplay` (13.1a, decision `-447` item 2) — pure,
-//        BEFORE the lock ⇒ `FieldWorkerProjectorInputError`;
+//   (0)  actor + actorId (QE7) — and, on EVERY command but none (Story 13.1c AD3 added `suspend`, `reactivate`, `terminate`), the
+//        authorization's PROVENANCE (a VERIFIED result of the RBAC check), its Pariwar and actor (= the command's), its dimension
+//        (`district`) — and its KEY: `field_worker.register` (+ the target) on `register`; `field_worker.approve` on
+//        `kyc_completed` / `activated` (Story 13.1a AD3); one of `FIELD_WORKER_MOVE_PERMISSION_KEYS` on `post` (13.1c AD4 —
+//        `field_worker.register` is REFUSED); `field_worker.suspend` / `.reactivate` / `.terminate` on their acts (13.1c AD3) —
+//        and, on `activated`, a non-blank `approvedByDisplay` (13.1a, decision `-447` item 2), and on `post` a non-blank
+//        `expectedFromDistrict` (13.1c AD4) — pure, BEFORE the lock ⇒ `FieldWorkerProjectorInputError`;
 //   (0b) `terminate`: `ended_on` present, `YYYY-MM-DD`, a real date — pure ⇒ `FieldWorkerEndedOnInvalidError`;
 //   under the lock:
 //   (1)  the row exists in this Pariwar ⇒ `FieldWorkerGenesisMissingError`;
 //   (2)  the (state, event) pair is legal ⇒ `FieldWorkerIllegalTransitionError` (anything out of `terminated`, and a
 //        repeated `kyc_completed` on an `active` worker);
 //   (3)  the KYC guard ⇒ `FieldWorkerKycAlreadyCompletedError` / `FieldWorkerKycNotCompletedError`;
+//   (3a) `post`: the LOCKED district is the one the admin saw (`expectedFromDistrict` — 13.1 D7, 13.1c AD4) ⇒
+//        `FieldWorkerAuthorizationStaleError`;
 //   (3b) `post`: the district differs ⇒ `FieldWorkerDistrictUnchangedError`;
 //   (3c) `post`: the authorization targets `toDistrict` or the LOCKED district ⇒ `FieldWorkerAuthorizationStaleError`;
-//   (3d) `kyc_completed` / `activated`: the authorization targets the LOCKED district (13.1a AD3 — the gate read the district
-//        BEFORE the lock; a concurrent move would write a false target into an append-only log) ⇒ `FieldWorkerAuthorizationStaleError`;
+//   (3d) `kyc_completed` / `activated` / `suspended` / `reactivated` / `terminated`: the authorization targets the LOCKED district
+//        (13.1a AD3, 13.1c AD3 — the gate read the district BEFORE the lock; a concurrent move would write a false target into an
+//        append-only log) ⇒ `FieldWorkerAuthorizationStaleError`;
 //   (4)  the reason (suspend, terminate, post) ⇒ `FieldWorkerReasonInvalidError`;
 //   (5)  `terminate`: the IST bounds — not after today, not before the registration day ⇒ `FieldWorkerEndedOnInvalidError`.
 
@@ -73,6 +78,17 @@ export const FIELD_WORKER_REGISTER_PERMISSION_KEY = 'field_worker.register';
 
 /** The ONE permission key whose verified result `recordFieldWorkerKycCompleted` and `activateFieldWorker` accept (Story 13.1a AD3, AD6). */
 export const FIELD_WORKER_APPROVE_PERMISSION_KEY = 'field_worker.approve';
+
+/**
+ * The keys whose verified result `postFieldWorker` accepts (Story 13.1c AD4; 13.1 C5 / C10) — a LIST, so Story 13.1d APPENDS
+ * its request keys in the commit that mints them. `field_worker.register` is ⛔ here, and refused by a test.
+ */
+export const FIELD_WORKER_MOVE_PERMISSION_KEYS = ['field_worker.move'] as const;
+
+/** The ONE permission key each lifecycle act accepts (Story 13.1c AD3, AD5 — one key per act, 13.1 QE10). */
+export const FIELD_WORKER_SUSPEND_PERMISSION_KEY = 'field_worker.suspend';
+export const FIELD_WORKER_REACTIVATE_PERMISSION_KEY = 'field_worker.reactivate';
+export const FIELD_WORKER_TERMINATE_PERMISSION_KEY = 'field_worker.terminate';
 
 /** What every command takes. Human only: `actor` ∈ {operator, trustee}, `actorId` non-null (QE7). */
 export interface FieldWorkerCommandBase {
@@ -146,7 +162,7 @@ function verifiedSnapshot(
   eventType: FieldWorkerEventType,
   authorization: unknown,
   i: { pariwarId: string; actorId: string },
-  expected: { permissionKey?: string; targetValue?: string },
+  expected: { permissionKey?: string; permissionKeys?: readonly string[]; targetValue?: string },
 ): FieldWorkerAuthorizationSnapshot {
   if (!isVerifiedAuthorization(authorization)) {
     throw new FieldWorkerProjectorInputError(
@@ -161,6 +177,9 @@ function verifiedSnapshot(
     throw new FieldWorkerProjectorInputError(`[${eventType}] the authorization was not checked at the district dimension (QE18)`);
   }
   if (expected.permissionKey !== undefined && a.permissionKey !== expected.permissionKey) {
+    throw new FieldWorkerProjectorInputError(`[${eventType}] the authorization is for '${a.permissionKey}', not this act (QE18)`);
+  }
+  if (expected.permissionKeys !== undefined && !expected.permissionKeys.includes(a.permissionKey)) {
     throw new FieldWorkerProjectorInputError(`[${eventType}] the authorization is for '${a.permissionKey}', not this act (QE18)`);
   }
   if (expected.targetValue !== undefined && a.target.value !== expected.targetValue) {
@@ -283,8 +302,8 @@ export interface ApproveFieldWorkerCommandInput extends FieldWorkerCommandBase {
   authorization: VerifiedAuthorization;
 }
 
-/** (3d) — the approval's target must be the LOCKED row's district (13.1a AD3). */
-function assertApprovalTarget(i: FieldWorkerCommandBase, authorization: FieldWorkerAuthorizationSnapshot, row: FieldWorkerLockedRow): void {
+/** (3d) — the act's target must be the LOCKED row's district (13.1a AD3 for the approval; 13.1c AD3 for suspend, reactivate, terminate). */
+function assertLockedTarget(i: FieldWorkerCommandBase, authorization: FieldWorkerAuthorizationSnapshot, row: FieldWorkerLockedRow): void {
   if (authorization.target.value !== row.district) throw new FieldWorkerAuthorizationStaleError(i.fieldWorkerId, authorization.target.value);
 }
 
@@ -307,7 +326,7 @@ export async function recordFieldWorkerKycCompleted(
     'field_worker.kyc_completed',
     (row) => {
       if (row.kycStatus === 'completed') throw new FieldWorkerKycAlreadyCompletedError(i.fieldWorkerId);
-      assertApprovalTarget(i, authorization, row);
+      assertLockedTarget(i, authorization, row);
       return { authorization };
     },
     'field_worker.kyc_complete',
@@ -341,7 +360,7 @@ export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFiel
     'field_worker.activated',
     (row) => {
       if (row.kycStatus !== 'completed') throw new FieldWorkerKycNotCompletedError(i.fieldWorkerId);
-      assertApprovalTarget(i, authorization, row);
+      assertLockedTarget(i, authorization, row);
       return { authorization };
     },
     'field_worker.activate',
@@ -351,38 +370,81 @@ export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFiel
   return result;
 }
 
-/** `active → suspended`, with a suspension reason (QE12). @throws FieldWorkerReasonInvalidError. */
-export async function suspendFieldWorker(
-  client: pg.PoolClient,
-  i: FieldWorkerCommandBase & { reasonCode: string },
-): Promise<FieldWorkerTransitionResult> {
+/** What a lifecycle act takes (Story 13.1c AD3): the VERIFIED result of ITS act's key the gate stored — ⛔ a recomputation. */
+export interface FieldWorkerLifecycleCommandInput extends FieldWorkerCommandBase {
+  /** `request.authorizations['field_worker.<act>']`, passed on unchanged. Its target must be the LOCKED district (3d). */
+  authorization: VerifiedAuthorization;
+}
+
+export interface SuspendFieldWorkerInput extends FieldWorkerLifecycleCommandInput {
+  /** `under_review` | `at_worker_request` (QE12's suspend list). */
+  reasonCode: string;
+}
+
+export interface TerminateFieldWorkerInput extends FieldWorkerLifecycleCommandInput {
+  /** `left_voluntarily` | `inactive` | `registered_in_error` | `died` (QE12's terminate list; `died` — `-455`). */
+  reasonCode: string;
+  /** The ACTUAL LAST DAY (QE20) — for `died`, the date of death (`-455`); `YYYY-MM-DD`, judged by the IST bounds. */
+  endedOn: string;
+}
+
+/**
+ * `active → suspended`, with a suspension reason (QE12). Carries the verified `field_worker.suspend` authorization, its target
+ * judged against the LOCKED district (Story 13.1c AD3).
+ * @throws FieldWorkerAuthorizationStaleError, FieldWorkerReasonInvalidError (+ the shared guards).
+ */
+export async function suspendFieldWorker(client: pg.PoolClient, i: SuspendFieldWorkerInput): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.suspended', i.actor, i.actorId);
+  const authorization = verifiedSnapshot('field_worker.suspended', i.authorization, i, {
+    permissionKey: FIELD_WORKER_SUSPEND_PERMISSION_KEY,
+  });
   return runLockedTransition(
     client,
     i,
     'field_worker.suspended',
-    () => ({ reason_code: assertReason('field_worker.suspended', i.reasonCode, FIELD_WORKER_SUSPEND_REASONS) }),
+    (row) => {
+      assertLockedTarget(i, authorization, row);
+      return { authorization, reason_code: assertReason('field_worker.suspended', i.reasonCode, FIELD_WORKER_SUSPEND_REASONS) };
+    },
     (extra) => `field_worker.suspend:${extra['reason_code'] as string}`,
   );
 }
 
-/** `suspended → active` — the way back (AI-10-1); the reason is cleared. */
-export async function reactivateFieldWorker(client: pg.PoolClient, i: FieldWorkerCommandBase): Promise<FieldWorkerTransitionResult> {
+/**
+ * `suspended → active` — the way back (AI-10-1); the reason is cleared. Carries the verified `field_worker.reactivate`
+ * authorization, its target judged against the LOCKED district (Story 13.1c AD3).
+ * @throws FieldWorkerAuthorizationStaleError (+ the shared guards).
+ */
+export async function reactivateFieldWorker(client: pg.PoolClient, i: FieldWorkerLifecycleCommandInput): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.reactivated', i.actor, i.actorId);
-  return runLockedTransition(client, i, 'field_worker.reactivated', () => ({}), 'field_worker.reactivate');
+  const authorization = verifiedSnapshot('field_worker.reactivated', i.authorization, i, {
+    permissionKey: FIELD_WORKER_REACTIVATE_PERMISSION_KEY,
+  });
+  return runLockedTransition(
+    client,
+    i,
+    'field_worker.reactivated',
+    (row) => {
+      assertLockedTarget(i, authorization, row);
+      return { authorization };
+    },
+    'field_worker.reactivate',
+  );
 }
 
 /**
- * `pending_kyc | active | suspended → terminated` — TERMINAL (QE5). `endedOn` is the ACTUAL LAST DAY (QE20): `YYYY-MM-DD`,
- * a real date, not after today and not before the registration day — BOTH IST days computed in SQL on the
- * transaction-start clock, compared as strings (string order = calendar order); ⛔ a JS `Date`.
- * @throws FieldWorkerEndedOnInvalidError, FieldWorkerReasonInvalidError (+ the shared guards).
+ * `pending_kyc | active | suspended → terminated` — TERMINAL (QE5; the undo of a mistaken ending is row 13-1f's, `-454` Q1 A).
+ * `endedOn` is the ACTUAL LAST DAY (QE20) — for `died`, the date of death (`-455`): `YYYY-MM-DD`, a real date, not after today and
+ * not before the registration day — BOTH IST days computed in SQL on the transaction-start clock, compared as strings (string
+ * order = calendar order); ⛔ a JS `Date`. Carries the verified `field_worker.terminate` authorization, its target judged against
+ * the LOCKED district (Story 13.1c AD3).
+ * @throws FieldWorkerEndedOnInvalidError, FieldWorkerAuthorizationStaleError, FieldWorkerReasonInvalidError (+ the shared guards).
  */
-export async function terminateFieldWorker(
-  client: pg.PoolClient,
-  i: FieldWorkerCommandBase & { reasonCode: string; endedOn: string },
-): Promise<FieldWorkerTransitionResult> {
+export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFieldWorkerInput): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.terminated', i.actor, i.actorId);
+  const authorization = verifiedSnapshot('field_worker.terminated', i.authorization, i, {
+    permissionKey: FIELD_WORKER_TERMINATE_PERMISSION_KEY,
+  });
   // (0b) — pure, BEFORE any SQL: a malformed date is never sent to Postgres.
   if (typeof i.endedOn !== 'string' || !isCalendarDateString(i.endedOn)) {
     throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'missing_or_malformed');
@@ -392,11 +454,12 @@ export async function terminateFieldWorker(
     i,
     'field_worker.terminated',
     async (row) => {
+      assertLockedTarget(i, authorization, row);
       const reasonCode = assertReason('field_worker.terminated', i.reasonCode, FIELD_WORKER_TERMINATE_REASONS);
       const today = await istToday(client);
       if (i.endedOn > today) throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'in_future');
       if (i.endedOn < row.registeredOn) throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'before_registration');
-      return { reason_code: reasonCode, ended_on: i.endedOn };
+      return { authorization, reason_code: reasonCode, ended_on: i.endedOn };
     },
     (extra) => `field_worker.terminate:${extra['reason_code'] as string}`,
   );
@@ -407,27 +470,37 @@ export interface PostFieldWorkerInput extends FieldWorkerCommandBase {
   toDistrict: string;
   /** `at_worker_request` | `reassigned` (QE12's post list). */
   reasonCode: string;
-  /** The VERIFIED result of the move's gate — checked at `district`, targeting EITHER end of the move (AC5). */
+  /**
+   * The district the admin's screen SHOWED (13.1 D7; Story 13.1c AD4) — judged under the lock FIRST among the district guards:
+   * a worker moved meanwhile ⇒ `FieldWorkerAuthorizationStaleError`. 13.1d's acceptance passes the request's source.
+   */
+  expectedFromDistrict: string;
+  /** The VERIFIED result of the move's gate — a key of `FIELD_WORKER_MOVE_PERMISSION_KEYS`, checked at `district`, targeting EITHER end of the move (AC5). */
   authorization: VerifiedAuthorization;
 }
 
 /**
  * Move the worker to another REPORTING district — `field_worker.posted`, a same-state marker legal in `pending_kyc`,
- * `active` and `suspended` (QE17). The authorization's TARGET is judged ONLY under the lock: `toDistrict` or the locked
- * row's district (either end — whichever the gate passed); any other ⇒ `FieldWorkerAuthorizationStaleError`.
- * ⚠ Until Story 13.1c / 13.1d mint the move keys, any verified DISTRICT-dimension key is accepted (its tests use
- * `field_worker.register`); the minting story makes this REFUSE every key outside the move-key list — `field_worker.register`
- * explicitly — in the same commit (C5, C10).
+ * `active` and `suspended` (QE17). Accepts ONLY a key of `FIELD_WORKER_MOVE_PERMISSION_KEYS` (Story 13.1c AD4 — 13.1 C5 / C10:
+ * `field_worker.register` is refused). Under the lock, the locked district must be `expectedFromDistrict` (13.1 D7 — of two moves
+ * from the same screen, the second is refused, ⛔ fulfilled), and the authorization's TARGET must be `toDistrict` or the locked
+ * row's district (either end — whichever the gate passed); either failure ⇒ `FieldWorkerAuthorizationStaleError`.
  * @throws FieldWorkerDistrictUnchangedError, FieldWorkerAuthorizationStaleError, FieldWorkerReasonInvalidError (+ shared).
  */
 export async function postFieldWorker(client: pg.PoolClient, i: PostFieldWorkerInput): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.posted', i.actor, i.actorId);
-  const authorization = verifiedSnapshot('field_worker.posted', i.authorization, i, {});
+  const authorization = verifiedSnapshot('field_worker.posted', i.authorization, i, {
+    permissionKeys: FIELD_WORKER_MOVE_PERMISSION_KEYS,
+  });
+  if (typeof i.expectedFromDistrict !== 'string' || i.expectedFromDistrict.trim().length === 0) {
+    throw new FieldWorkerProjectorInputError('[field_worker.posted] the expected source district is missing (13.1 D7)');
+  }
   return runLockedTransition(
     client,
     i,
     'field_worker.posted',
     (row) => {
+      if (row.district !== i.expectedFromDistrict) throw new FieldWorkerAuthorizationStaleError(i.fieldWorkerId, i.expectedFromDistrict);
       if (i.toDistrict === row.district) throw new FieldWorkerDistrictUnchangedError(i.fieldWorkerId);
       const target = authorization.target.value;
       if (target !== i.toDistrict && target !== row.district) {

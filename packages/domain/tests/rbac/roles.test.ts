@@ -1150,3 +1150,77 @@ describe('Story 13.1a — `field_worker.approve` / `.read_code` / `.view` (`2026
     }
   });
 });
+
+describe('Story 13.1c — `field_worker.move` (`2026-11-07-453` AD5; WHO: `-443` Q1 A, confirmed `-454` Q7 A)', () => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const OTHER = '22222222-2222-2222-2222-222222222222';
+  const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
+  const da = { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' } as const;
+  const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+  const sa = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+
+  it('the holders, exactly: pariwar_admin (+ super_admin); ⛔ every other role; the bundle count stays 13', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes('field_worker.move'))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['pariwar_admin', 'super_admin']);
+    for (const role of ['district_admin', 'state_trustee', 'trustee_panel', 'helpline_operator', 'field_worker'] as const) {
+      expect((bundleForRole(role)!.permissions as readonly string[]).includes('field_worker.move'), role).toBe(false);
+    }
+    expect(defaultRoleBundles).toHaveLength(13);
+  });
+
+  it('POSITIVE for pariwar_admin at any district and super_admin; ⛔ district_admin even in its OWN district; ⛔ another Pariwar', () => {
+    for (const d of ['Patna', 'Gaya']) expect(hasPermission([pa], 'field_worker.move', at(d)), d).toBe(true);
+    expect(hasPermission([sa], 'field_worker.move', at('Gaya'))).toBe(true);
+    expect(hasPermission([da], 'field_worker.move', at('Patna'))).toBe(false);
+    expect(hasPermission([{ ...pa, pariwarId: OTHER, scopeValue: OTHER }], 'field_worker.move', at('Patna'))).toBe(false);
+  });
+});
+
+describe.each(['field_worker.suspend', 'field_worker.reactivate', 'field_worker.terminate', 'field_worker.read_log'])(
+  'Story 13.1c — `%s` (`2026-11-07-453` AD5; confirmed `-454` Q7 A)',
+  (key) => {
+    const P = '11111111-1111-1111-1111-111111111111';
+    const OTHER = '22222222-2222-2222-2222-222222222222';
+    const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
+    const BIHAR: GeoTreeResolver = {
+      contains: (a, d) => a.dimension === 'state' && a.value === 'Bihar' && (d.value === 'Patna' || d.value === 'Gaya'),
+    };
+    const da = { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' } as const;
+    const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+    const sa = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+
+    it('the holders, exactly: district_admin + pariwar_admin (+ super_admin); ⛔ every other role; the bundle count stays 13', () => {
+      const holders = defaultRoleBundles
+        .filter((b) => (b.permissions as readonly string[]).includes(key))
+        .map((b) => b.role)
+        .sort();
+      expect(holders).toEqual(['district_admin', 'pariwar_admin', 'super_admin']);
+      for (const role of ['state_trustee', 'trustee_panel', 'helpline_operator', 'field_worker'] as const) {
+        expect((bundleForRole(role)!.permissions as readonly string[]).includes(key), role).toBe(false);
+      }
+      expect(defaultRoleBundles).toHaveLength(13);
+    });
+
+    it('POSITIVE for district_admin in its OWN district (exact bytes) and FAILS in another; pariwar_admin anywhere; super_admin; ⛔ another Pariwar', () => {
+      expect(hasPermission([da], key, at('Patna'))).toBe(true);
+      expect(hasPermission([da], key, at('Gaya'))).toBe(false);
+      expect(hasPermission([da], key, at('patna'))).toBe(false);
+      for (const d of ['Patna', 'Gaya']) expect(hasPermission([pa], key, at(d)), d).toBe(true);
+      expect(hasPermission([sa], key, at('Gaya'))).toBe(true);
+      expect(hasPermission([{ ...pa, pariwarId: OTHER, scopeValue: OTHER }], key, at('Patna'))).toBe(false);
+    });
+
+    it('⛔ state_trustee (its BUNDLE lacks it, with and without a geo tree), trustee_panel, helpline_operator', () => {
+      const st = { pariwarId: P, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' } as const;
+      expect(hasPermission([st], key, at('Patna'))).toBe(false);
+      expect(hasPermission([st], key, at('Patna'), { resolver: BIHAR })).toBe(false);
+      expect(hasPermission([st], 'claim.approve', at('Patna'), { resolver: BIHAR })).toBe(true); // CONTROL: the tree reaches Patna
+      for (const role of ['trustee_panel', 'helpline_operator'] as const) {
+        expect(hasPermission([{ pariwarId: P, role, scopeDimension: 'pariwar', scopeValue: P }], key, at('Patna')), role).toBe(false);
+      }
+    });
+  },
+);

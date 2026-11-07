@@ -173,38 +173,45 @@ export const FieldWorkerActivatedPayloadSchema = z
   .strict();
 export type FieldWorkerActivatedPayload = z.infer<typeof FieldWorkerActivatedPayloadSchema>;
 
-/** `field_worker.suspended`: `active` → `suspended`, with a suspension reason. Owner: Story 13.1c. */
+/** `field_worker.suspended`: `active` → `suspended`, with a suspension reason. Emitted by Story 13.1c's suspend route; carries
+ *  the verified `field_worker.suspend` authorization snapshot (13.1 QE18; 13.1c AD3 — `-443` Q3 A: "the log records which
+ *  authorisation allowed each act"). */
 export const FieldWorkerSuspendedPayloadSchema = z
   .object({
     from_state: z.literal('active'),
     to_state: z.literal('suspended'),
     trigger: triggerWithReason('field_worker.suspend', FIELD_WORKER_SUSPEND_REASONS),
     actor: fieldWorkerActorSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema,
     reason_code: fieldWorkerSuspendReasonSchema,
   })
   .strict();
 export type FieldWorkerSuspendedPayload = z.infer<typeof FieldWorkerSuspendedPayloadSchema>;
 
-/** `field_worker.reactivated`: `suspended` → `active` (the way back — AI-10-1). Owner: Story 13.1c. */
+/** `field_worker.reactivated`: `suspended` → `active` (the way back — AI-10-1). Emitted by Story 13.1c's reactivate route;
+ *  carries the verified `field_worker.reactivate` authorization snapshot (13.1c AD3). */
 export const FieldWorkerReactivatedPayloadSchema = z
   .object({
     from_state: z.literal('suspended'),
     to_state: z.literal('active'),
     trigger: triggerOf('field_worker.reactivate'),
     actor: fieldWorkerActorSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema,
   })
   .strict();
 export type FieldWorkerReactivatedPayload = z.infer<typeof FieldWorkerReactivatedPayloadSchema>;
 
 /** `field_worker.terminated`: `pending_kyc` | `active` | `suspended` → `terminated` — TERMINAL (QE5). Carries the
- *  termination reason and `ended_on`, the ACTUAL LAST DAY (QE20 — the clock of the 8-year removal). Owner: Story 13.1c
- *  (after 13.6's C4). */
+ *  termination reason and `ended_on`, the ACTUAL LAST DAY (QE20 — the clock of the 8-year removal; for `died`, the date of
+ *  death, `-455`). Emitted by Story 13.1c's terminate route (Q-1 C, `-453`); carries the verified `field_worker.terminate`
+ *  authorization snapshot (13.1c AD3) — whose `role` is who ended the worker (row 13-1f's appeal reads it, `-454` Q1 A). */
 export const FieldWorkerTerminatedPayloadSchema = z
   .object({
     from_state: z.enum(['pending_kyc', 'active', 'suspended']),
     to_state: z.literal('terminated'),
     trigger: triggerWithReason('field_worker.terminate', FIELD_WORKER_TERMINATE_REASONS),
     actor: fieldWorkerActorSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema,
     reason_code: fieldWorkerTerminateReasonSchema,
     ended_on: fieldWorkerEndedOnSchema,
   })
@@ -214,8 +221,8 @@ export type FieldWorkerTerminatedPayload = z.infer<typeof FieldWorkerTerminatedP
 /**
  * `field_worker.posted`: a move of REPORTING district (QE17) — a SAME-STATE event (`pending_kyc` | `active` | `suspended`,
  * ⛔ `terminated`). Carries the authorization snapshot, both districts and a post reason. The reason lives in the EVENT
- * only — ⛔ projected into `state_reason_code`. Owner: Stories 13.1c (a Pariwar Admin's direct move) and 13.1d (the
- * accepted request).
+ * only — ⛔ projected into `state_reason_code`. Emitted by Story 13.1c's move route (a Pariwar Admin's direct move, key
+ * `field_worker.move`); Story 13.1d adds the accepted request.
  */
 export const FieldWorkerPostedPayloadSchema = z
   .object({

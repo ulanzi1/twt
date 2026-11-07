@@ -68,19 +68,36 @@ export async function approveTestFieldWorker(client: pg.PoolClient, pariwarId: s
 }
 
 /**
- * Story 13.1a — MOVE a worker to `toDistrict` through the PUBLIC `postFieldWorker` on `client` (it takes the row lock `FOR UPDATE`
- * and holds it until the caller's transaction ends — the race legs commit it while a request waits). Until 13.1c / 13.1d mint the
- * move keys, the command accepts any verified district-dimension key (13.1 C5): the registration key, targeting the destination.
+ * Story 13.1c (AD3, AD4) — a VERIFIED result for one of the act keys (`field_worker.move` / `.suspend` / `.reactivate` /
+ * `.terminate`) for `actorId` at `district`, minted by the REAL check from a pariwar_admin grant (it holds all four). ⚠ This file is
+ * exempt from the `authorize(` fence by exact path — keep it here.
  */
-export async function moveTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, toDistrict: string): Promise<void> {
-  const actorId = randomUUID();
+export function actAuthorization(
+  key: 'field_worker.move' | 'field_worker.suspend' | 'field_worker.reactivate' | 'field_worker.terminate',
+  pariwarId: string,
+  district: string,
+  actorId: string,
+) {
   const authorization = rbac.authorize({
     actorId,
     grants: [{ pariwarId, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pariwarId }],
-    key: 'field_worker.register',
-    resource: { dimension: 'district', value: toDistrict, pariwarId },
+    key,
+    resource: { dimension: 'district', value: district, pariwarId },
   });
-  if (authorization === null) throw new Error('[_field-worker-fixture] the real check refused a pariwar_admin grant');
+  if (authorization === null) throw new Error(`[_field-worker-fixture] the real check refused ${key} for a pariwar_admin grant`);
+  return authorization;
+}
+
+/**
+ * Story 13.1a — MOVE a worker to `toDistrict` through the PUBLIC `postFieldWorker` on `client` (it takes the row lock `FOR UPDATE`
+ * and holds it until the caller's transaction ends — the race legs commit it while a request waits). Story 13.1c AD4: under the
+ * `field_worker.move` key (targeting the destination), from the district the row holds NOW (the expected source — what an admin
+ * opening the worker would have seen).
+ */
+export async function moveTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, toDistrict: string): Promise<void> {
+  const actorId = randomUUID();
+  const { rows } = await client.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1', [id]);
+  if (rows[0] === undefined) throw new Error('[_field-worker-fixture] moveTestFieldWorker: no such worker');
   await fieldWorker.postFieldWorker(client, {
     pariwarId: ids.pariwarId(pariwarId),
     fieldWorkerId: id,
@@ -88,7 +105,8 @@ export async function moveTestFieldWorker(client: pg.PoolClient, pariwarId: stri
     actor: 'operator',
     actorId,
     toDistrict,
+    expectedFromDistrict: rows[0].district,
     reasonCode: 'reassigned',
-    authorization,
+    authorization: actAuthorization('field_worker.move', pariwarId, toDistrict, actorId),
   });
 }

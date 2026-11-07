@@ -865,7 +865,19 @@ export function permissionKey(value: string): PermissionKey {
 // (members), `module.manage`, `workplace.manage`, `known_people.run_campaign`, `pariwar.provision`. 59 / 78 READ LIVE at
 // `99a01805` (⚠ 14-3 holds a `<CAT>` placeholder — +1 / +3 from whatever `main` holds when this lands). `defaultRoleBundles`
 // stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 60 as const;
+//
+// ⭐ Story 13.1c (author-commit `2026-11-07-453` AD5, BigDev's Q-5 A; CONFIRMED as built by the Panel, `2026-11-07-454` Q7 A:
+// "Move: the Pariwar Admin only. Suspend, reactivate, end and read the history: the District Admin of the worker's current
+// district, and the Pariwar Admin"; each a `-059` B(3) field-worker permission — roster Row 50 (a) MET) — 60 → 61, FIVE keys
+// (81 → 86), ONE bump: `field_worker.move` (move a worker to another REPORTING district directly — `field_worker.posted`;
+// `pariwar_admin` ONLY, the Panel's `-443` Q1 A), `field_worker.suspend`, `field_worker.reactivate`, `field_worker.terminate`
+// (the lifecycle acts) and `field_worker.read_log` (read a worker's whole event stream) — the last four `district_admin` (own
+// district) and `pariwar_admin` (any). All five DISTRICT-dimension (the target is the worker's CURRENT reporting district, read
+// by the pre-gate loader) (+ derived super_admin). One key per act (13.1 QE10). ⛔ NOT `state_trustee`, `trustee_panel`,
+// `helpline_operator`, nor the `field_worker` role. REUSE CHECK — ⛔ `field_worker.register` (adds; `postFieldWorker` REFUSES
+// it), `field_worker.view` (the log is a separate read the Panel confirmed apart), `member.suspend` / `member.moderate`
+// (members). 60 / 81 READ LIVE at `bb4d8620`. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 61 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1493,6 +1505,23 @@ export const SEED_PERMISSION_KEYS = [
   // mobile); one audit line per read. district-dimension (the list: `pariwar` when no district is named); `district_admin`
   // (own district) and `pariwar_admin` (any) (+ derived super_admin).
   'field_worker.view',
+  // Story 13.1c (`2026-11-07-453` AD5; WHO is `-443` Q1 A, confirmed `-454` Q7 A) — MOVE a worker to another REPORTING district
+  // directly (`field_worker.posted`). district-dimension (the worker's current district; a Pariwar grant covers both ends);
+  // `pariwar_admin` ONLY (+ derived super_admin). The ONE entry of `FIELD_WORKER_MOVE_PERMISSION_KEYS` (13.1d appends).
+  'field_worker.move',
+  // Story 13.1c (AD5; `-454` Q7 A) — SUSPEND an active worker (`under_review` | `at_worker_request`). district-dimension;
+  // `district_admin` (own district) and `pariwar_admin` (any) (+ derived super_admin).
+  'field_worker.suspend',
+  // Story 13.1c (AD5; `-454` Q7 A) — REACTIVATE a suspended worker. district-dimension; `district_admin` (own district) and
+  // `pariwar_admin` (any) (+ derived super_admin).
+  'field_worker.reactivate',
+  // Story 13.1c (AD5, AD2 — Q-1 C, `-453`; `-454` Q7 A) — END a worker (`left_voluntarily` | `inactive` | `registered_in_error`
+  // | `died`). district-dimension; `district_admin` (own district) and `pariwar_admin` (any) (+ derived super_admin). ⚠ Not used
+  // on a real worker before row 13-1f's undo and appeal record are built (roster Row 50 (f), `-455`).
+  'field_worker.terminate',
+  // Story 13.1c (AD5, AD7; `-441` "Keep the full log of field worker") — READ a worker's whole event stream. district-dimension;
+  // `district_admin` (own district) and `pariwar_admin` (any) (+ derived super_admin). No decrypt, no audit line (AD7).
+  'field_worker.read_log',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

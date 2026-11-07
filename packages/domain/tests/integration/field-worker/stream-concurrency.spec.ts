@@ -8,7 +8,8 @@
 //   (c) the GENESIS race on the SAME id, two DIFFERENT mobiles — REPEATABLE READ, the snapshot pinned BEFORE the barrier.
 //   (d) the SAME-MOBILE race, two DIFFERENT ids: the loser MobileAlreadyRegistered BY CONSTRAINT NAME, its transaction
 //       still usable, and NO event for its id.
-//   (e) post vs terminate (6 rounds), two posts to different districts, and a stale-target post.
+//   (e) post vs terminate (6 rounds), and two moves from the SAME screen (6 rounds): since Story 13.1c AD4 (13.1 D7) the second is
+//       refused AuthorizationStale, ⛔ fulfilled from the first's destination.
 // (a), (b), (d), (e) run at READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001 (QE13). Every error
 // code is read as `err.code ?? err.cause?.code`; no race may end in 40P01 or 40001.
 //
@@ -37,7 +38,7 @@ import {
 } from '../../../src/field-worker/errors.js';
 import { pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { DATABASE_URL, hasDatabase } from '../../../src/test-utils/integration-setup.js';
-import { approval, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { actAuthorization, approval, expectRowMatchesStream, moveAuthorization, registerReal, streamTypes } from './_fixtures.js';
 
 const PARIWAR = randomUUID();
 const P = toPariwarId(PARIWAR);
@@ -101,6 +102,15 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
   const base = (id: FieldWorkerId) => ({ pariwarId: P, fieldWorkerId: id, auditId: randomUUID(), actor: 'operator' as const, actorId: ACTOR });
   /** Story 13.1a AD3 — the two approval commands take a verified `field_worker.approve` result (+ the approver's name). */
   const approve = (id: FieldWorkerId) => ({ ...base(id), ...approval(PARIWAR, 'Patna', ACTOR) });
+  /** Story 13.1c AD3 — suspend / terminate take a verified result for THEIR key (every worker here starts in Patna). */
+  const act = (id: FieldWorkerId, key: 'field_worker.suspend' | 'field_worker.terminate') => ({ ...base(id), authorization: actAuthorization(key, PARIWAR, 'Patna', ACTOR) });
+  /** Story 13.1c AD4 — a move from Patna (the district the admin saw), under the `field_worker.move` key at `target`. */
+  const moveFromPatna = (id: FieldWorkerId, to: string, target = to) => ({
+    ...base(id),
+    toDistrict: to,
+    expectedFromDistrict: 'Patna',
+    authorization: moveAuthorization(PARIWAR, target, ACTOR),
+  });
 
   async function begin(client: pg.PoolClient, isolation: 'READ COMMITTED' | 'REPEATABLE READ'): Promise<void> {
     await client.query('BEGIN');
@@ -168,8 +178,8 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
       const id = await committedWorker('active');
       const arrive = barrier();
       const [suspended, terminated] = await Promise.allSettled([
-        racer(arrive, (c) => suspendFieldWorker(c, { ...base(id), reasonCode: 'under_review' })),
-        racer(arrive, (c) => terminateFieldWorker(c, { ...base(id), reasonCode: 'inactive', endedOn: today })),
+        racer(arrive, (c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'under_review' })),
+        racer(arrive, (c) => terminateFieldWorker(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today })),
       ]);
       expect(terminated.status, `round ${round}: terminate ${String((terminated as PromiseRejectedResult).reason)}`).toBe('fulfilled');
       const after = await inspect(id);
@@ -264,8 +274,13 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
       const id = await committedWorker('active');
       const arrive = barrier();
       const [posted, terminated] = await Promise.allSettled([
-        racer(arrive, (c) => postFieldWorker(c, { ...base(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR, 'Gaya', ACTOR) })),
-        racer(arrive, (c) => terminateFieldWorker(c, { ...base(id), reasonCode: 'left_voluntarily', endedOn: today })),
+        racer(arrive, (c) => postFieldWorker(c, { ...moveFromPatna(id, 'Gaya'), reasonCode: 'reassigned' })),
+        // The termination's gate read Patna; a move that wins first makes its target stale (13.1c AD3, (3d)) — so it is authorized at
+        // the district it will find: Patna if it runs first, Gaya if the move did. Both orders are legal; (3d) is pinned in commands.spec.ts.
+        racer(arrive, async (c) => {
+          const { district } = (await c.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1 FOR UPDATE', [id])).rows[0]!;
+          return terminateFieldWorker(c, { ...base(id), authorization: actAuthorization('field_worker.terminate', PARIWAR, district, ACTOR), reasonCode: 'left_voluntarily', endedOn: today });
+        }),
       ]);
       expect(terminated.status, `round ${round}`).toBe('fulfilled');
       const after = await inspect(id);
@@ -281,52 +296,24 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
     }
   }, 30_000);
 
-  it('(e2) two posts to DIFFERENT districts at once, each targeting its own destination: both fulfil, serialised by the row lock', async () => {
-    const id = await committedWorker('active');
-    const arrive = barrier();
-    const post = (to: string) =>
-      racer(arrive, (c) => postFieldWorker(c, { ...base(id), toDistrict: to, reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR, to, ACTOR) }));
-    const results = await Promise.allSettled([post('Gaya'), post('Nalanda')]);
-    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
-    const after = await inspect(id);
-    const client = await pool.connect();
-    try {
-      const posts = (
-        await client.query<{ payload: { from_district: string; to_district: string } }>(
-          "SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'field_worker.posted' ORDER BY event_version",
-          [id],
-        )
-      ).rows.map((r) => r.payload);
-      expect(posts).toHaveLength(2);
-      expect(posts[0]!.from_district).toBe('Patna');
-      expect(posts[1]!.from_district).toBe(posts[0]!.to_district); // the second saw the first's move
-      expect(after.row.district).toBe(posts[1]!.to_district);
-    } finally {
-      client.release();
-    }
-  });
-
-  it('(e3) a racer whose authorization targets the CURRENT district loses with AuthorizationStale when the other move wins first', async () => {
-    let staleSeen = false;
-    for (let round = 0; round < 6 && !staleSeen; round += 1) {
+  // Story 13.1c AD4 (13.1 D7) — before 13.1c, two moves from the same screen BOTH fulfilled, serialised by the row lock (the second
+  // ran from the first's destination). Now each names the district its admin saw (`expectedFromDistrict`), so the second is REFUSED.
+  it('(e2) two moves from the SAME screen (both saw Patna) at once — one to Gaya at its destination, one to Nalanda at the sending end: exactly one fulfils, the other AuthorizationStale; one posted event', async () => {
+    for (let round = 0; round < 6; round += 1) {
       const id = await committedWorker('active');
       const arrive = barrier();
-      const [toGaya, fromPatna] = await Promise.allSettled([
-        racer(arrive, (c) => postFieldWorker(c, { ...base(id), toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: registerAuthorization(PARIWAR, 'Gaya', ACTOR) })),
-        // Authorized at the SENDING end (Patna) toward Nalanda.
-        racer(arrive, (c) => postFieldWorker(c, { ...base(id), toDistrict: 'Nalanda', reasonCode: 'at_worker_request', authorization: registerAuthorization(PARIWAR, 'Patna', ACTOR) })),
+      const results = await Promise.allSettled([
+        racer(arrive, (c) => postFieldWorker(c, { ...moveFromPatna(id, 'Gaya'), reasonCode: 'reassigned' })),
+        racer(arrive, (c) => postFieldWorker(c, { ...moveFromPatna(id, 'Nalanda', 'Patna'), reasonCode: 'at_worker_request' })),
       ]);
-      expect(toGaya.status).toBe('fulfilled');
-      if (fromPatna.status === 'rejected') {
-        expect(fromPatna.reason).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
-        expect((await inspect(id)).row.district).toBe('Gaya');
-        staleSeen = true;
-      } else {
-        // It ran first (the worker was still in Patna) — then the Gaya move ran from Nalanda.
-        expect((await inspect(id)).row.district).toBe('Gaya');
-      }
+      const won = results.findIndex((r) => r.status === 'fulfilled');
+      expect(results.filter((r) => r.status === 'fulfilled'), `round ${round}`).toHaveLength(1);
+      const lost = results[1 - won] as PromiseRejectedResult;
+      expect(['40P01', '40001']).not.toContain(codeOf(lost.reason));
+      expect(lost.reason).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      const after = await inspect(id);
+      expect(after.row.district).toBe(won === 0 ? 'Gaya' : 'Nalanda');
+      expect(after.types.filter((t) => t === 'field_worker.posted')).toHaveLength(1);
     }
-    // Probabilistic: report rather than fail if every round ran the sending-end move first.
-    if (!staleSeen) console.warn('[stream-concurrency (e3)] no round produced the stale ordering — the leg is covered deterministically in commands.spec.ts');
   }, 30_000);
 });

@@ -35,7 +35,7 @@ import {
 } from '../../../src/ids/index.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
-import { approval, caught, registerReal } from './_fixtures.js';
+import { actAuthorization, approval, caught, registerReal } from './_fixtures.js';
 
 const ACTOR = randomUUID();
 
@@ -48,6 +48,8 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
   const base = (id: FieldWorkerId) => ({ pariwarId: P, fieldWorkerId: id, auditId: randomUUID(), actor: 'operator' as const, actorId: ACTOR });
   /** Story 13.1a AD3 — the two approval commands take a verified `field_worker.approve` result (+ the approver's name). */
   const approve = (id: FieldWorkerId) => ({ ...base(id), ...approval(PARIWAR, 'Patna', ACTOR) });
+  /** Story 13.1c AD3 — suspend / terminate take a verified result for THEIR key (the worker is in Patna). */
+  const act = (id: FieldWorkerId, key: 'field_worker.suspend' | 'field_worker.terminate') => ({ ...base(id), authorization: actAuthorization(key, PARIWAR, 'Patna', ACTOR) });
 
   beforeAll(() => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4, ssl: false });
@@ -151,7 +153,7 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
       await recordFieldWorkerKycCompleted(c, approve(id));
       await activateFieldWorker(c, approve(id));
     });
-    await committed((c) => suspendFieldWorker(c, { ...base(id), reasonCode: 'under_review' }));
+    await committed((c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'under_review' }));
     const [, , , v4] = await stamps(id);
     expect(await withCapture(PARIWAR, at(v4!), stateAt(id))).toMatchObject({ state: 'suspended', reasonCode: 'under_review' });
     expect(await withCapture(PARIWAR, at(v4!, '-1 microsecond'), stateAt(id))).toMatchObject({ state: 'active', reasonCode: null });
@@ -195,10 +197,10 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     await check();
     await committed((c) => activateFieldWorker(c, approve(id)));
     await check();
-    await committed((c) => suspendFieldWorker(c, { ...base(id), reasonCode: 'at_worker_request' }));
+    await committed((c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'at_worker_request' }));
     await check();
     const today = (await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-    await committed((c) => terminateFieldWorker(c, { ...base(id), reasonCode: 'inactive', endedOn: today }));
+    await committed((c) => terminateFieldWorker(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }));
     await check();
   });
 
@@ -297,7 +299,16 @@ describe.skipIf(!hasDatabase)('field-worker reads (per-test ROLLBACK)', () => {
     const db = bindScopedDb(client);
     expect(await findLiveFieldWorkerByMobileIndex(db, toPariwarId(PARIWAR_A), 'gone-index')).toBe(id);
     const today = (await client.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-    await terminateFieldWorker(client, { pariwarId: toPariwarId(PARIWAR_A), fieldWorkerId: id, auditId: randomUUID(), actor: 'operator', actorId: ACTOR, reasonCode: 'registered_in_error', endedOn: today });
+    await terminateFieldWorker(client, {
+      pariwarId: toPariwarId(PARIWAR_A),
+      fieldWorkerId: id,
+      auditId: randomUUID(),
+      actor: 'operator',
+      actorId: ACTOR,
+      authorization: actAuthorization('field_worker.terminate', PARIWAR_A, 'Patna', ACTOR),
+      reasonCode: 'registered_in_error',
+      endedOn: today,
+    });
     expect(await findLiveFieldWorkerByMobileIndex(db, toPariwarId(PARIWAR_A), 'gone-index')).toBeNull();
   });
 

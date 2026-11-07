@@ -342,6 +342,16 @@ const FIELD_WORKER_APPROVE = permissionKey('field_worker.approve');
 // trustee_panel / helpline_operator / the `field_worker` role.
 const FIELD_WORKER_READ_CODE = permissionKey('field_worker.read_code');
 const FIELD_WORKER_VIEW = permissionKey('field_worker.view');
+// Story 13.1c (`2026-11-07-453` AD5; confirmed as built, the Panel's `2026-11-07-454` Q7 A) — move a worker directly
+// (district-dimension). Granted to pariwar_admin ONLY (`-443` Q1 A) (+ super_admin auto). ⛔ district_admin (13.1d's request is theirs).
+const FIELD_WORKER_MOVE = permissionKey('field_worker.move');
+// Story 13.1c (AD5; `-454` Q7 A) — suspend, reactivate, end a worker and read their log, all district-dimension. Granted to
+// district_admin (own district) AND pariwar_admin (any) (+ super_admin auto). ⛔ state_trustee / trustee_panel /
+// helpline_operator / the `field_worker` role.
+const FIELD_WORKER_SUSPEND = permissionKey('field_worker.suspend');
+const FIELD_WORKER_REACTIVATE = permissionKey('field_worker.reactivate');
+const FIELD_WORKER_TERMINATE = permissionKey('field_worker.terminate');
+const FIELD_WORKER_READ_LOG = permissionKey('field_worker.read_log');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -522,6 +532,12 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       FIELD_WORKER_APPROVE,
       FIELD_WORKER_READ_CODE,
       FIELD_WORKER_VIEW,
+      // Story 13.1c (AD5; `-454` Q7 A) — move a worker directly (Pariwar Admin only); suspend, reactivate, end, read the log — any district.
+      FIELD_WORKER_MOVE,
+      FIELD_WORKER_SUSPEND,
+      FIELD_WORKER_REACTIVATE,
+      FIELD_WORKER_TERMINATE,
+      FIELD_WORKER_READ_LOG,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -583,6 +599,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // Story 13.1a (AD6) — read a worker's code and see workers in the District Admin's OWN district. ⛔ Approve (Pariwar Admin only).
       FIELD_WORKER_READ_CODE,
       FIELD_WORKER_VIEW,
+      // Story 13.1c (AD5; `-454` Q7 A) — suspend, reactivate, end and read the log of a worker in the OWN district. ⛔ Move (Pariwar Admin only).
+      FIELD_WORKER_SUSPEND,
+      FIELD_WORKER_REACTIVATE,
+      FIELD_WORKER_TERMINATE,
+      FIELD_WORKER_READ_LOG,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.

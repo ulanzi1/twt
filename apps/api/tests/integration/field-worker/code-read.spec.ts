@@ -54,7 +54,7 @@ vi.mock('../../../src/modules/field-worker/attribution-code-access.js', async (i
 
 const { fieldWorker, ids } = await import('@twt/domain');
 const { hasDatabase } = await import('../_setup.js');
-const { moveTestFieldWorker } = await import('../_field-worker-fixture.js');
+const { actAuthorization, moveTestFieldWorker } = await import('../_field-worker-fixture.js');
 const { payloadHash } = await import('../../../src/modules/field-worker/write-support.js');
 const { readAttributionCodeForRequest } = await import('../../../src/modules/field-worker/attribution-code-access.js');
 const { createHarness, errOf, json, releaseHolder, waitForBlockedBy, waitUntilBlocked } = await import('./_registration-harness.js');
@@ -128,11 +128,11 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
     for (const state of ['pending_kyc', 'suspended', 'terminated'] as const) {
       const { p, admin, id } = await activeWorker({ pending: state === 'pending_kyc' });
       const base = { pariwarId: ids.pariwarId(p), fieldWorkerId: ids.fieldWorkerId(id), actor: 'operator' as const, actorId: admin.userId, auditId: randomUUID() };
-      if (state === 'suspended') await ownerTx((c) => fieldWorker.suspendFieldWorker(c, { ...base, reasonCode: 'under_review' }).then(() => undefined));
+      if (state === 'suspended') await ownerTx((c) => fieldWorker.suspendFieldWorker(c, { ...base, authorization: actAuthorization('field_worker.suspend', p, 'Patna', base.actorId), reasonCode: 'under_review' }).then(() => undefined));
       if (state === 'terminated') {
         await ownerTx(async (c) => {
           const today = (await c.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-          await fieldWorker.terminateFieldWorker(c, { ...base, reasonCode: 'inactive', endedOn: today });
+          await fieldWorker.terminateFieldWorker(c, { ...base, authorization: actAuthorization('field_worker.terminate', p, 'Patna', base.actorId), reasonCode: 'inactive', endedOn: today });
         });
       }
       doorSpy.mockClear();
@@ -216,6 +216,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
         actor: 'operator',
         actorId: admin.userId,
         auditId: randomUUID(),
+        authorization: actAuthorization('field_worker.suspend', p, 'Patna', admin.userId),
         reasonCode: 'under_review',
       }); // holds FOR UPDATE until COMMIT
       const pending = h.code(admin.client, p, id);
@@ -245,6 +246,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
         actor: 'operator',
         actorId: admin.userId,
         auditId: randomUUID(),
+        authorization: actAuthorization('field_worker.suspend', p, 'Patna', admin.userId),
         reasonCode: 'under_review',
       });
       await waitUntilBlocked(h.td.pool, suspenderPid);

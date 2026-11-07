@@ -95,7 +95,8 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
   const seal = async (value: string, pid: string): Promise<string> =>
     encryption.serializeEnvelope(await encryption.encryptTier1(Buffer.from(value, 'utf-8'), { pariwarId: pid, fieldClass: 'field_worker' }, enc.kms, enc.kekRef));
 
-  const verified = (pid: string, key: 'field_worker.register' | 'field_worker.approve') => {
+  // Story 13.1c AD3 — suspend / reactivate / terminate take a verified result for THEIR key too. ⚠ Keep this helper in a `.test.ts` (the `authorize(` fence).
+  const verified = (pid: string, key: 'field_worker.register' | 'field_worker.approve' | 'field_worker.suspend' | 'field_worker.reactivate' | 'field_worker.terminate') => {
     const result = rbac.authorize({
       actorId: ACTOR,
       grants: [{ pariwarId: pid, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pid }],
@@ -290,12 +291,12 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
   it('⭐ AC3 (a), (b) — suspended before the tick ends `skipped_not_active`, ⛔ audit line, ⛔ gateway; reactivated later, ⛔ second text', async () => {
     const pid = await pariwar();
     const { id, sendId } = await approved(pid, '592015');
-    await withPariwarScope(pool, pid, (_db, client) => fieldWorker.suspendFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), reasonCode: 'under_review' }));
+    await withPariwarScope(pool, pid, (_db, client) => fieldWorker.suspendFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.suspend'), reasonCode: 'under_review' }));
     const gw = gateway();
     expect(await settled(sweep(gw), sendId)).toMatchObject({ outcome: 'skipped_not_active', detail: null, locale: null });
     expect(gw.mine(sendId)).toHaveLength(0);
     expect(await auditLines(pid, id)).toEqual([]);
-    await withPariwarScope(pool, pid, (_db, client) => fieldWorker.reactivateFieldWorker(client, { ...base(pid, id), auditId: randomUUID() }));
+    await withPariwarScope(pool, pid, (_db, client) => fieldWorker.reactivateFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.reactivate') }));
     await runFieldWorkerCodeSmsTick(sweep(gw));
     expect((await rowOf(sendId)).outcome).toBe('skipped_not_active');
     expect(gw.mine(sendId)).toHaveLength(0);
@@ -309,7 +310,7 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
     const { rows: ist } = await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d");
     const today = ist[0]!.d;
     await withPariwarScope(pool, pid, (_db, client) =>
-      fieldWorker.terminateFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), reasonCode: 'inactive', endedOn: today }),
+      fieldWorker.terminateFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }),
     );
     const gw = gateway();
     expect(await settled(sweep(gw), sendId)).toMatchObject({ outcome: 'skipped_not_active' });

@@ -20,7 +20,7 @@ import { mapFieldWorkerWriteError, projectFieldWorkerTransition, type FieldWorke
 import { pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, enterAppScope } from '../_helpers.js';
-import { approveAuthorization, caught, expectRowMatchesStream, registerAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { actAuthorization, approveAuthorization, caught, expectRowMatchesStream, moveAuthorization, registerReal, streamTypes, type FieldWorkerActKey } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 const ACTOR = randomUUID();
@@ -55,7 +55,19 @@ const APPROVE_SNAPSHOT = {
   target: { dimension: 'district', value: 'Patna' },
   catalog_version: approve.catalogVersion,
 };
-const APPROVAL_TYPES = new Set(['field_worker.kyc_completed', 'field_worker.activated']);
+/** Story 13.1c AD3 — `suspended` / `reactivated` / `terminated` carry their OWN key's snapshot (a worker in Patna). */
+const actSnapshot = (key: FieldWorkerActKey) => {
+  const a = actAuthorization(key, PARIWAR_A, 'Patna', ACTOR);
+  return { permission_key: a.permissionKey, role: a.role, grant: { dimension: a.grant.dimension, value: a.grant.value }, target: { dimension: 'district', value: 'Patna' }, catalog_version: a.catalogVersion };
+};
+/** The snapshot each transition type carries, added by `input` (a `posted` payload brings its own — its target is an end of the move). */
+const SNAPSHOT_BY_TYPE: Record<string, unknown> = {
+  'field_worker.kyc_completed': APPROVE_SNAPSHOT,
+  'field_worker.activated': APPROVE_SNAPSHOT,
+  'field_worker.suspended': actSnapshot('field_worker.suspend'),
+  'field_worker.reactivated': actSnapshot('field_worker.reactivate'),
+  'field_worker.terminated': actSnapshot('field_worker.terminate'),
+};
 
 const input = (
   id: FieldWorkerId,
@@ -70,7 +82,7 @@ const input = (
   payload: {
     trigger: TRIGGER[eventType]?.(payload) ?? 'field_worker.unknown',
     actor: 'operator',
-    ...(APPROVAL_TYPES.has(eventType) ? { authorization: APPROVE_SNAPSHOT } : {}),
+    ...(eventType in SNAPSHOT_BY_TYPE ? { authorization: SNAPSHOT_BY_TYPE[eventType] } : {}),
     ...payload,
   },
   auditId: randomUUID(),
@@ -142,7 +154,7 @@ describe.skipIf(!hasDatabase)('projectFieldWorkerTransition, direct (AC2, AC5)',
     await enterAppScope(client, PARIWAR_A);
     const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
     const row = await locked(client, id);
-    const auth = registerAuthorization(PARIWAR_A, 'Gaya', ACTOR);
+    const auth = moveAuthorization(PARIWAR_A, 'Gaya', ACTOR);
     const snapshot = { permission_key: auth.permissionKey, role: auth.role, grant: { dimension: auth.grant.dimension, value: auth.grant.value }, target: { dimension: 'district', value: 'Gaya' }, catalog_version: auth.catalogVersion };
     for (const [type, payload] of [
       ['field_worker.kyc_completed', { from_state: 'active', to_state: 'pending_kyc' }],

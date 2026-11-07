@@ -96,6 +96,30 @@ export function approveAuthorization(pariwarId: string, district: string, actorI
   return result;
 }
 
+/** The keys Story 13.1c minted for its acts (AD5) — `field_worker.read_log` gates a read, ⛔ a command, so it is ⛔ here. */
+export type FieldWorkerActKey = 'field_worker.move' | 'field_worker.suspend' | 'field_worker.reactivate' | 'field_worker.terminate';
+
+/**
+ * A VERIFIED result for one of Story 13.1c's act keys (AD3, AD4) for `actorId` at `district` in `pariwarId` — minted by the REAL
+ * check from a pariwar_admin grant (it holds all four). ⚠ This file is exempt from the `authorize` fence BY EXACT PATH: keep the
+ * helper here (TR6).
+ */
+export function actAuthorization(key: FieldWorkerActKey, pariwarId: string, district: string, actorId: string): VerifiedAuthorization {
+  const result = authorize({
+    actorId,
+    grants: [{ pariwarId, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pariwarId }],
+    key,
+    resource: { dimension: 'district', value: district, pariwarId },
+  });
+  if (result === null) throw new Error(`actAuthorization: the real check refused a pariwar_admin grant for ${key}`);
+  return result;
+}
+
+/** A VERIFIED `field_worker.move` result (13.1c AD4) — what `postFieldWorker` accepts (⛔ `field_worker.register`). */
+export function moveAuthorization(pariwarId: string, district: string, actorId: string): VerifiedAuthorization {
+  return actAuthorization('field_worker.move', pariwarId, district, actorId);
+}
+
 /** The approval inputs both commands take, for a worker in `district` (13.1a AD3; `-447` item 2). */
 export function approval(pariwarId: string, district: string, actorId: string): { authorization: VerifiedAuthorization; approvedByDisplay: string } {
   return { authorization: approveAuthorization(pariwarId, district, actorId), approvedByDisplay: 'Meera Pariwar-Admin' };

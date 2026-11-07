@@ -9,7 +9,7 @@ import { fieldWorker, ids, rbac } from '@twt/domain';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { makeClient, hasDatabase } from '../_setup.js';
-import { approveTestFieldWorker, moveTestFieldWorker } from '../_field-worker-fixture.js';
+import { actAuthorization, approveTestFieldWorker, moveTestFieldWorker } from '../_field-worker-fixture.js';
 import { payloadHash } from '../../../src/modules/field-worker/write-support.js';
 import { createHarness, errOf, json, releaseHolder, waitForBlockedBy, type Harness, type Json } from './_registration-harness.js';
 
@@ -181,11 +181,11 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
       const fw = ids.fieldWorkerId(id);
       const base = { pariwarId: ids.pariwarId(p), fieldWorkerId: fw, actor: 'operator' as const, actorId: admin.userId, auditId: randomUUID() };
-      if (target === 'suspended') await owner((c) => fieldWorker.suspendFieldWorker(c, { ...base, reasonCode: 'under_review' }).then(() => undefined));
+      if (target === 'suspended') await owner((c) => fieldWorker.suspendFieldWorker(c, { ...base, authorization: actAuthorization('field_worker.suspend', p, 'Patna', base.actorId), reasonCode: 'under_review' }).then(() => undefined));
       if (target === 'terminated') {
         await owner(async (c) => {
           const today = (await c.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-          await fieldWorker.terminateFieldWorker(c, { ...base, reasonCode: 'inactive', endedOn: today });
+          await fieldWorker.terminateFieldWorker(c, { ...base, authorization: actAuthorization('field_worker.terminate', p, 'Patna', base.actorId), reasonCode: 'inactive', endedOn: today });
         });
       }
       const eventsBefore = (await events(id)).length;

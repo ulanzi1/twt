@@ -27,6 +27,8 @@ const APPROVE_AUTH = {
   target: { dimension: 'district', value: 'Patna' },
   catalog_version: 60,
 };
+/** Story 13.1c AD3 / AD4 — a lifecycle act's snapshot (key = the act's; the move's is `field_worker.move`). */
+const actAuth = (permission_key: string) => ({ ...APPROVE_AUTH, permission_key, catalog_version: 61 });
 /** `o` without `key` (a payload missing one required field). */
 const without = (o: Record<string, unknown>, key: string): Record<string, unknown> => Object.fromEntries(Object.entries(o).filter(([k]) => k !== key));
 
@@ -34,10 +36,10 @@ const VALID: Record<(typeof FIELD_WORKER_EVENT_TYPES)[number], Record<string, un
   'field_worker.registered': { from_state: null, to_state: 'pending_kyc', trigger: 'field_worker.register', actor: 'operator', authorization: AUTH, district: 'Patna' },
   'field_worker.kyc_completed': { from_state: 'pending_kyc', to_state: 'pending_kyc', trigger: 'field_worker.kyc_complete', actor: 'operator', authorization: APPROVE_AUTH },
   'field_worker.activated': { from_state: 'pending_kyc', to_state: 'active', trigger: 'field_worker.activate', actor: 'trustee', authorization: APPROVE_AUTH },
-  'field_worker.suspended': { from_state: 'active', to_state: 'suspended', trigger: 'field_worker.suspend:under_review', actor: 'operator', reason_code: 'under_review' },
-  'field_worker.reactivated': { from_state: 'suspended', to_state: 'active', trigger: 'field_worker.reactivate', actor: 'operator' },
-  'field_worker.terminated': { from_state: 'active', to_state: 'terminated', trigger: 'field_worker.terminate:inactive', actor: 'operator', reason_code: 'inactive', ended_on: '2026-11-01' },
-  'field_worker.posted': { from_state: 'active', to_state: 'active', trigger: 'field_worker.post', actor: 'operator', authorization: AUTH, from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' },
+  'field_worker.suspended': { from_state: 'active', to_state: 'suspended', trigger: 'field_worker.suspend:under_review', actor: 'operator', authorization: actAuth('field_worker.suspend'), reason_code: 'under_review' },
+  'field_worker.reactivated': { from_state: 'suspended', to_state: 'active', trigger: 'field_worker.reactivate', actor: 'operator', authorization: actAuth('field_worker.reactivate') },
+  'field_worker.terminated': { from_state: 'active', to_state: 'terminated', trigger: 'field_worker.terminate:inactive', actor: 'operator', authorization: actAuth('field_worker.terminate'), reason_code: 'inactive', ended_on: '2026-11-01' },
+  'field_worker.posted': { from_state: 'active', to_state: 'active', trigger: 'field_worker.post', actor: 'operator', authorization: actAuth('field_worker.move'), from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' },
 };
 
 describe('the seven payloads (AC3)', () => {
@@ -113,6 +115,22 @@ describe('the seven payloads (AC3)', () => {
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(without(VALID[t], 'authorization')).success, t).toBe(false);
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], approved_by_display: 'Meera' }).success, t).toBe(false);
     }
+  });
+
+  // Story 13.1c AD3 — the last three events REQUIRE it too: every field-worker event now records which authorization allowed it (`-443` Q3 A).
+  it('suspended, reactivated and terminated REQUIRE the authorization snapshot (13.1c AD3)', () => {
+    for (const t of ['field_worker.suspended', 'field_worker.reactivated', 'field_worker.terminated'] as const) {
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(VALID[t]).success, t).toBe(true);
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(without(VALID[t], 'authorization')).success, t).toBe(false);
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: { ...actAuth('x'), display_name: 'Meera' } }).success, t).toBe(false);
+    }
+  });
+
+  it('`died` (`-455`) is a termination reason with its trigger; ⛔ a suspension reason', () => {
+    expect(FieldWorkerTerminatedPayloadSchema.safeParse({ ...VALID['field_worker.terminated'], reason_code: 'died', trigger: 'field_worker.terminate:died' }).success).toBe(true);
+    expect(
+      FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS['field_worker.suspended'].safeParse({ ...VALID['field_worker.suspended'], reason_code: 'died', trigger: 'field_worker.suspend:died' }).success,
+    ).toBe(false);
   });
 
   it('the genesis carries a non-blank district and the authorization snapshot', () => {

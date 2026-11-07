@@ -36,17 +36,23 @@ describe('EVENT_TYPE_REGISTRY — field_worker.* coverage', () => {
     }
   });
 
-  // Story 13.1a (AC4) — kyc_completed and activated now HAVE an emitter (the approval route); the other four still say they have none.
-  it('field_worker.registered names the 13.1 registration route; kyc_completed and activated the 13.1a approval route; the other four say they have none yet', () => {
+  // Story 13.1a (AC4) — kyc_completed and activated HAVE an emitter (the approval route); Story 13.1c (AD3) — the other four HAVE
+  // theirs (the move, suspend, reactivate and terminate routes), so NO field_worker.* entry still says it has none.
+  it('field_worker.registered names the 13.1 registration route; kyc_completed and activated the 13.1a approval route; the other four their 13.1c route; none says "no production emitter"', () => {
     const rows = EVENT_TYPE_REGISTRY as Record<string, { description: string } | undefined>;
     const approval = new Set(['field_worker.kyc_completed', 'field_worker.activated']);
+    const lifecycle: Record<string, string> = {
+      'field_worker.suspended': 'Emitted by the Story 13.1c suspend route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/suspend)',
+      'field_worker.reactivated': 'Emitted by the Story 13.1c reactivate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/reactivate)',
+      'field_worker.terminated': 'Emitted by the Story 13.1c terminate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/terminate)',
+      'field_worker.posted': 'Emitted by the Story 13.1c move route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move, key field_worker.move)',
+    };
     for (const type of fieldWorker.FIELD_WORKER_EVENT_TYPES) {
       const d = rows[type]!.description;
+      expect(d, type).not.toContain('No production emitter');
       if (type === 'field_worker.registered') expect(d).toContain('Emitted by the Story 13.1 registration route');
-      else if (approval.has(type)) {
-        expect(d, type).toContain('Emitted by the Story 13.1a approval route');
-        expect(d, type).not.toContain('No production emitter');
-      } else expect(d, type).toContain('No production emitter in 13.1');
+      else if (approval.has(type)) expect(d, type).toContain('Emitted by the Story 13.1a approval route');
+      else expect(d, type).toContain(lifecycle[type]);
     }
   });
 

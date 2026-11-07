@@ -697,25 +697,25 @@ export const EVENT_TYPE_REGISTRY = {
   'field_worker.suspended': {
     type: 'field_worker.suspended',
     description:
-      '`field_worker.suspended` (active → suspended) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Carries a neutral suspension reason (QE12). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1c (unverified until built).',
+      '`field_worker.suspended` (active → suspended) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Carries a neutral suspension reason (QE12) and the verified field_worker.suspend authorization snapshot (Story 13.1c AD3). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c suspend route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/suspend).',
     schema: fieldWorker.FieldWorkerSuspendedPayloadSchema,
   },
   'field_worker.reactivated': {
     type: 'field_worker.reactivated',
     description:
-      '`field_worker.reactivated` (suspended → active) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). The way back from a suspension; the reason is cleared. Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1c (unverified until built).',
+      '`field_worker.reactivated` (suspended → active) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). The way back from a suspension; the reason is cleared. Carries the verified field_worker.reactivate authorization snapshot (Story 13.1c AD3). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c reactivate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/reactivate).',
     schema: fieldWorker.FieldWorkerReactivatedPayloadSchema,
   },
   'field_worker.terminated': {
     type: 'field_worker.terminated',
     description:
-      '`field_worker.terminated` (pending_kyc | active | suspended → terminated) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Terminal; carries a neutral termination reason and ended_on, the actual last day (QE20). Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surface is Story 13.1c (unverified until built).',
+      '`field_worker.terminated` (pending_kyc | active | suspended → terminated) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Terminal; carries a neutral termination reason (incl. died, decision 2026-11-07-455), ended_on — the actual last day (QE20), for died the date of death — and the verified field_worker.terminate authorization snapshot (Story 13.1c AD3). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c terminate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/terminate).',
     schema: fieldWorker.FieldWorkerTerminatedPayloadSchema,
   },
   'field_worker.posted': {
     type: 'field_worker.posted',
     description:
-      '`field_worker.posted` (pending_kyc | active | suspended → the same state) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A move of REPORTING district (QE17): the authorization snapshot, both districts and a post reason. Human actor only (operator / trustee — QE7); NO PII (I8). No production emitter in 13.1; the emitting surfaces are Stories 13.1c / 13.1d (unverified until built).',
+      '`field_worker.posted` (pending_kyc | active | suspended → the same state) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A move of REPORTING district (QE17): the authorization snapshot (a key of FIELD_WORKER_MOVE_PERMISSION_KEYS — Story 13.1c AD4), both districts and a post reason. Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c move route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move, key field_worker.move); the accepted move request of Story 13.1d is the second emitter (unverified until built).',
     schema: fieldWorker.FieldWorkerPostedPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

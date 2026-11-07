@@ -14,6 +14,7 @@ import type pg from 'pg';
 
 import {
   activateFieldWorker,
+  FIELD_WORKER_MOVE_PERMISSION_KEYS,
   postFieldWorker,
   reactivateFieldWorker,
   recordFieldWorkerKycCompleted,
@@ -34,6 +35,7 @@ import {
 } from '../../src/field-worker/errors.js';
 import { fieldWorkerId, pariwarId } from '../../src/ids/index.js';
 import { authorize, type EffectiveGrant, type VerifiedAuthorization } from '../../src/rbac/check.js';
+import { SEED_PERMISSION_KEYS } from '../../src/rbac/permissions.js';
 import type { FieldWorkerKycStatus, FieldWorkerReasonCode, FieldWorkerState } from '../../src/schema/field_workers.js';
 
 const P = pariwarId('11111111-1111-1111-1111-111111111111');
@@ -127,7 +129,17 @@ function stub(over: Partial<StubRow> | null = {}, opts: { istToday?: string } = 
   return { client: { query } as unknown as pg.PoolClient, calls, payloads };
 }
 
-const staff = { pariwarId: P, fieldWorkerId: FW, auditId: AUDIT, actor: 'operator' as const, actorId: STAFF };
+function staffBase() {
+  return { pariwarId: P, fieldWorkerId: FW, auditId: AUDIT, actor: 'operator' as const, actorId: STAFF };
+}
+const staff = staffBase();
+/** Story 13.1c AD3 / AD4 — a VERIFIED result for one of the act keys (pariwar_admin holds all four) at `district`. */
+const moveAt = (district: string, over: { actorId?: string; pariwarId?: string } = {}) => authAt(district, { ...over, key: 'field_worker.move' });
+const suspender = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.suspend' }) };
+const reactivator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.reactivate' }) };
+const terminator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.terminate' }) };
+/** A move from Patna (the stub row's district — what the admin saw) to `to`, authorized at `target`. */
+const mover = (to: string, target = to) => ({ ...staffBase(), toDistrict: to, expectedFromDistrict: 'Patna', authorization: moveAt(target) });
 /** Story 13.1a AD3 — a VERIFIED `field_worker.approve` result (pariwar_admin) at `district`. */
 const approveAt = (district: string, over: { actorId?: string; pariwarId?: string } = {}) => authAt(district, { ...over, key: 'field_worker.approve' });
 /** CR25 — the RIGHT key checked at the PARIWAR dimension (a Pariwar Admin holds both keys): isolates the dimension check, which
@@ -146,9 +158,9 @@ describe('I13 — the row lock comes before any events_log read or append (RP4 s
   it.each([
     ['kyc_completed', () => recordFieldWorkerKycCompleted, { state: 'pending_kyc', kyc: 'pending' } as Partial<StubRow>, approver, 'field_worker.kyc_complete', ORDER],
     ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, approver, 'field_worker.activate', ACTIVATED_ORDER],
-    ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { reasonCode: 'under_review' }, 'field_worker.suspend:under_review', ORDER],
-    ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, {}, 'field_worker.reactivate', ORDER],
-    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') }, 'field_worker.post', ORDER],
+    ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { ...suspender, reasonCode: 'under_review' }, 'field_worker.suspend:under_review', ORDER],
+    ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, reactivator, 'field_worker.reactivate', ORDER],
+    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { ...mover('Gaya'), reasonCode: 'reassigned' }, 'field_worker.post', ORDER],
   ])('%s: SAVEPOINT → LOCK → HEAD → APPEND → UPDATE, and the command’s computed trigger', async (_label, command, row, extra, trigger, order) => {
     const { client, calls, payloads } = stub(row);
     await (command() as (c: pg.PoolClient, i: unknown) => Promise<unknown>)(client, { ...staff, ...extra });
@@ -158,7 +170,7 @@ describe('I13 — the row lock comes before any events_log read or append (RP4 s
 
   it('terminate: SAVEPOINT → LOCK → NOW → HEAD → APPEND → UPDATE (QE20 reads the IST day under the lock), trigger field_worker.terminate:inactive', async () => {
     const { client, calls, payloads } = stub();
-    await terminateFieldWorker(client, { ...staff, reasonCode: 'inactive', endedOn: '2026-11-02' });
+    await terminateFieldWorker(client, { ...terminator, reasonCode: 'inactive', endedOn: '2026-11-02' });
     expect(calls).toEqual(['SAVEPOINT', 'LOCK', 'NOW', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE']);
     expect(JSON.parse(String(payloads[0]))).toMatchObject({ trigger: 'field_worker.terminate:inactive', reason_code: 'inactive' });
   });
@@ -206,7 +218,7 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
 
   it('(2) BEATS (4): terminate with an INVALID reason on a TERMINATED worker ⇒ IllegalTransition, ⛔ ReasonInvalid', async () => {
     const { client, calls } = stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31' });
-    await expect(terminateFieldWorker(client, { ...staff, reasonCode: 'bogus', endedOn: '2026-11-01' })).rejects.toBeInstanceOf(
+    await expect(terminateFieldWorker(client, { ...terminator, reasonCode: 'bogus', endedOn: '2026-11-01' })).rejects.toBeInstanceOf(
       FieldWorkerIllegalTransitionError,
     );
     await refused(calls);
@@ -214,7 +226,7 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
 
   it('(2): anything out of terminated — `posted` included', async () => {
     const { client, calls } = stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31' });
-    await expect(postFieldWorker(client, { ...staff, toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya') })).rejects.toBeInstanceOf(
+    await expect(postFieldWorker(client, { ...mover('Gaya'), reasonCode: 'reassigned' })).rejects.toBeInstanceOf(
       FieldWorkerIllegalTransitionError,
     );
     await refused(calls); // review R3-22 — its siblings asserted nothing appended; this one did not
@@ -265,16 +277,16 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
   it('(3b) BEATS (3c) BEATS (4) for a post', async () => {
     // Same district, a stale target and a bad reason ⇒ DistrictUnchanged.
     await expect(
-      postFieldWorker(stub().client, { ...staff, toDistrict: 'Patna', reasonCode: 'bogus', authorization: authAt('Nalanda') }),
+      postFieldWorker(stub().client, { ...mover('Patna', 'Nalanda'), reasonCode: 'bogus' }),
     ).rejects.toBeInstanceOf(FieldWorkerDistrictUnchangedError);
     // A stale target and a bad reason ⇒ AuthorizationStale.
     await expect(
-      postFieldWorker(stub().client, { ...staff, toDistrict: 'Gaya', reasonCode: 'bogus', authorization: authAt('Nalanda') }),
+      postFieldWorker(stub().client, { ...mover('Gaya', 'Nalanda'), reasonCode: 'bogus' }),
     ).rejects.toBeInstanceOf(FieldWorkerAuthorizationStaleError);
     // Only the reason is wrong ⇒ ReasonInvalid; a missing reason too.
     for (const reasonCode of ['bogus', 'under_review', undefined]) {
       await expect(
-        postFieldWorker(stub().client, { ...staff, toDistrict: 'Gaya', reasonCode: reasonCode as string, authorization: authAt('Gaya') }),
+        postFieldWorker(stub().client, { ...mover('Gaya'), reasonCode: reasonCode as string }),
       ).rejects.toBeInstanceOf(FieldWorkerReasonInvalidError);
     }
   });
@@ -282,20 +294,20 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
   it('(3c): a target equal to EITHER end of the move is accepted — the destination or the LOCKED district', async () => {
     for (const target of ['Gaya', 'Patna']) {
       const { client, payloads } = stub({ district: 'Patna' });
-      await postFieldWorker(client, { ...staff, toDistrict: 'Gaya', reasonCode: 'at_worker_request', authorization: authAt(target) });
+      await postFieldWorker(client, { ...mover('Gaya', target), reasonCode: 'at_worker_request' });
       expect(JSON.parse(String(payloads[0]))).toMatchObject({ from_district: 'Patna', to_district: 'Gaya', authorization: { target: { value: target } } });
     }
   });
 
   it('(4) suspend / terminate reasons come from their OWN lists', async () => {
-    await expect(suspendFieldWorker(stub().client, { ...staff, reasonCode: 'reassigned' })).rejects.toBeInstanceOf(FieldWorkerReasonInvalidError);
-    await expect(terminateFieldWorker(stub().client, { ...staff, reasonCode: 'under_review', endedOn: '2026-11-01' })).rejects.toBeInstanceOf(
+    await expect(suspendFieldWorker(stub().client, { ...suspender, reasonCode: 'reassigned' })).rejects.toBeInstanceOf(FieldWorkerReasonInvalidError);
+    await expect(terminateFieldWorker(stub().client, { ...terminator, reasonCode: 'under_review', endedOn: '2026-11-01' })).rejects.toBeInstanceOf(
       FieldWorkerReasonInvalidError,
     );
   });
 
   it('(4) BEATS (5): a bad reason AND a future ended_on ⇒ ReasonInvalid', async () => {
-    await expect(terminateFieldWorker(stub().client, { ...staff, reasonCode: 'bogus', endedOn: '2026-12-31' })).rejects.toBeInstanceOf(
+    await expect(terminateFieldWorker(stub().client, { ...terminator, reasonCode: 'bogus', endedOn: '2026-12-31' })).rejects.toBeInstanceOf(
       FieldWorkerReasonInvalidError,
     );
   });
@@ -304,12 +316,12 @@ describe('QE5 — the guard ORDER, case by case (AC5)', () => {
   // stringified must still be the TYPED error (the trigger is built only after the reason is validated).
   it('(4) a free-text reason never appears in the error; a BigInt or a null-prototype object is still ReasonInvalid', async () => {
     const freeText = 'Ramesh Kumar 9876543210 asked to stop';
-    const err = (await suspendFieldWorker(stub().client, { ...staff, reasonCode: freeText }).catch((e: unknown) => e)) as FieldWorkerReasonInvalidError;
+    const err = (await suspendFieldWorker(stub().client, { ...suspender, reasonCode: freeText }).catch((e: unknown) => e)) as FieldWorkerReasonInvalidError;
     expect(err).toBeInstanceOf(FieldWorkerReasonInvalidError);
     expect(err.received).toBe('not_in_the_list');
     expect(JSON.stringify({ ...err, message: err.message })).not.toMatch(/Ramesh|9876543210/);
     for (const odd of [10n, Object.create(null) as unknown]) {
-      const e = await terminateFieldWorker(stub().client, { ...staff, reasonCode: odd as string, endedOn: '2026-11-01' }).catch((x: unknown) => x);
+      const e = await terminateFieldWorker(stub().client, { ...terminator, reasonCode: odd as string, endedOn: '2026-11-01' }).catch((x: unknown) => x);
       expect(e).toBeInstanceOf(FieldWorkerReasonInvalidError);
       expect((e as FieldWorkerReasonInvalidError).received).toBe('not_a_string');
     }
@@ -320,7 +332,7 @@ describe('QE20 — ended_on: (0b) before ANY statement, and the IST bounds in SQ
   it('(0b) a missing or malformed ended_on is refused with NO statement sent (never FieldWorkerProjectorInputError)', async () => {
     for (const endedOn of [undefined, '', '2026-02-30', '01-11-2026', '2026-11-01T00:00:00Z', 20261101]) {
       const { client, calls } = stub();
-      const err = await terminateFieldWorker(client, { ...staff, reasonCode: 'inactive', endedOn: endedOn as string }).catch((e: unknown) => e);
+      const err = await terminateFieldWorker(client, { ...terminator, reasonCode: 'inactive', endedOn: endedOn as string }).catch((e: unknown) => e);
       expect(err, String(endedOn)).toBeInstanceOf(FieldWorkerEndedOnInvalidError);
       expect(err).toMatchObject({ reason: 'missing_or_malformed' });
       expect(calls).toEqual([]);
@@ -328,7 +340,7 @@ describe('QE20 — ended_on: (0b) before ANY statement, and the IST bounds in SQ
   });
 
   it('(5) after the IST today ⇒ in_future; before the IST registration day ⇒ before_registration; both ends inclusive', async () => {
-    const t = (endedOn: string, row: Partial<StubRow> = {}) => terminateFieldWorker(stub(row, { istToday: '2026-11-03' }).client, { ...staff, reasonCode: 'inactive', endedOn });
+    const t = (endedOn: string, row: Partial<StubRow> = {}) => terminateFieldWorker(stub(row, { istToday: '2026-11-03' }).client, { ...terminator, reasonCode: 'inactive', endedOn });
     await expect(t('2026-11-04')).rejects.toMatchObject({ reason: 'in_future' });
     await expect(t('2026-09-30')).rejects.toMatchObject({ reason: 'before_registration' });
     await expect(t('2026-11-03')).resolves.toMatchObject({ state: 'terminated' });
@@ -338,7 +350,7 @@ describe('QE20 — ended_on: (0b) before ANY statement, and the IST bounds in SQ
   it('⭐ the UPPER bound at 00:30 IST: the UTC date is still yesterday, but ended_on = the IST date is ACCEPTED', async () => {
     // 00:30 IST on 2026-11-04 is 19:00 UTC on 2026-11-03 — a UTC "today" would refuse a same-day termination here.
     const { client, payloads } = stub({}, { istToday: '2026-11-04' });
-    await expect(terminateFieldWorker(client, { ...staff, reasonCode: 'left_voluntarily', endedOn: '2026-11-04' })).resolves.toMatchObject({
+    await expect(terminateFieldWorker(client, { ...terminator, reasonCode: 'left_voluntarily', endedOn: '2026-11-04' })).resolves.toMatchObject({
       state: 'terminated',
     });
     expect(JSON.parse(String(payloads[0]))).toMatchObject({ ended_on: '2026-11-04', reason_code: 'left_voluntarily' });
@@ -358,10 +370,10 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
       (c) => registerFieldWorker(c, { ...staff, ...registerInput, authorization: authAt('Patna'), ...bad } as never),
       (c) => recordFieldWorkerKycCompleted(c, { ...approver, ...bad } as never),
       (c) => activateFieldWorker(c, { ...approver, ...bad } as never),
-      (c) => suspendFieldWorker(c, { ...staff, reasonCode: 'under_review', ...bad } as never),
-      (c) => reactivateFieldWorker(c, { ...staff, ...bad } as never),
-      (c) => terminateFieldWorker(c, { ...staff, reasonCode: 'inactive', endedOn: '2026-11-01', ...bad } as never),
-      (c) => postFieldWorker(c, { ...staff, toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authAt('Gaya'), ...bad } as never),
+      (c) => suspendFieldWorker(c, { ...suspender, reasonCode: 'under_review', ...bad } as never),
+      (c) => reactivateFieldWorker(c, { ...reactivator, ...bad } as never),
+      (c) => terminateFieldWorker(c, { ...terminator, reasonCode: 'inactive', endedOn: '2026-11-01', ...bad } as never),
+      (c) => postFieldWorker(c, { ...mover('Gaya'), reasonCode: 'reassigned', ...bad } as never),
     ];
     for (const run of commands) {
       const { client, calls } = stub();
@@ -408,10 +420,10 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
   });
 
   it('post refuses an unverified / foreign / non-district authorization BEFORE the lock (its TARGET is judged only under the lock)', async () => {
-    for (const authorization of [undefined, { ...authAt('Gaya') }, authAt('Gaya', { pariwarId: OTHER_P }), authAt('Gaya', { key: 'module.manage' })]) {
+    for (const authorization of [undefined, { ...moveAt('Gaya') }, moveAt('Gaya', { pariwarId: OTHER_P }), authAt('Gaya', { key: 'module.manage' })]) {
       const { client, calls } = stub();
       await expect(
-        postFieldWorker(client, { ...staff, toDistrict: 'Gaya', reasonCode: 'reassigned', authorization: authorization as VerifiedAuthorization }),
+        postFieldWorker(client, { ...mover('Gaya'), reasonCode: 'reassigned', authorization: authorization as VerifiedAuthorization }),
       ).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
       expect(calls).toEqual([]);
     }
@@ -462,5 +474,134 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
     expect(() => {
       a.target.value = 'Gaya';
     }).toThrow(TypeError);
+  });
+});
+
+// Story 13.1c AD3 — suspend, reactivate and terminate carry the VERIFIED result of THEIR key; its target is judged under the lock.
+describe('Story 13.1c AD3 — the lifecycle acts carry their own key’s authorization (13.1 QE18; `-443` Q3 A)', () => {
+  const ACTS = [
+    ['suspend', 'field_worker.suspend', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => suspendFieldWorker(c, { ...staff, reasonCode: 'under_review', authorization: a as VerifiedAuthorization })],
+    ['reactivate', 'field_worker.reactivate', { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => reactivateFieldWorker(c, { ...staff, authorization: a as VerifiedAuthorization })],
+    ['terminate', 'field_worker.terminate', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => terminateFieldWorker(c, { ...staff, reasonCode: 'inactive', endedOn: '2026-11-02', authorization: a as VerifiedAuthorization })],
+  ] as const;
+
+  it.each(ACTS)('%s writes the snapshot of %s, target = the locked district', async (_label, key, row, run) => {
+    const { client, payloads } = stub(row);
+    await run(client, authAt('Patna', { key }));
+    expect(JSON.parse(String(payloads[0])).authorization).toMatchObject({ permission_key: key, role: 'pariwar_admin', target: { dimension: 'district', value: 'Patna' } });
+  });
+
+  it.each(ACTS)('%s refuses — with NO statement sent — a missing, look-alike, foreign-Pariwar, foreign-actor, wrong-dimension or WRONG-KEY authorization', async (_label, key, row, run) => {
+    const otherActKeys = ['field_worker.suspend', 'field_worker.reactivate', 'field_worker.terminate', 'field_worker.move', 'field_worker.register', 'field_worker.approve'].filter((k) => k !== key);
+    for (const authorization of [
+      undefined,
+      { ...authAt('Patna', { key }) },
+      authAt('Patna', { key, pariwarId: OTHER_P }),
+      authAt('Patna', { key, actorId: '99999999-9999-4999-8999-999999999999' }),
+      keyAtPariwar(key),
+      ...otherActKeys.map((k) => authAt('Patna', { key: k })),
+    ]) {
+      const { client, calls } = stub(row);
+      await expect(run(client, authorization)).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it.each(ACTS)('(3d) %s: a target that is not the LOCKED district ⇒ AuthorizationStale, judged under the lock, nothing appended', async (_label, key, row, run) => {
+    const { client, calls } = stub({ ...row, district: 'Gaya' });
+    await expect(run(client, authAt('Patna', { key }))).rejects.toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+    expect(calls.slice(0, 2)).toEqual(['SAVEPOINT', 'LOCK']);
+    expect(calls).not.toContain('APPEND');
+    expect(calls.slice(-2)).toEqual(['ROLLBACK TO', 'RELEASE']);
+  });
+
+  it('(2) BEATS (3d): a stale target on a TERMINATED worker ⇒ IllegalTransition, for all three', async () => {
+    for (const [, key, , run] of ACTS) {
+      const { client } = stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31', district: 'Gaya' });
+      await expect(run(client, authAt('Patna', { key }))).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    }
+  });
+
+  it('(3d) BEATS (4) and (5): a stale target with a bad reason or a future ended_on ⇒ AuthorizationStale', async () => {
+    await expect(suspendFieldWorker(stub({ district: 'Gaya' }).client, { ...suspender, reasonCode: 'bogus' })).rejects.toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+    await expect(terminateFieldWorker(stub({ district: 'Gaya' }).client, { ...terminator, reasonCode: 'bogus', endedOn: '2026-11-01' })).rejects.toBeInstanceOf(
+      FieldWorkerAuthorizationStaleError,
+    );
+    await expect(
+      terminateFieldWorker(stub({ district: 'Gaya' }, { istToday: '2026-11-03' }).client, { ...terminator, reasonCode: 'inactive', endedOn: '2026-12-31' }),
+    ).rejects.toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+  });
+
+  it('`died` (`-455`) is a termination reason, ⛔ a suspension one; its ended_on is judged by the same IST bounds', async () => {
+    const { client, payloads } = stub({}, { istToday: '2026-11-03' });
+    await terminateFieldWorker(client, { ...terminator, reasonCode: 'died', endedOn: '2026-11-03' });
+    expect(JSON.parse(String(payloads[0]))).toMatchObject({ reason_code: 'died', ended_on: '2026-11-03', trigger: 'field_worker.terminate:died' });
+    await expect(terminateFieldWorker(stub({}, { istToday: '2026-11-03' }).client, { ...terminator, reasonCode: 'died', endedOn: '2026-11-04' })).rejects.toMatchObject({
+      reason: 'in_future',
+    });
+    await expect(suspendFieldWorker(stub().client, { ...suspender, reasonCode: 'died' })).rejects.toBeInstanceOf(FieldWorkerReasonInvalidError);
+  });
+});
+
+// Story 13.1c AD4 (13.1 C5 / C10, D7) — the move accepts ONLY a move key, and names the district its admin saw.
+describe('Story 13.1c AD4 — the move key list and the expected source', () => {
+  it('the move-key list is exactly [field_worker.move] — ⛔ field_worker.register', () => {
+    expect([...FIELD_WORKER_MOVE_PERMISSION_KEYS]).toEqual(['field_worker.move']);
+  });
+
+  it('I2: a VERIFIED field_worker.register result at the destination is refused by the KEY check, with NO statement sent', async () => {
+    const { client, calls } = stub();
+    await expect(postFieldWorker(client, { ...mover('Gaya'), authorization: authAt('Gaya'), reasonCode: 'reassigned' })).rejects.toThrow(
+      /the authorization is for 'field_worker\.register', not this act/,
+    );
+    expect(calls).toEqual([]);
+  });
+
+  it('EVERY catalog key but the move key is refused — a super_admin grant issues each at the destination; no statement sent', async () => {
+    const SUPER: EffectiveGrant = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null };
+    const others = SEED_PERMISSION_KEYS.filter((k) => !(FIELD_WORKER_MOVE_PERMISSION_KEYS as readonly string[]).includes(k));
+    expect(others.length).toBe(SEED_PERMISSION_KEYS.length - 1); // non-vacuity: the whole catalog but one
+    for (const key of others) {
+      const authorization = authorize({ actorId: STAFF, grants: [SUPER], key, resource: { dimension: 'district', value: 'Gaya', pariwarId: P } });
+      expect(authorization, key).not.toBeNull();
+      const { client, calls } = stub();
+      await expect(postFieldWorker(client, { ...mover('Gaya'), authorization: authorization!, reasonCode: 'reassigned' }), key).rejects.toBeInstanceOf(
+        FieldWorkerProjectorInputError,
+      );
+      expect(calls, key).toEqual([]);
+    }
+    // CONTROL — the move key from the same grant passes.
+    const move = authorize({ actorId: STAFF, grants: [SUPER], key: 'field_worker.move', resource: { dimension: 'district', value: 'Gaya', pariwarId: P } })!;
+    await expect(postFieldWorker(stub().client, { ...mover('Gaya'), authorization: move, reasonCode: 'reassigned' })).resolves.toMatchObject({ district: 'Gaya' });
+  });
+
+  it('a missing or blank expected source is refused with NO statement sent', async () => {
+    for (const expectedFromDistrict of [undefined, '', '  ']) {
+      const { client, calls } = stub();
+      await expect(postFieldWorker(client, { ...mover('Gaya'), expectedFromDistrict: expectedFromDistrict as string, reasonCode: 'reassigned' })).rejects.toThrow(
+        /expected source district is missing/,
+      );
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it('(3a) a locked district other than the expected source ⇒ AuthorizationStale under the lock — and it BEATS (3b), (3c) and (4)', async () => {
+    // The worker is in Gaya (moved meanwhile); the admin saw Patna.
+    for (const [to, target, reasonCode] of [
+      ['Nalanda', 'Nalanda', 'reassigned'], // (3c) alone would accept: the target is the destination
+      ['Gaya', 'Gaya', 'reassigned'], // (3b) alone would say DistrictUnchanged
+      ['Nalanda', 'Bhojpur', 'bogus'], // a stale target and a bad reason too
+    ] as const) {
+      const { client, calls } = stub({ district: 'Gaya' });
+      await expect(postFieldWorker(client, { ...mover(to, target), reasonCode })).rejects.toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      expect(calls.slice(0, 2)).toEqual(['SAVEPOINT', 'LOCK']);
+      expect(calls).not.toContain('APPEND');
+    }
+  });
+
+  it('(2) BEATS (3a): a terminated worker with a stale source ⇒ IllegalTransition', async () => {
+    await expect(
+      postFieldWorker(stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31', district: 'Gaya' }).client, { ...mover('Nalanda'), reasonCode: 'reassigned' }),
+    ).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
   });
 });

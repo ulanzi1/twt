@@ -26,7 +26,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1c: A Pariwar Admin Moves a Field Worker Directly; a Field Worker Is Suspended, Reactivated or Terminated - and Everything That Has Happened to Their Record Can Be Read `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -507,7 +507,7 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
 - [ ] **Task 0 - Preflight and governance (AC: 12)** - runs FIRST; writes no code.
   - [x] 0.0 (`01cbba52`) Commit this story file and the create-story record edits (`epics.md` note under Story 13.1c, `deferred-work.md` lines, `sprint-status.yaml`
     row + ledger `2026-11-07d`) as ONE `records(13.1c)` commit on the story branch, when BigDev asks.
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor bb4d8620 HEAD`; `git diff --name-only bb4d8620..origin/main -- packages apps scripts docs/launch-gate-inventory`.
+  - [x] 0.1 `git fetch origin`; `git merge-base --is-ancestor bb4d8620 HEAD`; `git diff --name-only bb4d8620..origin/main -- packages apps scripts docs/launch-gate-inventory`.
     Re-derive any claim at the new tip; re-grep the NUMBERS block; check `git worktree list` / `git branch -a` for another branch touching
     `packages/domain/src/field-worker/`, `rbac/permissions.ts` or `apps/admin/src/modules/field-workers/` (13.1d especially: it mints move keys too, AD4).
     If any migration after `0202` other than this story's `0203` / `0204` touches `users`' policies or grants, re-check G19; if a sibling has taken
@@ -543,53 +543,53 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
     E4 commands before sending (the decision id `-453` it cites exists only after Task 0.3). Non-blocking. A ruling is its own decision entry plus dated
     lines at Row 50 and Row 48 (i).
 
-- [ ] **Task 1 - Keys (AC: 9; I10)** - in the SAME commit as Task 2.3.
-  - [ ] 1.1 `permissions.ts`: the keys, `PERMISSION_CATALOG_VERSION = 61`, the changelog comment; `roles.ts`: constants and bundle entries per AD5.
-  - [ ] 1.2 `tests/rbac/permissions.test.ts` (`toBe(61)`, length), `tests/rbac/roles.test.ts` (one describe per key, 13.1a's shape), `tests/field-worker/events.test.ts` catalog fixtures.
+- [x] **Task 1 - Keys (AC: 9; I10)** - in the SAME commit as Task 2.3.
+  - [x] 1.1 `permissions.ts`: the keys, `PERMISSION_CATALOG_VERSION = 61`, the changelog comment; `roles.ts`: constants and bundle entries per AD5.
+  - [x] 1.2 `tests/rbac/permissions.test.ts` (`toBe(61)`, length), `tests/rbac/roles.test.ts` (one describe per key, 13.1a's shape), `tests/field-worker/events.test.ts` catalog fixtures.
 
-- [ ] **Task 2 - The domain (AC: 1-7; I1-I5)**
-  - [ ] 2.0 Migrations `0203` + `0204` and the drizzle schema (AD11, TR12): `'died'` APPENDED LAST to `FIELD_WORKER_REASON_CODES` (after `'reassigned'` -
+- [x] **Task 2 - The domain (AC: 1-7; I1-I5)**
+  - [x] 2.0 Migrations `0203` + `0204` and the drizzle schema (AD11, TR12): `'died'` APPENDED LAST to `FIELD_WORKER_REASON_CODES` (after `'reassigned'` -
     G5; the enum-order spec fails otherwise) and to `FIELD_WORKER_TERMINATE_REASONS` in `events.ts` (the payload enum follows); the CHECK text and the two
     comments (AD11). `schema-trigger.spec.ts`: `died` refused as a suspension reason, accepted on `terminated` (AC6 (g)). `scripts/field-worker-state-invariant`
     names no reason (grepped at the pin) - re-check. Run the migrations on a FRESH container.
-  - [ ] 2.1 `events.ts`: `authorization` REQUIRED on `suspended`, `reactivated`, `terminated`; the four registry descriptions (AD3, incl. `posted`);
+  - [x] 2.1 `events.ts`: `authorization` REQUIRED on `suspended`, `reactivated`, `terminated`; the four registry descriptions (AD3, incl. `posted`);
     `packages/events/tests/field-worker-registry-coverage.test.ts`.
-  - [ ] 2.2 `commands.ts`: the three commands gain `authorization` + key check at guard (0) + locked-target check (AD3); update the guard-order header (:13-30).
+  - [x] 2.2 `commands.ts`: the three commands gain `authorization` + key check at guard (0) + locked-target check (AD3); update the guard-order header (:13-30).
     Sweep G12 (b) in the SAME commit - including `apps/jobs/tests/field-worker-code-sms-live.test.ts`, which the domain test run does not reach
     (run `pnpm --filter @twt/jobs test` too, or it first fails at `ci:local`).
-  - [ ] 2.3 `postFieldWorker`: `FIELD_WORKER_MOVE_PERMISSION_KEYS`, `verifiedSnapshot`'s `permissionKeys` option, `expectedFromDistrict` (AD4). Sweep G12 (a)'s tests to the new keys
+  - [x] 2.3 `postFieldWorker`: `FIELD_WORKER_MOVE_PERMISSION_KEYS`, `verifiedSnapshot`'s `permissionKeys` option, `expectedFromDistrict` (AD4). Sweep G12 (a)'s tests to the new keys
     through the two fence-exempt fixture files only; `commands-guards.test.ts` gains: register key refused, every non-move key refused, stale source refused.
-  - [ ] 2.4 `read.ts`: `listFieldWorkerEvents` (AD7) + `clampLimit`; export through the barrel; the dated comment at `:362-365` (AD10 (c)).
-  - [ ] 2.5 Tests: `tests/integration/field-worker/commands.spec.ts` (each act with its key; stale target under the lock; move of a suspended worker keeps
+  - [x] 2.4 `read.ts`: `listFieldWorkerEvents` (AD7) + `clampLimit`; export through the barrel; the dated comment at `:362-365` (AD10 (c)).
+  - [x] 2.5 Tests: `tests/integration/field-worker/commands.spec.ts` (each act with its key; stale target under the lock; move of a suspended worker keeps
     the reason), `log.spec.ts` (order, paging, clamp, foreign Pariwar null, a moved worker's whole stream), `stream-concurrency.spec.ts` updated. RED proof
     for each new guard (mutate it, see the intended assertion fail, restore).
 
-- [ ] **Task 3 - Contracts (AC: 6-8, 11)**
-  - [ ] 3.1 DTOs and the three reason tuples (the terminate one with `died`; re-declared, sync test in `packages/contracts/tests/field-workers.test.ts`); `emit-openapi.ts` entries; regenerate `openapi/v1.yaml`.
-  - [ ] 3.2 A required field added to a contract breaks fixtures outside tsc ([[project_contracts_tests_outside_tsc]]) - grep the contracts tests.
+- [x] **Task 3 - Contracts (AC: 6-8, 11)**
+  - [x] 3.1 DTOs and the three reason tuples (the terminate one with `died`; re-declared, sync test in `packages/contracts/tests/field-workers.test.ts`); `emit-openapi.ts` entries; regenerate `openapi/v1.yaml`.
+  - [x] 3.2 A required field added to a contract breaks fixtures outside tsc ([[project_contracts_tests_outside_tsc]]) - grep the contracts tests.
 
-- [ ] **Task 4 - The API (AC: 1-8, 11; I6-I8)**
-  - [ ] 4.1 `lifecycle-handlers.ts` (AD6) on `createFieldWorkerWriteSupport`; `log-handlers.ts`; registrations in `routes.ts` with the per-worker chain and
+- [x] **Task 4 - The API (AC: 1-8, 11; I6-I8)**
+  - [x] 4.1 `lifecycle-handlers.ts` (AD6) on `createFieldWorkerWriteSupport`; `log-handlers.ts`; registrations in `routes.ts` with the per-worker chain and
     each key; `index.ts` header (13.1c no longer "owner of" unbuilt routes). `errors.ts`: no new code (Q-1 C needs none); `field-worker-errors.test.ts`
     relabels the rows now reachable.
-  - [ ] 4.2 Extend `_registration-harness.ts` (`move`, `suspend`, `reactivate`, `terminate`, `log` helpers; `cleanup` unchanged in order) and
+  - [x] 4.2 Extend `_registration-harness.ts` (`move`, `suspend`, `reactivate`, `terminate`, `log` helpers; `cleanup` unchanged in order) and
     `_field-worker-fixture.ts` (`moveTestFieldWorker` on the move key). New specs in `apps/api/tests/integration/field-worker/`: `lifecycle.spec.ts`
     (AC1, AC4-AC6 incl. holders and non-holders, pre-read refusals write no audit line - assert by counting `audit_log` rows for the locator, with a
     control that a committed act writes one; assert the move's line is `field_worker.posted`), `move-race.spec.ts` (AC2), `terminate-race.spec.ts`
     (AC6 (b): two concurrent terminations, the loser's 409 `illegal_transition` from inside `mutate` and its `_rolled_back` twin, with the reason AND a
     control asserted - TR8), `log.spec.ts` (AC8). Idempotency:
     same key replays; same key on another worker is a different namespace (13.1a TR6).
-  - [ ] 4.3 Route review (13.2 C7): grep the new files for a door import, a re-export, `requestContextStorage.run`, `pariwarId =`; run the reach fence and `check.test.ts`.
+  - [x] 4.3 Route review (13.2 C7): grep the new files for a door import, a re-export, `requestContextStorage.run`, `pariwarId =`; run the reach fence and `check.test.ts`.
 
-- [ ] **Task 5 - The screens (AC: 10)**
-  - [ ] 5.1 Hooks and client (`src/api/hooks.ts`, `client.ts`): four mutations (on success: invalidate the lists and the log, `setQueryData` the identity - AD8), `useFieldWorkerLog` (infinite, `gcTime: 0` like identity - [[project_query_gctime_blinds_removal_tests]]); `fieldWorkerListIsStale` + `code_not_available` (AD10 (b)).
-  - [ ] 5.2 `WorkerDetail.tsx`: `children`'s second argument (AD8); `WorkerActions.tsx`, `WorkerHistory.tsx`, the Find state selector (incl. Waiting for approval), copy in `i18n-en.ts` (reason labels incl. "Died" and "Date of death"; the "Stopped working" line `fw.actions.end.inactiveHint`; AD8 messages; AD10 (a)); `derive.ts` `BY_CODE` rows.
-  - [ ] 5.3 RTL tests: `apps/admin/tests/field-worker-{actions,history}.test.tsx`; update `field-worker-find-page.test.tsx` (`:1057`), `field-worker-derive.test.ts` (walks `FIELD_WORKER_EN_KEYS`). Mind [[project_tanstack_onsettled_before_success]] and [[project_tanstack_mutate_callbacks_latest_only]].
+- [x] **Task 5 - The screens (AC: 10)**
+  - [x] 5.1 Hooks and client (`src/api/hooks.ts`, `client.ts`): four mutations (on success: invalidate the lists and the log, `setQueryData` the identity - AD8), `useFieldWorkerLog` (infinite, `gcTime: 0` like identity - [[project_query_gctime_blinds_removal_tests]]); `fieldWorkerListIsStale` + `code_not_available` (AD10 (b)).
+  - [x] 5.2 `WorkerDetail.tsx`: `children`'s second argument (AD8); `WorkerActions.tsx`, `WorkerHistory.tsx`, the Find state selector (incl. Waiting for approval), copy in `i18n-en.ts` (reason labels incl. "Died" and "Date of death"; the "Stopped working" line `fw.actions.end.inactiveHint`; AD8 messages; AD10 (a)); `derive.ts` `BY_CODE` rows.
+  - [x] 5.3 RTL tests: `apps/admin/tests/field-worker-{actions,history}.test.tsx`; update `field-worker-find-page.test.tsx` (`:1057`), `field-worker-derive.test.ts` (walks `FIELD_WORKER_EN_KEYS`). Mind [[project_tanstack_onsettled_before_success]] and [[project_tanstack_mutate_callbacks_latest_only]].
 
-- [ ] **Task 6 - Records (AC: 12)** - the story's Dev Agent Record and File List; `deferred-work.md`: CR33's re-trigger fired (AD12), 13.1b C1 / C7 and 13.1a CR60 closed by
+- [x] **Task 6 - Records (AC: 12)** - the story's Dev Agent Record and File List; `deferred-work.md`: CR33's re-trigger fired (AD12), 13.1b C1 / C7 and 13.1a CR60 closed by
   this story with commit ids; `epics.md` BUILT note; ledger entry. A record states only what has been run ([[feedback_record_unattested_no_backfill]]).
 
-- [ ] **Task 7 - Gate** - `ci:local` on a FRESH container through the push ([[project_known_livedb_test_failures]], #18 needs a fresh DB).
+- [x] **Task 7 - Gate** - `ci:local` on a FRESH container through the push ([[project_known_livedb_test_failures]], #18 needs a fresh DB).
 
 - [ ] **Task 8 - Browser pass (AC: 10)**
   - [ ] 8.1 In the dev Mac's Chrome: move a worker, suspend, reactivate, end an active one (left voluntarily), a pending one (registered in error) and
@@ -691,13 +691,82 @@ _(none yet)_
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1c`, 2026-11-07, in the story's worktree.
+
 ### Debug Log References
+
+- Task 0.1 (2026-11-07): `origin/main` still `bb4d8620` (ancestor of HEAD; no `packages/` / `apps/` / `scripts/` change); journal's last
+  idx 202, so `0203` / `0204` free; catalog v60 / 81 keys; next decision `-456`; no live sibling branch (14.3, 6.22b, 6.39) touches the
+  field-worker domain, RBAC, the admin module or migrations (older branches touching `permissions.ts` are stale, Aug-Oct). No
+  migration after `0202` touches `users` (G19 holds).
+- Containers: `twt-13-1c-pg` `:5481` (dev), `twt-13-1c-red` `:5482` (AC6 (g)'s RED proof, removed), `twt-13-1c-ci` `:5483` (`ci:local`).
+- ⚠ The shell's own `DATABASE_URL` is `:5432` and an `export` does not survive between tool calls: two RED-proof runs of the domain
+  `log.spec.ts` went to `:5432` and failed at their first insert ("relation field_workers does not exist") - per-test-rollback specs,
+  nothing persisted there. Every later run carries the URL on the command. ([[project_prepush_hook_inherits_5432]])
+- A first draft of the API `lifecycle.spec.ts` refusal helper read its "before" counts AFTER the request ran (the argument was
+  evaluated first), so "no audit line" could not fail - found because a RED proof (the legality pre-read removed) stayed green.
+  Fixed to a thunk; the RED proofs then failed as intended.
+- The domain-accessor-invariants gate refused `listFieldWorkerEvents`'s bare `.limit(limit + 1)`; it now clamps inline
+  (`pageFieldWorkersForPariwar`'s form).
+- The microcopy tone gate's out-of-band-blame rule fired on the admin label "Registered by mistake" (AC10 pins it verbatim): ONE
+  allow entry scoped to `i18n-en.ts` and the exact phrase (the rule is for member copy about gifts). ⚠ A choice BigDev may revisit.
+- A throwaway browser-pass launcher spec was written into `apps/api/tests/integration/` while `ci:local` ran; moved out to the
+  scratchpad within about a minute (the lint job had already passed). Never committed.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created (create-story, 2026-11-07).
+- **Implemented 2026-11-07 (dev-story), six commits on the story branch, nothing pushed:** `7575ce9f` migrations `0203` + `0204`
+  (`died`); `e14636da` the five keys (catalog 60 -> 61, 81 -> 86), AD3 (the three acts carry their own key's verified
+  authorization, target judged against the locked district) and AD4 (`FIELD_WORKER_MOVE_PERMISSION_KEYS`, `verifiedSnapshot`'s
+  `permissionKeys`, the `expectedFromDistrict` guard (3a)); `3381e55e` `listFieldWorkerEvents` (AD7) and AD10 (c)'s dated comment;
+  `68baf1db` contracts + OpenAPI; `290802b2` the four write routes and the log route (AD6) + five live specs; `f311243b` the admin
+  screens (AD8), AD10 (a) and (b), and one `microcopy.yaml` allow entry.
+- **Tests run (all on fresh containers):** domain unit 3996 + field-worker live 135 (incl. `log.spec` 4); API field-worker live
+  103 (lifecycle 14, move-race 3, terminate-race 1, log 4); jobs code-SMS live 21; contracts 1713; admin 2035 (actions 15,
+  history 4). RED proofs, each failing the intended leg and restored: AC6 (g)'s `0204` held back on a fresh container (23514);
+  the move-key list, the (3a) source check, suspend's (3d), terminate's key check; the log's Pariwar predicate and blank-name rule;
+  the API's legality and district-unchanged pre-reads; the history read on mount and invalidating the identity instead of
+  `setQueryData`.
+- **Task 7 - gate, as run (⛔ through the push; nothing is pushed):** `ci:local` at `f311243b` on a FRESH container (`:5483`), run
+  directly: 37 of 38 jobs green - lint, typecheck, build, every gate, `integration-tests` (api 3148, jobs 2150 among them) - and
+  `test (unit)` FAILED on ONE spec this story does not touch, `packages/domain/tests/db.test.ts` "builds a pool with defaults",
+  a 5000 ms timeout under load (collection 2224 s; turbo then cancelled admin / api / jobs). It passes 3/3 alone; the unit job
+  re-run alone (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`, same tree) was 37/37 tasks green. The oversubscription
+  class ([[project_ci_local_concurrency_oversubscription]]). The push's own `ci:local` is still to run.
+- **Task 8 - browser pass: NOT YET RUN.** The Mac's Chrome loaded the `127.0.0.1` probe at the start of the session; when the pass
+  began, the only connected browser was a Windows one (`isLocal: false`), and the probe (still served, `curl` fetches it) showed an
+  error page. Waiting on BigDev to reconnect the Mac's Chrome ([[project_agent_chrome_cannot_reach_localhost]]). The launcher, the
+  helper and Vite are prepared (scratchpad; nothing in the tree).
+- **Variances / choices to review:** (1) the log's `limit` is CLAMPED to 100 by a `preprocess` (AC8) while the OpenAPI still declares
+  `maximum: 100` (the forced-pagination guard reads a bound); (2) the `ended_on` bounds are judged by the command inside `mutate`,
+  so a 422 `ended_on_invalid` writes the intent and its `_rolled_back` twin (TR2's case), asserted as such - every refusal the
+  pre-read can see writes none; (3) the API pre-read also refuses a stale gate target / a stale `from_district` /
+  `district_unchanged` with no line (AC1 (c), I7); (4) `stream-concurrency.spec` (e2)/(e3) rewritten: two moves from the same
+  screen no longer both fulfil (13.1 D7); (5) "Registered by mistake" kept verbatim (AC10) with a file- and phrase-scoped
+  microcopy allow entry; (6) `CodeReveal` stays on the Find panel for every state (its 409 copy by state is the answer).
 
 ### File List
+
+New: `packages/domain/migrations/0203_field-worker-reason-died.sql`, `packages/domain/migrations/0204_field-worker-reason-subset-died.sql`,
+`packages/domain/tests/integration/field-worker/log.spec.ts`, `apps/api/src/modules/field-worker/lifecycle-handlers.ts`,
+`apps/api/src/modules/field-worker/log-handlers.ts`, `apps/api/tests/integration/field-worker/{lifecycle,log,move-race,terminate-race}.spec.ts`,
+`apps/admin/src/modules/field-workers/WorkerActions.tsx`, `apps/admin/src/modules/field-workers/WorkerHistory.tsx`,
+`apps/admin/tests/field-worker-actions.test.tsx`, `apps/admin/tests/field-worker-history.test.tsx`.
+
+Modified: `packages/domain/migrations/meta/_journal.json`; `packages/domain/src/schema/field_workers.ts`;
+`packages/domain/src/field-worker/{commands,events,read}.ts`; `packages/domain/src/rbac/{permissions,roles}.ts`;
+`packages/domain/tests/field-worker/{commands-guards,events,state}.test.ts`; `packages/domain/tests/rbac/{permissions,roles}.test.ts`;
+`packages/domain/tests/integration/field-worker/{_fixtures.ts,commands.spec.ts,projector-trigger.spec.ts,read.spec.ts,schema-trigger.spec.ts,stream-concurrency.spec.ts}`;
+`packages/events/src/registry.ts`; `packages/events/tests/field-worker-registry-coverage.test.ts`;
+`packages/contracts/src/field-workers/{dto,enums,index}.ts`; `packages/contracts/scripts/emit-openapi.ts`; `packages/contracts/tests/field-workers.test.ts`;
+`openapi/v1.yaml`; `apps/api/src/modules/field-worker/{routes,index}.ts`; `apps/api/tests/integration/_field-worker-fixture.ts`;
+`apps/api/tests/integration/field-worker/{_registration-harness.ts,approval.spec.ts,code-read.spec.ts}`; `apps/api/tests/unit/field-worker-errors.test.ts`;
+`apps/jobs/tests/field-worker-code-sms-live.test.ts`; `apps/admin/src/api/{client,hooks}.ts`;
+`apps/admin/src/modules/field-workers/{FindWorkerPage,WorkerDetail}.tsx`, `{derive,i18n-en,index}.ts`;
+`apps/admin/tests/{field-worker-derive.test.ts,field-worker-find-page.test.tsx,field-worker-reads.test.tsx}`; `microcopy.yaml`.
+
+Records: this story file; `_bmad-output/implementation-artifacts/{deferred-work.md,sprint-status.yaml}`; `_bmad-output/planning-artifacts/epics.md`.
 
 ## Change Log
 
@@ -713,3 +782,4 @@ _(none yet)_
 | 2026-11-07 | 1.7 | The Panel RULED (BigDev relayed: "by DR and KB / Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A") - decision `2026-11-07-454` committed ALONE `98cebb74` (Trustee-ratified). Q2 B was NOT our suggestion: a returning worker gets a new code, linked to the old record. Row 50 (a) and (d) MET; (b)'s answers recorded, its rows OPEN (an undo and appeal record, the link, the shown-number line, the silence warning, the reason "died" - BigDev's scheduling); Row 48 (i): 13.1c's contribution discharged. 13.6's C4 RECORDED. Not ruled: Q4's period, a "could not be reached" reason, credit for a wrongly-ended worker's gap, money already earned. PRD FR-85 annotated (the under-review hold). No AC of this story changed yet: the build still ships the three neutral reasons; whether "died" (and the rest) joins THIS story is the open scheduling question. |
 | 2026-11-07 | 1.8 | BigDev: "yes, apply the split" - decision `2026-11-07-455` (author-commit, alone `608f9faf`) amends `-453` AD1 / AD2 / AD11. **This story gains the reason `died`** (`-454` Q5 A): on the officer's word, `ended_on` = the date of death; TWO hand-authored migrations (`0203` ADD VALUE alone; `0204` the reason-subset CHECK by `::text` - TR12); AD2, AD8 ("Died", "Date of death"), AD11, I5, AC6 (g), Tasks 2.0 / 3.1 / 5.2, Project Structure. **Not here:** the undo, appeal record, link and shown number - row `13-1f` (C2), whose undo + appeal gate this route's go-live (Row 50 (f), new); the silence warning - 13.8 (C5, new; its period not ruled); the held credit - 13.8 / 13.5 (C3). Row 50 (b) MET. |
 | 2026-11-07 | 1.9 | Validated a second time (`bmad-create-story validate 13.1c`, at `2852318f`; `origin/main` still `bb4d8620`, no `packages/` / `apps/` change; `0203` / `0204` free on every branch; BigDev: "all" - 13 items applied). **`died` goes LAST in `FIELD_WORKER_REASON_CODES`** (`ADD VALUE` appends; `field-workers-policy-regression.spec.ts:67` pins the enum order) - G5, AD11, Task 2.0. **AC10 names the FOUR reasons**, the "Date of death" relabel and the `-454` Q4 A line. **Policy meaning** rewritten to the Panel's ruled sentence (`-454` Q6 C, Q1 A, Q2 B), with "this story builds none of it; `acceptsNewAttributions` is not edited". **Q4 A binds `inactive` here:** End's confirm shows "End a worker for this only after you have tried to reach them." (AD2, AD8, Task 5.2) - a line, no attestation. Rulings table gains `-454` Q1 / Q4 / Q5 / Q6 / Q7 and `-455`; the opening paragraph, section 0 edges 2-4, cost (a), AD2, AD5, AD12 and Project Structure read as RULED (gate Row 50 (f); keys confirmed; undo / appeal in `13-1f`). Header NUMBERS (next decision `-456`, ledger `2026-11-07l`, Row 50 appended). `schema-trigger.spec.ts` gains `died`-as-suspension refused (AC6 (g)); AC6 (g)'s RED proof is a development-time mutation; AD10 (c)'s ground narrowed (the text tells a worker their own code); Task 0.1 renumbers on collision; Task 8.1 ends one "Died"; C2 carries three facts to `13-1f` (the mobile index on undo, the ender's role, the log's event type) - also in `deferred-work.md`. No AC of the build changed beyond AC6 (g) and AC10; nothing went to the Panel. |
+| 2026-11-07 | 1.10 | `bmad-dev-story 13.1c`: Tasks 0.1-7 done (six code commits `7575ce9f`..`f311243b`, nothing pushed); Task 8 (the browser pass) NOT YET RUN - the Mac's Chrome dropped and only a Windows browser was connected. `ci:local` at `f311243b` on a fresh container: 37/38, `test (unit)` failed on an untouched spec's load timeout (`db.test.ts`); the unit job re-run alone 37/37. Status stays `in-progress` until Task 8. `deferred-work.md`: CB9 / 13.1b C7 / C1 and 13.1a CR60 BUILT on the branch (close on landing); CR33's re-trigger confirmed. |

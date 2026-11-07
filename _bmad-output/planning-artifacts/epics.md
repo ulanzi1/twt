@@ -7649,6 +7649,8 @@ whether this story builds its anonymize command.
 
 > ✅ **RULED 2026-11-07** (decision `2026-11-07-454`, Trustee-ratified, DR + KB): *"by DR and KB / Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A"* — Q2 B was not our suggestion (a returning worker gets a NEW code, linked to the old record). Row 50 (a) and (d) MET; (b) waits on a ROW for each needed build (an undo and appeal record, the link, the shown-number line, the silence warning, the reason "died"). Annotation only.
 
+> 🔨 **DEV-STORY (2026-11-07, `bmad-dev-story 13.1c`; story v1.10, row `in-progress`; annotation only).** BUILT on the story branch, ⛔ landed, ⛔ pushed: migrations `0203` + `0204` (`died`), the five keys (catalog 61), the move / suspend / reactivate / terminate routes and the log read, the admin acts and history (commits `7575ce9f`..`f311243b`). `ci:local` at `f311243b`: 37/38 on a fresh container (one load timeout in an untouched spec; the unit job re-run alone green). The real-browser pass (Task 8) has NOT run. The terminate route stays off real workers until row 13-1f's undo and appeal record exist (Row 50 (f)).
+
 ### Story 13.1d: A District Admin Asks Another to Take On or Release a Field Worker, and the Other Accepts or Refuses With a Reason — and the District Admins Are Told by Email and in the Admin Console `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-11-03** by BigDev (*"Yes to all four, mint 13-1d"*), refining Story 13.1's Q-6. The row is

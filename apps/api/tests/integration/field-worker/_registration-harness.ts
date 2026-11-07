@@ -1,6 +1,7 @@
 // The shared harness of the field-worker registration specs — Story 13.1 (AC8, AC13). Two spec files use it (the exhaustion
 // legs need a FILE-WIDE `vi.mock` of the door, so they live apart). Story 13.1a EXTENDS it with one helper per new route
-// (`approve`, `code`, `identity`, `list`, `districts`) and `registered`; its approval / code-read / reads specs use it too.
+// (`approve`, `code`, `identity`, `list`, `districts`) and `registered`; its approval / code-read / reads specs use it too. Story
+// 13.1c adds `move`, `suspend`, `reactivate`, `terminate` and `log` (its lifecycle / race / log specs); `cleanup` is unchanged.
 //
 // ⚠ OWN-COMMITTING: the route COMMITS inside `mutate`, so every 201 leaves append-only rows (`events_log`, the code, audit
 // lines) on the shared DB. Every test uses a FRESH `randomUUID()` Pariwar, asserts by its own ids (⛔ counts), and `cleanup`
@@ -41,6 +42,12 @@ export interface Harness {
   identity: (c: Client, p: string, id: string) => ReturnType<Client['inject']>;
   list: (c: Client, p: string, query: Record<string, string>) => ReturnType<Client['inject']>;
   districts: (c: Client, p: string) => ReturnType<Client['inject']>;
+  // ── Story 13.1c — the lifecycle acts and the log (a JSON body string, so `reactivate`'s `'{}'` is sent as-is — TR5) ──
+  move: (c: Client, p: string, id: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  suspend: (c: Client, p: string, id: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  reactivate: (c: Client, p: string, id: string, key?: string | null, body?: string) => ReturnType<Client['inject']>;
+  terminate: (c: Client, p: string, id: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  log: (c: Client, p: string, id: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
   /** Register through the route as `c` and return the new worker's id (asserts the 201). */
   registered: (c: Client, p: string, body: Json) => Promise<string>;
   cleanup: () => Promise<void>;
@@ -121,6 +128,21 @@ export async function createHarness(): Promise<Harness> {
   const list = (c: Client, p: string, query: Record<string, string>) =>
     c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers?${new URLSearchParams(query).toString()}` });
   const districts = (c: Client, p: string) => c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/districts` });
+  const actPost = (c: Client, p: string, id: string, act: string, body: string, key: string | null) =>
+    c.inject({
+      method: 'POST',
+      url: `/api/v1/p/${p}/field-workers/${id}/${act}`,
+      payload: body,
+      headers: { 'content-type': 'application/json', ...(key === null ? {} : { 'idempotency-key': key }) },
+    });
+  const move = (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => actPost(c, p, id, 'move', JSON.stringify(body), key);
+  const suspend = (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => actPost(c, p, id, 'suspend', JSON.stringify(body), key);
+  const reactivate = (c: Client, p: string, id: string, key: string | null = randomUUID(), body = '{}') => actPost(c, p, id, 'reactivate', body, key);
+  const terminate = (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => actPost(c, p, id, 'terminate', JSON.stringify(body), key);
+  const log = (c: Client, p: string, id: string, query: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(query).toString();
+    return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/${id}/log${qs === '' ? '' : `?${qs}`}` });
+  };
   async function registered(c: Client, p: string, body: Json): Promise<string> {
     const r = await register(c, p, body);
     expect(r.statusCode, r.body).toBe(201);
@@ -156,7 +178,30 @@ export async function createHarness(): Promise<Harness> {
     await td.pool.end();
   }
 
-  return { td, deps, app, logs: () => logged, freshPariwar, actor, addGrant, listDistrict, seedTree, register, approve, code, identity, list, districts, registered, cleanup };
+  return {
+    td,
+    deps,
+    app,
+    logs: () => logged,
+    freshPariwar,
+    actor,
+    addGrant,
+    listDistrict,
+    seedTree,
+    register,
+    approve,
+    code,
+    identity,
+    list,
+    districts,
+    move,
+    suspend,
+    reactivate,
+    terminate,
+    log,
+    registered,
+    cleanup,
+  };
 }
 
 /**

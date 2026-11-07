@@ -3,7 +3,8 @@
 // Row by row over EVERY row `mapFieldWorkerError` owns. The registration route's own rows (the 409 mobile / display-name /
 // in-progress, the 400 key and validation, the 422s, the 503) are ALSO pinned over HTTP in
 // `tests/integration/field-worker/registration*.spec.ts`; the rows ONLY A COMMAND can raise are pinned HERE — Story 13.1a's
-// approval reaches six of them (and its `approval.spec.ts` pins them over HTTP too), the rest wait for 13.1c / 13.1d. Anything outside the table — a `FieldWorkerProjectorInputError`, a `FieldWorkerPersistError`,
+// approval reaches six of them, Story 13.1c's move / suspend / reactivate / terminate the district and ended_on rows (their
+// `lifecycle.spec.ts` pins them over HTTP); `reason_invalid` stays mapped but no route reaches it (each body's reason enum is a 400 first). Anything outside the table — a `FieldWorkerProjectorInputError`, a `FieldWorkerPersistError`,
 // the door's programming errors, a plain Error, an `ApiError` — is rethrown UNCHANGED (the SAME instance). ⛔ PII in any message.
 
 import { fieldWorker, FieldWorkerStateDirectWriteError } from '@twt/domain';
@@ -58,9 +59,12 @@ describe('mapFieldWorkerError — the registration route’s rows', () => {
   });
 });
 
-// Story 13.1a — the approval route now REACHES the first six rows below (illegal transition, the two KYC rows, not found, stream
-// conflict, authorization stale — the last also from the reads, `-447` item 1); the others still have no route (13.1c / 13.1d).
-describe('mapFieldWorkerError — the rows a COMMAND raises (the approval reaches illegal_transition … authorization_stale; the rest wait for 13.1c / 13.1d)', () => {
+// Story 13.1a — the approval route REACHES illegal transition, the two KYC rows, not found, stream conflict and authorization stale
+// (the last also from the reads, `-447` item 1). Story 13.1c (AD6) — the lifecycle routes reach illegal transition, not found,
+// stream conflict, district unchanged, authorization stale (a stale source or target) and ended_on invalid; `district_unknown` is a
+// move's (the row above). STILL UNREACHABLE through a route: `reason_invalid` (each act's body schema refuses another reason with
+// 400 `request.validation` before the hooks run) and `already_exists` (the server mints the id).
+describe('mapFieldWorkerError — the rows a COMMAND raises (the approval and the 13.1c lifecycle routes reach all but reason_invalid and already_exists)', () => {
   it.each([
     ['FieldWorkerIllegalTransitionError', new fieldWorker.FieldWorkerIllegalTransitionError(FW, 'terminated', 'field_worker.activated'), 409, 'field_worker.illegal_transition'],
     ['FieldWorkerKycAlreadyCompletedError', new fieldWorker.FieldWorkerKycAlreadyCompletedError(FW), 409, 'field_worker.kyc_already_completed'],

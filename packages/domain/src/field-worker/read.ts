@@ -458,7 +458,7 @@ export async function listFieldWorkerEvents(
     .leftJoin(users, eq(users.id, eventsLog.actorId))
     .where(and(eq(eventsLog.pariwarId, pariwarId), eq(eventsLog.streamId, fieldWorkerId), sql`${eventsLog.eventVersion} > ${after}`))
     .orderBy(asc(eventsLog.eventVersion))
-    .limit(limit + 1);
+    .limit(clampLimit(limit + 1, { default: LIST_FIELD_WORKER_EVENTS_DEFAULT_LIMIT + 1, cap: LIST_FIELD_WORKER_EVENTS_MAX_LIMIT + 1 }));
 
   const items = rows.slice(0, limit).map((r): FieldWorkerLogEntry => {
     const p = (typeof r.payload === 'object' && r.payload !== null ? r.payload : {}) as Record<string, unknown>;

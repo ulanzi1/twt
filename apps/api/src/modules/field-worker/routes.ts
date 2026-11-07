@@ -8,6 +8,12 @@
 //   · GET  …/field-workers/:fieldWorkerId                → one worker's identity (`field_worker.view`, AD4 a)
 //   · POST …/field-workers/:fieldWorkerId/approve        → approve (`field_worker.approve`, AD4 a)
 //   · GET  …/field-workers/:fieldWorkerId/code           → the code, by hand (`field_worker.read_code`, AD4 a)
+//   Story 13.1c (AD6) — the lifecycle acts and the log, each on the same per-worker chain with ITS key:
+//   · POST …/field-workers/:fieldWorkerId/move           → a direct move (`field_worker.move` — pariwar_admin)
+//   · POST …/field-workers/:fieldWorkerId/suspend        → suspend (`field_worker.suspend`)
+//   · POST …/field-workers/:fieldWorkerId/reactivate     → reactivate (`field_worker.reactivate`; the body is `{}`)
+//   · POST …/field-workers/:fieldWorkerId/terminate      → end (`field_worker.terminate`)
+//   · GET  …/field-workers/:fieldWorkerId/log            → the worker's log (`field_worker.read_log`; the named `read` rate limit)
 //   A per-worker route's target is the worker's CURRENT district, stashed by `loadFieldWorkerGateDistrict` (`gate.ts`); an unknown
 //   worker, another Pariwar's or one outside the grant is the SAME 403. The three decrypting / code GETs carry the named `read`
 //   rate limit (each decrypt is a KMS call; each code read an audit line).
@@ -27,12 +33,19 @@ import {
   ApproveFieldWorkerResponse,
   FieldWorkerCodeResponse,
   FieldWorkerDistrictsResponse,
+  FieldWorkerLifecycleResult,
+  FieldWorkerLog,
+  FieldWorkerLogQuery,
   FieldWorkerIdentityResponse,
   FieldWorkerListQuery,
   FieldWorkerListResponse,
   FieldWorkerParams,
+  MoveFieldWorkerRequest,
+  ReactivateFieldWorkerRequest,
   RegisterFieldWorkerRequest,
   RegisterFieldWorkerResponse,
+  SuspendFieldWorkerRequest,
+  TerminateFieldWorkerRequest,
 } from '@twt/contracts';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -46,6 +59,14 @@ import { requirePermissionHook } from '../rbac/index.js';
 import { FIELD_WORKER_APPROVE_KEY, createFieldWorkerApprovalHandlers } from './approval-handlers.js';
 import { fieldWorkerGateDistrict, listGateDimension, listGateValue, loadFieldWorkerGateDistrict } from './gate.js';
 import { FIELD_WORKER_REGISTER_KEY, createFieldWorkerHandlers } from './handlers.js';
+import {
+  FIELD_WORKER_MOVE_KEY,
+  FIELD_WORKER_REACTIVATE_KEY,
+  FIELD_WORKER_SUSPEND_KEY,
+  FIELD_WORKER_TERMINATE_KEY,
+  createFieldWorkerLifecycleHandlers,
+} from './lifecycle-handlers.js';
+import { FIELD_WORKER_READ_LOG_KEY, createFieldWorkerLogHandlers } from './log-handlers.js';
 import { FIELD_WORKER_READ_CODE_KEY, FIELD_WORKER_VIEW_KEY, createFieldWorkerReadHandlers } from './read-handlers.js';
 
 const TAG = 'field-workers';
@@ -147,5 +168,52 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
       preHandler: perWorker(FIELD_WORKER_READ_CODE_KEY),
     },
     reads.readCode,
+  );
+
+  // ── Story 13.1c (AD6) — the lifecycle acts and the log. The bodies are validated (400 `request.validation`) BEFORE the hooks run:
+  // a reason outside the act's own list never reaches the domain (its 422 `reason_invalid` stays mapped but unreachable here). ──
+  const lifecycle = createFieldWorkerLifecycleHandlers(deps);
+  const logs = createFieldWorkerLogHandlers();
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move',
+    {
+      schema: { params: FieldWorkerParams, body: MoveFieldWorkerRequest, response: { 200: FieldWorkerLifecycleResult }, tags: [TAG] },
+      preHandler: perWorker(FIELD_WORKER_MOVE_KEY),
+    },
+    lifecycle.move,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/suspend',
+    {
+      schema: { params: FieldWorkerParams, body: SuspendFieldWorkerRequest, response: { 200: FieldWorkerLifecycleResult }, tags: [TAG] },
+      preHandler: perWorker(FIELD_WORKER_SUSPEND_KEY),
+    },
+    lifecycle.suspend,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/reactivate',
+    {
+      schema: { params: FieldWorkerParams, body: ReactivateFieldWorkerRequest, response: { 200: FieldWorkerLifecycleResult }, tags: [TAG] },
+      preHandler: perWorker(FIELD_WORKER_REACTIVATE_KEY),
+    },
+    lifecycle.reactivate,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/terminate',
+    {
+      schema: { params: FieldWorkerParams, body: TerminateFieldWorkerRequest, response: { 200: FieldWorkerLifecycleResult }, tags: [TAG] },
+      preHandler: perWorker(FIELD_WORKER_TERMINATE_KEY),
+    },
+    lifecycle.terminate,
+  );
+
+  r.get(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/log',
+    {
+      schema: { params: FieldWorkerParams, querystring: FieldWorkerLogQuery, response: { 200: FieldWorkerLog }, tags: [TAG] },
+      config: { rateLimit: limits.read },
+      preHandler: perWorker(FIELD_WORKER_READ_LOG_KEY),
+    },
+    logs.log,
   );
 }

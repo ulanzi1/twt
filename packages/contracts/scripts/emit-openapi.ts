@@ -5457,6 +5457,110 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 13.1c — MOVE a field worker directly, SUSPEND, REACTIVATE, END them, and read their LOG (`2026-11-07-453` AD5 / AD6 / AD7;
+// keys confirmed by the Panel, `-454` Q7 A) ─────────────────────────────────────────────────────────────────────────────────────────
+// Five keys, all DISTRICT-dimension at the worker's CURRENT district (a pre-gate loader; an unknown worker, another Pariwar's or one
+// outside the grant is the SAME 403): `field_worker.move` (pariwar_admin), `field_worker.suspend` / `.reactivate` / `.terminate` /
+// `.read_log` (district_admin for its own district, pariwar_admin for any) + super_admin. Each write takes an `Idempotency-Key` (the
+// worker id is in its namespace), records ONE event carrying the verified authorization and ONE audit line (action = the event type)
+// naming the officer, and answers the worker as the act left it — ⛔ a name, a mobile or a code. Nothing here reaches a member.
+const {
+  MoveFieldWorkerRequest: MoveFieldWorkerRequestSchema,
+  SuspendFieldWorkerRequest: SuspendFieldWorkerRequestSchema,
+  ReactivateFieldWorkerRequest: ReactivateFieldWorkerRequestSchema,
+  TerminateFieldWorkerRequest: TerminateFieldWorkerRequestSchema,
+  FieldWorkerLifecycleResult: FieldWorkerLifecycleResultSchema,
+  FieldWorkerLogQuery: FieldWorkerLogQuerySchema,
+  FieldWorkerLog: FieldWorkerLogSchema,
+} = await import('../src/field-workers/index.js');
+const FieldWorkerLifecycleComponent = FieldWorkerLifecycleResultSchema.openapi('FieldWorkerLifecycleResult');
+const fieldWorkerActWrite = (key: string, extra409: string) => ({
+  400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
+  401: fieldWorkersNoSession,
+  403: errorResponse(`Missing ${key} for the worker's district — also an unknown worker or another Pariwar's`),
+  404: errorResponse('No grant for this Pariwar (pariwar.not_found) · field_worker.not_found (a lost race only)'),
+  409: errorResponse(`field_worker.illegal_transition · field_worker.authorization_stale · field_worker.idempotency_in_progress${extra409}`),
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/move',
+  summary: "Move a field worker to another reporting district (a Pariwar Admin's direct move)",
+  description:
+    '`field_worker.move` (pariwar_admin) at the worker\'s CURRENT district. `from_district` is the district the screen showed: a worker ' +
+    'moved meanwhile is refused (409 field_worker.authorization_stale — reload). Records `field_worker.posted`; the worker\'s state, ' +
+    'reason, code and history are unchanged. A waiting, active or suspended worker can be moved; an ended one cannot.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(MoveFieldWorkerRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Moved', content: jsonOf(FieldWorkerLifecycleComponent) },
+    ...fieldWorkerActWrite('field_worker.move', ' · field_worker.district_unchanged'),
+    422: errorResponse('field_worker.district_unknown (not a recorded district of the Pariwar)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/suspend',
+  summary: 'Suspend an active field worker',
+  description:
+    '`field_worker.suspend` at the worker\'s CURRENT district. Reason `under_review` or `at_worker_request`. Records ' +
+    '`field_worker.suspended`; while suspended the worker\'s code credits no new teacher and cannot be read by hand.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(SuspendFieldWorkerRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Suspended', content: jsonOf(FieldWorkerLifecycleComponent) },
+    ...fieldWorkerActWrite('field_worker.suspend', ''),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/reactivate',
+  summary: 'Reactivate a suspended field worker',
+  description:
+    '`field_worker.reactivate` at the worker\'s CURRENT district. Body `{}`. Records `field_worker.reactivated`; the reason is cleared.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(ReactivateFieldWorkerRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Reactivated', content: jsonOf(FieldWorkerLifecycleComponent) },
+    ...fieldWorkerActWrite('field_worker.reactivate', ''),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/terminate',
+  summary: 'End a field worker (left, stopped working, registered by mistake, died)',
+  description:
+    '`field_worker.terminate` at the worker\'s CURRENT district. Reason `left_voluntarily`, `inactive`, `registered_in_error` or ' +
+    '`died`; `ended_on` the last day (for `died`, the date of death), between the registration day and today in IST. Records ' +
+    '`field_worker.terminated` — final in this version: the worker\'s mobile can be registered again. A waiting, active or suspended ' +
+    'worker can be ended.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(TerminateFieldWorkerRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Ended', content: jsonOf(FieldWorkerLifecycleComponent) },
+    ...fieldWorkerActWrite('field_worker.terminate', ''),
+    422: errorResponse('field_worker.ended_on_invalid (not a real date, in the future, or before the registration day — IST)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/log',
+  summary: "A field worker's log — everything that has happened to their record",
+  description:
+    '`field_worker.read_log` at the worker\'s CURRENT district. The worker\'s whole event stream in `event_version` order — including ' +
+    'events from districts they were in before — each with its type, time, the officer (their CURRENT display name, `null` if none is ' +
+    'recorded), role, key, grant, target district, reason, districts and `ended_on`. `after` + `limit` page it (default 50; an over-cap ' +
+    '`limit` is clamped to 100). No name, mobile or code; no decrypt and no audit line. `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, query: FieldWorkerLogQuerySchema },
+  responses: {
+    200: { description: 'A page of the log', content: jsonOf(FieldWorkerLogSchema.openapi('FieldWorkerLog')) },
+    400: errorResponse('Invalid input (request.validation)'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_log for the worker\'s district — also an unknown worker or another Pariwar\'s'),
+    404: fieldWorkersNoGrant,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

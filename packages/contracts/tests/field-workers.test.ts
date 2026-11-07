@@ -4,7 +4,7 @@
 // import domain in SHIPPED files — the bundle boundary); (2) the request DTO is SHAPE-only and `.strict()` (QE9), and the
 // 201 refuses a stray field — ⛔ a `code` (QE22).
 
-import { schema } from '@twt/domain';
+import { fieldWorker, schema } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -22,6 +22,18 @@ import {
   FieldWorkerParams,
   RegisterFieldWorkerRequest,
   RegisterFieldWorkerResponse,
+  FIELD_WORKER_EVENT_TYPES,
+  FIELD_WORKER_POST_REASONS,
+  FIELD_WORKER_REASON_CODES,
+  FIELD_WORKER_SUSPEND_REASONS,
+  FIELD_WORKER_TERMINATE_REASONS,
+  FieldWorkerLifecycleResult,
+  FieldWorkerLog,
+  FieldWorkerLogQuery,
+  MoveFieldWorkerRequest,
+  ReactivateFieldWorkerRequest,
+  SuspendFieldWorkerRequest,
+  TerminateFieldWorkerRequest,
 } from '../src/field-workers/index.js';
 
 describe('field-workers contract ↔ domain sync-guard', () => {
@@ -29,6 +41,15 @@ describe('field-workers contract ↔ domain sync-guard', () => {
     expect([...FIELD_WORKER_STATES]).toEqual([...schema.FIELD_WORKER_STATES]);
     expect([...FIELD_WORKER_KYC_STATUSES]).toEqual([...schema.FIELD_WORKER_KYC_STATUSES]);
     expect([...FIELD_WORKER_CODE_SMS_STATUSES]).toEqual([...schema.FIELD_WORKER_CODE_SMS_STATUSES]);
+  });
+
+  // Story 13.1c (Task 3.1) — the three reason tuples, the whole reason enum (in its Postgres order — `died` last) and the event types.
+  it('the reason tuples and the event types equal the domain tuples (13.1c)', () => {
+    expect([...FIELD_WORKER_REASON_CODES]).toEqual([...schema.FIELD_WORKER_REASON_CODES]);
+    expect([...FIELD_WORKER_SUSPEND_REASONS]).toEqual([...fieldWorker.FIELD_WORKER_SUSPEND_REASONS]);
+    expect([...FIELD_WORKER_TERMINATE_REASONS]).toEqual([...fieldWorker.FIELD_WORKER_TERMINATE_REASONS]);
+    expect([...FIELD_WORKER_POST_REASONS]).toEqual([...fieldWorker.FIELD_WORKER_POST_REASONS]);
+    expect([...FIELD_WORKER_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_EVENT_TYPES]);
   });
 });
 
@@ -134,5 +155,83 @@ describe('Story 13.1a DTOs', () => {
     expect(FieldWorkerDistrictsResponse.safeParse({ districts: ['Gaya'] }).success).toBe(false);
     expect(FieldWorkerParams.safeParse({ pariwarId: ID, fieldWorkerId: ID }).success).toBe(true);
     expect(FieldWorkerParams.safeParse({ pariwarId: ID, fieldWorkerId: 'districts' }).success).toBe(false);
+  });
+});
+
+// ── Story 13.1c (AD6, AD7; AC6 (f), AC8, AC11) — the four writes and the log: shape-only, `.strict()`, each act's OWN reason list, and
+// ⛔ a name, a mobile or a code in any response.
+describe('Story 13.1c DTOs', () => {
+  const ID = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
+  const NUL = String.fromCharCode(0);
+
+  it('move: both districts and a MOVE reason; a NUL or blank district, a suspension reason or an unknown key is refused', () => {
+    expect(MoveFieldWorkerRequest.safeParse({ from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' }).success).toBe(true);
+    // Shape only: an unlisted district passes (the domain's 422).
+    expect(MoveFieldWorkerRequest.safeParse({ from_district: 'Patna ', to_district: 'Nowhere', reason_code: 'at_worker_request' }).success).toBe(true);
+    for (const bad of [
+      { from_district: 'Patna', to_district: 'Gaya', reason_code: 'under_review' },
+      { to_district: 'Gaya', reason_code: 'reassigned' },
+      { from_district: 'Patna', to_district: '', reason_code: 'reassigned' },
+      { from_district: 'Patna', to_district: `Ga${NUL}ya`, reason_code: 'reassigned' },
+      { from_district: 'P'.repeat(201), to_district: 'Gaya', reason_code: 'reassigned' },
+      { from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned', field_worker_id: ID },
+    ]) {
+      expect(MoveFieldWorkerRequest.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+    }
+  });
+
+  it('suspend / reactivate / terminate take ONLY their own reasons; terminate takes the four (with died), ⛔ a labelling reason; reactivate is `{}`', () => {
+    for (const r of ['under_review', 'at_worker_request']) expect(SuspendFieldWorkerRequest.safeParse({ reason_code: r }).success, r).toBe(true);
+    for (const r of ['inactive', 'died', 'reassigned', 'conduct', undefined]) expect(SuspendFieldWorkerRequest.safeParse({ reason_code: r }).success, String(r)).toBe(false);
+    for (const r of ['left_voluntarily', 'inactive', 'registered_in_error', 'died']) {
+      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: r, ended_on: '2026-11-07' }).success, r).toBe(true);
+    }
+    for (const r of ['conduct', 'conduct_concern', 'fraud_confirmed', 'under_review', 'reassigned']) {
+      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: r, ended_on: '2026-11-07' }).success, r).toBe(false);
+    }
+    // The SHAPE of ended_on only: 2026-02-30 passes here (the domain's 422); a malformed one is 400.
+    expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: '2026-02-30' }).success).toBe(true);
+    for (const d of ['07-11-2026', '2026-11-07T00:00:00Z', '', undefined]) {
+      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: d }).success, String(d)).toBe(false);
+    }
+    expect(ReactivateFieldWorkerRequest.safeParse({}).success).toBe(true);
+    expect(ReactivateFieldWorkerRequest.safeParse({ reason_code: 'under_review' }).success).toBe(false);
+  });
+
+  it('the lifecycle result carries the five keys and refuses a code, a name or a mobile', () => {
+    const ok = { field_worker_id: ID, district: 'Gaya', current_state: 'terminated', state_reason_code: 'died', ended_on: '2026-11-07' };
+    expect(FieldWorkerLifecycleResult.safeParse(ok).success).toBe(true);
+    expect(FieldWorkerLifecycleResult.safeParse({ ...ok, current_state: 'active', state_reason_code: null, ended_on: null }).success).toBe(true);
+    for (const key of ['code', 'name', 'mobile']) expect(FieldWorkerLifecycleResult.safeParse({ ...ok, [key]: 'x' }).success, key).toBe(false);
+  });
+
+  it('the log query: `after` ≥ 0; `limit` 1–100, an OVER-CAP limit CLAMPED to 100 (never an error); a fraction, 0 or text is refused', () => {
+    expect(FieldWorkerLogQuery.parse({})).toEqual({});
+    expect(FieldWorkerLogQuery.parse({ after: '5', limit: '40' })).toEqual({ after: 5, limit: 40 });
+    expect(FieldWorkerLogQuery.parse({ limit: '1000' })).toEqual({ limit: 100 });
+    expect(FieldWorkerLogQuery.parse({ limit: 101 })).toEqual({ limit: 100 });
+    for (const bad of [{ limit: '0' }, { limit: '2.5' }, { limit: 'all' }, { after: '-1' }, { after: 'x' }, { page: 'all' }]) {
+      expect(FieldWorkerLogQuery.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+    }
+  });
+
+  it('a log item: the eleven keys, every optional field nullable; ⛔ a name, a mobile or a code key; event_type from the seven', () => {
+    const item = {
+      event_version: 1,
+      event_type: 'field_worker.registered',
+      occurred_at: '2026-11-07T10:15:30.123Z',
+      actor: { user_id: ID, display_name: null, role: 'district_admin' },
+      permission_key: 'field_worker.register',
+      grant: { dimension: 'district', value: 'Patna' },
+      target_district: 'Patna',
+      reason_code: null,
+      from_district: null,
+      to_district: null,
+      ended_on: null,
+    };
+    expect(FieldWorkerLog.safeParse({ items: [item], next_after: null }).success).toBe(true);
+    for (const key of ['code', 'name', 'mobile', 'payload']) expect(FieldWorkerLog.safeParse({ items: [{ ...item, [key]: 'x' }], next_after: null }).success, key).toBe(false);
+    expect(FieldWorkerLog.safeParse({ items: [{ ...item, event_type: 'field_worker.moved' }], next_after: null }).success).toBe(false);
+    expect(FieldWorkerLog.safeParse({ items: [{ ...item, actor: { ...item.actor, email: 'a@b.c' } }], next_after: null }).success).toBe(false);
   });
 });

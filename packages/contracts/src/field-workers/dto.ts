@@ -19,7 +19,16 @@ import { z } from 'zod';
 
 import { Cursor } from '../_common/pagination.js';
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
-import { FieldWorkerCodeSmsStatus, FieldWorkerKycStatus, FieldWorkerState } from './enums.js';
+import {
+  FieldWorkerCodeSmsStatus,
+  FieldWorkerEventType,
+  FieldWorkerKycStatus,
+  FieldWorkerPostReason,
+  FieldWorkerReasonCode,
+  FieldWorkerState,
+  FieldWorkerSuspendReason,
+  FieldWorkerTerminateReason,
+} from './enums.js';
 
 /** Register a field worker (Idempotency-Key header required). The id is SERVER-minted. */
 export const RegisterFieldWorkerRequest = z
@@ -131,3 +140,94 @@ export type FieldWorkerIdentityResponse = z.output<typeof FieldWorkerIdentityRes
 /** `GET …/field-workers/districts` — the Pariwar's RECORDED districts, sorted, exact values; truncated past 200 (AC8). */
 export const FieldWorkerDistrictsResponse = z.object({ districts: z.array(z.string()), districts_truncated: z.boolean() }).strict();
 export type FieldWorkerDistrictsResponse = z.output<typeof FieldWorkerDistrictsResponse>;
+
+// ── Story 13.1c — move, suspend, reactivate, end, and the worker's log (AD6, AD7) ──────────────────────────────────────────
+// SHAPE-only requests (QE9): a reason outside the act's own list, an unknown key or a malformed date is 400 `request.validation`
+// in the validation phase; a district that is not LISTED and an `ended_on` outside the IST bounds are the domain's 422s. ⛔ A name,
+// a mobile or a code anywhere (I6). Each write takes an `Idempotency-Key` header.
+
+/** A district on the wire: non-empty, ≤ 200, ⛔ a NUL (22021 ⇒ a 500) — compared BYTE FOR BYTE, ⛔ trimmed (TR12). */
+const WireDistrict = z
+  .string()
+  .min(1)
+  .max(200)
+  .refine((d) => !d.includes(NUL), 'district must not contain NUL');
+
+/** `POST …/:fieldWorkerId/move` — `from_district` is the district the admin's screen SHOWED (13.1 D7: refused 409 if stale). */
+export const MoveFieldWorkerRequest = z
+  .object({ from_district: WireDistrict, to_district: WireDistrict, reason_code: FieldWorkerPostReason })
+  .strict();
+export type MoveFieldWorkerRequest = z.output<typeof MoveFieldWorkerRequest>;
+
+/** `POST …/:fieldWorkerId/suspend`. */
+export const SuspendFieldWorkerRequest = z.object({ reason_code: FieldWorkerSuspendReason }).strict();
+export type SuspendFieldWorkerRequest = z.output<typeof SuspendFieldWorkerRequest>;
+
+/** `POST …/:fieldWorkerId/reactivate` — the body is `{}` (a bodyless POST is a 400 in Fastify, TR5). */
+export const ReactivateFieldWorkerRequest = z.object({}).strict();
+export type ReactivateFieldWorkerRequest = z.output<typeof ReactivateFieldWorkerRequest>;
+
+/** `POST …/:fieldWorkerId/terminate` — `ended_on` the last day (for `died`, the date of death), `YYYY-MM-DD`; a real date in the IST bounds is the domain's 422. */
+export const TerminateFieldWorkerRequest = z
+  .object({ reason_code: FieldWorkerTerminateReason, ended_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) })
+  .strict();
+export type TerminateFieldWorkerRequest = z.output<typeof TerminateFieldWorkerRequest>;
+
+/** 200 for all four writes — the worker as the act left it. ⛔ A name, a mobile or a code. */
+export const FieldWorkerLifecycleResult = z
+  .object({
+    field_worker_id: UuidString,
+    district: z.string(),
+    current_state: FieldWorkerState,
+    state_reason_code: FieldWorkerReasonCode.nullable(),
+    ended_on: z.string().nullable(),
+  })
+  .strict();
+export type FieldWorkerLifecycleResult = z.output<typeof FieldWorkerLifecycleResult>;
+
+/** The log's page cap (AD7) — the domain's `LIST_FIELD_WORKER_EVENTS_MAX_LIMIT`. */
+const FIELD_WORKER_LOG_MAX_LIMIT = 100;
+
+/**
+ * `GET …/:fieldWorkerId/log` query. `after` — the last `event_version` seen (0 or absent: from the start). `limit` 1–100 (default 50):
+ * an OVER-CAP value is CLAMPED to 100 before validation, never an error (AC8) — so the declared `maximum` (what
+ * `forced-pagination.spec.ts` reads) is the most a page can hold; a non-integer or a value under 1 is still 400.
+ */
+export const FieldWorkerLogQuery = z
+  .object({
+    after: z.coerce.number().int().min(0).optional(),
+    limit: z
+      .preprocess((v) => {
+        const n = typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v;
+        return typeof n === 'number' && Number.isInteger(n) && n > FIELD_WORKER_LOG_MAX_LIMIT ? FIELD_WORKER_LOG_MAX_LIMIT : v;
+      }, z.coerce.number().int().min(1).max(FIELD_WORKER_LOG_MAX_LIMIT))
+      .optional(),
+  })
+  .strict();
+export type FieldWorkerLogQuery = z.output<typeof FieldWorkerLogQuery>;
+
+/**
+ * One event of the worker's stream (AD7). Fields an event does not carry are `null`. `actor.display_name` is the officer's CURRENT
+ * name (`null` when none is recorded — ⛔ an email); `role`, `permission_key`, `grant` and `target_district` come from the event's
+ * authorization snapshot.
+ */
+export const FieldWorkerLogItem = z
+  .object({
+    event_version: z.number().int().positive(),
+    event_type: FieldWorkerEventType,
+    occurred_at: Iso8601Datetime,
+    actor: z.object({ user_id: UuidString.nullable(), display_name: z.string().nullable(), role: z.string().nullable() }).strict(),
+    permission_key: z.string().nullable(),
+    grant: z.object({ dimension: z.string(), value: z.string().nullable() }).strict().nullable(),
+    target_district: z.string().nullable(),
+    reason_code: FieldWorkerReasonCode.nullable(),
+    from_district: z.string().nullable(),
+    to_district: z.string().nullable(),
+    ended_on: z.string().nullable(),
+  })
+  .strict();
+export type FieldWorkerLogItem = z.output<typeof FieldWorkerLogItem>;
+
+/** 200 — a page in `event_version` order; `next_after` is the `after` of the next page (`null` on the last). */
+export const FieldWorkerLog = z.object({ items: z.array(FieldWorkerLogItem), next_after: z.number().int().nullable() }).strict();
+export type FieldWorkerLog = z.output<typeof FieldWorkerLog>;

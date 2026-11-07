@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 13-1c-field-worker-moves-suspension-and-termination (create-story, 2026-11-07)
+
+Carried items C1–C4 of Story 13.1c (created, ready-for-dev, not built; Q-1…Q-5 ANSWERED by BigDev 2026-11-07, verbatim "Q1 C, Q2-Q5 A"; story v1.2). This pass CLOSES nothing: 13.1b C1 / C7 / CB9 and 13.1a CR60 are ANSWERED in the story (AD9, AD10) and close only when the story's code lands.
+
+- **C1 — Story 13.1d: the move-key list exists.** `FIELD_WORKER_MOVE_PERMISSION_KEYS` (13.1c AD4) holds `field_worker.move`; 13.1d APPENDS its request keys in the commit that mints them. The acceptance passes the request's source as `expectedFromDistrict` (13.1 D7, answered in 13.1c AD4). A Pariwar Admin's direct move must end any pending request and be noticed to both District Admins. Trigger: 13.1d create-story.
+- **C2 — Story 13.6: termination.** 13.1c builds the FULL terminate route (Q-1 C: every neutral reason, every state but `terminated`), its go-live gated by roster Row 50 (b); C4 is put to the Panel from 13.1c's note (Q-2 A, `trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md`, DRAFTED, NOT sent) and 13.6 records the answer. A way back or an appeal is a new transition and a new decision; a narrower rule narrows the route (one file); a shown returning number is a register-route change; the labelling reasons extend 13.1c's reason labels and the re-declared contract tuples. Trigger: the Panel's answer.
+- **C3 — Stories 13.8 / 13.5: credit during a suspension.** 13.1c makes `suspended` reachable; `acceptsNewAttributions` is `active` only, so a signup during a suspension is never credited. Whether that stands is put to the Panel in 13.1c's note (Q-3 A; roster Row 50 (d)). What an ending does to money ALREADY EARNED is not in that note: the first commission writer (13.5) asks it. Trigger: the first attribution recorder's create-story — read Row 50 (d) first.
+- **C4 — The 8-year removal (13.1 C5, D8; counsel question 3).** Owner: a new row `13-1e-field-worker-eight-year-removal` (13.1c Q-4 A), minted at 13.1c's Task 0.4. Needs a guard-function replacement admitting a scrub of the three PII columns and a role a policy names. Trigger: the row is minted at 13.1c's Task 0.4, before the terminate route reaches a real worker.
+- **13.1a CR33 — re-trigger FIRED (not fixed).** 13.1c adds four keyed writes on `tenantWrite`; a `recordResult` failure after COMMIT still answers a retry with a 409. Owner unchanged. Trigger: unchanged.
+
+---
+
 ## Deferred from: code review of story 13-1b-field-worker-code-by-sms, round 3 - the whole branch, code chunks G1-G3 (2026-11-06)
 
 - **CB56 - The code SMS tick can reject if the alarm sink throws, though its header says it always resolves.** [`apps/jobs/src/scheduler/field-worker-code-sms.ts`: `runFieldWorkerCodeSmsTick`, the `rls_bound_role` alarm and its catch's `sweepFailed`, and the per-row lapse alarms] Not reachable while `onAlarm` is unwired at boot (`console.warn` does not throw). When Row 32 (h) / Row 49 (j) wire alarms to a person, that sink's contract (never throws, or every call site guards it) is decided there. Owner: Row 32 (h) / Row 49 (j). Re-trigger: the first `onAlarm` wired at boot.

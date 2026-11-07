@@ -9,9 +9,9 @@ created from `origin/main` on 2026-11-07. Every `apps/` / `packages/` claim was 
 research passes - the domain commands and stream; the API routes, RBAC and admin module; the governance trail - then the author's own reads of `state.ts`,
 the attribution door and the 13.1a / 13.1b stories). Perishable - re-check at Task 0.1. Re-locate by FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.3, 2026-11-07; validated; Q-1..Q-5 ANSWERED by BigDev: "Q1 C, Q2-Q5 A" - Task 0.2 done). The Panel note (Task 0.6) is
+STATUS: ready-for-dev (v1.4, 2026-11-07; validated; Tasks 0.0, 0.2, 0.3, 0.4, 0.6 done; Q-1..Q-5 ANSWERED by BigDev: "Q1 C, Q2-Q5 A" - Task 0.2 done). The Panel note (Task 0.6) is
 DRAFTED, NOT sent. No code before Task 0.3 (the decision entry, committed ALONE). Nothing is committed: this pass wrote this file, the Panel note and the
-record edits listed in Task 0.0, uncommitted, in the worktree.
+record edits listed in Task 0.0 - committed `01cbba52`; decision `-453` `490510d9`; Row 50 and row `13-1e` `0b329bb4`. Next: Task 0.5.
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `2026-11-07-453` (the newest on any ref is `-452`). "The number belongs to the first COMMIT" (`-449`).
@@ -229,7 +229,8 @@ NOT sent. It is non-blocking: it gates go-live (Row 50), never the build.**
   `illegal_transition` on the pre-read (no audit line); one terminated by a concurrent request between the pre-read and the lock makes the command throw
   inside `mutate`, which rolls back and writes the `_rolled_back` twin (TR2) - as for every act. Termination stays FINAL (13.1 section 0 edge 7): this
   story adds no way back. **Supersession, by the decision entry (Task 0.3), never a re-reading:** 13.1 C5's "Build NO terminate route before 13.6 records
-  C4" and the epic's "the terminate route does NOT ship before Story 13.6 records its C4" are superseded; in their place, the route is built and merged,
+  C4" and the epic's "the terminate route does NOT ship before Story 13.6 records its C4" are superseded - and, found while writing `-453`, `-442`'s
+  "terminate waits on Story 13.6's C4" and Story 13.6's INHERITED C4 lines ("13.1c's terminate route does not ship before this is recorded"); in their place, the route is built and merged,
   and does not reach a real worker before the Panel answers the note's Questions 1-5 (C4, going silent, death; Row 50 (b)). If the Panel rules a way back, a rejoin on the old code or an appeal,
   that is a new transition and a new decision (C2); if it rules that some reason or state must not be ended, or not by a District Admin, the route
   narrows - one file. The labelling reasons stay 13.6's (the body's reason enum is the three neutral values; anything else -> 400).
@@ -464,7 +465,7 @@ only in this worktree, grep `docs/legal` by ABSOLUTE path ([[feedback_worktree_s
 never `prettier --write` ([[project_prettier_not_enforced]]); first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
 
 - [ ] **Task 0 - Preflight and governance (AC: 12)** - runs FIRST; writes no code.
-  - [ ] 0.0 Commit this story file and the create-story record edits (`epics.md` note under Story 13.1c, `deferred-work.md` lines, `sprint-status.yaml`
+  - [x] 0.0 (`01cbba52`) Commit this story file and the create-story record edits (`epics.md` note under Story 13.1c, `deferred-work.md` lines, `sprint-status.yaml`
     row + ledger `2026-11-07d`) as ONE `records(13.1c)` commit on the story branch, when BigDev asks.
   - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor bb4d8620 HEAD`; `git diff --name-only bb4d8620..origin/main -- packages apps scripts docs/launch-gate-inventory`.
     Re-derive any claim at the new tip; re-grep the NUMBERS block; check `git worktree list` / `git branch -a` for another branch touching
@@ -473,14 +474,15 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
   - [x] 0.2 **HALT on Q-1..Q-5.** ANSWERED 2026-11-07, BigDev verbatim: "Q1 C, Q2-Q5 A" (Change Log v1.2). Q-1 C was propagated through this file in
     the same edit, before any code ([[feedback_spec_edits_must_propagate_to_tasks]]): AC6 covers every neutral reason and every non-terminated state;
     Row 50 (b) gates the route's go-live; `terminate_not_available` is not minted.
-  - [ ] 0.3 Write decision `2026-11-07-453` (re-grep every ref) in `.decision-log.md` above the newest entry; commit it ALONE, `governance:` prefix: an
+  - [x] 0.3 (`490510d9`, alone, 2026-11-07; it supersedes FOUR texts - the two below plus `-442`'s "terminate waits on Story 13.6's C4" and
+    Story 13.6's INHERITED C4 lines) Write decision `2026-11-07-453` (re-grep every ref) in `.decision-log.md` above the newest entry; commit it ALONE, `governance:` prefix: an
     author-commit (BigDev) recording AD1-AD12, the answers verbatim ("Q1 C, Q2-Q5 A"), the SUPERSESSION of 13.1 C5's "Build NO terminate route before 13.6
     records C4" AND of the epic's "the terminate route does NOT ship before Story 13.6 records its C4" - superseded, never re-read
     ([[feedback_supersede_never_reinterpret]]); the replacement rule: built and merged, no real worker before C4 is recorded (Row 50 (b)) - the five keys
     as built on the default with a non-blocking confirm, the D7 guard, AD7's display-name variance, the Q-4 owner (`13-1e`), the three questions put to the
     Panel (Q-2, Q-3, Q-5) and "supersedes no RATIFIED text (C5 is an author-commit, the epic line BigDev's); adds no member predicate". Cite `-441`,
     `-442`, `-443`, `-444`, `-445`, `-446`, `-447`, `-450`, `-059` B(3).
-  - [ ] 0.4 Roster, its OWN `governance:` commit: append **Row 50 `field-worker-lifecycle-live`** (state why 46 is skipped), decision-authored,
+  - [x] 0.4 (`0b329bb4`, 2026-11-07; (c) MET on minting; ledger `2026-11-07g`) Roster, its OWN `governance:` commit: append **Row 50 `field-worker-lifecycle-live`** (state why 46 is skipped), decision-authored,
     blocking no build and no merge ([[project_not_in_production_merge_is_not_golive]]): (a) the Panel's confirm of each key minted (and a dated line at
     Row 48 (i) pointing here); (b) the Panel's answers to the note's Questions 1-5 (C4, going silent, death) recorded - and a ROW for each answer that needs a build - before
     the terminate route reaches a real worker;
@@ -490,7 +492,8 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
     question 3; G18; trigger: before the first removal falls due, eight years after the first termination), in the same commit.
   - [ ] 0.5 Annotate `epics.md` Story 13.1c (a create-story note: what was answered, where; the supersession by `-453`) and Story 13.6's INHERITED C4
     block ("put to the Panel from 13.1c, note `trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md`, not sent / sent <date>;
-    13.1c's terminate route is BUILT, its go-live gated by Row 50 (b)"). Annotate, never rewrite.
+    13.1c's terminate route is BUILT, its go-live gated by Row 50 (b)"). Each of the 13.1c and 13.6 blocks also gets a pointer that `-453`
+    supersedes its "does NOT ship" / "does not ship before this is recorded" line. Annotate, never rewrite.
   - [x] 0.6 ONE Panel note DRAFTED 2026-11-07 from the template: `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md`
     - seven questions (Q-2's C4 split in three: a wrong ending's undo / appeal, a worker who comes back, a returning number; going silent and death,
     added by BigDev; credit during a suspension: Q-3; the five keys: Q-5), each with section 0 answered, the deciding fact, honest
@@ -643,3 +646,4 @@ _(none yet)_
 | 2026-11-07 | 1.1 | Validated (`bmad-create-story validate 13.1c`, claims re-traced at `bb4d8620`; BigDev: "all" - 14 items applied). A waiting worker's acts get a screen (Find's selector gains Waiting for approval); `WorkerDetail`'s `children` passes the worker; the move's audit action is `field_worker.posted` (13.1 QE6); G12 (b) lists AD3's breakage incl. the jobs test; AD2's under-lock re-check is `result.fromState` (G20); `verifiedSnapshot` gains `permissionKeys`; G19 (display names readable, Task 0.1's check dropped); `reads.spec.ts:514` unchanged; no second identity fetch after an act; Q-1 B's costs completed; two quote sources corrected; `posted`'s registry text; "13.1a TR6"; the lifecycle result's field sources. Q-1..Q-5 still OPEN. |
 | 2026-11-07 | 1.2 | BigDev answered the asks, verbatim: "Q1 C, Q2-Q5 A" (Task 0.2 done). **Q-1 C** (against the recommendation B): the terminate route takes every neutral reason from `pending_kyc`, `active` or `suspended`, with no route restriction; `terminate_not_available` and the `fromState` re-check are dropped (a concurrent termination is refused by the command inside `mutate`, as for every act); 13.1 C5's "Build NO terminate route" and the epic's "does NOT ship" line are to be superseded by `-453` (Task 0.3), replaced by "no real worker before C4 is recorded" (Row 50 (b)). Propagated through the Policy note (ending is reachable from `active` / `suspended`; FR-85; finality), section 0, AD1, AD2, AD5, AD8 (End on every non-ended state, a finality line), AD10 (c) (the SMS window re-accepted for termination), AD12, the Errors table, I5, AC6 (every reason and state; a concurrent-termination race leg; FR-85 checks), AC10, Tasks 0.2-0.6, 4.1, 4.2, 8.1, TR2, C2-C4. **Q-2 A, Q-3 A, Q-5 A:** one Panel note with four questions (C4 split in two), DRAFTED (Task 0.6), NOT sent: `trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md`; its suggestions are 1 A (an appeal), 2 A (shown, information only), 3 C (by reason) and 4 A. **Q-4 A:** the row `13-1e-field-worker-eight-year-removal` is minted at Task 0.4. What an ending does to money already earned is NOT in the note (C3: 13.5 asks it). |
 | 2026-11-07 | 1.3 | The Panel note REWRITTEN before sending (BigDev: "yes, rewrite question 1 and add silent and death", after challenging Question 1 with an employee who resigns and rejoins a year later). Question 1 had mixed a person who left and comes back (not an appeal) with a person ended wrongly: now 1 (a wrong ending: undo a slip, appeal a dispute), 2 (coming back: old record and code, or new), 3 (a returning number shown); added 4 (a worker who goes silent: a 90-day warning, officer decides, never automatic) and 5 (death: its own reason, on the officer's word); 6 credit during a suspension; 7 the keys. Seven questions; suggestions 1 A, 2 A, 3 A, 4 A, 5 A, 6 C, 7 A - the author's, not BigDev's. Row 50 (b) now waits on Questions 1-5, each build-needing answer with a ROW. Still DRAFTED, NOT sent. No AC or Task of the build changed: the route ships the three neutral reasons; "died" / "could not be reached" are built only if the Panel chooses them. |
+| 2026-11-07 | 1.4 | Governance committed on the story branch: Task 0.0 records `01cbba52`; Task 0.3 decision `2026-11-07-453` ALONE `490510d9` (BigDev: "commit records and write decision 453") - it supersedes FOUR author / BigDev texts, not two: writing it found `-442`'s "terminate waits on Story 13.6's C4" and Story 13.6's INHERITED C4 lines besides 13.1 C5 and the 13.1c epic line (AD2 and Task 0.5 updated); Task 0.4 (BigDev: "go ahead with task 0.4") `0b329bb4` - roster Row 50 `field-worker-lifecycle-live` (a)-(e), (c) MET; dated lines at Row 48 (f), (i); row `13-1e-field-worker-eight-year-removal: backlog` and its `epics.md` stub; ledger `2026-11-07g`. Task 0.6's note: DRAFTED, NOT sent. Next: Task 0.5, then Task 0.1's re-check and code. |

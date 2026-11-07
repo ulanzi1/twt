@@ -7709,6 +7709,34 @@ the worker is moved or ended by another route.
 > ⭐ **INHERITED FROM 13.1b (2026-11-06, `bmad-create-story 13.1b`; story `13-1b-field-worker-code-by-sms`; `deferred-work.md` "Deferred from: story 13-1b-… (create-story, 2026-11-06)"; C6).** HOMED here, ⛔ closed. 13.1b was created, not built, when this was written (it is now built on its branch and not merged: see the BUILT ON THE BRANCH note under Story 13.1b).
 > - **C6 — this story's notices, if a job sends one.** C2 above cites `decryptFieldWorkerField`. 13.1b moves that function to `@twt/domain` (the API re-exports it). Its audit-first shape holds; its actor does not, since a job has none: the line names the system. Trigger: 13.1d create-story.
 
+### Story 13.1e: A Terminated Field Worker's Name and Mobile Are Removed Eight Years After Their Ending — Their Record, Code and Log Stay `[PRIMITIVE]`
+
+> ⚠ **Added 2026-11-07** by BigDev (*"Q1 C, Q2-Q5 A"* — Story 13.1c's Q-4, option A: *"mint a backlog row now, `13-1e-field-worker-eight-year-removal`,
+> as its owner, with no build here"*), recorded in decision `2026-11-07-453`. The row is `13-1e-field-worker-eight-year-removal` (`backlog`). Source:
+> Story 13.1's carried items C5 and D8 and its QE20 (`ended_on` is the clock); Story 13.1c's G18; the recruitment form *"Application for Field
+> Worker"*, version 1, as BigDev read it (2026-11-03): the name and mobile are kept while the worker is employed and REMOVED 8 years after the date
+> of termination. It owns roster Row 48 leg (f)'s 8-year half and is Row 50 leg (c)'s named owner. Needs Story 13.1c LANDED (no worker can be
+> terminated before it). **Nothing is due before eight years after the first termination.** **The gate:** a request for erasure BEFORE the 8
+> years is counsel's question 3 (`counsel-question-2026-11-03-field-worker-data-basis.md`, written, not sent) — not this story's to decide.
+
+As the Trust, I want a terminated field worker's name and mobile number removed eight years after the date their work ended, while their
+record, their code, the teachers credited to them and their full log stay, so that the promise on the recruitment form is kept without
+losing the history the Panel asked to keep (`-441`: "Keep the full log of field worker").
+
+**Acceptance Criteria (in brief):**
+- **What is removed.** For a `terminated` worker whose `ended_on` is at least 8 years ago: `name_ciphertext`, `mobile_ciphertext` and
+  `mobile_blind_index` are scrubbed — the blind index replaced by a per-row tombstone, unique per row, so the NOT NULL column and the
+  partial unique index (which skips terminated rows) still hold. The row, the code, the attributions and the event log stay; the log
+  carries no name or mobile (13.1 I8, I15).
+- **Only terminated workers, only after 8 years.** Any other state, or a date inside the 8 years, is refused. A worker restored or brought
+  back on their old record (if the Panel's answers to Story 13.1c's note allow either) is never scrubbed.
+- **The database lets it happen, and nothing else.** A migration `CREATE OR REPLACE`s the append-only guard function to admit this scrub
+  under its own writer variable, and the scrub runs under a role a policy names (FORCE RLS; the policies name `twt_app` only, so an
+  owner-run UPDATE matches zero rows) — Story 13.1 C5 / D8.
+- **Audited, by a sweep.** A jobs sweep finds due rows and removes them, one audit line per worker naming the worker id, never the name
+  or mobile; a failure leaves the row as it was and is retried.
+- **Not here:** erasure on request before 8 years (counsel's question 3); the paper form; payout records (Story 13.5; Row 48 (e)).
+
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
 As Solo Builder authoring the attribution code allocation system,

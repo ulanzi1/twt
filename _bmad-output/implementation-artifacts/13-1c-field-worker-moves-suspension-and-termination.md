@@ -709,7 +709,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1c`, 2026-11-07, in the 
 - The domain-accessor-invariants gate refused `listFieldWorkerEvents`'s bare `.limit(limit + 1)`; it now clamps inline
   (`pageFieldWorkersForPariwar`'s form).
 - The microcopy tone gate's out-of-band-blame rule fired on the admin label "Registered by mistake" (AC10 pins it verbatim): ONE
-  allow entry scoped to `i18n-en.ts` and the exact phrase (the rule is for member copy about gifts). ⚠ A choice BigDev may revisit.
+  allow entry scoped to `i18n-en.ts` and the exact phrase (the rule is for member copy about gifts). **KEPT by BigDev, 2026-11-07,
+  verbatim: "Registered by mistake - keep it."** (the label and the scoped allow entry both stay).
 - A throwaway browser-pass launcher spec was written into `apps/api/tests/integration/` while `ci:local` ran; moved out to the
   scratchpad within about a minute (the lint job had already passed). Never committed.
 
@@ -761,7 +762,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1c`, 2026-11-07, in the 
   pre-read can see writes none; (3) the API pre-read also refuses a stale gate target / a stale `from_district` /
   `district_unchanged` with no line (AC1 (c), I7); (4) `stream-concurrency.spec` (e2)/(e3) rewritten: two moves from the same
   screen no longer both fulfil (13.1 D7); (5) "Registered by mistake" kept verbatim (AC10) with a file- and phrase-scoped
-  microcopy allow entry; (6) `CodeReveal` stays on the Find panel for every state (its 409 copy by state is the answer).
+  microcopy allow entry - confirmed by BigDev 2026-11-07 ("Registered by mistake - keep it."); (6) `CodeReveal` stays on the Find panel for every state (its 409 copy by state is the answer).
 
 ### File List
 

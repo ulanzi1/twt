@@ -1,3 +1,4 @@
+# last_updated: 2026-11-07k (STORY 13.1c — THE SPLIT. BigDev: "yes, apply the split". Decision `2026-11-07-455` (author-commit) committed ALONE `608f9faf`, amending `-453` AD1 / AD2 / AD11 and Row 50: the reason `died` (`-454` Q5 A) joins 13.1c with TWO hand-authored migrations (`0203` ADD VALUE alone, `0204` the reason-subset CHECK); NEW row **`13-1f-field-worker-ending-undo-appeal-and-return: backlog`** for the undo of a mistaken ending, the appeal record, a returning worker's link and the shown number (Q1–Q3); the silence warning (Q4) carried to 13.8 (its period not ruled); the held credit (Q6) stays 13.8 / 13.5's. Row 50 (b) MET; NEW leg (f): the undo and appeal record BUILT before the terminate route meets a real worker. Story v1.8; row stays ready-for-dev. No code; nothing live.)
 # last_updated: 2026-11-07j (STORY 13.1c — the PANEL RULED. BigDev: "by DR and KB / Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A". Decision `2026-11-07-454` (TRUSTEE-RATIFIED) committed ALONE `98cebb74`: a mistaken ending undone by the Pariwar Admin, a disputed one appealed (Pariwar Admin, or the Panel if a Pariwar Admin ended them); a returning worker is a NEW registration with a NEW code, linked to the old (Q2 B — not our suggestion); a returning number shown; a silent worker flagged, ended only after the officer tries; "died" with its date; credit while suspended by reason (under review held, own request none); the five keys confirmed. Row 50 (a), (d) MET; (b) needs ROWS for the builds — BigDev's scheduling; Row 48 (i) 13.1c's part discharged; 13.6's C4 RECORDED; PRD FR-85 annotated. Not ruled: Q4's period, "could not be reached", a wrongly-ended worker's gap credit, money already earned. Row stays ready-for-dev. No code; nothing live.)
 # last_updated: 2026-11-07i (STORY 13.1c — the PANEL NOTE SENT. BigDev: "note sent to panel". `trustee-panel-routing-note-2026-11-07-story-13-1c-field-worker-lifecycle.md` (seven questions: a wrong ending, coming back, a returning number, going silent, death, credit while suspended, the five keys) is SENT as committed at `01cbba52`; channel, time and whether the sent text is identical are NOT recorded. No ruling: Row 50 (a), (b), (d) and Row 48 (i) stay open, with dated lines. Story v1.6; row stays ready-for-dev. No code; nothing live.)
 # last_updated: 2026-11-07h (STORY 13.1c — Task 0.5: `epics.md` ANNOTATED, nothing edited. Under Story 13.1c: the answers "Q1 C, Q2-Q5 A", its "terminate route does NOT ship before Story 13.6 records its C4" line SUPERSEDED by `-453` (with 13.1 C5, `-442`'s line and 13.6's), Row 50 (b) in its place, the seven-question Panel note DRAFTED, ⛔ NOT sent. Under Story 13.6's INHERITED C4: its two "before 13.1c's terminate route ships" lines superseded; C4 is put to the Panel from 13.1c; 13.6 RECORDS the answer. The route is written as DECIDED, not built (Task 0.5's "BUILT" would have been a record ahead of its evidence). Story v1.5; Task 0 done but 0.1's re-check; row stays ready-for-dev. No code; nothing live.)
@@ -22727,6 +22728,7 @@ development_status:
   # 2026-11-07h: Task 0.5 done (epics.md annotated); next Task 0.1's re-check, then code.
   # 2026-11-07i: the Panel note SENT (BigDev); not ruled.
   # 2026-11-07j: the Panel RULED (-454, DR + KB); Row 50 (a), (d) MET; (b) awaits rows for the ruled builds.
+  # 2026-11-07k: the split (-455): `died` + migrations 0203/0204 here; row 13-1f minted; Row 50 (b) MET, (f) added.
   13-1c-field-worker-moves-suspension-and-termination: ready-for-dev
   # ⭐ 2026-11-03 13-1d ADDED by BigDev ("Yes to all four, mint 13-1d"): the DISTRICT-ADMIN-TO-DISTRICT-ADMIN move REQUEST (a District Admin at
   # either end opens it at the worker's request; the other accepts or refuses with a reason from a fixed list; 7 days unanswered => the
@@ -22738,6 +22740,12 @@ development_status:
   # change that admits the scrub and a role a policy names. Erasure BEFORE 8 years is counsel's question 3 (unsent). Owner of roster Row 48 (f)
   # and Row 50 (c). Nothing is due before 8 years after the first termination; needs 13.1c LANDED (no termination exists before it).
   13-1e-field-worker-eight-year-removal: backlog
+  # ⭐ 2026-11-07k 13-1f ADDED by BigDev ("yes, apply the split"; decision -455, carrying out the Panel's -454 Q1 A / Q2 B / Q3 A): the Pariwar
+  # Admin's UNDO of a mistaken ending (same code; both acts in the history), the APPEAL record (heard by the Pariwar Admin, or the Trustee Panel when a
+  # Pariwar Admin ended the worker), a returning worker's LINK from the new registration to the old, and the register screen's line that a number
+  # belonged to an ended worker (information only). New transition out of `terminated`, a migration, new keys (-059 B(3) confirms). Needs 13.1c LANDED.
+  # Its undo + appeal gate 13.1c's terminate route on real workers (roster Row 50 (f)).
+  13-1f-field-worker-ending-undo-appeal-and-return: backlog
   13-2-6-digit-attribution-code-generation-per-pariwar: done
   13-3-field-worker-mobile-first-dispatch-app-field-worker-dispatch-scheduler: backlog
   13-4-attribution-analytics-dashboard: backlog

@@ -9,14 +9,15 @@ created from `origin/main` on 2026-11-07. Every `apps/` / `packages/` claim was 
 research passes - the domain commands and stream; the API routes, RBAC and admin module; the governance trail - then the author's own reads of `state.ts`,
 the attribution door and the 13.1a / 13.1b stories). Perishable - re-check at Task 0.1. Re-locate by FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.7, 2026-11-07; validated; Tasks 0.0, 0.2-0.6 done; Q-1..Q-5 ANSWERED by BigDev: "Q1 C, Q2-Q5 A" - Task 0.2 done). The Panel note (Task 0.6) is
-RULED (`-454`, DR + KB: Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A) - the rows Row 50 (b) needs are OPEN with BigDev. No code before Task 0.3 (the decision entry, committed ALONE). Nothing is committed: this pass wrote this file, the Panel note and the
+STATUS: ready-for-dev (v1.8, 2026-11-07; validated; Tasks 0.0, 0.2-0.6 done; Q-1..Q-5 ANSWERED by BigDev: "Q1 C, Q2-Q5 A" - Task 0.2 done). The Panel note (Task 0.6) is
+RULED (`-454`, DR + KB: Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A); split by `-455` ("yes, apply the split"): `died` HERE (two migrations),
+row `13-1f` for the undo / appeal / link / shown number, the warning to 13.8, the held credit to 13.8 / 13.5. No code before Task 0.3 (the decision entry, committed ALONE). Nothing is committed: this pass wrote this file, the Panel note and the
 record edits listed in Task 0.0 - committed `01cbba52`; decision `-453` `490510d9`; Row 50 and row `13-1e` `0b329bb4`; Task 0.5's annotations in the commit that records v1.5. Next: Task 0.1, then code.
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `2026-11-07-453` (the newest on any ref is `-452`). "The number belongs to the first COMMIT" (`-449`).
 - RBAC: `PERMISSION_CATALOG_VERSION = 60`, 81 keys (`packages/domain/src/rbac/permissions.ts`). This story: ONE bump, 60 -> 61; keys 81 -> 86 (five keys, AD5; Q-1 C keeps `field_worker.terminate`).
-- Migration: NONE expected (the catalog is TypeScript only - 13.1a's mint `54ed242a` touched no permission table; payloads are JSON). If one turns out to be needed, the next free is `0203`; read the journal's last `when` live.
+- Migration: TWO, for the reason `died` only (`-455`, amending AD11): `0203` (ADD VALUE, alone) and `0204` (the reason-subset CHECK). The keys stay TypeScript-only (13.1a's mint `54ed242a` touched no permission table); payloads are JSON. `0203` / `0204` were free at the pin - read the journal's last idx and `when` live ([[project_sibling_migration_when_order_shared_db]]).
 - Ledger: the newest letter on any ref is `2026-11-07c`; this pass takes `2026-11-07d` (read it live: letters collide across branches). The comment block at the top of `sprint-status.yaml` is the live ledger.
 - Roster: the highest row is 49; Row 46 is RESERVED by 6.39 / 14.3. This story appends **Row 50** (Task 0.4).
 - Panel notes: the 13.1a keys confirm (`trustee-panel-routing-note-2026-11-04-story-13-1a-field-worker-keys-confirm.md`) is SENT (reported 2026-11-05), NOT ruled; the 13.1b confirm is WRITTEN, NOT sent.
@@ -224,7 +225,7 @@ SENT 2026-11-07 (reported by BigDev; channel and time not recorded); RULED the s
   move request, its answer, the 7-day escalation and every notice (13.1d); the 8-year removal (Q-4 A: row `13-1e`); the labelling reasons `conduct_concern`, `conduct`,
   `fraud_confirmed` and their writer (13.6); profile correction (13.1 QE15, 13.3 / C5); the cross-Pariwar link (13.1 C11, no row).
 - **AD2 - Termination: Q-1 C (BigDev, 2026-11-07: "Q1 C").** The terminate route accepts every reason in `FIELD_WORKER_TERMINATE_REASONS`
-  (`left_voluntarily`, `inactive`, `registered_in_error`) for a `pending_kyc`, `active` or `suspended` worker - the domain command's own rules (G4, G6),
+  (`left_voluntarily`, `inactive`, `registered_in_error`, and - `-455`, the Panel's `-454` Q5 A - `died`) for a `pending_kyc`, `active` or `suspended` worker - the domain command's own rules (G4, G6),
   and NO route-level restriction (⛔ `terminate_not_available`: that code was option B's and is not minted). A terminated worker -> 409
   `illegal_transition` on the pre-read (no audit line); one terminated by a concurrent request between the pre-read and the lock makes the command throw
   inside `mutate`, which rolls back and writes the `_rolled_back` twin (TR2) - as for every act. Termination stays FINAL (13.1 section 0 edge 7): this
@@ -233,7 +234,10 @@ SENT 2026-11-07 (reported by BigDev; channel and time not recorded); RULED the s
   "terminate waits on Story 13.6's C4" and Story 13.6's INHERITED C4 lines ("13.1c's terminate route does not ship before this is recorded"); in their place, the route is built and merged,
   and does not reach a real worker before the Panel answers the note's Questions 1-5 (C4, going silent, death; Row 50 (b)). If the Panel rules a way back, a rejoin on the old code or an appeal,
   that is a new transition and a new decision (C2); if it rules that some reason or state must not be ended, or not by a District Admin, the route
-  narrows - one file. The labelling reasons stay 13.6's (the body's reason enum is the three neutral values; anything else -> 400).
+  narrows - one file. The labelling reasons stay 13.6's (the body's reason enum is the four values; anything else -> 400). **`died` (`-455`):** recorded
+  on the officer's word (`-454` Q5 A: "on what they have been told"); `ended_on` is the DATE OF DEATH, under the same IST bounds; nothing else is asked for.
+  **The Panel's later answers (`-454`)** - the undo of a mistaken ending, the appeal record, the returning worker's link, the shown number - are row
+  `13-1f`'s, ⛔ this story's; Row 50 (f) keeps this route off real workers until the undo and the appeal record are built.
 - **AD3 - Every event this story writes carries the verified authorization (13.1 QE18; `-443` Q3 A).** `suspendFieldWorker`, `reactivateFieldWorker` and
   `terminateFieldWorker` gain a REQUIRED `authorization`; each runs `verifiedSnapshot` at guard (0) with `expected.permissionKey` = its own key, and UNDER
   the lock, after the legality guard, refuses an authorization whose `target.value` is not the LOCKED row's `district` with
@@ -293,8 +297,9 @@ SENT 2026-11-07 (reported by BigDev; channel and time not recorded); RULED the s
   live there; the Approvals page keeps its own pending list and approve button and is NOT edited. On an opened worker
   (`WorkerDetail`), `WorkerActions` shows the acts for the worker's state (active: Move, Suspend, End; suspended: Move, Reactivate, End; pending: Move,
   End; terminated: none) and `WorkerHistory` (a "Show history" button: an explicit click, then the log, with Load more). End's confirm says it is final
-  ("Ending is final. Their code stops crediting new teachers; to work again they must be registered again.") and its reason select lists the three
-  neutral reasons.
+  ("Ending is final. Their code stops crediting new teachers; to work again they must be registered again." - row `13-1f` rewords it when the undo
+  exists) and its reason select lists the four reasons ("Left", "Stopped working", "Registered by mistake", "Died"); choosing "Died" relabels the date
+  input "Date of death".
   **The panel hands them the worker:** `WorkerDetail`'s `children` becomes `(name: string, worker: { current_state; district }) => ReactNode` - a second
   argument, so the Approvals page's existing `(name) => ...` child compiles unchanged. `WorkerActions` reads the state from it and sends `worker.district`
   as Move's `from_district`; ⛔ a second identity fetch inside `WorkerActions` (each is an audited decrypt, G13). No client-side role gating (13.1a C5): a 403 shows the act's "no access"
@@ -313,8 +318,12 @@ SENT 2026-11-07 (reported by BigDev; channel and time not recorded); RULED the s
   at `:1057` changes to "a 409 `code_not_available` refreshes the list". (c) G15's re-examination: re-accepted, a comment at `read.ts:362-365` dated and
   pointing at 13.1b AD4; the sweep is not touched. Under Q-1 C the same window covers a TERMINATION of an active worker (the text can still go in the
   seconds between the sweep's check and the gateway call); re-accepted on the same ground - the code credits nothing once the worker is not `active`.
-- **AD11 - No migration.** The keys are TypeScript; payloads are JSON; the log uses `events_log_pariwar_stream_idx`. If a test proves otherwise, stop and
-  record why before adding one.
+- **AD11 - Two migrations, for `died` only (`-455` amends "No migration").** `0203_field-worker-reason-died.sql`: `ALTER TYPE "field_worker_reason_code"
+  ADD VALUE IF NOT EXISTS 'died'` ALONE (the `0146` posture - TR12). `0204_field-worker-reason-subset-died.sql`: DROP and re-ADD
+  `field_workers_state_reason_subset` with the terminated arm `state_reason_code::text IN ('left_voluntarily','inactive','registered_in_error','died')`
+  (text, never an enum literal of the new value); the suspended arm unchanged. Both hand-authored, journal entries in order, ⛔ regenerated; the drizzle
+  schema (`FIELD_WORKER_REASON_CODES` + the CHECK's text in `schema/field_workers.ts`) moves in the same commit. The keys stay TypeScript; payloads are
+  JSON; the log uses `events_log_pariwar_stream_idx`. Any OTHER migration: stop and record why first.
 - **AD12 - Not built, with homes.** The move request, the notices, "a move ends a pending request" - 13.1d (nothing pending can exist before it). The
   8-year removal - row `13-1e` (Q-4 A). Appeal, reinstatement of a terminated worker, showing an officer that a number belonged to an ended worker - the
   Panel (asked in this story's note, Q-2 A), recorded by 13.6; the labelling reasons - 13.6. Search by mobile or name - 13.1a C7.
@@ -380,8 +389,8 @@ Each is the author's recommendation in plain words. Q-2, Q-3 and Q-5 shape one P
 - **I2** - `postFieldWorker` accepts only `FIELD_WORKER_MOVE_PERMISSION_KEYS`; `field_worker.register` is refused by a test.
 - **I3** - A move whose source is not the district the admin saw is refused; the worker's id, code, state, reason and history are unchanged by a move.
 - **I4** - A terminated worker is never moved, suspended, reactivated or terminated again (13.1; re-proved through the routes).
-- **I5** - Termination is final: no route leaves `terminated`, and the terminate route writes only a neutral reason (`left_voluntarily`, `inactive`,
-  `registered_in_error`) with an `ended_on` inside the IST bounds; no labelling reason is writable (13.6's).
+- **I5** - Termination is final IN THIS STORY: no route leaves `terminated` (the undo is row `13-1f`'s), and the terminate route writes only
+  `left_voluntarily`, `inactive`, `registered_in_error` or `died`, with an `ended_on` inside the IST bounds; no labelling reason is writable (13.6's).
 - **I6** - No name, mobile or code in any new payload, audit field, response, log item, error message or URL. The log route decrypts nothing.
 - **I7** - Every refusal on the pre-read writes no audit line; every committed act writes exactly one, before the COMMIT, naming the actor and role.
 - **I8** - The door's eleven exports, the reach fence (no new `ALLOWED` entry) and the C7 route-review items hold: no re-export of a door wrapper, no
@@ -415,7 +424,7 @@ afterwards and the by-hand code read answers 409 `code_not_available` (13.1a AD8
 `field_worker.reactivate` authorization. No second code text is due (13.1b G5: the row is final); the by-hand read works again. A non-suspended worker -> 409.
 
 **AC6 - Terminating (Q-1 C).** A District Admin of the current district or a Pariwar Admin ends a `pending_kyc`, `active` or `suspended` worker with
-`left_voluntarily`, `inactive` or `registered_in_error` and an `ended_on` (today or a day between registration and today, IST): 200, `terminated`,
+`left_voluntarily`, `inactive`, `registered_in_error` or `died` and an `ended_on` (today or a day between registration and today, IST): 200, `terminated`,
 `state_reason_code` and `ended_on` set; one `field_worker.terminated` event with the `field_worker.terminate` authorization; one `field_worker.terminated`
 audit line. (a) The same mobile can then be registered again in the Pariwar (G16) - a live leg through the register route, for a pending worker ended
 `registered_in_error` AND an active one ended `left_voluntarily`. (b) Two concurrent terminations of one worker: one commits; the other answers 409
@@ -423,7 +432,9 @@ audit line. (a) The same mobile can then be registered again in the Pariwar (G16
 `ended_on` or one before registration -> 422 `ended_on_invalid` (IST bounds; the test reads "today" from the DB, never the UTC clock). (d) Every act on a
 terminated worker -> 409 `illegal_transition`, no event, no audit line. (e) An active worker once ended: `acceptsNewAttributions` is `false`, the by-hand
 code read answers 409 `code_not_available`, and the code row and worker id are unchanged (FR-85: existing attributions preserved). (f) A labelling reason
-(`conduct`) or any value outside the three -> 400 `request.validation`.
+(`conduct`) or any value outside the four -> 400 `request.validation`. (g) `died` (`-455`): an `active` worker ended `died` with a date of death is
+`terminated`, `state_reason_code = 'died'`, `ended_on` = that date - a live leg proving migrations `0203` + `0204` (the CHECK admits it; a RED proof:
+without `0204` the UPDATE fails 23514); a date of death in the future -> 422.
 
 **AC7 - The authorization rides every event (AD3).** The `suspended`, `reactivated` and `terminated` payload schemas REQUIRE `authorization`; each
 command refuses a look-alike object, another Pariwar's or another actor's authorization, the wrong key, and (under the lock) a target that is not the
@@ -507,6 +518,8 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
   - [ ] 1.2 `tests/rbac/permissions.test.ts` (`toBe(61)`, length), `tests/rbac/roles.test.ts` (one describe per key, 13.1a's shape), `tests/field-worker/events.test.ts` catalog fixtures.
 
 - [ ] **Task 2 - The domain (AC: 1-7; I1-I5)**
+  - [ ] 2.0 Migrations `0203` + `0204` and the drizzle schema (AD11, TR12); `FIELD_WORKER_TERMINATE_REASONS` gains `died` in `events.ts` (the payload
+    enum follows); `scripts/field-worker-state-invariant` and `schema-trigger.spec.ts` checked for the reason list. Run the migrations on a FRESH container.
   - [ ] 2.1 `events.ts`: `authorization` REQUIRED on `suspended`, `reactivated`, `terminated`; the four registry descriptions (AD3, incl. `posted`);
     `packages/events/tests/field-worker-registry-coverage.test.ts`.
   - [ ] 2.2 `commands.ts`: the three commands gain `authorization` + key check at guard (0) + locked-target check (AD3); update the guard-order header (:13-30).
@@ -520,7 +533,7 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
     for each new guard (mutate it, see the intended assertion fail, restore).
 
 - [ ] **Task 3 - Contracts (AC: 6-8, 11)**
-  - [ ] 3.1 DTOs and the three reason tuples (re-declared, sync test in `packages/contracts/tests/field-workers.test.ts`); `emit-openapi.ts` entries; regenerate `openapi/v1.yaml`.
+  - [ ] 3.1 DTOs and the three reason tuples (the terminate one with `died`; re-declared, sync test in `packages/contracts/tests/field-workers.test.ts`); `emit-openapi.ts` entries; regenerate `openapi/v1.yaml`.
   - [ ] 3.2 A required field added to a contract breaks fixtures outside tsc ([[project_contracts_tests_outside_tsc]]) - grep the contracts tests.
 
 - [ ] **Task 4 - The API (AC: 1-8, 11; I6-I8)**
@@ -538,7 +551,7 @@ never `prettier --write` ([[project_prettier_not_enforced]]); first push with an
 
 - [ ] **Task 5 - The screens (AC: 10)**
   - [ ] 5.1 Hooks and client (`src/api/hooks.ts`, `client.ts`): four mutations (on success: invalidate the lists and the log, `setQueryData` the identity - AD8), `useFieldWorkerLog` (infinite, `gcTime: 0` like identity - [[project_query_gctime_blinds_removal_tests]]); `fieldWorkerListIsStale` + `code_not_available` (AD10 (b)).
-  - [ ] 5.2 `WorkerDetail.tsx`: `children`'s second argument (AD8); `WorkerActions.tsx`, `WorkerHistory.tsx`, the Find state selector (incl. Waiting for approval), copy in `i18n-en.ts` (reason labels; AD8 messages; AD10 (a)); `derive.ts` `BY_CODE` rows.
+  - [ ] 5.2 `WorkerDetail.tsx`: `children`'s second argument (AD8); `WorkerActions.tsx`, `WorkerHistory.tsx`, the Find state selector (incl. Waiting for approval), copy in `i18n-en.ts` (reason labels incl. "Died" and "Date of death"; AD8 messages; AD10 (a)); `derive.ts` `BY_CODE` rows.
   - [ ] 5.3 RTL tests: `apps/admin/tests/field-worker-{actions,history}.test.tsx`; update `field-worker-find-page.test.tsx` (`:1057`), `field-worker-derive.test.ts` (walks `FIELD_WORKER_EN_KEYS`). Mind [[project_tanstack_onsettled_before_success]] and [[project_tanstack_mutate_callbacks_latest_only]].
 
 - [ ] **Task 6 - Records (AC: 12)** - the story's Dev Agent Record and File List; `deferred-work.md`: CR33's re-trigger fired (AD12), 13.1b C1 / C7 and 13.1a CR60 closed by
@@ -582,18 +595,25 @@ _(none yet)_
 - **TR9** - Domain spec files run in parallel forks against one DB: seed by the worker ids you created and assert on them; mind the FK + TRUNCATE lock order ([[project_fk_truncate_cascade_deadlock]]).
 - **TR10** - `field-worker-crypto.ts` must keep ONE mockable export shape (13.1a TR10) - do not add to it.
 - **TR11** - `**cl.3**`-style emphasis inside a JSDoc closes it ([[project_markdown_emphasis_closes_jsdoc]]).
+- **TR12** - A new enum value cannot be USED in the transaction that added it, and drizzle applies every pending migration in ONE transaction: `0203`
+  holds the ADD VALUE alone, and `0204` compares `state_reason_code::text` - never `'died'::field_worker_reason_code`. Never regenerate an applied
+  migration ([[project_live_db_test_gotchas]], 42P07); test on a FRESH container.
 
 ### Carried to sibling stories (C) - WRITTEN to `deferred-work.md` ("Deferred from: story 13-1c-... (create-story, 2026-11-07)"). Build NONE.
 
 - **C1 -> 13.1d.** `FIELD_WORKER_MOVE_PERMISSION_KEYS` exists: append the request keys in the commit that mints them; the acceptance passes the
   request's source as `expectedFromDistrict`; a direct move (`field_worker.posted` with key `field_worker.move`) must end any pending request and be noticed
   to both District Admins. Trigger: 13.1d create-story.
-- **C2 -> 13.6 (C4 put to the Panel from here, Q-2 A).** The terminate route is BUILT (Q-1 C); 13.6 records the Panel's answer. If it adds a way back
-  or an appeal, that is a new transition and a new decision; if it narrows who may end whom, or for which reason or state, narrow AD2's route (one
-  file); if it says an officer is shown that a number belonged to an ended worker, that is a register-route change. The labelling reasons extend the
-  AD8 reason labels and the re-declared tuples.
-- **C3 -> 13.8 / 13.5.** Credit during suspension (Q-3 A): read Row 50 (d) before recording any attribution. What an ending does to money ALREADY
-  EARNED is unruled (`-443`; 13.1 section 0 edge 6) and is NOT in this story's note: the first commission writer (13.5) asks it.
+- **C2 -> 13.6 and row `13-1f`.** C4 is RULED (`-454`) and RECORDED for 13.6. Its builds are row `13-1f-field-worker-ending-undo-appeal-and-return`'s
+  (`-455`): the undo of a mistaken ending and the appeal record (Q1 A - Row 50 (f): built before this route meets a real worker), the returning
+  worker's link (Q2 B), the shown number on the register screen (Q3 A); it rewords AD8's "Ending is final" line. 13.6 keeps the labelling reasons
+  (they extend AD8's labels and the re-declared tuples) and whether a CONDUCT ending may be appealed or undone (not ruled).
+- **C3 -> 13.8 / 13.5.** Credit during suspension is RULED (`-454` Q6 C): under review - HELD, credited on reactivation; at the worker's own request
+  - not credited. The recorder builds the held credit (PRD FR-85 annotated). What an ending - incl. a death - does to money ALREADY EARNED is unruled
+  (`-443`, `-454`): the first commission writer (13.5) asks it.
+- **C5 -> 13.8 (`-455`).** The silence warning (`-454` Q4 A): the District Admin is told when a worker brings in no teacher for a set time; ended
+  only after the officer tries to reach them. Needs the credit recorder; the PERIOD is not ruled (the option said "we suggest 90 days") - confirm
+  with the Panel at 13.8's create-story. A suspension reason "could not be reached" was NOT ruled.
 - **C4 -> 13.1e (Q-4 A; row minted at Task 0.4).** The 8-year removal: G18's guard and role work, counsel question 3.
 
 ### Testing standards
@@ -607,8 +627,8 @@ _(none yet)_
 ### Project Structure Notes
 
 - New: `apps/api/src/modules/field-worker/{lifecycle-handlers,log-handlers}.ts`; `apps/admin/src/modules/field-workers/{WorkerActions,WorkerHistory}.tsx`;
-  tests per Tasks 2-5; the Panel note; the decision entry; Row 50.
-- Modified: `packages/domain/src/field-worker/{commands,events,read,index}.ts`; `packages/domain/src/rbac/{permissions,roles}.ts`; `packages/events/src/registry.ts`;
+  tests per Tasks 2-5; migrations `0203` + `0204` (`died`); the Panel note; decisions `-453`, `-454`, `-455`; Row 50; rows `13-1e`, `13-1f`.
+- Modified: `packages/domain/src/schema/field_workers.ts` (the reason enum + CHECK text); `packages/domain/src/field-worker/{commands,events,read,index}.ts`; `packages/domain/src/rbac/{permissions,roles}.ts`; `packages/events/src/registry.ts`;
   `packages/contracts/{src/field-workers/*,scripts/emit-openapi.ts}`; `openapi/v1.yaml`; `apps/api/src/modules/field-worker/{routes,errors,index}.ts`;
   `apps/admin/src/{api/client.ts,api/hooks.ts}`; `apps/admin/src/modules/field-workers/{FindWorkerPage,WorkerDetail,derive,i18n-en}.ts(x)`; the test files of G12 and G14.
 - Variance from the epic, with reason: the move body names its expected source (D7, AD4); the log shows the actor's CURRENT name (AD7); the terminate
@@ -651,3 +671,4 @@ _(none yet)_
 | 2026-11-07 | 1.5 | Task 0.5 (BigDev: "go ahead with task 0.5"): `epics.md` annotated, nothing edited - under Story 13.1c, the answers, the supersession of its "does NOT ship" line by `-453` (with the other three texts), Row 50 (b) in its place, and the seven-question note (DRAFTED, NOT sent); under Story 13.6's INHERITED C4, its two "before 13.1c's terminate route ships" lines superseded, C4 put to the Panel from 13.1c, 13.6 RECORDS the answer. Task 0.5's own text said to write that the route is "BUILT": written as DECIDED, not built, because no code exists. |
 | 2026-11-07 | 1.6 | BigDev: "note sent to panel" - the seven-question Panel note is SENT (as committed at `01cbba52`; channel, time and whether the sent text is identical are NOT recorded). Recorded in the note's AWAITING block (the rest kept as drafted), dated lines at Row 50 and Row 48 (i), `deferred-work.md` C2, the `epics.md` 13.6 annotation (a dated pointer, nothing edited) and ledger `2026-11-07i`. No ruling; every Row 50 leg but (c) stays open. |
 | 2026-11-07 | 1.7 | The Panel RULED (BigDev relayed: "by DR and KB / Q1 A, Q2 B, Q3 A, Q4 A, Q5 A, Q6 C, Q7 A") - decision `2026-11-07-454` committed ALONE `98cebb74` (Trustee-ratified). Q2 B was NOT our suggestion: a returning worker gets a new code, linked to the old record. Row 50 (a) and (d) MET; (b)'s answers recorded, its rows OPEN (an undo and appeal record, the link, the shown-number line, the silence warning, the reason "died" - BigDev's scheduling); Row 48 (i): 13.1c's contribution discharged. 13.6's C4 RECORDED. Not ruled: Q4's period, a "could not be reached" reason, credit for a wrongly-ended worker's gap, money already earned. PRD FR-85 annotated (the under-review hold). No AC of this story changed yet: the build still ships the three neutral reasons; whether "died" (and the rest) joins THIS story is the open scheduling question. |
+| 2026-11-07 | 1.8 | BigDev: "yes, apply the split" - decision `2026-11-07-455` (author-commit, alone `608f9faf`) amends `-453` AD1 / AD2 / AD11. **This story gains the reason `died`** (`-454` Q5 A): on the officer's word, `ended_on` = the date of death; TWO hand-authored migrations (`0203` ADD VALUE alone; `0204` the reason-subset CHECK by `::text` - TR12); AD2, AD8 ("Died", "Date of death"), AD11, I5, AC6 (g), Tasks 2.0 / 3.1 / 5.2, Project Structure. **Not here:** the undo, appeal record, link and shown number - row `13-1f` (C2), whose undo + appeal gate this route's go-live (Row 50 (f), new); the silence warning - 13.8 (C5, new; its period not ruled); the held credit - 13.8 / 13.5 (C3). Row 50 (b) MET. |

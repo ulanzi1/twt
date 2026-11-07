@@ -7741,6 +7741,34 @@ losing the history the Panel asked to keep (`-441`: "Keep the full log of field 
   or mobile; a failure leaves the row as it was and is retried.
 - **Not here:** erasure on request before 8 years (counsel's question 3); the paper form; payout records (Story 13.5; Row 48 (e)).
 
+### Story 13.1f: A Mistaken Ending Is Undone, a Disputed One Is Appealed, and a Returning Field Worker Is Linked to Their Old Record — the Registering Officer Is Shown an Ended Worker's Number `[SURFACE]`
+
+> ⚠ **Added 2026-11-07** by BigDev (*"yes, apply the split"*), recorded in decision `2026-11-07-455`, to build what the Panel ruled in `2026-11-07-454`
+> (Trustee-ratified, DR + KB) for Story 13.1c's note: Q1 A, Q2 B, Q3 A. The row is `13-1f-field-worker-ending-undo-appeal-and-return` (`backlog`).
+> Needs Story 13.1c LANDED. **Its undo and appeal record GATE 13.1c's terminate route:** that route is not used on a real worker until they are
+> built and deployed (roster Row 50 (f) — the Panel accepted Q1 A at the cost *"A way back and an appeal record must be built before go-live"*).
+> **The gate:** WHAT is built is RULED (`-454`); what the ruling does NOT cover is listed there and below.
+
+As a Pariwar Admin, I want to undo an ending made by mistake, record a worker's appeal against an ending and its outcome, link a returning
+worker's new registration to their old record, and — as any registering officer — be told when a number belonged to an ended worker, so that
+a slip costs nobody anything, a worker ended unfairly has someone else to turn to, and one person's history reads as one.
+
+**Acceptance Criteria (in brief):**
+- **Undo (Q1 A).** A Pariwar Admin undoes an ending made by mistake: the worker returns to the state they were ended from, with the SAME code
+  and record; the ending and the undo both stay in the log. A new event and transition OUT of `terminated` (13.1 made it final; `-454` changes
+  that for a mistaken ending only), the database rule that refuses any update of a terminated row amended by migration, a new key (a `-059`
+  B (3) permission with its own confirm). A death recorded wrongly is undone the same way (`-454` Q5 A's cost).
+- **Appeal (Q1 A).** A worker who says an ending was unfair appeals by phone or in person; the officer who hears it records the appeal and its
+  outcome — the Pariwar Admin, or the Trustee Panel when a Pariwar Admin ended the worker. An appeal allowed undoes the ending as above.
+- **A returning worker (Q2 B).** A worker who left and comes back is a NEW registration with a NEW code, approved as any worker is (`-443`
+  Q4 A), and LINKED to their old record; the old code stays dead.
+- **The shown number (Q3 A).** Registering a number that belonged to a worker ENDED in this Pariwar shows the officer the date and reason of
+  that ending — information only; the officer decides (and may link, above).
+- **The copy.** 13.1c's "Ending is final" confirm line is reworded once the undo exists.
+- **Not ruled — decide or ask at create-story:** credit for the time a wrongly-ended worker was ended (`-454`: NOT ruled — back to the Panel);
+  who hears an appeal when the Pariwar Admin who ended the worker is the only one, the time limit for an appeal, and what the worker is told;
+  what the link joins and who makes it; whether any of this reaches an ending for CONDUCT (Story 13.6's).
+
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
 As Solo Builder authoring the attribution code allocation system,
@@ -7813,6 +7841,8 @@ So that field-worker effectiveness is visible without exposing per-member PII in
 > - **C8 (cont.) — "field workers by Pariwar/district".** `field_workers` carries the worker's REPORTING `district` (13.1 QE17: the district whose District Admin manages them, NOT a work area — a code works anywhere in the Pariwar; changed only by `field_worker.posted`, and the history is in the worker's event stream) — this dashboard's "by district" grouping reads it (so it groups workers by who manages them, not by where their sign-ups came from), and a per-district history reads the stream; a BLOCK column does not exist, and adding one means `CREATE OR REPLACE` of 13.1's guard function.
 
 ### Story 13.5: Commission Payment Trigger — Qualified-Acquisition-Gated + TDS §194H Deduction `[CONSUMER]`
+
+> ⭐ **INHERITED FROM 13.1c (2026-11-07; decision `2026-11-07-454`, Trustee-ratified).** ⛔ closed. **(1)** the held credit while suspended `under_review` (Q6 C) — if commission is paid on credited signups, a held one is paid only once credited (see Story 13.8's note). **(2) NOT ruled, and this story's to ask the Panel:** what an ending, a suspension or a DEATH (the reason `died`, Q5 A) does to money a worker has ALREADY earned — including whether a dead worker's family is paid, and to whom (field workers have no nominee).
 
 As the field-worker commission disbursement system,
 I want a commission payment trigger gated on qualified acquisition (KYC + ₹110 + first valid contribution via Story 9.5 green-pill confirmation) + TDS §194H deduction per AR-56,
@@ -7896,6 +7926,8 @@ So that invitation is voluntary trust-sharing, not coercive growth optimization.
 **And** the philosophy is documented: TWT's growth comes from authentic trust transmission, not engagement engineering
 
 ### Story 13.8: `<InviteeOnboardingShell>` + Adopter Chain Attribution (Chain Captured v1; Commission Flow v2) `[SURFACE]`
+
+> ⭐ **INHERITED FROM 13.1c (2026-11-07; decisions `2026-11-07-454` Trustee-ratified and `2026-11-07-455`).** HOMED here, ⛔ closed. Read BEFORE recording any credit to a field worker (roster Row 50 (d) is MET by the ruling): **(1) the held credit (`-454` Q6 C):** a signup on the code of a worker SUSPENDED `under_review` is HELD, and credited to them if they are reactivated; one suspended `at_worker_request`, and every other non-`active` state, is not credited (PRD FR-85 is annotated for the under-review case). The teacher is a member in full in every case. **(2) the silence warning (`-454` Q4 A):** once this story records which teachers a worker brings in, a worker who brings in none for a set time is flagged to their District Admin, who tries to reach them before ending them for "stopped working" — never automatically (13.1's events refuse a machine actor). ⚠ The PERIOD is NOT ruled (the option said "we suggest 90 days"): confirm it with the Panel at this story's create-story. A suspension reason "could not be reached" was NOT ruled. **(3)** credit for the time a wrongly-ended worker was ended is NOT ruled (row `13-1f` returns it to the Panel).
 
 As an invitee (Anand) opening the deep link from Sushil,
 I want a welcoming onboarding shell that captures Sushil's attribution chain at signup,

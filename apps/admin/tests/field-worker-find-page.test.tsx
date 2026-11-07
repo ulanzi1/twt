@@ -1054,17 +1054,22 @@ describe('review round 3 — the fix diff', () => {
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2, name: t('fw.find.title') }));
   });
 
-  it('CR47 — a 409 authorization_stale on the code read refreshes the list; a 409 for another reason does not', async () => {
+  // Story 13.1c AD10 (b) (13.1a CR60) — a `code_not_available` now means the row's state changed since the list was read (a suspend
+  // or an end is reachable), so it refreshes the list too; a 409 for any OTHER reason (`district_unchanged` here) still does not.
+  it('CR47 / 13.1c AD10 (b) — a 409 authorization_stale or code_not_available on the code read refreshes the list; a 409 for another reason does not', async () => {
     await renderWithDistrict();
     await openPanel(W1);
     expect(listFieldWorkers).toHaveBeenCalledTimes(1);
-    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.code_not_available', 'no', { current_state: 'suspended' }));
+    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.district_unchanged', 'no'));
     fireEvent.click(showFor(W1));
     await screen.findByTestId('fw-code-refused');
     expect(listFieldWorkers).toHaveBeenCalledTimes(1);
-    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.authorization_stale', 'moved'));
+    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.code_not_available', 'no', { current_state: 'suspended' }));
     fireEvent.click(showFor(W1));
     await waitFor(() => expect(listFieldWorkers).toHaveBeenCalledTimes(2));
+    readFieldWorkerCode.mockRejectedValueOnce(new ApiError(409, 'field_worker.authorization_stale', 'moved'));
+    fireEvent.click(showFor(W1));
+    await waitFor(() => expect(listFieldWorkers).toHaveBeenCalledTimes(3));
   });
 
   describe('the typed district (CR44) and the districts read (CR45)', () => {

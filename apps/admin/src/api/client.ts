@@ -397,10 +397,15 @@ import {
   FieldWorkerCodeResponse,
   FieldWorkerDistrictsResponse,
   FieldWorkerIdentityResponse,
+  FieldWorkerLifecycleResult,
   FieldWorkerListResponse,
+  FieldWorkerLog,
   RegisterFieldWorkerResponse,
   type FieldWorkerState,
+  type MoveFieldWorkerRequest,
   type RegisterFieldWorkerRequest,
+  type SuspendFieldWorkerRequest,
+  type TerminateFieldWorkerRequest,
 } from '@twt/contracts';
 import { z } from 'zod';
 
@@ -3667,4 +3672,34 @@ export function approveFieldWorker(pariwarId: string, fieldWorkerId: string, ide
 /** An ACTIVE worker's code, to read out to them — each call is a fresh audited read; the caller keeps the value in component state only. */
 export function readFieldWorkerCode(pariwarId: string, fieldWorkerId: string) {
   return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/code`, FieldWorkerCodeResponse, { cache: 'no-store' });
+}
+
+// ── Story 13.1c — move, suspend, reactivate, end (each with an Idempotency-Key the PAGE mints per submission attempt), and the log ──
+
+/** A lifecycle act's POST — the 200 is the worker as the act left it (⛔ a name, a mobile or a code). */
+function fieldWorkerAct(pariwarId: string, fieldWorkerId: string, act: string, body: unknown, idempotencyKey: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/${act}`, FieldWorkerLifecycleResult, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** Move a worker directly (a Pariwar Admin). `from_district` is the district the panel showed — a stale one is a 409. */
+export function moveFieldWorker(pariwarId: string, fieldWorkerId: string, body: MoveFieldWorkerRequest, idempotencyKey: string) {
+  return fieldWorkerAct(pariwarId, fieldWorkerId, 'move', body, idempotencyKey);
+}
+export function suspendFieldWorker(pariwarId: string, fieldWorkerId: string, body: SuspendFieldWorkerRequest, idempotencyKey: string) {
+  return fieldWorkerAct(pariwarId, fieldWorkerId, 'suspend', body, idempotencyKey);
+}
+/** The body is `{}` — Fastify answers 400 to an EMPTY JSON body. */
+export function reactivateFieldWorker(pariwarId: string, fieldWorkerId: string, idempotencyKey: string) {
+  return fieldWorkerAct(pariwarId, fieldWorkerId, 'reactivate', {}, idempotencyKey);
+}
+export function terminateFieldWorker(pariwarId: string, fieldWorkerId: string, body: TerminateFieldWorkerRequest, idempotencyKey: string) {
+  return fieldWorkerAct(pariwarId, fieldWorkerId, 'terminate', body, idempotencyKey);
+}
+/** One page of the worker's log, in event order; pass `next_after` back as `after`. No name, mobile or code; `no-store`. */
+export function getFieldWorkerLog(pariwarId: string, fieldWorkerId: string, opts: { after?: number } = {}) {
+  const q = opts.after === undefined ? '' : `?${new URLSearchParams({ after: String(opts.after) }).toString()}`;
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/log${q}`, FieldWorkerLog, { cache: 'no-store' });
 }

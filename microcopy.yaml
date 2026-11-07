@@ -618,6 +618,16 @@ allow:
       Story 10.7 reports console (staff/admin surface, apps/admin). "report"/"Report" is
       the FR-58A feature name + code identifiers, not the member-visible register
       (Sahyog Vivran governs apps/mobile / Epic 2+ member copy).
+  # Story 13.1c (AD8, AC10 — the label is pinned verbatim by the story) — an OFFICER's reason label for ending a field worker's
+  # registration that was entered in error (`registered_in_error`, 13.1 QE15: "a typo is corrected by terminating"). The
+  # out-of-band-blame rule's "by mistake" arm exists for MEMBER copy that would call an intentional gift an error; here nobody gave
+  # anything and the subject is a data-entry slip on a staff console. Scoped to ONE file and the EXACT phrase — the rule keeps its
+  # teeth on every other line of this file and everywhere else.
+  - file: apps/admin/src/modules/field-workers/i18n-en.ts
+    pattern: 'Registered by mistake'
+    reason: >-
+      Story 13.1c staff/admin reason label for ending a registration made in error (registered_in_error). Not member copy and
+      not about money given outside the app — the out-of-band-blame frame does not apply.
   - file: apps/admin/src/routes/ReportsRoute.tsx
     pattern: '\breport'
     reason: >-

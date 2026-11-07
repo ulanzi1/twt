@@ -10,8 +10,13 @@
 // back on the row's "Check details".
 // The list is mounted from the start (a disabled query shows nothing but its always-mounted status region), so the first district
 // choice is announced like every later one (review CR10).
+// Story 13.1c (AD8): a STATE selector beside the district (Waiting for approval / Active / Suspended / Ended, default Active) reuses
+// the list route's `state` filter; a change of state closes the panel like a change of district. The panel also hosts the acts the
+// worker's state allows (`WorkerActions`) and the worker's history (`WorkerHistory`), both fed by the identity already on screen.
 
 import { useQueryClient } from '@tanstack/react-query';
+import type { FieldWorkerState } from '@twt/contracts';
+import { FIELD_WORKER_STATES } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useRef, useState } from 'react';
 
@@ -19,15 +24,18 @@ import { fieldWorkerIdentityKey, useFieldWorkers } from '../../api/hooks.js';
 import { CodeReveal } from './CodeReveal.js';
 import { DistrictPicker } from './DistrictPicker.js';
 import { FieldWorkerNav } from './FieldWorkerNav.js';
+import { WorkerActions } from './WorkerActions.js';
 import { WorkerDetail } from './WorkerDetail.js';
+import { WorkerHistory } from './WorkerHistory.js';
 import { WorkerList } from './WorkerList.js';
 import { resolveEn as t } from './i18n-en.js';
 
 export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactElement {
   const qc = useQueryClient();
   const [district, setDistrict] = useState<string | null>(null);
+  const [state, setState] = useState<FieldWorkerState>('active');
   const [open, setOpenState] = useState<string | null>(null);
-  const list = useFieldWorkers(pariwarId, 'active', district, district !== null);
+  const list = useFieldWorkers(pariwarId, state, district, district !== null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   // The panel open NOW — the handlers compare against this, not against the render they were created in.
   const openRef = useRef<string | null>(null);
@@ -66,16 +74,35 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
         }}
         testId="fw-find-district"
       />
+      <label className="flex flex-col gap-1 text-sm">
+        {t('fw.find.state')}
+        <select
+          value={state}
+          onChange={(e) => {
+            forget(openRef.current);
+            setState(e.target.value as FieldWorkerState);
+            setOpen(null);
+          }}
+          className="self-start rounded border px-2 py-1"
+          data-testid="fw-find-state"
+        >
+          {FIELD_WORKER_STATES.map((s) => (
+            <option key={s} value={s}>
+              {t(`fw.find.state.${s}`)}
+            </option>
+          ))}
+        </select>
+      </label>
       <h2 ref={listHeadingRef} tabIndex={-1} className="sr-only">
         {t('fw.find.title')}
       </h2>
       {district === null && <p data-testid="fw-find-choose">{t('fw.find.chooseFirst')}</p>}
       <WorkerList
         query={list}
-        empty={t('fw.find.empty')}
+        empty={state === 'active' ? t('fw.find.empty') : t(`fw.find.empty.${state}`)}
         headingRef={listHeadingRef}
         noAccessText={t('fw.noAccessFind')}
-        filterKey={JSON.stringify(district)}
+        filterKey={JSON.stringify([district, state])}
         testId="fw-find-list"
         action={(item, register) => (
           <button
@@ -101,7 +128,13 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
       />
       {open !== null && (
         <WorkerDetail key={open} pariwarId={pariwarId} fieldWorkerId={open} surface="find" onClose={closePanel}>
-          {(name) => <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} />}
+          {(name, worker) => (
+            <>
+              <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} />
+              <WorkerActions pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} />
+              <WorkerHistory pariwarId={pariwarId} fieldWorkerId={open} />
+            </>
+          )}
         </WorkerDetail>
       )}
     </section>

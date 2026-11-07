@@ -25,13 +25,14 @@ export interface Guidance {
 }
 
 /** Where the admin was when the server refused — the 403 line says what THAT action needs (review CR11). */
-export type Surface = 'register' | 'approvals' | 'find' | 'code';
+export type Surface = 'register' | 'approvals' | 'find' | 'code' | 'history';
 
 const NO_ACCESS_KEY: Record<Surface, string> = {
   register: 'fw.noAccessRegister',
   approvals: 'fw.noAccess',
   find: 'fw.noAccessFind',
   code: 'fw.noAccessCode',
+  history: 'fw.history.noAccess',
 };
 
 const BY_CODE: Record<string, () => Guidance> = {
@@ -53,7 +54,46 @@ const BY_CODE: Record<string, () => Guidance> = {
   'field_worker.kyc_already_completed': () => ({ text: t('fw.approvals.alreadyDone') }),
   'field_worker.kyc_not_completed': () => ({ text: t('fw.err.kycNotDone') }),
   'field_worker.cursor_invalid': () => ({ text: t('fw.err.cursorInvalid'), reload: true }),
+  // Story 13.1c — reachable from the acts (a move to the same district; an ending date outside the IST bounds).
+  'field_worker.district_unchanged': () => ({ text: t('fw.err.districtUnchanged') }),
+  'field_worker.ended_on_invalid': () => ({ text: t('fw.err.endedOnInvalid') }),
 };
+
+/** Story 13.1c (AD8) — the four acts on an opened worker. */
+export type WorkerAct = 'move' | 'suspend' | 'reactivate' | 'end';
+
+/**
+ * An act's refusal: its OWN no-access line (403), the AD8 "moved by someone else" line (409 `authorization_stale`), a "status
+ * changed meanwhile" line (409 `illegal_transition` — the approvals' "already approved" copy would be wrong here); else the shared rows.
+ */
+export function actGuidance(error: unknown, act: WorkerAct): Guidance {
+  if (error instanceof ApiError) {
+    if (error.status === 403) return { text: t(`fw.actions.noAccess.${act}`), noAccess: true };
+    if (error.code === 'field_worker.authorization_stale') return { text: t('fw.actions.moved') };
+    if (error.code === 'field_worker.illegal_transition') return { text: t('fw.actions.stateChanged') };
+  }
+  return fieldWorkerGuidance(error);
+}
+
+/** A reason code's label (never the code itself). */
+export function reasonLabel(code: string): string {
+  return t(`fw.reason.${code}`);
+}
+
+/** An officer's role, as the history shows it. */
+export function roleLabel(role: string | null): string {
+  return role === 'district_admin' || role === 'pariwar_admin' || role === 'super_admin' ? t(`fw.role.${role}`) : t('fw.role.unknown');
+}
+
+/** Today's date in India (`YYYY-MM-DD`) on THIS browser's clock — the End form's default; the server judges the bounds. */
+export function istTodayInBrowser(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+/** A server instant as an India date and time, e.g. "7 Nov 2026, 4:05 pm". */
+export function formatIstDateTime(iso: string): string {
+  return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+}
 
 /** The guidance for any caught error. An unknown code still says something useful and names the code. */
 export function fieldWorkerGuidance(error: unknown, surface: Surface = 'approvals'): Guidance {

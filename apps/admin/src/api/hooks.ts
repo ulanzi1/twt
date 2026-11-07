@@ -3021,6 +3021,8 @@ export const fieldWorkersListKey = (pariwarId: string, state: import('@twt/contr
   [...fieldWorkersRoot(pariwarId), 'list', state, district === null ? (['all'] as const) : (['district', district] as const)] as const;
 export const fieldWorkerListsKey = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'list'] as const;
 export const fieldWorkerIdentityKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'identity', fieldWorkerId] as const;
+/** Story 13.1c — one worker's log (the history panel). */
+export const fieldWorkerLogKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'log', fieldWorkerId] as const;
 
 export function useFieldWorkerDistricts(pariwarId: string) {
   return useQuery({ queryKey: [...fieldWorkersRoot(pariwarId), 'districts'] as const, queryFn: () => api.getFieldWorkerDistricts(pariwarId), retry: false });
@@ -3060,11 +3062,17 @@ export function useFieldWorkerIdentity(pariwarId: string, fieldWorkerId: string)
   });
 }
 
-/** The 409s that say the list on screen is stale: the worker was already approved, or moved to another district. */
+/**
+ * The 409s that say the list on screen is stale: the worker was already approved, moved to another district, or (Story 13.1c AD10 (b),
+ * 13.1a CR60) is no longer active — a `code_not_available` now means the row's state changed since the list was read.
+ */
 export function fieldWorkerListIsStale(err: unknown): boolean {
   return (
     err instanceof ApiError &&
-    (err.code === 'field_worker.illegal_transition' || err.code === 'field_worker.kyc_already_completed' || err.code === 'field_worker.authorization_stale')
+    (err.code === 'field_worker.illegal_transition' ||
+      err.code === 'field_worker.kyc_already_completed' ||
+      err.code === 'field_worker.authorization_stale' ||
+      err.code === 'field_worker.code_not_available')
   );
 }
 
@@ -3083,6 +3091,71 @@ export function useApproveFieldWorker(pariwarId: string) {
     onSuccess: refreshLists,
     onError: (err) => {
       if (fieldWorkerListIsStale(err)) refreshLists();
+    },
+  });
+}
+
+// ── Story 13.1c — the lifecycle acts and the log ──
+
+/**
+ * One worker's log — an infinite query the history panel enables only on its explicit "Show history" click. `gcTime: 0` like the
+ * identity ([[project_query_gctime_blinds_removal_tests]]): nothing is kept once the panel is gone. ⛔ Background refetching (the
+ * module's rule above): it is refreshed by an act that changes it.
+ */
+export function useFieldWorkerLog(pariwarId: string, fieldWorkerId: string, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: fieldWorkerLogKey(pariwarId, fieldWorkerId),
+    initialPageParam: undefined as number | undefined,
+    queryFn: ({ pageParam }) => api.getFieldWorkerLog(pariwarId, fieldWorkerId, pageParam === undefined ? {} : { after: pageParam }),
+    getNextPageParam: (last) => last.next_after ?? undefined,
+    enabled,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/** What every act's mutation takes: the worker, the act, and the key the page minted for this submission attempt. */
+export type FieldWorkerActInput =
+  | { act: 'move'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').MoveFieldWorkerRequest }
+  | { act: 'suspend'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').SuspendFieldWorkerRequest }
+  | { act: 'reactivate'; fieldWorkerId: string; idempotencyKey: string }
+  | { act: 'terminate'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').TerminateFieldWorkerRequest };
+
+/**
+ * Move / suspend / reactivate / end (Story 13.1c AD8) — ONE mutation for the four, the act in the variables. On success the lists and
+ * the log refresh in the background, and the open panel's identity is UPDATED from the 200 (`current_state`, `district`) with
+ * `setQueryData` — ⛔ invalidated: a refetch would decrypt the name and mobile again and write a `field_worker.identity_viewed` line
+ * nobody asked for (G13). A 409 that says the list is stale refreshes the lists and the log too.
+ */
+export function useFieldWorkerAct(pariwarId: string) {
+  const qc = useQueryClient();
+  const refresh = (fieldWorkerId: string): void => {
+    void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
+    void qc.invalidateQueries({ queryKey: fieldWorkerLogKey(pariwarId, fieldWorkerId) });
+  };
+  return useMutation({
+    mutationFn: (input: FieldWorkerActInput) => {
+      switch (input.act) {
+        case 'move':
+          return api.moveFieldWorker(pariwarId, input.fieldWorkerId, input.body, input.idempotencyKey);
+        case 'suspend':
+          return api.suspendFieldWorker(pariwarId, input.fieldWorkerId, input.body, input.idempotencyKey);
+        case 'reactivate':
+          return api.reactivateFieldWorker(pariwarId, input.fieldWorkerId, input.idempotencyKey);
+        case 'terminate':
+          return api.terminateFieldWorker(pariwarId, input.fieldWorkerId, input.body, input.idempotencyKey);
+      }
+    },
+    onSuccess: (result, input) => {
+      qc.setQueryData(fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId), (old: import('@twt/contracts').FieldWorkerIdentityResponse | undefined) =>
+        old === undefined ? old : { ...old, current_state: result.current_state, district: result.district },
+      );
+      refresh(input.fieldWorkerId);
+    },
+    onError: (err, input) => {
+      if (fieldWorkerListIsStale(err)) refresh(input.fieldWorkerId);
     },
   });
 }

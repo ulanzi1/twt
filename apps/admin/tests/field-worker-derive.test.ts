@@ -11,7 +11,8 @@ import { FIELD_WORKER_EN_KEYS, resolveEn as t } from '../src/modules/field-worke
 describe('the copy (i18n-en.ts)', () => {
   it('every key resolves with its parameters and leaves no stray brace', () => {
     expect(FIELD_WORKER_EN_KEYS.length).toBeGreaterThan(40);
-    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60 };
+    // Story 13.1c's keys add `district`, `act`, `role`, `from` and `to`.
+    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', act: 'suspend', role: 'District Admin', from: 'Patna', to: 'Gaya' };
     for (const key of FIELD_WORKER_EN_KEYS) {
       const text = t(key, params);
       expect(text, key).not.toMatch(/[{}]/);
@@ -19,11 +20,13 @@ describe('the copy (i18n-en.ts)', () => {
     }
   });
 
-  it('the finder’s copy (CR1, -448): "Check details" is a key of its own; the intro lists ACTIVE workers, puts the details before the code and says each look is recorded', () => {
+  // Story 13.1c (AD8): the finder now lists the workers of the chosen STATUS (Active by default), so the intro names the status choice.
+  it('the finder’s copy (CR1, -448; 13.1c AD8): "Check details" is a key of its own; the intro names the status choice, puts the details before the code and says each look is recorded', () => {
     expect(FIELD_WORKER_EN_KEYS).toContain('fw.find.check');
     expect(t('fw.find.check')).toBe('Check details');
     const intro = t('fw.find.intro');
-    expect(intro).toMatch(/active workers/);
+    expect(intro).toMatch(/a status/);
+    expect(intro).toMatch(/Active/);
     expect(intro).toMatch(/recorded/);
     expect(intro.indexOf('details')).toBeGreaterThan(-1);
     expect(intro.indexOf('details')).toBeLessThan(intro.indexOf('code'));
@@ -42,9 +45,10 @@ describe('Story 13.1b (AD12, Q-7) — the code SMS line, per value', () => {
     ['sending', 'Code SMS: sending'],
     ['sent', 'Code SMS: sent, not yet confirmed'],
     ['delivered', 'Code SMS: delivered'],
-    ['not_delivered', 'Code SMS not delivered - give the code by hand when they ask'],
-    ['not_confirmed', 'Code SMS outcome unknown, it may have arrived - give the code by hand when they ask'],
-  ] as const)('%s reads as AD12 writes it', (status, line) => {
+    // Story 13.1c AD10 (a) (13.1b C7 / CB9) — a suspended or ended worker's by-hand read answers 409, so the tail is conditional.
+    ['not_delivered', 'Code SMS not delivered - if the worker is active, give the code by hand when they ask'],
+    ['not_confirmed', 'Code SMS outcome unknown, it may have arrived - if the worker is active, give the code by hand when they ask'],
+  ] as const)('%s reads as AD12 writes it (as 13.1c AD10 (a) reworded the last two)', (status, line) => {
     expect(codeSmsLine(status)).toBe(line);
   });
 
@@ -114,16 +118,17 @@ describe('the 403 line depends on the screen (review CR11)', () => {
     approvals: 'fw.noAccess',
     find: 'fw.noAccessFind',
     code: 'fw.noAccessCode',
+    history: 'fw.history.noAccess',
   };
 
   it.each(Object.entries(KEYS))('%s ⇒ %s, and it is a no-access guidance', (surface, key) => {
     expect(fieldWorkerGuidance(forbidden, surface as Surface)).toMatchObject({ noAccess: true, text: t(key) });
   });
 
-  it('the four lines are four different sentences, and none of the non-approval ones sends the admin to "approving"', () => {
+  it('the five lines are five different sentences, and none of the non-approval ones sends the admin to "approving"', () => {
     const texts = Object.values(KEYS).map((k) => t(k));
-    expect(new Set(texts).size).toBe(4);
-    for (const key of ['fw.noAccessRegister', 'fw.noAccessFind', 'fw.noAccessCode']) expect(t(key)).not.toMatch(/approv/i);
+    expect(new Set(texts).size).toBe(5);
+    for (const key of ['fw.noAccessRegister', 'fw.noAccessFind', 'fw.noAccessCode', 'fw.history.noAccess']) expect(t(key)).not.toMatch(/approv/i);
   });
 
   it('"Press Register again" never reaches an approve: the key-required line names no screen', () => {

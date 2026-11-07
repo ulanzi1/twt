@@ -3,7 +3,9 @@
 // `NomineeNameCheckDisclosure` precedent) so no decrypted identity outlives the panel. Both pages use it: the approvals page passes
 // the approve button as `children`, the finder passes "Show code" — so a code can be asked for only with the identity on screen.
 // `children` is called ONLY once the identity has loaded (never while loading, nor after a refusal). The heading takes focus when
-// the panel opens.
+// the panel opens. Story 13.1c (AD8): `children` also receives the worker's state and district (a SECOND argument, so the
+// approvals page's one-argument child compiles unchanged) — the finder's acts read them from here, ⛔ from a second identity read
+// (each is an audited decrypt); an act's 200 updates this query's data in place (`useFieldWorkerAct`).
 //
 // ⛔ The removal is in the explicit handlers (the Close button here; the approval in `ApprovalsPage`; a switch to another worker or
 // another district in either page), NOT in an effect cleanup: a cleanup runs on StrictMode's simulated unmount too, which destroyed
@@ -11,6 +13,7 @@
 // (review CR2). The hook's own `gcTime: 0` drops the query when the panel unmounts for any other reason (review CR48).
 
 import { useQueryClient } from '@tanstack/react-query';
+import type { FieldWorkerState } from '@twt/contracts';
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 
@@ -25,8 +28,14 @@ export interface WorkerDetailProps {
   onClose: () => void;
   /** Where the admin is — a refused read says what THAT screen needs (the 403 line differs by screen). */
   surface?: Surface;
-  /** Rendered under the identity once it has loaded (the approve button, or "Show code"). */
-  children?: (name: string) => ReactNode;
+  /** Rendered under the identity once it has loaded (the approve button, or "Show code" and the acts). */
+  children?: (name: string, worker: WorkerSummary) => ReactNode;
+}
+
+/** What the acts need of the opened worker (Story 13.1c AD8) — ⛔ the mobile. */
+export interface WorkerSummary {
+  readonly current_state: FieldWorkerState;
+  readonly district: string;
 }
 
 export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'approvals', children }: WorkerDetailProps): ReactElement {
@@ -111,7 +120,7 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
               </>
             )}
           </dl>
-          {children?.(w.name)}
+          {children?.(w.name, { current_state: w.current_state, district: w.district })}
         </>
       )}
       <button type="button" className="self-start text-sm underline" onClick={close} data-testid="fw-detail-close">

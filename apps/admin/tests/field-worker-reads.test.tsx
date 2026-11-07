@@ -154,6 +154,8 @@ describe('Story 13.1b (AD12) — the code SMS pair', () => {
     );
     const line = await screen.findByTestId('fw-detail-code-sms');
     expect(line.textContent).toBe(t('fw.codeSms.not_confirmed'));
+    // Story 13.1c AD10 (a) — the by-hand advice holds only for an active worker, and says so.
+    expect(line.textContent).toContain('if the worker is active, give the code by hand');
     expect(line.tagName).toBe('DD');
     expect(line.previousElementSibling?.textContent).toBe(t('fw.detail.codeSms'));
     expect(line.closest('[aria-live]')).toBeNull();

@@ -43,11 +43,13 @@ export const fieldWorkerStateSchema = z.enum(FIELD_WORKER_STATES);
 
 /** A suspension's reasons. ⛔ A labelling value — Story 13.6 adds those with the writer that uses them. */
 export const FIELD_WORKER_SUSPEND_REASONS = ['under_review', 'at_worker_request'] as const satisfies readonly FieldWorkerReasonCode[];
-/** A termination's reasons. */
+/** A termination's reasons. `died` — Story 13.1c (the Panel's `2026-11-07-454` Q5 A, `-455`): on the officer's word, and
+ *  `ended_on` is the date of death. */
 export const FIELD_WORKER_TERMINATE_REASONS = [
   'left_voluntarily',
   'inactive',
   'registered_in_error',
+  'died',
 ] as const satisfies readonly FieldWorkerReasonCode[];
 /** A move of REPORTING district's reasons (QE17): the worker asked, or the Trust moves them. */
 export const FIELD_WORKER_POST_REASONS = ['at_worker_request', 'reassigned'] as const satisfies readonly FieldWorkerReasonCode[];

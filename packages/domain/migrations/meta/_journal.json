@@ -1415,6 +1415,20 @@
       "when": 1797046800047,
       "tag": "0202_field-worker-code-sms-sends",
       "breakpoints": true
+    },
+    {
+      "idx": 203,
+      "version": "7",
+      "when": 1797133200048,
+      "tag": "0203_field-worker-reason-died",
+      "breakpoints": true
+    },
+    {
+      "idx": 204,
+      "version": "7",
+      "when": 1797219600049,
+      "tag": "0204_field-worker-reason-subset-died",
+      "breakpoints": true
     }
   ]
 }

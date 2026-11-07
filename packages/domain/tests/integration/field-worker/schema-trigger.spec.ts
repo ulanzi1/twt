@@ -219,6 +219,19 @@ describe.skipIf(!hasDatabase)('field_workers CHECKs, by name (AC2 — 23514)', (
     await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'terminated', state_reason_code = 'under_review', ended_on = '2026-11-01', state_event_version = 4 WHERE field_worker_id = $1", [id], '23514', 'field_workers_state_reason_subset');
   });
 
+  it('_state_reason_subset (0203 + 0204, Story 13.1c AC6 (g)): `died` stored as a suspension reason is refused; on a terminated row it is accepted', async () => {
+    const { client, id } = await seeded();
+    await guardedUpdate(client, id, "kyc_status = 'completed', state_event_version = 2");
+    await guardedUpdate(client, id, "current_state = 'active', state_event_version = 3, approved_by_display = 'Raw Approver'");
+    await client.query(GUARD_ON);
+    await expectSqlRejected(client, "UPDATE field_workers SET current_state = 'suspended', state_reason_code = 'died', state_event_version = 4 WHERE field_worker_id = $1", [id], '23514', 'field_workers_state_reason_subset');
+    // CONTROL — the same row, ended `died`.
+    await client.query("UPDATE field_workers SET current_state = 'terminated', state_reason_code = 'died', ended_on = '2026-11-01', state_event_version = 4 WHERE field_worker_id = $1", [id]);
+    const row = await rowOf(client, id);
+    expect(row.current_state).toBe('terminated');
+    expect(row.state_reason_code).toBe('died');
+  });
+
   it('_ended_on_pair: a transition to terminated without ended_on; an ended_on on a live worker', async () => {
     const { client, id } = await seeded();
     await client.query(GUARD_ON);

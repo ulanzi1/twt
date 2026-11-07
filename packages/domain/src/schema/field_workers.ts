@@ -64,8 +64,10 @@ export type FieldWorkerKycStatus = (typeof FIELD_WORKER_KYC_STATUSES)[number];
 /**
  * The NEUTRAL reason codes (QE12 — an author-commit, `2026-11-03-442`; ⛔ a `-210` delegation) — the pgEnum source
  * (`CREATE TYPE field_worker_reason_code`). Suspend: `under_review`, `at_worker_request`. Terminate: `left_voluntarily`,
- * `inactive`, `registered_in_error`. Post (a move of reporting district): `at_worker_request`, `reassigned`. ⛔ A labelling
+ * `inactive`, `registered_in_error`, `died`. Post (a move of reporting district): `at_worker_request`, `reassigned`. ⛔ A labelling
  * value (`conduct_concern`, `conduct`, `fraud_confirmed`) — Story 13.6 adds those with the writer that uses them.
+ * ⭐ `died` (Story 13.1c, migration 0203; the Panel's `2026-11-07-454` Q5 A, `-455`) is LAST: `ADD VALUE` appends, and the
+ * policy-regression spec pins this tuple against the labels in `enumsortorder`.
  */
 export const FIELD_WORKER_REASON_CODES = [
   'under_review',
@@ -74,6 +76,7 @@ export const FIELD_WORKER_REASON_CODES = [
   'inactive',
   'registered_in_error',
   'reassigned',
+  'died',
 ] as const;
 export const fieldWorkerReasonCodeEnum = pgEnum('field_worker_reason_code', FIELD_WORKER_REASON_CODES);
 export type FieldWorkerReasonCode = (typeof FIELD_WORKER_REASON_CODES)[number];
@@ -140,10 +143,11 @@ export const fieldWorkers = pgTable(
       'field_workers_state_reason_pair',
       sql`(${t.currentState} IN ('suspended', 'terminated')) = (${t.stateReasonCode} IS NOT NULL)`,
     ),
-    // QE12's lists — Story 13.6 REPLACES this CHECK when it adds the labelling values.
+    // QE12's lists, + `died` on the terminated arm (Story 13.1c, migration 0204 — `::text`, as 0203's value cannot be an enum
+    // literal in the migrator's one transaction). Story 13.6 REPLACES this CHECK again when it adds the labelling values.
     check(
       'field_workers_state_reason_subset',
-      sql`(${t.currentState} <> 'suspended' OR ${t.stateReasonCode} IN ('under_review', 'at_worker_request')) AND (${t.currentState} <> 'terminated' OR ${t.stateReasonCode} IN ('left_voluntarily', 'inactive', 'registered_in_error'))`,
+      sql`(${t.currentState} <> 'suspended' OR ${t.stateReasonCode} IN ('under_review', 'at_worker_request')) AND (${t.currentState} <> 'terminated' OR ${t.stateReasonCode}::text IN ('left_voluntarily', 'inactive', 'registered_in_error', 'died'))`,
     ),
     check('field_workers_active_needs_kyc', sql`${t.currentState} <> 'active' OR ${t.kycStatus} = 'completed'`),
     check('field_workers_registered_by_display_nonblank', sql`length(btrim(${t.registeredByDisplay})) > 0`),

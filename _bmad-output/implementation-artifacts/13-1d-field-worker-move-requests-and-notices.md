@@ -10,7 +10,7 @@ created from `origin/main` (no upstream) on 2026-11-08. Every `apps/` / `package
 admin module - then the author's own reads of the decision log, the roster and the 13.1c story). Perishable - re-check at Task 0.1. Re-locate by
 FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.3, 2026-11-08). Task 0 DONE except sending the Panel note (BigDev's). Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; Records `5dea5d89`; decision `-458` `d20eb1d5`; Row 51 `0b663d46`. Code may start (Task 1).
+STATUS: ready-for-dev (v1.4, 2026-11-08). Task 0 DONE; the Panel note SENT and RULED - decision `-459` `0ba691f0` (DR + KB: Q1 A, Q2 A WIDENED, Q3 A). ⏳ Task 0.8 (the author-commit for Q2's widening) is owed BEFORE Task 6; Tasks 1-5 may start. Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; Records `5dea5d89`; decision `-458` `d20eb1d5`; Row 51 `0b663d46`. Code may start (Task 1).
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `2026-11-08-458` (the newest on every ref and every worktree is `-457`, 13.1c's). "The number belongs to the first COMMIT" (`-449`).
@@ -21,7 +21,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Ledger: the newest letter on any ref is `2026-11-08d` (read it live: letters collide across branches).
 - Roster: next free row is **51** (the highest is 50 on every ref and worktree; Row 46 is RESERVED by 6.39 / 14.3). Rows 48 (i) and 50 are the
   field-worker rows this story touches.
-- Panel notes: 13.1a's keys confirm is SENT (2026-11-05), NOT ruled; 13.1b's confirm is WRITTEN, NOT sent; 13.1c's is RULED (`-454`).
+- Panel notes: 13.1a's keys confirm is SENT (2026-11-05), NOT ruled; 13.1b's confirm is WRITTEN, NOT sent; 13.1c's is RULED (`-454`); 13.1d's is RULED (`-459`, 2026-11-08).
 -->
 
 # Story 13.1d: A District Admin Asks Another to Take On or Release a Field Worker, and the Other Accepts or Refuses With a Reason - and the District Admins Are Told in the Admin Console (and by Email) `[PRIMITIVE]` `[SURFACE]`
@@ -83,9 +83,9 @@ Quotes are word-for-word; typographic dashes are written as ASCII hyphens; "..."
 | # | Edge - stripped of citations | Verdict |
 |---|---|---|
 | 1 | Who may change a worker's reporting district, and how | **The Panel's - RULED** (`-443` Q1 A). Gate MET |
-| 2 | Who holds the keys to open, answer, settle and read requests | **The Panel's in kind** (`-059` B(3)): built on the default, a NON-BLOCKING confirm (Q-3 A; Row 51 (a); Row 48 (i)) |
-| 3 | Whether the District Admin at the OTHER end - who cannot see a worker outside their district today - is shown the worker's NAME on the request | **The Panel's** (what the Trust discloses about a person, to whom). The ruled consent presupposes they know whom they accept; built on "name only, behind an audited read" - put as a confirm (Q-3; Row 51 (b)) |
-| 4 | Whether the system tells the WORKER of the answer | **The Panel's** (who is told - [[feedback_told_line_must_not_carry_panel_choice]]); the ruled option named District Admins only. Built default: the system sends the worker nothing (no channel exists); the answer notice tells the opener to tell the worker - put as a confirm (Q-3; Row 51 (b)) |
+| 2 | Who holds the keys to open, answer, settle and read requests | **The Panel's in kind** (`-059` B(3)): built on the default, a NON-BLOCKING confirm (Q-3 A; Row 51 (a); Row 48 (i)). ✅ **RULED `-459` Q1 A** - as built |
+| 3 | Whether the District Admin at the OTHER end - who cannot see a worker outside their district today - is shown the worker's NAME on the request | **The Panel's** (what the Trust discloses about a person, to whom). The ruled consent presupposes they know whom they accept; built on "name only, behind an audited read" - put as a confirm (Q-3; Row 51 (b)). ⭐ **RULED `-459` Q2 A, WIDENED**: the name AND "other details like work history with organization, number of member onboarded, etc."; never the phone number. The build follows Task 0.8 |
+| 4 | Whether the system tells the WORKER of the answer | **The Panel's** (who is told - [[feedback_told_line_must_not_carry_panel_choice]]); the ruled option named District Admins only. Built default: the system sends the worker nothing (no channel exists); the answer notice tells the opener to tell the worker - put as a confirm (Q-3; Row 51 (b)). ✅ **RULED `-459` Q3 A** - as built |
 | 5 | Which further officers are told (the split of the notices), incl. how a REFUSED request reaches the Pariwar Admin | **The author's / BigDev's** - `-443` left "the split of the notices" to the author. **Q-2 A**: the Pariwar Admins are told of every refusal |
 | 6 | Whether the email is built here or in its own row | **BigDev's** scheduling - **Q-1 A**: its own row `13-1g`. WHAT is owed (email AND console) is ruled; go-live waits for both (Row 51 (c)) |
 | 7 | The stream, the table, the reason list, the sweep, the screens, the key names, the email's wording (names no one) | **Yours** (AD) - the email naming NO ONE is narrower than any disclosure; naming anyone would be the Panel's (6.25's `-262` FQ3 A) |
@@ -309,7 +309,10 @@ worker's name; (3) the worker is told by the officer, not the system.**
   Withdraw and close write none (the work list shows the state). A notice holds NO name, mobile or code; the in-app list renders the worker's name
   only through the audited request read (AD10). **The email (row `13-1g`, Q-1 A):** one email per notice row, naming NO ONE - "A field worker move request
   needs your answer" / "... was answered" etc. + a link to the Move requests page (6.25's `-262` FQ3 A shape); the wording is that row's.
-- **AD10 - The screens.** A **Move requests** page (`FieldWorkerNav` gains `'requests'`, route `/p/$pariwarId/field-workers/requests`): (1) "Waiting
+- **AD10 - The screens.** ⭐ **Amended by the Panel (`-459` Q2 A, WIDENED, 2026-11-08):** where this AD says the worker's NAME, the Panel ruled
+  the name AND *"other details like work history with organization, number of member onboarded, etc."* - never the phone number, every look
+  audited. What those details are, where they are read and how the count shows before Story 13.8 can compute it are Task 0.8's author-commit,
+  owed BEFORE Task 6; until it lands, build the name as below and nothing more. A **Move requests** page (`FieldWorkerNav` gains `'requests'`, route `/p/$pariwarId/field-workers/requests`): (1) "Waiting
   for your answer" - open requests whose counterpart is a district the officer holds (a Pariwar Admin: every `escalated` request), each with Accept /
   Refuse (a REQUIRED reason select, labels only) or, for a Pariwar Admin, Close and a link to the worker on Find (moving directly is 13.1c's act);
   (2) "Your requests" - opened by the officer, with Withdraw; (3) "Notices" - the officer's notices, newest first, unseen ones marked; showing a page
@@ -487,9 +490,18 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
     `13-1g-field-worker-move-notices-by-email: backlog` to `sprint-status.yaml` and a `### Story 13.1g` stub in `epics.md` (source: this story's
     AD1 / AD9, G11; needs this story LANDED and a new ADR), in the same commit.
   - [x] 0.5 Annotate `epics.md` Story 13.1d (what was answered, where; the variance) - annotate, never rewrite.
-  - [x] 0.6 (written 2026-11-08, E4 run: all pass; DRAFTED, NOT sent - BigDev sends it) (Q-3 A) ONE Panel note from the template,
+  - [x] 0.6 (written 2026-11-08 `ef5d5748`, E4 run: all pass; SENT by BigDev and RULED 2026-11-08 - see 0.7) (Q-3 A) ONE Panel note from the template,
     `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-08-story-13-1d-field-worker-move-requests.md`, section 0 answered per
     question, the deciding fact, honest costs on every option, evidence last; run its E4 commands before it is sent. Non-blocking.
+  - [x] 0.7 (2026-11-08) Record the Panel's ruling, relayed by BigDev: *"by DR and KB / Q1 - A, Q2 - A, name and other details like work
+    history with organization, number of member onboarded, etc. Keep the phone number out. / Q3 A"*. Decision `-459` (Trustee-ratified) committed
+    alone `0ba691f0`; the note's status block; dated lines at Row 51 ((a) MET; (b) first half MET, second half OPEN) and Row 48 (i) (13.1d's
+    contribution discharged); `epics.md`; `deferred-work.md` C4; ledger `2026-11-08h`.
+  - [ ] 0.8 **HALT before Task 6 - Q2's widening (BigDev's answers, then an author-commit amending `-458` AD10, AD11 if a column, AC9).** Decide:
+    (i) what "work history with organization" shows the officer at the other end - the dates and districts only, or also each suspension's
+    reason and the acting officers' names (the worker's own log holds both); (ii) the closed list behind "etc."; (iii) where it is read and
+    audited (the request detail read, one audit line per view, is the default); (iv) the count of members onboarded before Story 13.8 can
+    compute it - shown as "not counted yet", or go-live waits for it (a new Row 51 leg). Then dated lines at Row 51 (b) naming the row(s).
 
 - [ ] **Task 1 - Keys (AC: 8; I10)** - in the SAME commit as Task 2.4 (the move-key list).
   - [ ] 1.1 `permissions.ts` (four keys, v62, changelog comment); `roles.ts` (constants beside 13.1c's; bundles per AD5; update the :347 comment).
@@ -580,6 +592,9 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
   create-story.
 - **C2 -> 13.3 (the worker's app).** Whether a worker sees their own pending request and its answer depends on Q-3 item 3; a worker login is 13.3's.
 - **C3 -> 13-1f.** An undo of a mistaken ending does not reopen a request it superseded (the supersede is final); 13-1f says so or decides otherwise.
+- **C4 -> 13.8 (`-459` Q2 A, widened).** The number of members a worker has onboarded is shown to the officer at the other end of a move
+  request. It cannot be computed until 13.8 resolves a member's captured code to a worker (`member_attribution` has no worker column;
+  `resolveAttributionForRequest` has no caller). 13.8 supplies the count read (by worker, inside one Pariwar, a number - never a member's name).
 
 ### Testing standards
 
@@ -635,3 +650,4 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 | 2026-11-08 | 1.1 | Validated (`bmad-create-story validate 13.1d`; numbers re-checked live, unchanged), BigDev: "all": the acceptance moves the worker FIRST and records `posted_event_id` (event ids are DB-minted); only a direct move supersedes inside `postFieldWorker`; side effects after `runLockedTransition`, ⛔ inside its savepoint; `escalation_cause` CHECK admits withdraw / supersede after escalation; notices filtered by recipient in SQL (no actor setting); a direct move writes one notice per recipient; `pending_kyc` named; the list GETs' clamp, `limit` max and `rateLimit` named; the 201-`escalated` line; the notices routes on `[session, scope]`; the unseen count on `FieldWorkerNav`; 13.1c's CR34 told apart from 13.1a's. Q-1..Q-3 still open. |
 | 2026-11-08 | 1.2 | Q-1..Q-3 ANSWERED by BigDev, verbatim "Q1-Q3 A": the email is row `13-1g`'s (Task 7 not here); the Pariwar Admins are told of every refusal; ONE non-blocking Panel note with the three questions (Task 0.6). Propagated through AD1, AD9, AD12, AC3, Tasks 0.2-0.6 and 7, C1 and the variances; Task 0.2 done. |
 | 2026-11-08 | 1.3 | Task 0 done on BigDev's "go ahead": records `5dea5d89`; preflight clean; decision `-458` committed alone `d20eb1d5`; roster Row 51 + Row 48 (i) line + row `13-1g` and its `epics.md` stub `0b663d46`; `epics.md` 13.1d annotation (the supersession pointer); the Panel note written (E4 all pass), NOT sent. |
+| 2026-11-08 | 1.4 | The Panel note SENT and RULED (DR + KB, relayed by BigDev): Q1 A, Q2 A WIDENED (the name and "other details like work history with organization, number of member onboarded, etc.", never the phone number), Q3 A. Decision `-459` `0ba691f0`; section 0 edges 2-4 marked; AD10 carries the widening; Task 0.7 [x]; Task 0.8 (the widening's author-commit) owed before Task 6; C4 -> 13.8 (the count). |

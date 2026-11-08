@@ -1,13 +1,21 @@
 # Trustee Panel routing note — Story 13.1d: asking for and answering a field worker's move between District Admins — four permissions, the worker's name shown to the officer at the other end, and who tells the worker (three questions, all non-blocking)
 
-> ## ⏳ AWAITING PANEL RULING — DRAFTED, NOT SENT
+> ## ✅ RULED 2026-11-08 — [Decision 2026-11-08-459](../../.decision-log.md#decision-2026-11-08-459) (Trustee-ratified, DR + KB)
 >
-> **Nothing is recorded here yet.** BigDev sends this note; the session does not. When the Panel rules, transcribe the ruling into this
-> block **and** into `.decision-log.md` as a new decision id. Everything below is then kept **unedited** as the questions **as they were
-> put** ([[feedback_supersede_never_reinterpret]]).
+> **Sent by BigDev; the ruling relayed to the session on 2026-11-08.** ⚠ Not recorded: the channel, the send time, the time the Panel
+> ruled, and whether the text sent is identical to this file as committed at `ef5d5748`. Verbatim, as relayed:
 >
-> **All three questions are NON-BLOCKING.** Story 13.1d is built on the answers we suggest (A, A, A). What waits for the Panel is going
-> live with move requests (roster Row 51, legs (a) and (b)) — nothing is live today.
+> > *"by DR and KB*
+> > *Q1 - A, Q2 - A, name and other details like work history with organization, number of member onboarded, etc. Keep the phone number out.*
+> > *Q3 A"*
+>
+> - **Q1 — A** (our suggestion): the four keys confirmed as built. Roster Row 51 (a) MET; 13.1d's contribution to Row 48 (i) discharged.
+> - **Q2 — A, WIDENED** (our suggestion, with more): the officer at the other end sees the worker's name **and** *"other details like work
+>   history with organization, number of member onboarded, etc."*; never the phone number; every look recorded. NOT ruled: the list behind
+>   "etc.", what "work history" shows, and how the count appears before Story 13.8 can compute it — see `-459` "does NOT cover".
+> - **Q3 — A** (our suggestion): the officer who opened the request tells the worker; the system reminds them.
+>
+> Everything below is kept **unedited** — the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

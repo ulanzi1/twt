@@ -223,7 +223,7 @@ const EN: Record<string, string> = {
   'fw.nav.requests': 'Move requests',
   'fw.nav.requestsUnseen': 'Move requests ({count} new)',
   'fw.requests.title': 'Move requests',
-  'fw.requests.intro': 'A worker who asks to report to another district moves only when the District Admin there agrees. A request nobody answers for 7 days goes to the Pariwar Admin.',
+  'fw.requests.intro': 'A worker who asks to change district moves only when the District Admin there agrees. A request nobody answers for 7 days goes to the Pariwar Admin.',
   'fw.requests.waiting': 'Waiting for your answer',
   'fw.requests.waitingEmpty': 'Nothing is waiting for your answer here.',
   'fw.requests.escalated': 'Gone to the Pariwar Admin',

@@ -1,8 +1,8 @@
 // One move request's detail panel — Story 13.1d (AC9; AD10 as amended by decision `-460`). Mounted only while open: its read is an
 // AUDITED decrypt of the worker's name (one line a view), so the query is dropped on close (`gcTime: 0`) and never refetched in the
 // background. It shows the request's history and the worker's WORK HISTORY: the current state, when they registered and started, each
-// district with its dates and each suspension's dates — ⛔ a reason, an officer's name, the mobile or the code — and "Members brought in:
-// Not counted yet" until Story 13.8 can count them (`-460` item 4).
+// district with its dates and each suspension's dates — ⛔ a reason, an officer's name, the mobile or the code — and "Members brought in"
+// with the `fw.requests.detail.notCounted` line until Story 13.8 can count them (`-460` item 4).
 
 import type { ReactElement } from 'react';
 

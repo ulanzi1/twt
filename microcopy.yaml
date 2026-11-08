@@ -628,6 +628,16 @@ allow:
     reason: >-
       Story 13.1c staff/admin reason label for ending a registration made in error (registered_in_error). Not member copy and
       not about money given outside the app — the out-of-band-blame frame does not apply.
+  # Story 13.1d (decision `2026-11-08-460` item 4 — the wording is the decision's, on BigDev's "recommended") — the OFFICER's line for
+  # the count of members a field worker has brought in, which cannot be computed before Story 13.8 resolves a member's code to a
+  # worker. The out-of-band-blame rule's "not counted" arm exists for MEMBER copy that would call a contribution "not counted"; here
+  # nobody gave anything and the subject is a count the system cannot make yet, on a staff console. Scoped to ONE file and the EXACT
+  # phrase — the rule keeps its teeth on every other line of this file and everywhere else.
+  - file: apps/admin/src/modules/field-workers/i18n-en.ts
+    pattern: 'Not counted yet'
+    reason: >-
+      Story 13.1d staff/admin line for a field worker's members-onboarded count before Story 13.8 can compute it (`-460` item 4). Not
+      member copy and not about money — the out-of-band-blame frame does not apply.
   - file: apps/admin/src/routes/ReportsRoute.tsx
     pattern: '\breport'
     reason: >-

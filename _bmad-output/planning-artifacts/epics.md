@@ -7583,6 +7583,8 @@ and who bears it; whether a worker can ask for the SMS again, or that is only ev
 
 ### Story 13.1c: A Pariwar Admin Moves a Field Worker Directly; a Field Worker Is Suspended, Reactivated or Terminated — and Everything That Has Happened to Their Record Can Be Read `[SURFACE]`
 
+> ⭐ **LANDED on `main` 2026-11-08** (PR #326, `bb4d8620..23a1dbfa`, fast-forward; `ci:local` and GitHub CI 38/38 at `23a1dbfa`; decisions `-453`, `-454` (Trustee-ratified), `-455`, `-456`, `-457`). Merge is not go-live: the terminate route reaches no real worker until row 13-1f's undo and appeal record exist (roster Row 50 (f)). The notes below are as written before the landing.
+
 > ⚠ **Added 2026-11-03** by BigDev (*"mint 13-1a, 13-1b, 13-1c"*), answering Story 13.1's ASK Q-2; **narrowed the same day** when Story 13.1d
 > was minted. The row is `13-1c-field-worker-moves-suspension-and-termination` (`backlog`). Source: Story 13.1's Q-2 RECOMMENDATION, QE17,
 > QE19, QE20 and carried items C4, C5; the Panel's ruling `2026-11-03-441` (*"Keep the full log of field worker"*). Field workers ROTATE

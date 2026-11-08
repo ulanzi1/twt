@@ -10,7 +10,7 @@ created from `origin/main` (no upstream) on 2026-11-08. Every `apps/` / `package
 admin module - then the author's own reads of the decision log, the roster and the 13.1c story). Perishable - re-check at Task 0.1. Re-locate by
 FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.5, 2026-11-08). Task 0 DONE; the Panel note SENT and RULED - decision `-459` `0ba691f0` (DR + KB: Q1 A, Q2 A WIDENED, Q3 A); Q2's widening built per `-460` `0a88cb40` (BigDev: "recommended"). Code may start (Task 1). Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; Records `5dea5d89`; decision `-458` `d20eb1d5`; Row 51 `0b663d46`. Code may start (Task 1).
+STATUS: review (v1.7, 2026-11-09). Tasks 0-9 DONE; `ci:local` 39/39 at `8ef28475` on a fresh container. Two questions for BigDev from the browser pass are OPEN (B2: a direct move to a third district does not tell the superseded request's counterpart — amends `-458` AD9; B4: a destination District Admin cannot open a request from the screens — a disclosure question). Governance: `-458` `d20eb1d5`, `-459` `0ba691f0`, `-460` `0a88cb40`; Row 51 `0b663d46`. Nothing pushed.
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `2026-11-08-458` (the newest on every ref and every worktree is `-457`, 13.1c's). "The number belongs to the first COMMIT" (`-449`).
@@ -26,7 +26,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1d: A District Admin Asks Another to Take On or Release a Field Worker, and the Other Accepts or Refuses With a Reason - and the District Admins Are Told in the Admin Console (and by Email) `[PRIMITIVE]` `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -520,29 +520,29 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
   - [x] 1.1 `permissions.ts` (four keys, v62, changelog comment); `roles.ts` (constants beside 13.1c's; bundles per AD5; update the :347 comment).
   - [x] 1.2 `tests/rbac/{permissions,roles}.test.ts`, `tests/field-worker/{events,state}.test.ts` catalog fixtures.
 
-- [ ] **Task 2 - The domain (AC: 1-7; I1-I5)**
-  - [ ] 2.1 Migration `0205` + drizzle schema files + `schema/index.ts` + RLS policy file + regression spec (`packages/domain/tests/integration/rls/`)
+- [x] **Task 2 - The domain (AC: 1-7; I1-I5)** (`e20fe202`; 2.4's key half with Task 1, `2ae726f0`)
+  - [x] 2.1 Migration `0205` + drizzle schema files + `schema/index.ts` + RLS policy file + regression spec (`packages/domain/tests/integration/rls/`)
     (AD11). Run on a FRESH container; never regenerate an applied migration ([[project_live_db_test_gotchas]]).
-  - [ ] 2.2 `move-request-events.ts`, `move-request-state.ts`, `move-request-project.ts` (AD2, AD3); registry entries + the sibling coverage test.
-  - [ ] 2.3 `move-request-commands.ts`: open, accept, refuse, withdraw, close, escalate, supersede - each takes the caller's client, worker lock first
+  - [x] 2.2 `move-request-events.ts`, `move-request-state.ts`, `move-request-project.ts` (AD2, AD3); registry entries + the sibling coverage test.
+  - [x] 2.3 `move-request-commands.ts`: open, accept, refuse, withdraw, close, escalate, supersede - each takes the caller's client, worker lock first
     (I5), the request lock second; `notices.ts`: recipients + insert (AD9). Export through the barrel.
-  - [ ] 2.4 `commands.ts`: append the key; export `lockFieldWorkerRow` (it exists, private, :125); call supersede + notices from `postFieldWorker`
+  - [x] 2.4 `commands.ts`: append the key; export `lockFieldWorkerRow` (it exists, private, :125); call supersede + notices from `postFieldWorker`
     (key `field_worker.move` ONLY -> supersede + the direct-move notice; the answer key -> neither, AD4) and `terminateFieldWorker` (supersede +
     `move_request_superseded`), AFTER `runLockedTransition` returns, on the same client - `activateFieldWorker`'s code-SMS shape (:375); ⛔ editing
     `runLockedTransition` (a failure there rolls back the caller's transaction whole). `posted`'s `permission_key` pinned (R2-D1). Update the
     guard-order header and the registry's `posted` description (drop "unverified until built").
-  - [ ] 2.5 `read.ts` (or `move-request-read.ts`): list (keyset, `clampLimit`), detail with events, notices page; (`-460`) the worker's
+  - [x] 2.5 `read.ts` (or `move-request-read.ts`): list (keyset, `clampLimit`), detail with events, notices page; (`-460`) the worker's
     work-history read from their own stream (types, versions, dates, districts only - ⛔ select a reason or an actor), bounded, `truncated` flag.
-  - [ ] 2.6 Tests: unit (events, state table incl. `system` only on `escalated`); live (`tests/integration/field-worker/move-requests.spec.ts`: each
+  - [x] 2.6 Tests: unit (events, state table incl. `system` only on `escalated`); live (`tests/integration/field-worker/move-requests.spec.ts`: each
     act, the partial unique race, lock-order legs both ways, supersede from move and terminate, a rolled-back move, notices' recipients incl. "no
     recipient => no row" and "the actor excluded"). RED proof for each guard (mutate, see the assertion fail, restore).
 
-- [ ] **Task 3 - Contracts (AC: 7, 10)** - DTOs (`FieldWorkerMoveRequest`, `...Page`, `...Detail`, `Open...Request`, `Refuse...Request`,
+- [x] **Task 3 - Contracts (AC: 7, 10)** (`cbb52a48`) - DTOs (`FieldWorkerMoveRequest`, `...Page`, `...Detail`, `Open...Request`, `Refuse...Request`,
   `FieldWorkerNotice`, `...Page`, `MarkFieldWorkerNoticesSeenRequest`, the detail's `worker` block (`-460`: `members_onboarded` nullable), the two list queries with `FieldWorkerLogQuery`'s clamp), the refusal and
   notice-kind tuples re-declared with sync tests; `emit-openapi.ts`
   entries; regenerate `openapi/v1.yaml`; grep the contracts tests for broken fixtures ([[project_contracts_tests_outside_tsc]]).
 
-- [ ] **Task 4 - The API (AC: 1-7; I6-I8)** - `move-request-handlers.ts`, `notice-handlers.ts`; loaders in `gate.ts` (the grant-aware open loader,
+- [x] **Task 4 - The API (AC: 1-7; I6-I8)** (`701f3cc4`) - `move-request-handlers.ts`, `notice-handlers.ts`; loaders in `gate.ts` (the grant-aware open loader,
   G8; `loadMoveRequestGate`); registrations in `routes.ts` (before `/:fieldWorkerId`); the new codes in `errors.ts` + `field-worker-errors.test.ts`;
   `index.ts` header. Harness helpers (`openMoveRequest`, `accept`, `refuse`, `withdraw`, `close`, `notices`) and `cleanup` (the two tables before
   `field_workers`). Specs: `move-requests.spec.ts` (AC1-AC4, AC7 incl. 13.1a C2's legs), `move-request-race.spec.ts` (AC1 (d), AC2 (e)),
@@ -550,10 +550,10 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
   review (13.2 C7): no door import, no re-export, no `requestContextStorage.run`, no `pariwarId =`. (`-460`) The detail handler writes
   `field_worker.move_request_worker_viewed` before decrypting the name through `field-worker-crypto.ts`; an audit failure returns no name.
 
-- [ ] **Task 5 - The job (AC: 5)** - `field-worker-move-request-escalation.ts` + `register...Cron` + `boot.ts` (own pool); `apps/jobs/tests/` unit (tick
+- [x] **Task 5 - The job (AC: 5)** (`070e63f7`) - `field-worker-move-request-escalation.ts` + `register...Cron` + `boot.ts` (own pool); `apps/jobs/tests/` unit (tick
   outcomes, the Row 26 guard) and a live test (AC5 (a)). Mind the jobs pool ([[project_jobs_pool_two_connection_starvation]]).
 
-- [ ] **Task 6 - The screens (AC: 9)** - client + hooks (new mutations `networkMode: 'always'`; approve / register too - CR34); `MoveRequestsPage`,
+- [x] **Task 6 - The screens (AC: 9)** (`1dd9d64c`) - client + hooks (new mutations `networkMode: 'always'`; approve / register too - CR34); `MoveRequestsPage`,
   `MoveRequestActions`, `NoticeList`, (`-460`) the request's detail panel (work history; members onboarded "Not counted yet"), `FieldWorkerNav` (`'requests'` + count), the route in `router.tsx` + `routeTree`, "Ask to move" in
   `WorkerActions`; copy in `i18n-en.ts` (`fw.requests.*`, `fw.notices.*`, the refusal labels); `derive.ts` `BY_CODE` rows. RTL tests
   `apps/admin/tests/field-worker-move-requests.test.tsx`; update `field-worker-actions.test.tsx`, `field-worker-derive.test.ts` (walks the keys).
@@ -562,11 +562,11 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 - **Task 7 - The email - NOT this story's (Q-1 A).** Row `13-1g` builds it (its ADR first) over this story's `field_worker_notices` rows; here, only
   keep those rows channel-neutral (AD9). ⛔ a send table, sender, template or fence entry in this story.
 
-- [ ] **Task 8 - Records + gate** - Dev Agent Record and File List; `deferred-work.md`: 13.1 C10 / D7, 13.1a C2, 13.1b C6, 13.1c C1 and R2-D1, 13.1c
+- [x] **Task 8 - Records + gate** (`ci:local` 39/39 at `8ef28475`, fresh container :5451, 2026-11-09) - Dev Agent Record and File List; `deferred-work.md`: 13.1 C10 / D7, 13.1a C2, 13.1b C6, 13.1c C1 and R2-D1, 13.1c
   CR34 (patch review, `networkMode`; ⛔ 13.1a's CR34) closed with commit ids; CR33's re-trigger fired; `epics.md` BUILT note; ledger. A record states only what has run
   ([[feedback_record_unattested_no_backfill]]). `ci:local` on a FRESH container through the push ([[project_known_livedb_test_failures]]).
 
-- [ ] **Task 9 - Browser pass (AC: 9)** - in the dev Mac's Chrome, two District Admins and a Pariwar Admin: open from the source and from the
+- [x] **Task 9 - Browser pass (AC: 9)** (2026-11-09, the Mac's Chrome; findings below — two fixed `28385fbb`, two put to BigDev) - in the dev Mac's Chrome, two District Admins and a Pariwar Admin: open from the source and from the
   destination, accept one, refuse one with a reason, withdraw one, close an escalated one (seeded age), a Pariwar Admin's direct move with an open
   request, the notices and the count. Record what ran and what did not.
 
@@ -649,13 +649,167 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story`, on the story worktree.
+
 ### Debug Log References
+
+- The story's own Postgres container `twt-131d-pg` (:5451, `twt_dev`), migrated fresh twice (once at the start, once before `ci:local`).
+- RED proofs (each mutation made, the named test seen failing, the code restored): the role bundles (`roles.test.ts`); `posted`'s pinned key
+  (`events.test.ts`); both 0205 guard triggers disabled on the story DB (exactly the six guard tests failed); the acceptance's move also
+  superseding, and the actor not excluded from notices, and the one-notice-per-recipient rule (`move-requests.spec.ts`, domain); a planted
+  raw write outside the projector (the write gate); the approval without `networkMode: 'always'` (stalls); the detail decrypting before its
+  audit line (`move-request-reads-audit.spec.ts`).
+- EXPLAIN (COSTS OFF) on 1,500 seeded requests of one Pariwar (+ 20 of a rare district), ANALYZEd, as `twt_app` under RLS, 2026-11-09: a
+  common district's page and the Pariwar-wide page walk `field_worker_move_requests_pariwar_idx` in page order with NO Sort (the district a
+  filter); a rare district's page uses a BitmapOr of `_from_idx` and `_to_idx` and sorts its few rows; the sweep's selector uses
+  `_pending_idx`. The seeded rows were deleted afterwards. A one-off measurement, ⛔ a pinned spec.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created (create-story, 2026-11-08).
+- **Task 1** (`2ae726f0`): four keys, catalog 61 -> 62, 86 -> 90; `FIELD_WORKER_MOVE_PERMISSION_KEYS` gains the answer key and MOVED to
+  `events.ts` (re-exported by `commands.ts`) so `posted`'s schema pins its snapshot key without an import cycle (TR12; 13.1c R2-D1).
+- **Task 2** (`e20fe202`): migration 0205 (both tables, CHECK pairs, guard triggers, one-open partial unique); the request's own stream
+  (seven events, each pinning its act's key; `system` only on `escalated`); projector; commands (open, accept, refuse, withdraw, close,
+  escalate — worker lock first, I5); the supersede after a direct move / an ending in its own module (TR12); notices (exact district grant,
+  active users, actor excluded, one per recipient per act); reads incl. `-460`'s work history (selects no reason, no actor).
+- **Task 3** (`cbb52a48`): contracts + sync guard + nine OpenAPI paths (deterministic).
+- **Task 4** (`701f3cc4`): the API — grant-aware open target, per-request gate loaders (missing / foreign = 403 for all), pre-read refusals
+  with no audit line, one audit line per act (the acceptance's covers the move), audit-first reads, notices on `[session, scope]`.
+- **Task 5** (`070e63f7`): the hourly sweep on its own pool with the Row 26 guard; a row no longer due writes the twin and is skipped.
+- **Task 6** (`1dd9d64c`): the page, detail panel, notices, nav count, "Ask to move"; `networkMode: 'always'` on the approval (13.1c CR34).
+- **Task 7**: not this story's (row `13-1g`); the notice rows are channel-neutral.
+- **Variances from the story text, each with its reason:**
+  (1) The request list's page cap is **25** (default 20), ⛔ AD6's 100: AD10 requires ONE audit line a page NAMING the page's workers, and the
+  audit locator holds 1,024 characters — 25 UUIDs fit (the 13.1a list's cap, for the same reason). The notices (no names) keep 100. Not in
+  `-458`'s text (it names no number).
+  (2) The list indexes are `(pariwar_id, from_district, …)`, `(pariwar_id, to_district, …)` and `(pariwar_id, opened_at, …)`, ⛔ AD11's
+  counterpart / source pair: a district's list is EITHER end (from OR to), and the Pariwar Admin's page has no district. EXPLAIN above.
+  (3) "Ask to move" is its own component (`AskToMove.tsx`) mounted beside `WorkerActions` in the Find panel, ⛔ a fifth act inside
+  `WorkerActions`: 13.1c's acts (their stale handling, held fields and focus rules) stay untouched. It is withdrawn with the acts when the
+  panel's copy is stale.
+  (4) "the registration mutation" (13.1c CR34): there is none — the register page calls the client directly (13.1a review R5).
+- **Quick validation (BigDev, 2026-11-09: "run quick story validation once done and apply any findings")** — every AC re-read against the
+  build; findings, all APPLIED: (V1) AC7's "an audit failure returns no name" had no test — `move-request-reads-audit.spec.ts` (the real
+  wrapper on a pool that cannot connect; RED-proved); (V2) AD11's EXPLAIN check had not run — run and recorded above; (V3) AC1 (c)'s "NO
+  event" was asserted only as "no audit line" over HTTP — added; (V4) AC7 (b)'s "no code in any body" was not asserted on the detail — added;
+  (V5) the variances above were unrecorded — recorded; (V6) the STATUS line repeated itself — fixed.
+- 13.1a CR33's re-trigger FIRED again (five keyed writes), not fixed — `deferred-work.md`.
+- **Task 8 — the gate.** `ci:local` run 1 (at `1dd9d64c`, a fresh container): 37/39 — `microcopy` (a real finding: my intro used the bare word
+  "report", the member register's; and "Not counted yet", decision `-460`'s own wording, tripped the out-of-band-blame "not counted" arm)
+  and `test (unit)` (`apps/admin/tests/helpline-claim-page.test.tsx`, one 5 s timeout under load — unrelated to this story; 28/28 alone).
+  Fixed `8ef28475`: the intro says "change district"; "Not counted yet" allow-listed for the field-workers copy file and that exact phrase
+  (13.1c's "Registered by mistake" precedent — ⛔ the ruled wording reworded). Run 2 (at `8ef28475`, the container recreated fresh): **39/39**.
+- **Task 9 — the browser pass (2026-11-09)**, in the Mac's Chrome (`list_connected_browsers`: one macOS browser; a 127.0.0.1 probe loaded first)
+  against a throwaway stack: an uncommitted env-guarded launcher spec (its own container :5452; a Pariwar Admin, District Admins of Patna and
+  Gaya (two), five approved workers, one suspended and reactivated; four requests opened through the real routes), the API on 127.0.0.1:3000,
+  the admin Vite on :3001, a cookie helper (sessions minted through the real passkey routes). RAN, as the officers: the District Admin's "All
+  districts" → "choose a district you manage"; Gaya chosen → "Waiting for your answer" (two, from Patna) and "Your requests" (one); View →
+  the work history (Status, Registered, Active since, Patna since …, one suspension's dates, "Members brought in: Not counted yet", the
+  request's history — no reason anywhere); Refuse with no reason sent NOTHING (one `refused` line in the audit log), then with "There is no
+  work for them here" → "You refused the request for Sunita Devi."; Accept → "Meena Kumari now reports to Gaya."; as Ravi (Patna) the
+  notices "Your request was accepted: Patna to Gaya. Tell the worker." and the refusal with its reason's LABEL; "Ask to move" on Find (the
+  current district excluded) → "Request sent. Ramesh Kumar stays in Patna until it is answered."; a second ask → "This worker already has a
+  move request waiting…"; as the Pariwar Admin "All districts" → "Gone to the Pariwar Admin" (Kiran, escalated at open: nobody holds
+  Nalanda) → Close → "You closed the request for Kiran Yadav."; a direct Move of Ramesh to Nalanda with his request open → superseded
+  (`worker_moved`); as Sita, Withdraw → "You withdrew the request for Arjun Singh.". Swept afterwards: no worker name or mobile in the API
+  log, the audit lines or the request events. Everything torn down (container, servers, launcher file). NOT RUN: the 7-day sweep (live job
+  test only), a direct move with NO open request in the browser (API spec only).
+  FINDINGS: (B1) FIXED `28385fbb` — the notices' "New" marks vanished before they could be read (the seen mark's refresh returned them
+  seen); now a notice unseen when the visit showed it keeps "New" for the visit — re-checked in the browser. (B3) FIXED `28385fbb` — an act
+  refreshed every request query, so an OPEN detail panel was re-read: its worker's name decrypted again and a `move_request_worker_viewed`
+  line written nobody asked for (three lines for one View); now only the lists refresh. (B2) OPEN — BigDev's: a Pariwar Admin's direct move
+  to a THIRD district (Ramesh: request Patna→Gaya, moved Patna→Nalanda) supersedes the request and tells Patna and Nalanda, but GAYA's
+  District Admins — told the request was opened — are told nothing; it vanishes from their list. AD9 assumed the move's two districts always
+  include the request's; changing who is told amends `-458` AD9. (B4) OPEN — BigDev's / the Panel's: a DESTINATION District Admin cannot
+  open a request from the screens — "Ask to move" is on Find a worker, which shows only the officer's own district's workers (Sita on
+  Patna: "You do not have access to this district's workers"). The API supports it (pinned in the specs); a screen would have to let an
+  officer identify a worker outside their district, a disclosure `-459` Q2 ruled only for workers already on a request.
 
 ### File List
+
+- `.github/workflows/ci.yml`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/field-workers/AskToMove.tsx`
+- `apps/admin/src/modules/field-workers/FieldWorkerNav.tsx`
+- `apps/admin/src/modules/field-workers/FindWorkerPage.tsx`
+- `apps/admin/src/modules/field-workers/MoveRequestActions.tsx`
+- `apps/admin/src/modules/field-workers/MoveRequestDetail.tsx`
+- `apps/admin/src/modules/field-workers/MoveRequestsPage.tsx`
+- `apps/admin/src/modules/field-workers/NoticeList.tsx`
+- `apps/admin/src/modules/field-workers/derive.ts`
+- `apps/admin/src/modules/field-workers/i18n-en.ts`
+- `apps/admin/src/modules/field-workers/index.ts`
+- `apps/admin/src/router.tsx`
+- `apps/admin/src/routes/FieldWorkerMoveRequestsRoute.tsx`
+- `apps/admin/tests/field-worker-derive.test.ts`
+- `apps/admin/tests/field-worker-move-requests.test.tsx`
+- `apps/api/src/modules/field-worker/errors.ts`
+- `apps/api/src/modules/field-worker/gate.ts`
+- `apps/api/src/modules/field-worker/index.ts`
+- `apps/api/src/modules/field-worker/move-request-handlers.ts`
+- `apps/api/src/modules/field-worker/notice-handlers.ts`
+- `apps/api/src/modules/field-worker/routes.ts`
+- `apps/api/src/types.ts`
+- `apps/api/tests/integration/_field-worker-fixture.ts`
+- `apps/api/tests/integration/field-worker/_registration-harness.ts`
+- `apps/api/tests/integration/field-worker/move-request-race.spec.ts`
+- `apps/api/tests/integration/field-worker/move-request-reads-audit.spec.ts`
+- `apps/api/tests/integration/field-worker/move-requests.spec.ts`
+- `apps/api/tests/unit/field-worker-errors.test.ts`
+- `apps/jobs/src/boot.ts`
+- `apps/jobs/src/scheduler/field-worker-move-request-escalation.ts`
+- `apps/jobs/tests/field-worker-move-request-escalation-live.test.ts`
+- `apps/jobs/tests/field-worker-move-request-escalation.test.ts`
+- `openapi/v1.yaml`
+- `package.json`
+- `packages/contracts/scripts/emit-openapi.ts`
+- `packages/contracts/src/field-workers/dto.ts`
+- `packages/contracts/src/field-workers/enums.ts`
+- `packages/contracts/src/field-workers/index.ts`
+- `packages/contracts/tests/field-workers.test.ts`
+- `packages/domain/migrations/0205_field-worker-move-requests.sql`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/field-worker/commands.ts`
+- `packages/domain/src/field-worker/errors.ts`
+- `packages/domain/src/field-worker/events.ts`
+- `packages/domain/src/field-worker/index.ts`
+- `packages/domain/src/field-worker/move-request-commands.ts`
+- `packages/domain/src/field-worker/move-request-events.ts`
+- `packages/domain/src/field-worker/move-request-lock.ts`
+- `packages/domain/src/field-worker/move-request-project.ts`
+- `packages/domain/src/field-worker/move-request-read.ts`
+- `packages/domain/src/field-worker/move-request-state.ts`
+- `packages/domain/src/field-worker/move-request-supersede.ts`
+- `packages/domain/src/field-worker/notices.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/policies/field-worker-move-requests-rls.ts`
+- `packages/domain/src/policies/field-worker-notices-rls.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/src/schema/field_worker_move_requests.ts`
+- `packages/domain/src/schema/field_worker_notices.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/tests/field-worker/commands-guards.test.ts`
+- `packages/domain/tests/field-worker/events.test.ts`
+- `packages/domain/tests/field-worker/move-request.test.ts`
+- `packages/domain/tests/field-worker/state.test.ts`
+- `packages/domain/tests/integration/field-worker/_fixtures.ts`
+- `packages/domain/tests/integration/field-worker/move-requests.spec.ts`
+- `packages/domain/tests/integration/rls/field-worker-move-requests-policy-regression.spec.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/events/src/registry.ts`
+- `packages/events/tests/field-worker-move-request-registry-coverage.test.ts`
+- `packages/queue/src/index.ts`
+- `scripts/ci-local.sh`
+- `scripts/field-worker-move-request-invariant/README.md`
+- `scripts/field-worker-move-request-invariant/check.ts`
+- `scripts/field-worker-move-request-invariant/lib.test.ts`
+- `scripts/field-worker-move-request-invariant/lib.ts`
+- `_bmad-output/implementation-artifacts/13-1d-field-worker-move-requests-and-notices.md`, `deferred-work.md`, `sprint-status.yaml`; `_bmad-output/planning-artifacts/epics.md`
 
 ## Change Log
 
@@ -667,3 +821,5 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 | 2026-11-08 | 1.3 | Task 0 done on BigDev's "go ahead": records `5dea5d89`; preflight clean; decision `-458` committed alone `d20eb1d5`; roster Row 51 + Row 48 (i) line + row `13-1g` and its `epics.md` stub `0b663d46`; `epics.md` 13.1d annotation (the supersession pointer); the Panel note written (E4 all pass), NOT sent. |
 | 2026-11-08 | 1.4 | The Panel note SENT and RULED (DR + KB, relayed by BigDev): Q1 A, Q2 A WIDENED (the name and "other details like work history with organization, number of member onboarded, etc.", never the phone number), Q3 A. Decision `-459` `0ba691f0`; section 0 edges 2-4 marked; AD10 carries the widening; Task 0.7 [x]; Task 0.8 (the widening's author-commit) owed before Task 6; C4 -> 13.8 (the count). |
 | 2026-11-08 | 1.5 | Task 0.8 done on BigDev's "recommended": decision `-460` `0a88cb40` amends `-458` AD10 - one request's DETAIL shows the name and a work history (registered on, active since, current state, districts with dates, suspensions' dates; no reason, no officer's name), members onboarded "Not counted yet" until 13.8; "etc." adds nothing; one audit line per detail view; the list keeps the name only; go-live does not wait for the count. AD10, I6, AC7, AC9, Tasks 2.5, 3, 4, 6 updated; Row 51 (b) MET. |
+| 2026-11-09 | 1.6 | `bmad-dev-story`: Tasks 1-6 built and committed (`2ae726f0` keys; `e20fe202` domain; `cbb52a48` contracts; `701f3cc4` API; `070e63f7` sweep; `1dd9d64c` screens); the request list capped at 25 (one audit line names a page's workers); the either-end indexes; `AskToMove` beside `WorkerActions`. Quick validation (BigDev's ask): six findings, all applied (an audit-first spec, the EXPLAIN check, two absence assertions, the variances recorded, the STATUS line). Task 8's `ci:local` and Task 9's browser pass remain. |
+| 2026-11-09 | 1.7 | Task 9 browser pass (B1, B3 fixed `28385fbb`; B2, B4 put to BigDev); Task 8: `ci:local` 37/39 then, after the microcopy fix `8ef28475`, 39/39 on a fresh container; `deferred-work.md` closures; `epics.md` BUILT note; status -> review. |

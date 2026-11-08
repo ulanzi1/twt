@@ -34,6 +34,13 @@
 //        append-only log) ⇒ `FieldWorkerAuthorizationStaleError`;
 //   (4)  the reason (suspend, terminate, post) ⇒ `FieldWorkerReasonInvalidError`;
 //   (5)  `terminate`: the IST bounds — not after today, not before the registration day ⇒ `FieldWorkerEndedOnInvalidError`.
+//
+// ── Side effects AFTER the transition, on the SAME client (the `activate` code-SMS shape) ─────────
+// `activate` records the code SMS as due (13.1b). Story 13.1d (AD3, AD4, AD9): a DIRECT move (`post` under `field_worker.move` ONLY —
+// the acceptance's key `field_worker.answer_move_request` has nothing else to supersede) supersedes the worker's open move request and
+// tells both districts' District Admins; `terminate` supersedes it and tells its opener and the other end. Each runs after
+// `runLockedTransition` returns — the worker's row lock is still held, so the request's lock is taken second (I5) — and a failure there
+// fails the CALLER's transaction whole (⛔ inside `runLockedTransition`'s savepoint, ⛔ a swallowed error).
 
 import type pg from 'pg';
 
@@ -71,6 +78,7 @@ import {
   type FieldWorkerTransitionResult,
   type ProjectFieldWorkerGenesisResult,
 } from './project.js';
+import { afterDirectMove, afterEnding } from './move-request-supersede.js';
 import { nextFieldWorkerState } from './state.js';
 
 export type { FieldWorkerTransitionResult, ProjectFieldWorkerGenesisResult } from './project.js';
@@ -123,8 +131,11 @@ interface LockedRowRaw {
   registered_on: string;
 }
 
-/** `SELECT … FOR UPDATE` on the worker row (QE13). Under twt_app this needs the UPDATE grant + policy. */
-async function lockFieldWorkerRow(
+/**
+ * `SELECT … FOR UPDATE` on the worker row (QE13). Under twt_app this needs the UPDATE grant + policy. Exported for Story 13.1d's
+ * request commands, which lock the WORKER first and the request second (AD4, I5).
+ */
+export async function lockFieldWorkerRow(
   client: pg.PoolClient,
   pariwarId: PariwarId,
   fieldWorkerId: FieldWorkerId,
@@ -161,8 +172,8 @@ async function istToday(client: pg.PoolClient): Promise<string> {
  * literal with the same fields is refused), one for another Pariwar or actor, one not checked at `district`, and — when
  * `expected` names them — the wrong key or target. Returns the snake_case payload snapshot.
  */
-function verifiedSnapshot(
-  eventType: FieldWorkerEventType,
+export function verifiedSnapshot(
+  eventType: string,
   authorization: unknown,
   i: { pariwarId: string; actorId: string },
   // ONE of the two is REQUIRED (review R2-13): with neither, any verified district-dimension key would be accepted (the hole `post` had).
@@ -457,7 +468,7 @@ export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFi
   if (typeof i.endedOn !== 'string' || !isCalendarDateString(i.endedOn)) {
     throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'missing_or_malformed');
   }
-  return runLockedTransition(
+  const result = await runLockedTransition(
     client,
     i,
     'field_worker.terminated',
@@ -471,6 +482,9 @@ export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFi
     },
     (extra) => `field_worker.terminate:${extra['reason_code'] as string}`,
   );
+  // Story 13.1d (AD3, AD9) — an ending supersedes the worker's open move request and tells its opener and the other end.
+  await afterEnding(client, { pariwarId: i.pariwarId, fieldWorkerId: i.fieldWorkerId, authorization, auditId: i.auditId, actor: i.actor, actorId: i.actorId });
+  return result;
 }
 
 export interface PostFieldWorkerInput extends FieldWorkerCommandBase {
@@ -503,7 +517,7 @@ export async function postFieldWorker(client: pg.PoolClient, i: PostFieldWorkerI
   if (typeof i.expectedFromDistrict !== 'string' || i.expectedFromDistrict.trim().length === 0) {
     throw new FieldWorkerProjectorInputError('[field_worker.posted] the expected source district is missing (13.1 D7)');
   }
-  return runLockedTransition(
+  const result = await runLockedTransition(
     client,
     i,
     'field_worker.posted',
@@ -519,4 +533,20 @@ export async function postFieldWorker(client: pg.PoolClient, i: PostFieldWorkerI
     },
     'field_worker.post',
   );
+  // Story 13.1d (AD3, AD4, AD9) — a DIRECT move only: supersede the open request and tell both districts. The acceptance's move (the
+  // answer key) supersedes nothing: the worker lock is held and the one open request is the one being accepted. (3a) proved the locked
+  // district WAS `expectedFromDistrict`.
+  if (authorization.permission_key === 'field_worker.move') {
+    await afterDirectMove(client, {
+      pariwarId: i.pariwarId,
+      fieldWorkerId: i.fieldWorkerId,
+      authorization,
+      auditId: i.auditId,
+      actor: i.actor,
+      actorId: i.actorId,
+      fromDistrict: i.expectedFromDistrict,
+      toDistrict: i.toDistrict,
+    });
+  }
+  return result;
 }

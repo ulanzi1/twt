@@ -65,6 +65,8 @@
     "marketplace-module-state:test": "vitest run scripts/marketplace-module-state-invariant",
     "field-worker-state:check": "tsx scripts/field-worker-state-invariant/check.ts",
     "field-worker-state:test": "vitest run scripts/field-worker-state-invariant",
+    "field-worker-move-request:check": "tsx scripts/field-worker-move-request-invariant/check.ts",
+    "field-worker-move-request:test": "vitest run scripts/field-worker-move-request-invariant",
     "survey-advisory:check": "tsx scripts/survey-advisory-invariant/check.ts",
     "survey-advisory:test": "vitest run scripts/survey-advisory-invariant",
     "governance-boundary:check": "tsx scripts/governance-boundary/check.ts",

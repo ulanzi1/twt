@@ -715,7 +715,54 @@ export const EVENT_TYPE_REGISTRY = {
   'field_worker.posted': {
     type: 'field_worker.posted',
     description:
-      '`field_worker.posted` (pending_kyc | active | suspended → the same state) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A move of REPORTING district (QE17): the authorization snapshot (a key of FIELD_WORKER_MOVE_PERMISSION_KEYS — Story 13.1c AD4), both districts and a post reason. Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c move route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move, key field_worker.move); the accepted move request of Story 13.1d is the second emitter (unverified until built).',
+      '`field_worker.posted` (pending_kyc | active | suspended → the same state) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A move of REPORTING district (QE17): the authorization snapshot (a key of FIELD_WORKER_MOVE_PERMISSION_KEYS — Story 13.1c AD4), both districts and a post reason. Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c move route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move, key field_worker.move) and by the Story 13.1d acceptance of a move request (POST /api/v1/p/:pariwarId/field-workers/move-requests/:moveRequestId/accept, key field_worker.answer_move_request).',
     schema: fieldWorker.FieldWorkerPostedPayloadSchema,
+  },
+  // ── Story 13.1d — field_worker_move_request.* vocabulary (a move request between two District Admins, on its OWN stream) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/field-worker/move-request-events.ts) — appended on the MOVE REQUEST stream
+  // (stream_id = move_request_id; caller-minted), ⛔ the worker's (its projector's head check would refuse the worker's next transition).
+  // Written by `projectMoveRequestOpened` / `projectMoveRequestTransition` through a 13.1d command (move-request-commands.ts), or by the
+  // supersede inside 13.1c's move / terminate commands.
+  'field_worker_move_request.opened': {
+    type: 'field_worker_move_request.opened',
+    description:
+      '`field_worker_move_request.opened` ((none) → pending) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). A District Admin of EITHER end asks the other to take on or release a worker: both districts, the opener\'s end, the counterpart, the reason at_worker_request and the verified field_worker.request_move snapshot. NO PII (I6). Emitted by the Story 13.1d open route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move-requests).',
+    schema: fieldWorker.FieldWorkerMoveRequestOpenedPayloadSchema,
+  },
+  'field_worker_move_request.accepted': {
+    type: 'field_worker_move_request.accepted',
+    description:
+      '`field_worker_move_request.accepted` (pending → accepted) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). The counterpart\'s District Admin agrees; the worker was moved FIRST in the same transaction and posted_event_id names that field_worker.posted event. Carries the verified field_worker.answer_move_request snapshot. NO PII (I6). Emitted by the Story 13.1d accept route (POST /api/v1/p/:pariwarId/field-workers/move-requests/:moveRequestId/accept).',
+    schema: fieldWorker.FieldWorkerMoveRequestAcceptedPayloadSchema,
+  },
+  'field_worker_move_request.refused': {
+    type: 'field_worker_move_request.refused',
+    description:
+      '`field_worker_move_request.refused` (pending → refused) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). The counterpart\'s District Admin refuses with a reason from the fixed list (never free text); the worker stays. Carries the verified field_worker.answer_move_request snapshot. NO PII (I6). Emitted by the Story 13.1d refuse route (POST /api/v1/p/:pariwarId/field-workers/move-requests/:moveRequestId/refuse).',
+    schema: fieldWorker.FieldWorkerMoveRequestRefusedPayloadSchema,
+  },
+  'field_worker_move_request.withdrawn': {
+    type: 'field_worker_move_request.withdrawn',
+    description:
+      '`field_worker_move_request.withdrawn` (pending | escalated → withdrawn) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). The opener withdraws it. Carries the verified field_worker.request_move snapshot. NO PII (I6). Emitted by the Story 13.1d withdraw route (POST /api/v1/p/:pariwarId/field-workers/move-requests/:moveRequestId/withdraw).',
+    schema: fieldWorker.FieldWorkerMoveRequestWithdrawnPayloadSchema,
+  },
+  'field_worker_move_request.escalated': {
+    type: 'field_worker_move_request.escalated',
+    description:
+      '`field_worker_move_request.escalated` (pending → escalated) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). SYSTEM actor only (actor_id NULL) — the ONLY automated move-request act, and it never accepts: cause unanswered_7_days (the hourly escalation sweep, apps/jobs field-worker-move-request-escalation) or no_counterpart_officer (the open route, when no other District Admin holds the counterpart district). NO PII (I6).',
+    schema: fieldWorker.FieldWorkerMoveRequestEscalatedPayloadSchema,
+  },
+  'field_worker_move_request.closed': {
+    type: 'field_worker_move_request.closed',
+    description:
+      '`field_worker_move_request.closed` (escalated → closed) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). A Pariwar Admin settles an escalated request without a move. Carries the verified field_worker.settle_move_request snapshot. NO PII (I6). Emitted by the Story 13.1d close route (POST /api/v1/p/:pariwarId/field-workers/move-requests/:moveRequestId/close).',
+    schema: fieldWorker.FieldWorkerMoveRequestClosedPayloadSchema,
+  },
+  'field_worker_move_request.superseded': {
+    type: 'field_worker_move_request.superseded',
+    description:
+      '`field_worker_move_request.superseded` (pending | escalated → superseded) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). A direct move (cause worker_moved, the field_worker.move snapshot) or an ending (cause worker_ended, the field_worker.terminate snapshot) made the request moot, in the same transaction. NO PII (I6). Emitted by the Story 13.1c move and terminate routes (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move and /terminate).',
+    schema: fieldWorker.FieldWorkerMoveRequestSupersededPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

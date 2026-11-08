@@ -86,6 +86,7 @@ run "alert-state-invariant"  "pnpm alert-state:test && pnpm alert-state:check"
 run "helpdesk-state-invariant"  "pnpm helpdesk-state:test && pnpm helpdesk-state:check"
 run "marketplace-module-state-invariant" "pnpm marketplace-module-state:test && pnpm marketplace-module-state:check"
 run "field-worker-state-invariant" "pnpm field-worker-state:test && pnpm field-worker-state:check"
+run "field-worker-move-request-invariant" "pnpm field-worker-move-request:test && pnpm field-worker-move-request:check"
 run "governance-boundary"  "pnpm governance-boundary:test && pnpm governance-boundary:check"
 run "custom-field-governance" "pnpm custom-field:test && pnpm custom-field:check"
 # [Review][Patch] — code review of 10-15-survey-poll (2026-08-17): CRITICAL — the gate existed as

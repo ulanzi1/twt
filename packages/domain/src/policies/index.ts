@@ -303,3 +303,7 @@ export * from './attribution-code-allocation-flags-rls.js';
 export * from './field-workers-rls.js';
 // Story 13.1b (0202) — field_worker_code_sms_sends tenant-isolation policies (select / insert only, ⛔ `FOR ALL`: `twt_app` cannot move a row).
 export * from './field-worker-code-sms-sends-rls.js';
+// Story 13.1d (0205) — field_worker_move_requests + field_worker_notices tenant-isolation policies (select / insert / update each,
+// ⛔ `FOR ALL`, ⛔ DELETE). The requests' write guard and the notices' seen-only guard (0205's triggers) are ORTHOGONAL.
+export * from './field-worker-move-requests-rls.js';
+export * from './field-worker-notices-rls.js';

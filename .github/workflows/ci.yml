@@ -686,6 +686,29 @@ jobs:
       - run: pnpm field-worker-state:test
       - run: pnpm field-worker-state:check
 
+  field-worker-move-request-invariant:
+    name: field-worker-move-request-invariant (field_worker_move_requests is projector-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 13.1d AD2: field_worker_move_requests is the projection of each request's own event stream, written ONLY by
+    # packages/domain/src/field-worker/move-request-project.ts. The projector writes RAW SQL, so this TS-AST scan flags raw
+    # INSERT / UPDATE literals and the writer setting as well as drizzle writes, across packages/domain/src, apps/api/src and
+    # apps/jobs/src, and fails if it does not see the projector write. No DB / network. See scripts/field-worker-move-request-invariant/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm field-worker-move-request:test
+      - run: pnpm field-worker-move-request:check
+
   governance-boundary:
     name: governance-boundary (a feature flag cannot bypass a governance control)
     runs-on: ubuntu-latest

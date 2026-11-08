@@ -893,6 +893,20 @@ export type FieldWorkerId = Brand<'FieldWorkerId'>;
 /** Smart constructor: validates UUID shape, returns a branded `FieldWorkerId`. */
 export const fieldWorkerId = uuidBrand('FieldWorkerId');
 
+// ── Story 13.1d — a field worker's move request and an officer's notice ──
+// A move request is its OWN event stream (`events_log.stream_id = move_request_id`, caller-minted — AD2) and the primary key of
+// `field_worker_move_requests`; a notice is one row of `field_worker_notices` (one per notice and recipient — AD9).
+
+/** A move request between two District Admins — `field_worker_move_requests.move_request_id` and its stream id. */
+export type FieldWorkerMoveRequestId = Brand<'FieldWorkerMoveRequestId'>;
+/** Smart constructor: validates UUID shape, returns a branded `FieldWorkerMoveRequestId`. */
+export const fieldWorkerMoveRequestId = uuidBrand('FieldWorkerMoveRequestId');
+
+/** One officer's notice — `field_worker_notices.notice_id`. */
+export type FieldWorkerNoticeId = Brand<'FieldWorkerNoticeId'>;
+/** Smart constructor: validates UUID shape, returns a branded `FieldWorkerNoticeId`. */
+export const fieldWorkerNoticeId = uuidBrand('FieldWorkerNoticeId');
+
 /** Per-row address of a permanent attribution code (`field_worker_attribution_codes.attribution_code_id`). */
 export type AttributionCodeId = Brand<'AttributionCodeId'>;
 /** Smart constructor: validates UUID shape, returns a branded `AttributionCodeId`. */

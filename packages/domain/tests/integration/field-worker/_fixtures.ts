@@ -115,6 +115,30 @@ export function actAuthorization(key: FieldWorkerActKey, pariwarId: string, dist
   return result;
 }
 
+/**
+ * Story 13.1d — a VERIFIED result for ANY key from ONE grant (a District Admin's exact district grant, or a Pariwar Admin's), minted by
+ * the REAL check; null when the check refuses it (a non-holder — the caller asserts that). ⚠ This file is exempt from the `authorize`
+ * fence BY EXACT PATH: keep the helper here (TR5).
+ */
+export function grantAuthorization(
+  key: string,
+  grant: { role: 'district_admin'; district: string } | { role: 'pariwar_admin' },
+  pariwarId: string,
+  district: string,
+  actorId: string,
+): VerifiedAuthorization | null {
+  return authorize({
+    actorId,
+    grants: [
+      grant.role === 'district_admin'
+        ? { pariwarId, role: 'district_admin', scopeDimension: 'district', scopeValue: grant.district }
+        : { pariwarId, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pariwarId },
+    ],
+    key,
+    resource: { dimension: 'district', value: district, pariwarId },
+  });
+}
+
 /** A VERIFIED `field_worker.move` result (13.1c AD4) — what `postFieldWorker` accepts (⛔ `field_worker.register`). */
 export function moveAuthorization(pariwarId: string, district: string, actorId: string): VerifiedAuthorization {
   return actAuthorization('field_worker.move', pariwarId, district, actorId);

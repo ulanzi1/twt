@@ -527,3 +527,8 @@ export * from './field_workers.js';
 // Story 13.1b (0202) — the field-worker code SMS send record: one row per worker id, the outbox the approval writes and the sweep's
 // at-most-once record of the one text (ids only; a finished row is frozen by a guard trigger; tenant-isolated).
 export * from './field_worker_code_sms_sends.js';
+// Story 13.1d (0205) — a field worker's MOVE REQUEST between two District Admins (the projection of its own `events_log` stream,
+// projector-only, guarded by a whole-row trigger; one open per worker by a partial unique) and the officers' NOTICES (one row per
+// notice and recipient, channel-neutral; only `seen_at` ever changes). Both tenant-isolated; ids, districts and reason codes only.
+export * from './field_worker_move_requests.js';
+export * from './field_worker_notices.js';

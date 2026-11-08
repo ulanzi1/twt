@@ -79,6 +79,9 @@ function classify(text: string): string {
   if (t.startsWith('INSERT INTO field_worker_code_sms_sends')) return 'ENQUEUE';
   if (/^update "field_workers"/i.test(t)) return 'UPDATE';
   if (t.startsWith('SET LOCAL app.field_worker_state_writer')) return t.includes("'on'") ? 'GUARD ON' : 'GUARD OFF';
+  // Story 13.1d (AD3, AD9) — the supersede after a direct move or an ending: the worker's open request (none in the stub), then the notices' recipients.
+  if (t.includes('FROM field_worker_move_requests') && t.endsWith('FOR UPDATE')) return 'REQUEST LOCK';
+  if (t.includes("g.role = 'district_admin'")) return 'DISTRICT ADMINS';
   return `OTHER: ${t.slice(0, 40)}`;
 }
 
@@ -153,6 +156,12 @@ describe('I13 — the row lock comes before any events_log read or append (RP4 s
   const ORDER = ['SAVEPOINT', 'LOCK', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE'];
   /** Story 13.1b (AD1) — `activated` alone records the code SMS, on the caller's client, AFTER the savepoint. The other four are `ORDER`: the proof they enqueue nothing. */
   const ACTIVATED_ORDER = [...ORDER, 'ENQUEUE'];
+  /**
+   * Story 13.1d (AD3, AD9) — a DIRECT move, AFTER the savepoint: the worker's open request (none here — nothing superseded), then the
+   * District Admins of BOTH districts for the `moved_by_pariwar_admin` notice (none here — no row). The acceptance's move (the answer key)
+   * is `ORDER` exactly: it supersedes and tells nothing.
+   */
+  const DIRECT_MOVE_ORDER = [...ORDER, 'REQUEST LOCK', 'DISTRICT ADMINS', 'DISTRICT ADMINS'];
 
   // The last column: QE6's COMPUTED trigger — asserted on the appended payload (review R3-16: a typo'd or dropped `:<reason>` was green).
   it.each([
@@ -160,7 +169,25 @@ describe('I13 — the row lock comes before any events_log read or append (RP4 s
     ['activated', () => activateFieldWorker, { state: 'pending_kyc', kyc: 'completed' } as Partial<StubRow>, approver, 'field_worker.activate', ACTIVATED_ORDER],
     ['suspended', () => suspendFieldWorker, {} as Partial<StubRow>, { ...suspender, reasonCode: 'under_review' }, 'field_worker.suspend:under_review', ORDER],
     ['reactivated', () => reactivateFieldWorker, { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, reactivator, 'field_worker.reactivate', ORDER],
-    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { ...mover('Gaya'), reasonCode: 'reassigned' }, 'field_worker.post', ORDER],
+    ['posted', () => postFieldWorker, {} as Partial<StubRow>, { ...mover('Gaya'), reasonCode: 'reassigned' }, 'field_worker.post', DIRECT_MOVE_ORDER],
+    [
+      'posted (the acceptance — 13.1d AD4)',
+      () => postFieldWorker,
+      {} as Partial<StubRow>,
+      {
+        ...mover('Gaya'),
+        // The answer key is a District Admin's (the counterpart's — Gaya); a Pariwar Admin does not hold it (AD5).
+        authorization: authorize({
+          actorId: STAFF,
+          grants: [{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Gaya' }],
+          key: 'field_worker.answer_move_request',
+          resource: { dimension: 'district', value: 'Gaya', pariwarId: P },
+        })!,
+        reasonCode: 'at_worker_request',
+      },
+      'field_worker.post',
+      ORDER,
+    ],
   ])('%s: SAVEPOINT → LOCK → HEAD → APPEND → UPDATE, and the command’s computed trigger', async (_label, command, row, extra, trigger, order) => {
     const { client, calls, payloads } = stub(row);
     await (command() as (c: pg.PoolClient, i: unknown) => Promise<unknown>)(client, { ...staff, ...extra });
@@ -171,7 +198,8 @@ describe('I13 — the row lock comes before any events_log read or append (RP4 s
   it('terminate: SAVEPOINT → LOCK → NOW → HEAD → APPEND → UPDATE (QE20 reads the IST day under the lock), trigger field_worker.terminate:inactive', async () => {
     const { client, calls, payloads } = stub();
     await terminateFieldWorker(client, { ...terminator, reasonCode: 'inactive', endedOn: '2026-11-02' });
-    expect(calls).toEqual(['SAVEPOINT', 'LOCK', 'NOW', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE']);
+    // Story 13.1d (AD3) — then, after the savepoint, the worker's open move request (none here: nothing superseded, nobody told).
+    expect(calls).toEqual(['SAVEPOINT', 'LOCK', 'NOW', 'HEAD', 'APPEND', 'GUARD ON', 'UPDATE', 'GUARD OFF', 'RELEASE', 'REQUEST LOCK']);
     expect(JSON.parse(String(payloads[0]))).toMatchObject({ trigger: 'field_worker.terminate:inactive', reason_code: 'inactive' });
   });
 

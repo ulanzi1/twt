@@ -288,3 +288,75 @@ export class FieldWorkerCursorInvalidError extends Error {
     super(`field-worker list cursor is invalid: ${reason}`);
   }
 }
+
+// ── Story 13.1d — the move request (decision `2026-11-08-458` AD3, AD4, AD6) ───────────────────────────────────────────────────
+
+/** The P0001 message prefix every 0205 request-trigger raise carries. */
+export const FIELD_WORKER_MOVE_REQUEST_DIRECT_WRITE_MESSAGE_PREFIX = 'field_worker_move_requests direct write rejected';
+
+/** A request is already OPEN (`pending` / `escalated`) for this worker — the pre-read, or the partial unique BY NAME (I4). → 409. */
+export class FieldWorkerMoveRequestOpenError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestOpenError';
+  public constructor(public readonly fieldWorkerId: string) {
+    super(`field worker ${fieldWorkerId} already has an open move request`);
+  }
+}
+
+/** The act needs a state the request is not in: accept / refuse a non-`pending`, withdraw a final one, close a non-`escalated`. → 409. */
+export class FieldWorkerMoveRequestNotOpenError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestNotOpenError';
+  public constructor(
+    public readonly moveRequestId: string,
+    public readonly state: string,
+  ) {
+    super(`move request ${moveRequestId} is '${state}' — this act does not apply`);
+  }
+}
+
+/** The opener tried to answer their own request (a District Admin holding both ends — AD3, I3). → 409. */
+export class FieldWorkerMoveRequestSameOfficerError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestSameOfficerError';
+  public constructor(public readonly moveRequestId: string) {
+    super(`move request ${moveRequestId}: the officer who opened it cannot answer it`);
+  }
+}
+
+/** Someone other than the opener tried to withdraw the request (AD6). → 409. */
+export class FieldWorkerMoveRequestNotOpenerError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestNotOpenerError';
+  public constructor(public readonly moveRequestId: string) {
+    super(`move request ${moveRequestId}: only the officer who opened it may withdraw it`);
+  }
+}
+
+/** A command on a request id with no row in this Pariwar (the API's loader refuses first — 403; this is the domain's own check). */
+export class FieldWorkerMoveRequestMissingError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestMissingError';
+  public constructor(public readonly moveRequestId: string) {
+    super(`move request ${moveRequestId} has no row in this Pariwar`);
+  }
+}
+
+/** The request's stream head ≠ its locked row's version (drift — never expected under the row lock), or a 23505 on the version slot. */
+export class FieldWorkerMoveRequestStreamConcurrencyError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestStreamConcurrencyError';
+  public constructor(
+    public readonly moveRequestId: string,
+    public readonly attemptedVersion: number,
+  ) {
+    super(`move request stream ${moveRequestId} concurrency conflict at event_version ${String(attemptedVersion)}`);
+  }
+}
+
+/** The request row write failed or matched no row. The message carries the pg text only. */
+export class FieldWorkerMoveRequestPersistError extends Error {
+  public readonly name = 'FieldWorkerMoveRequestPersistError';
+  public readonly sqlstate: string | null;
+  public constructor(
+    public readonly moveRequestId: string,
+    public readonly cause: unknown,
+  ) {
+    super(`failed to persist move request ${moveRequestId}: ${pgMessageOf(cause)}`);
+    this.sqlstate = pgSqlstateOf(cause);
+  }
+}

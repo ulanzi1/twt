@@ -22,6 +22,8 @@ export interface Guidance {
   readonly retryable?: boolean;
   /** The same request can never work; loading the list from its first page can (a cursor the server refused). */
   readonly reload?: boolean;
+  /** An act's 409 that says the panel's own copy of the worker is out of date (moved, or the status changed): reopen the worker (review CR23). */
+  readonly stale?: boolean;
 }
 
 /** Where the admin was when the server refused — the 403 line says what THAT action needs (review CR11). */
@@ -69,8 +71,8 @@ export type WorkerAct = 'move' | 'suspend' | 'reactivate' | 'end';
 export function actGuidance(error: unknown, act: WorkerAct): Guidance {
   if (error instanceof ApiError) {
     if (error.status === 403) return { text: t(`fw.actions.noAccess.${act}`), noAccess: true };
-    if (error.code === 'field_worker.authorization_stale') return { text: t('fw.actions.moved') };
-    if (error.code === 'field_worker.illegal_transition') return { text: t('fw.actions.stateChanged') };
+    if (error.code === 'field_worker.authorization_stale') return { text: t('fw.actions.moved'), stale: true };
+    if (error.code === 'field_worker.illegal_transition') return { text: t('fw.actions.stateChanged'), stale: true };
   }
   return fieldWorkerGuidance(error);
 }
@@ -85,9 +87,24 @@ export function roleLabel(role: string | null): string {
   return role === 'district_admin' || role === 'pariwar_admin' || role === 'super_admin' ? t(`fw.role.${role}`) : t('fw.role.unknown');
 }
 
+/** The India calendar day (`YYYY-MM-DD`) of an instant. */
+export function istDateOf(at: Date | string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(at));
+}
+
 /** Today's date in India (`YYYY-MM-DD`) on THIS browser's clock — the End form's default; the server judges the bounds. */
 export function istTodayInBrowser(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  return istDateOf(now);
+}
+
+/**
+ * The End date's default: today in India on this browser's clock, but never before the registration day (the control's `min`) — a
+ * browser clock behind the server's would otherwise pre-fill a day the control itself refuses (review PR7).
+ */
+export function defaultEndDate(registeredAt: string, now: Date = new Date()): string {
+  const today = istTodayInBrowser(now);
+  const registered = istDateOf(registeredAt);
+  return today < registered ? registered : today;
 }
 
 /** A server instant as an India date and time, e.g. "7 Nov 2026, 4:05 pm". */

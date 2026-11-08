@@ -8,9 +8,11 @@
 // failure, a bug — is rethrown UNCHANGED for the central mapper to answer 500.
 //
 // The rows ONLY A COMMAND can raise (illegal transition, KYC, reason, not found, stream conflict, district unchanged,
-// authorization stale, ended_on) had NO route in Story 13.1. Story 13.1a's approval now reaches six of them (illegal
-// transition, the two KYC rows, not found, stream conflict, authorization stale); the rest wait for 13.1c / 13.1d. They are
-// mapped here once, so every route inherits one mapping, and asserted by `field-worker-errors.test.ts`.
+// authorization stale, ended_on) had NO route in Story 13.1. Story 13.1a's approval reached six of them (illegal
+// transition, the two KYC rows, not found, stream conflict, authorization stale); Story 13.1c's move, suspend, reactivate and
+// terminate routes reach district unchanged and ended_on as well (a wrong reason is refused by the contract, a 400, before the
+// command can raise it — that row is defence in depth). They are mapped here once, so every route inherits one mapping, and
+// asserted by `field-worker-errors.test.ts`.
 //
 // Story 13.1a adds three rows of its own (the "Errors" table): the list's malformed cursor (400), and the decrypt's two
 // failures kept APART (decision `-447` item 4) — a stored value that cannot be read (500: an integrity fault, retry never
@@ -62,7 +64,7 @@ export function mapFieldWorkerError(err: unknown): never {
   if (err instanceof FieldWorkerDecryptUnavailableError) {
     throw new ApiError(503, 'field_worker.decrypt_unavailable', 'The key service is unavailable just now — please try again shortly');
   }
-  // ── Rows a COMMAND raises (the approval route — 13.1a — reaches the first six; the others wait for 13.1c / 13.1d) ──
+  // ── Rows a COMMAND raises (13.1a's approval reached the first six; 13.1c's lifecycle routes reach district unchanged and ended_on) ──
   if (err instanceof fieldWorker.FieldWorkerIllegalTransitionError) {
     throw new ApiError(409, 'field_worker.illegal_transition', 'This field worker cannot be changed from their current state');
   }

@@ -195,11 +195,16 @@ const FIELD_WORKER_LOG_MAX_LIMIT = 100;
  */
 export const FieldWorkerLogQuery = z
   .object({
-    after: z.coerce.number().int().min(0).optional(),
+    // `max` = the domain's `Number.isSafeInteger` guard: an `after` above it would reach `listFieldWorkerEvents` as a RangeError, a 500 (review CR8).
+    after: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
     limit: z
       .preprocess((v) => {
-        const n = typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : v;
-        return typeof n === 'number' && Number.isInteger(n) && n > FIELD_WORKER_LOG_MAX_LIMIT ? FIELD_WORKER_LOG_MAX_LIMIT : v;
+        // EVERY spelling of an over-cap whole number clamps — whatever `Number()` itself reads as one: '1000', '1000.0', '1e3', '+1000',
+        // '0x3E8', 'Infinity', and a digit string too long for a double (review CR13). A fraction, zero, a negative, an empty string or
+        // text `Number()` cannot read falls through to the strict schema (400).
+        const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+        const wholeOrInfinite = typeof n === 'number' && (Number.isInteger(n) || n === Number.POSITIVE_INFINITY);
+        return wholeOrInfinite && n > FIELD_WORKER_LOG_MAX_LIMIT ? FIELD_WORKER_LOG_MAX_LIMIT : v;
       }, z.coerce.number().int().min(1).max(FIELD_WORKER_LOG_MAX_LIMIT))
       .optional(),
   })

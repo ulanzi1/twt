@@ -124,7 +124,7 @@ describe.skipIf(!hasDatabase)('listFieldWorkerEvents — the worker’s log (Sto
     expect(tail.nextAfter).toBeNull();
   });
 
-  it('an unknown worker, or another Pariwar’s — even as the OWNER (RLS bypassed) — ⇒ null; a bad afterVersion ⇒ RangeError before any statement', async () => {
+  it('an unknown worker, or another Pariwar’s — even as the OWNER (RLS bypassed) — ⇒ null; a bad afterVersion or limit ⇒ RangeError before any statement', async () => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_B);
     const inB = await registerReal(client, PARIWAR_B, { actorId: randomUUID() });
@@ -136,8 +136,15 @@ describe.skipIf(!hasDatabase)('listFieldWorkerEvents — the worker’s log (Sto
     expect(await listFieldWorkerEvents(bindScopedDb(client), A, inB)).toBeNull();
     // CONTROL — B's own read finds it.
     expect((await listFieldWorkerEvents(bindScopedDb(client), toPariwarId(PARIWAR_B), inB))!.items.map((e) => e.eventType)).toEqual(['field_worker.registered']);
-    for (const afterVersion of [-1, 1.5, Number.NaN]) {
-      await expect(listFieldWorkerEvents(db, A, inB, { afterVersion })).rejects.toBeInstanceOf(RangeError);
+    // The guards throw BEFORE any statement: a db that throws on first touch is never touched (review CR1 — `limit` joined `afterVersion`).
+    const untouched = new Proxy({}, { get: () => { throw new Error('a statement was sent'); } }) as unknown as typeof db;
+    for (const afterVersion of [-1, 1.5, Number.NaN, 2 ** 53]) {
+      await expect(listFieldWorkerEvents(untouched, A, inB, { afterVersion }), String(afterVersion)).rejects.toBeInstanceOf(RangeError);
     }
+    for (const limit of [1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(listFieldWorkerEvents(untouched, A, inB, { limit }), String(limit)).rejects.toBeInstanceOf(RangeError);
+    }
+    // CONTROL — an integer limit (even one over the cap) is clamped, never refused.
+    expect((await listFieldWorkerEvents(bindScopedDb(client), toPariwarId(PARIWAR_B), inB, { limit: 1000 }))!.items).toHaveLength(1);
   });
 });

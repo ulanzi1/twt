@@ -314,6 +314,9 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await reactivateFieldWorker(client, act(suspended, 'reactivate', 'Gaya'));
     expect((await rowOf(client, active)).current_state).toBe('suspended');
     expect((await rowOf(client, suspended)).current_state).toBe('active');
+    // …and terminate's control too (review CR7): it leaves a suspended worker, authorized at Gaya.
+    await terminateFieldWorker(client, { ...act(active, 'terminate', 'Gaya'), reasonCode: 'inactive', endedOn: today });
+    expect((await rowOf(client, active)).current_state).toBe('terminated');
   });
 
   // Story 13.1c AD4 / 13.1 D7 — two moves from the same screen: the second is refused, ⛔ fulfilled.

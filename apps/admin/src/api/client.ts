@@ -3677,7 +3677,7 @@ export function readFieldWorkerCode(pariwarId: string, fieldWorkerId: string) {
 // ── Story 13.1c — move, suspend, reactivate, end (each with an Idempotency-Key the PAGE mints per submission attempt), and the log ──
 
 /** A lifecycle act's POST — the 200 is the worker as the act left it (⛔ a name, a mobile or a code). */
-function fieldWorkerAct(pariwarId: string, fieldWorkerId: string, act: string, body: unknown, idempotencyKey: string) {
+function fieldWorkerAct(pariwarId: string, fieldWorkerId: string, act: 'move' | 'suspend' | 'reactivate' | 'terminate', body: object, idempotencyKey: string) {
   return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/${act}`, FieldWorkerLifecycleResult, {
     method: 'POST',
     body: JSON.stringify(body),

@@ -8,7 +8,8 @@
 //
 // ONE act, ONE event, ONE audit line (13.1 QE6: the audit action IS the event type — a move's is `field_worker.posted`, ⛔ `moved`).
 // Each command takes the VERIFIED result its gate stored (AD3 / AD4 — passed on unchanged, ⛔ recomputed) and judges it again under
-// the row lock: the key, the target = the LOCKED district, and for a move the expected source (13.1 D7).
+// the row lock: the key, the target (= the LOCKED district; a move's may be either end of the move — guard 3c) and, for a move, the
+// expected source (13.1 D7).
 //
 // The write is `tenantWrite` (`write-support.ts`) with the WORKER ID in the key's namespace (13.1a TR6 — the keyed store keeps no
 // body fingerprint, so a key reused for another worker must not replay this one's 200). `prepare` does nothing (no transaction
@@ -17,7 +18,8 @@
 //   2. a PRE-READ of the worker on the write transaction: absent ⇒ 404 `field_worker.not_found` (a lost race only — the gate's
 //      loader saw it); an act the state does not allow ⇒ 409 `illegal_transition`; the worker no longer in the district the gate
 //      passed ⇒ 409 `authorization_stale`; a move whose `from_district` is not the worker's district ⇒ 409 `authorization_stale`,
-//      one to the district they are in ⇒ 409 `district_unchanged`. Each refused HERE writes NO audit line (I7, TR2);
+//      one to the district they are in ⇒ 409 `district_unchanged`; a terminate whose `ended_on` is not a real calendar day ⇒ 422
+//      `ended_on_invalid` (review CR12). Each refused HERE writes NO audit line (I7, TR2);
 //   3. ONE `audit.withCompensatingAudit` whose `mutate` runs the command (with the intent's id — the row's `audit_id` afterwards)
 //      and COMMITS. A refusal only the lock sees (a concurrent act) throws inside `mutate`: the transaction rolls back and the
 //      `_rolled_back` twin is written (TR2). Errors propagate (13.1a TR4) to `mapFieldWorkerError`.
@@ -74,7 +76,7 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
     which: Act,
     opts: {
       hashShape: Record<string, unknown>;
-      /** A move's extra checks on the pre-read row, AFTER the legality and gate-district checks (AD4: source, then unchanged). */
+      /** An act's extra checks on the pre-read row, AFTER the legality and gate-district checks (a move's AD4: source, then unchanged; a terminate's calendar-day check). */
       preCheck?: (worker: fieldWorker.FieldWorkerView) => void;
       /** A move's `to_district` recorded-district check (AD6), BEFORE the pre-read. */
       before?: (ctx: WriteCtx, pariwarId: ids.PariwarId) => Promise<void>;
@@ -139,15 +141,19 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
         if (worker.district !== body.from_district) throw new fieldWorker.FieldWorkerAuthorizationStaleError(worker.fieldWorkerId, body.from_district);
         if (worker.district === body.to_district) throw new fieldWorker.FieldWorkerDistrictUnchangedError(worker.fieldWorkerId);
       },
-      command: async (ctx, base, worker) => {
-        const r = await fieldWorker.postFieldWorker(ctx.scopeTx.client, {
+      command: async (ctx, base) => {
+        await fieldWorker.postFieldWorker(ctx.scopeTx.client, {
           ...base,
           toDistrict: body.to_district,
           expectedFromDistrict: body.from_district,
           reasonCode: body.reason_code,
         });
-        // A move keeps the state and its reason (G4) — from the pre-read row, which the lock confirmed unchanged in state.
-        return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: worker.stateReasonCode, ended_on: worker.endedOn };
+        // A move keeps the state and its reason (G4) — but a suspend or a reactivate can commit between the pre-read and the lock (a move
+        // is legal in every non-terminated state, and the command checks only the district), so the pre-read's reason can be stale.
+        // Read the row the lock holds NOW, on this same transaction (review CR10) — its state, reason and end date are the stored ones.
+        const locked = await fieldWorker.getFieldWorker(ctx.scopeTx.tx, base.pariwarId, base.fieldWorkerId);
+        if (locked === null) throw new fieldWorker.FieldWorkerGenesisMissingError(base.fieldWorkerId);
+        return { field_worker_id: locked.fieldWorkerId, district: locked.district, current_state: locked.currentState, state_reason_code: locked.stateReasonCode, ended_on: locked.endedOn };
       },
     });
   }
@@ -180,6 +186,14 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
     const body = request.body as TerminateFieldWorkerRequest;
     return act(request, reply, 'terminate', {
       hashShape: { reason_code: body.reason_code, ended_on: body.ended_on },
+      // A date that is not a real calendar day (`2026-02-30`, `2026-13-45`) is a PURE refusal: judged here, after the legality check
+      // and before the wrapper, so it writes no audit pair (I7). The IST bounds (not after today, not before the registration day) are
+      // left to the command — ONE judge of them, under the lock (domain guard 5); the handler COULD pre-judge them (the pre-read row
+      // carries `createdAt`, `now()` is one SELECT), at the price of a second copy of the rule. The cost of leaving them: a future or
+      // early date writes the intent line and its `_rolled_back` twin (variance 2, pinned by `expectRefusedInMutate`). Review CR12.
+      preCheck: (worker) => {
+        if (!fieldWorker.isCalendarDateString(body.ended_on)) throw new fieldWorker.FieldWorkerEndedOnInvalidError(worker.fieldWorkerId, 'missing_or_malformed');
+      },
       command: async (ctx, base, worker) => {
         const r = await fieldWorker.terminateFieldWorker(ctx.scopeTx.client, { ...base, reasonCode: body.reason_code, endedOn: body.ended_on });
         return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: body.reason_code, ended_on: body.ended_on };

@@ -470,6 +470,34 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
       expect(r.body).not.toMatch(/Moving/);
       expect(await lines(p, 'field_worker.identity_viewed')).toEqual([]);
     });
+
+    // Review CR18 — the LOG route re-reads the worker after the gate, as the identity read does; this leg reaches that 409 (it was untested).
+    it('R2 (log) — a MOVE committed between the gate’s loader and the log read ⇒ 409 field_worker.authorization_stale, no page sent; the new district then reads it (200), the old one is a plain 403', async () => {
+      const { p, admin } = await pariwar();
+      const id = await reg(h, admin.client, p, 'Moving Log-Worker');
+      const patna = await h.actor(p, 'district_admin', 'district', 'Patna');
+      hooks.afterLoad = async () => {
+        const c = await h.td.pool.connect();
+        try {
+          await c.query('BEGIN');
+          await moveTestFieldWorker(c, p, ids.fieldWorkerId(id), 'Gaya');
+          await c.query('COMMIT');
+        } finally {
+          c.release();
+        }
+      };
+      const r = await h.log(patna.client, p, id);
+      expect(hooks.afterLoad).toBeNull(); // the hook ran — the loader saw Patna, then the move committed
+      expect(r.statusCode, r.body).toBe(409);
+      expect(errOf(r).code).toBe('field_worker.authorization_stale');
+      expect(json(r)['items']).toBeUndefined();
+      // CONTROL — the race, not a permanent refusal: Gaya's District Admin reads the whole log, Patna's is now simply not entitled.
+      const gaya = await h.actor(p, 'district_admin', 'district', 'Gaya');
+      const ok = await h.log(gaya.client, p, id);
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect((json(ok)['items'] as Record<string, unknown>[]).map((e) => e['event_type'])).toContain('field_worker.posted');
+      expect((await h.log(patna.client, p, id)).statusCode).toBe(403);
+    });
   });
 
   // CR20 (AD5) — the three personal-data reads are on the named `read` tier. The test environment sets every tier's ceiling to the same

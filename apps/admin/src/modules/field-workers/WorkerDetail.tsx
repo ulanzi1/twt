@@ -32,10 +32,11 @@ export interface WorkerDetailProps {
   children?: (name: string, worker: WorkerSummary) => ReactNode;
 }
 
-/** What the acts need of the opened worker (Story 13.1c AD8) — ⛔ the mobile. */
+/** What the acts need of the opened worker (Story 13.1c AD8) — ⛔ the mobile. `created_at` bounds the End date from below (review CR24). */
 export interface WorkerSummary {
   readonly current_state: FieldWorkerState;
   readonly district: string;
+  readonly created_at: string;
 }
 
 export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'approvals', children }: WorkerDetailProps): ReactElement {
@@ -120,7 +121,7 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
               </>
             )}
           </dl>
-          {children?.(w.name, { current_state: w.current_state, district: w.district })}
+          {children?.(w.name, { current_state: w.current_state, district: w.district, created_at: w.created_at })}
         </>
       )}
       <button type="button" className="self-start text-sm underline" onClick={close} data-testid="fw-detail-close">

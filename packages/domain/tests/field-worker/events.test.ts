@@ -122,6 +122,8 @@ describe('the seven payloads (AC3)', () => {
     for (const t of ['field_worker.suspended', 'field_worker.reactivated', 'field_worker.terminated'] as const) {
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(VALID[t]).success, t).toBe(true);
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(without(VALID[t], 'authorization')).success, t).toBe(false);
+      // CONTROL — the same snapshot without the stray key parses, so the refusal below is the extra `display_name` and nothing else (review CR6).
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: actAuth('x') }).success, t).toBe(true);
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: { ...actAuth('x'), display_name: 'Meera' } }).success, t).toBe(false);
     }
   });

@@ -210,7 +210,27 @@ describe('Story 13.1c DTOs', () => {
     expect(FieldWorkerLogQuery.parse({ after: '5', limit: '40' })).toEqual({ after: 5, limit: 40 });
     expect(FieldWorkerLogQuery.parse({ limit: '1000' })).toEqual({ limit: 100 });
     expect(FieldWorkerLogQuery.parse({ limit: 101 })).toEqual({ limit: 100 });
-    for (const bad of [{ limit: '0' }, { limit: '2.5' }, { limit: 'all' }, { after: '-1' }, { after: 'x' }, { page: 'all' }]) {
+    // Every spelling of an over-cap whole number clamps - never an error (AC8; review CR13); the cap itself and values under it pass through.
+    for (const spelling of ['1e3', '1000.0', '+1000', ' 1000 ', 'Infinity', '9'.repeat(400)]) {
+      expect(FieldWorkerLogQuery.parse({ limit: spelling }), spelling).toEqual({ limit: 100 });
+    }
+    expect(FieldWorkerLogQuery.parse({ limit: '100' })).toEqual({ limit: 100 });
+    expect(FieldWorkerLogQuery.parse({ limit: '99' })).toEqual({ limit: 99 });
+    // The largest `after` the domain accepts (`Number.isSafeInteger`) passes; one past it, and an exponent form, are a 400 (review CR8).
+    expect(FieldWorkerLogQuery.parse({ after: String(Number.MAX_SAFE_INTEGER) })).toEqual({ after: Number.MAX_SAFE_INTEGER });
+    for (const bad of [
+      { limit: '0' },
+      { limit: '2.5' },
+      { limit: '1000.5' },
+      { limit: '-1000' },
+      { limit: '' },
+      { limit: 'all' },
+      { after: '-1' },
+      { after: 'x' },
+      { after: '9007199254740992' },
+      { after: '1e21' },
+      { page: 'all' },
+    ]) {
       expect(FieldWorkerLogQuery.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
     }
   });

@@ -3136,6 +3136,10 @@ export function useFieldWorkerAct(pariwarId: string) {
     void qc.invalidateQueries({ queryKey: fieldWorkerLogKey(pariwarId, fieldWorkerId) });
   };
   return useMutation({
+    // `'always'`, not the default `'online'`: an offline mutation would PAUSE (the form stuck on "Saving…", Cancel disabled) and then
+    // RUN on reconnect, long after the officer gave up — a Suspend or an irreversible End nobody is watching. Offline, the request
+    // fails at once as a retryable network error, and a retry reuses the attempt's key (review CR22).
+    networkMode: 'always',
     mutationFn: (input: FieldWorkerActInput) => {
       switch (input.act) {
         case 'move':

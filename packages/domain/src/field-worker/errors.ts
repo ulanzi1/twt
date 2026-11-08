@@ -222,8 +222,12 @@ export class FieldWorkerProjectorInputError extends Error {
 
 /** A VERIFIED authorization whose target district no longer matches the worker's LOCKED row — a concurrent move changed it
  *  after the gate, or a caller bug (the command cannot tell which). Thrown by `posted` (the target is neither `toDistrict` nor
- *  the row's `district`; QE5 guard 3c, QE17), by the approval commands (13.1a guard 3d) and by the API's identity and by-hand
- *  code reads (13.1a `-447` items 1 and 3). */
+ *  the row's `district`; QE5 guard 3c, QE17; and guard 3a, Story 13.1c AD4 — the source district the admin's screen showed is not
+ *  the locked one), by the approval commands (13.1a guard 3d), by `suspended` / `reactivated` / `terminated` (13.1c AD3, guard 3d)
+ *  and by the API's identity and by-hand code reads and its log read (13.1a `-447` items 1 and 3; 13.1c AD7).
+ *
+ *  `targetDistrict` is the district the CALLER named that no longer matches: the authorization's target (guards 3c and 3d) or, on
+ *  guard 3a, the move's `expectedFromDistrict`. It is ⛔ the worker's present district. No code reads it today. */
 export class FieldWorkerAuthorizationStaleError extends Error {
   public readonly name = 'FieldWorkerAuthorizationStaleError';
   public constructor(

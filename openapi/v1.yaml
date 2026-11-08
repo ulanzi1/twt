@@ -19551,7 +19551,7 @@ paths:
   /api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/move:
     post:
       summary: Move a field worker to another reporting district (a Pariwar Admin's direct move)
-      description: "`field_worker.move` (pariwar_admin) at the worker's CURRENT district. `from_district` is the district the screen showed: a worker moved meanwhile is refused (409 field_worker.authorization_stale — reload). Records `field_worker.posted`; the worker's state, reason, code and history are unchanged. A waiting, active or suspended worker can be moved; an ended one cannot."
+      description: "`field_worker.move` (pariwar_admin) at the worker's CURRENT district. `from_district` is the district the screen showed: a worker moved meanwhile is refused (409 field_worker.authorization_stale — reload). Records `field_worker.posted`; the worker's state, reason, code and history are unchanged. A waiting, active or suspended worker can be moved; an ended one cannot. Send an `Idempotency-Key` header (1-200 characters; the worker id is in its namespace): a replay returns the first 200."
       tags:
         - field-workers
       parameters:
@@ -19638,7 +19638,7 @@ paths:
   /api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/suspend:
     post:
       summary: Suspend an active field worker
-      description: "`field_worker.suspend` at the worker's CURRENT district. Reason `under_review` or `at_worker_request`. Records `field_worker.suspended`; while suspended the worker's code credits no new teacher and cannot be read by hand."
+      description: "`field_worker.suspend` at the worker's CURRENT district. Reason `under_review` or `at_worker_request`. Records `field_worker.suspended`; while suspended the worker's code cannot be read by hand. What a signup on the code earns meanwhile depends on the reason (the credit recorder's rule, `-454` Q6 C) and is not decided here. Send an `Idempotency-Key` header (1-200 characters; the worker id is in its namespace): a replay returns the first 200."
       tags:
         - field-workers
       parameters:
@@ -19709,7 +19709,7 @@ paths:
   /api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/reactivate:
     post:
       summary: Reactivate a suspended field worker
-      description: "`field_worker.reactivate` at the worker's CURRENT district. Body `{}`. Records `field_worker.reactivated`; the reason is cleared."
+      description: "`field_worker.reactivate` at the worker's CURRENT district. Body `{}`. Records `field_worker.reactivated`; the reason is cleared. Send an `Idempotency-Key` header (1-200 characters; the worker id is in its namespace): a replay returns the first 200."
       tags:
         - field-workers
       parameters:
@@ -19773,7 +19773,7 @@ paths:
   /api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/terminate:
     post:
       summary: End a field worker (left, stopped working, registered by mistake, died)
-      description: "`field_worker.terminate` at the worker's CURRENT district. Reason `left_voluntarily`, `inactive`, `registered_in_error` or `died`; `ended_on` the last day (for `died`, the date of death), between the registration day and today in IST. Records `field_worker.terminated` — final in this version: the worker's mobile can be registered again. A waiting, active or suspended worker can be ended."
+      description: "`field_worker.terminate` at the worker's CURRENT district. Reason `left_voluntarily`, `inactive`, `registered_in_error` or `died`; `ended_on` the last day (for `died`, the date of death), between the registration day and today in IST. Records `field_worker.terminated` — final in this version: the worker's mobile can be registered again. A waiting, active or suspended worker can be ended. Send an `Idempotency-Key` header (1-200 characters; the worker id is in its namespace): a replay returns the first 200."
       tags:
         - field-workers
       parameters:
@@ -19877,6 +19877,7 @@ paths:
               - integer
               - "null"
             minimum: 0
+            maximum: 9007199254740991
           required: false
           name: after
           in: query
@@ -19913,7 +19914,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: No grant for this Pariwar (pariwar.not_found — the scope hook; distinct from the 403)
+          description: No grant for this Pariwar (pariwar.not_found) · field_worker.not_found (a lost race only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: field_worker.authorization_stale (the worker moved out of the gate's district meanwhile — reload)
           content:
             application/json:
               schema:

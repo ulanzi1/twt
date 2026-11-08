@@ -89,6 +89,27 @@ export function actAuthorization(
 }
 
 /**
+ * Story 13.1c review (CR10) — SUSPEND (`under_review`) or REACTIVATE a worker through the PUBLIC commands on `client`, under the
+ * act's own key at the district the row holds now. Like `moveTestFieldWorker`, the row lock is held until the caller's transaction
+ * ends — a race leg commits it while a request waits.
+ */
+export async function actTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, act: 'suspend' | 'reactivate'): Promise<void> {
+  const actorId = randomUUID();
+  const { rows } = await client.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1', [id]);
+  if (rows[0] === undefined) throw new Error('[_field-worker-fixture] actTestFieldWorker: no such worker');
+  const base = {
+    pariwarId: ids.pariwarId(pariwarId),
+    fieldWorkerId: id,
+    auditId: randomUUID(),
+    actor: 'operator' as const,
+    actorId,
+    authorization: actAuthorization(act === 'suspend' ? 'field_worker.suspend' : 'field_worker.reactivate', pariwarId, rows[0].district, actorId),
+  };
+  if (act === 'suspend') await fieldWorker.suspendFieldWorker(client, { ...base, reasonCode: 'under_review' });
+  else await fieldWorker.reactivateFieldWorker(client, base);
+}
+
+/**
  * Story 13.1a — MOVE a worker to `toDistrict` through the PUBLIC `postFieldWorker` on `client` (it takes the row lock `FOR UPDATE`
  * and holds it until the caller's transaction ends — the race legs commit it while a request waits). Story 13.1c AD4: under the
  * `field_worker.move` key (targeting the destination), from the district the row holds NOW (the expected source — what an admin

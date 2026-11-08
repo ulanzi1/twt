@@ -11,8 +11,9 @@
 // ⚠ The caller's transaction must be READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001.
 //
 // ── Guard order, in EVERY command (QE5; pinned by a test) ─────────────────────────────────────────
-//   (0)  actor + actorId (QE7) — and, on EVERY command but none (Story 13.1c AD3 added `suspend`, `reactivate`, `terminate`), the
-//        authorization's PROVENANCE (a VERIFIED result of the RBAC check), its Pariwar and actor (= the command's), its dimension
+//   (0)  actor + actorId (QE7) — and, on EVERY one of the seven commands (Story 13.1c AD3 added `suspend`, `reactivate` and `terminate`
+//        to the four that already carried one), the authorization's PROVENANCE (a VERIFIED result of the RBAC check), its Pariwar and
+//        actor (= the command's), its dimension
 //        (`district`) — and its KEY: `field_worker.register` (+ the target) on `register`; `field_worker.approve` on
 //        `kyc_completed` / `activated` (Story 13.1a AD3); one of `FIELD_WORKER_MOVE_PERMISSION_KEYS` on `post` (13.1c AD4 —
 //        `field_worker.register` is REFUSED); `field_worker.suspend` / `.reactivate` / `.terminate` on their acts (13.1c AD3) —

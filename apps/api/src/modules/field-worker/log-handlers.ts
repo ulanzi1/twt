@@ -6,8 +6,19 @@
 // nothing: the stream holds no name, mobile or code (13.1 QE4), so there is no decrypt and no audit line (AD7). The log FOLLOWS the
 // worker — a District Admin of their current district reads the events from districts they were in before (AC8 (e)). The worker is
 // re-read on the same transaction first: one moved out of the gate's district since the gate read it ⇒ 409 `authorization_stale`
-// (the 13.1a identity read's rule, `-447` item 1). Each officer is shown by their CURRENT display name — `null` when none is
+// (the 13.1a identity read's rule, `-447` item 1). ⚠ That re-read is its OWN statement, not the page's (READ COMMITTED, no row lock —
+// unlike the identity read's single statement and the code read's `FOR SHARE`): a move landing in the milliseconds between the
+// re-read and the page lets that one page through. Accepted: the stream holds no name, mobile or code (13.1 QE4) — it does hold the
+// worker's reasons and dates (a date of death among them) — and what a moved-out District Admin could read in that window is the log
+// they were entitled to a moment earlier plus the events since (the move itself). The sibling reads close the window because they
+// decrypt (review CR18). Each officer is shown by their CURRENT display name — `null` when none is
 // recorded, ⛔ an email (AD7). `Cache-Control: no-store`.
+//
+// ⚠ DELIBERATE (checklist family 9): the gate judges the worker's CURRENT district, yet the page it opens holds the events from the
+// districts the worker was in BEFORE, with the acting officers' ids, current names, roles and grants — a District Admin of B sees A's
+// officers. Rationale: AC8 (e) and the Panel's "Keep the full log of field worker" (`-441`): the log is the WORKER's record, not a
+// district's. RE-EXAMINE (the author's trigger, not the Panel's) when the stream starts to carry words of anyone's own — a complaint,
+// an appeal (row 13-1f) — or an officer objects to their name being shown outside their district.
 
 import type { FieldWorkerLog, FieldWorkerLogQuery } from '@twt/contracts';
 import { fieldWorker, ids } from '@twt/domain';

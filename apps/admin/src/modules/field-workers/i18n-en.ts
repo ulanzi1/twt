@@ -112,9 +112,10 @@ const EN: Record<string, string> = {
   'fw.find.title': 'Find a worker',
   'fw.find.intro':
     'Choose a district, and a status (Active to start with), to see those workers. Check a worker’s details with them first, then show their code, only to read it to them when they ask. Each look at the details or the code is recorded. From the details you can also move, suspend, reactivate or end a worker, and see their history.',
-  // Story 13.1c (AD8) — the state selector; "Waiting for approval" is here because a waiting worker can be moved or ended.
+  // Story 13.1c (AD8) — the state selector; the waiting state is here because a waiting worker can be moved or ended. It reads
+  // "Awaiting approval" like `fw.state.pending_kyc` and the Approvals page (`-456` item 3; AD8 had written "Waiting for approval").
   'fw.find.state': 'Status',
-  'fw.find.state.pending_kyc': 'Waiting for approval',
+  'fw.find.state.pending_kyc': 'Awaiting approval',
   'fw.find.state.active': 'Active',
   'fw.find.state.suspended': 'Suspended',
   'fw.find.state.terminated': 'Ended',
@@ -155,7 +156,8 @@ const EN: Record<string, string> = {
   'fw.actions.move.to': 'Move to district',
   'fw.actions.move.choose': 'Choose a district',
   'fw.actions.move.noOther': 'This Pariwar records no other district to move the worker to.',
-  'fw.actions.suspend.intro': 'While suspended, the worker’s code cannot be given out and credits no new teacher.',
+  // No credit clause: `-454` Q6 C holds a signup for a worker suspended under review and credits it if cleared; this line shows before a reason is chosen.
+  'fw.actions.suspend.intro': 'While suspended, the worker’s code cannot be given out.',
   'fw.actions.reactivate.intro': 'Reactivating makes the worker active again: their code can be given out and credits new teachers.',
   // Row 13-1f rewords this line when the undo of a mistaken ending exists (`-454` Q1 A).
   'fw.actions.end.final': 'Ending is final. Their code stops crediting new teachers; to work again they must be registered again.',
@@ -167,13 +169,14 @@ const EN: Record<string, string> = {
   'fw.actions.done.suspend': '{name} is suspended.',
   'fw.actions.done.reactivate': '{name} is active again.',
   'fw.actions.done.end': '{name}’s engagement has ended.',
-  'fw.actions.failedNamed': 'Could not {act} {name}. {reason}',
   'fw.actions.noAccess.move': 'Only a Pariwar Admin can move a worker directly.',
   'fw.actions.noAccess.suspend': 'You do not have access to suspend this worker. A District Admin can do this only in the worker’s own district.',
   'fw.actions.noAccess.reactivate': 'You do not have access to reactivate this worker. A District Admin can do this only in the worker’s own district.',
   'fw.actions.noAccess.end': 'You do not have access to end this worker’s engagement. A District Admin can do this only in the worker’s own district.',
   'fw.actions.moved': 'This worker was moved by someone else while you were working. Reload to see their district.',
-  'fw.actions.stateChanged': 'This worker’s status was changed by someone else meanwhile. Reload to see it.',
+  'fw.actions.stateChanged': 'This worker’s status has changed since you opened them.',
+  // Shown under either stale line (`moved` is AD8's, verbatim): nothing in the panel reloads, and the acts are withdrawn until the worker is reopened.
+  'fw.actions.reopen': 'Close this panel and open the worker again to see their current details.',
 
   // ── Reasons — labels, never codes ──
   'fw.reason.under_review': 'Under review',
@@ -190,6 +193,9 @@ const EN: Record<string, string> = {
   'fw.history.loaded': 'History loaded.',
   'fw.history.empty': 'Nothing is recorded for this worker yet.',
   'fw.history.more': 'Load more',
+  'fw.history.moreShown': '{n} more entries shown.',
+  'fw.history.moreShownOne': '1 more entry shown.',
+  'fw.history.noMore': 'No more entries.',
   'fw.history.moreError': 'Could not load more of the history. Try again.',
   'fw.history.noAccess': 'You do not have access to this worker’s history. A District Admin can see it only in the worker’s own district.',
   'fw.history.by': 'by {name}, {role}',

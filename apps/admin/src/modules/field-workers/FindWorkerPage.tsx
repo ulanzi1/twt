@@ -10,7 +10,7 @@
 // back on the row's "Check details".
 // The list is mounted from the start (a disabled query shows nothing but its always-mounted status region), so the first district
 // choice is announced like every later one (review CR10).
-// Story 13.1c (AD8): a STATE selector beside the district (Waiting for approval / Active / Suspended / Ended, default Active) reuses
+// Story 13.1c (AD8): a STATE selector beside the district (Awaiting approval / Active / Suspended / Ended, default Active) reuses
 // the list route's `state` filter; a change of state closes the panel like a change of district. The panel also hosts the acts the
 // worker's state allows (`WorkerActions`) and the worker's history (`WorkerHistory`), both fed by the identity already on screen.
 
@@ -35,6 +35,8 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
   const [district, setDistrict] = useState<string | null>(null);
   const [state, setState] = useState<FieldWorkerState>('active');
   const [open, setOpenState] = useState<string | null>(null);
+  /** The panel whose acts met a 409 that says its copy of the worker is out of date: "Show code" goes with them (review PR11). */
+  const [staleFor, setStaleFor] = useState<string | null>(null);
   const list = useFieldWorkers(pariwarId, state, district, district !== null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   // The panel open NOW — the handlers compare against this, not against the render they were created in.
@@ -43,6 +45,7 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
 
   const setOpen = (id: string | null): void => {
     openRef.current = id;
+    setStaleFor(null); // a panel opened afresh reads the worker afresh
     setOpenState(id);
   };
   /** No decrypted identity outlives its panel: the explicit removal (the hook's `gcTime: 0` is only the backstop). */
@@ -130,8 +133,9 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
         <WorkerDetail key={open} pariwarId={pariwarId} fieldWorkerId={open} surface="find" onClose={closePanel}>
           {(name, worker) => (
             <>
-              <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} />
-              <WorkerActions pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} />
+              {/* Only an ACTIVE worker's code can be read (13.1a); a suspend or an end unmounts a code on screen (review CR26). */}
+              {worker.current_state === 'active' && staleFor !== open && <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} />}
+              <WorkerActions pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} onStale={() => setStaleFor(open)} />
               <WorkerHistory pariwarId={pariwarId} fieldWorkerId={open} />
             </>
           )}

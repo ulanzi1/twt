@@ -5474,6 +5474,9 @@ const {
   FieldWorkerLog: FieldWorkerLogSchema,
 } = await import('../src/field-workers/index.js');
 const FieldWorkerLifecycleComponent = FieldWorkerLifecycleResultSchema.openapi('FieldWorkerLifecycleResult');
+/** Appended to each write's description - the header is required, and the worker id is in its namespace (13.1a TR6; review CR14). */
+const fieldWorkerActNote =
+  ' Send an `Idempotency-Key` header (1-200 characters; the worker id is in its namespace): a replay returns the first 200.';
 const fieldWorkerActWrite = (key: string, extra409: string) => ({
   400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
   401: fieldWorkersNoSession,
@@ -5488,7 +5491,8 @@ registry.registerPath({
   description:
     '`field_worker.move` (pariwar_admin) at the worker\'s CURRENT district. `from_district` is the district the screen showed: a worker ' +
     'moved meanwhile is refused (409 field_worker.authorization_stale — reload). Records `field_worker.posted`; the worker\'s state, ' +
-    'reason, code and history are unchanged. A waiting, active or suspended worker can be moved; an ended one cannot.',
+    'reason, code and history are unchanged. A waiting, active or suspended worker can be moved; an ended one cannot.' +
+    fieldWorkerActNote,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(MoveFieldWorkerRequestSchema), required: true } },
   responses: {
@@ -5503,7 +5507,9 @@ registry.registerPath({
   summary: 'Suspend an active field worker',
   description:
     '`field_worker.suspend` at the worker\'s CURRENT district. Reason `under_review` or `at_worker_request`. Records ' +
-    '`field_worker.suspended`; while suspended the worker\'s code credits no new teacher and cannot be read by hand.',
+    '`field_worker.suspended`; while suspended the worker\'s code cannot be read by hand. What a signup on the code earns meanwhile depends on the ' +
+    'reason (the credit recorder\'s rule, `-454` Q6 C) and is not decided here.' +
+    fieldWorkerActNote,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(SuspendFieldWorkerRequestSchema), required: true } },
   responses: {
@@ -5516,7 +5522,8 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/reactivate',
   summary: 'Reactivate a suspended field worker',
   description:
-    '`field_worker.reactivate` at the worker\'s CURRENT district. Body `{}`. Records `field_worker.reactivated`; the reason is cleared.',
+    '`field_worker.reactivate` at the worker\'s CURRENT district. Body `{}`. Records `field_worker.reactivated`; the reason is cleared.' +
+    fieldWorkerActNote,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(ReactivateFieldWorkerRequestSchema), required: true } },
   responses: {
@@ -5532,7 +5539,8 @@ registry.registerPath({
     '`field_worker.terminate` at the worker\'s CURRENT district. Reason `left_voluntarily`, `inactive`, `registered_in_error` or ' +
     '`died`; `ended_on` the last day (for `died`, the date of death), between the registration day and today in IST. Records ' +
     '`field_worker.terminated` — final in this version: the worker\'s mobile can be registered again. A waiting, active or suspended ' +
-    'worker can be ended.',
+    'worker can be ended.' +
+    fieldWorkerActNote,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(TerminateFieldWorkerRequestSchema), required: true } },
   responses: {
@@ -5557,7 +5565,8 @@ registry.registerPath({
     400: errorResponse('Invalid input (request.validation)'),
     401: fieldWorkersNoSession,
     403: errorResponse('Missing field_worker.read_log for the worker\'s district — also an unknown worker or another Pariwar\'s'),
-    404: fieldWorkersNoGrant,
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found) · field_worker.not_found (a lost race only)'),
+    409: errorResponse('field_worker.authorization_stale (the worker moved out of the gate\'s district meanwhile — reload)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

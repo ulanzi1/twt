@@ -420,7 +420,15 @@ describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
   });
 
   it('post refuses an unverified / foreign / non-district authorization BEFORE the lock (its TARGET is judged only under the lock)', async () => {
-    for (const authorization of [undefined, { ...moveAt('Gaya') }, moveAt('Gaya', { pariwarId: OTHER_P }), authAt('Gaya', { key: 'module.manage' })]) {
+    // `keyAtPariwar('field_worker.move')` isolates the DIMENSION check (the right key at the wrong dimension): `module.manage` alone is
+    // refused by the key check first, whatever its dimension (review CR5).
+    for (const authorization of [
+      undefined,
+      { ...moveAt('Gaya') },
+      moveAt('Gaya', { pariwarId: OTHER_P }),
+      authAt('Gaya', { key: 'module.manage' }),
+      keyAtPariwar('field_worker.move'),
+    ]) {
       const { client, calls } = stub();
       await expect(
         postFieldWorker(client, { ...mover('Gaya'), reasonCode: 'reassigned', authorization: authorization as VerifiedAuthorization }),

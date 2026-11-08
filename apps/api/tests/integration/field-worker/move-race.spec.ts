@@ -9,9 +9,9 @@ import { ids } from '@twt/domain';
 import type { PoolClient } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { moveTestFieldWorker } from '../_field-worker-fixture.js';
+import { actTestFieldWorker, moveTestFieldWorker } from '../_field-worker-fixture.js';
 import { hasDatabase } from '../_setup.js';
-import { createHarness, errOf, releaseHolder, waitForBlockedBy, type Harness } from './_registration-harness.js';
+import { createHarness, errOf, json, releaseHolder, waitForBlockedBy, type Harness } from './_registration-harness.js';
 
 describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a race to a move (AC2, AC7)', { timeout: 60_000 }, () => {
   let h: Harness;
@@ -34,6 +34,7 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
   const types = (id: string) =>
     h.td.pool.query<{ event_type: string }>('SELECT event_type FROM events_log WHERE stream_id = $1 ORDER BY event_version', [id]).then((r) => r.rows.map((x) => x.event_type));
   const district = (id: string) => h.td.pool.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1', [id]).then((r) => r.rows[0]!.district);
+  const istToday = () => h.td.pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d").then((r) => r.rows[0]!.d);
 
   async function activeWorker() {
     const p = h.freshPariwar();
@@ -44,13 +45,13 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
     return { p, admin, id };
   }
 
-  /** Hold a committed-later move Patna → Gaya on its own connection while `request` runs; COMMIT once the request is parked behind it. */
-  async function raceAgainstMove(p: string, id: string, request: () => ReturnType<Harness['move']>) {
+  /** Hold `hold` (a committed-later act, through the PUBLIC command) on its own connection while `request` runs; COMMIT once the request is parked behind it. */
+  async function raceAgainst(p: string, hold: (holder: PoolClient) => Promise<void>, request: () => ReturnType<Harness['move']>) {
     const holder = await h.td.pool.connect();
     try {
       await holder.query('BEGIN');
       await holder.query(`SELECT set_config('app.pariwar_id', $1, true)`, [p]);
-      await moveTestFieldWorker(holder, p, ids.fieldWorkerId(id), 'Gaya'); // holds FOR UPDATE until COMMIT
+      await hold(holder); // holds FOR UPDATE until COMMIT
       const pending = request();
       await waitForBlockedBy(h.td.pool, await pidOf(holder));
       await holder.query('COMMIT');
@@ -59,6 +60,9 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
       await releaseHolder(holder);
     }
   }
+  /** Hold a committed-later move Patna → Gaya while `request` runs. */
+  const raceAgainstMove = (p: string, id: string, request: () => ReturnType<Harness['move']>) =>
+    raceAgainst(p, (holder) => moveTestFieldWorker(holder, p, ids.fieldWorkerId(id), 'Gaya'), request);
 
   it('AC2: two Pariwar Admins both saw Patna; one moves Patna → Gaya and commits while the other’s Patna → Nalanda waits on the lock ⇒ 409 authorization_stale, the worker stays in Gaya, the loser’s intent and its twin', async () => {
     const { p, id } = await activeWorker();
@@ -75,7 +79,9 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
 
   it.each([
     ['suspend', (h: Harness, c: Parameters<Harness['suspend']>[0], p: string, id: string) => h.suspend(c, p, id, { reason_code: 'under_review' }), 'field_worker.suspended'],
-    ['terminate', (h: Harness, c: Parameters<Harness['suspend']>[0], p: string, id: string) => h.terminate(c, p, id, { reason_code: 'inactive', ended_on: '2026-11-01' }), 'field_worker.terminated'],
+    // A date that is VALID for this worker (today, IST, read from the DB) — so the 409 is the stale target and cannot be a
+    // by-product of the guard order (a hard-coded day before the registration would be `ended_on_invalid` if that guard ran first).
+    ['terminate', async (h: Harness, c: Parameters<Harness['suspend']>[0], p: string, id: string) => h.terminate(c, p, id, { reason_code: 'inactive', ended_on: await istToday() }), 'field_worker.terminated'],
   ] as const)(
     'AC7: a %s gated at Patna, the worker moved to Gaya before the lock ⇒ 409 authorization_stale under the lock, nothing appended, the intent and its twin',
     async (_label, act, action) => {
@@ -91,4 +97,23 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
       expect(await lines(p, id)).toEqual([action, `${action}_rolled_back`]);
     },
   );
+
+  // Review CR10 — a move is legal in every non-terminated state, so a suspend or a reactivate that commits between the move's
+  // pre-read and its lock does NOT stop it; the 200 (which the idempotency store replays for a day, and the admin panel renders
+  // without a second fetch) must carry the state AND the reason of the row the lock confirmed — ⛔ the pre-read's reason.
+  it.each([
+    ['a suspend', 'active', 'suspend', { current_state: 'suspended', state_reason_code: 'under_review' }],
+    ['a reactivate', 'suspended', 'reactivate', { current_state: 'active', state_reason_code: null }],
+  ] as const)('CR10: %s commits while the move waits on the lock ⇒ 200 carrying the LOCKED row’s state and reason, which are the stored ones', async (_label, start, act, expected) => {
+    const { p, admin, id } = await activeWorker();
+    if (start === 'suspended') expect((await h.suspend(admin.client, p, id, { reason_code: 'under_review' })).statusCode).toBe(200);
+    const r = await raceAgainst(p, (holder) => actTestFieldWorker(holder, p, ids.fieldWorkerId(id), act), () =>
+      h.move(admin.client, p, id, { from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' }),
+    );
+    expect(r.statusCode, r.body).toBe(200);
+    expect(json(r)).toEqual({ field_worker_id: id, district: 'Gaya', ended_on: null, ...expected });
+    // CONTROL — the body equals the stored row (the holder's act committed first; the move kept its state and reason).
+    const stored = (await h.td.pool.query<{ current_state: string; state_reason_code: string | null; district: string }>('SELECT current_state, state_reason_code, district FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!;
+    expect(stored).toEqual({ district: 'Gaya', ...expected });
+  });
 });

@@ -2,17 +2,31 @@
 // ([[feedback_stub_must_call_not_transcribe]]): every key resolves with no stray brace; every registration / approval / read code
 // maps to its guidance (the field it belongs to, retryable or not); the code's spelled label; an unknown code still names itself.
 
+import { FIELD_WORKER_EVENT_TYPES, FIELD_WORKER_REASON_CODES } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../src/api/client.js';
-import { codeSmsLine, codeUnavailableText, fieldWorkerGuidance, needsSignIn, spellDigits, stateLabel, type Surface } from '../src/modules/field-workers/derive.js';
+import {
+  actGuidance,
+  codeSmsLine,
+  codeUnavailableText,
+  fieldWorkerGuidance,
+  defaultEndDate,
+  istDateOf,
+  istTodayInBrowser,
+  needsSignIn,
+  reasonLabel,
+  spellDigits,
+  stateLabel,
+  type Surface,
+} from '../src/modules/field-workers/derive.js';
 import { FIELD_WORKER_EN_KEYS, resolveEn as t } from '../src/modules/field-workers/i18n-en.js';
 
 describe('the copy (i18n-en.ts)', () => {
   it('every key resolves with its parameters and leaves no stray brace', () => {
     expect(FIELD_WORKER_EN_KEYS.length).toBeGreaterThan(40);
-    // Story 13.1c's keys add `district`, `act`, `role`, `from` and `to`.
-    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', act: 'suspend', role: 'District Admin', from: 'Patna', to: 'Gaya' };
+    // Story 13.1c's keys add `district`, `role`, `from` and `to`.
+    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya' };
     for (const key of FIELD_WORKER_EN_KEYS) {
       const text = t(key, params);
       expect(text, key).not.toMatch(/[{}]/);
@@ -158,5 +172,61 @@ describe('the code', () => {
   it('spellDigits reads a code one digit at a time; stateLabel names each state', () => {
     expect(spellDigits('042719')).toBe('0 4 2 7 1 9');
     expect(['pending_kyc', 'active', 'suspended', 'terminated'].map(stateLabel)).toEqual(['Awaiting approval', 'Active', 'Suspended', 'Ended']);
+  });
+});
+
+// ── Story 13.1c, review round 1 ──
+
+describe('the India day (AD8: the End date defaults to the IST day of the browser) - review CR24', () => {
+  it('istTodayInBrowser is the IST calendar day, ⛔ the browser’s own or UTC: the day turns over at 18:30 UTC', () => {
+    expect(istTodayInBrowser(new Date('2026-11-06T18:29:59.000Z'))).toBe('2026-11-06');
+    expect(istTodayInBrowser(new Date('2026-11-06T18:30:00.000Z'))).toBe('2026-11-07');
+    expect(istTodayInBrowser(new Date('2026-12-31T20:00:00.000Z'))).toBe('2027-01-01');
+  });
+
+  it('PR7: the End date defaults to today in India, but never before the registration day (a browser clock behind the server’s)', () => {
+    const now = new Date('2026-11-06T10:00:00.000Z'); // 6 Nov, India
+    expect(defaultEndDate('2026-11-04T05:00:00.000Z', now)).toBe('2026-11-06');
+    expect(defaultEndDate('2026-11-06T04:00:00.000Z', now)).toBe('2026-11-06'); // registered today
+    expect(defaultEndDate('2026-11-06T20:00:00.000Z', now)).toBe('2026-11-07'); // registered "tomorrow" by this clock: the floor wins
+  });
+
+  it('istDateOf reads an instant (the registration instant bounds the End date from below)', () => {
+    expect(istDateOf('2026-11-04T05:00:00.000Z')).toBe('2026-11-04');
+    expect(istDateOf('2026-11-04T19:00:00.000Z')).toBe('2026-11-05');
+  });
+});
+
+describe('every label the history and the acts can show exists (the resolver throws on a missing key) - review CR31', () => {
+  it('a label for every reason code and for every event type of the contract', () => {
+    for (const code of FIELD_WORKER_REASON_CODES) expect(() => reasonLabel(code), code).not.toThrow();
+    for (const type of FIELD_WORKER_EVENT_TYPES) expect(() => t(`fw.history.event.${type}`), type).not.toThrow();
+  });
+
+  it('the labels are the words the Panel and AD8 chose, never a code (by code - the order of the contract list is not pinned)', () => {
+    expect(Object.fromEntries(FIELD_WORKER_REASON_CODES.map((c) => [c, reasonLabel(c)]))).toEqual({
+      under_review: 'Under review',
+      at_worker_request: 'At the worker’s request',
+      left_voluntarily: 'Left',
+      inactive: 'Stopped working',
+      registered_in_error: 'Registered by mistake',
+      reassigned: 'Reassigned by the Trust',
+      died: 'Died',
+    });
+  });
+});
+
+describe('an act’s 409s that say the panel is out of date are marked `stale` (the acts are withdrawn)', () => {
+  it.each([
+    ['field_worker.authorization_stale', 'This worker was moved by someone else while you were working. Reload to see their district.'],
+    ['field_worker.illegal_transition', 'This worker’s status has changed since you opened them.'],
+  ])('%s', (code, text) => {
+    expect(actGuidance(new ApiError(409, code, 'x'), 'suspend')).toEqual({ text, stale: true });
+  });
+
+  it('a 403, a 5xx and a network failure are not', () => {
+    expect(actGuidance(new ApiError(403, 'authz.forbidden', 'x'), 'end').stale).toBeUndefined();
+    expect(actGuidance(new ApiError(503, 'down', 'x'), 'end').stale).toBeUndefined();
+    expect(actGuidance(new TypeError('Failed to fetch'), 'end').stale).toBeUndefined();
   });
 });

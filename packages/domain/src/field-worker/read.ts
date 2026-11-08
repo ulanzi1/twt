@@ -6,7 +6,9 @@
 // worker's data. Story 13.1a adds two reads that return ciphertext — `pageFieldWorkersForPariwar` (the name) and
 // `getFieldWorkerSealedIdentity` (the name and the mobile) — for the API layer's audited decrypt-on-read (13.1a AD7, AD9), and Story
 // 13.1b a third, `getFieldWorkerForCodeSms` (the mobile alone), for the sweep's audited decrypt; the worker's own read is still
-// Story 13.3's (C1). Story 13.1c adds the worker's LOG read (`listFieldWorkerEvents`) — the event stream, which holds no personal data.
+// Story 13.3's (C1). Story 13.1c adds the worker's LOG read (`listFieldWorkerEvents`) — the event stream, which holds no identity data
+// of the WORKER (no name, mobile or code — 13.1 QE4; it does hold reasons and dates); the one personal datum it joins in is each acting
+// OFFICER's current display name.
 
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
 
@@ -436,6 +438,10 @@ export async function listFieldWorkerEvents(
 ): Promise<FieldWorkerLogPage | null> {
   const after = opts.afterVersion ?? 0;
   if (!Number.isSafeInteger(after) || after < 0) throw new RangeError('afterVersion must be a non-negative integer');
+  // `clampLimit` passes NaN and a fraction through (`Math.max(1, NaN)` is NaN) and Postgres would answer 22P02 — the sibling's guard.
+  if (opts.limit !== undefined && !Number.isInteger(opts.limit)) {
+    throw new RangeError(`listFieldWorkerEvents: limit must be an integer, got ${String(opts.limit)}`);
+  }
   const limit = clampLimit(opts.limit, { default: LIST_FIELD_WORKER_EVENTS_DEFAULT_LIMIT, cap: LIST_FIELD_WORKER_EVENTS_MAX_LIMIT });
 
   const exists = await db

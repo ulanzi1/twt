@@ -4,6 +4,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: story 13-1d-field-worker-move-requests-and-notices (create-story, 2026-11-08)
+
+Carried items C1–C3 of Story 13.1d (created, ready-for-dev, not built; Q-1…Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; story v1.2). This pass CLOSES nothing: 13.1 C10 / D7, 13.1a C2, 13.1b C6, 13.1c C1, R2-D1 and 13.1c's CR34 (its patch review's `networkMode` finding; ⛔ 13.1a's CR34, the seal's AAD, which stays open) are ANSWERED in the story (AD1–AD10) and close only when its code lands; 13.1a CR33's re-trigger fires again when it does (AD12).
+
+- **C1 — the email notices (Story 13.1d Q-1 A; row `13-1g-field-worker-move-notices-by-email`, minted at 13.1d's Task 0.4).** The Panel ruled "by email and in the admin console" (`-443` Q1 A); an email to a District Admin is a FOURTH admin-email path, which ADR-0040 / ADR-0043 admit only by a new ADR. Needs: that ADR (a district-admin recipient read by EXACT district grant; the Q2 address read for a third caller), a send table keyed on 13.1d's `notice_id` (6.25's shape: once per notice, held / parked sweep, `aging_since`), a jobs sender on `staff-email-client.ts`, one template per notice kind naming NO ONE with a link (6.25's `-262` FQ3 A), and the four allowlists of `apps/jobs/tests/staff-email-identity-read-fence.test.ts`. Go-live leg: roster Row 51 (c). Trigger: 13.1g create-story (needs 13.1d LANDED).
+- **C2 — Story 13.3: a worker's own view of their request.** Depends on the Panel's answer to 13.1d's note, item 3 (Q-3 A: the system tells the worker nothing by default; the officer does). Trigger: 13.3 create-story.
+- **C3 — row `13-1f`: an undo does not reopen a superseded request.** 13.1d supersedes an open request when the worker is ended (cause `worker_ended`), and the supersede is final. 13-1f's undo either says so or decides otherwise. Trigger: 13-1f create-story.
+
+---
+
 ## Deferred from: story 13-1c-field-worker-moves-suspension-and-termination (create-story, 2026-11-07)
 
 Carried items C1–C4 of Story 13.1c (created, ready-for-dev, not built; Q-1…Q-5 ANSWERED by BigDev 2026-11-07, verbatim "Q1 C, Q2-Q5 A"; story v1.2). This pass CLOSES nothing: 13.1b C1 / C7 / CB9 and 13.1a CR60 are ANSWERED in the story (AD9, AD10) and close only when the story's code lands.

@@ -3241,7 +3241,9 @@ export type FieldWorkerMoveRequestActInput =
 export function useFieldWorkerMoveRequestAct(pariwarId: string) {
   const qc = useQueryClient();
   const refresh = (): void => {
-    void qc.invalidateQueries({ queryKey: fieldWorkerMoveRequestsRoot(pariwarId) });
+    // The LISTS only — ⛔ the root: an open detail panel would be re-read, decrypting the worker's name and writing a
+    // `move_request_worker_viewed` line nobody asked for (the browser pass, 2026-11-09; 13.1c G13's rule).
+    void qc.invalidateQueries({ queryKey: [...fieldWorkerMoveRequestsRoot(pariwarId), 'list'] });
     void qc.invalidateQueries({ queryKey: fieldWorkerNoticesKey(pariwarId) });
     void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
   };

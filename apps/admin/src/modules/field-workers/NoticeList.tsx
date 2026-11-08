@@ -1,5 +1,7 @@
 // The officer's notices — Story 13.1d (AC9; AD9, AD10). Newest first, the unseen ones marked "New"; showing them marks the unseen ones
-// on screen SEEN (one POST for the shown ids, once per set — the nav's count then refreshes). A notice carries no name: it names the
+// on screen SEEN (one POST for the shown ids, once per set — the nav's count then refreshes). A notice unseen when THIS visit showed it
+// keeps its "New" mark for the visit: the seen mark's refresh returns it with `seen_at` set, and dropping the mark then would hide which
+// notices are new before the officer could read them (the browser pass, 2026-11-09). A notice carries no name: it names the
 // two districts and, for a refusal, the reason's label; the accepted one reminds the opener "Tell the worker." (`-459` Q3 A). A failed
 // seen mark is silent: the notices simply stay "New".
 
@@ -40,8 +42,8 @@ export function NoticeList({ pariwarId }: { pariwarId: string }): ReactElement {
       {notices.isSuccess && notices.data.items.length > 0 && (
         <ul className="flex flex-col gap-1 text-sm">
           {notices.data.items.map((n) => (
-            <li key={n.notice_id} data-testid="fw-notice" data-unseen={n.seen_at === null ? 'true' : 'false'}>
-              {n.seen_at === null && <strong className="mr-1">{t('fw.notices.new')}:</strong>}
+            <li key={n.notice_id} data-testid="fw-notice" data-unseen={n.seen_at === null || marked.current.has(n.notice_id) ? 'true' : 'false'}>
+              {(n.seen_at === null || marked.current.has(n.notice_id)) && <strong className="mr-1">{t('fw.notices.new')}:</strong>}
               {noticeText(n)} <span className="text-xs">{formatIstDateTime(n.created_at)}</span>
             </li>
           ))}

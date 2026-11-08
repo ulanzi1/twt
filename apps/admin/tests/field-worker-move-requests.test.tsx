@@ -233,6 +233,40 @@ describe('Story 13.1d — the Move requests page (AC9)', () => {
   });
 });
 
+describe('Story 13.1d — the browser pass’s two screen findings (2026-11-09)', () => {
+  it('a notice unseen when the page showed it KEEPS its "New" mark after the seen mark’s refresh returns it seen', async () => {
+    listFieldWorkerMoveRequests.mockResolvedValue({ items: [], next_cursor: null });
+    listFieldWorkerNotices
+      .mockResolvedValueOnce({ items: [notice()], next_cursor: null })
+      .mockResolvedValue({ items: [notice({ seen_at: '2026-11-09T01:00:00.000Z' })], next_cursor: null });
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await waitFor(() => expect(markFieldWorkerNoticesSeen).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listFieldWorkerNotices.mock.calls.length).toBeGreaterThanOrEqual(2)); // the refresh after the mark
+    const [item] = await screen.findAllByTestId('fw-notice');
+    expect(item).toHaveAttribute('data-unseen', 'true');
+    expect(item).toHaveTextContent(/^New:/);
+  });
+
+  it('an act does NOT re-read an open detail panel (each read decrypts the name and writes an audit line)', async () => {
+    const other = req({ move_request_id: '00000000-0000-4000-8000-0000000000a9', name: 'Other Worker' });
+    listFieldWorkerMoveRequests.mockResolvedValue({ items: [req(), other], next_cursor: null });
+    getFieldWorkerMoveRequest.mockResolvedValue({
+      request: req(),
+      events: [],
+      worker: { field_worker_id: req().field_worker_id, name: 'Ramesh Kumar', current_state: 'active', registered_on: null, active_since: null, districts: [], suspensions: [], history_truncated: false, members_onboarded: null },
+    });
+    actOnFieldWorkerMoveRequest.mockResolvedValue(result());
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await choose('Gaya');
+    fireEvent.click((await screen.findAllByTestId('fw-request-view'))[0]!);
+    await screen.findByTestId('fw-request-detail');
+    fireEvent.click(screen.getAllByTestId('fw-request-accept')[1]!); // the OTHER request
+    await waitFor(() => expect(actOnFieldWorkerMoveRequest).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listFieldWorkerMoveRequests.mock.calls.length).toBeGreaterThanOrEqual(2)); // the lists refreshed
+    expect(getFieldWorkerMoveRequest).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Story 13.1d — notices and the nav (AC9)', () => {
   it('the unseen marked "New" and marked seen ONCE; the accepted one says "Tell the worker."', async () => {
     listFieldWorkerMoveRequests.mockResolvedValue({ items: [], next_cursor: null });

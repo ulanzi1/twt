@@ -130,6 +130,11 @@ import {
   registerFieldWorkerCodeSmsCron,
 } from './scheduler/field-worker-code-sms.js';
 import {
+  DEFAULT_FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON,
+  FIELD_WORKER_MOVE_REQUEST_ESCALATION_TZ,
+  registerFieldWorkerMoveRequestEscalationCron,
+} from './scheduler/field-worker-move-request-escalation.js';
+import {
   createAnnouncementPoster,
   createAnnouncementPostTrigger,
   enqueueAnnouncementCycle,
@@ -187,6 +192,8 @@ const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT
 // Story 12.2 (QE7 (A)) — the 5-minute partner-module activation sweep.
 const MODULE_ACTIVATION_CRON = process.env['MODULE_ACTIVATION_CRON'] ?? DEFAULT_MODULE_ACTIVATION_CRON;
 const FIELD_WORKER_CODE_SMS_CRON = process.env['FIELD_WORKER_CODE_SMS_CRON'] ?? DEFAULT_FIELD_WORKER_CODE_SMS_CRON;
+const FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON =
+  process.env['FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON'] ?? DEFAULT_FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON;
 // Daily renewal-lifecycle tick (Story 3.8, AC1/AC3). Cadence is operations policy (IST).
 const RENEWAL_LIFECYCLE_CRON =
   process.env['MEMBER_RENEWAL_LIFECYCLE_CRON'] ?? DEFAULT_RENEWAL_LIFECYCLE_CRON;
@@ -287,6 +294,11 @@ async function main(): Promise<void> {
       `[jobs] FIELD_WORKER_CODE_SMS_CRON must be a 5-field cron expression (got "${FIELD_WORKER_CODE_SMS_CRON}")`,
     );
   }
+  if (!/^(\S+\s+){4}\S+$/.test(FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON must be a 5-field cron expression (got "${FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON}")`,
+    );
+  }
   if (!/^(\S+\s+){4}\S+$/.test(RENEWAL_LIFECYCLE_CRON.trim())) {
     throw new RangeError(
       `[jobs] MEMBER_RENEWAL_LIFECYCLE_CRON must be a 5-field cron expression (got "${RENEWAL_LIFECYCLE_CRON}")`,
@@ -357,6 +369,9 @@ async function main(): Promise<void> {
   // Story 13.1b (AD2, AD5) — the field-worker code SMS sweep's OWN pool, the same reasoning: the claim, each scope transaction and
   // the audit lines all run here, sequentially, and ⛔ connection is held across the decrypt or the gateway call.
   const { pool: fieldWorkerCodeSmsPool } = createDb(connectionString, { max: 3, logger: false });
+  // Story 13.1d (AD8 (a)) — the move-request escalation sweep's OWN pool: each row's scope transaction holds one connection while its
+  // system audit line (and a compensating twin) commits on another; max 2 is its sequential peak. ⛔ The shared max-2 pool above.
+  const { pool: fieldWorkerMoveRequestEscalationPool } = createDb(connectionString, { max: 2, logger: false });
 
   // ── Data-export KMS deps (Story 3.11) — the FIRST apps/jobs crypto wiring ──────
   // Resolve the Argon2id pepper (fake-KMS mode derives the KEK from it; live mode ignores it) via the
@@ -412,6 +427,7 @@ async function main(): Promise<void> {
     await waWebhookPool.end().catch((err: unknown) => logError('wa-webhook-pool-end', err));
     await moduleActivationPool.end().catch((err: unknown) => logError('module-activation-pool-end', err));
     await fieldWorkerCodeSmsPool.end().catch((err: unknown) => logError('field-worker-code-sms-pool-end', err));
+    await fieldWorkerMoveRequestEscalationPool.end().catch((err: unknown) => logError('field-worker-move-request-escalation-pool-end', err));
     console.info('[jobs] shutdown complete');
     process.exit(process.exitCode ?? 0);
   }
@@ -724,6 +740,13 @@ async function main(): Promise<void> {
       },
       { cron: FIELD_WORKER_CODE_SMS_CRON, tz: FIELD_WORKER_CODE_SMS_TZ },
     );
+    // ⭐ Story 13.1d (AD8 (a)) — every hour, a move request `pending` for 7 × 24 h goes to the Pariwar Admin (actor `system`); ⛔ ever
+    // accepted. Refuses, with ONE `rls_bound_role` alarm, under a login that cannot read across Pariwars (roster Row 26).
+    await registerFieldWorkerMoveRequestEscalationCron(
+      boss,
+      { pool: fieldWorkerMoveRequestEscalationPool },
+      { cron: FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON, tz: FIELD_WORKER_MOVE_REQUEST_ESCALATION_TZ },
+    );
     // ⭐ Story 5.11b (FS19) — built ABOVE the contribution deps (it needs only `contributionProviders`): the alert SMS seam reads
     // the SAME memo (fail open — G15).
     const contributionNotifyDeps = {
@@ -979,6 +1002,7 @@ async function main(): Promise<void> {
     await waWebhookPool.end().catch(() => undefined);
     await moduleActivationPool.end().catch(() => undefined);
     await fieldWorkerCodeSmsPool.end().catch(() => undefined);
+    await fieldWorkerMoveRequestEscalationPool.end().catch(() => undefined);
     throw err;
   }
 

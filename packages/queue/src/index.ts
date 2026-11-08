@@ -572,6 +572,11 @@ export const QUEUE_NAMES = {
    * a job lost between COMMIT and enqueue would lose the text). Job class C.
    */
   FIELD_WORKER_CODE_SMS: 'field_worker.code_sms',
+  /**
+   * The hourly field-worker MOVE REQUEST escalation sweep (Story 13.1d, `2026-11-08-458` AD8 (a)): a request `pending` for 7 × 24 h goes to
+   * the Pariwar Admin (`escalated`, actor `system`) — ⛔ ever accepted. A cron tick with an empty payload. Job class C.
+   */
+  FIELD_WORKER_MOVE_REQUEST_ESCALATION: 'field_worker.move_request_escalation',
 } as const;
 
 /** Union of the registered queue names. */

@@ -14,6 +14,8 @@
 
 import { and, asc, desc, eq, inArray, isNull, notInArray, or, sql } from 'drizzle-orm';
 
+import type pg from 'pg';
+
 import type { Db } from '../db.js';
 import type { FieldWorkerId, FieldWorkerMoveRequestId, FieldWorkerNoticeId, PariwarId } from '../ids/index.js';
 import { clampLimit } from '../pagination.js';
@@ -458,4 +460,27 @@ export async function hasOpenMoveRequest(db: Db, pariwarId: PariwarId, fieldWork
     .where(and(eq(t.pariwarId, pariwarId), eq(t.fieldWorkerId, fieldWorkerId), inArray(t.state, [...FIELD_WORKER_MOVE_REQUEST_OPEN_STATES])))
     .limit(1);
   return rows.length > 0;
+}
+
+/** The escalation sweep's bound a tick (AD8 (a)) — hitting it is alarmed; the next tick starts again from the oldest. */
+export const STALE_MOVE_REQUESTS_TICK_MAX = 200;
+
+/**
+ * AD8 (a) — the CROSS-TENANT selector of the escalation sweep: `pending` requests opened at least 7 × 24 h ago by the DATABASE clock
+ * (TR3), oldest first, at most `limit`. On a pool whose role can read across Pariwars (roster Row 26 — the caller checks it first). A
+ * plain read: each row is re-judged under its locks (`escalateStaleMoveRequest`), so a row escalated or answered meanwhile is a no-op.
+ */
+export async function findStaleMoveRequests(
+  pool: pg.Pool,
+  opts: { limit?: number } = {},
+): Promise<Array<{ pariwarId: PariwarId; moveRequestId: FieldWorkerMoveRequestId }>> {
+  const limit = clampLimit(opts.limit, { default: STALE_MOVE_REQUESTS_TICK_MAX, cap: STALE_MOVE_REQUESTS_TICK_MAX });
+  const r = await pool.query<{ pariwar_id: string; move_request_id: string }>(
+    `SELECT pariwar_id, move_request_id FROM field_worker_move_requests
+      WHERE state = 'pending' AND opened_at <= now() - interval '7 days'
+      ORDER BY opened_at, move_request_id
+      LIMIT $1`,
+    [limit],
+  );
+  return r.rows.map((x) => ({ pariwarId: x.pariwar_id as PariwarId, moveRequestId: x.move_request_id as FieldWorkerMoveRequestId }));
 }

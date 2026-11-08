@@ -10,7 +10,7 @@ created from `origin/main` (no upstream) on 2026-11-08. Every `apps/` / `package
 admin module - then the author's own reads of the decision log, the roster and the 13.1c story). Perishable - re-check at Task 0.1. Re-locate by
 FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.4, 2026-11-08). Task 0 DONE; the Panel note SENT and RULED - decision `-459` `0ba691f0` (DR + KB: Q1 A, Q2 A WIDENED, Q3 A). ⏳ Task 0.8 (the author-commit for Q2's widening) is owed BEFORE Task 6; Tasks 1-5 may start. Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; Records `5dea5d89`; decision `-458` `d20eb1d5`; Row 51 `0b663d46`. Code may start (Task 1).
+STATUS: ready-for-dev (v1.5, 2026-11-08). Task 0 DONE; the Panel note SENT and RULED - decision `-459` `0ba691f0` (DR + KB: Q1 A, Q2 A WIDENED, Q3 A); Q2's widening built per `-460` `0a88cb40` (BigDev: "recommended"). Code may start (Task 1). Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; Records `5dea5d89`; decision `-458` `d20eb1d5`; Row 51 `0b663d46`. Code may start (Task 1).
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `2026-11-08-458` (the newest on every ref and every worktree is `-457`, 13.1c's). "The number belongs to the first COMMIT" (`-449`).
@@ -312,7 +312,15 @@ worker's name; (3) the worker is told by the officer, not the system.**
 - **AD10 - The screens.** ⭐ **Amended by the Panel (`-459` Q2 A, WIDENED, 2026-11-08):** where this AD says the worker's NAME, the Panel ruled
   the name AND *"other details like work history with organization, number of member onboarded, etc."* - never the phone number, every look
   audited. What those details are, where they are read and how the count shows before Story 13.8 can compute it are Task 0.8's author-commit,
-  owed BEFORE Task 6; until it lands, build the name as below and nothing more. A **Move requests** page (`FieldWorkerNav` gains `'requests'`, route `/p/$pariwarId/field-workers/requests`): (1) "Waiting
+  owed BEFORE Task 6. ⭐ **DECIDED by `-460` (2026-11-08, BigDev: "recommended"):** the LIST keeps the name only (below). ONE request's
+  DETAIL (`GET .../move-requests/:moveRequestId`) adds a `worker` block - the name, and a work history read at request time from the worker's
+  OWN stream: registered on; active since (the first `activated`, or none); the current state's NAME (⛔ its reason); each district with its
+  dates (the `registered` district, then each `posted` `to_district`, oldest first, the last open-ended); each suspension's dates (`suspended`
+  to the next `reactivated`, or open-ended) - ⛔ any reason, ⛔ any officer's name or role, ⛔ KYC, ⛔ code, ⛔ mobile; and `members_onboarded:
+  null`, shown as "Not counted yet" until Story 13.8 (C4). "etc." adds nothing. ONE audit line per detail view
+  (`field_worker.move_request_worker_viewed`, naming the request and the worker), written BEFORE the name is decrypted (the `-447` shape). The
+  history read is bounded (a cap of at least 200 events, saying so if it stops); ⛔ a new column or table for it. On the page, each item opens its
+  detail panel. A **Move requests** page (`FieldWorkerNav` gains `'requests'`, route `/p/$pariwarId/field-workers/requests`): (1) "Waiting
   for your answer" - open requests whose counterpart is a district the officer holds (a Pariwar Admin: every `escalated` request), each with Accept /
   Refuse (a REQUIRED reason select, labels only) or, for a Pariwar Admin, Close and a link to the worker on Find (moving directly is 13.1c's act);
   (2) "Your requests" - opened by the officer, with Withdraw; (3) "Notices" - the officer's notices, newest first, unseen ones marked; showing a page
@@ -390,7 +398,8 @@ Kept as asked, so the decision entry (Task 0.3) can quote them.
 - **I3** - Nothing accepts a request but a District Admin of its counterpart district who did not open it; the sweep only escalates.
 - **I4** - At most one open request per worker; a move or an ending leaves none open (same transaction).
 - **I5** - Lock order: worker row, then request row - everywhere.
-- **I6** - No name, mobile or code in any new payload, audit field, notice, response (beyond the audited name of AD10), error, URL or email.
+- **I6** - No name, mobile or code in any new payload, audit field, notice, response (beyond the audited name and work history of AD10 as amended
+  by `-460` - still ⛔ mobile and code), error, URL or email. ⛔ Any suspension or ending reason, or any officer's name, in the detail's `worker` block.
 - **I7** - Every pre-read refusal writes no audit line; every committed act writes exactly one, before the COMMIT.
 - **I8** - The reach fence, the door's eleven exports, `check.test.ts`'s two fences and the staff-email fence hold with no new entry here (a new
   entry is the email row's, with its ADR).
@@ -440,7 +449,11 @@ NO request open still writes the two districts' notices. A rolled-back move leav
 
 **AC7 - Reading.** The list for a district returns requests where it is either end, keyset-paged (default 50, cap 100, clamped), open or closed; each
 item with the worker's name (decrypted behind ONE `field_worker.move_requests_viewed` audit line per page naming the workers), both districts, the
-opener's current display name or `null`, the state, the reason, the ages. One request's detail returns its events in `event_version` order. (a) A
+opener's current display name or `null`, the state, the reason, the ages. One request's detail returns its events in `event_version` order and
+(`-460`) a `worker` block - the name, registered on, active since, the current state, the districts with dates, the suspensions' dates,
+`members_onboarded: null` - behind ONE `field_worker.move_request_worker_viewed` audit line per view (audit-first: an audit failure returns
+no name), proved for a worker with a move and a suspension; ABSENCE legs: no reason code, no officer display name, no mobile, no code in the
+block (seed a suspension `under_review` and assert the string is nowhere in the body). (a) A
 District Admin of neither end -> 403 for both reads. (b) Absence: no mobile or code in any body; no name in the detail's events. (c) The notices read
 returns only the actor's own rows, keyset-paged (default 50, cap 100, clamped); `seen` sets `seen_at` once on the actor's own rows and ignores
 others' ids (no error, no change) - both proved with a second officer's notices in the same Pariwar (RLS does not separate them, AD9). (d) Both list
@@ -450,7 +463,7 @@ GETs declare a `limit` maximum of 100 and a `rateLimit` in the route table (`for
 count 13; `FIELD_WORKER_MOVE_PERMISSION_KEYS` gains `answer_move_request`; catalog fixtures updated.
 
 **AC9 - The screens (AD10).** RTL: the Move requests page's three sections; Accept / Refuse with a required reason; Withdraw on "Your requests";
-Close for an escalated one; notices with unseen marks and `FieldWorkerNav`'s count, and the seen POST for the shown ids; "Ask to move" on Find for
+Close for an escalated one; (`-460`) an item's detail panel with the work history and "Not counted yet" for members onboarded; notices with unseen marks and `FieldWorkerNav`'s count, and the seen POST for the shown ids; "Ask to move" on Find for
 `pending_kyc`, `active` and `suspended` workers only (none for `terminated`), its district select excluding the current one, its 403 line, its
 "gone to the Pariwar Admin" line on a 201 `escalated`; the accepted notice's "Tell the worker." line; one idempotency key per attempt;
 `networkMode: 'always'` on the new mutations and on approve / register (13.1c CR34, patch review). A real-browser pass (Task 9) in the dev
@@ -497,7 +510,7 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
     history with organization, number of member onboarded, etc. Keep the phone number out. / Q3 A"*. Decision `-459` (Trustee-ratified) committed
     alone `0ba691f0`; the note's status block; dated lines at Row 51 ((a) MET; (b) first half MET, second half OPEN) and Row 48 (i) (13.1d's
     contribution discharged); `epics.md`; `deferred-work.md` C4; ledger `2026-11-08h`.
-  - [ ] 0.8 **HALT before Task 6 - Q2's widening (BigDev's answers, then an author-commit amending `-458` AD10, AD11 if a column, AC9).** Decide:
+  - [x] 0.8 (2026-11-08, BigDev: "recommended"; decision `-460` `0a88cb40`, committed alone; Row 51 (b) MET; ledger `2026-11-08i`) **HALT before Task 6 - Q2's widening (BigDev's answers, then an author-commit amending `-458` AD10, AD11 if a column, AC9).** Decide:
     (i) what "work history with organization" shows the officer at the other end - the dates and districts only, or also each suspension's
     reason and the acting officers' names (the worker's own log holds both); (ii) the closed list behind "etc."; (iii) where it is read and
     audited (the request detail read, one audit line per view, is the default); (iv) the count of members onboarded before Story 13.8 can
@@ -518,13 +531,14 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
     `move_request_superseded`), AFTER `runLockedTransition` returns, on the same client - `activateFieldWorker`'s code-SMS shape (:375); ⛔ editing
     `runLockedTransition` (a failure there rolls back the caller's transaction whole). `posted`'s `permission_key` pinned (R2-D1). Update the
     guard-order header and the registry's `posted` description (drop "unverified until built").
-  - [ ] 2.5 `read.ts` (or `move-request-read.ts`): list (keyset, `clampLimit`), detail with events, notices page.
+  - [ ] 2.5 `read.ts` (or `move-request-read.ts`): list (keyset, `clampLimit`), detail with events, notices page; (`-460`) the worker's
+    work-history read from their own stream (types, versions, dates, districts only - ⛔ select a reason or an actor), bounded, `truncated` flag.
   - [ ] 2.6 Tests: unit (events, state table incl. `system` only on `escalated`); live (`tests/integration/field-worker/move-requests.spec.ts`: each
     act, the partial unique race, lock-order legs both ways, supersede from move and terminate, a rolled-back move, notices' recipients incl. "no
     recipient => no row" and "the actor excluded"). RED proof for each guard (mutate, see the assertion fail, restore).
 
 - [ ] **Task 3 - Contracts (AC: 7, 10)** - DTOs (`FieldWorkerMoveRequest`, `...Page`, `...Detail`, `Open...Request`, `Refuse...Request`,
-  `FieldWorkerNotice`, `...Page`, `MarkFieldWorkerNoticesSeenRequest`, the two list queries with `FieldWorkerLogQuery`'s clamp), the refusal and
+  `FieldWorkerNotice`, `...Page`, `MarkFieldWorkerNoticesSeenRequest`, the detail's `worker` block (`-460`: `members_onboarded` nullable), the two list queries with `FieldWorkerLogQuery`'s clamp), the refusal and
   notice-kind tuples re-declared with sync tests; `emit-openapi.ts`
   entries; regenerate `openapi/v1.yaml`; grep the contracts tests for broken fixtures ([[project_contracts_tests_outside_tsc]]).
 
@@ -533,13 +547,14 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
   `index.ts` header. Harness helpers (`openMoveRequest`, `accept`, `refuse`, `withdraw`, `close`, `notices`) and `cleanup` (the two tables before
   `field_workers`). Specs: `move-requests.spec.ts` (AC1-AC4, AC7 incl. 13.1a C2's legs), `move-request-race.spec.ts` (AC1 (d), AC2 (e)),
   `move-request-supersede.spec.ts` (AC6 through 13.1c's routes). Pre-read refusals: count `audit_log` rows for the locator, with a control. Route
-  review (13.2 C7): no door import, no re-export, no `requestContextStorage.run`, no `pariwarId =`.
+  review (13.2 C7): no door import, no re-export, no `requestContextStorage.run`, no `pariwarId =`. (`-460`) The detail handler writes
+  `field_worker.move_request_worker_viewed` before decrypting the name through `field-worker-crypto.ts`; an audit failure returns no name.
 
 - [ ] **Task 5 - The job (AC: 5)** - `field-worker-move-request-escalation.ts` + `register...Cron` + `boot.ts` (own pool); `apps/jobs/tests/` unit (tick
   outcomes, the Row 26 guard) and a live test (AC5 (a)). Mind the jobs pool ([[project_jobs_pool_two_connection_starvation]]).
 
 - [ ] **Task 6 - The screens (AC: 9)** - client + hooks (new mutations `networkMode: 'always'`; approve / register too - CR34); `MoveRequestsPage`,
-  `MoveRequestActions`, `NoticeList`, `FieldWorkerNav` (`'requests'` + count), the route in `router.tsx` + `routeTree`, "Ask to move" in
+  `MoveRequestActions`, `NoticeList`, (`-460`) the request's detail panel (work history; members onboarded "Not counted yet"), `FieldWorkerNav` (`'requests'` + count), the route in `router.tsx` + `routeTree`, "Ask to move" in
   `WorkerActions`; copy in `i18n-en.ts` (`fw.requests.*`, `fw.notices.*`, the refusal labels); `derive.ts` `BY_CODE` rows. RTL tests
   `apps/admin/tests/field-worker-move-requests.test.tsx`; update `field-worker-actions.test.tsx`, `field-worker-derive.test.ts` (walks the keys).
   Mind [[project_tanstack_onsettled_before_success]], [[project_query_gctime_blinds_removal_tests]].
@@ -651,3 +666,4 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 | 2026-11-08 | 1.2 | Q-1..Q-3 ANSWERED by BigDev, verbatim "Q1-Q3 A": the email is row `13-1g`'s (Task 7 not here); the Pariwar Admins are told of every refusal; ONE non-blocking Panel note with the three questions (Task 0.6). Propagated through AD1, AD9, AD12, AC3, Tasks 0.2-0.6 and 7, C1 and the variances; Task 0.2 done. |
 | 2026-11-08 | 1.3 | Task 0 done on BigDev's "go ahead": records `5dea5d89`; preflight clean; decision `-458` committed alone `d20eb1d5`; roster Row 51 + Row 48 (i) line + row `13-1g` and its `epics.md` stub `0b663d46`; `epics.md` 13.1d annotation (the supersession pointer); the Panel note written (E4 all pass), NOT sent. |
 | 2026-11-08 | 1.4 | The Panel note SENT and RULED (DR + KB, relayed by BigDev): Q1 A, Q2 A WIDENED (the name and "other details like work history with organization, number of member onboarded, etc.", never the phone number), Q3 A. Decision `-459` `0ba691f0`; section 0 edges 2-4 marked; AD10 carries the widening; Task 0.7 [x]; Task 0.8 (the widening's author-commit) owed before Task 6; C4 -> 13.8 (the count). |
+| 2026-11-08 | 1.5 | Task 0.8 done on BigDev's "recommended": decision `-460` `0a88cb40` amends `-458` AD10 - one request's DETAIL shows the name and a work history (registered on, active since, current state, districts with dates, suspensions' dates; no reason, no officer's name), members onboarded "Not counted yet" until 13.8; "etc." adds nothing; one audit line per detail view; the list keeps the name only; go-live does not wait for the count. AD10, I6, AC7, AC9, Tasks 2.5, 3, 4, 6 updated; Row 51 (b) MET. |

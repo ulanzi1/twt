@@ -7775,6 +7775,27 @@ a slip costs nobody anything, a worker ended unfairly has someone else to turn t
   who hears an appeal when the Pariwar Admin who ended the worker is the only one, the time limit for an appeal, and what the worker is told;
   what the link joins and who makes it; whether any of this reaches an ending for CONDUCT (Story 13.6's).
 
+### Story 13.1g: The District Admins Are Told of Each Field Worker Move Request, Answer, Escalation and Move by Email — Naming No One `[CONSUMER]`
+
+> ⚠ **Added 2026-11-08** by BigDev (*"Q1-Q3 A"* — Story 13.1d's Q-1, option A: the email in its own row), recorded in decision `2026-11-08-458`.
+> The row is `13-1g-field-worker-move-notices-by-email` (`backlog`). Needs Story 13.1d LANDED. **Its emails GATE 13.1d's go-live** (roster Row 51 (c) —
+> the Panel ruled the officers are told *"by email and in the admin console"*, `-443` Q1 A). Source: Story 13.1d AD1, AD9, G11 and its carried item C1.
+
+As a District Admin or a Pariwar Admin, I want an email when a field worker move request needs my answer, is answered, goes to the Pariwar Admin,
+is superseded, or when the Pariwar Admin moves a worker of mine, so that I do not have to keep opening the admin console to know.
+
+**Acceptance Criteria (in brief):**
+- **The ADR first.** An email to a District Admin is a FOURTH admin-email path: ADR-0040 (ratified `-358`) and ADR-0043 admit no other without a new
+  ADR. It names the recipient read (a District Admin by EXACT district grant; the Pariwar Admins as 6.25 reads them), the address read (the Q2
+  address for a third caller) and the fence entries — drafted and committed before any code.
+- **One email per notice row.** Over 13.1d's `field_worker_notices` rows (channel-neutral, written in the deciding transaction): a send table
+  keyed on `notice_id` (6.25's shape: once per notice, a held / parked sweep, `aging_since`), a jobs sender on `staff-email-client.ts`.
+- **Naming no one.** One bilingual template per notice kind with a link to the Move requests page and NO name, mobile, code or district beyond
+  what `-262` FQ3 A's shape admits; adding a field is a disclosure question for the Panel.
+- **The fence.** The four allowlists of `apps/jobs/tests/staff-email-identity-read-fence.test.ts` gain exactly this path's entries.
+- **Not decided — at create-story:** the wording of each email; whether a recipient may opt out; what happens to an email for a notice already
+  seen in the console.
+
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
 As Solo Builder authoring the attribution code allocation system,

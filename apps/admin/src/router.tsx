@@ -44,6 +44,7 @@ import { BannersRoute } from './routes/BannersRoute.js';
 import { ModuleDetailRoute, ModuleNewRoute, ModulesRoute, validateModuleDetailSearch, validateModuleNewSearch } from './routes/ModulesRoute.js';
 import { FieldWorkerApprovalsRoute } from './routes/FieldWorkerApprovalsRoute.js';
 import { FieldWorkerFindRoute } from './routes/FieldWorkerFindRoute.js';
+import { FieldWorkerMoveRequestsRoute } from './routes/FieldWorkerMoveRequestsRoute.js';
 import { FieldWorkerRegisterRoute } from './routes/FieldWorkerRegisterRoute.js';
 import { SurveysRoute } from './routes/SurveysRoute.js';
 import { FeatureFlagsRoute } from './routes/FeatureFlagsRoute.js';
@@ -243,6 +244,13 @@ const fieldWorkersApprovalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/field-workers/approvals',
   component: FieldWorkerApprovalsRoute,
+});
+
+// Story 13.1d (AD10) — the move requests between District Admins, and the officer's notices.
+const fieldWorkersRequestsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/field-workers/requests',
+  component: FieldWorkerMoveRequestsRoute,
 });
 
 // Story 10.15 — the tenant-scoped survey/poll console (list + authoring editor + the aggregate
@@ -498,6 +506,7 @@ const routeTree = rootRoute.addChildren([
   fieldWorkersFindRoute,
   fieldWorkersRegisterRoute,
   fieldWorkersApprovalsRoute,
+  fieldWorkersRequestsRoute,
   surveysRoute,
   reportsRoute,
   featureFlagsRoute,

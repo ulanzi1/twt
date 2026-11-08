@@ -59,7 +59,40 @@ const BY_CODE: Record<string, () => Guidance> = {
   // Story 13.1c — reachable from the acts (a move to the same district; an ending date outside the IST bounds).
   'field_worker.district_unchanged': () => ({ text: t('fw.err.districtUnchanged') }),
   'field_worker.ended_on_invalid': () => ({ text: t('fw.err.endedOnInvalid') }),
+  // Story 13.1d — the move requests (AD6).
+  'field_worker.move_request_open': () => ({ text: t('fw.ask.open') }),
+  'field_worker.move_request_not_open': () => ({ text: t('fw.requests.stale'), stale: true }),
+  'field_worker.move_request_same_officer': () => ({ text: t('fw.requests.sameOfficer') }),
+  'field_worker.move_request_not_opener': () => ({ text: t('fw.requests.notOpener') }),
+  'field_worker.move_request_not_found': () => ({ text: t('fw.err.notFound') }),
 };
+
+/** Story 13.1d — the acts on a move request (AD10). */
+export type RequestAct = 'ask' | 'accept' | 'refuse' | 'withdraw' | 'close';
+
+/** A move-request act's refusal: its OWN no-access line (403), else the shared rows (a stale request: `stale`, the list refreshed). */
+export function requestGuidance(error: unknown, act: RequestAct): Guidance {
+  if (error instanceof ApiError && error.status === 403) return { text: t(act === 'ask' ? 'fw.ask.noAccess' : `fw.requests.noAccess.${act}`), noAccess: true };
+  return fieldWorkerGuidance(error);
+}
+
+/** A refusal reason's label (never the code). */
+export function refusalLabel(code: string): string {
+  return t(`fw.refusal.${code}`);
+}
+
+/** A move request's state, as the lists show it. */
+export function requestStateLabel(state: string): string {
+  return t(`fw.requests.state.${state}`);
+}
+
+/** One notice's sentence — districts and codes only (a notice carries no name). */
+export function noticeText(n: { kind: string; from_district: string; to_district: string; refusal_reason: string | null }): string {
+  const base = { from: n.from_district, to: n.to_district };
+  return n.kind === 'move_request_refused'
+    ? t('fw.notices.kind.move_request_refused', { ...base, reason: n.refusal_reason === null ? t('fw.unknownError', { code: 'reason' }) : refusalLabel(n.refusal_reason) })
+    : t(`fw.notices.kind.${n.kind}`, base);
+}
 
 /** Story 13.1c (AD8) — the four acts on an opened worker. */
 export type WorkerAct = 'move' | 'suspend' | 'reactivate' | 'end';

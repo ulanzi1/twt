@@ -15,7 +15,11 @@ import {
   istDateOf,
   istTodayInBrowser,
   needsSignIn,
+  noticeText,
   reasonLabel,
+  refusalLabel,
+  requestGuidance,
+  requestStateLabel,
   spellDigits,
   stateLabel,
   type Surface,
@@ -25,8 +29,8 @@ import { FIELD_WORKER_EN_KEYS, resolveEn as t } from '../src/modules/field-worke
 describe('the copy (i18n-en.ts)', () => {
   it('every key resolves with its parameters and leaves no stray brace', () => {
     expect(FIELD_WORKER_EN_KEYS.length).toBeGreaterThan(40);
-    // Story 13.1c's keys add `district`, `role`, `from` and `to`.
-    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya' };
+    // Story 13.1c's keys add `district`, `role`, `from` and `to`; Story 13.1d's `count` and `state`.
+    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya', count: 2, state: 'Active' };
     for (const key of FIELD_WORKER_EN_KEYS) {
       const text = t(key, params);
       expect(text, key).not.toMatch(/[{}]/);
@@ -228,5 +232,36 @@ describe('an act’s 409s that say the panel is out of date are marked `stale` (
     expect(actGuidance(new ApiError(403, 'authz.forbidden', 'x'), 'end').stale).toBeUndefined();
     expect(actGuidance(new ApiError(503, 'down', 'x'), 'end').stale).toBeUndefined();
     expect(actGuidance(new TypeError('Failed to fetch'), 'end').stale).toBeUndefined();
+  });
+});
+
+// Story 13.1d (AD10) — the move requests' guidance and labels, through the REAL resolver.
+describe('Story 13.1d — move requests', () => {
+  it('every refusal reason, request state, notice kind and request event has its label (the contract tuples, walked)', async () => {
+    const c = await import('@twt/contracts');
+    for (const r of c.FIELD_WORKER_MOVE_REFUSAL_REASONS) expect(refusalLabel(r), r).not.toBe(r);
+    for (const s of c.FIELD_WORKER_MOVE_REQUEST_STATES) expect(requestStateLabel(s), s).toBeTruthy();
+    for (const k of c.FIELD_WORKER_NOTICE_KINDS) {
+      expect(noticeText({ kind: k, from_district: 'Patna', to_district: 'Gaya', refusal_reason: k === 'move_request_refused' ? 'no_capacity' : null }), k).toContain('Patna');
+    }
+    for (const e of c.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES) expect(t(`fw.requests.event.${e}`), e).toBeTruthy();
+  });
+
+  it('the accepted notice reminds the opener "Tell the worker." (-459 Q3 A); a refused one names the reason’s LABEL, never its code', () => {
+    expect(noticeText({ kind: 'move_request_accepted', from_district: 'Patna', to_district: 'Gaya', refusal_reason: null })).toMatch(/Tell the worker\.$/);
+    const refused = noticeText({ kind: 'move_request_refused', from_district: 'Patna', to_district: 'Gaya', refusal_reason: 'work_not_needed_here' });
+    expect(refused).toContain('There is no work for them here');
+    expect(refused).not.toContain('work_not_needed_here');
+  });
+
+  it('a 403 gives each act its own line; the 409s map to their guidance (a request moved on is `stale`)', () => {
+    expect(requestGuidance(new ApiError(403, 'authz.forbidden', 'x'), 'ask')).toMatchObject({ text: t('fw.ask.noAccess'), noAccess: true });
+    for (const act of ['accept', 'refuse', 'withdraw', 'close'] as const) {
+      expect(requestGuidance(new ApiError(403, 'authz.forbidden', 'x'), act).text).toBe(t(`fw.requests.noAccess.${act}`));
+    }
+    expect(requestGuidance(new ApiError(409, 'field_worker.move_request_not_open', 'x'), 'accept')).toMatchObject({ text: t('fw.requests.stale'), stale: true });
+    expect(requestGuidance(new ApiError(409, 'field_worker.move_request_same_officer', 'x'), 'accept').text).toBe(t('fw.requests.sameOfficer'));
+    expect(requestGuidance(new ApiError(409, 'field_worker.move_request_not_opener', 'x'), 'withdraw').text).toBe(t('fw.requests.notOpener'));
+    expect(requestGuidance(new ApiError(409, 'field_worker.move_request_open', 'x'), 'ask').text).toBe(t('fw.ask.open'));
   });
 });

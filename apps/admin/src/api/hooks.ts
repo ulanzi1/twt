@@ -3021,6 +3021,12 @@ export const fieldWorkersListKey = (pariwarId: string, state: import('@twt/contr
   [...fieldWorkersRoot(pariwarId), 'list', state, district === null ? (['all'] as const) : (['district', district] as const)] as const;
 export const fieldWorkerListsKey = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'list'] as const;
 export const fieldWorkerIdentityKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'identity', fieldWorkerId] as const;
+/** Story 13.1d — the move-request lists, one request (the detail panel) and the officer's notices. */
+export const fieldWorkerMoveRequestsRoot = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'move-requests'] as const;
+export const fieldWorkerMoveRequestsKey = (pariwarId: string, state: 'open' | 'closed', district: string | null) =>
+  [...fieldWorkerMoveRequestsRoot(pariwarId), 'list', state, district === null ? (['all'] as const) : (['district', district] as const)] as const;
+export const fieldWorkerMoveRequestKey = (pariwarId: string, moveRequestId: string) => [...fieldWorkerMoveRequestsRoot(pariwarId), 'one', moveRequestId] as const;
+export const fieldWorkerNoticesKey = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'notices'] as const;
 /** Story 13.1c — one worker's log (the history panel). */
 export const fieldWorkerLogKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'log', fieldWorkerId] as const;
 
@@ -3087,6 +3093,9 @@ export function useApproveFieldWorker(pariwarId: string) {
     void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
   };
   return useMutation({
+    // Story 13.1d (13.1c CR34, its patch review's `networkMode` finding): `'always'`, as every field-worker act — offline, an approval
+    // must fail at once as a retryable network error, ⛔ pause and then run on reconnect long after the officer gave up.
+    networkMode: 'always',
     mutationFn: (input: { fieldWorkerId: string; idempotencyKey: string }) => api.approveFieldWorker(pariwarId, input.fieldWorkerId, input.idempotencyKey),
     onSuccess: refreshLists,
     onError: (err) => {
@@ -3160,6 +3169,109 @@ export function useFieldWorkerAct(pariwarId: string) {
     },
     onError: (err, input) => {
       if (fieldWorkerListIsStale(err)) refresh(input.fieldWorkerId);
+    },
+  });
+}
+
+// ── Story 13.1d — the move requests and the officer's notices ──
+// The lists and the detail DECRYPT worker names (the detail also the work history), each with an audit line: ⛔ background refetching,
+// as the module's rule above. The notices carry no name; their first page is read when the page or the nav mounts — ⛔ polling (AD10).
+
+/** A list of move requests, a cursor page at a time — a district's (either end), or the Pariwar's (`district` null). */
+export function useFieldWorkerMoveRequests(pariwarId: string, state: 'open' | 'closed', district: string | null, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: fieldWorkerMoveRequestsKey(pariwarId, state, district),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      api.listFieldWorkerMoveRequests(pariwarId, { state, ...(district !== null ? { district } : {}), ...(pageParam !== undefined ? { cursor: pageParam } : {}) }),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    enabled,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/** One request with the worker's work history (`-460`) — mounted only while its panel is open; `gcTime: 0` drops it on close. */
+export function useFieldWorkerMoveRequest(pariwarId: string, moveRequestId: string) {
+  return useQuery({
+    queryKey: fieldWorkerMoveRequestKey(pariwarId, moveRequestId),
+    queryFn: () => api.getFieldWorkerMoveRequest(pariwarId, moveRequestId),
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
+}
+
+/** The officer's notices — the FIRST page (the nav's unseen count reads it too). */
+export function useFieldWorkerNotices(pariwarId: string) {
+  return useQuery({
+    queryKey: fieldWorkerNoticesKey(pariwarId),
+    queryFn: () => api.listFieldWorkerNotices(pariwarId),
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/** The 409s that say a move-request list on screen is stale: answered or moved on meanwhile, or the worker moved. */
+export function fieldWorkerMoveRequestIsStale(err: unknown): boolean {
+  return (
+    err instanceof ApiError &&
+    (err.code === 'field_worker.move_request_not_open' ||
+      err.code === 'field_worker.move_request_open' ||
+      err.code === 'field_worker.move_request_same_officer' ||
+      err.code === 'field_worker.authorization_stale')
+  );
+}
+
+/** What the move-request mutation takes: the act, and the key the page minted for this attempt. */
+export type FieldWorkerMoveRequestActInput =
+  | { act: 'open'; fieldWorkerId: string; idempotencyKey: string; body: { from_district: string; to_district: string } }
+  | { act: 'accept' | 'withdraw' | 'close'; moveRequestId: string; idempotencyKey: string }
+  | { act: 'refuse'; moveRequestId: string; idempotencyKey: string; reason: import('@twt/contracts').FieldWorkerMoveRefusalReason };
+
+/**
+ * Open / accept / refuse / withdraw / close (Story 13.1d AD10) — ONE mutation, `networkMode: 'always'` (13.1c CR34). On success, and on a
+ * 409 that says the screen is stale, the request lists, the notices and the worker lists refresh in the background (an acceptance moves
+ * the worker).
+ */
+export function useFieldWorkerMoveRequestAct(pariwarId: string) {
+  const qc = useQueryClient();
+  const refresh = (): void => {
+    void qc.invalidateQueries({ queryKey: fieldWorkerMoveRequestsRoot(pariwarId) });
+    void qc.invalidateQueries({ queryKey: fieldWorkerNoticesKey(pariwarId) });
+    void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
+  };
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (input: FieldWorkerMoveRequestActInput) => {
+      switch (input.act) {
+        case 'open':
+          return api.openFieldWorkerMoveRequest(pariwarId, input.fieldWorkerId, input.body, input.idempotencyKey);
+        case 'refuse':
+          return api.actOnFieldWorkerMoveRequest(pariwarId, input.moveRequestId, 'refuse', input.idempotencyKey, input.reason);
+        default:
+          return api.actOnFieldWorkerMoveRequest(pariwarId, input.moveRequestId, input.act, input.idempotencyKey);
+      }
+    },
+    onSuccess: refresh,
+    onError: (err) => {
+      if (fieldWorkerMoveRequestIsStale(err)) refresh();
+    },
+  });
+}
+
+/** Mark the shown notices seen; the notices refresh (the nav's count with them). A failure is silent — the marks stay unseen. */
+export function useMarkFieldWorkerNoticesSeen(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: (noticeIds: string[]) => api.markFieldWorkerNoticesSeen(pariwarId, noticeIds),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: fieldWorkerNoticesKey(pariwarId) });
     },
   });
 }

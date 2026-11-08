@@ -21,6 +21,7 @@ import type { ReactElement } from 'react';
 import { useRef, useState } from 'react';
 
 import { fieldWorkerIdentityKey, useFieldWorkers } from '../../api/hooks.js';
+import { AskToMove } from './AskToMove.js';
 import { CodeReveal } from './CodeReveal.js';
 import { DistrictPicker } from './DistrictPicker.js';
 import { FieldWorkerNav } from './FieldWorkerNav.js';
@@ -146,6 +147,8 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
                 externalStale={codeStale?.id === open ? codeStale.kind : null}
                 onStale={() => setStaleFor(open)}
               />
+              {/* Story 13.1d (AD10) — ask the other end's District Admin; withdrawn with the acts when the panel's copy is stale. */}
+              {staleFor !== open && <AskToMove pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} />}
               <WorkerHistory pariwarId={pariwarId} fieldWorkerId={open} />
             </>
           )}

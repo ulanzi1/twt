@@ -400,7 +400,12 @@ import {
   FieldWorkerLifecycleResult,
   FieldWorkerListResponse,
   FieldWorkerLog,
+  FieldWorkerMoveRequestDetail,
+  FieldWorkerMoveRequestPage,
+  FieldWorkerMoveRequestResult,
+  FieldWorkerNoticePage,
   RegisterFieldWorkerResponse,
+  type FieldWorkerMoveRefusalReason,
   type FieldWorkerState,
   type MoveFieldWorkerRequest,
   type RegisterFieldWorkerRequest,
@@ -3698,6 +3703,51 @@ export function reactivateFieldWorker(pariwarId: string, fieldWorkerId: string, 
 export function terminateFieldWorker(pariwarId: string, fieldWorkerId: string, body: TerminateFieldWorkerRequest, idempotencyKey: string) {
   return fieldWorkerAct(pariwarId, fieldWorkerId, 'terminate', body, idempotencyKey);
 }
+// ── Story 13.1d — the move requests (each write with an Idempotency-Key the PAGE mints per attempt) and the officer's notices ──
+
+/** Ask the other end's District Admin to take on or release a worker — 201; `state: 'escalated'` when nobody else holds that district. */
+export function openFieldWorkerMoveRequest(pariwarId: string, fieldWorkerId: string, body: { from_district: string; to_district: string }, idempotencyKey: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/move-requests`, FieldWorkerMoveRequestResult, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** Accept, withdraw or close a request (the body is `{}`), or refuse it with a reason from the fixed list. */
+export function actOnFieldWorkerMoveRequest(
+  pariwarId: string,
+  moveRequestId: string,
+  act: 'accept' | 'withdraw' | 'close' | 'refuse',
+  idempotencyKey: string,
+  reason?: FieldWorkerMoveRefusalReason,
+) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/move-requests/${encodeURIComponent(moveRequestId)}/${act}`, FieldWorkerMoveRequestResult, {
+    method: 'POST',
+    body: JSON.stringify(act === 'refuse' ? { reason_code: reason } : {}),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** One page of move requests — a district's at either end, or (no district) the Pariwar's; the worker's NAME decrypted (audited). */
+export function listFieldWorkerMoveRequests(pariwarId: string, opts: { state: 'open' | 'closed'; district?: string; cursor?: string }) {
+  const q = new URLSearchParams({ state: opts.state });
+  if (opts.district !== undefined) q.set('district', opts.district);
+  if (opts.cursor !== undefined) q.set('cursor', opts.cursor);
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/move-requests?${q.toString()}`, FieldWorkerMoveRequestPage, { cache: 'no-store' });
+}
+/** One request, its history, and the worker's name and work history (`-460`; an audited read). */
+export function getFieldWorkerMoveRequest(pariwarId: string, moveRequestId: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/move-requests/${encodeURIComponent(moveRequestId)}`, FieldWorkerMoveRequestDetail, { cache: 'no-store' });
+}
+/** The officer's own notices, newest first. */
+export function listFieldWorkerNotices(pariwarId: string, opts: { cursor?: string } = {}) {
+  const q = opts.cursor === undefined ? '' : `?${new URLSearchParams({ cursor: opts.cursor }).toString()}`;
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/notices${q}`, FieldWorkerNoticePage, { cache: 'no-store' });
+}
+/** Mark the officer's notices seen (204). */
+export function markFieldWorkerNoticesSeen(pariwarId: string, noticeIds: string[]): Promise<void> {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/notices/seen`, z.undefined(), { method: 'POST', body: JSON.stringify({ notice_ids: noticeIds }) });
+}
+
 /** One page of the worker's log, in event order; pass `next_after` back as `after`. No name, mobile or code; `no-store`. */
 export function getFieldWorkerLog(pariwarId: string, fieldWorkerId: string, opts: { after?: number } = {}) {
   const q = opts.after === undefined ? '' : `?${new URLSearchParams({ after: String(opts.after) }).toString()}`;

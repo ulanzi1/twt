@@ -2,8 +2,11 @@
 // worker and show their code. Story 13.1c adds, on an opened worker, the acts (`WorkerActions`) and the history (`WorkerHistory`). ⛔ `field-worker-dispatch/` — the architecture reserves that name for the dispatch surface (13.3).
 
 export { ApprovalsPage } from './ApprovalsPage.js';
+export { AskToMove } from './AskToMove.js';
 export { CodeReveal, CODE_VISIBLE_MS } from './CodeReveal.js';
 export { FindWorkerPage } from './FindWorkerPage.js';
+// Story 13.1d — the move requests page (with its detail panel and the notices) and "Ask to move" on an opened worker.
+export { MoveRequestsPage } from './MoveRequestsPage.js';
 export { RegisterFieldWorkerPage } from './RegisterFieldWorkerPage.js';
 export { WorkerActions } from './WorkerActions.js';
 export { WorkerDetail, type WorkerSummary } from './WorkerDetail.js';

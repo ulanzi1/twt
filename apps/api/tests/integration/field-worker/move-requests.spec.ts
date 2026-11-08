@@ -87,15 +87,18 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
     it('(c) pre-read refusals — a stale source, the same district, an open request already — each with NO audit line', async () => {
       const s = await setup();
       const before = (await linesOf(s.p, 'field_worker_move_request/')).length;
+      const requestEvents = () => q<{ n: number }>("SELECT count(*)::int AS n FROM events_log WHERE pariwar_id = $1 AND event_type LIKE 'field_worker_move_request.%'", [s.p]).then((r) => r[0]!.n);
       const stale = await h.openRequest(s.daG.client, s.p, s.worker, { from_district: 'Gaya', to_district: 'Patna' });
       expect([stale.statusCode, errOf(stale).code]).toEqual([409, 'field_worker.authorization_stale']);
       const same = await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Patna' });
       expect([same.statusCode, errOf(same).code]).toEqual([409, 'field_worker.district_unchanged']);
       expect((await linesOf(s.p, 'field_worker_move_request/')).length).toBe(before);
+      expect(await requestEvents()).toBe(0); // AC1 (c) — NO event either
       await opened(s.daP.client, s.p, s.worker);
       const again = await h.openRequest(s.daG.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya' });
       expect([again.statusCode, errOf(again).code]).toEqual([409, 'field_worker.move_request_open']);
       expect((await linesOf(s.p, 'field_worker_move_request/')).length).toBe(before + 1); // CONTROL — the one committed open
+      expect(await requestEvents()).toBe(1);
     });
 
     it('a terminated worker → 409 illegal_transition; an unlisted destination → 422 district_unknown (the opener holds the source)', async () => {
@@ -253,6 +256,10 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       expect((d.worker['districts'] as Json[]).map((x) => x['district'])).toEqual(['Patna']);
       expect(d.worker['suspensions'] as Json[]).toHaveLength(1);
       for (const banned of ['under_review', MOBILE_DIGITS, 'Meera Pariwar-Admin', 'reason']) expect(JSON.stringify(d.worker), banned).not.toContain(banned);
+      // AC7 (b) — no code anywhere in the body (the worker is active: they HAVE one).
+      const code = (await q<{ code: string }>('SELECT code FROM field_worker_attribution_codes WHERE field_worker_id = $1', [s.worker]))[0]!.code;
+      expect(r.body).not.toContain(code);
+      expect(r.body).not.toContain(MOBILE_DIGITS);
       const viewed = (await linesOf(s.p, `field_worker_move_request/${id}/field_worker/`)).map((l) => [l.action, l.actor_id]);
       expect(viewed).toEqual([['field_worker.move_request_worker_viewed', s.daG.userId]]);
       const daN = await h.actor(s.p, 'district_admin', 'district', 'Nalanda');

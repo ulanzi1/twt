@@ -63,18 +63,28 @@ export interface WorkerActionsProps {
   worker: WorkerSummary;
   /** Called when a 409 says the panel's copy of the worker is out of date, so the panel can withdraw what depends on it ("Show code"). */
   onStale?: () => void;
+  /**
+   * Another part of the panel learned its copy of the worker is out of date — "Show code" met a 409 `code_not_available` (`'state'`: no
+   * longer active) or `authorization_stale` (`'moved'`): the acts are withdrawn as after their own 409, with the matching line, so none
+   * is offered for a status or district the worker no longer has (review R2-5, RP-2; `-457` item 2 (k)). Announced POLITELY: the code's
+   * own refusal, an alert, says it first (RP-3). ⛔ `onStale` is not called back — the code's line stays. Ignored while this panel's own
+   * act is saving: that act may be what changed the worker, and its 200 updates the panel (RP-1).
+   */
+  externalStale?: 'state' | 'moved' | null;
 }
 
-export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale }: WorkerActionsProps): ReactElement {
+export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale, externalStale = null }: WorkerActionsProps): ReactElement {
   const mutation = useFieldWorkerAct(pariwarId);
   const [open, setOpen] = useState<WorkerAct | null>(null);
   const [reason, setReason] = useState('');
   const [toDistrict, setToDistrict] = useState('');
   const [endedOn, setEndedOn] = useState('');
   const [busy, setBusy] = useState(false);
+  /** `busy` for the effect below, which must not re-run when it changes. */
+  const busyRef = useRef(false);
   const [problem, setProblem] = useState<Guidance | null>(null);
   /** The panel's copy of the worker is out of date (a 409): the acts are withdrawn until the worker is reopened. */
-  const [stale, setStale] = useState<string | null>(null);
+  const [stale, setStale] = useState<{ text: string; polite: boolean } | null>(null);
   const [announce, setAnnounce] = useState<string | null>(null);
   const attempt = useRef<AttemptKey | null>(null);
   const firstField = useRef<HTMLSelectElement>(null);
@@ -102,6 +112,16 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
     setProblem(null);
     setAnnounce(null);
   };
+  useEffect(() => {
+    if (externalStale === null || busyRef.current) return;
+    // An open form unmounts with focus in it: focus the heading first, as the act's own 409 does (RP-1).
+    focusIfUnclaimed(titleRef.current, formRef.current);
+    attempt.current = null;
+    setOpen(null);
+    setProblem(null);
+    setAnnounce(null);
+    setStale((s) => s ?? { text: t(externalStale === 'moved' ? 'fw.actions.moved' : 'fw.actions.stateChanged'), polite: true });
+  }, [externalStale]);
   // The confirm's first field takes focus when an act opens (Reactivate has none: its Confirm does).
   useEffect(() => {
     if (open !== null) (firstField.current ?? confirmRef.current)?.focus();
@@ -110,6 +130,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
   const clearValueProblem = (): void => setProblem((p) => (p !== null && (p.noAccess === true || p.signIn === true) ? p : null));
   /** Entering or leaving "Died" restarts the End date at that reason's own starting point: none for a death, today for the rest (`-456`). */
   const chooseReason = (next: string): void => {
+    if (busy) return; // the fields are held while an act saves (see `held` below)
     if (open === 'end' && (next === 'died') !== (reason === 'died')) setEndedOn(next === 'died' ? '' : defaultEndDate(worker.created_at));
     setReason(next);
     clearValueProblem();
@@ -121,6 +142,14 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
     setOpen(null);
     setProblem(null);
   };
+
+  /**
+   * While an act saves, its fields are HELD: an edit then would not be what was sent, yet the form would show it (review R2-2). Held as
+   * Confirm is, `aria-disabled` and a change that is ignored, ⛔ `disabled`: Enter in the date or the typed district submits with focus
+   * in that field, and a disabled field loses it. ⚠ Only while it saves: after a failure the fields are editable, and an EDITED body is a
+   * new attempt with a new key (`attemptKey`, round 1 CR20) — if the first had committed, the server refuses the second (RP-9).
+   */
+  const held = busy || undefined;
 
   const ready = open !== null && (open === 'reactivate' || reason !== '') && (open !== 'move' || toDistrict.trim() !== '') && (open !== 'end' || endedOn !== '');
 
@@ -145,6 +174,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
     const built = draft(act);
     const key = attemptKey(attempt, { ...built, idempotencyKey: undefined });
     setBusy(true);
+    busyRef.current = true;
     setProblem(null);
     setAnnounce(null);
     let result: Awaited<ReturnType<typeof mutation.mutateAsync>>;
@@ -156,7 +186,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
       if (g.stale === true) {
         focusIfUnclaimed(titleRef.current, formRef.current);
         setOpen(null);
-        setStale(g.text);
+        setStale({ text: g.text, polite: false });
         onStale?.();
       } else {
         setProblem(g);
@@ -164,6 +194,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
       return;
     } finally {
       setBusy(false);
+      busyRef.current = false;
     }
     // Only a request that FAILED reaches the catch above: nothing below can make a committed act read as a failed one (review PR6).
     attempt.current = null;
@@ -188,8 +219,8 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
         {announce !== null && <p className="text-sm text-status-ok-fg">{announce}</p>}
       </div>
       {stale !== null && (
-        <div role="alert" className="flex flex-col gap-1 text-sm text-status-fail-fg" data-testid="fw-actions-stale">
-          <p data-testid="fw-actions-stale-text">{stale}</p>
+        <div role={stale.polite ? 'status' : 'alert'} className="flex flex-col gap-1 text-sm text-status-fail-fg" data-testid="fw-actions-stale">
+          <p data-testid="fw-actions-stale-text">{stale.text}</p>
           <p>{t('fw.actions.reopen')}</p>
         </div>
       )}
@@ -258,6 +289,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
                 required
                 value={reason}
                 aria-describedby={introId}
+                aria-disabled={held}
                 onChange={(e) => chooseReason(e.target.value)}
                 data-testid="fw-act-reason"
               >
@@ -285,6 +317,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
               pariwarId={pariwarId}
               current={worker.district}
               value={toDistrict}
+              held={busy}
               onChange={(d) => {
                 setToDistrict(d);
                 clearValueProblem();
@@ -300,7 +333,9 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
                 value={endedOn}
                 min={istDateOf(worker.created_at)}
                 max={END_DATE_MAX}
+                aria-disabled={held}
                 onChange={(e) => {
+                  if (busy) return;
                   setEndedOn(e.target.value);
                   clearValueProblem();
                 }}
@@ -342,7 +377,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale 
  * the read says `districts_truncated` (more than can be listed) an exact-text field is offered as well, as `DistrictPicker` does: a
  * district past the list can still be chosen, sent byte for byte, and judged by the server (review CR28).
  */
-function MoveDistrict({ pariwarId, current, value, onChange }: { pariwarId: string; current: string; value: string; onChange: (d: string) => void }): ReactElement {
+function MoveDistrict({ pariwarId, current, value, held, onChange }: { pariwarId: string; current: string; value: string; held: boolean; onChange: (d: string) => void }): ReactElement {
   const districts = useFieldWorkerDistricts(pariwarId);
   const [typed, setTyped] = useState('');
   const typedId = useId();
@@ -362,7 +397,9 @@ function MoveDistrict({ pariwarId, current, value, onChange }: { pariwarId: stri
           <select
             required={typed === ''}
             value={typed === '' ? value : ''}
+            aria-disabled={held || undefined}
             onChange={(e) => {
+              if (held) return; // held while the move saves (review R2-2)
               setTyped('');
               onChange(e.target.value);
             }}
@@ -387,7 +424,9 @@ function MoveDistrict({ pariwarId, current, value, onChange }: { pariwarId: stri
             value={typed}
             maxLength={DISTRICT_MAX_LENGTH}
             aria-describedby={hintId}
+            aria-disabled={held || undefined}
             onChange={(e) => {
+              if (held) return;
               setTyped(e.target.value);
               onChange(e.target.value);
             }}

@@ -119,7 +119,7 @@ const EN: Record<string, string> = {
   'fw.find.state.active': 'Active',
   'fw.find.state.suspended': 'Suspended',
   'fw.find.state.terminated': 'Ended',
-  'fw.find.empty.pending_kyc': 'No workers waiting for approval in this district.',
+  'fw.find.empty.pending_kyc': 'No workers awaiting approval in this district.',
   'fw.find.empty.suspended': 'No suspended workers in this district.',
   'fw.find.empty.terminated': 'No ended workers in this district.',
   'fw.find.check': 'Check details',
@@ -176,7 +176,7 @@ const EN: Record<string, string> = {
   'fw.actions.moved': 'This worker was moved by someone else while you were working. Reload to see their district.',
   'fw.actions.stateChanged': 'This worker’s status has changed since you opened them.',
   // Shown under either stale line (`moved` is AD8's, verbatim): nothing in the panel reloads, and the acts are withdrawn until the worker is reopened.
-  'fw.actions.reopen': 'Close this panel and open the worker again to see their current details.',
+  'fw.actions.reopen': 'Close this panel and find the worker again to see their current details. They may now be listed under another status, or moved to a district you cannot open.',
 
   // ── Reasons — labels, never codes ──
   'fw.reason.under_review': 'Under review',
@@ -197,6 +197,7 @@ const EN: Record<string, string> = {
   'fw.history.moreShownOne': '1 more entry shown.',
   'fw.history.noMore': 'No more entries.',
   'fw.history.moreError': 'Could not load more of the history. Try again.',
+  'fw.history.moved': 'This worker was moved to another district while their history was loading. Try again.',
   'fw.history.noAccess': 'You do not have access to this worker’s history. A District Admin can see it only in the worker’s own district.',
   'fw.history.by': 'by {name}, {role}',
   // AD7 — a missing or blank display name; ⛔ an email.

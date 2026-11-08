@@ -45,4 +45,5 @@ export {
   FieldWorkerLogQuery,
   FieldWorkerLogItem,
   FieldWorkerLog,
+  FIELD_WORKER_LOG_MAX_LIMIT,
 } from './dto.js';

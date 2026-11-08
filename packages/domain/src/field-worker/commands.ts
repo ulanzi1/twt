@@ -163,7 +163,8 @@ function verifiedSnapshot(
   eventType: FieldWorkerEventType,
   authorization: unknown,
   i: { pariwarId: string; actorId: string },
-  expected: { permissionKey?: string; permissionKeys?: readonly string[]; targetValue?: string },
+  // ONE of the two is REQUIRED (review R2-13): with neither, any verified district-dimension key would be accepted (the hole `post` had).
+  expected: ({ permissionKey: string; permissionKeys?: never } | { permissionKeys: readonly string[]; permissionKey?: never }) & { targetValue?: string },
 ): FieldWorkerAuthorizationSnapshot {
   if (!isVerifiedAuthorization(authorization)) {
     throw new FieldWorkerProjectorInputError(
@@ -171,6 +172,10 @@ function verifiedSnapshot(
     );
   }
   const a: VerifiedAuthorization = authorization;
+  // The type requires one of the two keys; a cast or a loosely typed `expected` must not slip past it at runtime either (review RP-7).
+  if (expected.permissionKey === undefined && expected.permissionKeys === undefined) {
+    throw new FieldWorkerProjectorInputError(`[${eventType}] no expected permission key was named for this act (QE18)`);
+  }
   if (a.pariwarId !== i.pariwarId || a.actorId !== i.actorId) {
     throw new FieldWorkerProjectorInputError(`[${eventType}] the authorization is for another Pariwar or actor (QE18)`);
   }

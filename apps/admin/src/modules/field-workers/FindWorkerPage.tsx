@@ -37,6 +37,8 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
   const [open, setOpenState] = useState<string | null>(null);
   /** The panel whose acts met a 409 that says its copy of the worker is out of date: "Show code" goes with them (review PR11). */
   const [staleFor, setStaleFor] = useState<string | null>(null);
+  /** The panel whose "Show code" met a 409 saying its copy is out of date (not active, or moved): its acts go too (review R2-5, RP-2). */
+  const [codeStale, setCodeStale] = useState<{ id: string; kind: 'state' | 'moved' } | null>(null);
   const list = useFieldWorkers(pariwarId, state, district, district !== null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   // The panel open NOW — the handlers compare against this, not against the render they were created in.
@@ -46,6 +48,7 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
   const setOpen = (id: string | null): void => {
     openRef.current = id;
     setStaleFor(null); // a panel opened afresh reads the worker afresh
+    setCodeStale(null);
     setOpenState(id);
   };
   /** No decrypted identity outlives its panel: the explicit removal (the hook's `gcTime: 0` is only the backstop). */
@@ -134,8 +137,15 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
           {(name, worker) => (
             <>
               {/* Only an ACTIVE worker's code can be read (13.1a); a suspend or an end unmounts a code on screen (review CR26). */}
-              {worker.current_state === 'active' && staleFor !== open && <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} />}
-              <WorkerActions pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} onStale={() => setStaleFor(open)} />
+              {worker.current_state === 'active' && staleFor !== open && <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} onStateChanged={(kind) => setCodeStale({ id: open, kind })} />}
+              <WorkerActions
+                pariwarId={pariwarId}
+                fieldWorkerId={open}
+                name={name}
+                worker={worker}
+                externalStale={codeStale?.id === open ? codeStale.kind : null}
+                onStale={() => setStaleFor(open)}
+              />
               <WorkerHistory pariwarId={pariwarId} fieldWorkerId={open} />
             </>
           )}

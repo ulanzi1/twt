@@ -16,7 +16,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { useFieldWorkerLog } from '../../api/hooks.js';
 import { focusIfUnclaimed } from '../marketplace/focus.js';
-import { fieldWorkerGuidance, formatIstDate, formatIstDateTime, needsSignIn, reasonLabel, roleLabel } from './derive.js';
+import { formatIstDate, formatIstDateTime, historyGuidance, needsSignIn, reasonLabel, roleLabel } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -28,11 +28,14 @@ export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string;
   const ids = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const moreButton = useRef<HTMLButtonElement | null>(null);
+  /** A "Load more" an act's refresh cancelled: "Load more" takes focus back once the refresh has settled and it can hold it (RP-4). */
+  const refocusMore = useRef(false);
+  const [refocusTick, setRefocusTick] = useState(0); // re-runs the effect when the refresh had already settled by then
   const entryRefs = useRef(new Map<number, HTMLLIElement>());
   useSignInRedirect(log.isError && needsSignIn(log.error));
 
   const items = log.data?.pages.flatMap((p) => p.items) ?? [];
-  const g = log.isError ? fieldWorkerGuidance(log.error, 'history') : null;
+  const g = log.isError ? historyGuidance(log.error) : null;
   const moreFailed = log.isFetchNextPageError;
 
   // The new entries are in the DOM when this runs: focus the first (a `li` with `tabIndex={-1}`), the heading if there was none.
@@ -41,6 +44,11 @@ export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string;
     const target = revealed.firstVersion === null ? titleRef.current : (entryRefs.current.get(revealed.firstVersion) ?? titleRef.current);
     focusIfUnclaimed(target, moreButton.current);
   }, [revealed]);
+  useEffect(() => {
+    if (!refocusMore.current || log.isFetching) return;
+    refocusMore.current = false;
+    focusIfUnclaimed(moreButton.current, moreButton.current);
+  }, [log.isFetching, refocusTick]);
 
   const loadMore = (e: MouseEvent<HTMLButtonElement>): void => {
     const before = items.length;
@@ -48,13 +56,23 @@ export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string;
     setRevealed(null);
     void log.fetchNextPage().then((r) => {
       if (r.isFetchNextPageError) {
-        // The failure is said beside the button; the pressed (disabled while fetching) button gets focus back if nothing else has it.
-        focusIfUnclaimed(moreButton.current, moreButton.current);
+        // The failure is said beside the button; the pressed (disabled while fetching) button gets focus back if nothing else has it —
+        // or, when no retry can help (the button stays disabled), the heading does (review R2-3).
+        const retryable = historyGuidance(r.error).retryable === true;
+        focusIfUnclaimed(retryable ? moreButton.current : titleRef.current, moreButton.current);
         return;
       }
       const after = r.data?.pages.flatMap((p) => p.items) ?? [];
-      const n = Math.max(0, after.length - before); // a refetch of every page can reshape the list under the count: never negative
-      setRevealed({ n, firstVersion: n === 0 ? null : (after[before]?.event_version ?? null) });
+      const first = after[before];
+      // As `WorkerList`'s: "No more entries." only when the stream has truly ended. A page that never arrived (an act's refresh of the
+      // pages cancels a next page in flight, and the cancelled fetch resolves with the old pages) says nothing (review R2-4).
+      if (first !== undefined) setRevealed({ n: after.length - before, firstVersion: first.event_version });
+      else if (!r.hasNextPage) setRevealed({ n: 0, firstVersion: null });
+      else {
+        // The page never arrived: say nothing, but give focus back (it fell when the button disabled).
+        refocusMore.current = true;
+        setRefocusTick((k) => k + 1);
+      }
     });
   };
 
@@ -130,8 +148,10 @@ export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string;
         </ol>
       )}
       {moreFailed && (
+        // As `WorkerList`'s: "Try again" only when trying again can help; else what the server said (the history's no-access line, say),
+        // ⛔ an invitation to press a button that stays disabled (review R2-3).
         <p role="alert" className="text-sm text-status-fail-fg" data-testid="fw-history-more-error">
-          {t('fw.history.moreError')}
+          {g === null || g.retryable === true ? t('fw.history.moreError') : g.text}
         </p>
       )}
       {log.hasNextPage && (

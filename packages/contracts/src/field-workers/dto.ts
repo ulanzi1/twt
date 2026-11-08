@@ -185,8 +185,8 @@ export const FieldWorkerLifecycleResult = z
   .strict();
 export type FieldWorkerLifecycleResult = z.output<typeof FieldWorkerLifecycleResult>;
 
-/** The log's page cap (AD7) — the domain's `LIST_FIELD_WORKER_EVENTS_MAX_LIMIT`. */
-const FIELD_WORKER_LOG_MAX_LIMIT = 100;
+/** The log's page cap (AD7) — the domain's `LIST_FIELD_WORKER_EVENTS_MAX_LIMIT`, bound by the contracts sync-guard test (review R2-11). */
+export const FIELD_WORKER_LOG_MAX_LIMIT = 100;
 
 /**
  * `GET …/:fieldWorkerId/log` query. `after` — the last `event_version` seen (0 or absent: from the start). `limit` 1–100 (default 50):

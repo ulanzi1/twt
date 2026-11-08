@@ -185,6 +185,48 @@ describe('WorkerHistory', () => {
     expect(screen.queryByTestId('fw-history-error')).toBeNull();
   });
 
+  it('R2-3: a "Load more" refused for good (403) says the history’s no-access line - ⛔ "Try again" beside a button that stays disabled - and focus rests on the heading', async () => {
+    getFieldWorkerLog.mockResolvedValueOnce({ items: [item(1), item(2)], next_after: 2 });
+    getFieldWorkerLog.mockRejectedValueOnce(new ApiError(403, 'authz.forbidden', 'no'));
+    renderHistory();
+    fireEvent.click(screen.getByTestId('fw-history-show'));
+    await waitFor(() => expect(screen.getAllByTestId('fw-history-item')).toHaveLength(2));
+    screen.getByTestId('fw-history-more').focus();
+    fireEvent.click(screen.getByTestId('fw-history-more'));
+    expect((await screen.findByTestId('fw-history-more-error')).textContent).toBe(t('fw.history.noAccess'));
+    expect((screen.getByTestId('fw-history-more') as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'History' })));
+  });
+
+  it('R2-4: a "Load more" cancelled by an act’s refresh of the pages says NOTHING - ⛔ "No more entries." while more remain', async () => {
+    let release: (v: unknown) => void = () => undefined;
+    getFieldWorkerLog.mockResolvedValueOnce({ items: [item(1), item(2)], next_after: 2 });
+    getFieldWorkerLog.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    getFieldWorkerLog.mockResolvedValue({ items: [item(1), item(2)], next_after: 2 });
+    const qc = renderHistory();
+    fireEvent.click(screen.getByTestId('fw-history-show'));
+    await waitFor(() => expect(screen.getAllByTestId('fw-history-item')).toHaveLength(2));
+    fireEvent.click(screen.getByTestId('fw-history-more'));
+    await waitFor(() => expect(getFieldWorkerLog).toHaveBeenCalledTimes(2));
+    await qc.invalidateQueries({ queryKey: fieldWorkerLogKey(P, W) }); // what an act's `refresh` does - it cancels the next page in flight
+    release({ items: [item(3)], next_after: null }); // the cancelled page's answer arrives late and is dropped
+    await waitFor(() => expect((screen.getByTestId('fw-history-more') as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.queryByTestId('fw-history-revealed')).toBeNull();
+    expect(screen.getAllByTestId('fw-history-item')).toHaveLength(2);
+    // RP-4 (focus back to "Load more" once the refresh settles) is NOT asserted: jsdom keeps focus on a disabled button and will not
+    // blur it, so no leg here can see focus fall - and one that passes either way would be vacuous. Unproven until a browser pass.
+  });
+
+  it('R2-6: a first load refused 409 authorization_stale (a move landed between the gate and the read) offers Retry with the history’s own line - ⛔ "Reload"', async () => {
+    getFieldWorkerLog.mockRejectedValueOnce(new ApiError(409, 'field_worker.authorization_stale', 'moved')).mockResolvedValueOnce({ items: [item(1)], next_after: null });
+    renderHistory();
+    fireEvent.click(screen.getByTestId('fw-history-show'));
+    expect((await screen.findByTestId('fw-history-error')).textContent).toBe(t('fw.history.moved'));
+    expect(t('fw.history.moved')).not.toMatch(/reload/i);
+    fireEvent.click(screen.getByTestId('fw-history-retry'));
+    await waitFor(() => expect(screen.getAllByTestId('fw-history-item')).toHaveLength(1));
+  });
+
   it('a 403 shows the history’s own no-access line', async () => {
     getFieldWorkerLog.mockRejectedValue(new ApiError(403, 'authz.forbidden', 'no'));
     renderHistory();

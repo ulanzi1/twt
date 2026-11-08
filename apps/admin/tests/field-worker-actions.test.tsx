@@ -38,6 +38,7 @@ const suspendFieldWorker = vi.fn();
 const reactivateFieldWorker = vi.fn();
 const terminateFieldWorker = vi.fn();
 const getFieldWorkerLog = vi.fn();
+const readFieldWorkerCode = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -50,6 +51,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     reactivateFieldWorker: (...a: unknown[]) => reactivateFieldWorker(...a),
     terminateFieldWorker: (...a: unknown[]) => terminateFieldWorker(...a),
     getFieldWorkerLog: (...a: unknown[]) => getFieldWorkerLog(...a),
+    readFieldWorkerCode: (...a: unknown[]) => readFieldWorkerCode(...a),
   };
 });
 
@@ -61,10 +63,12 @@ const { createQueryClient } = await import('../src/api/hooks.js');
 const P = '11111111-1111-4111-8111-111111111111';
 const W = '00000000-0000-4000-8000-000000000001';
 type State = 'pending_kyc' | 'active' | 'suspended' | 'terminated';
+/** The district the worker is in NOW (a move behind the panel changes it). */
+let where = 'Patna';
 const row = (state: State = 'active') => ({
   field_worker_id: W,
   name: 'Ramesh Kumar',
-  district: 'Patna',
+  district: where,
   current_state: state,
   kyc_status: state === 'pending_kyc' ? 'pending' : 'completed',
   registered_by_display: 'Asha Verma',
@@ -83,10 +87,16 @@ const result = (o: Partial<{ district: string; current_state: State; state_reaso
 
 let state: State = 'active';
 beforeEach(() => {
-  for (const fn of [listFieldWorkers, getFieldWorkerIdentity, getFieldWorkerDistricts, moveFieldWorker, suspendFieldWorker, reactivateFieldWorker, terminateFieldWorker, getFieldWorkerLog]) fn.mockReset();
+  for (const fn of [listFieldWorkers, getFieldWorkerIdentity, getFieldWorkerDistricts, moveFieldWorker, suspendFieldWorker, reactivateFieldWorker, terminateFieldWorker, getFieldWorkerLog, readFieldWorkerCode]) fn.mockReset();
   state = 'active';
+  where = 'Patna';
   getFieldWorkerDistricts.mockResolvedValue({ districts: ['Gaya', 'Nalanda', 'Patna'], districts_truncated: false });
-  listFieldWorkers.mockImplementation(async () => ({ items: [row(state)], next_cursor: null }));
+  // The list FILTERS by status and district as the route does: a worker whose status or district changed leaves the list on screen
+  // (review R2-1, RP-5 - a mock that ignored the filter let PR3 reopen a suspended worker from the Active list, which the real page cannot).
+  listFieldWorkers.mockImplementation(async (_p: string, o?: { state?: State; district?: string }) => ({
+    items: (o?.state === undefined || o.state === state) && (o?.district === undefined || o.district === where) ? [row(state)] : [],
+    next_cursor: null,
+  }));
   getFieldWorkerIdentity.mockImplementation(async () => identity(state));
 });
 
@@ -321,7 +331,8 @@ describe('submitting an act', () => {
     choose('fw-act-reason', 'under_review');
     fireEvent.click(confirm());
     expect((await screen.findByTestId('fw-actions-stale-text')).textContent).toBe('This worker was moved by someone else while you were working. Reload to see their district.');
-    expect(screen.getByTestId('fw-actions-stale').textContent).toContain('Close this panel and open the worker again');
+    expect(screen.getByTestId('fw-actions-stale').textContent).toContain(t('fw.actions.reopen'));
+    expect(t('fw.actions.reopen')).toBe('Close this panel and find the worker again to see their current details. They may now be listed under another status, or moved to a district you cannot open.'); // `-457` item 1
     expect(screen.getByTestId('fw-actions-stale').getAttribute('role')).toBe('alert');
     expect(actButtons()).toEqual([]);
     expect(screen.queryByTestId('fw-act-suspend-form')).toBeNull();
@@ -416,8 +427,9 @@ describe('patch-review round (PR1-PR11)', () => {
     expect(screen.getByTestId('fw-act-error').textContent).toBe(t('fw.actions.noAccess.suspend'));
   });
 
-  it('PR3: the way out the stale line names WORKS - Close, then open the worker again: a fresh identity read shows the true state, its acts and no stale lock', async () => {
+  it('PR3: the way out the stale line names WORKS - Close, then FIND the worker again under their new status: a fresh identity read shows the true state, its acts and no stale lock', async () => {
     await openWorker('active');
+    state = 'suspended'; // someone else suspended the worker meanwhile - so the 409's refresh of the lists drops them from Active
     suspendFieldWorker.mockRejectedValueOnce(new ApiError(409, 'field_worker.illegal_transition', 'no'));
     fireEvent.click(screen.getByTestId('fw-act-suspend'));
     choose('fw-act-reason', 'under_review');
@@ -425,9 +437,11 @@ describe('patch-review round (PR1-PR11)', () => {
     await screen.findByTestId('fw-actions-stale');
     // PR11: the stale copy's "Show code" is withdrawn with the acts (it was offered because the copy said "active").
     expect(screen.queryByTestId('fw-code-show')).toBeNull();
-    state = 'suspended'; // someone else suspended the worker meanwhile
     fireEvent.click(screen.getByTestId('fw-detail-close'));
     await waitFor(() => expect(screen.queryByTestId('fw-detail')).toBeNull());
+    // R2-1: the Active list no longer holds them - "open the worker again" from here is impossible, which is why the line says where to look.
+    await waitFor(() => expect(screen.queryByTestId('fw-find-check')).toBeNull());
+    fireEvent.change(screen.getByTestId('fw-find-state'), { target: { value: 'suspended' } });
     fireEvent.click(await screen.findByTestId('fw-find-check'));
     await screen.findByTestId('fw-actions');
     expect(getFieldWorkerIdentity).toHaveBeenCalledTimes(2);
@@ -552,6 +566,153 @@ describe('"Show code" is offered only for an ACTIVE worker (review CR26)', () =>
     choose('fw-act-reason', 'under_review');
     fireEvent.click(confirm());
     await waitFor(() => expect(screen.queryByTestId('fw-code-show')).toBeNull());
+  });
+});
+
+describe('code review round 2 (R2-2, R2-5, R2-8)', () => {
+  it('R2-2: while an act saves, its fields are HELD - an edit is ignored (aria-disabled), so what was sent is what the form shows', async () => {
+    await openWorker('active');
+    let release: (v: ReturnType<typeof result>) => void = () => undefined;
+    terminateFieldWorker.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    fireEvent.click(screen.getByTestId('fw-act-end'));
+    choose('fw-act-reason', 'died');
+    choose('fw-act-ended-on', '2026-11-05');
+    fireEvent.click(confirm());
+    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toContain(t('fw.actions.saving')));
+    for (const id of ['fw-act-reason', 'fw-act-ended-on']) expect(screen.getByTestId(id).getAttribute('aria-disabled'), id).toBe('true');
+    choose('fw-act-ended-on', '2026-11-06');
+    choose('fw-act-reason', 'left_voluntarily');
+    expect((screen.getByTestId('fw-act-ended-on') as HTMLInputElement).value).toBe('2026-11-05');
+    expect((screen.getByTestId('fw-act-reason') as HTMLSelectElement).value).toBe('died');
+    expect(terminateFieldWorker).toHaveBeenCalledWith(P, W, { reason_code: 'died', ended_on: '2026-11-05' }, expect.any(String));
+    release(result({ current_state: 'terminated', state_reason_code: 'died', ended_on: '2026-11-05' }));
+    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(t('fw.actions.done.end', { name: 'Ramesh Kumar' })));
+  });
+
+  it('R2-2: Move’s district is held too while the move saves', async () => {
+    await openWorker('active');
+    let release: (v: ReturnType<typeof result>) => void = () => undefined;
+    moveFieldWorker.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    fireEvent.click(screen.getByTestId('fw-act-move'));
+    choose('fw-act-reason', 'reassigned');
+    await screen.findByTestId('fw-act-to-district');
+    choose('fw-act-to-district', 'Gaya');
+    fireEvent.click(confirm());
+    await waitFor(() => expect(screen.getByTestId('fw-act-to-district').getAttribute('aria-disabled')).toBe('true'));
+    choose('fw-act-to-district', 'Nalanda');
+    expect((screen.getByTestId('fw-act-to-district') as HTMLSelectElement).value).toBe('Gaya');
+    release(result({ district: 'Gaya' }));
+    await waitFor(() => expect(screen.queryByTestId('fw-act-move-form')).toBeNull());
+  });
+
+  it('R2-5: "Show code" answering 409 code_not_available (suspended behind the panel) withdraws the acts with the status-changed and reopen lines, POLITELY; the code’s own line stays', async () => {
+    await openWorker('active');
+    readFieldWorkerCode.mockRejectedValue(new ApiError(409, 'field_worker.code_not_available', 'no', { current_state: 'suspended' }));
+    expect(actButtons()).toEqual(['fw-act-move', 'fw-act-suspend', 'fw-act-end']);
+    fireEvent.click(screen.getByTestId('fw-code-show'));
+    expect((await screen.findByTestId('fw-code-refused')).textContent).toBe(t('fw.code.suspended'));
+    expect((await screen.findByTestId('fw-actions-stale-text')).textContent).toBe(t('fw.actions.stateChanged'));
+    expect(screen.getByTestId('fw-actions-stale').textContent).toContain(t('fw.actions.reopen'));
+    expect(actButtons()).toEqual([]);
+    expect(screen.getByTestId('fw-code-refused')).toBeTruthy(); // ⛔ withdrawn with the acts: it is what says the status
+    // RP-3: the code's refusal is the alert; the withdrawal that follows is polite, so it does not cut the specific line off.
+    expect(screen.getByTestId('fw-code-refused').getAttribute('role')).toBe('alert');
+    expect(screen.getByTestId('fw-actions-stale').getAttribute('role')).toBe('status');
+    expect(suspendFieldWorker).not.toHaveBeenCalled();
+  });
+
+  it('RP-2: "Show code" answering 409 authorization_stale (moved behind the panel) withdraws the acts with AD8’s moved line', async () => {
+    await openWorker('active');
+    readFieldWorkerCode.mockRejectedValue(new ApiError(409, 'field_worker.authorization_stale', 'moved'));
+    fireEvent.click(screen.getByTestId('fw-code-show'));
+    expect((await screen.findByTestId('fw-actions-stale-text')).textContent).toBe(t('fw.actions.moved'));
+    expect(actButtons()).toEqual([]);
+  });
+
+  it('RP-1: the code read’s 409 caused by the panel’s OWN act (still saving) does not withdraw the acts: the 200 updates the panel', async () => {
+    await openWorker('active');
+    let release: (v: ReturnType<typeof result>) => void = () => undefined;
+    suspendFieldWorker.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    readFieldWorkerCode.mockRejectedValue(new ApiError(409, 'field_worker.code_not_available', 'no', { current_state: 'suspended' }));
+    fireEvent.click(screen.getByTestId('fw-act-suspend'));
+    choose('fw-act-reason', 'under_review');
+    fireEvent.click(confirm());
+    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toContain(t('fw.actions.saving')));
+    fireEvent.click(screen.getByTestId('fw-code-show')); // the suspend committed first; its 200 has not arrived yet
+    await screen.findByTestId('fw-code-refused');
+    expect(screen.queryByTestId('fw-actions-stale')).toBeNull();
+    release(result({ current_state: 'suspended', state_reason_code: 'under_review' }));
+    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(t('fw.actions.done.suspend', { name: 'Ramesh Kumar' })));
+    await waitFor(() => expect(actButtons()).toEqual(['fw-act-move', 'fw-act-reactivate', 'fw-act-end']));
+    expect(screen.queryByTestId('fw-actions-stale')).toBeNull();
+  });
+
+  it('RP-1: a withdrawal while a form is open moves focus to the panel’s heading - ⛔ the body - and clears the form’s error line', async () => {
+    await openWorker('active');
+    let reject: (e: unknown) => void = () => undefined;
+    readFieldWorkerCode.mockImplementation(() => new Promise((_r, rej) => { reject = rej; }));
+    fireEvent.click(screen.getByTestId('fw-code-show'));
+    suspendFieldWorker.mockRejectedValueOnce(new ApiError(422, 'request.validation', 'bad'));
+    fireEvent.click(screen.getByTestId('fw-act-suspend'));
+    choose('fw-act-reason', 'under_review');
+    fireEvent.click(confirm());
+    await screen.findByTestId('fw-act-error');
+    screen.getByTestId('fw-act-reason').focus();
+    reject(new ApiError(409, 'field_worker.code_not_available', 'no', { current_state: 'suspended' }));
+    await screen.findByTestId('fw-actions-stale');
+    expect(screen.queryByTestId('fw-act-suspend-form')).toBeNull();
+    expect(screen.queryByTestId('fw-act-error')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: t('fw.actions.title') }));
+  });
+
+  it('RP-5: a worker moved behind the panel is found again under the NEW district (a Pariwar Admin can choose it)', async () => {
+    await openWorker('active');
+    where = 'Gaya'; // a Pariwar Admin moved them meanwhile
+    suspendFieldWorker.mockRejectedValueOnce(new ApiError(409, 'field_worker.authorization_stale', 'moved'));
+    fireEvent.click(screen.getByTestId('fw-act-suspend'));
+    choose('fw-act-reason', 'under_review');
+    fireEvent.click(confirm());
+    await screen.findByTestId('fw-actions-stale');
+    fireEvent.click(screen.getByTestId('fw-detail-close'));
+    await waitFor(() => expect(screen.queryByTestId('fw-find-check')).toBeNull()); // Patna's list no longer holds them
+    await chooseDistrict('Gaya');
+    fireEvent.click(await screen.findByTestId('fw-find-check'));
+    await screen.findByTestId('fw-actions');
+    expect(within(screen.getByTestId('fw-detail')).getByText('Gaya')).toBeTruthy();
+    expect(actButtons()).toEqual(['fw-act-move', 'fw-act-suspend', 'fw-act-end']);
+  });
+
+  it('R2-8: Reactivate’s success line (Suspend’s, Move’s and End’s are rendered by other legs), and a move to the district the worker is already in, render through the real copy', async () => {
+    await openWorker('suspended');
+    reactivateFieldWorker.mockResolvedValue(result({ current_state: 'active' }));
+    fireEvent.click(screen.getByTestId('fw-act-reactivate'));
+    fireEvent.click(confirm());
+    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(t('fw.actions.done.reactivate', { name: 'Ramesh Kumar' })));
+    expect(t('fw.actions.done.reactivate', { name: 'X' })).not.toBe(t('fw.actions.done.suspend', { name: 'X' }));
+    moveFieldWorker.mockRejectedValue(new ApiError(409, 'field_worker.district_unchanged', 'same'));
+    fireEvent.click(screen.getByTestId('fw-act-move'));
+    choose('fw-act-reason', 'reassigned');
+    await screen.findByTestId('fw-act-to-district');
+    choose('fw-act-to-district', 'Gaya');
+    fireEvent.click(confirm());
+    expect((await screen.findByTestId('fw-act-error')).textContent).toBe(t('fw.err.districtUnchanged'));
+  });
+
+  it.each([
+    ['pending_kyc', 'No workers awaiting approval in this district.'],
+    ['suspended', 'No suspended workers in this district.'],
+    ['terminated', 'No ended workers in this district.'],
+  ] as const)('R2-8 / R2-7: an empty %s list says its own line (the key is BUILT from the status)', async (s, line) => {
+    listFieldWorkers.mockImplementation(async () => ({ items: [], next_cursor: null }));
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <FindWorkerPage pariwarId={P} />
+      </QueryClientProvider>,
+    );
+    await chooseDistrict('Patna');
+    fireEvent.change(screen.getByTestId('fw-find-state'), { target: { value: s } });
+    await waitFor(() => expect(screen.getByTestId('fw-find-list-empty').textContent).toBe(line));
+    expect(line).toBe(t(`fw.find.empty.${s}`));
   });
 });
 

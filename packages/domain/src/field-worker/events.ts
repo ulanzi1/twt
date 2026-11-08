@@ -204,7 +204,10 @@ export type FieldWorkerReactivatedPayload = z.infer<typeof FieldWorkerReactivate
 /** `field_worker.terminated`: `pending_kyc` | `active` | `suspended` → `terminated` — TERMINAL (QE5). Carries the
  *  termination reason and `ended_on`, the ACTUAL LAST DAY (QE20 — the clock of the 8-year removal; for `died`, the date of
  *  death, `-455`). Emitted by Story 13.1c's terminate route (Q-1 C, `-453`); carries the verified `field_worker.terminate`
- *  authorization snapshot (13.1c AD3) — whose `role` is who ended the worker (row 13-1f's appeal reads it, `-454` Q1 A). */
+ *  authorization snapshot (13.1c AD3). ⚠ Its `role` is the role of the MOST SPECIFIC grant that allowed the act
+ *  (`authorizingGrant` asks `district` before `pariwar`), ⛔ every role the officer held: an officer holding both `district_admin`
+ *  there and `pariwar_admin` is recorded as `district_admin`. Row 13-1f's appeal (`-454` Q1 A: "if a Pariwar Admin ended them, the
+ *  Trustee Panel") must not read it as "who ended the worker" without deciding that case (review R2-9; deferred-work C2 (ii)). */
 export const FieldWorkerTerminatedPayloadSchema = z
   .object({
     from_state: z.enum(['pending_kyc', 'active', 'suspended']),

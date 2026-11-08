@@ -17,7 +17,8 @@
 //   1. a move only: `to_district` must be a RECORDED district of the Pariwar at the transaction's `now()` (422 district_unknown);
 //   2. a PRE-READ of the worker on the write transaction: absent ⇒ 404 `field_worker.not_found` (a lost race only — the gate's
 //      loader saw it); an act the state does not allow ⇒ 409 `illegal_transition`; the worker no longer in the district the gate
-//      passed ⇒ 409 `authorization_stale`; a move whose `from_district` is not the worker's district ⇒ 409 `authorization_stale`,
+//      passed — for a move, the gate's district neither the worker's district nor `to_district` (guard 3c, review R2-10) ⇒ 409
+//      `authorization_stale`; a move whose `from_district` is not the worker's district ⇒ 409 `authorization_stale`,
 //      one to the district they are in ⇒ 409 `district_unchanged`; a terminate whose `ended_on` is not a real calendar day ⇒ 422
 //      `ended_on_invalid` (review CR12). Each refused HERE writes NO audit line (I7, TR2);
 //   3. ONE `audit.withCompensatingAudit` whose `mutate` runs the command (with the intent's id — the row's `audit_id` afterwards)
@@ -101,10 +102,13 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
         if (fieldWorker.nextFieldWorkerState(worker.currentState, event) === null) {
           throw new fieldWorker.FieldWorkerIllegalTransitionError(fieldWorkerId, worker.currentState, event);
         }
-        if (which !== 'move' && worker.district !== authorization.target.value) {
-          // The worker moved between the gate's read and this one; the command would refuse it under the lock too (AD3 (3d)).
-          throw new fieldWorker.FieldWorkerAuthorizationStaleError(fieldWorkerId, authorization.target.value);
-        }
+        // The worker moved between the gate's read and this one; the command would refuse it under the lock too — AD3 (3d), and for a
+        // move (3c), whose target may be EITHER end of the move (review R2-10: it was judged under the lock only, at an audit pair).
+        const targetStale =
+          which === 'move'
+            ? authorization.target.value !== worker.district && authorization.target.value !== (request.body as MoveFieldWorkerRequest).to_district
+            : worker.district !== authorization.target.value;
+        if (targetStale) throw new fieldWorker.FieldWorkerAuthorizationStaleError(fieldWorkerId, authorization.target.value);
         opts.preCheck?.(worker);
         const base: CommandBase = { pariwarId, fieldWorkerId, actor: 'operator', actorId: ctx.actorId, authorization };
         return audit.withCompensatingAudit(deps.servicePool, {

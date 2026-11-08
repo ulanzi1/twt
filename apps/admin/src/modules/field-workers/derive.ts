@@ -77,6 +77,15 @@ export function actGuidance(error: unknown, act: WorkerAct): Guidance {
   return fieldWorkerGuidance(error);
 }
 
+/**
+ * The history's refusal. A 409 `authorization_stale` there is the log handler's re-read losing a race with a move (`log-handlers.ts`):
+ * the gate re-reads the district on the next try, so it is RETRIED, ⛔ the Approvals page's "Reload and try again" (review R2-6).
+ */
+export function historyGuidance(error: unknown): Guidance {
+  if (error instanceof ApiError && error.code === 'field_worker.authorization_stale') return { text: t('fw.history.moved'), retryable: true };
+  return fieldWorkerGuidance(error, 'history');
+}
+
 /** A reason code's label (never the code itself). */
 export function reasonLabel(code: string): string {
   return t(`fw.reason.${code}`);

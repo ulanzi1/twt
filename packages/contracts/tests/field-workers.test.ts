@@ -23,6 +23,7 @@ import {
   RegisterFieldWorkerRequest,
   RegisterFieldWorkerResponse,
   FIELD_WORKER_EVENT_TYPES,
+  FIELD_WORKER_LOG_MAX_LIMIT,
   FIELD_WORKER_POST_REASONS,
   FIELD_WORKER_REASON_CODES,
   FIELD_WORKER_SUSPEND_REASONS,
@@ -50,6 +51,13 @@ describe('field-workers contract ↔ domain sync-guard', () => {
     expect([...FIELD_WORKER_TERMINATE_REASONS]).toEqual([...fieldWorker.FIELD_WORKER_TERMINATE_REASONS]);
     expect([...FIELD_WORKER_POST_REASONS]).toEqual([...fieldWorker.FIELD_WORKER_POST_REASONS]);
     expect([...FIELD_WORKER_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_EVENT_TYPES]);
+  });
+
+  // Review R2-11 — the log's page cap is re-declared too: the OpenAPI `maximum` (what `forced-pagination.spec.ts` reads) and the clamp
+  // must be the most the domain serves, or a page silently holds fewer than the declared maximum.
+  it('the log page cap equals the domain cap, and an over-cap limit clamps to it (13.1c)', () => {
+    expect(FIELD_WORKER_LOG_MAX_LIMIT).toBe(fieldWorker.LIST_FIELD_WORKER_EVENTS_MAX_LIMIT);
+    expect(FieldWorkerLogQuery.parse({ limit: '1000' }).limit).toBe(fieldWorker.LIST_FIELD_WORKER_EVENTS_MAX_LIMIT);
   });
 });
 

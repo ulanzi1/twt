@@ -110,7 +110,14 @@ describe.skipIf(!hasDatabase)('Story 13.1c — read a field worker’s log (AC8)
     const other = h.freshPariwar();
     await h.listDistrict(other, 'Patna');
     const otherAdmin = await h.actor(other, 'pariwar_admin', 'pariwar', other, 'Other Admin');
-    expect((await h.log(otherAdmin.client, other, id)).statusCode).toBe(403);
+    // ONE actor asks for a real worker of another Pariwar and for an id that never existed: the same 403, the WHOLE error object -
+    // a different code, message or detail would tell "exists elsewhere" from "never existed" (review R2-12, RP-6).
+    const foreign = await h.log(otherAdmin.client, other, id);
+    const unknown = await h.log(otherAdmin.client, other, '6ba7b810-9dad-41d1-80b4-00c04fd430c8');
+    expect(foreign.statusCode).toBe(403);
+    expect(unknown.statusCode).toBe(403);
+    const withoutRequestId = (r: { body: string }) => ({ ...(json(r)['error'] as Json), request_id: undefined }); // unique per request
+    expect(withoutRequestId(unknown)).toEqual(withoutRequestId(foreign));
     expect((await h.log(admin.client, p, '6ba7b810-9dad-41d1-80b4-00c04fd430c8')).statusCode).toBe(403);
     const helpline = await h.actor(p, 'helpline_operator', 'pariwar', p);
     expect((await h.log(helpline.client, p, id)).statusCode).toBe(403);

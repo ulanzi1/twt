@@ -98,6 +98,42 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
     },
   );
 
+  // Review R2-10 — a move whose GATE read Patna, the worker moved Patna → Gaya before the pre-read, and a body that already says
+  // `from_district: 'Gaya'` (a screen loaded at Gaya after an ABA, or a hand-built request): the gate's target (Patna) is NEITHER end of
+  // the move (Gaya → Nalanda), guard (3c). The pre-read refuses it like the other acts' stale target - 409, ⛔ an audit line (I7) -
+  // where it used to reach the lock and write an intent and its twin. The request is parked AFTER the gate on the idempotency claim's
+  // advisory lock (`keyed-store.ts`), which a holder takes on the request's exact key, while the move commits.
+  it('R2-10: a move gated at Patna, the worker moved to Gaya before the pre-read, a body from Gaya to Nalanda ⇒ 409 authorization_stale at the pre-read, NO audit line', async () => {
+    const { p, admin, id } = await activeWorker();
+    const key = `r2-10-${id}`;
+    const holder = await h.td.pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`field_worker.move:${p}:${admin.userId}:${id}:${key}`]);
+      const pending = h.move(admin.client, p, id, { from_district: 'Gaya', to_district: 'Nalanda', reason_code: 'reassigned' }, key);
+      await waitForBlockedBy(h.td.pool, await pidOf(holder)); // past the gate (it read Patna), waiting on the claim
+      const mover = await h.td.pool.connect();
+      try {
+        await mover.query('BEGIN');
+        await mover.query(`SELECT set_config('app.pariwar_id', $1, true)`, [p]);
+        await moveTestFieldWorker(mover, p, ids.fieldWorkerId(id), 'Gaya');
+        await mover.query('COMMIT');
+      } finally {
+        mover.release();
+      }
+      await holder.query('COMMIT');
+      const r = await pending;
+      expect(r.statusCode, r.body).toBe(409);
+      expect(errOf(r).code).toBe('field_worker.authorization_stale');
+    } finally {
+      await releaseHolder(holder);
+    }
+    // CONTROL: the fixture's move committed (the worker is in Gaya, one posted event) - and the refused move wrote NO line.
+    expect(await district(id)).toBe('Gaya');
+    expect((await types(id)).filter((t) => t === 'field_worker.posted')).toHaveLength(1);
+    expect(await lines(p, id)).toEqual([]);
+  });
+
   // Review CR10 — a move is legal in every non-terminated state, so a suspend or a reactivate that commits between the move's
   // pre-read and its lock does NOT stop it; the 200 (which the idempotency store replays for a day, and the admin panel renders
   // without a second fetch) must carry the state AND the reason of the row the lock confirmed — ⛔ the pre-read's reason.

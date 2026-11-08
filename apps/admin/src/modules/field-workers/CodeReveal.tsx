@@ -33,11 +33,16 @@ export interface CodeRevealProps {
   pariwarId: string;
   fieldWorkerId: string;
   workerName: string;
+  /**
+   * Called when the read says the panel's copy of the worker is out of date: 409 `code_not_available` (`'state'` — no longer active) or
+   * `authorization_stale` (`'moved'`) (review R2-5, RP-2).
+   */
+  onStateChanged?: (kind: 'state' | 'moved') => void;
 }
 
 type View = { kind: 'idle' } | { kind: 'loading' } | { kind: 'shown'; code: string } | { kind: 'refused'; text: string; signIn: boolean };
 
-export function CodeReveal({ pariwarId, fieldWorkerId, workerName }: CodeRevealProps): ReactElement {
+export function CodeReveal({ pariwarId, fieldWorkerId, workerName, onStateChanged }: CodeRevealProps): ReactElement {
   const qc = useQueryClient();
   const [view, setView] = useState<View>({ kind: 'idle' });
   const [live, setLive] = useState('');
@@ -103,6 +108,8 @@ export function CodeReveal({ pariwarId, fieldWorkerId, workerName }: CodeRevealP
         if (epochRef.current !== epoch) return;
         const g: Guidance = fieldWorkerGuidance(err, 'code');
         if (fieldWorkerListIsStale(err)) void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) }); // review CR47
+        if (err instanceof api.ApiError && err.code === 'field_worker.code_not_available') onStateChanged?.('state');
+        if (err instanceof api.ApiError && err.code === 'field_worker.authorization_stale') onStateChanged?.('moved');
         setLive('');
         setView({ kind: 'refused', text: codeUnavailableText(err) ?? g.text, signIn: g.signIn === true });
       },

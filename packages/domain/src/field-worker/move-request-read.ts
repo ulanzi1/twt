@@ -34,8 +34,13 @@ import { decodeFieldWorkerCursor, encodeFieldWorkerCursor } from './read.js';
 
 const NUL = String.fromCharCode(0);
 
-export const PAGE_MOVE_REQUESTS_DEFAULT_LIMIT = 50;
-export const PAGE_MOVE_REQUESTS_MAX_LIMIT = 100;
+/**
+ * The request list decrypts the worker's NAME and writes ONE audit line a page naming the workers on it (AD10); a locator holds 1,024
+ * characters, so a page holds at most 25 (the 13.1a list's cap, for the same reason — story 13.1d's AD6 said 100, which cannot keep
+ * one line a page). The notices carry no name and keep 100.
+ */
+export const PAGE_MOVE_REQUESTS_DEFAULT_LIMIT = 20;
+export const PAGE_MOVE_REQUESTS_MAX_LIMIT = 25;
 export const PAGE_NOTICES_DEFAULT_LIMIT = 50;
 export const PAGE_NOTICES_MAX_LIMIT = 100;
 /** The work history reads at most this many of the worker's events (`-460` item 3: "at least 200"), and says so if it stops. */
@@ -124,7 +129,7 @@ function toListRow(r: ListSelect): FieldWorkerMoveRequestListRow {
 /**
  * A page of move requests, newest first: those with `district` at EITHER end (byte-equal), or — no district — the whole Pariwar; `open`
  * (`pending`, `escalated`) or `closed` (the five final states). `after` MUST come from `decodeMoveRequestCursor`. A non-integer `limit`
- * throws `RangeError`; the size is `clampLimit`-ed (default 50, ceiling 100). Over-fetches one row for `nextCursor`.
+ * throws `RangeError`; the size is `clampLimit`-ed (default 20, ceiling 25). Over-fetches one row for `nextCursor`.
  */
 export async function pageFieldWorkerMoveRequests(
   db: Db,
@@ -410,17 +415,47 @@ export async function markFieldWorkerNoticesSeen(
   return updated.length;
 }
 
-/** The request row a gate loader needs — its ends, the opener's end and state — or null (AD6: a missing / foreign id is 403 for all). */
+/** What a gate loader and a handler's pre-read need of a request. */
+export interface MoveRequestGateRow {
+  readonly fieldWorkerId: FieldWorkerId;
+  readonly fromDistrict: string;
+  readonly toDistrict: string;
+  readonly openedAtEnd: FieldWorkerMoveOpenedAtEnd;
+  readonly counterpartDistrict: string;
+  readonly state: FieldWorkerMoveRequestState;
+  readonly openedBy: string;
+}
+
+/** The request row a gate loader and a handler's pre-read need, or null (AD6: a missing / foreign id is 403 for all). */
 export async function getMoveRequestGateRow(
   db: Db,
   pariwarId: PariwarId,
   moveRequestId: FieldWorkerMoveRequestId,
-): Promise<{ fromDistrict: string; toDistrict: string; openedAtEnd: FieldWorkerMoveOpenedAtEnd; counterpartDistrict: string; state: FieldWorkerMoveRequestState } | null> {
+): Promise<MoveRequestGateRow | null> {
   const t = fieldWorkerMoveRequests;
   const rows = await db
-    .select({ fromDistrict: t.fromDistrict, toDistrict: t.toDistrict, openedAtEnd: t.openedAtEnd, counterpartDistrict: t.counterpartDistrict, state: t.state })
+    .select({
+      fieldWorkerId: t.fieldWorkerId,
+      fromDistrict: t.fromDistrict,
+      toDistrict: t.toDistrict,
+      openedAtEnd: t.openedAtEnd,
+      counterpartDistrict: t.counterpartDistrict,
+      state: t.state,
+      openedBy: t.openedBy,
+    })
     .from(t)
     .where(and(eq(t.pariwarId, pariwarId), eq(t.moveRequestId, moveRequestId)))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/** True when the worker has an OPEN (`pending` / `escalated`) request — the open route's pre-read (AD6; the partial unique decides a race). */
+export async function hasOpenMoveRequest(db: Db, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<boolean> {
+  const t = fieldWorkerMoveRequests;
+  const rows = await db
+    .select({ one: sql<number>`1` })
+    .from(t)
+    .where(and(eq(t.pariwarId, pariwarId), eq(t.fieldWorkerId, fieldWorkerId), inArray(t.state, [...FIELD_WORKER_MOVE_REQUEST_OPEN_STATES])))
+    .limit(1);
+  return rows.length > 0;
 }

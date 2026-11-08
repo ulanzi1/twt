@@ -50,6 +50,13 @@ export interface Harness {
   log: (c: Client, p: string, id: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
   /** Register through the route as `c` and return the new worker's id (asserts the 201). */
   registered: (c: Client, p: string, body: Json) => Promise<string>;
+  // ── Story 13.1d — the move requests and the notices ──
+  openRequest: (c: Client, p: string, workerId: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  requestAct: (c: Client, p: string, requestId: string, act: 'accept' | 'refuse' | 'withdraw' | 'close', body?: Json, key?: string | null) => ReturnType<Client['inject']>;
+  requests: (c: Client, p: string, query: Record<string, string>) => ReturnType<Client['inject']>;
+  request: (c: Client, p: string, requestId: string) => ReturnType<Client['inject']>;
+  notices: (c: Client, p: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
+  seen: (c: Client, p: string, noticeIds: string[]) => ReturnType<Client['inject']>;
   cleanup: () => Promise<void>;
 }
 
@@ -143,6 +150,21 @@ export async function createHarness(): Promise<Harness> {
     const qs = new URLSearchParams(query).toString();
     return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/${id}/log${qs === '' ? '' : `?${qs}`}` });
   };
+  const jsonPost = (c: Client, url: string, body: string, key: string | null) =>
+    c.inject({ method: 'POST', url, payload: body, headers: { 'content-type': 'application/json', ...(key === null ? {} : { 'idempotency-key': key }) } });
+  const openRequest = (c: Client, p: string, workerId: string, body: Json, key: string | null = randomUUID()) =>
+    jsonPost(c, `/api/v1/p/${p}/field-workers/${workerId}/move-requests`, JSON.stringify(body), key);
+  const requestAct = (c: Client, p: string, requestId: string, act: string, body: Json = {}, key: string | null = randomUUID()) =>
+    jsonPost(c, `/api/v1/p/${p}/field-workers/move-requests/${requestId}/${act}`, JSON.stringify(body), key);
+  const requests = (c: Client, p: string, query: Record<string, string>) =>
+    c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/move-requests?${new URLSearchParams(query).toString()}` });
+  const request = (c: Client, p: string, requestId: string) => c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/move-requests/${requestId}` });
+  const notices = (c: Client, p: string, query: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(query).toString();
+    return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/notices${qs === '' ? '' : `?${qs}`}` });
+  };
+  const seen = (c: Client, p: string, noticeIds: string[]) =>
+    c.inject({ method: 'POST', url: `/api/v1/p/${p}/field-workers/notices/seen`, payload: { notice_ids: noticeIds } });
   async function registered(c: Client, p: string, body: Json): Promise<string> {
     const r = await register(c, p, body);
     expect(r.statusCode, r.body).toBe(201);
@@ -156,6 +178,11 @@ export async function createHarness(): Promise<Harness> {
       await c.query('BEGIN');
       await c.query("SET LOCAL session_replication_role = 'replica'");
       const streams = (await c.query<{ id: string }>('SELECT field_worker_id AS id FROM field_workers WHERE pariwar_id = ANY($1)', [createdPariwars])).rows.map((r) => r.id);
+      // Story 13.1d — a move request is its OWN stream; its events, its notices and its row go before the workers (replica mode disables the FKs).
+      const requestStreams = (await c.query<{ id: string }>('SELECT move_request_id AS id FROM field_worker_move_requests WHERE pariwar_id = ANY($1)', [createdPariwars])).rows.map((r) => r.id);
+      await c.query('DELETE FROM field_worker_notices WHERE pariwar_id = ANY($1)', [createdPariwars]);
+      await c.query('DELETE FROM field_worker_move_requests WHERE pariwar_id = ANY($1)', [createdPariwars]);
+      await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1) AND stream_id = ANY($2)', [createdPariwars, requestStreams]);
       await c.query('DELETE FROM field_worker_attribution_codes WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM attribution_code_allocation_flags WHERE pariwar_id = ANY($1)', [createdPariwars]);
       // Story 13.1b — before the workers: replica mode disables the FK, so a `due` row would outlive them for a later sweep to find.
@@ -200,6 +227,12 @@ export async function createHarness(): Promise<Harness> {
     terminate,
     log,
     registered,
+    openRequest,
+    requestAct,
+    requests,
+    request,
+    notices,
+    seen,
     cleanup,
   };
 }

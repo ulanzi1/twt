@@ -131,3 +131,27 @@ export async function moveTestFieldWorker(client: pg.PoolClient, pariwarId: stri
     authorization: actAuthorization('field_worker.move', pariwarId, toDistrict, actorId),
   });
 }
+
+/**
+ * Story 13.1d (AD4) — ACCEPT a move request through the PUBLIC `acceptFieldWorkerMoveRequest` on `client`, as a District Admin of its
+ * counterpart district (the answer key minted by the REAL check from a district grant). It takes the WORKER's lock first and holds it
+ * until the caller's transaction ends — the race legs commit it while a request waits.
+ */
+export async function acceptTestMoveRequest(client: pg.PoolClient, pariwarId: string, moveRequestId: string, counterpartDistrict: string): Promise<void> {
+  const actorId = randomUUID();
+  const authorization = rbac.authorize({
+    actorId,
+    grants: [{ pariwarId, role: 'district_admin', scopeDimension: 'district', scopeValue: counterpartDistrict }],
+    key: 'field_worker.answer_move_request',
+    resource: { dimension: 'district', value: counterpartDistrict, pariwarId },
+  });
+  if (authorization === null) throw new Error('[_field-worker-fixture] the real check refused field_worker.answer_move_request for a district grant');
+  await fieldWorker.acceptFieldWorkerMoveRequest(client, {
+    pariwarId: ids.pariwarId(pariwarId),
+    moveRequestId: ids.fieldWorkerMoveRequestId(moveRequestId),
+    auditId: randomUUID(),
+    actor: 'operator',
+    actorId,
+    authorization,
+  });
+}

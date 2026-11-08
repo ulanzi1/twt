@@ -141,3 +141,25 @@ describe('mapFieldWorkerError — everything else is rethrown UNCHANGED (500 thr
     expect(thrown(err)).toBe(err);
   });
 });
+
+// Story 13.1d (AD3, AD6) — the move request's rows. ⛔ A name in any message: ids, states and codes only.
+describe('mapFieldWorkerError — Story 13.1d, the move request', () => {
+  const MR = '9b2c1d4e-5f60-4a71-8b92-a3b4c5d6e7f8';
+  it.each([
+    ['FieldWorkerMoveRequestOpenError', new fieldWorker.FieldWorkerMoveRequestOpenError(FW), 409, 'field_worker.move_request_open'],
+    ['FieldWorkerMoveRequestNotOpenError', new fieldWorker.FieldWorkerMoveRequestNotOpenError(MR, 'refused'), 409, 'field_worker.move_request_not_open'],
+    ['FieldWorkerMoveRequestSameOfficerError', new fieldWorker.FieldWorkerMoveRequestSameOfficerError(MR), 409, 'field_worker.move_request_same_officer'],
+    ['FieldWorkerMoveRequestNotOpenerError', new fieldWorker.FieldWorkerMoveRequestNotOpenerError(MR), 409, 'field_worker.move_request_not_opener'],
+    ['FieldWorkerMoveRequestMissingError', new fieldWorker.FieldWorkerMoveRequestMissingError(MR), 404, 'field_worker.move_request_not_found'],
+    ['FieldWorkerMoveRequestStreamConcurrencyError', new fieldWorker.FieldWorkerMoveRequestStreamConcurrencyError(MR, 2), 409, 'field_worker.stream_conflict'],
+  ])('%s ⇒ %i %s', (_n, err, status, code) => {
+    const e = mapped(err);
+    expect([e.statusCode, e.code]).toEqual([status, code]);
+  });
+
+  it('not_open carries the request’s state in its details; a persist error is rethrown unchanged (500 centrally)', () => {
+    expect(mapped(new fieldWorker.FieldWorkerMoveRequestNotOpenError(MR, 'superseded')).details).toEqual({ state: 'superseded' });
+    const persist = new fieldWorker.FieldWorkerMoveRequestPersistError(MR, new Error('x'));
+    expect(thrown(persist)).toBe(persist);
+  });
+});

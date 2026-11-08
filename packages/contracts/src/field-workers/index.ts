@@ -61,6 +61,7 @@ export {
   FieldWorkerLog,
   FIELD_WORKER_LOG_MAX_LIMIT,
   FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT,
+  FIELD_WORKER_NOTICE_LIST_MAX_LIMIT,
   FieldWorkerMoveRequestParams,
   OpenFieldWorkerMoveRequestRequest,
   FieldWorkerMoveRequestActRequest,

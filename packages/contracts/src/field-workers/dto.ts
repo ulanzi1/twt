@@ -259,8 +259,13 @@ const clampedLimit = (max: number) =>
     }, z.coerce.number().int().min(1).max(max))
     .optional();
 
-/** The page cap of both lists (AD6) — the domain's `PAGE_MOVE_REQUESTS_MAX_LIMIT` / `PAGE_NOTICES_MAX_LIMIT`, bound by the sync-guard. */
-export const FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT = 100;
+/**
+ * The request list's page cap — 25: each page's worker NAMES are decrypted behind ONE audit line naming them, and a locator holds 1,024
+ * characters (the worker list's cap, 13.1a). The domain's `PAGE_MOVE_REQUESTS_MAX_LIMIT`, bound by the sync-guard.
+ */
+export const FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT = 25;
+/** The notices' page cap (no names) — the domain's `PAGE_NOTICES_MAX_LIMIT`. */
+export const FIELD_WORKER_NOTICE_LIST_MAX_LIMIT = 100;
 
 /** The path of a per-request route. */
 export const FieldWorkerMoveRequestParams = z.object({ pariwarId: z.string().uuid(), moveRequestId: z.string().uuid() }).strict();
@@ -298,7 +303,7 @@ export type FieldWorkerMoveRequestResult = z.output<typeof FieldWorkerMoveReques
 
 /**
  * `GET …/field-workers/move-requests` query. `state` REQUIRED (`open` | `closed`); `district` optional — a District Admin names one of
- * theirs (the requests with it at EITHER end); with none, the whole Pariwar (a Pariwar grant only). `limit` 1–100 (default 50; an over-cap
+ * theirs (the requests with it at EITHER end); with none, the whole Pariwar (a Pariwar grant only). `limit` 1–25 (default 20; an over-cap
  * value is clamped); `cursor` opaque.
  */
 export const FieldWorkerMoveRequestListQuery = z
@@ -379,7 +384,7 @@ export const FieldWorkerMoveRequestDetail = z
 export type FieldWorkerMoveRequestDetail = z.output<typeof FieldWorkerMoveRequestDetail>;
 
 /** `GET …/field-workers/notices` query — the officer's OWN notices; `limit` 1–100 (default 50; clamped); `cursor` opaque. */
-export const FieldWorkerNoticeListQuery = z.object({ cursor: Cursor.optional(), limit: clampedLimit(FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT) }).strict();
+export const FieldWorkerNoticeListQuery = z.object({ cursor: Cursor.optional(), limit: clampedLimit(FIELD_WORKER_NOTICE_LIST_MAX_LIMIT) }).strict();
 export type FieldWorkerNoticeListQuery = z.output<typeof FieldWorkerNoticeListQuery>;
 
 /** One notice — ids, districts and codes (⛔ a name; the screen shows the worker's name only through the audited request reads). */

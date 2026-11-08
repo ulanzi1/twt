@@ -81,6 +81,11 @@ declare module 'fastify' {
      *  routes' (synchronous) district `resolveValue` can read it. `null` when the worker is absent in this Pariwar → the district gate
      *  fails closed (403) for everyone, so the boundary never leaks a worker's existence. */
     fieldWorkerGateDistrict?: string | null;
+    /** Story 13.1d (AD5, AD6) — the district a MOVE-REQUEST route gates at, stashed by `loadMoveRequestOpenTarget` /
+     *  `loadMoveRequestGate`: the end the opener holds (open), the counterpart (accept / refuse), the opener's end (withdraw), the source
+     *  (close), or the end the reader holds (one request's detail). `null` for a missing / foreign request or an officer holding neither
+     *  end → the district gate fails closed (403) for everyone, so the boundary never says whether a request exists. */
+    moveRequestGateDistrict?: string | null;
     /**
      * Story 6.18 (AC11) — the scope the CORRECTION-QUEUE list route gates this caller at.
      *

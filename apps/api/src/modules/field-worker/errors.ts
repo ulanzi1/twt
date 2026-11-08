@@ -97,6 +97,26 @@ export function mapFieldWorkerError(err: unknown): never {
   if (err instanceof fieldWorker.FieldWorkerEndedOnInvalidError) {
     throw new ApiError(422, 'field_worker.ended_on_invalid', 'The last day must be a real date, not in the future and not before the registration day');
   }
+  // ── Story 13.1d — the move request (AD3, AD6; the story's "Errors" table) ──
+  if (err instanceof fieldWorker.FieldWorkerMoveRequestOpenError) {
+    throw new ApiError(409, 'field_worker.move_request_open', 'This field worker already has a move request waiting — answer or withdraw it first');
+  }
+  if (err instanceof fieldWorker.FieldWorkerMoveRequestNotOpenError) {
+    throw new ApiError(409, 'field_worker.move_request_not_open', 'This move request has already been answered or has moved on — reload the list', { state: err.state });
+  }
+  if (err instanceof fieldWorker.FieldWorkerMoveRequestSameOfficerError) {
+    throw new ApiError(409, 'field_worker.move_request_same_officer', 'The officer who asked cannot answer their own request');
+  }
+  if (err instanceof fieldWorker.FieldWorkerMoveRequestNotOpenerError) {
+    throw new ApiError(409, 'field_worker.move_request_not_opener', 'Only the officer who asked can withdraw this request');
+  }
+  if (err instanceof fieldWorker.FieldWorkerMoveRequestMissingError) {
+    // Unreachable through the gate (a missing request is 403 there) — a lost race only; requests are never deleted.
+    throw new ApiError(404, 'field_worker.move_request_not_found', 'This move request was not found');
+  }
+  if (err instanceof fieldWorker.FieldWorkerMoveRequestStreamConcurrencyError) {
+    throw new ApiError(409, 'field_worker.stream_conflict', 'This move request was changed at the same time — reload and try again');
+  }
   if (err instanceof FieldWorkerStateDirectWriteError) {
     // The 0200 trigger — a BUG (the projector writes under the guard). The detail carries ids and states only.
     console.error('[field-worker] field_workers direct write rejected', JSON.stringify({ code: err.code }));

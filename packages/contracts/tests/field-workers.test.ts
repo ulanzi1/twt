@@ -276,7 +276,9 @@ describe('Story 13.1d — contract ↔ domain sync-guard and DTO shapes', () => 
     expect([...c.FIELD_WORKER_NOTICE_KINDS]).toEqual([...schema.FIELD_WORKER_NOTICE_KINDS]);
     expect([...c.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES]);
     expect(c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_MOVE_REQUESTS_MAX_LIMIT);
-    expect(c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_NOTICES_MAX_LIMIT);
+    expect(c.FIELD_WORKER_NOTICE_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_NOTICES_MAX_LIMIT);
+    // ONE audit line a page names every worker on it: 25 ids and the prefix fit the 1,024-character locator.
+    expect(`field_workers/${Array.from({ length: c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT }, () => '7c9e6679-7425-40de-944b-e07fc1f90ae7').join(',')}`.length).toBeLessThanOrEqual(1024);
   });
 
   it('the requests are strict and shape-only; a refusal reason outside AD7 or free text is refused; an over-cap limit clamps', async () => {
@@ -287,7 +289,7 @@ describe('Story 13.1d — contract ↔ domain sync-guard and DTO shapes', () => 
     expect(c.FieldWorkerMoveRequestActRequest.safeParse({ note: 'x' }).success).toBe(false);
     expect(c.RefuseFieldWorkerMoveRequestRequest.safeParse({ reason_code: 'no_capacity' }).success).toBe(true);
     for (const r of ['busy', 'We are full', '']) expect(c.RefuseFieldWorkerMoveRequestRequest.safeParse({ reason_code: r }).success, r).toBe(false);
-    expect(c.FieldWorkerMoveRequestListQuery.parse({ state: 'open', limit: '1000' }).limit).toBe(100);
+    expect(c.FieldWorkerMoveRequestListQuery.parse({ state: 'open', limit: '1000' }).limit).toBe(25);
     expect(c.FieldWorkerMoveRequestListQuery.safeParse({ state: 'open', limit: '0' }).success).toBe(false);
     expect(c.FieldWorkerMoveRequestListQuery.safeParse({ state: 'pending' }).success).toBe(false);
     expect(c.FieldWorkerNoticeListQuery.parse({ limit: '1e3' }).limit).toBe(100);

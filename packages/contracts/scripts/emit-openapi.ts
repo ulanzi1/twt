@@ -5678,7 +5678,7 @@ registry.registerPath({
   description:
     '`field_worker.read_move_requests` at `district` (a District Admin of it), or — with no district — at the Pariwar (a Pariwar Admin). ' +
     '`state` `open` (pending, escalated) or `closed`. Each item carries the worker\'s NAME, decrypted behind ONE audit line per page ' +
-    'naming the workers on it; never the mobile. `limit` 1-100 (default 50; an over-cap value is clamped). `Cache-Control: no-store`.',
+    'naming the workers on it; never the mobile. `limit` 1-25 (default 20; an over-cap value is clamped). `Cache-Control: no-store`.',
   tags: ['field-workers'],
   request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerMoveRequestListQuerySchema },
   responses: {

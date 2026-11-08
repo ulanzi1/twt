@@ -14347,3 +14347,34 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
   per such pool for the alert's life.** Alarmed (a de-duplicated `defect`) and bounded — no retry storm — but not eliminated: `pool_label` is
   NOT NULL for a `pool_open` row, so there is nothing to record a refusal on without a new `detail` value (a migration). Unreachable through the
   spawn saga (`pool_index` is assigned 0, 1, 2…). Trigger: a `defect` alarm for a pool label.
+
+## Deferred from: code review of 13-1c-field-worker-moves-suspension-and-termination, chunk A (2026-11-07)
+
+- **CR9 — `ended_on` is the clock of the 8-year removal, and its only lower bound is the registration day.** A District Admin (or a Pariwar Admin) can
+  end a worker with an `ended_on` as far back as the registration day, which would start the removal clock early; for `died`, a typo in the date of
+  death is permanent (no correction path until row 13-1f's undo). Conforms to the story (AC6 (c): "today or a day between registration and today, IST"),
+  and the removal itself is not built. Owner: row `13-1e-field-worker-eight-year-removal` (see C4 above) - it decides whether the date needs a further
+  bound, a second officer's confirmation, or a correction path; 13-1f's undo is the other place a wrong date can be mended. Trigger: 13-1e's story is
+  created, or a termination is recorded with an `ended_on` more than a few weeks back.
+
+## Deferred from: code review of 13-1c-field-worker-moves-suspension-and-termination, chunk B (2026-11-07)
+
+- **CR19 — none of the six field-worker WRITE routes sets `config.rateLimit`.** `register`, `approve`, `move`, `suspend`, `reactivate` and `terminate`
+  take no named tier (`routes.ts` sets `limits.read` on the reads only), so a write is bounded by the global per-IP ceiling. A named `limits.write`
+  exists (`plugins/rate-limit/index.ts`; helpdesk and data-rights routes use it). 13.1 and 13.1a shipped the same posture and no story text mentions it,
+  so adding it to 13.1c's routes alone would split the module. Each refusal the IST bounds make (a future `ended_on`) still writes an intent-and-twin
+  audit pair, so an authorized officer can append audit lines at the global rate. Owner: a module-wide pass (any story that touches the six routes
+  together, or the next rate-limit sweep). Trigger: an audit-volume complaint, or a sixth write route.
+- **CR20 — the keyed idempotency store keeps no body fingerprint.** `write-support.ts` namespaces the key by act and worker, but a retry with the
+  SAME `Idempotency-Key` and a DIFFERENT body (another `to_district`, reason or `ended_on`) returns the first call's recorded 200 and the second act is
+  never attempted - silently. Approve had the same shape with an empty body; move, suspend and terminate now carry real bodies. Fixing it is a change
+  to the shared store (a stored body hash and a 422 / 409 on mismatch) and touches every module that uses it. Owner: the idempotency substrate.
+  Trigger: any client that reuses a key across different bodies. The admin client does not: `attemptKey` keys on the act, the worker and the BODY (an edited body gets a new key) - answered in chunk C of this review.
+
+## Deferred from: code review of 13-1c-field-worker-moves-suspension-and-termination, patch review (2026-11-08)
+
+- **CR34 — `useApproveFieldWorker` and the registration mutation keep TanStack's default `networkMode: 'online'`.** Offline they PAUSE and RUN on reconnect, long after the
+  officer gave up — the hazard 13.1c's review fixed (CR22) only for the four lifecycle acts, whose mutation now has `networkMode: 'always'` (offline it is sent, fails as a
+  retryable network error, and the retry reuses the attempt's key). A late replay of an approval is the milder case (a second approval of the same worker is refused with a 409,
+  `approval.spec.ts` AC3), a late registration the least harmful. Owner: the next story that edits `hooks.ts`'s field-worker mutations (13.3 / 13.1d), or a
+  module-wide pass with CR19. Trigger: an officer reports an approval or a registration appearing after a dropped connection.

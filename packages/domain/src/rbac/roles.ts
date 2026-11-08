@@ -343,7 +343,8 @@ const FIELD_WORKER_APPROVE = permissionKey('field_worker.approve');
 const FIELD_WORKER_READ_CODE = permissionKey('field_worker.read_code');
 const FIELD_WORKER_VIEW = permissionKey('field_worker.view');
 // Story 13.1c (`2026-11-07-453` AD5; confirmed as built, the Panel's `2026-11-07-454` Q7 A) — move a worker directly
-// (district-dimension). Granted to pariwar_admin ONLY (`-443` Q1 A) (+ super_admin auto). ⛔ district_admin (13.1d's request is theirs).
+// (district-dimension). Granted to pariwar_admin ONLY (`-443` Q1 A) (+ super_admin auto). ⛔ district_admin (13.1d's request and
+// answer are theirs — `FIELD_WORKER_REQUEST_MOVE` / `FIELD_WORKER_ANSWER_MOVE_REQUEST` below).
 const FIELD_WORKER_MOVE = permissionKey('field_worker.move');
 // Story 13.1c (AD5; `-454` Q7 A) — suspend, reactivate, end a worker and read their log, all district-dimension. Granted to
 // district_admin (own district) AND pariwar_admin (any) (+ super_admin auto). ⛔ state_trustee / trustee_panel /
@@ -352,6 +353,15 @@ const FIELD_WORKER_SUSPEND = permissionKey('field_worker.suspend');
 const FIELD_WORKER_REACTIVATE = permissionKey('field_worker.reactivate');
 const FIELD_WORKER_TERMINATE = permissionKey('field_worker.terminate');
 const FIELD_WORKER_READ_LOG = permissionKey('field_worker.read_log');
+// Story 13.1d (`2026-11-08-458` AD5; confirmed as built, the Panel's `2026-11-08-459` Q1 A) — the move request, all
+// district-dimension. Request (open / withdraw) and answer (accept / refuse): district_admin ONLY (either end opens, the other
+// answers). Settle (close an escalated request): pariwar_admin ONLY. Read: district_admin (either end) AND pariwar_admin (any)
+// (+ super_admin auto). ⛔ pariwar_admin for request / answer (it moves directly); ⛔ state_trustee / trustee_panel /
+// helpline_operator / the `field_worker` role.
+const FIELD_WORKER_REQUEST_MOVE = permissionKey('field_worker.request_move');
+const FIELD_WORKER_ANSWER_MOVE_REQUEST = permissionKey('field_worker.answer_move_request');
+const FIELD_WORKER_SETTLE_MOVE_REQUEST = permissionKey('field_worker.settle_move_request');
+const FIELD_WORKER_READ_MOVE_REQUESTS = permissionKey('field_worker.read_move_requests');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -538,6 +548,10 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       FIELD_WORKER_REACTIVATE,
       FIELD_WORKER_TERMINATE,
       FIELD_WORKER_READ_LOG,
+      // Story 13.1d (AD5; `-459` Q1 A) — close a move request that has gone to the Pariwar Admin; read requests — any district.
+      // ⛔ Request / answer (the Pariwar Admin moves directly).
+      FIELD_WORKER_SETTLE_MOVE_REQUEST,
+      FIELD_WORKER_READ_MOVE_REQUESTS,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -604,6 +618,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       FIELD_WORKER_REACTIVATE,
       FIELD_WORKER_TERMINATE,
       FIELD_WORKER_READ_LOG,
+      // Story 13.1d (AD5; `-459` Q1 A) — ask the other end's District Admin to take on or release a worker, answer such a request
+      // from the other end, and read the requests of the OWN district (either end). ⛔ Settle (Pariwar Admin only).
+      FIELD_WORKER_REQUEST_MOVE,
+      FIELD_WORKER_ANSWER_MOVE_REQUEST,
+      FIELD_WORKER_READ_MOVE_REQUESTS,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.

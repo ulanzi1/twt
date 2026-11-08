@@ -59,6 +59,14 @@ export const fieldWorkerTerminateReasonSchema = z.enum(FIELD_WORKER_TERMINATE_RE
 export const fieldWorkerPostReasonSchema = z.enum(FIELD_WORKER_POST_REASONS);
 
 /**
+ * The keys whose verified result may move a worker (`field_worker.posted`): the Pariwar Admin's DIRECT move (Story 13.1c AD4) and
+ * the District Admin's ACCEPTANCE of a move request (Story 13.1d AD4, AD5 — appended in the commit that minted it, 13.1c C1).
+ * Defined HERE, not in `commands.ts`, so `posted`'s schema can pin its snapshot's key without an import cycle (13.1d TR12;
+ * `commands.ts` re-exports it). `field_worker.register` is ⛔ here, and refused by a test.
+ */
+export const FIELD_WORKER_MOVE_PERMISSION_KEYS = ['field_worker.move', 'field_worker.answer_move_request'] as const;
+
+/**
  * The audit note naming the COMMAND that wrote the event (QE6) — the commands COMPUTE it (⛔ caller input). ⛔ Free text (review
  * R3-16): each event type accepts only its command's value — `field_worker.suspend` / `.terminate` carry a reason as a `:<reason>`
  * suffix drawn from that event's own reason list (ANY reason of the list — the schema does not bind it to `reason_code`; the commands
@@ -225,7 +233,8 @@ export type FieldWorkerTerminatedPayload = z.infer<typeof FieldWorkerTerminatedP
  * `field_worker.posted`: a move of REPORTING district (QE17) — a SAME-STATE event (`pending_kyc` | `active` | `suspended`,
  * ⛔ `terminated`). Carries the authorization snapshot, both districts and a post reason. The reason lives in the EVENT
  * only — ⛔ projected into `state_reason_code`. Emitted by Story 13.1c's move route (a Pariwar Admin's direct move, key
- * `field_worker.move`); Story 13.1d adds the accepted request.
+ * `field_worker.move`) and by Story 13.1d's accepted move request (key `field_worker.answer_move_request`). The snapshot's
+ * `permission_key` is PINNED to `FIELD_WORKER_MOVE_PERMISSION_KEYS` (13.1c R2-D1: a second key for an existing event).
  */
 export const FieldWorkerPostedPayloadSchema = z
   .object({
@@ -233,7 +242,7 @@ export const FieldWorkerPostedPayloadSchema = z
     to_state: z.enum(['pending_kyc', 'active', 'suspended']),
     trigger: triggerOf('field_worker.post'),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.enum(FIELD_WORKER_MOVE_PERMISSION_KEYS) }),
     from_district: fieldWorkerDistrictSchema,
     to_district: fieldWorkerDistrictSchema,
     reason_code: fieldWorkerPostReasonSchema,

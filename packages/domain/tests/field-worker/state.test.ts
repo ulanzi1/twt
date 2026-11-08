@@ -45,7 +45,7 @@ const terminated = (from_state: string, reason_code = 'inactive', ended_on = '20
   ev('field_worker.terminated', { from_state, to_state: 'terminated', reason_code, ended_on });
 /** Story 13.1c AD4 — a move carries a `field_worker.move` snapshot (the fold ignores it; ⛔ the registrar's key). */
 const posted = (state: string, from_district: string, to_district: string, reason_code = 'reassigned') =>
-  ev('field_worker.posted', { from_state: state, to_state: state, authorization: { ...AUTH, permission_key: 'field_worker.move', catalog_version: 61 }, from_district, to_district, reason_code });
+  ev('field_worker.posted', { from_state: state, to_state: state, authorization: { ...AUTH, permission_key: 'field_worker.move', catalog_version: 62 }, from_district, to_district, reason_code });
 
 describe('the transition table and the reducer AGREE on every (state × event type) pair (AC4)', () => {
   // Review R3-13 — the table and the reducer read the SAME constant, so "agree" alone is true by construction; QE5's ten arms are

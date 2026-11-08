@@ -553,8 +553,8 @@ describe('Story 13.1c AD3 — the lifecycle acts carry their own key’s authori
 
 // Story 13.1c AD4 (13.1 C5 / C10, D7) — the move accepts ONLY a move key, and names the district its admin saw.
 describe('Story 13.1c AD4 — the move key list and the expected source', () => {
-  it('the move-key list is exactly [field_worker.move] — ⛔ field_worker.register', () => {
-    expect([...FIELD_WORKER_MOVE_PERMISSION_KEYS]).toEqual(['field_worker.move']);
+  it('the move-key list is exactly [field_worker.move, field_worker.answer_move_request] (13.1d AD4 appends) — ⛔ field_worker.register', () => {
+    expect([...FIELD_WORKER_MOVE_PERMISSION_KEYS]).toEqual(['field_worker.move', 'field_worker.answer_move_request']);
   });
 
   it('I2: a VERIFIED field_worker.register result at the destination is refused by the KEY check, with NO statement sent', async () => {
@@ -565,10 +565,10 @@ describe('Story 13.1c AD4 — the move key list and the expected source', () => 
     expect(calls).toEqual([]);
   });
 
-  it('EVERY catalog key but the move key is refused — a super_admin grant issues each at the destination; no statement sent', async () => {
+  it('EVERY catalog key but the two move keys is refused — a super_admin grant issues each at the destination; no statement sent', async () => {
     const SUPER: EffectiveGrant = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null };
     const others = SEED_PERMISSION_KEYS.filter((k) => !(FIELD_WORKER_MOVE_PERMISSION_KEYS as readonly string[]).includes(k));
-    expect(others.length).toBe(SEED_PERMISSION_KEYS.length - 1); // non-vacuity: the whole catalog but one
+    expect(others.length).toBe(SEED_PERMISSION_KEYS.length - 2); // non-vacuity: the whole catalog but two
     for (const key of others) {
       const authorization = authorize({ actorId: STAFF, grants: [SUPER], key, resource: { dimension: 'district', value: 'Gaya', pariwarId: P } });
       expect(authorization, key).not.toBeNull();
@@ -578,9 +578,11 @@ describe('Story 13.1c AD4 — the move key list and the expected source', () => 
       );
       expect(calls, key).toEqual([]);
     }
-    // CONTROL — the move key from the same grant passes.
-    const move = authorize({ actorId: STAFF, grants: [SUPER], key: 'field_worker.move', resource: { dimension: 'district', value: 'Gaya', pariwarId: P } })!;
-    await expect(postFieldWorker(stub().client, { ...mover('Gaya'), authorization: move, reasonCode: 'reassigned' })).resolves.toMatchObject({ district: 'Gaya' });
+    // CONTROL — each move key from the same grant passes.
+    for (const key of FIELD_WORKER_MOVE_PERMISSION_KEYS) {
+      const move = authorize({ actorId: STAFF, grants: [SUPER], key, resource: { dimension: 'district', value: 'Gaya', pariwarId: P } })!;
+      await expect(postFieldWorker(stub().client, { ...mover('Gaya'), authorization: move, reasonCode: 'reassigned' }), key).resolves.toMatchObject({ district: 'Gaya' });
+    }
   });
 
   it('a missing or blank expected source is refused with NO statement sent', async () => {

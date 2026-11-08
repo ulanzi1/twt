@@ -28,7 +28,7 @@ const APPROVE_AUTH = {
   catalog_version: 60,
 };
 /** Story 13.1c AD3 / AD4 — a lifecycle act's snapshot (key = the act's; the move's is `field_worker.move`). */
-const actAuth = (permission_key: string) => ({ ...APPROVE_AUTH, permission_key, catalog_version: 61 });
+const actAuth = (permission_key: string) => ({ ...APPROVE_AUTH, permission_key, catalog_version: 62 });
 /** `o` without `key` (a payload missing one required field). */
 const without = (o: Record<string, unknown>, key: string): Record<string, unknown> => Object.fromEntries(Object.entries(o).filter(([k]) => k !== key));
 
@@ -92,6 +92,11 @@ describe('the seven payloads (AC3)', () => {
     expect(FieldWorkerTerminatedPayloadSchema.safeParse({ ...VALID['field_worker.terminated'], reason_code: 'under_review' }).success).toBe(false);
     expect(FieldWorkerPostedPayloadSchema.safeParse(without(VALID['field_worker.posted'], 'reason_code')).success).toBe(false);
     expect(FieldWorkerPostedPayloadSchema.safeParse({ ...VALID['field_worker.posted'], reason_code: 'at_worker_request' }).success).toBe(true);
+    // Story 13.1d (13.1c R2-D1) — the snapshot's key is PINNED to the move-key list: the acceptance's key passes, any other fails.
+    expect(FieldWorkerPostedPayloadSchema.safeParse({ ...VALID['field_worker.posted'], authorization: actAuth('field_worker.answer_move_request') }).success).toBe(true);
+    for (const key of ['field_worker.register', 'field_worker.request_move', 'field_worker.suspend', 'member.view']) {
+      expect(FieldWorkerPostedPayloadSchema.safeParse({ ...VALID['field_worker.posted'], authorization: actAuth(key) }).success, key).toBe(false);
+    }
     expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS['field_worker.activated'].safeParse({ ...VALID['field_worker.activated'], reason_code: 'inactive' }).success).toBe(false);
   });
 

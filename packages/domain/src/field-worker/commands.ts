@@ -54,6 +54,7 @@ import {
   FieldWorkerReasonInvalidError,
 } from './errors.js';
 import {
+  FIELD_WORKER_MOVE_PERMISSION_KEYS,
   FIELD_WORKER_POST_REASONS,
   FIELD_WORKER_SUSPEND_REASONS,
   FIELD_WORKER_TERMINATE_REASONS,
@@ -81,10 +82,11 @@ export const FIELD_WORKER_REGISTER_PERMISSION_KEY = 'field_worker.register';
 export const FIELD_WORKER_APPROVE_PERMISSION_KEY = 'field_worker.approve';
 
 /**
- * The keys whose verified result `postFieldWorker` accepts (Story 13.1c AD4; 13.1 C5 / C10) — a LIST, so Story 13.1d APPENDS
- * its request keys in the commit that mints them. `field_worker.register` is ⛔ here, and refused by a test.
+ * The keys whose verified result `postFieldWorker` accepts (Story 13.1c AD4; 13.1 C5 / C10): `field_worker.move` (the direct move)
+ * and `field_worker.answer_move_request` (Story 13.1d's acceptance — AD4). Defined in `events.ts` (`posted`'s schema pins it, R2-D1);
+ * re-exported here. `field_worker.register` is ⛔ here, and refused by a test.
  */
-export const FIELD_WORKER_MOVE_PERMISSION_KEYS = ['field_worker.move'] as const;
+export { FIELD_WORKER_MOVE_PERMISSION_KEYS };
 
 /** The ONE permission key each lifecycle act accepts (Story 13.1c AD3, AD5 — one key per act, 13.1 QE10). */
 export const FIELD_WORKER_SUSPEND_PERMISSION_KEY = 'field_worker.suspend';

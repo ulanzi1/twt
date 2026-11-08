@@ -877,7 +877,20 @@ export function permissionKey(value: string): PermissionKey {
 // `helpline_operator`, nor the `field_worker` role. REUSE CHECK — ⛔ `field_worker.register` (adds; `postFieldWorker` REFUSES
 // it), `field_worker.view` (the log is a separate read the Panel confirmed apart), `member.suspend` / `member.moderate`
 // (members). 60 / 81 READ LIVE at `bb4d8620`. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 61 as const;
+//
+// ⭐ Story 13.1d (author-commit `2026-11-08-458` AD5; CONFIRMED as built by the Panel, `2026-11-08-459` Q1 A: "Ask: a District
+// Admin of either end. Answer: a District Admin of the other end, never the one who asked. Settle: the Pariwar Admin. Read: the
+// District Admins of either end, and the Pariwar Admin."; each a `-059` B(3) field-worker permission — roster Row 51 (a) MET) —
+// 61 → 62, FOUR keys (86 → 90), ONE bump: `field_worker.request_move` (open a move request from either end, and withdraw it) and
+// `field_worker.answer_move_request` (accept or refuse one from the other end — the acceptance moves the worker, so it is the
+// SECOND entry of `FIELD_WORKER_MOVE_PERMISSION_KEYS`) — `district_admin` ONLY; `field_worker.settle_move_request` (close a
+// request that has gone to the Pariwar Admin) — `pariwar_admin` ONLY; `field_worker.read_move_requests` (the request list and
+// one request's detail) — `district_admin` (either end) and `pariwar_admin` (any). All four DISTRICT-dimension (+ derived
+// super_admin). ⛔ `pariwar_admin` for request / answer (it moves directly — `field_worker.move`). REUSE CHECK — ⛔
+// `field_worker.move` (the DIRECT move, Pariwar Admin only — `-454` Q7 A, unchanged), `field_worker.view` / `.read_log` (a
+// worker the reader manages; the officer at the other end does not), `workplace.manage` (members' postings). 61 / 86 READ LIVE
+// at `43deb5d2`. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 62 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1522,6 +1535,20 @@ export const SEED_PERMISSION_KEYS = [
   // Story 13.1c (AD5, AD7; `-441` "Keep the full log of field worker") — READ a worker's whole event stream. district-dimension;
   // `district_admin` (own district) and `pariwar_admin` (any) (+ derived super_admin). No decrypt, no audit line (AD7).
   'field_worker.read_log',
+  // Story 13.1d (`2026-11-08-458` AD5; WHO is `-443` Q1 A, confirmed `-459` Q1 A) — OPEN a move request from either end (the
+  // end the officer holds), and WITHDRAW one they opened. district-dimension; `district_admin` ONLY (+ derived super_admin).
+  'field_worker.request_move',
+  // Story 13.1d (AD5, AD4) — ACCEPT or REFUSE a pending request, from the OTHER end (never the opener). The acceptance moves the
+  // worker (`field_worker.posted`), so this is the SECOND entry of `FIELD_WORKER_MOVE_PERMISSION_KEYS`. district-dimension (the
+  // request's counterpart district); `district_admin` ONLY (+ derived super_admin).
+  'field_worker.answer_move_request',
+  // Story 13.1d (AD5, AD8) — CLOSE a request that has gone to the Pariwar Admin (`escalated`); settling by a direct move is
+  // `field_worker.move`. district-dimension; `pariwar_admin` ONLY (+ derived super_admin).
+  'field_worker.settle_move_request',
+  // Story 13.1d (AD5, AD10; `-460`) — READ move requests: the list (decrypted names, one audit line a page) and one request's
+  // detail (the worker's name and work history, one audit line a view). district-dimension (either end); `district_admin`
+  // (either end) and `pariwar_admin` (any) (+ derived super_admin).
+  'field_worker.read_move_requests',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

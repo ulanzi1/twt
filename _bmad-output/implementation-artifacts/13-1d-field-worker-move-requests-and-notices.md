@@ -10,8 +10,7 @@ created from `origin/main` (no upstream) on 2026-11-08. Every `apps/` / `package
 admin module - then the author's own reads of the decision log, the roster and the 13.1c story). Perishable - re-check at Task 0.1. Re-locate by
 FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.2, 2026-11-08). Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; NO code before Task 0.3. Nothing committed yet (Task 0.0 commits these records on
-BigDev's word).
+STATUS: ready-for-dev (v1.3, 2026-11-08). Task 0 DONE except sending the Panel note (BigDev's). Q-1..Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; Records `5dea5d89`; decision `-458` `d20eb1d5`; Row 51 `0b663d46`. Code may start (Task 1).
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `2026-11-08-458` (the newest on every ref and every worktree is `-457`, 13.1c's). "The number belongs to the first COMMIT" (`-449`).
@@ -470,25 +469,25 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 ([[project_prettier_not_enforced]]); first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
 
 - [ ] **Task 0 - Preflight and governance (AC: 11)** - writes no code.
-  - [ ] 0.0 Commit this story file and the create-story record edits (`epics.md` note under Story 13.1d, `deferred-work.md` section, `sprint-status.yaml`
+  - [x] 0.0 (`5dea5d89`) Commit this story file and the create-story record edits (`epics.md` note under Story 13.1d, `deferred-work.md` section, `sprint-status.yaml`
     row + ledger) as ONE `records(13.1d)` commit on the story branch, when BigDev asks.
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor 43deb5d2 HEAD`; `git diff --name-only 43deb5d2..origin/main -- packages apps scripts docs`.
+  - [x] 0.1 (2026-11-08: `origin/main` still `43deb5d2`, no code moved; `-458`, `0205`, catalog 61, Row 51 free on every ref and worktree) `git fetch origin`; `git merge-base --is-ancestor 43deb5d2 HEAD`; `git diff --name-only 43deb5d2..origin/main -- packages apps scripts docs`.
     Re-grep the NUMBERS block; `git worktree list` / `git branch -a` for another branch touching `field-worker/`, `rbac/permissions.ts`,
     `apps/admin/src/modules/field-workers/` or migrations `0205`+.
   - [x] 0.2 **HALT on Q-1..Q-3.** ANSWERED 2026-11-08, BigDev verbatim "Q1-Q3 A"; propagated through this file (v1.2), `deferred-work.md`, `epics.md`
     and the ledger in the same edit, before any code ([[feedback_spec_edits_must_propagate_to_tasks]]).
-  - [ ] 0.3 Write decision `2026-11-08-458` (re-grep every ref and worktree) above the newest entry; commit it ALONE (`governance:`): an author-commit
+  - [x] 0.3 (`d20eb1d5`) Write decision `2026-11-08-458` (re-grep every ref and worktree) above the newest entry; commit it ALONE (`governance:`): an author-commit
     recording AD1-AD12, the answers verbatim, the four keys built on the default with a non-blocking confirm, the epic variance (AD4's "marked stale"),
     R2-D1's fix, "supersedes no RATIFIED text; adds no member predicate". Cite `-441`, `-442` QE17, `-443` Q1 A, `-453`, `-454` Q7 A, `-059` B(3),
     ADR-0040 / ADR-0043.
-  - [ ] 0.4 Roster, its OWN `governance:` commit: append **Row 51 `field-worker-move-requests-live`** (decision-authored; blocks no build or merge,
+  - [x] 0.4 (`0b663d46`) Roster, its OWN `governance:` commit: append **Row 51 `field-worker-move-requests-live`** (decision-authored; blocks no build or merge,
     [[project_not_in_production_merge_is_not_golive]]): (a) the Panel's confirm of the four keys; (b) the Panel's answers on the name shown to the other
     end and on telling the worker; (c) the email notices BUILT and deployed (`-443` Q1 A: "by email and in the admin console") - owner row `13-1g` (Q-1 A);
     (d) Row 48 closed first. A dated line at Row 48 (i) (13.1d's keys now minted, the confirm outstanding). (Q-1 A) Add the row
     `13-1g-field-worker-move-notices-by-email: backlog` to `sprint-status.yaml` and a `### Story 13.1g` stub in `epics.md` (source: this story's
     AD1 / AD9, G11; needs this story LANDED and a new ADR), in the same commit.
-  - [ ] 0.5 Annotate `epics.md` Story 13.1d (what was answered, where; the variance) - annotate, never rewrite.
-  - [ ] 0.6 (Q-3 A) ONE Panel note from the template,
+  - [x] 0.5 Annotate `epics.md` Story 13.1d (what was answered, where; the variance) - annotate, never rewrite.
+  - [x] 0.6 (written 2026-11-08, E4 run: all pass; DRAFTED, NOT sent - BigDev sends it) (Q-3 A) ONE Panel note from the template,
     `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-08-story-13-1d-field-worker-move-requests.md`, section 0 answered per
     question, the deciding fact, honest costs on every option, evidence last; run its E4 commands before it is sent. Non-blocking.
 
@@ -635,3 +634,4 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
 | 2026-11-08 | 1.0 | Created by `bmad-create-story 13.1d` on the story worktree at `43deb5d2`; Q-1..Q-3 open with BigDev; no code before Task 0.3. |
 | 2026-11-08 | 1.1 | Validated (`bmad-create-story validate 13.1d`; numbers re-checked live, unchanged), BigDev: "all": the acceptance moves the worker FIRST and records `posted_event_id` (event ids are DB-minted); only a direct move supersedes inside `postFieldWorker`; side effects after `runLockedTransition`, ⛔ inside its savepoint; `escalation_cause` CHECK admits withdraw / supersede after escalation; notices filtered by recipient in SQL (no actor setting); a direct move writes one notice per recipient; `pending_kyc` named; the list GETs' clamp, `limit` max and `rateLimit` named; the 201-`escalated` line; the notices routes on `[session, scope]`; the unseen count on `FieldWorkerNav`; 13.1c's CR34 told apart from 13.1a's. Q-1..Q-3 still open. |
 | 2026-11-08 | 1.2 | Q-1..Q-3 ANSWERED by BigDev, verbatim "Q1-Q3 A": the email is row `13-1g`'s (Task 7 not here); the Pariwar Admins are told of every refusal; ONE non-blocking Panel note with the three questions (Task 0.6). Propagated through AD1, AD9, AD12, AC3, Tasks 0.2-0.6 and 7, C1 and the variances; Task 0.2 done. |
+| 2026-11-08 | 1.3 | Task 0 done on BigDev's "go ahead": records `5dea5d89`; preflight clean; decision `-458` committed alone `d20eb1d5`; roster Row 51 + Row 48 (i) line + row `13-1g` and its `epics.md` stub `0b663d46`; `epics.md` 13.1d annotation (the supersession pointer); the Panel note written (E4 all pass), NOT sent. |

@@ -263,3 +263,54 @@ describe('Story 13.1c DTOs', () => {
     expect(FieldWorkerLog.safeParse({ items: [{ ...item, actor: { ...item.actor, email: 'a@b.c' } }], next_after: null }).success).toBe(false);
   });
 });
+
+// ── Story 13.1d — the move request and the notices (`2026-11-08-458` AD6, AD7, AD9; `-460`) ──────────────────────────────────────
+describe('Story 13.1d — contract ↔ domain sync-guard and DTO shapes', () => {
+  it('every re-declared tuple equals its @twt/domain source, in order; the list cap is the domain’s', async () => {
+    const c = await import('../src/field-workers/index.js');
+    expect([...c.FIELD_WORKER_MOVE_REQUEST_STATES]).toEqual([...schema.FIELD_WORKER_MOVE_REQUEST_STATES]);
+    expect([...c.FIELD_WORKER_MOVE_REFUSAL_REASONS]).toEqual([...schema.FIELD_WORKER_MOVE_REFUSAL_REASONS]);
+    expect([...c.FIELD_WORKER_MOVE_ESCALATION_CAUSES]).toEqual([...schema.FIELD_WORKER_MOVE_ESCALATION_CAUSES]);
+    expect([...c.FIELD_WORKER_MOVE_SUPERSEDE_CAUSES]).toEqual([...schema.FIELD_WORKER_MOVE_SUPERSEDE_CAUSES]);
+    expect([...c.FIELD_WORKER_MOVE_OPENED_AT_ENDS]).toEqual([...schema.FIELD_WORKER_MOVE_OPENED_AT_ENDS]);
+    expect([...c.FIELD_WORKER_NOTICE_KINDS]).toEqual([...schema.FIELD_WORKER_NOTICE_KINDS]);
+    expect([...c.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES]);
+    expect(c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_MOVE_REQUESTS_MAX_LIMIT);
+    expect(c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_NOTICES_MAX_LIMIT);
+  });
+
+  it('the requests are strict and shape-only; a refusal reason outside AD7 or free text is refused; an over-cap limit clamps', async () => {
+    const c = await import('../src/field-workers/index.js');
+    expect(c.OpenFieldWorkerMoveRequestRequest.safeParse({ from_district: 'Patna', to_district: 'Gaya' }).success).toBe(true);
+    expect(c.OpenFieldWorkerMoveRequestRequest.safeParse({ from_district: 'Patna', to_district: 'Gaya', name: 'x' }).success).toBe(false);
+    expect(c.FieldWorkerMoveRequestActRequest.safeParse({}).success).toBe(true);
+    expect(c.FieldWorkerMoveRequestActRequest.safeParse({ note: 'x' }).success).toBe(false);
+    expect(c.RefuseFieldWorkerMoveRequestRequest.safeParse({ reason_code: 'no_capacity' }).success).toBe(true);
+    for (const r of ['busy', 'We are full', '']) expect(c.RefuseFieldWorkerMoveRequestRequest.safeParse({ reason_code: r }).success, r).toBe(false);
+    expect(c.FieldWorkerMoveRequestListQuery.parse({ state: 'open', limit: '1000' }).limit).toBe(100);
+    expect(c.FieldWorkerMoveRequestListQuery.safeParse({ state: 'open', limit: '0' }).success).toBe(false);
+    expect(c.FieldWorkerMoveRequestListQuery.safeParse({ state: 'pending' }).success).toBe(false);
+    expect(c.FieldWorkerNoticeListQuery.parse({ limit: '1e3' }).limit).toBe(100);
+    expect(c.MarkFieldWorkerNoticesSeenRequest.safeParse({ notice_ids: [] }).success).toBe(false);
+    expect(c.MarkFieldWorkerNoticesSeenRequest.safeParse({ notice_ids: Array.from({ length: 101 }, () => '7c9e6679-7425-40de-944b-e07fc1f90ae7') }).success).toBe(false);
+  });
+
+  it('`-460`: the detail’s worker block has NO reason, actor, mobile or code key — and members_onboarded is nullable', async () => {
+    const c = await import('../src/field-workers/index.js');
+    const keys = Object.keys(c.FieldWorkerMoveRequestWorker.shape);
+    for (const banned of ['reason_code', 'state_reason_code', 'actor', 'mobile', 'code', 'registered_by_display', 'approved_by_display']) {
+      expect(keys, banned).not.toContain(banned);
+    }
+    const w = {
+      field_worker_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7', name: 'A', current_state: 'active', registered_on: '2026-01-02', active_since: null,
+      districts: [{ district: 'Patna', from: '2026-01-02', to: null }], suspensions: [], history_truncated: false, members_onboarded: null,
+    };
+    expect(c.FieldWorkerMoveRequestWorker.safeParse(w).success).toBe(true);
+    expect(c.FieldWorkerMoveRequestWorker.safeParse({ ...w, suspensions: [{ from: '2026-02-01', to: null, reason: 'under_review' }] }).success).toBe(false);
+    for (const schemaName of ['FieldWorkerMoveRequestResult', 'FieldWorkerNoticeItem', 'FieldWorkerMoveRequestEvent'] as const) {
+      const k = Object.keys(c[schemaName].shape);
+      expect(k, schemaName).not.toContain('name');
+      expect(k, schemaName).not.toContain('mobile');
+    }
+  });
+});

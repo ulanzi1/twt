@@ -5570,6 +5570,174 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 13.1d — a District Admin's MOVE REQUEST for a field worker, its answer, its escalation, and the officers' NOTICES
+// (`2026-11-08-458` AD5 / AD6 / AD9 / AD10, as amended by `-460`; keys confirmed by the Panel, `-459` Q1 A) ───────────────────────────
+// Four keys, all DISTRICT-dimension: `field_worker.request_move` and `field_worker.answer_move_request` (district_admin — either end
+// opens, the OTHER end answers, never the opener), `field_worker.settle_move_request` (pariwar_admin — close an escalated request),
+// `field_worker.read_move_requests` (both). A missing or foreign request is the SAME 403 for everyone. The notices need no key: they
+// are the officer's own rows. ⛔ A mobile or a code anywhere; the worker's NAME only in the audited reads.
+const {
+  FieldWorkerMoveRequestParams: FieldWorkerMoveRequestParamsSchema,
+  OpenFieldWorkerMoveRequestRequest: OpenFieldWorkerMoveRequestRequestSchema,
+  FieldWorkerMoveRequestActRequest: FieldWorkerMoveRequestActRequestSchema,
+  RefuseFieldWorkerMoveRequestRequest: RefuseFieldWorkerMoveRequestRequestSchema,
+  FieldWorkerMoveRequestResult: FieldWorkerMoveRequestResultSchema,
+  FieldWorkerMoveRequestListQuery: FieldWorkerMoveRequestListQuerySchema,
+  FieldWorkerMoveRequestPage: FieldWorkerMoveRequestPageSchema,
+  FieldWorkerMoveRequestDetail: FieldWorkerMoveRequestDetailSchema,
+  FieldWorkerNoticeListQuery: FieldWorkerNoticeListQuerySchema,
+  FieldWorkerNoticePage: FieldWorkerNoticePageSchema,
+  MarkFieldWorkerNoticesSeenRequest: MarkFieldWorkerNoticesSeenRequestSchema,
+} = await import('../src/field-workers/index.js');
+const FieldWorkerMoveRequestResultComponent = FieldWorkerMoveRequestResultSchema.openapi('FieldWorkerMoveRequestResult');
+const moveRequestActNote =
+  ' Send an `Idempotency-Key` header (1-200 characters; the request id is in its namespace): a replay returns the first answer.';
+const moveRequestWrite = (key: string, extra409: string) => ({
+  400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
+  401: fieldWorkersNoSession,
+  403: errorResponse(`Missing ${key} for the district this act needs — also an unknown request or another Pariwar's`),
+  404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  409: errorResponse(`field_worker.move_request_not_open · field_worker.idempotency_in_progress${extra409}`),
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/move-requests',
+  summary: 'Ask the District Admin at the other end to take on or release a field worker',
+  description:
+    '`field_worker.request_move` (district_admin) at the END the officer holds — the worker\'s current district or the one they ask to ' +
+    'join. `from_district` is the worker\'s district as the screen showed it (a worker moved meanwhile is 409 authorization_stale). The ' +
+    'District Admins of the other end are told; if none other works there, the request goes to the Pariwar Admin at once (`state: ' +
+    'escalated`). One open request per worker. The worker does not move until the other end accepts.' +
+    moveRequestActNote,
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(OpenFieldWorkerMoveRequestRequestSchema), required: true } },
+  responses: {
+    201: { description: 'Opened (pending, or escalated at once)', content: jsonOf(FieldWorkerMoveRequestResultComponent) },
+    ...moveRequestWrite('field_worker.request_move', ' · field_worker.move_request_open · field_worker.illegal_transition · field_worker.authorization_stale · field_worker.district_unchanged'),
+    422: errorResponse('field_worker.district_unknown (not a recorded district of the Pariwar)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+for (const [act, key, summary, description, extra409] of [
+  [
+    'accept',
+    'field_worker.answer_move_request',
+    'Accept a move request (the District Admin at the other end)',
+    '`field_worker.answer_move_request` (district_admin) at the request\'s OTHER end — never the officer who opened it. Moves the worker ' +
+      '(`field_worker.posted`) and records the acceptance in one transaction; the opener is told, and reminded to tell the worker. Body `{}`.',
+    ' · field_worker.move_request_same_officer · field_worker.authorization_stale',
+  ],
+  [
+    'withdraw',
+    'field_worker.request_move',
+    'Withdraw a move request (the officer who opened it)',
+    '`field_worker.request_move` at the opener\'s end; only the officer who opened it, while it is pending or with the Pariwar Admin. Body `{}`.',
+    ' · field_worker.move_request_not_opener',
+  ],
+  [
+    'close',
+    'field_worker.settle_move_request',
+    'Close a move request that has gone to the Pariwar Admin, without a move',
+    '`field_worker.settle_move_request` (pariwar_admin). An escalated request only; to settle it by moving the worker, move them directly ' +
+      '(which closes the request as superseded). Body `{}`.',
+    '',
+  ],
+] as const) {
+  registry.registerPath({
+    method: 'post',
+    path: `/api/v1/p/{pariwarId}/field-workers/move-requests/{moveRequestId}/${act}`,
+    summary,
+    description: description + moveRequestActNote,
+    tags: ['field-workers'],
+    request: { params: FieldWorkerMoveRequestParamsSchema, body: { content: jsonOf(FieldWorkerMoveRequestActRequestSchema), required: true } },
+    responses: {
+      200: { description: 'Done', content: jsonOf(FieldWorkerMoveRequestResultComponent) },
+      ...moveRequestWrite(key, extra409),
+    } as Parameters<typeof registry.registerPath>[0]['responses'],
+  });
+}
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/move-requests/{moveRequestId}/refuse',
+  summary: 'Refuse a move request, with a reason from the fixed list',
+  description:
+    '`field_worker.answer_move_request` (district_admin) at the request\'s OTHER end — never the opener. `reason_code` is one of ' +
+    '`no_capacity`, `work_not_needed_here`, `request_incomplete`, `other` (never free text). The worker stays; the opener and the ' +
+    'Pariwar Admins are told.' +
+    moveRequestActNote,
+  tags: ['field-workers'],
+  request: { params: FieldWorkerMoveRequestParamsSchema, body: { content: jsonOf(RefuseFieldWorkerMoveRequestRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Refused', content: jsonOf(FieldWorkerMoveRequestResultComponent) },
+    ...moveRequestWrite('field_worker.answer_move_request', ' · field_worker.move_request_same_officer · field_worker.authorization_stale'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/move-requests',
+  summary: 'Move requests — a district\'s (either end), or the whole Pariwar\'s',
+  description:
+    '`field_worker.read_move_requests` at `district` (a District Admin of it), or — with no district — at the Pariwar (a Pariwar Admin). ' +
+    '`state` `open` (pending, escalated) or `closed`. Each item carries the worker\'s NAME, decrypted behind ONE audit line per page ' +
+    'naming the workers on it; never the mobile. `limit` 1-100 (default 50; an over-cap value is clamped). `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerMoveRequestListQuerySchema },
+  responses: {
+    200: { description: 'A page of requests', content: jsonOf(FieldWorkerMoveRequestPageSchema.openapi('FieldWorkerMoveRequestPage')) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.cursor_invalid'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_move_requests for the district (or the Pariwar, with no district)'),
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/move-requests/{moveRequestId}',
+  summary: 'One move request — its history, and the worker\'s name and work history',
+  description:
+    '`field_worker.read_move_requests` at either end of the request. The request\'s events in order, and the worker: their name, current ' +
+    'state, when they registered and started, each district with its dates and each suspension\'s dates — never a reason, an officer\'s ' +
+    'name, the mobile or the code (decision 2026-11-08-460). `members_onboarded` is `null` until it can be counted. ONE audit line per ' +
+    'view, written before the name is decrypted. `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerMoveRequestParamsSchema },
+  responses: {
+    200: { description: 'The request', content: jsonOf(FieldWorkerMoveRequestDetailSchema.openapi('FieldWorkerMoveRequestDetail')) },
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_move_requests at either end — also an unknown request or another Pariwar\'s'),
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/notices',
+  summary: 'The officer\'s own field-worker notices, newest first',
+  description:
+    'No key — the officer\'s own rows only (a signed-in admin of the Pariwar). Ids, districts and codes; never a name. `limit` 1-100 ' +
+    '(default 50; an over-cap value is clamped). `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerNoticeListQuerySchema },
+  responses: {
+    200: { description: 'A page of notices', content: jsonOf(FieldWorkerNoticePageSchema.openapi('FieldWorkerNoticePage')) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.cursor_invalid'),
+    401: fieldWorkersNoSession,
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/notices/seen',
+  summary: 'Mark the officer\'s notices seen',
+  description: 'No key. Sets `seen_at` once on each of the officer\'s OWN notices named; another officer\'s ids and unknown ids are ignored.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), body: { content: jsonOf(MarkFieldWorkerNoticesSeenRequestSchema), required: true } },
+  responses: {
+    204: { description: 'Marked' },
+    400: errorResponse('Invalid input (request.validation)'),
+    401: fieldWorkersNoSession,
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

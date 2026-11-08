@@ -23,6 +23,13 @@ import {
   FieldWorkerCodeSmsStatus,
   FieldWorkerEventType,
   FieldWorkerKycStatus,
+  FieldWorkerMoveEscalationCause,
+  FieldWorkerMoveOpenedAtEnd,
+  FieldWorkerMoveRefusalReason,
+  FieldWorkerMoveRequestEventType,
+  FieldWorkerMoveRequestState,
+  FieldWorkerMoveSupersedeCause,
+  FieldWorkerNoticeKind,
   FieldWorkerPostReason,
   FieldWorkerReasonCode,
   FieldWorkerState,
@@ -236,3 +243,165 @@ export type FieldWorkerLogItem = z.output<typeof FieldWorkerLogItem>;
 /** 200 — a page in `event_version` order; `next_after` is the `after` of the next page (`null` on the last). */
 export const FieldWorkerLog = z.object({ items: z.array(FieldWorkerLogItem), next_after: z.number().int().nullable() }).strict();
 export type FieldWorkerLog = z.output<typeof FieldWorkerLog>;
+
+// ── Story 13.1d — a move request between two District Admins, and the officers' notices (`2026-11-08-458` AD6, AD9, AD10; `-460`) ──
+// SHAPE-only requests (QE9). ⛔ A mobile or a code anywhere (I6). The worker's NAME appears ONLY in the list item and the detail's
+// `worker` block — both decrypted behind an audit line (AD10; `-460`). The detail's work history carries dates, districts and the
+// current state's name — ⛔ a reason, ⛔ an officer's name (`-460` item 1). Each write takes an `Idempotency-Key` header.
+
+/** An over-cap whole-number `limit` is CLAMPED to `max` before validation (the `FieldWorkerLogQuery` shape — AD6), never an error. */
+const clampedLimit = (max: number) =>
+  z
+    .preprocess((v) => {
+      const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+      const wholeOrInfinite = typeof n === 'number' && (Number.isInteger(n) || n === Number.POSITIVE_INFINITY);
+      return wholeOrInfinite && n > max ? max : v;
+    }, z.coerce.number().int().min(1).max(max))
+    .optional();
+
+/** The page cap of both lists (AD6) — the domain's `PAGE_MOVE_REQUESTS_MAX_LIMIT` / `PAGE_NOTICES_MAX_LIMIT`, bound by the sync-guard. */
+export const FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT = 100;
+
+/** The path of a per-request route. */
+export const FieldWorkerMoveRequestParams = z.object({ pariwarId: z.string().uuid(), moveRequestId: z.string().uuid() }).strict();
+export type FieldWorkerMoveRequestParams = z.output<typeof FieldWorkerMoveRequestParams>;
+
+/**
+ * `POST …/:fieldWorkerId/move-requests` — `from_district` is the worker's district as the screen SHOWED it (a stale one is 409);
+ * the officer must hold one of the two ends (the gate's target is the end they hold).
+ */
+export const OpenFieldWorkerMoveRequestRequest = z.object({ from_district: WireDistrict, to_district: WireDistrict }).strict();
+export type OpenFieldWorkerMoveRequestRequest = z.output<typeof OpenFieldWorkerMoveRequestRequest>;
+
+/** `POST …/move-requests/:moveRequestId/{accept,withdraw,close}` — the body is `{}` (a bodyless POST is a 400 in Fastify, TR4). */
+export const FieldWorkerMoveRequestActRequest = z.object({}).strict();
+export type FieldWorkerMoveRequestActRequest = z.output<typeof FieldWorkerMoveRequestActRequest>;
+
+/** `POST …/move-requests/:moveRequestId/refuse` — a reason from the fixed list (AD7); free text is a 400. */
+export const RefuseFieldWorkerMoveRequestRequest = z.object({ reason_code: FieldWorkerMoveRefusalReason }).strict();
+export type RefuseFieldWorkerMoveRequestRequest = z.output<typeof RefuseFieldWorkerMoveRequestRequest>;
+
+/** 201 / 200 for every write — the request as the act left it, and the worker's district after it. ⛔ A name. */
+export const FieldWorkerMoveRequestResult = z
+  .object({
+    move_request_id: UuidString,
+    field_worker_id: UuidString,
+    state: FieldWorkerMoveRequestState,
+    from_district: z.string(),
+    to_district: z.string(),
+    counterpart_district: z.string(),
+    /** Where the worker reports after this act — `to_district` after an acceptance, else unchanged. */
+    worker_district: z.string(),
+  })
+  .strict();
+export type FieldWorkerMoveRequestResult = z.output<typeof FieldWorkerMoveRequestResult>;
+
+/**
+ * `GET …/field-workers/move-requests` query. `state` REQUIRED (`open` | `closed`); `district` optional — a District Admin names one of
+ * theirs (the requests with it at EITHER end); with none, the whole Pariwar (a Pariwar grant only). `limit` 1–100 (default 50; an over-cap
+ * value is clamped); `cursor` opaque.
+ */
+export const FieldWorkerMoveRequestListQuery = z
+  .object({
+    state: z.enum(['open', 'closed']),
+    district: WireDistrict.optional(),
+    cursor: Cursor.optional(),
+    limit: clampedLimit(FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT),
+  })
+  .strict();
+export type FieldWorkerMoveRequestListQuery = z.output<typeof FieldWorkerMoveRequestListQuery>;
+
+/** One request in a list — the worker's NAME decrypted (AD10, audited a page at a time); the opener's CURRENT display name or null. */
+export const FieldWorkerMoveRequestItem = z
+  .object({
+    move_request_id: UuidString,
+    field_worker_id: UuidString,
+    name: z.string(),
+    from_district: z.string(),
+    to_district: z.string(),
+    opened_at_end: FieldWorkerMoveOpenedAtEnd,
+    counterpart_district: z.string(),
+    state: FieldWorkerMoveRequestState,
+    refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
+    escalation_cause: FieldWorkerMoveEscalationCause.nullable(),
+    supersede_cause: FieldWorkerMoveSupersedeCause.nullable(),
+    opened_by: UuidString,
+    opened_by_display: z.string().nullable(),
+    opened_at: Iso8601Datetime,
+    answered_at: Iso8601Datetime.nullable(),
+  })
+  .strict();
+export type FieldWorkerMoveRequestItem = z.output<typeof FieldWorkerMoveRequestItem>;
+
+/** 200 — a keyset page (`next_cursor` null on the last), `Cache-Control: no-store`. */
+export const FieldWorkerMoveRequestPage = z.object({ items: z.array(FieldWorkerMoveRequestItem), next_cursor: z.string().nullable() }).strict();
+export type FieldWorkerMoveRequestPage = z.output<typeof FieldWorkerMoveRequestPage>;
+
+/** An IST calendar day, `YYYY-MM-DD`. */
+const IstDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+/**
+ * `-460` — the worker on a request, as one request's detail shows them: the name, the current state's NAME, and a work history of DATES
+ * and DISTRICTS (⛔ a reason, ⛔ an officer's name). `members_onboarded` is `null` until Story 13.8 can count it ("Not counted yet").
+ */
+export const FieldWorkerMoveRequestWorker = z
+  .object({
+    field_worker_id: UuidString,
+    name: z.string(),
+    current_state: FieldWorkerState,
+    registered_on: IstDay.nullable(),
+    active_since: IstDay.nullable(),
+    districts: z.array(z.object({ district: z.string(), from: IstDay, to: IstDay.nullable() }).strict()),
+    suspensions: z.array(z.object({ from: IstDay, to: IstDay.nullable() }).strict()),
+    /** True when the history stopped at its cap. */
+    history_truncated: z.boolean(),
+    members_onboarded: z.number().int().nonnegative().nullable(),
+  })
+  .strict();
+export type FieldWorkerMoveRequestWorker = z.output<typeof FieldWorkerMoveRequestWorker>;
+
+/** One event of a request's stream — codes only (⛔ an officer's name). */
+export const FieldWorkerMoveRequestEvent = z
+  .object({
+    event_version: z.number().int().positive(),
+    event_type: FieldWorkerMoveRequestEventType,
+    occurred_at: Iso8601Datetime,
+    refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
+    cause: z.string().nullable(),
+  })
+  .strict();
+export type FieldWorkerMoveRequestEvent = z.output<typeof FieldWorkerMoveRequestEvent>;
+
+/** `GET …/move-requests/:moveRequestId` — the request, its events in order, and the worker (`-460`; ONE audit line per view). */
+export const FieldWorkerMoveRequestDetail = z
+  .object({ request: FieldWorkerMoveRequestItem, events: z.array(FieldWorkerMoveRequestEvent), worker: FieldWorkerMoveRequestWorker })
+  .strict();
+export type FieldWorkerMoveRequestDetail = z.output<typeof FieldWorkerMoveRequestDetail>;
+
+/** `GET …/field-workers/notices` query — the officer's OWN notices; `limit` 1–100 (default 50; clamped); `cursor` opaque. */
+export const FieldWorkerNoticeListQuery = z.object({ cursor: Cursor.optional(), limit: clampedLimit(FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT) }).strict();
+export type FieldWorkerNoticeListQuery = z.output<typeof FieldWorkerNoticeListQuery>;
+
+/** One notice — ids, districts and codes (⛔ a name; the screen shows the worker's name only through the audited request reads). */
+export const FieldWorkerNoticeItem = z
+  .object({
+    notice_id: UuidString,
+    kind: FieldWorkerNoticeKind,
+    field_worker_id: UuidString,
+    move_request_id: UuidString.nullable(),
+    from_district: z.string(),
+    to_district: z.string(),
+    refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
+    created_at: Iso8601Datetime,
+    seen_at: Iso8601Datetime.nullable(),
+  })
+  .strict();
+export type FieldWorkerNoticeItem = z.output<typeof FieldWorkerNoticeItem>;
+
+/** 200 — a keyset page of the officer's own notices, `Cache-Control: no-store`. */
+export const FieldWorkerNoticePage = z.object({ items: z.array(FieldWorkerNoticeItem), next_cursor: z.string().nullable() }).strict();
+export type FieldWorkerNoticePage = z.output<typeof FieldWorkerNoticePage>;
+
+/** `POST …/field-workers/notices/seen` — 1–100 of the officer's notice ids; another officer's ids are ignored (no error). → 204. */
+export const MarkFieldWorkerNoticesSeenRequest = z.object({ notice_ids: z.array(UuidString).min(1).max(100) }).strict();
+export type MarkFieldWorkerNoticesSeenRequest = z.output<typeof MarkFieldWorkerNoticesSeenRequest>;

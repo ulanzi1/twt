@@ -26,7 +26,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1d: A District Admin Asks Another to Take On or Release a Field Worker, and the Other Accepts or Refuses With a Reason - and the District Admins Are Told in the Admin Console (and by Email) `[PRIMITIVE]` `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -484,7 +484,7 @@ work only in this worktree and grep `docs/legal` by ABSOLUTE path ([[feedback_wo
 and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[project_prepush_hook_inherits_5432]]) on a FRESH container; hand-format
 ([[project_prettier_not_enforced]]); first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
 
-- [ ] **Task 0 - Preflight and governance (AC: 11)** - writes no code.
+- [x] **Task 0 - Preflight and governance (AC: 11)** - writes no code.
   - [x] 0.0 (`5dea5d89`) Commit this story file and the create-story record edits (`epics.md` note under Story 13.1d, `deferred-work.md` section, `sprint-status.yaml`
     row + ledger) as ONE `records(13.1d)` commit on the story branch, when BigDev asks.
   - [x] 0.1 (2026-11-08: `origin/main` still `43deb5d2`, no code moved; `-458`, `0205`, catalog 61, Row 51 free on every ref and worktree) `git fetch origin`; `git merge-base --is-ancestor 43deb5d2 HEAD`; `git diff --name-only 43deb5d2..origin/main -- packages apps scripts docs`.
@@ -516,9 +516,9 @@ and `git push` with the story's `DATABASE_URL` port and `?sslmode=disable` ([[pr
     audited (the request detail read, one audit line per view, is the default); (iv) the count of members onboarded before Story 13.8 can
     compute it - shown as "not counted yet", or go-live waits for it (a new Row 51 leg). Then dated lines at Row 51 (b) naming the row(s).
 
-- [ ] **Task 1 - Keys (AC: 8; I10)** - in the SAME commit as Task 2.4 (the move-key list).
-  - [ ] 1.1 `permissions.ts` (four keys, v62, changelog comment); `roles.ts` (constants beside 13.1c's; bundles per AD5; update the :347 comment).
-  - [ ] 1.2 `tests/rbac/{permissions,roles}.test.ts`, `tests/field-worker/{events,state}.test.ts` catalog fixtures.
+- [x] **Task 1 - Keys (AC: 8; I10)** (`2ae726f0`) - in the SAME commit as Task 2.4 (the move-key list).
+  - [x] 1.1 `permissions.ts` (four keys, v62, changelog comment); `roles.ts` (constants beside 13.1c's; bundles per AD5; update the :347 comment).
+  - [x] 1.2 `tests/rbac/{permissions,roles}.test.ts`, `tests/field-worker/{events,state}.test.ts` catalog fixtures.
 
 - [ ] **Task 2 - The domain (AC: 1-7; I1-I5)**
   - [ ] 2.1 Migration `0205` + drizzle schema files + `schema/index.ts` + RLS policy file + regression spec (`packages/domain/tests/integration/rls/`)

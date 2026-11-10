@@ -123,6 +123,9 @@ export const fieldWorkerMoveRequests = pgTable(
       sql`(${t.state} IN ('pending', 'escalated')) = (${t.answeredBy} IS NULL) AND (${t.answeredBy} IS NULL) = (${t.answeredAt} IS NULL)`,
     ),
     check('field_worker_move_requests_posted_event_pair', sql`(${t.state} = 'accepted') = (${t.postedEventId} IS NOT NULL)`),
+    // `-459` Q1 A / I3 and AD3: whoever accepts or refuses is never the opener; a withdrawal is the opener's (code review CR1).
+    check('field_worker_move_requests_answerer_not_opener', sql`${t.state} NOT IN ('accepted', 'refused') OR ${t.answeredBy} <> ${t.openedBy}`),
+    check('field_worker_move_requests_withdrawn_by_opener', sql`${t.state} <> 'withdrawn' OR ${t.answeredBy} = ${t.openedBy}`),
   ],
 );
 

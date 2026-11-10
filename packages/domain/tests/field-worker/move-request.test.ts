@@ -1,8 +1,9 @@
 // Story 13.1d — the move request's vocabulary, state table and work-history fold (AD2, AD3, AD8; `-460`). DB-free.
 
 import { describe, expect, it } from 'vitest';
+import type pg from 'pg';
 
-import { foldWorkHistory } from '../../src/field-worker/move-request-read.js';
+import { findStaleMoveRequests, foldWorkHistory } from '../../src/field-worker/move-request-read.js';
 import {
   FIELD_WORKER_MOVE_REQUEST_EVENT_PAYLOAD_SCHEMAS,
   FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES,
@@ -108,6 +109,23 @@ describe('Story 13.1d AD3 — the state table', () => {
     expect(isMoveRequestOpen('pending') && isMoveRequestOpen('escalated')).toBe(true);
   });
 
+  // `legal` above is built from the table `nextMoveRequestState` reads, so that equality cannot see a swapped `to` (the 13.1 R3-13 trap) —
+  // each arm's TARGET is pinned here by hand (code review CR9).
+  it('each legal arm lands in the state AD3 names — written out, ⛔ derived from the table', () => {
+    const arms = [
+      ['pending', 'field_worker_move_request.accepted', 'accepted'],
+      ['pending', 'field_worker_move_request.refused', 'refused'],
+      ['pending', 'field_worker_move_request.withdrawn', 'withdrawn'],
+      ['escalated', 'field_worker_move_request.withdrawn', 'withdrawn'],
+      ['pending', 'field_worker_move_request.escalated', 'escalated'],
+      ['escalated', 'field_worker_move_request.closed', 'closed'],
+      ['pending', 'field_worker_move_request.superseded', 'superseded'],
+      ['escalated', 'field_worker_move_request.superseded', 'superseded'],
+    ] as const;
+    expect(arms).toHaveLength(FIELD_WORKER_MOVE_REQUEST_TRANSITIONS.length);
+    for (const [from, event, to] of arms) expect(nextMoveRequestState(from, event), `${from} + ${event}`).toBe(to);
+  });
+
   it('once escalated, the counterpart can no longer answer (accept / refuse are pending-only); the sweep escalates pending only', () => {
     expect(nextMoveRequestState('escalated', 'field_worker_move_request.accepted')).toBeNull();
     expect(nextMoveRequestState('escalated', 'field_worker_move_request.refused')).toBeNull();
@@ -145,5 +163,53 @@ describe('`-460` — the work-history fold', () => {
   it('a worker never approved: no "active since"; an empty stream folds to nothing', () => {
     expect(foldWorkHistory([{ eventType: 'field_worker.registered', day: '2026-01-02', district: 'Patna' }]).activeSince).toBeNull();
     expect(foldWorkHistory([])).toEqual({ registeredOn: null, activeSince: null, districts: [], suspensions: [] });
+  });
+
+  // `-460` item 1 — "the last one open-ended"; ⛔ "the date or fact of an ending beyond the state's name" (code review CR13). The reader's SQL does
+  // not select `field_worker.terminated`, and the fold ignores it too, so an ended worker's last district and an open suspension stay open-ended.
+  it('a worker whose work ENDED: the last district and a suspension open at the ending stay open-ended; a `terminated` row changes nothing and its day appears nowhere', () => {
+    const before = [
+      { eventType: 'field_worker.registered', day: '2026-01-02', district: 'Patna' },
+      { eventType: 'field_worker.activated', day: '2026-01-03', district: null },
+      { eventType: 'field_worker.posted', day: '2026-03-10', district: 'Gaya' },
+      { eventType: 'field_worker.suspended', day: '2026-05-05', district: null },
+    ];
+    const ended = [...before, { eventType: 'field_worker.terminated', day: '2026-06-30', district: null }];
+    const h = foldWorkHistory(ended);
+    expect(h).toEqual(foldWorkHistory(before)); // the ending adds nothing
+    expect(h.districts.at(-1)).toEqual({ district: 'Gaya', from: '2026-03-10', to: null });
+    expect(h.suspensions.at(-1)).toEqual({ from: '2026-05-05', to: null });
+    expect(JSON.stringify(h)).not.toContain('2026-06-30'); // the ending's day
+  });
+});
+
+describe('Story 13.1d CR15 — the sweep’s cross-tenant selector', () => {
+  const poolOf = (rows: Array<{ pariwar_id: string; move_request_id: string }> = []) => {
+    const calls: Array<{ sql: string; params: unknown[] }> = [];
+    const pool = {
+      query: async (sql: string, params: unknown[]) => {
+        calls.push({ sql, params });
+        return { rows };
+      },
+    } as unknown as pg.Pool;
+    return { pool, calls };
+  };
+
+  it('a `limit` that is not an integer is a RangeError BEFORE any statement (the page reads’ guard; `clampLimit` would pass 1.5 and NaN on to Postgres)', async () => {
+    for (const limit of [1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const { pool, calls } = poolOf();
+      await expect(findStaleMoveRequests(pool, { limit }), String(limit)).rejects.toBeInstanceOf(RangeError);
+      expect(calls, String(limit)).toEqual([]);
+    }
+  });
+
+  it('CONTROL: an integer limit is sent, an over-cap one is clamped to the tick bound, and the rows come back as ids only', async () => {
+    const row = { pariwar_id: '11111111-1111-1111-1111-111111111111', move_request_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7' };
+    const small = poolOf([row]);
+    expect(await findStaleMoveRequests(small.pool, { limit: 5 })).toEqual([{ pariwarId: row.pariwar_id, moveRequestId: row.move_request_id }]);
+    expect(small.calls[0]!.params).toEqual([5]);
+    const big = poolOf();
+    await findStaleMoveRequests(big.pool, { limit: 5000 });
+    expect(big.calls[0]!.params).toEqual([200]);
   });
 });

@@ -101,14 +101,45 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       expect(await requestEvents()).toBe(1);
     });
 
-    it('a terminated worker → 409 illegal_transition; an unlisted destination → 422 district_unknown (the opener holds the source)', async () => {
+    it('a terminated worker → 409 illegal_transition; an unlisted destination → 422 district_unknown (the opener holds the source) — each with NO audit line', async () => {
       const s = await setup();
+      const before = (await linesOf(s.p, 'field_worker_move_request/')).length;
       const unlisted = await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Darbhanga' });
       expect([unlisted.statusCode, errOf(unlisted).code]).toEqual([422, 'field_worker.district_unknown']);
       const today = (await q<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d", []))[0]!.d;
       expect((await h.terminate(s.pa.client, s.p, s.worker, { reason_code: 'inactive', ended_on: today })).statusCode).toBe(200);
       const r = await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya' });
       expect([r.statusCode, errOf(r).code]).toEqual([409, 'field_worker.illegal_transition']);
+      expect((await linesOf(s.p, 'field_worker_move_request/')).length).toBe(before); // I7 — neither pre-read refusal wrote a line
+    });
+
+    // CR24 — the TENANT boundary never says whether a worker exists in ANOTHER Pariwar (the per-worker routes' rule): an unknown id and another
+    // Pariwar's worker are the same 403. ⚠ Within the Pariwar the answers differ - (c) above: an existing worker with a stale `from_district` is
+    // 409 `authorization_stale`, for an officer who holds the district they name (RP-19: this leg does not claim otherwise).
+    it('an unknown worker id and another Pariwar’s worker: 403 for the officer who holds the named district, no audit line, with a CONTROL that the same officer opens for their own worker', async () => {
+      const s = await setup();
+      const other = await setup(); // another Pariwar, with its own approved worker in Patna
+      const before = (await linesOf(s.p, 'field_worker_move_request/')).length;
+      for (const worker of [randomUUID(), other.worker]) {
+        const r = await h.openRequest(s.daP.client, s.p, worker, { from_district: 'Patna', to_district: 'Gaya' });
+        expect(r.statusCode, `${worker}: ${r.body}`).toBe(403);
+      }
+      expect((await linesOf(s.p, 'field_worker_move_request/')).length).toBe(before);
+      expect((await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya' })).statusCode).toBe(201);
+    });
+
+    // CR26 — the per-request gate's `opened_at_end === 'to'` branches, through the routes: the opener's end is the DESTINATION, the counterpart the SOURCE.
+    it('a request opened from the DESTINATION: its opener withdraws (200); opened again, a Gaya officer who is not the counterpart is 403 and the SOURCE end’s District Admin accepts — the worker lands in Gaya', async () => {
+      const s = await setup();
+      const first = await opened(s.daG.client, s.p, s.worker); // opened_at_end 'to': Gaya asks for a Patna worker
+      expect((await h.requestAct(s.daG.client, s.p, first, 'withdraw')).statusCode).toBe(200);
+      const id = await opened(s.daG.client, s.p, s.worker);
+      expect(await requestRow(id)).toMatchObject({ opened_at_end: 'to', counterpart_district: 'Patna' });
+      expect((await h.requestAct(s.daG2.client, s.p, id, 'accept')).statusCode).toBe(403);
+      const r = await h.requestAct(s.daP.client, s.p, id, 'accept');
+      expect(r.statusCode, r.body).toBe(200);
+      expect(json(r)).toMatchObject({ state: 'accepted', worker_district: 'Gaya' });
+      expect(await districtOf(s.worker)).toBe('Gaya');
     });
 
     it('AD8 (b): toward a district with no other District Admin — 201 `escalated`, the Pariwar Admin told', async () => {
@@ -125,6 +156,10 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       const b = await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya' }, key);
       expect([a.statusCode, b.statusCode]).toEqual([201, 201]);
       expect(json(b)['move_request_id']).toBe(json(a)['move_request_id']);
+      // "opens nothing new": one request, one event, one audit line (the replay wrote none)
+      expect((await q<{ n: number }>('SELECT count(*)::int AS n FROM field_worker_move_requests WHERE field_worker_id = $1', [s.worker]))[0]!.n).toBe(1);
+      expect((await q<{ n: number }>("SELECT count(*)::int AS n FROM events_log WHERE pariwar_id = $1 AND event_type LIKE 'field_worker_move_request.%'", [s.p]))[0]!.n).toBe(1);
+      expect((await linesOf(s.p, 'field_worker_move_request/')).length).toBe(1);
       const none = await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya' }, null);
       expect([none.statusCode, errOf(none).code]).toEqual([400, 'field_worker.idempotency_key_required']);
     });
@@ -143,6 +178,22 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       const auditId = (await q<{ audit_id: string }>('SELECT audit_id FROM field_workers WHERE field_worker_id = $1', [s.worker]))[0]!.audit_id;
       expect((await requestRow(id))['audit_id']).toBe(auditId); // the move's row and the request's share the acceptance's line
       expect((await noticesOf(s.p)).filter((n) => n.kind === 'move_request_accepted').map((n) => n.recipient)).toEqual([s.daP.userId]);
+    });
+
+    // CR23 — QE17: a request waits up to 7 days; the acceptance moves the worker, so the destination is judged against the list NOW.
+    it('ACCEPT meets a destination that is no longer LISTED: 422 district_unknown, no audit line, the worker stays and the request stays pending; re-listed, the same accept is 200', async () => {
+      const s = await setup();
+      const id = await opened(s.daP.client, s.p, s.worker);
+      const before = (await linesOf(s.p, `field_worker_move_request/${id}`)).length;
+      await q("UPDATE workplace_districts SET status = 'retired' WHERE pariwar_id = $1 AND district = 'Gaya'", [s.p]);
+      const r = await h.requestAct(s.daG.client, s.p, id, 'accept');
+      expect([r.statusCode, errOf(r).code]).toEqual([422, 'field_worker.district_unknown']);
+      expect(await districtOf(s.worker)).toBe('Patna');
+      expect(await requestRow(id)).toMatchObject({ state: 'pending' });
+      expect((await linesOf(s.p, `field_worker_move_request/${id}`)).length).toBe(before); // a pre-read refusal: no line
+      await q("UPDATE workplace_districts SET status = 'listed' WHERE pariwar_id = $1 AND district = 'Gaya'", [s.p]); // CONTROL
+      expect((await h.requestAct(s.daG.client, s.p, id, 'accept')).statusCode).toBe(200);
+      expect(await districtOf(s.worker)).toBe('Gaya');
     });
 
     it('a District Admin of the opener’s end only → 403; the opener holding both ends → 409 same_officer; a second answer → 409 not_open', async () => {
@@ -165,7 +216,9 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       expect((await h.requestAct(s.daG.client, s.p, id, 'refuse', { reason_code: 'other', note: 'x' })).statusCode).toBe(400);
       expect((await h.requestAct(s.daG.client, s.p, id, 'refuse', { reason_code: 'work_not_needed_here' })).statusCode).toBe(200);
       expect(await requestRow(id)).toMatchObject({ state: 'refused', refusal_reason: 'work_not_needed_here' });
-      expect(sorted((await noticesOf(s.p)).filter((n) => n.kind === 'move_request_refused').map((n) => n.recipient))).toEqual(sorted([s.daP.userId, s.pa.userId]));
+      const refusals = await noticesOf(s.p);
+      expect(sorted(refusals.filter((n) => n.kind === 'move_request_refused').map((n) => n.recipient))).toEqual([s.daP.userId]); // the opener: "Tell the worker."
+      expect(sorted(refusals.filter((n) => n.kind === 'move_request_refused_admin').map((n) => n.recipient))).toEqual([s.pa.userId]); // the Pariwar Admin: its own kind (CR41 A)
     });
 
     it('WITHDRAW: another officer of the same end → 409 not_opener (no audit line); the opener → 200; again → 409 not_open', async () => {
@@ -192,6 +245,23 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       expect(await requestRow(esc)).toMatchObject({ state: 'closed', escalation_cause: 'no_counterpart_officer' });
     });
 
+    // CR25 — family 3: the loaders and the gate read the request under THIS request's Pariwar; the domain half is CR11's.
+    it('another Pariwar’s officers, given this Pariwar’s request id: 403 on every act and on the detail, an empty list, nothing changed; its own Pariwar answers it', async () => {
+      const s = await setup();
+      const other = await setup();
+      const id = await opened(s.daP.client, s.p, s.worker);
+      const before = (await linesOf(s.p, `field_worker_move_request/${id}`)).length;
+      expect((await h.requestAct(other.daG.client, other.p, id, 'accept')).statusCode).toBe(403);
+      expect((await h.requestAct(other.daG.client, other.p, id, 'refuse', { reason_code: 'other' })).statusCode).toBe(403);
+      expect((await h.requestAct(other.daP.client, other.p, id, 'withdraw')).statusCode).toBe(403);
+      expect((await h.requestAct(other.pa.client, other.p, id, 'close')).statusCode).toBe(403);
+      expect((await h.request(other.pa.client, other.p, id)).statusCode).toBe(403);
+      expect((json(await h.requests(other.pa.client, other.p, { state: 'open' })) as { items: unknown[] }).items).toEqual([]);
+      expect(await requestRow(id)).toMatchObject({ state: 'pending' });
+      expect((await linesOf(s.p, `field_worker_move_request/${id}`)).length).toBe(before);
+      expect((await h.requestAct(s.daG.client, s.p, id, 'refuse', { reason_code: 'other' })).statusCode).toBe(200); // CONTROL
+    });
+
     it('an unknown request id → 403 for everyone, a Pariwar Admin included (no oracle)', async () => {
       const s = await setup();
       for (const c of [s.pa.client, s.daG.client]) expect((await h.requestAct(c, s.p, randomUUID(), 'accept')).statusCode).toBe(403);
@@ -212,13 +282,62 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       expect([late.statusCode, errOf(late).code]).toEqual([409, 'field_worker.move_request_not_open']);
     });
 
-    it('an ending supersedes it and tells the opener and the other end', async () => {
+    it('`-461` (CR22 A): a superseded request’s detail has NO time and NO cause on its `superseded` event whatever the cause, and its item carries no cause or answered_at', async () => {
+      for (const how of ['move', 'end'] as const) {
+        const s = await setup();
+        const id = await opened(s.daP.client, s.p, s.worker);
+        if (how === 'move') {
+          expect((await h.move(s.pa.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' })).statusCode).toBe(200);
+        } else {
+          const today = (await q<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d", []))[0]!.d;
+          expect((await h.terminate(s.pa.client, s.p, s.worker, { reason_code: 'inactive', ended_on: today })).statusCode).toBe(200);
+        }
+        const r = await h.request(s.pa.client, s.p, id);
+        expect(r.statusCode, `${how}: ${r.body}`).toBe(200);
+        const d = json(r) as { request: Json; events: Json[] };
+        const sup = d.events.find((e) => e['event_type'] === 'field_worker_move_request.superseded')!;
+        expect(sup, how).toMatchObject({ occurred_at: null });
+        expect(d.events.find((e) => e['event_type'] === 'field_worker_move_request.opened')!['occurred_at'], how).toEqual(expect.any(String)); // CONTROL
+        for (const banned of ['cause', 'supersede_cause', 'escalation_cause', 'answered_at']) {
+          expect(Object.keys(sup), `${how} ${banned}`).not.toContain(banned);
+          expect(Object.keys(d.request), `${how} ${banned}`).not.toContain(banned);
+        }
+        expect(JSON.stringify(d), how).not.toMatch(/worker_ended|worker_moved/);
+      }
+    });
+
+    it('an ending BY THE OPENER supersedes it and tells the other end — the actor is never told of their own act', async () => {
       const s = await setup();
       const id = await opened(s.daP.client, s.p, s.worker);
       const today = (await q<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d", []))[0]!.d;
       expect((await h.terminate(s.daP.client, s.p, s.worker, { reason_code: 'left_voluntarily', ended_on: today })).statusCode).toBe(200);
       expect(await requestRow(id)).toMatchObject({ state: 'superseded', supersede_cause: 'worker_ended' });
       expect(sorted((await noticesOf(s.p)).filter((n) => n.kind === 'move_request_superseded').map((n) => n.recipient))).toEqual(sorted([s.daG.userId, s.daG2.userId]));
+    });
+
+    it('an ending BY A PARIWAR ADMIN supersedes it and tells the opener AND the other end', async () => {
+      const s = await setup();
+      const id = await opened(s.daP.client, s.p, s.worker);
+      const today = (await q<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d", []))[0]!.d;
+      expect((await h.terminate(s.pa.client, s.p, s.worker, { reason_code: 'left_voluntarily', ended_on: today })).statusCode).toBe(200);
+      expect(await requestRow(id)).toMatchObject({ state: 'superseded', supersede_cause: 'worker_ended' });
+      expect(sorted((await noticesOf(s.p)).filter((n) => n.kind === 'move_request_superseded').map((n) => n.recipient))).toEqual(
+        sorted([s.daP.userId, s.daG.userId, s.daG2.userId]),
+      );
+    });
+
+    // Decision `2026-11-10-462` (R4-13): the notices API sends no time for a "no longer needed" notice - for an ending it is when the
+    // ending was recorded, sent to the other end's officers.
+    it('`-462`: GET notices carries NO created_at on an ending’s move_request_superseded; the request’s opened notice keeps its time', async () => {
+      const s = await setup();
+      const id = await opened(s.daP.client, s.p, s.worker);
+      const today = (await q<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d", []))[0]!.d;
+      expect((await h.terminate(s.pa.client, s.p, s.worker, { reason_code: 'inactive', ended_on: today })).statusCode).toBe(200);
+      const items = (json(await h.notices(s.daG.client, s.p)) as { items: Json[] }).items.filter((n) => n['move_request_id'] === id);
+      const at = Object.fromEntries(items.map((n) => [n['kind'] as string, n['created_at']]));
+      expect(Object.keys(at).sort()).toEqual(['move_request_opened', 'move_request_superseded']);
+      expect(at['move_request_superseded']).toBeNull();
+      expect(at['move_request_opened']).toEqual(expect.any(String)); // CONTROL
     });
   });
 
@@ -239,7 +358,20 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       expect((await h.requests(s.daG.client, s.p, { state: 'open', district: 'Patna' })).statusCode).toBe(403);
       expect((await h.requests(s.daG.client, s.p, { state: 'open' })).statusCode).toBe(403); // the whole Pariwar: a Pariwar grant only
       expect((await h.requests(s.pa.client, s.p, { state: 'open' })).statusCode).toBe(200);
+      // An over-cap `limit` is ACCEPTED (not a 400) — the clamp itself is proved by the contracts' parse test and the domain's 26-request walk (CR28 (b)).
       expect((json(await h.requests(s.daG.client, s.p, { state: 'open', district: 'Gaya', limit: '1000' })) as { items: unknown[] }).items).toHaveLength(1);
+    });
+
+    it('an EMPTY page: 200, no items, no cursor — and its one audit line names no worker (the locator is `field_workers/`)', async () => {
+      const s = await setup();
+      const viewed = async () => (await linesOf(s.p, 'field_workers/')).filter((l) => l.action === 'field_worker.move_requests_viewed');
+      const before = (await viewed()).length;
+      const r = await h.requests(s.pa.client, s.p, { state: 'closed' });
+      expect(r.statusCode, r.body).toBe(200);
+      expect(json(r)).toEqual({ items: [], next_cursor: null });
+      const lines = await viewed();
+      expect(lines.length).toBe(before + 1);
+      expect(lines.at(-1)).toMatchObject({ actor_id: s.pa.userId, resource_locator: 'field_workers/' });
     });
 
     it('`-460`: the detail — the request, its events, and the worker’s name and work history behind ONE `move_request_worker_viewed` line; ⛔ a reason, an officer, the mobile', async () => {

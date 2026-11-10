@@ -5,8 +5,9 @@
 // savepoint keeps its locks), so this takes the request's lock second (I5). A request is therefore never left pending for a worker who
 // has moved or ended (I4) — a later acceptance reads `superseded` and answers 409 (the epic's "marked stale", superseded by `-458`).
 // It also writes the act's notices (AD9): an ending tells the opener and the counterpart's District Admins (`move_request_superseded`);
-// a direct move tells the District Admins of BOTH districts (`moved_by_pariwar_admin`, naming the request it superseded, if any) and
-// writes NO `move_request_superseded` — its recipients are all told already. ⛔ Imports from `commands.ts` (TR12).
+// a direct move tells the District Admins of BOTH districts of the move (`moved_by_pariwar_admin`, naming the request it superseded, if any)
+// and — AMENDED by decision `2026-11-10-461` item 3 (B2) — those of the superseded request's OTHER district when it is not one of the
+// move's (`move_request_superseded`); a move that covers both of the request's districts writes none. ⛔ Imports from `commands.ts` (TR12).
 
 import type pg from 'pg';
 
@@ -62,6 +63,12 @@ async function supersede(
  * After a Pariwar Admin's DIRECT move (`field_worker.posted` under `field_worker.move`): supersede the open request (cause
  * `worker_moved`), then tell the District Admins of BOTH districts of the move (`moved_by_pariwar_admin`) — whether or not a request was
  * open. Returns the superseded request's id, or null.
+ *
+ * ⚠ The move's two districts are NOT always the request's two: request Patna→Gaya, the worker moved Patna→Nalanda — Gaya's District Admins
+ * were told the request was opened and the move's notice does not reach them. Each district of the superseded request that is not one of the
+ * move's has its District Admins sent ONE `move_request_superseded`, carrying the REQUEST's own `from → to` (decision `2026-11-10-461`
+ * item 3, B2; it amends `-458` AD9, which assumed "its recipients are all told already"). Nobody is told twice for the act: the actor and
+ * the officers of the first group are skipped. A move that covers both of the request's districts writes none.
  */
 export async function afterDirectMove(
   client: pg.PoolClient,
@@ -70,7 +77,7 @@ export async function afterDirectMove(
   const superseded = await supersede(client, i, 'worker_moved');
   const fromAdmins = await districtAdminsOf(client, i.pariwarId, i.fromDistrict);
   const toAdmins = await districtAdminsOf(client, i.pariwarId, i.toDistrict);
-  await writeFieldWorkerNotices(
+  const moved = await writeFieldWorkerNotices(
     client,
     {
       pariwarId: i.pariwarId,
@@ -82,6 +89,29 @@ export async function afterDirectMove(
     [['moved_by_pariwar_admin', [...fromAdmins, ...toAdmins]]],
     i.actorId,
   );
+  if (superseded !== null) {
+    // The filter is REDUNDANT with `alreadyTold` (code review R4-8): an officer of a move's district was told by the move's notice. Kept as the
+    // rule's own statement ("the request's districts that are not the move's") and to spare the reads; no leg can see it go.
+    const movedDistricts = new Set([i.fromDistrict, i.toDistrict]);
+    const left = [...new Set([superseded.fromDistrict, superseded.toDistrict])].filter((d) => !movedDistricts.has(d));
+    const recipients: string[] = [];
+    for (const district of left) recipients.push(...(await districtAdminsOf(client, i.pariwarId, district)));
+    if (recipients.length > 0) {
+      await writeFieldWorkerNotices(
+        client,
+        {
+          pariwarId: i.pariwarId,
+          fieldWorkerId: i.fieldWorkerId,
+          moveRequestId: superseded.moveRequestId,
+          fromDistrict: superseded.fromDistrict,
+          toDistrict: superseded.toDistrict,
+        },
+        [['move_request_superseded', recipients]],
+        i.actorId,
+        new Set(moved.map(([recipient]) => recipient)),
+      );
+    }
+  }
   return superseded?.moveRequestId ?? null;
 }
 

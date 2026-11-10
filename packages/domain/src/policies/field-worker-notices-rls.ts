@@ -3,6 +3,12 @@
 // TENANT-ISOLATED read + write — mirrors `field-workers-rls.ts`. An officer's notice belongs to exactly one Pariwar and is read / written under
 // that Pariwar's `app.pariwar_id` (Story 1.6's fail-closed construct: unset scope → NULL → 0 rows). Three per-command policies,
 // ⛔ `FOR ALL` (it would grant DELETE). Orthogonal to 0205's guard trigger, which decides WHAT may change regardless of tenant.
+//
+// ⚠ DELIBERATE (checklist 9; code review CR8): these policies separate PARIWARS, ⛔ OFFICERS. The scope transaction sets `app.pariwar_id`
+// and no actor (`db.ts`), and AD9 bars adding one, so the DB cannot tell one officer's notices from another's: the read and the seen mark
+// filter `recipient_user_id = <actor>` in SQL (`pageFieldWorkerNotices`, `markFieldWorkerNoticesSeen` in `move-request-read.ts`), and a
+// read that forgot it would return every officer's notices in the Pariwar (refusal reasons, worker ids). RE-EXAMINE when a SECOND notice
+// reader appears, or any read that does not filter on the recipient — nothing in this file can catch it.
 
 import { sql } from 'drizzle-orm';
 import { pgPolicy } from 'drizzle-orm/pg-core';

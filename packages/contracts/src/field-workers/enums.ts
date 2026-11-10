@@ -98,6 +98,7 @@ export const FIELD_WORKER_NOTICE_KINDS = [
   'move_request_opened',
   'move_request_accepted',
   'move_request_refused',
+  'move_request_refused_admin',
   'move_request_escalated',
   'move_request_superseded',
   'moved_by_pariwar_admin',

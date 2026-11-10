@@ -41,6 +41,7 @@ const listFieldWorkers = vi.fn();
 const getFieldWorkerIdentity = vi.fn();
 const readFieldWorkerCode = vi.fn();
 const getFieldWorkerDistricts = vi.fn();
+const openFieldWorkerMoveRequest = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -50,6 +51,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     getFieldWorkerIdentity: (p: string, id: string) => getFieldWorkerIdentity(p, id),
     readFieldWorkerCode: (p: string, id: string) => readFieldWorkerCode(p, id),
     getFieldWorkerDistricts: (p: string) => getFieldWorkerDistricts(p),
+    openFieldWorkerMoveRequest: (...a: unknown[]) => openFieldWorkerMoveRequest(...a),
   };
 });
 
@@ -138,7 +140,7 @@ const liveOf = (id: string): HTMLElement => within(screen.getByTestId(`fw-code-$
 
 beforeEach(() => {
   navigate.mockReset();
-  for (const fn of [listFieldWorkers, getFieldWorkerIdentity, readFieldWorkerCode, getFieldWorkerDistricts]) fn.mockReset();
+  for (const fn of [listFieldWorkers, getFieldWorkerIdentity, readFieldWorkerCode, getFieldWorkerDistricts, openFieldWorkerMoveRequest]) fn.mockReset();
   getFieldWorkerDistricts.mockResolvedValue({ districts: ['Gaya', 'Patna'], districts_truncated: false });
   listFieldWorkers.mockResolvedValue({ items: [row(W1, 'Ramesh Kumar'), row(W2, 'Sita Devi')], next_cursor: null });
   getFieldWorkerIdentity.mockImplementation(async (_p: string, id: string) => identityOf(id));
@@ -1129,5 +1131,98 @@ describe('review round 3 — the fix diff', () => {
       );
       await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }));
     });
+  });
+});
+
+// Story 13.1d (code review of the round-1 patches, RP-3 / RP-6 / RP-15): "Ask to move" lives in this panel, so these legs go through the PAGE.
+describe('Story 13.1d — "Ask to move" in the Find panel', () => {
+  const asked = (state: string) => ({
+    move_request_id: '00000000-0000-4000-8000-0000000000a1',
+    field_worker_id: W1,
+    state,
+    from_district: 'Patna',
+    to_district: 'Gaya',
+    counterpart_district: 'Gaya',
+    worker_district: 'Patna',
+  });
+  /** Choose `district` in the Ask form's select once its options have LOADED (the districts read is async). */
+  const askTo = async (district: string): Promise<void> => {
+    const select = await screen.findByTestId('fw-ask-to');
+    await waitFor(() => expect(within(select).getByText(district)).toBeInTheDocument());
+    fireEvent.change(select, { target: { value: district } });
+  };
+
+  it('RP-3: a 404 `pariwar.not_found` on a district says the Pariwar is not found — ⛔ the finder’s role sentence', async () => {
+    listFieldWorkers.mockRejectedValue(new ApiError(404, 'pariwar.not_found', 'x'));
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <FindWorkerPage pariwarId={P} />
+      </QueryClientProvider>,
+    );
+    await chooseDistrict('Gaya');
+    const line = await screen.findByTestId('fw-find-list-error');
+    expect(line.textContent).toContain(t('fw.err.noPariwar'));
+    expect(line.textContent).not.toContain(t('fw.noAccessFind'));
+  });
+
+  it('RP-15: another worker gets a FRESH Ask form — A’s target, error and retry key do not follow the panel (the page keys the panel by worker)', async () => {
+    openFieldWorkerMoveRequest.mockRejectedValueOnce(new ApiError(503, 'http.503', 'down')).mockResolvedValueOnce(asked('pending'));
+    await renderWithDistrict();
+    await openPanel(W1);
+    fireEvent.click(screen.getByTestId('fw-ask-open'));
+    await askTo('Gaya');
+    fireEvent.click(screen.getByTestId('fw-ask-send'));
+    expect(await screen.findByTestId('fw-ask-error')).toBeInTheDocument();
+    await openPanel(W2); // the panel switches to another worker
+    expect(screen.queryByTestId('fw-ask-error')).toBeNull();
+    expect(screen.queryByTestId('fw-ask-form')).toBeNull();
+    fireEvent.click(screen.getByTestId('fw-ask-open'));
+    await askTo('Gaya');
+    fireEvent.click(screen.getByTestId('fw-ask-send'));
+    await waitFor(() => expect(openFieldWorkerMoveRequest).toHaveBeenCalledTimes(2));
+    const [a, b] = openFieldWorkerMoveRequest.mock.calls;
+    expect(a![1]).toBe(W1);
+    expect(b![1]).toBe(W2);
+    // ⛔ a "fresh key" check here (code review R4-9): pressing "Ask to move" clears the attempt's key with or without a remount, so it cannot
+    // fail; the form gone on W2 (above) is what proves the remount.
+  });
+
+  it.each([
+    ['authorization_stale', 'fw.ask.moved', 'fw.actions.moved'],
+    ['illegal_transition', 'fw.ask.workerEnded', 'fw.actions.stateChanged'],
+  ] as const)('RP-6: a 409 `%s` on Ask withdraws the panel’s acts and "Show code" too, and keeps Ask’s own line with focus on it', async (code, askLine, actsLine) => {
+    openFieldWorkerMoveRequest.mockRejectedValueOnce(new ApiError(409, `field_worker.${code}`, 'x'));
+    await renderWithDistrict();
+    await openPanel(W1);
+    expect(screen.getByTestId('fw-act-suspend')).toBeInTheDocument(); // CONTROL: the acts and the code were offered
+    expect(screen.getByTestId('fw-code-show')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('fw-ask-open'));
+    await askTo('Gaya');
+    fireEvent.click(screen.getByTestId('fw-ask-send'));
+    expect(await screen.findByTestId('fw-ask-stale')).toHaveTextContent(t(askLine));
+    await waitFor(() => expect(screen.getByTestId('fw-actions-stale-text')).toHaveTextContent(t(actsLine)));
+    expect(screen.queryByTestId('fw-act-suspend')).toBeNull(); // ⛔ acts offered on the copy Ask has just proved stale
+    expect(screen.queryByTestId('fw-code-show')).toBeNull();
+    expect(screen.getByTestId('fw-ask-stale')).toHaveFocus();
+  });
+
+  it('R4-4: a 409 on Ask that lands after the officer opened another worker and came back does NOT withdraw the fresh copy’s acts', async () => {
+    let refuse: (e: unknown) => void = () => undefined;
+    openFieldWorkerMoveRequest.mockReturnValueOnce(new Promise((_r, reject) => (refuse = reject)));
+    await renderWithDistrict();
+    await openPanel(W1);
+    fireEvent.click(screen.getByTestId('fw-ask-open'));
+    await askTo('Gaya');
+    fireEvent.click(screen.getByTestId('fw-ask-send'));
+    await waitFor(() => expect(openFieldWorkerMoveRequest).toHaveBeenCalledTimes(1));
+    await openPanel(W2);
+    await openPanel(W1); // a fresh read of W1
+    await act(async () => refuse(new ApiError(409, 'field_worker.authorization_stale', 'x'))); // the OLD copy's verdict arrives
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.getByTestId('fw-act-suspend')).toBeInTheDocument(); // the fresh copy keeps its acts
+    expect(screen.getByTestId('fw-code-show')).toBeInTheDocument();
+    expect(screen.queryByTestId('fw-actions-stale-text')).toBeNull();
   });
 });

@@ -1,7 +1,8 @@
 // The field-worker pages link to one another — Story 13.1a (AC11 (d)): the TopBar carries ONE "Field workers" link (the
 // finder), so each page carries the others and all are reachable from it. Story 13.1d (AD10) adds "Move requests", whose link carries
-// the officer's UNSEEN notices, counted on the notices' FIRST page when the nav mounts (⛔ polling; `RootLayout` unchanged). A notices
-// read that fails shows the plain link — the count is a convenience, the page itself shows every notice.
+// the officer's UNSEEN notices, counted on the notices' FIRST page when the nav mounts (⛔ polling; `RootLayout` unchanged) — "N+" when
+// that page is all unseen and more pages exist. A notices read that fails shows the plain link — the count is a convenience; the page
+// itself pages through every notice (code review CR44).
 
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
@@ -13,7 +14,9 @@ export type FieldWorkerPage = 'register' | 'approvals' | 'find' | 'requests';
 
 export function FieldWorkerNav({ pariwarId, current }: { pariwarId: string; current: FieldWorkerPage }): ReactElement {
   const notices = useFieldWorkerNotices(pariwarId);
-  const unseen = notices.data?.items.filter((n) => n.seen_at === null).length ?? 0;
+  const first = notices.data?.pages[0];
+  const unseen = first?.items.filter((n) => n.seen_at === null).length ?? 0;
+  const mayBeMore = first !== undefined && first.next_cursor !== null && unseen === first.items.length;
   return (
     <nav aria-label={t('fw.nav.label')} className="flex gap-4 text-sm" data-testid="fw-nav">
       {current !== 'register' && (
@@ -33,7 +36,7 @@ export function FieldWorkerNav({ pariwarId, current }: { pariwarId: string; curr
       )}
       {current !== 'requests' && (
         <Link to="/p/$pariwarId/field-workers/requests" params={{ pariwarId }} className="underline" data-testid="fw-nav-requests">
-          {unseen > 0 ? t('fw.nav.requestsUnseen', { count: unseen }) : t('fw.nav.requests')}
+          {unseen > 0 ? t(mayBeMore ? 'fw.nav.requestsUnseenMore' : 'fw.nav.requestsUnseen', { count: unseen }) : t('fw.nav.requests')}
         </Link>
       )}
     </nav>

@@ -12,6 +12,16 @@
 //      twin is written and the row is counted skipped. The Pariwar Admins and the opener are told (the command's notices).
 // ⛔⛔ It NEVER accepts, refuses, closes or moves anything (I3) — `escalated` is the one system act. A row's failure is that row's
 // (alarmed; the next row runs); a second tick finds nothing left to do (idempotent).
+//
+// ⚠ DELIBERATE (checklist 9; code review CR39): the pool's login is the jobs / service login (BYPASSRLS), and `withPariwarScope` sets
+// `app.pariwar_id` WITHOUT dropping to `twt_app` — so every per-row statement here, not only the selector, runs with RLS waived. Tenant
+// separation rests on the explicit `pariwar_id` predicate of each command query (the domain's owner-run cross-Pariwar legs prove them),
+// ⛔ on RLS. RE-EXAMINE if the login becomes RLS-bound (the guard then refuses every tick) or a per-row statement loses its predicate.
+// ⚠ GRANTS (roster Row 51, Row 26): 0205 grants only `twt_app`, and BYPASSRLS does not waive a GRANT check — on the production login this
+// sweep cannot read the table until Row 26 closes or the login is granted what the command touches; the alarm then reads `code:42501`.
+//
+// A row that ALWAYS fails stays at the head of the oldest-first read — an intent line, its `_rolled_back` twin and an alarm every hour,
+// and 200 of them would hold the younger rows back. Deferred (deferred-work.md, "move-request escalation sweep", CR40).
 
 import { createHash, randomUUID } from 'node:crypto';
 
@@ -48,6 +58,19 @@ function errorName(err: unknown): string {
   return err instanceof Error ? err.name : typeof err;
 }
 
+/**
+ * The CLASS of a thrown error: a SQLSTATE or Node code (`code`, else a persist error's `sqlstate`), else its name. pg's `DatabaseError.name`
+ * is `error`, so the name alone says nothing — a 42501, a 23514, a trigger refusal and a deadlock would all read alike (the 13.1b sweep's
+ * `faultClass`; the module-activation lesson; code review CR33).
+ */
+function faultClass(err: unknown): string {
+  const e = err as { code?: unknown; sqlstate?: unknown } | null | undefined;
+  for (const c of [e?.code, e?.sqlstate]) {
+    if (typeof c === 'string' && /^[A-Z0-9_]{3,24}$/.test(c)) return `code:${c}`;
+  }
+  return errorName(err);
+}
+
 /** One tick. It always resolves. */
 export async function runFieldWorkerMoveRequestEscalationTick(
   deps: FieldWorkerMoveRequestEscalationDeps,
@@ -65,10 +88,18 @@ export async function runFieldWorkerMoveRequestEscalationTick(
     }
     rows = await fieldWorker.findStaleMoveRequests(deps.pool, { limit });
   } catch (err) {
-    alarm(`[jobs] field-worker-move-request-escalation: field_worker_move_request.sweep_failed:${errorName(err)} — this tick escalated nothing`);
+    alarm(`[jobs] field-worker-move-request-escalation: field_worker_move_request.sweep_failed:${faultClass(err)} — this tick escalated nothing`);
     return { refused: false, scanned: 0, escalated: 0, skipped: 0, failed: 0 };
   }
-  if (rows.length >= limit) alarm(`[jobs] field-worker-move-request-escalation: the tick's bound (${String(limit)}) was hit — the rest wait for the next tick`);
+  // `>=`, not `>`: the read cannot say whether MORE were due than `limit`, so reaching it is "there may be more" — and the rest wait for the
+  // next tick only if the rows at the head stop failing (a row that always fails keeps its place, CR40).
+  const boundHit = rows.length >= limit;
+  if (boundHit) {
+    alarm(
+      `[jobs] field-worker-move-request-escalation: the tick reached its bound (${String(limit)}) — there may be more waiting; they are read on the next tick, ` +
+        'unless the rows at the head keep failing (see the failed-row alarms)',
+    );
+  }
 
   let escalated = 0;
   let skipped = 0;
@@ -105,10 +136,10 @@ export async function runFieldWorkerMoveRequestEscalationTick(
         continue;
       }
       failed += 1;
-      alarm(`[jobs] field-worker-move-request-escalation: a row failed (${errorName(err)}) — it stays pending for the next tick — pariwar ${r.pariwarId} request ${r.moveRequestId}`);
+      alarm(`[jobs] field-worker-move-request-escalation: a row failed (${faultClass(err)}) — it stays pending for the next tick — pariwar ${r.pariwarId} request ${r.moveRequestId}`);
     }
   }
-  if (rows.length > 0) console.info('[jobs] field-worker-move-request-escalation tick', JSON.stringify({ scanned: rows.length, escalated, skipped, failed, tick: randomUUID() }));
+  if (rows.length > 0) console.info('[jobs] field-worker-move-request-escalation tick', JSON.stringify({ scanned: rows.length, escalated, skipped, failed, bound_hit: boundHit, tick: randomUUID() }));
   return { refused: false, scanned: rows.length, escalated, skipped, failed };
 }
 

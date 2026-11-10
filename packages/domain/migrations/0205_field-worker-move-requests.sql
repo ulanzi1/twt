@@ -12,10 +12,15 @@
 --   UPDATE — (a) an unguarded one; (f) any change to a FINAL row (`accepted`, `refused`, `withdrawn`, `closed`, `superseded` — AD3);
 --            (b) a change to any column but the projected ones (the 0189 chained-key form — a column added later is immutable by
 --            default); (c) a version that does not strictly increase; (e) an `escalation_cause` once written is never changed or
---            cleared (AD11 — a superseded or withdrawn escalated request keeps it).
+--            cleared (AD11 — a superseded or withdrawn escalated request keeps it); (g) an `escalation_cause` first written by anything
+--            but the move to `escalated` (AD3 — a `pending` request never carries one into a withdraw or a supersede); (h) `closed`
+--            from anything but `escalated` (AD3 — a close is a Pariwar Admin settling an escalation; code review CR4).
 --   DELETE / TRUNCATE — every role (a request is the Panel's "full log" of a move; only `session_replication_role = 'replica'`, the
 --            test fixtures' cleanup, bypasses it).
--- The state ⇔ column pairs are CHECKs (23514), ⛔ trigger rules — the CHECKs are the shape backstop.
+-- The state ⇔ column pairs are CHECKs (23514), ⛔ trigger rules — the CHECKs are the shape backstop. So are the two ACTOR rules: whoever
+-- accepts or refuses is never the opener, and a withdrawal is the opener's (`-459` Q1 A, I3, AD3 — `answerer_not_opener`,
+-- `withdrawn_by_opener`). The command layer refuses both first (`lockForAnswer`, `withdrawFieldWorkerMoveRequest`); these keep a projector
+-- or command slip from storing a self-answered request (code review CR1; checklist 5).
 -- ⭐ ONE OPEN REQUEST PER WORKER (AD3, I4): the partial UNIQUE `field_worker_move_requests_one_open_uq` — the open's 23505 on THIS
 -- name maps to 409 `field_worker.move_request_open` (by constraint name, ⛔ by any 23505).
 -- ⭐ States, reasons and causes are TEXT with CHECKs, ⛔ pg enums (⛔ the ADD VALUE trap). ⚠ LOCKSTEP with the tuples in
@@ -26,6 +31,13 @@
 -- it now; row `13-1g`'s email sends it later (Q-1 A). `twt_app` INSERTs the identity columns and UPDATEs `seen_at` ONLY (a column
 -- grant); the trigger refuses any other change and a second `seen_at`. RLS is by Pariwar ONLY — the scope transaction sets
 -- `app.pariwar_id` and no actor setting (db.ts), so the domain read and the seen UPDATE filter `recipient_user_id = <actor>` in SQL.
+-- ⚠ DELIBERATE (code review CR8; checklist 9): the DB separates PARIWARS here, ⛔ officers — RLS has no actor to key on, and AD9 bars a new
+-- setting — so a read that forgets the `recipient_user_id` filter returns every officer's notices in the Pariwar (refusal reasons, worker
+-- ids). Re-examine when a SECOND notice reader appears, or any read that does not filter on the recipient.
+-- ⚠ No delete / truncate TRIGGER on this table (the requests have one): a notice is shielded from `twt_app` by the missing GRANT alone,
+-- and the owner can delete one (CR3). Nothing prunes a notice (⛔ Pruned; the 8-year removal, row 13-1e, does not touch it).
+-- ONE notice per request, kind and recipient is a partial UNIQUE (`field_worker_notices_once_per_act_uq`, CR7): the writer merges
+-- recipients in memory, this is the DB's backstop. A direct move that superseded no request names none and is not covered.
 --
 -- Both tables: a COMPOSITE FK `(pariwar_id, field_worker_id)` to `field_workers` (a single-column FK check bypasses RLS — 0178); the
 -- notices also `(pariwar_id, move_request_id)` to the requests. PII: ⛔ (ids, districts, reason codes, user ids). The 8-year removal
@@ -74,6 +86,10 @@ ALTER TABLE "field_worker_move_requests" ADD CONSTRAINT "field_worker_move_reque
 ALTER TABLE "field_worker_move_requests" ADD CONSTRAINT "field_worker_move_requests_supersede_pair" CHECK (("state" = 'superseded') = ("supersede_cause" IS NOT NULL));--> statement-breakpoint
 -- The act that ENDED it: both NULL while open (pending, escalated — the sweep's escalation ends nothing), both set when final.
 ALTER TABLE "field_worker_move_requests" ADD CONSTRAINT "field_worker_move_requests_answered_pair" CHECK (("state" IN ('pending', 'escalated')) = ("answered_by" IS NULL) AND ("answered_by" IS NULL) = ("answered_at" IS NULL));--> statement-breakpoint
+-- `-459` Q1 A / I3: a District Admin of the other end answers, "never the one who asked"; AD3: only the opener withdraws. (A final row's
+-- `answered_by` is non-NULL by `answered_pair`, so the comparison is never NULL there.)
+ALTER TABLE "field_worker_move_requests" ADD CONSTRAINT "field_worker_move_requests_answerer_not_opener" CHECK ("state" NOT IN ('accepted', 'refused') OR "answered_by" <> "opened_by");--> statement-breakpoint
+ALTER TABLE "field_worker_move_requests" ADD CONSTRAINT "field_worker_move_requests_withdrawn_by_opener" CHECK ("state" <> 'withdrawn' OR "answered_by" = "opened_by");--> statement-breakpoint
 -- AD4 — the `field_worker.posted` event the acceptance wrote; set IFF accepted.
 ALTER TABLE "field_worker_move_requests" ADD CONSTRAINT "field_worker_move_requests_posted_event_pair" CHECK (("state" = 'accepted') = ("posted_event_id" IS NOT NULL));--> statement-breakpoint
 GRANT SELECT, INSERT, UPDATE ON "field_worker_move_requests" TO twt_app;--> statement-breakpoint
@@ -84,8 +100,9 @@ CREATE POLICY "field_worker_move_requests_tenant_isolation_insert" ON "field_wor
 CREATE POLICY "field_worker_move_requests_tenant_isolation_update" ON "field_worker_move_requests" AS PERMISSIVE FOR UPDATE TO "twt_app" USING (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid) WITH CHECK (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid);--> statement-breakpoint
 -- AD3 / I4 — at most ONE open request per worker.
 CREATE UNIQUE INDEX "field_worker_move_requests_one_open_uq" ON "field_worker_move_requests" USING btree ("pariwar_id", "field_worker_id") WHERE "state" IN ('pending', 'escalated');--> statement-breakpoint
--- The list (AD6): a district's requests at EITHER end (two keyset indexes, one per end — the read UNIONs them), and the Pariwar Admin's
--- whole-Pariwar page (no district).
+-- The list (AD6): a district's requests at EITHER end (two keyset indexes, one per end; the read is ONE `OR` of the two ends ordered by
+-- `(opened_at, move_request_id)` — a BitmapOr of the two and a sort until a plan shows a need for a UNION ALL, code review CR20), and the
+-- Pariwar Admin's whole-Pariwar page (no district).
 CREATE INDEX "field_worker_move_requests_from_idx" ON "field_worker_move_requests" USING btree ("pariwar_id", "from_district", "opened_at" DESC, "move_request_id" DESC);--> statement-breakpoint
 CREATE INDEX "field_worker_move_requests_to_idx" ON "field_worker_move_requests" USING btree ("pariwar_id", "to_district", "opened_at" DESC, "move_request_id" DESC);--> statement-breakpoint
 CREATE INDEX "field_worker_move_requests_pariwar_idx" ON "field_worker_move_requests" USING btree ("pariwar_id", "opened_at" DESC, "move_request_id" DESC);--> statement-breakpoint
@@ -154,6 +171,21 @@ BEGIN
       OLD.move_request_id
       USING ERRCODE = 'P0001';
   END IF;
+  -- (g) The cause is first written by the move to `escalated` and by nothing else (AD3, AD11): a withdraw or a supersede of a `pending`
+  --     request never earns one, and `escalation_cause_state` alone would admit it on `withdrawn` / `superseded`.
+  IF OLD.escalation_cause IS NULL AND NEW.escalation_cause IS NOT NULL AND NEW.state IS DISTINCT FROM 'escalated' THEN
+    RAISE EXCEPTION
+      'field_worker_move_requests direct write rejected — an escalation cause is first written by the move to escalated (Story 13.1d AD3); attempted state "%" on request %',
+      NEW.state, OLD.move_request_id
+      USING ERRCODE = 'P0001';
+  END IF;
+  -- (h) A close is a Pariwar Admin settling an ESCALATED request (AD3).
+  IF NEW.state = 'closed' AND OLD.state IS DISTINCT FROM 'escalated' THEN
+    RAISE EXCEPTION
+      'field_worker_move_requests direct write rejected — a request is closed only from escalated (Story 13.1d AD3); attempted % -> closed on request %',
+      OLD.state, OLD.move_request_id
+      USING ERRCODE = 'P0001';
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -195,11 +227,11 @@ CREATE TABLE "field_worker_notices" (
 ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_worker_fk" FOREIGN KEY ("pariwar_id", "field_worker_id") REFERENCES "public"."field_workers"("pariwar_id", "field_worker_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_request_fk" FOREIGN KEY ("pariwar_id", "move_request_id") REFERENCES "public"."field_worker_move_requests"("pariwar_id", "move_request_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 -- ⚠ LOCKSTEP with `FIELD_WORKER_NOTICE_KINDS` (AD9).
-ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_kind_check" CHECK ("kind" IN ('move_request_opened', 'move_request_accepted', 'move_request_refused', 'move_request_escalated', 'move_request_superseded', 'moved_by_pariwar_admin'));--> statement-breakpoint
+ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_kind_check" CHECK ("kind" IN ('move_request_opened', 'move_request_accepted', 'move_request_refused', 'move_request_refused_admin', 'move_request_escalated', 'move_request_superseded', 'moved_by_pariwar_admin'));--> statement-breakpoint
 -- Every kind but the direct move is ABOUT a request; the direct move names the one it superseded, if any.
 ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_request_pair" CHECK ("kind" = 'moved_by_pariwar_admin' OR "move_request_id" IS NOT NULL);--> statement-breakpoint
 ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_refusal_reason_check" CHECK ("refusal_reason" IS NULL OR "refusal_reason" IN ('no_capacity', 'work_not_needed_here', 'request_incomplete', 'other'));--> statement-breakpoint
-ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_refusal_pair" CHECK (("kind" = 'move_request_refused') = ("refusal_reason" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_refusal_pair" CHECK (("kind" IN ('move_request_refused', 'move_request_refused_admin')) = ("refusal_reason" IS NOT NULL));--> statement-breakpoint
 ALTER TABLE "field_worker_notices" ADD CONSTRAINT "field_worker_notices_districts_check" CHECK (length(btrim("from_district")) > 0 AND length(btrim("to_district")) > 0 AND "from_district" <> "to_district");--> statement-breakpoint
 GRANT SELECT ON "field_worker_notices" TO twt_app;--> statement-breakpoint
 -- INSERT — EXACTLY what `insertFieldWorkerNotices` writes (`notice_id`, `created_at` are their DEFAULTs; `seen_at` starts NULL).
@@ -213,6 +245,10 @@ CREATE POLICY "field_worker_notices_tenant_isolation_insert" ON "field_worker_no
 CREATE POLICY "field_worker_notices_tenant_isolation_update" ON "field_worker_notices" AS PERMISSIVE FOR UPDATE TO "twt_app" USING (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid) WITH CHECK (pariwar_id = nullif(current_setting('app.pariwar_id', true), '')::uuid);--> statement-breakpoint
 -- An officer's own notices, newest first (the keyset page).
 CREATE INDEX "field_worker_notices_recipient_idx" ON "field_worker_notices" USING btree ("pariwar_id", "recipient_user_id", "created_at" DESC, "notice_id" DESC);--> statement-breakpoint
+-- One notice per request, kind and recipient (CR7): each kind is written at most once per request — opened once; escalated once (at the open
+-- when nobody else can answer, else by the sweep from `pending` only); refused / accepted once, the request then being final; the direct
+-- move's once, in the transaction that supersedes it. The writer merges recipients in memory; this is the DB's backstop.
+CREATE UNIQUE INDEX "field_worker_notices_once_per_act_uq" ON "field_worker_notices" USING btree ("pariwar_id", "move_request_id", "kind", "recipient_user_id") WHERE "move_request_id" IS NOT NULL;--> statement-breakpoint
 CREATE FUNCTION field_worker_notices_guard_update()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN

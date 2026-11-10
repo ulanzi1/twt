@@ -1266,6 +1266,15 @@ describe.each([
     expect(hasPermission([{ ...pa, pariwarId: OTHER, scopeValue: OTHER }], key, at('Patna'))).toBe(false);
   });
 
+  // A narrower grant never satisfies a wider-dimension gate (checklist 3; code review CR5): the Pariwar-wide page of
+  // `field_worker.read_move_requests` is gated at the PARIWAR dimension, and a District Admin's district grant does not reach it.
+  it('⛔ a district grant never satisfies a PARIWAR-dimension gate — the Pariwar Admin does, if a holder', () => {
+    const wide = { pariwarId: P, dimension: 'pariwar', value: P } as const;
+    expect(hasPermission([da], key, wide), 'district_admin').toBe(false);
+    expect(hasPermission([pa], key, wide), 'pariwar_admin').toBe(paHolds);
+    expect(hasPermission([sa], key, wide), 'super_admin').toBe(true);
+  });
+
   it('⛔ state_trustee (its BUNDLE lacks it, with and without a geo tree), trustee_panel, helpline_operator', () => {
     const st = { pariwarId: P, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' } as const;
     expect(hasPermission([st], key, at('Patna'))).toBe(false);

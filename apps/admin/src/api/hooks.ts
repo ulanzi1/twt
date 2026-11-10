@@ -3205,25 +3205,32 @@ export function useFieldWorkerMoveRequest(pariwarId: string, moveRequestId: stri
   });
 }
 
-/** The officer's notices — the FIRST page (the nav's unseen count reads it too). */
+/** The officer's notices, a cursor page at a time (the nav's unseen count reads the FIRST page — code review CR44). */
 export function useFieldWorkerNotices(pariwarId: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: fieldWorkerNoticesKey(pariwarId),
-    queryFn: () => api.listFieldWorkerNotices(pariwarId),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => api.listFieldWorkerNotices(pariwarId, pageParam !== undefined ? { cursor: pageParam } : {}),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
 }
 
-/** The 409s that say a move-request list on screen is stale: answered or moved on meanwhile, or the worker moved. */
+/**
+ * The refusals that say a move-request list on screen is stale: answered or moved on meanwhile, the worker moved, or the request is no
+ * longer there (a 404 — `derive.ts` words it "the list has been refreshed", so this set must be what refreshes it; code review RP-5).
+ */
 export function fieldWorkerMoveRequestIsStale(err: unknown): boolean {
   return (
     err instanceof ApiError &&
     (err.code === 'field_worker.move_request_not_open' ||
       err.code === 'field_worker.move_request_open' ||
       err.code === 'field_worker.move_request_same_officer' ||
-      err.code === 'field_worker.authorization_stale')
+      err.code === 'field_worker.move_request_not_found' ||
+      err.code === 'field_worker.authorization_stale' ||
+      err.code === 'field_worker.illegal_transition')
   );
 }
 
@@ -3240,12 +3247,14 @@ export type FieldWorkerMoveRequestActInput =
  */
 export function useFieldWorkerMoveRequestAct(pariwarId: string) {
   const qc = useQueryClient();
-  const refresh = (): void => {
+  const refresh = (workerMoved: boolean): void => {
     // The LISTS only — ⛔ the root: an open detail panel would be re-read, decrypting the worker's name and writing a
     // `move_request_worker_viewed` line nobody asked for (the browser pass, 2026-11-09; 13.1c G13's rule).
     void qc.invalidateQueries({ queryKey: [...fieldWorkerMoveRequestsRoot(pariwarId), 'list'] });
     void qc.invalidateQueries({ queryKey: fieldWorkerNoticesKey(pariwarId) });
-    void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
+    // The WORKER lists only when a worker moved - an acceptance, or a 409 saying one did: an open, a refusal, a withdrawal and a close move
+    // nobody, and on Find the list is active with the panel open, so each refetch would decrypt every loaded page and audit it (CR45).
+    if (workerMoved) void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
   };
   return useMutation({
     networkMode: 'always',
@@ -3259,9 +3268,9 @@ export function useFieldWorkerMoveRequestAct(pariwarId: string) {
           return api.actOnFieldWorkerMoveRequest(pariwarId, input.moveRequestId, input.act, input.idempotencyKey);
       }
     },
-    onSuccess: refresh,
-    onError: (err) => {
-      if (fieldWorkerMoveRequestIsStale(err)) refresh();
+    onSuccess: (_result, input) => refresh(input.act === 'accept'),
+    onError: (err, input) => {
+      if (fieldWorkerMoveRequestIsStale(err)) refresh(input.act === 'accept' || (err instanceof ApiError && (err.code === 'field_worker.authorization_stale' || err.code === 'field_worker.illegal_transition')));
     },
   });
 }

@@ -204,7 +204,11 @@ export interface AnswerMoveRequestInput extends MoveRequestCommandBase {
 }
 
 /** The answer's shared guards under both locks: `pending` (an escalated request has gone to the Pariwar Admin — AD3), not the opener, the counterpart's key. */
-async function lockForAnswer(client: pg.PoolClient, i: AnswerMoveRequestInput, eventType: string): Promise<{ row: MoveRequestLockedRow; authorization: FieldWorkerAuthorizationSnapshot }> {
+async function lockForAnswer(
+  client: pg.PoolClient,
+  i: AnswerMoveRequestInput,
+  eventType: 'field_worker_move_request.accepted' | 'field_worker_move_request.refused',
+): Promise<{ row: MoveRequestLockedRow; authorization: FieldWorkerAuthorizationSnapshot }> {
   assertHumanActor(eventType, i.actor, i.actorId);
   const authorization = verifiedSnapshot(eventType, i.authorization, i, { permissionKey: FIELD_WORKER_ANSWER_MOVE_REQUEST_PERMISSION_KEY });
   const row = await lockWorkerThenRequest(client, i.pariwarId, i.moveRequestId);
@@ -277,7 +281,12 @@ export async function refuseFieldWorkerMoveRequest(client: pg.PoolClient, i: Ref
   const notified = await writeFieldWorkerNotices(
     client,
     { pariwarId: i.pariwarId, fieldWorkerId: row.fieldWorkerId, moveRequestId: row.moveRequestId, fromDistrict: row.fromDistrict, toDistrict: row.toDistrict, refusalReason },
-    [['move_request_refused', [row.openedBy, ...(await pariwarAdminsOf(client, i.pariwarId))]]],
+    // The opener (reminded "Tell the worker.") and the Pariwar Admins (told of every refusal, `-458` Q-2 A) are TWO kinds: the reminder is wrong to
+    // the Pariwar Admins (decision `2026-11-10-461` item 2). An officer who is both is the opener's, as the first group wins.
+    [
+      ['move_request_refused', [row.openedBy]],
+      ['move_request_refused_admin', await pariwarAdminsOf(client, i.pariwarId)],
+    ],
     i.actorId,
   );
   return resultOf(row, 'refused', notified);

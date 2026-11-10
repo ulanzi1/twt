@@ -23,12 +23,10 @@ import {
   FieldWorkerCodeSmsStatus,
   FieldWorkerEventType,
   FieldWorkerKycStatus,
-  FieldWorkerMoveEscalationCause,
   FieldWorkerMoveOpenedAtEnd,
   FieldWorkerMoveRefusalReason,
   FieldWorkerMoveRequestEventType,
   FieldWorkerMoveRequestState,
-  FieldWorkerMoveSupersedeCause,
   FieldWorkerNoticeKind,
   FieldWorkerPostReason,
   FieldWorkerReasonCode,
@@ -316,7 +314,11 @@ export const FieldWorkerMoveRequestListQuery = z
   .strict();
 export type FieldWorkerMoveRequestListQuery = z.output<typeof FieldWorkerMoveRequestListQuery>;
 
-/** One request in a list — the worker's NAME decrypted (AD10, audited a page at a time); the opener's CURRENT display name or null. */
+/**
+ * One request in a list — the worker's NAME decrypted (AD10, audited a page at a time); the opener's CURRENT display name or null.
+ * ⛔ No `escalation_cause`, `supersede_cause` or `answered_at` (decision `2026-11-10-461` item 1): no screen read them, and a supersede's cause and
+ * time are "the date or fact of an ending" `-460` item 1 withholds.
+ */
 export const FieldWorkerMoveRequestItem = z
   .object({
     move_request_id: UuidString,
@@ -328,12 +330,9 @@ export const FieldWorkerMoveRequestItem = z
     counterpart_district: z.string(),
     state: FieldWorkerMoveRequestState,
     refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
-    escalation_cause: FieldWorkerMoveEscalationCause.nullable(),
-    supersede_cause: FieldWorkerMoveSupersedeCause.nullable(),
     opened_by: UuidString,
     opened_by_display: z.string().nullable(),
     opened_at: Iso8601Datetime,
-    answered_at: Iso8601Datetime.nullable(),
   })
   .strict();
 export type FieldWorkerMoveRequestItem = z.output<typeof FieldWorkerMoveRequestItem>;
@@ -365,16 +364,23 @@ export const FieldWorkerMoveRequestWorker = z
   .strict();
 export type FieldWorkerMoveRequestWorker = z.output<typeof FieldWorkerMoveRequestWorker>;
 
-/** One event of a request's stream — codes only (⛔ an officer's name). */
+/**
+ * One event of a request's stream — codes only (⛔ an officer's name, ⛔ a `cause`). `occurred_at` is NULL for the `superseded` event whatever
+ * its cause (decision `2026-11-10-461` item 1, CR22 A): the line reads "No longer needed", undated. NULL for that event ONLY (code review
+ * R4-5): a time missing from any other event is a server fault, refused here, ⛔ an undated timeline.
+ */
 export const FieldWorkerMoveRequestEvent = z
   .object({
     event_version: z.number().int().positive(),
     event_type: FieldWorkerMoveRequestEventType,
-    occurred_at: Iso8601Datetime,
+    occurred_at: Iso8601Datetime.nullable(),
     refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
-    cause: z.string().nullable(),
   })
-  .strict();
+  .strict()
+  .refine((e) => (e.occurred_at === null) === (e.event_type === 'field_worker_move_request.superseded'), {
+    message: 'occurred_at is null for the superseded event and only for it',
+    path: ['occurred_at'],
+  });
 export type FieldWorkerMoveRequestEvent = z.output<typeof FieldWorkerMoveRequestEvent>;
 
 /** `GET …/move-requests/:moveRequestId` — the request, its events in order, and the worker (`-460`; ONE audit line per view). */
@@ -387,7 +393,11 @@ export type FieldWorkerMoveRequestDetail = z.output<typeof FieldWorkerMoveReques
 export const FieldWorkerNoticeListQuery = z.object({ cursor: Cursor.optional(), limit: clampedLimit(FIELD_WORKER_NOTICE_LIST_MAX_LIMIT) }).strict();
 export type FieldWorkerNoticeListQuery = z.output<typeof FieldWorkerNoticeListQuery>;
 
-/** One notice — ids, districts and codes (⛔ a name; the screen shows the worker's name only through the audited request reads). */
+/**
+ * One notice — ids, districts and codes (⛔ a name; the screen shows the worker's name only through the audited request reads). `created_at`
+ * is NULL for `move_request_superseded` and only for it, whatever its cause (decision `2026-11-10-462`, `-460` item 1): for an ending it is
+ * the moment the ending was recorded. ⚠ The page's `next_cursor` still carries the exact time when the page ends on one (recorded residual).
+ */
 export const FieldWorkerNoticeItem = z
   .object({
     notice_id: UuidString,
@@ -397,10 +407,14 @@ export const FieldWorkerNoticeItem = z
     from_district: z.string(),
     to_district: z.string(),
     refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
-    created_at: Iso8601Datetime,
+    created_at: Iso8601Datetime.nullable(),
     seen_at: Iso8601Datetime.nullable(),
   })
-  .strict();
+  .strict()
+  .refine((n) => (n.created_at === null) === (n.kind === 'move_request_superseded'), {
+    message: 'created_at is null for move_request_superseded and only for it',
+    path: ['created_at'],
+  });
 export type FieldWorkerNoticeItem = z.output<typeof FieldWorkerNoticeItem>;
 
 /** 200 — a keyset page of the officer's own notices, `Cache-Control: no-store`. */

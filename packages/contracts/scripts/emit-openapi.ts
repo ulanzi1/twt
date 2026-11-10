@@ -5591,13 +5591,23 @@ const {
 } = await import('../src/field-workers/index.js');
 const FieldWorkerMoveRequestResultComponent = FieldWorkerMoveRequestResultSchema.openapi('FieldWorkerMoveRequestResult');
 const moveRequestActNote =
-  ' Send an `Idempotency-Key` header (1-200 characters; the request id is in its namespace): a replay returns the first answer.';
-const moveRequestWrite = (key: string, extra409: string) => ({
+  ' Send an `Idempotency-Key` header (1-200 characters; scoped to this request — when opening, to the worker): a replay returns the first answer.';
+const moveRequestWrite = (
+  key: string,
+  extra409: string,
+  // What the gate cannot tell from a missing one: an unknown request (the acts) or an unknown worker (the open) is 403 for everyone.
+  opts: { unknown: string; lost: string } = {
+    unknown: 'an unknown request',
+    lost: ' · field_worker.move_request_not_found (a request lost in a race only — an unknown one is 403)',
+  },
+) => ({
   400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
   401: fieldWorkersNoSession,
-  403: errorResponse(`Missing ${key} for the district this act needs — also an unknown request or another Pariwar's`),
-  404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
-  409: errorResponse(`field_worker.move_request_not_open · field_worker.idempotency_in_progress${extra409}`),
+  403: errorResponse(`Missing ${key} for the district this act needs — also ${opts.unknown} or another Pariwar's`),
+  404: errorResponse(`No grant for this Pariwar (pariwar.not_found)${opts.lost}`),
+  409: errorResponse(
+    `field_worker.move_request_not_open · field_worker.idempotency_in_progress · field_worker.stream_conflict (changed at the same time — reload and try again)${extra409}`,
+  ),
 });
 registry.registerPath({
   method: 'post',
@@ -5613,7 +5623,11 @@ registry.registerPath({
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(OpenFieldWorkerMoveRequestRequestSchema), required: true } },
   responses: {
     201: { description: 'Opened (pending, or escalated at once)', content: jsonOf(FieldWorkerMoveRequestResultComponent) },
-    ...moveRequestWrite('field_worker.request_move', ' · field_worker.move_request_open · field_worker.illegal_transition · field_worker.authorization_stale · field_worker.district_unchanged'),
+    ...moveRequestWrite(
+      'field_worker.request_move',
+      ' · field_worker.move_request_open · field_worker.illegal_transition · field_worker.authorization_stale · field_worker.district_unchanged',
+      { unknown: 'an unknown worker', lost: '' },
+    ),
     422: errorResponse('field_worker.district_unknown (not a recorded district of the Pariwar)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
@@ -5652,6 +5666,10 @@ for (const [act, key, summary, description, extra409] of [
     responses: {
       200: { description: 'Done', content: jsonOf(FieldWorkerMoveRequestResultComponent) },
       ...moveRequestWrite(key, extra409),
+      // An acceptance moves the worker, so the destination is judged against the list NOW (QE17) — a request can wait up to 7 days.
+      ...(act === 'accept'
+        ? { 422: errorResponse('field_worker.district_unknown (the destination is no longer a recorded district of the Pariwar — nothing changed; the request stays pending)') }
+        : {}),
     } as Parameters<typeof registry.registerPath>[0]['responses'],
   });
 }
@@ -5677,7 +5695,7 @@ registry.registerPath({
   summary: 'Move requests — a district\'s (either end), or the whole Pariwar\'s',
   description:
     '`field_worker.read_move_requests` at `district` (a District Admin of it), or — with no district — at the Pariwar (a Pariwar Admin). ' +
-    '`state` `open` (pending, escalated) or `closed`. Each item carries the worker\'s NAME, decrypted behind ONE audit line per page ' +
+    '`state` `open` (pending, escalated) or `closed` — EVERY final state (accepted, refused, withdrawn, closed, superseded). Each item carries the worker\'s NAME, decrypted behind ONE audit line per page ' +
     'naming the workers on it; never the mobile. `limit` 1-25 (default 20; an over-cap value is clamped). `Cache-Control: no-store`.',
   tags: ['field-workers'],
   request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerMoveRequestListQuerySchema },

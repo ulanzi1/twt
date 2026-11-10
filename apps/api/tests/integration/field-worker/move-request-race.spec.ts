@@ -33,9 +33,10 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move-request races (AC1 (d), AC2 
     const pa = await h.actor(p, 'pariwar_admin', 'pariwar', p, 'Meera Pariwar-Admin');
     const daP = await h.actor(p, 'district_admin', 'district', 'Patna', 'Ravi Patna');
     const daG = await h.actor(p, 'district_admin', 'district', 'Gaya', 'Sita Gaya');
+    const daG2 = await h.actor(p, 'district_admin', 'district', 'Gaya', 'Gopal Gaya');
     const worker = await h.registered(pa.client, p, { name: 'Racer Unusual-Surname', mobile: '+919876545678', district: 'Patna' });
     expect((await h.approve(pa.client, p, worker)).statusCode).toBe(200);
-    return { p, pa, daP, daG, worker };
+    return { p, pa, daP, daG, daG2, worker };
   }
 
   /** Run `hold` on its own connection (it takes the worker's lock), start `requests`, wait until `n` backends are parked behind it, COMMIT. */
@@ -48,6 +49,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move-request races (AC1 (d), AC2 
       const pending = requests();
       const pid = await pidOf(holder);
       await waitForBlockedBy(h.td.pool, pid);
+      let parked = 0;
       for (let i = 0; i < 100; i += 1) {
         // Parked behind the holder directly, or behind a request that is (a lock queue: the second waiter is blocked by the first).
         const r = await h.td.pool.query<{ n: number }>(
@@ -56,8 +58,14 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move-request races (AC1 (d), AC2 
                OR EXISTS (SELECT 1 FROM pg_stat_activity b WHERE $1 = ANY(pg_blocking_pids(b.pid)) AND b.pid = ANY(pg_blocking_pids(a.pid)))`,
           [pid],
         );
-        if (r.rows[0]!.n >= n) break;
+        parked = r.rows[0]!.n;
+        if (parked >= n) break;
         await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      if (parked < n) {
+        // Committing now would run the leg SEQUENTIALLY, and its reason codes would still pass: fail instead (code review CR28 (d)).
+        pending.catch(() => undefined); // the holder rolls back in `finally`; the stranded requests then settle on their own
+        throw new Error(`[race] only ${String(parked)} of ${String(n)} backends parked behind the worker lock — the leg would prove nothing`);
       }
       await holder.query('COMMIT');
       return await pending;
@@ -126,5 +134,48 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move-request races (AC1 (d), AC2 
     expect(errOf(r).code).toBe('field_worker.authorization_stale');
     expect(await district(s.worker)).toBe('Gaya'); // CONTROL — the holder's acceptance committed
     expect((await row(id)).state).toBe('accepted');
+  });
+
+  /** Two writers of ONE open request, parked on the worker's lock: exactly one commits; the other is judged under the lock and answers 409. */
+  async function answerRace(
+    first: (s: Awaited<ReturnType<typeof setup>>, id: string) => ReturnType<Harness['requestAct']>,
+    second: (s: Awaited<ReturnType<typeof setup>>, id: string) => ReturnType<Harness['requestAct']>,
+    outcomes: { firstWins: [string, string, string]; secondWins: [string, string, string] },
+  ): Promise<void> {
+    const s = await setup();
+    const id = json(await h.openRequest(s.daP.client, s.p, s.worker, { from_district: 'Patna', to_district: 'Gaya' }))['move_request_id'] as string;
+    const [a, b] = await race(s.p, lockWorker(s.worker), () => Promise.all([first(s, id), second(s, id)]), 2);
+    const codes = [a, b].map((r) => (r.statusCode === 200 ? 200 : `${r.statusCode} ${errOf(r).code}`)).sort();
+    expect(codes).toEqual([200, '409 field_worker.move_request_not_open']);
+    const [state, workerDistrict, loserAction] = a.statusCode === 200 ? outcomes.firstWins : outcomes.secondWins;
+    expect((await row(id)).state).toBe(state);
+    expect(await district(s.worker)).toBe(workerDistrict); // CONTROL — the winner's act is the one that took effect
+    // The WHOLE ledger of the request (code review RP-18): the opener's line, the winner's own line, and the loser's INTENT line with its
+    // `_rolled_back` twin (a refusal found only under the lock) - nothing else, so a missing winner line or intent line fails here.
+    const actions = await actionsOn(s.p, `field_worker_move_request/${id}`);
+    expect([...actions].sort()).toEqual(
+      [
+        'field_worker_move_request.opened',
+        `field_worker_move_request.${state}`,
+        `field_worker_move_request.${loserAction}`,
+        `field_worker_move_request.${loserAction}_rolled_back`,
+      ].sort(),
+    );
+  }
+
+  it('AC2 (e) — two answerers, accept x refuse by the two Gaya District Admins: exactly one commits, the other is 409 move_request_not_open (CR27)', async () => {
+    await answerRace(
+      (s, id) => h.requestAct(s.daG.client, s.p, id, 'accept'),
+      (s, id) => h.requestAct(s.daG2.client, s.p, id, 'refuse', { reason_code: 'other' }),
+      { firstWins: ['accepted', 'Gaya', 'refused'], secondWins: ['refused', 'Patna', 'accepted'] },
+    );
+  });
+
+  it('AC2 / AC4 — accept by the counterpart x withdraw by the opener: exactly one commits, the other is 409 move_request_not_open (CR27)', async () => {
+    await answerRace(
+      (s, id) => h.requestAct(s.daG.client, s.p, id, 'accept'),
+      (s, id) => h.requestAct(s.daP.client, s.p, id, 'withdraw'),
+      { firstWins: ['accepted', 'Gaya', 'withdrawn'], secondWins: ['withdrawn', 'Patna', 'accepted'] },
+    );
   });
 });

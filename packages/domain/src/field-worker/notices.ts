@@ -52,7 +52,7 @@ export interface FieldWorkerNoticeFacts {
   moveRequestId: FieldWorkerMoveRequestId | null;
   fromDistrict: string;
   toDistrict: string;
-  /** `move_request_refused` only. */
+  /** `move_request_refused` and `move_request_refused_admin` only. */
   refusalReason?: FieldWorkerMoveRefusalReason;
 }
 
@@ -60,14 +60,21 @@ export interface FieldWorkerNoticeFacts {
  * Write one act's notices: for each `[kind, recipients]` group, in order, one row per recipient — the ACTOR excluded (`actorId`; `null`
  * for the system), and an officer already told by an earlier group of this act skipped (one notice per recipient per act). Returns the
  * rows written as `[recipient, kind]`, in order.
+ *
+ * ONE call carries ONE set of `facts` (one `from → to` pair), so an act that tells two groups different facts — a direct move tells the
+ * MOVE's districts and the superseded REQUEST's other district (decision `2026-11-10-461` item 3) — makes two calls and passes the
+ * first call's recipients as `alreadyTold`: the "one notice per officer per act" rule is the writer's, ⛔ the unique index's (that one is
+ * per request, KIND and recipient).
  */
 export async function writeFieldWorkerNotices(
   client: pg.PoolClient,
   facts: FieldWorkerNoticeFacts,
   groups: ReadonlyArray<readonly [FieldWorkerNoticeKind, readonly string[]]>,
   actorId: string | null,
+  alreadyTold: ReadonlySet<string> = new Set<string>(),
 ): Promise<Array<[string, FieldWorkerNoticeKind]>> {
-  const told = new Set<string>(actorId === null ? [] : [actorId]);
+  const told = new Set<string>(alreadyTold);
+  if (actorId !== null) told.add(actorId);
   const rows: Array<[string, FieldWorkerNoticeKind]> = [];
   for (const [kind, recipients] of groups) {
     for (const recipient of recipients) {
@@ -89,7 +96,7 @@ export async function writeFieldWorkerNotices(
         facts.moveRequestId,
         facts.fromDistrict,
         facts.toDistrict,
-        kind === 'move_request_refused' ? (facts.refusalReason ?? null) : null,
+        kind === 'move_request_refused' || kind === 'move_request_refused_admin' ? (facts.refusalReason ?? null) : null,
       ],
     );
   }

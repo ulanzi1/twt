@@ -23,11 +23,9 @@ import { eventsLog } from '../schema/events_log.js';
 import {
   FIELD_WORKER_MOVE_REQUEST_OPEN_STATES,
   fieldWorkerMoveRequests,
-  type FieldWorkerMoveEscalationCause,
   type FieldWorkerMoveOpenedAtEnd,
   type FieldWorkerMoveRefusalReason,
   type FieldWorkerMoveRequestState,
-  type FieldWorkerMoveSupersedeCause,
 } from '../schema/field_worker_move_requests.js';
 import { fieldWorkerNotices, type FieldWorkerNoticeKind } from '../schema/field_worker_notices.js';
 import { fieldWorkers, type FieldWorkerState } from '../schema/field_workers.js';
@@ -64,7 +62,11 @@ function encodeCursor(atExact: string, id: string): string {
   return encodeFieldWorkerCursor({ createdAtExact: atExact, fieldWorkerId: id as FieldWorkerId });
 }
 
-/** One request as a list shows it — codes and ids; the worker's NAME as ciphertext (the API decrypts it, audited). */
+/**
+ * One request as a list shows it — codes and ids; the worker's NAME as ciphertext (the API decrypts it, audited).
+ * ⛔ No `escalation_cause`, `supersede_cause` or `answered_at` (decision `2026-11-10-461` item 1): the table keeps them; no read hands them on - a
+ * `supersede_cause` of `worker_ended` and the moment the ending was recorded are "the date or fact of an ending" `-460` item 1 withholds.
+ */
 export interface FieldWorkerMoveRequestListRow {
   readonly moveRequestId: FieldWorkerMoveRequestId;
   readonly fieldWorkerId: FieldWorkerId;
@@ -75,13 +77,10 @@ export interface FieldWorkerMoveRequestListRow {
   readonly counterpartDistrict: string;
   readonly state: FieldWorkerMoveRequestState;
   readonly refusalReason: FieldWorkerMoveRefusalReason | null;
-  readonly escalationCause: FieldWorkerMoveEscalationCause | null;
-  readonly supersedeCause: FieldWorkerMoveSupersedeCause | null;
   readonly openedBy: string;
   /** The opener's CURRENT display name, or null (never derived — the 6.11 R5 rule). */
   readonly openedByDisplay: string | null;
   readonly openedAt: string;
-  readonly answeredAt: string | null;
 }
 
 const LIST_COLUMNS = {
@@ -94,12 +93,9 @@ const LIST_COLUMNS = {
   counterpartDistrict: fieldWorkerMoveRequests.counterpartDistrict,
   state: fieldWorkerMoveRequests.state,
   refusalReason: fieldWorkerMoveRequests.refusalReason,
-  escalationCause: fieldWorkerMoveRequests.escalationCause,
-  supersedeCause: fieldWorkerMoveRequests.supersedeCause,
   openedBy: fieldWorkerMoveRequests.openedBy,
   openedByDisplay: users.displayName,
   openedAt: fieldWorkerMoveRequests.openedAt,
-  answeredAt: fieldWorkerMoveRequests.answeredAt,
   openedAtExact: sql<string>`${fieldWorkerMoveRequests.openedAt}::text`,
 };
 
@@ -119,12 +115,9 @@ function toListRow(r: ListSelect): FieldWorkerMoveRequestListRow {
     counterpartDistrict: r.counterpartDistrict as string,
     state: r.state as FieldWorkerMoveRequestState,
     refusalReason: (r.refusalReason as FieldWorkerMoveRefusalReason | null) ?? null,
-    escalationCause: (r.escalationCause as FieldWorkerMoveEscalationCause | null) ?? null,
-    supersedeCause: (r.supersedeCause as FieldWorkerMoveSupersedeCause | null) ?? null,
     openedBy: r.openedBy as string,
     openedByDisplay: display !== null && display.trim() !== '' ? display : null,
     openedAt: new Date(r.openedAt as Date).toISOString(),
-    answeredAt: r.answeredAt === null ? null : new Date(r.answeredAt as Date).toISOString(),
   };
 }
 
@@ -168,14 +161,20 @@ export async function pageFieldWorkerMoveRequests(
   };
 }
 
-/** One event of a request, as its detail shows it — codes only (⛔ an officer's name, ⛔ the authorization). */
+/**
+ * One event of a request, as its detail shows it — codes only (⛔ an officer's name, ⛔ the authorization, ⛔ a `cause`).
+ * `occurredAt` is NULL for the `superseded` event WHATEVER its cause (decision `2026-11-10-461` item 1, CR22 A): a time withheld only for a
+ * `worker_ended` supersede would say "ended" by its absence (one rule per surface, never per item). The line is "No longer needed", undated.
+ */
 export interface FieldWorkerMoveRequestEventView {
   readonly eventVersion: number;
   readonly eventType: string;
-  readonly occurredAt: string;
+  readonly occurredAt: string | null;
   readonly refusalReason: string | null;
-  readonly cause: string | null;
 }
+
+/** The event types whose time the detail withholds (`-461` item 1). */
+const UNDATED_EVENT_TYPES: ReadonlySet<string> = new Set(['field_worker_move_request.superseded']);
 
 /** One request and its events, or null for an unknown / another Pariwar's id. */
 export async function getFieldWorkerMoveRequest(
@@ -200,7 +199,6 @@ export async function getFieldWorkerMoveRequest(
       eventType: eventsLog.eventType,
       occurredAt: eventsLog.occurredAt,
       refusalReason: sql<string | null>`${eventsLog.payload}->>'refusal_reason'`,
-      cause: sql<string | null>`${eventsLog.payload}->>'cause'`,
     })
     .from(eventsLog)
     .where(and(eq(eventsLog.pariwarId, pariwarId), eq(eventsLog.streamId, moveRequestId)))
@@ -211,20 +209,23 @@ export async function getFieldWorkerMoveRequest(
     events: events.map((e) => ({
       eventVersion: Number(e.eventVersion),
       eventType: e.eventType,
-      occurredAt: new Date(e.occurredAt).toISOString(),
+      occurredAt: UNDATED_EVENT_TYPES.has(e.eventType) ? null : new Date(e.occurredAt).toISOString(),
       refusalReason: e.refusalReason ?? null,
-      cause: e.cause ?? null,
     })),
   };
 }
 
-/** A district the worker reported to, and when (IST days; `to` null = still there). */
+/**
+ * A district the worker reported to, and when (IST days). `to` null = OPEN-ENDED: the district the worker is in now — or, for a worker whose
+ * work has ended, the last one: the ending's date is WITHHELD (`-460` item 1: "the last one open-ended"; ⛔ "the date or fact of an ending
+ * beyond the state's name" — the SQL reads no `field_worker.terminated`). Read `currentState` for whether the worker is still there.
+ */
 export interface WorkHistoryDistrict {
   readonly district: string;
   readonly from: string;
   readonly to: string | null;
 }
-/** A suspension's days (IST; `to` null = still suspended). ⛔ Its reason (`-460` item 1). */
+/** A suspension's days (IST; `to` null = OPEN-ENDED: still suspended, or suspended when the work ended — ⛔ that ending's date). ⛔ Its reason (`-460` item 1). */
 export interface WorkHistorySuspension {
   readonly from: string;
   readonly to: string | null;
@@ -238,11 +239,18 @@ export interface MoveRequestWorkerHistory {
   readonly activeSince: string | null;
   readonly districts: WorkHistoryDistrict[];
   readonly suspensions: WorkHistorySuspension[];
-  /** True when the read stopped at `MOVE_REQUEST_HISTORY_EVENT_CAP` events. */
+  /**
+   * True when the read stopped at `MOVE_REQUEST_HISTORY_EVENT_CAP` events. It keeps the OLDEST events, so `districts` then ends on an OLD
+   * district, ⛔ the worker's current one — a consumer that shows the history says it is incomplete (code review CR13).
+   */
   readonly truncated: boolean;
 }
 
-/** The pure fold of the history rows (event-version order) — exported for its unit test. */
+/**
+ * The pure fold of the history rows — exported for its unit test. The rows MUST arrive in event-version order (the reader's `ORDER BY`);
+ * the fold does not sort. It knows five event types and ignores every other, `field_worker.terminated` included (`-460` item 1: ⛔ the date
+ * or fact of an ending beyond the state's name), so a worker's last district and an open suspension stay open-ended.
+ */
 export function foldWorkHistory(
   rows: ReadonlyArray<{ eventType: string; day: string; district: string | null }>,
 ): Pick<MoveRequestWorkerHistory, 'registeredOn' | 'activeSince' | 'districts' | 'suspensions'> {
@@ -283,7 +291,8 @@ export function foldWorkHistory(
 /**
  * `-460` — the work history of the worker a request is about, or null for an unknown / another Pariwar's request. Reads the worker's
  * OWN stream: ONLY the event type, version, IST day and the district (`district` on `registered`, `to_district` on `posted`) — the SQL
- * selects ⛔ a reason, ⛔ an actor, ⛔ an authorization. Returns the NAME ciphertext (the API decrypts it, audit first).
+ * selects ⛔ a reason, ⛔ an actor, ⛔ an authorization, and filters ⛔ `field_worker.terminated` out (`-460` item 1: the ending's date is not
+ * shown; `currentState` carries the state's NAME). Returns the NAME ciphertext (the API decrypts it, audit first).
  */
 export async function getMoveRequestWorkerHistory(
   db: Db,
@@ -328,7 +337,12 @@ export async function getMoveRequestWorkerHistory(
   };
 }
 
-/** One of the officer's notices — ids, districts and codes (⛔ a name). */
+/**
+ * One of the officer's notices — ids, districts and codes (⛔ a name). `createdAt` is NULL for `move_request_superseded` WHATEVER its cause
+ * (decision `2026-11-10-462`; `-460` item 1): for an ending it is the moment the ending was recorded, and a time withheld only for an ending
+ * would say "ended" by its absence. RECORDED residuals: the page is ordered by that time, and `nextCursor` carries it exactly when the page
+ * ends on such a notice (`-462` item 2).
+ */
 export interface FieldWorkerNoticeView {
   readonly noticeId: FieldWorkerNoticeId;
   readonly kind: FieldWorkerNoticeKind;
@@ -337,9 +351,12 @@ export interface FieldWorkerNoticeView {
   readonly fromDistrict: string;
   readonly toDistrict: string;
   readonly refusalReason: FieldWorkerMoveRefusalReason | null;
-  readonly createdAt: string;
+  readonly createdAt: string | null;
   readonly seenAt: string | null;
 }
+
+/** The notice kinds whose time the read withholds (`-462`). */
+const UNDATED_NOTICE_KINDS: ReadonlySet<FieldWorkerNoticeKind> = new Set<FieldWorkerNoticeKind>(['move_request_superseded']);
 
 /**
  * A page of the OFFICER's own notices (`recipient_user_id = recipientUserId`, AD9), newest first. `after` MUST come from
@@ -386,7 +403,7 @@ export async function pageFieldWorkerNotices(
       fromDistrict: r.fromDistrict,
       toDistrict: r.toDistrict,
       refusalReason: r.refusalReason ?? null,
-      createdAt: new Date(r.createdAt).toISOString(),
+      createdAt: UNDATED_NOTICE_KINDS.has(r.kind) ? null : new Date(r.createdAt).toISOString(),
       seenAt: r.seenAt === null ? null : new Date(r.seenAt).toISOString(),
     })),
     nextCursor: rows.length > limit && last !== undefined ? encodeCursor(last.createdAtExact, last.noticeId) : null,
@@ -469,11 +486,20 @@ export const STALE_MOVE_REQUESTS_TICK_MAX = 200;
  * AD8 (a) — the CROSS-TENANT selector of the escalation sweep: `pending` requests opened at least 7 × 24 h ago by the DATABASE clock
  * (TR3), oldest first, at most `limit`. On a pool whose role can read across Pariwars (roster Row 26 — the caller checks it first). A
  * plain read: each row is re-judged under its locks (`escalateStaleMoveRequest`), so a row escalated or answered meanwhile is a no-op.
+ *
+ * ⚠ DELIBERATE (checklist 9; code review CR15): this reads EVERY Pariwar's rows on a raw pool — the one cross-tenant read of the
+ * move-request module, a platform-wide sweep selecting ids only (⛔ a name, ⛔ a district). The Row 26 guard (the pool's role) is the
+ * CALLER's, `apps/jobs`. The per-row writes that follow run on that same login with RLS waived too, held apart only by each command's explicit
+ * `pariwar_id` predicate (the sweep's header, CR39). RE-EXAMINE if it is ever called from a request path, or if the sweep moves to an RLS-bound login.
+ * @throws RangeError for a `limit` that is not an integer (the page reads' guard — `clampLimit` passes 1.5 and NaN through to Postgres).
  */
 export async function findStaleMoveRequests(
   pool: pg.Pool,
   opts: { limit?: number } = {},
 ): Promise<Array<{ pariwarId: PariwarId; moveRequestId: FieldWorkerMoveRequestId }>> {
+  if (opts.limit !== undefined && !Number.isInteger(opts.limit)) {
+    throw new RangeError(`findStaleMoveRequests: limit must be an integer, got ${String(opts.limit)}`);
+  }
   const limit = clampLimit(opts.limit, { default: STALE_MOVE_REQUESTS_TICK_MAX, cap: STALE_MOVE_REQUESTS_TICK_MAX });
   const r = await pool.query<{ pariwar_id: string; move_request_id: string }>(
     `SELECT pariwar_id, move_request_id FROM field_worker_move_requests

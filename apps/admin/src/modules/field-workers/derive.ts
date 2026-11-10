@@ -24,10 +24,12 @@ export interface Guidance {
   readonly reload?: boolean;
   /** An act's 409 that says the panel's own copy of the worker is out of date (moved, or the status changed): reopen the worker (review CR23). */
   readonly stale?: boolean;
+  /** What was asked for is gone: there is nothing to try again (a request read that finds no request). */
+  readonly gone?: boolean;
 }
 
 /** Where the admin was when the server refused — the 403 line says what THAT action needs (review CR11). */
-export type Surface = 'register' | 'approvals' | 'find' | 'code' | 'history';
+export type Surface = 'register' | 'approvals' | 'find' | 'code' | 'history' | 'requests';
 
 const NO_ACCESS_KEY: Record<Surface, string> = {
   register: 'fw.noAccessRegister',
@@ -35,6 +37,7 @@ const NO_ACCESS_KEY: Record<Surface, string> = {
   find: 'fw.noAccessFind',
   code: 'fw.noAccessCode',
   history: 'fw.history.noAccess',
+  requests: 'fw.requests.detail.noAccess',
 };
 
 const BY_CODE: Record<string, () => Guidance> = {
@@ -64,7 +67,12 @@ const BY_CODE: Record<string, () => Guidance> = {
   'field_worker.move_request_not_open': () => ({ text: t('fw.requests.stale'), stale: true }),
   'field_worker.move_request_same_officer': () => ({ text: t('fw.requests.sameOfficer') }),
   'field_worker.move_request_not_opener': () => ({ text: t('fw.requests.notOpener') }),
-  'field_worker.move_request_not_found': () => ({ text: t('fw.err.notFound') }),
+  // A lost race (the request is gone): the list is refreshed and the line says so (code review CR46).
+  'field_worker.move_request_not_found': () => ({ text: t('fw.requests.gone'), stale: true }),
+  // No grant for this Pariwar, or no such Pariwar (a 404) — in every route's contract; the shared fallback read "Something went wrong
+  // (pariwar.not_found)". ⛔ NOT `noAccess`: that flag means a 403, and its consumers print a ROLE sentence for it — "choose a district you
+  // manage" on the requests page, `noAccessText` on `WorkerList` (code review RP-3). It says what it is, in its own words.
+  'pariwar.not_found': () => ({ text: t('fw.err.noPariwar') }),
 };
 
 /** Story 13.1d — the acts on a move request (AD10). */
@@ -72,8 +80,27 @@ export type RequestAct = 'ask' | 'accept' | 'refuse' | 'withdraw' | 'close';
 
 /** A move-request act's refusal: its OWN no-access line (403), else the shared rows (a stale request: `stale`, the list refreshed). */
 export function requestGuidance(error: unknown, act: RequestAct): Guidance {
-  if (error instanceof ApiError && error.status === 403) return { text: t(act === 'ask' ? 'fw.ask.noAccess' : `fw.requests.noAccess.${act}`), noAccess: true };
+  if (error instanceof ApiError) {
+    if (error.status === 403) return { text: t(act === 'ask' ? 'fw.ask.noAccess' : `fw.requests.noAccess.${act}`), noAccess: true };
+    // The shared rows are the register form's and the approvals page's: an act here says what happened in ITS words (code review CR46).
+    // An acceptance moves the worker, so the destination is judged against the list NOW (CR23): nothing changed, and the officer can refuse.
+    if (act === 'accept' && error.code === 'field_worker.district_unknown') return { text: t('fw.requests.acceptDistrictUnknown') };
+    // "Ask to move" on a worker whose work ended, or who moved, meanwhile: the panel's own copy is out of date.
+    if (act === 'ask' && error.code === 'field_worker.illegal_transition') return { text: t('fw.ask.workerEnded'), stale: true };
+    if (act === 'ask' && error.code === 'field_worker.authorization_stale') return { text: t('fw.ask.moved'), stale: true };
+  }
   return fieldWorkerGuidance(error);
+}
+
+/**
+ * One request's DETAIL read. A request that is gone says only that: `fw.requests.gone` ("The list has been refreshed") is the ACT's line,
+ * where the hook refreshes the lists, and nothing refreshes a list from a detail panel (code review RP-5); there is nothing to retry.
+ */
+export function requestDetailGuidance(error: unknown): Guidance {
+  if (error instanceof ApiError && error.status !== 401 && error.status !== 403 && error.code === 'field_worker.move_request_not_found') {
+    return { text: t('fw.requests.detail.gone'), gone: true };
+  }
+  return fieldWorkerGuidance(error, 'requests');
 }
 
 /** A refusal reason's label (never the code). */
@@ -86,12 +113,25 @@ export function requestStateLabel(state: string): string {
   return t(`fw.requests.state.${state}`);
 }
 
-/** One notice's sentence — districts and codes only (a notice carries no name). */
+/**
+ * One notice's sentence — districts and codes only (a notice carries no name). The reason is worded for the OPENER and the Pariwar Admins
+ * who read it: the refuser's own labels ("talk to me") name no one here (code review CR49).
+ */
 export function noticeText(n: { kind: string; from_district: string; to_district: string; refusal_reason: string | null }): string {
   const base = { from: n.from_district, to: n.to_district };
-  return n.kind === 'move_request_refused'
-    ? t('fw.notices.kind.move_request_refused', { ...base, reason: n.refusal_reason === null ? t('fw.unknownError', { code: 'reason' }) : refusalLabel(n.refusal_reason) })
+  return n.kind === 'move_request_refused' || n.kind === 'move_request_refused_admin'
+    ? t(`fw.notices.kind.${n.kind}`, { ...base, reason: n.refusal_reason === null ? t('fw.unknownError', { code: 'reason' }) : t(`fw.notices.reason.${n.refusal_reason}`) })
     : t(`fw.notices.kind.${n.kind}`, base);
+}
+
+/**
+ * The request a notice's "View" opens, or `null` when it has none to open: a notice about no request, and `moved_by_pariwar_admin` — it goes
+ * to the District Admins of the MOVE's two districts and names the request the move superseded, whose ends they need not hold (a move to a
+ * third district): the detail's gate answers 403, so the button would promise what it cannot give (code review RP-7). Every other kind goes to
+ * an end of its request or to a Pariwar Admin, who may read it.
+ */
+export function noticeViewRequestId(n: { kind: string; move_request_id: string | null }): string | null {
+  return n.kind === 'moved_by_pariwar_admin' ? null : n.move_request_id;
 }
 
 /** Story 13.1c (AD8) — the four acts on an opened worker. */

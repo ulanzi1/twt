@@ -9,6 +9,9 @@
 // projector assumes (QE13). Specs import the projector from `src/field-worker/project.js`.
 // Story 13.1d — ⛔ re-exported either: the move request's projector (move-request-project.ts), its row lock (move-request-lock.ts) and the
 // supersede after a direct move or an ending (move-request-supersede.ts, called by `postFieldWorker` / `terminateFieldWorker` only).
+// `export * from './commands.js'` below DOES carry two helpers the request commands import from `./commands.js` directly (Task 2.4; code
+// review CR19): `lockFieldWorkerRow` (the worker's `SELECT … FOR UPDATE` — a lock, no write) and `verifiedSnapshot` (pure). Neither is a
+// write entry point: nothing is written without a projector, and the projectors are not exported.
 // ⛔ Anything from `attribution-code` (I9): the code is read only through 13.2's door, and by Story 13.1b's one reviewed job.
 
 // The field_worker.* vocabulary + .strict() payload schemas (consumed by packages/events' registry + the projector).

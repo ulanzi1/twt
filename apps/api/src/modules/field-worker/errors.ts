@@ -102,7 +102,7 @@ export function mapFieldWorkerError(err: unknown): never {
     throw new ApiError(409, 'field_worker.move_request_open', 'This field worker already has a move request waiting — answer or withdraw it first');
   }
   if (err instanceof fieldWorker.FieldWorkerMoveRequestNotOpenError) {
-    throw new ApiError(409, 'field_worker.move_request_not_open', 'This move request has already been answered or has moved on — reload the list', { state: err.state });
+    throw new ApiError(409, 'field_worker.move_request_not_open', 'This move request is not waiting for this step — it may already have been answered, withdrawn, closed or moved on; reload the list', { state: err.state });
   }
   if (err instanceof fieldWorker.FieldWorkerMoveRequestSameOfficerError) {
     throw new ApiError(409, 'field_worker.move_request_same_officer', 'The officer who asked cannot answer their own request');

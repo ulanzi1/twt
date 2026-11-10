@@ -40,6 +40,8 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
   const [staleFor, setStaleFor] = useState<string | null>(null);
   /** The panel whose "Show code" met a 409 saying its copy is out of date (not active, or moved): its acts go too (review R2-5, RP-2). */
   const [codeStale, setCodeStale] = useState<{ id: string; kind: 'state' | 'moved' } | null>(null);
+  /** The panel whose "Ask to move" met a 409 saying its copy is out of date: the acts and "Show code" go too; Ask keeps its own line (RP-6). */
+  const [askStale, setAskStale] = useState<{ id: string; kind: 'state' | 'moved' } | null>(null);
   const list = useFieldWorkers(pariwarId, state, district, district !== null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   // The panel open NOW — the handlers compare against this, not against the render they were created in.
@@ -50,6 +52,7 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
     openRef.current = id;
     setStaleFor(null); // a panel opened afresh reads the worker afresh
     setCodeStale(null);
+    setAskStale(null);
     setOpenState(id);
   };
   /** No decrypted identity outlives its panel: the explicit removal (the hook's `gcTime: 0` is only the backstop). */
@@ -138,17 +141,21 @@ export function FindWorkerPage({ pariwarId }: { pariwarId: string }): ReactEleme
           {(name, worker) => (
             <>
               {/* Only an ACTIVE worker's code can be read (13.1a); a suspend or an end unmounts a code on screen (review CR26). */}
-              {worker.current_state === 'active' && staleFor !== open && <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} onStateChanged={(kind) => setCodeStale({ id: open, kind })} />}
+              {worker.current_state === 'active' && staleFor !== open && askStale?.id !== open && (
+                <CodeReveal pariwarId={pariwarId} fieldWorkerId={open} workerName={name} onStateChanged={(kind) => setCodeStale({ id: open, kind })} />
+              )}
               <WorkerActions
                 pariwarId={pariwarId}
                 fieldWorkerId={open}
                 name={name}
                 worker={worker}
-                externalStale={codeStale?.id === open ? codeStale.kind : null}
+                externalStale={codeStale?.id === open ? codeStale.kind : askStale?.id === open ? askStale.kind : null}
                 onStale={() => setStaleFor(open)}
               />
-              {/* Story 13.1d (AD10) — ask the other end's District Admin; withdrawn with the acts when the panel's copy is stale. */}
-              {staleFor !== open && <AskToMove pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} />}
+              {/* Story 13.1d (AD10) — ask the other end's District Admin; withdrawn with the acts when the panel's copy is stale. Its OWN stale
+                  refusal withdraws the acts and "Show code" the other way round (`onStale`) but keeps the component, so its line stays (RP-6).
+                  ⛔ No `key` here: `WorkerDetail` above is keyed by the open worker, so the whole subtree remounts per worker (RP-15). */}
+              {staleFor !== open && <AskToMove pariwarId={pariwarId} fieldWorkerId={open} name={name} worker={worker} onStale={(kind) => setAskStale({ id: open, kind })} />}
               <WorkerHistory pariwarId={pariwarId} fieldWorkerId={open} />
             </>
           )}

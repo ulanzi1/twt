@@ -73,10 +73,24 @@ async function heldEnd(request: FastifyRequest, key: string, ends: readonly stri
 
 /**
  * `POST …/:fieldWorkerId/move-requests` (AD5) — the end the officer holds: the body's `from_district`, else its `to_district` (the
- * ALREADY-VALIDATED body). ⛔ The worker's row here: the command judges `from_district` against the LOCKED row (a stale one is 409).
+ * ALREADY-VALIDATED body). The worker's row is read for its EXISTENCE only (code review CR24): a missing worker — or another Pariwar's,
+ * which RLS and the explicit `pariwar_id` predicate both hide — stashes `null`, a 403 for EVERYONE, so the TENANT boundary never says
+ * whether a worker exists in ANOTHER Pariwar (the per-worker routes' rule, above). ⛔ Its district here: the command judges `from_district`
+ * against the LOCKED row (a stale one is 409 — the screen's staleness answer, for a worker who IS in this Pariwar).
+ * ⚠ So WITHIN the Pariwar the answer does tell them apart: an officer who names a district they hold gets 409 for a worker who exists and 403
+ * for an unknown id. That needs a worker UUID the officer already has, and nothing but the UUID is learned - the same class as the 403 body's
+ * `details` (deferred-work CR31); `move-requests.spec.ts` (c) pins the 409, the CR24 leg the 403 (code review RP-19).
  */
 export function loadMoveRequestOpenTarget(key: string): preHandlerHookHandler {
   return async function preHandler(request: FastifyRequest): Promise<void> {
+    const scopeTx = request.scopeTx;
+    if (!scopeTx) throw new UnauthorizedError('Authentication required', 'auth.session_required');
+    const { fieldWorkerId } = request.params as { fieldWorkerId: string };
+    const worker = await fieldWorker.getFieldWorker(scopeTx.tx, ids.pariwarId(scopeTx.pariwarId), ids.fieldWorkerId(fieldWorkerId));
+    if (worker === null) {
+      request.moveRequestGateDistrict = null;
+      return;
+    }
     const body = request.body as { from_district?: unknown; to_district?: unknown } | undefined;
     const ends = [body?.from_district, body?.to_district].filter((d): d is string => typeof d === 'string');
     request.moveRequestGateDistrict = await heldEnd(request, key, ends);

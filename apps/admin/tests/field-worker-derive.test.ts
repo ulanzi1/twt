@@ -2,7 +2,7 @@
 // ([[feedback_stub_must_call_not_transcribe]]): every key resolves with no stray brace; every registration / approval / read code
 // maps to its guidance (the field it belongs to, retryable or not); the code's spelled label; an unknown code still names itself.
 
-import { FIELD_WORKER_EVENT_TYPES, FIELD_WORKER_REASON_CODES } from '@twt/contracts';
+import { FIELD_WORKER_EVENT_TYPES, FIELD_WORKER_NOTICE_KINDS, FIELD_WORKER_REASON_CODES } from '@twt/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { ApiError } from '../src/api/client.js';
@@ -16,8 +16,10 @@ import {
   istTodayInBrowser,
   needsSignIn,
   noticeText,
+  noticeViewRequestId,
   reasonLabel,
   refusalLabel,
+  requestDetailGuidance,
   requestGuidance,
   requestStateLabel,
   spellDigits,
@@ -137,16 +139,17 @@ describe('the 403 line depends on the screen (review CR11)', () => {
     find: 'fw.noAccessFind',
     code: 'fw.noAccessCode',
     history: 'fw.history.noAccess',
+    requests: 'fw.requests.detail.noAccess',
   };
 
   it.each(Object.entries(KEYS))('%s ⇒ %s, and it is a no-access guidance', (surface, key) => {
     expect(fieldWorkerGuidance(forbidden, surface as Surface)).toMatchObject({ noAccess: true, text: t(key) });
   });
 
-  it('the five lines are five different sentences, and none of the non-approval ones sends the admin to "approving"', () => {
+  it('the six lines are six different sentences, and none of the non-approval ones sends the admin to "approving"', () => {
     const texts = Object.values(KEYS).map((k) => t(k));
-    expect(new Set(texts).size).toBe(5);
-    for (const key of ['fw.noAccessRegister', 'fw.noAccessFind', 'fw.noAccessCode', 'fw.history.noAccess']) expect(t(key)).not.toMatch(/approv/i);
+    expect(new Set(texts).size).toBe(6);
+    for (const key of ['fw.noAccessRegister', 'fw.noAccessFind', 'fw.noAccessCode', 'fw.history.noAccess', 'fw.requests.detail.noAccess']) expect(t(key)).not.toMatch(/approv/i);
   });
 
   it('"Press Register again" never reaches an approve: the key-required line names no screen', () => {
@@ -242,7 +245,7 @@ describe('Story 13.1d — move requests', () => {
     for (const r of c.FIELD_WORKER_MOVE_REFUSAL_REASONS) expect(refusalLabel(r), r).not.toBe(r);
     for (const s of c.FIELD_WORKER_MOVE_REQUEST_STATES) expect(requestStateLabel(s), s).toBeTruthy();
     for (const k of c.FIELD_WORKER_NOTICE_KINDS) {
-      expect(noticeText({ kind: k, from_district: 'Patna', to_district: 'Gaya', refusal_reason: k === 'move_request_refused' ? 'no_capacity' : null }), k).toContain('Patna');
+      expect(noticeText({ kind: k, from_district: 'Patna', to_district: 'Gaya', refusal_reason: k === 'move_request_refused' || k === 'move_request_refused_admin' ? 'no_capacity' : null }), k).toContain('Patna');
     }
     for (const e of c.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES) expect(t(`fw.requests.event.${e}`), e).toBeTruthy();
   });
@@ -250,8 +253,82 @@ describe('Story 13.1d — move requests', () => {
   it('the accepted notice reminds the opener "Tell the worker." (-459 Q3 A); a refused one names the reason’s LABEL, never its code', () => {
     expect(noticeText({ kind: 'move_request_accepted', from_district: 'Patna', to_district: 'Gaya', refusal_reason: null })).toMatch(/Tell the worker\.$/);
     const refused = noticeText({ kind: 'move_request_refused', from_district: 'Patna', to_district: 'Gaya', refusal_reason: 'work_not_needed_here' });
-    expect(refused).toContain('There is no work for them here');
+    expect(refused).toContain('There is no work for them in the district asked');
     expect(refused).not.toContain('work_not_needed_here');
+  });
+
+  // CR41 A (decision `2026-11-10-461` item 2) — the opener is reminded on a REFUSAL too (-459 Q3 A); the Pariwar Admins' own kind is not.
+  it('the OPENER’s refused notice ends "Tell the worker."; the Pariwar Admins’ refused notice carries the reason and ⛔ the reminder', () => {
+    const facts = { from_district: 'Patna', to_district: 'Gaya', refusal_reason: 'no_capacity' };
+    const opener = noticeText({ kind: 'move_request_refused', ...facts });
+    const admin = noticeText({ kind: 'move_request_refused_admin', ...facts });
+    expect(opener).toMatch(/Tell the worker\.$/);
+    expect(opener).toContain(t('fw.notices.reason.no_capacity'));
+    expect(admin).toContain(t('fw.notices.reason.no_capacity'));
+    expect(admin).not.toMatch(/Tell the worker/);
+    expect(admin).toMatch(/^A request was refused: Patna to Gaya\./);
+  });
+
+  // CR49 — the refuser's own labels read "talk to me", which names no one to the OPENER and the Pariwar Admins who read the notice.
+  it('a refusal NOTICE words every reason for its readers — ⛔ the refuser’s first-person labels — and has one for each reason of the contract', async () => {
+    const c = await import('@twt/contracts');
+    for (const kind of ['move_request_refused', 'move_request_refused_admin']) {
+      for (const r of c.FIELD_WORKER_MOVE_REFUSAL_REASONS) {
+        const text = noticeText({ kind, from_district: 'Patna', to_district: 'Gaya', refusal_reason: r });
+        expect(text, `${kind} ${r}`).not.toMatch(/talk to me/);
+        expect(text, `${kind} ${r}`).not.toMatch(new RegExp(`\\b${r}\\b`)); // never the CODE (as a word: "Another" is not "other")
+        expect(text, `${kind} ${r}`).toContain(t(`fw.notices.reason.${r}`));
+      }
+    }
+    expect(refusalLabel('other')).toMatch(/talk to me/); // the REFUSER's own form keeps its wording
+  });
+
+  // CR46 — the shared rows are the register form's and the approvals page's; an act here says what happened in ITS words.
+  it('an accept answered 422 district_unknown says nothing changed and offers refusing; "Ask" on a worker ended or moved meanwhile is `stale` in its own words; a lost race is `stale`', () => {
+    const accept = requestGuidance(new ApiError(422, 'field_worker.district_unknown', 'x'), 'accept');
+    expect(accept.text).toBe(t('fw.requests.acceptDistrictUnknown'));
+    expect(accept.text).toMatch(/Nothing has changed/);
+    expect(accept.text).toMatch(/refuse/i);
+    expect(accept.field).toBeUndefined(); // there is no field to correct
+    // The register form's line is unchanged where it belongs.
+    expect(fieldWorkerGuidance(new ApiError(422, 'field_worker.district_unknown', 'x'))).toMatchObject({ text: t('fw.err.districtUnknown'), field: 'district' });
+    expect(requestGuidance(new ApiError(409, 'field_worker.illegal_transition', 'x'), 'ask')).toMatchObject({ text: t('fw.ask.workerEnded'), stale: true });
+    expect(requestGuidance(new ApiError(409, 'field_worker.authorization_stale', 'x'), 'ask')).toMatchObject({ text: t('fw.ask.moved'), stale: true });
+    expect(requestGuidance(new ApiError(404, 'field_worker.move_request_not_found', 'x'), 'accept')).toMatchObject({ text: t('fw.requests.gone'), stale: true });
+    // RP-3 — a 404 is NOT a 403: `noAccess` is the flag its consumers read as "a role sentence" (the requests page, `WorkerList`).
+    const noPariwar = requestGuidance(new ApiError(404, 'pariwar.not_found', 'x'), 'accept');
+    expect(noPariwar.text).toBe(t('fw.err.noPariwar'));
+    expect(noPariwar.noAccess).toBeUndefined();
+    expect(fieldWorkerGuidance(new ApiError(404, 'pariwar.not_found', 'x'), 'find').noAccess).toBeUndefined();
+    expect(fieldWorkerGuidance(new ApiError(403, 'authz.forbidden', 'x'), 'find').noAccess).toBe(true); // CONTROL: a 403 still is
+    expect(t('fw.ask.workerEnded')).not.toMatch(/approv/i);
+  });
+
+  // RP-5 — the ACT's line says "the list has been refreshed" (the hook refreshes on it); a DETAIL read that finds no request says only that.
+  it('a detail read that finds no request is `gone` and claims no refresh; every other detail error is the requests surface’s', () => {
+    const gone = requestDetailGuidance(new ApiError(404, 'field_worker.move_request_not_found', 'x'));
+    expect(gone).toMatchObject({ text: t('fw.requests.detail.gone'), gone: true });
+    expect(gone.text).not.toMatch(/refreshed/i);
+    expect(requestGuidance(new ApiError(404, 'field_worker.move_request_not_found', 'x'), 'accept').text).toMatch(/refreshed/); // CONTROL: the act's line does
+    expect(requestDetailGuidance(new ApiError(403, 'authz.forbidden', 'x'))).toMatchObject({ text: t('fw.requests.detail.noAccess'), noAccess: true });
+    expect(requestDetailGuidance(new ApiError(401, 'auth.session_required', 'x'))).toMatchObject({ signIn: true });
+    expect(requestDetailGuidance(new ApiError(503, 'http.503', 'x'))).toMatchObject({ retryable: true });
+    expect(requestDetailGuidance(new ApiError(503, 'http.503', 'x')).gone).toBeUndefined();
+  });
+
+  // RP-7 — the one notice kind whose recipients need not be an end of the request it names has no request to open.
+  it('`noticeViewRequestId`: no request ⇒ none; `moved_by_pariwar_admin` ⇒ none; every other kind opens its request', () => {
+    expect(noticeViewRequestId({ kind: 'move_request_accepted', move_request_id: null })).toBeNull();
+    for (const kind of FIELD_WORKER_NOTICE_KINDS) {
+      expect(noticeViewRequestId({ kind, move_request_id: 'r1' }), kind).toBe(kind === 'moved_by_pariwar_admin' ? null : 'r1');
+    }
+  });
+
+  it('the detail and notices read with the REQUESTS surface: a 403 does not send the officer to "approving"', () => {
+    const g = fieldWorkerGuidance(new ApiError(403, 'authz.forbidden', 'x'), 'requests');
+    expect(g).toMatchObject({ text: t('fw.requests.detail.noAccess'), noAccess: true });
+    expect(g.text).not.toMatch(/approv/i);
+    expect(fieldWorkerGuidance(new ApiError(401, 'auth.session_required', 'x'), 'requests')).toMatchObject({ signIn: true });
   });
 
   it('a 403 gives each act its own line; the 409s map to their guidance (a request moved on is `stale`)', () => {

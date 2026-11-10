@@ -180,6 +180,13 @@ export function createFieldWorkerMoveRequestHandlers(deps: AppDeps) {
         if (!needs) throw new fieldWorker.FieldWorkerMoveRequestNotOpenError(moveRequestId, row.state);
         if ((which === 'accept' || which === 'refuse') && row.openedBy === ctx.actorId) throw new fieldWorker.FieldWorkerMoveRequestSameOfficerError(moveRequestId);
         if (which === 'withdraw' && row.openedBy !== ctx.actorId) throw new fieldWorker.FieldWorkerMoveRequestNotOpenerError(moveRequestId);
+        if (which === 'accept') {
+          // QE17 (code review CR23) — the destination was LISTED when the request was opened and a request waits up to 7 days: the move the
+          // acceptance makes is judged against the list NOW, as the open, the direct move and the registration are. A pre-read refusal: no audit
+          // line, the worker stays, the request stays pending.
+          const at = (await ctx.scopeTx.client.query<{ now: Date }>('SELECT now() AS now')).rows[0]!.now;
+          await fieldWorker.assertDistrictRecorded(ctx.scopeTx.tx, pariwarId, row.toDistrict, at);
+        }
         const base = { pariwarId, actor: 'operator' as const, actorId: ctx.actorId, moveRequestId, authorization };
         return audited(
           ctx,
@@ -290,7 +297,6 @@ export function createFieldWorkerMoveRequestHandlers(deps: AppDeps) {
               event_type: e.eventType as FieldWorkerMoveRequestDetail['events'][number]['event_type'],
               occurred_at: e.occurredAt,
               refusal_reason: e.refusalReason as FieldWorkerMoveRequestDetail['events'][number]['refusal_reason'],
-              cause: e.cause,
             })),
             worker: {
               field_worker_id: history.fieldWorkerId,
@@ -327,11 +333,8 @@ function itemOf(i: fieldWorker.FieldWorkerMoveRequestListRow, name: string): Fie
     counterpart_district: i.counterpartDistrict,
     state: i.state,
     refusal_reason: i.refusalReason,
-    escalation_cause: i.escalationCause,
-    supersede_cause: i.supersedeCause,
     opened_by: i.openedBy,
     opened_by_display: i.openedByDisplay,
     opened_at: i.openedAt,
-    answered_at: i.answeredAt,
   };
 }

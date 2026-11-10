@@ -69,6 +69,7 @@ import {
   type FieldWorkerAuthorizationSnapshot,
   type FieldWorkerEventType,
 } from './events.js';
+import type { FieldWorkerMoveRequestEventType } from './move-request-events.js';
 import {
   assertFieldWorkerActor,
   projectFieldWorkerGenesis,
@@ -173,7 +174,8 @@ async function istToday(client: pg.PoolClient): Promise<string> {
  * `expected` names them — the wrong key or target. Returns the snake_case payload snapshot.
  */
 export function verifiedSnapshot(
-  eventType: string,
+  // Both vocabularies (Story 13.1d widened it for the request commands; code review CR19 — ⛔ a bare `string`, which loses the check).
+  eventType: FieldWorkerEventType | FieldWorkerMoveRequestEventType,
   authorization: unknown,
   i: { pariwarId: string; actorId: string },
   // ONE of the two is REQUIRED (review R2-13): with neither, any verified district-dimension key would be accepted (the hole `post` had).

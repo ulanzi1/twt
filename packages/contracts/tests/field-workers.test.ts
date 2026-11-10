@@ -309,10 +309,49 @@ describe('Story 13.1d — contract ↔ domain sync-guard and DTO shapes', () => 
     };
     expect(c.FieldWorkerMoveRequestWorker.safeParse(w).success).toBe(true);
     expect(c.FieldWorkerMoveRequestWorker.safeParse({ ...w, suspensions: [{ from: '2026-02-01', to: null, reason: 'under_review' }] }).success).toBe(false);
-    for (const schemaName of ['FieldWorkerMoveRequestResult', 'FieldWorkerNoticeItem', 'FieldWorkerMoveRequestEvent'] as const) {
-      const k = Object.keys(c[schemaName].shape);
+    // The notice and the event are refined objects (R4-5, `-462`): their keys are the inner object's.
+    const shapes = { FieldWorkerMoveRequestResult: c.FieldWorkerMoveRequestResult.shape, FieldWorkerNoticeItem: c.FieldWorkerNoticeItem.innerType().shape, FieldWorkerMoveRequestEvent: c.FieldWorkerMoveRequestEvent.innerType().shape };
+    for (const [schemaName, shape] of Object.entries(shapes)) {
+      const k = Object.keys(shape);
       expect(k, schemaName).not.toContain('name');
       expect(k, schemaName).not.toContain('mobile');
     }
+  });
+
+  // CR22 A (decision `2026-11-10-461` item 1) — a supersede's cause and time are "the date or fact of an ending" (`-460` item 1).
+  it('`-461`: the list item and the event carry no cause, no answered_at and no escalation_cause; the `superseded` event may be undated; the Pariwar Admins’ refusal kind exists', async () => {
+    const c = await import('../src/field-workers/index.js');
+    for (const banned of ['escalation_cause', 'supersede_cause', 'answered_at']) expect(Object.keys(c.FieldWorkerMoveRequestItem.shape), banned).not.toContain(banned);
+    expect(Object.keys(c.FieldWorkerMoveRequestEvent.innerType().shape)).not.toContain('cause');
+    const e = { event_version: 2, event_type: 'field_worker_move_request.superseded', occurred_at: null, refusal_reason: null };
+    expect(c.FieldWorkerMoveRequestEvent.safeParse(e).success).toBe(true);
+    expect(c.FieldWorkerMoveRequestEvent.safeParse({ ...e, cause: 'worker_ended' }).success).toBe(false); // `.strict()`: a cause is refused, not ignored
+    expect(c.FieldWorkerMoveRequestEvent.safeParse({ ...e, occurred_at: undefined }).success).toBe(false); // null is allowed, absent is not
+    expect([...c.FIELD_WORKER_NOTICE_KINDS]).toContain('move_request_refused_admin');
+  });
+
+  // Code review R4-5: undated is the `superseded` event's ONLY — a time missing from any other event is refused, ⛔ an undated timeline.
+  it('R4-5: `occurred_at` is null for the superseded event and only for it', async () => {
+    const c = await import('../src/field-workers/index.js');
+    const at = '2026-11-08T05:00:00.000Z';
+    const ev = (event_type: string, occurred_at: string | null) => ({ event_version: 2, event_type, occurred_at, refusal_reason: null });
+    expect(c.FieldWorkerMoveRequestEvent.safeParse(ev('field_worker_move_request.superseded', null)).success).toBe(true);
+    expect(c.FieldWorkerMoveRequestEvent.safeParse(ev('field_worker_move_request.superseded', at)).success).toBe(false); // a superseded event with a time
+    expect(c.FieldWorkerMoveRequestEvent.safeParse(ev('field_worker_move_request.opened', at)).success).toBe(true); // CONTROL
+    expect(c.FieldWorkerMoveRequestEvent.safeParse(ev('field_worker_move_request.opened', null)).success).toBe(false); // any other event undated
+  });
+
+  // Decision `2026-11-10-462` (R4-13): a "no longer needed" notice carries no time - for an ending it is when the ending was recorded.
+  it('`-462`: a notice’s `created_at` is null for move_request_superseded and only for it', async () => {
+    const c = await import('../src/field-workers/index.js');
+    const at = '2026-11-08T05:00:00.000Z';
+    const n = (kind: string, created_at: string | null) => ({
+      notice_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7', kind, field_worker_id: '7c9e6679-7425-40de-944b-e07fc1f90ae8',
+      move_request_id: '7c9e6679-7425-40de-944b-e07fc1f90ae9', from_district: 'Patna', to_district: 'Gaya', refusal_reason: null, created_at, seen_at: null,
+    });
+    expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_superseded', null)).success).toBe(true);
+    expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_superseded', at)).success).toBe(false); // the time of an ending on the wire
+    expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_opened', at)).success).toBe(true); // CONTROL
+    expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_opened', null)).success).toBe(false); // any other kind undated
   });
 });

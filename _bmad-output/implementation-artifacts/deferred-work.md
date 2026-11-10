@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 13-1d-field-worker-move-requests-and-notices, round 5 - the round-4 patches (2026-11-10)
+
+- **R5-W1 - a hung read blocks "Load more" with no way out (the admin transport has no timeout; pre-existing).** Since 13.1d's R4-1, "Load more" on the Move requests page and the notices waits while ANY fetch of its list runs or waits (`fetchStatus !== 'idle'`), so a refresh that never answers keeps it `aria-disabled` for good. The cause is older and general: `apiFetch` (`apps/admin/src/api/client.ts`) passes no `AbortSignal` and sets no timeout, and the hooks set `retry: false` - every admin read can hang. Fix in one place: a bounded timeout (or TanStack's `signal`) on reads. Trigger: the next story that touches the admin transport, or any report of a "stuck" admin screen.
+
 ## Deferred from: code review of story 13-1d-field-worker-move-requests-and-notices, round 4 - every uncommitted patch (2026-11-10)
 
 - **R4-W1 - a Find panel's stale callbacks capture the worker id of their render (13.1c, pre-existing).** `WorkerActions` (`onStale={() => setStaleFor(open)}`) and `CodeReveal` (`onStateChanged`) in `apps/admin/src/modules/field-workers/FindWorkerPage.tsx` take the panel id from the render that created them; a 409 that lands after the officer closed and reopened the same worker would withdraw the FRESH copy's acts. Story 13.1d's `AskToMove` has the same shape and is fixed there (R4-4: `onStale` only while mounted); these two are 13.1c's. Trigger: the next story that touches the Find panel's stale handling.

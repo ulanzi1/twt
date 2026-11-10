@@ -11053,6 +11053,7 @@ components:
                   - string
                   - "null"
                 format: date-time
+                description: NULL for the superseded event, and only for it (decision 2026-11-10-461 item 1).
               refusal_reason:
                 type:
                   - string
@@ -11188,6 +11189,7 @@ components:
                   - string
                   - "null"
                 format: date-time
+                description: NULL for move_request_superseded, and only for it (decision 2026-11-10-462).
               seen_at:
                 type:
                   - string

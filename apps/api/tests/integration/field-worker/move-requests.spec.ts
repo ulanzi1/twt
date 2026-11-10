@@ -334,6 +334,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests and notices through
       const today = (await q<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d", []))[0]!.d;
       expect((await h.terminate(s.pa.client, s.p, s.worker, { reason_code: 'inactive', ended_on: today })).statusCode).toBe(200);
       const items = (json(await h.notices(s.daG.client, s.p)) as { items: Json[] }).items.filter((n) => n['move_request_id'] === id);
+      expect(items).toHaveLength(2); // one of each - a double notice would hide behind the map below (R5-7)
       const at = Object.fromEntries(items.map((n) => [n['kind'] as string, n['created_at']]));
       expect(Object.keys(at).sort()).toEqual(['move_request_opened', 'move_request_superseded']);
       expect(at['move_request_superseded']).toBeNull();

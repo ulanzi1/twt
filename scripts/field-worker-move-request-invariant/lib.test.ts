@@ -206,6 +206,55 @@ describe('scanMoveRequestWrites — the spellings round 4 found', () => {
   });
 });
 
+// Code review R5-1 / R5-2 (the review of round 4's patches): the regex is LINEAR on runs of comments, needs no space before a quote or a
+// comment, reads up to two qualifiers (quoted with any characters); a held SQL name is transitive, a property, or a call's argument.
+describe('scanMoveRequestWrites — round 5', () => {
+  it('R5-1: a run of block comments and no table is answered at once (the old lazy body backtracked exponentially)', () => {
+    for (const run of ['/**/'.repeat(40), '/* a */ '.repeat(40), '/* a */ only '.repeat(20)]) {
+      const t = Date.now();
+      expect(scan(`function f(c) { c.query('update ${run}x'); }`)).toEqual([]);
+      expect(Date.now() - t, run.slice(0, 12)).toBeLessThan(200);
+    }
+  });
+
+  it('R5-1: flags no space before a comment or a quote, ONLY then a comment, two qualifiers, a quoted schema with any characters', () => {
+    for (const sql of [
+      'UPDATE/**/field_worker_move_requests SET a = 1',
+      'INSERT INTO"field_worker_move_requests" (a) VALUES (1)',
+      'UPDATE ONLY/* x */field_worker_move_requests SET a = 1',
+      'UPDATE twt.app.field_worker_move_requests SET a = 1',
+      'UPDATE "my-schema".field_worker_move_requests SET a = 1',
+      'UPDATE /* a */ /* b */ -- c\\n ONLY -- d\\n public.field_worker_move_requests SET a = 1',
+    ]) {
+      expect(scan(`function f(c) { c.query('${sql}'); }`).map((x) => x.detail), sql).toEqual(['raw SQL write to field_worker_move_requests']);
+    }
+  });
+
+  it('R5-2: flags a transitive constant, an assigned one, a property, and a call given the SQL name (sql.identifier / sql.raw) - and a spread array', () => {
+    for (const src of [
+      "const T = 'field_worker_move_requests'; const U = T; function f(c) { c.query(`UPDATE ${U} SET a = 1`); }",
+      "let T; T = 'field_worker_move_requests'; function f(c) { c.query(`UPDATE ${T} SET a = 1`); }",
+      "const N = { t: 'field_worker_move_requests' }; function f(c) { c.query(`UPDATE ${N.t} SET a = 1`); }",
+      "function f(db) { return db.execute(sql`UPDATE ${sql.identifier('field_worker_move_requests')} SET a = 1`); }",
+      "function f(db) { return db.execute(sql`INSERT INTO ${sql.raw('public.field_worker_move_requests')} (a) VALUES (1)`); }",
+      'const [, t] = [...pre, fieldWorkerMoveRequests]; function f(db) { db.update(t).set({}); }',
+    ]) {
+      expect(scan(src), src).toHaveLength(1);
+    }
+  });
+
+  it('R5-1 / R5-2: does NOT flag a column of the table after a `-- copy` comment, another table through a call, or a constant of another table', () => {
+    for (const src of [
+      "function f(c) { c.query('SELECT a, -- copy\\n field_worker_move_requests.id FROM field_worker_move_requests'); }",
+      "function f(db) { return db.execute(sql`UPDATE ${sql.identifier('field_worker_notices')} SET a = 1`); }",
+      "const T = 'field_worker_notices'; const U = T; function f(c) { c.query(`UPDATE ${U} SET a = 1`); }",
+      "const N = { t: 'field_worker_move_requests' }; function f(c) { c.query(`SELECT * FROM ${N.t}`); }",
+    ]) {
+      expect(scan(src), src).toEqual([]);
+    }
+  });
+});
+
 describe('the allow-list diagnostics and the non-vacuity floor', () => {
   const finding = (over: Partial<MoveRequestWriteFinding>): MoveRequestWriteFinding => ({ file: 'p.ts', line: 1, detail: 'raw SQL write to field_worker_move_requests', enclosingFunction: 'w', ...over });
   const allow = [{ file: 'p.ts', functions: new Set(['w']) }];

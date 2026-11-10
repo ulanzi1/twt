@@ -212,10 +212,11 @@ export function MoveRequestsPage({ pariwarId }: { pariwarId: string }): ReactEle
             <button
               type="button"
               className="self-start rounded border px-3 py-1 text-sm"
-              aria-disabled={list.isFetching}
+              aria-disabled={list.fetchStatus !== 'idle'}
               onClick={() => {
-                // ⛔ while ANY fetch runs (R4-1): a press during an act's refetch would cancel it and extend the stale pages.
-                if (list.isFetching) return;
+                // ⛔ while ANY fetch runs or waits (R4-1): a press during an act's refetch would cancel it and extend the stale pages. A refetch
+                // PAUSED offline is not `isFetching` but is cancelled all the same - hence `fetchStatus` (code review R5-3).
+                if (list.fetchStatus !== 'idle') return;
                 const seq = ++loadSeq.current;
                 const before = list.data?.pages.length ?? 0;
                 void list.fetchNextPage().then((r) => {

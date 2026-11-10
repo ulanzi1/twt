@@ -15,7 +15,7 @@
 //     act's own guidance; focus; Ask per worker.
 
 import { QueryClientProvider, onlineManager } from '@tanstack/react-query';
-import { FieldWorkerMoveRequestEvent, FieldWorkerMoveRequestItem, FieldWorkerNoticeItem } from '@twt/contracts';
+import { FieldWorkerMoveRequestDetail, FieldWorkerMoveRequestEvent, FieldWorkerMoveRequestItem, FieldWorkerMoveRequestResult, FieldWorkerNoticeItem } from '@twt/contracts';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -85,7 +85,7 @@ const req = (o: Partial<Record<string, unknown>> = {}) => FieldWorkerMoveRequest
   opened_at: '2026-11-08T05:00:00.000Z',
   ...o,
 });
-const result = (o: Partial<Record<string, unknown>> = {}) => ({
+const result = (o: Partial<Record<string, unknown>> = {}) => FieldWorkerMoveRequestResult.parse({
   move_request_id: '00000000-0000-4000-8000-0000000000a1',
   field_worker_id: '00000000-0000-4000-8000-000000000001',
   state: 'accepted',
@@ -95,7 +95,7 @@ const result = (o: Partial<Record<string, unknown>> = {}) => ({
   worker_district: 'Gaya',
   ...o,
 });
-/** One notice; a `move_request_superseded` one carries no time (`-462`) unless the leg says otherwise. */
+/** One notice; a `move_request_superseded` one carries no time (`-462`) - a leg that gives it one is refused by the contract's refine. */
 const notice = (o: Partial<Record<string, unknown>> = {}) => FieldWorkerNoticeItem.parse({
   notice_id: '00000000-0000-4000-8000-0000000000n1'.replace('n', 'b'),
   kind: 'move_request_accepted',
@@ -109,6 +109,8 @@ const notice = (o: Partial<Record<string, unknown>> = {}) => FieldWorkerNoticeIt
   ...o,
 });
 const event = (o: Partial<Record<string, unknown>>) => FieldWorkerMoveRequestEvent.parse({ event_version: 1, refusal_reason: null, ...o });
+/** One request's detail - its worker block parsed by the STRICT worker DTO too (code review R5-7: no fixture the server could not send). */
+const detailFixture = (d: Record<string, unknown>) => FieldWorkerMoveRequestDetail.parse(d);
 
 function renderWith(ui: ReactNode) {
   return render(<QueryClientProvider client={createQueryClient()}>{ui}</QueryClientProvider>);
@@ -219,7 +221,7 @@ describe('Story 13.1d — the Move requests page (AC9)', () => {
 
   it('`-460`: View opens the work history — dates and districts, "Not counted yet" — and ⛔ any reason', async () => {
     listFieldWorkerMoveRequests.mockResolvedValue({ items: [req()], next_cursor: null });
-    getFieldWorkerMoveRequest.mockResolvedValue({
+    getFieldWorkerMoveRequest.mockResolvedValue(detailFixture({
       request: req(),
       events: [event({ event_type: 'field_worker_move_request.opened', occurred_at: '2026-11-08T05:00:00.000Z' })],
       worker: {
@@ -233,7 +235,7 @@ describe('Story 13.1d — the Move requests page (AC9)', () => {
         history_truncated: false,
         members_onboarded: null,
       },
-    });
+    }));
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await choose('Gaya');
     fireEvent.click(await screen.findByTestId('fw-request-view'));
@@ -250,15 +252,15 @@ describe('Story 13.1d — the Move requests page (AC9)', () => {
   // RP-16 — the leg above bans words from a fixture that carries none: the worker block's DTO is `.strict()` and has no reason or officer field
   // (that DTO, not this screen, is the real guard — a mocked client never parses it), and its event has `refusal_reason: null`. The ONE reason
   // the payload can carry is a refused event's `refusal_reason`; the detail shows the event's NAME and time only, so seed one and assert it is
-  // printed nowhere, as a code or as its label. That is the SCREEN's choice, stricter than the rulings: `-458` AD9 allows the reason on the
-  // request's own timeline, and `-460` item 1 bans it from the WORK HISTORY only (R4-10 - the citation corrected).
+  // printed nowhere, as a code or as its label. That is the SCREEN's choice, stricter than the story: AC3 puts "the reason in the event and the
+  // row" and AC7 lets the reads carry it, and `-460` item 1 bans it from the WORK HISTORY only (R4-10; R5-7 - the citation corrected again).
   it('RP-16: a refused event that CARRIES a refusal reason prints neither the code nor its label — the detail names the event and its time only', async () => {
     listFieldWorkerMoveRequests.mockResolvedValue({ items: [req()], next_cursor: null });
-    getFieldWorkerMoveRequest.mockResolvedValue({
+    getFieldWorkerMoveRequest.mockResolvedValue(detailFixture({
       request: req({ state: 'refused', refusal_reason: 'request_incomplete' }),
       events: [event({ event_version: 2, event_type: 'field_worker_move_request.refused', occurred_at: '2026-11-08T07:00:00.000Z', refusal_reason: 'request_incomplete' })],
       worker: { field_worker_id: req().field_worker_id, name: 'Ramesh Kumar', current_state: 'active', registered_on: null, active_since: null, districts: [], suspensions: [], history_truncated: false, members_onboarded: null },
-    });
+    }));
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await choose('Gaya');
     fireEvent.click(await screen.findByTestId('fw-request-view'));
@@ -286,11 +288,11 @@ describe('Story 13.1d — the browser pass’s two screen findings (2026-11-09)'
   it('an act does NOT re-read an open detail panel (each read decrypts the name and writes an audit line)', async () => {
     const other = req({ move_request_id: '00000000-0000-4000-8000-0000000000a9', name: 'Other Worker' });
     listFieldWorkerMoveRequests.mockResolvedValue({ items: [req(), other], next_cursor: null });
-    getFieldWorkerMoveRequest.mockResolvedValue({
+    getFieldWorkerMoveRequest.mockResolvedValue(detailFixture({
       request: req(),
       events: [],
       worker: { field_worker_id: req().field_worker_id, name: 'Ramesh Kumar', current_state: 'active', registered_on: null, active_since: null, districts: [], suspensions: [], history_truncated: false, members_onboarded: null },
-    });
+    }));
     actOnFieldWorkerMoveRequest.mockResolvedValue(result());
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await choose('Gaya');
@@ -555,11 +557,11 @@ describe('CR44 — the notices page, say which worker, and the nav says there is
       items: [notice({ seen_at: '2026-11-08T07:00:00.000Z' }), notice({ notice_id: '00000000-0000-4000-8000-0000000000d2', kind: 'moved_by_pariwar_admin', move_request_id: null, seen_at: '2026-11-08T07:00:00.000Z' })],
       next_cursor: null,
     });
-    getFieldWorkerMoveRequest.mockResolvedValue({
+    getFieldWorkerMoveRequest.mockResolvedValue(detailFixture({
       request: req(),
       events: [],
       worker: { field_worker_id: req().field_worker_id, name: 'Ramesh Kumar', current_state: 'active', registered_on: null, active_since: null, districts: [{ district: 'Gaya', from: '2026-03-10', to: null }], suspensions: [], history_truncated: false, members_onboarded: null },
-    });
+    }));
     renderWith(<MoveRequestsPage pariwarId={P} />);
     const items = await screen.findAllByTestId('fw-notice');
     expect(items).toHaveLength(2);
@@ -754,6 +756,17 @@ describe('CR48 — Ask to move, per worker', () => {
     await waitFor(() => expect(screen.getByTestId('fw-ask-cancel')).toHaveFocus());
   });
 
+  it('R5-5: the districts read failed, Try again succeeds — the Try again that held focus is gone and the select takes focus, ⛔ the body', async () => {
+    getFieldWorkerDistricts.mockReset().mockRejectedValueOnce(new ApiError(503, 'http.503', 'down')).mockResolvedValueOnce({ districts: ['Gaya', 'Patna'], districts_truncated: false });
+    renderWith(<AskToMove pariwarId={P} fieldWorkerId="w" name="Ramesh Kumar" worker={w} />);
+    fireEvent.click(screen.getByTestId('fw-ask-open'));
+    const retry = within(await screen.findByTestId('fw-ask-districts-error')).getByRole('button');
+    retry.focus();
+    fireEvent.click(retry);
+    await waitFor(() => expect(screen.queryByTestId('fw-ask-districts-error')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('fw-ask-to')).toHaveFocus());
+  });
+
   it('a 409 `authorization_stale` (the worker was MOVED) tells the panel `moved`', async () => {
     const onStale = vi.fn();
     openFieldWorkerMoveRequest.mockRejectedValueOnce(new ApiError(409, 'field_worker.authorization_stale', 'x'));
@@ -811,7 +824,7 @@ describe('CR50 — the acts that were only ever asserted present', () => {
 
 // ── Review of the round-1 patches (RP-3 … RP-14; 2026-11-10) ────────────────────────────────────────────────────────────────
 
-const detailOf = () => ({
+const detailOf = () => detailFixture({
   request: req(),
   events: [],
   worker: { field_worker_id: req().field_worker_id, name: 'Ramesh Kumar', current_state: 'active', registered_on: null, active_since: null, districts: [], suspensions: [], history_truncated: false, members_onboarded: null },
@@ -989,6 +1002,36 @@ describe('RP-11 / RP-12 — "Load more" on the requests page', () => {
     const more = screen.getByTestId('fw-requests-more');
     expect(more).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(more);
+    // Let a press that got through reach the client (R5-7: asserted in the same tick, the call could not have been made yet).
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(listFieldWorkerMoveRequests).not.toHaveBeenCalledWith(P, expect.objectContaining({ cursor: 'c2' }));
+    expect(firstPages).toBe(2); // and the refresh was not re-run either
+  });
+
+  it('R5-3: "Load more" pressed while an act’s refresh is PAUSED offline does nothing either (a paused fetch is not `isFetching`, and is cancelled all the same)', async () => {
+    let firstPages = 0;
+    listFieldWorkerMoveRequests.mockImplementation(async (_p: string, o: { district?: string; cursor?: string }) => {
+      if (o.district !== GAYA) return { items: [], next_cursor: null };
+      if (o.cursor === undefined) firstPages++;
+      return { items: [req({ opened_by: ME })], next_cursor: 'c2' };
+    });
+    actOnFieldWorkerMoveRequest.mockResolvedValueOnce(result({ state: 'withdrawn', worker_district: 'Patna' }));
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await choose(GAYA);
+    const withdraw = await screen.findByTestId('fw-request-withdraw');
+    onlineManager.setOnline(false); // the act still goes (`networkMode: 'always'`); its refresh waits for the network
+    fireEvent.click(withdraw);
+    await waitFor(() => expect(screen.getByTestId('fw-requests-more')).toHaveAttribute('aria-disabled', 'true'));
+    expect(firstPages).toBe(1); // the refresh is paused, not run
+    fireEvent.click(screen.getByTestId('fw-requests-more'));
+    // Back online: the press that got through would have CANCELLED the paused refresh and fetched page 2 onto the stale page instead.
+    await act(async () => {
+      onlineManager.setOnline(true);
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    await waitFor(() => expect(firstPages).toBe(2)); // the paused refresh ran
     expect(listFieldWorkerMoveRequests).not.toHaveBeenCalledWith(P, expect.objectContaining({ cursor: 'c2' }));
   });
 
@@ -1005,8 +1048,11 @@ describe('RP-11 / RP-12 — "Load more" on the requests page', () => {
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await choose(GAYA);
     const press = async (k: number) => {
+      // Wait for THIS press's line (R5-7): from the sixth the count stays five, so wait for the oldest line to leave.
+      const oldest = screen.queryAllByTestId('fw-requests-announce')[0];
       fireEvent.click(await screen.findByTestId('fw-requests-more'));
-      await waitFor(() => expect(screen.getAllByTestId('fw-requests-announce')).toHaveLength(Math.min(k, 5)));
+      if (k <= 5) await waitFor(() => expect(screen.getAllByTestId('fw-requests-announce')).toHaveLength(k));
+      else await waitFor(() => expect(oldest!.isConnected).toBe(false));
       await waitFor(() => expect(screen.getByTestId('fw-requests-more')).toHaveAttribute('aria-disabled', 'false'));
     };
     for (let k = 1; k <= 5; k++) await press(k);
@@ -1034,6 +1080,25 @@ describe('R4-1 — "Load more notices" and the seen mark’s refresh', () => {
       await new Promise((r) => setTimeout(r, 20));
     });
     expect(screen.getByTestId('fw-notices-status')).toBeEmptyDOMElement();
+  });
+  it('R5-4: a second "Load more notices" of the SAME size is announced again — its line is a new node, not the same words left in place', async () => {
+    listFieldWorkerMoveRequests.mockResolvedValue({ items: [], next_cursor: null });
+    const two = (a: string, b: string) => [notice({ notice_id: a, seen_at: SEEN }), notice({ notice_id: b, seen_at: SEEN })];
+    listFieldWorkerNotices.mockImplementation(async (_p: string, o?: { cursor?: string }) => {
+      if (o?.cursor === undefined) return { items: [notice({ seen_at: SEEN })], next_cursor: 'n2' };
+      if (o.cursor === 'n2') return { items: two('00000000-0000-4000-8000-0000000003a1', '00000000-0000-4000-8000-0000000003a2'), next_cursor: 'n3' };
+      return { items: two('00000000-0000-4000-8000-0000000003a3', '00000000-0000-4000-8000-0000000003a4'), next_cursor: null };
+    });
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await screen.findAllByTestId('fw-notice');
+    const status = screen.getByTestId('fw-notices-status');
+    fireEvent.click(screen.getByTestId('fw-notices-more'));
+    await waitFor(() => expect(status).toHaveTextContent(t('fw.notices.moreShown', { count: 2 })));
+    const first = status.querySelector('p');
+    fireEvent.click(await screen.findByTestId('fw-notices-more'));
+    await waitFor(() => expect(screen.getAllByTestId('fw-notice')).toHaveLength(5));
+    await waitFor(() => expect(status.querySelector('p')).not.toBe(first)); // a NEW node: the status region announces it
+    expect(status).toHaveTextContent(t('fw.notices.moreShown', { count: 2 }));
   });
 });
 
@@ -1094,13 +1159,13 @@ describe('RP-14 — the sections wait for the session', () => {
 describe('RP-20 — CR22 A: nothing says when a worker’s work ended (decision `2026-11-10-461` item 1)', () => {
   it('a `superseded` event reads "No longer needed" with no time (and no cause); the events that are dated keep theirs', async () => {
     listFieldWorkerMoveRequests.mockResolvedValue({ items: [req()], next_cursor: null });
-    getFieldWorkerMoveRequest.mockResolvedValue({
+    getFieldWorkerMoveRequest.mockResolvedValue(detailFixture({
       ...detailOf(),
       events: [
         event({ event_type: 'field_worker_move_request.opened', occurred_at: '2026-11-08T05:00:00.000Z' }),
         event({ event_version: 2, event_type: 'field_worker_move_request.superseded', occurred_at: null }),
       ],
-    });
+    }));
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await choose(GAYA);
     fireEvent.click(await screen.findByTestId('fw-request-view'));

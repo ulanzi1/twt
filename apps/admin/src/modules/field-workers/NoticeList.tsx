@@ -24,7 +24,9 @@ export function NoticeList({ pariwarId }: { pariwarId: string }): ReactElement {
   const seen = useMarkFieldWorkerNoticesSeen(pariwarId);
   const marked = useRef(new Set<string>());
   const [viewing, setViewing] = useState<string | null>(null);
-  const [said, setSaid] = useState<string | null>(null);
+  /** The "Load more" line, with its own id: a second page of the same size says the same words and must still be announced (R5-4). */
+  const [said, setSaid] = useState<{ id: number; text: string } | null>(null);
+  const saidSeq = useRef(0);
   const items = notices.data?.pages.flatMap((p) => p.items) ?? [];
   const unseen = items.filter((n) => n.seen_at === null && !marked.current.has(n.notice_id)).map((n) => n.notice_id);
   const unseenKey = unseen.join(',');
@@ -46,7 +48,11 @@ export function NoticeList({ pariwarId }: { pariwarId: string }): ReactElement {
       </h2>
       {/* Mounted with the section, EMPTY, so a page of older notices arriving is ANNOUNCED (checklist 13 (d); RP-10). */}
       <div role="status" data-testid="fw-notices-status">
-        {said !== null && <p className="text-sm">{said}</p>}
+        {said !== null && (
+          <p key={said.id} className="text-sm">
+            {said.text}
+          </p>
+        )}
       </div>
       {notices.isPending && <p role="status">{t('fw.loading')}</p>}
       {error !== null && (
@@ -99,16 +105,16 @@ export function NoticeList({ pariwarId }: { pariwarId: string }): ReactElement {
         <button
           type="button"
           className="self-start rounded border px-3 py-1 text-sm"
-          aria-disabled={notices.isFetching}
+          aria-disabled={notices.fetchStatus !== 'idle'}
           onClick={() => {
-            // ⛔ while ANY fetch runs (R4-1): a press during the seen mark's refetch would cancel it and extend the stale pages.
-            if (notices.isFetching) return;
+            // ⛔ while ANY fetch runs or waits (R4-1, R5-3): a press during the seen mark's refetch would cancel it and extend the stale pages.
+            if (notices.fetchStatus !== 'idle') return;
             const before = notices.data?.pages.length ?? 0;
             void notices.fetchNextPage().then((r) => {
               // No page added - a refresh cancelled this one and resolved it with the refetched notices: nothing came.
               if (r.isError || (r.data?.pages.length ?? 0) <= before) return;
               const count = r.data?.pages.at(-1)?.items.length ?? 0;
-              setSaid(count === 1 ? t('fw.notices.moreShownOne') : t('fw.notices.moreShown', { count }));
+              setSaid({ id: ++saidSeq.current, text: count === 1 ? t('fw.notices.moreShownOne') : t('fw.notices.moreShown', { count }) });
             });
           }}
           data-testid="fw-notices-more"

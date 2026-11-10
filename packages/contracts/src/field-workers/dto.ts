@@ -369,15 +369,20 @@ export type FieldWorkerMoveRequestWorker = z.output<typeof FieldWorkerMoveReques
  * its cause (decision `2026-11-10-461` item 1, CR22 A): the line reads "No longer needed", undated. NULL for that event ONLY (code review
  * R4-5): a time missing from any other event is a server fault, refused here, ⛔ an undated timeline.
  */
+/** The event types the detail sends UNDATED (`-461` item 1) - re-declared from `@twt/domain` (the sync-guard binds them; code review R5-6). */
+export const FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES = ['field_worker_move_request.superseded'] as const;
+/** The notice kinds the notices page sends UNDATED (`-462`) - re-declared from `@twt/domain` (the sync-guard binds them; R5-6). */
+export const FIELD_WORKER_UNDATED_NOTICE_KINDS = ['move_request_superseded'] as const;
+
 export const FieldWorkerMoveRequestEvent = z
   .object({
     event_version: z.number().int().positive(),
     event_type: FieldWorkerMoveRequestEventType,
-    occurred_at: Iso8601Datetime.nullable(),
+    occurred_at: Iso8601Datetime.nullable().describe('NULL for the superseded event, and only for it (decision 2026-11-10-461 item 1).'),
     refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
   })
   .strict()
-  .refine((e) => (e.occurred_at === null) === (e.event_type === 'field_worker_move_request.superseded'), {
+  .refine((e) => (e.occurred_at === null) === (FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES as readonly string[]).includes(e.event_type), {
     message: 'occurred_at is null for the superseded event and only for it',
     path: ['occurred_at'],
   });
@@ -396,7 +401,8 @@ export type FieldWorkerNoticeListQuery = z.output<typeof FieldWorkerNoticeListQu
 /**
  * One notice — ids, districts and codes (⛔ a name; the screen shows the worker's name only through the audited request reads). `created_at`
  * is NULL for `move_request_superseded` and only for it, whatever its cause (decision `2026-11-10-462`, `-460` item 1): for an ending it is
- * the moment the ending was recorded. ⚠ The page's `next_cursor` still carries the exact time when the page ends on one (recorded residual).
+ * the moment the ending was recorded. ⚠ RECORDED residuals (`-462`, as annotated by code review R5-D1): the page's `next_cursor` carries the
+ * exact time when the page ends on one, and the cursor is NOT signed - a recipient who forges cursors can find the time by bisection (~40 reads).
  */
 export const FieldWorkerNoticeItem = z
   .object({
@@ -407,11 +413,11 @@ export const FieldWorkerNoticeItem = z
     from_district: z.string(),
     to_district: z.string(),
     refusal_reason: FieldWorkerMoveRefusalReason.nullable(),
-    created_at: Iso8601Datetime.nullable(),
+    created_at: Iso8601Datetime.nullable().describe('NULL for move_request_superseded, and only for it (decision 2026-11-10-462).'),
     seen_at: Iso8601Datetime.nullable(),
   })
   .strict()
-  .refine((n) => (n.created_at === null) === (n.kind === 'move_request_superseded'), {
+  .refine((n) => (n.created_at === null) === (FIELD_WORKER_UNDATED_NOTICE_KINDS as readonly string[]).includes(n.kind), {
     message: 'created_at is null for move_request_superseded and only for it',
     path: ['created_at'],
   });

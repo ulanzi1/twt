@@ -173,8 +173,12 @@ export interface FieldWorkerMoveRequestEventView {
   readonly refusalReason: string | null;
 }
 
-/** The event types whose time the detail withholds (`-461` item 1). */
-const UNDATED_EVENT_TYPES: ReadonlySet<string> = new Set(['field_worker_move_request.superseded']);
+/**
+ * The event types whose time the detail withholds (`-461` item 1). ⚠ LOCKSTEP with the contract's refine on `FieldWorkerMoveRequestEvent`
+ * (the contracts' sync-guard compares them): a time withheld here and required there would fail the whole detail (code review R5-6).
+ */
+export const FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES = ['field_worker_move_request.superseded'] as const;
+const UNDATED_EVENT_TYPES: ReadonlySet<string> = new Set<string>(FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES);
 
 /** One request and its events, or null for an unknown / another Pariwar's id. */
 export async function getFieldWorkerMoveRequest(
@@ -340,8 +344,10 @@ export async function getMoveRequestWorkerHistory(
 /**
  * One of the officer's notices — ids, districts and codes (⛔ a name). `createdAt` is NULL for `move_request_superseded` WHATEVER its cause
  * (decision `2026-11-10-462`; `-460` item 1): for an ending it is the moment the ending was recorded, and a time withheld only for an ending
- * would say "ended" by its absence. RECORDED residuals: the page is ordered by that time, and `nextCursor` carries it exactly when the page
- * ends on such a notice (`-462` item 2).
+ * would say "ended" by its absence. RECORDED residuals: the page is ordered by that time, `nextCursor` carries it exactly when the page
+ * ends on such a notice (`-462` item 2), and the cursor is NOT signed (`decodeFieldWorkerCursor` takes any well-formed time) - a recipient
+ * who forges cursors can find the exact time by bisection, ~40 reads (code review R5-D1; BigDev: record it and ship - a signed cursor, `-462`'s
+ * option C, stays a later change).
  */
 export interface FieldWorkerNoticeView {
   readonly noticeId: FieldWorkerNoticeId;
@@ -355,8 +361,12 @@ export interface FieldWorkerNoticeView {
   readonly seenAt: string | null;
 }
 
-/** The notice kinds whose time the read withholds (`-462`). */
-const UNDATED_NOTICE_KINDS: ReadonlySet<FieldWorkerNoticeKind> = new Set<FieldWorkerNoticeKind>(['move_request_superseded']);
+/**
+ * The notice kinds whose time the read withholds (`-462`). ⚠ LOCKSTEP with the contract's refine on `FieldWorkerNoticeItem` (the contracts'
+ * sync-guard compares them): a mismatch fails the WHOLE notices page - and the nav's unseen count with it - not one stamp (code review R5-6).
+ */
+export const FIELD_WORKER_UNDATED_NOTICE_KINDS = ['move_request_superseded'] as const satisfies readonly FieldWorkerNoticeKind[];
+const UNDATED_NOTICE_KINDS: ReadonlySet<FieldWorkerNoticeKind> = new Set<FieldWorkerNoticeKind>(FIELD_WORKER_UNDATED_NOTICE_KINDS);
 
 /**
  * A page of the OFFICER's own notices (`recipient_user_id = recipientUserId`, AD9), newest first. `after` MUST come from

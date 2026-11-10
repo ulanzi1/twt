@@ -73,6 +73,8 @@ export {
   FieldWorkerMoveRequestWorker,
   FieldWorkerMoveRequestEvent,
   FieldWorkerMoveRequestDetail,
+  FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES,
+  FIELD_WORKER_UNDATED_NOTICE_KINDS,
   FieldWorkerNoticeListQuery,
   FieldWorkerNoticeItem,
   FieldWorkerNoticePage,

@@ -251,7 +251,7 @@ describe.skipIf(!hasDatabase)('field_worker_move_requests + field_worker_notices
       expect(own.rowCount).toBe(1);
     });
 
-    it('as the OWNER (no grant in the way): DELETE and TRUNCATE are refused by their own triggers (P0001) and the row survives (CR3)', async () => {
+    it('as the OWNER (no grant in the way): DELETE and TRUNCATE are refused by their own triggers (P0001, their messages) — and with the triggers off the same DELETE removes the row (CR3; R4-7)', async () => {
       const { client } = getTx();
       const a = await seedRequest(client, PARIWAR_A);
       await client.query('RESET ROLE'); // the owner bypasses RLS and holds every privilege — only the triggers stand in the way

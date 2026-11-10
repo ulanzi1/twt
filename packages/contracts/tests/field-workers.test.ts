@@ -277,6 +277,9 @@ describe('Story 13.1d — contract ↔ domain sync-guard and DTO shapes', () => 
     expect([...c.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES]);
     expect(c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_MOVE_REQUESTS_MAX_LIMIT);
     expect(c.FIELD_WORKER_NOTICE_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_NOTICES_MAX_LIMIT);
+    // R5-6: what the read sends UNDATED is what the refines admit undated - else one row fails the whole page (a 500 on the response schema).
+    expect([...c.FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_UNDATED_MOVE_REQUEST_EVENT_TYPES]);
+    expect([...c.FIELD_WORKER_UNDATED_NOTICE_KINDS]).toEqual([...fieldWorker.FIELD_WORKER_UNDATED_NOTICE_KINDS]);
     // ONE audit line a page names every worker on it: 25 ids and the prefix fit the 1,024-character locator.
     expect(`field_workers/${Array.from({ length: c.FIELD_WORKER_MOVE_REQUEST_LIST_MAX_LIMIT }, () => '7c9e6679-7425-40de-944b-e07fc1f90ae7').join(',')}`.length).toBeLessThanOrEqual(1024);
   });

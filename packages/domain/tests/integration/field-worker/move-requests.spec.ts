@@ -393,6 +393,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
           await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: w, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
         }
         const mine = (await pageFieldWorkerNotices(db, cast.P, cast.daGaya)).items.filter((n) => n.moveRequestId === id);
+        expect(mine, how).toHaveLength(2); // one of each - a double notice would hide behind the map below (R5-7)
         const at = Object.fromEntries(mine.map((n) => [n.kind, n.createdAt]));
         expect(Object.keys(at).sort(), how).toEqual(['move_request_opened', 'move_request_superseded']);
         expect(at['move_request_superseded'], how).toBeNull();

@@ -15,12 +15,14 @@
 //       (code review RP-8).
 // The raw verbs are `INSERT INTO`, `UPDATE [ONLY]`, `MERGE INTO` and `COPY`, with the table quoted, qualified by ANY schema (spaces around the
 // dot allowed; a schema put in by a substitution reads as a bare dot) or behind a block or a `--` line comment; a template whose substitution
-// IS the table (`sql\`UPDATE ${fieldWorkerMoveRequests} ...\``) or a constant holding its SQL name (`const T = 'field_worker_move_requests'`)
-// reads as the table, and a `+` chain of literals in one expression is read joined (code review R4-6). A `pgTable('field_worker_move_requests',
-// ...)` bound to another name is the table, and so is an element of `const [t] = [fieldWorkerMoveRequests]`. DELETE and TRUNCATE are
+// IS the table (`sql\`UPDATE ${fieldWorkerMoveRequests} ...\``), holds its SQL name (`const T = 'field_worker_move_requests'`, `const U = T`,
+// `{ t: '...' }` read as `N.t`) or is a call given it (`sql.identifier('...')`, `sql.raw('...')`) reads as the table, and a `+` chain of
+// literals in one expression is read joined (code review R4-6, R5-2). ANY call given the SQL name and bound to a name (`pgTable(...)`,
+// `sql.identifier(...)`) is the table, and so is an element of `const [t] = [fieldWorkerMoveRequests]` (every element, if the literal spreads).
+// No whitespace is needed before a quote or a comment (`UPDATE"t"`, `UPDATE/**/t`); up to two qualifiers, quoted or bare (R5-1). DELETE and TRUNCATE are
 // deliberately NOT flagged: 0205's triggers refuse both for every role (code review CR32); a `COPY ... TO` (a read) is flagged - fail closed.
 // ⚠ What it cannot see: SQL assembled from fragments across variables (a `let` built up, a helper returning a fragment), a table name
-// computed at run time, a write method reached by `.call` / `.apply` / `.bind` or a computed name, a table passed through a function's
+// computed at run time, a SQL-name constant IMPORTED from another module (the aliases are per file), nested or assignment destructuring, a write method reached by `.call` / `.apply` / `.bind` or a computed name, a table passed through a function's
 // parameter, `sql.raw` / `sql.identifier` given a name built at run time, a symlinked directory, `.sql` files, and code outside the scanned
 // roots (check.ts). The DB trigger (0205) is the independent RUNTIME guard; both are required.
 
@@ -40,8 +42,18 @@ export interface AllowlistEntry {
 
 const TABLE = 'fieldWorkerMoveRequests';
 const SQL_NAME = 'field_worker_move_requests';
-const RAW_WRITE =
-  /\b(?:insert\s+into|update|merge\s+into|copy)\s+(?:(?:\/\*[\s\S]*?\*\/|--[^\n]*(?:\n|$))\s*)*(?:only\s+)?(?:(?:\/\*[\s\S]*?\*\/|--[^\n]*(?:\n|$))\s*)*(?:(?:"?[a-z_][a-z0-9_$]*"?\s*)?\.\s*)?"?field_worker_move_requests"?(?![a-z0-9_$])/i;
+// A comment whose body cannot run past its own `*/` (an UNAMBIGUOUS body - a lazy `[\s\S]*?` let a run of comments split many ways and
+// backtracked exponentially; code review R5-1), or a `--` line comment.
+const COMMENT = String.raw`(?:\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/|--[^\n]*(?:\n|$))`;
+// Between tokens: whitespace or comments, one item a step (linear); or nothing before a quote or a comment (`UPDATE"t"`, `UPDATE/**/t`).
+const GAP = String.raw`(?:(?:\s|${COMMENT})+|(?="|\/\*|--))`;
+// Up to two qualifiers (`schema.`, `db.schema.`), quoted (`"my-schema"`, `""` inside) or bare - or a bare dot, a substitution's gap.
+const QUALIFIER = String.raw`(?:(?:(?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)\s*)?\.\s*){0,2}`;
+// ⛔ followed by a dot: `field_worker_move_requests.id` names a COLUMN of the table (a `-- copy` comment before it in a read is not a write).
+const RAW_WRITE = new RegExp(
+  String.raw`\b(?:insert\s+into|update|merge\s+into|copy)${GAP}(?:only${GAP})?${QUALIFIER}"?field_worker_move_requests"?(?![a-z0-9_$])(?!\s*\.)`,
+  'i',
+);
 /** A string that IS the table's SQL name, quoted or qualified or not - held in a constant, it reads as the table in a substitution (R4-6). */
 const SQL_NAME_ONLY = /^\s*(?:"?[a-z_][a-z0-9_$]*"?\s*\.\s*)?"?field_worker_move_requests"?\s*$/i;
 const WRITER_SETTING = /app\.field_worker_move_request_writer/;
@@ -66,8 +78,10 @@ interface Aliases {
   names: Set<string>;
   props: Set<string>;
   arrays: Set<string>;
-  /** Names bound to a string that IS the SQL name (`const T = 'field_worker_move_requests'`). */
+  /** Names bound to a string that IS the SQL name (`const T = 'field_worker_move_requests'`, `const U = T`, `T = '...'`). */
   sqlNames: Set<string>;
+  /** Property names given that string (`{ t: 'field_worker_move_requests' }`, read as `N.t`). */
+  sqlProps: Set<string>;
 }
 
 const stringKey = (e: ts.Expression): string | undefined => {
@@ -102,7 +116,7 @@ function outerParent(node: ts.Node): ts.Node | undefined {
  * Assignments, object-literal properties and arrays are alias sources too (code review RP-8).
  */
 function collectAliases(sf: ts.SourceFile): Aliases {
-  const aliases: Aliases = { names: new Set<string>(), props: new Set<string>(), arrays: new Set<string>(), sqlNames: new Set<string>() };
+  const aliases: Aliases = { names: new Set<string>(), props: new Set<string>(), arrays: new Set<string>(), sqlNames: new Set<string>(), sqlProps: new Set<string>() };
   let grew = true;
   const add = (set: Set<string>, name: string): void => {
     if (!set.has(name)) {
@@ -117,16 +131,21 @@ function collectAliases(sf: ts.SourceFile): Aliases {
       if (ts.isIdentifier(node.name) && isTable(node.initializer, aliases)) add(aliases.names, node.name.text);
       // `const x = pgTable('field_worker_move_requests', ...)` - a second drizzle table over the same SQL name (R4-6).
       if (ts.isIdentifier(node.name) && ts.isCallExpression(init) && init.arguments[0] !== undefined && stringKey(init.arguments[0]) === SQL_NAME) add(aliases.names, node.name.text);
-      // `const T = 'field_worker_move_requests'` - the SQL name in a constant, read as the table in a substitution (R4-6).
-      if (ts.isIdentifier(node.name)) {
-        const text = stringKey(node.initializer);
-        if (text !== undefined && SQL_NAME_ONLY.test(text)) add(aliases.sqlNames, node.name.text);
-      }
+      // `const T = 'field_worker_move_requests'` - the SQL name in a constant, read as the table in a substitution (R4-6) - and `const U = T`
+      // (R5-2: transitive, through the fixpoint).
+      if (ts.isIdentifier(node.name) && holdsSqlName(node.initializer, aliases)) add(aliases.sqlNames, node.name.text);
       // `const [t] = [fieldWorkerMoveRequests]` (positional) and `const [t] = held` for an array that holds it (every element - fail closed).
       if (ts.isArrayBindingPattern(node.name)) {
+        // A spread in the literal shifts the positions: then every element is the table if any is (fail closed; R5-2).
+        const spread = ts.isArrayLiteralExpression(init) && init.elements.some((e) => ts.isSpreadElement(e));
+        const anyHeld = ts.isArrayLiteralExpression(init) && init.elements.some((e) => !ts.isSpreadElement(e) && isTable(e, aliases));
         node.name.elements.forEach((el, i) => {
           if (ts.isOmittedExpression(el) || el.dotDotDotToken !== undefined || !ts.isIdentifier(el.name)) return;
-          const held = ts.isArrayLiteralExpression(init) ? init.elements[i] !== undefined && !ts.isSpreadElement(init.elements[i]!) && isTable(init.elements[i]!, aliases) : ts.isIdentifier(init) && aliases.arrays.has(init.text);
+          const held = ts.isArrayLiteralExpression(init)
+            ? spread
+              ? anyHeld
+              : init.elements[i] !== undefined && !ts.isSpreadElement(init.elements[i]!) && isTable(init.elements[i]!, aliases)
+            : ts.isIdentifier(init) && aliases.arrays.has(init.text);
           if (held) add(aliases.names, el.name.text);
         });
       }
@@ -138,6 +157,12 @@ function collectAliases(sf: ts.SourceFile): Aliases {
       }
     }
     // `t = fieldWorkerMoveRequests`, `holder.t = ...`, `holder['t'] = ...`
+    // `T = 'field_worker_move_requests'` (R5-2)
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(unwrap(node.left)) && holdsSqlName(node.right, aliases)) {
+      add(aliases.sqlNames, (unwrap(node.left) as ts.Identifier).text);
+    }
+    // `{ t: 'field_worker_move_requests' }` (R5-2)
+    if (ts.isPropertyAssignment(node) && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) && holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, node.name.text);
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && isTable(node.right, aliases)) {
       const left = unwrap(node.left);
       if (ts.isIdentifier(left)) add(aliases.names, left.text);
@@ -187,10 +212,28 @@ function enclosingFunctionName(node: ts.Node): string | undefined {
   return undefined;
 }
 
-/** True for a substitution that reads as the table: the drizzle table or a constant holding its SQL name. */
+/** True for an expression that holds the table's SQL name: the string itself, or a name / property bound to it (R5-2). */
+function holdsSqlName(expr: ts.Expression, aliases: Aliases): boolean {
+  const e = unwrap(expr);
+  const text = stringKey(e);
+  if (text !== undefined) return SQL_NAME_ONLY.test(text);
+  if (ts.isIdentifier(e)) return aliases.sqlNames.has(e.text);
+  if (ts.isPropertyAccessExpression(e)) return aliases.sqlProps.has(e.name.text);
+  if (ts.isElementAccessExpression(e)) {
+    const key = stringKey(e.argumentExpression);
+    return key !== undefined && aliases.sqlProps.has(key);
+  }
+  return false;
+}
+
+/**
+ * True for a substitution that reads as the table: the drizzle table, something holding its SQL name, or a CALL given the SQL name
+ * (`sql.identifier('field_worker_move_requests')`, `sql.raw('...')` - code review R5-2; fail closed on any callee).
+ */
 function namesTable(expr: ts.Expression, aliases: Aliases): boolean {
   const e = unwrap(expr);
-  return isTable(e, aliases) || (ts.isIdentifier(e) && aliases.sqlNames.has(e.text));
+  if (isTable(e, aliases) || holdsSqlName(e, aliases)) return true;
+  return ts.isCallExpression(e) && e.arguments[0] !== undefined && holdsSqlName(e.arguments[0], aliases);
 }
 
 /** The literal text of a string / template node (a template's static parts joined; a substitution that IS the table reads as its name), or null. */

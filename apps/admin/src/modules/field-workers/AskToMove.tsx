@@ -14,8 +14,9 @@
 // "Sending…" and the hint for a press with nothing chosen are said in a status region mounted empty with the component. A refusal that says
 // the panel's own copy of the worker is out of date (moved, or ended, meanwhile) withdraws the form, keeps the line here (CR48) and tells
 // the panel (`onStale`), which withdraws the acts it offers on the same stale copy (RP-6). Focus goes to the select when the form opens and
-// back to "Ask to move" when it closes (CR47) — or onto the stale line when the form closes into one, ⛔ the body (RP-4). A select focused
-// while the districts load and then replaced by "no other district" hands focus to Cancel (code review R4-3). A refusal that lands after
+// back to "Ask to move" when it closes (CR47) — or onto the stale line when the form closes into one, ⛔ the body (RP-4). Whatever held focus
+// in the open form and is replaced as the districts read settles - the select replaced by "no other district" (R4-3), the districts' Try again
+// gone when the retry succeeds (R5-5) - hands focus to the select, else to Cancel. A refusal that lands after
 // this component unmounted (the officer opened another worker) tells the panel NOTHING: its verdict was on a copy no longer on screen, and
 // the same worker reopened is a fresh read (R4-4).
 
@@ -85,11 +86,12 @@ export function AskToMove({
   const truncated = districts.data?.districts_truncated === true;
   const others = (districts.data?.districts ?? []).filter((d) => d !== worker.district);
   const noOther = others.length === 0 && districts.isSuccess && !truncated;
-  // R4-3: the select took focus while the districts loaded; when they come back with none to choose, it is replaced and focus would fall
-  // to the body - Cancel takes it.
+  // R4-3 / R5-5: the element that held focus in the open form was replaced as the districts read settled (the select by "no other district",
+  // Try again by the select) and focus fell to the body - the select takes it, else Cancel. ⛔ Moved from anywhere but the body.
+  const districtsFailed = districtsError !== null;
   useEffect(() => {
-    if (open && noOther && (document.activeElement === null || document.activeElement === document.body)) cancelRef.current?.focus();
-  }, [open, noOther]);
+    if (open && (document.activeElement === null || document.activeElement === document.body)) (selectRef.current ?? cancelRef.current)?.focus();
+  }, [open, noOther, districtsFailed]);
 
   if (worker.current_state === 'terminated') return null;
 

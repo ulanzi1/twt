@@ -7786,6 +7786,8 @@ a slip costs nobody anything, a worker ended unfairly has someone else to turn t
 > ⚠ **Added 2026-11-08** by BigDev (*"Q1-Q3 A"* — Story 13.1d's Q-1, option A: the email in its own row), recorded in decision `2026-11-08-458`.
 > The row is `13-1g-field-worker-move-notices-by-email` (`backlog`). Needs Story 13.1d LANDED. **Its emails GATE 13.1d's go-live** (roster Row 51 (c) —
 > the Panel ruled the officers are told *"by email and in the admin console"*, `-443` Q1 A). Source: Story 13.1d AD1, AD9, G11 and its carried item C1.
+>
+> ⚠ **AMENDED for this row by decisions `2026-11-10-461` and `2026-11-10-462` (Story 13.1d code review; annotation only — the text below is NOT edited):** a NEW notice kind `move_request_refused_admin` (the Pariwar Admins' refusal, no "Tell the worker."), while the opener's `move_request_refused` now carries "Tell the worker."; `move_request_superseded` reads *"A request is no longer needed: {from} to {to}."* for either cause and now ALSO goes to the District Admins of a superseded request's other district on a direct move (B2); and an email for `move_request_superseded` carries NO time of the act — on an ending it is when the ending was recorded (`-460` item 1, `-462`).
 
 As a District Admin or a Pariwar Admin, I want an email when a field worker move request needs my answer, is answered, goes to the Pariwar Admin,
 is superseded, or when the Pariwar Admin moves a worker of mine, so that I do not have to keep opening the admin console to know.

@@ -4,11 +4,15 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 13-1d-field-worker-move-requests-and-notices, round 4 - every uncommitted patch (2026-11-10)
+
+- **R4-W1 - a Find panel's stale callbacks capture the worker id of their render (13.1c, pre-existing).** `WorkerActions` (`onStale={() => setStaleFor(open)}`) and `CodeReveal` (`onStateChanged`) in `apps/admin/src/modules/field-workers/FindWorkerPage.tsx` take the panel id from the render that created them; a 409 that lands after the officer closed and reopened the same worker would withdraw the FRESH copy's acts. Story 13.1d's `AskToMove` has the same shape and is fixed there (R4-4: `onStale` only while mounted); these two are 13.1c's. Trigger: the next story that touches the Find panel's stale handling.
+
 ## Deferred from: story 13-1d-field-worker-move-requests-and-notices (create-story, 2026-11-08)
 
 Carried items C1–C4 of Story 13.1d (BUILT on the story branch 2026-11-09, not merged; created ready-for-dev, Q-1…Q-3 ANSWERED by BigDev 2026-11-08, verbatim "Q1-Q3 A"; story v1.2). This pass CLOSES nothing: 13.1 C10 / D7, 13.1a C2, 13.1b C6, 13.1c C1, R2-D1 and 13.1c's CR34 (its patch review's `networkMode` finding; ⛔ 13.1a's CR34, the seal's AAD, which stays open) are ANSWERED in the story (AD1–AD10) and close only when its code lands; 13.1a CR33's re-trigger fires again when it does (AD12).
 
-- **C1 — the email notices (Story 13.1d Q-1 A; row `13-1g-field-worker-move-notices-by-email`, minted at 13.1d's Task 0.4).** The Panel ruled "by email and in the admin console" (`-443` Q1 A); an email to a District Admin is a FOURTH admin-email path, which ADR-0040 / ADR-0043 admit only by a new ADR. Needs: that ADR (a district-admin recipient read by EXACT district grant; the Q2 address read for a third caller), a send table keyed on 13.1d's `notice_id` (6.25's shape: once per notice, held / parked sweep, `aging_since`), a jobs sender on `staff-email-client.ts`, one template per notice kind naming NO ONE with a link (6.25's `-262` FQ3 A), and the four allowlists of `apps/jobs/tests/staff-email-identity-read-fence.test.ts`. Go-live leg: roster Row 51 (c). Trigger: 13.1g create-story (needs 13.1d LANDED).
+- **C1 — the email notices (Story 13.1d Q-1 A; row `13-1g-field-worker-move-notices-by-email`, minted at 13.1d's Task 0.4).** The Panel ruled "by email and in the admin console" (`-443` Q1 A); an email to a District Admin is a FOURTH admin-email path, which ADR-0040 / ADR-0043 admit only by a new ADR. Needs: that ADR (a district-admin recipient read by EXACT district grant; the Q2 address read for a third caller), a send table keyed on 13.1d's `notice_id` (6.25's shape: once per notice, held / parked sweep, `aging_since`), a jobs sender on `staff-email-client.ts`, one template per notice kind naming NO ONE with a link (6.25's `-262` FQ3 A), and the four allowlists of `apps/jobs/tests/staff-email-identity-read-fence.test.ts`. Go-live leg: roster Row 51 (c). Trigger: 13.1g create-story (needs 13.1d LANDED). **2026-11-10 (13.1d code review, decisions `-461` / `-462`) - what this row now owes:** a template for the new kind `move_request_refused_admin`; the opener's refusal email says "Tell the worker."; `move_request_superseded` reworded ("A request is no longer needed: {from} to {to}.") and sent to B2's new recipients (a direct move: the superseded request's other district); and NO time of the act in a `move_request_superseded` email (`-462`).
 - **C2 — Story 13.3: a worker's own view of their request.** Depends on the Panel's answer to 13.1d's note, item 3 (Q-3 A: the system tells the worker nothing by default; the officer does). Trigger: 13.3 create-story.
 - **C3 — row `13-1f`: an undo does not reopen a superseded request.** 13.1d supersedes an open request when the worker is ended (cause `worker_ended`), and the supersede is final. 13-1f's undo either says so or decides otherwise. Trigger: 13-1f create-story.
 - **C4 — Story 13.8: the count of members a worker has onboarded (`-459` Q2 A, WIDENED, 2026-11-08).** The Panel ruled that the District Admin at the other end of a move request sees the worker's name and *"other details like work history with organization, number of member onboarded, etc."*. The count cannot be computed today: a member's code is captured at signup (`member_attribution.attribution_source`) and never resolved to a worker (`resolveAttributionForRequest` has no caller). When 13.8 wires that resolution, it also supplies a count read (by worker, inside one Pariwar; a number, never a member's name) for 13.1d's request read. Whether 13.1d's go-live waits for it is 13.1d's Task 0.8 (BigDev's). Trigger: 13.8 create-story.
@@ -14406,3 +14410,45 @@ Recorded at Story 5.14's Task 0.4 under [`-417`](../../.decision-log.md#decision
   registered / kyc_completed / activated events too. Owner: the next story that adds a WRITER of field-worker events outside `commands.ts` (13.1d's acceptance, 13-1f's undo).
   Trigger: that writer, or a second key for an existing event.
   **2026-11-09 (Story 13.1d dev-story) — CLOSED for `field_worker.posted` `2ae726f0` (its trigger fired: a second key for an existing event):** `posted`'s snapshot key is pinned to `FIELD_WORKER_MOVE_PERMISSION_KEYS`, and each `field_worker_move_request.*` event pins its own act's key. The other six worker events still accept any key string (no new writer of them); the item stays OPEN for those, owner and trigger unchanged (13-1f's undo).
+
+## Deferred from: code review of 13-1d-field-worker-move-requests-and-notices, chunk 1 (2026-11-09)
+
+- **CR10 — `postFieldWorker` is not tied to a request when it carries the answer key.** The post-move supersede / notice leg switches on the permission key alone
+  (`packages/domain/src/field-worker/commands.ts`, `if (authorization.permission_key === 'field_worker.move')`) and `postFieldWorker` takes no request id, so a call with a
+  verified `field_worker.answer_move_request` for a worker with no open request, or a different one, moves the worker, supersedes nothing and tells nobody - the open
+  request is left `pending` with a stale `from_district` (13.1d I4). NOT reachable today: the only caller passing the answer key is `acceptFieldWorkerMoveRequest` (under
+  the worker and request locks) and the one HTTP caller (`lifecycle-handlers.ts`) gates on `field_worker.move`; not every caller of the domain barrel was traced. Owner: the
+  next story that adds a caller of `postFieldWorker`. Trigger: that caller, or a third key in `FIELD_WORKER_MOVE_PERMISSION_KEYS`. The fix then: the answer-key path requires
+  the worker's open request under the lock (`lockOpenMoveRequestOfWorker`) with its counterpart equal to the authorization's target - or `postFieldWorker`'s answer-key path
+  stops being exported.
+
+## Deferred from: code review of 13-1d-field-worker-move-requests-and-notices, chunk 3 (2026-11-09)
+
+- **CR31 — the 403 `details` body distinguishes a request that exists from one that does not.** `AuthorizationDeniedError.toErrorResponse` returns `details: this.denial`,
+  which carries `targetLocator` (`packages/domain/src/rbac/check.ts:348`). For accept / refuse / withdraw / close the per-request loader stashes the request's real district when it
+  exists and `null` when it does not (`apps/api/src/modules/field-worker/gate.ts`, `loadMoveRequestGate`), so an officer who holds some grant but not the right one sees a real district name
+  for an existing request and `null` for an unknown id. INHERITED, not introduced by 13.1d: `loadFieldWorkerGateDistrict` (13.1a) has the same shape, and the detail and open routes
+  return `null` for both cases. It needs a request UUID the officer already holds. The fix is a redaction of `details` in the shared 403 body, which touches every gated route.
+  Owner: the next story that changes `AuthorizationDeniedError`'s body, or adds a route whose existence must not leak by UUID. Trigger: that change.
+
+## Deferred from: code review of 13-1d-field-worker-move-requests-and-notices, chunk 4 (2026-11-09)
+
+- **CR40 — the escalation sweep has no memory of a row that always fails, no lock timeout and no cross-process guard.** `findStaleMoveRequests` reads `pending` rows opened 7 days ago,
+  oldest first, `LIMIT 200`, with no failure memory, so a request that always fails (a deterministic persist error, a missing grant) stays at the head of every tick: each hour it writes an
+  intent audit line (200) and a `_rolled_back` twin (500) into the append-only ledger - about 48 lines a day per stuck request - plus one alarm, and 200 such rows would starve younger
+  ones. The sweep's `SELECT … FOR UPDATE` has no `lock_timeout` / `statement_timeout`, so one blocked worker lock stalls the whole sequential tick. `{ localConcurrency: 1 }` is per process: a tick
+  outlasting the hour, or a second jobs replica, runs two ticks together - state stays safe (every row is re-judged under its locks) and the loser writes a duplicate intent / twin pair. The 13.1b
+  code-SMS sweep has the same shape. 200 persistent failures is implausible and a poison row is alarmed hourly (CR33 made the alarm say what class of fault it is and that the rest may be held back).
+  Owner: the first production alarm from this sweep, OR the next story that adds a sweep with a quarantine / attempt-memory policy, OR the jobs go-live pass (roster Row 26). Trigger: any of them.
+  The fix then: an attempt counter or backoff on the request row (a column - a migration), a `lock_timeout` on the sweep's transactions, and a `singletonKey` on the schedule.
+
+## Deferred from: code review of 13-1d-field-worker-move-requests-and-notices, the round-1 patches (2026-11-10)
+
+- **RP-D1 — the nav's "N+" is judged on the notices' first page only.** `FieldWorkerNav.tsx` (`mayBeMore`) shows "N+" only when the first page is ALL unseen and a next cursor exists; a first page that
+  mixes seen and unseen with a cursor shows "1 new" while older unseen notices stay unloaded and uncounted (e.g. an officer who viewed page 1 of 120, then received one more). That is AD10's own rule
+  ("counted on the notices' first page ... no polling") and the nav's comment says so; the page itself pages through every notice, so nothing is lost, only the count is low. An exact count needs a
+  server-side unseen count (a field on the notices list contract). Owner: the next story that changes the notices contract (row `13-1g`'s email notices), OR a reported missed notice. Trigger: either.
+- **RP-D2 — a Pariwar Admin's "waiting for your answer" depends on paging.** `MoveRequestsPage.tsx` filters the `escalated` subset out of the newest-first `open` list (25 a page); a sweep-escalated
+  request is at least 7 days old, so with more than a page of open requests the section reads "None of the requests loaded so far ... Load more" until the officer pages through (AD10 (1): "a Pariwar
+  Admin: every `escalated` request"). Round 1's CR43 (c) made the line honest, not complete. The fix is a `state=escalated` filter on the list (the contract, the route and the hook). Owner: the next
+  story that touches the move-request list contract. Trigger: that story, or a Pariwar with more than 25 open requests.

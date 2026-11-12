@@ -28,7 +28,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1g: The District Admins Are Told of Each Field Worker Move Request, Answer, Escalation and Move by Email - Naming No One `[CONSUMER]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -561,36 +561,36 @@ prefix every `ci:local` and `git push` with the story's `DATABASE_URL` port and 
 ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]]); hand-format ([[project_prettier_not_enforced]]); first push with an
 explicit refspec ([[project_story_branch_upstream_is_main]]).
 
-- [ ] **Task 0 - Preflight and governance (AC: 1, 10)** - writes no code.
+- [x] **Task 0 - Preflight and governance (AC: 1, 10)** - writes no code.
   - [x] 0.0 DONE 2026-11-12 (BigDev: "commit the records (Task 0.0)"): the `records(13.1g)` commit on the story branch, parent `cae6ac65`. Commit this story file and the create-story / validate record edits (`epics.md` note under Story 13.1g, `deferred-work.md` section,
     `sprint-status.yaml` row + ledger `2026-11-11a` / `2026-11-12a`) as ONE `records(13.1g)` commit on the story branch, when BigDev asks.
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor cae6ac65 HEAD`; `git diff --name-only cae6ac65..origin/main -- packages apps scripts docs`.
+  - [x] 0.1 DONE 2026-11-12: `origin/main` still `cae6ac65`; no code moved; `-463`, ADR-0045, 0206 free on every ref and worktree (journal idx 205, `when` 1797305400049); 155 index rows; no sibling branch or worktree touches the named files. `git fetch origin`; `git merge-base --is-ancestor cae6ac65 HEAD`; `git diff --name-only cae6ac65..origin/main -- packages apps scripts docs`.
     Re-grep the NUMBERS block (`-463`, ADR-0045, 0206, the journal's last `when`, the ADR index count); `git worktree list` / `git branch -a` for
     another branch touching `field-worker/`, `staff-email*`, `login-next.ts`, `sign-in.ts`, the fence, or migrations 0206+.
   - [x] 0.2 **HALT on Q-1..Q-5** - DONE 2026-11-12: all answered (Q-2 B; Q-1, Q-3, Q-4, Q-5 A), propagated through this file, `deferred-work.md`,
     `epics.md` and the ledger (`2026-11-12b`); no B answer adds a field or an opt-out, so no Panel note. (As written:) Propagate the answers through this file (AD4, AD7, AD9, ACs, Tasks),
     `deferred-work.md`, `epics.md` and the ledger in the same edit, before any code ([[feedback_spec_edits_must_propagate_to_tasks]]). A B answer
     that adds a field to an email or an opt-out STOPS for a Panel note (section 0, rows 3-4).
-  - [ ] 0.3 Write decision `2026-11-<DD>-463` (the date it is written) above the newest entry (re-grep every ref and worktree; heading and field
+  - [x] 0.3 DONE 2026-11-12: `2026-11-12-463` committed ALONE `ad0244f8`. Write decision `2026-11-<DD>-463` (the date it is written) above the newest entry (re-grep every ref and worktree; heading and field
     order as `-462`); commit it ALONE (`governance:`): an author-commit recording AD1-AD13 and the answers verbatim; "supersedes no RATIFIED text;
     adds no member predicate"; the Q-2 rule word for word WITH its exception (AD6); AD13 (no production grant; why; the privilege table); the residuals (the rule's exception; AD9's arrival time, `-462` residual (c)'s class); the narrowings of AD5; its
     Consequences AUTHOR Row 51's new legs (e) ADR-0045 RATIFIED (Q-4 A) and (f) the Hindi of the seven `notice_email.*` texts reviewed by a
     non-author (as `-452` amended Row 49 by decision). Cite `-443` Q1 A, `-458` AD1 / AD9, `-459` Q3, `-460` item 1, `-461` items 1-3 and "NOT
     covered", `-462` "NOT covered" and residual (c), `-262` FQ3 A, `-299`, `-358`, `-412`, ADR-0040 / ADR-0043, and ADR-0045 "(committed next)".
-  - [ ] 0.4 Write `docs/adr/ADR-0045-field-worker-move-notice-email.md` from `docs/adr/_adr-template.md` (AD1; cites `-463`); in
+  - [x] 0.4 DONE 2026-11-12: ADR-0045 + index row + reconciliation (156 rows re-counted; 110 / 3 / 0 / 42 / 1) committed ALONE `cae6a377`. Write `docs/adr/ADR-0045-field-worker-move-notice-email.md` from `docs/adr/_adr-template.md` (AD1; cites `-463`); in
     `docs/knowledge-transfer/adr-index.md` a NEW Section A row (check first that no `slot-reserved-pre-write` row fits) and an italic reconciliation
     paragraph per `docs/knowledge-transfer/README.md` section 7; the ADR's Decision states the Q-2 rule word for word with its exception (AD6)
     (the ADR-0043 paragraph at L56 is the model: `drafted` 2 -> 3, Total 155 -> 156,
     RE-COUNTED with `grep -cE '^\| ADR-'`; status `drafted`, ⛔ `under-trustee-review`; ratification = Row 51 (e)); commit ALONE
     (`governance(13.1g): ADR-0045 ...`).
-  - [ ] 0.5 Roster, its OWN `governance:` commit - dated lines at **Row 51** (criteria never edited): it adds legs **(e)** and **(f)** per `-463`,
+  - [x] 0.5 DONE 2026-11-12: Rows 51 (two dated lines: legs (e), (f); (c) + the Q-2 rule), 26, 24 committed ALONE `b71915e7`. Roster, its OWN `governance:` commit - dated lines at **Row 51** (criteria never edited): it adds legs **(e)** and **(f)** per `-463`,
     and the row now closes on ALL SIX ("ALL FOUR" above is as of `-458`); (c) its build is this row, still OPEN until deployed; the sweep, like the
     escalation sweep, cannot read 0205 / 0206 on the production jobs login until Row 26 closes (G3); sending at all waits for Row 24 (the
     transport); a dated line at **Row 26** adding AD13's steps to its list (6.36d's 2026-10-23 note is the form) and one at **Row 24** noting
     Q4 joins Q1 / Q2 in (b)'s "production jobs login able to make ... reads" for this sender, each saying Row 51 (c) depends on it - ⛔ a new
     leg; the Q-2 rule word for word (AD6), and for operators: an email outage (or a stopped sweep) of 3+ IST days loses those notices' emails by
     design, the held run's alarm is the signal, and the console still has every notice. ⛔ a new row.
-  - [ ] 0.6 Annotate `epics.md` Story 13.1g (what was decided, where) - annotate, never rewrite.
+  - [x] 0.6 DONE 2026-11-12: a DECIDED note under Story 13.1g. Annotate `epics.md` Story 13.1g (what was decided, where) - annotate, never rewrite.
 
 - [ ] **Task 1 - The table (AC: 2; I2)**
   - [ ] 1.1 Migration `0206_field-worker-notice-emails.sql` (AD2; copy 0187's statements, renamed - ⚠ the INSERT grant is AD2's, NOT 0187's;

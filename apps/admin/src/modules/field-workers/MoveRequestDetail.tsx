@@ -13,6 +13,7 @@ import type { ReactElement } from 'react';
 import { useFieldWorkerMoveRequest } from '../../api/hooks.js';
 import { formatIstDate, formatIstDateTime, requestDetailGuidance, stateLabel } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { fieldWorkerRequestsPath } from '../../routes/login-next.js';
 import { useSignInRedirect } from './sign-in.js';
 
 /** An IST day (`YYYY-MM-DD`) as the console writes dates — read as noon UTC so it is the same day in India. */
@@ -21,7 +22,7 @@ const day = (d: string): string => formatIstDate(`${d}T12:00:00Z`);
 export function MoveRequestDetail({ pariwarId, moveRequestId, domId }: { pariwarId: string; moveRequestId: string; domId?: string }): ReactElement {
   const q = useFieldWorkerMoveRequest(pariwarId, moveRequestId);
   const error = q.isError ? requestDetailGuidance(q.error) : null;
-  useSignInRedirect(error?.signIn === true);
+  useSignInRedirect(error?.signIn === true, fieldWorkerRequestsPath(pariwarId)); // AD10 — mounted on the Move requests page only
   if (q.isPending) return <p role="status">{t('fw.loading')}</p>;
   if (error !== null) {
     return (

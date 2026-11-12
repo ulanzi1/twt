@@ -68,6 +68,9 @@ const { createQueryClient, useApproveFieldWorker, fieldWorkerListsKey, fieldWork
 
 const P = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
+/** Story 13.1g (AD10) — every sign-in redirect on the Move requests page carries the page's own path, so the move-notice email's link
+ * survives a sign-in. Other field-worker pages keep `{ to: '/login' }` (e.g. `field-worker-find-page.test.tsx`'s DistrictPicker leg). */
+const BACK_HERE = { to: '/login', search: { next: `/p/${P}/field-workers/requests` } };
 // The fixtures are PARSED by the contract (code review R4-10): a mocked client never parses a response, so a fixture the strict DTO
 // refuses - a field the contract dropped, a time where `-461` / `-462` send none - would test a shape the server can never send.
 const req = (o: Partial<Record<string, unknown>> = {}) => FieldWorkerMoveRequestItem.parse({
@@ -648,7 +651,7 @@ describe('CR46 — an accept that meets a destination no longer on the list says
     await choose(GAYA);
     fireEvent.click(await screen.findByTestId('fw-request-view'));
     await screen.findByTestId('fw-request-detail-error');
-    expect(navigate).toHaveBeenCalledWith({ to: '/login' });
+    expect(navigate).toHaveBeenCalledWith(BACK_HERE); // Story 13.1g AD10 — sign-in comes back to this page
   });
 
   it('the notices: a 401 signs the officer back in; a 5xx says so and a click on Try again reads them again', async () => {
@@ -665,7 +668,7 @@ describe('CR46 — an accept that meets a destination no longer on the list says
     listFieldWorkerNotices.mockRejectedValue(new ApiError(401, 'auth.session_required', 'x'));
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await screen.findByTestId('fw-notices-error');
-    expect(navigate).toHaveBeenCalledWith({ to: '/login' });
+    expect(navigate).toHaveBeenCalledWith(BACK_HERE); // Story 13.1g AD10 — sign-in comes back to this page
   });
 });
 
@@ -1152,7 +1155,28 @@ describe('RP-14 — the sections wait for the session', () => {
     getSession.mockRejectedValueOnce(new ApiError(401, 'auth.session_required', 'x'));
     renderWith(<MoveRequestsPage pariwarId={P} />);
     await screen.findByTestId('fw-requests-session-error');
-    expect(navigate).toHaveBeenCalledWith({ to: '/login' });
+    expect(navigate).toHaveBeenCalledWith(BACK_HERE); // Story 13.1g AD10 — sign-in comes back to this page
+  });
+});
+
+describe('Story 13.1g AD10 — the Move requests page is a sign-in return route', () => {
+  it('a 401 on the DISTRICTS read (the DistrictPicker on this page) signs the officer in and back here — ⛔ a bare `/login`', async () => {
+    listFieldWorkerMoveRequests.mockResolvedValue({ items: [], next_cursor: null });
+    getFieldWorkerDistricts.mockRejectedValue(new ApiError(401, 'auth.session_required', 'x'));
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(BACK_HERE));
+    expect(navigate).not.toHaveBeenCalledWith({ to: '/login' });
+  });
+
+  it('a 401 on every read at once (a lapsed session): EVERY navigate carries the page — the last one wins, so none may drop it', async () => {
+    const expired = new ApiError(401, 'auth.session_required', 'x');
+    listFieldWorkerMoveRequests.mockRejectedValue(expired);
+    listFieldWorkerNotices.mockRejectedValue(expired);
+    getFieldWorkerDistricts.mockRejectedValue(expired);
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await waitFor(() => expect(navigate).toHaveBeenCalled());
+    await screen.findByTestId('fw-notices-error');
+    for (const call of navigate.mock.calls) expect(call[0]).toEqual(BACK_HERE);
   });
 });
 

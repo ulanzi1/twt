@@ -7,6 +7,7 @@
 // query or a trailing segment — falls back to `/audit/integrity` as before (⛔ an open redirect).
 // Story 6.22 (code review 2026-11-02, RC10) adds ONE more allowlisted route: the District Admin's fraud work-list, which already
 // redirected here with a `next` that was silently dropped.
+// Story 13.1g (decision `2026-11-12-463` AD10) adds a THIRD: the field worker Move requests page, which the move-notice email links to.
 
 const NOMINEE_REFUSALS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/nominee-refusals$/;
 
@@ -34,9 +35,12 @@ export function allowedNextPariwarId(next: unknown): string | null {
 
 const FRAUD_INVESTIGATIONS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/fraud-investigations$/;
 
-/** Where sign-in returns to: one of the TWO allowlisted routes and the Pariwar it is for. */
+// ⚠ Its OWN one-line literal (⛔ a shared fragment): the jobs template test reads each route's literal from this file as text.
+const FIELD_WORKER_REQUESTS_PATH = /^\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/field-workers\/requests$/;
+
+/** Where sign-in returns to: one of the THREE allowlisted routes and the Pariwar it is for. */
 export interface LoginReturn {
-  readonly to: '/p/$pariwarId/nominee-refusals' | '/p/$pariwarId/fraud-investigations';
+  readonly to: '/p/$pariwarId/nominee-refusals' | '/p/$pariwarId/fraud-investigations' | '/p/$pariwarId/field-workers/requests';
   readonly pariwarId: string;
 }
 
@@ -47,10 +51,17 @@ export function allowedNextReturn(next: unknown): LoginReturn | null {
   if (refusalsPariwarId !== null) return { to: '/p/$pariwarId/nominee-refusals', pariwarId: refusalsPariwarId };
   const fraud = FRAUD_INVESTIGATIONS_PATH.exec(next);
   if (fraud) return { to: '/p/$pariwarId/fraud-investigations', pariwarId: fraud[1]! };
+  const requests = FIELD_WORKER_REQUESTS_PATH.exec(next);
+  if (requests) return { to: '/p/$pariwarId/field-workers/requests', pariwarId: requests[1]! };
   return null;
 }
 
 /** Story 6.22 (DL10 (iv)) — the District Admin's work-list of claims flagged for investigation. */
 export function fraudInvestigationsPath(pariwarId: string): string {
   return `/p/${pariwarId.toLowerCase()}/fraud-investigations`;
+}
+
+/** Story 13.1g (AD10) — the field worker Move requests page (13.1d): the move-notice email's link, and what its own sign-in redirects pass. */
+export function fieldWorkerRequestsPath(pariwarId: string): string {
+  return `/p/${pariwarId.toLowerCase()}/field-workers/requests`;
 }

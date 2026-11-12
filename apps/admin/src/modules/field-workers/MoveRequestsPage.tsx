@@ -35,6 +35,7 @@ import { MoveRequestDetail } from './MoveRequestDetail.js';
 import { NoticeList } from './NoticeList.js';
 import { fieldWorkerGuidance, formatIstDate, requestStateLabel } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { fieldWorkerRequestsPath } from '../../routes/login-next.js';
 import { useSignInRedirect } from './sign-in.js';
 
 export function MoveRequestsPage({ pariwarId }: { pariwarId: string }): ReactElement {
@@ -53,7 +54,7 @@ export function MoveRequestsPage({ pariwarId }: { pariwarId: string }): ReactEle
   const list = useFieldWorkerMoveRequests(pariwarId, 'open', district);
   const listError = list.isError ? fieldWorkerGuidance(list.error) : null;
   const sessionError = session.isError ? fieldWorkerGuidance(session.error) : null;
-  useSignInRedirect(listError?.signIn === true || sessionError?.signIn === true);
+  useSignInRedirect(listError?.signIn === true || sessionError?.signIn === true, fieldWorkerRequestsPath(pariwarId)); // AD10
 
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const waiting =
@@ -134,6 +135,7 @@ export function MoveRequestsPage({ pariwarId }: { pariwarId: string }): ReactEle
       </div>
       <DistrictPicker
         pariwarId={pariwarId}
+        signInNext={fieldWorkerRequestsPath(pariwarId)}
         value={district}
         onChange={(d) => {
           loadSeq.current += 1;

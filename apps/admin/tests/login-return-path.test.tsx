@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultParseSearch, defaultStringifySearch } from '@tanstack/react-router';
 
-import { allowedNextPariwarId, allowedNextReturn, fraudInvestigationsPath, nomineeRefusalsPath, validateLoginSearch } from '../src/routes/login-next.js';
+import { allowedNextPariwarId, allowedNextReturn, fieldWorkerRequestsPath, fraudInvestigationsPath, nomineeRefusalsPath, validateLoginSearch } from '../src/routes/login-next.js';
 import { renderWithClient } from './_helpers.js';
 
 const P = '2b7c0a4e-5d1f-4e8a-9c3b-1f2e3d4c5b6a';
@@ -59,6 +59,7 @@ vi.mock('../src/api/hooks.js', async (importOriginal) => ({
 
 const { LoginPage } = await import('../src/routes/LoginPage.js');
 const { NomineeRefusalsRoute } = await import('../src/routes/NomineeRefusalsRoute.js');
+const { FieldWorkerMoveRequestsRoute } = await import('../src/routes/FieldWorkerMoveRequestsRoute.js');
 const { ApiError } = await import('../src/api/client.js');
 
 beforeEach(() => {
@@ -105,7 +106,7 @@ describe('⭐ Story 6.22 (code review RC10) — the fraud work-list is the SECON
   });
 
   it('the SAME hostile inputs are refused for the new path as for the old one', () => {
-    for (const route of ['nominee-refusals', 'fraud-investigations']) {
+    for (const route of ['nominee-refusals', 'fraud-investigations', 'field-workers/requests']) {
       for (const bad of [
         undefined,
         null,
@@ -133,6 +134,36 @@ describe('⭐ Story 6.22 (code review RC10) — the fraud work-list is the SECON
   it('⭐ a signed-out District Admin who opened the work-list signs in and lands ON it', async () => {
     window.history.replaceState(null, '', `/login?next=${encodeURIComponent(fraudInvestigationsPath(P))}`);
     expect(await signIn()).toEqual({ to: '/p/$pariwarId/fraud-investigations', params: { pariwarId: P } });
+  });
+});
+
+describe('⭐ Story 13.1g (AD10) — the field worker Move requests page is the THIRD allowlisted return (⛔ an open redirect)', () => {
+  it('it returns its destination and Pariwar; the two existing returns still work; the nominee-only function is UNCHANGED', () => {
+    expect(fieldWorkerRequestsPath(P.toUpperCase())).toBe(`/p/${P}/field-workers/requests`);
+    expect(allowedNextReturn(fieldWorkerRequestsPath(P))).toEqual({ to: '/p/$pariwarId/field-workers/requests', pariwarId: P });
+    expect(allowedNextReturn(nomineeRefusalsPath(P))).toEqual({ to: '/p/$pariwarId/nominee-refusals', pariwarId: P });
+    expect(allowedNextReturn(fraudInvestigationsPath(P))).toEqual({ to: '/p/$pariwarId/fraud-investigations', pariwarId: P });
+    expect(allowedNextPariwarId(fieldWorkerRequestsPath(P))).toBeNull();
+  });
+
+  it('the field-worker pages that are ⛔ return routes are refused — the list, Approvals, a trailing segment', () => {
+    for (const bad of [`/p/${P}/field-workers`, `/p/${P}/field-workers/approvals`, `/p/${P}/field-workers/register`, `/p/${P}/field-workers/requests/x`]) {
+      expect(allowedNextReturn(bad), bad).toBeNull();
+    }
+  });
+
+  it('⭐ a signed-out officer who followed the emailed link signs in and lands ON the Move requests page', async () => {
+    window.history.replaceState(null, '', `/login?next=${encodeURIComponent(fieldWorkerRequestsPath(P))}`);
+    expect(await signIn()).toEqual({ to: '/p/$pariwarId/field-workers/requests', params: { pariwarId: P } });
+  });
+
+  it('⭐ the route\'s session error goes to `/login?next=<its own path>` (a re-cased id lower-cased), and that `search` survives the router\'s round trip', async () => {
+    session.isError = true;
+    params.pariwarId = P.toUpperCase();
+    renderWithClient(<FieldWorkerMoveRequestsRoute />);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login', search: { next: `/p/${P}/field-workers/requests` } }));
+    const search = navigate.mock.calls.at(-1)![0].search as { next: string };
+    expect(allowedNextReturn(validateLoginSearch(defaultParseSearch(defaultStringifySearch(search))).next)).toEqual({ to: '/p/$pariwarId/field-workers/requests', pariwarId: P });
   });
 });
 

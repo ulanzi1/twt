@@ -17,6 +17,7 @@ import { useFieldWorkerNotices, useMarkFieldWorkerNoticesSeen } from '../../api/
 import { MoveRequestDetail } from './MoveRequestDetail.js';
 import { fieldWorkerGuidance, formatIstDateTime, noticeText, noticeViewRequestId } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { fieldWorkerRequestsPath } from '../../routes/login-next.js';
 import { useSignInRedirect } from './sign-in.js';
 
 export function NoticeList({ pariwarId }: { pariwarId: string }): ReactElement {
@@ -31,7 +32,7 @@ export function NoticeList({ pariwarId }: { pariwarId: string }): ReactElement {
   const unseen = items.filter((n) => n.seen_at === null && !marked.current.has(n.notice_id)).map((n) => n.notice_id);
   const unseenKey = unseen.join(',');
   const error = notices.isError ? fieldWorkerGuidance(notices.error, 'requests') : null;
-  useSignInRedirect(error?.signIn === true);
+  useSignInRedirect(error?.signIn === true, fieldWorkerRequestsPath(pariwarId)); // AD10 — this page is a sign-in return route
   useEffect(() => {
     if (unseenKey === '') return;
     const ids = unseenKey.split(',');

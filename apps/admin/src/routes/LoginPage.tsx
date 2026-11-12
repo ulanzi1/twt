@@ -137,8 +137,9 @@ export function LoginPage(): ReactElement {
 
   async function completeLogin(): Promise<void> {
     await queryClient.invalidateQueries({ queryKey: sessionKey });
-    // Story 6.25 (RE9 A) — return to the nominee-refusal list the staff email linked to (Story 6.22: or the fraud work-list), IFF `next`
-    // is EXACTLY an allowlisted relative path (`login-next.ts`); anything else lands on the default page as before (⛔ an open redirect).
+    // Story 6.25 (RE9 A) — return to the nominee-refusal list the staff email linked to (Story 6.22: or the fraud work-list; Story 13.1g:
+    // or the field worker Move requests page), IFF `next` is EXACTLY an allowlisted relative path (`login-next.ts`); anything else lands
+    // on the default page as before (⛔ an open redirect).
     const back = allowedNextReturn(search.next ?? null);
     if (back !== null) {
       void navigate({ to: back.to, params: { pariwarId: back.pariwarId } });

@@ -85,7 +85,8 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   // Story 6.25 (RE9 A) — the sign-in return path: `next` is carried as given and ALLOWLISTED by `LoginPage` (`login-next.ts`) —
-  // only the nominee-refusal list's own path is ever followed (⛔ an open redirect).
+  // only the allowlisted routes' own paths are ever followed — the nominee-refusal list, the fraud work-list, the Move requests page (⛔ an
+  // open redirect).
   validateSearch: validateLoginSearch,
   component: LoginPage,
 });

@@ -37,9 +37,11 @@ export interface DistrictPickerProps {
   invalid?: boolean;
   describedBy?: string;
   testId: string;
+  /** Story 13.1g (AD10) — a page that is a sign-in return route passes its own path, so a 401 here comes back to it; others pass none. */
+  signInNext?: string;
 }
 
-export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, invalid = false, describedBy, testId }: DistrictPickerProps): ReactElement {
+export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, invalid = false, describedBy, testId, signInNext }: DistrictPickerProps): ReactElement {
   const districts = useFieldWorkerDistricts(pariwarId);
   const selectId = useId();
   const typedId = useId();
@@ -48,7 +50,7 @@ export function DistrictPicker({ pariwarId, value, onChange, allowAll = false, i
   // What the page was last told from the typed field: a blur with nothing new typed (a Tab through the field) must not clear
   // a district the admin chose from the select.
   const committed = useRef('');
-  useSignInRedirect(districts.isError && needsSignIn(districts.error));
+  useSignInRedirect(districts.isError && needsSignIn(districts.error), signInNext);
   const list = districts.data?.districts ?? [];
   const truncated = districts.data?.districts_truncated === true;
   const listed = value !== null && list.includes(value);

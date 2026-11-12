@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from 'react';
 import { attemptKey, useFieldWorkerMoveRequestAct, type AttemptKey } from '../../api/hooks.js';
 import { refusalLabel, requestGuidance, type Guidance, type RequestAct } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
+import { fieldWorkerRequestsPath } from '../../routes/login-next.js';
 import { useSignInRedirect } from './sign-in.js';
 
 export type ListAct = Exclude<RequestAct, 'ask'>;
@@ -46,7 +47,7 @@ export function MoveRequestActions({
   const selectRef = useRef<HTMLSelectElement>(null);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
-  useSignInRedirect(problem?.signIn === true);
+  useSignInRedirect(problem?.signIn === true, fieldWorkerRequestsPath(pariwarId)); // AD10 — mounted on the Move requests page only
   // The form takes focus when it opens; when it is CANCELLED focus returns to "Refuse" (a success leaves the row, and the page takes focus).
   useEffect(() => {
     if (refusing) {

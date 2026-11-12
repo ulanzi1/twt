@@ -18,6 +18,7 @@ Carried items C1–C2 of Story 13.1g (created ready-for-dev 2026-11-11, story v1
 
 - **C1 — a digest of move-notice emails (13.1g AD8).** 13.1g sends one email per notice row, no batching. Trigger: an officer reports too many emails.
 - **C2 — 13.1d's in-app recipient helpers are looser than 13.1g's Q4 (observed, not planned).** `districtAdminsOf` / `pariwarAdminsOf` (`packages/domain/src/field-worker/notices.ts`) test no `admin_credentials` row, and `pariwarAdminsOf` no `scope_value = pariwar_id::text`; the opener is used unchecked. In-app this is harmless (no login, no read). The email re-checks at send (Q4). Trigger: a notice reader that does not require a login.
+  **2026-11-12 (Story 13.1g dev-story) — BUILT on the story branch (`c59f88d1`, `6c5cc2ac`), NOT landed:** C1 and C2 above stay OPEN as carried (neither is built here, by design). 13.1d C1 below is NOT closed yet — it closes item by item (the story's AD12 map) only when this code LANDS (Task 8); RP-D1 is not touched (13.1g changes no notices contract).
 
 ## Deferred from: story 13-1d-field-worker-move-requests-and-notices (create-story, 2026-11-08)
 

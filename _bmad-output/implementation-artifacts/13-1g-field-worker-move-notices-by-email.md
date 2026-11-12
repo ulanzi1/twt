@@ -28,7 +28,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1g: The District Admins Are Told of Each Field Worker Move Request, Answer, Escalation and Move by Email - Naming No One `[CONSUMER]`
 
-Status: in-progress
+Status: review
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -592,31 +592,31 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
     design, the held run's alarm is the signal, and the console still has every notice. ⛔ a new row.
   - [x] 0.6 DONE 2026-11-12: a DECIDED note under Story 13.1g. Annotate `epics.md` Story 13.1g (what was decided, where) - annotate, never rewrite.
 
-- [ ] **Task 1 - The table (AC: 2; I2)**
-  - [ ] 1.1 Migration `0206_field-worker-notice-emails.sql` (AD2; copy 0187's statements, renamed - ⚠ the INSERT grant is AD2's, NOT 0187's;
+- [x] **Task 1 - The table (AC: 2; I2)**
+  - [x] 1.1 Migration `0206_field-worker-notice-emails.sql` (AD2; copy 0187's statements, renamed - ⚠ the INSERT grant is AD2's, NOT 0187's;
     idempotent guards as 0187) + `meta/_journal.json` (idx 206, `when` greater than 1797305400049 -
     [[project_sibling_migration_when_order_shared_db]]). Run on a FRESH container; never regenerate an applied migration
     ([[project_live_db_test_gotchas]]).
-  - [ ] 1.2 `schema/field_worker_notice_emails.ts` (+ the outcome and detail-pattern constants), `schema/field_worker_notices.ts` (the `unique` and
+  - [x] 1.2 `schema/field_worker_notice_emails.ts` (+ the outcome and detail-pattern constants), `schema/field_worker_notices.ts` (the `unique` and
     the `index` only), `schema/index.ts`, `policies/field-worker-notice-emails-rls.ts`, `policies/index.ts`; reuse `FieldWorkerNoticeId`
     (`ids/index.ts:906`) - ⛔ a new brand ([[project_branded_ids_lowercase]]).
-  - [ ] 1.3 Regression spec `packages/domain/tests/integration/rls/field-worker-notice-emails-policy-regression.spec.ts`: tenant policies, the
+  - [x] 1.3 Regression spec `packages/domain/tests/integration/rls/field-worker-notice-emails-policy-regression.spec.ts`: tenant policies, the
     column grants, the trigger's three refusals, the outcome / pattern lockstep, the FK. Each guard RED-proved (mutate, see the assertion fail,
     restore).
-  - [ ] 1.4 13.1d's `field-worker-move-requests-policy-regression.spec.ts` (G19): add `['field_worker_notices_pariwar_notice_uq', 'u']` and
+  - [x] 1.4 13.1d's `field-worker-move-requests-policy-regression.spec.ts` (G19): add `['field_worker_notices_pariwar_notice_uq', 'u']` and
     `field_worker_notices_email_due_idx` to its two exact lists, and pin the UNIQUE's def and the index's columns.
-  - [ ] 1.5 The two replica-mode cleanups (G17) delete `field_worker_notice_emails` for the same Pariwars BEFORE the notices (TR4). ⛔ touch the other
+  - [x] 1.5 The two replica-mode cleanups (G17) delete `field_worker_notice_emails` for the same Pariwars BEFORE the notices (TR4). ⛔ touch the other
     three files.
 
-- [ ] **Task 2 - The domain (AC: 3-5; I2-I7)**
-  - [ ] 2.1 `field-worker/notice-email-eligibility-read.ts`: Q4 (AD5, the SQL in full), Q3's projection discipline, unique aliases (`fn_u`,
+- [x] **Task 2 - The domain (AC: 3-5; I2-I7)**
+  - [x] 2.1 `field-worker/notice-email-eligibility-read.ts`: Q4 (AD5, the SQL in full), Q3's projection discipline, unique aliases (`fn_u`,
     `fn_ac`, `fn_g`).
-  - [ ] 2.2 `field-worker/notice-email.ts`, mirroring `memorial/takedown-approver-email.ts` function by function (G20); constants re-exported from
+  - [x] 2.2 `field-worker/notice-email.ts`, mirroring `memorial/takedown-approver-email.ts` function by function (G20); constants re-exported from
     6.25's; every statement filtered by `pariwar_id` (AD3 (c)): `selectDueFieldWorkerNoticeEmails` (AD3 (b)'s two branches, `allow`, keyset on
     `notice_id`, `clampLimit` cap - `pagination.ts:34`), `beginFieldWorkerNoticeEmail` (AC4's order and results), `finaliseFieldWorkerNoticeEmail`
     (CAS), `noteFieldWorkerNoticeEmailTransient`, `parkHeldFieldWorkerNoticeEmails` (`allow`), `expireExhaustedFieldWorkerNoticeEmails` (`allow`;
     `RETURNING notice_id`), `fieldWorkerNoticeEmailDetail` + `isFieldWorkerNoticeEmailDetail`. Export through the barrel.
-  - [ ] 2.3 Live spec `packages/domain/tests/integration/field-worker/notice-emails.spec.ts`: AC3's selection legs (incl. a seen notice selected and
+  - [x] 2.3 Live spec `packages/domain/tests/integration/field-worker/notice-emails.spec.ts`: AC3's selection legs (incl. a seen notice selected and
     a parked `attempting` row re-selected), every AC4 leg incl. each Q4 negative, the race (two begins, one `begun`), park / re-claim credits only
     parked time, give-up. Notices are written by 13.1d's REAL commands (open / accept / refuse / escalate / a direct move / an ending), ⛔ raw
     inserts, so the recipient set under test is the shipped one. To AGE a notice (the cutoff leg) or a send row (the give-up), backdate in a
@@ -625,32 +625,32 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
     ([[project_test_only_ddl_use_pg_temp_clone]]); seed `attempting` send rows by raw INSERT, as 11b.4a's live test (L409-454). Mind
     [[project_db_clock_ordering_tests_tie]] and [[project_fk_truncate_cascade_deadlock]].
 
-- [ ] **Task 3 - The text (AC: 6; I1, I5)**
-  - [ ] 3.1 `packages/i18n/locales/{en,hi}/field_worker.json`: the 15 FLAT keys + `$comment.notice_email` (agent-authored, Hindi NOT YET
+- [x] **Task 3 - The text (AC: 6; I1, I5)**
+  - [x] 3.1 `packages/i18n/locales/{en,hi}/field_worker.json`: the 15 FLAT keys + `$comment.notice_email` (agent-authored, Hindi NOT YET
     HUMAN-REVIEWED, Row 51 (f); the same English text in both files) - 16 entries per locale. Type the Hindi; scan the added lines for invisible
     characters ([[project_unicode_escapes_written_raw]]).
-  - [ ] 3.2 `apps/jobs/src/scheduler/field-worker-notice-email-templates.ts` (AD4) and `apps/jobs/tests/field-worker-notice-email-templates.test.ts`
+  - [x] 3.2 `apps/jobs/src/scheduler/field-worker-notice-email-templates.ts` (AD4) and `apps/jobs/tests/field-worker-notice-email-templates.test.ts`
     (AC6 and AC7's jobs leg, modelled on `staff-email-client.test.ts:350-400`).
 
-- [ ] **Task 4 - The job (AC: 3-5, 9; I3, I4)**
-  - [ ] 4.1 `apps/jobs/src/scheduler/field-worker-notice-emails.ts`, mirroring `memorial-takedown-approver-emails.ts` (its imports, G21) + 6.25's
+- [x] **Task 4 - The job (AC: 3-5, 9; I3, I4)**
+  - [x] 4.1 `apps/jobs/src/scheduler/field-worker-notice-emails.ts`, mirroring `memorial-takedown-approver-emails.ts` (its imports, G21) + 6.25's
     link / origin / render handling; `pariwarAllowlist` in its deps; queue names in `packages/queue/src/index.ts`; registration in `boot.ts`
     beside 11b.4a's (AD3 (e): the pool); the role guard as step 0 and the `42501` alarm (AD13); its header records AD13's table and that the
     production login cannot run it until Rows 26 / 24 (13.1d's escalation header, CR37, is the model).
-  - [ ] 4.2 Live test `apps/jobs/tests/field-worker-notice-emails-live.test.ts` (AC9: the tick outcomes; one notice per kind through the fake
+  - [x] 4.2 Live test `apps/jobs/tests/field-worker-notice-emails-live.test.ts` (AC9: the tick outcomes; one notice per kind through the fake
     client - the recipient, the subject, the outcome row; a held run then a recovered one re-claiming the parked row; a transient then success;
     `may_have_sent`), with its own `pariwarAllowlist`.
 
-- [ ] **Task 5 - The fences (AC: 8)** - in the SAME commit as Task 2.1 / Task 4.1's new sites (ADR-0043's rule). RED-prove each new plant.
-  - [ ] 5.1 The staff-email fence's three entries and Q4's rules.
-  - [ ] 5.2 `apps/jobs/tests/field-worker-notice-email-no-decision.test.ts` (G22's form) over the four new modules.
+- [x] **Task 5 - The fences (AC: 8)** - in the SAME commit as Task 2.1 / Task 4.1's new sites (ADR-0043's rule). RED-prove each new plant.
+  - [x] 5.1 The staff-email fence's three entries and Q4's rules.
+  - [x] 5.2 `apps/jobs/tests/field-worker-notice-email-no-decision.test.ts` (G22's form) over the four new modules.
 
-- [ ] **Task 6 - The sign-in return (AC: 7)** - AD10: `login-next.ts`, `FieldWorkerMoveRequestsRoute.tsx`, `sign-in.ts` and its five callers on the
+- [x] **Task 6 - The sign-in return (AC: 7)** - AD10: `login-next.ts`, `FieldWorkerMoveRequestsRoute.tsx`, `sign-in.ts` and its five callers on the
   page, the two stale comments; tests per AC7. A browser check of one emailed link signed-out → sign-in → the Move requests page, in the dev Mac's
   Chrome ([[project_agent_chrome_cannot_reach_localhost]], [[project_admin_browser_pass_launcher]]); record whether it ran. Expected, not a defect:
   a District Admin lands on "All districts", whose first read is a 403 shown as "choose a district you manage" (`MoveRequestsPage.tsx:157-160`).
 
-- [ ] **Task 7 - Records + gate (AC: 10)** - Dev Agent Record and File List; `deferred-work.md`; `epics.md` BUILT note; ledger. `ci:local` on a FRESH
+- [x] **Task 7 - Records + gate (AC: 10)** - Dev Agent Record and File List; `deferred-work.md`; `epics.md` BUILT note; ledger. `ci:local` on a FRESH
   container through the push.
 
 - [ ] **Task 8 - At landing (AC: 10)** - ledger; `epics.md` LANDED note; `deferred-work.md` 13.1d C1 "Closed by <sha>" per AD12's map (incl. the
@@ -730,7 +730,23 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1g on worktree`, 2026-11-12.
+
 ### Debug Log References
+
+- Story container `twt-131g-pg` (postgres:16, :5452, DB `twt_dev`), created fresh for Tasks 1-4, RECREATED fresh before `ci:local`. Every live leg
+  ran with `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5452/twt_dev?sslmode=disable` prefixed (the env does not persist between
+  shell calls - one run without it hit a different DB and failed for no reason of this story's; re-run with it, green).
+- 0206 applied by `pnpm db:migrate` (journal idx 206, `when` 1797391800049) and re-applied by `psql -f` with ⛔ error (idempotent).
+- RED proofs (mutate, see it fail, restore byte-identical): 0206 spec - 5 DB mutations (the `notice_id` INSERT grant, the trigger, the
+  skipped CHECK, a `twt_service` grant, the UPDATE policy); 13.1d's spec RED before its lists were updated; domain spec - 10 source mutations
+  (a `seen_at` filter, no attempting branch, `>` for `>=` at the cutoff, Q4 without the login / the PA scope / with a global branch / any
+  district, no parked-time credit, the give-up taking parked rows, the notice read without `pariwar_id`); the fence - each of the three new
+  allowlist entries removed; the no-write fence - one plant per form per module; admin - the allowlist branch, the route's `next`, the
+  DistrictPicker's `next`. The jobs template test's AC7 sign-in leg was RED until Task 6, then green.
+- Fixture slips found and fixed in the TESTS (⛔ the code): the jobs live world had one Gaya District Admin (an open writes ONE notice); a
+  backdate of `opened_at` as `twt_app` aborted the transaction (now as the owner, replica mode); the no-write fence's name match was a substring
+  (`registerFieldWorkerNoticeEmailWorkers` contains `registerFieldWorker`) - now a whole identifier.
 
 ### Completion Notes List
 
@@ -740,8 +756,51 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
 - 2026-11-12 - BigDev answered Q-1, Q-3, Q-4, Q-5: A each; Task 0.2 done: v1.2.
 - 2026-11-12 - BigDev: qualify "every notice" - the Q-2 rule stated once (AD6) with its held-backlog exception, carried word for word: v1.3.
 - 2026-11-12 - BigDev: the grants contradicted the jobs login - AD13 (the privilege table, no production grant and why, the role guard, go-live on Rows 26 / 24): v1.4.
+- 2026-11-12 - dev-story (Opus 5.5), PAUSED at the usage limit after Task 4. Done: Task 0 (commits `ad0244f8` -463, `cae6a377` ADR-0045, `b71915e7` roster, `22dc5123` records); Tasks 1-4 built and green on a fresh container `twt-131g-pg` (:5452): 0206 spec 11/11 (5 mutations RED-proved), 13.1d spec 27/27, domain notice-emails spec 13/13 (10 mutations RED-proved), templates test 14/15 (the ONE red is AC7's sign-in leg - waits for Task 6), jobs live test 13/13. ⛔ COMMITTED: ADR-0043's rule puts the fence entries (Task 5) in the SAME commit as Q4 and the child. Left: Task 5 (fence + no-write fence), Task 6 (sign-in return), Task 7 (records, ci:local), Task 8 (landing).
+- 2026-11-12 - dev-story resumed (Opus 5.5): Task 5 (`c59f88d1`, with Tasks 1-4 - ADR-0043's rule: the fence entries ride the same commit as Q4
+  and the child) and Task 6 (`6c5cc2ac`). What was built: AD2's table; Q4 in its own module (aliases `fn_*`); the domain mirror of 11b.4a with
+  an explicit `pariwar_id` on every child statement; seven templates (link only); the sweep (step 0 the role guard, a `42501` one alarm) and
+  child; the fence widened by THREE entries (Q4's rules factored with Q3's into one checker - Q3's plants still caught), `CONTEXT_ALLOWLIST`
+  untouched (AD12's variance); a no-write fence over the four modules; the sign-in return route. Results: domain 0206 spec 11/11, notice-emails
+  spec 13/13, 13.1d's spec 27/27; jobs templates 15/15, live 13/13, fences 16/16; admin 2168/2168; typecheck and lint clean on the changed
+  packages; i18n parity passed.
+  ⚠ Deviations, stated: (a) `begin` THROWS on a notice missing under the given Pariwar (11b.4a's form) - the child turns it into an alarmed
+  transient, nothing written; AC4's result list is otherwise as written. (b) `parked_at` is cleared when a re-claim's re-check expires the row
+  (0187's mirror leaves it; harmless - the row is final). (c) The race leg (two claims at once) is in the jobs live test, ⛔ the domain spec
+  (it needs committed rows on two connections). (d) The page's components import `fieldWorkerRequestsPath` from `routes/login-next.ts` (one
+  path literal, the jobs test reads it there) - the first module -> routes import in the admin.
+  ⚠ NOT RUN: Task 6's browser check of an emailed link signed-out -> sign-in -> the Move requests page in the dev Mac's Chrome. The unit legs
+  drive the real `LoginPage`, the real `/login` validateSearch and TanStack's real search round trip; a browser pass is still owed (say the word).
+  Every live leg ran as the superuser: behaviour, ⛔ production privilege (AD13) - production sends only after Rows 26 and 24 (b).
+- 2026-11-12 - Task 7: `ci:local` on a FRESH `twt-131g-pg` (DATABASE_URL :5452): 36/37 - every job green incl. `integration-tests`, EXCEPT
+  `test (unit)`: 9 tests in 4 admin files this story never touched (`workplaces-page`, `helpline-claim-page`, `questionnaire-versions-page`,
+  `ground-inspection-discrepancy`) timing out at 5 s under the gate's load ([[project_ci_local_concurrency_oversubscription]]); the 4 alone
+  135/135; the unit job re-run as the script runs it (`env -u DATABASE_URL pnpm turbo run test --concurrency=4`) 37/37 (admin re-ran, 105/105
+  files; 33 tasks replayed from the first run's green results). ⛔ pushed. Task 8 (landing) not started. Status -> review.
 
 ### File List
+
+Governance (Task 0): `.decision-log.md` (`-463`), `docs/adr/ADR-0045-field-worker-move-notice-email.md` (new),
+`docs/knowledge-transfer/adr-index.md`, `docs/launch-gate-inventory/inventory-roster.md`, `_bmad-output/planning-artifacts/epics.md`,
+`_bmad-output/implementation-artifacts/sprint-status.yaml`, `_bmad-output/implementation-artifacts/deferred-work.md`, this story file.
+
+Code and tests (Tasks 1-6):
+- `packages/domain/migrations/0206_field-worker-notice-emails.sql` (new), `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/field_worker_notice_emails.ts` (new), `packages/domain/src/schema/field_worker_notices.ts`, `packages/domain/src/schema/index.ts`
+- `packages/domain/src/policies/field-worker-notice-emails-rls.ts` (new), `packages/domain/src/policies/index.ts`
+- `packages/domain/src/field-worker/notice-email-eligibility-read.ts` (new), `packages/domain/src/field-worker/notice-email.ts` (new), `packages/domain/src/field-worker/index.ts`
+- `packages/domain/tests/integration/rls/field-worker-notice-emails-policy-regression.spec.ts` (new), `packages/domain/tests/integration/rls/field-worker-move-requests-policy-regression.spec.ts`
+- `packages/domain/tests/integration/field-worker/notice-emails.spec.ts` (new)
+- `packages/i18n/locales/en/field_worker.json`, `packages/i18n/locales/hi/field_worker.json`
+- `packages/queue/src/index.ts`
+- `apps/jobs/src/scheduler/field-worker-notice-email-templates.ts` (new), `apps/jobs/src/scheduler/field-worker-notice-emails.ts` (new), `apps/jobs/src/boot.ts`
+- `apps/jobs/tests/field-worker-notice-email-templates.test.ts` (new), `apps/jobs/tests/field-worker-notice-emails-live.test.ts` (new),
+  `apps/jobs/tests/field-worker-notice-email-no-decision.test.ts` (new), `apps/jobs/tests/staff-email-identity-read-fence.test.ts`,
+  `apps/jobs/tests/field-worker-move-request-escalation-live.test.ts`
+- `apps/api/tests/integration/field-worker/_registration-harness.ts`
+- `apps/admin/src/routes/login-next.ts`, `apps/admin/src/routes/FieldWorkerMoveRequestsRoute.tsx`, `apps/admin/src/routes/LoginPage.tsx`, `apps/admin/src/router.tsx`
+- `apps/admin/src/modules/field-workers/sign-in.ts`, `DistrictPicker.tsx`, `MoveRequestsPage.tsx`, `NoticeList.tsx`, `MoveRequestDetail.tsx`, `MoveRequestActions.tsx`
+- `apps/admin/tests/login-return-path.test.tsx`, `apps/admin/tests/field-worker-move-requests.test.tsx`
 
 ## Change Log
 
@@ -752,3 +811,4 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
 | 2026-11-12 | 1.2 | Q-1, Q-3, Q-4, Q-5 ANSWERED A by BigDev (Q-2 B at v1.1); Task 0.2 done; ASKs, section 0, AD4 / AD7 / AD9 and STATUS updated; no AC or Task changes (each A is the AD as written). Next: Task 0.0 (records commit, on BigDev's word), then 0.1. |
 | 2026-11-12 | 1.3 | At BigDev's word, "every notice" QUALIFIED: AD6 is now THE Q-2 RULE - every eligible notice is emailed, seen or not, moved on or not, EXCEPT notices that expire under the held-backlog cutoff ((i) no email row by the cutoff - never emailed; (ii) a send still `attempting` 3 IST days on - given up). The rule and its exception carried word for word into the one-paragraph summary, Policy meaning, the sources table, section 0 rows 5-6, AD1, AD4, Q-2, AC1, AC3 (both exceptions legged), Tasks 0.3-0.5 and TR5. |
 | 2026-11-12 | 1.4 | At BigDev's word, the DATABASE-PERMISSION contradiction fixed: G3 / AD2 / AD3 (c) said the jobs child does what only `twt_app` is granted. NEW AD13 (the steps' privilege table; ⛔ a production grant here - Q2 / Q4 are identity reads inside Row 24, Row 26 owns the posture; the `twt_app` grants serve the regression spec and Row 26's RLS-bound posture; the code right under both postures; `canReadAcrossPariwars` as step 0 and the `42501` alarm; go-live on Rows 26 and 24 (b), dated lines there) and G23; AD1 / AC9 / Tasks 0.3, 0.5, 4.1 / TR7 updated. |
+| 2026-11-12 | 1.5 | dev-story: Tasks 0-7 done, Status review (governance `ad0244f8`, `cae6a377`, `b71915e7`, `22dc5123`; code `c59f88d1`, `6c5cc2ac`); Dev Agent Record, File List. |

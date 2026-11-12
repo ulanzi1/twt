@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { encryption, fieldWorker, ids, rbac, withPariwarScope } from '@twt/domain';
 import type { JobEnvelope } from '@twt/queue';
 import pg from 'pg';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { buildJobsEncryptionDeps } from '../src/deps.js';
 import { ClaimCorrectionTransientError } from '../src/scheduler/claim-correction-reminders.js';
@@ -33,6 +33,17 @@ const enc = buildJobsEncryptionDeps('field-worker-notice-email-live-pepper');
 
 // The REAL selector, unless a leg injects a fault into it (the `42501` leg).
 const hook = vi.hoisted(() => ({ selectFault: null as null | Error }));
+const renderSwitch = vi.hoisted(() => ({ fail: false }));
+vi.mock('../src/scheduler/field-worker-notice-email-templates.js', async (importActual) => {
+  const actual = await importActual<typeof import('../src/scheduler/field-worker-notice-email-templates.js')>();
+  return {
+    ...actual,
+    renderFieldWorkerNoticeEmail: (...args: Parameters<typeof actual.renderFieldWorkerNoticeEmail>) => {
+      if (renderSwitch.fail) throw new Error('render failed (test switch)');
+      return actual.renderFieldWorkerNoticeEmail(...args);
+    },
+  };
+});
 vi.mock('@twt/domain', async (importActual) => {
   const actual = await importActual<typeof import('@twt/domain')>();
   return {
@@ -53,6 +64,10 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
   beforeAll(() => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 8, ssl: false, connectionTimeoutMillis: 5000 });
     pool.on('error', (err) => console.error('[field-worker-notice-emails-live] idle client error:', err.message));
+  });
+  afterEach(() => {
+    renderSwitch.fail = false;
+    hook.selectFault = null;
   });
   afterAll(async () => {
     const c = await pool.connect();
@@ -236,6 +251,20 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
       )
       .then((r) => r.rows[0]);
   const envelope = (pariwarId: string, noticeId: string): JobEnvelope<FieldWorkerNoticeEmailPayload> => ({ pariwarId, requestId: 'r', actorId: null, traceId: 't', payload: { noticeId } });
+  /** Inject a query fault on a real scoped connection; all other SQL, including rollback and the transient note, still runs. */
+  const withQueryFault = (fault: (text: string) => Error | null): pg.Pool =>
+    ({
+      connect: async () => {
+        const client = await pool.connect();
+        return {
+          query: (statement: string | pg.QueryConfig, values?: unknown[]) => {
+            const error = fault(typeof statement === 'string' ? statement : statement.text);
+            return error === null ? client.query(statement, values) : Promise.reject(error);
+          },
+          release: () => client.release(),
+        };
+      },
+    }) as unknown as pg.Pool;
   /** An `attempting` send row seeded by raw INSERT (11b.4a's form), claimed `claimedMinutesAgo`, aging from `agingMinutesAgo`. */
   const seedAttempting = (pid: string, noticeId: string, claimedMinutesAgo: number, agingMinutesAgo = claimedMinutesAgo) =>
     pool.query(
@@ -368,6 +397,121 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
     // The other notice of that act is fresh and still sent; the given-up one never is.
     for (const e of [...h2.enqueued]) await runFieldWorkerNoticeEmailChild(h2.deps, e.data, randomUUID());
     expect(h2.client.sent.map((m) => m.reference)).not.toContain(s!.notice_id);
+  });
+
+  it.each(['queued', 'rolled_back', 'lock_wait'])('CR1 — a queued first claim crossing midnight is never sent (%s)', async (delay) => {
+    const w = await world();
+    await w.open(await w.worker());
+    const [n] = await notices(w.pid);
+    const dbNow = (await pool.query<{ n: Date }>('SELECT clock_timestamp() AS n')).rows[0]!.n;
+    const floor = fieldWorker.fieldWorkerNoticeEmailReclaimCutoff(dbNow);
+    let at = new Date(floor.getTime() + 3 * 24 * 60 * MIN - MIN); // 23:59 IST today
+    await asOwner('UPDATE field_worker_notices SET created_at = $2 WHERE notice_id = $1', [n!.notice_id, new Date(floor.getTime() + MIN)]);
+    const h = harness([w.pid], { now: () => at });
+    await sweep(h);
+    const queued = h.enqueued.find((e) => e.data.payload.noticeId === n!.notice_id)!;
+    expect(queued).toBeDefined();
+    const jobId = randomUUID();
+    if (delay === 'rolled_back') {
+      const faultPool = withQueryFault((text) => text === 'COMMIT' ? new Error('injected claiming commit failure') : null);
+      await expect(runFieldWorkerNoticeEmailChild({ ...h.deps, pool: faultPool }, queued.data, jobId)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    }
+    expect(await emailRow(n!.notice_id)).toBeUndefined(); // including the rolled-back INSERT
+    const afterMidnight = new Date(at.getTime() + 2 * MIN);
+    const lateDeps = delay === 'lock_wait'
+      ? { ...h.deps, pool: withQueryFault((text) => {
+        // Simulate midnight passing while the advisory-lock query is in flight, before the notice is read.
+        if (text.includes('pg_advisory_xact_lock')) at = afterMidnight;
+        return null;
+      }) }
+      : h.deps;
+    if (delay !== 'lock_wait') at = afterMidnight; // 00:01 IST tomorrow: the floor advanced
+    const due = await fieldWorker.selectDueFieldWorkerNoticeEmails(pool, { after: null, limit: 100, now: afterMidnight, allow: [w.pid] });
+    expect(due.due.some((d) => d.noticeId === n!.notice_id)).toBe(false);
+    expect(await runFieldWorkerNoticeEmailChild(lateDeps, queued.data, jobId)).toEqual({ status: 'skipped', reason: 'past_cutoff' });
+    expect(await emailRow(n!.notice_id)).toBeUndefined();
+    expect(h.client.sent).toEqual([]);
+  });
+
+  it('CR2 — Q2 permission denial alarms with the wrapped SQLSTATE and retries; an ordinary read blip stays transient', async () => {
+    const w = await world();
+    await w.open(await w.worker());
+    const [n] = await notices(w.pid);
+    let faultCode: string | null = '42501';
+    let reads = 0;
+    const faultPool = withQueryFault((text) => {
+      if (!text.includes('se_q2.email_ciphertext')) return null;
+      reads += 1;
+      return faultCode === null ? null : Object.assign(new Error('injected Q2 fault'), { code: faultCode });
+    });
+    const h = harness([w.pid], { pool: faultPool });
+    const jobId = randomUUID();
+    await expect(runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(reads).toBe(1); // real Q2 reached, after a committed claim
+    expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'attempting', detail: 'transient:read_failed', attempt_count: 1 });
+    expect(h.client.sent).toEqual([]);
+    expect(h.alarms).toEqual([expect.stringContaining('code:42501')]);
+    expect(h.alarms.join(' ')).not.toContain('injected Q2 fault');
+    // Drizzle wraps the real driver error in `cause`; this leg exercises that path without mocking Q2.
+    faultCode = '08006';
+    await expect(runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+    expect(h.alarms).toHaveLength(1);
+    expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'attempting', detail: 'transient:read_failed', attempt_count: 2 });
+    faultCode = null;
+    expect(await runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 3, may_have_sent: false });
+    expect(h.client.sent).toHaveLength(1);
+  });
+
+  it('CR3 — decrypt and render faults stay attempting, do not send, alarm once per fault, and recover on the same job', async () => {
+    const w = await world();
+    await w.open(await w.worker());
+    const [n] = await notices(w.pid);
+    const ciphertext = (await pool.query<{ email_ciphertext: string }>('SELECT email_ciphertext FROM admin_credentials WHERE user_id = $1', [n!.recipient_user_id])).rows[0]!.email_ciphertext;
+    await pool.query('UPDATE admin_credentials SET email_ciphertext = $2 WHERE user_id = $1', [n!.recipient_user_id, 'not-an-envelope']);
+    const h = harness([w.pid]);
+    const jobId = randomUUID();
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      await expect(runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+      expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'attempting', detail: 'transient:decrypt_failed', attempt_count: attempt, may_have_sent: false });
+      expect(h.client.sent).toEqual([]);
+      expect(h.alarms).toEqual([expect.stringContaining('transient:decrypt_failed')]);
+    }
+    await pool.query('UPDATE admin_credentials SET email_ciphertext = $2 WHERE user_id = $1', [n!.recipient_user_id, ciphertext]);
+    renderSwitch.fail = true;
+    for (let attempt = 3; attempt <= 4; attempt += 1) {
+      await expect(runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+      expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'attempting', detail: 'transient:render_failed', attempt_count: attempt, may_have_sent: false });
+      expect(h.client.sent).toEqual([]);
+      expect(h.alarms).toEqual([expect.stringContaining('transient:decrypt_failed'), expect.stringContaining('transient:render_failed')]);
+    }
+    renderSwitch.fail = false;
+    expect(await runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 5, may_have_sent: false });
+    expect(h.client.sent).toHaveLength(1);
+    expect(h.alarms).toHaveLength(2);
+  });
+
+  it('CR3 — a provider held fault retries, suppresses identical alarms and alarms a changed fault', async () => {
+    const w = await world();
+    await w.open(await w.worker());
+    const [n] = await notices(w.pid);
+    const h = harness([w.pid]);
+    const jobId = randomUUID();
+    let detail = 'held:AccountSuspendedException';
+    h.client.state.respond = () => ({ kind: 'transient', detail, held: true, mayHaveSent: false });
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      if (attempt === 3) detail = 'held:AccessDeniedException';
+      await expect(runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).rejects.toBeInstanceOf(ClaimCorrectionTransientError);
+      expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'attempting', detail, attempt_count: attempt, may_have_sent: false });
+      expect(h.client.sent).toHaveLength(attempt);
+      expect(h.alarms).toHaveLength(attempt === 3 ? 2 : 1);
+    }
+    expect(h.alarms).toEqual([expect.stringContaining('held:AccountSuspendedException'), expect.stringContaining('held:AccessDeniedException')]);
+    h.client.state.respond = () => ({ kind: 'final', outcome: 'accepted', providerMessageId: 'recovered' });
+    expect(await runFieldWorkerNoticeEmailChild(h.deps, envelope(w.pid, n!.notice_id), jobId)).toEqual({ status: 'sent', outcome: 'accepted' });
+    expect(await emailRow(n!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 4, provider_message_id: 'recovered', may_have_sent: false });
+    expect(h.alarms).toHaveLength(2);
   });
 
   it('a TRANSIENT that may have sent, then success on the SAME job: `may_have_sent`, ONE "may have sent" alarm; a rejection is final', async () => {

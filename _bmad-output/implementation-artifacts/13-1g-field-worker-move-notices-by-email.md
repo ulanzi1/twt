@@ -28,7 +28,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1g: The District Admins Are Told of Each Field Worker Move Request, Answer, Escalation and Move by Email - Naming No One `[CONSUMER]`
 
-Status: review
+Status: done
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -508,11 +508,13 @@ The options are kept as they were put, so `-463` can record what was chosen and 
    hold IS sent.
 4. **AC4 - The claim and its re-check.** Under `SET LOCAL lock_timeout` and `pg_advisory_xact_lock(hashtext('field-worker-notice-email:' ||
    notice_id))` (⛔ `FOR UPDATE` on the notice): read the notice (`notice_id` AND `pariwar_id`); read any email row - a final one ⇒
-   `already_final`; an `attempting` one not ours, not parked and inside the lease ⇒ `held_by_other`; re-check Q4; then a fresh notice inserts
+   `already_final`; an `attempting` one not ours, not parked and inside the lease ⇒ `held_by_other`; **CR1 correction (2026-11-12):** if no
+   email row exists and the notice is before the current cutoff, return `past_cutoff` with no write or send (AD6 exception (i)); read the
+   child's clock after the advisory lock and preserve recovery of existing attempting rows regardless of notice age. Re-check Q4; then a fresh notice inserts
    `skipped` / `skipped:not_eligible` or `attempting` with `ON CONFLICT (notice_id) DO NOTHING` (no row ⇒ `held_by_other`), and an existing
    `attempting` row is re-claimed by compare-and-set (parked-time credit to `aging_since`) or, if Q4 now fails, finished `error` /
    `exhausted:recheck_not_eligible` (result `expired`; the caller alarms "may have sent"). Results `begun | already_final | held_by_other |
-   skipped | expired`; `begun` carries `recipientUserId` and `kind` from the notice. Q4 legs (`skipped:not_eligible`): user `suspended`, user
+   past_cutoff | skipped | expired`; `begun` carries `recipientUserId` and `kind` from the notice. Q4 legs (`skipped:not_eligible`): user `suspended`, user
    `disabled`; no `admin_credentials` row; the district grant revoked; a District Admin of a THIRD district; a Pariwar Admin whose `pariwar` grant's
    `scope_value` names another Pariwar; a Pariwar Admin grant REPLACED by a state-scoped one after the notice; a `super_admin` opener's
    accepted / refused notice. A positive leg per kind's recipient set (written by 13.1d's real commands). A skipped row sends nothing. The
@@ -613,7 +615,8 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
     `fn_ac`, `fn_g`).
   - [x] 2.2 `field-worker/notice-email.ts`, mirroring `memorial/takedown-approver-email.ts` function by function (G20); constants re-exported from
     6.25's; every statement filtered by `pariwar_id` (AD3 (c)): `selectDueFieldWorkerNoticeEmails` (AD3 (b)'s two branches, `allow`, keyset on
-    `notice_id`, `clampLimit` cap - `pagination.ts:34`), `beginFieldWorkerNoticeEmail` (AC4's order and results), `finaliseFieldWorkerNoticeEmail`
+    `notice_id`, `clampLimit` cap - `pagination.ts:34`), `beginFieldWorkerNoticeEmail` (AC4's order and results, including CR1's first-claim
+    cutoff / `past_cutoff` and the clock read after the lock), `finaliseFieldWorkerNoticeEmail`
     (CAS), `noteFieldWorkerNoticeEmailTransient`, `parkHeldFieldWorkerNoticeEmails` (`allow`), `expireExhaustedFieldWorkerNoticeEmails` (`allow`;
     `RETURNING notice_id`), `fieldWorkerNoticeEmailDetail` + `isFieldWorkerNoticeEmailDetail`. Export through the barrel.
   - [x] 2.3 Live spec `packages/domain/tests/integration/field-worker/notice-emails.spec.ts`: AC3's selection legs (incl. a seen notice selected and
@@ -656,6 +659,72 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
 - [ ] **Task 8 - At landing (AC: 10)** - ledger; `epics.md` LANDED note; `deferred-work.md` 13.1d C1 "Closed by <sha>" per AD12's map (incl. the
   three-of-four allowlist variance and (iii)'s narrower form); a dated line ON RP-D1's own entry (L14458): 13.1g landed, changed no notices
   contract - its trigger did not fire, NOT addressed; Row 51 (c) dated line "BUILT, not deployed".
+
+### Review Findings
+
+Code review 2026-11-12 (Codex), full review of `cae6ac65..31f1938e` in this worktree: 45 files, 3,987 additions / 48 deletions.
+All three independent layers completed (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Deduplicated result: **0 decision-needed,
+3 patch, 0 defer, 0 dismissed**. These are engineering corrections; no Panel question is needed. BigDev selected option 1 (apply every
+patch). All three findings are resolved below; the application edits are limited to the claim and the jobs child, with their regression tests.
+
+- [x] [Review][Patch] **CR1 / P2 - Re-check the cutoff before a queued child's FIRST claim**
+  [packages/domain/src/field-worker/notice-email.ts:289]. The sweep alone checks the notice's age. `beginFieldWorkerNoticeEmail` does not
+  read `created_at`, so a job queued before midnight IST can first execute (or retry a failed claiming transaction) after the cutoff
+  advances, insert its first email row and send an expired notice. This violates AD6 exception (i) / TR5: no email row by the cutoff means
+  intentionally never emailed. **Live reproduction:** enqueue at 23:59 IST, advance the injected clock to 00:01, prove a fresh selector
+  excludes the notice and no email row exists, then deliver the saved envelope: one fake-provider call and an `accepted` row result.
+  Check the current cutoff under the notice lock only when no email row exists; leave recovery of existing attempting / parked rows
+  intact. Add a delayed-child regression across midnight, including a first-claim retry after a rolled-back claim.
+  **Resolved 2026-11-12:** the notice read computes `within_backlog` in SQL; a first claim outside it returns `past_cutoff` without a row
+  or a send. The child passes a clock read after the advisory lock, so a lock wait cannot preserve yesterday's cutoff. The exact-cutoff
+  positive, a notice one microsecond before it, existing parked-row recovery, queued / rolled-back-claim / lock-wait midnight cases pass.
+- [x] [Review][Patch] **CR2 / P2 - Preserve and alarm a Q2 permission failure**
+  [apps/jobs/src/scheduler/field-worker-notice-emails.ts:340]. The address-read catch discards the error and calls `preCall('read_failed')`;
+  that path sets `held: false`, so the successful transient note produces no operator alarm. A login able to claim and run Q4 but denied
+  SELECT on `email_ciphertext` silently retries a persistent grant fault until eventual exhaustion. This violates AD13's promise that a
+  child's SQLSTATE 42501 alarms and retries. **Reproduction:** inject 42501 only at the real Q2 query, allow the claim and transient note,
+  and observe `ClaimCorrectionTransientError`, an `attempting` row with `transient:read_failed`, zero provider calls and `alarms: []`.
+  Retain the fault class (including a wrapped database cause if applicable), emit the required `code:42501` alarm and preserve the retry;
+  test this post-claim failure explicitly.
+  **Resolved 2026-11-12:** `faultClass` follows a cycle-guarded cause chain; Q2 permission denial emits a `code:42501` alarm and retains the
+  existing `transient:read_failed` retry. A fault injected at the actual Q2 driver query (wrapped by real Drizzle) proves the alarm and
+  persisted attempt; an ordinary `08006` read failure still retries without a permission alarm, and recovery sends once on the same job.
+- [x] [Review][Patch] **CR3 / P2 - Add AC5's child-level held-fault and render/decrypt failure tests**
+  [apps/jobs/tests/field-worker-notice-emails-live.test.ts:373]. The existing transient test injects only `held: false` / `transient:timeout`.
+  No child test injects `render_failed`, `decrypt_failed` or a provider result with `held: true`; the renderer-only throw test does not
+  exercise persistence, retry or alarms. AC5 explicitly requires the render-failure transient and an alarm once per distinct held fault.
+  Add child-level legs that prove the row remains `attempting`, the expected detail is recorded, pg-boss receives a transient error,
+  decrypt/render failures do not reach the provider, repeated identical held faults do not repeat the alarm, and a changed fault alarms.
+  **Resolved 2026-11-12:** child-level tests cover real decrypt failure, an injected renderer crash, repeated identical and changed faults,
+  provider `held: true`, persisted details / attempt counts / `may_have_sent`, transient throws, suppressed duplicate alarms, and recovery
+  on the same job. Decrypt / render failures make zero provider calls; provider-held attempts do reach the fake provider.
+
+Verification: **137 existing focused tests passed**: jobs templates / no-write fence / identity-read fence 23; admin sign-in-return /
+Move requests 77; domain notice-email / policy regression 24; jobs live sweep / child 13. Live tests used only the story's existing
+`twt-131g-pg` on port 5452 (the test superuser, behaviour rather than production privilege). Initial sandbox connection failures were
+rerun with authorized local access. Two additional expected-behaviour assertions in a temporary scratch suite are RED for CR1 and CR2;
+temporary reproductions are in `/private/tmp/twt-13-1g-review/`, outside the repository. The Q2 reproduction injects a database fault;
+it does not attest a production login's privileges. The existing disclosed browser check remains unrun.
+
+Fix verification (after BigDev's option 1): **66 affected tests passed** — jobs live suite 19 (six new cases; the two queued / rolled-back
+cutoff cases and the Q2 permission case were RED before the fixes), domain notice-email / RLS suites 24, jobs templates / source fences 23.
+Both affected packages typecheck; ESLint passes on the four changed code/test files; `git diff --check` passes. The final jobs suite also
+proves midnight during the lock-query wait. Used the existing isolated story database on port 5452; no production-privilege claim, browser
+run, fresh-container full `ci:local`, commit, push, landing or deployment is attested by this fix pass. The prior full-gate record below
+describes the earlier implementation run. Review status is `done`; landing Task 8 and the disclosed browser check remain outstanding.
+
+Load-bearing-invariant lens (untouched families omitted):
+
+| Family | Verdict / evidence |
+|---|---|
+| 1 - state guards | **covered-by-test**: CR1 boundary / midnight tests and domain first-claim cutoff assertions; final-row guards in `notice-emails.spec.ts` and policy regression case (j). |
+| 2 - concurrency / redelivery | **covered-by-test**: CR1 queued / rolled-back / lock-wait tests, parked-row recovery and jobs live `the race: two children for ONE notice at once`. |
+| 3 - tenant / actor boundaries | **covered-by-test**: domain `I7 / G18`, jobs `I7`, and Q4 negatives for status, credentials and scope. |
+| 5 - DB backstops | **covered-by-test**: policy regression cases (a)-(j), including FORCE RLS, grants, FK, uniqueness, CHECKs and trigger guards. |
+| 6 - projection / PII | **covered-by-construction / test**: explicit ID-only selector, boolean Q4, link-only template; template smuggling and all-kinds jobs tests. |
+| 9 - deliberate bypasses | **covered-by-construction**: cross-tenant selector / park / expiry document rationale and re-examination triggers; child predicates by Pariwar. |
+| 10 - closure honesty | **covered-by-construction**: records disclose the browser gap, production blockers and landing work, and distinguish built from deployed. |
+| 13 - accessibility | **covered-by-construction**: component edits carry only the sign-in return path; existing announced redirect state remains. |
 
 ## Dev Notes
 
@@ -812,3 +881,4 @@ Code and tests (Tasks 1-6):
 | 2026-11-12 | 1.3 | At BigDev's word, "every notice" QUALIFIED: AD6 is now THE Q-2 RULE - every eligible notice is emailed, seen or not, moved on or not, EXCEPT notices that expire under the held-backlog cutoff ((i) no email row by the cutoff - never emailed; (ii) a send still `attempting` 3 IST days on - given up). The rule and its exception carried word for word into the one-paragraph summary, Policy meaning, the sources table, section 0 rows 5-6, AD1, AD4, Q-2, AC1, AC3 (both exceptions legged), Tasks 0.3-0.5 and TR5. |
 | 2026-11-12 | 1.4 | At BigDev's word, the DATABASE-PERMISSION contradiction fixed: G3 / AD2 / AD3 (c) said the jobs child does what only `twt_app` is granted. NEW AD13 (the steps' privilege table; ⛔ a production grant here - Q2 / Q4 are identity reads inside Row 24, Row 26 owns the posture; the `twt_app` grants serve the regression spec and Row 26's RLS-bound posture; the code right under both postures; `canReadAcrossPariwars` as step 0 and the `42501` alarm; go-live on Rows 26 and 24 (b), dated lines there) and G23; AD1 / AC9 / Tasks 0.3, 0.5, 4.1 / TR7 updated. |
 | 2026-11-12 | 1.5 | dev-story: Tasks 0-7 done, Status review (governance `ad0244f8`, `cae6a377`, `b71915e7`, `22dc5123`; code `c59f88d1`, `6c5cc2ac`); Dev Agent Record, File List. |
+| 2026-11-12 | 1.6 | Codex three-layer code review at `31f1938e`; BigDev option 1: CR1-CR3 fixed and checked off. First-claim cutoff under the lock (clock read after waiting), Q2 wrapped-42501 alarm, six new child failure/boundary cases and stronger domain boundary/recovery assertions. Affected tests 66/66; domain/jobs typechecks and changed-file lint pass. Status done; browser check and landing remain disclosed. Uncommitted; no push or deployment. |

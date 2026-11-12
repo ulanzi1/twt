@@ -213,6 +213,10 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (domain, li
         await c.query(`UPDATE field_worker_notices SET created_at = $2::timestamptz WHERE notice_id = $1`, [b!.notice_id, cutoff]);
       });
       expect((await due()).map((d) => d.noticeId)).toEqual([b!.notice_id]);
+      // CR1: the claim itself also enforces the floor (including the exact cutoff boundary), even for an already queued child.
+      expect(await begin(a!.notice_id)).toEqual({ kind: 'past_cutoff' });
+      expect(await emailRow(c, a!.notice_id)).toBeUndefined();
+      expect((await begin(b!.notice_id)).kind).toBe('begun');
       // The cutoff is 00:00 IST of (today − 2): a notice ONE day old is still due.
       expect(cutoff.getTime()).toBeLessThan(now.getTime() - 2 * 24 * 3600 * 1000 + 1);
       expect(cutoff.getTime()).toBeGreaterThan(now.getTime() - 3 * 24 * 3600 * 1000);
@@ -234,6 +238,8 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (domain, li
       );
       // Another Pariwar's notices are out of an allow-list that does not name it.
       expect(await due({ allow: [randomUUID()] })).toEqual([]);
+      // CR1: an existing parked row is still recoverable even when its notice has aged out of the first-claim window.
+      expect(await begin(a!.notice_id, 'job-recovered')).toMatchObject({ kind: 'begun', attemptCount: 2 });
     });
   });
 

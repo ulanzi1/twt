@@ -257,6 +257,8 @@ export type BeginFieldWorkerNoticeEmailResult =
     }
   | { readonly kind: 'already_final' }
   | { readonly kind: 'held_by_other' }
+  /** No email row exists and the notice has expired under the backlog cutoff — nothing written or sent (AD6 exception (i)). */
+  | { readonly kind: 'past_cutoff' }
   /** A FIRST claim whose recipient is ⛔ eligible (Q4) — a `skipped` row written; nothing sent. */
   | { readonly kind: 'skipped' }
   /** An existing `attempting` row finished `error` by a failed re-check — the caller ALWAYS alarms "may have sent". */
@@ -277,17 +279,20 @@ interface NoticeEmailRow {
  */
 export async function beginFieldWorkerNoticeEmail(
   client: pg.PoolClient,
-  input: { readonly pariwarId: PariwarId; readonly noticeId: string; readonly jobId: string; readonly now: Date },
+  input: { readonly pariwarId: PariwarId; readonly noticeId: string; readonly jobId: string; readonly now: Date | (() => Date) },
 ): Promise<BeginFieldWorkerNoticeEmailResult> {
-  const { pariwarId, jobId, now } = input;
+  const { pariwarId, jobId } = input;
   const noticeId = String(input.noticeId).toLowerCase() as FieldWorkerNoticeId;
   await client.query(`SET LOCAL lock_timeout = '${FIELD_WORKER_NOTICE_EMAIL_LOCK_TIMEOUT}'`);
   await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`field-worker-notice-email:${noticeId}`]);
+  // CR1: the child's clock is read AFTER waiting for the lock, which may itself cross midnight IST. Dates remain useful in domain tests.
+  const now = typeof input.now === 'function' ? input.now() : input.now;
   // The notice — by id AND Pariwar (I7), ⛔ `FOR UPDATE` (TR3). Only what the re-check and the template need.
   const notice = (
-    await client.query<{ recipient_user_id: string; kind: FieldWorkerNoticeKind; from_district: string; to_district: string }>(
-      `SELECT recipient_user_id, kind, from_district, to_district FROM field_worker_notices WHERE pariwar_id = $1 AND notice_id = $2`,
-      [pariwarId, noticeId],
+    await client.query<{ recipient_user_id: string; kind: FieldWorkerNoticeKind; from_district: string; to_district: string; within_backlog: boolean }>(
+      `SELECT recipient_user_id, kind, from_district, to_district, created_at >= $3::timestamptz AS within_backlog
+         FROM field_worker_notices WHERE pariwar_id = $1 AND notice_id = $2`,
+      [pariwarId, noticeId, fieldWorkerNoticeEmailReclaimCutoff(now)],
     )
   ).rows[0];
   if (!notice) throw new Error(`[field-worker-notice-email] notice ${noticeId} is missing under Pariwar ${pariwarId}`);
@@ -299,6 +304,8 @@ export async function beginFieldWorkerNoticeEmail(
     )
   ).rows[0];
   if (existing && existing.outcome !== 'attempting') return { kind: 'already_final' };
+  // A queued envelope is not a claim. Re-check the floor before a FIRST row, while existing attempts retain park / retry recovery.
+  if (!existing && !notice.within_backlog) return { kind: 'past_cutoff' };
   if (existing) {
     const ownRetry = existing.claimed_by_job === jobId;
     const parked = existing.claimed_by_job === FIELD_WORKER_NOTICE_EMAIL_PARKED_BY;

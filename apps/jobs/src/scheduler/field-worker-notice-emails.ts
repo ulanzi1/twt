@@ -93,9 +93,15 @@ function sampleIds(list: readonly string[]): string {
 
 /** The CLASS of a thrown error — a SQLSTATE (`code:42501`), else its name (13.1d's escalation sweep, CR33 / CR37). */
 function faultClass(err: unknown): string {
-  const e = err as { code?: unknown; sqlstate?: unknown } | null | undefined;
-  for (const c of [e?.code, e?.sqlstate]) {
-    if (typeof c === 'string' && /^[A-Z0-9_]{3,24}$/.test(c)) return `code:${c}`;
+  // Drizzle wraps driver failures in `cause`. Read only a validated code; never include SQL, parameters or an error message in an alarm.
+  const seen = new Set<unknown>();
+  for (let current = err; typeof current === 'object' && current !== null && !seen.has(current);) {
+    seen.add(current);
+    const e = current as { code?: unknown; sqlstate?: unknown; cause?: unknown };
+    for (const c of [e.code, e.sqlstate]) {
+      if (typeof c === 'string' && /^[A-Z0-9_]{3,24}$/.test(c)) return `code:${c}`;
+    }
+    current = e.cause;
   }
   return err instanceof Error ? err.name : typeof err;
 }
@@ -252,7 +258,7 @@ export type FieldWorkerNoticeEmailChildResult =
   | { readonly status: 'sent'; readonly outcome: 'accepted' | 'rejected' }
   | { readonly status: 'error'; readonly detail: string }
   | { readonly status: 'held_config'; readonly reason: string }
-  | { readonly status: 'skipped'; readonly reason: 'already_final' | 'held_by_other' | 'not_eligible' | 'recheck_failed' }
+  | { readonly status: 'skipped'; readonly reason: 'already_final' | 'held_by_other' | 'past_cutoff' | 'not_eligible' | 'recheck_failed' }
   | { readonly status: 'noop'; readonly reason: string };
 
 /**
@@ -288,14 +294,14 @@ export async function runFieldWorkerNoticeEmailChild(
   let begun: fieldWorker.BeginFieldWorkerNoticeEmailResult;
   try {
     begun = await withPariwarScope(deps.pool, pariwarId, (_db: Db, client: pg.PoolClient) =>
-      fieldWorker.beginFieldWorkerNoticeEmail(client, { pariwarId, noticeId: p.noticeId, jobId, now: clock() }),
+      fieldWorker.beginFieldWorkerNoticeEmail(client, { pariwarId, noticeId: p.noticeId, jobId, now: clock }),
     );
   } catch (err) {
     // The transaction rolled back — nothing written. A `42501` here is the production login before Row 26 (AD13).
     alarm(`${ALARM}: the claim of the ${tag} failed (${faultClass(err)}); ⛔ nothing written, pg-boss retries it`);
     throw new ClaimCorrectionTransientError(`${ALARM}: claim failed ${faultClass(err)} for notice ${p.noticeId}`);
   }
-  if (begun.kind === 'already_final' || begun.kind === 'held_by_other') return { status: 'skipped', reason: begun.kind };
+  if (begun.kind === 'already_final' || begun.kind === 'held_by_other' || begun.kind === 'past_cutoff') return { status: 'skipped', reason: begun.kind };
   if (begun.kind === 'skipped') return { status: 'skipped', reason: 'not_eligible' };
   if (begun.kind === 'expired') {
     alarm(`${ALARM}: the ${tag} — the recipient is no longer eligible after an attempt was claimed; recorded 'error' (${begun.detail}); a prior attempt may have sent`);
@@ -339,7 +345,9 @@ export async function runFieldWorkerNoticeEmailChild(
   let ciphertext: string | null;
   try {
     ciphertext = await inScope((d) => claimDomain.readAdminEmailCiphertext(d, begun.recipientUserId));
-  } catch {
+  } catch (err) {
+    // CR2 / AD13: permission denial is a deployment fault, not an unalarmed DB blip. Preserve the SQLSTATE through Drizzle's wrapper.
+    if (faultClass(err) === 'code:42501') alarm(`${ALARM}: the address read for the ${tag} failed (code:42501); pg-boss retries it (roster Row 24 / 26)`);
     return preCall('read_failed');
   }
   if (ciphertext === null) return noAddress('no_address');

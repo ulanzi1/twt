@@ -37,3 +37,8 @@ export * from './move-request-commands.js';
 // ⛔ The notices' writer (notices.ts) — only the commands write a notice, in the deciding transaction (AD9).
 export { FIELD_WORKER_NOTICE_KINDS, type FieldWorkerNoticeKind } from './notices.js';
 export * from './move-request-read.js';
+// Story 13.1g — the EMAIL of each notice (decision `2026-11-12-463`; ADR-0045): Q4, the recipient re-check (its own module — the
+// staff-email fence scans by file), and the send row's select / begin / finalise / note-transient / park / expire / detail. ⛔ A writer of
+// the notices: the email path never writes `field_worker_notices` (I3).
+export * from './notice-email-eligibility-read.js';
+export * from './notice-email.js';

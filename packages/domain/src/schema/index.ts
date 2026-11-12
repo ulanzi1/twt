@@ -532,3 +532,6 @@ export * from './field_worker_code_sms_sends.js';
 // notice and recipient, channel-neutral; only `seen_at` ever changes). Both tenant-isolated; ids, districts and reason codes only.
 export * from './field_worker_move_requests.js';
 export * from './field_worker_notices.js';
+// Story 13.1g (0206) — the EMAIL of each notice: one send row per notice, EVER (0187's outbox shape keyed on `notice_id`; a finished row
+// is frozen by a guard trigger; ids and a fixed-vocabulary detail only; tenant-isolated; `twt_app` grants only).
+export * from './field_worker_notice_emails.js';

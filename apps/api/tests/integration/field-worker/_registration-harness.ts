@@ -180,6 +180,8 @@ export async function createHarness(): Promise<Harness> {
       const streams = (await c.query<{ id: string }>('SELECT field_worker_id AS id FROM field_workers WHERE pariwar_id = ANY($1)', [createdPariwars])).rows.map((r) => r.id);
       // Story 13.1d — a move request is its OWN stream; its events, its notices and its row go before the workers (replica mode disables the FKs).
       const requestStreams = (await c.query<{ id: string }>('SELECT move_request_id AS id FROM field_worker_move_requests WHERE pariwar_id = ANY($1)', [createdPariwars])).rows.map((r) => r.id);
+      // Story 13.1g — a notice's email row goes FIRST: replica mode disables its FK, so it would outlive the notice for a later sweep to find.
+      await c.query('DELETE FROM field_worker_notice_emails WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM field_worker_notices WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM field_worker_move_requests WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1) AND stream_id = ANY($2)', [createdPariwars, requestStreams]);

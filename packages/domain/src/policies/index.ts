@@ -307,3 +307,6 @@ export * from './field-worker-code-sms-sends-rls.js';
 // ⛔ `FOR ALL`, ⛔ DELETE). The requests' write guard and the notices' seen-only guard (0205's triggers) are ORTHOGONAL.
 export * from './field-worker-move-requests-rls.js';
 export * from './field-worker-notices-rls.js';
+// Story 13.1g (0206) — field_worker_notice_emails tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`, ⛔ DELETE); bind
+// `twt_app` only — the jobs child's guard is its explicit `pariwar_id` predicate (AD3 (c)).
+export * from './field-worker-notice-emails-rls.js';

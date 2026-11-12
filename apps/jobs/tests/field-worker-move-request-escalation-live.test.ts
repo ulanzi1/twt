@@ -47,6 +47,8 @@ describe.skipIf(!hasDatabase)('Story 13.1d — the move-request escalation sweep
       await c.query("SET LOCAL session_replication_role = 'replica'");
       const requests = (await c.query<{ id: string }>('SELECT move_request_id AS id FROM field_worker_move_requests WHERE pariwar_id::text = ANY($1)', [pariwars])).rows.map((r) => r.id);
       const workers = (await c.query<{ id: string }>('SELECT field_worker_id AS id FROM field_workers WHERE pariwar_id::text = ANY($1)', [pariwars])).rows.map((r) => r.id);
+      // Story 13.1g — the notices' email rows first (replica mode disables their FK; an orphan would outlive the notice).
+      await c.query('DELETE FROM field_worker_notice_emails WHERE pariwar_id::text = ANY($1)', [pariwars]);
       await c.query('DELETE FROM field_worker_notices WHERE pariwar_id::text = ANY($1)', [pariwars]);
       await c.query('DELETE FROM field_worker_move_requests WHERE pariwar_id::text = ANY($1)', [pariwars]);
       await c.query('DELETE FROM field_workers WHERE pariwar_id::text = ANY($1)', [pariwars]);

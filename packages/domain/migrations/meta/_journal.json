@@ -1436,6 +1436,13 @@
       "when": 1797305400049,
       "tag": "0205_field-worker-move-requests",
       "breakpoints": true
+    },
+    {
+      "idx": 206,
+      "version": "7",
+      "when": 1797391800049,
+      "tag": "0206_field-worker-notice-emails",
+      "breakpoints": true
     }
   ]
 }

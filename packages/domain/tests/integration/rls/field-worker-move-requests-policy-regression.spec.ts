@@ -562,6 +562,8 @@ describe.skipIf(!hasDatabase)('field_worker_move_requests + field_worker_notices
       expect(con.rows.map((c) => [c.conname, c.contype])).toEqual([
         ['field_worker_notices_districts_check', 'c'],
         ['field_worker_notices_kind_check', 'c'],
+        // Story 13.1g (0206): the target of `field_worker_notice_emails`' composite FK.
+        ['field_worker_notices_pariwar_notice_uq', 'u'],
         ['field_worker_notices_pkey', 'p'],
         ['field_worker_notices_refusal_pair', 'c'],
         ['field_worker_notices_refusal_reason_check', 'c'],
@@ -578,13 +580,23 @@ describe.skipIf(!hasDatabase)('field_worker_move_requests + field_worker_notices
       expect(conDef('field_worker_notices_request_fk')).toBe(
         'FOREIGN KEY (pariwar_id, move_request_id) REFERENCES field_worker_move_requests(pariwar_id, move_request_id)',
       );
+      expect(conDef('field_worker_notices_pariwar_notice_uq')).toBe('UNIQUE (pariwar_id, notice_id)');
       const idx = await client.query<{ indexname: string; def: string; uniq: boolean; pred: string | null }>(
         `SELECT c.relname AS indexname, pg_get_indexdef(i.indexrelid) AS def, i.indisunique AS uniq, pg_get_expr(i.indpred, i.indrelid) AS pred
            FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
           WHERE i.indrelid = 'field_worker_notices'::regclass ORDER BY c.relname`,
       );
       const byName = new Map(idx.rows.map((x) => [x.indexname, x]));
-      expect([...byName.keys()]).toEqual(['field_worker_notices_once_per_act_uq', 'field_worker_notices_pkey', 'field_worker_notices_recipient_idx']);
+      expect([...byName.keys()]).toEqual([
+        // Story 13.1g (0206): the email sweep's due floor, and the composite FK target's backing index.
+        'field_worker_notices_email_due_idx',
+        'field_worker_notices_once_per_act_uq',
+        'field_worker_notices_pariwar_notice_uq',
+        'field_worker_notices_pkey',
+        'field_worker_notices_recipient_idx',
+      ]);
+      expect(normalise(byName.get('field_worker_notices_email_due_idx')!.def).replace(/^.* using btree /, '')).toBe('created_at');
+      expect(byName.get('field_worker_notices_email_due_idx')!.uniq).toBe(false);
       expect(normalise(byName.get('field_worker_notices_recipient_idx')!.def).replace(/^.* using btree /, '')).toBe(
         'pariwar_id, recipient_user_id, created_at desc, notice_id desc',
       );

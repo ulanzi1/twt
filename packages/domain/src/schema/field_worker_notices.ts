@@ -7,7 +7,7 @@
 // the seen mark filter `recipient_user_id = <actor>` in SQL (the scope transaction carries no actor setting).
 
 import { sql } from 'drizzle-orm';
-import { check, foreignKey, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { check, foreignKey, index, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import type { FieldWorkerId, FieldWorkerMoveRequestId, FieldWorkerNoticeId, PariwarId } from '../ids/index.js';
 import { fieldWorkerMoveRequests, type FieldWorkerMoveRefusalReason } from './field_worker_move_requests.js';
@@ -60,6 +60,10 @@ export const fieldWorkerNotices = pgTable(
       foreignColumns: [fieldWorkerMoveRequests.pariwarId, fieldWorkerMoveRequests.moveRequestId],
     }).onDelete('no action'),
     index('field_worker_notices_recipient_idx').on(t.pariwarId, t.recipientUserId, t.createdAt.desc(), t.noticeId.desc()),
+    // Story 13.1g (0206): the target of `field_worker_notice_emails`' composite FK, and the email sweep's due floor (decision `2026-11-12-463`
+    // AD2 / AD3 (b)). Nothing else here changed for the email.
+    unique('field_worker_notices_pariwar_notice_uq').on(t.pariwarId, t.noticeId),
+    index('field_worker_notices_email_due_idx').on(t.createdAt),
     // One notice per request, kind and recipient — the writer merges recipients in memory, this is the DB's backstop (code review CR7). A direct
     // move that superseded no request names none, so it is not covered.
     uniqueIndex('field_worker_notices_once_per_act_uq')

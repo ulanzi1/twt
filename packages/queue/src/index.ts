@@ -577,6 +577,21 @@ export const QUEUE_NAMES = {
    * the Pariwar Admin (`escalated`, actor `system`) — ⛔ ever accepted. A cron tick with an empty payload. Job class C.
    */
   FIELD_WORKER_MOVE_REQUEST_ESCALATION: 'field_worker.move_request_escalation',
+  /**
+   * The field-worker MOVE NOTICE EMAIL sweep (Story 13.1g, `2026-11-12-463` AD3; ADR-0045) — 6.25's / 11b.4a's shape: every 15 minutes
+   * IST, the role guard first (a login that cannot read across Pariwars ⇒ one `rls_bound_role` alarm), then the config check + pre-flight
+   * (a gap enqueues and writes ⛔ nothing — it parks in-flight rows, one end-of-run alarm), the give-up of `attempting` rows three IST days
+   * old, and one FIELD_WORKER_NOTICE_EMAIL_SEND child per due notice: a notice with ⛔ send row created since the cutoff (seen or not —
+   * the Q-2 rule), or an `attempting` row. ⛔ It never writes a notice or a move request. Job class C.
+   */
+  FIELD_WORKER_NOTICE_EMAIL_SWEEP: 'field_worker.notice_email_sweep',
+  /**
+   * ONE move-notice email for one notice (Story 13.1g) — under the notice lock it re-checks the recipient (Q4) and claims the row; AFTER
+   * that commit it reads the address ciphertext (ADR-0040 Q2), decrypts, renders the kind's template (the Move requests link only) and
+   * sends. It throws ONLY on a transient failure. Its `singletonKey` (the notice id) is a LABEL — the table's PRIMARY KEY + the lease are
+   * the dedup. The payload carries ids only, ⛔ never an address. Job class B.
+   */
+  FIELD_WORKER_NOTICE_EMAIL_SEND: 'field_worker.notice_email_send',
 } as const;
 
 /** Union of the registered queue names. */

@@ -155,6 +155,7 @@ import { registerClaimPeerMeshWaReminderWorkers } from './scheduler/claim-peer-m
 import { registerClaimSuspicionNoticeWorkers } from './scheduler/claim-suspicion-notices.js';
 import { registerClaimSuspicionStaffEmailWorkers } from './scheduler/claim-suspicion-staff-emails.js';
 import { registerMemorialTakedownApproverEmailWorkers } from './scheduler/memorial-takedown-approver-emails.js';
+import { registerFieldWorkerNoticeEmailWorkers } from './scheduler/field-worker-notice-emails.js';
 import { registerMemorialTakedownOverdueWorker } from './scheduler/memorial-takedown-overdue.js';
 import { buildStaffEmailClient } from './scheduler/staff-email-config.js';
 import { createConfigShepherdFallbackResolver } from './shepherd-fallback-resolver.js';
@@ -870,6 +871,16 @@ async function main(): Promise<void> {
     // Story 11b.4a (Task 8 — `2026-10-27-412` MP10 (b) / MP11; ADR-0043) — the memorial take-down's APPROVER EMAIL, on the SAME
     // staff email client (its boot alarm was raised once above), and the daily overdue WATCH (MP14 (b) — one `warn` per Pariwar).
     await registerMemorialTakedownApproverEmailWorkers(boss, { pool, encryption: jobsEncryption, staffEmail: staffEmail.client });
+    // Story 13.1g (`2026-11-12-463`; ADR-0045) — the field-worker MOVE NOTICE EMAIL: each District Admin / Pariwar Admin a 13.1d notice
+    // names is emailed once per notice (the Move requests link only), on the SAME staff email client and origin (their boot alarms were
+    // raised once above). ⚠ Its step 0 refuses a login that cannot read across Pariwars, and production SENDS only once roster Rows 26
+    // and 24 (b) give the jobs login its reads (AD13) — until then each tick is one alarm.
+    await registerFieldWorkerNoticeEmailWorkers(boss, {
+      pool,
+      encryption: jobsEncryption,
+      staffEmail: staffEmail.client,
+      adminAppOrigin: process.env['ADMIN_APP_ORIGIN'],
+    });
     await registerMemorialTakedownOverdueWorker(boss, { pool });
 
     // Story 10.5 (Task 5) — the News/Blog scheduled + immediate publish worker. Reuses the SAME

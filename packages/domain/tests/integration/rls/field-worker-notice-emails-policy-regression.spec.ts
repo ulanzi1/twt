@@ -142,6 +142,10 @@ describe.skipIf(!hasDatabase)('0206 — field_worker_notice_emails: RLS, the FK,
       const { client } = getTx();
       const priv = async (role: string, p: string) =>
         (await client.query<{ ok: boolean }>(`SELECT has_table_privilege($1, $2, $3) AS ok`, [role, EMAILS, p])).rows[0]!.ok;
+      // ⚠ `has_table_privilege` is true only for a TABLE-level grant; 0206 grants `twt_app` COLUMN-narrowed INSERT / UPDATE, the very form a later edit
+      // would copy for the jobs role. `has_any_column_privilege` is true for either, so a column-level grant to the jobs role turns this red (R2-2).
+      const anyPriv = async (role: string, p: string) =>
+        (await client.query<{ ok: boolean }>(`SELECT has_any_column_privilege($1::name, $2::text, $3::text) AS ok`, [role, EMAILS, p])).rows[0]!.ok;
       const cols = async (p: string) =>
         (
           await client.query<{ attname: string }>(
@@ -167,7 +171,9 @@ describe.skipIf(!hasDatabase)('0206 — field_worker_notice_emails: RLS, the FK,
         'updated_at',
       ]);
       // AD13 — ⛔ a grant to the jobs role here (Row 26's posture; Row 24 (b)'s identity reads).
-      for (const p of ['SELECT', 'INSERT', 'UPDATE']) expect(await priv('twt_service', p)).toBe(false);
+      for (const p of ['SELECT', 'INSERT', 'UPDATE', 'REFERENCES']) expect(await anyPriv('twt_service', p), `twt_service ${p}`).toBe(false);
+      // DELETE and TRUNCATE exist only as TABLE-level privileges (R5-2): the table is append-only, so the jobs role must hold neither.
+      for (const p of ['DELETE', 'TRUNCATE']) expect(await priv('twt_service', p), `twt_service ${p}`).toBe(false);
     });
 
     it('(d) every CHECK, the FK and the index BY NAME; the outcome CHECK is the TS tuple; the detail CHECKs carry the TS pattern', async () => {

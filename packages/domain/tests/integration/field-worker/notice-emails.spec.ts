@@ -27,6 +27,7 @@ import {
   fieldWorkerNoticeEmailReclaimCutoff,
   finaliseFieldWorkerNoticeEmail,
   isFieldWorkerNoticeEmailDetail,
+  noteFieldWorkerNoticeEmailTransient,
   parkHeldFieldWorkerNoticeEmails,
   selectDueFieldWorkerNoticeEmails,
 } from '../../../src/field-worker/notice-email.js';
@@ -326,7 +327,7 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (domain, li
       for (const x of all.filter((n) => !negatives.includes(n.recipient_user_id))) expect((await begin(x.notice_id)).kind).toBe('begun');
     });
 
-    it('a `super_admin` opener is ⛔ emailed (⛔ `global` branch) — its accepted notice is `skipped`; the console still has it', async () => {
+    it('a `super_admin` opener is ⛔ emailed (⛔ `global` branch) — its accepted AND its refused notice are `skipped`; the console still has them', async () => {
       const su = await asOwner(c, cast.P, () => officer(c, cast.P, { role: 'super_admin', dimension: 'global', value: null }));
       const authorization = authorize({
         actorId: su,
@@ -340,6 +341,14 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (domain, li
       const accepted = (await noticesOf(c, cast.P)).filter((n) => n.kind === 'move_request_accepted');
       expect(accepted.map((n) => n.recipient_user_id)).toEqual([su]);
       expect(await begin(accepted[0]!.notice_id)).toEqual({ kind: 'skipped' });
+      // R2-3: AC4 lists the REFUSED notice too — the same Q4 path (no `global` branch), a different kind, a second request by the same opener.
+      const refusedWorker = await registerReal(c, cast.P, { district: 'Patna' });
+      const refusedId = await open(c, cast, refusedWorker, { by: su, authorization: authorization! });
+      await refuseFieldWorkerMoveRequest(c, { ...answer(cast, refusedId, cast.daGaya), refusalReason: 'other' });
+      const refused = (await noticesOf(c, cast.P)).filter((n) => n.kind === 'move_request_refused');
+      expect(refused.map((n) => n.recipient_user_id)).toEqual([su]);
+      expect(await begin(refused[0]!.notice_id)).toEqual({ kind: 'skipped' });
+      expect(await emailRow(c, refused[0]!.notice_id)).toMatchObject({ outcome: 'skipped', detail: 'skipped:not_eligible' });
     });
 
     it('the re-check failing on a RE-claim ⇒ `expired` / `error` / `exhausted:recheck_not_eligible`, may_have_sent', async () => {
@@ -350,6 +359,79 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (domain, li
       const later = new Date(now.getTime() + FIELD_WORKER_NOTICE_EMAIL_LEASE_MS + 1000);
       expect(await begin(n.notice_id, 'job-2', later)).toEqual({ kind: 'expired', detail: 'exhausted:recheck_not_eligible' });
       expect(await emailRow(c, n.notice_id)).toMatchObject({ outcome: 'error', detail: 'exhausted:recheck_not_eligible', may_have_sent: true });
+    });
+
+    it('R5-1 — the re-check failing on a same-job RETRY inside the lease ⇒ `expired`, may_have_sent (pg-boss retries the SAME job; ANOTHER job would be `held_by_other`)', async () => {
+      await open(c, cast, worker);
+      const n = (await noticesOf(c, cast.P)).find((x) => x.recipient_user_id === cast.daGaya)!;
+      expect((await begin(n.notice_id, 'job-1')).kind).toBe('begun');
+      await asOwner(c, cast.P, () => c.query(`UPDATE users SET status = 'suspended' WHERE id = $1`, [cast.daGaya]));
+      const soon = new Date(now.getTime() + 60_000); // well inside the 30-minute lease
+      // CONTROL: another job inside the lease is refused before Q4 and writes nothing...
+      expect(await begin(n.notice_id, 'job-2', soon)).toEqual({ kind: 'held_by_other' });
+      expect(await emailRow(c, n.notice_id)).toMatchObject({ outcome: 'attempting', claimed_by_job: 'job-1' });
+      // ...but the SAME job's retry is the holder, so the lapsed recipient finishes the row (the `claimed_by_job = $4` disjunct).
+      expect(await begin(n.notice_id, 'job-1', soon)).toEqual({ kind: 'expired', detail: 'exhausted:recheck_not_eligible' });
+      expect(await emailRow(c, n.notice_id)).toMatchObject({ outcome: 'error', detail: 'exhausted:recheck_not_eligible', may_have_sent: true });
+    });
+
+    // The Q4-fail UPDATE reads the row, runs Q4, THEN writes. `finalise` and the transient note take no advisory lock, so a holder can write in
+    // between. A hook on the Q4 statement (alias `fn_u`, which no earlier statement carries) stands in for that other connection's commit: one
+    // connection, so the plain UPDATE the holder issues is exactly what the next statement would see. It runs `between` once, before Q4.
+    const hookAtQ4 = (between: () => Promise<void>) => {
+      let ran = 0;
+      const hooked = {
+        query: async (text: string, values?: unknown[]) => {
+          if (text.includes('fn_u') && ran === 0) {
+            ran += 1;
+            await between();
+          }
+          return c.query(text, values);
+        },
+      } as unknown as Client;
+      return { hooked, ran: () => ran };
+    };
+
+    it('R2-1 — the re-check failing on a RE-claim does ⛔ force a row whose holder refreshed its lease after the read: `held_by_other`, still `attempting`', async () => {
+      await open(c, cast, worker);
+      const n = (await noticesOf(c, cast.P)).find((x) => x.recipient_user_id === cast.daGaya)!;
+      expect((await begin(n.notice_id)).kind).toBe('begun'); // job-1 holds the row
+      await asOwner(c, cast.P, () => c.query(`UPDATE users SET status = 'suspended' WHERE id = $1`, [cast.daGaya]));
+      const later = new Date(now.getTime() + FIELD_WORKER_NOTICE_EMAIL_LEASE_MS + 1000); // job-1's lease has lapsed, so job-2 MAY take over...
+      // ...but job-1's transient note lands between job-2's read and its UPDATE. The control is the test above: the same set-up without the hook is `expired`.
+      const hook = hookAtQ4(async () => {
+        const noted = await noteFieldWorkerNoticeEmailTransient(bindScopedDb(c), {
+          pariwarId: cast.P,
+          noticeId: n.notice_id,
+          jobId: 'job-1',
+          detail: 'transient:timeout',
+          mayHaveSent: false,
+          now: later,
+        });
+        expect(noted, 'job-1 still holds the row, so its note lands').toBe(1);
+      });
+      expect(await beginFieldWorkerNoticeEmail(hook.hooked, { pariwarId: cast.P, noticeId: n.notice_id, jobId: 'job-2', now: later })).toEqual({ kind: 'held_by_other' });
+      expect(hook.ran(), 'the Q4 statement was reached, so the hook ran between the read and the UPDATE').toBe(1);
+      expect(await emailRow(c, n.notice_id)).toMatchObject({ outcome: 'attempting', detail: 'transient:timeout', claimed_by_job: 'job-1', may_have_sent: false, attempt_count: 1 });
+      // The holder is not stranded: its own finalise still lands.
+      expect(await finaliseFieldWorkerNoticeEmail(bindScopedDb(c), { pariwarId: cast.P, noticeId: n.notice_id, jobId: 'job-1', outcome: 'accepted', providerMessageId: 'm-1' })).toEqual({
+        mayHaveSent: false,
+      });
+    });
+
+    it('R5-3 — the re-check failing on a RE-claim when the holder FINALISED after the read ⇒ `already_final`, the finished row untouched', async () => {
+      await open(c, cast, worker);
+      const n = (await noticesOf(c, cast.P)).find((x) => x.recipient_user_id === cast.daGaya)!;
+      expect((await begin(n.notice_id)).kind).toBe('begun'); // job-1 holds the row
+      await asOwner(c, cast.P, () => c.query(`UPDATE users SET status = 'suspended' WHERE id = $1`, [cast.daGaya]));
+      const later = new Date(now.getTime() + FIELD_WORKER_NOTICE_EMAIL_LEASE_MS + 1000);
+      const hook = hookAtQ4(async () => {
+        const done = await finaliseFieldWorkerNoticeEmail(bindScopedDb(c), { pariwarId: cast.P, noticeId: n.notice_id, jobId: 'job-1', outcome: 'accepted', providerMessageId: 'm-1' });
+        expect(done, 'job-1 still holds the row, so its finalise lands').toEqual({ mayHaveSent: false });
+      });
+      expect(await beginFieldWorkerNoticeEmail(hook.hooked, { pariwarId: cast.P, noticeId: n.notice_id, jobId: 'job-2', now: later })).toEqual({ kind: 'already_final' });
+      expect(hook.ran(), 'the Q4 statement was reached, so the hook ran between the read and the UPDATE').toBe(1);
+      expect(await emailRow(c, n.notice_id)).toMatchObject({ outcome: 'accepted', claimed_by_job: 'job-1', may_have_sent: false });
     });
 
     it('I7 / G18 — as the superuser (RLS off), a notice of Pariwar A claimed with Pariwar B\'s id finds NOTHING and writes nothing', async () => {

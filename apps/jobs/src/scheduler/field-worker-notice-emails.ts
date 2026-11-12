@@ -6,8 +6,8 @@
 //
 // The Panel's `-443` Q1 A: "Both District Admins are told by email and in the admin console, including when the Pariwar Admin moves a
 // worker." The email goes to the notice row's recipient ONLY (I6), re-checked by Q4 under the lock (AD5 — it removes, never adds), and
-// carries ONE variable: the Move requests link (AD4, `field-worker-notice-email-templates.ts`). ⭐ THE Q-2 RULE (`-463`, word for word):
-// every eligible notice is emailed, seen in the console or not, its request moved on or not — EXCEPT a notice that expires under the
+// carries ONE variable: the Move requests link (AD4, `field-worker-notice-email-templates.ts`). ⭐ THE Q-2 RULE (restated here; the verbatim
+// text is in `-463`, ADR-0045 and roster Row 51): every eligible notice is emailed, seen in the console or not, its request moved on or not — EXCEPT a notice that expires under the
 // held-backlog cutoff (3 IST days): ⛔ email row by the cutoff ⇒ NEVER emailed; still `attempting` 3 IST days on ⇒ given up. The
 // console still has every notice.
 // ⭐ ADR-0045: the child reads the address through ADR-0040's Q2 (`readAdminEmailCiphertext`, its THIRD caller) AFTER its claiming commit
@@ -24,10 +24,13 @@
 //     Q2 (child)                             SELECT admin_credentials.email_ciphertext — identity (Row 24)
 // In dev / CI that login is the superuser, so every live test proves BEHAVIOUR, ⛔ production privilege. In production ⛔ login holds
 // these today (0205 / 0206 grant `twt_app` only; BYPASSRLS waives no GRANT): the tick's FIRST step refuses a login that cannot read
-// across Pariwars (ONE `rls_bound_role` alarm), and a `42501` from any step is ONE alarm carrying `code:42501` — sending in production
-// waits for Row 26 (the posture) and Row 24 (b) (Q4 joins Q1 / Q2's jobs-login reads). The 13.1d escalation sweep's header (CR37) is the
-// precedent. ⚠ DELIBERATE (G18): `withPariwarScope` sets `app.pariwar_id` and ⛔ role, so on a BYPASSRLS login RLS waives every child
-// statement — tenant separation rests on the explicit `pariwar_id` predicate of each (`field-worker/notice-email.ts`).
+// across Pariwars (ONE `rls_bound_role` alarm), and a `42501` from the sweep's steps, the claiming transaction or the Q2 read raises an alarm
+// carrying `code:42501` (the sweep's ends the tick; the child's repeats each attempt - R3-W1) (a failed post-claim `finalise` / transient note reaches the worker wrapper's "FAILED unexpectedly" alarm, which
+// names the error class only) — sending in production waits for Row 26 (the posture) and Row 24 (b) (Q4 joins Q1 / Q2's jobs-login
+// reads). The 13.1d escalation sweep's header (CR37) is the precedent. ⚠ DELIBERATE (G18): `withPariwarScope` sets `app.pariwar_id` and
+// ⛔ role, so on a BYPASSRLS login RLS waives every child statement — tenant separation rests on the explicit `pariwar_id` predicate of
+// each (`field-worker/notice-email.ts`). RE-EXAMINE when roster Row 26 chooses the jobs login's posture (an RLS-bound login makes RLS a
+// second wall), or any child statement loses its explicit `pariwar_id` predicate.
 // The shared jobs pool, as 11b.4a: the child holds ⛔ connection while writing on another.
 // The queue names live in `@twt/queue`'s `QUEUE_NAMES` (the registry — DD-3); the constant below is a local alias for them.
 

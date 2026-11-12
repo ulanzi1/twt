@@ -6,8 +6,9 @@
 //
 // ⭐ THE RECIPIENT is the notice row's `recipient_user_id` — ⛔ re-derived (TR2: 13.1d's helpers would email officers appointed after the
 // act). Q4 (`fieldWorkerNoticeEmailEligibleSql`) re-checks it at claim and only REMOVES: ⛔ eligible ⇒ `skipped` / `skipped:not_eligible`
-// at a FIRST claim (nothing was tried), or `error` / `exhausted:recheck_not_eligible` on a RE-claim (a prior attempt may have sent).
-// ⭐ THE Q-2 RULE (AD6, word for word in `-463`): every eligible notice is emailed, seen in the console or not, its request moved on or
+// at a FIRST claim (nothing was tried), or `error` / `exhausted:recheck_not_eligible` on a RE-claim (a prior attempt may have sent) -
+// unless the row is meanwhile held by a live holder (its lease unexpired, another job), which is `held_by_other` and leaves the row alone (R2-1).
+// ⭐ THE Q-2 RULE (AD6; the verbatim text is in `-463`, ADR-0045 and roster Row 51): every eligible notice is emailed, seen in the console or not, its request moved on or
 // not — EXCEPT a notice that expires under the held-backlog cutoff (3 IST days, `suspicionStaffEmailReclaimCutoff`): (i) a notice with
 // ⛔ email row by the cutoff is NEVER emailed; (ii) a send still `attempting` 3 IST days on (parked time not counted) is given up. So the
 // email path ⛔ reads `seen_at` and ⛔ reads the request's state.
@@ -15,7 +16,8 @@
 // mark-seen; `twt_app` holds UPDATE on `seen_at` only anyway).
 // ⚠ DELIBERATE (G18, AD3 (c)): the child runs on the jobs pool inside `withPariwarScope`, which sets `app.pariwar_id` and ⛔ no role — on
 // a BYPASSRLS login RLS does ⛔ not separate Pariwars here, so EVERY per-notice statement below carries an explicit `pariwar_id`
-// predicate. It also stays inside 0206's `twt_app` column grants, so it is right under `SET LOCAL ROLE twt_app` too (AD13).
+// predicate. It also stays inside 0206's `twt_app` column grants, so it is right under `SET LOCAL ROLE twt_app` too (AD13). RE-EXAMINE when
+// roster Row 26 chooses the jobs login's posture (an RLS-bound login makes RLS a second wall), or any per-notice statement loses its `pariwar_id`.
 // ⛔⛔ NOTHING here writes `field_worker_notices` (⛔ `seen_at`), a move request, `events_log`, `role_grants`, `users` or `admin_credentials`
 // (I3; `apps/jobs/tests/field-worker-notice-email-no-decision.test.ts`).
 // ⚠ ⛔ Never a Drizzle correlated subquery — raw SQL with explicit `fe_` aliases ([[project_epic6_drizzle_correlated_subquery_bug]]).
@@ -271,6 +273,18 @@ interface NoticeEmailRow {
   claimed_by_job: string | null;
 }
 
+/** A compare-and-set on the email row matched nothing: it is still `attempting` under another holder (`held_by_other`), or it has finished (`already_final`). */
+async function rowMovedOn(
+  client: pg.PoolClient,
+  pariwarId: PariwarId,
+  noticeId: FieldWorkerNoticeId,
+): Promise<{ kind: 'held_by_other' } | { kind: 'already_final' }> {
+  const current = (
+    await client.query<{ outcome: string }>(`SELECT outcome FROM field_worker_notice_emails WHERE pariwar_id = $1 AND notice_id = $2`, [pariwarId, noticeId])
+  ).rows[0];
+  return current?.outcome === 'attempting' ? { kind: 'held_by_other' } : { kind: 'already_final' };
+}
+
 /**
  * ⭐ THE CLAIMING TRANSACTION — on the ONE client of the caller's scope transaction: take the notice lock, read the notice and its email
  * row, re-check Q4 under the lock, and claim (or finish) the row. ⛔ KMS, ⛔ decrypt, ⛔ address here — the caller COMMITS, then reads
@@ -334,14 +348,18 @@ export async function beginFieldWorkerNoticeEmail(
       return (skipped.rowCount ?? 0) === 0 ? { kind: 'held_by_other' } : { kind: 'skipped' };
     }
     const detail = fieldWorkerNoticeEmailDetail({ kind: 'recheck_not_eligible' });
+    // R2-1: the SAME holder / lease predicate as the re-claim below. The transient note takes no advisory lock, so a holder can refresh
+    // `claimed_at` between the read above and this UPDATE (a `finalise` is already refused by `outcome = 'attempting'`); without the predicate a
+    // live holder's row is forced to `error`.
     const expired = await client.query(
       `UPDATE field_worker_notice_emails
           SET outcome = 'error', may_have_sent = true, first_detail = COALESCE(first_detail, detail), detail = $3,
               claimed_by_job = $4, claimed_at = $5, parked_at = NULL, updated_at = clock_timestamp()
-        WHERE pariwar_id = $1 AND notice_id = $2 AND outcome = 'attempting'`,
-      [pariwarId, noticeId, detail, jobId, now],
+        WHERE pariwar_id = $1 AND notice_id = $2 AND outcome = 'attempting'
+          AND (claimed_by_job = $4 OR claimed_by_job = $6 OR claimed_at < $7)`,
+      [pariwarId, noticeId, detail, jobId, now, FIELD_WORKER_NOTICE_EMAIL_PARKED_BY, new Date(now.getTime() - FIELD_WORKER_NOTICE_EMAIL_LEASE_MS)],
     );
-    if ((expired.rowCount ?? 0) === 0) return { kind: 'already_final' };
+    if ((expired.rowCount ?? 0) === 0) return rowMovedOn(client, pariwarId, noticeId);
     return { kind: 'expired', detail };
   }
 
@@ -364,12 +382,7 @@ export async function beginFieldWorkerNoticeEmail(
         [pariwarId, noticeId, now, jobId, FIELD_WORKER_NOTICE_EMAIL_PARKED_BY, new Date(now.getTime() - FIELD_WORKER_NOTICE_EMAIL_LEASE_MS)],
       )
     ).rows[0];
-    if (!claimed) {
-      const current = (
-        await client.query<{ outcome: string }>(`SELECT outcome FROM field_worker_notice_emails WHERE pariwar_id = $1 AND notice_id = $2`, [pariwarId, noticeId])
-      ).rows[0];
-      return current?.outcome === 'attempting' ? { kind: 'held_by_other' } : { kind: 'already_final' };
-    }
+    if (!claimed) return rowMovedOn(client, pariwarId, noticeId);
   } else {
     claimed = (
       await client.query<{ attempt_count: number; may_have_sent: boolean }>(

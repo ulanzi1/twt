@@ -131,6 +131,8 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
     daG: { id: string; address: string };
     /** A SECOND Gaya District Admin — an open Patna → Gaya tells both (two notices of one act). */
     daG2: { id: string; address: string };
+    /** The Nalanda District Admin - the `to`-district recipient of `moved_by_pariwar_admin`. */
+    daN: { id: string; address: string };
     worker: (district?: string) => Promise<string>;
     open: (worker: string, to?: string) => Promise<string>;
   }
@@ -141,7 +143,7 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
     const daP = await officer(pid, { role: 'district_admin', dim: 'district', value: 'Patna' });
     const daG = await officer(pid, { role: 'district_admin', dim: 'district', value: 'Gaya' });
     const daG2 = await officer(pid, { role: 'district_admin', dim: 'district', value: 'Gaya' });
-    await officer(pid, { role: 'district_admin', dim: 'district', value: 'Nalanda' });
+    const daN = await officer(pid, { role: 'district_admin', dim: 'district', value: 'Nalanda' });
     const P = ids.pariwarId(pid);
     const worker = async (district = 'Patna') => {
       const w = randomUUID();
@@ -179,7 +181,7 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
       );
       return r;
     };
-    return { pid, pa, daP, daG, daG2, worker, open };
+    return { pid, pa, daP, daG, daG2, daN, worker, open };
   }
 
   /** As the owner, triggers off — the notices' and requests' guards refuse a backdate for EVERY role. */
@@ -321,19 +323,20 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
     expect(results).toEqual(all.map(() => ({ status: 'sent', outcome: 'accepted' })));
     expect(h.enqueued.every((e) => e.queue === FIELD_WORKER_NOTICE_EMAIL_QUEUES.SEND && e.key === e.data.payload.noticeId)).toBe(true);
     // Each notice: ONE message, to ITS recipient's address, carrying ITS kind's text and the Pariwar's link; ONE `accepted` row.
-    const addressOf = new Map([w.pa, w.daP, w.daG, w.daG2].map((o) => [o.id, o.address]));
-    const nalanda = (await pool.query<{ user_id: string }>("SELECT user_id FROM role_grants WHERE pariwar_id = $1 AND scope_value = 'Nalanda'", [w.pid])).rows[0]!.user_id;
+    const addressOf = new Map([w.pa, w.daP, w.daG, w.daG2, w.daN].map((o) => [o.id, o.address]));
     expect(h.client.sent).toHaveLength(all.length);
+    // R3-3: the Nalanda District Admin is a recipient too (moved_by_pariwar_admin) - every notice's `to` is ITS recipient's own address.
+    expect(all.some((n) => n.recipient_user_id === w.daN.id), 'the Nalanda recipient is exercised').toBe(true);
     for (const n of all) {
       const msg = h.client.sent.find((m) => m.reference === n.notice_id)!;
       expect(msg, n.kind).toBeDefined();
-      if (n.recipient_user_id !== nalanda) expect(msg.to).toBe(addressOf.get(n.recipient_user_id));
+      expect(msg.to, `${n.kind} → ${n.recipient_user_id}`).toBe(addressOf.get(n.recipient_user_id));
       expect({ subject: msg.subject, text: msg.text }).toEqual(renderFieldWorkerNoticeEmail(n.kind, { link: fieldWorkerNoticeEmailLink(ORIGIN, w.pid) }));
       expect(await emailRow(n.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 1, may_have_sent: false });
     }
     // ⛔ An address anywhere but the provider call.
     const leaked = JSON.stringify({ enqueued: h.enqueued, alarms: h.alarms, logs });
-    for (const o of [w.pa, w.daP, w.daG, w.daG2]) expect(leaked).not.toContain(o.address);
+    for (const o of [w.pa, w.daP, w.daG, w.daG2, w.daN]) expect(leaked).not.toContain(o.address);
     // Idempotent re-run: ⛔ due, ⛔ sent.
     expect(await tick(h)).toEqual([]);
     expect(h.client.sent).toHaveLength(all.length);
@@ -357,6 +360,44 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
       { status: 'sent', outcome: 'accepted' },
     ]);
     expect(await emailRow(a!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 2, may_have_sent: false });
+    expect(await emailRow(b!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 1 });
+  });
+
+  it('⭐ AC9 / AD3 (d) - a SANDBOXED, sending-disabled or THROWING pre-flight HOLDS: ⛔ enqueue, ⛔ new row, ONE "HELD" alarm naming the gap, an in-flight row PARKED; fixed ⇒ the next tick sends both', async () => {
+    const w = await world();
+    await w.open(await w.worker());
+    const [a, b] = await notices(w.pid);
+    await seedAttempting(w.pid, a!.notice_id, 45); // a crashed send past the lease: a hold PARKS it
+    const h = harness([w.pid]);
+    const legs: [string, () => void, () => void][] = [
+      ['preflight:sandbox', () => (h.client.state.preflight = { ok: false, detail: 'preflight:sandbox' }), () => (h.client.state.preflight = { ok: true })],
+      ['preflight:sending_disabled', () => (h.client.state.preflight = { ok: false, detail: 'preflight:sending_disabled' }), () => (h.client.state.preflight = { ok: true })],
+    ];
+    for (const [word, breakIt, fixIt] of legs) {
+      breakIt();
+      h.alarms.length = 0;
+      expect(await sweep(h), word).toMatchObject({ refused: false, failed: null, enqueued: 0, heldForConfig: 2 });
+      expect(await emailRow(b!.notice_id), word).toBeUndefined(); // TR5 - ⛔ row for the fresh notice
+      expect(await emailRow(a!.notice_id), word).toMatchObject({ outcome: 'attempting', claimed_by_job: 'sweep:held' });
+      const held = h.alarms.filter((m) => m.includes('HELD'));
+      expect(held, word).toHaveLength(1);
+      expect(held[0], word).toContain(word);
+      fixIt();
+    }
+    // A pre-flight that ITSELF throws also holds.
+    const realPreflight = h.client.preflight;
+    (h.client as { preflight: unknown }).preflight = () => Promise.reject(new Error('boom'));
+    h.alarms.length = 0;
+    expect(await sweep(h)).toMatchObject({ enqueued: 0, heldForConfig: 2 });
+    expect(await emailRow(b!.notice_id)).toBeUndefined();
+    expect(h.alarms.filter((m) => m.includes('HELD'))).toEqual([expect.stringContaining('preflight:failed')]);
+    (h.client as { preflight: unknown }).preflight = realPreflight;
+    // Fixed ⇒ the next tick re-claims the parked row AND sends the fresh notice.
+    expect(await tick(h)).toEqual([
+      { status: 'sent', outcome: 'accepted' },
+      { status: 'sent', outcome: 'accepted' },
+    ]);
+    expect(await emailRow(a!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 2 });
     expect(await emailRow(b!.notice_id)).toMatchObject({ outcome: 'accepted', attempt_count: 1 });
   });
 
@@ -575,6 +616,11 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
     const out = await tick(h);
     expect(out).toEqual(expect.arrayContaining([{ status: 'skipped', reason: 'not_eligible' }, { status: 'sent', outcome: 'accepted' }]));
     expect(h.client.sent.map((m) => m.reference)).toEqual([gaya2.notice_id]);
+    // R3-3: the suspended recipient's notice has a FINAL `skipped` row, so it is never due again - ⛔ re-enqueued every tick for 3 days.
+    const mine = (await notices(w.pid)).find((n) => n.recipient_user_id === w.daG.id)!;
+    expect(await emailRow(mine.notice_id)).toMatchObject({ outcome: 'skipped', detail: 'skipped:not_eligible' });
+    expect(await tick(h)).toEqual([]);
+    expect(h.client.sent).toHaveLength(1);
   });
 
   it('the race: two children for ONE notice at once ⇒ ONE send (the PK + the notice lock + the lease)', async () => {
@@ -641,6 +687,21 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
     const h = harness([]);
     expect(await sweep(h)).toMatchObject({ enqueued: 0, scannedNotices: 0 });
     expect(h.alarms).toEqual([expect.stringContaining('`pariwarAllowlist` is EMPTY')]);
+  });
+
+  it('R3-3 - the test-only allow-list in PRODUCTION ⇒ refused (alarmed), ⛔ statement runs (6.25\'s RE11)', async () => {
+    const query = vi.fn(() => Promise.reject(new Error('the pool must not be touched')));
+    const h = harness([randomUUID()], { pool: { query, connect: query } as unknown as pg.Pool });
+    const prev = process.env['NODE_ENV'];
+    process.env['NODE_ENV'] = 'production';
+    try {
+      expect(await sweep(h)).toMatchObject({ refused: false, failed: null, enqueued: 0, scannedNotices: 0 });
+    } finally {
+      if (prev === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = prev;
+    }
+    expect(h.alarms).toEqual([expect.stringContaining('while NODE_ENV is production')]);
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('a minute later the clock moves on: an `attempting` row inside the lease is NOT re-claimed by another job (`held_by_other`)', async () => {

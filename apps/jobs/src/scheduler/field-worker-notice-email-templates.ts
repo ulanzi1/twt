@@ -10,7 +10,7 @@
 // One plain-text email, Hindi FIRST then English (`email-channel.md`'s bilingual convention): subject `"<hi> / <en>"`; body the Hindi
 // body and the Hindi footer, a blank line, the English body and the English footer. Rendered through the REAL `t()` (`t()` THROWS on a
 // missing `{token}`), ⛔ a transcribed string ([[feedback_stub_must_call_not_transcribe]]).
-// ⚠ Agent-drafted Hindi, ⛔ NOT YET HUMAN-REVIEWED — roster Row 51 (f); the English is BigDev's (Q-1 A).
+// ⚠ Agent-drafted Hindi, ⛔ NOT YET HUMAN-REVIEWED — roster Row 51 (f); the English was approved by BigDev (Q-1 A).
 // ⚠ Recorded departures from `email-channel.md` (`drafted`), as 6.25's: a subject over 60 characters (`:27`); the link carries the Pariwar
 // UUID (an id, ⛔ a name) against `:50`; plain text only against `:28`.
 

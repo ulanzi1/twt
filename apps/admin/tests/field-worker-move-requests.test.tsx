@@ -654,6 +654,18 @@ describe('CR46 — an accept that meets a destination no longer on the list says
     expect(navigate).toHaveBeenCalledWith(BACK_HERE); // Story 13.1g AD10 — sign-in comes back to this page
   });
 
+  // R4-1 — the ACTIONS component carries `next` too (it had no leg: dropping the argument left every test green).
+  it('a 401 on Accept signs the officer back in - to THIS page, ⛔ a bare `/login`', async () => {
+    listFieldWorkerMoveRequests.mockResolvedValue({ items: [req()], next_cursor: null });
+    actOnFieldWorkerMoveRequest.mockRejectedValueOnce(new ApiError(401, 'auth.session_required', 'x'));
+    renderWith(<MoveRequestsPage pariwarId={P} />);
+    await choose(GAYA);
+    expect(navigate).not.toHaveBeenCalled(); // CONTROL: nothing has failed yet
+    fireEvent.click(await screen.findByTestId('fw-request-accept'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(BACK_HERE));
+    expect(navigate).not.toHaveBeenCalledWith({ to: '/login' });
+  });
+
   it('the notices: a 401 signs the officer back in; a 5xx says so and a click on Try again reads them again', async () => {
     listFieldWorkerMoveRequests.mockResolvedValue({ items: [], next_cursor: null });
     listFieldWorkerNotices.mockRejectedValueOnce(new ApiError(503, 'http.503', 'down')).mockResolvedValueOnce({ items: [notice({ seen_at: '2026-11-08T07:00:00.000Z' })], next_cursor: null });
@@ -1174,8 +1186,10 @@ describe('Story 13.1g AD10 — the Move requests page is a sign-in return route'
     listFieldWorkerNotices.mockRejectedValue(expired);
     getFieldWorkerDistricts.mockRejectedValue(expired);
     renderWith(<MoveRequestsPage pariwarId={P} />);
-    await waitFor(() => expect(navigate).toHaveBeenCalled());
     await screen.findByTestId('fw-notices-error');
+    // R4-2 - three readers meet the 401 (the page's list, the notices, the DistrictPicker): wait until ALL THREE have signed the officer in,
+    // else a loop over "the calls so far" passes while a late caller that dropped `next` has not fired yet.
+    await waitFor(() => expect(navigate.mock.calls.length).toBeGreaterThanOrEqual(3));
     for (const call of navigate.mock.calls) expect(call[0]).toEqual(BACK_HERE);
   });
 });

@@ -8,7 +8,7 @@
 // these modules only — ⛔ the helpers they call. Comments stripped. ⭐ POSITIVE CONTROL: the claim IS referenced; one plant per form into a
 // copy of each REAL module IS caught by its own pattern; a commented plant is ⛔; and the table list is checked against the schema's exports.
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,7 +26,11 @@ const NOTICE_EMAIL_MODULES = [
   'packages/domain/src/field-worker/notice-email-eligibility-read.ts',
 ] as const;
 
-/** Every writer of a move request, a notice, a field worker or the event log (13.1d's commands; 13.1 / 13.1c's lifecycle). */
+/**
+ * Every writer of a move request, a notice, a field worker or the event log: the commands (13.1d's, and 13.1 / 13.1a / 13.1c's lifecycle),
+ * the projectors they call, 13.1d's supersede helpers, and the event append. ⚠ A NAME here must be a REAL export (the guard below reads the
+ * source for it) — an invented one (`projectMoveRequest` was) can never match, and a gate that cannot match proves nothing.
+ */
 const FORBIDDEN = [
   'openFieldWorkerMoveRequest',
   'acceptFieldWorkerMoveRequest',
@@ -37,13 +41,22 @@ const FORBIDDEN = [
   'writeFieldWorkerNotices',
   'markFieldWorkerNoticesSeen',
   'registerFieldWorker',
+  'recordFieldWorkerKycCompleted',
+  'activateFieldWorker',
   'postFieldWorker',
   'suspendFieldWorker',
   'reactivateFieldWorker',
   'terminateFieldWorker',
-  'projectMoveRequest',
+  'projectMoveRequestOpened',
+  'projectMoveRequestTransition',
+  'projectFieldWorkerGenesis',
+  'projectFieldWorkerTransition',
+  'afterDirectMove',
+  'afterEnding',
   'appendEvent',
 ] as const;
+/** Where those writers are defined — the guard that every name above is a real export reads these directories. */
+const WRITER_SOURCE_DIRS = ['packages/domain/src/field-worker', 'packages/events/src'] as const;
 
 /** The tables the email must ⛔ write (I3): the notices (it never marks one seen), the requests, the workers, the event log, the identity family. */
 const FORBIDDEN_TABLE_NAMES = [
@@ -111,12 +124,27 @@ describe('⛔ I3 — the move-notice email writes ⛔ notice, request, worker, e
       ['drizzle', 'await db.delete(schema.eventsLog);'],
       ['interpolated', 'await db.execute(sql`UPDATE ${schema.fieldWorkerNotices} SET seen_at = now()`);'],
     ];
+    // R3-2: ONE plant per forbidden NAME (derived from the list, so a name added to it is planted too).
+    const namePlants: readonly (readonly [string, string])[] = FORBIDDEN.map((name) => [name, `await fieldWorker.${name}(client, input);`] as const);
     for (const rel of NOTICE_EMAIL_MODULES) {
-      for (const [form, plant] of plants) {
+      for (const [form, plant] of [...plants, ...namePlants]) {
         expect(violationsOf(`${read(rel)}\n${plant}\n`), `${rel} + ${plant}`).toContain(form);
       }
       expect(violationsOf(`${read(rel)}\n// ${plants[4]![1]}\n`)).toEqual([]);
     }
+  });
+
+  it('⭐ the writer list is REAL — every forbidden NAME is a function or constant the domain / events source exports (an invented or renamed entry is red)', () => {
+    const files = (dir: string): string[] =>
+      readdirSync(path.join(repoRoot, dir), { withFileTypes: true }).flatMap((e) => {
+        const rel = path.join(dir, e.name);
+        return e.isDirectory() ? files(rel) : e.name.endsWith('.ts') ? [rel] : [];
+      });
+    const exported = new Set<string>();
+    for (const rel of WRITER_SOURCE_DIRS.flatMap(files)) {
+      for (const m of read(rel).matchAll(/^export\s+(?:async\s+)?(?:function|const)\s+(\w+)/gm)) exported.add(m[1]!);
+    }
+    for (const name of FORBIDDEN) expect(exported, name).toContain(name);
   });
 
   it('⭐ the table list is REAL — every name is a table the schema exports', () => {

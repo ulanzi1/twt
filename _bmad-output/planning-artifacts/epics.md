@@ -7814,6 +7814,8 @@ is superseded, or when the Pariwar Admin moves a worker of mine, so that I do no
 
 > 📝 **BUILT (2026-11-12, `bmad-dev-story 13.1g`; annotation only — nothing above is edited).** On the story branch, ⛔ landed: migration 0206 `field_worker_notice_emails` and the notices' UNIQUE + due index (`c59f88d1`); Q4 and the domain send functions; seven bilingual templates whose only variable is the Move requests link (the Hindi agent-drafted, Row 51 (f)); the 15-minute sweep + child on the staff-email client (the RLS-bound role guard first; the Q-2 rule); the staff-email fence widened by ADR-0045's three entries and a new no-write fence; the Move requests page made a sign-in return route (`6c5cc2ac`). Every live leg runs as the superuser — production SENDS only after Rows 26 and 24 (b), and Row 51 (c) stays open until deployed. The browser check of the emailed link is NOT yet run.
 
+> ⭐ **LANDED on `main` 2026-11-12** (PR #328, `cae6ac65..54ff8a67`, fast-forward; GitHub marked it merged; GitHub CI 39/39 on the PR at `54ff8a67`; decision `-463`, ADR-0045 `drafted`). The browser check of the emailed link RAN 2026-11-12 (four legs, no defect) - it supersedes the BUILT note's "NOT yet run". Merge is not go-live: roster Row 51 (c) the emails deployed and sending (Rows 24 (b) and 26 gate sending), (d) Row 48, (e) ADR-0045 ratified, (f) the Hindi reviewed. The notes above are as written before the landing.
+
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 
 As Solo Builder authoring the attribution code allocation system,

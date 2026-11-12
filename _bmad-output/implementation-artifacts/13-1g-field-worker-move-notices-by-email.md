@@ -10,8 +10,7 @@ PINNED: `cae6ac65` = `origin/main` (ledger 2026-11-10c - Story 13.1d LANDED, PR 
 sign-in return and the copy; governance and records), their load-bearing claims re-read by the author (`origin/main` still `cae6ac65`).
 Perishable - re-check at Task 0.1. Re-locate by FUNCTION, not by line.
 
-STATUS: review (v1.13, 2026-11-12). BUILT (Tasks 0-7) and code-reviewed three times (Codex CR1-CR3; Claude Sonnet 5.5 round 2 in three chunks, round 3 the patches alone) - COMMITTED on the story branch (the review code `8ac5510a`, these records in the next commit), NOT pushed, NOT landed (Task 8 not started); Task 6's browser check RAN 2026-11-12 (Dev Agent Record, "Browser pass") and a full `ci:local` PASSED 39/39 the same day (Dev Agent Record, "Full ci:local"); `done` is
-set at LANDING (13.1a, 13.1d; 6.36e even stayed `review` after it landed). Q-1..Q-5 were ANSWERED by BigDev (Q-2 B with the two follow-ons; Q-1, Q-3, Q-4, Q-5 A).
+STATUS: done (v1.14, 2026-11-12). LANDED on `main` by fast-forward (BigDev: "yes land it"): PR #328, `cae6ac65..54ff8a67`, fast-forward; GitHub marked it merged at 14:21Z and the merge commit is the tip (SHAs unchanged); GitHub CI 39/39 on the PR at `54ff8a67`; the push-to-main CI run (`ci.yml`, run 43236334523) 39/39 green at `54ff8a67`, completed 14:49Z; the push skipped `ci:local` (every commit sent was already on origin; it PASSED 39/39 on a fresh container beforehand - Dev Agent Record, "Full ci:local"). BUILT (Tasks 0-8) and code-reviewed three times (Codex CR1-CR3; Claude Sonnet 5.5 round 2 in three chunks, round 3 the patches alone); Task 6's browser check RAN 2026-11-12 (Dev Agent Record, "Browser pass"). **Merge is not go-live:** roster Row 51 (c) stays OPEN until the emails are DEPLOYED and SENDING (Rows 24 (b) and 26 gate sending); (e) ADR-0045's ratification and (f) the Hindi review are open. `done` was set at LANDING (13.1a, 13.1d; 6.36e even stayed `review` after it landed). Q-1..Q-5 were ANSWERED by BigDev (Q-2 B with the two follow-ons; Q-1, Q-3, Q-4, Q-5 A).
 
 NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 - Next free decision: `-463` (`-462` is the newest on every ref and every worktree, 2026-11-12). Its id carries the date it is WRITTEN:
@@ -29,7 +28,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1g: The District Admins Are Told of Each Field Worker Move Request, Answer, Escalation and Move by Email - Naming No One `[CONSUMER]`
 
-Status: review
+Status: done
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -657,9 +656,10 @@ explicit refspec ([[project_story_branch_upstream_is_main]]).
 - [x] **Task 7 - Records + gate (AC: 10)** - Dev Agent Record and File List; `deferred-work.md`; `epics.md` BUILT note; ledger. `ci:local` on a FRESH
   container through the push.
 
-- [ ] **Task 8 - At landing (AC: 10)** - ledger; `epics.md` LANDED note; `deferred-work.md` 13.1d C1 "Closed by <sha>" per AD12's map (incl. the
+- [x] **Task 8 - At landing (AC: 10)** - ledger; `epics.md` LANDED note; `deferred-work.md` 13.1d C1 "Closed by <sha>" per AD12's map (incl. the
   three-of-four allowlist variance and (iii)'s narrower form); a dated line ON RP-D1's own entry (L14458): 13.1g landed, changed no notices
   contract - its trigger did not fire, NOT addressed; Row 51 (c) dated line "BUILT, not deployed".
+  **DONE 2026-11-12 (v1.14), written AFTER the landing and the CI result it cites:** ledger `2026-11-12l` and the row `review` -> `done`; the `epics.md` LANDED note; `deferred-work.md` 13.1d C1 "Closed by `54ff8a67`" item by item (two items qualified, as AD12 foresaw: three of the four fence allowlists, and (iii) in its narrower form); the dated line on RP-D1 (NOT addressed); Row 51 (c) "BUILT, not deployed".
 
 ### Review Findings
 
@@ -1095,3 +1095,4 @@ Code and tests (Tasks 1-6):
 | 2026-11-12 | 1.11 | Task 6's browser check RAN (BigDev: "do the browser pass"), in the Mac's Chrome on a throwaway stack signing in through the REAL `/login` (password + recovery code): the emailed link signed out -> `/login?next=<page>` -> the Move requests page; a mid-page 401 on Accept -> `/login?next=<page>` -> back, nothing accepted; a hostile `next` ignored. Four legs, no defect. Not covered: the passkey factor, a delivered email, the production origin. Torn down; nothing committed. Remaining: Task 8 (landing), a full `ci:local`. |
 | 2026-11-12 | 1.12 | Full `ci:local` (BigDev: "complete ci:local") on the tree at `4862fda6` + the round 2 / 3 patches + the records, against a FRESH container (:5462, database `twt_dev`, removed afterwards): **PASSED - 39 jobs green**, exit 0, 20 min 35 s; `integration-tests` domain 525 files / 8305 passed, api 238 files / 3200 passed, jobs 95 files / 2205 passed; no re-run. Supersedes the dev run's 36/37. The GitHub CI has not run; nothing committed or pushed. Remaining: Task 8 (landing). |
 | 2026-11-12 | 1.13 | COMMITTED on `story/13-1g-field-worker-move-notices-by-email` (BigDev: "commit it, code and records separately"): the review code and tests of rounds 2-3 as `8ac5510a` (11 files, +244 / -36; on `4862fda6`), then these records (the story, `sprint-status.yaml`, `deferred-work.md`, ADR-0045's RE-EXAMINE / wording edits, roster Row 51's corrected line) as the next commit. The "uncommitted" in v1.6-v1.12 and the 2026-11-12f..j ledger lines was true when each was written. NOT pushed (the pre-push hook needs `DATABASE_URL` on the story port); Task 8 (landing) still owed. |
+| 2026-11-12 | 1.14 | BigDev: "yes land it". LANDED on `main` by fast-forward (PR #328, `cae6ac65..54ff8a67`, fast-forward; GitHub marked it merged at 14:21Z, merge commit = the tip); GitHub CI 39/39 on the PR at `54ff8a67`; the push-to-main CI run (`ci.yml`, run 43236334523) 39/39 green at `54ff8a67`, completed 14:49Z; the pre-push hook skipped `ci:local` (every commit sent was already on origin). Task 8's records written AFTER the landing (ledger `2026-11-12l`, `epics.md`, `deferred-work.md`, roster Row 51 (c)); Status `review` -> `done`. Merge is not go-live: Row 51 (c), (d), (e), (f) open. The v1.13 "NOT pushed" and the ledger's 2026-11-12k "NOT pushed" were true when written; the branch was pushed and PR #328 opened at 11:08Z the same day. |

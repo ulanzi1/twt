@@ -85,6 +85,8 @@ Load-bearing details:
   roster Row 26's (`jobs-db-role`). The code is written right under both postures Row 26 may choose (a BYPASSRLS login: the explicit
   predicate; `SET LOCAL ROLE twt_app`: 0206's column grants and policies). Every tick first checks it can read across Pariwars
   (`canReadAcrossPariwars`) — false ⇒ one `rls_bound_role` alarm, nothing done; a `42501` ⇒ one alarm carrying the code.
+  **RE-EXAMINE this bypass when** roster Row 26 chooses the jobs login's posture (an RLS-bound login makes RLS a second wall), any child
+  statement loses its explicit `pariwar_id` predicate, or a further notice reader appears (0205's own trigger — this sweep is its second).
 
 ## Alternatives considered
 
@@ -103,12 +105,12 @@ Load-bearing details:
 
 - **Security.** One more caller of an existing single-column read; one more existence test against `admin_credentials` and a grant match
   for a known `user_id`. ⛔ No identity column is projected by Q4; the address is decrypted only in the child, with ⛔ no KMS audit line
-  (as every jobs decrypt — ADR-0040). The email names no one; the mail provider learns that a move-request event happened in a Pariwar (the
-  Pariwar id is in the link), as 6.25's and 11b.4a's emails already disclose of theirs.
+  (as every jobs decrypt — ADR-0040). The email names no one; the mail provider learns which KIND of move-request event happened (the subject: opened,
+  accepted, refused, escalated, superseded, or a Pariwar Admin's move) and in which Pariwar (the id is in the link), as 6.25's and 11b.4a's emails already disclose of theirs.
 - **Operational.** Rides ADR-0040's provisioning (roster Row 24). An email outage, or a stopped sweep, of 3+ IST days loses those notices'
   emails by design; the held run's alarm is the signal; the console keeps every notice. Go-live (Row 51 (c), SENDING) also needs Row 26
   closed with this sweep's steps in its list and Row 24 (b) extended to Q4.
-- **Migration / pivot.** A fifth identity read path, a fourth Q2 caller, or a move to `twt_auth`, is a new ADR.
+- **Migration / pivot.** A further identity read path, a further Q2 caller, or a move to `twt_auth`, is a new ADR.
 
 ## References
 

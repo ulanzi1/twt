@@ -7783,6 +7783,8 @@ a slip costs nobody anything, a worker ended unfairly has someone else to turn t
   who hears an appeal when the Pariwar Admin who ended the worker is the only one, the time limit for an appeal, and what the worker is told;
   what the link joins and who makes it; whether any of this reaches an ending for CONDUCT (Story 13.6's).
 
+> 📝 **CREATE-STORY (2026-11-12, `bmad-create-story 13.1f`; story `13-1f-field-worker-ending-undo-appeal-and-return` v1.0, validated v1.1 2026-11-13 and v1.2 2026-11-14, row `ready-for-dev`; annotation only — nothing above is edited).** Created on its own worktree at `5ede00c4`; ⛔ committed, ⛔ built. The open items above are answered as the AUTHOR's build decisions (AD1–AD17), not yet recorded in a decision (`-464`, Task 0.3): the undo is ONE new event `field_worker.ending_undone` returning the worker to the state the ending left (the suspension reason restored, same code), refused while the number is live again; migration `0207` replaces the guard's terminal rule with one that admits only the undo; the appeal is a RECORD on its own stream, its hearer FIXED AT THE ENDING from the officer's grants (a Pariwar Admin's ending — including an officer who is also the District Admin, and a Pariwar's only Pariwar Admin — goes to the Panel; `-454` leaves the only-Pariwar-Admin case "the author's to propose", so `-464` will RECORD that answer as the author's proposal — amending nothing of `-454` — and the Panel is asked to confirm; a super admin's ending going to the Panel, and a super admin hearing, are named as built ahead of the Panel), and an appeal allowed undoes the ending in the same transaction; the link is made by the registering officer to a NUMBER-MATCHED ended record; the shown line lists each earlier ending's date and reason, decrypts nothing and writes one audit line. **Put to the Panel (one note, Task 0.6, non-blocking; Questions 2-7 built on our suggestion, Question 1 builds nothing):** credit for the time a worker was wrongly ended (`-454` sends it back with this work; as built, not credited); the appeal's time limit and count; what the worker is told (of an outcome, and at an ending that they may appeal); who hears in four edges (the dual-role or only Pariwar Admin, a super-admin ending, a super admin hearing, every trustee being the ender); the four keys and how one trustee's account records the Panel; a slip undo after a refused appeal; an allowed appeal while the number is in use again. **BigDev's (Q-1..Q-4, open):** who records the Panel's decision in the console (a `trustee_panel` account recommended); a link for a different number; the note; one hear key or one per hearer (two recommended). Go-live: roster Row 52 (Task 0.4); `-464` amends Row 50 (f) to wait on Row 52 (a), (b), (d) and (e), and amends `-453` AD8's "a line that ending is final". **Validated 2026-11-13 (story v1.1) and 2026-11-14 (story v1.2).**
+
 ### Story 13.1g: The District Admins Are Told of Each Field Worker Move Request, Answer, Escalation and Move by Email — Naming No One `[CONSUMER]`
 
 > ⚠ **Added 2026-11-08** by BigDev (*"Q1-Q3 A"* — Story 13.1d's Q-1, option A: the email in its own row), recorded in decision `2026-11-08-458`.
@@ -7815,6 +7817,27 @@ is superseded, or when the Pariwar Admin moves a worker of mine, so that I do no
 > 📝 **BUILT (2026-11-12, `bmad-dev-story 13.1g`; annotation only — nothing above is edited).** On the story branch, ⛔ landed: migration 0206 `field_worker_notice_emails` and the notices' UNIQUE + due index (`c59f88d1`); Q4 and the domain send functions; seven bilingual templates whose only variable is the Move requests link (the Hindi agent-drafted, Row 51 (f)); the 15-minute sweep + child on the staff-email client (the RLS-bound role guard first; the Q-2 rule); the staff-email fence widened by ADR-0045's three entries and a new no-write fence; the Move requests page made a sign-in return route (`6c5cc2ac`). Every live leg runs as the superuser — production SENDS only after Rows 26 and 24 (b), and Row 51 (c) stays open until deployed. The browser check of the emailed link is NOT yet run.
 
 > ⭐ **LANDED on `main` 2026-11-12** (PR #328, `cae6ac65..54ff8a67`, fast-forward; GitHub marked it merged; GitHub CI 39/39 on the PR at `54ff8a67`; decision `-463`, ADR-0045 `drafted`). The browser check of the emailed link RAN 2026-11-12 (four legs, no defect) - it supersedes the BUILT note's "NOT yet run". Merge is not go-live: roster Row 51 (c) the emails deployed and sending (Rows 24 (b) and 26 gate sending), (d) Row 48, (e) ADR-0045 ratified, (f) the Hindi reviewed. The notes above are as written before the landing.
+
+### Story 13.1h: A Returning Field Worker Who Changed Numbers Is Found by Their PAN — the Registering Officer Records a PAN and the Aadhaar Last 4 for Every Worker `[SURFACE]`
+
+> ⚠ **Added 2026-11-16** by BigDev (Story 13.1f's Q-2: *"For Q2 combine mobile number, PAN number and Aadhaar last 4 digits for indetification"*;
+> follow-ups *"Mobile OR PAN (Recommended)"*, *"Both required"*, *"New sibling story (Recommended)"*), to be recorded in decision `-464` (13.1f's,
+> Task 0.3 - dated the day it is committed). The row is `13-1h-field-worker-pan-and-aadhaar-last-four-match` (`backlog`). Needs Story 13.1f LANDED.
+> Source: Story 13.1f C6, AD11, AD12.
+
+As a registering officer, I want a returning field worker's earlier record found even when they come back with a new phone number, so that one
+person's history reads as one (`-454` Q2 B) whatever number they use.
+
+**Acceptance Criteria (in brief):**
+- **Two new fields, both required at registration:** the worker's PAN and the LAST 4 digits of their Aadhaar - each Tier-1 ciphertext, the PAN
+  with a keyed blind index (the mobile's shape). ⛔ The full Aadhaar number, in any form (Aadhaar Act s.8A(4)(b)).
+- **The match:** the same mobile OR the same PAN in this Pariwar finds an ended record (13.1f AD11's read widened); the Aadhaar last 4 is shown to
+  the officer as "matches" / "differs" - it never finds a record by itself. 13.1f AD12's `link_to` re-check accepts a PAN match.
+- **Governance first:** a decision SUPERSEDING Story 13.1 QE8 ("no document, PAN or bank detail is captured") by name; a Panel question - a PAN
+  match shows an ending's date and reason to a second officer, wider than `-454` Q3 A's "the number"; counsel's footing and notice for the two
+  fields (the roster Row 19 precedent - the recruitment form promises a name and a mobile only), a go-live leg.
+- **Not decided - at create-story:** PAN format checks; what the officer sees when the mobile and the PAN point at two different records; whether
+  workers registered before this story are asked for the two fields.
 
 ### Story 13.2: 6-Digit Attribution Code Generation Per Pariwar — Pariwar-Scoped Uniqueness Invariant `[PRIMITIVE]`
 

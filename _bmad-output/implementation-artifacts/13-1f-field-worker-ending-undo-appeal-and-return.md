@@ -36,7 +36,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1f: A Mistaken Ending Is Undone, a Disputed One Is Appealed, and a Returning Field Worker Is Linked to Their Old Record - the Registering Officer Is Shown an Ended Worker's Number `[SURFACE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -947,10 +947,10 @@ screens. Commit on the story branch only ([[feedback_commit_on_story_branch]]); 
 `?sslmode=disable` on a FRESH container ([[project_prepush_hook_inherits_5432]]); hand-format, never `prettier --write` ([[project_prettier_not_enforced]]);
 first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
 
-- [ ] **Task 0 - Preflight and governance (AC: 14)** - runs FIRST; writes no code.
-  - [ ] 0.0 Commit this story file and the create-story record edits (`epics.md` note under Story 13.1f, `deferred-work.md` section, `sprint-status.yaml`
+- [x] **Task 0 - Preflight and governance (AC: 14)** - runs FIRST; writes no code.
+  - [x] 0.0 **DONE `c73bddbd` (2026-11-16).** Commit this story file and the create-story record edits (`epics.md` note under Story 13.1f, `deferred-work.md` section, `sprint-status.yaml`
     row + ledger `2026-11-12m` / `2026-11-13a` / `2026-11-14a` / `2026-11-16a` / `2026-11-16b`) as ONE `records(13.1f)` commit on the story branch, when BigDev asks.
-  - [ ] 0.1 `git fetch origin`; `git merge-base --is-ancestor 5ede00c4 HEAD`; `git diff --name-only 5ede00c4..origin/main -- packages apps scripts
+  - [x] 0.1 **DONE 2026-11-16 (dev-story):** `origin/main` still `5ede00c4`, nothing to re-derive; `-464`, `0207`, Row 52 free; G6, G12, G16, G22, G23 hold. `git fetch origin`; `git merge-base --is-ancestor 5ede00c4 HEAD`; `git diff --name-only 5ede00c4..origin/main -- packages apps scripts
     .github docs/launch-gate-inventory`. Re-derive any claim at the new tip; re-grep the NUMBERS block; `git worktree list` for a branch touching
     `packages/domain/src/field-worker/`, `rbac/`, `migrations/` or `apps/admin/src/modules/field-workers/`. Re-check G6 (no grant-history table), G12
     (a `trustee_panel` grant passes a district check; `requirePermissionHook` still takes a fixed key), G16 (`resolveAttributionForRequest` still has
@@ -961,7 +961,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     `trustee_panel`, `_as_panel`, `four keys` / `exactly four` / `90 -> 94`, `seven questions`, `link_to`, `PROPOSED`. At minimum: the NUMBERS block,
     the Names table, section 0, AD7, AD9, AD10, AD12-AD14, AD17, I5, I10, the Per-command table, the Errors table, AC5, AC6, AC10, AC11, AC15, the
     File checklist, Tasks 0.3, 0.4, 1.1, 5.2 and the Panel note plan. Then drop each `PROPOSED` tag the answer settles.
-  - [ ] 0.3 Write decision `-464`, dated the day it is COMMITTED (`<YYYY-MM-DD>-464`; re-grep every ref first) above the newest entry in `.decision-log.md`; commit it ALONE, `governance:` prefix:
+  - [x] 0.3 **DONE `7117e7e9` (2026-11-16): `2026-11-16-464`, committed ALONE.** Write decision `-464`, dated the day it is COMMITTED (`<YYYY-MM-DD>-464`; re-grep every ref first) above the newest entry in `.decision-log.md`; commit it ALONE, `governance:` prefix:
     an author-commit (BigDev) recording AD1-AD17 and the answers verbatim (incl. the three Q-2 follow-ups) and the new row `13-1h`
     (Q-2's PAN / Aadhaar-last-4 identification, split out at BigDev's word - the `-458` / 13-1g shape: the parent's decision records the row); the four keys RECORDED under `-059` B (3) as `-453` / `-458` did
     (`-210` cl. 2 EXCLUDES keys from its delegation - it authorises none); AD8's only-Pariwar-Admin answer RECORDED as the author's PROPOSAL under
@@ -972,7 +972,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     Row 52 (a), (b), (d), (e)) and `-453` AD8's "a line that ending is final" (AD14); it supersedes no other text; Policy meaning as in this story;
     the seven questions put to the Panel. Cite `-454`, `-455`, `-453`, `-458`, `-459` Q3 A, `-461` CR41 A, `-059` B (3), `-210` cl. 2, `-096` cl. 4,
     13.1c C2 (ii), PRD FR-85.
-  - [ ] 0.4 Roster, its OWN `governance:` commit: append **Row 52 `field-worker-ending-undo-appeal-live`** (decision-authored, `-464`; blocking no build or
+  - [x] 0.4 **DONE `785b4db5` (2026-11-16): Row 52 + the dated lines at Row 50 (f) and Row 48 (i).** Roster, its OWN `governance:` commit: append **Row 52 `field-worker-ending-undo-appeal-live`** (decision-authored, `-464`; blocking no build or
     merge - [[project_not_in_production_merge_is_not_golive]]), in Rows 48-51's shape - its `gate_name` ("the undo, the appeal and the register
     route's shown number and link are not used on a real worker in production until ...") and its `architecture_source_line` (citing `-464` under
     `-059` B (3)) - with legs: (a) the Panel's confirm of the four keys and of how the Panel records (note Q5); (b) the
@@ -982,10 +982,10 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     closed first. Dated lines: **Row 50 (f)** - "`-464` amends this leg: met when Row 52 (a), (b), (d) and (e) are met and the undo and appeal
     routes are deployed" (NOT (c) - that leg gates the credit recorder, 13.8 / 13.5, not the terminate route); **Row 48 (i)** - four more keys
     await the Panel (note Q5).
-  - [ ] 0.5 Annotate `epics.md` Story 13.1f (a DECIDED note: answers and where; the Story 13.1h section, added 2026-11-16 with the row, gets the
+  - [x] 0.5 **DONE 2026-11-16** (the DECIDED note under 13.1f; the `-464` pointer under 13.1h; pointers under 13.1b, 13.1c, 13.1e, 13.5, 13.6, 13.8). Annotate `epics.md` Story 13.1f (a DECIDED note: answers and where; the Story 13.1h section, added 2026-11-16 with the row, gets the
     `-464` id once committed), and pointers under Story 13.1c ("Ending is final" now reworded by
     13.1f), Story 13.1e (C2), Story 13.6 (C3), Stories 13.8 / 13.5 (C1), Story 13.1b (C7). Annotate, never rewrite.
-  - [ ] 0.6 Write the Panel note from the TEMPLATE (section "The Panel note" above, every cost carried); run its E4 commands - every one passes, or the
+  - [x] 0.6 **DONE 2026-11-16 - DRAFTED, NOT sent:** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-16-story-13-1f-field-worker-undo-and-appeal.md`, seven questions; its E4 commands run 2026-11-16, every one as expected (`-464` 1; the keys 0; the appeal table 0; the credit door's non-test callers 0; each quote 1). Write the Panel note from the TEMPLATE (section "The Panel note" above, every cost carried); run its E4 commands - every one passes, or the
     note is not called ready; it is DRAFTED until BigDev sends it. A ruling is its own decision entry plus dated lines at Row 52 and Row 48 (i).
     Non-blocking: code may start after 0.5.
 

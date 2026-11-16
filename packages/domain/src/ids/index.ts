@@ -907,6 +907,15 @@ export type FieldWorkerNoticeId = Brand<'FieldWorkerNoticeId'>;
 /** Smart constructor: validates UUID shape, returns a branded `FieldWorkerNoticeId`. */
 export const fieldWorkerNoticeId = uuidBrand('FieldWorkerNoticeId');
 
+// ── Story 13.1f — an appeal against a field worker's ending ──
+// An appeal is its OWN event stream (`events_log.stream_id = appeal_id`, caller-minted — AD7) and the primary key of
+// `field_worker_ending_appeals`.
+
+/** An appeal against one ending — `field_worker_ending_appeals.appeal_id` and its stream id. */
+export type FieldWorkerEndingAppealId = Brand<'FieldWorkerEndingAppealId'>;
+/** Smart constructor: validates UUID shape, returns a branded `FieldWorkerEndingAppealId`. */
+export const fieldWorkerEndingAppealId = uuidBrand('FieldWorkerEndingAppealId');
+
 /** Per-row address of a permanent attribution code (`field_worker_attribution_codes.attribution_code_id`). */
 export type AttributionCodeId = Brand<'AttributionCodeId'>;
 /** Smart constructor: validates UUID shape, returns a branded `AttributionCodeId`. */

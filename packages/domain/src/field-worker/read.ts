@@ -12,13 +12,16 @@
 
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
 
-import { UUID_REGEX, type Db } from '../db.js';
+import type pg from 'pg';
+
+import { bindScopedDb, UUID_REGEX, type Db } from '../db.js';
 import { geoTreeVersionInForce, type GeoTreeInForce } from '../geo-tree/registry.js';
 import type { FieldWorkerId, MemberAttributionId, PariwarId } from '../ids/index.js';
 import { findListedWorkplaceDistricts } from '../marketplace/scope-options.js';
 import { clampLimit } from '../pagination.js';
 import { eventsLog } from '../schema/events_log.js';
-import { fieldWorkers, type FieldWorkerState } from '../schema/field_workers.js';
+import type { FieldWorkerEndingAppealHearer } from '../schema/field_worker_ending_appeals.js';
+import { fieldWorkers, type FieldWorkerReasonCode, type FieldWorkerState } from '../schema/field_workers.js';
 import { users } from '../schema/users.js';
 import { pageWorkplaceDistricts } from '../member/workplace.js';
 import { FieldWorkerCaptureNotFoundError, FieldWorkerCursorInvalidError, FieldWorkerDistrictUnknownError } from './errors.js';
@@ -409,6 +412,14 @@ export interface FieldWorkerLogEntry {
   readonly fromDistrict: string | null;
   readonly toDistrict: string | null;
   readonly endedOn: string | null;
+  /** Story 13.1f — the payload's `to_state` (the undo's restored state; every event carries one). */
+  readonly toState: string | null;
+  /** Story 13.1f — the undo's `cause` (`mistake` | `appeal_allowed`), else null. */
+  readonly cause: string | null;
+  /** Story 13.1f — the allowed appeal an undo carries out, else null. */
+  readonly appealId: string | null;
+  /** Story 13.1f (AD12) — the genesis's link to an earlier ended record, else null. */
+  readonly previousFieldWorkerId: string | null;
 }
 
 /** One page of the log, and the `after` that reads the next one (`null` when this page is the last). */
@@ -486,6 +497,10 @@ export async function listFieldWorkerEvents(
       fromDistrict: str(p['from_district']),
       toDistrict: str(p['to_district']),
       endedOn: str(p['ended_on']),
+      toState: str(p['to_state']),
+      cause: str(p['cause']),
+      appealId: str(p['appeal_id']),
+      previousFieldWorkerId: str(p['previous_field_worker_id']),
     };
   });
   return { items, nextAfter: rows.length > limit ? items[items.length - 1]!.eventVersion : null };
@@ -526,7 +541,9 @@ function parseFieldWorkerAsOf(asOf: unknown): string | null {
  *  (4) every comparison is made IN SQL at microsecond precision — `captured_at` is read in the SAME statement, never into JS;
  *  (5) `'now'` applies NO cut — the whole stream, the latest committed state (= the stored projection, I4);
  *  (6) an empty prefix is the initial `pending_kyc` (the worker exists);
- *  (7) all seven event types replay (one event per transition — small), through `foldFieldWorkerProjection`.
+ *  (7) all EIGHT event types replay (one event per transition — small), through `foldFieldWorkerProjection` — Story 13.1f's
+ *      `field_worker.ending_undone` included: a capture made while the worker was ended reads `terminated`; one after the undo, the
+ *      restored state.
  * ⚠ (8) CLOCK DOMAINS: `events_log.occurred_at` and `member_attribution.captured_at` are both `now()` — the TRANSACTION
  * START — while 13.2's `allocated_at` is `clock_timestamp()`. A transition therefore counts from the moment its transaction
  * BEGAN, at BOTH edges: a signup whose transaction starts inside a SUSPENSION's window reads as already-suspended here while
@@ -598,4 +615,250 @@ export async function lockFieldWorkerForCodeRead(
     .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
     .for('share');
   return rows[0] ?? null;
+}
+
+// ── Story 13.1f — the current ending, the shown number, the link, the eligible list (decision `2026-11-16-464` AD5, AD11–AD13, AD17) ──
+
+/**
+ * AD17 — "the current ending" of a TERMINATED worker: its `field_worker.terminated` event (the one at the row's `state_event_version` —
+ * nothing else is written to the stream while terminated), the hearer fixed at that ending (`appeal_heard_by`, read RAW from the JSON
+ * — TR18; ABSENT ⇒ `trustee_panel`, the more independent hearer: a legacy event, test databases only — AD8) and the ENDER (that row's
+ * `events_log.actor_id` COLUMN — ⛔ a payload key). ⛔ The strict write schema. `null` unless the worker exists here and is terminated.
+ * The legacy rule lives HERE and nowhere else.
+ */
+export interface FieldWorkerCurrentEnding {
+  readonly endingVersion: number;
+  readonly heardBy: FieldWorkerEndingAppealHearer;
+  readonly endedByUserId: string;
+  readonly endedOn: string;
+  readonly reasonCode: FieldWorkerReasonCode;
+  readonly district: string;
+}
+
+export async function getCurrentFieldWorkerEnding(
+  db: Db,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+): Promise<FieldWorkerCurrentEnding | null> {
+  const res = await db.execute(sql`
+    SELECT e.event_version, COALESCE(e.payload->>'appeal_heard_by', 'trustee_panel') AS heard_by, e.actor_id,
+           fw.ended_on::text AS ended_on, fw.state_reason_code::text AS reason_code, fw.district
+      FROM field_workers fw
+      JOIN events_log e ON e.pariwar_id = fw.pariwar_id AND e.stream_id = fw.field_worker_id AND e.event_version = fw.state_event_version
+     WHERE fw.pariwar_id = ${pariwarId}::uuid AND fw.field_worker_id = ${fieldWorkerId}::uuid
+       AND fw.current_state = 'terminated' AND e.event_type = 'field_worker.terminated'`);
+  const r = res.rows[0] as
+    | { event_version: string | number; heard_by: string; actor_id: string | null; ended_on: string; reason_code: string; district: string }
+    | undefined;
+  if (r === undefined || r.actor_id === null) return null;
+  if (r.heard_by !== 'pariwar_admin' && r.heard_by !== 'trustee_panel') return null;
+  return {
+    endingVersion: Number(r.event_version),
+    heardBy: r.heard_by,
+    endedByUserId: r.actor_id,
+    endedOn: r.ended_on,
+    reasonCode: r.reason_code as FieldWorkerReasonCode,
+    district: r.district,
+  };
+}
+
+/** AD17's in-lock twin — the same read on the client that holds the worker's row lock (the lodge command's step (3)). */
+export async function getCurrentFieldWorkerEndingLocked(
+  client: pg.PoolClient,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+): Promise<FieldWorkerCurrentEnding | null> {
+  return getCurrentFieldWorkerEnding(bindScopedDb(client), pariwarId, fieldWorkerId);
+}
+
+/** AD11 — at most this many earlier endings are shown on the register screen. */
+export const PREVIOUS_ENDINGS_SHOWN_MAX = 5;
+
+/** One earlier ENDED record holding a number — what the registering officer is shown (Q3 A: a date and a reason; ⛔ name, district, officer). */
+export interface FieldWorkerPreviousEnding {
+  readonly fieldWorkerId: FieldWorkerId;
+  readonly endedOn: string;
+  readonly reasonCode: FieldWorkerReasonCode;
+}
+
+/**
+ * AD11 — this Pariwar's TERMINATED workers holding `mobileBlindIndex` (every district), `ended_on DESC, field_worker_id`, at most 5.
+ * Decrypts nothing (the index is a keyed hash). The register route's ended pre-check, after the live one.
+ */
+export async function findEndedFieldWorkersByMobileIndex(
+  db: Db,
+  pariwarId: PariwarId,
+  mobileBlindIndex: string,
+): Promise<FieldWorkerPreviousEnding[]> {
+  const rows = await db
+    .select({
+      fieldWorkerId: fieldWorkers.fieldWorkerId,
+      endedOn: sql<string>`${fieldWorkers.endedOn}::text`,
+      reasonCode: fieldWorkers.stateReasonCode,
+    })
+    .from(fieldWorkers)
+    .where(
+      and(
+        eq(fieldWorkers.pariwarId, pariwarId),
+        eq(fieldWorkers.mobileBlindIndex, mobileBlindIndex),
+        eq(fieldWorkers.currentState, 'terminated'),
+      ),
+    )
+    .orderBy(desc(fieldWorkers.endedOn), asc(fieldWorkers.fieldWorkerId))
+    .limit(PREVIOUS_ENDINGS_SHOWN_MAX);
+  return rows.map((r) => ({ fieldWorkerId: r.fieldWorkerId, endedOn: r.endedOn, reasonCode: r.reasonCode as FieldWorkerReasonCode }));
+}
+
+/** AD5 — the worker's mobile BLIND INDEX (a keyed hash, ⛔ decrypted), or null — the undo's pre-read of "the number is live again". */
+export async function getFieldWorkerMobileIndex(db: Db, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<string | null> {
+  const rows = await db
+    .select({ mobileBlindIndex: fieldWorkers.mobileBlindIndex })
+    .from(fieldWorkers)
+    .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
+    .limit(1);
+  return rows[0]?.mobileBlindIndex ?? null;
+}
+
+/**
+ * AD12 — the link's re-check, IN the registration's scope transaction BEFORE the genesis INSERT: the candidate record's state and
+ * blind index, the row locked `FOR SHARE` (the `lockFieldWorkerForCodeRead` precedent). A concurrent undo of that record (it holds
+ * `FOR UPDATE`) finishes first, and the registration then sees it live and answers `link_invalid` — without the lock, the INSERT's FK
+ * check waits on the undo while the undo's UPDATE waits on the INSERT's index entry: a deadlock (TR15). `null` for an unknown id or
+ * another Pariwar's.
+ */
+export async function lockFieldWorkerForLink(
+  db: Db,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+): Promise<{ readonly currentState: FieldWorkerState; readonly mobileBlindIndex: string } | null> {
+  const rows = await db
+    .select({ currentState: fieldWorkers.currentState, mobileBlindIndex: fieldWorkers.mobileBlindIndex })
+    .from(fieldWorkers)
+    .where(and(eq(fieldWorkers.pariwarId, pariwarId), eq(fieldWorkers.fieldWorkerId, fieldWorkerId)))
+    .for('share');
+  return rows[0] ?? null;
+}
+
+/** AD12 — how many links `listFieldWorkerLinkChain` follows. */
+export const FIELD_WORKER_LINK_CHAIN_MAX = 10;
+
+/**
+ * AD12 — the earlier records reached from `fieldWorkerId` by following `previous_field_worker_id`, nearest first, at most 10 hops (a
+ * cycle is impossible — the column is set at the INSERT to an EXISTING row — but the depth is capped anyway). Each with its district,
+ * for the reader's own read check. Excludes the worker itself.
+ */
+export async function listFieldWorkerLinkChain(
+  db: Db,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+): Promise<{ readonly fieldWorkerId: FieldWorkerId; readonly district: string }[]> {
+  const res = await db.execute(sql`
+    WITH RECURSIVE chain(id, depth) AS (
+      SELECT fw.previous_field_worker_id, 1
+        FROM field_workers fw
+       WHERE fw.pariwar_id = ${pariwarId}::uuid AND fw.field_worker_id = ${fieldWorkerId}::uuid AND fw.previous_field_worker_id IS NOT NULL
+      UNION ALL
+      SELECT fw.previous_field_worker_id, c.depth + 1
+        FROM chain c JOIN field_workers fw ON fw.pariwar_id = ${pariwarId}::uuid AND fw.field_worker_id = c.id
+       WHERE fw.previous_field_worker_id IS NOT NULL AND c.depth < ${FIELD_WORKER_LINK_CHAIN_MAX}
+    )
+    SELECT c.id AS field_worker_id, fw.district
+      FROM chain c JOIN field_workers fw ON fw.pariwar_id = ${pariwarId}::uuid AND fw.field_worker_id = c.id
+     ORDER BY c.depth`);
+  return (res.rows as { field_worker_id: string; district: string }[]).map((r) => ({
+    fieldWorkerId: r.field_worker_id as FieldWorkerId,
+    district: r.district,
+  }));
+}
+
+/** AD13 — the eligible list's page size (13.1d's — one audit line names a page's workers). */
+export const PAGE_APPEAL_ELIGIBLE_DEFAULT_LIMIT = 20;
+export const PAGE_APPEAL_ELIGIBLE_MAX_LIMIT = 25;
+
+/** One ended worker a hearer can record an appeal for — the NAME as ciphertext (the API decrypts it, audited). ⛔ mobile, ⛔ code. */
+export interface FieldWorkerAppealEligibleRow {
+  readonly fieldWorkerId: FieldWorkerId;
+  readonly nameCiphertext: string;
+  readonly district: string;
+  readonly endedOn: string;
+  readonly reasonCode: FieldWorkerReasonCode;
+  readonly endingEventVersion: number;
+  readonly heardBy: FieldWorkerEndingAppealHearer;
+}
+
+/**
+ * The eligible list's cursor reuses the worker-list codec (`decodeFieldWorkerCursor` — strict, before any SQL): `c` carries the
+ * `ended_on` date as `YYYY-MM-DD 00:00:00+00` (a `timestamptz` text the codec accepts), `w` the worker id.
+ */
+export function encodeAppealEligibleCursor(endedOn: string, fieldWorkerId: FieldWorkerId): string {
+  return encodeFieldWorkerCursor({ createdAtExact: `${endedOn} 00:00:00+00`, fieldWorkerId });
+}
+/** @throws FieldWorkerCursorInvalidError */
+export function decodeAppealEligibleCursor(s: unknown): { readonly endedOn: string; readonly fieldWorkerId: FieldWorkerId } {
+  const c = decodeFieldWorkerCursor(s);
+  if (!/^\d{4}-\d{2}-\d{2} 00:00:00\+00$/.test(c.createdAtExact)) throw new FieldWorkerCursorInvalidError('ended_on');
+  return { endedOn: c.createdAtExact.slice(0, 10), fieldWorkerId: c.fieldWorkerId };
+}
+
+/**
+ * AD13 — this Pariwar's TERMINATED workers whose CURRENT ending (AD17: the terminated event at `state_event_version`) has no OPEN or
+ * REFUSED appeal and whose hearer is one of `hearers` (the hear keys the reader holds — the API decides, `_as_panel` counted only from a
+ * non-`global` grant), optionally of ONE district; `ended_on DESC, field_worker_id DESC`. An empty `hearers` reads nothing.
+ */
+export async function pageAppealEligibleFieldWorkers(
+  db: Db,
+  pariwarId: PariwarId,
+  opts: {
+    district?: string;
+    hearers: readonly FieldWorkerEndingAppealHearer[];
+    after?: { readonly endedOn: string; readonly fieldWorkerId: FieldWorkerId };
+    limit?: number;
+  },
+): Promise<{ items: FieldWorkerAppealEligibleRow[]; nextCursor: string | null }> {
+  if (opts.limit !== undefined && !Number.isInteger(opts.limit)) {
+    throw new RangeError(`pageAppealEligibleFieldWorkers: limit must be an integer, got ${String(opts.limit)}`);
+  }
+  if (opts.hearers.length === 0) return { items: [], nextCursor: null };
+  if (opts.district !== undefined && opts.district.includes(NUL)) return { items: [], nextCursor: null };
+  const limit = clampLimit(opts.limit, { default: PAGE_APPEAL_ELIGIBLE_DEFAULT_LIMIT, cap: PAGE_APPEAL_ELIGIBLE_MAX_LIMIT });
+  const fetch = clampLimit(limit + 1, { default: PAGE_APPEAL_ELIGIBLE_DEFAULT_LIMIT + 1, cap: PAGE_APPEAL_ELIGIBLE_MAX_LIMIT + 1 });
+  const hearers = sql.join(opts.hearers.map((h) => sql`${h}`), sql`, `);
+  const res = await db.execute(sql`
+    SELECT fw.field_worker_id, fw.name_ciphertext, fw.district, fw.ended_on::text AS ended_on, fw.state_reason_code::text AS reason_code,
+           e.event_version AS ending_event_version, COALESCE(e.payload->>'appeal_heard_by', 'trustee_panel') AS heard_by
+      FROM field_workers fw
+      JOIN events_log e ON e.pariwar_id = fw.pariwar_id AND e.stream_id = fw.field_worker_id AND e.event_version = fw.state_event_version
+     WHERE fw.pariwar_id = ${pariwarId}::uuid AND fw.current_state = 'terminated' AND e.event_type = 'field_worker.terminated'
+       AND COALESCE(e.payload->>'appeal_heard_by', 'trustee_panel') IN (${hearers})
+       ${opts.district === undefined ? sql`` : sql`AND fw.district = ${opts.district}`}
+       ${opts.after === undefined ? sql`` : sql`AND (fw.ended_on, fw.field_worker_id) < (${opts.after.endedOn}::date, ${opts.after.fieldWorkerId}::uuid)`}
+       AND NOT EXISTS (
+         SELECT 1 FROM field_worker_ending_appeals a
+          WHERE a.pariwar_id = fw.pariwar_id AND a.field_worker_id = fw.field_worker_id
+            AND a.ending_event_version = fw.state_event_version AND a.state IN ('open', 'refused'))
+     ORDER BY fw.ended_on DESC, fw.field_worker_id DESC
+     LIMIT ${fetch}`);
+  const rows = res.rows as {
+    field_worker_id: string;
+    name_ciphertext: string;
+    district: string;
+    ended_on: string;
+    reason_code: string;
+    ending_event_version: string | number;
+    heard_by: FieldWorkerEndingAppealHearer;
+  }[];
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+  return {
+    items: page.map((r) => ({
+      fieldWorkerId: r.field_worker_id as FieldWorkerId,
+      nameCiphertext: r.name_ciphertext,
+      district: r.district,
+      endedOn: r.ended_on,
+      reasonCode: r.reason_code as FieldWorkerReasonCode,
+      endingEventVersion: Number(r.ending_event_version),
+      heardBy: r.heard_by,
+    })),
+    nextCursor: rows.length > limit && last !== undefined ? encodeAppealEligibleCursor(last.ended_on, last.field_worker_id as FieldWorkerId) : null,
+  };
 }

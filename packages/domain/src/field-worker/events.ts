@@ -17,7 +17,7 @@
 // ⛔ the epic. Renaming a shipped event type is a migration of every stream that carries it — pinned here, once.
 //
 // ── Actors (QE7, I7) — HUMAN ONLY ─────────────────────────────────────────────────────────────────
-// `operator` / `trustee`, with a non-null `actorId`, for ALL seven events. `system` and `member` are refused here, in the
+// `operator` / `trustee`, with a non-null `actorId`, for ALL eight events. `system` and `member` are refused here, in the
 // commands and in the projector (three places, as 12.1's I11): Story 13.6's commitment that heuristics "do not
 // independently terminate field-worker eligibility" is cheapest to keep if the primitive CANNOT record a machine as the
 // author of a suspension or termination. A later automated actor is a new decision, ⛔ a quiet enum value.
@@ -30,6 +30,7 @@
 import { z } from 'zod';
 
 import { SCOPE_DIMENSIONS } from '../rbac/scope.js';
+import { FIELD_WORKER_ENDING_APPEAL_HEARERS } from '../schema/field_worker_ending_appeals.js';
 import { FIELD_WORKER_STATES, type FieldWorkerReasonCode } from '../schema/field_workers.js';
 
 /** WHO caused a field-worker event — HUMAN ONLY (QE7). */
@@ -65,6 +66,25 @@ export const fieldWorkerPostReasonSchema = z.enum(FIELD_WORKER_POST_REASONS);
  * `commands.ts` re-exports it). `field_worker.register` is ⛔ here, and refused by a test.
  */
 export const FIELD_WORKER_MOVE_PERMISSION_KEYS = ['field_worker.move', 'field_worker.answer_move_request'] as const;
+
+/**
+ * Story 13.1f (AD2, AD15) — the keys whose verified result may UNDO an ending (`field_worker.ending_undone`): the Pariwar Admin's undo of
+ * a slip (`field_worker.undo_ending`, cause `mistake`) and the HEARER's allowed appeal (`field_worker.hear_ending_appeal` — an appeal the
+ * Pariwar Admin hears — or `field_worker.hear_ending_appeal_as_panel` — one the Trustee Panel hears; cause `appeal_allowed`). Defined
+ * HERE so the event's schema pins its snapshot's key without an import cycle (the move-key-list pattern; `commands.ts` re-exports it).
+ */
+export const FIELD_WORKER_UNDO_PERMISSION_KEYS = [
+  'field_worker.undo_ending',
+  'field_worker.hear_ending_appeal',
+  'field_worker.hear_ending_appeal_as_panel',
+] as const;
+/** The two HEAR keys (AD9) — one per hearer (Q-4 A); the second entries of `FIELD_WORKER_UNDO_PERMISSION_KEYS`. */
+export const FIELD_WORKER_HEAR_APPEAL_PERMISSION_KEYS = ['field_worker.hear_ending_appeal', 'field_worker.hear_ending_appeal_as_panel'] as const;
+/** Why an ending was undone (AD2): a slip, or an appeal the hearer allowed. */
+export const FIELD_WORKER_UNDO_CAUSES = ['mistake', 'appeal_allowed'] as const;
+export type FieldWorkerUndoCause = (typeof FIELD_WORKER_UNDO_CAUSES)[number];
+/** Who hears an appeal against an ending — written into the terminated event AT THE ENDING (AD8). */
+export const fieldWorkerAppealHeardBySchema = z.enum(FIELD_WORKER_ENDING_APPEAL_HEARERS);
 
 /**
  * The audit note naming the COMMAND that wrote the event (QE6) — the commands COMPUTE it (⛔ caller input). ⛔ Free text (review
@@ -146,8 +166,12 @@ export const FieldWorkerRegisteredPayloadSchema = z
     to_state: z.literal('pending_kyc'),
     trigger: triggerOf('field_worker.register'),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    // Story 13.1f (AD15, R2-D1) — every worker event pins its key.
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.literal('field_worker.register') }),
     district: fieldWorkerDistrictSchema,
+    // Story 13.1f (AD12; `-454` Q2 B) — the earlier, ENDED record of this Pariwar the registering officer linked this registration to.
+    // Optional (absent for every unlinked worker and every stored event); the row's `previous_field_worker_id` is written from it.
+    previous_field_worker_id: z.string().uuid().optional(),
   })
   .strict();
 export type FieldWorkerRegisteredPayload = z.infer<typeof FieldWorkerRegisteredPayloadSchema>;
@@ -162,7 +186,7 @@ export const FieldWorkerKycCompletedPayloadSchema = z
     to_state: z.literal('pending_kyc'),
     trigger: triggerOf('field_worker.kyc_complete'),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.literal('field_worker.approve') }),
   })
   .strict();
 export type FieldWorkerKycCompletedPayload = z.infer<typeof FieldWorkerKycCompletedPayloadSchema>;
@@ -176,7 +200,7 @@ export const FieldWorkerActivatedPayloadSchema = z
     to_state: z.literal('active'),
     trigger: triggerOf('field_worker.activate'),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.literal('field_worker.approve') }),
   })
   .strict();
 export type FieldWorkerActivatedPayload = z.infer<typeof FieldWorkerActivatedPayloadSchema>;
@@ -190,7 +214,7 @@ export const FieldWorkerSuspendedPayloadSchema = z
     to_state: z.literal('suspended'),
     trigger: triggerWithReason('field_worker.suspend', FIELD_WORKER_SUSPEND_REASONS),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.literal('field_worker.suspend') }),
     reason_code: fieldWorkerSuspendReasonSchema,
   })
   .strict();
@@ -204,27 +228,33 @@ export const FieldWorkerReactivatedPayloadSchema = z
     to_state: z.literal('active'),
     trigger: triggerOf('field_worker.reactivate'),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.literal('field_worker.reactivate') }),
   })
   .strict();
 export type FieldWorkerReactivatedPayload = z.infer<typeof FieldWorkerReactivatedPayloadSchema>;
 
-/** `field_worker.terminated`: `pending_kyc` | `active` | `suspended` → `terminated` — TERMINAL (QE5). Carries the
+/** `field_worker.terminated`: `pending_kyc` | `active` | `suspended` → `terminated` (Story 13.1f: left ONLY by
+ *  `field_worker.ending_undone`, AD2). Carries the
  *  termination reason and `ended_on`, the ACTUAL LAST DAY (QE20 — the clock of the 8-year removal; for `died`, the date of
  *  death, `-455`). Emitted by Story 13.1c's terminate route (Q-1 C, `-453`); carries the verified `field_worker.terminate`
  *  authorization snapshot (13.1c AD3). ⚠ Its `role` is the role of the MOST SPECIFIC grant that allowed the act
  *  (`authorizingGrant` asks `district` before `pariwar`), ⛔ every role the officer held: an officer holding both `district_admin`
  *  there and `pariwar_admin` is recorded as `district_admin`. Row 13-1f's appeal (`-454` Q1 A: "if a Pariwar Admin ended them, the
- *  Trustee Panel") must not read it as "who ended the worker" without deciding that case (review R2-9; deferred-work C2 (ii)). */
+ *  Trustee Panel") must not read it as "who ended the worker" without deciding that case (review R2-9; deferred-work C2 (ii)).
+ *  ⭐ Story 13.1f (AD8) decides it: `appeal_heard_by` is computed AT THE ENDING by the terminate route — `trustee_panel` if the actor
+ *  held a `pariwar_admin` grant in this Pariwar (or is a super admin), else `pariwar_admin` — and never recomputed. OPTIONAL here (a
+ *  stored legacy event still parses; AD17 reads an absent one as `trustee_panel`); REQUIRED by `terminateFieldWorker`'s input, so
+ *  every NEW terminated event carries it. The FOLD ignores it. */
 export const FieldWorkerTerminatedPayloadSchema = z
   .object({
     from_state: z.enum(['pending_kyc', 'active', 'suspended']),
     to_state: z.literal('terminated'),
     trigger: triggerWithReason('field_worker.terminate', FIELD_WORKER_TERMINATE_REASONS),
     actor: fieldWorkerActorSchema,
-    authorization: FieldWorkerAuthorizationSnapshotSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.literal('field_worker.terminate') }),
     reason_code: fieldWorkerTerminateReasonSchema,
     ended_on: fieldWorkerEndedOnSchema,
+    appeal_heard_by: fieldWorkerAppealHeardBySchema.optional(),
   })
   .strict();
 export type FieldWorkerTerminatedPayload = z.infer<typeof FieldWorkerTerminatedPayloadSchema>;
@@ -258,6 +288,50 @@ export const FieldWorkerPostedPayloadSchema = z
   });
 export type FieldWorkerPostedPayload = z.infer<typeof FieldWorkerPostedPayloadSchema>;
 
+/**
+ * `field_worker.ending_undone`: `terminated` → the state the ending left (`pending_kyc` | `active` | `suspended`) — Story 13.1f (AD2;
+ * the Panel's `-454` Q1 A: "restoring the worker as they were, with the same code"). The ONLY event out of `terminated`. Its target is
+ * COMPUTED by the command under the worker lock from the stream (the fold of the prefix before the latest ending) — ⛔ caller input —
+ * and checked by the projector against the undone event's `from_state` (AD3). `reason_code` is the restored SUSPENSION reason iff the
+ * target is `suspended`. `cause` ties to the key: `mistake` ⇔ `field_worker.undo_ending` (and no appeal); `appeal_allowed` ⇔ a hear key
+ * (and the appeal's id). `undone_ending_version` names the `field_worker.terminated` event undone. The FOLD reads only `to_state` and
+ * `reason_code`, through a fold-only shape (`state.ts`, R4-10).
+ */
+export const FieldWorkerEndingUndonePayloadSchema = z
+  .object({
+    from_state: z.literal('terminated'),
+    to_state: z.enum(['pending_kyc', 'active', 'suspended']),
+    trigger: z.enum(['field_worker.undo_ending:mistake', 'field_worker.undo_ending:appeal_allowed']),
+    actor: fieldWorkerActorSchema,
+    authorization: FieldWorkerAuthorizationSnapshotSchema.extend({ permission_key: z.enum(FIELD_WORKER_UNDO_PERMISSION_KEYS) }),
+    cause: z.enum(FIELD_WORKER_UNDO_CAUSES),
+    appeal_id: z.string().uuid().nullable(),
+    undone_ending_version: z.number().int().min(2),
+    reason_code: fieldWorkerSuspendReasonSchema.nullable(),
+  })
+  .strict()
+  .superRefine((v, ctx) => {
+    if ((v.to_state === 'suspended') !== (v.reason_code !== null)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'reason_code is the restored suspension reason iff the target is suspended', path: ['reason_code'] });
+    }
+    if (v.trigger !== `field_worker.undo_ending:${v.cause}`) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'the trigger names the cause', path: ['trigger'] });
+    }
+    const key = v.authorization.permission_key;
+    if (v.cause === 'mistake') {
+      if (key !== 'field_worker.undo_ending') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "a slip's undo is signed with field_worker.undo_ending", path: ['authorization', 'permission_key'] });
+      }
+      if (v.appeal_id !== null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "a slip's undo names no appeal", path: ['appeal_id'] });
+    } else {
+      if (!(FIELD_WORKER_HEAR_APPEAL_PERMISSION_KEYS as readonly string[]).includes(key)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'an allowed appeal is signed with a hear key', path: ['authorization', 'permission_key'] });
+      }
+      if (v.appeal_id === null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'an allowed appeal names its appeal', path: ['appeal_id'] });
+    }
+  });
+export type FieldWorkerEndingUndonePayload = z.infer<typeof FieldWorkerEndingUndonePayloadSchema>;
+
 // ── The event-type vocabulary + the type→schema map (single source) ────────────────────────────────
 
 export const FIELD_WORKER_EVENT_TYPES = [
@@ -268,9 +342,11 @@ export const FIELD_WORKER_EVENT_TYPES = [
   'field_worker.reactivated',
   'field_worker.terminated',
   'field_worker.posted',
+  // Story 13.1f (AD2) — the ONLY event out of `terminated`.
+  'field_worker.ending_undone',
 ] as const;
 
-/** The dotted `field_worker.*` event-type literal union (genesis + six). */
+/** The dotted `field_worker.*` event-type literal union (genesis + seven). */
 export type FieldWorkerEventType = (typeof FIELD_WORKER_EVENT_TYPES)[number];
 
 /**
@@ -285,4 +361,5 @@ export const FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS = {
   'field_worker.reactivated': FieldWorkerReactivatedPayloadSchema,
   'field_worker.terminated': FieldWorkerTerminatedPayloadSchema,
   'field_worker.posted': FieldWorkerPostedPayloadSchema,
+  'field_worker.ending_undone': FieldWorkerEndingUndonePayloadSchema,
 } as const satisfies Record<FieldWorkerEventType, z.ZodTypeAny>;

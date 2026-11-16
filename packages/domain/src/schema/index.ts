@@ -535,3 +535,6 @@ export * from './field_worker_notices.js';
 // Story 13.1g (0206) — the EMAIL of each notice: one send row per notice, EVER (0187's outbox shape keyed on `notice_id`; a finished row
 // is frozen by a guard trigger; ids and a fixed-vocabulary detail only; tenant-isolated; `twt_app` grants only).
 export * from './field_worker_notice_emails.js';
+// Story 13.1f (0207) — `field_worker_ending_appeals`: an appeal against ONE ending, the projection of its own stream (decision -464 AD7).
+// 0207 also adds `field_workers.previous_field_worker_id` (the link, AD12) and replaces the guard's rule (t) by (t′) (the undo, AD4).
+export * from './field_worker_ending_appeals.js';

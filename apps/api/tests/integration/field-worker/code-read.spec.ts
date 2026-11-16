@@ -132,7 +132,7 @@ describe.skipIf(!hasDatabase)('Story 13.1a — read a field worker’s code by h
       if (state === 'terminated') {
         await ownerTx(async (c) => {
           const today = (await c.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-          await fieldWorker.terminateFieldWorker(c, { ...base, authorization: actAuthorization('field_worker.terminate', p, 'Patna', base.actorId), reasonCode: 'inactive', endedOn: today });
+          await fieldWorker.terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base, authorization: actAuthorization('field_worker.terminate', p, 'Patna', base.actorId), reasonCode: 'inactive', endedOn: today });
         });
       }
       doorSpy.mockClear();

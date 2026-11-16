@@ -200,7 +200,7 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     await committed((c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'at_worker_request' }));
     await check();
     const today = (await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-    await committed((c) => terminateFieldWorker(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }));
+    await committed((c) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }));
     await check();
   });
 
@@ -299,7 +299,7 @@ describe.skipIf(!hasDatabase)('field-worker reads (per-test ROLLBACK)', () => {
     const db = bindScopedDb(client);
     expect(await findLiveFieldWorkerByMobileIndex(db, toPariwarId(PARIWAR_A), 'gone-index')).toBe(id);
     const today = (await client.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-    await terminateFieldWorker(client, {
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin',
       pariwarId: toPariwarId(PARIWAR_A),
       fieldWorkerId: id,
       auditId: randomUUID(),

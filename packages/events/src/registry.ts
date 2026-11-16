@@ -709,7 +709,7 @@ export const EVENT_TYPE_REGISTRY = {
   'field_worker.terminated': {
     type: 'field_worker.terminated',
     description:
-      '`field_worker.terminated` (pending_kyc | active | suspended → terminated) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Terminal; carries a neutral termination reason (incl. died, decision 2026-11-07-455), ended_on — the actual last day (QE20), for died the date of death — and the verified field_worker.terminate authorization snapshot (Story 13.1c AD3). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c terminate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/terminate).',
+      '`field_worker.terminated` (pending_kyc | active | suspended → terminated) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Left only by field_worker.ending_undone (Story 13.1f); carries a neutral termination reason (incl. died, decision 2026-11-07-455), ended_on — the actual last day (QE20), for died the date of death — and the verified field_worker.terminate authorization snapshot (Story 13.1c AD3), and appeal_heard_by — who hears an appeal against this ending, fixed at the act (Story 13.1f AD8; absent on a legacy event, read as trustee_panel). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c terminate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/terminate).',
     schema: fieldWorker.FieldWorkerTerminatedPayloadSchema,
   },
   'field_worker.posted': {
@@ -717,6 +717,12 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       '`field_worker.posted` (pending_kyc | active | suspended → the same state) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). A move of REPORTING district (QE17): the authorization snapshot (a key of FIELD_WORKER_MOVE_PERMISSION_KEYS — Story 13.1c AD4), both districts and a post reason. Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1c move route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move, key field_worker.move) and by the Story 13.1d acceptance of a move request (POST /api/v1/p/:pariwarId/field-workers/move-requests/:moveRequestId/accept, key field_worker.answer_move_request).',
     schema: fieldWorker.FieldWorkerPostedPayloadSchema,
+  },
+  'field_worker.ending_undone': {
+    type: 'field_worker.ending_undone',
+    description:
+      '`field_worker.ending_undone` (terminated → the state the ending left: pending_kyc | active | suspended) on the FIELD WORKER stream (stream_id = field_worker_id) (Story 13.1). Story 13.1f (decision 2026-11-16-464 AD2; the Panel\'s 2026-11-07-454 Q1 A): the ONLY event out of terminated — the worker as they were, the same code; the target computed from the stream under the worker lock, the restored suspension reason, the undone ending\'s version, and a cause tied to its key (mistake — field_worker.undo_ending; appeal_allowed — a hear key, with the appeal\'s id). Human actor only (operator / trustee — QE7); NO PII (I8). Emitted by the Story 13.1f undo route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/undo-ending) and by an allowed appeal (POST /api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/decide).',
+    schema: fieldWorker.FieldWorkerEndingUndonePayloadSchema,
   },
   // ── Story 13.1d — field_worker_move_request.* vocabulary (a move request between two District Admins, on its OWN stream) ──
   // Payload schemas live in @twt/domain (packages/domain/src/field-worker/move-request-events.ts) — appended on the MOVE REQUEST stream
@@ -764,5 +770,39 @@ export const EVENT_TYPE_REGISTRY = {
     description:
       '`field_worker_move_request.superseded` (pending | escalated → superseded) on the MOVE REQUEST stream (stream_id = move_request_id) (Story 13.1d). A direct move (cause worker_moved, the field_worker.move snapshot) or an ending (cause worker_ended, the field_worker.terminate snapshot) made the request moot, in the same transaction. NO PII (I6). Emitted by the Story 13.1c move and terminate routes (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move and /terminate).',
     schema: fieldWorker.FieldWorkerMoveRequestSupersededPayloadSchema,
+  },
+  // ── Story 13.1f — field_worker_ending_appeal.* vocabulary (an appeal against ONE ending, on its OWN stream) ──
+  // Payload schemas live in @twt/domain (packages/domain/src/field-worker/ending-appeal-events.ts) — appended on the APPEAL stream
+  // (stream_id = appeal_id; caller-minted), ⛔ the worker's. Written by `projectEndingAppealLodged` / `projectEndingAppealTransition`
+  // through a 13.1f command, or by the supersede inside the slip's undo.
+  'field_worker_ending_appeal.lodged': {
+    type: 'field_worker_ending_appeal.lodged',
+    description:
+      '`field_worker_ending_appeal.lodged` ((none) → open) on the APPEAL stream (stream_id = appeal_id) (Story 13.1f). The HEARER records a worker\'s appeal against one ending (ending_event_version), the hearer fixed at that ending (heard_by), the day and the channel (phone / in_person) — no grounds, no free text; the verified snapshot of the hear key matching heard_by. NO PII (I6). Emitted by the Story 13.1f lodge route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/ending-appeals).',
+    schema: fieldWorker.FieldWorkerEndingAppealLodgedPayloadSchema,
+  },
+  'field_worker_ending_appeal.allowed': {
+    type: 'field_worker_ending_appeal.allowed',
+    description:
+      '`field_worker_ending_appeal.allowed` (open → allowed) on the APPEAL stream (stream_id = appeal_id) (Story 13.1f). The hearer allows it; the worker\'s field_worker.ending_undone (cause appeal_allowed) was written FIRST in the same transaction and undone_event_id names it. The verified snapshot of the hear key matching heard_by. NO PII (I6). Emitted by the Story 13.1f decide route (POST /api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/decide, outcome allowed).',
+    schema: fieldWorker.FieldWorkerEndingAppealAllowedPayloadSchema,
+  },
+  'field_worker_ending_appeal.refused': {
+    type: 'field_worker_ending_appeal.refused',
+    description:
+      '`field_worker_ending_appeal.refused` (open → refused) on the APPEAL stream (stream_id = appeal_id) (Story 13.1f). The hearer refuses it; the worker stays ended. The verified snapshot of the hear key matching heard_by. NO PII (I6). Emitted by the Story 13.1f decide route (POST /api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/decide, outcome refused).',
+    schema: fieldWorker.FieldWorkerEndingAppealRefusedPayloadSchema,
+  },
+  'field_worker_ending_appeal.withdrawn': {
+    type: 'field_worker_ending_appeal.withdrawn',
+    description:
+      '`field_worker_ending_appeal.withdrawn` (open → withdrawn) on the APPEAL stream (stream_id = appeal_id) (Story 13.1f). The worker withdrew it and the hearer records that; it counts for nothing. The verified snapshot of the hear key matching heard_by. NO PII (I6). Emitted by the Story 13.1f withdraw route (POST /api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/withdraw).',
+    schema: fieldWorker.FieldWorkerEndingAppealWithdrawnPayloadSchema,
+  },
+  'field_worker_ending_appeal.superseded': {
+    type: 'field_worker_ending_appeal.superseded',
+    description:
+      '`field_worker_ending_appeal.superseded` (open → superseded) on the APPEAL stream (stream_id = appeal_id) (Story 13.1f). A slip\'s undo restored the worker, so the open appeal is no longer needed; written in the undo\'s transaction with its verified field_worker.undo_ending snapshot and undone_event_id. NO PII (I6). Emitted by the Story 13.1f undo route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/undo-ending).',
+    schema: fieldWorker.FieldWorkerEndingAppealSupersededPayloadSchema,
   },
 } as const satisfies Readonly<Record<string, EventTypeRegistryEntry>>;

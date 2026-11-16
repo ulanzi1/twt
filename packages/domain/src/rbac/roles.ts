@@ -362,6 +362,14 @@ const FIELD_WORKER_REQUEST_MOVE = permissionKey('field_worker.request_move');
 const FIELD_WORKER_ANSWER_MOVE_REQUEST = permissionKey('field_worker.answer_move_request');
 const FIELD_WORKER_SETTLE_MOVE_REQUEST = permissionKey('field_worker.settle_move_request');
 const FIELD_WORKER_READ_MOVE_REQUESTS = permissionKey('field_worker.read_move_requests');
+// Story 13.1f (`2026-11-16-464` AD10; BigDev's Q-1 A / Q-4 A; built on the default, the Panel's confirm is note Q5 — roster Row 52 (a)).
+// All district-dimension. Undo: pariwar_admin ONLY (`-454` Q1 A). Hear (Pariwar Admin): pariwar_admin. Hear (Panel): trustee_panel
+// ONLY — see its bundle. Read: district_admin (own district), pariwar_admin, trustee_panel (+ super_admin auto). ⛔ state_trustee /
+// helpline_operator / the `field_worker` role. The older field-worker keys' "⛔ trustee_panel" notes above stay true for THOSE keys.
+const FIELD_WORKER_UNDO_ENDING = permissionKey('field_worker.undo_ending');
+const FIELD_WORKER_HEAR_ENDING_APPEAL = permissionKey('field_worker.hear_ending_appeal');
+const FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL = permissionKey('field_worker.hear_ending_appeal_as_panel');
+const FIELD_WORKER_READ_ENDING_APPEALS = permissionKey('field_worker.read_ending_appeals');
 
 /**
  * The recommended v1 role→permission matrix (provisional pending OQ-3). Roles from
@@ -552,6 +560,11 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // ⛔ Request / answer (the Pariwar Admin moves directly).
       FIELD_WORKER_SETTLE_MOVE_REQUEST,
       FIELD_WORKER_READ_MOVE_REQUESTS,
+      // Story 13.1f (AD10; `-454` Q1 A) — undo a mistaken ending (Pariwar Admin only); hear an appeal against a District Admin's ending;
+      // read the appeals — any district. ⛔ The Panel's hear key (an appeal against a Pariwar Admin's ending is the Panel's).
+      FIELD_WORKER_UNDO_ENDING,
+      FIELD_WORKER_HEAR_ENDING_APPEAL,
+      FIELD_WORKER_READ_ENDING_APPEALS,
     ],
     scopeCeiling: 'pariwar',
   },
@@ -623,6 +636,8 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       FIELD_WORKER_REQUEST_MOVE,
       FIELD_WORKER_ANSWER_MOVE_REQUEST,
       FIELD_WORKER_READ_MOVE_REQUESTS,
+      // Story 13.1f (AD10) — read the appeals of the OWN district. ⛔ Undo or hear (the Pariwar Admin or the Panel hears).
+      FIELD_WORKER_READ_ENDING_APPEALS,
       // Story 6.12 (R6) — the manual shepherd reassignment key. The District Admin IS the shepherd (D-C),
       // so they administer the assignment; checked at `dimension: 'district'` against the deceased's
       // server-derived posting district. Grants no adjudication power (AC6) — orthogonal to CLAIM_APPROVE.
@@ -944,6 +959,19 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       // of every memorial (`-391` Confirm 1 A: *"moderation by trustees"* read as this role, ⛔ the Trustee-Lite
       // `pariwar_admin`). Live by the ceiling above: a `pariwar` ceiling satisfies the pariwar-dimension check.
       MEMORIAL_REVIEW,
+      // ⭐ Story 13.1f (`2026-11-16-464` AD9, AD10; BigDev's Q-1 A and Q-4 A; the Panel's confirm is note Q5 — roster Row 52 (a)) —
+      // `field_worker.hear_ending_appeal_as_panel`, and this bundle is its ONLY holder: the appeal against a Pariwar Admin's (or a super
+      // admin's) ending of a FIELD WORKER is heard by the Trustee Panel (`-454` Q1 A) and "recorded by the officer who hears it" — a
+      // trustee signed in as themselves. A SEPARATE key from the Pariwar Admin's `field_worker.hear_ending_appeal` because a key shared
+      // with `pariwar_admin` cannot record that the Panel acted (the 10.22 reason above — `authorizingGrant` picks `pariwar_admin` first
+      // by role name for a holder of both). ⛔ Do NOT grant this key to any other role without a Panel decision. A `super_admin` derives
+      // it, but the commands refuse it from a `global` grant (the Panel acts as itself — AD9). ⚠ Holding it is NOT sufficient to decide
+      // any given appeal: the officer who ended the worker is refused (a typed 409; the 0207 CHECK). `field_worker.read_ending_appeals`
+      // lets a trustee reach an ended worker to record an appeal for (the eligible list) — and shows the workers' NAMES, one audit line a
+      // page. A field-worker key on this bundle for the first time: the role was constituted for members (Part 8) and is PROVISIONAL
+      // (`-096` cl. 4) — the note says so.
+      FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL,
+      FIELD_WORKER_READ_ENDING_APPEALS,
     ],
     scopeCeiling: 'pariwar',
   },

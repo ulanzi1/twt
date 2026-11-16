@@ -84,7 +84,7 @@ async function workerIn(client: pg.PoolClient, state: 'pending_kyc' | 'kyc_done'
     await suspendFieldWorker(client, { ...act(id, 'suspend'), reasonCode: 'under_review' });
     return id;
   }
-  await terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: (await istToday(client)) });
+  await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: (await istToday(client)) });
   return id;
 }
 
@@ -129,7 +129,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await expectRowMatchesStream(client, id);
     const today = await istToday(client);
     const audit = randomUUID();
-    await terminateFieldWorker(client, { ...act(id, 'terminate', 'Nalanda'), auditId: audit, reasonCode: 'left_voluntarily', endedOn: today });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate', 'Nalanda'), auditId: audit, reasonCode: 'left_voluntarily', endedOn: today });
     expect(await rowOf(client, id)).toMatchObject({ current_state: 'terminated', state_reason_code: 'left_voluntarily', ended_on: today, district: 'Nalanda', audit_id: audit, v: 8 });
     await expectRowMatchesStream(client, id);
     expect(await streamTypes(client, id)).toEqual([
@@ -154,7 +154,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
       () => activateFieldWorker(client, approve(id)),
       () => reactivateFieldWorker(client, act(id, 'reactivate')),
       () => suspendFieldWorker(client, { ...act(id, 'suspend'), reasonCode: 'under_review' }),
-      () => terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'bogus', endedOn: '2026-11-01' }), // (2) beats (4)
+      () => terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'bogus', endedOn: '2026-11-01' }), // (2) beats (4)
       () => postFieldWorker(client, { ...move(id, 'Patna', 'Gaya'), reasonCode: 'reassigned' }),
       () => recordFieldWorkerKycCompleted(client, approve(id)), // review R3-22 — the title says ANYTHING
     ]) {
@@ -226,7 +226,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const before = await rowOf(client, id);
     const types = await streamTypes(client, id);
     expect(await caught(() => suspendFieldWorker(client, { ...act(id, 'suspend'), reasonCode: 'reassigned' }))).toBeInstanceOf(FieldWorkerReasonInvalidError);
-    expect(await caught(() => terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'under_review', endedOn: '2026-11-01' }))).toBeInstanceOf(
+    expect(await caught(() => terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'under_review', endedOn: '2026-11-01' }))).toBeInstanceOf(
       FieldWorkerReasonInvalidError,
     );
     for (const reasonCode of [undefined, 'bogus', 'inactive']) {
@@ -274,7 +274,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     await suspendFieldWorker(client, { ...act(id, 'suspend'), reasonCode: 'under_review' });
     await reactivateFieldWorker(client, act(id, 'reactivate'));
     await postFieldWorker(client, { ...move(id, 'Patna', 'Gaya'), reasonCode: 'reassigned' });
-    await terminateFieldWorker(client, { ...act(id, 'terminate', 'Gaya'), reasonCode: 'left_voluntarily', endedOn: await istToday(client) });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate', 'Gaya'), reasonCode: 'left_voluntarily', endedOn: await istToday(client) });
     const rows = (
       await client.query<{ event_type: string; payload: { authorization?: { permission_key: string; role: string; target: { value: string } } } }>(
         'SELECT event_type, payload FROM events_log WHERE stream_id = $1 AND event_version > 3 ORDER BY event_version',
@@ -302,7 +302,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     for (const [id, run] of [
       [active, () => suspendFieldWorker(client, { ...act(active, 'suspend', 'Patna'), reasonCode: 'under_review' })],
       [suspended, () => reactivateFieldWorker(client, act(suspended, 'reactivate', 'Patna'))],
-      [active, () => terminateFieldWorker(client, { ...act(active, 'terminate', 'Patna'), reasonCode: 'inactive', endedOn: today })],
+      [active, () => terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(active, 'terminate', 'Patna'), reasonCode: 'inactive', endedOn: today })],
     ] as const) {
       const before = await rowOf(client, id);
       const types = await streamTypes(client, id);
@@ -315,7 +315,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     expect((await rowOf(client, active)).current_state).toBe('suspended');
     expect((await rowOf(client, suspended)).current_state).toBe('active');
     // …and terminate's control too (review CR7): it leaves a suspended worker, authorized at Gaya.
-    await terminateFieldWorker(client, { ...act(active, 'terminate', 'Gaya'), reasonCode: 'inactive', endedOn: today });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(active, 'terminate', 'Gaya'), reasonCode: 'inactive', endedOn: today });
     expect((await rowOf(client, active)).current_state).toBe('terminated');
   });
 
@@ -364,10 +364,10 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     const tomorrow = (await client.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date + 1)::text AS d")).rows[0]!.d;
     const before = await rowOf(client, id);
     const types = await streamTypes(client, id);
-    expect(await caught(() => terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'died', endedOn: tomorrow }))).toMatchObject({ reason: 'in_future' });
+    expect(await caught(() => terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'died', endedOn: tomorrow }))).toMatchObject({ reason: 'in_future' });
     await expectRefusedCleanly(client, id, before, types);
     const today = await istToday(client);
-    await terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'died', endedOn: today });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'died', endedOn: today });
     expect(await rowOf(client, id)).toMatchObject({ current_state: 'terminated', state_reason_code: 'died', ended_on: today });
     const ev = (await client.query("SELECT payload FROM events_log WHERE stream_id = $1 AND event_type = 'field_worker.terminated'", [id])).rows[0];
     expect(ev.payload).toMatchObject({ reason_code: 'died', ended_on: today, trigger: 'field_worker.terminate:died' });
@@ -415,7 +415,7 @@ describe.skipIf(!hasDatabase)('field-worker commands, live (AC5)', () => {
     expect(await streamTypes(client, loser)).toEqual([]);
     // Terminated ⇒ the mobile may register again (a new id).
     await recordFieldWorkerKycCompleted(client, approve(id));
-    await terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'registered_in_error', endedOn: await istToday(client) });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'registered_in_error', endedOn: await istToday(client) });
     const again = await registerReal(client, PARIWAR_A, { mobileBlindIndex: 'dup-mobile', actorId: ACTOR });
     expect(again).not.toBe(id);
   });
@@ -436,11 +436,11 @@ describe.skipIf(!hasDatabase)('QE20 — the LOWER bound, live (the registration 
     await client.query("SET LOCAL session_replication_role = 'origin'");
     await enterAppScope(client, PARIWAR_A);
     const before = await rowOf(client, id);
-    const err = await caught(() => terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: '2026-10-14' }));
+    const err = await caught(() => terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: '2026-10-14' }));
     expect(err).toBeInstanceOf(FieldWorkerEndedOnInvalidError);
     expect(err).toMatchObject({ reason: 'before_registration' });
     await expectRefusedCleanly(client, id, before, ['field_worker.registered']); // review R4-13
-    await terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: '2026-10-15' });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: '2026-10-15' });
     expect((await rowOf(client, id)).ended_on).toBe('2026-10-15');
   });
 
@@ -450,7 +450,7 @@ describe.skipIf(!hasDatabase)('QE20 — the LOWER bound, live (the registration 
     const id = await registerReal(client, PARIWAR_A, { actorId: ACTOR });
     const tomorrow = (await client.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date + 1)::text AS d")).rows[0]!.d;
     const before = await rowOf(client, id);
-    expect(await caught(() => terminateFieldWorker(client, { ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: tomorrow }))).toMatchObject({ reason: 'in_future' });
+    expect(await caught(() => terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'terminate'), reasonCode: 'inactive', endedOn: tomorrow }))).toMatchObject({ reason: 'in_future' });
     await expectRefusedCleanly(client, id, before, ['field_worker.registered']); // review R4-13
   });
 });

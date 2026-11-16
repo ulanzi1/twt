@@ -190,7 +190,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
       );
       expect((await c.query('SELECT count(*)::int AS n FROM field_worker_move_requests WHERE field_worker_id = $1', [worker])).rows[0]).toEqual({ n: 0 });
       // Terminated: ended first (by a Pariwar Admin), then the open is refused.
-      await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'left_voluntarily', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
+      await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'left_voluntarily', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
       expect(await caught(() => req({}))).toBeInstanceOf(FieldWorkerIllegalTransitionError);
       expect((await c.query('SELECT 1 AS ok')).rows).toEqual([{ ok: 1 }]); // CONTROL — the transaction is usable
     });
@@ -369,7 +369,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
         if (how === 'move') {
           await postFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: w, toDistrict: 'Nalanda', expectedFromDistrict: 'Patna', reasonCode: 'reassigned', authorization: actAuthorization('field_worker.move', cast.P, 'Nalanda', cast.pa) });
         } else {
-          await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: w, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
+          await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: w, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
         }
         const detail = await getFieldWorkerMoveRequest(db, cast.P, id);
         const at = Object.fromEntries(detail!.events.map((e) => [e.eventType, e.occurredAt]));
@@ -390,7 +390,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
         if (how === 'move') {
           await postFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: w, toDistrict: 'Nalanda', expectedFromDistrict: 'Patna', reasonCode: 'reassigned', authorization: actAuthorization('field_worker.move', cast.P, 'Nalanda', cast.pa) });
         } else {
-          await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: w, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
+          await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: w, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
         }
         const mine = (await pageFieldWorkerNotices(db, cast.P, cast.daGaya)).items.filter((n) => n.moveRequestId === id);
         expect(mine, how).toHaveLength(2); // one of each - a double notice would hide behind the map below (R5-7)
@@ -461,7 +461,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
 
     it('an ENDING supersedes it (worker_ended) and tells the opener and the counterpart’s District Admins (move_request_superseded)', async () => {
       const { id } = await open(c, cast, worker);
-      await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
+      await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
       expect(await requestRow(c, id)).toMatchObject({ state: 'superseded', supersede_cause: 'worker_ended' });
       const sup = (await notices(c, cast.P)).filter((x) => x.kind === 'move_request_superseded');
       expect(sorted(sup.map((x) => x.recipient))).toEqual(sorted([cast.daPatna, cast.daGaya, cast.daGaya2]));
@@ -470,7 +470,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
     it('an escalated request superseded by an ENDING keeps its escalation cause', async () => {
       const other = await registerReal(c, cast.P, { district: 'Patna' });
       const { id: esc } = await open(c, cast, other, { to: 'Nalanda' });
-      await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: other, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
+      await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: other, reasonCode: 'inactive', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
       expect(await requestRow(c, esc)).toMatchObject({ state: 'superseded', escalation_cause: 'no_counterpart_officer', supersede_cause: 'worker_ended' });
     });
 
@@ -643,7 +643,7 @@ describe.skipIf(!hasDatabase)('Story 13.1d — move requests (live DB)', () => {
       await reactivateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: worker, authorization: at('field_worker.reactivate', 'Gaya') });
       await suspend();
       const today = await istToday(c);
-      await terminateFieldWorker(c, { ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'inactive', endedOn: today, authorization: at('field_worker.terminate', 'Gaya') });
+      await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'inactive', endedOn: today, authorization: at('field_worker.terminate', 'Gaya') });
       const h = await getMoveRequestWorkerHistory(db, cast.P, id);
       expect(h).toMatchObject({ currentState: 'terminated', registeredOn: today, activeSince: today, truncated: false });
       // OPEN-ENDED, not closed: the last district and the suspension open at the ending carry `to: null` — the ending's date is withheld.

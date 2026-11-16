@@ -310,3 +310,6 @@ export * from './field-worker-notices-rls.js';
 // Story 13.1g (0206) — field_worker_notice_emails tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`, ⛔ DELETE); bind
 // `twt_app` only — the jobs child's guard is its explicit `pariwar_id` predicate (AD3 (c)).
 export * from './field-worker-notice-emails-rls.js';
+// Story 13.1f (0207) — field_worker_ending_appeals tenant-isolation policies (select / insert / update, ⛔ `FOR ALL`, ⛔ DELETE). The
+// appeal's write guard (0207's trigger) is ORTHOGONAL.
+export * from './field-worker-ending-appeals-rls.js';

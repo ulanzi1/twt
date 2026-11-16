@@ -41,7 +41,7 @@ describe.skipIf(!hasDatabase)('Story 13.1c — two terminations of one worker at
       await holder.query('BEGIN');
       await holder.query(`SELECT set_config('app.pariwar_id', $1, true)`, [p]);
       const actorId = randomUUID();
-      await fieldWorker.terminateFieldWorker(holder, {
+      await fieldWorker.terminateFieldWorker(holder, { appealHeardBy: 'pariwar_admin',
         pariwarId: ids.pariwarId(p),
         fieldWorkerId: ids.fieldWorkerId(id),
         auditId: randomUUID(),

@@ -20,7 +20,7 @@ const registryFieldWorkerTypes = Object.keys(EVENT_TYPE_REGISTRY)
   .sort();
 
 describe('EVENT_TYPE_REGISTRY — field_worker.* coverage', () => {
-  it('registers EVERY FIELD_WORKER_EVENT_TYPES member (seven), and carries no orphan field_worker.* entry', () => {
+  it('registers EVERY FIELD_WORKER_EVENT_TYPES member (eight — Story 13.1f adds the undo), and carries no orphan field_worker.* entry', () => {
     expect(registryFieldWorkerTypes).toEqual([...fieldWorker.FIELD_WORKER_EVENT_TYPES].sort());
   });
 
@@ -46,6 +46,7 @@ describe('EVENT_TYPE_REGISTRY — field_worker.* coverage', () => {
       'field_worker.reactivated': 'Emitted by the Story 13.1c reactivate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/reactivate)',
       'field_worker.terminated': 'Emitted by the Story 13.1c terminate route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/terminate)',
       'field_worker.posted': 'Emitted by the Story 13.1c move route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/move, key field_worker.move)',
+      'field_worker.ending_undone': 'Emitted by the Story 13.1f undo route (POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/undo-ending)',
     };
     for (const type of fieldWorker.FIELD_WORKER_EVENT_TYPES) {
       const d = rows[type]!.description;
@@ -61,5 +62,14 @@ describe('EVENT_TYPE_REGISTRY — field_worker.* coverage', () => {
     for (const type of fieldWorker.FIELD_WORKER_EVENT_TYPES) {
       expect(rows[type]?.schema).toBe(fieldWorker.FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[type]);
     }
+  });
+});
+
+// Story 13.1f — `terminated` is no longer final: no field_worker.* entry calls it terminal (the undo leaves it).
+describe('field_worker.terminated is not "Terminal" (Story 13.1f)', () => {
+  it('its description names the undo, not a terminal state', () => {
+    const d = (EVENT_TYPE_REGISTRY as Record<string, { description: string } | undefined>)['field_worker.terminated']!.description;
+    expect(d).not.toContain('Terminal;');
+    expect(d).toContain('Left only by field_worker.ending_undone');
   });
 });

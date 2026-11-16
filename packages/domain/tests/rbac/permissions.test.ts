@@ -248,9 +248,11 @@ describe('PERMISSION_CATALOG', () => {
     // lifecycle acts, read a worker's log; `2026-11-07-453` AD5, confirmed `-454` Q7 A; ONE bump for the five; 81 -> 86 keys).
     // 62 at Story 13.1d +4 (field_worker.request_move / .answer_move_request / .settle_move_request / .read_move_requests — the
     // move request between District Admins; `2026-11-08-458` AD5, confirmed `-459` Q1 A; ONE bump for the four; 86 -> 90 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(62);
+    // 63 at Story 13.1f +4 (field_worker.undo_ending / .hear_ending_appeal / .hear_ending_appeal_as_panel / .read_ending_appeals —
+    // the undo of a mistaken ending and the appeal record; `2026-11-16-464` AD10, Q-1 A / Q-4 A; ONE bump for the four; 90 -> 94 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(63);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(90);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(94);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

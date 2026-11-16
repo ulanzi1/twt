@@ -1285,3 +1285,109 @@ describe.each([
     }
   });
 });
+
+// Story 13.1f (`2026-11-16-464` AD10; BigDev's Q-1 A / Q-4 A; the Panel's confirm is note Q5 — roster Row 52 (a)). The two keys held by
+// the Pariwar Admin alone share 13.1d's table shape; `_as_panel` and `read_ending_appeals` get their OWN describes (13.1d's table
+// hard-codes `trustee_panel` as a non-holder, and both are trustee_panel's).
+describe.each([
+  ['field_worker.undo_ending', ['pariwar_admin', 'super_admin']],
+  ['field_worker.hear_ending_appeal', ['pariwar_admin', 'super_admin']],
+] as const)('Story 13.1f — `%s` (`2026-11-16-464` AD10)', (key, expected) => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const OTHER = '22222222-2222-2222-2222-222222222222';
+  const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
+  const da = { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' } as const;
+  const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+  const sa = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+
+  it('the holders, exactly; ⛔ every other role (trustee_panel included); the bundle count stays 13', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual([...expected]);
+    for (const role of ['district_admin', 'state_trustee', 'trustee_panel', 'helpline_operator', 'field_worker'] as const) {
+      expect((bundleForRole(role)!.permissions as readonly string[]).includes(key), role).toBe(false);
+    }
+    expect(defaultRoleBundles).toHaveLength(13);
+  });
+
+  it('pariwar_admin anywhere in its Pariwar; super_admin; ⛔ a District Admin, a trustee, another Pariwar', () => {
+    for (const d of ['Patna', 'Gaya']) expect(hasPermission([pa], key, at(d)), d).toBe(true);
+    expect(hasPermission([da], key, at('Patna'))).toBe(false);
+    expect(hasPermission([sa], key, at('Gaya'))).toBe(true);
+    expect(hasPermission([{ pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P }], key, at('Patna'))).toBe(false);
+    expect(hasPermission([{ ...pa, pariwarId: OTHER, scopeValue: OTHER }], key, at('Patna'))).toBe(false);
+  });
+});
+
+describe('Story 13.1f — `field_worker.hear_ending_appeal_as_panel` (`2026-11-16-464` AD9, AD10; Q-1 A, Q-4 A)', () => {
+  const key = 'field_worker.hear_ending_appeal_as_panel';
+  const P = '11111111-1111-1111-1111-111111111111';
+  const OTHER = '22222222-2222-2222-2222-222222222222';
+  const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
+  const tp = { pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P } as const;
+
+  it('trustee_panel is its ONLY bundle holder (super_admin derives it — no bundle lists it); the bundle count stays 13', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['super_admin', 'trustee_panel']);
+    expect(defaultRoleBundles).toHaveLength(13);
+  });
+
+  it('⭐ a trustee_panel PARIWAR grant passes the DISTRICT-dimension check (G12) — any district; ⛔ another Pariwar', () => {
+    for (const d of ['Patna', 'Gaya']) expect(hasPermission([tp], key, at(d)), d).toBe(true);
+    expect(hasPermission([{ ...tp, pariwarId: OTHER, scopeValue: OTHER }], key, at('Patna'))).toBe(false);
+  });
+
+  it('⛔ pariwar_admin, district_admin, state_trustee, helpline_operator — the Panel hears as itself', () => {
+    for (const g of [
+      { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P },
+      { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' },
+      { pariwarId: P, role: 'state_trustee', scopeDimension: 'state', scopeValue: 'Bihar' },
+      { pariwarId: P, role: 'helpline_operator', scopeDimension: 'pariwar', scopeValue: P },
+    ] as const) {
+      expect(hasPermission([g], key, at('Patna')), g.role).toBe(false);
+    }
+  });
+
+  it('trustee_panel does NOT hold the Pariwar Admin\'s keys: ⛔ undo_ending, ⛔ hear_ending_appeal', () => {
+    expect(hasPermission([tp], 'field_worker.undo_ending', at('Patna'))).toBe(false);
+    expect(hasPermission([tp], 'field_worker.hear_ending_appeal', at('Patna'))).toBe(false);
+  });
+});
+
+describe('Story 13.1f — `field_worker.read_ending_appeals` (`2026-11-16-464` AD10, AD13)', () => {
+  const key = 'field_worker.read_ending_appeals';
+  const P = '11111111-1111-1111-1111-111111111111';
+  const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
+  const da = { pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' } as const;
+  const pa = { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P } as const;
+  const tp = { pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P } as const;
+
+  it('the holders, exactly: district_admin, pariwar_admin, trustee_panel (+ super_admin); ⛔ state_trustee, helpline_operator, field_worker', () => {
+    const holders = defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(key))
+      .map((b) => b.role)
+      .sort();
+    expect(holders).toEqual(['district_admin', 'pariwar_admin', 'super_admin', 'trustee_panel']);
+    for (const role of ['state_trustee', 'helpline_operator', 'field_worker'] as const) {
+      expect((bundleForRole(role)!.permissions as readonly string[]).includes(key), role).toBe(false);
+    }
+  });
+
+  it('district_admin only in its OWN district; pariwar_admin and trustee_panel anywhere; ⛔ a district grant at the PARIWAR dimension', () => {
+    expect(hasPermission([da], key, at('Patna'))).toBe(true);
+    expect(hasPermission([da], key, at('Gaya'))).toBe(false);
+    for (const d of ['Patna', 'Gaya']) {
+      expect(hasPermission([pa], key, at(d)), d).toBe(true);
+      expect(hasPermission([tp], key, at(d)), d).toBe(true);
+    }
+    const wide = { pariwarId: P, dimension: 'pariwar', value: P } as const;
+    expect(hasPermission([da], key, wide)).toBe(false);
+    expect(hasPermission([pa], key, wide)).toBe(true);
+    expect(hasPermission([tp], key, wide)).toBe(true);
+  });
+});

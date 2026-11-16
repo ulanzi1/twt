@@ -890,7 +890,19 @@ export function permissionKey(value: string): PermissionKey {
 // `field_worker.move` (the DIRECT move, Pariwar Admin only — `-454` Q7 A, unchanged), `field_worker.view` / `.read_log` (a
 // worker the reader manages; the officer at the other end does not), `workplace.manage` (members' postings). 61 / 86 READ LIVE
 // at `43deb5d2`. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 62 as const;
+//
+// ⭐ Story 13.1f (author-commit `2026-11-16-464` AD10, BigDev's Q-1 A and Q-4 A; each a `-059` B(3) field-worker permission built on
+// the default, its confirm Question 5 of the Panel note — roster Row 52 (a); `-210` cl. 2 authorises none of them) — 62 → 63, FOUR keys
+// (90 → 94), ONE bump: `field_worker.undo_ending` (undo an ending made by mistake — `field_worker.ending_undone`; `pariwar_admin` ONLY,
+// the Panel's `-454` Q1 A "The Pariwar Admin may undo"); `field_worker.hear_ending_appeal` (lodge, decide and withdraw an appeal the
+// PARIWAR ADMIN hears — a District Admin's ending; `pariwar_admin`); `field_worker.hear_ending_appeal_as_panel` (the same for an appeal
+// the TRUSTEE PANEL hears — a Pariwar Admin's or a super admin's ending; `trustee_panel` ONLY, never acted on from a `global` grant —
+// a SEPARATE key so the record shows the Panel acted, the 10.22 reason); `field_worker.read_ending_appeals` (the appeal list, the
+// eligible list and one worker's appeals) — `district_admin` (the worker's district), `pariwar_admin`, `trustee_panel`. All four
+// DISTRICT-dimension (+ derived super_admin). REUSE CHECK — ⛔ `field_worker.terminate` (the opposite act), `member.restore_terminated`
+// / `member.decide_moderation_appeal` (members), `field_worker.read_log` (the worker's stream, not the appeal's). 62 / 90 READ LIVE at
+// `5ede00c4`. `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 63 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1549,6 +1561,18 @@ export const SEED_PERMISSION_KEYS = [
   // detail (the worker's name and work history, one audit line a view). district-dimension (either end); `district_admin`
   // (either end) and `pariwar_admin` (any) (+ derived super_admin).
   'field_worker.read_move_requests',
+  // Story 13.1f (`2026-11-16-464` AD6, AD10; `-454` Q1 A) — UNDO an ending made by mistake (`field_worker.ending_undone`, the worker as
+  // they were, the same code). district-dimension (the worker's district); `pariwar_admin` ONLY (+ derived super_admin).
+  'field_worker.undo_ending',
+  // Story 13.1f (AD9, AD10) — LODGE, DECIDE and WITHDRAW an appeal heard by the Pariwar Admin (a District Admin's ending; AD8).
+  // district-dimension; `pariwar_admin` (+ derived super_admin — Panel note Q4 (c)).
+  'field_worker.hear_ending_appeal',
+  // Story 13.1f (AD9, AD10; Q-1 A, Q-4 A) — the same for an appeal heard by the TRUSTEE PANEL. district-dimension; `trustee_panel`
+  // ONLY. A super admin derives it but the commands refuse it from a `global` grant (the Panel acts as itself).
+  'field_worker.hear_ending_appeal_as_panel',
+  // Story 13.1f (AD13) — READ the appeals: the list and the eligible list (decrypted names, one audit line a page) and one worker's
+  // appeals (no decrypt). district-dimension; `district_admin` (own district), `pariwar_admin`, `trustee_panel` (+ derived super_admin).
+  'field_worker.read_ending_appeals',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

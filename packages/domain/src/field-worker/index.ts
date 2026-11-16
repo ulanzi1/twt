@@ -12,6 +12,12 @@
 // `export * from './commands.js'` below DOES carry two helpers the request commands import from `./commands.js` directly (Task 2.4; code
 // review CR19): `lockFieldWorkerRow` (the worker's `SELECT … FOR UPDATE` — a lock, no write) and `verifiedSnapshot` (pure). Neither is a
 // write entry point: nothing is written without a projector, and the projectors are not exported.
+// Story 13.1f — ⛔ re-exported either: the appeal's projector (ending-appeal-project.ts), its row lock (ending-appeal-lock.ts) and the
+// supersede after a slip's undo (ending-appeal-supersede.ts, called by `undoFieldWorkerEnding` only); and the undo's CORE and its stream
+// read stay MODULE-PRIVATE in commands.ts (`undoEndingLocked`, `readFieldWorkerStreamLocked` — TR17; a barrel-keys leg pins it). The two
+// exported undo writers are `undoFieldWorkerEnding` and `allowFieldWorkerEndingAppeal`. `export * from './commands.js'` also carries
+// three helpers the appeal commands import from `./commands.js` directly: `istToday` (a clock read), `lockAppealForDecision` (two locks
+// and the decide checks — no write) and `verifiedSnapshot` (pure). None writes.
 // ⛔ Anything from `attribution-code` (I9): the code is read only through 13.2's door, and by Story 13.1b's one reviewed job.
 
 // The field_worker.* vocabulary + .strict() payload schemas (consumed by packages/events' registry + the projector).
@@ -42,3 +48,9 @@ export * from './move-request-read.js';
 // the notices: the email path never writes `field_worker_notices` (I3).
 export * from './notice-email-eligibility-read.js';
 export * from './notice-email.js';
+// Story 13.1f — the appeal against an ending: its vocabulary, its state table and pure checks, its commands (lodge / refuse / withdraw —
+// the allowed decision and the undo are in commands.ts), and its reads (decision `2026-11-16-464` AD7, AD9, AD13).
+export * from './ending-appeal-events.js';
+export * from './ending-appeal-state.js';
+export * from './ending-appeal-commands.js';
+export * from './ending-appeal-read.js';

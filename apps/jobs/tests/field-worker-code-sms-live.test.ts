@@ -310,7 +310,7 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
     const { rows: ist } = await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d");
     const today = ist[0]!.d;
     await withPariwarScope(pool, pid, (_db, client) =>
-      fieldWorker.terminateFieldWorker(client, { ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }),
+      fieldWorker.terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }),
     );
     const gw = gateway();
     expect(await settled(sweep(gw), sendId)).toMatchObject({ outcome: 'skipped_not_active' });

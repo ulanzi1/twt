@@ -1,4 +1,5 @@
-// The seven field-worker commands — Story 13.1 (QE5, QE7, QE13, QE14, QE17, QE18, QE20; AC5). The ONLY public writers.
+// The field-worker commands — Story 13.1 (QE5, QE7, QE13, QE14, QE17, QE18, QE20; AC5); Story 13.1f adds the undo of an ending and the
+// allowed appeal (`undoFieldWorkerEnding`, `allowFieldWorkerEndingAppeal` — AD2, AD9). The ONLY public writers of the worker's stream.
 //
 // Copy of the SHIPPED `marketplace/commands.ts` lock / SAVEPOINT shape: the pure guards run first (no SQL); then, inside
 // ONE savepoint, the row is locked `FOR UPDATE` (QE13), the guards are judged against the LOCKED row, and the projector
@@ -8,6 +9,10 @@
 //
 // ── Statement order, pinned by `tests/field-worker/commands-guards.test.ts` (I13) ────────────────────
 //   SAVEPOINT → LOCK → HEAD → APPEND → UPDATE      (`terminate`: SAVEPOINT → LOCK → NOW → HEAD → APPEND → UPDATE)
+//   Story 13.1f — the undo (AD2): SAVEPOINT → LOCK → STREAM → HEAD → UNDONE-EVENT → APPEND → GUARD ON → UNDO ON → UPDATE → UNDO OFF →
+//   GUARD OFF → RELEASE, then for a SLIP only: APPEAL LOCK → (an open one) NOW → appeal APPEND → appeal UPDATE. The ALLOWED appeal first
+//   takes APPEAL-WORKER (unlocked) → WORKER LOCK → APPEAL LOCK → NOW (TR5), then the undo's sequence (its LOCK re-locks a row already
+//   held), then the appeal's APPEND → UPDATE after RELEASE.
 // ⚠ The caller's transaction must be READ COMMITTED — under REPEATABLE READ a lock waiter gets an untyped 40001.
 //
 // ── Guard order, in EVERY command (QE5; pinned by a test) ─────────────────────────────────────────
@@ -34,6 +39,10 @@
 //        append-only log) ⇒ `FieldWorkerAuthorizationStaleError`;
 //   (4)  the reason (suspend, terminate, post) ⇒ `FieldWorkerReasonInvalidError`;
 //   (5)  `terminate`: the IST bounds — not after today, not before the registration day ⇒ `FieldWorkerEndedOnInvalidError`.
+//   Story 13.1f — the undo REPLACES step (2) through `resolveTarget` (TR14): (2′) the row is `terminated` ⇒ `FieldWorkerIllegalTransitionError`;
+//   then its guard: (2a) the locked version is the ending the officer saw ⇒ `FieldWorkerEndingChangedError`; (3d) the target; then the
+//   target itself — the fold of the stream PREFIX before the latest ending, checked against that ending's `from_state` (a mismatch is a
+//   corrupt stream ⇒ `FieldWorkerProjectorInputError`, a 500).
 //
 // ── Side effects AFTER the transition, on the SAME client (the `activate` code-SMS shape) ─────────
 // `activate` records the code SMS as due (13.1b). Story 13.1d (AD3, AD4, AD9): a DIRECT move (`post` under `field_worker.move` ONLY —
@@ -44,13 +53,32 @@
 
 import type pg from 'pg';
 
-import type { FieldWorkerId, PariwarId } from '../ids/index.js';
+import type { FieldWorkerEndingAppealId, FieldWorkerId, PariwarId } from '../ids/index.js';
 import { rollbackToSavepoint } from '../marketplace/project.js';
 import { isVerifiedAuthorization, type VerifiedAuthorization } from '../rbac/check.js';
+import type { FieldWorkerEndingAppealHearer } from '../schema/field_worker_ending_appeals.js';
 import type { FieldWorkerKycStatus, FieldWorkerReasonCode, FieldWorkerState } from '../schema/field_workers.js';
 import { enqueueFieldWorkerCodeSms } from './code-sms.js';
 import {
+  FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES,
+  FIELD_WORKER_UNDO_ENDING_PERMISSION_KEY,
+  type FieldWorkerEndingAppealEventType,
+} from './ending-appeal-events.js';
+import {
+  appealWorkerOf,
+  lockEndingAppealRow,
+  type EndingAppealLockedRow,
+} from './ending-appeal-lock.js';
+import { projectEndingAppealTransition } from './ending-appeal-project.js';
+import { assertAppealActorKind, assertAppealHearer } from './ending-appeal-state.js';
+import { supersedeOpenEndingAppeal } from './ending-appeal-supersede.js';
+import {
+  FieldWorkerAppealDateInvalidError,
+  FieldWorkerAppealDeciderIsEnderError,
+  FieldWorkerAppealMissingError,
+  FieldWorkerAppealNotOpenError,
   FieldWorkerEndedOnInvalidError,
+  FieldWorkerEndingChangedError,
   FieldWorkerAuthorizationStaleError,
   FieldWorkerDistrictUnchangedError,
   FieldWorkerGenesisMissingError,
@@ -61,13 +89,17 @@ import {
   FieldWorkerReasonInvalidError,
 } from './errors.js';
 import {
+  FIELD_WORKER_HEAR_APPEAL_PERMISSION_KEYS,
   FIELD_WORKER_MOVE_PERMISSION_KEYS,
   FIELD_WORKER_POST_REASONS,
   FIELD_WORKER_SUSPEND_REASONS,
   FIELD_WORKER_TERMINATE_REASONS,
+  FIELD_WORKER_UNDO_PERMISSION_KEYS,
+  fieldWorkerAppealHeardBySchema,
   isCalendarDateString,
   type FieldWorkerAuthorizationSnapshot,
   type FieldWorkerEventType,
+  type FieldWorkerUndoCause,
 } from './events.js';
 import type { FieldWorkerMoveRequestEventType } from './move-request-events.js';
 import {
@@ -80,9 +112,10 @@ import {
   type ProjectFieldWorkerGenesisResult,
 } from './project.js';
 import { afterDirectMove, afterEnding } from './move-request-supersede.js';
-import { nextFieldWorkerState } from './state.js';
+import { foldFieldWorkerProjection, nextFieldWorkerState, type FieldWorkerReplayEvent } from './state.js';
 
 export type { FieldWorkerTransitionResult, ProjectFieldWorkerGenesisResult } from './project.js';
+export type { EndingAppealLockedRow } from './ending-appeal-lock.js';
 
 /** The ONE permission key whose verified result `registerFieldWorker` accepts (QE10). */
 export const FIELD_WORKER_REGISTER_PERMISSION_KEY = 'field_worker.register';
@@ -96,6 +129,9 @@ export const FIELD_WORKER_APPROVE_PERMISSION_KEY = 'field_worker.approve';
  * re-exported here. `field_worker.register` is ⛔ here, and refused by a test.
  */
 export { FIELD_WORKER_MOVE_PERMISSION_KEYS };
+
+/** Story 13.1f (AD2) — the keys whose verified result may undo an ending; defined in `events.ts` (the event's schema pins it). */
+export { FIELD_WORKER_UNDO_PERMISSION_KEYS };
 
 /** The ONE permission key each lifecycle act accepts (Story 13.1c AD3, AD5 — one key per act, 13.1 QE10). */
 export const FIELD_WORKER_SUSPEND_PERMISSION_KEY = 'field_worker.suspend';
@@ -158,8 +194,11 @@ export async function lockFieldWorkerRow(
   };
 }
 
-/** The IST calendar day of the TRANSACTION-START clock (`now()` — the same clock as `occurred_at`; ⛔ `clock_timestamp()`). */
-async function istToday(client: pg.PoolClient): Promise<string> {
+/**
+ * The IST calendar day of the TRANSACTION-START clock (`now()` — the same clock as `occurred_at`; ⛔ `clock_timestamp()`). Exported for
+ * Story 13.1f's appeal commands (their date bounds — TR4); it writes nothing (13.1d CR19's rule), and the barrel's header names it.
+ */
+export async function istToday(client: pg.PoolClient): Promise<string> {
   const res = await client.query<{ ist_today: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS ist_today");
   const day = res.rows[0]?.ist_today;
   if (typeof day !== 'string') throw new Error('[field-worker] the IST day query returned no row');
@@ -174,8 +213,9 @@ async function istToday(client: pg.PoolClient): Promise<string> {
  * `expected` names them — the wrong key or target. Returns the snake_case payload snapshot.
  */
 export function verifiedSnapshot(
-  // Both vocabularies (Story 13.1d widened it for the request commands; code review CR19 — ⛔ a bare `string`, which loses the check).
-  eventType: FieldWorkerEventType | FieldWorkerMoveRequestEventType,
+  // The three vocabularies (Story 13.1d widened it for the request commands, Story 13.1f for the appeal's; code review CR19 — ⛔ a bare
+  // `string`, which loses the check).
+  eventType: FieldWorkerEventType | FieldWorkerMoveRequestEventType | FieldWorkerEndingAppealEventType,
   authorization: unknown,
   i: { pariwarId: string; actorId: string },
   // ONE of the two is REQUIRED (review R2-13): with neither, any verified district-dimension key would be accepted (the hole `post` had).
@@ -231,6 +271,11 @@ export interface RegisterFieldWorkerInput extends FieldWorkerCommandBase {
   district: string;
   /** The VERIFIED result the gate stored on `request.authorizations['field_worker.register']` — ⛔ a recomputation. */
   authorization: VerifiedAuthorization;
+  /**
+   * Story 13.1f (AD12; `-454` Q2 B) — the earlier ENDED record of this Pariwar the officer linked this registration to. The API
+   * validated it (terminated, the same number) under `FOR SHARE` in this transaction; the composite FK re-checks the Pariwar.
+   */
+  previousFieldWorkerId?: FieldWorkerId;
 }
 
 /**
@@ -261,6 +306,7 @@ export async function registerFieldWorker(
     auditId: i.auditId,
     actor: i.actor,
     actorId: i.actorId,
+    ...(i.previousFieldWorkerId === undefined ? {} : { previousFieldWorkerId: i.previousFieldWorkerId }),
   });
 }
 
@@ -269,10 +315,18 @@ export async function registerFieldWorker(
 const TRANSITION_SAVEPOINT = 'field_worker_transition';
 
 /**
+ * Story 13.1f (AD2, TR14) — the undo's target hook. Given it, the runner's legality step is `row.currentState === 'terminated'` (⛔ the
+ * table — it answers `null` for every undo) and the target comes from the hook, AFTER the command's guard: its `toState` and the payload
+ * keys it computes (the restored reason). Nothing comes from the caller.
+ */
+type ResolveTarget = (row: FieldWorkerLockedRow) => Promise<{ toState: FieldWorkerState; extraPayload: Record<string, unknown> }>;
+
+/**
  * SAVEPOINT → lock → (1) present → (2) legal → `guard(row)` (3…5) → build the payload → project, inside one savepoint.
  * `guard` may run SQL (terminate's NOW step) and returns the payload's extra keys. `trigger` is a constant, or is computed FROM
  * those keys — so a reason reaches the trigger only once its guard has VALIDATED it (review R3-20: ⛔ `String(<raw input>)`).
- * `approvedByDisplay` is `activate`'s row-only snapshot (13.1a, `-447` item 2) — ⛔ a payload key.
+ * `approvedByDisplay` is `activate`'s row-only snapshot (13.1a, `-447` item 2) — ⛔ a payload key. `resolveTarget` is the undo's
+ * (Story 13.1f): it REPLACES step (2) and the target (TR14).
  */
 async function runLockedTransition(
   client: pg.PoolClient,
@@ -280,15 +334,26 @@ async function runLockedTransition(
   eventType: FieldWorkerTransitionEventType,
   guard: (row: FieldWorkerLockedRow) => Promise<Record<string, unknown>> | Record<string, unknown>,
   trigger: string | ((extraPayload: Record<string, unknown>) => string),
-  approvedByDisplay?: string,
+  opts: { approvedByDisplay?: string; resolveTarget?: ResolveTarget } = {},
 ): Promise<FieldWorkerTransitionResult> {
+  const { approvedByDisplay, resolveTarget } = opts;
   await client.query(`SAVEPOINT ${TRANSITION_SAVEPOINT}`);
   try {
     const row = await lockFieldWorkerRow(client, i.pariwarId, i.fieldWorkerId);
     if (row === null) throw new FieldWorkerGenesisMissingError(i.fieldWorkerId);
-    const toState = nextFieldWorkerState(row.currentState, eventType);
-    if (toState === null) throw new FieldWorkerIllegalTransitionError(i.fieldWorkerId, row.currentState, eventType);
-    const extraPayload = await guard(row);
+    let toState: FieldWorkerState | null;
+    let extraPayload: Record<string, unknown>;
+    if (resolveTarget === undefined) {
+      toState = nextFieldWorkerState(row.currentState, eventType);
+      if (toState === null) throw new FieldWorkerIllegalTransitionError(i.fieldWorkerId, row.currentState, eventType);
+      extraPayload = await guard(row);
+    } else {
+      if (row.currentState !== 'terminated') throw new FieldWorkerIllegalTransitionError(i.fieldWorkerId, row.currentState, eventType);
+      const guarded = await guard(row);
+      const target = await resolveTarget(row);
+      toState = target.toState;
+      extraPayload = { ...guarded, ...target.extraPayload };
+    }
     const triggerValue = typeof trigger === 'string' ? trigger : trigger(extraPayload);
 
     const result = await projectFieldWorkerTransition(client, {
@@ -385,7 +450,7 @@ export async function activateFieldWorker(client: pg.PoolClient, i: ActivateFiel
       return { authorization };
     },
     'field_worker.activate',
-    i.approvedByDisplay,
+    { approvedByDisplay: i.approvedByDisplay },
   );
   await enqueueFieldWorkerCodeSms(client, { pariwarId: i.pariwarId, fieldWorkerId: i.fieldWorkerId, activatedAuditId: i.auditId });
   return result;
@@ -407,6 +472,13 @@ export interface TerminateFieldWorkerInput extends FieldWorkerLifecycleCommandIn
   reasonCode: string;
   /** The ACTUAL LAST DAY (QE20) — for `died`, the date of death (`-455`); `YYYY-MM-DD`, judged by the IST bounds. */
   endedOn: string;
+  /**
+   * Story 13.1f (AD8) — who hears an appeal against THIS ending, computed by the terminate route AT THE ACT from the actor's grants
+   * (`trustee_panel` if they hold a `pariwar_admin` grant in this Pariwar or are a super admin, else `pariwar_admin`) — never
+   * recomputed later, ⛔ read from the snapshot's `role`. REQUIRED: the command refuses a missing one (the SCHEMA keeps it optional so a
+   * stored legacy event still parses).
+   */
+  appealHeardBy: FieldWorkerEndingAppealHearer;
 }
 
 /**
@@ -454,7 +526,8 @@ export async function reactivateFieldWorker(client: pg.PoolClient, i: FieldWorke
 }
 
 /**
- * `pending_kyc | active | suspended → terminated` — TERMINAL (QE5; the undo of a mistaken ending is row 13-1f's, `-454` Q1 A).
+ * `pending_kyc | active | suspended → terminated` — left ONLY by an undo (Story 13.1f — `undoFieldWorkerEnding` /
+ * `allowFieldWorkerEndingAppeal`, `-454` Q1 A). Writes the hearer fixed at the ending (`appeal_heard_by`, AD8).
  * `endedOn` is the ACTUAL LAST DAY (QE20) — for `died`, the date of death (`-455`): `YYYY-MM-DD`, a real date, not after today and
  * not before the registration day — BOTH IST days computed in SQL on the transaction-start clock, compared as strings (string
  * order = calendar order); ⛔ a JS `Date`. Carries the verified `field_worker.terminate` authorization, its target judged against
@@ -466,6 +539,10 @@ export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFi
   const authorization = verifiedSnapshot('field_worker.terminated', i.authorization, i, {
     permissionKey: FIELD_WORKER_TERMINATE_PERMISSION_KEY,
   });
+  // Story 13.1f (AD8) — the hearer is REQUIRED on every new ending (the schema keeps it optional for stored legacy events).
+  if (!fieldWorkerAppealHeardBySchema.safeParse(i.appealHeardBy).success) {
+    throw new FieldWorkerProjectorInputError('[field_worker.terminated] appealHeardBy (who hears an appeal against this ending) is missing (AD8)');
+  }
   // (0b) — pure, BEFORE any SQL: a malformed date is never sent to Postgres.
   if (typeof i.endedOn !== 'string' || !isCalendarDateString(i.endedOn)) {
     throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'missing_or_malformed');
@@ -480,7 +557,7 @@ export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFi
       const today = await istToday(client);
       if (i.endedOn > today) throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'in_future');
       if (i.endedOn < row.registeredOn) throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'before_registration');
-      return { authorization, reason_code: reasonCode, ended_on: i.endedOn };
+      return { authorization, reason_code: reasonCode, ended_on: i.endedOn, appeal_heard_by: i.appealHeardBy };
     },
     (extra) => `field_worker.terminate:${extra['reason_code'] as string}`,
   );
@@ -552,3 +629,269 @@ export async function postFieldWorker(client: pg.PoolClient, i: PostFieldWorkerI
   }
   return result;
 }
+
+// ── Story 13.1f — the undo of an ending, and the allowed appeal (decision `2026-11-16-464` AD2, AD5, AD6, AD9) ─────────────────────────
+
+/** The worker's WHOLE stream, read on the client that holds its row lock (the undo's STREAM step). MODULE-PRIVATE (TR17). */
+async function readFieldWorkerStreamLocked(
+  client: pg.PoolClient,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+): Promise<FieldWorkerReplayEvent[]> {
+  const res = await client.query<{ event_type: string; payload: unknown; event_version: string | number }>(
+    'SELECT event_type, payload, event_version FROM events_log WHERE pariwar_id = $1 AND stream_id = $2 ORDER BY event_version',
+    [pariwarId, fieldWorkerId],
+  );
+  return res.rows.map((r) => ({ type: r.event_type, payload: r.payload, eventVersion: Number(r.event_version) }));
+}
+
+/** What the undo's core takes — every input already checked by its exported caller. */
+interface UndoEndingLockedInput extends FieldWorkerCommandBase {
+  /** The VERIFIED snapshot of one of `FIELD_WORKER_UNDO_PERMISSION_KEYS` (the caller ran `verifiedSnapshot`). */
+  authorization: FieldWorkerAuthorizationSnapshot;
+  cause: FieldWorkerUndoCause;
+  appealId: FieldWorkerEndingAppealId | null;
+  /** The ending the officer saw (the slip), or the appeal's `ending_event_version` (the allowed decision). */
+  expectedEndingVersion: number;
+}
+
+/**
+ * The undo's CORE (AD2) — MODULE-PRIVATE: the barrel is `export * from './commands.js'`, so an export would be public and a caller could
+ * pass an unchecked `appeal_id` (TR17). Runs `runLockedTransition` with `resolveTarget`: (2′) terminated; the guard — (2a) the version is
+ * the expected ending ⇒ `FieldWorkerEndingChangedError`, (3d) the target; then the target — the fold of the stream PREFIX before the
+ * latest `field_worker.terminated` event (G2; an earlier undo in the prefix folds through AD3's arm), which must equal that event's
+ * `from_state` read RAW (TR18) ⇒ else `FieldWorkerProjectorInputError` (a corrupt stream, a 500). Restores the suspension reason iff
+ * suspended. The projector re-checks the undone event (AD3) and maps the live-number 23505 (AD5).
+ */
+async function undoEndingLocked(client: pg.PoolClient, i: UndoEndingLockedInput): Promise<FieldWorkerTransitionResult> {
+  return runLockedTransition(
+    client,
+    i,
+    'field_worker.ending_undone',
+    (row) => {
+      if (row.stateEventVersion !== i.expectedEndingVersion) throw new FieldWorkerEndingChangedError(i.fieldWorkerId, i.expectedEndingVersion);
+      assertLockedTarget(i, i.authorization, row);
+      return {
+        authorization: i.authorization,
+        cause: i.cause,
+        appeal_id: i.appealId,
+        undone_ending_version: row.stateEventVersion,
+      };
+    },
+    (extra) => `field_worker.undo_ending:${extra['cause'] as string}`,
+    {
+      resolveTarget: async (row) => {
+        const stream = await readFieldWorkerStreamLocked(client, i.pariwarId, i.fieldWorkerId);
+        let lastEnding = -1;
+        for (let k = stream.length - 1; k >= 0; k -= 1) {
+          if (stream[k]!.type === 'field_worker.terminated') {
+            lastEnding = k;
+            break;
+          }
+        }
+        const ending = lastEnding === -1 ? undefined : stream[lastEnding];
+        if (ending === undefined || ending.eventVersion !== row.stateEventVersion) {
+          throw new FieldWorkerProjectorInputError(`[field_worker.ending_undone] field worker ${i.fieldWorkerId}: the row's version is not its latest ending`);
+        }
+        const before = foldFieldWorkerProjection(stream.slice(0, lastEnding));
+        const raw = (typeof ending.payload === 'object' && ending.payload !== null ? ending.payload : {}) as Record<string, unknown>;
+        if (before.state === 'terminated' || raw['from_state'] !== before.state) {
+          throw new FieldWorkerProjectorInputError(
+            `[field_worker.ending_undone] field worker ${i.fieldWorkerId}: the stream before the ending folds to '${before.state}', the ending says '${String(raw['from_state'])}'`,
+          );
+        }
+        return {
+          toState: before.state,
+          extraPayload: { reason_code: before.state === 'suspended' ? before.reasonCode : null },
+        };
+      },
+    },
+  );
+}
+
+/** What an undo returns: the transition, the restored reason and no last day — the handler's 200 is built from THIS (G24). */
+export interface FieldWorkerUndoResult extends FieldWorkerTransitionResult {
+  reasonCode: FieldWorkerReasonCode | null;
+  endedOn: null;
+}
+
+/** The restored reason, read back from the row the undo just wrote (the same transaction). */
+async function restoredReason(client: pg.PoolClient, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<FieldWorkerReasonCode | null> {
+  const res = await client.query<{ state_reason_code: FieldWorkerReasonCode | null }>(
+    'SELECT state_reason_code FROM field_workers WHERE pariwar_id = $1 AND field_worker_id = $2',
+    [pariwarId, fieldWorkerId],
+  );
+  return res.rows[0]?.state_reason_code ?? null;
+}
+
+export interface UndoFieldWorkerEndingInput extends FieldWorkerCommandBase {
+  /** `request.authorizations['field_worker.undo_ending']`, passed on unchanged — ⛔ a recomputation. */
+  authorization: VerifiedAuthorization;
+  /** The worker's `state_event_version` as the officer's screen showed it (AD6 — 13.1 D7's guard). */
+  expectedEndingVersion: number;
+}
+
+/**
+ * Story 13.1f (AD6; the Panel's `-454` Q1 A) — the Pariwar Admin undoes an ending made BY MISTAKE: the worker returns as they were (the
+ * state the ending left, its suspension reason, the same district and code), both acts stay in the history. Any ending — any reason,
+ * `died` included, any from-state, at any time, after a REFUSED appeal too (note Q6, as ruled). A SLIP's undo SUPERSEDES the worker's
+ * open appeal in the same transaction (I4). ⛔ It reopens no move request (13.1d C3) and re-sends no code text (C7).
+ * Guard (0), pure: the actor (QE7, and `'operator'` — AD9), the `field_worker.undo_ending` authorization, the expected version.
+ * @throws FieldWorkerIllegalTransitionError, FieldWorkerEndingChangedError, FieldWorkerAuthorizationStaleError,
+ *         FieldWorkerNumberRegisteredAgainError (+ the shared guards).
+ */
+export async function undoFieldWorkerEnding(client: pg.PoolClient, i: UndoFieldWorkerEndingInput): Promise<FieldWorkerUndoResult> {
+  assertFieldWorkerActor('field_worker.ending_undone', i.actor, i.actorId);
+  const authorization = verifiedSnapshot('field_worker.ending_undone', i.authorization, i, {
+    permissionKey: FIELD_WORKER_UNDO_ENDING_PERMISSION_KEY,
+  });
+  assertAppealActorKind('field_worker.ending_undone', i.actor, authorization.permission_key);
+  if (!Number.isSafeInteger(i.expectedEndingVersion) || i.expectedEndingVersion < 2) {
+    throw new FieldWorkerProjectorInputError('[field_worker.ending_undone] the expected ending version is missing or malformed (AD6)');
+  }
+  const result = await undoEndingLocked(client, {
+    ...i,
+    authorization,
+    cause: 'mistake',
+    appealId: null,
+    expectedEndingVersion: i.expectedEndingVersion,
+  });
+  // The slip supersedes the open appeal (AD6, I4) — the worker's row lock is still held, so the appeal's is taken second (TR5).
+  await supersedeOpenEndingAppeal(client, {
+    pariwarId: i.pariwarId,
+    fieldWorkerId: i.fieldWorkerId,
+    authorization,
+    undoneEventId: result.eventId,
+    auditId: i.auditId,
+    actor: i.actor,
+    actorId: i.actorId,
+  });
+  return { ...result, reasonCode: await restoredReason(client, i.pariwarId, i.fieldWorkerId), endedOn: null };
+}
+
+/** What a decision on an appeal takes (AD9): the VERIFIED result of the HEAR key the gate matched to the appeal's `heard_by`. */
+export interface FieldWorkerAppealDecisionInput {
+  pariwarId: PariwarId;
+  appealId: FieldWorkerEndingAppealId;
+  /** REQUIRED — the caller's `withCompensatingAudit` intent id (QE14). ONE line for the decision (an allowed one: both events carry it). */
+  auditId: string;
+  /** `'trustee'` under the Panel's key, `'operator'` under the Pariwar Admin's (AD9) — a mismatch is refused. */
+  actor: 'operator' | 'trustee';
+  actorId: string;
+  /** `request.authorizations[<the hear key>]`, passed on unchanged. */
+  authorization: VerifiedAuthorization;
+  /** `YYYY-MM-DD` — between the appeal's `received_on` and today (IST); judged by the command (AD7). */
+  decidedOn: string;
+}
+
+/** The appeal and its worker, both locked — worker FIRST (TR5). */
+export interface LockedAppealForDecision {
+  appeal: EndingAppealLockedRow;
+  worker: FieldWorkerLockedRow;
+  today: string;
+  authorization: FieldWorkerAuthorizationSnapshot;
+}
+
+/**
+ * AD9's decide / withdraw preamble — ONE implementation for the allowed decision (here) and the refusal and withdrawal
+ * (`ending-appeal-commands.ts` imports it — it writes nothing, 13.1d CR19's rule; the barrel's header names it). Guard (0), pure: the
+ * actor (QE7), the hear-key authorization, the actor kind, `decidedOn` well-formed. Then APPEAL-WORKER (unlocked) → WORKER LOCK →
+ * APPEAL LOCK → NOW, and in order: (0′) the appeal exists and names the locked worker ⇒ `FieldWorkerAppealMissingError`; (1) the key is
+ * the appeal's hearer's, never a Panel act from a `global` grant ⇒ `FieldWorkerAppealWrongHearerError`; (1′) the target is the locked
+ * district; (2) the appeal is open ⇒ `FieldWorkerAppealNotOpenError`; (3) the actor did not end the worker ⇒
+ * `FieldWorkerAppealDeciderIsEnderError`; (4) `decidedOn` between `received_on` and today ⇒ `FieldWorkerAppealDateInvalidError`.
+ */
+export async function lockAppealForDecision(
+  client: pg.PoolClient,
+  eventType: FieldWorkerEndingAppealEventType,
+  i: FieldWorkerAppealDecisionInput,
+): Promise<LockedAppealForDecision> {
+  assertFieldWorkerActor(eventType, i.actor, i.actorId);
+  const authorization = verifiedSnapshot(eventType, i.authorization, i, { permissionKeys: FIELD_WORKER_HEAR_APPEAL_PERMISSION_KEYS });
+  assertAppealActorKind(eventType, i.actor, authorization.permission_key);
+  if (typeof i.decidedOn !== 'string' || !isCalendarDateString(i.decidedOn)) {
+    throw new FieldWorkerAppealDateInvalidError('decided_on', 'missing_or_malformed');
+  }
+  const fieldWorkerId = await appealWorkerOf(client, i.pariwarId, i.appealId);
+  if (fieldWorkerId === null) throw new FieldWorkerAppealMissingError(i.appealId);
+  const worker = await lockFieldWorkerRow(client, i.pariwarId, fieldWorkerId);
+  if (worker === null) throw new FieldWorkerAppealMissingError(i.appealId);
+  const appeal = await lockEndingAppealRow(client, i.pariwarId, i.appealId);
+  if (appeal === null || appeal.fieldWorkerId !== fieldWorkerId) throw new FieldWorkerAppealMissingError(i.appealId);
+  const today = await istToday(client);
+  assertAppealHearer(fieldWorkerId, appeal.heardBy, i.authorization);
+  if (authorization.target.value !== worker.district) throw new FieldWorkerAuthorizationStaleError(fieldWorkerId, authorization.target.value);
+  if (appeal.state !== 'open') throw new FieldWorkerAppealNotOpenError(i.appealId, appeal.state);
+  if (i.actorId === appeal.endedByUserId) throw new FieldWorkerAppealDeciderIsEnderError(i.appealId);
+  if (i.decidedOn > today) throw new FieldWorkerAppealDateInvalidError('decided_on', 'in_future');
+  if (i.decidedOn < appeal.receivedOn) throw new FieldWorkerAppealDateInvalidError('decided_on', 'before_received');
+  return { appeal, worker, today, authorization };
+}
+
+/** What an allowed decision returns: the appeal's transition and the restored worker (the 200 is `{ appeal, worker }`). */
+export interface FieldWorkerAppealAllowedResult {
+  appealId: FieldWorkerEndingAppealId;
+  appealEventVersion: number;
+  worker: FieldWorkerUndoResult & { fieldWorkerId: FieldWorkerId };
+}
+
+/**
+ * Story 13.1f (AD9; the epic text "An appeal allowed undoes the ending as above") — the HEARER allows an appeal, and the ending is undone
+ * in the SAME transaction: `lockAppealForDecision`, then the worker must be `terminated` at the appeal's `ending_event_version` (else an
+ * open appeal on a changed ending — corrupt, since a slip supersedes it ⇒ `FieldWorkerProjectorInputError`), then the private core with
+ * cause `appeal_allowed`, then `field_worker_ending_appeal.allowed`. ONE audit id for both events. If the number is live again the whole
+ * decision fails (`FieldWorkerNumberRegisteredAgainError`) and the appeal stays OPEN (note Q7). It supersedes nothing — the open appeal
+ * IS the one being allowed.
+ */
+export async function allowFieldWorkerEndingAppeal(
+  client: pg.PoolClient,
+  i: FieldWorkerAppealDecisionInput,
+): Promise<FieldWorkerAppealAllowedResult> {
+  const { appeal, worker, authorization } = await lockAppealForDecision(client, 'field_worker_ending_appeal.allowed', i);
+  if (worker.currentState !== 'terminated' || worker.stateEventVersion !== appeal.endingEventVersion) {
+    throw new FieldWorkerProjectorInputError(
+      `[field_worker_ending_appeal.allowed] appeal ${i.appealId} is open on an ending that is not the worker's current one`,
+    );
+  }
+  const undone = await undoEndingLocked(client, {
+    pariwarId: i.pariwarId,
+    fieldWorkerId: appeal.fieldWorkerId,
+    auditId: i.auditId,
+    actor: i.actor,
+    actorId: i.actorId,
+    authorization,
+    cause: 'appeal_allowed',
+    appealId: i.appealId,
+    expectedEndingVersion: appeal.endingEventVersion,
+  });
+  const t = await projectEndingAppealTransition(client, {
+    pariwarId: i.pariwarId,
+    eventType: 'field_worker_ending_appeal.allowed',
+    payload: {
+      from_state: 'open',
+      to_state: 'allowed',
+      actor: i.actor,
+      field_worker_id: appeal.fieldWorkerId,
+      heard_by: appeal.heardBy,
+      authorization,
+      decided_on: i.decidedOn,
+      undone_event_id: undone.eventId,
+    },
+    actorId: i.actorId,
+    auditId: i.auditId,
+    lockedRow: appeal,
+  });
+  return {
+    appealId: i.appealId,
+    appealEventVersion: t.eventVersion,
+    worker: {
+      ...undone,
+      fieldWorkerId: appeal.fieldWorkerId,
+      reasonCode: await restoredReason(client, i.pariwarId, appeal.fieldWorkerId),
+      endedOn: null,
+    },
+  };
+}
+
+/** The appeal vocabulary, re-exported for the API's audit action names (a constant, no write). */
+export { FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES };

@@ -39,7 +39,7 @@
 // Naming discipline (architecture L3663-3677): DB columns snake_case, TS fields camelCase, table snake_case-plural.
 
 import { sql } from 'drizzle-orm';
-import { bigint, check, date, index, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, check, date, foreignKey, index, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { piiColumn } from '../encryption/column.js';
 import type { FieldWorkerId, PariwarId } from '../ids/index.js';
@@ -124,6 +124,10 @@ export const fieldWorkers = pgTable(
     approvedByDisplay: text('approved_by_display'),
     // PROJECTED: set to `now()` on every transition.
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+    // Story 13.1f (migration 0207, AD12; the Panel's `-454` Q2 B): the earlier, ENDED record of this Pariwar the registering officer
+    // linked this registration to — NULL for every other worker. Written ONLY by the genesis INSERT (from the `field_worker.registered`
+    // payload); the 0201 / 0207 trigger's rule (b) makes it immutable afterwards. A composite FK to this table and a not-self CHECK.
+    previousFieldWorkerId: uuid('previous_field_worker_id').$type<FieldWorkerId>(),
   },
   (t) => [
     // The target of 13.2's composite FK `field_worker_attribution_codes_worker_fk` (C1).
@@ -159,6 +163,13 @@ export const fieldWorkers = pgTable(
       'field_workers_approved_by_state',
       sql`(${t.currentState} <> 'pending_kyc' OR ${t.approvedByDisplay} IS NULL) AND (${t.currentState} NOT IN ('active', 'suspended') OR ${t.approvedByDisplay} IS NOT NULL)`,
     ),
+    // Story 13.1f (0207, AD12): a link names ANOTHER record of the SAME Pariwar.
+    check('field_workers_previous_not_self', sql`${t.previousFieldWorkerId} IS NULL OR ${t.previousFieldWorkerId} <> ${t.fieldWorkerId}`),
+    foreignKey({
+      name: 'field_workers_previous_fk',
+      columns: [t.pariwarId, t.previousFieldWorkerId],
+      foreignColumns: [t.pariwarId, t.fieldWorkerId],
+    }).onDelete('no action'),
   ],
 );
 

@@ -48,7 +48,7 @@ describe.skipIf(!hasDatabase)('listFieldWorkerEvents — the worker’s log (Sto
     await suspendFieldWorker(client, { ...staff(id, asha), authorization: actAuthorization('field_worker.suspend', PARIWAR_A, 'Patna', asha), reasonCode: 'under_review' });
     await postFieldWorker(client, { ...staff(id, asha), toDistrict: 'Gaya', expectedFromDistrict: 'Patna', authorization: moveAuthorization(PARIWAR_A, 'Gaya', asha), reasonCode: 'reassigned' });
     const today = await istToday(client);
-    await terminateFieldWorker(client, { ...staff(id, asha), authorization: actAuthorization('field_worker.terminate', PARIWAR_A, 'Gaya', asha), reasonCode: 'died', endedOn: today });
+    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...staff(id, asha), authorization: actAuthorization('field_worker.terminate', PARIWAR_A, 'Gaya', asha), reasonCode: 'died', endedOn: today });
 
     const page = await listFieldWorkerEvents(bindScopedDb(client), A, id);
     expect(page).not.toBeNull();

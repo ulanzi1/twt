@@ -21,8 +21,11 @@
 // "(none)"). Genesis legality is "the stream is empty", checked by `projectFieldWorkerGenesis` — `registered` is NEVER
 // legal through `projectFieldWorkerTransition`, so it has ⛔ table row.
 //
-// ── TERMINAL `terminated` (QE5, I6) ───────────────────────────────────────────────────────────────
-// No event leaves it — `posted` included. A worker taken back is a NEW registration (a new id, a new code).
+// ── `terminated` is left ONLY by an undo (Story 13.1f AD2, AD3; the Panel's `-454` Q1 A) ──────────
+// No TABLE arm leaves it — `posted` included. The one way out is `field_worker.ending_undone`, whose target is DATA (the state the ending
+// left), so it is a PAYLOAD-DEPENDENT arm answered BEFORE the table lookup — a recorded variance (AD3). Its three rows are documentation
+// in `FIELD_WORKER_UNDO_TRANSITIONS`, ⛔ in `FIELD_WORKER_TRANSITIONS` (there every two-argument call would answer the FIRST row's
+// target, never `null` — G17 (a)). A worker who LEAVES and comes back is still a NEW registration (a new id, a new code — Q2 B).
 
 import { z } from 'zod';
 
@@ -46,6 +49,12 @@ import {
 const FoldRegisteredSchema = z.object({ district: fieldWorkerDistrictSchema });
 const FoldTerminatedSchema = z.object({ reason_code: fieldWorkerTerminateReasonSchema, ended_on: fieldWorkerEndedOnSchema });
 const FoldPostedSchema = z.object({ to_district: fieldWorkerDistrictSchema });
+/** Story 13.1f (AD3) — the undo's FOLD-ONLY shape: the target and the restored suspension reason; unknown keys ignored, ⛔ the write
+ *  schema (its pinned trigger, cause / key refinements). A malformed one is not applied (`nextFieldWorkerState` answers `null`). */
+const FoldEndingUndoneSchema = z.object({
+  to_state: z.enum(['pending_kyc', 'active', 'suspended']),
+  reason_code: fieldWorkerSuspendReasonSchema.nullable(),
+});
 
 export {
   FIELD_WORKER_KYC_STATUSES,
@@ -88,6 +97,20 @@ const FIELD_WORKER_TRANSITIONS = [
   to: FieldWorkerState;
 }>;
 
+/**
+ * Story 13.1f (AD3) — the undo's three arms, DOCUMENTATION ONLY: the target comes from the payload, so they are ⛔ in
+ * `FIELD_WORKER_TRANSITIONS` (the runtime lookup) and the agreement test treats `field_worker.ending_undone` as payload-dependent.
+ */
+export const FIELD_WORKER_UNDO_TRANSITIONS: ReadonlyArray<{
+  readonly from: FieldWorkerState;
+  readonly event: FieldWorkerEventType;
+  readonly to: FieldWorkerState;
+}> = [
+  { from: 'terminated', event: 'field_worker.ending_undone', to: 'pending_kyc' },
+  { from: 'terminated', event: 'field_worker.ending_undone', to: 'active' },
+  { from: 'terminated', event: 'field_worker.ending_undone', to: 'suspended' },
+];
+
 /** The documentation matrix, exported for the table / reducer agreement test (AC4). */
 export const FIELD_WORKER_TRANSITION_TABLE: ReadonlyArray<{
   readonly from: FieldWorkerState;
@@ -97,15 +120,23 @@ export const FIELD_WORKER_TRANSITION_TABLE: ReadonlyArray<{
 
 /**
  * The target state of `eventType` applied to `state`, or `null` when the pair is not a legal transition (PURE; reads no
- * payload). The transition projector's legality check is `!== null` (TR1).
+ * payload except `field_worker.ending_undone`'s target — Story 13.1f AD3). The transition projector's legality check is `!== null`
+ * (TR1). The undo arm runs BEFORE the table lookup: from `terminated`, with a payload whose `to_state` is one of the three targets, it
+ * answers that target; without a payload, or with a bad one, or from any other state, `null` — so every two-argument caller is
+ * unchanged and gets `null` for the undo (TR1).
  */
-export function nextFieldWorkerState(state: FieldWorkerState, eventType: string): FieldWorkerState | null {
+export function nextFieldWorkerState(state: FieldWorkerState, eventType: string, payload?: unknown): FieldWorkerState | null {
+  if (eventType === 'field_worker.ending_undone') {
+    if (state !== 'terminated') return null;
+    const parsed = FoldEndingUndoneSchema.safeParse(payload);
+    return parsed.success ? parsed.data.to_state : null;
+  }
   const arm = FIELD_WORKER_TRANSITIONS.find((t) => t.from === state && t.event === eventType);
   return arm ? arm.to : null;
 }
 
 function reduce(state: FieldWorkerState, event: FieldWorkerEventInput): FieldWorkerState {
-  return nextFieldWorkerState(state, event.type) ?? state;
+  return nextFieldWorkerState(state, event.type, event.payload) ?? state;
 }
 
 /** The field-worker lifecycle state machine (`initial: 'pending_kyc'`, the pre-genesis precedent). */
@@ -156,7 +187,8 @@ export function foldFieldWorkerProjection(rows: readonly FieldWorkerReplayEvent[
       district = parsed.success ? parsed.data.district : null;
       continue;
     }
-    const next = nextFieldWorkerState(state, row.type);
+    // The fold's OWN legality call passes the payload (Story 13.1f G17 (g) — without it every undo is skipped here).
+    const next = nextFieldWorkerState(state, row.type, row.payload);
     if (next === null) continue;
     switch (row.type) {
       case 'field_worker.kyc_completed':
@@ -181,6 +213,14 @@ export function foldFieldWorkerProjection(rows: readonly FieldWorkerReplayEvent[
         // The reason of a posting lives in the EVENT only — a suspended worker who is moved keeps their suspension reason.
         const parsed = FoldPostedSchema.safeParse(row.payload);
         if (parsed.success) district = parsed.data.to_district;
+        break;
+      }
+      case 'field_worker.ending_undone': {
+        // Story 13.1f (AD2, AD3) — the worker as they were: the target (`next`), the restored suspension reason, no last day.
+        // `kyc_status` and the district are unchanged (an ending never changed them).
+        const parsed = FoldEndingUndoneSchema.safeParse(row.payload);
+        reasonCode = parsed.success ? parsed.data.reason_code : null;
+        endedOn = null;
         break;
       }
       default:

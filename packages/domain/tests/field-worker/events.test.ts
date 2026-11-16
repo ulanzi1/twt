@@ -1,4 +1,4 @@
-// Story 13.1 (AC3; QE6, QE7, QE12, QE17, QE18, QE20; I7, I8) — the seven payload schemas. DB-free.
+// Story 13.1 (AC3; QE6, QE7, QE12, QE17, QE18, QE20; I7, I8) — the payload schemas (seven; Story 13.1f adds the eighth, the undo). DB-free.
 
 import { describe, expect, it } from 'vitest';
 
@@ -6,6 +6,7 @@ import {
   FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS,
   FIELD_WORKER_EVENT_TYPES,
   FieldWorkerAuthorizationSnapshotSchema,
+  FieldWorkerEndingUndonePayloadSchema,
   FieldWorkerPostedPayloadSchema,
   FieldWorkerRegisteredPayloadSchema,
   FieldWorkerTerminatedPayloadSchema,
@@ -40,11 +41,24 @@ const VALID: Record<(typeof FIELD_WORKER_EVENT_TYPES)[number], Record<string, un
   'field_worker.reactivated': { from_state: 'suspended', to_state: 'active', trigger: 'field_worker.reactivate', actor: 'operator', authorization: actAuth('field_worker.reactivate') },
   'field_worker.terminated': { from_state: 'active', to_state: 'terminated', trigger: 'field_worker.terminate:inactive', actor: 'operator', authorization: actAuth('field_worker.terminate'), reason_code: 'inactive', ended_on: '2026-11-01' },
   'field_worker.posted': { from_state: 'active', to_state: 'active', trigger: 'field_worker.post', actor: 'operator', authorization: actAuth('field_worker.move'), from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' },
+  'field_worker.ending_undone': { from_state: 'terminated', to_state: 'active', trigger: 'field_worker.undo_ending:mistake', actor: 'operator', authorization: actAuth('field_worker.undo_ending'), cause: 'mistake', appeal_id: null, undone_ending_version: 4, reason_code: null },
 };
 
-describe('the seven payloads (AC3)', () => {
-  it('SEVEN types, one schema each; every valid example parses', () => {
-    expect(FIELD_WORKER_EVENT_TYPES).toHaveLength(7);
+/** Story 13.1f (AD15, R2-D1) — the ONE key each event's snapshot is pinned to. */
+const KEY_OF: Record<(typeof FIELD_WORKER_EVENT_TYPES)[number], string> = {
+  'field_worker.registered': 'field_worker.register',
+  'field_worker.kyc_completed': 'field_worker.approve',
+  'field_worker.activated': 'field_worker.approve',
+  'field_worker.suspended': 'field_worker.suspend',
+  'field_worker.reactivated': 'field_worker.reactivate',
+  'field_worker.terminated': 'field_worker.terminate',
+  'field_worker.posted': 'field_worker.move',
+  'field_worker.ending_undone': 'field_worker.undo_ending',
+};
+
+describe('the eight payloads (AC3; Story 13.1f adds the undo)', () => {
+  it('EIGHT types, one schema each; every valid example parses', () => {
+    expect(FIELD_WORKER_EVENT_TYPES).toHaveLength(8);
     for (const t of FIELD_WORKER_EVENT_TYPES) expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(VALID[t]).success, t).toBe(true);
   });
 
@@ -72,6 +86,8 @@ describe('the seven payloads (AC3)', () => {
       ['field_worker.reactivated', 't'],
       ['field_worker.terminated', 'field_worker.terminate:under_review'], // a SUSPENSION reason
       ['field_worker.posted', 'field_worker.post:reassigned'],
+      ['field_worker.ending_undone', 'field_worker.undo_ending:appeal_allowed'], // the trigger names the cause (`mistake` here)
+      ['field_worker.ending_undone', 'field_worker.undo_ending'],
     ];
     for (const [t, trigger] of refused) {
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], trigger }).success, `${t} ${trigger}`).toBe(false);
@@ -81,7 +97,7 @@ describe('the seven payloads (AC3)', () => {
     }
   });
 
-  it('I7: human actors only — `system` and `member` are refused on ALL seven', () => {
+  it('I7: human actors only — `system` and `member` are refused on ALL eight', () => {
     for (const t of FIELD_WORKER_EVENT_TYPES) {
       for (const actor of ['system', 'member']) expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], actor }).success, `${t} ${actor}`).toBe(false);
     }
@@ -128,8 +144,9 @@ describe('the seven payloads (AC3)', () => {
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(VALID[t]).success, t).toBe(true);
       expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse(without(VALID[t], 'authorization')).success, t).toBe(false);
       // CONTROL — the same snapshot without the stray key parses, so the refusal below is the extra `display_name` and nothing else (review CR6).
-      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: actAuth('x') }).success, t).toBe(true);
-      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: { ...actAuth('x'), display_name: 'Meera' } }).success, t).toBe(false);
+      // Story 13.1f (AD15, TR10): RE-KEYED to the event's own pinned key (the control must still parse) — ⛔ inverted.
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: actAuth(KEY_OF[t]) }).success, t).toBe(true);
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: { ...actAuth(KEY_OF[t]), display_name: 'Meera' } }).success, t).toBe(false);
     }
   });
 
@@ -166,5 +183,69 @@ describe('the authorization snapshot (QE18, AC3)', () => {
     expect(FieldWorkerAuthorizationSnapshotSchema.safeParse({ ...AUTH, target: { dimension: 'district', value: null } }).success).toBe(false);
     expect(FieldWorkerAuthorizationSnapshotSchema.safeParse({ ...AUTH, grant: { ...AUTH.grant, grant_id: 'not-a-uuid' } }).success).toBe(false);
     expect(FieldWorkerAuthorizationSnapshotSchema.safeParse({ ...AUTH, grant: { dimension: 'district', value: 'Patna' } }).success).toBe(true);
+  });
+});
+
+// Story 13.1f (AD15 — 13.1c R2-D1 answered) — EVERY worker event pins its snapshot's key: a snapshot signed with any other key is refused.
+describe('every event pins its key (AD15, R2-D1)', () => {
+  it('a snapshot of another key — the stray `x`, a sibling act, a member key — is refused on all eight; its own key parses', () => {
+    for (const t of FIELD_WORKER_EVENT_TYPES) {
+      const auth = (VALID[t]['authorization'] ?? {}) as Record<string, unknown>;
+      expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: { ...auth, permission_key: KEY_OF[t] } }).success, `${t} own`).toBe(true);
+      for (const key of ['x', 'member.view', t === 'field_worker.terminated' ? 'field_worker.suspend' : 'field_worker.terminate']) {
+        expect(FIELD_WORKER_EVENT_PAYLOAD_SCHEMAS[t].safeParse({ ...VALID[t], authorization: { ...auth, permission_key: key } }).success, `${t} ${key}`).toBe(false);
+      }
+    }
+  });
+});
+
+// Story 13.1f (AD2; AC1 (i)) — the undo's payload.
+describe('field_worker.ending_undone (AD2)', () => {
+  const ok = VALID['field_worker.ending_undone'];
+  const APPEAL = '44444444-4444-4444-8444-444444444444';
+  const allowed = (key: string) => ({ ...ok, trigger: 'field_worker.undo_ending:appeal_allowed', cause: 'appeal_allowed', appeal_id: APPEAL, authorization: actAuth(key) });
+
+  it('a control per cause parses: a slip under undo_ending; an allowed appeal under EITHER hear key', () => {
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse(ok).success).toBe(true);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse(allowed('field_worker.hear_ending_appeal')).success).toBe(true);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse(allowed('field_worker.hear_ending_appeal_as_panel')).success).toBe(true);
+  });
+
+  it('refuses each wrong cause–key pairing: mistake + a hear key; appeal_allowed + undo_ending; appeal_allowed with no appeal; mistake WITH an appeal', () => {
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, authorization: actAuth('field_worker.hear_ending_appeal') }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse(allowed('field_worker.undo_ending')).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...allowed('field_worker.hear_ending_appeal'), appeal_id: null }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, appeal_id: APPEAL }).success).toBe(false);
+  });
+
+  it('the restored reason is present IFF the target is suspended (a suspension reason only); the target is never terminated', () => {
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, to_state: 'suspended', reason_code: 'under_review' }).success).toBe(true);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, to_state: 'suspended', reason_code: null }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, to_state: 'active', reason_code: 'under_review' }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, to_state: 'suspended', reason_code: 'inactive' }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, to_state: 'terminated' }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, from_state: 'active' }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, to_state: 'pending_kyc' }).success).toBe(true);
+  });
+
+  it('names the undone ending (a version >= 2 — the genesis is never an ending)', () => {
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse({ ...ok, undone_ending_version: 1 }).success).toBe(false);
+    expect(FieldWorkerEndingUndonePayloadSchema.safeParse(without(ok, 'undone_ending_version')).success).toBe(false);
+  });
+});
+
+// Story 13.1f (AD8, AD12) — the two optional keys on existing events.
+describe('appeal_heard_by on terminated (AD8) and previous_field_worker_id on registered (AD12)', () => {
+  it('appeal_heard_by is OPTIONAL in the schema (a legacy event parses) and one of the two hearers', () => {
+    expect(FieldWorkerTerminatedPayloadSchema.safeParse(VALID['field_worker.terminated']).success).toBe(true);
+    for (const h of ['pariwar_admin', 'trustee_panel']) {
+      expect(FieldWorkerTerminatedPayloadSchema.safeParse({ ...VALID['field_worker.terminated'], appeal_heard_by: h }).success, h).toBe(true);
+    }
+    expect(FieldWorkerTerminatedPayloadSchema.safeParse({ ...VALID['field_worker.terminated'], appeal_heard_by: 'district_admin' }).success).toBe(false);
+  });
+
+  it('previous_field_worker_id is an optional uuid', () => {
+    expect(FieldWorkerRegisteredPayloadSchema.safeParse({ ...VALID['field_worker.registered'], previous_field_worker_id: '55555555-5555-4555-8555-555555555555' }).success).toBe(true);
+    expect(FieldWorkerRegisteredPayloadSchema.safeParse({ ...VALID['field_worker.registered'], previous_field_worker_id: 'Vikram' }).success).toBe(false);
   });
 });

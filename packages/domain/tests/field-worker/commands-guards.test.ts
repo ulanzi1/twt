@@ -140,7 +140,7 @@ const staff = staffBase();
 const moveAt = (district: string, over: { actorId?: string; pariwarId?: string } = {}) => authAt(district, { ...over, key: 'field_worker.move' });
 const suspender = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.suspend' }) };
 const reactivator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.reactivate' }) };
-const terminator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.terminate' }) };
+const terminator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.terminate' }), appealHeardBy: 'pariwar_admin' as const };
 /** A move from Patna (the stub row's district — what the admin saw) to `to`, authorized at `target`. */
 const mover = (to: string, target = to) => ({ ...staffBase(), toDistrict: to, expectedFromDistrict: 'Patna', authorization: moveAt(target) });
 /** Story 13.1a AD3 — a VERIFIED `field_worker.approve` result (pariwar_admin) at `district`. */
@@ -518,7 +518,7 @@ describe('Story 13.1c AD3 — the lifecycle acts carry their own key’s authori
   const ACTS = [
     ['suspend', 'field_worker.suspend', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => suspendFieldWorker(c, { ...staff, reasonCode: 'under_review', authorization: a as VerifiedAuthorization })],
     ['reactivate', 'field_worker.reactivate', { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => reactivateFieldWorker(c, { ...staff, authorization: a as VerifiedAuthorization })],
-    ['terminate', 'field_worker.terminate', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => terminateFieldWorker(c, { ...staff, reasonCode: 'inactive', endedOn: '2026-11-02', authorization: a as VerifiedAuthorization })],
+    ['terminate', 'field_worker.terminate', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...staff, reasonCode: 'inactive', endedOn: '2026-11-02', authorization: a as VerifiedAuthorization })],
   ] as const;
 
   it.each(ACTS)('%s writes the snapshot of %s, target = the locked district', async (_label, key, row, run) => {

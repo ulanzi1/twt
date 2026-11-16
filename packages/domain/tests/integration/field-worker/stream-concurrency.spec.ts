@@ -179,7 +179,7 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
       const arrive = barrier();
       const [suspended, terminated] = await Promise.allSettled([
         racer(arrive, (c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'under_review' })),
-        racer(arrive, (c) => terminateFieldWorker(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today })),
+        racer(arrive, (c) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today })),
       ]);
       expect(terminated.status, `round ${round}: terminate ${String((terminated as PromiseRejectedResult).reason)}`).toBe('fulfilled');
       const after = await inspect(id);
@@ -279,7 +279,7 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
         // the district it will find: Patna if it runs first, Gaya if the move did. Both orders are legal; (3d) is pinned in commands.spec.ts.
         racer(arrive, async (c) => {
           const { district } = (await c.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1 FOR UPDATE', [id])).rows[0]!;
-          return terminateFieldWorker(c, { ...base(id), authorization: actAuthorization('field_worker.terminate', PARIWAR, district, ACTOR), reasonCode: 'left_voluntarily', endedOn: today });
+          return terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(id), authorization: actAuthorization('field_worker.terminate', PARIWAR, district, ACTOR), reasonCode: 'left_voluntarily', endedOn: today });
         }),
       ]);
       expect(terminated.status, `round ${round}`).toBe('fulfilled');

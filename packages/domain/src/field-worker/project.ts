@@ -12,6 +12,11 @@
 // I4 (row = fold of the stream) is proven by a TEST that folds the stream, ⛔ by this projector replaying.
 // `approved_by_display` (Story 13.1a, `-447` item 2) is written here too, on `field_worker.activated` only, from the command's
 // input — a staff attribution snapshot like `registered_by_display`, outside the fold.
+// Story 13.1f: `field_worker.ending_undone` (AD2–AD5) — the ONLY write out of `terminated`. Its UPDATE sets the undo writer variable
+// (`app.field_worker_undo_writer`, nested inside the state writer variable's try / finally) that 0207's rule (t′) requires; before the
+// append it re-reads the undone `field_worker.terminated` event and refuses a payload whose target is not that event's `from_state`
+// (AD3); a 23505 on the live-number index under the UPDATE is the number registered again (AD5, mapped BY NAME). The genesis INSERT
+// writes `previous_field_worker_id` from the payload (AD12).
 //
 // ⛔ Re-exported from the barrel: the seven commands are the public write entry points (they take the row lock and check
 // the guards the projector assumes). Specs import this file directly. ⛔ `withCompensatingAudit` here (QE14) — the
@@ -39,6 +44,7 @@ import {
   FieldWorkerGenesisAlreadyExistsError,
   FieldWorkerIllegalTransitionError,
   FieldWorkerMobileAlreadyRegisteredError,
+  FieldWorkerNumberRegisteredAgainError,
   FieldWorkerPersistError,
   FieldWorkerProjectorInputError,
   FieldWorkerStateDirectWriteError,
@@ -51,7 +57,6 @@ import {
   FieldWorkerRegisteredPayloadSchema,
   type FieldWorkerAuthorizationSnapshot,
   type FieldWorkerEventType,
-  type FieldWorkerRegisteredPayload,
 } from './events.js';
 import { nextFieldWorkerState } from './state.js';
 
@@ -62,7 +67,7 @@ const GENESIS_SAVEPOINT = 'field_worker_genesis';
  * The QE7 actor check every projector and command runs first: HUMAN ONLY — `operator` or `trustee` with a non-null
  * `actorId`. `system` and `member` are refused (I7). Throws `FieldWorkerProjectorInputError`.
  */
-export function assertFieldWorkerActor(eventType: FieldWorkerEventType, actor: unknown, actorId: unknown): void {
+export function assertFieldWorkerActor(eventType: FieldWorkerEventType | `field_worker_ending_appeal.${string}`, actor: unknown, actorId: unknown): void {
   if (actor !== 'operator' && actor !== 'trustee') {
     throw new FieldWorkerProjectorInputError(
       `[${eventType}] actor must be 'operator' or 'trustee' (QE7 — human only); got '${String(actor)}'`,
@@ -112,6 +117,12 @@ export interface ProjectFieldWorkerGenesisInput {
   actor: 'operator' | 'trustee';
   /** The admin's `users` id — `events_log.actor_id` AND `registered_by_user_id`, written from this ONE input. */
   actorId: string;
+  /**
+   * Story 13.1f (AD12) — the earlier ENDED record the registering officer linked this registration to; omitted for every unlinked
+   * worker. Written to the genesis payload AND the row's `previous_field_worker_id` from this ONE input. The API re-checked it under
+   * `FOR SHARE`; the composite FK re-checks the Pariwar.
+   */
+  previousFieldWorkerId?: FieldWorkerId;
 }
 
 export interface ProjectFieldWorkerGenesisResult {
@@ -138,13 +149,14 @@ export async function projectFieldWorkerGenesis(
 ): Promise<ProjectFieldWorkerGenesisResult> {
   assertFieldWorkerActor('field_worker.registered', input.actor, input.actorId);
 
-  const payload: FieldWorkerRegisteredPayload = {
+  const payload: Record<string, unknown> = {
     from_state: null,
     to_state: 'pending_kyc',
     trigger: 'field_worker.register',
     actor: input.actor,
     authorization: input.authorization,
     district: input.district,
+    ...(input.previousFieldWorkerId === undefined ? {} : { previous_field_worker_id: input.previousFieldWorkerId }),
   };
   const parsed = FieldWorkerRegisteredPayloadSchema.safeParse(payload);
   if (!parsed.success) {
@@ -196,6 +208,7 @@ export async function projectFieldWorkerGenesis(
             district: input.district,
             endedOn: null,
             auditId: input.auditId,
+            previousFieldWorkerId: input.previousFieldWorkerId ?? null,
           })
           .returning({ fieldWorkerId: fieldWorkers.fieldWorkerId });
       } catch (err) {
@@ -317,7 +330,9 @@ export async function projectFieldWorkerTransition(
   }
 
   const fromState = lockedRow.currentState;
-  const toState = nextFieldWorkerState(fromState, input.eventType);
+  // The undo's target is DATA (Story 13.1f AD3): the payload goes to the legality call, which answers its `to_state` from `terminated`.
+  const isUndo = input.eventType === 'field_worker.ending_undone';
+  const toState = nextFieldWorkerState(fromState, input.eventType, isUndo ? input.payload : undefined);
   if (toState === null) throw new FieldWorkerIllegalTransitionError(input.fieldWorkerId, fromState, input.eventType);
 
   const p = (typeof input.payload === 'object' && input.payload !== null ? input.payload : {}) as Record<string, unknown>;
@@ -347,6 +362,29 @@ export async function projectFieldWorkerTransition(
     throw new FieldWorkerProjectorInputError(`[${input.eventType}] payload fails its schema: ${zodMessage(parsed.error)}`, parsed.error);
   }
 
+  // Story 13.1f (AD3) — the projector's own check of an undo, below the command: the event it names is THIS worker's CURRENT ending
+  // (a `field_worker.terminated` event at the row's version), and the target is that ending's `from_state`, read RAW from its JSON
+  // (TR18 — ⛔ through the write schema; a stored event is never re-validated). The generic from/to check above compares the payload's
+  // `to_state` with itself (G17 (d)), so this is the only check of "as they were" in the projector.
+  if (isUndo) {
+    const undone = Number(p['undone_ending_version']);
+    const res = await client.query<{ event_type: string; from_state: string | null }>(
+      "SELECT event_type, payload->>'from_state' AS from_state FROM events_log WHERE pariwar_id = $1 AND stream_id = $2 AND event_version = $3",
+      [input.pariwarId, input.fieldWorkerId, undone],
+    );
+    const ev = res.rows[0];
+    if (
+      ev === undefined ||
+      ev.event_type !== 'field_worker.terminated' ||
+      undone !== lockedRow.stateEventVersion ||
+      ev.from_state !== toState
+    ) {
+      throw new FieldWorkerProjectorInputError(
+        `[field_worker.ending_undone] the undo names version ${String(undone)} and restores '${toState}', which is not this worker's current ending's from_state`,
+      );
+    }
+  }
+
   // The new projection — the same rules as `foldFieldWorkerProjection` (I4).
   let kycStatus = lockedRow.kycStatus;
   let stateReasonCode = lockedRow.stateReasonCode;
@@ -369,6 +407,11 @@ export async function projectFieldWorkerTransition(
     case 'field_worker.posted':
       // The posting's reason lives in the EVENT only — `state_reason_code` is untouched (QE12).
       district = p['to_district'] as string;
+      break;
+    case 'field_worker.ending_undone':
+      // Story 13.1f (AD2) — as they were: the restored suspension reason (null unless suspended), no last day. KYC and district kept.
+      stateReasonCode = (p['reason_code'] ?? null) as FieldWorkerReasonCode | null;
+      endedOn = null;
       break;
     default:
       break;
@@ -396,6 +439,8 @@ export async function projectFieldWorkerTransition(
 
   await client.query("SET LOCAL app.field_worker_state_writer = 'on'");
   try {
+    // Story 13.1f (AD4) — the undo writer variable, for `ending_undone` ONLY, nested inside the state writer's try / finally (0207 (t′)).
+    if (isUndo) await client.query("SET LOCAL app.field_worker_undo_writer = 'on'");
     let updated: { fieldWorkerId: FieldWorkerId }[];
     try {
       updated = await db
@@ -415,6 +460,11 @@ export async function projectFieldWorkerTransition(
         .where(and(eq(fieldWorkers.fieldWorkerId, input.fieldWorkerId), eq(fieldWorkers.pariwarId, input.pariwarId)))
         .returning({ fieldWorkerId: fieldWorkers.fieldWorkerId });
     } catch (err) {
+      // Story 13.1f (AD5, TR3) — an undo leaving `terminated` re-enters the live-number index: another live row holding the number
+      // answers 23505 on THAT name (⛔ any 23505 — the stream-version slot keeps its own mapping).
+      if (isUndo && uniqueViolationConstraint(err) === FIELD_WORKER_MOBILE_LIVE_CONSTRAINT) {
+        throw new FieldWorkerNumberRegisteredAgainError(input.fieldWorkerId);
+      }
       const mapped = mapFieldWorkerWriteError(err, input.fieldWorkerId, nextVersion);
       throw mapped === err ? new FieldWorkerPersistError(input.fieldWorkerId, err) : mapped;
     }
@@ -423,6 +473,7 @@ export async function projectFieldWorkerTransition(
     }
   } finally {
     try {
+      if (isUndo) await client.query("SET LOCAL app.field_worker_undo_writer = 'off'");
       await client.query("SET LOCAL app.field_worker_state_writer = 'off'");
     } catch {
       // an aborted tx refuses this — the caller's rollback clears it

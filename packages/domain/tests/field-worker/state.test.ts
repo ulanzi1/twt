@@ -6,10 +6,12 @@ import { FIELD_WORKER_EVENT_TYPES } from '../../src/field-worker/events.js';
 import {
   FIELD_WORKER_STATES,
   FIELD_WORKER_TRANSITION_TABLE,
+  FIELD_WORKER_UNDO_TRANSITIONS,
   acceptsNewAttributions,
   fieldWorkerStateMachine,
   foldFieldWorkerProjection,
   nextFieldWorkerState,
+  replayFieldWorkerState,
   type FieldWorkerReplayEvent,
 } from '../../src/field-worker/state.js';
 
@@ -29,6 +31,7 @@ const TRIGGER: Record<string, (p: Record<string, unknown>) => string> = {
   'field_worker.reactivated': () => 'field_worker.reactivate',
   'field_worker.terminated': (p) => `field_worker.terminate:${String(p['reason_code'])}`,
   'field_worker.posted': () => 'field_worker.post',
+  'field_worker.ending_undone': (p) => `field_worker.undo_ending:${String(p['cause'] ?? 'mistake')}`,
 };
 let v = 0;
 const ev = (type: string, payload: Record<string, unknown>): FieldWorkerReplayEvent => ({
@@ -43,6 +46,9 @@ const suspended = (reason_code = 'under_review') => ev('field_worker.suspended',
 const reactivated = () => ev('field_worker.reactivated', { from_state: 'suspended', to_state: 'active' });
 const terminated = (from_state: string, reason_code = 'inactive', ended_on = '2026-11-01') =>
   ev('field_worker.terminated', { from_state, to_state: 'terminated', reason_code, ended_on });
+/** Story 13.1f (AD2) — the undo; the fold reads only `to_state` and `reason_code` (its fold-only shape). */
+const undone = (to_state: string, reason_code: string | null = null, undone_ending_version = v) =>
+  ev('field_worker.ending_undone', { from_state: 'terminated', to_state, cause: 'mistake', appeal_id: null, undone_ending_version, reason_code });
 /** Story 13.1c AD4 — a move carries a `field_worker.move` snapshot (the fold ignores it; ⛔ the registrar's key). */
 const posted = (state: string, from_district: string, to_district: string, reason_code = 'reassigned') =>
   ev('field_worker.posted', { from_state: state, to_state: state, authorization: { ...AUTH, permission_key: 'field_worker.move', catalog_version: 62 }, from_district, to_district, reason_code });
@@ -68,10 +74,10 @@ describe('the transition table and the reducer AGREE on every (state × event ty
     );
   });
 
-  it('nextFieldWorkerState returns the arm’s `to` or null — for all 4 × 7 pairs', () => {
+  it('nextFieldWorkerState returns the arm’s `to` or null — for all 4 × 7 TABLE pairs (the undo is payload-dependent — its own legs below, TR1)', () => {
     let legal = 0;
     for (const state of FIELD_WORKER_STATES) {
-      for (const type of FIELD_WORKER_EVENT_TYPES) {
+      for (const type of FIELD_WORKER_EVENT_TYPES.filter((t) => t !== 'field_worker.ending_undone')) {
         const arm = FIELD_WORKER_TRANSITION_TABLE.find((t) => t.from === state && t.event === type);
         expect(nextFieldWorkerState(state, type), `${state} × ${type}`).toBe(arm ? arm.to : null);
         expect(fieldWorkerStateMachine.step(state, { type, payload: {} }), `${state} × ${type}`).toBe(arm ? arm.to : state);
@@ -155,5 +161,65 @@ describe('acceptsNewAttributions — the FR-85 contract (QE11, AC10)', () => {
       suspended: false,
       terminated: false,
     });
+  });
+});
+
+// Story 13.1f (AD3; AC1 (f); TR1) — the ONE payload-dependent arm: `field_worker.ending_undone` from `terminated` answers its payload's target.
+describe('the undo arm — payload-dependent, answered BEFORE the table (AD3)', () => {
+  it('the undo rows are DOCUMENTATION, ⛔ in the table: three, all from terminated; the table count stays 10 (above)', () => {
+    expect(FIELD_WORKER_UNDO_TRANSITIONS.map((r) => `${r.from}>${r.to}`).sort()).toEqual(['terminated>active', 'terminated>pending_kyc', 'terminated>suspended']);
+    expect(FIELD_WORKER_TRANSITION_TABLE.some((r) => r.event === 'field_worker.ending_undone')).toBe(false);
+  });
+
+  it('with no payload, or a bad one, it is null (every two-argument caller is unchanged); with each valid payload, that target', () => {
+    expect(nextFieldWorkerState('terminated', 'field_worker.ending_undone')).toBeNull();
+    for (const bad of [null, {}, 'x', { to_state: 'terminated', reason_code: null }, { to_state: 'active' }, { to_state: 'suspended', reason_code: 'inactive' }]) {
+      expect(nextFieldWorkerState('terminated', 'field_worker.ending_undone', bad), JSON.stringify(bad)).toBeNull();
+    }
+    for (const row of FIELD_WORKER_UNDO_TRANSITIONS) {
+      const payload = { to_state: row.to, reason_code: row.to === 'suspended' ? 'under_review' : null };
+      expect(nextFieldWorkerState('terminated', 'field_worker.ending_undone', payload), row.to).toBe(row.to);
+      // Only from `terminated`.
+      for (const s of ['pending_kyc', 'active', 'suspended'] as const) expect(nextFieldWorkerState(s, 'field_worker.ending_undone', payload)).toBeNull();
+    }
+    // A table event never reads the payload.
+    expect(nextFieldWorkerState('terminated', 'field_worker.posted', { to_state: 'active' })).toBeNull();
+  });
+
+  it('the state machine and replayFieldWorkerState fold the undo (reduce passes the payload)', () => {
+    v = 0;
+    const s = [registered(), kyc(), activated(), terminated('active'), undone('active', null, 4)];
+    expect(fieldWorkerStateMachine.fold(s)).toBe('active');
+    const rows = s.map((e) => ({ eventType: e.type, payload: e.payload, eventVersion: e.eventVersion })) as unknown as Parameters<typeof replayFieldWorkerState>[0];
+    expect(replayFieldWorkerState(rows)).toBe('active');
+  });
+});
+
+describe('foldFieldWorkerProjection folds the undo — its OWN legality call passes the payload (G17 (g); AC1 (f))', () => {
+  it('per from-state: as they were — the state, the suspension reason, KYC, district; no last day', () => {
+    v = 0;
+    const pend = [registered('Patna'), terminated('pending_kyc', 'registered_in_error'), undone('pending_kyc', null, 2)];
+    expect(foldFieldWorkerProjection(pend)).toEqual({ state: 'pending_kyc', version: 3, kycStatus: 'pending', reasonCode: null, district: 'Patna', endedOn: null });
+    v = 0;
+    const act = [registered('Patna'), kyc(), activated(), terminated('active', 'died'), undone('active', null, 4)];
+    expect(foldFieldWorkerProjection(act)).toEqual({ state: 'active', version: 5, kycStatus: 'completed', reasonCode: null, district: 'Patna', endedOn: null });
+    v = 0;
+    const sus = [registered('Patna'), kyc(), activated(), suspended('at_worker_request'), posted('suspended', 'Patna', 'Gaya'), terminated('suspended'), undone('suspended', 'at_worker_request', 6)];
+    expect(foldFieldWorkerProjection(sus)).toEqual({ state: 'suspended', version: 7, kycStatus: 'completed', reasonCode: 'at_worker_request', district: 'Gaya', endedOn: null });
+  });
+
+  it('two endings and one undo: the second ending stands; the prefix before it (with the undo) folds to the right state', () => {
+    v = 0;
+    const s = [registered(), kyc(), activated(), suspended('under_review'), terminated('suspended'), undone('suspended', 'under_review', 5), reactivated(), terminated('active', 'left_voluntarily', '2026-11-05')];
+    expect(foldFieldWorkerProjection(s)).toMatchObject({ state: 'terminated', reasonCode: 'left_voluntarily', endedOn: '2026-11-05', version: 8 });
+    expect(foldFieldWorkerProjection(s.slice(0, 7))).toMatchObject({ state: 'active', reasonCode: null, endedOn: null });
+    expect(foldFieldWorkerProjection(s.slice(0, 6))).toMatchObject({ state: 'suspended', reasonCode: 'under_review', endedOn: null });
+  });
+
+  it('a malformed undo is not applied (pure, never throws)', () => {
+    v = 0;
+    const s = [registered(), terminated('pending_kyc'), ev('field_worker.ending_undone', { to_state: 'nonsense' })];
+    expect(() => foldFieldWorkerProjection(s)).not.toThrow();
+    expect(foldFieldWorkerProjection(s)).toMatchObject({ state: 'terminated', endedOn: '2026-11-01' });
   });
 });

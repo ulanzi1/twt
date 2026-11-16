@@ -360,3 +360,136 @@ export class FieldWorkerMoveRequestPersistError extends Error {
     this.sqlstate = pgSqlstateOf(cause);
   }
 }
+
+// ── Story 13.1f — the undo of an ending, the link, and the appeal (decision `2026-11-16-464` AD5–AD9, AD12) ─────────────────────────────
+
+/**
+ * Undo or lodge: the ending the officer's screen showed (`expected_ending_version`) is no longer the worker's current one — the worker
+ * was undone and ended again since (13.1 D7's guard, AD6, AD7). → 409 `field_worker.ending_changed`.
+ */
+export class FieldWorkerEndingChangedError extends Error {
+  public readonly name = 'FieldWorkerEndingChangedError';
+  public constructor(
+    public readonly fieldWorkerId: string,
+    public readonly expectedVersion: number,
+  ) {
+    super(`field worker ${fieldWorkerId}: the ending at version ${String(expectedVersion)} is not the current one`);
+  }
+}
+
+/**
+ * Undo, or an allowed appeal: another LIVE record of this Pariwar holds the worker's number (they were registered again meanwhile —
+ * AD5; 13.1c C2 (i)). The pre-read, or the live-number index's 23505 BY NAME under the lock. → 409 `field_worker.number_registered_again`.
+ */
+export class FieldWorkerNumberRegisteredAgainError extends Error {
+  public readonly name = 'FieldWorkerNumberRegisteredAgainError';
+  public constructor(public readonly fieldWorkerId: string) {
+    super(`field worker ${fieldWorkerId}: the number now belongs to another live registration`);
+  }
+}
+
+/** Register: `link_to` is not a TERMINATED record of this Pariwar holding the same number (AD12). → 422 `field_worker.link_invalid`. */
+export class FieldWorkerLinkInvalidError extends Error {
+  public readonly name = 'FieldWorkerLinkInvalidError';
+  public constructor(public readonly linkTo: string) {
+    super(`field worker ${linkTo} cannot be linked to: it is not an ended record of this Pariwar with the same number`);
+  }
+}
+
+/** The P0001 message prefix every 0207 appeal-trigger raise carries. */
+export const FIELD_WORKER_ENDING_APPEAL_DIRECT_WRITE_MESSAGE_PREFIX = 'field_worker_ending_appeals direct write rejected';
+
+/** Lodge while an appeal is OPEN for this worker — the pre-read, under the lock, or the partial unique BY NAME (I4). → 409. */
+export class FieldWorkerAppealOpenError extends Error {
+  public readonly name = 'FieldWorkerAppealOpenError';
+  public constructor(public readonly fieldWorkerId: string) {
+    super(`field worker ${fieldWorkerId} already has an open appeal`);
+  }
+}
+
+/** Lodge on an ending whose appeal was REFUSED — one appeal per ending (AD7; the Panel note's Q2). → 409. */
+export class FieldWorkerAppealAlreadyDecidedError extends Error {
+  public readonly name = 'FieldWorkerAppealAlreadyDecidedError';
+  public constructor(
+    public readonly fieldWorkerId: string,
+    public readonly endingVersion: number,
+  ) {
+    super(`field worker ${fieldWorkerId}: the ending at version ${String(endingVersion)} has already been appealed and refused`);
+  }
+}
+
+/** Decide or withdraw an appeal that is not `open`. → 409. */
+export class FieldWorkerAppealNotOpenError extends Error {
+  public readonly name = 'FieldWorkerAppealNotOpenError';
+  public constructor(
+    public readonly appealId: string,
+    public readonly state: string,
+  ) {
+    super(`appeal ${appealId} is '${state}' — this act does not apply`);
+  }
+}
+
+/**
+ * The authorization's key does not match the appeal's hearer, or a Panel act from a `global` grant (a super admin derives the Panel's
+ * key but never acts as the Panel — AD9). → 409.
+ */
+export class FieldWorkerAppealWrongHearerError extends Error {
+  public readonly name = 'FieldWorkerAppealWrongHearerError';
+  public constructor(
+    public readonly fieldWorkerId: string,
+    public readonly heardBy: string,
+  ) {
+    super(`field worker ${fieldWorkerId}: the appeal is heard by '${heardBy}', and this authorization is not that hearer's`);
+  }
+}
+
+/** Decide or withdraw by the officer who ENDED the worker (AD9 (3); the 0207 CHECK backs it). → 409. */
+export class FieldWorkerAppealDeciderIsEnderError extends Error {
+  public readonly name = 'FieldWorkerAppealDeciderIsEnderError';
+  public constructor(public readonly appealId: string) {
+    super(`appeal ${appealId}: the officer who ended the worker cannot decide or withdraw it`);
+  }
+}
+
+/** `received_on` / `decided_on` malformed or outside its IST bounds (AD7 — the command judges both). → 422. */
+export class FieldWorkerAppealDateInvalidError extends Error {
+  public readonly name = 'FieldWorkerAppealDateInvalidError';
+  public constructor(
+    public readonly field: 'received_on' | 'decided_on',
+    public readonly why: 'missing_or_malformed' | 'in_future' | 'before_registration' | 'before_received',
+  ) {
+    super(`${field} is invalid: ${why}`);
+  }
+}
+
+/** A command on an appeal id with no row in this Pariwar, or whose worker is not the locked worker (the API's loader refuses first — 403). */
+export class FieldWorkerAppealMissingError extends Error {
+  public readonly name = 'FieldWorkerAppealMissingError';
+  public constructor(public readonly appealId: string) {
+    super(`appeal ${appealId} has no row in this Pariwar`);
+  }
+}
+
+/** The appeal's stream head ≠ its locked row's version (drift), or a 23505 on the version slot. */
+export class FieldWorkerAppealStreamConcurrencyError extends Error {
+  public readonly name = 'FieldWorkerAppealStreamConcurrencyError';
+  public constructor(
+    public readonly appealId: string,
+    public readonly attemptedVersion: number,
+  ) {
+    super(`appeal stream ${appealId} concurrency conflict at event_version ${String(attemptedVersion)}`);
+  }
+}
+
+/** The appeal row write failed or matched no row. The message carries the pg text only. */
+export class FieldWorkerAppealPersistError extends Error {
+  public readonly name = 'FieldWorkerAppealPersistError';
+  public readonly sqlstate: string | null;
+  public constructor(
+    public readonly appealId: string,
+    public readonly cause: unknown,
+  ) {
+    super(`failed to persist appeal ${appealId}: ${pgMessageOf(cause)}`);
+    this.sqlstate = pgSqlstateOf(cause);
+  }
+}

@@ -1010,7 +1010,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     `_as_panel` comment in 10.22's words).
   - [x] 1.2 `tests/rbac/permissions.test.ts` (`toBe(63)`, `toBe(94)`), `tests/rbac/roles.test.ts`, `tests/field-worker/events.test.ts` catalog fixtures.
 
-- [ ] **Task 2 - Migration `0207` (AC: 4, 5, 10, 13, 16; I1)** - hand-authored ([[project_live_db_test_gotchas]]: never regenerate; a `when` after 0206's).
+- [x] **Task 2 - Migration `0207` (AC: 4, 5, 10, 13, 16; I1)** - hand-authored ([[project_live_db_test_gotchas]]: never regenerate; a `when` after 0206's).
   - [x] 2.1 The guard function `CREATE OR REPLACE`d from `0201`'s body with (t') and its own message (AD4); a header naming 13.1e's duty to carry it (C2).
     Diff the function text against `0201`'s in review (TR2).
   - [x] 2.2 `field_workers.previous_field_worker_id uuid NULL`, CHECK `<> field_worker_id`, the composite FK (AD12); the drizzle column in
@@ -1020,13 +1020,13 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     state / hearer / via CHECKs, GRANT, FORCE RLS + three policies, the projector-only guard (transitions `open -> final` only, the four final states
     frozen, the immutable columns), the no-delete and no-truncate triggers, the partial unique, the composite FK; `schema/field_worker_ending_appeals.ts`
     + `schema/index.ts`; the journal entry; the `policies/` RLS file AND its entry in `policies/index.ts`; its own policy-regression pins.
-  - [ ] 2.4 Live specs on a FRESH container: `schema-trigger.spec.ts` (AC4's six refusals with their messages + the legal shape; AC10 (b)); the appeal
+  - [x] 2.4 Live specs on a FRESH container: `schema-trigger.spec.ts` (AC4's six refusals with their messages + the legal shape; AC10 (b)); the appeal
     table's AC16 legs (guard per transition and per final state, immutables, CHECKs by name, DELETE / TRUNCATE as OWNER, FK 23503 by name) and RLS.
     The RED proof of AC4 (as AC4 words it) and of each AC16 CHECK / guard rule.
   - [x] 2.5 `scripts/field-worker-ending-appeal-invariant` on 13.1d's move-request gate's model (projector-only writers of the appeal table), wired into
     `ci.yml`, `ci-local.sh` and `package.json` (one more job).
 
-- [ ] **Task 3 - The domain (AC: 1-11, 16, 17; I1-I5)**
+- [x] **Task 3 - The domain (AC: 1-11, 16, 17; I1-I5)**
   - [x] 3.1 `events.ts`: `FieldWorkerEndingUndonePayloadSchema` (with AD2's two superRefines - the suspension reason, and cause <-> key),
     `FIELD_WORKER_UNDO_PERMISSION_KEYS` (three entries: the undo key and both hear keys), `appeal_heard_by` on `terminated` as `.optional()` in the
     SCHEMA (AD8 - required by the command's input, not the schema), the optional `previous_field_worker_id` on `registered`, every key pinned (AD15);
@@ -1065,7 +1065,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
   - [x] 3.6 `read.ts`: `getCurrentFieldWorkerEnding` / `getCurrentFieldWorkerEndingLocked` (AD17), `findEndedFieldWorkersByMobileIndex`,
     `getFieldWorkerMobileIndex`, `lockFieldWorkerForLink` (AD12), `listFieldWorkerLinkChain` (cap 10), `listAppealEligibleFieldWorkers` (AD13's join,
     `ended_on DESC, field_worker_id` cursor); `getFieldWorkerStateAt`'s header ("all EIGHT event types").
-  - [ ] 3.7 Specs in `packages/domain/tests/integration/field-worker/`: `undo.spec.ts` (AC1-AC3, AC8), `ending-appeal.spec.ts` (AC5, AC6, AC17's
+  - [x] 3.7 Specs in `packages/domain/tests/integration/field-worker/`: `undo.spec.ts` (AC1-AC3, AC8), `ending-appeal.spec.ts` (AC5, AC6, AC17's
     domain legs and the matrix's live legs), `register-previous.spec.ts` (the read halves of AC9-AC10); `commands-guards.test.ts` (the undo's guard
     and full statement order; AD9's lodge and decide orders; the lock order); `state.test.ts` (Task 3.2's legs); the barrel leg (AC1 (h)). Extend
     `_fixtures.ts`: `FieldWorkerActKey` and `grantAuthorization`'s role union gain the four keys and `trustee_panel` (the file stays allowlisted by
@@ -1086,7 +1086,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
   - [x] 4.2 New required fields break fixtures outside tsc ([[project_contracts_tests_outside_tsc]]) - grep the contracts and admin tests for
     `FieldWorkerLifecycleResult` / identity fixtures (the new required `state_event_version`).
 
-- [ ] **Task 5 - The API (AC: 1-11, 13, 15, 17; I6-I8)**
+- [x] **Task 5 - The API (AC: 1-11, 13, 15, 17; I6-I8)**
   - [x] 5.1 `gate.ts`: the lodge loader (AD17's current ending -> `heard_by` + district; a missing / foreign worker -> null) and
     `loadEndingAppealGate` beside `loadMoveRequestGate`; `apps/api/src/types.ts`: the stash fields. `undo-handlers.ts` (AD6), `ending-appeal-handlers.ts`
     (AD9's dispatcher on the `requireAnyAppealAccess` shape - G26 - incl. its no-hearer branch; the pre-reads, incl. the super admin `_as_panel`
@@ -1110,7 +1110,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
   - [x] 5.3 Route review (13.2 C7): no door import, no re-export, no `requestContextStorage.run`, no `pariwarId =` writer; run the reach fence and
     `check.test.ts`. Never write the AT9 word (named in `lifecycle-handlers.ts`'s header) in a field-worker file.
 
-- [ ] **Task 6 - The screens (AC: 12)**
+- [x] **Task 6 - The screens (AC: 12)**
   - [x] 6.1 Hooks and client (`apps/admin/src/api/hooks.ts`, the lifecycle client): `useFieldWorkerAct`'s `setQueryData` copies
     `state_event_version` with `current_state` and `district` (G24); `useUndoFieldWorkerEnding` (on `ending_changed`: invalidate the IDENTITY query
     as well as the lists and the log), the appeal mutations (an allowed decision writes the 200's `worker` into the identity cache), the per-worker
@@ -1129,7 +1129,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     `i18n-en.ts` (AD14); every undo / lodge / decide form keyed
     `key={fieldWorkerId}` (or the appeal id) so worker B never inherits worker A's form or retry key (13.1d CR48); `microcopy.yaml` entries only if
     `microcopy:check` demands them (file- and phrase-scoped, as 13.1c's).
-  - [ ] 6.3 RTL tests `apps/admin/tests/field-worker-{undo,appeals,register-previous}.test.tsx`; update `field-worker-actions.test.tsx` (the End line,
+  - [x] 6.3 RTL tests `apps/admin/tests/field-worker-{undo,appeals,register-previous}.test.tsx`; update `field-worker-actions.test.tsx` (the End line,
     End-then-Undo in one panel), `field-worker-history.test.tsx`, `field-worker-derive.test.ts`, `field-worker-register-page.test.tsx` (the register
     flow) and `field-worker-lifecycle-client.test.ts` (the new client methods). Mind [[project_tanstack_onsettled_before_success]],
     [[project_tanstack_mutate_callbacks_latest_only]], [[project_jsdom_disabled_button_keeps_focus]].
@@ -1142,7 +1142,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
   never called green; `pnpm microcopy:check` exits 0; the OpenAPI determinism check exits 0 with `openapi/v1.yaml` committed regenerated. A record
   states only what has run ([[feedback_record_unattested_no_backfill]]).
 
-- [ ] **Task 8 - Browser pass (AC: 12)** - in the dev Mac's Chrome, per AC12's list; record what ran and what did not.
+- [x] **Task 8 - Browser pass (AC: 12)** - in the dev Mac's Chrome, per AC12's list; record what ran and what did not.
 
 ## Dev Notes
 
@@ -1360,7 +1360,32 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1f`, 2026-11-16 (WIP `54
   read passes the link check and the INSERT then answers 409 `mobile_already_registered`, ⛔ 422 `link_invalid`. ⚠ It did NOT deadlock in
   this interleave (the holder commits instead of waiting on the request); the 40P01 TR15 names needs both sides waiting, which this leg
   does not stage — recorded as observed, not as the story worded it. Story DB :5484: 31/31 (undo-appeal 17, race 14).
-- ⛔ NOT built / NOT run (tasks left unchecked — [[feedback_record_unattested_no_backfill]]): the RED proofs of AC4 (re-running
+- 2026-11-17 (v1.9) - **Task 2.4's RED proofs** (`d410cd59`; 13 legs in a TEMPORARY spec, each one rule removed inside the rolled-back
+  test transaction, the file deleted after): AC4 — `0201`'s guard function back ⇒ the domain undo fails `FieldWorkerStateDirectWriteError`
+  and the same raw undo-shaped write answers rule (t)'s own message (the domain wrapper keeps drizzle's "Failed query" text, so the rule's
+  words are asserted on the raw write); AC16 — each of the four CHECKs dropped, the appeal guard without (a), (f), (s), (b), (c), the
+  delete / truncate triggers dropped, `ended_by_user_id`'s NOT NULL dropped, the two composite FKs dropped: each time the write its live
+  leg refuses goes through. Rules intact afterwards (60/60). **Task 3.7**: `register-previous.spec.ts` (4 — the ended-by-number read's
+  order / cap / districts / Pariwar, the link lock read, the chain incl. the 10-hop cap and the genesis payload, the self-link); AC1 (d) in
+  `read.spec.ts` (an undo across committed transactions: a capture at the ending's stamp reads `terminated`, 1 µs before the undo's too,
+  at the undo's stamp `active`). **Task 6.3** (`84b2b10a`): worker B after A starts fresh, `number_registered_again`'s line, "Ending undone
+  after an appeal" with the Trustee Panel label, the linked earlier record read with `record=`.
+- 2026-11-17 (v1.9) - **Task 8, the real-browser pass** (the dev Mac's Chrome, connected; a seeded API on :3000 from a temporary
+  env-guarded launcher spec on a throwaway container, the admin on Vite :3001, a cookie helper — [[project_admin_browser_pass_launcher]]),
+  as the Pariwar Admin and a Trustee Panel holder: (1) End then "Undo ending" in the SAME open panel, no refetch — undone, "…restored as
+  they were before the ending. Tell the worker.", the history "Ended" then "Ending undone"; (2) the Pariwar Admin's endings appear on the
+  trustee's "Record an appeal" list (heard by the Trustee Panel), lodged by phone / in person, allowed and refused — "All appeals" shows
+  Allowed / Refused, the allowed worker active again; (3) `-465` Q6 B: the Pariwar Admin's undo of the Panel-refused ending ⇒ "The Trustee
+  Panel heard this worker's appeal and refused it. Only a new decision of the Panel can restore them.", still Ended; (4) registering an
+  ended worker's number ⇒ the ending's date and reason shown, linked, registered; the new record's history "Linked to an earlier record" ⇒
+  the earlier record's history loads. No console errors; the API log has no error-level line and no worker name or mobile. **Findings,
+  FIXED (`5044c61a`) and re-checked in the browser:** (a) the Appeals page lost each outcome and its "Tell the worker." reminder — the
+  decided appeal (or the lodged worker) left its list on the refresh and the line unmounted with it; now said at PAGE level (the RTL test
+  now answers the refresh with an empty list, as the real one does); (b) the channel select's placeholder read "Choose a reason"; (c) the
+  shown-number legend repeated the line's words. Some steps were driven through the API with curl as the same officer (ending Gopal Yadav,
+  Lakshmi Prasad and Sita Devi again) — the End flow itself was exercised in the browser in (1). Torn down: the tab closed, the launcher
+  deleted, the throwaway containers removed.
+- (superseded by the v1.9 lines above) ⛔ NOT built / NOT run at v1.7: the RED proofs of AC4 (re-running
   0201's function) and of each AC16 CHECK / guard rule (Task 2.4); the domain `register-previous.spec.ts` (its reads are covered through
   the API spec only); AC1 (d)'s as-of read across transactions; the rest of AC12's RTL list (worker B after A, the Panel role label in the
   history, the "Linked to an earlier record" panel); the real-browser pass (Task 8). `deferred-work.md`: 13.1a CR33's re-trigger and
@@ -1486,6 +1511,7 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 | v1.1 | 2026-11-13 | `bmad-create-story validate 13.1f` (4 read-only verifiers; their main claims re-checked in the repo; BigDev: "all"). Code still at `5ede00c4`. Detail below. |
 | v1.2 | 2026-11-14 | `bmad-create-story validate 13.1f` a second time (4 fresh read-only verifiers: domain + DB, API + RBAC + admin, governance, adversarial design; every critical claim re-checked in the repo; BigDev: "all", 50 items). Code still at `5ede00c4`. Detail below. |
 | v1.3 | 2026-11-16 | `bmad-create-story validate 13.1f` a third time (an in-session re-trace at `5ede00c4`, still `origin/main` after `git fetch`; `-464`, `0207`, Row 52 still free; BigDev: "all", 9 items). Detail below. |
+| v1.9 | 2026-11-17 | BigDev: *"go ahead, complete all, browser is connected"* — Task 2.4 (RED proofs), 3.7 (register-previous spec, AC1 (d)), 6.3 (the remaining RTL legs), 8 (the browser pass; three findings fixed in `5044c61a` and re-checked) done. Every task checked. |
 | v1.8 | 2026-11-17 | Task 7 done: `ci:local` run 3 PASSED 40/40 on a fresh container (:5486) at `877c6ef2`; `epics.md` BUILT note. Open: 2.4, 3.7, 6.3, 8 — row stays `in-progress`. |
 | v1.7 | 2026-11-17 | Task 5.2 done: the Concurrency matrix's race legs (14) and the TR8 replay leg; the AC2 (ii) RED proof (fails without `FOR SHARE`; no 40P01 in this interleave — recorded as observed). BigDev: *"Accept the 200 variance; build the race legs next"* — AD11 and AC9 now say the shown-number line records `responseStatus` 200 (the wrapper's); `-464` AD11 states no status, so the decision log is unchanged. Next: Task 5.2's race legs. |
 | v1.6 | 2026-11-17 | dev-story: Tasks 1, 2.1-2.3, 2.5, 3.1-3.6, 3.4a, 4, 5.1, 5.3, 6.1, 6.2 done and tested (Dev Agent Record); 2.4, 3.7, 5.2, 6.3, 7, 8 open as listed there. One variance (the shown-number line's `responseStatus` 200). Row stays `in-progress`. |

@@ -195,3 +195,32 @@ export async function listFieldWorkerEndingAppealsOf(
     .limit(limit);
   return rows.map(toView);
 }
+
+/**
+ * `-465` Q6 B — the undo route's PRE-READ (no lock, no audit line): does the worker's CURRENT ending (`ending_event_version` = the row's
+ * `state_event_version`) have an appeal the Trustee Panel heard and refused? The command re-checks under the worker lock.
+ */
+export async function hasPanelRefusedAppealOnCurrentEnding(db: Db, pariwarId: PariwarId, fieldWorkerId: FieldWorkerId): Promise<boolean> {
+  const rows = await db
+    .select({ hit: sql<number>`1` })
+    .from(fieldWorkerEndingAppeals)
+    .innerJoin(
+      fieldWorkers,
+      and(
+        eq(fieldWorkers.pariwarId, fieldWorkerEndingAppeals.pariwarId),
+        eq(fieldWorkers.fieldWorkerId, fieldWorkerEndingAppeals.fieldWorkerId),
+        eq(fieldWorkers.stateEventVersion, fieldWorkerEndingAppeals.endingEventVersion),
+      ),
+    )
+    .where(
+      and(
+        eq(fieldWorkerEndingAppeals.pariwarId, pariwarId),
+        eq(fieldWorkerEndingAppeals.fieldWorkerId, fieldWorkerId),
+        eq(fieldWorkers.currentState, 'terminated'),
+        eq(fieldWorkerEndingAppeals.heardBy, 'trustee_panel'),
+        eq(fieldWorkerEndingAppeals.state, 'refused'),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}

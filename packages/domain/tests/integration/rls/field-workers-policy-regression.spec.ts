@@ -48,6 +48,7 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
       ['audit_id', 'uuid', 'NO'],
       ['updated_at', 'timestamptz', 'NO'],
       ['approved_by_display', 'text', 'YES'], // Story 13.1a (0201) — the approver, NULL until the approval
+      ['previous_field_worker_id', 'uuid', 'YES'], // Story 13.1f (0207, AD12) — the link to an earlier record; immutable (rule (b))
     ]);
     const defaults = Object.fromEntries(r.rows.filter((c) => c.column_default !== null).map((c) => [c.column_name, c.column_default]));
     // ⛔ default on the id (caller-minted, QE3); only the two timestamps default to now().
@@ -82,12 +83,17 @@ describe.skipIf(!hasDatabase)('field_workers table + RLS policy regression (AC1)
       ['field_workers_ended_on_pair', 'c'],
       ['field_workers_pariwar_worker_uq', 'u'],
       ['field_workers_pkey', 'p'],
+      ['field_workers_previous_fk', 'f'], // Story 13.1f (0207, AD12) — (pariwar_id, previous_field_worker_id) -> this table
+      ['field_workers_previous_not_self', 'c'], // Story 13.1f (0207, AD12)
       ['field_workers_registered_by_display_nonblank', 'c'],
       ['field_workers_state_reason_pair', 'c'],
       ['field_workers_state_reason_subset', 'c'],
     ]);
     expect(r.rows.find((c) => c.conname === 'field_workers_pariwar_worker_uq')!.def).toBe('UNIQUE (pariwar_id, field_worker_id)');
     expect(r.rows.find((c) => c.conname === 'field_workers_approved_by_state')!.def).toMatch(/ NOT VALID$/);
+    expect(r.rows.find((c) => c.conname === 'field_workers_previous_fk')!.def).toBe(
+      'FOREIGN KEY (pariwar_id, previous_field_worker_id) REFERENCES field_workers(pariwar_id, field_worker_id)',
+    );
   });
 
   it('AC1: the partial unique mobile index (column list + predicate, normalised) and the keyset list index (Story 13.1a AD10)', async () => {

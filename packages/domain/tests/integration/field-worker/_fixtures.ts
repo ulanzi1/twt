@@ -97,7 +97,14 @@ export function approveAuthorization(pariwarId: string, district: string, actorI
 }
 
 /** The keys Story 13.1c minted for its acts (AD5) — `field_worker.read_log` gates a read, ⛔ a command, so it is ⛔ here. */
-export type FieldWorkerActKey = 'field_worker.move' | 'field_worker.suspend' | 'field_worker.reactivate' | 'field_worker.terminate';
+export type FieldWorkerActKey =
+  | 'field_worker.move'
+  | 'field_worker.suspend'
+  | 'field_worker.reactivate'
+  | 'field_worker.terminate'
+  // Story 13.1f (AD10) — the Pariwar Admin's two keys (`_as_panel` and `read_ending_appeals` are minted through `grantAuthorization`).
+  | 'field_worker.undo_ending'
+  | 'field_worker.hear_ending_appeal';
 
 /**
  * A VERIFIED result for one of Story 13.1c's act keys (AD3, AD4) for `actorId` at `district` in `pariwarId` — minted by the REAL
@@ -122,7 +129,12 @@ export function actAuthorization(key: FieldWorkerActKey, pariwarId: string, dist
  */
 export function grantAuthorization(
   key: string,
-  grant: { role: 'district_admin'; district: string } | { role: 'pariwar_admin' },
+  grant:
+    | { role: 'district_admin'; district: string }
+    | { role: 'pariwar_admin' }
+    // Story 13.1f (AD10, Q-1 A) — the Panel's own role at the Pariwar, and a super admin's GLOBAL grant (it derives every key).
+    | { role: 'trustee_panel' }
+    | { role: 'super_admin' },
   pariwarId: string,
   district: string,
   actorId: string,
@@ -132,7 +144,9 @@ export function grantAuthorization(
     grants: [
       grant.role === 'district_admin'
         ? { pariwarId, role: 'district_admin', scopeDimension: 'district', scopeValue: grant.district }
-        : { pariwarId, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pariwarId },
+        : grant.role === 'super_admin'
+          ? { pariwarId, role: 'super_admin', scopeDimension: 'global', scopeValue: null }
+          : { pariwarId, role: grant.role, scopeDimension: 'pariwar', scopeValue: pariwarId },
     ],
     key,
     resource: { dimension: 'district', value: district, pariwarId },

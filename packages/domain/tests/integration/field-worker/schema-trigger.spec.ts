@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { describe, expect, it } from 'vitest';
 
+import { isFieldWorkerStateDirectWriteError } from '../../../src/field-worker/errors.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A } from '../_helpers.js';
 import {
@@ -26,7 +27,8 @@ const RULE = {
   unguardedInsert: 'only the event-replay projector may create',
   unguardedUpdate: 'only the event-replay projector may update',
   genesisShape: 'a genesis INSERT must be',
-  terminated: 'a terminated field worker is never updated',
+  // Story 13.1f (AD4) — 0207's rule (t′) replaces 0200 / 0201's (t) "a terminated field worker is never updated".
+  terminated: 'a terminated field worker leaves terminated only by an undo',
   identity: 'identity is immutable',
   version: 'state_event_version must strictly increase',
   kycBackwards: 'kyc_status never goes completed -> pending',
@@ -34,6 +36,10 @@ const RULE = {
   delete: 'a field-worker row is never deleted',
   approver: 'approved_by_display is set once', // Story 13.1a — 0201 rule (f)
 } as const;
+
+/** Story 13.1f (AD4) — the undo writer variable the projector sets for `field_worker.ending_undone` ONLY. */
+const UNDO_ON = "SET LOCAL app.field_worker_undo_writer = 'on'";
+const UNDO_OFF = "SET LOCAL app.field_worker_undo_writer = 'off'";
 
 /** Run `text`, expect P0001 with the direct-write prefix and `rule`'s text; the tx stays usable (a savepoint). */
 async function expectDirectWrite(client: pg.PoolClient, text: string, params: unknown[], rule: string): Promise<void> {
@@ -50,6 +56,8 @@ async function expectDirectWrite(client: pg.PoolClient, text: string, params: un
   expect(caught!.code).toBe('P0001');
   expect(caught!.message).toMatch(new RegExp(`^${DIRECT_WRITE_PREFIX}`));
   expect(caught!.message, `the refusing rule for: ${text}`).toContain(rule);
+  // G25 — every rule's message carries the shared prefix, so the API's matcher maps each refusal (13.1f AC4).
+  expect(isFieldWorkerStateDirectWriteError(caught)).toBe(true);
 }
 
 /** A genesis row as the owner, guarded. */
@@ -163,7 +171,7 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
     expect((await rowOf(client, id)).district).toBe('Gaya');
   });
 
-  it('I6: a GUARDED UPDATE of ANY column on a TERMINATED row is refused (the trigger’s own rule)', async () => {
+  it('I6 (Story 13.1f AD4, rule (t′)): a GUARDED UPDATE of a TERMINATED row WITHOUT the undo variable is refused, whatever it changes', async () => {
     const { client } = getTx();
     const id = await seed(client);
     await guardedUpdate(client, id, "current_state = 'terminated', state_reason_code = 'registered_in_error', ended_on = '2026-11-01', state_event_version = 2");
@@ -176,6 +184,90 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
     ]) {
       await expectDirectWrite(client, `UPDATE field_workers SET ${set}, state_event_version = 3 WHERE field_worker_id = $1`, [id], RULE.terminated);
     }
+  });
+
+  describe('AC4 (Story 13.1f AD4) — the database admits only an UNDO-SHAPED update out of terminated', () => {
+    /** A worker ended from pending_kyc at version 2. */
+    async function ended(client: pg.PoolClient): Promise<string> {
+      const id = await seed(client);
+      await guardedUpdate(client, id, "current_state = 'terminated', state_reason_code = 'registered_in_error', ended_on = '2026-11-01', state_event_version = 2");
+      return id;
+    }
+    const UNDO_SHAPE = "current_state = 'pending_kyc', state_reason_code = NULL, ended_on = NULL, state_event_version = 3";
+
+    it('(1) UNGUARDED (no writer variable, the undo variable on) — rule (a) answers first', async () => {
+      const { client } = getTx();
+      const id = await ended(client);
+      await client.query(UNDO_ON);
+      await expectDirectWrite(client, `UPDATE field_workers SET ${UNDO_SHAPE} WHERE field_worker_id = $1`, [id], RULE.unguardedUpdate);
+    });
+
+    it('(2) guarded WITHOUT the undo variable — (t′)', async () => {
+      const { client } = getTx();
+      const id = await ended(client);
+      await client.query(GUARD_ON);
+      await client.query(UNDO_OFF);
+      await expectDirectWrite(client, `UPDATE field_workers SET ${UNDO_SHAPE} WHERE field_worker_id = $1`, [id], RULE.terminated);
+    });
+
+    it('(3)-(6) with the undo variable: staying terminated, setting an ended_on, changing the district, changing the KYC status — each (t′), answering before (c)', async () => {
+      const { client } = getTx();
+      const id = await ended(client);
+      await client.query(GUARD_ON);
+      await client.query(UNDO_ON);
+      for (const set of [
+        // (3) keeps `terminated` (another reason) — and the version does NOT increase, so (c) would refuse too: (t′) answers first.
+        "current_state = 'terminated', state_reason_code = 'inactive', state_event_version = 2",
+        // (4) leaves terminated but keeps a last day.
+        "current_state = 'pending_kyc', state_reason_code = NULL, ended_on = '2026-11-01', state_event_version = 3",
+        // (5) changes the district.
+        "current_state = 'pending_kyc', state_reason_code = NULL, ended_on = NULL, district = 'Gaya', state_event_version = 3",
+        // (6) changes the KYC status pending -> completed.
+        "current_state = 'pending_kyc', state_reason_code = NULL, ended_on = NULL, kyc_status = 'completed', state_event_version = 3",
+      ]) {
+        await expectDirectWrite(client, `UPDATE field_workers SET ${set} WHERE field_worker_id = $1`, [id], RULE.terminated);
+      }
+    });
+
+    it('CONTROL: the legal undo shape passes (guarded, the undo variable on) — and the other rules still bite: (b) an identity change with the undo shape; (c) a version that does not increase', async () => {
+      const { client } = getTx();
+      const id = await ended(client);
+      await client.query(GUARD_ON);
+      await client.query(UNDO_ON);
+      await expectDirectWrite(client, `UPDATE field_workers SET ${UNDO_SHAPE}, mobile_blind_index = 'x' WHERE field_worker_id = $1`, [id], RULE.identity);
+      await expectDirectWrite(client, "UPDATE field_workers SET current_state = 'pending_kyc', state_reason_code = NULL, ended_on = NULL, state_event_version = 2 WHERE field_worker_id = $1", [id], RULE.version);
+      await client.query(`UPDATE field_workers SET ${UNDO_SHAPE} WHERE field_worker_id = $1`, [id]);
+      await client.query(UNDO_OFF);
+      await client.query(GUARD_OFF);
+      const row = await rowOf(client, id);
+      expect(row.current_state).toBe('pending_kyc');
+      expect(row.ended_on).toBeNull();
+      expect(row.district).toBe('Patna');
+    });
+
+    it('(b) on a LIVE row still refuses an identity change, the undo variable notwithstanding', async () => {
+      const { client } = getTx();
+      const id = await seed(client);
+      await client.query(GUARD_ON);
+      await client.query(UNDO_ON);
+      await expectDirectWrite(client, "UPDATE field_workers SET mobile_blind_index = 'x', state_event_version = 2 WHERE field_worker_id = $1", [id], RULE.identity);
+    });
+
+    it('AC10 (b): previous_field_worker_id is immutable — a guarded UPDATE that sets or changes it is refused by rule (b), on a row that never had it and on one written without it', async () => {
+      const { client } = getTx();
+      const old = await ended(client);
+      const fresh = await seed(client);
+      await client.query(GUARD_ON);
+      await expectDirectWrite(client, 'UPDATE field_workers SET previous_field_worker_id = $2, state_event_version = 2 WHERE field_worker_id = $1', [fresh, old], RULE.identity);
+      const linked = randomUUID();
+      await client.query(GUARD_ON);
+      await client.query(RAW_INSERT_SQL, rawInsertParams(linked, PARIWAR_A));
+      await client.query(GUARD_OFF);
+      // The INSERT helper writes no link; the link column is set only by the projector's genesis INSERT (Task 3.3, proved in
+      // `undo.spec.ts`'s link legs). Here: once a row exists, ANY later write of the column is the identity rule's.
+      await client.query(GUARD_ON);
+      await expectDirectWrite(client, 'UPDATE field_workers SET previous_field_worker_id = $2, state_event_version = 2 WHERE field_worker_id = $1', [linked, old], RULE.identity);
+    });
   });
 
   it('I10: a DELETE as the OWNER is refused by the BEFORE DELETE trigger (P0001)', async () => {

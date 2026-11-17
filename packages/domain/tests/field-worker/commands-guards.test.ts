@@ -21,8 +21,23 @@ import {
   registerFieldWorker,
   suspendFieldWorker,
   terminateFieldWorker,
+  allowFieldWorkerEndingAppeal,
+  undoFieldWorkerEnding,
 } from '../../src/field-worker/commands.js';
 import {
+  lodgeFieldWorkerEndingAppeal,
+  refuseFieldWorkerEndingAppeal,
+  withdrawFieldWorkerEndingAppeal,
+} from '../../src/field-worker/ending-appeal-commands.js';
+import {
+  FieldWorkerAppealAlreadyDecidedError,
+  FieldWorkerAppealDateInvalidError,
+  FieldWorkerAppealDeciderIsEnderError,
+  FieldWorkerAppealNotOpenError,
+  FieldWorkerAppealOpenError,
+  FieldWorkerAppealRefusedByPanelError,
+  FieldWorkerAppealWrongHearerError,
+  FieldWorkerEndingChangedError,
   FieldWorkerAuthorizationStaleError,
   FieldWorkerDistrictUnchangedError,
   FieldWorkerEndedOnInvalidError,
@@ -33,7 +48,7 @@ import {
   FieldWorkerProjectorInputError,
   FieldWorkerReasonInvalidError,
 } from '../../src/field-worker/errors.js';
-import { fieldWorkerId, pariwarId } from '../../src/ids/index.js';
+import { fieldWorkerEndingAppealId, fieldWorkerId, pariwarId } from '../../src/ids/index.js';
 import { authorize, type EffectiveGrant, type VerifiedAuthorization } from '../../src/rbac/check.js';
 import { SEED_PERMISSION_KEYS } from '../../src/rbac/permissions.js';
 import type { FieldWorkerKycStatus, FieldWorkerReasonCode, FieldWorkerState } from '../../src/schema/field_workers.js';
@@ -82,6 +97,21 @@ function classify(text: string): string {
   // Story 13.1d (AD3, AD9) — the supersede after a direct move or an ending: the worker's open request (none in the stub), then the notices' recipients.
   if (t.includes('FROM field_worker_move_requests') && t.endsWith('FOR UPDATE')) return 'REQUEST LOCK';
   if (t.includes("g.role = 'district_admin'")) return 'DISTRICT ADMINS';
+  // Story 13.1f (AD2, AD3, AD9; `-465` Q6 B) — the undo's and the appeal's statements.
+  if (t.startsWith('SELECT event_type, payload, event_version FROM events_log')) return 'STREAM';
+  if (t.startsWith("SELECT event_type, payload->>'from_state'")) return 'UNDONE EVENT';
+  if (t.startsWith('SET LOCAL app.field_worker_undo_writer')) return t.includes("'on'") ? 'UNDO ON' : 'UNDO OFF';
+  if (t.startsWith('SELECT 1 AS hit FROM field_worker_ending_appeals')) return 'PANEL REFUSED';
+  if (t.startsWith('SELECT field_worker_id FROM field_worker_ending_appeals')) return 'APPEAL WORKER';
+  if (t.includes('FROM field_worker_ending_appeals') && t.includes("state = 'open'") && t.endsWith('FOR UPDATE')) return 'OPEN APPEAL LOCK';
+  if (t.includes('FROM field_worker_ending_appeals') && t.endsWith('FOR UPDATE')) return 'APPEAL LOCK';
+  if (t.startsWith('SELECT count(*)::text AS n FROM field_worker_ending_appeals')) return 'REFUSED COUNT';
+  if (t.startsWith('SELECT state_reason_code FROM field_workers')) return 'REASON READ';
+  if (t.includes("COALESCE(e.payload->>'appeal_heard_by'")) return 'CURRENT ENDING';
+  if (t.startsWith('INSERT INTO events_log')) return 'APPEAL APPEND';
+  if (t.startsWith('INSERT INTO field_worker_ending_appeals')) return 'APPEAL INSERT';
+  if (t.startsWith('UPDATE field_worker_ending_appeals')) return 'APPEAL UPDATE';
+  if (t.startsWith('SET LOCAL app.field_worker_ending_appeal_writer')) return t.includes("'on'") ? 'APPEAL WRITER ON' : 'APPEAL WRITER OFF';
   return `OTHER: ${t.slice(0, 40)}`;
 }
 
@@ -641,5 +671,227 @@ describe('Story 13.1c AD4 — the move key list and the expected source', () => 
     await expect(
       postFieldWorker(stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31', district: 'Gaya' }).client, { ...mover('Nalanda'), reasonCode: 'reassigned' }),
     ).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
+  });
+});
+
+// ── Story 13.1f (AD2, AD9; `-465` Q6 B) — the undo's and the appeal's statement order and check order, DB-free ──────────────────────
+
+/** The rejection of `fn` (a resolve is a test failure). */
+async function caught(fn: () => Promise<unknown>): Promise<unknown> {
+  try {
+    await fn();
+  } catch (e) {
+    return e;
+  }
+  throw new Error('expected a rejection');
+}
+
+const ENDER = '3e2d1c0b-9a8f-4e7d-8c6b-5a4f3e2d1c0b';
+const APPEAL = '4f3e2d1c-0b9a-4f8e-9d7c-6b5a4f3e2d1c';
+const TRUSTEE = '5a4f3e2d-1c0b-4a9f-8e7d-6c5b4a3f2e1d';
+interface AppealStub {
+  panelRefused?: boolean;
+  openAppeal?: boolean;
+  heardBy?: 'pariwar_admin' | 'trustee_panel';
+  refusedCount?: number;
+  appealState?: string;
+}
+/** A stub for a TERMINATED worker (ended from pending_kyc at version 2) and, when asked, its appeal. */
+function appealStub(o: AppealStub = {}): { client: pg.PoolClient; calls: string[] } {
+  const calls: string[] = [];
+  const appealRaw = {
+    appeal_id: APPEAL,
+    field_worker_id: FW,
+    state: o.appealState ?? 'open',
+    state_event_version: '1',
+    ending_event_version: '2',
+    heard_by: o.heardBy ?? 'trustee_panel',
+    received_on: '2026-11-02',
+    lodged_by_user_id: TRUSTEE,
+    ended_by_user_id: ENDER,
+  };
+  const query = async (arg: unknown, params?: unknown[]): Promise<{ rows: unknown[]; rowCount: number; fields: unknown[] }> => {
+    const cfg = typeof arg === 'string' ? { text: arg, values: params } : (arg as { text?: unknown; rowMode?: string });
+    const kind = classify(String(cfg.text ?? ''));
+    calls.push(kind);
+    const out = (rows: unknown[]) => ({ rows, rowCount: rows.length, fields: [] });
+    const returning = (value: string) => out((cfg as { rowMode?: string }).rowMode === 'array' ? [[value]] : [{ value }]);
+    switch (kind) {
+      case 'LOCK':
+        return out([
+          { current_state: 'terminated', state_event_version: '2', kyc_status: 'pending', state_reason_code: 'inactive', district: 'Patna', ended_on: '2026-11-02', registered_on: '2026-10-01' },
+        ]);
+      case 'STREAM':
+        return out([
+          { event_type: 'field_worker.registered', payload: { from_state: null, to_state: 'pending_kyc', district: 'Patna' }, event_version: '1' },
+          { event_type: 'field_worker.terminated', payload: { from_state: 'pending_kyc', to_state: 'terminated', reason_code: 'inactive', ended_on: '2026-11-02' }, event_version: '2' },
+        ]);
+      case 'HEAD': {
+        const values = (params ?? (cfg as { values?: unknown[] }).values ?? []) as unknown[];
+        return out([{ max: values.includes(APPEAL) ? '1' : '2' }]); // the appeal's stream holds its `lodged` event
+      }
+      case 'UNDONE EVENT':
+        return out([{ event_type: 'field_worker.terminated', from_state: 'pending_kyc' }]);
+      case 'APPEND':
+        return returning(EVENT_ID);
+      case 'UPDATE':
+        return returning(FW);
+      case 'PANEL REFUSED':
+        return out(o.panelRefused === true ? [{ hit: 1 }] : []);
+      case 'OPEN APPEAL LOCK':
+        return out(o.openAppeal === true ? [appealRaw] : []);
+      case 'APPEAL WORKER':
+        return out([{ field_worker_id: FW }]);
+      case 'APPEAL LOCK':
+        return out([appealRaw]);
+      case 'NOW':
+        return out([{ ist_today: '2026-11-03' }]);
+      case 'REFUSED COUNT':
+        return out([{ n: String(o.refusedCount ?? 0) }]);
+      case 'CURRENT ENDING':
+        return out([{ event_version: '2', heard_by: o.heardBy ?? 'trustee_panel', actor_id: ENDER, ended_on: '2026-11-02', reason_code: 'inactive', district: 'Patna' }]);
+      case 'REASON READ':
+        return out([{ state_reason_code: null }]);
+      case 'APPEAL APPEND':
+        return out([{ event_id: EVENT_ID }]);
+      case 'APPEAL UPDATE':
+        return out([{ appeal_id: APPEAL }]);
+      default:
+        return out([]);
+    }
+  };
+  return { client: { query } as unknown as pg.PoolClient, calls };
+}
+
+const UNDO_KEY = 'field_worker.undo_ending';
+const undoer = (expectedEndingVersion = 2) => ({ ...staffBase(), expectedEndingVersion, authorization: authAt('Patna', { key: UNDO_KEY }) });
+const TRUSTEE_GRANT: EffectiveGrant = { pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P };
+const panelAuth = (actorId = TRUSTEE): VerifiedAuthorization =>
+  authorize({ actorId, grants: [TRUSTEE_GRANT], key: 'field_worker.hear_ending_appeal_as_panel', resource: { dimension: 'district', value: 'Patna', pariwarId: P } })!;
+const paHearAuth = (): VerifiedAuthorization => authAt('Patna', { key: 'field_worker.hear_ending_appeal' });
+
+describe('Story 13.1f — the undo (AD2; `-465` Q6 B): statement order and check order', () => {
+  it('a slip: SAVEPOINT → LOCK → PANEL REFUSED → STREAM → HEAD → UNDONE EVENT → APPEND → GUARD ON → UNDO ON → UPDATE → UNDO OFF → GUARD OFF → RELEASE → OPEN APPEAL LOCK → REASON READ', async () => {
+    const { client, calls } = appealStub();
+    const r = await undoFieldWorkerEnding(client, undoer());
+    expect(r).toMatchObject({ state: 'pending_kyc', reasonCode: null, endedOn: null });
+    expect(calls).toEqual([
+      'SAVEPOINT', 'LOCK', 'PANEL REFUSED', 'STREAM', 'HEAD', 'UNDONE EVENT', 'APPEND',
+      'GUARD ON', 'UNDO ON', 'UPDATE', 'UNDO OFF', 'GUARD OFF', 'RELEASE', 'OPEN APPEAL LOCK', 'REASON READ',
+    ]);
+  });
+
+  it('a slip with an open appeal: after RELEASE the appeal is locked SECOND (TR5) and superseded — NOW → HEAD → APPEAL APPEND → APPEAL UPDATE', async () => {
+    const { client, calls } = appealStub({ openAppeal: true });
+    await undoFieldWorkerEnding(client, undoer());
+    expect(calls.slice(calls.indexOf('RELEASE'))).toEqual([
+      'RELEASE', 'OPEN APPEAL LOCK', 'NOW', 'HEAD', 'APPEAL APPEND', 'APPEAL WRITER ON', 'APPEAL UPDATE', 'APPEAL WRITER OFF', 'REASON READ',
+    ]);
+  });
+
+  it('check order under the lock: (2′) terminated → (2a) the version → (2b) the Panel refusal (Q6 B) → (3d) the target; each refusal stops before STREAM', async () => {
+    // (2a) BEATS (2b): a stale version on a Panel-refused ending ⇒ EndingChanged.
+    let s = appealStub({ panelRefused: true });
+    expect(await caught(() => undoFieldWorkerEnding(s.client, undoer(3)))).toBeInstanceOf(FieldWorkerEndingChangedError);
+    expect(s.calls).toEqual(['SAVEPOINT', 'LOCK', 'ROLLBACK TO', 'RELEASE']);
+    // (2b) BEATS (3d): a Panel refusal with a stale target ⇒ AppealRefusedByPanel.
+    s = appealStub({ panelRefused: true });
+    const stale = { ...undoer(), authorization: authAt('Gaya', { key: UNDO_KEY }) };
+    expect(await caught(() => undoFieldWorkerEnding(s.client, stale))).toBeInstanceOf(FieldWorkerAppealRefusedByPanelError);
+    expect(s.calls).toEqual(['SAVEPOINT', 'LOCK', 'PANEL REFUSED', 'ROLLBACK TO', 'RELEASE']);
+    // (3d) without a refusal ⇒ AuthorizationStale, before STREAM.
+    s = appealStub();
+    expect(await caught(() => undoFieldWorkerEnding(s.client, stale))).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+    expect(s.calls).not.toContain('STREAM');
+  });
+
+  it('guard (0) before ANY statement: a wrong key, the trustee actor kind, a malformed version', async () => {
+    for (const bad of [
+      { ...undoer(), authorization: authAt('Patna', { key: 'field_worker.terminate' }) },
+      { ...undoer(), actor: 'trustee' as const },
+      { ...undoer(), expectedEndingVersion: 1 },
+      { ...undoer(), expectedEndingVersion: Number.NaN },
+    ]) {
+      const s = appealStub();
+      expect(await caught(() => undoFieldWorkerEnding(s.client, bad))).toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(s.calls).toEqual([]);
+    }
+  });
+});
+
+describe('Story 13.1f — the appeal (AD9): the lodge order, the decide lock order', () => {
+  const lodger = (over: Partial<Parameters<typeof lodgeFieldWorkerEndingAppeal>[1]> = {}) => ({
+    pariwarId: P,
+    fieldWorkerId: FW,
+    appealId: fieldWorkerEndingAppealId(APPEAL),
+    auditId: AUDIT,
+    actor: 'trustee' as const,
+    actorId: TRUSTEE,
+    authorization: panelAuth(),
+    expectedEndingVersion: 2,
+    receivedOn: '2026-11-02',
+    receivedVia: 'phone',
+    ...over,
+  });
+
+  it('lodge: LOCK → CURRENT ENDING → OPEN APPEAL LOCK → REFUSED COUNT → NOW → (the lodge projector) — the worker lock FIRST', async () => {
+    const { client, calls } = appealStub();
+    await lodgeFieldWorkerEndingAppeal(client, lodger());
+    expect(calls.slice(0, 5)).toEqual(['LOCK', 'CURRENT ENDING', 'OPEN APPEAL LOCK', 'REFUSED COUNT', 'NOW']);
+    expect(calls).toContain('APPEAL INSERT');
+  });
+
+  it('lodge check order (AC5 (i)): version BEATS the hearer; the hearer BEATS open; open BEATS already-decided; already-decided BEATS the dates', async () => {
+    // version (2) before the hearer (3): a stale version AND the wrong key ⇒ EndingChanged.
+    expect(await caught(() => lodgeFieldWorkerEndingAppeal(appealStub({ heardBy: 'pariwar_admin' }).client, lodger({ expectedEndingVersion: 3 })))).toBeInstanceOf(
+      FieldWorkerEndingChangedError,
+    );
+    // hearer (3) before open (4).
+    expect(await caught(() => lodgeFieldWorkerEndingAppeal(appealStub({ heardBy: 'pariwar_admin', openAppeal: true }).client, lodger()))).toBeInstanceOf(
+      FieldWorkerAppealWrongHearerError,
+    );
+    // open (4) before already-decided (5).
+    expect(await caught(() => lodgeFieldWorkerEndingAppeal(appealStub({ openAppeal: true, refusedCount: 1 }).client, lodger()))).toBeInstanceOf(FieldWorkerAppealOpenError);
+    // already-decided (5) before the dates (6).
+    expect(await caught(() => lodgeFieldWorkerEndingAppeal(appealStub({ refusedCount: 1 }).client, lodger({ receivedOn: '2026-12-31' })))).toBeInstanceOf(
+      FieldWorkerAppealAlreadyDecidedError,
+    );
+    // the dates (6), last.
+    expect(await caught(() => lodgeFieldWorkerEndingAppeal(appealStub().client, lodger({ receivedOn: '2026-12-31' })))).toBeInstanceOf(FieldWorkerAppealDateInvalidError);
+  });
+
+  const decider = (over: Partial<Parameters<typeof refuseFieldWorkerEndingAppeal>[1]> = {}) => ({
+    pariwarId: P,
+    appealId: fieldWorkerEndingAppealId(APPEAL),
+    auditId: AUDIT,
+    actor: 'trustee' as const,
+    actorId: STAFF,
+    authorization: panelAuth(STAFF),
+    decidedOn: '2026-11-03',
+    ...over,
+  });
+
+  it('decide / withdraw lock order (TR5, AC6 (i)): APPEAL WORKER (unlocked) → LOCK (the worker) → APPEAL LOCK → NOW — never the appeal first', async () => {
+    for (const act of [refuseFieldWorkerEndingAppeal, withdrawFieldWorkerEndingAppeal, allowFieldWorkerEndingAppeal]) {
+      const { client, calls } = appealStub();
+      await act(client, decider());
+      expect(calls.slice(0, 4), act.name).toEqual(['APPEAL WORKER', 'LOCK', 'APPEAL LOCK', 'NOW']);
+    }
+  });
+
+  it('decide check order (AC6 (i)): the key vs heard_by → open → the ender → the dates', async () => {
+    // hearer before open.
+    expect(await caught(() => refuseFieldWorkerEndingAppeal(appealStub({ appealState: 'refused' }).client, decider({ actor: 'operator', authorization: paHearAuth() })))).toBeInstanceOf(
+      FieldWorkerAppealWrongHearerError,
+    );
+    // open before the ender.
+    expect(await caught(() => refuseFieldWorkerEndingAppeal(appealStub({ appealState: 'withdrawn' }).client, decider({ actorId: ENDER, authorization: panelAuth(ENDER) })))).toBeInstanceOf(
+      FieldWorkerAppealNotOpenError,
+    );
+    // the ender before the dates.
+    expect(await caught(() => refuseFieldWorkerEndingAppeal(appealStub().client, decider({ actorId: ENDER, authorization: panelAuth(ENDER), decidedOn: '2026-12-31' })))).toBeInstanceOf(
+      FieldWorkerAppealDeciderIsEnderError,
+    );
+    expect(await caught(() => refuseFieldWorkerEndingAppeal(appealStub().client, decider({ decidedOn: '2026-12-31' })))).toBeInstanceOf(FieldWorkerAppealDateInvalidError);
   });
 });

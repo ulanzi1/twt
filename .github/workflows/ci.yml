@@ -709,6 +709,28 @@ jobs:
       - run: pnpm field-worker-move-request:test
       - run: pnpm field-worker-move-request:check
 
+  field-worker-ending-appeal-invariant:
+    name: field-worker-ending-appeal-invariant (field_worker_ending_appeals is projector-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 13.1f AD7: field_worker_ending_appeals is the projection of each appeal's own event stream, written ONLY by
+    # packages/domain/src/field-worker/ending-appeal-project.ts (13.1d AD2's gate, for the appeal table). No DB / network.
+    # See scripts/field-worker-ending-appeal-invariant/.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm field-worker-ending-appeal:test
+      - run: pnpm field-worker-ending-appeal:check
+
   governance-boundary:
     name: governance-boundary (a feature flag cannot bypass a governance control)
     runs-on: ubuntu-latest

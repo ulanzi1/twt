@@ -418,6 +418,21 @@ export class FieldWorkerAppealAlreadyDecidedError extends Error {
   }
 }
 
+/**
+ * `-465` Q6 B (Trustee-ratified 2026-11-17) — a SLIP undo of an ending whose appeal the Trustee Panel heard and REFUSED: "once you have
+ * refused, only a new decision of yours restores the worker". The pre-read, or under the worker lock. → 409
+ * `field_worker.appeal_refused_by_panel`. ⛔ Raised for a refusal heard by the Pariwar Admin (not covered — the slip undo stays).
+ */
+export class FieldWorkerAppealRefusedByPanelError extends Error {
+  public readonly name = 'FieldWorkerAppealRefusedByPanelError';
+  public constructor(
+    public readonly fieldWorkerId: string,
+    public readonly endingVersion: number,
+  ) {
+    super(`field worker ${fieldWorkerId}: the Trustee Panel refused the appeal on the ending at version ${String(endingVersion)}`);
+  }
+}
+
 /** Decide or withdraw an appeal that is not `open`. → 409. */
 export class FieldWorkerAppealNotOpenError extends Error {
   public readonly name = 'FieldWorkerAppealNotOpenError';

@@ -104,3 +104,23 @@ export async function countRefusedAppealsOfEnding(
   );
   return Number(r.rows[0]?.n ?? '0');
 }
+
+/**
+ * `-465` Q6 B — does this ending have an appeal the PANEL heard and REFUSED? (`heard_by = 'trustee_panel'`, `state = 'refused'`.) Read
+ * under the worker lock by the slip undo: such an ending is not undone as a mistake ("once you have refused, only a new decision of yours
+ * restores the worker"). ⛔ A refusal heard by the Pariwar Admin — `-465` does not cover it, and the slip undo stays (`-454` Q1 A).
+ */
+export async function hasPanelRefusedAppealOfEnding(
+  client: pg.PoolClient,
+  pariwarId: PariwarId,
+  fieldWorkerId: FieldWorkerId,
+  endingEventVersion: number,
+): Promise<boolean> {
+  const r = await client.query<{ hit: number }>(
+    `SELECT 1 AS hit FROM field_worker_ending_appeals
+      WHERE pariwar_id = $1 AND field_worker_id = $2 AND ending_event_version = $3 AND heard_by = 'trustee_panel' AND state = 'refused'
+      LIMIT 1`,
+    [pariwarId, fieldWorkerId, endingEventVersion],
+  );
+  return r.rows.length > 0;
+}

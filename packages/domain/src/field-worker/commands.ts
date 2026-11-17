@@ -66,6 +66,7 @@ import {
 } from './ending-appeal-events.js';
 import {
   appealWorkerOf,
+  hasPanelRefusedAppealOfEnding,
   lockEndingAppealRow,
   type EndingAppealLockedRow,
 } from './ending-appeal-lock.js';
@@ -78,6 +79,7 @@ import {
   FieldWorkerAppealMissingError,
   FieldWorkerAppealNotOpenError,
   FieldWorkerEndedOnInvalidError,
+  FieldWorkerAppealRefusedByPanelError,
   FieldWorkerEndingChangedError,
   FieldWorkerAuthorizationStaleError,
   FieldWorkerDistrictUnchangedError,
@@ -656,9 +658,21 @@ interface UndoEndingLockedInput extends FieldWorkerCommandBase {
 }
 
 /**
+ * `-465` Q6 B — the SLIP's extra locked check, after the version and before the target: the ending's appeal heard by the PANEL and refused
+ * bars the undo. ⛔ For `appeal_allowed` (its appeal is open, never refused).
+ */
+async function assertNoPanelRefusal(client: pg.PoolClient, i: UndoEndingLockedInput, row: FieldWorkerLockedRow): Promise<void> {
+  if (i.cause !== 'mistake') return;
+  if (await hasPanelRefusedAppealOfEnding(client, i.pariwarId, i.fieldWorkerId, row.stateEventVersion)) {
+    throw new FieldWorkerAppealRefusedByPanelError(i.fieldWorkerId, row.stateEventVersion);
+  }
+}
+
+/**
  * The undo's CORE (AD2) — MODULE-PRIVATE: the barrel is `export * from './commands.js'`, so an export would be public and a caller could
  * pass an unchecked `appeal_id` (TR17). Runs `runLockedTransition` with `resolveTarget`: (2′) terminated; the guard — (2a) the version is
- * the expected ending ⇒ `FieldWorkerEndingChangedError`, (3d) the target; then the target — the fold of the stream PREFIX before the
+ * the expected ending ⇒ `FieldWorkerEndingChangedError`, (2b) a SLIP only: no Panel-refused appeal on it ⇒
+ * `FieldWorkerAppealRefusedByPanelError` (`-465` Q6 B), (3d) the target; then the target — the fold of the stream PREFIX before the
  * latest `field_worker.terminated` event (G2; an earlier undo in the prefix folds through AD3's arm), which must equal that event's
  * `from_state` read RAW (TR18) ⇒ else `FieldWorkerProjectorInputError` (a corrupt stream, a 500). Restores the suspension reason iff
  * suspended. The projector re-checks the undone event (AD3) and maps the live-number 23505 (AD5).
@@ -668,8 +682,9 @@ async function undoEndingLocked(client: pg.PoolClient, i: UndoEndingLockedInput)
     client,
     i,
     'field_worker.ending_undone',
-    (row) => {
+    async (row) => {
       if (row.stateEventVersion !== i.expectedEndingVersion) throw new FieldWorkerEndingChangedError(i.fieldWorkerId, i.expectedEndingVersion);
+      await assertNoPanelRefusal(client, i, row);
       assertLockedTarget(i, i.authorization, row);
       return {
         authorization: i.authorization,
@@ -734,11 +749,12 @@ export interface UndoFieldWorkerEndingInput extends FieldWorkerCommandBase {
 /**
  * Story 13.1f (AD6; the Panel's `-454` Q1 A) — the Pariwar Admin undoes an ending made BY MISTAKE: the worker returns as they were (the
  * state the ending left, its suspension reason, the same district and code), both acts stay in the history. Any ending — any reason,
- * `died` included, any from-state, at any time, after a REFUSED appeal too (note Q6, as ruled). A SLIP's undo SUPERSEDES the worker's
+ * `died` included, any from-state, at any time — EXCEPT one whose appeal the Trustee Panel heard and REFUSED (`-465` Q6 B: "once you have
+ * refused, only a new decision of yours restores the worker"; a Pariwar Admin's refusal does not bar it). A SLIP's undo SUPERSEDES the worker's
  * open appeal in the same transaction (I4). ⛔ It reopens no move request (13.1d C3) and re-sends no code text (C7).
  * Guard (0), pure: the actor (QE7, and `'operator'` — AD9), the `field_worker.undo_ending` authorization, the expected version.
- * @throws FieldWorkerIllegalTransitionError, FieldWorkerEndingChangedError, FieldWorkerAuthorizationStaleError,
- *         FieldWorkerNumberRegisteredAgainError (+ the shared guards).
+ * @throws FieldWorkerIllegalTransitionError, FieldWorkerEndingChangedError, FieldWorkerAppealRefusedByPanelError,
+ *         FieldWorkerAuthorizationStaleError, FieldWorkerNumberRegisteredAgainError (+ the shared guards).
  */
 export async function undoFieldWorkerEnding(client: pg.PoolClient, i: UndoFieldWorkerEndingInput): Promise<FieldWorkerUndoResult> {
   assertFieldWorkerActor('field_worker.ending_undone', i.actor, i.actorId);

@@ -52,7 +52,7 @@ export const FIELD_WORKER_POST_REASONS = ['at_worker_request', 'reassigned'] as 
 export const FieldWorkerPostReason = z.enum(FIELD_WORKER_POST_REASONS);
 export type FieldWorkerPostReason = z.output<typeof FieldWorkerPostReason>;
 
-/** The seven event types of a worker's stream (`fieldWorker.FIELD_WORKER_EVENT_TYPES`). ⚠ Row 13-1f adds the undo's (13.1c C2 (iii)). */
+/** The eight event types of a worker's stream (`fieldWorker.FIELD_WORKER_EVENT_TYPES`) — Story 13.1f adds the undo's (13.1c C2 (iii)). */
 export const FIELD_WORKER_EVENT_TYPES = [
   'field_worker.registered',
   'field_worker.kyc_completed',
@@ -61,6 +61,7 @@ export const FIELD_WORKER_EVENT_TYPES = [
   'field_worker.reactivated',
   'field_worker.terminated',
   'field_worker.posted',
+  'field_worker.ending_undone',
 ] as const;
 export const FieldWorkerEventType = z.enum(FIELD_WORKER_EVENT_TYPES);
 export type FieldWorkerEventType = z.output<typeof FieldWorkerEventType>;
@@ -118,3 +119,42 @@ export const FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES = [
 ] as const;
 export const FieldWorkerMoveRequestEventType = z.enum(FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES);
 export type FieldWorkerMoveRequestEventType = z.output<typeof FieldWorkerMoveRequestEventType>;
+
+// ── Story 13.1f — the undo of an ending and the appeal record (decision `2026-11-16-464` AD2, AD7, AD8; the Panel's `2026-11-17-465`) ──
+// Re-declared like the tuples above; the sync-guard (tests/field-workers.test.ts) binds each to its @twt/domain source.
+
+/** Why an ending was undone (`fieldWorker.FIELD_WORKER_UNDO_CAUSES`). */
+export const FIELD_WORKER_UNDO_CAUSES = ['mistake', 'appeal_allowed'] as const;
+export const FieldWorkerUndoCause = z.enum(FIELD_WORKER_UNDO_CAUSES);
+export type FieldWorkerUndoCause = z.output<typeof FieldWorkerUndoCause>;
+
+/** An appeal's states (`schema.FIELD_WORKER_ENDING_APPEAL_STATES`) — open: `open`; the rest final. */
+export const FIELD_WORKER_ENDING_APPEAL_STATES = ['open', 'allowed', 'refused', 'withdrawn', 'superseded'] as const;
+export const FieldWorkerEndingAppealState = z.enum(FIELD_WORKER_ENDING_APPEAL_STATES);
+export type FieldWorkerEndingAppealState = z.output<typeof FieldWorkerEndingAppealState>;
+
+/** Who hears an appeal, fixed at the ending (`schema.FIELD_WORKER_ENDING_APPEAL_HEARERS`, AD8). */
+export const FIELD_WORKER_ENDING_APPEAL_HEARERS = ['pariwar_admin', 'trustee_panel'] as const;
+export const FieldWorkerEndingAppealHearer = z.enum(FIELD_WORKER_ENDING_APPEAL_HEARERS);
+export type FieldWorkerEndingAppealHearer = z.output<typeof FieldWorkerEndingAppealHearer>;
+
+/** How the worker appealed (`schema.FIELD_WORKER_ENDING_APPEAL_CHANNELS`; `-454`: "by phone or in person"). */
+export const FIELD_WORKER_ENDING_APPEAL_CHANNELS = ['phone', 'in_person'] as const;
+export const FieldWorkerEndingAppealChannel = z.enum(FIELD_WORKER_ENDING_APPEAL_CHANNELS);
+export type FieldWorkerEndingAppealChannel = z.output<typeof FieldWorkerEndingAppealChannel>;
+
+/** A hearer's decision (AD7). */
+export const FIELD_WORKER_ENDING_APPEAL_OUTCOMES = ['allowed', 'refused'] as const;
+export const FieldWorkerEndingAppealOutcome = z.enum(FIELD_WORKER_ENDING_APPEAL_OUTCOMES);
+export type FieldWorkerEndingAppealOutcome = z.output<typeof FieldWorkerEndingAppealOutcome>;
+
+/** The five event types of an appeal's stream (`fieldWorker.FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES`). */
+export const FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES = [
+  'field_worker_ending_appeal.lodged',
+  'field_worker_ending_appeal.allowed',
+  'field_worker_ending_appeal.refused',
+  'field_worker_ending_appeal.withdrawn',
+  'field_worker_ending_appeal.superseded',
+] as const;
+export const FieldWorkerEndingAppealEventType = z.enum(FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES);
+export type FieldWorkerEndingAppealEventType = z.output<typeof FieldWorkerEndingAppealEventType>;

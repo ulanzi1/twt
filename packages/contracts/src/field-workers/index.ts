@@ -4,7 +4,8 @@
 // the ONE route this story builds: `POST /api/v1/p/:pariwarId/field-workers` (register a worker; `field_worker.register`,
 // district dimension). ⛔ A code in any response (QE22). Story 13.1a adds the approval, the audited by-hand code read (the ONE
 // schema with a `code`), the list, one worker's identity and the districts read. Story 13.1c adds the move, suspend, reactivate and
-// terminate writes and the worker's log; the move REQUEST is Story 13.1d's.
+// terminate writes and the worker's log; the move REQUEST is Story 13.1d's; the undo of an ending, the appeal record and the
+// register route's shown number and link are Story 13.1f's.
 
 export {
   FIELD_WORKER_CODE_SMS_STATUSES,
@@ -37,6 +38,18 @@ export {
   FieldWorkerNoticeKind,
   FIELD_WORKER_MOVE_REQUEST_EVENT_TYPES,
   FieldWorkerMoveRequestEventType,
+  FIELD_WORKER_UNDO_CAUSES,
+  FieldWorkerUndoCause,
+  FIELD_WORKER_ENDING_APPEAL_STATES,
+  FieldWorkerEndingAppealState,
+  FIELD_WORKER_ENDING_APPEAL_HEARERS,
+  FieldWorkerEndingAppealHearer,
+  FIELD_WORKER_ENDING_APPEAL_CHANNELS,
+  FieldWorkerEndingAppealChannel,
+  FIELD_WORKER_ENDING_APPEAL_OUTCOMES,
+  FieldWorkerEndingAppealOutcome,
+  FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES,
+  FieldWorkerEndingAppealEventType,
 } from './enums.js';
 
 export {
@@ -79,4 +92,21 @@ export {
   FieldWorkerNoticeItem,
   FieldWorkerNoticePage,
   MarkFieldWorkerNoticesSeenRequest,
+  FieldWorkerPreviousEndingsDetails,
+  FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT,
+  UndoFieldWorkerEndingRequest,
+  FieldWorkerEndingAppealParams,
+  LodgeFieldWorkerEndingAppealRequest,
+  DecideFieldWorkerEndingAppealRequest,
+  WithdrawFieldWorkerEndingAppealRequest,
+  FieldWorkerEndingAppeal,
+  DecideFieldWorkerEndingAppealResponse,
+  FieldWorkerEndingAppealListQuery,
+  FieldWorkerEndingAppealListItem,
+  FieldWorkerEndingAppealPage,
+  FieldWorkerAppealEligibleQuery,
+  FieldWorkerAppealEligibleItem,
+  FieldWorkerAppealEligiblePage,
+  FieldWorkerEndingAppealsOfQuery,
+  FieldWorkerEndingAppealsOf,
 } from './dto.js';

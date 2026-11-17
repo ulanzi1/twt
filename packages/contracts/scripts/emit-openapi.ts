@@ -5332,8 +5332,12 @@ registry.registerPath({
     401: errorResponse('No admin session · auth.session_required · auth.session_expired'),
     403: errorResponse('Missing field_worker.register'),
     404: errorResponse('No grant for this Pariwar (pariwar.not_found — the scope hook; distinct from the 403)'),
-    409: errorResponse('field_worker.mobile_already_registered · admin.display_name_missing · field_worker.idempotency_in_progress'),
-    422: errorResponse('field_worker.name_invalid · field_worker.mobile_invalid · field_worker.district_unknown'),
+    409: errorResponse(
+      'field_worker.mobile_already_registered · field_worker.number_previously_ended (Story 13.1f: ENDED records of this Pariwar hold the ' +
+        'number — `details.previous_endings[]` = their id, end date and reason, information only; re-submit with `previous_endings_seen: ' +
+        'true`, and optionally `link_to` one of them) · admin.display_name_missing · field_worker.idempotency_in_progress',
+    ),
+    422: errorResponse('field_worker.name_invalid · field_worker.mobile_invalid · field_worker.district_unknown · field_worker.link_invalid'),
     503: errorResponse('field_worker.code_allocation_exhausted'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
@@ -5538,8 +5542,9 @@ registry.registerPath({
   description:
     '`field_worker.terminate` at the worker\'s CURRENT district. Reason `left_voluntarily`, `inactive`, `registered_in_error` or ' +
     '`died`; `ended_on` the last day (for `died`, the date of death), between the registration day and today in IST. Records ' +
-    '`field_worker.terminated` — final in this version: the worker\'s mobile can be registered again. A waiting, active or suspended ' +
-    'worker can be ended.' +
+    '`field_worker.terminated`, with who would hear an appeal against it fixed at the act (Story 13.1f). The worker\'s mobile can be ' +
+    'registered again. A Pariwar Admin may undo an ending made by mistake (`…/undo-ending`); a worker may appeal it (`…/ending-appeals`). ' +
+    'A waiting, active or suspended worker can be ended.' +
     fieldWorkerActNote,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(TerminateFieldWorkerRequestSchema), required: true } },
@@ -5557,7 +5562,9 @@ registry.registerPath({
     '`field_worker.read_log` at the worker\'s CURRENT district. The worker\'s whole event stream in `event_version` order — including ' +
     'events from districts they were in before — each with its type, time, the officer (their CURRENT display name, `null` if none is ' +
     'recorded), role, key, grant, target district, reason, districts and `ended_on`. `after` + `limit` page it (default 50; an over-cap ' +
-    '`limit` is clamped to 100). No name, mobile or code; no decrypt and no audit line. `Cache-Control: no-store`.',
+    '`limit` is clamped to 100). No name, mobile or code; no decrypt and no audit line. `record` (Story 13.1f): an EARLIER record reached ' +
+    'by following the registration link from this worker, read only if the officer may read that record\'s own district (else a bare ' +
+    '403 with no details). `Cache-Control: no-store`.',
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, query: FieldWorkerLogQuerySchema },
   responses: {
@@ -5752,6 +5759,158 @@ registry.registerPath({
     204: { description: 'Marked' },
     400: errorResponse('Invalid input (request.validation)'),
     401: fieldWorkersNoSession,
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+// ── Story 13.1f — UNDO a mistaken ending, the APPEAL record, and the register route's shown number and link (`2026-11-16-464`; the
+// Panel's `2026-11-17-465`: as built, except Q6 B — a slip undo is refused once the Panel has heard and refused the appeal) ──────────
+// Four keys, DISTRICT-dimension at the worker's district: `field_worker.undo_ending` (pariwar_admin), `field_worker.hear_ending_appeal`
+// (pariwar_admin — appeals heard by the Pariwar Admin), `field_worker.hear_ending_appeal_as_panel` (trustee_panel ONLY — a super admin
+// derives it but never acts as the Panel), `field_worker.read_ending_appeals` (district_admin, pariwar_admin, trustee_panel). The hearer
+// is fixed at the ending. ⛔ A mobile or a code anywhere; the worker's NAME only in the two audited lists.
+const {
+  UndoFieldWorkerEndingRequest: UndoFieldWorkerEndingRequestSchema,
+  FieldWorkerEndingAppealParams: FieldWorkerEndingAppealParamsSchema,
+  LodgeFieldWorkerEndingAppealRequest: LodgeFieldWorkerEndingAppealRequestSchema,
+  DecideFieldWorkerEndingAppealRequest: DecideFieldWorkerEndingAppealRequestSchema,
+  WithdrawFieldWorkerEndingAppealRequest: WithdrawFieldWorkerEndingAppealRequestSchema,
+  FieldWorkerEndingAppeal: FieldWorkerEndingAppealSchema,
+  DecideFieldWorkerEndingAppealResponse: DecideFieldWorkerEndingAppealResponseSchema,
+  FieldWorkerEndingAppealListQuery: FieldWorkerEndingAppealListQuerySchema,
+  FieldWorkerEndingAppealPage: FieldWorkerEndingAppealPageSchema,
+  FieldWorkerAppealEligibleQuery: FieldWorkerAppealEligibleQuerySchema,
+  FieldWorkerAppealEligiblePage: FieldWorkerAppealEligiblePageSchema,
+  FieldWorkerEndingAppealsOfQuery: FieldWorkerEndingAppealsOfQuerySchema,
+  FieldWorkerEndingAppealsOf: FieldWorkerEndingAppealsOfSchema,
+} = await import('../src/field-workers/index.js');
+const FieldWorkerEndingAppealComponent = FieldWorkerEndingAppealSchema.openapi('FieldWorkerEndingAppeal');
+const appealActNote = ' Send an `Idempotency-Key` header (1-200 characters; scoped to this appeal — when lodging, to the worker): a replay returns the first answer.';
+const appealWrite = (extra409: string) => ({
+  400: errorResponse('Invalid input (request.validation) · field_worker.idempotency_key_required'),
+  401: fieldWorkersNoSession,
+  403: errorResponse("Missing the hear key matching the appeal's hearer — also an unknown appeal or worker, or another Pariwar's"),
+  404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  409: errorResponse(`field_worker.appeal_wrong_hearer · field_worker.idempotency_in_progress${extra409}`),
+  422: errorResponse('field_worker.appeal_date_invalid (not a real date, or outside its IST bounds)'),
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/undo-ending',
+  summary: 'Undo an ending made by mistake (a Pariwar Admin)',
+  description:
+    '`field_worker.undo_ending` (pariwar_admin) at the worker\'s district. `expected_ending_version` is the worker\'s `state_event_version` ' +
+    'as the screen showed it (409 field_worker.ending_changed if they were undone and ended again since). Records ' +
+    '`field_worker.ending_undone`: the worker returns as they were before the ending — the same state, suspension reason, district and ' +
+    'code. An open appeal on the ending closes as no longer needed. Refused while another live registration holds the worker\'s number ' +
+    '(409 field_worker.number_registered_again), and once the Trustee Panel has heard and REFUSED an appeal on this ending (409 ' +
+    'field_worker.appeal_refused_by_panel — decision 2026-11-17-465 Q6 B: only a new decision of the Panel restores the worker).' +
+    fieldWorkerActNote,
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(UndoFieldWorkerEndingRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Undone', content: jsonOf(FieldWorkerLifecycleComponent) },
+    ...fieldWorkerActWrite(
+      'field_worker.undo_ending',
+      ' · field_worker.ending_changed · field_worker.number_registered_again · field_worker.appeal_refused_by_panel',
+    ),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/ending-appeals',
+  summary: "Record a worker's appeal against their ending (the hearer records it)",
+  description:
+    'The hear key matching the hearer fixed at the CURRENT ending: `field_worker.hear_ending_appeal` (the Pariwar Admin) or ' +
+    '`field_worker.hear_ending_appeal_as_panel` (a trustee, signed in as themselves). `expected_ending_version` names the ending appealed; ' +
+    '`received_on` the day the worker appealed (not after today, not before their registration day — IST); `received_via` `phone` or ' +
+    '`in_person`. No grounds or notes are recorded. One open appeal per worker; one appeal per ending (a refused one bars another).' +
+    appealActNote,
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(LodgeFieldWorkerEndingAppealRequestSchema), required: true } },
+  responses: {
+    201: { description: 'Lodged (open)', content: jsonOf(FieldWorkerEndingAppealComponent) },
+    ...appealWrite(' · field_worker.illegal_transition · field_worker.ending_changed · field_worker.appeal_open · field_worker.appeal_already_decided'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/ending-appeals/{appealId}/decide',
+  summary: 'Allow or refuse an appeal (the hearer)',
+  description:
+    'The hear key matching the appeal\'s hearer; never the officer who ended the worker. `allowed` undoes the ending in the same ' +
+    'transaction (the worker restored as they were) — refused while another live registration holds the number (the appeal stays open); ' +
+    '`refused` leaves the worker ended. `decided_on` between `received_on` and today (IST).' +
+    appealActNote,
+  tags: ['field-workers'],
+  request: { params: FieldWorkerEndingAppealParamsSchema, body: { content: jsonOf(DecideFieldWorkerEndingAppealRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Decided', content: jsonOf(DecideFieldWorkerEndingAppealResponseSchema.openapi('DecideFieldWorkerEndingAppealResult')) },
+    ...appealWrite(' · field_worker.appeal_not_open · field_worker.appeal_decider_is_ender · field_worker.number_registered_again'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/field-workers/ending-appeals/{appealId}/withdraw',
+  summary: 'Record that the worker withdrew their appeal (the hearer)',
+  description: 'The hear key matching the appeal\'s hearer; never the officer who ended the worker. A withdrawn appeal counts for nothing — a new one may be lodged.' + appealActNote,
+  tags: ['field-workers'],
+  request: { params: FieldWorkerEndingAppealParamsSchema, body: { content: jsonOf(WithdrawFieldWorkerEndingAppealRequestSchema), required: true } },
+  responses: {
+    200: { description: 'Withdrawn', content: jsonOf(FieldWorkerEndingAppealComponent) },
+    ...appealWrite(' · field_worker.appeal_not_open · field_worker.appeal_decider_is_ender'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/ending-appeals',
+  summary: "Appeals against endings — a district's, or the whole Pariwar's",
+  description:
+    '`field_worker.read_ending_appeals` at `district` (the worker\'s), or — with no district — at the Pariwar. A reader under the Trustee ' +
+    'Panel role sees only appeals the Panel hears. Each item carries the worker\'s NAME, decrypted behind ONE audit line per page (an empty ' +
+    'page writes none). `limit` 1-25 (default 20; an over-cap value is clamped). `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerEndingAppealListQuerySchema },
+  responses: {
+    200: { description: 'A page of appeals', content: jsonOf(FieldWorkerEndingAppealPageSchema.openapi('FieldWorkerEndingAppealPage')) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.cursor_invalid'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_ending_appeals for the district (or the Pariwar, with no district)'),
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/ending-appeals/eligible',
+  summary: 'Ended workers the reader can record an appeal for',
+  description:
+    '`field_worker.read_ending_appeals`, the same district rule. Ended workers whose current ending has no open or refused appeal and whose ' +
+    'hearer matches a hear key the reader holds (a super admin\'s derived Panel key does not count). Each carries the ending\'s version (what ' +
+    'the lodge names) and the NAME, behind ONE audit line per page. `limit` 1-25 (default 20). `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerAppealEligibleQuerySchema },
+  responses: {
+    200: { description: 'A page of ended workers', content: jsonOf(FieldWorkerAppealEligiblePageSchema.openapi('FieldWorkerAppealEligiblePage')) },
+    400: errorResponse('Invalid input (request.validation) · field_worker.cursor_invalid'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_ending_appeals for the district (or the Pariwar, with no district)'),
+    404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/p/{pariwarId}/field-workers/{fieldWorkerId}/ending-appeals',
+  summary: "One worker's appeals, newest first",
+  description:
+    '`field_worker.read_ending_appeals` at the worker\'s district; the Trustee Panel role sees only Panel-heard appeals. No name, no ' +
+    'decrypt, no audit line. `limit` 1-25 (default 20). `Cache-Control: no-store`.',
+  tags: ['field-workers'],
+  request: { params: FieldWorkerParamsSchema, query: FieldWorkerEndingAppealsOfQuerySchema },
+  responses: {
+    200: { description: "The worker's appeals", content: jsonOf(FieldWorkerEndingAppealsOfSchema.openapi('FieldWorkerEndingAppealsOf')) },
+    400: errorResponse('Invalid input (request.validation)'),
+    401: fieldWorkersNoSession,
+    403: errorResponse('Missing field_worker.read_ending_appeals for the worker\'s district — also an unknown worker or another Pariwar\'s'),
     404: errorResponse('No grant for this Pariwar (pariwar.not_found)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

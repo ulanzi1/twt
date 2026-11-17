@@ -21,6 +21,10 @@ import { Cursor } from '../_common/pagination.js';
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
 import {
   FieldWorkerCodeSmsStatus,
+  FieldWorkerEndingAppealChannel,
+  FieldWorkerEndingAppealHearer,
+  FieldWorkerEndingAppealOutcome,
+  FieldWorkerEndingAppealState,
   FieldWorkerEventType,
   FieldWorkerKycStatus,
   FieldWorkerMoveOpenedAtEnd,
@@ -33,6 +37,7 @@ import {
   FieldWorkerState,
   FieldWorkerSuspendReason,
   FieldWorkerTerminateReason,
+  FieldWorkerUndoCause,
 } from './enums.js';
 
 /** Register a field worker (Idempotency-Key header required). The id is SERVER-minted. */
@@ -44,9 +49,33 @@ export const RegisterFieldWorkerRequest = z
     mobile: z.string().max(64),
     /** The REPORTING district — whose District Admin manages the worker (QE17); a LISTED district of the Pariwar. */
     district: z.string().max(200),
+    /**
+     * Story 13.1f (AD11) — the officer has SEEN the 409 `field_worker.number_previously_ended` list for this number (`-454` Q3 A,
+     * information only) and registers anyway. The screen sends it only after it showed the list.
+     */
+    previous_endings_seen: z.literal(true).optional(),
+    /** Story 13.1f (AD12; `-454` Q2 B) — one of the shown ENDED records to link the new registration to (permanent). Needs `previous_endings_seen`. */
+    link_to: UuidString.optional(),
+  })
+  .strict()
+  .refine((b) => b.link_to === undefined || b.previous_endings_seen === true, {
+    message: 'link_to needs previous_endings_seen: true',
+    path: ['link_to'],
+  });
+export type RegisterFieldWorkerRequest = z.output<typeof RegisterFieldWorkerRequest>;
+
+/**
+ * Story 13.1f (AD11) — the `details` of the 409 `field_worker.number_previously_ended`: this Pariwar's ENDED records holding the number,
+ * newest ending first, at most 5. A date and a reason only (`-454` Q3 A) — ⛔ a name, a district or an officer.
+ */
+export const FieldWorkerPreviousEndingsDetails = z
+  .object({
+    previous_endings: z
+      .array(z.object({ field_worker_id: UuidString, ended_on: z.string(), reason_code: FieldWorkerReasonCode }).strict())
+      .max(5),
   })
   .strict();
-export type RegisterFieldWorkerRequest = z.output<typeof RegisterFieldWorkerRequest>;
+export type FieldWorkerPreviousEndingsDetails = z.output<typeof FieldWorkerPreviousEndingsDetails>;
 
 /** `POST …/field-workers` — 201. The state and KYC status come from the genesis RETURN value (12.2 RB1), ⛔ literals. */
 export const RegisterFieldWorkerResponse = z
@@ -139,6 +168,8 @@ export type FieldWorkerListResponse = z.output<typeof FieldWorkerListResponse>;
 export const FieldWorkerIdentityResponse = FieldWorkerListItem.extend({
   mobile: z.string(),
   approved_by_display: z.string().nullable(),
+  /** Story 13.1f (AD6) — the worker's `state_event_version`: an undo or an appeal names the ending it acts on by it (13.1 D7's guard). */
+  state_event_version: z.number().int().positive(),
 }).strict();
 export type FieldWorkerIdentityResponse = z.output<typeof FieldWorkerIdentityResponse>;
 
@@ -178,7 +209,7 @@ export const TerminateFieldWorkerRequest = z
   .strict();
 export type TerminateFieldWorkerRequest = z.output<typeof TerminateFieldWorkerRequest>;
 
-/** 200 for all four writes — the worker as the act left it. ⛔ A name, a mobile or a code. */
+/** 200 for every lifecycle write (and the undo — Story 13.1f) — the worker as the act left it. ⛔ A name, a mobile or a code. */
 export const FieldWorkerLifecycleResult = z
   .object({
     field_worker_id: UuidString,
@@ -186,6 +217,8 @@ export const FieldWorkerLifecycleResult = z
     current_state: FieldWorkerState,
     state_reason_code: FieldWorkerReasonCode.nullable(),
     ended_on: z.string().nullable(),
+    /** Story 13.1f (AD6, G24) — REQUIRED: the act's event version, so the screen can undo straight after an End without a refetch. */
+    state_event_version: z.number().int().positive(),
   })
   .strict();
 export type FieldWorkerLifecycleResult = z.output<typeof FieldWorkerLifecycleResult>;
@@ -202,6 +235,8 @@ export const FieldWorkerLogQuery = z
   .object({
     // `max` = the domain's `Number.isSafeInteger` guard: an `after` above it would reach `listFieldWorkerEvents` as a RangeError, a 500 (review CR8).
     after: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+    /** Story 13.1f (AD12) — an EARLIER record reached by the link chain; its own read authority is re-checked (a bare 403 otherwise). */
+    record: UuidString.optional(),
     limit: z
       .preprocess((v) => {
         // EVERY spelling of an over-cap whole number clamps — whatever `Number()` itself reads as one: '1000', '1000.0', '1e3', '+1000',
@@ -234,6 +269,14 @@ export const FieldWorkerLogItem = z
     from_district: z.string().nullable(),
     to_district: z.string().nullable(),
     ended_on: z.string().nullable(),
+    /** Story 13.1f — the state an event leaves the worker in (the undo's target), else null. */
+    to_state: FieldWorkerState.nullable(),
+    /** Story 13.1f (AD2) — the undo's cause, else null. */
+    cause: FieldWorkerUndoCause.nullable(),
+    /** Story 13.1f (AD2) — the allowed appeal an undo carries out, else null. */
+    appeal_id: UuidString.nullable(),
+    /** Story 13.1f (AD12) — on `registered`: the earlier record this one is linked to, else null. */
+    previous_field_worker_id: UuidString.nullable(),
   })
   .strict();
 export type FieldWorkerLogItem = z.output<typeof FieldWorkerLogItem>;
@@ -430,3 +473,101 @@ export type FieldWorkerNoticePage = z.output<typeof FieldWorkerNoticePage>;
 /** `POST …/field-workers/notices/seen` — 1–100 of the officer's notice ids; another officer's ids are ignored (no error). → 204. */
 export const MarkFieldWorkerNoticesSeenRequest = z.object({ notice_ids: z.array(UuidString).min(1).max(100) }).strict();
 export type MarkFieldWorkerNoticesSeenRequest = z.output<typeof MarkFieldWorkerNoticesSeenRequest>;
+
+// ── Story 13.1f — the undo of an ending and the appeal record (decision `2026-11-16-464` AD6, AD7, AD9, AD13; `2026-11-17-465`) ──────────
+// SHAPE-only requests (QE9): dates are strings; the COMMAND judges them (422 `field_worker.appeal_date_invalid`). ⛔ A name, a mobile or a
+// code anywhere except the two lists' audited NAME (I6). Each write takes an `Idempotency-Key` header.
+
+/** The page cap of the appeal list, the eligible list and the per-worker read (AD13; 13.1d's). */
+export const FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT = 25;
+
+/** `POST …/:fieldWorkerId/undo-ending` — the ending the officer saw (the worker's `state_event_version`, AD6). */
+export const UndoFieldWorkerEndingRequest = z.object({ expected_ending_version: z.number().int().positive() }).strict();
+export type UndoFieldWorkerEndingRequest = z.output<typeof UndoFieldWorkerEndingRequest>;
+
+/** The path of an appeal route. */
+export const FieldWorkerEndingAppealParams = z.object({ pariwarId: z.string().uuid(), appealId: z.string().uuid() }).strict();
+export type FieldWorkerEndingAppealParams = z.output<typeof FieldWorkerEndingAppealParams>;
+
+/** `POST …/:fieldWorkerId/ending-appeals` — lodge (the hearer records it). */
+export const LodgeFieldWorkerEndingAppealRequest = z
+  .object({ expected_ending_version: z.number().int().positive(), received_on: z.string().max(32), received_via: FieldWorkerEndingAppealChannel })
+  .strict();
+export type LodgeFieldWorkerEndingAppealRequest = z.output<typeof LodgeFieldWorkerEndingAppealRequest>;
+
+/** `POST …/ending-appeals/:appealId/decide`. */
+export const DecideFieldWorkerEndingAppealRequest = z.object({ outcome: FieldWorkerEndingAppealOutcome, decided_on: z.string().max(32) }).strict();
+export type DecideFieldWorkerEndingAppealRequest = z.output<typeof DecideFieldWorkerEndingAppealRequest>;
+
+/** `POST …/ending-appeals/:appealId/withdraw` — the worker withdrew; the hearer records the day. */
+export const WithdrawFieldWorkerEndingAppealRequest = z.object({ decided_on: z.string().max(32) }).strict();
+export type WithdrawFieldWorkerEndingAppealRequest = z.output<typeof WithdrawFieldWorkerEndingAppealRequest>;
+
+/** One appeal (AD7) — ids, dates, codes and the lodger's CURRENT name. ⛔ The worker's name, mobile or code. */
+export const FieldWorkerEndingAppeal = z
+  .object({
+    appeal_id: UuidString,
+    field_worker_id: UuidString,
+    ending_event_version: z.number().int().positive(),
+    state: FieldWorkerEndingAppealState,
+    heard_by: FieldWorkerEndingAppealHearer,
+    received_on: z.string(),
+    received_via: FieldWorkerEndingAppealChannel,
+    decided_on: z.string().nullable(),
+    lodged_by: z.object({ user_id: UuidString, display_name: z.string().nullable() }).strict(),
+    created_at: Iso8601Datetime,
+  })
+  .strict();
+export type FieldWorkerEndingAppeal = z.output<typeof FieldWorkerEndingAppeal>;
+
+/** 200 of `decide` — the appeal, and the restored worker when allowed (`null` when refused). */
+export const DecideFieldWorkerEndingAppealResponse = z.object({ appeal: FieldWorkerEndingAppeal, worker: FieldWorkerLifecycleResult.nullable() }).strict();
+export type DecideFieldWorkerEndingAppealResponse = z.output<typeof DecideFieldWorkerEndingAppealResponse>;
+
+/** `GET …/field-workers/ending-appeals` — `district` optional (absent ⇒ a Pariwar-level grant only); `state` optional; limit 1–25 (default 20). */
+export const FieldWorkerEndingAppealListQuery = z
+  .object({
+    district: WireDistrict.optional(),
+    state: FieldWorkerEndingAppealState.optional(),
+    cursor: Cursor.optional(),
+    limit: clampedLimit(FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT),
+  })
+  .strict();
+export type FieldWorkerEndingAppealListQuery = z.output<typeof FieldWorkerEndingAppealListQuery>;
+
+/** One appeal in the list — plus the worker's NAME (decrypted, one audit line a page) and district. */
+export const FieldWorkerEndingAppealListItem = FieldWorkerEndingAppeal.extend({ name: z.string(), district: z.string() }).strict();
+export type FieldWorkerEndingAppealListItem = z.output<typeof FieldWorkerEndingAppealListItem>;
+
+export const FieldWorkerEndingAppealPage = z.object({ items: z.array(FieldWorkerEndingAppealListItem), next_cursor: z.string().nullable() }).strict();
+export type FieldWorkerEndingAppealPage = z.output<typeof FieldWorkerEndingAppealPage>;
+
+/** `GET …/field-workers/ending-appeals/eligible` — the ended workers the reader can record an appeal for. */
+export const FieldWorkerAppealEligibleQuery = z
+  .object({ district: WireDistrict.optional(), cursor: Cursor.optional(), limit: clampedLimit(FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT) })
+  .strict();
+export type FieldWorkerAppealEligibleQuery = z.output<typeof FieldWorkerAppealEligibleQuery>;
+
+/** One eligible worker — the NAME (audited a page at a time), the ending the lodge must name, its hearer. ⛔ mobile, ⛔ code. */
+export const FieldWorkerAppealEligibleItem = z
+  .object({
+    field_worker_id: UuidString,
+    display_name: z.string(),
+    district: z.string(),
+    ended_on: z.string(),
+    reason_code: FieldWorkerReasonCode,
+    ending_event_version: z.number().int().positive(),
+    heard_by: FieldWorkerEndingAppealHearer,
+  })
+  .strict();
+export type FieldWorkerAppealEligibleItem = z.output<typeof FieldWorkerAppealEligibleItem>;
+
+export const FieldWorkerAppealEligiblePage = z.object({ items: z.array(FieldWorkerAppealEligibleItem), next_cursor: z.string().nullable() }).strict();
+export type FieldWorkerAppealEligiblePage = z.output<typeof FieldWorkerAppealEligiblePage>;
+
+/** `GET …/:fieldWorkerId/ending-appeals` — one worker's appeals, newest first (limit 1–25, default 20). No name. */
+export const FieldWorkerEndingAppealsOfQuery = z.object({ limit: clampedLimit(FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT) }).strict();
+export type FieldWorkerEndingAppealsOfQuery = z.output<typeof FieldWorkerEndingAppealsOfQuery>;
+
+export const FieldWorkerEndingAppealsOf = z.object({ items: z.array(FieldWorkerEndingAppeal) }).strict();
+export type FieldWorkerEndingAppealsOf = z.output<typeof FieldWorkerEndingAppealsOf>;

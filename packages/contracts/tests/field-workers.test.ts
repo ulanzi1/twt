@@ -118,8 +118,10 @@ describe('Story 13.1a DTOs', () => {
     for (const key of ['mobile', 'code', 'name_ciphertext', 'mobile_blind_index']) expect(FieldWorkerListItem.safeParse({ ...item, [key]: 'x' }).success, key).toBe(false);
     expect(FieldWorkerListResponse.safeParse({ items: [item], next_cursor: null }).success).toBe(true);
     expect(FieldWorkerListResponse.safeParse({ items: [item] }).success).toBe(false);
-    const identity = { ...item, mobile: '+919876543210', approved_by_display: null };
+    const identity = { ...item, mobile: '+919876543210', approved_by_display: null, state_event_version: 3 };
     expect(FieldWorkerIdentityResponse.safeParse(identity).success).toBe(true);
+    // Story 13.1f (AD6, G24) — the version is REQUIRED on the identity.
+    expect(FieldWorkerIdentityResponse.safeParse({ ...identity, state_event_version: undefined }).success).toBe(false);
     expect(FieldWorkerIdentityResponse.safeParse({ ...identity, code: '042719' }).success).toBe(false);
     expect(FieldWorkerIdentityResponse.safeParse(item).success).toBe(false); // the mobile is required there
   });
@@ -134,7 +136,7 @@ describe('Story 13.1a DTOs', () => {
       expect(FieldWorkerListItem.safeParse({ ...item, code_sms_status: status }).success, String(status)).toBe(false);
     }
     for (const key of ['detail', 'provider_message_id', 'locale']) expect(FieldWorkerListItem.safeParse({ ...item, [key]: 'x' }).success, key).toBe(false);
-    const identity = { ...item, mobile: '+919876543210', approved_by_display: null };
+    const identity = { ...item, mobile: '+919876543210', approved_by_display: null, state_event_version: 3 };
     expect(FieldWorkerIdentityResponse.safeParse(without(identity)).success).toBe(false);
     expect(FieldWorkerIdentityResponse.safeParse({ ...identity, detail: 'x' }).success).toBe(false);
   });
@@ -206,9 +208,10 @@ describe('Story 13.1c DTOs', () => {
     expect(ReactivateFieldWorkerRequest.safeParse({ reason_code: 'under_review' }).success).toBe(false);
   });
 
-  it('the lifecycle result carries the five keys and refuses a code, a name or a mobile', () => {
-    const ok = { field_worker_id: ID, district: 'Gaya', current_state: 'terminated', state_reason_code: 'died', ended_on: '2026-11-07' };
+  it('the lifecycle result carries the six keys (Story 13.1f: `state_event_version` REQUIRED) and refuses a code, a name or a mobile', () => {
+    const ok = { field_worker_id: ID, district: 'Gaya', current_state: 'terminated', state_reason_code: 'died', ended_on: '2026-11-07', state_event_version: 4 };
     expect(FieldWorkerLifecycleResult.safeParse(ok).success).toBe(true);
+    expect(FieldWorkerLifecycleResult.safeParse({ ...ok, state_event_version: undefined }).success).toBe(false);
     expect(FieldWorkerLifecycleResult.safeParse({ ...ok, current_state: 'active', state_reason_code: null, ended_on: null }).success).toBe(true);
     for (const key of ['code', 'name', 'mobile']) expect(FieldWorkerLifecycleResult.safeParse({ ...ok, [key]: 'x' }).success, key).toBe(false);
   });
@@ -243,7 +246,7 @@ describe('Story 13.1c DTOs', () => {
     }
   });
 
-  it('a log item: the eleven keys, every optional field nullable; ⛔ a name, a mobile or a code key; event_type from the seven', () => {
+  it('a log item: the fifteen keys (Story 13.1f adds four), every optional field nullable; ⛔ a name, a mobile or a code key; event_type from the eight', () => {
     const item = {
       event_version: 1,
       event_type: 'field_worker.registered',
@@ -256,8 +259,15 @@ describe('Story 13.1c DTOs', () => {
       from_district: null,
       to_district: null,
       ended_on: null,
+      to_state: 'pending_kyc',
+      cause: null,
+      appeal_id: null,
+      previous_field_worker_id: null,
     };
     expect(FieldWorkerLog.safeParse({ items: [item], next_after: null }).success).toBe(true);
+    const undone = { ...item, event_type: 'field_worker.ending_undone', to_state: 'active', cause: 'appeal_allowed', appeal_id: ID };
+    expect(FieldWorkerLog.safeParse({ items: [undone], next_after: null }).success).toBe(true);
+    expect(FieldWorkerLog.safeParse({ items: [{ ...undone, cause: 'slip' }], next_after: null }).success).toBe(false);
     for (const key of ['code', 'name', 'mobile', 'payload']) expect(FieldWorkerLog.safeParse({ items: [{ ...item, [key]: 'x' }], next_after: null }).success, key).toBe(false);
     expect(FieldWorkerLog.safeParse({ items: [{ ...item, event_type: 'field_worker.moved' }], next_after: null }).success).toBe(false);
     expect(FieldWorkerLog.safeParse({ items: [{ ...item, actor: { ...item.actor, email: 'a@b.c' } }], next_after: null }).success).toBe(false);
@@ -356,5 +366,77 @@ describe('Story 13.1d — contract ↔ domain sync-guard and DTO shapes', () => 
     expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_superseded', at)).success).toBe(false); // the time of an ending on the wire
     expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_opened', at)).success).toBe(true); // CONTROL
     expect(c.FieldWorkerNoticeItem.safeParse(n('move_request_opened', null)).success).toBe(false); // any other kind undated
+  });
+});
+
+// ── Story 13.1f — the undo, the appeal record, the register link (`2026-11-16-464`; `2026-11-17-465`) ─────────────────────────────────
+describe('Story 13.1f — contract ↔ domain sync-guard and DTO shapes', () => {
+  const ID2 = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+  it('the tuples and the caps equal their @twt/domain sources', async () => {
+    const c = await import('../src/field-workers/index.js');
+    expect([...c.FIELD_WORKER_UNDO_CAUSES]).toEqual([...fieldWorker.FIELD_WORKER_UNDO_CAUSES]);
+    expect([...c.FIELD_WORKER_ENDING_APPEAL_STATES]).toEqual([...schema.FIELD_WORKER_ENDING_APPEAL_STATES]);
+    expect([...c.FIELD_WORKER_ENDING_APPEAL_HEARERS]).toEqual([...schema.FIELD_WORKER_ENDING_APPEAL_HEARERS]);
+    expect([...c.FIELD_WORKER_ENDING_APPEAL_CHANNELS]).toEqual([...schema.FIELD_WORKER_ENDING_APPEAL_CHANNELS]);
+    expect([...c.FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES]);
+    expect(c.FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_ENDING_APPEALS_MAX_LIMIT);
+    expect(c.FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_APPEAL_ELIGIBLE_MAX_LIMIT);
+  });
+
+  it('register: `previous_endings_seen` is the literal true; `link_to` needs it (400); unknown keys refused', async () => {
+    const c = await import('../src/field-workers/index.js');
+    const base = { name: 'A', mobile: '9', district: 'Patna' };
+    expect(c.RegisterFieldWorkerRequest.safeParse(base).success).toBe(true);
+    expect(c.RegisterFieldWorkerRequest.safeParse({ ...base, previous_endings_seen: true }).success).toBe(true);
+    expect(c.RegisterFieldWorkerRequest.safeParse({ ...base, previous_endings_seen: true, link_to: ID2 }).success).toBe(true);
+    expect(c.RegisterFieldWorkerRequest.safeParse({ ...base, link_to: ID2 }).success).toBe(false);
+    expect(c.RegisterFieldWorkerRequest.safeParse({ ...base, previous_endings_seen: false }).success).toBe(false);
+    expect(c.RegisterFieldWorkerRequest.safeParse({ ...base, previous_endings_seen: true, link_to: 'x' }).success).toBe(false);
+    expect(c.RegisterFieldWorkerRequest.safeParse({ ...base, extra: 1 }).success).toBe(false);
+    expect(c.FieldWorkerPreviousEndingsDetails.safeParse({ previous_endings: [{ field_worker_id: ID2, ended_on: '2026-11-01', reason_code: 'inactive' }] }).success).toBe(true);
+    for (const key of ['name', 'district', 'ended_by']) {
+      expect(c.FieldWorkerPreviousEndingsDetails.safeParse({ previous_endings: [{ field_worker_id: ID2, ended_on: '2026-11-01', reason_code: 'inactive', [key]: 'x' }] }).success, key).toBe(false);
+    }
+  });
+
+  it('the bodies: strict, shape-only (dates are strings — the command judges them); the outcome and channel from their lists', async () => {
+    const c = await import('../src/field-workers/index.js');
+    expect(c.UndoFieldWorkerEndingRequest.safeParse({ expected_ending_version: 3 }).success).toBe(true);
+    expect(c.UndoFieldWorkerEndingRequest.safeParse({}).success).toBe(false);
+    expect(c.UndoFieldWorkerEndingRequest.safeParse({ expected_ending_version: 3, reason: 'x' }).success).toBe(false);
+    expect(c.LodgeFieldWorkerEndingAppealRequest.safeParse({ expected_ending_version: 3, received_on: 'not-a-date', received_via: 'phone' }).success).toBe(true);
+    expect(c.LodgeFieldWorkerEndingAppealRequest.safeParse({ expected_ending_version: 3, received_on: '2026-11-01', received_via: 'email' }).success).toBe(false);
+    expect(c.LodgeFieldWorkerEndingAppealRequest.safeParse({ expected_ending_version: 3, received_on: '2026-11-01', received_via: 'phone', grounds: 'x' }).success).toBe(false);
+    expect(c.DecideFieldWorkerEndingAppealRequest.safeParse({ outcome: 'allowed', decided_on: '2026-11-01' }).success).toBe(true);
+    expect(c.DecideFieldWorkerEndingAppealRequest.safeParse({ outcome: 'withdrawn', decided_on: '2026-11-01' }).success).toBe(false);
+    expect(c.WithdrawFieldWorkerEndingAppealRequest.safeParse({ decided_on: '2026-11-01' }).success).toBe(true);
+  });
+
+  it('the appeal: its fields, ⛔ the worker’s name, mobile or code; the decide response; the list and eligible items carry the audited name', async () => {
+    const c = await import('../src/field-workers/index.js');
+    const appeal = {
+      appeal_id: ID2,
+      field_worker_id: ID2,
+      ending_event_version: 3,
+      state: 'open',
+      heard_by: 'trustee_panel',
+      received_on: '2026-11-01',
+      received_via: 'phone',
+      decided_on: null,
+      lodged_by: { user_id: ID2, display_name: 'A' },
+      created_at: '2026-11-07T10:15:30.123Z',
+    };
+    expect(c.FieldWorkerEndingAppeal.safeParse(appeal).success).toBe(true);
+    for (const key of ['name', 'mobile', 'code', 'grounds']) expect(c.FieldWorkerEndingAppeal.safeParse({ ...appeal, [key]: 'x' }).success, key).toBe(false);
+    expect(c.DecideFieldWorkerEndingAppealResponse.safeParse({ appeal, worker: null }).success).toBe(true);
+    expect(c.FieldWorkerEndingAppealPage.safeParse({ items: [{ ...appeal, name: 'N', district: 'Patna' }], next_cursor: null }).success).toBe(true);
+    const eligible = { field_worker_id: ID2, display_name: 'N', district: 'Patna', ended_on: '2026-11-01', reason_code: 'inactive', ending_event_version: 3, heard_by: 'pariwar_admin' };
+    expect(c.FieldWorkerAppealEligiblePage.safeParse({ items: [eligible], next_cursor: null }).success).toBe(true);
+    for (const key of ['mobile', 'code']) expect(c.FieldWorkerAppealEligibleItem.safeParse({ ...eligible, [key]: 'x' }).success, key).toBe(false);
+    expect(c.FieldWorkerEndingAppealListQuery.parse({ limit: '1000' })).toEqual({ limit: 25 });
+    expect(c.FieldWorkerAppealEligibleQuery.parse({ limit: '1000' })).toEqual({ limit: 25 });
+    expect(c.FieldWorkerEndingAppealsOfQuery.parse({ limit: '1000' })).toEqual({ limit: 25 });
+    expect(c.FieldWorkerLogQuery.safeParse({ record: 'x' }).success).toBe(false);
+    expect(c.FieldWorkerLogQuery.parse({ record: ID2 })).toEqual({ record: ID2 });
   });
 });

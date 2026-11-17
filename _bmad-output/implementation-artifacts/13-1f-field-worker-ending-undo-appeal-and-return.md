@@ -10,7 +10,8 @@ pass (the author's own reads of `state.ts`, `events.ts`, `commands.ts`, `project
 handlers, the admin module's copy and acts, the RBAC roles and catalog, and the governance trail `-453`..`-455`, Row 50, the 13.1c note, `deferred-work.md`).
 Perishable - re-check at Task 0.1. Re-locate by FUNCTION, not by line.
 
-STATUS: ready-for-dev (v1.4, 2026-11-16 - validated three times; Q-1..Q-4 ANSWERED by BigDev 2026-11-16: Q-1, Q-3, Q-4 A; Q-2 - the
+STATUS: in-progress (v1.5, 2026-11-17 - the Panel RULED its note, `2026-11-17-465`: as recommended for all, except Q6 = B - built here, AD6 /
+ AC8). Earlier: ready-for-dev (v1.4, 2026-11-16 - validated three times; Q-1..Q-4 ANSWERED by BigDev 2026-11-16: Q-1, Q-3, Q-4 A; Q-2 - the
 mobile-matched link here, a returning worker found by PAN in the new sibling row `13-1h`, C6). Nothing committed. No code before Task 0.5.
 VALIDATED: v1.1, v1.2 and v1.3 each re-traced the G / AD / TR code claims at `5ede00c4` (still `origin/main` on 2026-11-16) - re-derived, not inherited.
 
@@ -72,12 +73,14 @@ and is NOT edited (I9). What changes is that `terminated` is no longer always th
 the state the ending left - so a worker ended while `active` is `active` again and their SAME code credits them again from that moment. *In the field
 worker's terms:* **"If you were ended by mistake, the Pariwar Admin restores you exactly as you were, with the same code, and from then on teachers who
 join with your code are credited to you again. If you think an ending was unfair, you can appeal - to the Pariwar Admin, or to the Trustee Panel if a
-Pariwar Admin ended you - and if your appeal is allowed you are restored the same way. Whether teachers who joined with your code while you were
-ended are credited to you is a question the Trust is putting to the Trustee Panel (no signup credits anyone yet). If you leave and come back with the
+Pariwar Admin ended you - and if your appeal is allowed you are restored the same way. Teachers who joined with your code while you were ended are
+held and credited to you once the ending is undone (the Panel's Q1 B, `-465` - built by 13.8 / 13.5; no signup credits anyone yet). If the
+Trustee Panel hears your appeal and refuses it, only a new decision of the Panel can restore you (Q6 B). If you leave and come back with the
 same phone number, you are registered again with a new code, the officer may link your old record to the new one, and your old code never credits you
 again."**
 
-*PROPOSED, not ruled* (the Panel note, Task 0.6): one appeal per ending, no time limit, who hears when the officer who ended you is the only Pariwar
+*RULED 2026-11-17* (`-465`, the Panel note's "Our reading" for every question except Q6, which is B - the sentence above now carries it; the
+paragraph below is kept as it stood): *PROPOSED, not ruled* (the Panel note, Task 0.6): one appeal per ending, no time limit, who hears when the officer who ended you is the only Pariwar
 Admin, the only trustee, or a super admin, whether a slip undo may follow a refused appeal, what happens to an allowed appeal while your number is in use by a new
 registration, and whether you are told at the ending that you may appeal and to whom. "If your appeal is allowed you are restored the same way" is
 the `epics.md` text (BigDev's), not a Panel ruling (section 0 row 1a). The sentence above changes if the Panel answers otherwise; it is never told to a
@@ -143,12 +146,13 @@ Quotes are word-for-word; typographic dashes are written as ASCII hyphens; "..."
 | 9 | Who records the Panel's outcome in the console | **BigDev's** (Q-1) for option A (a trustee's own `trustee_panel` account - the hearer records, as `-454`'s accepted cost says). Option B (a Pariwar Admin transcribes) departs from "recorded by the officer who hears it" and would need the Panel. **ANSWERED: A** (BigDev, 2026-11-16) |
 | 10 | Whether the link can join a returning worker who has a NEW number | **BigDev's** (Q-2) - `-454`: "What the link (Q2 B) joins and who makes it ... The author's". **ANSWERED** (2026-11-16): mobile OR PAN finds the old record, Aadhaar last 4 shown as a matches / differs check, both REQUIRED at registration - built in the new sibling row `13-1h` (C6); THIS story builds the mobile-matched link only (AD12). Two edges of that answer are NOT BigDev's and go with 13-1h: a PAN match showing an ending's date and reason widens `-454` Q3 A's "the number" (the Panel's), and the footing and notice for two new personal-data fields (counsel's - roster Row 19 precedent) |
 | 10a | What the link lets an officer read of the earlier record | **Yours** - AD12 gates `log?record=` on the officer's OWN read authority over the earlier record, so the link discloses nothing the officer could not already read; nothing beyond Q3 A's date and reason reaches a second officer |
-| 10b | A Pariwar Admin undoes "as a slip" an ending the Panel has heard and REFUSED | **The Panel's** - it touches the Panel's own ruling. Built AS RULED (Q1 A: "may undo any ending made by mistake"); note Q6 asks whether to refuse it (non-blocking) |
+| 10b | A Pariwar Admin undoes "as a slip" an ending the Panel has heard and REFUSED | **The Panel's** - it touches the Panel's own ruling. Built AS RULED (Q1 A: "may undo any ending made by mistake"); note Q6 asks whether to refuse it (non-blocking). **RULED 2026-11-17, `-465` Q6 B: refused** - "once you have refused, only a new decision of yours restores the worker"; built (AD6). A refusal heard by the Pariwar Admin is NOT covered (the slip undo stays); how a new Panel decision is carried out is not built (C8) |
 | 10c | An appeal is ALLOWED while the worker's number belongs to a new registration | **The Panel's** - what an allowed worker receives. Built: the decision is refused and the appeal stays open until that registration is ended (no ending reason describes this - a cost); note Q7 |
 | 11 | The undo's mechanics, the appeal record's shape, the guard migration, the register flow, the key names, and the copy that says nothing of who is paid or told | **Yours** (AD) - no change to what a person is owed or told beyond what is ruled. Copy about who is paid or told is NOT yours: AD14 carries none beyond the rulings and the row-7 reminder |
 | 11a | A legacy terminated event without `appeal_heard_by` | **Yours** - no production stream exists (Row 48 open); read as `trustee_panel` |
 | 12 | Whether an undo or an appeal reaches an ending for CONDUCT | **13.6's** (`-454`) - no conduct reason exists yet; carried (C3) |
 
+**RULED 2026-11-17 (`-465`): Q1 B, Q2 A, Q3 A / A, Q4 A x4, Q5 A, Q6 B, Q7 A - every answer matches the build except Q6 (built as B - AD6).**
 **Result: ONE Panel note (Task 0.6), SEVEN questions, all non-blocking. Q2-Q7 are built on our suggestion (Q6 as ruled); Q1 builds NOTHING - as built
 the answer is option A until 13.8 / 13.5 build the Panel's. A different answer changes a rule or a holder before go-live (Row 52). Q-1..Q-4 are
 BigDev's - ANSWERED 2026-11-16 (below).**
@@ -166,7 +170,7 @@ BigDev's - ANSWERED 2026-11-16 (below).**
 | Migration `0207` | `0207_field-worker-ending-undo-appeal-link.sql`: the guard function replaced (rule (t) -> (t'), copied from `0201`); `field_workers.previous_field_worker_id` + its composite FK + CHECK; the table `field_worker_ending_appeals` (text + CHECK states, the decider / ender CHECKs, partial unique open), its transition guard and its no-delete / no-truncate triggers (AD7) |
 | Routes (AD13) | `POST /api/v1/p/:pariwarId/field-workers/:fieldWorkerId/undo-ending`; `POST .../:fieldWorkerId/ending-appeals`; `POST .../ending-appeals/:appealId/{decide,withdraw}`; `GET .../field-workers/ending-appeals` (the list); `GET .../field-workers/ending-appeals/eligible` (ended workers a hearer can record an appeal for); `GET .../:fieldWorkerId/ending-appeals?limit=`; `GET .../:fieldWorkerId/log?record=<earlier id>` |
 | API files | `apps/api/src/modules/field-worker/undo-handlers.ts`, `ending-appeal-handlers.ts`; `gate.ts` (the lodge loader and the appeal loader, beside `loadFieldWorkerGateDistrict` / `loadMoveRequestGate`); `handlers.ts` (register: shown number + link); `lifecycle-handlers.ts` (terminate: `appealHeardBy`; every act returns `state_event_version`); `log-handlers.ts` (`record`; its RE-EXAMINE header annotated); `routes.ts`; `errors.ts`; `apps/api/src/types.ts` (the new request stash fields `endingAppealHeardBy?` / `endingAppealGateDistrict?`) |
-| Errors (new codes) | `field_worker.number_previously_ended` (409, with details), `field_worker.link_invalid` (422), `field_worker.number_registered_again` (409), `field_worker.ending_changed` (409), `field_worker.appeal_open` (409), `field_worker.appeal_already_decided` (409), `field_worker.appeal_not_open` (409), `field_worker.appeal_wrong_hearer` (409 - a super admin on a Panel-heard appeal; other wrong hearers get the gate's 403 first), `field_worker.appeal_decider_is_ender` (409), `field_worker.appeal_date_invalid` (422) |
+| Errors (new codes) | `field_worker.number_previously_ended` (409, with details), `field_worker.link_invalid` (422), `field_worker.number_registered_again` (409), `field_worker.ending_changed` (409), `field_worker.appeal_open` (409), `field_worker.appeal_already_decided` (409), `field_worker.appeal_not_open` (409), `field_worker.appeal_wrong_hearer` (409 - a super admin on a Panel-heard appeal; other wrong hearers get the gate's 403 first), `field_worker.appeal_decider_is_ender` (409), `field_worker.appeal_date_invalid` (422), `field_worker.appeal_refused_by_panel` (409 - `-465` Q6 B) |
 | Audit actions | = the event type: `field_worker.ending_undone`, `field_worker_ending_appeal.lodged` / `.allowed` / `.refused` / `.withdrawn` / `.superseded` (the undo's line covers its supersede); `field_worker.previous_endings_shown` (the shown line); `field_worker.ending_appeal_list_viewed` (the names on the list); `field_worker.ending_appeal_candidates_viewed` (the names on the eligible list) |
 | Admin | `apps/admin/src/api/hooks.ts` (`useFieldWorkerAct` copies `state_event_version`; the new hooks); `WorkerDetail.tsx` (`WorkerSummary` gains `state_event_version`); `apps/admin/src/modules/field-workers/`: `WorkerActions.tsx` (`ACTS_BY_STATE.terminated = ['undo']`, a `REASONS` entry for `'undo'`; the End line reworded), `derive.ts` (`'undo'` in `WorkerAct`; `fw.actions.noAccess.undo`; `'appeals'` in `Surface` / `NO_ACCESS_KEY`; `roleLabel` + `fw.role.trustee_panel`; `BY_CODE` rows), `WorkerHistory.tsx` (the new event, the earlier record), `RegisterFieldWorkerPage.tsx` (the shown line, the link choice), NEW `AppealsPage.tsx` + `AppealActions.tsx` (incl. "Record an appeal" from the eligible list), `FieldWorkerNav.tsx` (an "Appeals" tab, `'appeals'` in `FieldWorkerPage`), `apps/admin/src/router.tsx` (the `/p/$pariwarId/field-workers/appeals` route beside `requests`) + NEW `apps/admin/src/routes/FieldWorkerAppealsRoute.tsx` (the session gate and `key={pariwarId}`, copied from `FieldWorkerMoveRequestsRoute.tsx`) and the module `index.ts` export of `AppealsPage`, copy in `i18n-en.ts` |
 | Roster | Row 52 `field-worker-ending-undo-appeal-live`; dated lines at Row 50 (f) and Row 48 (i) |
@@ -392,8 +396,13 @@ BigDev's - ANSWERED 2026-11-16 (below).**
   handler (move: from its locked re-read), and `useFieldWorkerAct` copies it into the identity cache with `current_state` and `district` - else
   "Undo ending" pressed straight after End sends the pre-end version and always gets `ending_changed`. On `ending_changed` the screen also
   invalidates the worker's IDENTITY query (not only the lists and the log), so a retry reads the current version. Any ending - any reason, `died` included (`-454` Q5 A's cost), any from-state - may be undone, at any time, AS RULED (Q1
-  A: "may undo any ending made by mistake") - including after the Panel has REFUSED an appeal on that ending (note Q6 asks whether to refuse that;
-  non-blocking). A SLIP's undo (`cause = 'mistake'`) SUPERSEDES the worker's open appeal in the same transaction (AD9); an appeal's own undo
+  A: "may undo any ending made by mistake") - **EXCEPT (`-465` Q6 B, 2026-11-17; superseding this AD's former "including after the Panel has
+  REFUSED an appeal on that ending") an ending whose appeal the PANEL heard and refused**: when the worker's CURRENT ending (AD17) has an appeal
+  with `heard_by = 'trustee_panel'` and `state = 'refused'`, the slip undo is refused 409 `field_worker.appeal_refused_by_panel` - on the
+  pre-read (no audit line) and under the worker lock (after the version check, before the stream fold; the intent line and its `_rolled_back`
+  twin). It binds every actor (a super admin too). A refused appeal heard by the PARIWAR ADMIN does not bar the slip undo (`-465` "does NOT
+  cover"). `allowFieldWorkerEndingAppeal` is unaffected (its appeal is open, never refused). No route carries out "a new decision of yours"
+  (C8). A SLIP's undo (`cause = 'mistake'`) SUPERSEDES the worker's open appeal in the same transaction (AD9); an appeal's own undo
   (`appeal_allowed`) supersedes nothing - the open appeal IS the one being allowed (13.1d's acceptance moves without superseding, for the same
   reason). A terminated worker's `state_event_version` IS its latest terminated event's version (nothing else can be written to the stream while it
   is terminated), so `expected_ending_version` and an appeal's `ending_event_version` name the same thing. It does NOT reopen a move request the ending
@@ -564,7 +573,8 @@ BigDev's - ANSWERED 2026-11-16 (below).**
   -> "Their code stops crediting new teachers. If this ending is a mistake, a Pariwar Admin can undo it; a worker who disagrees can appeal." (it
   carries out `-454` Q1 A and amends `-453` AD8's "a line that ending is final" - `-464`). Undo: button "Undo ending"; confirm "Undo this ending? Use
   this only if it was a mistake. The worker returns as they were before it, with the same code." + when an appeal is open on this ending: "Their open
-  appeal will close as no longer needed." Reminders (note Q3 (A) / (b) as built - the `-459` Q3 A / `-461` CR41 A shape): after an End, "Tell the
+  appeal will close as no longer needed."; the `appeal_refused_by_panel` line (`-465` Q6 B): "The Trustee Panel heard this worker's appeal and
+  refused it. Only a new decision of the Panel can restore them." Reminders (note Q3 (A) / (b) as built - the `-459` Q3 A / `-461` CR41 A shape): after an End, "Tell the
   worker. If they disagree, they can appeal."; after an undo, an appeal decision or a withdrawal, "Tell the worker." Shown number: "This number belonged to a
   worker in this Pariwar whose work ended on {date} ({reason})." + "This is the same person - link the new registration to their earlier record" +
   "Register". History: `fw.history.event.field_worker.ending_undone` "Ending undone" (+ "after an appeal" when `cause` says so), the registered line's
@@ -596,7 +606,7 @@ under the lock is raised inside `mutate`, so `withCompensatingAudit` writes the 
 
 | Act (route) | Gate key | Pre-read (no audit) | Locks, in order | Locked checks, in order -> code | Events (one transaction) | Audit line | Response |
 |---|---|---|---|---|---|---|---|
-| Undo, a slip (`POST .../:id/undo-ending`) | `undo_ending` (`district` chain) | missing -> 403; not `terminated` -> `illegal_transition`; version -> `ending_changed`; number live -> `number_registered_again` | worker; then (after the transition) the open appeal | terminated -> version -> (3d) target -> stream fold = `from_state`; UPDATE 23505 on the live index -> `number_registered_again` | `field_worker.ending_undone` (`mistake`); `field_worker_ending_appeal.superseded` if one was open | `field_worker.ending_undone` (covers the supersede) | 200 `FieldWorkerLifecycleResult` + `state_event_version` |
+| Undo, a slip (`POST .../:id/undo-ending`) | `undo_ending` (`district` chain) | missing -> 403; not `terminated` -> `illegal_transition`; version -> `ending_changed`; a Panel-refused appeal on this ending -> `appeal_refused_by_panel` (Q6 B); number live -> `number_registered_again` | worker; then (after the transition) the open appeal | terminated -> version -> Panel-refused appeal (Q6 B) -> (3d) target -> stream fold = `from_state`; UPDATE 23505 on the live index -> `number_registered_again` | `field_worker.ending_undone` (`mistake`); `field_worker_ending_appeal.superseded` if one was open | `field_worker.ending_undone` (covers the supersede) | 200 `FieldWorkerLifecycleResult` + `state_event_version` |
 | Lodge (`POST .../:id/ending-appeals`) | the key matching AD17's `heard_by`; either key when not terminated (AD9) | missing -> 403; not `terminated` -> `illegal_transition`; version -> `ending_changed`; super admin `_as_panel` -> `appeal_wrong_hearer`; open -> `appeal_open`; refused -> `appeal_already_decided` | worker | AD9's lodge order (1)-(6); the partial unique's 23505 BY NAME -> `appeal_open` | `field_worker_ending_appeal.lodged` | `field_worker_ending_appeal.lodged` | 201 `FieldWorkerEndingAppeal` |
 | Decide allowed (`POST .../ending-appeals/:appealId/decide`) | the key matching the appeal's `heard_by` | missing -> 403; super admin `_as_panel` -> `appeal_wrong_hearer`; not open -> `appeal_not_open`; ender -> `appeal_decider_is_ender`; number live -> `number_registered_again` | `appealWorkerOf` (unlocked), worker, appeal | worker = appeal's worker -> key vs `heard_by` -> open -> ender -> dates -> worker terminated at `ending_event_version` (else 500) -> the core's checks | `field_worker.ending_undone` (`appeal_allowed`) + `field_worker_ending_appeal.allowed` | ONE `field_worker_ending_appeal.allowed` line; both events carry its `audit_id` | 200 `{ appeal, worker }` |
 | Decide refused (same route) | as above | as above, minus the number check | as above | worker = appeal's worker -> key -> open -> ender -> dates | `field_worker_ending_appeal.refused` | `.refused` | 200 `{ appeal, worker: null }` |
@@ -610,7 +620,7 @@ under the lock is raised inside `mutate`, so `withCompensatingAudit` writes the 
 | Pair | Serialised by | Outcome | Proof |
 |---|---|---|---|
 | slip undo x decide-allowed | the worker lock (both take it first) | the first wins; the other: `appeal_not_open` (undo first - the appeal was superseded) or `illegal_transition` (allow first) | live, BOTH orders, `waitForBlockedBy` (13.1d CR27: a sequential "second answer" leg proves the state check, not the lock) |
-| slip undo x decide-refused / withdraw | worker lock | as above (`appeal_not_open` or the refusal stands and the undo then succeeds - note Q6 as ruled) | live, both orders |
+| slip undo x decide-refused / withdraw | worker lock | undo first: the decision -> `appeal_not_open`; decision first: a PANEL-heard refusal -> the undo `appeal_refused_by_panel` (`-465` Q6 B); a Pariwar-Admin-heard refusal or a withdrawal -> the undo succeeds | live, both orders |
 | decide x decide; decide x withdraw | worker lock, then appeal lock | the second -> `appeal_not_open` | live, both orders |
 | lodge x lodge | worker lock (the partial unique is the backstop) | the second -> `appeal_open` | live + AC5 (c)'s planted row |
 | undo x registration of the same number | the live index entry | the undo's UPDATE waits, then 23505 BY NAME -> `number_registered_again` | AC2 (i) |
@@ -633,6 +643,7 @@ under the lock is raised inside `mutate`, so `withCompensatingAudit` writes the 
 | `FieldWorkerAppealNotOpenError` (NEW) | decide / withdraw a closed appeal | 409 `field_worker.appeal_not_open` |
 | `FieldWorkerAppealWrongHearerError` (NEW) | the authorization's key does not match the appeal's `heard_by`, or an `_as_panel` authorization from a `global` grant (AD9) - through the API, a super admin on a Panel-heard appeal; any other wrong hearer gets the gate's 403 first | 409 `field_worker.appeal_wrong_hearer` |
 | `FieldWorkerAppealDeciderIsEnderError` (NEW) | decide / withdraw by the officer who ended the worker | 409 `field_worker.appeal_decider_is_ender` |
+| `FieldWorkerAppealRefusedByPanelError` (NEW - `-465` Q6 B) | a slip undo (cause `mistake`) when the worker's CURRENT ending has a REFUSED appeal heard by the Panel (pre-read: no audit line; under the lock: the `_rolled_back` twin) | 409 `field_worker.appeal_refused_by_panel` |
 | `FieldWorkerAppealDateInvalidError` (NEW) | `received_on` / `decided_on` malformed or outside its IST bounds (the command judges both) | 422 `field_worker.appeal_date_invalid` |
 | an actor without the hear key matching `heard_by` | AD9's dispatcher | 403 `authz.forbidden` |
 | a missing / foreign appeal or worker | the loader stashes null | 403 `authz.forbidden`, as the worker loader - ⚠ its `details.targetLocator` tells an existing row from an unknown id (G27, CR31, INHERITED) |
@@ -851,7 +862,10 @@ required input.
 **AC8 - An undo supersedes the open appeal; an ending's supersede of a move request stays (AD6).** A slip undone while an appeal is open: the appeal is
 `superseded` in the same transaction (event `field_worker_ending_appeal.superseded`, signed with `field_worker.undo_ending`; `decided_on` the undo's
 IST date). A worker whose open move request the ending superseded: after the undo the request is still `superseded` and a new request can be opened.
-A slip undo after the Panel REFUSED an appeal on that ending succeeds (note Q6, built as ruled). An `appeal_allowed` undo supersedes nothing (its
+A slip undo after the Panel REFUSED an appeal on that ending -> 409 `appeal_refused_by_panel` (`-465` Q6 B), no event, no audit line on the
+pre-read (and, from the lock - a refusal committed between the pre-read and the lock - the intent line and its `_rolled_back` twin), the worker
+stays ended; controls: after a refusal heard by the PARIWAR ADMIN the slip undo succeeds, and after a Panel-heard WITHDRAWN appeal it succeeds;
+a super admin's slip undo after a Panel refusal is refused too. An `appeal_allowed` undo supersedes nothing (its
 appeal becomes `allowed`, no `superseded` event). The superseded row's `decided_by_user_id` is the undoer.
 
 **AC9 - The shown number (AD11).** Registering a number that belongs to one or more ENDED workers of this Pariwar -> 409 `number_previously_ended`
@@ -1036,6 +1050,11 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     with `classify` rules for every new statement. `terminateFieldWorker` takes a REQUIRED `appealHeardBy` input (AD8; update every G22 caller).
     `registerFieldWorker` takes `previousFieldWorkerId` (validated in the API, re-checked by the FK). Update the guard-order header. Domain
     `errors.ts`: the new classes (no `_rolled_back` classes - G25).
+  - [ ] 3.4a **`-465` Q6 B (v1.5):** `undoFieldWorkerEnding` refuses `FieldWorkerAppealRefusedByPanelError` under the worker lock, after the
+    version check and before the stream fold, when the current ending (`ending_event_version = state_event_version`) has an appeal with
+    `heard_by = 'trustee_panel'` AND `state = 'refused'`; a domain read for the API pre-read (`hasPanelRefusedAppealOnEnding` in
+    `ending-appeal-read.ts`); the statement-order pin gains its query (classify rule); `undo.spec.ts` legs per AC8 (Panel refusal refused;
+    Pariwar-Admin refusal and Panel withdrawal controls succeed; super admin refused) and the Concurrency matrix's both-orders leg.
   - [ ] 3.5 `ending-appeal-{events,state,lock,project,supersede,commands,read}.ts` on 13.1d's request files (G13): `-lock` (`appealWorkerOf`,
     `lockEndingAppealRow`), `-project` and `-supersede` import NOTHING from `commands.ts` and are NOT re-exported by `index.ts` (TR17);
     `ending-appeal-commands.ts` = lodge (AD9's lodge order, its version guard, the one-per-ending constant, the in-lock hearer from AD17 - the
@@ -1077,6 +1096,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     line and the 409, AD12's `lockFieldWorkerForLink` re-check in the scope transaction), `lifecycle-handlers.ts` (terminate: `appealHeardBy` - AD8;
     TR16; EVERY act's 200 gains `state_event_version` from the domain result - G24); `routes.ts` (the static `ending-appeals` routes before `/:fieldWorkerId` - AD13); `errors.ts` + `field-worker-errors.test.ts`
     (every new code, and the `numberPreviouslyEndedError` factory); each appeal and undo handler sets `actor` from the authorization's key (AD9).
+    The undo handler's pre-read refuses `appeal_refused_by_panel` with NO audit line (`-465` Q6 B; AC8's HTTP legs in `undo.spec.ts`).
   - [ ] 5.2 Harness and fixtures (G29): HTTP legs use the harness's own `h.actor(p, 'trustee_panel', 'pariwar', p)` and `h.addGrant(userId, p,
     'pariwar_admin', 'pariwar', p)` for the dual-role officer - no new grant helper; `_registration-harness.ts` gains the act helpers (`undoEnding`,
     `lodgeAppeal`, `decideAppeal`, `withdrawAppeal`, `listAppeals`, `listEligible`) and its `cleanup()` deletes the appeal rows and their `events_log`
@@ -1100,7 +1120,8 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
   - [ ] 6.2 `WorkerDetail.tsx` (`WorkerSummary` gains `state_event_version`; the worker panel shows its appeals - the per-worker read - and offers
     "Record an appeal" to a hear-key holder), `WorkerActions.tsx` (`ACTS_BY_STATE.terminated = ['undo']`, a `REASONS` entry; the End line; the undo
     confirm with its open-appeal line; the "Tell the worker." reminders - AD14), `derive.ts` (`'undo'` in `WorkerAct`; `fw.actions.noAccess.undo`
-    for `actGuidance`'s 403; `'appeals'` in `Surface` / `NO_ACCESS_KEY`; `roleLabel` + `fw.role.trustee_panel`; `BY_CODE` rows for every new code),
+    for `actGuidance`'s 403; `'appeals'` in `Surface` / `NO_ACCESS_KEY`; `roleLabel` + `fw.role.trustee_panel`; `BY_CODE` rows for every new code,
+    incl. `appeal_refused_by_panel` with AD14's line - `-465` Q6 B),
     `WorkerHistory.tsx` (the label; "Linked to an earlier record" and its history), `RegisterFieldWorkerPage.tsx` (the shown line, the link choice, a
     new key on re-submit), `AppealsPage.tsx` + `AppealActions.tsx` (the list and "Record an appeal" from the eligible list), `FieldWorkerNav.tsx`
     (`'appeals'` in `FieldWorkerPage`), `router.tsx` (the appeals route) + NEW `apps/admin/src/routes/FieldWorkerAppealsRoute.tsx` (the session gate and `key={pariwarId}`,
@@ -1211,6 +1232,11 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
   shows an ending's date and reason to a second officer - wider than `-454` Q3 A's "the number"); counsel's footing and notice for the two
   fields (roster Row 19 precedent; the recruitment form promises a name and a mobile only); AD11's ended read and AD12's `link_to` re-check
   widened to a PAN match. Needs 13.1f LANDED. Until it lands, a worker who changed numbers is not linked.
+- **C8 - How a new decision of the Panel restores a worker after it refused the appeal (`-465` Q6 B, "does NOT cover").** As built (AD7's one
+  appeal per ending; `refused` final), after a Panel refusal NO route can restore the worker - the slip undo is refused (AD6) and no second
+  appeal is admitted. The author proposes the shape (a new act under `field_worker.hear_ending_appeal_as_panel`, re-opening the refused appeal,
+  or another), the Panel's if it touches what the worker is owed. Also open: whether a Pariwar Admin's refusal should bar the slip undo too
+  (not asked). Trigger: the Panel makes such a decision, or BigDev raises either. WRITTEN to `deferred-work.md` 2026-11-17.
 - **C7 - Story 13.1b: a code text after an undo.** A worker activated and ended before the sweep sent their code is settled `skipped_not_active`
   (final, one row per worker); after an undo nothing re-sends it, and the officer reads the code by hand (G21). Trigger: an officer reports a restored
   worker who never got their code, or 13.1b's send row is reopened for another reason.
@@ -1298,6 +1324,7 @@ one dispatcher (the hook takes a fixed key; the dispatcher itself copies `requir
 | v1.1 | 2026-11-13 | `bmad-create-story validate 13.1f` (4 read-only verifiers; their main claims re-checked in the repo; BigDev: "all"). Code still at `5ede00c4`. Detail below. |
 | v1.2 | 2026-11-14 | `bmad-create-story validate 13.1f` a second time (4 fresh read-only verifiers: domain + DB, API + RBAC + admin, governance, adversarial design; every critical claim re-checked in the repo; BigDev: "all", 50 items). Code still at `5ede00c4`. Detail below. |
 | v1.3 | 2026-11-16 | `bmad-create-story validate 13.1f` a third time (an in-session re-trace at `5ede00c4`, still `origin/main` after `git fetch`; `-464`, `0207`, Row 52 still free; BigDev: "all", 9 items). Detail below. |
+| v1.5 | 2026-11-17 | The Panel RULED its note (`2026-11-17-465`; BigDev's relay verbatim: *"Panel ruled as recommended for all except Q6 for which option B is chosen"*): Q1 B, Q2 A, Q3 A / A, Q4 A x4, Q5 A, Q6 **B**, Q7 A. Q6 B propagated (a spec edit made at BigDev's instruction to record the ruling, outside dev-story's usual sections): AD6 (the slip undo refused after a Panel-heard refusal, superseding its "including after the Panel has REFUSED"), section 0 rows 10b and Result, the Policy meaning, the Per-command table, the Concurrency matrix, the Errors table + Names (`field_worker.appeal_refused_by_panel`), AD14's line, AC8, Tasks 3.4a / 5.1 / 6.2, C8 (new). Governance commits `36330c87` (`-465`, alone), `7c0d46f9` (the note's block, Row 52 (a) / (c) MET and (b) recorded, Row 48 (i), PRD FR-85 annotated). |
 | v1.4 | 2026-11-16 | Task 0.2: BigDev's answers recorded verbatim (the ASKs section) - Q-1, Q-3, Q-4 A; Q-2: the mobile-matched link stays here, the PAN / Aadhaar-last-4 identification goes to the new row `13-1h` (C6; mobile OR PAN finds, last 4 a check, both required). PROPOSED tags dropped (NUMBERS, Names, AD10, AD12); section 0 rows 9 and 10, AD1, AD16, I10, Task 0.3, Task 0.4 (d), C6 updated. Row stays `ready-for-dev`. |
 
 - **v1.1 detail** (the full list is in ledger `2026-11-13a`). Blocking: the undo could not run through the table, the runner, the reducer

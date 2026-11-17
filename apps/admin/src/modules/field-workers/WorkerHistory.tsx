@@ -20,11 +20,13 @@ import { formatIstDate, formatIstDateTime, historyGuidance, needsSignIn, reasonL
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
-export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string; fieldWorkerId: string }): ReactElement {
+export function WorkerHistory({ pariwarId, fieldWorkerId, record }: { pariwarId: string; fieldWorkerId: string; record?: string }): ReactElement {
   const [shown, setShown] = useState(false);
+  /** Story 13.1f (AD12) — the earlier record's history, opened from the registration's "Linked to an earlier record" line. */
+  const [earlierShown, setEarlierShown] = useState(false);
   /** What the last "Load more" added: how many, and the first new entry (null: the page was empty). */
   const [revealed, setRevealed] = useState<{ n: number; firstVersion: number | null } | null>(null);
-  const log = useFieldWorkerLog(pariwarId, fieldWorkerId, shown);
+  const log = useFieldWorkerLog(pariwarId, fieldWorkerId, shown, record);
   const ids = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const moreButton = useRef<HTMLButtonElement | null>(null);
@@ -135,7 +137,10 @@ export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string;
               className="outline-none"
               data-testid="fw-history-item"
             >
-              <p className="font-medium">{t(`fw.history.event.${e.event_type}`)}</p>
+              <p className="font-medium">
+                {t(`fw.history.event.${e.event_type}`)}
+                {e.event_type === 'field_worker.ending_undone' && e.cause === 'appeal_allowed' ? ` ${t('fw.history.afterAppeal')}` : ''}
+              </p>
               <p>
                 {formatIstDateTime(e.occurred_at)} ·{' '}
                 {t('fw.history.by', { name: e.actor.display_name ?? t('fw.history.unknownOfficer'), role: roleLabel(e.actor.role) })}
@@ -143,6 +148,15 @@ export function WorkerHistory({ pariwarId, fieldWorkerId }: { pariwarId: string;
               {details(e).map((line) => (
                 <p key={line}>{line}</p>
               ))}
+              {record === undefined && e.event_type === 'field_worker.registered' && e.previous_field_worker_id !== null && (
+                <div className="flex flex-col gap-1" data-testid="fw-history-linked">
+                  <p>{t('fw.history.linked')}</p>
+                  <button type="button" className="self-start underline" aria-expanded={earlierShown} onClick={() => setEarlierShown((v) => !v)} data-testid="fw-history-show-earlier">
+                    {t('fw.history.showEarlier')}
+                  </button>
+                  {earlierShown && <WorkerHistory pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} record={e.previous_field_worker_id} />}
+                </div>
+              )}
             </li>
           ))}
         </ol>

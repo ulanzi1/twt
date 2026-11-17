@@ -2,6 +2,8 @@
 // worker and show their code. Story 13.1c adds, on an opened worker, the acts (`WorkerActions`) and the history (`WorkerHistory`). ⛔ `field-worker-dispatch/` — the architecture reserves that name for the dispatch surface (13.3).
 
 export { ApprovalsPage } from './ApprovalsPage.js';
+// Story 13.1f — the appeals against endings (the list, the hearer's acts, "Record an appeal").
+export { AppealsPage } from './AppealsPage.js';
 export { AskToMove } from './AskToMove.js';
 export { CodeReveal, CODE_VISIBLE_MS } from './CodeReveal.js';
 export { FindWorkerPage } from './FindWorkerPage.js';

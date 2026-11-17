@@ -32,7 +32,7 @@ describe('the copy (i18n-en.ts)', () => {
   it('every key resolves with its parameters and leaves no stray brace', () => {
     expect(FIELD_WORKER_EN_KEYS.length).toBeGreaterThan(40);
     // Story 13.1c's keys add `district`, `role`, `from` and `to`; Story 13.1d's `count` and `state`.
-    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya', count: 2, state: 'Active' };
+    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya', count: 2, state: 'Active', via: 'By phone' }; // Story 13.1f adds `via`
     for (const key of FIELD_WORKER_EN_KEYS) {
       const text = t(key, params);
       expect(text, key).not.toMatch(/[{}]/);
@@ -140,15 +140,16 @@ describe('the 403 line depends on the screen (review CR11)', () => {
     code: 'fw.noAccessCode',
     history: 'fw.history.noAccess',
     requests: 'fw.requests.detail.noAccess',
+    appeals: 'fw.appeals.noAccess', // Story 13.1f
   };
 
   it.each(Object.entries(KEYS))('%s ⇒ %s, and it is a no-access guidance', (surface, key) => {
     expect(fieldWorkerGuidance(forbidden, surface as Surface)).toMatchObject({ noAccess: true, text: t(key) });
   });
 
-  it('the six lines are six different sentences, and none of the non-approval ones sends the admin to "approving"', () => {
+  it('the seven lines are seven different sentences (Story 13.1f adds the appeals), and none of the non-approval ones sends the admin to "approving"', () => {
     const texts = Object.values(KEYS).map((k) => t(k));
-    expect(new Set(texts).size).toBe(6);
+    expect(new Set(texts).size).toBe(7);
     for (const key of ['fw.noAccessRegister', 'fw.noAccessFind', 'fw.noAccessCode', 'fw.history.noAccess', 'fw.requests.detail.noAccess']) expect(t(key)).not.toMatch(/approv/i);
   });
 

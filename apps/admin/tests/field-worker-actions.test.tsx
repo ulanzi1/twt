@@ -156,11 +156,11 @@ describe('the acts by state (AD8)', () => {
     ['pending_kyc', ['fw-act-move', 'fw-act-end']],
     ['active', ['fw-act-move', 'fw-act-suspend', 'fw-act-end']],
     ['suspended', ['fw-act-move', 'fw-act-reactivate', 'fw-act-end']],
-    ['terminated', []],
+    // Story 13.1f (AD6) — an ended worker offers "Undo ending" (the server decides who may).
+    ['terminated', ['fw-act-undo']],
   ] as const)('a %s worker shows exactly %j', async (s, expected) => {
     await openWorker(s);
     expect(actButtons()).toEqual(expected);
-    if (s === 'terminated') expect(screen.getByTestId('fw-actions-none').textContent).toBe(t('fw.actions.none'));
   });
 });
 
@@ -169,7 +169,7 @@ describe('End’s confirm (AD8; -454 Q4 A, Q5 A)', () => {
     await openWorker('active');
     fireEvent.click(screen.getByTestId('fw-act-end'));
     // AD8's sentence VERBATIM (row 13-1f rewords it when the undo exists - that story changes this literal on purpose).
-    expect(screen.getByTestId('fw-act-end-final').textContent).toBe('Ending is final. Their code stops crediting new teachers; to work again they must be registered again.');
+    expect(screen.getByTestId('fw-act-end-final').textContent).toBe('Their code stops crediting new teachers. If this ending is a mistake, a Pariwar Admin can undo it; a worker who disagrees can appeal.');
     const reasons = [...(screen.getByTestId('fw-act-reason') as HTMLSelectElement).options].map((o) => o.textContent);
     expect(reasons).toEqual([t('fw.actions.reason.choose'), 'Left', 'Stopped working', 'Registered by mistake', 'Died']);
     expect(confirm().disabled).toBe(true);
@@ -527,7 +527,7 @@ describe('focus and announcements (checklist family 13; review CR25)', () => {
     fireEvent.click(screen.getByTestId('fw-act-end'));
     expect(screen.getByRole('form', { name: 'End' })).toBeTruthy();
     const describedBy = screen.getByTestId('fw-act-reason').getAttribute('aria-describedby')!;
-    expect(document.getElementById(describedBy)!.textContent).toBe('Ending is final. Their code stops crediting new teachers; to work again they must be registered again.');
+    expect(document.getElementById(describedBy)!.textContent).toBe('Their code stops crediting new teachers. If this ending is a mistake, a Pariwar Admin can undo it; a worker who disagrees can appeal.');
     const region = screen.getByTestId('fw-act-hint');
     expect(region.getAttribute('role')).toBe('status');
     expect(region.textContent).toBe('');
@@ -586,7 +586,7 @@ describe('code review round 2 (R2-2, R2-5, R2-8)', () => {
     expect((screen.getByTestId('fw-act-reason') as HTMLSelectElement).value).toBe('died');
     expect(terminateFieldWorker).toHaveBeenCalledWith(P, W, { reason_code: 'died', ended_on: '2026-11-05' }, expect.any(String));
     release(result({ current_state: 'terminated', state_reason_code: 'died', ended_on: '2026-11-05' }));
-    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(t('fw.actions.done.end', { name: 'Ramesh Kumar' })));
+    await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(`${t('fw.actions.done.end', { name: 'Ramesh Kumar' })} ${t('fw.actions.tell.end')}`));
   });
 
   it('R2-2: Move’s district is held too while the move saves', async () => {

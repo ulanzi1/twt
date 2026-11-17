@@ -10,7 +10,7 @@ import type { ReactElement } from 'react';
 import { useFieldWorkerNotices } from '../../api/hooks.js';
 import { resolveEn as t } from './i18n-en.js';
 
-export type FieldWorkerPage = 'register' | 'approvals' | 'find' | 'requests';
+export type FieldWorkerPage = 'register' | 'approvals' | 'find' | 'requests' | 'appeals';
 
 export function FieldWorkerNav({ pariwarId, current }: { pariwarId: string; current: FieldWorkerPage }): ReactElement {
   const notices = useFieldWorkerNotices(pariwarId);
@@ -37,6 +37,11 @@ export function FieldWorkerNav({ pariwarId, current }: { pariwarId: string; curr
       {current !== 'requests' && (
         <Link to="/p/$pariwarId/field-workers/requests" params={{ pariwarId }} className="underline" data-testid="fw-nav-requests">
           {unseen > 0 ? t(mayBeMore ? 'fw.nav.requestsUnseenMore' : 'fw.nav.requestsUnseen', { count: unseen }) : t('fw.nav.requests')}
+        </Link>
+      )}
+      {current !== 'appeals' && (
+        <Link to="/p/$pariwarId/field-workers/appeals" params={{ pariwarId }} className="underline" data-testid="fw-nav-appeals">
+          {t('fw.nav.appeals')}
         </Link>
       )}
     </nav>

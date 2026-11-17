@@ -394,6 +394,14 @@ import {
 // Story 13.1a — the field-worker console (register, approve, find a worker and read their code).
 import {
   ApproveFieldWorkerResponse,
+  DecideFieldWorkerEndingAppealResponse,
+  FieldWorkerAppealEligiblePage,
+  FieldWorkerEndingAppeal,
+  FieldWorkerEndingAppealPage,
+  FieldWorkerEndingAppealsOf,
+  type FieldWorkerEndingAppealChannel,
+  type FieldWorkerEndingAppealOutcome,
+  type FieldWorkerEndingAppealState,
   FieldWorkerCodeResponse,
   FieldWorkerDistrictsResponse,
   FieldWorkerIdentityResponse,
@@ -3703,6 +3711,67 @@ export function reactivateFieldWorker(pariwarId: string, fieldWorkerId: string, 
 export function terminateFieldWorker(pariwarId: string, fieldWorkerId: string, body: TerminateFieldWorkerRequest, idempotencyKey: string) {
   return fieldWorkerAct(pariwarId, fieldWorkerId, 'terminate', body, idempotencyKey);
 }
+// ── Story 13.1f — the undo of an ending and the appeal record (each write with an Idempotency-Key the PAGE mints per attempt) ──
+
+/** Undo a mistaken ending (a Pariwar Admin) — `expected_ending_version` is the worker's version as the panel showed it. */
+export function undoFieldWorkerEnding(pariwarId: string, fieldWorkerId: string, expectedEndingVersion: number, idempotencyKey: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/undo-ending`, FieldWorkerLifecycleResult, {
+    method: 'POST',
+    body: JSON.stringify({ expected_ending_version: expectedEndingVersion }),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** Record a worker's appeal against their CURRENT ending — the hearer records it (201). */
+export function lodgeFieldWorkerEndingAppeal(
+  pariwarId: string,
+  fieldWorkerId: string,
+  body: { expected_ending_version: number; received_on: string; received_via: FieldWorkerEndingAppealChannel },
+  idempotencyKey: string,
+) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/ending-appeals`, FieldWorkerEndingAppeal, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** Allow or refuse an appeal (the hearer); an allowed one carries the restored worker. */
+export function decideFieldWorkerEndingAppeal(pariwarId: string, appealId: string, body: { outcome: FieldWorkerEndingAppealOutcome; decided_on: string }, idempotencyKey: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/ending-appeals/${encodeURIComponent(appealId)}/decide`, DecideFieldWorkerEndingAppealResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** Record that the worker withdrew their appeal (the hearer). */
+export function withdrawFieldWorkerEndingAppeal(pariwarId: string, appealId: string, decidedOn: string, idempotencyKey: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/ending-appeals/${encodeURIComponent(appealId)}/withdraw`, FieldWorkerEndingAppeal, {
+    method: 'POST',
+    body: JSON.stringify({ decided_on: decidedOn }),
+    headers: { 'Idempotency-Key': idempotencyKey },
+  });
+}
+/** One page of appeals (names decrypted — audited a page at a time). */
+export function listFieldWorkerEndingAppeals(pariwarId: string, opts: { state?: FieldWorkerEndingAppealState; district?: string; cursor?: string } = {}) {
+  const q = new URLSearchParams();
+  if (opts.state !== undefined) q.set('state', opts.state);
+  if (opts.district !== undefined) q.set('district', opts.district);
+  if (opts.cursor !== undefined) q.set('cursor', opts.cursor);
+  const qs = q.toString();
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/ending-appeals${qs === '' ? '' : `?${qs}`}`, FieldWorkerEndingAppealPage, { cache: 'no-store' });
+}
+/** Ended workers this officer can record an appeal for (names decrypted — audited). */
+export function listAppealEligibleFieldWorkers(pariwarId: string, opts: { district?: string; cursor?: string } = {}) {
+  const q = new URLSearchParams();
+  if (opts.district !== undefined) q.set('district', opts.district);
+  if (opts.cursor !== undefined) q.set('cursor', opts.cursor);
+  const qs = q.toString();
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/ending-appeals/eligible${qs === '' ? '' : `?${qs}`}`, FieldWorkerAppealEligiblePage, { cache: 'no-store' });
+}
+/** One worker's appeals, newest first (no name). */
+export function getFieldWorkerEndingAppealsOf(pariwarId: string, fieldWorkerId: string) {
+  return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/ending-appeals`, FieldWorkerEndingAppealsOf, { cache: 'no-store' });
+}
+
 // ── Story 13.1d — the move requests (each write with an Idempotency-Key the PAGE mints per attempt) and the officer's notices ──
 
 /** Ask the other end's District Admin to take on or release a worker — 201; `state: 'escalated'` when nobody else holds that district. */
@@ -3749,7 +3818,11 @@ export function markFieldWorkerNoticesSeen(pariwarId: string, noticeIds: string[
 }
 
 /** One page of the worker's log, in event order; pass `next_after` back as `after`. No name, mobile or code; `no-store`. */
-export function getFieldWorkerLog(pariwarId: string, fieldWorkerId: string, opts: { after?: number } = {}) {
-  const q = opts.after === undefined ? '' : `?${new URLSearchParams({ after: String(opts.after) }).toString()}`;
+export function getFieldWorkerLog(pariwarId: string, fieldWorkerId: string, opts: { after?: number; record?: string } = {}) {
+  // Story 13.1f (AD12) — `record`: an EARLIER record reached by the registration link (the server re-checks the officer may read it).
+  const params = new URLSearchParams();
+  if (opts.after !== undefined) params.set('after', String(opts.after));
+  if (opts.record !== undefined) params.set('record', opts.record);
+  const q = params.toString() === '' ? '' : `?${params.toString()}`;
   return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/log${q}`, FieldWorkerLog, { cache: 'no-store' });
 }

@@ -13,7 +13,7 @@ const KEY = 'attempt-key-0001';
 
 afterEach(() => vi.unstubAllGlobals());
 
-const LIFECYCLE = { field_worker_id: W, district: 'Gaya', current_state: 'active', state_reason_code: null, ended_on: null };
+const LIFECYCLE = { field_worker_id: W, district: 'Gaya', current_state: 'active', state_reason_code: null, ended_on: null, state_event_version: 4 }; // Story 13.1f (G24)
 
 function stub(body: unknown, status = 200): ReturnType<typeof vi.fn> {
   const f = vi.fn(async () => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));

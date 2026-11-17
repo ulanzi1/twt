@@ -8,7 +8,7 @@
 // The page calls `api.registerFieldWorker` ITSELF (⛔ `useMutation`): TanStack's MutationCache would keep the submitted name and
 // mobile after the page is left (review R5). The typed values live in component state only and go with the page.
 
-import type { RegisterFieldWorkerResponse } from '@twt/contracts';
+import { FieldWorkerPreviousEndingsDetails, type RegisterFieldWorkerResponse } from '@twt/contracts';
 import type { FormEvent, ReactElement } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 
@@ -16,7 +16,7 @@ import * as api from '../../api/client.js';
 import { attemptKey, type AttemptKey } from '../../api/hooks.js';
 import { DistrictPicker } from './DistrictPicker.js';
 import { FieldWorkerNav } from './FieldWorkerNav.js';
-import { fieldWorkerGuidance, stateLabel, type Guidance } from './derive.js';
+import { fieldWorkerGuidance, formatIstDate, reasonLabel, stateLabel, type Guidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -27,6 +27,13 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<Guidance | null>(null);
   const [done, setDone] = useState<RegisterFieldWorkerResponse | null>(null);
+  /**
+   * Story 13.1f (AD11; `-454` Q3 A, information only — "the officer still decides") — the ENDED records the server said hold this number,
+   * once shown. The next submit carries `previous_endings_seen: true` (and `link_to` when the officer chose a record — AD12); editing the
+   * mobile forgets them (the list was about the old number).
+   */
+  const [previous, setPrevious] = useState<FieldWorkerPreviousEndingsDetails['previous_endings'] | null>(null);
+  const [linkTo, setLinkTo] = useState<string | null>(null);
   const keyRef = useRef<AttemptKey | null>(null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
@@ -54,7 +61,13 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
     if (mobile.trim() === '') return setProblem({ text: t('fw.register.mobileRequired'), field: 'mobile' });
     if (district === null) return setProblem({ text: t('fw.register.chooseDistrict'), field: 'district' });
     // The district is sent BYTE FOR BYTE (I11); the name and mobile as typed — the server normalises and judges them (422).
-    const body = { name, mobile, district };
+    const body = {
+      name,
+      mobile,
+      district,
+      ...(previous !== null ? { previous_endings_seen: true as const } : {}),
+      ...(previous !== null && linkTo !== null ? { link_to: linkTo } : {}),
+    };
     const key = attemptKey(keyRef, body);
     inFlight.current = true;
     setSubmitting(true);
@@ -71,6 +84,17 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
         inFlight.current = false;
         if (!mounted.current) return;
         setSubmitting(false);
+        // The shown number: ⛔ an error — the list, and a second submit (a NEW key: the body changes — TR9).
+        if (err instanceof api.ApiError && err.code === 'field_worker.number_previously_ended') {
+          const details = FieldWorkerPreviousEndingsDetails.safeParse(err.details);
+          if (details.success) {
+            keyRef.current = null;
+            setPrevious(details.data.previous_endings);
+            setLinkTo(null);
+            headingRef.current?.focus();
+            return;
+          }
+        }
         setProblem(fieldWorkerGuidance(err, 'register'));
         headingRef.current?.focus();
       },
@@ -84,6 +108,8 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
     setDistrict(null);
     setProblem(null);
     setDone(null);
+    setPrevious(null);
+    setLinkTo(null);
     headingRef.current?.focus();
   };
 
@@ -146,7 +172,11 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
               className="rounded border px-2 py-1"
               value={mobile}
               inputMode="tel"
-              onChange={(e) => setMobile(e.target.value)}
+              onChange={(e) => {
+                setMobile(e.target.value);
+                setPrevious(null);
+                setLinkTo(null);
+              }}
               aria-invalid={invalid('mobile') || undefined}
               aria-describedby={invalid('mobile') ? errorId : undefined}
               autoComplete="off"
@@ -161,6 +191,24 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
             {...(invalid('district') ? { describedBy: errorId } : {})}
             testId="fw-register-district"
           />
+          {previous !== null && (
+            <fieldset className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid="fw-register-previous">
+              <legend className="font-medium">{t('fw.register.previous.title')}</legend>
+              {previous.map((p) => (
+                <label key={p.field_worker_id} className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={linkTo === p.field_worker_id}
+                    onChange={(e) => setLinkTo(e.target.checked ? p.field_worker_id : null)}
+                    data-testid={`fw-register-link-${p.field_worker_id}`}
+                  />
+                  <span>
+                    {t('fw.register.previous.line', { date: formatIstDate(p.ended_on), reason: reasonLabel(p.reason_code) })} {t('fw.register.previous.link')}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+          )}
           <button type="submit" className="self-start rounded bg-black px-3 py-1 text-sm text-white" disabled={submitting} data-testid="fw-register-submit">
             {submitting ? t('fw.register.submitting') : t('fw.register.submit')}
           </button>

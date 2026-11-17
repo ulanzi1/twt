@@ -2,7 +2,7 @@
 // state and district from the identity it already read — ⛔ a second identity read (each is an audited decrypt).
 //
 // The acts shown are the ones the worker's STATE allows: waiting — Move, End; active — Move, Suspend, End; suspended — Move,
-// Reactivate, End; ended — none. ⛔ Client-side role gating (13.1a C5): the server decides, and a 403 shows that act's "no access" line.
+// Reactivate, End; ended — Undo ending (Story 13.1f AD6; the server decides who may). ⛔ Client-side role gating (13.1a C5): the server decides, and a 403 shows that act's "no access" line.
 // Each act opens ONE inline confirm with a REQUIRED reason select (labels, never codes; ⛔ free text) — Reactivate has no reason —
 // Move a district select (the current district excluded; an exact-text field when the Pariwar has more districts than can be listed)
 // and End a date input defaulting to today in India on this browser's clock (the SERVER judges the bounds; the control only refuses a
@@ -29,7 +29,14 @@ import { FIELD_WORKER_POST_REASONS, FIELD_WORKER_SUSPEND_REASONS, FIELD_WORKER_T
 import type { ReactElement } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { attemptKey, useFieldWorkerAct, useFieldWorkerDistricts, type AttemptKey, type FieldWorkerActInput } from '../../api/hooks.js';
+import {
+  attemptKey,
+  useFieldWorkerAct,
+  useFieldWorkerDistricts,
+  useFieldWorkerEndingAppealsOf,
+  type AttemptKey,
+  type FieldWorkerActInput,
+} from '../../api/hooks.js';
 import { focusIfUnclaimed } from '../marketplace/focus.js';
 import type { WorkerSummary } from './WorkerDetail.js';
 import { actGuidance, defaultEndDate, istDateOf, reasonLabel, type Guidance, type WorkerAct } from './derive.js';
@@ -40,7 +47,8 @@ const ACTS_BY_STATE: Record<WorkerSummary['current_state'], readonly WorkerAct[]
   pending_kyc: ['move', 'end'],
   active: ['move', 'suspend', 'end'],
   suspended: ['move', 'reactivate', 'end'],
-  terminated: [],
+  // Story 13.1f (AD6) — an ended worker can be restored by a Pariwar Admin (the server decides who; ⛔ client-side role gating).
+  terminated: ['undo'],
 };
 
 const REASONS: Record<WorkerAct, readonly string[]> = {
@@ -48,6 +56,7 @@ const REASONS: Record<WorkerAct, readonly string[]> = {
   suspend: FIELD_WORKER_SUSPEND_REASONS,
   reactivate: [],
   end: FIELD_WORKER_TERMINATE_REASONS,
+  undo: [],
 };
 
 /** The contract's `ended_on` is four-digit-year `YYYY-MM-DD`; a browser date field would otherwise accept a longer year (a 400). */
@@ -97,6 +106,9 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
   useSignInRedirect(problem?.signIn === true);
 
   const acts = ACTS_BY_STATE[worker.current_state];
+  // Story 13.1f (AD14) — the undo confirm says when an open appeal on this ending will close (read only while that confirm is open).
+  const appeals = useFieldWorkerEndingAppealsOf(pariwarId, fieldWorkerId, open === 'undo');
+  const openAppeal = (appeals.data?.items ?? []).some((a) => a.state === 'open' && a.ending_event_version === worker.state_event_version);
 
   const start = (act: WorkerAct): void => {
     if (open === act) {
@@ -151,7 +163,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
    */
   const held = busy || undefined;
 
-  const ready = open !== null && (open === 'reactivate' || reason !== '') && (open !== 'move' || toDistrict.trim() !== '') && (open !== 'end' || endedOn !== '');
+  const ready = open !== null && (open === 'reactivate' || open === 'undo' || reason !== '') && (open !== 'move' || toDistrict.trim() !== '') && (open !== 'end' || endedOn !== '');
 
   /** The request WITHOUT its key: `submit` fills `idempotencyKey` from the attempt (the placeholder is never sent). */
   const draft = (act: WorkerAct): FieldWorkerActInput => {
@@ -165,6 +177,9 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
         return { ...base, act: 'reactivate' };
       case 'end':
         return { ...base, act: 'terminate', body: { reason_code: reason as FieldWorkerTerminateReason, ended_on: endedOn } };
+      case 'undo':
+        // The ending the panel showed (AD6) — the cache copies each act's version, so End then Undo names THIS ending (G24).
+        return { ...base, act: 'undo', body: { expected_ending_version: worker.state_event_version } };
     }
   };
 
@@ -202,11 +217,9 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
     // unless the officer has gone elsewhere meanwhile.
     focusIfUnclaimed(titleRef.current, formRef.current);
     setOpen(null);
-    setAnnounce(
-      act === 'move'
-        ? t('fw.actions.done.move', { name, district: result.district })
-        : t(`fw.actions.done.${act}`, { name }),
-    );
+    // Story 13.1f (AD14) — after an End or an undo the officer is reminded to tell the worker (`-465` Q3 A).
+    const done = act === 'move' ? t('fw.actions.done.move', { name, district: result.district }) : t(`fw.actions.done.${act}`, { name });
+    setAnnounce(act === 'end' ? `${done} ${t('fw.actions.tell.end')}` : act === 'undo' ? `${done} ${t('fw.actions.tell')}` : done);
   };
 
   return (
@@ -276,12 +289,18 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
               {t('fw.actions.reactivate.intro')}
             </p>
           )}
+          {open === 'undo' && (
+            <div id={introId} className="flex flex-col gap-1 text-sm">
+              <p data-testid="fw-act-undo-intro">{t('fw.actions.undo.intro')}</p>
+              {openAppeal && <p data-testid="fw-act-undo-open-appeal">{t('fw.actions.undo.openAppeal')}</p>}
+            </div>
+          )}
           {open === 'end' && (
             <p id={introId} className="text-sm font-medium" data-testid="fw-act-end-final">
               {t('fw.actions.end.final')}
             </p>
           )}
-          {open !== 'reactivate' && (
+          {open !== 'reactivate' && open !== 'undo' && (
             <label className="flex flex-col gap-1 text-sm">
               {t('fw.actions.reason')}
               <select
@@ -357,7 +376,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
               // Busy is `aria-disabled`, ⛔ `disabled`: the focused Confirm must keep focus while it saves (a disabled control loses it);
               // `submit` ignores a press while busy.
               aria-disabled={busy || undefined}
-              aria-describedby={open === 'reactivate' ? introId : undefined}
+              aria-describedby={open === 'reactivate' || open === 'undo' ? introId : undefined}
               data-testid="fw-act-confirm"
             >
               {busy ? t('fw.actions.saving') : problem?.retryable === true ? t('fw.retry') : t('fw.actions.confirm')}

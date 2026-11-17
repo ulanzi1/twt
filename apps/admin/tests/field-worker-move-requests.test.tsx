@@ -349,7 +349,7 @@ describe('Story 13.1d — notices and the nav (AC9)', () => {
 });
 
 describe('Story 13.1d — Ask to move (AC9)', () => {
-  const worker = (state: 'pending_kyc' | 'active' | 'suspended' | 'terminated') => ({ current_state: state, district: 'Patna', created_at: '2026-11-04T05:00:00.000Z' });
+  const worker = (state: 'pending_kyc' | 'active' | 'suspended' | 'terminated') => ({ current_state: state, district: 'Patna', created_at: '2026-11-04T05:00:00.000Z', state_event_version: 3 });
 
   it('offered for a waiting, active or suspended worker; ⛔ an ended one', () => {
     for (const s of ['pending_kyc', 'active', 'suspended'] as const) {
@@ -591,7 +591,7 @@ describe('CR45 — an OPEN moves nobody: the worker lists are not refetched; an 
     openFieldWorkerMoveRequest.mockResolvedValueOnce(result({ state: 'pending', worker_district: 'Patna' }));
     const ask = render(
       <QueryClientProvider client={client}>
-        <AskToMove pariwarId={P} fieldWorkerId="w" name="Ramesh Kumar" worker={{ current_state: 'active', district: 'Patna', created_at: '2026-11-04T05:00:00.000Z' }} />
+        <AskToMove pariwarId={P} fieldWorkerId="w" name="Ramesh Kumar" worker={{ current_state: 'active', district: 'Patna', created_at: '2026-11-04T05:00:00.000Z', state_event_version: 3 }} />
       </QueryClientProvider>,
     );
     fireEvent.click(screen.getByTestId('fw-ask-open'));
@@ -722,7 +722,7 @@ describe('CR47 — focus and the Refuse form', () => {
 
   it('Ask to move: focus goes into the select, and back on "Ask to move" after Cancel and after a send; a press with nothing chosen says so', async () => {
     openFieldWorkerMoveRequest.mockResolvedValue(result({ state: 'pending', worker_district: 'Patna' }));
-    renderWith(<AskToMove pariwarId={P} fieldWorkerId="w" name="Ramesh Kumar" worker={{ current_state: 'active', district: 'Patna', created_at: '2026-11-04T05:00:00.000Z' }} />);
+    renderWith(<AskToMove pariwarId={P} fieldWorkerId="w" name="Ramesh Kumar" worker={{ current_state: 'active', district: 'Patna', created_at: '2026-11-04T05:00:00.000Z', state_event_version: 3 }} />);
     fireEvent.click(screen.getByTestId('fw-ask-open'));
     const select = await screen.findByTestId('fw-ask-to');
     await waitFor(() => expect(select).toHaveFocus());
@@ -742,7 +742,7 @@ describe('CR48 — Ask to move, per worker', () => {
   // RP-15 — "another worker gets a FRESH form" is pinned through the Find page, where it is true (`field-worker-find-page.test.tsx`): the panel's
   // `WorkerDetail` is keyed by the open worker, so a `key` on `AskToMove` itself was a no-op and the two legs that "proved" it (a source-text
   // regex; a harness with its own `key`) could not fail on behaviour. They are gone.
-  const w = { current_state: 'active' as const, district: 'Patna', created_at: '2026-11-04T05:00:00.000Z' };
+  const w = { current_state: 'active' as const, district: 'Patna', created_at: '2026-11-04T05:00:00.000Z', state_event_version: 3 };
 
   it('a 409 that says the worker moved or ended meanwhile WITHDRAWS the form, keeps its line, TAKES FOCUS onto it (RP-4) and tells the panel (RP-6)', async () => {
     const onStale = vi.fn();

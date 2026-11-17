@@ -44,6 +44,7 @@ import { BannersRoute } from './routes/BannersRoute.js';
 import { ModuleDetailRoute, ModuleNewRoute, ModulesRoute, validateModuleDetailSearch, validateModuleNewSearch } from './routes/ModulesRoute.js';
 import { FieldWorkerApprovalsRoute } from './routes/FieldWorkerApprovalsRoute.js';
 import { FieldWorkerFindRoute } from './routes/FieldWorkerFindRoute.js';
+import { FieldWorkerAppealsRoute } from './routes/FieldWorkerAppealsRoute.js';
 import { FieldWorkerMoveRequestsRoute } from './routes/FieldWorkerMoveRequestsRoute.js';
 import { FieldWorkerRegisterRoute } from './routes/FieldWorkerRegisterRoute.js';
 import { SurveysRoute } from './routes/SurveysRoute.js';
@@ -252,6 +253,13 @@ const fieldWorkersRequestsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/p/$pariwarId/field-workers/requests',
   component: FieldWorkerMoveRequestsRoute,
+});
+
+// Story 13.1f (AD13) — the appeals against endings.
+const fieldWorkersAppealsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/field-workers/appeals',
+  component: FieldWorkerAppealsRoute,
 });
 
 // Story 10.15 — the tenant-scoped survey/poll console (list + authoring editor + the aggregate
@@ -508,6 +516,7 @@ const routeTree = rootRoute.addChildren([
   fieldWorkersRegisterRoute,
   fieldWorkersApprovalsRoute,
   fieldWorkersRequestsRoute,
+  fieldWorkersAppealsRoute,
   surveysRoute,
   reportsRoute,
   featureFlagsRoute,

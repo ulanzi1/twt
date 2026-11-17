@@ -3027,6 +3027,8 @@ export const fieldWorkerMoveRequestsKey = (pariwarId: string, state: 'open' | 'c
   [...fieldWorkerMoveRequestsRoot(pariwarId), 'list', state, district === null ? (['all'] as const) : (['district', district] as const)] as const;
 export const fieldWorkerMoveRequestKey = (pariwarId: string, moveRequestId: string) => [...fieldWorkerMoveRequestsRoot(pariwarId), 'one', moveRequestId] as const;
 export const fieldWorkerNoticesKey = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'notices'] as const;
+/** Story 13.1f — the appeal lists, the eligible list and one worker's appeals. */
+export const fieldWorkerEndingAppealsRoot = (pariwarId: string) => [...fieldWorkersRoot(pariwarId), 'ending-appeals'] as const;
 /** Story 13.1c — one worker's log (the history panel). */
 export const fieldWorkerLogKey = (pariwarId: string, fieldWorkerId: string) => [...fieldWorkersRoot(pariwarId), 'log', fieldWorkerId] as const;
 
@@ -3078,7 +3080,10 @@ export function fieldWorkerListIsStale(err: unknown): boolean {
     (err.code === 'field_worker.illegal_transition' ||
       err.code === 'field_worker.kyc_already_completed' ||
       err.code === 'field_worker.authorization_stale' ||
-      err.code === 'field_worker.code_not_available')
+      err.code === 'field_worker.code_not_available' ||
+      // Story 13.1f — the list moved under the officer.
+      err.code === 'field_worker.ending_changed' ||
+      err.code === 'field_worker.appeal_not_open')
   );
 }
 
@@ -3111,11 +3116,13 @@ export function useApproveFieldWorker(pariwarId: string) {
  * identity ([[project_query_gctime_blinds_removal_tests]]): nothing is kept once the panel is gone. ⛔ Background refetching (the
  * module's rule above): it is refreshed by an act that changes it.
  */
-export function useFieldWorkerLog(pariwarId: string, fieldWorkerId: string, enabled: boolean) {
+export function useFieldWorkerLog(pariwarId: string, fieldWorkerId: string, enabled: boolean, record?: string) {
   return useInfiniteQuery({
-    queryKey: fieldWorkerLogKey(pariwarId, fieldWorkerId),
+    // Story 13.1f — an earlier record's log (`record`) is its own entry under the worker's key, so an act's refresh reaches it too.
+    queryKey: record === undefined ? fieldWorkerLogKey(pariwarId, fieldWorkerId) : ([...fieldWorkerLogKey(pariwarId, fieldWorkerId), 'record', record] as const),
     initialPageParam: undefined as number | undefined,
-    queryFn: ({ pageParam }) => api.getFieldWorkerLog(pariwarId, fieldWorkerId, pageParam === undefined ? {} : { after: pageParam }),
+    queryFn: ({ pageParam }) =>
+      api.getFieldWorkerLog(pariwarId, fieldWorkerId, { ...(pageParam === undefined ? {} : { after: pageParam }), ...(record === undefined ? {} : { record }) }),
     getNextPageParam: (last) => last.next_after ?? undefined,
     enabled,
     gcTime: 0,
@@ -3130,7 +3137,9 @@ export type FieldWorkerActInput =
   | { act: 'move'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').MoveFieldWorkerRequest }
   | { act: 'suspend'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').SuspendFieldWorkerRequest }
   | { act: 'reactivate'; fieldWorkerId: string; idempotencyKey: string }
-  | { act: 'terminate'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').TerminateFieldWorkerRequest };
+  | { act: 'terminate'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').TerminateFieldWorkerRequest }
+  // Story 13.1f (AD6) — the undo of a mistaken ending, naming the ending the panel showed.
+  | { act: 'undo'; fieldWorkerId: string; idempotencyKey: string; body: import('@twt/contracts').UndoFieldWorkerEndingRequest };
 
 /**
  * Move / suspend / reactivate / end (Story 13.1c AD8) — ONE mutation for the four, the act in the variables. On success the lists and
@@ -3159,16 +3168,24 @@ export function useFieldWorkerAct(pariwarId: string) {
           return api.reactivateFieldWorker(pariwarId, input.fieldWorkerId, input.idempotencyKey);
         case 'terminate':
           return api.terminateFieldWorker(pariwarId, input.fieldWorkerId, input.body, input.idempotencyKey);
+        case 'undo':
+          return api.undoFieldWorkerEnding(pariwarId, input.fieldWorkerId, input.body.expected_ending_version, input.idempotencyKey);
       }
     },
     onSuccess: (result, input) => {
+      // Story 13.1f (G24) — the version travels with the state and district, so "Undo ending" pressed straight after End names THIS ending.
       qc.setQueryData(fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId), (old: import('@twt/contracts').FieldWorkerIdentityResponse | undefined) =>
-        old === undefined ? old : { ...old, current_state: result.current_state, district: result.district },
+        old === undefined ? old : { ...old, current_state: result.current_state, district: result.district, state_event_version: result.state_event_version },
       );
       refresh(input.fieldWorkerId);
+      void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
     },
     onError: (err, input) => {
       if (fieldWorkerListIsStale(err)) refresh(input.fieldWorkerId);
+      // Story 13.1f (AD6) — the ending moved on: the IDENTITY is re-read too, so a retry names the current version.
+      if (err instanceof ApiError && err.code === 'field_worker.ending_changed') {
+        void qc.invalidateQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId) });
+      }
     },
   });
 }
@@ -3283,6 +3300,91 @@ export function useMarkFieldWorkerNoticesSeen(pariwarId: string) {
     mutationFn: (noticeIds: string[]) => api.markFieldWorkerNoticesSeen(pariwarId, noticeIds),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: fieldWorkerNoticesKey(pariwarId) });
+    },
+  });
+}
+
+// ── Story 13.1f — the appeal record (AD7, AD13). The lists DECRYPT names behind an audit line: ⛔ background refetching, and `gcTime: 0`
+// so a closed list keeps no names ([[project_query_gctime_blinds_removal_tests]]). ──
+
+/** One worker's appeals (no name, no audit line). */
+export function useFieldWorkerEndingAppealsOf(pariwarId: string, fieldWorkerId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'of', fieldWorkerId] as const,
+    queryFn: () => api.getFieldWorkerEndingAppealsOf(pariwarId, fieldWorkerId),
+    enabled,
+    retry: false,
+  });
+}
+
+/** The appeal list (a page at a time). */
+export function useFieldWorkerEndingAppeals(pariwarId: string, state: import('@twt/contracts').FieldWorkerEndingAppealState | null) {
+  return useInfiniteQuery({
+    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'list', state ?? 'all'] as const,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => api.listFieldWorkerEndingAppeals(pariwarId, { ...(state !== null ? { state } : {}), ...(pageParam !== undefined ? { cursor: pageParam } : {}) }),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
+}
+
+/** The ended workers this officer can record an appeal for. */
+export function useAppealEligibleFieldWorkers(pariwarId: string, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'eligible'] as const,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => api.listAppealEligibleFieldWorkers(pariwarId, pageParam !== undefined ? { cursor: pageParam } : {}),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    enabled,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+  });
+}
+
+/** What an appeal act takes: lodge (a worker + the ending), decide or withdraw (an appeal), and the attempt's key. */
+export type FieldWorkerAppealActInput =
+  | {
+      act: 'lodge';
+      fieldWorkerId: string;
+      idempotencyKey: string;
+      body: { expected_ending_version: number; received_on: string; received_via: import('@twt/contracts').FieldWorkerEndingAppealChannel };
+    }
+  | { act: 'decide'; appealId: string; fieldWorkerId: string; idempotencyKey: string; body: { outcome: import('@twt/contracts').FieldWorkerEndingAppealOutcome; decided_on: string } }
+  | { act: 'withdraw'; appealId: string; fieldWorkerId: string; idempotencyKey: string; decidedOn: string };
+
+/** Lodge / decide / withdraw — one mutation; an ALLOWED decision writes the 200's restored worker into the identity cache (⛔ a refetch). */
+export function useFieldWorkerAppealAct(pariwarId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    networkMode: 'always',
+    mutationFn: async (input: FieldWorkerAppealActInput) => {
+      switch (input.act) {
+        case 'lodge':
+          return { appeal: await api.lodgeFieldWorkerEndingAppeal(pariwarId, input.fieldWorkerId, input.body, input.idempotencyKey), worker: null };
+        case 'decide':
+          return api.decideFieldWorkerEndingAppeal(pariwarId, input.appealId, input.body, input.idempotencyKey);
+        case 'withdraw':
+          return { appeal: await api.withdrawFieldWorkerEndingAppeal(pariwarId, input.appealId, input.decidedOn, input.idempotencyKey), worker: null };
+      }
+    },
+    onSuccess: (result, input) => {
+      const worker = result.worker;
+      if (worker !== null) {
+        qc.setQueryData(fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId), (old: import('@twt/contracts').FieldWorkerIdentityResponse | undefined) =>
+          old === undefined ? old : { ...old, current_state: worker.current_state, district: worker.district, state_event_version: worker.state_event_version },
+        );
+        void qc.invalidateQueries({ queryKey: fieldWorkerListsKey(pariwarId) });
+        void qc.invalidateQueries({ queryKey: fieldWorkerLogKey(pariwarId, input.fieldWorkerId) });
+      }
+      void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
+    },
+    onError: (err) => {
+      if (fieldWorkerListIsStale(err)) void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
     },
   });
 }

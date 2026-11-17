@@ -37,6 +37,8 @@ export interface WorkerSummary {
   readonly current_state: FieldWorkerState;
   readonly district: string;
   readonly created_at: string;
+  /** Story 13.1f (AD6) — the version an undo or a lodge names the ending by (copied from each act's 200 — G24). */
+  readonly state_event_version: number;
 }
 
 export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'approvals', children }: WorkerDetailProps): ReactElement {
@@ -121,7 +123,7 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
               </>
             )}
           </dl>
-          {children?.(w.name, { current_state: w.current_state, district: w.district, created_at: w.created_at })}
+          {children?.(w.name, { current_state: w.current_state, district: w.district, created_at: w.created_at, state_event_version: w.state_event_version })}
         </>
       )}
       <button type="button" className="self-start text-sm underline" onClick={close} data-testid="fw-detail-close">

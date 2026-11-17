@@ -29,7 +29,7 @@ export interface Guidance {
 }
 
 /** Where the admin was when the server refused — the 403 line says what THAT action needs (review CR11). */
-export type Surface = 'register' | 'approvals' | 'find' | 'code' | 'history' | 'requests';
+export type Surface = 'register' | 'approvals' | 'find' | 'code' | 'history' | 'requests' | 'appeals';
 
 const NO_ACCESS_KEY: Record<Surface, string> = {
   register: 'fw.noAccessRegister',
@@ -38,6 +38,7 @@ const NO_ACCESS_KEY: Record<Surface, string> = {
   code: 'fw.noAccessCode',
   history: 'fw.history.noAccess',
   requests: 'fw.requests.detail.noAccess',
+  appeals: 'fw.appeals.noAccess', // Story 13.1f
 };
 
 const BY_CODE: Record<string, () => Guidance> = {
@@ -73,6 +74,18 @@ const BY_CODE: Record<string, () => Guidance> = {
   // (pariwar.not_found)". ⛔ NOT `noAccess`: that flag means a 403, and its consumers print a ROLE sentence for it — "choose a district you
   // manage" on the requests page, `noAccessText` on `WorkerList` (code review RP-3). It says what it is, in its own words.
   'pariwar.not_found': () => ({ text: t('fw.err.noPariwar') }),
+  // Story 13.1f — the undo, the appeal and the link (AD14; `-465` Q6 B).
+  'field_worker.ending_changed': () => ({ text: t('fw.err.endingChanged'), retryable: true }),
+  'field_worker.number_registered_again': () => ({ text: t('fw.err.numberRegisteredAgain') }),
+  'field_worker.appeal_refused_by_panel': () => ({ text: t('fw.err.appealRefusedByPanel') }),
+  'field_worker.appeal_open': () => ({ text: t('fw.err.appealOpen') }),
+  'field_worker.appeal_already_decided': () => ({ text: t('fw.err.appealAlreadyDecided') }),
+  'field_worker.appeal_not_open': () => ({ text: t('fw.err.appealNotOpen'), stale: true }),
+  'field_worker.appeal_wrong_hearer': () => ({ text: t('fw.err.appealWrongHearer') }),
+  'field_worker.appeal_decider_is_ender': () => ({ text: t('fw.err.appealDeciderIsEnder') }),
+  'field_worker.appeal_date_invalid': () => ({ text: t('fw.err.appealDateInvalid') }),
+  'field_worker.appeal_not_found': () => ({ text: t('fw.err.appealNotFound'), stale: true }),
+  'field_worker.link_invalid': () => ({ text: t('fw.err.linkInvalid') }),
 };
 
 /** Story 13.1d — the acts on a move request (AD10). */
@@ -135,7 +148,7 @@ export function noticeViewRequestId(n: { kind: string; move_request_id: string |
 }
 
 /** Story 13.1c (AD8) — the four acts on an opened worker. */
-export type WorkerAct = 'move' | 'suspend' | 'reactivate' | 'end';
+export type WorkerAct = 'move' | 'suspend' | 'reactivate' | 'end' | 'undo';
 
 /**
  * An act's refusal: its OWN no-access line (403), the AD8 "moved by someone else" line (409 `authorization_stale`), a "status
@@ -166,7 +179,8 @@ export function reasonLabel(code: string): string {
 
 /** An officer's role, as the history shows it. */
 export function roleLabel(role: string | null): string {
-  return role === 'district_admin' || role === 'pariwar_admin' || role === 'super_admin' ? t(`fw.role.${role}`) : t('fw.role.unknown');
+  // Story 13.1f — an appeal decided by the Panel is signed `trustee_panel`: shown, never "role not recorded".
+  return role === 'district_admin' || role === 'pariwar_admin' || role === 'super_admin' || role === 'trustee_panel' ? t(`fw.role.${role}`) : t('fw.role.unknown');
 }
 
 /** The India calendar day (`YYYY-MM-DD`) of an instant. */

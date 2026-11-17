@@ -37,6 +37,19 @@
 // 13.1's lost-201 residual (its TR11) is answered by 13.1a's list: a registration whose 201 was lost shows in `pending_kyc`.
 
 import {
+  DecideFieldWorkerEndingAppealRequest,
+  DecideFieldWorkerEndingAppealResponse,
+  FieldWorkerAppealEligiblePage,
+  FieldWorkerAppealEligibleQuery,
+  FieldWorkerEndingAppeal,
+  FieldWorkerEndingAppealListQuery,
+  FieldWorkerEndingAppealPage,
+  FieldWorkerEndingAppealParams,
+  FieldWorkerEndingAppealsOf,
+  FieldWorkerEndingAppealsOfQuery,
+  LodgeFieldWorkerEndingAppealRequest,
+  UndoFieldWorkerEndingRequest,
+  WithdrawFieldWorkerEndingAppealRequest,
   FieldWorkerMoveRequestActRequest,
   FieldWorkerMoveRequestDetail,
   FieldWorkerMoveRequestListQuery,
@@ -77,13 +90,24 @@ import { requireAdminSession } from '../auth/shared/session-guard.js';
 import { requirePermissionHook } from '../rbac/index.js';
 import { FIELD_WORKER_APPROVE_KEY, createFieldWorkerApprovalHandlers } from './approval-handlers.js';
 import {
+  FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY,
+  FIELD_WORKER_HEAR_ENDING_APPEAL_KEY,
+  FIELD_WORKER_READ_ENDING_APPEALS_KEY,
+  createFieldWorkerEndingAppealHandlers,
+} from './ending-appeal-handlers.js';
+import { FIELD_WORKER_UNDO_ENDING_KEY, createFieldWorkerUndoHandlers } from './undo-handlers.js';
+import {
+  endingAppealGateDistrict,
   fieldWorkerGateDistrict,
   listGateDimension,
   listGateValue,
   loadFieldWorkerGateDistrict,
   loadMoveRequestGate,
+  loadEndingAppealGate,
+  loadEndingAppealLodgeGate,
   loadMoveRequestOpenTarget,
   moveRequestGateDistrict,
+  requireEndingAppealHearer,
   type MoveRequestGateFor,
 } from './gate.js';
 import { FIELD_WORKER_REGISTER_KEY, createFieldWorkerHandlers } from './handlers.js';
@@ -282,6 +306,51 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
     reads.readCode,
   );
 
+  // ── Story 13.1f (AD13) — the appeal record's STATIC routes, BEFORE `/:fieldWorkerId` (13.1d's convention: a static segment beats a
+  // parametric one, and the order keeps that visible). Every GET carries `limits.read` (13.1d AC7 (d)). ──
+  const appeals = createFieldWorkerEndingAppealHandlers(deps);
+  const undos = createFieldWorkerUndoHandlers(deps);
+  const readAppealsAtList = requirePermissionHook(deps, FIELD_WORKER_READ_ENDING_APPEALS_KEY, { resolveDimension: listGateDimension, resolveValue: listGateValue });
+  // AD9 — the two hear hooks are BUILT here with their fixed keys; the dispatcher invokes the one matching the stashed hearer.
+  const hearHooks = {
+    pariwarAdmin: requirePermissionHook(deps, FIELD_WORKER_HEAR_ENDING_APPEAL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
+    panel: requirePermissionHook(deps, FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
+  };
+  r.get(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals',
+    {
+      schema: { params: PariwarParam, querystring: FieldWorkerEndingAppealListQuery, response: { 200: FieldWorkerEndingAppealPage }, tags: [TAG] },
+      config: { rateLimit: limits.read },
+      preHandler: [session, scope, readAppealsAtList],
+    },
+    appeals.list,
+  );
+  r.get(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals/eligible',
+    {
+      schema: { params: PariwarParam, querystring: FieldWorkerAppealEligibleQuery, response: { 200: FieldWorkerAppealEligiblePage }, tags: [TAG] },
+      config: { rateLimit: limits.read },
+      preHandler: [session, scope, readAppealsAtList],
+    },
+    appeals.eligible,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/decide',
+    {
+      schema: { params: FieldWorkerEndingAppealParams, body: DecideFieldWorkerEndingAppealRequest, response: { 200: DecideFieldWorkerEndingAppealResponse }, tags: [TAG] },
+      preHandler: [session, scope, loadEndingAppealGate(), requireEndingAppealHearer(hearHooks)],
+    },
+    appeals.decide,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/withdraw',
+    {
+      schema: { params: FieldWorkerEndingAppealParams, body: WithdrawFieldWorkerEndingAppealRequest, response: { 200: FieldWorkerEndingAppeal }, tags: [TAG] },
+      preHandler: [session, scope, loadEndingAppealGate(), requireEndingAppealHearer(hearHooks)],
+    },
+    appeals.withdraw,
+  );
+
   // ── Story 13.1c (AD6) — the lifecycle acts and the log. The bodies are validated (400 `request.validation`) BEFORE the hooks run:
   // a reason outside the act's own list never reaches the domain (its 422 `reason_invalid` stays mapped but unreachable here). ──
   const lifecycle = createFieldWorkerLifecycleHandlers(deps);
@@ -327,6 +396,34 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
       preHandler: perWorker(FIELD_WORKER_READ_LOG_KEY),
     },
     logs.log,
+  );
+
+  // ── Story 13.1f (AD6, AD9, AD13) — the per-worker undo and appeal routes ──
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/undo-ending',
+    {
+      schema: { params: FieldWorkerParams, body: UndoFieldWorkerEndingRequest, response: { 200: FieldWorkerLifecycleResult }, tags: [TAG] },
+      preHandler: perWorker(FIELD_WORKER_UNDO_ENDING_KEY),
+    },
+    undos.undo,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/ending-appeals',
+    {
+      schema: { params: FieldWorkerParams, body: LodgeFieldWorkerEndingAppealRequest, response: { 201: FieldWorkerEndingAppeal }, tags: [TAG] },
+      // The loader READS THE WORKER (AD17): a missing or foreign worker is 403, never 404 (13.1d CR24).
+      preHandler: [session, scope, loadEndingAppealLodgeGate(), requireEndingAppealHearer(hearHooks)],
+    },
+    appeals.lodge,
+  );
+  r.get(
+    '/api/v1/p/:pariwarId/field-workers/:fieldWorkerId/ending-appeals',
+    {
+      schema: { params: FieldWorkerParams, querystring: FieldWorkerEndingAppealsOfQuery, response: { 200: FieldWorkerEndingAppealsOf }, tags: [TAG] },
+      config: { rateLimit: limits.read },
+      preHandler: perWorker(FIELD_WORKER_READ_ENDING_APPEALS_KEY),
+    },
+    appeals.ofWorker,
   );
 
   // Story 13.1d (AD5, AD6) — open a move request: the target is the END the officer holds (`loadMoveRequestOpenTarget`, grant-aware).

@@ -38,6 +38,22 @@ export function codeNotAvailableError(currentState: string): ApiError {
 }
 
 /**
+ * Story 13.1f (AD11; `-454` Q3 A) — the 409 when ENDED records of this Pariwar hold the number being registered: their id, end date and
+ * reason, information only ("the officer still decides"). The handler's OWN row (a domain error carries no HTTP, so no `details`). ⛔ A
+ * name, a district or an officer.
+ */
+export function numberPreviouslyEndedError(
+  previousEndings: readonly { field_worker_id: string; ended_on: string; reason_code: string }[],
+): ApiError {
+  return new ApiError(
+    409,
+    'field_worker.number_previously_ended',
+    'This number belonged to a field worker of this Pariwar whose work has ended — review, then register again',
+    { previous_endings: previousEndings },
+  );
+}
+
+/**
  * Map a domain error to its transport error and THROW it; rethrow anything else unchanged. ⛔ Returns.
  */
 export function mapFieldWorkerError(err: unknown): never {
@@ -116,6 +132,52 @@ export function mapFieldWorkerError(err: unknown): never {
   }
   if (err instanceof fieldWorker.FieldWorkerMoveRequestStreamConcurrencyError) {
     throw new ApiError(409, 'field_worker.stream_conflict', 'This move request was changed at the same time — reload and try again');
+  }
+  // ── Story 13.1f — the undo, the appeal, the link (the story's "Errors" table; `-465` Q6 B) ──
+  if (err instanceof fieldWorker.FieldWorkerEndingChangedError) {
+    throw new ApiError(409, 'field_worker.ending_changed', 'This ending has changed since you opened it — reload and try again');
+  }
+  if (err instanceof fieldWorker.FieldWorkerNumberRegisteredAgainError) {
+    throw new ApiError(
+      409,
+      'field_worker.number_registered_again',
+      'This number now belongs to another registration. End that registration first, if it was made in error, then undo this ending.',
+    );
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealRefusedByPanelError) {
+    throw new ApiError(
+      409,
+      'field_worker.appeal_refused_by_panel',
+      "The Trustee Panel heard this worker's appeal and refused it. Only a new decision of the Panel can restore them.",
+    );
+  }
+  if (err instanceof fieldWorker.FieldWorkerLinkInvalidError) {
+    throw new ApiError(422, 'field_worker.link_invalid', 'The record to link is not an ended record of this Pariwar with the same number');
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealOpenError) {
+    throw new ApiError(409, 'field_worker.appeal_open', 'This worker already has an appeal waiting for a decision');
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealAlreadyDecidedError) {
+    throw new ApiError(409, 'field_worker.appeal_already_decided', 'An appeal against this ending has already been heard and refused');
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealNotOpenError) {
+    throw new ApiError(409, 'field_worker.appeal_not_open', 'This appeal is no longer waiting for a decision — reload the list', { state: err.state });
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealWrongHearerError) {
+    throw new ApiError(409, 'field_worker.appeal_wrong_hearer', 'This appeal is heard by someone else');
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealDeciderIsEnderError) {
+    throw new ApiError(409, 'field_worker.appeal_decider_is_ender', "The officer who ended this worker cannot decide or withdraw their appeal");
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealDateInvalidError) {
+    throw new ApiError(422, 'field_worker.appeal_date_invalid', 'The date is not a real date, or is outside the days it may be');
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealMissingError) {
+    // Unreachable through the gate (a missing appeal is 403 there) — a lost race only; appeals are never deleted.
+    throw new ApiError(404, 'field_worker.appeal_not_found', 'This appeal was not found');
+  }
+  if (err instanceof fieldWorker.FieldWorkerAppealStreamConcurrencyError) {
+    throw new ApiError(409, 'field_worker.stream_conflict', 'This appeal was changed at the same time — reload and try again');
   }
   if (err instanceof FieldWorkerStateDirectWriteError) {
     // The 0200 trigger — a BUG (the projector writes under the guard). The detail carries ids and states only.

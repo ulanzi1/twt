@@ -60,7 +60,9 @@ describe.skipIf(!hasDatabase)('Story 13.1c — move, suspend, reactivate and end
   /** Every 200 here: the five keys, and ⛔ a name, a mobile or a code anywhere in the body (I6 — an absence assertion on a 200, TR7). */
   async function expectCleanResult(r: { statusCode: number; body: string }, id: string, expected: Json): Promise<void> {
     expect(r.statusCode, r.body).toBe(200);
-    expect(json(r)).toEqual({ field_worker_id: id, ...expected });
+    // Story 13.1f (AD6, G24) — every act's 200 carries the act's event version (= the stream's head after it).
+    const head = (await q<{ v: string }>('SELECT max(event_version)::text AS v FROM events_log WHERE stream_id = $1', [id]))[0]!.v;
+    expect(json(r)).toEqual({ field_worker_id: id, ...expected, state_event_version: Number(head) });
     const code = (await codeOf(id))[0]?.code;
     for (const secret of [NAME, MOBILE_DIGITS, code ?? 'no-code']) expect(r.body).not.toContain(secret);
   }
@@ -257,7 +259,11 @@ describe.skipIf(!hasDatabase)('Story 13.1c — move, suspend, reactivate and end
       expect(again.statusCode, again.body).toBe(409);
       expect(errOf(again).code).toBe('field_worker.mobile_already_registered');
       expect((await h.terminate(admin.client, p, id, { reason_code: reason, ended_on: await istToday() })).statusCode).toBe(200);
-      const fresh = await h.register(admin.client, p, { name: NAME, mobile, district: 'Patna' });
+      // Story 13.1f (AD11) — the ended record's number is SHOWN first (409, information only); registered on the second submit.
+      const shown = await h.register(admin.client, p, { name: NAME, mobile, district: 'Patna' });
+      expect(shown.statusCode, shown.body).toBe(409);
+      expect(errOf(shown).code).toBe('field_worker.number_previously_ended');
+      const fresh = await h.register(admin.client, p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true });
       expect(fresh.statusCode, fresh.body).toBe(201);
       expect(json(fresh)['field_worker_id']).not.toBe(id);
     }

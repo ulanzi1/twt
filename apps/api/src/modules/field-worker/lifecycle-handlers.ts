@@ -24,8 +24,9 @@
 //   3. ONE `audit.withCompensatingAudit` whose `mutate` runs the command (with the intent's id — the row's `audit_id` afterwards)
 //      and COMMITS. A refusal only the lock sees (a concurrent act) throws inside `mutate`: the transaction rolls back and the
 //      `_rolled_back` twin is written (TR2). Errors propagate (13.1a TR4) to `mapFieldWorkerError`.
-// ⚠ The terminate route is built and merged, but is not used on a real worker before row 13-1f's undo and appeal record exist
-// (roster Row 50 (f), decision `-455`). Do NOT write the word that names how codes are made anywhere in this file, not even in a
+// ⚠ The terminate route is not used on a real worker before row 13-1f's undo and appeal record are DEPLOYED (roster Row 50 (f), decision
+// `-455`, as amended by `-464`). Story 13.1f: terminate fixes the appeal's hearer at the act (AD8); every act's 200 carries the event's
+// `state_event_version` (AD6, G24). Do NOT write the word that names how codes are made anywhere in this file, not even in a
 // comment: the reach fence (AT9) rejects it in a field-worker file.
 
 import type {
@@ -157,7 +158,14 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
         // Read the row the lock holds NOW, on this same transaction (review CR10) — its state, reason and end date are the stored ones.
         const locked = await fieldWorker.getFieldWorker(ctx.scopeTx.tx, base.pariwarId, base.fieldWorkerId);
         if (locked === null) throw new fieldWorker.FieldWorkerGenesisMissingError(base.fieldWorkerId);
-        return { field_worker_id: locked.fieldWorkerId, district: locked.district, current_state: locked.currentState, state_reason_code: locked.stateReasonCode, ended_on: locked.endedOn };
+        return {
+          field_worker_id: locked.fieldWorkerId,
+          district: locked.district,
+          current_state: locked.currentState,
+          state_reason_code: locked.stateReasonCode,
+          ended_on: locked.endedOn,
+          state_event_version: locked.stateEventVersion, // Story 13.1f (AD6, G24)
+        };
       },
     });
   }
@@ -169,7 +177,7 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
       hashShape: { reason_code: body.reason_code },
       command: async (ctx, base, worker) => {
         const r = await fieldWorker.suspendFieldWorker(ctx.scopeTx.client, { ...base, reasonCode: body.reason_code });
-        return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: body.reason_code, ended_on: null };
+        return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: body.reason_code, ended_on: null, state_event_version: r.eventVersion };
       },
     });
   }
@@ -180,7 +188,7 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
       hashShape: {},
       command: async (ctx, base, worker) => {
         const r = await fieldWorker.reactivateFieldWorker(ctx.scopeTx.client, base);
-        return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: null, ended_on: null };
+        return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: null, ended_on: null, state_event_version: r.eventVersion };
       },
     });
   }
@@ -199,13 +207,39 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
         if (!fieldWorker.isCalendarDateString(body.ended_on)) throw new fieldWorker.FieldWorkerEndedOnInvalidError(worker.fieldWorkerId, 'missing_or_malformed');
       },
       command: async (ctx, base, worker) => {
-        const r = await fieldWorker.terminateFieldWorker(ctx.scopeTx.client, { ...base, reasonCode: body.reason_code, endedOn: body.ended_on });
-        return { field_worker_id: worker.fieldWorkerId, district: r.district, current_state: r.state, state_reason_code: body.reason_code, ended_on: body.ended_on };
+        const r = await fieldWorker.terminateFieldWorker(ctx.scopeTx.client, {
+          ...base,
+          reasonCode: body.reason_code,
+          endedOn: body.ended_on,
+          appealHeardBy: appealHearerAtEnding(request.scopeGrants ?? [], ctx.pariwarId),
+        });
+        return {
+          field_worker_id: worker.fieldWorkerId,
+          district: r.district,
+          current_state: r.state,
+          state_reason_code: body.reason_code,
+          ended_on: body.ended_on,
+          state_event_version: r.eventVersion,
+        };
       },
     });
   }
 
   return { move, suspend, reactivate, terminate };
+}
+
+/**
+ * Story 13.1f (AD8; 13.1c C2 (ii), R2-9; the Panel's `-465` Q4 A) — who hears an appeal against THIS ending, fixed at the act from ONE
+ * property of the actor's grants loaded for this request: a `pariwar_admin` grant in this Pariwar (whatever else they hold — a dual-role
+ * officer counts as a Pariwar Admin), or a global `super_admin` ⇒ the Trustee Panel; anyone else ⇒ the Pariwar Admin. ⛔ The
+ * snapshot's `role` (the most specific grant's — G6), ⛔ recomputed later. This reads a PROPERTY of `scopeGrants`; the record of who
+ * authorized stays `request.authorizations[key]` (types.ts TR13).
+ */
+export function appealHearerAtEnding(grants: readonly rbac.EffectiveGrant[], pariwarId: string): 'pariwar_admin' | 'trustee_panel' {
+  const heardByPanel = grants.some(
+    (g) => (g.role === 'pariwar_admin' && g.pariwarId === pariwarId) || (g.role === 'super_admin' && g.scopeDimension === 'global'),
+  );
+  return heardByPanel ? 'trustee_panel' : 'pariwar_admin';
 }
 
 /** What every lifecycle command takes besides its own fields. */

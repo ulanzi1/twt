@@ -165,6 +165,27 @@ export async function createHarness(): Promise<Harness> {
   };
   const seen = (c: Client, p: string, noticeIds: string[]) =>
     c.inject({ method: 'POST', url: `/api/v1/p/${p}/field-workers/notices/seen`, payload: { notice_ids: noticeIds } });
+  // Story 13.1f — the undo and the appeal record (AD6, AD7, AD13).
+  const undoEnding = (c: Client, p: string, workerId: string, expectedEndingVersion: number, key: string | null = randomUUID()) =>
+    jsonPost(c, `/api/v1/p/${p}/field-workers/${workerId}/undo-ending`, JSON.stringify({ expected_ending_version: expectedEndingVersion }), key);
+  const lodgeAppeal = (c: Client, p: string, workerId: string, body: Json, key: string | null = randomUUID()) =>
+    jsonPost(c, `/api/v1/p/${p}/field-workers/${workerId}/ending-appeals`, JSON.stringify(body), key);
+  const decideAppeal = (c: Client, p: string, appealId: string, body: Json, key: string | null = randomUUID()) =>
+    jsonPost(c, `/api/v1/p/${p}/field-workers/ending-appeals/${appealId}/decide`, JSON.stringify(body), key);
+  const withdrawAppeal = (c: Client, p: string, appealId: string, body: Json, key: string | null = randomUUID()) =>
+    jsonPost(c, `/api/v1/p/${p}/field-workers/ending-appeals/${appealId}/withdraw`, JSON.stringify(body), key);
+  const listAppeals = (c: Client, p: string, query: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(query).toString();
+    return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/ending-appeals${qs === '' ? '' : `?${qs}`}` });
+  };
+  const listEligible = (c: Client, p: string, query: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(query).toString();
+    return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/ending-appeals/eligible${qs === '' ? '' : `?${qs}`}` });
+  };
+  const appealsOf = (c: Client, p: string, workerId: string, query: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(query).toString();
+    return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/${workerId}/ending-appeals${qs === '' ? '' : `?${qs}`}` });
+  };
   async function registered(c: Client, p: string, body: Json): Promise<string> {
     const r = await register(c, p, body);
     expect(r.statusCode, r.body).toBe(201);
@@ -185,6 +206,10 @@ export async function createHarness(): Promise<Harness> {
       await c.query('DELETE FROM field_worker_notices WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM field_worker_move_requests WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1) AND stream_id = ANY($2)', [createdPariwars, requestStreams]);
+      // Story 13.1f — an appeal is its OWN stream; its events and its row go before the workers (G29).
+      const appealStreams = (await c.query<{ id: string }>('SELECT appeal_id AS id FROM field_worker_ending_appeals WHERE pariwar_id = ANY($1)', [createdPariwars])).rows.map((r) => r.id);
+      await c.query('DELETE FROM field_worker_ending_appeals WHERE pariwar_id = ANY($1)', [createdPariwars]);
+      await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1) AND stream_id = ANY($2)', [createdPariwars, appealStreams]);
       await c.query('DELETE FROM field_worker_attribution_codes WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM attribution_code_allocation_flags WHERE pariwar_id = ANY($1)', [createdPariwars]);
       // Story 13.1b — before the workers: replica mode disables the FK, so a `due` row would outlive them for a later sweep to find.
@@ -235,6 +260,13 @@ export async function createHarness(): Promise<Harness> {
     request,
     notices,
     seen,
+    undoEnding,
+    lodgeAppeal,
+    decideAppeal,
+    withdrawAppeal,
+    listAppeals,
+    listEligible,
+    appealsOf,
     cleanup,
   };
 }

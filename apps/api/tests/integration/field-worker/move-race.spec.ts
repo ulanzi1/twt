@@ -147,7 +147,7 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
       h.move(admin.client, p, id, { from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' }),
     );
     expect(r.statusCode, r.body).toBe(200);
-    expect(json(r)).toEqual({ field_worker_id: id, district: 'Gaya', ended_on: null, ...expected });
+    expect(json(r)).toEqual({ field_worker_id: id, district: 'Gaya', ended_on: null, ...expected, state_event_version: expect.any(Number) }); // Story 13.1f (G24)
     // CONTROL — the body equals the stored row (the holder's act committed first; the move kept its state and reason).
     const stored = (await h.td.pool.query<{ current_state: string; state_reason_code: string | null; district: string }>('SELECT current_state, state_reason_code, district FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!;
     expect(stored).toEqual({ district: 'Gaya', ...expected });

@@ -169,6 +169,7 @@ export function createFieldWorkerReadHandlers(deps: AppDeps) {
             code_sms_status: smsStatuses.get(fieldWorkerId) ?? null,
             mobile,
             approved_by_display: sealed.approvedByDisplay,
+            state_event_version: v.stateEventVersion, // Story 13.1f (AD6) — what an undo or an appeal names the ending by
           };
         },
       });

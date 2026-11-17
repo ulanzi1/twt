@@ -80,8 +80,11 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (live DB, o
       await c.query('DELETE FROM field_worker_notice_emails WHERE pariwar_id = ANY($1::uuid[])', [pariwars]);
       await c.query('DELETE FROM field_worker_notices WHERE pariwar_id = ANY($1::uuid[])', [pariwars]);
       await c.query('DELETE FROM field_worker_move_requests WHERE pariwar_id = ANY($1::uuid[])', [pariwars]);
+      // Story 13.1f (G29) — an appeal row and its own stream go before the workers.
+      const appeals = (await c.query<{ id: string }>('SELECT appeal_id AS id FROM field_worker_ending_appeals WHERE pariwar_id = ANY($1::uuid[])', [pariwars])).rows.map((r) => r.id);
+      await c.query('DELETE FROM field_worker_ending_appeals WHERE pariwar_id = ANY($1::uuid[])', [pariwars]);
       await c.query('DELETE FROM field_workers WHERE pariwar_id = ANY($1::uuid[])', [pariwars]);
-      await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1::uuid[]) AND stream_id = ANY($2::uuid[])', [pariwars, [...requests, ...workers]]);
+      await c.query('DELETE FROM events_log WHERE pariwar_id = ANY($1::uuid[]) AND stream_id = ANY($2::uuid[])', [pariwars, [...requests, ...appeals, ...workers]]);
       await c.query('DELETE FROM role_grants WHERE user_id = ANY($1::uuid[])', [users]);
       await c.query('DELETE FROM admin_credentials WHERE user_id = ANY($1::uuid[])', [users]);
       await c.query('DELETE FROM users WHERE id = ANY($1::uuid[])', [users]);

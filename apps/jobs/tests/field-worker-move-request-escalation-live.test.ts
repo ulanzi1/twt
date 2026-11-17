@@ -51,8 +51,11 @@ describe.skipIf(!hasDatabase)('Story 13.1d — the move-request escalation sweep
       await c.query('DELETE FROM field_worker_notice_emails WHERE pariwar_id::text = ANY($1)', [pariwars]);
       await c.query('DELETE FROM field_worker_notices WHERE pariwar_id::text = ANY($1)', [pariwars]);
       await c.query('DELETE FROM field_worker_move_requests WHERE pariwar_id::text = ANY($1)', [pariwars]);
+      // Story 13.1f (G29) — an appeal row and its own stream go before the workers.
+      const appeals = (await c.query<{ id: string }>('SELECT appeal_id AS id FROM field_worker_ending_appeals WHERE pariwar_id::text = ANY($1)', [pariwars])).rows.map((r) => r.id);
+      await c.query('DELETE FROM field_worker_ending_appeals WHERE pariwar_id::text = ANY($1)', [pariwars]);
       await c.query('DELETE FROM field_workers WHERE pariwar_id::text = ANY($1)', [pariwars]);
-      await c.query('DELETE FROM events_log WHERE pariwar_id::text = ANY($1) AND stream_id::text = ANY($2)', [pariwars, [...requests, ...workers]]);
+      await c.query('DELETE FROM events_log WHERE pariwar_id::text = ANY($1) AND stream_id::text = ANY($2)', [pariwars, [...requests, ...appeals, ...workers]]);
       await c.query('DELETE FROM role_grants WHERE user_id::text = ANY($1)', [users]);
       await c.query('DELETE FROM users WHERE id::text = ANY($1)', [users]);
       await c.query('COMMIT');

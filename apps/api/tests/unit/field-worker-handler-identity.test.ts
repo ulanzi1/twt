@@ -33,6 +33,8 @@ vi.mock('@twt/domain', async (importOriginal) => {
       ...actual.fieldWorker,
       assertDistrictRecorded: vi.fn(async () => undefined),
       findLiveFieldWorkerByMobileIndex: vi.fn(async () => null),
+      // Story 13.1f (AD11) — no ENDED record holds the number (the shown-number pre-read).
+      findEndedFieldWorkersByMobileIndex: vi.fn(async () => []),
       registerFieldWorker: vi.fn(async (_client: unknown, input: unknown) => {
         calls.register.push(input);
         return { eventId: 'e', eventVersion: 1, state: 'pending_kyc', kycStatus: 'pending' };

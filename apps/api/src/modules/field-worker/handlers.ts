@@ -42,6 +42,7 @@ import {
   allocateAttributionCodeForRequest,
   flagAllocationExhaustedForRequest,
 } from './attribution-code-access.js';
+import { numberPreviouslyEndedError } from './errors.js';
 import { sealFieldWorkerIdentity } from './field-worker-crypto.js';
 import { createFieldWorkerWriteSupport, payloadHash } from './write-support.js';
 
@@ -213,6 +214,38 @@ export function createFieldWorkerHandlers(deps: AppDeps) {
         const live = await fieldWorker.findLiveFieldWorkerByMobileIndex(ctx.scopeTx.tx, pariwarId, sealed.mobileBlindIndex);
         if (live !== null) throw new fieldWorker.FieldWorkerMobileAlreadyRegisteredError(ctx.pariwarId);
 
+        // Story 13.1f (AD11; `-454` Q3 A, information only — "the officer still decides") — ENDED records of this Pariwar holding the
+        // number (every district; the blind index — nothing is decrypted). Shown ONCE: unless the officer re-submits with
+        // `previous_endings_seen: true`, the route answers 409 with their id, end date and reason. It is the ONE pre-read refusal that
+        // writes an audit line (I7 — a second officer learns of an earlier ending): on the SERVICE pool, ⛔ the scope transaction (which
+        // rolls back with the 409), AWAITED before the answer — if it fails, a 500 and nothing is disclosed.
+        const previous = await fieldWorker.findEndedFieldWorkersByMobileIndex(ctx.scopeTx.tx, pariwarId, sealed.mobileBlindIndex);
+        if (previous.length > 0 && body.previous_endings_seen !== true) {
+          await audit.writeAuditEntry(deps.servicePool, {
+            pariwarId: ctx.pariwarId,
+            actorId: ctx.actorId,
+            actorRole: authorization.role,
+            action: 'field_worker.previous_endings_shown',
+            resourceLocator: `field_worker/${previous[0]!.fieldWorkerId}`,
+            requestPayloadHash: payloadHash({ ended: previous.map((e) => e.fieldWorkerId) }),
+            responseStatus: 409,
+            traceId: ctx.traceId,
+          });
+          throw numberPreviouslyEndedError(previous.map((e) => ({ field_worker_id: e.fieldWorkerId, ended_on: e.endedOn, reason_code: e.reasonCode })));
+        }
+        // Story 13.1f (AD12; `-454` Q2 B) — the LINK, chosen by the officer: one of this Pariwar's TERMINATED records with the SAME number,
+        // re-checked here under `FOR SHARE` BEFORE the genesis INSERT (TR15 — a concurrent undo of that record finishes first; without
+        // the lock the INSERT's FK check and the undo's UPDATE deadlock). Through a DOMAIN read — the API never queries the table.
+        let previousFieldWorkerId: ids.FieldWorkerId | undefined;
+        if (body.link_to !== undefined) {
+          const linkTo = ids.fieldWorkerId(body.link_to);
+          const candidate = await fieldWorker.lockFieldWorkerForLink(ctx.scopeTx.tx, pariwarId, linkTo);
+          if (candidate === null || candidate.currentState !== 'terminated' || candidate.mobileBlindIndex !== sealed.mobileBlindIndex) {
+            throw new fieldWorker.FieldWorkerLinkInvalidError(body.link_to);
+          }
+          previousFieldWorkerId = linkTo;
+        }
+
         return audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
             pariwarId: ctx.pariwarId,
@@ -220,7 +253,7 @@ export function createFieldWorkerHandlers(deps: AppDeps) {
             actorRole: authorization.role,
             action: 'field_worker.registered',
             resourceLocator: `field_worker/${fieldWorkerId}`,
-            requestPayloadHash: payloadHash({ field_worker_id: fieldWorkerId, district: body.district }),
+            requestPayloadHash: payloadHash({ field_worker_id: fieldWorkerId, district: body.district, link_to: body.link_to ?? null }),
             traceId: ctx.traceId,
           },
           mutate: async ({ auditId }) => {
@@ -236,6 +269,7 @@ export function createFieldWorkerHandlers(deps: AppDeps) {
               registeredByDisplay,
               district: body.district,
               authorization,
+              ...(previousFieldWorkerId === undefined ? {} : { previousFieldWorkerId }),
             });
             try {
               // The SAME transaction (I11). The returned code is ⛔ copied anywhere (QE22).

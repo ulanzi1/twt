@@ -137,3 +137,68 @@ export function loadMoveRequestGate(key: string, gateFor: MoveRequestGateFor): p
 export function moveRequestGateDistrict(request: FastifyRequest): string | null {
   return request.moveRequestGateDistrict ?? null;
 }
+
+// ── Story 13.1f (AD9, AD13) — the appeal's gate targets and the hearer dispatcher ──────────────────────────────────────────────
+// TWO hear keys, one per hearer (Q-4 A — a shared key could not record that the Panel acted, G12). The loader stashes the hearer and the
+// worker's district; `requireEndingAppealHearer` invokes the matching key's PREBUILT `requirePermissionHook` closure (the claims
+// `requireAnyAppealAccess` shape — G26; ⛔ `rbac.requirePermission`, which the R3-29 fence flags). An actor without the matching key ⇒
+// 403 (a Pariwar Admin cannot hear the Panel's appeal; a trustee cannot hear a Pariwar Admin's). With NO hearer to match (lodge on a
+// worker who is not terminated) EITHER hook passes (`_as_panel` first) and the handler answers its pre-read 409. A NULL district (a
+// missing or foreign worker / appeal) still fails closed to 403 — ⚠ the 403's `details.targetLocator` tells an existing row from an
+// unknown id to a grant-holder (13.1d CR31 — INHERITED, not fixed; G27).
+
+/** `POST …/:fieldWorkerId/ending-appeals` — the worker's district, and the CURRENT ending's hearer (AD17; null when not terminated). */
+export function loadEndingAppealLodgeGate(): preHandlerHookHandler {
+  return async function preHandler(request: FastifyRequest): Promise<void> {
+    const scopeTx = request.scopeTx;
+    if (!scopeTx) throw new UnauthorizedError('Authentication required', 'auth.session_required');
+    const { fieldWorkerId } = request.params as { fieldWorkerId: string };
+    const pariwarId = ids.pariwarId(scopeTx.pariwarId);
+    const worker = await fieldWorker.getFieldWorker(scopeTx.tx, pariwarId, ids.fieldWorkerId(fieldWorkerId));
+    if (worker === null) {
+      request.endingAppealGateDistrict = null;
+      request.endingAppealHeardBy = null;
+      return;
+    }
+    const ending = await fieldWorker.getCurrentFieldWorkerEnding(scopeTx.tx, pariwarId, worker.fieldWorkerId);
+    request.endingAppealGateDistrict = worker.district;
+    request.endingAppealHeardBy = ending?.heardBy ?? null;
+  };
+}
+
+/** `POST …/ending-appeals/:appealId/{decide,withdraw}` — the appeal's worker's district and the appeal's `heard_by`. */
+export function loadEndingAppealGate(): preHandlerHookHandler {
+  return async function preHandler(request: FastifyRequest): Promise<void> {
+    const scopeTx = request.scopeTx;
+    if (!scopeTx) throw new UnauthorizedError('Authentication required', 'auth.session_required');
+    const { appealId } = request.params as { appealId: string };
+    const row = await fieldWorker.getFieldWorkerEndingAppealGateRow(scopeTx.tx, ids.pariwarId(scopeTx.pariwarId), ids.fieldWorkerEndingAppealId(appealId));
+    request.endingAppealGateDistrict = row?.district ?? null;
+    request.endingAppealHeardBy = row?.heardBy ?? null;
+  };
+}
+
+/** `resolveValue` for the appeal routes — the stash, `null` (deny) when absent. */
+export function endingAppealGateDistrict(request: FastifyRequest): string | null {
+  return request.endingAppealGateDistrict ?? null;
+}
+
+/** The two hear hooks, PREBUILT by the routes (fixed keys), dispatched on the stashed hearer (AD9). */
+export function requireEndingAppealHearer(hooks: {
+  pariwarAdmin: preHandlerHookHandler;
+  panel: preHandlerHookHandler;
+}): preHandlerHookHandler {
+  // Each hook is a single-arg `(request) => Promise<void>` at runtime (the requirePermissionHook shape) — cast to invoke it directly.
+  const asPanel = hooks.panel as unknown as (req: FastifyRequest) => Promise<void>;
+  const asPariwarAdmin = hooks.pariwarAdmin as unknown as (req: FastifyRequest) => Promise<void>;
+  return async function preHandler(request: FastifyRequest): Promise<void> {
+    const heardBy = request.endingAppealHeardBy ?? null;
+    if (heardBy === 'trustee_panel') return asPanel(request);
+    if (heardBy === 'pariwar_admin') return asPariwarAdmin(request);
+    try {
+      await asPanel(request);
+    } catch {
+      await asPariwarAdmin(request);
+    }
+  };
+}

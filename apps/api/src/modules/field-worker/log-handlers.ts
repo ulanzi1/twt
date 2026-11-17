@@ -19,12 +19,20 @@
 // officers. Rationale: AC8 (e) and the Panel's "Keep the full log of field worker" (`-441`): the log is the WORKER's record, not a
 // district's. RE-EXAMINE (the author's trigger, not the Panel's) when the stream starts to carry words of anyone's own — a complaint,
 // an appeal (row 13-1f) — or an officer objects to their name being shown outside their district.
+// ⭐ 2026-11-17, Story 13.1f — the trigger looked at, NOT fired: the worker stream gains only `cause`, `appeal_id` (the undo) and
+// `previous_field_worker_id` (the link) — codes and ids, no one's words; the appeal lives on its OWN stream, read through its own key.
+//
+// Story 13.1f (AD12; `-454` Q2 B "The history reads as one person's") — `record=<id>`: the log of an EARLIER record reached from this
+// worker by following `previous_field_worker_id` (at most 10 hops), returned ONLY if the officer's own `field_worker.read_log` passes on
+// THAT record's district (the same predicate the gate uses, on the loaded grants). Else — not in the chain, or not readable — a BARE 403
+// with NO `details` (⛔ `AuthorizationDeniedError`, whose locator would tell an existing record from an unknown one — G27, TR19). So the
+// link discloses nothing the officer could not already read.
 
 import type { FieldWorkerLog, FieldWorkerLogQuery } from '@twt/contracts';
-import { fieldWorker, ids } from '@twt/domain';
+import { fieldWorker, ids, rbac } from '@twt/domain';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import { UnauthorizedError } from '../../http-errors.js';
+import { ApiError, UnauthorizedError } from '../../http-errors.js';
 import { mapFieldWorkerError } from './errors.js';
 
 /** The key the log read gates on (AD5, catalog v61) — `district_admin` (own district), `pariwar_admin` (any). */
@@ -44,11 +52,22 @@ export function createFieldWorkerLogHandlers() {
       const worker = await fieldWorker.getFieldWorker(scopeTx.tx, pariwarId, fieldWorkerId);
       if (worker === null) throw new fieldWorker.FieldWorkerGenesisMissingError(fieldWorkerId);
       if (worker.district !== authorization.target.value) throw new fieldWorker.FieldWorkerAuthorizationStaleError(fieldWorkerId, authorization.target.value);
-      const page = await fieldWorker.listFieldWorkerEvents(scopeTx.tx, pariwarId, fieldWorkerId, {
+      let streamId = fieldWorkerId;
+      if (query.record !== undefined) {
+        const record = ids.fieldWorkerId(query.record);
+        const chain = await fieldWorker.listFieldWorkerLinkChain(scopeTx.tx, pariwarId, fieldWorkerId);
+        const hop = chain.find((c) => c.fieldWorkerId === record);
+        const readable =
+          hop !== undefined &&
+          rbac.hasPermission(request.scopeGrants ?? [], FIELD_WORKER_READ_LOG_KEY, { dimension: 'district', value: hop.district, pariwarId: scopeTx.pariwarId });
+        if (!readable) throw new ApiError(403, 'authz.forbidden', 'Not permitted'); // bare — no details (TR19)
+        streamId = record;
+      }
+      const page = await fieldWorker.listFieldWorkerEvents(scopeTx.tx, pariwarId, streamId, {
         ...(query.after === undefined ? {} : { afterVersion: query.after }),
         ...(query.limit === undefined ? {} : { limit: query.limit }),
       });
-      if (page === null) throw new fieldWorker.FieldWorkerGenesisMissingError(fieldWorkerId);
+      if (page === null) throw new fieldWorker.FieldWorkerGenesisMissingError(streamId);
       const out: FieldWorkerLog = {
         items: page.items.map((e) => ({
           event_version: e.eventVersion,
@@ -62,6 +81,10 @@ export function createFieldWorkerLogHandlers() {
           from_district: e.fromDistrict,
           to_district: e.toDistrict,
           ended_on: e.endedOn,
+          to_state: e.toState as FieldWorkerLog['items'][number]['to_state'],
+          cause: e.cause as FieldWorkerLog['items'][number]['cause'],
+          appeal_id: e.appealId,
+          previous_field_worker_id: e.previousFieldWorkerId,
         })),
         next_after: page.nextAfter,
       };

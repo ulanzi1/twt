@@ -47,6 +47,12 @@ const FORBIDDEN = [
   'suspendFieldWorker',
   'reactivateFieldWorker',
   'terminateFieldWorker',
+  // Story 13.1f — the undo and the appeal's EXPORTED writers (⛔ the module-private core `undoEndingLocked` — not a real export).
+  'undoFieldWorkerEnding',
+  'allowFieldWorkerEndingAppeal',
+  'lodgeFieldWorkerEndingAppeal',
+  'refuseFieldWorkerEndingAppeal',
+  'withdrawFieldWorkerEndingAppeal',
   'projectMoveRequestOpened',
   'projectMoveRequestTransition',
   'projectFieldWorkerGenesis',
@@ -62,6 +68,7 @@ const WRITER_SOURCE_DIRS = ['packages/domain/src/field-worker', 'packages/events
 const FORBIDDEN_TABLE_NAMES = [
   'field_worker_notices',
   'field_worker_move_requests',
+  'field_worker_ending_appeals', // Story 13.1f
   'field_workers',
   'events_log',
   'role_grants',

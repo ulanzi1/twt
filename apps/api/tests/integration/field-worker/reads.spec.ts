@@ -587,7 +587,8 @@ describe.skipIf(!hasDatabase)('Story 13.1a — the field-worker reads (AC6, AC7,
       );
       const r = await h.identity(admin.client, p, id);
       expect(Object.keys(json(r)).sort()).toEqual(
-        ['approved_by_display', 'code_sms_status', 'created_at', 'current_state', 'district', 'field_worker_id', 'kyc_status', 'mobile', 'name', 'registered_by_display'].sort(),
+        // Story 13.1f (AD6) adds `state_event_version` — what an undo or an appeal names the ending by.
+        ['approved_by_display', 'code_sms_status', 'created_at', 'current_state', 'district', 'field_worker_id', 'kyc_status', 'mobile', 'name', 'registered_by_display', 'state_event_version'].sort(),
       );
       await sendRow(p, id, { outcome: 'error', detail: 'exhausted:outcome_unknown:api_unavailable:timeout' });
       // Review finding CB21 (c): an absence assertion is only meaningful against a SUCCESSFUL body that shows the row was read. The status is the

@@ -86,6 +86,12 @@ declare module 'fastify' {
      *  (close), or the end the reader holds (one request's detail). `null` for a missing / foreign request or an officer holding neither
      *  end → the district gate fails closed (403) for everyone, so the boundary never says whether a request exists. */
     moveRequestGateDistrict?: string | null;
+    /** Story 13.1f (AD9, AD13) — the APPEAL routes' district target (the worker's — frozen while terminated), stashed by
+     *  `loadEndingAppealLodgeGate` / `loadEndingAppealGate`. `null` for a missing / foreign worker or appeal → 403 for everyone. */
+    endingAppealGateDistrict?: string | null;
+    /** Story 13.1f (AD9) — who hears the appeal: the CURRENT ending's hearer (lodge) or the appeal's `heard_by` (decide / withdraw);
+     *  `null` when there is none to match (a worker who is not terminated) — the dispatcher then passes on EITHER hear key. */
+    endingAppealHeardBy?: 'pariwar_admin' | 'trustee_panel' | null;
     /**
      * Story 6.18 (AC11) — the scope the CORRECTION-QUEUE list route gates this caller at.
      *

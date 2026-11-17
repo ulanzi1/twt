@@ -57,6 +57,14 @@ export interface Harness {
   request: (c: Client, p: string, requestId: string) => ReturnType<Client['inject']>;
   notices: (c: Client, p: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
   seen: (c: Client, p: string, noticeIds: string[]) => ReturnType<Client['inject']>;
+  // ── Story 13.1f — the undo and the appeal record ──
+  undoEnding: (c: Client, p: string, workerId: string, expectedEndingVersion: number, key?: string | null) => ReturnType<Client['inject']>;
+  lodgeAppeal: (c: Client, p: string, workerId: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  decideAppeal: (c: Client, p: string, appealId: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  withdrawAppeal: (c: Client, p: string, appealId: string, body: Json, key?: string | null) => ReturnType<Client['inject']>;
+  listAppeals: (c: Client, p: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
+  listEligible: (c: Client, p: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
+  appealsOf: (c: Client, p: string, workerId: string, query?: Record<string, string>) => ReturnType<Client['inject']>;
   cleanup: () => Promise<void>;
 }
 

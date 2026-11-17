@@ -705,7 +705,7 @@ export async function findEndedFieldWorkersByMobileIndex(
       ),
     )
     .orderBy(desc(fieldWorkers.endedOn), asc(fieldWorkers.fieldWorkerId))
-    .limit(PREVIOUS_ENDINGS_SHOWN_MAX);
+    .limit(clampLimit(PREVIOUS_ENDINGS_SHOWN_MAX, { default: PREVIOUS_ENDINGS_SHOWN_MAX, cap: PREVIOUS_ENDINGS_SHOWN_MAX }));
   return rows.map((r) => ({ fieldWorkerId: r.fieldWorkerId, endedOn: r.endedOn, reasonCode: r.reasonCode as FieldWorkerReasonCode }));
 }
 

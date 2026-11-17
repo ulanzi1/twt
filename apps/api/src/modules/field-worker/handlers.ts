@@ -218,20 +218,25 @@ export function createFieldWorkerHandlers(deps: AppDeps) {
         // number (every district; the blind index — nothing is decrypted). Shown ONCE: unless the officer re-submits with
         // `previous_endings_seen: true`, the route answers 409 with their id, end date and reason. It is the ONE pre-read refusal that
         // writes an audit line (I7 — a second officer learns of an earlier ending): on the SERVICE pool, ⛔ the scope transaction (which
-        // rolls back with the 409), AWAITED before the answer — if it fails, a 500 and nothing is disclosed.
+        // rolls back with the 409), AWAITED before the answer — if it fails, a 500 and nothing is disclosed. Through the sanctioned
+        // `withCompensatingAudit` (ADR-0030 — ⛔ a direct `writeAuditEntry`): its intent line IS the disclosure record (the disclosure
+        // succeeded, so the line's `responseStatus` is the wrapper's 200 — a recorded variance from AC9's "409"); `mutate` only builds the
+        // 409, which is thrown AFTER the wrapper returns, so no `_rolled_back` twin is written.
         const previous = await fieldWorker.findEndedFieldWorkersByMobileIndex(ctx.scopeTx.tx, pariwarId, sealed.mobileBlindIndex);
         if (previous.length > 0 && body.previous_endings_seen !== true) {
-          await audit.writeAuditEntry(deps.servicePool, {
-            pariwarId: ctx.pariwarId,
-            actorId: ctx.actorId,
-            actorRole: authorization.role,
-            action: 'field_worker.previous_endings_shown',
-            resourceLocator: `field_worker/${previous[0]!.fieldWorkerId}`,
-            requestPayloadHash: payloadHash({ ended: previous.map((e) => e.fieldWorkerId) }),
-            responseStatus: 409,
-            traceId: ctx.traceId,
+          const shown = await audit.withCompensatingAudit(deps.servicePool, {
+            auditIntent: {
+              pariwarId: ctx.pariwarId,
+              actorId: ctx.actorId,
+              actorRole: authorization.role,
+              action: 'field_worker.previous_endings_shown',
+              resourceLocator: `field_worker/${previous[0]!.fieldWorkerId}`,
+              requestPayloadHash: payloadHash({ ended: previous.map((e) => e.fieldWorkerId) }),
+              traceId: ctx.traceId,
+            },
+            mutate: async () => numberPreviouslyEndedError(previous.map((e) => ({ field_worker_id: e.fieldWorkerId, ended_on: e.endedOn, reason_code: e.reasonCode }))),
           });
-          throw numberPreviouslyEndedError(previous.map((e) => ({ field_worker_id: e.fieldWorkerId, ended_on: e.endedOn, reason_code: e.reasonCode })));
+          throw shown;
         }
         // Story 13.1f (AD12; `-454` Q2 B) — the LINK, chosen by the officer: one of this Pariwar's TERMINATED records with the SAME number,
         // re-checked here under `FOR SHARE` BEFORE the genesis INSERT (TR15 — a concurrent undo of that record finishes first; without

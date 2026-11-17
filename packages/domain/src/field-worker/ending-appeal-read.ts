@@ -192,7 +192,7 @@ export async function listFieldWorkerEndingAppealsOf(
     .leftJoin(users, eq(users.id, t.lodgedByUserId))
     .where(and(...conds))
     .orderBy(desc(t.createdAt), desc(t.appealId))
-    .limit(limit);
+    .limit(clampLimit(limit, { default: PAGE_ENDING_APPEALS_DEFAULT_LIMIT, cap: PAGE_ENDING_APPEALS_MAX_LIMIT }));
   return rows.map(toView);
 }
 

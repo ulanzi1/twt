@@ -1307,7 +1307,13 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1f`, 2026-11-16 (WIP `54
 - `ci:local` run 1 (2026-11-17, :5485 fresh, at `31d5d99c`): 35 of 40 jobs green; 5 red on three causes — the API `Harness` interface
   lacked the appeal helpers (typecheck, build, crypto-check), two `.limit()`s not clamped inline (domain-invariants), the shown-number
   line's direct `writeAuditEntry` (access-wrapper-invariants, ADR-0030). Fixed in `39357f77`; the five jobs' commands then exit 0 alone.
-- `ci:local` run 2 (at `39357f77`): CI_LOCAL_RUN_2
+- `ci:local` run 2 (at `39357f77`, :5485, the second run on that DB): 38 of 40 jobs green, ⛔ called green. 2 red: (a) `test (unit)` — 20
+  failures in 4 admin files the branch does not touch (`ground-inspection-{discrepancy,page,questionnaire}`, `helpline-claim-page`), most
+  at the 5 s timeout under the unit job's concurrency ([[project_ci_local_concurrency_oversubscription]]); the four pass 142/142 alone.
+  (b) `integration-tests` — 1 failure: `ending-appeal-race.spec.ts` AC2 (ii), answering 409 `mobile_already_registered` — EXACTLY the
+  RED proof's outcome; the race spec entered the tree mid-run and the RED-proof mutation (the link's `FOR SHARE` removed) was live for
+  about a minute while that job ran. The leg passes 14/14 on the restored code against the same DB (:5485). Attribution to the mutation is
+  the session's inference from the matching outcome and the timing, ⛔ proven from the log. A third run on a fresh container follows.
 - Full live domain suite (:5484): 8386 pass, 6 fail under full-suite load (~25 s timeouts in `claim/*` and `field-worker/page.spec`) —
   the four files pass 75/75 alone. Full live API suite (:5484): 239 files, 3216 pass.
 

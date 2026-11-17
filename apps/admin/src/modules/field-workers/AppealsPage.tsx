@@ -24,6 +24,12 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
   const [state, setState] = useState<FieldWorkerEndingAppealState | null>('open');
   const appeals = useFieldWorkerEndingAppeals(pariwarId, state);
   const [recording, setRecording] = useState(false);
+  /**
+   * The last act's outcome (a decision, a withdrawal, a lodge) — said HERE, in a status region mounted with the page: the act's own row
+   * leaves its list on the refresh (a decided appeal is no longer "waiting"; a lodged worker is no longer eligible), so a line inside it
+   * would never be seen (browser pass 2026-11-17).
+   */
+  const [outcome, setOutcome] = useState<string | null>(null);
   const eligible = useAppealEligibleFieldWorkers(pariwarId, recording);
   const listProblem = appeals.isError ? fieldWorkerGuidance(appeals.error, 'appeals') : null;
   useSignInRedirect(listProblem?.signIn === true);
@@ -35,6 +41,9 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
       <h1 className="text-xl font-semibold">{t('fw.appeals.title')}</h1>
       <FieldWorkerNav pariwarId={pariwarId} current="appeals" />
       <p className="text-sm">{t('fw.appeals.intro')}</p>
+      <div role="status" data-testid="fw-appeals-outcome">
+        {outcome !== null && <p className="text-sm text-status-ok-fg">{outcome}</p>}
+      </div>
 
       <label className="flex items-center gap-2 text-sm">
         {t('fw.appeals.filter')}
@@ -67,7 +76,7 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
               </p>
               <p>{t('fw.appeals.received', { date: formatIstDate(a.received_on), via: t(`fw.appeals.via.${a.received_via}`) })}</p>
               {a.decided_on !== null && <p>{t('fw.appeals.decided', { date: formatIstDate(a.decided_on) })}</p>}
-              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} />}
+              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={setOutcome} />}
             </li>
           ))}
         </ul>
@@ -97,7 +106,7 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
             {eligible.isSuccess && candidates.length === 0 && <p className="text-sm" data-testid="fw-appeals-eligible-empty">{t('fw.appeals.eligible.empty')}</p>}
             <ul className="flex flex-col gap-2" data-testid="fw-appeals-eligible">
               {candidates.map((c) => (
-                <LodgeForm key={`${c.field_worker_id}:${String(c.ending_event_version)}`} pariwarId={pariwarId} worker={c} />
+                <LodgeForm key={`${c.field_worker_id}:${String(c.ending_event_version)}`} pariwarId={pariwarId} worker={c} onLodged={setOutcome} />
               ))}
             </ul>
           </>
@@ -108,7 +117,7 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
 }
 
 /** One ended worker and the form that records their appeal — the hearer records it (`-454`: "recorded by the officer who hears it"). */
-function LodgeForm({ pariwarId, worker }: { pariwarId: string; worker: FieldWorkerAppealEligibleItem }): ReactElement {
+function LodgeForm({ pariwarId, worker, onLodged }: { pariwarId: string; worker: FieldWorkerAppealEligibleItem; onLodged: (line: string) => void }): ReactElement {
   const mutation = useFieldWorkerAppealAct(pariwarId);
   const [receivedOn, setReceivedOn] = useState(istTodayInBrowser());
   const [via, setVia] = useState<FieldWorkerEndingAppealChannel | ''>('');
@@ -128,6 +137,7 @@ function LodgeForm({ pariwarId, worker }: { pariwarId: string; worker: FieldWork
       await mutation.mutateAsync({ act: 'lodge', fieldWorkerId: worker.field_worker_id, idempotencyKey: key, body });
       attempt.current = null;
       setDone(true);
+      onLodged(t('fw.appeals.lodgedFor', { name: worker.display_name }));
     } catch (err) {
       const g = fieldWorkerGuidance(err, 'appeals');
       if (g.retryable !== true) attempt.current = null;
@@ -165,7 +175,7 @@ function LodgeForm({ pariwarId, worker }: { pariwarId: string; worker: FieldWork
           <label className="flex flex-col gap-1">
             {t('fw.appeals.via')}
             <select required value={via} onChange={(e) => setVia(e.target.value as FieldWorkerEndingAppealChannel | '')} data-testid="fw-appeals-via">
-              <option value="">{t('fw.actions.reason.choose')}</option>
+              <option value="">{t('fw.appeals.via.choose')}</option>
               <option value="phone">{t('fw.appeals.via.phone')}</option>
               <option value="in_person">{t('fw.appeals.via.in_person')}</option>
             </select>

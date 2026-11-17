@@ -194,7 +194,9 @@ describe('Story 13.1f — the register page’s shown number and link (AD11, AD1
 describe('Story 13.1f — the Appeals page (AD13, AD14)', () => {
   const appeal = { appeal_id: OLD, field_worker_id: W, ending_event_version: 4, state: 'open', heard_by: 'trustee_panel', received_on: '2026-11-05', received_via: 'phone', decided_on: null, lodged_by: { user_id: OLD, display_name: 'T' }, created_at: '2026-11-05T05:00:00.000Z' };
   it('lists the appeals with their state and hearer; Allow decides and reminds "Tell the worker."; "Record an appeal" lodges from the eligible list', async () => {
-    listFieldWorkerEndingAppeals.mockResolvedValue({ items: [{ ...appeal, name: 'Ramesh Kumar', district: 'Patna' }], next_cursor: null });
+    // The first read lists the open appeal; every later read (the refresh after the decision) does NOT — as the real "waiting" list.
+    listFieldWorkerEndingAppeals.mockResolvedValueOnce({ items: [{ ...appeal, name: 'Ramesh Kumar', district: 'Patna' }], next_cursor: null });
+    listFieldWorkerEndingAppeals.mockResolvedValue({ items: [], next_cursor: null });
     decideFieldWorkerEndingAppeal.mockResolvedValue({ appeal: { ...appeal, state: 'allowed', decided_on: '2026-11-06' }, worker: lifecycle({ state_event_version: 5 }) });
     listAppealEligibleFieldWorkers.mockResolvedValue({
       items: [{ field_worker_id: OLD, display_name: 'Sita Devi', district: 'Gaya', ended_on: '2026-11-01', reason_code: 'inactive', ending_event_version: 2, heard_by: 'pariwar_admin' }],
@@ -211,13 +213,14 @@ describe('Story 13.1f — the Appeals page (AD13, AD14)', () => {
     expect(item.textContent).toContain(t('fw.appeals.heardBy.trustee_panel'));
     fireEvent.click(within(item).getByTestId('fw-appeal-allowed'));
     fireEvent.click(within(item).getByTestId('fw-appeal-confirm'));
-    expect(await within(item).findByTestId('fw-appeal-done')).toHaveTextContent(t('fw.actions.tell'));
+    // The outcome is said at PAGE level: the decided appeal leaves the "waiting" list on the refresh (browser pass 2026-11-17).
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-outcome')).toHaveTextContent(`${t('fw.appeals.done.allowed', { name: 'Ramesh Kumar' })} ${t('fw.actions.tell')}`));
     expect(decideFieldWorkerEndingAppeal).toHaveBeenCalledWith(P, OLD, { outcome: 'allowed', decided_on: expect.any(String) }, expect.any(String));
     fireEvent.click(screen.getByTestId('fw-appeals-record-open'));
     const candidate = await screen.findByTestId('fw-appeals-eligible-item');
     fireEvent.change(within(candidate).getByTestId('fw-appeals-via'), { target: { value: 'in_person' } });
     fireEvent.click(within(candidate).getByTestId('fw-appeals-lodge'));
-    expect(await within(candidate).findByTestId('fw-appeals-lodged')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-outcome')).toHaveTextContent(t('fw.appeals.lodgedFor', { name: 'Sita Devi' })));
     expect(lodgeFieldWorkerEndingAppeal).toHaveBeenCalledWith(P, OLD, { expected_ending_version: 2, received_on: expect.any(String), received_via: 'in_person' }, expect.any(String));
   });
 });

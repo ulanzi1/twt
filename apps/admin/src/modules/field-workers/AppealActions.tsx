@@ -15,13 +15,16 @@ import { useSignInRedirect } from './sign-in.js';
 
 type AppealAct = 'allowed' | 'refused' | 'withdrawn';
 
-export function AppealActions({ pariwarId, appeal, name }: { pariwarId: string; appeal: FieldWorkerEndingAppeal; name: string }): ReactElement {
+/**
+ * `onDone` receives the outcome line (with the "Tell the worker." reminder): the PAGE shows it, because a decided appeal leaves an "open"
+ * list on the refresh and this component unmounts with it (browser pass 2026-11-17 — the line was never seen).
+ */
+export function AppealActions({ pariwarId, appeal, name, onDone }: { pariwarId: string; appeal: FieldWorkerEndingAppeal; name: string; onDone: (line: string) => void }): ReactElement {
   const mutation = useFieldWorkerAppealAct(pariwarId);
   const [open, setOpen] = useState<AppealAct | null>(null);
   const [decidedOn, setDecidedOn] = useState(istTodayInBrowser());
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Guidance | null>(null);
-  const [announce, setAnnounce] = useState<string | null>(null);
   const attempt = useRef<AttemptKey | null>(null);
   useSignInRedirect(problem?.signIn === true);
 
@@ -39,7 +42,7 @@ export function AppealActions({ pariwarId, appeal, name }: { pariwarId: string; 
       }
       attempt.current = null;
       setOpen(null);
-      setAnnounce(`${t(`fw.appeals.done.${act}`, { name })} ${t('fw.actions.tell')}`);
+      onDone(`${t(`fw.appeals.done.${act}`, { name })} ${t('fw.actions.tell')}`);
     } catch (err) {
       const g = fieldWorkerGuidance(err, 'appeals');
       if (g.retryable !== true) attempt.current = null;
@@ -51,16 +54,13 @@ export function AppealActions({ pariwarId, appeal, name }: { pariwarId: string; 
 
   return (
     <div className="flex flex-col gap-1" data-testid="fw-appeal-actions">
-      <div role="status">{announce !== null && <p className="text-status-ok-fg" data-testid="fw-appeal-done">{announce}</p>}</div>
-      {announce === null && (
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
           {(['allowed', 'refused', 'withdrawn'] as const).map((act) => (
             <button key={act} type="button" className="rounded border px-3 py-1" aria-expanded={open === act} disabled={busy} onClick={() => setOpen(act)} data-testid={`fw-appeal-${act}`}>
               {t(`fw.appeals.act.${act}`)}
             </button>
           ))}
-        </div>
-      )}
+      </div>
       {open !== null && (
         <form
           aria-label={t(`fw.appeals.act.${open}`)}

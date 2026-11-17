@@ -16,6 +16,7 @@ import {
   recordFieldWorkerKycCompleted,
   suspendFieldWorker,
   terminateFieldWorker,
+  undoFieldWorkerEnding,
 } from '../../../src/field-worker/commands.js';
 import { FieldWorkerCaptureNotFoundError, FieldWorkerDistrictUnknownError } from '../../../src/field-worker/errors.js';
 import {
@@ -49,7 +50,7 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
   /** Story 13.1a AD3 — the two approval commands take a verified `field_worker.approve` result (+ the approver's name). */
   const approve = (id: FieldWorkerId) => ({ ...base(id), ...approval(PARIWAR, 'Patna', ACTOR) });
   /** Story 13.1c AD3 — suspend / terminate take a verified result for THEIR key (the worker is in Patna). */
-  const act = (id: FieldWorkerId, key: 'field_worker.suspend' | 'field_worker.terminate') => ({ ...base(id), authorization: actAuthorization(key, PARIWAR, 'Patna', ACTOR) });
+  const act = (id: FieldWorkerId, key: 'field_worker.suspend' | 'field_worker.terminate' | 'field_worker.undo_ending') => ({ ...base(id), authorization: actAuthorization(key, PARIWAR, 'Patna', ACTOR) });
 
   beforeAll(() => {
     pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4, ssl: false });
@@ -176,6 +177,21 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     expect(v2! > v1!).toBe(true);
     expect(await withCapture(PARIWAR, at(v2!), stateAt(id))).toMatchObject({ state: 'active', kycStatus: 'completed', version: 3 });
     expect(await withCapture(PARIWAR, at(v2!, '-1 microsecond'), stateAt(id))).toMatchObject({ state: 'pending_kyc', kycStatus: 'pending', version: 1 });
+  });
+
+  it('Story 13.1f AC1 (d) — an UNDO: a capture inside the ended window reads `terminated`; one AT the undo’s stamp reads the restored state (separate transactions — TR6)', async () => {
+    const id = await committed((c) => registerReal(c, PARIWAR, { actorId: ACTOR }));
+    created.push(id);
+    await committed((c) => recordFieldWorkerKycCompleted(c, approve(id)));
+    await committed((c) => activateFieldWorker(c, approve(id)));
+    const today = (await pool.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date)::text AS d")).rows[0]!.d;
+    await committed((c) => terminateFieldWorker(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today, appealHeardBy: 'trustee_panel' }));
+    await committed((c) => undoFieldWorkerEnding(c, { ...act(id, 'field_worker.undo_ending'), expectedEndingVersion: 4 }));
+    const [, , , ended, undone] = await stamps(id);
+    expect(undone! > ended!).toBe(true);
+    expect(await withCapture(PARIWAR, at(ended!), stateAt(id))).toMatchObject({ state: 'terminated', version: 4 });
+    expect(await withCapture(PARIWAR, at(undone!, '-1 microsecond'), stateAt(id))).toMatchObject({ state: 'terminated', version: 4 });
+    expect(await withCapture(PARIWAR, at(undone!), stateAt(id))).toMatchObject({ state: 'active', version: 5, endedOn: null, reasonCode: null });
   });
 
   it("(c) 'now' equals the stored projection in every state", async () => {

@@ -30,6 +30,7 @@ const listAppealEligibleFieldWorkers = vi.fn();
 const lodgeFieldWorkerEndingAppeal = vi.fn();
 const decideFieldWorkerEndingAppeal = vi.fn();
 const listFieldWorkerNotices = vi.fn();
+const getFieldWorkerLog = vi.fn();
 vi.mock('../src/api/client.js', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -46,6 +47,7 @@ vi.mock('../src/api/client.js', async (importOriginal) => {
     lodgeFieldWorkerEndingAppeal: (...a: unknown[]) => lodgeFieldWorkerEndingAppeal(...a),
     decideFieldWorkerEndingAppeal: (...a: unknown[]) => decideFieldWorkerEndingAppeal(...a),
     listFieldWorkerNotices: (...a: unknown[]) => listFieldWorkerNotices(...a),
+    getFieldWorkerLog: (...a: unknown[]) => getFieldWorkerLog(...a),
   };
 });
 
@@ -86,6 +88,7 @@ beforeEach(() => {
     lodgeFieldWorkerEndingAppeal,
     decideFieldWorkerEndingAppeal,
     listFieldWorkerNotices,
+    getFieldWorkerLog,
   ])
     fn.mockReset();
   state = 'active';
@@ -216,5 +219,88 @@ describe('Story 13.1f — the Appeals page (AD13, AD14)', () => {
     fireEvent.click(within(candidate).getByTestId('fw-appeals-lodge'));
     expect(await within(candidate).findByTestId('fw-appeals-lodged')).toBeInTheDocument();
     expect(lodgeFieldWorkerEndingAppeal).toHaveBeenCalledWith(P, OLD, { expected_ending_version: 2, received_on: expect.any(String), received_via: 'in_person' }, expect.any(String));
+  });
+});
+
+describe('Story 13.1f — the remaining screen legs (AC12; 13.1d CR48)', () => {
+  const W2 = '00000000-0000-4000-8000-000000000002';
+  const logItem = (o: Record<string, unknown>) => ({
+    event_version: 1,
+    event_type: 'field_worker.registered',
+    occurred_at: '2026-11-05T05:00:00.000Z',
+    actor: { user_id: OLD, display_name: 'Dev Trustee', role: 'pariwar_admin' },
+    permission_key: null,
+    grant: null,
+    target_district: 'Patna',
+    reason_code: null,
+    from_district: null,
+    to_district: null,
+    ended_on: null,
+    to_state: null,
+    cause: null,
+    appeal_id: null,
+    previous_field_worker_id: null,
+    ...o,
+  });
+
+  it('opening worker B after worker A starts B’s panel fresh — A’s open undo form does not carry over (`key` per worker)', async () => {
+    version = 4;
+    listFieldWorkers.mockImplementation(async () => ({ items: [row(), { ...row(), field_worker_id: W2, name: 'Sita Devi' }], next_cursor: null }));
+    getFieldWorkerIdentity.mockImplementation(async (_p: string, id: string) => ({ ...row(), field_worker_id: id, name: id === W ? 'Ramesh Kumar' : 'Sita Devi', mobile: '+919876500010', approved_by_display: 'Meera Rao', state_event_version: version }));
+    state = 'terminated';
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <FindWorkerPage pariwarId={P} />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(screen.getByTestId('fw-find-state'), { target: { value: 'terminated' } });
+    await screen.findByRole('option', { name: 'Patna' });
+    const d = screen.getByTestId('fw-find-district') as HTMLSelectElement;
+    fireEvent.change(d, { target: { value: [...d.options].find((o) => o.textContent === 'Patna')!.value } });
+    const checks = await screen.findAllByTestId('fw-find-check');
+    fireEvent.click(checks[0]!);
+    fireEvent.click(await screen.findByTestId('fw-act-undo'));
+    expect(screen.getByTestId('fw-act-undo-intro')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByTestId('fw-find-check')[1]!);
+    await waitFor(() => expect(getFieldWorkerIdentity).toHaveBeenLastCalledWith(P, W2));
+    await screen.findByTestId('fw-act-undo');
+    expect(screen.queryByTestId('fw-act-undo-intro')).toBeNull();
+    expect(screen.getByTestId('fw-act-undo').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('a 409 number_registered_again shows its line', async () => {
+    version = 4;
+    await openWorker('terminated');
+    undoFieldWorkerEnding.mockRejectedValue(new ApiError(409, 'field_worker.number_registered_again', 'taken'));
+    fireEvent.click(screen.getByTestId('fw-act-undo'));
+    fireEvent.click(screen.getByTestId('fw-act-confirm'));
+    expect(await screen.findByTestId('fw-act-error')).toHaveTextContent(t('fw.err.numberRegisteredAgain'));
+  });
+
+  it('the history: an undo after an appeal, signed by the Trustee Panel, reads "Ending undone after an appeal" with the Trustee Panel label (never "role not recorded"); a linked registration offers the earlier record’s history, read with `record`', async () => {
+    version = 2;
+    getFieldWorkerLog.mockImplementation(async (_p: string, _id: string, o?: { record?: string }) =>
+      o?.record === undefined
+        ? {
+            items: [
+              logItem({ previous_field_worker_id: OLD }),
+              logItem({ event_version: 2, event_type: 'field_worker.ending_undone', to_state: 'active', cause: 'appeal_allowed', appeal_id: OLD, actor: { user_id: OLD, display_name: 'Dev Trustee', role: 'trustee_panel' } }),
+            ],
+            next_after: null,
+          }
+        : { items: [logItem({ event_type: 'field_worker.terminated', reason_code: 'inactive', ended_on: '2026-10-01' })], next_after: null },
+    );
+    await openWorker('active');
+    fireEvent.click(screen.getByTestId('fw-history-show'));
+    const list = await screen.findByTestId('fw-history-list');
+    expect(list.textContent).toContain(`${t('fw.history.event.field_worker.ending_undone')} ${t('fw.history.afterAppeal')}`);
+    expect(list.textContent).toContain(t('fw.role.trustee_panel'));
+    expect(list.textContent).not.toContain(t('fw.role.unknown'));
+    const linked = within(list).getByTestId('fw-history-linked');
+    expect(linked.textContent).toContain(t('fw.history.linked'));
+    fireEvent.click(within(linked).getByTestId('fw-history-show-earlier'));
+    fireEvent.click(within(linked).getByTestId('fw-history-show'));
+    await waitFor(() => expect(getFieldWorkerLog).toHaveBeenCalledWith(P, W, { record: OLD }));
+    expect(await within(linked).findByText(t('fw.history.event.field_worker.terminated'))).toBeInTheDocument();
   });
 });

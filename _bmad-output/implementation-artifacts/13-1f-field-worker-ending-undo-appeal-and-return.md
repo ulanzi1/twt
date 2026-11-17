@@ -1134,7 +1134,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     flow) and `field-worker-lifecycle-client.test.ts` (the new client methods). Mind [[project_tanstack_onsettled_before_success]],
     [[project_tanstack_mutate_callbacks_latest_only]], [[project_jsdom_disabled_button_keeps_focus]].
 
-- [ ] **Task 7 - Records and gate (AC: 13)** - Dev Agent Record, File List; `deferred-work.md` closures with commit ids (13.1c C2 (i)-(iii), 13.1d C3,
+- [x] **Task 7 - Records and gate (AC: 13)** (2026-11-17: ci:local 40/40 on a fresh container at `877c6ef2`; microcopy and the OpenAPI determinism check pass; CR31 / CR33 annotated FIRED; `epics.md` BUILT note; the closures wait for landing, as the task says) - Dev Agent Record, File List; `deferred-work.md` closures with commit ids (13.1c C2 (i)-(iii), 13.1d C3,
   R2-D1; CR9's correction-path half) - closed only when the code LANDS ([[feedback_closure_language_precision]]); 13.1a CR33's re-trigger and 13.1d
   CR31's trigger annotated as FIRED (not fixed - G27); `epics.md` BUILT note; ledger. **Passing means:** `DATABASE_URL=<story port>?sslmode=disable
   pnpm ci:local` on a FRESH container with every job green (count the jobs the script reports at the run - `scripts/ci-local.sh` and the GitHub
@@ -1314,6 +1314,9 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1f`, 2026-11-16 (WIP `54
   RED proof's outcome; the race spec entered the tree mid-run and the RED-proof mutation (the link's `FOR SHARE` removed) was live for
   about a minute while that job ran. The leg passes 14/14 on the restored code against the same DB (:5485). Attribution to the mutation is
   the session's inference from the matching outcome and the timing, ⛔ proven from the log. A third run on a fresh container follows.
+- `ci:local` run 3 (at `877c6ef2` — the code tip, the race legs included; a FRESH container `twt-13-1f-pg-fresh3`, :5486): **PASSED — 40 of 40
+  jobs green** (incl. `field-worker-ending-appeal-invariant`, `contracts-determinism`, `microcopy`, `integration-tests`). The commits after it
+  touch records only.
 - Full live domain suite (:5484): 8386 pass, 6 fail under full-suite load (~25 s timeouts in `claim/*` and `field-worker/page.spec`) —
   the four files pass 75/75 alone. Full live API suite (:5484): 239 files, 3216 pass.
 
@@ -1483,6 +1486,7 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 | v1.1 | 2026-11-13 | `bmad-create-story validate 13.1f` (4 read-only verifiers; their main claims re-checked in the repo; BigDev: "all"). Code still at `5ede00c4`. Detail below. |
 | v1.2 | 2026-11-14 | `bmad-create-story validate 13.1f` a second time (4 fresh read-only verifiers: domain + DB, API + RBAC + admin, governance, adversarial design; every critical claim re-checked in the repo; BigDev: "all", 50 items). Code still at `5ede00c4`. Detail below. |
 | v1.3 | 2026-11-16 | `bmad-create-story validate 13.1f` a third time (an in-session re-trace at `5ede00c4`, still `origin/main` after `git fetch`; `-464`, `0207`, Row 52 still free; BigDev: "all", 9 items). Detail below. |
+| v1.8 | 2026-11-17 | Task 7 done: `ci:local` run 3 PASSED 40/40 on a fresh container (:5486) at `877c6ef2`; `epics.md` BUILT note. Open: 2.4, 3.7, 6.3, 8 — row stays `in-progress`. |
 | v1.7 | 2026-11-17 | Task 5.2 done: the Concurrency matrix's race legs (14) and the TR8 replay leg; the AC2 (ii) RED proof (fails without `FOR SHARE`; no 40P01 in this interleave — recorded as observed). BigDev: *"Accept the 200 variance; build the race legs next"* — AD11 and AC9 now say the shown-number line records `responseStatus` 200 (the wrapper's); `-464` AD11 states no status, so the decision log is unchanged. Next: Task 5.2's race legs. |
 | v1.6 | 2026-11-17 | dev-story: Tasks 1, 2.1-2.3, 2.5, 3.1-3.6, 3.4a, 4, 5.1, 5.3, 6.1, 6.2 done and tested (Dev Agent Record); 2.4, 3.7, 5.2, 6.3, 7, 8 open as listed there. One variance (the shown-number line's `responseStatus` 200). Row stays `in-progress`. |
 | v1.5 | 2026-11-17 | The Panel RULED its note (`2026-11-17-465`; BigDev's relay verbatim: *"Panel ruled as recommended for all except Q6 for which option B is chosen"*): Q1 B, Q2 A, Q3 A / A, Q4 A x4, Q5 A, Q6 **B**, Q7 A. Q6 B propagated (a spec edit made at BigDev's instruction to record the ruling, outside dev-story's usual sections): AD6 (the slip undo refused after a Panel-heard refusal, superseding its "including after the Panel has REFUSED"), section 0 rows 10b and Result, the Policy meaning, the Per-command table, the Concurrency matrix, the Errors table + Names (`field_worker.appeal_refused_by_panel`), AD14's line, AC8, Tasks 3.4a / 5.1 / 6.2, C8 (new). Governance commits `36330c87` (`-465`, alone), `7c0d46f9` (the note's block, Row 52 (a) / (c) MET and (b) recorded, Row 48 (i), PRD FR-85 annotated). |

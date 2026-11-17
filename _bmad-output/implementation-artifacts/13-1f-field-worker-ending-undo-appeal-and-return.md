@@ -37,7 +37,7 @@ NUMBERS (re-grep each at Task 0.1; every one is contended by siblings):
 
 # Story 13.1f: A Mistaken Ending Is Undone, a Disputed One Is Appealed, and a Returning Field Worker Is Linked to Their Old Record - the Registering Officer Is Shown an Ended Worker's Number `[SURFACE]`
 
-Status: in-progress
+Status: review
 
 ## WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1317,6 +1317,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1f`, 2026-11-16 (WIP `54
 - `ci:local` run 3 (at `877c6ef2` — the code tip, the race legs included; a FRESH container `twt-13-1f-pg-fresh3`, :5486): **PASSED — 40 of 40
   jobs green** (incl. `field-worker-ending-appeal-invariant`, `contracts-determinism`, `microcopy`, `integration-tests`). The commits after it
   touch records only.
+- `ci:local` run 4 (at `5044c61a` — after Tasks 2.4 / 3.7 / 6.3 / 8 and the browser-pass fix; a FRESH container `twt-13-1f-pg-final`,
+  :5487, removed afterwards): **PASSED — 40 of 40 jobs green.**
 - Full live domain suite (:5484): 8386 pass, 6 fail under full-suite load (~25 s timeouts in `claim/*` and `field-worker/page.spec`) —
   the four files pass 75/75 alone. Full live API suite (:5484): 239 files, 3216 pass.
 
@@ -1393,9 +1395,16 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1f`, 2026-11-16 (WIP `54
 
 ### File List
 
-Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-undo-appeal-and-return`:
+Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-undo-appeal-and-return` (the temporary RED-proof spec and the browser-pass launcher were never committed):
 
+- `.decision-log.md` (modified)
 - `.github/workflows/ci.yml` (modified)
+- `_bmad-output/implementation-artifacts/13-1f-field-worker-ending-undo-appeal-and-return.md` (new)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
+- `_bmad-output/planning-artifacts/epics.md` (modified)
+- `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` (modified)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-16-story-13-1f-field-worker-undo-and-appeal.md` (new)
 - `apps/admin/src/api/client.ts` (modified)
 - `apps/admin/src/api/hooks.ts` (modified)
 - `apps/admin/src/modules/field-workers/AppealActions.tsx` (new)
@@ -1425,9 +1434,11 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 - `apps/api/src/modules/field-worker/routes.ts` (modified)
 - `apps/api/src/modules/field-worker/undo-handlers.ts` (new)
 - `apps/api/src/types.ts` (modified)
+- `apps/api/tests/integration/_field-worker-fixture.ts` (modified)
 - `apps/api/tests/integration/field-worker/_registration-harness.ts` (modified)
 - `apps/api/tests/integration/field-worker/approval.spec.ts` (modified)
 - `apps/api/tests/integration/field-worker/code-read.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/ending-appeal-race.spec.ts` (new)
 - `apps/api/tests/integration/field-worker/lifecycle.spec.ts` (modified)
 - `apps/api/tests/integration/field-worker/move-race.spec.ts` (modified)
 - `apps/api/tests/integration/field-worker/reads.spec.ts` (modified)
@@ -1438,6 +1449,7 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 - `apps/jobs/tests/field-worker-move-request-escalation-live.test.ts` (modified)
 - `apps/jobs/tests/field-worker-notice-email-no-decision.test.ts` (modified)
 - `apps/jobs/tests/field-worker-notice-emails-live.test.ts` (modified)
+- `docs/launch-gate-inventory/inventory-roster.md` (modified)
 - `openapi/v1.yaml` (modified)
 - `package.json` (modified)
 - `packages/contracts/scripts/emit-openapi.ts` (modified)
@@ -1479,6 +1491,7 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 - `packages/domain/tests/integration/field-worker/move-requests.spec.ts` (modified)
 - `packages/domain/tests/integration/field-worker/notice-emails.spec.ts` (modified)
 - `packages/domain/tests/integration/field-worker/read.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/register-previous.spec.ts` (new)
 - `packages/domain/tests/integration/field-worker/schema-trigger.spec.ts` (modified)
 - `packages/domain/tests/integration/field-worker/stream-concurrency.spec.ts` (modified)
 - `packages/domain/tests/integration/field-worker/undo.spec.ts` (new)
@@ -1494,14 +1507,6 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 - `scripts/field-worker-ending-appeal-invariant/check.ts` (new)
 - `scripts/field-worker-ending-appeal-invariant/lib.test.ts` (new)
 - `scripts/field-worker-ending-appeal-invariant/lib.ts` (new)
-- `.decision-log.md` (modified)
-- `_bmad-output/implementation-artifacts/13-1f-field-worker-ending-undo-appeal-and-return.md` (new)
-- `_bmad-output/implementation-artifacts/deferred-work.md` (modified)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
-- `_bmad-output/planning-artifacts/epics.md` (modified)
-- `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` (modified)
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-16-story-13-1f-field-worker-undo-and-appeal.md` (new)
-- `docs/launch-gate-inventory/inventory-roster.md` (modified)
 
 ## Change Log
 
@@ -1511,6 +1516,7 @@ Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-u
 | v1.1 | 2026-11-13 | `bmad-create-story validate 13.1f` (4 read-only verifiers; their main claims re-checked in the repo; BigDev: "all"). Code still at `5ede00c4`. Detail below. |
 | v1.2 | 2026-11-14 | `bmad-create-story validate 13.1f` a second time (4 fresh read-only verifiers: domain + DB, API + RBAC + admin, governance, adversarial design; every critical claim re-checked in the repo; BigDev: "all", 50 items). Code still at `5ede00c4`. Detail below. |
 | v1.3 | 2026-11-16 | `bmad-create-story validate 13.1f` a third time (an in-session re-trace at `5ede00c4`, still `origin/main` after `git fetch`; `-464`, `0207`, Row 52 still free; BigDev: "all", 9 items). Detail below. |
+| v1.10 | 2026-11-17 | `ci:local` run 4 PASSED 40/40 on a fresh container at `5044c61a`; every task checked; Status `review` (sprint-status row `in-progress` → `review`). ⛔ landed, ⛔ pushed. |
 | v1.9 | 2026-11-17 | BigDev: *"go ahead, complete all, browser is connected"* — Task 2.4 (RED proofs), 3.7 (register-previous spec, AC1 (d)), 6.3 (the remaining RTL legs), 8 (the browser pass; three findings fixed in `5044c61a` and re-checked) done. Every task checked. |
 | v1.8 | 2026-11-17 | Task 7 done: `ci:local` run 3 PASSED 40/40 on a fresh container (:5486) at `877c6ef2`; `epics.md` BUILT note. Open: 2.4, 3.7, 6.3, 8 — row stays `in-progress`. |
 | v1.7 | 2026-11-17 | Task 5.2 done: the Concurrency matrix's race legs (14) and the TR8 replay leg; the AC2 (ii) RED proof (fails without `FOR SHARE`; no 40P01 in this interleave — recorded as observed). BigDev: *"Accept the 200 variance; build the race legs next"* — AD11 and AC9 now say the shown-number line records `responseStatus` 200 (the wrapper's); `-464` AD11 states no status, so the decision log is unchanged. Next: Task 5.2's race legs. |

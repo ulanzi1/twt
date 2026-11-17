@@ -151,6 +151,35 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
     });
   });
 
+  describe('TR8 — idempotency: a replay returns the first 200; the key is namespaced by the worker id', () => {
+    it('the same key twice on one undo → the same 200, ONE line; the same key on ANOTHER worker → that worker’s own act, not a replay', async () => {
+      const w = await world();
+      const a = await activeWorker(w);
+      const b = await activeWorker(w);
+      const va = await end(w, a, w.pa.client);
+      const vb = await end(w, b, w.pa.client);
+      const key = randomUUID();
+      const first = await h.undoEnding(w.pa.client, w.p, a, va, key);
+      const replay = await h.undoEnding(w.pa.client, w.p, a, va, key);
+      expect(first.statusCode, first.body).toBe(200);
+      expect(replay.statusCode).toBe(200);
+      expect(json(replay)).toEqual(json(first));
+      expect(await auditCount(w.p, 'field_worker.ending_undone')).toBe(1);
+      const other = await h.undoEnding(w.pa.client, w.p, b, vb, key);
+      expect(other.statusCode, other.body).toBe(200);
+      expect(json(other)['field_worker_id']).toBe(b);
+      expect(await auditCount(w.p, 'field_worker.ending_undone')).toBe(2);
+      // An appeal lodge: the same, with the worker id in its namespace.
+      const c = await activeWorker(w);
+      const vc = await end(w, c, w.pa.client);
+      const lk = randomUUID();
+      const l1 = await h.lodgeAppeal(w.tp.client, w.p, c, await lodgeBody(vc), lk);
+      const l2 = await h.lodgeAppeal(w.tp.client, w.p, c, await lodgeBody(vc), lk);
+      expect(l1.statusCode, l1.body).toBe(201);
+      expect(json(l2)['appeal_id']).toBe(json(l1)['appeal_id']);
+    });
+  });
+
   describe('AC7 — the hearer is fixed at the ending', () => {
     it('a District Admin → pariwar_admin; a Pariwar Admin, a dual-role officer (snapshot role district_admin) and a super admin → trustee_panel', async () => {
       const w = await world();

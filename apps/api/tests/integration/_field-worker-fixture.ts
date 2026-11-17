@@ -15,7 +15,7 @@ import type pg from 'pg';
 export async function registerTestFieldWorker(
   client: pg.PoolClient,
   pariwarId: string,
-  opts: { district?: string; actorId?: string } = {},
+  opts: { district?: string; actorId?: string; mobileBlindIndex?: string } = {},
 ): Promise<ids.FieldWorkerId> {
   const district = opts.district ?? 'Patna';
   const actorId = opts.actorId ?? randomUUID();
@@ -35,7 +35,8 @@ export async function registerTestFieldWorker(
     actorId, // the SAME actor the authorization was minted for — the command refuses another
     nameCiphertext: 'enc:v1:fixture-name',
     mobileCiphertext: 'enc:v1:fixture-mobile',
-    mobileBlindIndex: `fixture-${randomUUID()}`,
+    // Story 13.1f — a race leg registers a SECOND row with an existing worker's number (the live-number index).
+    mobileBlindIndex: opts.mobileBlindIndex ?? `fixture-${randomUUID()}`,
     registeredByDisplay: 'Fixture Admin',
     district,
     authorization,
@@ -154,4 +155,99 @@ export async function acceptTestMoveRequest(client: pg.PoolClient, pariwarId: st
     actorId,
     authorization,
   });
+}
+
+// ── Story 13.1f — the undo and the appeal, through the PUBLIC commands, for the race legs (each takes the WORKER's row lock first and
+// holds it until the caller's transaction ends). Authorizations minted by the REAL check (this file is exempt from the `authorize(`
+// fence by exact path). ──
+
+type Hearer = 'pariwar_admin' | 'trustee_panel';
+function hearAuthorization(hearer: Hearer, pariwarId: string, district: string, actorId: string) {
+  const authorization = rbac.authorize({
+    actorId,
+    grants: [{ pariwarId, role: hearer, scopeDimension: 'pariwar', scopeValue: pariwarId }],
+    key: hearer === 'trustee_panel' ? 'field_worker.hear_ending_appeal_as_panel' : 'field_worker.hear_ending_appeal',
+    resource: { dimension: 'district', value: district, pariwarId },
+  });
+  if (authorization === null) throw new Error(`[_field-worker-fixture] the real check refused the hear key for ${hearer}`);
+  return { authorization, actor: hearer === 'trustee_panel' ? ('trustee' as const) : ('operator' as const) };
+}
+async function districtAndVersion(client: pg.PoolClient, id: string): Promise<{ district: string; version: number }> {
+  const { rows } = await client.query<{ district: string; v: string }>('SELECT district, state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id]);
+  if (rows[0] === undefined) throw new Error('[_field-worker-fixture] no such worker');
+  return { district: rows[0].district, version: Number(rows[0].v) };
+}
+const istToday = async (client: pg.PoolClient) => (await client.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date)::text AS d")).rows[0]!.d;
+
+/** END a worker (`inactive`, today IST) through `terminateFieldWorker`; `heardBy` as the terminate route would fix it. */
+export async function terminateTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, heardBy: Hearer = 'trustee_panel'): Promise<void> {
+  const actorId = randomUUID();
+  const { district } = await districtAndVersion(client, id);
+  await fieldWorker.terminateFieldWorker(client, {
+    pariwarId: ids.pariwarId(pariwarId),
+    fieldWorkerId: id,
+    auditId: randomUUID(),
+    actor: 'operator',
+    actorId,
+    reasonCode: 'inactive',
+    endedOn: await istToday(client),
+    authorization: actAuthorization('field_worker.terminate', pariwarId, district, actorId),
+    appealHeardBy: heardBy,
+  });
+}
+
+/** UNDO the worker's current ending (a slip) through `undoFieldWorkerEnding`, as a Pariwar Admin. */
+export async function undoTestEnding(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId): Promise<void> {
+  const actorId = randomUUID();
+  const { district, version } = await districtAndVersion(client, id);
+  const authorization = rbac.authorize({
+    actorId,
+    grants: [{ pariwarId, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: pariwarId }],
+    key: 'field_worker.undo_ending',
+    resource: { dimension: 'district', value: district, pariwarId },
+  });
+  if (authorization === null) throw new Error('[_field-worker-fixture] the real check refused field_worker.undo_ending');
+  await fieldWorker.undoFieldWorkerEnding(client, { pariwarId: ids.pariwarId(pariwarId), fieldWorkerId: id, auditId: randomUUID(), actor: 'operator', actorId, authorization, expectedEndingVersion: version });
+}
+
+/** LODGE an appeal against the worker's current ending through `lodgeFieldWorkerEndingAppeal`, by the given hearer; returns its id. */
+export async function lodgeTestAppeal(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, hearer: Hearer = 'trustee_panel'): Promise<string> {
+  const actorId = randomUUID();
+  const { district, version } = await districtAndVersion(client, id);
+  const appealId = ids.fieldWorkerEndingAppealId(randomUUID());
+  await fieldWorker.lodgeFieldWorkerEndingAppeal(client, {
+    pariwarId: ids.pariwarId(pariwarId),
+    fieldWorkerId: id,
+    appealId,
+    auditId: randomUUID(),
+    actorId,
+    ...hearAuthorization(hearer, pariwarId, district, actorId),
+    expectedEndingVersion: version,
+    receivedOn: await istToday(client),
+    receivedVia: 'phone',
+  });
+  return appealId;
+}
+
+/** DECIDE (allow / refuse) or WITHDRAW an appeal through its PUBLIC command, by the given hearer (never the ender — a fresh actor). */
+export async function closeTestAppeal(
+  client: pg.PoolClient,
+  pariwarId: string,
+  appealId: string,
+  act: 'allowed' | 'refused' | 'withdrawn',
+  hearer: Hearer = 'trustee_panel',
+  district = 'Patna',
+): Promise<void> {
+  const actorId = randomUUID();
+  const input = {
+    pariwarId: ids.pariwarId(pariwarId),
+    appealId: ids.fieldWorkerEndingAppealId(appealId),
+    auditId: randomUUID(),
+    actorId,
+    ...hearAuthorization(hearer, pariwarId, district, actorId),
+    decidedOn: await istToday(client),
+  };
+  if (act === 'allowed') await fieldWorker.allowFieldWorkerEndingAppeal(client, input);
+  else if (act === 'refused') await fieldWorker.refuseFieldWorkerEndingAppeal(client, input);
+  else await fieldWorker.withdrawFieldWorkerEndingAppeal(client, input);
 }

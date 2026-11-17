@@ -513,7 +513,7 @@ BigDev's - ANSWERED 2026-11-16 (below).**
   `previous_endings_seen: true`, the route answers 409 `field_worker.number_previously_ended` with `details: { previous_endings: [{ field_worker_id,
   ended_on, reason_code }] }` - no name, no district, no officer; nothing is decrypted. It is the ONE pre-read refusal that writes an audit line (I7):
   `field_worker.previous_endings_shown` (`writeAuditEntry` on `deps.servicePool` - NEVER the scope transaction, which rolls back with the 409 -
-  awaited, `responseStatus: 409`, locator `field_worker/<newest ended id>`, hash `{ ended ids }`) BEFORE answering - if the write fails, the answer
+  awaited, `responseStatus` 200 through `audit.withCompensatingAudit` (ADR-0030's gate refuses a direct `writeAuditEntry`; was 409 - the variance ACCEPTED by BigDev 2026-11-17, *"Accept the 200 variance"*, v1.7), locator `field_worker/<newest ended id>`, hash `{ ended ids }`) BEFORE answering - if the write fails, the answer
   is a 500 and nothing is disclosed. A second officer learned of an ending (the ruling's
   accepted cost - Q3 A anticipated an officer of another district), and that showing is recorded. A refused request is never stored by the
   idempotency layer (G20), so a retried first submit writes another line - each is a showing. The officer re-submits with `previous_endings_seen:
@@ -870,7 +870,7 @@ appeal becomes `allowed`, no `superseded` event). The superseded row's `decided_
 
 **AC9 - The shown number (AD11).** Registering a number that belongs to one or more ENDED workers of this Pariwar -> 409 `number_previously_ended`
 with each `{ field_worker_id, ended_on, reason_code }` (`ended_on DESC, field_worker_id`, at most 5 - a leg with two endings on one day) and ONE `field_worker.previous_endings_shown` audit line
-(`responseStatus` 409); re-submitted with `previous_endings_seen: true` under a new idempotency key -> 201. (a) An ended worker of ANOTHER district of
+(`responseStatus` 200 - the variance BigDev accepted 2026-11-17, v1.7); re-submitted with `previous_endings_seen: true` under a new idempotency key -> 201. (a) An ended worker of ANOTHER district of
 this Pariwar is shown; one of ANOTHER Pariwar never is. (b) A LIVE holder still answers 409 `mobile_already_registered` first (no ended list). (c)
 The 409 body holds `details.previous_endings` with the expected ids (positive) AND no name, mobile, district or officer (absence). (d) KMS is called
 for the seal only - no decrypt. (e) A retry of the first submit (same key) writes a second audit line (G20). (f) The audit write failing -> 500 and no
@@ -1003,44 +1003,44 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     note is not called ready; it is DRAFTED until BigDev sends it. A ruling is its own decision entry plus dated lines at Row 52 and Row 48 (i).
     Non-blocking: code may start after 0.5.
 
-- [ ] **Task 1 - Keys (AC: 11; I10)** - in the SAME commit as the first code that uses them (Task 3.1's undo key list).
-  - [ ] 1.1 `permissions.ts`: four keys, `PERMISSION_CATALOG_VERSION = 63`, the changelog comment (REUSE CHECK: not `field_worker.terminate` - the
+- [x] **Task 1 - Keys (AC: 11; I10)** - in the SAME commit as the first code that uses them (Task 3.1's undo key list).
+  - [x] 1.1 `permissions.ts`: four keys, `PERMISSION_CATALOG_VERSION = 63`, the changelog comment (REUSE CHECK: not `field_worker.terminate` - the
     opposite act; not `member.restore_terminated` / `member.decide_moderation_appeal` - members; not `field_worker.read_log` - the worker stream, not
     the appeal stream). `roles.ts`: constants and bundle entries per AD10 (`trustee_panel`'s bundle gains `_as_panel` and `read_ending_appeals`; the
     `_as_panel` comment in 10.22's words).
-  - [ ] 1.2 `tests/rbac/permissions.test.ts` (`toBe(63)`, `toBe(94)`), `tests/rbac/roles.test.ts`, `tests/field-worker/events.test.ts` catalog fixtures.
+  - [x] 1.2 `tests/rbac/permissions.test.ts` (`toBe(63)`, `toBe(94)`), `tests/rbac/roles.test.ts`, `tests/field-worker/events.test.ts` catalog fixtures.
 
 - [ ] **Task 2 - Migration `0207` (AC: 4, 5, 10, 13, 16; I1)** - hand-authored ([[project_live_db_test_gotchas]]: never regenerate; a `when` after 0206's).
-  - [ ] 2.1 The guard function `CREATE OR REPLACE`d from `0201`'s body with (t') and its own message (AD4); a header naming 13.1e's duty to carry it (C2).
+  - [x] 2.1 The guard function `CREATE OR REPLACE`d from `0201`'s body with (t') and its own message (AD4); a header naming 13.1e's duty to carry it (C2).
     Diff the function text against `0201`'s in review (TR2).
-  - [ ] 2.2 `field_workers.previous_field_worker_id uuid NULL`, CHECK `<> field_worker_id`, the composite FK (AD12); the drizzle column in
+  - [x] 2.2 `field_workers.previous_field_worker_id uuid NULL`, CHECK `<> field_worker_id`, the composite FK (AD12); the drizzle column in
     `schema/field_workers.ts`. Nothing else on `field_workers` changes. Update `field-workers-policy-regression.spec.ts` (the column list; the
     constraint list gains exactly the CHECK and the FK) and `composite-fk.spec.ts` if it pins the table's FKs.
-  - [ ] 2.3 `field_worker_ending_appeals` (AD7) on `0205`'s shape: table (incl. `ended_by_user_id` and `lodged_by_user_id` NOT NULL, `decided_by_user_id`), the four AD7 CHECKs + the
+  - [x] 2.3 `field_worker_ending_appeals` (AD7) on `0205`'s shape: table (incl. `ended_by_user_id` and `lodged_by_user_id` NOT NULL, `decided_by_user_id`), the four AD7 CHECKs + the
     state / hearer / via CHECKs, GRANT, FORCE RLS + three policies, the projector-only guard (transitions `open -> final` only, the four final states
     frozen, the immutable columns), the no-delete and no-truncate triggers, the partial unique, the composite FK; `schema/field_worker_ending_appeals.ts`
     + `schema/index.ts`; the journal entry; the `policies/` RLS file AND its entry in `policies/index.ts`; its own policy-regression pins.
   - [ ] 2.4 Live specs on a FRESH container: `schema-trigger.spec.ts` (AC4's six refusals with their messages + the legal shape; AC10 (b)); the appeal
     table's AC16 legs (guard per transition and per final state, immutables, CHECKs by name, DELETE / TRUNCATE as OWNER, FK 23503 by name) and RLS.
     The RED proof of AC4 (as AC4 words it) and of each AC16 CHECK / guard rule.
-  - [ ] 2.5 `scripts/field-worker-ending-appeal-invariant` on 13.1d's move-request gate's model (projector-only writers of the appeal table), wired into
+  - [x] 2.5 `scripts/field-worker-ending-appeal-invariant` on 13.1d's move-request gate's model (projector-only writers of the appeal table), wired into
     `ci.yml`, `ci-local.sh` and `package.json` (one more job).
 
 - [ ] **Task 3 - The domain (AC: 1-11, 16, 17; I1-I5)**
-  - [ ] 3.1 `events.ts`: `FieldWorkerEndingUndonePayloadSchema` (with AD2's two superRefines - the suspension reason, and cause <-> key),
+  - [x] 3.1 `events.ts`: `FieldWorkerEndingUndonePayloadSchema` (with AD2's two superRefines - the suspension reason, and cause <-> key),
     `FIELD_WORKER_UNDO_PERMISSION_KEYS` (three entries: the undo key and both hear keys), `appeal_heard_by` on `terminated` as `.optional()` in the
     SCHEMA (AD8 - required by the command's input, not the schema), the optional `previous_field_worker_id` on `registered`, every key pinned (AD15);
     `FIELD_WORKER_EVENT_TYPES` + the schema map (`events.test.ts` `toHaveLength(8)`); the `packages/events` registry entry (and reword
     `field_worker.terminated`'s "Terminal;") and `field-worker-registry-coverage.test.ts`. `ids/index.ts`: the branded `FieldWorkerEndingAppealId`.
-  - [ ] 3.2 `state.ts` per AD3: the undo arm BEFORE the table lookup, parsing the fold-only schema; `FIELD_WORKER_UNDO_TRANSITIONS` (doc-only, outside
+  - [x] 3.2 `state.ts` per AD3: the undo arm BEFORE the table lookup, parsing the fold-only schema; `FIELD_WORKER_UNDO_TRANSITIONS` (doc-only, outside
     `FIELD_WORKER_TRANSITIONS`); `reduce` passes `event.payload`; `foldFieldWorkerProjection`'s OWN call passes `row.payload` (G17 (g)); the fold
     applies the undo; the header. `state.test.ts`: the `legal` count, the literal table and "nothing leaves terminated" stay UNCHANGED (G17 (f)) -
     ADD the payload legs (each valid payload -> its target; none / bad -> `null`), the agreement test treating `ending_undone` as payload-dependent
     (TR1), the fold legs (per from-state, two endings and one undo), AC1 (f)'s unit legs.
-  - [ ] 3.3 `project.ts`: the undo variable for `ending_undone` only, `SET LOCAL` as the writer variable is, nested INSIDE its `try / finally`; AD3's
+  - [x] 3.3 `project.ts`: the undo variable for `ending_undone` only, `SET LOCAL` as the writer variable is, nested INSIDE its `try / finally`; AD3's
     check of the undone event (`from_state` read raw); `ended_on` null, reason restored; the 23505 on `FIELD_WORKER_MOBILE_LIVE_CONSTRAINT` mapped
     in the UPDATE catch (AD5, TR3); `projectFieldWorkerGenesis`'s INSERT writes `previous_field_worker_id` from the payload.
-  - [ ] 3.4 `commands.ts` (AD2, TR14, TR17): `runLockedTransition`'s optional `resolveTarget`; the PRIVATE `readFieldWorkerStreamLocked` and
+  - [x] 3.4 `commands.ts` (AD2, TR14, TR17): `runLockedTransition`'s optional `resolveTarget`; the PRIVATE `readFieldWorkerStreamLocked` and
     `undoEndingLocked`; the two exported writers `undoFieldWorkerEnding` (guard (0): actor, `field_worker.undo_ending`, `expectedEndingVersion`;
     under the lock: terminated, the version, (3d) `assertLockedTarget`, the stream fold; after the transition, `ending-appeal-supersede.ts` for an
     open appeal) and `allowFieldWorkerEndingAppeal` (worker lock -> `ending-appeal-lock.ts` -> AD9's decide checks -> the core -> `.allowed` through
@@ -1050,19 +1050,19 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     with `classify` rules for every new statement. `terminateFieldWorker` takes a REQUIRED `appealHeardBy` input (AD8; update every G22 caller).
     `registerFieldWorker` takes `previousFieldWorkerId` (validated in the API, re-checked by the FK). Update the guard-order header. Domain
     `errors.ts`: the new classes (no `_rolled_back` classes - G25).
-  - [ ] 3.4a **`-465` Q6 B (v1.5):** `undoFieldWorkerEnding` refuses `FieldWorkerAppealRefusedByPanelError` under the worker lock, after the
+  - [x] 3.4a **`-465` Q6 B (v1.5):** `undoFieldWorkerEnding` refuses `FieldWorkerAppealRefusedByPanelError` under the worker lock, after the
     version check and before the stream fold, when the current ending (`ending_event_version = state_event_version`) has an appeal with
     `heard_by = 'trustee_panel'` AND `state = 'refused'`; a domain read for the API pre-read (`hasPanelRefusedAppealOnEnding` in
     `ending-appeal-read.ts`); the statement-order pin gains its query (classify rule); `undo.spec.ts` legs per AC8 (Panel refusal refused;
     Pariwar-Admin refusal and Panel withdrawal controls succeed; super admin refused) and the Concurrency matrix's both-orders leg.
-  - [ ] 3.5 `ending-appeal-{events,state,lock,project,supersede,commands,read}.ts` on 13.1d's request files (G13): `-lock` (`appealWorkerOf`,
+  - [x] 3.5 `ending-appeal-{events,state,lock,project,supersede,commands,read}.ts` on 13.1d's request files (G13): `-lock` (`appealWorkerOf`,
     `lockEndingAppealRow`), `-project` and `-supersede` import NOTHING from `commands.ts` and are NOT re-exported by `index.ts` (TR17);
     `ending-appeal-commands.ts` = lodge (AD9's lodge order, its version guard, the one-per-ending constant, the in-lock hearer from AD17 - the
     command takes no `heardBy` input), refuse and withdraw (AD9's decide order, the lock order of TR5); the IST date bounds (AD7, the genesis
     event's IST date as the lower bound); every appeal event's key pinned (AD15); the list, eligible and per-worker reads in `-read.ts` (the name
     decrypt stays in the API, as 13.1d's); the `packages/events` registry entries and `field-worker-ending-appeal-registry-coverage.test.ts`. Extend
     `index.ts`'s barrel for `-events`, `-state`, `-commands`, `-read` only, and its header's "⛔ re-exported" list.
-  - [ ] 3.6 `read.ts`: `getCurrentFieldWorkerEnding` / `getCurrentFieldWorkerEndingLocked` (AD17), `findEndedFieldWorkersByMobileIndex`,
+  - [x] 3.6 `read.ts`: `getCurrentFieldWorkerEnding` / `getCurrentFieldWorkerEndingLocked` (AD17), `findEndedFieldWorkersByMobileIndex`,
     `getFieldWorkerMobileIndex`, `lockFieldWorkerForLink` (AD12), `listFieldWorkerLinkChain` (cap 10), `listAppealEligibleFieldWorkers` (AD13's join,
     `ended_on DESC, field_worker_id` cursor); `getFieldWorkerStateAt`'s header ("all EIGHT event types").
   - [ ] 3.7 Specs in `packages/domain/tests/integration/field-worker/`: `undo.spec.ts` (AC1-AC3, AC8), `ending-appeal.spec.ts` (AC5, AC6, AC17's
@@ -1072,8 +1072,8 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     its exact path in `check.test.ts`); its cleanup deletes the appeal table and its streams before `field_workers` (G29). RED proof for each new
     guard (mutate, see the intended assertion fail, restore).
 
-- [ ] **Task 4 - Contracts (AC: 1, 3, 5, 6, 9, 10, 13, 15)**
-  - [ ] 4.1 `enums.ts`: the eighth event type (closing 13.1c C2 (iii) on landing), the appeal states / via / outcome / hearer tuples and the appeal event
+- [x] **Task 4 - Contracts (AC: 1, 3, 5, 6, 9, 10, 13, 15)**
+  - [x] 4.1 `enums.ts`: the eighth event type (closing 13.1c C2 (iii) on landing), the appeal states / via / outcome / hearer tuples and the appeal event
     types (re-declared; the sync test in `packages/contracts/tests/field-workers.test.ts`). `dto.ts`: `UndoFieldWorkerEndingRequest`, the lodge (with
     `expected_ending_version`), decide and withdraw requests (AD7's bodies; dates as `z.string()`) and responses, the list, eligible and per-worker
     queries (each with `limit`) and pages, `RegisterFieldWorkerRequest` + `previous_endings_seen` / `link_to` (optional, the refine), the 409 details
@@ -1083,11 +1083,11 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     page defaults 20 / cap 25 through `clampedLimit` (export it or reuse it in place - G28). `packages/contracts/scripts/emit-openapi.ts`: register
     the seven new paths, the register route's new 409 / 422 and the log's `record` parameter BY HAND (`registry.registerPath`), and reword its
     "final in this version"; regenerate `openapi/v1.yaml`.
-  - [ ] 4.2 New required fields break fixtures outside tsc ([[project_contracts_tests_outside_tsc]]) - grep the contracts and admin tests for
+  - [x] 4.2 New required fields break fixtures outside tsc ([[project_contracts_tests_outside_tsc]]) - grep the contracts and admin tests for
     `FieldWorkerLifecycleResult` / identity fixtures (the new required `state_event_version`).
 
 - [ ] **Task 5 - The API (AC: 1-11, 13, 15, 17; I6-I8)**
-  - [ ] 5.1 `gate.ts`: the lodge loader (AD17's current ending -> `heard_by` + district; a missing / foreign worker -> null) and
+  - [x] 5.1 `gate.ts`: the lodge loader (AD17's current ending -> `heard_by` + district; a missing / foreign worker -> null) and
     `loadEndingAppealGate` beside `loadMoveRequestGate`; `apps/api/src/types.ts`: the stash fields. `undo-handlers.ts` (AD6), `ending-appeal-handlers.ts`
     (AD9's dispatcher on the `requireAnyAppealAccess` shape - G26 - incl. its no-hearer branch; the pre-reads, incl. the super admin `_as_panel`
     refusal and, for an allowed decision, AD5's number check; AD13's list, eligible and per-worker reads on G28's helpers, `limits.read`, the empty-page
@@ -1097,7 +1097,7 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     TR16; EVERY act's 200 gains `state_event_version` from the domain result - G24); `routes.ts` (the static `ending-appeals` routes before `/:fieldWorkerId` - AD13); `errors.ts` + `field-worker-errors.test.ts`
     (every new code, and the `numberPreviouslyEndedError` factory); each appeal and undo handler sets `actor` from the authorization's key (AD9).
     The undo handler's pre-read refuses `appeal_refused_by_panel` with NO audit line (`-465` Q6 B; AC8's HTTP legs in `undo.spec.ts`).
-  - [ ] 5.2 Harness and fixtures (G29): HTTP legs use the harness's own `h.actor(p, 'trustee_panel', 'pariwar', p)` and `h.addGrant(userId, p,
+  - [x] 5.2 Harness and fixtures (G29): HTTP legs use the harness's own `h.actor(p, 'trustee_panel', 'pariwar', p)` and `h.addGrant(userId, p,
     'pariwar_admin', 'pariwar', p)` for the dual-role officer - no new grant helper; `_registration-harness.ts` gains the act helpers (`undoEnding`,
     `lodgeAppeal`, `decideAppeal`, `withdrawAppeal`, `listAppeals`, `listEligible`) and its `cleanup()` deletes the appeal rows and their `events_log`
     streams before `field_workers`; `apps/api/tests/integration/_field-worker-fixture.ts` (NOT under `field-worker/`) gains only the DOMAIN
@@ -1107,17 +1107,17 @@ first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
     `register-previous.spec.ts`, `terminate-hearer.spec.ts` (AC7), `log-link.spec.ts`; the route-table tests pin `limits.read` on every new GET;
     cross-Pariwar legs with REAL ids (AC5 (k), AC6 (l), AC10 (c), AC15 (d) (f)); pre-read refusals write no audit line (count `audit_log` rows for
     the locator, with a control); idempotency replays and per-id namespaces.
-  - [ ] 5.3 Route review (13.2 C7): no door import, no re-export, no `requestContextStorage.run`, no `pariwarId =` writer; run the reach fence and
+  - [x] 5.3 Route review (13.2 C7): no door import, no re-export, no `requestContextStorage.run`, no `pariwarId =` writer; run the reach fence and
     `check.test.ts`. Never write the AT9 word (named in `lifecycle-handlers.ts`'s header) in a field-worker file.
 
 - [ ] **Task 6 - The screens (AC: 12)**
-  - [ ] 6.1 Hooks and client (`apps/admin/src/api/hooks.ts`, the lifecycle client): `useFieldWorkerAct`'s `setQueryData` copies
+  - [x] 6.1 Hooks and client (`apps/admin/src/api/hooks.ts`, the lifecycle client): `useFieldWorkerAct`'s `setQueryData` copies
     `state_event_version` with `current_state` and `district` (G24); `useUndoFieldWorkerEnding` (on `ending_changed`: invalidate the IDENTITY query
     as well as the lists and the log), the appeal mutations (an allowed decision writes the 200's `worker` into the identity cache), the per-worker
     `useFieldWorkerEndingAppealsOf`, `useFieldWorkerEndingAppeals` and `useAppealEligibleFieldWorkers` (infinite; `gcTime: 0` where names are shown -
     [[project_query_gctime_blinds_removal_tests]]); the register mutation's 409 details; `fieldWorkerListIsStale` gains the new 409s that mean "the
     list moved" (`ending_changed`, `appeal_not_open`).
-  - [ ] 6.2 `WorkerDetail.tsx` (`WorkerSummary` gains `state_event_version`; the worker panel shows its appeals - the per-worker read - and offers
+  - [x] 6.2 `WorkerDetail.tsx` (`WorkerSummary` gains `state_event_version`; the worker panel shows its appeals - the per-worker read - and offers
     "Record an appeal" to a hear-key holder), `WorkerActions.tsx` (`ACTS_BY_STATE.terminated = ['undo']`, a `REASONS` entry; the End line; the undo
     confirm with its open-appeal line; the "Tell the worker." reminders - AD14), `derive.ts` (`'undo'` in `WorkerAct`; `fw.actions.noAccess.undo`
     for `actGuidance`'s 403; `'appeals'` in `Surface` / `NO_ACCESS_KEY`; `roleLabel` + `fw.role.trustee_panel`; `BY_CODE` rows for every new code,
@@ -1297,9 +1297,19 @@ one dispatcher (the hook takes a fixed key; the dispatcher itself copies `requir
 
 ### Agent Model Used
 
-(the dev-story session fills this)
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 13.1f`, 2026-11-16 (WIP `541b9073`) and 2026-11-17.
 
 ### Debug Log References
+
+- Live DB: the story's container `twt-13-1f-pg` (:5484, 0207 applied) for the specs; a FRESH container `twt-13-1f-pg-fresh` (:5485)
+  for `ci:local`. A standalone `pnpm db:migrate` against :5485 was refused by the session's permission check; `ci:local`'s own
+  integration job migrated it.
+- `ci:local` run 1 (2026-11-17, :5485 fresh, at `31d5d99c`): 35 of 40 jobs green; 5 red on three causes — the API `Harness` interface
+  lacked the appeal helpers (typecheck, build, crypto-check), two `.limit()`s not clamped inline (domain-invariants), the shown-number
+  line's direct `writeAuditEntry` (access-wrapper-invariants, ADR-0030). Fixed in `39357f77`; the five jobs' commands then exit 0 alone.
+- `ci:local` run 2 (at `39357f77`): CI_LOCAL_RUN_2
+- Full live domain suite (:5484): 8386 pass, 6 fail under full-suite load (~25 s timeouts in `claim/*` and `field-worker/page.spec`) —
+  the four files pass 75/75 alone. Full live API suite (:5484): 239 files, 3216 pass.
 
 ### Completion Notes List
 
@@ -1313,8 +1323,151 @@ one dispatcher (the hook takes a fixed key; the dispatcher itself copies `requir
   compressed change log - all applied at BigDev's "all". Q-1..Q-4 still OPEN; nothing committed; no code before Task 0.5.
 - 2026-11-16 - Task 0.2 (v1.4): BigDev answered Q-1..Q-4 (Q-1, Q-3, Q-4 A; Q-2 split to the new row `13-1h`); propagated. Nothing committed; next
   Task 0.0 on BigDev's word, then 0.1, 0.3-0.6.
+- 2026-11-17 - the Panel RULED its note: `2026-11-17-465` (committed ALONE `36330c87`), the note's block + roster + PRD FR-85 (`7c0d46f9`),
+  story v1.5 + records (`71849dca`). Q6 B is built (Task 3.4a): a slip undo is refused 409 `field_worker.appeal_refused_by_panel` once the
+  PANEL has heard and refused the current ending's appeal — pre-read (no audit line) and under the worker lock; a Pariwar-Admin-heard refusal
+  does not bar it (`-465` "does NOT cover"). RED-proved (the guard disabled ⇒ the Q6 B leg fails; restored).
+- 2026-11-17 - BUILT on the story branch (⛔ landed, ⛔ pushed): domain (`4a51a28e`), contracts + OpenAPI (`fd317a87`), API (`e973d5b2`),
+  admin (`31d5d99c`), the ci:local fixes (`39357f77`). What ran: the domain live specs `undo.spec` (18), `ending-appeal.spec` (26, incl.
+  AC16's guard / immutables / CHECKs by name / 23502 / DELETE + TRUNCATE as owner / FKs by name), `schema-trigger` AC4's refusals and
+  AC10 (b), the appeal table's RLS policy regression; `commands-guards` order pins for the undo (incl. Q6 B's place), the lodge order and
+  the decide / withdraw lock order; the API `undo-appeal.spec` (16 — AC1, AC2 pre-read, AC3, AC5-AC10, AC15, the route table's
+  `limits.read`); the admin `field-worker-undo.test.tsx` (5 — End then Undo in one panel names the End's version; the open-appeal line;
+  Q6 B's line; `ending_changed` re-reads the identity; the register's shown endings + link under a new key; the Appeals page acts and
+  "Record an appeal"); every existing 13.1 / 13.1a-d test updated for the new shapes (`state_event_version`, the shown-number 409 on
+  13.1c's re-register leg, "Undo ending" on an ended worker, the reworded End line). The new `field-worker-ending-appeal-invariant` gate
+  in `package.json`, `ci-local.sh`, `ci.yml`.
+- ⚠ Variance — ACCEPTED by BigDev 2026-11-17 (*"Accept the 200 variance"*; AD11 / AC9 amended in the story, v1.7; `-464` AD11 says only
+  "writes ONE audit line … BEFORE answering", so no decision entry changes): the shown-number audit line goes through `audit.withCompensatingAudit` (ADR-0030's
+  gate refuses a direct `writeAuditEntry`), so it records `responseStatus` 200, not AC9's 409; one line per showing still holds.
+- 2026-11-17 (v1.7, Task 5.2) - `ending-appeal-race.spec.ts` (14 legs): every row of the Concurrency matrix live, a holder connection
+  running the PUBLIC command (new `_field-worker-fixture.ts` helpers) while the HTTP request is proved BLOCKED behind it
+  (`waitForBlockedBy`), reason AND control asserted, the intent + `_rolled_back` pair where the refusal is under the lock: slip undo x
+  allowed decision (both orders), slip undo x refusal (both orders — a Panel refusal committed first answers `appeal_refused_by_panel`
+  UNDER THE LOCK; a Pariwar Admin's refusal or a withdrawal lets the undo through), decide x decide and decide x withdraw, lodge x lodge,
+  lodge x undo (both orders — a lodge committed first is superseded), undo x re-end (AC3, `ending_changed`), and AC2 (i), (ii), (iii).
+  Plus `undo-appeal.spec.ts`'s TR8 leg (a replay returns the first 200 and writes one line; the same key on another worker is that
+  worker's own act). **RED proof of AC2 (ii)** (the link's `FOR SHARE` removed, run, restored — diff empty): the leg FAILS — the stale
+  read passes the link check and the INSERT then answers 409 `mobile_already_registered`, ⛔ 422 `link_invalid`. ⚠ It did NOT deadlock in
+  this interleave (the holder commits instead of waiting on the request); the 40P01 TR15 names needs both sides waiting, which this leg
+  does not stage — recorded as observed, not as the story worded it. Story DB :5484: 31/31 (undo-appeal 17, race 14).
+- ⛔ NOT built / NOT run (tasks left unchecked — [[feedback_record_unattested_no_backfill]]): the RED proofs of AC4 (re-running
+  0201's function) and of each AC16 CHECK / guard rule (Task 2.4); the domain `register-previous.spec.ts` (its reads are covered through
+  the API spec only); AC1 (d)'s as-of read across transactions; the rest of AC12's RTL list (worker B after A, the Panel role label in the
+  history, the "Linked to an earlier record" panel); the real-browser pass (Task 8). `deferred-work.md`: 13.1a CR33's re-trigger and
+  13.1d CR31's trigger annotated FIRED; the closures (13.1c C2 (i)-(iii), 13.1d C3, R2-D1, CR9's half) wait for landing.
 
 ### File List
+
+Against `5ede00c4` (the pin), every commit on `story/13-1f-field-worker-ending-undo-appeal-and-return`:
+
+- `.github/workflows/ci.yml` (modified)
+- `apps/admin/src/api/client.ts` (modified)
+- `apps/admin/src/api/hooks.ts` (modified)
+- `apps/admin/src/modules/field-workers/AppealActions.tsx` (new)
+- `apps/admin/src/modules/field-workers/AppealsPage.tsx` (new)
+- `apps/admin/src/modules/field-workers/FieldWorkerNav.tsx` (modified)
+- `apps/admin/src/modules/field-workers/RegisterFieldWorkerPage.tsx` (modified)
+- `apps/admin/src/modules/field-workers/WorkerActions.tsx` (modified)
+- `apps/admin/src/modules/field-workers/WorkerDetail.tsx` (modified)
+- `apps/admin/src/modules/field-workers/WorkerHistory.tsx` (modified)
+- `apps/admin/src/modules/field-workers/derive.ts` (modified)
+- `apps/admin/src/modules/field-workers/i18n-en.ts` (modified)
+- `apps/admin/src/modules/field-workers/index.ts` (modified)
+- `apps/admin/src/router.tsx` (modified)
+- `apps/admin/src/routes/FieldWorkerAppealsRoute.tsx` (new)
+- `apps/admin/tests/field-worker-actions.test.tsx` (modified)
+- `apps/admin/tests/field-worker-derive.test.ts` (modified)
+- `apps/admin/tests/field-worker-lifecycle-client.test.ts` (modified)
+- `apps/admin/tests/field-worker-move-requests.test.tsx` (modified)
+- `apps/admin/tests/field-worker-undo.test.tsx` (new)
+- `apps/api/src/modules/field-worker/ending-appeal-handlers.ts` (new)
+- `apps/api/src/modules/field-worker/errors.ts` (modified)
+- `apps/api/src/modules/field-worker/gate.ts` (modified)
+- `apps/api/src/modules/field-worker/handlers.ts` (modified)
+- `apps/api/src/modules/field-worker/lifecycle-handlers.ts` (modified)
+- `apps/api/src/modules/field-worker/log-handlers.ts` (modified)
+- `apps/api/src/modules/field-worker/read-handlers.ts` (modified)
+- `apps/api/src/modules/field-worker/routes.ts` (modified)
+- `apps/api/src/modules/field-worker/undo-handlers.ts` (new)
+- `apps/api/src/types.ts` (modified)
+- `apps/api/tests/integration/field-worker/_registration-harness.ts` (modified)
+- `apps/api/tests/integration/field-worker/approval.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/code-read.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/lifecycle.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/move-race.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/reads.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/terminate-race.spec.ts` (modified)
+- `apps/api/tests/integration/field-worker/undo-appeal.spec.ts` (new)
+- `apps/api/tests/unit/field-worker-handler-identity.test.ts` (modified)
+- `apps/jobs/tests/field-worker-code-sms-live.test.ts` (modified)
+- `apps/jobs/tests/field-worker-move-request-escalation-live.test.ts` (modified)
+- `apps/jobs/tests/field-worker-notice-email-no-decision.test.ts` (modified)
+- `apps/jobs/tests/field-worker-notice-emails-live.test.ts` (modified)
+- `openapi/v1.yaml` (modified)
+- `package.json` (modified)
+- `packages/contracts/scripts/emit-openapi.ts` (modified)
+- `packages/contracts/src/field-workers/dto.ts` (modified)
+- `packages/contracts/src/field-workers/enums.ts` (modified)
+- `packages/contracts/src/field-workers/index.ts` (modified)
+- `packages/contracts/tests/field-workers.test.ts` (modified)
+- `packages/domain/migrations/0207_field-worker-ending-undo-appeal-link.sql` (new)
+- `packages/domain/migrations/meta/_journal.json` (modified)
+- `packages/domain/src/field-worker/commands.ts` (modified)
+- `packages/domain/src/field-worker/ending-appeal-commands.ts` (new)
+- `packages/domain/src/field-worker/ending-appeal-events.ts` (new)
+- `packages/domain/src/field-worker/ending-appeal-lock.ts` (new)
+- `packages/domain/src/field-worker/ending-appeal-project.ts` (new)
+- `packages/domain/src/field-worker/ending-appeal-read.ts` (new)
+- `packages/domain/src/field-worker/ending-appeal-state.ts` (new)
+- `packages/domain/src/field-worker/ending-appeal-supersede.ts` (new)
+- `packages/domain/src/field-worker/errors.ts` (modified)
+- `packages/domain/src/field-worker/events.ts` (modified)
+- `packages/domain/src/field-worker/index.ts` (modified)
+- `packages/domain/src/field-worker/project.ts` (modified)
+- `packages/domain/src/field-worker/read.ts` (modified)
+- `packages/domain/src/field-worker/state.ts` (modified)
+- `packages/domain/src/ids/index.ts` (modified)
+- `packages/domain/src/policies/field-worker-ending-appeals-rls.ts` (new)
+- `packages/domain/src/policies/index.ts` (modified)
+- `packages/domain/src/rbac/permissions.ts` (modified)
+- `packages/domain/src/rbac/roles.ts` (modified)
+- `packages/domain/src/schema/field_worker_ending_appeals.ts` (new)
+- `packages/domain/src/schema/field_workers.ts` (modified)
+- `packages/domain/src/schema/index.ts` (modified)
+- `packages/domain/tests/field-worker/commands-guards.test.ts` (modified)
+- `packages/domain/tests/field-worker/events.test.ts` (modified)
+- `packages/domain/tests/field-worker/state.test.ts` (modified)
+- `packages/domain/tests/integration/field-worker/_fixtures.ts` (modified)
+- `packages/domain/tests/integration/field-worker/commands.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/ending-appeal.spec.ts` (new)
+- `packages/domain/tests/integration/field-worker/log.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/move-requests.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/notice-emails.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/read.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/schema-trigger.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/stream-concurrency.spec.ts` (modified)
+- `packages/domain/tests/integration/field-worker/undo.spec.ts` (new)
+- `packages/domain/tests/integration/rls/field-worker-ending-appeals-policy-regression.spec.ts` (new)
+- `packages/domain/tests/integration/rls/field-workers-policy-regression.spec.ts` (modified)
+- `packages/domain/tests/rbac/permissions.test.ts` (modified)
+- `packages/domain/tests/rbac/roles.test.ts` (modified)
+- `packages/events/src/registry.ts` (modified)
+- `packages/events/tests/field-worker-ending-appeal-registry-coverage.test.ts` (new)
+- `packages/events/tests/field-worker-registry-coverage.test.ts` (modified)
+- `scripts/ci-local.sh` (modified)
+- `scripts/field-worker-ending-appeal-invariant/README.md` (new)
+- `scripts/field-worker-ending-appeal-invariant/check.ts` (new)
+- `scripts/field-worker-ending-appeal-invariant/lib.test.ts` (new)
+- `scripts/field-worker-ending-appeal-invariant/lib.ts` (new)
+- `.decision-log.md` (modified)
+- `_bmad-output/implementation-artifacts/13-1f-field-worker-ending-undo-appeal-and-return.md` (new)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (modified)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified)
+- `_bmad-output/planning-artifacts/epics.md` (modified)
+- `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` (modified)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-16-story-13-1f-field-worker-undo-and-appeal.md` (new)
+- `docs/launch-gate-inventory/inventory-roster.md` (modified)
 
 ## Change Log
 
@@ -1324,6 +1477,8 @@ one dispatcher (the hook takes a fixed key; the dispatcher itself copies `requir
 | v1.1 | 2026-11-13 | `bmad-create-story validate 13.1f` (4 read-only verifiers; their main claims re-checked in the repo; BigDev: "all"). Code still at `5ede00c4`. Detail below. |
 | v1.2 | 2026-11-14 | `bmad-create-story validate 13.1f` a second time (4 fresh read-only verifiers: domain + DB, API + RBAC + admin, governance, adversarial design; every critical claim re-checked in the repo; BigDev: "all", 50 items). Code still at `5ede00c4`. Detail below. |
 | v1.3 | 2026-11-16 | `bmad-create-story validate 13.1f` a third time (an in-session re-trace at `5ede00c4`, still `origin/main` after `git fetch`; `-464`, `0207`, Row 52 still free; BigDev: "all", 9 items). Detail below. |
+| v1.7 | 2026-11-17 | Task 5.2 done: the Concurrency matrix's race legs (14) and the TR8 replay leg; the AC2 (ii) RED proof (fails without `FOR SHARE`; no 40P01 in this interleave — recorded as observed). BigDev: *"Accept the 200 variance; build the race legs next"* — AD11 and AC9 now say the shown-number line records `responseStatus` 200 (the wrapper's); `-464` AD11 states no status, so the decision log is unchanged. Next: Task 5.2's race legs. |
+| v1.6 | 2026-11-17 | dev-story: Tasks 1, 2.1-2.3, 2.5, 3.1-3.6, 3.4a, 4, 5.1, 5.3, 6.1, 6.2 done and tested (Dev Agent Record); 2.4, 3.7, 5.2, 6.3, 7, 8 open as listed there. One variance (the shown-number line's `responseStatus` 200). Row stays `in-progress`. |
 | v1.5 | 2026-11-17 | The Panel RULED its note (`2026-11-17-465`; BigDev's relay verbatim: *"Panel ruled as recommended for all except Q6 for which option B is chosen"*): Q1 B, Q2 A, Q3 A / A, Q4 A x4, Q5 A, Q6 **B**, Q7 A. Q6 B propagated (a spec edit made at BigDev's instruction to record the ruling, outside dev-story's usual sections): AD6 (the slip undo refused after a Panel-heard refusal, superseding its "including after the Panel has REFUSED"), section 0 rows 10b and Result, the Policy meaning, the Per-command table, the Concurrency matrix, the Errors table + Names (`field_worker.appeal_refused_by_panel`), AD14's line, AC8, Tasks 3.4a / 5.1 / 6.2, C8 (new). Governance commits `36330c87` (`-465`, alone), `7c0d46f9` (the note's block, Row 52 (a) / (c) MET and (b) recorded, Row 48 (i), PRD FR-85 annotated). |
 | v1.4 | 2026-11-16 | Task 0.2: BigDev's answers recorded verbatim (the ASKs section) - Q-1, Q-3, Q-4 A; Q-2: the mobile-matched link stays here, the PAN / Aadhaar-last-4 identification goes to the new row `13-1h` (C6; mobile OR PAN finds, last 4 a check, both required). PROPOSED tags dropped (NUMBERS, Names, AD10, AD12); section 0 rows 9 and 10, AD1, AD16, I10, Task 0.3, Task 0.4 (d), C6 updated. Row stays `ready-for-dev`. |
 

@@ -1,11 +1,27 @@
 # Trustee Panel routing note — Story 13.1f: undoing a field worker's mistaken ending, their appeal against an unfair one, and a returning worker — credit for the ended time, the appeal's rules, what the worker is told, who hears in four edge cases, four permissions, and two clashes between an undo and an appeal (seven questions, all non-blocking)
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-17 — [Decision 2026-11-17-465](../../.decision-log.md#decision-2026-11-17-465) (Trustee-ratified)
 >
-> **Nothing is recorded here yet.** DRAFTED 2026-11-16 by Story 13.1f (Task 0.6), under the author-commit
-> [Decision 2026-11-16-464](../../.decision-log.md#decision-2026-11-16-464). ⛔ SENT — it is sent by BigDev; it is called sent only once
-> BigDev says it went. When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision id. Everything
-> below is then kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
+> **Sent by BigDev; the ruling relayed to the session on 2026-11-17.** ⚠ Not recorded: the ratifying trustees, the channel, the send
+> time, the time the Panel ruled, and whether the text sent is identical to this file as committed at `6c9fa89f`. Verbatim, as relayed:
+>
+> > *"Panel ruled as recommended for all except Q6 for which option B is chosen"*
+>
+> "As recommended" = each question's "Our reading" line below (the session's mapping, recorded in `-465`):
+>
+> - **Q1 — B**: held, and credited if the ending is undone — by mistake or on appeal. Builds nothing in Story 13.1f; Stories 13.8 / 13.5
+>   build the hold. PRD FR-85 annotated, not rewritten. Roster Row 52 (c) MET.
+> - **Q2 — A**: no time limit; one appeal per ending (a withdrawn one does not count). As built.
+> - **Q3 — A for (a) and (b)**: the officer tells the worker, reminded on screen. As built.
+> - **Q4 — A in all four cases**. As built.
+> - **Q5 — A**: the four permissions confirmed; a trustee's own account records the Panel's decision. Row 52 (a) MET; 13.1f's contribution
+>   to Row 48 (i) discharged.
+> - ⭐ **Q6 — B** (NOT our reading): once the Panel has heard and refused an appeal, only a new decision of the Panel restores the worker —
+>   a Pariwar Admin may not undo that ending as a mistake. Supersedes `-454` Q1 A's "any ending" for that one case. Story 13.1f builds the
+>   refusal. NOT ruled: a Pariwar Admin's refusal (the slip undo stays), and how a new decision of the Panel is carried out (no route).
+> - **Q7 — A**: an allowed decision is refused until the new registration is ended. As built.
+>
+> Everything below is kept **unedited** — the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

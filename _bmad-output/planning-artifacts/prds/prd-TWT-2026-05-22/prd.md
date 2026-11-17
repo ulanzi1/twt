@@ -1174,6 +1174,8 @@ Field worker can be deactivated; existing attributions preserved; new attributio
 
 > ⚠ **ANNOTATION 2026-11-07 (Story `13-1c`, decision `2026-11-07-454`, Trustee-ratified) — ⭐ Annotated, ⛔ not rewritten.** For a field worker SUSPENDED `under_review`, a new signup on their code is HELD, not rejected, and credited to them if they are cleared (reactivated) — the Panel's Q6 C. If a suspension is a "deactivation", that narrows this requirement for that one case; for a suspension at the worker's own request and for an ENDED worker, the sentence above stands. The credit recorder (Stories 13.8 / 13.5) builds the held credit.
 
+> ⚠ **ANNOTATION 2026-11-17 (Story `13-1f`, decision `2026-11-17-465`, Trustee-ratified) — ⭐ Annotated, ⛔ not rewritten.** For a field worker whose ENDING is later UNDONE — as a mistake or on an allowed appeal — a new signup on their code while they were ended is HELD, and credited to them once the ending is undone (the Panel's Q1 B). This narrows the 2026-11-07 annotation's "for an ENDED worker, the sentence above stands" to an ending that is never undone. How long the hold lasts after the Panel refuses an appeal (when only a new Panel decision can undo the ending) is not ruled. The credit recorder (Stories 13.8 / 13.5) builds it.
+
 #### FR-86: Anti-fraud throttling on attribution code `[v1-S]`
 
 Code usage > X/day or > Y unique devices → flag for trustee review. X, Y thresholds set by trustee.

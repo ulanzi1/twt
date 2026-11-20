@@ -154,6 +154,15 @@ registration route's one write pairs through `withCompensatingAudit`; the domain
 `audit.writeAuditEntry(...)` planted in `apps/api/src/modules/field-worker/` turned `pnpm access-wrapper:check` RED, and green
 again once removed (the story's Debug Log). The same namespace-shape limit as Story 12.2's applies.
 
+⭐ **Story 14.3 (2026-11-20, `2026-11-20-467`) — the data-protection surface** (`apps/api/src/modules/data-protection`,
+`packages/domain/src/breach`) is scanned by THIS invariant ONLY, through its OWN const `DATA_PROTECTION_ROOTS` in `check.ts`
+(⛔ an edit of another story's const); the constant-time-compare invariant does ⛔ run there (the surface verifies no secret).
+The breach register's two writes AND its audited detail read pair through `withCompensatingAudit` — the read's intent line is
+its disclosure record (`data_protection.breach.viewed`); the domain accessors never audit (pinned by
+`packages/domain/tests/breach/no-audit-wrapper-in-domain.test.ts`). Teeth (revert-sanity, 2026-11-20): a bare
+`audit.writeAuditEntry(...)` planted in `apps/api/src/modules/data-protection/handlers.ts` turned `pnpm access-wrapper:check`
+RED, and green again once removed (the story's Debug Log). The same namespace-shape limit as Story 12.2's applies.
+
 ## Per-epic scope-extension convention (AI-6-1)
 
 Expanding this gate's scan scope is complete only when at least one invariant has **meaningful

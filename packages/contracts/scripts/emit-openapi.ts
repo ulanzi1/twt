@@ -5919,6 +5919,163 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 14.3 — the personal data breach register (`/api/v1/data-protection/…`; decision `2026-11-20-467`) ──
+// Six GLOBAL routes behind `breach.manage` (held by super_admin alone). The system DRAFTS the three notices DPDP Rules 2025 Rule 7
+// describes from what is recorded here; it sends none. Both writes REQUIRE an `Idempotency-Key` header (an append-only row can
+// never be removed, so a retry must not write twice).
+const {
+  BreachEntryAppendRequest,
+  BreachIncidentDetailResponse,
+  BreachIncidentListQuery,
+  BreachIncidentListResponse,
+  BreachIncidentOpenRequest,
+  BreachMembersOnRecordResponse,
+  BreachSignalListQuery,
+  BreachSignalListResponse,
+} = await import('../src/breach/index.js');
+const breachComponents = {
+  BreachIncidentOpenRequest: BreachIncidentOpenRequest.openapi('BreachIncidentOpenRequest'),
+  BreachEntryAppendRequest: BreachEntryAppendRequest.openapi('BreachEntryAppendRequest'),
+  BreachIncidentDetailResponse: BreachIncidentDetailResponse.openapi('BreachIncidentDetailResponse'),
+  BreachIncidentListResponse: BreachIncidentListResponse.openapi('BreachIncidentListResponse'),
+  BreachSignalListResponse: BreachSignalListResponse.openapi('BreachSignalListResponse'),
+  BreachMembersOnRecordResponse: BreachMembersOnRecordResponse.openapi('BreachMembersOnRecordResponse'),
+} as const;
+for (const [name, schema] of Object.entries(breachComponents)) {
+  registry.register(name, schema);
+}
+const breachTags = ['data-protection'];
+const breachAuth = errorResponse('Authentication required');
+const breachForbidden = errorResponse('Forbidden — requires breach.manage at global scope (super_admin)');
+const breachIncidentParams = z.object({ incidentId: z.string().uuid() });
+const breachIdempotencyNote =
+  'Requires an Idempotency-Key header: a missing or blank one is 400 breach.idempotency_key_required; the same key again replays ' +
+  'the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. ';
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/data-protection/breaches',
+  summary: 'List breach incidents, newest first',
+  description:
+    'A title, times and derived flags per incident (status, the due time of the 72-hour report to the Board, overdue, what has ' +
+    'been recorded). No narrative. Bounded: limit 1 to 100, default 20. Not audited. Requires breach.manage at global scope.',
+  tags: breachTags,
+  request: { query: BreachIncidentListQuery },
+  responses: {
+    200: { description: 'The incidents', content: jsonOf(breachComponents.BreachIncidentListResponse) },
+    400: errorResponse('Request validation failed (e.g. limit out of range)'),
+    401: breachAuth,
+    403: breachForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/data-protection/breaches',
+  summary: 'Open a breach incident (Super Admin; audited)',
+  description:
+    'Records a new incident: real or a rehearsal (fixed here, never changed), a title, when the Trust became aware (the start of ' +
+    'the 72-hour clock; not in the future) and how it was detected. ' +
+    breachIdempotencyNote +
+    'Writes one audit line (data_protection.breach.opened). Requires breach.manage at global scope.',
+  tags: breachTags,
+  request: { body: { content: jsonOf(breachComponents.BreachIncidentOpenRequest), required: true } },
+  responses: {
+    200: { description: 'The incident as opened, with its derived view', content: jsonOf(breachComponents.BreachIncidentDetailResponse) },
+    400: errorResponse(
+      'Request validation failed; OR no Idempotency-Key (breach.idempotency_key_required); OR the database refused the row ' +
+        '(breach.constraint_violation — e.g. awareness later than the database clock)',
+    ),
+    401: breachAuth,
+    403: breachForbidden,
+    409: errorResponse(
+      'The first request with this Idempotency-Key is still in progress (breach.idempotency_in_progress); OR the acting admin ' +
+        'has no users.display_name (admin.display_name_missing)',
+    ),
+    503: errorResponse('The incident was written but the idempotency record was not — retry with the same key (idempotency.record_failed)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/data-protection/breaches/{incidentId}',
+  summary: 'Read one breach incident with its timeline (audited)',
+  description:
+    'The incident, every entry in entrySeq order, and the derived view the three Rule-7 drafts are built from. Each read writes ' +
+    'one audit line (data_protection.breach.viewed); an unknown incident writes none. Requires breach.manage at global scope.',
+  tags: breachTags,
+  request: { params: breachIncidentParams },
+  responses: {
+    200: { description: 'The incident', content: jsonOf(breachComponents.BreachIncidentDetailResponse) },
+    400: errorResponse('Request validation failed (a malformed incident id)'),
+    401: breachAuth,
+    403: breachForbidden,
+    404: errorResponse('No such incident (breach.incident_not_found)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/data-protection/breaches/{incidentId}/entries',
+  summary: 'Append one entry to a breach incident (Super Admin; audited)',
+  description:
+    'Appends one entry of a closed list of kinds, each with its own strict payload. Entries are never edited or deleted; a ' +
+    'correction is a new entry. A "…_recorded" entry records that staff sent a notice by their own means — nothing is sent here. ' +
+    breachIdempotencyNote +
+    'Writes one audit line per accepted entry (data_protection.breach.entry_appended). Requires breach.manage at global scope.',
+  tags: breachTags,
+  request: { params: breachIncidentParams, body: { content: jsonOf(breachComponents.BreachEntryAppendRequest), required: true } },
+  responses: {
+    200: { description: 'The incident after the entry, with its derived view', content: jsonOf(breachComponents.BreachIncidentDetailResponse) },
+    400: errorResponse(
+      'Request validation failed; OR no Idempotency-Key (breach.idempotency_key_required); OR an extension not later than the ' +
+        'current due time (breach.extension_not_after_due); OR the database refused the row (breach.constraint_violation)',
+    ),
+    401: breachAuth,
+    403: breachForbidden,
+    404: errorResponse('No such incident (breach.incident_not_found)'),
+    409: errorResponse(
+      'The incident is closed (breach.incident_closed); OR the first request with this Idempotency-Key is still in progress ' +
+        '(breach.idempotency_in_progress); OR the acting admin has no users.display_name (admin.display_name_missing)',
+    ),
+    503: errorResponse('The entry was written but the idempotency record was not — retry with the same key (idempotency.record_failed)'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/data-protection/signals',
+  summary: 'List signals to assess (failed, unacknowledged audit-chain checks)',
+  description:
+    'Every audit integrity check that failed and has not been acknowledged, newest first, each with the incidents opened from ' +
+    'it. A signal is a prompt to assess, not yet a breach. Read only: acknowledgement stays with the integrity page. Bounded: ' +
+    'limit 1 to 50, default 20. Requires breach.manage at global scope.',
+  tags: breachTags,
+  request: { query: BreachSignalListQuery },
+  responses: {
+    200: { description: 'The signals', content: jsonOf(breachComponents.BreachSignalListResponse) },
+    400: errorResponse('Request validation failed (e.g. limit out of range)'),
+    401: breachAuth,
+    403: breachForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/data-protection/members-on-record',
+  summary: 'Count members on record, trust-wide (the monthly review)',
+  description:
+    'The number of members across every Pariwar (anonymized members left out of the total and shown under their own state), the ' +
+    'number of Pariwars, and a count per lifecycle state. An input to the monthly compliance review — not a threshold and not ' +
+    'an alert. It counts members only. Requires breach.manage at global scope.',
+  tags: breachTags,
+  responses: {
+    200: { description: 'The counts', content: jsonOf(breachComponents.BreachMembersOnRecordResponse) },
+    401: breachAuth,
+    403: breachForbidden,
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 const doc = generator.generateDocument({

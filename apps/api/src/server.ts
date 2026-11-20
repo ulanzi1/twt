@@ -42,6 +42,7 @@ import { registerSelfVerifyModule } from './modules/self-verify/index.js';
 import { registerPaymentModule } from './modules/payment/index.js';
 import { registerMemberValidityModule } from './modules/member-validity/index.js';
 import { registerChannelConfigModule } from './modules/channel-config/index.js';
+import { registerDataProtectionModule } from './modules/data-protection/index.js';
 import { registerDegradedModeModule } from './modules/degraded-mode/index.js';
 import { registerDirectoryPublicationModule } from './modules/directory-publication/index.js';
 import { registerDriveTargetModule } from './modules/drive-target/index.js';
@@ -413,6 +414,8 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   registerMarketplaceModule(app, deps);
   // Story 13.1 — register a field worker (`field_worker.register`, district dimension) + allocate their attribution code.
   registerFieldWorkerModule(app, deps);
+  // Story 14.3 — the personal data breach register (`/api/v1/data-protection/…`; GLOBAL, `breach.manage`; decision `2026-11-20-467`).
+  registerDataProtectionModule(app, deps);
   registerSurveyModule(app, deps);
   // Story 10.10 — the FR-56 member-moderation surface: suspend / terminate / restore with
   // registry-driven reason codes, a MANDATORY Tier-1-encrypted rationale, full attribution and —

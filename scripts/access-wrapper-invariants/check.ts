@@ -123,6 +123,14 @@ const MARKETPLACE_ROOTS = ['apps/api/src/modules/marketplace', 'packages/domain/
  */
 const FIELD_WORKER_ROOTS = ['apps/api/src/modules/field-worker', 'packages/domain/src/field-worker'];
 
+/**
+ * Story 14.3 (decision `2026-11-20-467` DL10; AC13) — the data-protection surface: the breach register's routes (open, append and
+ * the AUDITED detail read each pair through `withCompensatingAudit` — the read's intent line IS its disclosure record) and the
+ * domain accessors (which must NEVER call the wrapper). Scanned by the COMPENSATING-AUDIT invariant ONLY (its own const — ⛔ an
+ * edit of another story's): the surface verifies ⛔ secret. DIRECTORIES only (a file root throws ENOTDIR).
+ */
+const DATA_PROTECTION_ROOTS = ['apps/api/src/modules/data-protection', 'packages/domain/src/breach'];
+
 function collectTsFiles(absDir: string, acc: string[]): void {
   for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
@@ -188,8 +196,8 @@ function main(): void {
     formatSecretCompareFinding,
   );
   const compensatingAudit = runInvariant(
-    'AI-5-3/6-1 compensating-audit mechanization (channel + claim + module + field-worker surface)',
-    [...ACCESS_SURFACE_ROOTS, ...MARKETPLACE_ROOTS, ...FIELD_WORKER_ROOTS],
+    'AI-5-3/6-1 compensating-audit mechanization (channel + claim + module + field-worker + data-protection surface)',
+    [...ACCESS_SURFACE_ROOTS, ...MARKETPLACE_ROOTS, ...FIELD_WORKER_ROOTS, ...DATA_PROTECTION_ROOTS],
     scanCompensatingAuditInvariant,
     formatCompensatingAuditFinding,
   );
@@ -199,7 +207,7 @@ function main(): void {
   if (allLines.length === 0) {
     console.log('  ✓ validity entrypoints fail closed on an omitted caller');
     console.log('  ✓ every verification context (channel + claim) uses a constant-time secret compare');
-    console.log('  ✓ every mutation+audit pairing (channel + claim + module + field-worker) flows through withCompensatingAudit\n');
+    console.log('  ✓ every mutation+audit pairing (channel + claim + module + field-worker + data-protection) flows through withCompensatingAudit\n');
     console.log('✓ access-wrapper-invariants gate passed');
     return;
   }

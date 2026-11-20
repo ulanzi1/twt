@@ -194,15 +194,23 @@ describe('Story 13.1c DTOs', () => {
     for (const r of ['under_review', 'at_worker_request']) expect(SuspendFieldWorkerRequest.safeParse({ reason_code: r }).success, r).toBe(true);
     for (const r of ['inactive', 'died', 'reassigned', 'conduct', undefined]) expect(SuspendFieldWorkerRequest.safeParse({ reason_code: r }).success, String(r)).toBe(false);
     for (const r of ['left_voluntarily', 'inactive', 'registered_in_error', 'died']) {
-      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: r, ended_on: '2026-11-07' }).success, r).toBe(true);
+      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: r, ended_on: '2026-11-07', expected_state_event_version: 3 }).success, r).toBe(true);
     }
     for (const r of ['conduct', 'conduct_concern', 'fraud_confirmed', 'under_review', 'reassigned']) {
-      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: r, ended_on: '2026-11-07' }).success, r).toBe(false);
+      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: r, ended_on: '2026-11-07', expected_state_event_version: 3 }).success, r).toBe(false);
     }
+    // Code review round 2, R2A-2 — the version the screen showed is REQUIRED, a positive integer; the body stays strict.
+    const ok = { reason_code: 'inactive', ended_on: '2026-11-07', expected_state_event_version: 3 };
+    expect(TerminateFieldWorkerRequest.safeParse(ok).success).toBe(true);
+    expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: '2026-11-07' }).success, 'missing').toBe(false);
+    for (const v of [0, -1, 1.5, '3', null, Number.NaN]) {
+      expect(TerminateFieldWorkerRequest.safeParse({ ...ok, expected_state_event_version: v }).success, String(v)).toBe(false);
+    }
+    expect(TerminateFieldWorkerRequest.safeParse({ ...ok, extra: 1 }).success, 'strict').toBe(false);
     // The SHAPE of ended_on only: 2026-02-30 passes here (the domain's 422); a malformed one is 400.
-    expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: '2026-02-30' }).success).toBe(true);
+    expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: '2026-02-30', expected_state_event_version: 3 }).success).toBe(true);
     for (const d of ['07-11-2026', '2026-11-07T00:00:00Z', '', undefined]) {
-      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: d }).success, String(d)).toBe(false);
+      expect(TerminateFieldWorkerRequest.safeParse({ reason_code: 'inactive', ended_on: d, expected_state_event_version: 3 }).success, String(d)).toBe(false);
     }
     expect(ReactivateFieldWorkerRequest.safeParse({}).success).toBe(true);
     expect(ReactivateFieldWorkerRequest.safeParse({ reason_code: 'under_review' }).success).toBe(false);
@@ -381,6 +389,9 @@ describe('Story 13.1f — contract ↔ domain sync-guard and DTO shapes', () => 
     expect([...c.FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES]).toEqual([...fieldWorker.FIELD_WORKER_ENDING_APPEAL_EVENT_TYPES]);
     expect(c.FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_ENDING_APPEALS_MAX_LIMIT);
     expect(c.FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT).toBe(fieldWorker.PAGE_APPEAL_ELIGIBLE_MAX_LIMIT);
+    // Review R2C-12 - the DEFAULT page size the emitter prints in three descriptions is bound to the domain's two defaults, as the caps are.
+    expect(c.FIELD_WORKER_ENDING_APPEAL_LIST_DEFAULT_LIMIT).toBe(fieldWorker.PAGE_ENDING_APPEALS_DEFAULT_LIMIT);
+    expect(c.FIELD_WORKER_ENDING_APPEAL_LIST_DEFAULT_LIMIT).toBe(fieldWorker.PAGE_APPEAL_ELIGIBLE_DEFAULT_LIMIT);
   });
 
   it('register: `previous_endings_seen` is the literal true; `link_to` needs it (400); unknown keys refused', async () => {

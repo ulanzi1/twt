@@ -203,9 +203,18 @@ export type SuspendFieldWorkerRequest = z.output<typeof SuspendFieldWorkerReques
 export const ReactivateFieldWorkerRequest = z.object({}).strict();
 export type ReactivateFieldWorkerRequest = z.output<typeof ReactivateFieldWorkerRequest>;
 
-/** `POST …/:fieldWorkerId/terminate` — `ended_on` the last day (for `died`, the date of death), `YYYY-MM-DD`; a real date in the IST bounds is the domain's 422. */
+/**
+ * `POST …/:fieldWorkerId/terminate` — `ended_on` the last day (for `died`, the date of death), `YYYY-MM-DD`; a real date in the IST bounds is the domain's 422.
+ * `expected_state_event_version` (code review round 2, R2A-2) is the worker's `state_event_version` as the officer's screen showed it — REQUIRED: since
+ * `terminated` stopped being final (Story 13.1f), it is what refuses a stale or repeated End (409 `field_worker.state_changed`) instead of ending a worker
+ * a Panel decision has just restored. Every lifecycle 200 and the identity read carry the current version (G24).
+ */
 export const TerminateFieldWorkerRequest = z
-  .object({ reason_code: FieldWorkerTerminateReason, ended_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) })
+  .object({
+    reason_code: FieldWorkerTerminateReason,
+    ended_on: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    expected_state_event_version: z.number().int().positive(),
+  })
   .strict();
 export type TerminateFieldWorkerRequest = z.output<typeof TerminateFieldWorkerRequest>;
 
@@ -269,7 +278,7 @@ export const FieldWorkerLogItem = z
     from_district: z.string().nullable(),
     to_district: z.string().nullable(),
     ended_on: z.string().nullable(),
-    /** Story 13.1f — the state an event leaves the worker in (the undo's target), else null. */
+    /** The state the event leaves the worker in - forwarded as the event payload names it, for every event whose payload carries one (registered, activated, suspended, reactivated, terminated, posted, an undo's target), else null (review R2C-13: 13.1f widened what is sent, not just the undo). */
     to_state: FieldWorkerState.nullable(),
     /** Story 13.1f (AD2) — the undo's cause, else null. */
     cause: FieldWorkerUndoCause.nullable(),
@@ -480,6 +489,8 @@ export type MarkFieldWorkerNoticesSeenRequest = z.output<typeof MarkFieldWorkerN
 
 /** The page cap of the appeal list, the eligible list and the per-worker read (AD13; 13.1d's). */
 export const FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT = 25;
+/** The page size those three reads answer with when `limit` is omitted - the domain's `PAGE_ENDING_APPEALS_DEFAULT_LIMIT` and `PAGE_APPEAL_ELIGIBLE_DEFAULT_LIMIT`, bound by the sync-guard test (review R2C-12); the emitter prints it. */
+export const FIELD_WORKER_ENDING_APPEAL_LIST_DEFAULT_LIMIT = 20;
 
 /** `POST …/:fieldWorkerId/undo-ending` — the ending the officer saw (the worker's `state_event_version`, AD6). */
 export const UndoFieldWorkerEndingRequest = z.object({ expected_ending_version: z.number().int().positive() }).strict();

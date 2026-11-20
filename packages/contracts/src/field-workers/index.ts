@@ -94,6 +94,7 @@ export {
   MarkFieldWorkerNoticesSeenRequest,
   FieldWorkerPreviousEndingsDetails,
   FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT,
+  FIELD_WORKER_ENDING_APPEAL_LIST_DEFAULT_LIMIT,
   UndoFieldWorkerEndingRequest,
   FieldWorkerEndingAppealParams,
   LodgeFieldWorkerEndingAppealRequest,

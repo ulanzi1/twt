@@ -5544,13 +5544,15 @@ registry.registerPath({
     '`died`; `ended_on` the last day (for `died`, the date of death), between the registration day and today in IST. Records ' +
     '`field_worker.terminated`, with who would hear an appeal against it fixed at the act (Story 13.1f). The worker\'s mobile can be ' +
     'registered again. A Pariwar Admin may undo an ending made by mistake (`…/undo-ending`); a worker may appeal it (`…/ending-appeals`). ' +
-    'A waiting, active or suspended worker can be ended.' +
+    'A waiting, active or suspended worker can be ended. `expected_state_event_version` is the worker\'s `state_event_version` as the ' +
+    'officer\'s screen showed it: a worker changed since — or ended and then restored — is refused (409 `field_worker.state_changed`), so a ' +
+    'stale screen cannot end them again.' +
     fieldWorkerActNote,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, body: { content: jsonOf(TerminateFieldWorkerRequestSchema), required: true } },
   responses: {
     200: { description: 'Ended', content: jsonOf(FieldWorkerLifecycleComponent) },
-    ...fieldWorkerActWrite('field_worker.terminate', ''),
+    ...fieldWorkerActWrite('field_worker.terminate', ' · field_worker.state_changed'),
     422: errorResponse('field_worker.ended_on_invalid (not a real date, in the future, or before the registration day — IST)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
@@ -5783,6 +5785,8 @@ const {
   FieldWorkerAppealEligiblePage: FieldWorkerAppealEligiblePageSchema,
   FieldWorkerEndingAppealsOfQuery: FieldWorkerEndingAppealsOfQuerySchema,
   FieldWorkerEndingAppealsOf: FieldWorkerEndingAppealsOfSchema,
+  FIELD_WORKER_ENDING_APPEAL_LIST_MAX_LIMIT: APPEAL_LIST_MAX,
+  FIELD_WORKER_ENDING_APPEAL_LIST_DEFAULT_LIMIT: APPEAL_LIST_DEFAULT,
 } = await import('../src/field-workers/index.js');
 const FieldWorkerEndingAppealComponent = FieldWorkerEndingAppealSchema.openapi('FieldWorkerEndingAppeal');
 const appealActNote = ' Send an `Idempotency-Key` header (1-200 characters; scoped to this appeal — when lodging, to the worker): a replay returns the first answer.';
@@ -5868,7 +5872,7 @@ registry.registerPath({
   description:
     '`field_worker.read_ending_appeals` at `district` (the worker\'s), or — with no district — at the Pariwar. A reader under the Trustee ' +
     'Panel role sees only appeals the Panel hears. Each item carries the worker\'s NAME, decrypted behind ONE audit line per page (an empty ' +
-    'page writes none). `limit` 1-25 (default 20; an over-cap value is clamped). `Cache-Control: no-store`.',
+    `page writes none). \`limit\` 1-${APPEAL_LIST_MAX} (default ${APPEAL_LIST_DEFAULT}; an over-cap value is clamped). \`Cache-Control: no-store\`.`,
   tags: ['field-workers'],
   request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerEndingAppealListQuerySchema },
   responses: {
@@ -5886,7 +5890,7 @@ registry.registerPath({
   description:
     '`field_worker.read_ending_appeals`, the same district rule. Ended workers whose current ending has no open or refused appeal and whose ' +
     'hearer matches a hear key the reader holds (a super admin\'s derived Panel key does not count). Each carries the ending\'s version (what ' +
-    'the lodge names) and the NAME, behind ONE audit line per page. `limit` 1-25 (default 20). `Cache-Control: no-store`.',
+    `the lodge names) and the NAME, behind ONE audit line per page. \`limit\` 1-${APPEAL_LIST_MAX} (default ${APPEAL_LIST_DEFAULT}). \`Cache-Control: no-store\`.`,
   tags: ['field-workers'],
   request: { params: z.object({ pariwarId: z.string().uuid() }), query: FieldWorkerAppealEligibleQuerySchema },
   responses: {
@@ -5903,7 +5907,7 @@ registry.registerPath({
   summary: "One worker's appeals, newest first",
   description:
     '`field_worker.read_ending_appeals` at the worker\'s district; the Trustee Panel role sees only Panel-heard appeals. No name, no ' +
-    'decrypt, no audit line. `limit` 1-25 (default 20). `Cache-Control: no-store`.',
+    `decrypt, no audit line. \`limit\` 1-${APPEAL_LIST_MAX} (default ${APPEAL_LIST_DEFAULT}). \`Cache-Control: no-store\`.`,
   tags: ['field-workers'],
   request: { params: FieldWorkerParamsSchema, query: FieldWorkerEndingAppealsOfQuerySchema },
   responses: {

@@ -640,7 +640,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
+- [x] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
   - [x] 0.1 `git fetch origin`; ⭐ **REBASE** the story commits onto `origin/main` (304 commits ahead at v1.3 — an ancestor check alone
         passes trivially and proves nothing); resolve the `sprint-status.yaml` conflict by relabelling this branch's `2026-11-01c` /
         `-e` / `2026-11-20f` lines to the next free letters, keeping every entry and the `---` separator (NUMBERS;
@@ -665,7 +665,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
         re-derive on every ref and worktree), committed ALONE, FIRST; try the write — if refused, ask once ([[project_decision_log_writes_user_inserted]]).
   - [x] 0.5 The CQ file (DL13) + Row 18 dated line; Row <ROW> appended (Row 45's shape) + Row 8 line (DL12); EVERY premise site's dated
         annotation (DL1's list, precedent shapes; re-grep `MeitY` in `prd.md` and `epics.md`); escrow Domain 7 dated line.
-  - [ ] 0.6 `deferred-work.md` — a NEW newest-first section `## Deferred from: story 14-3-dpo-breach-reporting-operational-readiness.md —
+  - [x] 0.6 `deferred-work.md` — a NEW newest-first section `## Deferred from: story 14-3-dpo-breach-reporting-operational-readiness.md —
         the build decisions `<DEC>` (<date>)`, one-line intro, items `- **<title>** [<file / symbol>; <id>] — <what and why>. ⭐ Trigger:
         <…>.`, then `---`. Items: (i) live feeds for 4.8 / 1.16b / architecture's five signals → Category 5 (trigger: the Category-5
         observability story's create-story); (ii) a DLT-registered breach SMS text (trigger: Row <ROW> (f)); (iii) a human-reviewed Hindi member
@@ -675,7 +675,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
         13.1b C3 (⛔ rewritten), and one dated "told — see DL9 / the runbook" line at roster Row 48's notes (13.1 C7).
   - [x] 0.7 Ledger line (next free letter — DL14) + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]] — verify the
         YAML parses).
-- [ ] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13 and §3's escalation bullet. Cite sections, ⛔ paste
+- [x] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13 and §3's escalation bullet. Cite sections, ⛔ paste
       private-corpus text (this repo is public — `-167`).
 - [ ] **Task 2 — Permission (AC3)** — DL3; run `packages/domain/tests/rbac/permissions.test.ts` and `roles.test.ts`.
 - [ ] **Task 3 — Migration + schema + domain module (AC4, AC6)** — DL4: `<MIG>`, journal entry (`when` above every sibling), Drizzle schema,
@@ -889,6 +889,32 @@ a decision BigDev was asked to make).
   references are paraphrases with section numbers; the one count taken from the private copy (seven "DPO" mentions in the English
   draft policy) is a number, not text.
 
+**(d4) Task 1 — 2026-11-20 (the runbooks, AC2).**
+
+- Written, each with the template's five numbered sections, the "NOT AUTHORITATIVE until signed" header and a changelog row:
+  `docs/runbooks/personal-data-breach-response.md` (both Rule-7 clocks; the three rules incl. the confirmed-leak line; the triage
+  table with each signal's present surface and the wrong-recipient row citing Row 49 (d); the notice steps; only channels that
+  exist; CERT-In `[COUNSEL — CQ2]` on the conservative 6-hour reading; an appendix "Where personal data is held and who receives
+  it"), `dpo-appointment-and-sdf-watch.md` (criteria; the SDF trigger; the ceremony; the FR-99 monthly review with a log table; the
+  DPIA-owner line), `breach-tabletop-exercise.md` (a script on a REHEARSAL record; output a gap list). The breach owner is
+  `[PENDING PQ1]` everywhere. ⛔ Ledger row, ⛔ "run" line, ⛔ named person.
+- **The inventory was built by grep at `a7c99c6a`, 2026-11-20** (⛔ from the story's list alone): `_ciphertext` columns across
+  `packages/domain/src/schema/*.ts` (44 schema files carry one); `decrypt…(` call sites (22 API modules, 7 jobs scheduler files);
+  outbound hosts and provider adapters (MSG91, Meta WhatsApp, Telegram, APNs / FCM, Amazon SES for staff email, DigiLocker, Google
+  Cloud, Cloudflare). The appendix says "found by grep, no completeness claimed".
+- **Read for the runbooks:** Rule 9 (publication of the contact) and Rule 13(1) (the twelve-month DPIA / audit) are quoted from the
+  Gazette file. ⚠ The CERT-In Directions could NOT be fetched on 2026-11-20 (`cert-in.org.in` returned an empty reply), so the
+  runbook prints no CERT-In reporting address and says the Directions were last read at authoring (2026-11-01).
+- **Removed while writing (the session's own inventions, caught on re-read):** a fallback "send it to the Ministry" route if the
+  Board has no filing route (now: ask counsel the same hour; the runbook says it does not know); a "within 1 hour" secondary
+  escalation and a "within 35 days" check (no source for either number).
+- `docs/runbooks/README.md`: three rows in the related-runbooks table. `docs/knowledge-transfer/on-call-playbook.md` (status
+  "drafted", unsigned): §2.13 and §3's escalation bullet REWRITTEN in place as DL11 decides — they point at the breach runbook,
+  name counsel `lc-1`, and no longer say "(when engaged)" (first written as annotations beside the old text; corrected to DL11's
+  "drops").
+- **Task 0.6 closed here:** the dated DISCHARGED lines under 13.1a C6 and 13.1b C3 and the follow-up line at roster Row 48 were
+  written once the appendix existed. `pnpm dlt-typed-variables:check` passes after the roster edit.
+
 ### Completion Notes List
 
 ### File List
@@ -903,7 +929,12 @@ a decision BigDev was asked to make).
 - `docs/launch-gate-inventory/inventory-roster.md` — MODIFIED (Row 53; dated lines at Rows 8 and 48)
 - `docs/legal-counsel-engagement/review-artifact-roster.md` — MODIFIED (Row 18 dated line)
 - `docs/escrow/credential-inventory.md` — MODIFIED (Domain 7 dated line)
-- `_bmad-output/implementation-artifacts/deferred-work.md` — MODIFIED (new section; two "picked up" lines)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — MODIFIED (new section; "picked up" then DISCHARGED lines under 13.1a C6 and 13.1b C3)
+- `docs/runbooks/personal-data-breach-response.md` — NEW
+- `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
+- `docs/runbooks/breach-tabletop-exercise.md` — NEW
+- `docs/runbooks/README.md` — MODIFIED (three related-runbook rows)
+- `docs/knowledge-transfer/on-call-playbook.md` — MODIFIED (§2.13; §3 escalation bullet)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (rebase relabels; ledger `2026-11-20g`; row -> in-progress)
 - `_bmad-output/implementation-artifacts/14-3-dpo-breach-reporting-operational-readiness.md` — MODIFIED (task boxes, Dev Agent Record, File List, Change Log)
 

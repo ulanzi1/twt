@@ -287,3 +287,8 @@ export * from './modules/index.js';
 // `field_worker.register`, district dimension): a shape-only request and a 201 that carries ⛔ attribution code (QE22). The
 // state / KYC tuples are drift-guarded against @twt/domain by tests/field-workers.test.ts.
 export * from './field-workers/index.js';
+// Story 14.3 (`2026-11-20-467`) — the personal data breach register (`/api/v1/data-protection/…`, GLOBAL key `breach.manage`): open /
+// append requests (one strict payload per entry kind), the detail / list / signals / members-on-record DTOs, the ONE derivation
+// (`deriveBreachIncidentView`) and the three Rule-7 drafts (`buildBreachDrafts` — drafted, never sent). The kind / source tuples and
+// the 72-hour window are drift-guarded against @twt/domain by tests/breach.test.ts.
+export * from './breach/index.js';

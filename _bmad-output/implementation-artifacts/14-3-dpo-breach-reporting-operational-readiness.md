@@ -684,7 +684,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
       (with `incidentIds`) / `countMembersOnRecord`; explicit `clampLimit`); the regression spec
       `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts` incl. the EXECUTED service-login leg (⛔ policy
       file — DL4); the concurrency spec.
-- [ ] **Task 4 — Contracts (AC5–AC9)** — `packages/contracts/src/breach/` (`schemas.ts`, `derive.ts`, `drafts.ts`, `index.ts`; re-export from
+- [x] **Task 4 — Contracts (AC5–AC9)** — `packages/contracts/src/breach/` (`schemas.ts`, `derive.ts`, `drafts.ts`, `index.ts`; re-export from
       `src/index.ts`); tuples mirrored + pinned to the domain export; unit tests for derive + drafts
       ([[project_contracts_tests_outside_tsc]] — run them, typecheck does ⛔ see them).
 - [ ] **Task 5 — API (AC5–AC7, AC10, AC11)** — `apps/api/src/modules/data-protection/{index,routes,handlers}.ts` registered in `server.ts`;
@@ -951,6 +951,32 @@ current version — left alone.
   `payload` must be a JSON object and the display snapshots non-blank (CHECKs); `entry_id` has no default (the one writer always
   supplies it); `entry_seq` cannot be written (`GENERATED ALWAYS` — pinned, 428C9).
 
+**(d7) Task 4 — 2026-11-20 (contracts; AC5–AC9's shapes, AC8, AC9).**
+
+- RED first (`tests/breach.test.ts` could not import the module), then GREEN: 40 tests; the whole contracts suite 97 files /
+  1764 tests; `tsc` and `eslint` clean. `packages/contracts/src/breach/{schemas,derive,drafts,index}.ts`, re-exported from the top
+  barrel.
+- **Shapes decided where the story left room (the session's calls, each within DL5–DL7):**
+  (1) An `assessment` may be PARTIAL — its narrative fields may be blank, its lists empty, its count "unknown". A first assessment
+  is recorded "as soon as anything is known" and AC9 asks that an EMPTY assessment yield named missing fields; requiring every
+  field would make both impossible. Every other kind's main text is required (1–2000).
+  (2) Two payload sets from one factory: REQUEST payloads refuse a future `occurredAt` / `sentAt` and a `signedOn` later than
+  today in IST; STORED payloads (inside a response) do not re-judge time.
+  (3) `deriveBreachIncidentView` returns DL6's flags PLUS what the drafts are built from (the latest assessment, mitigations,
+  findings, remedial measures, recorded notices, timeline events), so `buildBreachDrafts(view)` keeps DL7's one-argument
+  signature. The LIST item is a separate strict schema that carries the flags only — a narrative key is refused (pinned).
+  (4) `signoff_recorded.signers`: two names that differ only in case or spacing are the same person.
+  (5) The response sends display names, never an actor id (0188's posture).
+  (6) An IST formatter for the draft TEXT lives in `drafts.ts` — contracts cannot import the admin's `formatIst`, and DL6's
+  "no fourth formatter" is about the admin module, which still imports `correction-chase/ist.ts`.
+- **Pinned to the domain** (the test imports `@twt/domain`, as other contracts tests do): both tuples, the 72-hour window, the nine
+  member states, and — the (d6) promise — the domain's `isBreachIncidentClosed` / `breachBoardReportDueAt` equal the derivation's
+  `status` / `boardReportDueAt` on eight shared fixtures.
+- **AC8's "one definition":** a test walks `apps/` and `packages/` source (skipping `tests` directories) and finds
+  `function deriveBreachIncidentView` in exactly one file.
+- Two bugs caught by the tests while going green: an impossible calendar date (`2026-02-30`) THREW inside the refinement instead of
+  being refused (now guarded); the single-definition test matched its own pattern.
+
 ### Completion Notes List
 
 ### File List
@@ -977,6 +1003,9 @@ current version — left alone.
 - `packages/domain/src/index.ts` — MODIFIED (`export * as breach`)
 - `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts` — NEW
 - `packages/domain/tests/integration/breach/append-concurrency.spec.ts` — NEW
+- `packages/contracts/src/breach/{index,schemas,derive,drafts}.ts` — NEW
+- `packages/contracts/src/index.ts` — MODIFIED (export)
+- `packages/contracts/tests/breach.test.ts` — NEW
 - `docs/runbooks/personal-data-breach-response.md` — NEW
 - `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
 - `docs/runbooks/breach-tabletop-exercise.md` — NEW

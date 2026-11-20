@@ -1076,6 +1076,15 @@ and runbooks only, never in code or copy (N7). ⚠ The session's own additions, 
 in the table-top runbook that, the owner being a Trustee, two trustees should be present BESIDES them until a decision says
 otherwise. NOT given and still open: a stand-in, a start date. NOT verified: the mailbox.
 
+**(d13) 2026-11-20 (~23:15 IST): BigDev decided the session's flagged line — "option 1".** Asked to explain it, the session put
+three options (keep the line and apply it to the incident sign-off too / strike it / put it to the Panel); BigDev: *"option 1"*.
+**Decision `2026-11-20-470`** (author-commit), committed ALONE as `55923a9f`: the breach owner, being a Trustee, is not one of the
+"two trustees" — a table-top and a real incident's sign-off each need two trustees BESIDES the owner. Records commit: the two
+runbooks (the table-top's prerequisites, opening and step 2.6; the breach runbook's step 17 and its verification check) with a
+changelog row each, and a dated line at roster Row 53. NOT changed: Row 53 (a)'s ledger sign-off of the runbooks; Row 53 (b)'s
+wording. ⛔ Code: the register still checks only "two different names" and cannot know who the owner is — the form's "(at least
+two)" label is left as built (a copy change would be a code change after the gate; offered to BigDev, not made).
+
 ### Completion Notes List
 
 **Story 14.3 — implemented 2026-11-20 by `bmad-dev-story 14.3` on `story/14-3-dpo-breach-reporting-operational-readiness` (own worktree), rebased onto `origin/main` `a7c99c6a`. Not pushed. Nothing is live.**
@@ -1271,3 +1280,5 @@ that person, so nothing is published and Rows 8 and 53 (c) stay open; the privac
 - 2026-11-20 — v1.7: BigDev's three facts recorded — Decision `2026-11-20-469` (author-commit): the named person's contact, that they
   act as a Trustee, the privacy policy and Terms published at go-live. Records and runbook owner lines only. ⛔ Code. Status stays
   `review`.
+- 2026-11-20 — v1.8: BigDev's "option 1" — Decision `2026-11-20-470` (author-commit): two trustees BESIDES the breach owner at a
+  table-top and at an incident's sign-off. Two draft runbooks and a Row 53 dated line. ⛔ Code. Status stays `review`.

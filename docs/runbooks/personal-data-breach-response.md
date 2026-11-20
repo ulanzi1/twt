@@ -125,7 +125,9 @@ exposed.**
 ### 2.8 — Review, sign-off and close
 
 16. The breach owner records an **owner review**.
-17. When at least two trustees have signed the incident's summary by their own means, record **Sign-off recorded** with their names
+17. When at least two trustees OTHER THAN the breach owner have signed the incident's summary by their own means (Decision
+    `2026-11-20-470` — the owner is a Trustee and runs the response, so their own signature is not one of the two), record
+    **Sign-off recorded** with their names
     and the date. ⚠ This is the operator's record that trustees signed — it is not the trustees signing in the app.
 18. Record **Closed** with a summary. Nothing can be added after closing; if more is learned, open a new incident and refer to the
     first by its id.
@@ -152,7 +154,7 @@ A breach record is append-only by design: nothing in it is edited or deleted.
 - [ ] The 72-hour report is recorded before the due time, or a Board extension is recorded and the report is within it. The page does not show "Board report overdue".
 - [ ] The CERT-In step was either done within 6 hours or counsel's recorded answer (CQ2) says it does not apply.
 - [ ] No entry names a member by name, mobile or identity number.
-- [ ] An owner review, a recorded sign-off by at least two trustees, and a closing summary exist.
+- [ ] An owner review, a recorded sign-off by at least two trustees other than the breach owner, and a closing summary exist. (The app checks only that two different names were recorded — it does not know who the owner is; check the names yourself.)
 - [ ] The Trustee Panel has been told; the audit-chain check passes afterwards.
 
 If any check fails, do not declare the incident handled; escalate per §5.
@@ -217,3 +219,4 @@ A breach at any of these is the Trust's breach to report for the Trust's data: a
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the incident sign-off is by two trustees OTHER THAN the breach owner (Decision `2026-11-20-470`) | yes (≥2 trustees) — not yet signed | none yet |

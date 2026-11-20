@@ -4,11 +4,11 @@
 > describes has **not been run**: Story 14.3 writes the script; trustees run it (launch-gate Row 53 (b)).
 
 > **Status:** draft (Story 14.3 author-commit 2026-11-20, Decision `2026-11-20-467`); unsigned; never executed
-> **Owner role:** Facilitator — the breach owner (designated by the Trustee Panel, Decision `2026-11-20-468`; a Trustee, `dpo@aipwt.org` — `-469`; the Solo Builder facilitates if they cannot), with at least two trustees taking part
+> **Owner role:** Facilitator — the breach owner (designated by the Trustee Panel, Decision `2026-11-20-468`; a Trustee, `dpo@aipwt.org` — `-469`; the Solo Builder facilitates if they cannot), with at least two trustees taking part besides the owner (Decision `2026-11-20-470`)
 > **Last material edit:** 2026-11-20 by Solo Builder (initial)
 > **Architectural authority:** architecture.md Launch Gate Risks (*"Incident response tabletop | Pre-launch | Semi-annual"*), §2.12 · PRD FR-99 · epics.md Story 14.3 (*"a tabletop exercise validates the breach-reporting flow end-to-end"*) · DPDP Rules 2025 Rule 7 · the shape of `docs/degradation-policy/table-top-exercise.md`
 
-This runbook walks at least two trustees and the facilitator through one made-up breach, from the first signal to a closed record, on
+This runbook walks at least two trustees — besides the breach owner, who facilitates — through one made-up breach, from the first signal to a closed record, on
 a **rehearsal** record in the admin app. It tests whether `personal-data-breach-response.md` can be followed cold, inside the clocks.
 
 **Output is a gap list, not a pass/fail score.** A run that finds gaps has done its job. A run that finds none is tested again with a
@@ -22,8 +22,8 @@ has happened — never before.
 - `personal-data-breach-response.md` and `dpo-appointment-and-sdf-watch.md` read by everyone taking part, beforehand.
 - A Super Admin account with a display name set, on an environment where the admin app's breach page works (staging, or production
   with a rehearsal record — a rehearsal record is permanent and is marked as one everywhere).
-- At least two trustees present for the whole exercise; a note-taker who is not the facilitator.
-  ⚠ The breach owner is themselves a Trustee (Decision `2026-11-20-469`). Whether the owner counts as one of the two is not settled by any decision — until it is, have two trustees present besides the owner.
+- At least two trustees present for the whole exercise **besides the breach owner**; a note-taker who is not the facilitator.
+  The breach owner is a Trustee (Decision `2026-11-20-469`) and does NOT count as one of the two (Decision `2026-11-20-470`): the owner runs the response, so counting them would make one person both the responder and half of the check on it.
 - A scenario card (2.1) that the trustees have **not** seen.
 - A stopwatch. The exercise compresses the 72 hours: the facilitator announces the simulated time at each step.
 - ⛔ No real notice is sent to anyone during a rehearsal. Every draft is headed `REHEARSAL — DO NOT SEND`.
@@ -72,7 +72,7 @@ participants find the "Board report overdue" marker and decide what they would d
 
 ### 2.6 — Owner review → recorded sign-off → close
 
-**Participants do:** the breach owner records an owner review; the two trustees sign the summary by their own means and the operator
+**Participants do:** the breach owner records an owner review; the two trustees — neither of them the breach owner — sign the summary by their own means and the operator
 records **Sign-off recorded** with their names; the incident is closed; one more entry is attempted and is refused.
 **Record:** whether the trustees understood that the operator records their signing — they do not sign in the app.
 
@@ -91,7 +91,7 @@ A table-top changes no real state; "rollback" means handling a run that goes wro
 - **A rehearsal record opened as real by mistake** — it cannot be changed. Close it with a note saying it was a rehearsal opened in
   error, tell the breach owner, and open a rehearsal record. ⛔ Send nothing from it.
 - **A rehearsal draft was sent to someone** — that is a real incident of its own: follow `personal-data-breach-response.md`.
-- **Fewer than two trustees stay to the end** — record what was done as a partial run, reschedule the rest; it does not close
+- **Fewer than two trustees besides the owner stay to the end** — record what was done as a partial run, reschedule the rest; it does not close
   Row 53 (b).
 - **The facilitator has to answer for the participants** — that is a gap; write it down and carry on.
 
@@ -120,3 +120,4 @@ If any check fails, the run does not count toward Row 53 (b); escalate per §5.
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — two trustees BESIDES the breach owner (Decision `2026-11-20-470`) | yes (≥2 trustees) — not yet signed | none yet |

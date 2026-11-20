@@ -1542,6 +1542,12 @@ What changed, in brief: **R3-1** a refused Undo (`ending_changed` / `state_chang
 - `test (unit)`: `@twt/admin` had 15 failures in 3 files (`ground-inspection-discrepancy`, `ground-inspection-page`, `helpline-claim-page`): 3 timeouts at 5 s, and lines not found in time. Alone they ran 3 files, 90 of 90 green. The rest of the admin suite, the field-worker files included, passed: 106 of 109 files, 2,252 tests.
 - `integration-tests`: `@twt/api` had ONE failure, `claims/ground-inspection-discrepancy.spec.ts`, where its test-only `ALTER TABLE ... DROP CONSTRAINT` hit `lock_timeout` (10 s) under the job's parallel load. Alone, on the same container, it ran 20 of 20 green. The other 23 of 24 tasks passed.
 - These are the known machine-load classes ([[project_ci_local_concurrency_oversubscription]], [[project_known_livedb_test_failures]] #19-#21), recorded as observed, NOT fixed. The push's own pre-push `ci:local` is the next run.
+- **Pushed and PR #329 opened (2026-11-20).** The push's pre-push `ci:local` ran on a fresh container `:5490`: **40 of 40 green** at `366605e1`.
+- **GitHub CI on PR #329 was 39 of 40, twice.** The one red was `integration-tests`: `@twt/domain`'s `rls/contribution-suppression-index-policy-regression.spec.ts` (Story 5.11b AP-P2, a spec this story never touched), which failed on BOTH attempts.
+  - The plan, decoded from the job log: the reversal lookup used `contribution_reversed_pool_reference_idx` with only `(pariwar_id, pool)` as its Index Cond, and `contribution_reversed_event_id` as a **Filter**.
+  - Why: the spec seeded no reversal in its pool, so the planner estimated about 1 row for the pool alone, and "Index Cond" and "Filter" cost alike. This is the tie the spec's own comment describes for the member key, which it fixed by seeding a realistic pool.
+  - BigDev chose "fix the spec, then land". Fixed in `af4703bc` (test-only): the spec now seeds 500 reversals in the pool, each referencing one of its confirmations, before `ANALYZE`.
+  - ⚠ The failure was NOT reproduced locally: a throwaway `:5491` database broke the tie toward the Index Cond, even under skewed background rows. With the fix, the per-lookup estimate is selective (about 2 rows, against 217 without it in the same skewed setup). The fixed spec ran 3 of 3 green there. GitHub CI is what confirms it.
 
 ## Dev Notes
 

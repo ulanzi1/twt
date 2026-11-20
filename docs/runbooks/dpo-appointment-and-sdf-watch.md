@@ -5,7 +5,7 @@
 > `2026-11-20-468`); no Data Protection Officer is appointed, and none is owed unless the Government names the Trust.
 
 > **Status:** draft (Story 14.3 author-commit 2026-11-20, Decision `2026-11-20-467`); unsigned; launch-gate Row 53 (a) open
-> **Owner role:** Trustee Panel (the appointment); the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468` — runs the monthly review (interim, until their contact is recorded: Solo Builder)
+> **Owner role:** Trustee Panel (the appointment); the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468` (a Trustee; `dpo@aipwt.org` — `-469`) — runs the monthly review (the Solo Builder if they cannot)
 > **Last material edit:** 2026-11-20 by Solo Builder (initial)
 > **Architectural authority:** architecture.md §2.12 (SDF classification reviewed at named triggers; the DPIA lives in governance documentation; its owner identified before launch) · PRD FR-99 (*"monthly compliance review"*), OQ-7 · DPDP Act 2023 ss.2(l), 8(9), 10 · DPDP Rules 2025 Rules 9, 13 · Decision `2026-11-20-467`
 
@@ -119,7 +119,7 @@ If any check fails, escalate per §5.
 
 ## 5. Contact escalation list
 
-- **Primary:** the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468` (interim, until their contact is recorded: Solo Builder).
+- **Primary:** the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468`; a Trustee, `dpo@aipwt.org` (Decision `2026-11-20-469`; the mailbox not yet verified; no stand-in recorded — the Solo Builder meanwhile).
 - **Secondary:** Trustee Panel chair on rota.
 - **Legal:** counsel `lc-1` (`docs/legal-counsel-engagement/counsel-roster.md`) — engaged; not yet asked about a DPO, breach reporting or SDF status.
 - **Trustee escalation:** an SDF notification, a commencement change, or a missed appointment window goes to the Trustee Panel at once.
@@ -132,3 +132,4 @@ If any check fails, escalate per §5.
 |---|---|---|---|---|---|
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines and the opening, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |

@@ -1065,6 +1065,17 @@ the named person, with a slot for BigDev to say in what capacity they act). `pnp
 pass. ⛔ Code touched — so `ci:local` was NOT re-run; the 40 / 40 stands for the code at `4c2c1bae`. Row stays `review`.
 ⚠ Read as a reading, and said so in `-468`: one name under option B's "ONE person … both" = both duties.
 
+**(d12) 2026-11-20 (~23:00 IST): BigDev filled three gaps `-468` named.** Verbatim, three lines: *"1. dpo@aipwt.org"* /
+*"2. Trustee"* / *"3. Privacy Policy and terms will be published when go live"*. Recorded as **Decision `2026-11-20-469`**
+(AUTHOR-COMMIT — BigDev's facts, ⛔ a Panel ruling), committed ALONE as `61e351f6`. Then one records commit: dated lines at roster
+Rows 8 and 53 (c) (both stay `open`); the three runbooks and the playbook give the address BESIDE the interim escalation (kept —
+one unverified mailbox, no stand-in); the counsel file's capacity slot filled and CQ5 sharpened for a trustee; dated lines under
+the two deferred items; a PRD OQ-7 line. `pii:check` and `dlt-typed-variables:check` pass. ⛔ Code — the address is in records
+and runbooks only, never in code or copy (N7). ⚠ The session's own additions, flagged: (1) an observation in `-469` that a
+`dpo@` address presents the contact as a DPO, which option B says the person is not called — recorded, not decided; (2) a line
+in the table-top runbook that, the owner being a Trustee, two trustees should be present BESIDES them until a decision says
+otherwise. NOT given and still open: a stand-in, a start date. NOT verified: the mailbox.
+
 ### Completion Notes List
 
 **Story 14.3 — implemented 2026-11-20 by `bmad-dev-story 14.3` on `story/14-3-dpo-breach-reporting-operational-readiness` (own worktree), rebased onto `origin/main` `a7c99c6a`. Not pushed. Nothing is live.**
@@ -1257,3 +1268,6 @@ that person, so nothing is published and Rows 8 and 53 (c) stay open; the privac
 - 2026-11-20 — v1.6: after the dev run, the Panel ruled PQ1 — Decision `2026-11-20-468` (option B; one named person is both the
   published contact and the breach owner). Records only: the note's ruling block, roster Rows 8 / 53 dated lines, PRD OQ-7
   annotation, two deferred items, the runbooks' owner lines, the unsent counsel file. ⛔ Code. Status stays `review`.
+- 2026-11-20 — v1.7: BigDev's three facts recorded — Decision `2026-11-20-469` (author-commit): the named person's contact, that they
+  act as a Trustee, the privacy policy and Terms published at go-live. Records and runbook owner lines only. ⛔ Code. Status stays
+  `review`.

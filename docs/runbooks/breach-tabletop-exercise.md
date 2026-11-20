@@ -4,7 +4,7 @@
 > describes has **not been run**: Story 14.3 writes the script; trustees run it (launch-gate Row 53 (b)).
 
 > **Status:** draft (Story 14.3 author-commit 2026-11-20, Decision `2026-11-20-467`); unsigned; never executed
-> **Owner role:** Facilitator — the breach owner (designated by the Trustee Panel, Decision `2026-11-20-468`; until their contact is recorded, the Solo Builder facilitates), with at least two trustees taking part
+> **Owner role:** Facilitator — the breach owner (designated by the Trustee Panel, Decision `2026-11-20-468`; a Trustee, `dpo@aipwt.org` — `-469`; the Solo Builder facilitates if they cannot), with at least two trustees taking part
 > **Last material edit:** 2026-11-20 by Solo Builder (initial)
 > **Architectural authority:** architecture.md Launch Gate Risks (*"Incident response tabletop | Pre-launch | Semi-annual"*), §2.12 · PRD FR-99 · epics.md Story 14.3 (*"a tabletop exercise validates the breach-reporting flow end-to-end"*) · DPDP Rules 2025 Rule 7 · the shape of `docs/degradation-policy/table-top-exercise.md`
 
@@ -23,6 +23,7 @@ has happened — never before.
 - A Super Admin account with a display name set, on an environment where the admin app's breach page works (staging, or production
   with a rehearsal record — a rehearsal record is permanent and is marked as one everywhere).
 - At least two trustees present for the whole exercise; a note-taker who is not the facilitator.
+  ⚠ The breach owner is themselves a Trustee (Decision `2026-11-20-469`). Whether the owner counts as one of the two is not settled by any decision — until it is, have two trustees present besides the owner.
 - A scenario card (2.1) that the trustees have **not** seen.
 - A stopwatch. The exercise compresses the 72 hours: the facilitator announces the simulated time at each step.
 - ⛔ No real notice is sent to anyone during a rehearsal. Every draft is headed `REHEARSAL — DO NOT SEND`.
@@ -118,3 +119,4 @@ If any check fails, the run does not count toward Row 53 (b); escalate per §5.
 |---|---|---|---|---|---|
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |

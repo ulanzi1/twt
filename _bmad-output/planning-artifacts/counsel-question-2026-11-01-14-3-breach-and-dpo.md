@@ -38,9 +38,8 @@ notices themselves.
 
 **The Trustee Panel has since ruled** (Decision `2026-11-20-468`): the Trust does not appoint a Data Protection Officer before the
 law requires one; ONE named person is both the published contact (section 8(9)) and the person responsible for a breach; a Data
-Protection Officer is appointed if the Trust is notified as significant, or earlier on your advice. The Panel named the person; the
-capacity they act in is not recorded here — `[BigDev to add before sending: who the named person is to the Trust — a trustee, staff
-or an outside professional]`.
+Protection Officer is appointed if the Trust is notified as significant, or earlier on your advice. The person the Panel named is a
+**trustee** of the Trust (Decision `2026-11-20-469`), reached at a Trust mailbox.
 
 ## The questions
 
@@ -59,7 +58,8 @@ or an outside professional]`.
    certificates, payment history, nominees), how likely is a notification to reach the Trust or its class, and do you advise
    appointing a Data Protection Officer before the law requires one?
 5. **Who may hold the role.** May the person the Panel has named hold both duties — the published contact and the breach owner —
-   in the capacity described above? More generally, may a trustee be the Data Protection Officer, or that named person? What independence or conflict limits apply? (The Act asks that the officer be an individual based
+   being a trustee? What independence or conflict limits apply to a trustee in that position, and must a stand-in be named? More
+   generally, may a trustee be the Data Protection Officer if one is later required? (The Act asks that a Data Protection Officer be an individual based
    in India and "responsible to the Board of Directors or similar governing body".)
 
 **Asked elsewhere, not repeated here:** whether a text that reaches a wrong person through a mistyped number is a breach the Trust

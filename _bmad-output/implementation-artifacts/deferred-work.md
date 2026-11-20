@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 14-3-dpo-breach-reporting-operational-readiness.md (2026-11-20)
+
+- **Breach list has no cursor** (`apps/admin/src/api/hooks.ts` `useBreachIncidents`, limit 50; signals 20). An older open, overdue incident can drop off the only list once there are more than 50 incidents, rehearsals included. Deferred because expected volume stays far below 50 for years; revisit at the first year's monthly review (keyset on `(opened_at, incident_id)` or open-first ordering).
+- **Idempotency keys are not tied to the request body** (`apps/api/src/modules/data-protection/handlers.ts` `idempotent`). This is a pre-existing convention across known-people, marketplace, member-data-rights and feature-flags; a store-level body hash and a 422 `idempotency.key_reused` would fix every surface at once. The breach admin UI's `attemptKey(attempt, body)` covers this surface meanwhile.
+- **No earliest bound on breach instants** (`packages/contracts/src/breach/schemas.ts` `instantNotAfterNow`). A mistyped year opens a permanently overdue incident. Recoverable today through the runbook's "opened by mistake" path. A floor date is a separate call, related to the review's extension-correction decision.
+
+---
+
 ## Deferred from: story 14-3-dpo-breach-reporting-operational-readiness.md — the build decisions `2026-11-20-467` (2026-11-20)
 
 Four things Story 14.3 names and does not build, each with its trigger (`-467` DL7, DL8, DL9, DL12).

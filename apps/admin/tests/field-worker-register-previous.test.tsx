@@ -89,7 +89,10 @@ describe('R2D-3 — the first press shows the earlier records AND says nobody is
     expect(screen.getByTestId('fw-register-status')).toBe(region); // the SAME node: the line arrived into the region that was already there
     expect(notice).toHaveTextContent(t('fw.register.previous.noticeOne'));
     expect(notice.textContent).toMatch(/not registered yet/);
-    expect(document.activeElement).toBe(notice);
+    // The effect that takes focus runs AFTER the notice is committed, not with it, so this waits for the focus instead of reading it at once. Added after
+    // ONE failure of the immediate read in a full-suite run (2026-11-20; it passes alone, and 12 loaded single-file runs did not reproduce it) - the cause
+    // is suspected (the effect running after `findBy` resolves), not proven. The wait still fails when focus never arrives or lands elsewhere.
+    await waitFor(() => expect(document.activeElement).toBe(notice));
     expect(screen.getByTestId('fw-register-previous')).toBeInTheDocument();
     expect(registerFieldWorker).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('fw-register-done')).toBeNull();

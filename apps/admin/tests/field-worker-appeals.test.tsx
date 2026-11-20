@@ -695,3 +695,67 @@ describe('R2D-20 — "today" is India’s day, pinned across the UTC / IST bound
     await waitFor(() => expect(lodgeFieldWorkerEndingAppeal).toHaveBeenCalledWith(P, W2, { expected_ending_version: 2, received_on: '2026-11-19', received_via: 'phone' }, expect.any(String)));
   });
 });
+
+// ── F1 (browser pass 2026-11-20) — a stale refusal takes FOCUS ─────────────────────────────────────────────────────────────────────
+// The real browser showed what jsdom cannot: after a stale refusal the line was said (role="alert") and the row left with the refresh, but the
+// pressed Confirm left with it and keyboard focus fell to <body>. The success path (`finish`) already took focus; the stale path did not. Each leg
+// puts focus ON the pressed control first (a real press does; `fireEvent.click` does not), so "unclaimed" is judged the way a person would meet it.
+describe('F1 — a stale refusal takes focus, because the refresh removes the control that held it', () => {
+  it('decide: focus goes to the page heading (the success path’s target), ⛔ not to <body>', async () => {
+    listThenEmpty([listItem()]);
+    decideFieldWorkerEndingAppeal.mockRejectedValue(new ApiError(409, 'field_worker.appeal_not_open', 'closed'));
+    renderAppeals();
+    await openAct('allowed');
+    screen.getByTestId('fw-appeal-confirm').focus();
+    confirm();
+    await waitFor(() => expect(screen.queryByTestId('fw-appeal-item')).toBeNull());
+    expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.appealNotOpen'));
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
+  });
+
+  it('decide: ⛔ it does not pull focus back from where the officer went while the request was in flight', async () => {
+    listThenEmpty([listItem()]);
+    let refuse!: (e: unknown) => void;
+    decideFieldWorkerEndingAppeal.mockImplementation(() => new Promise((_resolve, reject) => { refuse = reject; }));
+    renderAppeals();
+    await openAct('allowed');
+    screen.getByTestId('fw-appeal-confirm').focus();
+    confirm();
+    await waitFor(() => expect(decideFieldWorkerEndingAppeal).toHaveBeenCalledTimes(1));
+    const district = screen.getByTestId('fw-appeals-district');
+    district.focus(); // the officer has moved on
+    await act(async () => refuse(new ApiError(409, 'field_worker.appeal_not_open', 'closed')));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.appealNotOpen')));
+    await waitFor(() => expect(screen.queryByTestId('fw-appeal-item')).toBeNull());
+    expect(district).toHaveFocus();
+  });
+
+  it('eligible lodge: focus goes to the "Record an appeal" heading, the lodge success path’s target', async () => {
+    listAppealEligibleFieldWorkers.mockResolvedValueOnce(page([cand(W2, 'Sita Devi')]));
+    listAppealEligibleFieldWorkers.mockResolvedValue(page([]));
+    lodgeFieldWorkerEndingAppeal.mockRejectedValue(new ApiError(409, 'field_worker.illegal_transition', 'not ended'));
+    renderAppeals();
+    fireEvent.click(await screen.findByTestId('fw-appeals-record-open'));
+    const c = await screen.findByTestId('fw-appeals-eligible-item');
+    fireEvent.change(within(c).getByTestId('fw-appeals-via'), { target: { value: 'phone' } });
+    const lodge = within(c).getByTestId('fw-appeals-lodge');
+    lodge.focus();
+    fireEvent.click(lodge);
+    await waitFor(() => expect(screen.queryByTestId('fw-appeals-eligible-item')).toBeNull());
+    expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.appealWorkerChanged'));
+    expect(document.getElementById('fw-appeals-record-title')).toHaveFocus();
+  });
+
+  it('Find’s panel: focus goes to the panel’s title after a stale lodge re-keys the form', async () => {
+    lodgeFieldWorkerEndingAppeal.mockRejectedValueOnce(new ApiError(409, 'field_worker.ending_changed', 'new ending'));
+    fireEvent.click((await openFind())[0]!);
+    const panel = await startFindLodge('in_person');
+    version = 6;
+    const lodge = within(panel).getByTestId('fw-appeals-lodge');
+    lodge.focus();
+    fireEvent.click(lodge);
+    await waitFor(() => expect(within(panel).getByTestId('fw-appeals-via')).toHaveValue('')); // the form for ending 6
+    expect(within(panel).getByTestId('fw-worker-appeals-stale')).toHaveTextContent(t('fw.err.endingChanged'));
+    expect(within(panel).getByRole('heading', { level: 3, name: t('fw.appeals.title') })).toHaveFocus();
+  });
+});

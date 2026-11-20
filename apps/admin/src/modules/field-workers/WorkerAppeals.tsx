@@ -55,7 +55,7 @@ export function WorkerAppeals({ pariwarId, fieldWorkerId, worker }: { pariwarId:
       {canRecord && (!recording ? (
         <button type="button" className="self-start rounded border px-3 py-1 text-sm" onClick={() => { titleRef.current?.focus(); setRecording(true); }} data-testid="fw-worker-appeals-record">{t('fw.appeals.record')}</button>
       ) : (
-        <LodgeAppealForm key={`${fieldWorkerId}:${String(worker.state_event_version)}`} pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} endingVersion={worker.state_event_version} minDate={istDateOf(worker.created_at)} onAttempt={() => setStale(null)} onStale={setStale} onLodged={() => { setStale(null); setOutcome(t('fw.appeals.lodged')); focusIfUnclaimed(titleRef.current, sectionRef.current); }} />
+        <LodgeAppealForm key={`${fieldWorkerId}:${String(worker.state_event_version)}`} pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} endingVersion={worker.state_event_version} minDate={istDateOf(worker.created_at)} onAttempt={() => setStale(null)} onStale={(line) => { setStale(line); focusIfUnclaimed(titleRef.current, sectionRef.current); }} onLodged={() => { setStale(null); setOutcome(t('fw.appeals.lodged')); focusIfUnclaimed(titleRef.current, sectionRef.current); }} />
       ))}
     </section>
   );

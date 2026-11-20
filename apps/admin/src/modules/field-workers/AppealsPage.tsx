@@ -56,6 +56,15 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
     setOutcome(line);
     focusIfUnclaimed(headingRef.current, listRef.current, eligibleListRef.current);
   };
+  /**
+   * A stale refusal reached the page: say it here AND take focus the way `finish` does. The refresh that follows removes the row (or the
+   * eligible candidate) whose button held focus, and nothing moved it, so a keyboard user fell to `<body>` (browser pass 2026-11-20, F1).
+   * `target` and `owners` are the same pair the matching success path hands to `focusIfUnclaimed`.
+   */
+  const refused = (line: string, target: HTMLElement | null, ...owners: (Element | null)[]): void => {
+    setStale(line);
+    focusIfUnclaimed(target, ...owners);
+  };
   const listProblem = appeals.isError ? fieldWorkerGuidance(appeals.error, 'appeals') : null;
   const eligibleProblem = eligible.isError ? fieldWorkerGuidance(eligible.error, 'appeals') : null;
   useSignInRedirect(listProblem?.signIn === true || eligibleProblem?.signIn === true);
@@ -116,7 +125,7 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
               </p>
               <p>{t('fw.appeals.received', { date: formatIstDate(a.received_on), via: t(`fw.appeals.via.${a.received_via}`) })}</p>
               {a.decided_on !== null && <p>{t('fw.appeals.decided', { date: formatIstDate(a.decided_on) })}</p>}
-              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={finish} onStale={setStale} onAttempt={() => setStale(null)} />}
+              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={finish} onStale={(line) => refused(line, headingRef.current, listRef.current, eligibleListRef.current)} onAttempt={() => setStale(null)} />}
             </li>
           ))}
         </ul>
@@ -182,7 +191,7 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
                     heardBy={c.heard_by}
                     name={c.display_name}
                     onAttempt={() => setStale(null)}
-                    onStale={setStale}
+                    onStale={(line) => refused(line, recordTitleRef.current, recordSectionRef.current)}
                     onLodged={() => { setStale(null); setOutcome(t('fw.appeals.lodgedFor', { name: c.display_name })); focusIfUnclaimed(recordTitleRef.current, recordSectionRef.current); }}
                   />
                 </li>

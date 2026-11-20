@@ -11,6 +11,13 @@ import {
   AuditIntegrityAcknowledgement,
   AuditIntegrityCheckList,
   AuditIntegrityCheckResult,
+  // Story 14.3 — the personal data breach register (`/api/v1/data-protection/…`).
+  BreachEntryAppendRequest,
+  BreachIncidentDetailResponse,
+  BreachIncidentListResponse,
+  BreachIncidentOpenRequest,
+  BreachMembersOnRecordResponse,
+  BreachSignalListResponse,
   ClauseDraftResponse,
   ClauseVersionResponse,
   DeployTriggerResponse,
@@ -3825,4 +3832,56 @@ export function getFieldWorkerLog(pariwarId: string, fieldWorkerId: string, opts
   if (opts.record !== undefined) params.set('record', opts.record);
   const q = params.toString() === '' ? '' : `?${params.toString()}`;
   return apiFetch(`${fieldWorkersBase(pariwarId)}/${encodeURIComponent(fieldWorkerId)}/log${q}`, FieldWorkerLog, { cache: 'no-store' });
+}
+
+// ── Story 14.3 — the personal data breach register (decision `2026-11-20-467`) ──────────────────────────────────────────────
+// Six GLOBAL routes behind `breach.manage` (Super Admin only). The register RECORDS an incident and returns the facts the three
+// Rule-7 notices are drafted from; nothing here, or on the server, sends a notice.
+
+const BREACH_BASE = '/api/v1/data-protection';
+
+/** The request bodies, as the contract's INPUT types (what the forms build). */
+export type BreachIncidentOpenBody = z.input<typeof BreachIncidentOpenRequest>;
+export type BreachEntryAppendBody = z.input<typeof BreachEntryAppendRequest>;
+
+/** GET the newest incidents — a title, times and flags only. */
+export function listBreachIncidents(limit = 50): Promise<z.output<typeof BreachIncidentListResponse>> {
+  return apiFetch(`${BREACH_BASE}/breaches?limit=${String(limit)}`, BreachIncidentListResponse);
+}
+
+/** POST open an incident. `Idempotency-Key` is REQUIRED by the route — the caller holds one key across the retries of ONE attempt. */
+export function openBreachIncident(body: BreachIncidentOpenBody, idempotencyKey: string): Promise<z.output<typeof BreachIncidentDetailResponse>> {
+  return apiFetch(`${BREACH_BASE}/breaches`, BreachIncidentDetailResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET one incident with its timeline and derived view. ⚠ AUDITED: every call writes one "viewed" audit line. */
+export function getBreachIncident(incidentId: string): Promise<z.output<typeof BreachIncidentDetailResponse>> {
+  return apiFetch(`${BREACH_BASE}/breaches/${encodeURIComponent(incidentId)}`, BreachIncidentDetailResponse);
+}
+
+/** POST append one entry. `Idempotency-Key` REQUIRED — an entry can never be removed, so a retry must carry the same key. */
+export function appendBreachEntry(
+  incidentId: string,
+  body: BreachEntryAppendBody,
+  idempotencyKey: string,
+): Promise<z.output<typeof BreachIncidentDetailResponse>> {
+  return apiFetch(`${BREACH_BASE}/breaches/${encodeURIComponent(incidentId)}/entries`, BreachIncidentDetailResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+}
+
+/** GET "signals to assess" — failed, unacknowledged audit-chain checks, each with the incidents opened from it. */
+export function listBreachSignals(limit = 20): Promise<z.output<typeof BreachSignalListResponse>> {
+  return apiFetch(`${BREACH_BASE}/signals?limit=${String(limit)}`, BreachSignalListResponse);
+}
+
+/** GET members on record, trust-wide — the monthly review's input (a count; not a threshold). */
+export function getBreachMembersOnRecord(): Promise<z.output<typeof BreachMembersOnRecordResponse>> {
+  return apiFetch(`${BREACH_BASE}/members-on-record`, BreachMembersOnRecordResponse);
 }

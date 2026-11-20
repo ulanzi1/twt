@@ -82,6 +82,11 @@ export function hasAuditVerify(grants: readonly string[] | undefined): boolean {
   return grants?.includes('audit.verify') ?? false;
 }
 
+/** True iff the session carries `breach.manage` at global scope (Story 14.3 — the breach register; Super Admin only). Advisory: the server is the boundary. */
+export function hasBreachManage(grants: readonly string[] | undefined): boolean {
+  return grants?.includes('breach.manage') ?? false;
+}
+
 // ── Multi-Pariwar provisioning surface (Story 1.15) ───────────────────────────
 
 /** The provisioning-status view: provisioned Pariwars + latest deploy status. */
@@ -3408,6 +3413,69 @@ export function useFieldWorkerAppealAct(pariwarId: string) {
         void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
         // Find's lodge uses the identity's ending version (R5). An explicit stale result must refresh that version too.
         if (input.act === 'lodge') void qc.invalidateQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId) });
+      }
+    },
+  });
+}
+
+// ── Story 14.3 — the personal data breach register (decision `2026-11-20-467`; AC12) ─────────────────────────────────────────
+
+export const breachListKey = ['breaches', 'list'] as const;
+export const breachDetailKey = (incidentId: string) => ['breaches', 'detail', incidentId] as const;
+export const breachSignalsKey = ['breaches', 'signals'] as const;
+export const breachMembersOnRecordKey = ['breaches', 'members-on-record'] as const;
+
+/** The newest incidents — a title, times and flags (no narrative). */
+export function useBreachIncidents() {
+  return useQuery({ queryKey: breachListKey, queryFn: () => api.listBreachIncidents(50) });
+}
+
+/** One incident with its timeline and derived view. ⚠ The read is AUDITED on the server — one line per fetch. */
+export function useBreachIncident(incidentId: string) {
+  return useQuery({ queryKey: breachDetailKey(incidentId), queryFn: () => api.getBreachIncident(incidentId) });
+}
+
+/** "Signals to assess" — failed, unacknowledged audit-chain checks. */
+export function useBreachSignals() {
+  return useQuery({ queryKey: breachSignalsKey, queryFn: () => api.listBreachSignals(20) });
+}
+
+/** Members on record, trust-wide — the monthly review's input. */
+export function useBreachMembersOnRecord() {
+  return useQuery({ queryKey: breachMembersOnRecordKey, queryFn: api.getBreachMembersOnRecord });
+}
+
+/**
+ * Open an incident, then refresh the list and the signals (a signal the incident was opened from now shows "Incident opened").
+ * The `Idempotency-Key` is supplied BY THE CALLER and held across the retries of ONE attempt (`attemptKey` over a `useRef`) —
+ * ⛔ never minted here: an incident can never be removed, so a retry must carry the same key.
+ */
+export function useOpenBreachIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, idempotencyKey }: { body: api.BreachIncidentOpenBody; idempotencyKey: string }) => api.openBreachIncident(body, idempotencyKey),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: breachListKey });
+      void qc.invalidateQueries({ queryKey: breachSignalsKey });
+    },
+  });
+}
+
+/**
+ * Append one entry, then refresh the incident and the list. A 409 `breach.incident_closed` (someone closed it meanwhile) ALSO
+ * refreshes the incident, so the page shows the closed state and hides its forms. The key is the caller's, as above.
+ */
+export function useAppendBreachEntry(incidentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, idempotencyKey }: { body: api.BreachEntryAppendBody; idempotencyKey: string }) => api.appendBreachEntry(incidentId, body, idempotencyKey),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: breachDetailKey(incidentId) });
+      void qc.invalidateQueries({ queryKey: breachListKey });
+    },
+    onError: (error: unknown) => {
+      if (error instanceof api.ApiError && error.code === 'breach.incident_closed') {
+        void qc.invalidateQueries({ queryKey: breachDetailKey(incidentId) });
       }
     },
   });

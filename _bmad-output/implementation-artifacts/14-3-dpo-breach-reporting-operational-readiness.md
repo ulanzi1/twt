@@ -696,7 +696,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
       `packages/contracts/scripts/emit-openapi.ts` (+ component registrations — AC13), then `pnpm contracts:emit-openapi`;
       `DATA_PROTECTION_ROOTS` in `scripts/access-wrapper-invariants/check.ts` + README line, `.viewed` through `withCompensatingAudit`
       (DL10), revert-sanity.
-- [ ] **Task 6 — Admin (AC12, AC9, AC10, AC11)** — module + route + nav + `BreachGateView` / local `AccessDenied` + `hasBreachManage` +
+- [x] **Task 6 — Admin (AC12, AC9, AC10, AC11)** — module + route + nav + `BreachGateView` / local `AccessDenied` + `hasBreachManage` +
       client / hooks additions in `api/client.ts` / `api/hooks.ts` (query keys, invalidation, `newIdempotencyKey()` in a `useRef`) + the
       two-way IST helper in `correction-chase/ist.ts`; `microcopy.yaml` entries only for files the gate flags (AC13); tests.
 - [ ] **Task 7 — Gate + records (AC13)** — `ci:local` on a fresh container; story Completion Notes (including AC10's narrowing, the
@@ -1016,6 +1016,37 @@ current version — left alone.
   earlier step had failed silently — the fence test still sat at `apps/api/tests/` and this story-file record was missing from
   it. The next commit moves the test to `tests/unit/` and adds this record; no code in `1671ccf4` is wrong.
 
+**(d9) Task 6 — 2026-11-20 (the admin pages; AC12, and AC9 / AC10 / AC11's page halves).**
+
+- **The IST helper first (RED → GREEN):** `istLocalInputToIso` / `isoToIstLocalInput` beside `formatIst` in
+  `correction-chase/ist.ts`; `tests/ist-local-input.test.ts` (6 tests) runs with `TZ=America/New_York` and asserts it really is
+  outside IST. An impossible date (30 February) is refused, not rolled forward.
+- **Module `apps/admin/src/modules/breach-reporting/`:** `i18n-en.ts` (all copy), `BreachGateView.tsx` (the module's own gate +
+  its own `AccessDenied`), `fields.ts` (each kind's form as data — the payload is validated by the SAME
+  `BreachEntryAppendRequest` the server uses, through a react-hook-form resolver), `OpenIncidentForm.tsx`, `EntryForm.tsx`,
+  `DraftsPanel.tsx` (the contract's `buildBreachDrafts`; read-only boxes with Copy; ⛔ send control), `BreachListPage.tsx`
+  (signals, open, the list with badges, the "Monthly review" panel), `BreachDetailPage.tsx` (rehearsal banner, the clock in IST,
+  the timeline, one form per kind behind a kind selector, the drafts; a closed incident shows no form).
+  `routes/BreachReportingRoute.tsx` (list + detail), two routes in `router.tsx`, a "Data protection" nav link shown only with
+  the grant. `api/client.ts` (six calls), `api/hooks.ts` (`hasBreachManage`, the four query keys of AC12, the hooks).
+- **Idempotency on the page:** `attemptKey` over a `useRef` (the 12.2 helper) — one key per attempt, kept across its retries,
+  renewed when the body changes or the attempt succeeds. Pinned: three submits of one body carry ONE key; an edited body a new one.
+- **`tests/breach-reporting-page.test.tsx` — 13 tests**, the client mocked with an in-memory register whose views come from the
+  REAL derivation: the gate; open (12:00 IST ⇒ `06:30Z`; navigate; list + signals refreshed); client-side refusals without a
+  server call; the display-name 409 and the 503 messages; a signal's prefill and "Incident opened" + link IN PLACE of the action;
+  the badges; "Members on record" with no threshold; the rehearsal banner and draft heading; the drafts read-only with Copy and
+  no send control anywhere; an append through a kind's form; a partial assessment; the sign-off's two-different-names rule and
+  its "trustees do not sign in this app" line; the 409-closed refetch; the clock in IST.
+  ⚠ Written AFTER the pages and green on the first run — so three MUTATIONS were run and reverted to show they bite: (1) no
+  refetch on a 409 closed ⇒ the closed-state test fails; (2) a "Send to the Board" button in the drafts ⇒ the no-send test
+  fails; (3) the open action left beside "Incident opened" ⇒ the signal test fails.
+- **Microcopy gate:** the first run had 11 findings — nine "report" hits and two "not counted" (the out-of-band-blame rule).
+  Reworded where it was not the statute's word (a test id, a comment, one label); ONE allow-list entry, for
+  `breach-reporting/i18n-en.ts`, with AC13's statutory reason. `pnpm microcopy:check` green; `microcopy:test` 443 pass.
+- Whole admin suite: 111 files, 2286 tests pass. Admin `tsc` + `eslint` clean.
+- ⚠ **UN-ATTESTED: no real-browser pass.** Everything above is jsdom. The pages have not been opened in a browser, so layout,
+  the native `datetime-local` control, the clipboard permission prompt and focus behaviour are unverified.
+
 ### Completion Notes List
 
 ### File List
@@ -1054,6 +1085,16 @@ current version — left alone.
 - `scripts/access-wrapper-invariants/check.ts` — MODIFIED (`DATA_PROTECTION_ROOTS`)
 - `scripts/access-wrapper-invariants/README.md` — MODIFIED
 - `packages/domain/tests/breach/no-audit-wrapper-in-domain.test.ts` — NEW
+- `apps/admin/src/modules/breach-reporting/{i18n-en.ts,BreachGateView.tsx,fields.ts,OpenIncidentForm.tsx,EntryForm.tsx,DraftsPanel.tsx,BreachListPage.tsx,BreachDetailPage.tsx}` — NEW
+- `apps/admin/src/routes/BreachReportingRoute.tsx` — NEW
+- `apps/admin/src/router.tsx` — MODIFIED (two routes)
+- `apps/admin/src/routes/RootLayout.tsx` — MODIFIED (nav link)
+- `apps/admin/src/api/client.ts` — MODIFIED (six calls)
+- `apps/admin/src/api/hooks.ts` — MODIFIED (`hasBreachManage`, keys, hooks)
+- `apps/admin/src/modules/correction-chase/ist.ts` — MODIFIED (the two-way IST input helper)
+- `apps/admin/tests/breach-reporting-page.test.tsx` — NEW
+- `apps/admin/tests/ist-local-input.test.ts` — NEW
+- `microcopy.yaml` — MODIFIED (one allow-list entry)
 - `docs/runbooks/personal-data-breach-response.md` — NEW
 - `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
 - `docs/runbooks/breach-tabletop-exercise.md` — NEW

@@ -649,6 +649,14 @@ allow:
       Story 10.7 admin API client reports methods (request/poll/download a report export).
       "report" is the FR-58A feature name + JSDoc/identifiers on a staff/admin surface,
       not the member-visible register.
+  # Story 14.3 (decision `2026-11-20-467`; AC13) — the breach register's staff copy. ONE file: every other file of the module
+  # was reworded to avoid the word instead (the gate flagged only this one after that).
+  - file: apps/admin/src/modules/breach-reporting/i18n-en.ts
+    pattern: '\breport'
+    reason: >-
+      statutory DPDP Rule 7(2)(b) term — 'report to the Board' — staff surface. The 72-hour
+      "Board report" is what the Rules call it; rewording the statute's language on the page
+      staff file it from would mislead. Not member-visible copy (Sahyog Vivran governs that).
   # ⚠⚠ Story 6.18 (validate pass, 2026-09-22) — THE ONE ALLOW-LIST PAIR IN THIS FILE THAT
   # SUPPRESSES A REAL DEBT RATHER THAN A NON-APPLICABLE, and it says so. Read the reason
   # before extending it.

@@ -11,7 +11,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 
 import * as api from '../api/client.js';
-import { hasAuditVerify, hasPariwarProvision, sessionKey, useSession } from '../api/hooks.js';
+import { hasAuditVerify, hasBreachManage, hasPariwarProvision, sessionKey, useSession } from '../api/hooks.js';
 import { correctionChaseEn } from '../modules/correction-chase/i18n-en.js';
 import { correctionClosureEn } from '../modules/correction-closure/i18n-en.js';
 import { certificateRemindersEn } from '../modules/certificate-reminders/i18n-en.js';
@@ -30,6 +30,8 @@ function TopBar(): ReactElement {
   const authed = Boolean(session.data);
   const canVerify = hasAuditVerify(session.data?.nationalGrants);
   const canProvision = hasPariwarProvision(session.data?.nationalGrants);
+  // Story 14.3 — the breach register: the GLOBAL `breach.manage` grant (Super Admin only). Advisory; the server is the boundary.
+  const canManageBreaches = hasBreachManage(session.data?.nationalGrants);
   // Story 6.19c (AC8c) — the Super Admin's held claims are a GLOBAL role's queue: reachable from the TOP LEVEL (a Pariwar
   // picker) on the national grant — advisory, the server's key check is the boundary.
   const canReviewEscalations = session.data?.nationalGrants.includes('claim.review_escalated_closure') ?? false;
@@ -76,6 +78,11 @@ function TopBar(): ReactElement {
           {canProvision && (
             <Link to="/provisioning" className="text-sm underline" data-testid="nav-provisioning">
               Provisioning
+            </Link>
+          )}
+          {canManageBreaches && (
+            <Link to="/data-protection/breaches" className="text-sm underline" data-testid="nav-data-protection">
+              Data protection
             </Link>
           )}
           {pariwarId && (

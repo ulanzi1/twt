@@ -61,6 +61,7 @@ import { ModerationAppealsRoute } from './routes/ModerationAppealsRoute.js';
 import { MemorialReviewDetailRoute, MemorialReviewRoute } from './routes/MemorialReviewRoute.js';
 import { MemorialTakedownDriveRoute, MemorialTakedownRoute } from './routes/MemorialTakedownRoute.js';
 import { VerifierConsoleRoute } from './routes/VerifierConsoleRoute.js';
+import { BreachIncidentRoute, BreachReportingRoute } from './routes/BreachReportingRoute.js';
 import { IntegrityRoute } from './routes/IntegrityRoute.js';
 import { LoginPage } from './routes/LoginPage.js';
 import { validateLoginSearch } from './routes/login-next.js';
@@ -96,6 +97,19 @@ const integrityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/audit/integrity',
   component: IntegrityRoute,
+});
+
+// Story 14.3 (decision `2026-11-20-467`) — the personal data breach register. Trust-wide (no Pariwar in the path); gated on the
+// GLOBAL `breach.manage` grant by the module's own gate (advisory — the server is the boundary).
+const breachReportingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/data-protection/breaches',
+  component: BreachReportingRoute,
+});
+const breachIncidentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/data-protection/breaches/$incidentId',
+  component: BreachIncidentRoute,
 });
 
 const provisioningRoute = createRoute({
@@ -495,6 +509,8 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   integrityRoute,
+  breachReportingRoute,
+  breachIncidentRoute,
   provisioningRoute,
   niyamavaliRoute,
   memberSearchRoute,

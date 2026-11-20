@@ -20,7 +20,7 @@ import { formatIstDate, formatIstDateTime, historyGuidance, needsSignIn, reasonL
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
-export function WorkerHistory({ pariwarId, fieldWorkerId, record }: { pariwarId: string; fieldWorkerId: string; record?: string }): ReactElement {
+export function WorkerHistory({ pariwarId, fieldWorkerId, record, depth = 0 }: { pariwarId: string; fieldWorkerId: string; record?: string; depth?: number }): ReactElement {
   const [shown, setShown] = useState(false);
   /** Story 13.1f (AD12) — the earlier record's history, opened from the registration's "Linked to an earlier record" line. */
   const [earlierShown, setEarlierShown] = useState(false);
@@ -148,13 +148,13 @@ export function WorkerHistory({ pariwarId, fieldWorkerId, record }: { pariwarId:
               {details(e).map((line) => (
                 <p key={line}>{line}</p>
               ))}
-              {record === undefined && e.event_type === 'field_worker.registered' && e.previous_field_worker_id !== null && (
+              {depth < 10 && e.event_type === 'field_worker.registered' && e.previous_field_worker_id !== null && (
                 <div className="flex flex-col gap-1" data-testid="fw-history-linked">
                   <p>{t('fw.history.linked')}</p>
                   <button type="button" className="self-start underline" aria-expanded={earlierShown} onClick={() => setEarlierShown((v) => !v)} data-testid="fw-history-show-earlier">
                     {t('fw.history.showEarlier')}
                   </button>
-                  {earlierShown && <WorkerHistory pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} record={e.previous_field_worker_id} />}
+                  {earlierShown && <WorkerHistory pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} record={e.previous_field_worker_id} depth={depth + 1} />}
                 </div>
               )}
             </li>

@@ -21,6 +21,7 @@ import { fieldWorkerIdentityKey, fieldWorkerListIsStale, fieldWorkerListsKey, us
 import { codeSmsLine, fieldWorkerGuidance, formatIstDate, needsSignIn, stateLabel, type Surface } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
+import { WorkerAppeals } from './WorkerAppeals.js';
 
 export interface WorkerDetailProps {
   pariwarId: string;
@@ -124,6 +125,7 @@ export function WorkerDetail({ pariwarId, fieldWorkerId, onClose, surface = 'app
             )}
           </dl>
           {children?.(w.name, { current_state: w.current_state, district: w.district, created_at: w.created_at, state_event_version: w.state_event_version })}
+          {surface === 'find' && <WorkerAppeals key={fieldWorkerId} pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} worker={w} />}
         </>
       )}
       <button type="button" className="self-start text-sm underline" onClick={close} data-testid="fw-detail-close">

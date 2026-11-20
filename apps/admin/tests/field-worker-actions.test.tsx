@@ -62,6 +62,8 @@ const { createQueryClient } = await import('../src/api/hooks.js');
 
 const P = '11111111-1111-4111-8111-111111111111';
 const W = '00000000-0000-4000-8000-000000000001';
+/** The worker's `state_event_version` as the panel showed it (G24). The End act sends it as `expected_state_event_version` (R2A-2). */
+const SHOWN_VERSION = 7;
 type State = 'pending_kyc' | 'active' | 'suspended' | 'terminated';
 /** The district the worker is in NOW (a move behind the panel changes it). */
 let where = 'Patna';
@@ -74,6 +76,7 @@ const row = (state: State = 'active') => ({
   registered_by_display: 'Asha Verma',
   created_at: '2026-11-04T05:00:00.000Z',
   code_sms_status: null,
+  state_event_version: SHOWN_VERSION,
 });
 const identity = (state: State = 'active') => ({ ...row(state), mobile: '+919876500010', approved_by_display: state === 'pending_kyc' ? null : 'Meera Rao' });
 const result = (o: Partial<{ district: string; current_state: State; state_reason_code: string | null; ended_on: string | null }> = {}) => ({
@@ -231,7 +234,7 @@ describe('End’s confirm (AD8; -454 Q4 A, Q5 A)', () => {
     fireEvent.change(screen.getByTestId('fw-act-ended-on'), { target: { value: '2026-11-05' } });
     fireEvent.click(confirm());
     await waitFor(() => expect(terminateFieldWorker).toHaveBeenCalledTimes(1));
-    expect(terminateFieldWorker).toHaveBeenCalledWith(P, W, { reason_code: 'died', ended_on: '2026-11-05' }, expect.any(String));
+    expect(terminateFieldWorker).toHaveBeenCalledWith(P, W, { reason_code: 'died', ended_on: '2026-11-05', expected_state_event_version: SHOWN_VERSION }, expect.any(String));
   });
 });
 
@@ -350,6 +353,22 @@ describe('submitting an act', () => {
     expect((await screen.findByTestId('fw-actions-stale-text')).textContent).toBe('This worker’s status has changed since you opened them.');
     expect(screen.getByTestId('fw-actions-stale').textContent).not.toMatch(/someone else/);
     expect(actButtons()).toEqual([]);
+  });
+
+  it('R2A-2: an End from a panel that is out of date (409 state_changed - the worker was ended and restored, or changed, since) says the status HAS CHANGED, withdraws the acts and re-reads the worker; the version it sent was the one the panel showed', async () => {
+    await openWorker('active');
+    terminateFieldWorker.mockRejectedValueOnce(new ApiError(409, 'field_worker.state_changed', 'no'));
+    fireEvent.click(screen.getByTestId('fw-act-end'));
+    choose('fw-act-reason', 'left_voluntarily');
+    fireEvent.click(confirm());
+    expect((await screen.findByTestId('fw-actions-stale-text')).textContent).toBe(t('fw.actions.stateChanged'));
+    expect(terminateFieldWorker.mock.calls[0]![2]).toMatchObject({ expected_state_event_version: SHOWN_VERSION });
+    expect(actButtons()).toEqual([]);
+    expect(terminateFieldWorker).toHaveBeenCalledTimes(1); // nothing left to press: the doomed body is not resent
+    // Code review round 2, chunk D (R2D-19): the title says "re-reads the worker" and the body asserted no re-read, so removing the hook's
+    // `state_changed` branch left every test green. The identity IS read a second time (the hook invalidates it for `state_changed`, as for
+    // `ending_changed`) - the contrast is the `illegal_transition` leg above, which correctly stays at ONE read.
+    await waitFor(() => expect(getFieldWorkerIdentity).toHaveBeenCalledTimes(2));
   });
 
   it('review CR22: offline, the act is SENT and fails as a retryable network error - never PAUSED to run on reconnect; the retry reuses the attempt’s key', async () => {
@@ -584,7 +603,7 @@ describe('code review round 2 (R2-2, R2-5, R2-8)', () => {
     choose('fw-act-reason', 'left_voluntarily');
     expect((screen.getByTestId('fw-act-ended-on') as HTMLInputElement).value).toBe('2026-11-05');
     expect((screen.getByTestId('fw-act-reason') as HTMLSelectElement).value).toBe('died');
-    expect(terminateFieldWorker).toHaveBeenCalledWith(P, W, { reason_code: 'died', ended_on: '2026-11-05' }, expect.any(String));
+    expect(terminateFieldWorker).toHaveBeenCalledWith(P, W, { reason_code: 'died', ended_on: '2026-11-05', expected_state_event_version: SHOWN_VERSION }, expect.any(String));
     release(result({ current_state: 'terminated', state_reason_code: 'died', ended_on: '2026-11-05' }));
     await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(`${t('fw.actions.done.end', { name: 'Ramesh Kumar' })} ${t('fw.actions.tell.end')}`));
   });

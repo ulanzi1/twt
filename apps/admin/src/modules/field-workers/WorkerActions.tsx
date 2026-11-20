@@ -39,7 +39,7 @@ import {
 } from '../../api/hooks.js';
 import { focusIfUnclaimed } from '../marketplace/focus.js';
 import type { WorkerSummary } from './WorkerDetail.js';
-import { actGuidance, defaultEndDate, istDateOf, reasonLabel, type Guidance, type WorkerAct } from './derive.js';
+import { actGuidance, defaultEndDate, fieldWorkerGuidance, istDateOf, reasonLabel, type Guidance, type WorkerAct } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -101,14 +101,18 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
   const formRef = useRef<HTMLFormElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const actRefs = useRef(new Map<WorkerAct, HTMLButtonElement>());
+  /** The undo form's Confirm has taken focus once in THIS opening (R2D-6): a later refetch must not take it again. */
+  const undoFocused = useRef(false);
   const ids = useId();
   const introId = `${ids}-intro`;
-  useSignInRedirect(problem?.signIn === true);
 
   const acts = ACTS_BY_STATE[worker.current_state];
   // Story 13.1f (AD14) — the undo confirm says when an open appeal on this ending will close (read only while that confirm is open).
   const appeals = useFieldWorkerEndingAppealsOf(pariwarId, fieldWorkerId, open === 'undo');
   const openAppeal = (appeals.data?.items ?? []).some((a) => a.state === 'open' && a.ending_event_version === worker.state_event_version);
+  const undoCheckReady = appeals.isSuccess && appeals.fetchStatus === 'idle';
+  const appealProblem = open === 'undo' && appeals.isError ? fieldWorkerGuidance(appeals.error, 'appeals') : null;
+  useSignInRedirect(problem?.signIn === true || appealProblem?.signIn === true);
 
   const start = (act: WorkerAct): void => {
     if (open === act) {
@@ -136,8 +140,22 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
   }, [externalStale]);
   // The confirm's first field takes focus when an act opens (Reactivate has none: its Confirm does).
   useEffect(() => {
-    if (open !== null) (firstField.current ?? confirmRef.current)?.focus();
+    if (open !== null) (open === 'undo' ? formRef.current : (firstField.current ?? confirmRef.current))?.focus();
   }, [open]);
+  // The undo's Confirm takes focus when its appeal check FIRST completes — and only from the form itself or the Undo button it was opened from,
+  // ⛔ from a control the officer has already moved to (Cancel is inside the form, and `focusIfUnclaimed`'s "inside the form" counts it as
+  // unclaimed). Once per opening: a refetch that took `undoCheckReady` false and true again moved focus from Cancel to Confirm, so Enter or
+  // Space meant for Cancel confirmed an undo (code review round 2, chunk D: R2D-6).
+  useEffect(() => {
+    if (open !== 'undo') {
+      undoFocused.current = false;
+      return;
+    }
+    if (!undoCheckReady || undoFocused.current) return;
+    undoFocused.current = true;
+    const active = document.activeElement;
+    if (active === null || active === document.body || active === formRef.current || active === actRefs.current.get('undo')) confirmRef.current?.focus();
+  }, [open, undoCheckReady]);
   /** Editing a field clears the error that described the OLD value — ⛔ one that is not about a value (no access, sign-in). */
   const clearValueProblem = (): void => setProblem((p) => (p !== null && (p.noAccess === true || p.signIn === true) ? p : null));
   /** Entering or leaving "Died" restarts the End date at that reason's own starting point: none for a death, today for the rest (`-456`). */
@@ -163,7 +181,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
    */
   const held = busy || undefined;
 
-  const ready = open !== null && (open === 'reactivate' || open === 'undo' || reason !== '') && (open !== 'move' || toDistrict.trim() !== '') && (open !== 'end' || endedOn !== '');
+  const ready = open !== null && (open === 'reactivate' || open === 'undo' || reason !== '') && (open !== 'undo' || undoCheckReady) && (open !== 'move' || toDistrict.trim() !== '') && (open !== 'end' || endedOn !== '');
 
   /** The request WITHOUT its key: `submit` fills `idempotencyKey` from the attempt (the placeholder is never sent). */
   const draft = (act: WorkerAct): FieldWorkerActInput => {
@@ -176,7 +194,12 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
       case 'reactivate':
         return { ...base, act: 'reactivate' };
       case 'end':
-        return { ...base, act: 'terminate', body: { reason_code: reason as FieldWorkerTerminateReason, ended_on: endedOn } };
+        // The version the panel showed (R2A-2): a worker ended and then restored since is refused, never ended again by a stale screen.
+        return {
+          ...base,
+          act: 'terminate',
+          body: { reason_code: reason as FieldWorkerTerminateReason, ended_on: endedOn, expected_state_event_version: worker.state_event_version },
+        };
       case 'undo':
         // The ending the panel showed (AD6) — the cache copies each act's version, so End then Undo names THIS ending (G24).
         return { ...base, act: 'undo', body: { expected_ending_version: worker.state_event_version } };
@@ -266,6 +289,7 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
       {stale === null && open !== null && (
         <form
           ref={formRef}
+          tabIndex={-1}
           aria-label={t(`fw.actions.${open}`)}
           className="flex flex-col gap-2 rounded border p-2"
           onSubmit={(e) => {
@@ -292,7 +316,17 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
           {open === 'undo' && (
             <div id={introId} className="flex flex-col gap-1 text-sm">
               <p data-testid="fw-act-undo-intro">{t('fw.actions.undo.intro')}</p>
-              {openAppeal && <p data-testid="fw-act-undo-open-appeal">{t('fw.actions.undo.openAppeal')}</p>}
+              <div role="status" data-testid="fw-act-undo-check">
+                {!undoCheckReady && appealProblem === null && <p>{t('fw.loading')}</p>}
+                {undoCheckReady && openAppeal && <p data-testid="fw-act-undo-open-appeal">{t('fw.actions.undo.openAppeal')}</p>}
+              </div>
+              {appealProblem !== null && (
+                <div role="alert">
+                  <p>{appealProblem.text}</p>
+                  {/* The refetch unmounts this alert with the button: focus goes to the form first, ⛔ falls to the body (R2D-11). */}
+                  {appealProblem.retryable === true && <button type="button" onClick={() => { formRef.current?.focus(); void appeals.refetch(); }}>{t('fw.retry')}</button>}
+                </div>
+              )}
             </div>
           )}
           {open === 'end' && (

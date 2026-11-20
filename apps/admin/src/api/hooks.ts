@@ -3083,7 +3083,15 @@ export function fieldWorkerListIsStale(err: unknown): boolean {
       err.code === 'field_worker.code_not_available' ||
       // Story 13.1f — the list moved under the officer.
       err.code === 'field_worker.ending_changed' ||
-      err.code === 'field_worker.appeal_not_open')
+      // Code review round 2, R2A-2 — an End from a screen that is out of date (the worker changed, or was ended and restored, since).
+      err.code === 'field_worker.state_changed' ||
+      err.code === 'field_worker.appeal_not_open' ||
+      // Code review round 2, chunk D (R2D-7) — its two siblings: another officer lodged first (`appeal_open`) or the Panel already refused
+      // one (`appeal_already_decided`), so the form and the lists on screen are out of date and every retry would answer the same 409.
+      // `appeal_not_found` too: its line says "The list has been refreshed", which is only true if this refreshes it.
+      err.code === 'field_worker.appeal_open' ||
+      err.code === 'field_worker.appeal_already_decided' ||
+      err.code === 'field_worker.appeal_not_found')
   );
 }
 
@@ -3183,7 +3191,8 @@ export function useFieldWorkerAct(pariwarId: string) {
     onError: (err, input) => {
       if (fieldWorkerListIsStale(err)) refresh(input.fieldWorkerId);
       // Story 13.1f (AD6) — the ending moved on: the IDENTITY is re-read too, so a retry names the current version.
-      if (err instanceof ApiError && err.code === 'field_worker.ending_changed') {
+      // R2A-2 — the same for an End whose version was out of date: the identity names the current version for the next attempt.
+      if (err instanceof ApiError && (err.code === 'field_worker.ending_changed' || err.code === 'field_worker.state_changed')) {
         void qc.invalidateQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId) });
       }
     },
@@ -3307,22 +3316,29 @@ export function useMarkFieldWorkerNoticesSeen(pariwarId: string) {
 // ── Story 13.1f — the appeal record (AD7, AD13). The lists DECRYPT names behind an audit line: ⛔ background refetching, and `gcTime: 0`
 // so a closed list keeps no names ([[project_query_gctime_blinds_removal_tests]]). ──
 
-/** One worker's appeals (no name, no audit line). */
+/**
+ * One worker's appeals (no name, no audit line). Code review round 2, chunk D (R2D-6): ⛔ no background refetch on window focus or
+ * reconnect, as every sibling hook — the Undo confirm waits on this read, and a refetch while an officer sits on Cancel moved focus to
+ * Confirm. It is refreshed by an act that changes it (`useFieldWorkerAppealAct`, and `useFieldWorkerAct` for an undo - both invalidate the
+ * appeals root).
+ */
 export function useFieldWorkerEndingAppealsOf(pariwarId: string, fieldWorkerId: string, enabled = true) {
   return useQuery({
     queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'of', fieldWorkerId] as const,
     queryFn: () => api.getFieldWorkerEndingAppealsOf(pariwarId, fieldWorkerId),
     enabled,
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
 /** The appeal list (a page at a time). */
-export function useFieldWorkerEndingAppeals(pariwarId: string, state: import('@twt/contracts').FieldWorkerEndingAppealState | null) {
+export function useFieldWorkerEndingAppeals(pariwarId: string, state: import('@twt/contracts').FieldWorkerEndingAppealState | null, district: string | null = null) {
   return useInfiniteQuery({
-    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'list', state ?? 'all'] as const,
+    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'list', state, district] as const,
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => api.listFieldWorkerEndingAppeals(pariwarId, { ...(state !== null ? { state } : {}), ...(pageParam !== undefined ? { cursor: pageParam } : {}) }),
+    queryFn: ({ pageParam }) => api.listFieldWorkerEndingAppeals(pariwarId, { ...(state !== null ? { state } : {}), ...(district !== null ? { district } : {}), ...(pageParam !== undefined ? { cursor: pageParam } : {}) }),
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     gcTime: 0,
     refetchOnWindowFocus: false,
@@ -3332,11 +3348,11 @@ export function useFieldWorkerEndingAppeals(pariwarId: string, state: import('@t
 }
 
 /** The ended workers this officer can record an appeal for. */
-export function useAppealEligibleFieldWorkers(pariwarId: string, enabled = true) {
+export function useAppealEligibleFieldWorkers(pariwarId: string, enabled = true, district: string | null = null) {
   return useInfiniteQuery({
-    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'eligible'] as const,
+    queryKey: [...fieldWorkerEndingAppealsRoot(pariwarId), 'eligible', district] as const,
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => api.listAppealEligibleFieldWorkers(pariwarId, pageParam !== undefined ? { cursor: pageParam } : {}),
+    queryFn: ({ pageParam }) => api.listAppealEligibleFieldWorkers(pariwarId, { ...(district !== null ? { district } : {}), ...(pageParam !== undefined ? { cursor: pageParam } : {}) }),
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled,
     gcTime: 0,
@@ -3383,8 +3399,12 @@ export function useFieldWorkerAppealAct(pariwarId: string) {
       }
       void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
     },
-    onError: (err) => {
-      if (fieldWorkerListIsStale(err)) void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
+    onError: (err, input) => {
+      if (fieldWorkerListIsStale(err)) {
+        void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
+        // Find's lodge uses the identity's ending version (R5). An explicit stale result must refresh that version too.
+        if (input.act === 'lodge') void qc.invalidateQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId) });
+      }
     },
   });
 }

@@ -8,21 +8,25 @@
 // role gating: the server decides who may act, and its 403 / 409 lines are shown. No grounds or notes are typed — what the worker said
 // stays with the officer (13.1 QE12). Each form is keyed by its worker or appeal id (13.1d CR48), so one never inherits another's state.
 
-import type { FieldWorkerAppealEligibleItem, FieldWorkerEndingAppealChannel, FieldWorkerEndingAppealState } from '@twt/contracts';
+import type { FieldWorkerEndingAppealState } from '@twt/contracts';
 import { FIELD_WORKER_ENDING_APPEAL_STATES } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useRef, useState } from 'react';
 
-import { attemptKey, useAppealEligibleFieldWorkers, useFieldWorkerAppealAct, useFieldWorkerEndingAppeals, type AttemptKey } from '../../api/hooks.js';
+import { useAppealEligibleFieldWorkers, useFieldWorkerEndingAppeals } from '../../api/hooks.js';
+import { focusIfUnclaimed } from '../marketplace/focus.js';
 import { AppealActions } from './AppealActions.js';
+import { DistrictPicker } from './DistrictPicker.js';
+import { LodgeAppealForm } from './LodgeAppealForm.js';
 import { FieldWorkerNav } from './FieldWorkerNav.js';
-import { fieldWorkerGuidance, formatIstDate, istTodayInBrowser, reasonLabel, type Guidance } from './derive.js';
+import { fieldWorkerGuidance, formatIstDate, reasonLabel } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
 export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement {
   const [state, setState] = useState<FieldWorkerEndingAppealState | null>('open');
-  const appeals = useFieldWorkerEndingAppeals(pariwarId, state);
+  const [district, setDistrict] = useState<string | null>(null);
+  const appeals = useFieldWorkerEndingAppeals(pariwarId, state, district);
   const [recording, setRecording] = useState(false);
   /**
    * The last act's outcome (a decision, a withdrawal, a lodge) — said HERE, in a status region mounted with the page: the act's own row
@@ -30,21 +34,48 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
    * would never be seen (browser pass 2026-11-17).
    */
   const [outcome, setOutcome] = useState<string | null>(null);
-  const eligible = useAppealEligibleFieldWorkers(pariwarId, recording);
+  /**
+   * A STALE refusal of an act (an appeal another officer already decided, a worker whose ending changed, an appeal that appeared) — said HERE
+   * for the same reason as `outcome`, and more so: the refusal's own refresh removes or re-keys the row or form that raised it, and a line
+   * kept inside it was destroyed within a round trip, so the row simply vanished, as after a success (code review round 2, chunk D: R2D-2).
+   */
+  const [stale, setStale] = useState<string | null>(null);
+  const eligible = useAppealEligibleFieldWorkers(pariwarId, recording, district);
+  const [moreNotice, setMoreNotice] = useState<string | null>(null);
+  const [moreAppealsNotice, setMoreAppealsNotice] = useState<string | null>(null);
+  const loadSeq = useRef(0);
+  const appealsSeq = useRef(0);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const eligibleListRef = useRef<HTMLUListElement>(null);
+  const recordTitleRef = useRef<HTMLHeadingElement>(null);
+  const recordSectionRef = useRef<HTMLElement>(null);
+  /** An act finished: say it here, and take focus to the page unless the officer has gone elsewhere (the pressed control unmounts with its row). */
+  const finish = (line: string): void => {
+    setStale(null);
+    setOutcome(line);
+    focusIfUnclaimed(headingRef.current, listRef.current, eligibleListRef.current);
+  };
   const listProblem = appeals.isError ? fieldWorkerGuidance(appeals.error, 'appeals') : null;
-  useSignInRedirect(listProblem?.signIn === true);
+  const eligibleProblem = eligible.isError ? fieldWorkerGuidance(eligible.error, 'appeals') : null;
+  useSignInRedirect(listProblem?.signIn === true || eligibleProblem?.signIn === true);
   const items = appeals.data?.pages.flatMap((p) => p.items) ?? [];
   const candidates = eligible.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
     <section className="flex max-w-3xl flex-col gap-4 p-4" data-testid="fw-appeals-page">
-      <h1 className="text-xl font-semibold">{t('fw.appeals.title')}</h1>
+      <h1 ref={headingRef} tabIndex={-1} className="text-xl font-semibold outline-none">{t('fw.appeals.title')}</h1>
       <FieldWorkerNav pariwarId={pariwarId} current="appeals" />
       <p className="text-sm">{t('fw.appeals.intro')}</p>
       <div role="status" data-testid="fw-appeals-outcome">
         {outcome !== null && <p className="text-sm text-status-ok-fg">{outcome}</p>}
       </div>
+      {/* Mounted EMPTY, so a refusal arrives into a live region (it is heard), and it outlives the row the refusal's refresh removes. */}
+      <div role="alert" data-testid="fw-appeals-stale">
+        {stale !== null && <p className="text-sm text-status-fail-fg">{stale}</p>}
+      </div>
 
+      <DistrictPicker pariwarId={pariwarId} value={district} allowAll testId="fw-appeals-district" onChange={(d) => { loadSeq.current += 1; appealsSeq.current += 1; setDistrict(d); setRecording(false); setOutcome(null); setStale(null); setMoreNotice(null); setMoreAppealsNotice(null); }} />
       <label className="flex items-center gap-2 text-sm">
         {t('fw.appeals.filter')}
         <select value={state ?? ''} onChange={(e) => setState(e.target.value === '' ? null : (e.target.value as FieldWorkerEndingAppealState))} data-testid="fw-appeals-filter">
@@ -57,15 +88,24 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
         </select>
       </label>
 
-      {appeals.isPending && <p className="text-sm">{t('fw.loading')}</p>}
+      <div role="status">
+        {appeals.isPending && <p className="text-sm">{t('fw.loading')}</p>}
+        {appeals.isSuccess && <p className="sr-only">{t(items.length === 0 ? 'fw.appeals.recordsNone' : items.length === 1 ? 'fw.appeals.recordsOne' : 'fw.appeals.recordsLoaded', { count: items.length })}</p>}
+      </div>
       {listProblem !== null && (
-        <p role="alert" className="text-sm text-status-fail-fg" data-testid="fw-appeals-error">
-          {listProblem.text}
-        </p>
+        <div role="alert" className="flex flex-col gap-1 text-sm text-status-fail-fg">
+          <p data-testid="fw-appeals-error">{listProblem.text}</p>
+          {/* The sibling lists offer "Try again" when trying again can help (R2D-12). Focus first: the refetch unmounts this alert with the button. */}
+          {listProblem.retryable === true && (
+            <button type="button" className="self-start underline" onClick={() => { headingRef.current?.focus(); void appeals.refetch(); }} data-testid="fw-appeals-retry">
+              {t('fw.retry')}
+            </button>
+          )}
+        </div>
       )}
       {appeals.isSuccess && items.length === 0 && <p className="text-sm" data-testid="fw-appeals-empty">{t('fw.appeals.empty')}</p>}
       {items.length > 0 && (
-        <ul className="flex flex-col gap-2" data-testid="fw-appeals-list">
+        <ul ref={listRef} className="flex flex-col gap-2" data-testid="fw-appeals-list">
           {items.map((a) => (
             <li key={a.appeal_id} className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid="fw-appeal-item">
               <p className="font-medium">
@@ -76,120 +116,97 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
               </p>
               <p>{t('fw.appeals.received', { date: formatIstDate(a.received_on), via: t(`fw.appeals.via.${a.received_via}`) })}</p>
               {a.decided_on !== null && <p>{t('fw.appeals.decided', { date: formatIstDate(a.decided_on) })}</p>}
-              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={setOutcome} />}
+              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={finish} onStale={setStale} onAttempt={() => setStale(null)} />}
             </li>
           ))}
         </ul>
       )}
+      {/* "Load more" keeps focus while it loads, says what arrived, and hands focus on when it was the last page — as the eligible list below (R2D-11). */}
+      <div role="status" data-testid="fw-appeals-more-status">{moreAppealsNotice}</div>
       {appeals.hasNextPage && (
-        <button type="button" className="self-start text-sm underline" disabled={appeals.isFetching} onClick={() => void appeals.fetchNextPage()}>
+        <button
+          type="button"
+          className="self-start text-sm underline"
+          aria-disabled={appeals.fetchStatus !== 'idle' || undefined}
+          data-testid="fw-appeals-more"
+          onClick={(e) => {
+            if (appeals.fetchStatus !== 'idle') return;
+            const pressed = e.currentTarget;
+            const seq = ++appealsSeq.current;
+            const before = appeals.data?.pages.length ?? 0;
+            setMoreAppealsNotice(null);
+            void appeals.fetchNextPage().then((r) => {
+              if (r.isError || seq !== appealsSeq.current || (r.data?.pages.length ?? 0) <= before) return;
+              const count = r.data?.pages.at(-1)?.items.length ?? 0;
+              setMoreAppealsNotice(t(count === 1 ? 'fw.appeals.moreOne' : 'fw.appeals.more', { count }));
+              if (!r.hasNextPage) focusIfUnclaimed(headingRef.current, pressed);
+            });
+          }}
+        >
           {t('fw.history.more')}
         </button>
       )}
 
-      <section className="flex flex-col gap-2 border-t pt-2" aria-labelledby="fw-appeals-record-title">
-        <h2 id="fw-appeals-record-title" className="font-medium">
+      <section ref={recordSectionRef} className="flex flex-col gap-2 border-t pt-2" aria-labelledby="fw-appeals-record-title">
+        <h2 id="fw-appeals-record-title" ref={recordTitleRef} tabIndex={-1} className="font-medium">
           {t('fw.appeals.record')}
         </h2>
         {!recording ? (
-          <button type="button" className="self-start rounded border px-3 py-1 text-sm" onClick={() => setRecording(true)} data-testid="fw-appeals-record-open">
+          <button type="button" className="self-start rounded border px-3 py-1 text-sm" onClick={() => { recordTitleRef.current?.focus(); setRecording(true); }} data-testid="fw-appeals-record-open">
             {t('fw.appeals.record')}
           </button>
         ) : (
           <>
             {eligible.isPending && <p className="text-sm">{t('fw.loading')}</p>}
-            {eligible.isError && (
-              <p role="alert" className="text-sm text-status-fail-fg">
-                {fieldWorkerGuidance(eligible.error, 'appeals').text}
-              </p>
+            {eligibleProblem !== null && (
+              <div role="alert" className="flex flex-col gap-1 text-sm text-status-fail-fg">
+                <p data-testid="fw-appeals-eligible-error">{eligibleProblem.text}</p>
+                {/* "Record an appeal" is hidden while recording, so without this the only way back was the district picker (R2D-12). */}
+                {eligibleProblem.retryable === true && (
+                  <button type="button" className="self-start underline" onClick={() => { recordTitleRef.current?.focus(); void eligible.refetch(); }} data-testid="fw-appeals-eligible-retry">
+                    {t('fw.retry')}
+                  </button>
+                )}
+              </div>
             )}
             {eligible.isSuccess && candidates.length === 0 && <p className="text-sm" data-testid="fw-appeals-eligible-empty">{t('fw.appeals.eligible.empty')}</p>}
-            <ul className="flex flex-col gap-2" data-testid="fw-appeals-eligible">
+            <ul ref={eligibleListRef} className="flex flex-col gap-2" data-testid="fw-appeals-eligible">
               {candidates.map((c) => (
-                <LodgeForm key={`${c.field_worker_id}:${String(c.ending_event_version)}`} pariwarId={pariwarId} worker={c} onLodged={setOutcome} />
+                <li key={`${c.field_worker_id}:${String(c.ending_event_version)}`} className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid="fw-appeals-eligible-item">
+                  <p className="font-medium">{c.display_name} · {c.district}</p>
+                  <p>{t('fw.appeals.endedOn', { date: formatIstDate(c.ended_on), reason: reasonLabel(c.reason_code) })} · {t(`fw.appeals.heardBy.${c.heard_by}`)}</p>
+                  <LodgeAppealForm
+                    pariwarId={pariwarId}
+                    fieldWorkerId={c.field_worker_id}
+                    endingVersion={c.ending_event_version}
+                    heardBy={c.heard_by}
+                    name={c.display_name}
+                    onAttempt={() => setStale(null)}
+                    onStale={setStale}
+                    onLodged={() => { setStale(null); setOutcome(t('fw.appeals.lodgedFor', { name: c.display_name })); focusIfUnclaimed(recordTitleRef.current, recordSectionRef.current); }}
+                  />
+                </li>
               ))}
             </ul>
+            <div role="status" data-testid="fw-appeals-eligible-status">{moreNotice}</div>
+            {eligible.hasNextPage && (
+              <button type="button" className="self-start text-sm underline" aria-disabled={eligible.fetchStatus !== 'idle'} data-testid="fw-appeals-eligible-more" onClick={(e) => {
+                if (eligible.fetchStatus !== 'idle') return;
+                const pressed = e.currentTarget;
+                const seq = ++loadSeq.current;
+                const before = eligible.data?.pages.length ?? 0;
+                setMoreNotice(null);
+                void eligible.fetchNextPage().then((r) => {
+                  if (r.isError || seq !== loadSeq.current || (r.data?.pages.length ?? 0) <= before) return;
+                  const count = r.data?.pages.at(-1)?.items.length ?? 0;
+                  setMoreNotice(t(count === 1 ? 'fw.appeals.moreCandidateOne' : 'fw.appeals.moreCandidates', { count }));
+                  if (!r.hasNextPage) focusIfUnclaimed(recordTitleRef.current, pressed);
+                });
+              }}>{t('fw.history.more')}</button>
+            )}
           </>
         )}
       </section>
     </section>
-  );
-}
-
-/** One ended worker and the form that records their appeal — the hearer records it (`-454`: "recorded by the officer who hears it"). */
-function LodgeForm({ pariwarId, worker, onLodged }: { pariwarId: string; worker: FieldWorkerAppealEligibleItem; onLodged: (line: string) => void }): ReactElement {
-  const mutation = useFieldWorkerAppealAct(pariwarId);
-  const [receivedOn, setReceivedOn] = useState(istTodayInBrowser());
-  const [via, setVia] = useState<FieldWorkerEndingAppealChannel | ''>('');
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<Guidance | null>(null);
-  const [done, setDone] = useState(false);
-  const attempt = useRef<AttemptKey | null>(null);
-  useSignInRedirect(problem?.signIn === true);
-
-  const submit = async (): Promise<void> => {
-    if (busy || via === '' || receivedOn === '') return;
-    const body = { expected_ending_version: worker.ending_event_version, received_on: receivedOn, received_via: via };
-    const key = attemptKey(attempt, { worker: worker.field_worker_id, ...body });
-    setBusy(true);
-    setProblem(null);
-    try {
-      await mutation.mutateAsync({ act: 'lodge', fieldWorkerId: worker.field_worker_id, idempotencyKey: key, body });
-      attempt.current = null;
-      setDone(true);
-      onLodged(t('fw.appeals.lodgedFor', { name: worker.display_name }));
-    } catch (err) {
-      const g = fieldWorkerGuidance(err, 'appeals');
-      if (g.retryable !== true) attempt.current = null;
-      setProblem(g);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <li className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid="fw-appeals-eligible-item">
-      <p className="font-medium">
-        {worker.display_name} · {worker.district}
-      </p>
-      <p>
-        {t('fw.appeals.endedOn', { date: formatIstDate(worker.ended_on), reason: reasonLabel(worker.reason_code) })} · {t(`fw.appeals.heardBy.${worker.heard_by}`)}
-      </p>
-      {done ? (
-        <p role="status" className="text-status-ok-fg" data-testid="fw-appeals-lodged">
-          {t('fw.appeals.lodged')}
-        </p>
-      ) : (
-        <form
-          aria-label={t('fw.appeals.record')}
-          className="flex flex-col gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
-          }}
-        >
-          <label className="flex flex-col gap-1">
-            {t('fw.appeals.receivedOn')}
-            <input type="date" required value={receivedOn} max={istTodayInBrowser()} onChange={(e) => setReceivedOn(e.target.value)} data-testid="fw-appeals-received-on" />
-          </label>
-          <label className="flex flex-col gap-1">
-            {t('fw.appeals.via')}
-            <select required value={via} onChange={(e) => setVia(e.target.value as FieldWorkerEndingAppealChannel | '')} data-testid="fw-appeals-via">
-              <option value="">{t('fw.appeals.via.choose')}</option>
-              <option value="phone">{t('fw.appeals.via.phone')}</option>
-              <option value="in_person">{t('fw.appeals.via.in_person')}</option>
-            </select>
-          </label>
-          {problem !== null && (
-            <p role="alert" className="text-status-fail-fg" data-testid="fw-appeals-lodge-error">
-              {problem.text}
-            </p>
-          )}
-          <button type="submit" className="self-start rounded bg-black px-3 py-1 text-white disabled:opacity-50" disabled={via === '' || busy} data-testid="fw-appeals-lodge">
-            {busy ? t('fw.actions.saving') : t('fw.appeals.lodge')}
-          </button>
-        </form>
-      )}
-    </li>
   );
 }

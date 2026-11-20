@@ -23,6 +23,8 @@ import { useSignInRedirect } from './sign-in.js';
 export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): ReactElement {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
+  // Updated synchronously on edits: a response for another number cannot acknowledge this one (13.1f R1).
+  const mobileRef = useRef('');
   const [district, setDistrict] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [problem, setProblem] = useState<Guidance | null>(null);
@@ -39,9 +41,12 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
   const mounted = useRef(true);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const doneRef = useRef<HTMLHeadingElement>(null);
+  /** The "not registered yet" line (R2D-3) — focused when the earlier records arrive, so a screen reader hears it and a sighted officer sees where to look. */
+  const noticeRef = useRef<HTMLParagraphElement>(null);
   const nameId = useId();
   const mobileId = useId();
   const errorId = useId();
+  const linkGroup = useId();
   useSignInRedirect(problem?.signIn === true);
 
   useEffect(() => {
@@ -53,6 +58,12 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
   useEffect(() => {
     if (done !== null) doneRef.current?.focus();
   }, [done]);
+  // The first press registered NOBODY and showed the earlier records (AD11): say so, in a live region, and put focus on it. ⛔ The page heading
+  // (the old target) — a screen reader heard only "Register a field worker" and never learned a list had appeared, so a second press, which
+  // registers, passed the disclosure without it being perceived (code review round 2, chunk D: R2D-3; family 13 (d)).
+  useEffect(() => {
+    if (previous !== null) noticeRef.current?.focus();
+  }, [previous]);
 
   const submit = (e: FormEvent): void => {
     e.preventDefault();
@@ -86,12 +97,16 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
         setSubmitting(false);
         // The shown number: ⛔ an error — the list, and a second submit (a NEW key: the body changes — TR9).
         if (err instanceof api.ApiError && err.code === 'field_worker.number_previously_ended') {
+          if (body.mobile !== mobileRef.current) {
+            keyRef.current = null;
+            return;
+          }
           const details = FieldWorkerPreviousEndingsDetails.safeParse(err.details);
           if (details.success) {
             keyRef.current = null;
             setPrevious(details.data.previous_endings);
             setLinkTo(null);
-            headingRef.current?.focus();
+            // Focus goes to the "not registered yet" line once it is rendered (the `previous` effect above), ⛔ the page heading.
             return;
           }
         }
@@ -102,6 +117,7 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
   };
 
   const registerAnother = (): void => {
+    mobileRef.current = '';
     keyRef.current = null;
     setName('');
     setMobile('');
@@ -138,6 +154,14 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
         </div>
       ) : (
         <form className="flex flex-col gap-3" onSubmit={submit} noValidate data-testid="fw-register-form">
+          {/* Mounted EMPTY, so the line arrives into a live region (it is heard): the earlier records were SHOWN and nobody is registered yet. */}
+          <div role="status" data-testid="fw-register-status">
+            {previous !== null && (
+              <p ref={noticeRef} tabIndex={-1} className="rounded border p-2 text-sm font-medium outline-none" data-testid="fw-register-previous-notice">
+                {previous.length === 1 ? t('fw.register.previous.noticeOne') : t('fw.register.previous.noticeMany', { count: previous.length })}
+              </p>
+            )}
+          </div>
           {problem !== null && problem.noAccess !== true && (
             <p id={errorId} role="alert" className="text-sm text-status-fail-fg" data-testid="fw-register-error">
               {problem.text}
@@ -173,6 +197,7 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
               value={mobile}
               inputMode="tel"
               onChange={(e) => {
+                mobileRef.current = e.target.value;
                 setMobile(e.target.value);
                 setPrevious(null);
                 setLinkTo(null);
@@ -194,12 +219,15 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
           {previous !== null && (
             <fieldset className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid="fw-register-previous">
               <legend className="font-medium">{t('fw.register.previous.title')}</legend>
+              {/* ONE choice among the records and "do not link" (R2D-14): a radio group, so ticking one unticks another in the open and a screen
+                  reader hears "one of". The default is no link — the first press must never link by itself. */}
               {previous.map((p) => (
                 <label key={p.field_worker_id} className="flex items-start gap-2">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name={linkGroup}
                     checked={linkTo === p.field_worker_id}
-                    onChange={(e) => setLinkTo(e.target.checked ? p.field_worker_id : null)}
+                    onChange={() => setLinkTo(p.field_worker_id)}
                     data-testid={`fw-register-link-${p.field_worker_id}`}
                   />
                   <span>
@@ -207,6 +235,10 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
                   </span>
                 </label>
               ))}
+              <label className="flex items-start gap-2">
+                <input type="radio" name={linkGroup} checked={linkTo === null} onChange={() => setLinkTo(null)} data-testid="fw-register-link-none" />
+                <span>{t('fw.register.previous.noLink')}</span>
+              </label>
             </fieldset>
           )}
           <button type="submit" className="self-start rounded bg-black px-3 py-1 text-sm text-white" disabled={submitting} data-testid="fw-register-submit">

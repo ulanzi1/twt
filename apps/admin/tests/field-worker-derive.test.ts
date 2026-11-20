@@ -32,7 +32,7 @@ describe('the copy (i18n-en.ts)', () => {
   it('every key resolves with its parameters and leaves no stray brace', () => {
     expect(FIELD_WORKER_EN_KEYS.length).toBeGreaterThan(40);
     // Story 13.1c's keys add `district`, `role`, `from` and `to`; Story 13.1d's `count` and `state`.
-    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya', count: 2, state: 'Active', via: 'By phone' }; // Story 13.1f adds `via`
+    const params = { n: 3, name: 'Asha', id: 'x', date: '4 Nov 2026', code: 'c', spelled: '1 2 3', reason: 'because', seconds: 60, district: 'Gaya', role: 'District Admin', from: 'Patna', to: 'Gaya', count: 2, state: 'Active', via: 'By phone', act: 'Allow' }; // Story 13.1f adds `via`; round 2 chunk D (R2D-15) adds `act`
     for (const key of FIELD_WORKER_EN_KEYS) {
       const text = t(key, params);
       expect(text, key).not.toMatch(/[{}]/);

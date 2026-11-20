@@ -76,6 +76,9 @@ const BY_CODE: Record<string, () => Guidance> = {
   'pariwar.not_found': () => ({ text: t('fw.err.noPariwar') }),
   // Story 13.1f — the undo, the appeal and the link (AD14; `-465` Q6 B).
   'field_worker.ending_changed': () => ({ text: t('fw.err.endingChanged'), retryable: true }),
+  // Code review round 2, R2A-2 — an End from a screen that is out of date: the acts are withdrawn and the panel re-read, as after a
+  // `illegal_transition`; the line is the same existing one ("This worker's status has changed since you opened them").
+  'field_worker.state_changed': () => ({ text: t('fw.actions.stateChanged'), stale: true }),
   'field_worker.number_registered_again': () => ({ text: t('fw.err.numberRegisteredAgain') }),
   'field_worker.appeal_refused_by_panel': () => ({ text: t('fw.err.appealRefusedByPanel') }),
   'field_worker.appeal_open': () => ({ text: t('fw.err.appealOpen') }),
@@ -161,6 +164,44 @@ export function actGuidance(error: unknown, act: WorkerAct): Guidance {
     if (error.code === 'field_worker.illegal_transition') return { text: t('fw.actions.stateChanged'), stale: true };
   }
   return fieldWorkerGuidance(error);
+}
+
+/** Story 13.1f — the three writes of the appeal record. */
+export type AppealAct = 'lodge' | 'decide' | 'withdraw';
+
+/**
+ * An appeal ACT's refusal (code review round 2, chunk D: R2D-4, R2D-5, R2D-8). The shared rows are wrong here, each for its own reason:
+ * `illegal_transition` is the APPROVALS' "already approved" line; the read page's 403 line sends a Pariwar Admin to "ask a Pariwar Admin"
+ * on an appeal the Panel hears; `number_registered_again` tells a hearer to "undo this ending", which an appeal's hearer may not (the
+ * Panel cannot) and which would close the appeal instead of allowing it. `heardBy` is what the ROW knows (an appeal's `heard_by`, an
+ * eligible candidate's `heard_by`); Find knows neither, so its lodge says something true of both hearers.
+ *
+ * `stale` is set for EXACTLY the codes whose refusal also refreshes the appeals (`fieldWorkerListIsStale`): the refresh unmounts or re-keys
+ * the row or form that raised the line, so the SCREEN must say it somewhere that stays mounted (R2D-2).
+ */
+export function appealGuidance(error: unknown, ctx: { act: AppealAct; heardBy?: 'pariwar_admin' | 'trustee_panel' | null }): Guidance {
+  if (error instanceof ApiError) {
+    if (error.status === 403) {
+      const hearer = ctx.heardBy ?? null;
+      if (ctx.act === 'lodge') return { text: t(`fw.appeals.noAccess.lodge.${hearer ?? 'unknown'}`), noAccess: true };
+      return { text: t(hearer === null ? 'fw.appeals.noAccess' : `fw.appeals.noAccess.hear.${hearer}`), noAccess: true };
+    }
+    switch (error.code) {
+      case 'field_worker.illegal_transition':
+      case 'field_worker.authorization_stale':
+        return { text: t('fw.err.appealWorkerChanged'), stale: true };
+      case 'field_worker.ending_changed':
+        // Retryable: the ending's version is re-read, the body then differs, and `attemptKey` mints a NEW key for it.
+        return { text: t('fw.err.endingChanged'), retryable: true, stale: true };
+      case 'field_worker.appeal_open':
+        return { text: `${t('fw.err.appealOpen')} ${t('fw.err.listRefreshed')}`, stale: true };
+      case 'field_worker.appeal_already_decided':
+        return { text: `${t('fw.err.appealAlreadyDecided')} ${t('fw.err.listRefreshed')}`, stale: true };
+      case 'field_worker.number_registered_again':
+        return { text: t('fw.err.appealNumberRegisteredAgain') };
+    }
+  }
+  return fieldWorkerGuidance(error, 'appeals');
 }
 
 /**

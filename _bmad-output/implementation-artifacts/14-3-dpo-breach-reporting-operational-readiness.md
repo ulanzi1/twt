@@ -1085,6 +1085,15 @@ changelog row each, and a dated line at roster Row 53. NOT changed: Row 53 (a)'s
 wording. ⛔ Code: the register still checks only "two different names" and cannot know who the owner is — the form's "(at least
 two)" label is left as built (a copy change would be a code change after the gate; offered to BigDev, not made).
 
+**(d14) 2026-11-20 (~23:20–23:31 IST): the sign-off label, and the gate RE-RUN.** `-470` left the form's label unchanged and
+offered the change; BigDev: *"yes, change the label"*. RED first (a test that the signers field is labelled "… (at least two, not
+counting the breach owner)" — 1 failed), then the one-line change in `breach-reporting/i18n-en.ts` — GREEN. Admin suite 2286
+pass; `tsc`, `eslint` clean; `microcopy:check` green with that exact wording (no new allow-list entry). Committed `2096cfc7`.
+Because it is code, the whole gate was run again: the earlier gate container was REPLACED by a fresh one (`twt-143-gate`,
+`postgres:16.16-alpine`, :5490 — a second run on one database is a known false red), and `pnpm ci:local` at `2096cfc7`, clean
+tree: **`ci:local PASSED — 40 job(s) green`**, one run; 208 migrations applied from empty. A label only — the register still
+checks just "two different names".
+
 ### Completion Notes List
 
 **Story 14.3 — implemented 2026-11-20 by `bmad-dev-story 14.3` on `story/14-3-dpo-breach-reporting-operational-readiness` (own worktree), rebased onto `origin/main` `a7c99c6a`. Not pushed. Nothing is live.**
@@ -1178,6 +1187,9 @@ that person, so nothing is published and Rows 8 and 53 (c) stay open; the privac
   contracts 40, the admin 13 + 6, the two fences.
 - After that run only records and one documentation line changed (`docs/access-wrapper-invariants.md`, the story file,
   `sprint-status.yaml`); no gate reads them except `pii-scrape` over `.decision-log.md`, which is unchanged since the run.
+- **Re-run 2026-11-20 after the one code change made since** (the sign-off label, `2096cfc7`): 40 of 40 green in one run on a
+  fresh container. The commits between `4c2c1bae` and `2096cfc7` are records, documentation and decision entries only; the
+  commits after `2096cfc7` are records only.
 - Not run: GitHub CI (nothing is pushed).
 
 ### File List
@@ -1282,3 +1294,5 @@ that person, so nothing is published and Rows 8 and 53 (c) stay open; the privac
   `review`.
 - 2026-11-20 — v1.8: BigDev's "option 1" — Decision `2026-11-20-470` (author-commit): two trustees BESIDES the breach owner at a
   table-top and at an incident's sign-off. Two draft runbooks and a Row 53 dated line. ⛔ Code. Status stays `review`.
+- 2026-11-20 — v1.9: the sign-off form's label now says the breach owner is not one of the two trustees (`-470`; BigDev: "yes, change
+  the label") — `2096cfc7`, test first. `ci:local` re-run: 40 / 40 on a fresh container at `2096cfc7`. Status stays `review`.

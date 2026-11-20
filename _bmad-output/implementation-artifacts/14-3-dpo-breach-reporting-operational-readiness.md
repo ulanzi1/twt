@@ -677,7 +677,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
         YAML parses).
 - [x] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13 and §3's escalation bullet. Cite sections, ⛔ paste
       private-corpus text (this repo is public — `-167`).
-- [ ] **Task 2 — Permission (AC3)** — DL3; run `packages/domain/tests/rbac/permissions.test.ts` and `roles.test.ts`.
+- [x] **Task 2 — Permission (AC3)** — DL3; run `packages/domain/tests/rbac/permissions.test.ts` and `roles.test.ts`.
 - [ ] **Task 3 — Migration + schema + domain module (AC4, AC6)** — DL4: `<MIG>`, journal entry (`when` above every sibling), Drizzle schema,
       tuples in `schema/breach_incidents.ts`, `packages/domain/src/breach/` (`openBreachIncident` / `appendBreachEntry` +
       `appendBreachEntryInTx` (ADVISORY lock — ⛔ `FOR UPDATE`, TR18) / `listBreachIncidents` / `readBreachIncident` / the signals read
@@ -915,6 +915,15 @@ a decision BigDev was asked to make).
 - **Task 0.6 closed here:** the dated DISCHARGED lines under 13.1a C6 and 13.1b C3 and the follow-up line at roster Row 48 were
   written once the appendix existed. `pnpm dlt-typed-variables:check` passes after the roster edit.
 
+**(d5) Task 2 — 2026-11-20 (the permission, AC3).** RED first: the two pins moved (`toBe(64)`, `toHaveLength(95)`) and a new
+`roles.test.ts` block (`breach.manage` held by `super_admin` only; not `auditor`; no `dpo` bundle, the count stays 13; live for a
+GLOBAL super_admin grant, refused for a pariwar_admin, an auditor and a super_admin grant narrowed to a Pariwar) — 3 failed. GREEN:
+`breach.manage` appended to `SEED_PERMISSION_KEYS`, `PERMISSION_CATALOG_VERSION` 63 -> 64 with a dated block (63 / 94 read live at
+`a7c99c6a`), the dated DL1 correction beside the `member.data_rights` comment (the old lines kept). `tests/rbac` + `tests/field-worker`:
+15 files, 640 tests pass. ⛔ `roles.ts` change (super_admin derives it); ⛔ contracts change. The one other literal `63` found
+(`tests/field-worker/ending-appeal-events.test.ts`, an event fixture's recorded `catalog_version`) is a stored fact, not a pin of the
+current version — left alone.
+
 ### Completion Notes List
 
 ### File List
@@ -930,6 +939,9 @@ a decision BigDev was asked to make).
 - `docs/legal-counsel-engagement/review-artifact-roster.md` — MODIFIED (Row 18 dated line)
 - `docs/escrow/credential-inventory.md` — MODIFIED (Domain 7 dated line)
 - `_bmad-output/implementation-artifacts/deferred-work.md` — MODIFIED (new section; "picked up" then DISCHARGED lines under 13.1a C6 and 13.1b C3)
+- `packages/domain/src/rbac/permissions.ts` — MODIFIED (`breach.manage`; catalog 64; the dated correction line)
+- `packages/domain/tests/rbac/permissions.test.ts` — MODIFIED (pins 64 / 95)
+- `packages/domain/tests/rbac/roles.test.ts` — MODIFIED (the `breach.manage` block)
 - `docs/runbooks/personal-data-breach-response.md` — NEW
 - `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
 - `docs/runbooks/breach-tabletop-exercise.md` — NEW

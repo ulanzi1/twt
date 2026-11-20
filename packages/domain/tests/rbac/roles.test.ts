@@ -1391,3 +1391,32 @@ describe('Story 13.1f — `field_worker.read_ending_appeals` (`2026-11-16-464` A
     expect(hasPermission([tp], key, wide)).toBe(true);
   });
 });
+
+describe('Story 14.3 — `breach.manage` (`2026-11-20-467` DL3): the trust-wide breach register, Super Admin only', () => {
+  const P = '11111111-1111-1111-1111-111111111111';
+  const key = 'breach.manage';
+  const holders = (k: string) =>
+    defaultRoleBundles
+      .filter((b) => (b.permissions as readonly string[]).includes(k))
+      .map((b) => b.role)
+      .sort();
+
+  it('is held by `super_admin` ONLY (derived) — no other bundle, and in particular not `auditor`', () => {
+    expect(holders(key)).toEqual(['super_admin']);
+    expect((bundleForRole('auditor')!.permissions as readonly string[]).includes(key)).toBe(false);
+  });
+
+  it('no `dpo` role is minted (`2026-08-14-106` item 8 stands): the bundle count stays 13 and no bundle is named for a DPO', () => {
+    expect(defaultRoleBundles).toHaveLength(13);
+    expect(defaultRoleBundles.map((b) => b.role as string).filter((r) => /dpo|data_protection/i.test(r))).toEqual([]);
+  });
+
+  it('is LIVE for a GLOBAL super_admin grant; refused for a pariwar_admin, an auditor, and a super_admin grant narrowed to a Pariwar', () => {
+    const resource = { dimension: 'global', value: null, pariwarId: '00000000-0000-0000-0000-000000000000' } as const;
+    const sa = { pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null } as const;
+    expect(hasPermission([sa], key, resource)).toBe(true);
+    expect(hasPermission([{ pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P }], key, resource)).toBe(false);
+    expect(hasPermission([{ pariwarId: P, role: 'auditor', scopeDimension: 'global', scopeValue: null }], key, resource)).toBe(false);
+    expect(hasPermission([{ ...sa, scopeDimension: 'pariwar', scopeValue: P }], key, resource)).toBe(false);
+  });
+});

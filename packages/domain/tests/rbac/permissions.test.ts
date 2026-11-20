@@ -250,9 +250,11 @@ describe('PERMISSION_CATALOG', () => {
     // move request between District Admins; `2026-11-08-458` AD5, confirmed `-459` Q1 A; ONE bump for the four; 86 -> 90 keys).
     // 63 at Story 13.1f +4 (field_worker.undo_ending / .hear_ending_appeal / .hear_ending_appeal_as_panel / .read_ending_appeals —
     // the undo of a mistaken ending and the appeal record; `2026-11-16-464` AD10, Q-1 A / Q-4 A; ONE bump for the four; 90 -> 94 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(63);
+    // 64 at Story 14.3 +1 (breach.manage — the trust-wide breach register, read AND write; GLOBAL; super_admin ONLY, derived;
+    // `2026-11-20-467` DL3; 94 -> 95 keys).
+    expect(PERMISSION_CATALOG_VERSION).toBe(64);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(94);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(95);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

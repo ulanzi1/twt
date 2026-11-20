@@ -902,7 +902,16 @@ export function permissionKey(value: string): PermissionKey {
 // DISTRICT-dimension (+ derived super_admin). REUSE CHECK — ⛔ `field_worker.terminate` (the opposite act), `member.restore_terminated`
 // / `member.decide_moderation_appeal` (members), `field_worker.read_log` (the worker's stream, not the appeal's). 62 / 90 READ LIVE at
 // `5ede00c4`. `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 63 as const;
+//
+// ⭐ Story 14.3 (author-commit `2026-11-20-467` DL3) — 63 → 64, ONE key (94 → 95): `breach.manage` — the trust-wide personal data
+// breach register (`/api/v1/data-protection/…`): open an incident, append an entry, read the list / one incident / the signals /
+// the members-on-record count. Read AND write under the one key. GLOBAL-dimension (`requireGlobalPermission`); `super_admin` ONLY
+// (derived — ⛔ a `roles.ts` const, the 5.8b / 6.33 precedent). ⛔ `dpo` role, ⛔ `auditor` grant (`2026-08-14-106` item 8 stands).
+// `-059` B(3) names Finance Officer / Media-Comms / Field Worker / Helpline Operator additions — this key is granted to none of
+// them; `-210` cl. 2 authorises no key and is not relied on. REUSE CHECK — ⛔ `audit.verify` (the integrity page; a breach record is
+// not an audit read), ⛔ `member.data_rights` (one member's rights request, pariwar-dimension). 63 / 94 READ LIVE at `a7c99c6a`.
+// `defaultRoleBundles` stays 13 — ⛔ no new role.
+export const PERMISSION_CATALOG_VERSION = 64 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1009,6 +1018,10 @@ export const SEED_PERMISSION_KEYS = [
   // ⛔ No `dpo` role is minted. FR-99 activates at the MeitY threshold and DPO appointment is OQ-7 (open);
   // minting a bundle for an unconstituted body seeds an INERT capability (the Story 10.18 lesson). The
   // DPO is the intended future holder of this key — recorded here as a comment, not as a bundle.
+  // ⚠ CORRECTION 2026-11-20 (Story 14.3, `2026-11-20-467` DL1) — the lines above are kept as written. Their conclusion (⛔ `dpo`
+  // role) STANDS on its other grounds (OQ-7 open; an unconstituted body). Their premise "FR-99 activates at the MeitY threshold" is
+  // corrected FOR BREACH REPORTING: DPDP Act s.8(6) + Rules 2025 Rule 7 bind every Data Fiduciary from commencement; only the DPO
+  // waits on a Significant-Data-Fiduciary notification (s.10), and there is no numeric threshold. See `breach.manage` below.
   //
   // ⭐ SETTLED — Decision `2026-08-14-109` clause 7 RULED Escalation 10 (raised by `2026-08-14-107`):
   // *"NO DPDPA ACTION INHERENTLY REQUIRES TRUSTEE PANEL AUTHORITY"* — not access, not portability, not
@@ -1573,6 +1586,11 @@ export const SEED_PERMISSION_KEYS = [
   // Story 13.1f (AD13) — READ the appeals: the list and the eligible list (decrypted names, one audit line a page) and one worker's
   // appeals (no decrypt). district-dimension; `district_admin` (own district), `pariwar_admin`, `trustee_panel` (+ derived super_admin).
   'field_worker.read_ending_appeals',
+  // Story 14.3 (`2026-11-20-467` DL3) — the personal data breach register, read AND write: `POST /api/v1/data-protection/breaches`,
+  // `POST …/breaches/:incidentId/entries`, and the list / detail / signals / members-on-record reads. GLOBAL-dimension; `super_admin`
+  // ONLY (derived). ⛔ `dpo` role, ⛔ `auditor`. The future Data Protection Officer is the intended holder — recorded here as a
+  // comment, not as a bundle (as beside `member.data_rights`).
+  'breach.manage',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

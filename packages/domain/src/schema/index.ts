@@ -538,3 +538,6 @@ export * from './field_worker_notice_emails.js';
 // Story 13.1f (0207) — `field_worker_ending_appeals`: an appeal against ONE ending, the projection of its own stream (decision -464 AD7).
 // 0207 also adds `field_workers.previous_field_worker_id` (the link, AD12) and replaces the guard's rule (t) by (t′) (the undo, AD4).
 export * from './field_worker_ending_appeals.js';
+// Story 14.3 (0208) — `breach_incidents` + `breach_incident_entries`: the personal data breach register (decision -467 DL4).
+// GLOBAL, append-only, RLS forced with ZERO policies, no `twt_app` grant; the kind / source tuples live in the same file.
+export * from './breach_incidents.js';

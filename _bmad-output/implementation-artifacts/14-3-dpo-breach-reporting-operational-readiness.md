@@ -678,7 +678,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - [x] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13 and §3's escalation bullet. Cite sections, ⛔ paste
       private-corpus text (this repo is public — `-167`).
 - [x] **Task 2 — Permission (AC3)** — DL3; run `packages/domain/tests/rbac/permissions.test.ts` and `roles.test.ts`.
-- [ ] **Task 3 — Migration + schema + domain module (AC4, AC6)** — DL4: `<MIG>`, journal entry (`when` above every sibling), Drizzle schema,
+- [x] **Task 3 — Migration + schema + domain module (AC4, AC6)** — DL4: `<MIG>`, journal entry (`when` above every sibling), Drizzle schema,
       tuples in `schema/breach_incidents.ts`, `packages/domain/src/breach/` (`openBreachIncident` / `appendBreachEntry` +
       `appendBreachEntryInTx` (ADVISORY lock — ⛔ `FOR UPDATE`, TR18) / `listBreachIncidents` / `readBreachIncident` / the signals read
       (with `incidentIds`) / `countMembersOnRecord`; explicit `clampLimit`); the regression spec
@@ -924,6 +924,33 @@ GLOBAL super_admin grant, refused for a pariwar_admin, an auditor and a super_ad
 (`tests/field-worker/ending-appeal-events.test.ts`, an event fixture's recorded `catalog_version`) is a stored fact, not a pin of the
 current version — left alone.
 
+**(d6) Task 3 — 2026-11-20 (migration `0208`, schema, domain module; AC4, AC6's race).**
+
+- **Database:** this story's own container `twt-143-pg`, `postgres:16.16-alpine` (CI's minor), port **5489**, DB `twt_dev`;
+  migrated to main's `0207` first. `DATABASE_URL=postgresql://twt_dev_app:devpass@127.0.0.1:5489/twt_dev?sslmode=disable`.
+- **Numbers taken:** migration `0208_breach-incidents`, journal idx 208, `when` 1797996600050 — above main's 1797910200000 (`0207`),
+  `story/6-22b-…`'s 1796701200043 and `story/6-39-…`'s 1796182800037 (each read from its ref today). The journal stays monotonic.
+- **RED → GREEN:** both specs were written and run BEFORE `0208` was applied — 15 of 16 failed (no table); after `pnpm db:migrate`
+  16 of 16 pass. `pnpm db:check`: "Everything's fine". Domain `tsc` and `eslint` clean.
+- **⚠ A DEPARTURE FROM DL4's WORDING, forced by the package graph.** DL4 has `appendBreachEntryInTx` "derive (DL6)" under the lock,
+  and DL6 puts the ONE derivation in `@twt/contracts`. But `@twt/contracts` depends on `@twt/domain` (never the reverse — a domain
+  import of contracts is a workspace cycle), so the domain cannot call it. Built instead: `packages/domain/src/breach/rules.ts`, two
+  pure pg-free functions answering the only two facts the in-lock backstop needs — `isBreachIncidentClosed(entries)` and
+  `breachBoardReportDueAt(becameAwareAt, entries)` (+ the 72-hour constant). `deriveBreachIncidentView` stays the ONE view
+  derivation in contracts (Task 4), and a contracts test — which may import the domain — pins both rules equal to it on shared
+  fixtures, so they cannot drift silently. The domain derives nothing else. ⚠ This is the session's call, not BigDev's; it changes
+  no behaviour DL4 / DL6 describe.
+- **Sanity, both run and reverted:** (1) the advisory lock REMOVED ⇒ the race spec goes red ("backend … never waited on a lock");
+  (2) the advisory lock REPLACED by `SELECT … FOR UPDATE` ⇒ the service-login leg goes red ("permission denied for table
+  breach_incidents") while every superuser leg stays green — TR16 / TR18 demonstrated, not assumed.
+- **Found while building:** `twt_service` already holds SELECT on `audit_integrity_checks` / `_acknowledgements` (the signals read
+  works on the production login); it holds NO grant on `members` (the members-on-record read is the known Row 26 residual — `0208`
+  adds no grant, as DL9 says). An identity column needs no separate sequence grant, and the FK's referential check passes under the
+  service login (both executed in the service-login leg).
+- The regression spec has no policy file beside it (zero policies — DL4). Detail the story did not spell out, added: a
+  `payload` must be a JSON object and the display snapshots non-blank (CHECKs); `entry_id` has no default (the one writer always
+  supplies it); `entry_seq` cannot be written (`GENERATED ALWAYS` — pinned, 428C9).
+
 ### Completion Notes List
 
 ### File List
@@ -942,6 +969,14 @@ current version — left alone.
 - `packages/domain/src/rbac/permissions.ts` — MODIFIED (`breach.manage`; catalog 64; the dated correction line)
 - `packages/domain/tests/rbac/permissions.test.ts` — MODIFIED (pins 64 / 95)
 - `packages/domain/tests/rbac/roles.test.ts` — MODIFIED (the `breach.manage` block)
+- `packages/domain/migrations/0208_breach-incidents.sql` — NEW
+- `packages/domain/migrations/meta/_journal.json` — MODIFIED (idx 208)
+- `packages/domain/src/schema/breach_incidents.ts` — NEW (tables + the kind / source tuples)
+- `packages/domain/src/schema/index.ts` — MODIFIED (export)
+- `packages/domain/src/breach/{index,incidents,rules}.ts` — NEW
+- `packages/domain/src/index.ts` — MODIFIED (`export * as breach`)
+- `packages/domain/tests/integration/rls/breach-incidents-policy-regression.spec.ts` — NEW
+- `packages/domain/tests/integration/breach/append-concurrency.spec.ts` — NEW
 - `docs/runbooks/personal-data-breach-response.md` — NEW
 - `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
 - `docs/runbooks/breach-tabletop-exercise.md` — NEW

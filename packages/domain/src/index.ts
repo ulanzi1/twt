@@ -331,6 +331,9 @@ export * as announcementChannels from './announcement-channels/index.js';
 // effective_from<=at AND (expires_at IS NULL OR expires_at>at)). Tenant-scoped; audit linkage is the
 // consumer route's obligation. Backs the AR-20 cycle-open SMS bridge.
 export * as degradedMode from './degraded-mode/index.js';
+// Story 14.3 — the personal data breach register: openBreachIncident, appendBreachEntry (advisory-locked — never a row lock),
+// the list / detail / signals reads and countMembersOnRecord; the two pure write rules (decision `2026-11-20-467` DL4, DL8, DL9).
+export * as breach from './breach/index.js';
 // Story 8.8 (Task 1; D4) — the notification COMPOSITION substrate: the four per-member delivery-target
 // resolvers (push/WA/SMS/Telegram), the shared per-pool member-facing identity join, and the isolated
 // push-token invalidation write. Relocated from apps/api so the live fan-out in apps/jobs (the stack's

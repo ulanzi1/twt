@@ -641,7 +641,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; ⭐ **REBASE** the story commits onto `origin/main` (304 commits ahead at v1.3 — an ancestor check alone
+  - [x] 0.1 `git fetch origin`; ⭐ **REBASE** the story commits onto `origin/main` (304 commits ahead at v1.3 — an ancestor check alone
         passes trivially and proves nothing); resolve the `sprint-status.yaml` conflict by relabelling this branch's `2026-11-01c` /
         `-e` / `2026-11-20f` lines to the next free letters, keeping every entry and the `---` separator (NUMBERS;
         [[project_rebase_ledger_conflict_separator]]; verify the YAML parses); then re-verify every `apps/` / `packages/` / `scripts/`
@@ -652,18 +652,18 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
         says "Gazette re-check UN-ATTESTED — secondary sources only", ⛔ "checked". A negative ("⛔ SDF notified") is written "none found
         by <method>, <date>" — a search can ⛔ prove an absence. `ListAgents` + `git branch --show-current` before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 ⛔ **STOP — HUMAN.** Put DL1–DL14 to BigDev (DL9 (a)/(b)); proceed ONLY on BigDev's verbatim answers, recorded verbatim in this
+  - [x] 0.2 ⛔ **STOP — HUMAN.** Put DL1–DL14 to BigDev (DL9 (a)/(b)); proceed ONLY on BigDev's verbatim answers, recorded verbatim in this
         file. ⛔ Infer, default or "take as recommended" an answer BigDev did not give.
-  - [ ] 0.3 Write the PQ1 note from the template (by path, ⛔ copied):
+  - [x] 0.3 Write the PQ1 note from the template (by path, ⛔ copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-14-3-who-owns-a-breach.md`, in the template's order: the
         ⏳ AWAITING block; The question (one sentence + why it needs the Panel, ⛔ clause ids); The one fact; the options table (what changes
         for a person / honest cost) + Our reading; What is at stake (live / blocked: nothing / if nothing is decided); How much to trust
         this note; In plain English; EVIDENCE E1–E4 LAST (E4's commands RUN before sending). PQ1's `s.8(9)` / `CQ4` / Row 8 references move
         to the evidence. ⛔ Private-corpus text — paraphrase with section numbers. Run the template's checks. Status WRITTEN, ⛔ sent
         (BigDev sends). Written now, committed AFTER 0.4's entry (the entry is the first commit).
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, next free — `-433` at authoring, TAKEN by 12.2; `-467` at v1.3, 2026-11-20 —
+  - [x] 0.4 Decision entry (AUTHOR-COMMIT, next free — `-433` at authoring, TAKEN by 12.2; `-467` at v1.3, 2026-11-20 —
         re-derive on every ref and worktree), committed ALONE, FIRST; try the write — if refused, ask once ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 The CQ file (DL13) + Row 18 dated line; Row <ROW> appended (Row 45's shape) + Row 8 line (DL12); EVERY premise site's dated
+  - [x] 0.5 The CQ file (DL13) + Row 18 dated line; Row <ROW> appended (Row 45's shape) + Row 8 line (DL12); EVERY premise site's dated
         annotation (DL1's list, precedent shapes; re-grep `MeitY` in `prd.md` and `epics.md`); escrow Domain 7 dated line.
   - [ ] 0.6 `deferred-work.md` — a NEW newest-first section `## Deferred from: story 14-3-dpo-breach-reporting-operational-readiness.md —
         the build decisions `<DEC>` (<date>)`, one-line intro, items `- **<title>** [<file / symbol>; <id>] — <what and why>. ⭐ Trigger:
@@ -673,7 +673,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
         / `field_workers` / the memorial family list (trigger: an SDF notification or CQ4's return). ⭐ (v1.3) Also a dated
         "discharged by Story 14.3 (`<DEC>`) — the breach runbook's 'Where personal data is held' section" line under 13.1a C6 and
         13.1b C3 (⛔ rewritten), and one dated "told — see DL9 / the runbook" line at roster Row 48's notes (13.1 C7).
-  - [ ] 0.7 Ledger line (next free letter — DL14) + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]] — verify the
+  - [x] 0.7 Ledger line (next free letter — DL14) + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]] — verify the
         YAML parses).
 - [ ] **Task 1 — Runbooks (AC2)** — DL11's three files + README + playbook §2.13 and §3's escalation bullet. Cite sections, ⛔ paste
       private-corpus text (this repo is public — `-167`).
@@ -790,11 +790,122 @@ PQ1, there).
 
 ### Agent Model Used
 
+Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 14.3`, started 2026-11-20.
+
 ### Debug Log References
+
+**(d1) Task 0.1 — 2026-11-20 (rebase, citations, NUMBERS, Gazette).**
+
+- **Rebase.** `git fetch origin`; `origin/main` = `a7c99c6a` (unchanged since v1.3). Backup branch `backup/14-3-pre-rebase-2026-11-20`
+  (= `b2250129`). Rebased the three story commits onto `a7c99c6a`; SHA map `0280dfc9` -> `6a953bd3`, `be1c5b9a` -> `0b1792aa`,
+  `b2250129` -> `8508a6be`. Conflicts only in `sprint-status.yaml`'s two ledgers, branch lines on top. Relabelled (label only, bodies
+  untouched): `2026-11-01c` -> `2026-11-01ae`, `2026-11-01e` -> `2026-11-01af` (main's 11-01 letters ran to `ad`; main holds `-c` / `-e`
+  as Story 13.2 lines); `2026-11-20f` kept (main's 11-20 letters run to `e`; no other ref or worktree holds `f`). The commit SUBJECTS
+  still read "ledger 2026-11-01c" / "-01e" — this map is the record. Verified: main's file minus the branch's four lines and two row
+  moves is byte-identical to `origin/main`'s; the file has no `---` separator on either side (none to keep); PyYAML parses it
+  (`epic-14: in-progress`, the 14-3 row `ready-for-dev`); the story file is byte-identical to the backup's.
+- **Citations at `a7c99c6a`, by function (grep, ~125 symbol checks across 68 files).** All hold. Three notes, none changing a task:
+  the member-state tuple the story calls "the `members.ts` tuple" is in `packages/domain/src/schema/members.ts` (also
+  `member/state.ts`); `resolveMembersByMobile` is in `apps/api/src/modules/auth/member/member-auth.repo.ts`; the roster's phrase is
+  "Row 46 is reserved by Stories 6.39 / 14.3" (Rows 48-52's preambles). `istLocalInputToIso` / `isoToIstLocalInput` do not exist yet
+  (expected — Task 6 builds them). `docs/runbooks/` holds 12 runbooks + README, `_template.md`, the ledger (as G8).
+- **NUMBERS re-derived on every local + remote ref ahead of main and every worktree (all five worktrees clean).** Highest anywhere:
+  decision `2026-11-20-466`, migration `0207` (journal `when` 1797910200000), `PERMISSION_CATALOG_VERSION = 63` / 94 keys
+  (`toBe(63)` / `toHaveLength(94)`), roster Row 52 (46 unused — reserved). The open peers `story/6-22b-…` (decision -440, `0198`,
+  catalog 58) and `story/6-39-…` (-430, `0192`, 56) sit on stale bases and hold nothing above main. => next free TODAY: decision
+  `2026-11-20-467`, Row 53, migration `0208`, catalog 64 / 95 keys, ledger `2026-11-20g`. Still re-derived at each commit that takes one.
+- **G5 Gazette re-check — PARTLY attested.** READ (primary, e-Gazette, 2026-11-20 ~15:45 UTC, plain HTTPS GET, text extracted with
+  macOS PDFKit): (1) `https://egazette.gov.in/WriteReadData/2025/267650.pdf` — G.S.R. 846(E), the Rules (41 pp., SHA-256
+  `eabc7d05…f5aa08`; byte-identical to the MeitY copy at `meity.gov.in/static/uploads/2025/11/53450e6e…ad39.pdf`); (2)
+  `https://egazette.gov.in/WriteReadData/2025/267647.pdf` — G.S.R. 843(E), the Act's commencement (2 pp., SHA-256 `6df25cd8…0998e5`).
+  CONFIRMED as notified: Rule 1(2) Rules 1, 2, 17-21 on publication; 1(3) Rule 4 "one year after the date of publication of this
+  Gazette"; 1(4) "Rules 3, 5 to 16, 22 and 23 … eighteen months after the date of publication of this Gazette" (so Rule 7 is in the
+  18-month tranche); Rule 7(1)(a)-(e), 7(2)(a) (with "location"), 7(2)(b)(i)-(vi) and "within seventy-two hours of becoming aware of
+  the breach, or within such longer period as the Board may allow on a request made in writing" — G2 matches the text. 843(E): (a)
+  ss.1(2), 2, 18-26, 35, 38-43, 44(1), 44(3) on publication; (b) ss.6(9), 27(1)(d) at one year; (c) ss.3-5, 6(1)-(8), 6(10), 7-10,
+  11-17, 27 (rest), 28-34, 36, 37, 44(2) at eighteen months — G5 matches.
+  ⚠ **NEW — the date the clock runs from is not settled by the text.** Both issues are headed "NEW DELHI, THURSDAY, NOVEMBER 13, 2025"
+  (the notification is also dated the 13th), but each carries the e-Gazette number `CG-DL-E-14112025-…` — an e-publication stamp of
+  14 Nov 2025. Rule 1(4) runs from "the date of publication of this Gazette" => 13 May 2027 on the issue date, 14 May 2027 on the
+  e-publication stamp. v1.3's "14 Nov is only the PIB press date" is therefore too strong. This story keeps **13 May 2027** (the
+  EARLIER, conservative date) as a readiness target; which date the law takes is put to counsel (folded into CQ1 at Task 0.5).
+  **UN-ATTESTED (secondary sources only, 2026-11-20; "none found", never "none exists"):** (i) any notification amending Rule 1(4)
+  (18 -> 12 months) — none found by web search (easydp.in, theintect.com, consentos.in, bitscore.in, astraready.com, dpdpa.support,
+  legismith.com); the e-Gazette's ministry search (`SearchMenu.aspx`, a stateful form) was NOT run and its recent-uploads lists
+  returned nothing parseable; (ii) any SDF or class notified under s.10, and so any window one would set for a DPO — none found
+  (konfirmity.com, complydp.com, dpdpa.dcomply.in, certbar.com; one says "no public designation" as of Sept 2026); (iii) the Board —
+  secondary trackers report NO Chairperson or Member appointed as of 1 / 14 Nov 2026 (livelaw.in, ppc.land, indiadatalaw.org,
+  dapro.in), MeitY advertised the posts May-June 2026; no breach-intimation portal found; `dpb.gov.in` and `www.dpb.gov.in` do not
+  resolve (DNS, 2026-11-20); (iv) corrigendum G.S.R. 892(E) (10 Dec 2025) — its text was NOT read (the one page said to reproduce it,
+  dpdp.myndsolution.com, returned 503; no e-Gazette id for it found); secondary description only: "minor typographical errors",
+  page 24 of the notification; (v) a second corrigendum "G.S.R. 113(E)" is named by one secondary page (simpliance.in, Feb 2026) —
+  unconfirmed, not read. `meity.gov.in` HTML pages refused the fetch agent (403); the e-Gazette refused it too (TLS chain) but
+  answered a plain request.
+
+**(d2) Task 0.2 — 2026-11-20, BigDev's answers, VERBATIM.** Put as two questions in the session's question dialog (the dialog's
+option labels are the answer text; nothing was inferred or defaulted):
+
+- Question: *"Story 14.3, DL9 — how should the monthly review get its "members on record" count?"* — offered: "(a) Endpoint + panel
+  (Recommended)" / "(b) Runbook SQL only". **BigDev: "(a) Endpoint + panel (Recommended)"**.
+- Question: *"Story 14.3 — do you accept the other thirteen build decisions (DL1–DL8, DL10–DL14) exactly as written in story v1.3?"* —
+  offered: "All thirteen as written (Recommended)" / "Some need changes". **BigDev: "All thirteen as written (Recommended)"**.
+
+=> DL1–DL8 and DL10–DL14 stand exactly as written in v1.3; DL9 takes arm (a). AC11's arm (b) is STRUCK by this answer — the AC's own
+text sits outside the sections a dev run may edit, so the strike is recorded here and in the decision entry, and the AC text is left
+as written. Not asked and not answered: anything beyond DL1–DL14 (the 13 / 14 May 2027 reading in (d1) is a finding for counsel, not
+a decision BigDev was asked to make).
+
+**(d3) Tasks 0.3–0.7 — 2026-11-20 (governance records; ⛔ code).**
+
+- **0.4 — Decision `2026-11-20-467`** (author-commit) written to `.decision-log.md` (the write was accepted — no ask needed) and
+  committed ALONE as `1bfc9053`, the first commit after the rebase. Beyond Task 0.1's two Gazette files the Act itself was read that
+  day (MeitY's copy, 21 pp., SHA-256 `4deb2398…a7d15`): ss.2(l), 2(s), 8(6), 8(9), 10 are quoted in the entry from the file. The
+  Act's only registration is the Consent Manager's (ss.2(g), 6(9)) — grepped.
+- **0.3 — The PQ1 note** `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-20-14-3-who-owns-a-breach.md`, written
+  from the template in its order; E4's eight commands RUN at `1bfc9053`, each returning what the note states. WRITTEN, ⛔ sent.
+  Rule 13(1)'s twelve-month DPIA / audit clock (option B's cost) was read in the Gazette file.
+- **0.5 — Records.** The counsel file `counsel-question-2026-11-01-14-3-breach-and-dpo.md` (DL13's file name kept as decided; it
+  says inside that it was prepared 2026-11-20), CQ1–CQ5, with CQ1 (b) ADDED for the 13 / 14 May 2027 reading and the Row 49 (d)
+  cross-reference; WRITTEN, ⛔ sent. `review-artifact-roster.md` Row 18: a dated "question drafted (not submitted)" line, status
+  unchanged. Roster **Row 53** `dpdpa-breach-and-dpo-readiness` (commit `f611941c`, with the Row 8 cross-reference line). Dated
+  annotations: PRD — the FR-99 entry, the §4.14 "DPDPA & PMLA" paragraph, and two FURTHER `MeitY` sites the re-grep found (the
+  glossary's DPO line; the §4.14.1 "Data Fiduciary registration" line); `epics.md` — the FR inventory's FR-99 line, the Epic 14
+  intro, the User Outcome, Story 14.3's title, its Given / "at threshold activation" block, and its launch-gate block ("monitoring of
+  data-principal count threshold"). Every `MeitY` line in both files now has an annotation beside it (re-grepped). Escrow Domain 7:
+  one dated line, the three statuses unchanged. ⚠ Corrected while writing: Row 53 (f)'s discharge path first cited Row 26 for DLT
+  registration — Row 26 is `jobs-db-role`; the DLT row is Row 30 (fixed before the commit).
+- **0.6 — `deferred-work.md`: PARTLY done, the box is left OPEN on purpose.** Written: the new section with the four items, and
+  the dated "told" line at roster Row 48 (13.1 C7). ⛔ Written as the task words it: the "discharged by Story 14.3" lines under
+  13.1a C6 and 13.1b C3. What discharges them — the runbook's "Where personal data is held and who receives it" section — does not
+  exist until Task 1, and a discharge recorded before its evidence is a record ahead of its evidence
+  ([[feedback_record_unattested_no_backfill]]). Each item carries a dated "PICKED UP … not yet discharged" line instead; the discharge
+  lines are written with Task 1, and 0.6 is ticked then.
+- **0.7 — Ledger `2026-11-20g`** (free on every ref and worktree, re-fetched; `origin/main` still `a7c99c6a`); row
+  `ready-for-dev -> in-progress`; PyYAML parses the file; line count +2 (nothing truncated).
+- **Gates that read these files, run now:** `pnpm dlt-typed-variables:check` (reads `docs/launch-gate-inventory/*.md`) — passed;
+  `pnpm pii:check` (reads `.decision-log.md`) — passed. `pnpm install --frozen-lockfile` was run in the worktree first (it had no
+  `node_modules`).
+- **Private corpus.** Nothing from `twt-legal` is quoted in any file written: the Niyamavali Part 10 and privacy-policy section 11
+  references are paraphrases with section numbers; the one count taken from the private copy (seven "DPO" mentions in the English
+  draft policy) is a number, not text.
 
 ### Completion Notes List
 
 ### File List
+
+*(Task 0 — governance; code files are added as each task lands.)*
+
+- `.decision-log.md` — MODIFIED (Decision `2026-11-20-467`)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-20-14-3-who-owns-a-breach.md` — NEW
+- `_bmad-output/planning-artifacts/counsel-question-2026-11-01-14-3-breach-and-dpo.md` — NEW
+- `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md` — MODIFIED (four dated annotations)
+- `_bmad-output/planning-artifacts/epics.md` — MODIFIED (six dated annotations)
+- `docs/launch-gate-inventory/inventory-roster.md` — MODIFIED (Row 53; dated lines at Rows 8 and 48)
+- `docs/legal-counsel-engagement/review-artifact-roster.md` — MODIFIED (Row 18 dated line)
+- `docs/escrow/credential-inventory.md` — MODIFIED (Domain 7 dated line)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — MODIFIED (new section; two "picked up" lines)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (rebase relabels; ledger `2026-11-20g`; row -> in-progress)
+- `_bmad-output/implementation-artifacts/14-3-dpo-breach-reporting-operational-readiness.md` — MODIFIED (task boxes, Dev Agent Record, File List, Change Log)
 
 ## Change Log
 
@@ -826,3 +937,8 @@ PQ1, there).
   a wrong-recipient triage row + a CQ cross-reference to Row 49 (d); G2 / G5 re-dated (13 Nov 2026 passed; ⛔ 12-month cut found;
   Board ⛔ functional — UN-ATTESTED); the `0194` landing note retired; NUMBERS re-derived. Low: TR15 "by mistake"; the IST formatter
   duplicates; Rows 49–52 as the row shape. ⛔ Rebased; ⛔ code; ⛔ decision entry.
+- 2026-11-20 — v1.4: `bmad-dev-story 14.3` started. Task 0 (governance): rebased onto `origin/main` `a7c99c6a` (ledger lines
+  relabelled `-11-01ae` / `-11-01af`); BigDev's answers to DL1–DL14 recorded verbatim (DL9 arm (a); the rest as written); decision
+  `2026-11-20-467` committed alone; roster Row 53; the PQ1 note and the counsel file written, ⛔ sent; ten dated annotations; the
+  deferred-work section. Found: the Gazette's two dates (13 / 14 May 2027). Un-attested: the "none found" negatives; corrigendum
+  G.S.R. 892(E). Task 0.6 left open until Task 1's runbook section exists. ⛔ Code yet.

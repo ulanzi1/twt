@@ -77,6 +77,13 @@ Closure-language precision per `[[feedback_closure_language_precision]]`: never 
 | `incident-response-tooling-credentials` | DPDPA breach-reporting tooling | Pre-existing if paging SaaS is provisioned for the trustee escalation surface; else `pending-system-availability` | `prod-credential` | `pending-system-availability` (no paging SaaS provisioned at Story 0.2 closure time per architecture §5.10 "paging integration may use the same SaaS as the tracing / crash-reporting provider" — deferred to operations ADR) | Reserved | operations policy cadence | _not yet sealed_ | Confirm with Solo Builder during Task 7 execution whether any paging SaaS credentials exist operationally |
 | `dpo-contact-path` | DPDPA breach-reporting tooling | Story 14.3 + Story 0.13 + PRD §11 OQ-7 (DPO appointment) | `prod-credential` | `pending-system-availability` (no DPO appointed at Story 0.2 closure time) | Reserved | DPO replacement events | _not yet sealed_ | The DPO contact path is itself a recoverable artifact under bus-factor scenario; envelope holds the DPO identity + escalation tree + replacement-DPO appointment procedure |
 
+> **2026-11-20 — Domain 7, statuses UNCHANGED** (Story 14.3 Task 0.5, [Decision 2026-11-20-467](../../.decision-log.md#decision-2026-11-20-467)). All three rows stay
+> `pending-system-availability`: (1) `dpo-breach-reporting-portal` — no Data Protection Board portal was found to exist (`dpb.gov.in` does
+> not resolve; secondary reports of mid-November 2026 have no Board member appointed) — re-checked at the monthly review in
+> `docs/runbooks/dpo-appointment-and-sdf-watch.md`; (2) `incident-response-tooling-credentials` — Story 14.3 adds no paging or alert
+> sink; its breach register sits behind the admin session and needs no credential of its own; (3) `dpo-contact-path` — no DPO or breach
+> owner is named; it is sealed at the appointment ceremony that runbook describes, after the Panel's answer (launch-gate Row 53 (c)).
+
 ### Out-of-scope-for-§9.1.1 (architecturally-adjacent envelope classes)
 
 These envelope classes are not enumerated in PRD §9.1.1 but are architecturally adjacent — their credentials must be escrowed to preserve the §2.10a invariant and the §5.9 high-sensitivity tier separation, regardless of PRD enumeration.

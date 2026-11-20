@@ -195,6 +195,7 @@ TWT is a legal trust with the **statutorily required minimum of 3 trustees** plu
 - **DPDPA** — Digital Personal Data Protection Act (India). Governs PII handling. Drives consent registry, RTBF flow, export/portability, breach reporting.
 - **PMLA** — Prevention of Money Laundering Act. Reason public-donor-to-nominee donations are killed in v1.
 - **DPO** — Data Protection Officer. Required at MeitY's Data Fiduciary threshold; trust to appoint pre-launch or v1-S.
+  > ⚠ **ANNOTATION 2026-11-20 (Story `14-3` Task 0, `2026-11-20-467`). Annotated, not rewritten.** There is no "threshold". A Data Protection Officer is required only of a Data Fiduciary the Central Government NOTIFIES as Significant (DPDP Act s.10) — one fiduciary or a class, not a count. Breach reporting does not wait for that (FR-99's annotation). Whether and when the Trust appoints one is OQ-7 — put to the Panel (written, not sent), not ruled.
 - **80G** — Income Tax Act donation deduction. Only relevant when Crowdfunding Module ships (Phase 2/3).
 
 **Public / transparency**
@@ -1229,6 +1230,12 @@ The posture manifests in: under-funded delivers actual, no top-up (FR-19); Contr
 
 **DPDPA & PMLA.** DPDPA compliance is built in from v1: data export, RTBF (soft-delete + anonymize, no refund), consent registry. DPO + breach-reporting readiness activate at the MeitY threshold. PMLA posture is **structurally limited** — by never holding support money in the support-pool flow, the trust avoids PMLA exposure on support funds. But the trust does hold the ₹110 fee inflow, module commissions, and Phase 2/3 crowdfunding (when shipped); those flows have their own regulatory surface — enumerated in §4.14.1.
 
+> ⚠ **ANNOTATION 2026-11-20 (Story `14-3` Task 0, `2026-11-20-467`) — breach reporting is ⛔ SDF-gated; only the DPO is. ⭐ Annotated, ⛔ not rewritten.**
+> *"DPO + breach-reporting readiness activate at the MeitY threshold"* is corrected as FOUND law, not by a ruling: DPDP Act s.8(6) and Rules 2025 Rule 7
+> bind EVERY Data Fiduciary — each affected person and the Board are told without delay, and the Board gets a detailed report within 72
+> hours — from commencement (13 May 2027 as far as found; `-467` records what was read and what was not). Only the Data Protection
+> Officer waits on a Government notification under s.10, and there is no numeric threshold. Readiness is tracked at launch-gate Row 53.
+
 #### §4.14.1 Regulatory Surface Inventory
 
 The trust touches multiple regulatory regimes despite the "facilitator, not intermediary" posture on support-pool money. Every cash flow the trust handles is enumerated below with applicable law and TWT's posture. Canonical; legal counsel must sign off pre-launch.
@@ -1247,6 +1254,7 @@ The trust touches multiple regulatory regimes despite the "facilitator, not inte
 - 80G registration (for Phase 2/3 readiness; can begin pre-launch as it lapses if unused).
 - GST registration trigger threshold (likely required from launch given module commissions).
 - DPDPA Data Fiduciary registration (when MeitY thresholds are clarified; tracking is needed).
+  > ⚠ **ANNOTATION 2026-11-20 (Story `14-3` Task 0, `2026-11-20-467`). Annotated, not rewritten.** As read on 2026-11-20 the DPDP Act registers Consent Managers only (ss.2(g), 6(9)); no registration of an ordinary Data Fiduciary was found, and no "threshold" awaits clarification (Significant status is by notification). Whether any registration duty exists is asked of counsel (Story 14.3's counsel file, question 1 (c) — written, not sent). This line and roster Rows 10 / 11 are not changed.
 - **TRAI compliance — partial.** Bulk-DLT compliance de-scoped (no bulk-alert SMS). **DLT-transactional (PE/OE) registration required** for OTP-SMS, step-up-OTP-SMS, transactional-fallback-SMS, and degraded-mode cycle-open-bridge SMS — committed as operational prerequisite (architecture §2.2, §3.4). In-app notification rules may apply where notification content overlaps with regulated categories.
   > ⚠ **ANNOTATION 2026-11-06 (Story `13-1b` Task 0.5, `2026-11-06-450`). Annotated, not rewritten.** This list names four uses; a field worker's code text is not one. See §4.10's annotation of the same date: to be put to the Panel as a confirm (drafted, not sent), not ruled.
 - Consumer Protection Act 2019 — trust's "service" is in scope; internal appeal flow (FR-43A) is the mitigation.
@@ -1299,6 +1307,12 @@ When a mass-casualty event hits, claims are stretched over months. Never panic. 
 #### FR-99: DPO + breach-reporting readiness `[v1-S, activates at MeitY threshold]`
 
 Process + contact present; tooling for incident-response, breach notification timing per DPDPA, monthly compliance review.
+
+> ⚠ **ANNOTATION 2026-11-20 (Story `14-3` Task 0, `2026-11-20-467`) — breach reporting is ⛔ SDF-gated; only the DPO is. ⭐ Annotated, ⛔ not rewritten.**
+> The tag *"activates at MeitY threshold"* holds for the DPO half only. The breach half binds the Trust as it is today, from DPDP
+> commencement (FOUND — s.8(6), Rule 7), and the author's own readiness target is go-live if that is earlier. Story 14.3 builds the
+> incident register, the 72-hour clock, the notice drafts and the runbooks (with this entry's *"monthly compliance review"*); the DPO
+> appointment is DOCUMENTED there, not performed — it follows the Panel's answer on OQ-7 and any s.10 notification (Row 53 (c)).
 
 **Feature-specific NFRs:**
 - All PII at rest encrypted; in-transit TLS 1.3+.

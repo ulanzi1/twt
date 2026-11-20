@@ -421,6 +421,14 @@ These rows track the cross-Story deferred-scope inventory from `review-scope-cha
 | `integration_status` | `pending-submission` |
 | `notes` | Cross-references inventory `es-1` + `es-2`. Cross-coupled with Story 14.3 + Story 4 DPDPA consent flow row 4. |
 
+> **2026-11-20 — question drafted (not submitted)** (Story 14.3 Task 0.5, [Decision 2026-11-20-467](../../.decision-log.md#decision-2026-11-20-467) DL13). The counsel
+> question for this artifact is WRITTEN: `_bmad-output/planning-artifacts/counsel-question-2026-11-01-14-3-breach-and-dpo.md` (CQ1–CQ5:
+> whether DPDP Act s.8(6) / Rule 7 bind the Trust and from which date; the CERT-In 2022 Directions; how an affected member may be told;
+> Significant Data Fiduciary exposure and a voluntary DPO; who may hold the role). It is ⛔ sent — BigDev sends it. `integration_status`
+> stays `pending-submission`; the submission and return fields above are unchanged. Counsel has not been asked about breach reporting, a
+> DPO or SDF status. The row's `integration_target` (two escrow envelopes flipping to active) still holds for `dpo-contact-path`; for
+> `dpo-breach-reporting-portal` no Board portal was found to exist on 2026-11-20.
+
 ### Row 19: `fallback-handler-denial-appeal-procedural-fairness-v1`
 
 | Field | Value |

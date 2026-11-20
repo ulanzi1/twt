@@ -196,6 +196,7 @@ Inputs reconciled per the 2026-05-27 Sprint Change Proposal: the Sprint Change P
 - **FR-97: Consent registry (DPDPA #3).** Granular records: T&C version, privacy policy version, marketing comms, biometric data, photo. Revocable.
 - **FR-98: Disaster-handling policy — slow-roll over months.** Trustee marks disaster window; alert engine throttles claim spawn; per-pool amount NOT raised reactively; member copy de-emphasizes urgency.
 - **FR-99: DPO + breach-reporting readiness `[v1-S, activates at MeitY threshold]`.** Process + contact present; tooling for incident response; monthly compliance review.
+  - ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467)) — ⛔ not rewritten.** Breach reporting is ⛔ SDF-gated; only the DPO is — DPDP Act s.8(6) and Rule 7 bind every Data Fiduciary from commencement (FOUND, not ruled). The PRD's FR-99 also reads *"breach notification timing per DPDPA"*, which this copy drops; Story 14.3 carries both it and the monthly compliance review.
 
 **Future Benefit Hooks (§4.15)**
 
@@ -8057,9 +8058,13 @@ So that the trust knows my chain origin (for Phase B future activation) without 
 
 When a mass-casualty event hits, trustees mark a disaster window; the alert engine throttles claim spawn over months; member-comms framing de-emphasizes urgency (without suspending governance); per-pool amount is NOT raised reactively. DPO + breach-reporting readiness lands at MeitY SDF threshold. Forward-compat hooks for Durghatana Sahayata are verified, not built.
 
+- ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467)) — ⛔ not rewritten.** *"lands at MeitY SDF threshold"*: breach reporting is ⛔ SDF-gated; only the DPO is, and SDF status has no numeric threshold (it is by Government notification, DPDP Act s.10). Breach-reporting readiness is due by DPDP commencement (FOUND) or go-live if earlier (the author's target) — launch-gate Row 53.
+
 **Why this epic exists at the end:** FR-100 hooks are *touched* across Epic 2 (registry tagging) and Epic 3 (receipt persistence); this final epic *verifies* them, lands the disaster-handling control surfaces, and discharges DPO operational readiness.
 
 **User Outcome:** Trustee marks a disaster window in admin UI; alert engine throttles claim spawn; member-facing copy de-emphasizes urgency while preserving institutional continuity messaging. DPO appointment ratified pre-MeitY threshold; breach-reporting tooling rehearsed. Schema-diff test confirms v1 ships no `payout_destinations` artifacts. `benefit_mechanism` discriminator tagged on all v1 rules as `pool`; `reserve` enum value exists but tags no v1 rules. Vyawastha Shulk receipt back-prove query: for an arbitrary past date, the system reconstructs whether a given member was Vyawastha Shulk-paid via replay-derived historical proof.
+
+- ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467)) — ⛔ not rewritten.** *"DPO appointment ratified pre-MeitY threshold"*: the appointment is DOCUMENTED by Story 14.3 (a runbook with the ceremony and its trigger), ⛔ performed — who owns a breach before a DPO exists, and when one is appointed, is put to the Panel (PRD OQ-7; one note, written, not sent) and tracked at Row 53 (c). The table-top is WRITTEN as a script, ⛔ run by the story (Row 53 (b)).
 
 **FRs:** FR-98, FR-99, FR-100.
 
@@ -8116,6 +8121,8 @@ So that I'm informed without being pressured during community grief.
 
 ### Story 14.3: DPO + Breach-Reporting Operational Readiness (`[v1-S]`, MeitY SDF Threshold Activation) `[GOVERNANCE]`
 
+- ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467)) — ⛔ not rewritten.** The title's *"MeitY SDF Threshold Activation"* and the *"before TWT crosses the MeitY-notified threshold"* line below rest on a premise FOUND wrong for breach reporting: it is ⛔ SDF-gated; only the DPO is — see `-467` (G1–G5). There is no threshold to cross: SDF status is a Government notification. Paths: admin modules live under `apps/admin/src/modules/` (the AC's `apps/admin/modules/` drops `src/`).
+
 As a Trustee Panel preparing for DPDPA compliance at scale,
 I want DPO appointment + breach-reporting tooling rehearsed before TWT crosses the MeitY-notified threshold for Significant Data Fiduciary (SDF) status,
 So that compliance activates at threshold without operational scramble.
@@ -8128,9 +8135,14 @@ So that compliance activates at threshold without operational scramble.
 **And** infrastructure is **rehearsed pre-threshold**: a tabletop exercise validates the breach-reporting flow end-to-end (synthetic incident → incident capture → mitigation steps → DPO ratification → regulator draft → trustee sign-off); rehearsal is logged in `.decision-log.md`
 **And** **at MeitY SDF threshold activation**: DPO appointment ceremony completes within the regulator-notified window; trustee panel ratifies + records; breach-reporting tooling moves from `rehearsed` to `active` operational status
 
+- ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467) DL1, DL8) — ⛔ not rewritten.** (1) The Given's *"SDF threshold (MeitY-notified data-principal volume …)"* — see the title's annotation. (2) *"DPO appointment ceremony completes within the regulator-notified window; trustee panel ratifies + records"* and the Demoable's *"DPO ratified in `.decision-log.md`"* are MAPPED, declared: they become Row 53 (c), after the Panel's answer — the runbook carries the ceremony and its trigger (an SDF notification; within any window the notification sets — the Rules set none). (3) *"moves from `rehearsed` to `active`"* IS Row 53's closure — ⛔ a status field in code. (4) *"integrates with"* the detection signals is NARROWED, declared: one live link (a failed audit-chain check); the others are runbook triage and a deferred item. (5) Notices are DRAFTED; people send them — the system sends none.
+
+
 **Given** Story 0.15 launch-gate inventory
 **When** SDF threshold approaches
 **Then** the DPO + breach-reporting readiness is tracked as a launch-gate item; named owner + closure criteria + monitoring of data-principal count threshold
+
+- ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467) DL9, DL12) — ⛔ not rewritten.** The launch-gate item is Row 53 `dpdpa-breach-and-dpo-readiness`. *"monitoring of data-principal count threshold"*: there is ⛔ threshold to monitor (DPDP Act s.10(1)) — Story 14.3 gives the monthly review a members-on-record COUNT as an input, with ⛔ threshold and ⛔ alert.
 
 ### Story 14.4: FR-100 Schema-Diff Verification — Continuous CI Gate Final Closure + Non-Additive Guard Invariant `[GOVERNANCE]`
 

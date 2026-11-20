@@ -8121,6 +8121,8 @@ So that I'm informed without being pressured during community grief.
 
 ### Story 14.3: DPO + Breach-Reporting Operational Readiness (`[v1-S]`, MeitY SDF Threshold Activation) `[GOVERNANCE]`
 
+> ⭐ **LANDED on `main` 2026-11-21** (PR #330, `a7c99c6a..5e9171c1`, fast-forward; `ci:local` and GitHub CI 40/40 at `5e9171c1`; decisions `-467`, `-468` (Trustee-ratified), `-469`, `-470`, `-471`). Merge is not go-live: roster Row 53 stays open on all six legs. The notes below are as written before the landing.
+
 - ⚠ **ANNOTATED 2026-11-20 ([`-467`](../../.decision-log.md#decision-2026-11-20-467)) — ⛔ not rewritten.** The title's *"MeitY SDF Threshold Activation"* and the *"before TWT crosses the MeitY-notified threshold"* line below rest on a premise FOUND wrong for breach reporting: it is ⛔ SDF-gated; only the DPO is — see `-467` (G1–G5). There is no threshold to cross: SDF status is a Government notification. Paths: admin modules live under `apps/admin/src/modules/` (the AC's `apps/admin/modules/` drops `src/`).
 
 As a Trustee Panel preparing for DPDPA compliance at scale,

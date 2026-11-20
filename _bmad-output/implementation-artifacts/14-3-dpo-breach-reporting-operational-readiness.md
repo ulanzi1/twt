@@ -1399,3 +1399,6 @@ that person, so nothing is published and Rows 8 and 53 (c) stay open; the privac
   patches applied in `1390c1e1` after a second adversarial pass over them, 3 deferred, 4 dismissed. Migration `0209`. `ci:local` twice on a
   fresh container at `1390c1e1`: 39 / 40 each (a different unrelated unit flake each time, each 3 / 3 alone). Status `review` -> `done`.
   Nothing is live.
+- 2026-11-21 — v1.11: LANDED on `main` by fast-forward (PR #330, `a7c99c6a..5e9171c1`). The pre-push `ci:local` at `5e9171c1`: 40 / 40
+  in ONE run on a fresh container; GitHub CI 40 / 40 on the PR and on the push to `main` at `5e9171c1`. Merge is not go-live: roster
+  Row 53 stays `open`, all six legs (runbooks unsigned, no table-top run, the contact unpublished, counsel's return outstanding).

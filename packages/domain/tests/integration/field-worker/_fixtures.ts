@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { expect } from 'vitest';
 
-import { registerFieldWorker } from '../../../src/field-worker/commands.js';
+import { registerFieldWorker, terminateFieldWorker, type TerminateFieldWorkerInput } from '../../../src/field-worker/commands.js';
 import { foldFieldWorkerProjection } from '../../../src/field-worker/state.js';
 import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { authorize, type VerifiedAuthorization } from '../../../src/rbac/check.js';
@@ -217,6 +217,30 @@ export async function expectRowMatchesStream(client: pg.PoolClient, id: string):
   }).toEqual(fold);
   // Versions run 1…n with no gap.
   expect(events.map((e) => Number(e.event_version))).toEqual(events.map((_e, i) => i + 1));
+}
+
+/**
+ * Code review round 2, R2A-2 — `terminateFieldWorker` REQUIRES the version the officer's screen showed (`expectedStateEventVersion`).
+ * The specs that are not ABOUT that guard end the worker they mean to end: this reads the worker's CURRENT version on the same client (a
+ * plain SELECT — it never waits on a row lock, so a race spec's holder does not block it) and passes it. The guard's own legs
+ * (`undo.spec.ts` R2A-2, `commands-guards.test.ts`) call `terminateFieldWorker` directly with an explicit version, or pass one here.
+ * A worker that does not exist reads as version 1, so the command's own `FieldWorkerGenesisMissingError` is what a spec sees.
+ */
+export async function terminateAtCurrentVersion(
+  client: pg.PoolClient,
+  input: Omit<TerminateFieldWorkerInput, 'expectedStateEventVersion'> & { expectedStateEventVersion?: number },
+): ReturnType<typeof terminateFieldWorker> {
+  const version =
+    input.expectedStateEventVersion ??
+    Number(
+      (
+        await client.query<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1 AND pariwar_id = $2', [
+          input.fieldWorkerId,
+          input.pariwarId,
+        ])
+      ).rows[0]?.v ?? 1,
+    );
+  return terminateFieldWorker(client, { ...input, expectedStateEventVersion: version });
 }
 
 /** The event types of a stream, in version order. */

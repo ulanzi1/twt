@@ -89,6 +89,7 @@ import {
   FieldWorkerKycNotCompletedError,
   FieldWorkerProjectorInputError,
   FieldWorkerReasonInvalidError,
+  FieldWorkerStateChangedError,
 } from './errors.js';
 import {
   FIELD_WORKER_HEAR_APPEAL_PERMISSION_KEYS,
@@ -475,6 +476,13 @@ export interface TerminateFieldWorkerInput extends FieldWorkerLifecycleCommandIn
   /** The ACTUAL LAST DAY (QE20) — for `died`, the date of death (`-455`); `YYYY-MM-DD`, judged by the IST bounds. */
   endedOn: string;
   /**
+   * Code review round 2, R2A-2 — the worker's `state_event_version` as the officer's screen showed it (the guard `undo` and `lodge`
+   * already carry as `expectedEndingVersion`; the move's is `expectedFromDistrict`, 13.1 D7). REQUIRED: judged under the lock, a
+   * mismatch ⇒ `FieldWorkerStateChangedError`. With `terminated` no longer final (13.1f), this is the only thing that stops a stale
+   * or repeated End from ending a worker a Panel decision has just restored.
+   */
+  expectedStateEventVersion: number;
+  /**
    * Story 13.1f (AD8) — who hears an appeal against THIS ending, computed by the terminate route AT THE ACT from the actor's grants
    * (`trustee_panel` if they hold a `pariwar_admin` grant in this Pariwar or are a super admin, else `pariwar_admin`) — never
    * recomputed later, ⛔ read from the snapshot's `role`. REQUIRED: the command refuses a missing one (the SCHEMA keeps it optional so a
@@ -533,8 +541,10 @@ export async function reactivateFieldWorker(client: pg.PoolClient, i: FieldWorke
  * `endedOn` is the ACTUAL LAST DAY (QE20) — for `died`, the date of death (`-455`): `YYYY-MM-DD`, a real date, not after today and
  * not before the registration day — BOTH IST days computed in SQL on the transaction-start clock, compared as strings (string
  * order = calendar order); ⛔ a JS `Date`. Carries the verified `field_worker.terminate` authorization, its target judged against
- * the LOCKED district (Story 13.1c AD3).
- * @throws FieldWorkerEndedOnInvalidError, FieldWorkerAuthorizationStaleError, FieldWorkerReasonInvalidError (+ the shared guards).
+ * the LOCKED district (Story 13.1c AD3). Under the lock, in this order: legality (`terminated` ⇒ `FieldWorkerIllegalTransitionError`), the
+ * authorization's target (3d), the version the screen showed (R2A-2 ⇒ `FieldWorkerStateChangedError`), then the reason and the dates.
+ * @throws FieldWorkerEndedOnInvalidError, FieldWorkerAuthorizationStaleError, FieldWorkerStateChangedError, FieldWorkerReasonInvalidError
+ *         (+ the shared guards).
  */
 export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFieldWorkerInput): Promise<FieldWorkerTransitionResult> {
   assertFieldWorkerActor('field_worker.terminated', i.actor, i.actorId);
@@ -544,6 +554,10 @@ export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFi
   // Story 13.1f (AD8) — the hearer is REQUIRED on every new ending (the schema keeps it optional for stored legacy events).
   if (!fieldWorkerAppealHeardBySchema.safeParse(i.appealHeardBy).success) {
     throw new FieldWorkerProjectorInputError('[field_worker.terminated] appealHeardBy (who hears an appeal against this ending) is missing (AD8)');
+  }
+  // R2A-2 — the version the screen showed is REQUIRED too; pure, BEFORE any SQL (a worker exists at version 1 or later).
+  if (!Number.isSafeInteger(i.expectedStateEventVersion) || i.expectedStateEventVersion < 1) {
+    throw new FieldWorkerProjectorInputError('[field_worker.terminated] the expected state version (the one the screen showed) is missing or malformed (R2A-2)');
   }
   // (0b) — pure, BEFORE any SQL: a malformed date is never sent to Postgres.
   if (typeof i.endedOn !== 'string' || !isCalendarDateString(i.endedOn)) {
@@ -555,6 +569,8 @@ export async function terminateFieldWorker(client: pg.PoolClient, i: TerminateFi
     'field_worker.terminated',
     async (row) => {
       assertLockedTarget(i, authorization, row);
+      // R2A-2 — a worker changed since the officer's screen (moved, suspended, or ended-then-restored): refuse, ⛔ end them again.
+      if (row.stateEventVersion !== i.expectedStateEventVersion) throw new FieldWorkerStateChangedError(i.fieldWorkerId, i.expectedStateEventVersion);
       const reasonCode = assertReason('field_worker.terminated', i.reasonCode, FIELD_WORKER_TERMINATE_REASONS);
       const today = await istToday(client);
       if (i.endedOn > today) throw new FieldWorkerEndedOnInvalidError(i.fieldWorkerId, 'in_future');

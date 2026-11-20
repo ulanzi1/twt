@@ -40,6 +40,9 @@ describe('scanEndingAppealWrites', () => {
       "function f(c) { c.query('INSERT INTO field_worker_notices (a) VALUES (1)'); }",
       'function f(db) { db.select().from(fieldWorkerEndingAppeals); }',
       '// UPDATE field_worker_ending_appeals SET state = 1\nfunction f() {}',
+      // Code review round 2, R2B-6: the title names a DELETE and the list had none. 0207's triggers refuse both for every role.
+      "function f(c) { c.query('DELETE FROM field_worker_ending_appeals WHERE a = 1'); }",
+      "function f(c) { c.query('TRUNCATE field_worker_ending_appeals'); }",
     ]) {
       expect(scan(src), src).toEqual([]);
     }
@@ -51,6 +54,21 @@ describe('scanEndingAppealWrites', () => {
     const [outside] = scan("function helper(c) { c.query('UPDATE field_worker_ending_appeals SET a = 1'); }");
     expect(isAllowlistedWrite(inside!, allow)).toBe(true);
     expect(isAllowlistedWrite(outside!, allow)).toBe(false);
+  });
+
+  // R2B-6 — the FILE clause: every other case varied only the function name, so a mutant matching the allow-list by function name alone
+  // (dropping `a.file === f.file`) passed every test, and a same-named function in ANY file would have been let through.
+  it('the allowlist is by FILE too — the allow-listed function NAME in another file is still a violation, and does not satisfy the floor', () => {
+    const allow = [{ file: 'packages/domain/src/field-worker/ending-appeal-project.ts', functions: new Set(['projectEndingAppealTransition']) }];
+    const src = "function projectEndingAppealTransition(c) { c.query('UPDATE field_worker_ending_appeals SET a = 1'); c.query(\"SET LOCAL app.field_worker_ending_appeal_writer = 'on'\"); }";
+    const here = scanEndingAppealWrites('packages/domain/src/field-worker/ending-appeal-project.ts', src);
+    const elsewhere = scanEndingAppealWrites('apps/api/src/x.ts', src);
+    expect(here.length).toBeGreaterThan(0);
+    expect(here.every((f) => isAllowlistedWrite(f, allow))).toBe(true); // CONTROL — the right file passes
+    expect(elsewhere.length).toBeGreaterThan(0);
+    expect(elsewhere.some((f) => isAllowlistedWrite(f, allow))).toBe(false);
+    expect(unseenAllowlistedWriters(elsewhere, allow)).toEqual(['packages/domain/src/field-worker/ending-appeal-project.ts projectEndingAppealTransition']);
+    expect(unseenAllowlistedWriters(here, allow)).toEqual([]);
   });
 });
 
@@ -213,7 +231,9 @@ describe('scanEndingAppealWrites — round 5', () => {
     for (const run of ['/**/'.repeat(40), '/* a */ '.repeat(40), '/* a */ only '.repeat(20)]) {
       const t = Date.now();
       expect(scan(`function f(c) { c.query('update ${run}x'); }`)).toEqual([]);
-      expect(Date.now() - t, run.slice(0, 12)).toBeLessThan(200);
+      // R2B-6: the old exponential body ran for SECONDS to forever on this input; 200 ms also failed a correct scanner on a loaded `ci:local`
+      // (the bound includes `createSourceFile`). 2 s separates a blow-up from a busy machine just as well.
+      expect(Date.now() - t, run.slice(0, 12)).toBeLessThan(2000);
     }
   });
 
@@ -249,6 +269,73 @@ describe('scanEndingAppealWrites — round 5', () => {
       "function f(db) { return db.execute(sql`UPDATE ${sql.identifier('field_worker_notices')} SET a = 1`); }",
       "const T = 'field_worker_notices'; const U = T; function f(c) { c.query(`UPDATE ${U} SET a = 1`); }",
       "const N = { t: 'field_worker_ending_appeals' }; function f(c) { c.query(`SELECT * FROM ${N.t}`); }",
+    ]) {
+      expect(scan(src), src).toEqual([]);
+    }
+  });
+});
+
+// Code review round 2, R2B-6 (the review of the gate itself): each form below passed the gate before - a false negative no test pinned.
+describe('scanEndingAppealWrites — round 2 (R2B-6): the spellings the round-5 gate still missed', () => {
+  const RAW = ['raw SQL write to field_worker_ending_appeals'];
+  const SETTING = ['the app.field_worker_ending_appeal_writer setting'];
+  const inQuery = (sql: string) => `function f(c) { c.query('${sql}'); }`;
+
+  it('a comment between the two words of INSERT INTO and MERGE INTO is whitespace to Postgres: flagged', () => {
+    for (const sql of [
+      'INSERT /* x */ INTO field_worker_ending_appeals (a) VALUES (1)',
+      'INSERT/**/INTO field_worker_ending_appeals (a) VALUES (1)',
+      'insert -- c\\n into field_worker_ending_appeals (a) values (1)',
+      'MERGE /* y */ INTO field_worker_ending_appeals t USING x ON true WHEN MATCHED THEN UPDATE SET a = 1',
+    ]) {
+      expect(scan(inQuery(sql)).map((x) => x.detail), sql).toEqual(RAW);
+    }
+    // CONTROL — the words still need a break between them: `insertinto` is not a verb.
+    expect(scan(inQuery('INSERTINTO field_worker_ending_appeals (a) VALUES (1)')), 'insertinto').toEqual([]);
+  });
+
+  it('the writer setting is case-insensitive (Postgres compares setting names so), in a literal and in a `+` chain split across its words', () => {
+    for (const src of [
+      "function f(c) { c.query(\"SET LOCAL APP.Field_Worker_Ending_Appeal_Writer = 'on'\"); }",
+      "function f(c) { c.query(\"SELECT set_config('App.field_worker_ending_appeal_writer', 'on', true)\"); }",
+    ]) {
+      expect(scan(src).map((x) => x.detail), src).toEqual(SETTING);
+    }
+    const split = "function f(c) { c.query('SET LOCAL app.field_worker_ending_' + 'appeal_writer = on'); }";
+    expect(scan(split).map((x) => x.detail), 'split').toEqual(SETTING);
+    // CONTROL — the same chain with a different setting is not the writer's.
+    expect(scan("function f(c) { c.query('SET LOCAL app.field_worker_ending_' + 'notices_writer = on'); }"), 'other setting').toEqual([]);
+  });
+
+  it('a SQL-name constant with the SAME qualifier grammar as the write regex reads as the table (two qualifiers, a quoted schema with a hyphen)', () => {
+    for (const name of ['twt.app.field_worker_ending_appeals', '"my-schema".field_worker_ending_appeals', '"public"."field_worker_ending_appeals"', 'public . field_worker_ending_appeals']) {
+      const src = `const T = '${name.replace(/"/g, '\\"')}'; function f(c) { c.query(\`UPDATE \${T} SET a = 1\`); }`;
+      expect(scan(src).map((x) => x.detail), name).toEqual(RAW);
+    }
+    // CONTROL — the same constants over another table are not.
+    expect(scan("const T = 'twt.app.field_worker_notices'; function f(c) { c.query(`UPDATE ${T} SET a = 1`); }")).toEqual([]);
+  });
+
+  it('a table held in a class field, a parameter default, an arm of a conditional or an operand of ?? / || / && is the table', () => {
+    for (const src of [
+      'class W { t = fieldWorkerEndingAppeals; m(db) { db.update(this.t).set({}); } }',
+      'function f(db, t = fieldWorkerEndingAppeals) { db.update(t).set({}); }',
+      'function f(db, flag) { db.update(flag ? fieldWorkerEndingAppeals : other).set({}); }',
+      'function f(db, flag) { db.update(flag ? other : fieldWorkerEndingAppeals).set({}); }',
+      'function f(db, x) { db.insert(x ?? fieldWorkerEndingAppeals).values({}); }',
+      'function f(db, x) { db.insert(x || fieldWorkerEndingAppeals).values({}); }',
+      'const t = pick ? fieldWorkerEndingAppeals : other; function f(db) { db.update(t).set({}); }',
+      "const T = pick ? 'field_worker_ending_appeals' : 'x'; function f(c) { c.query(`UPDATE ${T} SET a = 1`); }",
+      "class W { T = 'field_worker_ending_appeals'; m(c) { c.query(`UPDATE ${this.T} SET a = 1`); } }",
+    ]) {
+      expect(scan(src).length, src).toBe(1);
+    }
+    // CONTROLS — the same shapes over other tables are not flagged.
+    for (const src of [
+      'class W { t = fieldWorkerNotices; m(db) { db.update(this.t).set({}); } }',
+      'function f(db, t = fieldWorkerNotices) { db.update(t).set({}); }',
+      'function f(db, flag) { db.update(flag ? other : another).set({}); }',
+      'function f(db, x) { db.insert(x ?? fieldWorkerNotices).values({}); }',
     ]) {
       expect(scan(src), src).toEqual([]);
     }

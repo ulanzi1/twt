@@ -15,7 +15,6 @@ import {
   activateFieldWorker,
   recordFieldWorkerKycCompleted,
   suspendFieldWorker,
-  terminateFieldWorker,
   undoFieldWorkerEnding,
 } from '../../../src/field-worker/commands.js';
 import { FieldWorkerCaptureNotFoundError, FieldWorkerDistrictUnknownError } from '../../../src/field-worker/errors.js';
@@ -36,7 +35,7 @@ import {
 } from '../../../src/ids/index.js';
 import { DATABASE_URL, getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope, seedMember } from '../_helpers.js';
-import { actAuthorization, approval, caught, registerReal } from './_fixtures.js';
+import { actAuthorization, approval, caught, registerReal, terminateAtCurrentVersion } from './_fixtures.js';
 
 const ACTOR = randomUUID();
 
@@ -185,7 +184,7 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     await committed((c) => recordFieldWorkerKycCompleted(c, approve(id)));
     await committed((c) => activateFieldWorker(c, approve(id)));
     const today = (await pool.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date)::text AS d")).rows[0]!.d;
-    await committed((c) => terminateFieldWorker(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today, appealHeardBy: 'trustee_panel' }));
+    await committed((c) => terminateAtCurrentVersion(c, { ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today, appealHeardBy: 'trustee_panel' }));
     await committed((c) => undoFieldWorkerEnding(c, { ...act(id, 'field_worker.undo_ending'), expectedEndingVersion: 4 }));
     const [, , , ended, undone] = await stamps(id);
     expect(undone! > ended!).toBe(true);
@@ -216,7 +215,7 @@ describe.skipIf(!hasDatabase)('getFieldWorkerStateAt — the ordering contract (
     await committed((c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'at_worker_request' }));
     await check();
     const today = (await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-    await committed((c) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }));
+    await committed((c) => terminateAtCurrentVersion(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }));
     await check();
   });
 
@@ -315,7 +314,7 @@ describe.skipIf(!hasDatabase)('field-worker reads (per-test ROLLBACK)', () => {
     const db = bindScopedDb(client);
     expect(await findLiveFieldWorkerByMobileIndex(db, toPariwarId(PARIWAR_A), 'gone-index')).toBe(id);
     const today = (await client.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin',
+    await terminateAtCurrentVersion(client, { appealHeardBy: 'pariwar_admin',
       pariwarId: toPariwarId(PARIWAR_A),
       fieldWorkerId: id,
       auditId: randomUUID(),

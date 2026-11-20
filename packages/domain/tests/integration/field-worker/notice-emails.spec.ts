@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { postFieldWorker, terminateFieldWorker } from '../../../src/field-worker/commands.js';
+import { postFieldWorker } from '../../../src/field-worker/commands.js';
 import {
   acceptFieldWorkerMoveRequest,
   escalateStaleMoveRequest,
@@ -38,7 +38,7 @@ import { FIELD_WORKER_NOTICE_EMAIL_DETAIL_PATTERN } from '../../../src/schema/fi
 import { FIELD_WORKER_NOTICE_KINDS } from '../../../src/schema/field_worker_notices.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppScope } from '../_helpers.js';
-import { actAuthorization, grantAuthorization, registerReal } from './_fixtures.js';
+import { actAuthorization, grantAuthorization, registerReal, terminateAtCurrentVersion } from './_fixtures.js';
 
 type Client = pg.PoolClient;
 
@@ -487,7 +487,7 @@ describe.skipIf(!hasDatabase)('Story 13.1g — the move-notice email (domain, li
 
   it('an ending supersedes the request — its `move_request_superseded` notices are claimable like any other (AD9: ⛔ held, ⛔ dated)', async () => {
     await open(c, cast, worker);
-    await terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'left_voluntarily', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
+    await terminateAtCurrentVersion(c, { appealHeardBy: 'pariwar_admin', ...base(cast.P, cast.pa), fieldWorkerId: worker, reasonCode: 'left_voluntarily', endedOn: await istToday(c), authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa) });
     const sup = (await noticesOf(c, cast.P)).filter((n) => n.kind === 'move_request_superseded');
     expect(sup.length).toBeGreaterThan(0);
     for (const n of sup) expect((await begin(n.notice_id)).kind).toBe('begun');

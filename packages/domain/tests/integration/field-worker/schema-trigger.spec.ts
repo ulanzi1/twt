@@ -253,20 +253,27 @@ describe.skipIf(!hasDatabase)('field_workers write guard (AC2 — I1–I3, I6, I
       await expectDirectWrite(client, "UPDATE field_workers SET mobile_blind_index = 'x', state_event_version = 2 WHERE field_worker_id = $1", [id], RULE.identity);
     });
 
-    it('AC10 (b): previous_field_worker_id is immutable — a guarded UPDATE that sets or changes it is refused by rule (b), on a row that never had it and on one written without it', async () => {
+    it('AC10 (b): previous_field_worker_id is immutable — a guarded UPDATE that SETS it on a row that never had one, and one that CLEARS or CHANGES it on a row written with one, is refused by rule (b)', async () => {
       const { client } = getTx();
       const old = await ended(client);
+      const other = await ended(client);
       const fresh = await seed(client);
       await client.query(GUARD_ON);
       await expectDirectWrite(client, 'UPDATE field_workers SET previous_field_worker_id = $2, state_event_version = 2 WHERE field_worker_id = $1', [fresh, old], RULE.identity);
+      // Code review round 2, R2B-9: the old test's second row came from the INSERT helper, which writes NO link - so "or CHANGES it" never ran
+      // (its own comment said so). This row is written WITH one, as the projector's genesis INSERT writes it (the one allowed write).
       const linked = randomUUID();
       await client.query(GUARD_ON);
-      await client.query(RAW_INSERT_SQL, rawInsertParams(linked, PARIWAR_A));
+      await client.query(
+        `INSERT INTO field_workers (field_worker_id, pariwar_id, name_ciphertext, mobile_ciphertext, mobile_blind_index, registered_by_user_id, registered_by_display, current_state, state_event_version, kyc_status, district, audit_id, previous_field_worker_id)
+         VALUES ($1, $2, 'enc:v1:n', 'enc:v1:m', $3, gen_random_uuid(), 'X', 'pending_kyc', 1, 'pending', 'Patna', gen_random_uuid(), $4)`,
+        [linked, PARIWAR_A, `idx-${randomUUID()}`, old],
+      );
       await client.query(GUARD_OFF);
-      // The INSERT helper writes no link; the link column is set only by the projector's genesis INSERT (Task 3.3, proved in
-      // `undo.spec.ts`'s link legs). Here: once a row exists, ANY later write of the column is the identity rule's.
+      expect((await rowOf(client, linked))['previous_field_worker_id']).toBe(old); // CONTROL — the link was written, so the legs below have something to change
       await client.query(GUARD_ON);
-      await expectDirectWrite(client, 'UPDATE field_workers SET previous_field_worker_id = $2, state_event_version = 2 WHERE field_worker_id = $1', [linked, old], RULE.identity);
+      await expectDirectWrite(client, 'UPDATE field_workers SET previous_field_worker_id = NULL, state_event_version = 2 WHERE field_worker_id = $1', [linked], RULE.identity); // cleared
+      await expectDirectWrite(client, 'UPDATE field_workers SET previous_field_worker_id = $2, state_event_version = 2 WHERE field_worker_id = $1', [linked, other], RULE.identity); // changed
     });
   });
 

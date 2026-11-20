@@ -33,6 +33,9 @@ export async function supersedeOpenEndingAppeal(client: pg.PoolClient, i: Supers
   const res = await client.query<{ ist_today: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS ist_today");
   const today = res.rows[0]?.ist_today;
   if (typeof today !== 'string') throw new Error('[field-worker] the IST day query returned no row');
+  // An undo begun before IST midnight can lock after a lodge begun on the next day. Keep the transaction-start event clock,
+  // but never date the supersede before the appeal it closes (R7; the locked row is authoritative, 0207's date CHECK).
+  const decidedOn = today < open.receivedOn ? open.receivedOn : today;
   await projectEndingAppealTransition(client, {
     pariwarId: i.pariwarId,
     eventType: 'field_worker_ending_appeal.superseded',
@@ -43,7 +46,7 @@ export async function supersedeOpenEndingAppeal(client: pg.PoolClient, i: Supers
       field_worker_id: i.fieldWorkerId,
       heard_by: open.heardBy,
       authorization: i.authorization,
-      decided_on: today,
+      decided_on: decidedOn,
       undone_event_id: i.undoneEventId,
     },
     actorId: i.actorId,

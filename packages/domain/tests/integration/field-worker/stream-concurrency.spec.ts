@@ -1,9 +1,16 @@
 // Story 13.1 — true two-connection races on a field-worker stream (AC6; I4, I13; QE13). Live DB. Twin:
 // `marketplace/module-stream-concurrency.spec.ts`.
 //
-//   (a) suspend vs terminate, from `active`, 6 rounds: terminate ALWAYS fulfils; suspend ran first or lost with
-//       IllegalTransition. ⚠ A PROBABILISTIC SMOKE — the interleaving is not forced. I13's ORDER is pinned
+//   (a) suspend vs terminate, from `active`, 6 rounds, BOTH from the same screen: EXACTLY ONE fulfils. Terminate first: suspend
+//       loses with IllegalTransition. Suspend first: terminate loses with StateChanged (code review round 2, R2A-2 — it carries the
+//       version the screen showed, as two moves from one screen already do (e)); before R2A-2 terminate "ALWAYS fulfilled", running
+//       after the suspend. ⚠ A PROBABILISTIC SMOKE — the interleaving is not forced, and it does not count which order won (a round-2
+//       tally of the two orders could not fail: R2B-5). The two orders are FORCED in (a1) and (a2). I13's ORDER is pinned
 //       deterministically per command in `tests/field-worker/commands-guards.test.ts` (with its RED proof).
+//   (a1) / (a2) FORCED (R2B-5): the first act HOLDS the row lock uncommitted, the second is started and read BLOCKED in `pg_stat_activity`,
+//       then the first commits — (a1) the End holds, the suspension waits -> IllegalTransition; (a2) the suspension holds, the End waits
+//       -> StateChanged. Each asserts the reason AND a control. Move and reactivate take the same lock and meet the same version check;
+//       they are not raced separately.
 //   (b) kyc_completed vs itself: one event; the loser KycAlreadyCompleted.
 //   (c) the GENESIS race on the SAME id, two DIFFERENT mobiles — REPEATABLE READ, the snapshot pinned BEFORE the barrier.
 //   (d) the SAME-MOBILE race, two DIFFERENT ids: the loser MobileAlreadyRegistered BY CONSTRAINT NAME, its transaction
@@ -27,7 +34,6 @@ import {
   postFieldWorker,
   recordFieldWorkerKycCompleted,
   suspendFieldWorker,
-  terminateFieldWorker,
 } from '../../../src/field-worker/commands.js';
 import {
   FieldWorkerAuthorizationStaleError,
@@ -35,10 +41,11 @@ import {
   FieldWorkerIllegalTransitionError,
   FieldWorkerKycAlreadyCompletedError,
   FieldWorkerMobileAlreadyRegisteredError,
+  FieldWorkerStateChangedError,
 } from '../../../src/field-worker/errors.js';
 import { pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { DATABASE_URL, hasDatabase } from '../../../src/test-utils/integration-setup.js';
-import { actAuthorization, approval, expectRowMatchesStream, moveAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { actAuthorization, approval, expectRowMatchesStream, moveAuthorization, registerReal, streamTypes, terminateAtCurrentVersion } from './_fixtures.js';
 
 const PARIWAR = randomUUID();
 const P = toPariwarId(PARIWAR);
@@ -157,11 +164,13 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
     }
   }
 
-  async function inspect(id: string): Promise<{ types: string[]; row: { current_state: string; district: string } }> {
+  async function inspect(id: string): Promise<{ types: string[]; row: { current_state: string; district: string; state_event_version: string } }> {
     const client = await pool.connect();
     try {
       await expectRowMatchesStream(client, id); // I4, and versions 1…n with no gap
-      const row = (await client.query('SELECT current_state, district FROM field_workers WHERE field_worker_id = $1', [id])).rows[0];
+      const row = (
+        await client.query('SELECT current_state, district, state_event_version::text AS state_event_version FROM field_workers WHERE field_worker_id = $1', [id])
+      ).rows[0];
       return { types: await streamTypes(client, id), row };
     } finally {
       client.release();
@@ -172,28 +181,124 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
     return (await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
   }
 
-  it('(a) suspend vs terminate, from active, 6 rounds: terminate always fulfils; the final state is terminated; never 40P01 / 40001', async () => {
+  it('(a) suspend vs terminate, from active, 6 rounds, both from the SAME screen: exactly ONE fulfils; the loser is the typed refusal for its order; never 40P01 / 40001', async () => {
     const today = await istToday();
     for (let round = 0; round < 6; round += 1) {
       const id = await committedWorker('active');
+      const shown = Number((await inspect(id)).row.state_event_version); // the screen both officers opened — read BEFORE the race
       const arrive = barrier();
       const [suspended, terminated] = await Promise.allSettled([
         racer(arrive, (c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'under_review' })),
-        racer(arrive, (c) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today })),
+        racer(arrive, (c) =>
+          terminateAtCurrentVersion(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today, expectedStateEventVersion: shown }),
+        ),
       ]);
-      expect(terminated.status, `round ${round}: terminate ${String((terminated as PromiseRejectedResult).reason)}`).toBe('fulfilled');
       const after = await inspect(id);
-      expect(after.row.current_state).toBe('terminated');
-      expect(after.types.at(-1)).toBe('field_worker.terminated');
-      if (suspended.status === 'fulfilled') {
-        expect(after.types.slice(-2)).toEqual(['field_worker.suspended', 'field_worker.terminated']);
-      } else {
-        expect(['40P01', '40001']).not.toContain(codeOf(suspended.reason));
-        expect(suspended.reason).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+      for (const r of [suspended, terminated]) if (r.status === 'rejected') expect(['40P01', '40001'], `round ${round}`).not.toContain(codeOf(r.reason));
+      // Exactly one fulfils: the second to take the row lock finds the worker changed since the screen.
+      expect([suspended.status, terminated.status].filter((s) => s === 'fulfilled'), `round ${round}`).toHaveLength(1);
+      if (terminated.status === 'fulfilled') {
+        expect(suspended.status === 'rejected' && suspended.reason).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+        expect(after.row.current_state).toBe('terminated');
         expect(after.types.slice(-1)).toEqual(['field_worker.terminated']);
         expect(after.types).not.toContain('field_worker.suspended');
+      } else {
+        expect(terminated.reason).toBeInstanceOf(FieldWorkerStateChangedError);
+        expect(after.row.current_state).toBe('suspended');
+        expect(after.types.slice(-1)).toEqual(['field_worker.suspended']);
+        expect(after.types).not.toContain('field_worker.terminated');
       }
     }
+  }, 30_000);
+
+  /** Poll `pg_stat_activity` until `pid` is waiting on a LOCK (the API specs' `waitForBlockedBy`): a leg that never blocks fails, it does not pass. */
+  async function waitUntilBlocked(pid: number, timeoutMs = 5_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const r = await pool.query<{ wait_event_type: string | null }>('SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1', [pid]);
+      if (r.rows[0]?.wait_event_type === 'Lock') return;
+      if (Date.now() > deadline) throw new Error(`the second act (backend ${String(pid)}) never blocked on the first's row lock`);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+
+  /**
+   * A FORCED interleaving (R2B-5). `first` runs on its own transaction and HOLDS the row lock, uncommitted; `second` is started on another
+   * and must be seen BLOCKED behind it; only then does `first` commit. Returns `first`'s value and `second`'s settled outcome.
+   */
+  async function forced<A, B>(first: (c: pg.PoolClient) => Promise<A>, second: (c: pg.PoolClient) => Promise<B>): Promise<{ first: A; second: PromiseSettledResult<B> }> {
+    const holder = await pool.connect();
+    const waiter = await pool.connect();
+    let holderOpen = false;
+    let waiterOpen = false;
+    try {
+      await begin(holder, 'READ COMMITTED');
+      holderOpen = true;
+      const firstValue = await first(holder); // the row lock is held from here until COMMIT
+      await begin(waiter, 'READ COMMITTED');
+      waiterOpen = true;
+      const waiterPid = (await waiter.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
+      const pending = Promise.allSettled([second(waiter)]);
+      await waitUntilBlocked(waiterPid);
+      await holder.query('COMMIT');
+      holderOpen = false;
+      const [outcome] = await pending;
+      if (outcome!.status === 'fulfilled') await waiter.query('COMMIT');
+      else await waiter.query('ROLLBACK');
+      waiterOpen = false;
+      return { first: firstValue, second: outcome! };
+    } finally {
+      if (holderOpen) await holder.query('ROLLBACK').catch(() => undefined);
+      if (waiterOpen) await waiter.query('ROLLBACK').catch(() => undefined);
+      holder.release();
+      waiter.release();
+    }
+  }
+
+  it('(a1) FORCED, the End first: the End holds the lock and the suspension, from the same screen, waits - then loses with IllegalTransition; the worker stays ended, no `suspended` event', async () => {
+    const today = await istToday();
+    const id = await committedWorker('active');
+    const shown = Number((await inspect(id)).row.state_event_version);
+    const r = await forced(
+      (c) => terminateAtCurrentVersion(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today, expectedStateEventVersion: shown }),
+      (c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'under_review' }),
+    );
+    expect(r.first).toMatchObject({ state: 'terminated' }); // CONTROL — the holder's End is the act that was recorded
+    expect(r.second.status).toBe('rejected');
+    expect((r.second as PromiseRejectedResult).reason).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    expect(['40P01', '40001']).not.toContain(codeOf((r.second as PromiseRejectedResult).reason));
+    const after = await inspect(id);
+    expect(after.row.current_state).toBe('terminated');
+    expect(after.types.slice(-1)).toEqual(['field_worker.terminated']);
+    expect(after.types).not.toContain('field_worker.suspended');
+  }, 30_000);
+
+  it('(a2) FORCED, the suspension first: the suspension holds the lock and the End, from the same screen, waits - then loses with StateChanged; the worker stays suspended, no `terminated` event; CONTROL: the screen re-read ends them', async () => {
+    const today = await istToday();
+    const id = await committedWorker('active');
+    const shown = Number((await inspect(id)).row.state_event_version);
+    const r = await forced(
+      (c) => suspendFieldWorker(c, { ...act(id, 'field_worker.suspend'), reasonCode: 'under_review' }),
+      (c) => terminateAtCurrentVersion(c, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today, expectedStateEventVersion: shown }),
+    );
+    expect(r.first).toMatchObject({ state: 'suspended' }); // CONTROL — the holder's suspension is the act that was recorded
+    expect(r.second.status).toBe('rejected');
+    expect((r.second as PromiseRejectedResult).reason).toBeInstanceOf(FieldWorkerStateChangedError);
+    expect(['40P01', '40001']).not.toContain(codeOf((r.second as PromiseRejectedResult).reason));
+    const after = await inspect(id);
+    expect(after.row.current_state).toBe('suspended');
+    expect(after.types.slice(-1)).toEqual(['field_worker.suspended']);
+    expect(after.types).not.toContain('field_worker.terminated');
+    // CONTROL — the refusal was the VERSION, nothing else: the same End from a re-read screen (the current version) ends the suspended worker.
+    const client = await pool.connect();
+    try {
+      await begin(client, 'READ COMMITTED');
+      await terminateAtCurrentVersion(client, { appealHeardBy: 'pariwar_admin', ...act(id, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today });
+      await client.query('COMMIT');
+    } finally {
+      client.release();
+    }
+    expect((await inspect(id)).row.current_state).toBe('terminated');
   }, 30_000);
 
   it('(b) kyc_completed vs itself: exactly ONE event; the loser gets KycAlreadyCompleted; pending_kyc with kyc completed', async () => {
@@ -279,7 +384,7 @@ describe.skipIf(!hasDatabase)('field-worker stream — two-connection concurrenc
         // the district it will find: Patna if it runs first, Gaya if the move did. Both orders are legal; (3d) is pinned in commands.spec.ts.
         racer(arrive, async (c) => {
           const { district } = (await c.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1 FOR UPDATE', [id])).rows[0]!;
-          return terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base(id), authorization: actAuthorization('field_worker.terminate', PARIWAR, district, ACTOR), reasonCode: 'left_voluntarily', endedOn: today });
+          return terminateAtCurrentVersion(c, { appealHeardBy: 'pariwar_admin', ...base(id), authorization: actAuthorization('field_worker.terminate', PARIWAR, district, ACTOR), reasonCode: 'left_voluntarily', endedOn: today });
         }),
       ]);
       expect(terminated.status, `round ${round}`).toBe('fulfilled');

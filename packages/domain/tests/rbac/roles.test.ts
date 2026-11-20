@@ -1328,7 +1328,7 @@ describe('Story 13.1f — `field_worker.hear_ending_appeal_as_panel` (`2026-11-1
   const at = (district: string, pariwarId = P) => ({ pariwarId, dimension: 'district', value: district }) as const;
   const tp = { pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P } as const;
 
-  it('trustee_panel is its ONLY bundle holder (super_admin derives it — no bundle lists it); the bundle count stays 13', () => {
+  it('the only bundles that list it are trustee_panel\'s and super_admin\'s (a super admin derives every key but never ACTS as the Panel — AD9); the bundle count stays 13', () => {
     const holders = defaultRoleBundles
       .filter((b) => (b.permissions as readonly string[]).includes(key))
       .map((b) => b.role)

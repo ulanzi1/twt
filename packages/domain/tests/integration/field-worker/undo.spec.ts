@@ -15,7 +15,6 @@ import {
   lockFieldWorkerRow,
   recordFieldWorkerKycCompleted,
   suspendFieldWorker,
-  terminateFieldWorker,
   undoFieldWorkerEnding,
 } from '../../../src/field-worker/commands.js';
 import {
@@ -31,6 +30,7 @@ import {
   FieldWorkerIllegalTransitionError,
   FieldWorkerNumberRegisteredAgainError,
   FieldWorkerProjectorInputError,
+  FieldWorkerStateChangedError,
 } from '../../../src/field-worker/errors.js';
 import { openFieldWorkerMoveRequest } from '../../../src/field-worker/move-request-commands.js';
 import { projectFieldWorkerTransition } from '../../../src/field-worker/project.js';
@@ -46,7 +46,7 @@ import {
 } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppScope, seedRoleGrant, seedUser } from '../_helpers.js';
-import { actAuthorization, approval, caught, expectRowMatchesStream, grantAuthorization, registerReal, streamTypes } from './_fixtures.js';
+import { actAuthorization, approval, caught, expectRowMatchesStream, grantAuthorization, registerReal, streamTypes, terminateAtCurrentVersion } from './_fixtures.js';
 
 interface Cast {
   P: PariwarId;
@@ -123,7 +123,7 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
   ): Promise<number> {
     const id = o.id ?? worker;
     const by = o.by ?? cast.pa;
-    await terminateFieldWorker(c, {
+    await terminateAtCurrentVersion(c, {
       ...base(cast.P, by),
       fieldWorkerId: id,
       reasonCode: o.reason ?? 'registered_in_error',
@@ -171,6 +171,59 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
   };
   const appealRow = async (id: string) =>
     (await c.query('SELECT state, decided_by_user_id, decided_on::text AS decided_on FROM field_worker_ending_appeals WHERE appeal_id = $1', [id])).rows[0];
+
+  // Code review round 2, R2A-2 — `terminate` carries the version the officer's screen showed. Before 13.1f a second End was refused as
+  // `terminated` (final); an undo and an allowed appeal made it reachable, so a stale screen could end a restored worker again.
+  describe('R2A-2 — a stale End cannot end a worker a restore has just returned', () => {
+    const staleEnd = async (shown: number) =>
+      caught(async () =>
+        terminateAtCurrentVersion(c, {
+          ...base(cast.P, cast.pa),
+          fieldWorkerId: worker,
+          reasonCode: 'inactive',
+          endedOn: await istToday(c),
+          authorization: actAuthorization('field_worker.terminate', cast.P, 'Patna', cast.pa),
+          appealHeardBy: 'trustee_panel',
+          expectedStateEventVersion: shown,
+        }),
+      );
+
+    it('ended, then restored by a slip undo: an End from the screen that showed the worker BEFORE the ending is refused (StateChanged); the current version ends them again', async () => {
+      await activate();
+      const shown = await version(c, worker); // the officer's screen: the worker, active
+      const ending = await end(); // someone else ends them
+      await undo(ending); // a Pariwar Admin restores them
+      const restored = await version(c, worker);
+      const types = await streamTypes(c, worker);
+      expect(await staleEnd(shown)).toBeInstanceOf(FieldWorkerStateChangedError);
+      expect(await version(c, worker)).toBe(restored); // nothing written
+      expect(await streamTypes(c, worker)).toEqual(types);
+      expect((await row(c, worker)).current_state).toBe('active');
+      // CONTROL — the screen re-read (the current version) ends them, normally, and the second ending can be undone too (AC1 (e)).
+      await end();
+      expect((await row(c, worker)).current_state).toBe('terminated');
+    });
+
+    it('ended, then restored by an ALLOWED appeal: the same stale End is refused — the Panel’s decision is not overridden by a stale tab', async () => {
+      await activate();
+      const shown = await version(c, worker);
+      const ending = await end({ heardBy: 'trustee_panel' });
+      const appealId = await lodge(ending);
+      await allowFieldWorkerEndingAppeal(c, await decision(appealId));
+      const restored = await version(c, worker);
+      expect(await staleEnd(shown)).toBeInstanceOf(FieldWorkerStateChangedError);
+      expect(await version(c, worker)).toBe(restored);
+      expect((await row(c, worker)).current_state).toBe('active');
+      expect((await appealRow(appealId))!['state']).toBe('allowed');
+    });
+
+    it('a worker that is `terminated` right now is still IllegalTransition for any screen — the version never masks the old, final answer', async () => {
+      await activate();
+      const shown = await version(c, worker);
+      await end();
+      expect(await staleEnd(shown)).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    });
+  });
 
   describe('AC1 — undoing a mistaken ending, per from-state', () => {
     it('from pending_kyc: back to pending_kyc with its KYC status, ended_on null, the same district; one ending_undone (mistake, the undone version, the undo key); row = fold', async () => {
@@ -236,7 +289,10 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
       await expectRowMatchesStream(c, worker);
     });
 
-    it('a wrong key, a non-human actor and the trustee actor kind are refused before any SQL; a District Admin does not hold the key', async () => {
+    // (Code review round 2, R2A-6: the title named a non-human actor this body never sends. AC17's non-human, literal, wrong-dimension,
+    // other-actor and other-Pariwar legs for the undo, the lodge and the three decisions are in `commands-guards.test.ts`, refused with NO
+    // statement sent.)
+    it('a wrong key and the trustee actor kind are refused; a District Admin does not hold the key (that they are refused BEFORE any statement is the DB-free guard suite\'s leg)', async () => {
       const v = await end();
       expect(grantAuthorization('field_worker.undo_ending', { role: 'district_admin', district: 'Patna' }, cast.P, 'Patna', cast.daPatna)).toBeNull();
       expect(grantAuthorization('field_worker.undo_ending', TP, cast.P, 'Patna', cast.tp)).toBeNull();
@@ -263,10 +319,13 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
       ).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
     });
 
-    it('(h) the barrel does not expose the core or its stream read', () => {
-      expect('undoEndingLocked' in fieldWorker).toBe(false);
-      expect('readFieldWorkerStreamLocked' in fieldWorker).toBe(false);
-      expect('undoFieldWorkerEnding' in fieldWorker).toBe(true); // CONTROL
+    it('(h) the barrel exposes EXACTLY the two undo writers - never the core, never its stream read', () => {
+      // Code review round 2, R2B-9: the old test asserted two NAMES absent, which passes on a rename of the core. This asserts the whole set
+      // of exported functions that begin an undo or an allow: a renamed, re-exported core would appear here.
+      const exported = fieldWorker as unknown as Record<string, unknown>;
+      const writers = Object.keys(exported).filter((k) => typeof exported[k] === 'function' && /^(undo|allow)/i.test(k)).sort();
+      expect(writers).toEqual(['allowFieldWorkerEndingAppeal', 'undoFieldWorkerEnding']);
+      expect(Object.keys(exported).filter((k) => /StreamLocked|readFieldWorkerStream/i.test(k))).toEqual([]);
     });
   });
 
@@ -277,9 +336,14 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
       const v = await end({ id: old });
       const newer = await registerReal(c, cast.P, { district: 'Patna', mobileBlindIndex: index });
       await c.query('SAVEPOINT s');
+      const typesBefore = await streamTypes(c, old);
       expect(await caught(() => undo(v, { id: old }))).toBeInstanceOf(FieldWorkerNumberRegisteredAgainError);
-      await c.query('ROLLBACK TO SAVEPOINT s');
+      // Code review round 2, R2B-1: read BEFORE the test's own rollback. After `ROLLBACK TO SAVEPOINT` the row would read `terminated`
+      // whatever the refused command had written first - the rollback erased the evidence. The command rolled back its OWN savepoint, so
+      // the transaction is usable here; a command that left it aborted fails these reads (25P02) instead of passing.
       expect((await row(c, old)).current_state).toBe('terminated'); // the reason above, and the row did not move
+      expect(await streamTypes(c, old)).toEqual(typesBefore); // ... and no event was left behind
+      await c.query('ROLLBACK TO SAVEPOINT s');
       await end({ id: newer });
       await undo(v, { id: old });
       expect((await row(c, old)).current_state).toBe('pending_kyc');
@@ -301,7 +365,7 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
   });
 
   describe('AC4 — the projector’s check of the undone event (AD3)', () => {
-    it('an ending_undone whose to_state is not the undone ending’s from_state → FieldWorkerProjectorInputError; one naming a non-ending version → refused', async () => {
+    it('an ending_undone whose to_state is not the undone ending’s from_state → FieldWorkerProjectorInputError (AD3’s own message); version 1 is refused by the WRITE SCHEMA, before AD3 runs', async () => {
       await activate();
       const v = await end();
       // The real undo's payload, captured inside a savepoint and rolled back — then fed back with one field wrong.
@@ -314,16 +378,90 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
       const project = (p: unknown) =>
         projectFieldWorkerTransition(c, { pariwarId: cast.P, fieldWorkerId: worker, eventType: 'field_worker.ending_undone', payload: p, auditId: randomUUID(), actor: 'operator', actorId: cast.pa, lockedRow: locked! });
       await c.query('SAVEPOINT p');
-      expect(await caught(() => project(payload('pending_kyc')))).toBeInstanceOf(FieldWorkerProjectorInputError);
+      const wrongTarget = await caught(() => project(payload('pending_kyc')));
+      expect(wrongTarget).toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect((wrongTarget as Error).message).toMatch(/which is not this worker.s current ending.s from_state/); // AD3's refusal, not the schema's
       await c.query('ROLLBACK TO SAVEPOINT p');
-      expect(await caught(() => project(payload('active', 1)))).toBeInstanceOf(FieldWorkerProjectorInputError);
+      // Code review round 2, R2B-2: this leg used to be titled "a non-ending version". Version 1 fails the write schema's `min(2)` - and the
+      // schema parse runs BEFORE AD3 - so it never reached the check it was named for. It is the SCHEMA's refusal; AD3's clauses are isolated below.
+      const schemaRefused = await caught(() => project(payload('active', 1)));
+      expect(schemaRefused).toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect((schemaRefused as Error).message).toMatch(/fails its schema/);
       await c.query('ROLLBACK TO SAVEPOINT p');
       await project(payload('active')); // CONTROL — the true target projects
+      expect((await row(c, worker)).current_state).toBe('active');
+    });
+
+    // R2B-2 — AD3's check refuses on four conjuncts (the event exists; it is a `terminated` event; it is THIS worker's CURRENT ending; its
+    // `from_state` is the target). Each leg below fails exactly ONE, every other holding, so deleting any one conjunct turns a leg red.
+    it('AD3 clause by clause: no such event, an event that is not an ending, an OLDER ending, a wrong target — each refused by AD3 alone', async () => {
+      await activate(); // v3 `activated`
+      const first = await end(); // v4 `terminated` (from active)
+      await undo(first); // v5 `ending_undone`
+      const second = await end(); // v6 `terminated` — the CURRENT ending
+      expect([first, second]).toEqual([4, 6]);
+      await c.query('SAVEPOINT real');
+      await undo(second);
+      const real = await lastPayload(c, worker);
+      await c.query('ROLLBACK TO SAVEPOINT real');
+      const locked = (await lockFieldWorkerRow(c, cast.P, worker))!;
+      const payload = (to: string, undone: number) => ({ ...real, to_state: to, undone_ending_version: undone });
+      const project = (p: unknown, lockedRow = locked, id: FieldWorkerId = worker) =>
+        projectFieldWorkerTransition(c, { pariwarId: cast.P, fieldWorkerId: id, eventType: 'field_worker.ending_undone', payload: p, auditId: randomUUID(), actor: 'operator', actorId: cast.pa, lockedRow });
+      const refusedByAd3 = async (label: string, p: unknown, lockedRow?: typeof locked, id?: FieldWorkerId): Promise<void> => {
+        await c.query('SAVEPOINT p');
+        const e = await caught(() => project(p, lockedRow, id));
+        expect(e, label).toBeInstanceOf(FieldWorkerProjectorInputError); // not a TypeError: AD3 guards its own read
+        expect((e as Error).message, label).toMatch(/which is not this worker.s current ending.s from_state/);
+        await c.query('ROLLBACK TO SAVEPOINT p');
+      };
+      // An OLDER ending: a real `terminated` event whose `from_state` is the target, but not the row's current version (4 against 6).
+      await refusedByAd3('an older ending', payload('active', first));
+      // A version no event has: the stream's head is 6, so the check's own SELECT finds nothing (and must not dereference it).
+      await refusedByAd3('no such event', payload('active', 99));
+      // An event that is NOT an ending, AT the row's own version - the one clause that needs the row and the stream to AGREE (the projector's
+      // stream-head check refuses a row whose version is not the head, before AD3). A worker whose latest event is `activated` (v3), its
+      // locked row made to read `terminated`; the event's `from_state` is the target, so only "is a `terminated` event" is false.
+      const other = await registerReal(c, cast.P, { district: 'Patna' });
+      await activate(other);
+      const lockedOther = (await lockFieldWorkerRow(c, cast.P, other))!;
+      expect(lockedOther.stateEventVersion).toBe(3);
+      await refusedByAd3('not an ending', payload('pending_kyc', 3), { ...lockedOther, currentState: 'terminated' }, other);
+      // The wrong target for the current ending is the first test's leg; CONTROL — the true current ending, the true target, projects.
+      await project(payload('active', second));
       expect((await row(c, worker)).current_state).toBe('active');
     });
   });
 
   describe('AC8 — the undo and the appeal', () => {
+    it('R7: an undo transaction begun on the previous IST day can supersede an appeal received after midnight', async () => {
+      const v = await end();
+      const appealId = await lodge(v);
+      const receivedOn = await istToday(c);
+      const yesterday = (await c.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date - 1)::text AS d")).rows[0]!.d;
+      const actualQuery = c.query;
+      let intercepted = 0;
+      // Simulate only the undo's older transaction-start clock. Its public command, projector, events and CHECKs all run live.
+      // This represents a pre-midnight undo whose worker lock was acquired after a post-midnight lodge committed.
+      c.query = function (...args: unknown[]) {
+        if (args[0] === "SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS ist_today") {
+          intercepted += 1;
+          return Promise.resolve({ rows: [{ ist_today: yesterday }], rowCount: 1 });
+        }
+        return actualQuery.apply(c, args as never);
+      } as typeof c.query;
+      try {
+        await undo(v);
+      } finally {
+        c.query = actualQuery;
+      }
+      expect(intercepted).toBe(1);
+      expect(await appealRow(appealId)).toEqual({ state: 'superseded', decided_by_user_id: cast.pa, decided_on: receivedOn });
+      expect(await lastPayload(c, appealId)).toMatchObject({ decided_on: receivedOn, to_state: 'superseded' });
+      expect((await row(c, worker)).current_state).toBe('pending_kyc');
+      await expectRowMatchesStream(c, worker);
+    });
+
     it('a SLIP undone while an appeal is open supersedes it in the same transaction: `superseded`, signed with undo_ending, decided_on the undo’s IST day, decided_by the undoer', async () => {
       const v = await end();
       const appealId = await lodge(v);

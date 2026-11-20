@@ -16,7 +16,7 @@ import {
   withdrawFieldWorkerEndingAppeal,
 } from '../../../src/field-worker/ending-appeal-commands.js';
 import { projectEndingAppealLodged } from '../../../src/field-worker/ending-appeal-project.js';
-import { listFieldWorkerEndingAppealsOf, pageFieldWorkerEndingAppeals } from '../../../src/field-worker/ending-appeal-read.js';
+import { decodeEndingAppealCursor, listFieldWorkerEndingAppealsOf, pageFieldWorkerEndingAppeals } from '../../../src/field-worker/ending-appeal-read.js';
 import {
   FieldWorkerAppealAlreadyDecidedError,
   FieldWorkerAppealDateInvalidError,
@@ -31,7 +31,7 @@ import {
   FieldWorkerProjectorInputError,
 } from '../../../src/field-worker/errors.js';
 import { FieldWorkerTerminatedPayloadSchema } from '../../../src/field-worker/events.js';
-import { getCurrentFieldWorkerEnding, pageAppealEligibleFieldWorkers } from '../../../src/field-worker/read.js';
+import { decodeAppealEligibleCursor, getCurrentFieldWorkerEnding, pageAppealEligibleFieldWorkers } from '../../../src/field-worker/read.js';
 import { bindScopedDb } from '../../../src/db.js';
 import {
   fieldWorkerEndingAppealId as toAppealId,
@@ -42,7 +42,7 @@ import {
 } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { enterAppScope, seedRoleGrant, seedUser } from '../_helpers.js';
-import { GUARD_OFF, GUARD_ON, actAuthorization, caught, expectRowMatchesStream, grantAuthorization, pgErrorOf, registerReal, streamTypes } from './_fixtures.js';
+import { GUARD_OFF, GUARD_ON, actAuthorization, caught, expectRowMatchesStream, grantAuthorization, pgErrorOf, registerReal, streamTypes, terminateAtCurrentVersion } from './_fixtures.js';
 
 interface Cast {
   P: PariwarId;
@@ -122,7 +122,7 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
 
   /** End `worker` by `by`, the hearer as the terminate route would fix it (AD8). */
   async function end(by: string, heardBy: 'pariwar_admin' | 'trustee_panel', id: FieldWorkerId = worker): Promise<number> {
-    await terminateFieldWorker(c, {
+    await terminateAtCurrentVersion(c, {
       ...base(cast.P, by, 'operator'),
       fieldWorkerId: id,
       reasonCode: 'inactive',
@@ -212,12 +212,17 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       const first = await lodge(v, 'panel');
       expect(await caught(() => lodge(v, 'panel'))).toBeInstanceOf(FieldWorkerAppealOpenError);
       const [ev] = await payloadsOf(c, first);
+      const planted = toAppealId(randomUUID());
       expect(
         await caught(() =>
-          projectEndingAppealLodged(c, { pariwarId: cast.P, appealId: toAppealId(randomUUID()), payload: ev!.payload, actorId: cast.tp, endedByUserId: cast.pa, auditId: randomUUID() }),
+          projectEndingAppealLodged(c, { pariwarId: cast.P, appealId: planted, payload: ev!.payload, actorId: cast.tp, endedByUserId: cast.pa, auditId: randomUUID() }),
         ),
       ).toBeInstanceOf(FieldWorkerAppealOpenError);
       expect((await c.query('SELECT count(*)::int AS n FROM field_worker_ending_appeals WHERE field_worker_id = $1', [worker])).rows[0]).toEqual({ n: 1 });
+      // Code review round 2, R2B-8: the row count alone cannot see an ORPHAN EVENT - a `lodged` event appended before the INSERT that failed, with no
+      // row behind it. The refused appeal's own stream must be empty (the projector rolled its savepoint back over the append too).
+      expect(await streamTypes(c, planted)).toEqual([]);
+      expect(await streamTypes(c, first)).toEqual(['field_worker_ending_appeal.lodged']); // CONTROL - the real appeal's stream is untouched
     });
 
     it(`(d) one appeal per ending (${String(FIELD_WORKER_APPEALS_PER_ENDING)}): after a REFUSED one → AlreadyDecided; after a WITHDRAWN one → lodged; after an ALLOWED one → IllegalTransition`, async () => {
@@ -290,7 +295,7 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
   });
 
   describe('AC6 — deciding and withdrawing', () => {
-    it('(a) ALLOWED: one transaction — ending_undone (appeal_allowed, the appeal id, the hear key, actor trustee) and `allowed`, both carrying ONE audit id; the worker restored; row = fold', async () => {
+    it('(a) ALLOWED: one transaction — ending_undone (appeal_allowed, the appeal id, the hear key, actor trustee) and `allowed`; the worker row and the appeal row carry ONE audit id (the events carry none: review round 1 dismissed that wording); the worker restored; row = fold', async () => {
       const v = await panelEnding();
       const appealId = await lodge(v, 'panel');
       const d = await decision(appealId, 'panel');
@@ -313,9 +318,14 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       const appealId = await lodge(v, 'panel');
       const newer = await registerReal(c, cast.P, { district: 'Patna', mobileBlindIndex: index });
       await c.query('SAVEPOINT s');
+      const [workerTypes, appealTypes] = [await streamTypes(c, worker), await streamTypes(c, appealId)];
       expect(await caught(async () => allowFieldWorkerEndingAppeal(c, await decision(appealId, 'panel')))).toBeInstanceOf(FieldWorkerNumberRegisteredAgainError);
-      await c.query('ROLLBACK TO SAVEPOINT s');
+      // Code review round 2, R2B-1: read BEFORE the test's own rollback - after it the appeal would read `open` whatever the refused
+      // decision had written first (the rollback erased it). The command rolled back its own savepoint, so the transaction is usable.
       expect((await appealRow(c, appealId)).state).toBe('open');
+      expect(await streamTypes(c, worker)).toEqual(workerTypes); // no ending_undone was left behind
+      expect(await streamTypes(c, appealId)).toEqual(appealTypes); // and no `allowed` event on the appeal's own stream
+      await c.query('ROLLBACK TO SAVEPOINT s');
       await end(cast.pa, 'trustee_panel', newer);
       await allowFieldWorkerEndingAppeal(c, await decision(appealId, 'panel'));
       expect((await appealRow(c, appealId)).state).toBe('allowed');
@@ -389,11 +399,14 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
   });
 
   describe('AC7 — a legacy terminated event without appeal_heard_by', () => {
-    it('planted by raw SQL as the OWNER: it PARSES with the terminated schema, is read as trustee_panel (AD17), and the Panel lodges', async () => {
-      // A real terminate's authorization, minus the hearer — taken from a real ending on a scratch worker, rolled back.
+    // Code review round 2, R2B-13: the legacy leg's ender was a Pariwar Admin, whose endings are Panel-heard anyway - so a read that derived the
+    // hearer from the ender's ROLE (Pariwar Admin -> Panel, District Admin -> Pariwar Admin) passed it. A District Admin ender is the case where
+    // the default matters: the stored value is absent, and AD17 says an absent one reads as `trustee_panel`, whoever ended.
+    /** Plant a `terminated` event WITHOUT `appeal_heard_by`, as `by` (a real terminate's authorization, minus the hearer), as the OWNER. */
+    async function plantLegacyEnding(by: string): Promise<void> {
       await enterAppScope(c, cast.P);
       await c.query('SAVEPOINT real');
-      await end(cast.pa, 'trustee_panel');
+      await end(by, by === cast.daPatna ? 'pariwar_admin' : 'trustee_panel');
       const real = (await payloadsOf(c, worker)).at(-1)!.payload;
       await c.query('ROLLBACK TO SAVEPOINT real');
       await c.query('RESET ROLE');
@@ -402,7 +415,7 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       expect(FieldWorkerTerminatedPayloadSchema.safeParse(legacy).success).toBe(true);
       await c.query(
         `INSERT INTO events_log (stream_id, event_type, payload, event_version, actor_id, pariwar_id) VALUES ($1, 'field_worker.terminated', $2, 2, $3, $4)`,
-        [worker, JSON.stringify(legacy), cast.pa, cast.P],
+        [worker, JSON.stringify(legacy), by, cast.P],
       );
       await c.query(GUARD_ON);
       await c.query("UPDATE field_workers SET current_state = 'terminated', state_reason_code = 'inactive', ended_on = $2::date, state_event_version = 2 WHERE field_worker_id = $1", [
@@ -411,15 +424,45 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       ]);
       await c.query(GUARD_OFF);
       await enterAppScope(c, cast.P);
+    }
+
+    it('planted by raw SQL as the OWNER: it PARSES with the terminated schema, is read as trustee_panel (AD17), and the Panel lodges', async () => {
+      await plantLegacyEnding(cast.pa);
       expect(await getCurrentFieldWorkerEnding(bindScopedDb(c), cast.P, worker)).toMatchObject({ heardBy: 'trustee_panel', endedByUserId: cast.pa, endingVersion: 2 });
       const appealId = await lodge(2, 'panel');
       expect((await appealRow(c, appealId)).heard_by).toBe('trustee_panel');
     });
 
+    it('R2B-13: a legacy ending by a DISTRICT ADMIN is read as trustee_panel too - the default is the ABSENCE, not a function of the ender\'s role; the Pariwar Admin\'s key is then the wrong hearer', async () => {
+      await plantLegacyEnding(cast.daPatna);
+      expect(await getCurrentFieldWorkerEnding(bindScopedDb(c), cast.P, worker)).toMatchObject({ heardBy: 'trustee_panel', endedByUserId: cast.daPatna, endingVersion: 2 });
+      // CONTROL - the same ender, ending WITH the hearer the route would fix (a District Admin's ending is the Pariwar Admin's to hear) reads as stored.
+      const other = await registerReal(c, cast.P, { district: 'Patna' });
+      await end(cast.daPatna, 'pariwar_admin', other);
+      expect(await getCurrentFieldWorkerEnding(bindScopedDb(c), cast.P, other)).toMatchObject({ heardBy: 'pariwar_admin', endedByUserId: cast.daPatna });
+      expect(await caught(() => lodge(2, 'pa'))).toBeInstanceOf(FieldWorkerAppealWrongHearerError); // the legacy ending is the Panel's
+      expect((await appealRow(c, await lodge(2, 'panel'))).heard_by).toBe('trustee_panel');
+    });
+
+    it('R2B-13: the hearer is FIXED at the ending - the ender\'s Pariwar Admin grant revoked afterwards changes nothing, and neither does a grant given to a District Admin ender', async () => {
+      const v = await panelEnding(); // ended by a Pariwar Admin: the Panel hears it
+      const other = await registerReal(c, cast.P, { district: 'Patna' });
+      const v2 = await end(cast.daPatna, 'pariwar_admin', other); // ended by a District Admin: the Pariwar Admin hears it
+      await c.query('RESET ROLE');
+      await c.query('DELETE FROM role_grants WHERE user_id = $1', [cast.pa]); // the first ender is no longer a Pariwar Admin
+      await seedRoleGrant(getTx().tx, cast.P, { userId: cast.daPatna, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: cast.P }); // the second now IS one
+      await enterAppScope(c, cast.P);
+      expect((await c.query('SELECT count(*)::int AS n FROM role_grants WHERE user_id = $1', [cast.pa])).rows[0]).toEqual({ n: 0 }); // non-vacuity: the grant IS gone
+      expect(await getCurrentFieldWorkerEnding(bindScopedDb(c), cast.P, worker)).toMatchObject({ heardBy: 'trustee_panel', endedByUserId: cast.pa, endingVersion: v });
+      expect(await getCurrentFieldWorkerEnding(bindScopedDb(c), cast.P, other)).toMatchObject({ heardBy: 'pariwar_admin', endedByUserId: cast.daPatna, endingVersion: v2 });
+      expect((await appealRow(c, await lodge(v, 'panel'))).heard_by).toBe('trustee_panel'); // still the Panel's
+      expect(await caught(() => lodge(v2, 'panel', { fieldWorkerId: other }))).toBeInstanceOf(FieldWorkerAppealWrongHearerError); // still not the Panel's
+    });
+
     it('terminateFieldWorker without appealHeardBy is refused (the command requires it; the schema keeps it optional)', async () => {
       expect(
         await caught(async () =>
-          terminateFieldWorker(c, {
+          terminateAtCurrentVersion(c, {
             ...base(cast.P, cast.pa, 'operator'),
             fieldWorkerId: worker,
             reasonCode: 'inactive',
@@ -454,6 +497,63 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       // An undone worker is not eligible (no current ending).
       await undoFieldWorkerEnding(c, { ...base(cast.P, cast.pa, 'operator'), fieldWorkerId: worker, expectedEndingVersion: v, authorization: actAuthorization('field_worker.undo_ending', cast.P, 'Patna', cast.pa) });
       expect((await pageAppealEligibleFieldWorkers(db, cast.P, { hearers: ['trustee_panel', 'pariwar_admin'] })).items).toEqual([]);
+    });
+  });
+
+  // Code review round 2 — R2A-3 (the eligible list reads the per-ending constant, it does not copy its value) and R2A-7 (the two keyset
+  // cursors, FOLLOWED to a second page: before this, only an empty page's `next_cursor: null` was ever asserted).
+  describe('R2A-3 / R2A-7 — the constant is bound in the eligible list; the keyset cursors are followed', () => {
+    it('R2A-3: a refused appeal hides the worker exactly while the refusals reach FIELD_WORKER_APPEALS_PER_ENDING; an OPEN appeal hides it at any limit', async () => {
+      const v = await panelEnding();
+      const db = bindScopedDb(c);
+      const eligible = async (appealsPerEnding?: number): Promise<string[]> =>
+        (await pageAppealEligibleFieldWorkers(db, cast.P, { hearers: ['trustee_panel'], ...(appealsPerEnding === undefined ? {} : { appealsPerEnding }) })).items.map(
+          (x) => x.fieldWorkerId,
+        );
+      expect(await eligible()).toEqual([worker]); // CONTROL — no appeal yet
+      const appealId = await lodge(v, 'panel');
+      expect(await eligible()).toEqual([]); // open
+      expect(await eligible(FIELD_WORKER_APPEALS_PER_ENDING + 1)).toEqual([]); // an OPEN appeal hides the worker whatever the limit (one open at a time)
+      await refuseFieldWorkerEndingAppeal(c, await decision(appealId, 'panel'));
+      expect(await eligible()).toEqual(FIELD_WORKER_APPEALS_PER_ENDING <= 1 ? [] : [worker]); // the lodge command's own rule, read from the same constant
+      // The limit raised by one: ONE refusal no longer hides the worker — the proof the SQL follows the constant instead of a literal 'refused'.
+      expect(await eligible(FIELD_WORKER_APPEALS_PER_ENDING + 1)).toEqual([worker]);
+      await expect(pageAppealEligibleFieldWorkers(db, cast.P, { hearers: ['trustee_panel'], appealsPerEnding: 0 })).rejects.toBeInstanceOf(RangeError);
+    });
+
+    it('R2A-7: the eligible list pages on its keyset cursor — three workers ended the SAME day tie on ended_on, so the id is the whole tie-break; page 2 repeats and skips nothing', async () => {
+      const ids = [worker, await registerReal(c, cast.P, { district: 'Patna' }), await registerReal(c, cast.P, { district: 'Patna' })];
+      for (const id of ids) await end(cast.pa, 'trustee_panel', id);
+      const db = bindScopedDb(c);
+      const first = await pageAppealEligibleFieldWorkers(db, cast.P, { hearers: ['trustee_panel'], limit: 2 });
+      expect(first.items).toHaveLength(2);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await pageAppealEligibleFieldWorkers(db, cast.P, {
+        hearers: ['trustee_panel'],
+        limit: 2,
+        after: decodeAppealEligibleCursor(first.nextCursor),
+      });
+      expect(second.items).toHaveLength(1);
+      expect(second.nextCursor).toBeNull();
+      const all = [...first.items, ...second.items];
+      expect(all.map((x) => x.fieldWorkerId)).toEqual([...ids].sort().reverse()); // every worker once, `ended_on DESC, field_worker_id DESC`
+      expect(new Set(all.map((x) => x.endedOn)).size).toBe(1); // non-vacuity: the dates DO tie, so only the id orders them
+    });
+
+    it('R2A-7: the appeals list pages on its keyset cursor — appeals lodged in ONE transaction tie on created_at, so the id is the whole tie-break; page 2 repeats and skips nothing', async () => {
+      const ids = [worker, await registerReal(c, cast.P, { district: 'Patna' }), await registerReal(c, cast.P, { district: 'Patna' })];
+      const appeals: string[] = [];
+      for (const id of ids) appeals.push(await lodge(await end(cast.pa, 'trustee_panel', id), 'panel', { fieldWorkerId: id }));
+      const stamps = await c.query<{ n: string }>('SELECT count(DISTINCT created_at)::text AS n FROM field_worker_ending_appeals WHERE pariwar_id = $1', [cast.P]);
+      expect(stamps.rows[0]!.n).toBe('1'); // non-vacuity: one transaction, one created_at — only the appeal id orders them
+      const db = bindScopedDb(c);
+      const first = await pageFieldWorkerEndingAppeals(db, cast.P, { heardBy: 'trustee_panel', limit: 2 });
+      expect(first.items).toHaveLength(2);
+      expect(first.nextCursor).not.toBeNull();
+      const second = await pageFieldWorkerEndingAppeals(db, cast.P, { heardBy: 'trustee_panel', limit: 2, after: decodeEndingAppealCursor(first.nextCursor) });
+      expect(second.items).toHaveLength(1);
+      expect(second.nextCursor).toBeNull();
+      expect([...first.items, ...second.items].map((x) => x.appealId)).toEqual([...appeals].sort().reverse());
     });
   });
 
@@ -512,6 +612,26 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       );
     });
 
+    // Code review round 2, R2B-11: the lodging-INSERT refusal above is ONE row that fails three disjuncts at once (a `refused` row with a decider
+    // and a decision date), so removing the VERSION disjunct - or any other single one - left every test green. One disjunct per row.
+    it('the lodging INSERT guard, one disjunct at a time: a state other than open, a version other than 1, a decider, a decision date - each refused alone; the version CHECK by name', async () => {
+      await plantOpen();
+      await c.query(WRITER_ON);
+      const insert = (over: { state?: string; version?: number; decidedBy?: boolean; decidedOn?: boolean; endingVersion?: number }) =>
+        `INSERT INTO field_worker_ending_appeals (appeal_id, pariwar_id, field_worker_id, ending_event_version, state, heard_by, received_on, received_via, lodged_by_user_id, ended_by_user_id, decided_by_user_id, decided_on, state_event_version, audit_id)
+         VALUES (gen_random_uuid(), $1, $2, ${String(over.endingVersion ?? 2)}, '${over.state ?? 'open'}', 'trustee_panel', current_date, 'phone', gen_random_uuid(), gen_random_uuid(), ${over.decidedBy === true ? 'gen_random_uuid()' : 'NULL'}, ${over.decidedOn === true ? 'current_date' : 'NULL'}, ${String(over.version ?? 1)}, gen_random_uuid())`;
+      const FRAGMENT = 'a lodging INSERT must be open';
+      await expectRefused(insert({ version: 5 }), [cast.P, worker], 'P0001', FRAGMENT); // open, version 5, no decision: ONLY the version
+      await expectRefused(insert({ version: 2 }), [cast.P, worker], 'P0001', FRAGMENT);
+      await expectRefused(insert({ decidedBy: true }), [cast.P, worker], 'P0001', FRAGMENT); // open, version 1, a decider: ONLY the decider
+      await expectRefused(insert({ decidedOn: true }), [cast.P, worker], 'P0001', FRAGMENT); // open, version 1, a date: ONLY the date
+      await expectRefused(insert({ state: 'withdrawn' }), [cast.P, worker], 'P0001', FRAGMENT); // version 1, no decision, not open: ONLY the state
+      // The ending version must name an ending (>= 2): the trigger passes an open / version-1 row, the CHECK refuses it BY NAME.
+      for (const endingVersion of [1, 0, -4]) {
+        await expectRefused(insert({ endingVersion }), [cast.P, worker], '23514', 'field_worker_ending_appeals_ending_version_positive');
+      }
+    });
+
     it('each immutable column is refused on change (rule (b)), as the projector would write it', async () => {
       const id = await plantOpen();
       await c.query(WRITER_ON);
@@ -524,6 +644,9 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
         "received_via = 'in_person'",
         'lodged_by_user_id = gen_random_uuid()',
         'ended_by_user_id = gen_random_uuid()',
+        // Code review round 2, R2B-11: immutable BY DEFAULT (rule (b) names the projected columns, not these) - and so never given a leg.
+        'appeal_id = gen_random_uuid()',
+        "created_at = created_at - interval '1 day'",
       ]) {
         await expectRefused(`UPDATE field_worker_ending_appeals SET ${set}, state = 'withdrawn', decided_on = current_date + 1, decided_by_user_id = gen_random_uuid(), state_event_version = 2 WHERE appeal_id = $1`, [id], 'P0001', 'identity is immutable');
       }

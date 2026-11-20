@@ -238,6 +238,22 @@ export class FieldWorkerAuthorizationStaleError extends Error {
   }
 }
 
+/**
+ * Code review round 2, R2A-2 — an End whose screen is out of date: the worker's `state_event_version` is no longer the one the officer's
+ * screen showed (`expectedVersion`). Since Story 13.1f `terminated` is no longer final, so `illegal_transition` no longer refuses a
+ * stale or repeated End — a worker ended, then restored (an undone slip or an allowed appeal), would otherwise be ended AGAIN by a
+ * stale tab, with a fresh hearer and a fresh appeal allowance, overriding the restoring decision. → 409 `field_worker.state_changed`.
+ */
+export class FieldWorkerStateChangedError extends Error {
+  public readonly name = 'FieldWorkerStateChangedError';
+  public constructor(
+    public readonly fieldWorkerId: string,
+    public readonly expectedVersion: number,
+  ) {
+    super(`field worker ${fieldWorkerId}: the worker is no longer at version ${String(expectedVersion)}, the state the officer's screen showed`);
+  }
+}
+
 /** `posted` to the district the worker already reports to (QE5 guard 3b). */
 export class FieldWorkerDistrictUnchangedError extends Error {
   public readonly name = 'FieldWorkerDistrictUnchangedError';

@@ -32,6 +32,7 @@ import {
 import {
   FieldWorkerAppealAlreadyDecidedError,
   FieldWorkerAppealDateInvalidError,
+  FieldWorkerAppealMissingError,
   FieldWorkerAppealDeciderIsEnderError,
   FieldWorkerAppealNotOpenError,
   FieldWorkerAppealOpenError,
@@ -47,6 +48,7 @@ import {
   FieldWorkerKycNotCompletedError,
   FieldWorkerProjectorInputError,
   FieldWorkerReasonInvalidError,
+  FieldWorkerStateChangedError,
 } from '../../src/field-worker/errors.js';
 import { fieldWorkerEndingAppealId, fieldWorkerId, pariwarId } from '../../src/ids/index.js';
 import { authorize, type EffectiveGrant, type VerifiedAuthorization } from '../../src/rbac/check.js';
@@ -170,7 +172,13 @@ const staff = staffBase();
 const moveAt = (district: string, over: { actorId?: string; pariwarId?: string } = {}) => authAt(district, { ...over, key: 'field_worker.move' });
 const suspender = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.suspend' }) };
 const reactivator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.reactivate' }) };
-const terminator = { ...staffBase(), authorization: authAt('Patna', { key: 'field_worker.terminate' }), appealHeardBy: 'pariwar_admin' as const };
+/** `expectedStateEventVersion: 3` — the stub row's version (`ROW`), i.e. what the officer's screen showed (R2A-2). */
+const terminator = {
+  ...staffBase(),
+  authorization: authAt('Patna', { key: 'field_worker.terminate' }),
+  appealHeardBy: 'pariwar_admin' as const,
+  expectedStateEventVersion: 3,
+};
 /** A move from Patna (the stub row's district — what the admin saw) to `to`, authorized at `target`. */
 const mover = (to: string, target = to) => ({ ...staffBase(), toDistrict: to, expectedFromDistrict: 'Patna', authorization: moveAt(target) });
 /** Story 13.1a AD3 — a VERIFIED `field_worker.approve` result (pariwar_admin) at `district`. */
@@ -415,8 +423,75 @@ describe('QE20 — ended_on: (0b) before ANY statement, and the IST bounds in SQ
   });
 });
 
+// Code review round 2, R2A-2 — `terminate` carries the version the officer's screen showed. Since 13.1f `terminated` is not final, so
+// `illegal_transition` no longer stops a stale or repeated End; this guard does. The stub row is `active` at version 3 (`ROW`).
+describe('R2A-2 — terminate refuses a worker that changed since the screen (expectedStateEventVersion)', () => {
+  const endOf = (over: Record<string, unknown> = {}) => ({ ...terminator, reasonCode: 'inactive', endedOn: '2026-11-01', ...over }) as Parameters<typeof terminateFieldWorker>[1];
+
+  it('a missing or malformed version is refused BEFORE any statement (FieldWorkerProjectorInputError), and the right one is not', async () => {
+    for (const bad of [undefined, null, 0, -1, 2.5, Number.NaN, Number.POSITIVE_INFINITY, '3']) {
+      const { client, calls } = stub();
+      await expect(terminateFieldWorker(client, endOf({ expectedStateEventVersion: bad })), String(bad)).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(calls, String(bad)).toEqual([]);
+    }
+    // CONTROL — the screen's version (3) ends the worker.
+    await expect(terminateFieldWorker(stub().client, endOf())).resolves.toMatchObject({ state: 'terminated' });
+  });
+
+  it('a worker at ANOTHER version (older or newer than the screen) ⇒ FieldWorkerStateChangedError under the lock — nothing appended, nothing updated', async () => {
+    for (const shown of [2, 4]) {
+      const { client, calls } = stub(); // the row is at version 3
+      const err = await terminateFieldWorker(client, endOf({ expectedStateEventVersion: shown })).catch((e: unknown) => e);
+      expect(err, `shown ${shown}`).toBeInstanceOf(FieldWorkerStateChangedError);
+      expect(err).toMatchObject({ fieldWorkerId: FW, expectedVersion: shown });
+      expect(calls.slice(0, 2), `shown ${shown}`).toEqual(['SAVEPOINT', 'LOCK']);
+      expect(calls).not.toContain('APPEND');
+      expect(calls).not.toContain('UPDATE');
+      expect(calls[calls.length - 1]).toBe('RELEASE'); // the savepoint was rolled back to and released
+    }
+  });
+
+  it('the check ORDER under the lock: legality BEATS the version; the authorization target BEATS the version; the version BEATS the reason and the dates', async () => {
+    // (1) a `terminated` worker with a stale screen: the old, final answer — IllegalTransition, not StateChanged.
+    const ended = stub({ state: 'terminated', reason: 'inactive', endedOn: '2026-10-31' });
+    await expect(terminateFieldWorker(ended.client, endOf({ expectedStateEventVersion: 2 }))).rejects.toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    // (3d) a worker moved out of the gate's district AND a stale version: the target says so first.
+    await expect(terminateFieldWorker(stub({ district: 'Gaya' }).client, endOf({ expectedStateEventVersion: 2 }))).rejects.toBeInstanceOf(
+      FieldWorkerAuthorizationStaleError,
+    );
+    // the version, then the reason and the dates: a stale screen AND a bad reason AND a future date ⇒ StateChanged.
+    await expect(
+      terminateFieldWorker(stub({}, { istToday: '2026-11-03' }).client, endOf({ expectedStateEventVersion: 2, reasonCode: 'bogus', endedOn: '2026-12-31' })),
+    ).rejects.toBeInstanceOf(FieldWorkerStateChangedError);
+    // CONTROL — the right version with that bad reason is the reason's refusal, so the version check was not what refused it above.
+    await expect(terminateFieldWorker(stub({}, { istToday: '2026-11-03' }).client, endOf({ reasonCode: 'bogus', endedOn: '2026-12-31' }))).rejects.toBeInstanceOf(
+      FieldWorkerReasonInvalidError,
+    );
+  });
+});
+
+// Code review round 2, R2B-10 — AC7: "`terminateFieldWorker` without `appealHeardBy` is refused (unit)". The only leg was live, through the
+// fixtures' wrapper, had no control, asserted the stream rather than "nothing sent", and never sent an INVALID value - the guard exists to
+// refuse one (`safeParse`), and a `typeof === 'string'` check would have passed every test while letting the schema refuse it after SQL.
+describe('R2B-10 — terminate: the hearer fixed at the ending is REQUIRED and must be a hearer, refused before any statement', () => {
+  const endOf = (over: Record<string, unknown>) => ({ ...terminator, reasonCode: 'inactive', endedOn: '2026-11-01', ...over }) as Parameters<typeof terminateFieldWorker>[1];
+
+  it('a missing, null, empty or unknown `appealHeardBy` (a role that is not a hearer included) ⇒ FieldWorkerProjectorInputError with NOTHING sent; either hearer is accepted', async () => {
+    for (const bad of [undefined, null, '', 'district_admin', 'trustee', 'super_admin', 7]) {
+      const { client, calls } = stub();
+      await expect(terminateFieldWorker(client, endOf({ appealHeardBy: bad })), String(bad)).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(calls, String(bad)).toEqual([]);
+    }
+    for (const ok of ['pariwar_admin', 'trustee_panel'] as const) {
+      const { client, payloads } = stub();
+      await terminateFieldWorker(client, endOf({ appealHeardBy: ok })); // CONTROL — and the value is what is written
+      expect(JSON.parse(String(payloads[0]))).toMatchObject({ appeal_heard_by: ok });
+    }
+  });
+});
+
 describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
-  const registerInput = { nameCiphertext: 'n', mobileCiphertext: 'm', mobileBlindIndex: 'i', registeredByDisplay: 'Asha', district: 'Patna' };
+  const registerInput ={ nameCiphertext: 'n', mobileCiphertext: 'm', mobileBlindIndex: 'i', registeredByDisplay: 'Asha', district: 'Patna' };
 
   it.each([
     ['actor system', { actor: 'system' }],
@@ -548,7 +623,7 @@ describe('Story 13.1c AD3 — the lifecycle acts carry their own key’s authori
   const ACTS = [
     ['suspend', 'field_worker.suspend', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => suspendFieldWorker(c, { ...staff, reasonCode: 'under_review', authorization: a as VerifiedAuthorization })],
     ['reactivate', 'field_worker.reactivate', { state: 'suspended', reason: 'under_review' } as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => reactivateFieldWorker(c, { ...staff, authorization: a as VerifiedAuthorization })],
-    ['terminate', 'field_worker.terminate', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...staff, reasonCode: 'inactive', endedOn: '2026-11-02', authorization: a as VerifiedAuthorization })],
+    ['terminate', 'field_worker.terminate', {} as Partial<StubRow>, (c: pg.PoolClient, a: unknown) => terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', expectedStateEventVersion: 3, ...staff, reasonCode: 'inactive', endedOn: '2026-11-02', authorization: a as VerifiedAuthorization })],
   ] as const;
 
   it.each(ACTS)('%s writes the snapshot of %s, target = the locked district', async (_label, key, row, run) => {
@@ -695,6 +770,11 @@ interface AppealStub {
   heardBy?: 'pariwar_admin' | 'trustee_panel';
   refusedCount?: number;
   appealState?: string;
+  /** R2B-12 — the worker row the lock returns: its state and `state_event_version` (the default: `terminated` at 2, the appeal's ending). */
+  workerState?: string;
+  workerVersion?: number;
+  /** R2B-12 — the worker the LOCKED appeal row names, when it is not the worker the unlocked read named (the stub's default: the same). */
+  lockedAppealWorker?: string;
 }
 /** A stub for a TERMINATED worker (ended from pending_kyc at version 2) and, when asked, its appeal. */
 function appealStub(o: AppealStub = {}): { client: pg.PoolClient; calls: string[] } {
@@ -719,7 +799,15 @@ function appealStub(o: AppealStub = {}): { client: pg.PoolClient; calls: string[
     switch (kind) {
       case 'LOCK':
         return out([
-          { current_state: 'terminated', state_event_version: '2', kyc_status: 'pending', state_reason_code: 'inactive', district: 'Patna', ended_on: '2026-11-02', registered_on: '2026-10-01' },
+          {
+            current_state: o.workerState ?? 'terminated',
+            state_event_version: String(o.workerVersion ?? 2),
+            kyc_status: 'pending',
+            state_reason_code: 'inactive',
+            district: 'Patna',
+            ended_on: '2026-11-02',
+            registered_on: '2026-10-01',
+          },
         ]);
       case 'STREAM':
         return out([
@@ -743,7 +831,7 @@ function appealStub(o: AppealStub = {}): { client: pg.PoolClient; calls: string[
       case 'APPEAL WORKER':
         return out([{ field_worker_id: FW }]);
       case 'APPEAL LOCK':
-        return out([appealRaw]);
+        return out([{ ...appealRaw, field_worker_id: o.lockedAppealWorker ?? FW }]);
       case 'NOW':
         return out([{ ist_today: '2026-11-03' }]);
       case 'REFUSED COUNT':
@@ -790,6 +878,11 @@ describe('Story 13.1f — the undo (AD2; `-465` Q6 B): statement order and check
   });
 
   it('check order under the lock: (2′) terminated → (2a) the version → (2b) the Panel refusal (Q6 B) → (3d) the target; each refusal stops before STREAM', async () => {
+    // (2') BEATS (2a) - R2B-9: the title named this check and no leg reached it (the stub's worker was always `terminated`). A worker that is
+    // NOT ended, shown a stale version, is IllegalTransition, and the stop is before STREAM.
+    const notEnded = appealStub({ workerState: 'active' });
+    expect(await caught(() => undoFieldWorkerEnding(notEnded.client, undoer(3)))).toBeInstanceOf(FieldWorkerIllegalTransitionError);
+    expect(notEnded.calls).toEqual(['SAVEPOINT', 'LOCK', 'ROLLBACK TO', 'RELEASE']);
     // (2a) BEATS (2b): a stale version on a Panel-refused ending ⇒ EndingChanged.
     let s = appealStub({ panelRefused: true });
     expect(await caught(() => undoFieldWorkerEnding(s.client, undoer(3)))).toBeInstanceOf(FieldWorkerEndingChangedError);
@@ -893,5 +986,221 @@ describe('Story 13.1f — the appeal (AD9): the lodge order, the decide lock ord
       FieldWorkerAppealDeciderIsEnderError,
     );
     expect(await caught(() => refuseFieldWorkerEndingAppeal(appealStub().client, decider({ decidedOn: '2026-12-31' })))).toBeInstanceOf(FieldWorkerAppealDateInvalidError);
+  });
+
+  // Code review round 2, R2B-10 — the lodge branches no test reached: a malformed version, the target (3d), and AC5 (e)'s dates.
+  describe('R2B-10 — lodge: the version guard, the stale target and the date bounds', () => {
+    const panelAtDistrict = (actorId: string, district: string): VerifiedAuthorization =>
+      authorize({ actorId, grants: [TRUSTEE_GRANT], key: 'field_worker.hear_ending_appeal_as_panel', resource: { dimension: 'district', value: district, pariwarId: P } })!;
+
+    it('a missing or malformed `expectedEndingVersion` (the undo has this leg; the lodge had none) is refused BEFORE any statement', async () => {
+      for (const bad of [undefined, null, 0, 1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '2']) {
+        const { client, calls } = appealStub();
+        await expect(lodgeFieldWorkerEndingAppeal(client, lodger({ expectedEndingVersion: bad as number })), String(bad)).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+        expect(calls, String(bad)).toEqual([]);
+      }
+      await expect(lodgeFieldWorkerEndingAppeal(appealStub().client, lodger({ expectedEndingVersion: 2 }))).resolves.toBeDefined(); // CONTROL — the boundary is in
+    });
+
+    it('(3d) an authorization targeting another district than the worker\'s ⇒ AuthorizationStale, AFTER the hearer and BEFORE the open-appeal check', async () => {
+      const stale = lodger({ authorization: panelAtDistrict(TRUSTEE, 'Gaya') });
+      let s = appealStub();
+      expect(await caught(() => lodgeFieldWorkerEndingAppeal(s.client, stale))).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      expect(s.calls).not.toContain('APPEAL INSERT');
+      // the target BEATS "an appeal is open": the stale one answers first, and the open-appeal lock is never taken.
+      s = appealStub({ openAppeal: true });
+      expect(await caught(() => lodgeFieldWorkerEndingAppeal(s.client, stale))).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      expect(s.calls).not.toContain('OPEN APPEAL LOCK');
+      // the hearer BEATS the target: a Panel key on a Pariwar-Admin-heard ending is WrongHearer even from a stale district.
+      s = appealStub({ heardBy: 'pariwar_admin' });
+      expect(await caught(() => lodgeFieldWorkerEndingAppeal(s.client, stale))).toBeInstanceOf(FieldWorkerAppealWrongHearerError);
+      // CONTROL — the same lodge authorized at the worker's own district goes through.
+      await expect(lodgeFieldWorkerEndingAppeal(appealStub().client, lodger())).resolves.toBeDefined();
+    });
+
+    it('AC5 (e): `received_on` may be ANY day from the registration day to today (the lower bound is the registration day, not the ending); before it, 422', async () => {
+      // The stub: registered 2026-10-01, ended 2026-11-02, today 2026-11-03.
+      for (const receivedOn of ['2026-10-01', '2026-10-15', '2026-11-02', '2026-11-03']) {
+        const { client, calls } = appealStub();
+        await lodgeFieldWorkerEndingAppeal(client, lodger({ receivedOn }));
+        expect(calls, receivedOn).toContain('APPEAL INSERT');
+      }
+      const before = await caught(() => lodgeFieldWorkerEndingAppeal(appealStub().client, lodger({ receivedOn: '2026-09-30' })));
+      expect(before).toMatchObject({ field: 'received_on', why: 'before_registration' });
+      const future = await caught(() => lodgeFieldWorkerEndingAppeal(appealStub().client, lodger({ receivedOn: '2026-11-04' })));
+      expect(future).toMatchObject({ field: 'received_on', why: 'in_future' });
+    });
+  });
+
+  // Code review round 2, R2B-10 / R2B-12 — the decide branches no test reached.
+  describe('R2B-10 / R2B-12 — decide: the stale target, the appeal-worker pair, and an open appeal on a changed ending', () => {
+    const panelAtDistrict = (actorId: string, district: string): VerifiedAuthorization =>
+      authorize({ actorId, grants: [TRUSTEE_GRANT], key: 'field_worker.hear_ending_appeal_as_panel', resource: { dimension: 'district', value: district, pariwarId: P } })!;
+    const DECIDES = [
+      ['refuse', refuseFieldWorkerEndingAppeal],
+      ['withdraw', withdrawFieldWorkerEndingAppeal],
+      ['allow', allowFieldWorkerEndingAppeal],
+    ] as const;
+
+    it.each(DECIDES)('%s: (3d) a stale target ⇒ AuthorizationStale, AFTER the hearer and BEFORE "is it open"', async (_n, act) => {
+      const stale = decider({ authorization: panelAtDistrict(STAFF, 'Gaya') });
+      let s = appealStub();
+      expect(await caught(() => act(s.client, stale))).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      expect(s.calls).not.toContain('APPEND');
+      // the target BEATS "not open": a stale screen on an already-decided appeal answers 'stale', as the spec's order says (1')(2).
+      s = appealStub({ appealState: 'refused' });
+      expect(await caught(() => act(s.client, stale))).toBeInstanceOf(FieldWorkerAuthorizationStaleError);
+      // the hearer BEATS the target.
+      s = appealStub({ heardBy: 'pariwar_admin' });
+      expect(await caught(() => act(s.client, stale))).toBeInstanceOf(FieldWorkerAppealWrongHearerError);
+    });
+
+    it.each(DECIDES)('%s: AC6 (i) the appeal the LOCK returns must belong to the worker the unlocked read named - else AppealMissing, nothing appended', async (_n, act) => {
+      const { client, calls } = appealStub({ lockedAppealWorker: '99999999-9999-4999-8999-999999999999' });
+      expect(await caught(() => act(client, decider()))).toBeInstanceOf(FieldWorkerAppealMissingError);
+      expect(calls).not.toContain('APPEND');
+      expect(calls).not.toContain('APPEAL APPEND');
+      await expect(act(appealStub().client, decider())).resolves.toBeDefined(); // CONTROL — the pair agreeing goes through
+    });
+
+    it('allow: an appeal that is OPEN on an ending that is not the worker\'s current one is corrupt (a slip supersedes it) ⇒ FieldWorkerProjectorInputError, nothing written', async () => {
+      for (const over of [{ workerVersion: 3 }, { workerState: 'active' }, { workerState: 'suspended', workerVersion: 4 }]) {
+        const { client, calls } = appealStub(over);
+        const e = await caught(() => allowFieldWorkerEndingAppeal(client, decider()));
+        expect(e, JSON.stringify(over)).toBeInstanceOf(FieldWorkerProjectorInputError);
+        expect((e as Error).message, JSON.stringify(over)).toMatch(/not the worker.s current one/);
+        expect(calls, JSON.stringify(over)).not.toContain('APPEND');
+        expect(calls, JSON.stringify(over)).not.toContain('UPDATE');
+      }
+    });
+  });
+
+  // Code review round 2, R2A-6 — AC17's guard (0) on EVERY 13.1f act. AC17: "for each of undo, lodge, decide and withdraw: a non-human
+  // actor, a literal (unverified) authorization, a wrong key and a wrong dimension are each refused" — and, here, before ANY statement.
+  // The undo had only a wrong key and the trustee kind; lodge had no wrong dimension; refuse / withdraw / allow had none of these.
+  describe('AC17 — guard (0): a tampered actor or authorization is refused before ANY statement, on every act', () => {
+    const OTHER_ACTOR = '99999999-9999-4999-8999-999999999999';
+    const PANEL_KEY = 'field_worker.hear_ending_appeal_as_panel';
+    const panelAt = (actorId: string, dimension: 'district' | 'pariwar', pariwarId: string = P): VerifiedAuthorization =>
+      authorize({
+        actorId,
+        grants: [{ ...TRUSTEE_GRANT, pariwarId, scopeValue: pariwarId }],
+        key: PANEL_KEY,
+        resource: { dimension, value: dimension === 'district' ? 'Patna' : pariwarId, pariwarId },
+      })!;
+    type Over = Record<string, unknown>;
+    interface Act {
+      readonly name: string;
+      readonly run: (c: pg.PoolClient, over: Over) => Promise<unknown>;
+      /**
+       * The tampers that are NOT this act's valid input — each an `over` merged onto the valid input; every authorization but the literal
+       * is a result the RBAC check itself produced. ⚠ The wrong-key leg also carries `actor: 'operator'` for the Panel-style acts: a
+       * `trustee` actor under a non-Panel key is refused by `assertAppealActorKind` too (defence in depth), which would let the
+       * key check go unproven; with the operator kind only the key check can refuse it.
+       */
+      readonly authorizations: ReadonlyArray<readonly [string, Over]>;
+    }
+    const decideAuthorizations = (actorId: string): Act['authorizations'] => [
+      ['an object LITERAL with the same fields (not verified)', { authorization: { ...panelAuth(actorId) } }],
+      ['a wrong key (field_worker.terminate)', { authorization: authAt('Patna', { key: 'field_worker.terminate', actorId }), actor: 'operator' }],
+      ['the RIGHT key at the wrong DIMENSION (pariwar)', { authorization: panelAt(actorId, 'pariwar') }],
+      ['another actor’s result', { authorization: panelAt(OTHER_ACTOR, 'district') }],
+      ['another Pariwar’s result', { authorization: panelAt(actorId, 'district', OTHER_P) }],
+    ];
+    const acts: readonly Act[] = [
+      {
+        name: 'undo',
+        run: (c, over) => undoFieldWorkerEnding(c, { ...undoer(), ...over } as never),
+        authorizations: [
+          ['an object LITERAL with the same fields (not verified)', { authorization: { ...authAt('Patna', { key: UNDO_KEY }) } }],
+          ['a wrong key (field_worker.terminate)', { authorization: authAt('Patna', { key: 'field_worker.terminate' }) }],
+          ['the RIGHT key at the wrong DIMENSION (pariwar)', { authorization: keyAtPariwar(UNDO_KEY) }],
+          ['another actor’s result', { authorization: authAt('Patna', { key: UNDO_KEY, actorId: OTHER_ACTOR }) }],
+          ['another Pariwar’s result', { authorization: authAt('Patna', { key: UNDO_KEY, pariwarId: OTHER_P }) }],
+        ],
+      },
+      { name: 'lodge', run: (c, over) => lodgeFieldWorkerEndingAppeal(c, { ...lodger(), ...over } as never), authorizations: decideAuthorizations(TRUSTEE) },
+      { name: 'refuse', run: (c, over) => refuseFieldWorkerEndingAppeal(c, { ...decider(), ...over } as never), authorizations: decideAuthorizations(STAFF) },
+      { name: 'withdraw', run: (c, over) => withdrawFieldWorkerEndingAppeal(c, { ...decider(), ...over } as never), authorizations: decideAuthorizations(STAFF) },
+      { name: 'allow', run: (c, over) => allowFieldWorkerEndingAppeal(c, { ...decider(), ...over } as never), authorizations: decideAuthorizations(STAFF) },
+    ];
+    const actors: ReadonlyArray<readonly [string, Over]> = [
+      ['a non-human actor (system)', { actor: 'system' }],
+      ['a non-human actor (member)', { actor: 'member' }],
+      ['a null actorId', { actorId: null }],
+      ['an empty actorId', { actorId: '' }],
+    ];
+
+    it.each(acts.map((a) => [a.name, a] as const))('%s: its VALID input is not refused — the control that makes every refusal below mean something', async (_name, act) => {
+      const { client, calls } = appealStub();
+      await act.run(client, {}); // a rejection fails the test
+      expect(calls.length).toBeGreaterThan(0);
+    });
+
+    it.each(acts.map((a) => [a.name, a] as const))('%s: a non-human actor or a missing actor id ⇒ FieldWorkerProjectorInputError, nothing sent', async (_name, act) => {
+      for (const [label, over] of actors) {
+        const { client, calls } = appealStub();
+        await expect(act.run(client, over), label).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+        expect(calls, label).toEqual([]);
+      }
+    });
+
+    it.each(acts.map((a) => [a.name, a] as const))('%s: a literal, a wrong-key, a wrong-dimension, another actor’s or another Pariwar’s authorization ⇒ FieldWorkerProjectorInputError, nothing sent', async (_name, act) => {
+      expect(act.authorizations.length).toBe(5); // non-vacuity: the five tampers AC17 names, per act
+      for (const [label, over] of act.authorizations) {
+        const { client, calls } = appealStub();
+        await expect(act.run(client, over), label).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+        expect(calls, label).toEqual([]);
+      }
+    });
+
+    // Code review round 2, R2B-4 — two holes the R2A-6 matrix left. (1) The ACTOR KIND: R2A-6 re-keyed the wrong-key leg to the operator kind
+    // so the key check could be proved alone, which left `assertAppealActorKind` with no leg of its own on refuse and withdraw (one call in
+    // `lockAppealForDecision`); AC17 asks that "`_as_panel` with 'operator', or 'trustee' with another key, is refused". (2) Every tamper
+    // above uses the PANEL's key; the Pariwar Admin's hear key is the other branch of the same guard (a different permission list entry).
+    const HEAR_ACTS = acts.filter((a) => a.name !== 'undo');
+    const PA_KEY = 'field_worker.hear_ending_appeal';
+    const paAt = (actorId: string, over: { pariwarId?: string } = {}): VerifiedAuthorization => authAt('Patna', { key: PA_KEY, actorId, ...over });
+    /** The Pariwar Admin's path: the operator kind, the decider's actor id (not the ender's), on an appeal the Pariwar Admin hears. */
+    const PA_PATH = { actor: 'operator' as const, actorId: STAFF };
+
+    it.each(HEAR_ACTS.map((a) => [a.name, a] as const))('%s: the Pariwar Admin\'s path is a valid input - the control for the legs below', async (_name, act) => {
+      const { client, calls } = appealStub({ heardBy: 'pariwar_admin' });
+      await act.run(client, { ...PA_PATH, authorization: paAt(STAFF) }); // a rejection fails the test
+      expect(calls.length).toBeGreaterThan(0);
+    });
+
+    it.each(HEAR_ACTS.map((a) => [a.name, a] as const))('%s: the actor KIND - `_as_panel` with the operator kind, the Pariwar Admin\'s key with the trustee kind - is refused, nothing sent', async (_name, act) => {
+      const cases: ReadonlyArray<readonly [string, Over]> = [
+        ['the Panel key with the operator kind', { actor: 'operator' }],
+        ['the Pariwar Admin key with the trustee kind', { actor: 'trustee', actorId: STAFF, authorization: paAt(STAFF) }],
+      ];
+      for (const [label, over] of cases) {
+        const { client, calls } = appealStub();
+        await expect(act.run(client, over), label).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+        expect(calls, label).toEqual([]);
+      }
+    });
+
+    it('undo: the slip\'s key with the trustee kind is refused, nothing sent (the undo is never the Panel\'s act)', async () => {
+      const undo = acts.find((a) => a.name === 'undo')!;
+      const { client, calls } = appealStub();
+      await expect(undo.run(client, { actor: 'trustee' })).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+      expect(calls).toEqual([]);
+    });
+
+    it.each(HEAR_ACTS.map((a) => [a.name, a] as const))('%s: under the PARIWAR ADMIN\'s key too - a literal, a wrong dimension, another actor\'s, another Pariwar\'s authorization - refused, nothing sent', async (_name, act) => {
+      const tampers: ReadonlyArray<readonly [string, VerifiedAuthorization | Record<string, unknown>]> = [
+        ['an object LITERAL (not verified)', { ...paAt(STAFF) }],
+        ['the RIGHT key at the wrong DIMENSION (pariwar)', keyAtPariwar(PA_KEY)],
+        ['another actor\'s result', paAt(OTHER_ACTOR)],
+        ['another Pariwar\'s result', paAt(STAFF, { pariwarId: OTHER_P })],
+      ];
+      for (const [label, authorization] of tampers) {
+        const { client, calls } = appealStub({ heardBy: 'pariwar_admin' });
+        await expect(act.run(client, { ...PA_PATH, authorization }), label).rejects.toBeInstanceOf(FieldWorkerProjectorInputError);
+        expect(calls, label).toEqual([]);
+      }
+    });
   });
 });

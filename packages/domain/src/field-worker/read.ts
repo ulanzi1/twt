@@ -24,6 +24,7 @@ import type { FieldWorkerEndingAppealHearer } from '../schema/field_worker_endin
 import { fieldWorkers, type FieldWorkerReasonCode, type FieldWorkerState } from '../schema/field_workers.js';
 import { users } from '../schema/users.js';
 import { pageWorkplaceDistricts } from '../member/workplace.js';
+import { FIELD_WORKER_APPEALS_PER_ENDING } from './ending-appeal-events.js';
 import { FieldWorkerCaptureNotFoundError, FieldWorkerCursorInvalidError, FieldWorkerDistrictUnknownError } from './errors.js';
 import { foldFieldWorkerProjection, type FieldWorkerProjection } from './state.js';
 
@@ -684,6 +685,15 @@ export interface FieldWorkerPreviousEnding {
 /**
  * AD11 — this Pariwar's TERMINATED workers holding `mobileBlindIndex` (every district), `ended_on DESC, field_worker_id`, at most 5.
  * Decrypts nothing (the index is a keyed hash). The register route's ended pre-check, after the live one.
+ *
+ * ⚠ DELIBERATE (checklist family 9; code review round 2, R2A-4): this read does NOT narrow to the registering officer's district — it
+ * looks across EVERY district of the Pariwar. Rationale: the officer who registers a number must be told it once belonged to an ended
+ * worker wherever that worker served, because a worker who left one district is registered again in another (Q3 A anticipated "an
+ * officer of another district"; AD11). What it returns is bounded to a date and a reason code plus the record's id — never a name, a
+ * district or an officer — and the route writes an audit line for every showing (`field_worker.previous_endings_shown`, I7).
+ * ⚠ Re-examine when (1) Story 13.6 adds conduct reasons: a reason shown here would then say more about a person than "left" or
+ * "inactive" (13.1f C3 — the Panel's); or (2) row `13-1h` widens the match from the mobile to the PAN, so that more records match a
+ * registration (13.1f C6). Until then, an undocumented widening of this predicate is a finding.
  */
 export async function findEndedFieldWorkersByMobileIndex(
   db: Db,
@@ -801,9 +811,12 @@ export function decodeAppealEligibleCursor(s: unknown): { readonly endedOn: stri
 }
 
 /**
- * AD13 — this Pariwar's TERMINATED workers whose CURRENT ending (AD17: the terminated event at `state_event_version`) has no OPEN or
- * REFUSED appeal and whose hearer is one of `hearers` (the hear keys the reader holds — the API decides, `_as_panel` counted only from a
- * non-`global` grant), optionally of ONE district; `ended_on DESC, field_worker_id DESC`. An empty `hearers` reads nothing.
+ * AD13 — this Pariwar's TERMINATED workers whose CURRENT ending (AD17: the terminated event at `state_event_version`) has no OPEN appeal
+ * and fewer REFUSED appeals than `FIELD_WORKER_APPEALS_PER_ENDING` (the lodge command's own limit — ONE constant, read in two places,
+ * the lodge command and this SQL, so that the Panel's answer changing it changes both; code review round 2, R2A-3) and whose hearer is
+ * one of `hearers` (the hear keys the reader holds — the API decides, `_as_panel` counted only from a non-`global` grant), optionally
+ * of ONE district; `ended_on DESC, field_worker_id DESC`. An empty `hearers` reads nothing. `appealsPerEnding` is that limit's override
+ * for the live spec that proves this read follows the constant; no route passes it.
  */
 export async function pageAppealEligibleFieldWorkers(
   db: Db,
@@ -813,10 +826,15 @@ export async function pageAppealEligibleFieldWorkers(
     hearers: readonly FieldWorkerEndingAppealHearer[];
     after?: { readonly endedOn: string; readonly fieldWorkerId: FieldWorkerId };
     limit?: number;
+    appealsPerEnding?: number;
   },
 ): Promise<{ items: FieldWorkerAppealEligibleRow[]; nextCursor: string | null }> {
   if (opts.limit !== undefined && !Number.isInteger(opts.limit)) {
     throw new RangeError(`pageAppealEligibleFieldWorkers: limit must be an integer, got ${String(opts.limit)}`);
+  }
+  const appealsPerEnding = opts.appealsPerEnding ?? FIELD_WORKER_APPEALS_PER_ENDING;
+  if (!Number.isInteger(appealsPerEnding) || appealsPerEnding < 1) {
+    throw new RangeError(`pageAppealEligibleFieldWorkers: appealsPerEnding must be a positive integer, got ${String(appealsPerEnding)}`);
   }
   if (opts.hearers.length === 0) return { items: [], nextCursor: null };
   if (opts.district !== undefined && opts.district.includes(NUL)) return { items: [], nextCursor: null };
@@ -835,7 +853,11 @@ export async function pageAppealEligibleFieldWorkers(
        AND NOT EXISTS (
          SELECT 1 FROM field_worker_ending_appeals a
           WHERE a.pariwar_id = fw.pariwar_id AND a.field_worker_id = fw.field_worker_id
-            AND a.ending_event_version = fw.state_event_version AND a.state IN ('open', 'refused'))
+            AND a.ending_event_version = fw.state_event_version AND a.state = 'open')
+       AND (
+         SELECT count(*) FROM field_worker_ending_appeals a
+          WHERE a.pariwar_id = fw.pariwar_id AND a.field_worker_id = fw.field_worker_id
+            AND a.ending_event_version = fw.state_event_version AND a.state = 'refused') < ${appealsPerEnding}::int
      ORDER BY fw.ended_on DESC, fw.field_worker_id DESC
      LIMIT ${fetch}`);
   const rows = res.rows as {

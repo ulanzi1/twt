@@ -22,7 +22,9 @@
 // No whitespace is needed before a quote or a comment (`UPDATE"t"`, `UPDATE/**/t`); up to two qualifiers, quoted or bare (R5-1). DELETE and TRUNCATE are
 // deliberately NOT flagged: 0207's triggers refuse both for every role (code review CR32); a `COPY ... TO` (a read) is flagged - fail closed.
 // ⚠ What it cannot see: SQL assembled from fragments across variables (a `let` built up, a helper returning a fragment), a table name
-// computed at run time, a SQL-name constant IMPORTED from another module (the aliases are per file), nested or assignment destructuring, a write method reached by `.call` / `.apply` / `.bind` or a computed name, a table passed through a function's
+// computed at run time, a SQL-name constant IMPORTED from another module (the aliases are per file), the TABLE imported under a name the
+// exporting file chose (`export { fieldWorkerEndingAppeals as appeals }` - nothing in the importing file names it), a function that
+// RETURNS the table (`const tbl = () => fieldWorkerEndingAppeals`), nested or assignment destructuring, a write method reached by `.call` / `.apply` / `.bind` or a computed name, a table passed through a function's
 // parameter, `sql.raw` / `sql.identifier` given a name built at run time, a symlinked directory, `.sql` files, and code outside the scanned
 // roots (check.ts). The DB trigger (0207) is the independent RUNTIME guard; both are required.
 
@@ -50,13 +52,20 @@ const GAP = String.raw`(?:(?:\s|${COMMENT})+|(?="|\/\*|--))`;
 // Up to two qualifiers (`schema.`, `db.schema.`), quoted (`"my-schema"`, `""` inside) or bare - or a bare dot, a substitution's gap.
 const QUALIFIER = String.raw`(?:(?:(?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)\s*)?\.\s*){0,2}`;
 // ⛔ followed by a dot: `field_worker_ending_appeals.id` names a COLUMN of the table (a `-- copy` comment before it in a read is not a write).
+// Code review round 2, R2B-6: a comment is whitespace to Postgres BETWEEN the two words of `INSERT INTO` / `MERGE INTO` too
+// (`INSERT /* x */ INTO t`), so those two take the same GAP as every other token boundary - they used a bare `\s+` and missed it.
 const RAW_WRITE = new RegExp(
-  String.raw`\b(?:insert\s+into|update|merge\s+into|copy)${GAP}(?:only${GAP})?${QUALIFIER}"?field_worker_ending_appeals"?(?![a-z0-9_$])(?!\s*\.)`,
+  String.raw`\b(?:insert${GAP}into|update|merge${GAP}into|copy)${GAP}(?:only${GAP})?${QUALIFIER}"?field_worker_ending_appeals"?(?![a-z0-9_$])(?!\s*\.)`,
   'i',
 );
-/** A string that IS the table's SQL name, quoted or qualified or not - held in a constant, it reads as the table in a substitution (R4-6). */
-const SQL_NAME_ONLY = /^\s*(?:"?[a-z_][a-z0-9_$]*"?\s*\.\s*)?"?field_worker_ending_appeals"?\s*$/i;
-const WRITER_SETTING = /app\.field_worker_ending_appeal_writer/;
+/**
+ * A string that IS the table's SQL name, quoted or qualified or not - held in a constant, it reads as the table in a substitution (R4-6).
+ * R2B-6: the SAME qualifier grammar as `RAW_WRITE` (up to two, quoted with any characters or bare); it took one bare qualifier, so
+ * `const T = 'twt.app.field_worker_ending_appeals'` or a quoted `"my-schema"` was not recognised and `UPDATE ${T}` read as `UPDATE  SET`.
+ */
+const SQL_NAME_ONLY = new RegExp(String.raw`^\s*${QUALIFIER}"?field_worker_ending_appeals"?\s*$`, 'i');
+// R2B-6: Postgres compares setting names case-insensitively (`SET LOCAL APP.Field_Worker_Ending_Appeal_Writer` unlocks the trigger too).
+const WRITER_SETTING = /app\.field_worker_ending_appeal_writer/i;
 
 function unwrap(expr: ts.Expression): ts.Expression {
   let e = expr;
@@ -84,6 +93,10 @@ interface Aliases {
   sqlProps: Set<string>;
 }
 
+/** `??`, `||` and `&&`: an expression that evaluates to ONE of its operands. */
+const isChoiceOperator = (k: ts.SyntaxKind): boolean =>
+  k === ts.SyntaxKind.QuestionQuestionToken || k === ts.SyntaxKind.BarBarToken || k === ts.SyntaxKind.AmpersandAmpersandToken;
+
 const stringKey = (e: ts.Expression): string | undefined => {
   const a = unwrap(e);
   return ts.isStringLiteral(a) || ts.isNoSubstitutionTemplateLiteral(a) ? a.text : undefined;
@@ -92,6 +105,9 @@ const stringKey = (e: ts.Expression): string | undefined => {
 /** True for `fieldWorkerEndingAppeals`, `<ns>.fieldWorkerEndingAppeals`, `<ns>['fieldWorkerEndingAppeals']` or what is bound to it, under any wrapper. */
 function isTable(expr: ts.Expression, aliases: Aliases): boolean {
   const e = unwrap(expr);
+  // R2B-6: either arm of a conditional, or either operand of `??` / `||` / `&&`, may BE the table - fail closed.
+  if (ts.isConditionalExpression(e)) return isTable(e.whenTrue, aliases) || isTable(e.whenFalse, aliases);
+  if (ts.isBinaryExpression(e) && isChoiceOperator(e.operatorToken.kind)) return isTable(e.left, aliases) || isTable(e.right, aliases);
   if (ts.isIdentifier(e)) return e.text === TABLE || aliases.names.has(e.text);
   if (ts.isPropertyAccessExpression(e)) return e.name.text === TABLE || aliases.props.has(e.name.text);
   if (ts.isElementAccessExpression(e)) {
@@ -126,6 +142,16 @@ function collectAliases(sf: ts.SourceFile): Aliases {
   };
   const walk = (node: ts.Node): void => {
     if (ts.isImportSpecifier(node) && (node.propertyName ?? node.name).text === TABLE) add(aliases.names, node.name.text);
+    // R2B-6: a class field (`t = fieldWorkerEndingAppeals`, read as `this.t`) and a parameter default (`(db, t = fieldWorkerEndingAppeals)`)
+    // bind the table to a name too - only a `const` / `let`, an assignment and an object literal did.
+    if (ts.isPropertyDeclaration(node) && node.initializer !== undefined && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))) {
+      if (isTable(node.initializer, aliases)) add(aliases.props, node.name.text);
+      if (holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, node.name.text);
+    }
+    if (ts.isParameter(node) && node.initializer !== undefined && ts.isIdentifier(node.name)) {
+      if (isTable(node.initializer, aliases)) add(aliases.names, node.name.text);
+      if (holdsSqlName(node.initializer, aliases)) add(aliases.sqlNames, node.name.text);
+    }
     if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
       const init = unwrap(node.initializer);
       if (ts.isIdentifier(node.name) && isTable(node.initializer, aliases)) add(aliases.names, node.name.text);
@@ -215,6 +241,9 @@ function enclosingFunctionName(node: ts.Node): string | undefined {
 /** True for an expression that holds the table's SQL name: the string itself, or a name / property bound to it (R5-2). */
 function holdsSqlName(expr: ts.Expression, aliases: Aliases): boolean {
   const e = unwrap(expr);
+  // R2B-6: either arm of a conditional / either operand of `??` `||` `&&` - fail closed, as `isTable` does.
+  if (ts.isConditionalExpression(e)) return holdsSqlName(e.whenTrue, aliases) || holdsSqlName(e.whenFalse, aliases);
+  if (ts.isBinaryExpression(e) && isChoiceOperator(e.operatorToken.kind)) return holdsSqlName(e.left, aliases) || holdsSqlName(e.right, aliases);
   const text = stringKey(e);
   if (text !== undefined) return SQL_NAME_ONLY.test(text);
   if (ts.isIdentifier(e)) return aliases.sqlNames.has(e.text);
@@ -303,6 +332,12 @@ export function scanEndingAppealWrites(file: string, source: string): EndingAppe
         return t !== null && RAW_WRITE.test(t);
       });
       if (!alone && RAW_WRITE.test(joined)) add(node, 'raw SQL write to field_worker_ending_appeals');
+      // R2B-6: the writer setting split across a `+` chain (`'SET LOCAL app.field_worker_ending_' + 'appeal_writer = on'`) reads joined too.
+      const settingAlone = leaves.some((l) => {
+        const t = literalText(l, aliases);
+        return t !== null && WRITER_SETTING.test(t);
+      });
+      if (!settingAlone && WRITER_SETTING.test(joined)) add(node, 'the app.field_worker_ending_appeal_writer setting');
     }
     if (ts.isCallExpression(node)) {
       const method = writeVerb(node.expression);

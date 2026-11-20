@@ -13,13 +13,12 @@ import {
   postFieldWorker,
   recordFieldWorkerKycCompleted,
   suspendFieldWorker,
-  terminateFieldWorker,
 } from '../../../src/field-worker/commands.js';
 import { LIST_FIELD_WORKER_EVENTS_MAX_LIMIT, listFieldWorkerEvents } from '../../../src/field-worker/read.js';
 import { fieldWorkerId as toFieldWorkerId, pariwarId as toPariwarId, type FieldWorkerId } from '../../../src/ids/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import { PARIWAR_A, PARIWAR_B, enterAppScope } from '../_helpers.js';
-import { actAuthorization, approval, moveAuthorization, registerReal } from './_fixtures.js';
+import { actAuthorization, approval, moveAuthorization, registerReal, terminateAtCurrentVersion } from './_fixtures.js';
 
 const A = toPariwarId(PARIWAR_A);
 
@@ -48,7 +47,7 @@ describe.skipIf(!hasDatabase)('listFieldWorkerEvents — the worker’s log (Sto
     await suspendFieldWorker(client, { ...staff(id, asha), authorization: actAuthorization('field_worker.suspend', PARIWAR_A, 'Patna', asha), reasonCode: 'under_review' });
     await postFieldWorker(client, { ...staff(id, asha), toDistrict: 'Gaya', expectedFromDistrict: 'Patna', authorization: moveAuthorization(PARIWAR_A, 'Gaya', asha), reasonCode: 'reassigned' });
     const today = await istToday(client);
-    await terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...staff(id, asha), authorization: actAuthorization('field_worker.terminate', PARIWAR_A, 'Gaya', asha), reasonCode: 'died', endedOn: today });
+    await terminateAtCurrentVersion(client, { appealHeardBy: 'pariwar_admin', ...staff(id, asha), authorization: actAuthorization('field_worker.terminate', PARIWAR_A, 'Gaya', asha), reasonCode: 'died', endedOn: today });
 
     const page = await listFieldWorkerEvents(bindScopedDb(client), A, id);
     expect(page).not.toBeNull();

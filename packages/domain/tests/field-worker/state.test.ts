@@ -186,6 +186,21 @@ describe('the undo arm — payload-dependent, answered BEFORE the table (AD3)', 
     expect(nextFieldWorkerState('terminated', 'field_worker.posted', { to_state: 'active' })).toBeNull();
   });
 
+  // Code review round 2, R2B-15: the old agreement loop above filters the undo out, and the fold has its own malformed-undo leg, but nothing asserted
+  // the REDUCER's side of TR1: "a bad payload => null, and the reducer's identity" - `step` returns the state it was given, never another one.
+  it('TR1: `fieldWorkerStateMachine.step` is the IDENTITY for an undo with no payload or a bad one, and for an undo from any state but `terminated`; with a valid one it answers the target', () => {
+    for (const bad of [undefined, null, {}, 'x', 7, { to_state: 'terminated', reason_code: null }, { to_state: 'active' }, { to_state: 'suspended', reason_code: 'inactive' }]) {
+      expect(fieldWorkerStateMachine.step('terminated', { type: 'field_worker.ending_undone', payload: bad as never }), JSON.stringify(bad) ?? 'undefined').toBe('terminated');
+    }
+    for (const row of FIELD_WORKER_UNDO_TRANSITIONS) {
+      const payload = { to_state: row.to, reason_code: row.to === 'suspended' ? 'under_review' : null };
+      expect(fieldWorkerStateMachine.step('terminated', { type: 'field_worker.ending_undone', payload }), row.to).toBe(row.to); // CONTROL — a valid payload moves
+      for (const s of ['pending_kyc', 'active', 'suspended'] as const) {
+        expect(fieldWorkerStateMachine.step(s, { type: 'field_worker.ending_undone', payload }), `${s} + undo`).toBe(s);
+      }
+    }
+  });
+
   it('the state machine and replayFieldWorkerState fold the undo (reduce passes the payload)', () => {
     v = 0;
     const s = [registered(), kyc(), activated(), terminated('active'), undone('active', null, 4)];

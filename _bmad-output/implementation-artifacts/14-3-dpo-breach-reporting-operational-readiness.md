@@ -64,7 +64,7 @@ LETTERS: **G** = found facts (G1–G22); **DL** = build decisions (DL1–DL14, P
 
 # Story 14.3: DPO + Breach-Reporting Operational Readiness — the Trust Can Tell the Board and Every Affected Person on Time, and Knows Who Answers
 
-Status: ready-for-dev
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** Under India's DPDP Act 2023 (s.8(6)) and DPDP Rules 2025 (Rule 7), **every** Data Fiduciary
 > that suffers a personal data breach must tell **each affected person** "without delay", tell the **Data Protection Board** "without
@@ -699,7 +699,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - [x] **Task 6 — Admin (AC12, AC9, AC10, AC11)** — module + route + nav + `BreachGateView` / local `AccessDenied` + `hasBreachManage` +
       client / hooks additions in `api/client.ts` / `api/hooks.ts` (query keys, invalidation, `newIdempotencyKey()` in a `useRef`) + the
       two-way IST helper in `correction-chase/ist.ts`; `microcopy.yaml` entries only for files the gate flags (AC13); tests.
-- [ ] **Task 7 — Gate + records (AC13)** — `ci:local` on a fresh container; story Completion Notes (including AC10's narrowing, the
+- [x] **Task 7 — Gate + records (AC13)** — `ci:local` on a fresh container; story Completion Notes (including AC10's narrowing, the
       migration `when` re-check against the open siblings (DL4), the Row 26 `members` grant residual, and every un-attested item: ⛔ table-top run, ⛔ sign-off, ⛔ counsel
       return, ⛔ device / browser pass, the Gazette re-check if it was un-attested); File List; ledger (next free letter); row → review.
 
@@ -1047,7 +1047,100 @@ current version — left alone.
 - ⚠ **UN-ATTESTED: no real-browser pass.** Everything above is jsdom. The pages have not been opened in a browser, so layout,
   the native `datetime-local` control, the clipboard permission prompt and focus behaviour are unverified.
 
+**(d10) Task 7 — 2026-11-20 (the gate and the records; AC13).** `DATABASE_URL=…:5490… pnpm ci:local` at `4c2c1bae`, clean tree,
+fresh container `twt-143-gate`: `ci:local PASSED — 40 job(s) green`, first run, no re-run. The log shows each new test file ran
+and passed, and `drizzle.__drizzle_migrations` holds 208 rows on that database. `origin/main` was re-fetched afterwards: still
+`a7c99c6a`. Ledger `2026-11-20h` (free on every worktree and on main); row `in-progress -> review`. Added after the gate, docs
+only: the `(g)` line for this surface in `docs/access-wrapper-invariants.md` (the 12.2 / 13.1 precedent — found while the gate
+ran, and held back so the tree the gate judged stayed untouched).
+
 ### Completion Notes List
+
+**Story 14.3 — implemented 2026-11-20 by `bmad-dev-story 14.3` on `story/14-3-dpo-breach-reporting-operational-readiness` (own worktree), rebased onto `origin/main` `a7c99c6a`. Not pushed. Nothing is live.**
+
+**What exists now**
+- **Governance (AC1):** decision `2026-11-20-467` (author-commit, committed alone `1bfc9053`) — breach reporting binds EVERY Data
+  Fiduciary (DPDP Act s.8(6), Rules 2025 Rule 7 — read in the e-Gazette on 2026-11-20); only the DPO waits on an SDF
+  notification. Roster **Row 53** `dpdpa-breach-and-dpo-readiness` (six legs, all OPEN) with dated lines at Rows 8 and 48; ten
+  dated annotations (PRD ×4, `epics.md` ×6); review-artifact Row 18 and escrow Domain 7 dated lines; four `deferred-work.md`
+  items; 13.1a C6 and 13.1b C3 discharged.
+- **Runbooks (AC2):** `personal-data-breach-response.md`, `dpo-appointment-and-sdf-watch.md`, `breach-tabletop-exercise.md` —
+  DRAFTS, unsigned; on-call playbook §2.13 and §3 updated.
+- **Permission (AC3):** `breach.manage`, catalog 63 → 64 (95 keys), Super Admin only; no `dpo` role.
+- **Register (AC4–AC7):** migration `0208` — two global append-only tables, RLS forced with zero policies, no `twt_app` grant;
+  the domain module; six routes under `/api/v1/data-protection`; both writes need an `Idempotency-Key`; the detail read is audited.
+- **One derivation and three drafts (AC8, AC9):** `deriveBreachIncidentView`, `buildBreachDrafts` in `@twt/contracts`.
+- **Signals and the count (AC10, AC11 arm (a)):** failed, unacknowledged audit-chain checks with "open an incident from this";
+  members on record, trust-wide.
+- **Admin (AC12):** `/data-protection/breaches` and `/data-protection/breaches/$incidentId`.
+
+**AC10's narrowing, stated as the AC requires.** ONE detection signal is wired — a failed, unacknowledged
+`audit_integrity_checks` row. Story 4.8's validity-cache alerts, Story 1.16b's PII-scrape gate and architecture §2.12's five
+signals (cross-tenant read anomaly, PII export volume, RLS-bypass attempts, out-of-hours privileged sessions, Class-A dead-letter
+build-up) are NOT wired: none has a persisted signal to read. They are a triage table in the breach runbook and a
+`deferred-work.md` item (Category 5). ⚠ Nothing built ALERTS anyone to a breach: the integrity alerter only logs, and its nightly
+check runs on a CI database, not production.
+
+**Departures from the story's wording — each the session's call, none BigDev's**
+1. **DL4 / DL6 — the in-lock check does not call the contracts derivation.** `@twt/contracts` depends on `@twt/domain`, so the
+   domain cannot import it. The domain carries two small pure rules (`isBreachIncidentClosed`, `breachBoardReportDueAt`); a
+   contracts test pins them equal to `deriveBreachIncidentView` on eight fixtures. Same behaviour; one more place to read.
+2. **Task 0.6 was closed with Task 1**, not before it: the "discharged" lines under 13.1a C6 / 13.1b C3 were written only once
+   the runbook section that discharges them existed.
+3. **AC11 arm (b) is struck by BigDev's answer** but its text stays in the AC (a dev run may not edit ACs).
+4. **An `assessment` may be partial** (blank narrative, no categories, unknown count) — needed for an early assessment and for
+   AC9's "empty assessment" leg.
+5. **The view carries more than DL6 lists** (mitigations, findings, remedial measures, recorded notices, timeline events) so
+   `buildBreachDrafts(view)` keeps DL7's signature; the LIST item is a separate schema with flags only.
+6. **Tests after code in Tasks 5 and 6** (the API spec and the admin page tests). Compensated by sanity runs: the
+   forced-pagination gate and the access-wrapper gate were each shown to bite on the new surface, and three mutations of the
+   admin code each failed a page test.
+7. **Added, not asked for:** a source fence that the API and domain breach modules import no channel, queue or mail client
+   (N1 / TR5); a domain test that the breach module never calls the audit wrapper (the 12.2 / 13.1 precedent); CHECKs that a
+   payload is a JSON object and a display snapshot is non-blank.
+
+**Residuals — recorded, not fixed**
+- **Row 26 (shared service-login grants):** `twt_service` holds NO grant on `members`, so `GET …/members-on-record` will fail
+  42501 on a production service login until that row's grant work lands; every test here connects as a superuser, which hides it.
+  `0208` adds no grant on `members` (DL9). The breach tables' own grants ARE executed under a BYPASSRLS role IN ROLE
+  `twt_service` (AC4).
+- **Migration `when`:** `0208` = 1797996600050, above main's `0207` (1797910200000) and above the open siblings read today —
+  `story/6-22b-…` (1796701200043) and `story/6-39-…` (1796182800037). Whichever of 14.3 / 6.22b / 6.39 lands later re-checks at
+  its own rebase.
+- **The 503 `idempotency.record_failed` leg** (the write committed, the record did not) is reasoned from the code, not executed
+  by a test.
+- **A read on window focus is an audited read:** the admin's query client refetches on focus, and each detail fetch writes one
+  `data_protection.breach.viewed` line. Accurate, but it will add lines for an open tab. Not changed.
+
+**UN-ATTESTED — nothing below was done, and nothing in the repo says it was**
+- ⛔ No table-top exercise has been run (Row 53 (b)).
+- ⛔ No runbook is signed; `operational-readiness-ledger.md` is untouched (Row 53 (a)).
+- ⛔ No breach owner, DPO or Row 8 contact is named anywhere (`[PENDING PQ1]`).
+- ⛔ The Panel note is NOT sent; ⛔ the counsel file is NOT sent; counsel has returned nothing (Row 53 (c), (d); Row 18 stays
+  `pending-submission`).
+- ⛔ No real-browser or device pass: the admin pages are tested in jsdom only.
+- **The Gazette re-check is PARTLY attested.** Read from primary sources on 2026-11-20: the Rules (G.S.R. 846(E)), the Act's
+  commencement notification (G.S.R. 843(E)) and the Act. NOT attested — secondary sources only, "none found": any amendment to
+  the commencement periods, any SDF notification, the Board's functional status and filing route. NOT read at all: corrigendum
+  G.S.R. 892(E), a second corrigendum one page names (G.S.R. 113(E)), and — on this date — the CERT-In Directions (unreachable).
+- **Found in the reading:** the Gazette issues are dated 13 Nov 2025 and stamped 14 Nov 2025, so commencement is 13 OR 14 May
+  2027. 13 May is used as the target; the point is in the counsel file (CQ1 (b)).
+
+**For BigDev**
+- Send the Panel note (`trustee-panel-routing-note-2026-11-20-14-3-who-owns-a-breach.md`) and the counsel file
+  (`counsel-question-2026-11-01-14-3-breach-and-dpo.md`) — both written, neither sent.
+- The branch is local only: 3 rebased story commits + this run's commits on `a7c99c6a`. A push needs
+  `DATABASE_URL=<this story's port>` prefixed (the shell's default points at :5432).
+- Containers this run started and left running: `twt-143-pg` (:5489, dev) and `twt-143-gate` (:5490, the gate).
+
+**The gate (AC13)**
+- `pnpm ci:local` — **40 of 40 jobs green in ONE run**, on a FRESH container (`twt-143-gate`, `postgres:16.16-alpine`, port
+  5490, DB `twt_dev`), at `4c2c1bae` with a clean tree. The integration job applied all 208 migrations from empty (`0208` on a
+  fresh database) and ran this story's specs (the regression spec 13, the race 3, the API spec 30); the unit job ran the
+  contracts 40, the admin 13 + 6, the two fences.
+- After that run only records and one documentation line changed (`docs/access-wrapper-invariants.md`, the story file,
+  `sprint-status.yaml`); no gate reads them except `pii-scrape` over `.decision-log.md`, which is unchanged since the run.
+- Not run: GitHub CI (nothing is pushed).
 
 ### File List
 
@@ -1095,6 +1188,7 @@ current version — left alone.
 - `apps/admin/tests/breach-reporting-page.test.tsx` — NEW
 - `apps/admin/tests/ist-local-input.test.ts` — NEW
 - `microcopy.yaml` — MODIFIED (one allow-list entry)
+- `docs/access-wrapper-invariants.md` — MODIFIED (the data-protection surface in the scope list)
 - `docs/runbooks/personal-data-breach-response.md` — NEW
 - `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
 - `docs/runbooks/breach-tabletop-exercise.md` — NEW
@@ -1138,3 +1232,7 @@ current version — left alone.
   `2026-11-20-467` committed alone; roster Row 53; the PQ1 note and the counsel file written, ⛔ sent; ten dated annotations; the
   deferred-work section. Found: the Gazette's two dates (13 / 14 May 2027). Un-attested: the "none found" negatives; corrigendum
   G.S.R. 892(E). Task 0.6 left open until Task 1's runbook section exists. ⛔ Code yet.
+- 2026-11-20 — v1.5: `bmad-dev-story 14.3` complete — Tasks 1–7. Three runbooks (drafts); `breach.manage` (catalog 64); migration
+  `0208` and the domain module; contracts (the one derivation, the three drafts); six API routes; the admin pages; OpenAPI; the
+  access-wrapper gate scans the surface. `ci:local` 40 / 40 on a fresh container at `4c2c1bae`. Status `review`. Departures and
+  every un-attested item are in the Completion Notes. ⛔ Pushed. ⛔ Panel note or counsel file sent.

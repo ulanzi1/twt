@@ -687,7 +687,7 @@ items marked [S] are secondary).** ⚠ Verify against the e-Gazette at Task 0.1 
 - [x] **Task 4 — Contracts (AC5–AC9)** — `packages/contracts/src/breach/` (`schemas.ts`, `derive.ts`, `drafts.ts`, `index.ts`; re-export from
       `src/index.ts`); tuples mirrored + pinned to the domain export; unit tests for derive + drafts
       ([[project_contracts_tests_outside_tsc]] — run them, typecheck does ⛔ see them).
-- [ ] **Task 5 — API (AC5–AC7, AC10, AC11)** — `apps/api/src/modules/data-protection/{index,routes,handlers}.ts` registered in `server.ts`;
+- [x] **Task 5 — API (AC5–AC7, AC10, AC11)** — `apps/api/src/modules/data-protection/{index,routes,handlers}.ts` registered in `server.ts`;
       global guards (⛔ `scopeResolutionHook` / `requirePermissionHook` — TR3); route schemas with `querystring` / `response[200]` (AC7)
       and the read rate limit; handlers in the bridge-switch shape (ids by `randomUUID()` before the audit intent; pre-checks before the
       intent; 23514 ⇒ 400 via a copied `isCheckViolation`; the REQUIRED idempotency key on open AND append in DL5's order); live-DB specs under
@@ -977,6 +977,45 @@ current version — left alone.
 - Two bugs caught by the tests while going green: an impossible calendar date (`2026-02-30`) THREW inside the refinement instead of
   being refused (now guarded); the single-definition test matched its own pattern.
 
+**(d8) Task 5 — 2026-11-20 (the API; AC5–AC7, AC10, AC11, part of AC13).**
+
+- `apps/api/src/modules/data-protection/{index,routes,handlers}.ts`, registered in `server.ts`: six routes, each behind
+  `[requireAdminSession, requireGlobalPermission('breach.manage')]`, each declaring `response[200]`; both collection routes
+  `{ items }` with a bounded `limit`; reads on the `read` rate limit, writes on `write`.
+- **The live-DB spec** `apps/api/tests/integration/data-protection/breach-register.spec.ts` — 30 tests, on `twt-143-pg`: 401 / 403
+  on every route (no role, a Pariwar Admin, a global Auditor — each with an `authz.denied` event and nothing written); open
+  (one row, one `…opened` line, the row carries that line's id; the same key twice ⇒ one incident, the same response; a missing
+  or blank key ⇒ 400; a nameless admin ⇒ 409 with no row and no audit line, and the key is free to retry); one test PER KIND
+  (valid ⇒ 200 + one `…entry_appended` line with the exact locator; invalid ⇒ 400); pre-checked refusals leave ZERO
+  `entry_appended*` lines (404 / extension 400 / 409 closed); idempotency on append incl. a claimed-but-unfinished key ⇒ 409;
+  the detail's one `…viewed` line per read, none on a 404, never a `_rolled_back` twin; the list's exact key set (⛔ narrative)
+  and bounds; overdue; signals by membership + `incidentIds`; members on record.
+  ⚠ Written AFTER the handlers (the one task where the test did not come first); the first run was 28 / 30 — both failures were
+  the spec's own (it sent an EMPTY body to the POSTs, and body validation answers 400 before a `preHandler` guard runs — the
+  repo's convention, as `login-wall.spec.ts` notes). Fixed in the spec; no handler change.
+- **A DB CHECK violation ⇒ 400, executed:** `Date.now` is moved two hours ahead for one request so the contract admits a
+  `becameAwareAt` the database's clock refuses ⇒ 400 `breach.constraint_violation` naming the constraint; no row.
+- **Idempotency as built (DL5's order):** the claim holds for 300 s (a dead claim blocks no longer); the recorded response is
+  replayed for 24 h (`extendTtlSeconds`); a throw before the commit releases the key; a failure to record AFTER the commit is a
+  503 `idempotency.record_failed` and keeps the claim. ⚠ NOT executed by a test: that last 503 leg (it needs the store to fail
+  between a commit and its record) — reasoned from the code only.
+- **Sanity, each run and reverted:** (1) `forced-pagination.spec.ts` EXAMINES the new routes — the signals route with no
+  `maximum` on `limit` turned it red ("expected [ '/api/v1/data-protection/signals' ] to deeply equal []"); (2)
+  `pnpm access-wrapper:check` with a direct `audit.writeAuditEntry(…)` planted in `handlers.ts` ⇒ RED (exit 1), green again
+  once removed. `DATA_PROTECTION_ROOTS` (its own const) + the README paragraph + a domain test that the breach module never calls
+  the wrapper (the 12.2 / 13.1 precedent — the gate sees the `audit.` call shape only).
+- **OpenAPI:** six `registerPath` entries + six components in `packages/contracts/scripts/emit-openapi.ts`; `pnpm
+  contracts:emit-openapi` re-run. ⚠ The file's diff shows 541 DELETED lines — YAML anchor renumbering only (`&a78` → `&a82`, …):
+  with anchors resolved, all 188 earlier paths and 246 earlier schemas are unchanged; 5 paths (6 operations) and 6 schemas are
+  added. `contracts:check-openapi-determinism` passes.
+- **Added beyond the task list (small, in scope of N1 / TR5):** `apps/api/tests/unit/data-protection-sends-nothing.test.ts` — a
+  source fence: neither the API module nor the domain breach module imports a channel, a queue or a mail / SMS client, or makes
+  an outbound request (with teeth).
+- `login-wall.spec.ts` (5) and `forced-pagination.spec.ts` (6) pass. API `tsc` + `eslint` clean.
+- ⚠ **A slip in this session's own commit, recorded:** `1671ccf4` (Task 5's code) was committed by a chained command whose
+  earlier step had failed silently — the fence test still sat at `apps/api/tests/` and this story-file record was missing from
+  it. The next commit moves the test to `tests/unit/` and adds this record; no code in `1671ccf4` is wrong.
+
 ### Completion Notes List
 
 ### File List
@@ -1006,6 +1045,15 @@ current version — left alone.
 - `packages/contracts/src/breach/{index,schemas,derive,drafts}.ts` — NEW
 - `packages/contracts/src/index.ts` — MODIFIED (export)
 - `packages/contracts/tests/breach.test.ts` — NEW
+- `apps/api/src/modules/data-protection/{index,routes,handlers}.ts` — NEW
+- `apps/api/src/server.ts` — MODIFIED (module registered)
+- `apps/api/tests/integration/data-protection/breach-register.spec.ts` — NEW
+- `apps/api/tests/unit/data-protection-sends-nothing.test.ts` — NEW
+- `packages/contracts/scripts/emit-openapi.ts` — MODIFIED (six paths, six components)
+- `openapi/v1.yaml` — MODIFIED (emitted)
+- `scripts/access-wrapper-invariants/check.ts` — MODIFIED (`DATA_PROTECTION_ROOTS`)
+- `scripts/access-wrapper-invariants/README.md` — MODIFIED
+- `packages/domain/tests/breach/no-audit-wrapper-in-domain.test.ts` — NEW
 - `docs/runbooks/personal-data-breach-response.md` — NEW
 - `docs/runbooks/dpo-appointment-and-sdf-watch.md` — NEW
 - `docs/runbooks/breach-tabletop-exercise.md` — NEW

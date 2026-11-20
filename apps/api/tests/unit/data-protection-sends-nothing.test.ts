@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOTS = [resolve(HERE, '../src/modules/data-protection'), resolve(HERE, '../../../packages/domain/src/breach')];
+const ROOTS = [resolve(HERE, '../../src/modules/data-protection'), resolve(HERE, '../../../../packages/domain/src/breach')];
 
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');

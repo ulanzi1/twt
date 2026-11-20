@@ -360,7 +360,11 @@ export async function listActedMemberIdsForPool(
       eq(poolColumn, poolId),
       eq(eventsLog.eventType, CONFIRMED_EVENT_TYPE),
       memberFilter,
-    )).as(SELECTED_CONFIRMATIONS);
+    // OFFSET 0 fences THIS subquery too, so the lateral lookup below compares the generated column with a plain text Var. Flattened, the
+    // comparison was `contribution_reversed_event_id = (events_log_1.event_id)::text`: the uuid -> text cast is not leakproof, and from
+    // PostgreSQL 16.16 the planner keeps such a clause out of the index under RLS - the reversal lookup read the pool's every reversal and
+    // FILTERED on the reference (found by GitHub CI on PR #329; reproduced on postgres:16.16-alpine; 16.14 still indexed it).
+    )).offset(sql`0` as unknown as number).as(SELECTED_CONFIRMATIONS);
   const selectRows = () => db.select({
       eventType: eventsLog.eventType,
       eventId: eventsLog.eventId,

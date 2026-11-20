@@ -128,6 +128,8 @@ export function createFieldWorkerEndingAppealHandlers(deps: AppDeps) {
         if (refused >= fieldWorker.FIELD_WORKER_APPEALS_PER_ENDING) {
           throw new fieldWorker.FieldWorkerAppealAlreadyDecidedError(fieldWorkerId, worker.stateEventVersion);
         }
+        // Review R2C-3 - the PURE date shape is judged HERE, before the audit wrapper: a refusal that never reaches the command writes no intent line and no `_rolled_back` twin (I7; the CR12 precedent on terminate's `ended_on`). The COMMAND still judges the shape and the IST bounds - one judge of the bounds.
+        if (!fieldWorker.isCalendarDateString(body.received_on)) throw new fieldWorker.FieldWorkerAppealDateInvalidError('received_on', 'missing_or_malformed');
         const appealId = ids.fieldWorkerEndingAppealId(randomUUID());
         return audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
@@ -185,6 +187,8 @@ export function createFieldWorkerEndingAppealHandlers(deps: AppDeps) {
         const pariwarId = ids.pariwarId(ctx.pariwarId);
         const row = await preReadDecision(ctx, appealId, authorization);
         if (body.outcome === 'allowed') await assertNumberFree(ctx.scopeTx.tx, pariwarId, row.fieldWorkerId);
+        // Review R2C-3 - the PURE date shape is judged HERE, before the audit wrapper: a refusal that never reaches the command writes no intent line and no `_rolled_back` twin (I7; the CR12 precedent on terminate's `ended_on`). The COMMAND still judges the shape and the IST bounds - one judge of the bounds.
+        if (!fieldWorker.isCalendarDateString(body.decided_on)) throw new fieldWorker.FieldWorkerAppealDateInvalidError('decided_on', 'missing_or_malformed');
         const eventType = body.outcome === 'allowed' ? 'field_worker_ending_appeal.allowed' : 'field_worker_ending_appeal.refused';
         return audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
@@ -227,6 +231,8 @@ export function createFieldWorkerEndingAppealHandlers(deps: AppDeps) {
       async (ctx): Promise<FieldWorkerEndingAppeal> => {
         const pariwarId = ids.pariwarId(ctx.pariwarId);
         const row = await preReadDecision(ctx, appealId, authorization);
+        // Review R2C-3 - the PURE date shape is judged HERE, before the audit wrapper: a refusal that never reaches the command writes no intent line and no `_rolled_back` twin (I7; the CR12 precedent on terminate's `ended_on`). The COMMAND still judges the shape and the IST bounds - one judge of the bounds.
+        if (!fieldWorker.isCalendarDateString(body.decided_on)) throw new fieldWorker.FieldWorkerAppealDateInvalidError('decided_on', 'missing_or_malformed');
         return audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {
             pariwarId: ctx.pariwarId,

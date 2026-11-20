@@ -22,6 +22,7 @@ import {
   FieldWorkerIdentityUnreadableError,
   codeNotAvailableError,
   mapFieldWorkerError,
+  numberPreviouslyEndedError,
 } from '../../src/modules/field-worker/errors.js';
 
 const FW = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
@@ -161,5 +162,44 @@ describe('mapFieldWorkerError — Story 13.1d, the move request', () => {
     expect(mapped(new fieldWorker.FieldWorkerMoveRequestNotOpenError(MR, 'superseded')).details).toEqual({ state: 'superseded' });
     const persist = new fieldWorker.FieldWorkerMoveRequestPersistError(MR, new Error('x'));
     expect(thrown(persist)).toBe(persist);
+  });
+});
+
+// Story 13.1f (the "Errors" table; `-465` Q6 B) — the undo, the appeal and the link. Code review round 2, R2C-9: Task 5.1 was checked and this file
+// was untouched, so a dropped row answered 500 and nothing went red. ⛔ An id, a hearer or a name in any message: ids, states and codes only.
+describe('mapFieldWorkerError — Story 13.1f, the undo, the appeal and the link', () => {
+  const AP = 'c3d4e5f6-0718-4293-a4b5-c6d7e8f90a1b';
+  it.each([
+    ['FieldWorkerStateChangedError (R2A-2: an End from a screen that is out of date)', 409, 'field_worker.state_changed', new fieldWorker.FieldWorkerStateChangedError(FW, 4)],
+    ['FieldWorkerEndingChangedError', 409, 'field_worker.ending_changed', new fieldWorker.FieldWorkerEndingChangedError(FW, 3)],
+    ['FieldWorkerNumberRegisteredAgainError', 409, 'field_worker.number_registered_again', new fieldWorker.FieldWorkerNumberRegisteredAgainError(FW)],
+    ['FieldWorkerAppealRefusedByPanelError (`-465` Q6 B)', 409, 'field_worker.appeal_refused_by_panel', new fieldWorker.FieldWorkerAppealRefusedByPanelError(FW, 3)],
+    ['FieldWorkerLinkInvalidError', 422, 'field_worker.link_invalid', new fieldWorker.FieldWorkerLinkInvalidError(FW)],
+    ['FieldWorkerAppealOpenError', 409, 'field_worker.appeal_open', new fieldWorker.FieldWorkerAppealOpenError(FW)],
+    ['FieldWorkerAppealAlreadyDecidedError', 409, 'field_worker.appeal_already_decided', new fieldWorker.FieldWorkerAppealAlreadyDecidedError(FW, 3)],
+    ['FieldWorkerAppealNotOpenError', 409, 'field_worker.appeal_not_open', new fieldWorker.FieldWorkerAppealNotOpenError(AP, 'refused')],
+    ['FieldWorkerAppealWrongHearerError', 409, 'field_worker.appeal_wrong_hearer', new fieldWorker.FieldWorkerAppealWrongHearerError(FW, 'trustee_panel')],
+    ['FieldWorkerAppealDeciderIsEnderError', 409, 'field_worker.appeal_decider_is_ender', new fieldWorker.FieldWorkerAppealDeciderIsEnderError(AP)],
+    ['FieldWorkerAppealDateInvalidError (malformed)', 422, 'field_worker.appeal_date_invalid', new fieldWorker.FieldWorkerAppealDateInvalidError('received_on', 'missing_or_malformed')],
+    ['FieldWorkerAppealDateInvalidError (a bound)', 422, 'field_worker.appeal_date_invalid', new fieldWorker.FieldWorkerAppealDateInvalidError('decided_on', 'before_received')],
+    ['FieldWorkerAppealMissingError (a lost race only - the gate answers 403 first)', 404, 'field_worker.appeal_not_found', new fieldWorker.FieldWorkerAppealMissingError(AP)],
+    ['FieldWorkerAppealStreamConcurrencyError', 409, 'field_worker.stream_conflict', new fieldWorker.FieldWorkerAppealStreamConcurrencyError(AP, 2)],
+  ])('%s ⇒ %i %s', (_n, status, code, err) => {
+    const e = mapped(err);
+    expect([e.statusCode, e.code]).toEqual([status, code]);
+    for (const leak of [FW, AP, 'trustee_panel']) expect(e.message, `${code} leaks ${leak}`).not.toContain(leak);
+  });
+
+  it('appeal_not_open carries the appeal’s state in its details - the one row that does; appeal_open carries none', () => {
+    expect(mapped(new fieldWorker.FieldWorkerAppealNotOpenError(AP, 'superseded')).details).toEqual({ state: 'superseded' });
+    expect(mapped(new fieldWorker.FieldWorkerAppealOpenError(FW)).details).toBeUndefined();
+  });
+
+  it('numberPreviouslyEndedError is the handler’s own ApiError: 409 with the ended records (id, date, reason) and nothing else, passed THROUGH the mapper unchanged', () => {
+    const endings = [{ field_worker_id: FW, ended_on: '2026-11-01', reason_code: 'left_voluntarily' }];
+    const err = numberPreviouslyEndedError(endings);
+    expect(thrown(err)).toBe(err);
+    expect([err.statusCode, err.code, err.details]).toEqual([409, 'field_worker.number_previously_ended', { previous_endings: endings }]);
+    expect(err.message).not.toContain(FW);
   });
 });

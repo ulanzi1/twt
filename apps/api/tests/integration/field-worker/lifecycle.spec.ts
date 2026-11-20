@@ -240,9 +240,15 @@ describe.skipIf(!hasDatabase)('Story 13.1c — move, suspend, reactivate and end
     const da = await h.actor(p, 'district_admin', 'district', 'Patna', 'Ravi District-Admin');
     const code = await codeOf(id);
     const today = await istToday();
-    const r = await h.terminate(da.client, p, id, { reason_code: 'left_voluntarily', ended_on: today });
+    // R2A-2 — the version the screen showed is part of the act's canonical audit hash input (`hashShape`), so the spec names it.
+    const shown = Number((await q<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id]))[0]!.v);
+    const r = await h.terminate(da.client, p, id, { reason_code: 'left_voluntarily', ended_on: today, expected_state_event_version: shown });
     await expectCleanResult(r, id, { district: 'Patna', current_state: 'terminated', state_reason_code: 'left_voluntarily', ended_on: today });
-    await expectOneAct(p, id, da.userId, 'field_worker.terminated', 'field_worker.terminate', 'district_admin', { reason_code: 'left_voluntarily', ended_on: today });
+    await expectOneAct(p, id, da.userId, 'field_worker.terminated', 'field_worker.terminate', 'district_admin', {
+      reason_code: 'left_voluntarily',
+      ended_on: today,
+      expected_state_event_version: shown,
+    });
     expect(await row(id)).toMatchObject({ current_state: 'terminated', state_reason_code: 'left_voluntarily', ended_on: today });
     expect(fieldWorker.acceptsNewAttributions('terminated')).toBe(false);
     const read = await h.code(da.client, p, id);
@@ -310,6 +316,42 @@ describe.skipIf(!hasDatabase)('Story 13.1c — move, suspend, reactivate and end
     ]) {
       await expectRefused(() => run(), p, id, 409, 'field_worker.illegal_transition');
     }
+  });
+
+  // Code review round 2, R2A-2 — terminate carries the version the officer's screen showed. `terminated` is no longer final (13.1f), so a
+  // stale or repeated End would otherwise end a worker a restore has just returned. A pre-read refusal: no event, no audit line.
+  it('R2A-2: a missing or malformed `expected_state_event_version` is 400; a worker ended, then restored, is NOT ended again by the stale screen (409 state_changed, nothing written); the re-read version ends them', async () => {
+    const { p, admin, id } = await setup();
+    const today = await istToday();
+    const version = async () => Number((await q<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id]))[0]!.v);
+    const shown = await version(); // the officer's screen: the worker, active
+    for (const bad of [undefined, null, 0, -1, 1.5, '3']) {
+      await expectRefused(
+        () => h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today, expected_state_event_version: bad }),
+        p,
+        id,
+        400,
+        'request.validation',
+      ).catch((e: unknown) => {
+        throw new Error(`version ${String(bad)}: ${String(e)}`);
+      });
+    }
+    // Someone else ends the worker; a Pariwar Admin restores them with a slip undo.
+    expect((await h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today })).statusCode).toBe(200);
+    expect((await h.undoEnding(admin.client, p, id, await version())).statusCode).toBe(200);
+    expect((await row(id)).current_state).toBe('active');
+    // The stale screen's End: refused on the pre-read, 409, nothing written, no audit line.
+    await expectRefused(
+      () => h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today, expected_state_event_version: shown }),
+      p,
+      id,
+      409,
+      'field_worker.state_changed',
+    );
+    expect((await row(id)).current_state).toBe('active');
+    // CONTROL — the screen re-read (the current version) ends them.
+    expect((await h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today, expected_state_event_version: await version() })).statusCode).toBe(200);
+    expect((await row(id)).current_state).toBe('terminated');
   });
 
   // ── Denial and holders, per route (checklist family 3; Task 4.2) ──

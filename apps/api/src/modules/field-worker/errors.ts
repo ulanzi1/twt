@@ -134,6 +134,10 @@ export function mapFieldWorkerError(err: unknown): never {
     throw new ApiError(409, 'field_worker.stream_conflict', 'This move request was changed at the same time — reload and try again');
   }
   // ── Story 13.1f — the undo, the appeal, the link (the story's "Errors" table; `-465` Q6 B) ──
+  if (err instanceof fieldWorker.FieldWorkerStateChangedError) {
+    // Code review round 2, R2A-2 — an End from a screen that is out of date (the worker was changed, or ended and restored, since).
+    throw new ApiError(409, 'field_worker.state_changed', 'This worker has changed since you opened them — reload and try again');
+  }
   if (err instanceof fieldWorker.FieldWorkerEndingChangedError) {
     throw new ApiError(409, 'field_worker.ending_changed', 'This ending has changed since you opened it — reload and try again');
   }

@@ -87,7 +87,7 @@ import type { AppDeps } from '../../context.js';
 import { scopeResolutionHook } from '../../middleware/scope-resolution/index.js';
 import { namedRateLimits } from '../../plugins/rate-limit/index.js';
 import { requireAdminSession } from '../auth/shared/session-guard.js';
-import { requirePermissionHook } from '../rbac/index.js';
+import { holdsPermission, requirePermissionHook } from '../rbac/index.js';
 import { FIELD_WORKER_APPROVE_KEY, createFieldWorkerApprovalHandlers } from './approval-handlers.js';
 import {
   FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY,
@@ -247,6 +247,55 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
     notices.seen,
   );
 
+  // ── Story 13.1f (AD13) — the appeal record's STATIC routes, registered HERE with the other static segments (`move-requests`, `notices`,
+  // `districts`) and so BEFORE every `/:fieldWorkerId` route, as AD13 and Task 5.1 order (review R2C-3 / R2C-6: they sat after `/:fieldWorkerId/code`
+  // under a comment saying BEFORE). A static segment beats a parametric one in find-my-way either way; the ORDER is what keeps that visible.
+  // Every GET carries `limits.read` (13.1d AC7 (d)). ──
+  const appeals = createFieldWorkerEndingAppealHandlers(deps);
+  const undos = createFieldWorkerUndoHandlers(deps);
+  const readAppealsAtList = requirePermissionHook(deps, FIELD_WORKER_READ_ENDING_APPEALS_KEY, { resolveDimension: listGateDimension, resolveValue: listGateValue });
+  // AD9 — the two hear hooks are BUILT here with their fixed keys; the dispatcher invokes the one matching the stashed hearer.
+  const hearHooks = {
+    pariwarAdmin: requirePermissionHook(deps, FIELD_WORKER_HEAR_ENDING_APPEAL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
+    panel: requirePermissionHook(deps, FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
+    // The PURE twin of `panel` (the same key and options, no denial seam) - the dispatcher's no-hearer branch only (review R2C-2).
+    holdsPanel: holdsPermission(FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
+  };
+  r.get(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals',
+    {
+      schema: { params: PariwarParam, querystring: FieldWorkerEndingAppealListQuery, response: { 200: FieldWorkerEndingAppealPage }, tags: [TAG] },
+      config: { rateLimit: limits.read },
+      preHandler: [session, scope, readAppealsAtList],
+    },
+    appeals.list,
+  );
+  r.get(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals/eligible',
+    {
+      schema: { params: PariwarParam, querystring: FieldWorkerAppealEligibleQuery, response: { 200: FieldWorkerAppealEligiblePage }, tags: [TAG] },
+      config: { rateLimit: limits.read },
+      preHandler: [session, scope, readAppealsAtList],
+    },
+    appeals.eligible,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/decide',
+    {
+      schema: { params: FieldWorkerEndingAppealParams, body: DecideFieldWorkerEndingAppealRequest, response: { 200: DecideFieldWorkerEndingAppealResponse }, tags: [TAG] },
+      preHandler: [session, scope, loadEndingAppealGate(), requireEndingAppealHearer(hearHooks)],
+    },
+    appeals.decide,
+  );
+  r.post(
+    '/api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/withdraw',
+    {
+      schema: { params: FieldWorkerEndingAppealParams, body: WithdrawFieldWorkerEndingAppealRequest, response: { 200: FieldWorkerEndingAppeal }, tags: [TAG] },
+      preHandler: [session, scope, loadEndingAppealGate(), requireEndingAppealHearer(hearHooks)],
+    },
+    appeals.withdraw,
+  );
+
   // DELIBERATE (checklist family 9): NO permission key on this route — a session plus a grant in this Pariwar is the whole gate.
   // WHY: it returns only the Pariwar's recorded district NAMES (curated labels: the geo tree's district nodes, or the listed
   // workplace districts — never member-typed text), which the register screen's picker needs before the officer has chosen
@@ -304,51 +353,6 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
       preHandler: perWorker(FIELD_WORKER_READ_CODE_KEY),
     },
     reads.readCode,
-  );
-
-  // ── Story 13.1f (AD13) — the appeal record's STATIC routes, BEFORE `/:fieldWorkerId` (13.1d's convention: a static segment beats a
-  // parametric one, and the order keeps that visible). Every GET carries `limits.read` (13.1d AC7 (d)). ──
-  const appeals = createFieldWorkerEndingAppealHandlers(deps);
-  const undos = createFieldWorkerUndoHandlers(deps);
-  const readAppealsAtList = requirePermissionHook(deps, FIELD_WORKER_READ_ENDING_APPEALS_KEY, { resolveDimension: listGateDimension, resolveValue: listGateValue });
-  // AD9 — the two hear hooks are BUILT here with their fixed keys; the dispatcher invokes the one matching the stashed hearer.
-  const hearHooks = {
-    pariwarAdmin: requirePermissionHook(deps, FIELD_WORKER_HEAR_ENDING_APPEAL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
-    panel: requirePermissionHook(deps, FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY, { dimension: 'district', resolveValue: endingAppealGateDistrict }),
-  };
-  r.get(
-    '/api/v1/p/:pariwarId/field-workers/ending-appeals',
-    {
-      schema: { params: PariwarParam, querystring: FieldWorkerEndingAppealListQuery, response: { 200: FieldWorkerEndingAppealPage }, tags: [TAG] },
-      config: { rateLimit: limits.read },
-      preHandler: [session, scope, readAppealsAtList],
-    },
-    appeals.list,
-  );
-  r.get(
-    '/api/v1/p/:pariwarId/field-workers/ending-appeals/eligible',
-    {
-      schema: { params: PariwarParam, querystring: FieldWorkerAppealEligibleQuery, response: { 200: FieldWorkerAppealEligiblePage }, tags: [TAG] },
-      config: { rateLimit: limits.read },
-      preHandler: [session, scope, readAppealsAtList],
-    },
-    appeals.eligible,
-  );
-  r.post(
-    '/api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/decide',
-    {
-      schema: { params: FieldWorkerEndingAppealParams, body: DecideFieldWorkerEndingAppealRequest, response: { 200: DecideFieldWorkerEndingAppealResponse }, tags: [TAG] },
-      preHandler: [session, scope, loadEndingAppealGate(), requireEndingAppealHearer(hearHooks)],
-    },
-    appeals.decide,
-  );
-  r.post(
-    '/api/v1/p/:pariwarId/field-workers/ending-appeals/:appealId/withdraw',
-    {
-      schema: { params: FieldWorkerEndingAppealParams, body: WithdrawFieldWorkerEndingAppealRequest, response: { 200: FieldWorkerEndingAppeal }, tags: [TAG] },
-      preHandler: [session, scope, loadEndingAppealGate(), requireEndingAppealHearer(hearHooks)],
-    },
-    appeals.withdraw,
   );
 
   // ── Story 13.1c (AD6) — the lifecycle acts and the log. The bodies are validated (400 `request.validation`) BEFORE the hooks run:

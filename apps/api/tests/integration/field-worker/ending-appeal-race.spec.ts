@@ -159,6 +159,50 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo and the appeal under con
     });
   });
 
+  // Code review round 2, R2B-16 and R2C-8: the matrix says "live, both orders" for decide x decide, decide x withdraw and undo x withdraw. This is
+  // ONE table of EVERY order - each of the four closing acts (an allowed decision, a refusal, a withdrawal, the slip undo) holds, and each of the
+  // three waiting acts (allow, refuse, withdraw) waits, then loses with `appeal_not_open`: 4 x 3 = 12, none filtered out. (R2B-16's first version
+  // skipped the four orders the legs above stage, so removing one of those legs left a hole that its own arithmetic could not see; the legs above
+  // stay for their narrative, but the matrix no longer DEPENDS on them.)
+  describe('every closing act × every other (decide x decide, decide x withdraw, undo x withdraw): the second loses with appeal_not_open — all twelve orders', () => {
+    type Hold = (c: PoolClient, w: World, appealId: string) => Promise<void>;
+    // `worker` is the CONTROL on the worker: an allowed decision and the slip undo both RESTORE them; a refusal and a withdrawal leave the ending.
+    const holds: Record<string, { hold: Hold; state: string; worker: 'active' | 'terminated' }> = {
+      allow: { hold: (c, w, a) => closeTestAppeal(c, w.p, a, 'allowed'), state: 'allowed', worker: 'active' },
+      refuse: { hold: (c, w, a) => closeTestAppeal(c, w.p, a, 'refused'), state: 'refused', worker: 'terminated' },
+      withdraw: { hold: (c, w, a) => closeTestAppeal(c, w.p, a, 'withdrawn'), state: 'withdrawn', worker: 'terminated' },
+      'the slip undo': { hold: (c, w) => undoTestEnding(c, w.p, W(w.id)), state: 'superseded', worker: 'active' },
+    };
+    const waits: Record<string, { request: (w: World, a: string) => Promise<Reply>; action: string }> = {
+      allow: { request: async (w, a) => h.decideAppeal(w.tp.client, w.p, a, { outcome: 'allowed', decided_on: await istDay() }), action: 'field_worker_ending_appeal.allowed' },
+      refuse: { request: async (w, a) => h.decideAppeal(w.tp.client, w.p, a, { outcome: 'refused', decided_on: await istDay() }), action: 'field_worker_ending_appeal.refused' },
+      withdraw: { request: async (w, a) => h.withdrawAppeal(w.tp.client, w.p, a, { decided_on: await istDay() }), action: 'field_worker_ending_appeal.withdrawn' },
+    };
+    const pairs = Object.keys(holds).flatMap((holder) => Object.keys(waits).map((waiter) => [holder, waiter] as const));
+
+    // Non-vacuity: the table's OWN size, pinned to the matrix (four closing acts x three waiting acts) - a deleted row of either table, or a
+    // filter added later, shrinks it and fails here; there is no second list for a leg to hide in.
+    it('the pairs: non-vacuity - all twelve orders are in the table, each once', () => {
+      expect(Object.keys(holds)).toEqual(['allow', 'refuse', 'withdraw', 'the slip undo']);
+      expect(Object.keys(waits)).toEqual(['allow', 'refuse', 'withdraw']);
+      expect(pairs).toHaveLength(12);
+      expect(new Set(pairs.map(([a, b]) => `${a}>${b}`)).size).toBe(12);
+    });
+
+    it.each(pairs)('%s HOLDS the locks; a %s waits, then 409 appeal_not_open — its intent and twin; CONTROL: the holder\'s act is the one recorded', async (holder, waiter) => {
+      const w = await endedWorker();
+      const appealId = await lodgeHttp(w);
+      const { hold, state, worker: workerState } = holds[holder]!;
+      const { request, action } = waits[waiter]!;
+      const r = await race(w.p, (c) => hold(c, w, appealId), () => request(w, appealId));
+      expect(r.statusCode, r.body).toBe(409);
+      expect(errOf(r).code).toBe('field_worker.appeal_not_open');
+      expect(await appealState(appealId)).toBe(state); // CONTROL — the holder's act stands
+      expect((await worker(w.id)).current_state).toBe(workerState); // CONTROL — and the worker is where that act left them
+      expect(await actions(w.p, action)).toEqual([action, `${action}_rolled_back`]); // the waiter was ATTEMPTED under the lock, then refused
+    });
+  });
+
   describe('lodge × lodge, lodge × undo (worker lock; both orders)', () => {
     it('a lodge holds the lock: a second lodge waits, then 409 appeal_open — its intent and twin; CONTROL: one appeal', async () => {
       const w = await endedWorker();
@@ -227,6 +271,9 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo and the appeal under con
       expect(r.statusCode, r.body).toBe(409);
       expect(errOf(r).code).toBe('field_worker.mobile_already_registered');
       expect((await worker(w.id)).current_state).toBe('active');
+      // Code review round 2, R2B-16: AC2 (iii) names the audit pair and this leg asserted neither - a registration refused under the lock that stopped
+      // writing its `_rolled_back` twin would have stayed green. The first line is the worker's own registration (`endedWorker`).
+      expect(await actions(w.p, 'field_worker.registered')).toEqual(['field_worker.registered', 'field_worker.registered', 'field_worker.registered_rolled_back']);
     });
 
     it('(ii) the undo holds the old row: a registration with link_to = that row waits on its FOR SHARE, then 422 link_invalid — ⛔ 40P01; CONTROL: restored', async () => {
@@ -239,6 +286,10 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo and the appeal under con
       expect(r.statusCode, r.body).toBe(422);
       expect(errOf(r).code).toBe('field_worker.link_invalid');
       expect((await worker(w.id)).current_state).toBe('active');
+      // Code review round 2, R2C-4: the link check is a PRE-READ refusal (AD12: in the scope transaction, BEFORE the audit wrapper opens), so the
+      // refused registration writes NO intent line and NO `_rolled_back` twin - unlike the number check of leg (iii) above, which is raised inside
+      // `mutate`. The only `field_worker.registered` line is the worker's own registration (`endedWorker`).
+      expect(await actions(w.p, 'field_worker.registered')).toEqual(['field_worker.registered']);
     });
   });
 });

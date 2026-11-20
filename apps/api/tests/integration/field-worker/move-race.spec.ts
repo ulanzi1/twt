@@ -143,6 +143,8 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
   ] as const)('CR10: %s commits while the move waits on the lock ⇒ 200 carrying the LOCKED row’s state and reason, which are the stored ones', async (_label, start, act, expected) => {
     const { p, admin, id } = await activeWorker();
     if (start === 'suspended') expect((await h.suspend(admin.client, p, id, { reason_code: 'under_review' })).statusCode).toBe(200);
+    const versionOf = async () => Number((await h.td.pool.query<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!.v);
+    const before = await versionOf(); // what the move's PRE-READ sees - the holder's act moves the row past it while the move waits
     const r = await raceAgainst(p, (holder) => actTestFieldWorker(holder, p, ids.fieldWorkerId(id), act), () =>
       h.move(admin.client, p, id, { from_district: 'Patna', to_district: 'Gaya', reason_code: 'reassigned' }),
     );
@@ -151,5 +153,9 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
     // CONTROL — the body equals the stored row (the holder's act committed first; the move kept its state and reason).
     const stored = (await h.td.pool.query<{ current_state: string; state_reason_code: string | null; district: string }>('SELECT current_state, state_reason_code, district FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!;
     expect(stored).toEqual({ district: 'Gaya', ...expected });
+    // Review R2C-7 - the point of G24 here is WHICH version: the one the lock confirmed (the holder's act), ⛔ the pre-read's. `any(Number)` passed for either.
+    const after = await versionOf();
+    expect(after, 'the holder\'s act did not move the row past the pre-read version - the leg cannot tell locked from pre-read').toBeGreaterThan(before);
+    expect(json(r)['state_event_version']).toBe(after);
   });
 });

@@ -182,7 +182,7 @@ const istToday = async (client: pg.PoolClient) => (await client.query<{ d: strin
 /** END a worker (`inactive`, today IST) through `terminateFieldWorker`; `heardBy` as the terminate route would fix it. */
 export async function terminateTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, heardBy: Hearer = 'trustee_panel'): Promise<void> {
   const actorId = randomUUID();
-  const { district } = await districtAndVersion(client, id);
+  const { district, version } = await districtAndVersion(client, id);
   await fieldWorker.terminateFieldWorker(client, {
     pariwarId: ids.pariwarId(pariwarId),
     fieldWorkerId: id,
@@ -193,6 +193,7 @@ export async function terminateTestFieldWorker(client: pg.PoolClient, pariwarId:
     endedOn: await istToday(client),
     authorization: actAuthorization('field_worker.terminate', pariwarId, district, actorId),
     appealHeardBy: heardBy,
+    expectedStateEventVersion: version, // R2A-2 — the version the "screen" (this read) showed
   });
 }
 

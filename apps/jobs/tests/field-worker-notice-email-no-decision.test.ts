@@ -55,6 +55,10 @@ const FORBIDDEN = [
   'withdrawFieldWorkerEndingAppeal',
   'projectMoveRequestOpened',
   'projectMoveRequestTransition',
+  // Story 13.1f (review R2C-14) - the appeal's projectors and the supersede helper, as the move-request projectors above.
+  'projectEndingAppealLodged',
+  'projectEndingAppealTransition',
+  'supersedeOpenEndingAppeal',
   'projectFieldWorkerGenesis',
   'projectFieldWorkerTransition',
   'afterDirectMove',

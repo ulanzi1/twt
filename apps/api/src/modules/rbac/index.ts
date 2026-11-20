@@ -136,40 +136,58 @@ export function requirePermissionHook(
   key: string,
   opts: RequirePermissionOptions = {},
 ): preHandlerHookHandler {
-  const fixedDimension = opts.dimension ?? 'pariwar';
   return async function preHandler(request: FastifyRequest): Promise<void> {
-    const scopeTx = request.scopeTx;
-    const actorId = request.requestContext.actorId;
-    if (!scopeTx || !actorId) {
-      // Programming error — a permission-gated route was registered without the
-      // session + scope-resolution pre-handlers ahead of it. Fail loud (500).
-      throw new Error('[rbac] requirePermission ran without session + scope-resolution');
-    }
-    const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
-    // Both resolved INSIDE the closure, per request (Story 6.17). `resolveDimension` is absent for
-    // every caller but the ground-inspection gate, which falls back to the construction-time value.
-    const dimension = opts.resolveDimension ? opts.resolveDimension(request) : fixedDimension;
-    const value = opts.resolveValue ? opts.resolveValue(request) : scopeTx.pariwarId;
+    const { params, scopeTx, actorId } = await permissionAskOf(request, key, opts);
 
     // ⭐ Story 13.1 (QE18 (c)) — the guard RETURNS the verified authorization; it is stored per KEY on a FRESH per-request
     // object (⛔ `decorateRequest('authorizations', {})` — Fastify 5 rejects a reference default, and it would be shared by
     // every request). A handler that records who authorized an act passes THIS object on and ⛔ never recomputes it from
     // `request.scopeGrants` (TR13).
-    const authorization = rbac.requirePermission(
-      {
-        actorId,
-        grants,
-        key,
-        resource: { dimension, value, pariwarId: scopeTx.pariwarId },
-      },
-      {
-        onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, scopeTx.pariwarId),
-        // ⭐ SITE 1 (Story 1.18, AC3) — the primary injection point. `undefined` when this Pariwar
-        // has published no tree, which `resolveContext` turns back into `denyDeeperGeoResolver`.
-        resolver: geoTreeResolverForRequest(request),
-      },
-    );
+    const authorization = rbac.requirePermission(params, {
+      onAuthorizationDenied: auditAuthorizationDenied(deps, request, actorId, scopeTx.pariwarId),
+      // ⭐ SITE 1 (Story 1.18, AC3) — the primary injection point. `undefined` when this Pariwar
+      // has published no tree, which `resolveContext` turns back into `denyDeeperGeoResolver`.
+      resolver: geoTreeResolverForRequest(request),
+    });
     (request.authorizations ??= {})[key] = authorization;
+  };
+}
+
+/**
+ * What `requirePermissionHook` asks of the guard for THIS request, resolved in ONE place so the hook and `holdsPermission` can never
+ * disagree about the question (review R2C-2). Both the dimension and the value are resolved INSIDE the per-request closure
+ * (Story 6.17): `resolveDimension` is absent for every caller but the ground-inspection gate, which falls back to the
+ * construction-time `dimension`.
+ */
+async function permissionAskOf(
+  request: FastifyRequest,
+  key: string,
+  opts: RequirePermissionOptions,
+): Promise<{ params: rbac.RequirePermissionParams; scopeTx: ScopeTx; actorId: string }> {
+  const scopeTx = request.scopeTx;
+  const actorId = request.requestContext.actorId;
+  if (!scopeTx || !actorId) {
+    // Programming error — a permission-gated route was registered without the
+    // session + scope-resolution pre-handlers ahead of it. Fail loud (500).
+    throw new Error('[rbac] requirePermission ran without session + scope-resolution');
+  }
+  const grants = request.scopeGrants ?? (await loadActorGrants(scopeTx, actorId));
+  const dimension = opts.resolveDimension ? opts.resolveDimension(request) : (opts.dimension ?? 'pariwar');
+  const value = opts.resolveValue ? opts.resolveValue(request) : scopeTx.pariwarId;
+  return { params: { actorId, grants, key, resource: { dimension, value, pariwarId: scopeTx.pariwarId } }, scopeTx, actorId };
+}
+
+/**
+ * Story 13.1f (review R2C-2) — PURE: does the actor HOLD `key` for this request - the SAME question `requirePermissionHook` asks (one
+ * `permissionAskOf`), answered with `rbac.hasPermission`. ⛔ It fires NO denial seam, writes no audit line and throws nothing on a "no": it
+ * exists so a caller choosing BETWEEN two keys (the appeal hearer dispatcher, with no hearer) can pick the one to enforce without a
+ * denial for the key it did not need landing in the security stream. An infrastructure error (grants not loadable) is NOT a "no": it
+ * propagates.
+ */
+export function holdsPermission(key: string, opts: RequirePermissionOptions = {}): (request: FastifyRequest) => Promise<boolean> {
+  return async function holds(request: FastifyRequest): Promise<boolean> {
+    const { params } = await permissionAskOf(request, key, opts);
+    return rbac.hasPermission(params.grants, params.key, params.resource, { resolver: geoTreeResolverForRequest(request) });
   };
 }
 

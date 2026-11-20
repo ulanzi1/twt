@@ -183,10 +183,14 @@ export function endingAppealGateDistrict(request: FastifyRequest): string | null
   return request.endingAppealGateDistrict ?? null;
 }
 
-/** The two hear hooks, PREBUILT by the routes (fixed keys), dispatched on the stashed hearer (AD9). */
+/**
+ * The two hear hooks, PREBUILT by the routes (fixed keys), dispatched on the stashed hearer (AD9). `holdsPanel` is the PURE "does the
+ * actor hold the Panel's key here" (`holdsPermission`) - used ONLY when there is no hearer to match (review R2C-2).
+ */
 export function requireEndingAppealHearer(hooks: {
   pariwarAdmin: preHandlerHookHandler;
   panel: preHandlerHookHandler;
+  holdsPanel: (request: FastifyRequest) => Promise<boolean>;
 }): preHandlerHookHandler {
   // Each hook is a single-arg `(request) => Promise<void>` at runtime (the requirePermissionHook shape) — cast to invoke it directly.
   const asPanel = hooks.panel as unknown as (req: FastifyRequest) => Promise<void>;
@@ -195,10 +199,11 @@ export function requireEndingAppealHearer(hooks: {
     const heardBy = request.endingAppealHeardBy ?? null;
     if (heardBy === 'trustee_panel') return asPanel(request);
     if (heardBy === 'pariwar_admin') return asPariwarAdmin(request);
-    try {
-      await asPanel(request);
-    } catch {
-      await asPariwarAdmin(request);
-    }
+    // NO hearer: exactly ONE hook runs, chosen by what the actor HOLDS - never "try the Panel's, swallow, try the other". ⛔ The old
+    // try/catch (a) fired the Panel key's denial seam for an authorised Pariwar Admin who was not denied, and (b) swallowed an
+    // infrastructure error from the first hook. Now an actor holding the Panel's key passes through its hook; every other actor meets
+    // the Pariwar Admin's, which passes or is the one TRUE denial; an error from either is never caught here.
+    if (await hooks.holdsPanel(request)) return asPanel(request);
+    return asPariwarAdmin(request);
   };
 }

@@ -41,7 +41,9 @@ describe.skipIf(!hasDatabase)('Story 13.1c — two terminations of one worker at
       await holder.query('BEGIN');
       await holder.query(`SELECT set_config('app.pariwar_id', $1, true)`, [p]);
       const actorId = randomUUID();
-      await fieldWorker.terminateFieldWorker(holder, { appealHeardBy: 'pariwar_admin',
+      // R2A-2 — the version both officers' screens showed (read before either act; the holder's own End is not yet committed).
+      const shown = Number((await holder.query<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!.v);
+      await fieldWorker.terminateFieldWorker(holder, { appealHeardBy: 'pariwar_admin', expectedStateEventVersion: shown,
         pariwarId: ids.pariwarId(p),
         fieldWorkerId: ids.fieldWorkerId(id),
         auditId: randomUUID(),
@@ -67,6 +69,58 @@ describe.skipIf(!hasDatabase)('Story 13.1c — two terminations of one worker at
     const ended = (await h.td.pool.query("SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'field_worker.terminated'", [id])).rowCount;
     expect(ended).toBe(1);
     // The second was ATTEMPTED under the lock: its intent and its twin, both naming the admin.
+    const lines = (
+      await h.td.pool.query<{ action: string; actor_id: string }>(
+        "SELECT action, actor_id FROM audit_log_entries WHERE pariwar_id = $1 AND resource_locator = $2 AND action LIKE 'field_worker.terminated%' ORDER BY seq",
+        [p, `field_worker/${id}`],
+      )
+    ).rows;
+    expect(lines).toEqual([
+      { action: 'field_worker.terminated', actor_id: admin.userId },
+      { action: 'field_worker.terminated_rolled_back', actor_id: admin.userId },
+    ]);
+  });
+
+  // Code review round 2, R2A-2 — the version is judged UNDER THE LOCK too: a worker changed between the pre-read and the lock (here a
+  // suspension that commits while the End waits) is refused 409 `state_changed`, with the intent line and its `_rolled_back` twin.
+  it('R2A-2: the first (a suspension) commits; the End from the same screen answers 409 state_changed from inside `mutate` and writes the twin; the worker stays suspended, ONE suspended event, NO terminated event', async () => {
+    const p = h.freshPariwar();
+    await h.listDistrict(p, 'Patna');
+    const admin = await h.actor(p, 'pariwar_admin', 'pariwar', p, 'Meera Pariwar-Admin');
+    const id = await h.registered(admin.client, p, { name: 'Ender Unusual-Surname', mobile: '+919876545679', district: 'Patna' });
+    expect((await h.approve(admin.client, p, id)).statusCode).toBe(200);
+    const today = (await h.td.pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
+
+    const holder = await h.td.pool.connect();
+    let second: Awaited<ReturnType<Harness['terminate']>>;
+    try {
+      await holder.query('BEGIN');
+      await holder.query(`SELECT set_config('app.pariwar_id', $1, true)`, [p]);
+      const actorId = randomUUID();
+      await fieldWorker.suspendFieldWorker(holder, {
+        pariwarId: ids.pariwarId(p),
+        fieldWorkerId: ids.fieldWorkerId(id),
+        auditId: randomUUID(),
+        actor: 'operator',
+        actorId,
+        authorization: actAuthorization('field_worker.suspend', p, 'Patna', actorId),
+        reasonCode: 'under_review',
+      }); // holds FOR UPDATE until COMMIT
+      const pending = h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today }); // the version it reads: the committed, pre-suspension one
+      await waitForBlockedBy(h.td.pool, await pidOf(holder));
+      await holder.query('COMMIT');
+      second = await pending;
+    } finally {
+      await releaseHolder(holder);
+    }
+
+    expect(second.statusCode, second.body).toBe(409);
+    expect(errOf(second).code).toBe('field_worker.state_changed');
+    // CONTROL: the suspension is the change that was recorded; nothing was ended.
+    const row = (await h.td.pool.query('SELECT current_state FROM field_workers WHERE field_worker_id = $1', [id])).rows[0];
+    expect(row).toEqual({ current_state: 'suspended' });
+    expect((await h.td.pool.query("SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'field_worker.suspended'", [id])).rowCount).toBe(1);
+    expect((await h.td.pool.query("SELECT 1 FROM events_log WHERE stream_id = $1 AND event_type = 'field_worker.terminated'", [id])).rowCount).toBe(0);
     const lines = (
       await h.td.pool.query<{ action: string; actor_id: string }>(
         "SELECT action, actor_id FROM audit_log_entries WHERE pariwar_id = $1 AND resource_locator = $2 AND action LIKE 'field_worker.terminated%' ORDER BY seq",

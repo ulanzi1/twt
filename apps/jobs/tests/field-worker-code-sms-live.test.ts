@@ -309,9 +309,11 @@ describe.skipIf(!hasDatabase)('Story 13.1b — the code SMS sweep (live DB, own-
     // place; the UTC date is a day behind from 00:00 to 05:30 IST, and `ended_on` then falls before registration (it failed at 01:10 IST).
     const { rows: ist } = await pool.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d");
     const today = ist[0]!.d;
-    await withPariwarScope(pool, pid, (_db, client) =>
-      fieldWorker.terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today }),
-    );
+    await withPariwarScope(pool, pid, async (_db, client) => {
+      // R2A-2 — the version the "screen" showed: this read, on the same client.
+      const shown = Number((await client.query<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!.v);
+      return fieldWorker.terminateFieldWorker(client, { appealHeardBy: 'pariwar_admin', expectedStateEventVersion: shown, ...base(pid, id), auditId: randomUUID(), authorization: verified(pid, 'field_worker.terminate'), reasonCode: 'inactive', endedOn: today });
+    });
     const gw = gateway();
     expect(await settled(sweep(gw), sendId)).toMatchObject({ outcome: 'skipped_not_active' });
     expect(gw.mine(sendId)).toHaveLength(0);

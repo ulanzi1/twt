@@ -185,7 +185,8 @@ describe.skipIf(!hasDatabase)('Story 13.1a — approve a field worker through HT
       if (target === 'terminated') {
         await owner(async (c) => {
           const today = (await c.query<{ d: string }>("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date::text AS d")).rows[0]!.d;
-          await fieldWorker.terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', ...base, authorization: actAuthorization('field_worker.terminate', p, 'Patna', base.actorId), reasonCode: 'inactive', endedOn: today });
+          const shown = Number((await c.query<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]!.v); // R2A-2
+          await fieldWorker.terminateFieldWorker(c, { appealHeardBy: 'pariwar_admin', expectedStateEventVersion: shown, ...base, authorization: actAuthorization('field_worker.terminate', p, 'Patna', base.actorId), reasonCode: 'inactive', endedOn: today });
         });
       }
       const eventsBefore = (await events(id)).length;

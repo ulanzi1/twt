@@ -197,13 +197,19 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
   async function terminate(request: FastifyRequest, reply: FastifyReply) {
     const body = request.body as TerminateFieldWorkerRequest;
     return act(request, reply, 'terminate', {
-      hashShape: { reason_code: body.reason_code, ended_on: body.ended_on },
+      hashShape: { reason_code: body.reason_code, ended_on: body.ended_on, expected_state_event_version: body.expected_state_event_version },
+      // Code review round 2, R2A-2 — the version the officer's screen showed, judged HERE first (a pure refusal: no audit pair, I7) and
+      // again under the lock by the command. A worker ended, then restored, is no longer refused as `terminated`; a stale End would end
+      // them again. A changed version beats a bad date, as under the lock.
       // A date that is not a real calendar day (`2026-02-30`, `2026-13-45`) is a PURE refusal: judged here, after the legality check
       // and before the wrapper, so it writes no audit pair (I7). The IST bounds (not after today, not before the registration day) are
       // left to the command — ONE judge of them, under the lock (domain guard 5); the handler COULD pre-judge them (the pre-read row
       // carries `createdAt`, `now()` is one SELECT), at the price of a second copy of the rule. The cost of leaving them: a future or
       // early date writes the intent line and its `_rolled_back` twin (variance 2, pinned by `expectRefusedInMutate`). Review CR12.
       preCheck: (worker) => {
+        if (worker.stateEventVersion !== body.expected_state_event_version) {
+          throw new fieldWorker.FieldWorkerStateChangedError(worker.fieldWorkerId, body.expected_state_event_version);
+        }
         if (!fieldWorker.isCalendarDateString(body.ended_on)) throw new fieldWorker.FieldWorkerEndedOnInvalidError(worker.fieldWorkerId, 'missing_or_malformed');
       },
       command: async (ctx, base, worker) => {
@@ -211,6 +217,7 @@ export function createFieldWorkerLifecycleHandlers(deps: AppDeps) {
           ...base,
           reasonCode: body.reason_code,
           endedOn: body.ended_on,
+          expectedStateEventVersion: body.expected_state_event_version,
           appealHeardBy: appealHearerAtEnding(request.scopeGrants ?? [], ctx.pariwarId),
         });
         return {

@@ -274,6 +274,160 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
     });
   });
 
+  // Code review round 2, R2B-16: the AC5 / AC6 legs the first version left out - each is a gate or a pre-read the HANDLER owns, which the domain
+  // commands do not make redundant (they would still refuse, but with the intent line and its `_rolled_back` twin instead of NO line).
+  describe('R2B-16 — AC5 (g), AC6 (h), AC6 (b), AC6 (d): the gates and pre-reads of lodge, decide and withdraw', () => {
+    it('AC5 (g): a District Admin lodges nothing - 403 on a Panel-heard AND on a Pariwar-Admin-heard ending; no line; CONTROL: the hearer lodges', async () => {
+      const w = await world();
+      const a = await activeWorker(w);
+      const b = await activeWorker(w);
+      const va = await end(w, a, w.pa.client); // heard by the Panel
+      const vb = await end(w, b, w.da.client); // heard by the Pariwar Admin
+      for (const [id, v] of [[a, va], [b, vb]] as const) {
+        const r = await h.lodgeAppeal(w.da.client, w.p, id, await lodgeBody(v));
+        expect(r.statusCode, r.body).toBe(403);
+        expect(errOf(r).code).toBe('authz.forbidden');
+      }
+      expect(await auditCount(w.p, 'field_worker_ending_appeal.lodged')).toBe(0);
+      expect((await h.lodgeAppeal(w.tp.client, w.p, a, await lodgeBody(va))).statusCode).toBe(201); // CONTROL
+      expect((await h.lodgeAppeal(w.pa.client, w.p, b, await lodgeBody(vb))).statusCode).toBe(201);
+    });
+
+    it('AC6 (h): on a PANEL-heard appeal a Pariwar Admin cannot decide or withdraw (403) and a super admin is refused 409 appeal_wrong_hearer - on the PRE-READ, no audit line; CONTROL: the trustee decides', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.pa.client);
+      const appealId = String(json(await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v)))['appeal_id']);
+      const decided = async () => (await auditCount(w.p, 'field_worker_ending_appeal.refused')) + (await auditCount(w.p, 'field_worker_ending_appeal.withdrawn')) + (await auditCount(w.p, 'field_worker_ending_appeal.allowed'));
+      const before = await decided();
+      for (const outcome of ['refused', 'allowed'] as const) {
+        expect((await h.decideAppeal(w.pa2.client, w.p, appealId, { outcome, decided_on: await istDay() })).statusCode, `PA ${outcome}`).toBe(403);
+        const sa = await h.decideAppeal(w.sa.client, w.p, appealId, { outcome, decided_on: await istDay() });
+        expect(sa.statusCode, `SA ${outcome}`).toBe(409);
+        expect(errOf(sa).code).toBe('field_worker.appeal_wrong_hearer');
+      }
+      expect((await h.withdrawAppeal(w.pa2.client, w.p, appealId, { decided_on: await istDay() })).statusCode).toBe(403);
+      const saW = await h.withdrawAppeal(w.sa.client, w.p, appealId, { decided_on: await istDay() });
+      expect(saW.statusCode).toBe(409);
+      expect(errOf(saW).code).toBe('field_worker.appeal_wrong_hearer');
+      expect(await decided()).toBe(before); // NO line, intent or twin, from any of the six refusals
+      expect((await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'refused', decided_on: await istDay() })).statusCode).toBe(200); // CONTROL
+      expect(await decided()).toBe(before + 1);
+    });
+
+    it('AC6 (b): an ALLOWED decision while the number is live again → 409 number_registered_again on the PRE-READ, no line, the appeal stays open; CONTROL: that registration ended, the same decision succeeds', async () => {
+      const w = await world();
+      const mobile = randomMobile();
+      const old = await activeWorker(w, mobile);
+      const v = await end(w, old, w.pa.client, 'registered_in_error');
+      const appealId = String(json(await h.lodgeAppeal(w.tp.client, w.p, old, await lodgeBody(v)))['appeal_id']);
+      const newer = await h.registered(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true });
+      const blocked = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'allowed', decided_on: await istDay() });
+      expect(blocked.statusCode, blocked.body).toBe(409);
+      expect(errOf(blocked).code).toBe('field_worker.number_registered_again');
+      expect(await auditCount(w.p, 'field_worker_ending_appeal.allowed')).toBe(0);
+      expect((await row(old)).current_state).toBe('terminated');
+      // A REFUSAL is not the number's business: it goes through while the number is live (the check is the allowed decision's alone).
+      const other = await activeWorker(w);
+      const vo = await end(w, other, w.pa.client);
+      const second = String(json(await h.lodgeAppeal(w.tp.client, w.p, other, await lodgeBody(vo)))['appeal_id']);
+      expect((await h.decideAppeal(w.tp2.client, w.p, second, { outcome: 'refused', decided_on: await istDay() })).statusCode).toBe(200);
+      await end(w, newer, w.pa.client, 'registered_in_error');
+      const ok = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'allowed', decided_on: await istDay() });
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect((await row(old)).current_state).toBe('active'); // restored as they were: the worker was approved (active) before the ending
+      expect(await auditCount(w.p, 'field_worker_ending_appeal.allowed')).toBe(1);
+    });
+
+    it('AC6 (d): the ender never WITHDRAWS either (409 appeal_decider_is_ender) - the same rule as decide; CONTROL: another officer withdraws it', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.da.client); // a District Admin's ending - the Pariwar Admin hears it
+      const appealId = String(json(await h.lodgeAppeal(w.pa.client, w.p, id, await lodgeBody(v)))['appeal_id']);
+      await h.addGrant(w.da.userId, w.p, 'pariwar_admin', 'pariwar', w.p); // the ender may now hear it - and still never decides or withdraws
+      const byEnder = await h.withdrawAppeal(w.da.client, w.p, appealId, { decided_on: await istDay() });
+      expect(byEnder.statusCode, byEnder.body).toBe(409);
+      expect(errOf(byEnder).code).toBe('field_worker.appeal_decider_is_ender');
+      const other = await h.withdrawAppeal(w.pa2.client, w.p, appealId, { decided_on: await istDay() });
+      expect(other.statusCode, other.body).toBe(200);
+      expect(json(other)['state']).toBe('withdrawn');
+    });
+  });
+
+  // Code review round 2, R2C-3: the PURE date shape is judged on the handlers' pre-read (no intent line, no `_rolled_back` twin - I7, the CR12 precedent on
+  // terminate's `ended_on`); the IST BOUNDS stay the command's, so a future date still costs the pair. The two together prove there is ONE judge of the bounds.
+  describe('R2C-3 — a malformed date is refused on the pre-read (no line); a future date still reaches the command (the pair)', () => {
+    const MALFORMED = ['2026-02-30', 'abc', '2026-13-01'] as const;
+    const appealState = (id: string) => q<{ state: string }>('SELECT state FROM field_worker_ending_appeals WHERE appeal_id = $1', [id]).then((r) => r[0]!.state);
+
+    it('lodge: a malformed received_on → 422 appeal_date_invalid, NO line, NO appeal row; a FUTURE one → 422 WITH the pair; CONTROL: a real date lodges', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.pa.client); // Panel-heard
+      const lodged = () => auditCount(w.p, 'field_worker_ending_appeal.lodged');
+      for (const bad of MALFORMED) {
+        const r = await h.lodgeAppeal(w.tp.client, w.p, id, { ...(await lodgeBody(v)), received_on: bad });
+        expect(r.statusCode, `${bad}: ${r.body}`).toBe(422);
+        expect(errOf(r).code, bad).toBe('field_worker.appeal_date_invalid');
+      }
+      expect(await lodged(), 'a malformed date wrote an audit line').toBe(0);
+      expect(await q('SELECT 1 FROM field_worker_ending_appeals WHERE field_worker_id = $1', [id])).toHaveLength(0);
+      const future = await h.lodgeAppeal(w.tp.client, w.p, id, { ...(await lodgeBody(v)), received_on: await istDay(1) });
+      expect(future.statusCode, future.body).toBe(422);
+      expect(errOf(future).code).toBe('field_worker.appeal_date_invalid');
+      expect(await lodged(), 'a FUTURE date is the command\'s bound: the intent line and its twin').toBe(2);
+      const ok = await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v)); // CONTROL
+      expect(ok.statusCode, ok.body).toBe(201);
+      expect(await lodged()).toBe(3);
+    });
+
+    it('decide: a malformed decided_on (refused AND allowed) → 422, NO line, the appeal stays open; a FUTURE one → 422 WITH the pair; CONTROL: a real date decides', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.pa.client);
+      const appealId = String(json(await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v)))['appeal_id']);
+      const refused = () => auditCount(w.p, 'field_worker_ending_appeal.refused');
+      const allowed = () => auditCount(w.p, 'field_worker_ending_appeal.allowed');
+      for (const outcome of ['refused', 'allowed'] as const) {
+        for (const bad of MALFORMED) {
+          const r = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome, decided_on: bad });
+          expect(r.statusCode, `${outcome} ${bad}: ${r.body}`).toBe(422);
+          expect(errOf(r).code, `${outcome} ${bad}`).toBe('field_worker.appeal_date_invalid');
+        }
+      }
+      expect([await refused(), await allowed()], 'a malformed date wrote an audit line').toEqual([0, 0]);
+      expect(await appealState(appealId)).toBe('open');
+      const future = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'refused', decided_on: await istDay(1) });
+      expect(future.statusCode, future.body).toBe(422);
+      expect(await refused(), 'a FUTURE date is the command\'s bound: the intent line and its twin').toBe(2);
+      expect(await appealState(appealId)).toBe('open');
+      const ok = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'refused', decided_on: await istDay() }); // CONTROL
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect(await appealState(appealId)).toBe('refused');
+    });
+
+    it('withdraw: a malformed decided_on → 422, NO line, the appeal stays open; a FUTURE one → 422 WITH the pair; CONTROL: a real date withdraws', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.da.client); // Pariwar-Admin-heard
+      const appealId = String(json(await h.lodgeAppeal(w.pa.client, w.p, id, await lodgeBody(v)))['appeal_id']);
+      const withdrawn = () => auditCount(w.p, 'field_worker_ending_appeal.withdrawn');
+      for (const bad of MALFORMED) {
+        const r = await h.withdrawAppeal(w.pa2.client, w.p, appealId, { decided_on: bad });
+        expect(r.statusCode, `${bad}: ${r.body}`).toBe(422);
+        expect(errOf(r).code, bad).toBe('field_worker.appeal_date_invalid');
+      }
+      expect(await withdrawn(), 'a malformed date wrote an audit line').toBe(0);
+      expect(await appealState(appealId)).toBe('open');
+      const future = await h.withdrawAppeal(w.pa2.client, w.p, appealId, { decided_on: await istDay(1) });
+      expect(future.statusCode, future.body).toBe(422);
+      expect(await withdrawn(), 'a FUTURE date is the command\'s bound: the intent line and its twin').toBe(2);
+      const ok = await h.withdrawAppeal(w.pa2.client, w.p, appealId, { decided_on: await istDay() }); // CONTROL
+      expect(ok.statusCode, ok.body).toBe(200);
+      expect(await appealState(appealId)).toBe('withdrawn');
+    });
+  });
+
   describe('AC15 — the reads', () => {
     it('the list: ONE audit line a page naming its workers (names present); an EMPTY page writes none; a trustee sees only Panel-heard appeals; a District Admin needs `district`', async () => {
       const w = await world();
@@ -339,9 +493,12 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
       const otherLive = await activeWorker(w);
       expect((await h.register(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', link_to: old })).statusCode).toBe(400);
       await end(w, old, w.pa.client, 'left_voluntarily');
+      const registeredLines = await auditCount(w.p, 'field_worker.registered');
       const wrong = await h.register(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true, link_to: otherLive });
       expect(wrong.statusCode).toBe(422);
       expect(errOf(wrong).code).toBe('field_worker.link_invalid');
+      // Code review round 2, R2C-4: `link_invalid` is a PRE-READ refusal (AD12) - no intent line, no `_rolled_back` twin.
+      expect(await auditCount(w.p, 'field_worker.registered'), 'a refused link wrote an audit line').toBe(registeredLines);
       const linked = await h.register(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true, link_to: old });
       expect(linked.statusCode, linked.body).toBe(201);
       const id = String(json(linked)['field_worker_id']);
@@ -370,8 +527,144 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
     });
   });
 
+  // Code review round 2, R2C-5: the link and the per-worker reads, against the ids a refusal must name correctly. The first version's only "wrong
+  // record" was a LIVE worker of a DIFFERENT number, so deleting the number comparison, or the Pariwar predicate, left every leg green.
+  describe('R2C-5 — AC10 (a), AC10 (c), AC15 (f): the link and the reads against real ids of another number, another Pariwar and nobody', () => {
+    const workerCount = async (p: string) => (await q<{ n: number }>('SELECT count(*)::int AS n FROM field_workers WHERE pariwar_id = $1', [p]))[0]!.n;
+
+    it('AC10 (a): link_to a TERMINATED record of another number, an unknown id, or another Pariwar’s terminated record of THE SAME number → 422 link_invalid, no worker, no line; CONTROL: the right record links', async () => {
+      const w = await world();
+      const other = await world();
+      const mobile = randomMobile();
+      const old = await activeWorker(w, mobile);
+      await end(w, old, w.pa.client, 'left_voluntarily');
+      const elsewhere = await activeWorker(w); // terminated, but a DIFFERENT number - only the number comparison can refuse it
+      await end(w, elsewhere, w.pa.client, 'left_voluntarily');
+      const foreign = await activeWorker(other, mobile); // another Pariwar's, terminated, the SAME number - only the Pariwar predicate can refuse it
+      await end(other, foreign, other.pa.client, 'left_voluntarily');
+      const lines = await auditCount(w.p, 'field_worker.registered');
+      const before = await workerCount(w.p);
+      for (const [label, linkTo] of [
+        ['a terminated record of another number', elsewhere],
+        ['an unknown id', randomUUID()],
+        ['another Pariwar’s terminated record of the same number', foreign],
+      ] as const) {
+        const r = await h.register(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true, link_to: linkTo });
+        expect(r.statusCode, `${label}: ${r.body}`).toBe(422);
+        expect(errOf(r).code, label).toBe('field_worker.link_invalid');
+      }
+      expect(await workerCount(w.p), 'a refused link created a worker').toBe(before);
+      expect(await auditCount(w.p, 'field_worker.registered'), 'a refused link wrote an audit line (R2C-4: a pre-read refusal)').toBe(lines);
+      // CONTROL - the right record links, and writes its one line.
+      const ok = await h.register(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true, link_to: old });
+      expect(ok.statusCode, ok.body).toBe(201);
+      expect((await row(String(json(ok)['field_worker_id']))).previous_field_worker_id).toBe(old);
+      expect(await auditCount(w.p, 'field_worker.registered')).toBe(lines + 1);
+    });
+
+    it('AC10 (c): ANOTHER Pariwar’s real worker id as `log?record=` → a bare 403 (no details); CONTROL: this worker’s linked earlier record reads', async () => {
+      const w = await world();
+      const other = await world();
+      const mobile = randomMobile();
+      const old = await activeWorker(w, mobile);
+      await end(w, old, w.pa.client, 'left_voluntarily');
+      const id = await h.registered(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true, link_to: old });
+      const foreign = await activeWorker(other, mobile);
+      await end(other, foreign, other.pa.client, 'left_voluntarily');
+      const r = await h.log(w.pa.client, w.p, id, { record: foreign });
+      expect(r.statusCode, r.body).toBe(403);
+      expect(errOf(r).code).toBe('authz.forbidden');
+      expect((errOf(r) as unknown as { details?: unknown }).details).toBeUndefined();
+      const earlier = await h.log(w.pa.client, w.p, id, { record: old }); // CONTROL
+      expect(earlier.statusCode, earlier.body).toBe(200);
+    });
+
+    it('AC15 (f): ANOTHER Pariwar’s real worker id on the per-worker appeals read → 403, though it has an appeal to leak; CONTROL: this Pariwar’s own ended worker answers 200', async () => {
+      const w = await world();
+      const other = await world();
+      const foreign = await activeWorker(other);
+      const vf = await end(other, foreign, other.pa.client);
+      expect((await h.lodgeAppeal(other.tp.client, other.p, foreign, await lodgeBody(vf))).statusCode).toBe(201);
+      const own = await activeWorker(w);
+      const vo = await end(w, own, w.pa.client);
+      expect((await h.lodgeAppeal(w.tp.client, w.p, own, await lodgeBody(vo))).statusCode).toBe(201);
+      const r = await h.appealsOf(w.pa.client, w.p, foreign);
+      expect(r.statusCode, r.body).toBe(403);
+      expect(r.body).not.toContain(foreign);
+      const mine = await h.appealsOf(w.tp.client, w.p, own); // CONTROL
+      expect(mine.statusCode, mine.body).toBe(200);
+      expect((json(mine) as { items: Json[] }).items).toHaveLength(1);
+    });
+  });
+
+  // Code review round 2, R2C-9: the lodge, decide and withdraw PRE-READS the handlers own. Each is a refusal with its OWN code and NO audit line; deleting
+  // one turns it into the domain command's refusal under the lock, which answers the same code with an intent line AND its `_rolled_back` twin.
+  describe('R2C-9 — the pre-reads of lodge, decide and withdraw: ending_changed, appeal_already_decided and appeal_not_open, each with NO line', () => {
+    const appealRows = (id: string) => q('SELECT 1 FROM field_worker_ending_appeals WHERE field_worker_id = $1', [id]);
+
+    it('lodge with the OLD ending version (undone, then ended again) → 409 ending_changed, no appeal, no line; CONTROL: the current version lodges', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v1 = await end(w, id, w.pa.client); // Panel-heard
+      expect((await h.undoEnding(w.pa2.client, w.p, id, v1)).statusCode).toBe(200);
+      const v2 = await end(w, id, w.pa.client);
+      expect(v2, 'the second ending must be a NEW version, or the leg proves nothing').toBeGreaterThan(v1);
+      const lodged = () => auditCount(w.p, 'field_worker_ending_appeal.lodged');
+      const stale = await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v1));
+      expect(stale.statusCode, stale.body).toBe(409);
+      expect(errOf(stale).code).toBe('field_worker.ending_changed');
+      expect(await lodged(), 'a stale version wrote an audit line').toBe(0);
+      expect(await appealRows(id)).toHaveLength(0);
+      const ok = await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v2)); // CONTROL
+      expect(ok.statusCode, ok.body).toBe(201);
+      expect(await lodged()).toBe(1);
+    });
+
+    it('lodge after the Panel REFUSED an appeal on this ending → 409 appeal_already_decided, no second appeal, no new line; CONTROL: the first lodge and the refusal each wrote theirs', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.pa.client);
+      const first = await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v));
+      expect(first.statusCode, first.body).toBe(201);
+      const refused = await h.decideAppeal(w.tp2.client, w.p, String(json(first)['appeal_id']), { outcome: 'refused', decided_on: await istDay() });
+      expect(refused.statusCode, refused.body).toBe(200);
+      const lodged = () => auditCount(w.p, 'field_worker_ending_appeal.lodged');
+      expect([await lodged(), await auditCount(w.p, 'field_worker_ending_appeal.refused')]).toEqual([1, 1]); // CONTROL
+      const again = await h.lodgeAppeal(w.tp.client, w.p, id, await lodgeBody(v));
+      expect(again.statusCode, again.body).toBe(409);
+      expect(errOf(again).code).toBe('field_worker.appeal_already_decided');
+      expect(await lodged(), 'a lodge after a refusal wrote an audit line').toBe(1);
+      expect(await appealRows(id)).toHaveLength(1);
+    });
+
+    it('decide (refused AND allowed) and withdraw on a CLOSED appeal → 409 appeal_not_open carrying its state, no line; CONTROL: the closing decision wrote its one line', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.da.client); // Pariwar-Admin-heard
+      const appealId = String(json(await h.lodgeAppeal(w.pa.client, w.p, id, await lodgeBody(v)))['appeal_id']);
+      const closed = await h.decideAppeal(w.pa2.client, w.p, appealId, { outcome: 'refused', decided_on: await istDay() });
+      expect(closed.statusCode, closed.body).toBe(200);
+      const lines = async () => [
+        await auditCount(w.p, 'field_worker_ending_appeal.refused'),
+        await auditCount(w.p, 'field_worker_ending_appeal.allowed'),
+        await auditCount(w.p, 'field_worker_ending_appeal.withdrawn'),
+      ];
+      expect(await lines()).toEqual([1, 0, 0]); // CONTROL
+      for (const outcome of ['refused', 'allowed'] as const) {
+        const r = await h.decideAppeal(w.pa2.client, w.p, appealId, { outcome, decided_on: await istDay() });
+        expect(r.statusCode, `${outcome}: ${r.body}`).toBe(409);
+        expect(errOf(r).code, outcome).toBe('field_worker.appeal_not_open');
+        expect((errOf(r) as unknown as { details?: unknown }).details, outcome).toEqual({ state: 'refused' });
+      }
+      const withdrawn = await h.withdrawAppeal(w.pa2.client, w.p, appealId, { decided_on: await istDay() });
+      expect(withdrawn.statusCode, withdrawn.body).toBe(409);
+      expect(errOf(withdrawn).code).toBe('field_worker.appeal_not_open');
+      expect(await lines(), 'a closed appeal cost an audit line').toEqual([1, 0, 0]);
+    });
+  });
+
   describe('AC13 — the route table (13.1d AC7 (d), CR20)', () => {
-    it('the three new GETs declare the module’s ONE shared `read` rate limit (object identity); the five new writes declare none', () => {
+    it('the three new GETs declare the module’s ONE shared `read` rate limit (object identity); the four new writes declare none', () => {
       const routes = getCollectedRoutes(h.app);
       const base = '/api/v1/p/:pariwarId/field-workers';
       const cfg = (method: string, url: string) => {
@@ -380,6 +673,8 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
         return (r!.config as { rateLimit?: unknown } | undefined)?.rateLimit;
       };
       const read = cfg('GET', base);
+      // Review R2C-6 - without this an ABSENT limit makes `toBe(undefined)` below pass for all three GETs (the test could not fail).
+      expect(read, 'the module `read` rate limit is not declared on `GET /field-workers`').toBeDefined();
       for (const url of [`${base}/ending-appeals`, `${base}/ending-appeals/eligible`, `${base}/:fieldWorkerId/ending-appeals`]) expect(cfg('GET', url), url).toBe(read);
       for (const [m, url] of [
         ['POST', `${base}/:fieldWorkerId/undo-ending`],
@@ -387,6 +682,30 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
         ['POST', `${base}/ending-appeals/:appealId/decide`],
         ['POST', `${base}/ending-appeals/:appealId/withdraw`],
       ] as const) expect(cfg(m, url), url).toBeUndefined();
+    });
+
+    // Review R2C-6 - AD13 and Task 5.1 order the appeal record's STATIC routes before every `/:fieldWorkerId` route (13.1d's convention). A
+    // static segment beats a parametric one in find-my-way whatever the order, so this is a convention test: it keeps the order VISIBLE.
+    it('the four static `ending-appeals` routes are registered BEFORE the first `/:fieldWorkerId` route (AD13, Task 5.1)', () => {
+      const base = '/api/v1/p/:pariwarId/field-workers';
+      // ⚠ Fastify exposes a HEAD twin of every GET (registered right after it); the convention is about the routes the module declares.
+      const urls = getCollectedRoutes(h.app)
+        .filter((r) => r.method !== 'HEAD')
+        .map((r) => `${r.method} ${r.url}`)
+        .filter((u) => u.split(' ')[1]!.startsWith(base));
+      const firstParametric = urls.findIndex((u) => u.split(' ')[1]!.startsWith(`${base}/:fieldWorkerId`));
+      expect(firstParametric, 'no per-worker route found').toBeGreaterThan(-1);
+      const statics = urls.map((u, i) => ({ u, i })).filter(({ u }) => u.split(' ')[1]!.startsWith(`${base}/ending-appeals`));
+      // Non-vacuity: all four static routes exist (so an emptied filter cannot pass the loop below).
+      expect(statics.map(({ u }) => u).sort()).toEqual(
+        [
+          `GET ${base}/ending-appeals`,
+          `GET ${base}/ending-appeals/eligible`,
+          `POST ${base}/ending-appeals/:appealId/decide`,
+          `POST ${base}/ending-appeals/:appealId/withdraw`,
+        ].sort(),
+      );
+      for (const { u, i } of statics) expect(i, `${u} is registered after the first per-worker route (${urls[firstParametric]})`).toBeLessThan(firstParametric);
     });
   });
 });

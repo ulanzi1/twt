@@ -25,8 +25,10 @@
 // Story 13.1f (AD12; `-454` Q2 B "The history reads as one person's") — `record=<id>`: the log of an EARLIER record reached from this
 // worker by following `previous_field_worker_id` (at most 10 hops), returned ONLY if the officer's own `field_worker.read_log` passes on
 // THAT record's district (the same predicate the gate uses, on the loaded grants). Else — not in the chain, or not readable — a BARE 403
-// with NO `details` (⛔ `AuthorizationDeniedError`, whose locator would tell an existing record from an unknown one — G27, TR19). So the
-// link discloses nothing the officer could not already read.
+// with NO `details` (⛔ `AuthorizationDeniedError`, whose locator would tell an existing record from an unknown one — G27, TR19). So what
+// the link lets an officer READ of the earlier record is only what their own read already allows. ⚠ What it does NOT hide (code review
+// round 2, R2A-5): `previous_field_worker_id` is in the NEW worker's own log, so that an earlier ended record exists, and its id, reaches
+// every officer who may read that log — never the earlier record's date, reason or events, which stay behind `record=`.
 
 import type { FieldWorkerLog, FieldWorkerLogQuery } from '@twt/contracts';
 import { fieldWorker, ids, rbac } from '@twt/domain';

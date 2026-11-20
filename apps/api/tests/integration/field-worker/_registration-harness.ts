@@ -153,7 +153,18 @@ export async function createHarness(): Promise<Harness> {
   const move = (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => actPost(c, p, id, 'move', JSON.stringify(body), key);
   const suspend = (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => actPost(c, p, id, 'suspend', JSON.stringify(body), key);
   const reactivate = (c: Client, p: string, id: string, key: string | null = randomUUID(), body = '{}') => actPost(c, p, id, 'reactivate', body, key);
-  const terminate = (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => actPost(c, p, id, 'terminate', JSON.stringify(body), key);
+  /**
+   * Code review round 2, R2A-2 — the terminate body REQUIRES `expected_state_event_version`, the version the officer's screen showed. A spec that
+   * is not about that guard leaves it out and gets the worker's CURRENT version, read here (an owner read, BEFORE the request is sent — so a race
+   * spec's other act has not committed yet); a spec that IS about it passes its own — a stale one, or a malformed one — and is sent as given.
+   */
+  const terminate = async (c: Client, p: string, id: string, body: Json, key: string | null = randomUUID()) => {
+    const given = Object.prototype.hasOwnProperty.call(body, 'expected_state_event_version');
+    const shown = given
+      ? undefined
+      : Number((await td.pool.query<{ v: string }>('SELECT state_event_version::text AS v FROM field_workers WHERE field_worker_id = $1', [id])).rows[0]?.v ?? 1);
+    return actPost(c, p, id, 'terminate', JSON.stringify(given ? body : { ...body, expected_state_event_version: shown }), key);
+  };
   const log = (c: Client, p: string, id: string, query: Record<string, string> = {}) => {
     const qs = new URLSearchParams(query).toString();
     return c.inject({ method: 'GET', url: `/api/v1/p/${p}/field-workers/${id}/log${qs === '' ? '' : `?${qs}`}` });

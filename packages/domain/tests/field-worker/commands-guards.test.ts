@@ -447,7 +447,7 @@ describe('R2A-2 — terminate refuses a worker that changed since the screen (ex
       expect(calls.slice(0, 2), `shown ${shown}`).toEqual(['SAVEPOINT', 'LOCK']);
       expect(calls).not.toContain('APPEND');
       expect(calls).not.toContain('UPDATE');
-      expect(calls[calls.length - 1]).toBe('RELEASE'); // the savepoint was rolled back to and released
+      expect(calls.slice(-2), `shown ${shown}`).toEqual(['ROLLBACK TO', 'RELEASE']); // the savepoint was rolled back to and released (review R3-38)
     }
   });
 
@@ -491,7 +491,7 @@ describe('R2B-10 — terminate: the hearer fixed at the ending is REQUIRED and m
 });
 
 describe('QE7 / QE18 — guard (0) runs BEFORE any statement', () => {
-  const registerInput ={ nameCiphertext: 'n', mobileCiphertext: 'm', mobileBlindIndex: 'i', registeredByDisplay: 'Asha', district: 'Patna' };
+  const registerInput = { nameCiphertext: 'n', mobileCiphertext: 'm', mobileBlindIndex: 'i', registeredByDisplay: 'Asha', district: 'Patna' };
 
   it.each([
     ['actor system', { actor: 'system' }],

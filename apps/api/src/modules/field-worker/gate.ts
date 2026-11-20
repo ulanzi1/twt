@@ -143,7 +143,9 @@ export function moveRequestGateDistrict(request: FastifyRequest): string | null 
 // worker's district; `requireEndingAppealHearer` invokes the matching key's PREBUILT `requirePermissionHook` closure (the claims
 // `requireAnyAppealAccess` shape — G26; ⛔ `rbac.requirePermission`, which the R3-29 fence flags). An actor without the matching key ⇒
 // 403 (a Pariwar Admin cannot hear the Panel's appeal; a trustee cannot hear a Pariwar Admin's). With NO hearer to match (lodge on a
-// worker who is not terminated) EITHER hook passes (`_as_panel` first) and the handler answers its pre-read 409. A NULL district (a
+// worker who is not terminated) EXACTLY ONE hook runs, chosen by whether the actor holds the Panel's key (`holdsPanel`, a pure question -
+// review R2C-2; review R3-24 corrected this comment, which still described the removed try/catch), and the handler answers its pre-read
+// 409. A NULL district (a
 // missing or foreign worker / appeal) still fails closed to 403 — ⚠ the 403's `details.targetLocator` tells an existing row from an
 // unknown id to a grant-holder (13.1d CR31 — INHERITED, not fixed; G27).
 

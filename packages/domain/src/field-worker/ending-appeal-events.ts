@@ -101,7 +101,8 @@ export const FieldWorkerEndingAppealWithdrawnPayloadSchema = z
 
 /**
  * `open → superseded` — a SLIP's undo (`field_worker.undo_ending`, cause `mistake`) restored the worker, so the appeal is no longer
- * needed (AD6, I4); written by the undo, in its transaction, with the undoer's snapshot. `decided_on` is the undo's IST day (SQL).
+ * needed (AD6, I4); written by the undo, in its transaction, with the undoer's snapshot. `decided_on` is the undo's IST day (SQL), or the appeal's
+ * `received_on` when that is later (an undo begun before IST midnight that locked after a lodge of the next day - R7; review R3-36).
  */
 export const FieldWorkerEndingAppealSupersededPayloadSchema = z
   .object({

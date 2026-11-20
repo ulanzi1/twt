@@ -111,6 +111,8 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
   const appeals = useFieldWorkerEndingAppealsOf(pariwarId, fieldWorkerId, open === 'undo');
   const openAppeal = (appeals.data?.items ?? []).some((a) => a.state === 'open' && a.ending_event_version === worker.state_event_version);
   const undoCheckReady = appeals.isSuccess && appeals.fetchStatus === 'idle';
+  /** A check that HAD answered is being read again (a refused undo re-reads it - R3-1): Confirm is held, ⛔ disabled (R3-13). */
+  const undoRechecking = open === 'undo' && appeals.isSuccess && appeals.fetchStatus !== 'idle';
   const appealProblem = open === 'undo' && appeals.isError ? fieldWorkerGuidance(appeals.error, 'appeals') : null;
   useSignInRedirect(problem?.signIn === true || appealProblem?.signIn === true);
 
@@ -406,10 +408,12 @@ export function WorkerActions({ pariwarId, fieldWorkerId, name, worker, onStale,
               ref={confirmRef}
               type="submit"
               className={`rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50${busy ? ' opacity-50' : ''}`}
-              disabled={!ready}
+              disabled={!ready && !undoRechecking}
               // Busy is `aria-disabled`, ⛔ `disabled`: the focused Confirm must keep focus while it saves (a disabled control loses it);
-              // `submit` ignores a press while busy.
-              aria-disabled={busy || undefined}
+              // `submit` ignores a press while busy. The same while Undo's appeal check is RE-read (review R3-13): `ready` is false then, so
+              // `submit` ignores the press, but a `disabled` Confirm would drop the officer's focus to the body, and `undoFocused` would not
+              // put it back.
+              aria-disabled={busy || undoRechecking || undefined}
               aria-describedby={open === 'reactivate' || open === 'undo' ? introId : undefined}
               data-testid="fw-act-confirm"
             >

@@ -156,8 +156,8 @@ export function requirePermissionHook(
 /**
  * What `requirePermissionHook` asks of the guard for THIS request, resolved in ONE place so the hook and `holdsPermission` can never
  * disagree about the question (review R2C-2). Both the dimension and the value are resolved INSIDE the per-request closure
- * (Story 6.17): `resolveDimension` is absent for every caller but the ground-inspection gate, which falls back to the
- * construction-time `dimension`.
+ * (Story 6.17): without `resolveDimension` the construction-time `dimension` is used (review R3-24: several callers now pass one - the
+ * claims queues, the field-worker lists and the appeals list - so this no longer names them).
  */
 async function permissionAskOf(
   request: FastifyRequest,

@@ -155,7 +155,9 @@ describe.skipIf(!hasDatabase)('Story 13.1c — a move or an act that loses a rac
     expect(stored).toEqual({ district: 'Gaya', ...expected });
     // Review R2C-7 - the point of G24 here is WHICH version: the one the lock confirmed (the holder's act), ⛔ the pre-read's. `any(Number)` passed for either.
     const after = await versionOf();
-    expect(after, 'the holder\'s act did not move the row past the pre-read version - the leg cannot tell locked from pre-read').toBeGreaterThan(before);
+    // Review R3-20: `> before` held from the MOVE's own `posted` event alone, so it could not show the holder's act came first. The holder's act
+    // and the move each append ONE event: exactly two past the pre-read, and the 200 is the second.
+    expect(after, 'the holder\'s act did not commit before the move - the leg cannot tell locked from pre-read').toBe(before + 2);
     expect(json(r)['state_event_version']).toBe(after);
   });
 });

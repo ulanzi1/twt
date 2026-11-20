@@ -516,7 +516,9 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the appeal record (live DB)', () 
       expect(await eligible(FIELD_WORKER_APPEALS_PER_ENDING + 1)).toEqual([]); // an OPEN appeal hides the worker whatever the limit (one open at a time)
       await refuseFieldWorkerEndingAppeal(c, await decision(appealId, 'panel'));
       expect(await eligible()).toEqual(FIELD_WORKER_APPEALS_PER_ENDING <= 1 ? [] : [worker]); // the lodge command's own rule, read from the same constant
-      // The limit raised by one: ONE refusal no longer hides the worker — the proof the SQL follows the constant instead of a literal 'refused'.
+      // The limit raised by one: ONE refusal no longer hides the worker — the proof the SQL compares against the LIMIT it is given, instead of
+      // hiding on any 'refused'. Review R3-34: it is NOT a proof that the default IS the constant (at N = 1 a literal `?? 1` passes too); that tie,
+      // and the lodge command's own `>= FIELD_WORKER_APPEALS_PER_ENDING`, hold by construction (both import the one constant), not by a leg.
       expect(await eligible(FIELD_WORKER_APPEALS_PER_ENDING + 1)).toEqual([worker]);
       await expect(pageAppealEligibleFieldWorkers(db, cast.P, { hearers: ['trustee_panel'], appealsPerEnding: 0 })).rejects.toBeInstanceOf(RangeError);
     });

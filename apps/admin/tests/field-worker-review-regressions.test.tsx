@@ -276,6 +276,30 @@ describe('13.1f review regressions', () => {
     expect(lodgeFieldWorkerEndingAppeal.mock.calls[0]![3]).not.toBe(lodgeFieldWorkerEndingAppeal.mock.calls[1]![3]);
   });
 
+  // Review R3-2 — the R1 guard covered `number_previously_ended` only: A's other refusals about its number were shown on the field holding B.
+  it.each([
+    ['field_worker.mobile_already_registered'],
+    ['field_worker.mobile_invalid'],
+    ['field_worker.link_invalid'],
+  ] as const)('R3-2: a delayed %s for number A is NOT shown once the mobile holds B; CONTROL: the same refusal for the number on screen is', async (code) => {
+    let rejectA!: (reason: unknown) => void;
+    registerFieldWorker.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectA = reject; }));
+    registerFieldWorker.mockRejectedValueOnce(new ApiError(409, code, 'about B'));
+    render(<QueryClientProvider client={createQueryClient()}><RegisterFieldWorkerPage pariwarId={P} /></QueryClientProvider>);
+    fireEvent.change(screen.getByTestId('fw-register-name'), { target: { value: 'Ramesh Kumar' } });
+    fireEvent.change(screen.getByTestId('fw-register-mobile'), { target: { value: '9876500010' } });
+    await chooseDistrict('fw-register-district', 'Patna');
+    fireEvent.click(screen.getByTestId('fw-register-submit'));
+    await waitFor(() => expect(registerFieldWorker).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByTestId('fw-register-mobile'), { target: { value: '9876500020' } });
+    await act(async () => rejectA(new ApiError(409, code, 'about A')));
+    expect(screen.queryByTestId('fw-register-error')).toBeNull();
+    expect(screen.getByTestId('fw-register-mobile')).not.toHaveAttribute('aria-invalid', 'true');
+    fireEvent.click(screen.getByTestId('fw-register-submit')); // CONTROL - B's own refusal IS shown
+    expect(await screen.findByTestId('fw-register-error')).toBeInTheDocument();
+    expect(registerFieldWorker.mock.calls[1]![2]).not.toBe(registerFieldWorker.mock.calls[0]![2]); // a NEW attempt for B
+  });
+
   it('R6: Undo stays blocked while the appeal check is pending and announces the closure warning before confirmation', async () => {
     version = 4;
     let resolveAppeals!: (v: unknown) => void;
@@ -285,6 +309,11 @@ describe('13.1f review regressions', () => {
     fireEvent.click(screen.getByTestId('fw-act-undo'));
     expect(screen.getByTestId('fw-act-confirm')).toBeDisabled();
     fireEvent.submit(screen.getByTestId('fw-act-undo-form'));
+    // Review R3-11: a TanStack v5 mutation calls its `mutationFn` asynchronously, so "not sent" read at once passed with the guard deleted. A
+    // macrotask first: a submit the guard let through has reached the client by then.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     expect(undoFieldWorkerEnding).not.toHaveBeenCalled();
     await act(async () => resolveAppeals({ items: [appeal()] }));
     await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());

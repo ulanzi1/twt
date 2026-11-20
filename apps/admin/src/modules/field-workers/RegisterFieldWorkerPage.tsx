@@ -110,7 +110,14 @@ export function RegisterFieldWorkerPage({ pariwarId }: { pariwarId: string }): R
             return;
           }
         }
-        setProblem(fieldWorkerGuidance(err, 'register'));
+        // Review R3-2 — the same rule for every refusal ABOUT the number (it is taken, invalid, or the link chosen for it is not a record of it):
+        // one about number A must not be shown on the field that now holds B. Any other refusal (no access, the network) is still said.
+        const g = fieldWorkerGuidance(err, 'register');
+        if (body.mobile !== mobileRef.current && (g.field === 'mobile' || (err instanceof api.ApiError && err.code === 'field_worker.link_invalid'))) {
+          keyRef.current = null;
+          return;
+        }
+        setProblem(g);
         headingRef.current?.focus();
       },
     );

@@ -65,7 +65,9 @@ const RAW_WRITE = new RegExp(
  */
 const SQL_NAME_ONLY = new RegExp(String.raw`^\s*${QUALIFIER}"?field_worker_ending_appeals"?\s*$`, 'i');
 // R2B-6: Postgres compares setting names case-insensitively (`SET LOCAL APP.Field_Worker_Ending_Appeal_Writer` unlocks the trigger too).
-const WRITER_SETTING = /app\.field_worker_ending_appeal_writer/i;
+// Review R3-25: and `SET` reads the name as TOKENS (`var_name '.' ColId`), so each part may be quoted and a space or a comment may sit around
+// the dot (`SET LOCAL "app"."field_worker_ending_appeal_writer"`, `app /**/ . field_worker_ending_appeal_writer`) - all unlock the trigger.
+const WRITER_SETTING = new RegExp(String.raw`"?app"?(?:\s|${COMMENT})*\.(?:\s|${COMMENT})*"?field_worker_ending_appeal_writer`, 'i');
 
 function unwrap(expr: ts.Expression): ts.Expression {
   let e = expr;
@@ -96,6 +98,24 @@ interface Aliases {
 /** `??`, `||` and `&&`: an expression that evaluates to ONE of its operands. */
 const isChoiceOperator = (k: ts.SyntaxKind): boolean =>
   k === ts.SyntaxKind.QuestionQuestionToken || k === ts.SyntaxKind.BarBarToken || k === ts.SyntaxKind.AmpersandAmpersandToken;
+/**
+ * `=` and the logical assignments `??=` / `||=` / `&&=` (review R3-26): each can bind the table to its left, and each EVALUATES to it, so
+ * `db.update(t = fieldWorkerEndingAppeals)` is the table too.
+ */
+const isAssignOperator = (k: ts.SyntaxKind): boolean =>
+  k === ts.SyntaxKind.EqualsToken ||
+  k === ts.SyntaxKind.QuestionQuestionEqualsToken ||
+  k === ts.SyntaxKind.BarBarEqualsToken ||
+  k === ts.SyntaxKind.AmpersandAmpersandEqualsToken;
+/**
+ * A declared member or property NAME as text: an identifier, a string, a private field (`#t`, read `this.#t` - review R3-26) or a computed
+ * key that is a string (`['t']`) - or undefined.
+ */
+function memberName(name: ts.PropertyName | ts.PrivateIdentifier): string | undefined {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isPrivateIdentifier(name)) return name.text;
+  if (ts.isComputedPropertyName(name)) return stringKey(name.expression);
+  return undefined;
+}
 
 const stringKey = (e: ts.Expression): string | undefined => {
   const a = unwrap(e);
@@ -108,6 +128,8 @@ function isTable(expr: ts.Expression, aliases: Aliases): boolean {
   // R2B-6: either arm of a conditional, or either operand of `??` / `||` / `&&`, may BE the table - fail closed.
   if (ts.isConditionalExpression(e)) return isTable(e.whenTrue, aliases) || isTable(e.whenFalse, aliases);
   if (ts.isBinaryExpression(e) && isChoiceOperator(e.operatorToken.kind)) return isTable(e.left, aliases) || isTable(e.right, aliases);
+  // R3-26: the comma operator evaluates to its RIGHT operand, and an assignment to what it assigns.
+  if (ts.isBinaryExpression(e) && (e.operatorToken.kind === ts.SyntaxKind.CommaToken || isAssignOperator(e.operatorToken.kind))) return isTable(e.right, aliases);
   if (ts.isIdentifier(e)) return e.text === TABLE || aliases.names.has(e.text);
   if (ts.isPropertyAccessExpression(e)) return e.name.text === TABLE || aliases.props.has(e.name.text);
   if (ts.isElementAccessExpression(e)) {
@@ -144,11 +166,23 @@ function collectAliases(sf: ts.SourceFile): Aliases {
     if (ts.isImportSpecifier(node) && (node.propertyName ?? node.name).text === TABLE) add(aliases.names, node.name.text);
     // R2B-6: a class field (`t = fieldWorkerEndingAppeals`, read as `this.t`) and a parameter default (`(db, t = fieldWorkerEndingAppeals)`)
     // bind the table to a name too - only a `const` / `let`, an assignment and an object literal did.
-    if (ts.isPropertyDeclaration(node) && node.initializer !== undefined && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))) {
-      if (isTable(node.initializer, aliases)) add(aliases.props, node.name.text);
-      if (holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, node.name.text);
+    // R3-26: a PRIVATE field (`#t = ...`, read `this.#t`) and a computed string key too.
+    if (ts.isPropertyDeclaration(node) && node.initializer !== undefined) {
+      const name = memberName(node.name);
+      if (name !== undefined && isTable(node.initializer, aliases)) add(aliases.props, name);
+      if (name !== undefined && holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, name);
     }
     if (ts.isParameter(node) && node.initializer !== undefined && ts.isIdentifier(node.name)) {
+      if (isTable(node.initializer, aliases)) add(aliases.names, node.name.text);
+      if (holdsSqlName(node.initializer, aliases)) add(aliases.sqlNames, node.name.text);
+      // R3-26: a TypeScript parameter PROPERTY (`constructor(private t = fieldWorkerEndingAppeals)`) is also read as `this.t`.
+      if (ts.isParameterPropertyDeclaration(node, node.parent)) {
+        if (isTable(node.initializer, aliases)) add(aliases.props, node.name.text);
+        if (holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, node.name.text);
+      }
+    }
+    // R3-26: a destructured default (`({ t = fieldWorkerEndingAppeals }) => ...`, `const [t = ...] = []`) binds the name to it.
+    if (ts.isBindingElement(node) && node.initializer !== undefined && ts.isIdentifier(node.name)) {
       if (isTable(node.initializer, aliases)) add(aliases.names, node.name.text);
       if (holdsSqlName(node.initializer, aliases)) add(aliases.sqlNames, node.name.text);
     }
@@ -184,12 +218,12 @@ function collectAliases(sf: ts.SourceFile): Aliases {
     }
     // `t = fieldWorkerEndingAppeals`, `holder.t = ...`, `holder['t'] = ...`
     // `T = 'field_worker_ending_appeals'` (R5-2)
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(unwrap(node.left)) && holdsSqlName(node.right, aliases)) {
+    if (ts.isBinaryExpression(node) && isAssignOperator(node.operatorToken.kind) && ts.isIdentifier(unwrap(node.left)) && holdsSqlName(node.right, aliases)) {
       add(aliases.sqlNames, (unwrap(node.left) as ts.Identifier).text);
     }
     // `{ t: 'field_worker_ending_appeals' }` (R5-2)
-    if (ts.isPropertyAssignment(node) && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) && holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, node.name.text);
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && isTable(node.right, aliases)) {
+    if (ts.isPropertyAssignment(node) && memberName(node.name) !== undefined && holdsSqlName(node.initializer, aliases)) add(aliases.sqlProps, memberName(node.name)!);
+    if (ts.isBinaryExpression(node) && isAssignOperator(node.operatorToken.kind) && isTable(node.right, aliases)) {
       const left = unwrap(node.left);
       if (ts.isIdentifier(left)) add(aliases.names, left.text);
       else if (ts.isPropertyAccessExpression(left)) add(aliases.props, left.name.text);
@@ -199,7 +233,7 @@ function collectAliases(sf: ts.SourceFile): Aliases {
       }
     }
     // `{ t: fieldWorkerEndingAppeals }`, `{ fieldWorkerEndingAppeals }`
-    if (ts.isPropertyAssignment(node) && isTable(node.initializer, aliases) && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name))) add(aliases.props, node.name.text);
+    if (ts.isPropertyAssignment(node) && isTable(node.initializer, aliases) && memberName(node.name) !== undefined) add(aliases.props, memberName(node.name)!);
     if (ts.isShorthandPropertyAssignment(node) && (node.name.text === TABLE || aliases.names.has(node.name.text))) add(aliases.props, node.name.text);
     // `const a = [fieldWorkerEndingAppeals]` / `a = [...]`
     if (ts.isArrayLiteralExpression(node) && node.elements.some((el) => !ts.isSpreadElement(el) && isTable(el, aliases))) {

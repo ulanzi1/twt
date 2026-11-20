@@ -14,7 +14,7 @@ import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { attemptKey, useFieldWorkerAppealAct, type AttemptKey } from '../../api/hooks.js';
-import { appealGuidance, istTodayInBrowser, type Guidance } from './derive.js';
+import { appealGuidance, istTodayNotBefore, type Guidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -43,7 +43,7 @@ export function AppealActions({
 }): ReactElement {
   const mutation = useFieldWorkerAppealAct(pariwarId);
   const [open, setOpen] = useState<AppealAct | null>(null);
-  const [decidedOn, setDecidedOn] = useState(istTodayInBrowser());
+  const [decidedOn, setDecidedOn] = useState(() => istTodayNotBefore(appeal.received_on));
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Guidance | null>(null);
   const attempt = useRef<AttemptKey | null>(null);
@@ -153,7 +153,7 @@ export function AppealActions({
               value={decidedOn}
               // The server judges both bounds; the control offers the days that can pass: not before the day the worker appealed (R2D-13).
               min={appeal.received_on}
-              max={istTodayInBrowser()}
+              max={istTodayNotBefore(appeal.received_on)}
               readOnly={busy}
               onChange={(e) => {
                 if (inFlight.current) return;

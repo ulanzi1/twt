@@ -248,7 +248,7 @@ export function registerFieldWorkerRoutes(app: FastifyInstance, deps: AppDeps): 
   );
 
   // ── Story 13.1f (AD13) — the appeal record's STATIC routes, registered HERE with the other static segments (`move-requests`, `notices`,
-  // `districts`) and so BEFORE every `/:fieldWorkerId` route, as AD13 and Task 5.1 order (review R2C-3 / R2C-6: they sat after `/:fieldWorkerId/code`
+  // `districts`) and so BEFORE every `/:fieldWorkerId` route, as AD13 and Task 5.1 order (review R2C-6: they sat after `/:fieldWorkerId/code`
   // under a comment saying BEFORE). A static segment beats a parametric one in find-my-way either way; the ORDER is what keeps that visible.
   // Every GET carries `limits.read` (13.1d AC7 (d)). ──
   const appeals = createFieldWorkerEndingAppealHandlers(deps);

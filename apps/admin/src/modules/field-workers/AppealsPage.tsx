@@ -38,31 +38,58 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
    * A STALE refusal of an act (an appeal another officer already decided, a worker whose ending changed, an appeal that appeared) — said HERE
    * for the same reason as `outcome`, and more so: the refusal's own refresh removes or re-keys the row or form that raised it, and a line
    * kept inside it was destroyed within a round trip, so the row simply vanished, as after a success (code review round 2, chunk D: R2D-2).
+   * `owner` is the row or candidate that raised it: another row's success does not wipe it (review R3-5).
    */
-  const [stale, setStale] = useState<string | null>(null);
+  const [stale, setStale] = useState<{ text: string; owner: string } | null>(null);
   const eligible = useAppealEligibleFieldWorkers(pariwarId, recording, district);
   const [moreNotice, setMoreNotice] = useState<string | null>(null);
   const [moreAppealsNotice, setMoreAppealsNotice] = useState<string | null>(null);
   const loadSeq = useRef(0);
   const appealsSeq = useRef(0);
+  /**
+   * The VIEW (district and state filter) the lines on the page describe. Review R3-3 / R3-4: an act still in flight when the view changed
+   * wrote its outcome or refusal into the NEW view (its row had left with the old one), and a state-filter change cleared nothing.
+   */
+  const viewSeq = useRef(0);
+  const view = viewSeq.current;
+  const inView = (): boolean => view === viewSeq.current;
+  const changeView = (): void => {
+    viewSeq.current += 1;
+    loadSeq.current += 1;
+    appealsSeq.current += 1;
+    setOutcome(null);
+    setStale(null);
+    setMoreNotice(null);
+    setMoreAppealsNotice(null);
+  };
   const headingRef = useRef<HTMLHeadingElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const eligibleListRef = useRef<HTMLUListElement>(null);
   const recordTitleRef = useRef<HTMLHeadingElement>(null);
   const recordSectionRef = useRef<HTMLElement>(null);
-  /** An act finished: say it here, and take focus to the page unless the officer has gone elsewhere (the pressed control unmounts with its row). */
-  const finish = (line: string): void => {
-    setStale(null);
+  /**
+   * An act finished: say it here, and take focus to the page unless the officer has gone elsewhere (the pressed control unmounts with its row).
+   * It clears only ITS OWN row's refusal (R3-5): a refusal another row raised meanwhile stays - that row has already left with its refresh.
+   */
+  const finish = (line: string, owner: string, target: HTMLElement | null, ...owners: (Element | null)[]): void => {
+    if (!inView()) return;
+    setStale((s) => (s !== null && s.owner !== owner ? s : null));
     setOutcome(line);
-    focusIfUnclaimed(headingRef.current, listRef.current, eligibleListRef.current);
+    focusIfUnclaimed(target, ...owners);
+  };
+  /** A new attempt began: the lines about the LAST act are cleared - a refusal, and a success too, so two lines never describe two acts (R3-5). */
+  const attempted = (): void => {
+    setStale(null);
+    setOutcome(null);
   };
   /**
    * A stale refusal reached the page: say it here AND take focus the way `finish` does. The refresh that follows removes the row (or the
    * eligible candidate) whose button held focus, and nothing moved it, so a keyboard user fell to `<body>` (browser pass 2026-11-20, F1).
    * `target` and `owners` are the same pair the matching success path hands to `focusIfUnclaimed`.
    */
-  const refused = (line: string, target: HTMLElement | null, ...owners: (Element | null)[]): void => {
-    setStale(line);
+  const refused = (line: string, owner: string, target: HTMLElement | null, ...owners: (Element | null)[]): void => {
+    if (!inView()) return;
+    setStale({ text: line, owner });
     focusIfUnclaimed(target, ...owners);
   };
   const listProblem = appeals.isError ? fieldWorkerGuidance(appeals.error, 'appeals') : null;
@@ -81,13 +108,13 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
       </div>
       {/* Mounted EMPTY, so a refusal arrives into a live region (it is heard), and it outlives the row the refusal's refresh removes. */}
       <div role="alert" data-testid="fw-appeals-stale">
-        {stale !== null && <p className="text-sm text-status-fail-fg">{stale}</p>}
+        {stale !== null && <p className="text-sm text-status-fail-fg">{stale.text}</p>}
       </div>
 
-      <DistrictPicker pariwarId={pariwarId} value={district} allowAll testId="fw-appeals-district" onChange={(d) => { loadSeq.current += 1; appealsSeq.current += 1; setDistrict(d); setRecording(false); setOutcome(null); setStale(null); setMoreNotice(null); setMoreAppealsNotice(null); }} />
+      <DistrictPicker pariwarId={pariwarId} value={district} allowAll testId="fw-appeals-district" onChange={(d) => { changeView(); setDistrict(d); setRecording(false); }} />
       <label className="flex items-center gap-2 text-sm">
         {t('fw.appeals.filter')}
-        <select value={state ?? ''} onChange={(e) => setState(e.target.value === '' ? null : (e.target.value as FieldWorkerEndingAppealState))} data-testid="fw-appeals-filter">
+        <select value={state ?? ''} onChange={(e) => { changeView(); setState(e.target.value === '' ? null : (e.target.value as FieldWorkerEndingAppealState)); }} data-testid="fw-appeals-filter">
           <option value="">{t('fw.appeals.filter.all')}</option>
           {FIELD_WORKER_ENDING_APPEAL_STATES.map((s) => (
             <option key={s} value={s}>
@@ -97,9 +124,11 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
         </select>
       </label>
 
-      <div role="status">
+      {/* The count is said for the FIRST page only: a "Load more" says what arrived in its own region below, and the count changing too was
+          heard twice (review R3-10). A removed line is not announced, so the count simply leaves once more pages are shown. */}
+      <div role="status" data-testid="fw-appeals-count">
         {appeals.isPending && <p className="text-sm">{t('fw.loading')}</p>}
-        {appeals.isSuccess && <p className="sr-only">{t(items.length === 0 ? 'fw.appeals.recordsNone' : items.length === 1 ? 'fw.appeals.recordsOne' : 'fw.appeals.recordsLoaded', { count: items.length })}</p>}
+        {appeals.isSuccess && appeals.data.pages.length <= 1 && <p className="sr-only">{t(items.length === 0 ? 'fw.appeals.recordsNone' : items.length === 1 ? 'fw.appeals.recordsOne' : 'fw.appeals.recordsLoaded', { count: items.length })}</p>}
       </div>
       {listProblem !== null && (
         <div role="alert" className="flex flex-col gap-1 text-sm text-status-fail-fg">
@@ -125,7 +154,7 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
               </p>
               <p>{t('fw.appeals.received', { date: formatIstDate(a.received_on), via: t(`fw.appeals.via.${a.received_via}`) })}</p>
               {a.decided_on !== null && <p>{t('fw.appeals.decided', { date: formatIstDate(a.decided_on) })}</p>}
-              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={finish} onStale={(line) => refused(line, headingRef.current, listRef.current, eligibleListRef.current)} onAttempt={() => setStale(null)} />}
+              {a.state === 'open' && <AppealActions key={a.appeal_id} pariwarId={pariwarId} appeal={a} name={a.name} onDone={(line) => finish(line, a.appeal_id, headingRef.current, listRef.current, eligibleListRef.current)} onStale={(line) => refused(line, a.appeal_id, headingRef.current, listRef.current, eligibleListRef.current)} onAttempt={attempted} />}
             </li>
           ))}
         </ul>
@@ -160,13 +189,22 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
         <h2 id="fw-appeals-record-title" ref={recordTitleRef} tabIndex={-1} className="font-medium">
           {t('fw.appeals.record')}
         </h2>
+        {/* Review R3-9 (family 13 (d)) - the eligible list's loading line, its empty line and its first page's count, in a status region mounted
+            with the section (EMPTY until "Record an appeal"), so each arrives into a live region and is heard: it is a Trustee Panel holder's only
+            way to a worker. The count, as the appeals list's, is the first page's only (R3-10). */}
+        <div role="status" data-testid="fw-appeals-eligible-loaded">
+          {recording && eligible.isPending && <p className="text-sm">{t('fw.loading')}</p>}
+          {recording && eligible.isSuccess && candidates.length === 0 && <p className="text-sm" data-testid="fw-appeals-eligible-empty">{t('fw.appeals.eligible.empty')}</p>}
+          {recording && eligible.isSuccess && candidates.length > 0 && eligible.data.pages.length <= 1 && (
+            <p className="sr-only">{candidates.length === 1 ? t('fw.appeals.candidatesOne') : t('fw.appeals.candidates', { count: candidates.length })}</p>
+          )}
+        </div>
         {!recording ? (
           <button type="button" className="self-start rounded border px-3 py-1 text-sm" onClick={() => { recordTitleRef.current?.focus(); setRecording(true); }} data-testid="fw-appeals-record-open">
             {t('fw.appeals.record')}
           </button>
         ) : (
           <>
-            {eligible.isPending && <p className="text-sm">{t('fw.loading')}</p>}
             {eligibleProblem !== null && (
               <div role="alert" className="flex flex-col gap-1 text-sm text-status-fail-fg">
                 <p data-testid="fw-appeals-eligible-error">{eligibleProblem.text}</p>
@@ -178,7 +216,6 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
                 )}
               </div>
             )}
-            {eligible.isSuccess && candidates.length === 0 && <p className="text-sm" data-testid="fw-appeals-eligible-empty">{t('fw.appeals.eligible.empty')}</p>}
             <ul ref={eligibleListRef} className="flex flex-col gap-2" data-testid="fw-appeals-eligible">
               {candidates.map((c) => (
                 <li key={`${c.field_worker_id}:${String(c.ending_event_version)}`} className="flex flex-col gap-1 rounded border p-2 text-sm" data-testid="fw-appeals-eligible-item">
@@ -190,16 +227,17 @@ export function AppealsPage({ pariwarId }: { pariwarId: string }): ReactElement 
                     endingVersion={c.ending_event_version}
                     heardBy={c.heard_by}
                     name={c.display_name}
-                    onAttempt={() => setStale(null)}
-                    onStale={(line) => refused(line, recordTitleRef.current, recordSectionRef.current)}
-                    onLodged={() => { setStale(null); setOutcome(t('fw.appeals.lodgedFor', { name: c.display_name })); focusIfUnclaimed(recordTitleRef.current, recordSectionRef.current); }}
+                    fromList
+                    onAttempt={attempted}
+                    onStale={(line) => refused(line, c.field_worker_id, recordTitleRef.current, recordSectionRef.current)}
+                    onLodged={() => finish(t('fw.appeals.lodgedFor', { name: c.display_name }), c.field_worker_id, recordTitleRef.current, recordSectionRef.current)}
                   />
                 </li>
               ))}
             </ul>
             <div role="status" data-testid="fw-appeals-eligible-status">{moreNotice}</div>
             {eligible.hasNextPage && (
-              <button type="button" className="self-start text-sm underline" aria-disabled={eligible.fetchStatus !== 'idle'} data-testid="fw-appeals-eligible-more" onClick={(e) => {
+              <button type="button" className="self-start text-sm underline" aria-disabled={eligible.fetchStatus !== 'idle' || undefined} data-testid="fw-appeals-eligible-more" onClick={(e) => {
                 if (eligible.fetchStatus !== 'idle') return;
                 const pressed = e.currentTarget;
                 const seq = ++loadSeq.current;

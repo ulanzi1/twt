@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import * as commandsModule from '../../../src/field-worker/commands.js';
 import * as fieldWorker from '../../../src/field-worker/index.js';
 import {
   activateFieldWorker,
@@ -199,9 +200,12 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
       expect(await version(c, worker)).toBe(restored); // nothing written
       expect(await streamTypes(c, worker)).toEqual(types);
       expect((await row(c, worker)).current_state).toBe('active');
-      // CONTROL — the screen re-read (the current version) ends them, normally, and the second ending can be undone too (AC1 (e)).
-      await end();
+      // CONTROL — the screen re-read (the current version) ends them, normally, and the second ending can be undone too (AC1 (e); review
+      // R3-40: the comment promised the undo and no undo ran).
+      const second = await end();
       expect((await row(c, worker)).current_state).toBe('terminated');
+      await undo(second);
+      expect((await row(c, worker)).current_state).toBe('active');
     });
 
     it('ended, then restored by an ALLOWED appeal: the same stale End is refused — the Panel’s decision is not overridden by a stale tab', async () => {
@@ -320,12 +324,31 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
     });
 
     it('(h) the barrel exposes EXACTLY the two undo writers - never the core, never its stream read', () => {
-      // Code review round 2, R2B-9: the old test asserted two NAMES absent, which passes on a rename of the core. This asserts the whole set
-      // of exported functions that begin an undo or an allow: a renamed, re-exported core would appear here.
-      const exported = fieldWorker as unknown as Record<string, unknown>;
-      const writers = Object.keys(exported).filter((k) => typeof exported[k] === 'function' && /^(undo|allow)/i.test(k)).sort();
-      expect(writers).toEqual(['allowFieldWorkerEndingAppeal', 'undoFieldWorkerEnding']);
-      expect(Object.keys(exported).filter((k) => /StreamLocked|readFieldWorkerStream/i.test(k))).toEqual([]);
+      // Code review round 2, R2B-9: the old test asserted two NAMES absent, which passes on a rename of the core. Review R3-32: its successor
+      // filtered by an `undo` / `allow` PREFIX, so a core re-exported as `endingUndoLocked` was still invisible. This pins EVERY function
+      // `commands.ts` exports (the barrel's `export *` carries them all): a core made public under ANY name changes this list and fails here.
+      const exported = commandsModule as unknown as Record<string, unknown>;
+      const functions = Object.keys(exported).filter((k) => typeof exported[k] === 'function').sort();
+      expect(functions).toEqual(
+        [
+          'activateFieldWorker',
+          'allowFieldWorkerEndingAppeal',
+          'istToday',
+          'lockAppealForDecision',
+          'lockFieldWorkerRow',
+          'postFieldWorker',
+          'reactivateFieldWorker',
+          'recordFieldWorkerKycCompleted',
+          'registerFieldWorker',
+          'suspendFieldWorker',
+          'terminateFieldWorker',
+          'undoFieldWorkerEnding',
+          'verifiedSnapshot',
+        ].sort(),
+      );
+      // ... and the barrel re-exports each of them as itself (the two writers among them), with nothing of the stream read.
+      for (const k of functions) expect((fieldWorker as unknown as Record<string, unknown>)[k], k).toBe(exported[k]);
+      expect(Object.keys(fieldWorker).filter((k) => /StreamLocked|readFieldWorkerStream/i.test(k))).toEqual([]);
     });
   });
 
@@ -462,7 +485,7 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo of an ending (live DB)',
       await expectRowMatchesStream(c, worker);
     });
 
-    it('a SLIP undone while an appeal is open supersedes it in the same transaction: `superseded`, signed with undo_ending, decided_on the undo’s IST day, decided_by the undoer', async () => {
+    it('a SLIP undone while an appeal is open supersedes it in the same transaction: `superseded`, signed with undo_ending, decided_on the undo’s IST day (here, where the appeal was received the same day - R7 covers a later one; review R3-36), decided_by the undoer', async () => {
       const v = await end();
       const appealId = await lodge(v);
       await undo(v);

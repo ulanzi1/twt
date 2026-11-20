@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getCollectedRoutes } from '../../../src/route-registry.js';
-import { hasDatabase } from '../_setup.js';
+import { hasDatabase, makeClient } from '../_setup.js';
 import { createHarness, errOf, json, type Client, type Harness, type Json } from './_registration-harness.js';
 
 const NAME = 'Undo Distinctive-Surname';
@@ -86,6 +86,41 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
       expect((await lastEvent(id)).payload).toMatchObject({ cause: 'mistake', undone_ending_version: v, actor: 'operator' });
       // AC1 (c) — the by-hand code read works again.
       expect((await h.code(w.pa.client, w.p, id)).statusCode).toBe(200);
+    });
+
+    // Review R3-19 (checklist family 3) — `undo-ending` was the one 13.1f write with no per-route denial set over HTTP: a swapped key or a dropped
+    // hook on THIS route would pass every other route's tests. The `lifecycle.spec.ts` "Denial and holders, per route" set, for the undo.
+    it('R3-19 denial: no session ⇒ 401; another Pariwar’s admin ⇒ 404; a role without the key ⇒ 403; a District Admin (of this district and of another) ⇒ 403; another Pariwar’s worker id ⇒ the unknown-worker 403 — each with NO event and NO line; CONTROL: the Pariwar Admin ⇒ 200', async () => {
+      const w = await world();
+      const id = await activeWorker(w);
+      const v = await end(w, id, w.pa.client);
+      const events = async () => Number((await q<{ n: string }>('SELECT count(*)::text AS n FROM events_log WHERE stream_id = $1', [id]))[0]!.n);
+      const denied = async (c: Client, status: number, target = id, p = w.p): Promise<Json> => {
+        const before = { events: await events(), lines: await auditCount(w.p, 'field_worker.ending_undone') };
+        const r = await h.undoEnding(c, p, target, v);
+        expect(r.statusCode, r.body).toBe(status);
+        expect(await events()).toBe(before.events);
+        expect(await auditCount(w.p, 'field_worker.ending_undone')).toBe(before.lines);
+        return errOf(r);
+      };
+      await denied(makeClient(h.app), 401);
+      await denied((await h.actor(h.freshPariwar(), 'pariwar_admin', 'pariwar', randomUUID())).client, 404);
+      await denied((await h.actor(w.p, 'helpline_operator', 'pariwar', w.p)).client, 403);
+      await denied(w.da.client, 403);
+      await denied(w.daGaya.client, 403);
+      // Another Pariwar's REAL worker under THIS Pariwar's path: the same 403 as an id nobody holds, and that worker untouched.
+      const other = await world();
+      const foreignId = await activeWorker(other);
+      const foreignV = await end(other, foreignId, other.pa.client);
+      const foreign = await h.undoEnding(w.pa.client, w.p, foreignId, foreignV);
+      const unknown = await h.undoEnding(w.pa.client, w.p, randomUUID(), v);
+      expect(foreign.statusCode, foreign.body).toBe(403);
+      expect(unknown.statusCode, unknown.body).toBe(403);
+      expect(errOf(foreign).code).toBe(errOf(unknown).code);
+      expect((await row(foreignId)).current_state).toBe('terminated');
+      expect(await auditCount(other.p, 'field_worker.ending_undone')).toBe(0);
+      // CONTROL - the same undo by the right officer is not refused for being in the wrong place.
+      expect((await h.undoEnding(w.pa.client, w.p, id, v)).statusCode).toBe(200);
     });
 
     it('AC3 — undone and ended again: the old version → 409 ending_changed, no line; the log shows the ending AND the undo', async () => {
@@ -404,6 +439,24 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the undo, the appeal record, the 
       const ok = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'refused', decided_on: await istDay() }); // CONTROL
       expect(ok.statusCode, ok.body).toBe(200);
       expect(await appealState(appealId)).toBe('refused');
+    });
+
+    // Review R3-21 — the order: the pure shape BEFORE the number check. With the number live again, an allowed decision's malformed date
+    // answered 409 number_registered_again (the officer fixed that, then met the 422).
+    it('R3-21 decide: an ALLOWED decision with a malformed date while the number is live again → 422 appeal_date_invalid, ⛔ 409; CONTROL: a real date → 409 number_registered_again', async () => {
+      const w = await world();
+      const mobile = randomMobile();
+      const old = await activeWorker(w, mobile);
+      const v = await end(w, old, w.pa.client, 'registered_in_error');
+      const appealId = String(json(await h.lodgeAppeal(w.tp.client, w.p, old, await lodgeBody(v)))['appeal_id']);
+      await h.registered(w.pa.client, w.p, { name: NAME, mobile, district: 'Patna', previous_endings_seen: true });
+      const bad = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'allowed', decided_on: '2026-02-30' });
+      expect(bad.statusCode, bad.body).toBe(422);
+      expect(errOf(bad).code).toBe('field_worker.appeal_date_invalid');
+      const real = await h.decideAppeal(w.tp2.client, w.p, appealId, { outcome: 'allowed', decided_on: await istDay() }); // CONTROL
+      expect(real.statusCode, real.body).toBe(409);
+      expect(errOf(real).code).toBe('field_worker.number_registered_again');
+      expect(await auditCount(w.p, 'field_worker_ending_appeal.allowed')).toBe(0);
     });
 
     it('withdraw: a malformed decided_on → 422, NO line, the appeal stays open; a FUTURE one → 422 WITH the pair; CONTROL: a real date withdraws', async () => {

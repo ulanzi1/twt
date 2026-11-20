@@ -98,7 +98,7 @@ describe('R2D-3 — the first press shows the earlier records AND says nobody is
     expect(screen.queryByTestId('fw-register-done')).toBeNull();
   });
 
-  it('several earlier records: the line counts them; editing the mobile (the list was about the old number) takes the line away; a second press registers', async () => {
+  it('several earlier records: the line counts them; editing the mobile (the list was about the old number) takes the line away; the press for the NEW number registers it', async () => {
     registerFieldWorker.mockRejectedValueOnce(
       new ApiError(409, 'field_worker.number_previously_ended', 'ended', { previous_endings: [ended(A, '2026-10-01'), ended(B, '2026-09-01')] }),
     );
@@ -108,9 +108,16 @@ describe('R2D-3 — the first press shows the earlier records AND says nobody is
     fireEvent.change(screen.getByTestId('fw-register-mobile'), { target: { value: '9876500011' } });
     expect(screen.queryByTestId('fw-register-previous-notice')).toBeNull();
     expect(screen.queryByTestId('fw-register-previous')).toBeNull();
-    // CONTROL — the same page does register, on the press AFTER the earlier records were shown.
+    // CONTROL — the page registers the NEW number (the earlier records were about the old one): it carries no acknowledgment, since nothing was
+    // shown for this number, and the done panel follows (review R3-14: the leg asserted the call count only; the acknowledged second press of
+    // the SAME number is the R2D-14 legs').
     fireEvent.click(screen.getByTestId('fw-register-submit'));
     await waitFor(() => expect(registerFieldWorker).toHaveBeenCalledTimes(2));
+    const second = registerFieldWorker.mock.calls[1]![1] as Record<string, unknown>;
+    expect(second['mobile']).toBe('9876500011');
+    expect(second).not.toHaveProperty('previous_endings_seen');
+    expect(second).not.toHaveProperty('link_to');
+    expect(await screen.findByTestId('fw-register-done')).toBeInTheDocument();
   });
 });
 

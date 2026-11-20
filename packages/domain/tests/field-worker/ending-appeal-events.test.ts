@@ -64,10 +64,13 @@ const VALID: Record<FieldWorkerEndingAppealEventType, (h: Hearer) => Record<stri
   }),
   'field_worker_ending_appeal.refused': (h) => ({ from_state: 'open', to_state: 'refused', ...common(h), authorization: snapshot(KEY[h]), decided_on: '2026-11-03' }),
   'field_worker_ending_appeal.withdrawn': (h) => ({ from_state: 'open', to_state: 'withdrawn', ...common(h), authorization: snapshot(KEY[h]), decided_on: '2026-11-03' }),
+  // Review R3-29: the undo is never the Panel's act (`assertAppealActorKind` refuses a `trustee` with the undo key), so the VALID payload is the
+  // operator's whoever heard the appeal - it carried `actor: 'trustee'` for a Panel-heard one, a payload the command never writes.
   'field_worker_ending_appeal.superseded': (h) => ({
     from_state: 'open',
     to_state: 'superseded',
     ...common(h),
+    actor: 'operator',
     authorization: snapshot(FIELD_WORKER_UNDO_ENDING_PERMISSION_KEY),
     decided_on: '2026-11-03',
     undone_event_id: UNDONE_EVENT,
@@ -266,8 +269,9 @@ describe('projectEndingAppealTransition - its checks that run BEFORE any stateme
     }
   });
 
-  it('the head-version check: a stream that moved past the locked row is FieldWorkerAppealStreamConcurrencyError, and the write is never sent', async () => {
-    for (const head of [4, 9]) {
+  // Review R3-30: heads BELOW the row (2) and an empty stream (null) too - with only heads above it, a `!==` -> `>` mutant stayed green.
+  it('the head-version check: a stream that is not AT the locked row (past it, behind it, or empty) is FieldWorkerAppealStreamConcurrencyError, and the write is never sent', async () => {
+    for (const head of [4, 9, 2, null]) {
       const { client: c, calls } = client(head);
       const e = await caught(() => run(c, refused, locked({ stateEventVersion: 3 })));
       expect(e, `head ${head}`).toBeInstanceOf(FieldWorkerAppealStreamConcurrencyError);

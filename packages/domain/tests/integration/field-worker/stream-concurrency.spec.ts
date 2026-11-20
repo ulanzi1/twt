@@ -9,8 +9,9 @@
 //       deterministically per command in `tests/field-worker/commands-guards.test.ts` (with its RED proof).
 //   (a1) / (a2) FORCED (R2B-5): the first act HOLDS the row lock uncommitted, the second is started and read BLOCKED in `pg_stat_activity`,
 //       then the first commits — (a1) the End holds, the suspension waits -> IllegalTransition; (a2) the suspension holds, the End waits
-//       -> StateChanged. Each asserts the reason AND a control. Move and reactivate take the same lock and meet the same version check;
-//       they are not raced separately.
+//       -> StateChanged. Each asserts the reason AND a control. Reactivate takes the same lock and meets the same version check; it is not
+//       raced separately. ⚠ (e1)'s terminate reads the version UNDER the lock (a screen opened AFTER the move), so it always fulfils: the
+//       stale-screen path (an End from a screen opened BEFORE the act) is (a2)'s (review R3-37).
 //   (b) kyc_completed vs itself: one event; the loser KycAlreadyCompleted.
 //   (c) the GENESIS race on the SAME id, two DIFFERENT mobiles — REPEATABLE READ, the snapshot pinned BEFORE the barrier.
 //   (d) the SAME-MOBILE race, two DIFFERENT ids: the loser MobileAlreadyRegistered BY CONSTRAINT NAME, its transaction

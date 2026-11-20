@@ -349,9 +349,26 @@ describe.skipIf(!hasDatabase)('Story 13.1c — move, suspend, reactivate and end
       'field_worker.state_changed',
     );
     expect((await row(id)).current_state).toBe('active');
+    // Review R3-22 — the ORDER on the pre-read, as stated: a changed version beats a bad date (swapping the two checks stayed green) ...
+    await expectRefused(
+      () => h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: '2026-02-30', expected_state_event_version: shown }),
+      p,
+      id,
+      409,
+      'field_worker.state_changed',
+    );
     // CONTROL — the screen re-read (the current version) ends them.
     expect((await h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today, expected_state_event_version: await version() })).statusCode).toBe(200);
     expect((await row(id)).current_state).toBe('terminated');
+    // ... and legality beats the version: the stale screen on a worker who was ENDED AGAIN since is told the worker is ended (`illegal_transition`),
+    // ⛔ that the screen is out of date.
+    await expectRefused(
+      () => h.terminate(admin.client, p, id, { reason_code: 'inactive', ended_on: today, expected_state_event_version: shown }),
+      p,
+      id,
+      409,
+      'field_worker.illegal_transition',
+    );
   });
 
   // ── Denial and holders, per route (checklist family 3; Task 4.2) ──

@@ -1,7 +1,7 @@
 // Story 13.1f (AC12; AD6, AD11, AD12, AD14; the Panel's `2026-11-17-465`) — the undo on an opened worker, the register page's shown number
 // and link, and the Appeals page. RTL with the API client mocked (the server's rules are the API specs').
 
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, QueryObserver } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -118,6 +118,17 @@ async function openWorker(s: State = 'active') {
   await screen.findByTestId('fw-actions');
 }
 
+/**
+ * Confirm is READY: enabled and not held. Review R3-13 holds Undo's Confirm with `aria-disabled` (⛔ `disabled`) while its appeals check is
+ * read AGAIN - and Find's own appeals panel shares that read, so `toBeEnabled()` alone passed while a press would still be ignored.
+ */
+async function confirmReady(): Promise<void> {
+  await waitFor(() => {
+    expect(screen.getByTestId('fw-act-confirm')).toBeEnabled();
+    expect(screen.getByTestId('fw-act-confirm')).not.toHaveAttribute('aria-disabled');
+  });
+}
+
 describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
   it('⭐ End then Undo in the SAME panel, no refetch between: the undo names the version the End’s 200 returned; the reminders follow each act', async () => {
     await openWorker('active');
@@ -125,13 +136,13 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
     fireEvent.click(screen.getByTestId('fw-act-end'));
     expect(screen.getByTestId('fw-act-end-final').textContent).toBe(t('fw.actions.end.final'));
     fireEvent.change(screen.getByTestId('fw-act-reason'), { target: { value: 'inactive' } });
-    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+    await confirmReady();
     fireEvent.click(screen.getByTestId('fw-act-confirm'));
     await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toContain(t('fw.actions.tell.end')));
     undoFieldWorkerEnding.mockResolvedValue(lifecycle({ state_event_version: 5 }));
     fireEvent.click(await screen.findByTestId('fw-act-undo'));
     expect(screen.getByTestId('fw-act-undo-intro').textContent).toBe(t('fw.actions.undo.intro'));
-    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+    await confirmReady();
     fireEvent.click(screen.getByTestId('fw-act-confirm'));
     await waitFor(() => expect(undoFieldWorkerEnding).toHaveBeenCalledWith(P, W, 4, expect.any(String)));
     await waitFor(() => expect(screen.getByTestId('fw-actions-status').textContent).toBe(`${t('fw.actions.done.undo', { name: 'Ramesh Kumar' })} ${t('fw.actions.tell')}`));
@@ -147,7 +158,7 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
     fireEvent.click(screen.getByTestId('fw-act-undo'));
     expect(await screen.findByTestId('fw-act-undo-open-appeal')).toHaveTextContent(t('fw.actions.undo.openAppeal'));
     undoFieldWorkerEnding.mockRejectedValue(new ApiError(409, 'field_worker.appeal_refused_by_panel', 'refused'));
-    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+    await confirmReady();
     fireEvent.click(screen.getByTestId('fw-act-confirm'));
     expect(await screen.findByTestId('fw-act-error')).toHaveTextContent(t('fw.err.appealRefusedByPanel'));
   });
@@ -160,7 +171,7 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
     await openWorker('terminated');
     undoFieldWorkerEnding.mockRejectedValueOnce(new ApiError(409, 'field_worker.ending_changed', 'changed'));
     fireEvent.click(screen.getByTestId('fw-act-undo'));
-    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+    await confirmReady();
     let release!: () => void;
     getFieldWorkerIdentity.mockImplementationOnce(
       () =>
@@ -186,6 +197,36 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
     expect(undoFieldWorkerEnding.mock.calls[0]![2]).toBe(4); // CONTROL - the first attempt named the version the panel showed then
   });
 
+  // Review R3-1 — the ending moved on AND an appeal was lodged on the new one: the refusal re-read the identity (the new version) but not the
+  // appeals, so the warning was judged against the read taken when the form opened (nothing on the new ending) and the retry closed an appeal
+  // the officer never saw. Both reads are HELD so the leg sees the retry wait for the appeals re-read.
+  it('R3-1 — a 409 ending_changed re-reads the APPEALS too: the retry waits for them and the new ending’s open appeal is said before it', async () => {
+    version = 4;
+    await openWorker('terminated');
+    undoFieldWorkerEnding.mockRejectedValueOnce(new ApiError(409, 'field_worker.ending_changed', 'changed'));
+    fireEvent.click(screen.getByTestId('fw-act-undo'));
+    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).not.toHaveAttribute('aria-disabled'));
+    expect(screen.queryByTestId('fw-act-undo-open-appeal')).toBeNull(); // CONTROL - nothing open on the ending the form opened on
+    const openOnSix = { appeal_id: OLD, field_worker_id: W, ending_event_version: 6, state: 'open', heard_by: 'pariwar_admin', received_on: '2026-11-05', received_via: 'phone', decided_on: null, lodged_by: { user_id: OLD, display_name: 'T' }, created_at: '2026-11-05T05:00:00.000Z' };
+    let releaseAppeals!: () => void;
+    getFieldWorkerEndingAppealsOf.mockImplementationOnce(() => new Promise((resolve) => { releaseAppeals = () => resolve({ items: [openOnSix] }); }));
+    getFieldWorkerIdentity.mockImplementationOnce(async () => ({ ...row(), mobile: '+919876500010', approved_by_display: 'Meera Rao', state_event_version: 6 }));
+    const readsBefore = getFieldWorkerEndingAppealsOf.mock.calls.length;
+    fireEvent.click(screen.getByTestId('fw-act-confirm'));
+    expect(await screen.findByTestId('fw-act-error')).toHaveTextContent(t('fw.err.endingChanged'));
+    await waitFor(() => expect(getFieldWorkerEndingAppealsOf).toHaveBeenCalledTimes(readsBefore + 1)); // the appeals are read AGAIN
+    await waitFor(() => expect((client.getQueryData(fieldWorkerIdentityKey(P, W)) as { state_event_version: number }).state_event_version).toBe(6));
+    expect(screen.getByTestId('fw-act-confirm')).toHaveAttribute('aria-disabled', 'true'); // held while they are read
+    fireEvent.click(screen.getByTestId('fw-act-confirm'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(undoFieldWorkerEnding).toHaveBeenCalledTimes(1); // a press while held sends nothing
+    await act(async () => releaseAppeals());
+    expect(await screen.findByTestId('fw-act-undo-open-appeal')).toHaveTextContent(t('fw.actions.undo.openAppeal'));
+    expect(screen.getByTestId('fw-act-undo-check')).toHaveAttribute('role', 'status');
+  });
+
   // R2D-18 (AC12) — "the act answers 403's line for a District Admin": the line is pinned by its TEXT, because `actGuidance` builds the key
   // by template and a deleted key falls back to the key itself - which `toHaveTextContent(t(key))` would then match.
   it('R2D-18 — a 403 on Undo shows ITS no-access line, pinned by its words', async () => {
@@ -195,7 +236,7 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
     await openWorker('terminated');
     undoFieldWorkerEnding.mockRejectedValue(new ApiError(403, 'authz.forbidden', 'no'));
     fireEvent.click(screen.getByTestId('fw-act-undo'));
-    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+    await confirmReady();
     fireEvent.click(screen.getByTestId('fw-act-confirm'));
     expect(await screen.findByTestId('fw-act-error')).toHaveTextContent('Only a Pariwar Admin can undo an ending.');
   });
@@ -206,26 +247,45 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
     /**
      * Refresh the appeals check from outside (as an act elsewhere would) and HOLD the read open until the returned function is called. A mock that
      * resolves at once never lets React see the form go not-ready - the observers are told once, with the final state - so a leg built on it
-     * passes with the focus rule deleted (found by the RED proof of round 2, chunk D). Held, Confirm is seen DISABLED, then enabled again.
+     * passes with the focus rule deleted (found by the RED proof of round 2, chunk D). Held, Confirm is seen HELD (`aria-disabled` - review
+     * R3-13: ⛔ `disabled`, which drops a focused Confirm to the body), then released again.
      */
-    const refreshHeld = async (): Promise<() => Promise<void>> => {
+    const refreshHeld = async (items: unknown[] = []): Promise<() => Promise<void>> => {
       let release!: () => void;
-      getFieldWorkerEndingAppealsOf.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({ items: [] }); }));
+      getFieldWorkerEndingAppealsOf.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve({ items }); }));
       await act(async () => {
         void client.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(P) });
       });
-      await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeDisabled()); // not ready: the check is being read again
+      await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toHaveAttribute('aria-disabled', 'true')); // not ready: read again
       return async () => {
         await act(async () => release());
-        await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled()); // ready again - the effect has run
+        await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).not.toHaveAttribute('aria-disabled')); // ready again - the effect has run
       };
     };
+
+    // Review R3-13 — a refetch of the check used to make Confirm `disabled`, and a focused Confirm then lost focus to the body (jsdom keeps
+    // focus on a disabled control, so the leg reads the ATTRIBUTE: `disabled` absent while held, and a press then sends nothing).
+    it('R3-13 — a refetch of the check HOLDS a focused Confirm (aria-disabled, never disabled) and a press while held sends nothing', async () => {
+      version = 4;
+      await openWorker('terminated');
+      fireEvent.click(screen.getByTestId('fw-act-undo'));
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('fw-act-confirm')));
+      const done = await refreshHeld();
+      expect(screen.getByTestId('fw-act-confirm')).not.toBeDisabled();
+      fireEvent.click(screen.getByTestId('fw-act-confirm'));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(undoFieldWorkerEnding).not.toHaveBeenCalled();
+      await done();
+      expect(document.activeElement).toBe(screen.getByTestId('fw-act-confirm'));
+    });
 
     it('Confirm takes focus when the check FIRST completes (from the form the officer was put in)', async () => {
       version = 4;
       await openWorker('terminated');
       fireEvent.click(screen.getByTestId('fw-act-undo'));
-      await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+      await confirmReady();
       await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('fw-act-confirm')));
     });
 
@@ -247,12 +307,20 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
       version = 4;
       await openWorker('terminated');
       fireEvent.click(screen.getByTestId('fw-act-undo'));
-      await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+      await confirmReady();
       const reads = getFieldWorkerEndingAppealsOf.mock.calls.length;
+      // Review R3-17 — the POSITIVE control: a query on the same client WITHOUT the opt-out is re-read by the same event, so the event really is
+      // "back to the tab" here (a client default or a hidden document would leave the leg below green with the opt-out deleted).
+      const probe = vi.fn(async () => 1);
+      const observer = new QueryObserver(client, { queryKey: ['r3-17-probe'], queryFn: probe, staleTime: 0, refetchOnWindowFocus: true });
+      const unsubscribe = observer.subscribe(() => undefined);
+      await waitFor(() => expect(probe).toHaveBeenCalledTimes(1));
       // TanStack Query v5 listens for `visibilitychange` on `window` (jsdom reports the document visible); this is its "back to the tab".
       await act(async () => {
         window.dispatchEvent(new Event('visibilitychange'));
       });
+      await waitFor(() => expect(probe).toHaveBeenCalledTimes(2));
+      unsubscribe();
       expect(getFieldWorkerEndingAppealsOf.mock.calls.length).toBe(reads);
     });
 
@@ -267,7 +335,7 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
       const cancel = screen.getByTestId('fw-act-cancel');
       cancel.focus();
       await act(async () => finish({ items: [] }));
-      await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+      await confirmReady();
       expect(document.activeElement).toBe(cancel);
     });
 
@@ -293,7 +361,7 @@ describe('Story 13.1f — the undo on an opened worker (AC12)', () => {
       await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('fw-act-confirm')));
       fireEvent.click(screen.getByTestId('fw-act-cancel'));
       fireEvent.click(screen.getByTestId('fw-act-undo'));
-      await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+      await confirmReady();
       await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('fw-act-confirm')));
     });
   });
@@ -413,7 +481,7 @@ describe('Story 13.1f — the remaining screen legs (AC12; 13.1d CR48)', () => {
     await openWorker('terminated');
     undoFieldWorkerEnding.mockRejectedValue(new ApiError(409, 'field_worker.number_registered_again', 'taken'));
     fireEvent.click(screen.getByTestId('fw-act-undo'));
-    await waitFor(() => expect(screen.getByTestId('fw-act-confirm')).toBeEnabled());
+    await confirmReady();
     fireEvent.click(screen.getByTestId('fw-act-confirm'));
     expect(await screen.findByTestId('fw-act-error')).toHaveTextContent(t('fw.err.numberRegisteredAgain'));
   });

@@ -146,9 +146,14 @@ describe.skipIf(!hasDatabase)('Story 13.1f — the shown number and the link: th
     expect(log?.items[0]).toMatchObject({ eventType: 'field_worker.registered', previousFieldWorkerId: old }); // the history still carries the link
     // CONTROL - a NEW link to the now-live record is not offered: it is no longer terminated, so it is not a number-matched ended record.
     expect(await lockFieldWorkerForLink(db(), P, old)).toEqual({ currentState: 'pending_kyc', mobileBlindIndex: index });
+    // Review R3-33: the line above only re-reads a state this test produced. What OFFERS a link is the ended-by-number read: it must list the
+    // ended `newer` (non-vacuity - the read does find this number) and never the live `old`.
+    expect((await findEndedFieldWorkersByMobileIndex(db(), P, index)).map((e) => e.fieldWorkerId)).toEqual([newer]);
   });
 
-  it('AC10 — the self-link CHECK and the composite FK hold below the command (owner, guarded); CONTROLS: the same INSERT unlinked, and linked to a real terminated record, stand', async () => {
+  // Review R3-39: the dangling-id leg below would fail a SINGLE-column FK too; the COMPOSITE half (`pariwar_id`, previous) is pinned by its
+  // definition in `rls/field-workers-policy-regression.spec.ts` (`field_workers_previous_fk`). This leg pins that the FK refuses at all.
+  it('AC10 — the self-link CHECK and the link FK (its composite definition: the policy-regression spec) hold below the command (owner, guarded); CONTROLS: the same INSERT unlinked, and linked to a real terminated record, stand', async () => {
     const target = await registerReal(c, P);
     await end(target);
     await c.query('RESET ROLE');

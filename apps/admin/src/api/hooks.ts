@@ -3192,8 +3192,12 @@ export function useFieldWorkerAct(pariwarId: string) {
       if (fieldWorkerListIsStale(err)) refresh(input.fieldWorkerId);
       // Story 13.1f (AD6) — the ending moved on: the IDENTITY is re-read too, so a retry names the current version.
       // R2A-2 — the same for an End whose version was out of date: the identity names the current version for the next attempt.
+      // Code review round 3, R3-1 — and the worker's APPEALS: the Undo confirm judges "their open appeal will close" from them, and a
+      // re-read identity naming a NEW ending against the appeals read when the form opened (none on that ending) let the retry close an
+      // appeal the officer was never told of. The confirm waits on the re-read (`undoCheckReady`).
       if (err instanceof ApiError && (err.code === 'field_worker.ending_changed' || err.code === 'field_worker.state_changed')) {
         void qc.invalidateQueries({ queryKey: fieldWorkerIdentityKey(pariwarId, input.fieldWorkerId) });
+        void qc.invalidateQueries({ queryKey: fieldWorkerEndingAppealsRoot(pariwarId) });
       }
     },
   });

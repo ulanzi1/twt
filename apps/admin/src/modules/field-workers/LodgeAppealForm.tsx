@@ -8,7 +8,7 @@ import type { ReactElement } from 'react';
 import { useRef, useState } from 'react';
 
 import { attemptKey, useFieldWorkerAppealAct, type AttemptKey } from '../../api/hooks.js';
-import { appealGuidance, istTodayInBrowser, type Guidance } from './derive.js';
+import { appealGuidance, istTodayNotBefore, type Guidance } from './derive.js';
 import { resolveEn as t } from './i18n-en.js';
 import { useSignInRedirect } from './sign-in.js';
 
@@ -22,6 +22,7 @@ export function LodgeAppealForm({
   heardBy,
   minDate,
   name,
+  fromList,
 }: {
   pariwarId: string;
   fieldWorkerId: string;
@@ -37,9 +38,12 @@ export function LodgeAppealForm({
   minDate?: string;
   /** The worker's name, when the page shows many forms: it names the form and its button (a screen reader hears whose it is). */
   name?: string;
+  /** The form is a candidate of the Appeals page's eligible list (no worker details shown): its refusal lines name the list (R3-8). */
+  fromList?: boolean;
 }): ReactElement {
   const mutation = useFieldWorkerAppealAct(pariwarId);
-  const [receivedOn, setReceivedOn] = useState(istTodayInBrowser());
+  // Never before the control's own `min` on a browser clock behind the server's (review R3-7).
+  const [receivedOn, setReceivedOn] = useState(() => istTodayNotBefore(minDate));
   const [via, setVia] = useState<FieldWorkerEndingAppealChannel | ''>('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<Guidance | null>(null);
@@ -65,7 +69,7 @@ export function LodgeAppealForm({
       setDone(true);
       onLodged();
     } catch (err) {
-      const g = appealGuidance(err, { act: 'lodge', ...(heardBy === undefined ? {} : { heardBy }) });
+      const g = appealGuidance(err, { act: 'lodge', ...(heardBy === undefined ? {} : { heardBy }), ...(fromList === true ? { fromList } : {}) });
       if (g.retryable !== true) attempt.current = null;
       if (g.stale === true) onStale(g.text);
       else setProblem(g);
@@ -77,7 +81,9 @@ export function LodgeAppealForm({
 
   const label = (text: string): string => (name === undefined ? text : t('fw.appeals.actFor', { act: text, name }));
 
-  return done ? <p role="status" data-testid="fw-appeals-lodged">{t('fw.appeals.lodged')}</p> : (
+  // ⛔ a live region: both callers say the outcome in their own status region (which outlives this form), and a second one here was heard
+  // as well (review R3-10).
+  return done ? <p data-testid="fw-appeals-lodged">{t('fw.appeals.lodged')}</p> : (
     <form aria-label={label(t('fw.appeals.record'))} className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
       <label className="flex flex-col gap-1">
         {t('fw.appeals.receivedOn')}
@@ -86,7 +92,7 @@ export function LodgeAppealForm({
           required
           value={receivedOn}
           {...(minDate === undefined ? {} : { min: minDate })}
-          max={istTodayInBrowser()}
+          max={istTodayNotBefore(minDate)}
           readOnly={busy}
           onChange={(e) => {
             if (inFlight.current) return;

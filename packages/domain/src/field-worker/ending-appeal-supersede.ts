@@ -35,6 +35,8 @@ export async function supersedeOpenEndingAppeal(client: pg.PoolClient, i: Supers
   if (typeof today !== 'string') throw new Error('[field-worker] the IST day query returned no row');
   // An undo begun before IST midnight can lock after a lodge begun on the next day. Keep the transaction-start event clock,
   // but never date the supersede before the appeal it closes (R7; the locked row is authoritative, 0207's date CHECK).
+  // ⚠ Then `decided_on` is the day AFTER this event's own `occurred_at` (review R3-36): harmless, because every read orders an appeal's
+  // stream by `event_version`, never by time - a reader that ordered by `occurred_at` would see this event before the lodge it closes.
   const decidedOn = today < open.receivedOn ? open.receivedOn : today;
   await projectEndingAppealTransition(client, {
     pariwarId: i.pariwarId,

@@ -342,6 +342,60 @@ describe('scanEndingAppealWrites — round 2 (R2B-6): the spellings the round-5 
   });
 });
 
+describe('scanEndingAppealWrites — round 3 (R3-25..R3-27): the spellings and branches the R2B-6 fixes left', () => {
+  const SETTING = ['the app.field_worker_ending_appeal_writer setting'];
+
+  it('R3-25: the writer setting with QUOTED parts, or a space / comment around the dot, is the setting (Postgres reads the name as tokens)', () => {
+    for (const sql of [
+      'SET LOCAL "app"."field_worker_ending_appeal_writer" = \'on\'',
+      'SET LOCAL app . field_worker_ending_appeal_writer = on',
+      'SET LOCAL app /**/ . /* x */ field_worker_ending_appeal_writer = on',
+      'SET LOCAL "APP" . "Field_Worker_Ending_Appeal_Writer" = on',
+    ]) {
+      const src = `function f(c) { c.query(\`${sql}\`); }`;
+      expect(scan(src).map((x) => x.detail), sql).toEqual(SETTING);
+    }
+    // CONTROL — another setting in the same shapes is not the writer's.
+    expect(scan('function f(c) { c.query(`SET LOCAL "app"."field_worker_notices_writer" = on`); }')).toEqual([]);
+    expect(scan('function f(c) { c.query(`SET LOCAL app . field_worker_ending_appeal_reader = on`); }')).toEqual([]);
+  });
+
+  it('R3-26: a private field, a parameter property, a destructured default, a logical assignment, the comma operator, an inline assignment and a computed key each bind (or are) the table', () => {
+    for (const src of [
+      'class W { #t = fieldWorkerEndingAppeals; m(db) { db.update(this.#t).set({}); } }',
+      'class W { constructor(private t = fieldWorkerEndingAppeals) {} m(db) { db.update(this.t).set({}); } }',
+      'const f = (db, { t = fieldWorkerEndingAppeals } = {}) => db.update(t).set({});',
+      'function f(db) { const [t = fieldWorkerEndingAppeals] = []; db.update(t).set({}); }',
+      'let t; t ??= fieldWorkerEndingAppeals; function f(db) { db.update(t).set({}); }',
+      'let t; t ||= fieldWorkerEndingAppeals; function f(db) { db.update(t).set({}); }',
+      'function f(db) { db.update((0, fieldWorkerEndingAppeals)).set({}); }',
+      'let t; function f(db) { db.update(t = fieldWorkerEndingAppeals).set({}); }',
+      "const o = { ['t']: fieldWorkerEndingAppeals }; function f(db) { db.update(o.t).set({}); }",
+      // R3-27: the `&&` operand, and the choice operators holding the SQL NAME - each had no leg.
+      'function f(db, x) { db.insert(x && fieldWorkerEndingAppeals).values({}); }',
+      "function f(c, x) { const T = x ?? 'field_worker_ending_appeals'; c.query(`UPDATE ${T} SET a = 1`); }",
+      "function f(c, x) { const T = x || 'field_worker_ending_appeals'; c.query(`UPDATE ${T} SET a = 1`); }",
+      "function f(c, x) { const T = x && 'field_worker_ending_appeals'; c.query(`UPDATE ${T} SET a = 1`); }",
+      // R3-27: a parameter default holding the SQL name.
+      "function f(c, T = 'field_worker_ending_appeals') { c.query(`UPDATE ${T} SET a = 1`); }",
+    ]) {
+      expect(scan(src).length, src).toBe(1);
+    }
+    // CONTROLS — the same shapes over another table are not flagged.
+    for (const src of [
+      'class W { #t = fieldWorkerNotices; m(db) { db.update(this.#t).set({}); } }',
+      'class W { constructor(private t = fieldWorkerNotices) {} m(db) { db.update(this.t).set({}); } }',
+      'const f = (db, { t = fieldWorkerNotices } = {}) => db.update(t).set({});',
+      'let t; t ??= fieldWorkerNotices; function f(db) { db.update(t).set({}); }',
+      'function f(db) { db.update((fieldWorkerEndingAppeals, fieldWorkerNotices)).set({}); }',
+      "function f(c, x) { const T = x ?? 'field_worker_notices'; c.query(`UPDATE ${T} SET a = 1`); }",
+      "function f(c, T = 'field_worker_notices') { c.query(`UPDATE ${T} SET a = 1`); }",
+    ]) {
+      expect(scan(src), src).toEqual([]);
+    }
+  });
+});
+
 describe('the allow-list diagnostics and the non-vacuity floor', () => {
   const finding = (over: Partial<EndingAppealWriteFinding>): EndingAppealWriteFinding => ({ file: 'p.ts', line: 1, detail: 'raw SQL write to field_worker_ending_appeals', enclosingFunction: 'w', ...over });
   const allow = [{ file: 'p.ts', functions: new Set(['w']) }];

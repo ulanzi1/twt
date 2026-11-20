@@ -211,8 +211,12 @@ describe('R2D-2 / R2D-4 / R2D-7 — a STALE refusal is said where it survives it
 });
 
 describe('R2D-2 — a lodge form clears the stale line about its last attempt, too', () => {
+  // Review R3-16: the list's refresh after `ending_changed` returns the candidate at its NEW ending (as the server would), so its form is
+  // re-keyed and the retry is a NEW attempt (a new key, the new version) - the old mock kept version 2, so the "retry" resent the same key and
+  // body, which a real server answers with the same 409. Review R3-8: the line names the LIST, which is what was refreshed here.
   it('eligible list: the next attempt clears it AT ONCE (while in flight), ⛔ only the success that follows', async () => {
-    listAppealEligibleFieldWorkers.mockResolvedValue(page([cand(W2, 'Sita Devi')]));
+    listAppealEligibleFieldWorkers.mockResolvedValueOnce(page([cand(W2, 'Sita Devi')]));
+    listAppealEligibleFieldWorkers.mockResolvedValue(page([cand(W2, 'Sita Devi', { ending_event_version: 5 })]));
     lodgeFieldWorkerEndingAppeal.mockRejectedValueOnce(new ApiError(409, 'field_worker.ending_changed', 'new ending'));
     let finish!: (v: unknown) => void;
     lodgeFieldWorkerEndingAppeal.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
@@ -221,9 +225,16 @@ describe('R2D-2 — a lodge form clears the stale line about its last attempt, t
     const c = await screen.findByTestId('fw-appeals-eligible-item');
     fireEvent.change(within(c).getByTestId('fw-appeals-via'), { target: { value: 'phone' } });
     fireEvent.click(within(c).getByTestId('fw-appeals-lodge'));
-    await waitFor(() => expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.endingChanged')));
-    fireEvent.click(within(await screen.findByTestId('fw-appeals-eligible-item')).getByTestId('fw-appeals-lodge'));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.endingChangedList')));
+    expect(t('fw.err.endingChangedList')).not.toContain('details'); // the Appeals page shows no worker details
+    // The re-keyed form starts empty: choose the channel again, then lodge.
+    await waitFor(() => expect(within(screen.getByTestId('fw-appeals-eligible-item')).getByTestId('fw-appeals-via')).toHaveValue(''));
+    const again = screen.getByTestId('fw-appeals-eligible-item');
+    fireEvent.change(within(again).getByTestId('fw-appeals-via'), { target: { value: 'phone' } });
+    fireEvent.click(within(again).getByTestId('fw-appeals-lodge'));
     await waitFor(() => expect(lodgeFieldWorkerEndingAppeal).toHaveBeenCalledTimes(2));
+    expect(lodgeFieldWorkerEndingAppeal.mock.calls[1]![3]).not.toBe(lodgeFieldWorkerEndingAppeal.mock.calls[0]![3]); // a NEW attempt
+    expect(lodgeFieldWorkerEndingAppeal.mock.calls[1]![2]).toMatchObject({ expected_ending_version: 5 });
     expect(screen.getByTestId('fw-appeals-stale')).toBeEmptyDOMElement();
     expect(screen.getByTestId('fw-appeals-outcome')).toBeEmptyDOMElement();
     await act(async () => finish(appeal()));
@@ -327,7 +338,9 @@ describe('R2D-2 / R2D-5 — Find’s lodging panel', () => {
   });
 
   // R2D-18 (AC12) — "a lodge form's retry key resets when worker B opens".
-  it('worker B after worker A starts fresh: A’s failed attempt’s Idempotency-Key is never B’s, and A’s retry still reuses its own', async () => {
+  // Review R3-15: B's key differing from A's holds BY CONSTRUCTION (the attempt's fingerprint names the worker), so that assertion cannot
+  // show the remount; what shows B's form is fresh is that A's line is not carried over. The key assertion stays as the contract it is.
+  it('worker B after worker A starts fresh: A’s line does not carry over; A’s retry reuses its own key and B’s differs (the fingerprint names the worker)', async () => {
     lodgeFieldWorkerEndingAppeal.mockRejectedValue(new TypeError('network')); // retryable: the attempt's key is KEPT
     const checks = await openFind([
       [W, 'Ramesh Kumar'],
@@ -757,5 +770,155 @@ describe('F1 — a stale refusal takes focus, because the refresh removes the co
     await waitFor(() => expect(within(panel).getByTestId('fw-appeals-via')).toHaveValue('')); // the form for ending 6
     expect(within(panel).getByTestId('fw-worker-appeals-stale')).toHaveTextContent(t('fw.err.endingChanged'));
     expect(within(panel).getByRole('heading', { level: 3, name: t('fw.appeals.title') })).toHaveFocus();
+  });
+});
+
+// ── Code review round 3 (R3-3..R3-7, R3-9, R3-10, R3-12) ─────────────────────────────────────────────────────────────────────────────
+describe('Code review round 3 — the Appeals page’s lines belong to the view and the act that raised them', () => {
+  const chooseDistrict = async (name: string) => {
+    await screen.findByRole('option', { name });
+    const picker = screen.getByTestId('fw-appeals-district') as HTMLSelectElement;
+    fireEvent.change(picker, { target: { value: [...picker.options].find((o) => o.textContent === name)!.value } });
+  };
+
+  it('R3-3: a decision still in flight when the district changes writes NOTHING into the new district’s view; CONTROL: in the same view it is said', async () => {
+    listFieldWorkerEndingAppeals.mockResolvedValue(page([listItem()]));
+    let allow!: (v: unknown) => void;
+    decideFieldWorkerEndingAppeal.mockImplementation(() => new Promise((resolve) => { allow = resolve; }));
+    renderAppeals();
+    await openAct('allowed');
+    confirm();
+    await waitFor(() => expect(decideFieldWorkerEndingAppeal).toHaveBeenCalledTimes(1));
+    await chooseDistrict('Gaya');
+    await act(async () => allow({ appeal: appeal({ state: 'allowed', decided_on: '2026-11-06' }), worker: null }));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByTestId('fw-appeals-outcome')).toBeEmptyDOMElement();
+    // CONTROL — the same decision in an unchanged view is said.
+    await openAct('allowed');
+    confirm();
+    await waitFor(() => expect(decideFieldWorkerEndingAppeal).toHaveBeenCalledTimes(2));
+    await act(async () => allow({ appeal: appeal({ state: 'allowed', decided_on: '2026-11-06' }), worker: null }));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-outcome')).toHaveTextContent(t('fw.appeals.done.allowed', { name: 'Ramesh Kumar' })));
+  });
+
+  it('R3-4: changing the STATE filter clears the refusal and the "more" lines (as a district change does)', async () => {
+    listThenEmpty([listItem()]);
+    decideFieldWorkerEndingAppeal.mockRejectedValue(new ApiError(409, 'field_worker.appeal_not_open', 'closed'));
+    renderAppeals();
+    await openAct('allowed');
+    confirm();
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.appealNotOpen')));
+    fireEvent.change(screen.getByTestId('fw-appeals-filter'), { target: { value: '' } });
+    expect(screen.getByTestId('fw-appeals-stale')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('fw-appeals-more-status')).toBeEmptyDOMElement();
+  });
+
+  it('R3-5: one row’s success does NOT wipe another row’s refusal (that row already left); a new attempt clears an earlier success', async () => {
+    const b = listItem({ appeal_id: A2, field_worker_id: W2, name: 'Sita Devi' });
+    listFieldWorkerEndingAppeals.mockResolvedValueOnce(page([listItem(), b]));
+    listFieldWorkerEndingAppeals.mockResolvedValue(page([listItem()])); // B's refusal refreshes the list: B leaves, A stays
+    let allowA!: (v: unknown) => void;
+    decideFieldWorkerEndingAppeal.mockImplementationOnce(() => new Promise((resolve) => { allowA = resolve; }));
+    decideFieldWorkerEndingAppeal.mockRejectedValueOnce(new ApiError(409, 'field_worker.appeal_not_open', 'closed'));
+    renderAppeals();
+    const [rowA, rowB] = await screen.findAllByTestId('fw-appeal-item');
+    fireEvent.click(within(rowA!).getByTestId('fw-appeal-allowed'));
+    fireEvent.click(within(rowA!).getByTestId('fw-appeal-confirm'));
+    await waitFor(() => expect(decideFieldWorkerEndingAppeal).toHaveBeenCalledTimes(1));
+    fireEvent.click(within(rowB!).getByTestId('fw-appeal-refused'));
+    fireEvent.click(within(rowB!).getByTestId('fw-appeal-confirm'));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.appealNotOpen')));
+    await waitFor(() => expect(screen.getAllByTestId('fw-appeal-item')).toHaveLength(1)); // B has left
+    await act(async () => allowA({ appeal: appeal({ state: 'allowed', decided_on: '2026-11-06' }), worker: null }));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-outcome')).toHaveTextContent(t('fw.appeals.done.allowed', { name: 'Ramesh Kumar' })));
+    expect(screen.getByTestId('fw-appeals-stale')).toHaveTextContent(t('fw.err.appealNotOpen')); // B's line is still there
+    // A NEW attempt clears both lines (they describe the last act, not this one).
+    listFieldWorkerEndingAppeals.mockResolvedValue(page([listItem({ appeal_id: '00000000-0000-4000-8000-0000000000a3' })]));
+    decideFieldWorkerEndingAppeal.mockImplementation(() => new Promise(() => undefined));
+    const next = await openAct('refused');
+    fireEvent.click(within(next).getByTestId('fw-appeal-confirm'));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-outcome')).toBeEmptyDOMElement());
+    expect(screen.getByTestId('fw-appeals-stale')).toBeEmptyDOMElement();
+  });
+
+  it('R3-7: an appeal received on a day AFTER this browser’s today (its clock behind the server’s) starts the decision date AT that day, which the control also allows', async () => {
+    listFieldWorkerEndingAppeals.mockResolvedValue(page([listItem({ received_on: '2099-01-01' })]));
+    renderAppeals();
+    await openAct('allowed');
+    const date = screen.getByTestId('fw-appeal-decided-on');
+    expect(date).toHaveValue('2099-01-01');
+    expect(date).toHaveAttribute('min', '2099-01-01');
+    expect(date).toHaveAttribute('max', '2099-01-01');
+  });
+
+  it('R3-9: the eligible list’s empty line and its first page’s count arrive into a status region mounted before "Record an appeal"', async () => {
+    renderAppeals();
+    const region = await screen.findByTestId('fw-appeals-eligible-loaded');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement(); // mounted EMPTY
+    fireEvent.click(screen.getByTestId('fw-appeals-record-open'));
+    await waitFor(() => expect(within(region).getByTestId('fw-appeals-eligible-empty')).toHaveTextContent(t('fw.appeals.eligible.empty')));
+  });
+
+  it('R3-9: a non-empty first page is counted there', async () => {
+    listAppealEligibleFieldWorkers.mockResolvedValue(page([cand(W, 'Ramesh Kumar'), cand(W2, 'Sita Devi')]));
+    renderAppeals();
+    fireEvent.click(await screen.findByTestId('fw-appeals-record-open'));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-eligible-loaded')).toHaveTextContent(t('fw.appeals.candidates', { count: 2 })));
+  });
+
+  it('R3-10: after "Load more" the count leaves its region (only the "more" line is said); CONTROL: the first page is counted', async () => {
+    listFieldWorkerEndingAppeals.mockImplementation(async (_p: string, q: { cursor?: string }) =>
+      q.cursor === undefined ? page([listItem()], 'p2') : page([listItem({ appeal_id: A2, name: 'Sita Devi' })], null),
+    );
+    renderAppeals();
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-count')).toHaveTextContent(t('fw.appeals.recordsOne')));
+    fireEvent.click(await screen.findByTestId('fw-appeals-more'));
+    await waitFor(() => expect(screen.getByTestId('fw-appeals-more-status')).toHaveTextContent(t('fw.appeals.moreOne')));
+    expect(screen.getByTestId('fw-appeals-count')).toBeEmptyDOMElement();
+  });
+
+  it('R3-12: Confirm pressed twice while the decision saves sends ONE request; the lodge likewise', async () => {
+    listFieldWorkerEndingAppeals.mockResolvedValue(page([listItem()]));
+    decideFieldWorkerEndingAppeal.mockImplementation(() => new Promise(() => undefined));
+    listAppealEligibleFieldWorkers.mockResolvedValue(page([cand(W2, 'Sita Devi')]));
+    lodgeFieldWorkerEndingAppeal.mockImplementation(() => new Promise(() => undefined));
+    renderAppeals();
+    await openAct('allowed');
+    confirm();
+    await waitFor(() => expect(screen.getByTestId('fw-appeal-confirm')).toHaveAttribute('aria-disabled', 'true'));
+    confirm();
+    fireEvent.submit(screen.getByTestId('fw-appeal-form'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(decideFieldWorkerEndingAppeal).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('fw-appeals-record-open'));
+    const c = await screen.findByTestId('fw-appeals-eligible-item');
+    fireEvent.change(within(c).getByTestId('fw-appeals-via'), { target: { value: 'phone' } });
+    fireEvent.click(within(c).getByTestId('fw-appeals-lodge'));
+    await waitFor(() => expect(within(c).getByTestId('fw-appeals-lodge')).toHaveAttribute('aria-disabled', 'true'));
+    fireEvent.click(within(c).getByTestId('fw-appeals-lodge'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(lodgeFieldWorkerEndingAppeal).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Code review round 3 — Find’s appeal panel (R3-6)', () => {
+  it('R3-6: the "recorded and waits for a decision" line is not kept once the panel shows ANOTHER ending (an Undo closed that appeal)', async () => {
+    const { WorkerAppeals } = await import('../src/modules/field-workers/WorkerAppeals.js');
+    lodgeFieldWorkerEndingAppeal.mockResolvedValue(appeal());
+    const summary = (v: number) => ({ current_state: 'terminated' as const, district: 'Patna', state_event_version: v, created_at: '2026-11-04T05:00:00.000Z' });
+    const qc = createQueryClient();
+    const view = render(<QueryClientProvider client={qc}><WorkerAppeals pariwarId={P} fieldWorkerId={W} worker={summary(4) as never} /></QueryClientProvider>);
+    const panel = await startFindLodge('phone');
+    fireEvent.click(within(panel).getByTestId('fw-appeals-lodge'));
+    expect(await screen.findByTestId('fw-worker-appeals-outcome')).toHaveTextContent(t('fw.appeals.lodged'));
+    view.rerender(<QueryClientProvider client={qc}><WorkerAppeals pariwarId={P} fieldWorkerId={W} worker={{ ...summary(5), current_state: 'active' } as never} /></QueryClientProvider>);
+    expect(screen.queryByTestId('fw-worker-appeals-outcome')).toBeNull();
   });
 });

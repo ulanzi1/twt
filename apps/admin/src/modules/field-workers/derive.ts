@@ -179,7 +179,7 @@ export type AppealAct = 'lodge' | 'decide' | 'withdraw';
  * `stale` is set for EXACTLY the codes whose refusal also refreshes the appeals (`fieldWorkerListIsStale`): the refresh unmounts or re-keys
  * the row or form that raised the line, so the SCREEN must say it somewhere that stays mounted (R2D-2).
  */
-export function appealGuidance(error: unknown, ctx: { act: AppealAct; heardBy?: 'pariwar_admin' | 'trustee_panel' | null }): Guidance {
+export function appealGuidance(error: unknown, ctx: { act: AppealAct; heardBy?: 'pariwar_admin' | 'trustee_panel' | null; fromList?: boolean }): Guidance {
   if (error instanceof ApiError) {
     if (error.status === 403) {
       const hearer = ctx.heardBy ?? null;
@@ -191,8 +191,10 @@ export function appealGuidance(error: unknown, ctx: { act: AppealAct; heardBy?: 
       case 'field_worker.authorization_stale':
         return { text: t('fw.err.appealWorkerChanged'), stale: true };
       case 'field_worker.ending_changed':
-        // Retryable: the ending's version is re-read, the body then differs, and `attemptKey` mints a NEW key for it.
-        return { text: t('fw.err.endingChanged'), retryable: true, stale: true };
+        // Only a lodge meets it (decide and withdraw name no ending version). Retryable: the ending's version is re-read - Find's identity, or the
+        // eligible list, which re-keys the candidate's form - so the next attempt's body differs and `attemptKey` mints a NEW key. The eligible
+        // list (`fromList`) shows no worker details, so its line says the LIST was refreshed (review R3-8).
+        return { text: t(ctx.fromList === true ? 'fw.err.endingChangedList' : 'fw.err.endingChanged'), retryable: true, stale: true };
       case 'field_worker.appeal_open':
         return { text: `${t('fw.err.appealOpen')} ${t('fw.err.listRefreshed')}`, stale: true };
       case 'field_worker.appeal_already_decided':
@@ -239,9 +241,18 @@ export function istTodayInBrowser(now: Date = new Date()): string {
  * browser clock behind the server's would otherwise pre-fill a day the control itself refuses (review PR7).
  */
 export function defaultEndDate(registeredAt: string, now: Date = new Date()): string {
+  return istTodayNotBefore(istDateOf(registeredAt), now);
+}
+
+/**
+ * Today in India on this browser's clock, but never before `floor` (a server day: the day an appeal was received, a registration day).
+ * Code review round 3, R3-7: a browser clock behind the server's across IST midnight read "today" as a day BEFORE that server day, so a
+ * date control defaulted below its own `min`, and its `max` (today) sat below the `min` too - no day could be chosen. Used for both the
+ * default and the `max`, as `defaultEndDate` does for the End form; the server judges the real bounds.
+ */
+export function istTodayNotBefore(floor: string | undefined, now: Date = new Date()): string {
   const today = istTodayInBrowser(now);
-  const registered = istDateOf(registeredAt);
-  return today < registered ? registered : today;
+  return floor !== undefined && today < floor ? floor : today;
 }
 
 /** A server instant as an India date and time, e.g. "7 Nov 2026, 4:05 pm". */

@@ -180,6 +180,8 @@ const EN: Record<string, string> = {
   'fw.actions.done.undo': '{name} is restored as they were before the ending.',
   'fw.actions.noAccess.undo': 'Only a Pariwar Admin can undo an ending.',
   'fw.err.endingChanged': 'This ending has changed since you opened it. The worker’s details have been reloaded; try again.',
+  // Review R3-8 — the Appeals page's eligible list shows no worker details: what was reloaded there is the list.
+  'fw.err.endingChangedList': 'This ending has changed since the list was read. The list has been refreshed; try again.',
   'fw.err.numberRegisteredAgain': 'This number now belongs to another registration. End that registration first, if it was made in error, then undo this ending.',
   'fw.err.appealRefusedByPanel': 'The Trustee Panel heard this worker’s appeal and refused it. Only a new decision of the Panel can restore them.',
   'fw.err.appealOpen': 'This worker already has an appeal waiting for a decision.',
@@ -286,6 +288,9 @@ const EN: Record<string, string> = {
   'fw.appeals.eligible.empty': 'No ended worker you can record an appeal for.',
   'fw.appeals.moreCandidateOne': '1 more worker shown.',
   'fw.appeals.moreCandidates': '{count} more workers shown.',
+  // Review R3-9 — the eligible list's first page, said in its status region as the appeals list's count is.
+  'fw.appeals.candidatesOne': '1 worker shown.',
+  'fw.appeals.candidates': '{count} workers shown.',
   'fw.appeals.recordsLoaded': '{count} appeals shown.',
   'fw.appeals.recordsOne': '1 appeal shown.',
   'fw.appeals.recordsNone': 'No appeals shown.',

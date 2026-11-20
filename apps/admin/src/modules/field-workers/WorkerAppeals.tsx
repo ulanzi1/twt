@@ -13,7 +13,11 @@ import { useSignInRedirect } from './sign-in.js';
 export function WorkerAppeals({ pariwarId, fieldWorkerId, worker }: { pariwarId: string; fieldWorkerId: string; worker: WorkerSummary }): ReactElement {
   const appeals = useFieldWorkerEndingAppealsOf(pariwarId, fieldWorkerId);
   const [recording, setRecording] = useState(false);
-  const [outcome, setOutcome] = useState<string | null>(null);
+  /**
+   * The lodge's outcome, for the ENDING it was lodged against (review R3-6): an Undo in the same panel closes that appeal and moves the worker
+   * to a new version, and the line went on saying the appeal "waits for a decision". It is shown only while the panel shows that ending.
+   */
+  const [outcome, setOutcome] = useState<{ text: string; endingVersion: number } | null>(null);
   // A stale refusal of a lodge (the ending changed, an appeal appeared) is said HERE: the refresh it triggers re-keys the lodging form, and a
   // line kept inside the form would go with it (code review round 2, chunk D: R2D-2).
   const [stale, setStale] = useState<string | null>(null);
@@ -31,7 +35,7 @@ export function WorkerAppeals({ pariwarId, fieldWorkerId, worker }: { pariwarId:
       <div role="status">
         {appeals.isPending && <p>{t('fw.loading')}</p>}
         {appeals.isSuccess && <p className="sr-only">{t(items.length === 0 ? 'fw.appeals.recordsNone' : items.length === 1 ? 'fw.appeals.recordsOne' : 'fw.appeals.recordsLoaded', { count: items.length })}</p>}
-        {outcome !== null && <p>{outcome}</p>}
+        {outcome !== null && outcome.endingVersion === worker.state_event_version && <p data-testid="fw-worker-appeals-outcome">{outcome.text}</p>}
       </div>
       {/* Mounted EMPTY, so the line arrives into a live region (it is heard), and it outlives the form the refusal re-keys. */}
       <div role="alert" data-testid="fw-worker-appeals-stale">{stale !== null && <p className="text-sm text-status-fail-fg">{stale}</p>}</div>
@@ -55,7 +59,7 @@ export function WorkerAppeals({ pariwarId, fieldWorkerId, worker }: { pariwarId:
       {canRecord && (!recording ? (
         <button type="button" className="self-start rounded border px-3 py-1 text-sm" onClick={() => { titleRef.current?.focus(); setRecording(true); }} data-testid="fw-worker-appeals-record">{t('fw.appeals.record')}</button>
       ) : (
-        <LodgeAppealForm key={`${fieldWorkerId}:${String(worker.state_event_version)}`} pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} endingVersion={worker.state_event_version} minDate={istDateOf(worker.created_at)} onAttempt={() => setStale(null)} onStale={(line) => { setStale(line); focusIfUnclaimed(titleRef.current, sectionRef.current); }} onLodged={() => { setStale(null); setOutcome(t('fw.appeals.lodged')); focusIfUnclaimed(titleRef.current, sectionRef.current); }} />
+        <LodgeAppealForm key={`${fieldWorkerId}:${String(worker.state_event_version)}`} pariwarId={pariwarId} fieldWorkerId={fieldWorkerId} endingVersion={worker.state_event_version} minDate={istDateOf(worker.created_at)} onAttempt={() => setStale(null)} onStale={(line) => { setStale(line); focusIfUnclaimed(titleRef.current, sectionRef.current); }} onLodged={() => { setStale(null); setOutcome({ text: t('fw.appeals.lodged'), endingVersion: worker.state_event_version }); focusIfUnclaimed(titleRef.current, sectionRef.current); }} />
       ))}
     </section>
   );

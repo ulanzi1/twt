@@ -36,6 +36,14 @@ const GRANTS = {
   pariwarAdmin: [{ pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P }],
   trustee: [{ pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P }],
   districtAdminPatna: [{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Patna' }],
+  // Review R3-23 — the shapes the equality test missed: a global super_admin (the cross-Pariwar branch of the grant check), a trustee who is
+  // also a Pariwar Admin, and a District Admin of ANOTHER district.
+  superAdmin: [{ pariwarId: P, role: 'super_admin', scopeDimension: 'global', scopeValue: null }],
+  trusteeAndPariwarAdmin: [
+    { pariwarId: P, role: 'trustee_panel', scopeDimension: 'pariwar', scopeValue: P },
+    { pariwarId: P, role: 'pariwar_admin', scopeDimension: 'pariwar', scopeValue: P },
+  ],
+  districtAdminGaya: [{ pariwarId: P, role: 'district_admin', scopeDimension: 'district', scopeValue: 'Gaya' }],
 } as const satisfies Record<string, rbac.EffectiveGrant[]>;
 
 function fakeRequest(grants: readonly rbac.EffectiveGrant[], stash: { heardBy: 'pariwar_admin' | 'trustee_panel' | null | undefined; district: string | null }): FastifyRequest {
@@ -113,18 +121,33 @@ describe('the hearer dispatcher, over the REAL hooks (AD9, R2C-2)', () => {
 describe('`holdsPermission` is the PURE twin of the hook (R2C-2)', () => {
   const opts = { dimension: 'district', resolveValue: endingAppealGateDistrict } as const;
 
-  it('answers what the hook would, for every grant shape, and fires NO denial seam on a "no"', async () => {
-    const stash = { heardBy: null, district: 'Patna' } as const;
-    for (const key of [FIELD_WORKER_HEAR_ENDING_APPEAL_KEY, FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY]) {
-      for (const grants of Object.values(GRANTS)) {
-        const sink = new CapturingSink();
-        const deps = { auditSink: sink, clock: () => new Date() } as unknown as AppDeps;
-        const hookPasses = await run(requirePermissionHook(deps, key, opts), fakeRequest(grants, stash)).then(() => true, () => false);
-        sink.events.length = 0;
-        const holds = await holdsPermission(key, opts)(fakeRequest(grants, stash));
-        expect(holds, `${key} / ${grants[0].role}`).toBe(hookPasses);
-        expect(sink.events, 'the pure predicate fired a denial seam').toEqual([]);
+  it('answers what the hook would, for every grant shape here and a NULL district too, and fires NO denial seam on a "no"', async () => {
+    const answers = new Set<boolean>();
+    for (const district of ['Patna', null] as const) {
+      const stash = { heardBy: null, district };
+      for (const key of [FIELD_WORKER_HEAR_ENDING_APPEAL_KEY, FIELD_WORKER_HEAR_ENDING_APPEAL_AS_PANEL_KEY]) {
+        for (const [shape, grants] of Object.entries(GRANTS)) {
+          const sink = new CapturingSink();
+          const deps = { auditSink: sink, clock: () => new Date() } as unknown as AppDeps;
+          const hookPasses = await run(requirePermissionHook(deps, key, opts), fakeRequest(grants, stash)).then(() => true, () => false);
+          sink.events.length = 0;
+          const holds = await holdsPermission(key, opts)(fakeRequest(grants, stash));
+          expect(holds, `${key} / ${shape} / ${String(district)}`).toBe(hookPasses);
+          expect(sink.events, 'the pure predicate fired a denial seam').toEqual([]);
+          answers.add(holds);
+        }
       }
+    }
+    expect([...answers].sort(), 'the table must hold both a "yes" and a "no" or it proves nothing').toEqual([false, true]);
+  });
+
+  it('R3-23: NO hearer + a super_admin and a trustee who is also a Pariwar Admin each pass through ONE hook with no denial', async () => {
+    for (const grants of [GRANTS.superAdmin, GRANTS.trusteeAndPariwarAdmin]) {
+      const sink = new CapturingSink();
+      const req = fakeRequest(grants, { heardBy: null, district: 'Patna' });
+      await run(realDispatcher(sink), req);
+      expect(keysDenied(sink), grants[0].role).toEqual([]);
+      expect(Object.keys(req.authorizations ?? {}), grants[0].role).toHaveLength(1);
     }
   });
 

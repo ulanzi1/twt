@@ -186,9 +186,10 @@ export function createFieldWorkerEndingAppealHandlers(deps: AppDeps) {
       async (ctx): Promise<DecideFieldWorkerEndingAppealResponse> => {
         const pariwarId = ids.pariwarId(ctx.pariwarId);
         const row = await preReadDecision(ctx, appealId, authorization);
-        if (body.outcome === 'allowed') await assertNumberFree(ctx.scopeTx.tx, pariwarId, row.fieldWorkerId);
         // Review R2C-3 - the PURE date shape is judged HERE, before the audit wrapper: a refusal that never reaches the command writes no intent line and no `_rolled_back` twin (I7; the CR12 precedent on terminate's `ended_on`). The COMMAND still judges the shape and the IST bounds - one judge of the bounds.
+        // Review R3-21 - and BEFORE the number check: the pure shape first, as R2C-3 states (a malformed date answered 409 number_registered_again, after two index reads, when the number was live).
         if (!fieldWorker.isCalendarDateString(body.decided_on)) throw new fieldWorker.FieldWorkerAppealDateInvalidError('decided_on', 'missing_or_malformed');
+        if (body.outcome === 'allowed') await assertNumberFree(ctx.scopeTx.tx, pariwarId, row.fieldWorkerId);
         const eventType = body.outcome === 'allowed' ? 'field_worker_ending_appeal.allowed' : 'field_worker_ending_appeal.refused';
         return audit.withCompensatingAudit(deps.servicePool, {
           auditIntent: {

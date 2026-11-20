@@ -1,8 +1,8 @@
 # Question for counsel — reporting a personal data breach, a Data Protection Officer, and "Significant Data Fiduciary" status
 
 **From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-20 (Story 14.3 Task 0.5; Decision `2026-11-20-467` DL13 — the
-file name carries the date the story was authored, 2026-11-01) · **Status:** WRITTEN, ⛔ not yet sent. Nothing here is recorded as asked
-until BigDev sends it.
+file name carries the date the story was authored, 2026-11-01) · **Revised:** 2026-11-20, after the Trustee Panel's ruling (Decision
+`2026-11-20-468`) · **Status:** WRITTEN, ⛔ not yet sent. Nothing here is recorded as asked until BigDev sends it.
 **Roster:** launch-gate Row 53 (`dpdpa-breach-and-dpo-readiness`) leg (d) closes on a recorded return to questions 1 to 5; legal-review
 artifact Row 18 (`dpo-breach-reporting-envelope-v1`). Question 1 also bears on launch-gate Rows 10 and 11 (a "Data Fiduciary
 registration" those rows assume). Counsel has not been asked about breach reporting, a Data Protection Officer or Significant Data
@@ -34,8 +34,13 @@ Gazette. Our own understanding — **not legal advice** — is:
 - We could not find that the Data Protection Board has appointed members or a way to file an intimation yet.
 
 The Trust is building a register to record a breach, a 72-hour clock, and drafts of the three notices Rule 7 describes; staff send the
-notices themselves. The Trustee Panel is being asked, separately, which person owns a breach for the Trust until a Data Protection
-Officer exists.
+notices themselves.
+
+**The Trustee Panel has since ruled** (Decision `2026-11-20-468`): the Trust does not appoint a Data Protection Officer before the
+law requires one; ONE named person is both the published contact (section 8(9)) and the person responsible for a breach; a Data
+Protection Officer is appointed if the Trust is notified as significant, or earlier on your advice. The Panel named the person; the
+capacity they act in is not recorded here — `[BigDev to add before sending: who the named person is to the Trust — a trustee, staff
+or an outside professional]`.
 
 ## The questions
 
@@ -53,8 +58,8 @@ Officer exists.
 4. **Significant Data Fiduciary exposure, and a voluntary officer.** Given what the Trust holds (Aadhaar-derived KYC, death
    certificates, payment history, nominees), how likely is a notification to reach the Trust or its class, and do you advise
    appointing a Data Protection Officer before the law requires one?
-5. **Who may hold the role.** May a trustee be the Data Protection Officer, or the person who owns a breach and is the published
-   contact before an officer exists? What independence or conflict limits apply? (The Act asks that the officer be an individual based
+5. **Who may hold the role.** May the person the Panel has named hold both duties — the published contact and the breach owner —
+   in the capacity described above? More generally, may a trustee be the Data Protection Officer, or that named person? What independence or conflict limits apply? (The Act asks that the officer be an individual based
    in India and "responsible to the Board of Directors or similar governing body".)
 
 **Asked elsewhere, not repeated here:** whether a text that reaches a wrong person through a mistyped number is a breach the Trust
@@ -64,6 +69,6 @@ governs the "a notice or text reached the wrong person" line of the Trust's brea
 ## What we need back
 
 A short written answer to each. It will be recorded as a decision; it closes launch-gate Row 53 leg (d), and question 1 (c) decides
-whether Rows 10 and 11 rest on a real duty. Questions 4 and 5 inform the Trustee Panel's choice of who owns a breach — the Panel is
-being asked that without waiting for this return, and may revisit it on your advice. If any answer depends on facts we have not given,
+whether Rows 10 and 11 rest on a real duty. Questions 4 and 5 bear on the Trustee Panel's ruling on who owns a breach — the Panel ruled
+without waiting for this return, and may revisit it on your advice. If any answer depends on facts we have not given,
 please say which.

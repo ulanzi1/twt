@@ -1,12 +1,23 @@
 # Trustee Panel routing note — Story 14.3: who answers for the Trust when members' data is exposed, before a Data Protection Officer exists — and when one is appointed (one question, non-blocking)
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-20 — [Decision 2026-11-20-468](../../.decision-log.md#decision-2026-11-20-468) (Trustee-ratified)
 >
-> **Nothing is recorded here yet.** WRITTEN 2026-11-20 by Story 14.3 (Task 0.3), under the author-commit
-> [Decision 2026-11-20-467](../../.decision-log.md#decision-2026-11-20-467). ⛔ SENT — it is sent by BigDev; it is called sent only once
-> BigDev says it went. When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision id. Everything
-> below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
-
+> **The ruling was relayed to the session by BigDev on 2026-11-20, by DR and KB.** ⚠ Not recorded: the channel, when the question was
+> sent, when the Panel ruled, the trustees' full names (initials as relayed), and whether the text put to the Panel is this file
+> word for word (this file was committed at `c418a198` before the ruling and has not changed below this block). Verbatim, as relayed
+> (two lines):
+>
+> > *"by DR and KB*
+> > *option B, named person M K Jha"*
+>
+> **Option B** — ONE named person is both the published contact and the person responsible when members' data is exposed; a Data
+> Protection Officer is appointed only if the Government names the Trust, or earlier on counsel's advice (our reading). **The person
+> named is "M K Jha"** (recorded as relayed). A and C were not taken. No code changes. **Not covered by the ruling:** how that person
+> is reached (no contact details were given, so there is not yet a contact to publish), in what capacity they act, from when, and who
+> stands in; whether they may hold the role (a question for counsel, not yet sent); the rewording of the privacy policy, which
+> option B's cost requires before members agree to it; and the privacy-policy half of the project's open question.
+>
+> Everything below is kept **unedited** — the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 ---
 
 ## §0 — THE GATE: is this the Panel's decision?

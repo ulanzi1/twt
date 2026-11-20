@@ -1054,6 +1054,17 @@ and passed, and `drizzle.__drizzle_migrations` holds 208 rows on that database. 
 only: the `(g)` line for this surface in `docs/access-wrapper-invariants.md` (the 12.2 / 13.1 precedent — found while the gate
 ran, and held back so the tree the gate judged stayed untouched).
 
+**(d11) After the dev run — 2026-11-20 (~22:55 IST): THE PANEL RULED PQ1.** BigDev, verbatim, two lines: *"by DR and KB"* /
+*"option B, named person M K Jha"*. Recorded as **Decision `2026-11-20-468`** (Trustee-ratified; `-467` was the highest id on
+every ref after a fetch), committed ALONE as `6ec6d677`. Then, in one records commit: the note's ⏳ block replaced by the ruling
+block (everything below it byte-identical — asserted); dated lines at roster Row 53 (c) and Row 8; a PRD OQ-7 annotation; two new
+`deferred-work.md` items; every `[PENDING PQ1]` in the three runbooks replaced by "the breach owner designated by … `-468`" (the
+NAME stays in the decision — the runbook template asks for roles, and the repo is public), each keeping the interim escalation
+because NO CONTACT was given; on-call playbook §2.13; the unsent counsel file revised (the Panel has ruled; CQ5 now asks about
+the named person, with a slot for BigDev to say in what capacity they act). `pnpm pii:check` and `dlt-typed-variables:check`
+pass. ⛔ Code touched — so `ci:local` was NOT re-run; the 40 / 40 stands for the code at `4c2c1bae`. Row stays `review`.
+⚠ Read as a reading, and said so in `-468`: one name under option B's "ONE person … both" = both duties.
+
 ### Completion Notes List
 
 **Story 14.3 — implemented 2026-11-20 by `bmad-dev-story 14.3` on `story/14-3-dpo-breach-reporting-operational-readiness` (own worktree), rebased onto `origin/main` `a7c99c6a`. Not pushed. Nothing is live.**
@@ -1111,6 +1122,13 @@ check runs on a CI database, not production.
   by a test.
 - **A read on window focus is an audited read:** the admin's query client refetches on focus, and each detail fetch writes one
   `data_protection.breach.viewed` line. Accurate, but it will add lines for an open tab. Not changed.
+
+**⚠ UPDATE 2026-11-20, after these notes were written — the Panel RULED (Decision `2026-11-20-468`).** Option B: ONE named person
+is both the published contact and the breach owner; a DPO only on an SDF notification or on counsel's advice. The person is named
+in the decision. So, of the list below: "no breach owner … is named" and "the Panel note is NOT sent" are NO LONGER TRUE (left as
+written — they were true then). STILL true and now the sharper gap: no CONTACT, capacity, start date or stand-in is recorded for
+that person, so nothing is published and Rows 8 and 53 (c) stay open; the privacy policy still says "Data Protection Officer"
+(private repo — not this story's); the counsel file is still unsent.
 
 **UN-ATTESTED — nothing below was done, and nothing in the repo says it was**
 - ⛔ No table-top exercise has been run (Row 53 (b)).
@@ -1236,3 +1254,6 @@ check runs on a CI database, not production.
   `0208` and the domain module; contracts (the one derivation, the three drafts); six API routes; the admin pages; OpenAPI; the
   access-wrapper gate scans the surface. `ci:local` 40 / 40 on a fresh container at `4c2c1bae`. Status `review`. Departures and
   every un-attested item are in the Completion Notes. ⛔ Pushed. ⛔ Panel note or counsel file sent.
+- 2026-11-20 — v1.6: after the dev run, the Panel ruled PQ1 — Decision `2026-11-20-468` (option B; one named person is both the
+  published contact and the breach owner). Records only: the note's ruling block, roster Rows 8 / 53 dated lines, PRD OQ-7
+  annotation, two deferred items, the runbooks' owner lines, the unsent counsel file. ⛔ Code. Status stays `review`.

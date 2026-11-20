@@ -1,10 +1,11 @@
 # Runbook: Data Protection Officer appointment, the Significant Data Fiduciary watch, and the monthly compliance review
 
 > ⚠ **NOT AUTHORITATIVE until signed in `operational-readiness-ledger.md`.** This is a draft written by Story 14.3. No trustee has
-> signed it. It appoints nobody: no Data Protection Officer, breach owner or published contact is named by this file or by any decision.
+> signed it. It appoints nobody. The Trustee Panel has named ONE person as both the breach owner and the published contact (Decision
+> `2026-11-20-468`); no Data Protection Officer is appointed, and none is owed unless the Government names the Trust.
 
 > **Status:** draft (Story 14.3 author-commit 2026-11-20, Decision `2026-11-20-467`); unsigned; launch-gate Row 53 (a) open
-> **Owner role:** Trustee Panel (the appointment); the breach owner — `[PENDING PQ1]` — runs the monthly review (interim: Solo Builder)
+> **Owner role:** Trustee Panel (the appointment); the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468` — runs the monthly review (interim, until their contact is recorded: Solo Builder)
 > **Last material edit:** 2026-11-20 by Solo Builder (initial)
 > **Architectural authority:** architecture.md §2.12 (SDF classification reviewed at named triggers; the DPIA lives in governance documentation; its owner identified before launch) · PRD FR-99 (*"monthly compliance review"*), OQ-7 · DPDP Act 2023 ss.2(l), 8(9), 10 · DPDP Rules 2025 Rules 9, 13 · Decision `2026-11-20-467`
 
@@ -14,8 +15,9 @@ is no count to watch. **Every** Data Fiduciary must publish the business contact
 person who is able to answer"* (s.8(9)) — that person is launch-gate Row 8. Reporting a breach does not wait for a DPO
 (`personal-data-breach-response.md`).
 
-Whether the Trust appoints a DPO before the law requires one, and who owns a breach until then, is the Trustee Panel's decision (PRD
-OQ-7; the note is written, not sent). This runbook is ready for either answer.
+The Trustee Panel has ruled (Decision `2026-11-20-468`, PRD OQ-7's DPO half): the Trust does NOT appoint a DPO before the law
+requires one; one named person is both the published contact and the breach owner until then. A DPO is appointed if the Government
+notifies the Trust, or earlier on counsel's advice — §2.2 and §2.3 are for that day.
 
 ## 1. Prerequisites
 
@@ -49,7 +51,7 @@ what independence the role needs, is `[COUNSEL — CQ5]`. ⛔ Do not appoint on 
   read on 2026-11-20); if the notification is silent, appoint without delay. From the notification the Trust also owes, **once in
   every period of twelve months**, a Data Protection Impact Assessment and an audit (Rule 13(1)), and an independent data auditor
   (s.10(2)(b)).
-- **Or the Trustee Panel decides to appoint earlier** — its ruling on the open question, or counsel's advice `[COUNSEL — CQ4]`.
+- **Or the Trustee Panel decides to appoint earlier** — on counsel's advice `[COUNSEL — CQ4]` (its ruling of 2026-11-20 leaves that door open).
 
 ### 2.3 — The appointment ceremony
 
@@ -87,8 +89,8 @@ written to `.decision-log.md` unless something changed.
    threshold being published. If one has happened, tell the Trustee Panel and counsel.
 7. **Gates and counsel** — the status of launch-gate Rows 8 and 53; whether counsel has returned on the breach questions (CQ1–CQ5).
 8. **The DPIA owner** — a Data Protection Impact Assessment is required by law only of a Significant Data Fiduciary (Rule 13), but
-   architecture §2.12 asks that its owner be identified before launch. The owner is the breach owner's role — the person is
-   `[PENDING PQ1]`. The DPIA itself lives in the Trust's governance documentation, not in this repository.
+   architecture §2.12 asks that its owner be identified before launch. The owner is the breach owner's role — the person the
+   Panel named in Decision `2026-11-20-468`. The DPIA itself lives in the Trust's governance documentation, not in this repository.
 
 **Review log** (one row per month; never edit an earlier row):
 
@@ -117,7 +119,7 @@ If any check fails, escalate per §5.
 
 ## 5. Contact escalation list
 
-- **Primary:** the breach owner — `[PENDING PQ1]` (interim: Solo Builder).
+- **Primary:** the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468` (interim, until their contact is recorded: Solo Builder).
 - **Secondary:** Trustee Panel chair on rota.
 - **Legal:** counsel `lc-1` (`docs/legal-counsel-engagement/counsel-roster.md`) — engaged; not yet asked about a DPO, breach reporting or SDF status.
 - **Trustee escalation:** an SDF notification, a commencement change, or a missed appointment window goes to the Trustee Panel at once.
@@ -129,3 +131,4 @@ If any check fails, escalate per §5.
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines and the opening, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |

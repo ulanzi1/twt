@@ -5,7 +5,7 @@
 > escalation in `docs/knowledge-transfer/on-call-playbook.md` §2.13 stands.
 
 > **Status:** draft (Story 14.3 author-commit 2026-11-20, Decision `2026-11-20-467`); unsigned; launch-gate Row 53 (a) open
-> **Owner role:** the breach owner — `[PENDING PQ1]` (who owns a breach before a Data Protection Officer exists is with the Trustee Panel; note written, not sent). Interim: Solo Builder + Trustee Panel chair + counsel `lc-1`, as on-call playbook §2.13.
+> **Owner role:** the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468` (one named person is both the breach owner and the published contact; the name is in the decision). ⚠ No contact for the owner is recorded yet: until it is, reach them through the interim escalation — Solo Builder + Trustee Panel chair + counsel `lc-1`, as on-call playbook §2.13.
 > **Last material edit:** 2026-11-20 by Solo Builder (initial)
 > **Architectural authority:** architecture.md §2.12 (breach reporting; breach detection signals), §1.5 (a chain break triggers a P0 incident), Launch Gate Risks (incident response table-top) · PRD FR-99, FR-47 · DPDP Act 2023 ss.8(6), 8(9) · DPDP Rules 2025 (G.S.R. 846(E)) Rule 7 · Decision `2026-11-20-467`
 
@@ -49,7 +49,7 @@ counsel). Before that, and from go-live, the Trust follows this runbook as its o
 
 ### 2.1 — Triage: is this a signal, or a breach?
 
-Whoever notices tells the breach owner (`[PENDING PQ1]`; interim: on-call playbook §2.13) at once. Use this table to find where a
+Whoever notices tells the breach owner (Decision `2026-11-20-468`; no contact recorded yet — use the interim escalation of on-call playbook §2.13) at once. Use this table to find where a
 signal shows up today and what to do first. **A signal opens an assessment; it is not a breach until personal data is confirmed
 exposed.**
 
@@ -159,11 +159,11 @@ If any check fails, do not declare the incident handled; escalate per §5.
 
 ## 5. Contact escalation list
 
-- **Primary:** the breach owner — `[PENDING PQ1]`.
-- **Interim, until the Panel names one:** Solo Builder + Trustee Panel chair + counsel `lc-1` (`docs/legal-counsel-engagement/counsel-roster.md`). Counsel is engaged; counsel has not been asked about breach reporting, a DPO or SDF status (the questions are written, not sent).
+- **Primary:** the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468`. ⚠ Their contact details and a stand-in are not recorded yet.
+- **Interim, until the owner's contact and a stand-in are recorded:** Solo Builder + Trustee Panel chair + counsel `lc-1` (`docs/legal-counsel-engagement/counsel-roster.md`). Counsel is engaged; counsel has not been asked about breach reporting, a DPO or SDF status (the questions are written, not sent).
 - **Secondary (if the primary cannot be reached — the clocks are running, do not wait):** Trustee Panel chair on rota; then the backup engineer per `docs/backup-engineer/`.
 - **Trustee escalation:** every confirmed breach is told to the Trustee Panel chair at once (the interim escalation of on-call playbook §2.13).
-- **Published contact for members' questions (DPDP Act s.8(9)):** launch-gate Row 8 — nobody is designated yet. Until then the contact typed into each incident's assessment is what affected people are given.
+- **Published contact for members' questions (DPDP Act s.8(9)):** launch-gate Row 8 — the Panel has named the person (Decision `2026-11-20-468`, the same person as the breach owner); no contact is recorded or published yet. Until it is, the contact typed into each incident's assessment is what affected people are given.
 
 ## Appendix — Where personal data is held and who receives it
 
@@ -215,3 +215,4 @@ A breach at any of these is the Trust's breach to report for the Trust's data: a
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |

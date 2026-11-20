@@ -4,7 +4,7 @@
 > describes has **not been run**: Story 14.3 writes the script; trustees run it (launch-gate Row 53 (b)).
 
 > **Status:** draft (Story 14.3 author-commit 2026-11-20, Decision `2026-11-20-467`); unsigned; never executed
-> **Owner role:** Facilitator — the breach owner, `[PENDING PQ1]` (interim: Solo Builder), with at least two trustees taking part
+> **Owner role:** Facilitator — the breach owner (designated by the Trustee Panel, Decision `2026-11-20-468`; until their contact is recorded, the Solo Builder facilitates), with at least two trustees taking part
 > **Last material edit:** 2026-11-20 by Solo Builder (initial)
 > **Architectural authority:** architecture.md Launch Gate Risks (*"Incident response tabletop | Pre-launch | Semi-annual"*), §2.12 · PRD FR-99 · epics.md Story 14.3 (*"a tabletop exercise validates the breach-reporting flow end-to-end"*) · DPDP Rules 2025 Rule 7 · the shape of `docs/degradation-policy/table-top-exercise.md`
 
@@ -42,7 +42,7 @@ number; a processor (the SMS provider) reporting its own breach.
 
 **Simulated event:** the facilitator reads the card.
 **Participants do:** decide who is told first; open an incident, ticking **rehearsal**; enter the awareness time.
-**Record:** who was told and how long it took to open the record. *Gap prompts:* Did anyone know who the breach owner is? Was the
+**Record:** who was told and how long it took to open the record. *Gap prompts:* Did anyone know who the breach owner is, and how to reach them? Was the
 awareness time the call's time or the email's? Could a trustee find the page?
 
 ### 2.3 — Assessment (simulated T+2 h)
@@ -106,7 +106,7 @@ If any check fails, the run does not count toward Row 53 (b); escalate per §5.
 
 ## 5. Contact escalation list
 
-- **Primary:** the facilitator (the breach owner — `[PENDING PQ1]`; interim: Solo Builder).
+- **Primary:** the facilitator (the breach owner — designated by the Trustee Panel, Decision `2026-11-20-468`; interim: Solo Builder).
 - **Secondary:** Trustee Panel chair on rota.
 - **If a rehearsal turns into a real incident:** `personal-data-breach-response.md` §5.
 
@@ -117,3 +117,4 @@ If any check fails, the run does not count toward Row 53 (b); escalate per §5.
 | Date | git SHA | Author | Material edit? | Re-sign required? | Ledger entry |
 |---|---|---|---|---|---|
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |

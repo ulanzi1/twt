@@ -149,7 +149,7 @@ const EN: Record<string, string> = {
   'field.note': 'Note',
   'field.reference': 'Reference',
   'field.grantedUntil': 'New due time the Board allowed (IST)',
-  'field.signers': 'Trustees who signed, one name per line (at least two)',
+  'field.signers': 'Trustees who signed, one name per line (at least two, not counting the breach owner)',
   'field.signedOn': 'Date signed',
   'field.summary': 'Closing summary',
   'field.text': 'Note',

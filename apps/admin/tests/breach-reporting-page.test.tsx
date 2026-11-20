@@ -398,6 +398,8 @@ describe('BreachDetailPage — the banner, the clock, the timeline, the forms, t
     await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'signoff_recorded');
     expect(screen.getByTestId('breach-entry-kind-note')).toHaveTextContent('Trustees do not sign in this app');
     expect(screen.getByRole('option', { name: 'Record that trustees signed' })).toBeInTheDocument();
+    // Decision `2026-11-20-470`: the breach owner is a trustee and is not one of the two — the label says so (the app cannot check it).
+    expect(screen.getByLabelText('Trustees who signed, one name per line (at least two, not counting the breach owner)')).toBe(screen.getByTestId('breach-entry-signers'));
     fireEvent.change(screen.getByTestId('breach-entry-signedOn'), { target: { value: '2026-01-05' } });
     await user.type(screen.getByTestId('breach-entry-signers'), 'Trustee One{enter}trustee  one');
     await user.click(screen.getByTestId('breach-entry-submit'));

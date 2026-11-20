@@ -41,6 +41,17 @@ describe.skipIf(!hasDatabase)('AP-P2 — migrated suppression lookup indexes', (
        FROM generate_series(1, 2000)`,
       [pool, PARIWAR_A],
     );
+    // GitHub CI 2026-11-20 (PR #329, twice): the SAME tie for the REVERSAL key. With no reversal in this pool the planner estimated ~1 row for
+    // `(pariwar_id, pool)` alone, so "reversed id as Index Cond" and "as Filter" cost alike and it chose the Filter on a CI database (a local
+    // one chose the Index Cond - the tie broke differently, it was never reproduced). Seed the pool's reversals too, each referencing one of
+    // its confirmations, so the pool alone matches hundreds of rows and the referenced id is the selective key.
+    await client.query(
+      `INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id)
+       SELECT gen_random_uuid(), 'reconciliation.confirmation-reversed',
+              jsonb_build_object('poolId', $1::text, 'reversedConfirmedEventId', c.event_id::text, 'memberId', c.payload ->> 'memberId'), 1, $2
+       FROM (SELECT event_id, payload FROM events_log WHERE event_type = 'contribution.confirmed' AND payload ->> 'poolId' = $1 LIMIT 500) AS c`,
+      [pool, PARIWAR_A],
+    );
     await client.query('ANALYZE events_log');
     await enterAppScope(client, PARIWAR_A);
     await listActedMemberIdsForPool(db as never, {

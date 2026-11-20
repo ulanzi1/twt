@@ -57,25 +57,25 @@ describe.skipIf(!hasDatabase)('the breach register — two-connection append rac
         auditId: randomUUID(),
       })
     ).incident.incidentId;
-  const input = (incidentId: string, kind: 'closed' | 'mitigation') => ({
+  const input = (incidentId: string, kind: 'closed' | 'mitigation' | 'note') => ({
     entryId: randomUUID(),
     incidentId,
     kind,
-    payload: kind === 'closed' ? { summary: 'closed by the race' } : { measures: 'a measure', status: 'implemented' },
+    payload: kind === 'closed' ? { summary: 'closed by the race' } : kind === 'note' ? { text: 'a note' } : { measures: 'a measure', status: 'implemented' },
     actorId: actor,
     actorDisplay: 'Race Spec',
     auditId: randomUUID(),
   });
 
   /** A holds the lock with `first` (uncommitted); B calls the own-committing writer with `second` and must WAIT; then A commits. */
-  async function race(incidentId: string, first: 'closed' | 'mitigation', second: 'closed' | 'mitigation') {
+  async function race(incidentId: string, first: 'closed' | 'mitigation', second: 'closed' | 'mitigation' | 'note', secondSpelling: (id: string) => string = (id) => id) {
     const pidB = (await poolB.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
     const a = await pool.connect();
     let bWrite: Promise<unknown> | undefined;
     try {
       await a.query('BEGIN');
       await appendBreachEntryInTx(a, input(incidentId, first));
-      const b = appendBreachEntry(poolB, input(incidentId, second)).then(
+      const b = appendBreachEntry(poolB, input(secondSpelling(incidentId), second)).then(
         (value) => ({ ok: true as const, value }),
         (error: unknown) => ({ ok: false as const, error }),
       );
@@ -110,6 +110,14 @@ describe.skipIf(!hasDatabase)('the breach register — two-connection append rac
     expect(compareBreachEntrySeq(read!.entries[0]!.entrySeq, read!.entries[1]!.entrySeq)).toBeLessThan(0);
     expect(read!.entries[0]!.recordedAt.getTime()).toBeLessThanOrEqual(read!.entries[1]!.recordedAt.getTime());
     await expect(appendBreachEntry(pool, input(incidentId, 'mitigation'))).rejects.toMatchObject({ code: 'breach.incident_closed' });
+  });
+
+  it('⭐ the id in ANOTHER CASE takes the SAME lock: `closed` first ⇒ an upper-case `note` waits, then is refused (review 2026-11-20)', async () => {
+    const incidentId = await newIncident();
+    const b = await race(incidentId, 'closed', 'note', (id) => id.toUpperCase());
+    expect(b.ok).toBe(false);
+    expect(b.ok ? null : b.error).toMatchObject({ code: 'breach.incident_closed', status: 409 });
+    expect((await readBreachIncident(pool, incidentId))?.entries.map((e) => e.kind)).toEqual(['closed']);
   });
 
   it('two appends to DIFFERENT incidents never wait on each other', async () => {

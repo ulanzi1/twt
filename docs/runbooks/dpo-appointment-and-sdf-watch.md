@@ -24,7 +24,8 @@ notifies the Trust, or earlier on counsel's advice — §2.2 and §2.3 are for t
 - **For an appointment:** a Trustee Panel decision to appoint (voluntarily, on counsel's advice, or because the Trust or its class has
   been notified under s.10); a candidate who meets §2.1; counsel's written view on independence `[COUNSEL — CQ5]` (not yet asked).
 - **For the monthly review:** a Super Admin account (the "Monthly review" panel is on the breach list page,
-  `/data-protection/breaches`); access to the e-Gazette (`egazette.gov.in`) and the Ministry's site; this file's log table (§2.4).
+  `/data-protection/breaches`) — held by whoever reads the panel; the breach owner need not hold one, and a Super Admin reads the
+  count out to them (Decision `2026-11-20-471`); access to the e-Gazette (`egazette.gov.in`) and the Ministry's site; this file's log table (§2.4).
 - **Private documents:** the draft privacy policy and Terms name "the Data Protection Officer" as a placeholder in several places.
   They live in the private legal repository (Decision `2026-08-28-167`) and are changed there, never in this repository.
 
@@ -71,7 +72,9 @@ what independence the role needs, is `[COUNSEL — CQ5]`. ⛔ Do not appoint on 
 
 ### 2.4 — The monthly compliance review (PRD FR-99)
 
-Once a month the breach owner (interim: Solo Builder) works through this list and adds ONE dated row to the log table below. Nothing is
+Once a month the breach owner (interim: Solo Builder) works through this list and adds ONE dated row to the log table below. Where
+a step needs the register (the incidents, the members-on-record count), a Super Admin reads it out and records any entry on the
+owner's behalf (Decision `2026-11-20-471`); the owner decides. Nothing is
 written to `.decision-log.md` unless something changed.
 
 1. **Open incidents and clocks** — on the breach list page: any open incident, any "Board report overdue".
@@ -133,3 +136,4 @@ If any check fails, escalate per §5.
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes (initial) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines and the opening, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-21 | (this commit) | Solo Builder (Story 14.3 code review) | yes — a Super Admin reads the register and records on the breach owner's behalf (Decision `2026-11-20-471`) | yes (≥2 trustees) — not yet signed | none yet |

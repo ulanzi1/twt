@@ -3425,14 +3425,32 @@ export const breachDetailKey = (incidentId: string) => ['breaches', 'detail', in
 export const breachSignalsKey = ['breaches', 'signals'] as const;
 export const breachMembersOnRecordKey = ['breaches', 'members-on-record'] as const;
 
-/** The newest incidents — a title, times and flags (no narrative). */
+/**
+ * The newest incidents — a title, times and flags (no narrative). NOT audited, so it re-reads every minute: the list's
+ * "overdue" flag is the server's derivation and would otherwise freeze at fetch time (review 2026-11-20).
+ */
 export function useBreachIncidents() {
-  return useQuery({ queryKey: breachListKey, queryFn: () => api.listBreachIncidents(50) });
+  return useQuery({ queryKey: breachListKey, queryFn: () => api.listBreachIncidents(50), refetchInterval: 60_000 });
 }
 
-/** One incident with its timeline and derived view. ⚠ The read is AUDITED on the server — one line per fetch. */
+/**
+ * One incident with its timeline and derived view. ⚠ The read is AUDITED on the server — one `viewed` line per fetch — so it is
+ * fetched on purpose only (review 2026-11-20, the field-worker identity precedent): on opening the page (a deliberate read), ⛔ on
+ * window focus or a network reconnect, and a write's 200 (which carries the detail) is PUT into the cache, ⛔ invalidated. The
+ * page re-derives the clock on its own timer.
+ */
 export function useBreachIncident(incidentId: string) {
-  return useQuery({ queryKey: breachDetailKey(incidentId), queryFn: () => api.getBreachIncident(incidentId) });
+  return useQuery({
+    queryKey: breachDetailKey(incidentId),
+    queryFn: () => api.getBreachIncident(incidentId),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/** The highest `entrySeq` in a detail (−1 when it has no entry). */
+function lastSeq(detail: { readonly entries: readonly { readonly entrySeq: string }[] } | undefined): bigint {
+  return (detail?.entries ?? []).reduce((max, e) => (BigInt(e.entrySeq) > max ? BigInt(e.entrySeq) : max), -1n);
 }
 
 /** "Signals to assess" — failed, unacknowledged audit-chain checks. */
@@ -3455,8 +3473,13 @@ export function useOpenBreachIncident() {
   return useMutation({
     mutationFn: ({ body, idempotencyKey }: { body: api.BreachIncidentOpenBody; idempotencyKey: string }) => api.openBreachIncident(body, idempotencyKey),
     onSuccess: () => {
+      // (The page then navigates to the incident, and opening it is the one deliberate — audited — read.)
       void qc.invalidateQueries({ queryKey: breachListKey });
       void qc.invalidateQueries({ queryKey: breachSignalsKey });
+    },
+    onError: (error: unknown) => {
+      // Saved, but the confirmation was lost: the list shows the incident.
+      if (error instanceof api.ApiError && error.code === 'idempotency.record_failed') void qc.invalidateQueries({ queryKey: breachListKey });
     },
   });
 }
@@ -3469,12 +3492,19 @@ export function useAppendBreachEntry(incidentId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ body, idempotencyKey }: { body: api.BreachEntryAppendBody; idempotencyKey: string }) => api.appendBreachEntry(incidentId, body, idempotencyKey),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: breachDetailKey(incidentId) });
+    onSuccess: (detail) => {
+      // The 200 is the detail as of this write: put it in the cache (⛔ a refetch — one more audited `viewed` line). A REPLAY of an
+      // older write answers as that write did, so it may be OLDER than what the page already shows: then re-read instead of
+      // stepping the page back (patch review 2026-11-21).
+      if (lastSeq(detail) >= lastSeq(qc.getQueryData(breachDetailKey(incidentId)))) qc.setQueryData(breachDetailKey(incidentId), detail);
+      else void qc.invalidateQueries({ queryKey: breachDetailKey(incidentId) });
       void qc.invalidateQueries({ queryKey: breachListKey });
     },
     onError: (error: unknown) => {
-      if (error instanceof api.ApiError && error.code === 'breach.incident_closed') {
+      // Closed meanwhile ⇒ show the closed state. Saved-but-unconfirmed (503), any other server failure, or no answer at all
+      // (the connection dropped — the write may have committed) ⇒ re-read, so the timeline shows what WAS saved.
+      const unsure = !(error instanceof api.ApiError) || error.status >= 500;
+      if (unsure || (error instanceof api.ApiError && error.code === 'breach.incident_closed')) {
         void qc.invalidateQueries({ queryKey: breachDetailKey(incidentId) });
       }
     },

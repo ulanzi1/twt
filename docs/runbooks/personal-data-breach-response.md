@@ -35,7 +35,8 @@ counsel). Before that, and from go-live, the Trust follows this runbook as its o
 ## 1. Prerequisites
 
 - **Access:** a Super Admin account (the one permission `breach.manage` is held by the Super Admin only). The register is at
-  `/data-protection/breaches` in the admin app. Without that account, record the same facts on paper with times and enter them later —
+  `/data-protection/breaches` in the admin app. The breach owner (a Trustee) need not hold one: a Super Admin RECORDS what the owner
+  decides, on the owner's behalf (Decision `2026-11-20-471`) — so a Super Admin must be reachable within the 72 hours. Without that account, record the same facts on paper with times and enter them later —
   the clocks do not wait for the app.
 - **A display name is set** on that admin account (the register refuses a nameless admin; the name is stored on every entry).
 - **The time the Trust became aware**, to the minute, in IST. This starts both clocks. If in doubt, take the EARLIER time.
@@ -121,10 +122,20 @@ exposed.**
 15. If the report cannot be complete in time, ask the Board IN WRITING for a longer period BEFORE the due time; record a **Board
     extension recorded** entry only once the Board has allowed it (the due time moves only then). The page shows "Board report
     overdue" when the time passes with no report recorded.
+15a. If an extension was recorded WRONGLY (a mistyped date, or one the Board did not in fact allow), record **Withdraw a recorded
+    longer period**, choose that extension and say why (Decision `2026-11-20-471`). The due time goes back to the last extension
+    still standing, or to awareness + 72 hours. Both entries stay on the timeline. ⛔ Do not "correct" it by recording a later one.
+15b. If the deadline is missed — the report is filed after the due time, or the incident is closed after the due time with no
+    report — the page shows **"The 72-hour deadline was missed"** and keeps showing it after "overdue" clears. Each report is judged
+    against the due time recorded BEFORE it, so an extension entered afterwards does not clear it. Say why in the closing summary
+    and when the Panel is told (step 19). ⚠ The app cannot tell a missed report from one that was never owed: an incident closed
+    after 72 hours as NOT a breach shows the same line — then the summary says it was established not to be a breach and how,
+    ⛔ an admission of a missed report that was never due.
 
 ### 2.8 — Review, sign-off and close
 
-16. The breach owner records an **owner review**.
+16. The breach owner reviews the response. A Super Admin records it as an **owner review** entry on the owner's behalf, in the
+    owner's words (Decision `2026-11-20-471` — the owner need not hold an account, as with the trustees' sign-off in step 17).
 17. When at least two trustees OTHER THAN the breach owner have signed the incident's summary by their own means (Decision
     `2026-11-20-470` — the owner is a Trustee and runs the response, so their own signature is not one of the two), record
     **Sign-off recorded** with their names
@@ -154,7 +165,8 @@ A breach record is append-only by design: nothing in it is edited or deleted.
 - [ ] The 72-hour report is recorded before the due time, or a Board extension is recorded and the report is within it. The page does not show "Board report overdue".
 - [ ] The CERT-In step was either done within 6 hours or counsel's recorded answer (CQ2) says it does not apply.
 - [ ] No entry names a member by name, mobile or identity number.
-- [ ] An owner review, a recorded sign-off by at least two trustees other than the breach owner, and a closing summary exist. (The app checks only that two different names were recorded — it does not know who the owner is; check the names yourself.)
+- [ ] If the page shows "The 72-hour deadline was missed", the closing summary says why — a late report, or that no report was owed (not a breach) and how that was established.
+- [ ] An owner review (recorded by a Super Admin on the owner's behalf), a recorded sign-off by at least two trustees other than the breach owner, and a closing summary exist. (The app checks only that two different names were recorded — it does not know who the owner is; check the names yourself.)
 - [ ] The Trustee Panel has been told; the audit-chain check passes afterwards.
 
 If any check fails, do not declare the incident handled; escalate per §5.
@@ -220,3 +232,4 @@ A breach at any of these is the Trust's breach to report for the Trust's data: a
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the incident sign-off is by two trustees OTHER THAN the breach owner (Decision `2026-11-20-470`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-21 | (this commit) | Solo Builder (Story 14.3 code review) | yes — a Super Admin records the owner's review on the owner's behalf (step 16, prerequisites); a wrong extension is withdrawn (15a); a missed deadline stays shown and is explained (15b, §4) (Decision `2026-11-20-471`) | yes (≥2 trustees) — not yet signed | none yet |

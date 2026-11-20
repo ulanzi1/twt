@@ -19,7 +19,7 @@ import {
 } from '../schema/breach_incidents.js';
 import { MEMBER_LIFECYCLE_STATES } from '../schema/members.js';
 
-import { breachBoardReportDueAt, breachExtensionGrantedUntil, isBreachIncidentClosed } from './rules.js';
+import { breachBoardReportDueAt, breachExtensionGrantedUntil, breachWithdrawalRefusal, isBreachIncidentClosed } from './rules.js';
 
 type Queryable = Pick<pg.Pool, 'query'> | Pick<pg.PoolClient, 'query'>;
 
@@ -32,13 +32,15 @@ export type BreachRegisterErrorCode =
   | 'breach.incident_not_found'
   | 'breach.incident_closed'
   | 'breach.extension_not_after_due'
-  | 'breach.extension_invalid';
+  | 'breach.extension_invalid'
+  | 'breach.withdrawal_invalid';
 
 const STATUS: Record<BreachRegisterErrorCode, 400 | 404 | 409> = {
   'breach.incident_not_found': 404,
   'breach.incident_closed': 409,
   'breach.extension_not_after_due': 400,
   'breach.extension_invalid': 400,
+  'breach.withdrawal_invalid': 400,
 };
 
 /** A refused register write — `code` / `status` are the wire's; `details` carries ids and times only. */
@@ -169,6 +171,8 @@ export interface OpenBreachIncidentInput {
 /**
  * Open an incident: ONE INSERT (auto-committed on a pool; inside the caller's transaction on a client). The new incident has no
  * entries yet. A CHECK violation (title bounds, awareness later than `now()`, an unknown source) surfaces as pg 23514.
+ * IDEMPOTENT ON `incidentId`: the API derives the id from the request's `Idempotency-Key`, so a retry of a write that already
+ * committed (its idempotency record lost — review 2026-11-20) finds the row and returns it as it is, ⛔ a second incident.
  */
 export async function openBreachIncident(db: Queryable, input: OpenBreachIncidentInput): Promise<BreachIncidentWithEntries> {
   requireDisplay(input.actorDisplay);
@@ -176,6 +180,7 @@ export async function openBreachIncident(db: Queryable, input: OpenBreachInciden
     `INSERT INTO breach_incidents
        (incident_id, is_rehearsal, title, became_aware_at, detection_source, detection_signal_ref, opened_by, opened_by_display, audit_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     ON CONFLICT (incident_id) DO NOTHING
      RETURNING ${INCIDENT_COLS}`,
     [
       input.incidentId,
@@ -189,7 +194,12 @@ export async function openBreachIncident(db: Queryable, input: OpenBreachInciden
       input.auditId,
     ],
   );
-  return { incident: toIncident(res.rows[0]!), entries: [] };
+  const created = res.rows[0];
+  if (created) return { incident: toIncident(created), entries: [] };
+  const existing = await readBreachIncident(db, input.incidentId);
+  if (!existing) throw new Error(`[breach] incident ${input.incidentId} conflicted on insert but cannot be read`);
+  // As the first open answered: the incident, no entries (⛔ anything recorded since).
+  return { incident: existing.incident, entries: [] };
 }
 
 export interface AppendBreachEntryInput {
@@ -222,9 +232,12 @@ export async function appendBreachEntry(pool: pg.Pool, input: AppendBreachEntryI
 
 /**
  * {@link appendBreachEntry}'s body, on a client ALREADY inside a transaction (the caller owns BEGIN / COMMIT).
- * Order: read the incident (absent ⇒ `breach.incident_not_found`) → take the per-incident ADVISORY lock → read the entries →
- * refuse if closed (`breach.incident_closed`) → for an extension, refuse unless `grantedUntil` is later than the current due time
- * (`breach.extension_not_after_due`) → INSERT. Returns the incident with every entry, the new one last.
+ * Order: read the incident (absent ⇒ `breach.incident_not_found`) → take the per-incident ADVISORY lock, keyed on the STORED id
+ * (⛔ the caller's spelling: an upper-case id resolves to the same row but would hash to a different lock — review 2026-11-20) →
+ * read the entries → if `entryId` is ALREADY among them, return as it is (a retry of a committed write; the id derives from the
+ * `Idempotency-Key`) → refuse if closed (`breach.incident_closed`) → for an extension, refuse unless `grantedUntil` is later than
+ * the current due time (`breach.extension_not_after_due`) → for a withdrawal, refuse unless it names a not-yet-withdrawn extension
+ * of THIS incident (`breach.withdrawal_invalid`) → INSERT. Returns the incident with every entry, the new one last.
  */
 export async function appendBreachEntryInTx(
   client: Pick<pg.PoolClient, 'query'>,
@@ -236,33 +249,42 @@ export async function appendBreachEntryInTx(
   const row = found.rows[0];
   if (!row) throw new BreachRegisterError('breach.incident_not_found', { incidentId: input.incidentId });
   const incident = toIncident(row);
+  const incidentId = row.incident_id;
 
   // Serialise appends to THIS incident (transaction-scoped; released at COMMIT / ROLLBACK). ⛔ A row lock — see the file header.
-  await client.query(`SELECT pg_advisory_xact_lock(hashtext('breach_incident:' || $1::text))`, [input.incidentId]);
+  // Keyed on the stored id, so every spelling of it takes the same lock.
+  await client.query(`SELECT pg_advisory_xact_lock(hashtext('breach_incident:' || $1::text))`, [incidentId]);
 
   const before = await client.query<EntryRow>(
     `SELECT ${ENTRY_COLS} FROM breach_incident_entries WHERE incident_id = $1 ORDER BY breach_incident_entries.entry_seq`,
-    [input.incidentId],
+    [incidentId],
   );
   const entries = before.rows.map(toEntry);
-  if (isBreachIncidentClosed(entries)) throw new BreachRegisterError('breach.incident_closed', { incidentId: input.incidentId });
+  // Already there: answer as the first write did — the entries up to and including it (⛔ anything recorded since).
+  const already = entries.findIndex((e) => e.entryId === input.entryId.toLowerCase());
+  if (already >= 0) return { incident, entries: entries.slice(0, already + 1) };
+  if (isBreachIncidentClosed(entries)) throw new BreachRegisterError('breach.incident_closed', { incidentId });
   if (input.kind === 'board_extension_recorded') {
     const until = breachExtensionGrantedUntil(input.payload);
-    if (!until) throw new BreachRegisterError('breach.extension_invalid', { incidentId: input.incidentId });
+    if (!until) throw new BreachRegisterError('breach.extension_invalid', { incidentId });
     const due = breachBoardReportDueAt(incident.becameAwareAt, entries);
     if (until.getTime() <= due.getTime()) {
       throw new BreachRegisterError('breach.extension_not_after_due', {
-        incidentId: input.incidentId,
+        incidentId,
         currentDueAt: due.toISOString(),
       });
     }
+  }
+  if (input.kind === 'board_extension_withdrawn') {
+    const refusal = breachWithdrawalRefusal(entries, input.payload['withdrawsEntryId']);
+    if (refusal !== null) throw new BreachRegisterError('breach.withdrawal_invalid', { incidentId, reason: refusal });
   }
 
   const inserted = await client.query<EntryRow>(
     `INSERT INTO breach_incident_entries (entry_id, incident_id, kind, payload, recorded_by, recorded_by_display, audit_id)
      VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
      RETURNING ${ENTRY_COLS}`,
-    [input.entryId, input.incidentId, input.kind, JSON.stringify(input.payload), input.actorId, input.actorDisplay, input.auditId],
+    [input.entryId, incidentId, input.kind, JSON.stringify(input.payload), input.actorId, input.actorDisplay, input.auditId],
   );
   return { incident, entries: [...entries, toEntry(inserted.rows[0]!)] };
 }
@@ -317,6 +339,9 @@ export interface BreachSignal {
 /**
  * "Signals to assess": every `audit_integrity_checks` row with `chain_valid = false` and no acknowledgement, newest first. READ
  * only — acknowledgement stays with the integrity page. Clamped explicitly (see {@link listBreachIncidents}).
+ * `incidentIds` counts REAL incidents opened AS an audit-chain break only (⛔ a rehearsal — a table-top opened from a live signal must
+ * not mark it assessed; ⛔ another source whose free-text reference happens to be a check id), and matches the reference
+ * case-insensitively (a hand-typed upper-case id is the same check) — review 2026-11-20 / patch review 2026-11-21.
  */
 export async function listBreachSignals(db: Queryable, limit?: number): Promise<BreachSignal[]> {
   const n = clampLimit(limit, BREACH_SIGNAL_LIST_LIMIT);
@@ -331,7 +356,8 @@ export async function listBreachSignals(db: Queryable, limit?: number): Promise<
     `SELECT c.check_id, c.verified_at, c.first_broken_seq::text AS first_broken_seq, c.rows_verified, c.trigger_source,
             COALESCE(
               (SELECT array_agg(i.incident_id ORDER BY i.opened_at, i.incident_id)
-                 FROM breach_incidents i WHERE i.detection_signal_ref = c.check_id::text),
+                 FROM breach_incidents i
+                WHERE NOT i.is_rehearsal AND i.detection_source = 'audit_chain_break' AND lower(i.detection_signal_ref) = c.check_id::text),
               ARRAY[]::uuid[]
             ) AS incident_ids
        FROM audit_integrity_checks c
@@ -366,7 +392,14 @@ export interface MembersOnRecord {
 
 /**
  * Members on record, trust-wide, in ONE statement (one snapshot). Reads `members.state` — a projector-written cache, good enough
- * for a monthly count. People who are not members (nominees, known people, claim contacts, workplace requests, field workers, the
+ * for a monthly count.
+ *
+ * DELIBERATE — a TRUST-WIDE read of `members`, across every Pariwar, on the BYPASSRLS service pool (no Pariwar scope, no RLS).
+ * Why: the Trust, not a Pariwar, is the Data Fiduciary, and the monthly compliance review (decision `2026-11-20-467` DL9) needs
+ * the Trust's total. What keeps it safe: it returns COUNTS only (per lifecycle state, and distinct Pariwars) — ⛔ an id, a name,
+ * a number — and it is reachable only behind the global `breach.manage` key (Super Admin). Re-examine when: a field other than a
+ * count is added here; a second caller appears; the threshold watch (SDF) becomes an automatic alert; or Row 26 (the production
+ * service login's `members` grant) is decided otherwise. People who are not members (nominees, known people, claim contacts, workplace requests, field workers, the
  * memorial family list) are NOT counted; the runbook says so.
  */
 export async function countMembersOnRecord(db: Queryable): Promise<MembersOnRecord> {

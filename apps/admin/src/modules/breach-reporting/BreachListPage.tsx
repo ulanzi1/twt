@@ -109,6 +109,11 @@ function IncidentsList(): ReactElement {
                     {t('badge.overdue')}
                   </span>
                 )}
+                {i.boardReportLate && (
+                  <span className={`${badge} border-status-fail-border bg-status-fail-bg text-status-fail-fg`} data-testid={`breach-incident-${i.incidentId}-late`}>
+                    {t('badge.late')}
+                  </span>
+                )}
               </span>
               <span className="text-sm opacity-80">
                 {t('incidents.aware')} {formatIst(i.becameAwareAt)} · {t('incidents.opened')} {formatIst(i.openedAt)} · {t('incidents.due')} {formatIst(i.boardReportDueAt)}

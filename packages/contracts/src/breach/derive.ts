@@ -9,6 +9,15 @@ export const BREACH_BOARD_REPORT_WINDOW_HOURS = 72;
 
 const HOUR_MS = 60 * 60 * 1000;
 
+/** The Board report's due time from `entries` alone (a prefix, in `entrySeq` order): the latest extension not withdrawn. */
+function dueFrom(becameAwareAtMs: number, entries: readonly BreachEntry[]): number {
+  const withdrawn = new Set<string>();
+  for (const e of entries) if (e.kind === 'board_extension_withdrawn') withdrawn.add(e.payload.withdrawsEntryId.toLowerCase());
+  let due = becameAwareAtMs + BREACH_BOARD_REPORT_WINDOW_HOURS * HOUR_MS;
+  for (const e of entries) if (e.kind === 'board_extension_recorded' && !withdrawn.has(e.entryId.toLowerCase())) due = Date.parse(e.payload.grantedUntil);
+  return due;
+}
+
 function bySeq(a: BreachEntry, b: BreachEntry): number {
   const x = BigInt(a.entrySeq);
   const y = BigInt(b.entrySeq);
@@ -18,8 +27,14 @@ function bySeq(a: BreachEntry, b: BreachEntry): number {
 /**
  * Derive everything shown about an incident from its entries, as of `now`.
  *   status            — `closed` once a `closed` entry exists, else `open`.
- *   boardReportDueAt  — the LATEST recorded extension's `grantedUntil`, else awareness + 72 hours.
+ *   boardReportDueAt  — the LATEST recorded extension NOT withdrawn (`board_extension_withdrawn`, decision `2026-11-20-471`),
+ *                       its `grantedUntil`; else awareness + 72 hours.
  *   boardReportOverdue — open AND no 72-hour report recorded AND `now` is after the due time.
+ *   boardReportLate   — the deadline WAS missed (decision `2026-11-20-471`): NO Board report was sent in time — each report
+ *                       judged against the due time AS RECORDED BEFORE IT (so an extension entered afterwards can never excuse
+ *                       it — patch review 2026-11-21) and the earliest-sent one deciding; or, with no report, the incident was
+ *                       closed (the `closed` entry's `recordedAt`) after the due time as recorded before the close. Unlike
+ *                       `overdue`, it stays true after the report is recorded or the incident is closed.
  *   latestAssessment  — the last `assessment` (earlier ones stay on the timeline).
  * Entries are consumed in `entrySeq` order whatever order the array arrives in.
  */
@@ -29,8 +44,13 @@ export function deriveBreachIncidentView(
   now: Date,
 ): BreachIncidentView {
   const ordered = [...entries].sort(bySeq);
+  const awareMs = Date.parse(incident.becameAwareAt);
+  const dueMs = dueFrom(awareMs, ordered);
   let closed = false;
-  let dueMs = Date.parse(incident.becameAwareAt) + BREACH_BOARD_REPORT_WINDOW_HOURS * HOUR_MS;
+  /** With no report: was the close after the due time as recorded before it? */
+  let closedLate = false;
+  /** Each report against the due time recorded before it; ANY report in time means the deadline was met. */
+  let anyReportInTime = false;
   let principalsNoticeRecorded = false;
   let boardInitialRecorded = false;
   let boardReportRecorded = false;
@@ -42,7 +62,7 @@ export function deriveBreachIncidentView(
   const principalsNotices: BreachIncidentView['principalsNotices'] = [];
   const timelineEvents: BreachIncidentView['timelineEvents'] = [];
 
-  for (const e of ordered) {
+  ordered.forEach((e, i) => {
     switch (e.kind) {
       case 'assessment':
         latestAssessment = e.payload;
@@ -67,29 +87,32 @@ export function deriveBreachIncidentView(
         boardInitialRecorded = true;
         break;
       case 'board_report_recorded':
+        if (Date.parse(e.payload.sentAt) <= dueFrom(awareMs, ordered.slice(0, i))) anyReportInTime = true;
         boardReportRecorded = true;
         break;
       case 'board_extension_recorded':
-        dueMs = Date.parse(e.payload.grantedUntil);
         break;
       case 'signoff_recorded':
         signoffRecorded = true;
         break;
       case 'closed':
         closed = true;
+        closedLate = Date.parse(e.recordedAt) > dueFrom(awareMs, ordered.slice(0, i));
         break;
+      case 'board_extension_withdrawn':
       case 'cert_in_report_recorded':
       case 'owner_review':
       case 'note':
         break;
     }
-  }
+  });
   timelineEvents.sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
 
   return {
     status: closed ? 'closed' : 'open',
     boardReportDueAt: new Date(dueMs).toISOString(),
     boardReportOverdue: !closed && !boardReportRecorded && now.getTime() > dueMs,
+    boardReportLate: boardReportRecorded ? !anyReportInTime : closed && closedLate,
     principalsNoticeRecorded,
     boardInitialRecorded,
     boardReportRecorded,

@@ -4,7 +4,8 @@
 // on the production login's shape — a BYPASSRLS role IN ROLE `twt_service` — by CALLING `openBreachIncident` and
 // `appendBreachEntryInTx` (the superuser this suite connects as hides a missing grant, and a row lock would fail only there);
 // (iii) the bare NOBYPASSRLS group sees no row; (iv) the append-only triggers; (v) the CHECKs; (vi) each CHECK list equals its
-// domain tuple; (vii) `recorded_at` is the DB's clock; then the accessors' rules and reads.
+// domain tuple; (vii) `recorded_at` and `opened_at` are the DB's clock (0209 stamps `opened_at`); then the accessors' rules and
+// reads — including decision `2026-11-20-471`'s withdrawal (0209 widens the kinds to fifteen) and the review's idempotent writes.
 // Live DB only; per-test ROLLBACK (setupLiveDb).
 
 import { randomUUID } from 'node:crypto';
@@ -16,6 +17,7 @@ import {
   BREACH_ENTRY_KINDS,
   BreachRegisterError,
   appendBreachEntryInTx,
+  breachBoardReportDueAt,
   countMembersOnRecord,
   listBreachIncidents,
   listBreachSignals,
@@ -170,6 +172,7 @@ describe.skipIf(!hasDatabase)('the breach register — migration 0208 regression
       'breach_incident_entries_stamp',
       'breach_incidents_no_truncate',
       'breach_incidents_no_update_delete',
+      'breach_incidents_stamp',
     ]);
   });
 
@@ -212,7 +215,7 @@ describe.skipIf(!hasDatabase)('the breach register — migration 0208 regression
     const { client } = getTx();
     expect(await checkValues(client, 'breach_incident_entries_kind_check')).toEqual([...BREACH_ENTRY_KINDS].sort());
     expect(await checkValues(client, 'breach_incidents_detection_source_check')).toEqual([...BREACH_DETECTION_SOURCES].sort());
-    expect(BREACH_ENTRY_KINDS).toHaveLength(14);
+    expect(BREACH_ENTRY_KINDS).toHaveLength(15);
     expect(BREACH_DETECTION_SOURCES).toHaveLength(10);
   });
 
@@ -235,6 +238,72 @@ describe.skipIf(!hasDatabase)('the breach register — migration 0208 regression
         ),
       { code: '428C9' },
     );
+  });
+
+  it('⭐ 0209 — `opened_at` is the DB\'s clock at insert: a supplied (backdated) value is overwritten, so the awareness CHECK cannot be got round', async () => {
+    const { client } = getTx();
+    const insert = (openedAt: string, becameAwareAt: string) =>
+      client.query<{ opened_at: Date; tx_start: Date }>(
+        `INSERT INTO ${INCIDENTS} (incident_id, is_rehearsal, title, became_aware_at, opened_at, detection_source, opened_by, opened_by_display, audit_id)
+         VALUES ($1, true, 'Backdated', $2, $3, 'other', $4, 'Spec Admin', $5) RETURNING opened_at, now() AS tx_start`,
+        [randomUUID(), becameAwareAt, openedAt, ACTOR, randomUUID()],
+      );
+    const stamped = await insert('2000-01-01T00:00:00Z', '1999-12-31T00:00:00Z');
+    expect(stamped.rows[0]!.opened_at.getTime()).toBe(stamped.rows[0]!.tx_start.getTime());
+    // A forged FUTURE `opened_at` no longer lets a future awareness through either.
+    await expectPgError(client, () => insert('2999-01-01T00:00:00Z', '2998-01-01T00:00:00Z'), {
+      code: '23514',
+      constraint: 'breach_incidents_aware_before_opened_check',
+    });
+  });
+
+  it('⭐ the writes are IDEMPOTENT on their ids (the API derives them from the Idempotency-Key): a repeated open or append returns what is there — even after `closed`', async () => {
+    const { client } = getTx();
+    const incidentId = randomUUID();
+    const first = await open(client, { incidentId, title: 'Once' });
+    await append(client, incidentId, 'note', { text: 'recorded after the open' });
+    const again = await open(client, { incidentId, title: 'A different title on the retry' });
+    expect(again.incident).toEqual(first.incident);
+    // …answered as the first open was: no entries (⛔ what was recorded since).
+    expect(again.entries).toEqual([]);
+    expect((await client.query(`SELECT 1 FROM ${INCIDENTS} WHERE incident_id = $1`, [incidentId])).rowCount).toBe(1);
+    const entryId = randomUUID();
+    const entry = { entryId, incidentId, kind: 'closed' as const, payload: { summary: 'done' }, actorId: ACTOR, actorDisplay: 'Spec Admin', auditId: randomUUID() };
+    const closed = await appendBreachEntryInTx(client, entry);
+    const retried = await appendBreachEntryInTx(client, { ...entry, entryId: entryId.toUpperCase(), auditId: randomUUID() });
+    expect(retried.entries.map((e) => e.entryId)).toEqual(closed.entries.map((e) => e.entryId));
+    expect((await client.query(`SELECT 1 FROM ${ENTRIES} WHERE incident_id = $1`, [incidentId])).rowCount).toBe(2);
+    // A DIFFERENT entry is still refused after `closed`.
+    await expect(append(client, incidentId, 'note', { text: 'late' })).rejects.toMatchObject({ code: 'breach.incident_closed' });
+  });
+
+  it('⭐ decision -471 — a withdrawal names a not-yet-withdrawn extension of THIS incident; the due time falls back to the latest one standing', async () => {
+    const { client } = getTx();
+    const aware = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const due = aware.getTime() + 72 * 60 * 60 * 1000;
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const { incident } = await open(client, { becameAwareAt: aware });
+    const other = await open(client);
+    const otherExt = (await append(client, other.incident.incidentId, 'board_extension_recorded', { grantedUntil: iso(due + 10 * 60 * 60 * 1000), reference: 'X' })).entries[0]!;
+    const e1 = (await append(client, incident.incidentId, 'board_extension_recorded', { grantedUntil: iso(due + 1000), reference: 'E1' })).entries.at(-1)!;
+    const typo = (await append(client, incident.incidentId, 'board_extension_recorded', { grantedUntil: '2099-01-01T00:00:00.000Z', reference: 'E2' })).entries.at(-1)!;
+    const note = (await append(client, incident.incidentId, 'note', { text: 'n' })).entries.at(-1)!;
+    for (const target of [note.entryId, otherExt.entryId, randomUUID(), 'not-an-id']) {
+      await expect(append(client, incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: target, reason: 'x' })).rejects.toMatchObject({
+        code: 'breach.withdrawal_invalid',
+        status: 400,
+      });
+    }
+    const after = await append(client, incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: typo.entryId, reason: 'Typed 2099.' });
+    expect(breachBoardReportDueAt(aware, after.entries).toISOString()).toBe(iso(due + 1000));
+    await expect(append(client, incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: typo.entryId, reason: 'again' })).rejects.toMatchObject({
+      code: 'breach.withdrawal_invalid',
+      details: { reason: 'already_withdrawn' },
+    });
+    const all = await append(client, incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: e1.entryId, reason: 'Also wrong.' });
+    expect(breachBoardReportDueAt(aware, all.entries).toISOString()).toBe(iso(due));
+    // A new extension is judged against the FALLEN-BACK due time.
+    await append(client, incident.incidentId, 'board_extension_recorded', { grantedUntil: iso(due + 500), reference: 'E3' });
   });
 
   it('the append rules — unknown incident, nothing after `closed`, an extension must be later than the current due time; entries come back in `entry_seq` order', async () => {
@@ -319,7 +388,10 @@ describe.skipIf(!hasDatabase)('the breach register — migration 0208 regression
     const item = before.find((s) => s.checkId === mine);
     expect(item).toMatchObject({ checkId: mine, firstBrokenSeq: '5', rowsVerified: 4, incidentIds: [] });
     expect(before.some((s) => s.checkId === acked)).toBe(false);
-    const { incident } = await open(client, { detectionSource: 'audit_chain_break', detectionSignalRef: mine });
+    // A REHEARSAL opened from it does not mark it assessed; a real incident with the id typed in upper case does.
+    await open(client, { isRehearsal: true, detectionSource: 'audit_chain_break', detectionSignalRef: mine });
+    expect((await listBreachSignals(client, 50)).find((s) => s.checkId === mine)?.incidentIds).toEqual([]);
+    const { incident } = await open(client, { isRehearsal: false, detectionSource: 'audit_chain_break', detectionSignalRef: mine.toUpperCase() });
     const after = await listBreachSignals(client, 50);
     expect(after.find((s) => s.checkId === mine)?.incidentIds).toEqual([incident.incidentId]);
     expect((await listBreachSignals(client, 100000)).length).toBeLessThanOrEqual(50);

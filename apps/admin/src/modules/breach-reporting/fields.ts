@@ -21,7 +21,9 @@ export type FieldType =
   /** A count, or "not yet known". Two form values: `<name>` and `<name>Unknown`. */
   | 'affected'
   /** One value per line. */
-  | 'lines';
+  | 'lines'
+  /** A select over the incident's recorded extensions that are not yet withdrawn (decision `2026-11-20-471`). */
+  | 'extension';
 
 export interface FieldSpec {
   readonly name: string;
@@ -51,6 +53,7 @@ export const ENTRY_FIELDS: Record<BreachEntryKind, readonly FieldSpec[]> = {
   board_initial_recorded: [f('sentAt', 'datetime'), f('reference', 'text', 200)],
   board_report_recorded: [f('sentAt', 'datetime'), f('reference', 'text', 200)],
   board_extension_recorded: [f('grantedUntil', 'datetime'), f('reference', 'text', 200)],
+  board_extension_withdrawn: [f('withdrawsEntryId', 'extension'), f('reason', 'textarea', 2000)],
   cert_in_report_recorded: [f('sentAt', 'datetime'), f('reference', 'text', 200)],
   owner_review: [f('note', 'textarea', 2000)],
   signoff_recorded: [f('signers', 'lines'), f('signedOn', 'date'), f('note', 'textarea', 2000)],
@@ -62,6 +65,9 @@ export const ENTRY_FIELDS: Record<BreachEntryKind, readonly FieldSpec[]> = {
 export type EntryFormValues = Record<string, string | boolean | string[] | undefined>;
 
 const str = (v: EntryFormValues[string]): string => (typeof v === 'string' ? v : '');
+/** A whole number as typed. The inputs are TEXT (`inputMode="numeric"`): a browser's number input reads an invalid entry as '',
+ * which would silently become "no count" — here an invalid entry is an error instead (review 2026-11-20). */
+const WHOLE = /^\d{1,9}$/;
 const lines = (v: EntryFormValues[string]): string[] =>
   str(v)
     .split('\n')
@@ -88,6 +94,7 @@ export function buildEntryBody(
       case 'textarea':
       case 'date':
       case 'status':
+      case 'extension':
         payload[field.name] = str(raw);
         break;
       case 'datetime': {
@@ -98,16 +105,23 @@ export function buildEntryBody(
       }
       case 'integer-or-blank': {
         const s = str(raw).trim();
-        payload[field.name] = s === '' ? null : Number(s);
+        if (s === '') payload[field.name] = null;
+        else if (WHOLE.test(s)) payload[field.name] = Number(s);
+        else errors[field.name] = 'invalid.number';
         break;
       }
       case 'categories':
         payload[field.name] = Array.isArray(raw) ? raw.filter((c) => (BREACH_DATA_CATEGORIES as readonly string[]).includes(c)) : [];
         break;
       case 'affected': {
+        // Exactly one of the two: a count, or "not yet known" ticked. Neither or both is an error — ⛔ a silent guess.
         const unknown = values[`${field.name}Unknown`] === true;
         const s = str(raw).trim();
-        payload[field.name] = unknown || s === '' ? { unknown: true } : { count: Number(s) };
+        if (unknown && s !== '') errors[field.name] = 'invalid.affectedBoth';
+        else if (unknown) payload[field.name] = { unknown: true };
+        else if (s === '') errors[field.name] = 'invalid.affectedRequired';
+        else if (WHOLE.test(s)) payload[field.name] = { count: Number(s) };
+        else errors[field.name] = 'invalid.wholeNumber';
         break;
       }
       case 'lines':

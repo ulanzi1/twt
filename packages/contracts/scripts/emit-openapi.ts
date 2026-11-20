@@ -5950,7 +5950,9 @@ const breachForbidden = errorResponse('Forbidden — requires breach.manage at g
 const breachIncidentParams = z.object({ incidentId: z.string().uuid() });
 const breachIdempotencyNote =
   'Requires an Idempotency-Key header: a missing or blank one is 400 breach.idempotency_key_required; the same key again replays ' +
-  'the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. ';
+  'the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. ' +
+  'The new row\'s id is derived from the key, so a retry with the same key never writes a second row, even after a lost ' +
+  'idempotency record (503 idempotency.record_failed) — it answers with the row the first request wrote. ';
 
 registry.registerPath({
   method: 'get',
@@ -5992,7 +5994,7 @@ registry.registerPath({
       'The first request with this Idempotency-Key is still in progress (breach.idempotency_in_progress); OR the acting admin ' +
         'has no users.display_name (admin.display_name_missing)',
     ),
-    503: errorResponse('The incident was written but the idempotency record was not — retry with the same key (idempotency.record_failed)'),
+    503: errorResponse('The incident was written but the idempotency record was not — a retry with the same key answers with it (idempotency.record_failed)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -6029,7 +6031,8 @@ registry.registerPath({
     200: { description: 'The incident after the entry, with its derived view', content: jsonOf(breachComponents.BreachIncidentDetailResponse) },
     400: errorResponse(
       'Request validation failed; OR no Idempotency-Key (breach.idempotency_key_required); OR an extension not later than the ' +
-        'current due time (breach.extension_not_after_due); OR the database refused the row (breach.constraint_violation)',
+        'current due time (breach.extension_not_after_due); OR a withdrawal that does not name a not-yet-withdrawn extension of ' +
+        'this incident (breach.withdrawal_invalid); OR the database refused the row (breach.constraint_violation)',
     ),
     401: breachAuth,
     403: breachForbidden,
@@ -6038,7 +6041,7 @@ registry.registerPath({
       'The incident is closed (breach.incident_closed); OR the first request with this Idempotency-Key is still in progress ' +
         '(breach.idempotency_in_progress); OR the acting admin has no users.display_name (admin.display_name_missing)',
     ),
-    503: errorResponse('The entry was written but the idempotency record was not — retry with the same key (idempotency.record_failed)'),
+    503: errorResponse('The entry was written but the idempotency record was not — a retry with the same key answers with it (idempotency.record_failed)'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
@@ -6047,8 +6050,8 @@ registry.registerPath({
   path: '/api/v1/data-protection/signals',
   summary: 'List signals to assess (failed, unacknowledged audit-chain checks)',
   description:
-    'Every audit integrity check that failed and has not been acknowledged, newest first, each with the incidents opened from ' +
-    'it. A signal is a prompt to assess, not yet a breach. Read only: acknowledgement stays with the integrity page. Bounded: ' +
+    'Every audit integrity check that failed and has not been acknowledged, newest first, each with the REAL incidents opened ' +
+    'from it (a rehearsal does not count; the reference is matched in either case). A signal is a prompt to assess, not yet a breach. Read only: acknowledgement stays with the integrity page. Bounded: ' +
     'limit 1 to 50, default 20. Requires breach.manage at global scope.',
   tags: breachTags,
   request: { query: BreachSignalListQuery },

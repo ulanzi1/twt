@@ -29,9 +29,22 @@ function DraftBox({ name, draft }: { name: DraftKey; draft: BreachDraft }): Reac
           {draft.complete ? t('drafts.complete') : `${t('drafts.missing')}: ${draft.missing.join(', ')}`}
         </span>
       </div>
-      <textarea className="rounded border px-2 py-1 font-mono text-sm" rows={10} readOnly value={draft.text} data-testid={`breach-draft-${name}-text`} />
+      <textarea
+        className="rounded border px-2 py-1 font-mono text-sm"
+        rows={10}
+        readOnly
+        value={draft.text}
+        aria-label={`${t('drafts.textLabel')} ${t(`drafts.${name}`)}`}
+        data-testid={`breach-draft-${name}-text`}
+      />
       <div className="flex items-center gap-3">
-        <button type="button" className="rounded border px-3 py-1 text-sm" onClick={() => void copy()} data-testid={`breach-draft-${name}-copy`}>
+        <button
+          type="button"
+          className="rounded border px-3 py-1 text-sm"
+          onClick={() => void copy()}
+          aria-label={`${t('drafts.copyLabel')} ${t(`drafts.${name}`)}`}
+          data-testid={`breach-draft-${name}-copy`}
+        >
           {t('drafts.copy')}
         </button>
         {status === 'copied' && <span role="status" className="text-sm">{t('drafts.copied')}</span>}

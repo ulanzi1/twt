@@ -10,8 +10,10 @@
 import { z } from 'zod';
 
 import { Iso8601Datetime, UuidString } from '../_common/primitives.js';
+import { hasUnstorableChars } from '../questionnaire-versions/index.js';
 
-/** The closed list of entry kinds. LOCKSTEP: `@twt/domain` `BREACH_ENTRY_KINDS`, migration 0208's CHECK. */
+/** The closed list of entry kinds — FIFTEEN (decision `2026-11-20-471` added `board_extension_withdrawn`). LOCKSTEP: `@twt/domain`
+ * `BREACH_ENTRY_KINDS`, the kind CHECK (0208, re-created by 0209). */
 export const BREACH_ENTRY_KINDS = [
   'assessment',
   'timeline_event',
@@ -22,6 +24,7 @@ export const BREACH_ENTRY_KINDS = [
   'board_initial_recorded',
   'board_report_recorded',
   'board_extension_recorded',
+  'board_extension_withdrawn',
   'cert_in_report_recorded',
   'owner_review',
   'signoff_recorded',
@@ -68,10 +71,36 @@ function istToday(nowMs: number): string {
   return new Date(nowMs + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
-/** Required text: trimmed, 1–max. */
-const text = (max: number = BREACH_TEXT_MAX) => z.string().trim().min(1).max(max);
-/** Text that may be blank (not yet known): trimmed, 0–max. */
-const optionalText = (max: number = BREACH_TEXT_MAX) => z.string().trim().max(max);
+/** A NUL or a lone surrogate cannot be stored by Postgres — refused here as a 400, ⛔ a 500 on insert (review 2026-11-20; RV22's rule). */
+const storable = { message: 'contains a character that cannot be stored' } as const;
+/** Required text: trimmed, 1–max, storable. */
+const text = (max: number = BREACH_TEXT_MAX) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(max)
+    .refine((v) => !hasUnstorableChars(v), storable);
+/** Text that may be blank (not yet known): trimmed, 0–max, storable. */
+const optionalText = (max: number = BREACH_TEXT_MAX) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .refine((v) => !hasUnstorableChars(v), storable);
+
+/**
+ * A list whose items must all differ (after lower-casing — a UUID typed in either case is one id) — on a REQUEST only. A STORED
+ * payload is read permissively (`checkTime: false`): a rule tightened later must never make a row that is already in the
+ * append-only register unreadable (patch review 2026-11-21). Readers count distinct anyway (the drafts' Pariwar count).
+ */
+const distinct = <T extends z.ZodTypeAny>(item: T, max: number, checkTime: boolean) =>
+  checkTime
+    ? z
+        .array(item)
+        .max(max)
+        .refine((items: unknown[]) => new Set(items.map((v) => String(v).toLowerCase())).size === items.length, { message: 'each item must be different' })
+    : z.array(item).max(max);
 
 /** An instant that is not in the future. `checkTime` is false for STORED payloads (a past instant stays past; nothing to re-judge). */
 const instantNotAfterNow = (checkTime: boolean) =>
@@ -88,8 +117,11 @@ const CalendarDate = z
     { message: 'not a calendar date' },
   );
 
-/** Two names are the same person's if they match after trimming, collapsing inner spaces and ignoring case. */
-const nameKey = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
+/**
+ * Two names are the same person's if they match after Unicode NFC, trimming, collapsing inner spaces and ignoring case. NFC so one
+ * name typed in two normal forms is one person (review 2026-11-20); ⛔ ZWJ / ZWNJ stripping — they are meaningful in Indic names.
+ */
+const nameKey = (name: string) => name.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
 
 /**
  * One strict payload per entry kind. `checkTime: true` (requests) also refuses a future `occurredAt` / `sentAt` and a `signedOn`
@@ -105,10 +137,10 @@ function payloadSchemas(checkTime: boolean) {
         extent: optionalText(),
         /** Rule 7(2)(a) asks the Board for the location of occurrence; 7(1)(a) does not ask it for affected people. */
         location: optionalText(),
-        dataCategories: z.array(BreachDataCategory).max(BREACH_DATA_CATEGORIES.length),
+        dataCategories: distinct(BreachDataCategory, BREACH_DATA_CATEGORIES.length, checkTime),
         estimatedAffected: z.union([z.object({ count: z.number().int().min(0) }).strict(), z.object({ unknown: z.literal(true) }).strict()]),
         /** Empty = not yet known, or trust-wide. */
-        affectedPariwarIds: z.array(UuidString).max(500),
+        affectedPariwarIds: distinct(UuidString, 500, checkTime),
         likelyConsequences: optionalText(),
         /** Rule 7(1)(d). */
         safetyMeasuresForPrincipals: optionalText(),
@@ -130,17 +162,25 @@ function payloadSchemas(checkTime: boolean) {
     board_report_recorded: z.object({ sentAt, reference: text(BREACH_REFERENCE_MAX) }).strict(),
     /** A longer period the Board ALLOWED. It must be later than the current due time — judged by the server against the record. */
     board_extension_recorded: z.object({ grantedUntil: Iso8601Datetime, reference: text(BREACH_REFERENCE_MAX) }).strict(),
+    /**
+     * Withdraws a RECORDED extension that was wrong (decision `2026-11-20-471`): the due time falls back to the latest extension
+     * not withdrawn, else awareness + 72 hours. The server checks the target is a not-yet-withdrawn extension of THIS incident.
+     */
+    board_extension_withdrawn: z.object({ withdrawsEntryId: UuidString, reason: text() }).strict(),
     cert_in_report_recorded: z.object({ sentAt, reference: text(BREACH_REFERENCE_MAX) }).strict(),
     /** The breach owner's review. "Owner", not "DPO": who owns a breach is not yet decided. */
     owner_review: z.object({ note: text() }).strict(),
     /** The operator's RECORD that trustees signed by their own means — not the trustees' own sessions. */
     signoff_recorded: z
       .object({
-        signers: z
-          .array(text(BREACH_SIGNER_NAME_MAX))
-          .min(2)
-          .max(20)
-          .refine((names) => new Set(names.map(nameKey)).size === names.length, { message: 'each signer must be a different person' }),
+        // The distinct-person rule judges a REQUEST; a stored sign-off is read as it was written (see `distinct`).
+        signers: checkTime
+          ? z
+              .array(text(BREACH_SIGNER_NAME_MAX))
+              .min(2)
+              .max(20)
+              .refine((names) => new Set(names.map(nameKey)).size === names.length, { message: 'each signer must be a different person' })
+          : z.array(text(BREACH_SIGNER_NAME_MAX)).min(2).max(20),
         signedOn: checkTime ? CalendarDate.refine((v) => v <= istToday(Date.now()), { message: 'must not be later than today' }) : CalendarDate,
         note: optionalText(),
       })
@@ -169,7 +209,13 @@ export const BreachIncidentOpenRequest = z
     /** e.g. the failed integrity check's id. */
     detectionSignalRef: text(BREACH_REFERENCE_MAX).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((v, ctx) => {
+    // An audit-chain break's reference IS the failed check's id — anything else could never be matched to the signal.
+    if (v.detectionSource === 'audit_chain_break' && v.detectionSignalRef !== undefined && !UuidString.safeParse(v.detectionSignalRef).success) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['detectionSignalRef'], message: 'must be the failed check\'s id' });
+    }
+  });
 export type BreachIncidentOpenRequest = z.output<typeof BreachIncidentOpenRequest>;
 
 const requestOption = <K extends BreachEntryKind>(kind: K) => z.object({ kind: z.literal(kind), payload: REQUEST_PAYLOADS[kind] }).strict();
@@ -185,6 +231,7 @@ export const BreachEntryAppendRequest = z.discriminatedUnion('kind', [
   requestOption('board_initial_recorded'),
   requestOption('board_report_recorded'),
   requestOption('board_extension_recorded'),
+  requestOption('board_extension_withdrawn'),
   requestOption('cert_in_report_recorded'),
   requestOption('owner_review'),
   requestOption('signoff_recorded'),
@@ -218,6 +265,7 @@ export const BreachEntry = z.discriminatedUnion('kind', [
   storedOption('board_initial_recorded'),
   storedOption('board_report_recorded'),
   storedOption('board_extension_recorded'),
+  storedOption('board_extension_withdrawn'),
   storedOption('cert_in_report_recorded'),
   storedOption('owner_review'),
   storedOption('signoff_recorded'),
@@ -251,6 +299,11 @@ const viewFlags = {
   boardReportDueAt: Iso8601Datetime,
   /** Open, no 72-hour report recorded, and past the due time. */
   boardReportOverdue: z.boolean(),
+  /**
+   * The deadline WAS missed, and stays shown after it stops being "overdue" (decision `2026-11-20-471` call 2): the first Board
+   * report was sent after the due time, or the incident was closed after the due time with no Board report. Derived, never stored.
+   */
+  boardReportLate: z.boolean(),
   principalsNoticeRecorded: z.boolean(),
   boardInitialRecorded: z.boolean(),
   boardReportRecorded: z.boolean(),

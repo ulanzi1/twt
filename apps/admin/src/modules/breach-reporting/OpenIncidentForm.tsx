@@ -50,7 +50,13 @@ export function buildOpenBody(
       if (typeof name !== 'string' || !(name in EMPTY)) continue;
       const key = name as keyof OpenFormValues;
       if (errors[key] !== undefined) continue;
-      errors[key] = /future/.test(issue.message) ? 'invalid.future' : issue.code === 'too_small' ? 'invalid.required' : 'invalid.generic';
+      errors[key] = /future/.test(issue.message)
+        ? 'invalid.future'
+        : /check's id/.test(issue.message)
+          ? 'invalid.checkId'
+          : issue.code === 'too_small'
+            ? 'invalid.required'
+            : 'invalid.generic';
     }
   }
   if (Object.keys(errors).length > 0) return { ok: false, errors };
@@ -92,6 +98,10 @@ export function OpenIncidentForm({ prefill, onClearPrefill, onSubmit, pending, e
     });
   }, [prefill, reset]);
 
+  /** A control in error says so, and names its error text (review 2026-11-20). */
+  const a11y = (name: keyof OpenFormValues) =>
+    errors[name] ? ({ 'aria-invalid': true, 'aria-describedby': `breach-open-${name}-error` } as const) : ({ 'aria-invalid': false } as const);
+
   const submit = handleSubmit((values) => {
     const built = buildOpenBody(values);
     if (built.ok) onSubmit(built.body);
@@ -123,15 +133,15 @@ export function OpenIncidentForm({ prefill, onClearPrefill, onSubmit, pending, e
       </label>
       <div className="flex flex-col gap-1">
         <label htmlFor="breach-open-title" className="text-sm font-medium">{t('open.field.title')}</label>
-        <input id="breach-open-title" className="rounded border px-2 py-1" maxLength={200} {...register('title')} data-testid="breach-open-title" />
+        <input id="breach-open-title" className="rounded border px-2 py-1" maxLength={200} {...a11y('title')} {...register('title')} data-testid="breach-open-title" />
         <p className="text-sm opacity-70">{t('hint.pii')}</p>
-        {errors.title && <p role="alert" className="text-sm text-status-fail-fg">{errors.title.message}</p>}
+        {errors.title && <p id="breach-open-title-error" role="alert" className="text-sm text-status-fail-fg">{errors.title.message}</p>}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="breach-open-aware" className="text-sm font-medium">{t('open.field.becameAwareAt')}</label>
-        <input id="breach-open-aware" type="datetime-local" className="rounded border px-2 py-1" {...register('becameAwareAt')} data-testid="breach-open-aware" />
+        <input id="breach-open-aware" type="datetime-local" className="rounded border px-2 py-1" {...a11y('becameAwareAt')} {...register('becameAwareAt')} data-testid="breach-open-aware" />
         <p className="text-sm opacity-70">{t('open.field.becameAwareAt.note')}</p>
-        {errors.becameAwareAt && <p role="alert" className="text-sm text-status-fail-fg">{errors.becameAwareAt.message}</p>}
+        {errors.becameAwareAt && <p id="breach-open-becameAwareAt-error" role="alert" className="text-sm text-status-fail-fg">{errors.becameAwareAt.message}</p>}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="breach-open-source" className="text-sm font-medium">{t('open.field.detectionSource')}</label>
@@ -143,8 +153,8 @@ export function OpenIncidentForm({ prefill, onClearPrefill, onSubmit, pending, e
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="breach-open-ref" className="text-sm font-medium">{t('open.field.detectionSignalRef')}</label>
-        <input id="breach-open-ref" className="rounded border px-2 py-1" maxLength={200} {...register('detectionSignalRef')} data-testid="breach-open-ref" />
-        {errors.detectionSignalRef && <p role="alert" className="text-sm text-status-fail-fg">{errors.detectionSignalRef.message}</p>}
+        <input id="breach-open-ref" className="rounded border px-2 py-1" maxLength={200} {...a11y('detectionSignalRef')} {...register('detectionSignalRef')} data-testid="breach-open-ref" />
+        {errors.detectionSignalRef && <p id="breach-open-detectionSignalRef-error" role="alert" className="text-sm text-status-fail-fg">{errors.detectionSignalRef.message}</p>}
       </div>
       <button type="submit" disabled={pending} aria-busy={pending} className="self-start rounded bg-black px-4 py-2 text-white disabled:opacity-60" data-testid="breach-open-submit">
         {pending ? t('open.pending') : t('open.submit')}

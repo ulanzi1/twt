@@ -3846,7 +3846,7 @@ export type BreachEntryAppendBody = z.input<typeof BreachEntryAppendRequest>;
 
 /** GET the newest incidents — a title, times and flags only. */
 export function listBreachIncidents(limit = 50): Promise<z.output<typeof BreachIncidentListResponse>> {
-  return apiFetch(`${BREACH_BASE}/breaches?limit=${String(limit)}`, BreachIncidentListResponse);
+  return apiFetch(`${BREACH_BASE}/breaches?limit=${String(limit)}`, BreachIncidentListResponse, { cache: 'no-store' });
 }
 
 /** POST open an incident. `Idempotency-Key` is REQUIRED by the route — the caller holds one key across the retries of ONE attempt. */
@@ -3860,7 +3860,8 @@ export function openBreachIncident(body: BreachIncidentOpenBody, idempotencyKey:
 
 /** GET one incident with its timeline and derived view. ⚠ AUDITED: every call writes one "viewed" audit line. */
 export function getBreachIncident(incidentId: string): Promise<z.output<typeof BreachIncidentDetailResponse>> {
-  return apiFetch(`${BREACH_BASE}/breaches/${encodeURIComponent(incidentId)}`, BreachIncidentDetailResponse);
+  // `no-store`: the narrative is never kept in the browser's HTTP cache (the server says so too).
+  return apiFetch(`${BREACH_BASE}/breaches/${encodeURIComponent(incidentId)}`, BreachIncidentDetailResponse, { cache: 'no-store' });
 }
 
 /** POST append one entry. `Idempotency-Key` REQUIRED — an entry can never be removed, so a retry must carry the same key. */
@@ -3878,7 +3879,7 @@ export function appendBreachEntry(
 
 /** GET "signals to assess" — failed, unacknowledged audit-chain checks, each with the incidents opened from it. */
 export function listBreachSignals(limit = 20): Promise<z.output<typeof BreachSignalListResponse>> {
-  return apiFetch(`${BREACH_BASE}/signals?limit=${String(limit)}`, BreachSignalListResponse);
+  return apiFetch(`${BREACH_BASE}/signals?limit=${String(limit)}`, BreachSignalListResponse, { cache: 'no-store' });
 }
 
 /** GET members on record, trust-wide — the monthly review's input (a count; not a threshold). */

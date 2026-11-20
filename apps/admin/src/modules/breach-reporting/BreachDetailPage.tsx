@@ -1,19 +1,51 @@
 // `/data-protection/breaches/$incidentId` (Story 14.3, AC12): the rehearsal banner, the clock (IST), the timeline, one form
 // per entry kind, and the three drafts. A closed incident shows no form. This page sends nothing.
+// AC8: the page derives the view with the SAME `deriveBreachIncidentView` the API uses, on its own one-minute clock, so
+// "overdue" turns on while the page is open (review 2026-11-20) — the server's `view` is never re-fetched just to move time on.
 
-import { BREACH_ENTRY_KINDS, type BreachEntry, type BreachEntryKind, type BreachIncidentDetailResponse } from '@twt/contracts';
+import {
+  BREACH_ENTRY_KINDS,
+  deriveBreachIncidentView,
+  type BreachEntry,
+  type BreachEntryKind,
+  type BreachIncidentDetailResponse,
+  type BreachIncidentView,
+} from '@twt/contracts';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
 import { attemptKey, useAppendBreachEntry, useBreachIncident, type AttemptKey } from '../../api/hooks.js';
 import { formatIst } from '../correction-chase/ist.js';
 import { DraftsPanel } from './DraftsPanel.js';
-import { EntryForm } from './EntryForm.js';
+import { EntryForm, type WithdrawableExtension } from './EntryForm.js';
 import { errorSentence, t } from './i18n-en.js';
 
 const badge = 'rounded border px-2 py-0.5 text-xs font-medium';
+const CLOCK_TICK_MS = 60_000;
+
+/** The current time, moved on every minute — what the derived clock is judged against. */
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), CLOCK_TICK_MS);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
+}
+
+/** The recorded extensions not yet withdrawn, newest first — what a withdrawal may name (decision `2026-11-20-471`). */
+function withdrawableExtensions(entries: readonly BreachEntry[]): WithdrawableExtension[] {
+  const withdrawn = new Set(entries.flatMap((e) => (e.kind === 'board_extension_withdrawn' ? [e.payload.withdrawsEntryId.toLowerCase()] : [])));
+  return entries
+    .flatMap((e) =>
+      e.kind === 'board_extension_recorded' && !withdrawn.has(e.entryId.toLowerCase())
+        ? [{ entryId: e.entryId, label: `${formatIst(e.payload.grantedUntil)} — ${e.payload.reference}` }]
+        : [],
+    )
+    .reverse();
+}
 const INSTANT_FIELDS = new Set(['occurredAt', 'sentAt', 'grantedUntil']);
 
 /** One payload value as staff read it. */
@@ -56,8 +88,7 @@ function Timeline({ entries }: { entries: readonly BreachEntry[] }): ReactElemen
   );
 }
 
-function ClockPanel({ detail }: { detail: BreachIncidentDetailResponse }): ReactElement {
-  const { view } = detail;
+function ClockPanel({ view }: { view: BreachIncidentView }): ReactElement {
   const flag = (on: boolean) => (on ? t('clock.yes') : t('clock.no'));
   return (
     <section className="flex flex-col gap-1 rounded border px-3 py-2" aria-label={t('clock.title')} data-testid="breach-clock">
@@ -73,6 +104,11 @@ function ClockPanel({ detail }: { detail: BreachIncidentDetailResponse }): React
           </span>
         )}
       </p>
+      {view.boardReportLate && (
+        <p className="rounded border-l-4 border-status-fail-border bg-status-fail-bg px-3 py-1 text-sm text-status-fail-fg" role="status" data-testid="breach-clock-late">
+          {t('clock.late')}
+        </p>
+      )}
       <ul className="text-sm">
         <li data-testid="breach-flag-principals">{t('clock.flag.principals')}: {flag(view.principalsNoticeRecorded)}</li>
         <li data-testid="breach-flag-board-initial">{t('clock.flag.boardInitial')}: {flag(view.boardInitialRecorded)}</li>
@@ -84,12 +120,23 @@ function ClockPanel({ detail }: { detail: BreachIncidentDetailResponse }): React
   );
 }
 
-function RecordEntry({ incidentId }: { incidentId: string }): ReactElement {
+function RecordEntry({ incidentId, entries }: { incidentId: string; entries: readonly BreachEntry[] }): ReactElement {
   const append = useAppendBreachEntry(incidentId);
+  // Not memoised on the array's identity: it is cheap, and must follow every new entry.
+  const extensions = withdrawableExtensions(entries);
+  // A withdrawal is offered only while there is an extension to withdraw.
+  const kinds = BREACH_ENTRY_KINDS.filter((k) => k !== 'board_extension_withdrawn' || extensions.length > 0);
   const [kind, setKind] = useState<BreachEntryKind>('assessment');
   const [error, setError] = useState<string | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const attempt = useRef<AttemptKey | null>(null);
+  // The last extension withdrawn takes the withdrawal off the list: move the picker to a kind that IS offered (state, ⛔ only the
+  // rendered value — so an extension re-appearing later can never flip the form back under what is being typed).
+  const offered = kinds.includes(kind);
+  useEffect(() => {
+    if (!offered) setKind('assessment');
+  }, [offered]);
+  const shownKind: BreachEntryKind = offered ? kind : 'assessment';
 
   return (
     <section className="flex flex-col gap-3" aria-label={t('entry.title')} data-testid="breach-record-entry">
@@ -100,7 +147,9 @@ function RecordEntry({ incidentId }: { incidentId: string }): ReactElement {
         <select
           id="breach-entry-kind"
           className="rounded border px-2 py-1"
-          value={kind}
+          value={shownKind}
+          // Locked while a save is in flight: switching kind mid-save would show "Recorded" under the wrong form.
+          disabled={append.isPending}
           onChange={(e) => {
             setKind(e.target.value as BreachEntryKind);
             setError(undefined);
@@ -109,16 +158,18 @@ function RecordEntry({ incidentId }: { incidentId: string }): ReactElement {
           }}
           data-testid="breach-entry-kind"
         >
-          {BREACH_ENTRY_KINDS.map((k) => (
+          {kinds.map((k) => (
             <option key={k} value={k}>{t(`kind.${k}`)}</option>
           ))}
         </select>
       </div>
       <EntryForm
-        key={kind}
-        kind={kind}
+        // A new set of extensions remounts the withdrawal form, so its picker starts on an extension that still stands.
+        key={shownKind === 'board_extension_withdrawn' ? `${shownKind}:${extensions.map((x) => x.entryId).join(',')}` : shownKind}
+        kind={shownKind}
         pending={append.isPending}
         error={error}
+        extensions={extensions}
         onSubmit={async (body) => {
           setError(undefined);
           setSaved(false);
@@ -140,6 +191,9 @@ function RecordEntry({ incidentId }: { incidentId: string }): ReactElement {
 
 export function BreachDetailPage({ incidentId }: { incidentId: string }): ReactElement {
   const incident = useBreachIncident(incidentId);
+  const now = useNow();
+  const data = incident.data;
+  const view = useMemo(() => (data ? deriveBreachIncidentView(data.incident, data.entries, now) : null), [data, now]);
 
   const back = (
     <Link to="/data-protection/breaches" className="text-sm underline" data-testid="breach-back">
@@ -147,7 +201,8 @@ export function BreachDetailPage({ incidentId }: { incidentId: string }): ReactE
     </Link>
   );
   if (incident.isLoading) return <p role="status">{t('detail.loading')}</p>;
-  if (incident.isError || !incident.data) {
+  // An error REPLACES the page only when there is nothing to show; a failed background refetch keeps the cached incident.
+  if (!incident.data || view === null) {
     const notFound = incident.error instanceof ApiError && incident.error.status === 404;
     return (
       <div className="flex flex-col gap-3">
@@ -156,12 +211,19 @@ export function BreachDetailPage({ incidentId }: { incidentId: string }): ReactE
       </div>
     );
   }
-  const detail = incident.data;
-  const closed = detail.view.status === 'closed';
+  const detail: BreachIncidentDetailResponse = incident.data;
+  const closed = view.status === 'closed';
+  // A failed re-read keeps the last loaded copy on screen — and says so.
+  const stale = incident.isError;
 
   return (
-    <div className="flex flex-col gap-8" data-testid="breach-detail-page" data-status={detail.view.status}>
+    <div className="flex flex-col gap-8" data-testid="breach-detail-page" data-status={view.status}>
       {back}
+      {stale && (
+        <p role="status" className="text-sm text-status-fail-fg" data-testid="breach-detail-stale">
+          {t('detail.stale')}
+        </p>
+      )}
       {detail.incident.isRehearsal && (
         <p className="rounded border-l-4 border-status-fail-border bg-status-fail-bg p-3 font-semibold text-status-fail-fg" role="status" data-testid="breach-rehearsal-banner">
           {t('detail.rehearsalBanner')}
@@ -177,14 +239,14 @@ export function BreachDetailPage({ incidentId }: { incidentId: string }): ReactE
           {detail.incident.detectionSignalRef !== null ? ` · ${t('detail.signalRef')}: ${detail.incident.detectionSignalRef}` : ''}
         </p>
       </header>
-      <ClockPanel detail={detail} />
+      <ClockPanel view={view} />
       <Timeline entries={detail.entries} />
       {closed ? (
         <p className="rounded border px-3 py-2" role="status" data-testid="breach-closed-note">{t('detail.closedNote')}</p>
       ) : (
-        <RecordEntry incidentId={incidentId} />
+        <RecordEntry incidentId={incidentId} entries={detail.entries} />
       )}
-      <DraftsPanel view={detail.view} />
+      <DraftsPanel view={view} />
     </div>
   );
 }

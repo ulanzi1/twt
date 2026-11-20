@@ -1457,6 +1457,13 @@
       "when": 1797996600050,
       "tag": "0208_breach-incidents",
       "breakpoints": true
+    },
+    {
+      "idx": 209,
+      "version": "7",
+      "when": 1797997500000,
+      "tag": "0209_breach-withdrawal-and-opened-stamp",
+      "breakpoints": true
     }
   ]
 }

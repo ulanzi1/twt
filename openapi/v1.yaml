@@ -5482,6 +5482,30 @@ components:
             kind:
               type: string
               enum:
+                - board_extension_withdrawn
+            payload:
+              type: object
+              properties:
+                withdrawsEntryId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+              required:
+                - withdrawsEntryId
+                - reason
+              additionalProperties: false
+          required:
+            - kind
+            - payload
+          additionalProperties: false
+        - type: object
+          properties:
+            kind:
+              type: string
+              enum:
                 - cert_in_report_recorded
             payload:
               type: object
@@ -6054,6 +6078,45 @@ components:
                   kind:
                     type: string
                     enum:
+                      - board_extension_withdrawn
+                  payload:
+                    type: object
+                    properties:
+                      withdrawsEntryId:
+                        type: string
+                        format: uuid
+                      reason:
+                        type: string
+                        minLength: 1
+                        maxLength: 2000
+                    required:
+                      - withdrawsEntryId
+                      - reason
+                    additionalProperties: false
+                  recordedAt:
+                    type: string
+                    format: date-time
+                  recordedByDisplay:
+                    type: string
+                required:
+                  - entryId
+                  - entrySeq
+                  - kind
+                  - payload
+                  - recordedAt
+                  - recordedByDisplay
+                additionalProperties: false
+              - type: object
+                properties:
+                  entryId:
+                    type: string
+                    format: uuid
+                  entrySeq:
+                    type: string
+                    pattern: ^\d+$
+                  kind:
+                    type: string
+                    enum:
                       - cert_in_report_recorded
                   payload:
                     type: object
@@ -6247,6 +6310,8 @@ components:
               format: date-time
             boardReportOverdue:
               type: boolean
+            boardReportLate:
+              type: boolean
             principalsNoticeRecorded:
               type: boolean
             boardInitialRecorded:
@@ -6407,6 +6472,7 @@ components:
             - status
             - boardReportDueAt
             - boardReportOverdue
+            - boardReportLate
             - principalsNoticeRecorded
             - boardInitialRecorded
             - boardReportRecorded
@@ -6457,6 +6523,8 @@ components:
                 format: date-time
               boardReportOverdue:
                 type: boolean
+              boardReportLate:
+                type: boolean
               principalsNoticeRecorded:
                 type: boolean
               boardInitialRecorded:
@@ -6475,6 +6543,7 @@ components:
               - status
               - boardReportDueAt
               - boardReportOverdue
+              - boardReportLate
               - principalsNoticeRecorded
               - boardInitialRecorded
               - boardReportRecorded
@@ -23199,7 +23268,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
     post:
       summary: Open a breach incident (Super Admin; audited)
-      description: "Records a new incident: real or a rehearsal (fixed here, never changed), a title, when the Trust became aware (the start of the 72-hour clock; not in the future) and how it was detected. Requires an Idempotency-Key header: a missing or blank one is 400 breach.idempotency_key_required; the same key again replays the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. Writes one audit line (data_protection.breach.opened). Requires breach.manage at global scope."
+      description: "Records a new incident: real or a rehearsal (fixed here, never changed), a title, when the Trust became aware (the start of the 72-hour clock; not in the future) and how it was detected. Requires an Idempotency-Key header: a missing or blank one is 400 breach.idempotency_key_required; the same key again replays the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. The new row's id is derived from the key, so a retry with the same key never writes a second row, even after a lost idempotency record (503 idempotency.record_failed) — it answers with the row the first request wrote. Writes one audit line (data_protection.breach.opened). Requires breach.manage at global scope."
       tags: *a106
       requestBody:
         required: true
@@ -23239,7 +23308,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
-          description: The incident was written but the idempotency record was not — retry with the same key (idempotency.record_failed)
+          description: The incident was written but the idempotency record was not — a retry with the same key answers with it (idempotency.record_failed)
           content:
             application/json:
               schema:
@@ -23290,7 +23359,7 @@ paths:
   /api/v1/data-protection/breaches/{incidentId}/entries:
     post:
       summary: Append one entry to a breach incident (Super Admin; audited)
-      description: 'Appends one entry of a closed list of kinds, each with its own strict payload. Entries are never edited or deleted; a correction is a new entry. A "…_recorded" entry records that staff sent a notice by their own means — nothing is sent here. Requires an Idempotency-Key header: a missing or blank one is 400 breach.idempotency_key_required; the same key again replays the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. Writes one audit line per accepted entry (data_protection.breach.entry_appended). Requires breach.manage at global scope.'
+      description: "Appends one entry of a closed list of kinds, each with its own strict payload. Entries are never edited or deleted; a correction is a new entry. A \"…_recorded\" entry records that staff sent a notice by their own means — nothing is sent here. Requires an Idempotency-Key header: a missing or blank one is 400 breach.idempotency_key_required; the same key again replays the first response and writes nothing; a key whose first request has not finished is 409 breach.idempotency_in_progress. The new row's id is derived from the key, so a retry with the same key never writes a second row, even after a lost idempotency record (503 idempotency.record_failed) — it answers with the row the first request wrote. Writes one audit line per accepted entry (data_protection.breach.entry_appended). Requires breach.manage at global scope."
       tags: *a106
       parameters:
         - schema:
@@ -23313,7 +23382,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/BreachIncidentDetailResponse"
         "400":
-          description: Request validation failed; OR no Idempotency-Key (breach.idempotency_key_required); OR an extension not later than the current due time (breach.extension_not_after_due); OR the database refused the row (breach.constraint_violation)
+          description: Request validation failed; OR no Idempotency-Key (breach.idempotency_key_required); OR an extension not later than the current due time (breach.extension_not_after_due); OR a withdrawal that does not name a not-yet-withdrawn extension of this incident (breach.withdrawal_invalid); OR the database refused the row (breach.constraint_violation)
           content:
             application/json:
               schema:
@@ -23343,7 +23412,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
-          description: The entry was written but the idempotency record was not — retry with the same key (idempotency.record_failed)
+          description: The entry was written but the idempotency record was not — a retry with the same key answers with it (idempotency.record_failed)
           content:
             application/json:
               schema:
@@ -23351,7 +23420,7 @@ paths:
   /api/v1/data-protection/signals:
     get:
       summary: List signals to assess (failed, unacknowledged audit-chain checks)
-      description: "Every audit integrity check that failed and has not been acknowledged, newest first, each with the incidents opened from it. A signal is a prompt to assess, not yet a breach. Read only: acknowledgement stays with the integrity page. Bounded: limit 1 to 50, default 20. Requires breach.manage at global scope."
+      description: "Every audit integrity check that failed and has not been acknowledged, newest first, each with the REAL incidents opened from it (a rehearsal does not count; the reference is matched in either case). A signal is a prompt to assess, not yet a breach. Read only: acknowledgement stays with the integrity page. Bounded: limit 1 to 50, default 20. Requires breach.manage at global scope."
       tags: *a106
       parameters:
         - schema:

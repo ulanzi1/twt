@@ -7,7 +7,19 @@
 // `complete`. English only: a person translates the member notice at the time. The Trust's name is a placeholder (its legal name
 // is not settled); the contact for affected people is whatever was typed into the assessment. No draft ranks a breach by severity.
 
-import type { BreachIncidentView } from './schemas.js';
+import type { BreachDataCategory, BreachIncidentView } from './schemas.js';
+
+/** How a data category reads in a notice — plain words, ⛔ the code (review 2026-11-20: `health_or_death` reached the member notice). */
+const CATEGORY_WORDS: Readonly<Record<BreachDataCategory, string>> = {
+  identity: 'identity details',
+  contact: 'contact details',
+  kyc: 'KYC documents',
+  financial: 'financial details',
+  nominee: 'nominee details',
+  health_or_death: 'health or death information',
+  credentials: 'login credentials',
+  other: 'other personal data',
+};
 
 export const BREACH_REHEARSAL_BANNER = 'REHEARSAL — DO NOT SEND';
 export const BREACH_TRUST_NAME_PLACEHOLDER = '[TRUST LEGAL NAME]';
@@ -89,16 +101,20 @@ class Draft {
   }
 }
 
-function affectedLine(view: BreachIncidentView): string {
+/**
+ * "People affected", then the kinds of personal data — in words. NO category recorded is a MISSING input (`dataCategories`): the
+ * draft is not complete while it cannot say what was exposed (review 2026-11-20). An unknown COUNT stays an honest "not yet known".
+ */
+function affected(d: Draft, view: BreachIncidentView): Draft {
   const a = view.latestAssessment;
-  if (!a) return 'People affected: not yet known.';
-  const n = 'count' in a.estimatedAffected ? `about ${String(a.estimatedAffected.count)}` : 'not yet known';
-  const cats = a.dataCategories.length > 0 ? a.dataCategories.join(', ') : 'not yet recorded';
-  return `People affected: ${n}. Kinds of personal data: ${cats}.`;
+  const n = !a ? 'not yet known' : 'count' in a.estimatedAffected ? `about ${String(a.estimatedAffected.count)}` : 'not yet known';
+  const cats = a ? a.dataCategories.map((c) => CATEGORY_WORDS[c]).join(', ') : '';
+  return d.line(`People affected: ${n}.`).value('dataCategories', cats, 'Kinds of personal data: ');
 }
 
 function pariwarLine(view: BreachIncidentView): string {
-  const n = view.latestAssessment?.affectedPariwarIds.length ?? 0;
+  // Distinct ids (the contract refuses repeats; counted distinct anyway, so a stored repeat can never inflate the Board's figure).
+  const n = new Set((view.latestAssessment?.affectedPariwarIds ?? []).map((id) => id.toLowerCase())).size;
   return n > 0 ? `Pariwars affected: ${String(n)}.` : 'Pariwars affected: not yet known, or trust-wide.';
 }
 
@@ -117,7 +133,7 @@ export function buildBreachDrafts(view: BreachIncidentView): BreachDrafts {
   const a = view.latestAssessment;
 
   const notice = new Draft(view, 'Notice of a personal data breach');
-  notice.label('7(1)(a) What happened — nature, extent and timing:').value('nature', a?.nature, 'Nature: ').value('extent', a?.extent, 'Extent: ').line(affectedLine(view));
+  affected(notice.label('7(1)(a) What happened — nature, extent and timing:').value('nature', a?.nature, 'Nature: ').value('extent', a?.extent, 'Extent: '), view);
   for (const l of timing(view)) notice.line(l);
   notice.gap().label('7(1)(b) Likely consequences for you:').value('likelyConsequences', a?.likelyConsequences);
   notice.gap().label('7(1)(c) What we have done, and are doing, to reduce the risk:').list('mitigation', mitigationItems(view));
@@ -125,22 +141,24 @@ export function buildBreachDrafts(view: BreachIncidentView): BreachDrafts {
   notice.gap().label('7(1)(e) Whom to contact with your questions:').value('contactForPrincipals', a?.contactForPrincipals);
 
   const initial = new Draft(view, 'Intimation of a personal data breach to the Data Protection Board');
-  initial
-    .label('7(2)(a) Description of the breach — nature, extent, timing and location of occurrence, and the likely impact:')
-    .value('nature', a?.nature, 'Nature: ')
-    .value('extent', a?.extent, 'Extent: ')
-    .line(affectedLine(view))
-    .line(pariwarLine(view));
+  affected(
+    initial
+      .label('7(2)(a) Description of the breach — nature, extent, timing and location of occurrence, and the likely impact:')
+      .value('nature', a?.nature, 'Nature: ')
+      .value('extent', a?.extent, 'Extent: '),
+    view,
+  ).line(pariwarLine(view));
   for (const l of timing(view)) initial.line(l);
   initial.value('location', a?.location, 'Location of occurrence: ').value('likelyConsequences', a?.likelyConsequences, 'Likely impact: ');
 
   const report = new Draft(view, 'Detailed report of a personal data breach to the Data Protection Board');
-  report
-    .label('7(2)(b)(i) Updated and detailed information on the breach:')
-    .value('nature', a?.nature, 'Nature: ')
-    .value('extent', a?.extent, 'Extent: ')
-    .line(affectedLine(view))
-    .line(pariwarLine(view));
+  affected(
+    report
+      .label('7(2)(b)(i) Updated and detailed information on the breach:')
+      .value('nature', a?.nature, 'Nature: ')
+      .value('extent', a?.extent, 'Extent: '),
+    view,
+  ).line(pariwarLine(view));
   for (const l of timing(view)) report.line(l);
   report.value('location', a?.location, 'Location of occurrence: ').value('likelyConsequences', a?.likelyConsequences, 'Likely impact: ');
   report.gap().label('7(2)(b)(ii) The broad facts — events, circumstances and reasons leading to the breach:').value('broadFacts', view.causeFindings?.broadFacts);

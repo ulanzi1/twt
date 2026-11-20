@@ -37,7 +37,9 @@ has happened — never before.
 > "wrong person". Nobody knows yet whether it was opened or forwarded.
 
 Vary it on later runs: a failed audit-chain check; a public page that showed a member's phone number; a text that reached a wrong
-number; a processor (the SMS provider) reporting its own breach.
+number; a processor (the SMS provider) reporting its own breach. ⛔ Never rehearse on a LIVE signal: a real unacknowledged check on
+"Signals to assess" is assessed as a real incident. (A rehearsal opened from one does not mark it assessed — the register leaves its
+"Open an incident" action in place — but the real assessment is then still owed.) Simulate the signal on paper instead.
 
 ### 2.2 — Signal → open (simulated T+0)
 
@@ -72,7 +74,7 @@ participants find the "Board report overdue" marker and decide what they would d
 
 ### 2.6 — Owner review → recorded sign-off → close
 
-**Participants do:** the breach owner records an owner review; the two trustees — neither of them the breach owner — sign the summary by their own means and the operator
+**Participants do:** the breach owner reviews, and the operator (a Super Admin) records it as an owner review on the owner's behalf (Decision `2026-11-20-471`); the two trustees — neither of them the breach owner — sign the summary by their own means and the operator
 records **Sign-off recorded** with their names; the incident is closed; one more entry is attempted and is refused.
 **Record:** whether the trustees understood that the operator records their signing — they do not sign in the app.
 
@@ -121,3 +123,4 @@ If any check fails, the run does not count toward Row 53 (b); escalate per §5.
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner lines, after the Panel's ruling (Decision `2026-11-20-468`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — two trustees BESIDES the breach owner (Decision `2026-11-20-470`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-21 | (this commit) | Solo Builder (Story 14.3 code review) | yes — never rehearse on a live signal | yes (≥2 trustees) — not yet signed | none yet |

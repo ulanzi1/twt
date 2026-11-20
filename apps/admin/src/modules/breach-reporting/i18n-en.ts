@@ -60,6 +60,7 @@ const EN: Record<string, string> = {
   'incidents.due': 'Board report due',
   'badge.rehearsal': 'Rehearsal',
   'badge.overdue': 'Board report overdue',
+  'badge.late': 'Board deadline missed',
   'badge.closed': 'Closed',
   'badge.open': 'Open',
 
@@ -67,6 +68,7 @@ const EN: Record<string, string> = {
   'detail.loading': 'Loading the incident…',
   'detail.notFound': 'No such incident.',
   'detail.error': 'Could not load the incident. Reload to try again.',
+  'detail.stale': 'Could not refresh the incident — this is the copy last loaded. Reload to try again.',
   'detail.rehearsalBanner': 'REHEARSAL — this is a table-top exercise. Send nothing from it.',
   'detail.openedBy': 'Opened by',
   'detail.source': 'Noticed through',
@@ -77,6 +79,7 @@ const EN: Record<string, string> = {
   'clock.aware': 'The Trust became aware',
   'clock.due': 'Board report due (72 hours, or the period the Board allowed)',
   'clock.overdue': 'Board report overdue',
+  'clock.late': 'The 72-hour deadline was missed — the Board report was filed late, or the incident was closed after the deadline without one.',
   'clock.flag.principals': 'Notice to affected people recorded',
   'clock.flag.boardInitial': 'First intimation to the Board recorded',
   'clock.flag.boardReport': 'Board report recorded',
@@ -97,6 +100,8 @@ const EN: Record<string, string> = {
   'drafts.complete': 'Complete',
   'drafts.missing': 'Missing',
   'drafts.copy': 'Copy',
+  'drafts.copyLabel': 'Copy the draft:',
+  'drafts.textLabel': 'Draft text:',
   'drafts.copied': 'Copied',
   'drafts.copyFailed': 'Could not copy. Select the text and copy it yourself.',
 
@@ -115,6 +120,7 @@ const EN: Record<string, string> = {
   'kind.board_initial_recorded': 'Record that the Board was first told',
   'kind.board_report_recorded': 'Record that the Board report was filed',
   'kind.board_extension_recorded': 'Record a longer period the Board allowed',
+  'kind.board_extension_withdrawn': 'Withdraw a recorded longer period',
   'kind.cert_in_report_recorded': 'Record that CERT-In was told',
   'kind.owner_review': 'Breach owner’s review',
   'kind.signoff_recorded': 'Record that trustees signed',
@@ -122,8 +128,9 @@ const EN: Record<string, string> = {
   'kind.note': 'A note',
   'kind.signoff_recorded.note': 'You are recording that trustees signed on paper or by their own means. Trustees do not sign in this app.',
   'kind.closed.note': 'After closing, nothing more can be recorded on this incident.',
-  'kind.assessment.note': 'Record what you know now; leave the rest blank. A later assessment replaces this one for the drafts — every assessment stays on the timeline.',
+  'kind.assessment.note': 'Record what you know now; leave the rest blank (for people affected, tick “Not yet known”). A later assessment replaces this one for the drafts — every assessment stays on the timeline.',
   'kind.board_extension_recorded.note': 'Record this only once the Board has allowed the longer period in writing. The new time must be later than the current due time.',
+  'kind.board_extension_withdrawn.note': 'Use this when a longer period was recorded wrongly (a mistyped date, or one the Board did not allow). The due time goes back to the last period still standing, or 72 hours. Both entries stay on the timeline.',
 
   'field.nature': 'Nature of the breach',
   'field.extent': 'Extent',
@@ -149,6 +156,8 @@ const EN: Record<string, string> = {
   'field.note': 'Note',
   'field.reference': 'Reference',
   'field.grantedUntil': 'New due time the Board allowed (IST)',
+  'field.withdrawsEntryId': 'The longer period to withdraw',
+  'field.reason': 'Why it is withdrawn',
   'field.signers': 'Trustees who signed, one name per line (at least two, not counting the breach owner)',
   'field.signedOn': 'Date signed',
   'field.summary': 'Closing summary',
@@ -177,18 +186,25 @@ const EN: Record<string, string> = {
   'invalid.datetime': 'Enter a date and time.',
   'invalid.future': 'This cannot be in the future.',
   'invalid.generic': 'Check this value.',
+  'invalid.checkId': 'For a failed integrity check, this must be the check’s id (from “Signals to assess”).',
+  'invalid.number': 'Enter a whole number, or leave it blank.',
+  'invalid.wholeNumber': 'Enter a whole number.',
+  'invalid.affectedRequired': 'Enter a number, or tick “Not yet known”.',
+  'invalid.affectedBoth': 'Either enter a number or tick “Not yet known” — not both.',
 
   'error.admin.display_name_missing': 'Set your display name first. Every entry is recorded under your name, and your admin account has none.',
   'error.breach.incident_closed': 'This incident has been closed, so nothing was recorded. The page now shows it as closed.',
   'error.breach.incident_not_found': 'This incident no longer exists.',
   'error.breach.extension_not_after_due': 'The new time must be later than the current due time. Nothing was recorded.',
   'error.breach.extension_invalid': 'The new due time is not a valid date and time. Nothing was recorded.',
+  'error.breach.withdrawal_invalid': 'That longer period cannot be withdrawn — it is not on this incident, or it was already withdrawn. Nothing was recorded.',
   'error.breach.constraint_violation': 'The database refused this — most often a time that is ahead of the server’s clock. Check the time and try again.',
   'error.breach.idempotency_in_progress': 'This is still being saved. Wait a moment and check the timeline before trying again.',
   'error.breach.idempotency_key_required': 'This could not be saved. Reload the page and try again.',
-  'error.idempotency.record_failed': 'This was saved, but the confirmation was not. Press the button again — it will not be recorded twice.',
+  'error.idempotency.record_failed': 'This was saved, but the confirmation was lost. Check the record before trying again — pressing again with the same details will not record it twice.',
   'error.forbidden': 'You do not have access to the breach register (breach.manage is required).',
-  'error.unknown': 'Could not save this. Nothing was recorded; try again.',
+  'error.unsure': 'There was no clear answer, so this may or may not have been saved. Check the record before trying again — pressing again with the same details will not record it twice.',
+  'error.unknown': 'The server refused this, so nothing was recorded. Check what you entered and try again.',
 };
 
 /** A piece of chrome by key (the key itself if this build does not know it). */
@@ -200,5 +216,8 @@ export function t(key: string): string {
 export function errorSentence(code: string | undefined, status?: number): string {
   if (code !== undefined && Object.prototype.hasOwnProperty.call(EN, `error.${code}`)) return EN[`error.${code}`]!;
   if (status === 403) return EN['error.forbidden']!;
+  // No answer (the connection dropped) or a server failure: the write MAY have committed — say so (⛔ "nothing was recorded").
+  if (status === undefined || status >= 500) return EN['error.unsure']!;
+  // Any other refusal (a 4xx) was decided before anything was written.
   return EN['error.unknown']!;
 }

@@ -2,7 +2,8 @@
 // The api-client module is mocked with a small in-memory register whose views come from the REAL `deriveBreachIncidentView`, so
 // the hooks, the forms' contract validation, the IST conversion, the derivation and the drafts are all the shipped code.
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,6 +20,8 @@ import {
 import { BreachDetailPage } from '../src/modules/breach-reporting/BreachDetailPage.js';
 import { BreachGateView } from '../src/modules/breach-reporting/BreachGateView.js';
 import { BreachListPage } from '../src/modules/breach-reporting/BreachListPage.js';
+import { errorSentence } from '../src/modules/breach-reporting/i18n-en.js';
+import { createQueryClient } from '../src/api/hooks.js';
 import { renderWithClient } from './_helpers.js';
 
 const HOUR = 60 * 60 * 1000;
@@ -38,6 +41,10 @@ const h = vi.hoisted(() => ({
   calls: [] as { fn: string; body?: unknown; key?: string; id?: string }[],
   /** Errors to throw from the next write, in order: `{ status, code }`. */
   failNext: [] as { status: number; code: string }[],
+  /** When set, the next write waits for it (to observe the page while a save is in flight). */
+  hold: null as Promise<void> | null,
+  /** When set, the next append writes nothing and answers with this (a replay of an OLDER write). */
+  replayWith: null as unknown,
   navigate: vi.fn(),
   seq: 0,
 }));
@@ -99,6 +106,7 @@ vi.mock('../src/api/client.js', async () => {
           status: view.status,
           boardReportDueAt: view.boardReportDueAt,
           boardReportOverdue: view.boardReportOverdue,
+          boardReportLate: view.boardReportLate,
           principalsNoticeRecorded: view.principalsNoticeRecorded,
           boardInitialRecorded: view.boardInitialRecorded,
           boardReportRecorded: view.boardReportRecorded,
@@ -119,11 +127,22 @@ vi.mock('../src/api/client.js', async () => {
     }),
     getBreachIncident: vi.fn(async (id: string) => {
       h.calls.push({ fn: 'detail', id });
+      const f = h.failNext[0];
+      if (f?.code === 'detail.fail') {
+        h.failNext.shift();
+        throw new ApiError(f.status, 'internal', 'internal');
+      }
       return detailOf(id);
     }),
     appendBreachEntry: vi.fn(async (id: string, body: { kind: string; payload: unknown }, key: string) => {
       h.calls.push({ fn: 'append', id, body, key });
+      if (h.hold) await h.hold;
       failIfAsked();
+      if (h.replayWith !== null) {
+        const old = h.replayWith;
+        h.replayWith = null;
+        return old;
+      }
       h.seq += 1;
       h.incidents.get(id)!.entries.push({ entryId: `10000000-0000-4000-8000-${String(h.seq).padStart(12, '0')}`, entrySeq: String(h.seq), kind: body.kind, payload: body.payload, recordedAt: new Date().toISOString(), recordedByDisplay: 'Asha Verma' });
       return detailOf(id);
@@ -180,6 +199,8 @@ beforeEach(() => {
   h.members = { asOf: iso(Date.now()), pariwarCount: 3, total: 1200, byState: { 'pending-kyc': 5, 'pending-fee': 4, 'pending-valid': 3, 'lock-in': 1000, active: 150, 'active-in-grace': 20, 'lapsed-unpaid': 10, withdrawn: 8, anonymized: 7 } } satisfies BreachMembersOnRecordResponse;
   h.calls = [];
   h.failNext = [];
+  h.hold = null;
+  h.replayWith = null;
   h.seq = 0;
   h.navigate.mockReset();
 });
@@ -254,7 +275,7 @@ describe('BreachListPage — open, signals, the list, the monthly review', () =>
     await user.click(screen.getByTestId('breach-open-submit'));
     expect(await screen.findByTestId('breach-open-error')).toHaveTextContent('Set your display name first');
     await user.click(screen.getByTestId('breach-open-submit'));
-    await waitFor(() => expect(screen.getByTestId('breach-open-error')).toHaveTextContent('it will not be recorded twice'));
+    await waitFor(() => expect(screen.getByTestId('breach-open-error')).toHaveTextContent('will not record it twice'));
     await user.click(screen.getByTestId('breach-open-submit'));
     await waitFor(() => expect(h.navigate).toHaveBeenCalledTimes(1));
     const keys = calls('open').map((c) => c.key);
@@ -373,10 +394,240 @@ describe('BreachDetailPage — the banner, the clock, the timeline, the forms, t
     await screen.findByTestId('breach-entry-saved');
     const [append] = calls('append');
     expect(append).toMatchObject({ id, body: { kind: 'principals_notice_recorded', payload: { sentAt: '2026-11-19T09:30:00.000Z', channel: 'Phone call from the helpline', reachedCount: 38, note: '' } } });
-    await waitFor(() => expect(calls('detail').length).toBeGreaterThan(readsBefore));
     await waitFor(() => expect(screen.getByTestId('breach-flag-principals')).toHaveTextContent('Yes'));
+    // The append's 200 IS the detail: it is put in the cache — ⛔ a re-read, which would write one more audited `viewed` line.
+    expect(calls('detail').length).toBe(readsBefore);
     expect(screen.getByTestId('breach-timeline')).toHaveTextContent('Phone call from the helpline');
     expect((screen.getByTestId('breach-draft-boardReport-text') as HTMLTextAreaElement).value).toContain('Phone call from the helpline; reached 38');
+  });
+
+  it('⭐ a withdrawal names a recorded extension (offered only while one stands); the due time falls back on the page', async () => {
+    const user = userEvent.setup();
+    const aware = Date.now() - 2 * HOUR;
+    const typo = entry('board_extension_recorded', { grantedUntil: '2099-01-01T00:00:00.000Z', reference: 'BOARD-EXT-9' });
+    const id = seedIncident({ becameAwareAt: iso(aware) }, [typo]);
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByTestId('breach-record-entry');
+    expect(screen.getByTestId('breach-clock-due')).toHaveTextContent('2099');
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'board_extension_withdrawn');
+    expect(screen.getByTestId('breach-entry-kind-note')).toHaveTextContent('Both entries stay on the timeline');
+    expect(screen.getByLabelText('The longer period to withdraw')).toHaveTextContent('BOARD-EXT-9');
+    await user.type(screen.getByTestId('breach-entry-reason'), 'Typed 2099 for 2026.');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    await screen.findByTestId('breach-entry-saved');
+    expect(calls('append')[0]!.body).toEqual({ kind: 'board_extension_withdrawn', payload: { withdrawsEntryId: typo.entryId, reason: 'Typed 2099 for 2026.' } });
+    await waitFor(() => expect(screen.getByTestId('breach-clock-due')).not.toHaveTextContent('2099'));
+    // Nothing left to withdraw: the kind is no longer offered, and the picker fell back to a kind that is.
+    expect(screen.queryByRole('option', { name: 'Withdraw a recorded longer period' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('breach-entry-kind')).toHaveValue('assessment');
+  });
+
+  it('⭐ a missed deadline stays shown: a Board report filed late shows "deadline missed" on the detail and in the list, though no longer overdue', async () => {
+    const aware = Date.now() - 100 * HOUR;
+    const id = seedIncident({ title: 'Filed late', becameAwareAt: iso(aware), openedAt: iso(aware + HOUR) }, [
+      entry('board_report_recorded', { sentAt: iso(aware + 80 * HOUR), reference: 'R' }),
+    ]);
+    const { unmount } = renderWithClient(<BreachDetailPage incidentId={id} />);
+    expect(await screen.findByTestId('breach-clock-late')).toHaveTextContent('deadline was missed');
+    expect(screen.queryByTestId('breach-clock-overdue')).not.toBeInTheDocument();
+    unmount();
+    renderWithClient(<BreachListPage />);
+    expect(await screen.findByTestId(`breach-incident-${id}-late`)).toHaveTextContent('Board deadline missed');
+    expect(screen.queryByTestId(`breach-incident-${id}-overdue`)).not.toBeInTheDocument();
+  });
+
+  it('⭐ the clock moves on by itself: an open page turns "overdue" when the due time passes, without re-reading the (audited) incident', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const id = seedIncident({ becameAwareAt: iso(Date.now() - 72 * HOUR + 30_000) });
+      renderWithClient(<BreachDetailPage incidentId={id} />);
+      await screen.findByTestId('breach-clock');
+      expect(screen.queryByTestId('breach-clock-overdue')).not.toBeInTheDocument();
+      const reads = calls('detail').length;
+      act(() => {
+        vi.advanceTimersByTime(61_000);
+      });
+      expect(await screen.findByTestId('breach-clock-overdue')).toHaveTextContent('Board report overdue');
+      expect(calls('detail').length).toBe(reads);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('⭐ accessibility: the categories are a NAMED group; the drafts and their Copy buttons have distinct names; a field in error says so and points at its message', async () => {
+    const user = userEvent.setup();
+    const id = seedIncident({}, [entry('assessment', ASSESSMENT)]);
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByTestId('breach-entry-form-assessment');
+    expect(screen.getByRole('group', { name: 'Kinds of personal data' })).toBe(screen.getByTestId('breach-entry-dataCategories-group'));
+    const names = ['Notice to affected people — Rule 7(1)', 'First intimation to the Board — Rule 7(2)(a)', 'Board report within 72 hours — Rule 7(2)(b)'];
+    for (const name of names) {
+      expect(screen.getByRole('textbox', { name: `Draft text: ${name}` })).toHaveAttribute('readonly');
+      expect(screen.getByRole('button', { name: `Copy the draft: ${name}` })).toBeInTheDocument();
+    }
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'note');
+    const text = screen.getByTestId('breach-entry-text');
+    expect(text).toHaveAttribute('aria-invalid', 'false');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    await waitFor(() => expect(text).toHaveAttribute('aria-invalid', 'true'));
+    const describedBy = text.getAttribute('aria-describedby')!;
+    expect(document.getElementById(describedBy)).toHaveAttribute('role', 'alert');
+    expect(document.getElementById(describedBy)).toHaveTextContent('This is needed.');
+  });
+
+  it('a count is a whole number or blank, and "people affected" needs exactly one of a number or "not yet known" — ⛔ a silent guess', async () => {
+    const user = userEvent.setup();
+    const id = seedIncident();
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByTestId('breach-entry-form-assessment');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    expect(await screen.findByText('Enter a number, or tick “Not yet known”.')).toBeInTheDocument();
+    await user.type(screen.getByTestId('breach-entry-estimatedAffected'), '12');
+    await user.click(screen.getByTestId('breach-entry-estimatedAffected-unknown'));
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    expect(await screen.findByText('Either enter a number or tick “Not yet known” — not both.')).toBeInTheDocument();
+    expect(calls('append')).toEqual([]);
+
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'principals_notice_recorded');
+    fireEvent.change(screen.getByTestId('breach-entry-sentAt'), { target: { value: '2026-11-19T15:00' } });
+    await user.type(screen.getByTestId('breach-entry-channel'), 'Phone');
+    await user.type(screen.getByTestId('breach-entry-reachedCount'), '3.5');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    expect(await screen.findByText('Enter a whole number, or leave it blank.')).toBeInTheDocument();
+    expect(calls('append')).toEqual([]);
+  });
+
+  it('the kind picker is locked while a save is in flight', async () => {
+    const user = userEvent.setup();
+    const id = seedIncident();
+    let release: () => void = () => undefined;
+    h.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByTestId('breach-record-entry');
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'note');
+    await user.type(screen.getByTestId('breach-entry-text'), 'In flight');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    await waitFor(() => expect(screen.getByTestId('breach-entry-kind')).toBeDisabled());
+    act(() => release());
+    await screen.findByTestId('breach-entry-saved');
+    expect(screen.getByTestId('breach-entry-kind')).toBeEnabled();
+  });
+
+  it('a failed BACKGROUND re-read keeps the incident on screen (the error replaces the page only when there is nothing to show)', async () => {
+    const id = seedIncident({ title: 'Still here' });
+    const client = createQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <BreachDetailPage incidentId={id} />
+      </QueryClientProvider>,
+    );
+    await screen.findByTestId('breach-detail-page');
+    h.failNext.push({ status: 500, code: 'detail.fail' });
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['breaches', 'detail', id] });
+    });
+    expect(screen.getByTestId('breach-detail-page')).toHaveTextContent('Still here');
+    expect(screen.queryByTestId('breach-detail-error')).not.toBeInTheDocument();
+    // …and it SAYS the copy is the last one loaded (this also proves the re-read really failed).
+    expect(await screen.findByTestId('breach-detail-stale')).toHaveTextContent('this is the copy last loaded');
+  });
+
+  it('⭐ withdrawing ONE of two extensions: the picker then starts on the one still standing (⛔ an empty or removed choice)', async () => {
+    const user = userEvent.setup();
+    const aware = Date.now() - 2 * HOUR;
+    const e1 = entry('board_extension_recorded', { grantedUntil: iso(aware + 100 * HOUR), reference: 'EXT-ONE' });
+    const e2 = entry('board_extension_recorded', { grantedUntil: iso(aware + 200 * HOUR), reference: 'EXT-TWO' });
+    const id = seedIncident({ becameAwareAt: iso(aware) }, [e1, e2]);
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByTestId('breach-record-entry');
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'board_extension_withdrawn');
+    expect(screen.getByTestId('breach-entry-withdrawsEntryId')).toHaveValue(e2.entryId); // newest first
+    await user.type(screen.getByTestId('breach-entry-reason'), 'Not allowed.');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    await screen.findByTestId('breach-entry-saved');
+    await waitFor(() => expect(screen.getByTestId('breach-entry-withdrawsEntryId')).toHaveValue(e1.entryId));
+    expect(within(screen.getByTestId('breach-entry-withdrawsEntryId')).getAllByRole('option')).toHaveLength(1);
+    await user.type(screen.getByTestId('breach-entry-reason'), 'Also wrong.');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    await waitFor(() => expect(calls('append')).toHaveLength(2));
+    expect(calls('append')[1]!.body).toEqual({ kind: 'board_extension_withdrawn', payload: { withdrawsEntryId: e1.entryId, reason: 'Also wrong.' } });
+    // None left: the picker moved to a kind that is offered.
+    await waitFor(() => expect(screen.getByTestId('breach-entry-kind')).toHaveValue('assessment'));
+  });
+
+  it('⭐ a REPLAY older than the page (another write landed since) is ⛔ put over it: the incident is re-read instead', async () => {
+    const user = userEvent.setup();
+    const first = entry('note', { text: 'first' });
+    const id = seedIncident({}, [first]);
+    const older = { incident: h.incidents.get(id)!.incident, entries: [first], view: deriveBreachIncidentView(h.incidents.get(id)!.incident as BreachIncident, [first], new Date()) };
+    h.incidents.get(id)!.entries.push(entry('note', { text: 'second, by someone else' }));
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByText('second, by someone else');
+    const reads = calls('detail').length;
+    h.replayWith = older;
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'note');
+    await user.type(screen.getByTestId('breach-entry-text'), 'first');
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    await waitFor(() => expect(calls('detail').length).toBeGreaterThan(reads));
+    expect(screen.getByText('second, by someone else')).toBeInTheDocument();
+  });
+
+  it('an append that is saved but unconfirmed (503), or gets no answer, RE-READS the incident; the sentences say what is known', async () => {
+    const user = userEvent.setup();
+    const id = seedIncident();
+    renderWithClient(<BreachDetailPage incidentId={id} />);
+    await screen.findByTestId('breach-record-entry');
+    await user.selectOptions(screen.getByTestId('breach-entry-kind'), 'note');
+    await user.type(screen.getByTestId('breach-entry-text'), 'Unconfirmed');
+    const reads = calls('detail').length;
+    h.failNext.push({ status: 503, code: 'idempotency.record_failed' });
+    await user.click(screen.getByTestId('breach-entry-submit'));
+    expect(await screen.findByTestId('breach-entry-error')).toHaveTextContent('saved, but the confirmation was lost');
+    await waitFor(() => expect(calls('detail').length).toBeGreaterThan(reads));
+    // The sentence follows what is KNOWN: no answer or a 5xx may have saved; a 4xx refusal did not.
+    expect(errorSentence(undefined)).toMatch(/may or may not have been saved/);
+    expect(errorSentence('internal', 500)).toMatch(/may or may not have been saved/);
+    expect(errorSentence('validation_failed', 400)).toMatch(/nothing was recorded/);
+    expect(errorSentence('rate_limited', 429)).toMatch(/nothing was recorded/);
+  });
+
+  it('the open form: a field in error says so and points at its message', async () => {
+    const user = userEvent.setup();
+    renderWithClient(<BreachListPage />);
+    const title = screen.getByTestId('breach-open-title');
+    expect(title).toHaveAttribute('aria-invalid', 'false');
+    await user.click(screen.getByTestId('breach-open-submit'));
+    await waitFor(() => expect(title).toHaveAttribute('aria-invalid', 'true'));
+    expect(document.getElementById(title.getAttribute('aria-describedby')!)).toHaveAttribute('role', 'alert');
+    const aware = screen.getByTestId('breach-open-aware');
+    expect(document.getElementById(aware.getAttribute('aria-describedby')!)).toHaveTextContent('Enter a date and time.');
+    // An audit-chain break's reference must be the check's id.
+    await user.selectOptions(screen.getByTestId('breach-open-source'), 'audit_chain_break');
+    await user.type(title, 'A break');
+    fireEvent.change(aware, { target: { value: '2026-11-19T12:00' } });
+    await user.type(screen.getByTestId('breach-open-ref'), 'check 42');
+    await user.click(screen.getByTestId('breach-open-submit'));
+    expect(await screen.findByText(/must be the check’s id/)).toBeInTheDocument();
+    expect(calls('open')).toEqual([]);
+  });
+
+  it('the list re-reads every minute (it is not audited), so its "overdue" flag does not freeze', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date'], shouldAdvanceTime: true });
+    try {
+      seedIncident();
+      renderWithClient(<BreachListPage />);
+      await screen.findByTestId('breach-incidents');
+      await waitFor(() => expect(calls('list').length).toBeGreaterThan(0));
+      const before = calls('list').length;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(61_000);
+      });
+      await waitFor(() => expect(calls('list').length).toBeGreaterThan(before));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('an assessment with categories and an unknown count; then a sign-off needs two different names and says who signs', async () => {

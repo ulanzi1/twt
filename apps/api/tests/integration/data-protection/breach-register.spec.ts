@@ -52,6 +52,8 @@ function payloads(): Record<BreachEntryKind, { ok: Record<string, unknown>; bad:
     board_initial_recorded: { ok: { sentAt: past, reference: 'B-1' }, bad: { sentAt: future, reference: 'B-1' } },
     board_report_recorded: { ok: { sentAt: past, reference: 'B-2' }, bad: { sentAt: past } },
     board_extension_recorded: { ok: { grantedUntil: iso(Date.now() + 200 * HOUR), reference: 'E-1' }, bad: { grantedUntil: 'next week', reference: 'E-1' } },
+    // `withdrawsEntryId` is filled in by the per-kind leg with the extension it records first (a withdrawal needs a real target).
+    board_extension_withdrawn: { ok: { withdrawsEntryId: '', reason: 'Typed the wrong year.' }, bad: { withdrawsEntryId: 'the-first-one', reason: 'Wrong.' } },
     cert_in_report_recorded: { ok: { sentAt: past, reference: 'C-1' }, bad: { sentAt: past, reference: 'r'.repeat(201) } },
     owner_review: { ok: { note: 'Reviewed.' }, bad: { note: '' } },
     signoff_recorded: { ok: { signers: ['Trustee One', 'Trustee Two'], signedOn: '2026-01-05', note: '' }, bad: { signers: ['Trustee One', ' trustee  one '], signedOn: '2026-01-05', note: '' } },
@@ -282,21 +284,60 @@ describe.skipIf(!hasDatabase)('the breach register API (Story 14.3)', { timeout:
     for (const kind of BREACH_ENTRY_KINDS) {
       it(`${kind}: a valid payload ⇒ 200 and ONE audit line; an invalid one ⇒ 400 and none`, async () => {
         const { incident } = await open();
-        const { ok, bad } = payloads()[kind];
+        const all = payloads();
+        let { ok } = all[kind];
+        const { bad } = all[kind];
+        // A withdrawal needs a recorded extension to name: record one first (its own audit line is counted below).
+        const setup: BreachEntryKind[] = [];
+        if (kind === 'board_extension_withdrawn') {
+          const ext = await appendTo(incident.incidentId, 'board_extension_recorded', all.board_extension_recorded.ok);
+          expect(ext.statusCode, ext.body).toBe(200);
+          ok = { ...ok, withdrawsEntryId: ext.json<BreachIncidentDetailResponse>().entries[0]!.entryId };
+          setup.push('board_extension_recorded');
+        }
         const refused = await appendTo(incident.incidentId, kind, bad);
         expect(refused.statusCode, refused.body).toBe(400);
         const res = await appendTo(incident.incidentId, kind, ok);
         expect(res.statusCode, res.body).toBe(200);
         const dto = res.json<BreachIncidentDetailResponse>();
-        expect(dto.entries.map((e) => e.kind)).toEqual([kind]);
-        expect(dto.entries[0]).toMatchObject({ kind, payload: ok, recordedByDisplay: 'Asha Verma' });
+        expect(dto.entries.map((e) => e.kind)).toEqual([...setup, kind]);
+        const mine = dto.entries[setup.length]!;
+        expect(mine).toMatchObject({ kind, payload: ok, recordedByDisplay: 'Asha Verma' });
         expect(dto.view.status).toBe(kind === 'closed' ? 'closed' : 'open');
         const locator = `global/data-protection/breaches/${incident.incidentId}/entries/`;
-        expect(await auditActions('data_protection.breach.entry_appended', locator)).toEqual(['data_protection.breach.entry_appended']);
-        const line = await td.pool.query<{ resource_locator: string }>(`SELECT resource_locator FROM audit_log_entries WHERE resource_locator LIKE $1`, [`${locator}%`]);
-        expect(line.rows[0]!.resource_locator).toBe(`${locator}${dto.entries[0]!.entryId};kind=${kind}`);
+        expect(await auditActions('data_protection.breach.entry_appended', locator)).toEqual([...setup, kind].map(() => 'data_protection.breach.entry_appended'));
+        const line = await td.pool.query<{ resource_locator: string }>(`SELECT resource_locator FROM audit_log_entries WHERE resource_locator LIKE $1`, [`${locator}${mine.entryId}%`]);
+        expect(line.rows[0]!.resource_locator).toBe(`${locator}${mine.entryId};kind=${kind}`);
       });
     }
+
+    it('⭐ a withdrawal (decision -471): the due time falls back; naming a non-extension, an already-withdrawn one or ANOTHER incident\'s is 400 `breach.withdrawal_invalid` with no audit line', async () => {
+      const aware = Date.now() - 2 * HOUR;
+      const due = aware + 72 * HOUR;
+      const { incident } = await open(sa.client, { becameAwareAt: iso(aware) });
+      const other = await open();
+      const otherExt = (await appendTo(other.incident.incidentId, 'board_extension_recorded', { grantedUntil: iso(due + 10 * HOUR), reference: 'X' })).json<BreachIncidentDetailResponse>().entries[0]!;
+      const typo = (await appendTo(incident.incidentId, 'board_extension_recorded', { grantedUntil: '2099-01-01T00:00:00.000Z', reference: 'E' })).json<BreachIncidentDetailResponse>();
+      expect(typo.view.boardReportDueAt).toBe('2099-01-01T00:00:00.000Z');
+      const typoId = typo.entries[0]!.entryId;
+      const note = (await appendTo(incident.incidentId, 'note', { text: 'n' })).json<BreachIncidentDetailResponse>().entries[1]!.entryId;
+      const locator = `global/data-protection/breaches/${incident.incidentId}/entries/`;
+      const linesBefore = (await auditActions('data_protection.breach.entry_appended', locator)).length;
+      for (const target of [note, otherExt.entryId, randomUUID()]) {
+        const res = await appendTo(incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: target, reason: 'Wrong.' });
+        expect(res.statusCode, target).toBe(400);
+        expect(res.json<ErrorBody>().error.code).toBe('breach.withdrawal_invalid');
+      }
+      expect((await auditActions('data_protection.breach.entry_appended', locator)).length).toBe(linesBefore);
+      const back = await appendTo(incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: typoId.toUpperCase(), reason: 'Typed 2099 for 2026.' });
+      expect(back.statusCode, back.body).toBe(200);
+      expect(back.json<BreachIncidentDetailResponse>().view.boardReportDueAt).toBe(iso(due));
+      const twice = await appendTo(incident.incidentId, 'board_extension_withdrawn', { withdrawsEntryId: typoId, reason: 'Again.' });
+      expect(twice.json<ErrorBody>().error.code).toBe('breach.withdrawal_invalid');
+      // …and a correct extension can now be recorded against the fallen-back due time.
+      const fixed = await appendTo(incident.incidentId, 'board_extension_recorded', { grantedUntil: iso(due + 24 * HOUR), reference: 'E-2' });
+      expect(fixed.json<BreachIncidentDetailResponse>().view.boardReportDueAt).toBe(iso(due + 24 * HOUR));
+    });
 
     it('⭐ pre-checked refusals leave ZERO `entry_appended*` lines: an unknown incident (404), an extension not later than the due time (400), anything after `closed` (409)', async () => {
       const ghost = randomUUID();
@@ -351,17 +392,87 @@ describe.skipIf(!hasDatabase)('the breach register API (Story 14.3)', { timeout:
       // A claim another request holds and has not finished: this one must not run the write beside it.
       const inFlight = randomUUID();
       const store = idempotency.createKeyedStore(td.pool);
-      expect(await store.claim(`breach-entry:${incident.incidentId}:${inFlight}`, 300)).toBe('acquired');
+      const inFlightKey = `breach-entry:${sa.userId}:${incident.incidentId}:${inFlight}`;
+      expect(await store.claim(inFlightKey, 300)).toBe('acquired');
       const blocked = await appendTo(incident.incidentId, 'note', { text: 'beside an in-flight claim' }, { 'idempotency-key': inFlight });
       expect(blocked.statusCode).toBe(409);
       expect(blocked.json<ErrorBody>().error.code).toBe('breach.idempotency_in_progress');
       expect((await td.pool.query(`SELECT 1 FROM breach_incident_entries WHERE incident_id = $1`, [incident.incidentId])).rowCount).toBe(1);
-      await store.release(`breach-entry:${incident.incidentId}:${inFlight}`);
+      await store.release(inFlightKey);
 
-      // A REFUSED request frees its key: the same key then carries a valid one.
+      // A request REFUSED INSIDE the handler (it got past the body schema, so its key WAS claimed) frees its key: the same key then
+      // carries a valid one. (A schema 400 would prove nothing — it never reaches the claim.)
       const reused = key();
-      expect((await appendTo(incident.incidentId, 'owner_review', { note: '' }, reused)).statusCode).toBe(400);
-      expect((await appendTo(incident.incidentId, 'owner_review', { note: 'Reviewed.' }, reused)).statusCode).toBe(200);
+      const due = Date.parse(incident.becameAwareAt) + 72 * HOUR;
+      const refused = await appendTo(incident.incidentId, 'board_extension_recorded', { grantedUntil: iso(due), reference: 'E' }, reused);
+      expect(refused.statusCode).toBe(400);
+      expect(refused.json<ErrorBody>().error.code).toBe('breach.extension_not_after_due');
+      const retried = await appendTo(incident.incidentId, 'owner_review', { note: 'Reviewed.' }, reused);
+      expect(retried.statusCode, retried.body).toBe(200);
+      expect(retried.json<BreachIncidentDetailResponse>().entries.at(-1)?.kind).toBe('owner_review');
+    });
+
+    it('⭐ a LOST idempotency record never writes twice: the claim left `pending` (fresh, or expired and taken over) — the retry answers with the row the first attempt wrote', async () => {
+      const { incident } = await open();
+      const headers = key();
+      const idemKey = `breach-entry:${sa.userId}:${incident.incidentId}:${headers['idempotency-key']}`;
+      const first = await appendTo(incident.incidentId, 'note', { text: 'written once' }, headers);
+      expect(first.statusCode, first.body).toBe(200);
+      // Something is recorded AFTER it — a replay must not hand that out (it is not an audited read).
+      expect((await appendTo(incident.incidentId, 'note', { text: 'recorded later, under another key' })).statusCode).toBe(200);
+      const locator = `global/data-protection/breaches/${incident.incidentId}/entries/`;
+      // Make it look as if `recordResult` had failed after the commit (the 503 path): the claim is `pending` with no result…
+      const lose = (expiresAt: string) =>
+        td.pool.query(`UPDATE idempotency_keys SET status = 'pending', result = NULL, completed_at = NULL, expires_at = ${expiresAt} WHERE key = $1`, [idemKey]);
+      for (const expiresAt of [`now() + interval '5 minutes'`, `now() - interval '1 second'`]) {
+        await lose(expiresAt);
+        const retry = await appendTo(incident.incidentId, 'note', { text: 'written once' }, headers);
+        expect(retry.statusCode, `${expiresAt}: ${retry.body}`).toBe(200);
+        expect(retry.json<BreachIncidentDetailResponse>().entries.map((e) => e.entryId)).toEqual(first.json<BreachIncidentDetailResponse>().entries.map((e) => e.entryId));
+        expect(retry.body).not.toContain('recorded later, under another key');
+        expect((await td.pool.query(`SELECT 1 FROM breach_incident_entries WHERE incident_id = $1`, [incident.incidentId])).rowCount).toBe(2);
+        expect(await auditActions('data_protection.breach.entry_appended', locator)).toEqual(['data_protection.breach.entry_appended', 'data_protection.breach.entry_appended']);
+      }
+      // The same for open: a lost record, then a retry after the claim expired ⇒ the SAME incident, one row, one `opened` line.
+      const openHeaders = key();
+      const body = openBody({ title: `Lost record ${randomUUID()}` });
+      const opened = await sa.client.inject({ method: 'POST', url: `${BASE}/breaches`, payload: body, headers: openHeaders });
+      expect(opened.statusCode, opened.body).toBe(200);
+      await td.pool.query(`UPDATE idempotency_keys SET status = 'pending', result = NULL, completed_at = NULL, expires_at = now() - interval '1 second' WHERE key = $1`, [
+        `breach-open:${sa.userId}:${openHeaders['idempotency-key']}`,
+      ]);
+      const reopened = await sa.client.inject({ method: 'POST', url: `${BASE}/breaches`, payload: body, headers: openHeaders });
+      expect(reopened.statusCode, reopened.body).toBe(200);
+      const id = opened.json<BreachIncidentDetailResponse>().incident.incidentId;
+      expect(reopened.json<BreachIncidentDetailResponse>().incident.incidentId).toBe(id);
+      expect((await td.pool.query(`SELECT 1 FROM breach_incidents WHERE title = $1`, [body.title])).rowCount).toBe(1);
+      expect(await auditActions('data_protection.breach.opened', `global/data-protection/breaches/${id}`)).toEqual(['data_protection.breach.opened']);
+    });
+
+    it('⭐ the incident id in EITHER case is one incident: one idempotency namespace, and nothing lands after `closed` through an upper-case URL', async () => {
+      const { incident } = await open();
+      const upper = incident.incidentId.toUpperCase();
+      const headers = key();
+      const a = await appendTo(incident.incidentId, 'note', { text: 'once' }, headers);
+      const b = await appendTo(upper, 'note', { text: 'once' }, headers);
+      expect(a.statusCode).toBe(200);
+      expect(b.statusCode, b.body).toBe(200);
+      expect((await td.pool.query(`SELECT 1 FROM breach_incident_entries WHERE incident_id = $1`, [incident.incidentId])).rowCount).toBe(1);
+      expect((await appendTo(upper, 'closed', { summary: 'Done.' })).statusCode).toBe(200);
+      const late = await appendTo(upper, 'note', { text: 'after closing' });
+      expect(late.statusCode).toBe(409);
+      expect(late.json<ErrorBody>().error.code).toBe('breach.incident_closed');
+    });
+
+    it('a NUL or a lone surrogate in a text field is a 400 at the door — ⛔ a 500, and no audit line', async () => {
+      const { incident } = await open();
+      const locator = `global/data-protection/breaches/${incident.incidentId}/entries/`;
+      for (const text of [`a${String.fromCharCode(0)}b`, `a${String.fromCharCode(0xdc00)}b`]) {
+        expect((await appendTo(incident.incidentId, 'note', { text })).statusCode).toBe(400);
+      }
+      const title = `nul${String.fromCharCode(0)}title`;
+      expect((await sa.client.inject({ method: 'POST', url: `${BASE}/breaches`, payload: openBody({ title }), headers: key() })).statusCode).toBe(400);
+      expect(await auditActions('data_protection.breach.entry_appended', locator)).toEqual([]);
     });
 
     it('a bodyless append, an unknown kind and a malformed incident id are each 400', async () => {
@@ -385,6 +496,8 @@ describe.skipIf(!hasDatabase)('the breach register API (Story 14.3)', { timeout:
 
       const res = await sa.client.inject({ method: 'GET', url: `${BASE}/breaches/${incident.incidentId}` });
       expect(res.statusCode, res.body).toBe(200);
+      // The narrative is never kept by a browser or proxy cache.
+      expect(res.headers['cache-control']).toBe('no-store');
       const dto = res.json<BreachIncidentDetailResponse>();
       expect(dto.incident.incidentId).toBe(incident.incidentId);
       expect(dto.entries.map((e) => e.kind)).toEqual(['assessment', 'mitigation', 'principals_notice_recorded']);
@@ -422,7 +535,7 @@ describe.skipIf(!hasDatabase)('the breach register API (Story 14.3)', { timeout:
       const item = body.items.find((i) => i.incidentId === newer.incident.incidentId)!;
       expect(item).toMatchObject({ title: newer.incident.title, isRehearsal: true, status: 'open', boardInitialRecorded: true, boardReportRecorded: false, boardReportOverdue: false });
       expect(Object.keys(item).sort()).toEqual(
-        ['becameAwareAt', 'boardInitialRecorded', 'boardReportDueAt', 'boardReportOverdue', 'boardReportRecorded', 'detectionSource', 'incidentId', 'isRehearsal', 'openedAt', 'principalsNoticeRecorded', 'signoffRecorded', 'status', 'title'].sort(),
+        ['becameAwareAt', 'boardInitialRecorded', 'boardReportDueAt', 'boardReportLate', 'boardReportOverdue', 'boardReportRecorded', 'detectionSource', 'incidentId', 'isRehearsal', 'openedAt', 'principalsNoticeRecorded', 'signoffRecorded', 'status', 'title'].sort(),
       );
       expect(res.body).not.toContain('A file went to a wrong address.');
 
@@ -437,9 +550,11 @@ describe.skipIf(!hasDatabase)('the breach register API (Story 14.3)', { timeout:
       const item = async () =>
         (await sa.client.inject({ method: 'GET', url: `${BASE}/breaches?limit=100` })).json<BreachIncidentListResponse>().items.find((i) => i.incidentId === incident.incidentId)!;
       expect((await item()).boardReportOverdue).toBe(true);
+      expect((await item()).boardReportLate).toBe(false);
       const reported = await appendTo(incident.incidentId, 'board_report_recorded', payloads().board_report_recorded.ok);
-      expect(reported.json<BreachIncidentDetailResponse>().view).toMatchObject({ boardReportOverdue: false, boardReportRecorded: true });
-      expect((await item()).boardReportOverdue).toBe(false);
+      expect(reported.json<BreachIncidentDetailResponse>().view).toMatchObject({ boardReportOverdue: false, boardReportRecorded: true, boardReportLate: true });
+      // Overdue clears; LATE stays — the missed deadline is still shown (decision -471).
+      expect(await item()).toMatchObject({ boardReportOverdue: false, boardReportLate: true });
     });
   });
 
@@ -464,12 +579,24 @@ describe.skipIf(!hasDatabase)('the breach register API (Story 14.3)', { timeout:
       expect(before.find((s) => s.checkId === mine.checkId)).toEqual({ checkId: mine.checkId, verifiedAt: mine.verifiedAt, firstBrokenSeq: '4', rowsVerified: 3, triggerSource: 'manual', incidentIds: [] });
       expect(before.some((s) => s.checkId === acked.checkId)).toBe(false);
 
-      // "Open an incident from this": the source, the reference and the awareness time come from the signal.
-      const opened = await open(sa.client, { detectionSource: 'audit_chain_break', detectionSignalRef: mine.checkId, becameAwareAt: mine.verifiedAt });
+      // "Open an incident from this": the source, the reference and the awareness time come from the signal. A REAL incident —
+      // a rehearsal does not count as assessing a live signal (review 2026-11-20; the next leg).
+      const opened = await open(sa.client, { isRehearsal: false, detectionSource: 'audit_chain_break', detectionSignalRef: mine.checkId, becameAwareAt: mine.verifiedAt });
       expect(opened.incident).toMatchObject({ detectionSource: 'audit_chain_break', detectionSignalRef: mine.checkId, becameAwareAt: mine.verifiedAt });
       expect((await signals()).find((s) => s.checkId === mine.checkId)?.incidentIds).toEqual([opened.incident.incidentId]);
       // The breach page never acknowledges: the check is still unacknowledged.
       expect((await td.pool.query(`SELECT 1 FROM audit_integrity_acknowledgements WHERE check_id = $1`, [mine.checkId])).rowCount).toBe(0);
+    });
+
+    it('⭐ a REHEARSAL opened from a live signal does not mark it assessed; a real incident whose reference is typed in upper case does', async () => {
+      const live = await insertFailedCheck();
+      await open(sa.client, { isRehearsal: true, detectionSource: 'audit_chain_break', detectionSignalRef: live.checkId, becameAwareAt: live.verifiedAt });
+      expect((await signals()).find((s) => s.checkId === live.checkId)?.incidentIds).toEqual([]);
+      const real = await open(sa.client, { isRehearsal: false, detectionSource: 'audit_chain_break', detectionSignalRef: live.checkId.toUpperCase(), becameAwareAt: live.verifiedAt });
+      expect((await signals()).find((s) => s.checkId === live.checkId)?.incidentIds).toEqual([real.incident.incidentId]);
+      // An audit-chain break's reference must BE a check id.
+      const res = await sa.client.inject({ method: 'POST', url: `${BASE}/breaches`, payload: openBody({ detectionSource: 'audit_chain_break', detectionSignalRef: 'check 42' }), headers: key() });
+      expect(res.statusCode).toBe(400);
     });
 
     it('the signals list is `{ items }` and bounded (default 20, max 50)', async () => {

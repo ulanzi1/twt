@@ -14,7 +14,10 @@
 import { sql } from 'drizzle-orm';
 import { bigint, boolean, check, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-/** The closed list of entry kinds (DL5). LOCKSTEP: 0208's `breach_incident_entries_kind_check`; contracts `BreachEntryKind`. */
+/**
+ * The closed list of entry kinds (DL5, widened to FIFTEEN by decision `2026-11-20-471` — `board_extension_withdrawn`). LOCKSTEP: the
+ * `breach_incident_entries_kind_check` (0208, re-created by 0209); contracts `BreachEntryKind`.
+ */
 export const BREACH_ENTRY_KINDS = [
   'assessment',
   'timeline_event',
@@ -25,6 +28,7 @@ export const BREACH_ENTRY_KINDS = [
   'board_initial_recorded',
   'board_report_recorded',
   'board_extension_recorded',
+  'board_extension_withdrawn',
   'cert_in_report_recorded',
   'owner_review',
   'signoff_recorded',

@@ -1548,6 +1548,12 @@ What changed, in brief: **R3-1** a refused Undo (`ending_changed` / `state_chang
   - Why: the spec seeded no reversal in its pool, so the planner estimated about 1 row for the pool alone, and "Index Cond" and "Filter" cost alike. This is the tie the spec's own comment describes for the member key, which it fixed by seeding a realistic pool.
   - BigDev chose "fix the spec, then land". Fixed in `af4703bc` (test-only): the spec now seeds 500 reversals in the pool, each referencing one of its confirmations, before `ANALYZE`.
   - ⚠ The failure was NOT reproduced locally: a throwaway `:5491` database broke the tie toward the Index Cond, even under skewed background rows. With the fix, the per-lookup estimate is selective (about 2 rows, against 217 without it in the same skewed setup). The fixed spec ran 3 of 3 green there. GitHub CI is what confirms it.
+- **CORRECTION, 2026-11-20 - the cause above was WRONG, and `af4703bc` did not fix it.** GitHub CI failed again at `fedaa63b`: the planner estimated the seeded 499 reversals and still FILTERED on the reference.
+  - BigDev chose "collect evidence from CI" and then "pull the image, then fix". A temporary diagnostic (`ac1e7bce`) printed the planner's inputs on CI. The statistics were clean, and CI runs **PostgreSQL 16.16** (`postgres:16-alpine` today) while every local container ran **16.14**.
+  - Reproduced on `postgres:16.16-alpine` (`:5497`). The cause is in Story 5.11b's `listActedMemberIdsForPool`: the lateral reversal lookup compared `contribution_reversed_event_id = (events_log_1.event_id)::text`. The `uuid -> text` cast is not leakproof, and on 16.16 the planner keeps that clause out of the index under RLS. So each lookup read the pool's every reversal and filtered on the reference. This is a production cost on 16.16, not only a red test.
+  - Fixed in `1f47c772` (production code, one line): `OFFSET 0` on the confirmations subquery, the same fence the reversal subquery already carries.
+  - The spec is back to its `main` form (`612a8894` reverts `ac1e7bce` and `af4703bc`). On 16.16 it fails without the fence and passes with it (2 of 2). The contribution suites passed on 16.16 AND 16.14: domain 20 files / 147 tests, jobs 2 / 176.
+  - Not a 13.1f change: a 5.11b accessor fix carried by this branch because the branch cannot land red.
 
 ## Dev Notes
 

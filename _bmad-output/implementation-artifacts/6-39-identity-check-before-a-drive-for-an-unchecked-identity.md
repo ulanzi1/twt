@@ -132,6 +132,9 @@ so that **no drive raises money in the name of someone who was ⛔ the member, o
 joining fee was paid no later than the date of death on your death certificate — if it was paid after it, no drive ever opens — and, if
 you joined by typing in your own identity details and nobody has checked them since, that the person on the certificate is you, and
 while they cannot yet confirm that, the claim waits rather than being refused."**
+⚠ **AMENDED by [`-473`](../../.decision-log.md#decision-2026-11-21-473) Q1 B / [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 2**
+(noted by the 2026-11-21 code review; the words above are kept): *"no later than the date of death"* now reads **"before the date of
+death"** — a fee paid ON the day of death counts as after it, and no drive opens. `-473`'s member sentence is the operative one.
 
 *What that sentence deliberately does ⛔ promise:* that the family is ASKED for anything. Nothing built asks: once a certificate is
 accepted every upload is closed (`CLAIM_DOCUMENT_UPLOADABLE_STATES` + the accepted-certificate block, `death-certificate-approval.ts`), ⛔
@@ -776,13 +779,62 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
 - [x] **Task 7 — Close** — DL15 comment; DL14 anonymize + AC14's leg; `deferred-work.md` round-4 item A of 6.38 annotated "Closed by 6.39
       (built A on PQ1 (a) / PQ2 until ruled)"; `ci:local` on a FRESH container on the story's own DB; Completion Notes, File List, Change
       Log; Status → review.
-- [ ] **Task 8 — Build three of the Panel's four answers (`-473`; `-474`) — AC15, AC16, AC17** ⭐ added 2026-11-21 (story v1.7)
+- [x] **Task 8 — Build three of the Panel's four answers (`-473`; `-474`) — AC15, AC16, AC17** ⭐ added 2026-11-21 (story v1.7)
   - [x] 8.1 Q1 B: the constant, its comment, the AC8 test flipped; the four staff lines re-worded; `feeAfterDeathNote` for `same_day`.
   - [x] 8.2 Q3 B: the domain read (live denial reason, both vocabularies), the contract field, the handler, the mobile view + copy (`en`, `hi`).
   - [x] 8.3 Q4 B: the contract field, the handler (through `membershipCheckApprovalState` — the ONE definition), the mobile view + copy.
   - [x] 8.4 Tests (AC15–AC17), the contracts fixtures ([[project_contracts_tests_outside_tsc]] — a new REQUIRED field breaks them), the
         friction / microcopy gates; `ci:local` on a FRESH container on the story's own DB; records; Status → review.
   - ⛔ Q2 B — row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (`-474` item 1).
+
+### Review Findings
+
+Code review 2026-11-21 (`bmad-code-review`, mode `full`): the whole branch `9f5e2c84..c5041036`, source only (66 files; tests and
+records read in the tree, not in the diff). Three parallel read-only layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor). 1
+decision-needed, 9 patch, 0 defer, 11 dismissed. Every finding was re-verified by hand at `c5041036`. Who decides (§0): all are the
+AUTHOR's. None is the Panel's.
+⭐ **RESOLVED 2026-11-21** (BigDev: *"1"* for the decision, then *"all"* for the patches): the decision became the first patch, under
+author-commit [`-475`](../../.decision-log.md#decision-2026-11-21-475) (`68ac6305`, committed ALONE, before the code); all ten patches
+APPLIED in `27898db7`. Each new test was proved RED first by reverting its fix (the lost-update guard: the writer, API and race legs
+red; the refusal-reason read: the "after a reversal" leg red — which first showed that the leg needed the appeal's journey row, now
+seeded; the UTR line: the fee re-confirm leg red). Run at `27898db7`: typecheck (4 packages), lint (changed files), the domain unit
+suite (893), contracts (18), admin (111), the API unit suite with the fence (1154), the jobs fences (15), the microcopy and
+human-actor gates, the OpenAPI determinism gate; live-DB on the story's `twt-639-pg` (:5449, ⛔ fresh — reused by this session's
+targeted runs): domain 41/41 (the approval, concurrency and joining-receipt specs), API 63/63 (membership-check, appeal,
+vyawastha-shulk, required-routes). ⚠ **`ci:local` on a FRESH container NOT run** — recreating the container and `db:migrate` were
+refused by the session's auto-mode classifier; recorded un-attested ([[feedback_record_unattested_no_backfill]]), so the Status
+stays `review` until that run is green. ⚠ The real-browser pass of the console (Row 46 (d)) stays un-attested; the console changed
+again here (the note now follows `fee_blocks_approval`; the `check_changed` refusal and its refetch).
+
+- [x] [Review][Decision] ⭐ RESOLVED 2026-11-21 by BigDev: option (a) — now the first [Review][Patch] below. A member who paid can leave the claim with no way to ever be checked, and "Escalate this claim" does not unblock it —
+  DL3's reachable case is a gate-failed confirm re-confirmed with the same `tr` and a corrected UTR. The vyawastha-shulk re-confirm keeps
+  the stored receipt's ORIGINAL UTR, but writes `utr: body.utr` (the corrected one) into the `pending-fee → lock-in` event. So
+  `readJoiningFeeReceipt` finds no receipt of this member and every POST returns 409 `no_fee_receipt`. DL3 names "a staff escalation" as
+  the exit, and the refusal copy says "Escalate this claim." But the gate runs at BOTH steps and at all six sites, so the escalation's
+  approve, the final vote and R9 finalize all answer `not_checked`. The only exit is a denial on another ground. No deferred-work entry
+  records the dead end. Options: (a) fix the source — the re-confirm's lock-in event carries the STORED receipt's UTR (a 3.x payload
+  change; forward-only, since nothing is live); (b) DL3 falls back to the member's receipt named by the lock-in path (re-opens BigDev's
+  2026-10-31 rejection of "earliest receipt"); (c) keep fail-closed, record the dead end in deferred-work and the roster, and change the
+  refusal copy so it no longer promises an exit. [`packages/domain/src/claim/membership-check-read.ts:79`;
+  `apps/api/src/modules/vyawastha-shulk/handlers.ts:304`; `apps/api/src/modules/claims/claims.membership-check.handlers.ts:76`]
+- [x] [Review][Patch] (from the Decision, option (a)) The fee re-confirm's `pending-fee → lock-in` event records the STORED receipt's UTR, not `body.utr`, so DL3's lookup always finds the joining receipt. Needs an author-commit decision entry FIRST (a 3.x event-payload change); a live leg: gate-failed confirm, then a re-confirm with the same `tr` and a corrected UTR ⇒ the check records against that receipt; AC3's "corrected UTR ⇒ 409 `no_fee_receipt`" leg then becomes the defence-only raw-fixture case. The refusal copy keeps "Escalate" only if a real exit remains [`apps/api/src/modules/vyawastha-shulk/handlers.ts:304`; `packages/domain/src/claim/membership-check-read.ts:79`]
+- [x] [Review][Patch] Staff intro still says the fee must be paid "no later than the date of death", which contradicts `-473` Q1 B (a same-day fee holds); checklist family 11 REAL GAP. Reword to `-474`'s staff phrase ("not paid before the date of death"); fix the two comments; annotate the Policy-meaning sentence (§ line 132) as amended by `-474`, keeping the original words [`apps/admin/src/modules/claim-verification/i18n-en.ts:941`; `packages/domain/src/rbac/permissions.ts:1606`; `packages/domain/src/ids/index.ts:824`]
+- [x] [Review][Patch] Lost update: a re-check silently supersedes a live check the writer never saw (A records `not_confirmed`; B, on a preview with `staleTime: Infinity`, records `confirmed` and the hold is gone); checklist family 12 (c) REAL GAP. Add `expected_live_check_id: uuid | null` to the request (the preview already returns `live_check`), refuse `stale` under the lock when it does not match, admin sends it, plus an API leg [`packages/domain/src/claim/membership-check-persist.ts:212`; `packages/contracts/src/claims/membership-check.ts:75`]
+- [x] [Review][Patch] No two-connection race test for the writer (two concurrent POSTs ⇒ one live row, one supersede, one event each), and 23505 on `claim_membership_checks_one_live_per_claim_uq` is unmapped (a 500 if the lock were ever bypassed); checklist family 2 REAL GAP. Add the live race leg; map 23505 to `membership_check.stale` in `translate` [`packages/domain/src/claim/membership-check-persist.ts:177`; `apps/api/src/modules/claims/claims.membership-check.handlers.ts`]
+- [x] [Review][Patch] AC15 needs live-DB `same_day` legs at "every approval site … and is skipped by the commit"; only P1 has one. Add the legs, and rename the misnamed commit test (titled `stale`, but its second leg is `identity_not_confirmed`) [`packages/domain/tests/integration/claim/membership-check-approval.spec.ts:640`; `apps/api/tests/integration/claims/membership-check-required-routes.spec.ts`]
+- [x] [Review][Patch] AC17's live-DB legs are missing `stale` and "a claim that is no longer in review" (the window conjunct that makes the line go away is untested) [`apps/api/tests/integration/claims/membership-check.spec.ts:574`]
+- [x] [Review][Patch] `refusal_reason` reads `null` for a GENUINE fee refusal by the final vote after an appeal reversal: the blanket `NOT EXISTS (… status = 'reversed')` blanks it. Nothing shows today (one appeal per claim, so the affordance never renders), but it departs from `-474` item 4's "its LIVE denial"; checklist family 11 REAL GAP. After a reversed appeal, count only a final-vote denial decided after the appeal's decision. Add a live leg on the real path, not the raw `denied`-and-`reversed` fixture [`packages/domain/src/claim/membership-check-read.ts:176`]
+- [x] [Review][Patch] Second hand-written definition of the blocking fee outcomes in admin (`'after_death' || 'same_day'`), against N1's "⛔ a second definition anywhere". Have the preview carry a server-derived flag (e.g. `fee_blocks_approval`) from `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES` [`apps/admin/src/modules/claim-verification/MembershipCheckControl.tsx:186`]
+- [x] [Review][Patch] Deny-guard refusal says "found the fee was paid after the death", but the reason now also covers a same-day fee. Align it to `-474`'s staff phrase ("found the fee was not paid before the date of death") in both copies [`apps/admin/src/modules/claim-verification/i18n-en.ts:1058`; `apps/api/src/modules/claims/membership-check-required-message.ts:28`]
+- [x] [Review][Patch] Task 8's top-level box is unticked while 8.1–8.4 are ticked and v1.8 says DEV COMPLETE [this file, Task 8]
+
+Dismissed (11, each re-verified): claims stranded past the window (DL6's recorded raw-write-only dead end; R9's other from-states are in
+the window; nothing is live); two receipts with one UTR (`UNIQUE (pariwar_id, utr)`, 0029); family reads 500 on RLS (the live-DB API
+legs run as the family session); two "current accepted certificate" readers (`getCurrentAcceptedDeathCertificate` IS the snapshot);
+the gate ignores the receipt (one receipt per UTR; the joining event is fixed); the note column UPDATE grant (6.21a's scrub-column
+pattern); `ON DELETE cascade` (sibling pattern; receipts have no DELETE grant); the fee deny offered only on `ready_to_freeze` (that
+bucket holds `reversed`); two pooled connections (the repo-wide `openScopeTx` pattern); "latest posting" as a raw id (a plaintext
+district name); other producers of the new required fields (typecheck + `ci:local` 40/40).
 
 ## Dev Notes
 
@@ -1155,3 +1207,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.6 | 2026-11-21 | Records only (⛔ code): the Panel RULED the note — [`-473`](../../.decision-log.md#decision-2026-11-21-473) (Trustee-ratified, DR + KB, *"Q1 B / Q2 B / Q3 B / Q4 B"*), committed ALONE (`35014835`). All four MATCH option B; Q3 B widens `-424` Q3 B past the door (the Panel's); Q2 B overrides `-472` N3's "cannot override" in its one case. The note's ⏳ block replaced (questions unedited); `deferred-work.md` PQ1 (a) / (b), PQ2 DISCHARGED as questions; roster Row 46 (b), (c) — "ruled" MET, "reflected in code" OPEN; `epics.md` annotated; ledger `2026-11-21h`. ⚠ Built A on all four — the build to B has ⛔ row yet (BigDev's call). Status stays `review`. |
 | v1.7 | 2026-11-21 | Scope GROWN by author-commit [`-474`](../../.decision-log.md#decision-2026-11-21-474) (`8a9801a2`, BigDev: *"split as recommended — Q1, Q3, Q4 in 6.39, Q2 new row"*, then the three wordings approved): Task 8 + AC15–AC17 added; AC8 annotated AMENDED (kept). Status review → in-progress. Q2 B → new row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (backlog). |
 | v1.8 | 2026-11-21 | DEV COMPLETE for Task 8 (`-473` Q1 B, Q3 B, Q4 B under `-474`): code `5b4efdbb`, the friction-budget disposition `37460d6b`; `ci:local` on a fresh container 39 / 40 at `5b4efdbb` (`friction-budget` AC-4 only), then **40 / 40** at `37460d6b`. Roster Row 46 (d) RE-OPENED by the control change — the browser pass ATTEMPTED, ⛔ run (the throwaway DB could ⛔ be migrated), recorded UN-ATTESTED on BigDev's word. Two `deferred-work.md` items (Q3's line stops at the appeal; Q4's Hindi un-reviewed). Status in-progress → review. |
+| v1.9 | 2026-11-21 | CODE REVIEW (`bmad-code-review`, the whole branch `9f5e2c84..c5041036`, source only, three parallel read-only layers): 1 decision-needed, 9 patch, 0 defer, 11 dismissed (§ Review Findings). BigDev chose option (a) for the decision — author-commit [`-475`](../../.decision-log.md#decision-2026-11-21-475) (`68ac6305`): the joining fee's lock-in event records the STORED receipt's UTR; amends `-472` DL3 — then "all": ten patches applied in `27898db7` (the fee re-confirm UTR; "before the date of death" in the staff intro and the deny-guard line; a REQUIRED nullable `expected_live_check_id` with a `check_changed` refusal under the lock, and its 23505 backstop; a two-connection race spec; the preview's `fee_blocks_approval` (N1); `refusal_reason` keyed on the denial that made the claim denied; AC15's `same_day` legs at all six sites and the commit; AC17's `stale` and out-of-review legs; Task 8 ticked). The Policy-meaning sentence annotated as amended by `-473` Q1 B (its words kept). ⚠ `ci:local` on a fresh container NOT run (the classifier refused the container recreate and `db:migrate`) — Status stays `review`. |

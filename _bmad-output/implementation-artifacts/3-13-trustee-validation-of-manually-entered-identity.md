@@ -20,7 +20,8 @@ re-derived at `90535934`" is perishable — Task 0.1 re-derives them.
     in their own identity details, never verified since"* — a member this story verifies is, by those words, outside the ruled case. 6.39
     built exactly that reading (`-472` DL4). Quoted verbatim below ([[feedback_panel_gate_read_ratified_verbatim]]).
   · WHAT STAFF MUST SEE to confirm an identity, and WHAT HAPPENS / WHO IS TOLD when they cannot — the Panel's (what the Trust OWES a member:
-    whether they are covered once lock-in ends; whether they are told). PQ1 / PQ2, ONE non-blocking note at Task 0.3, each built on the
+    whether they are covered once lock-in ends; whether they are told), and WHICH STAFF may see the member's number (PQ3 — a disclosure).
+    PQ1 / PQ2 / PQ3, ONE non-blocking note at Task 0.3, each built on the
     narrow / unchanged side until answered; ruled before go-live (new roster row, Task 0.5).
   · HOW it is recorded, WHERE it sits, WHICH staff role, WHAT the screens say — the AUTHOR's (DL1–DL16, BigDev at Task 0.2). ⚠ DL6 (which
     staff role) is surfaced to the Panel inside PQ1's text so it is ⛔ hidden in a "told" line ([[feedback_told_line_must_not_carry_panel_choice]]).
@@ -229,6 +230,7 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   per-member routes) or against their own district (the list); a pariwar-ceiling caller at `dimension: 'pariwar'` against the Pariwar id.
   ⇒ a member with no resolvable posting district can be checked ONLY by a pariwar-ceiling caller (a District Admin's check fails closed),
   and appears only in a pariwar-ceiling caller's queue. ⛔ client-supplied district or dimension is read.
+  ✅ **Answered 2026-11-21 (Task 0.2, question dialog, BigDev):** *"District + Pariwar Admin (Recommended)"* — as written.
   REUSE CHECK — ⛔ `claim.check_membership` (death-time, claim-keyed), ⛔
   `member.moderate`, ⛔ `member.view_validity` (a read). *Considered and not taken:* District Admin only (a Pariwar with few District
   Admins would stall); Pariwar Admin only (FR-2's "trustee" literally — the queue could be most members, F12). ⚠ "Trustee" is the PRD's
@@ -236,7 +238,7 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
 - **DL7 — What staff record they saw (built to PQ1 option A until ruled).** `evidence_kind`: `photo_id_in_person` |
   `photo_id_video_call`. `document_kind`: `aadhaar_card` | `pan_card` | `voter_id` | `driving_licence` | `passport` |
   `government_service_id`. ⛔ number field, ⛔ upload. Staff confirm the name and date of birth on the document match the record, and (when
-  a photo is on record) the face. If the Panel rules B or C, the vocabulary changes (enum mint is delegated — `-210` cl.2,
+  a photo is on record) the face. If the Panel rules B, C or D, the vocabulary changes (enum mint is delegated — `-210` cl.2,
   [[project_enum_mint_authority_delegated]]) or the write route is withdrawn.
 - **DL8 — What staff see (the detail read).** The KYC name, date of birth and photo (decrypted with `decryptKycField` — the
   `adminMemberSearch` precedent, F8; an anonymized row shows ⛔ identity; ONE `audit.writeAuditEntry` line per view, ⛔ per field), the
@@ -248,6 +250,8 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   is a reason, and this screen shows only a masked mobile. Options: (a) masked only — staff arrange the check through channels they already
   have (the field worker, the school); (b) the full mobile behind one audited read — a NEW disclosure of a member's number to staff, which is
   what the Trust tells about a member, so it goes to the Panel (added to the Task 0.3 note) and is built on (a) until ruled. Built: (a).
+  ✅ **Answered 2026-11-21 (Task 0.2, question dialog, BigDev):** *"Ask Panel: show full mobile"* ⇒ (b): PQ3 is in the note; built (a)
+  until ruled.
 - **DL9 — `not_confirmed`.** Reason (closed list): `details_do_not_match` | `photo_does_not_match` | `no_document_shown` |
   `member_not_reached`; a note required (Tier-1, ≤ 1,000 code points). Effect: N6 — nothing changes; the member stays in the queue with
   the latest outcome shown; staff may record again at any time. ⛔ time limit, ⛔ attempt limit.
@@ -300,8 +304,9 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
 
 ## Panel questions — PROPOSED (one non-blocking note at Task 0.3)
 
-⭐ Both pass §0: each is what the Trust OWES a member (whether their identity counts as verified — and so whether they are covered once
-lock-in ends — and whether they are told). Neither blocks the build or the merge; both block GO-LIVE (Task 0.5). Built on the narrow /
+⭐ All three pass §0: PQ1 and PQ2 are what the Trust OWES a member (whether their identity counts as verified — and so whether they are
+covered once lock-in ends — and whether they are told); PQ3 is what the Trust DISCLOSES about a member, and to which staff. None blocks
+the build or the merge; all three block GO-LIVE (Task 0.5). Built on the narrow /
 unchanged side meanwhile.
 
 - **PQ1 — What must staff see before they confirm a typed-in identity in life?**
@@ -312,15 +317,23 @@ unchanged side meanwhile.
     Pariwar Admin, who checks the name, date of birth and photo against what the member typed in; nothing is copied or kept. *Cost:* a
     video call can be staged by a determined impostor, and a wrong confirmation means that member's family is later helped with ⛔
     identity check after the death; it takes staff time for possibly most members.
-  - **B:** as A, and the member's school or office also confirms in writing that the person works there under that name. *Cost:* slower,
-    more staff work, and the Trust collects a letter from an employer.
-  - **C:** no staff check — the member must later complete DigiLocker themselves; staff only remind. *Cost:* a member who cannot use
+  - **B:** as A, but in person only — ⛔ video calls. *Cost:* harder to stage, but a member far from the district office, unwell or posted
+    away may never be checked (and, once `3-14` exists, stops being covered); more staff travel. (Added while writing the note.)
+  - **C:** as A, and the member's school or office also confirms in writing that the person works there under that name. *Cost:* slower,
+    more staff work, and the Trust collects a letter from an employer; a retired member has no current employer.
+  - **D:** no staff check — the member must later complete DigiLocker themselves; staff only remind. *Cost:* a member who cannot use
     DigiLocker is never verified, and (once lock-in ends) is not covered; and it needs a new build first — today a member who has joined
     cannot run DigiLocker again (both identity routes accept only a member still at the identity step, F2).
-  - *Built:* A (DL7). ⭐ The note states who checks (DL6) in A's own text, so the Panel can change it.
-- **PQ3 — only if BigDev picks DL8b (b): may staff see a member's full mobile number to arrange the check?** Put in the same note, with
-  `-459` Q2's ruling for the field-worker case quoted verbatim (*"Keep the phone number out."*) as the nearest precedent. Built: masked
-  only until ruled. If BigDev picks DL8b (a), there is ⛔ PQ3.
+  - *Built:* A (DL7). ⭐ The note states who checks (DL6) in each option's own text, so the Panel can change it. If the Panel rules B,
+    `evidence_kind` drops `photo_id_video_call`; C adds an employer-confirmation field; D withdraws the write route.
+- **PQ3 — may the District Admin and the Pariwar Admin see a member's full mobile number to arrange the check?** (In the note:
+  BigDev chose DL8b (b), 2026-11-21.) Options: **A** ⛔ number (staff reach the member through the field worker / the school); **B (our
+  suggestion)** the whole number on this screen, one press at a time, every showing audited (actor, member, time — ⛔ the number),
+  Super Admin by derivation — "the Admin" of `-328`, but it WIDENS `-328`, which shows a neighbour's number only on their "yes"; **C** the
+  app asks the member *"May the Admin phone you to check your identity?"* first. The nearest ruling is `2026-10-13-328` (*"Trust can
+  contact any member anytime for any reason, but not all staff should have right to contact any member anytime"*; it does ⛔ cover
+  *"who may PHONE a member for any other purpose"*). `-459` Q2's *"Keep the phone number out."* concerns a field WORKER's number, ⛔ a
+  member's. *Built:* A until ruled; B is one audited read on the detail route, C needs member words and its own row.
 - **PQ2 — When staff cannot confirm a member's identity, is the member told?**
   - **A:** no new message; staff contact the member themselves, as they choose. *Cost:* the member may not know anything is wrong until
     lock-in ends.
@@ -396,15 +409,19 @@ unchanged side meanwhile.
         its story file for its reading of `kyc_verified` and reconcile with N1 BEFORE 0.2.
   - [ ] 0.2 Put DL1–DL16 to BigDev (the question dialog; recommended option first), with DL6 (who), DL8b (how staff reach the member),
         DL12 (the words) and DL14 (the export) as separate questions. Record the answers verbatim in this file.
-  - [ ] 0.3 Write the Panel note from the TEMPLATE (§0 first; plain question; the one deciding fact; options with an honest cost; evidence
+  - [x] 0.3 Write the Panel note from the TEMPLATE (§0 first; plain question; the one deciding fact; options with an honest cost; evidence
         last): `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-3-13-checking-a-typed-in-identity.md`, PQ1 + PQ2 (+ PQ3
         iff DL8b (b)). PQ1's deciding fact is the at-death consequence, stated first. Commit it ALONE. ⛔ "Sent" until BigDev says it went
         out ([[feedback_shown_to_panel_means_sent]]).
+        ⭐ 2026-11-21 — WRITTEN, ⛔ SENT: `trustee-panel-routing-note-2026-11-21-3-13-checking-a-typed-in-identity.md`, committed ALONE
+        `9f7da520` (BigDev: "prepare routing note"), after the DL6 and DL8b answers (DL8b (b) ⇒ PQ3 in). PQ1 gained option B (in person
+        only) while writing; the story's PQ1 matches. E4 run before commit. ⏳ The rest of Task 0.2 (DL1–DL5, DL7, DL9–DL16) is still owed.
   - [ ] 0.4 Author-commit decision entry (`<date>-<next>`): DL1–DL16 as answered, the §0 split, the `-424` match quoted verbatim, the
-        Policy meaning, PQ1/PQ2 open + built side; committed ALONE. ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
+        Policy meaning, PQ1/PQ2/PQ3 open + built side; committed ALONE. ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
   - [ ] 0.5 Roster row (next free number — 54 at the pin) `identity-validation-live` with legs: (a) PQ1 ruled and DL7's vocabulary matches
-        the ruling; (b) PQ2 ruled (and, if B/C, its row built); (c) a real-browser pass of the admin module; (d) row `3-14` built (until
-        then the check changes only the at-death half). `deferred-work.md`: PQ1 / PQ2 as open; a dated comment on the `3-13` sprint row.
+        the ruling; (b) PQ2 ruled (and, if B/C, its row built); (b2) PQ3 ruled (and, if B, the audited number read built; if C, its row
+        built); (c) a real-browser pass of the admin module; (d) row `3-14` built (until
+        then the check changes only the at-death half). `deferred-work.md`: PQ1 / PQ2 / PQ3 as open; a dated comment on the `3-13` sprint row.
   - [ ] 0.6 Sprint row `3-13-…` `ready-for-dev → in-progress` (map only; the ledger entry is written once at the end —
         [[project_sprint_status_ledger]], safe prepend — [[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — Schema (AC2, AC13).** Hand-authored migrations (⛔ `db:generate` — [[project_live_db_test_gotchas]]): each new enum
@@ -522,3 +539,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 |---|---|---|
 | 1.0 | 2026-11-21 | Created by `bmad-create-story 3.13` in its own worktree at `origin/main` `90535934`. §0 applied: the `-424` match quoted; DL1–DL16 PROPOSED for Task 0.2; PQ1 (what staff must see) and PQ2 (is the member told) PROPOSED for one non-blocking note; AI-10-1 Policy meaning written. ⛔ Code. |
 | 1.1 | 2026-11-21 | Validated (`bmad-create-story validate 3.13`, BigDev: "all"; traced at `90535934`). F7a (a null scope target is refused for everyone ⇒ DL6 / DL11 gate dimension moves with the caller, the 6.18 queue shape; AC8 pariwar-admin-on-unposted leg + all-13-bundles loop); F7b (⛔ CI gate scans admin member routes ⇒ AC12 per-route chain tests, ⛔ enrolment); F10a (0212's live-row mechanism as built ⇒ DL1 grants / guard / one-way trigger / `decided_by_*` at birth; ⛔ guard REPLACE in DL14 / AC13 / Task 5); new field class; F8 decrypt precedent (`adminMemberSearch`, ⛔ `bounded-decrypt.ts`); DL13 idempotency = `createKeyedStore` personal-event shape; DL12 microcopy is whole-word ⇒ keep `identity_validation.death_reported`; DL14 export carries ⛔ staff attribution; DL8b + PQ3 (how staff reach the member); PQ1's deciding fact (the at-death consequence) and C's build cost; `-459` quoted verbatim; F10 sibling numbers (6-22b: `-477`–`-480`, `0213`, ledger letter `21s`); DL5 lock also serialises staff acts; DL11 FR-2 widening noted; the list's bounded `limit`. ⛔ Code. |
+| 1.2 | 2026-11-21 | Task 0.3: the Panel note WRITTEN (⛔ sent), committed alone `9f7da520` (BigDev: "prepare routing note"). Task 0.2 in part: DL6 *"District + Pariwar Admin (Recommended)"*, DL8b *"Ask Panel: show full mobile"* ⇒ PQ3 in the note. PQ1 gains option B (in person only; old B / C become C / D); §0 / Task 0.4 / Task 0.5 roster legs / `deferred-work.md` lines carry PQ3. ⛔ Code. |

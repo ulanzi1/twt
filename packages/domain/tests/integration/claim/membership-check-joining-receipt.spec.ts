@@ -95,8 +95,8 @@ describe.skipIf(!hasDatabase)('Story 6.39 AC3 — the joining receipt (DL3)', { 
     const { tx, client } = getTx();
     const deceased = await seedMember(tx, PARIWAR_A, { state: 'lock-in' });
     const other = await seedMember(tx, PARIWAR_A, { state: 'lock-in' });
-    // The deceased's confirm was gate-failed with utr1 (their only receipt), then RE-CONFIRMED with the same `tr` and a
-    // corrected UTR typed in the body — the event carries the typed UTR, which is the OTHER member's receipt's UTR.
+    // An event whose UTR is the OTHER member's receipt's UTR — the shape a re-confirm with a corrected UTR wrote before
+    // `2026-11-21-475` (the event now carries the STORED receipt's UTR). A RAW fixture: the DEFENCE, unreachable through the door.
     await seedReceipt(tx, PARIWAR_A, deceased, { utr: uniq('UTR-OWN'), paidAt: '2026-01-05T06:00:00Z' });
     const typedUtr = uniq('UTR-TYPED');
     const othersReceipt = await seedReceipt(tx, PARIWAR_A, other, { utr: typedUtr, paidAt: '2026-01-02T06:00:00Z' });
@@ -109,7 +109,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 AC3 — the joining receipt (DL3)', { 
     expect(await read(tx, PARIWAR_A, deceased)).toBeNull();
   });
 
-  it('a re-confirm with a corrected UTR (the event’s UTR on ⛔ receipt of the member) ⇒ null — the check cannot be recorded', async () => {
+  it('DEFENCE (raw; unreachable through the door since -475) — the event’s UTR on ⛔ receipt of the member ⇒ null — the check cannot be recorded', async () => {
     const { tx, client } = getTx();
     const memberId = await seedMember(tx, PARIWAR_A, { state: 'lock-in' });
     await seedReceipt(tx, PARIWAR_A, memberId, { utr: uniq('UTR-STORED'), paidAt: '2026-01-05T06:00:00Z' });

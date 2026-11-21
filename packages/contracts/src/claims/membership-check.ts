@@ -73,6 +73,12 @@ export const MembershipCheckRequest = z
   .object({
     /** The ACCEPTED certificate review the staff member saw (the preview's `expected_live_review_id`). */
     expected_live_review_id: z.string().uuid(),
+    /**
+     * The LIVE check the staff member saw (the preview's `live_check.check_id`; `null` = they saw none). REQUIRED, so a
+     * client must say what it saw: a re-check never supersedes a check its writer never saw (409
+     * `membership_check.check_changed` — code review 2026-11-21).
+     */
+    expected_live_check_id: z.string().uuid().nullable(),
     identity_outcome: MembershipCheckIdentityOutcome,
     /** `not_confirmed` only — the writer refuses it elsewhere, and refuses `not_confirmed` without it. */
     identity_reason: MembershipCheckIdentityReason.optional(),
@@ -132,10 +138,16 @@ export const MembershipCheckPreviewResponse = z
     date_of_death: DateShape.nullable(),
     /** The joining fee's date, Indian calendar. `null` when the joining receipt cannot be identified. */
     fee_paid_on: DateShape.nullable(),
-    /** `false` ⇒ the member's joining receipt cannot be identified: the check cannot be recorded (escalate). */
+    /** `false` ⇒ the member's joining receipt cannot be identified: the check cannot be recorded (tell the Super Admin). */
     fee_receipt_found: z.boolean(),
     /** The computed comparison — `null` unless both dates are known. */
     fee_outcome: MembershipCheckFeeOutcome.nullable(),
+    /**
+     * Does `fee_outcome` stop the drive? Judged SERVER-SIDE from the gate's own `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES`
+     * (`after_death` and, since `-473` Q1 B, `same_day`) — N1: ⛔ a second definition in the console. `false` when
+     * `fee_outcome` is `null`.
+     */
+    fee_blocks_approval: z.boolean(),
     /** Must the staff member judge the identity? */
     identity_required: z.boolean(),
     kyc_route: MembershipCheckKycRoute,

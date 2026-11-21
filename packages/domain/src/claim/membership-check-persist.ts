@@ -63,6 +63,18 @@ export function isInMembershipCheckWindow(claimState: string): boolean {
   return (MEMBERSHIP_CHECK_RECORDABLE_STATES as readonly string[]).includes(claimState);
 }
 
+/** The one-live-check partial unique index (0212) — the backstop behind the claim-row lock. */
+export const CLAIM_MEMBERSHIP_CHECK_ONE_LIVE_INDEX = 'claim_membership_checks_one_live_per_claim_uq';
+
+/** A 23505 on THAT index (drizzle wraps the driver error; the SQLSTATE and constraint may be on `.cause`). ⛔ Any 23505. */
+export function isOneLiveCheckViolation(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as { code?: unknown; constraint?: unknown; cause?: { code?: unknown; constraint?: unknown } | null };
+  const code = e.code ?? e.cause?.code;
+  const constraint = e.constraint ?? e.cause?.constraint;
+  return code === '23505' && constraint === CLAIM_MEMBERSHIP_CHECK_ONE_LIVE_INDEX;
+}
+
 export interface RecordMembershipCheckInput {
   readonly claimCaseId: ClaimId;
   readonly pariwarId: PariwarId;
@@ -70,6 +82,11 @@ export interface RecordMembershipCheckInput {
   readonly computedAgainstReviewId: string;
   /** The joining receipt the handler compared — re-asserted under the lock. */
   readonly feeReceiptId: string;
+  /**
+   * The LIVE check the staff member saw (the preview's `live_check.check_id`; `null` = they saw none) — re-asserted under
+   * the lock, so a re-check never supersedes a check its writer never saw (code review 2026-11-21, family 12 (c)).
+   */
+  readonly expectedLiveCheckId: string | null;
   /** The comparison's outcome, computed by the handler (N3). ⛔ Never from the request. */
   readonly feeOutcome: MembershipCheckFeeOutcome;
   /** The staff member's judgment — or `not_required` when the identity is already checked. */
@@ -208,6 +225,22 @@ export async function recordMembershipCheck(
     throw refuse('invalid_outcome', 'this identity is already checked — there is nothing to judge');
   }
 
+  // (5b) The live check — still the one the staff member saw (⛔ a lost update: a second writer superseding a hold unseen).
+  const [liveNow] = await db
+    .select({ id: claimMembershipChecks.checkId })
+    .from(claimMembershipChecks)
+    .where(
+      and(
+        eq(claimMembershipChecks.pariwarId, input.pariwarId),
+        eq(claimMembershipChecks.claimCaseId, input.claimCaseId),
+        isNull(claimMembershipChecks.supersededAt),
+      ),
+    );
+  const liveNowId = liveNow ? (liveNow.id as string).toLowerCase() : null;
+  if (liveNowId !== (input.expectedLiveCheckId === null ? null : input.expectedLiveCheckId.toLowerCase())) {
+    throw refuse('check_changed', 'another membership check was recorded after this one was opened — open it again');
+  }
+
   // (6) Supersede the live check, insert the new one, emit the identity annotation.
   const superseded = await db
     .update(claimMembershipChecks)
@@ -223,6 +256,8 @@ export async function recordMembershipCheck(
   const supersededCheckId = superseded[0]?.id ?? null;
 
   const identityReason = input.identityOutcome === 'not_confirmed' ? input.identityReason : null;
+  // ⛔ A raw 23505 to the caller: should a writer ever reach the insert without the claim-row lock, the one-live-row
+  // index is the backstop, and its violation is the same typed refusal as (5b) (code review 2026-11-21).
   const [row] = await db
     .insert(claimMembershipChecks)
     .values({
@@ -239,7 +274,13 @@ export async function recordMembershipCheck(
       decidedByActorId: input.actorId,
       decidedByDisplay: input.actorDisplay,
     })
-    .returning({ checkId: claimMembershipChecks.checkId });
+    .returning({ checkId: claimMembershipChecks.checkId })
+    .catch((err: unknown) => {
+      if (isOneLiveCheckViolation(err)) {
+        throw refuse('check_changed', 'another membership check became live while this one was being recorded — open it again');
+      }
+      throw err;
+    });
   const checkId = row!.checkId;
 
   const projected = await projectClaimState(client, {

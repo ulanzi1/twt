@@ -668,6 +668,9 @@ export class MembershipCheckRequiredError extends Error {
  *   · `certificate_date_unreadable` — the accepted certificate's date could not be read, or was erased: there is
  *                                  nothing to compare the fee date with (raised by the API handler, which opens it);
  *   · `no_fee_receipt`           — the member's joining receipt cannot be identified (fail closed — DL3);
+ *   · `check_changed`            — the claim's live check is ⛔ the one the staff member saw (another check was recorded
+ *                                  since the preview, or one appeared) — a re-check never supersedes a check unseen
+ *                                  (code review 2026-11-21);
  *   · `invalid_outcome`          — the identity outcome does not fit the record (`not_required` for an unchecked
  *                                  identity, a judgment for a checked one, `not_confirmed` without a reason or note). */
 export class MembershipCheckRefusedError extends Error {
@@ -681,6 +684,7 @@ export class MembershipCheckRefusedError extends Error {
       | 'stale'
       | 'certificate_date_unreadable'
       | 'no_fee_receipt'
+      | 'check_changed'
       | 'invalid_outcome'
       | 'missing_display',
     detail: string,
@@ -696,7 +700,7 @@ export class FeePaidAfterDeathNotShownError extends Error {
   public readonly name = 'FeePaidAfterDeathNotShownError';
   public constructor(public readonly claimCaseId: string) {
     super(
-      `[membership-check] claim ${claimCaseId}: the reason 'fee_paid_after_death' needs a current membership check that found the fee was paid after the death`,
+      `[membership-check] claim ${claimCaseId}: the reason 'fee_paid_after_death' needs a current membership check that found the fee was not paid before the date of death`,
     );
   }
 }

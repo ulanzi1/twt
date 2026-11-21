@@ -1603,7 +1603,8 @@ export const SEED_PERMISSION_KEYS = [
   // comment, not as a bundle (as beside `member.data_rights`).
   'breach.manage',
   // Story 6.39 (`2026-11-21-472` DL7) — the MEMBERSHIP CHECK before any drive: the District Admin records, on the claim,
-  // that the joining fee was paid no later than the death (the system compares the two dates; they see both) and — when
+  // that the joining fee was paid BEFORE the date of death (a fee on the day counts as after — `-473` Q1 B; the system
+  // compares the two dates; they see both) and — when
   // nobody has checked the identity the member typed in — that the person who died is the member. Gates the preview read
   // (it opens the certificate's date of death, audited) and the write. District-dimension; `district_admin` ONLY
   // (+ derived super_admin). A failing check never denies — the claim waits.

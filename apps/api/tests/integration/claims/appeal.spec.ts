@@ -370,19 +370,33 @@ describe.skipIf(!hasDatabase)('Internal 3-stage appeal — E2E (:5433)', () => {
     expect(told.body['can_initiate']).toBe(true);
     expect(JSON.stringify(told.body)).not.toMatch(/fee_paid_after_death/);
     expect((await memberInject('GET', memberUrl(other), memberToken(owner, pariwarId))).body['refusal_reason']).toBeNull();
-    // An appeal that REVERSED it: the decision row stays live (F3), but its words ⛔ carry over.
+    // An appeal that REVERSED it (the ladder's own events, 6.16's shapes — code review 2026-11-21: ⛔ a raw `reversed` appeal
+    // row beside a claim still `denied`, a state no path makes). The P1 decision row stays live (F3), but the claim is
+    // ⛔ longer denied, so its words ⛔ carry over. (A LATER denial is keyed on the denial that made the claim `denied` —
+    // proved in the domain spec `membership-check-approval.spec.ts`, "AC16 — through an appeal".)
     const scopeTx = await openScopeTx(deps, pariwarId);
     try {
-      await scopeTx.client.query(
-        `INSERT INTO claim_appeals (claim_case_id, pariwar_id, current_stage, initiated_by_actor, status) VALUES ($1, $2, '1', 'operator', 'reversed')`,
-        [fee, pariwarId],
-      );
+      const emit = (from: string, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
+        claim.projectClaimState(scopeTx.client, {
+          claimCaseId: ids.claimId(fee),
+          pariwarId: ids.pariwarId(pariwarId),
+          deceasedMemberId: deceased,
+          intakeChannels: ['member_app'],
+          claimantActorId: owner,
+          eventType: eventType as never,
+          payload: { from_state: from, to_state: to, trigger: 'seed', actor: 'operator', ...extra },
+          actorId: null,
+        });
+      await emit('denied', 'appeal_stage_1', 'claim.appeal_stage1_initiated');
+      await emit('appeal_stage_1', 'reversed', 'claim.appeal_stage1_reviewed', { decision: 'reversed' });
       await closeScopeTx(scopeTx, true);
     } catch (err) {
       await closeScopeTx(scopeTx, false);
       throw err;
     }
-    expect((await memberInject('GET', memberUrl(fee), memberToken(owner, pariwarId))).body['refusal_reason']).toBeNull();
+    const reversed = await memberInject('GET', memberUrl(fee), memberToken(owner, pariwarId));
+    expect(reversed.status).toBe(200);
+    expect(reversed.body['refusal_reason']).toBeNull();
   });
 
   it('Step-up gating — Stage-2 finalize is 403 without a fresh elevation, 200 with one', async () => {

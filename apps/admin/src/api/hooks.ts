@@ -2699,6 +2699,7 @@ export function useForgetMembershipCheckPreview(pariwarId: string, claimCaseId: 
  */
 export const MEMBERSHIP_CHECK_STALE_CODES: ReadonlySet<string> = new Set([
   'membership_check.stale',
+  'membership_check.check_changed',
   'membership_check.concurrent',
   'membership_check.certificate_not_accepted',
   'membership_check.certificate_date_unreadable',

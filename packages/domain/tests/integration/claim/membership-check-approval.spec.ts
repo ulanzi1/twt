@@ -35,6 +35,7 @@ import {
   isCorrectionClaimHeld,
   isFeePaidAfterDeathRefusalStanding,
   membershipCheckApprovalState,
+  projectClaimState,
   openR9VotingSession,
   prepareR9VoteCiphertext,
   readJoiningFeeReceipt,
@@ -48,6 +49,7 @@ import {
   voteOnFrozenClaim,
   type MembershipCheckWaitReason,
 } from '../../../src/claim/index.js';
+import { bindScopedDb } from '../../../src/db.js';
 import {
   claimId as toClaimId,
   memberId as toMemberId,
@@ -167,6 +169,18 @@ async function checkOf(ctx: Ctx, over: Partial<Parameters<typeof seedMembershipC
   });
 }
 
+/** AC15 — a RAW `same_day` check against the claim's CURRENT accepted review, for a claim known only by id (the 6.19c fixtures). */
+async function sameDayCheck(client: Client, pid: string, cid: string): Promise<string> {
+  const deceased = await client.query<{ deceased_member_id: string }>('SELECT deceased_member_id FROM claims WHERE claim_case_id = $1', [cid]);
+  return seedMembershipCheck(bindScopedDb(client), {
+    pariwarId: pid,
+    claimCaseId: cid,
+    deceasedMemberId: deceased.rows[0]!.deceased_member_id,
+    reviewId: await seedAcceptedDeathCertificate(client, { pariwarId: pid, claimCaseId: cid }),
+    feeOutcome: 'same_day',
+  });
+}
+
 /** Give the deceased a KYC row (RAW — the placeholder ciphertext is never opened by anything under test). */
 async function seedKyc(ctx: Ctx, kind: 'digilocker' | 'typed_in' | 'unverified'): Promise<void> {
   const [strength, source] =
@@ -256,6 +270,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       await refusesAndWritesNothing(ctx, () => approve(ctx), waits('not_checked'));
       await succeedsThenUndo(ctx.client, async () => expect((await deny(ctx)).claimState).toBe('denied'));
       await succeedsThenUndo(ctx.client, () => escalate(ctx));
+      // AC15 — a fee paid ON the day of death holds this site too (`-473` Q1 B; code review 2026-11-21).
+      await checkOf(ctx, { feeOutcome: 'same_day' });
+      await refusesAndWritesNothing(ctx, () => approve(ctx), waits('fee_after_death'));
       await ensurePassedMembershipCheck(ctx.client, ctx.pid, ctx.cid);
       expect((await approve(ctx)).claimState).toBe('verifier_approved');
     });
@@ -266,6 +283,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       await succeedsThenUndo(ctx.client, async () => expect((await vote(ctx, 'denied')).claimState).toBe('denied'));
       await succeedsThenUndo(ctx.client, () => route(ctx));
       await succeedsThenUndo(ctx.client, () => giveBack(ctx));
+      // AC15 — a fee paid ON the day of death holds this site too (`-473` Q1 B; code review 2026-11-21).
+      await checkOf(ctx, { feeOutcome: 'same_day' });
+      await refusesAndWritesNothing(ctx, () => vote(ctx), waits('fee_after_death'));
       await ensurePassedMembershipCheck(ctx.client, ctx.pid, ctx.cid);
       expect((await vote(ctx)).claimState).toBe('state_trustee_approved');
     });
@@ -275,6 +295,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       await routeOpenAndVote(ctx);
       await voidMembershipCheck(ctx.client, ctx.cid);
       await refusesAndWritesNothing(ctx, () => finalize(ctx), waits('not_checked'));
+      // AC15 — a fee paid ON the day of death holds this site too (`-473` Q1 B; code review 2026-11-21).
+      await checkOf(ctx, { feeOutcome: 'same_day' });
+      await refusesAndWritesNothing(ctx, () => finalize(ctx), waits('fee_after_death'));
       // ⚠ `state_trustee_freeze` is IN the check's window, so a new check can still be recorded there.
       await ensurePassedMembershipCheck(ctx.client, ctx.pid, ctx.cid);
       await finalize(ctx);
@@ -295,6 +318,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
         await escalateStaffCase(client, { pariwarId: PARIWAR_A, claimCaseId: c.cid, now: c.day(90) });
         await voidMembershipCheck(client, c.cid);
         await refusesAndWritesNothing({ client, cid: c.cid }, () => saApprove(client, c, 'details_verified'), waits('not_checked'));
+        // AC15 — a fee paid ON the day of death holds this site too (`-473` Q1 B; code review 2026-11-21).
+        await sameDayCheck(client, PARIWAR_A, c.cid);
+        await refusesAndWritesNothing({ client, cid: c.cid }, () => saApprove(client, c, 'details_verified'), waits('fee_after_death'));
         await ensurePassedMembershipCheck(client, PARIWAR_A, c.cid);
         expect((await saApprove(client, c, 'details_verified')).closure).toMatchObject({ state: 'approved' });
       });
@@ -307,6 +333,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
         await decline(client, c);
         await voidMembershipCheck(client, c.cid);
         await refusesAndWritesNothing({ client, cid: c.cid }, () => saApprove(client, c, 'name_difference_accepted'), waits('not_checked'));
+        // AC15 — a fee paid ON the day of death holds this site too (`-473` Q1 B; code review 2026-11-21).
+        await sameDayCheck(client, PARIWAR_A, c.cid);
+        await refusesAndWritesNothing({ client, cid: c.cid }, () => saApprove(client, c, 'name_difference_accepted'), waits('fee_after_death'));
         await ensurePassedMembershipCheck(client, PARIWAR_A, c.cid);
         expect(await saApprove(client, c, 'name_difference_accepted')).toMatchObject({ nameCheckWaived: true });
       });
@@ -330,6 +359,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
             decisionRationaleCiphertext: 'enc:v1:note', warningReasonCode: null,
           });
         await refusesAndWritesNothing({ client, cid: c.cid }, d27, waits('not_checked'));
+        // AC15 — a fee paid ON the day of death holds this site too (`-473` Q1 B; code review 2026-11-21).
+        await sameDayCheck(client, PARIWAR_A, c.cid);
+        await refusesAndWritesNothing({ client, cid: c.cid }, d27, waits('fee_after_death'));
         await ensurePassedMembershipCheck(client, PARIWAR_A, c.cid);
         await d27();
       });
@@ -489,6 +521,86 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
     });
   });
 
+  // ── AC16 through an appeal — the reason follows the denial that MADE the claim denied (code review 2026-11-21) ──
+  describe('AC16 — through an appeal: the reason is the denial that made the claim `denied` (`-474` item 4, "its LIVE denial")', () => {
+    /**
+     * The appeal ladder's own events (6.16's shapes), from `denied`: `reversed` ⇒ `reversed`; `upheld` ⇒ `denied` — AND its
+     * journey row, as the ladder writes it (`reversed`; `upheld_final` for an uphold). ⚠ The row matters: the read this
+     * replaced keyed on it, so without it the "after a reversal" legs could not tell the two reads apart (proved by
+     * reverting the read — code review 2026-11-21). The uphold is at stage 1 for brevity (the reducer's `upheld` arm);
+     * the real ladder upholds at stage 3.
+     */
+    async function appealStage1(ctx: Ctx, decision: 'reversed' | 'upheld'): Promise<void> {
+      const [row] = await ctx.tx
+        .select({ intakeChannels: schema.claims.intakeChannels, claimantActorId: schema.claims.claimantActorId })
+        .from(schema.claims)
+        .where(eq(schema.claims.claimCaseId, ctx.cid));
+      const base = {
+        claimCaseId: ctx.cid,
+        pariwarId: ctx.pid,
+        deceasedMemberId: toMemberId(ctx.mid),
+        intakeChannels: row!.intakeChannels,
+        claimantActorId: row!.claimantActorId,
+        actorId: null,
+      };
+      await projectClaimState(ctx.client, {
+        ...base,
+        eventType: 'claim.appeal_stage1_initiated',
+        payload: { from_state: 'denied', to_state: 'appeal_stage_1', trigger: 'appeal_initiate_self', actor: 'member' },
+      });
+      await projectClaimState(ctx.client, {
+        ...base,
+        eventType: 'claim.appeal_stage1_reviewed',
+        payload: {
+          from_state: 'appeal_stage_1',
+          to_state: decision === 'reversed' ? 'reversed' : 'denied',
+          trigger: decision === 'reversed' ? 'appeal_stage1_reverse' : 'appeal_stage1_uphold',
+          actor: 'operator',
+          decision,
+        },
+      });
+      await ctx.client.query(
+        `INSERT INTO claim_appeals (claim_case_id, pariwar_id, current_stage, initiated_by_actor, status) VALUES ($1, $2, '1', 'member', $3)`,
+        [ctx.cid, ctx.pid, decision === 'reversed' ? 'reversed' : 'upheld_final'],
+      );
+    }
+
+    it('a P1 denial for ANOTHER reason, reversed on appeal, then the final vote denies with the reason ⇒ true (⛔ blanked)', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      await deny(ctx, 'other');
+      await appealStage1(ctx, 'reversed');
+      expect(await stateOf(ctx)).toBe('reversed');
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+      expect((await vote(ctx, 'denied', 'fee_paid_after_death')).claimState).toBe('denied');
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(true);
+    });
+
+    it('a P1 denial WITH the reason, reversed on appeal, then the final vote denies for another reason ⇒ false (⛔ inherited)', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      await deny(ctx, 'fee_paid_after_death');
+      await appealStage1(ctx, 'reversed');
+      expect((await vote(ctx, 'denied', 'other')).claimState).toBe('denied');
+      // The P1 decision row is STILL live (a reversal supersedes ⛔ decision) — the control that makes the false meaningful.
+      const p1 = await ctx.client.query(
+        'SELECT reason_code FROM claim_verifier_decisions WHERE claim_case_id = $1 AND superseded_at IS NULL',
+        [ctx.cid],
+      );
+      expect(p1.rows).toEqual([{ reason_code: 'fee_paid_after_death' }]);
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+    });
+
+    it('a P1 denial WITH the reason whose appeal is UPHELD ⇒ true (the upheld denial is the one that stands)', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      await deny(ctx, 'fee_paid_after_death');
+      await appealStage1(ctx, 'upheld');
+      expect(await stateOf(ctx)).toBe('denied');
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(true);
+    });
+  });
+
   // ── AC6 — the deny path is never gated; the dedicated reason is ──────────────────────────────────────────────
   describe('AC6 — a denial is never gated (N5); `fee_paid_after_death` is accepted ONLY while the live check says so (DL9)', () => {
     it('a P1 DENY and a final-vote DENY with ⛔ check at all succeed', async () => {
@@ -637,7 +749,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       expect(await stateOf(held)).toBe('approved');
     });
 
-    it('each failing reason keeps the claim: a check turned `after_death`, and one whose review was superseded (`stale`)', async () => {
+    it('each failing reason keeps the claim: a check turned `after_death`, one turned `same_day` (AC15 — `-473` Q1 B), and an identity `not_confirmed`', async () => {
       const { client, tx } = getTx();
       const pid = toPariwarId(randomUUID());
       await enterAppScope(client, pid);
@@ -646,6 +758,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       await seedNomineeNameCheck(client, pid, ctx.cid);
       await vote(ctx);
       await checkOf(ctx, { feeOutcome: 'after_death' });
+      expect((await commit(client, pid)).committedClaimIds).toEqual([]);
+      expect(await stateOf(ctx)).toBe('state_trustee_approved');
+      await checkOf(ctx, { feeOutcome: 'same_day' });
       expect((await commit(client, pid)).committedClaimIds).toEqual([]);
       expect(await stateOf(ctx)).toBe('state_trustee_approved');
       await checkOf(ctx, { identityOutcome: 'not_confirmed' });
@@ -678,9 +793,18 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       await enterAppScope(ctx.client, ctx.pid);
       return receiptId;
     }
-    const record = (ctx: Ctx, over: Partial<Parameters<typeof recordMembershipCheck>[1]>) =>
+    /** The claim's live check id right now (`null` ⇒ none) — what a staff member who just opened the check saw. */
+    const liveCheckId = async (ctx: Ctx): Promise<string | null> => {
+      const r = await ctx.client.query<{ check_id: string }>(
+        'SELECT check_id FROM claim_membership_checks WHERE claim_case_id = $1 AND superseded_at IS NULL',
+        [ctx.cid],
+      );
+      return r.rows[0]?.check_id ?? null;
+    };
+    const record = async (ctx: Ctx, over: Partial<Parameters<typeof recordMembershipCheck>[1]>) =>
       recordMembershipCheck(ctx.client, {
         claimCaseId: ctx.cid, pariwarId: ctx.pid, computedAgainstReviewId: randomUUID(), feeReceiptId: randomUUID(),
+        expectedLiveCheckId: 'expectedLiveCheckId' in over ? over.expectedLiveCheckId! : await liveCheckId(ctx),
         feeOutcome: 'before_death', identityOutcome: 'confirmed', identityReason: null, noteCiphertext: null,
         actorId: DA, actorDisplay: 'Anita (District Admin)', actor: 'operator', ...over,
       });
@@ -717,6 +841,23 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       const denied = await claimAt('verifier_review');
       await deny(denied, 'other');
       await refusesAndWritesNothing(denied, () => record(denied, {}), refused('window_closed'));
+    });
+
+    it('⭐ code review 2026-11-21 (family 12 (c)) — a live check that is ⛔ the one the writer saw ⇒ `check_changed`: ⛔ a re-check supersedes a check unseen', async () => {
+      const ctx = await claimAt('verifier_review');
+      const receiptId = await withJoiningReceipt(ctx);
+      const reviewId = await currentReviewId(ctx);
+      const base = { computedAgainstReviewId: reviewId, feeReceiptId: receiptId };
+      const seen = await liveCheckId(ctx);
+      expect(seen).not.toBeNull();
+      // Saw ⛔ live check, but one exists ⇒ refused; saw ANOTHER check ⇒ refused. Nothing written either time.
+      await refusesAndWritesNothing(ctx, () => record(ctx, { ...base, expectedLiveCheckId: null }), refused('check_changed'));
+      await refusesAndWritesNothing(ctx, () => record(ctx, { ...base, expectedLiveCheckId: randomUUID() }), refused('check_changed'));
+      // Saw the live one (any case) ⇒ recorded, superseding exactly it.
+      const result = await record(ctx, { ...base, expectedLiveCheckId: seen!.toUpperCase() });
+      expect(result.supersededCheckId).toBe(seen);
+      // The FIRST writer's view is now stale: its re-check is refused.
+      await refusesAndWritesNothing(ctx, () => record(ctx, { ...base, expectedLiveCheckId: seen }), refused('check_changed'));
     });
 
     it('the identity half is judged iff nobody has checked it — re-read under the lock (DL4)', async () => {

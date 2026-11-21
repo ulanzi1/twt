@@ -489,11 +489,13 @@ export function VerifierConsoleRoute(): ReactElement {
     resetMembershipCheck();
   }, [claimCaseId, resetMembershipCheck]);
   const submitMembershipCheck = async (input: MembershipCheckSubmit): Promise<boolean> => {
-    // The review the preview was computed against is the currency token — the server recomputes both dates itself.
+    // The review the preview was computed against is the currency token — the server recomputes both dates itself —
+    // and so is the live check the preview showed: a re-check never supersedes a check this staff member never saw.
     const expected = membershipPreviewQ.data?.expected_live_review_id;
     if (!expected) return false;
+    const expectedLiveCheckId = membershipPreviewQ.data?.live_check?.check_id ?? null;
     return recordMembershipCheck
-      .mutateAsync({ expected_live_review_id: expected, ...input })
+      .mutateAsync({ expected_live_review_id: expected, expected_live_check_id: expectedLiveCheckId, ...input })
       .then(() => true)
       .catch(() => false);
   };

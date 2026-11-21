@@ -301,7 +301,10 @@ export function createVyawasthaShulkHandlers(deps: AppDeps) {
                 to_state: 'lock-in',
                 trigger: 'vyawastha_shulk_paid',
                 actor: 'member',
-                utr: body.utr,
+                // ⭐ Story 6.39 (`2026-11-21-475`) — the STORED receipt's UTR, ⛔ `body.utr`: on an idempotent re-confirm the
+                // receipt keeps the UTR first typed, so a corrected UTR in the body would name ⛔ receipt of this member and
+                // the claim's membership check could never find the joining fee. Identical to `body.utr` on the fresh path.
+                utr: receiptView.utr,
                 amount_inr: amountInr,
               },
               actorId: memberIdStr,

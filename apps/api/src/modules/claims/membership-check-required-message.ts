@@ -25,4 +25,4 @@ export function membershipCheckRequiredMessage(reason: claim.MembershipCheckWait
 
 /** The deny-reason guard's refusal (DL9, DL12) — `<prefix>.fee_paid_after_death_not_shown`. */
 export const FEE_PAID_AFTER_DEATH_NOT_SHOWN_MESSAGE =
-  'This reason can be used only when the membership check found the fee was paid after the death.';
+  'This reason can be used only when the membership check found the fee was not paid before the date of death.';

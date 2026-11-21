@@ -938,7 +938,7 @@ export const verifierConsoleEn = {
   membershipCheck: {
     heading: 'Membership check',
     intro:
-      'Before any drive opens, check that the joining fee was paid no later than the date of death — and, if nobody has checked the identity the member typed in, that the person who died is the member. If you cannot confirm it yet, the claim waits. It is not refused.',
+      'Before any drive opens, check that the joining fee was paid before the date of death — and, if nobody has checked the identity the member typed in, that the person who died is the member. If you cannot confirm it yet, the claim waits. It is not refused.',
     show: 'Open the membership check',
     hide: 'Close the membership check',
     audited: 'Opening it shows the date of death from the accepted certificate. Each look is recorded.',
@@ -983,7 +983,7 @@ export const verifierConsoleEn = {
     } as Record<string, string>,
     feeComputed: 'The system compares the two dates. You cannot change the result.',
     noFeeReceipt:
-      "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+      "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Please tell the Super Admin.",
     feeAfterDeathNote:
       'No drive can open for this claim. Record the check, then deny the claim with the reason "Fee paid after the death".',
     // The identity half — the details on record. DL12 for the first two routes.
@@ -1043,8 +1043,9 @@ export const verifierConsoleEn = {
     refused: {
       stale: 'The certificate changed since the membership check was opened. It has been reloaded — check again.',
       concurrent: 'The claim changed while the check was being recorded. It has been reloaded — check again.',
+      check_changed: 'Another membership check was recorded on this claim since you opened it. It has been reloaded — check again.',
       no_fee_receipt:
-        "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+        "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Please tell the Super Admin.",
       certificate_not_accepted: 'Accept the death certificate first. The membership check compares its date of death with the joining fee.',
       certificate_date_unreadable: 'The date of death on the accepted certificate cannot be read. Review the certificate again.',
       window_closed: 'A membership check can no longer be recorded on this claim.',
@@ -1055,7 +1056,7 @@ export const verifierConsoleEn = {
     forbidden: 'You do not have permission to record the membership check on this claim.',
     refusedGeneric: 'The membership check could not be recorded.',
     // The deny reason's guard (DL9). DL12.
-    feePaidAfterDeathNotShown: 'This reason can be used only when the membership check found the fee was paid after the death.',
+    feePaidAfterDeathNotShown: 'This reason can be used only when the membership check found the fee was not paid before the date of death.',
   },
   deathCertificate: {
     heading: 'Death certificate review',

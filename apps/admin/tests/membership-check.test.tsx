@@ -74,7 +74,7 @@ const DL12 = {
   typedIn: 'Typed in at joining, never checked',
   digilocker: 'Checked through DigiLocker',
   reasonLabel: 'Fee paid after the death',
-  notShown: 'This reason can be used only when the membership check found the fee was paid after the death.',
+  notShown: 'This reason can be used only when the membership check found the fee was not paid before the date of death.',
 } as const;
 
 type Gate = MembershipCheckGateStatus;
@@ -88,6 +88,7 @@ const preview = (over: Partial<MembershipCheckPreviewResponse> = {}): Membership
   fee_paid_on: '2026-04-30',
   fee_receipt_found: true,
   fee_outcome: 'before_death',
+  fee_blocks_approval: false,
   identity_required: true,
   kyc_route: 'typed_in_unchecked',
   latest_posting_district: 'Patna',
@@ -168,7 +169,7 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
   });
 
   it('⭐ N3 — the comparison is the SYSTEM\'s: ⛔ date input, ⛔ control that changes the result, and the control says so', () => {
-    const { container } = renderControl({ preview: preview({ fee_outcome: 'after_death' }) });
+    const { container } = renderControl({ preview: preview({ fee_outcome: 'after_death', fee_blocks_approval: true }) });
     expect(container.querySelectorAll('input[type="date"]')).toHaveLength(0);
     // The ONLY inputs are the identity radios and the note.
     const inputs = [...container.querySelectorAll('input, select, textarea')].map((el) => el.getAttribute('data-testid'));
@@ -183,10 +184,19 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
     ['same_day', true],
     ['before_death', false],
   ] as const)('AC15 — the record-then-deny note for `%s`: shown %s (`-473` Q1 B — the day of death counts as after; `-474` item 3)', (fee_outcome, shown) => {
-    renderControl({ preview: preview({ fee_outcome }) });
+    // The server's `fee_blocks_approval` is what the API sends for each outcome (pinned in the API spec's preview leg).
+    renderControl({ preview: preview({ fee_outcome, fee_blocks_approval: shown }) });
     const note = screen.queryByTestId('membership-check-fee-after-death-note');
     if (shown) expect(note).toHaveTextContent(t.feeAfterDeathNote);
     else expect(note).toBeNull();
+  });
+
+  it('N1 (code review 2026-11-21) — the note follows the SERVER\'s `fee_blocks_approval`, ⛔ a second definition of the blocking outcomes in the console', () => {
+    renderControl({ preview: preview({ fee_outcome: 'same_day', fee_blocks_approval: false }) });
+    expect(screen.queryByTestId('membership-check-fee-after-death-note')).toBeNull();
+    cleanup();
+    renderControl({ preview: preview({ fee_outcome: 'before_death', fee_blocks_approval: true }) });
+    expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(t.feeAfterDeathNote);
   });
 
   it('the KYC route in words — DigiLocker (DL12), and the fail-closed routes', () => {
@@ -620,10 +630,45 @@ describe('<VerifierConsoleRoute> — the membership check (DL10, DL12)', () => {
     fireEvent.click(screen.getByTestId('membership-check-identity-confirmed'));
     const consoleReads = getVerifierConsole.mock.calls.length;
     fireEvent.click(screen.getByTestId('membership-check-submit'));
-    await waitFor(() => expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, identity_outcome: 'confirmed' }));
+    // ⛔ live check in the preview ⇒ the token says so (`null`) — code review 2026-11-21.
+    await waitFor(() =>
+      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'confirmed' }),
+    );
     expect(await screen.findByTestId('membership-check-recorded')).toHaveTextContent(t.recorded);
     // The console packet (its gate section, the approve gate) is refreshed.
     await waitFor(() => expect(getVerifierConsole.mock.calls.length).toBeGreaterThan(consoleReads));
+  });
+
+  it('⭐ a re-check sends the LIVE check the preview showed — the writer refuses `check_changed` if another was recorded since (code review 2026-11-21)', async () => {
+    getMembershipCheckPreview.mockResolvedValue(
+      preview({
+        live_check: {
+          check_id: CHECK,
+          fee_outcome: 'before_death',
+          identity_required: true,
+          identity_outcome: 'not_confirmed',
+          identity_reason: 'name_differs',
+          has_note: true,
+          decided_by_display: 'Anita (District Admin)',
+          decided_at: '2026-11-21T06:00:00.000Z',
+        },
+      }),
+    );
+    postMembershipCheck.mockRejectedValue(new ApiError(409, 'membership_check.check_changed', 'server words'));
+    await mount(gate());
+    fireEvent.click(screen.getByTestId('membership-check-disclosure'));
+    await screen.findByTestId('membership-check-form');
+    fireEvent.click(screen.getByTestId('membership-check-identity-confirmed'));
+    const previewReads = getMembershipCheckPreview.mock.calls.length;
+    fireEvent.click(screen.getByTestId('membership-check-submit'));
+    await waitFor(() =>
+      expect(postMembershipCheck).toHaveBeenCalledWith(PARIWAR, CLAIM, { expected_live_review_id: REVIEW, expected_live_check_id: CHECK, identity_outcome: 'confirmed' }),
+    );
+    const alert = await screen.findByTestId('membership-check-error');
+    expect(alert.getAttribute('role')).toBe('alert');
+    expect(alert).toHaveTextContent(t.refused.check_changed!);
+    // `check_changed` is a staleness code: the preview is read again, so the staff member sees the other check.
+    await waitFor(() => expect(getMembershipCheckPreview.mock.calls.length).toBeGreaterThan(previewReads));
   });
 
   it('⭐ a STALE 409 says so in words (`role="alert"`) AND refetches the preview and the console packet', async () => {

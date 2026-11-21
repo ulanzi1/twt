@@ -182,8 +182,9 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
               ) : (
                 <p className="text-xs">{t.feeComputed}</p>
               )}
-              {/* `-473` Q1 B — a fee paid ON the day of death counts as after: the same note (`-474` item 3). */}
-              {preview.fee_outcome === 'after_death' || preview.fee_outcome === 'same_day' ? (
+              {/* `-473` Q1 B — a fee paid ON the day of death counts as after: the same note (`-474` item 3). The SERVER says
+                  which outcomes stop the drive (N1 — ⛔ a second definition here; code review 2026-11-21). */}
+              {preview.fee_blocks_approval ? (
                 <p className="text-sm" data-testid="membership-check-fee-after-death-note">
                   {t.feeAfterDeathNote}
                 </p>

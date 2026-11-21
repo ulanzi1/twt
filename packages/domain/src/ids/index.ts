@@ -821,7 +821,8 @@ export const claimFraudInvestigationStepId = uuidBrand('ClaimFraudInvestigationS
 
 /**
  * Per-row address of one membership check (`claim_membership_checks.check_id` — Story 6.39, DL1): the District
- * Admin's recorded check, before any drive, that the joining fee was paid no later than the death and — when
+ * Admin's recorded check, before any drive, that the joining fee was paid BEFORE the date of death (a fee on the day
+ * counts as after — `-473` Q1 B) and — when
  * nobody has checked the identity — that the person who died is the member. At most one live per claim.
  */
 export type ClaimMembershipCheckId = Brand<'ClaimMembershipCheckId'>;

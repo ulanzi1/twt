@@ -409,6 +409,53 @@ describe.skipIf(!hasDatabase)('Vyawastha Shulk — E2E (:5433)', () => {
     }
   });
 
+  // ⭐ Story 6.39 (`2026-11-21-475`) — a gate-failed confirm re-confirmed with the same `tr` and a CORRECTED UTR: the receipt keeps the
+  // UTR first typed (idempotent on `tr`), and the `pending-fee → lock-in` event now names THAT receipt — so the claim's membership
+  // check (DL3: event UTR → the member's receipt) can always find the joining fee. Before the fix the event carried the body's UTR.
+  it('6.39 (-475): a re-confirm with a corrected UTR → the lock-in event carries the STORED receipt\'s UTR, which names the member\'s receipt', async () => {
+    const t = await createTestApp({ env: VPA_ENV });
+    try {
+      const { memberId, pariwarId } = await seedMemberPendingFee(t);
+      // Medical missing → the first confirm commits the receipt but fails the lock-in gate.
+      await seedNominee(t, pariwarId, memberId);
+      await seedTcConsent(t, pariwarId, memberId);
+      await seedLockInClause(t, pariwarId);
+      const tok = token(t, memberId, pariwarId);
+
+      const intent = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/intent', { token: tok });
+      const tr = String(intent.body.tr);
+      const first = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
+        payload: { tr, utr: goodUtr }, token: tok,
+      });
+      expect(first.status).toBe(200);
+      expect(first.body.lockInEntered).toBe(false);
+
+      await seedMedical(t, pariwarId, memberId);
+      const correctedUtr = '987654321098';
+      const second = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
+        payload: { tr, utr: correctedUtr }, token: tok,
+      });
+      expect(second.status).toBe(200);
+      expect(second.body.lockInEntered).toBe(true);
+
+      expect(await receiptCount(t, memberId)).toBe(1);
+      const paid = await t.pool.query<{ utr: string | null }>(
+        `SELECT payload->>'utr' AS utr FROM events_log
+          WHERE stream_id = $1 AND event_type = 'member.vyawastha_shulk_paid' AND payload->>'from_state' = 'pending-fee'`,
+        [memberId],
+      );
+      expect(paid.rows.map((r) => r.utr)).toEqual([goodUtr]);
+      // The DL3 join (pariwar + member + the event's UTR) finds exactly the member's one receipt.
+      const joined = await t.pool.query<{ n: string }>(
+        `SELECT count(*)::text AS n FROM vyawastha_shulk_receipts WHERE pariwar_id = $1 AND member_id = $2 AND utr = $3`,
+        [pariwarId, memberId, paid.rows[0]!.utr],
+      );
+      expect(joined.rows[0]!.n).toBe('1');
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('Reference Code (AC4): a 6-digit code → member_attribution row (no validation); omitted → no row', async () => {
     const t = await createTestApp({ env: VPA_ENV });
     try {

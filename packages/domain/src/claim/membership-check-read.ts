@@ -139,10 +139,16 @@ export async function getLiveMembershipCheck(
  * family's appeal card, which then shows the door's general reason (*"the person was not a member of the Trust when
  * they died"*). ⛔ The reason code itself never leaves the server. TRUE iff:
  *   · the claim is `denied`, AND
- *   · its LIVE P1 verifier decision, OR any LIVE final-vote / trustee decision, is `denied` with that reason (DL9 gives
- *     the reason to BOTH vocabularies), AND
- *   · ⛔ appeal of the claim was `reversed` — an allowed appeal leaves the decision row live (the RF1 / F3 precedent,
- *     `standingSuspicionRefusalSql`), so a LATER denial for another reason must ⛔ inherit this one's words.
+ *   · the transition that MADE it `denied` (the stream's latest event into `denied` from another state — ⛔ an identity
+ *     annotation such as a revise or `claim.denied_no_appeal`, ⛔ an appeal's `upheld` review, which upholds the denial
+ *     it reviewed) was the P1 verifier's denial (`claim.verifier_denied`)
+ *     whose LIVE verifier decision is `denied` with that reason, OR the final vote's (`claim.state_trustee_denied`)
+ *     whose LIVE `frozen_vote` decision is `denied` with that reason (DL9 gives the reason to BOTH vocabularies).
+ *   Keying on the denial that produced the CURRENT state is what `-474` item 4's "its LIVE denial" means: an allowed
+ *   appeal leaves the old decision row live (the RF1 / F3 precedent), so a LATER denial for another reason ⛔ inherits
+ *   its words — and a genuine fee refusal by the final vote AFTER a reversal is ⛔ blanked (code review 2026-11-21; the
+ *   earlier blanket "⛔ reversed appeal" clause did both). An escalation's denial also emits `claim.verifier_denied`,
+ *   but its live verifier decision is `escalated`, so it never matches (the reason is refused there anyway).
  * RLS-scoped with the explicit `pariwar_id` predicate on every table. ⛔ No ciphertext.
  */
 export async function isFeePaidAfterDeathRefusalStanding(
@@ -151,34 +157,49 @@ export async function isFeePaidAfterDeathRefusalStanding(
   claimCaseId: ClaimId,
 ): Promise<boolean> {
   const result = await db.execute<{ standing: boolean }>(sql`
+    WITH fr_denial AS (
+      -- The transition that made the claim denied: the latest event into denied from another state. An appeal
+      -- review (claim.appeal_stageN_reviewed, decision upheld) also lands in denied, but it UPHOLDS the denial
+      -- it reviewed, so it is skipped and the denial it upheld is the one that stands.
+      SELECT fr_e.event_type
+        FROM events_log fr_e
+       WHERE fr_e.pariwar_id = ${pariwarId}::uuid
+         AND fr_e.stream_id = ${claimCaseId}::uuid
+         AND fr_e.payload->>'to_state' = 'denied'
+         AND fr_e.payload->>'from_state' IS DISTINCT FROM 'denied'
+         AND fr_e.event_type NOT IN ('claim.appeal_stage1_reviewed', 'claim.appeal_stage2_reviewed', 'claim.appeal_stage3_reviewed')
+       ORDER BY fr_e.event_version DESC
+       LIMIT 1
+    )
     SELECT EXISTS (
       SELECT 1 FROM claims fr_c
        WHERE fr_c.pariwar_id = ${pariwarId}::uuid
          AND fr_c.claim_case_id = ${claimCaseId}::uuid
          AND fr_c.current_state = 'denied'
          AND (
-           EXISTS (
-             SELECT 1 FROM claim_verifier_decisions fr_v
-              WHERE fr_v.pariwar_id = fr_c.pariwar_id
-                AND fr_v.claim_case_id = fr_c.claim_case_id
-                AND fr_v.superseded_at IS NULL
-                AND fr_v.outcome = 'denied'
-                AND fr_v.reason_code = ${FEE_PAID_AFTER_DEATH_REASON_CODE}
+           (
+             (SELECT event_type FROM fr_denial) = 'claim.verifier_denied'
+             AND EXISTS (
+               SELECT 1 FROM claim_verifier_decisions fr_v
+                WHERE fr_v.pariwar_id = fr_c.pariwar_id
+                  AND fr_v.claim_case_id = fr_c.claim_case_id
+                  AND fr_v.superseded_at IS NULL
+                  AND fr_v.outcome = 'denied'
+                  AND fr_v.reason_code = ${FEE_PAID_AFTER_DEATH_REASON_CODE}
+             )
            )
-           OR EXISTS (
-             SELECT 1 FROM claim_state_trustee_decisions fr_t
-              WHERE fr_t.pariwar_id = fr_c.pariwar_id
-                AND fr_t.claim_case_id = fr_c.claim_case_id
-                AND fr_t.superseded_at IS NULL
-                AND fr_t.outcome = 'denied'
-                AND fr_t.reason_code = ${FEE_PAID_AFTER_DEATH_REASON_CODE}
+           OR (
+             (SELECT event_type FROM fr_denial) = 'claim.state_trustee_denied'
+             AND EXISTS (
+               SELECT 1 FROM claim_state_trustee_decisions fr_t
+                WHERE fr_t.pariwar_id = fr_c.pariwar_id
+                  AND fr_t.claim_case_id = fr_c.claim_case_id
+                  AND fr_t.superseded_at IS NULL
+                  AND fr_t.phase = 'frozen_vote'
+                  AND fr_t.outcome = 'denied'
+                  AND fr_t.reason_code = ${FEE_PAID_AFTER_DEATH_REASON_CODE}
+             )
            )
-         )
-         AND NOT EXISTS (
-           SELECT 1 FROM claim_appeals fr_a
-            WHERE fr_a.pariwar_id = fr_c.pariwar_id
-              AND fr_a.claim_case_id = fr_c.claim_case_id
-              AND fr_a.status = 'reversed'
          )
     ) AS standing
   `);

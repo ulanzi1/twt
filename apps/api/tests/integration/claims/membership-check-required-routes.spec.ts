@@ -299,7 +299,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership-check wait on every
 
   // ── AC6 — the deny path is never gated; the dedicated reason is guarded ─────────────────────────────────────
 
-  const NOT_SHOWN = 'This reason can be used only when the membership check found the fee was paid after the death.';
+  const NOT_SHOWN = 'This reason can be used only when the membership check found the fee was not paid before the date of death.';
 
   it('⭐ AC6 — P1: a DENY with ⛔ check succeeds (a denial is never gated); `fee_paid_after_death` is 409 `verifier_decision.fee_paid_after_death_not_shown` until the check says so, then it ends the claim', async () => {
     const plain = await seedWorld();

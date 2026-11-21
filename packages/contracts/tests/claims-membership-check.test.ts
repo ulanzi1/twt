@@ -48,33 +48,40 @@ describe('Story 6.39 — the membership check vocabulary', () => {
 
 describe('Story 6.39 — MembershipCheckRequest (⛔ a client supplies ⛔ date)', () => {
   it('accepts each identity outcome, with and without a reason / note (the WRITER owns coherence)', () => {
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'not_required' }).success).toBe(true);
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'confirmed', note: 'seen' }).success).toBe(true);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'not_required' }).success).toBe(true);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'confirmed', note: 'seen' }).success).toBe(true);
     expect(
       MembershipCheckRequest.safeParse({
         expected_live_review_id: REVIEW,
+        expected_live_check_id: REVIEW,
         identity_outcome: 'not_confirmed',
         identity_reason: 'name_differs',
         note: 'the certificate names another person',
       }).success,
     ).toBe(true);
     // Loose by design: the writer refuses this one with an audited `membership_check.invalid_outcome`.
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'not_confirmed' }).success).toBe(true);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'not_confirmed' }).success).toBe(true);
   });
 
   it.each(['fee_outcome', 'date_of_death', 'fee_paid_on', 'paid_at', 'fee_receipt_id'])(
     '⛔ refuses a client-supplied `%s` (.strict()) — the server computes the comparison (N3)',
     (key) => {
-      const parsed = MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'confirmed', [key]: '2026-01-01' });
+      const parsed = MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'confirmed', [key]: '2026-01-01' });
       expect(parsed.success).toBe(false);
     },
   );
 
   it('refuses an unknown outcome, an unknown reason, a non-uuid token and a missing token', () => {
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'maybe' }).success).toBe(false);
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'not_confirmed', identity_reason: 'because' }).success).toBe(false);
-    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: 'x', identity_outcome: 'confirmed' }).success).toBe(false);
-    expect(MembershipCheckRequest.safeParse({ identity_outcome: 'confirmed' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'maybe' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: null, identity_outcome: 'not_confirmed', identity_reason: 'because' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: 'x', expected_live_check_id: null, identity_outcome: 'confirmed' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_check_id: null, identity_outcome: 'confirmed' }).success).toBe(false);
+  });
+
+  it('the LIVE-check token is REQUIRED — nullable, ⛔ optional (code review 2026-11-21: a client must say which check it saw)', () => {
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, identity_outcome: 'confirmed' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: 'x', identity_outcome: 'confirmed' }).success).toBe(false);
+    expect(MembershipCheckRequest.safeParse({ expected_live_review_id: REVIEW, expected_live_check_id: REVIEW, identity_outcome: 'confirmed' }).success).toBe(true);
   });
 });
 
@@ -87,6 +94,7 @@ describe('Story 6.39 — the preview and the console section', () => {
     fee_paid_on: '2026-03-10',
     fee_receipt_found: true,
     fee_outcome: 'same_day',
+    fee_blocks_approval: true,
     identity_required: true,
     kyc_route: 'typed_in_unchecked',
     latest_posting_district: null,
@@ -104,8 +112,15 @@ describe('Story 6.39 — the preview and the console section', () => {
         fee_paid_on: null,
         fee_receipt_found: false,
         fee_outcome: null,
+        fee_blocks_approval: false,
       }).success,
     ).toBe(true);
+  });
+
+  it('the preview MUST say whether the fee stops the drive (`fee_blocks_approval` — N1: the console holds ⛔ copy of the rule)', () => {
+    const withoutFlag: Record<string, unknown> = { ...preview };
+    delete withoutFlag.fee_blocks_approval;
+    expect(MembershipCheckPreviewResponse.safeParse(withoutFlag).success).toBe(false);
   });
 
   it('⛔ the preview carries ⛔ name, ⛔ date of birth and ⛔ note (.strict())', () => {

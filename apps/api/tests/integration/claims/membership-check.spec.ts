@@ -165,7 +165,8 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
         to_state: 'lock-in',
         trigger: 'vyawastha_shulk_paid',
         actor: 'member',
-        // A re-confirm with a corrected UTR typed in the body: the event's UTR is on ⛔ receipt of this member (G3).
+        // An event whose UTR is on ⛔ receipt of this member — what a re-confirm with a corrected UTR wrote before `2026-11-21-475`
+        // (G3). A RAW fixture: the fail-closed DEFENCE, unreachable through the door now.
         utr: fee === 'corrected_utr' ? `UTR-CORRECTED-${randomUUID()}` : utr,
         amount_inr: 100,
       });
@@ -229,7 +230,14 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     ).rows.map((r) => r.payload);
   const claimState = async (w: World) =>
     (await td.pool.query<{ current_state: string }>(`SELECT current_state FROM claims WHERE claim_case_id = $1`, [w.claimCaseId])).rows[0]!.current_state;
-  const body = async (w: World, over: Json = {}): Promise<Json> => ({ expected_live_review_id: await reviewId(w), identity_outcome: 'confirmed', ...over });
+  /** The claim's live check id (`null` ⇒ none) — what a staff member who just opened the check saw (code review 2026-11-21). */
+  const liveCheckId = async (w: World): Promise<string | null> => (await checks(w)).find((r) => r.superseded_at === null)?.check_id ?? null;
+  const body = async (w: World, over: Json = {}): Promise<Json> => ({
+    expected_live_review_id: await reviewId(w),
+    expected_live_check_id: await liveCheckId(w),
+    identity_outcome: 'confirmed',
+    ...over,
+  });
 
   // ── The preview ─────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -252,6 +260,8 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
         fee_paid_on: FEE_DATE[fee],
         fee_receipt_found: true,
         fee_outcome: fee,
+        // N1 — the SERVER says which outcomes stop the drive (`-473` Q1 B: `same_day` and `after_death`).
+        fee_blocks_approval: fee !== 'before_death',
         identity_required: identityRequired,
         kyc_route: route,
         latest_posting_district: w.district,
@@ -411,7 +421,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     // The certificate is re-reviewed (another date ⇒ a NEW accepted review) after the staff member opened the check.
     await inScope(w.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, w.pariwarId, w.claimCaseId, { date: '2026-05-03' }));
     expect(await reviewId(w)).not.toBe(old);
-    const stale = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: old, identity_outcome: 'confirmed' } });
+    const stale = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: old, expected_live_check_id: null, identity_outcome: 'confirmed' } });
     expect(stale.statusCode, stale.body).toBe(409);
     expect(errCode(j(stale))).toBe('membership_check.stale');
     expect(await checks(w)).toEqual([]);
@@ -422,7 +432,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
   it('⭐ AC4 — ⛔ accepted certificate (none, awaiting review, rejected) is 409 `membership_check.certificate_not_accepted`, ⛔ row', async () => {
     const w = await world({ certificate: 'none' });
     const { client } = await da(w);
-    const post = () => client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), identity_outcome: 'confirmed' } });
+    const post = () => client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, identity_outcome: 'confirmed' } });
     // (i) no certificate at all.
     let res = await post();
     expect(res.statusCode, res.body).toBe(409);
@@ -471,7 +481,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
       const get = await client.inject({ method: 'GET', url: url(w) });
       expect(get.statusCode, `${kind}: ${get.body}`).toBe(409);
       expect(errCode(j(get))).toBe('membership_check.certificate_date_unreadable');
-      const post = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: rid, identity_outcome: 'confirmed' } });
+      const post = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: rid, expected_live_check_id: null, identity_outcome: 'confirmed' } });
       expect(post.statusCode, `${kind}: ${post.body}`).toBe(409);
       expect(errCode(j(post))).toBe('membership_check.certificate_date_unreadable');
       expect(await checks(w)).toEqual([]);
@@ -487,7 +497,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
   it('⭐ AC4 — OUTSIDE the review window is 409 `membership_check.window_closed` (before the certificate is even looked for), ⛔ row', async () => {
     const w = await world({ target: 'documents_pending' });
     const { client } = await da(w);
-    const res = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), identity_outcome: 'confirmed' } });
+    const res = await client.inject({ method: 'POST', url: url(w), payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, identity_outcome: 'confirmed' } });
     expect(res.statusCode, res.body).toBe(409);
     expect(errCode(j(res))).toBe('membership_check.window_closed');
     expect(await checks(w)).toEqual([]);
@@ -495,7 +505,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     expect(j(await client.inject({ method: 'GET', url: url(w) }))).toMatchObject({ window_open: false });
   });
 
-  it('⭐ AC3 — a re-confirm with a corrected UTR (the lock-in event’s UTR is on ⛔ receipt of the member) is 409 `membership_check.no_fee_receipt`, ⛔ row; the preview SAYS so', async () => {
+  it('⭐ AC3 (DEFENCE since -475) — a lock-in event whose UTR is on ⛔ receipt of the member is 409 `membership_check.no_fee_receipt`, ⛔ row; the preview SAYS so', async () => {
     const w = await world({ fee: 'corrected_utr' });
     const { client } = await da(w);
     const get = await client.inject({ method: 'GET', url: url(w) });
@@ -526,6 +536,41 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     expect(live.map((r) => r.check_id)).toEqual([j(second).check_id]);
     expect(rows.find((r) => r.check_id === j(first).check_id)).toMatchObject({ superseded_reason: 're_checked' });
     expect(j(await client.inject({ method: 'GET', url: url(w) }))).toMatchObject({ gate: { passed: true, reason: null } });
+  });
+
+  it('⭐ code review 2026-11-21 (family 12 (c)) — a re-check that did ⛔ see the live check is 409 `membership_check.check_changed`, ⛔ row: A\'s hold is ⛔ silently reversed by B', async () => {
+    const w = await world();
+    const { client } = await da(w);
+    // A and B both open the check while there is ⛔ live check; A records "cannot confirm yet".
+    const seenByBoth = await body(w, { identity_outcome: 'confirmed' });
+    expect(seenByBoth.expected_live_check_id).toBeNull();
+    const a = await client.inject({
+      method: 'POST',
+      url: url(w),
+      payload: await body(w, { identity_outcome: 'not_confirmed', identity_reason: 'document_unreadable', note: NOTE }),
+    });
+    expect(a.statusCode, a.body).toBe(201);
+    // B submits on the view it opened — refused, and A's hold stands.
+    const b = await client.inject({ method: 'POST', url: url(w), payload: seenByBoth });
+    expect(b.statusCode, b.body).toBe(409);
+    expect(errCode(j(b))).toBe('membership_check.check_changed');
+    const rows = await checks(w);
+    expect(rows.map((r) => [r.check_id, r.superseded_at, r.identity_outcome])).toEqual([[j(a).check_id, null, 'not_confirmed']]);
+    expect(auditsFor('admin_claim.membership_check_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['check_changed']);
+    // Re-opened (the console refetches on this code), B sees A's check and CAN supersede it deliberately.
+    const reopened = await client.inject({ method: 'POST', url: url(w), payload: await body(w, { identity_outcome: 'confirmed' }) });
+    expect(reopened.statusCode, reopened.body).toBe(201);
+    expect(j(reopened).superseded_check_id).toBe(j(a).check_id);
+  });
+
+  it('a request that does ⛔ say which live check it saw is 400 (the token is REQUIRED — nullable, ⛔ optional)', async () => {
+    const w = await world();
+    const { client } = await da(w);
+    const withoutToken: Json = { ...(await body(w)) };
+    delete withoutToken.expected_live_check_id;
+    const res = await client.inject({ method: 'POST', url: url(w), payload: withoutToken });
+    expect(res.statusCode, res.body).toBe(400);
+    expect(await checks(w)).toEqual([]);
   });
 
   it('a District Admin with ⛔ display name is refused 409 before anything is read — ⛔ row, audited (a check is attributed to a NAMED person)', async () => {
@@ -600,6 +645,38 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     const lateDa = await da(late);
     expect((await lateDa.client.inject({ method: 'POST', url: url(late), payload: await body(late, { identity_outcome: 'not_confirmed', identity_reason: 'name_differs', note: NOTE }) })).statusCode).toBe(201);
     expect(j(await family(late))).toMatchObject({ status: 'accepted', identity_check_waiting: false });
+
+    // AC17 (code review 2026-11-21) — `stale`: the identity still unconfirmed, but the certificate RE-REVIEWED since, so
+    // the check names an old review; the gate answers `stale` FIRST ⇒ ⛔ the line.
+    const reReviewed = await world({ kyc: 'typed_in' });
+    const rrDa = await da(reReviewed);
+    expect((await rrDa.client.inject({ method: 'POST', url: url(reReviewed), payload: await body(reReviewed, { identity_outcome: 'not_confirmed', identity_reason: 'name_differs', note: NOTE }) })).statusCode).toBe(201);
+    expect(j(await family(reReviewed))).toMatchObject({ identity_check_waiting: true });
+    await inScope(reReviewed.pariwarId, (s) => ensureAcceptedDeathCertificate(deps, s, reReviewed.pariwarId, reReviewed.claimCaseId, { date: '2026-05-03' }));
+    expect(j(await family(reReviewed))).toMatchObject({ status: 'accepted', identity_check_waiting: false });
+
+    // AC17 — a claim that is ⛔ longer in review (the window has closed: denied) ⇒ ⛔ the line, though the check still
+    // answers `identity_not_confirmed` (`-474` item 5: "it goes away once … the claim refused").
+    const refused = await world({ kyc: 'typed_in' });
+    const rfDa = await da(refused);
+    expect((await rfDa.client.inject({ method: 'POST', url: url(refused), payload: await body(refused, { identity_outcome: 'not_confirmed', identity_reason: 'name_differs', note: NOTE }) })).statusCode).toBe(201);
+    expect(j(await family(refused))).toMatchObject({ identity_check_waiting: true });
+    await inScope(refused.pariwarId, (s) =>
+      claim.adjudicateClaim(s.client, {
+        claimCaseId: ids.claimId(refused.claimCaseId),
+        pariwarId: ids.pariwarId(refused.pariwarId),
+        outcome: 'denied',
+        reasonCode: 'other',
+        rationaleCiphertext: 'enc:v1:deny',
+        actorId: randomUUID(),
+        actorDisplay: 'A District Admin',
+        actor: 'operator',
+      }),
+    );
+    expect(await claimState(refused)).toBe('denied');
+    const after = await family(refused);
+    expect(after.statusCode, after.body).toBe(200);
+    expect(j(after)).toMatchObject({ identity_check_waiting: false });
   });
 
   // ── AC8 / AC15 — the day of death (PQ1 (a), RULED B — `2026-11-21-473` Q1) ─────────────────────────────────────
@@ -735,7 +812,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
       const res = await client.inject({
         method,
         url: `/api/v1/p/${x.pariwarId}/admin/claims/${w.claimCaseId}/membership-check`,
-        ...(method === 'POST' ? { payload: { expected_live_review_id: randomUUID(), identity_outcome: 'confirmed' } } : {}),
+        ...(method === 'POST' ? { payload: { expected_live_review_id: randomUUID(), expected_live_check_id: null, identity_outcome: 'confirmed' } } : {}),
       });
       expect([403, 404], `${method}: ${res.body}`).toContain(res.statusCode);
     }

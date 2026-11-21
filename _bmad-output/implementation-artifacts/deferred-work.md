@@ -4,6 +4,28 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: Story 6.39 Task 0.5 — three edges open with the Panel (2026-11-21)
+
+All three are in ONE routing note, `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md`: WRITTEN, ⛔ sent (BigDev sends; its evidence
+commands are re-run first). Non-blocking for the build and the merge; each holds go-live (roster Row 46 legs (b), (c)). Recorded under
+author-commit `2026-11-21-472`. Owner: the Panel.
+
+- **PQ1 (a) — a joining fee paid ON the day of death** (the note's Q1). Not addressed — routed to the Panel. Built: `same_day` PASSES
+  the membership check and is shown to staff as "Paid on the day of death" (the ruled words of `-430` Q1 B stop a drive only when the
+  fee was paid *after* the death). The session suggested B (the same day counts as after, as `-235` Y).
+  - **Trigger:** the Panel's ruling. B flips ONE arm of the gate's precedence (`same_day` joins `fee_after_death`); the one test that
+    names PQ1 (a) flips with it.
+- **PQ1 (b) — a fee paid in life whose UTR was recorded after the death** (the note's Q2). Not addressed — routed to the Panel. Built:
+  the receipt's `paid_at` is the instant the member attested the UTR, ⛔ the bank's time, and the comparison is binding — such a member
+  reads `after_death`, with ⛔ staff remedy. The session suggested B (staff may record the bank's date, with a reason, audited).
+  - **Trigger:** the Panel's ruling. B is a new staff input with its own build decision.
+- **PQ2 — what the family is told** (the note's Q3 — when ⛔ drive opens because the fee came after the death; Q4 — while the identity
+  check waits). Not addressed — routed to the Panel. Built: ⛔ new family-facing words — the existing denial line with ⛔ reason, and
+  the existing in-review status.
+  - **Trigger:** the Panel's ruling. Any wording other than the built side is new member-facing copy (Hindi + English, its own task).
+
+---
+
 ## Deferred from: code review of story 14-3-dpo-breach-reporting-operational-readiness.md (2026-11-20)
 
 - **Breach list has no cursor** (`apps/admin/src/api/hooks.ts` `useBreachIncidents`, limit 50; signals 20). An older open, overdue incident can drop off the only list once there are more than 50 incidents, rehearsals included. Deferred because expected volume stays far below 50 for years; revisit at the first year's monthly review (keyset on `(opened_at, incident_id)` or open-first ordering).

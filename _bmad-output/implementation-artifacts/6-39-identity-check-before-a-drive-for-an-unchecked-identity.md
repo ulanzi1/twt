@@ -675,8 +675,8 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `9f5e2c84` (the v1.3 re-verification and rebase point; `beae5116` was the v1.0 pin) is an
+- [x] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
+  - [x] 0.1 `git fetch origin`; confirm `9f5e2c84` (the v1.3 re-verification and rebase point; `beae5116` was the v1.0 pin) is an
         ancestor of HEAD — if `origin/main` has moved, REBASE onto it first (backup branch; records only ⇒ a ledger conflict at most —
         TR15); `git diff --name-only 9f5e2c84 origin/main -- apps packages
         scripts` — re-derive G1–G17 if anything moved; AND `git log 9f5e2c84..origin/main -- .decision-log.md _bmad-output
@@ -685,7 +685,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
         decision number, ledger letter, migration or catalog version. Re-verify: G2's "the KYC record cannot change once a claim exists"
         (every writer of `member_kyc_profiles`, every state gate, the callback's TTL); G9's family-facing denial surface; G10's window.
         Check `ListAgents` + the branch before every commit ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL16 to BigDev (DL12's English verbatim; DL3's rejected alternative named). Record the answers here.
+  - [x] 0.2 Put DL1–DL16 to BigDev (DL12's English verbatim; DL3's rejected alternative named). Record the answers here.
   - [x] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` — PQ1 (a) (evidence led by
         `-235` Y and Niyamavali §2.2), PQ1 (b), PQ2 (i) + (ii), and TL1–TL3; plain-English question first, THE ONE FACT, options with an
@@ -695,16 +695,16 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
         stated (one re-pointed: `-235` Y's reading is found by *"on the day of death or any day after"*). ⚠ (v1.3, 2026-11-21) STILL
         ⛔ SENT, three weeks on, and ⛔ ruled (⛔ decision on `main` answers it). BEFORE BigDev sends it: re-run its E4 commands at the
         rebased HEAD (they ran at `f792d4e3`, 345 commits behind) and fix any that moved — [[feedback_shown_to_panel_means_sent]].
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-472` at 2026-11-21, `9f5e2c84`): DL1–DL16 as answered; cites
+  - [x] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-472` at 2026-11-21, `9f5e2c84`): DL1–DL16 as answered; cites
         `-424` Q1 (a) C and `-430` Q1 B; declares N3's narrowing and DL8's "death documents" match; names PQ1 (a) / (b) and PQ2 as open;
         ⛔ supersedes a ratified entry. Committed ALONE, first. It is also the decision the permission bump block cites (G8).
-  - [ ] 0.5 Records: `deferred-work.md` — PQ1 (a) / (b) and PQ2 open (trigger: the ruling); a row-`3-13` dated comment in
+  - [x] 0.5 Records: `deferred-work.md` — PQ1 (a) / (b) and PQ2 open (trigger: the ruling); a row-`3-13` dated comment in
         `sprint-status.yaml` (a member verified in life by 3-13 skips the identity half — N2 reads `trusteeVerified`); a NEW roster row
         in `docs/launch-gate-inventory/inventory-roster.md` — **Row 46, "Members' claims go live"** (⛔ such row exists: Rows 1–45 ⛔ mention
         it; decision-authored, Row 45's format) with legs: (a) 6.39 `done` on `main`; (b) PQ1 (a) / (b) ruled and reflected in code; (c)
         PQ2 ruled and reflected in code; (d) 6.39's browser pass attested; (e) the fixture KYC provider is never active in production (N2);
         (f) 6.38's D1 (c) (the go-live list it asked for) — ⛔ a PQ that can stay open for ever.
-  - [ ] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
+  - [x] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 1 — The record (AC1, AC14)**
   - [ ] 1.1 Three migrations (the next free numbers; READ the journal LIVE across branches — [[project_sibling_migration_when_order_shared_db]]):
         the verifier enum value ALONE, the state-trustee enum value ALONE (`0120`'s form, DL9), then the table +
@@ -855,6 +855,8 @@ family-facing or helpline words (PQ2); ⛔ deny automatically; ⛔ store a secon
 
 ### Agent Model Used
 
+Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in the story's own worktree.
+
 ### Debug Log References
 
 ### Completion Notes List
@@ -867,6 +869,22 @@ family-facing or helpline words (PQ2); ⛔ deny automatically; ⛔ store a secon
 - 2026-11-21 — Drift-validated (`bmad-create-story validate 6.39`, BigDev: "all, then rebase") at `origin/main` `9f5e2c84`: two read-only
   traces (the gate / denials / commit / fixtures; KYC / fee / keys / console / anonymize / numbers), the load-bearing numbers re-read by
   hand; 2 critical / 6 should-fix / 3 low, ALL applied (v1.3); branch rebased onto `9f5e2c84`.
+
+- 2026-11-21 — **Dev started (`bmad-dev-story 6.39`). Task 0 — governance first.**
+  - **0.1** `git fetch origin`: `origin/main` = `9f5e2c84` = the branch's base (⛔ drift — `git diff 9f5e2c84 origin/main -- apps packages
+    scripts` EMPTY; ⛔ new governance commit). Numbers re-read live across every ref and worktree (all clean): decision `-471` highest
+    anywhere, migration `0209`, catalog v64 / 95, `CLAIM_EVENT_TYPES` 39, `FENCED_FILES` 62, `COVERAGE_FLOOR` 19,
+    `VERIFIER_CONSOLE_MAX_READS` 33. G2 re-checked (`trusteeVerified` is written `false` only — `kyc.handlers.ts` ×2, `profile-write.ts`
+    default); G10's window unchanged. `ListAgents`: one idle peer session, ⛔ in this worktree.
+  - **0.2 — BigDev's answers (the question dialog, 2026-11-21):** DL1–DL16 — **"Accept all 16 (Recommended)"**; DL3 (the joining
+    receipt) — **"The lock-in event's receipt (Recommended)"** (the rejected alternative, "The member's earliest receipt", was named);
+    DL12 (the English staff copy, shown verbatim) — **"Approve verbatim (Recommended)"**. ⇒ every DL is built as written in v1.3.
+  - **0.4** Author-commit decision `2026-11-21-472`, committed ALONE (`3fd29221`). ⚠ Two things it does NOT claim, on purpose: it does
+    ⛔ cite `-210` cl. 2 for the two enum values (that delegation is for tracking vocabularies — unverified for a deny reason, so left
+    out), and it quotes `-430` Q1 B with its own glyph.
+  - **0.5** Roster Row 46 `members-claims-go-live` (six legs, all open; leg (f) asks for a dated line, ⛔ for Row 47 to be closed —
+    `-262` FQ4 B); `deferred-work.md` — PQ1 (a) / (b) and PQ2 open, trigger the ruling; a dated comment on row `3-13`.
+  - **0.6** Ledger `2026-11-21d`; row `ready-for-dev → in-progress`; the YAML parses (314 rows).
 
 ### File List
 

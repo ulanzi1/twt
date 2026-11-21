@@ -931,6 +931,26 @@ observes these.
     runs reached another database (:5450 stayed empty; which one is ⛔ known). BigDev: *"option 3, record it un-attested"*.
     UN-ATTESTED for `5b4efdbb` ([[feedback_record_unattested_no_backfill]]); the component tests cover both changes. The family's two
     new lines (`-473` Q3 B, Q4 B) have ⛔ device check either. ⛔ Criterion is edited.
+  - **2026-11-21 — (d) MET for the tree at commit `3c45bc98` ONLY** (Story 6.39, after both code-review rounds; the story's Dev Agent
+    Record, *Browser pass after the code review*). The verifier console and the cycle-freeze page ran in a real Chrome on this Mac
+    against the real API on a throwaway database (`twt-639-review-pg`, :5450, 212 migrations), signed in through the real passkey
+    routes (the passkey faked):
+    - **same-day fee:** the record-then-deny note shown from the server's `fee_blocks_approval`; the intro reads *"…paid before the
+      date of death…"*; the check recorded (`role="status"`); Approve held with *"The joining fee was not paid before the date of death
+      on the certificate. …"*.
+    - **lost update:** with the control open, a second check recorded behind it ⇒ the submit refused in a `role="alert"` line
+      (*"The membership check on this claim changed since you opened it. It has been reloaded — check again."*), the preview reloaded,
+      the answer reset, ⛔ row written (one live check — the other staff member's), the refusal audited `check_changed` with the
+      client's token; a deliberate re-check then recorded and Approve was enabled.
+    - **fee after death:** the note shown; a deny with *"Fee paid after the death"* and ⛔ check refused in a `role="alert"` line with
+      `-476`'s words (*"…found the fee was not paid before the date of death."*), the claim unchanged.
+    - **no accepted certificate:** *"Accept the death certificate first…"*, ⛔ check control.
+    - **final vote:** the cycle-freeze card offers *"Fee paid after the death"*; an Approve vote on a claim whose live check reads
+      after-death refused in a `role="alert"` line with the final-vote words.
+    - the audit lines (10) and the API log carry ⛔ date, ⛔ name, ⛔ note.
+    ⚠ Limits, ⛔ overclaimed: the claims, receipts and the second staff member's check were seeded; the passkey and the session were
+    faked; ⛔ screen reader listened; the family's two lines (`-473` Q3 B, Q4 B) still have ⛔ device check (the mobile app has ⛔
+    render harness — the pure view and a real-`t()` leg stand in). A later change to the console re-opens this leg.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 

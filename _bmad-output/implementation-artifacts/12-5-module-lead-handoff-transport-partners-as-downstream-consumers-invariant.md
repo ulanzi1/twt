@@ -9,11 +9,15 @@ PINNED: `90535934` = `origin/main` (2026-11-21o, after `git fetch origin`). The 
 `origin/main`. Two facts, kept apart: (1) the pin is an ancestor of HEAD (durable); (2) every `apps/` / `packages/` /
 `scripts/` claim below was re-derived at the pin on 2026-11-21 (perishable — `git diff --name-only 90535934..origin/main
 -- packages apps scripts` at Task 0.1). Re-locate by FUNCTION, ⛔ by line.
+REBASED 2026-11-21 onto `origin/main` = `e5e13f92` (Story 6.22b landed; every commit of this branch was re-written, so the
+SHAs cited here are the post-rebase ones). Between the pin and `e5e13f92` eight code files moved, all 6.22b's; ONE is
+cited here — `member/anonymize.ts`, where only a comment changed (the three pinned counts in `rtbf-anonymize.test.ts`
+are unchanged). Migration `0213` and decisions `-477`–`-481` are now on `main`.
 
-STATUS: ready-for-dev (2026-11-21 — v1.4). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
+STATUS: ready-for-dev (2026-11-21 — v1.5). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
 The build decisions QE1–QE26 carried TWELVE asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21–QE26). BigDev answered them on
 2026-11-21, all as recommended (QE21 is (C)), and accepted the rest as a set. The author-commit is **Decision
-`2026-11-21-483`**, committed ALONE (`1a885546`) before any code ([[feedback_governance_commits_precede_implementation]]).
+`2026-11-21-483`**, committed ALONE (`24d930fc`) before any code ([[feedback_governance_commits_precede_implementation]]).
 This file is amended to those answers: where an ASK lists options, the one marked "recommended" is the one BUILT, and
 the others stay only as the record of what was considered.
 ⭐ **The Panel note and the counsel question (Task 0.5) are WRITTEN, ⛔ SENT, by this story. Neither of them blocks the
@@ -38,7 +42,7 @@ NUMBERS — re-read 2026-11-21 ~18:20 IST across every ref (heads and remotes) a
 (`3-13-…`, `6-22b-…`, `6-39a-…`, `governance-registration-change-2026-11-21`, incl. uncommitted files). Siblings
 committed several times while this story was being written, so every number here is a floor, never a value. Rule (`-366` decision 6): the number belongs to the first
 COMMIT, on any branch.
-- Decisions: this story's author-commit is **`2026-11-21-483`** (`1a885546`), taken after `-477`–`-481`
+- Decisions: this story's author-commit is **`2026-11-21-483`** (`24d930fc`), taken after `-477`–`-481`
   (`story/6-22b-…`) and `-482` (`governance/registration-change-2026-11-21`). A later decision of this story re-greps
   every ref and every worktree.
 - Migrations: `main`'s highest is `0212_claim-membership-checks`. `story/6-22b-…` has COMMITTED
@@ -48,7 +52,7 @@ COMMIT, on any branch.
   `NNNN` / `NNNN+1`.
 - ADRs: highest `ADR-0045` ⇒ this story writes **≥ `ADR-0046`** (QE19). ⚠ New ADR files are upper-case `ADR-NNNN-…`.
 - RBAC: this story adds NO key, NO role (I7). Read `PERMISSION_CATALOG_VERSION` live at Task 0.1 only to record it.
-- Ledger: this story's creation entry is `2026-11-21t` (`e5788114`, 16:32:17 IST — the FIRST commit of `t`;
+- Ledger: this story's creation entry is `2026-11-21t` (`fc715af5`, 16:32:17 IST — the FIRST commit of `t`;
   `story/6-22b-…`'s own `t` is `10aa2b82`, 16:33:59 ⇒ THEIRS to relabel, ⛔ this story's). Letters through `z` are
   taken across the branches (`s` and `w` twice) ⇒ this story's next entry is **≥ `aa`** (the file's own convention
   after `z`; re-grep every ref at every entry; relabel if taken).
@@ -107,7 +111,7 @@ note and a counsel question. Both gate go-live, NOT the merge ([[project_not_in_
 | Headers sent | `X-TWT-Attribution: pariwar=<id>, module=<id>, lead_id=<uuid>` (epic AC, verbatim form) · `X-TWT-Signature: t=<unix>, v1=<hex>` (QE3 (A)) · `Idempotency-Key: <lead_id>` (QE6 (A)) · `Content-Type: application/json` |
 | Boundary fence (NEW) | static: `scripts/partner-boundary-invariant/{check,lib,lib.test}.ts` · scripts `partner-boundary:{check,test}` · route leg: `apps/api/tests/integration/partner-boundary.spec.ts` |
 | ADR (NEW) | `docs/adr/ADR-NNNN-partner-lead-handoff-transport.md` (≥ `ADR-0046`) |
-| Decision | `2026-11-21-483` (`1a885546`) — author-commit of QE1–QE26 |
+| Decision | `2026-11-21-483` (`24d930fc`) — author-commit of QE1–QE26 |
 | Panel note (WRITTEN, not sent) | `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md` |
 | Counsel question (WRITTEN, not sent) | `_bmad-output/planning-artifacts/counsel-question-2026-11-21-12-5-partner-lead-transfer.md` |
 | Roster | `Row 54` — `partner-lead-handoff-live` (appended 2026-11-21) |
@@ -1117,7 +1121,7 @@ and gate go-live (Row 54).
         Task 0.3 must still put to him before the author-commit: the non-ASK decisions "as a set", and QE24's reading of
         `-423` in terms (the Panel note's Q4 states it as our reading, not a ruling). **Both were then put to him and
         answered by selection, 2026-11-21:** the non-ASK set — "Accept as a set"; QE24's reading — "Record as proposed". Record the answers VERBATIM here.
-  - [x] 0.3 (DONE 2026-11-21: Decision `2026-11-21-483`, committed alone at `1a885546`; this file amended to the answers
+  - [x] 0.3 (DONE 2026-11-21: Decision `2026-11-21-483`, committed alone at `24d930fc`; this file amended to the answers
         as v1.3. Every answer was the recommended one, so NO row of the rewrite map below was used; the map is kept as
         the record.) The author-commit, committed ALONE
         (`governance: Story 12.5 lead-handoff transport build decisions (Decision 2026-11-21-NNN)`), naming what it
@@ -1457,5 +1461,6 @@ and gate go-live (Row 54).
 | 2026-11-21 | v1.0 | Created by `bmad-create-story 12.5` on its own worktree at `90535934`. Six ASKs open with BigDev (QE2, QE3, QE5, QE6, QE8, QE11); the Panel note and the counsel question are planned at Task 0.5 (written, not sent); NO code before Task 0.3. |
 | 2026-11-21 | v1.1 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), re-derived at `90535934`. Corrected facts: G1 (one registration per offer), G2 (what the twin has), G4, G5, G7, G10, G11, G12, G13, G15; new G17. Design: the row's writes restated as ONE table W1–W13 with a claim token, holds that do not count, a defined lapse and `held_since`; the tick as S1–S10 with the breaker moved into the claim; predicates P0–P5 (a sound-read check, the consent read through the lead, the standing death report); the seal moved before the transaction and the seam re-ordered (submit first); the audit lines fitted to the audit writer and a body nonce added; one signature with a receiver-side rotation window; the client's wall-clock deadline, v6 allow-range and single test seam; the route leg of the fence moved to an `apps/api` spec keyed on the session guard. Governance: `-427` QE10 quoted and named as amended; the privacy policy treated as a draft, with its no-sale, cross-border and withdrawal sections routed; PQ5 added; legal text no longer pasted; Task 0.4's closure words moved after the code; the rewrite map completed; AC13 added. Six new ASKs: QE21 (a failed handoff), QE22 (a withdrawn offer), QE23 (a terminated member), QE24 (retention, and its relation to `-423`), QE25 (a partner token), QE26 (a standing death report — PQ6). Also changed from v1.0: the tick's 20-row cap became a 45 s budget; "a 4xx other than 408 / 429 is permanent" now sits inside QE21; the PG 16.16 trap is TR18. This story's carried items renamed K-1 … K-11. NUMBERS re-read at ~18:20. The rewrite was itself re-validated by fresh-context rounds before commit, and their findings are applied above: an erasure update the guard would refuse; a misquoted reason of `-423`; holds that did not end the tick; and a partner-side outcome outranking a member-side cancel — closed by making S6 decide first on every attempt. |
 | 2026-11-21 | v1.2 | Task 0.2 answered by BigDev, verbatim "all as recommended, write the note" (the twelve ASKs as recommended; QE21 (C)). Task 0.5 done ahead of 0.3 / 0.4 on that instruction: the Panel note (Q1–Q7 + Told) and the counsel question (nine questions) are WRITTEN, not sent. Still owed before any code: the author-commit (Task 0.3, ≥ `-483`) with the story amended to the answers, the records (0.4) and Row 54 (0.6). |
-| 2026-11-21 | v1.3 | Task 0.3: the author-commit is Decision `2026-11-21-483` (`1a885546`, alone). BigDev's answers, verbatim: "all as recommended, write the note" (the twelve ASKs), "do it", then by selection "Accept as a set" (the fourteen non-ASK decisions) and "Record as proposed" (QE24's reading of `-423`). This file amended to the answers: every conditional on an ASK is now the answered text (QE21 (C): the requeue and the retried setup faults are built; `failed_delivery:address_refused` no longer exists), the ASK headings read ANSWERED, the rewrite map is kept unused. |
+| 2026-11-21 | v1.3 | Task 0.3: the author-commit is Decision `2026-11-21-483` (`24d930fc`, alone). BigDev's answers, verbatim: "all as recommended, write the note" (the twelve ASKs), "do it", then by selection "Accept as a set" (the fourteen non-ASK decisions) and "Record as proposed" (QE24's reading of `-423`). This file amended to the answers: every conditional on an ASK is now the answered text (QE21 (C): the requeue and the retried setup faults are built; `failed_delivery:address_refused` no longer exists), the ASK headings read ANSWERED, the rewrite map is kept unused. |
 | 2026-11-21 | v1.4 | Tasks 0.4 and 0.6 done: `deferred-work.md` (the 12-5 block K-1 … K-11, and dated lines on 12.1's C4 / C6 / C7 / C8 / C10 / C13 and on 12.2's five items and the `partners/` leg), `epics.md` (notes under 12.3, 12.4, 12.5, 12.6), five architecture annotations, six docs notes, and roster Row 54 (eleven legs, all open). No "Closed by" line was written: that is Task 9.3's, after the code. Two ADR bodies were left unannotated, by design (carried to Task 8). The Panel note and the counsel question were made current (Decision `-483`, Row 54); both still NOT sent. Task 0 is complete except 0.1's re-check. |
+| 2026-11-21 | v1.5 | Rebased onto `origin/main` `e5e13f92` (Story 6.22b landed), BigDev: "rebase". Every commit of the branch was re-written; the two SHAs this file cites are now the post-rebase ones (the author-commit `24d930fc`, the creation ledger entry `fc715af5`). No decision, AC or task changed. One cited code file moved on `main` since the pin (`member/anonymize.ts`, a comment only). |

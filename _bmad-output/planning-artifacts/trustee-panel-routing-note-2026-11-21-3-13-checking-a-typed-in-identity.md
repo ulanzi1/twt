@@ -1,6 +1,8 @@
 # Trustee Panel routing note — checking a typed-in identity while the member is alive: what staff must see, whether the member is told, and whether staff may see the member's phone number
 
-> **Status: WRITTEN 2026-11-21; ⛔ NOT YET SENT.** Written from Story 3.13 (Task 0.3), which builds the staff step that checks the
+> **Status: WRITTEN 2026-11-21; SENT 2026-11-21 (BigDev: "sent to panel"); ⏳ AWAITING RULING.** ⚠ Not recorded: the channel, the send
+> time, and whether the text sent is identical to this file as committed at `9f7da520`.
+> Written from Story 3.13 (Task 0.3), which builds the staff step that checks the
 > identity of a member who typed their own details in when they joined. ⛔ Member uses the system yet. ⛔ Nothing waits on this note to be
 > built or merged; the step does ⛔ go live until you have ruled.
 

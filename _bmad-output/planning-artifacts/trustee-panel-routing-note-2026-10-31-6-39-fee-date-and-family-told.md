@@ -1,6 +1,6 @@
 # Trustee Panel routing note — the staff check before a drive: what "the date the fee was paid" means, and what the family is told
 
-> **Status: WRITTEN 2026-10-31; SENT 2026-11-21** (reported by BigDev; ⛔ ruled). Written from Story 6.39's create-story and its validation (Task 0.3), which build
+> **Status: WRITTEN 2026-10-31; SENT 2026-11-21; RULED 2026-11-21** — [Decision 2026-11-21-473](../../.decision-log.md#decision-2026-11-21-473) (DR + KB, all B). Written from Story 6.39's create-story and its validation (Task 0.3), which build
 > the staff check you ruled on 31 October. ⛔ Member uses the system yet. ⛔ Nothing waits on this note to be built or merged.
 
 ## §0 — the gate
@@ -16,14 +16,34 @@ or cannot yet, what does it tell them?"* — questions about people, ⛔ about c
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING — SENT (reported by BigDev, 2026-11-21)
+> ## ✅ RULED 2026-11-21 — [Decision 2026-11-21-473](../../.decision-log.md#decision-2026-11-21-473) (Trustee-ratified, DR + KB)
 >
-> **SENT.** BigDev told the session on 2026-11-21 that this note has been sent to the Panel (*"sent the note to Panel"*), after its E4
-> was re-run at `eedc9be3` and told line 4 was added (committed `abe2d306`). ⚠ NOT recorded anywhere in the repo: the channel, the
-> time, and whether the text sent is identical to this file as committed at `abe2d306` — the file below is kept as it was then.
+> **Sent by BigDev (as committed at `abe2d306`); the ruling relayed to the session on 2026-11-21.** ⚠ Not recorded: the channel, the
+> send time, the time the Panel ruled, and whether the text sent is identical to this file as committed at `abe2d306`. Verbatim, as
+> relayed:
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
-> id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> > *"by DR and KB*
+> > *Q1 B*
+> > *Q2 B*
+> > *Q3 B*
+> > *Q4 B"*
+>
+> - **Q1 — B** (our suggestion): a fee recorded on the day of death counts as after — ⛔ drive.
+> - **Q2 — B** (our suggestion): staff may use the bank's date when the Trust's own bank statement shows the money arrived before the
+>   death, recorded with a reason and audited. NOT ruled: which staff member, when it can be used (before a refusal, after it, on
+>   appeal), how a payment is matched to the statement, and whether a bank date on the day of death counts as after — see `-473`
+>   "does NOT cover".
+> - **Q3 — B** (our suggestion): a family refused because the fee came after the death is told *"the person was not a member of the
+>   Trust when they died"* — `-424` Q3 B's door words, now past the door (the Panel's widening).
+> - **Q4 — B** (our suggestion): while staff cannot yet confirm the identity, the family sees *"We need to confirm a few details before
+>   this claim can go ahead. Our staff will contact you."* NOT ruled: any language but English (for Q3 too), and when the line shows
+>   and stops beyond the case asked.
+> - **Told lines 1–4:** ⛔ objection recorded — ⛔ a ratification. ⚠ Q2 B, once built, makes told line 1's *"nothing changes the fee
+>   date except a new death certificate"* untrue, and gives staff the one judgement told line 4 said they lack.
+> - **Built:** A on all four (Story 6.39, in code review). The difference needs a ROW (`-473` Consequence 1); go-live waits on it
+>   (roster Row 46 (b), (c)).
+>
+> Everything below is kept **unedited** — the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

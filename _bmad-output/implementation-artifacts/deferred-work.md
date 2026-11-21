@@ -38,20 +38,33 @@ commands are re-run first). Non-blocking for the build and the merge; each holds
 author-commit `2026-11-21-472`. Owner: the Panel.
 **2026-11-21, later — the note was SENT** (reported by BigDev, *"sent the note to Panel"*; as committed at `abe2d306`, after E4 was
 re-run at `eedc9be3`; channel and time ⛔ recorded). ⛔ Ruled yet — all three items below stay open.
+**2026-11-21, later — RULED: all three DISCHARGED as questions** by [Decision 2026-11-21-473](../../.decision-log.md#decision-2026-11-21-473)
+(Trustee-ratified, DR + KB — *"Q1 B / Q2 B / Q3 B / Q4 B"*). ⚠ NOT closed as work: the code is built A on all four, so each now needs
+BUILDING to the ruling — on a ROW not yet chosen (inside 6.39 before it merges, or a new row; BigDev's call, `-473` Consequence 1);
+roster Row 46 (b), (c) stay open for the "reflected in code" half. The items below are kept as written.
 
 - **PQ1 (a) — a joining fee paid ON the day of death** (the note's Q1). Not addressed — routed to the Panel. Built: `same_day` PASSES
   the membership check and is shown to staff as "Paid on the day of death" (the ruled words of `-430` Q1 B stop a drive only when the
   fee was paid *after* the death). The session suggested B (the same day counts as after, as `-235` Y).
   - **Trigger:** the Panel's ruling. B flips ONE arm of the gate's precedence (`same_day` joins `fee_after_death`); the one test that
     names PQ1 (a) flips with it.
+  - **DISCHARGED 2026-11-21** by `-473` Q1 **B** (the same day counts as after — ⛔ drive). Build owed: the flip above, and the staff
+    words for "Paid on the day of death".
 - **PQ1 (b) — a fee paid in life whose UTR was recorded after the death** (the note's Q2). Not addressed — routed to the Panel. Built:
   the receipt's `paid_at` is the instant the member attested the UTR, ⛔ the bank's time, and the comparison is binding — such a member
   reads `after_death`, with ⛔ staff remedy. The session suggested B (staff may record the bank's date, with a reason, audited).
   - **Trigger:** the Panel's ruling. B is a new staff input with its own build decision.
+  - **DISCHARGED 2026-11-21** by `-473` Q2 **B** (staff may use the bank's date when the Trust's own bank statement shows the fee
+    arrived before the death; with a reason; audited). Build owed: the new staff input, with its own build decisions — who, when
+    (before / after a refusal, on appeal), how the payment is matched, a bank date on the day of death — none ruled (`-473` "does
+    NOT cover").
 - **PQ2 — what the family is told** (the note's Q3 — when ⛔ drive opens because the fee came after the death; Q4 — while the identity
   check waits). Not addressed — routed to the Panel. Built: ⛔ new family-facing words — the existing denial line with ⛔ reason, and
   the existing in-review status.
   - **Trigger:** the Panel's ruling. Any wording other than the built side is new member-facing copy (Hindi + English, its own task).
+  - **DISCHARGED 2026-11-21** by `-473` Q3 **B** (*"the person was not a member of the Trust when they died"*) and Q4 **B** (*"We need
+    to confirm a few details before this claim can go ahead. Our staff will contact you."*) — English only ruled. Build owed: both
+    lines, their Hindi, and when Q4's line shows and stops.
 
 ---
 

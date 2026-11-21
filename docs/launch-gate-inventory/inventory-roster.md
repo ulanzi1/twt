@@ -914,6 +914,12 @@ observes these.
     narrowing). Legs **(b)** and **(c)** stay ⏳ OPEN until the Panel rules — ⛔ ruling is recorded. ⚠ Not recorded: the channel, the
     time, and whether the text sent is identical to the committed file. The `current_status` and `closure_evidence_link` lines'
     "⛔ sent" are as of the row's commit; this line supersedes them for the sending. ⛔ Criterion is edited.
+  - **2026-11-21 — the Panel RULED, all B** ([Decision 2026-11-21-473](../../.decision-log.md#decision-2026-11-21-473),
+    Trustee-ratified, DR + KB). Legs **(b)** and **(c)**: their "ruled by the Panel" half is ✅ MET — PQ1 (a) B (a fee on the day of
+    death counts as after), PQ1 (b) B (staff may use the bank's date, with a reason, audited), PQ2 B on both (the door words after
+    filing; one line while the identity waits). Their "reflected in code" half stays ⏳ OPEN: Story 6.39 is built A on all four, and
+    the work to build B has ⛔ row yet (BigDev's call — `-473` Consequence 1). ⚠ A ruling that differs from the built side cannot
+    close a leg by its Decision alone. (a), (d), (e), (f) unchanged. ⛔ Criterion is edited.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 

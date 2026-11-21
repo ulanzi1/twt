@@ -4123,6 +4123,10 @@ found alive"*; ⛔ notice, ⛔ appeal, ⛔ ban, ⛔ identifier, ⛔ member-facin
 > members' claims go live"*). The build decisions (DL1–DL16) are PROPOSED in the story file and answered at its Task 0; the two edges the
 > ruled words do ⛔ decide (PQ1 — what "the date the fee was paid" means: (a) a fee paid on the day of death, (b) a UTR attested after a
 > payment made in life; PQ2 — what the family is told) are ONE non-blocking note.
+> - ⚠ **2026-11-21 — the note SENT and RULED** ([`-473`](../../.decision-log.md#decision-2026-11-21-473), Trustee-ratified, DR + KB):
+>   all B — a fee on the day of death counts as after; staff may use the Trust's bank date for a fee recorded after the death; the
+>   family is told the door's general reason after filing, and one line while the identity waits. Built A on all four (story in
+>   review); the build to B needs a row (`-473` Consequence 1). The lines above are ⛔ edited.
 
 As a family whose member has died, the District Admin who reviews their claim, and every member who will be asked to give, I want staff to
 confirm, before any drive opens, that the person who died is the member — whenever nobody has checked the identity the member typed in —

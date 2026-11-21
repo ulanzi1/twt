@@ -69,7 +69,7 @@ COMMIT, on any branch.
 
 # Story 12.5: Module Lead-Handoff Transport + Partners-as-Downstream-Consumers Invariant `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: in-progress
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1156,8 +1156,8 @@ until those land ([[feedback_closure_language_precision]]).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). No code before 0.3 AND 0.7.**
-  - [ ] 0.1 `git fetch origin`. Re-check the pin and `git diff --name-only 90535934..origin/main -- packages apps
+- [x] **Task 0 — governance FIRST (AC0). No code before 0.3 AND 0.7.**
+  - [x] 0.1 (DONE 2026-11-21 by `bmad-dev-story` — see Debug Log References.) `git fetch origin`. Re-check the pin and `git diff --name-only 90535934..origin/main -- packages apps
         scripts`; re-derive every G fact by FUNCTION. Re-grep NUMBERS (decisions, migrations + `when`, ADR, ledger
         letter, roster row) on every ref AND in the live sibling worktrees, uncommitted files included. Confirm 12.3
         and 12.4 are still `backlog` (if 12.3 has started, read its seam
@@ -1527,7 +1527,22 @@ until those land ([[feedback_closure_language_precision]]).
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5` on the story worktree.
+
 ### Debug Log References
+
+- **Task 0.1 (2026-11-21).** `git fetch origin`: `origin/main` = `e5e13f92` (unchanged since the rebase) and an ancestor
+  of HEAD; `git diff --name-only e5e13f92..origin/main -- packages apps scripts` is EMPTY, so every G fact stands as
+  re-derived at the rebase. NUMBERS, re-grepped on every ref (heads and remotes) and in the five live sibling worktrees
+  (uncommitted files included): migrations — highest anywhere is `0213` (`main`, `when` `1797998580000`); no sibling
+  worktree has a file above `0212` ⇒ this story takes **`0214`** + **`0215`**, `when` > `1797998580000`. Decisions —
+  highest is `-484` (this branch) ⇒ a later one is ≥ `-485`. ADRs — highest `ADR-0045` ⇒ **`ADR-0046`**. Roster — `Row
+  54` is this story's; no sibling has a `Row 55`. Ledger — this branch's last is `an`; siblings' are `ac` (3-13), `ag`
+  (3-15), `ae` (governance), `z` (6-39a) ⇒ the next is ≥ `ao`. `PERMISSION_CATALOG_VERSION` = **65** (recorded only;
+  I7). Sprint rows: `12-3-…` and `12-4-…` are `backlog` (no seam to read first). QE23: `-477` Q6 A ("The ban ends every
+  membership") has NOT landed in code — 6.22b (`done`) shipped only the death-certificate guard (0213) and adds no
+  member state or moderation status ⇒ QE23 (A) stands as written; nothing added.
+- **Live DB.** A story-owned container `twt-12-5-pg` on `:5455` (`postgres:16-alpine`, 16.14), DB `twt_dev`.
 
 ### Completion Notes List
 

@@ -22897,7 +22897,7 @@ development_status:
   # sent (story v1.2). Owed before any code: the author-commit (>= -483), the records, the go-live roster row.
   # 2026-11-21ah: Task 0 complete except 0.1 — Decision -483 (author-commit, alone, 1a885546); story v1.4; records + roster Row 54; the Panel note and
   # the counsel question current, not sent. Next: bmad-dev-story 12.5 (Task 0.1 re-check, then Task 1).
-  12-5-module-lead-handoff-transport-partners-as-downstream-consumers-invariant: ready-for-dev
+  12-5-module-lead-handoff-transport-partners-as-downstream-consumers-invariant: in-progress
   12-6-time-bombed-module-lifecycle-auto-archive: backlog
   epic-12-retrospective: optional
 

@@ -38,7 +38,7 @@ here is the gated-build point.
 
 # Story 6.22b: The Fraud Register's Identifier Set and Filer Bans — Counsel's Question Written First, the Panel's Four Questions Put, and a Death Certificate Made Undeletable; the PAN Collection, the Bar at Filing and the Deletion Wait for the Answers
 
-Status: review
+Status: done
 
 > ⭐ **RESUME HERE — Task 0 is DONE (2026-11-02); the build starts at Task 1.0.** What the dev needs: Tasks 1.0–1.5 and 2.1–2.3, AC4,
 > AC5, AC7, AC8, DL5, G12, TR1–TR4 and TR8–TR10. The PQ, TL, C and W sections, DL1–DL4 and DL6's governance rows are finished governance
@@ -411,6 +411,10 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
     OLD.claim_case_id)` — exact, proven false inside a claims cascade) — ⛔ the house pattern (every guard in 0119–0197 uses depth > 1),
     and it would leave D8 with only a catalog check. The depth exception admits ANY trigger-issued delete; that is the house's accepted
     residual.
+    ⭐ 2026-11-21 — AMENDED by author-commit `2026-11-21-481` (the code review's Decision 1, BigDev "1"): 0213 also carries
+    `claim_documents_no_death_certificate_retype` (`BEFORE UPDATE OF document_type, claim_case_id`) — a certificate's row can be
+    neither retyped nor moved to another claim, the two-step way round the DELETE guard. "DELETE only" now reads "DELETE, plus an
+    UPDATE of those two columns on a certificate's row". The depth > 1 DELETE exception stands.
   - **B** — change `claim_death_certificate_uploads_claim_document_id_fk` to `ON DELETE NO ACTION` (end-of-statement check, so a claim's
     cascade still passes). *Cost:* protects only certificates that have an upload; the OCR row of a certificate with none stays deletable.
   - **C** — nothing here; re-defer the trap to `6-22e`. *Cost:* the trap waits for the story most likely to spring it.
@@ -605,7 +609,7 @@ The counsel question carries both in a further dated note (still ⛔ sent).
         cells written out. The counsel question gains a dated note: DPDP commencement re-checked, 13 May 2027 stands (two secondary
         sources of 15 / 20 Nov 2026; the SDF 12-month proposal never gazetted; S.O. 5458(E) wording only; ⛔ the Gazette read).
   - [x] 0.5 Decision entry (DL4) — the next free number READ LIVE; committed ALONE as `governance(6.22b): …`.
-        ⭐ 2026-11-02 — DONE: Decision `2026-11-02-440` (author-commit) committed ALONE as `8c088b76` (`-440` re-grepped free on every
+        ⭐ 2026-11-02 — DONE: Decision `2026-11-02-440` (author-commit) committed ALONE as `b9e9e842` (`8c088b76` before the 2026-11-21 rebase — corrected by the code review) (`-440` re-grepped free on every
         ref and worktree; `origin/main` `b7b43c47`).
   - [x] 0.6 Records (DL0, DL6): the new row (DL0 A) with its comment block; every DL6 line except the code comments (Task 1.2);
         `epics.md` 6.22b; ⛔ a ledger entry here — the create wrote `2026-11-02c`, and the next one is written at the story's close
@@ -688,6 +692,55 @@ The counsel question carries both in a further dated note (still ⛔ sent).
         ⭐ 2026-11-21 — DONE: ledger `2026-11-21y` (`x` was the newest letter on any ref or worktree when it was written), by
         the safe prepend; 317 rows under plain `yaml.safe_load`; the row `review`.
 
+### Review Findings
+
+Code review 2026-11-21 (`bmad-code-review`, three parallel read-only layers — Blind Hunter, Edge Case Hunter, Acceptance Auditor with
+the AI-6-5 checklist lens) over the branch's `packages` diff + the `deferred-work.md` close line, at `49d3739b` against `origin/main`
+`90535934`. ⛔ AC violated (the Auditor: N1, AC4 (a)–(e), AC5 / TR1, AC7 all hold). 1 decision, 7 patches, 1 defer, 8 dismissed. The
+§0 gate: the decision is an ENGINEERING question (the code should refuse X; ⛔ change to what a person sees or is owed) ⇒ BigDev's as
+the author of DL5 / `-440`, ⛔ the Panel's.
+
+- [x] [Review][Decision] ⭐ RESOLVED 2026-11-21 → A (BigDev "1"; author-commit `2026-11-21-481`, committed alone `8459fa99`) — A certificate's row can be retyped or re-pointed, then deleted — the guard keys on `OLD.document_type` only,
+  and `twt_app` holds table-wide UPDATE (0053). (i) `UPDATE … SET document_type = 'hospital_record'` then `DELETE` passes the guard
+  (owner / superuser / any role with DELETE) and cascades into every kept upload, review and membership check; (ii) `twt_app` can
+  `UPDATE … SET claim_case_id = <another claim>` — deleting THAT claim later takes the certificate row and, through 0122's
+  `claim_document_id` FK, the ORIGINAL claim's uploads and reviews while the original claim survives (nothing ties
+  `uploads.claim_case_id` to the document's). ⛔ code path writes either column today (the OCR upsert's `set` and
+  `seedDeathCertificate` write neither — re-read 2026-11-21). DL5 A / TR3 say "DELETE only" because a WHOLE-ROW UPDATE guard breaks the
+  OCR upsert; a column-scoped `BEFORE UPDATE OF document_type, claim_case_id` guard does not. Options: **A** — add that guard in 0213
+  (unlanded): refuse when `OLD.document_type = 'death_certificate'` and either column changes, 23000 + its own message; spec legs for
+  both routes; the catalog leg pins two triggers; amends DL5 A / TR3's "DELETE only" by name. **B** — keep DELETE-only; name the
+  two-step route as a residual in the 0213 header and in the `deferred-work.md` close line. (Blind #3, Edge #1, Auditor #2.)
+- [x] [Review][Patch] The closure wording overclaims — 0213's "for EVERY role (the table owner and a superuser included)" omits
+  `session_replication_role = replica` / `DISABLE TRIGGER` / `DROP TRIGGER` (the repo's own `nominee-history-concurrency` teardown
+  deletes certificate rows under replica); the uploads header's "that cascade comes from `claims` ONLY … undeletable except with its
+  claim" omits the trigger-issued-delete residual the D8 test itself uses [packages/domain/migrations/0213_claim-documents-death-certificate-delete-guard.sql:17; packages/domain/src/schema/claim_death_certificate_uploads.ts:147]
+- [x] [Review][Patch] The depth > 1 residual has a rationale but ⛔ re-examination trigger (checklist family 9) — name it: any new
+  role, job or SECURITY DEFINER function granted DELETE on `claim_documents`, or row `6-22e`'s build if any of its scrub is ever a
+  trigger-issued delete [packages/domain/migrations/0213_claim-documents-death-certificate-delete-guard.sql:21]
+- [x] [Review][Patch] "TRUNCATE is already refused one step removed" is untested and rests on 0122's FK + trigger — add a catalog leg
+  pinning `claim_death_certificate_uploads_claim_document_id_fk` (→ `claim_documents`) and `claim_death_certificate_uploads_no_truncate`
+  enabled (a catalog check, ⛔ a live TRUNCATE — the FK + TRUNCATE lock-order deadlock) [packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts:92]
+- [x] [Review][Patch] (e)'s upsert omits `storageObjectKey` — the OCR job's real `set` moves the key on a replacement, which is the
+  case TR3 names [packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts:210]
+- [x] [Review][Patch] (d) proves only `hospital_record` passes — an allow-list mutant that refuses `ground_inspection_photo` stays
+  green; add that type [packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts:167]
+- [x] [Review][Patch] The re-pointed `anonymize.ts` comment still reads the innocent-outcome-notes question as open — `-480` F8 A
+  (Trustee-ratified) rules it: *"NOTES ABOUT A MEMBER FOUND INNOCENT ARE DELETED AFTER COUNSEL'S PERIOD, THE FINDING KEPT"* — cite it
+  [packages/domain/src/member/anonymize.ts:338]
+- [x] [Review][Patch] Task 0.5 cites `-440` as `8c088b76` — the pre-rebase hash, reachable only from the local backup branch; the
+  rebased commit is `b9e9e842` (still `.decision-log.md` alone) [_bmad-output/implementation-artifacts/6-22b-fraud-register-identifier-set-and-filer-bans.md:608]
+- [x] [Review][Defer] 0122's `claim_death_certificate_uploads_claim_document_id_fk` does not require the referenced `claim_documents`
+  row to be a `death_certificate` — an upload pointing at another type's row cascades when that row is deleted (the guard does not
+  fire). Writer-only invariant today (the upload writer and the OCR upsert key on `document_type`) [packages/domain/migrations/0122_death-certificate-clear-date-rule.sql:43] — deferred, pre-existing
+
+Dismissed (8): the OCR reading is overwritten by UPDATE (the OCR job replaces it by design; pre-existing, and the comment cites the
+ruling, ⛔ claims enforcement); (b) passes without the guard and (c) / (e) pass with it dropped (by design — the header names (a)'s
+message as the proof and (c) / (d) as controls; the catalog leg and (a) catch a missing guard); the D8 spec is coupled to depth > 1
+(the parent-claim check is DL5's recorded rejected alternative); (a)'s "SUPERUSER" label (CI's `POSTGRES_USER` `twt_dev_app` IS the
+container superuser); the shared 23000 (DL5 A's house code, the message distinguishes it); other cascade parents (re-read: the only FK
+into `claim_documents` is from `claims`); forward-only migration / synthetic `when` (house convention; `when` > 0212's).
+
 ## Dev Notes
 
 ### Traps
@@ -712,6 +765,9 @@ The counsel question carries both in a further dated note (still ⛔ sent).
 - **TR3 — The OCR job UPDATEs `claim_documents`** — through `insert(claimDocuments).onConflictDoUpdate(...)`, whose conflict path fires
   UPDATE triggers (`apps/jobs/src/claim-ocr-parity.ts`); `seedDeathCertificate` also plain-UPDATEs on a replaced certificate. A guard on
   UPDATE would break both. DELETE only.
+  ⭐ 2026-11-21 — AMENDED by `2026-11-21-481`: a WHOLE-ROW UPDATE guard would break both; a COLUMN-SCOPED one
+  (`BEFORE UPDATE OF document_type, claim_case_id`) does not — neither SET list names either column (re-read 2026-11-21) — so 0213
+  carries one. DELETE plus that column scope.
 - **TR4 — Numbers collide with siblings (the 2026-11-02 snapshot — READ LIVE at each commit).** `main` at `b7b43c47`: decision `-439`,
   migration `0198` (journal idx 198, `when` `1796701200043`), catalog v58 / 77 keys, roster Row 47 (46 reserved by 6.39), ledger
   `2026-11-02b`. Unlanded siblings: `story/6-39-…` plans `0196_claim-membership-checks` (now taken on `main` — it renumbers on rebase),
@@ -838,6 +894,16 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.22b`, 2026-11-21 (Ta
     apps` (310 added lines) it printed NOTHING.
 - **Gates.** `tsc --noEmit` and eslint on `@twt/domain`; `db:check`, schema-diff, microcopy, domain-invariants; then
   `ci:local` 40 / 40 at `4a8c4d2e` (log kept only in the session scratchpad — ⛔ in the repo).
+- **Code review fixes (2026-11-21, § Review Findings; Decision 1 → `-481`, committed alone as `8459fa99`).** On a throwaway
+  container (`twt-622b-review-pg` :5454, every migration applied with 0213 as amended — BigDev ran `db:migrate` after the
+  classifier refused it): the guard spec 10 / 10 and the D8 spec 19 / 19.
+  - *Mutation — the retype trigger DROPPED* ⇒ 3 failed / 7 passed: the catalog leg, (f) and (g).
+  - *Mutation — the retype function refusing WITHOUT `IS DISTINCT FROM`* ⇒ 1 failed / 9 passed: (f) (its same-value control).
+  - The migration's function restored from the file ⇒ 29 / 29 across the two specs. Domain suite 541 files, 8596 passed,
+    1 skipped (8593 + the three new legs).
+  - AC7 re-run against the merge base with the working tree (`origin/main` `90535934`, unmoved): the same eight files; the four
+    baseline hits; the added-lines filter hit `+x pan_y` and printed NOTHING over the branch's diff.
+  - `tsc --noEmit` (`@twt/domain`, `tests/**` included) and eslint on the changed files clean.
 
 ### Completion Notes List
 
@@ -862,6 +928,20 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.22b`, 2026-11-21 (Ta
     GitHub CI has ⛔ run on `4a8c4d2e`.
   - **One process note.** The auto-mode classifier refused `db:migrate` against the throwaway container until BigDev said
     "continue"; nothing database-backed ran before that.
+- 2026-11-21 — `bmad-code-review 6.22b` (three parallel read-only layers; § Review Findings): ⛔ AC violated. BigDev: "1, then
+  apply all the patches".
+  - **Decision 1 → A, recorded as author-commit `2026-11-21-481`** (committed ALONE, `8459fa99`, before the code — it amends
+    `-440` item 5's "DELETE only"): 0213 gains `claim_documents_no_death_certificate_retype`, `BEFORE UPDATE OF document_type,
+    claim_case_id`, refusing either change on a certificate's row for every role (23000, its own message). It closes the
+    two-step way round the DELETE guard (retype then delete; move to another claim then delete that claim). The OCR upsert,
+    the plain OCR UPDATE and the seeder's key UPDATE name neither column, so the trigger does not fire for them. 0213 is
+    unlanded, so it is edited in place (⛔ a new migration) — a DB that applied the old 0213 lacks the second trigger.
+  - **The seven patches applied:** the closure wording (every role while triggers fire; the replica / DISABLE / DROP and
+    trigger-issued-delete residuals named in 0213, both schema headers and the `deferred-work.md` close line); the depth > 1
+    residual's re-examination trigger; a catalog leg pinning the TRUNCATE backstop (0122's FK + `…_uploads_no_truncate`);
+    (e)'s upsert writes `storageObjectKey` as the OCR job does; (d) adds `ground_inspection_photo`; the `anonymize.ts` comment
+    cites `-480` F8 A; Task 0.5's hash corrected to `b9e9e842`. DL5 A and TR3 carry dated amendment lines.
+  - **Deferred (1):** 0122's uploads FK does not pin the referenced row's type (pre-existing; `deferred-work.md`).
 
 ### File List
 
@@ -877,6 +957,16 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.22b`, 2026-11-21 (Ta
 - `_bmad-output/implementation-artifacts/deferred-work.md` — the 6.21 CASCADE item's closing line
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — row → `review`; ledger `2026-11-21y`
 - `_bmad-output/implementation-artifacts/6-22b-fraud-register-identifier-set-and-filer-bans.md` — this file
+
+*Code review (2026-11-21):*
+- `.decision-log.md` — `-481` (alone, `8459fa99`)
+- `packages/domain/migrations/0213_claim-documents-death-certificate-delete-guard.sql` — the retype guard; header wording
+- `packages/domain/src/schema/claim_documents.ts`, `claim_death_certificate_uploads.ts` — header comments
+- `packages/domain/src/member/anonymize.ts` — comment (`-480` F8 A)
+- `packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts` — catalog (two triggers +
+  the TRUNCATE backstop), (d), (e), new (f) and (g)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the close line's appended note; the review's defer
+- this file — § Review Findings; DL5 A / TR3 dated lines; Task 0.5's hash
 
 *Task 0 and the 2026-11-21 governance (earlier sessions; on this branch against `origin/main`):*
 - `.decision-log.md` — `-440`, `-477`, `-478`, `-479`, `-480`
@@ -898,3 +988,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.22b`, 2026-11-21 (Ta
 | 2026-11-21 | 1.2 | Validated again by `bmad-create-story validate 6.22b` before the build resumes, re-traced at `origin/main` `90535934` (the branch 270 commits behind; Task 0 records unchanged — nothing sent, `-440` still this branch's, AC7's baseline still four hits). BigDev: "all". New Task 1.0 (rebase; the four conflicting records files; `-440` placed between `-441` and `-439`; migration `0213`); AC7 diffs `origin/main...HEAD` (⛔ `b7b43c47`) and requires no ADDED hit (perl, ⛔ `grep -P`); Task 2.3's ledger key is the day it is written; G12 + AC4 (c) gain 0212's membership-check cascade; AC4's `pgCode` / `expectPgError` are file-local — copied, ⛔ exported; AC5 40 jobs; G16 / TR4 dated re-reads; E3 dated line on row `13-1h`'s PAN index (also in row `6-22e`'s block); a RESUME HERE block. Status unchanged. |
 | 2026-11-21 | 1.3 | Validated again by `bmad-create-story validate 6.22b` after the Panel's three rulings and the sends (`-477`, `-478`, `-480`; `-479` mints `6-22f`; the counsel question SENT). BigDev: "all". N2 discharged (dated line; the resume block says all is SENT and RULED); AC1 / AC2 judged as WRITTEN at `26e8c9b3`; the Policy-meaning section lists the ruled edges and the gated build's new predicates (PQ1 A, F7 A, F8 A); AC6's gates (Panel all met; counsel remains) and row count +2; a line under AC8 that Tasks 1–2, DL5, AC4, AC5 and AC7 are unchanged (no ruling touches a `claim_documents` delete; `0213` free; `origin/main` unmoved); Task 0's parent box ticked. Status unchanged. |
 | 2026-11-21 | 1.4 | Built by `bmad-dev-story 6.22b` (Tasks 1.1–1.5, 2.1–2.3; commit `4a8c4d2e`): migration `0213` — a `BEFORE DELETE` guard on `claim_documents` that refuses deleting a death certificate's row except with its claim (DL5 A); the two schema headers; the two `6-22b` code comments re-pointed to `6-22e`; a new guard spec (7 tests) and the D8 test fired from a pg_temp trigger; `deferred-work.md`'s 6.21 CASCADE item closed. Domain suite 541 files / 8593 passed; `ci:local` 40 / 40 on a fresh container; AC7 holds. Status `ready-for-dev` → `review`. ⛔ Pushed. |
+| 2026-11-21 | 1.5 | Code review by `bmad-code-review 6.22b` (three parallel read-only layers; § Review Findings): ⛔ AC violated; 1 decision, 7 patches, 1 defer, 8 dismissed. BigDev: "1, then apply all the patches". Decision 1 → A, author-commit `2026-11-21-481` (alone, `8459fa99`), amending `-440` item 5's "DELETE only": 0213 (unlanded, edited in place) gains `claim_documents_no_death_certificate_retype` (`BEFORE UPDATE OF document_type, claim_case_id`) — a certificate's row can be neither retyped nor moved to another claim. The seven patches applied (closure wording and residuals; the depth > 1 re-examination trigger; the TRUNCATE-backstop catalog leg; (e) writes `storageObjectKey`; (d) adds `ground_inspection_photo`; `anonymize.ts` cites `-480` F8 A; Task 0.5's hash). DL5 A / TR3 dated amendment lines. Guard spec 10 / 10, D8 19 / 19; two new mutation checks fail the legs they should; domain suite 541 files / 8596 passed; `ci:local` 40 / 40 on a fresh container (`twt-622b-review-ci-pg` :5455). Status review → done. |

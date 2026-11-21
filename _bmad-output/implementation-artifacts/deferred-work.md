@@ -4,6 +4,10 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 6-22b-fraud-register-identifier-set-and-filer-bans.md (2026-11-21)
+
+- An upload's FK to its document does not require the document to be a death certificate [`claim_death_certificate_uploads_claim_document_id_fk`, migration 0122] — an upload row pointing at a `claim_documents` row of another type cascades away when that row is deleted, and the 0213 guard (keyed on `document_type`) does not fire. Pre-existing (0122); a writer-only invariant today (the upload writer and the OCR upsert key on `document_type = 'death_certificate'`). Trigger: any new writer of `claim_death_certificate_uploads`, or a decision to pin the type in the database (a composite FK on `(claim_document_id, document_type)` or a check trigger).
+
 ## Deferred from: code review of story 6-39-identity-check-before-a-drive-for-an-unchecked-identity.md — round 2, the fix diff (2026-11-21)
 
 - **A corrected UTR typed on a joining-fee re-confirm is now stored nowhere in full**
@@ -3697,6 +3701,7 @@ Recorded under `2026-10-03-276` (CR1–CR15). ⛔ Q1–Q4 are ⛔ not here — `
 - A future `-240` cl.1 closure-time deletion of `claim_documents` rows would CASCADE (`ON DELETE cascade`, migration 0122) into every kept `claim_death_certificate_uploads` row and every review, contrary to `-243`. No production path deletes `claim_documents` today (traced 2026-09-26). A trap for whoever builds that deletion.
   - *Appended 2026-11-01 (Story 6.22, `2026-11-01-438` item 12; DL16):* Resolved via explicit deferral to `6-22b` (its `-240` cl. 1 deletion; trigger: that row's create-story).
   - *Appended 2026-11-21 (Story 6.22b Task 1.5; DL5 A, `2026-11-02-440`):* Closed by 6.22b DL5 — a guard refuses deleting a death certificate's row except with its claim. (Migration `0213_claim-documents-death-certificate-delete-guard`: a `BEFORE DELETE` trigger on `claim_documents`, every role, SQLSTATE 23000 with its own message; proved by `packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts`. The `-240` cl. 1 deletion itself is row `6-22e`'s and is a scrub of identity details, ⛔ a delete of this row.)
+    - *Appended 2026-11-21 (Story 6.22b code review; `2026-11-21-481`):* 0213 also refuses retyping a certificate's row or moving it to another claim (`BEFORE UPDATE OF document_type, claim_case_id`) — the two-step way round the delete guard. What the guards do NOT stop, recorded so "Closed" is not read wider than it is: a superuser or the owner switching triggers off (replica mode, `DISABLE TRIGGER`, `DROP TRIGGER`), and a delete issued from inside another trigger (the house's depth > 1 residual — re-examine when any new role, job or SECURITY DEFINER function is granted DELETE on `claim_documents`, or at row `6-22e`'s build).
 - After an RTBF erasure, the nominee determination can proceed only if the District Admin RE-ACCEPTS the certificate, which writes a fresh Tier-1 date ciphertext for an erased member; `recordDeathCertificateReview` has no erased-member check. Rides on go-live coupling (3′) — counsel's basis for keeping certificate data against an erasure request (`-243`).
 - After a stale-code 409 the verifier console keeps showing `reviewCertificate.error` ("reload") on the refreshed form until the next submit or a claim change (`apps/admin/src/routes/VerifierConsoleRoute.tsx`). Cosmetic; unverified in a browser.
 

@@ -567,6 +567,13 @@ export const QUEUE_NAMES = {
    */
   MODULE_ACTIVATION: 'module.activation',
   /**
+   * The per-minute partner LEAD HANDOFF sweep (Story 12.5, `2026-11-21-483` QE13, QE17): delivers each `due` row of
+   * `marketplace_lead_handoffs` to its module's partner endpoint — at least once, after the member-side checks P0–P5. A cron tick
+   * with an empty payload — ⛔ a per-lead job (the row is the outbox: a job lost between COMMIT and enqueue would lose the lead).
+   * Job class C.
+   */
+  MODULE_LEAD_HANDOFF: 'module.lead_handoff',
+  /**
    * The per-minute field-worker CODE SMS sweep (Story 13.1b, `2026-11-06-450` AD2): sends each `due` row of
    * `field_worker_code_sms_sends` at most once. A cron tick with an empty payload — ⛔ a per-worker job (the row is the outbox:
    * a job lost between COMMIT and enqueue would lose the text). Job class C.

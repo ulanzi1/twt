@@ -149,6 +149,11 @@ import {
   MODULE_ACTIVATION_TZ,
   registerModuleActivationCron,
 } from './scheduler/module-activation.js';
+import {
+  DEFAULT_MODULE_LEAD_HANDOFF_CRON,
+  MODULE_LEAD_HANDOFF_TZ,
+  registerModuleLeadHandoffCron,
+} from './scheduler/module-lead-handoff.js';
 import { registerContactLadderWhatsappWorkers } from './scheduler/claim-contact-ladder-whatsapp.js';
 import { enqueuePeerMeshRequestChild, registerClaimPeerMeshRequestWorkers } from './scheduler/claim-peer-mesh-requests.js';
 import { registerClaimPeerMeshWaReminderWorkers } from './scheduler/claim-peer-mesh-wa-reminders.js';
@@ -192,6 +197,8 @@ const VACUUM_TZ = 'Asia/Kolkata';
 const CERT_REFRESH_CRON = process.env['DIGILOCKER_CERT_REFRESH_CRON'] ?? DEFAULT_CERT_REFRESH_CRON;
 // Story 12.2 (QE7 (A)) — the 5-minute partner-module activation sweep.
 const MODULE_ACTIVATION_CRON = process.env['MODULE_ACTIVATION_CRON'] ?? DEFAULT_MODULE_ACTIVATION_CRON;
+// Story 12.5 (QE13) — the per-minute partner lead-handoff sweep.
+const MODULE_LEAD_HANDOFF_CRON = process.env['MODULE_LEAD_HANDOFF_CRON'] ?? DEFAULT_MODULE_LEAD_HANDOFF_CRON;
 const FIELD_WORKER_CODE_SMS_CRON = process.env['FIELD_WORKER_CODE_SMS_CRON'] ?? DEFAULT_FIELD_WORKER_CODE_SMS_CRON;
 const FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON =
   process.env['FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON'] ?? DEFAULT_FIELD_WORKER_MOVE_REQUEST_ESCALATION_CRON;
@@ -290,6 +297,11 @@ async function main(): Promise<void> {
       `[jobs] MODULE_ACTIVATION_CRON must be a 5-field cron expression (got "${MODULE_ACTIVATION_CRON}")`,
     );
   }
+  if (!/^(\S+\s+){4}\S+$/.test(MODULE_LEAD_HANDOFF_CRON.trim())) {
+    throw new RangeError(
+      `[jobs] MODULE_LEAD_HANDOFF_CRON must be a 5-field cron expression (got "${MODULE_LEAD_HANDOFF_CRON}")`,
+    );
+  }
   if (!/^(\S+\s+){4}\S+$/.test(FIELD_WORKER_CODE_SMS_CRON.trim())) {
     throw new RangeError(
       `[jobs] FIELD_WORKER_CODE_SMS_CRON must be a 5-field cron expression (got "${FIELD_WORKER_CODE_SMS_CRON}")`,
@@ -367,6 +379,9 @@ async function main(): Promise<void> {
   // its audit intent / compensating line commits on another ([[project_jobs_pool_two_connection_starvation]]); max 3 leaves
   // the scan headroom. ⛔ The shared max-2 pool above.
   const { pool: moduleActivationPool } = createDb(connectionString, { max: 3, logger: false });
+  // Story 12.5 (QE13, TR8) — the lead-handoff sweep's OWN pool: the claim, each scope transaction and the audit lines run here,
+  // sequentially, and ⛔ connection is held across a KMS, Secret Manager, DNS or HTTP call. ⛔ The shared max-2 pool above.
+  const { pool: moduleLeadHandoffPool } = createDb(connectionString, { max: 3, logger: false });
   // Story 13.1b (AD2, AD5) — the field-worker code SMS sweep's OWN pool, the same reasoning: the claim, each scope transaction and
   // the audit lines all run here, sequentially, and ⛔ connection is held across the decrypt or the gateway call.
   const { pool: fieldWorkerCodeSmsPool } = createDb(connectionString, { max: 3, logger: false });
@@ -427,6 +442,7 @@ async function main(): Promise<void> {
     await pool.end().catch((err: unknown) => logError('pool-end', err));
     await waWebhookPool.end().catch((err: unknown) => logError('wa-webhook-pool-end', err));
     await moduleActivationPool.end().catch((err: unknown) => logError('module-activation-pool-end', err));
+    await moduleLeadHandoffPool.end().catch((err: unknown) => logError('module-lead-handoff-pool-end', err));
     await fieldWorkerCodeSmsPool.end().catch((err: unknown) => logError('field-worker-code-sms-pool-end', err));
     await fieldWorkerMoveRequestEscalationPool.end().catch((err: unknown) => logError('field-worker-move-request-escalation-pool-end', err));
     console.info('[jobs] shutdown complete');
@@ -549,6 +565,18 @@ async function main(): Promise<void> {
       boss,
       { pool: moduleActivationPool },
       { cron: MODULE_ACTIVATION_CRON, tz: MODULE_ACTIVATION_TZ },
+    );
+
+    // ── Partner lead-handoff sweep (Story 12.5, `2026-11-21-483` QE13, QE17) ──
+    // Every minute: each `due` lead is checked on the member's side (P0–P5) and sent, signed, to its module's partner endpoint, at
+    // least once. ⛔ Production caller writes a row yet (12.3 is the seam's caller — I1), so with no rows it claims nothing. Refuses,
+    // with ONE `rls_bound_role` alarm, under a login that cannot read across Pariwars (roster Row 26); where the jobs login lacks the
+    // table grant the claim fails 42501 every minute as ONE `sweep_failed` alarm — Row 54 (g) ends it. The secret resolves per row by
+    // NAME (QE9; NOT_FOUND ⇒ null). The egress client is built inside with NO argument (fence rule (e)).
+    await registerModuleLeadHandoffCron(
+      boss,
+      { pool: moduleLeadHandoffPool, encryption: jobsEncryption, resolveSecret: resolveSmsDltConfig },
+      { cron: MODULE_LEAD_HANDOFF_CRON, tz: MODULE_LEAD_HANDOFF_TZ },
     );
 
     // ── Telegram inbound-update processor + opt-in stale-PENDING sweep (Story 5.5, AC4/AC8/AC10) ──
@@ -1012,6 +1040,7 @@ async function main(): Promise<void> {
     await pool.end().catch(() => undefined);
     await waWebhookPool.end().catch(() => undefined);
     await moduleActivationPool.end().catch(() => undefined);
+    await moduleLeadHandoffPool.end().catch(() => undefined);
     await fieldWorkerCodeSmsPool.end().catch(() => undefined);
     await fieldWorkerMoveRequestEscalationPool.end().catch(() => undefined);
     throw err;

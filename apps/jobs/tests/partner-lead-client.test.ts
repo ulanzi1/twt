@@ -59,7 +59,7 @@ async function rawTls(onSocket: (s: tls.TLSSocket) => void): Promise<number> {
 
 describe('the egress client, live (AC4)', () => {
   it('connects to the CHECKED address with SNI = the hostname, Host = the hostname, and sends the body', async () => {
-    const seen: Array<{ servername: string | false; host: string | undefined; body: string; idem: string | undefined }> = [];
+    const seen: Array<{ servername: string | false | null; host: string | undefined; body: string; idem: string | undefined }> = [];
     const server = https.createServer({ ...PARTNER }, (req, res) => {
       let body = '';
       req.on('data', (c: Buffer) => (body += c.toString('utf-8')));

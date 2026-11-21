@@ -40,6 +40,10 @@ here is the gated-build point.
 
 Status: ready-for-dev
 
+> ⭐ **RESUME HERE — Task 0 is DONE (2026-11-02); the build starts at Task 1.0.** What the dev needs: Tasks 1.0–1.5 and 2.1–2.3, AC4,
+> AC5, AC7, AC8, DL5, G12, TR1–TR4 and TR8–TR10. The PQ, TL, C and W sections, DL1–DL4 and DL6's governance rows are finished governance
+> (written, ⛔ sent) — read them for context only; ⛔ edit the counsel question or the Panel note, and ⛔ record either as sent (N2).
+
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled on 2026-09-21 that the fraud register keeps **only the guilty**, that a ban
 > reaches **only the people who filed**, and that **only an exact identifier** — PAN or an Aadhaar token — may bar someone automatically
 > (`-240` cl. 1–3); that PAN and Aadhaar of the claimant and nominee are to be collected on the filing form as that identifier (`-238`
@@ -230,6 +234,11 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
   `.delete(claims)` exists; no production code deletes either table. `claim_documents` has ⛔ trigger today (0053: *"NO …
   write-rejection trigger"*), so DL5 is not redundant; TRUNCATE is already refused one step removed (the uploads FK forces CASCADE, and
   `claim_death_certificate_uploads_no_truncate` raises 23000). No `pg_trigger` inventory test covers `claim_documents`.
+  ⭐ 2026-11-21 (re-traced at `origin/main` `90535934`): migration `0212_claim-membership-checks` (Story 6.39) adds
+  `claim_membership_checks`, whose `claim_membership_checks_death_certificate_review_id_fk` is `ON DELETE cascade` into the REVIEW
+  (and `…_claim_case_id_claims_claim_case_id_fk` cascades from `claims`), guarded by `claim_membership_checks_reject_mutation()` — the
+  same depth > 1 cascade exception, 23000. A certificate-row delete now cascades upload → review → membership check; at depth ≥ 3 that
+  guard passes. No new FK into `claim_documents`, its uploads or its reviews is NO ACTION; no new DELETE path or grant exists.
 - **G13 — Nothing deletes or scrubs on a claim's close today.** No retention job (`apps/jobs/src` has `sms-delivery-prune.ts` and
   `device-token-cleanup.ts` only); every claim-side scrub lives inside the member erasure (`member/anonymize.ts`, keyed on the deceased).
   Not scrubbed by anything: `claim_contacts`, `claim_contact_nominees`, `claim_nominee_bank_accounts`, the OCR row. `events_log` is
@@ -257,6 +266,10 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
   ref (`02c` = this
   story's creation, `02d` = its validate), row key
   `6-22e` (unused on every ref).
+  ⭐ 2026-11-21 re-read (`origin/main` `90535934`, this branch 270 commits behind): decision top `-476` (`-440` stays this branch's —
+  every sibling since recorded it as taken; on main it sits between `-441` and `-439`); migration top `0212` (journal idx 212, `when`
+  `1797998520000`) ⇒ next free `0213`; ledger top `2026-11-21o` on every ref; `ci:local` / GitHub CI 40 jobs. READ LIVE again at
+  each commit.
 
 ## Web research — W1–W8 (2026-11-02, each re-checked against its source the same day; NOT legal advice; put to counsel as questions — N4)
 
@@ -476,30 +489,38 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
    supersedes nothing; its Policy-meaning line says no predicate changes.
 4. **AC4 — The guard (DL5 A; adapt to the option answered).** Live-DB, each on a seeded claim with a `death_certificate` document and an
    upload + review: (a) `DELETE FROM claim_documents` of that row as SUPERUSER, inside a SAVEPOINT ⇒ refused with SQLSTATE 23000 AND the
-   guard's own message (23000 alone also matches the 0122 / 0197 guards) — use the house `pgCode` / `expectPgError` helpers (the D8 spec;
-   `peer-mesh-wa-reminder-record.spec.ts`). ⛔ Assert "the rows are still present" after `ROLLBACK TO SAVEPOINT` as proof — it cannot
+   guard's own message (23000 alone also matches the 0122 / 0197 / 0212 guards) — copy the SHAPE of `pgCode` (the D8 spec, file-local)
+   and `expectPgError` (`peer-mesh-wa-reminder-record.spec.ts`, file-local) into the new spec; ⛔ export either
+   ([[feedback_no_premature_package]]). ⛔ Assert "the rows are still present" after `ROLLBACK TO SAVEPOINT` as proof — it cannot
    fail ([[feedback_assertion_after_savepoint_rollback_is_vacuous]]); (c) and (d) are the controls that must succeed; (b) the same as
    `twt_app` ⇒ refused (42501 — no grant; the guard is the second wall); (c) deleting the
-   CLAIM (superuser) ⇒ claim, document, upload and review all gone (the cascade passes); (d) a `hospital_record` document row is still
+   CLAIM (superuser) ⇒ claim, document, upload and review all gone (the cascade passes) — and the membership check too whenever the
+   fixture seeds one (`seedNomineeNameCheck` does by default since 6.39; `seedMembershipCheck` directly — G12's 2026-11-21 line); (d) a `hospital_record` document row is still
    deletable by the superuser (the guard is death-certificate-only); (e) UPDATE of the OCR columns still works, both a plain UPDATE and
    the OCR job's `insert … onConflictDoUpdate` shape (the trigger is DELETE-only — TR3). Mutation check: drop the depth exception ⇒ (c)
    fails; drop the type test ⇒ (d) fails.
 5. **AC5 — Nothing regressed.** The D8 test still proves *ON DELETE SET NULL* reaches the determination, its DELETE fired from a
    pg_temp trigger inside its own transaction (TR1 — ⛔ any `ALTER TABLE` on a shared table, ⛔ the guard weakened); every suite green;
-   `ci:local` 37 / 37 (or the live job count) on a FRESH container.
+   `ci:local` 40 / 40 (the job count at `90535934` — re-read it live) on a FRESH container.
 6. **AC6 — Records (DL0, DL6).** Under DL0 A: row `6-22e-…` minted `backlog` in `sprint-status.yaml` with this row's DL0 scope VERBATIM
    (from `-438` item 1), the gates (counsel C1–C7; PQ1–PQ5; the 6.22 note's Q2) and E1–E10 as its trace list; every DL6 line written with
    the exact words; an `epics.md` entry for Story 6.22b after 6.22 (the minted-header shape: `### Story 6.22b: …` heading, a *"⚠ Minted
    by …"* blockquote, As a / I want / so that, *"Acceptance Criteria (in brief…)"*). `sprint-status.yaml` parses (`yaml.safe_load` under
    plain `python3` — ⛔ `python3 -I`, which hides PyYAML) with the row count +1.
-7. **AC7 — N1 holds (the negative is checkable).** At the story's last commit: `git diff --name-only b7b43c47 -- packages apps scripts`
-   lists ONLY the DL5 migration, `migrations/meta/_journal.json`, `schema/claim_documents.ts`, `schema/claim_death_certificate_uploads.ts`
+7. **AC7 — N1 holds (the negative is checkable).** At the story's last commit, after `git fetch origin`: `git diff --name-only
+   origin/main...HEAD -- packages apps scripts` (THREE dots — the branch's own changes since the merge base; ⛔ `b7b43c47`, which after
+   the rebase lists every file `main` changed) lists ONLY the DL5 migration, `migrations/meta/_journal.json`, `schema/claim_documents.ts`, `schema/claim_death_certificate_uploads.ts`
    (comment-only), `member/anonymize.ts` and `schema/claim_fraud_investigation_steps.ts` (comment-only, DL6 — DL0 A only), the D8 spec
    and the new guard spec; and `git grep -niP "\bpan_|_pan\b|aadhaar_(number|token|hash)|uid_token|father_?name" -- packages apps`
-   (⚠ `-P`: this machine's `git grep -E` ignores `\b` and matches nothing — TR10) returns exactly the FOUR baseline hits — the
+   (⚠ `-P`: this machine's `git grep -E` ignores `\b` and matches nothing — TR10) returns the FOUR baseline hits — the
    custom-field forbidden-label vocabulary: one comment in `custom-fields/frozen-governance.ts` (`pan_number`), two fixtures in
    `tests/custom-fields/frozen-governance.test.ts` (`aadhaar_number`, `member_pan`), one in
-   `tests/integration/custom-fields/frozen-governance.spec.ts` (`aadhaar_number`) — and nothing else; record the output.
+   `tests/integration/custom-fields/frozen-governance.spec.ts` (`aadhaar_number`) — still exactly four at `origin/main` `90535934`
+   (2026-11-21). The criterion is that THIS branch adds none: `git diff origin/main...HEAD -- packages apps | perl -ne 'print if
+   /^\+(?!\+\+)/ && /\bpan_|_pan\b|aadhaar_(number|token|hash)|uid_token|father_?name/i'` prints NOTHING (perl, ⛔ `grep -P` — macOS
+   `/usr/bin/grep` has no `-P`; prove it can hit first by piping it `+x pan_y` — TR10). Any further hit of the whole-tree grep must be in a file `main` changed, ⛔ this
+   branch (row `13-1h`, backlog, will add a field worker's PAN — if it lands first, its hits are main's, listed as such). Record both
+   outputs.
 8. **AC8 — The story's own Policy-meaning note stands** (no predicate here) and the DRAFTED predicate sentence is carried, verbatim, into
    row `6-22e`'s comment block so its build re-checks it.
 
@@ -551,7 +572,16 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
         writes it once the guard is built ([[feedback_closure_language_precision]]).
 - [ ] **Task 1 — The certificate guard (DL5; AC4, AC5)** — skip with a banner if DL5 C ([[project_story_automator_ops]]: an unchecked
       box means "correctly not done").
-  - [ ] 1.1 Migration `<next free>_claim-documents-death-certificate-delete-guard.sql`, HAND-WRITTEN (⛔ `db:generate` — drizzle
+  - [ ] 1.0 ⭐ **Re-sync before any code** — Task 0 ran on 2026-11-02 and `main` has moved since (270 commits at `90535934`).
+        `ListAgents` + `git branch --show-current`; `git fetch origin`; `git rebase origin/main`. A trial merge at `90535934` conflicts
+        in FOUR records files — resolve each by keeping BOTH sides:
+        `.decision-log.md` — `-440` goes in its NUMBERED place (newest-first: BELOW `-441`, ABOVE `-439`), ⛔ left on top, its text
+        unchanged; `sprint-status.yaml` — the ledger lines interleave by date and the rows keep both sides, `---` separators and
+        journal-style duplicates checked ([[project_rebase_ledger_conflict_separator]]), then `yaml.safe_load` under plain `python3`;
+        `epics.md` and `docs/launch-gate-inventory/inventory-roster.md` — both sides' added lines kept. Then re-run Task 0.1's diff
+        checks from `b7b43c47` to the new `origin/main` (G12's 2026-11-21 line is the result at `90535934`) and re-read the numbers
+        (G16's 2026-11-21 line: migration `0213` next, `when` later than `1797998520000`).
+  - [ ] 1.1 Migration `<next free — 0213 at 90535934>_claim-documents-death-certificate-delete-guard.sql`, HAND-WRITTEN (⛔ `db:generate` — drizzle
         snapshots stop at `0020`; a trigger is invisible to it): `CREATE FUNCTION claim_documents_reject_death_certificate_delete()` +
         `CREATE TRIGGER … BEFORE DELETE ON claim_documents FOR EACH ROW`. Header comment cites `-243` cl. 2 and G12. Journal entry with
         a `when` LATER than every sibling's (TR4).
@@ -577,7 +607,8 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
   - [ ] 2.1 `pnpm typecheck` (turbo), the domain integration suite, then `ci:local` on a FRESH container with `DATABASE_URL` set to it
         ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]] #18).
   - [ ] 2.2 AC7's two commands, output recorded.
-  - [ ] 2.3 The ledger entry (`2026-11-02<next letter>` READ LIVE) — the safe prepend ([[project_sprint_status_safe_prepend]]); row
+  - [ ] 2.3 The ledger entry, keyed by the date it is WRITTEN (`<that day><next letter>` READ LIVE on every ref and worktree — ⛔
+        `2026-11-02…`) — the safe prepend ([[project_sprint_status_safe_prepend]]); row
         `6-22b` → `review`; File List; Change Log.
 
 ## Dev Notes
@@ -610,6 +641,8 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
   the next catalog version and roster Row 46; `story/13-2-…`, `story/14-3-…` at `0193`. Whichever lands second renumbers; the journal's
   `when` order matters ([[project_sibling_migration_when_order_shared_db]]); never regenerate an applied migration (42P07 —
   [[project_live_db_test_gotchas]]).
+  ⭐ 2026-11-21 — the snapshot above is stale: 6.39, 13.2, 14.3 and 12.2 have all landed; `main` `90535934` is at decision `-476`,
+  migration `0212`, ledger `2026-11-21o`, 40 CI jobs (G16's 2026-11-21 line). Task 1.0 re-reads them.
 - **TR5 — "Counsel is not engaged" is false.** Write "counsel has not been asked about the identifier set" ([[project_dpdpa_counsel_engaged_but_unrecorded]]).
 - **TR6 — The legal corpus is private.** Cite Niyamavali / privacy-policy sections by NUMBER only; ⛔ paste their text into tracked files
   ([[project_legal_corpus_private_repo_split]]). The public repo is PUBLIC — the counsel question names no member, family or staff person.
@@ -635,6 +668,11 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
   `CLAIM_CONTACT_MOBILE_FIELD_CLASS` (run under the claim's `pariwarId` in `correction-crypto.ts`), whose comment explains why a
   claim-side index must never reuse the login hash — it would make rows joinable to a member's identity); batch-audit rules
   ([[project_kms_audit_per_hmac_global_lock]]); erasure keeps it only where `-240` cl. 1 keeps the record.
+  ⭐ 2026-11-21 (a dated line, ⛔ part of the verbatim list): row `13-1h-field-worker-pan-and-aadhaar-last-four-match` (backlog,
+  decision `2026-11-16-464`) will also collect a PAN, with a blind index, plus an Aadhaar last-4, from field workers; and
+  `counsel-question-2026-11-03-field-worker-data-basis.md` (WRITTEN, ⛔ sent) touches PAN for the TDS on commission. Whichever builds
+  first fixes the house shape of a PAN field class — design the two together (whether one PAN index or two, and which namespace), and
+  ask whether one counsel answer on PAN can serve both ([[feedback_no_premature_package]] holds for any shared code).
 - **E4 — The PAN port.** The port in `packages/contracts` (the usual home — G7) or `packages/platform-adapters/src/pan-verification/`
   (the `bank-ifsc-lookup` shape), an in-memory stub + vendor adapter, selection in
   `deps.ts`, a boundary gate like `scripts/kyc-provider-boundary/`; the vendor named in a recorded decision and the processor inventory
@@ -711,3 +749,4 @@ key, an audit type, a port or a flag; or send anything to counsel or the Panel.
 |---|---|---|
 | 2026-11-02 | 1.0 | Created by `bmad-create-story 6.22b` in its own worktree, pinned at `origin/main` `b7b43c47`: counsel's question first (C1–C8), the Panel's four questions (PQ1–PQ4 + TL1–TL3), the decision (DL0–DL7 PROPOSED), the certificate guard (DL5); the gated build moved to a proposed row `6-22e` with E1–E10. Row `backlog → ready-for-dev`. ⛔ Decision, ⛔ code. Nothing sent. |
 | 2026-11-02 | 1.1 | Validated by `bmad-create-story validate 6.22b` (fresh context; four read-only verifiers — governance + records; the DL5 guard substrate, with the trigger logic run on a scratch Postgres; filing + identity; the W-facts against their sources — each critical re-checked by hand at `0bc1d6ba`, `origin/main` still `b7b43c47`). BigDev: "all". AC7's grep moved to `-P` (`git grep -E` ignores `\b` here — TR10) and its allow-list completed; TR1's D8 fix is a pg_temp trigger, ⛔ DDL on a shared table (DL5's contradictory cost line fixed); AC4 asserts the guard's message, ⛔ a post-savepoint presence check; dropping Aadhaar is a narrowing of `-238` cl. 6 ⇒ new PQ5 (TL1 chooses nothing; TL1 / TL2 say a question is WRITTEN for counsel; send order in DL3); PQ1's ONE FACT re-based on adults (~3 in 4, an upper bound), PQ2's on a vendor claim (W8, new), PQ3's on G11's three final-denial cases; W1 corrected (the ITD page is not holder-only); E3 / DL2 (iv) namespaces corrected; template §E1 / §E4 disambiguated; DL6 gains Row 47 notes, the `epics.md` 6.22 blockquote, the stale *"No story file yet"* line and the two code comments (two, ⛔ three); G1 / G2 / G3 / G6 / G7 / G12 / G13 / G16 / TR3 / Niyamavali-row citations corrected; Tasks 0.4 / 0.6 commit order and ledger. Status unchanged. |
+| 2026-11-21 | 1.2 | Validated again by `bmad-create-story validate 6.22b` before the build resumes, re-traced at `origin/main` `90535934` (the branch 270 commits behind; Task 0 records unchanged — nothing sent, `-440` still this branch's, AC7's baseline still four hits). BigDev: "all". New Task 1.0 (rebase; the four conflicting records files; `-440` placed between `-441` and `-439`; migration `0213`); AC7 diffs `origin/main...HEAD` (⛔ `b7b43c47`) and requires no ADDED hit (perl, ⛔ `grep -P`); Task 2.3's ledger key is the day it is written; G12 + AC4 (c) gain 0212's membership-check cascade; AC4's `pgCode` / `expectPgError` are file-local — copied, ⛔ exported; AC5 40 jobs; G16 / TR4 dated re-reads; E3 dated line on row `13-1h`'s PAN index (also in row `6-22e`'s block); a RESUME HERE block. Status unchanged. |

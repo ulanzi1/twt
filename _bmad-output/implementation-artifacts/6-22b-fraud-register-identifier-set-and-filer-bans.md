@@ -42,7 +42,11 @@ Status: ready-for-dev
 
 > ⭐ **RESUME HERE — Task 0 is DONE (2026-11-02); the build starts at Task 1.0.** What the dev needs: Tasks 1.0–1.5 and 2.1–2.3, AC4,
 > AC5, AC7, AC8, DL5, G12, TR1–TR4 and TR8–TR10. The PQ, TL, C and W sections, DL1–DL4 and DL6's governance rows are finished governance
-> (written, ⛔ sent) — read them for context only; ⛔ edit the counsel question or the Panel note, and ⛔ record either as sent (N2).
+> — read them for context only; ⛔ edit the counsel question or either Panel note.
+> ⭐ **Since 2026-11-21 all of it is SENT and RULED** (N2 discharged): the 6.22 note → `2026-11-21-477`; this story's note →
+> `2026-11-21-478`; row `6-22f` minted → `2026-11-21-479`; the follow-up note F1–F8 → `2026-11-21-480`; the counsel question SENT
+> (roster Row 47 (f) MET), its answer awaited. ⛔ None of the four touches Tasks 1–2, DL5, AC4, AC5 or AC7 — see the 2026-11-21 line
+> under AC8.
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled on 2026-09-21 that the fraud register keeps **only the guilty**, that a ban
 > reaches **only the people who filed**, and that **only an exact identifier** — PAN or an Aadhaar token — may bar someone automatically
@@ -119,6 +123,12 @@ with that build in row `6-22e`):** *"If an investigation has found that you took
 on — another death claim with the Trust, under any number, for as long as the ban stands; a claim from someone whose name, date of birth
 and father's name only resemble yours is held for a person to check, never refused on the resemblance alone."* Its edges are PQ1 (a
 family with no PAN), PQ2 (a PAN that cannot be confirmed) and the 6.22 note's Q2 (a nominee who never knew).
+⭐ 2026-11-21 — those edges are RULED, and the gated build gains three predicates, each carried in row `6-22e`'s block: PQ1 **A**
+(`-478`) — *"You cannot file a death claim, or be paid on one, without a PAN; if you have none, the helpline will direct you to a PAN
+centre to get one."*; PQ2 **B** — a doubt about a PAN is a warning the approver answers; the 6.22 note's Q2 **B** (`-477`) — a nominee
+is barred only on a finding naming them; F7 **A** (`-480`) — *"If you file a death claim and an investigation finds you took part in a
+false one, you can be barred from filing again; being named on a claim is not enough."*; F8 **A** — notes about a member found
+innocent are deleted after counsel's period. This story's own line above (NO predicate) is unchanged.
 
 **Checked against the Niyamavali** (the git-ignored copy in the main checkout, `docs/legal/niyamavali.md`, 2026-11-02) — result: SILENT
 on PAN, Aadhaar tokens, father's name and any ban on a NON-member; §6 lists what a claim collects without PAN (the gated build ADDS to
@@ -134,6 +144,8 @@ it); §8.5's grounds are consistent with a finding of fraud; §2.5's *"Aadhaar H
 **N2 — Nothing is recorded as asked until BigDev sends it.** The counsel question and the Panel note are WRITTEN, ⛔ SENT. No record —
 story, ledger, roster, deferred-work, decision — says "asked", "put to counsel" or "shown to the Panel" before the send
 ([[feedback_shown_to_panel_means_sent]]).
+⭐ 2026-11-21 — **N2 DISCHARGED by the sends**: the Panel note was sent and ruled (`-478`), the counsel question sent (BigDev: *"yes,
+it's gone"*). The records now say SENT because they are; ⛔ "correct" them back.
 
 **N3 — A death certificate's record is never deleted except with its claim.** After DL5 a direct DELETE of a `claim_documents` row whose
 `document_type = 'death_certificate'` is refused for every role, superuser included; deleting the parent claim still removes everything
@@ -499,6 +511,8 @@ The counsel question carries both in a further dated note (still ⛔ sent).
    summary-line correction and G11's three final-denial cases), evidence LAST with template §E1 verbatim by decision id + clause;
    template §E4 commands RUN and recorded. No TL line says counsel "is asked" or credits a Consequence / summary line to the Panel.
    Status WRITTEN, ⛔ sent. The 6.22 note's Q2 referenced, ⛔ duplicated.
+   ⭐ 2026-11-21 — **AC1 and AC2 are judged as WRITTEN** (both files at `26e8c9b3`, 2026-11-02, plus their dated notes): both were met
+   then. Their status lines now read SENT (and the note RULED, `-478`) because N2 was discharged by the sends — ⛔ a failure of either AC.
 3. **AC3 — The decision (DL4)** committed ALONE, before any code, with a free number re-grepped on every ref and worktree at its commit;
    supersedes nothing; its Policy-meaning line says no predicate changes.
 4. **AC4 — The guard (DL5 A; adapt to the option answered).** Live-DB, each on a seeded claim with a `death_certificate` document and an
@@ -521,6 +535,9 @@ The counsel question carries both in a further dated note (still ⛔ sent).
    the exact words; an `epics.md` entry for Story 6.22b after 6.22 (the minted-header shape: `### Story 6.22b: …` heading, a *"⚠ Minted
    by …"* blockquote, As a / I want / so that, *"Acceptance Criteria (in brief…)"*). `sprint-status.yaml` parses (`yaml.safe_load` under
    plain `python3` — ⛔ `python3 -I`, which hides PyYAML) with the row count +1.
+   ⭐ 2026-11-21 — every PANEL gate in row `6-22e`'s list is now met (PQ1–PQ5 `-478`; the 6.22 note's Q2 `-477`; F2 / F7 / F8 `-480`);
+   what still gates it is counsel's answer (questions 1–8), and for the Aadhaar half a lawful route (F2 A). A second row, `6-22f`, was
+   minted by `-479` — against `origin/main` the row count is now **+2** (315 → 317), ⛔ +1.
 7. **AC7 — N1 holds (the negative is checkable).** At the story's last commit, after `git fetch origin`: `git diff --name-only
    origin/main...HEAD -- packages apps scripts` (THREE dots — the branch's own changes since the merge base; ⛔ `b7b43c47`, which after
    the rebase lists every file `main` changed) lists ONLY the DL5 migration, `migrations/meta/_journal.json`, `schema/claim_documents.ts`, `schema/claim_death_certificate_uploads.ts`
@@ -537,10 +554,16 @@ The counsel question carries both in a further dated note (still ⛔ sent).
    outputs.
 8. **AC8 — The story's own Policy-meaning note stands** (no predicate here) and the DRAFTED predicate sentence is carried, verbatim, into
    row `6-22e`'s comment block so its build re-checks it.
+   ⭐ 2026-11-21 — **the build here is unchanged by the four rulings.** None of `-477`–`-480` touches deleting a `claim_documents` row:
+   every death certificate is kept (`-243`, untouched); the deletions ruled (`-478` Q3 C, `-480` F8 A) are of identity details and
+   investigation notes, row `6-22e`'s SCRUB (E7), ⛔ a row DELETE — so DL5's guard is ⛔ widened, and its DELETE-only, depth > 1 shape
+   stands. AC7's allow-list and baseline are unchanged (N1 holds: nothing of the identifier set is built). Re-read 2026-11-21:
+   `origin/main` `90535934` (unmoved), migration `0213` free on every ref and worktree, decisions to `-480` on this branch — Tasks 1–2
+   need ⛔ decision.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST, no code** ([[feedback_governance_commits_precede_implementation]])
+- [x] **Task 0 — Governance FIRST, no code** ([[feedback_governance_commits_precede_implementation]])
   - [x] 0.1 `git fetch origin`; confirm `b7b43c47` is an ancestor of HEAD (rebase onto a moved `origin/main` — ledger-only conflicts,
         branch on top, [[project_rebase_ledger_conflict_separator]]); `git diff --name-only b7b43c47 origin/main -- apps packages scripts`
         — re-derive G3, G8, G10–G13 if anything under `claim/`, `schema/claim_documents*`, `kyc/`, `anonymize.ts` or `migrations/` moved;
@@ -781,3 +804,4 @@ key, an audit type, a port or a flag; or send anything to counsel or the Panel.
 | 2026-11-02 | 1.0 | Created by `bmad-create-story 6.22b` in its own worktree, pinned at `origin/main` `b7b43c47`: counsel's question first (C1–C8), the Panel's four questions (PQ1–PQ4 + TL1–TL3), the decision (DL0–DL7 PROPOSED), the certificate guard (DL5); the gated build moved to a proposed row `6-22e` with E1–E10. Row `backlog → ready-for-dev`. ⛔ Decision, ⛔ code. Nothing sent. |
 | 2026-11-02 | 1.1 | Validated by `bmad-create-story validate 6.22b` (fresh context; four read-only verifiers — governance + records; the DL5 guard substrate, with the trigger logic run on a scratch Postgres; filing + identity; the W-facts against their sources — each critical re-checked by hand at `0bc1d6ba`, `origin/main` still `b7b43c47`). BigDev: "all". AC7's grep moved to `-P` (`git grep -E` ignores `\b` here — TR10) and its allow-list completed; TR1's D8 fix is a pg_temp trigger, ⛔ DDL on a shared table (DL5's contradictory cost line fixed); AC4 asserts the guard's message, ⛔ a post-savepoint presence check; dropping Aadhaar is a narrowing of `-238` cl. 6 ⇒ new PQ5 (TL1 chooses nothing; TL1 / TL2 say a question is WRITTEN for counsel; send order in DL3); PQ1's ONE FACT re-based on adults (~3 in 4, an upper bound), PQ2's on a vendor claim (W8, new), PQ3's on G11's three final-denial cases; W1 corrected (the ITD page is not holder-only); E3 / DL2 (iv) namespaces corrected; template §E1 / §E4 disambiguated; DL6 gains Row 47 notes, the `epics.md` 6.22 blockquote, the stale *"No story file yet"* line and the two code comments (two, ⛔ three); G1 / G2 / G3 / G6 / G7 / G12 / G13 / G16 / TR3 / Niyamavali-row citations corrected; Tasks 0.4 / 0.6 commit order and ledger. Status unchanged. |
 | 2026-11-21 | 1.2 | Validated again by `bmad-create-story validate 6.22b` before the build resumes, re-traced at `origin/main` `90535934` (the branch 270 commits behind; Task 0 records unchanged — nothing sent, `-440` still this branch's, AC7's baseline still four hits). BigDev: "all". New Task 1.0 (rebase; the four conflicting records files; `-440` placed between `-441` and `-439`; migration `0213`); AC7 diffs `origin/main...HEAD` (⛔ `b7b43c47`) and requires no ADDED hit (perl, ⛔ `grep -P`); Task 2.3's ledger key is the day it is written; G12 + AC4 (c) gain 0212's membership-check cascade; AC4's `pgCode` / `expectPgError` are file-local — copied, ⛔ exported; AC5 40 jobs; G16 / TR4 dated re-reads; E3 dated line on row `13-1h`'s PAN index (also in row `6-22e`'s block); a RESUME HERE block. Status unchanged. |
+| 2026-11-21 | 1.3 | Validated again by `bmad-create-story validate 6.22b` after the Panel's three rulings and the sends (`-477`, `-478`, `-480`; `-479` mints `6-22f`; the counsel question SENT). BigDev: "all". N2 discharged (dated line; the resume block says all is SENT and RULED); AC1 / AC2 judged as WRITTEN at `26e8c9b3`; the Policy-meaning section lists the ruled edges and the gated build's new predicates (PQ1 A, F7 A, F8 A); AC6's gates (Panel all met; counsel remains) and row count +2; a line under AC8 that Tasks 1–2, DL5, AC4, AC5 and AC7 are unchanged (no ruling touches a `claim_documents` delete; `0213` free; `origin/main` unmoved); Task 0's parent box ticked. Status unchanged. |

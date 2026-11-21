@@ -85,6 +85,11 @@ import {
 } from './state-trustee-decision.js';
 import { hasLiveRoutedRow } from './r9-routing.js';
 import { groundInspectionApprovalState, readGroundInspectionApprovalFacts } from './ground-inspection-approval.js';
+import {
+  FEE_PAID_AFTER_DEATH_REASON_CODE,
+  assertFeePaidAfterDeathShown,
+  membershipCheckApprovalState,
+} from './membership-check-approval.js';
 import { readStandingSuspicionRefusals, suspicionAppealWaitState } from './suspicion-refusal.js';
 import { readPaymentCommittedClaim } from './one-payment-per-death.js';
 
@@ -531,6 +536,11 @@ export async function voteOnFrozenClaim(
   // silently strand it as `state_trustee_approved` with no path to commit. Guard the vote, not just commit.
   if (await hasLiveRoutedRow(db, input.pariwarId, input.claimCaseId)) {
     throw new ClaimAlreadyRoutedError(input.claimCaseId);
+  }
+  // ⭐ Story 6.39 (DL9 (b), N6) — the final-vote DENY with `fee_paid_after_death` is accepted ONLY while the live,
+  // current membership check says so. A guard on the REASON, ⛔ on the denial (N5). BEFORE any write below.
+  if (input.reasonCode === FEE_PAID_AFTER_DEATH_REASON_CODE) {
+    await assertFeePaidAfterDeathShown(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId);
   }
 
   // Story 6.18 (AC11) — a LIVE return blocks the vote until the claim is RESUBMITTED, and when it is,
@@ -1081,6 +1091,12 @@ export async function resolveEscalation(
   input: ResolveEscalationInput,
 ): Promise<TrusteeDecisionResult> {
   assertReasonCode(input.outcome, input.reasonCode);
+  // ⭐ Story 6.39 (DL9 (b)) — `fee_paid_after_death` is the FINAL VOTE's reason, ⛔ an escalation resolution's: refused
+  // here as not valid for this decision (the Pariwar Admin denies an escalated claim with another reason; the District
+  // Admin's own denial carries the verifier code).
+  if (input.reasonCode === FEE_PAID_AFTER_DEATH_REASON_CODE) {
+    throw new TrusteeReasonCodeError(input.outcome, input.reasonCode, 'this reason is recorded on the final-vote denial only');
+  }
   const warningReasonCode = input.warningReasonCode ?? null;
   assertWarningReasonOnApprovalOnly(input.claimCaseId, input.outcome, warningReasonCode);
   await acquireTrusteeLock(client, input.pariwarId, input.claimCaseId);
@@ -1341,6 +1357,15 @@ export async function commitCycleFreeze(
       continue;
     }
     if (!groundInspectionApprovalState(await readGroundInspectionApprovalFacts(db, input.pariwarId, candidate.claimCaseId)).complete) {
+      continue;
+    }
+    // ⭐ Story 6.39 DL6 (`2026-10-31-424` Q1 (a) C, `-430` Q1 B: *"before any drive opens"*) — the membership check,
+    // re-read through the gate's OWN state function at the LAST read before the pools spawn: SKIP-AND-KEEP a candidate
+    // whose check no longer passes. Defence in depth, as the ground-inspection skip above: the final vote required a
+    // passing check and the review window closes at that vote, so only a raw write reaches this (G10). The claim stays
+    // `state_trustee_approved`; ⛔ no `claim.approved`; ⛔ reason shown (as every skip here). ⚠ Such a claim is STRANDED:
+    // outside the window ⛔ new check can be recorded — its only exit is `routeToR9`. A recorded dead end, ⛔ a built path.
+    if (!(await membershipCheckApprovalState(db, input.pariwarId, candidate.claimCaseId, locked.deceasedMemberId)).passed) {
       continue;
     }
     // ⭐ Story 6.28 OP3 (`2026-10-11-319`) — one payment per death, re-checked at the payout milestone (defence in depth —

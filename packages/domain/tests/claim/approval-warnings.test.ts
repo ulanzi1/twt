@@ -507,6 +507,9 @@ describe('NW1 — import discipline, TRANSITIVELY (`-279` A12)', () => {
     'claim/suspicion-refusal.ts',
     // ⭐ Story 6.28 (OP1) — "one payment per death", once: the gate's conjunct (OP2), the warning (OP5) and the queue read it.
     'claim/one-payment-per-death.ts',
+    // ⭐ Story 6.39 (DL5, TR4) — the membership check's LEAF: `nominee-name-check.ts` imports its conjunct, so it must
+    // reach ⛔ the gate module, ⛔ the event graph and ⛔ the nominee lock (a runtime init cycle typecheck cannot see).
+    'claim/membership-check-approval.ts',
     // ⭐ Story 6.27a (PM23 (a)) — the questionnaire engine: 6.27b's warning SQL reads its key list, so it is fenced like
     // the gate's own modules (the event-response mapping lives in `claim/peer-mesh-reply.ts`, ⛔ never here).
     'questionnaires/index.ts',

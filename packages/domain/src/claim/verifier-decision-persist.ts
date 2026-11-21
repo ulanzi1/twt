@@ -45,6 +45,7 @@ import { assertClaimContactRecorded } from './claim-contact-check.js';
 import { SuspicionReasonLockedError, WarningReasonUngroundedError } from './errors.js';
 import { intakeAdvisoryLockKey } from './icp-lock.js';
 import { POST_DEATH_NOMINEE_CHANGE_REASON_CODE } from './suspicion-refusal.js';
+import { FEE_PAID_AFTER_DEATH_REASON_CODE, assertFeePaidAfterDeathShown } from './membership-check-approval.js';
 import { assertClaimApprovable } from './nominee-name-check.js';
 import { projectClaimState } from './project.js';
 import {
@@ -371,6 +372,12 @@ export async function adjudicateClaim(
   if (input.reasonCode === 'post_death_nominee_change') {
     await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
   }
+  // ⭐ Story 6.39 (DL9 (a), N6) — `fee_paid_after_death` is accepted ONLY while the live, current membership check says
+  // so. A guard on the REASON, ⛔ on the denial (N5): the same denial with another reason is never gated. Placed with
+  // the `-239` grounding, after the live-decision guard, for the same reason.
+  if (input.reasonCode === FEE_PAID_AFTER_DEATH_REASON_CODE) {
+    await assertFeePaidAfterDeathShown(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId);
+  }
 
   // (a) Enter review in the write path when still gathering signals (D-C) — approve/deny ONLY.
   if (claimRow.currentState === 'verification_in_progress') {
@@ -663,6 +670,11 @@ export async function reviseDecision(
   // revision that cannot happen is refused for its real reason.
   if (input.reasonCode === 'post_death_nominee_change') {
     await assertPostDeathRefusalGrounded(db, input.pariwarId, input.claimCaseId);
+  }
+  // ⭐ Story 6.39 (DL9 (a)) — a revise ONTO (or keeping) `fee_paid_after_death` needs the live membership check to say
+  // so, exactly as the first decision does (a same-outcome revise can switch reason codes).
+  if (input.reasonCode === FEE_PAID_AFTER_DEATH_REASON_CODE) {
+    await assertFeePaidAfterDeathShown(db, input.pariwarId, input.claimCaseId, claimRow.deceasedMemberId);
   }
   // ⭐ Story 6.23a (NW7; NW18) — an APPROVAL on a warned claim is FINAL in its words: a revise would re-record an
   //    approval over a warning with ⛔ no reason channel, or replace a written note. AFTER the window / live /

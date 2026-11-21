@@ -84,6 +84,7 @@ import {
   underSavepoint,
 } from './later-approval-warnings.js';
 import { groundInspectionRequiredMessage } from './ground-inspection-required-message.js';
+import { membershipCheckRequiredMessage } from './membership-check-required-message.js';
 import { DEATH_ALREADY_FINALLY_APPROVED_MESSAGE } from './death-already-finally-approved-message.js';
 import { suspicionAppealPendingMessage } from './suspicion-appeal-pending-message.js';
 
@@ -214,6 +215,12 @@ export function translateClosureError(err: unknown): never {
       'closure.death_certificate_acceptance_required',
       { reason: err.reason },
     );
+  }
+  // ⭐ Story 6.39 (DL5; `-424` Q1 (a) C, `-430` Q1 B) — the approval WAITS for the membership check. ⛔ NOT a denial.
+  if (err instanceof claim.MembershipCheckRequiredError) {
+    throw new ConflictError(membershipCheckRequiredMessage(err.reason), 'closure.membership_check_required', {
+      reason: err.reason,
+    });
   }
   // ⭐ Story 6.26a (GI11) — the claim WAITS for its ground inspection (`-263` FQ9 A) — ⛔ never a 500, ⛔ never a denial.
   if (err instanceof claim.GroundInspectionRequiredError) {

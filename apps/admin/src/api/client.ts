@@ -370,6 +370,9 @@ import {
   FraudInvestigationResponse,
   MemberFraudClaimsResponse,
   OpenFraudInvestigationsResponse,
+  MembershipCheckPreviewResponse,
+  type MembershipCheckRequest,
+  MembershipCheckWriteResponse,
   type DeathCertificateReviewRequest,
   ClaimDocumentUploadResponse,
   RecordNomineeBankResponse,
@@ -2145,6 +2148,24 @@ export function postDeathCertificateReview(pariwarId: string, claimCaseId: strin
 /** Every upload with its reviews — the dates and notes DECRYPTED, so fetched on demand and audited (D9). */
 export function getDeathCertificateHistory(pariwarId: string, claimCaseId: string) {
   return apiFetch(`${claimBase(pariwarId, claimCaseId)}/death-certificate/history`, DeathCertificateHistoryResponse);
+}
+
+// ── Story 6.39 — the staff membership check before any drive ─────────────────────────────────────────────────────
+/**
+ * The PREVIEW: the accepted certificate's date of death beside the joining fee's date, the comparison the SYSTEM made,
+ * whether the identity must be judged, and the live check. It opens the date of death, so it is fetched on demand
+ * and audited.
+ */
+export function getMembershipCheckPreview(pariwarId: string, claimCaseId: string) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/membership-check`, MembershipCheckPreviewResponse);
+}
+
+/** The District Admin RECORDS the check. ⛔ No date in the body — the server computes the comparison. */
+export function postMembershipCheck(pariwarId: string, claimCaseId: string, body: MembershipCheckRequest) {
+  return apiFetch(`${claimBase(pariwarId, claimCaseId)}/membership-check`, MembershipCheckWriteResponse, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 // ── Story 6.21b (D5) — the helpline's death-certificate replacement (upload + status list) ──────

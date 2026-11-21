@@ -46,6 +46,11 @@ export const VERIFIER_REASON_CODES = [
   // on or after the certificate date. A DEDICATED code, ⛔ not `other`: AC13's ground-inspection
   // inheritance must RECOGNISE a `-239` refusal. `denied` ONLY. Migration 0120 adds the pgEnum value.
   'post_death_nominee_change',
+  // Story 6.39 (DL9 (a), `2026-10-31-430` Q1 B) — the joining fee was paid AFTER the date of death on the certificate:
+  // ⛔ drive can open, and the District Admin ENDS the claim with this dedicated code (⛔ `other`: the ruling's own
+  // ground must be recognisable). `denied` ONLY, and accepted ONLY while the live membership check says `after_death`
+  // (`assertFeePaidAfterDeathShown`). Migration 0210 adds the pgEnum value.
+  'fee_paid_after_death',
   // Escalate family.
   'r9_routed_to_voting', // routed to State-Trustee voting/discretion → escalate
   // Any-outcome escape hatch (mandatory free-text rationale).
@@ -69,6 +74,7 @@ export const REASON_CODE_OUTCOME_COMPAT: Readonly<
   concealment_flag_override: ['approved'],
   concealment_flag_uphold: ['denied'],
   post_death_nominee_change: ['denied'],
+  fee_paid_after_death: ['denied'],
   r9_routed_to_voting: ['escalated'],
   other: ['approved', 'denied', 'escalated'],
 };

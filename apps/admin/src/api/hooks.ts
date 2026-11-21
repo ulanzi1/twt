@@ -2659,6 +2659,61 @@ export function usePostDeathCertificateReview(pariwarId: string, claimCaseId: st
   });
 }
 
+// ── Story 6.39 — the staff membership check before any drive ─────────────────────────────────────────────────────
+export const membershipCheckKey = (pariwarId: string, claimCaseId: string) => ['membership-check', pariwarId, claimCaseId] as const;
+
+/**
+ * The PREVIEW — fetched ONLY while the control is open, and ⛔ never in the background: every fetch opens the accepted
+ * certificate's date of death and writes an audit line (the death-certificate history's posture).
+ */
+export function useMembershipCheckPreview(pariwarId: string, claimCaseId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: membershipCheckKey(pariwarId, claimCaseId),
+    queryFn: () => api.getMembershipCheckPreview(pariwarId, claimCaseId),
+    enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
+    staleTime: Infinity,
+    // ⭐ Closing FORGETS the date: nothing is kept once the control unmounts its query.
+    gcTime: 0,
+  });
+}
+
+/**
+ * The refusals that mean "what the check was opened against has moved" — the certificate was reviewed again, the
+ * claim left the window, or the identity record changed: refetch the preview AND the console packet, so the staff
+ * member sees the current state before checking again.
+ */
+export const MEMBERSHIP_CHECK_STALE_CODES: ReadonlySet<string> = new Set([
+  'membership_check.stale',
+  'membership_check.concurrent',
+  'membership_check.certificate_not_accepted',
+  'membership_check.certificate_date_unreadable',
+  'membership_check.window_closed',
+  'membership_check.invalid_outcome',
+  'membership_check.no_fee_receipt',
+]);
+
+/**
+ * The District Admin's membership check. A success moves the console packet (its gate section and the approve gate)
+ * and the preview (the live check); a STALE refusal refreshes both.
+ */
+export function usePostMembershipCheck(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: verifierConsoleKey(pariwarId, claimCaseId ?? '') });
+    void qc.invalidateQueries({ queryKey: membershipCheckKey(pariwarId, claimCaseId ?? '') });
+  };
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.postMembershipCheck>[2]) => api.postMembershipCheck(pariwarId, claimCaseId as string, body),
+    onSuccess: refresh,
+    onError: (err: unknown) => {
+      if (err instanceof ApiError && MEMBERSHIP_CHECK_STALE_CODES.has(err.code)) refresh();
+    },
+  });
+}
+
 // ── The Super Admin's WARNING-REASON LIST (Story 6.23a, NW17) ──────────────────────────────────────────────────
 export const approvalWarningReasonsKey = (pariwarId: string) => ['approval-warning-reasons', pariwarId] as const;
 

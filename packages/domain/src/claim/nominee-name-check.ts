@@ -32,6 +32,7 @@ import {
 import { assertLateWarningsCovered } from './approval-warnings.js';
 import { assertDeathCertificateAcceptedForApproval } from './death-certificate-approval.js';
 import { assertGroundInspectionCompleteForApproval } from './ground-inspection-approval.js';
+import { assertMembershipCheckedForApproval } from './membership-check-approval.js';
 import { assertNoOtherFinalApprovalForDeath } from './one-payment-per-death.js';
 import { assertSuspicionAppealDecidedForFinalApproval } from './suspicion-refusal.js';
 import { getEffectiveNomineeDeclaration } from './nominee-effective.js';
@@ -389,6 +390,13 @@ export async function readNomineeNameCheckSnapshot(
  *                                            claim WAITS (→ 409) — ⛔ NOT a denial. Runs after the name check (or the
  *                                            `-251` waiver) and before the late-warning wait; it reaches all six call
  *                                            sites and the waived approve from HERE, ONCE.
+ * @throws MembershipCheckRequiredError       ⭐ Story 6.39 DL5 (`2026-10-31-424` Q1 (a) C, `2026-10-31-430` Q1 B) — the claim has
+ *                                            ⛔ CURRENT, PASSING membership check (`membershipCheckApprovalState`: ⛔ no
+ *                                            check, a check made against a superseded certificate review, the fee paid
+ *                                            after the death, or the identity ⛔ confirmed). The claim WAITS (→ 409) —
+ *                                            ⛔ NOT a denial. Runs after the ground inspection and BEFORE the final-only
+ *                                            conjuncts and the late-warning wait; at BOTH steps; it reaches all six call
+ *                                            sites and the waived approve from HERE, ONCE.
  * @throws LateWarningReasonRequiredError     ⭐ Story 6.23b EA2 (`-277` Q3 B) — the LAST conjunct: a warning that
  *                                            appeared after the District Admin's approval has ⛔ no District Admin
  *                                            reason yet (⛔ counting a late reason an approving actor recorded —
@@ -430,6 +438,10 @@ export async function assertClaimApprovable(
   // ⭐ Story 6.26a GI1 — the ground inspection, OUTSIDE the inner helper (its fourth caller `isReturnedClaimResubmitted`
   // swallows exactly three typed errors — the 6.21a T4 reasoning), so the `-251` waived approve reaches it too.
   await assertGroundInspectionCompleteForApproval(db, pariwarId, claimCaseId);
+  // ⭐ Story 6.39 DL5 — the membership check (`-424` Q1 (a) C, `-430` Q1 B), OUTSIDE the inner helper for the 6.26a GI1
+  // reason — so it binds BOTH steps and the `-251` waived approve, BY CONSTRUCTION. AFTER the ground inspection and
+  // BEFORE the final-only conjuncts: every earlier refusal keeps its code and order, and the late-warning wait stays LAST.
+  await assertMembershipCheckedForApproval(db, pariwarId, claimCaseId, deceasedMemberId);
   // ⭐ Story 6.24a RF5 — the suspicion appeal's wait, FINAL approvals only; OUTSIDE the inner helper for the 6.26a GI1
   // reason. It takes RF15's per-death key FIRST inside itself and ⛔ never waits on another claim's lock (Trap 8).
   if (opts.step === 'final') {

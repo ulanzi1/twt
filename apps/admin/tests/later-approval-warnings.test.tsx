@@ -485,6 +485,25 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
     expect(alert).not.toHaveTextContent('server words');
   });
 
+  // ⭐ Story 6.39 (DL5, DL12) — THROUGH the panel: removing the panel's `.membership_check_required` branch turns these red.
+  // For a fee paid after the death the R9 panel's words carry ⛔ instruction — its denial does not take the reason.
+  for (const [reason, words] of [
+    ['not_checked', 'Membership check needed before approval.'],
+    ['fee_after_death', 'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.'],
+  ] as const) {
+    it(`Story 6.39 — finalize's \`membership_check_required\` 409 (${reason}) reads as its approved words, ⛔ never the server text or a raw code`, async () => {
+      getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));
+      finalizeR9.mockRejectedValue(new ApiError(409, 'r9_voting.membership_check_required', 'server words', { reason }));
+      wrap(<R9CasePanel pariwarId={PARIWAR} claimCaseId={CLAIM} />);
+      fireEvent.click(await screen.findByTestId('r9-finalize'));
+      const alert = await screen.findByText((_, el) => el?.getAttribute('role') === 'alert' && (el.textContent ?? '').includes(words));
+      expect(alert).not.toHaveTextContent('server words');
+      expect(alert.textContent).not.toContain('r9_voting.');
+      // ⛔ The final-vote / console instruction is never shown on the R9 panel.
+      expect(alert.textContent).not.toMatch(/deny it with|refuse it in the final vote/);
+    });
+  }
+
   // ⭐ Story 6.24a (RF5) — THROUGH the panel: removing the panel's `.suspicion_appeal_pending` branch turns this red.
   // Both reasons (the `cycle-freeze-page.test.tsx` precedent) — the same shared Record lookup serves either.
   for (const reason of ['appeal_not_filed', 'appeal_open'] as const) {

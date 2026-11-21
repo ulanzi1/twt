@@ -40,6 +40,10 @@ export const VerifierReasonCode = z.enum([
   // Story 6.20 (D14, `2026-09-21-239`) — the District Admin's refusal on SUSPICION of a nominee
   // version dated on or after the certificate date. `denied` ONLY. Mirrors the domain tuple + 0120.
   'post_death_nominee_change',
+  // Story 6.39 (DL9 (a), `2026-10-31-430` Q1 B) — the joining fee was paid after the date of death: the District
+  // Admin's dedicated DENY-only reason (the domain accepts it only while the membership check says so). Mirrors the
+  // domain tuple + 0210.
+  'fee_paid_after_death',
   'r9_routed_to_voting',
   'other',
 ]);
@@ -61,6 +65,7 @@ export const REASON_CODE_OUTCOME_COMPAT: Readonly<
   concealment_flag_override: ['approved'],
   concealment_flag_uphold: ['denied'],
   post_death_nominee_change: ['denied'],
+  fee_paid_after_death: ['denied'],
   r9_routed_to_voting: ['escalated'],
   other: ['approved', 'denied', 'escalated'],
 };

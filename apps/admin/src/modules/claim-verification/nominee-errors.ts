@@ -1,6 +1,8 @@
 // Story 6.20 — the nominee declaration surfaces' error wording, shared by the verifier console, the
 // Pariwar Admin's queue and the helpline's raise (one table, so the three can ⛔ never drift). PURE.
 
+import { isMembershipCheckWaitReason } from '@twt/contracts';
+
 import { ApiError } from '../../api/client.js';
 import { verifierConsoleEn as t } from './i18n-en.js';
 
@@ -90,6 +92,38 @@ export function reasonLockedMessage(err: ApiError): string {
 export function claimContactRequiredMessage(err: ApiError): string {
   const reason = (err.details as { reason?: string } | undefined)?.reason ?? 'no_record';
   return t.claimContact.approvalGate[reason] ?? t.claimContact.approvalGate.no_record!;
+}
+
+/**
+ * ⭐ Story 6.39 (DL5, DL12; G16) — the approval gate's `…membership_check_required` 409 (`verifier_decision.` /
+ * `cycle_freeze.` / `r9_voting.`), worded by its REASON (`not_checked` | `stale` | `fee_after_death` |
+ * `identity_not_confirmed`) for the SURFACE it is shown on — the instruction for a fee paid after the death differs:
+ * the console's District Admin denies with the reason, the final vote refuses with it, and the R9 panel's denial
+ * does not take it (⛔ instruction there). ⛔ Never a raw code: an unknown reason falls back to "not checked".
+ * (The `closure.` surfaces show the API's own message — `closureErrorText`.)
+ */
+export function membershipCheckRequiredMessage(err: ApiError, surface: 'console' | 'final_vote' | 'r9'): string {
+  const reason = (err.details as { reason?: unknown } | undefined)?.reason;
+  const words = surface === 'console' ? t.membershipCheck.approveBlocked : surface === 'final_vote' ? t.membershipCheck.finalVoteGate : t.membershipCheck.r9Gate;
+  return (isMembershipCheckWaitReason(reason) ? words[reason] : undefined) ?? words.not_checked!;
+}
+
+/** `….fee_paid_after_death_not_shown` (DL9) — the deny reason needs a membership check that found it. */
+export function feePaidAfterDeathNotShownMessage(): string {
+  return t.membershipCheck.feePaidAfterDeathNotShown;
+}
+
+/** Story 6.39 — recording the check: the typed refusals (`membership_check.<reason>`), each with its instruction. */
+export function membershipCheckErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.code === 'admin.display_name_missing') return t.decision.displayNameMissing;
+    if (err.status === 401) return t.membershipCheck.sessionExpired;
+    if (err.status === 403) return t.membershipCheck.forbidden;
+    const reason = err.code.startsWith('membership_check.') ? err.code.slice('membership_check.'.length) : '';
+    const text = t.membershipCheck.refused[reason];
+    if (text) return text;
+  }
+  return t.membershipCheck.refusedGeneric;
 }
 
 /** Story 6.21a — the review's typed refusals (`death_certificate_review.<reason>`), each with its instruction. */

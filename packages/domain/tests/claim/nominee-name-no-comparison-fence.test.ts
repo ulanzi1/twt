@@ -164,6 +164,14 @@ const FENCED_FILES = [
   'packages/domain/src/questionnaire-versions/write.ts',
   'apps/api/src/modules/questionnaire-versions/handlers.ts',
   'apps/api/src/modules/claims/questionnaire-words.ts',
+  // ⭐ STORY 6.39 (`2026-11-21-472`; AC11) — the staff MEMBERSHIP CHECK's three surfaces that hold the deceased's
+  // details BESIDE the death documents: the API handler (it opens the accepted certificate's date and compares it with
+  // the fee's — ⛔ a name, ever), the wire contract, and the console control (it SHOWS the name on record beside the
+  // documents for a human to judge — `-424` Q1 (a) C: *"is checked first, by staff"*; the system forms ⛔ opinion about
+  // the two). The LEAF, the WRITER and the READ are fenced against `decrypt` by their own block below.
+  'apps/api/src/modules/claims/claims.membership-check.handlers.ts',
+  'packages/contracts/src/claims/membership-check.ts',
+  'apps/admin/src/modules/claim-verification/MembershipCheckControl.tsx',
 ] as const;
 
 /**
@@ -213,7 +221,7 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     // Code review patch (2026-10-02, corrected 2026-10-03): exact count, ⛔ a floor — AND every entry unique. The
     // count alone can't catch a duplicate standing in for a dropped file (one of each keeps the length at 34).
     expect(new Set(FENCED_FILES).size, 'a FENCED_FILES entry is duplicated').toBe(FENCED_FILES.length);
-    expect(FENCED_FILES.length).toBe(62); // Story 6.33 FROM 56 (+6 — the chain helpers, the versions reader / parser / writer, the chain's handlers and the ONE word function); Story 6.32 FROM 54 (+2 — the inspector's questionnaire definition and its save / reads module); Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
+    expect(FENCED_FILES.length).toBe(65); // Story 6.39 FROM 62 (+3 — the membership check's handler, its wire contract and the console control that shows the name on record beside the death documents); Story 6.33 FROM 56 (+6 — the chain helpers, the versions reader / parser / writer, the chain's handlers and the ONE word function); Story 6.32 FROM 54 (+2 — the inspector's questionnaire definition and its save / reads module); Story 6.31 FROM 53 (+1 — the WhatsApp reminder's module, T15); Story 6.27c FROM 52 (+1 — the neighbours' text module, BF16); Story 6.27d FROM 50 (+2 — the discrepancy comparison and the inspection writers' module); Story 6.27a FROM 41 (+9 — the reply writer, the answer window and the seven questionnaire-engine files); Story 6.25 FROM 39 (+2 — the staff email's domain module and its identity-read sibling, RE11 / ADR-0040); Story 6.24b FROM 38 (+1 — the suspicion notices' domain module, RB8); Story 6.24a FROM 36 (+2 — the suspicion refusal's read and its closure writer); Story 6.23a FROM 34 (+2 — the warnings module and the late-reason writer); Story 6.19c raised it FROM 26 (+1 domain module), then 27 → 32 (the highlight's read + its four wire / route surfaces), then 32 → 34 (its two admin render sites); Story 6.21a FROM 23 (+3 modules); Story 6.20 FROM 16 (+7)
   });
 
   it('⭐⭐ POSITIVE CONTROL — the scanner actually FIRES on a planted violation of every pattern', () => {
@@ -382,6 +390,66 @@ describe('⛔ the no-comparison fence (Trap 1, `-226` cl.5)', () => {
     expect(stripComments(read('packages/domain/src/claim/nominee-name-check.ts'))).toContain(
       'assertDeathCertificateAcceptedForApproval',
     );
+  });
+
+  it('⛔⛔ Story 6.39 (G5, TR3; AC11) — the membership check\'s LEAF, WRITER and READ ⛔ never decrypt, and ⛔ never reach a date or a name', () => {
+    // ⭐ `2026-10-31-430` Q1 B's comparison is made by the API HANDLER (it opens the accepted certificate's date and
+    // compares it with the receipt's — envelope ciphertext never compares equal, and the blind index gives equality
+    // only). The domain reads the recorded OUTCOME and re-asserts two IDS under the claim lock. A `decrypt` here — or
+    // a reach for the date's ciphertext or the deceased's name — would move a Tier-1 read into the approval path.
+    const MODULES = [
+      'packages/domain/src/claim/membership-check-approval.ts',
+      'packages/domain/src/claim/membership-check-persist.ts',
+      'packages/domain/src/claim/membership-check-read.ts',
+    ];
+    const FORBIDDEN = [
+      'decrypt',
+      'nameCiphertext',
+      'name_ciphertext',
+      'dobCiphertext',
+      'dob_ciphertext',
+      'acceptedDateCiphertext',
+      'accepted_date_ciphertext',
+      'getMemberNominees',
+    ];
+    const reaches = (code: string): string[] => FORBIDDEN.filter((forbidden) => stripComments(code).includes(forbidden));
+    for (const f of MODULES) {
+      expect(reaches(read(f)), `${f} reached for a forbidden name`).toEqual([]);
+    }
+
+    // ⭐⭐ POSITIVE CONTROL — a PLANTED specimen of each forbidden reach turns the scan red (a scan is worth its green
+    // only if a known input fails it — [[feedback_gate_scope_semantic_coverage]]). Each is a shape someone could write
+    // while "just being helpful": opening the date in the gate, or reading the name to pre-fill the staff judgment.
+    const SPECIMENS: readonly [string, string][] = [
+      ['const date = await decryptDeathCertificateReviewField(ct, pariwarId, enc);', 'decrypt'],
+      ['const { nameCiphertext } = kycRow;', 'nameCiphertext'],
+      ['sql`SELECT k.name_ciphertext FROM member_kyc_profiles k`', 'name_ciphertext'],
+      ['const dob = kycRow.dobCiphertext;', 'dobCiphertext'],
+      ['sql`SELECT k.dob_ciphertext FROM member_kyc_profiles k`', 'dob_ciphertext'],
+      ['const ct = review.acceptedDateCiphertext;', 'acceptedDateCiphertext'],
+      ['sql`SELECT r.accepted_date_ciphertext FROM claim_death_certificate_reviews r`', 'accepted_date_ciphertext'],
+      ['const nominees = await getMemberNominees(db, memberId);', 'getMemberNominees'],
+    ];
+    expect(SPECIMENS.map(([, token]) => token).sort()).toEqual([...FORBIDDEN].sort());
+    for (const [specimen, token] of SPECIMENS) {
+      expect(reaches(specimen), `the scan FAILED TO CATCH a planted '${token}': ${specimen}`).toContain(token);
+    }
+    // …planted into a REAL module's source, the same scan that passed above now fails for it.
+    const leaf = read(MODULES[0]!);
+    expect(reaches(`${leaf}\nexport const planted = (ct: string) => decryptTier1(ct);\n`)).toEqual(['decrypt']);
+    // …and a mention in a COMMENT stays invisible, which is why the modules may say what they do ⛔ do.
+    expect(reaches('// ⛔ no decrypt here\n/* nameCiphertext is never read */')).toEqual([]);
+
+    // ⭐ Teeth on the OTHER side: the handler — the ONE place the date is opened — DOES contain a decrypt, so the
+    // green above is ⛔ a vacuous string match…
+    expect(stripComments(read('apps/api/src/modules/claims/claims.membership-check.handlers.ts')).includes('decrypt')).toBe(true);
+    // …and it opens ⛔ the deceased's name or date of birth (the console packet's `memberRecord` already carries them).
+    const handler = stripComments(read('apps/api/src/modules/claims/claims.membership-check.handlers.ts'));
+    for (const forbidden of ['nameCiphertext', 'name_ciphertext', 'dobCiphertext', 'dob_ciphertext', 'decryptKyc']) {
+      expect(handler.includes(forbidden), `the membership-check handler reached for '${forbidden}'`).toBe(false);
+    }
+    // ⭐ And the gate module runs the conjunct from the LEAF (⛔ an inline copy would escape the fence).
+    expect(stripComments(read('packages/domain/src/claim/nominee-name-check.ts'))).toContain('assertMembershipCheckedForApproval');
   });
 
   it('⛔⛔ Story 6.23a (AC10; invariant 7) — the warnings module and the late-reason writer ⛔ never decrypt', () => {

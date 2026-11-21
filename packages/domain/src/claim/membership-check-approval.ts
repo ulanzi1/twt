@@ -103,6 +103,13 @@ export type MembershipCheckApprovalState =
   | { readonly passed: false; readonly reason: MembershipCheckWaitReason };
 
 /**
+ * ⭐ DL9 — the ONE deny reason a claim whose fee was paid after the death is ended with, on BOTH denial vocabularies
+ * (the District Admin's P1 denial and the final vote's — TR14). Deny-only, and accepted only while the live check
+ * says so (`assertFeePaidAfterDeathShown`).
+ */
+export const FEE_PAID_AFTER_DEATH_REASON_CODE = 'fee_paid_after_death' as const;
+
+/**
  * ⭐ PQ1 (a) — the fee outcomes that STOP a drive. `-430` Q1 B's words stop it only when the fee was paid *after*
  * the death, so `same_day` PASSES (the literal side, built until the Panel rules). A ruling of B (the day of death
  * counts as after, as `2026-09-20-235` Y) is `['after_death', 'same_day']` HERE — the one arm that flips.

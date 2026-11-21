@@ -104,7 +104,13 @@ import { encryptGroundInspectionField } from '../../../src/modules/claims/ground
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import { buildServer } from '../../../src/server.js';
 import { buildTestDeps, hasDatabase, makeClient, type CapturingStepUpDelivery, type TestDeps } from '../_setup.js';
-import { ensureAcceptedDeathCertificate, ensureClaimContact, ensureGroundInspection, seedNomineeNameCheck } from '../_nominee-name-check-fixture.js';
+import {
+  ensureAcceptedDeathCertificate,
+  ensureClaimContact,
+  ensureGroundInspection,
+  ensurePassedMembershipCheck,
+  seedNomineeNameCheck,
+} from '../_nominee-name-check-fixture.js';
 import * as peerFx from '../_peer-reply-fixture.js';
 import { FakeWebAuthnProvider } from '../_webauthn-fake.js';
 
@@ -328,6 +334,10 @@ describe.skipIf(!hasDatabase)('Story 6.23b — every approver, through HTTP (:54
         actorDisplay: 'Anita (District Admin)',
         actor: 'operator',
       });
+      // Story 6.39 (DL13; N4) — the re-review made the membership check STALE, exactly as it staled the name check
+      // (RD19): staff check again, so a passing check is re-recorded against the NEW accepted review. Without it the
+      // membership conjunct (before the late-warning wait, which stays LAST) would answer first.
+      await ensurePassedMembershipCheck(s, pariwarId, claimCaseId);
     });
   }
 

@@ -45,17 +45,27 @@ import {
   deathAlreadyFinallyApprovedMessage,
   suspicionAppealPendingMessage,
   deathCertificateReviewErrorMessage,
+  feePaidAfterDeathNotShownMessage,
+  membershipCheckErrorMessage,
+  membershipCheckRequiredMessage,
   nomineeCorrectionErrorMessage,
   nomineeDeterminationErrorMessage,
   nomineeDeterminationRequiredMessage,
 } from '../modules/claim-verification/nominee-errors.js';
 import { FraudInvestigationPanel } from '../modules/claim-verification/FraudInvestigationPanel.js';
+import {
+  MembershipCheckControl,
+  type MembershipCheckDocument,
+  type MembershipCheckSubmit,
+} from '../modules/claim-verification/MembershipCheckControl.js';
 
 export { nomineeCorrectionErrorMessage, nomineeDeterminationErrorMessage, nomineeDeterminationRequiredMessage };
 import {
   useDeathCertificateHistory,
   useForgetDeathCertificateHistory,
+  useMembershipCheckPreview,
   usePostDeathCertificateReview,
+  usePostMembershipCheck,
   useForgetNomineeDeclarationDetails,
   useForgetNomineeNameCheck,
   useNomineeCorrections,
@@ -128,6 +138,11 @@ export function decisionErrorMessage(err: unknown): string {
     if (err.code === 'verifier_decision.death_certificate_acceptance_required') return deathCertificateAcceptanceRequiredMessage(err);
     // Story 6.26a (GI11) — the ground inspection, after the name check: say WHY the claim waits (⛔ never "try again").
     if (err.code === 'verifier_decision.ground_inspection_required') return groundInspectionRequiredMessage(err);
+    // Story 6.39 (DL5, DL12) — the membership check, after the inspection: say WHY the claim waits (⛔ never "try again",
+    // ⛔ a raw code). For a fee paid after the death the console's words carry the instruction: deny with the reason.
+    if (err.code === 'verifier_decision.membership_check_required') return membershipCheckRequiredMessage(err, 'console');
+    // Story 6.39 (DL9) — the deny reason "Fee paid after the death" needs a membership check that found it.
+    if (err.code === 'verifier_decision.fee_paid_after_death_not_shown') return feePaidAfterDeathNotShownMessage();
     // Story 6.24a (RF5 — defensive: P1 is ⛔ not held, a future caller can never show a raw code) and RF13 (the revise).
     if (err.code === 'verifier_decision.suspicion_appeal_pending') return suspicionAppealPendingMessage(err);
     // Story 6.28 (OP2 — defensive: P1 is ⛔ never stopped; a future caller can never show a raw code).
@@ -141,6 +156,16 @@ export function decisionErrorMessage(err: unknown): string {
     if (warningMessage !== null) return warningMessage;
   }
   return t.decision.submitError;
+}
+
+/**
+ * PURE — the membership check's PREVIEW failed to load (Story 6.39): a typed refusal keeps its own words (e.g. the
+ * certificate's date cannot be read), anything else is the load-error line. ⛔ Never a raw code.
+ */
+export function membershipCheckLoadErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.code.startsWith('membership_check.')) return membershipCheckErrorMessage(err);
+  if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return membershipCheckErrorMessage(err);
+  return t.membershipCheck.loadError;
 }
 
 /**
@@ -446,6 +471,64 @@ export function VerifierConsoleRoute(): ReactElement {
       .then(() => true)
       .catch(() => false);
   };
+  // ── Story 6.39 (DL10, DL12) — the membership check before any drive ───────────────────────────────────────────────
+  // The control is mounted ONLY for `viewer.canCheckMembership` (judged SERVER-side). Its preview opens the accepted
+  // certificate's date of death, so it is fetched only while the control is OPEN, and the open state is KEYED TO THE
+  // CLAIM it was opened for (a claim change can ⛔ never fire an audited read of the next claim, nor carry a form over).
+  const membershipGate = packet?.membershipCheckGate;
+  const canCheckMembership = membershipGate?.viewer.canCheckMembership === true;
+  const [membershipOpenFor, setMembershipOpenFor] = useState<string | null>(null);
+  const membershipOpen = membershipOpenFor === claimCaseId && canCheckMembership && certificateAccepted;
+  const membershipPreviewQ = useMembershipCheckPreview(pariwarId, claimCaseId, membershipOpen);
+  const recordMembershipCheck = usePostMembershipCheck(pariwarId, claimCaseId);
+  const resetMembershipCheck = recordMembershipCheck.reset;
+  useEffect(() => {
+    setMembershipOpenFor(null);
+    resetMembershipCheck();
+  }, [claimCaseId, resetMembershipCheck]);
+  const submitMembershipCheck = async (input: MembershipCheckSubmit): Promise<boolean> => {
+    // The review the preview was computed against is the currency token — the server recomputes both dates itself.
+    const expected = membershipPreviewQ.data?.expected_live_review_id;
+    if (!expected) return false;
+    return recordMembershipCheck
+      .mutateAsync({ expected_live_review_id: expected, ...input })
+      .then(() => true)
+      .catch(() => false);
+  };
+  // DL8 — "the death documents": EVERY document on the claim the console already carries (each a short-lived signed
+  // URL from the packet — ⛔ a new read), and the ground inspection's photos as the console shows them.
+  const membershipDocuments: MembershipCheckDocument[] = packet
+    ? [
+        ...(packet.documentReview.status === 'present'
+          ? packet.documentReview.reviews.map((r, i) => ({
+              key: `document-${i}-${r.documentType}`,
+              kind: r.documentType,
+              signedUrl: r.preview.signedUrl,
+              contentType: r.preview.contentType,
+              ...(r.preview.filename !== undefined ? { filename: r.preview.filename } : {}),
+            }))
+          : []),
+        ...(packet.groundInspection.status === 'present'
+          ? packet.groundInspection.assignments.flatMap((g) =>
+              g.photos.map((p) => ({
+                key: `photo-${p.photoId}`,
+                kind: p.photoKind === 'original_certificate' ? 'original_certificate_photo' : 'ground_inspection_photo',
+                signedUrl: p.signedUrl,
+                contentType: p.contentType,
+              })),
+            )
+          : []),
+      ]
+    : [];
+  // DL5's order — the membership check answers AFTER the ground inspection. ⛔ `unavailable` is ⛔ "passed".
+  const membershipBlockedReason = !membershipGate
+    ? null
+    : !membershipGate.available
+      ? t.membershipCheck.approveBlocked.unavailable!
+      : membershipGate.passed
+        ? null
+        : (t.membershipCheck.approveBlocked[membershipGate.reason ?? 'not_checked'] ?? t.membershipCheck.approveBlocked.not_checked!);
+
   // D7 — approve waits for an ACCEPTED certificate (named FIRST, the gate's own order), then the name check.
   // ⛔ `unavailable` is ⛔ not `none`: a section that failed to load never says no certificate was sent; and a
   // legacy row (`missing`, no token) is ⛔ not "review it" — the gate answers `no_certificate` for it too.
@@ -500,6 +583,9 @@ export function VerifierConsoleRoute(): ReactElement {
                 // Story 6.26a (GI9) — approve waits for a COMPLETE ground inspection; ⛔ never on an unknown.
                 packet.groundInspectionGate.available &&
                 packet.groundInspectionGate.complete &&
+                // Story 6.39 (DL10) — approve waits for a CURRENT, PASSING membership check; ⛔ never on an unknown.
+                packet.membershipCheckGate.available &&
+                packet.membershipCheckGate.passed &&
                 packet.approvalWarnings.available &&
                 // Story 6.27b (BD4) — ⛔ while THIS viewer's own ground visit on the claim is pending (the server refuses).
                 !packet.approvalWarnings.ownVisitPending
@@ -527,7 +613,8 @@ export function VerifierConsoleRoute(): ReactElement {
                     !packet.groundInspectionGate.available
                     ? t.groundInspectionGate.approveBlocked.unavailable!
                     : packet.groundInspectionGate.complete
-                      ? null
+                      ? // Story 6.39 (DL10) — the membership check, AFTER the ground inspection (the gate's own order).
+                        membershipBlockedReason
                       : t.groundInspectionGate.approveBlocked[packet.groundInspectionGate.waitReason ?? 'no_completed_inspection']!
                   : // ⛔ "we could not read this" is ⛔ NOT "the bank details are missing".
                     !packet.nomineeNameCheck.available
@@ -602,6 +689,32 @@ export function VerifierConsoleRoute(): ReactElement {
                     error={certHistoryQ.isError ? t.deathCertificate.history.error : null}
                   />
                 ) : null}
+              </section>
+            ) : null}
+            {/* Story 6.39 (DL12, AC12) — the membership check before any drive: mounted ONLY for a viewer who may record
+                it (`viewer.canCheckMembership`, judged server-side). A fresh mount per claim. */}
+            {canCheckMembership && membershipGate ? (
+              <section className="mt-4 border-t pt-4" data-testid="membership-check-section">
+                <h3 className="font-semibold">{t.membershipCheck.heading}</h3>
+                <MembershipCheckControl
+                  key={claimCaseId}
+                  gate={membershipGate}
+                  certificateAccepted={certificateAccepted}
+                  open={membershipOpen}
+                  onOpenChange={(open) => {
+                    recordMembershipCheck.reset();
+                    setMembershipOpenFor(open ? claimCaseId : null);
+                  }}
+                  preview={membershipPreviewQ.isError ? undefined : membershipPreviewQ.data}
+                  loading={membershipPreviewQ.isLoading}
+                  loadError={membershipPreviewQ.isError ? membershipCheckLoadErrorMessage(membershipPreviewQ.error) : null}
+                  memberRecord={{ name: packet.identity.deceasedName, dateOfBirth: packet.identity.deceasedDateOfBirth }}
+                  documents={membershipDocuments}
+                  onSubmit={submitMembershipCheck}
+                  processing={recordMembershipCheck.isPending}
+                  error={recordMembershipCheck.error ? membershipCheckErrorMessage(recordMembershipCheck.error) : null}
+                  recorded={recordMembershipCheck.isSuccess}
+                />
               </section>
             ) : null}
             {/* Story 6.22 (DL7, DL10 (i)) — the fraud investigation: the helpline's flag, and the District Admin's finding.

@@ -32,6 +32,9 @@ describe('REASON_CODE_OUTCOME_COMPAT — the single domain source of truth (AC8)
       // Story 6.20 (D14, `-239`) — the District Admin's refusal on SUSPICION of a post-death nominee
       // change. `denied` ONLY: it is ⛔ never an approval or escalation reason.
       post_death_nominee_change: ['denied'],
+      // Story 6.39 (DL9 (a), `-430` Q1 B) — the joining fee was paid after the date of death. `denied` ONLY: it is
+      // ⛔ never an approval or escalation reason (and the writers accept it only while the membership check says so).
+      fee_paid_after_death: ['denied'],
       r9_routed_to_voting: ['escalated'],
       other: ['approved', 'denied', 'escalated'],
     };

@@ -115,6 +115,11 @@ export const STATE_TRUSTEE_REASON_CODES = [
   // (`trusteeReasonCodeRequiredForOutcome('approved')` stays false); this code is merely PERMITTED on an
   // approve once supplied. Added to the pgEnum via migration 0069 (ALTER TYPE ADD VALUE).
   'concealment_override',
+  // Story 6.39 (DL9 (b), `2026-10-31-430` Q1 B) — the joining fee was paid AFTER the date of death on the certificate.
+  // The FINAL-VOTE denial's twin of the District Admin's reason (TR14): a certificate can be re-reviewed after P1, so a
+  // re-check can turn `after_death` there, and a `reversed` claim never passes P1 again. `denied` ONLY; accepted on the
+  // final vote ONLY, and only while the live membership check says so. Migration 0211 adds the pgEnum value.
+  'fee_paid_after_death',
   // Any-outcome (deny/route) escape hatch — mandatory free-text rationale.
   'other',
 ] as const;
@@ -144,6 +149,9 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   // presence rule is unchanged (`trusteeReasonCodeRequiredForOutcome('approved')` stays false) — an
   // ordinary approve still takes NO code; this one is merely ACCEPTED on an approve once supplied.
   concealment_override: ['approved'],
+  // Story 6.39 (DL9 (b)) — deny only. The WRITERS narrow it further: `voteOnFrozenClaim` accepts it (while the live
+  // check says so); `resolveEscalation` refuses it (the escalation's denial is ⛔ the final vote).
+  fee_paid_after_death: ['denied'],
   // ⭐ `other` is the ONLY code valid for a return (AC11): `-227` cl.10 asks for a NOTE explaining
   // the discrepancy, ⛔ not a category — the Panel named no return-reason vocabulary, and inventing
   // one here would be this story deciding a question nobody ruled.

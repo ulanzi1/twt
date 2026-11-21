@@ -38,9 +38,10 @@ import { listNomineeDeclarationVersions } from '../../../src/nominee/declaration
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
 import {
-  PARIWAR_A,
   driveClaimTo,
+  ensurePassedMembershipCheck,
   enterAppScope,
+  PARIWAR_A,
   seedAcceptedDeathCertificate,
   seedGroundInspection,
   seedMember,
@@ -731,6 +732,10 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         // missing inspection (the rows that skip `seedNomineeNameCheck` would otherwise seed none).
         await seedGroundInspection(client, PARIWAR_A, cid);
         await d.seed(client, tx, cid);
+        // Story 6.39 (DL5, DL13) — the membership conjunct runs AFTER the inspection, in the OUTER helper, so each row is
+        // given a passing check too (LAST — it names the review that is current once the row's own seed has run): the
+        // waived approve then passes or fails on ITS OWN deficiency, ⛔ on a missing membership check.
+        await ensurePassedMembershipCheck(client, PARIWAR_A, cid);
         for (const opts of [{}, { nameCheck: undefined }, { nameCheck: 'required' as const }]) {
           await expect(assertClaimApprovable(tx, PARIWAR_A, cid, mid, { ...opts, approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({ name: d.error });
         }
@@ -800,6 +805,9 @@ describe.skipIf(!hasDatabase)('Story 6.18 — the nominee name check (:5433)', (
         actor: 'operator',
       });
       await determine(addCalendarDays(istDateOf(new Date()), -45));
+      // Story 6.39 (N4, DL13) — the re-review made the membership check stale too; staff check again (a passing check
+      // against the NEW accepted review), so the wait below is still what the waived arm reaches.
+      await ensurePassedMembershipCheck(client, pid, cid);
       const mmid = toMemberId(mid);
       // The waived arm reaches the wait directly (it skips the now-stale name check — RD19).
       await expect(assertClaimApprovable(tx, pid, cid, mmid, { nameCheck: 'waived_251', approvingActorIds: [TRUSTEE], step: 'final' })).rejects.toMatchObject({

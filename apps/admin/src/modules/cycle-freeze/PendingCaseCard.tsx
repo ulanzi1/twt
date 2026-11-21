@@ -58,6 +58,14 @@ export interface PendingCaseCardProps {
 
 const tw = verifierConsoleEn.approvalWarnings;
 
+/**
+ * A trustee reason code as shown in the list. ⭐ Story 6.39 (DL9, DL12): "Fee paid after the death" reads in its approved
+ * words (the SAME label the District Admin's dropdown shows); every other code renders as it did before.
+ */
+function trusteeReasonCodeLabel(code: string): string {
+  return code === 'fee_paid_after_death' ? verifierConsoleEn.reasonCodes.fee_paid_after_death : code;
+}
+
 /** The reason codes valid for an outcome (drives the dropdown; from the contract compat map). */
 function reasonCodesFor(outcome: 'denied' | 'routed_to_r9' | 'returned_for_correction'): string[] {
   return Object.entries(TRUSTEE_REASON_CODE_OUTCOME_COMPAT)
@@ -123,7 +131,9 @@ export function PendingCaseCard({
   const [mustAct, setMustAct] = useState<'' | 'family' | 'staff'>('');
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
 
-  const denyOptions = reasonCodesFor('denied');
+  // ⭐ Story 6.39 (DL9 (b)) — "Fee paid after the death" is the FINAL VOTE's reason: offered on the freeze-ready card only
+  // (an escalation's denial is ⛔ the final vote — the server refuses the reason there, so it is ⛔ offered).
+  const denyOptions = reasonCodesFor('denied').filter((code) => code !== 'fee_paid_after_death' || bucket === 'ready_to_freeze');
   const routeOptions = reasonCodesFor('routed_to_r9');
   // Story 6.18 (AC11) — a RETURN takes exactly one code, `other`, because `-227` cl.10 asks for a
   // NOTE explaining the discrepancy rather than a category. Selecting `other` makes the rationale
@@ -307,7 +317,7 @@ export function PendingCaseCard({
             <option value="">— none —</option>
             {[...new Set([...denyOptions, ...routeOptions, ...returnOptions])].map((code) => (
               <option key={code} value={code}>
-                {code}
+                {trusteeReasonCodeLabel(code)}
               </option>
             ))}
           </select>

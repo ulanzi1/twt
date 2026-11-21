@@ -1044,6 +1044,148 @@ export async function seedRejectedDeathCertificate(
   return result.reviewId as string;
 }
 
+// ── Story 6.39 — the membership check before any drive (DL13) ───────────────────────────────────────────────────
+// ⭐ TEST-ONLY RAW INSERTS. The approval gate reads ONLY the live check row, the claim's current accepted review id and
+// the deceased's KYC row — so a fixture that must reach an approval seeds the row directly, ⛔ through the API handler
+// (which opens the certificate's date). ⛔ No production path may import this file.
+
+export interface SeedMembershipCheckOptions {
+  readonly pariwarId: string;
+  readonly claimCaseId: string;
+  readonly deceasedMemberId: string;
+  /** The ACCEPTED certificate review the check names — it must be the claim's CURRENT one to pass (N4). */
+  readonly reviewId: string;
+  readonly feeOutcome?: schema.MembershipCheckFeeOutcome;
+  readonly identityOutcome?: schema.MembershipCheckIdentityOutcome;
+  readonly identityReason?: schema.MembershipCheckIdentityReason | null;
+  readonly noteCiphertext?: string | null;
+}
+
+/**
+ * Seed a claim's LIVE membership check as a RAW row — any outcome (the negative fixtures: `feeOutcome:
+ * 'after_death'`, `identityOutcome: 'not_confirmed'`). A live check with the same review and outcomes is REUSED; any
+ * other live check is superseded (`re_checked`) first. The deceased gets a `members` row and one receipt when they
+ * have none (the row's FKs) — ⛔ a lock-in event: the gate reads ⛔ receipt. Works in or out of app scope. Returns
+ * the check id.
+ */
+export async function seedMembershipCheck(tx: Db, opts: SeedMembershipCheckOptions): Promise<string> {
+  const pid = toPariwarId(opts.pariwarId);
+  const cid = toClaimId(opts.claimCaseId);
+  const mid = toMemberId(opts.deceasedMemberId);
+  const feeOutcome = opts.feeOutcome ?? 'before_death';
+  const identityOutcome = opts.identityOutcome ?? 'confirmed';
+  const identityReason = identityOutcome === 'not_confirmed' ? (opts.identityReason ?? 'other') : null;
+  const noteCiphertext =
+    opts.noteCiphertext !== undefined ? opts.noteCiphertext : identityOutcome === 'not_confirmed' ? 'enc:v1:membership-check-note' : null;
+
+  const [live] = await tx
+    .select()
+    .from(schema.claimMembershipChecks)
+    .where(
+      and(
+        eq(schema.claimMembershipChecks.pariwarId, pid),
+        eq(schema.claimMembershipChecks.claimCaseId, cid),
+        isNull(schema.claimMembershipChecks.supersededAt),
+      ),
+    );
+  if (live) {
+    if (
+      (live.deathCertificateReviewId as string).toLowerCase() === opts.reviewId.toLowerCase() &&
+      live.feeOutcome === feeOutcome &&
+      live.identityOutcome === identityOutcome &&
+      live.identityReason === identityReason
+    ) {
+      return live.checkId as string;
+    }
+    await tx
+      .update(schema.claimMembershipChecks)
+      .set({ supersededAt: sql`now()`, supersededReason: 're_checked' })
+      .where(eq(schema.claimMembershipChecks.checkId, live.checkId));
+  }
+
+  await tx
+    .insert(schema.members)
+    .values({ memberId: mid, pariwarId: pid, state: 'lock-in', stateEventVersion: 1 })
+    .onConflictDoNothing();
+  let [receipt] = await tx
+    .select({ receiptId: schema.vyawasthaShulkReceipts.receiptId })
+    .from(schema.vyawasthaShulkReceipts)
+    .where(and(eq(schema.vyawasthaShulkReceipts.pariwarId, pid), eq(schema.vyawasthaShulkReceipts.memberId, mid)))
+    .orderBy(asc(schema.vyawasthaShulkReceipts.paidAt))
+    .limit(1);
+  if (!receipt) {
+    [receipt] = await tx
+      .insert(schema.vyawasthaShulkReceipts)
+      .values({
+        memberId: mid,
+        pariwarId: pid,
+        tr: `TR-fixture-${randomUUID()}`,
+        utr: `UTR-fixture-${randomUUID()}`,
+        amountInr: 100,
+        paymentMethod: 'upi',
+        // Long before any fixture death.
+        paidAt: new Date('2020-01-01T06:00:00.000Z'),
+        validThrough: new Date('2099-01-01T00:00:00.000Z'),
+      })
+      .returning({ receiptId: schema.vyawasthaShulkReceipts.receiptId });
+  }
+
+  const [row] = await tx
+    .insert(schema.claimMembershipChecks)
+    .values({
+      claimCaseId: cid,
+      pariwarId: pid,
+      deceasedMemberId: mid,
+      deathCertificateReviewId: opts.reviewId as never,
+      feeReceiptId: receipt!.receiptId,
+      feeOutcome,
+      // `true` fits every deceased: the gate applies the identity half only while TODAY's KYC row says unchecked.
+      identityRequired: identityOutcome !== 'not_required',
+      identityOutcome,
+      identityReason,
+      noteCiphertext,
+      decidedByActorId: randomUUID(),
+      decidedByDisplay: 'Test District Admin',
+    })
+    .returning({ checkId: schema.claimMembershipChecks.checkId });
+  return row!.checkId as string;
+}
+
+/**
+ * ⭐ Story 6.39 (DL13) — give a claim a PASSING membership check (`fee_outcome 'before_death'`, `identity_outcome
+ * 'confirmed'`) against the accepted review `reviewId`. See `seedMembershipCheck`.
+ */
+export function seedPassedMembershipCheck(
+  tx: Db,
+  opts: Pick<SeedMembershipCheckOptions, 'pariwarId' | 'claimCaseId' | 'deceasedMemberId' | 'reviewId'>,
+): Promise<string> {
+  return seedMembershipCheck(tx, opts);
+}
+
+/**
+ * Give a claim a passing membership check against its CURRENT accepted certificate review — ⛔ nothing (returns
+ * `null`) when the claim has ⛔ current accepted review (the certificate conjunct answers first for such a claim).
+ * What `seedNomineeNameCheck` calls LAST, so a re-review made by an earlier step of the fixture is the one named.
+ */
+export async function ensurePassedMembershipCheck(client: pg.PoolClient, pariwarId: string, claimCaseId: string): Promise<string | null> {
+  const tx = bindScopedDb(client);
+  const pid = toPariwarId(pariwarId);
+  const cid = toClaimId(claimCaseId);
+  const snapshot = await readDeathCertificateSnapshot(tx, pid, cid);
+  if (deathCertificateStatus(snapshot) !== 'accepted') return null;
+  const [claimRow] = await tx
+    .select({ deceasedMemberId: schema.claims.deceasedMemberId })
+    .from(schema.claims)
+    .where(and(eq(schema.claims.pariwarId, pid), eq(schema.claims.claimCaseId, cid)));
+  if (!claimRow) return null;
+  return seedPassedMembershipCheck(tx, {
+    pariwarId,
+    claimCaseId,
+    deceasedMemberId: claimRow.deceasedMemberId as string,
+    reviewId: snapshot.currentReview!.reviewId as string,
+  });
+}
+
 /** The fixture ciphertext for an inspection's date of death (it carries the date, like the accepted one). */
 export function fixtureInspectionDeathDateCiphertext(date: string): string {
   return `enc:v1:inspection-death-date:${date}`;
@@ -1312,6 +1454,14 @@ export async function seedNomineeNameCheck(
      * `seedAcceptedDeathCertificate` BEFORE the determination (a re-review afterwards would stale it).
      */
     readonly registerCheck?: 'matches' | 'does_not_match' | 'could_not_check';
+    /**
+     * ⭐ Story 6.39 (DL13) — the PASSING membership check the approval gate now requires (`-424` Q1 (a) C, `-430` Q1 B),
+     * after the ground inspection and before the final-only conjuncts. Default `'passed'`: a raw live row against the
+     * claim's CURRENT accepted review, seeded LAST (`ensurePassedMembershipCheck` — ⛔ nothing when the claim has ⛔
+     * accepted certificate). `'skip'` reaches a claim with ⛔ check — the gate's 409 `…membership_check_required`
+     * (`not_checked`).
+     */
+    readonly membershipCheck?: 'passed' | 'skip';
   } = {},
 ): Promise<void> {
   if (opts.skip === true) return;
@@ -1423,6 +1573,8 @@ export async function seedNomineeNameCheck(
 
   if (opts.inspection !== 'skip') await seedGroundInspection(client, pariwarId, claimCaseId);
   if (opts.contact !== 'skip') await seedClaimContact(client, pariwarId, claimCaseId);
+  // Story 6.39 (DL13) — LAST: the check names the review that is current once every earlier step has run.
+  if (opts.membershipCheck !== 'skip') await ensurePassedMembershipCheck(client, pariwarId, claimCaseId);
 }
 
 /**

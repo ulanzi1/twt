@@ -765,6 +765,8 @@ export const verifierConsoleEn = {
     concealment_flag_uphold: 'Concealment flag reviewed — upheld',
     // Story 6.20 (D14, `2026-09-21-239`) — the District Admin's refusal on suspicion. Staff copy.
     post_death_nominee_change: 'Nominee changed on or after the date of death — refused on suspicion (appealable once)',
+    // Story 6.39 (DL9, `2026-11-21-472` DL12) — deny only, and only while the membership check found it. Staff copy.
+    fee_paid_after_death: 'Fee paid after the death',
     r9_routed_to_voting: 'R9 — routed to State-Trustee voting',
     other: 'Other (specify)',
   },
@@ -928,6 +930,132 @@ export const verifierConsoleEn = {
       photosOriginal: 'Original certificate',
       photosSite: 'Site',
     },
+  },
+  // ── Story 6.39 — the staff MEMBERSHIP CHECK before any drive (`2026-10-31-424` Q1 (a) C, `2026-10-31-430` Q1 B). ⭐ The
+  // lines marked DL12 are the copy BigDev approved word for word in author-commit `2026-11-21-472` — ⛔ reword them
+  // without a new decision. The rest are the control's own labels, written to match. ⛔ No date in any of these words:
+  // the two dates are VALUES the control shows beside them. ──
+  membershipCheck: {
+    heading: 'Membership check',
+    intro:
+      'Before any drive opens, check that the joining fee was paid no later than the date of death — and, if nobody has checked the identity the member typed in, that the person who died is the member. If you cannot confirm it yet, the claim waits. It is not refused.',
+    show: 'Open the membership check',
+    hide: 'Close the membership check',
+    audited: 'Opening it shows the date of death from the accepted certificate. Each look is recorded.',
+    loading: 'Loading the membership check…',
+    loadError: 'The membership check could not be loaded. Close it and open it again.',
+    needsCertificate: 'Accept the death certificate first. The membership check compares its date of death with the joining fee.',
+    windowClosed: 'A membership check can no longer be recorded on this claim.',
+    // The gate, as this console's approve-blocked line (P1). DL12.
+    approveBlocked: {
+      not_checked: 'Membership check needed before approval.',
+      stale: 'The certificate changed since the membership check — check again.',
+      identity_not_confirmed: "The person's identity has not been confirmed.",
+      fee_after_death:
+        'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — deny it with the reason "Fee paid after the death".',
+      unavailable:
+        'Whether the membership check has passed could not be checked. Reload the page — approval stays unavailable until it can be checked.',
+    } as Record<string, string>,
+    // The same 409 on the CYCLE-FREEZE page (the final vote). DL12.
+    finalVoteGate: {
+      not_checked: 'Membership check needed before approval.',
+      stale: 'The certificate changed since the membership check — check again.',
+      identity_not_confirmed: "The person's identity has not been confirmed.",
+      fee_after_death:
+        'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
+    } as Record<string, string>,
+    // The same 409 on the R9 panel — ⛔ instruction: the R9 denial does not take the reason. DL12.
+    r9Gate: {
+      not_checked: 'Membership check needed before approval.',
+      stale: 'The certificate changed since the membership check — check again.',
+      identity_not_confirmed: "The person's identity has not been confirmed.",
+      fee_after_death: 'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.',
+    } as Record<string, string>,
+    passed: 'The membership check has passed.',
+    // The fee half — the comparison the system made. DL12.
+    feeHeading: 'Joining fee and date of death',
+    dateOfDeath: 'Date of death on the accepted certificate',
+    feePaidOn: 'Joining fee paid on',
+    feeOutcome: {
+      before_death: 'Paid before the death',
+      same_day: 'Paid on the day of death',
+      after_death: 'Paid after the death',
+    } as Record<string, string>,
+    feeComputed: 'The system compares the two dates. You cannot change the result.',
+    noFeeReceipt:
+      "The member's joining-fee receipt cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+    feeAfterDeathNote:
+      'No drive can open for this claim. Record the check, then deny the claim with the reason "Fee paid after the death".',
+    // The identity half — the details on record. DL12 for the first two routes.
+    identityHeading: 'Identity',
+    kycRouteLabel: 'How the identity was recorded',
+    kycRoute: {
+      typed_in_unchecked: 'Typed in at joining, never checked',
+      digilocker: 'Checked through DigiLocker',
+      trustee_verified: 'Typed in at joining, checked by a trustee',
+      unverified: 'Not checked',
+      no_record: 'No identity record',
+    } as Record<string, string>,
+    recordName: 'Name on record',
+    recordDateOfBirth: 'Date of birth on record',
+    recordPosting: 'Latest posting',
+    recordUnknown: 'not on record',
+    identityNotRequired: 'This identity is already checked. There is nothing to judge.',
+    identityLegend: 'Is the person on the death documents the member on record?',
+    // The advisory criterion — staff judge; this is a guide, not a rule (DL8).
+    identityCriterion:
+      'Confirm when it is the same person: the name and the age or date of birth on the documents agree with the record, or a difference is explained by the documents or the ground inspection.',
+    identityOutcome: {
+      confirmed: 'Yes — confirmed',
+      not_confirmed: 'Cannot confirm yet',
+    } as Record<string, string>,
+    reasonLegend: 'Why can it not be confirmed?',
+    reasons: {
+      name_differs: 'The name differs',
+      age_or_birth_date_differs: 'The age or date of birth differs',
+      document_unreadable: 'A document cannot be read',
+      other: 'Another reason',
+    } as Record<string, string>,
+    note: 'Note',
+    noteHelpRequired: 'Required. Say what differs, so the next person knows what to look for.',
+    noteHelpOptional: 'Optional.',
+    notConfirmedHelp: 'The claim waits until a later check confirms the identity. It is not refused.',
+    documentsHeading: 'The death documents on this claim',
+    documentsNone: 'No document is on this claim yet.',
+    documentLabel: {
+      death_certificate: 'Death certificate',
+      hospital_record: 'Hospital record',
+      ground_inspection_photo: 'Ground inspection photo',
+      original_certificate_photo: 'Ground inspection — the original certificate',
+    } as Record<string, string>,
+    submit: 'Record the membership check',
+    incompleteIdentity: 'Choose whether the identity is confirmed.',
+    incompleteNotConfirmed: 'Choose a reason and write a note.',
+    recorded: 'The membership check is recorded.',
+    liveHeading: 'Recorded check',
+    liveBy: 'by',
+    liveOn: 'on',
+    liveIdentity: {
+      not_required: 'Identity already checked',
+      confirmed: 'Identity confirmed',
+      not_confirmed: 'Identity not confirmed',
+    } as Record<string, string>,
+    refused: {
+      stale: 'The certificate changed since the membership check was opened. It has been reloaded — check again.',
+      concurrent: 'The claim changed while the check was being recorded. It has been reloaded — check again.',
+      no_fee_receipt:
+        "The member's joining-fee receipt cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+      certificate_not_accepted: 'Accept the death certificate first. The membership check compares its date of death with the joining fee.',
+      certificate_date_unreadable: 'The date of death on the accepted certificate cannot be read. Review the certificate again.',
+      window_closed: 'A membership check can no longer be recorded on this claim.',
+      invalid_outcome: 'The identity answer does not fit this claim. It has been reloaded — check again.',
+      not_found: 'This claim could not be found.',
+    } as Record<string, string>,
+    sessionExpired: 'Your session has ended. Sign in again, then record the check.',
+    forbidden: 'You do not have permission to record the membership check on this claim.',
+    refusedGeneric: 'The membership check could not be recorded.',
+    // The deny reason's guard (DL9). DL12.
+    feePaidAfterDeathNotShown: 'This reason can be used only when the membership check found the fee was paid after the death.',
   },
   deathCertificate: {
     heading: 'Death certificate review',

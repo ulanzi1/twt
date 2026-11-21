@@ -69,6 +69,9 @@ export const StateTrusteeReasonCode = z.enum([
   'r9_panel_denied',
   // Story 6.15 (AC2) — the concealment OVERRIDE approve code (the only code valid for `approved`).
   'concealment_override',
+  // Story 6.39 (DL9 (b)) — the final-vote DENY's reason when the joining fee was paid after the death (the domain
+  // accepts it on the final vote only, and only while the membership check says so). Mirrors the domain tuple + 0211.
+  'fee_paid_after_death',
   'other',
 ]);
 export type StateTrusteeReasonCode = z.output<typeof StateTrusteeReasonCode>;
@@ -95,6 +98,8 @@ export const TRUSTEE_REASON_CODE_OUTCOME_COMPAT: Readonly<
   // Story 6.15 (AC2) — the concealment override approves; the ONLY code pinned to `approved`. The D-F
   // presence rule is unchanged (an ordinary approve still requires no code).
   concealment_override: ['approved'],
+  // Story 6.39 (DL9 (b)) — deny only.
+  fee_paid_after_death: ['denied'],
   // Story 6.18 (AC11) — `other` is the ONLY code valid for a return: `-227` cl.10 asks for a NOTE
   // explaining the discrepancy, ⛔ not a category, and the Panel named no return-reason vocabulary.
   other: ['denied', 'routed_to_r9', 'returned_for_correction'],

@@ -13,12 +13,13 @@ import { useEffect, useState } from 'react';
 import { ApiError, errorMessage as apiErrorMessage } from '../../api/client.js';
 import {
   claimContactRequiredMessage,
+  deathAlreadyFinallyApprovedMessage,
   laterApprovalWarningErrorMessage,
+  membershipCheckRequiredMessage,
+  suspicionAppealPendingMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
   trusteeGroundInspectionRequiredMessage,
-  deathAlreadyFinallyApprovedMessage,
-  suspicionAppealPendingMessage,
 } from '../claim-verification/nominee-errors.js';
 import {
   LaterApprovalWarnings,
@@ -43,6 +44,11 @@ function errorMessage(error: unknown): string | undefined {
   // trustee — the inspector acts, the claim waits, ⛔ never a refusal.
   if (error instanceof ApiError && error.code.endsWith('.ground_inspection_required')) {
     return trusteeGroundInspectionRequiredMessage(error);
+  }
+  // ⭐ Story 6.39 (DL5, DL12) — the approval waits for the membership check: worded by its reason for the R9 PANEL. For a
+  // fee paid after the death the words carry ⛔ instruction — the panel's denial does not take that reason. ⛔ Never a raw code.
+  if (error instanceof ApiError && error.code.endsWith('.membership_check_required')) {
+    return membershipCheckRequiredMessage(error, 'r9');
   }
   // ⭐ Story 6.24a (RF5) — the FINAL approval waits for another claim's suspicion appeal (⛔ never a refusal).
   if (error instanceof ApiError && error.code.endsWith('.suspicion_appeal_pending')) {

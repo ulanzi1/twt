@@ -12,12 +12,14 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client.js';
 import {
   claimContactRequiredMessage,
+  deathAlreadyFinallyApprovedMessage,
+  feePaidAfterDeathNotShownMessage,
   laterApprovalWarningErrorMessage,
+  membershipCheckRequiredMessage,
+  suspicionAppealPendingMessage,
   trusteeDeathCertificateAcceptanceRequiredMessage,
   trusteeDeterminationRequiredMessage,
   trusteeGroundInspectionRequiredMessage,
-  deathAlreadyFinallyApprovedMessage,
-  suspicionAppealPendingMessage,
 } from '../claim-verification/nominee-errors.js';
 import {
   useCommitCycleFreeze,
@@ -66,6 +68,16 @@ function errorMessage(error: unknown): string | undefined {
   // trustee — the inspector acts, the claim waits, ⛔ never a refusal.
   if (error instanceof ApiError && error.code.endsWith('.ground_inspection_required')) {
     return trusteeGroundInspectionRequiredMessage(error);
+  }
+  // ⭐ Story 6.39 (DL5, DL12) — the approval waits for the membership check (`-424` Q1 (a) C, `-430` Q1 B): worded by its
+  // reason for the FINAL VOTE — for a fee paid after the death, the words say to refuse it in the final vote with the
+  // reason "Fee paid after the death". ⛔ Never a raw code.
+  if (error instanceof ApiError && error.code.endsWith('.membership_check_required')) {
+    return membershipCheckRequiredMessage(error, 'final_vote');
+  }
+  // ⭐ Story 6.39 (DL9) — the deny reason "Fee paid after the death" needs a membership check that found it.
+  if (error instanceof ApiError && error.code.endsWith('.fee_paid_after_death_not_shown')) {
+    return feePaidAfterDeathNotShownMessage();
   }
   // ⭐ Story 6.24a (RF5) — the FINAL approval waits for another claim's suspicion appeal (⛔ never a refusal).
   if (error instanceof ApiError && error.code.endsWith('.suspicion_appeal_pending')) {

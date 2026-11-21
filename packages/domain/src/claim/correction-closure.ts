@@ -1285,14 +1285,16 @@ export function isClosureReasonValidFor(decision: ClosureSuperAdminDecision, rea
 }
 
 /**
- * The trustee reason codes a Super Admin REFUSAL may carry: those valid for `denied`, minus the two that belong to
- * other acts — `r9_panel_denied` (a panel VOTE's outcome) and `concealment_upheld` (needs the live concealment signal
- * the vote resolves — ⛔ this surface's). Pure.
+ * The trustee reason codes a Super Admin REFUSAL may carry: those valid for `denied`, minus the three that belong to
+ * other acts — `r9_panel_denied` (a panel VOTE's outcome), `concealment_upheld` (needs the live concealment signal
+ * the vote resolves — ⛔ this surface's) and ⭐ Story 6.39's `fee_paid_after_death` (the FINAL VOTE's reason, accepted
+ * there only while the live membership check says so — ⛔ this surface's: DL9 (b), DL12). Pure.
  */
 export function isSuperAdminRefusalReasonCode(code: string): code is StateTrusteeReasonCode {
   return (
     code !== 'r9_panel_denied' &&
     code !== 'concealment_upheld' &&
+    code !== 'fee_paid_after_death' &&
     isTrusteeReasonCodeValidForOutcome('denied', code as StateTrusteeReasonCode)
   );
 }

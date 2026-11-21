@@ -159,6 +159,55 @@ describe('<CycleFreezePage> — Story 6.28 (OP2), the one-payment-per-death STOP
   });
 });
 
+describe('<CycleFreezePage> — Story 6.39 (DL5, DL9, DL12), the membership-check WAIT and the deny reason, in the FINAL VOTE\'s words', () => {
+  const mountPage = () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <CycleFreezePage pariwarId={PARIWAR} />
+      </QueryClientProvider>,
+    );
+  };
+  // ⭐ THROUGH the page, ⛔ the helper alone: removing the page's `.membership_check_required` branch turns these red.
+  for (const [reason, words] of [
+    ['not_checked', 'Membership check needed before approval.'],
+    ['stale', 'The certificate changed since the membership check — check again.'],
+    ['identity_not_confirmed', "The person's identity has not been confirmed."],
+    [
+      'fee_after_death',
+      'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
+    ],
+  ] as const) {
+    it(`⭐ \`cycle_freeze.membership_check_required\` (${reason}) ⇒ its approved words — ⛔ a raw code, ⛔ the server text`, async () => {
+      postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.membership_check_required', 'server words', { reason }));
+      mountPage();
+      const section = await screen.findByRole('region', { name: 'Ready to freeze' });
+      fireEvent.click(within(section).getByRole('button', { name: 'Approve' }));
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(words);
+      expect(alert.textContent).not.toContain('cycle_freeze.');
+      expect(alert.textContent).not.toContain('server words');
+    });
+  }
+
+  it('⭐ `cycle_freeze.fee_paid_after_death_not_shown` ⇒ "This reason can be used only when…" — ⛔ a raw code', async () => {
+    postCycleFreezeDecision.mockRejectedValue(new ApiError(409, 'cycle_freeze.fee_paid_after_death_not_shown', 'server words'));
+    mountPage();
+    const section = await screen.findByRole('region', { name: 'Ready to freeze' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Approve' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(verifierConsoleEn.membershipCheck.feePaidAfterDeathNotShown);
+    expect(alert.textContent).not.toContain('cycle_freeze.');
+  });
+
+  it('⭐ the final vote\'s reason list offers "Fee paid after the death" IN ITS WORDS on a freeze-ready card', async () => {
+    mountPage();
+    const section = await screen.findByRole('region', { name: 'Ready to freeze' });
+    const option = within(section).getByRole('option', { name: 'Fee paid after the death' }) as HTMLOptionElement;
+    expect(option.value).toBe('fee_paid_after_death');
+  });
+});
+
 describe('<CycleFreezePage> — Story 6.24a (RF5), the suspicion-appeal WAIT in words', () => {
   for (const reason of ['appeal_not_filed', 'appeal_open'] as const) {
     it(`⭐ \`cycle_freeze.suspicion_appeal_pending\` (${reason}) ⇒ the words, "It is not refused." — ⛔ not a raw code`, async () => {

@@ -50,7 +50,7 @@ questions (PQ1 (a) / (b), PQ2 — non-blocking) + **TL** = lines the note TELLS 
 
 # Story 6.39: Before Any Drive Opens, Staff Check That the Person Who Died Is the Member — When Nobody Has Checked Their Identity — and That the Joining Fee Was Paid Before the Death
 
-Status: review
+Status: done
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled two staff checks that must happen **before any drive opens** for a death
 > claim. **(a)** `2026-10-31-424` Q1 (a) C — when the member joined by **typing in their own identity details** and nobody has checked
@@ -1155,6 +1155,11 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
     leg through `readJoiningFeeReceipt`, the refusal-reason R9 and escalation legs, and the backstop leg — which showed the 23505
     backstop is ⛔ constructible (the FK's KEY SHARE on the claim row). The defer (a corrected UTR is stored nowhere in full) is in
     `deferred-work.md` against row 6-39a.
+  - **`ci:local` at the round-2 tip `3c45bc98`:** on `twt-639-review-pg` (:5450, its SECOND run) 39 / 40 — the one red
+    `announcement-activity-read.spec.ts`, known failure #18 (14 committed PARIWAR_A `trustee-actor-1` `cycle_freeze_commits` from the
+    two runs, confirmed by query; this branch touches ⛔ cycle or announcement code); the integration job re-run with `--continue` —
+    every other package green. Then on a FRESH container `twt-639-review2-pg` (port 5451, DB `twt_dev`, 212 migrations, BigDev ran
+    `db:migrate`): **40 / 40**, all 24 integration tasks. Status → `done`.
   - ⚠ Roster Row 46 (d)'s real-browser pass of the console stays UN-ATTESTED; the console changed again in both rounds.
 
 ### File List
@@ -1261,3 +1266,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.8 | 2026-11-21 | DEV COMPLETE for Task 8 (`-473` Q1 B, Q3 B, Q4 B under `-474`): code `5b4efdbb`, the friction-budget disposition `37460d6b`; `ci:local` on a fresh container 39 / 40 at `5b4efdbb` (`friction-budget` AC-4 only), then **40 / 40** at `37460d6b`. Roster Row 46 (d) RE-OPENED by the control change — the browser pass ATTEMPTED, ⛔ run (the throwaway DB could ⛔ be migrated), recorded UN-ATTESTED on BigDev's word. Two `deferred-work.md` items (Q3's line stops at the appeal; Q4's Hindi un-reviewed). Status in-progress → review. |
 | v1.9 | 2026-11-21 | CODE REVIEW (`bmad-code-review`, the whole branch `9f5e2c84..c5041036`, source only, three parallel read-only layers): 1 decision-needed, 9 patch, 0 defer, 11 dismissed (§ Review Findings). BigDev chose option (a) for the decision — author-commit [`-475`](../../.decision-log.md#decision-2026-11-21-475) (`68ac6305`): the joining fee's lock-in event records the STORED receipt's UTR; amends `-472` DL3 — then "all": ten patches applied in `27898db7` (the fee re-confirm UTR; "before the date of death" in the staff intro and the deny-guard line; a REQUIRED nullable `expected_live_check_id` with a `check_changed` refusal under the lock, and its 23505 backstop; a two-connection race spec; the preview's `fee_blocks_approval` (N1); `refusal_reason` keyed on the denial that made the claim denied; AC15's `same_day` legs at all six sites and the commit; AC17's `stale` and out-of-review legs; Task 8 ticked). The Policy-meaning sentence annotated as amended by `-473` Q1 B (its words kept). ⚠ `ci:local` on a fresh container NOT run (the classifier refused the container recreate and `db:migrate`) — Status stays `review`. |
 | v1.10 | 2026-11-21 | Records + code (FIX REVIEW, round 2, at BigDev's ask after `ci:local` went **40 / 40 at `fb14510e`** on a FRESH container `twt-639-review-pg` :5450): the fix diff `c5041036..fb14510e` reviewed by three parallel read-only layers — 1 decision, 8 patch, 1 defer, 13 dismissed. BigDev *"1"*: author-commit [`-476`](../../.decision-log.md#decision-2026-11-21-476) (`536925b5`) records DL12's not-shown line as amended and corrects `-475`'s two slips. BigDev *"1"*: the eight patches in `5df89866` + this record — the spec annotated (G3, DL3, DL10, AC3, AC16, the same-day edge, the Policy-meaning note, words kept), comments, the `check_changed` audit field and neutral words, the `-475` leg through `readJoiningFeeReceipt`, refusal-reason R9 and escalation legs; the 23505 backstop shown ⛔ constructible (the FK's KEY SHARE). The round-1 note corrected (red-first narrowed to three; `ci:local` now run). Defer: a corrected UTR stored nowhere in full (row 6-39a). |
+| v1.11 | 2026-11-21 | Records only: **`ci:local` 40 / 40 at `3c45bc98`** on a FRESH container (`twt-639-review2-pg`, :5451, DB `twt_dev`, 212 migrations); the earlier 39 / 40 on `twt-639-review-pg`'s second run was known failure #18 (its signature confirmed), every other package green with `--continue`. Status `review` → `done` (`bmad-code-review` step 6: every decision and patch of both rounds resolved, ⛔ HIGH / MEDIUM open). ⚠ Roster Row 46 (d)'s browser pass stays UN-ATTESTED — a go-live item, ⛔ a merge blocker. Not pushed. |

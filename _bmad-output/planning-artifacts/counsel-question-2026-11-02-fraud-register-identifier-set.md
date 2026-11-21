@@ -135,3 +135,14 @@ If any answer depends on facts we have not given, please say which.
 
 *Not reached on 2026-11-02:* the Income Tax Department's own PAN statistics (the server refused the request), the RBI's own copy of the
 directions (it redirected), any Gazette notice after September 2026. Re-check the DPDP commencement date before sending.
+
+---
+
+**Note, 2026-11-21 — the DPDP commencement date re-checked before sending (nothing in the questions changes).** Two current secondary
+sources still give **13 May 2027** for sections 3 to 17 of the Act (so sections 8 and 17) and the bulk of the Rules:
+https://dpdpa.dcomply.in/updates/ (last updated 15 November 2026) and https://consentos.in/learn/dpdp-rules-notification-status/
+(reviewed 20 November 2026). MeitY's January 2026 proposal to shorten the 18-month window to 12 months was for Significant Data
+Fiduciaries only, and remains a proposal that was never gazetted. The Removal of Difficulties Order, S.O. 5458(E) of 5 October 2026 (Gazette 6 October 2026),
+corrects wording in sections 9(1) and 10(2)(c)(ii) and changes no date. Since 13 November 2026 the Consent Manager provisions (section
+6(9), Rule 4) are in force; that does not touch these questions. The Gazette texts themselves were not read — this re-check rests on
+the two secondary sources, as the 2 November check did.

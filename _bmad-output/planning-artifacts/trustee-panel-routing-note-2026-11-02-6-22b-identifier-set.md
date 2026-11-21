@@ -2,11 +2,11 @@
 
 > **Status: WRITTEN 2026-11-02, ⛔ NOT SENT — BigDev sends.** Written from Story 6.22b, Task 0.4 (DL3, accepted by BigDev 2026-11-02).
 > ⛔ Nothing here is built, and nothing here blocks anything already built. These answers, with legal advice, are needed before the
-> register's identity numbers are built (row `6-22e`).
+> later piece of work that builds the register's identity numbers.
 > ⭐ **Send order:** the written question for counsel (`counsel-question-2026-11-02-fraud-register-identifier-set.md`) goes out
-> **first, or with this note**. Please also send, with this note, the **Q2** of the 2026-11-01 note
-> (`trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md` — whether a guilty member's nominee is barred
-> automatically). That question belongs to the same build; it is ⛔ repeated here.
+> **first, or with this note**. Please also send, with this note, the 2026-11-01 note
+> (`trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md` — nine questions, also unsent). Its **Q2** — whether a
+> guilty member's nominee is barred automatically — belongs to the same build as these five; it is ⛔ repeated here.
 
 ## §0 — the gate
 
@@ -129,9 +129,9 @@ operator or District Admin flags"*; that line was the note author's summary — 
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **The helpline operator raises it, on the District Admin's word** — your words kept. | — | A hand-off that adds nothing: the District Admin has to tell the operator what the District Admin found. |
+| **A** | **The helpline operator raises it, on the District Admin's word** — your words kept. | Nothing changes for the family. | A hand-off that adds nothing: the District Admin has to tell the operator what the District Admin found. |
 | **B** | **The helpline operator or the District Admin raises it; a different person finds** (our suggestion). | The person who saw the fraud can raise it; someone else decides. | It widens your ruled chain — the summary line is not a ruling, so this is new. |
-| **C** | **Only the District Admin raises it, and a person one level up finds.** | — | A new chain of people to set up. |
+| **C** | **Only the District Admin raises it, and a person one level up finds.** | Nothing changes for the family. | A new chain of people to set up. |
 
 And the finding: *"the person who filed took part / did not take part"* — is that a separate investigation of the person who filed,
 **not** a third outcome added to your *"innocent / guilty"* finding about the member?
@@ -154,7 +154,7 @@ number can be used to recognise someone only by keeping the number itself, which
 |---|---|---|---|
 | **A** | **Drop Aadhaar; PAN is the only exact number** (our suggestion — the record we wrote of your 21 September ruling already noted it: *"If no UID token is available, PAN is the only exact identifier"*). | No one is asked for an Aadhaar number. | A person with no PAN is caught only by the person checking name matches. |
 | **B** | **Collect the last four digits only**, as a supporting detail, never to bar anyone. | Families give four digits they did not have to give before. | More kept about people who are not members, for a weak signal. |
-| **C** | **Keep your words and wait for a lawful route.** | — | The register cannot be built until one exists. |
+| **C** | **Keep your words and wait for a lawful route.** | Nothing changes for the family now. | The register cannot be built until one exists. |
 
 **Our reading:** **A** — **because** a number the Trust may not lawfully hold protects no one, and asking for it costs families trust.
 ⛔ This question does not need answering before counsel replies: your answer can be conditional on counsel confirming there is no route.
@@ -170,15 +170,16 @@ number can be used to recognise someone only by keeping the number itself, which
    to reply first.** Banks in India must give notice and a chance to reply before listing someone as a fraud, and their bar is for a
    fixed time (five years); insurers' fraud records have their own rules. Nothing is chosen now; if counsel says notice or a time limit is needed, it comes back to you as a question on
    your own words.
-3. **Nothing is collected, checked, barred or deleted until counsel answers.** The one thing built now is a database lock that stops a
-   death certificate ever being deleted on its own — your 25 September ruling made concrete.
+3. **Nothing is collected, checked, barred or deleted until counsel answers.** The one thing being built now is a database lock that
+   will stop a death certificate ever being deleted on its own — your 25 September ruling made concrete.
 
 ---
 
 # What is at stake right now
 
 - **Live today:** nothing. No member uses the system; no identity number is collected; no one is barred.
-- **Blocked:** the register's identity numbers and the bar at filing (row `6-22e`) — by counsel's answers and by these five questions.
+- **Blocked:** the later piece of work that builds the register's identity numbers and the bar at filing — by counsel's answers and by
+  these five questions.
   Nothing already built waits on this note.
 - **If nothing is decided:** a person found to have faked a death claim can file again, on any phone number, exactly as today.
 
@@ -194,7 +195,8 @@ number can be used to recognise someone only by keeping the number itself, which
   not your ruling — Q4 says so; (2) "an ordinary refusal never becomes final" was too broad — three kinds do (Q3); (3) an early draft
   said "about half of Indians hold a PAN"; that figure counted children, and the adult figure is about three in four, an upper estimate
   (Q1); (4) an early draft said the government's own PAN check could be used only by the PAN holder; it can be used by anyone who knows
-  the person's name and date of birth.
+  the person's name and date of birth; (5) told line 3 first said the database lock was already built — it is being built, and was
+  not yet in place when this note was finished (21 November).
 - **Still uncertain:** every figure about PAN coverage, name mismatches and what the Aadhaar authority allows comes from public
   research done on 2 November, **not** legal advice and **not** official statistics. The question written for counsel asks counsel to confirm or correct it. If
   this note and the evidence below ever disagree, the evidence is the record.
@@ -301,3 +303,9 @@ transcription). 3 — four lines, all the custom-field FORBIDDEN-label vocabular
 all) plus the three final cases `AppealClosedNoResponseError`, `AppealAlreadyExhaustedError`, `AppealTimeLimitPassedError`. 6 —
 *"Status: WRITTEN, ⛔ not yet sent."* ⚠ An earlier draft of this block, written before the commands were run, said command 3 returned
 two lines; corrected from the real output.
+
+⭐ **Re-run 2026-11-21** on `story/6-22b-…` rebased onto `origin/main` `90535934`, before sending: 1–6 return exactly the results
+above (four headings; 1; 1; 1; the same four lines; 1 hit; the same four errors; the same status line). Checked alongside: nothing in
+`.decision-log.md` since 2026-11-02 rules on the fraud register; Story 6.39's new refusal reason `fee_paid_after_death` is appealable
+like any other and `appeal-eligibility.ts` is unchanged, so Q3's three final cases stand; the 2026-11-01 note is still WRITTEN, ⛔
+sent.

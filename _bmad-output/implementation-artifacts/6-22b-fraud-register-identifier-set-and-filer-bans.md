@@ -557,6 +557,11 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
         note's Q1–Q5 = PQ1–PQ5, *Told* 1–3 = TL1–TL3, the 6.22 note's Q2 referenced with a send-together line, the send order (counsel
         question first or with it). Template §E4 RUN — two drafted results were WRONG before running (command 3 returns FOUR lines, ⛔
         two — which also corrected AC7's baseline) and are corrected from the real output. ⛔ Sent.
+        ⭐ 2026-11-21 — PRE-SEND PASS (BigDev: "yes do it"; still WRITTEN, ⛔ sent): the note's §E4 re-run at `90535934`, results
+        unchanged, recorded with a dated line; told line 3 now says the lock is BEING built (correction (5) in *How much to trust*);
+        "row `6-22e`" made plain in the header and *What is at stake*; the send line asks for the whole 2026-11-01 note; three "—"
+        cells written out. The counsel question gains a dated note: DPDP commencement re-checked, 13 May 2027 stands (two secondary
+        sources of 15 / 20 Nov 2026; the SDF 12-month proposal never gazetted; S.O. 5458(E) wording only; ⛔ the Gazette read).
   - [x] 0.5 Decision entry (DL4) — the next free number READ LIVE; committed ALONE as `governance(6.22b): …`.
         ⭐ 2026-11-02 — DONE: Decision `2026-11-02-440` (author-commit) committed ALONE as `8c088b76` (`-440` re-grepped free on every
         ref and worktree; `origin/main` `b7b43c47`).

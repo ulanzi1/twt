@@ -143,6 +143,20 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
     expect(within(docs[1]!).getByTestId('document-preview')).toHaveTextContent(t.documentLabel.hospital_record!);
   });
 
+  it('⭐ a KNOWN document kind shows its WORDS even when the packet names the file by its raw type (found in the real-browser pass); an unknown kind falls back to its filename', () => {
+    renderControl({
+      documents: [
+        // The console packet's `preview.filename` IS the raw document type.
+        { key: 'd1', kind: 'death_certificate', signedUrl: 'https://example.test/cert', contentType: 'image/png', filename: 'death_certificate' },
+        { key: 'd2', kind: 'police_report', signedUrl: 'https://example.test/other', contentType: 'application/pdf', filename: 'FIR-scan.pdf' },
+      ],
+    });
+    const docs = screen.getAllByTestId('membership-check-document');
+    expect(within(docs[0]!).getByRole('heading')).toHaveTextContent('Death certificate');
+    expect(within(docs[0]!).getByRole('heading').textContent).not.toContain('death_certificate');
+    expect(within(docs[1]!).getByRole('heading')).toHaveTextContent('FIR-scan.pdf');
+  });
+
   it.each([
     ['before_death', DL12.paidBefore],
     ['same_day', DL12.paidSameDay],

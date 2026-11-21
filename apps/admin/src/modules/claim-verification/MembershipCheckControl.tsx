@@ -221,7 +221,9 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
                     <DocumentPreview
                       signedUrl={d.signedUrl}
                       contentType={d.contentType}
-                      filename={d.filename ?? t.documentLabel[d.kind] ?? d.kind}
+                      // A KNOWN kind always shows its words: the packet's `filename` is the raw document type
+                      // (`death_certificate`) — found in the real-browser pass, ⛔ shown to staff as a code.
+                      filename={t.documentLabel[d.kind] ?? d.filename ?? d.kind}
                     />
                   </div>
                 ))

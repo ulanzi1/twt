@@ -1,3 +1,10 @@
+# last_updated: 2026-11-21w (STORY 6.39a — VALIDATED (`bmad-create-story validate 6.39a`, BigDev: "all"), story v1.1, re-traced at `90535934` (`origin/main` unmoved):
+# DL9's step-up cannot be completed in production (the admin step-up delivery is a stub — roster Row 47's notes, deferral R4) => its cost stated, a
+# no-step-up option, a go-live leg; N7 / TL1 promised two PEOPLE while the build separated ROLES => a same-person refusal in the check writer; AC5 / AC13's
+# "no assertion changed" was unsatisfiable => the two allowed kinds of edit named; the three admin wait-reason maps, the console's read count (stays 36),
+# the reference compared trimmed and without regard to letter case, the list capped, the nav link and the shared step-up panel, the console note amended
+# for the recorded-date case. Three decisions carry a second option for BigDev at Task 0.2 (DL6, DL9, DL11). Row stays `ready-for-dev`. ⛔ Decision entry,
+# ⛔ code. Letters: `v` was taken on `story/3-13-…` — `w` was the next free across branches at this line.)
 # last_updated: 2026-11-21u (STORY 6.39a CREATED — `bmad-create-story 6.39a`, in its own worktree `.claude/worktrees/6-39a-bank-date-for-a-fee-recorded-after-the-death`
 # (branch `story/6-39a-…`, from `origin/main` `90535934`): the story file + its `epics.md` entry; row `backlog` -> `ready-for-dev`. Builds `-473` Q2 B
 # (the bank's date) under `-474` item 1: the finance officer records the date the Trust's statement shows, matched by the member's recorded reference;
@@ -22357,6 +22364,9 @@ development_status:
   # rule. DL1–DL14 PROPOSED (BigDev, Task 0.2); PQ1 (after a refusal — built B, on appeal) / PQ2 (a reference that does not match — built A)
   # / PQ3 (a bank date on the day of death — built A, after) = ONE non-blocking note at Task 0.3; a new roster row holds go-live (DL13). One
   # migration (≥ `0214`). backlog → ready-for-dev. Built in its own worktree (`.claude/worktrees/6-39a-…`).
+  # ⭐ 2026-11-21 (ledger `2026-11-21w`, `bmad-create-story validate 6.39a`): story v1.1 — fifteen findings applied (BigDev: "all"). DL9's step-up
+  # carries its production cost (the admin step-up delivery is a stub) and a go-live leg; the membership-check writer refuses a check by the person
+  # who recorded the bank date (N7); DL11's console note is amended for the recorded-date case. Each has a second option for BigDev at Task 0.2.
   6-39a-bank-date-for-a-fee-recorded-after-the-death: ready-for-dev
   epic-6-retrospective: done
 

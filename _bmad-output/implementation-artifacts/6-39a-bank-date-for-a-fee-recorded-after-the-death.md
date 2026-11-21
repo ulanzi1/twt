@@ -11,6 +11,8 @@ three peer sessions were live (twt-fe, twt-6c busy; twt-a2 idle) and two fresh w
 Every `apps/` / `packages/` claim below was traced at `90535934` on 2026-11-21 and the load-bearing ones re-read by hand (the
 membership-check handler, writer, gate leaf and schema; `0212`'s guard; the `finance_officer` role; the verifier console's key).
 Re-locate by FUNCTION, ⛔ by line number — line numbers rot.
+RE-TRACED at validation (v1.1, 2026-11-21): `origin/main` was still `90535934` after `git fetch origin` — ⛔ file under `apps/`,
+`packages/` or `scripts/` moved; the NUMBERS block was re-read across every branch and worktree then.
 
 §0 GATE (the routing template's, applied FIRST — `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`): THAT staff
 may use the bank's date is the Panel's and is RULED — `2026-11-21-473` Q2 B. WHERE it is built is ruled by the author — `-474` item 1
@@ -27,12 +29,17 @@ NUMBERS: ⛔ claimed by this file. "Anywhere" means EVERY branch and worktree (`
 `.claude/worktrees/*` dirty tree), ⛔ `main` alone. ⭐ At 2026-11-21 (`90535934`): `main` holds decision `-476`, ledger `2026-11-21o`,
 migration `0212_claim-membership-checks` (journal top), `PERMISSION_CATALOG_VERSION = 65` / 96 keys, `CLAIM_EVENT_TYPES` 40
 (`STORY_6_39_CLAIM_EVENTS` the latest frozen literal), the human-actor gate's `COVERAGE_FLOOR = 20`, `FENCED_FILES` 65,
-`VERIFIER_CONSOLE_MAX_READS = 36`, roster highest Row 53. ⚠ The worktree `6-22b-…` (branch `story/6-22b-fraud-register-identifier-set-and-filer-bans`)
-holds decisions up to `-480` and ledger `2026-11-21s` (re-read at the end of authoring — it held `-479` / `r` an hour earlier), and its
-story PLANS migration `0213` (⛔ committed yet); the `12-5-…` worktree holds ledger `2026-11-21t`. ⇒ next free: decision ≥ `-481`, ledger
-≥ `2026-11-21u` (this file's creation line, `2026-11-21u`), migration ≥ `0214` (its drizzle `when` later than
-every sibling's — [[project_sibling_migration_when_order_shared_db]]), catalog v66 / 97 keys, `CLAIM_EVENT_TYPES` 41, `COVERAGE_FLOOR`
-21, roster Row ≥ 54. Every one is "the next free one" at the commit that takes it — READ LIVE then, across branches.
+`VERIFIER_CONSOLE_MAX_READS = 36`, roster highest Row 53. ⚠ THREE sibling stories, each `ready-for-dev` in its own worktree, want the
+SAME next numbers (re-read at validation, 2026-11-21): `6-22b-…` (branch `story/6-22b-fraud-register-identifier-set-and-filer-bans`)
+holds decisions up to `-480`, ledger letters `p`–`t`, and migration `0213_claim-documents-death-certificate-delete-guard` ON DISK
+(⛔ committed) — and its tree edits `member/anonymize.ts`, as this story does (expect a merge conflict there); `12-5-…` holds ledger `t`
+and plans decision ≥ `-481`, roster Row ≥ 54 and TWO migrations; `3-13-…` holds ledger `s` and `v` and plans the SAME catalog bump
+(v66 / 97 keys — its key `member.validate_identity`), a new table, a comment in the gate leaf and one label in the claim-verification
+`i18n-en.ts`. ⇒ at validation the next free were: decision `-481`, migration `0214`, catalog v66 / 97 keys, `CLAIM_EVENT_TYPES` 41,
+`COVERAGE_FLOOR` 21, roster Row 54 — and whichever story lands second takes the one after. Ledger: `2026-11-21u` is this file's
+creation line, `2026-11-21w` its validation line (`v` was taken). A migration's drizzle `when` must be later than every sibling's
+([[project_sibling_migration_when_order_shared_db]]). Every number in this file is "the next free one" at the commit that takes it —
+READ LIVE then, across branches.
 
 LETTERS: **G** = found facts (G1–G13); **DL** = build decisions (DL1–DL14 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel
 questions (PQ1–PQ3 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR12); **AC1–AC13**.
@@ -97,7 +104,7 @@ never opens a drive**.
 | `-474` Policy meaning | *"until row 6-39a is built, a fee paid in life but recorded after the death still stops the drive with no remedy."* | what this story ends |
 | `-475` + `deferred-work.md` (6.39 round 2) | *"A corrected UTR typed on a joining-fee re-confirm is now stored nowhere in full … ⚠ The receipt's ORIGINAL UTR may itself be the mistyped one … **Trigger:** row 6-39a … is built — it is the first consumer that may need the true UTR."* | open — PQ2, Task 6.3 |
 | roster Row 46 (b) | *"PQ1 ruled by the Panel and reflected in code, BOTH edges: … (b) a fee paid in life whose UTR was recorded after the death"* — its PQ1 (b) half waits on this row (dated line of 2026-11-21, `-474`). | open — closed by this row landing |
-| Niyamavali §2.1 (c), §2.2 | *"(c) payment of the Vyawastha Shulk"*; *"Joining lock-in: a new member's beneficiary eligibility is locked for [[15 days]] after fee payment."* — both speak of **payment**, ⛔ of recording. A rulebook, ⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]). | ⛔ ratified — Policy-meaning check only |
+| Niyamavali §2.1 (c), §2.2 | §2.1 lists payment of the fee among the conditions of membership; §2.2 counts a 15-day joining lock-in from fee payment — both speak of **payment**, ⛔ of recording. Cited by section, ⛔ quoted: the rulebook lives in the private legal corpus ([[project_legal_corpus_private_repo_split]]). A rulebook, ⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]). | ⛔ ratified — Policy-meaning check only |
 
 ## 📜 Policy meaning (AI-10-1)
 
@@ -117,8 +124,8 @@ claim it could help (DL10). Whether a family already refused can still be helped
 **Checked against the Niyamavali** (the git-ignored copy in the main checkout, `/Users/dev/Developer/projects/TWT/docs/legal/niyamavali.md`,
 2026-11-21 — read by ABSOLUTE path, [[feedback_worktree_session_never_cd_to_main_checkout]]) — result: CONSISTENT, one relevant unbuilt
 clause:
-- §2.1 (c) (*"payment of the Vyawastha Shulk"*) and §2.2 (*"after fee payment"*) name the **payment**, ⛔ its recording — CONSISTENT: the
-  bank's date is the better evidence of when (c) happened.
+- §2.1 (c) and §2.2 name the **payment** of the fee, ⛔ its recording — CONSISTENT: the bank's date is the better evidence of when (c)
+  happened. (Sections cited by number, ⛔ quoted — the rulebook is in the private legal corpus.)
 - §2.2's 15-day joining lock-in — RELEVANT, ⛔ built (as in 6.39): under it a bank date 1–14 days before the death would still be
   ineligible; this story helps such a family (the Panel's rulings are the instrument, ⛔ the rulebook). Named in the note's evidence, ⛔ asked.
 - ⛔ Clause speaks to bank statements, references or staff correcting a payment date — SILENT.
@@ -146,9 +153,12 @@ live) is not current: the gate answers a NEW wait reason `bank_date_recorded`, t
 **N6 — ⛔ Tier-1 or payment data out of events, logs and audits.** ⛔ Date (bank, recorded or death), ⛔ note, ⛔ typed reference, ⛔ full UTR,
 ⛔ name in any event payload, log line or audit context — ids, reason codes and outcome codes only (6.39 N7).
 
-**N7 — Two people, always.** The person who records the bank date (`claim.record_fee_bank_date` — the finance officer) is never the person
-who records the membership check (`claim.check_membership` — the District Admin) nor the final voter (`cycle.freeze` — the Pariwar Admin):
-the new key is granted to ⛔ role that holds either (super_admin derives every key — a recorded exception, TL1).
+**N7 — Two people, always.** Two layers. *Roles:* the key that records the bank date (`claim.record_fee_bank_date` — the finance
+officer) is granted to ⛔ role that holds `claim.check_membership` (the District Admin) or `cycle.freeze` (the final voter — the Pariwar
+Admin); `super_admin` derives every key. *People:* roles alone do ⛔ separate people — one user may hold several role grants
+(`role_grants` has ⛔ uniqueness on user + role) and a Super Admin holds every key — so the membership-check writer REFUSES a check that
+would use a bank date its own actor recorded (`membership_check.same_person` — DL6). ⇒ the person who typed the bank date never records
+the check that uses it, whatever roles they hold. ⚠ The final voter is kept apart by ROLE only (⛔ actor check at the vote) — TL1 says so.
 
 ## Found facts (traced at `90535934`)
 
@@ -198,7 +208,12 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   `readMembershipCheckFacts` reads the live check row (ids + codes), the certificate snapshot and the KYC row — ⛔ ciphertext. The reason
   vocabulary `MEMBERSHIP_CHECK_WAIT_REASONS` (`claim/errors.ts`) is mirrored in contracts with a lockstep test, and mapped to words at the
   four translators' human message (`apps/api/src/modules/claims/membership-check-required-message.ts` — `stale: 'The certificate changed
-  since the membership check — check again.'`) and the admin's `membershipCheckRequiredMessage` (`claim-verification/nominee-errors.ts`).
+  since the membership check — check again.'`) and the admin's `membershipCheckRequiredMessage` (`claim-verification/nominee-errors.ts`),
+  which picks from THREE per-surface maps in `claim-verification/i18n-en.ts` — `membershipCheck.approveBlocked` (the console),
+  `.finalVoteGate` (the cycle-freeze page), `.r9Gate` (the R9 panel) — each typed `Record<string, string>` with a fallback to
+  `not_checked`'s words: a reason missing from a map is ⛔ a compile error, it silently reads *"Membership check needed before
+  approval."* The API's map is an exhaustive `Record` (a miss IS a compile error); the closure surfaces show the API's message as
+  written. `packages/contracts/tests/claims-verifier-console.test.ts` hand-types the reason union and loops a literal list of the four.
   ⚠ Re-using `stale` for a new bank date would tell staff the CERTIFICATE changed — false (DL7). The deny-reason guard
   (`assertFeePaidAfterDeathShown`) accepts `fee_paid_after_death` only while the gate answers `fee_after_death`. The family's Q4 line
   (`identity_check_waiting`) is `true` only for `identity_not_confirmed` (`-474` item 5) — a new wait reason never shows it.
@@ -216,7 +231,14 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   ⚠ The admin microcopy gate fails on "receipt" / "report" / "invoice" in admin copy, test ids AND comments
   ([[project_microcopy_gate_scans_admin_code]]) — "payment" and "bank statement" are the words.
 - **G9 — Step-up.** `claims.fraud-investigation.routes.ts`: the permission hook, THEN `requireStepUp(deps, FRAUD_FINDING_STEP_UP_CONTEXT)`
-  (the one constant the admin caller imports), so an unauthorized actor never reaches step-up.
+  (the one constant the admin caller imports), so an unauthorized actor never reaches step-up. Step-up contexts have ⛔ registry: the
+  constant lives in the contract file, and the route AND the admin caller import it. The admin caller's piece is the shared `StepUpPanel`
+  (`apps/admin/src/modules/workplaces/StepUpPanel.tsx` — `holdOnce`, `needsStepUp`, `PendingWrite`), as `FraudInvestigationPanel.tsx`
+  uses it: a 403 `auth.step_up_required` HOLDS the write and the panel re-sends it. ⚠ Admin step-up is a one-time code whose delivery is
+  the always-stub `adminStepUpDelivery` (`apps/api/src/deps.ts`: `createLogStepUpDelivery({ revealForDev: !isProd })`): in production the
+  code is neither sent nor logged, so ⛔ admin can complete a step-up there until `deferred-work.md`'s deferral R4 (*"ADMIN step-up
+  OTP-over-SMS"*) is discharged — roster Row 47's notes record it for 6.22's finding; by `roles.ts`' own comment the finance officer's
+  `reconciliation.review` actions (9.8) are step-up-gated too.
 - **G10 — Who can be paid wrongly.** The new power's abuse case: a finance officer types a date that is too early. N3 makes the
   REFERENCE unforgeable from the statement side (a fee paid after the death has a bank credit after the death under the same reference);
   the DATE is the finance officer's word. The only system bounds available: ⛔ in the future (IST today) and ⛔ before the member's
@@ -228,8 +250,10 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   `packages/domain/tests/claim/nominee-name-no-comparison-fence.test.ts` (`FENCED_FILES` 65 — NAME patterns — and per-story `decrypt`-ban
   `it` blocks); the NW1 transitive import scan (`packages/domain/tests/claim/approval-warnings.test.ts`) over the gate leaf; the
   access-wrapper gate scans `apps/api/src/modules/claims` for direct `writeAuditEntry` calls (follow 6.39's `emitAuthAudit` path);
-  `VERIFIER_CONSOLE_MAX_READS = 36` (`claims.verifier-console.handlers.ts`) counts the packet's reads — `readMembershipCheckFacts` gains one
-  query (READ the ledger live: whether it counts per query or per section).
+  `VERIFIER_CONSOLE_MAX_READS = 36` (`claims.verifier-console.handlers.ts`) counts the packet's top-level QUERIES, bumped by hand in the
+  assembler: `assembleMembershipCheckGate` counts THREE for this gate (the live check, the certificate snapshot, the KYC row — the
+  constant's doc-block ledger: 6.39 added three, to 36). A fourth query inside `readMembershipCheckFacts` that the assembler does ⛔ count is the
+  silent exclusion that doc-block forbids (DL7).
 - **G12 — Erasure.** `member/anonymize.ts` scrubs 6.39's `note_ciphertext` (the shared field class in `encryption/field-classes.ts`,
   re-exported by `apps/api/src/context.ts`); erasure is refused while a death report stands (6.38) and released by an innocence finding
   (6.22, live) — so the scrub of a new Tier-1 note runs for real.
@@ -257,8 +281,11 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   `istDateOf(paidAt)` — ⛔ behaviour change for 6.39's callers (its AC2 legs stay green untouched). A bank date ON the day of death is
   `same_day` and HOLDS the claim (PQ3 — built as `-473` Q1 B's line).
 - **DL3 — How a payment is matched (N3).** The finance officer types (i) the payment reference EXACTLY as the Trust's statement shows it and
-  (ii) the date the money arrived. The writer compares (i) with the joining receipt's stored `utr` (trimmed, exact — the UTR is plaintext
-  Tier-3; ⛔ a decrypt) and refuses `fee_bank_date.reference_mismatch` otherwise — ⛔ row, the typed value ⛔ stored or logged. The page
+  (ii) the date the money arrived. The writer compares (i) with the joining receipt's stored `utr` — BOTH trimmed; digits exactly, LETTERS without
+  regard to case (the stored UTR is kept as the member typed it: the receipt contract neither trims nor re-cases, and its 22-character
+  form admits either case, while a statement prints capitals) — the SAME reference, ⛔ a looser match (PQ2 A stands); the UTR is
+  plaintext Tier-3, ⛔ a decrypt — and refuses `fee_bank_date.reference_mismatch` otherwise — ⛔ row, the typed
+  value ⛔ stored or logged. The page
   shows only the receipt's recorded date, amount and the reference's LAST FOUR (a new shared `maskUtr` — or a local one, ⛔ the two private
   copies exported), so the typed reference is a real check, ⛔ a copy from the screen. ⛔ Upload: the Trust's statement carries every other
   payer's name and VPA — a new store of third parties' data nobody asked for; *rejected* also: parsing an uploaded statement with
@@ -278,16 +305,28 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
 - **DL6 — The membership check uses it.** `postCheck` / `getPreview` read the claim's live bank-date record (`getLiveFeeBankDate`); when one
   exists AND names the joining receipt, the fee date is its `bank_credit_date` and `fee_date_source = 'bank'`, else `istDateOf(paidAt)` and
   `'recorded'`; the outcome comes from DL2's ONE rule. The POST body gains a REQUIRED nullable `expected_fee_bank_date_id` (the preview's
-  record id); the writer re-asserts it under the lock — else `membership_check.bank_date_changed` (its own code and words, as `check_changed`
-  is its own) — and stores `fee_date_source` + `fee_bank_date_id` on the new check. The preview gains `fee_date_source` and `fee_bank_date:
+  record id). As with the review today, TWO compares: the handler compares the body's token with the record it read, and passes the
+  writer `computedAgainstFeeBankDateId` (nullable — the record whose date it computed from; `null` when it used the recorded date); the
+  writer re-asserts THAT under the lock against the claim's live record naming the joining receipt — either miss is
+  `membership_check.bank_date_changed` (its own code and words, as `check_changed` is its own) — and stores `fee_date_source` +
+  `fee_bank_date_id` from what it re-read, so the outcome and the record it names can ⛔ diverge. **The same person (N7):** when the
+  check would use a bank date, the writer refuses `membership_check.same_person` if its actor recorded that live record (`isSameActorId`
+  from the leaf `claim/approver-own-visit.ts`, against the record's `decided_by_actor_id`, under the lock) — whatever roles the actor
+  holds, a Super Admin included; another person records the check. *The other option, for BigDev at 0.2:* ⛔ actor check — N7 and TL1
+  then promise a separation of ROLES only, and are reworded to say so. The preview gains `fee_date_source` and `fee_bank_date:
   { record_id, bank_credit_date, reason_code, recorded_by_display, recorded_at } | null`; `fee_paid_on` keeps meaning the RECORDED date
   (⛔ renamed — contract churn; its comment says so).
-- **DL7 — The gate (N4).** `MembershipCheckFacts` gains `liveFeeBankDateId` (one plaintext read of `claim_fee_bank_dates` in
-  `readMembershipCheckFacts` — the leaf stays a leaf, G6/TR4); `LiveMembershipCheck` gains `feeBankDateId`. A NEW wait reason
+- **DL7 — The gate (N4).** `MembershipCheckFacts` gains `liveFeeBankDateId` — the claim's live record id, read INSIDE the live-check
+  statement of `readMembershipCheckFacts` (a scalar subquery on `claim_fee_bank_dates`; with ⛔ live check the gate answers `not_checked`
+  first, so `null` is right there) ⇒ still THREE counted reads, and `VERIFIER_CONSOLE_MAX_READS` stays 36 (G11). A separate query
+  instead means the assembler's count 3 → 4, the ceiling 36 → 37 and a ledger line in the constant's doc-block. The leaf stays a leaf
+  (G6/TR4); `LiveMembershipCheck` gains `feeBankDateId`. A NEW wait reason
   `bank_date_recorded` — the check's `fee_bank_date_id` ≠ the claim's live record id (null = none, compared lower-cased) — with precedence
   `not_checked` → `stale` → **`bank_date_recorded`** → `fee_after_death` → `identity_not_confirmed`. Added to `MEMBERSHIP_CHECK_WAIT_REASONS`
-  + its contracts mirror + lockstep test, the API human message (*"The finance officer recorded the bank's date for the joining fee — check
-  again."*), the admin `membershipCheckRequiredMessage`, and the approve-blocked line. ⇒ the deny guard refuses `fee_paid_after_death`
+  + its contracts mirror + lockstep test; the API human message (*"The finance officer recorded the bank's date for the joining fee — check
+  again."* — an exhaustive `Record`, compile-enforced); ALL THREE admin maps — `approveBlocked`, `finalVoteGate`, `r9Gate` (the same
+  sentence; ⛔ compile-enforced — a miss reads as `not_checked`, G6); and the two hand-typed reason lists in
+  `packages/contracts/tests/claims-verifier-console.test.ts`. ⇒ the deny guard refuses `fee_paid_after_death`
   while it holds (N4), and the cycle-freeze commit skips such a claim (6.39 DL6, unchanged code — the ONE definition). *Rejected:* reusing
   `stale` (its words say the certificate changed — G6).
 - **DL8 — Who: a NEW key `claim.record_fee_bank_date`**, granted to `finance_officer` ONLY (ceiling `pariwar`); `super_admin` by
@@ -296,22 +335,40 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   keys (READ LIVE). ⛔ Granted to `district_admin` (they check — N7) or `pariwar_admin` (they vote — N7). *Rejected:* the District Admin
   (the 6.39 reading in `-473`): they do not hold the Trust's statement, and the same hand would type the date AND decide the check.
   ⚠ G4: if the Trust has no finance officer at go-live, only a Super Admin can record a bank date — a go-live leg (DL13).
-- **DL9 — Step-up.** The POST requires a FRESH step-up after the permission hook (`requireStepUp`, a new context constant the admin
-  imports — G9): a staff power over a bright line (Q2 B's cost). *Considered:* none, as the membership check (no step-up) — rejected because
-  this act alone moves the fee date. ⚠ The browser pass fakes the passkey ([[project_admin_browser_pass_launcher]]).
+- **DL9 — Step-up (PROPOSED: keep it, with a go-live leg).** The POST requires a FRESH step-up after the permission hook
+  (`requireStepUp`, a new context constant in the contract file that the route AND the admin caller import — G9): a staff power over a
+  bright line (Q2 B's cost), and this act alone moves the fee date. ⚠ Its cost, stated: in production ⛔ admin step-up code is delivered
+  (G9), so the bank date cannot be recorded there until deferral R4 is discharged — DL13 (e) holds go-live on it. *The other option, for
+  BigDev at 0.2:* ⛔ step-up, as the membership check has none (the act is then usable at go-live without R4; the power rests on the
+  key, the reason, the note and the audit alone). The admin page holds the write on `auth.step_up_required` and re-sends it through the
+  shared `StepUpPanel` (G9) — ⛔ a second step-up UI. ⚠ In the browser pass sign-in is the cookie helper and the step-up's code comes
+  from the admin stub's dev reveal ([[project_admin_browser_pass_launcher]]) — record both as limits.
 - **DL10 — Routes and the finance officer's page.** `GET /api/v1/p/:pariwarId/admin/fee-bank-dates` (pariwar dimension) — the claims the
   check holds on its fee: in the window, live check `fee_outcome` blocking (plaintext — ⛔ decrypt) or a live record present; each with the
   claim id, the posting district, the recorded fee date (IST), the amount, the reference's last four, `fee_date_source`, the live record
-  (date, reason, who, when) and `expected_live_check_id` / `expected_live_record_id`. `POST …/admin/claims/:claimCaseId/fee-bank-date`
+  (date, reason, who, when) and `expected_live_check_id` / `expected_live_record_id`. The payment on a row is the one the LIVE CHECK
+  names (`fee_receipt_id` — one join; ⛔ a second definition of "the joining receipt", ⛔ a per-row call of the reader). Capped: `?limit`
+  in the `certificate-reminders` shape (`clampLimit` INLINE in `.limit(...)` — the only form the `domain-accessor-invariants` gate
+  accepts; read cap + 1), longest-held first (the live check's `decided_at`), `truncated: true` when the cap cut the list. ⛔ The check's
+  `fee_outcome` on either route's wire or on the page: `same_day` beside a bank date IS the date of death (N2).
+  `POST …/admin/claims/:claimCaseId/fee-bank-date`
   (district dimension + step-up) `{ statement_reference, bank_credit_date, reason_code, note, expected_live_check_id,
   expected_live_record_id }`. Route-level codes `fee_bank_date.*`: `not_found`, `window_closed`, `not_held`, `no_fee_receipt`,
-  `reference_mismatch`, `in_future`, `before_joining`, `invalid_reason`, `stale`, `missing_display`. Both in ONE routes file
+  `reference_mismatch`, `in_future`, `before_joining`, `invalid_reason`, `stale`, `missing_display` (`invalid_reason` is the DOMAIN
+  writer's defence: through the route the contract's enum answers 400 `request.validation` first). Both in ONE routes file
   `apps/api/src/modules/claims/claims.fee-bank-date.routes.ts` (+ `.handlers.ts`), registered in `registerClaimsModule` after
   `registerMembershipCheckRoutes`, classified in the human-actor gate's COVERAGE_SET (`pathSubstrings: ['fee-bank-date']` — it matches
   both paths; `expectedMethods: ['get', 'post']`; `COVERAGE_FLOOR` 20 → 21). Zod contracts `packages/contracts/src/claims/fee-bank-date.ts`
-  (`.strict()`; the reason tuple DOMAIN-owned, mirrored with a lockstep test `claims-fee-bank-date.test.ts`; `statement_reference` with the
-  receipt contract's UTR regex). Admin: a NEW page `/p/$pariwarId/fee-bank-dates` (`apps/admin/src/modules/fee-bank-dates/`), registered as
-  `certificate-reminders` is; the page owns the mutation and the tokens; copy English only (DL11). ⛔ Name and ⛔ date of death on the page
+  (`.strict()`; the reason tuple DOMAIN-owned, mirrored with a lockstep test `claims-fee-bank-date.test.ts`;
+  `statement_reference`: `z.string().trim()` THEN
+  the receipt contract's UTR regex — the anchored regex alone would 400 a trailing space before the handler could trim it;
+  `bank_credit_date`: a `YYYY-MM-DD` that is a real calendar date, refined in the contract (400) and re-asserted by the writer).
+  Admin: a NEW page `/p/$pariwarId/fee-bank-dates` (`apps/admin/src/modules/fee-bank-dates/`), registered as
+  `certificate-reminders` is in ALL of its places: the route in `router.tsx`; a route component (`routes/FeeBankDatesRoute.tsx` — the
+  session gate, the list's own 401 / 403, a failed refetch keeps the list, an empty list says so: `CertificateReminderRoutes.tsx`); and
+  the nav link in `routes/RootLayout.tsx` (inside a Pariwar context, UNGATED — the server's 403 is the boundary; without the link the
+  page is reachable by a typed URL only). The page owns the mutation and the tokens, and holds a write on `auth.step_up_required`
+  through the shared `StepUpPanel` (G9); copy English only (DL11). ⛔ Name and ⛔ date of death on the page
   or its wire (N2).
 - **DL11 — Staff words (English only — BigDev approves word for word at 0.2).** The finance officer's page: title *"Joining fees to check
   against the bank statement"* · intro *"These claims are held because the joining fee was recorded on or after the date of death. If the
@@ -322,23 +379,37 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   again."* · refusals: mismatch *"This reference does not match the payment recorded for the member. Check that you have the right line
   on the statement."*; before joining *"That date is before the member joined. Check the date on the statement."*; future *"That date is
   in the future."*; not held *"This claim is not held on its joining fee."*; window *"A bank date can no longer be recorded on this
-  claim."*; stale *"This claim changed since you opened it. It has been reloaded — check again."*. The District Admin's console
-  (`MembershipCheckControl`): beside a blocking fee line from the RECORDED date — *"If the member may have paid before the death, the
-  finance officer can check the Trust's bank statement for this payment."*; when the bank's date is used — *"The Trust's bank statement
-  shows the payment arrived on {date} (recorded by {name})."*; the wait reason (DL7) and `bank_date_changed` — *"The finance officer
-  recorded the bank's date since you opened this check. It has been reloaded — check again."*. ⛔ Change to any DL12 / `-474` / `-476`
-  line (the deny instruction and its label stand). ⚠ Microcopy gate: ⛔ "receipt" (G8).
+  claim."*; stale *"This claim changed since you opened it. It has been reloaded — check again."*; nav *"Joining fee bank dates"* · empty
+  *"No claim is held on its joining fee."* · cut list *"Only the longest-held claims are shown."* · no access *"You do not have
+  permission to record bank dates."*. The District Admin's console (`MembershipCheckControl`): the note under a blocking fee line
+  (`feeAfterDeathNote` — today *"No drive can open for this claim. Record the check, then deny the claim with the reason "Fee paid after
+  the death"."*, `-474` item 3) is AMENDED for the one case the Panel changed, a blocking outcome from the RECORDED date: *"No drive can
+  open for this claim on the recorded date. If the member may have paid before the death, ask the finance officer to check the Trust's
+  bank statement before you deny. Otherwise record the check, then deny the claim with the reason "Fee paid after the death"."*; a
+  blocking outcome from the BANK's date keeps today's note, unchanged. (*The other option, for BigDev at 0.2:* ⛔ amendment — today's
+  note stays and the bank sentence is a separate line beside it; cost: one screen then tells the District Admin to deny and, beside it,
+  that the bank could still help.) When the bank's date is used — *"The Trust's bank statement shows the payment arrived on {date}
+  (recorded by {name})."*; the wait reason (DL7) and `bank_date_changed` — *"The finance officer recorded the bank's date since you
+  opened this check. It has been reloaded — check again."*; `same_person` (DL6) — *"You recorded the bank's date on this claim, so
+  another person must record this check."*. Left as approved: the three gate lines for `fee_after_death` (`approveBlocked`,
+  `finalVoteGate`, `r9Gate`), the API's message, the deny reason's label and `-476`'s guard line — a 409 carries the reason, ⛔ the
+  source. ⚠ Microcopy gate: ⛔ "receipt" (G8).
 - **DL12 — Events and audits (N6).** NEW event `claim.fee_bank_date_recorded` (annotation, ⛔ state change — the reducer's no-op arm;
   payload `record_id`, `fee_receipt_id`, `reason_code`, `superseded_record_id`); lockstep per 6.39 G11 (`CLAIM_EVENT_TYPES` 40 → 41; a frozen
   literal `STORY_6_39A_CLAIM_EVENTS = ['claim.fee_bank_date_recorded']` + its exclusion clause). Audits `admin_claim.fee_bank_date_recorded`
   and `admin_claim.fee_bank_date_rejected` (every refusal, its code — `reference_mismatch` included, ⛔ the typed value), through 6.39's
-  `emitAuthAudit` path, after the transaction closes; the membership check's existing audits gain `fee_date_source` (a code). ⛔ Read audit
+  `emitAuthAudit` path, after the transaction closes; the membership check's existing audits gain `fee_date_source`
+  (a code — the ONE exact-match assertion on the success line's context
+  gains the key, AC5). ⛔ Read audit
   for the list (⛔ Tier-1 on it).
 - **DL13 — Records.** A NEW roster row (the next free — ≥ Row 54; decision-authored, Row 46's format) *"Story 6.39a: the bank's date can be
   used at go-live"* with legs: (a) row `6-39a` `done` on `main`; (b) PQ1–PQ3 RULED and reflected in code (an open PQ can stay open for ever
   behind a built default — Row 46 note 1); (c) at go-live a named person holds `claim.record_fee_bank_date` (a finance officer, or the Super
-  Admin by decision) AND has the Trust's bank statements (G4; Q2 B's *"someone must match the payment"*); (d) the real-browser pass of the
-  page and the console's new lines — or un-attested. Row 46 gets a dated line when this row lands (its (b) PQ1 (b) half reflected).
+  Admin by decision) AND has the Trust's bank statements (G4; Q2 B's *"someone must match the payment"*), and ANOTHER person holds
+  `claim.check_membership` there (N7 — the recorder cannot record the check that uses the date); (d) the real-browser pass of the
+  page and the console's new lines — or un-attested; (e) while DL9's step-up stands: an admin can complete a step-up in production —
+  deferral R4 discharged (the dependency Row 47's notes name, G9) — or the step-up is withdrawn by a dated decision. Row 46 gets a
+  dated line when this row lands (its (b) PQ1 (b) half reflected).
   `deferred-work.md`'s corrected-UTR item: *"Not addressed by 6.39a — the match is against the STORED UTR (N3); a member whose stored UTR
   is wrong cannot be matched: PQ2"* (dated note, its text kept) ([[feedback_closure_language_precision]]).
 - **DL14 — ⛔ Scope creep.** ⛔ Family-facing words (the family sees nothing while the finance officer looks — `-474` item 5 keeps Q4's line
@@ -370,9 +441,12 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   (cost: a member whose money arrived that morning gets ⛔ drive). **B** — counts as before (cost: two different lines for "before the
   death" — one for the recorded date, one for the bank's). Suggest **A** (one line). **Built: A** (N1). ONE test names PQ3 (AC5).
 - **TOLD LINES (⛔ asked — the note states them so the Panel can object):**
-  - **TL1 — Who.** The Trust's finance officer records the bank's date; the District Admin then checks the claim again, and the final vote
-    follows as always — the person who types the date never decides the claim (N7). The Super Admin can also do it (every key). ⚠ If the
-    Trust has no finance officer, the remedy rests on the Super Admin (DL13 (c)).
+  - **TL1 — Who.** The Trust's finance officer records the bank's date; the District Admin then checks the claim again, and the final
+    vote follows as always. The system refuses that re-check from the person who typed the date, whatever roles they hold (N7). The
+    final voter is kept apart by role only: a person given both the finance officer's and the Pariwar Admin's role — or the Super
+    Admin, who holds every power — could type the date and later cast the final vote. Whether a second person must AGREE the date
+    itself was ⛔ asked on 21 November and is ⛔ built (TL2). ⚠ If the Trust has no finance officer, the remedy rests on the Super Admin
+    (DL13 (c)).
   - **TL2 — What is kept.** ⛔ Copy of the statement: the finance officer types the reference and the date, gives a reason and a note, and
     it is audited under their name. The system checks the reference; nobody re-checks the date.
   - **TL3 — Told line 1 of 21 November is no longer true** (already flagged in `-473`): the fee date now changes in a second way — the
@@ -394,15 +468,27 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
    appended, the claim's state unchanged; each refusal with ⛔ row: `window_closed` (a `denied` claim), `not_held` (⛔ live check; a live
    check that passes with ⛔ live record), `reference_mismatch`, `in_future`, `before_joining`, a missing note / unknown reason (400),
    `stale` (either expected id); ⛔ step-up ⇒ the step-up refusal; a second record supersedes the first (`re_recorded`), ONE live after; a
-   correction is accepted while the claim passes on an earlier bank date (DL5 (b)).
+   correction is accepted while the claim passes on an earlier bank date (DL5 (b)). The list: only claims held on the fee, in the
+   window, longest-held first, `truncated` past the cap, ⛔ `fee_outcome` on the wire. ⚠ Every 401 / 403 / step-up leg sends a VALID
+   body (TR9).
 4. **AC4 — The match (N3, PQ2).** ONE test names PQ2: a receipt whose stored UTR differs from the statement's reference by one digit ⇒
-   `reference_mismatch`, ⛔ row — and the typed value appears in ⛔ audit context, log line or response body (planted value).
+   `reference_mismatch`, ⛔ row — and the typed value appears in ⛔ audit context, log line or response body (planted value). A
+   22-character reference stored in lower case and typed in capitals, and a reference typed with a trailing space, are ACCEPTED (DL3 —
+   the same reference).
 5. **AC5 — The check uses it (DL6).** Live-DB: after a record, the preview shows `fee_date_source 'bank'`, the record and the recomputed
    outcome; the District Admin's re-check stores `fee_date_source 'bank'` + `fee_bank_date_id`; a bank date the day BEFORE the death ⇒
    `before_death` and the gate passes (identity permitting); ONE test names PQ3: a bank date ON the day of death ⇒ `same_day` and the gate
    answers `fee_after_death`; a bank date after ⇒ `after_death`; a POST with a stale `expected_fee_bank_date_id` ⇒ 409
    `membership_check.bank_date_changed`, ⛔ row; a record naming a receipt that is ⛔ the joining one (raw fixture — defence) is ignored
-   (`'recorded'`). 6.39's existing membership-check specs pass with ⛔ assertion changed (`fee_date_source 'recorded'`).
+   (`'recorded'`, a NULL `fee_bank_date_id`) — and the gate then answers `bank_date_recorded` until a new record supersedes it (fail
+   closed: the claim waits — ⛔ assert a pass). **The same person (DL6, N7):** a re-check by the actor who recorded the live bank date ⇒
+   409 `membership_check.same_person`, ⛔ row — for a Super Admin, and for a user holding BOTH role grants; another actor's is accepted.
+   6.39's existing membership-check specs pass with ⛔ assertion WEAKENED. Exactly two kinds of edit are allowed there: (i) every existing
+   check POST body gains `expected_fee_bank_date_id: null`, and every direct writer call the new input field (request edits — re-derive
+   the files with `git grep -lE "expected_live_check_id|expectedLiveCheckId" -- apps packages`: the API spec, the contracts test, the
+   admin test, the two domain specs, `VerifierConsoleRoute.tsx`); (ii) the ONE exact-match assertion on the success audit's context
+   (`membership-check.spec.ts`, under *"The success line carries the ids and the codes"*) gains `fee_date_source: 'recorded'` — a
+   strengthening.
 6. **AC6 — The appeal path (PQ1).** ONE test names PQ1, through the real path (the fixture of 6.39's "AC16 — through an appeal"): a claim
    denied `fee_paid_after_death` ⇒ a bank-date POST refused `window_closed`; the appeal reverses it ⇒ the record is accepted in `reversed`;
    the re-check passes; the final vote approves; the family's `refusal_reason` reads `null`.
@@ -424,13 +510,17 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
 11. **AC11 — The erasure scrub (G12).** Live-DB as `twt_app`: `anonymizeMember` writes the sentinel into a record's `note_ciphertext` (1 row
     matched, ⛔ 0), every other column unchanged.
 12. **AC12 — The staff surfaces (DL10, DL11).** Admin component tests: the finance page lists the held claims (⛔ name, ⛔ date of death),
-    the form refuses incomplete input in words, maps each `fee_bank_date.*` refusal to its line (⛔ raw code), refetches on `stale`, sends the
-    step-up; the console control shows the ask-the-finance-officer line ONLY beside a blocking RECORDED fee date, the bank line when the bank
-    is used, and the `bank_date_changed` / `bank_date_recorded` words; the four G6 surfaces map `bank_date_recorded` to its words. A
+    the form refuses incomplete input in words, maps each `fee_bank_date.*` refusal to its line (⛔ raw code), refetches on `stale`, HOLDS
+    the write on `auth.step_up_required` and re-sends it through the shared `StepUpPanel`; the list shows its empty, cut-list and
+    no-access lines and ⛔ fee outcome; the nav link renders inside a Pariwar context; the console control shows the amended note ONLY
+    under a blocking RECORDED fee date and today's note under a blocking BANK date, the bank line when the bank is used, and the
+    `bank_date_changed` / `same_person` words; each of the three admin maps (`approveBlocked`, `finalVoteGate`, `r9Gate`) shows
+    `bank_date_recorded`'s OWN sentence — asserted ≠ the `not_checked` fallback. A
     real-browser pass of the page and the console (the 6.39 route — [[project_admin_browser_pass_launcher]];
     [[project_agent_chrome_cannot_reach_localhost]] — probe once) — or recorded un-attested ([[feedback_record_unattested_no_backfill]]).
 13. **AC13 — The gate stays green.** Every existing approval-path and membership-check test passes with ⛔ assertion weakened (the fixture
-    `seedPassedMembershipCheck` writes `fee_date_source 'recorded'` by the column default); contracts and admin fixtures updated for the new
+    `seedPassedMembershipCheck` writes `fee_date_source 'recorded'` by the column default; the only edits to 6.39's specs are
+    AC5's two kinds); contracts and admin fixtures updated for the new
     REQUIRED fields ([[project_contracts_tests_outside_tsc]]); `ci:local` ALL jobs green (40 at `90535934` — READ LIVE) on a FRESH container,
     DB named `twt_dev`, on the story's own port ([[project_prepush_hook_inherits_5432]]; [[project_known_livedb_test_failures]] #18).
 
@@ -442,7 +532,10 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
         90535934..origin/main -- .decision-log.md _bmad-output docs/launch-gate-inventory` — read any new entry; re-read the NUMBERS block
         across EVERY branch and worktree (`6-22b-…`'s planned `0213` first). Check `ListAgents` + the branch before every commit
         ([[feedback_concurrent_review_agents_mutate_tree]]).
-  - [ ] 0.2 Put DL1–DL14 to BigDev (DL11's English verbatim; DL8's rejected District Admin named; DL9's step-up). Record the answers here.
+  - [ ] 0.2 Put DL1–DL14 to BigDev (DL11's English verbatim, with its amended console note and the no-amendment option; DL8's rejected
+        District Admin named; DL9's step-up WITH its go-live cost and the no-step-up option; DL6's same-person check and the roles-only
+        option; DL3's letter-case rule). Record the answers here, then AMEND N7, TL1, DL13's legs, the ACs and the Tasks to the answers
+        as given — a PROPOSED default left standing in an AC gets built.
   - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
         `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` (date = the day written) — PQ1–PQ3
         and TL1–TL3; plain-English question first, THE ONE FACT (*"the bank's date helps only a family whose recorded payment reference is
@@ -452,7 +545,8 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-481` at authoring): DL1–DL14 as answered; builds `-473` Q2 B under
         `-474` item 1; declares N3 (a narrowing: the reference only — PQ2), DL8 (the finance officer — a MATCH on "staff", ⛔ the
         District Admin `-473` named as the author's reading), PQ1 built B (the widest literal reach); names PQ1–PQ3 open; mints the key and
-        the roster row; ⛔ supersedes a ratified entry. Committed ALONE, first ([[project_decision_log_writes_user_inserted]] — stage, try,
+        the roster row; AMENDS `-474` item 3's console note for the recorded-date case (an author-commit, amended — only if DL11's
+        amendment is accepted); ⛔ supersedes a ratified entry. Committed ALONE, first ([[project_decision_log_writes_user_inserted]] — stage, try,
         verify; ask once on a refusal).
   - [ ] 0.5 Records: the roster row (DL13); `deferred-work.md` — PQ1–PQ3 open (trigger: the ruling) and the corrected-UTR item's dated
         note (DL13); the row-`6-39a` dated comment in `sprint-status.yaml`; ledger line + row `ready-for-dev → in-progress`
@@ -465,7 +559,8 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
 - [ ] **Task 2 — The rule and the reads (AC2)**
   - [ ] 2.1 `compareFeeCalendarDateWithDeathDate` + the delegation (DL2) + unit tests.
   - [ ] 2.2 `readJoiningFeeReceipt` widened (DL4) — update its callers' types only; `getLiveFeeBankDate`, `listClaimsHeldOnFee` in a NEW
-        `claim/fee-bank-date-read.ts` (⛔ decrypt).
+        `claim/fee-bank-date-read.ts` (⛔ decrypt; the list joins the payment by the live check's `fee_receipt_id`, `clampLimit` inline,
+        `truncated` — DL10).
 - [ ] **Task 3 — The finance officer's act (AC3, AC4, AC8, AC9)**
   - [ ] 3.1 Domain vocabulary (reasons, sources) + `claim/errors.ts` (`FeeBankDateRefusedError`) + contracts `fee-bank-date.ts` + export +
         lockstep test.
@@ -480,14 +575,18 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   - [ ] 3.6 Tests: AC3, AC4, the AC8 positive and 403 legs, AC9's planted values.
 - [ ] **Task 4 — The check and the gate (AC5, AC6, AC7, AC10)**
   - [ ] 4.1 The gate leaf (DL7): facts + the new reason + precedence; `MEMBERSHIP_CHECK_WAIT_REASONS` + contracts mirror + the API message +
-        the admin message helper. Run the NW1 scan AND a runtime import ([[project_type_only_import_cycle_trap]]).
-  - [ ] 4.2 The membership check (DL6): handler reads + preview fields + `expected_fee_bank_date_id`; writer re-assert + the two columns;
-        `bank_date_changed` in `REFUSAL_MESSAGES` and the admin hook's refetch list.
+        ALL THREE admin maps + the two lists in `claims-verifier-console.test.ts` (DL7); the facts read stays ONE statement (36 reads).
+        Run the NW1 scan AND a runtime import ([[project_type_only_import_cycle_trap]]).
+  - [ ] 4.2 The membership check (DL6): handler reads + preview fields + `expected_fee_bank_date_id`; writer re-assert
+        (`computedAgainstFeeBankDateId`) + the same-person refusal + the two columns; `bank_date_changed` and `same_person` in
+        `MembershipCheckRefusedError`'s reasons, `REFUSAL_MESSAGES` (exhaustive) and the admin `refused` map; `bank_date_changed` in the
+        admin hook's refetch list; AC5's two kinds of edit to 6.39's specs.
   - [ ] 4.3 The 6.39a fence `it` block + positive control (AC10).
   - [ ] 4.4 Tests: AC5 (incl. the PQ3 test), AC6 (the PQ1 test), AC7; then the WHOLE 6.39 membership-check and approval-path suites (TR1).
 - [ ] **Task 5 — The staff surfaces (AC12)** — client + hooks for the page (copy `certificate-reminders`' list + 6.39's
-      `usePostMembershipCheck` invalidations: a recorded bank date invalidates the console's preview and packet queries); the page and its
-      form; the control's new lines; DL11's words in the module's `i18n-en.ts` and `verifierConsoleEn`; component tests; the browser pass (or
+      `usePostMembershipCheck` invalidations: a recorded bank date invalidates the console's preview and packet queries); the page, its
+      route component and its nav link (`RootLayout.tsx`); the form with the shared `StepUpPanel`; the control's new lines;
+      DL11's words in the module's `i18n-en.ts` and `verifierConsoleEn`; component tests; the browser pass (or
       un-attested).
 - [ ] **Task 6 — Close** — 6.1 `ci:local` on a FRESH container on the story's own DB (AC13); 6.2 the roster row's (a) status line, Row 46's
       dated line; 6.3 `deferred-work.md` dispositions (the corrected-UTR item; anything new); 6.4 Completion Notes, File List, Change Log;
@@ -509,7 +608,8 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
 - **TR4 — The leaf.** `membership-check-approval.ts` reads one more table — `sql` + schema only; ⛔ import the new writer or read module
   into it (the init cycle — 6.39 TR4).
 - **TR5 — The typed reference is a SECRET-ish value.** ⛔ Store it, ⛔ log it (pino serializers log `request.body` on error paths — check
-  the claims module's error logging), ⛔ echo it in a 409's `details`. Compare after `trim()`; the receipt's UTR is compared as stored.
+  the claims module's error logging), ⛔ echo it in a 409's `details`. Both sides trimmed (the contract trims the
+  typed one — DL10), letters compared without regard to case (DL3); the stored UTR is ⛔ rewritten.
 - **TR6 — Calendar dates, ⛔ instants.** `bank_credit_date` is a `date` column: read it as `YYYY-MM-DD` (`mode: 'string'`), ⛔ through a JS
   `Date` (a UTC midnight would shift it a day in IST). The bounds use `istDateOf(now)` and `istDateOf(members.created_at)`.
 - **TR7 — Two currency tokens on one POST.** The membership-check POST now carries three tokens (`expected_live_review_id`,
@@ -518,7 +618,8 @@ the new key is granted to ⛔ role that holds either (super_admin derives every 
   a deceased with ⛔ posting fails the resolver closed — a finance officer then cannot record either. Prove the positive leg on a seeded
   posting; record the no-posting behaviour (it matches 6.39's).
 - **TR9 — Step-up in tests.** Copy the fraud-finding route specs' step-up fixture; a test without it must assert the step-up refusal, ⛔
-  bypass the hook.
+  bypass the hook. Zod validation runs BEFORE the preHandler hooks ⇒ every 401 / 403 / step-up leg sends a VALID body, else 400
+  `request.validation` answers first and the leg proves nothing.
 - **TR10 — "Matches in practice" is ⛔ proven by this story.** The synthetic bank-parsers golden files (G3) prove nothing about the Trust's
   bank; the first real use is the attestation — say so in Completion Notes, ⛔ claim it.
 - **TR11 — Admin microcopy gate.** "receipt" fails in admin copy, test ids and comments ([[project_microcopy_gate_scans_admin_code]]).
@@ -541,7 +642,8 @@ claim outside the appeal.
   anyway, ⛔ write a test that claims to reach it.
 - `ci:local` on a fresh container was twice blocked by the auto-mode classifier (`db:migrate`): ask BigDev for a permission rule FIRST
   ([[project_admin_browser_pass_launcher]]).
-- The browser pass needs a throwaway DB migrated from scratch, the cookie helper and a faked passkey; record its limits in the roster line.
+- The browser pass needs a throwaway DB migrated from scratch and the cookie helper (⛔ passkey sign-in); a step-up's code comes from the
+  admin stub's dev reveal (G9). Record both as limits in the roster line.
 
 ### Git intelligence
 
@@ -565,10 +667,10 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 - API: `apps/api/src/modules/claims/claims.fee-bank-date.{handlers,routes}.ts`, `claims/index.ts`, `claims.membership-check.handlers.ts`,
   `membership-check-required-message.ts`, `audit/audit-sink.ts`, `context.ts`; `scripts/claim-adjudication-human-actor-invariant/check.ts`.
 - Contracts: `packages/contracts/src/claims/fee-bank-date.ts` + `claims/index.ts`, `claims/membership-check.ts` (preview + POST + the wait
-  reason mirror); tests `claims-fee-bank-date.test.ts`, `claims-membership-check.test.ts`.
+  reason mirror); tests `claims-fee-bank-date.test.ts`, `claims-membership-check.test.ts`, `claims-verifier-console.test.ts`.
 - Admin: `apps/admin/src/modules/fee-bank-dates/` (page, form, `i18n-en.ts`), `router.tsx`, `api/client.ts`, `api/hooks.ts`,
   `modules/claim-verification/MembershipCheckControl.tsx`, `claim-verification/nominee-errors.ts`, `claim-verification/i18n-en.ts`,
-  `routes/VerifierConsoleRoute.tsx`.
+  `routes/VerifierConsoleRoute.tsx`, `routes/FeeBankDatesRoute.tsx` (NEW), `routes/RootLayout.tsx` (the nav link).
 - Records: the roster row (DL13), Row 46's dated line, `deferred-work.md`, `sprint-status.yaml`, `.decision-log.md`, `epics.md` (6.39a).
 
 ### References
@@ -578,8 +680,10 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 - `_bmad-output/implementation-artifacts/6-39-identity-check-before-a-drive-for-an-unchecked-identity.md` (v1.13 — G1–G17, DL1–DL16, both
   review rounds).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` (Q2 as put; *"Still uncertain"*).
-- `_bmad-output/planning-artifacts/epics.md` — Story 6.39a; `docs/launch-gate-inventory/inventory-roster.md` — Row 46.
-- `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: code review of story 6-39 … round 2"; "Story 6.39 Task 0.5".
+- `_bmad-output/planning-artifacts/epics.md` — Story 6.39a; `docs/launch-gate-inventory/inventory-roster.md` — Row 46; Row 47's notes (the admin
+  step-up dependency).
+- `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: code review of story 6-39 … round 2"; "Story 6.39 Task 0.5";
+  the deferral R4 item (*"ADMIN step-up OTP-over-SMS"*).
 - PRD (`_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md`) — FR-1 (receipts retained), §4.14.1 (trust-account banking),
   OQ-3, OQ-15, OQ-16.
 - Niyamavali §2.1, §2.2 (git-ignored copy, main checkout).
@@ -595,6 +699,10 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 - 2026-11-21 — story created by `bmad-create-story 6.39a` (ledger `2026-11-21u`): ultimate context engine analysis completed —
   comprehensive developer guide created. DL1–DL14 PROPOSED, PQ1–PQ3 PROPOSED (one non-blocking note at Task 0.3); ⛔ code; ⛔ decision
   entry yet.
+- 2026-11-21 — validated (`bmad-create-story validate 6.39a`, BigDev: "all"; ledger `2026-11-21w`), re-traced at `90535934`: fifteen
+  findings applied (Change Log v1.1). Three build decisions gained a second option for BigDev at Task 0.2 — DL9 (the step-up and its
+  production cost), DL6 / N7 (the same-person check) and DL11 (the amended console note). One inline pass; ⛔ fresh-context verifier
+  round was run. ⛔ Code; ⛔ decision entry yet.
 
 ### File List
 
@@ -603,3 +711,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 | Date | Version | Description |
 |---|---|---|
 | 2026-11-21 | v1.0 | Created (`bmad-create-story 6.39a`) at `90535934`, in its own worktree. |
+| 2026-11-21 | v1.1 | Validated (`bmad-create-story validate 6.39a`, BigDev: "all"; re-traced at `90535934`, `origin/main` unmoved). **Critical:** DL9's step-up cannot be completed in production (the admin step-up delivery is a stub — G9) ⇒ its cost stated, a no-step-up option, DL13 leg (e); N7 / TL1 promised two PEOPLE while the build separated ROLES (one user may hold several grants) ⇒ a same-person refusal in the check writer (DL6, AC5), TL1 reworded; AC5 / AC13's "no assertion changed" was unsatisfiable against DL6's required token and DL12's audit field ⇒ the two allowed kinds of edit named. **Added:** the three admin wait-reason maps and the contracts test's lists (G6, DL7, AC12); the console's read count resolved (G11, DL7 — stays 36); the reference compared trimmed and without regard to letter case (DL3, DL10, AC4); the list capped, joined by the live check's payment, ⛔ fee outcome on its wire (DL10, AC3); the nav link, the route component and the shared `StepUpPanel` (DL10, AC12); the console note amended for the recorded-date case, with a no-amendment option (DL11, Task 0.4); the writer's computed-against token (DL6). **Small:** AC5's defence leg says what the gate answers; valid bodies on the 401 / 403 / step-up legs (TR9); the Niyamavali cited by section, ⛔ quoted; the NUMBERS block re-read (three sibling stories want the same numbers). |

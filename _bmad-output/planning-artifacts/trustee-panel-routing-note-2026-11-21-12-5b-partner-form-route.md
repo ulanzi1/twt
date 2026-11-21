@@ -1,6 +1,8 @@
 # Trustee Panel routing note — the partner's own form: which offers use it, who decides, and what the Trust may learn about members who use it
 
-> **Status: WRITTEN 2026-11-21, ⛔ NOT SENT — BigDev sends.** Written from the correct-course for Story 12.5's K-12 (Decision
+> **Status: SENT and RULED 2026-11-22 — Decision `2026-11-22-486` (Trustee-ratified, DR + KB; relayed by BigDev).** Everything below
+> the ruling block is kept as the questions were put. The original status line follows.
+> **Status (as written): WRITTEN 2026-11-21, ⛔ NOT SENT — BigDev sends.** Written from the correct-course for Story 12.5's K-12 (Decision
 > `2026-11-21-485`, an author-commit — ⛔ a ruling), which turns your 21 November answer *"Both — each offer works one way or the other"*
 > into a story to build (Story 12.5b). ⛔ No member uses the system yet, and none of this is built. Nothing here blocks building or
 > merging. Every answer must be in before the first offer of this kind is shown to members (roster Row 55, `partner-form-route-live`).
@@ -30,6 +32,21 @@ whether the Trust may learn anything about a member's visit, or what members are
 tracking *"a further question for you"*. That is why this note exists.
 
 ---
+
+> ## ✅ RULED 2026-11-22 — Decision `2026-11-22-486` (Trustee-ratified, DR + KB)
+>
+> As relayed by BigDev: *"routing note sent. / R1 A, R2 C -  remove after 90 days, R3 B, R4 A, R5 : You are being directed to
+> [partner]'s page, where [partner] may ask for your contact information."*
+>
+> - **R1 — A:** the publishing admin chooses, offer by offer (⛔ our suggestion, which was C).
+> - **R2 — C, 90 days:** the record that a named member opened a partner's form is removed after 90 days (⛔ our suggestion, which was A).
+> - **R3 — B:** totals per offer only, advisory; below 5 not shown (the number as put).
+> - **R4 — A:** hidden once a death is reported, also after settlement.
+> - **R5 — AMENDED:** the member sees only *"You are being directed to [partner]'s page, where [partner] may ask for your contact
+>   information."* — it replaces the whole draft below; the Hindi goes through tone review (BigDev).
+>
+> ⛔ NOT covered (see the decision): the basis for R2's record (counsel); who on staff may read it; how totals reach the Trust; the Hindi text.
+
 
 # The question
 

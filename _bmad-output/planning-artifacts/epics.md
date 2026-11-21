@@ -7556,6 +7556,16 @@ signing key for `trust_sends`; WHO may choose the route is the Panel's (routing 
 
 **And** ⛔ go-live until its own roster row closes (`partner-form-route-live`, Row 55); merge ≠ go-live
 
+> ⭐ **2026-11-22 — THE PANEL RULED THE NOTE: Decision `2026-11-22-486`** (Trustee-ratified, DR + KB; the AC above is kept as written).
+> Binding here: **R1 A** — the publishing admin chooses each offer's route in the wizard, on the publish record; **R2 C** — BUILD a
+> per-member record that a member opened a `partner_form` offer's form, removed 90 days after it was made, reached by an erasure
+> request and the DPDPA data export (⛔ staff read built — ⛔ asked); this SUPERSEDES the AC's *"a per-member "opened" record is ⛔ built
+> unless the Panel rules it"*; **R3 B** — a partner may report TOTALS per offer (advisory, ⛔ a fact about any member; below 5 not
+> shown): an intake may be built, and HOW they arrive (staff entry vs an inbound endpoint that passes `-483` QE15's fence) is this
+> story's create-story ASK — the AC's *"⛔ inbound path"* holds for anything but totals; **R4 A** — confirmed as built; **R5** — the
+> member sees only *"You are being directed to [partner]'s page, where [partner] may ask for your contact information."* (a new copy
+> key with a real-`t()` leg; the Hindi through tone review). Open: the basis for R2's record (counsel, Row 55); the partner agreement (Row 55 (c)).
+
 ### Story 12.6: Time-Bombed Module Lifecycle + Auto-Archive `[CONSUMER]`
 
 As Solo Builder authoring the module-archive lifecycle,

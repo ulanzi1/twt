@@ -221,3 +221,17 @@ Questions as approved (full note in the 12.5 note's format: §0, the one fact, o
 **Success criteria:** `-485` committed alone and first; the routing note written and not marked sent; Row 55 open; `epics.md` carries
 12.5b and the 12.3 / 12.4 notes; K-12 and the external-URL item carry dated owner lines; `sprint-status.yaml` parses and lists
 `12-5b-partner-own-form-route: backlog`; ⛔ "Closed by" line anywhere; ⛔ code.
+
+---
+
+## Addendum 2026-11-22 — the Panel ruled the routing note (Decision `2026-11-22-486`)
+
+The proposal above is kept as approved. The Panel (DR + KB) answered R1 A, R2 C (90 days), R3 B, R4 A and amended R5. Two of those
+differ from what the proposal assumed, and `-486` supersedes the matching sentences of `-485` by quotation:
+- **R2 C:** Story 12.5b BUILDS a per-member record of a visit (removed after 90 days; erasure and export reach it) — §4.1's "a per-member
+  "opened" record is ⛔ built unless the Panel rules it" is now ruled.
+- **R3 B:** partner totals per offer may come in (advisory; below 5 not shown) — §4.1's "⛔ inbound path" holds for anything but totals.
+- **R1 A:** the publishing admin chooses the route (§4.1's wizard step). **R4 A:** confirmed. **R5:** the member sees only *"You are
+  being directed to [partner]'s page, where [partner] may ask for your contact information."*; the Hindi through tone review.
+
+Roster Row 55 (a) and (b) are MET; (c) and (d) remain. A dated note under Story 12.5b in `epics.md` carries the ruling.

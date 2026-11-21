@@ -4,9 +4,9 @@
 > ⛔ Nothing here is built, and nothing here blocks anything already built. These answers, with legal advice, are needed before the
 > later piece of work that builds the register's identity numbers.
 > ⭐ **Send order:** the written question for counsel (`counsel-question-2026-11-02-fraud-register-identifier-set.md`) goes out
-> **first, or with this note**. Please also send, with this note, the 2026-11-01 note
-> (`trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md` — nine questions, also unsent). Its **Q2** — whether a
-> guilty member's nominee is barred automatically — belongs to the same build as these five; it is ⛔ repeated here.
+> **first, or with this note**. The 2026-11-01 note (`trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md`) has
+> been answered (21 November, Decision `2026-11-21-477`); its **Q2** — a guilty member's nominee is barred only on a finding naming
+> them — belongs to the same build as these five and is ⛔ asked again here.
 
 ## §0 — the gate
 
@@ -27,7 +27,7 @@ who can be found to have lied?"* — questions about people, ⛔ about code.
 **Already ruled, and kept as ruled:** only the guilty are kept; the bar reaches the people who filed; only an exact identifier may bar
 automatically, and a name match goes to a person to check; the bar is for life, not appealable, and the Super Admin may lift it; a
 post-death nomination change is refused at once and banned only after an investigation; every death certificate is kept for as long as
-claim records are (21 and 25 September). We will build all of these as you ruled them, once counsel clears them.
+claim records are (21 and 25 September); a guilty member's nominee is barred only on a finding naming them (21 November). We will build all of these as you ruled them, once counsel clears them.
 
 ---
 
@@ -260,7 +260,8 @@ Aadhaar should be dropped (Q5). Nothing is built until counsel has answered too.
   helpline operator or District Admin flags → District Admin verifies → …"* — the note author's synthesis: the option chosen (Q2 C,
   *"Trust-wide, but imposed one level up after the Pariwar Admin refers it"*) names no flagger, and `-240` cl. 5 names none ⇒ Q4.
 - **What happens with no PAN** — no ruling ⇒ Q1. **Dropping Aadhaar** — no ruling; it would narrow `-238` cl. 6 ⇒ Q5.
-- **Whether a guilty member's nominee is barred automatically** (`-238` NOT covered (i)) — the 2026-11-01 note's Q2, ⛔ repeated here.
+- **Whether a guilty member's nominee is barred automatically** (`-238` NOT covered (i)) — RULED since: the 2026-11-01 note's Q2 **B**
+  (`2026-11-21-477`, Trustee-ratified, DR + KB) — only on a finding naming them; ⛔ asked again here.
 
 ## E3 — What the code actually does (traced at `b7b43c47`, Story 6.22b G2–G13)
 
@@ -308,4 +309,5 @@ two lines; corrected from the real output.
 above (four headings; 1; 1; 1; the same four lines; 1 hit; the same four errors; the same status line). Checked alongside: nothing in
 `.decision-log.md` since 2026-11-02 rules on the fraud register; Story 6.39's new refusal reason `fee_paid_after_death` is appealable
 like any other and `appeal-eligibility.ts` is unchanged, so Q3's three final cases stand; the 2026-11-01 note is still WRITTEN, ⛔
-sent.
+sent. ⭐ Later the same day the 2026-11-01 note was answered (`2026-11-21-477`): its Q2 is B (the header, §0 and E2 now say so). None
+of its answers changes a fact this note's five questions rest on — re-read against Q1–Q5 and Told 1–3.

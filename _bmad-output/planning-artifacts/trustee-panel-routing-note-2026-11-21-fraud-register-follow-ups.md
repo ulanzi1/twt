@@ -1,6 +1,7 @@
 # Trustee Panel routing note — the fraud register: eight things your two rulings of 21 November leave open
 
-> **Status: WRITTEN 2026-11-21, ⛔ NOT SENT — BigDev sends.** Written after Decisions `2026-11-21-477` (the first-half note, Q1–Q9) and
+> **Status: WRITTEN 2026-11-21; SENT by BigDev and RULED the same day — Decision `2026-11-21-480` (Trustee-ratified, DR + KB).**
+> Everything below the ruling block is the note as put. Written after Decisions `2026-11-21-477` (the first-half note, Q1–Q9) and
 > `2026-11-21-478` (the identity-numbers note, Q1–Q5), both Trustee-ratified (DR + KB). ⛔ Nothing here is built. **Part 1 (F1, F2)
 > blocks building**; Part 2 (F3–F8) is needed before the parts it names are built or go live. Nothing already built waits on it.
 
@@ -21,10 +22,20 @@ below is a gap one of them leaves, named with the answer it comes from.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-11-21 (relayed by BigDev), Decision `2026-11-21-480` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**.
+> Verbatim: *"by DR and KB / F1 A, F2 A, F3 A, F4 A, F5 B, F6 A, F7 A, F8 A"* — every answer the note's suggestion.
+>
+> - **F1 A** — the District Admin may close a flag as "the death is real"; the investigation ends with no finding (⛔ a third outcome).
+> - **F2 A** — the PAN half is built once counsel clears it; Aadhaar is added if a lawful route exists.
+> - **F3 A** — the District Admin of the joining person's district is told, information only. **F4 A** — no separate appeal of a
+>   finding; the termination's appeal is the route. **F5 B** — the other Pariwar's Pariwar Admin is told.
+> - **F6 A** — *"Closed — the member was found alive"* confirmed. **F7 A** — the filer is investigated separately (took part / did not).
+>   **F8 A** — notes about an innocent member are deleted after counsel's period; the finding is kept.
+> - ⚠ **Not covered:** the words the District Admin is told (F3); whether the person who closes a flag must differ from the flagger
+>   (F1); how and in what words a Pariwar Admin is told (F5).
+>
+> ⭐ Everything below is kept **unedited** as the questions **as they were put**.
 
 ---
 

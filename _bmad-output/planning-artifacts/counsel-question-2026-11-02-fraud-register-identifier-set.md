@@ -178,3 +178,8 @@ the Trust's direction, subject to your advice:
 
 Nothing has been built on any of these; the Trust's rules still forbid building the register until your answers are recorded.
 
+**Further note, 2026-11-21 (later the same day).** The Panel has since answered two more points that bear on this letter. (a) **The PAN
+half is built first**, once your answers allow it; the Aadhaar half is added only if there is a lawful route (question 2). (b) **Staff
+notes from an investigation that found a member innocent are deleted after a period you set, like the family's details**; the finding
+itself is kept. So for **question 7**, please also advise how long the Trust may keep those notes, and whether the finding may be kept
+longer than the notes.

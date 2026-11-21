@@ -426,6 +426,9 @@ to file and to be paid; a family without one is told to contact the helpline, wh
 amended (every deletion after a period counsel sets), **PQ4 B** (its second half not answered — the follow-up note's F7), **PQ5 C**
 (⛔ our suggestion — Aadhaar kept; whether the PAN half waits is F2). DL2 (i)'s PAN-only design is ⛔ the Panel's direction. None of
 this touches Task 1 (DL5's guard). The follow-up note: `trustee-panel-routing-note-2026-11-21-fraud-register-follow-ups.md`.
+⭐ 2026-11-21 — the follow-up note RULED (`2026-11-21-480`, all as suggested): F2 A — the PAN half is built first, once counsel clears it;
+F7 A — PQ4's second half (a separate investigation of the filer); F8 A — innocent-finding notes deleted with the family's details.
+The counsel question carries both in a further dated note (still ⛔ sent).
 
 - **PQ1 — A family member who has no PAN: may they still file, and be paid?** (`-238` cl. 6 and `-240` cl. 3 assume an identifier exists;
   neither says what happens when the person has none.) ⭐ THE ONE FACT: by count, roughly 3 in 4 adults hold a PAN — an upper bound;

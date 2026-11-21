@@ -624,6 +624,15 @@ export type AuthAuditEventType =
   | 'admin_claim.fraud_finding_rejected'
   | 'admin_claim.fraud_notes_read'
   | 'admin_claim.fraud_claims_read'
+  // ── Story 6.39 (DL11) — the staff membership check before any drive. ids, outcome codes and reason codes ONLY
+  // (⛔ never the date of death, ⛔ never the fee date, ⛔ never the note, ⛔ never a name — N7), with a `claim:<uuid>`
+  // resourceLocator.
+  //   membership_checked / membership_check_rejected — the District Admin's check (`claim.check_membership`), or its
+  //     refusal with the reason code.
+  //   membership_check_read — the preview was opened: it shows the certificate's date of death beside the fee's date.
+  | 'admin_claim.membership_checked'
+  | 'admin_claim.membership_check_rejected'
+  | 'admin_claim.membership_check_read'
   // ── Story 6.21b (D5) — the helpline's read of the SELECTED member's live claims + their status ──
   // ids and status codes ONLY (⛔ never a note/date/reviewer). `admin_death_certificate.claims_read`
   // does ⛔ NOT close 6.20's "the helpline live-claims read writes no audit line" deferral — that

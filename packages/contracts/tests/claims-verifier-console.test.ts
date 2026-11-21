@@ -166,6 +166,13 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
       complete: false,
       waitReason: 'certificate_check_required' as 'no_completed_inspection' | 'certificate_check_required' | null,
     },
+    // Story 6.39 (DL10) — why the approval waits for the membership check, and may this viewer record one: NON-PII.
+    membershipCheckGate: {
+      available: true,
+      passed: false,
+      reason: 'not_checked' as 'not_checked' | 'stale' | 'fee_after_death' | 'identity_not_confirmed' | null,
+      viewer: { canCheckMembership: true },
+    },
     suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
     otherClaimsForDeath: { available: true, total: 0, claims: [] },
     finallyApprovedElsewhere: null,
@@ -224,6 +231,25 @@ describe('VerifierConsolePacket — full round-trip + ordering', () => {
     expect(VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { ...groundInspectionGate, waitReason: 'refused' } }).success).toBe(false);
     expect(
       VerifierConsolePacket.safeParse({ ...PACKET, groundInspectionGate: { available: false, complete: false, waitReason: null } }).success,
+    ).toBe(true);
+  });
+
+  it('Story 6.39 (DL10) — `membershipCheckGate` is REQUIRED and STRICT: a closed reason set, ⛔ a date, ⛔ a name', () => {
+    const { membershipCheckGate, ...without } = PACKET;
+    expect(VerifierConsolePacket.safeParse(without).success).toBe(false);
+    for (const leak of ['dateOfDeath', 'feePaidOn', 'name', 'note']) {
+      expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, [leak]: '2026-05-10' } }).success, leak).toBe(false);
+    }
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, reason: 'denied' } }).success).toBe(false);
+    expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, viewer: {} } }).success).toBe(false);
+    for (const reason of ['not_checked', 'stale', 'fee_after_death', 'identity_not_confirmed']) {
+      expect(VerifierConsolePacket.safeParse({ ...PACKET, membershipCheckGate: { ...membershipCheckGate, reason } }).success, reason).toBe(true);
+    }
+    expect(
+      VerifierConsolePacket.safeParse({
+        ...PACKET,
+        membershipCheckGate: { available: false, passed: false, reason: null, viewer: { canCheckMembership: false } },
+      }).success,
     ).toBe(true);
   });
 

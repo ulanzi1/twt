@@ -911,7 +911,18 @@ export function permissionKey(value: string): PermissionKey {
 // them; `-210` cl. 2 authorises no key and is not relied on. REUSE CHECK — ⛔ `audit.verify` (the integrity page; a breach record is
 // not an audit read), ⛔ `member.data_rights` (one member's rights request, pariwar-dimension). 63 / 94 READ LIVE at `a7c99c6a`.
 // `defaultRoleBundles` stays 13 — ⛔ no new role.
-export const PERMISSION_CATALOG_VERSION = 64 as const;
+//
+// ⭐ Story 6.39 (author-commit `2026-11-21-472` DL7) — 64 → 65, ONE key (95 → 96): `claim.check_membership` — the District
+// Admin's MEMBERSHIP CHECK before any drive (`2026-10-31-424` Q1 (a) C: an identity nobody has checked *"is checked first, by
+// staff"*; `2026-10-31-430` Q1 B: *"staff compare the date of death on the certificate with the date the fee was paid"*). Gates
+// the preview read AND the write (`GET` / `POST …/admin/claims/:claimCaseId/membership-check`). DISTRICT-dimension, against the
+// deceased's server-derived posting district; `district_admin` (+ derived super_admin). "Staff" is the Panel's word; WHICH staff
+// is the author's (`-472` DL7) — the person who already accepts the certificate. `-210` cl. 2 authorises no key and is not relied
+// on. REUSE CHECK — ⛔ `claim.review_death_certificate` (admitting a DOCUMENT; a separate act deserves its own grant and audit,
+// and a later separation of duties needs it), ⛔ `claim.approve` (approving a CLAIM — and a verifier holds it), ⛔ `claim.verify`
+// (a verifier holds it; the check is the District Admin's), ⛔ `claim.record_fraud_finding` (an investigation's outcome).
+// 64 / 95 READ LIVE at `9f5e2c84`. `defaultRoleBundles` stays 13 — ⛔ no new role. ⛔ NOT `state_trustee` (the 6.10 disposition).
+export const PERMISSION_CATALOG_VERSION = 65 as const;
 
 /**
  * The grounded v1 seed keys (architecture + epic + PRD references only — see file
@@ -1591,6 +1602,12 @@ export const SEED_PERMISSION_KEYS = [
   // ONLY (derived). ⛔ `dpo` role, ⛔ `auditor`. The future Data Protection Officer is the intended holder — recorded here as a
   // comment, not as a bundle (as beside `member.data_rights`).
   'breach.manage',
+  // Story 6.39 (`2026-11-21-472` DL7) — the MEMBERSHIP CHECK before any drive: the District Admin records, on the claim,
+  // that the joining fee was paid no later than the death (the system compares the two dates; they see both) and — when
+  // nobody has checked the identity the member typed in — that the person who died is the member. Gates the preview read
+  // (it opens the certificate's date of death, audited) and the write. District-dimension; `district_admin` ONLY
+  // (+ derived super_admin). A failing check never denies — the claim waits.
+  'claim.check_membership',
 ] as const;
 
 /** The literal union of the v1 seed keys (extends per-epic as keys are added). */

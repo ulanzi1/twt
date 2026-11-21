@@ -135,6 +135,14 @@ export * from './one-payment-per-death.js';
 export * from './suspicion-refusal-persist.js';
 // Story 6.22 — the fraud register's investigation: the helpline operator's flag and the District Admin's finding.
 export * from './fraud-investigation-persist.js';
+// Story 6.39 — the staff membership check before any drive (`2026-10-31-424` Q1 (a) C, `2026-10-31-430` Q1 B): the
+// import-free fee-date / death-date comparison (the API handler calls it — it opens the certificate's date); the
+// LEAF approval conjunct + the ONE state function (all six approval sites, the cycle-freeze commit's re-check, the
+// deny-reason guard, the console's packet section); the reads (the joining receipt, the live check); the writer.
+export * from './fee-death-date.js';
+export * from './membership-check-approval.js';
+export * from './membership-check-read.js';
+export * from './membership-check-persist.js';
 // Story 6.24b (`2026-10-08-295` RB8, RB10) — the SUSPICION NOTICES' domain half: the three selectors, the claim-row lock and
 // its re-check, the recipients (`readRefusedFilerRecipient`) and the notice-row claim / finalise / expire helpers. A WRITE
 // module (⛔ an NW1 entry); ⛔ nothing here decrypts.

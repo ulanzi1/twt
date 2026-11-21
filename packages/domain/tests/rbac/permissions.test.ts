@@ -252,9 +252,12 @@ describe('PERMISSION_CATALOG', () => {
     // the undo of a mistaken ending and the appeal record; `2026-11-16-464` AD10, Q-1 A / Q-4 A; ONE bump for the four; 90 -> 94 keys).
     // 64 at Story 14.3 +1 (breach.manage — the trust-wide breach register, read AND write; GLOBAL; super_admin ONLY, derived;
     // `2026-11-20-467` DL3; 94 -> 95 keys).
-    expect(PERMISSION_CATALOG_VERSION).toBe(64);
+    // 65 at Story 6.39 +1 (claim.check_membership — district, district_admin: the membership check before any drive, the
+    // preview read and the write; `2026-11-21-472` DL7, under `-424` Q1 (a) C and `-430` Q1 B; 95 -> 96 keys. Reuse-check: not
+    // claim.review_death_certificate (admitting a document), not claim.approve, not claim.verify. 64 / 95 READ LIVE at 9f5e2c84).
+    expect(PERMISSION_CATALOG_VERSION).toBe(65);
     expect(PERMISSION_CATALOG.catalogVersion).toBe(PERMISSION_CATALOG_VERSION);
-    expect(PERMISSION_CATALOG.keys).toHaveLength(95);
+    expect(PERMISSION_CATALOG.keys).toHaveLength(96);
     expect([...PERMISSION_CATALOG.keys].sort()).toEqual(
       [...SEED_PERMISSION_KEYS].sort(),
     );

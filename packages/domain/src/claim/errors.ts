@@ -664,6 +664,8 @@ export class MembershipCheckRequiredError extends Error {
  *   · `certificate_not_accepted` — the claim has no CURRENT accepted death certificate to compare against;
  *   · `stale`                    — the accepted review, or the joining receipt, is no longer the one the check was
  *                                  computed against (or the live check was superseded concurrently);
+ *   · `certificate_date_unreadable` — the accepted certificate's date could not be read, or was erased: there is
+ *                                  nothing to compare the fee date with (raised by the API handler, which opens it);
  *   · `no_fee_receipt`           — the member's joining receipt cannot be identified (fail closed — DL3);
  *   · `invalid_outcome`          — the identity outcome does not fit the record (`not_required` for an unchecked
  *                                  identity, a judgment for a checked one, `not_confirmed` without a reason or note). */
@@ -676,6 +678,7 @@ export class MembershipCheckRefusedError extends Error {
       | 'window_closed'
       | 'certificate_not_accepted'
       | 'stale'
+      | 'certificate_date_unreadable'
       | 'no_fee_receipt'
       | 'invalid_outcome'
       | 'missing_display',

@@ -212,6 +212,13 @@ function reduce(state: ClaimLifecycleState, event: ClaimEventInput): ClaimLifecy
     case 'claim.death_certificate_reviewed':
       return state;
 
+    // ANNOTATION: the District Admin RECORDED the membership check before any drive (Story 6.39 — the 40th event;
+    // `2026-10-31-424` Q1 (a) C, `2026-10-31-430` Q1 B). ⛔ A failing check is ⛔ NOT a denial (N5): the claim WAITS —
+    // ⛔ no edge to `denied`, ⛔ no edge to anything — identity from any state. The write-path guard owns the review
+    // window; the approval gates READ the check ROW (`assertClaimApprovable`). Never here.
+    case 'claim.membership_checked':
+      return state;
+
     // ANNOTATION: claim-time DPDPA consent recorded (Story 6.9 — the 24th event). Claim-time capture
     // of the granular DPDPA consents via the Story 2.7 registry; it does NOT advance the primary state
     // (an annotation captured across the pre-adjudication window, like nominee_bank_recorded). Identity.

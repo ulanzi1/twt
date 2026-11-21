@@ -38,6 +38,7 @@ import type {
   DocumentReviewSection,
   FinallyApprovedElsewhere,
   GroundInspectionGateStatus,
+  MembershipCheckGateStatus,
   OtherClaimsForDeathSection,
   SuspicionRefusalSection,
   GroundInspectionSection,
@@ -71,6 +72,7 @@ import {
 import { decryptKycField } from '../kyc/kyc-crypto.js';
 import { geoTreeResolverForRequest } from '../rbac/index.js';
 import { DEATH_CERTIFICATE_REVIEW_KEY } from './claims.death-certificate.handlers.js';
+import { MEMBERSHIP_CHECK_KEY } from './claims.membership-check.handlers.js';
 import { decryptClaimDocumentField } from './claim-document-crypto.js';
 import { decryptGroundInspectionField } from './ground-inspection-crypto.js';
 import { underSavepoint } from './later-approval-warnings.js';
@@ -269,8 +271,15 @@ const SIGNED_URL_TTL_SECONDS = 300;
  * ceiling counts them (the worst case: both sections pinned to a DATABASE version). They were first shipped UNCOUNTED, which is the
  * silent exclusion the paragraph above forbids. ⭐ Ledger line:
  *   + Story 6.33 (RV24): the family account's / the replies' DATABASE-pinned definitions          +2  → 33 (conditional)
+ *
+ * ⭐ STORY 6.39's THREE READS (DL10) — why the approval waits for the MEMBERSHIP CHECK, through the gate's OWN state function
+ * (`membershipCheckApprovalState` — ⛔ a second definition): the claim's live check row, the death-certificate snapshot (the
+ * current accepted review the check must name — N4) and the deceased's two plaintext KYC columns (N2: re-read each time). They
+ * decrypt ⛔ nothing. The snapshot is read a second time here on purpose: sharing the document section's read would make this
+ * section's answer depend on another section's failure mode, and the gate reads its own. ⭐ Ledger line:
+ *   + Story 6.39 (DL10): the membership check's gate — the live check, the snapshot, the KYC row  +3  → 36
  */
-export const VERIFIER_CONSOLE_MAX_READS = 33;
+export const VERIFIER_CONSOLE_MAX_READS = 36;
 
 /** Counts the assembler's top-level bounded source reads (the no-N+1 fan-out width). */
 class ReadCounter {
@@ -447,6 +456,16 @@ export async function assembleVerifierConsole(
   //    SAVEPOINT, BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────
   const groundInspectionGate = await assembleGroundInspectionGate(ctx, claimCaseId, reads);
 
+  // ── (j′) why the approval waits for the membership check (Story 6.39, DL10) — NON-PII; ⛔ no decrypt; under a SAVEPOINT,
+  //    BEFORE the warnings (which stay LAST). ─────────────────────────────────────────────────────────────────────────
+  const membershipCheckGate = await assembleMembershipCheckGate(
+    ctx,
+    claimCaseId,
+    ids.memberId(deceasedMemberId),
+    core.claim.currentState as string,
+    reads,
+  );
+
   // ── (k) kept apart / the final-approval wait (Story 6.24a, RF10) — NON-PII; ⛔ no decrypt; under a SAVEPOINT, BEFORE
   //    the warnings (which stay LAST). ──────────────────────────────────────────────────────────────────────────────
   const suspicionRefusal = await assembleSuspicionRefusal(ctx, claimCaseId, ids.memberId(deceasedMemberId), reads);
@@ -488,6 +507,7 @@ export async function assembleVerifierConsole(
     shepherd,
     nomineeNameCheck,
     groundInspectionGate,
+    membershipCheckGate,
     suspicionRefusal,
     otherClaimsForDeath,
     finallyApprovedElsewhere,
@@ -984,6 +1004,51 @@ export async function assembleGroundInspectionGate(
       'verifier-console: ground-inspection gate unavailable; failing closed to cannot-approve',
     );
     return { available: false, complete: false, waitReason: null };
+  }
+}
+
+/**
+ * (j′) WHY THE APPROVAL WAITS for the membership check — Story 6.39 (DL10; `2026-10-31-424` Q1 (a) C, `-430` Q1 B). THREE
+ * counted reads through the gate's OWN state function (`membershipCheckApprovalState`) — so the console and
+ * `assertMembershipCheckedForApproval` can ⛔ never disagree. Under a raw SAVEPOINT: a SQL failure rolls back ONLY this
+ * read and fails CLOSED (`available: false` — Approve disabled with "could not be checked" words, ⛔ never "passed").
+ * `viewer.canCheckMembership` is judged SERVER-SIDE, as `viewer.canReview` is (6.21a D10): the claim is in the check's
+ * window AND the actor holds `claim.check_membership` at the deceased's district — outside the window every submit is 409
+ * `membership_check.window_closed`, so the control is ⛔ offered. ⭐ EXPORTED for its exact tests.
+ */
+export async function assembleMembershipCheckGate(
+  ctx: VerifierConsoleContext,
+  claimCaseId: ids.ClaimId,
+  deceasedMemberId: ids.MemberId,
+  claimState: string,
+  reads: { bump(): void },
+): Promise<MembershipCheckGateStatus> {
+  const viewer = {
+    canCheckMembership:
+      claim.isInMembershipCheckWindow(claimState) &&
+      rbac.hasPermission(
+        ctx.grants,
+        MEMBERSHIP_CHECK_KEY,
+        { dimension: 'district', value: ctx.district, pariwarId: ctx.pariwarId },
+        ctx.geoResolver ? { resolver: ctx.geoResolver } : undefined,
+      ),
+  };
+  try {
+    reads.bump();
+    reads.bump();
+    reads.bump();
+    const state = await underSavepoint(ctx.client, 'console_membership_check_gate', () =>
+      claim.membershipCheckApprovalState(ctx.db, ids.pariwarId(ctx.pariwarId), claimCaseId, deceasedMemberId),
+    );
+    return state.passed
+      ? { available: true, passed: true, reason: null, viewer }
+      : { available: true, passed: false, reason: state.reason, viewer };
+  } catch (err) {
+    ctx.log?.warn(
+      { err: err instanceof Error ? err.name : 'unknown', claimCaseId: ctx.claimCaseId },
+      'verifier-console: membership-check gate unavailable; failing closed to cannot-approve',
+    );
+    return { available: false, passed: false, reason: null, viewer };
   }
 }
 

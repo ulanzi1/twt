@@ -98,6 +98,8 @@ const packet = (nomineeNameCheck: NameStatus): VerifierConsolePacket =>
     // Story 6.23a (NW8) — the nominee-change warnings section (⛔ no warning by default).
     // Story 6.26a (GI9) — the ground-inspection gate section (complete by default).
     groundInspectionGate: { available: true, complete: true, waitReason: null },
+    // Story 6.39 (DL10) — the membership check has passed and this viewer cannot record one (the neutral default).
+    membershipCheckGate: { available: true, passed: true, reason: null, viewer: { canCheckMembership: false } },
     suspicionRefusal: { available: true, keptApartFrom: [], finalApprovalWaits: null },
     otherClaimsForDeath: { available: true, total: 0, claims: [] },
     finallyApprovedElsewhere: null,

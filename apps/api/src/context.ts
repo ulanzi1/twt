@@ -276,6 +276,14 @@ export const DEATH_CERTIFICATE_REVIEW_FIELD_CLASS = 'death_certificate_review';
 export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = encryptionRuntime.CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS;
 
 /**
+ * Field-class namespace for the membership check's Tier-1 note (Story 6.39, DL1 / DL14) — the District Admin's optional
+ * note on the check recorded before any drive (`claim_membership_checks.note_ciphertext`). Declared ONCE in `@twt/domain`
+ * `encryption` (the erasure scrub binds the same value); re-exported here. ⛔ NEVER in an event, a log line or an audit
+ * context.
+ */
+export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = encryptionRuntime.CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS;
+
+/**
  * The field worker's Tier-1 field class (Story 13.1, QE4) — the worker's name and mobile (`field_workers.name_ciphertext`,
  * `field_workers.mobile_ciphertext`), and the keyed-hash class of the worker's mobile (`field_workers.mobile_blind_index`),
  * disjoint from the member login hash. Declared ONCE in `@twt/domain` `encryption`; re-exported here. ⛔ NEVER in an event,

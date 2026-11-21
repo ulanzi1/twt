@@ -130,6 +130,9 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     // ⭐⭐ AMENDED BY STORY 6.22 (DL13, `2026-11-01-438`) — ⛔ NOT LOOSENED, the same way: 6.22 mints TWO identity
     // annotations (the helpline operator's flag and the guilty finding), named in a SIXTH frozen literal.
     const STORY_6_22_CLAIM_EVENTS: readonly string[] = ['claim.fraud_flagged', 'claim.member_found_guilty'];
+    // ⭐⭐ AMENDED BY STORY 6.39 (DL11, `2026-11-21-472`) — ⛔ NOT LOOSENED, the same way: 6.39 mints ONE identity
+    // annotation (the District Admin's membership check before any drive), named in a SEVENTH frozen literal.
+    const STORY_6_39_CLAIM_EVENTS: readonly string[] = ['claim.membership_checked'];
     const live = [...CLAIM_EVENT_TYPES] as string[];
 
     // ⭐ ADDED — exactly one, and it is the one AC3 names.
@@ -141,7 +144,8 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
           !STORY_6_21A_CLAIM_EVENTS.includes(t) &&
           !STORY_6_24A_CLAIM_EVENTS.includes(t) &&
           !STORY_6_36_CLAIM_EVENTS.includes(t) &&
-          !STORY_6_22_CLAIM_EVENTS.includes(t),
+          !STORY_6_22_CLAIM_EVENTS.includes(t) &&
+          !STORY_6_39_CLAIM_EVENTS.includes(t),
       ),
     ).toEqual(['claim.nominee_name_checked']);
     // Story 6.20 — its additions are EXACTLY its two, and both are live (a dropped one fails here too).
@@ -158,6 +162,8 @@ describe('ClaimNomineeNameCheckedPayloadSchema (the 32nd claim event)', () => {
     // Story 6.22 — its additions are EXACTLY its two, and both are live.
     expect(STORY_6_22_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
     expect(live.filter((t) => STORY_6_22_CLAIM_EVENTS.includes(t)).sort()).toEqual([...STORY_6_22_CLAIM_EVENTS].sort());
+    // Story 6.39 — its addition is EXACTLY its one, and it is live.
+    expect(STORY_6_39_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);
     // REMOVED — ⛔ none. A rename is an add AND a delete, and only checking additions would read a
     // rename as a clean addition.
     expect(PRE_6_18_CLAIM_EVENTS.filter((t) => !live.includes(t))).toEqual([]);

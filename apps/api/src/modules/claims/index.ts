@@ -23,6 +23,7 @@ import { registerNomineeNameCheckRoutes } from './claims.nominee-name-check.rout
 import { registerNomineeDeclarationRoutes } from './claims.nominee-declaration.routes.js';
 import { registerDeathCertificateRoutes } from './claims.death-certificate.routes.js';
 import { registerFraudInvestigationRoutes } from './claims.fraud-investigation.routes.js';
+import { registerMembershipCheckRoutes } from './claims.membership-check.routes.js';
 import { registerClaimContactRoutes } from './claims.contact.routes.js';
 import { registerCorrectionChaseRoutes } from './claims.correction-chase.routes.js';
 import { registerCorrectionClosureRoutes } from './claims.correction-closure.routes.js';
@@ -59,6 +60,9 @@ export function registerClaimsModule(app: FastifyInstance, deps: AppDeps): void 
   registerDeathCertificateRoutes(app, deps);
   // Story 6.22 — the fraud register's investigation (the flag, the finding, the console read, the helpline list, the work-list).
   registerFraudInvestigationRoutes(app, deps);
+  // Story 6.39 — the staff membership check before any drive (`-424` Q1 (a) C, `-430` Q1 B): the District Admin's
+  // preview (both dates, the comparison the system made) and the recorded check.
+  registerMembershipCheckRoutes(app, deps);
   // Story 6.19a — the claim CONTACT RECORD's admin routes: the helpline's write (claim.file + step-up), the
   // presence-only read (claim.view_nominee_name_check, district) and the operator's plaintext read-back.
   registerClaimContactRoutes(app, deps);

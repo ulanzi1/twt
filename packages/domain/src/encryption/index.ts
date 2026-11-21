@@ -70,6 +70,8 @@ export {
   MEMORIAL_FIELD_CLASS,
   // Story 6.22 (DL1 / DL15) — the fraud investigation's flag and finding notes.
   CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS,
+  // Story 6.39 (DL1 / DL14) — the membership check's optional staff note.
+  CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS,
   // Story 13.1 (QE4) — the field worker's Tier-1 class (name, mobile) and its disjoint mobile blind-index class.
   FIELD_WORKER_FIELD_CLASS,
   FIELD_WORKER_MOBILE_FIELD_CLASS,

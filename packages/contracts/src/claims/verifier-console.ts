@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { MemberValidityPayloadDto } from '../members/validity.js';
 import { DeathCertificateRegisterCheck } from './death-certificate.js';
 import { ClaimDocumentParityOutcome } from './documents.js';
+import { MembershipCheckGateStatus } from './membership-check.js';
 import { FinallyApprovedElsewhere } from './one-payment-per-death.js';
 import { NoteWithheldFlag, refineWithheldPair } from './withheld-note.js';
 // ⭐ The SINGLE clerical-reason tuple (a sibling contract, ⛔ not `@twt/domain` — the browser-bundle
@@ -744,6 +745,8 @@ export const VerifierConsolePacket = z
     nomineeNameCheck: NomineeNameCheckStatus,
     // Story 6.26a (GI9) — NON-PII: does the approval wait for the ground inspection, and why.
     groundInspectionGate: GroundInspectionGateStatus,
+    // Story 6.39 (DL10) — NON-PII: does the approval wait for the membership check, why, and may this viewer record one.
+    membershipCheckGate: MembershipCheckGateStatus,
     // Story 6.24a (RF10) — NON-PII: kept apart from a refused claim of this death, and does the FINAL approval wait.
     suspicionRefusal: SuspicionRefusalSection,
     // Story 6.28 (OP14 (a)) — STAFF-ONLY, NON-PII: the other claims for this death, by reference.

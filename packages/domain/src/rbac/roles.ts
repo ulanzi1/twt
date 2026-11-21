@@ -127,6 +127,8 @@ const CLAIM_REVIEW_DEATH_CERTIFICATE = permissionKey('claim.review_death_certifi
 // District Admin FINDS (district, step-up). Two different people — `-238` cl. 3; the domain refuses the same actor.
 const CLAIM_FLAG_FRAUD = permissionKey('claim.flag_fraud');
 const CLAIM_RECORD_FRAUD_FINDING = permissionKey('claim.record_fraud_finding');
+// Story 6.39 (`2026-11-21-472` DL7) — the District Admin's membership check before any drive (district).
+const CLAIM_CHECK_MEMBERSHIP = permissionKey('claim.check_membership');
 // Story 6.19b (keys (1) and (7), Decision `2026-09-28-265` §2) — the posted-letter record (+ the letter form's address
 // read) and the "who must act" change, both district-dimension, `district_admin` ONLY. See permissions.ts.
 const CLAIM_RECORD_CORRECTION_LETTER = permissionKey('claim.record_correction_letter');
@@ -621,6 +623,9 @@ export const defaultRoleBundles: readonly RoleBundle[] = [
       CLAIM_RECORD_NO_CORRECTION_NEEDED,
       // Story 6.22 — the FINDING on a flagged claim (district; step-up). ⛔ The flag: that is the helpline operator's.
       CLAIM_RECORD_FRAUD_FINDING,
+      // Story 6.39 (DL7) — the MEMBERSHIP CHECK before any drive (`-424` Q1 (a) C, `-430` Q1 B); district-dimension
+      // against the deceased's server-derived posting district — the same person who accepts the certificate.
+      CLAIM_CHECK_MEMBERSHIP,
       // Story 13.1 (QE10) — register a field worker in the District Admin's OWN district (the Panel's primary manager, `-441`).
       FIELD_WORKER_REGISTER,
       // Story 13.1a (AD6) — read a worker's code and see workers in the District Admin's OWN district. ⛔ Approve (Pariwar Admin only).

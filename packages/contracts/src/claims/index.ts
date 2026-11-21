@@ -110,3 +110,6 @@ export * from './ground-inspection-questionnaire.js';
 // read (notes withheld uniformly), the helpline's per-member list and the District Admin's work-list. `alive_confirmation`
 // is value-aligned with @twt/domain's FRAUD_ALIVE_CONFIRMATIONS (lockstep-pinned).
 export * from './fraud-investigation.js';
+// Story 6.39 — the staff membership check before any drive: its request (⛔ a date), write response, preview, the
+// console packet's gate section and the domain-mirrored vocabularies (pinned by `claims-membership-check.test.ts`).
+export * from './membership-check.js';

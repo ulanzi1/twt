@@ -33,6 +33,11 @@ import {
   DEATH_CERTIFICATE_REJECTION_REASONS,
   DEATH_CERTIFICATE_REVIEW_VERDICTS,
 } from '../schema/claim_death_certificate_reviews.js';
+import {
+  MEMBERSHIP_CHECK_FEE_OUTCOMES,
+  MEMBERSHIP_CHECK_IDENTITY_OUTCOMES,
+  MEMBERSHIP_CHECK_IDENTITY_REASONS,
+} from '../schema/claim_membership_checks.js';
 import { SHEPHERD_ASSIGNMENT_REASONS } from '../schema/claim_shepherd_assignments.js';
 import { CLAIM_INTAKE_CHANNELS, CLAIM_LIFECYCLE_STATES } from '../schema/claims.js';
 // ⚠ VALUE imports (the claim-time consent-type tuples), ⛔ not types — `schema/consent_records.ts`
@@ -807,7 +812,29 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
   supersedes_review_id: z.string().uuid().nullable(),
 });
 
-// ── The 39-event vocabulary + the type→schema map (single source) ─────────────
+// ── Story 6.39 — the staff membership check before any drive (ONE identity annotation) ────────────
+
+/**
+ * The District Admin RECORDED the claim's membership check (`2026-10-31-424` Q1 (a) C, `2026-10-31-430` Q1 B; DL1,
+ * DL11). The 40th claim event. An IDENTITY annotation (the 6.21a shape): the row in `claim_membership_checks` and
+ * this event are written in ONE transaction, and the reducer is a no-op.
+ *
+ * ⛔ A failing check is ⛔ NOT a denial and moves ⛔ no state (N5): the claim WAITS at the approval gate, which
+ * reads the check ROW, ⛔ this event.
+ * ⛔ PII discipline (N7): ids and outcome / reason CODES only — ⛔ no date of death, ⛔ no fee date, ⛔ no note,
+ * ⛔ no name. The Tier-1 note lives encrypted in the row; neither date is stored at all.
+ */
+export const ClaimMembershipCheckedPayloadSchema = requireIdentityTransition({
+  ...auditShape,
+  check_id: z.string().uuid(),
+  death_certificate_review_id: z.string().uuid(),
+  fee_outcome: z.enum(MEMBERSHIP_CHECK_FEE_OUTCOMES),
+  identity_required: z.boolean(),
+  identity_outcome: z.enum(MEMBERSHIP_CHECK_IDENTITY_OUTCOMES),
+  identity_reason: z.enum(MEMBERSHIP_CHECK_IDENTITY_REASONS).nullable(),
+});
+
+// ── The 40-event vocabulary + the type→schema map (single source) ─────────────
 // (Story 6.1 committed the 20 state-advancing events; Story 6.6 added the 21st —
 // `claim.peer_mesh_responded`; Story 6.7 added the 22nd — `claim.ground_inspection_completed`;
 // Story 6.8 added the 23rd — `claim.nominee_bank_recorded`; Story 6.9 added the 24th —
@@ -842,7 +869,10 @@ export const ClaimDeathCertificateReviewedPayloadSchema = requireIdentityTransit
 // Story 6.22 adds the 38th and 39th — `claim.fraud_flagged` (DL4) and `claim.member_found_guilty` (DL3), both IDENTITY
 // annotations with a no-op reducer: the helpline operator's flag (it gates nothing — the Panel's Q7) and the District
 // Admin's guilty finding (the overlay's STICKY freeze reads it). `claim.closed` gains the two FRAUD triggers — ⛔ a new
-// event.)
+// event.
+// Story 6.39 adds the 40th — `claim.membership_checked` (DL11), an IDENTITY annotation with a no-op reducer recording
+// the District Admin's membership check before any drive. The approval gates read the check ROW, ⛔ the event; a
+// failing check is ⛔ a denial (N5).)
 
 export const CLAIM_EVENT_TYPES = [
   'claim.intake_initiated',
@@ -860,6 +890,7 @@ export const CLAIM_EVENT_TYPES = [
   'claim.fraud_flagged',
   'claim.member_found_guilty',
   'claim.death_certificate_reviewed',
+  'claim.membership_checked',
   'claim.dpdpa_consent_recorded',
   'claim.dpdpa_consent_revoked',
   'claim.verifier_reviewing',
@@ -886,11 +917,11 @@ export const CLAIM_EVENT_TYPES = [
   'claim.closed',
 ] as const;
 
-/** The dotted `claim.*` event-type literal union (the 39 claim events). */
+/** The dotted `claim.*` event-type literal union (the 40 claim events). */
 export type ClaimEventType = (typeof CLAIM_EVENT_TYPES)[number];
 
 /**
- * type → payload-schema map. The ONE place the 39 events bind to their schemas;
+ * type → payload-schema map. The ONE place the 40 events bind to their schemas;
  * `EVENT_TYPE_REGISTRY` (packages/events) and the projector both consume it. The
  * `satisfies` keeps it exhaustive — adding a `ClaimEventType` without a schema is a
  * compile error.
@@ -911,6 +942,7 @@ export const CLAIM_EVENT_PAYLOAD_SCHEMAS = {
   'claim.fraud_flagged': ClaimFraudFlaggedPayloadSchema,
   'claim.member_found_guilty': ClaimMemberFoundGuiltyPayloadSchema,
   'claim.death_certificate_reviewed': ClaimDeathCertificateReviewedPayloadSchema,
+  'claim.membership_checked': ClaimMembershipCheckedPayloadSchema,
   'claim.dpdpa_consent_recorded': ClaimDpdpaConsentRecordedPayloadSchema,
   'claim.dpdpa_consent_revoked': ClaimDpdpaConsentRevokedPayloadSchema,
   'claim.verifier_reviewing': ClaimVerifierReviewingPayloadSchema,

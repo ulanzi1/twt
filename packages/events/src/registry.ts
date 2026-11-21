@@ -275,6 +275,12 @@ export const EVENT_TYPE_REGISTRY = {
       "The District Admin ACCEPTED or REJECTED the claim's current death certificate (2026-09-20-235 Y: only a certificate with a clear date is acceptable; 2026-09-20-236 BB: a rejection asks the family for another without the claim being denied) — annotation event (the 35th claim event); identity transition (state unchanged — a rejection is NEVER a denial); carries review_id + upload_id + verdict + rejection_reason (a code, or null) + supersedes_review_id, NO PII (no date of death, no note — the Tier-1 accepted date and note live in claim_death_certificate_reviews). The approval gates read the review row, not this event (Story 6.21a).",
     schema: claim.ClaimDeathCertificateReviewedPayloadSchema,
   },
+  'claim.membership_checked': {
+    type: 'claim.membership_checked',
+    description:
+      "The District Admin RECORDED the claim's membership check before any drive (2026-10-31-424 Q1 (a) C: an identity nobody has checked is checked first, by staff; 2026-10-31-430 Q1 B: staff compare the certificate's date of death with the date the joining fee was paid, and no drive opens if the fee was paid after the death) — annotation event (the 40th claim event); identity transition (state unchanged — a failing check is NEVER a denial, the claim waits); carries check_id + death_certificate_review_id + fee_outcome + identity_required + identity_outcome + identity_reason (a code, or null), NO PII (no date of death, no fee date, no note, no name — the Tier-1 note lives in claim_membership_checks and neither date is stored there). The approval gates read the check row, not this event (Story 6.39).",
+    schema: claim.ClaimMembershipCheckedPayloadSchema,
+  },
   'claim.dpdpa_consent_recorded': {
     type: 'claim.dpdpa_consent_recorded',
     description:

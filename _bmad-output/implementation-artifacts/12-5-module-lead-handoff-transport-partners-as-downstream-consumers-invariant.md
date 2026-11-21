@@ -1385,8 +1385,8 @@ and gate go-live (Row 54).
 - **K-10 → no owner yet:** the partner-coordination escalation runbook (`docs/runbooks/README.md` names this story as
   its candidate), a cross-tick breaker, and a second-address fallback. ⭐ Trigger: before Row 54 closes (its leg (j)
   names this runbook's owner).
-- **K-12 → no owner yet (BigDev, 2026-11-21):** a second route — the partner's own form opened from the app, with
-  tracking of where members give up. It is NOT part of this story: option B / C of the Panel note's Q1 and counsel's
+- **K-12 → no owner yet (BigDev, 2026-11-21):** a second route — the partner's own form opened from the app in the
+  phone's own browser (BigDev: no embedded web view), with tracking of where members give up. It is NOT part of this story: option B / C of the Panel note's Q1 and counsel's
   question 11. If the Panel or BigDev chooses it, Epic 12 needs a correct-course before this story's Task 1 (under B
   this transport is set aside; under C it is built beside the link). Details in `deferred-work.md`, 12.5's K-12.
 - **K-11 → 12.2 (follow-up):** the wizard's lead warning before Withdraw and before a corrected copy should say that

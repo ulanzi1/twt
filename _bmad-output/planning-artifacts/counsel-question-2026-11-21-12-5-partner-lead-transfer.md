@@ -42,10 +42,11 @@ times over about a day and a half.
 The Trust may be paid by partners. The terms are not agreed. They could be per lead delivered, or only when a member takes up the
 partner's product.
 
-**A second route is being considered instead of, or beside, the first.** The Trust would send nothing. The member would open the
-partner's own form from inside the Trust's app, type their details there, and have their number checked by the partner in its own
-way. The Trust would pass the partner only a code that says which offer the visit came from. The Trust would want to know where
-members give up on that form.
+**A second route is being considered instead of, or beside, the first.** The Trust would send nothing. The member would tap the
+offer in the Trust's app and the partner's own form would open in the phone's own browser — not embedded in the Trust's app, so the
+Trust cannot see what the member types there. The member would type their details and have their number checked by the partner in
+its own way. The Trust would pass the partner only a code that says which offer the visit came from. The Trust would want to know
+where members give up on that form.
 
 ## The questions
 
@@ -89,11 +90,10 @@ members give up on that form.
 11. **The second route — the partner's own form.**
     (a) If the Trust sends nothing about the member and passes only a code naming the offer, does the Trust need any footing at all,
     and what must it tell members before they leave its app for the partner's page?
-    (b) Is opening the partner's page inside the Trust's own app different, in law, from opening it in the phone's browser?
-    (c) To learn where members give up, may the Trust receive from the partner (i) totals for each step of the form, with no member
+    (b) To learn where members give up, may the Trust receive from the partner (i) totals for each step of the form, with no member
     identified, and (ii) step-by-step progress for each member, matched by the code? What would (ii) need — from the member, and in
     the agreement with the partner?
-    (d) May the Trust be paid when a member who came this way takes up the partner's product?
+    (c) May the Trust be paid when a member who came this way takes up the partner's product?
 
 ## What we need back
 

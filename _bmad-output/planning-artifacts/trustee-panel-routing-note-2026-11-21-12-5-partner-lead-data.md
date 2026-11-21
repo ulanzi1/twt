@@ -60,14 +60,14 @@ written today, sending a member's details to a partner is something the Trust ha
 There are two ways a member's interest can reach a partner. In the first, the member is shown the offer, shown exactly which details
 would be sent, and asked to agree for that one offer; only then does the Trust send them, and only to that offer's partner — much as
 a person agrees to let one service pass their name to another when signing in. In the second, the Trust sends nothing: the member
-opens the partner's own form from the app and fills it in themselves.
+opens the partner's own form from the app, in the phone's own browser, and fills it in themselves.
 
 **The one fact:** the draft policy names no partner among those the Trust shares with (above), and no ruling of yours covers it.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
 | **A** | **The Trust sends the details — on the member's own agreement, given offer by offer; the policy is changed before it is published to name partners.** *Our suggestion.* | A member who registers interest has their details sent to that one partner. A member who does not is never shared. Before agreeing, the member is told that the partner will handle the details under the partner's own terms. | The Trust becomes an organisation that passes members' details to commercial partners. Once sent, the details cannot be called back. The Trust stays answerable for the sharing itself — that the member really agreed, saw exactly what would go and to whom, and that nothing more went — and for which partners it lets in. What a partner does with the details afterwards is the partner's responsibility; counsel is asked how far that holds, and what the Trust may say about it to members. |
-| **B** | **The Trust sends nothing — the member opens the partner's own form from the app and fills it in; the partner checks the member's number in its own way.** The Trust passes the partner only a code saying which offer the visit came from, and nothing about the member. | Nothing about a member leaves the Trust. The member types their details again, on the partner's page, under the partner's terms. | More effort for the member, and some will give up part-way. The Trust knows who opened the form, but learns what happened on the partner's page only if the partner tells it — as totals, or member by member, which would be a further question for you. Nothing for this route is planned or built yet, and the sending described in the rest of this note would be set aside. |
+| **B** | **The Trust sends nothing — the member opens the partner's own form from the app and fills it in; the partner checks the member's number in its own way.** The form opens in the phone's own browser, not inside the Trust's app, so the Trust cannot see what the member types. The Trust passes the partner only a code saying which offer the visit came from, and nothing about the member. | Nothing about a member leaves the Trust. The member types their details again, on the partner's page, under the partner's terms. | More effort for the member, and some will give up part-way. The Trust knows who opened the form, but learns what happened on the partner's page only if the partner tells it — as totals, or member by member, which would be a further question for you. Nothing for this route is planned or built yet, and the sending described in the rest of this note would be set aside. |
 | **C** | **Both — each offer works one way or the other.** | As A for some offers and as B for others; the member sees which before going on. | Two things to build and keep, and two sets of wording for members. |
 
 **Our reading:** **A** — **because** the member asks for it, sees what will go, and agrees to that one offer; nothing is sent for a member
@@ -321,8 +321,8 @@ directory's exclusion and the `-146` sentence are untouched; the transport only 
 - Q1 option B (the partner's own form, opened from the app) is ⛔ decided and ⛔ planned anywhere. `2026-10-31-427` QE5 left an
   external link out of the offer record ("⛔ external-URL CTA (Not addressed)"), and Decision `-483` decides only the sending. BigDev's
   words, 2026-11-21: *"build a webview inside app where parter will open a form to register their interest where they usually have to
-  enter the phone and otp"*; *"we should have robust tracking for partner's own form, so that we know where users drop."* Carried as
-  `deferred-work.md` 12.5's K-12.
+  enter the phone and otp"*; *"we should have robust tracking for partner's own form, so that we know where users drop."*; and then,
+  settling how the form opens: *"I think we shouldn't be doing embedded webview."* Carried as `deferred-work.md` 12.5's K-12.
 - Whether the fee arrangement is **disclosed** to a member is deferred by `-433` QE6 (A) to its own trigger (OQ-4 answered, the first
   production publish, or Story 12.3's create-story). Q2 here asks only whether a paid lead is a sale.
 - The first partners' terms — "commission %, lead/conversion tracking, exclusivity clauses" — are open (PRD, OQ-4).

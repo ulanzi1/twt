@@ -14,15 +14,20 @@ SHAs cited here are the post-rebase ones). Between the pin and `e5e13f92` eight 
 cited here — `member/anonymize.ts`, where only a comment changed (the three pinned counts in `rtbf-anonymize.test.ts`
 are unchanged). Migration `0213` and decisions `-477`–`-481` are now on `main`.
 
-STATUS: ready-for-dev (2026-11-21 — v1.6). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
+STATUS: ready-for-dev (2026-11-21 — v1.7). ⭐ **Task 0 is DONE except 0.1 (the re-check `bmad-dev-story` runs first)
+and 0.7 (the records `-484` makes owed — they come BEFORE Task 1).**
 The build decisions QE1–QE26 carried TWELVE asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21–QE26). BigDev answered them on
 2026-11-21, all as recommended (QE21 is (C)), and accepted the rest as a set. The author-commit is **Decision
 `2026-11-21-483`**, committed ALONE (`24d930fc`) before any code ([[feedback_governance_commits_precede_implementation]]).
 This file is amended to those answers: where an ASK lists options, the one marked "recommended" is the one BUILT, and
 the others stay only as the record of what was considered.
-⭐ **The Panel note and the counsel question (Task 0.5) are WRITTEN, ⛔ SENT, by this story. Neither of them blocks the
-build — both block GO-LIVE** through the new roster row (Task 0.6). Nothing reaches a partner or a member from 12.5
-alone (I1).
+⭐ **The Panel note was SENT and RULED: Decision `2026-11-21-484` (Trustee-ratified, DR + KB) — Q1 C, Q2 A … Q7 A.**
+Every built answer the note asked about (the four details, the 30 days, the kept fact of interest, the stop on a
+reported death) is now RATIFIED as built; nothing in QE1–QE26 changes. Q1 C also allows a SECOND route (the member
+fills in the partner's own form; the Trust sends nothing) — NOT this story (K-12). BigDev, 2026-11-21, by selection:
+"Build 12.5 now" — the correct-course for that route does NOT come before Task 1 (K-12 says what it owes). The counsel
+question is WRITTEN, ⛔ recorded as sent. Neither blocks the build — counsel, the policy edit and the rest of Row 54
+block GO-LIVE (Task 0.6). Nothing reaches a partner or a member from 12.5 alone (I1).
 
 GLYPH REGISTER: `⛔` NEGATES the word or phrase it precedes (used ONLY in this header comment, the rulings and §0 tables,
 and the G / QE prose) · ⭐ = action / emphasis · ⚠ = hazard. ⭐ In Policy meaning, ACs, Invariants, Tasks, Dev Notes and
@@ -36,15 +41,17 @@ in our own words — ⛔ pasted (the repo is public; `docs/legal-corpus-location
 LETTERS: G = found facts · QE = build decisions (ANSWERED = BigDev's answer, `-483`) · W = the row's writes (QE6) ·
 S = the tick's steps (QE13) · P = the cancel predicates (QE7) · I = invariants · TR = traps · PQ = questions for the
 Panel / counsel (Task 0.5). ⚠ `C6`, `C7`, `C8`, `C10`, `C13` with NO hyphen are ALWAYS Story 12.1's carried items. This
-story's own carried items are `K-1` … `K-12`.
+story's own carried items are `K-1` … `K-13`.
 
-NUMBERS — re-read 2026-11-21 ~18:20 IST across every ref (heads and remotes) and the four live sibling worktrees
-(`3-13-…`, `6-22b-…`, `6-39a-…`, `governance-registration-change-2026-11-21`, incl. uncommitted files). Siblings
+NUMBERS — re-read 2026-11-21 ~18:20 IST across every ref (heads and remotes) and the live sibling worktrees
+(`3-13-…`, `6-22b-…`, `6-39a-…`, `governance-registration-change-2026-11-21`, incl. uncommitted files); re-read again at
+v1.7 after `git fetch origin` (`origin/main` = `e5e13f92`; `6-22b-…` has landed and has no worktree; a fifth sibling,
+`3-15-assisted-signup-field-worker-code`, stacked on the governance branch, adds no decision, migration or roster row). Siblings
 committed several times while this story was being written, so every number here is a floor, never a value. Rule (`-366` decision 6): the number belongs to the first
 COMMIT, on any branch.
 - Decisions: this story's author-commit is **`2026-11-21-483`** (`24d930fc`), taken after `-477`–`-481`
-  (`story/6-22b-…`) and `-482` (`governance/registration-change-2026-11-21`). A later decision of this story re-greps
-  every ref and every worktree.
+  (`story/6-22b-…`) and `-482` (`governance/registration-change-2026-11-21`). The Panel's ruling is **`-484`**
+  (`90e0f9ba`, this branch). A later decision is **≥ `-485`** and re-greps every ref and every worktree.
 - Migrations: `main`'s highest is `0212_claim-membership-checks`. `story/6-22b-…` has COMMITTED
   `0213_claim-documents-death-certificate-delete-guard` (journal `when` `1797998580000`); `story/6-39a-…` and
   `story/3-13-…` both plan later numbers in prose ⇒ this story takes the next TWO free numbers at its commit, **≥ `0214` + `0215`** (⚠ two files — QE2). Each
@@ -54,10 +61,10 @@ COMMIT, on any branch.
 - RBAC: this story adds NO key, NO role (I7). Read `PERMISSION_CATALOG_VERSION` live at Task 0.1 only to record it.
 - Ledger: this story's creation entry is `2026-11-21t` (`fc715af5`, 16:32:17 IST — the FIRST commit of `t`;
   `story/6-22b-…`'s own `t` is `10aa2b82`, 16:33:59 ⇒ THEIRS to relabel, ⛔ this story's). Letters through `z` are
-  taken across the branches (`s` and `w` twice) ⇒ this story's next entry is **≥ `aa`** (the file's own convention
-  after `z`; re-grep every ref at every entry; relabel if taken).
+  taken across the branches (`s` and `w` twice) ⇒ after `z` the file runs `aa`, `ab`, …; this story's last entry is
+  `al` (`a18a69ec`), so the next is **≥ `am`** (re-grep every ref at every entry; relabel if taken).
 - Roster: this story appended **`Row 54`** (`partner-lead-handoff-live`), the first commit of that number;
-  `story/6-39a-…` plans `Row 54` in prose and takes the next one.
+  `story/6-39a-…` plans `Row 54` in prose and takes the next one (≥ `Row 55`).
 ⭐ Re-grep ALL of these at Task 0.1 and again at the commit that takes each.
 -->
 
@@ -92,8 +99,14 @@ of truth for any member's lifecycle, validity, contribution or claim state. No i
 partner's reply is stored only as a short advisory reference. A CI fence and an ADR keep it that way.
 
 **Nothing reaches a partner or a member from 12.5 alone (I1).** The handoff command has no production caller until
-12.3, and the governance that must come before any member field leaves (12.1's C6 / C8) is written here as a Panel
-note and a counsel question. Both gate go-live, NOT the merge ([[project_not_in_production_merge_is_not_golive]]).
+12.3. The governance that must come before any member field leaves (12.1's C6 / C8) was routed here: the Panel has
+RULED (`-484`); counsel's return, the privacy-policy edit and the rest of Row 54 are still open. They gate go-live, NOT
+the merge ([[project_not_in_production_merge_is_not_golive]]).
+
+**This story builds ONE of the two routes `-484` Q1 C allows** — the one where the Trust sends the details. For offers
+that use the other route (the member fills in the partner's own form; "the Trust sends nothing"), no handoff row may
+ever exist. Nothing in 12.5 can tell the two kinds of offer apart yet (no module records its route); the story that
+adds that marker owes the refusal (K-12).
 
 ## ⭐ Names at a glance
 
@@ -111,9 +124,9 @@ note and a counsel question. Both gate go-live, NOT the merge ([[project_not_in_
 | Headers sent | `X-TWT-Attribution: pariwar=<id>, module=<id>, lead_id=<uuid>` (epic AC, verbatim form) · `X-TWT-Signature: t=<unix>, v1=<hex>` (QE3 (A)) · `Idempotency-Key: <lead_id>` (QE6 (A)) · `Content-Type: application/json` |
 | Boundary fence (NEW) | static: `scripts/partner-boundary-invariant/{check,lib,lib.test}.ts` · scripts `partner-boundary:{check,test}` · route leg: `apps/api/tests/integration/partner-boundary.spec.ts` |
 | ADR (NEW) | `docs/adr/ADR-NNNN-partner-lead-handoff-transport.md` (≥ `ADR-0046`) |
-| Decision | `2026-11-21-483` (`24d930fc`) — author-commit of QE1–QE26 |
-| Panel note (WRITTEN, not sent) | `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md` |
-| Counsel question (WRITTEN, not sent) | `_bmad-output/planning-artifacts/counsel-question-2026-11-21-12-5-partner-lead-transfer.md` |
+| Decisions | `2026-11-21-483` (`24d930fc`) — author-commit of QE1–QE26 · `2026-11-21-484` (`90e0f9ba`) — Trustee-ratified, the Panel note's Q1–Q7 |
+| Panel note (SENT, RULED by `-484`) | `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md` |
+| Counsel question (WRITTEN, not recorded as sent) | `_bmad-output/planning-artifacts/counsel-question-2026-11-21-12-5-partner-lead-transfer.md` |
 | Roster | `Row 54` — `partner-lead-handoff-live` (appended 2026-11-21) |
 
 ## Story
@@ -144,10 +157,21 @@ A second sentence follows from 12.1's rule that a member registers for each offe
 **"If your interest is stopped for one of those reasons, or could not be delivered, your place on that offer is not
 given back."**
 
-Both sentences are as BUILT (`-483`). One clause still waits on the Panel: "your death is reported" rests on P5 as
-well as P4, and the Panel is asked to confirm P5 (note Q7). (Staff can re-send a failed lead inside the retention
-window, once K-3 gives that a caller. That is a staff remedy, not something the member can ask for, so the second
-sentence covers a failed delivery too.)
+Both sentences are as BUILT (`-483`), and the Panel has ratified the acts behind them (`-484`): "your death is
+reported" rests on P5 as well as P4, and Q7 A reads, as put, "Stop from the moment the death is reported, and stay
+stopped after the claim is settled." (Staff can re-send a failed lead inside the retention window, once K-3 gives that
+a caller. That is a staff remedy, not something the member can ask for, so the second sentence covers a failed
+delivery too.)
+
+**Scope — the sentences cover ONE route.** `-484` Q1 C lets each offer work one of two ways; its own member sentence
+reads: "For some offers the Trust passes on four of your details when you agree; for others you fill in the partner's
+own form and the Trust passes on nothing about you. Once your death has been reported to the Trust, nothing of yours is
+passed to a partner." The two sentences above are about the FIRST kind of offer only. The second kind is K-12's.
+
+**After it is sent** (`-484` Q6 A, as put): "The Trust tells the partner and asks it to delete — a duty written into the
+partner agreement, carried out by staff." So "cannot be called back" stays true of the transport, and a member who
+withdraws or is erased after delivery is followed up by staff. 12.5 builds none of that duty (K-13); do NOT put it in
+member copy until it exists.
 
 ⚠ The first sentence narrows only: each predicate can stop a send, and none can cause one. "Before it is sent" is
 load-bearing: a change that lands after the last check is too late (TR9). The second sentence is a COST to the
@@ -160,9 +184,9 @@ member, and it is told to the Panel (PQ4).
 | "your agreement … is withdrawn" | P1 reads `revoked_at` on the lead's consent rows | NO. No member surface revokes a consent today (the revoke callers are the Telegram and WhatsApp opt-ins and the claim DPDPA route). The withdraw-my-interest act is carried to 12.3 (K-1). Built and tested here, unreachable until then. |
 | "your membership ends" | P3 reads the lifecycle state `withdrawn` and the moderation overlay `terminated` | Termination: yes. Withdrawal: no member can reach `withdrawn` until row `3-14` (the lock-in producer) lands. A SUSPENDED member is still a member, and the lead is sent. |
 | "your data is erased" | P2 reads the NULLed ciphertext / `anonymized`; QE16 cancels a `due` row inside the erasure | Only for a withdrawn or terminated member — erasure is legal for no one else (`resolveRtbfLegality`), and never while a death report stands (`-423` Q1 (a)). |
-| "your death is reported" | P4 reads the account-frozen overlay; P5 reads `isDeathReportStanding` | Yes. The wording follows the form of `-146`'s adopted sentence ("once your death has been reported to the trust"); it makes no promise about a freeze that lifts, or about a report later closed as false (the cancel is final — PQ6). |
+| "your death is reported" | P4 reads the account-frozen overlay; P5 reads `isDeathReportStanding` | Yes. The wording follows the form of `-146`'s adopted sentence ("once your death has been reported to the trust"); it makes no promise about a freeze that lifts, or about a report later closed as false (the cancel is final — ratified, `-484` Q7 A; its accepted cost: "A living member wrongly reported dead loses their place on that offer for good."). |
 | "the Trust withdraws the offer" | S4 reads the module's `archive_reason` (QE22) | Yes — 12.2's Withdraw. |
-| "cannot be called back" | TR9 | Yes — and whether the Trust then tells the partner is PQ5, not decided here. |
+| "cannot be called back" | TR9 | Yes. The Trust then tells the partner and asks it to delete (`-484` Q6 A) — a staff duty with no owner, procedure or clause yet (K-13). |
 
 **Checked against the Niyamavali** (the git-ignored copies in the MAIN checkout, by absolute path, 2026-11-21; cited by
 section, never pasted):
@@ -183,14 +207,17 @@ counsel's review before publication, and `-469` item 3 publishes it at go-live. 
 the remedy is an edit BEFORE publication, not a re-consent. As drafted (file unchanged since 2026-07-21):
 - §6 lists those the Trust shares personal data with. Partners are NOT among them.
 - §6 also commits that the Trust does not sell personal data. FR-64 lists commission terms on the manifest (none is
-  stored yet — `-433` QE6 (A)), and whether a partner pays per lead is unanswered (OQ-4). No 12.x record has weighed
-  a paid lead against that commitment.
+  stored yet — `-433` QE6 (A)). The Panel has now ruled (`-484` Q2 A, as put): "Never per lead. The Trust may be paid
+  only when a member takes up the partner's product, and the policy says so in plain words." Still open: whether a
+  take-up commission is a sale in law (counsel), and the partner terms themselves (OQ-4). 12.5 carries no payment
+  field and changes nothing for this.
 - §7 says where data is processed and limits cross-border transfer. QE8 admits any public address in the world.
 - §4.1 makes taking a consent back no harder than granting it. No withdraw surface exists yet (the table above).
 - §8 (retention) has no row for a lead.
 
-⇒ 12.1's C6 and C8 (a) are still open, and they are the Panel's and counsel's (§0 edge 1). They are routed at Task 0.5
-and gate go-live (Row 54).
+⇒ 12.1's C6 and C8 (a) are the Panel's and counsel's (§0 edge 1). The Panel's half is RULED (`-484` Q1–Q5); counsel's
+half and the policy edit before publication are still open, and gate go-live (Row 54 (b), (c)). Neither is "closed"
+until those land ([[feedback_closure_language_precision]]).
 
 ## The rulings and decisions this story builds on (quoted, never paraphrased)
 
@@ -217,24 +244,32 @@ and gate go-live (Row 54).
 | Decision `2026-10-30-423` Q1 (a) (Trustee-ratified) | "Never erased once a death is reported." · "From the moment a claim is filed for the member's death, an erasure request is refused, for good — unless the report is closed as false (Q1 (b))." · the reason, as put: "the member agreed to how their data is used while they were alive; that agreement is what the claim, the drive and the donors rely on, and no one can withdraw it on their behalf afterwards." | QE24 and QE26 state their relation to it. Also a fixture rule: an erased member never has a standing death report. |
 | Decision `2026-10-31-424` §0 gate (Trustee-ratified) | "the Panel's — … what may be done with a dead member's membership and record (Q2: CONSENT — `-423` Q1 (a)'s own reason)" | §0 edge 12; PQ6 |
 | Decision `2026-09-08-210` cl.2 (Trustee-ratified) | The delegated mint leaves out (verbatim, the glyph is the source's): "⛔ anything touching `PERMISSION_CATALOG_VERSION`, a role, or a permission key" — and any status whose meaning reaches a member (our words). | QE2 — the consent value is recorded in the author-commit, ⛔ as a `-210` mint |
+| Decision `2026-11-21-484` Q1 C (Trustee-ratified, DR + KB) | "Both — each offer works one way or the other." — option A: "The Trust sends the details — on the member's own agreement, given offer by offer; the policy is changed before it is published to name partners." · option B: "The Trust sends nothing — the member opens the partner's own form from the app and fills it in; the partner checks the member's number in its own way. … The Trust passes the partner only a code saying which offer the visit came from, and nothing about the member." · accepted cost: "Two things to build and keep, and two sets of wording for members." | RULED — NOT our suggestion (A). 12.5 builds A only; B is K-12. Not covered: which offers go which way, who chooses, member-by-member progress on the partner's form, step totals. |
+| `-484` Q2 A | "Never per lead. The Trust may be paid only when a member takes up the partner's product, and the policy says so in plain words." | RULED. Counsel: whether a take-up commission is a sale. |
+| `-484` Q3 A | "The four, for every partner. The member sees all four on the form before agreeing." · cost: "A partner that needs only a name and a number still receives the district and the language." | RULED = QE5 (A). The form half is 12.3's (K-1). |
+| `-484` Q4 A | "Removed at once if the send is stopped; removed 30 days after it is delivered or finally fails." | RULED = QE24 (A) as BEHAVIOUR. The number is still counsel's to change; the author's reading of `-423` is NOT ratified as a reading, and `-423` is NOT amended. |
+| `-484` Q5 A | "Accepted, and the policy says so: the fact that a member once registered interest in an offer is kept permanently, without their details." | RULED = what QE16 leaves on the row. Counsel: whether the law permits it. |
+| `-484` Q6 A | "The Trust tells the partner and asks it to delete — a duty written into the partner agreement, carried out by staff." | RULED; NOT built, no owner, no procedure (K-13; Row 54 (e)). |
+| `-484` Q7 A | "Stop from the moment the death is reported, and stay stopped after the claim is settled." · cost: "A living member wrongly reported dead loses their place on that offer for good." | RULED = P4 + P5 (QE26 (A)). `-423` is NOT amended. |
+| `-484` the Told list (PQ4) | "No objection is recorded — and that is ⛔ a ratification." | The TOLD costs stay TOLD; never cite them as ratified. |
 | `consent_records.ts` header | "New consent types (e.g. `whatsapp_opt_in` Epic 5, `module_lead_handoff` Epic 12) are added by the epic that FIRST WRITES them … Do NOT seed types for surfaces that do not exist yet." | house convention — QE2 (A) departs from its second sentence, recorded |
 
 ### §0 — whose decision is this (`trustee-panel-routing-note-TEMPLATE.md` §0, per edge)
 
 | # | Edge | Verdict |
 |---|---|---|
-| 1 | Sending a member's data to a partner at all, which fields, how long the Trust keeps what the member shared and the record that the member asked, and whether a paid lead squares with the draft policy's no-sale line (12.1's C6, C8 (a)) | **The Panel's, on counsel's advice** — "a LEGAL or consent BASIS for handling someone's data" and "what the Trust DISCLOSES about a person, or to whom". ⛔ 12.5 decides it. 12.5 BUILDS on the narrow side (a closed four-field allow-list, QE5; a finite retention default, QE24) and ROUTES it (PQ1–PQ5, Task 0.5; PQ6 is edge 12's); go-live waits (Row 54). |
+| 1 | Sending a member's data to a partner at all, which fields, how long the Trust keeps what the member shared and the record that the member asked, and whether a paid lead squares with the draft policy's no-sale line (12.1's C6, C8 (a)) | **The Panel's, on counsel's advice** — "a LEGAL or consent BASIS for handling someone's data" and "what the Trust DISCLOSES about a person, or to whom". ⛔ 12.5 decides it. 12.5 BUILDS on the narrow side (a closed four-field allow-list, QE5; a finite retention default, QE24) and ROUTED it (PQ1–PQ5, Task 0.5; PQ6 is edge 12's). **RULED by `-484` Q1 C – Q5 A** (rulings table): the built answers stand as put; Q1 C adds a second route (K-12). Counsel's half and the policy edit are open; go-live waits (Row 54). |
 | 2 | The signing scheme (12.1's C7) | **Yours** — "which implementation is correct, faster, or safer". Stripped: "should the partner check TWT's signature with a shared secret or a public key?" No person sees or is owed anything different. Answered (QE3) because the epic and the architecture disagree. |
 | 3 | At-least-once vs at-most-once delivery | **Yours, with a stated member cost** — the same lead can reach the partner more than once (at most 7 requests per pass through the schedule), so a partner that does not dedupe may contact a member again. Answered (QE6). The Panel is TOLD the exact bound (PQ4), the `-370` shape. |
 | 4 | The cancel predicates P1–P4 (Policy meaning) | **Yours** — each one only NARROWS what leaves (fail-closed). P4 rests on FR-65 ("Suppressed in all account-frozen states"). The Panel is TOLD of them as "built on the narrow side", ⛔ asked ([[feedback_told_line_must_not_carry_panel_choice]]). P5 is edge 12. |
 | 5 | The new `module_lead_handoff` consent VALUE | **Yours, recorded** — a code name with no writer and no copy in 12.5. The consent TEXT and its basis are edge 1 (the Panel's). ⛔ a `-210` mint (a consent reaches a member), so it is recorded in the author-commit (QE2). |
 | 6 | Port and address policy at send (12.1's C7) | **Yours** — SSRF hardening. Answered (QE8) only because a refusal at send can strand an immutable manifest (12.1's C10). |
 | 7 | What a partner may send BACK, and what TWT does with it | **Yours, as an invariant the epic already fixes** — partner-provided data "is treated as **advisory information**, never authoritative". 12.5 builds NO inbound path. The first inbound feedback path (lead outcome) re-opens §0 at its own create-story (K-5). |
-| 8 | The commission-disclosure question (12.2 QE6) | **⛔ 12.5's trigger** — its re-trigger (in our words: OQ-4 answered, the first production publish, or Story 12.3's create-story) is not met here. 12.5 shows no offer to a member. ⚠ But the no-sale line (edge 1) is 12.5's to ROUTE, because it concerns the transfer this story builds. |
+| 8 | The commission-disclosure question (12.2 QE6) | **⛔ 12.5's trigger** — its re-trigger (in our words: OQ-4 answered, the first production publish, or Story 12.3's create-story) is not met here. 12.5 shows no offer to a member. ⚠ But the no-sale line (edge 1) was 12.5's to ROUTE, because it concerns the transfer this story builds — RULED `-484` Q2 A ("Never per lead"); whether each OFFER shows the take-up commission stays deferred under `-433` QE6 (A). |
 | 9 | What a final failure costs the member (one registration per offer, ever) | **Yours to build, the Panel TOLD** — Answered (QE21): keep final, or add a guarded requeue. The cost reaches a member, so it is in PQ4. |
 | 10 | A lead whose offer was archived before it was sent | **Yours, on the narrow side** — Answered (QE22). Stopping sends after the Trust itself withdrew an offer NARROWS "to whom"; continuing them would be the wide side, and ⛔ recommended. Its cost (a withdrawal needs no step-up, and a correction is a withdrawal) is in QE22. |
-| 11 | Telling the partner, or asking it to delete, after a member withdraws agreement or is erased AFTER delivery | **The Panel's, on counsel's advice** — a new disclosure-and-duty question. ⛔ built here. PQ5. |
-| 12 | P5 — once the freeze has lifted, a standing death report still stops the send, for good | **Built on the narrow side; the Panel ASKED, ⛔ blocking (PQ6).** `-424`'s §0 puts "what may be done with a dead member's membership and record" with the Panel. `-423` Q1 (a)'s reason, as put, is that the dead member's agreement STANDS ("no one can withdraw it on their behalf afterwards"); it is scoped to what "the claim, the drive and the donors rely on". OUR reading: extended to a partner-offer consent, that agreement would still allow the send, so withholding is the narrower act. 12.1's C4 reads a durable death fact as a new reason under `-147` cl.3. Whether to BUILD it now was QE26, answered (A); whether it is RIGHT, and its cost when a report proves false, is the Panel's. |
+| 11 | Telling the partner, or asking it to delete, after a member withdraws agreement or is erased AFTER delivery | **The Panel's, on counsel's advice** — a new disclosure-and-duty question. PQ5. **RULED `-484` Q6 A** — staff tell the partner and ask it to delete. ⛔ built here; who, how staff learn, and the clause's words are ⛔ ruled (K-13). |
+| 12 | P5 — once the freeze has lifted, a standing death report still stops the send, for good | **Built on the narrow side; the Panel ASKED, ⛔ blocking (PQ6) — RULED `-484` Q7 A, as built.** `-423` is ⛔ amended, and "C when a way to register again exists" is ⛔ ruled. The original verdict, kept: `-424`'s §0 puts "what may be done with a dead member's membership and record" with the Panel. `-423` Q1 (a)'s reason, as put, is that the dead member's agreement STANDS ("no one can withdraw it on their behalf afterwards"); it is scoped to what "the claim, the drive and the donors rely on". OUR reading: extended to a partner-offer consent, that agreement would still allow the send, so withholding is the narrower act. 12.1's C4 reads a durable death fact as a new reason under `-147` cl.3. Whether to BUILD it now was QE26, answered (A); whether it is RIGHT, and its cost when a report proves false, is the Panel's. |
 
 ## FOUND FACTS (G) — re-derived at `90535934`, 2026-11-21
 
@@ -488,7 +523,9 @@ and gate go-live (Row 54).
   `attempt_count`, `next_attempt_at`, `held_since`). No DELETE. FORCE RLS with per-command policies, and an UPDATE
   policy AT BIRTH so erasure matches rows (G10). The sweep's writes run on the jobs login (Row 54 (g)).
 
-- **QE5 — ANSWERED (A) — the v1 member-field allow-list (what 12.5 BUILDS; the Panel rules what may be USED — PQ2).**
+- **QE5 — ANSWERED (A) — the v1 member-field allow-list (what 12.5 BUILDS; what may be USED is the Panel's — PQ2,
+  RULED `-484` Q3 A: "The four, for every partner. The member sees all four on the form before agreeing." The form
+  half is 12.3's — K-1).**
   `LeadMemberFieldsV1 = { full_name: string(1–120, the `storableText` rule), mobile: the canonical form
   `normalizeMobile` returns (refused when it returns null), district: string(1–120) | null, preferred_language:
   'hi' | 'en' }`, `.strict()`. The name is sent WHOLE, never shortened ([[feedback_never_mangle_member_names]]).
@@ -501,12 +538,12 @@ and gate go-live (Row 54).
     needs a new envelope version AND a Panel ruling; (iii) a partner needing FEWER fields still receives all four — a
     per-module allow-list ("scope-redacted to partner-allowed fields per FR-66 wizard") is carried (K-4), because the
     manifest is immutable and a new manifest column means a trigger-chain change (12.1's C12). Cost (iii) is a
-    disclosure breadth, so PQ2 asks it.
+    disclosure breadth, so PQ2 asked it — accepted by `-484` Q3 A.
   - (B) Name + mobile only. Cost: a partner cannot route by district; offers in Bihar are district-run.
   - (C) Per-module field choice now. Cost: a 12.2 wizard change plus a manifest column plus the trigger chain — story
     sized, outside a PRIMITIVE.
-  ⭐ Whatever is chosen: a Panel ruling (PQ2) for FEWER fields is a schema edit and a new envelope version — small,
-  but code. A ruling for MORE is a new story.
+  ⭐ The Panel chose the built four (`-484` Q3 A), so nothing here changes. A LATER ruling for FEWER fields would be a
+  schema edit and a new envelope version — small, but code. A ruling for MORE is a new story.
 
 - **QE6 — ANSWERED (A) — the delivery semantics, and the row's writes W1–W13 (the ONE copy; the guard and the domain tuple
   are in lockstep with this table).**
@@ -817,7 +854,8 @@ and gate go-live (Row 54).
     it lapses or is released, P2 cancels it at the NEXT attempt.
   - What erasure leaves on the row: `member_id`, `module_id`, `consent_id`, `partner_reference`, the status and the
     times. That is the same member↔offer link the retained event already holds (12.1's C8); the story does not claim
-    erasure removes it (PQ3 (b)).
+    erasure removes it (PQ3 (b) — RULED `-484` Q5 A: the bare fact of interest "is kept permanently, without their
+    details", and the policy is to say so; counsel may still say whether the law permits it).
   - The table's UPDATE grant, its UPDATE policy and the guard's ciphertext rule exist AT BIRTH (G10).
 
 - **QE17 — No production caller, and the cron.** `sealLeadMemberFields`, `recordLeadHandoff` and
@@ -914,7 +952,11 @@ and gate go-live (Row 54).
     membership; if that lands as a termination it is covered by (A), and if it lands as a new state Task 0.1 adds it
     here.
 
-- **QE24 — ANSWERED (A) — when what the member shared is dropped (PQ3 (a) may change the number).**
+- **QE24 — ANSWERED (A) — when what the member shared is dropped. The BEHAVIOUR is RULED `-484` Q4 A ("Removed at once
+  if the send is stopped; removed 30 days after it is delivered or finally fails."); counsel may still change the
+  number.**
+  ⭐ A requeue (W13) means the earlier failure was not final: a requeued row that fails again starts its 30 days from
+  that later failure (W12 judges `updated_at`). That matches "finally fails" — do NOT "fix" it to the first failure.
   - **(A, recommended)** `cancelled` → at once (W9, W11: nothing can need it again). `delivered` and `failed_delivery`
     → after `LEAD_FIELDS_RETENTION_DAYS = 30` (W12), a named constant. Cost: for 30 days the Trust can reproduce exactly
     what it sent, for a dispute; after that only the row, the audit hash and the partner's 2xx remain. A requeue
@@ -928,8 +970,11 @@ and gate go-live (Row 54).
     family — can have a dead member's record erased; it is kept indefinitely." — and its not-covered line, which
     leaves "the retention PERIOD and the legal basis for keeping a dead member's record" to counsel. This story treats
     its scheduled drop of a COPY of four fields (W9 on a death cancel, W12 later) as outside "a dead member's record".
-    That reading is the AUTHOR'S, accepted by BigDev as PROPOSED (`-483`); PQ3 (a) puts it to the Panel and counsel. If they
-    read the copy as inside the record, the change is small but not one line: any W9 for a member with a standing death report KEEPS the ciphertext, W12
+    That reading is the AUTHOR'S, accepted by BigDev as PROPOSED (`-483`); PQ3 (a) put it to the Panel and counsel.
+    `-484` Q4 A ratified the BEHAVIOUR "as put" (the note said the copy is removed on the same schedule "including a
+    member whose death has since been reported") and gave no separate word on the reading: the reading stays the
+    author's, ⛔ ratified, and `-423` is ⛔ amended. Counsel may still read it otherwise. If counsel reads the copy as
+    inside the record, the change is small but not one line: any W9 for a member with a standing death report KEEPS the ciphertext, W12
     skips a member with a standing death report, the purge index and AC5's "ciphertext NULL" leg follow, and how long
     such a kept copy lives becomes counsel's retention answer.
 
@@ -944,6 +989,9 @@ and gate go-live (Row 54).
 - **QE26 — ANSWERED (A) — P5: does a standing death report stop the send after the freeze has lifted? (§0 edge 12)**
   The freeze lifts when a claim settles (G11). From then on P4 no longer sees the death.
   - **(A, recommended)** Build P5 now, on the narrow side, and ask the Panel without blocking (PQ6; Row 54 (a)).
+    **RULED `-484` Q7 A**, as built: "Stop from the moment the death is reported, and stay stopped after the claim is
+    settled." The Panel accepted cost (i) as put and chose the act the note called narrower than a wide reading of
+    `-423`'s reason, so cost (iii) is answered.
     Cost: (i) the cancel is FINAL even if the report is later closed as false — a living member loses that place for
     good; (ii) it is a second, durable death fact, which 12.1's C4 reads as a new reason under `-147` cl.3 — Task 0.4
     annotates C4 and gives 12.4 the fact; (iii) `-423` Q1 (a)'s reason, as put, is about the agreement "the claim, the
@@ -988,9 +1036,10 @@ and gate go-live (Row 54).
 ## Acceptance Criteria
 
 0. **AC0 — governance first.** QE1–QE26 and BigDev's twelve answers are in the author-commit (`2026-11-21-483`), committed
-   ALONE before any code, and the story is amended to the recorded answers (Task 0.3). The Panel note and the counsel
-   question are WRITTEN and NOT sent. Row 54 exists. The `deferred-work.md`, `epics.md`, architecture and docs records
-   exist (Task 0.4).
+   ALONE before any code, and the story is amended to the recorded answers (Task 0.3). The Panel note is SENT and its
+   ruling is recorded as `2026-11-21-484`, committed ALONE; the counsel question is WRITTEN. Row 54 exists with its (a)
+   dated MET. The `deferred-work.md`, `epics.md`, architecture and docs records exist (Task 0.4), and so do the
+   records `-484` makes owed (Task 0.7) — all before Task 1.
 1. **AC1 — the schema.** Both migrations apply on a fresh DB (all files in one transaction) and on the current chain.
    `module_lead_handoff` is in the pgEnum and in `ConsentTypeSchema`; the lockstep test passes and
    `packages/contracts/tests/consent.test.ts` is amended to 14 values. `marketplace_lead_handoffs` has QE4's columns,
@@ -1108,7 +1157,7 @@ and gate go-live (Row 54).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (AC0). No code before 0.3.**
+- [ ] **Task 0 — governance FIRST (AC0). No code before 0.3 AND 0.7.**
   - [ ] 0.1 `git fetch origin`. Re-check the pin and `git diff --name-only 90535934..origin/main -- packages apps
         scripts`; re-derive every G fact by FUNCTION. Re-grep NUMBERS (decisions, migrations + `when`, ADR, ledger
         letter, roster row) on every ref AND in the live sibling worktrees, uncommitted files included. Confirm 12.3
@@ -1126,28 +1175,9 @@ and gate go-live (Row 54).
         the record.) The author-commit, committed ALONE
         (`governance: Story 12.5 lead-handoff transport build decisions (Decision 2026-11-21-NNN)`), naming what it
         amends (QE20). Then amend THIS story to the recorded answers — every "AS PROPOSED", "(if QE21 …)", "(ONLY if
-        QE26 (A))", "as answered" and conditional vocabulary word becomes the answered text — before Task 1. **Rewrite map** for a
-        non-recommended answer:
-
-        | Answer | Rewrite |
-        |---|---|
-        | QE2 (B) | Drop migration `NNNN`, Task 1.1, TR1, AC1's consent half and the 14-value pin. P1, AC2's consent refusal, AC5's P1 legs and Policy meaning's first clause ship behind a string and are tested by 12.3 (K-1). `-427` QE10 is then NOT amended. |
-        | QE2 (C) | Not buildable against G6 — re-ask. |
-        | QE3 (A2) | Add a domain resolver for enabled versions + its IAM leg in Row 54 (f); AC3 expects one or two `v1`. |
-        | QE3 (B) | AC3 becomes JWS vectors; add `marketplace_partners` key columns + C10's relaxation as a new Task 1.3; QE9's hold word; the ADR's receiver guide; no §5.9 JWT annotation. |
-        | QE3 (C) | Both of the above plus a manifest field — re-scope with BigDev first. |
-        | QE5 (B) / (C) | `LeadMemberFieldsV1`, the sealed shape, AC2, AC3's vectors, PQ2's wording. |
-        | QE6 (B) | W4 / W5 / W10's return to `due`, the schedule, `released:*`, AC6's transient and lapse legs, the breaker, `Idempotency-Key`'s purpose, Row 54 (e)'s dedupe clause, counsel's dedupe term, PQ4 — and record the variance from the epic's "retries … with exp backoff". |
-        | QE8 (B) | The port rule, AC4's port legs, I9, K-6, Row 54 (h). |
-        | QE11 (B) | Drop the ciphertext column, the seal, W11 / W12, QE24, P2's first arm, AC9; the body `nonce` moves to a plain column minted at W1; keep the decrypt audit line; I5 reads "the member's record at send time"; record the "what the member confirmed" cost in PQ2. |
-        | QE11 (C) | Refused — re-ask. |
-        | QE21 (A) | Drop W13, `requeueLeadHandoff` (QE17, I1, AC12, Task 3, K-3), `requeued:manual`, the requeue grant and AC6's requeue leg; drop the `released:http_401/403/404` and `released:address_refused` words, the setup-fault alarm and its AC6 leg; `address_refused` is W8; I10 reads "a final row never changes except by its ciphertext going NULL"; drop Policy meaning's (B) / (C) parenthetical and PQ4's "re-sent by staff" phrase. |
-        | QE21 (B) | Keep W13. Drop the `released:http_401/403/404` and `released:address_refused` words, the setup-fault alarm and its AC6 leg; `address_refused` is W8. |
-        | QE22 (B) / (C) | S4's "withdrawn" verdict and S6's outcome 3, `cancelled:module_withdrawn`, AC5's archive legs and its "module was withdrawn" clause, the Policy-meaning clause and table row, §0 edge 10 (under (B) the edge becomes a Panel question — add PQ7), K-2, K-11. |
-        | QE23 (B) | Drop the terminated arm, its word, its AC5 leg and its fence allow-list name; "your membership ends" narrows to withdrawal. |
-        | QE26 (B) | Drop P5 (the summary's clause, the Policy-meaning table cell, QE7, "P0–P5" → "P0–P4" and "P1–P5" → "P1–P4" in I2 / S6 / W9 / Task 3 / Testing standards, K-7's "P5" — K-7 itself stays for P4 — and I6's parenthetical), `cancelled:death_reported`, its AC5 leg, its fence allow-list name, the `-147` re-examination and the C4 annotation. KEEP §0 edge 12 (reworded: nothing is "built on the narrow side" any more) and PQ6 — not sending is no longer built, so PQ6 becomes the open question "should a standing death report stop the send?", with (B)'s cost as its deciding fact; Row 54 (a) and K-8 keep it. |
-        | QE24 (B) / (C) | W12, the purge index, AC9's purge leg, the requeue's window (QE21), PQ3 (a). |
-        | QE25 (B) | Re-scope with BigDev: a manifest column is outside this story. |
+        QE26 (A))", "as answered" and conditional vocabulary word becomes the answered text — before Task 1. The
+        **rewrite map** for a non-recommended answer was never used (every answer was the recommended one, and `-484`
+        ratified the built answers it asked about). Its full text is kept in this file as of `97bc9c26` (v1.3).
   - [x] 0.4 (DONE 2026-11-21, eleven files, additive only. Two departures from the list below, both recorded in
         `deferred-work.md`'s 12-5 block: the bodies of `adr-0001-…` and `ADR-0044-…` are NOT annotated — an accepted
         ADR is not edited in place, and Task 8's ADR cross-references both; and no row was added to
@@ -1181,9 +1211,12 @@ and gate go-live (Row 54).
           dated line pointing at K-10), `docs/escrow/credential-inventory.md` (the per-partner credentials row — Row 54
           (f)), `docs/knowledge-transfer/third-party-dependency-inventory.md` (the Panel ratifies the first partner
           contract — Row 54 (e)).
-  - [x] 0.5 (WRITTEN 2026-11-21 on BigDev's "write the note", ahead of 0.3 / 0.4; NOT sent — BigDev sends. The note
-        numbers its questions Q1–Q7: Q1 = PQ1 (a), Q2 = PQ1 (b), Q3 = PQ2, Q4 = PQ3 (a), Q5 = PQ3 (b), Q6 = PQ5, Q7 = PQ6,
-        "Told" = PQ4. Its commands in E4 were run and hold. It cites the author-commit and Row 54 as still owed.)
+  - [x] 0.5 (WRITTEN 2026-11-21 on BigDev's "write the note", ahead of 0.3 / 0.4; Q1 revised before sending at
+        `331541b6` / `35ff00e5`. **The note was SENT and RULED: Decision `2026-11-21-484`** (Trustee-ratified, DR + KB),
+        verbatim "Q1 C, Q2 A, Q3 A, Q4 A, Q5 A, Q6 A, Q7 A," — committed ALONE `90e0f9ba`; the note's ruling block
+        `a18a69ec`. The counsel question is WRITTEN and NOT recorded as sent. The note numbers its questions Q1–Q7:
+        Q1 = PQ1 (a), Q2 = PQ1 (b), Q3 = PQ2, Q4 = PQ3 (a), Q5 = PQ3 (b), Q6 = PQ5, Q7 = PQ6, "Told" = PQ4. The PQ list
+        below is the text AS ROUTED; read the answers in the rulings table, never here.)
         Write, and do NOT send, the Panel note from the template
         (`trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md`; §0 passed per edges 1, 11 and 12) and the
         counsel question (`counsel-question-2026-11-21-12-5-partner-lead-transfer.md`, the
@@ -1210,7 +1243,7 @@ and gate go-live (Row 54).
         - **PQ5** After a lead was delivered, if the member withdraws the agreement or is erased: does the Trust tell
           the partner, and does it ask the partner to delete? Deciding fact: nothing is built either way, and the
           partner agreement has no such clause yet.
-        - **PQ6** (asked, not blocking the build — QE26 (A)) Once a member's death has been reported, the Trust
+        - **PQ6** (asked, not blocking the build — QE26 (A); RULED `-484` Q7 A) Once a member's death has been reported, the Trust
           stops passing that member's pending interest to a partner — also after the claim is settled, and for good
           even if the report later proves false. Confirm, or say otherwise. Deciding fact: `-423` Q1 (a)'s reason, as
           put, is that the member's agreement stands after death — said of the claim, the drive and the donors; whether
@@ -1225,7 +1258,9 @@ and gate go-live (Row 54).
         sensitive by implication. ⭐ The note's "one fact that decides it": *the draft privacy policy, which members
         will accept at go-live, names no partner among those the Trust shares with, and says the Trust does not sell
         personal data.*
-  - [x] 0.6 (DONE 2026-11-21: Row 54, eleven legs (a)–(k), all open.) Append Row 54 `partner-lead-handoff-live` to
+  - [x] 0.6 (DONE 2026-11-21: Row 54, eleven legs (a)–(k). Dated line `a18a69ec`: **(a) MET** by `-484`; (b)–(k)
+        open; the row stays `open`. The legs below are the text as appended — the row's criteria are never edited,
+        only dated.) Append Row 54 `partner-lead-handoff-live` to
         `docs/launch-gate-inventory/inventory-roster.md`
         (decision-authored). Its legs:
         - (a) the Panel's ruling on PQ1–PQ3, PQ5 and PQ6, recorded;
@@ -1244,6 +1279,22 @@ and gate go-live (Row 54).
         - (j) someone sees a failed handoff: K-3's view is live, or the alarms have a named owner and the
           partner-coordination runbook exists (K-10);
         - (k) no live module carries an explicit port (K-6) — such a module fails every lead `port_refused`.
+  - [ ] 0.7 **The records `-484` makes owed — additive, dated lines, BEFORE Task 1** (the sprint-status `al` entry lists
+        them; a ledger comment does not reach the build, so they are tasks here). Write "RULED by `-484` Qn" — never
+        "Closed by" (no code yet; counsel and the policy edit are open — [[feedback_closure_language_precision]]).
+        - `deferred-work.md`: dated lines on 12.1's C6 and C8 (a) (the Panel's half ruled by Q1 C – Q5 A; counsel's
+          half and the policy edit open); on 12.5's K-4 (Q3 A: the four for every partner — the per-module list's
+          trigger "PQ2's answer" is MET and answered "no narrowing"), K-8 (the Panel half answered; counsel open) and
+          K-12 (trigger MET by Q1 C; BigDev's "Build 12.5 now" SUPERSEDES its "before this story's Task 1" — quote the
+          old sentence, never rewrite it — and the steps the correct-course owes, listed under K-12 below); and a NEW
+          item K-13 (Q6 A's staff duty, below). Grep every site that cites each item, not only its heading.
+        - `epics.md`: under the existing "INHERITED FROM 12.5" note for 12.3, a dated line: Q3 A's "The member sees all
+          four on the form before agreeing", and the K-13 hook (12.3's withdraw act on a `delivered` lead). A dated
+          note for the second route goes wherever the correct-course puts it — NOT invented here.
+        - The counsel question: made current to `-484` (what the Panel ruled; what is left to counsel — the 30 days,
+          whether a take-up commission is a sale, whether keeping the fact of interest is lawful, the notice wording
+          of its question 10, and the second route's question 11). It stays WRITTEN until BigDev sends it.
+        - The correct-course for the second route (K-12) is NOT 12.5's to run; it is recorded as owed, before 12.3.
 - [ ] **Task 1 — migrations (AC1).**
   - [ ] 1.1 `NNNN_consent-type-module-lead-handoff.sql` — the single `ALTER TYPE "consent_type" ADD VALUE IF NOT EXISTS
         'module_lead_handoff';`, alone. The journal entry is hand-added. Then add the pgEnum value at the END of the
@@ -1362,7 +1413,8 @@ and gate go-live (Row 54).
 - **K-1 → 12.3:** the seam (QE18). Also: the member's withdraw-my-interest act (revoking by `consent_artifact_ref`);
   the member-facing words for `pending_retry` / `delivered` / `failed_delivery`, for a cancelled handoff, and for "one
   registration per offer"; the consent copy (Row 54 (d)); the data-export lead section (12.1's C8 (b)); RVD2's retry
-  decision. ⚠ WHETHER a member is told that a lead was cancelled or failed, and in what words, goes through §0 at
+  decision. Ratified for 12.3's form (`-484` Q3 A): "The member sees all four on the form before agreeing" — the
+  fields 12.3 passes to `sealLeadMemberFields` are exactly what that form showed. ⚠ WHETHER a member is told that a lead was cancelled or failed, and in what words, goes through §0 at
   12.3's create-story — "is the person told" has been the Panel's before. 12.5 carries the question, not an answer.
 - **K-2 → 12.6:** QE22 (A). An archive writes no handoff; the transport reads the archive reason itself. If
   12.6 restores modules, nothing in 12.5 changes, and a cancelled lead stays cancelled.
@@ -1379,7 +1431,8 @@ and gate go-live (Row 54).
   manifest cannot be stranded. ⭐ Trigger: MET by `-483`; owner 12.2's follow-up.
 - **K-7 → 12.4:** the transport's own death cancels (P4, P5) are NOT 12.4's suppression. 12.4 still owns the shelf and
   the lead route, and must know the freeze lifts at settlement.
-- **K-8 → Panel / counsel (Row 54):** PQ1–PQ6 and the counsel question, as written at Task 0.5.
+- **K-8 → Panel / counsel (Row 54):** PQ1–PQ6 and the counsel question, as written at Task 0.5. The Panel half is
+  RULED (`-484`; Row 54 (a) MET). Counsel's half is open (Row 54 (b)); the question is to be made current (Task 0.7).
 - **K-9 → no owner yet:** a partner auth header from Secret Manager (`-429` Consequence 3; QE25). ⭐ Trigger: the first
   partner that will not accept the signature alone.
 - **K-10 → no owner yet:** the partner-coordination escalation runbook (`docs/runbooks/README.md` names this story as
@@ -1389,8 +1442,29 @@ and gate go-live (Row 54).
   phone's own browser (BigDev: no embedded web view), with tracking of where members give up. It is NOT part of this story: option B / C of the Panel note's Q1 and counsel's
   question 11. If the Panel or BigDev chooses it, Epic 12 needs a correct-course before this story's Task 1 (under B
   this transport is set aside; under C it is built beside the link). Details in `deferred-work.md`, 12.5's K-12.
+  ⭐ **Trigger MET 2026-11-21: `-484` Q1 C** — both routes, offer by offer. **BigDev, 2026-11-21, by selection: "Build
+  12.5 now"** — so the sentence above ("a correct-course before this story's Task 1") is SUPERSEDED for C: the
+  transport is built as decided in `-483` (which `-484` says "stands"), and the correct-course comes before 12.3 and
+  go-live instead. What the correct-course (or the story it mints) OWES, because nothing in 12.5 can do it yet:
+  1. a per-module marker for which way the offer works (the manifest has none; every module has a NOT NULL
+     `lead_handoff_url` and secret name — 12.1 I2 / C12's trigger chain);
+  2. ⚠ `recordLeadHandoff` REFUSES a partner's-own-form module, and S4 CANCELS a row of one — the ratified promise for
+     that route is "The Trust sends nothing", and a 12.3 bug would otherwise break it with no error;
+  3. step totals or progress from a partner (the drop-off tracking) is INBOUND partner data: advisory only, under
+     K-5's rules, the ADR's review question and the boundary fence — and member-by-member progress is NOT ruled;
+  4. which offers go which way, and who chooses — NOT ruled; the second set of member wording;
+  5. its own go-live row (Row 54's legs are the sending route's only).
+  12.5 builds NONE of these, and no Task here may add a route column.
 - **K-11 → 12.2 (follow-up):** the wizard's lead warning before Withdraw and before a corrected copy should say that
   pending leads will be cancelled for good (QE22 (A)). ⭐ Trigger: MET by `-483`; owner 12.2's follow-up.
+- **K-13 → no owner yet (`-484` Q6 A):** after a lead was DELIVERED, if the member withdraws the agreement or is
+  erased, "The Trust tells the partner and asks it to delete — a duty written into the partner agreement, carried out
+  by staff." NOT ruled: who on staff, how staff learn of it, the clause's words. 12.5 builds NOTHING for it and adds no
+  alarm or read for it. What already exists for whoever builds it: the handoff row survives erasure with `lead_id`,
+  `module_id`, `member_id` and `status = 'delivered'` (QE16), so "which partners received this member's details" is a
+  query on the `(pariwar_id, member_id)` index. The natural signals are 12.3's withdraw-my-interest act meeting a
+  `delivered` lead, and `anonymizeMember` meeting a `delivered` row. The agreement clause is Row 54 (e)'s; so is Q2 A's
+  "never per lead". ⭐ Trigger: the first partner agreement drafted, or 12.3's create-story, whichever is first.
 
 ### Testing standards
 
@@ -1469,3 +1543,4 @@ and gate go-live (Row 54).
 | 2026-11-21 | v1.4 | Tasks 0.4 and 0.6 done: `deferred-work.md` (the 12-5 block K-1 … K-11, and dated lines on 12.1's C4 / C6 / C7 / C8 / C10 / C13 and on 12.2's five items and the `partners/` leg), `epics.md` (notes under 12.3, 12.4, 12.5, 12.6), five architecture annotations, six docs notes, and roster Row 54 (eleven legs, all open). No "Closed by" line was written: that is Task 9.3's, after the code. Two ADR bodies were left unannotated, by design (carried to Task 8). The Panel note and the counsel question were made current (Decision `-483`, Row 54); both still NOT sent. Task 0 is complete except 0.1's re-check. |
 | 2026-11-21 | v1.5 | Rebased onto `origin/main` `e5e13f92` (Story 6.22b landed), BigDev: "rebase". Every commit of the branch was re-written; the two SHAs this file cites are now the post-rebase ones (the author-commit `24d930fc`, the creation ledger entry `fc715af5`). No decision, AC or task changed. One cited code file moved on `main` since the pin (`member/anonymize.ts`, a comment only). |
 | 2026-11-21 | v1.6 | On BigDev's direction, before the note is sent: the Panel note's Q1 revised (option A's cost corrected — the Trust answers for the sharing itself and its choice of partner, not for what the partner does afterwards; option B is now the partner's own form opened from the app; option C "both" added) and the counsel question extended (10: how far the Trust's responsibility runs and what the notice may say; 11: the second route and its tracking). K-12 added: the second route and its drop-off tracking are recorded, NOT decided and NOT part of this story. No decision, AC or task of this story changed. ⚠ If that route is chosen, a correct-course comes before Task 1. |
+| 2026-11-21 | v1.7 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), after `git fetch origin` (`origin/main` = `e5e13f92`; no code moved since the rebase; pin an ancestor). The Panel ruled the note: Decision `2026-11-21-484` (Q1 C, Q2 A … Q7 A) — absorbed throughout: header, Names, Policy meaning (ratified acts; the sentences scoped to the sending route, with `-484`'s own sentence quoted; Q6 A beside "cannot be called back"; Q2 A on the no-sale line), the rulings table (seven rows + the Told list, verbatim), §0 edges 1 / 8 / 11 / 12, QE5, QE16, QE24 (the requeue's 30 days restated), QE26, AC0, Task 0.5, PQ6, Task 0.6 ((a) MET), K-1 (Q3 A's form), K-8. NO build decision changed: every built answer the note asked about was ratified as put. K-12's trigger is MET, and BigDev chose "Build 12.5 now": its "before this story's Task 1" is superseded for C, and the five things the correct-course owes are listed (incl. `recordLeadHandoff` refusing a partner's-own-form module). New: Task 0.7 (the records `-484` makes owed, before Task 1) and K-13 (Q6 A's staff duty, not built). NUMBERS: decision ≥ `-485`, ledger ≥ `am`, others' roster ≥ `Row 55`; a fifth sibling worktree (`3-15-…`) noted. The unused Task 0.3 rewrite map is collapsed to a pointer to `97bc9c26`. |

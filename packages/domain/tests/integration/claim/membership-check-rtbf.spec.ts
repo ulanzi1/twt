@@ -79,10 +79,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — RTBF over the membership check\'s 
     expect(byId(after, noteless).note_ciphertext).toBeNull();
     // ⭐ EVERY other column of the scrubbed rows is unchanged: the outcomes, the reason, the review and receipt named,
     // who recorded it and when, and the supersession stamp.
+    const withoutNote = (row: Record<string, unknown>) => Object.fromEntries(Object.entries(row).filter(([column]) => column !== 'note_ciphertext'));
     for (const id of [waiting, confirmed]) {
-      const { note_ciphertext: _a, ...was } = byId(before, id);
-      const { note_ciphertext: _b, ...is } = byId(after, id);
-      expect(is).toEqual(was);
+      expect(withoutNote(byId(after, id))).toEqual(withoutNote(byId(before, id)));
     }
     expect(byId(after, waiting)).toMatchObject({ identity_outcome: 'not_confirmed', identity_reason: 'name_differs', superseded_reason: 're_checked' });
     expect(byId(after, confirmed)).toMatchObject({ fee_outcome: 'same_day', identity_outcome: 'confirmed', superseded_at: null });

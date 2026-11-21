@@ -983,7 +983,7 @@ export const verifierConsoleEn = {
     } as Record<string, string>,
     feeComputed: 'The system compares the two dates. You cannot change the result.',
     noFeeReceipt:
-      "The member's joining-fee receipt cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+      "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
     feeAfterDeathNote:
       'No drive can open for this claim. Record the check, then deny the claim with the reason "Fee paid after the death".',
     // The identity half — the details on record. DL12 for the first two routes.
@@ -1044,7 +1044,7 @@ export const verifierConsoleEn = {
       stale: 'The certificate changed since the membership check was opened. It has been reloaded — check again.',
       concurrent: 'The claim changed while the check was being recorded. It has been reloaded — check again.',
       no_fee_receipt:
-        "The member's joining-fee receipt cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+        "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
       certificate_not_accepted: 'Accept the death certificate first. The membership check compares its date of death with the joining fee.',
       certificate_date_unreadable: 'The date of death on the accepted certificate cannot be read. Review the certificate again.',
       window_closed: 'A membership check can no longer be recorded on this claim.',

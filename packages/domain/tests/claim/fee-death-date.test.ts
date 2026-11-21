@@ -11,20 +11,21 @@ import { compareFeeDateWithDeathDate } from '../../src/claim/fee-death-date.js';
 const DEATH = '2026-03-10';
 
 describe('compareFeeDateWithDeathDate (Story 6.39 DL2)', () => {
-  it.each([
+  const BOUNDARIES = [
     // The day BEFORE the death, in India: 9 March ends at 2026-03-09T18:29:59.999Z.
-    ['2026-03-08T18:30:00.000Z', 'before_death', '9 March 00:00 IST'],
-    ['2026-03-09T18:29:59.000Z', 'before_death', '9 March 23:59:59 IST — the last second before the day of death'],
+    { paidAt: '2026-03-08T18:30:00.000Z', expected: 'before_death', when: '9 March 00:00 IST' },
+    { paidAt: '2026-03-09T18:29:59.000Z', expected: 'before_death', when: '9 March 23:59:59 IST — the last second before the day of death' },
     // The day OF the death: 2026-03-09T18:30:00Z … 2026-03-10T18:29:59Z.
-    ['2026-03-09T18:30:00.000Z', 'same_day', '10 March 00:00 IST — the first instant of the day of death'],
-    ['2026-03-10T00:00:00.000Z', 'same_day', '10 March 05:30 IST'],
-    ['2026-03-10T18:29:59.000Z', 'same_day', '10 March 23:59:59 IST — the last second of the day of death'],
+    { paidAt: '2026-03-09T18:30:00.000Z', expected: 'same_day', when: '10 March 00:00 IST — the first instant of the day of death' },
+    { paidAt: '2026-03-10T00:00:00.000Z', expected: 'same_day', when: '10 March 05:30 IST' },
+    { paidAt: '2026-03-10T18:29:59.000Z', expected: 'same_day', when: '10 March 23:59:59 IST — the last second of the day of death' },
     // The day AFTER.
-    ['2026-03-10T18:30:00.000Z', 'after_death', '11 March 00:00 IST — the first instant after the day of death'],
-    ['2026-03-11T18:29:59.000Z', 'after_death', '11 March 23:59:59 IST'],
-    ['2027-01-01T00:00:00.000Z', 'after_death', 'months later'],
-    ['2020-01-01T00:00:00.000Z', 'before_death', 'years earlier'],
-  ] as const)('paidAt %s ⇒ %s (%s)', (paidAt, expected, _when) => {
+    { paidAt: '2026-03-10T18:30:00.000Z', expected: 'after_death', when: '11 March 00:00 IST — the first instant after the day of death' },
+    { paidAt: '2026-03-11T18:29:59.000Z', expected: 'after_death', when: '11 March 23:59:59 IST' },
+    { paidAt: '2027-01-01T00:00:00.000Z', expected: 'after_death', when: 'months later' },
+    { paidAt: '2020-01-01T00:00:00.000Z', expected: 'before_death', when: 'years earlier' },
+  ] as const;
+  it.each(BOUNDARIES)('paidAt $paidAt ⇒ $expected ($when)', ({ paidAt, expected }) => {
     expect(compareFeeDateWithDeathDate(new Date(paidAt), DEATH)).toBe(expected);
   });
 

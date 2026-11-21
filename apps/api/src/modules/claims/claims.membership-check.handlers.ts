@@ -73,7 +73,7 @@ const REFUSAL_MESSAGES: Record<RefusalReason, string> = {
   certificate_not_accepted: 'Accept the death certificate first — the membership check compares its date of death with the joining fee.',
   stale: 'The certificate changed since the membership check was opened — open it again.',
   certificate_date_unreadable: 'The date of death on the accepted certificate cannot be read. Review the certificate again.',
-  no_fee_receipt: "The member's joining-fee receipt cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
+  no_fee_receipt: "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Escalate this claim.",
   invalid_outcome: 'The identity answer does not fit this claim. Open the membership check again.',
   missing_display: 'Your account has no display name — the check cannot be recorded.',
 };

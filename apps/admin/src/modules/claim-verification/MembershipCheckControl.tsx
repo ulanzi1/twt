@@ -103,7 +103,7 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
     if (ready) setIncomplete(false);
   }, [ready]);
 
-  // The check can be recorded only against an accepted certificate, inside the window, with an identified receipt.
+  // The check can be recorded only against an accepted certificate, inside the window, with the joining fee's record identified.
   const recordable =
     preview !== undefined && preview.window_open && preview.expected_live_review_id !== null && preview.fee_receipt_found && preview.fee_outcome !== null;
 
@@ -176,7 +176,7 @@ export function MembershipCheckControl(props: MembershipCheckControlProps): Reac
                 </p>
               ) : null}
               {!preview.fee_receipt_found ? (
-                <p role="alert" data-testid="membership-check-no-fee-receipt">
+                <p role="alert" data-testid="membership-check-no-joining-fee">
                   {t.noFeeReceipt}
                 </p>
               ) : (

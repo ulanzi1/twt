@@ -306,7 +306,7 @@ describe('<MembershipCheckControl> — when the check cannot be recorded, it say
 
   it('the joining receipt cannot be identified ⇒ an ALERT that says to escalate, and ⛔ form (fail closed)', () => {
     renderControl({ preview: preview({ fee_receipt_found: false, fee_paid_on: null, fee_outcome: null }) });
-    const alert = screen.getByTestId('membership-check-no-fee-receipt');
+    const alert = screen.getByTestId('membership-check-no-joining-fee');
     expect(alert.getAttribute('role')).toBe('alert');
     expect(alert).toHaveTextContent(t.noFeeReceipt);
     expect(screen.queryByTestId('membership-check-form')).toBeNull();

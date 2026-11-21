@@ -119,6 +119,14 @@ export const MEMORIAL_FIELD_CLASS = 'memorial';
 export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = 'claim_fraud_investigation';
 
 /**
+ * ⭐ NEW (Story 6.39, DL1 / DL14) — the membership check's Tier-1 field class: the District Admin's optional note
+ * (`claim_membership_checks.note_ciphertext`). Keys on the claim's REAL `pariwarId`; matches
+ * `piiColumn(1, CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS)`. Declared ONCE here — the API's handlers (through
+ * `apps/api/src/context.ts`'s re-export) and `anonymizeMember`'s scrub both bind it. ⛔ Never re-declare it.
+ */
+export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = 'claim_membership_check';
+
+/**
  * Envelope-encryption + blind-index key material for the member PII families. Structurally identical
  * to `apps/api`'s `EncryptionDeps` and `apps/jobs`'s `JobsEncryptionDeps` (both are
  * `{ kms, kekRef, hmacKeyRef }` over these same domain types), so BOTH apps pass their own bundle

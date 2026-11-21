@@ -1464,6 +1464,27 @@
       "when": 1797997500000,
       "tag": "0209_breach-withdrawal-and-opened-stamp",
       "breakpoints": true
+    },
+    {
+      "idx": 210,
+      "version": "7",
+      "when": 1797998400000,
+      "tag": "0210_verifier-reason-fee-paid-after-death",
+      "breakpoints": true
+    },
+    {
+      "idx": 211,
+      "version": "7",
+      "when": 1797998460000,
+      "tag": "0211_state-trustee-reason-fee-paid-after-death",
+      "breakpoints": true
+    },
+    {
+      "idx": 212,
+      "version": "7",
+      "when": 1797998520000,
+      "tag": "0212_claim-membership-checks",
+      "breakpoints": true
     }
   ]
 }

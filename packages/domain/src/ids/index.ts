@@ -819,6 +819,15 @@ export type ClaimFraudInvestigationStepId = Brand<'ClaimFraudInvestigationStepId
 /** Smart constructor: validates UUID shape, returns a branded `ClaimFraudInvestigationStepId`. */
 export const claimFraudInvestigationStepId = uuidBrand('ClaimFraudInvestigationStepId');
 
+/**
+ * Per-row address of one membership check (`claim_membership_checks.check_id` — Story 6.39, DL1): the District
+ * Admin's recorded check, before any drive, that the joining fee was paid no later than the death and — when
+ * nobody has checked the identity — that the person who died is the member. At most one live per claim.
+ */
+export type ClaimMembershipCheckId = Brand<'ClaimMembershipCheckId'>;
+/** Smart constructor: validates UUID shape, returns a branded `ClaimMembershipCheckId`. */
+export const claimMembershipCheckId = uuidBrand('ClaimMembershipCheckId');
+
 // ── Workplace ids (Story 6.36a, Task 1; `2026-10-14-330` SW2, SW3, SW9) ───────────────────────────
 // Three NEW branded ids, each a ROW address (⛔ an event stream id):
 //   · `WorkplaceId` — one school or office on a Pariwar's list (`workplaces.workplace_id`); a posting names it.

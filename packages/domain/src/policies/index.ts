@@ -235,6 +235,9 @@ export * from './claim-death-certificate-rls.js';
 // Story 6.22 (0197) — the fraud investigation steps. SELECT + INSERT + a tenant-scoped UPDATE leg that 0197's column grant
 // narrows to the RTBF scrub of `note_ciphertext`. ⛔ No DELETE leg, ⛔ no `FOR ALL`.
 export * from './claim-fraud-investigation-rls.js';
+// Story 6.39 (0212) — the membership checks. SELECT + INSERT + a tenant-scoped UPDATE leg that 0212's column grants
+// narrow to the supersession pair and the RTBF scrub of `note_ciphertext`. ⛔ No DELETE leg, ⛔ no `FOR ALL`.
+export * from './claim-membership-check-rls.js';
 // Story 6.19a — the claim contact record (ONE file for both tables). SELECT + INSERT + UPDATE, per command;
 // ⛔ no DELETE leg and ⛔ no `FOR ALL` (W4: a write never deletes a row it does not carry).
 export * from './claim-contact-rls.js';

@@ -632,6 +632,71 @@ export class DeathCertificateReviewRefusedError extends Error {
   }
 }
 
+// ── Story 6.39 — the staff membership check before any drive ───────────────────────────────────────
+
+/** The reasons an approval WAITS on the membership check, in PRECEDENCE order (DL5): when several apply, the FIRST is
+ *  reported. ⚠ LOCKSTEP with `@twt/contracts`' `MEMBERSHIP_CHECK_WAIT_REASONS` (pinned by its lockstep test). */
+export const MEMBERSHIP_CHECK_WAIT_REASONS = ['not_checked', 'stale', 'fee_after_death', 'identity_not_confirmed'] as const;
+export type MembershipCheckWaitReason = (typeof MEMBERSHIP_CHECK_WAIT_REASONS)[number];
+
+/** DL5 (`2026-10-31-424` Q1 (a) C, `-430` Q1 B) — a claim cannot be APPROVED without a CURRENT, PASSING membership
+ *  check. ⛔ NEVER a denial (N5): the claim WAITS. Every approval handler maps it to 409
+ *  `<prefix>.membership_check_required`, `details.reason`:
+ *   · `not_checked`            — no live check on the claim;
+ *   · `stale`                  — the live check was computed against a certificate review that is no longer the
+ *                                current accepted one (N4), or it recorded `not_required` for an identity that
+ *                                today's KYC record says nobody has checked (N2);
+ *   · `fee_after_death`        — the joining fee was paid after the date of death: it can never pass (N6);
+ *   · `identity_not_confirmed` — staff could not yet confirm the person who died is the member. */
+export class MembershipCheckRequiredError extends Error {
+  public readonly name = 'MembershipCheckRequiredError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason: MembershipCheckWaitReason,
+  ) {
+    super(`[membership-check] claim ${claimCaseId} cannot be approved yet — the membership check is '${reason}'`);
+  }
+}
+
+/** DL2 / DL3 / DL10 — recording a membership check is refused. → 409 `membership_check.<reason>` (404 for
+ *  `not_found`; 400 for `invalid_outcome`):
+ *   · `window_closed`            — the claim is outside the review window;
+ *   · `certificate_not_accepted` — the claim has no CURRENT accepted death certificate to compare against;
+ *   · `stale`                    — the accepted review, or the joining receipt, is no longer the one the check was
+ *                                  computed against (or the live check was superseded concurrently);
+ *   · `no_fee_receipt`           — the member's joining receipt cannot be identified (fail closed — DL3);
+ *   · `invalid_outcome`          — the identity outcome does not fit the record (`not_required` for an unchecked
+ *                                  identity, a judgment for a checked one, `not_confirmed` without a reason or note). */
+export class MembershipCheckRefusedError extends Error {
+  public readonly name = 'MembershipCheckRefusedError';
+  public constructor(
+    public readonly claimCaseId: string,
+    public readonly reason:
+      | 'not_found'
+      | 'window_closed'
+      | 'certificate_not_accepted'
+      | 'stale'
+      | 'no_fee_receipt'
+      | 'invalid_outcome'
+      | 'missing_display',
+    detail: string,
+  ) {
+    super(`[membership-check] claim ${claimCaseId}: ${reason} — ${detail}`);
+  }
+}
+
+/** DL9 — the deny reason `fee_paid_after_death` was used on a claim whose live, current membership check does ⛔
+ *  not say the fee was paid after the death. → 409 `<prefix>.fee_paid_after_death_not_shown`. A GUARD on the
+ *  REASON, ⛔ on the denial: the same denial with another reason is never gated (N5). */
+export class FeePaidAfterDeathNotShownError extends Error {
+  public readonly name = 'FeePaidAfterDeathNotShownError';
+  public constructor(public readonly claimCaseId: string) {
+    super(
+      `[membership-check] claim ${claimCaseId}: the reason 'fee_paid_after_death' needs a current membership check that found the fee was paid after the death`,
+    );
+  }
+}
+
 // ── Story 6.19a — the claim CONTACT RECORD (D5, D14; W1–W10) ─────────────────────────────────────────
 
 /** D14 — the reasons a claim cannot be APPROVED for want of its contact record, in PRECEDENCE order: when

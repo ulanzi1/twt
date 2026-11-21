@@ -216,6 +216,10 @@ export * from './claim_death_certificate_reviews.js';
 // Story 6.22 (0197) — the fraud register's investigation record: one append-only row per step of one claim's
 // investigation (the helpline operator's flag; the District Admin's innocent / guilty finding). Tenant-isolated.
 export * from './claim_fraud_investigation_steps.js';
+// Story 6.39 (0212) — the staff membership check before any drive: one LIVE row per claim (a re-check supersedes),
+// append-only, tenant-isolated. It stores the OUTCOME of the fee-date / death-date comparison and of the identity
+// judgment — ⛔ either date.
+export * from './claim_membership_checks.js';
 // Story 6.19a — the claim's CONTACT RECORD: `claim_contacts` (one per claim — the claimant side and the filer's
 // per-claim agreement, D15) + `claim_contact_nominees` (one per nominee VERSION — the Tier-1 postal address and
 // the claimant-to-nominee relationship, D5 / D16). Tenant-isolated; SELECT / INSERT / UPDATE, ⛔ no DELETE.

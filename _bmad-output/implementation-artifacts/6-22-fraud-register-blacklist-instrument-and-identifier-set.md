@@ -932,6 +932,9 @@ code review of 2026-11-02, RA2; `release-rule-agreement.spec.ts` goes red if one
           — Q1–Q9 (= PQ1–PQ9) + "Told" 1–5 (= TL1 (i)–(iv), TL2); every option costed; suggestions as the PQs; E4 run 2026-11-01 at
           `91ea2c81` — every command returns the cited text (the approval-check grep EMPTY by design; the re-file grep corrected to
           `readRefileGuard` → `closedClosureIdOf` after it first returned empty).
+        - **2026-11-21 — SENT and RULED** (relayed by BigDev; Decision `2026-11-21-477`, Trustee-ratified, DR + KB): Q1 B, Q2 B, Q3 C
+          widened (the mobile flag), Q4 B, Q5 A, Q6 A, Q7 A, Q8 (a) A (b) B (c) B, Q9 C. The built PQ1, PQ8 (b) and PQ9 stand as ruled; PQ7 A,
+          PQ8 (a) A, PQ8 (c) B and the PQ3 flag are owed (a new row — BigDev's). Recorded on `story/6-22b-…`.
   - [x] 0.4 ⭐ FIRST, BigDev confirms DL16's EA10 closure from Task 0.1 (iv)'s re-trace. Decision entry (AUTHOR-COMMIT, the next free number across branches — `-438` at `91ea2c81`; READ LIVE): DL0–DL17 as answered;
         the two keys (outside `-210`'s delegated mint); cites `-238`, `-240`, `-261` D3 A, `-425` 6.38 DL4 / DL7; declares the scope split
         (`6-22b`, `6-22c`, `6-22d`, named); DECLARES the guilty arm's kept locks and sticky-frozen account as a narrowing of `-423` Q1 (b) /

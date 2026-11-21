@@ -1,6 +1,7 @@
 # Trustee Panel routing note — a living member reported dead: what the investigation's finding does, and what comes after it
 
-> **Status: WRITTEN 2026-11-01, ⛔ NOT SENT — BigDev sends.** Written from Story 6.22 (the first half of the fraud register), Task 0.3.
+> **Status: WRITTEN 2026-11-01; SENT by BigDev and RULED — relayed 2026-11-21, Decision `2026-11-21-477` (Trustee-ratified, DR + KB).**
+> Written from Story 6.22 (the first half of the fraud register), Task 0.3. Everything below the ruling block is the note as put.
 > ⛔ No member uses the system yet. Nothing here blocks building or merging; four answers (Q1, Q7, Q8, Q9) must be in before the parts
 > they name go live, and four (Q3–Q6) before the ban itself is built.
 
@@ -23,10 +24,21 @@ only by the investigation's finding, ⛔ by a bare staff note that they are aliv
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-11-21 (relayed by BigDev), Decision `2026-11-21-477` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**.
+> Verbatim: *"by DR and KB / first half / Q1 B, Q2 B, Q3 C - but flag the mobile number so that membership approver would know., Q4 B,
+> Q5 A, Q6 A, Q7 A, Q8  (a) A, (b) B, (c) B / Q9 C"*.
+>
+> - **Q1 B** — a member found guilty stays locked (as built). **Q2 B** — a nominee is barred only on a finding naming them.
+> - **Q3 C, widened** — no bar by mobile number until PAN or Aadhaar is collected, *"but flag the mobile number so that membership
+>   approver would know"*. **Q4 B** — the words as put. **Q5 A** — a Trustee Panel member imposes. **Q6 A** — every membership ends.
+> - **Q7 A** — a flagged claim waits at both approvals until a finding (⛔ our suggestion). **Q8 (a) A** — the family is texted once (⛔ our
+>   suggestion); **(b) B** — not appealable; **(c) B** — a new claim for a member found innocent is held at filing. **Q9 C** — in person,
+>   video call or a ground inspection that found the member alive (as built; ⛔ our suggestion).
+> - ⚠ **Not covered** (see the decision): a flag on a death that really happened under Q7 A; who the "membership approver" is; Q1's
+>   appeal against a guilty finding; Q6's telling of other Pariwars; the Q8 staff label; the Hindi of Q8 (a)'s text.
+>
+> ⭐ Everything below is kept **unedited** as the questions **as they were put**.
 
 ---
 

@@ -104,6 +104,11 @@ do so — and the build that follows is built on answers, not on a design that m
 | `2026-09-08-210` (WHAT IS NOT DELEGATED) | *"the closure-language vocabulary"* stays outside the delegation — ONLY *"Closed by [edit]"* / *"Resolved via explicit deferral"* / *"Not addressed"*. | Trustee-ratified ⇒ DL6 |
 | Niyamavali (§2.5, §6.1–6.3, §8.2, §8.4, §8.5, §8.8, Part 10) | §6 lists what a claim collects (certificate, bank / IFSC, consents) — ⛔ PAN; §8.5 grounds 1–3 (forged documents, identity fraud, financial fraud); §2.5 keys the re-join lock on an *"Aadhaar HMAC"* (the code uses a MOBILE blind index — G6); "blacklist" / "ban" / "father's name" / "succession" / "PAN" appear nowhere. A rulebook, ⛔ ratified apart from §8.8 and the 2026-08-07 interpretive ratification of "a skip" ([[feedback_niyamavali_rulebook_not_spec]]). | Policy-meaning check only |
 
+⭐ 2026-11-21 — the 6.22 note (2026-11-01) was SENT and RULED (`2026-11-21-477`, Trustee-ratified, DR + KB): its Q2 — this table's
+`-238` NOT covered (i) and row `6-22e`'s gate — is **B** (a nominee is barred only on a finding naming them). Its Q3 rider (*"flag the
+mobile number so that membership approver would know"*) and Q7 A (a flagged claim waits) do not touch this story's build. This story's
+own note (PQ1–PQ5) is ⛔ ruled by it.
+
 ## 📜 Policy meaning (AI-10-1)
 
 **This story introduces and changes NO predicate that gates a member's or a family's access to a benefit.** The one thing it builds (DL5)

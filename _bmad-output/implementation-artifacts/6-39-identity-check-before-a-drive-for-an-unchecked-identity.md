@@ -134,7 +134,7 @@ you joined by typing in your own identity details and nobody has checked them si
 while they cannot yet confirm that, the claim waits rather than being refused."**
 ⚠ **AMENDED by [`-473`](../../.decision-log.md#decision-2026-11-21-473) Q1 B / [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 2**
 (noted by the 2026-11-21 code review; the words above are kept): *"no later than the date of death"* now reads **"before the date of
-death"** — a fee paid ON the day of death counts as after it, and no drive opens. `-473`'s member sentence is the operative one.
+death"** — a fee paid ON the day of death counts as after it, and no drive opens. `-473`'s member sentence is the operative one — in full only once row `6-39a` builds Q2 B; until then a fee paid in life but recorded after the death still stops the drive with no remedy (`-474`'s Policy meaning).
 
 *What that sentence deliberately does ⛔ promise:* that the family is ASKED for anything. Nothing built asks: once a certificate is
 accepted every upload is closed (`CLAIM_DOCUMENT_UPLOADABLE_STATES` + the accepted-certificate block, `death-certificate-approval.ts`), ⛔
@@ -154,6 +154,7 @@ with §2.1, one RELEVANT unbuilt clause (§2.2), otherwise silent:
 - ⛔ Clause speaks to checking identity after death — SILENT; the Panel's rulings (`-424`, `-430`) are the instrument.
 - ⚠ **A declared edge, ⛔ built either way silently:** a fee paid on the day of death (PQ1 (a)) — built as ⛔ "after" (the drive may open)
   until the Panel answers, because the ruled words refuse only a fee paid *after* the death and a certificate shows ⛔ time.
+  ⚠ **AMENDED by `-473` Q1 B / `-474` item 2** (the words above are kept): a fee paid on the day of death is now built as AFTER — the claim is HELD (⛔ drive) and `fee_paid_after_death` is accepted for it.
 - ⚠ **What the member must also be told, because it is TRUE:** until row `3-13` builds verification during life, EVERY member who typed
   their details in is checked this way at death (G2), and a typed-in member who is later verified (3-13) is ⛔ checked again at death —
   the identity half reads the record at the time of the check.
@@ -251,6 +252,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   ⛔ `member/workplace.ts` `istToday` (its module imports drizzle / db / schema). Handler-side import precedent (v1.3):
   `claims.certificate-reminder.handlers.ts` and `claims.correction-chase.handlers.ts` already call it as `cycleCalendar.istDateOf` — copy
   that import in the API handler.
+  ⚠ **AMENDED by [`-475`](../../.decision-log.md#decision-2026-11-21-475)** (code review 2026-11-21; the words above are kept): since `-475` the joining confirm's `pending-fee → lock-in` event carries the STORED receipt's UTR, ⛔ the request body's — a re-confirm with a corrected UTR names this member's receipt. The body-UTR shape survives only in an event written before it (or a raw one): the `member_id` leg's defence.
 - **G4 — The date of death.** Three places, one of them authoritative:
   (i) `claim_death_certificate_reviews.accepted_date_ciphertext` (Tier-1, `YYYY-MM-DD`, ACCEPTED reviews only) +
   `accepted_date_index` (a keyed blind index — EQUALITY only, ⛔ ordering), written by the District Admin through
@@ -432,6 +434,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   gate-failed confirm whose T&C consent / medical disclosure the family supplied after the death) — compares the RECEIPT's `paidAt`, as
   the ruled words say, so the drive may open. Built that way; ⛔ settled here — it is TL3 in the note (it brushes the story's own *"became
   a member only after they had died"* and Niyamavali §2.1 (d) admission).
+  ⚠ **AMENDED by [`-475`](../../.decision-log.md#decision-2026-11-21-475) and [`-476`](../../.decision-log.md#decision-2026-11-21-476) item 2** (the words above are kept): *"It is REACHABLE"* now reads UNREACHABLE through the door (the event names the stored receipt) — kept as the fail-closed defence; *"a staff escalation"* is replaced by the staff line *"Please tell the Super Admin."* (an escalation never unblocked the claim: the gate runs at both steps and all six sites).
 - **DL4 — The identity half's trigger (N2).** `identity_required = (no KYC row) OR (verification_strength <> 'aadhaar_kyc' AND
   trusteeVerified = false)` — so `self_declared` AND `unverified` both count as unchecked (the latter and the no-row arm are fail-closed
   defence, unreachable today — N2). Read by the handler (to show and record) AND by the gate's state function (to enforce — plaintext
@@ -519,6 +522,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   ([[project_contracts_tests_outside_tsc]]); run them. Claim-state guard: the same window as the certificate review
   (`CLAIM_REVIEW_WINDOW_STATES`) — a check outside it is 409 `membership_check.window_closed`. Routes file registered in
   `registerClaimsModule` and classified in the human-actor gate's COVERAGE_SET (G15).
+  ⚠ **AMENDED** (code review 2026-11-21; the words above are kept): the POST body gains a REQUIRED nullable `expected_live_check_id` (the preview's `live_check.check_id`; `null` = none) and the refusals gain `membership_check.check_changed` (the live check is ⛔ the one the staff member saw — refused under the claim lock; the console refetches on it); the preview gains `fee_blocks_approval` (N1). Review patches 3 and 4 were WRITTEN as "`stale`"; BUILT as this separate code, so a changed certificate and a changed check say different things.
 - **DL11 — Event + audits (N7).** NEW event `claim.membership_checked` (annotation, ⛔ state change — the reducer's no-op arm; payload:
   `check_id`, `death_certificate_review_id`, `fee_outcome`, `identity_required`, `identity_outcome`, `identity_reason`), lockstep files
   per G11 (`CLAIM_EVENT_TYPES` 39 → 40 at `9f5e2c84`; a new frozen literal `STORY_6_39_CLAIM_EVENTS = ['claim.membership_checked']` + its exclusion
@@ -628,6 +632,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
    `lock-in` ⇒ the joining one is chosen; ANOTHER member of the Pariwar holding a receipt whose UTR equals a re-confirm's typed UTR is ⛔
    chosen (the `member_id` leg); a re-confirm with a corrected UTR (the event's UTR on ⛔ receipt of the member) ⇒ 409
    `membership_check.no_fee_receipt` and ⛔ row.
+   ⚠ **AMENDED by [`-475`](../../.decision-log.md#decision-2026-11-21-475)** (the words above are kept): the corrected-UTR leg is now the fail-closed DEFENCE — a raw event naming ⛔ receipt of the member ⇒ 409 `membership_check.no_fee_receipt`; a REAL re-confirm with a corrected UTR finds the receipt (`vyawastha-shulk.spec.ts`, the `-475` leg, through `readJoiningFeeReceipt`).
 4. **AC4 — Recording a check (DL2, DL4, DL8, DL10).** Live-DB through the API: a DigiLocker-verified deceased ⇒ `identity_required false`,
    `identity_outcome` must be `not_required` (any other ⇒ 400); a `self_declared` deceased ⇒ `identity_required true` and `not_required` ⇒
    400; the `unverified` and no-KYC-row deceased (raw fixtures — fail-closed defence, unreachable today) ⇒ `identity_required true`;
@@ -695,6 +700,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
     ⛔ the reason code leaves the server. The family's appeal card shows `appeal.refused_not_member` INSTEAD of `appeal.eligible` then, and
     only then (pure-view unit test), in `en` AND `hi`, word for word as `-474` item 4, with a real-`t()` leg
     ([[feedback_stub_must_call_not_transcribe]]).
+    ⚠ **AMENDED** (code review 2026-11-21; the words above are kept), under `-474` item 4's *"its LIVE denial"*: the value follows the denial that MADE the claim `denied` — the P1 verifier's (`claim.verifier_denied`) or the final vote's (`claim.state_trustee_denied`, phase `frozen_vote`), an appeal's `upheld` review skipped. So a P1 fee denial reversed on appeal and then denied otherwise — by the final vote or by R9 — ⇒ `null`; a reversal then a final-vote fee denial ⇒ `not_a_member_when_died`; *"a claim reversed on appeal ⇒ `null`"* holds while it is `reversed`. Proved in `membership-check-approval.spec.ts`, "AC16 — through an appeal" (five legs).
 17. **AC17 — Q4 B (`-473` Q4; `-474` item 5).** `MemberDeathCertificateStatusResponse` gains `identity_check_waiting: boolean` — `true`
     iff the certificate is `accepted` and `membershipCheckApprovalState` answers `identity_not_confirmed` (live-DB: `true` there; `false`
     for `not_checked`, `stale`, `fee_after_death`, a confirmed identity, and a claim that is no longer in review); ⛔ the gate's reason leaves
@@ -805,6 +811,12 @@ vyawastha-shulk, required-routes). ⚠ **`ci:local` on a FRESH container NOT run
 refused by the session's auto-mode classifier; recorded un-attested ([[feedback_record_unattested_no_backfill]]), so the Status
 stays `review` until that run is green. ⚠ The real-browser pass of the console (Row 46 (d)) stays un-attested; the console changed
 again here (the note now follows `fee_blocks_approval`; the `check_changed` refusal and its refetch).
+⚠ **CORRECTED by round 2** (the words above are kept): (i) *"Each new test was proved RED first"* is TRUE only of the three named —
+the lost-update guard, the refusal-reason read, the UTR line; the AC15 / AC17 legs pin behaviour that already existed (⛔ fix to revert),
+and the N1, contract and predicate tests were ⛔ reverted. (ii) `ci:local` on a FRESH container has SINCE RUN: **40 / 40 at
+`fb14510e`** on `twt-639-review-pg` (port 5450, DB `twt_dev`, 212 migrations — BigDev ran `db:migrate` from the worktree after the
+session's was refused), so the stated condition for leaving `review` is met. (iii) Patches 3 and 4 were BUILT as the code
+`check_changed`, ⛔ `stale` (DL10's amendment note).
 
 - [x] [Review][Decision] ⭐ RESOLVED 2026-11-21 by BigDev: option (a) — now the first [Review][Patch] below. A member who paid can leave the claim with no way to ever be checked, and "Escalate this claim" does not unblock it —
   DL3's reachable case is a gate-failed confirm re-confirmed with the same `tr` and a corrected UTR. The vyawastha-shulk re-confirm keeps
@@ -835,6 +847,26 @@ the gate ignores the receipt (one receipt per UTR; the joining event is fixed); 
 pattern); `ON DELETE cascade` (sibling pattern; receipts have no DELETE grant); the fee deny offered only on `ready_to_freeze` (that
 bucket holds `reversed`); two pooled connections (the repo-wide `openScopeTx` pattern); "latest posting" as a raw id (a plaintext
 district name); other producers of the new required fields (typecheck + `ci:local` 40/40).
+
+### Review Findings — round 2 (the fix diff)
+
+Adversarial review 2026-11-21 of the FIXES (`c5041036..fb14510e`, 26 files; three parallel read-only layers), run at BigDev's ask
+after `ci:local` went **40 / 40 green at `fb14510e`** on a FRESH container (`twt-639-review-pg`, port 5450, DB `twt_dev`; 212
+migrations; BigDev ran `db:migrate` from the worktree). 1 decision-needed, 9 patch, 1 defer, 13 dismissed. Each finding re-verified
+by hand. Who decides (§0): all the AUTHOR's; none the Panel's.
+
+- [x] [Review][Decision] ⭐ RESOLVED 2026-11-21 by BigDev (*"1"*): option (a) — recorded in author-commit [`-476`](../../.decision-log.md#decision-2026-11-21-476) (`536925b5`, committed ALONE). Patch 9 rewrote a staff line that `-472` DL12 approved WORD FOR WORD — *"This reason can be used only when the membership check found the fee was paid after the death."* → *"… found the fee was not paid before the date of death."* (API, admin, domain error) — with no decision entry; `-475`'s Consequences wrongly said the other patches "need no entry". BigDev's "all" covered the patch text that quoted the new words, so the approval exists in the session, ⛔ in the log. Options: (a) record it in a new author-commit entry (`-476`) that amends DL12's not-shown line and also corrects `-475`'s two slips (the "REACHABLE" / "a staff escalation" words it quotes are the STORY's DL3, which `-472` adopted as written; "Please tell the Super Admin." was the helpline and ground-inspection surfaces' words, ⛔ this console's); (b) revert the line to DL12's words. [`apps/admin/src/modules/claim-verification/i18n-en.ts:1059`; `apps/api/src/modules/claims/membership-check-required-message.ts:28`; `packages/domain/src/claim/errors.ts:699`]
+- [x] [Review][Patch] The story's spec text was not annotated for `-475` / the fixes (the AC8 "⚠ AMENDED … words kept" pattern): G3 and DL3 (the event carries the body's UTR; "It is REACHABLE"; "a staff escalation"), AC3 (a real corrected-UTR re-confirm now FINDS the receipt; the 409 leg is the raw defence), AC16 (keyed on the denial that made the claim denied — a P1 fee denial reversed then denied otherwise ⇒ `false`; a reversal then a final-vote fee denial ⇒ `true`), DL10 (the required `expected_live_check_id`; the new code `check_changed`), patches 3 and 4 (built as `check_changed`, ⛔ `stale`), the Niyamavali bullet that still says a same-day fee is built as "after… the drive may open", and the Policy-meaning note's "operative" sentence (true only once row 6-39a builds Q2 B) [this file]
+- [x] [Review][Patch] Records: the green `ci:local` (40 / 40 at `fb14510e`) shown on the round-1 note, a Change Log row, the ledger and Completion Notes; the "each new test proved red first" over-claim narrowed to the three named (the AC15 / AC17 legs pin behaviour that already existed); the File List gains the six files of `27898db7` [this file; `sprint-status.yaml`]
+- [x] [Review][Patch] Stale comments: `membership-check-read.ts` header (the DL3 note still says the event carries the BODY's UTR); its escalation note (after an escalation denial there is ⛔ live verifier decision — `resolveEscalation` supersedes the escalated row — ⛔ "an `escalated` one"); the `phase = 'frozen_vote'` narrowing stated (only the final vote may carry the reason: DL9, the escalation refuses it, R9's denial is always `r9_panel_denied`); `membership-check-persist.ts` header guard list lacks (5b) [`packages/domain/src/claim/membership-check-read.ts:16`, `:150`; `packages/domain/src/claim/membership-check-persist.ts:11`]
+- [x] [Review][Patch] `check_changed` audit: the rejection's context records neither the client's `expected_live_check_id` nor a way to see which check blocked it (family 8) — add the client-echoed token beside the client-echoed review id [`apps/api/src/modules/claims/claims.membership-check.handlers.ts`]
+- [x] [Review][Patch] The `check_changed` words blame "another" check — a lost-response RETRY of the staff member's OWN committed check gets them too. Neutral words: *"The membership check on this claim changed since you opened it. It has been reloaded — check again."* (API: *"… — open it again."*) [`apps/admin/src/modules/claim-verification/i18n-en.ts:1046`; `apps/api/src/modules/claims/claims.membership-check.handlers.ts`]
+- [x] [Review][Patch] The `-475` live leg re-writes the DL3 join by hand — call `readJoiningFeeReceipt` itself, so the leg fails if the reader drifts [`apps/api/tests/integration/vyawastha-shulk/vyawastha-shulk.spec.ts`]
+- [x] [Review][Patch] The 23505 backstop's catch path is untested (the race spec is serialised by the claim lock, so it proves (5b)). Constructible: a holder inserts a live row RAW without the claim lock, uncommitted; the writer passes (5b), blocks on the index; the holder commits ⇒ the writer's typed `check_changed`, ⛔ a 500. ⚠ **Applied as far as it can be — the claim was WRONG:** built that way, the leg ran GREEN with the 23505 mapping REMOVED. The raw insert's FK check takes a KEY SHARE lock on the claim row, which conflicts with the writer's `FOR UPDATE`, so the writer waits at (1) and (5b) answers. Every inserter of a check row serialises on the claim row: the backstop is NOT constructible (covered by construction; the predicate test stands). The leg is kept, renamed for what it proves (a lockless raw writer still serialises), and the comments say so [`packages/domain/tests/integration/claim/membership-check-concurrency.spec.ts`]
+- [x] [Review][Patch] `refusal_reason` branches untested: an ESCALATION's denial (`claim.verifier_denied` with ⛔ live verifier decision) and an R9 denial after a reversal (`claim.r9_outcome`) ⇒ `false` even with a P1 fee row still live [`packages/domain/tests/integration/claim/membership-check-approval.spec.ts`]
+- [x] [Review][Defer] On a re-confirm with a corrected UTR the corrected value is now stored NOWHERE in full (the receipt and the event keep the first one; the audit keeps only the masked last four), and the event's `amount_inr` still comes from config, not the receipt (no reader today) [`apps/api/src/modules/vyawastha-shulk/handlers.ts:307`] — deferred: a reconciliation concern for row 6-39a (the Trust's bank statement), ⛔ the gate's
+
+Dismissed (13): `event_version` "may be a schema version" (it is the per-stream sequence: `events_log_stream_id_event_version_uq`, ≥ 1, monotonic); the `frozen_vote` narrowing as a bug (only the final vote can carry the reason — recorded above as a comment fix); the preview's `live_check` null while a live row exists (`getLiveMembershipCheck` reads any live row); other writers of the joining lock-in event (only the joining confirm writes `pending-fee → lock-in`; line 552 is the renewal); the upheld leg "passes on the old read" (it is what proves the CTE's appeal-review skip: without the skip the latest denial is the review and the read is `false`); the console re-sending after a refetch (the form's fingerprint includes `live_check.check_id`, so the answer resets); the API appeal leg being weak (the domain legs carry it — by design, said in its comment); the OpenAPI / error catalogue (the determinism gate is green; the route is not in `openapi/v1.yaml`); the concurrency spec's committed members and receipts (a fresh tenant, the sibling specs' pattern); the "Fee paid after the death" label beside "not paid before" (`-474` kept the label); the escalation result (correct; only its comment is wrong — above); the 23505 path "unreachable" as a bug (it is the backstop — its test is above); the audit's masked body UTR differing from the event (folded into the defer).
 
 ## Dev Notes
 
@@ -1113,6 +1145,18 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
     harness — the pure view + real `t()` stand in).
   - ⛔ Q2 B — row `6-39a-…` (`-474` item 1); until it lands the comparison stays binding with ⛔ staff remedy.
 
+- **Code review 2026-11-21 — two rounds** (`bmad-code-review`; § Review Findings, both rounds):
+  - Round 1 (the whole branch, source only): 1 decision + 9 patch. The decision ⇒ author-commit `-475` (`68ac6305`); all ten patches
+    in `27898db7`; records `fb14510e`.
+  - **`ci:local` on a FRESH container: 40 / 40 at `fb14510e`** (`twt-639-review-pg`, port 5450, DB `twt_dev`, 212 migrations).
+  - Round 2 (the fix diff `c5041036..fb14510e`): 1 decision + 8 patch + 1 defer, 13 dismissed. The decision ⇒ author-commit `-476`
+    (`536925b5`, DL12's not-shown line, `-475`'s two slips); the eight patches in `5df89866`: the spec annotated (G3, DL3,
+    DL10, AC3, AC16, the same-day edge, the Policy-meaning note), comments, the `check_changed` audit field and neutral words, the `-475`
+    leg through `readJoiningFeeReceipt`, the refusal-reason R9 and escalation legs, and the backstop leg — which showed the 23505
+    backstop is ⛔ constructible (the FK's KEY SHARE on the claim row). The defer (a corrected UTR is stored nowhere in full) is in
+    `deferred-work.md` against row 6-39a.
+  - ⚠ Roster Row 46 (d)'s real-browser pass of the console stays UN-ATTESTED; the console changed again in both rounds.
+
 ### File List
 
 **New**
@@ -1192,6 +1236,14 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 - Records: `.decision-log.md` (`-473`, `-474`), the routing note, roster Row 46, `epics.md` (6.39 lines, the 6.39a stub),
   `deferred-work.md`, `sprint-status.yaml` (row `6-39a-…` minted)
 
+**Code review 2026-11-21** (`27898db7` and round 2)
+- New: `packages/domain/tests/integration/claim/membership-check-concurrency.spec.ts`,
+  `packages/domain/tests/claim/membership-check-one-live-violation.test.ts`
+- Modified: `apps/api/src/modules/vyawastha-shulk/handlers.ts`, `apps/api/tests/integration/vyawastha-shulk/vyawastha-shulk.spec.ts`,
+  `apps/api/tests/integration/claims/appeal.spec.ts`, `apps/admin/src/api/hooks.ts` (and the 6.39 files already listed:
+  the membership-check writer, read, errors, contract, handler, messages, console control and route, i18n, and their specs)
+- Records: `.decision-log.md` (`-475`, `-476`), `deferred-work.md`, `sprint-status.yaml`
+
 **Deleted** — none. (Throwaway, never committed: the browser-pass launcher spec, its cookie helper, the probe.)
 
 ## Change Log
@@ -1208,3 +1260,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.7 | 2026-11-21 | Scope GROWN by author-commit [`-474`](../../.decision-log.md#decision-2026-11-21-474) (`8a9801a2`, BigDev: *"split as recommended — Q1, Q3, Q4 in 6.39, Q2 new row"*, then the three wordings approved): Task 8 + AC15–AC17 added; AC8 annotated AMENDED (kept). Status review → in-progress. Q2 B → new row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (backlog). |
 | v1.8 | 2026-11-21 | DEV COMPLETE for Task 8 (`-473` Q1 B, Q3 B, Q4 B under `-474`): code `5b4efdbb`, the friction-budget disposition `37460d6b`; `ci:local` on a fresh container 39 / 40 at `5b4efdbb` (`friction-budget` AC-4 only), then **40 / 40** at `37460d6b`. Roster Row 46 (d) RE-OPENED by the control change — the browser pass ATTEMPTED, ⛔ run (the throwaway DB could ⛔ be migrated), recorded UN-ATTESTED on BigDev's word. Two `deferred-work.md` items (Q3's line stops at the appeal; Q4's Hindi un-reviewed). Status in-progress → review. |
 | v1.9 | 2026-11-21 | CODE REVIEW (`bmad-code-review`, the whole branch `9f5e2c84..c5041036`, source only, three parallel read-only layers): 1 decision-needed, 9 patch, 0 defer, 11 dismissed (§ Review Findings). BigDev chose option (a) for the decision — author-commit [`-475`](../../.decision-log.md#decision-2026-11-21-475) (`68ac6305`): the joining fee's lock-in event records the STORED receipt's UTR; amends `-472` DL3 — then "all": ten patches applied in `27898db7` (the fee re-confirm UTR; "before the date of death" in the staff intro and the deny-guard line; a REQUIRED nullable `expected_live_check_id` with a `check_changed` refusal under the lock, and its 23505 backstop; a two-connection race spec; the preview's `fee_blocks_approval` (N1); `refusal_reason` keyed on the denial that made the claim denied; AC15's `same_day` legs at all six sites and the commit; AC17's `stale` and out-of-review legs; Task 8 ticked). The Policy-meaning sentence annotated as amended by `-473` Q1 B (its words kept). ⚠ `ci:local` on a fresh container NOT run (the classifier refused the container recreate and `db:migrate`) — Status stays `review`. |
+| v1.10 | 2026-11-21 | Records + code (FIX REVIEW, round 2, at BigDev's ask after `ci:local` went **40 / 40 at `fb14510e`** on a FRESH container `twt-639-review-pg` :5450): the fix diff `c5041036..fb14510e` reviewed by three parallel read-only layers — 1 decision, 8 patch, 1 defer, 13 dismissed. BigDev *"1"*: author-commit [`-476`](../../.decision-log.md#decision-2026-11-21-476) (`536925b5`) records DL12's not-shown line as amended and corrects `-475`'s two slips. BigDev *"1"*: the eight patches in `5df89866` + this record — the spec annotated (G3, DL3, DL10, AC3, AC16, the same-day edge, the Policy-meaning note, words kept), comments, the `check_changed` audit field and neutral words, the `-475` leg through `readJoiningFeeReceipt`, refusal-reason R9 and escalation legs; the 23505 backstop shown ⛔ constructible (the FK's KEY SHARE). The round-1 note corrected (red-first narrowed to three; `ci:local` now run). Defer: a corrected UTR stored nowhere in full (row 6-39a). |

@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 6-39-identity-check-before-a-drive-for-an-unchecked-identity.md — round 2, the fix diff (2026-11-21)
+
+- **A corrected UTR typed on a joining-fee re-confirm is now stored nowhere in full**
+  [`apps/api/src/modules/vyawastha-shulk/handlers.ts`, the `pending-fee → lock-in` event]. Since `2026-11-21-475` the event names the
+  STORED receipt's UTR (the one first typed), the receipt keeps it too, and the audit line keeps only the masked last four of the
+  corrected one. Before `-475` the event was the only full record of the correction. Which of the two UTRs was true is ⛔ decided by
+  anything: the membership check compares the receipt's `paid_at` (DL2), not the UTR. Also latent on the same event: `amount_inr`
+  comes from config, ⛔ the receipt (no reader of it today). Owner: BigDev. **Trigger:** row `6-39a-bank-date-for-a-fee-recorded-after-the-death`
+  (matching a payment to the Trust's bank statement) is built — it is the first consumer that may need the true UTR.
+
+---
+
 ## Deferred from: dev of story 6-39-identity-check-before-a-drive-for-an-unchecked-identity.md (2026-11-21)
 
 - **The breach runbook's list of where personal data is held does ⛔ name `claim_membership_checks`**

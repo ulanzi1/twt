@@ -36,6 +36,8 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 All three are in ONE routing note, `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md`: WRITTEN, ⛔ sent (BigDev sends; its evidence
 commands are re-run first). Non-blocking for the build and the merge; each holds go-live (roster Row 46 legs (b), (c)). Recorded under
 author-commit `2026-11-21-472`. Owner: the Panel.
+**2026-11-21, later — the note was SENT** (reported by BigDev, *"sent the note to Panel"*; as committed at `abe2d306`, after E4 was
+re-run at `eedc9be3`; channel and time ⛔ recorded). ⛔ Ruled yet — all three items below stay open.
 
 - **PQ1 (a) — a joining fee paid ON the day of death** (the note's Q1). Not addressed — routed to the Panel. Built: `same_day` PASSES
   the membership check and is shown to staff as "Paid on the day of death" (the ruled words of `-430` Q1 B stop a drive only when the

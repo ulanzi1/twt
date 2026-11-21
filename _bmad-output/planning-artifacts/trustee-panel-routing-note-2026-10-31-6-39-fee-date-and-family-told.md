@@ -1,6 +1,6 @@
 # Trustee Panel routing note — the staff check before a drive: what "the date the fee was paid" means, and what the family is told
 
-> **Status: WRITTEN 2026-10-31, ⛔ sent** (BigDev sends). Written from Story 6.39's create-story and its validation (Task 0.3), which build
+> **Status: WRITTEN 2026-10-31; SENT 2026-11-21** (reported by BigDev; ⛔ ruled). Written from Story 6.39's create-story and its validation (Task 0.3), which build
 > the staff check you ruled on 31 October. ⛔ Member uses the system yet. ⛔ Nothing waits on this note to be built or merged.
 
 ## §0 — the gate
@@ -16,7 +16,11 @@ or cannot yet, what does it tell them?"* — questions about people, ⛔ about c
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ⏳ AWAITING PANEL RULING — SENT (reported by BigDev, 2026-11-21)
+>
+> **SENT.** BigDev told the session on 2026-11-21 that this note has been sent to the Panel (*"sent the note to Panel"*), after its E4
+> was re-run at `eedc9be3` and told line 4 was added (committed `abe2d306`). ⚠ NOT recorded anywhere in the repo: the channel, the
+> time, and whether the text sent is identical to this file as committed at `abe2d306` — the file below is kept as it was then.
 >
 > ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new decision
 > id. ⭐ Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).

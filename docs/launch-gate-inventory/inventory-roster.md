@@ -908,6 +908,12 @@ observes these.
     content shown). The six legs above were ⛔ repeated at `e189a663`; the change touches only what happens on close.
   - **2026-11-21 — (a) status:** row `6-39-…` is `review` on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity`
     (⛔ on `main`). (a) stays OPEN until it lands. (b), (c), (e), (f) unchanged — the Panel note is still WRITTEN, ⛔ sent.
+  - **2026-11-21 — the Panel note SENT.** BigDev reported to the session on 2026-11-21 that
+    `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` has been SENT (as committed
+    at `abe2d306`: E4 re-run at `eedc9be3`, told line 4 added — staff cannot override the date comparison, `-472`'s declared
+    narrowing). Legs **(b)** and **(c)** stay ⏳ OPEN until the Panel rules — ⛔ ruling is recorded. ⚠ Not recorded: the channel, the
+    time, and whether the text sent is identical to the committed file. The `current_status` and `closure_evidence_link` lines'
+    "⛔ sent" are as of the row's commit; this line supersedes them for the sending. ⛔ Criterion is edited.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 

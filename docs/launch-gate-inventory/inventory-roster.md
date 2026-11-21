@@ -908,6 +908,11 @@ observes these.
     content shown). The six legs above were ⛔ repeated at `e189a663`; the change touches only what happens on close.
   - **2026-11-21 — (a) status:** row `6-39-…` is `review` on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity`
     (⛔ on `main`). (a) stays OPEN until it lands. (b), (c), (e), (f) unchanged — the Panel note is still WRITTEN, ⛔ sent.
+  - **2026-11-21 — (a) ✅ MET** (a dated note; the line above stays as written): Story 6.39 LANDED on `main` by fast-forward —
+    PR #331, `9f5e2c84..e244a907`; GitHub CI 40 / 40 on the PR and on the push to `main` (run `44888099491`); row `6-39-…` is
+    `done` on `main`. The membership check exists: the record, the gate at all six approval sites, the commit re-check, the staff
+    surface. (b) — PQ1 (a) ruled and built (`-473` Q1 B); PQ1 (b) waits on row `6-39a`. (c) — ruled and built (`-473` Q3 B, Q4 B).
+    (d) MET for `3c45bc98`, the tree that landed (records-only commits after it). (e), (f) unchanged. The row stays `open`.
   - **2026-11-21 — the Panel note SENT.** BigDev reported to the session on 2026-11-21 that
     `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` has been SENT (as committed
     at `abe2d306`: E4 re-run at `eedc9be3`, told line 4 added — staff cannot override the date comparison, `-472`'s declared

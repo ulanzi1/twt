@@ -1171,6 +1171,12 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
   cycle-freeze card's fee reason and its Approve refused with the final-vote words. The audit lines and the API log carry ⛔ date,
   ⛔ name, ⛔ note. Limits: seeded data, a faked passkey, ⛔ screen reader, the family's two mobile lines ⛔ device-checked. Row 46 (d)
   MET for `3c45bc98` only (dated line in the roster). The "Row 46 (d) stays UN-ATTESTED" lines above are superseded by this one.
+- **LANDED on `main` 2026-11-21** by fast-forward — PR #331, `9f5e2c84..e244a907` (SHAs unchanged; GitHub marked it merged).
+  GitHub CI **40 / 40** on the PR and on the push to `main` (run `44888099491`). The pre-push hook skipped `ci:local` for the branch
+  push (`SKIP_CI_LOCAL=1`, BigDev's call — `ci:local` had run 40 / 40 at `3c45bc98`) and for the landing (every commit already on
+  `origin`). The code-escrow mirror workflow failed on the push, as it has on every push to `main` (`MIRROR_DESTINATION_URL` unset —
+  Story 0.3 Task 8), ⛔ this story's. The "Not pushed" lines of v1.9–v1.12 and the ledger are superseded by this one. Roster Row 46 (a)
+  MET; the row stays `open`.
 ### File List
 
 **New**
@@ -1277,3 +1283,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.10 | 2026-11-21 | Records + code (FIX REVIEW, round 2, at BigDev's ask after `ci:local` went **40 / 40 at `fb14510e`** on a FRESH container `twt-639-review-pg` :5450): the fix diff `c5041036..fb14510e` reviewed by three parallel read-only layers — 1 decision, 8 patch, 1 defer, 13 dismissed. BigDev *"1"*: author-commit [`-476`](../../.decision-log.md#decision-2026-11-21-476) (`536925b5`) records DL12's not-shown line as amended and corrects `-475`'s two slips. BigDev *"1"*: the eight patches in `5df89866` + this record — the spec annotated (G3, DL3, DL10, AC3, AC16, the same-day edge, the Policy-meaning note, words kept), comments, the `check_changed` audit field and neutral words, the `-475` leg through `readJoiningFeeReceipt`, refusal-reason R9 and escalation legs; the 23505 backstop shown ⛔ constructible (the FK's KEY SHARE). The round-1 note corrected (red-first narrowed to three; `ci:local` now run). Defer: a corrected UTR stored nowhere in full (row 6-39a). |
 | v1.11 | 2026-11-21 | Records only: **`ci:local` 40 / 40 at `3c45bc98`** on a FRESH container (`twt-639-review2-pg`, :5451, DB `twt_dev`, 212 migrations); the earlier 39 / 40 on `twt-639-review-pg`'s second run was known failure #18 (its signature confirmed), every other package green with `--continue`. Status `review` → `done` (`bmad-code-review` step 6: every decision and patch of both rounds resolved, ⛔ HIGH / MEDIUM open). ⚠ Roster Row 46 (d)'s browser pass stays UN-ATTESTED — a go-live item, ⛔ a merge blocker. Not pushed. |
 | v1.12 | 2026-11-21 | Records only: the real-browser pass of the console RUN at `3c45bc98` (BigDev: *"complete browser pass and open pr"*) — every leg the two review rounds changed seen in a real Chrome; roster Row 46 (d) MET for `3c45bc98` (dated line); limits recorded. |
+| v1.13 | 2026-11-21 | LANDED on `main` by fast-forward — PR #331, `9f5e2c84..e244a907`; GitHub CI 40 / 40 on the PR and on the push to `main` (run `44888099491`). Roster Row 46 (a) MET (dated line); the row stays `open`. Merge is not go-live. |

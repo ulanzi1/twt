@@ -889,6 +889,25 @@ observes these.
 - **cross_story_discharge_path:** (a) row `6-39-…` landing on `main`; (b), (c) BigDev sends the note → the Panel rules → a Decision, then a follow-up on row `6-39-…` (or a new row) building any difference from the built sides — a ruling that MATCHES the built side still needs its Decision and a dated line here; (d) row `6-39-…`'s staff-surface task; (e) the release checklist; (f) BigDev, at go-live.
 - **notes:** "6-39 `done`" ≠ "members' claims are live". Merge ≠ go-live ([[project_not_in_production_merge_is_not_golive]]). **(1)** ⛔ An open Panel question can stay open for ever behind a built default: (b) and (c) hold go-live until each is RULED, whichever way. **(2)** Until row `3-13` builds verification during life, EVERY member who typed their identity details in is checked this way at death (Story 6.39 G12). **(3)** The check is ONE of the things a claim needs before a drive; this row is ⛔ the whole go-live list for claims — other rows (Row 47 among them) carry their own legs.
 - **dated lines (appended later — the criteria above are never edited, [[feedback_supersede_never_reinterpret]]):**
+  - **2026-11-21 — (d) MET for the tree at commit `17df45f8` ONLY** (Story 6.39 Task 6; the story's Dev Agent Record, *Browser
+    pass (AC12)*). A real Chrome against the real API on a throwaway database migrated from scratch, six legs: the District Admin's
+    console on a typed-in member's claim (both dates and the result shown, ⛔ field to type either; the empty and the half-filled
+    form refused in words; "cannot confirm yet" recorded — the claim's state unchanged — then superseded by "confirmed"; Approve
+    unlocked); a verifier (⛔ control, the reason approval waits shown); a fee paid AFTER the death (the check recorded, Approve held
+    with the deny instruction, the claim denied with *"Fee paid after the death"*); a DigiLocker member with a fee paid ON the day of
+    death (⛔ identity question, the check passes — built A on PQ1 (a)); a claim with ⛔ accepted certificate (the control disabled
+    with its line); and the cycle-freeze page (the final vote's Approve refused in its words, then denied with the reason).
+    ⚠ Its limits, stated so the tick is read for what it covers: sign-in was a cookie helper (⛔ a passkey); most presses were made
+    by script in the page, two by a real pointer; the certificate's date was the fixture's; document previews showed their frames
+    with fixture files; ⛔ exercised — the stale-409 refetch, the R9 panel and the closure surfaces, the no-joining-fee and
+    window-closed states, a screen reader. The pass FOUND one defect (a document titled by its raw type) — fixed in `17df45f8` and
+    re-checked live. A later change to the control re-opens this leg.
+  - **2026-11-21 — (d) re-checked at `e189a663`** (the one change made after the pass: closing the control now FORGETS the date of
+    death, so a reopen is a fresh recorded read — a self-review fix). A short second run on a new throwaway database, the same
+    way: open (one `membership_check_read` line), close (the date is gone from the page), reopen (a SECOND read line, the same
+    content shown). The six legs above were ⛔ repeated at `e189a663`; the change touches only what happens on close.
+  - **2026-11-21 — (a) status:** row `6-39-…` is `review` on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity`
+    (⛔ on `main`). (a) stays OPEN until it lands. (b), (c), (e), (f) unchanged — the Panel note is still WRITTEN, ⛔ sent.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 

@@ -4,6 +4,33 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev of story 6-39-identity-check-before-a-drive-for-an-unchecked-identity.md (2026-11-21)
+
+- **The breach runbook's list of where personal data is held does ⛔ name `claim_membership_checks`**
+  [`docs/runbooks/personal-data-breach-response.md`, *"Where personal data is held"* — the *Claims and deaths* line]. The new table
+  holds a Tier-1 staff note about the person who died. Not addressed by 6.39: the runbook is Story 14.3's and is waiting for the
+  Panel's signature (roster Row 53 leg (a)) — 6.39 has ⛔ task that edits it. Owner: BigDev. **Trigger:** the next changelog row of
+  that runbook, and in any case before it is signed.
+- **An ESCALATED claim whose fee was paid after the death is denied with `other`, ⛔ the dedicated reason**
+  [`packages/domain/src/claim/state-trustee-decision-persist.ts` `resolveEscalation`]. `2026-11-21-472` DL9 gives
+  `fee_paid_after_death` to the District Admin's denial and to the FINAL VOTE's denial only; an escalation's denial is neither, so the
+  writer refuses the code there (and the admin card does ⛔ offer it on an escalated claim). The claim can still be ended — with
+  `other` and a rationale. Resolved via explicit deferral (built as DL9 reads). **Trigger:** a wish to see the dedicated reason on
+  every denial of such a claim (a one-line widening of DL9 — BigDev's call).
+- **The membership check's preview is read again after each recorded check** [`apps/admin/src/api/hooks.ts`
+  `usePostMembershipCheck` — a success invalidates the preview while the control is open]. Each read opens the certificate's date
+  and writes one `admin_claim.membership_check_read` line (ids and codes only), so one sitting writes a read line per recorded check
+  as well as per opening. Seen in the browser pass. Low. **Trigger:** audit-volume or "why was it read twice" questions.
+- **The browser pass did ⛔ cover** the stale-409 refetch, the R9 panel's and the closure surfaces' wait words, the
+  no-joining-fee and window-closed states, and ⛔ screen reader heard the control's `role="alert"` / `role="status"` lines — each is
+  proven by component tests only (roster Row 46 leg (d)'s dated line carries the limits). **Trigger:** the admin accessibility
+  audit (11b.8), or a reported miss.
+- **(Pre-existing, seen while here) the final vote's reason list shows raw codes** [`apps/admin/src/modules/cycle-freeze/PendingCaseCard.tsx`]
+  — `standing_not_met`, `documents_insufficient`, … render as codes; 6.39 labelled only its own new reason (*"Fee paid after the
+  death"*). ⛔ Changed by 6.39 (out of scope). **Trigger:** any pass over that card's copy.
+
+---
+
 ## Deferred from: Story 6.39 Task 0.5 — three edges open with the Panel (2026-11-21)
 
 All three are in ONE routing note, `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md`: WRITTEN, ⛔ sent (BigDev sends; its evidence
@@ -708,6 +735,11 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
     `6-39-identity-check-before-a-drive-for-an-unchecked-identity`.** The row grows by the fee-date / death-date comparison before any
     drive. Its create-story owes the same-day edge and what the family is told. Q2 A leaves the door as built. Story 6.38 is ⛔ changed.
     The text above is kept as the item was put.
+  - *Appended 2026-11-21 (Story 6.39, dev complete — row `review` on its story branch, ⛔ yet on `main`):* **Closed by 6.39** (the
+    build half): the staff membership check compares the joining fee's date with the certificate's date of death before any drive
+    (`2026-11-21-472` DL2, DL5), and a fee paid after the death is ended with the reason `fee_paid_after_death`. Built **A** on the two
+    edges the ruling left open — PQ1 (a) / (b) and PQ2 — until the Panel rules (the section *"Story 6.39 Task 0.5 — three edges open
+    with the Panel"* above; roster Row 46 legs (b), (c)).
 
 ---
 

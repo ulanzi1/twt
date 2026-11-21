@@ -50,7 +50,7 @@ questions (PQ1 (a) / (b), PQ2 — non-blocking) + **TL** = lines the note TELLS 
 
 # Story 6.39: Before Any Drive Opens, Staff Check That the Person Who Died Is the Member — When Nobody Has Checked Their Identity — and That the Joining Fee Was Paid Before the Death
 
-Status: ready-for-dev
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled two staff checks that must happen **before any drive opens** for a death
 > claim. **(a)** `2026-10-31-424` Q1 (a) C — when the member joined by **typing in their own identity details** and nobody has checked
@@ -705,50 +705,50 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
         PQ2 ruled and reflected in code; (d) 6.39's browser pass attested; (e) the fixture KYC provider is never active in production (N2);
         (f) 6.38's D1 (c) (the go-live list it asked for) — ⛔ a PQ that can stay open for ever.
   - [x] 0.6 Ledger line + row `ready-for-dev → in-progress` ([[project_sprint_status_safe_prepend]]; verify the YAML parses).
-- [ ] **Task 1 — The record (AC1, AC14)**
-  - [ ] 1.1 Three migrations (the next free numbers; READ the journal LIVE across branches — [[project_sibling_migration_when_order_shared_db]]):
+- [x] **Task 1 — The record (AC1, AC14)**
+  - [x] 1.1 Three migrations (the next free numbers; READ the journal LIVE across branches — [[project_sibling_migration_when_order_shared_db]]):
         the verifier enum value ALONE, the state-trustee enum value ALONE (`0120`'s form, DL9), then the table +
         `packages/domain/src/schema/claim_membership_checks.ts` + schema barrel + the RLS policy file + `policies/index.ts` + the branded
         id (DL1).
-  - [ ] 1.2 RLS / grant / guard / trigger / index live-DB tests (AC1) — copy the 6.21a reviews table's spec.
-- [ ] **Task 2 — The comparison and the joining receipt (AC2, AC3)**
-  - [ ] 2.1 `compareFeeDateWithDeathDate` in `claim/fee-death-date.ts` (DL2 — `istDateOf` + `isRealCalendarDate`) + unit tests (AC2).
-  - [ ] 2.2 `readJoiningFeeReceipt(db, pariwarId, memberId)` (DL3 — the event via the `getLockInClock` pattern, the receipt by
+  - [x] 1.2 RLS / grant / guard / trigger / index live-DB tests (AC1) — copy the 6.21a reviews table's spec.
+- [x] **Task 2 — The comparison and the joining receipt (AC2, AC3)**
+  - [x] 2.1 `compareFeeDateWithDeathDate` in `claim/fee-death-date.ts` (DL2 — `istDateOf` + `isRealCalendarDate`) + unit tests (AC2).
+  - [x] 2.2 `readJoiningFeeReceipt(db, pariwarId, memberId)` (DL3 — the event via the `getLockInClock` pattern, the receipt by
         `(pariwar_id, member_id, utr)`) + live-DB tests (AC3, raw `paid_at`).
-- [ ] **Task 3 — The writer, routes, event, audits (AC4, AC9, AC10)**
-  - [ ] 3.1 Domain vocabulary (outcomes, reasons) + contracts mirror `membership-check.ts` + `claims/index.ts` export + lockstep test
+- [x] **Task 3 — The writer, routes, event, audits (AC4, AC9, AC10)**
+  - [x] 3.1 Domain vocabulary (outcomes, reasons) + contracts mirror `membership-check.ts` + `claims/index.ts` export + lockstep test
         `claims-membership-check.test.ts`; errors in `claim/errors.ts`.
-  - [ ] 3.2 Writer `recordMembershipCheck` (the claim-row lock only, as the review writer; re-assert the current review id and the
+  - [x] 3.2 Writer `recordMembershipCheck` (the claim-row lock only, as the review writer; re-assert the current review id and the
         receipt; supersede; event) — ⛔ `decrypt`.
-  - [ ] 3.3 Event `claim.membership_checked` (registry, `claim/events.ts` tuple + payload map, reducer no-op arm, count 38, the frozen
+  - [x] 3.3 Event `claim.membership_checked` (registry, `claim/events.ts` tuple + payload map, reducer no-op arm, count 38, the frozen
         literal `STORY_6_39_CLAIM_EVENTS` — G11).
-  - [ ] 3.4 The key `claim.check_membership` (G8's places, the bump block citing Task 0.4's decision; READ LIVE the version at the commit).
-  - [ ] 3.5 Handlers + routes (GET preview — decrypt the certificate date + audit, sentinel → 409; POST) in
+  - [x] 3.4 The key `claim.check_membership` (G8's places, the bump block citing Task 0.4's decision; READ LIVE the version at the commit).
+  - [x] 3.5 Handlers + routes (GET preview — decrypt the certificate date + audit, sentinel → 409; POST) in
         `apps/api/src/modules/claims/claims.membership-check.{handlers,routes}.ts`, registered in `registerClaimsModule`, classified in the
         human-actor gate's COVERAGE_SET (G15); audit types in `audit-sink.ts` through the death-certificate handler's audit path; the
         `membershipCheckGate` packet section + its read-ledger lines + `VERIFIER_CONSOLE_MAX_READS` bump (DL10); the contracts and admin
         fixtures the new required field breaks.
-  - [ ] 3.6 Tests: the API live-DB legs of AC4; the event + audit planted-value legs of AC9; the 403 legs of AC10 (verifier,
+  - [x] 3.6 Tests: the API live-DB legs of AC4; the event + audit planted-value legs of AC9; the 403 legs of AC10 (verifier,
         pariwar_admin, helpline_operator, another district) + the permission / role tests.
-- [ ] **Task 4 — The gate (AC5, AC6, AC8, AC11)**
-  - [ ] 4.1 `membership-check-approval.ts` (DL5) — the state function + the assert; wire into `assertClaimApprovable` at DL5's position
+- [x] **Task 4 — The gate (AC5, AC6, AC8, AC11)**
+  - [x] 4.1 `membership-check-approval.ts` (DL5) — the state function + the assert; wire into `assertClaimApprovable` at DL5's position
         (+ the `@throws` entry); map the error to `<prefix>.membership_check_required` `{ reason }` + a plain message at ALL FOUR
         translators (G16).
-  - [ ] 4.2 `fee_paid_after_death` (DL9): both enum values + both compat / vocabulary maps + contracts copies + the pinned
+  - [x] 4.2 `fee_paid_after_death` (DL9): both enum values + both compat / vocabulary maps + contracts copies + the pinned
         `reasonCodesForOutcome('denied')` list; the domain guard in `adjudicateClaim`, `reviseDecision` AND the final-vote deny
         (`voteOnFrozenClaim`); the `…_not_shown` refusal at the translators.
-  - [ ] 4.3 Fence amendment (AC11): the 6.39 `decrypt` `it` block + planted control; `FENCED_FILES` additions + `toBe` + history line;
+  - [x] 4.3 Fence amendment (AC11): the 6.39 `decrypt` `it` block + planted control; `FENCED_FILES` additions + `toBe` + history line;
         the leaf in the NW1 scan.
-  - [ ] 4.4 Fixtures (DL13) BEFORE wiring: the helper + its API twin; the `membershipCheck` option on both `seedNomineeNameCheck`
+  - [x] 4.4 Fixtures (DL13) BEFORE wiring: the helper + its API twin; the `membershipCheck` option on both `seedNomineeNameCheck`
         fixtures; the direct caller(s) (TR1's corrected list — `peer-mesh-reply`); run the approval-path specs; ⛔ assertion changed.
-  - [ ] 4.5 Tests: AC5 (six sites × `not_checked` / pass, one site per reason, the KYC raw-write `stale`, the order legs); AC6 (the deny
+  - [x] 4.5 Tests: AC5 (six sites × `not_checked` / pass, one site per reason, the KYC raw-write `stale`, the order legs); AC6 (the deny
         legs in all three writers, the post-P1 final-vote deny); AC8 (the ONE test naming PQ1 (a)).
-- [ ] **Task 5 — The commit re-check (AC7)** — DL6 in `commitCycleFreeze` + live-DB test.
-- [ ] **Task 6 — The staff surface (AC12)** — client + hooks (copy `postDeathCertificateReview` / `usePostDeathCertificateReview`; add the
+- [x] **Task 5 — The commit re-check (AC7)** — DL6 in `commitCycleFreeze` + live-DB test.
+- [x] **Task 6 — The staff surface (AC12)** — client + hooks (copy `postDeathCertificateReview` / `usePostDeathCertificateReview`; add the
       `membership_check.*` stale codes to the refetch list); `MembershipCheckControl.tsx` (presentational; the route owns the mutation);
       the approve-blocked arm; the FOUR mappings (G16) + `membershipCheckRequiredMessage`; the reason label + the not-shown refusal copy in
       `i18n-en.ts`; component tests; the browser pass (or un-attested).
-- [ ] **Task 7 — Close** — DL15 comment; DL14 anonymize + AC14's leg; `deferred-work.md` round-4 item A of 6.38 annotated "Closed by 6.39
+- [x] **Task 7 — Close** — DL15 comment; DL14 anonymize + AC14's leg; `deferred-work.md` round-4 item A of 6.38 annotated "Closed by 6.39
       (built A on PQ1 (a) / PQ2 until ruled)"; `ci:local` on a FRESH container on the story's own DB; Completion Notes, File List, Change
       Log; Status → review.
 
@@ -859,6 +859,19 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 
 ### Debug Log References
 
+- The story's own database: container `twt-639-pg`, port 5449, DB `twt_dev` (recreated fresh before each `ci:local`). Every test and
+  `ci:local` command was typed with that `DATABASE_URL` (the shell exports `:5432` — [[project_prepush_hook_inherits_5432]]); `:5432`
+  and `:5433` were ⛔ touched.
+- Approval-path specs BEFORE wiring the conjunct (fixtures in, gate not wired): domain `tests/integration/{claim,member}` 119 files /
+  1602 tests, API `tests/integration/claims` 43 files / 695 tests — all green. AFTER wiring: 6 failures in 2 files
+  (`nominee-name-check.spec.ts` ×2, `approval-warnings-every-approver.spec.ts` ×4) — each builds its claim outside the fixture default
+  or re-reviews the certificate; fixed by seeding a passing check, ⛔ an assertion changed.
+- Mutation checks (a spec that went green first time is ⛔ trusted until it has failed once): the conjunct removed from
+  `assertClaimApprovable` ⇒ 13 of the gate spec's tests fail; the commit skip removed ⇒ both AC7 tests fail; the erasure spec was
+  run RED before the scrub existed (2 of 2 failed), then green.
+- Runtime import of each touched module on its own (`tsx -e import(...)`): the leaf, `nominee-name-check`,
+  `nominee-determination-persist`, the writer, the read, both decision writers — ⛔ init cycle (TR4).
+
 ### Completion Notes List
 
 - 2026-10-31 — Created by `bmad-create-story 6.39`: ultimate context engine analysis completed — comprehensive developer guide created.
@@ -886,7 +899,163 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
     `-262` FQ4 B); `deferred-work.md` — PQ1 (a) / (b) and PQ2 open, trigger the ruling; a dated comment on row `3-13`.
   - **0.6** Ledger `2026-11-21d`; row `ready-for-dev → in-progress`; the YAML parses (314 rows).
 
+- 2026-11-21 — **Tasks 1–7 built (`bmad-dev-story 6.39`).** What follows is what was ACTUALLY built and tested.
+  - **Task 1 — the record.** Migrations `0210` / `0211` (the two `fee_paid_after_death` enum values, each alone) and `0212`
+    (`claim_membership_checks`: one LIVE row per claim, append-only with a column-aware guard, one-way supersession, RLS with
+    SELECT / INSERT / UPDATE legs, the note scrubbable at birth). 17 live-DB tests assert each backstop directly (AC1).
+    ⚠ The outcome / reason columns are `text` + a named CHECK (the `0122` reviews table's own idiom, lockstep TS tuples), ⛔ pg enum
+    types — DL1's "enum" is read as "a closed set"; a later widening (e.g. PQ1) then needs ⛔ `ALTER TYPE`.
+  - **Task 2.** `compareFeeDateWithDeathDate` (import-free but for `holiday-resolver`; 21 unit tests at the 18:30Z boundary) and
+    `readJoiningFeeReceipt` (the lock-in event's UTR, matched by Pariwar + member + UTR; 6 live-DB tests incl. the other-member leg).
+  - **Task 3.** The writer `recordMembershipCheck` (the claim-row lock; the review and the receipt re-asserted; the identity half
+    re-read under the lock; supersede; ONE event), the 40th claim event `claim.membership_checked`, the key `claim.check_membership`
+    (catalog v65 / 96 keys, `district_admin`), `GET` preview + `POST` under the human-actor chain (COVERAGE_SET 20 / floor 20), three
+    audit types, the contracts mirror + lockstep test, and the console packet's `membershipCheckGate` (read budget 33 → 36: the gate
+    reads through its own state function — three statements).
+  - **Task 4.** The leaf `membership-check-approval.ts` (ONE resolver — the conjunct, the commit re-check, the deny-reason guard and
+    the console all call it), wired into `assertClaimApprovable` after the ground inspection; 409 `<prefix>.membership_check_required`
+    `{ reason }` at the four translators with DL12's words; `fee_paid_after_death` on both vocabularies with its guard in
+    `adjudicateClaim`, `reviseDecision` and `voteOnFrozenClaim`; the fence block (⛔ `decrypt` / a date's or a name's ciphertext in the
+    leaf, writer and read — with a planted control) and `FENCED_FILES` 62 → 65; the leaf in the NW1 import scan; the fixtures
+    (`seedMembershipCheck` / `seedPassedMembershipCheck` / `ensurePassedMembershipCheck` + the `membershipCheck` option, both twins).
+  - **Task 5.** `commitCycleFreeze` skips and keeps a claim whose check no longer passes (AC7 — the sibling commits; a later commit
+    takes the kept claim once it passes again).
+  - **Task 6.** `MembershipCheckControl.tsx` (presentational; the route owns the preview-on-open, the mutation and the claim keying),
+    the approve-blocked arm, the four mappings, the reason label on the District Admin's dropdown and on the final vote's list.
+  - **Task 7.** The erasure scrub (only where a note exists; 30 tables / 33 statements), AC14's two legs (direct, and through 6.22's
+    real innocence release), the intake door's comment, the jobs "a notice writes ⛔ decision" fences (table + writer), records.
+- **Decisions made while building — each is the session's, flagged for the reviewer:**
+  1. **`same_day` passes** (PQ1 (a), built A) through ONE constant, `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES = ['after_death']`; the
+     ONE test that names PQ1 (a) is in `membership-check-approval.spec.ts` (AC8).
+  2. **The identity half binds only while the identity is unchecked TODAY** (N2 re-read): a recorded `not_confirmed` stops holding a
+     claim once the record reads DigiLocker-verified. The story states the `not_required`-then-unchecked ⇒ `stale` direction; this is
+     the other direction of the same re-read — reachable only by the 15-minute callback window (G2).
+  3. **DL9 (b) read strictly:** `fee_paid_after_death` is refused on an ESCALATION's denial (`resolveEscalation`) and is ⛔ a Super
+     Admin refusal reason (`isSuperAdminRefusalReasonCode` — a deny-list; the contracts lockstep test caught that the new code had
+     slipped into it). The admin card offers it on a freeze-ready claim only. Recorded in `deferred-work.md`.
+  4. **The preview `GET` answers 200** with ⛔ date / ⛔ comparison when there is ⛔ accepted certificate or ⛔ identifiable joining
+     fee (the console's disabled states need the rest); it answers 409 `membership_check.certificate_date_unreadable` only for an
+     erased / unreadable date. The `POST` refuses each with its own code.
+  5. **`latest_posting_district`** is the district the route's permission check already resolved (`getMemberPostingLatest`) — ⛔ a
+     third "latest posting" reader.
+  6. **Staff copy beyond DL12's list** (the control's headings, radio labels, help lines, refusal lines, the advisory criterion's
+     sentence) was written by the session in the same plain style — DL12's lines are in the copy file word for word and pinned as
+     literals in `membership-check.test.tsx`. ⚠ One line reads *"The record of the member's joining fee cannot be identified…"*: the
+     microcopy gate bans the natural word for it in admin copy.
+  7. **`-210` cl. 2 is ⛔ relied on** for the two enum values, the event or the key (the permission bump block says so).
+  8. **AC9's "`CLAIM_EVENT_TYPES` 38"** is a stale number in the AC text; the live count is 40 (39 + this story's one), as the NUMBERS
+     block and DL11 say.
+- **Existing tests touched, and why (AC13 — ⛔ assertion weakened):** the read-budget pins 33 → 36 (four, with the ledger line); the
+  permission / role / event / reason-code pins the story names; the anonymize unit pins (29 → 30 tables, 32 → 33 statements);
+  `nominee-name-check.spec.ts` and `approval-warnings-every-approver.spec.ts` gained a seeded passing check where they bypass the
+  fixture default or re-review the certificate (as 6.26a did for the inspection, RD19 for the name check); four admin fixtures gained
+  the neutral packet section.
+- **Tests added:** domain — 17 (table) + 21 (comparison) + 6 (joining receipt) + 27 (gate: six sites, each reason, the order, the
+  deny legs, AC7, AC8, the writer's re-assertions) + 2 (erasure) + the fence block + 1 anonymize unit; contracts — 14 + 1; API — 26
+  (`membership-check.spec.ts`) + 8 (`membership-check-required-routes.spec.ts`); admin — 41 (`membership-check.test.tsx`) + 6
+  (cycle-freeze page) + 2 (R9 panel).
+- **Browser pass (AC12) — RUN, 2026-11-21** (BigDev connected the Mac's Chrome on request; the 127.0.0.1 probe loaded). A real
+  Chrome → the admin dev server (:3001) → the real API on a THROWAWAY database (port 5450, migrated from scratch; an uncommitted
+  launcher spec, a cookie sign-in helper — all deleted afterwards). Six legs:
+  (1) District Admin, typed-in member, fee before the death — the gate line and the disabled Approve say *"Membership check needed
+  before approval."*; opened: the two dates, *"Paid before the death"*, *"The system compares the two dates. You cannot change the
+  result."*, *"Typed in at joining, never checked"*, the name and date of birth on record, the posting, two documents; ⛔ radio
+  pre-selected; an empty submit and a reason-less "cannot confirm yet" each refused in words (`role="alert"`); with a reason and a
+  note ⇒ *"The membership check is recorded."* (`role="status"`), the claim still `verifier_review`, the gate line now *"The
+  person's identity has not been confirmed."*; a second check "confirmed" ⇒ the gate passes and Approve is enabled; the database
+  shows the first row superseded (with its note) and the second live.
+  (2) A verifier on a fresh claim — ⛔ membership section, ⛔ certificate control; Approve disabled with the reason.
+  (3) A fee paid AFTER the death — *"Paid after the death"*, the check recorded, Approve held with the deny instruction; the deny
+  list offers *"Fee paid after the death"*; denied through the existing confirm dialog ⇒ `denied`, reason `fee_paid_after_death`.
+  (4) DigiLocker member, fee paid ON the day of death — *"Paid on the day of death"*, *"Checked through DigiLocker"*, ⛔ identity
+  question (the note is the only input); recorded `not_required`; the gate passes (PQ1 (a), built A).
+  (5) ⛔ accepted certificate — the control shows its line and ⛔ disclosure; Approve names the certificate first.
+  (6) The cycle-freeze page (Pariwar Admin) on a P1-approved claim whose re-check reads `after_death` — Approve ⇒ the final-vote
+  words; the reason list offers *"Fee paid after the death"*; denied with it ⇒ `denied`, `frozen_vote` / `fee_paid_after_death`.
+  Afterwards: 14 membership audit lines and the API log searched for both dates, the note and three names — ⛔ one found.
+  ⚠ **Limits:** sign-in by cookie helper (⛔ passkey); most presses made by script in the page (two by a real pointer); one script ran
+  twice (a tool retry — it toggled the control shut, ⛔ other effect); the certificate date was the fixture's (tomorrow, IST); document
+  frames rendered with fixture files (their content ⛔ checked); in dev StrictMode an opening reads the preview twice. ⛔ Exercised: the
+  stale-409 refetch, the R9 panel, the closure surfaces, the no-joining-fee and window-closed states, a screen reader.
+  ⭐ **The pass found a defect the jsdom tests missed:** the death certificate's preview was titled `death_certificate` (the packet's
+  `filename` is the raw document type). Fixed (`17df45f8` — a known kind's label wins), re-checked live, and reproduced in a test.
+  ⭐ **A self-review fix after the pass, then re-checked in the browser:** closing the control kept the decrypted preview in the query
+  cache, so a reopen showed the date with ⛔ new recorded read — against the control's own line *"Each look is recorded."* Fixed in
+  `e189a663` (closing FORGETS it — the certificate history's posture; a test that failed first). A short second browser run at
+  `e189a663` on a new throwaway database: open (one read line) → close (the date gone from the page) → reopen (a second read line).
+  The six legs were ⛔ repeated at `e189a663`.
+- **`ci:local` on a FRESH container** (`twt-639-pg`, port 5449, DB `twt_dev`, recreated before each run): three complete runs. (1) `da858fa7` (before the browser pass): 40 / 40. (2) `e189a663` (the final code tree): 39 / 40 — the ONE red was `apps/api/tests/integration/claims/cycle-freeze.spec.ts` (the 6.19b *"a mark write that fails rolls the return back"* test: *canceling statement due to lock timeout* on its own test-only `CREATE TRIGGER` on the shared `claim_correction_marks`), a known pre-existing collision between spec files, ⛔ a regression; it then passed alone and twice beside its sibling specs. ⚠ Said plainly: this story's `membership-check-required-routes.spec.ts` is one MORE parallel user of that table (its `returned()` helper), so it adds to the odds; the real fix (the test installing its trigger without contending) is still owed and is ⛔ this story's. (3) `e189a663` again, the WHOLE job on a fresh container: **40 / 40**. A run started at `17df45f8` was stopped part-way when `e189a663` superseded it and is ⛔ counted.
+- **For BigDev, outside this story's tasks:** (a) the Panel note (`…-6-39-fee-date-and-family-told.md`) is still WRITTEN, ⛔ sent —
+  its evidence commands must be re-run before it goes (Task 0.3); (b) the breach runbook's list of where personal data is held does
+  ⛔ name the new table (`deferred-work.md`); (c) nothing was pushed — the branch is local (first push needs an explicit refspec and
+  the story's `DATABASE_URL`).
+
 ### File List
+
+**New**
+- `packages/domain/migrations/0210_verifier-reason-fee-paid-after-death.sql`
+- `packages/domain/migrations/0211_state-trustee-reason-fee-paid-after-death.sql`
+- `packages/domain/migrations/0212_claim-membership-checks.sql`
+- `packages/domain/src/schema/claim_membership_checks.ts`
+- `packages/domain/src/policies/claim-membership-check-rls.ts`
+- `packages/domain/src/claim/fee-death-date.ts`
+- `packages/domain/src/claim/membership-check-approval.ts`
+- `packages/domain/src/claim/membership-check-read.ts`
+- `packages/domain/src/claim/membership-check-persist.ts`
+- `packages/domain/tests/claim/fee-death-date.test.ts`
+- `packages/domain/tests/integration/rls/claim-membership-check-policy-regression.spec.ts`
+- `packages/domain/tests/integration/claim/membership-check-joining-receipt.spec.ts`
+- `packages/domain/tests/integration/claim/membership-check-approval.spec.ts`
+- `packages/domain/tests/integration/claim/membership-check-rtbf.spec.ts`
+- `packages/contracts/src/claims/membership-check.ts`
+- `packages/contracts/tests/claims-membership-check.test.ts`
+- `apps/api/src/modules/claims/claims.membership-check.handlers.ts`
+- `apps/api/src/modules/claims/claims.membership-check.routes.ts`
+- `apps/api/src/modules/claims/membership-check-crypto.ts`
+- `apps/api/src/modules/claims/membership-check-required-message.ts`
+- `apps/api/tests/integration/claims/membership-check.spec.ts`
+- `apps/api/tests/integration/claims/membership-check-required-routes.spec.ts`
+- `apps/admin/src/modules/claim-verification/MembershipCheckControl.tsx`
+- `apps/admin/tests/membership-check.test.tsx`
+
+**Modified — domain**
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/index.ts` · `packages/domain/src/policies/index.ts` · `packages/domain/src/ids/index.ts`
+- `packages/domain/src/encryption/field-classes.ts` · `packages/domain/src/encryption/index.ts`
+- `packages/domain/src/claim/index.ts` · `errors.ts` · `events.ts` · `state.ts` · `nominee-name-check.ts` · `intake-door.ts`
+- `packages/domain/src/claim/verifier-decision.ts` · `verifier-decision-persist.ts`
+- `packages/domain/src/claim/state-trustee-decision.ts` · `state-trustee-decision-persist.ts` · `correction-closure.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/rbac/permissions.ts` · `packages/domain/src/rbac/roles.ts`
+- `packages/domain/tests/integration/_helpers.ts` · `tests/integration/claim/nominee-name-check.spec.ts`
+- `packages/domain/tests/claim/{approval-warnings,dpdpa-consent-events,nominee-name-check-events,nominee-name-no-comparison-fence,verifier-decision}.test.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts` · `packages/domain/tests/rbac/{permissions,roles}.test.ts`
+
+**Modified — events, contracts**
+- `packages/events/src/registry.ts`
+- `packages/contracts/src/claims/{index,verifier-console,verification-decision,cycle-freeze}.ts`
+- `packages/contracts/tests/{claims-verifier-console,claims-verifier-decision}.test.ts`
+
+**Modified — API, jobs, scripts**
+- `apps/api/src/context.ts` · `apps/api/src/audit/audit-sink.ts` · `apps/api/src/modules/claims/index.ts`
+- `apps/api/src/modules/claims/claims.{verification-decision,cycle-freeze,r9-voting,correction-closure,verifier-console}.handlers.ts`
+- `apps/api/tests/integration/_nominee-name-check-fixture.ts`
+- `apps/api/tests/integration/claims/{approval-warnings-every-approver,suspicion-refusal-routes,verifier-console,verifier-console-ground-inspection}.spec.ts`
+- `apps/jobs/tests/{claim-suspicion-notice-no-decision,claim-suspicion-staff-email-no-decision}.test.ts`
+- `scripts/claim-adjudication-human-actor-invariant/check.ts`
+
+**Modified — admin**
+- `apps/admin/src/api/{client,hooks}.ts`
+- `apps/admin/src/modules/claim-verification/{i18n-en,nominee-errors}.ts`
+- `apps/admin/src/modules/cycle-freeze/{CycleFreezePage,PendingCaseCard}.tsx` · `apps/admin/src/modules/r9-voting/R9CasePanel.tsx`
+- `apps/admin/src/routes/VerifierConsoleRoute.tsx`
+- `apps/admin/tests/{cycle-freeze-page,later-approval-warnings,death-certificate-review,nominee-declaration-route,verifier-console-route-name-check,verifier-console}.test.tsx`
+
+**Modified — records**
+- `.decision-log.md` (`2026-11-21-472`) · `docs/launch-gate-inventory/inventory-roster.md` (Row 46)
+- `_bmad-output/implementation-artifacts/{deferred-work.md,sprint-status.yaml}` · this story file
+
+**Deleted** — none. (Throwaway, never committed: the browser-pass launcher spec, its cookie helper, the probe.)
 
 ## Change Log
 
@@ -896,3 +1065,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.2 | 2026-10-31 | Task 0.3 done: the routing note `trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` WRITTEN (⛔ sent) — Q1–Q4 = PQ1 (a) / PQ1 (b) / PQ2 (i) / PQ2 (ii), TL1–TL3 as told lines, E4 run. Corrected while writing it: a staff phone call to the CLAIMANT rests on their filing agreement (`-367` decision 2); only a call to a NOMINEE waits on roster Row 34 (Policy meaning, DL8, PQ2). |
 | v1.3 | 2026-11-21 | DRIFT validation (`bmad-create-story validate 6.39`, BigDev: "all, then rebase") at `origin/main` `9f5e2c84` (345 commits past `beae5116`): two read-only traces + the numbers re-read by hand. Every G1–G17 BEHAVIOUR holds (gate order + six sites, commit loop, both deny vocabularies, review window, claim states, KYC writers, receipt + event, certificate review, fence, translators — ⛔ diff); ⛔ Panel ruling on PQ1 / PQ2; ⛔ supersession of `-424` / `-430`. Corrected: NUMBERS (decision ≥ `-472`, migrations `0210`–`0212`, catalog v65 / 96, events 40, COVERAGE_SET 20 / floor 20, `ci:local` 40 jobs, ledger `2026-11-21c`); TR1 (46 files; only `peer-mesh-reply` bypasses the fixture — v1.1's "four" was wrong); DL14 (the innocence release is LIVE through 6.22's `recordFraudFinding` ⇒ the scrub binds at merge; follow 6.22's shared `encryption/field-classes.ts` constant) + an AC14 real-release leg; G7 / DL10 (6.22's self-fetching panel pattern considered, packet section kept); G8 (13.1's `VerifiedAuthorization` — ⛔ needed for claims); G15 registration after `registerFraudInvestigationRoutes`; G1 / DL16 (6.22's flag gates nothing — ⛔ link); G3 (`cycleCalendar.istDateOf` precedent; the TTL is an env setting); TR15 (siblings landed); Task 0.1 re-pinned to `9f5e2c84`; Task 0.3 — the note is still ⛔ sent: re-run E4 before sending. Branch REBASED onto `9f5e2c84` (backup `backup/6-39-pre-rebase-2026-11-21`); SHA map — `c15e47ca` → `450cb34a`, `f792d4e3` → `22979b70` (the E4 run Task 0.3 cites), `a5d74012` → `3825ce5c`, this v1.3 commit `e8af3dde` → `388b5d69`. |
 | v1.1 | 2026-10-31 | Fresh-context validation (`bmad-create-story validate 6.39`): DL9 gives `fee_paid_after_death` to BOTH denial vocabularies (P1 verifier + final-vote state-trustee; P1 cannot deny after P1), guarded in `adjudicateClaim`, `reviseDecision` and `voteOnFrozenClaim`; the Policy meaning is ONE sentence, ⛔ promises an ask nothing builds, and records Niyamavali §2.2; DL1 / AC1 grant `note_ciphertext` + an UPDATE policy at birth for DL14 (the `0122` shape, ⛔ `0121`), AC14 added; DL3 matches the receipt by `member_id` too (the event carries the body's UTR); the gate's codes prefixed per route at four translators + four admin surfaces (G16); AC5's `stale` leg avoids `determination_stale` (TR12); numbers re-read across branches (decision ≥ `-432`, ledger `ag` / `ah`, migrations ≥ `0194`); N3's binding outcome declared a narrowing, PQ1 split into (a) same day — evidence led by `-235` Y + §2.2, suggestion B — and (b) the attest-vs-bank time; DL8 shows every death document; TL1–TL3 told lines; DL6's "page shows why" dropped and the stranded claim recorded; the fixture-KYC-provider leg and roster Row 46; G15–G17 + the fence, NW1 scan, frozen event list, read budget, COVERAGE_SET, RLS policy file, branded id and 44-file blast radius named. |
+| v1.4 | 2026-11-21 | DEV COMPLETE (`bmad-dev-story 6.39`): Task 0 (BigDev accepted DL1–DL16 as written — author-commit `2026-11-21-472`; roster Row 46; ledger `2026-11-21d`), Tasks 1–7 built and tested (see the Dev Agent Record): migrations `0210`–`0212`, the membership check's record / writer / routes / event / key, the gate at all six approval sites and at the commit, `fee_paid_after_death` on both denials, the console control, the erasure scrub. `ci:local` 40 / 40 on a fresh container at the final code tree `e189a663` (its first run there was 39 / 40 — one known pre-existing lock-timeout flake; the whole job was re-run); the real-browser pass RUN (six legs; one defect found and fixed; one self-review fix re-checked). Status → `review`. Built A on PQ1 (a) / (b) and PQ2 — the Panel note is still ⛔ sent. |

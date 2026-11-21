@@ -1,5 +1,5 @@
 ---
-baseline_commit: beae5116
+baseline_commit: 9f5e2c84
 ---
 
 <!--
@@ -11,6 +11,12 @@ is behind `origin/main` at authoring and was ⛔ touched).
 Every `apps/` / `packages/` claim below was traced at `beae5116` on 2026-10-31 by three read-only traces (claim → drive; KYC / fee / date
 of death; staff surfaces / keys / numbers) and the load-bearing ones re-read by hand (`assertClaimApprovable`, the joining-fee confirm,
 `death-certificate-approval.ts`, `CLAIM_REVIEW_WINDOW_STATES`). Re-locate by FUNCTION, ⛔ by line number — line numbers rot.
+RE-VERIFIED 2026-11-21 (v1.3, `bmad-create-story validate 6.39`, a DRIFT pass) at `origin/main` `9f5e2c84` — 345 commits past the pin
+(Stories 6.22, 12.1, 12.2, 11b.5a, 13.x, 14.3 and others landed): two read-only traces, the load-bearing numbers re-read by hand. Every
+G1–G17 BEHAVIOUR holds (`git diff beae5116 9f5e2c84` is EMPTY on the gate, the commit loop, both deny vocabularies, the review window, the
+claim states, the KYC writers, the receipt + its event, the certificate review, the fence test, the four translators); the NUMBERS, TR1's
+list, DL14's premise and G15's counts had moved and are corrected in place. The branch was then REBASED onto `9f5e2c84` (records only —
+this branch carries ⛔ code).
 
 §0 GATE (the routing template's, applied FIRST — `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`): the BEHAVIOUR is
 the Panel's and is RULED — `2026-10-31-424` Q1 (a) C (staff check an unchecked identity before any drive opens) and `2026-10-31-430` Q1 B
@@ -27,13 +33,16 @@ GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `�
 the row key.
 
 NUMBERS: ⛔ claimed by this file. "Anywhere" means EVERY branch and worktree (`git for-each-ref refs/heads refs/remotes` + each worktree's
-dirty tree), ⛔ `main` alone. At 2026-10-31: `main` holds decision `-430`, ledger `2026-10-31u`, migration `0192_questionnaire-versions`
-(journal idx 192); ⚠ the siblings hold MORE — `story/11b-5a-…` decisions `-426` / `-428` / `-431` and ledger `w`–`af`; `story/12-1-…`
-decisions `-427` / `-429`, ledger `v` / `w`, and an UNTRACKED `0193_marketplace-modules.sql` (journal idx 193) in its worktree, plus edits
-to `packages/events/src/registry.ts` (expect a rebase conflict there). ⇒ next free: decision ≥ `-432`, ledger ≥ `2026-10-31ag`, migrations
-≥ `0194` / `0195`. The permission catalog is v56 / 74 keys and `CLAIM_EVENT_TYPES` is 37 on every branch. This create-story run's ledger
-lines are `2026-10-31ag` (created) and `2026-10-31ah` (validated). Task 0.4's decision entry, the migrations, the catalog bump and the event
-count are "the next free one" at the commit that takes each — READ LIVE then, across branches.
+dirty tree), ⛔ `main` alone. ⭐ At 2026-11-21 (`9f5e2c84`): `main` holds decision `-471`, ledger `2026-11-21b`, migration
+`0209_breach-withdrawal-and-opened-stamp` (journal idx 209), `PERMISSION_CATALOG_VERSION = 64` / 95 keys, `CLAIM_EVENT_TYPES` 39
+(`STORY_6_22_CLAIM_EVENTS` the latest frozen literal), the human-actor gate's COVERAGE_SET 19 entries / `COVERAGE_FLOOR = 19`,
+`FENCED_FILES` 62, `VERIFIER_CONSOLE_MAX_READS` 33, roster highest Row 53 (Row 46 RESERVED for this story by name — Row 53's note), `ci:local`
+40 jobs. ⛔ Unmerged branch holds more: `story/6-22b-…` (records only, 2026-11-02) stops at migration `0198` / catalog 58 / decision `-440`;
+every other unmerged `story/*` ref is older and lower. ⇒ next free: decision ≥ `-472`, ledger ≥ `2026-11-21c`, migrations ≥ `0210` /
+`0211` / `0212`, catalog v65 / 96 keys, `CLAIM_EVENT_TYPES` 40. (Superseded 2026-10-31 values, kept for the trail: decision `-430`, migration
+`0192`, catalog v56 / 74, events 37.) This branch's ledger lines: `2026-10-31ag` (created), `2026-10-31ah` (validated), `2026-10-31aj` (the
+note) — all three FREE on `main` (it skipped them) — and `2026-11-21c` (this drift validation). Task 0.4's decision entry, the
+migrations, the catalog bump and the event count are "the next free one" at the commit that takes each — READ LIVE then, across branches.
 
 LETTERS: **G** = found facts (G1–G17); **DL** = build decisions (DL1–DL16 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel
 questions (PQ1 (a) / (b), PQ2 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR15); **AC1–AC14**.
@@ -203,6 +212,11 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   return, the suspicion wait, `groundInspectionApprovalState(await readGroundInspectionApprovalFacts(...)).complete` and the
   payment-committed claim, and SKIPS (keeps `state_trustee_approved`) a claim that fails — a silent `continue`: it returns
   `committedClaimIds` only, its audit records `committed_count` only, and ⛔ skip reason reaches the cycle-freeze page today.
+  ⭐ (v1.3) Story 6.22's fraud register (landed) adds ⛔ conjunct and ⛔ commit skip: the flag *"gates NOTHING (the built side of the
+  Panel's Q7 — ⛔ no approval gate reads it)"* (`fraud-investigation-persist.ts`); a guilty or innocent finding CLOSES the claim (`closed`,
+  with a derived "found alive" label from `claim_fraud_investigation_steps` — ⛔ a new state; `-439`: a guilty finding leaves an approved /
+  settled claim as it is). ⇒ ⛔ Wire the membership check to the fraud flag: a closed claim is outside the review window, so a check there
+  is simply `membership_check.window_closed`.
 - **G2 — The identity record.** `member_kyc_profiles` (`packages/domain/src/schema/member_kyc_profiles.ts`, migration `0024`): ONE row per
   member (PK `member_id`), latest-wins (`upsertMemberKycProfile` — `onConflictDoUpdate`); `verification_strength` ∈ `aadhaar_kyc`
   (DigiLocker) | `self_declared` (manual) | `unverified`; `source` ∈ `digilocker` | `manual`; `trusteeVerified boolean NOT NULL DEFAULT
@@ -211,7 +225,8 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   `upsertMemberKycProfile` (`kyc/profile-write.ts`, two callers — the DigiLocker `POST /api/v1/kyc/callback` and `/manual`) and
   `anonymizeMember` (scrubs name / DOB / photo / `aadhaar_masked_id`, ⛔ `verification_strength` / `source` / `trusteeVerified`). ⚠
   `/manual` is gated on `pending-kyc`; the CALLBACK is ⛔ gated on member state — only on a `pending`, unexpired `kyc_transactions` row,
-  minted by `/initiate` while `pending-kyc`, TTL 15 min (`DIGILOCKER_TRANSACTION_TTL_MS`). ⇒ **once a claim exists the deceased's KYC
+  minted by `/initiate` while `pending-kyc`, TTL 15 min (the env setting `DIGILOCKER_TRANSACTION_TTL_MS`, read in `config.ts`,
+  default `15 * MINUTE` — ⛔ a code constant). ⇒ **once a claim exists the deceased's KYC
   record cannot change**, short of a callback landing within 15 minutes of a KYC start (`self_declared` → `aadhaar_kyc` only — N2's re-read
   covers it); erasure is refused while a death report stands (`resolveRtbfLegality` → `isDeathReportStanding`). A future 3-13 that sets
   `trusteeVerified` only relaxes N2.
@@ -230,7 +245,9 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   member's receipt under `(pariwar_id, utr)` alone (DL3). UTR is plaintext in both places (masked only in audits — `maskUtr`).
   `getLatestReceipt` (`payment/receipt-read.ts`) exists and is WRONG here (it would pick a receipt added after the death). ⛔ IST
   conversion anywhere on this path today; `istDateOf` (`cycle-calendar/holiday-resolver.ts`, zero imports) is the helper —
-  ⛔ `member/workplace.ts` `istToday` (its module imports drizzle / db / schema).
+  ⛔ `member/workplace.ts` `istToday` (its module imports drizzle / db / schema). Handler-side import precedent (v1.3):
+  `claims.certificate-reminder.handlers.ts` and `claims.correction-chase.handlers.ts` already call it as `cycleCalendar.istDateOf` — copy
+  that import in the API handler.
 - **G4 — The date of death.** Three places, one of them authoritative:
   (i) `claim_death_certificate_reviews.accepted_date_ciphertext` (Tier-1, `YYYY-MM-DD`, ACCEPTED reviews only) +
   `accepted_date_index` (a keyed blind index — EQUALITY only, ⛔ ordering), written by the District Admin through
@@ -273,17 +290,29 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   `verifier-console.spec.ts` and `suspicion-refusal-routes.spec.ts` — READ the value live). Data: `apps/admin/src/api/client.ts`
   (`apiFetch(path, zodSchema, init?)` — module-PRIVATE; `ApiError(status, code, message, details?)`), `apps/admin/src/api/hooks.ts`
   (`usePostDeathCertificateReview` invalidates the console, nominee-declaration and history queries; codes in
-  `DEATH_CERTIFICATE_REVIEW_STALE_CODES` refetch). ⚠ Admin `apiFetch` has ⛔ transport timeout (6.38 D6) — a hung POST leaves the control
-  pending.
-- **G8 — Keys and roles.** `packages/domain/src/rbac/permissions.ts`: `PERMISSION_CATALOG_VERSION = 56`, 74 keys, `<resource>.<action>`
+  `DEATH_CERTIFICATE_REVIEW_STALE_CODES` refetch). ⚠ Admin `apiFetch` has ⛔ transport timeout (6.38 D6 — still OPEN at `9f5e2c84`; only
+  the workplace writes' `boundedWrite` has one) — a hung POST leaves the control pending.
+  ⭐ (v1.3) The NEWEST console panel, Story 6.22's `FraudInvestigationPanel.tsx`, uses a DIFFERENT pattern: mounted UNCONDITIONALLY
+  (`<FraudInvestigationPanel key={claimCaseId} …/>`), it fetches its OWN read only when its disclosure opens (`useFraudInvestigation(…,
+  open)`) and gates its form on the server's `data.viewer.can_record_finding` — ⛔ packet section, ⛔ `VERIFIER_CONSOLE_MAX_READS` bump.
+  The packet's sections at `9f5e2c84` are unchanged by it (identity, validity, concealment, documentReview, peerMesh?, groundInspection,
+  priorVerifierComments, recentPrecedents, shepherd, nomineeNameCheck, groundInspectionGate, suspicionRefusal, otherClaimsForDeath,
+  finallyApprovedElsewhere, approvalWarnings). DL10 names the choice.
+- **G8 — Keys and roles.** `packages/domain/src/rbac/permissions.ts`: `PERMISSION_CATALOG_VERSION = 64`, 95 keys at `9f5e2c84` (56 / 74 at
+  the pin — 21 keys since, among them 6.22's `claim.flag_fraud` / `claim.record_fraud_finding`, `module.manage` and the `field_worker.*`
+  keys; READ LIVE at the commit), `<resource>.<action>`
   (ONE dot; `claim.check_nominee_name` is the `claim.check_*` precedent). `district_admin` (ceiling `district`) holds `claim.verify`,
   `claim.review_death_certificate`, `claim.approve`; `super_admin` derives every key; claim keys are enforced by
   `requirePermissionHook(deps, KEY, { dimension: 'district', resolveValue: districtFromStash })`, the district resolved by
   `resolveNomineeNameCheckDistrict()` (exported from `claims.nominee-name-check.routes.ts`; `districtFromStash` is a per-file closure — copy
   `claims.death-certificate.routes.ts`). Minting a key touches: `permissions.ts` (the key's doc block, the bump block citing its
   author-commit decision id + a "REUSE CHECK" paragraph, `SEED_PERMISSION_KEYS`, the version), `roles.ts` (a `permissionKey(...)` const +
-  the grant), `packages/domain/tests/rbac/permissions.test.ts` (history comment, `toBe(56)`, `toHaveLength(74)`), `roles.test.ts` (a holder
-  test), optionally `matching-grant.test.ts`, the handler's key constant. ⛔ Migration seeds keys; ⛔ contracts mirror; ⛔ admin nav.
+  the grant), `packages/domain/tests/rbac/permissions.test.ts` (history comment, `toBe(64)` → `toBe(65)`, `toHaveLength(95)` →
+  `toHaveLength(96)` at `9f5e2c84` — READ LIVE), `roles.test.ts` (a holder test), optionally `matching-grant.test.ts`, the handler's key
+  constant. ⛔ Migration seeds keys; ⛔ contracts mirror; ⛔ admin nav. `claims.fraud-investigation.routes.ts` (6.22) is the newest copy of
+  the `districtFromStash` closure. ⚠ (v1.3) Story 13.1 changed `requirePermissionHook` (`apps/api/src/modules/rbac/index.ts`) to also
+  store a frozen `VerifiedAuthorization` (`request.authorizations[key]`); ONLY field-worker handlers read it (their events carry the
+  snapshot) — a claims key and handler need ⛔ snapshot and ⛔ change for it. ⛔ Build one.
 - **G9 — The denial.** `VERIFIER_REASON_CODES` (pgEnum `verifier_reason_code`) + `REASON_CODE_OUTCOME_COMPAT` + `isReasonCodeValidForOutcome`
   (`packages/domain/src/claim/verifier-decision.ts`) — and a HAND-KEPT contracts copy (`packages/contracts/src/claims/verification-decision.ts`
   — enum, compat map, predicate: *"the domain write-path re-checks with its own canonical copy"*) pinned by the lockstep describe in
@@ -311,9 +340,10 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   nothing writes a review or a KYC row in that state (G2) — the only way to fail there is a raw write.
 - **G11 — Event and audit shapes.** `claim.death_certificate_reviewed` (`packages/events/src/registry.ts`) — an annotation, ⛔ state
   change, ids + codes only; claim event lockstep: `packages/domain/src/claim/events.ts` (the tuple + the payload map), `claim/state.ts` (the
-  reducer's no-op arm), `CLAIM_EVENT_TYPES toHaveLength(37)` (`packages/domain/tests/claim/dpdpa-consent-events.test.ts`), AND the
-  per-story FROZEN-LITERAL vocabulary diff in `packages/domain/tests/claim/nominee-name-check-events.test.ts` (`STORY_6_21A_CLAIM_EVENTS`, …
-  — fails on ANY new `claim.*` event until listed); `packages/events/tests/claim-registry-coverage.test.ts` follows the registry
+  reducer's no-op arm), `CLAIM_EVENT_TYPES toHaveLength(39)` at `9f5e2c84` (37 at the pin; 6.22 added `claim.fraud_flagged` + `claim.member_found_guilty`)
+  (`packages/domain/tests/claim/dpdpa-consent-events.test.ts`), AND the per-story FROZEN-LITERAL vocabulary diff in
+  `packages/domain/tests/claim/nominee-name-check-events.test.ts` (`STORY_6_21A_CLAIM_EVENTS`, … `STORY_6_22_CLAIM_EVENTS` the latest —
+  fails on ANY new `claim.*` event until listed); `packages/events/tests/claim-registry-coverage.test.ts` follows the registry
   automatically. Audit types in `apps/api/src/audit/audit-sink.ts` (`admin_claim.death_certificate_reviewed`, `…_review_rejected` with its
   reason code, `admin_death_certificate.history_read`) — written after the transaction closes, ⛔ the date or the note; ⚠ the
   `access-wrapper-invariants` gate scans `apps/api/src/modules/claims` for direct `writeAuditEntry` calls — follow
@@ -329,13 +359,15 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   `removed` / `left` / `not_joined` (`pending-kyc`) / `not_paid` (`pending-fee`) at the first report; its header: *"a typed-in identity
   nobody checked is FILED, in any state (its check before a drive is row `6-39-…`)"* — the ONLY code pointer to this row anywhere in
   `apps/`, `packages/`, `scripts/` (DL15 re-words it once built).
-- **G14 — Numbers.** See the NUMBERS block (top): on `main` migration `0192`, decision `-430`, ledger `2026-10-31u`; ACROSS branches the
-  next free are migration `0194`, decision `-432`, ledger `2026-10-31ag`; catalog v56 / 74 keys; `CLAIM_EVENT_TYPES` 37; `FENCED_FILES` 62.
+- **G14 — Numbers.** See the NUMBERS block (top) — at `9f5e2c84`: on `main` migration `0209`, decision `-471`, ledger `2026-11-21b`;
+  ACROSS branches the next free are migrations `0210` / `0211` / `0212`, decision `-472`, ledger `2026-11-21c`; catalog v64 / 95 keys;
+  `CLAIM_EVENT_TYPES` 39; `FENCED_FILES` 62; COVERAGE_SET 19 / floor 19; `VERIFIER_CONSOLE_MAX_READS` 33; roster Row 46 reserved.
 - **G15 — Gates that see a new claims route.** `scripts/claim-adjudication-human-actor-invariant/check.ts` fails on ANY unclassified
-  `claims.*.routes.ts` (*"an unlisted adjudication route is invisible to this gate"*) — its COVERAGE_SET (18 entries; floor 16) needs an
+  `claims.*.routes.ts` (*"an unlisted adjudication route is invisible to this gate"*) — its COVERAGE_SET (19 entries, `COVERAGE_FLOOR = 19` at `9f5e2c84` — 6.22 added `claims.fraud-investigation.routes.ts` and raised the
+  floor to the set's LIVE length; ⇒ 6.39 makes it 20 / floor 20) needs an
   entry `{ file, pathSubstrings: ['membership-check'], owner, expectedMethods: ['get', 'post'] }`, as 6.21a's
-  `claims.death-certificate.routes.ts`. Routes register in `registerClaimsModule` (`apps/api/src/modules/claims/index.ts`, beside
-  `registerDeathCertificateRoutes`).
+  `claims.death-certificate.routes.ts`. Routes register in `registerClaimsModule` (`apps/api/src/modules/claims/index.ts`, after
+  `registerDeathCertificateRoutes` and `registerFraudInvestigationRoutes` — 6.22's, the newest).
 - **G16 — Where the gate's refusals are translated and shown.** Each approval route PREFIXES its own codes — FOUR translators:
   `translateDecisionError` (`claims.verification-decision.handlers.ts`, `verifier_decision.`), `translateCycleFreezeError`
   (`claims.cycle-freeze.handlers.ts`, `cycle_freeze.`), `translateR9Error` (`claims.r9-voting.handlers.ts`, `r9_voting.`),
@@ -354,7 +386,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
 
 - **DL1 — ONE record: a NEW table `claim_membership_checks`** (DL9's TWO enum-value migrations first, each ALONE — the next free numbers
-  across branches, `0194` / `0195` at 2026-10-31 — then the table, `0196_claim-membership-checks.sql`; READ LIVE),
+  across branches, `0210` / `0211` at `9f5e2c84` — then the table, `0212_claim-membership-checks.sql`; READ LIVE),
   append-only with a supersede, copying `claim_death_certificate_reviews`' shape: `check_id uuid PK`, `pariwar_id`, `claim_case_id` (FK),
   `deceased_member_id`, `death_certificate_review_id` (FK — the accepted review the comparison was computed against; the currency token),
   `fee_receipt_id` (FK `vyawastha_shulk_receipts`), `fee_outcome` enum `before_death | same_day | after_death`, `identity_required boolean`
@@ -424,7 +456,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   path.
 - **DL7 — Who checks: a NEW key `claim.check_membership`**, granted to `district_admin` (ceiling `district`, checked at `dimension:
   'district'` on the deceased's posting district — the same person who accepts the certificate), `super_admin` by derivation. Catalog
-  56 → 57, 74 → 75 keys. The checker MAY be the P1 approver (as with the certificate review). *Rejected:* reusing
+  64 → 65, 95 → 96 keys at `9f5e2c84` (READ LIVE at the commit). The checker MAY be the P1 approver (as with the certificate review). *Rejected:* reusing
   `claim.review_death_certificate` (a separate act deserves its own grant and audit, and a later separation of duties needs it); a
   Pariwar-level role (the evidence — the certificate, the inspection — sits with the district). ⚠ "Staff" is the Panel's word; WHICH staff
   is the author's within it — a MATCH, ⛔ a narrowing.
@@ -475,14 +507,18 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   section `membershipCheckGate: { available, passed, reason, viewer: { canCheckMembership } }` in `packages/contracts/src/claims/verifier-console.ts`
   (`VerifierConsolePacket`), computed in `claims.verifier-console.handlers.ts` as `canReview` is (window && `claim.check_membership` at the
   deceased's district) — it drives both the control's mount and the approve-blocked line's new arm (after the ground inspection's); its reads
-  are added to the read ledger and `VERIFIER_CONSOLE_MAX_READS` bumped (G7). ⚠ A new REQUIRED packet field breaks the fixtures in
+  are added to the read ledger and `VERIFIER_CONSOLE_MAX_READS` bumped (33 at `9f5e2c84` — READ LIVE; G7). *Considered (v1.3):* 6.22's
+  `FraudInvestigationPanel` pattern — mounted always, its own read on open, the form gated on the server's `viewer` flag, ⛔ packet
+  section, ⛔ read-budget bump (G7). Kept the packet section because the approve-blocked line is computed from PACKET sections before
+  submit (6.26a) and must know the check's state without the panel opened; the control MAY still load its preview (DL10's GET) on open,
+  as 6.22's does. ⚠ A new REQUIRED packet field breaks the fixtures in
   `packages/contracts/tests/claims-verifier-console.test.ts` and the admin tests — contracts tests sit OUTSIDE tsc
   ([[project_contracts_tests_outside_tsc]]); run them. Claim-state guard: the same window as the certificate review
   (`CLAIM_REVIEW_WINDOW_STATES`) — a check outside it is 409 `membership_check.window_closed`. Routes file registered in
   `registerClaimsModule` and classified in the human-actor gate's COVERAGE_SET (G15).
 - **DL11 — Event + audits (N7).** NEW event `claim.membership_checked` (annotation, ⛔ state change — the reducer's no-op arm; payload:
   `check_id`, `death_certificate_review_id`, `fee_outcome`, `identity_required`, `identity_outcome`, `identity_reason`), lockstep files
-  per G11 (`CLAIM_EVENT_TYPES` 37 → 38; a new frozen literal `STORY_6_39_CLAIM_EVENTS = ['claim.membership_checked']` + its exclusion
+  per G11 (`CLAIM_EVENT_TYPES` 39 → 40 at `9f5e2c84`; a new frozen literal `STORY_6_39_CLAIM_EVENTS = ['claim.membership_checked']` + its exclusion
   clause in `nominee-name-check-events.test.ts` — ⛔ loosened). Audits: `admin_claim.membership_checked`,
   `admin_claim.membership_check_rejected` (every refusal, with its code), `admin_claim.membership_check_read` — through
   `claims.death-certificate.handlers.ts`'s audit path (G11). ⛔ Date, ⛔ note, ⛔ name in any of them.
@@ -506,20 +542,27 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   id and the KYC row — in `packages/domain/tests/integration/_helpers.ts` beside `seedAcceptedDeathCertificate` AND its API twin in
   `apps/api/tests/integration/_nominee-name-check-fixture.ts` beside `ensureAcceptedDeathCertificate`; AND a new option
   `membershipCheck?: 'passed' | 'skip'` (default `'passed'`, seeded after the certificate is accepted) on BOTH `seedNomineeNameCheck`
-  fixtures, as `certificate` / `inspection` — 40 of the 44 blast-radius files go through them; the other four call the helper directly.
+  fixtures, as `certificate` / `inspection` — 44 of the 46 blast-radius files go through them (TR1, corrected v1.3); the other two do
+  ⛔ — `peer-mesh-reply` calls the helper directly, `nominee-refusal-inheritance` only denies (⇒ likely untouched; run it).
   ⛔ Assertion weakened, ⛔ bypass flag, ⛔ env switch (the 6.38 DL14 rule).
 - **DL14 — RTBF / anonymize.** `note_ciphertext` is Tier-1: follow EXACTLY what 6.21a did for `claim_death_certificate_reviews` in
-  `member/anonymize.ts` — the sentinel write (here `isNotNull(note)`-guarded, the 6.23a pattern, because the note is optional), the
-  field-class constant by value and its twin in `apps/api/src/context.ts`. The DB side is DL1's at-birth grant + UPDATE policy + guard
-  (⛔ later REPLACE — [[project_append_only_guard_names_erasure_columns]]). (Erasure is refused while a death report stands —
-  `resolveRtbfLegality` → `isDeathReportStanding`, 6.38 — and the `member_found_innocent` release, `recordMemberInnocenceFinding`, has ⛔
-  production caller (row 6-22) — so this binds only once that lands; AC14 proves it now.)
+  `member/anonymize.ts` — the sentinel write (here `isNotNull(note)`-guarded as a row filter, the 6.23a / memorial-review-decision
+  pattern, because the note is optional). ⭐ (v1.3) The field class: TWO precedents now — 6.21a's LOCAL value constant
+  (`FIELD_CLASS_DEATH_CERTIFICATE_REVIEW`) and the newer SHARED one in `packages/domain/src/encryption/field-classes.ts`
+  (`CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS`, 6.22; `MEMORIAL_FIELD_CLASS`), imported by `anonymize.ts` and re-exported by
+  `apps/api/src/context.ts` as `encryptionRuntime.*` — FOLLOW 6.22's (one source for the writer, the handler and the scrub). The DB side
+  is DL1's at-birth grant + UPDATE policy + guard (⛔ later REPLACE — [[project_append_only_guard_names_erasure_columns]]). (Erasure is
+  refused while a death report stands — `resolveRtbfLegality` → `isDeathReportStanding`, 6.38.) ⚠ (v1.3) The release is NOW LIVE: Story
+  6.22's `recordFraudFinding` (`fraud-investigation-persist.ts`, from `claims.fraud-investigation.handlers.ts`) calls
+  `recordMemberInnocenceFinding` ⇒ a false claim closed as "found alive" lifts the erasure refusal and the scrub RUNS for real on a
+  check recorded before the flag — this binds at merge, ⛔ "once 6-22 lands".
 - **DL15 — Stale comments.** `intake-door.ts`'s header pointer (G13) — the ONE "row 6-39" pointer in code — is re-worded to name the
   built conjunct; ⛔ behaviour.
 - **DL16 — ⛔ Scope creep.** ⛔ Family-facing words (PQ2); ⛔ helpline change; ⛔ change to the door or to any member lifecycle state;
   ⛔ `trusteeVerified` written (row `3-13`); ⛔ backfill (⛔ member uses the system); ⛔ automatic denial; ⛔ commit skip reasons surfaced
   (DL6); ⛔ in-app documents request (DL8); ⛔ staff address decrypt (DL8); ⛔ staff override of the fee outcome (N3 — PQ1 (b)); ⛔
-  `receipt_id` added to the joining event (DL3 — 3.6b's producer, unchanged).
+  `receipt_id` added to the joining event (DL3 — 3.6b's producer, unchanged); ⛔ link to 6.22's fraud flag or finding (G1 — the flag
+  gates nothing; a finding closes the claim, and the window then refuses a check).
 
 ## Panel questions — PROPOSED (one non-blocking note at Task 0.3)
 
@@ -605,9 +648,9 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
 9. **AC9 — Events and audits (DL11, N7).** `claim.membership_checked` appended per write, the claim state unchanged; `CLAIM_EVENT_TYPES`
    38; the frozen literal `STORY_6_39_CLAIM_EVENTS` listed; every audit line + the event payload contain ⛔ date, ⛔ note, ⛔ name (asserted
    on the serialized payloads, with a planted value).
-10. **AC10 — Who (DL7).** Catalog v57 / 75 keys; `district_admin` holds `claim.check_membership` at `district`; a `verifier`, a
+10. **AC10 — Who (DL7).** Catalog v65 / 96 keys (at `9f5e2c84` — READ LIVE); `district_admin` holds `claim.check_membership` at `district`; a `verifier`, a
     `pariwar_admin` and a `helpline_operator` ⇒ 403 on both routes; a district admin of ANOTHER district ⇒ 403; the human-actor gate
-    classifies the new routes file (G15).
+    classifies the new routes file (G15 — COVERAGE_SET 20, `COVERAGE_FLOOR` raised to 20).
 11. **AC11 — The fences (G5, G6).** A new 6.39 `it` block in the fence test forbids `decrypt` in the leaf, the writer and the read
     module, with a planted-specimen positive control that turns it red; the handler, the contract and `MembershipCheckControl.tsx` join
     `FENCED_FILES` (`toBe(62)` → `toBe(65)`, a history-comment line — ⛔ a floor); the leaf is in the NW1 transitive import scan
@@ -619,19 +662,24 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
     page and the R9 panel map each reason to its copy (⛔ raw code), and a `closure.*` refusal shows the API's plain message. A
     real-browser pass of the console (the 6.33 AC11 route — [[project_admin_browser_pass_launcher]];
     [[project_agent_chrome_cannot_reach_localhost]] — probe once) — or recorded un-attested ([[feedback_record_unattested_no_backfill]]).
-13. **AC13 — The gate stays green (DL13).** Every existing approval-path test (the 44 files — TR1) passes with ⛔ assertion changed, its
+13. **AC13 — The gate stays green (DL13).** Every existing approval-path test (the 46 files — TR1) passes with ⛔ assertion changed, its
     fixture given a passing check through `seedNomineeNameCheck`'s new default or `seedPassedMembershipCheck`; the console read budget,
-    contracts and admin fixtures updated; `ci:local` 36 / 36 on a FRESH container, DB named `twt_dev` (the story's own port —
+    contracts and admin fixtures updated; `ci:local` ALL jobs green (40 at `9f5e2c84` — READ LIVE) on a FRESH container, DB named `twt_dev` (the story's own port —
     [[project_prepush_hook_inherits_5432]]; 6.38 D7 — a reused DB fails a second run on `PARIWAR_A` residue).
 14. **AC14 — The erasure scrub (DL14).** Live-DB as `twt_app`: `anonymizeMember` on a member whose claim carries a check with a note
     (called directly, as 6.21a's anonymize leg for `claim_death_certificate_reviews` does — find it in the anonymize specs) writes the sentinel into
     `note_ciphertext` (1 row matched, ⛔ 0 — the UPDATE policy), leaves a note-less check untouched, and every other column unchanged.
+    ⭐ (v1.3) PLUS one leg through the REAL release (now live — DL14): a check with a note recorded, the claim flagged and found
+    innocent through `recordFraudFinding`, then `anonymizeMember` — the note scrubbed (template: 6.22's
+    `packages/domain/tests/integration/claim/fraud-investigation-rtbf.spec.ts`).
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST, ⛔ code** ([[feedback_governance_commits_precede_implementation]])
-  - [ ] 0.1 `git fetch origin`; confirm `beae5116` is an ancestor of HEAD; `git diff --name-only beae5116 origin/main -- apps packages
-        scripts` — re-derive G1–G17 if anything moved; AND `git log beae5116..origin/main -- .decision-log.md _bmad-output
+  - [ ] 0.1 `git fetch origin`; confirm `9f5e2c84` (the v1.3 re-verification and rebase point; `beae5116` was the v1.0 pin) is an
+        ancestor of HEAD — if `origin/main` has moved, REBASE onto it first (backup branch; records only ⇒ a ledger conflict at most —
+        TR15); `git diff --name-only 9f5e2c84 origin/main -- apps packages
+        scripts` — re-derive G1–G17 if anything moved; AND `git log 9f5e2c84..origin/main -- .decision-log.md _bmad-output
         docs/launch-gate-inventory` — read any new entry (a ruling on PQ1 / PQ2, a supersession); AND re-read the NUMBERS block across
         EVERY branch and worktree (`git for-each-ref refs/heads refs/remotes` + each `.claude/worktrees/*` dirty tree) before taking a
         decision number, ledger letter, migration or catalog version. Re-verify: G2's "the KYC record cannot change once a claim exists"
@@ -644,8 +692,10 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
         honest cost on each, evidence LAST; E4 commands run. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking for build and merge;
         ruled before go-live (Row 46). ⭐ **DONE 2026-10-31** (ledger `2026-10-31aj`): the Panel's numbering is **Q1 = PQ1 (a), Q2 = PQ1
         (b), Q3 = PQ2 (i), Q4 = PQ2 (ii)**, told lines 1–3 = TL1–TL3; suggestions B / B / B / B; E4's 13 commands run at `f792d4e3`, all as
-        stated (one re-pointed: `-235` Y's reading is found by *"on the day of death or any day after"*).
-  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-432` at 2026-10-31): DL1–DL16 as answered; cites
+        stated (one re-pointed: `-235` Y's reading is found by *"on the day of death or any day after"*). ⚠ (v1.3, 2026-11-21) STILL
+        ⛔ SENT, three weeks on, and ⛔ ruled (⛔ decision on `main` answers it). BEFORE BigDev sends it: re-run its E4 commands at the
+        rebased HEAD (they ran at `f792d4e3`, 345 commits behind) and fix any that moved — [[feedback_shown_to_panel_means_sent]].
+  - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-472` at 2026-11-21, `9f5e2c84`): DL1–DL16 as answered; cites
         `-424` Q1 (a) C and `-430` Q1 B; declares N3's narrowing and DL8's "death documents" match; names PQ1 (a) / (b) and PQ2 as open;
         ⛔ supersedes a ratified entry. Committed ALONE, first. It is also the decision the permission bump block cites (G8).
   - [ ] 0.5 Records: `deferred-work.md` — PQ1 (a) / (b) and PQ2 open (trigger: the ruling); a row-`3-13` dated comment in
@@ -690,7 +740,7 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   - [ ] 4.3 Fence amendment (AC11): the 6.39 `decrypt` `it` block + planted control; `FENCED_FILES` additions + `toBe` + history line;
         the leaf in the NW1 scan.
   - [ ] 4.4 Fixtures (DL13) BEFORE wiring: the helper + its API twin; the `membershipCheck` option on both `seedNomineeNameCheck`
-        fixtures; the four direct callers (TR1's list); run the approval-path specs; ⛔ assertion changed.
+        fixtures; the direct caller(s) (TR1's corrected list — `peer-mesh-reply`); run the approval-path specs; ⛔ assertion changed.
   - [ ] 4.5 Tests: AC5 (six sites × `not_checked` / pass, one site per reason, the KYC raw-write `stale`, the order legs); AC6 (the deny
         legs in all three writers, the post-P1 final-vote deny); AC8 (the ONE test naming PQ1 (a)).
 - [ ] **Task 5 — The commit re-check (AC7)** — DL6 in `commitCycleFreeze` + live-DB test.
@@ -708,7 +758,10 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
 
 - **TR1 — The fixture blast radius.** Adding a conjunct to `assertClaimApprovable` turns RED every existing test that approves a claim
   (P1, final vote, R9, D27, `-251`, the cycle-freeze commit and everything downstream that seeds an `approved` claim THROUGH the
-  approval paths). Traced at `beae5116`: **44 files** — API (`apps/api/tests/integration/claims/`, 14): `approval-warnings-every-approver`,
+  approval paths). Traced at `beae5116`: **44 files**, + 2 at `9f5e2c84` (v1.3 — Story 6.22: API `fraud-investigation-routes.spec.ts`,
+  which drives a P1 approve and a final vote to `state_trustee_approved`, and domain `fraud-investigation.spec.ts`, whose "PQ7 (built C)"
+  test asserts `assertClaimApprovable(...)` RESOLVES at both steps — both through `seedNomineeNameCheck`) ⇒ **46** — API
+  (`apps/api/tests/integration/claims/`, 14 + 1): `approval-warnings-every-approver`,
   `approval-warnings`, `correction-closure`, `cycle-freeze`, `death-certificate`, `ground-inspection-required-routes`,
   `nominee-declaration`, `nominee-name-check`, `one-payment-per-death-routes`, `r9-voting`, `suspicion-refusal-routes`,
   `verifier-console-shape`, `verifier-console`, `verifier-decision` (`.spec.ts`); domain (`packages/domain/tests/integration/claim/`, 30):
@@ -716,9 +769,13 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   `correction-closure{-concurrency,}`, `correction-queue-late-{inspection,peer-reply}`, `death-certificate`,
   `ground-inspection-{approval,questionnaire}`, `nominee-name-check{-return-loop,}`, `nominee-refusal-inheritance`,
   `one-payment-per-death{-closure,-concurrency,-guard,-paths,-warning,}`, `peer-mesh-reply`, `r9-voting{-concurrency,}`,
-  `state-trustee-cycle-freeze{-concurrency,}`, `suspicion-refusal{-concurrency,}` (`.spec.ts`). All but four go through
-  `seedNomineeNameCheck` (DL13's default fixes them); the four that do ⛔ — `_correction-closure-fixture.ts` itself,
-  `nominee-refusal-inheritance`, `one-payment-per-death-concurrency`, `peer-mesh-reply` — call `seedPassedMembershipCheck` directly.
+  `state-trustee-cycle-freeze{-concurrency,}`, `suspicion-refusal{-concurrency,}` (`.spec.ts`), + 1 domain (6.22, above). ⚠ CORRECTED
+  v1.3 (the v1.1 "four" was wrong at the pin too): all but TWO go through `seedNomineeNameCheck` — `_correction-closure-fixture.ts`
+  CALLS it (twice), and `one-payment-per-death-concurrency` reaches it through `_one-payment-fixtures.ts` — so DL13's default fixes
+  them. The two that do ⛔: `peer-mesh-reply` (`seedAcceptedDeathCertificate` + a direct `assertClaimApprovable`) calls
+  `seedPassedMembershipCheck` directly; `nominee-refusal-inheritance` only DENIES (N5 — ⛔ gated), so it is expected untouched — run it.
+  NOT in the list (they reach `approved` by a RAW drive or approve nothing, ⛔ through the gate): 6.22's `fraud-convergence-door`,
+  `member/overlay-three-readers`, `fraud-investigation-live-processes`.
   Admin `.tsx` tests mock the API (unaffected by the gate; affected by the packet field — DL10). Re-run the list in Task 4.4 BEFORE wiring
   (6.21a D12 did the same); fix by seeding a passing check, ⛔ by weakening.
 - **TR2 — Order.** Insert AFTER the ground inspection, BEFORE the final-only conjuncts; the late-warning wait stays LAST. A test missing
@@ -747,9 +804,10 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
   route-level codes are `membership_check.*`. The admin matches with `endsWith`.
 - **TR14 — Two deny vocabularies.** P1's verifier reasons and the final vote's state-trustee reasons are separate enums with separate
   contracts copies and separate pgEnums (DL9) — a code in only one leaves a post-P1 `after_death` claim with ⛔ way to end it.
-- **TR15 — Sibling branches.** `story/12-1-…` holds an untracked migration `0193` and edits `packages/events/src/registry.ts`;
-  `story/11b-5a-…` holds decision `-431` and ledger letters to `af`. Read numbers across branches (Task 0.1) and expect a rebase conflict
-  in the registry.
+- **TR15 — Sibling branches.** (v1.3) The 2026-10-31 siblings (`12-1`, `11b-5a`) have LANDED; at `9f5e2c84` the only open sibling is
+  `story/6-22b-…` (records only, migration `0198` / catalog 58 / decision `-440` — all below `main`). This branch carries ⛔ code, so a
+  rebase conflicts only in `sprint-status.yaml` ([[project_rebase_ledger_conflict_separator]] — keep both, re-check the `---`). Still read
+  numbers across EVERY branch and worktree at each commit that takes one (Task 0.1) — a new sibling can appear.
 
 ### What this story does ⛔ do
 
@@ -763,8 +821,8 @@ family-facing or helpline words (PQ2); ⛔ deny automatically; ⛔ store a secon
   `claim/membership-check-read.ts` (the joining receipt + KYC route reads, ⛔ decrypt), `claim/fee-death-date.ts` (DL2, import-free),
   `claim/index.ts` barrel, `schema/claim_membership_checks.ts` + schema barrel, `policies/claim-membership-check-rls.ts` +
   `policies/index.ts`, `ids/index.ts` (`ClaimMembershipCheckId`), `claim/verifier-decision.ts` + `claim/state-trustee-decision.ts`
-  (DL9), `member/anonymize.ts` (DL14); migrations — two enum values + the table, the next free numbers across branches (`0194` /
-  `0195` / `0196` at 2026-10-31).
+  (DL9), `member/anonymize.ts` + `encryption/field-classes.ts` (DL14); migrations — two enum values + the table, the next free numbers
+  across branches (`0210` / `0211` / `0212` at `9f5e2c84`).
 - Domain tests: `tests/integration/_helpers.ts` (helper + the `seedNomineeNameCheck` option), `tests/claim/nominee-name-no-comparison-fence.test.ts`,
   `tests/claim/approval-warnings.test.ts` (NW1), `tests/claim/nominee-name-check-events.test.ts`, `tests/claim/dpdpa-consent-events.test.ts`,
   `tests/rbac/{permissions,roles}.test.ts`.
@@ -806,6 +864,9 @@ family-facing or helpline words (PQ2); ⛔ deny automatically; ⛔ store a secon
 - 2026-10-31 — Validated (`bmad-create-story validate 6.39`, BigDev: "all"): four read-only traces at `beae5116` (the gate; KYC / fee /
   date of death; staff surface / keys / numbers; governance + the footgun sweep) and a hand re-read of `-235` Y, Niyamavali §2.2, the
   `adjudicateClaim` state guard and the KYC provider fallback.
+- 2026-11-21 — Drift-validated (`bmad-create-story validate 6.39`, BigDev: "all, then rebase") at `origin/main` `9f5e2c84`: two read-only
+  traces (the gate / denials / commit / fixtures; KYC / fee / keys / console / anonymize / numbers), the load-bearing numbers re-read by
+  hand; 2 critical / 6 should-fix / 3 low, ALL applied (v1.3); branch rebased onto `9f5e2c84`.
 
 ### File List
 
@@ -815,4 +876,5 @@ family-facing or helpline words (PQ2); ⛔ deny automatically; ⛔ store a secon
 |---|---|---|
 | v1.0 | 2026-10-31 | Created (`bmad-create-story 6.39`) on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity`, pinned `beae5116`. |
 | v1.2 | 2026-10-31 | Task 0.3 done: the routing note `trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` WRITTEN (⛔ sent) — Q1–Q4 = PQ1 (a) / PQ1 (b) / PQ2 (i) / PQ2 (ii), TL1–TL3 as told lines, E4 run. Corrected while writing it: a staff phone call to the CLAIMANT rests on their filing agreement (`-367` decision 2); only a call to a NOMINEE waits on roster Row 34 (Policy meaning, DL8, PQ2). |
+| v1.3 | 2026-11-21 | DRIFT validation (`bmad-create-story validate 6.39`, BigDev: "all, then rebase") at `origin/main` `9f5e2c84` (345 commits past `beae5116`): two read-only traces + the numbers re-read by hand. Every G1–G17 BEHAVIOUR holds (gate order + six sites, commit loop, both deny vocabularies, review window, claim states, KYC writers, receipt + event, certificate review, fence, translators — ⛔ diff); ⛔ Panel ruling on PQ1 / PQ2; ⛔ supersession of `-424` / `-430`. Corrected: NUMBERS (decision ≥ `-472`, migrations `0210`–`0212`, catalog v65 / 96, events 40, COVERAGE_SET 20 / floor 20, `ci:local` 40 jobs, ledger `2026-11-21c`); TR1 (46 files; only `peer-mesh-reply` bypasses the fixture — v1.1's "four" was wrong); DL14 (the innocence release is LIVE through 6.22's `recordFraudFinding` ⇒ the scrub binds at merge; follow 6.22's shared `encryption/field-classes.ts` constant) + an AC14 real-release leg; G7 / DL10 (6.22's self-fetching panel pattern considered, packet section kept); G8 (13.1's `VerifiedAuthorization` — ⛔ needed for claims); G15 registration after `registerFraudInvestigationRoutes`; G1 / DL16 (6.22's flag gates nothing — ⛔ link); G3 (`cycleCalendar.istDateOf` precedent; the TTL is an env setting); TR15 (siblings landed); Task 0.1 re-pinned to `9f5e2c84`; Task 0.3 — the note is still ⛔ sent: re-run E4 before sending. Branch REBASED onto `9f5e2c84`. |
 | v1.1 | 2026-10-31 | Fresh-context validation (`bmad-create-story validate 6.39`): DL9 gives `fee_paid_after_death` to BOTH denial vocabularies (P1 verifier + final-vote state-trustee; P1 cannot deny after P1), guarded in `adjudicateClaim`, `reviseDecision` and `voteOnFrozenClaim`; the Policy meaning is ONE sentence, ⛔ promises an ask nothing builds, and records Niyamavali §2.2; DL1 / AC1 grant `note_ciphertext` + an UPDATE policy at birth for DL14 (the `0122` shape, ⛔ `0121`), AC14 added; DL3 matches the receipt by `member_id` too (the event carries the body's UTR); the gate's codes prefixed per route at four translators + four admin surfaces (G16); AC5's `stale` leg avoids `determination_stale` (TR12); numbers re-read across branches (decision ≥ `-432`, ledger `ag` / `ah`, migrations ≥ `0194`); N3's binding outcome declared a narrowing, PQ1 split into (a) same day — evidence led by `-235` Y + §2.2, suggestion B — and (b) the attest-vs-bank time; DL8 shows every death document; TL1–TL3 told lines; DL6's "page shows why" dropped and the stranded claim recorded; the fixture-KYC-provider leg and roster Row 46; G15–G17 + the fence, NW1 scan, frozen event list, read budget, COVERAGE_SET, RLS policy file, branded id and 44-file blast radius named. |

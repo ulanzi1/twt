@@ -3079,3 +3079,17 @@ category is `optional` — a nominee need never write one), so the disposition s
    above). ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted. A visitor reads the list; ⛔ nothing is asked of them.
 4. ⛔ **Dark until go-live:** the memorial stays behind `MEMORIAL_AUTHORSHIP_ENABLED` (off) until launch-gate Row 41 closes, including
    its (r) criteria — rows 11b-5b and 11b-5c `done` — so ⛔ a family pays anything new before then.
+
+**Story 6.39 disposition (Task 8 — declaration affirmed — ⛔ NO new row, ⛔ no row retired, ⛔ no row amended; `2026-11-21-473` Q3 B / Q4 B,
+built under `-474` items 4–5):** two family-facing lines change on surfaces the family already reads, and ⛔ anything is asked of them.
+1. **The appeal card** (`apps/mobile/components/claim/AppealStatusCard.tsx`, `apps/mobile/lib/appeal-status.ts`): for a claim refused
+   because the joining fee was ⛔ paid before the death, the card's first line is *"This claim was not approved: the person was not a
+   member of the Trust when they died. If you believe that was a mistake, you can ask us to look at it again."* INSTEAD of the plain
+   *"This claim was not approved. …"* — ONE line replaced, ⛔ added. The appeal button, the "no time limit" line and the helpline
+   CTA are unchanged; ⛔ a new tap, code, field or wait. Every other refusal is unchanged.
+2. **The certificate notice** (`apps/mobile/lib/death-certificate-view.ts`): while staff cannot yet confirm the identity, ONE read-only
+   line is added beneath *"The death certificate has been accepted."* — *"We need to confirm a few details before this claim can go
+   ahead. Our staff will contact you."* ⛔ A control; ⛔ an upload; the line asks nothing of the family (staff make the contact).
+3. ⇒ ⛔ payer: reading a sentence is ⛔ friction under UX Stance #2 (no forced or optional action, no wait the family must sit
+   through that was not already there — the claim waited before this line existed; the line only says so). The member-app bundle
+   facet is still a no-op (no measurable native build output). ⛔ Dark: nothing is live until roster Row 46 closes.

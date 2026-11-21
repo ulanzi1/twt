@@ -139,6 +139,11 @@ export async function resolveConsentById(
 
 /** The default page of {@link listConsentsForArtifact} — small on purpose: one lead has ONE consent row in the ordinary case. */
 export const CONSENTS_FOR_ARTIFACT_DEFAULT_LIMIT = 20;
+/**
+ * The most rows one {@link listConsentsForArtifact} call returns. ⚠ A caller that reads a FULL page as "there may be more" (the lead
+ * handoff's P1: `LEAD_HANDOFF_CONSENT_PAGE`) must ask for no more than this, or its full-page test can never be true — pinned by a test.
+ */
+export const CONSENTS_FOR_ARTIFACT_LIMIT_CAP = 50;
 
 /**
  * ⭐ Story 12.5 (`2026-11-21-483` QE7 P1; G5, G6) — every consent row of `consentType` that the SUBJECT recorded for ONE artifact
@@ -169,5 +174,5 @@ export async function listConsentsForArtifact(
       ),
     )
     .orderBy(desc(consentRecords.grantedAt))
-    .limit(clampLimit(opts.limit, { default: CONSENTS_FOR_ARTIFACT_DEFAULT_LIMIT, cap: 50 }));
+    .limit(clampLimit(opts.limit, { default: CONSENTS_FOR_ARTIFACT_DEFAULT_LIMIT, cap: CONSENTS_FOR_ARTIFACT_LIMIT_CAP }));
 }

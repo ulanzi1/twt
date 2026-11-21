@@ -76,6 +76,7 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
       refused: true,
       lapsed: 0,
       purged: 0,
+      cancelledWaiting: 0,
       claimed: 0,
       sent: 0,
     });
@@ -84,14 +85,17 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     expect(statements).toHaveLength(1);
   });
 
-  it.each(['lapse', 'purge', 'claim'])('a throw in the %s ⇒ ONE `sweep_failed:<error name>` alarm and the tick ends', async (step) => {
+  it.each(['lapse', 'purge', 'waiting pass', 'claim'])('a throw in the %s ⇒ ONE `sweep_failed:<error name>` alarm NAMING THAT STEP, and the tick ends', async (step) => {
+    const reached: string[] = [];
     const pool = {
       query: vi.fn(async (text: string) => {
         if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
         const isLapse = text.includes("WHERE status = 'attempting' AND claimed_at");
         const isPurge = text.includes('WITH old AS MATERIALIZED');
+        const isWaiting = text.includes('h.next_attempt_at > clock_timestamp()');
         const isClaim = text.includes('WITH next AS MATERIALIZED');
-        if ((step === 'lapse' && isLapse) || (step === 'purge' && isPurge) || (step === 'claim' && isClaim)) {
+        for (const [name, hit] of [['lapse', isLapse], ['purge', isPurge], ['waiting pass', isWaiting], ['claim', isClaim]] as const) if (hit) reached.push(name);
+        if ((step === 'lapse' && isLapse) || (step === 'purge' && isPurge) || (step === 'waiting pass' && isWaiting) || (step === 'claim' && isClaim)) {
           throw Object.assign(new Error('permission denied for table marketplace_lead_handoffs'), { code: '42501' });
         }
         return { rows: [], rowCount: 0 };
@@ -101,7 +105,10 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
     expect(result.claimed).toBe(0);
     expect(alarms).toHaveLength(1);
-    expect(alarms[0]).toMatch(/module_lead_handoff\.sweep_failed:Error \[code:42501\] at the (lapse|purge|claim)/);
+    // The step is THIS one (⛔ any of them), and nothing after it ran: the order is lapse → purge → waiting pass → claim.
+    expect(alarms[0]).toContain(`module_lead_handoff.sweep_failed:Error [code:42501] at the ${step} —`);
+    const order = ['lapse', 'purge', 'waiting pass', 'claim'];
+    expect(reached).toEqual(order.slice(0, order.indexOf(step) + 1));
     expect(alarms[0]).not.toContain('permission denied');
   });
 });
@@ -351,6 +358,8 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
       onAlarm: (m) => alarms.push(m),
       retryScheduleMs: SCHEDULE_ZERO,
       auditRetryPauseMs: 0,
+      // Each call its own waiting-pass cursor: no test inherits where another's pass stopped.
+      waitingCursor: { leadId: null },
       ...o,
     };
   }
@@ -457,29 +466,93 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     if (!requested) expect(lookups).toHaveLength(0);
   });
 
-  it('a corrupt envelope ⇒ failed_delivery:fields_unreadable with the alarm, ⛔ request', async () => {
-    const w = await world();
-    const { leadId } = await lead(w);
+  /** Overwrite a lead's sealed fields with an envelope sealed under `rowKey` (the guard refuses it; `replica` steps around the guard). */
+  async function resealAs(w: World, leadId: string, rowKey: string, plaintext = '{"version":1}'): Promise<void> {
     const c = await pool.connect();
     try {
       await c.query('BEGIN');
       await c.query("SET LOCAL session_replication_role = 'replica'");
       const other = encryption.serializeEnvelope(
-        await encryption.encryptTier1(Buffer.from('{"version":1}', 'utf-8'), { pariwarId: w.pariwarId, fieldClass: 'module_lead_fields', rowKey: randomUUID() }, enc.kms, enc.kekRef),
+        await encryption.encryptTier1(Buffer.from(plaintext, 'utf-8'), { pariwarId: w.pariwarId, fieldClass: 'module_lead_fields', rowKey }, enc.kms, enc.kekRef),
       );
       await c.query('UPDATE marketplace_lead_handoffs SET member_fields_ciphertext = $2 WHERE lead_id = $1', [leadId, other]);
       await c.query('COMMIT');
     } finally {
       c.release();
     }
+  }
+
+  it('fields that open but are not the sealed object ⇒ failed_delivery:fields_unreadable with the alarm, ⛔ request — ONE row\'s fault: the tick goes on', async () => {
+    const w = await world();
+    const { leadId } = await lead(w);
+    // Sealed under THIS lead's own context, so the key unwraps and the tag holds — but the object is not a `SealedLeadMemberFieldsV1`.
+    await resealAs(w, leadId, leadId);
     const control = await lead(await world());
     await runModuleLeadHandoffTick(deps());
-    expect(await row(leadId)).toMatchObject({ status: 'failed_delivery', outcome_detail: 'failed_delivery:fields_unreadable' });
+    expect(await row(leadId)).toMatchObject({ status: 'failed_delivery', outcome_detail: 'failed_delivery:fields_unreadable', attempt_count: 1 });
     expect(sentFor(leadId)).toHaveLength(0);
     expect(alarmsFor(leadId).some((a) => a.includes('module_lead_handoff_failed'))).toBe(true);
-    // A rowKey mismatch under the fake KMS is a key rejection ⇒ the tick ENDS; the control waits for the next tick.
-    if ((await row(control.leadId))['status'] === 'due') await runModuleLeadHandoffTick(deps());
+    // The SAME tick: unconditional — a `schema` fault never ends it.
     expect(sentFor(control.leadId)).toHaveLength(1);
+  });
+
+  it('⭐ a key the key service REJECTS ⇒ HELD (kms), the attempt given back, ONE held alarm, ⛔ failure, and the tick ENDS — then hold_expired:kms (Decision -487)', async () => {
+    const w = await world();
+    const { leadId } = await lead(w);
+    // Sealed under ANOTHER lead's context: the fake key service rejects the unwrap with gRPC 3 — what a wrong key reference returns for
+    // EVERY row. The sweep cannot tell the two apart, so it must not end the lead.
+    await resealAs(w, leadId, randomUUID());
+    const control = await lead(await world());
+    const zeroHold = { holdRetryMs: 0 };
+    const first = await runModuleLeadHandoffTick(deps(zeroHold));
+    expect(await row(leadId)).toMatchObject({ status: 'due', outcome_detail: 'held:kms_unavailable', attempt_count: 0 });
+    expect((await row(leadId))['held_since']).not.toBeNull();
+    expect((await row(leadId))['member_fields_ciphertext']).not.toBeNull();
+    expect(alarms.filter((a) => a.includes('module_lead_handoff_held:kms_unavailable'))).toHaveLength(1);
+    expect(alarms.filter((a) => a.includes('module_lead_handoff_failed'))).toHaveLength(0);
+    // The tick ENDED on it: the control behind it was not claimed, and nothing was sent.
+    expect(first.claimed).toBe(1);
+    expect(await row(control.leadId)).toMatchObject({ status: 'due', attempt_count: 0, outcome_detail: null });
+    expect(received).toHaveLength(0);
+    // The next tick: the control was due BEFORE the held row came back, so it goes first — a held row does not stall the queue — and the
+    // run of holds, past its maximum (an option here), ends as a HOLD's expiry with the failure alarm.
+    await runModuleLeadHandoffTick(deps({ ...zeroHold, maxHoldMs: 0 }));
+    expect(sentFor(control.leadId)).toHaveLength(1);
+    expect(await row(leadId)).toMatchObject({ status: 'failed_delivery', outcome_detail: 'failed_delivery:hold_expired:kms' });
+    expect(alarmsFor(leadId).filter((a) => a.includes('module_lead_handoff_failed (failed_delivery:hold_expired:kms)'))).toHaveLength(1);
+    expect(sentFor(leadId)).toHaveLength(0);
+  });
+
+  it.each([
+    ['a 403', '/s403', 'released:http_403', 403, true],
+    ['a 404', '/s404', 'released:http_404', 404, true],
+    ['a 408', '/s408', 'released:http_408', 408, false],
+    ['a 429', '/s429', 'released:http_429', 429, false],
+    ['a server that never answers (the deadline)', '/hang', 'released:timeout', 599, false],
+    ['a connection dropped after the request was written', '/drop', 'released:network', 598, false],
+  ] as const)('%s ⇒ due, counted, the schedule\'s next time, the attempted line\'s status — through the sweep (AC6, AC8)', async (_label, path, detail, auditStatus, setupFault) => {
+    const w = await world(`https://partner.test${path}`);
+    const { leadId } = await lead(w);
+    respond = (p, res) => {
+      if (p === '/hang') return; // never answered: the client's wall-clock deadline ends it
+      if (p === '/drop') return void res.socket?.destroy();
+      defaultRespond(p, res);
+    };
+    const before = (await pool.query<{ now: Date }>('SELECT clock_timestamp() AS now')).rows[0]!.now;
+    await runModuleLeadHandoffTick(deps({ client: seamClient({ deadlineMs: 400 }), retryScheduleMs: [120_000, 0, 0, 0, 0, 0] }));
+    const r = await row(leadId);
+    expect(r).toMatchObject({ status: 'due', outcome_detail: detail, attempt_count: 1, claim_token: null });
+    // "the schedule's next time": the FIRST wait of the schedule passed in, from the database clock.
+    const waitSeconds = ((r['next_attempt_at'] as Date).getTime() - before.getTime()) / 1000;
+    expect(waitSeconds).toBeGreaterThanOrEqual(120);
+    expect(waitSeconds).toBeLessThan(150);
+    expect(sentFor(leadId)).toHaveLength(1);
+    const attempted = (await auditLines(w.pariwarId, leadId)).filter((l) => l.action === 'module.lead_handoff_attempted');
+    expect(attempted).toHaveLength(1);
+    // A real status, or the fixed synthetic 599 (timeout) / 598 (network) when no response came (QE14 (c)).
+    expect(attempted[0]!.response_status).toBe(auditStatus);
+    expect(alarmsFor(leadId).filter((m) => m.includes('module_lead_handoff_setup_fault'))).toHaveLength(setupFault ? 1 : 0);
+    expect(alarmsFor(leadId).filter((m) => m.includes('module_lead_handoff_failed'))).toHaveLength(0);
   });
 
   it('a 401 ⇒ due, counted, ONE setup_fault alarm for that module in the tick; an address refusal the same, ⛔ request, that authority\'s other row ⛔ claimed', async () => {
@@ -702,10 +775,16 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
 
     const v = await world();
     const never = await lead(v);
-    await runModuleLeadHandoffTick(deps({ pool: faultyPool(pool, isAttempted), tickBudgetMs: 0 }));
+    const behind = await lead(await world('https://other.test/ok'));
+    // The DEFAULT budget (⛔ zero): only S9's own `end_tick` can keep the row behind it from being claimed.
+    const result = await runModuleLeadHandoffTick(deps({ pool: faultyPool(pool, isAttempted) }));
     expect(sentFor(never.leadId)).toHaveLength(1);
     expect(await row(never.leadId)).toMatchObject({ status: 'attempting', attempt_count: 1 });
     expect(alarmsFor(never.leadId).some((a) => a.includes('left to its lease'))).toBe(true);
+    expect(result.claimed).toBe(1);
+    expect(await row(behind.leadId)).toMatchObject({ status: 'due', attempt_count: 0, outcome_detail: null });
+    expect(sentFor(behind.leadId)).toHaveLength(0);
+    expect((await auditLines(v.pariwarId, never.leadId)).filter((l) => l.action === 'module.lead_handoff_attempted')).toHaveLength(0);
   });
 
   it('⛔ alarm, log line, audit locator or detail carries a member field, the URL, a resolved address, a header value or the secret', async () => {
@@ -725,14 +804,19 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
       await runModuleLeadHandoffTick(deps({ resolveSecret: async (n) => (n === 'nope-key' ? null : SECRET) }));
       const everything = [...alarms, ...logs];
       for (const s of everything) {
-        for (const forbidden of [MEMBER_NAME, MOBILE, '9876501234', 'Gaya', 'https://', 'partner.test', '127.0.0.1', SECRET, 'REF-1', 'v1=']) {
+        // The secret NAMES too: QE9 would allow one in an alarm, but the sweep emits none (its own header says so) — pinned as built.
+        for (const forbidden of [MEMBER_NAME, MOBILE, '9876501234', 'Gaya', 'https://', 'partner.test', '127.0.0.1', SECRET, 'REF-1', 'v1=', SECRET_NAME, 'nope-key']) {
           expect(s, `leaked "${forbidden}" in: ${s}`).not.toContain(forbidden);
         }
       }
-      for (const id of [a.leadId, b.leadId, c.leadId]) {
+      // Each lead's lines under its OWN Pariwar (one Pariwar for all three would read two empty lists), and the shape is asserted on
+      // lines that EXIST: the delivered and the refused lead each made a request.
+      for (const [w, id, requested] of [[ok, a.leadId, true], [bad, b.leadId, true], [held, c.leadId, false]] as const) {
         const r = await row(id);
         expect(String(r['outcome_detail'] ?? '')).not.toMatch(/partner\.test|127\.0\.0\.1|https/);
-        for (const l of await auditLines(ok.pariwarId, id)) expect(l.resource_locator).toMatch(/^module_lead\/[0-9a-f-]{36}(\/attempt\/\d+)?$/);
+        const lines = await auditLines(w.pariwarId, id);
+        expect(lines.length).toBe(requested ? 2 : 0);
+        for (const l of lines) expect(l.resource_locator).toMatch(/^module_lead\/[0-9a-f-]{36}(\/attempt\/\d+)?$/);
       }
     } finally {
       for (const s of spies) s.mockRestore();
@@ -866,9 +950,12 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     const w = await world(url, o);
     const l = await lead(w);
     await revoke(w, l);
+    // The control is on ANOTHER authority and another secret name, so neither breaker of this tick keeps it back.
+    const control = await lead(await world('https://other.test/ok'));
     await runModuleLeadHandoffTick(deps({ resolveSecret: async (n) => (n === 'absent-key' ? null : SECRET) }));
     await expectCancelled(l.leadId, w.pariwarId, 'consent_revoked');
     expect(alarmsFor(l.leadId).filter((a) => a.includes('setup_fault') || a.includes('held:'))).toHaveLength(0);
+    expect(sentFor(control.leadId)).toHaveLength(1);
   });
 
   it('the member\'s word wins over a withdrawn module: consent_revoked, ⛔ module_withdrawn', async () => {
@@ -876,8 +963,10 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     const l = await lead(w);
     await revoke(w, l);
     await archive(w.moduleId, 'trustee_archived');
+    const control = await lead(await world('https://other.test/ok'));
     await runModuleLeadHandoffTick(deps());
     await expectCancelled(l.leadId, w.pariwarId, 'consent_revoked');
+    expect(sentFor(control.leadId)).toHaveLength(1);
   });
 
   it('P0 false with an explicit-port URL: the row is HELD (held:db_unavailable), ⛔ failed, and the tick goes on', async () => {
@@ -891,13 +980,180 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
       [consentId, foreign.memberId, w.pariwarId, leadId],
     );
     const sealed = await marketplace.sealLeadMemberFields(enc, { pariwarId: w.pariwarId, leadId, fields: { full_name: 'X Y', mobile: MOBILE_RAW, district: null, preferred_language: 'en' } });
-    await withPariwarScope(pool, w.pariwarId, (_db: Db, client: pg.PoolClient) =>
-      marketplace.recordLeadHandoff(client, { pariwarId: w.pariwarId, leadId, moduleId: w.moduleId, memberId: foreign.memberId, consentId, sealedFields: sealed, auditId: randomUUID() }),
+    // `recordLeadHandoff` now REFUSES this row (`member_not_in_pariwar` — code review 2026-11-22, patch 1), so a row that predates the
+    // check, or one written around it, is seeded raw: P0 at send stays the backstop.
+    await expect(
+      withPariwarScope(pool, w.pariwarId, (_db: Db, client: pg.PoolClient) =>
+        marketplace.recordLeadHandoff(client, { pariwarId: w.pariwarId, leadId, moduleId: w.moduleId, memberId: foreign.memberId, consentId, sealedFields: sealed, auditId: randomUUID() }),
+      ),
+    ).rejects.toMatchObject({ name: 'LeadHandoffConsentInvalidError', reason: 'member_not_in_pariwar' });
+    await pool.query(
+      `INSERT INTO marketplace_lead_handoffs (lead_id, pariwar_id, module_id, member_id, consent_id, envelope_version, member_fields_ciphertext, audit_id)
+       VALUES ($1, $2, $3, $4, $5, 1, $6, $7)`,
+      [leadId, w.pariwarId, w.moduleId, foreign.memberId, consentId, sealed, randomUUID()],
     );
     const control = await lead(await world());
     await runModuleLeadHandoffTick(deps());
     expect(await row(leadId)).toMatchObject({ status: 'due', outcome_detail: 'held:db_unavailable', attempt_count: 0 });
     expect(sentFor(control.leadId)).toHaveLength(1);
+  });
+
+  it('a secret of nothing but whitespace is NOT a key: held:signing_key_unavailable, ⛔ request (patch 11)', async () => {
+    const w = await world('https://partner.test/ok', { secretName: 'blank-key' });
+    const { leadId } = await lead(w);
+    const control = await lead(await world('https://other.test/ok'));
+    await runModuleLeadHandoffTick(deps({ resolveSecret: async (n) => (n === 'blank-key' ? ' \n\t' : SECRET) }));
+    expect(await row(leadId)).toMatchObject({ status: 'due', outcome_detail: 'held:signing_key_unavailable', attempt_count: 0 });
+    expect(sentFor(leadId)).toHaveLength(0);
+    expect(sentFor(control.leadId)).toHaveLength(1);
+  });
+
+  // ── Checklist family 2 — the claim under two workers, on two connections ──
+
+  it('two workers: a row LOCKED by another transaction is passed over (SKIP LOCKED), and N concurrent claims of M due rows give exactly M winners', async () => {
+    const w = await world();
+    const first = await lead(w);
+    const second = await lead(w);
+    const holder = await pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query('SELECT 1 FROM marketplace_lead_handoffs WHERE lead_id = $1 FOR UPDATE', [first.leadId]);
+      // The head of the queue is locked by "the other worker": this claim does not wait for it, and does not take it.
+      const claimed = await marketplace.claimDueLeadHandoff(pool, { claimToken: 'worker-b' });
+      expect(claimed?.leadId).toBe(second.leadId);
+      await holder.query('ROLLBACK');
+    } finally {
+      holder.release();
+    }
+    const third = await lead(w);
+    const fourth = await lead(w);
+    // Three due rows (first, third, fourth), SIX claims at once on the pool's six connections.
+    const tokens = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6'];
+    const results = await Promise.all(tokens.map((claimToken) => marketplace.claimDueLeadHandoff(pool, { claimToken })));
+    const winners = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    expect(winners.map((r) => r.leadId).sort()).toEqual([first.leadId, third.leadId, fourth.leadId].sort());
+    for (const id of [first.leadId, third.leadId, fourth.leadId]) {
+      const r = await row(id);
+      // Exactly ONE write per row: one attempt counted, one token — the winner's.
+      expect(r).toMatchObject({ status: 'attempting', attempt_count: 1 });
+      expect(tokens[results.findIndex((x) => x?.leadId === id)]).toBe(r['claim_token']);
+    }
+    expect(await marketplace.claimDueLeadHandoff(pool, { claimToken: 'late' })).toBeNull();
+  });
+
+  // ── Decision 2026-11-22-487 (2) — the waiting pass: a stop is honoured within the tick, ⛔ at the next retry ──
+
+  const HOUR_SCHEDULE = [3_600_000, 3_600_000, 3_600_000, 3_600_000, 3_600_000, 3_600_000];
+
+  /** A lead that has FAILED once and is now waiting an hour for its retry (the schedule is an option), on `w`'s `/s503` endpoint. */
+  async function waitingLead(w: World): Promise<{ leadId: string; consentId: string }> {
+    const l = await lead(w);
+    await runModuleLeadHandoffTick(deps({ retryScheduleMs: HOUR_SCHEDULE, tickBudgetMs: 0 }));
+    expect(await row(l.leadId)).toMatchObject({ status: 'due', outcome_detail: 'released:http_5xx:503', attempt_count: 1 });
+    expect(((await row(l.leadId))['next_attempt_at'] as Date).getTime()).toBeGreaterThan(Date.now() + 3_000_000);
+    return l;
+  }
+
+  it.each<[string, string, Condition]>([
+    ['the consent revoked', 'consent_revoked', revoke],
+    ['the member withdrawn', 'member_withdrawn', async (w) => memberEvents(w, [{ type: 'member.withdrawal_completed' }])],
+    ['the offer withdrawn by the Trust', 'module_withdrawn', async (w) => archive(w.moduleId, 'trustee_archived')],
+  ])('a lead WAITING on a retry, %s ⇒ cancelled in the NEXT tick, the fields gone — ⛔ an hour later; the unstopped twin waits on', async (_label, word, condition) => {
+    const stopped = await world('https://partner.test/s503');
+    const l = await waitingLead(stopped);
+    const twinWorld = await world('https://other.test/s503');
+    const twin = await waitingLead(twinWorld);
+    await condition(stopped, l);
+    const dueNow = await lead(await world('https://other.test/ok'));
+    received.length = 0;
+    alarms.length = 0;
+
+    const result = await runModuleLeadHandoffTick(deps());
+    expect(result.cancelledWaiting).toBe(1);
+    expect(await row(l.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: `cancelled:${word}`, member_fields_ciphertext: null, attempt_count: 1, claim_token: null });
+    // ⛔ request, ⛔ a second decrypt line, ⛔ alarm for the cancelled lead: a cancel is not a failure.
+    expect(sentFor(l.leadId)).toHaveLength(0);
+    expect((await auditLines(stopped.pariwarId, l.leadId)).filter((x) => x.action === 'module.lead_handoff_fields_decrypted')).toHaveLength(1);
+    expect(alarmsFor(l.leadId)).toHaveLength(0);
+    // CONTROLS, same tick: the twin that nobody stopped still waits with its fields; a lead that is due now IS sent.
+    expect(await row(twin.leadId)).toMatchObject({ status: 'due', outcome_detail: 'released:http_5xx:503', attempt_count: 1 });
+    expect((await row(twin.leadId))['member_fields_ciphertext']).not.toBeNull();
+    expect(sentFor(twin.leadId)).toHaveLength(0);
+    expect(sentFor(dueNow.leadId)).toHaveLength(1);
+  });
+
+  it('the waiting pass: the member\'s word wins over a withdrawn offer, and an UNSOUND read cancels nothing', async () => {
+    const w = await world('https://partner.test/s503');
+    const l = await waitingLead(w);
+    await revoke(w, l);
+    await archive(w.moduleId, 'trustee_archived');
+    // A waiting row whose member the scope read cannot see (seeded raw: the command refuses it) — the row's own attempt will hold it.
+    const host = await world('https://other.test/ok');
+    const foreign = await world();
+    const unsoundLead = randomUUID();
+    const unsoundConsent = randomUUID();
+    await pool.query(
+      `INSERT INTO consent_records (consent_id, subject_id, pariwar_id, consent_type, consent_artifact_ref, granted_via_actor, consent_payload)
+       VALUES ($1, $2, $3, 'module_lead_handoff', $4, 'member_self', '{}')`,
+      [unsoundConsent, foreign.memberId, host.pariwarId, unsoundLead],
+    );
+    await pool.query(
+      `INSERT INTO marketplace_lead_handoffs (lead_id, pariwar_id, module_id, member_id, consent_id, envelope_version, member_fields_ciphertext, audit_id, next_attempt_at)
+       VALUES ($1, $2, $3, $4, $5, 1, 'kept', $6, now() + interval '1 hour')`,
+      [unsoundLead, host.pariwarId, host.moduleId, foreign.memberId, unsoundConsent, randomUUID()],
+    );
+    const result = await runModuleLeadHandoffTick(deps());
+    expect(result.cancelledWaiting).toBe(1);
+    expect(await row(l.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:consent_revoked' });
+    expect(await row(unsoundLead)).toMatchObject({ status: 'due', member_fields_ciphertext: 'kept', attempt_count: 0 });
+  });
+
+  it('the waiting pass has its own TIME budget and resumes from its cursor: budget 0 ⇒ one row a tick, each row reached once', async () => {
+    const a = await world('https://partner.test/s503');
+    const la = await waitingLead(a);
+    const b = await world('https://other.test/s503');
+    const lb = await waitingLead(b);
+    await revoke(a, la);
+    await revoke(b, lb);
+    const cursor = { leadId: null as string | null };
+    const one = await runModuleLeadHandoffTick(deps({ waitingBudgetMs: 0, waitingCursor: cursor }));
+    expect(one.cancelledWaiting).toBe(1);
+    const firstId = [la.leadId, lb.leadId].sort()[0]!;
+    // The pass walks in `lead_id` order and stopped BEHIND the row it handled.
+    expect(cursor.leadId).toBe(firstId);
+    expect([(await row(la.leadId))['status'], (await row(lb.leadId))['status']].sort()).toEqual(['cancelled', 'due']);
+    const two = await runModuleLeadHandoffTick(deps({ waitingBudgetMs: 0, waitingCursor: cursor }));
+    expect(two.cancelledWaiting).toBe(1);
+    expect([(await row(la.leadId))['status'], (await row(lb.leadId))['status']]).toEqual(['cancelled', 'cancelled']);
+    // The end of the list: the next tick starts over.
+    await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    expect(cursor.leadId).toBeNull();
+  });
+
+  it('a THROW in the waiting pass ⇒ ONE sweep_failed alarm naming it, the tick ends (⛔ claim) — and the next tick resumes BEHIND that row (no stall)', async () => {
+    const w = await world('https://partner.test/s503');
+    const l = await waitingLead(w);
+    await revoke(w, l);
+    const dueNow = await lead(await world('https://other.test/ok'));
+    alarms.length = 0;
+    received.length = 0;
+    const cursor = { leadId: null as string | null };
+    const broken = await runModuleLeadHandoffTick(deps({ pool: faultyPool(pool, (text) => /from "consent_records"/i.test(text), 1), waitingCursor: cursor }));
+    // (The injected fault reaches the sweep wrapped by the query layer, so its NAME is the wrapper's — the step is what is pinned.)
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]).toMatch(/module_lead_handoff\.sweep_failed:\w+ at the waiting pass — this tick swept nothing further/);
+    expect(broken).toMatchObject({ cancelledWaiting: 0, claimed: 0, sent: 0 });
+    expect(sentFor(dueNow.leadId)).toHaveLength(0);
+    expect(await row(l.leadId)).toMatchObject({ status: 'due' });
+    // The cursor moved BEFORE the read that threw: the next tick does not meet that row first, so sends go on.
+    expect(cursor.leadId).toBe(l.leadId);
+    const next = await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    expect(sentFor(dueNow.leadId)).toHaveLength(1);
+    expect(next.cancelledWaiting).toBe(0);
+    // And the tick after that starts over and reaches it.
+    const third = await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    expect(third.cancelledWaiting).toBe(1);
+    expect(await row(l.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:consent_revoked', member_fields_ciphertext: null });
   });
 
   // ── AC9 — the purge half ──

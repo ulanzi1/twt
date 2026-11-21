@@ -189,6 +189,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — marketplace_lead_handoffs (0215)',
       ['a detail outside the grammar', { status: 'due', outcomeDetail: 'released:boom' }, 'marketplace_lead_handoffs_outcome_detail_check'],
       ['an attempting row with no claim token', { status: 'attempting', claimToken: null as unknown as string }, 'marketplace_lead_handoffs_attempting_claim_check'],
       ['a negative attempt count', { attemptCount: -1 }, 'marketplace_lead_handoffs_attempt_count_check'],
+      ['a cancelled row that still holds the fields', { status: 'cancelled', outcomeDetail: 'cancelled:consent_revoked', ciphertext: 'still-here' }, 'marketplace_lead_handoffs_cancelled_fields_check'],
     ])('refuses %s', async (_label, o, constraint) => {
       const { client } = getTx();
       const a = await seedHandoffWorld(client, PARIWAR_A);
@@ -306,6 +307,40 @@ describe.skipIf(!hasDatabase)('Story 12.5 — marketplace_lead_handoffs (0215)',
       await expectRefused(client, `UPDATE ${TABLE} SET status = 'due', outcome_detail = 'requeued:manual', attempt_count = 0 WHERE lead_id = $1`, [a.leadId], INTEGRITY, {
         message: 'a requeue needs the member fields',
       });
+    });
+
+    it('a cancel that does NOT drop the fields is refused by the CHECK — from due and from attempting (`-484` Q4 A; code review patch 2)', async () => {
+      const { client } = getTx();
+      const due = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, due);
+      const flying = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, flying, { status: 'attempting' });
+      for (const id of [due.leadId, flying.leadId]) {
+        await expectRefused(
+          client,
+          `UPDATE ${TABLE} SET status = 'cancelled', outcome_detail = 'cancelled:consent_revoked', claim_token = NULL, claimed_at = NULL WHERE lead_id = $1`,
+          [id],
+          '23514',
+          { constraint: 'marketplace_lead_handoffs_cancelled_fields_check' },
+        );
+      }
+      // Control: the same statement WITH the fields dropped passes the guard and the CHECK.
+      await client.query(
+        `UPDATE ${TABLE} SET status = 'cancelled', outcome_detail = 'cancelled:consent_revoked', member_fields_ciphertext = NULL WHERE lead_id = $1`,
+        [due.leadId],
+      );
+      expect(await handoffRow(client, due.leadId)).toMatchObject({ status: 'cancelled', member_fields_ciphertext: null });
+    });
+
+    it('ADMITS on a final row the fields going NULL ALONE — updated_at left as the time it became final (patch 10)', async () => {
+      const { client } = getTx();
+      const a = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, a, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:400', updatedAtSql: "now() - interval '31 days'" });
+      const before = (await handoffRow(client, a.leadId))['updated_at'] as Date;
+      await client.query(`UPDATE ${TABLE} SET member_fields_ciphertext = NULL WHERE lead_id = $1`, [a.leadId]);
+      const row = await handoffRow(client, a.leadId);
+      expect(row['member_fields_ciphertext']).toBeNull();
+      expect((row['updated_at'] as Date).getTime()).toBe(before.getTime());
     });
 
     it('ADMITS on a final row exactly: the fields going NULL with updated_at (W11 / W12)', async () => {

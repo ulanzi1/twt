@@ -38,9 +38,11 @@ describe.skipIf(!hasDatabase)('Story 12.5 — erasure meets the lead handoffs (W
     const att = await another(client, due);
     await insertHandoffRaw(client, att, { status: 'attempting', attemptCount: 1 });
     const del = await another(client, due);
-    await insertHandoffRaw(client, del, { status: 'delivered', outcomeDetail: 'delivered:http_2xx:200', partnerReference: 'REF-9' });
+    await insertHandoffRaw(client, del, { status: 'delivered', outcomeDetail: 'delivered:http_2xx:200', partnerReference: 'REF-9', updatedAtSql: "now() - interval '10 days'" });
     const fail = await another(client, due);
-    await insertHandoffRaw(client, fail, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:400' });
+    await insertHandoffRaw(client, fail, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:400', updatedAtSql: "now() - interval '10 days'" });
+    const finalTimes = [(await handoffRow(client, del.leadId))['updated_at'] as Date, (await handoffRow(client, fail.leadId))['updated_at'] as Date];
+    const dueTime = (await handoffRow(client, due.leadId))['updated_at'] as Date;
     const held = await another(client, due);
     await insertHandoffRaw(client, held, { outcomeDetail: 'held:kms_unavailable', heldSinceSql: "now() - interval '1 hour'" });
 
@@ -53,6 +55,11 @@ describe.skipIf(!hasDatabase)('Story 12.5 — erasure meets the lead handoffs (W
     expect(await handoffRow(client, att.leadId)).toMatchObject({ status: 'attempting', attempt_count: 1, member_fields_ciphertext: null });
     expect(await handoffRow(client, del.leadId)).toMatchObject({ status: 'delivered', outcome_detail: 'delivered:http_2xx:200', partner_reference: 'REF-9', member_fields_ciphertext: null });
     expect(await handoffRow(client, fail.leadId)).toMatchObject({ status: 'failed_delivery', member_fields_ciphertext: null });
+    // A FINAL row keeps `updated_at` — the time it became final, the only failure time it has (patch 10); the row erasure CANCELS takes
+    // the clock.
+    expect(((await handoffRow(client, del.leadId))['updated_at'] as Date).getTime()).toBe(finalTimes[0]!.getTime());
+    expect(((await handoffRow(client, fail.leadId))['updated_at'] as Date).getTime()).toBe(finalTimes[1]!.getTime());
+    expect(((await handoffRow(client, due.leadId))['updated_at'] as Date).getTime()).toBeGreaterThanOrEqual(dueTime.getTime());
     // What it leaves (QE16; `-484` Q5 A): the ids, the status and the times — the member↔offer link.
     expect(await handoffRow(client, del.leadId)).toMatchObject({ member_id: due.memberId, module_id: del.moduleId, consent_id: del.consentId });
   });

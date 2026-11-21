@@ -450,7 +450,7 @@ export class LeadHandoffConsentInvalidError extends Error {
   public readonly name = 'LeadHandoffConsentInvalidError';
   public constructor(
     public readonly leadId: string,
-    public readonly reason: 'not_found' | 'wrong_type' | 'wrong_subject' | 'revoked' | 'wrong_artifact',
+    public readonly reason: 'not_found' | 'wrong_type' | 'wrong_subject' | 'member_not_in_pariwar' | 'revoked' | 'wrong_artifact',
   ) {
     super(`lead ${leadId}: the consent cannot back this handoff (${reason})`);
   }

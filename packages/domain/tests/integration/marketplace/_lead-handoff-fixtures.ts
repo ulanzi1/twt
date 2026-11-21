@@ -135,7 +135,8 @@ export async function insertHandoffRaw(
       w.moduleId,
       w.memberId,
       w.consentId,
-      o.ciphertext === undefined ? SEALED_PLACEHOLDER : o.ciphertext,
+      // A `cancelled` row holds NO fields (0215's `_cancelled_fields_check`): its default is NULL.
+      o.ciphertext === undefined ? (status === 'cancelled' ? null : SEALED_PLACEHOLDER) : o.ciphertext,
       status,
       o.outcomeDetail ?? null,
       o.attemptCount ?? 0,

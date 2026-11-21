@@ -16,11 +16,28 @@ contribution or claim state** (Epic 12, Story 12.5's boundary AC; Decision `2026
 Comments never match (AST-detected). The gate also FAILS when one of its listed files is missing, so a moved or renamed transport
 file cannot shrink the scan in silence.
 
+Added by the code review of 2026-11-22 (patch 8), so that no rule passes on nothing and the obvious ways around an import scan fail:
+
+- **(a)** also judges the marketplace lead shape (`…/modules/:moduleId/lead…`), and pins the EXACT list of body-accepting
+  `/webhooks/` routes: a new inbound webhook fails the spec until it is added there by name, with its reason.
+- **(b)** `lead-handoff.ts` MUST hold a function declaration named `getLeadHandoffStatus`. A rename, or a rewrite as an arrow
+  constant, fails instead of leaving the member-read leg with nothing to judge.
+- **(c)** in the four transport files these fail too: an import of the domain barrel (`../index.js`), a detoured relative path
+  (`./../consent/…`), a deep `@twt/domain/…` path, an authority package (`@twt/validity-service`), a dynamic `import(`, a
+  `require(`, a re-export, and a raw-SQL `INSERT INTO` / `UPDATE` / `DELETE FROM` / `TRUNCATE` naming any table other than
+  `marketplace_lead_handoffs`. And `lead-handoff.ts` must import EXACTLY the seven allow-listed reads: if the member-side reads
+  move to a file this gate does not judge, or an allowance goes unused, the gate fails.
+- **(e)** an import alias of `createPartnerLeadClient`, and `.call(` / `.apply(` / `.bind(` on it, are judged.
+
 ## ⚠ The semantic limit
 
 This gate proves the **absence of the patterns it names**. It does **NOT** prove that no future code path could launder partner data
 into what TWT believes about a member — a new table, a new namespace, a value copied through an innocently named field, or an inbound
-path that is session-guarded but fed by a partner's export would all pass it. A green run means "none of these five shapes", nothing
+path that is session-guarded but fed by a partner's export would all pass it. Nor does it see, in the transport itself: a write made
+through a helper in ANOTHER file (the scan reads four files, not their callees); SQL assembled from pieces, in lower-case keywords, or
+through the query builder; a namespace of the `@twt/domain` barrel outside the six it names; a response header other than
+`X-Partner-Reference` read in the client (rule (d) looks for JSON parsing only); or a hand-built client passed to the sweep as
+`deps.client` (that one is pinned by the sweep's own test on `boot.ts`'s text, ⛔ by this gate). A green run means "none of these five shapes", nothing
 more ([[feedback_gate_scope_semantic_coverage]]).
 
 The human half is the review question ADR-0046 sets for **every** future inbound integration (K-5's lead-outcome callback first):

@@ -9,6 +9,10 @@
 // ⚠ `hasSessionGuard` is COPIED from login-wall.spec.ts with its two guard symbols (it is not exported there). ⚠ The fence's semantic
 // limit is its README's (scripts/partner-boundary-invariant/README.md): a partner feed reaching TWT some other way is ADR-0046's review
 // question, ⛔ this spec's.
+// ⭐ Code review 2026-11-22 (patch 8): the word pattern alone missed the repo's OWN shapes — every inbound webhook here is named for its
+// provider (`/webhooks/<provider>/…`), and a marketplace route is `/modules/:moduleId/…`. So (1) the pattern also names the marketplace
+// lead shape, and (2) the body-accepting `/webhooks/` routes are PINNED to an exact list: a new inbound webhook fails here until it is
+// added by name — and a partner's is never added (ADR-0046's review question).
 
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
@@ -19,7 +23,16 @@ import { collectRoutes, getCollectedRoutes, type CollectedRoute } from '../../sr
 import { createTestApp, teardown } from './_setup.js';
 
 /** The URL shapes that name a partner or a lead outcome (QE15 (a)). */
-const INBOUND_PARTNER_URL = /partner|lead-outcome|lead_outcome|module-lead/i;
+const INBOUND_PARTNER_URL = /partner|lead-outcome|lead_outcome|module-lead|\/modules\/[^/]+\/leads?(\/|$)/i;
+/**
+ * EVERY body-accepting route under `/webhooks/` — each a channel PROVIDER's delivery ingress, public by design (login-wall.spec.ts's
+ * `PUBLIC_ALLOWLIST` holds the reason for each). ⛔ A partner's callback is never added here: partners are downstream consumers.
+ */
+const KNOWN_INBOUND_WEBHOOKS: readonly string[] = [
+  'POST /api/v1/webhooks/msg91/sms-reports',
+  'POST /api/v1/webhooks/telegram/:pariwarId',
+  'POST /api/v1/webhooks/whatsapp/:pariwarId',
+];
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /** Copied from login-wall.spec.ts: guarded ⇔ the admin-session OR the member-session guard is among the preHandlers. */
@@ -37,10 +50,18 @@ function partnerShaped(routes: readonly CollectedRoute[]): { readonly guarded: s
   const guarded: string[] = [];
   const inbound: string[] = [];
   for (const r of routes) {
-    if (!BODY_METHODS.has(r.method) || !INBOUND_PARTNER_URL.test(r.url)) continue;
-    (hasSessionGuard(r.preHandlers) ? guarded : inbound).push(`${r.method} ${r.url}`);
+    if (!BODY_METHODS.has(r.method.toUpperCase()) || !INBOUND_PARTNER_URL.test(r.url)) continue;
+    (hasSessionGuard(r.preHandlers) ? guarded : inbound).push(`${r.method.toUpperCase()} ${r.url}`);
   }
   return { guarded, inbound };
+}
+
+/** Every body-accepting `/webhooks/` route, as `METHOD url`, sorted. */
+function inboundWebhooks(routes: readonly CollectedRoute[]): string[] {
+  return routes
+    .filter((r) => BODY_METHODS.has(r.method.toUpperCase()) && /\/webhooks\//i.test(r.url))
+    .map((r) => `${r.method.toUpperCase()} ${r.url}`)
+    .sort();
 }
 
 describe('partner boundary — rule (a): ⛔ inbound partner route (hermetic)', () => {
@@ -56,6 +77,15 @@ describe('partner boundary — rule (a): ⛔ inbound partner route (hermetic)', 
     }
   });
 
+  it('on the REAL route table, the inbound webhooks are EXACTLY the known provider ingresses — a new one must be named here', async () => {
+    const t = await createTestApp();
+    try {
+      expect(inboundWebhooks(getCollectedRoutes(t.app))).toEqual([...KNOWN_INBOUND_WEBHOOKS].sort());
+    } finally {
+      await teardown(t);
+    }
+  });
+
   it('BITES: a planted UNGUARDED partner callback is an inbound partner path; the guarded twin is not', async () => {
     const app = Fastify();
     collectRoutes(app);
@@ -63,11 +93,21 @@ describe('partner boundary — rule (a): ⛔ inbound partner route (hermetic)', 
     app.post('/api/v1/partners/:partnerId/lead-outcome', async () => ({ ok: true }));
     app.put('/api/v1/p/:pariwarId/module-lead/:leadId/status', async () => ({ ok: true }));
     app.post('/api/v1/p/:pariwarId/modules/partners', { preHandler: [guard] }, async () => ({ ok: true }));
+    app.post('/api/v1/p/:pariwarId/modules/:moduleId/leads/:leadId/outcome', async () => ({ ok: true })); // the marketplace shape
+    app.post('/api/v1/webhooks/acme-insurer/lead-status', async () => ({ ok: true })); // the webhook shape: no partner word in it
     app.get('/api/v1/partners/:partnerId', async () => ({ ok: true })); // GET carries no body: out of scope
     await app.ready();
     try {
       const { guarded, inbound } = partnerShaped(getCollectedRoutes(app));
-      expect(inbound.sort()).toEqual(['POST /api/v1/partners/:partnerId/lead-outcome', 'PUT /api/v1/p/:pariwarId/module-lead/:leadId/status'].sort());
+      expect(inbound.sort()).toEqual(
+        [
+          'POST /api/v1/partners/:partnerId/lead-outcome',
+          'PUT /api/v1/p/:pariwarId/module-lead/:leadId/status',
+          'POST /api/v1/p/:pariwarId/modules/:moduleId/leads/:leadId/outcome',
+        ].sort(),
+      );
+      // The provider-named callback carries no partner word — the webhook PIN is what catches it.
+      expect(inboundWebhooks(getCollectedRoutes(app)).filter((w) => !KNOWN_INBOUND_WEBHOOKS.includes(w))).toEqual(['POST /api/v1/webhooks/acme-insurer/lead-status']);
       expect(guarded).toEqual(['POST /api/v1/p/:pariwarId/modules/partners']);
     } finally {
       await app.close();

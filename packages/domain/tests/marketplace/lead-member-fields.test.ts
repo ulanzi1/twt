@@ -15,6 +15,7 @@ import {
   LeadHandoffFieldsUnreadableError,
 } from '../../src/marketplace/errors.js';
 import {
+  UNNAMED_KEY,
   leadMemberFieldsV1Schema,
   openLeadMemberFieldsV1,
   parseLeadMemberFieldsInput,
@@ -70,8 +71,44 @@ describe('LeadMemberFieldsV1 — the allow-list (QE5 (A))', () => {
     expect(caught).toBeInstanceOf(LeadHandoffFieldsInvalidError);
     const e = caught as LeadHandoffFieldsInvalidError;
     expect(e.fields).toContain(field);
-    expect(e.message).not.toContain('12345');
-    expect(e.message).not.toContain('1980');
+    // ⛔ ANY value of THIS input in the message — every string the case supplied, not two literals (code review 2026-11-22, patch 9).
+    for (const value of Object.values(input)) {
+      if (typeof value === 'string' && value.trim().length > 2 && !Object.keys(input).includes(value)) expect(e.message, `leaked ${JSON.stringify(value)}`).not.toContain(value);
+    }
+  });
+
+  it.each([
+    ['a lone zero-width joiner', String.fromCharCode(0x200d)],
+    ['a zero-width non-joiner and a zero-width space', String.fromCharCode(0x200c, 0x200b)],
+    ['a word joiner and a byte-order mark', String.fromCharCode(0x2060, 0xfeff)],
+    ['a no-break space and an ideographic space', String.fromCharCode(0x00a0, 0x3000)],
+    ['a soft hyphen between spaces', ` ${String.fromCharCode(0x00ad)} `],
+  ])('refuses a name or district of nothing a reader can see: %s (built from code points — TR13)', (_label, invisible) => {
+    for (const input of [{ ...valid, full_name: invisible }, { ...valid, district: invisible }]) {
+      expect(() => parseLeadMemberFieldsInput(input)).toThrow(LeadHandoffFieldsInvalidError);
+    }
+  });
+
+  it('a joiner INSIDE a real name is kept, byte for byte — the blank test never edits the value', () => {
+    // "क्ष" written with an explicit zero-width joiner, as Devanagari names do: KA, VIRAMA, ZWJ, SSA.
+    const name = `${HINDI_NAME} ${String.fromCharCode(0x0915, 0x094d, 0x200d, 0x0937)}`;
+    expect(parseLeadMemberFieldsInput({ ...valid, full_name: name }).full_name).toBe(name);
+  });
+
+  it('an unknown key is echoed ONLY when it looks like a field name — a value-shaped key becomes the closed word (I8)', () => {
+    const valueShaped = { ...valid, 'Sita Devi, +91 98765 43210': true, ['x'.repeat(300)]: 1, 'line\nbreak': 1 };
+    let caught: unknown;
+    try {
+      parseLeadMemberFieldsInput(valueShaped);
+    } catch (err) {
+      caught = err;
+    }
+    const e = caught as LeadHandoffFieldsInvalidError;
+    expect(e).toBeInstanceOf(LeadHandoffFieldsInvalidError);
+    expect(e.fields).toEqual([UNNAMED_KEY, UNNAMED_KEY, UNNAMED_KEY]);
+    expect(e.message).not.toContain('98765');
+    expect(e.message).not.toContain('Sita');
+    expect(e.message.length).toBeLessThan(200);
   });
 
   it('the STORED schema takes only the canonical mobile', () => {
@@ -117,7 +154,18 @@ describe('sealLeadMemberFieldsV1 / openLeadMemberFieldsV1 (QE11 (A))', () => {
     const sealed = await sealLeadMemberFieldsV1(enc, { pariwarId: P, leadId: randomUUID(), fields: valid });
     const err = await openLeadMemberFieldsV1(enc, { pariwarId: P, leadId: randomUUID(), ciphertext: sealed }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(LeadHandoffFieldsUnreadableError);
-    expect(['key_rejected', 'authentication']).toContain((err as LeadHandoffFieldsUnreadableError).stage);
+    // EXACT: the fake key service binds the context into the unwrap, so another lead's `rowKey` is REJECTED there (code 3) — the same
+    // answer a wrong key reference gives for every row. That is why the sweep HOLDS on it (Decision `2026-11-22-487`).
+    expect((err as LeadHandoffFieldsUnreadableError).stage).toBe('key_rejected');
+  });
+
+  it('classifies: the key service REJECTS the key (gRPC 3) ⇒ key_rejected — never "unavailable", never "authentication"', async () => {
+    const leadId = randomUUID();
+    const sealed = await sealLeadMemberFieldsV1(enc, { pariwarId: P, leadId, fields: valid });
+    const rejecting: KmsProvider = { ...kms, decryptDek: () => Promise.reject(Object.assign(new Error('INVALID_ARGUMENT'), { code: 3 })) };
+    const err = await openLeadMemberFieldsV1({ ...enc, kms: rejecting }, { pariwarId: P, leadId, ciphertext: sealed }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LeadHandoffFieldsUnreadableError);
+    expect((err as LeadHandoffFieldsUnreadableError).stage).toBe('key_rejected');
   });
 
   it('nor under another Pariwar', async () => {

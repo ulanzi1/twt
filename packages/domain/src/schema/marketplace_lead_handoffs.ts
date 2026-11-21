@@ -137,6 +137,9 @@ export const marketplaceLeadHandoffs = pgTable(
       sql`(${t.status} = 'attempting') = (${t.claimToken} IS NOT NULL) AND (${t.status} = 'attempting') = (${t.claimedAt} IS NOT NULL)`,
     ),
     check('marketplace_lead_handoffs_delivered_at_check', sql`(${t.status} = 'delivered') = (${t.deliveredAt} IS NOT NULL)`),
+    // A cancelled row holds NO fields (`-484` Q4 A; code review 2026-11-22, patch 2): W9, W11 and W14 all write NULL, and the purge never
+    // visits a cancelled row — so the database says it too.
+    check('marketplace_lead_handoffs_cancelled_fields_check', sql`${t.status} <> 'cancelled' OR ${t.memberFieldsCiphertext} IS NULL`),
     check(
       'marketplace_lead_handoffs_partner_reference_check',
       sql`${t.partnerReference} IS NULL OR ${t.partnerReference} ~ ${sql.raw(`'${LEAD_HANDOFF_PARTNER_REFERENCE_PATTERN}'`)}`,

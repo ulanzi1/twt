@@ -6,8 +6,9 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { CONSENTS_FOR_ARTIFACT_LIMIT_CAP } from '../../../src/consent/read.js';
 import { bindScopedDb } from '../../../src/db.js';
 import {
   LeadHandoffAlreadyRecordedError,
@@ -19,12 +20,14 @@ import {
 import {
   LEAD_HANDOFF_CONSENT_PAGE,
   cancelLeadHandoff,
+  cancelWaitingLeadHandoff,
   claimDueLeadHandoff,
   failLeadHandoff,
   getLeadHandoffStatus,
   holdLeadHandoff,
   lapseLeadHandoffs,
   listFailedLeadHandoffs,
+  listWaitingLeadHandoffs,
   purgeLeadHandoffFields,
   readLeadHandoffModule,
   readLeadHandoffPredicates,
@@ -141,7 +144,30 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
     it('refuses a sealed string that is not an envelope (LeadHandoffFieldsInvalidError) before any SQL', async () => {
       const { client } = getTx();
       const w = await seedHandoffWorld(client, PARIWAR_A);
-      await expect(recordLeadHandoff(client, { ...w, sealedFields: 'plain text', auditId: randomUUID() })).rejects.toBeInstanceOf(LeadHandoffFieldsInvalidError);
+      const spy = vi.spyOn(client, 'query');
+      try {
+        await expect(recordLeadHandoff(client, { ...w, sealedFields: 'plain text', auditId: randomUUID() })).rejects.toBeInstanceOf(LeadHandoffFieldsInvalidError);
+        // "before any SQL" is OBSERVED: not even the SAVEPOINT.
+        expect(spy).not.toHaveBeenCalled();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('refuses a member of ANOTHER Pariwar (member_not_in_pariwar) — the member FK is single-column and ignores RLS', async () => {
+      const { client } = getTx();
+      const w = await seedHandoffWorld(client, PARIWAR_A);
+      const foreign = await seedMemberRow(client, PARIWAR_B);
+      // A consent in A whose subject is B's member: `subject_id` carries no FK, so this row is constructible.
+      const consentId = await seedLeadConsent(client, PARIWAR_A, { subjectId: foreign, artifactRef: w.leadId });
+      await enterAppScope(client, PARIWAR_A);
+      const err = await recordLeadHandoff(client, { ...w, memberId: foreign, consentId, sealedFields: SEALED_PLACEHOLDER, auditId: randomUUID() }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(LeadHandoffConsentInvalidError);
+      expect((err as LeadHandoffConsentInvalidError).reason).toBe('member_not_in_pariwar');
+      expect((await client.query('SELECT 1 FROM marketplace_lead_handoffs WHERE lead_id = $1', [w.leadId])).rows).toHaveLength(0);
+      // Control: the SAME call with this Pariwar's own member and consent is recorded.
+      await recordLeadHandoff(client, { ...w, sealedFields: SEALED_PLACEHOLDER, auditId: randomUUID() });
+      expect((await client.query('SELECT 1 FROM marketplace_lead_handoffs WHERE lead_id = $1', [w.leadId])).rows).toHaveLength(1);
     });
 
     it('a second call with the same lead_id ⇒ LeadHandoffAlreadyRecordedError(lead_id), and the transaction stays usable (TR3)', async () => {
@@ -194,6 +220,14 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       expect((await handoffRow(client, w.leadId))['status']).toBe('due');
       // Control: unexcluded, the due row IS claimed, the later one is not.
       expect((await claimDueLeadHandoff(client, { claimToken: randomUUID() }))?.leadId).toBe(w.leadId);
+      // ⚠ Not yet due: with `w` gone, keep claiming until nothing is left — the row an hour ahead is NEVER handed out. (Without the
+      // `next_attempt_at <= clock` predicate this loop reaches it: a mutation check, code review 2026-11-22 patch 9.)
+      for (let i = 0; i < 200; i += 1) {
+        const next = await claimDueLeadHandoff(client, { claimToken: randomUUID() });
+        if (next === null) break;
+        expect(next.leadId).not.toBe(later.leadId);
+      }
+      expect(await claimDueLeadHandoff(client, { claimToken: randomUUID() })).toBeNull();
       expect((await handoffRow(client, later.leadId))['status']).toBe('due');
     });
 
@@ -231,6 +265,21 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       expect((await handoffRow(client, w.leadId))['status']).toBe('attempting');
     });
 
+    it('the RIGHT token under ANOTHER Pariwar writes nothing, on every CAS writer (TR11 — the sweep\'s pool bypasses RLS)', async () => {
+      const { client } = getTx();
+      const w = await seedHandoffWorld(client, PARIWAR_A);
+      const token = await attempting(client, w);
+      const wrong = { pariwarId: PARIWAR_B, leadId: w.leadId, claimToken: token };
+      expect(await settleLeadHandoffDelivered(client, { ...wrong, httpStatus: 200, partnerReference: null })).toBe(false);
+      expect(await releaseLeadHandoff(client, { ...wrong, detail: 'released:timeout' })).toBe('stale');
+      expect(await holdLeadHandoff(client, { ...wrong, word: 'kms' })).toBe('stale');
+      expect(await failLeadHandoff(client, { ...wrong, detail: 'failed_delivery:http_4xx:400' })).toBe(false);
+      expect(await cancelLeadHandoff(client, { ...wrong, word: 'consent_revoked' })).toBe(false);
+      expect(await handoffRow(client, w.leadId)).toMatchObject({ status: 'attempting', claim_token: token, member_fields_ciphertext: SEALED_PLACEHOLDER });
+      // Control: the same token under the row's OWN Pariwar does write.
+      expect(await cancelLeadHandoff(client, { ...w, claimToken: token, word: 'consent_revoked' })).toBe(true);
+    });
+
     it('W4 — released: due, the attempt stays counted, next = clock + schedule[attempt − 1], held_since cleared', async () => {
       const { client } = getTx();
       const w = await seedHandoffWorld(client, PARIWAR_A);
@@ -260,7 +309,9 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       const row = await handoffRow(client, w.leadId);
       expect(row).toMatchObject({ status: 'due', outcome_detail: 'held:signing_key_unavailable', attempt_count: 4, claim_token: null });
       expect(row['held_since']).not.toBeNull();
+      // The HOLD's own minute — bounded on both sides, so the retry schedule's time (attempt 5 ⇒ 6 h) would fail.
       expect(secondsBetween(row['next_attempt_at'] as Date, before)).toBeGreaterThanOrEqual(60);
+      expect(secondsBetween(row['next_attempt_at'] as Date, before)).toBeLessThan(90);
     });
 
     it('W6 again keeps the run\'s start (COALESCE); W7 — 25 h of holds ⇒ failed_delivery:hold_expired:<this word>', async () => {
@@ -314,10 +365,15 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       await attempting(client, last, { attemptCount: 7, claimedAtSql: "now() - interval '10 minutes'" });
       const fresh = await seedHandoffWorld(client, PARIWAR_A);
       await attempting(client, fresh, { attemptCount: 1 });
+      const before = await dbNow(client);
       const lapsed = await lapseLeadHandoffs(client, { leaseMs: 300_000, retryScheduleMs: SCHEDULE });
       const mine = lapsed.filter((l) => [w.leadId, last.leadId, fresh.leadId].includes(l.leadId));
       expect(mine.map((l) => [l.leadId, l.status]).sort()).toEqual([[w.leadId, 'due'], [last.leadId, 'failed_delivery']].sort());
-      expect(await handoffRow(client, w.leadId)).toMatchObject({ status: 'due', outcome_detail: 'lapsed:lease_expired', attempt_count: 2, held_since: null, claim_token: null });
+      const lapsedRow = await handoffRow(client, w.leadId);
+      expect(lapsedRow).toMatchObject({ status: 'due', outcome_detail: 'lapsed:lease_expired', attempt_count: 2, held_since: null, claim_token: null });
+      // The backoff of the attempt it KEPT: attempt 2 ⇒ the schedule's second wait (5 min), from the clock.
+      expect(secondsBetween(lapsedRow['next_attempt_at'] as Date, before)).toBeGreaterThanOrEqual(300);
+      expect(secondsBetween(lapsedRow['next_attempt_at'] as Date, before)).toBeLessThan(330);
       expect(await handoffRow(client, last.leadId)).toMatchObject({ status: 'failed_delivery', outcome_detail: 'failed_delivery:outcome_unknown' });
       expect((await handoffRow(client, fresh.leadId))['status']).toBe('attempting');
     });
@@ -332,9 +388,12 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       await insertHandoffRaw(client, young, { status: 'delivered', outcomeDetail: 'delivered:http_2xx:200', updatedAtSql: "now() - interval '29 days'" });
       const oldDue = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, oldDue, { updatedAtSql: "now() - interval '31 days'" });
+      const failedAt = (await handoffRow(client, oldFailed.leadId))['updated_at'] as Date;
       expect(await purgeLeadHandoffFields(client, { retentionDays: 30 })).toBeGreaterThanOrEqual(2);
       expect(await handoffRow(client, old.leadId)).toMatchObject({ status: 'delivered', outcome_detail: 'delivered:http_2xx:200', member_fields_ciphertext: null });
       expect((await handoffRow(client, oldFailed.leadId))['member_fields_ciphertext']).toBeNull();
+      // The purge leaves `updated_at` — the time the row became final, the only failure time it has (patch 10).
+      expect(((await handoffRow(client, oldFailed.leadId))['updated_at'] as Date).getTime()).toBe(failedAt.getTime());
       expect((await handoffRow(client, young.leadId))['member_fields_ciphertext']).toBe(SEALED_PLACEHOLDER);
       expect((await handoffRow(client, oldDue.leadId))['member_fields_ciphertext']).toBe(SEALED_PLACEHOLDER);
     });
@@ -345,9 +404,15 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       const { client } = getTx();
       const w = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, w, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:hold_expired:kms', attemptCount: 4, heldSinceSql: "now() - interval '25 hours'" });
+      const before = await dbNow(client);
       await enterAppScope(client, PARIWAR_A);
       await requeueLeadHandoff(client, w);
-      expect(await handoffRow(client, w.leadId)).toMatchObject({ status: 'due', outcome_detail: 'requeued:manual', attempt_count: 0, held_since: null });
+      await client.query('RESET ROLE');
+      const requeued = await handoffRow(client, w.leadId);
+      expect(requeued).toMatchObject({ status: 'due', outcome_detail: 'requeued:manual', attempt_count: 0, held_since: null });
+      // "next = clock": due at once, ⛔ on the old schedule.
+      expect(secondsBetween(requeued['next_attempt_at'] as Date, before)).toBeGreaterThanOrEqual(0);
+      expect(secondsBetween(requeued['next_attempt_at'] as Date, before)).toBeLessThan(30);
     });
 
     it('refuses one whose fields are gone (LeadHandoffFieldsGoneError), a delivered one, and another Pariwar\'s (NotRequeueable)', async () => {
@@ -383,11 +448,15 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       }
       await enterAppScope(client, PARIWAR_A);
       for (const [w, expected] of worlds) {
-        const got = await getLeadHandoffStatus(client, w);
-        expect(got).toBe(expected);
-        expect(got).not.toContain('REF1');
+        // The derived word and nothing else: the read selects `status` alone (fence rule (b) fails the reference inside it).
+        expect(await getLeadHandoffStatus(client, w)).toBe(expected);
       }
-      expect(await getLeadHandoffStatus(client, { pariwarId: PARIWAR_A, leadId: randomUUID() })).toBeNull();
+      const [first] = worlds[0]!;
+      expect(await getLeadHandoffStatus(client, { pariwarId: PARIWAR_A, memberId: first.memberId, leadId: randomUUID() })).toBeNull();
+      // ⭐ Member-scoped (checklist family 12 (b)): ANOTHER member of the same Pariwar reads null for this lead, as if there were none.
+      const [second] = worlds[1]!;
+      expect(await getLeadHandoffStatus(client, { pariwarId: PARIWAR_A, memberId: second.memberId, leadId: first.leadId })).toBeNull();
+      expect(await getLeadHandoffStatus(client, { pariwarId: PARIWAR_A, memberId: first.memberId, leadId: first.leadId })).toBe('pending_retry');
     });
 
     it('listFailedLeadHandoffs returns this Pariwar\'s failed rows only', async () => {
@@ -396,11 +465,85 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       await insertHandoffRaw(client, f, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:410', partnerReference: 'P-9' });
       const d = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, d, { status: 'delivered', outcomeDetail: 'delivered:http_2xx:200' });
+      // ⚠ As the session user (RLS-exempt): ONLY the statement's own `pariwar_id` predicate keeps B's failed row out (TR11).
+      const theirs = await seedHandoffWorld(client, PARIWAR_B);
+      await insertHandoffRaw(client, theirs, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:410' });
       const list = await listFailedLeadHandoffs(client, PARIWAR_A, { limit: 200 });
       const ids = list.map((r) => r.leadId);
       expect(ids).toContain(f.leadId);
       expect(ids).not.toContain(d.leadId);
+      expect(ids).not.toContain(theirs.leadId);
+      expect((await listFailedLeadHandoffs(client, PARIWAR_B, { limit: 200 })).map((r) => r.leadId)).toContain(theirs.leadId);
       expect(list.find((r) => r.leadId === f.leadId)).toMatchObject({ outcomeDetail: 'failed_delivery:http_4xx:410', partnerReference: 'P-9', requeueable: true });
+    });
+  });
+
+  describe('the waiting pass\'s read and W14 (Decision 2026-11-22-487)', () => {
+    it('listWaitingLeadHandoffs returns ONLY due rows whose next attempt is still ahead, with the offer\'s withdrawal, in lead_id order after the cursor', async () => {
+      const { client } = getTx();
+      const waiting = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, waiting, { nextAttemptAtSql: "now() + interval '1 hour'", outcomeDetail: 'released:timeout', attemptCount: 3 });
+      const withdrawn = await seedHandoffWorld(client, PARIWAR_B);
+      await insertHandoffRaw(client, withdrawn, { nextAttemptAtSql: "now() + interval '1 hour'" });
+      await archiveModuleRow(client, withdrawn.moduleId, 'trustee_archived');
+      const ended = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, ended, { nextAttemptAtSql: "now() + interval '1 hour'" });
+      await archiveModuleRow(client, ended.moduleId, 'valid_until_reached');
+      const dueNow = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, dueNow);
+      const inFlight = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, inFlight, { status: 'attempting', nextAttemptAtSql: "now() + interval '1 hour'" });
+      const final = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, final, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:400', nextAttemptAtSql: "now() + interval '1 hour'" });
+
+      const mine = [waiting, withdrawn, ended, dueNow, inFlight, final].map((x) => x.leadId);
+      const all = (await listWaitingLeadHandoffs(client, { limit: 500 })).filter((r) => mine.includes(r.leadId));
+      expect(all.map((r) => r.leadId)).toEqual([waiting.leadId, withdrawn.leadId, ended.leadId].sort());
+      expect(all.find((r) => r.leadId === waiting.leadId)).toEqual({
+        leadId: waiting.leadId, pariwarId: PARIWAR_A, moduleId: waiting.moduleId, memberId: waiting.memberId, consentId: waiting.consentId, moduleWithdrawn: false,
+      });
+      // Withdrawn = `trustee_archived` ONLY (QE22 (A)); an offer that simply ended is not.
+      expect(all.find((r) => r.leadId === withdrawn.leadId)?.moduleWithdrawn).toBe(true);
+      expect(all.find((r) => r.leadId === ended.leadId)?.moduleWithdrawn).toBe(false);
+      // The cursor: strictly AFTER it, so a pass resumes behind the last row it looked at.
+      const [firstId, secondId] = [waiting.leadId, withdrawn.leadId, ended.leadId].sort();
+      const after = (await listWaitingLeadHandoffs(client, { afterLeadId: firstId!, limit: 500 })).filter((r) => mine.includes(r.leadId));
+      expect(after.map((r) => r.leadId)).not.toContain(firstId);
+      expect(after[0]?.leadId).toBe(secondId);
+    });
+
+    it('W14 — a waiting due row ⇒ cancelled:<word>, the fields gone, held_since cleared; attempt count and next attempt untouched', async () => {
+      const { client } = getTx();
+      const w = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, w, { nextAttemptAtSql: "now() + interval '6 hours'", outcomeDetail: 'held:dns_unavailable', attemptCount: 4, heldSinceSql: "now() - interval '2 hours'" });
+      expect(await cancelWaitingLeadHandoff(client, { pariwarId: w.pariwarId, leadId: w.leadId, word: 'consent_revoked' })).toBe(true);
+      expect(await handoffRow(client, w.leadId)).toMatchObject({
+        status: 'cancelled', outcome_detail: 'cancelled:consent_revoked', member_fields_ciphertext: null, held_since: null, attempt_count: 4, claim_token: null, claimed_at: null,
+      });
+      // Final: a second cancel, and a claim, find nothing to do.
+      expect(await cancelWaitingLeadHandoff(client, { pariwarId: w.pariwarId, leadId: w.leadId, word: 'member_withdrawn' })).toBe(false);
+      expect((await handoffRow(client, w.leadId))['outcome_detail']).toBe('cancelled:consent_revoked');
+    });
+
+    it('W14 writes NOTHING to a row that is not due (the claim took it; a final row), nor under another Pariwar', async () => {
+      const { client } = getTx();
+      const inFlight = await seedHandoffWorld(client, PARIWAR_A);
+      const token = await attempting(client, inFlight);
+      const failed = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, failed, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:400' });
+      const due = await seedHandoffWorld(client, PARIWAR_A);
+      await insertHandoffRaw(client, due, { nextAttemptAtSql: "now() + interval '1 hour'" });
+      expect(await cancelWaitingLeadHandoff(client, { pariwarId: PARIWAR_A, leadId: inFlight.leadId, word: 'consent_revoked' })).toBe(false);
+      expect(await cancelWaitingLeadHandoff(client, { pariwarId: PARIWAR_A, leadId: failed.leadId, word: 'consent_revoked' })).toBe(false);
+      expect(await cancelWaitingLeadHandoff(client, { pariwarId: PARIWAR_B, leadId: due.leadId, word: 'consent_revoked' })).toBe(false);
+      expect(await handoffRow(client, inFlight.leadId)).toMatchObject({ status: 'attempting', claim_token: token, member_fields_ciphertext: SEALED_PLACEHOLDER });
+      expect(await handoffRow(client, failed.leadId)).toMatchObject({ status: 'failed_delivery', member_fields_ciphertext: SEALED_PLACEHOLDER });
+      expect(await handoffRow(client, due.leadId)).toMatchObject({ status: 'due', member_fields_ciphertext: SEALED_PLACEHOLDER });
+      await expect(cancelWaitingLeadHandoff(client, { pariwarId: PARIWAR_A, leadId: due.leadId, word: 'boom' as never })).rejects.toThrow(/grammar/);
+    });
+
+    it('P1\'s page never exceeds the consent reader\'s cap — else a full page could not be told from "none revoked"', () => {
+      expect(LEAD_HANDOFF_CONSENT_PAGE).toBeLessThanOrEqual(CONSENTS_FOR_ARTIFACT_LIMIT_CAP);
     });
   });
 

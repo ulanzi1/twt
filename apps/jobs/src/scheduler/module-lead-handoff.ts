@@ -7,7 +7,11 @@
 //
 // ── The tick (QE13 — the ONE copy is the story's; this follows it) ──────────────────────────────────────
 //   S1  The roster Row 26 guard FIRST: under an RLS-bound login the claim would see ⛔ row with ⛔ error ⇒ ONE `rls_bound_role` alarm.
-//   S2  The lapse (W10), then the purge (W12, ≤ 100 rows) — each its own statement. A throw ⇒ ONE `sweep_failed:<error>` alarm, end.
+//   S2  The lapse (W10), then the purge (W12, ≤ 100 rows) — each its own statement — then the WAITING PASS (W14; Decision
+//       `2026-11-22-487`): every `due` row whose next attempt is still ahead has its member's side re-read (P0–P5, a scope transaction
+//       that commits) and its offer's withdrawal checked, and is cancelled at once on a stop — `-484` Q4 A's "at once" is the tick's
+//       minute, ⛔ the retry's backoff. Paged, under its own time budget, resuming from a cursor. ⛔ secret, ⛔ DNS, ⛔ decrypt, ⛔ audit
+//       line, ⛔ request, ⛔ alarm. A throw in any of the three ⇒ ONE `sweep_failed:<error>` alarm, end.
 //   S3  Claim ONE row (W2), EXCLUDING the tick's `keyHeld` modules and `open` authorities (the per-tick breaker: their rows are simply ⛔
 //       claimed). Repeat until `tickBudgetMs` has passed — a TIME budget (the first row always runs).
 //   S4  Read the module (explicit Pariwar predicate) and COMPUTE the partner-side verdict — ⛔ write: withdrawn (`trustee_archived`,
@@ -18,6 +22,8 @@
 //       Then exactly one of: unsound / a throw ⇒ hold `db` (a throw ends the tick); a P1–P5 failure ⇒ cancel (W9); withdrawn ⇒ cancel
 //       `module_withdrawn`; a refusal ⇒ W8; `address_refused` ⇒ a COUNTED W4 / W5 (QE21 (C)); a hold ⇒ W6 / W7; ok ⇒ S7.
 //   S7  ONE audit line (`module.lead_handoff_fields_decrypted`), written first, whose `mutate` is the decrypt and NOTHING else (TR7).
+//       A key the key service REJECTS is a HOLD (`kms`) that ends the tick, ⛔ a final failure (`-487`): the rejection cannot tell a
+//       wrong key reference — every row — from one bad row.
 //   S8  Build the body, sign it, POST it — ⛔ connection held (TR8).
 //   S9  The `module.lead_handoff_attempted` line: up to 3 tries; if all fail, write nothing more — the row lapses (at least once).
 //   S10 Settle: W3, W4 / W5, or W8. A transient outcome adds the authority to `open`.
@@ -77,6 +83,16 @@ export interface ModuleLeadHandoffDeps {
   readonly auditRetryPauseMs?: number;
   readonly tickBudgetMs?: number;
   readonly retentionDays?: number;
+  /** The waiting pass's time budget and page (S2, `-487`). */
+  readonly waitingBudgetMs?: number;
+  readonly waitingPage?: number;
+  /** The waiting pass's cursor (default: one per process). A test passes its own so no test inherits another's. */
+  readonly waitingCursor?: WaitingCursor;
+}
+
+/** Where the waiting pass resumes: the last `lead_id` it looked at, or null (from the start). In memory only — a restart starts over. */
+export interface WaitingCursor {
+  leadId: string | null;
 }
 
 export interface ModuleLeadHandoffTickResult {
@@ -84,6 +100,8 @@ export interface ModuleLeadHandoffTickResult {
   readonly refused: boolean;
   readonly lapsed: number;
   readonly purged: number;
+  /** Waiting rows cancelled by the waiting pass (W14). */
+  readonly cancelledWaiting: number;
   readonly claimed: number;
   /** Requests made (S8). */
   readonly sent: number;
@@ -195,7 +213,8 @@ async function processRow(deps: ModuleLeadHandoffDeps, tick: Tick, row: marketpl
       let cached = tick.secrets.get(name);
       if (cached === undefined) {
         cached = deps.resolveSecret(name).then(
-          (value) => (value === null || value === '' ? ({ kind: 'not_found' } as const) : ({ kind: 'ok', value } as const)),
+          // A value of nothing but whitespace is NOT a key (a secret version holding a lone newline would sign every lead with it).
+          (value) => (value === null || value.trim() === '' ? ({ kind: 'not_found' } as const) : ({ kind: 'ok', value } as const)),
           (err: unknown) => ({ kind: 'outage', fault: faultClass(err) }) as const,
         );
         tick.secrets.set(name, cached);
@@ -262,9 +281,12 @@ async function processRow(deps: ModuleLeadHandoffDeps, tick: Tick, row: marketpl
     });
   } catch (err) {
     if (err instanceof marketplace.LeadHandoffFieldsUnreadableError) {
+      // Decision `2026-11-22-487` (1): a key the key service REJECTS is rejected for EVERY row when the key reference is wrong, and the
+      // rejection cannot tell that from one bad row — so it is a HOLD (the attempt given back, the lead kept for the hold window) that
+      // ends the tick, ⛔ a final failure. A held row comes back a minute later, behind every row already due: no stall.
+      if (err.stage === 'key_rejected') return hold('kms', 'the key service rejected the key', true);
       await fail('failed_delivery:fields_unreadable');
-      // A key the KMS rejects for this row is rejected for EVERY row when the key reference is wrong (the 13.1b CB44 rule): end the tick.
-      return err.stage === 'key_rejected' ? 'end_tick' : 'next';
+      return 'next';
     }
     if (err instanceof marketplace.LeadHandoffDecryptUnavailableError) return hold('kms', 'the key service is unavailable', true);
     return hold('audit', `the decrypt audit line failed [${faultClass(err)}]`, true);
@@ -333,6 +355,40 @@ function defaultClient(): PartnerLeadClient {
   return sharedClient;
 }
 
+/** The production cursor of the waiting pass — one per process. */
+const processWaitingCursor: WaitingCursor = { leadId: null };
+
+/**
+ * ⭐ S2's waiting pass (W14; Decision `2026-11-22-487` (2)). For each `due` row whose next attempt is still ahead: the member's side FIRST
+ * (the same P0–P5, in a scope transaction that commits), then the offer (QE22 (A)); a stop cancels the row at once with the word S6 would
+ * write. `unsound` writes nothing — the row's own attempt holds it. The cursor moves BEFORE each read, so a row whose read throws is not
+ * the first row of the next tick (the tick ends on a throw; the pass resumes behind it). Returns how many rows it cancelled.
+ */
+async function runWaitingPass(deps: ModuleLeadHandoffDeps): Promise<number> {
+  const cursor = deps.waitingCursor ?? processWaitingCursor;
+  const budget = deps.waitingBudgetMs ?? marketplace.LEAD_HANDOFF_WAITING_BUDGET_MS;
+  const pageSize = deps.waitingPage ?? marketplace.LEAD_HANDOFF_WAITING_PAGE;
+  const started = Date.now();
+  let cancelled = 0;
+  for (;;) {
+    const page = await marketplace.listWaitingLeadHandoffs(deps.pool, { afterLeadId: cursor.leadId, limit: pageSize });
+    for (const waiting of page) {
+      cursor.leadId = waiting.leadId;
+      const member = await withPariwarScope(deps.pool, waiting.pariwarId, (db: Db, c: pg.PoolClient) => marketplace.readLeadHandoffPredicates(db, c, waiting));
+      const word: marketplace.LeadHandoffCancelWord | null =
+        member.kind === 'cancel' ? member.word : member.kind === 'ok' && waiting.moduleWithdrawn ? 'module_withdrawn' : null;
+      if (word !== null && (await marketplace.cancelWaitingLeadHandoff(deps.pool, { pariwarId: waiting.pariwarId, leadId: waiting.leadId, word }))) cancelled += 1;
+      // A time budget (the first row always runs): the next tick resumes behind this row.
+      if (Date.now() - started >= budget) return cancelled;
+    }
+    if (page.length < pageSize) {
+      // The end of the list: the next tick starts over.
+      cursor.leadId = null;
+      return cancelled;
+    }
+  }
+}
+
 /** One sweep. It always resolves. */
 export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Promise<ModuleLeadHandoffTickResult> {
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
@@ -340,7 +396,7 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     const fault = faultClass(err);
     alarm(`[jobs] module-lead-handoff: module_lead_handoff.sweep_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} at the ${step} — this tick swept nothing further`);
   };
-  const empty = { lapsed: 0, purged: 0, claimed: 0, sent: 0 };
+  const empty = { lapsed: 0, purged: 0, cancelledWaiting: 0, claimed: 0, sent: 0 };
 
   // ── S1 ──
   try {
@@ -380,6 +436,13 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     sweepFailed('purge', err);
     return { refused: false, ...empty, lapsed: lapsed.length };
   }
+  let cancelledWaiting: number;
+  try {
+    cancelledWaiting = await runWaitingPass(deps);
+  } catch (err) {
+    sweepFailed('waiting pass', err);
+    return { refused: false, ...empty, lapsed: lapsed.length, purged };
+  }
 
   // ── S3–S10, under a time budget ──
   const tick: Tick = { keyHeld: new Set(), open: new Set(), secrets: new Map(), raised: new Set(), sent: 0 };
@@ -406,10 +469,10 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     }
   } while (Date.now() - started < budget);
 
-  if (lapsed.length > 0 || purged > 0 || claimed > 0) {
-    console.info('[jobs] module-lead-handoff tick', JSON.stringify({ lapsed: lapsed.length, purged, claimed, sent: tick.sent }));
+  if (lapsed.length > 0 || purged > 0 || cancelledWaiting > 0 || claimed > 0) {
+    console.info('[jobs] module-lead-handoff tick', JSON.stringify({ lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent }));
   }
-  return { refused: false, lapsed: lapsed.length, purged, claimed, sent: tick.sent };
+  return { refused: false, lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent };
 }
 
 /**

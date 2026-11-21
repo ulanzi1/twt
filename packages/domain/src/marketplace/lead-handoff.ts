@@ -9,7 +9,7 @@
 //      ⛔ function here calls the audit wrapper; G13).
 // ⭐ THE ROW'S WRITES are QE6's W table, one function each (the sweep in `apps/jobs` drives the order S1–S10; this file holds only SQL):
 //   W1 record · W2 claim · W3 delivered · W4 / W5 release-or-exhaust · W6 / W7 hold-or-expire · W8 fail · W9 cancel · W10 lapse ·
-//   W11 erasure (in `member/anonymize.ts`) · W12 purge · W13 requeue.
+//   W11 erasure (in `member/anonymize.ts`) · W12 purge · W13 requeue · W14 cancel-while-waiting (`-487`).
 //   "CAS" = `WHERE pariwar_id AND lead_id AND status = 'attempting' AND claim_token = $token` — zero rows means another claim owns the
 //   row and the caller writes NOTHING (I11). ⛔ A compare on `claimed_at` (a JS `Date` drops microseconds). Every sweep write uses
 //   `clock_timestamp()` (TR10). Every write that leaves `attempting` clears the token and `claimed_at`.
@@ -70,6 +70,10 @@ export const LEAD_HANDOFF_TICK_BUDGET_MS = 45_000;
 export const LEAD_FIELDS_RETENTION_DAYS = 30;
 /** The purge's batch per tick (S2). */
 export const LEAD_HANDOFF_PURGE_BATCH = 100;
+/** The waiting pass's page (S2, `-487`): `due` rows whose next attempt is still ahead, read this many at a time. */
+export const LEAD_HANDOFF_WAITING_PAGE = 50;
+/** The waiting pass stops after this much time and resumes from its cursor on the next tick (`-487`) — a time budget, ⛔ a row count. */
+export const LEAD_HANDOFF_WAITING_BUDGET_MS = 10_000;
 
 /** The consent type that backs a handoff (QE2 (A); migration 0214). */
 export const LEAD_HANDOFF_CONSENT_TYPE = 'module_lead_handoff' as const;
@@ -128,6 +132,8 @@ const CONSENT_UNIQUE_CONSTRAINT = 'marketplace_lead_handoffs_consent_id_unique';
  * the Pariwar's scope. Refuses a consent that is not `module_lead_handoff`, is for another subject or Pariwar, is revoked, or whose
  * `consent_artifact_ref` is not this `lead_id` (`LeadHandoffConsentInvalidError`) — before any write. Writes ONLY the eight columns
  * 0215 grants; `due`, `attempt_count = 0`, `outcome_detail = NULL` and `next_attempt_at = now()` are the defaults.
+ * Refuses a member who is not a member of THIS Pariwar (`member_not_in_pariwar`): the member FK is single-column and an FK check ignores
+ * RLS, so without it a row could name another Pariwar's member — one the sweep can only hold and that member's erasure never reaches.
  * Under a SAVEPOINT (12.1 TR3): a 23505 on `lead_id` or `consent_id` is rolled back to it and mapped to
  * `LeadHandoffAlreadyRecordedError`, so the caller's transaction stays usable. NO production caller in 12.5 (I1).
  */
@@ -147,6 +153,7 @@ export async function recordLeadHandoff(client: pg.PoolClient, input: RecordLead
     if (consent === null) throw new LeadHandoffConsentInvalidError(leadId, 'not_found');
     if (consent.consentType !== LEAD_HANDOFF_CONSENT_TYPE) throw new LeadHandoffConsentInvalidError(leadId, 'wrong_type');
     if (consent.subjectId.toLowerCase() !== memberId) throw new LeadHandoffConsentInvalidError(leadId, 'wrong_subject');
+    if (!(await memberExists(db, pariwarId as PariwarId, memberId as MemberId))) throw new LeadHandoffConsentInvalidError(leadId, 'member_not_in_pariwar');
     if (consent.revokedAt !== null) throw new LeadHandoffConsentInvalidError(leadId, 'revoked');
     if ((consent.consentArtifactRef ?? '').toLowerCase() !== leadId) throw new LeadHandoffConsentInvalidError(leadId, 'wrong_artifact');
     await client.query(
@@ -503,6 +510,82 @@ export async function cancelLeadHandoff(q: Queryable, ref: LeadHandoffClaimRef &
   return (rowCount ?? 0) > 0;
 }
 
+// ── S2 — the waiting pass (W14; Decision `2026-11-22-487`) ────────────────────────────────────────────
+
+/** One `due` row whose next attempt is still ahead — ids, and whether its offer was withdrawn (QE22 (A)). */
+export interface WaitingLeadHandoff {
+  readonly leadId: string;
+  readonly pariwarId: string;
+  readonly moduleId: string;
+  readonly memberId: string;
+  readonly consentId: string;
+  /** The module is `archived` for `trustee_archived` — the test S4 applies. */
+  readonly moduleWithdrawn: boolean;
+}
+
+/**
+ * ⭐ S2 (`-487`) — a page of `due` rows that are WAITING (`next_attempt_at` still ahead: a retry's backoff or a hold's minute), in
+ * `lead_id` order after `afterLeadId`. The sweep re-reads the member's side for each so a stop is honoured within the tick's minute,
+ * ⛔ at the next retry (`-484` Q4 A: "Removed at once if the send is stopped"). A READ: ⛔ lock, ⛔ write — the cancel is W14's
+ * compare on `status = 'due'`.
+ *
+ * DELIBERATE (checklist family 9): every Pariwar's waiting rows in one statement on the sweep's pool (bypasses RLS) — the pass is the
+ * same platform-wide job as the claim, and it returns ids and one boolean only. The caller checks `canReadAcrossPariwars` first. Re-examine
+ * under the claim's triggers.
+ */
+export async function listWaitingLeadHandoffs(
+  q: Queryable,
+  opts: { readonly afterLeadId?: string | null; readonly limit?: number } = {},
+): Promise<WaitingLeadHandoff[]> {
+  const { rows } = await q.query<{
+    lead_id: string;
+    pariwar_id: string;
+    module_id: string;
+    member_id: string;
+    consent_id: string;
+    module_withdrawn: boolean;
+  }>(
+    `SELECT h.lead_id, h.pariwar_id, h.module_id, h.member_id, h.consent_id,
+            (m.current_state = 'archived' AND m.archive_reason = 'trustee_archived') AS module_withdrawn
+       FROM marketplace_lead_handoffs h
+       JOIN marketplace_modules m ON m.pariwar_id = h.pariwar_id AND m.module_id = h.module_id
+      WHERE h.status = 'due'
+        AND h.next_attempt_at > clock_timestamp()
+        AND ($1::uuid IS NULL OR h.lead_id > $1::uuid)
+      ORDER BY h.lead_id
+      LIMIT $2`,
+    [opts.afterLeadId ?? null, clampLimit(opts.limit, { default: LEAD_HANDOFF_WAITING_PAGE, cap: 500 })],
+  );
+  return rows.map((r) => ({
+    leadId: r.lead_id,
+    pariwarId: r.pariwar_id,
+    moduleId: r.module_id,
+    memberId: r.member_id,
+    consentId: r.consent_id,
+    moduleWithdrawn: r.module_withdrawn,
+  }));
+}
+
+/**
+ * ⭐ W14 (`-487`) — a CANCEL of a row that is NOT in flight: `due → cancelled:<word>`, the fields dropped AT ONCE. ⛔ A claim token (the
+ * row has none): the compare is `status = 'due'`, so `false` means the claim took the row first and that attempt's own S6 decides. Final,
+ * as W9 is (I10). The 0215 guard admits the edge (`due` moves only to `attempting` or `cancelled`).
+ */
+export async function cancelWaitingLeadHandoff(
+  q: Queryable,
+  ref: { readonly pariwarId: string; readonly leadId: string; readonly word: LeadHandoffCancelWord },
+): Promise<boolean> {
+  const detail = `cancelled:${ref.word}`;
+  assertDetail(detail, 'cancelled:');
+  const { rowCount } = await q.query(
+    `UPDATE marketplace_lead_handoffs
+        SET status = 'cancelled', outcome_detail = $3, member_fields_ciphertext = NULL, held_since = NULL, updated_at = clock_timestamp()
+      WHERE pariwar_id = $1 AND lead_id = $2 AND status = 'due'`,
+    [ref.pariwarId.toLowerCase(), ref.leadId.toLowerCase(), detail],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 // ── S2 — the lapse (W10) and the purge (W12) ─────────────────────────────────────────────────────────
 
 /** One row a lapse moved — enough to alarm by id. */
@@ -546,7 +629,9 @@ export async function lapseLeadHandoffs(
 /**
  * ⭐ W12 (QE24 (A), RULED `-484` Q4 A) — drop the fields of up to `limit` `delivered` / `failed_delivery` rows that have been final for
  * `retentionDays` or more (judged by `updated_at`, so a requeued row that fails again starts its 30 days from that LATER failure — "finally
- * fails"; ⛔ "fix" it to the first). Status and detail unchanged. Returns how many rows it purged.
+ * fails"; ⛔ "fix" it to the first). Status, detail AND `updated_at` unchanged: on a final row `updated_at` is the time it became final —
+ * the only failure time the row has, and what {@link listFailedLeadHandoffs} sorts on and returns (code review 2026-11-22, patch 10; the
+ * guard never needed the bump). Returns how many rows it purged.
  *
  * DELIBERATE (checklist family 9): every Pariwar's rows in one statement on the sweep's pool (bypasses RLS) — retention is a platform-wide
  * clock and the statement returns a count only. Re-examine under the claim's triggers.
@@ -564,7 +649,7 @@ export async function purgeLeadHandoffFields(
         FOR UPDATE SKIP LOCKED
         LIMIT $2
      )
-     UPDATE marketplace_lead_handoffs s SET member_fields_ciphertext = NULL, updated_at = clock_timestamp()
+     UPDATE marketplace_lead_handoffs s SET member_fields_ciphertext = NULL
        FROM old WHERE s.lead_id = old.lead_id`,
     [opts.retentionDays ?? LEAD_FIELDS_RETENTION_DAYS, clampLimit(opts.limit, { default: LEAD_HANDOFF_PURGE_BATCH, cap: 1000 })],
   );
@@ -624,16 +709,17 @@ export function deriveLeadHandoffMemberStatus(status: LeadHandoffStatus): LeadHa
 }
 
 /**
- * 12.3's status read — the derived word, or null (no handoff for this lead in this Pariwar). Keyed `(pariwar_id, lead_id)` with ⛔ cast
- * (TR18). ⛔ `partner_reference`, ⛔ the detail (QE15 (b)).
+ * 12.3's status read — the derived word, or null (no handoff for this lead OF THIS MEMBER in this Pariwar). Keyed `(pariwar_id, lead_id)`
+ * with ⛔ cast (TR18) AND `member_id`: a member-facing read never answers for another member's lead (checklist family 12 (b); code review
+ * 2026-11-22, patch 5) — a wrong member reads as null, the same as no handoff. ⛔ `partner_reference`, ⛔ the detail (QE15 (b)).
  */
 export async function getLeadHandoffStatus(
   q: Queryable,
-  input: { readonly pariwarId: string; readonly leadId: string },
+  input: { readonly pariwarId: string; readonly memberId: string; readonly leadId: string },
 ): Promise<LeadHandoffMemberStatus | null> {
   const { rows } = await q.query<{ status: LeadHandoffStatus }>(
-    'SELECT status FROM marketplace_lead_handoffs WHERE pariwar_id = $1 AND lead_id = $2',
-    [input.pariwarId.toLowerCase(), input.leadId.toLowerCase()],
+    'SELECT status FROM marketplace_lead_handoffs WHERE pariwar_id = $1 AND lead_id = $2 AND member_id = $3',
+    [input.pariwarId.toLowerCase(), input.leadId.toLowerCase(), input.memberId.toLowerCase()],
   );
   const r = rows[0];
   return r === undefined ? null : deriveLeadHandoffMemberStatus(r.status);

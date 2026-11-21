@@ -4,7 +4,7 @@
 -- CHECK, ⛔ edit of an applied migration.
 --
 -- ⭐ WHAT IT IS. An OUTBOX and its delivery record in one: ONE row per lead, written by `recordLeadHandoff` in 12.3's lead transaction
--- (the same one as `module.lead_submitted`), then moved by the jobs sweep along the W table of QE6 — and by two `twt_app` writers only:
+-- (the same one as `module.lead_submitted`), then moved by the jobs sweep along the W table of QE6 (W14 added by `-487`) — and by two `twt_app` writers only:
 -- erasure (W11) and the staff requeue (W13). AT LEAST ONCE (QE6 (A)): the partner dedupes on `Idempotency-Key: <lead_id>`.
 -- ⭐ TR1 — the new `consent_type` value (0214) is ⛔ named here: drizzle applies every pending file in ONE transaction and an added enum
 -- value cannot be used before it commits (55P04). The consent's TYPE is checked by `recordLeadHandoff`, ⛔ by a CHECK.
@@ -49,6 +49,10 @@ ALTER TABLE "marketplace_lead_handoffs" ADD CONSTRAINT "marketplace_lead_handoff
 -- A row in flight names the claim that holds it and when the lease began: every settle and release is compare-and-set on the token.
 ALTER TABLE "marketplace_lead_handoffs" ADD CONSTRAINT "marketplace_lead_handoffs_attempting_claim_check" CHECK (("status" = 'attempting') = ("claim_token" IS NOT NULL) AND ("status" = 'attempting') = ("claimed_at" IS NOT NULL));--> statement-breakpoint
 ALTER TABLE "marketplace_lead_handoffs" ADD CONSTRAINT "marketplace_lead_handoffs_delivered_at_check" CHECK (("status" = 'delivered') = ("delivered_at" IS NOT NULL));--> statement-breakpoint
+-- A cancelled row holds NO fields (`-484` Q4 A: "Removed at once if the send is stopped"; code review 2026-11-22, patch 2): W9, W11 and
+-- W14 all write NULL and the purge (W12) never visits a cancelled row, so a writer that cancelled WITHOUT dropping them would keep them
+-- for good. (A `status` that is never NULL makes this two-valued.)
+ALTER TABLE "marketplace_lead_handoffs" ADD CONSTRAINT "marketplace_lead_handoffs_cancelled_fields_check" CHECK ("status" <> 'cancelled' OR "member_fields_ciphertext" IS NULL);--> statement-breakpoint
 -- ADVISORY (I3) — ⚠ LOCKSTEP with `LEAD_HANDOFF_PARTNER_REFERENCE_PATTERN`.
 ALTER TABLE "marketplace_lead_handoffs" ADD CONSTRAINT "marketplace_lead_handoffs_partner_reference_check" CHECK ("partner_reference" IS NULL OR "partner_reference" ~ '^[A-Za-z0-9_.-]{1,64}$');--> statement-breakpoint
 -- QE10 — ⚠ LOCKSTEP with `LEAD_HANDOFF_DETAIL_PATTERN`.
@@ -133,7 +137,8 @@ BEGIN
     END IF;
     RETURN NEW;
   END IF;
-  -- `due` → `attempting` (W2) or `cancelled` (W11); ⛔ `due → due`, ⛔ `due → failed_delivery` (a hold and a give-up happen from `attempting`).
+  -- `due` → `attempting` (W2) or `cancelled` (W11, and W14 — the sweep's waiting pass, Decision `2026-11-22-487`); ⛔ `due → due`,
+  -- ⛔ `due → failed_delivery` (a hold and a give-up happen from `attempting`).
   IF OLD.status = 'due' AND NEW.status NOT IN ('attempting', 'cancelled') THEN
     RAISE EXCEPTION
       'marketplace_lead_handoffs: a due row moves only to attempting or cancelled (Story 12.5, QE6)'

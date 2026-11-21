@@ -14,7 +14,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CLIENT_FILE, REFERENCE_ALLOWED_FILES, SCAN_ROOTS, TRANSPORT_FILES, formatFinding, scanFile, type BoundaryFinding } from './lib.js';
+import {
+  CLIENT_FILE,
+  REFERENCE_ALLOWED_FILES,
+  SCAN_ROOTS,
+  TRANSPORT_FILES,
+  authorityReadAllowlistPairs,
+  authorityReadsImported,
+  formatFinding,
+  scanFile,
+  type BoundaryFinding,
+} from './lib.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '../..');
@@ -57,14 +67,25 @@ function main(): void {
     findings.push(...scanFile(rel, fs.readFileSync(abs, 'utf8')));
   }
 
+  // ⚠ Rule (c) is not vacuous: the file that holds P0–P5 must import EXACTLY the allow-listed reads. If the predicates move to a file
+  // this gate does not judge, or an allowance goes unused, the gate says so instead of passing on nothing.
+  const predicateFile = 'packages/domain/src/marketplace/lead-handoff.ts';
+  const imported = authorityReadsImported(predicateFile, fs.readFileSync(path.join(repoRoot, predicateFile), 'utf8'));
+  const allowed = authorityReadAllowlistPairs();
+  for (const pair of allowed.filter((p) => !imported.includes(p))) {
+    findings.push({ rule: 'c', file: predicateFile, line: 1, what: `the allow-listed read ${pair} is NOT imported here — the member-side reads moved (this gate would judge nothing), or the allowance is stale` });
+  }
+
   if (findings.length > 0) {
     console.error(`✗ partner-boundary-invariant: ${String(findings.length)} finding(s):\n`);
     for (const f of findings) console.error(formatFinding(f));
     console.error('\nSee scripts/partner-boundary-invariant/README.md and docs/adr/ADR-0046-partner-lead-handoff-transport.md.');
     process.exit(1);
   }
-  console.log('✓ partner-boundary-invariant: the advisory reference stays in its four files; the transport reads only the allow-listed');
-  console.log('  member / consent / claim reads; the response body is never parsed; production passes no test seam.');
+  console.log('✓ partner-boundary-invariant: none of the named shapes — the advisory reference is named only in its four files; the four');
+  console.log('  transport files import only the allow-listed member / consent / claim reads (all ' + String(allowed.length) + ' seen), write no other table by raw SQL');
+  console.log('  and load nothing dynamically; the client calls no JSON parser; no createPartnerLeadClient( call carries an argument.');
+  console.log('  ⚠ NOT proven (README, the semantic limit): a write through a helper in another file, a value laundered through a new field.');
 }
 
 main();

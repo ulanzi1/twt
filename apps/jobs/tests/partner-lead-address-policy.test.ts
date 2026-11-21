@@ -122,11 +122,21 @@ describe('checkLeadUrl — the re-parse and the port rule', () => {
 });
 
 describe('the seam\'s lookup as a spy', () => {
-  it('an explicit port is refused with NO lookup made (the sweep never resolves a refused URL)', () => {
+  it('an explicit port is refused by the URL check alone — and the spy IS reachable, so "no lookup" can fail', async () => {
     const lookup = vi.fn(async () => [{ address: '8.8.8.8', family: 4 }]);
-    createPartnerLeadClient({ testSeam: { lookup } });
+    const client = createPartnerLeadClient({ testSeam: { lookup } });
     expect(checkLeadUrl('https://leads.partner.example:8443/x').kind).toBe('port_refused');
     expect(lookup).not.toHaveBeenCalled();
+    // ⚠ Not vacuous: the SAME spy is what `resolve` calls. The sweep never calls `resolve` for a refused URL — that half is proved live
+    // (module-lead-handoff.test.ts, the permanent-failure legs: `lookups` stays empty for a refused URL).
+    await client.resolve('leads.partner.example');
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledWith('leads.partner.example');
+  });
+
+  it('a trailing-dot host is refused (url_refused): it would be sent as the SNI and Host, and key the breaker apart from the dotless name', () => {
+    expect(checkLeadUrl('https://leads.partner.example./hook').kind).toBe('url_refused');
+    expect(checkLeadUrl('https://leads.partner.example/hook').kind).toBe('ok');
   });
 
   it('a host that resolves to one PUBLIC and one PRIVATE address is refused whole', async () => {

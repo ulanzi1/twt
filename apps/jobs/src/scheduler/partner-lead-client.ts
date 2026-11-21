@@ -181,6 +181,9 @@ export function checkLeadUrl(raw: string): LeadUrlVerdict {
     return { kind: 'url_refused' };
   }
   if (url.protocol !== 'https:') return { kind: 'url_refused' };
+  // A trailing-dot host (`partner.example.`) passes 12.1's rule but would be sent as the SNI and `Host` and would key the per-tick breaker
+  // apart from the dotless name (code review 2026-11-22, patch 11): refused here, ⛔ normalised.
+  if (url.hostname.endsWith('.')) return { kind: 'url_refused' };
   if (url.port !== '') return { kind: 'port_refused' };
   return { kind: 'ok', hostname: url.hostname, path: `${url.pathname}${url.search}` };
 }

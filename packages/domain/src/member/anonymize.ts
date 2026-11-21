@@ -740,7 +740,9 @@ export async function anonymizeMember(
       memberFieldsCiphertext: null,
       status: sql`CASE WHEN ${marketplaceLeadHandoffs.status} = 'due' THEN 'cancelled' ELSE ${marketplaceLeadHandoffs.status} END`,
       outcomeDetail: sql`CASE WHEN ${marketplaceLeadHandoffs.status} = 'due' THEN 'cancelled:member_erased' ELSE ${marketplaceLeadHandoffs.outcomeDetail} END`,
-      updatedAt: sql`clock_timestamp()`,
+      // A FINAL row keeps `updated_at` — the time it became final, the only failure time it has and what the failed-rows list sorts on
+      // (code review 2026-11-22, patch 10); a `due` row (cancelled here) and an `attempting` one take the clock.
+      updatedAt: sql`CASE WHEN ${marketplaceLeadHandoffs.status} IN ('delivered', 'failed_delivery', 'cancelled') THEN ${marketplaceLeadHandoffs.updatedAt} ELSE clock_timestamp() END`,
     })
     .where(
       and(

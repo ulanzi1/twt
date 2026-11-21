@@ -9,8 +9,8 @@
 Trust OWES); Q3 and Q4 decide what a family is told about a person after a claim is filed (what the Trust DISCLOSES) — and your 31 October
 words for that were ruled for the moment of filing only, so using them later would extend them. **Split out and ⛔ asked — ours, and
 already decided in the story:** how the check is stored, which staff member does it (the District Admin who already accepts the death
-certificate), how its screens are worded for staff, and that a failed identity check makes the claim wait rather than refusing it (told
-to you below, so you can object). **Stripped of every reference, the questions read:** *"if a member pays the joining fee on the day they
+certificate), how its screens are worded for staff, that a failed identity check makes the claim wait rather than refusing it, and that
+the system — ⛔ the staff member — makes the date comparison, which staff cannot override (told to you below, so you can object). **Stripped of every reference, the questions read:** *"if a member pays the joining fee on the day they
 die, or pays in life but the payment is only recorded after they die, does the Trust help their family? And when the Trust cannot help,
 or cannot yet, what does it tell them?"* — questions about people, ⛔ about code.
 
@@ -116,13 +116,18 @@ what staff can do. **Built until you rule: A.**
    nominee, a health declaration, agreeing to the terms). If they die in between and the family finishes those steps from the phone, the
    fee date is still before the death, so the drive may open — although by the rulebook the person became a member only after they died.
    Built on your words ("the date the fee was paid"); you may make it a question.
+4. **The system compares the two dates, and staff cannot change its answer.** Your words were *"staff compare"*. As built, the system
+   reads the fee date from the payment record and the date of death from the accepted certificate; the District Admin sees both dates
+   and the result and records the check, but types neither date and cannot override the result. That is narrower than your words: it
+   leaves staff no judgement on the fee date. Q2 B would give them one, in one case only. If you meant staff to judge it, say so.
 
 ---
 
 # What is at stake right now
 
 - **Live today:** nothing — no member uses the system.
-- **Blocked:** nothing. The staff check is built with **A** on all four questions and can be merged; your answers are needed before
+- **Blocked:** nothing. The staff check is now built with **A** on all four questions — it is in code review, ⛔ merged yet — and can
+  be merged; your answers are needed before
   members' claims go live (our own go-live list carries them).
 - **If nothing is decided:** A stands on all four: a same-day fee opens a drive; a fee recorded after the death never does, even if paid
   in life; a refused family is told no reason; a waiting family is told nothing.
@@ -134,7 +139,9 @@ what staff can do. **Built until you rule: A.**
 - **Corrected in this note:** (1) The story first suggested **A** on Q1 without mentioning your nominee-change rule; checking found that
   rule counts the day of death as after, and the suggestion is now B. (2) The story first said a family whose identity check waits "is
   asked for more"; checking found nothing in the app can ask, so Q4 now asks what they are told. (3) The story first said every staff call
-  to the family waits on the lawyer; in fact only a call to a nominee does.
+  to the family waits on the lawyer; in fact only a call to a nominee does. (4) Re-checked on 21 November against the built staff
+  check, before sending: it does what this note says on every point, and told line 4 was added — the note had shown that staff cannot
+  override the date comparison only in the evidence, ⛔ to you.
 - **Still uncertain:** (1) how often Q2 happens — I have found ⛔ time limit between paying and recording, but ⛔ measured how long
   members take; (2) whether the Trust's bank statement can be matched to a fee by its reference number in practice — ⛔ traced; (3) the
   rulebook's lock-in clause is a rulebook, ⛔ ratified by you, so its weight in Q1 is yours to judge.
@@ -157,7 +164,8 @@ If this section and the evidence below ever disagree, the **evidence** is the re
 
 # EVIDENCE — for the record, ⛔ not for the meeting
 
-**Question ↔ story mapping.** Q1 = Story 6.39 PQ1 (a); Q2 = PQ1 (b); Q3 = PQ2 (i); Q4 = PQ2 (ii); told lines 1–3 = TL1–TL3.
+**Question ↔ story mapping.** Q1 = Story 6.39 PQ1 (a); Q2 = PQ1 (b); Q3 = PQ2 (i); Q4 = PQ2 (ii); told lines 1–3 = TL1–TL3; told
+line 4 = N3 (the binding comparison, declared a narrowing in `2026-11-21-472`).
 
 ## E1 — What is already ratified, verbatim
 
@@ -187,6 +195,9 @@ If this section and the evidence below ever disagree, the **evidence** is the re
 - **What the family is told after filing.** `-430` reading (3): *"⛔ ruled. Row `6-39`'s create-story owes it."* `-424` Q3 B is scoped
   to the door.
 - **What a waiting family is told.** No ruling.
+- **That the comparison binds staff.** `-430` Q1 B says *"staff compare"*. `2026-11-21-472` — an AUTHOR-COMMIT (BigDev), ⛔ a Panel
+  ruling — builds it as the system's comparison: *"BINDING — STAFF TYPE NEITHER DATE AND CANNOT OVERRIDE THE RESULT, A DECLARED
+  NARROWING"*. Told line 4.
 - **Niyamavali §2.2** — *"Joining lock-in: a new member's beneficiary eligibility is locked for [[15 days]] after fee payment."* — a
   rulebook, ⛔ ratified ([[feedback_niyamavali_rulebook_not_spec]]); ⛔ built in the claim path.
 
@@ -205,16 +216,22 @@ If this section and the evidence below ever disagree, the **evidence** is the re
   documents-request route exists, and an accepted certificate closes uploads (Story 6.39 Policy meaning).
 - **Appeals:** a denial is appealable once, with ⛔ deadline (`appeal-eligibility.ts`: *"D-E removed the claimant-facing deadline"*);
   only a `post_death_nominee_change` refusal has a 90-day limit.
-- **Will be built (Story 6.39, ⛔ yet):** the system computes `before_death` / `same_day` / `after_death` from the IST date of `paid_at`
-  and the accepted certificate's date; `after_death` never passes the approval gate; `same_day` passes (Q1 A); ⛔ staff override (Q2 A);
-  ⛔ new family words (Q3 A, Q4 A).
+- **Built (Story 6.39 — in code review, ⛔ merged; re-checked 2026-11-21 at `eedc9be3`):** `compareFeeDateWithDeathDate`
+  (`claim/fee-death-date.ts`) computes `before_death` / `same_day` / `after_death` from the IST date of `paid_at` and the accepted
+  certificate's date; only `after_death` blocks the approval gate (`MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES = ['after_death']`), so
+  `same_day` passes (Q1 A); ⛔ staff override (Q2 A; told line 4); ⛔ new family words (Q3 A, Q4 A — the story changes nothing under
+  `packages/i18n`); an identity staff could not confirm makes the gate answer `identity_not_confirmed` — the claim waits, ⛔ refused
+  (told line 2); `fee_paid_after_death` is a deny reason on both denials and is appealable once with ⛔ time limit (told line 1).
 
 ## E4 — Commands to re-verify every claim
 
-Run 2026-10-31 at `f792d4e3` on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity`; every one returned what is stated.
+Re-run 2026-11-21 at `eedc9be3` on `story/6-39-identity-check-before-a-drive-for-an-unchecked-identity` (the built code, before
+sending); every one returned what is stated. First run 2026-10-31 at `f792d4e3` (`22979b70` after the 2026-11-21 rebase) — there the
+first command's looser pattern found two lines; it now also hit `-438`'s heading, which names `-424`, and the last returned
+`ready-for-dev`.
 
 ```
-grep -n '^### Decision .*-4\(24\|30\)' .decision-log.md                  # two entries: -430, -424
+grep -n '^### Decision 2026-10-31-4\(24\|30\):' .decision-log.md       # two entries: -430, -424
 grep -c "Row \`6-39\`'s create-story must put that edge" .decision-log.md  # 1 (-430 reading 1)
 grep -c "Row \`6-39\`'s create-story owes it" .decision-log.md            # 1 (-430 reading 3)
 grep -c "A change done before a day of death will be assumed to be done by member" .decision-log.md   # ≥ 1 (-235 Y)
@@ -226,5 +243,11 @@ grep -n "export async function evaluateLockInGate" packages/domain/src/member/lo
 grep -n '"appeal.eligible"\|"certificate.accepted"' packages/i18n/locales/en/claim.json   # the two family lines quoted
 grep -n "D-E removed the" packages/domain/src/claim/appeal-eligibility.ts  # ⛔ appeal deadline
 grep -n "^## Row 34" docs/launch-gate-inventory/inventory-roster.md      # nominee-call basis
-grep -n "^  6-39-identity-check" _bmad-output/implementation-artifacts/sprint-status.yaml   # ready-for-dev
+grep -n "^  6-39-identity-check" _bmad-output/implementation-artifacts/sprint-status.yaml   # review (built; was ready-for-dev on 10-31)
+grep -c "STAFF TYPE NEITHER DATE AND CANNOT OVERRIDE THE RESULT, A DECLARED NARROWING" .decision-log.md   # 1 (-472, told line 4)
+grep -n "istDateOf(paidAt)" packages/domain/src/claim/fee-death-date.ts   # the fee's Indian calendar date
+grep -n "MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES: readonly" packages/domain/src/claim/membership-check-approval.ts   # ['after_death'] — same_day passes (Q1 A)
+grep -n "reason: 'identity_not_confirmed'" packages/domain/src/claim/membership-check-approval.ts   # the claim waits (told line 2)
+grep -n "Every other reason: ⛔ no time limit" packages/domain/src/claim/appeal-eligibility.ts   # told line 1
+git diff --name-only origin/main...HEAD -- packages/i18n | wc -l          # 0 — ⚠ the ABSENCE is the finding (no new family words; branch-only, until merged)
 ```

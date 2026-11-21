@@ -63,6 +63,7 @@ export { nomineeCorrectionErrorMessage, nomineeDeterminationErrorMessage, nomine
 import {
   useDeathCertificateHistory,
   useForgetDeathCertificateHistory,
+  useForgetMembershipCheckPreview,
   useMembershipCheckPreview,
   usePostDeathCertificateReview,
   usePostMembershipCheck,
@@ -480,6 +481,7 @@ export function VerifierConsoleRoute(): ReactElement {
   const [membershipOpenFor, setMembershipOpenFor] = useState<string | null>(null);
   const membershipOpen = membershipOpenFor === claimCaseId && canCheckMembership && certificateAccepted;
   const membershipPreviewQ = useMembershipCheckPreview(pariwarId, claimCaseId, membershipOpen);
+  const forgetMembershipPreview = useForgetMembershipCheckPreview(pariwarId, claimCaseId);
   const recordMembershipCheck = usePostMembershipCheck(pariwarId, claimCaseId);
   const resetMembershipCheck = recordMembershipCheck.reset;
   useEffect(() => {
@@ -703,6 +705,8 @@ export function VerifierConsoleRoute(): ReactElement {
                   open={membershipOpen}
                   onOpenChange={(open) => {
                     recordMembershipCheck.reset();
+                    // ⭐ Closing FORGETS the date of death; a reopen is a fresh, audited look ("Each look is recorded").
+                    if (!open) forgetMembershipPreview();
                     setMembershipOpenFor(open ? claimCaseId : null);
                   }}
                   preview={membershipPreviewQ.isError ? undefined : membershipPreviewQ.data}

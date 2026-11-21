@@ -654,6 +654,21 @@ describe('<VerifierConsoleRoute> — the membership check (DL10, DL12)', () => {
     expect(screen.queryByTestId('membership-check-form')).toBeNull();
   });
 
+  it('⭐ CLOSING forgets the date (⛔ merely hides it): a RE-OPEN is a fresh, recorded look — "Each look is recorded" stays true', async () => {
+    await mount(gate());
+    fireEvent.click(screen.getByTestId('membership-check-disclosure'));
+    await screen.findByTestId('membership-check-body');
+    expect(getMembershipCheckPreview).toHaveBeenCalledTimes(1);
+    // Close: the body is gone AND the decrypted preview is dropped from the cache.
+    fireEvent.click(screen.getByTestId('membership-check-disclosure'));
+    await waitFor(() => expect(screen.queryByTestId('membership-check-body')).toBeNull());
+    expect(qc.getQueryData(['membership-check', PARIWAR, CLAIM])).toBeUndefined();
+    // Re-open: a second read (each one writes an audit line server-side), ⛔ a silent render from the cache.
+    fireEvent.click(screen.getByTestId('membership-check-disclosure'));
+    await screen.findByTestId('membership-check-body');
+    expect(getMembershipCheckPreview).toHaveBeenCalledTimes(2);
+  });
+
   it('⭐ a same-route CLAIM CHANGE closes the control and does ⛔ fetch the next claim\'s audited preview', async () => {
     const utils = await mount(gate());
     fireEvent.click(screen.getByTestId('membership-check-disclosure'));
@@ -666,5 +681,7 @@ describe('<VerifierConsoleRoute> — the membership check (DL10, DL12)', () => {
     expect(screen.queryByTestId('membership-check-body')).toBeNull();
     expect(getMembershipCheckPreview).toHaveBeenCalledTimes(1);
     expect(getMembershipCheckPreview).not.toHaveBeenCalledWith(PARIWAR, CLAIM_2);
+    // ⭐ The previous claim's decrypted preview is FORGOTTEN (the A→B→A posture), ⛔ kept for a silent return.
+    expect(qc.getQueryData(['membership-check', PARIWAR, CLAIM])).toBeUndefined();
   });
 });

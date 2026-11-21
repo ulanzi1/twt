@@ -2675,9 +2675,21 @@ export function useMembershipCheckPreview(pariwarId: string, claimCaseId: string
     refetchOnReconnect: false,
     retry: false,
     staleTime: Infinity,
-    // ⭐ Closing FORGETS the date: nothing is kept once the control unmounts its query.
+    // A claim change drops the previous claim's preview at once (its key has ⛔ observer left).
     gcTime: 0,
   });
+}
+
+/**
+ * ⭐ FORGET the preview when the control CLOSES (the `useForgetDeathCertificateHistory` posture): a closed observer
+ * keeps its cache, which would re-render the date of death on reopen with ⛔ click-to-server and ⛔ audit line — and the
+ * control says "Each look is recorded". A reopen is then a fresh, audited read.
+ */
+export function useForgetMembershipCheckPreview(pariwarId: string, claimCaseId: string | null) {
+  const qc = useQueryClient();
+  return () => {
+    qc.removeQueries({ queryKey: membershipCheckKey(pariwarId, claimCaseId ?? ''), exact: true });
+  };
 }
 
 /**

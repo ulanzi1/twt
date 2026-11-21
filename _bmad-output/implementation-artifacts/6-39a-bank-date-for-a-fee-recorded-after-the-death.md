@@ -20,7 +20,9 @@ may use the bank's date is the Panel's and is RULED — `2026-11-21-473` Q2 B. W
 (DL — BigDev at Task 0.2; `-474` item 1 lists "who" outside the Panel's three). Three edges change WHOSE FAMILY IS HELPED and are the
 Panel's by `-474` item 1's own test ("the last three are the Panel's if they change whose family is helped"): PQ1 (after a refusal — on
 appeal), PQ2 (a reference that does not match), PQ3 (a bank date ON the day of death). ONE non-blocking note at Task 0.3; each is built on
-the literal side of the ruled words until answered.
+the literal side of the ruled words until answered. A FOURTH question rides in the same note — PQ4 (must a second person confirm the
+bank's date): by `-474` item 1 "who" is the author's, but `-473` records the point as *"⛔ asked"*, and it sets how far one person's
+word can open a drive — asked without blocking, ⛔ only told ([[feedback_told_line_must_not_carry_panel_choice]]).
 
 GLYPH REGISTER: `⛔` negates the word it precedes; `⭐` emphasis / action; `⚠` a hazard. ⛔ No `file:NNN` into `.decision-log.md`,
 `deferred-work.md`, `sprint-status.yaml` or `inventory-roster.md` (growing files): cite the decision id, the item's phrase or the row key.
@@ -42,7 +44,7 @@ creation line, `2026-11-21w` its validation line (`v` was taken). A migration's 
 READ LIVE then, across branches.
 
 LETTERS: **G** = found facts (G1–G13); **DL** = build decisions (DL1–DL14 — PROPOSED, BigDev answers at Task 0.2); **PQ** = Panel
-questions (PQ1–PQ3 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR12); **AC1–AC13**.
+questions (PQ1–PQ4 — non-blocking) + **TL** = lines the note TELLS the Panel (TL1–TL3); **TR** = traps (TR1–TR12); **AC1–AC13**.
 -->
 
 # Story 6.39a: Staff May Use the Bank's Date for a Joining Fee Recorded After the Death — When the Trust's Own Bank Statement Shows It Arrived Before
@@ -403,7 +405,7 @@ the check that uses it, whatever roles they hold. ⚠ The final voter is kept ap
   gains the key, AC5). ⛔ Read audit
   for the list (⛔ Tier-1 on it).
 - **DL13 — Records.** A NEW roster row (the next free — ≥ Row 54; decision-authored, Row 46's format) *"Story 6.39a: the bank's date can be
-  used at go-live"* with legs: (a) row `6-39a` `done` on `main`; (b) PQ1–PQ3 RULED and reflected in code (an open PQ can stay open for ever
+  used at go-live"* with legs: (a) row `6-39a` `done` on `main`; (b) PQ1–PQ4 RULED and reflected in code (an open PQ can stay open for ever
   behind a built default — Row 46 note 1); (c) at go-live a named person holds `claim.record_fee_bank_date` (a finance officer, or the Super
   Admin by decision) AND has the Trust's bank statements (G4; Q2 B's *"someone must match the payment"*), and ANOTHER person holds
   `claim.check_membership` there (N7 — the recorder cannot record the check that uses the date); (d) the real-browser pass of the
@@ -440,15 +442,24 @@ the check that uses it, whatever roles they hold. ⚠ The final voter is kept ap
 - **PQ3 — The bank's date ON the day of death.** Options: **A** — counts as after, as the recorded date does since your 21 November ruling
   (cost: a member whose money arrived that morning gets ⛔ drive). **B** — counts as before (cost: two different lines for "before the
   death" — one for the recorded date, one for the bank's). Suggest **A** (one line). **Built: A** (N1). ONE test names PQ3 (AC5).
+- **PQ4 — Is one person's reading of the statement enough?** (`-473` "does NOT cover": *"whether a second person must agree was ⛔
+  asked"*.) The finance officer types the date, and nobody else checks it against the statement (TL2). Options: **A** — one finance
+  officer's record is enough; the District Admin's re-check and the final vote follow, but neither sees the statement (cost: one person's
+  typed date can open a drive; a wrong date is caught only if someone later compares the audit with the statement — G10's bounds are all
+  the system has). **B** — a second person who also has the statement must confirm the date before it counts (cost: two people with the
+  Trust's bank statements, when even one finance officer is ⛔ settled — G4; slower for the family; a new build). **C** — keep a copy of
+  the statement line with the record (cost: a store of other payers' names and VPAs — DL3's rejected upload; counsel has ⛔ looked at
+  it). Suggest **A** (the record names the statement, the line and the reason under the finance officer's name, so it can be checked
+  afterwards). **Built: A** (DL3, DL8). ONE test names PQ4 (AC3).
 - **TOLD LINES (⛔ asked — the note states them so the Panel can object):**
   - **TL1 — Who.** The Trust's finance officer records the bank's date; the District Admin then checks the claim again, and the final
     vote follows as always. The system refuses that re-check from the person who typed the date, whatever roles they hold (N7). The
     final voter is kept apart by role only: a person given both the finance officer's and the Pariwar Admin's role — or the Super
     Admin, who holds every power — could type the date and later cast the final vote. Whether a second person must AGREE the date
-    itself was ⛔ asked on 21 November and is ⛔ built (TL2). ⚠ If the Trust has no finance officer, the remedy rests on the Super Admin
+    itself is PQ4. ⚠ If the Trust has no finance officer, the remedy rests on the Super Admin
     (DL13 (c)).
   - **TL2 — What is kept.** ⛔ Copy of the statement: the finance officer types the reference and the date, gives a reason and a note, and
-    it is audited under their name. The system checks the reference; nobody re-checks the date.
+    it is audited under their name. The system checks the reference; nobody re-checks the date (PQ4).
   - **TL3 — Told line 1 of 21 November is no longer true** (already flagged in `-473`): the fee date now changes in a second way — the
     bank's date — and, under PQ1 B as built, an appeal CAN lead to a drive in this one case.
 
@@ -470,7 +481,7 @@ the check that uses it, whatever roles they hold. ⚠ The final voter is kept ap
    `stale` (either expected id); ⛔ step-up ⇒ the step-up refusal; a second record supersedes the first (`re_recorded`), ONE live after; a
    correction is accepted while the claim passes on an earlier bank date (DL5 (b)). The list: only claims held on the fee, in the
    window, longest-held first, `truncated` past the cap, ⛔ `fee_outcome` on the wire. ⚠ Every 401 / 403 / step-up leg sends a VALID
-   body (TR9).
+   body (TR9). ONE test names PQ4: one finance officer's record is accepted with ⛔ second confirmation.
 4. **AC4 — The match (N3, PQ2).** ONE test names PQ2: a receipt whose stored UTR differs from the statement's reference by one digit ⇒
    `reference_mismatch`, ⛔ row — and the typed value appears in ⛔ audit context, log line or response body (planted value). A
    22-character reference stored in lower case and typed in capitals, and a reference typed with a trailing space, are ACCEPTED (DL3 —
@@ -537,18 +548,22 @@ the check that uses it, whatever roles they hold. ⚠ The final voter is kept ap
         option; DL3's letter-case rule). Record the answers here, then AMEND N7, TL1, DL13's legs, the ACs and the Tasks to the answers
         as given — a PROPOSED default left standing in an AC gets built.
   - [ ] 0.3 Draft ONE routing note from the template (by path, ⛔ copied):
-        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` (date = the day written) — PQ1–PQ3
+        `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` (date = the day written) — PQ1–PQ4
         and TL1–TL3; plain-English question first, THE ONE FACT (*"the bank's date helps only a family whose recorded payment reference is
         on the Trust's statement, and the system cannot see the statement — a person types what it shows"*), options with an honest cost
         on each, evidence LAST; E4 commands run. Status: WRITTEN, ⛔ sent (BigDev sends). Non-blocking for build and merge; held for go-live
         (DL13).
+        ⭐ DRAFTED 2026-11-21 at BigDev's ask, BEFORE 0.2: PQ1–PQ4 as its Q1–Q4, and six told lines (TL1–TL3, plus N2, the
+        Policy-meaning note's *"may"* and DL14's family silence); E4 run, every result as stated. It describes the PROPOSED build ⇒ what
+        is LEFT of this subtask: re-read told lines 1–2 and the *"will be built"* lines of Q2 and Q4 against the 0.2 answers, re-run E4,
+        and remove its *"Before sending"* paragraph.
   - [ ] 0.4 Decision entry (AUTHOR-COMMIT, the next free number across branches — ≥ `-481` at authoring): DL1–DL14 as answered; builds `-473` Q2 B under
         `-474` item 1; declares N3 (a narrowing: the reference only — PQ2), DL8 (the finance officer — a MATCH on "staff", ⛔ the
-        District Admin `-473` named as the author's reading), PQ1 built B (the widest literal reach); names PQ1–PQ3 open; mints the key and
+        District Admin `-473` named as the author's reading), PQ1 built B (the widest literal reach); names PQ1–PQ4 open (PQ4 is asked beyond `-474` item 1's three — say so); mints the key and
         the roster row; AMENDS `-474` item 3's console note for the recorded-date case (an author-commit, amended — only if DL11's
         amendment is accepted); ⛔ supersedes a ratified entry. Committed ALONE, first ([[project_decision_log_writes_user_inserted]] — stage, try,
         verify; ask once on a refusal).
-  - [ ] 0.5 Records: the roster row (DL13); `deferred-work.md` — PQ1–PQ3 open (trigger: the ruling) and the corrected-UTR item's dated
+  - [ ] 0.5 Records: the roster row (DL13); `deferred-work.md` — PQ1–PQ4 open (trigger: the ruling) and the corrected-UTR item's dated
         note (DL13); the row-`6-39a` dated comment in `sprint-status.yaml`; ledger line + row `ready-for-dev → in-progress`
         ([[project_sprint_status_safe_prepend]] — verify `yaml.safe_load` and the row count).
 - [ ] **Task 1 — The record (AC1, AC11)**
@@ -680,6 +695,8 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 - `_bmad-output/implementation-artifacts/6-39-identity-check-before-a-drive-for-an-unchecked-identity.md` (v1.13 — G1–G17, DL1–DL16, both
   review rounds).
 - `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-10-31-6-39-fee-date-and-family-told.md` (Q2 as put; *"Still uncertain"*).
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` (this story's note — Q1–Q4 = PQ1–PQ4;
+  WRITTEN, ⛔ sent).
 - `_bmad-output/planning-artifacts/epics.md` — Story 6.39a; `docs/launch-gate-inventory/inventory-roster.md` — Row 46; Row 47's notes (the admin
   step-up dependency).
 - `_bmad-output/implementation-artifacts/deferred-work.md` — "Deferred from: code review of story 6-39 … round 2"; "Story 6.39 Task 0.5";
@@ -703,6 +720,10 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
   findings applied (Change Log v1.1). Three build decisions gained a second option for BigDev at Task 0.2 — DL9 (the step-up and its
   production cost), DL6 / N7 (the same-person check) and DL11 (the amended console note). One inline pass; ⛔ fresh-context verifier
   round was run. ⛔ Code; ⛔ decision entry yet.
+- 2026-11-21 — the Panel note DRAFTED at BigDev's ask, before Task 0.2 (ledger `2026-11-21z`):
+  `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md` — WRITTEN, ⛔ sent. PQ4 added (must a
+  second person confirm the bank's date — it was a told line; built A). The note describes the PROPOSED build: Task 0.3 says what is
+  left before it goes out.
 
 ### File List
 
@@ -712,3 +733,4 @@ domain fact used: a UPI credit's narration on a payee's statement carries the pa
 |---|---|---|
 | 2026-11-21 | v1.0 | Created (`bmad-create-story 6.39a`) at `90535934`, in its own worktree. |
 | 2026-11-21 | v1.1 | Validated (`bmad-create-story validate 6.39a`, BigDev: "all"; re-traced at `90535934`, `origin/main` unmoved). **Critical:** DL9's step-up cannot be completed in production (the admin step-up delivery is a stub — G9) ⇒ its cost stated, a no-step-up option, DL13 leg (e); N7 / TL1 promised two PEOPLE while the build separated ROLES (one user may hold several grants) ⇒ a same-person refusal in the check writer (DL6, AC5), TL1 reworded; AC5 / AC13's "no assertion changed" was unsatisfiable against DL6's required token and DL12's audit field ⇒ the two allowed kinds of edit named. **Added:** the three admin wait-reason maps and the contracts test's lists (G6, DL7, AC12); the console's read count resolved (G11, DL7 — stays 36); the reference compared trimmed and without regard to letter case (DL3, DL10, AC4); the list capped, joined by the live check's payment, ⛔ fee outcome on its wire (DL10, AC3); the nav link, the route component and the shared `StepUpPanel` (DL10, AC12); the console note amended for the recorded-date case, with a no-amendment option (DL11, Task 0.4); the writer's computed-against token (DL6). **Small:** AC5's defence leg says what the gate answers; valid bodies on the 401 / 403 / step-up legs (TR9); the Niyamavali cited by section, ⛔ quoted; the NUMBERS block re-read (three sibling stories want the same numbers). |
+| 2026-11-21 | v1.2 | The Panel note drafted at BigDev's ask, before Task 0.2 (WRITTEN, ⛔ sent; E4 run). PQ4 added — must a second person confirm the bank's date (`-473`: *"⛔ asked"*); it was told in TL1 / TL2, and is now asked without blocking, built A; one test names it (AC3); DL13 (b), Tasks 0.3–0.5 and the header's §0 line follow. |

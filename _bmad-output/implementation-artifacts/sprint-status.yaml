@@ -1,3 +1,8 @@
+# last_updated: 2026-11-21z (STORY 6.39a — the PANEL NOTE DRAFTED at BigDev's ask, before Task 0.2: `trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`,
+# WRITTEN, ⛔ sent (BigDev sends); E4 run. Q1 a family already refused (will be built B — after an allowed appeal), Q2 a reference that does not match (A — the
+# same reference only), Q3 a bank date on the day of death (A — after), Q4 NEW: must a second person confirm the bank's date (A — one finance officer; it was a
+# told line). Six told lines. Story v1.2 (PQ4; Task 0.3 says what is left before the note goes out). Row stays `ready-for-dev`. ⛔ Decision entry, ⛔ code.
+# Letters: `x` and `y` were taken on other branches — `z` was the next free at this line; ⚠ this branch's `w` and `story/3-13-…`'s `w` collide (both committed).)
 # last_updated: 2026-11-21w (STORY 6.39a — VALIDATED (`bmad-create-story validate 6.39a`, BigDev: "all"), story v1.1, re-traced at `90535934` (`origin/main` unmoved):
 # DL9's step-up cannot be completed in production (the admin step-up delivery is a stub — roster Row 47's notes, deferral R4) => its cost stated, a
 # no-step-up option, a go-live leg; N7 / TL1 promised two PEOPLE while the build separated ROLES => a same-person refusal in the check writer; AC5 / AC13's
@@ -22367,6 +22372,8 @@ development_status:
   # ⭐ 2026-11-21 (ledger `2026-11-21w`, `bmad-create-story validate 6.39a`): story v1.1 — fifteen findings applied (BigDev: "all"). DL9's step-up
   # carries its production cost (the admin step-up delivery is a stub) and a go-live leg; the membership-check writer refuses a check by the person
   # who recorded the bank date (N7); DL11's console note is amended for the recorded-date case. Each has a second option for BigDev at Task 0.2.
+  # ⭐ 2026-11-21 (ledger `2026-11-21z`): the Panel note DRAFTED (WRITTEN, ⛔ sent) — Q1–Q4 = PQ1–PQ4; PQ4 (a second person to confirm the bank's
+  # date) is new, asked without blocking, built A. Story v1.2.
   6-39a-bank-date-for-a-fee-recorded-after-the-death: ready-for-dev
   epic-6-retrospective: done
 

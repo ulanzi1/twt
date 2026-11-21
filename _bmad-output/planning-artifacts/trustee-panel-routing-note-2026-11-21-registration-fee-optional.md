@@ -107,6 +107,10 @@ and made their first contribution.
 - **Blocked:** nothing. The switch is built off; the other registration changes (upload, field-worker drafts, the "assisted?" code) do
   not depend on this note.
 - **If nothing is decided:** the fee stays required, as you have ruled.
+- ⚠ **Read with the note on the bank's date, sent alongside** (`trustee-panel-routing-note-2026-11-21-6-39a-bank-date-edges.md`), which
+  asks when staff may use the bank's date for a fee that was paid in life but recorded after the death. If you choose B or C in Q1 here,
+  a late-recorded fee no longer stops a drive for a member who submitted before the death (Q2), so most of that note matters only while
+  the fee is required.
 
 ---
 

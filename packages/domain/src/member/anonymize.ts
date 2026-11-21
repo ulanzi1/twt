@@ -335,7 +335,8 @@ export async function anonymizeMember(
   // The step, the proof of life, the attribution and the finding link are governance history, kept. The column-level
   // UPDATE grant + the per-command UPDATE policy exist for exactly this (0197). Reachable only for an INNOCENT member who
   // is `withdrawn` or `terminated` (a guilty member stays erasure-locked — the leaf, Q1). ⚠ `-240` cl. 1: a note may describe
-  // the FILER — whether innocent-outcome notes fall in row `6-22e`'s deletion is recorded there (moved from `6-22b` — 6.22b DL0).
+  // the FILER — notes about a member found innocent are deleted after counsel's period, the finding kept (`2026-11-21-480`
+  // F8 A, Trustee-ratified); that deletion is row `6-22e`'s build (moved from `6-22b` — 6.22b DL0), ⛔ this function's.
   const fraudSentinel = await encSentinel(pariwarId, CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS, enc);
   await client
     .update(claimFraudInvestigationSteps)

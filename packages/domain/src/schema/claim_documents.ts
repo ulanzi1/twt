@@ -26,10 +26,14 @@
 //
 // ── A death certificate's row is never deleted on its own (Story 6.22b DL5; migration 0213, HAND-AUTHORED) ──────
 // `claim_documents_no_death_certificate_delete` (BEFORE DELETE, every role, 23000) refuses deleting a
-// `death_certificate` row except from inside another trigger (depth > 1 — the `ON DELETE cascade` from `claims`):
-// `2026-09-25-243` cl. 2 keeps every certificate and its OCR reading, and this row's delete would cascade into
-// the kept uploads, reviews and membership checks. DELETE only — the OCR job's upsert and every UPDATE pass; the
-// other document types stay deletable. The trigger is invisible to drizzle (no snapshot since 0020).
+// `death_certificate` row except from inside another trigger (depth > 1 — the `ON DELETE cascade` from `claims`;
+// it admits ANY trigger-issued delete, the house's accepted residual): `2026-09-25-243` cl. 2 keeps every
+// certificate, and this row's delete would cascade into the kept uploads, reviews and membership checks.
+// `claim_documents_no_death_certificate_retype` (BEFORE UPDATE OF document_type, claim_case_id; `2026-11-21-481`)
+// refuses retyping a certificate's row or moving it to another claim — the two-step way round the delete guard.
+// Every other UPDATE passes (the OCR job's upsert rewrites the OCR columns and `storage_object_key` only); the
+// other document types stay deletable. Neither stops a superuser switching triggers off (replica mode, DISABLE,
+// DROP). The triggers are invisible to drizzle (no snapshot since 0020).
 //
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase, table
 // snake_case-plural. Header style mirrors member_kyc_profiles.ts.

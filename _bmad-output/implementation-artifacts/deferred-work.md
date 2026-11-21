@@ -96,6 +96,12 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 - **Who sees the field worker's name** when a person enters their code (row `3-15` shows nothing) or reviews a worker's draft (row
   `13-9` shows who started it) — a disclosure of the worker's name to the person; `13-9`'s Panel note asks. Trigger: row `13-9`'s
   create-story.
+- **Three Panel notes WRITTEN 2026-11-21, ⛔ sent, ⏳ unruled:** `trustee-panel-routing-note-2026-11-21-registration-fee-optional.md`
+  (`ae16c388` — Q1 fee optional, Q2 submission-date check, Q3 free members if the fee becomes required, Q4 commission; blocks turning row
+  `3-17`'s switch ON); `trustee-panel-routing-note-2026-11-21-registration-field-worker-drafts.md` (`5ef2a013` — Q1 what a worker may
+  fill in, Q2 draft retention, Q3 who sees what; blocks row `13-9`'s go-live); and, on `story/3-13-…`,
+  `trustee-panel-routing-note-2026-11-21-3-13-follow-up-uploaded-documents.md` (`a18654f2` — Q1 option E, Q4 copy retention; send BEFORE
+  the first 3.13 note is ruled; blocks row `3-16`'s go-live). Trigger: each ruling.
 
 ---
 

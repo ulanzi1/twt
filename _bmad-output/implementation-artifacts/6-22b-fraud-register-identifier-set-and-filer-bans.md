@@ -572,7 +572,7 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
         writes it once the guard is built ([[feedback_closure_language_precision]]).
 - [ ] **Task 1 — The certificate guard (DL5; AC4, AC5)** — skip with a banner if DL5 C ([[project_story_automator_ops]]: an unchecked
       box means "correctly not done").
-  - [ ] 1.0 ⭐ **Re-sync before any code** — Task 0 ran on 2026-11-02 and `main` has moved since (270 commits at `90535934`).
+  - [x] 1.0 ⭐ **Re-sync before any code** — Task 0 ran on 2026-11-02 and `main` has moved since (270 commits at `90535934`).
         `ListAgents` + `git branch --show-current`; `git fetch origin`; `git rebase origin/main`. A trial merge at `90535934` conflicts
         in FOUR records files — resolve each by keeping BOTH sides:
         `.decision-log.md` — `-440` goes in its NUMBERED place (newest-first: BELOW `-441`, ABOVE `-439`), ⛔ left on top, its text
@@ -581,6 +581,13 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
         `epics.md` and `docs/launch-gate-inventory/inventory-roster.md` — both sides' added lines kept. Then re-run Task 0.1's diff
         checks from `b7b43c47` to the new `origin/main` (G12's 2026-11-21 line is the result at `90535934`) and re-read the numbers
         (G16's 2026-11-21 line: migration `0213` next, `when` later than `1797998520000`).
+        ⭐ 2026-11-21 — DONE: rebased onto `origin/main` `90535934` (re-fetched after; unmoved); backup
+        `backup/6-22b-pre-rebase-2026-11-21` (local). Conflicts as predicted, each kept both sides: the ledger (`02c` / `02d` back
+        above `02b`, `21p` above `21o`; ⛔ key collision; 316 rows, plain `yaml.safe_load`); `-440` placed between `-441` and `-439`,
+        text unchanged (main's lines 0 removed); `epics.md` 6.22 → 6.22b → 6.39 → 6.39a; roster Row 47's notes line before Row 48.
+        Per-file numstat of the branch against `origin/main` equals the pre-rebase branch against `b7b43c47`. Re-read: journal top
+        `0212` (`when` `1797998520000`), ⛔ `0213`+ on any ref; AC7's grep 4 hits; the Task 0.1 diff from `b7b43c47` is G12's
+        2026-11-21 line (traced at `90535934`).
   - [ ] 1.1 Migration `<next free — 0213 at 90535934>_claim-documents-death-certificate-delete-guard.sql`, HAND-WRITTEN (⛔ `db:generate` — drizzle
         snapshots stop at `0020`; a trigger is invisible to it): `CREATE FUNCTION claim_documents_reject_death_certificate_delete()` +
         `CREATE TRIGGER … BEFORE DELETE ON claim_documents FOR EACH ROW`. Header comment cites `-243` cl. 2 and G12. Journal entry with

@@ -690,7 +690,7 @@ Sahyog Drive + Sahyog Vivran + In Memoriam + memorial components + Real Data Tes
 
 ### Epic 12: Module Marketplace
 
-Module manifest + admin targeting wizard + member shelf + grief-context structural suppression (state-machine-enforced via Story 3.1 `account-frozen` derived overlay) + lead-handoff transport (partners are downstream consumers, not state co-owners) + time-bombed lifecycle. **6 stories.** Full body and stories in §Epic 12 below.
+Module manifest + admin targeting wizard + member shelf + grief-context structural suppression (state-machine-enforced via Story 3.1 `account-frozen` derived overlay) + lead-handoff transport (partners are downstream consumers, not state co-owners) + time-bombed lifecycle. **6 stories.** ⭐ *2026-11-21: 7 with Story 12.5b, the partner's-own-form route (correct-course K-12, `-485`).* Full body and stories in §Epic 12 below.
 
 ---
 
@@ -7428,6 +7428,22 @@ So that I see relevant partner offers without irrelevant noise.
 > - **Still this story's:** the consent copy; the data-export lead section (12.1's C8 (b)); RVD2's retry decision; the commission-disclosure question (`-433` QE6 (A)'s trigger).
 > - **2026-11-21 — the Panel ruled the note: Decision `2026-11-21-484`** (Trustee-ratified; the lines above are kept as written). Binding here: **Q3 A** — *"The four, for every partner. The member sees all four on the form before agreeing."* (so the "Panel is asked" line above is answered); **Q6 A** — after delivery, *"The Trust tells the partner and asks it to delete"*, a staff duty with ⛔ owner (`deferred-work.md` 12.5's K-13): when this story's withdraw act meets a `delivered` lead, that is the signal staff need — how they learn of it is ⛔ ruled, so it goes through §0 at this story's create-story; **Q1 C** — each offer works one of two ways, and for the partner's-own-form way *"The Trust sends nothing"*: this story's lead route must never call the seal or `recordLeadHandoff` for such an offer. Nothing marks an offer's way yet — the correct-course for that route (12.5's K-12) comes BEFORE this story.
 
+> ⭐ **2026-11-21 — CORRECT-COURSE (K-12; `-484` Q1 C; Decision `2026-11-21-485`): TWO KINDS OF OFFER.**
+> The AC's "tapping a module opens a brief interest form with explicit consent … emits `module.lead_submitted`"
+> now holds for `lead_route = trust_sends` ONLY. These bind this story:
+> - **⛔ Build before Story 12.5b lands.** 12.5b's guard is what makes a `partner_form` offer refuse a lead; 12.3 is
+>   the first caller of `submitModuleLead` / `recordLeadHandoff`.
+> - **`partner_form` card:** ⛔ consent form, ⛔ `recordConsent`, ⛔ `submitModuleLead`, ⛔ seal. The CTA opens the
+>   offer's `partner_form_url` through 12.5b's opener (the phone's own browser). It shows ⛔ place count (those
+>   offers have none) and ⛔ delivery status (nothing is delivered).
+> - **The member sees which way an offer works before going on** (`-484` Q1 C, as put: *"the member sees which
+>   before going on"*). The wording for `partner_form` is the second set of member wording — owed to the Panel
+>   (12.5b's routing note); ⛔ invented here.
+> - **The C9 re-check still runs** for a `partner_form` tap (scope, eligibility, member state, 12.4's suppression)
+>   before the link is handed out — a shelf filter is ⛔ an authorization, and a frozen member must not get the
+>   link either.
+> - **Counts only:** 12.3 emits 12.5b's per-offer counters; ⛔ member id on them.
+
 ### Story 12.4: Grief-Context Module Shelf Suppression — State-Machine-Enforced + Structural-Not-Cosmetic Invariant `[GOVERNANCE]`
 
 As a relative or nominee opening the deceased member's phone post-claim,
@@ -7452,6 +7468,15 @@ So that grief-context dignity is preserved at the architectural layer, not at re
 > ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; C4, C9).** ⚠ The `account-frozen` overlay this story keys on **LIFTS** on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4). Keying instead on the durable "a claim was ever filed" fact (`claim/nominee-lock.ts`) would suppress a LIVING member after an erroneous claim, which IS a new reason under `2026-08-21-147` cl.3 ⇒ the re-examination is MANDATORY here. **C9:** suppression must also bind the lead route, not only the rendered shelf. 12.1 added ⛔ freeze source.
 
 > ⭐ **INHERITED FROM 12.5 (Decision `2026-11-21-483`).** The transport cancels a pending lead on a death by itself — on the `account-frozen` overlay AND on the durable `isDeathReportStanding` fact (QE7 P4 / P5; QE26 (A)) — so this story owns the shelf and the lead route, ⛔ the transport. ⚠ A FACT for this story's own `-147` cl.3 re-examination (12.1's C4): the freeze LIFTS when the claim is settled, and `isDeathReportStanding` does not. P5 is put to the Panel (routing note `2026-11-21-12-5-partner-lead-data` Q7) — WRITTEN, ⛔ sent.
+
+> ⭐ **2026-11-21 — CORRECT-COURSE (K-12; `-484` Q1 C, Q7 A; Decision `2026-11-21-485`).**
+> - **Suppression covers BOTH kinds of offer.** A `partner_form` offer's card and its link are as absent as a
+>   `trust_sends` card — (a)–(e) above apply to the link too: ⛔ rendered, ⛔ prefetched, ⛔ cached.
+> - **A standing death report hides `partner_form` offers too, also after the freeze lifts** — built on the narrow
+>   side, like 12.5's P5 (`-483` QE26). Q7 A was ruled for the sending route; the note said that under B it remains
+>   *"only as 'the offers are not shown'"*. Whether Q7 A reaches the second route is ⛔ ruled — asked in 12.5b's
+>   routing note, ⛔ blocking.
+> - The C9 re-check that 12.3 runs before handing out a `partner_form` link includes this suppression.
 
 ### Story 12.5: Module Lead-Handoff Transport + Partners-as-Downstream-Consumers Invariant `[PRIMITIVE]`
 
@@ -7488,6 +7513,48 @@ So that partner systems receive valid leads with provenance, and partner integra
 > - **RVD2:** the first LEAD caller is where a stream drift becomes a loop (`-433` QE21's re-trigger).
 
 > ⭐ **BUILD DECISIONS (Decision `2026-11-21-483`, author-commit).** The AC above is varied in three places, each recorded there (V1): the row's primary key, status and claim token are the idempotency key — ⛔ Story 1.12 keyed-store entry; 401 / 403 / 404 and a refused address are retried before they fail; the audit line exists per REQUEST. The signing scheme is the AC's (HMAC per module, one signature) and supersedes the architecture's partner-JWT text for this transport. ⛔ Nothing reaches a partner before roster Row 54 closes: the Panel (seven questions) and counsel are asked first.
+
+### Story 12.5b: Partner's-Own-Form Route — Offer Route Marker + Send Guard + Outbound Link `[PRIMITIVE]`
+
+> ⭐ **Added by correct-course 2026-11-21** (K-12; Decision `2026-11-21-485`, author-commit, carrying out `-484` Q1 C,
+> Trustee-ratified). Full rationale + impact analysis: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-11-21-k12-partner-form-route.md`.
+> **Sequencing:** built AFTER Story 12.5 and BEFORE Story 12.3. Go-live: roster Row 55 `partner-form-route-live`; the Panel's
+> routing note `2026-11-21-12-5b-partner-form-route` (R1–R5) is WRITTEN, ⛔ sent.
+
+As Solo Builder carrying out Decision 2026-11-21-484 Q1 C ("Both — each offer works one way or the other"),
+I want each offer to carry which way a member's interest reaches the partner, and the "partner's own form"
+way to send nothing about the member,
+So that "The Trust sends nothing … only a code saying which offer the visit came from, and nothing about the
+member" holds by construction, not by 12.3 getting it right.
+
+**Acceptance Criteria:**
+
+**Given** `-484` Q1 C + Story 12.1 manifest + Story 12.5 transport (`-483`)
+**When** the route marker is added
+**Then** the manifest carries `lead_route` (`trust_sends | partner_form`), set at authoring and immutable
+(manifest schema v2); a `partner_form` offer carries `partner_form_url` and NO handoff URL, signing-key name or
+`slot_capacity` (a CHECK pairs each route with its columns; 12.5b relaxes 0193's two NOT NULLs, C10's path)
+**And** `partner_form_url` is `https`, ⛔ IP / localhost, ⛔ fragment; it may carry a FIXED query the partner
+supplied (the offer code); the Trust appends nothing; ⛔ per-member or per-visit token anywhere in it
+
+**Given** the send guard (K-12 item 2 — load-bearing)
+**When** anything tries to pass a member on for a `partner_form` offer
+**Then** `submitModuleLead`, `sealLeadMemberFields` and `recordLeadHandoff` refuse it with a typed error, and the
+12.5 sweep's S4 cancels any row of one with its own cancel word — so a 12.3 bug fails loudly, ⛔ sends quietly
+**And** a test proves no member field, `member_id` or lead id reaches a `partner_form` offer's URL
+
+**Given** the member opening the partner's form
+**Then** the app opens `partner_form_url` with `Linking.openURL` — the phone's own browser; ⛔ embedded web view,
+⛔ in-app browser tab (`expo-web-browser`) — "not inside the Trust's app" as ratified
+**And** the Trust counts per offer only (card shown / opened / went to partner / came back) — ⛔ member id on any
+count; a per-member "opened" record is ⛔ built unless the Panel rules it (routing note R2)
+**And** ⛔ inbound path for partner step totals or progress (12.5 K-5: advisory only; routing note R3)
+
+**Given** Story 12.2's wizard
+**Then** step (f) asks the route, and shows the partner-form URL field for `partner_form`, and the handoff URL +
+signing key for `trust_sends`; WHO may choose the route is the Panel's (routing note R1) — go-live waits on it
+
+**And** ⛔ go-live until its own roster row closes (`partner-form-route-live`, Row 55); merge ≠ go-live
 
 ### Story 12.6: Time-Bombed Module Lifecycle + Auto-Archive `[CONSUMER]`
 

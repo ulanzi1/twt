@@ -2620,6 +2620,12 @@ endpoint receives leads with TWT attribution; partner authentication via signed 
 > partner-allowed fields per FR-66 wizard" is ONE closed list of four details for every partner. ⛔ Nothing is built yet, and ⛔ member's
 > details reach a partner before roster Row 54 closes.
 
+> ⚠ **ANNOTATION 2026-11-21 (correct-course K-12, `2026-11-21-485` — author-commit, carrying out `-484` Q1 C,
+> Trustee-ratified) — a SECOND ROUTE.** An offer is `trust_sends` (everything above, as amended by `-483` (S1)) or
+> `partner_form`: ⛔ envelope, ⛔ signature, ⛔ delivery, ⛔ retry, ⛔ circuit breaker; the member opens the partner's
+> form in the phone's own browser and the Trust passes only a fixed per-offer code in the partner-supplied URL.
+> "Member UX state: lead status" applies to `trust_sends` only. Built by Story 12.5b. ⭐ Annotated, ⛔ not rewritten.
+
 **Architectural shape:**
 - Member taps Apply on a module card (FR-65) → consent capture (DPDPA, per surface
   category) → lead submission to TWT API.

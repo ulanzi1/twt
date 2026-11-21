@@ -10,10 +10,12 @@ PINNED: `90535934` = `origin/main` (2026-11-21o, after `git fetch origin`). The 
 `scripts/` claim below was re-derived at the pin on 2026-11-21 (perishable — `git diff --name-only 90535934..origin/main
 -- packages apps scripts` at Task 0.1). Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (2026-11-21 — v1.1). ⭐ **Task 0 runs FIRST in `bmad-dev-story`.** The build decisions QE1–QE26
-carry TWELVE real asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21, QE22, QE23, QE24, QE25, QE26). BigDev answers them at Task 0.2,
-and the author-commit lands ALONE at Task 0.3 BEFORE any code ([[feedback_governance_commits_precede_implementation]]).
-If an ASK is answered with a non-recommended option, Task 0.3 first rewrites the dependent sites (the map is in Task 0.3).
+STATUS: ready-for-dev (2026-11-21 — v1.3). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
+The build decisions QE1–QE26 carried TWELVE asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21–QE26). BigDev answered them on
+2026-11-21, all as recommended (QE21 is (C)), and accepted the rest as a set. The author-commit is **Decision
+`2026-11-21-483`**, committed ALONE (`1a885546`) before any code ([[feedback_governance_commits_precede_implementation]]).
+This file is amended to those answers: where an ASK lists options, the one marked "recommended" is the one BUILT, and
+the others stay only as the record of what was considered.
 ⭐ **The Panel note and the counsel question (Task 0.5) are WRITTEN, ⛔ SENT, by this story. Neither of them blocks the
 build — both block GO-LIVE** through the new roster row (Task 0.6). Nothing reaches a partner or a member from 12.5
 alone (I1).
@@ -27,7 +29,7 @@ newest-first files, so cite the decision id + clause, the item heading, or the r
 are perishable hints. Legal files (`docs/legal/*`, git-ignored, main checkout) are cited by SECTION NUMBER and described
 in our own words — ⛔ pasted (the repo is public; `docs/legal-corpus-location.md`).
 
-LETTERS: G = found facts · QE = build decisions (ASK = BigDev answers at Task 0.2) · W = the row's writes (QE6) ·
+LETTERS: G = found facts · QE = build decisions (ANSWERED = BigDev's answer, `-483`) · W = the row's writes (QE6) ·
 S = the tick's steps (QE13) · P = the cancel predicates (QE7) · I = invariants · TR = traps · PQ = questions for the
 Panel / counsel (Task 0.5). ⚠ `C6`, `C7`, `C8`, `C10`, `C13` with NO hyphen are ALWAYS Story 12.1's carried items. This
 story's own carried items are `K-1` … `K-11`.
@@ -36,9 +38,9 @@ NUMBERS — re-read 2026-11-21 ~18:20 IST across every ref (heads and remotes) a
 (`3-13-…`, `6-22b-…`, `6-39a-…`, `governance-registration-change-2026-11-21`, incl. uncommitted files). Siblings
 committed several times while this story was being written, so every number here is a floor, never a value. Rule (`-366` decision 6): the number belongs to the first
 COMMIT, on any branch.
-- Decisions: `main` stops at `-476`; `story/6-22b-…` has COMMITTED `-477`–`-481`, and
-  `governance/registration-change-2026-11-21` has COMMITTED `-482` ⇒ this story takes **≥ `-483`** and re-greps every
-  ref at the commit that takes it.
+- Decisions: this story's author-commit is **`2026-11-21-483`** (`1a885546`), taken after `-477`–`-481`
+  (`story/6-22b-…`) and `-482` (`governance/registration-change-2026-11-21`). A later decision of this story re-greps
+  every ref and every worktree.
 - Migrations: `main`'s highest is `0212_claim-membership-checks`. `story/6-22b-…` has COMMITTED
   `0213_claim-documents-death-certificate-delete-guard` (journal `when` `1797998580000`); `story/6-39a-…` and
   `story/3-13-…` both plan later numbers in prose ⇒ this story takes the next TWO free numbers at its commit, **≥ `0214` + `0215`** (⚠ two files — QE2). Each
@@ -105,7 +107,7 @@ note and a counsel question. Both gate go-live, NOT the merge ([[project_not_in_
 | Headers sent | `X-TWT-Attribution: pariwar=<id>, module=<id>, lead_id=<uuid>` (epic AC, verbatim form) · `X-TWT-Signature: t=<unix>, v1=<hex>` (QE3 (A)) · `Idempotency-Key: <lead_id>` (QE6 (A)) · `Content-Type: application/json` |
 | Boundary fence (NEW) | static: `scripts/partner-boundary-invariant/{check,lib,lib.test}.ts` · scripts `partner-boundary:{check,test}` · route leg: `apps/api/tests/integration/partner-boundary.spec.ts` |
 | ADR (NEW) | `docs/adr/ADR-NNNN-partner-lead-handoff-transport.md` (≥ `ADR-0046`) |
-| Decision | ≥ `2026-11-21-483` (re-grep) — author-commit of QE1–QE26 |
+| Decision | `2026-11-21-483` (`1a885546`) — author-commit of QE1–QE26 |
 | Panel note (WRITTEN, not sent) | `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md` |
 | Counsel question (WRITTEN, not sent) | `_bmad-output/planning-artifacts/counsel-question-2026-11-21-12-5-partner-lead-transfer.md` |
 | Roster | `Row NN` (≥ 54) — `partner-lead-handoff-live` |
@@ -138,9 +140,10 @@ A second sentence follows from 12.1's rule that a member registers for each offe
 **"If your interest is stopped for one of those reasons, or could not be delivered, your place on that offer is not
 given back."**
 
-Both sentences are AS PROPOSED until Task 0.2: QE2, QE22, QE23 and QE26 can each remove a clause from the first.
-(Under QE21 (B) / (C) staff can re-send a failed lead inside the retention window, once K-3 gives that a caller. That
-is a staff remedy, not something the member can ask for, so the second sentence stands under every option.)
+Both sentences are as BUILT (`-483`). One clause still waits on the Panel: "your death is reported" rests on P5 as
+well as P4, and the Panel is asked to confirm P5 (note Q7). (Staff can re-send a failed lead inside the retention
+window, once K-3 gives that a caller. That is a staff remedy, not something the member can ask for, so the second
+sentence covers a failed delivery too.)
 
 ⚠ The first sentence narrows only: each predicate can stop a send, and none can cause one. "Before it is sent" is
 load-bearing: a change that lands after the last check is too late (TR9). The second sentence is a COST to the
@@ -151,9 +154,9 @@ member, and it is told to the Panel (PQ4).
 | Clause | Mechanism | Reachable by a member today? |
 |---|---|---|
 | "your agreement … is withdrawn" | P1 reads `revoked_at` on the lead's consent rows | NO. No member surface revokes a consent today (the revoke callers are the Telegram and WhatsApp opt-ins and the claim DPDPA route). The withdraw-my-interest act is carried to 12.3 (K-1). Built and tested here, unreachable until then. |
-| "your membership ends" | P3 reads the lifecycle state `withdrawn` and (QE23) the moderation overlay `terminated` | Termination: yes. Withdrawal: no member can reach `withdrawn` until row `3-14` (the lock-in producer) lands. A SUSPENDED member is still a member, and the lead is sent. |
+| "your membership ends" | P3 reads the lifecycle state `withdrawn` and the moderation overlay `terminated` | Termination: yes. Withdrawal: no member can reach `withdrawn` until row `3-14` (the lock-in producer) lands. A SUSPENDED member is still a member, and the lead is sent. |
 | "your data is erased" | P2 reads the NULLed ciphertext / `anonymized`; QE16 cancels a `due` row inside the erasure | Only for a withdrawn or terminated member — erasure is legal for no one else (`resolveRtbfLegality`), and never while a death report stands (`-423` Q1 (a)). |
-| "your death is reported" | P4 reads the account-frozen overlay; P5 (QE26) reads `isDeathReportStanding` | Yes. The wording follows the form of `-146`'s adopted sentence ("once your death has been reported to the trust"); it makes no promise about a freeze that lifts, or about a report later closed as false (the cancel is final — PQ6). |
+| "your death is reported" | P4 reads the account-frozen overlay; P5 reads `isDeathReportStanding` | Yes. The wording follows the form of `-146`'s adopted sentence ("once your death has been reported to the trust"); it makes no promise about a freeze that lifts, or about a report later closed as false (the cancel is final — PQ6). |
 | "the Trust withdraws the offer" | S4 reads the module's `archive_reason` (QE22) | Yes — 12.2's Withdraw. |
 | "cannot be called back" | TR9 | Yes — and whether the Trust then tells the partner is PQ5, not decided here. |
 
@@ -217,17 +220,17 @@ and gate go-live (Row NN).
 | # | Edge | Verdict |
 |---|---|---|
 | 1 | Sending a member's data to a partner at all, which fields, how long the Trust keeps what the member shared and the record that the member asked, and whether a paid lead squares with the draft policy's no-sale line (12.1's C6, C8 (a)) | **The Panel's, on counsel's advice** — "a LEGAL or consent BASIS for handling someone's data" and "what the Trust DISCLOSES about a person, or to whom". ⛔ 12.5 decides it. 12.5 BUILDS on the narrow side (a closed four-field allow-list, QE5; a finite retention default, QE24) and ROUTES it (PQ1–PQ5, Task 0.5; PQ6 is edge 12's); go-live waits (Row NN). |
-| 2 | The signing scheme (12.1's C7) | **Yours** — "which implementation is correct, faster, or safer". Stripped: "should the partner check TWT's signature with a shared secret or a public key?" No person sees or is owed anything different. ASK (QE3) because the epic and the architecture disagree. |
-| 3 | At-least-once vs at-most-once delivery | **Yours, with a stated member cost** — the same lead can reach the partner more than once (at most 7 requests per pass through the schedule), so a partner that does not dedupe may contact a member again. ASK (QE6). The Panel is TOLD the exact bound (PQ4), the `-370` shape. |
+| 2 | The signing scheme (12.1's C7) | **Yours** — "which implementation is correct, faster, or safer". Stripped: "should the partner check TWT's signature with a shared secret or a public key?" No person sees or is owed anything different. Answered (QE3) because the epic and the architecture disagree. |
+| 3 | At-least-once vs at-most-once delivery | **Yours, with a stated member cost** — the same lead can reach the partner more than once (at most 7 requests per pass through the schedule), so a partner that does not dedupe may contact a member again. Answered (QE6). The Panel is TOLD the exact bound (PQ4), the `-370` shape. |
 | 4 | The cancel predicates P1–P4 (Policy meaning) | **Yours** — each one only NARROWS what leaves (fail-closed). P4 rests on FR-65 ("Suppressed in all account-frozen states"). The Panel is TOLD of them as "built on the narrow side", ⛔ asked ([[feedback_told_line_must_not_carry_panel_choice]]). P5 is edge 12. |
 | 5 | The new `module_lead_handoff` consent VALUE | **Yours, recorded** — a code name with no writer and no copy in 12.5. The consent TEXT and its basis are edge 1 (the Panel's). ⛔ a `-210` mint (a consent reaches a member), so it is recorded in the author-commit (QE2). |
-| 6 | Port and address policy at send (12.1's C7) | **Yours** — SSRF hardening. ASK (QE8) only because a refusal at send can strand an immutable manifest (12.1's C10). |
+| 6 | Port and address policy at send (12.1's C7) | **Yours** — SSRF hardening. Answered (QE8) only because a refusal at send can strand an immutable manifest (12.1's C10). |
 | 7 | What a partner may send BACK, and what TWT does with it | **Yours, as an invariant the epic already fixes** — partner-provided data "is treated as **advisory information**, never authoritative". 12.5 builds NO inbound path. The first inbound feedback path (lead outcome) re-opens §0 at its own create-story (K-5). |
 | 8 | The commission-disclosure question (12.2 QE6) | **⛔ 12.5's trigger** — its re-trigger (in our words: OQ-4 answered, the first production publish, or Story 12.3's create-story) is not met here. 12.5 shows no offer to a member. ⚠ But the no-sale line (edge 1) is 12.5's to ROUTE, because it concerns the transfer this story builds. |
-| 9 | What a final failure costs the member (one registration per offer, ever) | **Yours to build, the Panel TOLD** — ASK (QE21): keep final, or add a guarded requeue. The cost reaches a member, so it is in PQ4. |
-| 10 | A lead whose offer was archived before it was sent | **Yours, on the narrow side** — ASK (QE22). Stopping sends after the Trust itself withdrew an offer NARROWS "to whom"; continuing them would be the wide side, and ⛔ recommended. Its cost (a withdrawal needs no step-up, and a correction is a withdrawal) is in QE22. |
+| 9 | What a final failure costs the member (one registration per offer, ever) | **Yours to build, the Panel TOLD** — Answered (QE21): keep final, or add a guarded requeue. The cost reaches a member, so it is in PQ4. |
+| 10 | A lead whose offer was archived before it was sent | **Yours, on the narrow side** — Answered (QE22). Stopping sends after the Trust itself withdrew an offer NARROWS "to whom"; continuing them would be the wide side, and ⛔ recommended. Its cost (a withdrawal needs no step-up, and a correction is a withdrawal) is in QE22. |
 | 11 | Telling the partner, or asking it to delete, after a member withdraws agreement or is erased AFTER delivery | **The Panel's, on counsel's advice** — a new disclosure-and-duty question. ⛔ built here. PQ5. |
-| 12 | P5 — once the freeze has lifted, a standing death report still stops the send, for good | **Built on the narrow side; the Panel ASKED, ⛔ blocking (PQ6).** `-424`'s §0 puts "what may be done with a dead member's membership and record" with the Panel. `-423` Q1 (a)'s reason, as put, is that the dead member's agreement STANDS ("no one can withdraw it on their behalf afterwards"); it is scoped to what "the claim, the drive and the donors rely on". OUR reading: extended to a partner-offer consent, that agreement would still allow the send, so withholding is the narrower act. 12.1's C4 reads a durable death fact as a new reason under `-147` cl.3. Whether to BUILD it now is the ASK (QE26); whether it is RIGHT, and its cost when a report proves false, is the Panel's. |
+| 12 | P5 — once the freeze has lifted, a standing death report still stops the send, for good | **Built on the narrow side; the Panel ASKED, ⛔ blocking (PQ6).** `-424`'s §0 puts "what may be done with a dead member's membership and record" with the Panel. `-423` Q1 (a)'s reason, as put, is that the dead member's agreement STANDS ("no one can withdraw it on their behalf afterwards"); it is scoped to what "the claim, the drive and the donors rely on". OUR reading: extended to a partner-offer consent, that agreement would still allow the send, so withholding is the narrower act. 12.1's C4 reads a durable death fact as a new reason under `-147` cl.3. Whether to BUILD it now was QE26, answered (A); whether it is RIGHT, and its cost when a report proves false, is the Panel's. |
 
 ## FOUND FACTS (G) — re-derived at `90535934`, 2026-11-21
 
@@ -387,7 +390,7 @@ and gate go-live (Row NN).
   lands (Task 7). Not tripped, checked: ESLint (only the `pg` value-import ban), governance-boundary, microcopy,
   pii-scrape, schema-diff, marketplace-module-state, the erasure fence, and domain-accessor (given `clampLimit`).
 
-## ⚖️ Build decisions QE1–QE26 (ASK = BigDev answers at Task 0.2; the rest are recommendations BigDev may accept as a set)
+## ⚖️ Build decisions QE1–QE26 — ALL ANSWERED 2026-11-21, Decision `2026-11-21-483` (the option marked "recommended" is the one built; the others are kept as the record of what was considered)
 
 - **QE1 — Home.** Domain: `packages/domain/src/marketplace/lead-handoff.ts`, `lead-envelope.ts`, `lead-member-fields.ts`,
   re-exported through the existing `marketplace` namespace barrel. Schema: `schema/marketplace_lead_handoffs.ts`; RLS:
@@ -395,7 +398,7 @@ and gate go-live (Row NN).
   `apps/jobs/src/scheduler/module-lead-handoff.ts` + `partner-lead-client.ts`. ⛔ API route (12.3 calls the seam from
   its own handler), ⛔ contracts (no route), ⛔ admin UI (K-3).
 
-- **QE2 — ASK — per-lead consent, and who mints the value.**
+- **QE2 — ANSWERED (A) — per-lead consent, and who mints the value.**
   - **(A, recommended)** 12.5 mints `module_lead_handoff` (migration `NNNN`, alone; the contracts lockstep and the
     second pin). The handoff row stores the `consent_id` 12.3 records for THAT lead (`consent_artifact_ref = lead_id`),
     UNIQUE on the handoff table (one consent backs one handoff). Every check reads through that column, NEVER by
@@ -409,7 +412,7 @@ and gate go-live (Row NN).
   - (C) A per-subject `consentExists`. Cost: G6 — one consent covers every offer, so a revoke on one offer can be masked
     by another.
 
-- **QE3 — ASK — the signing scheme (12.1's C7).**
+- **QE3 — ANSWERED (A) — the signing scheme (12.1's C7).**
   - **(A, recommended)** HMAC-SHA-256 with the module's secret, the epic's wording. Header `X-TWT-Signature: t=<unix
     seconds>, v1=<lower-case hex>` — exactly ONE `v1`, signed with the `latest` version, over the exact bytes
     `"<t>." + body`. The receiver guide (in the ADR) asks for a constant-time compare and for refusing
@@ -424,8 +427,7 @@ and gate go-live (Row NN).
     §3.7's "signed JWT (asymmetric …)" and §5.9's "Partner JWT signing keys" — recorded in the author-commit, and Task
     0.4 annotates EVERY partner-JWT sentence in place, NEVER rewriting one ([[feedback_supersede_never_reinterpret]]).
     (iii) The secret must reach the partner over a secure channel at onboarding (roster leg (f)). (iv) A partner that
-    drops the old secret before TWT's next tick answers 401 until then (QE21 (C) retries it; under (A) / (B) it is
-    permanent at once). (v) The
+    drops the old secret before TWT's next tick answers 401 until then (retried on the schedule — QE21 (C)). (v) The
     secret lives in the PROD project, because 12.1's NAME carries no project and `resolveSecretValue` reads
     `GOOGLE_CLOUD_PROJECT` — a recorded variance from §5.9's separate high-sensitivity tier. What a leaked HMAC secret
     allows is forging a lead TO that partner; it does not open member data.
@@ -475,14 +477,14 @@ and gate go-live (Row NN).
     are immutable.
   - `member_fields_ciphertext` may only go NOT NULL → NULL. It never changes to another value and never comes back.
   - `status` moves only along the W rows of QE6. On a FINAL row (`delivered` / `failed_delivery` / `cancelled`) the
-    only changes admitted are the ciphertext going NULL with `updated_at` (W11, W12) and, if QE21 (B) or (C), W13.
+    only changes admitted are the ciphertext going NULL with `updated_at` (W11, W12) and W13.
 
   GRANTs: `twt_app` SELECT, INSERT, and UPDATE on EXACTLY the columns its writers touch — erasure (W11:
-  `member_fields_ciphertext`, `status`, `outcome_detail`, `updated_at`) and, if QE21 (B) or (C), the requeue (W13: also
+  `member_fields_ciphertext`, `status`, `outcome_detail`, `updated_at`) and the requeue (W13: also
   `attempt_count`, `next_attempt_at`, `held_since`). No DELETE. FORCE RLS with per-command policies, and an UPDATE
   policy AT BIRTH so erasure matches rows (G10). The sweep's writes run on the jobs login (Row NN (g)).
 
-- **QE5 — ASK — the v1 member-field allow-list (what 12.5 BUILDS; the Panel rules what may be USED — PQ2).**
+- **QE5 — ANSWERED (A) — the v1 member-field allow-list (what 12.5 BUILDS; the Panel rules what may be USED — PQ2).**
   `LeadMemberFieldsV1 = { full_name: string(1–120, the `storableText` rule), mobile: the canonical form
   `normalizeMobile` returns (refused when it returns null), district: string(1–120) | null, preferred_language:
   'hi' | 'en' }`, `.strict()`. The name is sent WHOLE, never shortened ([[feedback_never_mangle_member_names]]).
@@ -502,7 +504,7 @@ and gate go-live (Row NN).
   ⭐ Whatever is chosen: a Panel ruling (PQ2) for FEWER fields is a schema edit and a new envelope version — small,
   but code. A ruling for MORE is a new story.
 
-- **QE6 — ASK — the delivery semantics, and the row's writes W1–W13 (the ONE copy; the guard and the domain tuple
+- **QE6 — ANSWERED (A) — the delivery semantics, and the row's writes W1–W13 (the ONE copy; the guard and the domain tuple
   are in lockstep with this table).**
   - **(A, recommended)** AT LEAST ONCE, deduplicated by the partner on `Idempotency-Key: <lead_id>` (§3.7's "partner is
     contractually expected to dedupe by nonce"). A timeout or a dropped connection after the request was written is a
@@ -536,12 +538,12 @@ and gate go-live (Row NN).
   | W5 | exhausted (a W4 outcome on attempt 7) | `attempting` → `failed_delivery` | sweep, CAS | — | `failed_delivery:retries_exhausted` |
   | W6 | hold (a fault that DEFINITELY sent nothing) | `attempting` → `due` | sweep, CAS | `attempt_count − 1`; `held_since = COALESCE(held_since, clock)`; `next_attempt_at = clock + HOLD_RETRY_MS` | `held:*` |
   | W7 | hold expired (a W6 fault when `clock − held_since ≥ MAX_HOLD_MS`) | `attempting` → `failed_delivery` | sweep, CAS | `attempt_count − 1` | `failed_delivery:hold_expired:<signing_key\|kms\|audit\|db\|dns>` (the word of THIS attempt's fault, whatever earlier holds in the run were) |
-  | W8 | permanent | `attempting` → `failed_delivery` | sweep, CAS | — | `failed_delivery:(http_4xx:<code>\|http_3xx:<code>\|port_refused\|url_refused\|fields_unreadable)`, and `address_refused` unless QE21 (C) |
+  | W8 | permanent | `attempting` → `failed_delivery` | sweep, CAS | — | `failed_delivery:(http_4xx:<code>\|http_3xx:<code>\|port_refused\|url_refused\|fields_unreadable)` |
   | W9 | cancel (P1–P5, QE22) | `attempting` → `cancelled` | sweep, CAS | `member_fields_ciphertext` NULL (QE24) | `cancelled:*` |
   | W10 | lapse (`claimed_at ≤ clock − LEASE_MS`) | `attempting` → `due`; → `failed_delivery` when `attempt_count ≥ MAX_ATTEMPTS` | sweep's lapse step (no token; it clears the token) | `next_attempt_at = clock + RETRY_SCHEDULE_MS[attempt_count − 1]`; `held_since` NULL | `lapsed:lease_expired` / `failed_delivery:outcome_unknown` |
   | W11 | erasure | any status, unchanged — except `due` → `cancelled` | `anonymizeMember` (`twt_app`) | `member_fields_ciphertext` NULL | `cancelled:member_erased` (the `due` row only) |
   | W12 | purge (QE24: final for longer than the retention constant, judged by `updated_at`) | `delivered` / `failed_delivery`, unchanged | sweep's purge step | `member_fields_ciphertext` NULL | unchanged |
-  | W13 | requeue (ONLY if QE21 (B) or (C)) | `failed_delivery` → `due` | `requeueLeadHandoff` (no production caller) | `attempt_count 0`, `next_attempt_at clock`, `held_since` NULL; refused when the ciphertext is NULL | `requeued:manual` |
+  | W13 | requeue (QE21 (C)) | `failed_delivery` → `due` | `requeueLeadHandoff` (no production caller) | `attempt_count 0`, `next_attempt_at clock`, `held_since` NULL; refused when the ciphertext is NULL | `requeued:manual` |
 
   Rules that follow from the table:
   - "CAS" = `WHERE pariwar_id = $1 AND lead_id = $2 AND status = 'attempting' AND claim_token = $3`. Zero rows means
@@ -580,12 +582,12 @@ and gate go-live (Row NN).
     constant; a FULL page is a fault, not an answer: W6 `held:db_unavailable`.)
   - **P2 — erased.** `member_fields_ciphertext IS NULL`, or the lifecycle state is `anonymized` →
     `cancelled:member_erased`.
-  - **P3 — membership ended.** The lifecycle state is `withdrawn` → `cancelled:member_withdrawn`. If QE23 (A): the
+  - **P3 — membership ended.** The lifecycle state is `withdrawn` → `cancelled:member_withdrawn`. The
     moderation overlay (`member.moderation.getCurrentMemberModerationOverlay`) reads `terminated` →
     `cancelled:member_terminated`. A SUSPENDED member is still a member, and the lead is sent.
   - **P4 — frozen.** `listAccountFrozenMemberIds(db, [memberId], at)` contains the member, with `at` read from the
     database clock in the same transaction → `cancelled:account_frozen`.
-  - **P5 — a death report stands (ONLY if QE26 (A)).** `isDeathReportStanding(db, pariwarId, memberId)` →
+  - **P5 — a death report stands (QE26 (A)).** `isDeathReportStanding(db, pariwarId, memberId)` →
     `cancelled:death_reported`. This is what still holds after the freeze LIFTS on a settled claim (G11).
 
   P4 reads the overlay and adds NO freeze source (I6), so `-147` cl.3 is not engaged by it. P5 neither writes nor
@@ -593,7 +595,7 @@ and gate go-live (Row NN).
   is permanent for the member: one registration per offer (G1, QE21).
   The module's state is NOT one of these predicates; QE22 decides it.
 
-- **QE8 — ASK — the send-time address and port policy (12.1's C7: SSRF / DNS rebinding).** In `partner-lead-client.ts`:
+- **QE8 — ANSWERED (A) — the send-time address and port policy (12.1's C7: SSRF / DNS rebinding).** In `partner-lead-client.ts`:
   - **(A, recommended)** Re-parse the stored URL and require the same 12.1 rules (defence in depth); a failure is W8
     `url_refused`. **Port: only the default (none written).** Any explicit port → W8 `port_refused`, with NO lookup and
     NO request. (A stored URL can never carry `:443` — G3 — so "explicit" means "not 443".)
@@ -608,8 +610,8 @@ and gate go-live (Row NN).
       64:ff9b:1::/48. An IPv4-mapped address (`::ffff:a.b.c.d`, in dotted or hex form) is judged as its IPv4 — blocked or allowed as
       that address would be.
 
-    A refusal is `address_refused`: W8 under QE21 (A) / (B), a counted W4 under QE21 (C). Either way NO request is
-    made, and the authority joins the tick's `open` set.
+    A refusal is `address_refused`: a counted W4 (QE21 (C)), a W5 on attempt 7. NO request is made, and the authority
+    joins the tick's `open` set.
     Connect to the FIRST IPv4 address, else the first IPv6, with `https.request({ host: <that address>, servername:
     <hostname>, headers: { host: <hostname> }, agent: false, signal })`. The connection goes to the address that was
     checked (closing DNS rebinding); no `lookup` option is passed, because none is consulted for an address literal.
@@ -642,21 +644,21 @@ and gate go-live (Row NN).
 - **QE10 — The detail vocabulary (`outcome_detail`).** Closed and grammar-checked (a named CHECK + a domain tuple):
   - `delivered:http_2xx:<3 digits>`
   - `released:http_5xx:<code>` · `released:http_408` · `released:http_429` · `released:timeout` · `released:network`
-    (and, if QE21 (C): `released:http_401` · `released:http_403` · `released:http_404` · `released:address_refused`)
+    · `released:http_401` · `released:http_403` · `released:http_404` · `released:address_refused`
   - `held:signing_key_unavailable` · `held:kms_unavailable` · `held:audit_unavailable` · `held:db_unavailable` ·
     `held:dns_unavailable`
-  - `lapsed:lease_expired` · `requeued:manual` (QE21 (B) or (C))
+  - `lapsed:lease_expired` · `requeued:manual`
   - `failed_delivery:http_4xx:<code>` · `failed_delivery:http_3xx:<code>` · `failed_delivery:port_refused` ·
-    `failed_delivery:url_refused` · `failed_delivery:address_refused` (QE21 (A) or (B)) · `failed_delivery:fields_unreadable` ·
+    `failed_delivery:url_refused` · `failed_delivery:fields_unreadable` ·
     `failed_delivery:retries_exhausted` · `failed_delivery:outcome_unknown` ·
     `failed_delivery:hold_expired:(signing_key|kms|audit|db|dns)`
   - `cancelled:consent_revoked` · `cancelled:member_erased` · `cancelled:member_withdrawn` ·
-    `cancelled:member_terminated` (QE23 (A)) · `cancelled:account_frozen` · `cancelled:death_reported` (QE26 (A)) ·
-    `cancelled:module_withdrawn` (QE22 (A))
+    `cancelled:member_terminated` · `cancelled:account_frozen` · `cancelled:death_reported` ·
+    `cancelled:module_withdrawn`
 
   NEVER an error message, a body, a header value, a hostname, an IP or a secret name.
 
-- **QE11 — ASK — how the member fields are stored.**
+- **QE11 — ANSWERED (A) — how the member fields are stored.**
   - **(A, recommended)** ONE Tier-1 envelope (`member_fields_ciphertext`, field class `module_lead_fields`) of the
     canonical JSON of the SEALED object `{ version: 1, nonce: <32 lower-case hex from randomBytes(16)>, …the QE5
     fields }`. `sealLeadMemberFields(encDeps, { pariwarId, leadId, fields })` validates the fields, mints the nonce
@@ -701,8 +703,8 @@ and gate go-live (Row NN).
     the 5-minute lease covers it, and the single-flight registration keeps ticks from overlapping.
   - **S4** Read the module (URL, secret name, `partner_id`, state, archive reason) with an explicit Pariwar predicate,
     and re-parse the URL and the port. **S4 and S5 only COMPUTE the partner-side verdict; they write NOTHING for the
-    row.** The verdict is one of: ok · refuse (`url_refused`, `port_refused`) · withdrawn (QE22 (A): the module is
-    `trustee_archived`). "Withdrawn" outranks a refusal. If the module read itself throws → W6 `held:db_unavailable`,
+    row.** The verdict is one of: ok · refuse (`url_refused`, `port_refused`) · withdrawn (the module is
+    `trustee_archived` — QE22 (A)). "Withdrawn" outranks a refusal. If the module read itself throws → W6 `held:db_unavailable`,
     and the tick ends.
   - **S5** ONLY when S4's verdict is ok: resolve the secret (QE9), then DNS + the address check (QE8). The verdict may
     become: hold (`signing_key_unavailable`, `dns_unavailable`) · `address_refused`. A key hold adds the module to
@@ -784,8 +786,8 @@ and gate go-live (Row NN).
   - (c) **No authority import** — static: in `lead-handoff.ts`, `lead-envelope.ts` and the two jobs files, every use of
     the `member`, `consent`, `claim`, `contribution`, `pool` and `validityCache` namespaces (or a named import from
     their modules) must be on a (module, name) allow-list: `member.memberExists`, `member.getCurrentMemberState`,
-    `member.listAccountFrozenMemberIds`, `member.moderation.getCurrentMemberModerationOverlay` (only if QE23 (A)),
-    `claim.isDeathReportStanding` (only if QE26 (A)), `consent.listConsentsForArtifact` and
+    `member.listAccountFrozenMemberIds`, `member.moderation.getCurrentMemberModerationOverlay`,
+    `claim.isDeathReportStanding`, `consent.listConsentsForArtifact` and
     `consent.resolveConsentById`. Anything else fails. In the jobs files the rule keys on the namespace (they import the `@twt/domain` barrel, so an import-graph
     scan cannot do this); in the two domain files it keys on the relative import path and the imported name.
   - (d) **The response body is never parsed** — static: no `JSON.parse` and no `.json()` in `partner-lead-client.ts`;
@@ -814,7 +816,7 @@ and gate go-live (Row NN).
     erasure removes it (PQ3 (b)).
   - The table's UPDATE grant, its UPDATE policy and the guard's ciphertext rule exist AT BIRTH (G10).
 
-- **QE17 — No production caller, and the cron.** `sealLeadMemberFields`, `recordLeadHandoff` and (if QE21 (B) or (C))
+- **QE17 — No production caller, and the cron.** `sealLeadMemberFields`, `recordLeadHandoff` and
   `requeueLeadHandoff` have NO production caller (I1; grep in Completion Notes). The sweep IS registered in `boot.ts` (the 12.2 activation
   precedent). With no rows it claims nothing. ⚠ Where the jobs login lacks grants on the new table, the tick's claim
   fails with 42501 every minute: the tick maps that to ONE `sweep_failed:<error name>` alarm per tick, and Row NN (g)
@@ -848,7 +850,7 @@ and gate go-live (Row NN).
 
   It adds a row to `docs/knowledge-transfer/adr-index.md`.
 
-- **QE20 — Records.** An author-commit decision (≥ `-483`) recording QE1–QE26 (bar this one) and the twelve answers,
+- **QE20 — Records.** The author-commit decision (`2026-11-21-483`) recording QE1–QE26 (bar this one) and the twelve answers,
   committed ALONE (Task 0.3). It names, each by name:
   - what it AMENDS: `-427` QE10 (QE2 (A)); the `consent_records.ts` header's second sentence (QE2 (A));
   - what it SUPERSEDES for the lead transport: architecture §3.7 / §5.9's partner-JWT sentences and the
@@ -858,11 +860,11 @@ and gate go-live (Row NN).
     (`packages/contracts/module-leads/` — none here), its breaker wording (QE13) and its "dead-letter to the
     partner-coordination admin queue" (an alarm and K-3 instead); the tree's `partner-leads/`;
   - what it DEFERS, leaving the source untouched: `-429` Consequence 3 (QE25);
-  - what QE22 as answered adds to `-433` QE15's Withdraw (pending leads are cancelled).
+  - what QE22 (A) adds to `-433` QE15's Withdraw (pending leads are cancelled).
 
   Then the records of Task 0.4, the Panel note and the counsel question (Task 0.5), and Row NN (Task 0.6).
 
-- **QE21 — ASK — what a failed handoff costs the member (G1: one registration per offer, ever).**
+- **QE21 — ANSWERED (C) — what a failed handoff costs the member (G1: one registration per offer, ever).**
   Ways a lead ends `failed_delivery` that are nobody's intent: a secret pasted with a trailing newline (the partner
   answers 401 to every lead of that module); one wrong DNS answer; a key the jobs account cannot read for a day.
   - (A) Final is final. A 4xx other than 408 / 429, and `address_refused`, are permanent at once (W8); there is no
@@ -882,7 +884,7 @@ and gate go-live (Row NN).
     something a member can ask for — so the Policy-meaning second sentence covers a failed delivery under every
     option.
 
-- **QE22 — ASK — a lead whose offer was archived before it was sent (§0 edge 10).**
+- **QE22 — ANSWERED (A) — a lead whose offer was archived before it was sent (§0 edge 10).**
   - **(A, recommended)** Split by `archive_reason`. `trustee_archived` (the Trust itself withdrew the offer) → W9
     `cancelled:module_withdrawn` (S4's verdict, written at S6). `valid_until_reached` / `slot_capacity_exhausted` (the offer simply ended; the
     member registered while it was open) → DELIVERED. A withdrawal is the Trust's only stop switch, since the URL is
@@ -899,7 +901,7 @@ and gate go-live (Row NN).
   - Whatever is chosen, 12.6's archive adds no handoff write of its own (K-2). In flight is in flight: an `attempting`
     row whose module is withdrawn after S4 is sent.
 
-- **QE23 — ASK — a terminated member (P3).**
+- **QE23 — ANSWERED (A) — a terminated member (P3).**
   - **(A, recommended)** The moderation overlay `terminated` cancels (`cancelled:member_terminated`). Niyamavali §8.4
     ends the membership on termination, and erasure is already legal for that member. It only narrows.
   - (B) Leave it out. Cost: a member the Trust has terminated still has details sent to a partner as "a TWT member's
@@ -908,11 +910,11 @@ and gate go-live (Row NN).
     membership; if that lands as a termination it is covered by (A), and if it lands as a new state Task 0.1 adds it
     here.
 
-- **QE24 — ASK — when what the member shared is dropped (PQ3 (a) may change the number).**
+- **QE24 — ANSWERED (A) — when what the member shared is dropped (PQ3 (a) may change the number).**
   - **(A, recommended)** `cancelled` → at once (W9, W11: nothing can need it again). `delivered` and `failed_delivery`
     → after `LEAD_FIELDS_RETENTION_DAYS = 30` (W12), a named constant. Cost: for 30 days the Trust can reproduce exactly
     what it sent, for a dispute; after that only the row, the audit hash and the partner's 2xx remain. A requeue
-    (QE21 (B) or (C)) is possible only inside the 30 days.
+    is possible only inside the 30 days.
   - (B) Drop at every final status at once. Cost: no way to show what was sent, and no requeue at all.
   - (C) Keep indefinitely. Cost: the wide side; any finite answer to PQ3 (a) then needs new code.
   - Under (A) or (B), PQ3 (a) can only SHORTEN or lengthen a constant.
@@ -922,12 +924,12 @@ and gate go-live (Row NN).
     family — can have a dead member's record erased; it is kept indefinitely." — and its not-covered line, which
     leaves "the retention PERIOD and the legal basis for keeping a dead member's record" to counsel. This story treats
     its scheduled drop of a COPY of four fields (W9 on a death cancel, W12 later) as outside "a dead member's record".
-    That reading is the AUTHOR'S, PROPOSED for BigDev at Task 0.2; PQ3 (a) puts it to the Panel and counsel. If they
+    That reading is the AUTHOR'S, accepted by BigDev as PROPOSED (`-483`); PQ3 (a) puts it to the Panel and counsel. If they
     read the copy as inside the record, the change is small but not one line: any W9 for a member with a standing death report KEEPS the ciphertext, W12
     skips a member with a standing death report, the purge index and AC5's "ciphertext NULL" leg follow, and how long
     such a kept copy lives becomes counsel's retention answer.
 
-- **QE25 — ASK — a partner whose endpoint needs a static token (`-429` Consequence 3).**
+- **QE25 — ANSWERED (A) — a partner whose endpoint needs a static token (`-429` Consequence 3).**
   - **(A, recommended)** NOT built in v1. The signature is the only authentication TWT offers; a partner that insists
     on a bearer token or an API key cannot be onboarded yet. Recorded as "Resolved via explicit deferral" on `-429`
     Consequence 3, with K-9's trigger. Cost: such a partner waits for a story.
@@ -935,7 +937,7 @@ and gate go-live (Row NN).
     column on an immutable table (12.1's C12 — the trigger chain), a 12.2 wizard field, and a second secret in every
     hold rule. Story sized, outside a PRIMITIVE.
 
-- **QE26 — ASK — P5: does a standing death report stop the send after the freeze has lifted? (§0 edge 12)**
+- **QE26 — ANSWERED (A) — P5: does a standing death report stop the send after the freeze has lifted? (§0 edge 12)**
   The freeze lifts when a claim settles (G11). From then on P4 no longer sees the death.
   - **(A, recommended)** Build P5 now, on the narrow side, and ask the Panel without blocking (PQ6; Row NN (a)).
     Cost: (i) the cancel is FINAL even if the report is later closed as false — a living member loses that place for
@@ -949,15 +951,14 @@ and gate go-live (Row NN).
     directory change and no change to that sentence; P5 itself goes to the Panel as PQ6. 12.4's own re-examination
     for the shelf stays 12.4's.
   - (B) P4 only. Cost: once a claim has settled, nothing in the transport knows the member is dead: a failed lead
-    requeued by staff (QE21 (B) / (C)) is sent to the partner as a living member's interest. Without a requeue (QE21
-    (A)) the gap is a row that was never attempted during the whole freeze — rare, not impossible.
+    requeued by staff is sent to the partner as a living member's interest.
 
 ## Invariants (I)
 
-- **I1** — No production call site exists for `sealLeadMemberFields`, `recordLeadHandoff` or (if built — QE21)
+- **I1** — No production call site exists for `sealLeadMemberFields`, `recordLeadHandoff` or
   `requeueLeadHandoff`.
   With no rows, the sweep sends nothing. Proved by a grep in Completion Notes; 12.3 changes this.
-- **I2** — Every attempt runs P0–P5 (as answered) in a scope transaction that COMMITS before any partner-side outcome
+- **I2** — Every attempt runs P0–P5 in a scope transaction that COMMITS before any partner-side outcome
   is written and before any request. NO request is made for a cancelled row, and no partner-side outcome is written
   for a row whose member-side check failed in that attempt. (A change that lands after that commit is TR9's window.)
 - **I3** — Partner-provided data is advisory. Only `partner_reference` (≤ 64 safe characters) is stored, and nothing
@@ -975,14 +976,14 @@ and gate go-live (Row NN).
 - **I9** — A connection is made only to an address that passed QE8's check, on port 443, with TLS verified against the
   hostname, and with no redirect followed. Production passes no test seam.
 - **I10** — A `delivered` or `cancelled` row never changes except by its ciphertext going NULL. A `failed_delivery` row
-  changes only that way or, if QE21 (B) or (C), by W13.
+  changes only that way or by W13.
 - **I11** — A settle or release writes only while it still owns the claim token. A request's recorded outcome is its
   true outcome. When it cannot be recorded (S9 or the settle failing), the row is left to its lease and ends at worst
   `failed_delivery:outcome_unknown` — never a false final.
 
 ## Acceptance Criteria
 
-0. **AC0 — governance first.** QE1–QE26 and BigDev's twelve answers are in the author-commit (≥ `-483`), committed
+0. **AC0 — governance first.** QE1–QE26 and BigDev's twelve answers are in the author-commit (`2026-11-21-483`), committed
    ALONE before any code, and the story is amended to the recorded answers (Task 0.3). The Panel note and the counsel
    question are WRITTEN and NOT sent. Row NN exists. The `deferred-work.md`, `epics.md`, architecture and docs records
    exist (Task 0.4).
@@ -1007,13 +1008,13 @@ and gate go-live (Row NN).
      `LeadHandoffAlreadyRecordedError`, and the caller's transaction stays usable (the SAVEPOINT — 12.1 TR3).
    - It writes a `due` row with the sealed string, `attempt_count 0`, `outcome_detail` NULL and `next_attempt_at =
      now()`.
-3. **AC3 — the envelope and the signature (QE3 as answered, QE12; I5).** For a fixed input, the body bytes and the
+3. **AC3 — the envelope and the signature (QE3, QE12; I5).** For a fixed input, the body bytes and the
    header values equal frozen vectors. The body's keys are exactly `LeadEnvelopeV1`'s, and its member section is
    exactly the sealed fields. The bytes are identical across two attempts of one row. The signature verifies with a
    reference implementation in the test (an independent `createHmac` over `"<t>." + body`), and fails if the body
    changes by one byte or the timestamp changes. Exactly one `v1` is sent. The attribution header is exactly
    `pariwar=<id>, module=<id>, lead_id=<uuid>`.
-4. **AC4 — the address policy (QE8 as answered; I9).**
+4. **AC4 — the address policy (QE8; I9).**
    - Unit, on the pure functions (NO seam): a row for every blocked range, in v4, v6 and IPv4-mapped (dotted and hex)
      forms; a public v6 address outside 2000::/3 is refused; a host that resolves to one public and one private
      address is refused; with a v6 and a v4 answer the v4 is chosen. Through the seam's `lookup` as a spy: an explicit
@@ -1024,7 +1025,7 @@ and gate go-live (Row NN).
      the wall-clock deadline; a server that sends a 2xx status line and then drips its BODY ends `delivered`; it
      discards the body past 64 KiB; it reads only the status and `X-Partner-Reference`; a DNS lookup that never
      returns ends as a hold (the seam's `dnsTimeoutMs`).
-5. **AC5 — the cancel predicates (QE7).** For each of P1–P5 as answered — P3's withdrawn AND terminated arms each
+5. **AC5 — the cancel predicates (QE7).** For each of P1–P5 — P3's withdrawn AND terminated arms each
    with its own leg — and for QE22's withdrawn module, a live-DB leg sets the condition between `record` and the tick. The row ends `cancelled:<reason>` with its ciphertext NULL, the test
    server receives NO request, NO decrypt audit line is written — and a CONTROL row without the condition IS sent in
    the same tick, so "no request" cannot pass vacuously. Also:
@@ -1046,10 +1047,10 @@ and gate go-live (Row NN).
      value → NULL);
    - each transient class → `due` with the schedule's next time and the attempt counted;
    - the 7th transient failure → `failed_delivery:retries_exhausted`, and ONE `module_lead_handoff_failed` alarm;
-   - the permanent classes of QE21 as answered → `failed_delivery` at once; a 3xx → permanent; an explicit-port URL →
+   - a 4xx other than 401 / 403 / 404 / 408 / 429 → `failed_delivery` at once; a 3xx → permanent; an explicit-port URL →
      `port_refused`; a malformed stored URL → `url_refused`; a corrupt envelope → `fields_unreadable` — each with the
      alarm;
-   - if QE21 (C): a 401 → `due`, counted, with ONE `module_lead_handoff_setup_fault` alarm for that module in the tick;
+   - a 401 → `due`, counted, with ONE `module_lead_handoff_setup_fault` alarm for that module in the tick;
      a host that resolves to a private address → `due`, counted, the same alarm, NO request, and that authority's
      other row not claimed this tick;
    - a 409 to a replayed key → `failed_delivery:http_4xx:409` (QE6 cost (iii));
@@ -1059,7 +1060,7 @@ and gate go-live (Row NN).
      `Idempotency-Key` and the SAME body bytes; a lapse on attempt 7 → `failed_delivery:outcome_unknown`;
    - a stale worker (its row lapsed and was re-claimed) writes nothing and raises `stale_claim`;
    - a 2xx on a row erased mid-flight ends `delivered`;
-   - if QE21 (B) or (C): `requeueLeadHandoff` moves a `failed_delivery` row to `due` and refuses one whose ciphertext
+   - `requeueLeadHandoff` moves a `failed_delivery` row to `due` and refuses one whose ciphertext
      is gone;
    - `getLeadHandoffStatus` returns QE6's mapping for each status and never a `partner_reference`;
    - the secret for one name is resolved ONCE in a tick that sends two rows of that module;
@@ -1094,7 +1095,7 @@ and gate go-live (Row NN).
     `boot.ts`'s source text for the registration, the dedicated `max: 3` pool and both `…Pool.end()` sites (the
     `module-activation.test.ts` shape).
 12. **AC12 — no production caller (I1), and the regressions.** The Completion Notes grep shows `sealLeadMemberFields`,
-    `recordLeadHandoff` and (if built) `requeueLeadHandoff` called only from tests. The marketplace, consent, anonymize and
+    `recordLeadHandoff` and `requeueLeadHandoff` called only from tests. The marketplace, consent, anonymize and
     data-export suites are green. `ci:local` passes with every job on a FRESH container
     ([[project_known_livedb_test_failures]] #18 — re-run the whole job).
 13. **AC13 — the ADR and the docs (QE19, Task 8).** The ADR exists with every item of QE19, including the epic's
@@ -1114,8 +1115,11 @@ and gate go-live (Row NN).
         **ANSWERED 2026-11-21, verbatim: "all as recommended, write the note".** So: QE2 (A), QE3 (A), QE5 (A), QE6 (A),
         QE8 (A), QE11 (A), QE21 (C), QE22 (A), QE23 (A), QE24 (A), QE25 (A), QE26 (A). What that answer did NOT cover, and
         Task 0.3 must still put to him before the author-commit: the non-ASK decisions "as a set", and QE24's reading of
-        `-423` in terms (the Panel note's Q4 states it as our reading, not a ruling). Record the answers VERBATIM here.
-  - [ ] 0.3 The author-commit (≥ `-483`), committed ALONE
+        `-423` in terms (the Panel note's Q4 states it as our reading, not a ruling). **Both were then put to him and
+        answered by selection, 2026-11-21:** the non-ASK set — "Accept as a set"; QE24's reading — "Record as proposed". Record the answers VERBATIM here.
+  - [x] 0.3 (DONE 2026-11-21: Decision `2026-11-21-483`, committed alone at `1a885546`; this file amended to the answers
+        as v1.3. Every answer was the recommended one, so NO row of the rewrite map below was used; the map is kept as
+        the record.) The author-commit, committed ALONE
         (`governance: Story 12.5 lead-handoff transport build decisions (Decision 2026-11-21-NNN)`), naming what it
         amends (QE20). Then amend THIS story to the recorded answers — every "AS PROPOSED", "(if QE21 …)", "(ONLY if
         QE26 (A))", "as answered" and conditional vocabulary word becomes the answered text — before Task 1. **Rewrite map** for a
@@ -1156,7 +1160,7 @@ and gate go-live (Row NN).
           member-facing status words; whether and how a member is told of a cancel or a failure; the export section),
           12.4 (the transport cancels on a death by itself, so 12.4 owns the shelf and the route, NOT the transport;
           the FACT for 12.4: the freeze lifts at settlement and `isDeathReportStanding` does not — what 12.4 does with
-          that is its own re-examination under C4) and 12.6 (QE22 as answered; an archive writes no handoff; a
+          that is its own re-examination under C4) and 12.6 (QE22 (A); an archive writes no handoff; a
           restore does not revive a cancelled lead).
         - Architecture: annotate in place EVERY sentence that `grep -n "JWT" architecture.md` returns about partners
           or leads (§3.7, §5.9's rotation line and the secret-separation list, "Provider authentication lifecycle", the
@@ -1191,14 +1195,14 @@ and gate go-live (Row NN).
           the record that the member asked (the event and the row's ids, which erasure does not remove — 12.1's C8)?
           Deciding fact: the draft policy's §8 has no row for a lead.
         - **PQ4** — TOLD, no choice carried: a sent lead cannot be recalled; the same lead can reach the partner up to
-          7 times per pass if the partner does not dedupe (QE6 as answered); a member registers for each offer once,
-          so a lead that is cancelled, or that fails and is not re-sent by staff inside the retention window (QE21,
-          QE24 as answered — and no staff screen can re-send yet, K-3), does not give the place back; what the transport withholds by itself (P1–P4, QE22 and QE23
-          as answered).
+          7 times per pass if the partner does not dedupe (QE6 (A)); a member registers for each offer once,
+          so a lead that is cancelled, or that fails and is not re-sent by staff inside the retention window (QE21 (C),
+          QE24 (A) — and no staff screen can re-send yet, K-3), does not give the place back; what the transport withholds by itself (P1–P4, QE22 (A) and QE23
+          (A)).
         - **PQ5** After a lead was delivered, if the member withdraws the agreement or is erased: does the Trust tell
           the partner, and does it ask the partner to delete? Deciding fact: nothing is built either way, and the
           partner agreement has no such clause yet.
-        - **PQ6** (ONLY if QE26 (A); asked, not blocking the build) Once a member's death has been reported, the Trust
+        - **PQ6** (asked, not blocking the build — QE26 (A)) Once a member's death has been reported, the Trust
           stops passing that member's pending interest to a partner — also after the claim is settled, and for good
           even if the report later proves false. Confirm, or say otherwise. Deciding fact: `-423` Q1 (a)'s reason, as
           put, is that the member's agreement stands after death — said of the claim, the drive and the donors; whether
@@ -1247,7 +1251,7 @@ and gate go-live (Row NN).
       `listConsentsForArtifact` (P1). `lead-handoff.ts`: `sealLeadMemberFields`;
       `recordLeadHandoff`; `claimDueLeadHandoff` (S3); `readLeadHandoffPredicates` (P0–P5 in order);
       `settleLeadHandoffDelivered` / `releaseLeadHandoff` / `holdLeadHandoff` / `failLeadHandoff` / `cancelLeadHandoff`
-      (all CAS) / `lapseLeadHandoffs` / `purgeLeadHandoffFields` / `requeueLeadHandoff` (QE21 (B) or (C)); reads
+      (all CAS) / `lapseLeadHandoffs` / `purgeLeadHandoffFields` / `requeueLeadHandoff`; reads
       `getLeadHandoffStatus` (QE6) and `listFailedLeadHandoffs` (admin shape, capped, `clampLimit` inline — 12.1 TR5).
       The errors go in `marketplace/errors.ts`. No function here calls the audit wrapper (G13).
 - [ ] **Task 4 — the egress client (AC4).** `partner-lead-client.ts` per QE8, with the ONE `testSeam` option. Commit
@@ -1351,11 +1355,11 @@ and gate go-live (Row NN).
   registration per offer"; the consent copy (Row NN (d)); the data-export lead section (12.1's C8 (b)); RVD2's retry
   decision. ⚠ WHETHER a member is told that a lead was cancelled or failed, and in what words, goes through §0 at
   12.3's create-story — "is the person told" has been the Panel's before. 12.5 carries the question, not an answer.
-- **K-2 → 12.6:** QE22 as answered. An archive writes no handoff; the transport reads the archive reason itself. If
+- **K-2 → 12.6:** QE22 (A). An archive writes no handoff; the transport reads the archive reason itself. If
   12.6 restores modules, nothing in 12.5 changes, and a cancelled lead stays cancelled.
 - **K-3 → no owner yet:** the partner-relationship admin view (the failed list, a requeue button calling
   `requeueLeadHandoff` and pairing its own audit line, an open-circuit view — §3.7 "helpdesk can resubmit via admin").
-  12.5 builds the read, the command (if QE21 (B) or (C)) and the alarms only. ⭐ Trigger: the first
+  12.5 builds the read, the command and the alarms only. ⭐ Trigger: the first
   `module_lead_handoff_failed` alarm in a non-test database, or the first live partner, whichever is first.
 - **K-4 → no owner yet:** a per-module field allow-list ("scope-redacted … per FR-66 wizard") and a per-partner contract
   record (§3.7 "versioned per-partner"). ⭐ Trigger: the first partner whose contract needs fewer fields than QE5, a
@@ -1363,7 +1367,7 @@ and gate go-live (Row NN).
 - **K-5 → no owner yet:** any inbound partner feedback (lead outcome, "not at this time" — PRD UJ-10). It must be
   advisory (ADR), persist + ack (§3.11), and re-open §0. ⭐ Trigger: the first partner offering an outcome callback.
 - **K-6 → 12.2 (follow-up):** the wizard should refuse an explicit port at author time (QE8), so that an immutable
-  manifest cannot be stranded. ⭐ Trigger: QE8 (A) answered.
+  manifest cannot be stranded. ⭐ Trigger: MET by `-483`; owner 12.2's follow-up.
 - **K-7 → 12.4:** the transport's own death cancels (P4, P5) are NOT 12.4's suppression. 12.4 still owns the shelf and
   the lead route, and must know the freeze lifts at settlement.
 - **K-8 → Panel / counsel (Row NN):** PQ1–PQ6 and the counsel question, as written at Task 0.5.
@@ -1373,7 +1377,7 @@ and gate go-live (Row NN).
   its candidate), a cross-tick breaker, and a second-address fallback. ⭐ Trigger: before Row NN closes (its leg (j)
   names this runbook's owner).
 - **K-11 → 12.2 (follow-up):** the wizard's lead warning before Withdraw and before a corrected copy should say that
-  pending leads will be cancelled for good (QE22 (A)). ⭐ Trigger: QE22 (A) answered.
+  pending leads will be cancelled for good (QE22 (A)). ⭐ Trigger: MET by `-483`; owner 12.2's follow-up.
 
 ### Testing standards
 
@@ -1448,3 +1452,4 @@ and gate go-live (Row NN).
 | 2026-11-21 | v1.0 | Created by `bmad-create-story 12.5` on its own worktree at `90535934`. Six ASKs open with BigDev (QE2, QE3, QE5, QE6, QE8, QE11); the Panel note and the counsel question are planned at Task 0.5 (written, not sent); NO code before Task 0.3. |
 | 2026-11-21 | v1.1 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), re-derived at `90535934`. Corrected facts: G1 (one registration per offer), G2 (what the twin has), G4, G5, G7, G10, G11, G12, G13, G15; new G17. Design: the row's writes restated as ONE table W1–W13 with a claim token, holds that do not count, a defined lapse and `held_since`; the tick as S1–S10 with the breaker moved into the claim; predicates P0–P5 (a sound-read check, the consent read through the lead, the standing death report); the seal moved before the transaction and the seam re-ordered (submit first); the audit lines fitted to the audit writer and a body nonce added; one signature with a receiver-side rotation window; the client's wall-clock deadline, v6 allow-range and single test seam; the route leg of the fence moved to an `apps/api` spec keyed on the session guard. Governance: `-427` QE10 quoted and named as amended; the privacy policy treated as a draft, with its no-sale, cross-border and withdrawal sections routed; PQ5 added; legal text no longer pasted; Task 0.4's closure words moved after the code; the rewrite map completed; AC13 added. Six new ASKs: QE21 (a failed handoff), QE22 (a withdrawn offer), QE23 (a terminated member), QE24 (retention, and its relation to `-423`), QE25 (a partner token), QE26 (a standing death report — PQ6). Also changed from v1.0: the tick's 20-row cap became a 45 s budget; "a 4xx other than 408 / 429 is permanent" now sits inside QE21; the PG 16.16 trap is TR18. This story's carried items renamed K-1 … K-11. NUMBERS re-read at ~18:20. The rewrite was itself re-validated by fresh-context rounds before commit, and their findings are applied above: an erasure update the guard would refuse; a misquoted reason of `-423`; holds that did not end the tick; and a partner-side outcome outranking a member-side cancel — closed by making S6 decide first on every attempt. |
 | 2026-11-21 | v1.2 | Task 0.2 answered by BigDev, verbatim "all as recommended, write the note" (the twelve ASKs as recommended; QE21 (C)). Task 0.5 done ahead of 0.3 / 0.4 on that instruction: the Panel note (Q1–Q7 + Told) and the counsel question (nine questions) are WRITTEN, not sent. Still owed before any code: the author-commit (Task 0.3, ≥ `-483`) with the story amended to the answers, the records (0.4) and Row NN (0.6). |
+| 2026-11-21 | v1.3 | Task 0.3: the author-commit is Decision `2026-11-21-483` (`1a885546`, alone). BigDev's answers, verbatim: "all as recommended, write the note" (the twelve ASKs), "do it", then by selection "Accept as a set" (the fourteen non-ASK decisions) and "Record as proposed" (QE24's reading of `-423`). This file amended to the answers: every conditional on an ASK is now the answered text (QE21 (C): the requeue and the retried setup faults are built; `failed_delivery:address_refused` no longer exists), the ASK headings read ANSWERED, the rewrite map is kept unused. |

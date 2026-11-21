@@ -139,6 +139,10 @@ stands. **Will be built until you rule: A.**
 - **Blocked:** nothing. The remedy is not built yet. It will be built with **B** on Q1 and **A** on Q2, Q3 and Q4, and can be merged
   that way; your answers are needed before members' claims go live (our own go-live list will carry them).
 - **If nothing is decided:** those four stand as built, and this point stays on the go-live list.
+- ⚠ **Read with the note on an optional fee, sent alongside** (`trustee-panel-routing-note-2026-11-21-registration-fee-optional.md`).
+  If you make the joining fee optional there, a fee recorded after the death no longer needs to stop a drive at all — the day the person
+  pressed "Submit" decides instead — and most of this note matters only while the fee is required. If you keep the fee required, this
+  note stands exactly as written.
 
 # How much to trust this note
 

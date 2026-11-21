@@ -1485,6 +1485,13 @@
       "when": 1797998520000,
       "tag": "0212_claim-membership-checks",
       "breakpoints": true
+    },
+    {
+      "idx": 213,
+      "version": "7",
+      "when": 1797998580000,
+      "tag": "0213_claim-documents-death-certificate-delete-guard",
+      "breakpoints": true
     }
   ]
 }

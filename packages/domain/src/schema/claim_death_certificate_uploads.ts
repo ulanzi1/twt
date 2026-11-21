@@ -31,6 +31,9 @@
 // ⛔ No PII column (the OCR TEXT stays on `claim_documents` — the current certificate's; it is re-derivable
 // from the kept object). ⛔ No UPDATE, ⛔ no DELETE: the 0122 grants
 // and an append-only trigger for every role (only an `ON DELETE cascade` passes).
+// ⚠ Since migration 0213 (Story 6.22b DL5) that cascade comes from `claims` ONLY: 0122's header says a row may go
+// by the cascade "from `claims` OR `claim_documents`", and the second half is now false for a certificate — its
+// `claim_documents` row is itself undeletable except with its claim (`claim_documents_no_death_certificate_delete`).
 
 import {
   doublePrecision,

@@ -24,6 +24,13 @@
 // place). Idempotency (AC4): a UNIQUE index on (claim_case_id, document_type) makes a retried
 // OCR job upsert the SAME row rather than accumulating duplicates.
 //
+// ── A death certificate's row is never deleted on its own (Story 6.22b DL5; migration 0213, HAND-AUTHORED) ──────
+// `claim_documents_no_death_certificate_delete` (BEFORE DELETE, every role, 23000) refuses deleting a
+// `death_certificate` row except from inside another trigger (depth > 1 — the `ON DELETE cascade` from `claims`):
+// `2026-09-25-243` cl. 2 keeps every certificate and its OCR reading, and this row's delete would cascade into
+// the kept uploads, reviews and membership checks. DELETE only — the OCR job's upsert and every UPDATE pass; the
+// other document types stay deletable. The trigger is invisible to drizzle (no snapshot since 0020).
+//
 // Naming discipline per architecture L3663-3677: DB columns snake_case, TS camelCase, table
 // snake_case-plural. Header style mirrors member_kyc_profiles.ts.
 

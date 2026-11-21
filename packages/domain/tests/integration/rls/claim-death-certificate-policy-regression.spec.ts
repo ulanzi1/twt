@@ -489,7 +489,28 @@ describe.skipIf(!hasDatabase)('migration 0122 — death-certificate uploads + re
       .returning();
     expect(d!.deathCertificateReviewId).toBe(r!.reviewId);
     await client.query('RESET ROLE');
-    await client.query('DELETE FROM claim_documents WHERE claim_document_id = $1', [claimDocumentId]);
+    // ⚠ Story 6.22b (migration 0213): a death certificate's `claim_documents` row is ⛔ deletable on its own any more —
+    // the guard refuses a direct DELETE for every role and passes only a delete issued from inside another trigger
+    // (depth > 1, the `claims` cascade). Deleting the CLAIM instead would prove nothing here: the determination
+    // cascades away with it (0119), so SET NULL is never seen. So the DELETE is fired from a pg_temp trigger, in this
+    // test's own transaction: the guard runs at depth 2 and passes, the cascade reaches the review, and the FK's
+    // SET NULL is observed. Every temp object goes with the rollback; ⛔ DDL touches a shared table.
+    // This exercises the FK THROUGH the guard's cascade exception, ⛔ the guard itself —
+    // `claim/claim-documents-death-certificate-guard.spec.ts` proves the refusal. If the guard's exception is ever
+    // tightened past depth > 1, fall back to a catalog assertion (`pg_constraint.confdeltype = 'n'`); ⛔ weaken the guard.
+    await client.query('CREATE TEMP TABLE d8_fire (id uuid) ON COMMIT DROP');
+    await client.query(
+      `CREATE FUNCTION pg_temp.d8_fire_fn() RETURNS trigger LANGUAGE plpgsql AS $$
+       BEGIN
+         DELETE FROM public.claim_documents WHERE claim_document_id = NEW.id;
+         RETURN NULL;
+       END $$`,
+    );
+    await client.query('CREATE TRIGGER d8_fire_t AFTER INSERT ON pg_temp.d8_fire FOR EACH ROW EXECUTE FUNCTION pg_temp.d8_fire_fn()');
+    await client.query('INSERT INTO pg_temp.d8_fire VALUES ($1)', [claimDocumentId]);
+    // The certificate's row really went (else the NULL below could not be the cascade's doing).
+    const gone = await client.query('SELECT 1 FROM claim_documents WHERE claim_document_id = $1', [claimDocumentId]);
+    expect(gone.rows).toEqual([]);
     const after = await client.query<{ id: string | null }>(
       'SELECT death_certificate_review_id AS id FROM nominee_determinations WHERE determination_id = $1',
       [d!.determinationId],

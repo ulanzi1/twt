@@ -16,8 +16,8 @@
 //
 // ── PII discipline ────────────────────────────────────────────────────────────────────────────────────────────────────
 //   · note_ciphertext → Tier-1, REQUIRED on every step: the operator's or the District Admin's note. It may describe the
-//     FILER (possibly a non-member — `-240` cl. 1 applies at row `6-22b`). Decrypted only in the audited console read;
-//     ⛔ never in an event, a log line or an audit context (N6).
+//     FILER (possibly a non-member — `-240` cl. 1 applies at row `6-22e` (moved from `6-22b` — 6.22b DL0)). Decrypted only
+//     in the audited console read; ⛔ never in an event, a log line or an audit context (N6).
 //   · actor_display → controlled STAFF data, snapshotted at action time from `users.display_name` (⛔ fallback).
 //   · alive_confirmation → a plaintext code — HOW the member was confirmed alive (`FRAUD_ALIVE_CONFIRMATIONS`; the
 //     Panel's Q9 decides which suffice — the built set is a go-live condition).

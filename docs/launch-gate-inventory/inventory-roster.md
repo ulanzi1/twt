@@ -920,6 +920,10 @@ observes these.
     filing; one line while the identity waits). Their "reflected in code" half stays ⏳ OPEN: Story 6.39 is built A on all four, and
     the work to build B has ⛔ row yet (BigDev's call — `-473` Consequence 1). ⚠ A ruling that differs from the built side cannot
     close a leg by its Decision alone. (a), (d), (e), (f) unchanged. ⛔ Criterion is edited.
+  - **2026-11-21 — where the build to B goes** ([Decision 2026-11-21-474](../../.decision-log.md#decision-2026-11-21-474),
+    author-commit). Leg **(b)**: its PQ1 (a) half (Q1 B) and leg **(c)** (Q3 B, Q4 B) are built by Story 6.39's Task 8 — they close
+    when 6.39 lands on `main` with them; its PQ1 (b) half (Q2 B) waits on the NEW row `6-39a-bank-date-for-a-fee-recorded-after-the-death`
+    (`backlog`) landing. Story 6.39 is back to `in-progress`. ⛔ Criterion is edited.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 

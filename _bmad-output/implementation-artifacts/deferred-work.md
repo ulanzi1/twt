@@ -58,6 +58,9 @@ roster Row 46 (b), (c) stay open for the "reflected in code" half. The items bel
     arrived before the death; with a reason; audited). Build owed: the new staff input, with its own build decisions — who, when
     (before / after a refusal, on appeal), how the payment is matched, a bank date on the day of death — none ruled (`-473` "does
     NOT cover").
+  - **2026-11-21, later — the build ROUTED to row `6-39a-bank-date-for-a-fee-recorded-after-the-death`** (`backlog`; author-commit
+    [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 1). Story 6.39 merges WITHOUT it — the comparison stays binding with
+    ⛔ staff remedy until then.
 - **PQ2 — what the family is told** (the note's Q3 — when ⛔ drive opens because the fee came after the death; Q4 — while the identity
   check waits). Not addressed — routed to the Panel. Built: ⛔ new family-facing words — the existing denial line with ⛔ reason, and
   the existing in-review status.

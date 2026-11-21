@@ -4127,6 +4127,8 @@ found alive"*; ⛔ notice, ⛔ appeal, ⛔ ban, ⛔ identifier, ⛔ member-facin
 >   all B — a fee on the day of death counts as after; staff may use the Trust's bank date for a fee recorded after the death; the
 >   family is told the door's general reason after filing, and one line while the identity waits. Built A on all four (story in
 >   review); the build to B needs a row (`-473` Consequence 1). The lines above are ⛔ edited.
+> - ⚠ **2026-11-21 — split** ([`-474`](../../.decision-log.md#decision-2026-11-21-474), author-commit): Q1 B, Q3 B and Q4 B are built in THIS
+>   story (Task 8, before it merges); Q2 B goes to Story 6.39a below.
 
 As a family whose member has died, the District Admin who reviews their claim, and every member who will be asked to give, I want staff to
 confirm, before any drive opens, that the person who died is the member — whenever nobody has checked the identity the member typed in —
@@ -4144,6 +4146,16 @@ denial); ONE conjunct in `assertClaimApprovable` (all six approval sites, the `-
 commit skips a claim that fails it; `after_death` never passes — staff deny with the new reason `fee_paid_after_death` on the P1 denial
 before P1 and on the final-vote denial after it; a fee paid on the day of death passes until the Panel answers PQ1 (a); ⛔ new
 family-facing words until PQ2; ⛔ change to the door, any lifecycle state, or `trusteeVerified`.
+
+### Story 6.39a: Staff May Use the Bank's Date for a Joining Fee Recorded After the Death — When the Trust's Own Bank Statement Shows It Arrived Before `[SURFACE]`
+
+> ⚠ **Added 2026-11-21** — row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (`backlog`) minted by author-commit
+> [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 1, to build [`-473`](../../.decision-log.md#decision-2026-11-21-473) Q2 B
+> (Trustee-ratified, DR + KB): *"Staff may use the bank's date when the Trust's own bank statement shows the money arrived before the death;
+> they record that they did, with a reason, and it is audited."* A stub — `bmad-create-story` writes it. ⛔ Ruled, and so this story's to put
+> (to BigDev, or to the Panel where it changes whose family is helped): which staff member; when (before a refusal, after it, on appeal);
+> how a payment is matched to the Trust's bank statement; whether a bank date ON the day of death counts as after (`-473` "does NOT cover").
+> Builds on Story 6.39's membership check (`-472` N3 — binding until this lands). Holds roster Row 46 (b)'s PQ1 (b) half.
 
 ---
 

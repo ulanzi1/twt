@@ -50,7 +50,7 @@ questions (PQ1 (a) / (b), PQ2 — non-blocking) + **TL** = lines the note TELLS 
 
 # Story 6.39: Before Any Drive Opens, Staff Check That the Person Who Died Is the Member — When Nobody Has Checked Their Identity — and That the Joining Fee Was Paid Before the Death
 
-Status: review
+Status: in-progress
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled two staff checks that must happen **before any drive opens** for a death
 > claim. **(a)** `2026-10-31-424` Q1 (a) C — when the member joined by **typing in their own identity details** and nobody has checked
@@ -650,6 +650,9 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
    `commitCycleFreeze` (stays `state_trustee_approved`, ⛔ `claim.approved`, ⛔ spawn trigger for it) while a passing sibling commits.
 8. **AC8 — Same day (PQ1 (a) — built A).** A check with `fee_outcome 'same_day'` passes the gate; the preview and the console say "Paid on
    the day of death". ONE test names PQ1 (a) so a ruling of B flips it visibly.
+   ⚠ **AMENDED 2026-11-21 by [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 2** (the Panel ruled B — `-473` Q1; the words above
+   are kept): a `same_day` check now HOLDS the claim with the gate's `fee_after_death` answer and accepts the `fee_paid_after_death` deny;
+   the label stays "Paid on the day of death". The ONE test that names PQ1 (a) flips. See AC15.
 9. **AC9 — Events and audits (DL11, N7).** `claim.membership_checked` appended per write, the claim state unchanged; `CLAIM_EVENT_TYPES`
    38; the frozen literal `STORY_6_39_CLAIM_EVENTS` listed; every audit line + the event payload contain ⛔ date, ⛔ note, ⛔ name (asserted
    on the serialized payloads, with a planted value).
@@ -677,6 +680,23 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
     ⭐ (v1.3) PLUS one leg through the REAL release (now live — DL14): a check with a note recorded, the claim flagged and found
     innocent through `recordFraudFinding`, then `anonymizeMember` — the note scrubbed (template: 6.22's
     `packages/domain/tests/integration/claim/fraud-investigation-rtbf.spec.ts`).
+15. **AC15 — Q1 B (`-473` Q1; `-474` items 2–3).** `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES` is `['after_death', 'same_day']`; a `same_day`
+    check gives `{ passed: false, reason: 'fee_after_death' }` (unit), holds every approval site and is skipped by the commit (live-DB,
+    one leg each through the existing specs), and `fee_paid_after_death` is accepted for it on the P1 deny. Every staff line that opened
+    *"The joining fee was paid after the date of death on the certificate."* now opens *"The joining fee was not paid before the date of
+    death on the certificate."* (⛔ other word changed — grep: the old sentence occurs ⛔ in `apps/admin/src`); the console's
+    `feeAfterDeathNote` shows for `same_day` as for `after_death` (component test).
+16. **AC16 — Q3 B (`-473` Q3; `-474` item 4).** `MemberAppealStatusResponse` gains `refusal_reason: 'not_a_member_when_died' | null` —
+    `not_a_member_when_died` iff the claim is `denied` and its LIVE P1 verifier denial OR its LIVE final-vote denial carries
+    `fee_paid_after_death` (live-DB: both writers; a `denied` claim with another reason ⇒ `null`; a claim reversed on appeal ⇒ `null`);
+    ⛔ the reason code leaves the server. The family's appeal card shows `appeal.refused_not_member` INSTEAD of `appeal.eligible` then, and
+    only then (pure-view unit test), in `en` AND `hi`, word for word as `-474` item 4, with a real-`t()` leg
+    ([[feedback_stub_must_call_not_transcribe]]).
+17. **AC17 — Q4 B (`-473` Q4; `-474` item 5).** `MemberDeathCertificateStatusResponse` gains `identity_check_waiting: boolean` — `true`
+    iff the certificate is `accepted` and `membershipCheckApprovalState` answers `identity_not_confirmed` (live-DB: `true` there; `false`
+    for `not_checked`, `stale`, `fee_after_death`, a confirmed identity, and a claim that is no longer in review); ⛔ the gate's reason leaves
+    the server. The family's notice keeps `certificate.accepted` and adds `certificate.identity_wait` beneath it then, and only then (pure-view
+    unit test), in `en` AND `hi`, word for word as `-474` item 5, with a real-`t()` leg.
 
 ## Tasks / Subtasks
 
@@ -756,6 +776,13 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
 - [x] **Task 7 — Close** — DL15 comment; DL14 anonymize + AC14's leg; `deferred-work.md` round-4 item A of 6.38 annotated "Closed by 6.39
       (built A on PQ1 (a) / PQ2 until ruled)"; `ci:local` on a FRESH container on the story's own DB; Completion Notes, File List, Change
       Log; Status → review.
+- [ ] **Task 8 — Build three of the Panel's four answers (`-473`; `-474`) — AC15, AC16, AC17** ⭐ added 2026-11-21 (story v1.7)
+  - [ ] 8.1 Q1 B: the constant, its comment, the AC8 test flipped; the four staff lines re-worded; `feeAfterDeathNote` for `same_day`.
+  - [ ] 8.2 Q3 B: the domain read (live denial reason, both vocabularies), the contract field, the handler, the mobile view + copy (`en`, `hi`).
+  - [ ] 8.3 Q4 B: the contract field, the handler (through `membershipCheckApprovalState` — the ONE definition), the mobile view + copy.
+  - [ ] 8.4 Tests (AC15–AC17), the contracts fixtures ([[project_contracts_tests_outside_tsc]] — a new REQUIRED field breaks them), the
+        friction / microcopy gates; `ci:local` on a FRESH container on the story's own DB; records; Status → review.
+  - ⛔ Q2 B — row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (`-474` item 1).
 
 ## Dev Notes
 
@@ -1075,3 +1102,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.4 | 2026-11-21 | DEV COMPLETE (`bmad-dev-story 6.39`): Task 0 (BigDev accepted DL1–DL16 as written — author-commit `2026-11-21-472`; roster Row 46; ledger `2026-11-21d`), Tasks 1–7 built and tested (see the Dev Agent Record): migrations `0210`–`0212`, the membership check's record / writer / routes / event / key, the gate at all six approval sites and at the commit, `fee_paid_after_death` on both denials, the console control, the erasure scrub. `ci:local` 40 / 40 on a fresh container at the final code tree `e189a663` (its first run there was 39 / 40 — one known pre-existing lock-timeout flake; the whole job was re-run); the real-browser pass RUN (six legs; one defect found and fixed; one self-review fix re-checked). Status → `review`. Built A on PQ1 (a) / (b) and PQ2 — the Panel note is still ⛔ sent. |
 | v1.5 | 2026-11-21 | Records only (⛔ code): the Panel routing note re-checked before sending (`abe2d306`) — E4 re-run at `eedc9be3` against the BUILT code, 19 commands all as stated (command 1 re-anchored, command 13 now `review`, six new commands); E3 "will be built" → built; told line 4 added (the system, ⛔ staff, compares the dates and staff cannot override it — `-472`'s declared narrowing of `-430` Q1 B "staff compare"); Q1–Q4 and the suggestions unchanged. Then SENT (BigDev: *"sent the note to Panel"*; channel, time and whether the sent text is identical ⛔ recorded); ⛔ ruled. PQ1 (a) / (b) and PQ2 stay open; roster Row 46 (b), (c) dated; ledger `2026-11-21f`, `g`. Status stays `review`. |
 | v1.6 | 2026-11-21 | Records only (⛔ code): the Panel RULED the note — [`-473`](../../.decision-log.md#decision-2026-11-21-473) (Trustee-ratified, DR + KB, *"Q1 B / Q2 B / Q3 B / Q4 B"*), committed ALONE (`35014835`). All four MATCH option B; Q3 B widens `-424` Q3 B past the door (the Panel's); Q2 B overrides `-472` N3's "cannot override" in its one case. The note's ⏳ block replaced (questions unedited); `deferred-work.md` PQ1 (a) / (b), PQ2 DISCHARGED as questions; roster Row 46 (b), (c) — "ruled" MET, "reflected in code" OPEN; `epics.md` annotated; ledger `2026-11-21h`. ⚠ Built A on all four — the build to B has ⛔ row yet (BigDev's call). Status stays `review`. |
+| v1.7 | 2026-11-21 | Scope GROWN by author-commit [`-474`](../../.decision-log.md#decision-2026-11-21-474) (`8a9801a2`, BigDev: *"split as recommended — Q1, Q3, Q4 in 6.39, Q2 new row"*, then the three wordings approved): Task 8 + AC15–AC17 added; AC8 annotated AMENDED (kept). Status review → in-progress. Q2 B → new row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (backlog). |

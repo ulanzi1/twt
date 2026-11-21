@@ -14,8 +14,7 @@ SHAs cited here are the post-rebase ones). Between the pin and `e5e13f92` eight 
 cited here — `member/anonymize.ts`, where only a comment changed (the three pinned counts in `rtbf-anonymize.test.ts`
 are unchanged). Migration `0213` and decisions `-477`–`-481` are now on `main`.
 
-STATUS: ready-for-dev (2026-11-21 — v1.7). ⭐ **Task 0 is DONE except 0.1 (the re-check `bmad-dev-story` runs first)
-and 0.7 (the records `-484` makes owed — they come BEFORE Task 1).**
+STATUS: ready-for-dev (2026-11-21 — v1.8). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
 The build decisions QE1–QE26 carried TWELVE asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21–QE26). BigDev answered them on
 2026-11-21, all as recommended (QE21 is (C)), and accepted the rest as a set. The author-commit is **Decision
 `2026-11-21-483`**, committed ALONE (`24d930fc`) before any code ([[feedback_governance_commits_precede_implementation]]).
@@ -1279,7 +1278,12 @@ until those land ([[feedback_closure_language_precision]]).
         - (j) someone sees a failed handoff: K-3's view is live, or the alarms have a named owner and the
           partner-coordination runbook exists (K-10);
         - (k) no live module carries an explicit port (K-6) — such a module fails every lead `port_refused`.
-  - [ ] 0.7 **The records `-484` makes owed — additive, dated lines, BEFORE Task 1** (the sprint-status `al` entry lists
+  - [x] 0.7 (DONE 2026-11-21, BigDev: "yes, commit and write the Task 0.7 records". `deferred-work.md`: dated lines on
+        12.1's C6 and C8, on 12.2's field-list item, on 12.5's K-1, K-4, K-8 and K-12 (the sequencing superseded, the
+        five owed steps), and the new item K-13; `epics.md`: one dated line at the end of 12.3's "INHERITED FROM 12.5"
+        note; the counsel question revised to state the Panel's seven answers and to re-ask 3, 4 and 5 against them —
+        still WRITTEN, NOT sent. No "Closed by" line anywhere.)
+        **The records `-484` makes owed — additive, dated lines, BEFORE Task 1** (the sprint-status `al` entry lists
         them; a ledger comment does not reach the build, so they are tasks here). Write "RULED by `-484` Qn" — never
         "Closed by" (no code yet; counsel and the policy edit are open — [[feedback_closure_language_precision]]).
         - `deferred-work.md`: dated lines on 12.1's C6 and C8 (a) (the Panel's half ruled by Q1 C – Q5 A; counsel's
@@ -1432,7 +1436,7 @@ until those land ([[feedback_closure_language_precision]]).
 - **K-7 → 12.4:** the transport's own death cancels (P4, P5) are NOT 12.4's suppression. 12.4 still owns the shelf and
   the lead route, and must know the freeze lifts at settlement.
 - **K-8 → Panel / counsel (Row 54):** PQ1–PQ6 and the counsel question, as written at Task 0.5. The Panel half is
-  RULED (`-484`; Row 54 (a) MET). Counsel's half is open (Row 54 (b)); the question is to be made current (Task 0.7).
+  RULED (`-484`; Row 54 (a) MET). Counsel's half is open (Row 54 (b)); the question was made current to `-484` at Task 0.7 and is NOT sent.
 - **K-9 → no owner yet:** a partner auth header from Secret Manager (`-429` Consequence 3; QE25). ⭐ Trigger: the first
   partner that will not accept the signature alone.
 - **K-10 → no owner yet:** the partner-coordination escalation runbook (`docs/runbooks/README.md` names this story as
@@ -1544,3 +1548,4 @@ until those land ([[feedback_closure_language_precision]]).
 | 2026-11-21 | v1.5 | Rebased onto `origin/main` `e5e13f92` (Story 6.22b landed), BigDev: "rebase". Every commit of the branch was re-written; the two SHAs this file cites are now the post-rebase ones (the author-commit `24d930fc`, the creation ledger entry `fc715af5`). No decision, AC or task changed. One cited code file moved on `main` since the pin (`member/anonymize.ts`, a comment only). |
 | 2026-11-21 | v1.6 | On BigDev's direction, before the note is sent: the Panel note's Q1 revised (option A's cost corrected — the Trust answers for the sharing itself and its choice of partner, not for what the partner does afterwards; option B is now the partner's own form opened from the app; option C "both" added) and the counsel question extended (10: how far the Trust's responsibility runs and what the notice may say; 11: the second route and its tracking). K-12 added: the second route and its drop-off tracking are recorded, NOT decided and NOT part of this story. No decision, AC or task of this story changed. ⚠ If that route is chosen, a correct-course comes before Task 1. |
 | 2026-11-21 | v1.7 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), after `git fetch origin` (`origin/main` = `e5e13f92`; no code moved since the rebase; pin an ancestor). The Panel ruled the note: Decision `2026-11-21-484` (Q1 C, Q2 A … Q7 A) — absorbed throughout: header, Names, Policy meaning (ratified acts; the sentences scoped to the sending route, with `-484`'s own sentence quoted; Q6 A beside "cannot be called back"; Q2 A on the no-sale line), the rulings table (seven rows + the Told list, verbatim), §0 edges 1 / 8 / 11 / 12, QE5, QE16, QE24 (the requeue's 30 days restated), QE26, AC0, Task 0.5, PQ6, Task 0.6 ((a) MET), K-1 (Q3 A's form), K-8. NO build decision changed: every built answer the note asked about was ratified as put. K-12's trigger is MET, and BigDev chose "Build 12.5 now": its "before this story's Task 1" is superseded for C, and the five things the correct-course owes are listed (incl. `recordLeadHandoff` refusing a partner's-own-form module). New: Task 0.7 (the records `-484` makes owed, before Task 1) and K-13 (Q6 A's staff duty, not built). NUMBERS: decision ≥ `-485`, ledger ≥ `am`, others' roster ≥ `Row 55`; a fifth sibling worktree (`3-15-…`) noted. The unused Task 0.3 rewrite map is collapsed to a pointer to `97bc9c26`. |
+| 2026-11-21 | v1.8 | Task 0.7 done (BigDev: "yes, commit and write the Task 0.7 records"): `deferred-work.md` (dated lines on 12.1's C6 / C8, 12.2's field-list item, 12.5's K-1 / K-4 / K-8 / K-12; new K-13), `epics.md` (a dated line under 12.3's inherited note), the counsel question revised to `-484` (still not sent). Task 0 is complete except 0.1. No decision, AC or build task changed. |

@@ -1,10 +1,11 @@
 # Question for counsel — sending a member's name and mobile number to a partner when the member asks: the footing, the agreement with the partner, payment, and how long things are kept
 
 **From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-21, **REVISED 2026-11-21** before sending (questions 10 and 11 added
-on BigDev's direction) · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as
-asked until BigDev sends it.
-**Written from:** Story 12.5 (the transport that carries a member's registered interest to a partner), Task 0.5. The Trustee Panel is
-asked seven questions beside this one (`trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md`, also not sent).
+on BigDev's direction), and **REVISED again 2026-11-21** to state what the Trustee Panel has since decided (Decision
+`2026-11-21-484`) · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as asked until BigDev sends it.
+**Written from:** Story 12.5 (the transport that carries a member's registered interest to a partner), Task 0.5. The Trustee Panel was
+asked seven questions beside this one (`trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md`) and has answered them; its
+answers are set out below, so that you advise on what the Trust has actually decided.
 **Roster:** Row 54 (`partner-lead-handoff-live`), the go-live row for this feature. Your answer is its leg (b); nothing reaches a
 partner before it.
 
@@ -21,6 +22,15 @@ partner before it.
   described here. §4.1 covers taking a consent back, and §7 covers where data is processed.
 - **The trust deed exists in two drafts** that treat partner and commercial arrangements differently, and which one governs has not
   been recorded. We have not relied on either. If your answers depend on it, please say so.
+- **What the Trustee Panel has decided (2026-11-21), subject to your advice.** (1) Both routes described below may be used, each
+  offer working one way or the other. (2) The Trust is never paid per lead; it may be paid only when a member takes up the partner's
+  product, and the policy will say so in plain words. (3) The same four details go to every partner, and the member sees all four
+  on the form before agreeing. (4) The Trust's copy is removed at once if a send is stopped, and 30 days after it is delivered or
+  finally fails. (5) The bare fact that a member once registered interest is kept permanently, without their details, and the
+  policy will say so. (6) After delivery, if a member withdraws or is erased, the Trust tells the partner and asks it to delete — a
+  duty in the partner agreement, carried out by staff. (7) Nothing is passed on once a death is reported, and that stays so after
+  the claim is settled. The Panel did not decide which offers go which way, the wording to members, or anything it left to you; each
+  of your answers below can still change these, and any that does will go back to the Panel.
 
 ## The situation, in brief
 
@@ -29,20 +39,20 @@ interested opens the offer, is shown exactly which of their details would be sen
 sends the partner one message containing the member's **full name, mobile number, district and preferred language**. Nothing else is
 sent: no date of birth, no identity number, nothing about membership standing, contributions, claims, nominees, workplace or health.
 
-The Trust keeps its own encrypted copy of those four details until the send is done; the plan is to remove it 30 days after delivery,
-or at once if the send is stopped. Separately, the Trust keeps a permanent record that the member registered interest in that offer.
+The Trust keeps its own encrypted copy of those four details until the send is done; it is removed 30 days after delivery or a final
+failure, or at once if the send is stopped (the Panel's decision (4)). Separately, the Trust keeps a permanent record that the member registered interest in that offer.
 That record has no name or number in it, but it is tied to the member, and the way the Trust keeps its records means it is never
 removed — not even when a former member's data is erased.
 
 Before each attempt to send, the system checks again, and does not send if the member has taken the agreement back, has left or been
 terminated, has had their data erased, or has been reported dead, or if the Trust has withdrawn the offer. Once the details are
-delivered they cannot be called back. If the partner's system does not confirm receipt, the same message is sent again, up to seven
-times over about a day and a half.
+delivered they cannot be called back; the Trust then tells the partner and asks it to delete (decision (6)). If the partner's system
+does not confirm receipt, the same message is sent again, up to seven times over about a day and a half.
 
-The Trust may be paid by partners. The terms are not agreed. They could be per lead delivered, or only when a member takes up the
-partner's product.
+The Trust may be paid by partners. The terms are not agreed, but the Panel has ruled out payment per lead: only a commission when a
+member takes up the partner's product (decision (2)).
 
-**A second route is being considered instead of, or beside, the first.** The Trust would send nothing. The member would tap the
+**A second route will be used beside the first, offer by offer (decision (1)).** It has not been designed yet. The Trust would send nothing. The member would tap the
 offer in the Trust's app and the partner's own form would open in the phone's own browser — not embedded in the Trust's app, so the
 Trust cannot see what the member types there. The member would type their details and have their number checked by the partner in
 its own way. The Trust would pass the partner only a code that says which offer the visit came from. The Trust would want to know
@@ -58,19 +68,22 @@ where members give up on that form.
    We expect at least: use only for the offer the member asked about; no passing on; keeping the details secure; deleting on request;
    telling the Trust promptly of any breach; treating a repeated delivery of the same lead as one; and where the details are processed.
    Please correct or add to that list.
-3. **Payment.** If a partner pays the Trust for each lead delivered, is the Trust selling personal data — in law, and against the
-   promise in its own draft policy? Is a commission paid only when a member takes up the partner's product different? If either is
-   permitted, what must members be told?
+3. **Payment.** The Panel has ruled out payment per lead. Is a commission paid only when a member takes up the partner's product,
+   where the take-up followed a hand-over of the member's details, a sale of personal data — in law, and against the promise in the
+   Trust's own draft policy? If it is permitted, what must members be told, and where?
 4. **How long things are kept.**
-   (a) Is 30 days a sound period for the Trust's own copy of what it sent? What is the shortest and the longest you would advise?
-   (b) May the Trust keep, permanently and even after erasure, the bare fact that a member once registered interest in an offer, with
-   no contact details attached?
+   (a) The Panel accepted 30 days for the Trust's own copy of what it sent, and left the number to you. Is it sound? What is the
+   shortest and the longest you would advise?
+   (b) The Panel decided to keep, permanently and even after erasure, the bare fact that a member once registered interest in an
+   offer, with no contact details attached. May the Trust do that?
    (c) The Trustee Panel has ruled that once a member's death is reported, a request to erase that member's record is refused and the
-   record is kept, and it left the retention period to you. Does that reach the Trust's copy of the four details from a partner
-   offer, or may that copy be removed on the ordinary schedule?
-5. **After delivery.** If a member takes the agreement back, or has their data erased, after the details were delivered: must the
-   Trust tell the partner, and must it require the partner to delete? Is telling the partner "this member withdrew" itself something
-   the Trust needs a footing for?
+   record is kept, and it left the retention period to you. It has since decided that the Trust's copy of the four details is
+   removed on the ordinary schedule even for a member whose death has been reported, without saying whether that copy is part of
+   "the record". Does the earlier ruling's duty to keep reach that copy, or may it be removed on the ordinary schedule?
+5. **After delivery.** The Panel decided that if a member takes the agreement back, or has their data erased, after the details were
+   delivered, the Trust tells the partner and asks it to delete, by a clause in the partner agreement carried out by staff. Is that
+   required, and is it enough — must the Trust require deletion rather than ask? Is telling the partner "this member withdrew" or
+   "this member was erased" itself something the Trust needs a footing for?
 6. **Taking the agreement back.** The Act asks that withdrawing be as easy as agreeing. A screen for it will be built with the screen
    that shows the offers, and no offer goes live before it. Is it acceptable to tell members plainly that taking the agreement back
    stops only a send that has not happened yet?
@@ -98,6 +111,7 @@ where members give up on that form.
 ## What we need back
 
 A short written answer to each question that is sent. It will be recorded as a decision, and it answers the counsel leg of the go-live
-row for this feature. Your answers to 1, 3, 4, 5, 10 and 11 will also be put before the Trustee Panel beside its own questions. If any answer
+row for this feature. The Trustee Panel has already decided its own questions (above); any answer of yours that differs from what it
+decided — in particular to 1, 3, 4, 5, 10 and 11 — will be put back before it. If any answer
 depends on facts we have not given — the partner terms, which draft of the deed governs, or the wording of the consent form, none of
 which exists yet — please say which.

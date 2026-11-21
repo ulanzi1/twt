@@ -2043,6 +2043,27 @@ So that my DPDPA Right To Be Forgotten is honored while the trust's audit histor
 **When** Story 3.6 signup evaluates the identity
 **Then** the rejoin block fires (per Story 3.10 AC) — anonymization does NOT bypass the 12-month rejoin lock
 
+### Story 3.13: Staff Check a Typed-In Identity While the Member Is Alive `[PRIMITIVE]` `[SURFACE]`
+
+> ⚠ **Added 2026-11-21 (`bmad-create-story 3.13`)** — the row `3-13-trustee-validation-of-manually-entered-identity` was added 2026-10-31
+> (BigDev: *"yes, add it"*; ledger `2026-10-31f`) with ⛔ `epics.md` entry, from the trace behind Story 6.38's routing note: PRD FR-2
+> requires *"trustee validation"* of a typed-in identity and ⛔ step builds it (`trusteeVerified` is set true nowhere). ⚠ ORDER: before (or
+> with) Story 3.14. The build decisions (DL1–DL16) are PROPOSED in the story file and answered at its Task 0; what staff must see (PQ1) and
+> whether a member is told when staff cannot confirm (PQ2) are ONE non-blocking Panel note. What a check in life means at death is a MATCH
+> of [`-424`](../../.decision-log.md#decision-2026-10-31-424) Q1 (a) C's *"never verified since"*, ⛔ a question.
+
+As a member who joined by typing in my own identity details, I want the Trust's staff to check them while I am alive and record that they
+did, so that I become a full member when my lock-in ends and my family's claim does not wait for an identity check after I die.
+
+**Acceptance Criteria (in brief):** ONE recorded staff act per check — a new append-only table `member_identity_validations` (one live
+row per member, a later act supersedes; `confirmed` / `not_confirmed` with a reason and a Tier-1 note; the KIND of photo ID seen, ⛔ its
+number, ⛔ a copy) — by a District Admin (the member's posting district) or a Pariwar Admin (new key `member.validate_identity`); `confirmed`
+sets `member_kyc_profiles.trustee_verified = true` in the same transaction (⛔ identity field is changed) and appends a marker event, and
+from `pending-valid` also the existing `member.kyc_completed` (→ `active`); refused once a death is reported (6.39's check is the identity
+step then), and for anyone not `self_declared`, unverified and in `lock-in` / `pending-valid`; ONE definition of "verified" shared with
+6.39's identity trigger and Story 3.14; a queue of every such member in scope, `pending-valid` first then oldest signup (FR-2), with ⛔ name
+on the list; ⛔ undo, ⛔ member-facing words (PQ2), ⛔ change to 6.39's gate except one staff label.
+
 ---
 
 ### Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup `[SURFACE]`

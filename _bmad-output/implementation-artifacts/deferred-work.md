@@ -61,6 +61,19 @@ roster Row 46 (b), (c) stay open for the "reflected in code" half. The items bel
   - **2026-11-21, later — the build ROUTED to row `6-39a-bank-date-for-a-fee-recorded-after-the-death`** (`backlog`; author-commit
     [`-474`](../../.decision-log.md#decision-2026-11-21-474) item 1). Story 6.39 merges WITHOUT it — the comparison stays binding with
     ⛔ staff remedy until then.
+- **(Task 8, 2026-11-21) Q3 B's line stops at the appeal.** Built where `appeal.eligible` sat — with the "file appeal" affordance. Once
+  the family files, the card shows the stage line, and after a Stage-3 uphold the exhausted lines — ⛔ the reason (as for every refusal
+  before). `-473` does ⛔ say whether the reason follows the family through the appeal. ⛔ Addressed — owner BigDev (a disclosure past
+  the moment asked is the Panel's, `-473` §0). **Trigger:** any pass over the appeal card's copy, or a family's question at the helpline.
+- **(Task 8, 2026-11-21) Q4 B's Hindi is the session's, BigDev-approved** (`-474` item 5) — ⛔ native-speaker review recorded; Q3's
+  Hindi is two shipped strings joined. **Trigger:** the next Hindi copy review of `claim.json`.
+- **(Task 8, 2026-11-21) Where did two `db:migrate` runs go?** For the browser pass, BigDev ran `db:migrate` twice aimed at a throwaway
+  DB on :5450 (once through a `${DATABASE_URL/…}` rewrite, once with the URL written out); :5450 stayed EMPTY both times, and a third
+  run with `env -u` (clearing the Secret Manager switches) failed with no output. ⛔ Known which database the first two reached: the
+  :5432 dev DB, or — if `GOOGLE_APPLICATION_CREDENTIALS` / `NODE_ENV=production` / `DRIZZLE_FORCE_SECRET_MANAGER=1` was set in that
+  terminal — the Secret Manager connection `twt-dev-cloud-sql-conn-string`. If one ran there, this branch's UNMERGED migrations
+  `0210`–`0212` (two enum values, one table — additive) may be applied ahead of `main`. ⛔ Checked (the session's read-only query was
+  refused). Owner BigDev. **Trigger:** before the next migration on either database, or 6.39 landing.
 - **PQ2 — what the family is told** (the note's Q3 — when ⛔ drive opens because the fee came after the death; Q4 — while the identity
   check waits). Not addressed — routed to the Panel. Built: ⛔ new family-facing words — the existing denial line with ⛔ reason, and
   the existing in-review status.

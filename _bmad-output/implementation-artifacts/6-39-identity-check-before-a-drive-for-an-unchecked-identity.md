@@ -50,7 +50,7 @@ questions (PQ1 (a) / (b), PQ2 — non-blocking) + **TL** = lines the note TELLS 
 
 # Story 6.39: Before Any Drive Opens, Staff Check That the Person Who Died Is the Member — When Nobody Has Checked Their Identity — and That the Joining Fee Was Paid Before the Death
 
-Status: in-progress
+Status: review
 
 > **WHAT THIS STORY IS, IN ONE PARAGRAPH.** The Panel ruled two staff checks that must happen **before any drive opens** for a death
 > claim. **(a)** `2026-10-31-424` Q1 (a) C — when the member joined by **typing in their own identity details** and nobody has checked
@@ -777,10 +777,10 @@ line or an audit context — ids, outcome codes and reason codes only (6.21a T10
       (built A on PQ1 (a) / PQ2 until ruled)"; `ci:local` on a FRESH container on the story's own DB; Completion Notes, File List, Change
       Log; Status → review.
 - [ ] **Task 8 — Build three of the Panel's four answers (`-473`; `-474`) — AC15, AC16, AC17** ⭐ added 2026-11-21 (story v1.7)
-  - [ ] 8.1 Q1 B: the constant, its comment, the AC8 test flipped; the four staff lines re-worded; `feeAfterDeathNote` for `same_day`.
-  - [ ] 8.2 Q3 B: the domain read (live denial reason, both vocabularies), the contract field, the handler, the mobile view + copy (`en`, `hi`).
-  - [ ] 8.3 Q4 B: the contract field, the handler (through `membershipCheckApprovalState` — the ONE definition), the mobile view + copy.
-  - [ ] 8.4 Tests (AC15–AC17), the contracts fixtures ([[project_contracts_tests_outside_tsc]] — a new REQUIRED field breaks them), the
+  - [x] 8.1 Q1 B: the constant, its comment, the AC8 test flipped; the four staff lines re-worded; `feeAfterDeathNote` for `same_day`.
+  - [x] 8.2 Q3 B: the domain read (live denial reason, both vocabularies), the contract field, the handler, the mobile view + copy (`en`, `hi`).
+  - [x] 8.3 Q4 B: the contract field, the handler (through `membershipCheckApprovalState` — the ONE definition), the mobile view + copy.
+  - [x] 8.4 Tests (AC15–AC17), the contracts fixtures ([[project_contracts_tests_outside_tsc]] — a new REQUIRED field breaks them), the
         friction / microcopy gates; `ci:local` on a FRESH container on the story's own DB; records; Status → review.
   - ⛔ Q2 B — row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (`-474` item 1).
 
@@ -1024,6 +1024,43 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
   ⛔ name the new table (`deferred-work.md`); (c) nothing was pushed — the branch is local (first push needs an explicit refspec and
   the story's `DATABASE_URL`).
 
+- **Task 8 (2026-11-21, story v1.7 → v1.8) — three of the Panel's four answers built** (`-473`; `-474`), code `5b4efdbb`:
+  - **Q1 B (AC15).** `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES = ['after_death', 'same_day']`; a `same_day` check gives the gate's
+    `fee_after_death` answer (⛔ new wait reason — the contract's closed set is unchanged), so every approval site holds the claim and the
+    `fee_paid_after_death` deny is accepted for it (DL9's guard reads that answer). The AC8 test that named PQ1 (a) FLIPPED (domain and
+    API); AC6's leg now accepts the reason after a `same_day` check. The four staff lines (console P1, final vote, R9, the API's plain
+    message) open *"The joining fee was not paid before the date of death on the certificate."* — the old sentence occurs ⛔ in source or
+    tests (grep, 0). The console's record-then-deny note shows for `same_day` (component test, three outcomes).
+  - **Q3 B (AC16).** `isFeePaidAfterDeathRefusalStanding` (`membership-check-read.ts`): `denied` + a LIVE P1 OR trustee-decision
+    denial with `fee_paid_after_death` + ⛔ reversed appeal. `MemberAppealStatusResponse.refusal_reason` (`'not_a_member_when_died' |
+    null`, required). The card shows `appeal.refused_not_member` INSTEAD of `appeal.eligible`. Live-DB: domain (P1 with / without the
+    reason, a same-day fee, the final-vote denial with / without it) and API (the reason, another reason, a reversed appeal ⇒ `null`; the
+    code ⛔ on the wire). ⚠ **Its limit, by design:** the line sits where `appeal.eligible` sat — with the "file appeal" affordance;
+    once an appeal is filed the card shows the stage line, and after a Stage-3 uphold the exhausted lines, ⛔ the reason (as before for
+    every refusal). Whether the reason should follow the family through the appeal is ⛔ ruled; ⛔ built.
+  - **Q4 B (AC17).** `MemberDeathCertificateStatusResponse.identity_check_waiting` (required): `accepted` + `isInMembershipCheckWindow`
+    + `membershipCheckApprovalState` answers `identity_not_confirmed` (the ONE definition). The notice keeps `certificate.accepted` and
+    adds `certificate.identity_wait` as its second line. API live-DB: ⛔ before a check, ⛔ for a fee after the death (the gate answers
+    that first), ⛔ once confirmed; the reason, the identity reason and the note ⛔ on the wire.
+  - **Copy:** `en` and `hi`, word for word as `-474` items 4–5 — the Hindi of Q3 is two shipped strings joined (checked
+    programmatically); Q4's Hindi is new (BigDev-approved, ⛔ native-speaker review recorded). Real-`t()` test
+    `panel-473-family-copy-resolves.test.ts` (both locales, exact words; ⛔ "fee", a code or a digit in either line). ⛔ Invisible
+    characters in the added lines (scanned).
+  - **Gates:** `friction-budget` AC-4 FAILED the first `ci:local` (a member-facing surface touched, ⛔ ledger change) — fixed by a
+    **Story 6.39 disposition** (no new row: two read-only lines, nothing asked of the family), `37460d6b`; OpenAPI unchanged (these two
+    member reads are ⛔ in the registry — the determinism check is clean).
+  - **`ci:local` on a FRESH container** (`twt-639-pg`, port 5449, DB `twt_dev`, recreated before each run): (1) `5b4efdbb` — 39 / 40,
+    the one red `friction-budget` AC-4 (above; ⛔ a code fault); (2) `37460d6b` (the disposition committed; the code tree unchanged) —
+    **40 / 40**.
+  - **⚠ Roster Row 46 leg (d) RE-OPENED.** Its own words: *"A later change to the control re-opens this leg."* Task 8 changed the
+    control (the `same_day` note) and the staff lines. The real-browser pass was ATTEMPTED 2026-11-21 and ⛔ run: the Mac's Chrome was connected and loaded a 127.0.0.1 probe, but the throwaway database
+    (`twt-639-bp`, :5450) could ⛔ be migrated — the session's `db:migrate` was refused by the permission check, and BigDev's two
+    runs reached another database (:5450 stayed empty; which one is ⛔ known). BigDev: *"option 3, record it un-attested"*.
+    The leg is UN-ATTESTED for `5b4efdbb` until a pass runs ([[feedback_record_unattested_no_backfill]]); the component tests cover
+    both changes. The family's two lines have ⛔ device check (apps/mobile has ⛔ render
+    harness — the pure view + real `t()` stand in).
+  - ⛔ Q2 B — row `6-39a-…` (`-474` item 1); until it lands the comparison stays binding with ⛔ staff remedy.
+
 ### File List
 
 **New**
@@ -1089,6 +1126,20 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 - `.decision-log.md` (`2026-11-21-472`) · `docs/launch-gate-inventory/inventory-roster.md` (Row 46)
 - `_bmad-output/implementation-artifacts/{deferred-work.md,sprint-status.yaml}` · this story file
 
+**Task 8 (`-473` / `-474`)**
+- New: `apps/mobile/tests/unit/panel-473-family-copy-resolves.test.ts`
+- Modified: `packages/domain/src/claim/{membership-check-approval,membership-check-read,fee-death-date,errors}.ts` ·
+  `packages/domain/src/schema/claim_membership_checks.ts` · `packages/domain/tests/integration/claim/membership-check-approval.spec.ts` ·
+  `packages/contracts/src/claims/{appeal,death-certificate}.ts` · `packages/contracts/tests/{claims-membership-check,claims-suspicion-refusal}.test.ts` ·
+  `packages/i18n/locales/{en,hi}/claim.json` · `apps/api/src/modules/claims/{claims.appeal.handlers,claims.death-certificate-member.handlers,membership-check-required-message}.ts` ·
+  `apps/api/tests/integration/claims/{appeal,membership-check,membership-check-required-routes}.spec.ts` ·
+  `apps/mobile/{lib/appeal-status,lib/death-certificate-view,components/claim/AppealStatusCard}.ts(x)` ·
+  `apps/mobile/tests/unit/{appeal-status,death-certificate-view}.test.ts` ·
+  `apps/admin/src/modules/claim-verification/{MembershipCheckControl.tsx,i18n-en.ts}` ·
+  `apps/admin/tests/{membership-check,later-approval-warnings,cycle-freeze-page}.test.tsx` · `friction-budget.md`
+- Records: `.decision-log.md` (`-473`, `-474`), the routing note, roster Row 46, `epics.md` (6.39 lines, the 6.39a stub),
+  `deferred-work.md`, `sprint-status.yaml` (row `6-39a-…` minted)
+
 **Deleted** — none. (Throwaway, never committed: the browser-pass launcher spec, its cookie helper, the probe.)
 
 ## Change Log
@@ -1103,3 +1154,4 @@ Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.39`, 2026-11-21, in 
 | v1.5 | 2026-11-21 | Records only (⛔ code): the Panel routing note re-checked before sending (`abe2d306`) — E4 re-run at `eedc9be3` against the BUILT code, 19 commands all as stated (command 1 re-anchored, command 13 now `review`, six new commands); E3 "will be built" → built; told line 4 added (the system, ⛔ staff, compares the dates and staff cannot override it — `-472`'s declared narrowing of `-430` Q1 B "staff compare"); Q1–Q4 and the suggestions unchanged. Then SENT (BigDev: *"sent the note to Panel"*; channel, time and whether the sent text is identical ⛔ recorded); ⛔ ruled. PQ1 (a) / (b) and PQ2 stay open; roster Row 46 (b), (c) dated; ledger `2026-11-21f`, `g`. Status stays `review`. |
 | v1.6 | 2026-11-21 | Records only (⛔ code): the Panel RULED the note — [`-473`](../../.decision-log.md#decision-2026-11-21-473) (Trustee-ratified, DR + KB, *"Q1 B / Q2 B / Q3 B / Q4 B"*), committed ALONE (`35014835`). All four MATCH option B; Q3 B widens `-424` Q3 B past the door (the Panel's); Q2 B overrides `-472` N3's "cannot override" in its one case. The note's ⏳ block replaced (questions unedited); `deferred-work.md` PQ1 (a) / (b), PQ2 DISCHARGED as questions; roster Row 46 (b), (c) — "ruled" MET, "reflected in code" OPEN; `epics.md` annotated; ledger `2026-11-21h`. ⚠ Built A on all four — the build to B has ⛔ row yet (BigDev's call). Status stays `review`. |
 | v1.7 | 2026-11-21 | Scope GROWN by author-commit [`-474`](../../.decision-log.md#decision-2026-11-21-474) (`8a9801a2`, BigDev: *"split as recommended — Q1, Q3, Q4 in 6.39, Q2 new row"*, then the three wordings approved): Task 8 + AC15–AC17 added; AC8 annotated AMENDED (kept). Status review → in-progress. Q2 B → new row `6-39a-bank-date-for-a-fee-recorded-after-the-death` (backlog). |
+| v1.8 | 2026-11-21 | DEV COMPLETE for Task 8 (`-473` Q1 B, Q3 B, Q4 B under `-474`): code `5b4efdbb`, the friction-budget disposition `37460d6b`; `ci:local` on a fresh container 39 / 40 at `5b4efdbb` (`friction-budget` AC-4 only), then **40 / 40** at `37460d6b`. Roster Row 46 (d) RE-OPENED by the control change — the browser pass ATTEMPTED, ⛔ run (the throwaway DB could ⛔ be migrated), recorded UN-ATTESTED on BigDev's word. Two `deferred-work.md` items (Q3's line stops at the appeal; Q4's Hindi un-reviewed). Status in-progress → review. |

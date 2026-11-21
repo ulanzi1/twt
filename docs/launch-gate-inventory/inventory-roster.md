@@ -924,6 +924,13 @@ observes these.
     author-commit). Leg **(b)**: its PQ1 (a) half (Q1 B) and leg **(c)** (Q3 B, Q4 B) are built by Story 6.39's Task 8 — they close
     when 6.39 lands on `main` with them; its PQ1 (b) half (Q2 B) waits on the NEW row `6-39a-bank-date-for-a-fee-recorded-after-the-death`
     (`backlog`) landing. Story 6.39 is back to `in-progress`. ⛔ Criterion is edited.
+  - **2026-11-21 — (d) RE-OPENED by Task 8** (code `5b4efdbb`). The leg's own line: *"A later change to the control re-opens this
+    leg."* Task 8 changed the control (the record-then-deny note now shows for a fee paid ON the day of death) and the four staff lines
+    (*"The joining fee was not paid before the date of death on the certificate."*). The real-browser pass was ATTEMPTED 2026-11-21 and ⛔ run: the Mac's Chrome was connected and loaded a 127.0.0.1 probe, but the throwaway database
+    (`twt-639-bp`, :5450) could ⛔ be migrated — the session's `db:migrate` was refused by the permission check, and BigDev's two
+    runs reached another database (:5450 stayed empty; which one is ⛔ known). BigDev: *"option 3, record it un-attested"*.
+    UN-ATTESTED for `5b4efdbb` ([[feedback_record_unattested_no_backfill]]); the component tests cover both changes. The family's two
+    new lines (`-473` Q3 B, Q4 B) have ⛔ device check either. ⛔ Criterion is edited.
 
 ## Row 47 — Story 6.22: the fraud register's flag, finding and close can go live (decision-authored, `-438`)
 

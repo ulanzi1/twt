@@ -222,13 +222,15 @@ Identity is anchored to DigiLocker KYC + manually-entered eHRMS ID. The same mem
 
 A Bihar government teacher can register, complete KYC, pay ₹110, and become a member within a single app session. Realizes UJ-1.
 
+> ⏳ **2026-11-21 — PROPOSED, ⛔ ruled:** BigDev proposes the joining AND renewal fee be OPTIONAL until the Trustee Panel makes it mandatory, the 15-day joining lock-in starting at final submission (Story 3.17 — a switch that ships OFF). Until the Panel rules, the fee stays mandatory exactly as written here and in FR-1A. [2026-11-21 — sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`.]
+
 **v1 posture on the ₹110:** The Vyawastha Shulk is a **mandatory entry fee that buys the member no direct return in v1** — it funds trust operations (app, ground inspection, expansion). The Vyawastha Shulk-paid state is, however, the **future eligibility anchor** for **Durghatana Sahayata (Accident Assistance)** and other future trust-paid benefits — see §4.15 (Future Benefit Hooks). Forward-compat hooks for those benefits live in §4.15; FR-1 itself owns only the fee, not the future products it enables.
 
 **Consequences (testable):**
 - Member is created in `pending-kyc` state on form completion.
 - On successful DigiLocker pull, state moves to `pending-fee`.
 - On successful ₹110 UPI Intent payment + UTR confirmation, state moves to `lock-in` with lock-in clock initialized to the current applicable lock-in duration (v1: 30 days).
-- Reference Code field accepts: 6-digit numeric (field-worker), or member username/eHRMS (adopter), or empty (organic). Empty → `attribution_source = organic`.
+- ~~Reference Code field accepts: 6-digit numeric (field-worker), or member username/eHRMS (adopter), or empty (organic). Empty → `attribution_source = organic`.~~ [2026-11-21 — sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`.] Signup asks *"Did someone help you register?"* — Yes takes a 6-digit field-worker code (Story 3.15); a member-invite username / eHRMS is captured by Story 13.8; neither → `attribution_source = organic`. A registration a field worker started carries their code automatically (Story 13.9).
 - Eligibility-category dropdown enumerates: basic teacher, secondary teacher, Shikshakamitra, instructor, fourth-grade staff, clerical, BEO, DIET lecturer, higher-ed faculty. No "other."
 - Vyawastha Shulk receipts retain `paid_at`, `valid_through`, `amount`, `utr`, `payment_method` indefinitely — sufficient to back-prove, for any past date, whether a member was Vyawastha Shulk-paid. Required by §4.15 future-benefit eligibility evaluations against historical event dates.
 
@@ -258,7 +260,7 @@ Members renew the ₹110 Vyawastha Shulk annually after year 1. **First-time sig
 
 #### FR-2: DigiLocker KYC with manual fallback
 
-When DigiLocker is available, signup pulls Aadhaar-linked photo, name, DoB. When unavailable (provider down, member chooses to defer), KYC fields are entered manually and the member becomes `pending-valid` until trustee validation.
+When DigiLocker is available, signup pulls Aadhaar-linked photo, name, DoB. When unavailable (provider down, member chooses to defer), the member uploads a photo of their PAN card, a masked Aadhaar (last four digits only — the Trust never stores a full Aadhaar number) and a selfie; staff check them, and the member becomes `pending-valid` until that check (Story 3.13). [2026-11-21 — sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`.]
 
 **Consequences (testable):**
 - DigiLocker integration uses an abstraction that lets `pending-valid` state flip to `verified` post-hoc without data migration.
@@ -866,6 +868,7 @@ Field workers have a mobile-first admin app (separate from member app). Surfaces
 - Commission pipeline view: current month qualified count + ₹ projected, last month paid (with transaction reference), pending qualification count.
 - Push notification when a previously-attributed member crosses a qualification step (KYC done; ₹110 paid; first contribution made).
 - Field worker can flag a member account as "this person is no longer reachable" — admin-side action: investigate / disable attribution from this worker.
+- A field worker can START a person's registration as a draft (details, documents, photo captured in the app) but can never submit it; the person reviews, ticks every consent themselves, pays and submits on their own phone (Story 13.9; go-live waits on the Panel). [2026-11-21 — sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`.]
 - Audit log records each field worker session + attribution-related action.
 
 #### FR-54: Custom fields per Pariwar via JSON columns (ADM-17)
@@ -1163,6 +1166,8 @@ Funnel by source: signups → KYC complete → ₹110 paid → first contributio
 #### FR-84: Field worker payment trigger (FieldWorker #4)
 
 Commission earned only on **all three** of: KYC complete + ₹110 paid + first valid contribution in next monthly cycle.
+
+> ⏳ **2026-11-21:** if the fee becomes optional (FR-1 note; Story 3.17), "₹110 paid" needs a new rule — put to the Trustee Panel with the fee question. [2026-11-21 — sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`.]
 
 **Consequences (testable):**
 - Monthly disbursement batch sums qualified attributions per worker and disburses to worker's bank.

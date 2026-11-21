@@ -2042,6 +2042,59 @@ So that my DPDPA Right To Be Forgotten is honored while the trust's audit histor
 
 ---
 
+### Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup `[SURFACE]`
+
+> ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). ⛔ Panel question. Takes Story 13.8's C2 / C4 for 6-digit field-worker codes only.
+
+As a person signing up whom a field worker helped, I want to say so and enter their code, so that the worker who helped me is credited.
+
+**Acceptance Criteria (in brief):** a wizard step after `tc` asks *"Did someone help you register?"*; Yes shows a 6-digit code box, No
+continues; it ⛔ blocks a signup (a code that does not resolve is refused with a retry and a "continue without" choice). The code resolves
+through Story 13.2's door (`apps/api/src/modules/field-worker/attribution-code-access.ts` — the Pariwar from the session, ⛔ the body),
+FR-85's `acceptsNewAttributions`, and `-454` Q6 C's held credit for a worker `under_review`; the attribution is recorded at signup. The
+payment step's free-text Reference Code box stops taking 6-digit codes (member-invite usernames stay Story 13.8's). ⛔ worker's name or
+number is shown to the person.
+
+---
+
+### Story 3.16: Upload a PAN, a Masked Aadhaar and a Selfie When DigiLocker Is Unavailable `[PRIMITIVE]` `[SURFACE]`
+
+> ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Replaces the typed-in route (`POST /api/v1/member/kyc/manual`). ⚠ Go-live waits on the Panel's ruling on
+> the follow-up to Story 3.13's routing note (what is kept, and for how long). With Story 3.13 (staff check the uploads), then 3.14.
+
+As a person who cannot use DigiLocker, I want to upload my PAN card, a masked Aadhaar and a selfie, so that the Trust's staff can confirm
+who I am without a meeting.
+
+**Acceptance Criteria (in brief):** in-app camera capture of the PAN card, a MASKED Aadhaar (last four digits only) and a selfie — ⛔ copy
+left in the phone's gallery; a new KYC-document store following the per-purpose storage adapters (`packages/platform-adapters/src/*-storage/`),
+Tier-1 object references, short-lived signed reads, every read audited; consent to storing the copies shown and recorded before upload
+(Aadhaar (Authentication and Offline Verification) Regulations 2021, reg 16A(3)); retention and deletion as the Panel rules. ⛔ full
+Aadhaar number is ever stored (Aadhaar Act s.8A(4)(b)). Task 0 is a SPIKE: can the app reliably blank the first eight digits? If not,
+only the UIDAI masked download is accepted, and staff can reject and destroy an unmasked copy at once (a recorded act). A document-checked
+identity gets its own `verification_strength` value (enum mint delegated, `-210` cl.2). The AI-10-1 Policy-meaning note is owed (it
+changes how an identity counts as verified — and so who passes Story 6.39's identity half).
+
+---
+
+### Story 3.17: The Joining and Renewal Fee Can Be Made Optional — a Switch That Stays Off Until the Panel Rules `[PRIMITIVE]`
+
+> ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). ⭐ BigDev's PROPOSAL, put to the Panel: the fee would replace [`-424`](../../.decision-log.md#decision-2026-10-31-424)
+> Q1 (b), [`-430`](../../.decision-log.md#decision-2026-10-31-430) Q1 and [`-473`](../../.decision-log.md#decision-2026-11-21-473) Q1, which
+> STAND until it rules. The switch ships OFF (today's behaviour exactly) and is turned on only after a ruling that allows it. The
+> Niyamavali's §2.1 (c) / §2.2 make the fee a condition of membership — the Board's to amend.
+
+As a teacher who might be put off by a fee, I want to be able to join and stay a member without paying until the Trust decides the fee is
+required, so that cost does not keep me out.
+
+**Acceptance Criteria (in brief):** a per-Pariwar switch in the flag registry, default OFF. When ON: the payment step offers *"Continue
+without paying"*; final submission moves `pending-fee → lock-in` through a new member event (the 15-day joining lock-in from submission;
+the lock-in gate's four other conditions unchanged); the renewal scheduler emits ⛔ grace for non-renewal; the claim door admits a
+submitted member; Story 6.39's fee half, for a member with no receipt, becomes "submitted before the date of death" (keeping `-430`'s
+purpose) — `claim_membership_checks.fee_receipt_id` nullable with a CHECK tying it to that outcome; paying voluntarily stays possible. When
+OFF, every test of today's behaviour stays green unchanged. The AI-10-1 Policy-meaning note is mandatory (it changes who is covered).
+
+---
+
 ## Epic 4: Niyamavali Rules Engine & Member Validity Service
 
 The canonical "is this member valid right now?" answer. The R7 contribution-discipline ladder, R8 90% rule, R5/R9 special-death cases, R11 concealment penalty, and retirement-coverage extension all evaluate from the Epic 2 registry — no hardcoded logic. FR-12A returns a deterministic, idempotent, audit-logged payload with rule-by-rule provenance and `applicable_niyamavali_clauses[]` (via stable `clause_id`). Cache reflects amendments + member-state changes within 60 seconds (Sprint Change Proposal Item 5).
@@ -8069,6 +8122,8 @@ So that I can work effectively without a desktop or back-office tools.
 > ⭐ **INHERITED FROM 13.1a (2026-11-04, `bmad-create-story 13.1a`; story `13-1a-field-worker-approval-and-code-hand-over`; `deferred-work.md` "Deferred from: story 13-1a-… (create-story, 2026-11-04)"; C3 / C5).** HOMED here, ⛔ closed. 13.1a is created, not built.
 > - **C3 / C5 — the worker's own surface, and a client that knows who it is.** 13.1a's admin screens cannot show only the actions their user may take: `GET /api/v1/auth/session` returns `nationalGrants` only (GLOBAL-scope grants), so no admin page can tell a Pariwar Admin from a District Admin and each page falls back to the server's 403 and a "no access" line. A worker's own "my code" screen (key `field_worker_self`-scoped, B(3)-literal, 13.1 C1) is the first surface that needs a principal's role and scope in the client — decide there whether the session exposes roles and district grants (an API change that touches every admin module) rather than copying the 403 pattern again. 13.1a's code read is the by-hand path only and is `active`-only (13.1a AD8). Trigger: 13.3 create-story.
 
+> 📝 **2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)): this story is a PREREQUISITE of Story 13.9 (a field worker starting a registration needs their own login and app).
+
 ### Story 13.4: Attribution Analytics Dashboard `[SURFACE]`
 
 As a Pariwar admin or trustee monitoring field-worker performance,
@@ -8129,6 +8184,8 @@ So that commissions disburse only after canonical financial-truth confirmation a
 > 📝 **POINTER (2026-11-16, Story 13.1f C1; roster Row 52 (c)).** As Story 13.8's pointer: the credit for a wrongly-ended window is unruled (13.1f's Panel note Question 1); read Row 52 (c) first. Annotation only.
 >
 > ⭐ **RULED (2026-11-17, decision `2026-11-17-465` Q1 B, Trustee-ratified).** The window is now ruled: a signup on an ended worker's code is **held, and credited if the ending is undone — by mistake or on appeal**; PRD FR-85 annotated. The cost the Panel accepted: holding credits for every ended worker's code *"for as long as the ending could be undone (with no time limit, for ever)"*. NOT ruled: how long the hold lasts after the Panel refuses an appeal (Q6 B — then only a new Panel decision undoes it). Annotation only; nothing above is edited.
+
+> 📝 **2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)): if the joining fee becomes optional (Story 3.17), *"qualified acquisition"* (PRD FR-84: KYC + ₹110 paid + first contribution) needs a new rule — put to the Panel in the fee note.
 
 ### Story 13.6: Field Worker Anti-Fraud Throttling — Assistive-Not-Auto-Punitive Invariant `[GOVERNANCE]`
 
@@ -8211,6 +8268,29 @@ So that the trust knows my chain origin (for Phase B future activation) without 
 > - **C2 — FR-85 is applied HERE, from 13.1's state.** Call `fieldWorker.acceptsNewAttributions(state)` (true for `active` only — 13.1 QE11, SETTLED by BigDev 2026-11-03 and CONFIRMED by the Panel, `2026-11-03-441`) on the worker `resolveAttributionForRequest` returned (13.2 C2: it returns the HOLDER, ⛔ the holder's eligibility). When resolving a STORED capture (13.5's backfill), ask `getFieldWorkerStateAt(db, pariwarId, id, { captureId })` — the worker's state when the member typed the code, compared IN SQL at microsecond precision (⛔ a JS `Date`) — in addition to 13.2's code-as-of-capture rule; they are two separate checks. Its `asOf` takes `{ captureId } | 'now'` only (the `{ instant }` arm is dropped, following 13.2 AT4 (c): the instant is named, never passed). A transition counts from the moment its transaction BEGAN, at BOTH edges: a signup whose transaction starts inside an activation's commit window reads as active (and inside a suspension's, as suspended), while a live read of the row at that moment still shows the old state. A not-credited code must ⛔ block or delay a signup. Whether and how a member is told is a PANEL question this story raises (it discloses a third person's status — template §0); a known-but-not-credited code must ⛔ reuse Story 3.6's unknown-code rejection copy ("Please ask your introducer for the correct code or skip"), which delays the member — send nothing, or neutral wording. Policy meaning for the member: *"who introduced you never changes what you are covered for."*
 
 > ⭐ **INHERITED FROM 13.1d (2026-11-08, [`2026-11-08-459`](../../.decision-log.md#decision-2026-11-08-459) Q2 A, WIDENED; `deferred-work.md` 13.1d C4; annotation only).** The Panel ruled that the District Admin at the other end of a field-worker move request sees *"number of member onboarded"*. When this story resolves a member's captured code to a worker, it also supplies a count read for 13.1d: by worker, inside one Pariwar, a number — never a member's name.
+
+> 📝 **NARROWED 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)): a 6-digit FIELD-WORKER code typed at signup is now Story 3.15's (with this block's C2 / C4 for those
+> codes). This story keeps the member-invite deep link, the adopter chain, and member usernames / eHRMS as codes.
+
+---
+
+### Story 13.9: A Field Worker Starts a Registration; the Person Reviews and Submits It `[SURFACE]`
+
+> ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Needs Story 13.3 (the worker's own login and app). ⚠ Go-live waits on the Panel: may a field worker collect
+> a person's ID documents, nominees and health answers before the person has agreed to anything; how long an unsubmitted draft is kept;
+> whether the person is told who started it. Counsel: the field worker as a data processor (a contract).
+
+As a field worker, I want to fill in a person's registration with them and capture their documents, so that they only have to review it,
+agree and pay on their own phone.
+
+**Acceptance Criteria (in brief):** the worker enters the person's mobile, details, workplace, nominees and health answers, and captures
+the PAN, the masked Aadhaar and a selfie in the app (Story 3.16's rules; ⛔ gallery copy) — saved as a DRAFT keyed to the mobile and the
+Pariwar, with the worker's code attached (Story 3.15's attribution, automatic). The worker can ⛔ submit. The person logs in with the
+one-time code on their own phone, sees who started it, reviews and can edit every section, ticks terms, declaration and health
+declaration THEMSELVES (⛔ pre-ticked — DPDP Act s.6(1)), WhatsApp optional and unticked, pays (or, if Story 3.17's switch is on, continues
+without paying), and presses Submit — only Submit makes them a member. After submission the worker sees only the qualification status
+(FR-53). An unsubmitted draft and its documents are deleted after a fixed period (the Panel's; proposed 30 days).
+
 
 ---
 

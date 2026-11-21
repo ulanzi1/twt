@@ -80,6 +80,25 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 - An upload's FK to its document does not require the document to be a death certificate [`claim_death_certificate_uploads_claim_document_id_fk`, migration 0122] — an upload row pointing at a `claim_documents` row of another type cascades away when that row is deleted, and the 0213 guard (keyed on `document_type`) does not fire. Pre-existing (0122); a writer-only invariant today (the upload writer and the OCR upsert key on `document_type = 'death_certificate'`). Trigger: any new writer of `claim_death_certificate_uploads`, or a decision to pin the type in the database (a composite FK on `(claim_document_id, document_type)` or a check trigger).
 
+---
+
+## Deferred from: sprint change proposal 2026-11-21 — how a person registers (`sprint-change-proposal-2026-11-21-registration.md`; author-commit `2026-11-21-482`)
+
+- **The Niyamavali makes the fee a condition of membership** [`docs/legal/niyamavali.md` §2.1 (c): *"payment of the Vyawastha Shulk"*;
+  §2.2: *"₹[[110]] per year"*, the joining lock-in *"after fee payment"*, membership *"renews annually on payment"*] — row `3-17`'s
+  optional fee conflicts with it. The rulebook is framed by the Board under Deed Clause 20(a); amending it is the Board's, after the
+  Panel rules on the fee. ⛔ edited. Trigger: the Panel's ruling on the fee note.
+- **Counsel, ⛔ asked** (counsel engaged since 2026-06-21, [[project_dpdpa_counsel_engaged_but_unrecorded]]): (1) a field worker who
+  collects a person's documents and answers — a data processor needing a contract (DPDP Act s.8(2))? (2) guaranteeing an uploaded Aadhaar
+  copy is masked, and storage consent (Aadhaar (Authentication and Offline Verification) Regulations 2021, reg 16A(3)); (3) erasing an
+  abandoned draft (DPDP s.8(7)); (4) whether a fee-free membership changes the Trust's legal footing. Trigger: before rows `3-16`,
+  `3-17` (switch ON) or `13-9` go live.
+- **Who sees the field worker's name** when a person enters their code (row `3-15` shows nothing) or reviews a worker's draft (row
+  `13-9` shows who started it) — a disclosure of the worker's name to the person; `13-9`'s Panel note asks. Trigger: row `13-9`'s
+  create-story.
+
+---
+
 ## Deferred from: code review of story 6-39-identity-check-before-a-drive-for-an-unchecked-identity.md — round 2, the fix diff (2026-11-21)
 
 - **A corrected UTR typed on a joining-fee re-confirm is now stored nowhere in full**

@@ -38,7 +38,7 @@ here is the gated-build point.
 
 # Story 6.22b: The Fraud Register's Identifier Set and Filer Bans — Counsel's Question Written First, the Panel's Four Questions Put, and a Death Certificate Made Undeletable; the PAN Collection, the Bar at Filing and the Deletion Wait for the Answers
 
-Status: ready-for-dev
+Status: review
 
 > ⭐ **RESUME HERE — Task 0 is DONE (2026-11-02); the build starts at Task 1.0.** What the dev needs: Tasks 1.0–1.5 and 2.1–2.3, AC4,
 > AC5, AC7, AC8, DL5, G12, TR1–TR4 and TR8–TR10. The PQ, TL, C and W sections, DL1–DL4 and DL6's governance rows are finished governance
@@ -617,7 +617,7 @@ The counsel question carries both in a further dated note (still ⛔ sent).
         the notes' *"carry their own go-live conditions"*; `epics.md` — the 6.22 blockquote's pointer and a Story 6.22b entry.
         ⚠ DL6's 6.21 CASCADE line (*"Closed by 6.22b DL5 …"*) is ⛔ written here — it names an edit that does not exist yet; Task 1.5
         writes it once the guard is built ([[feedback_closure_language_precision]]).
-- [ ] **Task 1 — The certificate guard (DL5; AC4, AC5)** — skip with a banner if DL5 C ([[project_story_automator_ops]]: an unchecked
+- [x] **Task 1 — The certificate guard (DL5; AC4, AC5)** — skip with a banner if DL5 C ([[project_story_automator_ops]]: an unchecked
       box means "correctly not done").
   - [x] 1.0 ⭐ **Re-sync before any code** — Task 0 ran on 2026-11-02 and `main` has moved since (270 commits at `90535934`).
         `ListAgents` + `git branch --show-current`; `git fetch origin`; `git rebase origin/main`. A trial merge at `90535934` conflicts
@@ -635,15 +635,22 @@ The counsel question carries both in a further dated note (still ⛔ sent).
         Per-file numstat of the branch against `origin/main` equals the pre-rebase branch against `b7b43c47`. Re-read: journal top
         `0212` (`when` `1797998520000`), ⛔ `0213`+ on any ref; AC7's grep 4 hits; the Task 0.1 diff from `b7b43c47` is G12's
         2026-11-21 line (traced at `90535934`).
-  - [ ] 1.1 Migration `<next free — 0213 at 90535934>_claim-documents-death-certificate-delete-guard.sql`, HAND-WRITTEN (⛔ `db:generate` — drizzle
+  - [x] 1.1 Migration `<next free — 0213 at 90535934>_claim-documents-death-certificate-delete-guard.sql`, HAND-WRITTEN (⛔ `db:generate` — drizzle
         snapshots stop at `0020`; a trigger is invisible to it): `CREATE FUNCTION claim_documents_reject_death_certificate_delete()` +
         `CREATE TRIGGER … BEFORE DELETE ON claim_documents FOR EACH ROW`. Header comment cites `-243` cl. 2 and G12. Journal entry with
         a `when` LATER than every sibling's (TR4).
-  - [ ] 1.2 `schema/claim_documents.ts` header + `schema/claim_death_certificate_uploads.ts` header: one line each naming the guard
+        ⭐ 2026-11-21 — DONE (`4a8c4d2e`): `0213_claim-documents-death-certificate-delete-guard.sql` (`0213` re-read free on every
+        ref and all five worktrees at the commit; `origin/main` `90535934` unmoved); trigger
+        `claim_documents_no_death_certificate_delete`; journal idx 213, `when` `1797998580000` (after `0212`'s
+        `1797998520000`, the latest on any ref). `db:check` and the schema-diff gate pass.
+  - [x] 1.2 `schema/claim_documents.ts` header + `schema/claim_death_certificate_uploads.ts` header: one line each naming the guard
         (the 0122 *"The ONLY rows that ever go are the `ON DELETE cascade` from `claims` OR `claim_documents`"* sentence is now half
         false — say so in the uploads header; ⛔ edit the applied migration file). Under DL0 A also re-point the two code comments
         DL6 names (`member/anonymize.ts`, `schema/claim_fraud_investigation_steps.ts`) from `6-22b` to `6-22e` — comment-only.
-  - [ ] 1.3 New live-DB spec `packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts` — AC4 (a)–(e),
+        ⭐ 2026-11-21 — DONE (`4a8c4d2e`): both schema headers name the guard (the uploads header says 0122's *"from `claims` OR
+        `claim_documents`"* is now false in its second half for a certificate); the two `6-22b` comments read `6-22e` *"(moved
+        from `6-22b` — 6.22b DL0)"*. Comment-only — no code line changed in any of the four files.
+  - [x] 1.3 New live-DB spec `packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts` — AC4 (a)–(e),
         seeded with the shared helpers `seedMember` / `seedClaim` / `seedDeathCertificate` (`packages/domain/tests/integration/_helpers.ts`
         — the composition `claim-death-certificate-policy-regression.spec.ts`'s file-local `seedClaimWithCertificate` uses; ⛔ export or
         copy that local). ⚠ `seedDeathCertificate` seeds the document + ONE upload but ⛔ review — add the review as the D8 spec's raw
@@ -652,18 +659,34 @@ The counsel question carries both in a further dated note (still ⛔ sent).
         document_type)`; NOT NULL with no default: `claim_document_id, claim_case_id, pariwar_id, document_type, storage_object_key,
         content_type, byte_size, parity_outcome, parity_flags, ocr_confidence, verifier_review_required`). The mutation checks run by
         hand and recorded in the Debug Log.
-  - [ ] 1.4 TR1: keep the D8 test's assertion (the determination's review link becomes NULL); fire its DELETE from a pg_temp trigger
+        ⭐ 2026-11-21 — DONE (`4a8c4d2e`): 7 tests — AC4 (a)–(e), plus a certificate row with NO upload refused the same way
+        (what DL5 A covers and DL5 B would not) and a catalog check that the table's one trigger is BEFORE DELETE, row-level
+        (TR3). The review is a raw insert in the D8 builder's shape; (c) seeds a membership check with `seedMembershipCheck`
+        and asserts one row in each of the five tables BEFORE the delete. `pgCode`'s and `expectPgError`'s shapes copied
+        file-local, ⛔ exported. Red first and both mutation checks: the Debug Log.
+  - [x] 1.4 TR1: keep the D8 test's assertion (the determination's review link becomes NULL); fire its DELETE from a pg_temp trigger
         (TR1's recipe) — ⛔ delete the claim instead (the determination cascades away with it), ⛔ `ALTER TABLE … DISABLE TRIGGER`.
-  - [ ] 1.5 Once 1.1–1.4 are green: append DL6's line under `deferred-work.md`'s 6.21 item *"A future `-240` cl.1 closure-time
+        ⭐ 2026-11-21 — DONE (`4a8c4d2e`): TR1's recipe as written (the temp table `ON COMMIT DROP`); the assertion is kept and
+        one is added before it — the certificate's row is gone — so the NULL is the cascade's doing. The spec: 19 / 19.
+  - [x] 1.5 Once 1.1–1.4 are green: append DL6's line under `deferred-work.md`'s 6.21 item *"A future `-240` cl.1 closure-time
         deletion of `claim_documents` rows would CASCADE"* — *"Closed by 6.22b DL5 — a guard refuses deleting a death certificate's
         row except with its claim."* (dated, naming the migration).
-- [ ] **Task 2 — Verification and close (AC5–AC8)**
-  - [ ] 2.1 `pnpm typecheck` (turbo), the domain integration suite, then `ci:local` on a FRESH container with `DATABASE_URL` set to it
+        ⭐ 2026-11-21 — DONE: the line appended under the 6.21 item, after the domain suite ran green (541 files, 8593 passed,
+        1 skipped) — DL6's words verbatim, then the migration and the spec named.
+- [x] **Task 2 — Verification and close (AC5–AC8)**
+  - [x] 2.1 `pnpm typecheck` (turbo), the domain integration suite, then `ci:local` on a FRESH container with `DATABASE_URL` set to it
         ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]] #18).
-  - [ ] 2.2 AC7's two commands, output recorded.
-  - [ ] 2.3 The ledger entry, keyed by the date it is WRITTEN (`<that day><next letter>` READ LIVE on every ref and worktree — ⛔
+        ⭐ 2026-11-21 — DONE: the domain suite 541 files, 8593 passed, 1 skipped (container `twt-622b-pg` :5452, first run on
+        it); `ci:local` **40 / 40** at `4a8c4d2e` on a FRESH container (`twt-622b-ci-pg` :5453, database `twt_dev`, PostgreSQL
+        16.14, 213 migrations) — typecheck is its second job. ⛔ Pushed; GitHub CI has ⛔ run on this commit.
+  - [x] 2.2 AC7's two commands, output recorded.
+        ⭐ 2026-11-21 — DONE at `4a8c4d2e` (the Debug Log holds the output): eight files, all on the allow-list; four baseline
+        hits; ⛔ added hit (the filter proved able to hit first). The commit after it changes records only.
+  - [x] 2.3 The ledger entry, keyed by the date it is WRITTEN (`<that day><next letter>` READ LIVE on every ref and worktree — ⛔
         `2026-11-02…`) — the safe prepend ([[project_sprint_status_safe_prepend]]); row
         `6-22b` → `review`; File List; Change Log.
+        ⭐ 2026-11-21 — DONE: ledger `2026-11-21y` (`x` was the newest letter on any ref or worktree when it was written), by
+        the safe prepend; 317 rows under plain `yaml.safe_load`; the row `review`.
 
 ## Dev Notes
 
@@ -787,15 +810,84 @@ key, an audit type, a port or a flag; or send anything to counsel or the Panel.
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5.2 (`claude-fable-5-2`) — `bmad-dev-story 6.22b`, 2026-11-21 (Tasks 1.1–1.5, 2.1–2.3). Task 0 and Task 1.0 were done in earlier sessions.
 
 ### Debug Log References
+
+- **Red first (2026-11-21).** With every migration applied to a throwaway container (`twt-622b-pg` :5452) and the trigger then
+  DROPPED there, the new spec ran 3 failed / 4 passed: the catalog test (`expected [] to deeply equal […]`), (a) and the
+  no-upload leg (`expected undefined to match object { code: '23000', … }` — the delete went through). (b)–(e) pass without
+  the guard, as they should: they are the grant and the controls. Trigger re-created ⇒ new spec 7 / 7, D8 spec 19 / 19.
+- **Mutation checks (by hand, `CREATE OR REPLACE FUNCTION` on the throwaway container; the migration file untouched).**
+  - *The depth exception dropped* ⇒ 3 failed / 23 passed across the two specs, each with the guard's own message: the new
+    spec's (c); the D8 spec's *"the `claims` ON DELETE cascade still removes both tables' rows"*; and D8 itself.
+  - *The document-type test dropped* ⇒ 1 failed / 25 passed: the new spec's (d).
+  - The migration's body restored ⇒ 26 / 26. That container was then removed; `ci:local` ran on a new one.
+- **AC7 (2026-11-21, at `4a8c4d2e`, after `git fetch origin`; `origin/main` `90535934`).**
+  - `git diff --name-only origin/main...HEAD -- packages apps scripts` ⇒ eight files:
+    `packages/domain/migrations/0213_claim-documents-death-certificate-delete-guard.sql`,
+    `packages/domain/migrations/meta/_journal.json`, `packages/domain/src/member/anonymize.ts`,
+    `packages/domain/src/schema/claim_death_certificate_uploads.ts`, `packages/domain/src/schema/claim_documents.ts`,
+    `packages/domain/src/schema/claim_fraud_investigation_steps.ts`,
+    `packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts`,
+    `packages/domain/tests/integration/rls/claim-death-certificate-policy-regression.spec.ts`.
+  - `git grep -niP "…" -- packages apps` ⇒ the FOUR baseline hits, unchanged: `custom-fields/frozen-governance.ts` (the
+    comment), `tests/custom-fields/frozen-governance.test.ts` (two fixtures), `tests/integration/custom-fields/
+    frozen-governance.spec.ts` (one).
+  - The added-lines filter: fed `+x pan_y` it printed that line (it can hit); over `git diff origin/main...HEAD -- packages
+    apps` (310 added lines) it printed NOTHING.
+- **Gates.** `tsc --noEmit` and eslint on `@twt/domain`; `db:check`, schema-diff, microcopy, domain-invariants; then
+  `ci:local` 40 / 40 at `4a8c4d2e` (log kept only in the session scratchpad — ⛔ in the repo).
 
 ### Completion Notes List
 
 - 2026-11-02 — Created by `bmad-create-story 6.22b`: ultimate context engine analysis completed — comprehensive developer guide created.
+- 2026-11-21 — `bmad-dev-story 6.22b`, the build (Tasks 1.1–1.5, 2.1–2.3), commit `4a8c4d2e`:
+  - **What is built.** One hand-authored migration, `0213`: a `BEFORE DELETE` row trigger on `claim_documents`. A direct
+    DELETE of a `death_certificate` row is refused for every role, superuser included, with SQLSTATE 23000 and the guard's
+    own message. Two things pass: any other document type, and a delete issued from inside another trigger (depth > 1 —
+    the cascade from `claims`). It is DELETE-only — the OCR job's upsert and every UPDATE are untouched. N3 now holds by
+    the database (`-243` cl. 2), ⛔ only by the absence of a code path.
+  - **The guard checks the document type BEFORE the depth** (the story's DL5 text names the two conditions without an
+    order). The result is the same either way; this order lets a non-certificate row return without calling
+    `pg_trigger_depth()`.
+  - **Two tests beyond AC4's letters, both inside its intent:** a certificate row with NO upload is refused the same way
+    (DL5 A's stated advantage over DL5 B), and a catalog check pins the table's ONE trigger as BEFORE DELETE, row-level
+    (TR3 — an UPDATE trigger would break the OCR job).
+  - **AC by AC.** AC4 — (a)–(e) green, both mutation checks fail the legs they should (Debug Log). AC5 — D8 still proves
+    SET NULL, its DELETE fired from a pg_temp trigger, ⛔ `ALTER TABLE`, the guard ⛔ weakened; `ci:local` 40 / 40 on a
+    fresh container. AC6 — unchanged by this session except the 6.21 CASCADE line (Task 1.5); 317 rows. AC7 — holds
+    (Debug Log). AC8 — ⛔ predicate here; the Policy-meaning note stands. AC1–AC3 were met at Task 0.
+  - **Not done here, by design:** nothing of the identifier set (N1); ⛔ decision entry (none was needed); ⛔ push, ⛔ PR —
+    GitHub CI has ⛔ run on `4a8c4d2e`.
+  - **One process note.** The auto-mode classifier refused `db:migrate` against the throwaway container until BigDev said
+    "continue"; nothing database-backed ran before that.
 
 ### File List
+
+*Task 1–2 (this session):*
+- `packages/domain/migrations/0213_claim-documents-death-certificate-delete-guard.sql` — NEW
+- `packages/domain/migrations/meta/_journal.json` — idx 213
+- `packages/domain/src/schema/claim_documents.ts` — header comment only
+- `packages/domain/src/schema/claim_death_certificate_uploads.ts` — header comment only
+- `packages/domain/src/member/anonymize.ts` — comment only (`6-22b` → `6-22e`)
+- `packages/domain/src/schema/claim_fraud_investigation_steps.ts` — comment only (`6-22b` → `6-22e`)
+- `packages/domain/tests/integration/claim/claim-documents-death-certificate-guard.spec.ts` — NEW
+- `packages/domain/tests/integration/rls/claim-death-certificate-policy-regression.spec.ts` — the D8 test
+- `_bmad-output/implementation-artifacts/deferred-work.md` — the 6.21 CASCADE item's closing line
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row → `review`; ledger `2026-11-21y`
+- `_bmad-output/implementation-artifacts/6-22b-fraud-register-identifier-set-and-filer-bans.md` — this file
+
+*Task 0 and the 2026-11-21 governance (earlier sessions; on this branch against `origin/main`):*
+- `.decision-log.md` — `-440`, `-477`, `-478`, `-479`, `-480`
+- `_bmad-output/planning-artifacts/counsel-question-2026-11-02-fraud-register-identifier-set.md` — NEW
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-02-6-22b-identifier-set.md` — NEW
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-fraud-register-follow-ups.md` — NEW
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-01-6-22-fraud-register-first-half.md` — ruling block
+- `_bmad-output/planning-artifacts/epics.md` — the 6.22b entry; the 6.22 pointer
+- `_bmad-output/implementation-artifacts/6-22-fraud-register-blacklist-instrument-and-identifier-set.md`
+- `docs/launch-gate-inventory/inventory-roster.md` — Row 47
+- `_bmad-output/implementation-artifacts/deferred-work.md`, `sprint-status.yaml` — rows `6-22e`, `6-22f`; dated lines
 
 ## Change Log
 
@@ -805,3 +897,4 @@ key, an audit type, a port or a flag; or send anything to counsel or the Panel.
 | 2026-11-02 | 1.1 | Validated by `bmad-create-story validate 6.22b` (fresh context; four read-only verifiers — governance + records; the DL5 guard substrate, with the trigger logic run on a scratch Postgres; filing + identity; the W-facts against their sources — each critical re-checked by hand at `0bc1d6ba`, `origin/main` still `b7b43c47`). BigDev: "all". AC7's grep moved to `-P` (`git grep -E` ignores `\b` here — TR10) and its allow-list completed; TR1's D8 fix is a pg_temp trigger, ⛔ DDL on a shared table (DL5's contradictory cost line fixed); AC4 asserts the guard's message, ⛔ a post-savepoint presence check; dropping Aadhaar is a narrowing of `-238` cl. 6 ⇒ new PQ5 (TL1 chooses nothing; TL1 / TL2 say a question is WRITTEN for counsel; send order in DL3); PQ1's ONE FACT re-based on adults (~3 in 4, an upper bound), PQ2's on a vendor claim (W8, new), PQ3's on G11's three final-denial cases; W1 corrected (the ITD page is not holder-only); E3 / DL2 (iv) namespaces corrected; template §E1 / §E4 disambiguated; DL6 gains Row 47 notes, the `epics.md` 6.22 blockquote, the stale *"No story file yet"* line and the two code comments (two, ⛔ three); G1 / G2 / G3 / G6 / G7 / G12 / G13 / G16 / TR3 / Niyamavali-row citations corrected; Tasks 0.4 / 0.6 commit order and ledger. Status unchanged. |
 | 2026-11-21 | 1.2 | Validated again by `bmad-create-story validate 6.22b` before the build resumes, re-traced at `origin/main` `90535934` (the branch 270 commits behind; Task 0 records unchanged — nothing sent, `-440` still this branch's, AC7's baseline still four hits). BigDev: "all". New Task 1.0 (rebase; the four conflicting records files; `-440` placed between `-441` and `-439`; migration `0213`); AC7 diffs `origin/main...HEAD` (⛔ `b7b43c47`) and requires no ADDED hit (perl, ⛔ `grep -P`); Task 2.3's ledger key is the day it is written; G12 + AC4 (c) gain 0212's membership-check cascade; AC4's `pgCode` / `expectPgError` are file-local — copied, ⛔ exported; AC5 40 jobs; G16 / TR4 dated re-reads; E3 dated line on row `13-1h`'s PAN index (also in row `6-22e`'s block); a RESUME HERE block. Status unchanged. |
 | 2026-11-21 | 1.3 | Validated again by `bmad-create-story validate 6.22b` after the Panel's three rulings and the sends (`-477`, `-478`, `-480`; `-479` mints `6-22f`; the counsel question SENT). BigDev: "all". N2 discharged (dated line; the resume block says all is SENT and RULED); AC1 / AC2 judged as WRITTEN at `26e8c9b3`; the Policy-meaning section lists the ruled edges and the gated build's new predicates (PQ1 A, F7 A, F8 A); AC6's gates (Panel all met; counsel remains) and row count +2; a line under AC8 that Tasks 1–2, DL5, AC4, AC5 and AC7 are unchanged (no ruling touches a `claim_documents` delete; `0213` free; `origin/main` unmoved); Task 0's parent box ticked. Status unchanged. |
+| 2026-11-21 | 1.4 | Built by `bmad-dev-story 6.22b` (Tasks 1.1–1.5, 2.1–2.3; commit `4a8c4d2e`): migration `0213` — a `BEFORE DELETE` guard on `claim_documents` that refuses deleting a death certificate's row except with its claim (DL5 A); the two schema headers; the two `6-22b` code comments re-pointed to `6-22e`; a new guard spec (7 tests) and the D8 test fired from a pg_temp trigger; `deferred-work.md`'s 6.21 CASCADE item closed. Domain suite 541 files / 8593 passed; `ci:local` 40 / 40 on a fresh container; AC7 holds. Status `ready-for-dev` → `review`. ⛔ Pushed. |

@@ -107,11 +107,17 @@ const ACCESS_SURFACE_ROOTS = [...CHANNEL_ROOTS, ...CLAIM_ROOTS];
 /**
  * Story 12.2 (`2026-11-01-433`; Task 7) — the Epic-12 module surface: the admin module routes (the first production caller
  * of the 12.1 primitive — every write pairs through `withCompensatingAudit`) and the domain primitive (which must NEVER
- * call it — I11 / QE22). Scanned by the COMPENSATING-AUDIT invariant ONLY: the surface holds ⛔ secret-verification context
- * (the lead hand-off signing key is a Secret Manager NAME, read by no code here), so the constant-time-compare invariant
- * would pass vacuously for the wrong reason. DIRECTORIES only (`collectTsFiles` → `readdirSync`; a file root throws
- * ENOTDIR). ⚠ The activation sweep (`apps/jobs/src/scheduler/module-activation.ts`) is ⛔ scanned — apps/jobs is outside
- * this gate; its audit pairing is pinned by its own test.
+ * call it — I11 / QE22). Scanned by the COMPENSATING-AUDIT invariant ONLY: the surface holds ⛔ secret-VERIFICATION context,
+ * so the constant-time-compare invariant would pass vacuously for the wrong reason. DIRECTORIES only (`collectTsFiles` →
+ * `readdirSync`; a file root throws ENOTDIR). ⚠ The activation sweep (`apps/jobs/src/scheduler/module-activation.ts`) is ⛔
+ * scanned — apps/jobs is outside this gate; its audit pairing is pinned by its own test.
+ * ⭐ DATED 2026-11-21 (Story 12.5, `2026-11-21-483` QE3 (A); Task 7) — this note used to say the lead hand-off signing key is "read
+ * by no code here"; that is no longer true. The SECRET VALUE is now read — by the lead-handoff sweep in `apps/jobs`, OUTSIDE these
+ * roots — and used to SIGN (`marketplace/lead-envelope.ts`, `createHmac`, inside them). TWT signs and never VERIFIES a partner's
+ * signature, so (f) still does not apply here, now for that reason. The new domain files (`lead-handoff.ts`, `lead-envelope.ts`,
+ * `lead-member-fields.ts`) are inside `packages/domain/src/marketplace` and already covered by (g): ⛔ of them calls the audit
+ * wrapper. The sweep's bare `module.lead_handoff_attempted` line and its decrypt wrapper live in `apps/jobs`, outside, BY DESIGN —
+ * pinned by `apps/jobs/tests/module-lead-handoff.test.ts`.
  */
 const MARKETPLACE_ROOTS = ['apps/api/src/modules/marketplace', 'packages/domain/src/marketplace'];
 

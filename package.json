@@ -75,6 +75,8 @@
     "governance-boundary:test": "vitest run scripts/governance-boundary",
     "custom-field:check": "tsx scripts/custom-field-governance/check.ts",
     "custom-field:test": "vitest run scripts/custom-field-governance",
+    "partner-boundary:check": "tsx scripts/partner-boundary-invariant/check.ts",
+    "partner-boundary:test": "vitest run scripts/partner-boundary-invariant",
     "seed:tc": "tsx scripts/seed-placeholder-tc.ts",
     "provision:admin": "tsx scripts/provision-admin.ts",
     "ci:local": "bash scripts/ci-local.sh"

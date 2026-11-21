@@ -95,6 +95,9 @@ run "custom-field-governance" "pnpm custom-field:test && pnpm custom-field:check
 # reintroduced `quorum` (or a deleted/renamed SCAN_PATHS entry) got a green run regardless. That is
 # exactly the "by eye" enforcement Task 11 explicitly rejected.
 run "survey-advisory-invariant" "pnpm survey-advisory:test && pnpm survey-advisory:check"
+# Story 12.5 (QE15; AC10) — partners are downstream consumers: the advisory reference stays in four files, the transport reads only
+# the allow-listed member / consent / claim reads, the response body is never parsed, production passes no test seam.
+run "partner-boundary-invariant" "pnpm partner-boundary:test && pnpm partner-boundary:check"
 run "determinism-replay"    "pnpm --filter @twt/validity-service test:determinism"
 run "channels-determinism"  "pnpm --filter @twt/channels test:determinism"
 

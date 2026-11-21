@@ -829,6 +829,31 @@ jobs:
       - run: pnpm survey-advisory:test
       - run: pnpm survey-advisory:check
 
+  partner-boundary-invariant:
+    name: partner-boundary-invariant (partners are downstream consumers, never a source of member truth)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: install
+    # Story 12.5 (Decision 2026-11-21-483 QE15; AC10; ADR-0046). Epic 12.5's boundary AC: partner integrations consume explicitly
+    # consented lead-handoff events only and must NOT become authoritative sources of member lifecycle, validity, contribution or
+    # claim-state truth. Static rules (b)-(e): the advisory `partner_reference` stays in its four files; the transport uses only the
+    # allow-listed member / consent / claim READS; the partner's response body is never parsed; production passes no test seam.
+    # Rule (a) (no inbound partner route) is the live route-registry spec in apps/api's integration tests. No DB / network.
+    # ⚠ It proves the ABSENCE of the patterns it names, NOT that no future path could launder partner data — see the README.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm partner-boundary:test
+      - run: pnpm partner-boundary:check
+
   pool-support-category-invariant:
     name: pool-support-category-invariant (pool engine has no death branches)
     runs-on: ubuntu-latest

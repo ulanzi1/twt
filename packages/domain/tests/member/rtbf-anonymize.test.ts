@@ -37,6 +37,7 @@ import {
   nomineeCorrections,
   claimDeathCertificateReviews,
   claimFraudInvestigationSteps,
+  claimMembershipChecks,
   claimWarningApprovals,
   claimGroundInspections,
   claimPeerMeshReplyAnswers,
@@ -253,8 +254,11 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // ⭐ MOVED AGAIN by Story 6.22 (DL15): TWENTY-NINE tables, THIRTY-TWO statements. `claim_fraud_investigation_steps` — the
     // flag and finding notes about the reported member (Tier-1) — ONE statement keyed on `deceased_member_id`, run whatever
     // the member's claims (⛔ inside the has-claims block — the 6.21a reviews' shape).
+    // ⭐ MOVED AGAIN by Story 6.39 (DL14): THIRTY tables, THIRTY-THREE statements. `claim_membership_checks` — the District
+    // Admin's note on the membership check (Tier-1, OPTIONAL — scrubbed only where present) — ONE statement keyed on
+    // `deceased_member_id`, run whatever the member's claims (⛔ inside the has-claims block — the 6.21a reviews' shape).
     const { captured } = await run();
-    expect(captured).toHaveLength(32);
+    expect(captured).toHaveLength(33);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -275,6 +279,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       nomineeCorrections,
       claimDeathCertificateReviews,
       claimFraudInvestigationSteps, // Story 6.22 (DL15)
+      claimMembershipChecks, // Story 6.39 (DL14)
       claimWarningApprovals,
       claimGroundInspections,
       claimPeerMeshReplyAnswers,
@@ -298,7 +303,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(29); // Story 6.22 (DL15) — 28 → 29: `claim_fraud_investigation_steps`; Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(30); // Story 6.39 (DL14) — 29 → 30: `claim_membership_checks`; Story 6.22 (DL15) — 28 → 29: `claim_fraud_investigation_steps`; Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -326,13 +331,23 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     for (const id of claimIds) expect(params).toContain(id);
   });
 
+  it('⭐ Story 6.39 (DL14): the membership check\'s note → sentinel in ONE statement — ONLY the note, and only the member\'s rows', async () => {
+    const { captured } = await run();
+    const found = captured.filter((c) => c.table === claimMembershipChecks);
+    expect(found).toHaveLength(1);
+    // ⛔ Nothing but the note is written: the outcomes, the review and receipt named, the attribution and the
+    // supersession stamp are governance history (and the column grant covers ⛔ anything else but the stamp).
+    expect(Object.keys(found[0]!.set)).toEqual(['noteCiphertext']);
+    expect(typeof found[0]!.set.noteCiphertext).toBe('string');
+  });
+
   it('⭐ Story 6.26a (GI13): a member with ⛔ no claims writes ⛔ no inspection statement', async () => {
     const { captured } = await run([]);
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionAnswers); // Story 6.32 — ⛔ claims, ⛔ family answers
-    expect(captured).toHaveLength(28); // Story 6.22 — 27 → 28: the investigation steps (⛔ claim-scoped — keyed on the member); Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+    expect(captured).toHaveLength(29); // Story 6.39 — 28 → 29: the membership check's note (⛔ claim-scoped — keyed on the member); Story 6.22 — 27 → 28: the investigation steps (⛔ claim-scoped — keyed on the member); Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
   it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {

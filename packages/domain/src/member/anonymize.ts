@@ -53,6 +53,7 @@ import { nomineeCorrections } from '../schema/nominee_corrections.js';
 import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { claimFraudInvestigationSteps } from '../schema/claim_fraud_investigation_steps.js';
+import { claimMembershipChecks } from '../schema/claim_membership_checks.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
 import { claimGroundInspectionDiscrepancyNotes } from '../schema/claim_ground_inspection_discrepancies.js';
@@ -64,7 +65,11 @@ import { workplaceRequests } from '../schema/workplace_requests.js';
 import { memorialReviewDecisions } from '../schema/memorial_review_decisions.js';
 import { memorialSubmissions } from '../schema/memorial_submissions.js';
 import { memorialWithdrawals } from '../schema/memorial_withdrawals.js';
-import { CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS, MEMORIAL_FIELD_CLASS } from '../encryption/field-classes.js';
+import {
+  CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS,
+  CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS,
+  MEMORIAL_FIELD_CLASS,
+} from '../encryption/field-classes.js';
 import { eraseKnownPeopleLinks } from './known-people.js';
 // Story 6.36e — the nominee marks' erasure arm, imported DIRECTLY (⛔ the `nominee/` barrel — `member/` ↔ `nominee/` init order).
 import { eraseNomineeLinks } from '../nominee/member-links.js';
@@ -336,6 +341,19 @@ export async function anonymizeMember(
     .update(claimFraudInvestigationSteps)
     .set({ noteCiphertext: fraudSentinel })
     .where(eq(claimFraudInvestigationSteps.deceasedMemberId, memberId));
+
+  // ── ⭐ Story 6.39 (DL14) — the staff MEMBERSHIP CHECK's note, keyed on the DECEASED member (the 6.21a pattern): the
+  // District Admin's note on the check recorded before any drive → sentinel. ⚠ The note is OPTIONAL (required only for
+  // an identity that was ⛔ confirmed), so it is replaced only WHERE PRESENT (the `isNotNull` row filter — the 6.23a
+  // shape): a sentinel on a note-less check would invent a note nobody wrote. The check itself — the fee outcome, the
+  // identity outcome and reason, the review and receipt it names, the attribution and the supersession — is governance
+  // history, kept. The column-level UPDATE grant + the per-command UPDATE policy exist for exactly this (0212, at birth;
+  // the guard trigger leaves `note_ciphertext` out of its frozen list). Reachable for real: an INNOCENCE finding lifts
+  // the erasure refusal (6.22's release), so a check recorded before the flag is scrubbed here.
+  await client
+    .update(claimMembershipChecks)
+    .set({ noteCiphertext: await encSentinel(pariwarId, CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS, enc) })
+    .where(and(eq(claimMembershipChecks.deceasedMemberId, memberId), isNotNull(claimMembershipChecks.noteCiphertext)));
 
   // ── ⭐ Story 6.23a (NW13, Trap 14) — the APPROVAL-OVER-WARNING record, keyed on the DECEASED member (the
   // `nominee_determinations` shape — ⛔ never a subquery inside this UPDATE): a late-warning reason's Tier-1 note →

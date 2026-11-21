@@ -4,8 +4,9 @@
 // the Trust, had been removed, or had been erased is refused when it is filed: the helpline tells the caller the claim
 // cannot be filed; ⛔ claim record is kept."* `2026-10-31-424` Q1 (b) B: someone who never paid the joining fee is refused
 // the same way. ⛔ Touched (`-423` Q3): *"members in their first days after joining, behind on contributions, or
-// suspended"* — and (`-424` Q1 (a) C) a typed-in identity nobody checked is FILED, in any state (its check before a drive is
-// row `6-39-…`).
+// suspended"* — and (`-424` Q1 (a) C) a typed-in identity nobody checked is FILED, in any state: its check before a drive is
+// the staff MEMBERSHIP CHECK (Story 6.39 — `membership-check-approval.ts`, the conjunct `assertClaimApprovable` runs at every
+// approval site), which also compares the joining fee's date with the date of death (`-430` Q1 B). ⛔ This door is unchanged.
 //
 // ⭐ EXACTLY FIVE REFUSALS, checked in this order (N6): `anonymized` ⇒ `erased`; terminated (the moderation OVERLAY) ⇒
 // `removed`; `withdrawn` ⇒ `left`; `pending-kyc` ⇒ `not_joined`; `pending-fee` ⇒ `not_paid`. Every other lifecycle state

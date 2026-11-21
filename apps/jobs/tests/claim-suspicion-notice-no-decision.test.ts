@@ -62,6 +62,8 @@ const FORBIDDEN = [
   'recordMemberInnocenceFinding',
   'recordMemberGuiltFinding',
   'closeClaimOnFraudFinding',
+  // ⭐ Story 6.39 — the membership check's writer.
+  'recordMembershipCheck',
   'projectClaimState',
   'appendEvent',
   // ⭐ 6.24a — the closure, the appeal writers and the reversal key (the notices READ RF1 and the closing event, ⛔ more).
@@ -92,6 +94,8 @@ const DECISION_TABLE_NAMES = [
   // ⭐ Story 6.22 — the fraud investigation's flag and finding steps, and the member finding that carries the release.
   'claim_fraud_investigation_steps',
   'claim_nominee_findings',
+  // ⭐ Story 6.39 — the staff membership check before any drive: a STAFF act (`-424` Q1 (a) C) — ⛔ a job ever records one.
+  'claim_membership_checks',
   'cycle_freeze_commits',
   'nominee_determinations',
   'nominee_determination_items',
@@ -146,6 +150,9 @@ describe('⛔ invariant 7 — the suspicion notices call ⛔ decision writer and
       ['closeClaimOnFraudFinding', 'await closeClaimOnFraudFinding(client, input);'],
       ['insert', 'await client.query(`INSERT INTO claim_nominee_findings (finding_id) VALUES ($1)`, [id]);'],
       ['update', 'await client.query(`UPDATE claim_fraud_investigation_steps SET note_ciphertext = $1`, [x]);'],
+      // ⭐ Story 6.39 — the membership check: its writer by NAME, and its table by WRITE form.
+      ['recordMembershipCheck', 'await claim.recordMembershipCheck(client, input);'],
+      ['insert', 'await client.query(`INSERT INTO claim_membership_checks (claim_case_id) VALUES ($1)`, [id]);'],
       ['drizzle', 'await db.insert(claimNomineeFindings).values(row);'],
       ['drizzle', 'await db.insert(s.claimVerifierDecisions).values(row);'],
       ['drizzle', 'await tx.update(claims).set({ currentState: "closed" });'],

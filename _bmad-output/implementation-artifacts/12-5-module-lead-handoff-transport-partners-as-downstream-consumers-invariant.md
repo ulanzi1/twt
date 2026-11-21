@@ -69,7 +69,7 @@ COMMIT, on any branch.
 
 # Story 12.5: Module Lead-Handoff Transport + Partners-as-Downstream-Consumers Invariant `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1299,43 +1299,43 @@ until those land ([[feedback_closure_language_precision]]).
           whether a take-up commission is a sale, whether keeping the fact of interest is lawful, the notice wording
           of its question 10, and the second route's question 11). It stays WRITTEN until BigDev sends it.
         - The correct-course for the second route (K-12) is NOT 12.5's to run; it is recorded as owed, before 12.3.
-- [ ] **Task 1 — migrations (AC1).**
-  - [ ] 1.1 `NNNN_consent-type-module-lead-handoff.sql` — the single `ALTER TYPE "consent_type" ADD VALUE IF NOT EXISTS
+- [x] **Task 1 — migrations (AC1).**
+  - [x] 1.1 `NNNN_consent-type-module-lead-handoff.sql` — the single `ALTER TYPE "consent_type" ADD VALUE IF NOT EXISTS
         'module_lead_handoff';`, alone. The journal entry is hand-added. Then add the pgEnum value at the END of the
         `consent_records.ts` list (never reorder) with its comment and the dated header line (QE2), plus
         `ConsentTypeSchema` and the 14-value pin in `packages/contracts/tests/consent.test.ts`.
-  - [ ] 1.2 `NNNN+1_marketplace-lead-handoffs.sql` — the table, CHECKs, FKs, indexes, grants, FORCE RLS + policies, and
+  - [x] 1.2 `NNNN+1_marketplace-lead-handoffs.sql` — the table, CHECKs, FKs, indexes, grants, FORCE RLS + policies, and
         the guard function + trigger (QE4, the W table), hand-authored (G16). It must not use the new enum literal
         anywhere (TR1). The Drizzle schema + RLS file are exported through the schema / policies barrels; the field
         class goes in `encryption/field-classes.ts` AND `encryption/index.ts`'s export list.
-- [ ] **Task 2 — pure modules (AC2 seal half, AC3, AC4 unit half).** `lead-member-fields.ts` (the QE5 schema + the
+- [x] **Task 2 — pure modules (AC2 seal half, AC3, AC4 unit half).** `lead-member-fields.ts` (the QE5 schema + the
       sealed shape), then `lead-envelope.ts` (body, signature, attribution — QE3 / QE12), then the address table + the
       port rule (in `partner-lead-client.ts`'s pure half). Frozen vectors.
-- [ ] **Task 3 — domain commands (AC1 W legs, AC2, AC5–AC7 state half).** `consent/read.ts`: the ONE new read
+- [x] **Task 3 — domain commands (AC1 W legs, AC2, AC5–AC7 state half).** `consent/read.ts`: the ONE new read
       `listConsentsForArtifact` (P1). `lead-handoff.ts`: `sealLeadMemberFields`;
       `recordLeadHandoff`; `claimDueLeadHandoff` (S3); `readLeadHandoffPredicates` (P0–P5 in order);
       `settleLeadHandoffDelivered` / `releaseLeadHandoff` / `holdLeadHandoff` / `failLeadHandoff` / `cancelLeadHandoff`
       (all CAS) / `lapseLeadHandoffs` / `purgeLeadHandoffFields` / `requeueLeadHandoff`; reads
       `getLeadHandoffStatus` (QE6) and `listFailedLeadHandoffs` (admin shape, capped, `clampLimit` inline — 12.1 TR5).
       The errors go in `marketplace/errors.ts`. No function here calls the audit wrapper (G13).
-- [ ] **Task 4 — the egress client (AC4).** `partner-lead-client.ts` per QE8, with the ONE `testSeam` option. Commit
+- [x] **Task 4 — the egress client (AC4).** `partner-lead-client.ts` per QE8, with the ONE `testSeam` option. Commit
       the fixture CA and leaf under `apps/jobs/tests/fixtures/partner-lead/` (the `apps/api/tests/fixtures/kyc/` shape),
       with a note on how they were made.
-- [ ] **Task 5 — the sweep (AC5–AC8, AC9's purge half, AC11).** `module-lead-handoff.ts` in S1–S10's order. Register it in `boot.ts`, add
+- [x] **Task 5 — the sweep (AC5–AC8, AC9's purge half, AC11).** `module-lead-handoff.ts` in S1–S10's order. Register it in `boot.ts`, add
       `QUEUE_NAMES.MODULE_LEAD_HANDOFF`, give it its own pool, wire the secret resolver (QE9).
-- [ ] **Task 6 — erasure (AC9).** One step in `member/anonymize.ts` (QE16), with a comment in the file's own shape, and
+- [x] **Task 6 — erasure (AC9).** One step in `member/anonymize.ts` (QE16), with a comment in the file's own shape, and
       the three pinned counts in `rtbf-anonymize.test.ts`.
-- [ ] **Task 7 — the boundary fence (AC10, AC13).** `scripts/partner-boundary-invariant/` + the wiring + a README;
+- [x] **Task 7 — the boundary fence (AC10, AC13).** `scripts/partner-boundary-invariant/` + the wiring + a README;
       `apps/api/tests/integration/partner-boundary.spec.ts`. Then the access-wrapper gate: correct the stale comment in
       `scripts/access-wrapper-invariants/check.ts` and add this story's scope note to
       `docs/access-wrapper-invariants.md` — the marketplace roots already cover the new domain files; the bare audit
       line is in `apps/jobs`, outside them, by design; the constant-time leg does not apply because TWT signs and
       never compares.
-- [ ] **Task 8 — ADR (AC13)** + the `adr-index.md` row.
-- [ ] **Task 9 — tests, `ci:local`, closure (AC1–AC13).**
-  - [ ] 9.1 Per Testing standards.
-  - [ ] 9.2 `ci:local` on a fresh container; the Completion Notes greps (I1, I6, I7).
-  - [ ] 9.3 Now, with the code committed, write the "Closed by `<sha>`" lines on the items this story's code closes
+- [x] **Task 8 — ADR (AC13)** + the `adr-index.md` row.
+- [x] **Task 9 — tests, `ci:local`, closure (AC1–AC13).**
+  - [x] 9.1 Per Testing standards.
+  - [x] 9.2 `ci:local` on a fresh container; the Completion Notes greps (I1, I6, I7).
+  - [x] 9.3 Now, with the code committed, write the "Closed by `<sha>`" lines on the items this story's code closes
         (12.1's C7; C8 (c); 12.2's resolution-at-send item), and "Resolved via explicit deferral" with a re-trigger on
         the rest.
 
@@ -1548,8 +1548,78 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5` on the story worktree
 
 - Ultimate context engine analysis completed - comprehensive developer guide created (`bmad-create-story 12.5`,
   2026-11-21).
+- **Built (`bmad-dev-story 12.5`, 2026-11-21), Tasks 1–9, on the story branch; ⛔ landed.** Commits: `2b2d1b83` (Task 0.1 record),
+  `c16bcf75` (Tasks 1–3), `979d8035` (Task 4), `79723a77` (Task 5), `dbe6737e` (Task 6), `b8e17904` (Task 7), `8269daaf` (Task 8), then
+  the records commit (9.3). Every decision is `-483`'s as answered; ⛔ new decision was taken.
+- **Migrations `0214` + `0215`** (`when` `1797998640000` / `1797998700000`, above 0213's). `0214` is the `ADD VALUE` alone; `0215` never
+  names the literal (TR1) — a fresh DB applies the whole chain in one transaction (verified twice by recreating the container).
+- ⚠ **A CHECK bug found and fixed before commit, recorded:** the status↔detail CHECK as first written admitted a FINAL row with NO detail —
+  `NULL LIKE …` is NULL and a CHECK that evaluates to NULL passes. Each final branch now says `IS NOT NULL` (SQL and the Drizzle twin);
+  a schema-spec leg pins it.
+- ⚠ **Node `net.BlockList` trap, recorded:** one list holding both families blocks EVERY IPv4 address — `check(v4, 'ipv4')` also tests
+  the v4 address against IPv6 rules through its mapped form, and `::/3` covers `::ffff:0:0/96`. `NON_PUBLIC_ADDRESSES` is therefore ONE
+  exported constant holding a list PER FAMILY (QE8's "one exported constant" kept). A unit leg pins why.
+- **Dev picks the story left open, recorded:** (i) QE5's `storableText` is EXPORTED from `marketplace/filters.ts` (the one copy, ⛔ a
+  lockstep twin). (ii) The name and district are kept byte for byte (⛔ trimmed) but refused when blank. (iii) A KMS `key_rejected` on
+  the decrypt is `fields_unreadable` (W8) AND ends the tick — the 13.1b CB44 rule (a wrong key reference rejects every row). (iv) A
+  module row that reads back as NULL at S4 (the composite FK makes that a broken read) is a NON-global `held:db_unavailable`; a THROW at
+  S4 is global and ends the tick, as QE13 says. (v) An HTTP status outside 200–599 is `released:network`. (vi) An empty-string secret is
+  treated as NOT_FOUND. (vii) `recordLeadHandoff` also refuses a sealed string that does not parse as an envelope
+  (`LeadHandoffFieldsInvalidError(['sealedFields'])`) — it still cannot READ it. (viii) A consent with no `consent_artifact_ref` is
+  `wrong_artifact`.
+- **AC2's consent-id leg** cannot be reached through `recordLeadHandoff` (the artifact rule refuses first), so the 23505 mapping is proved
+  with a raw-seeded row already naming the consent — stated in the spec.
+- **AC6 "a stale worker"** is proved by a client double that lapses and re-claims the row DURING the request (the real domain commands);
+  **AC7 audit / predicate faults** by a pool proxy that throws on the chosen statement only. Time moves ONLY through the sweep's options
+  (zero schedules / holds, `tickBudgetMs: 0`, `leaseMs: 0`, `maxHoldMs: 0`, `retentionDays: 0`); ⛔ fake timers, ⛔ a frozen column
+  edited.
+- **Fixtures:** a test CA (its key DELETED after signing) and leaves for `partner.test` / `other.test`, valid to 2126 (⛔ a date bomb);
+  the sweep's live test serves both names from one server by SNI.
+- **Counts:** domain — schema spec 62, commands spec 41, erasure spec 4, unit 34 (+1 anonymize leg; the pinned counts 33 / 29 / 30 → 34 /
+  30 / 31); jobs — address policy 103, client 10, sweep 48 (4 unit + 44 live); fence 12 + the api route spec 2; contracts consent 15
+  (14 values). Regressions: every anonymize live spec + the marketplace / consent / member suites — 66 files, 1189 tests.
+- **`ci:local` PASSED — 41 job(s) green** on a FRESH container (`twt-12-5-pg`, :5455, DB `twt_dev`) at `8269daaf` (the new
+  `partner-boundary-invariant` job is the 41st; `ci.yml` has 41 jobs).
+- **I1 grep:** `git grep -nE "\b(sealLeadMemberFields|recordLeadHandoff|requeueLeadHandoff)\(" -- 'apps/*/src' 'packages/*/src'`
+  minus the three definitions ⇒ **0 hits** — every caller is a test. The sweep IS registered in `boot.ts` (QE17) and claims nothing while
+  no row exists.
+- **I6:** `git diff --stat e5e13f92 HEAD -- packages/domain/src/member/overlay.ts packages/domain/src/claim/death-report.ts` ⇒ empty.
+  **I7:** ⛔ diff in `rbac/permissions.ts` (`PERMISSION_CATALOG_VERSION` still **65**), `packages/events/src/registry.ts`,
+  `marketplace/{events,commands,project,state}.ts`, `secrets.ts` ⇒ 0 lines; ⛔ new event type.
+- **9.3 records:** "Closed by" lines on 12.1's C7 (`c16bcf75` + `979d8035` + `79723a77`), C8 (c) (`c16bcf75` + `dbe6737e`) and 12.2's
+  "Secret Manager existence / resolution at send" (`79723a77`) — each marked "⛔ landed yet". Every other routed item already carries its
+  "Resolved via explicit deferral" or "RULED" line from Task 0.4 / 0.7, and the K items their triggers — ⛔ re-written.
+- **Still OPEN, ⛔ 12.5's to close:** roster Row 54 (b)–(k) (go-live, ⛔ merge); the counsel question (WRITTEN, ⛔ sent); the Epic 12
+  correct-course for K-12 (being run by a separate session on `correct-course/12-5-k12-partner-form-route`, cut from `8269daaf`, which takes
+  decision ≥ `-485` and ledger ≥ `ap`); ADR-0046 ratification (⛔ claimed).
 
 ### File List
+
+- `packages/domain/migrations/0214_consent-type-module-lead-handoff.sql` (new)
+- `packages/domain/migrations/0215_marketplace-lead-handoffs.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/marketplace_lead_handoffs.ts` (new) · `schema/index.ts` · `schema/consent_records.ts`
+- `packages/domain/src/policies/marketplace-lead-handoffs-rls.ts` (new) · `policies/index.ts`
+- `packages/domain/src/encryption/field-classes.ts` · `encryption/index.ts`
+- `packages/domain/src/consent/read.ts`
+- `packages/domain/src/marketplace/lead-member-fields.ts` (new) · `lead-envelope.ts` (new) · `lead-handoff.ts` (new) · `errors.ts` ·
+  `filters.ts` · `index.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/tests/marketplace/lead-member-fields.test.ts` (new) · `lead-envelope.test.ts` (new)
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/integration/marketplace/_lead-handoff-fixtures.ts` (new) · `lead-handoff-schema.spec.ts` (new) ·
+  `lead-handoff-commands.spec.ts` (new) · `lead-handoff-erasure.spec.ts` (new)
+- `packages/contracts/src/consent/consent-record.ts` · `packages/contracts/tests/consent.test.ts`
+- `packages/queue/src/index.ts`
+- `apps/jobs/src/scheduler/partner-lead-client.ts` (new) · `module-lead-handoff.ts` (new) · `apps/jobs/src/boot.ts`
+- `apps/jobs/tests/partner-lead-address-policy.test.ts` (new) · `partner-lead-client.test.ts` (new) · `module-lead-handoff.test.ts` (new)
+- `apps/jobs/tests/fixtures/partner-lead/{README.md,ca-cert.pem,partner-cert.pem,partner-key.pem,other-cert.pem,other-key.pem}` (new)
+- `apps/api/tests/integration/partner-boundary.spec.ts` (new)
+- `scripts/partner-boundary-invariant/{lib.ts,check.ts,lib.test.ts,README.md}` (new)
+- `scripts/access-wrapper-invariants/check.ts` (a comment) · `docs/access-wrapper-invariants.md`
+- `package.json` · `scripts/ci-local.sh` · `.github/workflows/ci.yml`
+- `docs/adr/ADR-0046-partner-lead-handoff-transport.md` (new) · `docs/knowledge-transfer/adr-index.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md` · `sprint-status.yaml` · this story file
 
 ### Change Log
 
@@ -1564,3 +1634,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5` on the story worktree
 | 2026-11-21 | v1.6 | On BigDev's direction, before the note is sent: the Panel note's Q1 revised (option A's cost corrected — the Trust answers for the sharing itself and its choice of partner, not for what the partner does afterwards; option B is now the partner's own form opened from the app; option C "both" added) and the counsel question extended (10: how far the Trust's responsibility runs and what the notice may say; 11: the second route and its tracking). K-12 added: the second route and its drop-off tracking are recorded, NOT decided and NOT part of this story. No decision, AC or task of this story changed. ⚠ If that route is chosen, a correct-course comes before Task 1. |
 | 2026-11-21 | v1.7 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), after `git fetch origin` (`origin/main` = `e5e13f92`; no code moved since the rebase; pin an ancestor). The Panel ruled the note: Decision `2026-11-21-484` (Q1 C, Q2 A … Q7 A) — absorbed throughout: header, Names, Policy meaning (ratified acts; the sentences scoped to the sending route, with `-484`'s own sentence quoted; Q6 A beside "cannot be called back"; Q2 A on the no-sale line), the rulings table (seven rows + the Told list, verbatim), §0 edges 1 / 8 / 11 / 12, QE5, QE16, QE24 (the requeue's 30 days restated), QE26, AC0, Task 0.5, PQ6, Task 0.6 ((a) MET), K-1 (Q3 A's form), K-8. NO build decision changed: every built answer the note asked about was ratified as put. K-12's trigger is MET, and BigDev chose "Build 12.5 now": its "before this story's Task 1" is superseded for C, and the five things the correct-course owes are listed (incl. `recordLeadHandoff` refusing a partner's-own-form module). New: Task 0.7 (the records `-484` makes owed, before Task 1) and K-13 (Q6 A's staff duty, not built). NUMBERS: decision ≥ `-485`, ledger ≥ `am`, others' roster ≥ `Row 55`; a fifth sibling worktree (`3-15-…`) noted. The unused Task 0.3 rewrite map is collapsed to a pointer to `97bc9c26`. |
 | 2026-11-21 | v1.8 | Task 0.7 done (BigDev: "yes, commit and write the Task 0.7 records"): `deferred-work.md` (dated lines on 12.1's C6 / C8, 12.2's field-list item, 12.5's K-1 / K-4 / K-8 / K-12; new K-13), `epics.md` (a dated line under 12.3's inherited note), the counsel question revised to `-484` (still not sent). Task 0 is complete except 0.1. No decision, AC or build task changed. |
+| 2026-11-21 | v1.9 | `bmad-dev-story 12.5`: Task 0.1 re-check (nothing moved; 0214 / 0215 / ADR-0046 taken) and Tasks 1–9 BUILT on the story branch — migrations 0214 + 0215, the domain seam / W writes / P0–P5 / reads, the egress client, the sweep (registered in `boot.ts`), the W11 erasure step, the partner-boundary fence (41st CI job) and the api route spec, ADR-0046 + its index row. `ci:local` 41/41 on a fresh container. 9.3's three "Closed by" lines written. Status → `review`. ⛔ decision or AC changed. |

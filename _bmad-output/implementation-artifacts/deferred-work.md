@@ -455,6 +455,7 @@ Four items the round-2 review (baseline `b7b43c47`, HEAD `99010844`) found real 
   finding on that claim) — asked inside Q1. The 6.38 helpdesk sentence (*"only a finding that the member is alive lifts it"*) changes
   with the ruling. Carries `-147` cl. 3's re-examination (`-438`). ⚠ GO-LIVE condition for the guilty arm. Trigger: Q1's ruling.
   - *Appended 2026-11-21 (Trustee-ratified `2026-11-21-477`, DR + KB):* Q1 **B** — lift on innocence only, as built; `-438`'s declared narrowing ratified (`-423` Q1 (b) A / `-424` Q2 (a) A superseded for a guilty finding only). Not addressed: the 6.38 helpdesk sentence (*"only a finding that the member is alive lifts it"* — a guilty finding is also one, and lifts nothing), the `-147` cl. 3 re-read, and whether a guilty finding may be appealed (asked, ⛔ answered). Owner BigDev. Trigger: Row 47 (a).
+  - *Appended 2026-11-21 (`2026-11-21-479`, author-commit):* the helpdesk sentence and the `-147` re-read are row `6-22f`'s; the appeal question is the follow-up note's F4.
 - **Q2 (PQ2) — the nominee of a guilty member: banned automatically or only on a finding of their own** — built neither; suggested B.
   Lands in row `6-22b`. Trigger: Q2's ruling.
   - *Appended 2026-11-02 (Story 6.22b Task 0.6; `2026-11-02-440` item 1):* Resolved via explicit deferral to `6-22e` (DL0); the question is the 6.22 note's Q2, ⛔ re-asked.
@@ -462,13 +463,16 @@ Four items the round-2 review (baseline `b7b43c47`, HEAD `99010844`) found real 
 - **Q3–Q6 (PQ3–PQ6) — may a mobile number bar; what a barred joiner is told; who is "the State Trustee" who imposes; does "Trust-wide"
   end other memberships** — built nothing; suggested C, B, A, A. ⚠ They gate row `6-22d`'s BUILD. Trigger: their rulings.
   - *Appended 2026-11-21 (Trustee-ratified `2026-11-21-477`, DR + KB):* Q3 **C**, widened — *"but flag the mobile number so that membership approver would know"*; Q4 **B** (the words as put); Q5 **A** (a Trustee Panel member imposes); Q6 **A** (every membership ends). Q4–Q6 are row `6-22d`'s build. Not addressed: who the "membership approver" is (⛔ staff role approves a membership today), what the flag shows and where it is built; whether the other Pariwars' members are told (Q6) — follow-ups. Trigger: their answers.
+  - *Appended 2026-11-21 (`2026-11-21-479`, author-commit):* the mobile flag is row `6-22d`'s, gated on the follow-up note's F3; Q6's telling is F5.
 - **Q7 (PQ7) — an open fraud flag gates nothing; a flagged claim can be approved and paid before a finding** [`assertClaimApprovable`
   has ⛔ flag check] — built C, suggested B (the `-263` FQ10 warning shape). ⚠ GO-LIVE condition for the flag. Trigger: Q7's ruling.
   - *Appended 2026-11-21 (Trustee-ratified `2026-11-21-477`, DR + KB):* Q7 **A** — a flagged claim waits at both approvals until a finding (⛔ our suggestion). Not addressed: the build (owner BigDev — the row), and a flag on a death that really happened, which the accepted cost says *"waits for ever"* unless a *"flag closed: the death is real"* step is ruled not a third outcome — a follow-up question for the Panel, owed BEFORE the build. Trigger: that ruling.
+  - *Appended 2026-11-21 (`2026-11-21-479`, author-commit):* the build is row `6-22f`'s, gated on the follow-up note's F1 (`trustee-panel-routing-note-2026-11-21-fraud-register-follow-ups.md`, WRITTEN, ⛔ sent).
 - **Q8 (PQ8) — a claim closed because the member is alive: ⛔ notice, ⛔ appeal, re-filing allowed; staff see *"Closed — the member was
   found alive"*** — built (a) B, (b) B, (c) A; suggested (a) B, (b) B, (c) B. As built the same filer can file again at once and re-lock
   the released member. ⚠ GO-LIVE condition for the close. Trigger: Q8's ruling.
   - *Appended 2026-11-21 (Trustee-ratified `2026-11-21-477`, DR + KB):* Q8 (a) **A** (texted once — ⛔ our suggestion), (b) **B**, (c) **B**. (b) is as built. Not addressed: (a) the one text (a new DLT template; English ruled, Hindi not) and (c) the hold at filing for a member found innocent — owner BigDev (the row); the staff label *"Closed — the member was found alive"* was ⛔ confirmed. Trigger: the row's build; the label's confirmation.
+  - *Appended 2026-11-21 (`2026-11-21-479`, author-commit):* (a) and (c) are row `6-22f`'s build; the staff label waits on the follow-up note's F6.
 - **Q9 (PQ9) — the proof of life a finding requires** — built `in_person | video_call | ground_inspection` (`FRAUD_ALIVE_CONFIRMATIONS`),
   suggested `in_person | video_call`. ⚠ GO-LIVE condition for the finding. Trigger: Q9's ruling.
   - *Appended 2026-11-21 (Trustee-ratified `2026-11-21-477`, DR + KB):* Q9 **C** — in person, video call or a ground inspection that found the member alive, as built. Closed by `2026-11-21-477` Q9 C — `FRAUD_ALIVE_CONFIRMATIONS` is the ruled list; no code edit needed (roster Row 47 (d) MET).

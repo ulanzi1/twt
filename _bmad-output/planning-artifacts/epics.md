@@ -4100,6 +4100,8 @@ WHY with a read-back prompt, the app ONE calm message with ⛔ reason on screen 
 >
 > ⭐ 2026-11-02 — `6-22b` writes the questions and the certificate guard; the build moved to `6-22e` (6.22b DL0,
 > [`-440`](../../.decision-log.md#decision-2026-11-02-440) item 1).
+> ⭐ 2026-11-21 — both fraud-register notes RULED (`2026-11-21-477`, `2026-11-21-478`); row `6-22f` minted (`2026-11-21-479`) for the
+> flag's wait, the found-alive text and the hold at filing; eight follow-ups (F1–F8) WRITTEN, ⛔ sent.
 
 As a member who has been wrongly reported dead, and the helpline operator and District Admin who look into such a report,
 I want a recorded investigation that ends in one of the two findings the Panel ruled — and only once the member has been confirmed alive:

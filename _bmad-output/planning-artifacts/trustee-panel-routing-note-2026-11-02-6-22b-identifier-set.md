@@ -1,6 +1,7 @@
 # Trustee Panel routing note — the fraud register's identity numbers: five things your rulings leave open before anything is collected
 
-> **Status: WRITTEN 2026-11-02, ⛔ NOT SENT — BigDev sends.** Written from Story 6.22b, Task 0.4 (DL3, accepted by BigDev 2026-11-02).
+> **Status: WRITTEN 2026-11-02; SENT by BigDev and RULED 2026-11-21 — Decision `2026-11-21-478` (Trustee-ratified, DR + KB).** Written
+> from Story 6.22b, Task 0.4 (DL3, accepted by BigDev 2026-11-02). Everything below the ruling block is the note as put.
 > ⛔ Nothing here is built, and nothing here blocks anything already built. These answers, with legal advice, are needed before the
 > later piece of work that builds the register's identity numbers.
 > ⭐ **Send order:** the written question for counsel (`counsel-question-2026-11-02-fraud-register-identifier-set.md`) goes out
@@ -31,10 +32,22 @@ claim records are (21 and 25 September); a guilty member's nominee is barred onl
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ PANEL RULED — 2026-11-21 (relayed by BigDev), Decision `2026-11-21-478` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**.
+> Verbatim: *"by DR and KB / Q1 A - Display message sth like - please contact helpline support if you don't have PAN, they can help you
+> to get a PAN. The responsbility of helpline would be here to direct the family to PAN center where they can get registered to get PAN
+> card. / Q2 B, Q3 C but make small change delete a closed claim's details after a period set by counsel, and a paid claim's after
+> counsel's period; for a refused claim, delete after a fixed period counsel sets, without closing the appeal. / Q4 - B, Q5 C"*.
+>
+> - **Q1 A, widened** — a PAN is required to file and to be paid (⛔ our suggestion); a family without one is told to contact the
+>   helpline, which directs them to a PAN centre. **Q2 B** — a warning the approver must answer.
+> - **Q3 C, amended** — every deletion waits for a period counsel sets (a closed claim's too, ⛔ at once); a refused claim's appeal stays
+>   open. **Q4 B** — the helpline operator or the District Admin raises it; a different person finds.
+> - **Q5 C** — Aadhaar kept in the ruled words; the build waits for a lawful route (⛔ our suggestion).
+> - ⚠ **Not covered** (see the decision, and the follow-up note `trustee-panel-routing-note-2026-11-21-fraud-register-follow-ups.md`):
+>   whether the PAN half waits for Aadhaar (F2); Q4's second half (F7); the innocent-notes question (F8); Q1's exact words; the periods.
+>
+> ⭐ Everything below is kept **unedited** as the questions **as they were put**.
 
 ---
 

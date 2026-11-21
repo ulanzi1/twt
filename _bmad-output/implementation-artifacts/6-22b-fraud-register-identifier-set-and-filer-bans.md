@@ -421,6 +421,12 @@ settles a fact about that vendor; what the Trust may lawfully do is counsel's).
 
 ## Panel questions — ONE note at Task 0.4 (WRITTEN; BigDev sends)
 
+⭐ 2026-11-21 — SENT and RULED (`2026-11-21-478`, Trustee-ratified, DR + KB): **PQ1 A** widened (⛔ our suggestion — a PAN is required
+to file and to be paid; a family without one is told to contact the helpline, which directs them to a PAN centre), **PQ2 B**, **PQ3 C**
+amended (every deletion after a period counsel sets), **PQ4 B** (its second half not answered — the follow-up note's F7), **PQ5 C**
+(⛔ our suggestion — Aadhaar kept; whether the PAN half waits is F2). DL2 (i)'s PAN-only design is ⛔ the Panel's direction. None of
+this touches Task 1 (DL5's guard). The follow-up note: `trustee-panel-routing-note-2026-11-21-fraud-register-follow-ups.md`.
+
 - **PQ1 — A family member who has no PAN: may they still file, and be paid?** (`-238` cl. 6 and `-240` cl. 3 assume an identifier exists;
   neither says what happens when the person has none.) ⭐ THE ONE FACT: by count, roughly 3 in 4 adults hold a PAN — an upper bound;
   no figure exists for poor or rural families, who are likely below it (W4 — research, ⛔ an official statistic). So some genuine

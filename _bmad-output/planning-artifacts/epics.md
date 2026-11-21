@@ -2064,6 +2064,10 @@ step then), and for anyone not `self_declared`, unverified and in `lock-in` / `p
 6.39's identity trigger and Story 3.14; a queue of every such member in scope, `pending-valid` first then oldest signup (FR-2), with ⛔ name
 on the list; ⛔ undo, ⛔ member-facing words (PQ2), ⛔ change to 6.39's gate except one staff label.
 
+> 📝 **2026-11-21 — RESHAPED (sprint change proposal `2026-11-21-registration`; author-commit `2026-11-21-482`):** when DigiLocker is
+> unavailable the person uploads a PAN, a masked Aadhaar and a selfie (Story 3.16) and staff check the uploads; a follow-up Panel note
+> (Q1 option E, Q4 retention) was written before the first note is ruled. This block is re-validated after both rulings.
+
 ---
 
 ### Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup `[SURFACE]`

@@ -1,6 +1,8 @@
 # Trustee Panel routing note — passing a member's details to a partner when the member asks: may the Trust do it, what may go, how long it is kept, and what happens afterwards
 
-> **Status: WRITTEN 2026-11-21, ⛔ NOT SENT — BigDev sends.** Written from Story 12.5 (the transport that carries a member's registered
+> **Status: SENT and RULED 2026-11-21 — Decision `2026-11-21-484` (Trustee-ratified, DR + KB; relayed by BigDev).** Everything below
+> the ruling block is kept as the questions were put. The original status line follows.
+> **Status (as written): WRITTEN 2026-11-21, ⛔ NOT SENT — BigDev sends.** Written from Story 12.5 (the transport that carries a member's registered
 > interest to a partner), Task 0.5. ⛔ No member uses the system yet, and none of this is built. Nothing here blocks building or merging.
 > Every answer must be in before the first member's details can reach a partner. A question for counsel was written beside this note
 > (`counsel-question-2026-11-21-12-5-partner-lead-transfer.md`), also ⛔ not sent.
@@ -30,10 +32,21 @@ mentions partners, offers or the passing-on of a member's details** — that is 
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-21 — Decision `2026-11-21-484` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put**.
+> As relayed by BigDev: *"by DR and KB / Q1 C, Q2 A, Q3 A, Q4 A, Q5 A, Q6 A, Q7 A,"*
+>
+> - **Q1 — C:** both ways, offer by offer (⛔ our suggestion, which was A).
+> - **Q2 — A:** never paid per lead; only when a member takes up the partner's product, and the policy says so.
+> - **Q3 — A:** the four details, for every partner.
+> - **Q4 — A:** the Trust's copy is removed at once if the send is stopped, and 30 days after it is delivered or finally fails.
+> - **Q5 — A:** the bare fact that a member registered interest is kept, and the policy says so.
+> - **Q6 — A:** staff tell the partner and ask it to delete, under the partner agreement.
+> - **Q7 — A:** nothing is passed on once a death is reported, also after the claim is settled.
+>
+> ⛔ NOT covered (see the decision): which offers go which way; member-by-member tracking on the partner's form; the wording to
+> members; the number of days (counsel may change it); option C of Q7; the Told list. Everything below is **unedited** — the
+> questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

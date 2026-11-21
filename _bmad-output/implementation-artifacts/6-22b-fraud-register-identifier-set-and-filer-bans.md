@@ -567,6 +567,7 @@ The counsel question carries both in a further dated note (still ⛔ sent).
         (the house format — appended, ⛔ the questions edited) carrying `-477` / `-478`: Aadhaar kept (Q5 C — question 3 re-read), PAN
         required with the helpline's help (Q1 A — question 4), a PAN doubt is a warning (Q2 B), three deletion periods (Q3 C amended —
         question 7), a nominee barred only on their own finding (`-477` Q2 B — question 6).
+        ⭐ 2026-11-21 — **SENT** (BigDev: *"yes, it's gone"*), with a further dated note (`-480` F2 A, F8 A). Roster Row 47 (f) MET.
   - [x] 0.4 WRITE the Panel note (DL3) from the template by path; run the template's §E4 commands; WRITTEN, ⛔ sent. Re-read
         [[feedback_told_line_must_not_carry_panel_choice]]: TL1–TL3 choose nothing, and none says counsel "is asked". Commit the counsel
         question and the note TOGETHER as `records(6.22b): counsel question + Panel note — WRITTEN, ⛔ sent` BEFORE Task 0.5 (the

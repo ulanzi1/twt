@@ -484,6 +484,7 @@ Four items the round-2 review (baseline `b7b43c47`, HEAD `99010844`) found real 
   (b) whether a UID token is obtainable, (c) Aadhaar Data Vault obligations; ⛔ counsel-question file exists] — the Panel was told twice
   the register *"waits on legal advice"*. Owner BigDev (writes) / counsel. Trigger: row `6-22b`'s create-story — its FIRST task.
   - *Appended 2026-11-02 (Story 6.22b Task 0.6; `2026-11-02-440` item 2):* WRITTEN 2026-11-02 (`_bmad-output/planning-artifacts/counsel-question-2026-11-02-fraud-register-identifier-set.md`), ⛔ sent — owner BigDev (sends); trigger: the send. Not addressed: the answer.
+  - *Appended 2026-11-21:* SENT 2026-11-21 (BigDev: *"yes, it's gone"*), carrying the Panel's answers of the same day (`-477`, `-478`, `-480`) in two dated notes. Roster Row 47 (f) MET. Not addressed: counsel's answer — owner counsel; trigger: its return, recorded as a decision.
 - **A released member is still "reported" outside peer-mesh** [`-438` item 11; `member/known-people.ts` `namedByClaimSql` — "People who
   know me", the unavailable prompts, `listRequestsNamingMe` / `answerKnownPersonRequest`, `nominee/member-links.ts` × 5] — a member found
   innocent re-enters the peer-mesh five (DL11) but keeps being treated as reported dead by known-people and nominee links. A NAMED

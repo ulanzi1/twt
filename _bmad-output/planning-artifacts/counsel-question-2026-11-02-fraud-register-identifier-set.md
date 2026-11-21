@@ -1,8 +1,8 @@
 # Question for counsel — the fraud register: what the Trust may collect, check, keep and delete about the people who file death claims
 
 **From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-02 (Story 6.22b Task 0.3, DL1 — accepted by BigDev 2026-11-02;
-the counsel gate in Decision `2026-09-21-238`) · **Status:** WRITTEN, ⛔ not yet sent. Nothing here is recorded as asked until BigDev
-sends it.
+the counsel gate in Decision `2026-09-21-238`) · **Status:** WRITTEN 2026-11-02; **SENT by BigDev
+2026-11-21**, with the two notes of 2026-11-21 below. Awaiting counsel's answer.
 **Roster:** Row 47 (`fraud-register-finding-live`) leg (f) — *"row `6-22b`'s counsel question (`-238` (a)–(c)) WRITTEN and SENT"*.
 Writing this file meets the WRITTEN half; the leg stays open until it is sent. Questions 1–3 are the three points the Panel's
 2026-09-21 ruling named for counsel ((a), (b), (c)); questions 4–7 follow from the same rulings; question 8 is a separate retention

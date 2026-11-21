@@ -39,6 +39,8 @@ import { DATA_EXPORT_DELIVERY_OTP_INTENT } from '../data-export/delivery.js';
 import { dataExportDeliveryGrants } from '../schema/data_export_delivery_grants.js';
 import { memberAuthOtps } from '../schema/member_auth_otps.js';
 import { dataExports } from '../schema/data_exports.js';
+// Story 12.5 (QE16) — the lead-handoff table, imported DIRECTLY (⛔ the `marketplace` barrel — a member ↔ marketplace init cycle).
+import { marketplaceLeadHandoffs } from '../schema/marketplace_lead_handoffs.js';
 import { memberDataRightsCorrections } from '../schema/member_data_rights_corrections.js';
 import { memberModerationAppeals } from '../schema/member_moderation_appeals.js';
 import { memberAddresses } from '../schema/member_addresses.js';
@@ -722,6 +724,31 @@ export async function anonymizeMember(
   // the DECLARER or the NOMINEE becomes `erased` — ⛔ deleted (the history is kept, the ids opaque). An already-ended mark
   // keeps its write-once end (V21); an answered one keeps its answer (V1). ONE statement.
   await eraseNomineeLinks(client, { pariwarId, memberId });
+
+  // ── marketplace_lead_handoffs (Story 12.5, `2026-11-21-483` QE16; W11) ── the member's sealed lead fields (Tier-1: whole name, mobile,
+  // district, language) → NULL on EVERY one of their handoff rows that still holds them, in every status; a `due` row ALSO becomes
+  // `cancelled` (`cancelled:member_erased`) — two CASEs on `status`, ONE statement. An `attempting` row keeps its status: if its request
+  // already went, the settle records the true outcome; if it lapses, P2 cancels it at the next attempt.
+  // ⚠ The `WHERE` is load-bearing (TR19): erasure is legal only for a withdrawn or terminated member, whose rows P3 has usually
+  // cancelled already with the fields gone — an unfiltered update would touch only `updated_at` on those final rows, and the 0215 guard
+  // refuses that, aborting the whole erasure. What it leaves on the row (ids, status, times) is the member↔offer link the retained
+  // `module.lead_submitted` event already holds — kept "permanently, without their details" (`-484` Q5 A, Trustee-ratified).
+  // The column-level UPDATE grant + the per-command UPDATE policy exist AT BIRTH (0215) for exactly this.
+  await client
+    .update(marketplaceLeadHandoffs)
+    .set({
+      memberFieldsCiphertext: null,
+      status: sql`CASE WHEN ${marketplaceLeadHandoffs.status} = 'due' THEN 'cancelled' ELSE ${marketplaceLeadHandoffs.status} END`,
+      outcomeDetail: sql`CASE WHEN ${marketplaceLeadHandoffs.status} = 'due' THEN 'cancelled:member_erased' ELSE ${marketplaceLeadHandoffs.outcomeDetail} END`,
+      updatedAt: sql`clock_timestamp()`,
+    })
+    .where(
+      and(
+        eq(marketplaceLeadHandoffs.pariwarId, pariwarId),
+        eq(marketplaceLeadHandoffs.memberId, memberId),
+        sql`(${marketplaceLeadHandoffs.memberFieldsCiphertext} IS NOT NULL OR ${marketplaceLeadHandoffs.status} = 'due')`,
+      ),
+    );
 
   await client
     .update(dataExports)

@@ -21,6 +21,7 @@ import { ANONYMIZED_SENTINEL, anonymizeMember } from '../../src/member/anonymize
 import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/index.js';
 import {
   dataExportDeliveryGrants,
+  marketplaceLeadHandoffs,
   memberAuthOtps,
   dataExports,
   memberAddresses,
@@ -258,7 +259,9 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     // Admin's note on the membership check (Tier-1, OPTIONAL — scrubbed only where present) — ONE statement keyed on
     // `deceased_member_id`, run whatever the member's claims (⛔ inside the has-claims block — the 6.21a reviews' shape).
     const { captured } = await run();
-    expect(captured).toHaveLength(33);
+    // ⭐ MOVED AGAIN by Story 12.5 (QE16): THIRTY-ONE tables, THIRTY-FOUR statements. `marketplace_lead_handoffs` — the sealed lead
+    // fields → NULL, a `due` row cancelled — ONE statement, keyed on the member (⛔ claim-scoped).
+    expect(captured).toHaveLength(34);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -291,6 +294,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memorialSubmissions,
       memorialReviewDecisions,
       memorialWithdrawals,
+      marketplaceLeadHandoffs,
     ]) {
       expect(tables).toContain(t);
     }
@@ -303,7 +307,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(30); // Story 6.39 (DL14) — 29 → 30: `claim_membership_checks`; Story 6.22 (DL15) — 28 → 29: `claim_fraud_investigation_steps`; Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(31); // Story 12.5 (QE16) — 30 → 31: `marketplace_lead_handoffs`; Story 6.39 (DL14) — 29 → 30: `claim_membership_checks`; Story 6.22 (DL15) — 28 → 29: `claim_fraud_investigation_steps`; Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -341,13 +345,25 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(typeof found[0]!.set.noteCiphertext).toBe('string');
   });
 
+  it('⭐ Story 12.5 (QE16): the lead handoffs in ONE statement — the fields NULL, a `due` row cancelled, and a WHERE that skips final rows already empty', async () => {
+    const { captured } = await run();
+    const found = captured.filter((c) => c.table === marketplaceLeadHandoffs);
+    expect(found).toHaveLength(1);
+    const set = found[0]!.set;
+    expect(Object.keys(set).sort()).toEqual(['memberFieldsCiphertext', 'outcomeDetail', 'status', 'updatedAt']);
+    expect(set['memberFieldsCiphertext']).toBeNull();
+    const where = new PgDialect().sqlToQuery(found[0]!.where as SQL);
+    expect(where.sql).toMatch(/"member_fields_ciphertext" IS NOT NULL OR "marketplace_lead_handoffs"\."status" = 'due'/i);
+    expect(where.sql).toMatch(/"member_id" = \$\d+/);
+  });
+
   it('⭐ Story 6.26a (GI13): a member with ⛔ no claims writes ⛔ no inspection statement', async () => {
     const { captured } = await run([]);
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionAnswers); // Story 6.32 — ⛔ claims, ⛔ family answers
-    expect(captured).toHaveLength(29); // Story 6.39 — 28 → 29: the membership check's note (⛔ claim-scoped — keyed on the member); Story 6.22 — 27 → 28: the investigation steps (⛔ claim-scoped — keyed on the member); Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+    expect(captured).toHaveLength(30); // Story 12.5 — 29 → 30: the lead handoffs (⛔ claim-scoped — keyed on the member); Story 6.39 — 28 → 29: the membership check's note (⛔ claim-scoped — keyed on the member); Story 6.22 — 27 → 28: the investigation steps (⛔ claim-scoped — keyed on the member); Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
   it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {

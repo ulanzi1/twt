@@ -8,6 +8,9 @@ Writing this file meets the WRITTEN half; the leg stays open until it is sent. Q
 2026-09-21 ruling named for counsel ((a), (b), (c)); questions 4–7 follow from the same rulings; question 8 is a separate retention
 item owed since 2026-09-25, put here so that one letter carries every retention question.
 
+**Please read the note of 2026-11-21 at the end first.** The Trust's Panel has decided five things since this was written; they change
+the design described below and questions 3, 4, 6 and 7. The questions themselves are unchanged and still need answering.
+
 ---
 
 ## The situation, in brief
@@ -146,3 +149,32 @@ Fiduciaries only, and remains a proposal that was never gazetted. The Removal of
 corrects wording in sections 9(1) and 10(2)(c)(ii) and changes no date. Since 13 November 2026 the Consent Manager provisions (section
 6(9), Rule 4) are in force; that does not touch these questions. The Gazette texts themselves were not read — this re-check rests on
 the two secondary sources, as the 2 November check did.
+
+---
+
+**Note, 2026-11-21 — what the Trust's Panel has decided since this question was written (please read this first).** On 21 November the
+Panel answered the policy questions this letter refers to. Where an answer changes the design described above, the Panel's answer is
+the Trust's direction, subject to your advice:
+
+1. **Aadhaar is kept, not dropped.** Design item 1 above ("PAN only") is no longer the plan. The Panel chose to keep its ruling that
+   PAN **and** Aadhaar are collected, and to wait until there is a lawful way for the Trust to hold an Aadhaar-based identifier. So
+   **question 2** (is there any lawful route) now decides whether the Aadhaar half can ever be built, and **question 3** now reads:
+   *what would a lawful route require of the Trust (the data-vault rules, the Sharing Regulations), and is any such duty already on us
+   for the last four digits members give at sign-up?* Whether the PAN half may be built first, while Aadhaar waits, is a further
+   question now with the Panel.
+2. **A PAN is required to file a claim and to be paid.** The Panel chose this over a signed declaration. A family with no PAN is told
+   to contact the Trust's helpline, which directs them to a PAN centre to apply for one. **Question 4** therefore asks: *may the Trust
+   require a PAN in this way, and what must the person be told?* If you advise that it may not be required, or that an alternative
+   such as a declaration must be offered, the Panel has said that comes back to it.
+3. **A PAN that cannot be confirmed does not stop the claim.** The claim goes on, and the person approving it must see the doubt and
+   record a reason. (This bears on question 5.)
+4. **Every deletion waits for a period you set.** Design item 6 above said details are deleted "when a claim closes with no finding of
+   fraud". The Panel decided instead that identity details are deleted **after a period set by counsel** in each case: for a claim
+   closed with no finding of fraud; for a claim that was paid; and for a claim that was refused — without taking away the family's
+   right to appeal, which today has no time limit for most refusals. **Question 7** therefore asks for **three**
+   periods: *how long may (or must) the Trust keep these details for a closed claim, a paid claim, and a refused claim?*
+5. **A nominee is barred only if an investigation finds that they took part.** Being named as the nominee of a member found guilty is
+   not enough. (This bears on question 6: the bar reaches a nominee or claimant only after a finding about that person.)
+
+Nothing has been built on any of these; the Trust's rules still forbid building the register until your answers are recorded.
+

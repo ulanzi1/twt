@@ -560,6 +560,10 @@ this touches Task 1 (DL5's guard). The follow-up note: `trustee-panel-routing-no
         questions 1–8 (= C1–C8, C8 in), the DL2 design in *The situation*, the W-facts as "our own understanding", the sources with
         URLs (re-read 2026-11-02; the ITD statistics PDF, the RBI's own copy and post-September Gazette notices ⛔ reached — named in
         the file). ⛔ Sent.
+        ⭐ 2026-11-21 — still ⛔ sent (BigDev: *"no counsel note has not gone, make changes"*): a header pointer and a dated note added
+        (the house format — appended, ⛔ the questions edited) carrying `-477` / `-478`: Aadhaar kept (Q5 C — question 3 re-read), PAN
+        required with the helpline's help (Q1 A — question 4), a PAN doubt is a warning (Q2 B), three deletion periods (Q3 C amended —
+        question 7), a nominee barred only on their own finding (`-477` Q2 B — question 6).
   - [x] 0.4 WRITE the Panel note (DL3) from the template by path; run the template's §E4 commands; WRITTEN, ⛔ sent. Re-read
         [[feedback_told_line_must_not_carry_panel_choice]]: TL1–TL3 choose nothing, and none says counsel "is asked". Commit the counsel
         question and the note TOGETHER as `records(6.22b): counsel question + Panel note — WRITTEN, ⛔ sent` BEFORE Task 0.5 (the

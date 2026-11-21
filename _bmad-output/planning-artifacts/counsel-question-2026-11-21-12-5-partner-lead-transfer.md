@@ -1,6 +1,7 @@
 # Question for counsel — sending a member's name and mobile number to a partner when the member asks: the footing, the agreement with the partner, payment, and how long things are kept
 
-**From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-21 · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as
+**From:** BigDev (Solo Builder), for the Trust · **Prepared:** 2026-11-21, **REVISED 2026-11-21** before sending (questions 10 and 11 added
+on BigDev's direction) · **Status:** WRITTEN, NOT yet sent. Nothing here is recorded as
 asked until BigDev sends it.
 **Written from:** Story 12.5 (the transport that carries a member's registered interest to a partner), Task 0.5. The Trustee Panel is
 asked seven questions beside this one (`trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md`, also not sent).
@@ -41,6 +42,11 @@ times over about a day and a half.
 The Trust may be paid by partners. The terms are not agreed. They could be per lead delivered, or only when a member takes up the
 partner's product.
 
+**A second route is being considered instead of, or beside, the first.** The Trust would send nothing. The member would open the
+partner's own form from inside the Trust's app, type their details there, and have their number checked by the partner in its own
+way. The Trust would pass the partner only a code that says which offer the visit came from. The Trust would want to know where
+members give up on that form.
+
 ## The questions
 
 1. **The footing and the notice.** Is the member's own agreement, given for one named offer after being shown the four details, a
@@ -74,10 +80,24 @@ partner's product.
    and does the draft policy's statement about where data is processed need changing?
 9. **Breach.** If a partner suffers a breach involving details the Trust sent, what must the Trust itself do, and how quickly? (The
    Trust's own breach duties are the subject of its separate question of 2026-11-01.)
+10. **How far the Trust's responsibility runs.** The Trust's view is that when a member, shown exactly what will go and to whom, tells
+    the Trust to share, the Trust is carrying out the member's own decision — as one service does when a person signs in to another
+    with it — and that from then on the partner is responsible under its own terms. Is that right in law? For what does the Trust
+    stay answerable: the sharing itself, its choice of partner, anything the partner does? May the notice say that the partner will
+    handle the details under the partner's terms, and may it go further and say the Trust is not responsible for misuse — or would
+    that second statement be ineffective, or unwise to make?
+11. **The second route — the partner's own form.**
+    (a) If the Trust sends nothing about the member and passes only a code naming the offer, does the Trust need any footing at all,
+    and what must it tell members before they leave its app for the partner's page?
+    (b) Is opening the partner's page inside the Trust's own app different, in law, from opening it in the phone's browser?
+    (c) To learn where members give up, may the Trust receive from the partner (i) totals for each step of the form, with no member
+    identified, and (ii) step-by-step progress for each member, matched by the code? What would (ii) need — from the member, and in
+    the agreement with the partner?
+    (d) May the Trust be paid when a member who came this way takes up the partner's product?
 
 ## What we need back
 
 A short written answer to each question that is sent. It will be recorded as a decision, and it answers the counsel leg of the go-live
-row for this feature. Your answers to 1, 3, 4 and 5 will also be put before the Trustee Panel beside its own questions. If any answer
+row for this feature. Your answers to 1, 3, 4, 5, 10 and 11 will also be put before the Trustee Panel beside its own questions. If any answer
 depends on facts we have not given — the partner terms, which draft of the deed governs, or the wording of the consent form, none of
 which exists yet — please say which.

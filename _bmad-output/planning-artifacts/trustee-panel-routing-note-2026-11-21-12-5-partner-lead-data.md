@@ -6,6 +6,9 @@
 > (`counsel-question-2026-11-21-12-5-partner-lead-transfer.md`), also ⛔ not sent.
 > **Made current 2026-11-21, before sending:** BigDev's build decisions are now recorded as Decision `2026-11-21-483` (an author-commit,
 > ⛔ a ruling), and the go-live row is roster Row 54 (`partner-lead-handoff-live`). No question or option below was changed.
+> **Revised 2026-11-21, before sending, on BigDev's direction:** Q1 only. Option A's cost was overstated and is corrected; option B is
+> now the route BigDev actually has in mind (the partner's own form, opened from the app); option C (both) is added. See "How much to
+> trust this note".
 
 ## §0 — the gate
 
@@ -54,18 +57,24 @@ written today, sending a member's details to a partner is something the Trust ha
 
 # Q1 — May the Trust send a member's details to a partner when the member asks?
 
-The member would be shown the offer, shown exactly which details would be sent, and asked to agree for that one offer. Only then is
-anything sent, and only to that offer's partner.
+There are two ways a member's interest can reach a partner. In the first, the member is shown the offer, shown exactly which details
+would be sent, and asked to agree for that one offer; only then does the Trust send them, and only to that offer's partner — much as
+a person agrees to let one service pass their name to another when signing in. In the second, the Trust sends nothing: the member
+opens the partner's own form from the app and fills it in themselves.
 
 **The one fact:** the draft policy names no partner among those the Trust shares with (above), and no ruling of yours covers it.
 
 | | Option | What changes for a person | Cost |
 |---|---|---|---|
-| **A** | **Yes — on the member's own agreement, given offer by offer; the policy is changed before it is published to name partners.** *Our suggestion.* | A member who registers interest has their details sent to that one partner. A member who does not is never shared. | The Trust becomes an organisation that passes members' details to commercial partners. Once sent, the details cannot be called back, and the Trust is answerable for having sent them even if the partner later misuses them. |
-| **B** | **No — the Trust shows the offer and the partner's own contact details; the member contacts the partner themselves.** | Nothing about a member ever leaves the Trust. A member who wants the offer does the work of reaching the partner. | The partner cannot tell which enquiries came through the Trust, so the Trust cannot be credited for them. The "I am interested" button has no purpose. |
+| **A** | **The Trust sends the details — on the member's own agreement, given offer by offer; the policy is changed before it is published to name partners.** *Our suggestion.* | A member who registers interest has their details sent to that one partner. A member who does not is never shared. Before agreeing, the member is told that the partner will handle the details under the partner's own terms. | The Trust becomes an organisation that passes members' details to commercial partners. Once sent, the details cannot be called back. The Trust stays answerable for the sharing itself — that the member really agreed, saw exactly what would go and to whom, and that nothing more went — and for which partners it lets in. What a partner does with the details afterwards is the partner's responsibility; counsel is asked how far that holds, and what the Trust may say about it to members. |
+| **B** | **The Trust sends nothing — the member opens the partner's own form from the app and fills it in; the partner checks the member's number in its own way.** The Trust passes the partner only a code saying which offer the visit came from, and nothing about the member. | Nothing about a member leaves the Trust. The member types their details again, on the partner's page, under the partner's terms. | More effort for the member, and some will give up part-way. The Trust knows who opened the form, but learns what happened on the partner's page only if the partner tells it — as totals, or member by member, which would be a further question for you. Nothing for this route is planned or built yet, and the sending described in the rest of this note would be set aside. |
+| **C** | **Both — each offer works one way or the other.** | As A for some offers and as B for others; the member sees which before going on. | Two things to build and keep, and two sets of wording for members. |
 
 **Our reading:** **A** — **because** the member asks for it, sees what will go, and agrees to that one offer; nothing is sent for a member
 who has not asked. Counsel is asked what the agreement with each partner must say before A can go live.
+
+**If you choose B:** Q3 to Q6 fall away, because the Trust holds and sends no copy. Q2 remains in a smaller form — the Trust could not
+be paid per lead, but it might still be paid when a member takes up an offer. Q7 remains only as "the offers are not shown".
 
 ---
 
@@ -220,6 +229,11 @@ worse than one member's lost place. We are building A meanwhile; your answer doe
 - **Earlier versions of this question:** none sent. The story behind it was written and then checked on 21 November. The first draft
   called the privacy policy the one members had "accepted". That was wrong: it is unpublished, and nobody has accepted it. This matters,
   because it means the remedy is a change before publication, not asking members to agree again.
+- **Corrected before sending, on BigDev's direction (21 November):** Q1 option A said the Trust is answerable for having sent the
+  details "even if the partner later misuses them". That overstated it: the Trust answers for its own act of sharing and for its choice
+  of partner, and counsel is asked where the line falls. Q1 option B described a route nobody proposes (the member finding the partner
+  themselves); it now describes the route BigDev has in mind. **Our reading is still A, as first written — BigDev has not said that B
+  or C is now his preference**, though he has asked that B be workable and well measured.
 - **Corrected in this note:** the first draft would have told you that a member whose interest was stopped "registers again". That is
   false — a member registers once per offer — so it is now Told 3 and part of Q7. The check also first summarised your 30 October
   reason wrongly (as though a dead member's agreement lapsed); it says the opposite, and Q7 now quotes it. Q2 and Q7 were not in the
@@ -233,6 +247,8 @@ worse than one member's lost place. We are building A meanwhile; your answer doe
   - Nothing is built. Everything above describes a plan, and "as planned" means BigDev's decisions of 21 November (recorded as his
     own decisions, not rulings of yours).
   - Counsel has not been asked yet.
+  - Option B is an idea, not a plan: how the form is opened, what code is passed, and how the Trust learns where members give up are
+    not designed.
 
 ---
 
@@ -242,6 +258,9 @@ The app will show teachers offers from partners. When a teacher taps "I am inter
 number, district and language to that one partner, so the partner can phone them. The Trust has never said it would do this: the privacy
 policy it has drafted lists who it shares with, partners are not on the list, and the same page says the Trust does not sell personal
 data. Nobody has accepted that policy yet, so there is still time to get it right.
+
+There are two ways to do it: the Trust sends the details once the member agrees (Q1 A), or the Trust sends nothing and the member
+fills in the partner's own form (Q1 B).
 
 We suggest: yes, send — but only when the member asks, sees what goes, and agrees for that one offer (Q1 A); the Trust is never paid
 per lead, only when a member actually takes a partner's product (Q2 A); the four details and nothing more (Q3 A); the Trust's own copy is
@@ -299,6 +318,11 @@ directory's exclusion and the `-146` sentence are untouched; the transport only 
     back. §7 — where data is processed. §8 — the retention table (⛔ line for a lead).
   - Trust deed: `-433` QE6 (A) records that TWO drafts exist (2026-07-21, Clause 7.2(i) and Clause 20(i); and the 2026-08-06 objects
     draft v4, Object 10) and that "WHICH governs is recorded nowhere".
+- Q1 option B (the partner's own form, opened from the app) is ⛔ decided and ⛔ planned anywhere. `2026-10-31-427` QE5 left an
+  external link out of the offer record ("⛔ external-URL CTA (Not addressed)"), and Decision `-483` decides only the sending. BigDev's
+  words, 2026-11-21: *"build a webview inside app where parter will open a form to register their interest where they usually have to
+  enter the phone and otp"*; *"we should have robust tracking for partner's own form, so that we know where users drop."* Carried as
+  `deferred-work.md` 12.5's K-12.
 - Whether the fee arrangement is **disclosed** to a member is deferred by `-433` QE6 (A) to its own trigger (OQ-4 answered, the first
   production publish, or Story 12.3's create-story). Q2 here asks only whether a paid lead is a sale.
 - The first partners' terms — "commission %, lead/conversion tracking, exclusivity clauses" — are open (PRD, OQ-4).

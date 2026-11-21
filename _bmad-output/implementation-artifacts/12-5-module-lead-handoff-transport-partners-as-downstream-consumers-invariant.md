@@ -14,7 +14,7 @@ SHAs cited here are the post-rebase ones). Between the pin and `e5e13f92` eight 
 cited here — `member/anonymize.ts`, where only a comment changed (the three pinned counts in `rtbf-anonymize.test.ts`
 are unchanged). Migration `0213` and decisions `-477`–`-481` are now on `main`.
 
-STATUS: ready-for-dev (2026-11-21 — v1.5). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
+STATUS: ready-for-dev (2026-11-21 — v1.6). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
 The build decisions QE1–QE26 carried TWELVE asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21–QE26). BigDev answered them on
 2026-11-21, all as recommended (QE21 is (C)), and accepted the rest as a set. The author-commit is **Decision
 `2026-11-21-483`**, committed ALONE (`24d930fc`) before any code ([[feedback_governance_commits_precede_implementation]]).
@@ -36,7 +36,7 @@ in our own words — ⛔ pasted (the repo is public; `docs/legal-corpus-location
 LETTERS: G = found facts · QE = build decisions (ANSWERED = BigDev's answer, `-483`) · W = the row's writes (QE6) ·
 S = the tick's steps (QE13) · P = the cancel predicates (QE7) · I = invariants · TR = traps · PQ = questions for the
 Panel / counsel (Task 0.5). ⚠ `C6`, `C7`, `C8`, `C10`, `C13` with NO hyphen are ALWAYS Story 12.1's carried items. This
-story's own carried items are `K-1` … `K-11`.
+story's own carried items are `K-1` … `K-12`.
 
 NUMBERS — re-read 2026-11-21 ~18:20 IST across every ref (heads and remotes) and the four live sibling worktrees
 (`3-13-…`, `6-22b-…`, `6-39a-…`, `governance-registration-change-2026-11-21`, incl. uncommitted files). Siblings
@@ -1385,6 +1385,10 @@ and gate go-live (Row 54).
 - **K-10 → no owner yet:** the partner-coordination escalation runbook (`docs/runbooks/README.md` names this story as
   its candidate), a cross-tick breaker, and a second-address fallback. ⭐ Trigger: before Row 54 closes (its leg (j)
   names this runbook's owner).
+- **K-12 → no owner yet (BigDev, 2026-11-21):** a second route — the partner's own form opened from the app, with
+  tracking of where members give up. It is NOT part of this story: option B / C of the Panel note's Q1 and counsel's
+  question 11. If the Panel or BigDev chooses it, Epic 12 needs a correct-course before this story's Task 1 (under B
+  this transport is set aside; under C it is built beside the link). Details in `deferred-work.md`, 12.5's K-12.
 - **K-11 → 12.2 (follow-up):** the wizard's lead warning before Withdraw and before a corrected copy should say that
   pending leads will be cancelled for good (QE22 (A)). ⭐ Trigger: MET by `-483`; owner 12.2's follow-up.
 
@@ -1464,3 +1468,4 @@ and gate go-live (Row 54).
 | 2026-11-21 | v1.3 | Task 0.3: the author-commit is Decision `2026-11-21-483` (`24d930fc`, alone). BigDev's answers, verbatim: "all as recommended, write the note" (the twelve ASKs), "do it", then by selection "Accept as a set" (the fourteen non-ASK decisions) and "Record as proposed" (QE24's reading of `-423`). This file amended to the answers: every conditional on an ASK is now the answered text (QE21 (C): the requeue and the retried setup faults are built; `failed_delivery:address_refused` no longer exists), the ASK headings read ANSWERED, the rewrite map is kept unused. |
 | 2026-11-21 | v1.4 | Tasks 0.4 and 0.6 done: `deferred-work.md` (the 12-5 block K-1 … K-11, and dated lines on 12.1's C4 / C6 / C7 / C8 / C10 / C13 and on 12.2's five items and the `partners/` leg), `epics.md` (notes under 12.3, 12.4, 12.5, 12.6), five architecture annotations, six docs notes, and roster Row 54 (eleven legs, all open). No "Closed by" line was written: that is Task 9.3's, after the code. Two ADR bodies were left unannotated, by design (carried to Task 8). The Panel note and the counsel question were made current (Decision `-483`, Row 54); both still NOT sent. Task 0 is complete except 0.1's re-check. |
 | 2026-11-21 | v1.5 | Rebased onto `origin/main` `e5e13f92` (Story 6.22b landed), BigDev: "rebase". Every commit of the branch was re-written; the two SHAs this file cites are now the post-rebase ones (the author-commit `24d930fc`, the creation ledger entry `fc715af5`). No decision, AC or task changed. One cited code file moved on `main` since the pin (`member/anonymize.ts`, a comment only). |
+| 2026-11-21 | v1.6 | On BigDev's direction, before the note is sent: the Panel note's Q1 revised (option A's cost corrected — the Trust answers for the sharing itself and its choice of partner, not for what the partner does afterwards; option B is now the partner's own form opened from the app; option C "both" added) and the counsel question extended (10: how far the Trust's responsibility runs and what the notice may say; 11: the second route and its tracking). K-12 added: the second route and its drop-off tracking are recorded, NOT decided and NOT part of this story. No decision, AC or task of this story changed. ⚠ If that route is chosen, a correct-course comes before Task 1. |

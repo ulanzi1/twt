@@ -14,11 +14,13 @@
 // `member.vyawastha_shulk_paid` event with `from_state = 'pending-fee'` carries its UTR.
 //   · ⛔ NOT the earliest receipt (a gate-failed first attempt is earlier) and ⛔ NOT the latest (`getLatestReceipt`
 //     would pick a receipt added after the death);
-//   · ⚠ matched by `(pariwar_id, member_id, utr)` — `member_id` is REQUIRED: the event carries the REQUEST BODY's
-//     UTR, ⛔ the stored receipt's, so on a re-confirm with a corrected UTR it can equal ANOTHER member's receipt
-//     under `(pariwar_id, utr)` alone;
+//   · ⚠ matched by `(pariwar_id, member_id, utr)` — `member_id` is REQUIRED: until `2026-11-21-475` the event carried
+//     the REQUEST BODY's UTR, so an event written before it (or a raw one) can name ANOTHER member's receipt under
+//     `(pariwar_id, utr)` alone. Since `-475` the joining confirm writes the STORED receipt's UTR, so a re-confirm with
+//     a corrected UTR still names this member's receipt; the `member_id` leg stays as the defence;
 //   · ⛔ the event's `occurred_at` — that is when lock-in happened, ⛔ when the fee was paid;
-//   · ⛔ match ⇒ `null`: the check CANNOT be recorded (fail closed — the claim waits; a staff escalation, ⛔ a guess).
+//   · ⛔ match ⇒ `null`: the check CANNOT be recorded (fail closed — the claim waits, ⛔ a guess; the staff line says
+//     "Please tell the Super Admin." — `-475`). Unreachable through the door since `-475`; kept as the defence.
 
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
@@ -143,12 +145,16 @@ export async function getLiveMembershipCheck(
  *     annotation such as a revise or `claim.denied_no_appeal`, ⛔ an appeal's `upheld` review, which upholds the denial
  *     it reviewed) was the P1 verifier's denial (`claim.verifier_denied`)
  *     whose LIVE verifier decision is `denied` with that reason, OR the final vote's (`claim.state_trustee_denied`)
- *     whose LIVE `frozen_vote` decision is `denied` with that reason (DL9 gives the reason to BOTH vocabularies).
+ *     whose LIVE `frozen_vote` decision is `denied` with that reason (DL9 gives the reason to BOTH vocabularies). On
+ *     the trustee side ONLY the final vote can carry it: the escalation resolution refuses the reason, the
+ *     correction-closure chains write their own codes, and R9's denial is always `r9_panel_denied` — hence
+ *     `phase = 'frozen_vote'`.
  *   Keying on the denial that produced the CURRENT state is what `-474` item 4's "its LIVE denial" means: an allowed
  *   appeal leaves the old decision row live (the RF1 / F3 precedent), so a LATER denial for another reason ⛔ inherits
  *   its words — and a genuine fee refusal by the final vote AFTER a reversal is ⛔ blanked (code review 2026-11-21; the
  *   earlier blanket "⛔ reversed appeal" clause did both). An escalation's denial also emits `claim.verifier_denied`,
- *   but its live verifier decision is `escalated`, so it never matches (the reason is refused there anyway).
+ *   but `resolveEscalation` supersedes the escalated verifier row and writes ⛔ new one, so there is ⛔ live verifier
+ *   decision to match (and the reason is refused there anyway).
  * RLS-scoped with the explicit `pariwar_id` predicate on every table. ⛔ No ciphertext.
  */
 export async function isFeePaidAfterDeathRefusalStanding(

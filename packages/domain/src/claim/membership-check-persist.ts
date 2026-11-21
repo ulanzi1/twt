@@ -17,6 +17,10 @@
 //       against (N4): re-asserted HERE, under the lock (the 6.21a D8 pattern);
 //   (4) the RECEIPT — the joining receipt must still be the one the comparison was computed against (DL3);
 //   (5) the IDENTITY — re-read under the lock (DL4): an unchecked identity must be judged, a checked one must not;
+//   (5b) the LIVE CHECK — still the one the staff member saw (`expectedLiveCheckId`; `null` = none): ⛔ a re-check
+//       supersedes a check its writer never saw ⇒ `check_changed` (code review 2026-11-21); a 23505 on the
+//       one-live-row index at (6) maps to the same refusal — defence in depth only: every inserter of a check row
+//       takes a KEY SHARE lock on the claim row through the FK, so it serialises with (1) and (5b) answers first;
 //   (6) supersede the live check (`re_checked`), insert the new one, and emit `claim.membership_checked` — ONE
 //       transaction.
 //
@@ -238,7 +242,7 @@ export async function recordMembershipCheck(
     );
   const liveNowId = liveNow ? (liveNow.id as string).toLowerCase() : null;
   if (liveNowId !== (input.expectedLiveCheckId === null ? null : input.expectedLiveCheckId.toLowerCase())) {
-    throw refuse('check_changed', 'another membership check was recorded after this one was opened — open it again');
+    throw refuse('check_changed', 'the live membership check is not the one this check was opened against — open it again');
   }
 
   // (6) Supersede the live check, insert the new one, emit the identity annotation.
@@ -256,8 +260,9 @@ export async function recordMembershipCheck(
   const supersededCheckId = superseded[0]?.id ?? null;
 
   const identityReason = input.identityOutcome === 'not_confirmed' ? input.identityReason : null;
-  // ⛔ A raw 23505 to the caller: should a writer ever reach the insert without the claim-row lock, the one-live-row
-  // index is the backstop, and its violation is the same typed refusal as (5b) (code review 2026-11-21).
+  // ⛔ A raw 23505 to the caller: the one-live-row index is the backstop, and its violation is the same typed refusal as
+  // (5b) (code review 2026-11-21). Not reachable today — the FK to `claims` makes every inserter serialise on the claim
+  // row — so it is proved by its predicate test only (round 2 tried to construct it live, and could not).
   const [row] = await db
     .insert(claimMembershipChecks)
     .values({

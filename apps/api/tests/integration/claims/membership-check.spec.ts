@@ -556,7 +556,10 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     expect(errCode(j(b))).toBe('membership_check.check_changed');
     const rows = await checks(w);
     expect(rows.map((r) => [r.check_id, r.superseded_at, r.identity_outcome])).toEqual([[j(a).check_id, null, 'not_confirmed']]);
-    expect(auditsFor('admin_claim.membership_check_rejected', w.claimCaseId).map((e) => (e.context as Json).reason)).toEqual(['check_changed']);
+    // The refusal is audited with the token B sent — the check B had ⛔ seen is then A's, the one live row (family 8).
+    expect(auditsFor('admin_claim.membership_check_rejected', w.claimCaseId).map((e) => [(e.context as Json).reason, (e.context as Json).expected_live_check_id])).toEqual([
+      ['check_changed', null],
+    ]);
     // Re-opened (the console refetches on this code), B sees A's check and CAN supersede it deliberately.
     const reopened = await client.inject({ method: 'POST', url: url(w), payload: await body(w, { identity_outcome: 'confirmed' }) });
     expect(reopened.statusCode, reopened.body).toBe(201);

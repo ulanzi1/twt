@@ -9,6 +9,12 @@
 //   · two District Admins recording a check on the same claim at once, each having seen ⛔ live check ⇒ they
 //     serialise on the claim row, and the second is a typed `check_changed` refusal — exactly ONE live check, ONE
 //     `claim.membership_checked` event, ⛔ never a raw 23505 on the one-live-row index.
+//   · a live row written by something that does ⛔ take the claim lock itself (a raw insert) STILL serialises with the
+//     writer: the row's FK check takes a KEY SHARE lock on the claim row, which conflicts with the writer's
+//     `FOR UPDATE`, so the writer WAITS at (1) and then (5b) sees the row ⇒ `check_changed`. ⚠ That is why the 23505
+//     backstop at (6) is ⛔ constructible here (code review 2026-11-21, round 2: an attempt to build it this way ran
+//     green with the 23505 mapping REMOVED — the writer never reached the index). The mapping is proved by its pure
+//     predicate test (`tests/claim/membership-check-one-live-violation.test.ts`) and kept as defence in depth.
 //
 // A FRESH tenant per file — committed rows ⛔ never pollute PARIWAR_A ([[project_known_livedb_test_failures]]).
 
@@ -111,7 +117,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — membership check two-connection co
    * receipt) and ONE current accepted certificate review — ⛔ membership check yet. Seeded as the superuser (the
    * receipt and the member's event are ⛔ the app role's to write raw), committed.
    */
-  async function claimReadyForCheck(): Promise<{ cid: ClaimId; reviewId: string; receiptId: string }> {
+  async function claimReadyForCheck(): Promise<{ cid: ClaimId; mid: string; reviewId: string; receiptId: string }> {
     const cid = toClaimId(randomUUID());
     const client = await pool.connect();
     try {
@@ -155,7 +161,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — membership check two-connection co
       await emit('verification_in_progress', 'verifier_review', 'claim.verifier_reviewing');
       const reviewId = await seedAcceptedDeathCertificate(client, { pariwarId: PARIWAR, claimCaseId: cid, date: '2026-03-10' });
       await client.query('COMMIT');
-      return { cid, reviewId, receiptId: receipt.rows[0]!.receipt_id };
+      return { cid, mid, reviewId, receiptId: receipt.rows[0]!.receipt_id };
     } catch (err) {
       await client.query('ROLLBACK').catch(() => undefined);
       throw err;
@@ -228,5 +234,28 @@ describe.skipIf(!hasDatabase)('Story 6.39 — membership check two-connection co
       [ready.cid],
     );
     expect(events.rows[0]!.n).toBe('1');
+  });
+
+  it('a live row written WITHOUT taking the claim lock still serialises (its FK\'s KEY SHARE on the claim row): the writer waits, then (5b) refuses `check_changed` — the first row stands', { timeout: TIMEOUT }, async () => {
+    const ready = await claimReadyForCheck();
+    const { waited, outcome } = await holderWaiter(
+      (holder) =>
+        holder.query(
+          `INSERT INTO claim_membership_checks (claim_case_id, pariwar_id, deceased_member_id, death_certificate_review_id, fee_receipt_id,
+             fee_outcome, identity_required, identity_outcome, decided_by_actor_id, decided_by_display)
+           VALUES ($1, $2, $3, $4, $5, 'before_death', true, 'confirmed', $6, 'A raw writer')`,
+          [ready.cid, PARIWAR, ready.mid, ready.reviewId, ready.receiptId, randomUUID()],
+        ),
+      (waiter) => recordMembershipCheck(waiter, input(ready, 'confirmed')),
+    );
+    expect(waited, 'the writer did not wait for the raw row').toBe(true);
+    expect(outcome.status).toBe('rejected');
+    const reason = (outcome as PromiseRejectedResult).reason;
+    expect(reason instanceof MembershipCheckRefusedError && reason.reason === 'check_changed', String(reason)).toBe(true);
+    const rows = await pool.query<{ decided_by_display: string }>(
+      'SELECT decided_by_display FROM claim_membership_checks WHERE claim_case_id = $1 AND superseded_at IS NULL',
+      [ready.cid],
+    );
+    expect(rows.rows).toEqual([{ decided_by_display: 'A raw writer' }]);
   });
 });

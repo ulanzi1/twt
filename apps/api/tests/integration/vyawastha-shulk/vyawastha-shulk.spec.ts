@@ -19,7 +19,7 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { ids, member as memberDomain } from '@twt/domain';
+import { claim as claimDomain, ids, member as memberDomain } from '@twt/domain';
 import { describe, expect, it } from 'vitest';
 
 import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
@@ -445,12 +445,18 @@ describe.skipIf(!hasDatabase)('Vyawastha Shulk — E2E (:5433)', () => {
         [memberId],
       );
       expect(paid.rows.map((r) => r.utr)).toEqual([goodUtr]);
-      // The DL3 join (pariwar + member + the event's UTR) finds exactly the member's one receipt.
-      const joined = await t.pool.query<{ n: string }>(
-        `SELECT count(*)::text AS n FROM vyawastha_shulk_receipts WHERE pariwar_id = $1 AND member_id = $2 AND utr = $3`,
-        [pariwarId, memberId, paid.rows[0]!.utr],
-      );
-      expect(joined.rows[0]!.n).toBe('1');
+      // The claim's OWN reader (DL3 — ⛔ a hand-written copy of its join, code review 2026-11-21) finds the member's one
+      // receipt, so a membership check on this member's claim can be recorded.
+      const receipt = await t.pool.query<{ receipt_id: string }>(`SELECT receipt_id FROM vyawastha_shulk_receipts WHERE member_id = $1`, [memberId]);
+      const scopeTx = await openScopeTx(t.deps, pariwarId);
+      try {
+        const joining = await claimDomain.readJoiningFeeReceipt(scopeTx.tx, ids.pariwarId(pariwarId), ids.memberId(memberId));
+        expect(joining?.receiptId).toBe(receipt.rows[0]!.receipt_id);
+        await closeScopeTx(scopeTx, true);
+      } catch (err) {
+        await closeScopeTx(scopeTx, false);
+        throw err;
+      }
     } finally {
       await teardown(t);
     }

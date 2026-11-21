@@ -1043,7 +1043,7 @@ export const verifierConsoleEn = {
     refused: {
       stale: 'The certificate changed since the membership check was opened. It has been reloaded — check again.',
       concurrent: 'The claim changed while the check was being recorded. It has been reloaded — check again.',
-      check_changed: 'Another membership check was recorded on this claim since you opened it. It has been reloaded — check again.',
+      check_changed: 'The membership check on this claim changed since you opened it. It has been reloaded — check again.',
       no_fee_receipt:
         "The record of the member's joining fee cannot be identified, so the membership check cannot be recorded. Please tell the Super Admin.",
       certificate_not_accepted: 'Accept the death certificate first. The membership check compares its date of death with the joining fee.',

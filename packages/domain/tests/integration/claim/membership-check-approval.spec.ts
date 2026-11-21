@@ -591,6 +591,47 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
     });
 
+    it('an R9 denial after a reversal ⇒ false, though the P1 fee denial row is still live (the denial that made it `denied` is `claim.r9_outcome`) — round 2', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip', beforeScope: seedR9 });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      await deny(ctx, 'fee_paid_after_death');
+      await appealStage1(ctx, 'reversed');
+      await route(ctx);
+      await openR9VotingSession(ctx.client, {
+        claimCaseId: ctx.cid, pariwarId: ctx.pid, clauseId: R9_CLAUSE, panelActorIds: PANEL,
+        actorId: PA, actorDisplay: 'Pariwar Admin', actor: 'trustee',
+      });
+      for (const voter of [V1, V2]) {
+        await castR9Vote(ctx.client, {
+          claimCaseId: ctx.cid, pariwarId: ctx.pid, vote: 'deny',
+          rationaleCiphertext: prepareR9VoteCiphertext(`enc:v1:vote-${voter.slice(-2)}`), warningReasonCode: null,
+          actorId: voter, actorDisplay: `Panelist ${voter.slice(-2)}`, actor: 'trustee',
+        });
+      }
+      await finalize(ctx);
+      expect(await stateOf(ctx)).toBe('denied');
+      const p1 = await ctx.client.query(
+        'SELECT reason_code FROM claim_verifier_decisions WHERE claim_case_id = $1 AND superseded_at IS NULL',
+        [ctx.cid],
+      );
+      expect(p1.rows).toEqual([{ reason_code: 'fee_paid_after_death' }]);
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+    });
+
+    it('an ESCALATION\'s denial (`claim.verifier_denied`, ⛔ live verifier decision after `resolveEscalation`) ⇒ false — round 2', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      await escalate(ctx);
+      await resolveEscalation(ctx.client, {
+        claimCaseId: ctx.cid, pariwarId: ctx.pid, outcome: 'denied', reasonCode: 'other',
+        rationaleCiphertext: 'enc:v1:deny', actorId: PA, actorDisplay: 'Pariwar Admin', actor: 'trustee',
+      });
+      expect(await stateOf(ctx)).toBe('denied');
+      const live = await ctx.client.query('SELECT 1 FROM claim_verifier_decisions WHERE claim_case_id = $1 AND superseded_at IS NULL', [ctx.cid]);
+      expect(live.rows).toEqual([]);
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+    });
+
     it('a P1 denial WITH the reason whose appeal is UPHELD ⇒ true (the upheld denial is the one that stands)', async () => {
       const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
       await checkOf(ctx, { feeOutcome: 'after_death' });

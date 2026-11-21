@@ -1109,8 +1109,12 @@ and gate go-live (Row NN).
         letter, roster row) on every ref AND in the live sibling worktrees, uncommitted files included. Confirm 12.3
         and 12.4 are still `backlog` (if 12.3 has started, read its seam
         first). Record `PERMISSION_CATALOG_VERSION`. Check whether `-477` Q6 A has landed and in what form (QE23).
-  - [ ] 0.2 BigDev answers the twelve ASKs (QE2, QE3, QE5, QE6, QE8, QE11, QE21, QE22, QE23, QE24, QE25, QE26), and
-        accepts or amends the rest as a set — QE24's reading of `-423` put to him explicitly. Record the answers VERBATIM here.
+  - [x] 0.2 BigDev answers the twelve ASKs (QE2, QE3, QE5, QE6, QE8, QE11, QE21, QE22, QE23, QE24, QE25, QE26), and
+        accepts or amends the rest as a set — QE24's reading of `-423` put to him explicitly.
+        **ANSWERED 2026-11-21, verbatim: "all as recommended, write the note".** So: QE2 (A), QE3 (A), QE5 (A), QE6 (A),
+        QE8 (A), QE11 (A), QE21 (C), QE22 (A), QE23 (A), QE24 (A), QE25 (A), QE26 (A). What that answer did NOT cover, and
+        Task 0.3 must still put to him before the author-commit: the non-ASK decisions "as a set", and QE24's reading of
+        `-423` in terms (the Panel note's Q4 states it as our reading, not a ruling). Record the answers VERBATIM here.
   - [ ] 0.3 The author-commit (≥ `-483`), committed ALONE
         (`governance: Story 12.5 lead-handoff transport build decisions (Decision 2026-11-21-NNN)`), naming what it
         amends (QE20). Then amend THIS story to the recorded answers — every "AS PROPOSED", "(if QE21 …)", "(ONLY if
@@ -1165,7 +1169,10 @@ and gate go-live (Row NN).
           dated line pointing at K-10), `docs/escrow/credential-inventory.md` (the per-partner credentials row — Row NN
           (f)), `docs/knowledge-transfer/third-party-dependency-inventory.md` (the Panel ratifies the first partner
           contract — Row NN (e)).
-  - [ ] 0.5 Write, and do NOT send, the Panel note from the template
+  - [x] 0.5 (WRITTEN 2026-11-21 on BigDev's "write the note", ahead of 0.3 / 0.4; NOT sent — BigDev sends. The note
+        numbers its questions Q1–Q7: Q1 = PQ1 (a), Q2 = PQ1 (b), Q3 = PQ2, Q4 = PQ3 (a), Q5 = PQ3 (b), Q6 = PQ5, Q7 = PQ6,
+        "Told" = PQ4. Its commands in E4 were run and hold. It cites the author-commit and Row NN as still owed.)
+        Write, and do NOT send, the Panel note from the template
         (`trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md`; §0 passed per edges 1, 11 and 12) and the
         counsel question (`counsel-question-2026-11-21-12-5-partner-lead-transfer.md`, the
         `counsel-question-2026-11-01-14-3-…` shape). Read first, by absolute path in the main checkout, and cite by
@@ -1440,3 +1447,4 @@ and gate go-live (Row NN).
 |---|---|---|
 | 2026-11-21 | v1.0 | Created by `bmad-create-story 12.5` on its own worktree at `90535934`. Six ASKs open with BigDev (QE2, QE3, QE5, QE6, QE8, QE11); the Panel note and the counsel question are planned at Task 0.5 (written, not sent); NO code before Task 0.3. |
 | 2026-11-21 | v1.1 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), re-derived at `90535934`. Corrected facts: G1 (one registration per offer), G2 (what the twin has), G4, G5, G7, G10, G11, G12, G13, G15; new G17. Design: the row's writes restated as ONE table W1–W13 with a claim token, holds that do not count, a defined lapse and `held_since`; the tick as S1–S10 with the breaker moved into the claim; predicates P0–P5 (a sound-read check, the consent read through the lead, the standing death report); the seal moved before the transaction and the seam re-ordered (submit first); the audit lines fitted to the audit writer and a body nonce added; one signature with a receiver-side rotation window; the client's wall-clock deadline, v6 allow-range and single test seam; the route leg of the fence moved to an `apps/api` spec keyed on the session guard. Governance: `-427` QE10 quoted and named as amended; the privacy policy treated as a draft, with its no-sale, cross-border and withdrawal sections routed; PQ5 added; legal text no longer pasted; Task 0.4's closure words moved after the code; the rewrite map completed; AC13 added. Six new ASKs: QE21 (a failed handoff), QE22 (a withdrawn offer), QE23 (a terminated member), QE24 (retention, and its relation to `-423`), QE25 (a partner token), QE26 (a standing death report — PQ6). Also changed from v1.0: the tick's 20-row cap became a 45 s budget; "a 4xx other than 408 / 429 is permanent" now sits inside QE21; the PG 16.16 trap is TR18. This story's carried items renamed K-1 … K-11. NUMBERS re-read at ~18:20. The rewrite was itself re-validated by fresh-context rounds before commit, and their findings are applied above: an erasure update the guard would refuse; a misquoted reason of `-423`; holds that did not end the tick; and a partner-side outcome outranking a member-side cancel — closed by making S6 decide first on every attempt. |
+| 2026-11-21 | v1.2 | Task 0.2 answered by BigDev, verbatim "all as recommended, write the note" (the twelve ASKs as recommended; QE21 (C)). Task 0.5 done ahead of 0.3 / 0.4 on that instruction: the Panel note (Q1–Q7 + Told) and the counsel question (nine questions) are WRITTEN, not sent. Still owed before any code: the author-commit (Task 0.3, ≥ `-483`) with the story amended to the answers, the records (0.4) and Row NN (0.6). |

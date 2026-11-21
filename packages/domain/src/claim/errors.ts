@@ -646,7 +646,8 @@ export type MembershipCheckWaitReason = (typeof MEMBERSHIP_CHECK_WAIT_REASONS)[n
  *   · `stale`                  — the live check was computed against a certificate review that is no longer the
  *                                current accepted one (N4), or it recorded `not_required` for an identity that
  *                                today's KYC record says nobody has checked (N2);
- *   · `fee_after_death`        — the joining fee was paid after the date of death: it can never pass (N6);
+ *   · `fee_after_death`        — the joining fee was ⛔ paid before the date of death (after it, or ON it — `-473` Q1 B):
+ *                                it can never pass (N6);
  *   · `identity_not_confirmed` — staff could not yet confirm the person who died is the member. */
 export class MembershipCheckRequiredError extends Error {
   public readonly name = 'MembershipCheckRequiredError';

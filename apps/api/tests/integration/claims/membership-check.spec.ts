@@ -5,7 +5,7 @@
 //   · AC4 — recording a check for each identity record (DigiLocker / typed in / the two fail-closed fixtures), every
 //     HTTP-reachable REFUSAL with its wire code AND its `_rejected` audit line, and a re-check superseding the first;
 //   · AC3 — a member whose joining receipt cannot be identified ⇒ 409 `membership_check.no_fee_receipt`, ⛔ row;
-//   · AC8 — a fee paid ON the day of death is shown as its own outcome (`same_day`) — PQ1 (a);
+//   · AC8 / AC15 — a fee paid ON the day of death is shown as its own outcome (`same_day`) and STOPS the drive (`-473` Q1 B);
 //   · AC9 — `claim.membership_checked` per write, the state unchanged; ⛔ the date of death, ⛔ the fee date, ⛔ the
 //     note and ⛔ the name in ANY audit line or event payload (planted values, searched in the serialized lines);
 //   · AC10 — 403 without `claim.check_membership`, and for a District Admin of ANOTHER district.
@@ -21,6 +21,7 @@ import type { AppDeps } from '../../../src/context.js';
 import * as service from '../../../src/modules/auth/admin/admin-auth.service.js';
 import { encryptDeathCertificateReviewField } from '../../../src/modules/claims/death-certificate-crypto.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
+import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
 import { buildServer } from '../../../src/server.js';
 import { ensureAcceptedDeathCertificate, insertDeathCertificate } from '../_nominee-name-check-fixture.js';
 import { buildTestDeps, hasDatabase, makeClient, type TestDeps } from '../_setup.js';
@@ -568,9 +569,42 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     expect((j(res).packet as Json).membershipCheckGate).toEqual({ available: true, passed: false, reason: 'not_checked', viewer: { canCheckMembership: false } });
   });
 
-  // ── AC8 — the day of death (PQ1 (a), built A) ────────────────────────────────────────────────────────────────
+  // ── AC17 — what the family sees while the identity waits (`2026-11-21-473` Q4 B; `-474` item 5) ──────────────────
 
-  it('⭐ AC8 / PQ1 (a) — a fee paid ON the day of death is recorded as `same_day` and the gate PASSES (the literal side of `-430` Q1 B; a ruling of B flips this)', async () => {
+  it('⭐ AC17 — the family\'s certificate read says `identity_check_waiting` ONLY while the check answers `identity_not_confirmed`; ⛔ before a check, ⛔ for a fee after the death, ⛔ once confirmed; ⛔ the gate\'s reason on the wire', async () => {
+    const family = (w: World) =>
+      app.inject({
+        method: 'GET',
+        url: `/api/v1/member/claims/${w.claimCaseId}/death-certificate`,
+        headers: { authorization: `Bearer ${signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'test-device' }, 15 * 60 * 1000)}` },
+      });
+    const w = await world({ kyc: 'typed_in' });
+    const { client } = await da(w);
+    // Not yet checked (`not_checked`): ⛔ the line.
+    let res = await family(w);
+    expect(res.statusCode, res.body).toBe(200);
+    expect(j(res)).toMatchObject({ status: 'accepted', identity_check_waiting: false });
+    // Staff cannot confirm yet ⇒ the line.
+    expect((await client.inject({ method: 'POST', url: url(w), payload: await body(w, { identity_outcome: 'not_confirmed', identity_reason: 'name_differs', note: NOTE }) })).statusCode).toBe(201);
+    res = await family(w);
+    expect(j(res)).toMatchObject({ status: 'accepted', identity_check_waiting: true });
+    expect(res.body).not.toMatch(/identity_not_confirmed|name_differs/);
+    expect(res.body).not.toContain(NOTE);
+    // Confirmed on a re-check ⇒ gone.
+    expect((await client.inject({ method: 'POST', url: url(w), payload: await body(w, { identity_outcome: 'confirmed' }) })).statusCode).toBe(201);
+    expect(j(await family(w))).toMatchObject({ identity_check_waiting: false });
+
+    // A fee after the death with the identity unconfirmed: the gate answers `fee_after_death` FIRST ⇒ ⛔ the line (the
+    // Panel ruled it for the identity wait only).
+    const late = await world({ kyc: 'typed_in', fee: 'after_death' });
+    const lateDa = await da(late);
+    expect((await lateDa.client.inject({ method: 'POST', url: url(late), payload: await body(late, { identity_outcome: 'not_confirmed', identity_reason: 'name_differs', note: NOTE }) })).statusCode).toBe(201);
+    expect(j(await family(late))).toMatchObject({ status: 'accepted', identity_check_waiting: false });
+  });
+
+  // ── AC8 / AC15 — the day of death (PQ1 (a), RULED B — `2026-11-21-473` Q1) ─────────────────────────────────────
+
+  it('⭐ AC8 / AC15 — a fee paid ON the day of death is recorded as `same_day` and the gate answers `fee_after_death` (`-473` Q1 B: the same day counts as after; until the ruling it passed)', async () => {
     const w = await world({ fee: 'same_day', kyc: 'digilocker' });
     const { client } = await da(w);
     const res = await client.inject({ method: 'POST', url: url(w), payload: await body(w, { identity_outcome: 'not_required' }) });
@@ -579,7 +613,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check surface — E
     expect(j(await client.inject({ method: 'GET', url: url(w) }))).toMatchObject({
       fee_outcome: 'same_day',
       live_check: { fee_outcome: 'same_day' },
-      gate: { passed: true, reason: null },
+      gate: { passed: false, reason: 'fee_after_death' },
     });
   });
 

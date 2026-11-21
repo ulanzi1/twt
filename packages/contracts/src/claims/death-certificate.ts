@@ -185,6 +185,15 @@ export const MemberDeathCertificateStatusResponse = z
      * for no response is a different thing). ⛔ Never shown as such.
      */
     claim_closed: z.boolean(),
+    /**
+     * ⭐ Story 6.39 (`2026-11-21-473` Q4 B; built `-474` item 5) — the claim WAITS because staff cannot yet confirm the
+     * person who died is the member: TRUE iff the certificate is `accepted`, the claim is in the membership check's
+     * window, and the check answers `identity_not_confirmed`. The family's notice then adds ONE line beneath
+     * "accepted" (*"We need to confirm a few details before this claim can go ahead. Our staff will contact you."*).
+     * ⛔ Any other wait (`not_checked`, `stale`, a fee after the death) — the Panel ruled the line for this one case.
+     * ⛔ The gate's reason itself never leaves the server.
+     */
+    identity_check_waiting: z.boolean(),
   })
   .strict();
 export type MemberDeathCertificateStatusResponse = z.output<typeof MemberDeathCertificateStatusResponse>;

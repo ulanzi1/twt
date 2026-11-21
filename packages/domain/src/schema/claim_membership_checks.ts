@@ -41,8 +41,9 @@ import { vyawasthaShulkReceipts } from './vyawastha_shulk_receipts.js';
 
 /**
  * The fee half's result (DL2): the joining receipt's Indian calendar date against the accepted certificate's date
- * of death. Computed by the SYSTEM — ⛔ typed and ⛔ overridable by staff (N3). `same_day` PASSES the gate today
- * (PQ1 (a) — open with the Panel; built on the literal side of `-430` Q1 B).
+ * of death. Computed by the SYSTEM — ⛔ typed and ⛔ overridable by staff (N3). `same_day` STOPS the drive, as
+ * `after_death` does (`2026-11-21-473` Q1 B — the gate's `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES`); it stays its own
+ * stored outcome so staff see "Paid on the day of death".
  * ⚠ LOCKSTEP with migration 0212's `claim_membership_checks_fee_outcome_check` and `@twt/contracts`'
  * `MEMBERSHIP_CHECK_FEE_OUTCOMES` (pinned by `claims-membership-check.test.ts`).
  */

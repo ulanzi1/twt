@@ -66,6 +66,14 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
         // refusal STANDS (refused on `-239`, under appeal) routes like a TERMINAL one, so the wizard — the refile — is
         // reachable on the device that filed it (`-261` D4 B's window). `claim_live`'s other consumers are unchanged.
         const suspicionStanding = await claim.isSuspicionRefusalStanding(tx.tx, pariwarId, claimCaseIdBrand);
+        // ⭐ Story 6.39 (`2026-11-21-473` Q4 B; `-474` item 5) — the claim waits on an identity staff cannot yet confirm.
+        // Through the gate's ONE definition (`membershipCheckApprovalState`), and only inside the check's own window, so
+        // the line can ⛔ outlive the wait (a refusal, an approval, a closure). ⛔ The gate's reason leaves the server.
+        let identityCheckWaiting = false;
+        if (result.status === 'accepted' && claim.isInMembershipCheckWindow(claimRow.currentState)) {
+          const gate = await claim.membershipCheckApprovalState(tx.tx, pariwarId, claimCaseIdBrand, claimRow.deceasedMemberId);
+          identityCheckWaiting = !gate.passed && gate.reason === 'identity_not_confirmed';
+        }
         ok = true;
         void reply.status(200);
         return {
@@ -81,6 +89,7 @@ export function createDeathCertificateMemberHandlers(deps: AppDeps) {
           // ⭐ Story 6.24a (RF12 v1.3) — the closed claim's routing bit (the calm helpline screen, ⛔ not the wizard) — for
           // both closures (Story 6.28 OP4: another claim of the death is paid).
           claim_closed: claimRow.currentState === 'closed',
+          identity_check_waiting: identityCheckWaiting,
         };
       } finally {
         await closeScopeTx(tx, ok);

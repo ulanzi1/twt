@@ -15,7 +15,7 @@ const MEMBERSHIP_CHECK_REQUIRED_MESSAGES: Record<claim.MembershipCheckWaitReason
   not_checked: 'Membership check needed before approval.',
   stale: 'The certificate changed since the membership check — check again.',
   fee_after_death:
-    'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.',
+    'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
   identity_not_confirmed: "The person's identity has not been confirmed.",
 };
 

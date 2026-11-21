@@ -175,7 +175,7 @@ describe('<CycleFreezePage> — Story 6.39 (DL5, DL9, DL12), the membership-chec
     ['identity_not_confirmed', "The person's identity has not been confirmed."],
     [
       'fee_after_death',
-      'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
+      'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
     ],
   ] as const) {
     it(`⭐ \`cycle_freeze.membership_check_required\` (${reason}) ⇒ its approved words — ⛔ a raw code, ⛔ the server text`, async () => {

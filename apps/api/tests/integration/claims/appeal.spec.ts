@@ -188,7 +188,12 @@ describe.skipIf(!hasDatabase)('Internal 3-stage appeal — E2E (:5433)', () => {
   }
 
   /** Drive a fresh claim to `denied`, owned by `claimantActorId` (a member session actor). */
-  async function seedDeniedClaim(pariwarId: string, deceasedMemberId: ids.MemberId, claimantActorId: string): Promise<string> {
+  async function seedDeniedClaim(
+    pariwarId: string,
+    deceasedMemberId: ids.MemberId,
+    claimantActorId: string,
+    reasonCode: 'other' | 'fee_paid_after_death' = 'other',
+  ): Promise<string> {
     const claimCaseId = ids.claimId(randomUUID());
     const scopeTx = await openScopeTx(deps, pariwarId);
     const emit = (from: string | null, to: string, eventType: string, extra: Record<string, unknown> = {}) =>
@@ -211,8 +216,8 @@ describe.skipIf(!hasDatabase)('Internal 3-stage appeal — E2E (:5433)', () => {
       await emit('verifier_review', 'denied', 'claim.verifier_denied');
       await scopeTx.client.query(
         `INSERT INTO claim_verifier_decisions (claim_case_id, pariwar_id, outcome, reason_code, rationale_ciphertext, actor_id, actor_display)
-         VALUES ($1, $2, 'denied', 'other', 'enc:v1:x', $3, 'Original Verifier')`,
-        [String(claimCaseId), pariwarId, VERIFIER],
+         VALUES ($1, $2, 'denied', $4, 'enc:v1:x', $3, 'Original Verifier')`,
+        [String(claimCaseId), pariwarId, VERIFIER, reasonCode],
       );
       await closeScopeTx(scopeTx, true);
     } catch (err) {
@@ -351,6 +356,33 @@ describe.skipIf(!hasDatabase)('Internal 3-stage appeal — E2E (:5433)', () => {
     const statusByOwner = await memberInject('GET', memberUrl(claimCaseId), memberToken(owner, pariwarId));
     expect(statusByOwner.status).toBe(200);
     expect(statusByOwner.body['can_initiate']).toBe(true);
+  });
+
+  it('⭐ Story 6.39 AC16 (`2026-11-21-473` Q3 B) — the member read carries ONE closed reason for a refusal for a fee ⛔ paid before the death, `null` for any other refusal and once an appeal reversed it; ⛔ the reason code on the wire', async () => {
+    const pariwarId = randomUUID();
+    const deceased = await seedDeceasedMember(pariwarId, DISTRICT);
+    const owner = randomUUID();
+    const fee = await seedDeniedClaim(pariwarId, deceased, owner, 'fee_paid_after_death');
+    const other = await seedDeniedClaim(pariwarId, deceased, owner, 'other');
+    const told = await memberInject('GET', memberUrl(fee), memberToken(owner, pariwarId));
+    expect(told.status).toBe(200);
+    expect(told.body['refusal_reason']).toBe('not_a_member_when_died');
+    expect(told.body['can_initiate']).toBe(true);
+    expect(JSON.stringify(told.body)).not.toMatch(/fee_paid_after_death/);
+    expect((await memberInject('GET', memberUrl(other), memberToken(owner, pariwarId))).body['refusal_reason']).toBeNull();
+    // An appeal that REVERSED it: the decision row stays live (F3), but its words ⛔ carry over.
+    const scopeTx = await openScopeTx(deps, pariwarId);
+    try {
+      await scopeTx.client.query(
+        `INSERT INTO claim_appeals (claim_case_id, pariwar_id, current_stage, initiated_by_actor, status) VALUES ($1, $2, '1', 'operator', 'reversed')`,
+        [fee, pariwarId],
+      );
+      await closeScopeTx(scopeTx, true);
+    } catch (err) {
+      await closeScopeTx(scopeTx, false);
+      throw err;
+    }
+    expect((await memberInject('GET', memberUrl(fee), memberToken(owner, pariwarId))).body['refusal_reason']).toBeNull();
   });
 
   it('Step-up gating — Stage-2 finalize is 403 without a fresh elevation, 200 with one', async () => {

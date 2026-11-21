@@ -167,7 +167,7 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership-check wait on every
     not_checked: 'Membership check needed before approval.',
     stale: 'The certificate changed since the membership check — check again.',
     identity_not_confirmed: "The person's identity has not been confirmed.",
-    fee_after_death: 'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.',
+    fee_after_death: 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
   } as const;
 
   /** The ONE assertion every route makes: 409, its OWN prefix, the reason, the approved words — ⛔ a refusal. */

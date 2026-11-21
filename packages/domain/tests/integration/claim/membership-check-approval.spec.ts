@@ -33,6 +33,7 @@ import {
   escalateStaffCase,
   finalizeR9Outcome,
   isCorrectionClaimHeld,
+  isFeePaidAfterDeathRefusalStanding,
   membershipCheckApprovalState,
   openR9VotingSession,
   prepareR9VoteCiphertext,
@@ -435,13 +436,13 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
 
   // ── AC8 — the day of death ──────────────────────────────────────────────────────────────────────────────────
   describe('AC8 — a joining fee paid ON the day of death', () => {
-    it('⭐ PQ1 (a), BUILT A — `same_day` PASSES the gate (the literal side of `-430` Q1 B: only a fee paid AFTER the death stops a drive). ⚠ A Panel ruling of B flips THIS test: `same_day` joins `MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES`', async () => {
-      // The one arm a ruling of B changes, pinned as built.
-      expect([...MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES]).toEqual(['after_death']);
+    it('⭐ PQ1 (a), RULED B (`2026-11-21-473` Q1) — `same_day` STOPS the drive: the gate answers `fee_after_death` and the approval is refused (until the ruling it passed — built A; THIS is the test that flipped)', async () => {
+      // The one arm the ruling changed, pinned as ruled.
+      expect([...MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES]).toEqual(['after_death', 'same_day']);
       const ctx = await claimAt('verifier_review');
       await checkOf(ctx, { feeOutcome: 'same_day' });
-      expect(await gateState(ctx)).toEqual({ passed: true });
-      expect((await approve(ctx)).claimState).toBe('verifier_approved');
+      expect(await gateState(ctx)).toEqual({ passed: false, reason: 'fee_after_death' });
+      await refusesAndWritesNothing(ctx, () => approve(ctx), waits('fee_after_death'));
       // The pure resolver, for each fee outcome (identity confirmed, the check current).
       const outcomeOf = (feeOutcome: schema.MembershipCheckFeeOutcome) =>
         resolveMembershipCheckApprovalState({
@@ -450,8 +451,41 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
           kyc: null,
         });
       expect(outcomeOf('before_death')).toEqual({ passed: true });
-      expect(outcomeOf('same_day')).toEqual({ passed: true });
+      expect(outcomeOf('same_day')).toEqual({ passed: false, reason: 'fee_after_death' });
       expect(outcomeOf('after_death')).toEqual({ passed: false, reason: 'fee_after_death' });
+    });
+  });
+
+  // ── AC16 — what the family is told (`2026-11-21-473` Q3 B; `-474` item 4) ──────────────────────────────────────
+  describe('AC16 — `isFeePaidAfterDeathRefusalStanding`: the refusal stands on `fee_paid_after_death`, on EITHER denial', () => {
+    it('the P1 denial with the reason ⇒ true; with another reason ⇒ false; not yet denied ⇒ false', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+      await succeedsThenUndo(ctx.client, async () => {
+        await deny(ctx, 'other');
+        expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+      });
+      await deny(ctx, 'fee_paid_after_death');
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(true);
+    });
+
+    it('a fee paid ON the day of death (`-473` Q1 B) refused with the reason ⇒ true', async () => {
+      const ctx = await claimAt('verifier_review', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'same_day' });
+      await deny(ctx, 'fee_paid_after_death');
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(true);
+    });
+
+    it('the FINAL-VOTE denial with the reason (P1 approved) ⇒ true; with another reason ⇒ false', async () => {
+      const ctx = await claimAt('verifier_approved', { membershipCheck: 'skip' });
+      await checkOf(ctx, { feeOutcome: 'after_death' });
+      await succeedsThenUndo(ctx.client, async () => {
+        expect((await vote(ctx, 'denied', 'other')).claimState).toBe('denied');
+        expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(false);
+      });
+      expect((await vote(ctx, 'denied', 'fee_paid_after_death')).claimState).toBe('denied');
+      expect(await isFeePaidAfterDeathRefusalStanding(ctx.tx, ctx.pid, ctx.cid)).toBe(true);
     });
   });
 
@@ -470,8 +504,9 @@ describe.skipIf(!hasDatabase)('Story 6.39 — the membership check approval gate
       await refusesAndWritesNothing(ctx, () => deny(ctx, 'fee_paid_after_death'), notShown);
       await checkOf(ctx);
       await refusesAndWritesNothing(ctx, () => deny(ctx, 'fee_paid_after_death'), notShown);
+      // `-473` Q1 B — a fee paid ON the day of death counts as after: the reason is accepted for it too.
       await checkOf(ctx, { feeOutcome: 'same_day' });
-      await refusesAndWritesNothing(ctx, () => deny(ctx, 'fee_paid_after_death'), notShown);
+      await succeedsThenUndo(ctx.client, async () => expect((await deny(ctx, 'fee_paid_after_death')).claimState).toBe('denied'));
       await checkOf(ctx, { feeOutcome: 'after_death' });
       // ⚠ The same denial with ANOTHER reason goes through — the guard is on the reason, ⛔ on the denial.
       await succeedsThenUndo(ctx.client, async () => expect((await deny(ctx, 'other')).claimState).toBe('denied'));

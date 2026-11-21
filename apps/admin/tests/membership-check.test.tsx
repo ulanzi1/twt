@@ -64,10 +64,10 @@ const DL12 = {
   stale: 'The certificate changed since the membership check — check again.',
   identity: "The person's identity has not been confirmed.",
   feeConsole:
-    'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — deny it with the reason "Fee paid after the death".',
+    'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — deny it with the reason "Fee paid after the death".',
   feeFinalVote:
-    'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
-  feeR9AndClosure: 'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.',
+    'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
+  feeR9AndClosure: 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
   paidBefore: 'Paid before the death',
   paidSameDay: 'Paid on the day of death',
   paidAfter: 'Paid after the death',
@@ -176,6 +176,17 @@ describe('<MembershipCheckControl> — what the staff member is shown (DL8, N3)'
     expect(screen.getByTestId('membership-check-body')).toHaveTextContent(t.feeComputed);
     // A fee paid after the death: the control says what follows (record, then deny with the reason) — ⛔ a refusal of its own.
     expect(screen.getByTestId('membership-check-fee-after-death-note')).toHaveTextContent(t.feeAfterDeathNote);
+  });
+
+  it.each([
+    ['after_death', true],
+    ['same_day', true],
+    ['before_death', false],
+  ] as const)('AC15 — the record-then-deny note for `%s`: shown %s (`-473` Q1 B — the day of death counts as after; `-474` item 3)', (fee_outcome, shown) => {
+    renderControl({ preview: preview({ fee_outcome }) });
+    const note = screen.queryByTestId('membership-check-fee-after-death-note');
+    if (shown) expect(note).toHaveTextContent(t.feeAfterDeathNote);
+    else expect(note).toBeNull();
   });
 
   it('the KYC route in words — DigiLocker (DL12), and the fail-closed routes', () => {

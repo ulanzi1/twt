@@ -489,7 +489,7 @@ describe('<R9CasePanel> — the approve vote and finalize (EA5; RD11)', () => {
   // For a fee paid after the death the R9 panel's words carry ⛔ instruction — its denial does not take the reason.
   for (const [reason, words] of [
     ['not_checked', 'Membership check needed before approval.'],
-    ['fee_after_death', 'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.'],
+    ['fee_after_death', 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.'],
   ] as const) {
     it(`Story 6.39 — finalize's \`membership_check_required\` 409 (${reason}) reads as its approved words, ⛔ never the server text or a raw code`, async () => {
       getR9Panel.mockResolvedValue(r9Panel({ votes: [approveVote(true)], tally: approvedTally }));

@@ -14,12 +14,21 @@ export interface MemberAppealStatus {
   /** Story 6.19c (AC7, `-273` §9) — the claim was CLOSED for no response: ⛔ appealable, ⛔ no affordance, ⛔ no
    *  external-remedy disclosure (a display rule — the server's `can_initiate` already says false). */
   closed_no_response: boolean
+  /** ⭐ Story 6.39 (`2026-11-21-473` Q3 B) — the ONE reason a family is told (a refusal for a fee ⛔ paid before the death);
+   *  `null` for every other refusal. */
+  refusal_reason: 'not_a_member_when_died' | null
 }
+
+/** `appeal.eligible` with the door's reason joined in (`-474` item 4: approved word for word, en + hi). */
+export const REFUSED_NOT_MEMBER_KEY = 'appeal.refused_not_member'
 
 /** What the card should show, as bounded, testable flags + copy keys (resolved via useClaimT in the card). */
 export interface AppealView {
   /** Show the "file appeal" affordance (denied + no prior journey — no deadline, D-E). */
   showFileAffordance: boolean
+  /** The affordance's first line: `appeal.eligible`, or — for a refusal whose reason the family is told (`-473` Q3 B) —
+   *  `appeal.refused_not_member` INSTEAD of it. */
+  eligibleKey: 'appeal.eligible' | typeof REFUSED_NOT_MEMBER_KEY
   /** Show the in-progress status line + its copy key ('appeal.status_stage1|2|3'). */
   statusKey: string | null
   /** Show the reversed-outcome message. */
@@ -49,6 +58,7 @@ export function deriveAppealView(status: MemberAppealStatus): AppealView {
   const showExhausted = status.appeal_exhausted && !status.closed_no_response && status.appeal_status !== 'closed'
   return {
     showFileAffordance: status.can_initiate && !status.closed_no_response && status.appeal_status !== 'closed',
+    eligibleKey: status.refusal_reason === 'not_a_member_when_died' ? REFUSED_NOT_MEMBER_KEY : 'appeal.eligible',
     statusKey: status.appeal_status === 'open' && status.current_stage ? STAGE_STATUS_KEY[status.current_stage] : null,
     showReversed,
     showExhausted,

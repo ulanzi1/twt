@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { type MemberAppealStatus, deriveAppealView } from '../../lib/appeal-status'
+import { type MemberAppealStatus, REFUSED_NOT_MEMBER_KEY, deriveAppealView } from '../../lib/appeal-status'
 
 const base: MemberAppealStatus = {
   claim_state: 'denied',
@@ -12,6 +12,7 @@ const base: MemberAppealStatus = {
   current_stage: null,
   appeal_exhausted: false,
   closed_no_response: false,
+  refusal_reason: null,
 }
 
 describe('deriveAppealView (AC7)', () => {
@@ -19,7 +20,15 @@ describe('deriveAppealView (AC7)', () => {
     // Even were the server's `can_initiate` / `appeal_exhausted` true, the closure wins (the `closed_no_response`
     // precedent, same isolation): the guard must be `appeal_status`-keyed, ⛔ never riding only on those fields.
     const v = deriveAppealView({ ...base, claim_state: 'closed', appeal_status: 'closed', current_stage: '1', can_initiate: true, appeal_exhausted: true })
-    expect(v).toEqual({ showFileAffordance: false, statusKey: null, showReversed: false, showExhausted: false, showExternalRemedy: false })
+    expect(v).toEqual({ showFileAffordance: false, eligibleKey: 'appeal.eligible', statusKey: null, showReversed: false, showExhausted: false, showExternalRemedy: false })
+  })
+
+  it('⭐ AC16 — Story 6.39 (`-473` Q3 B): a refusal for a fee ⛔ paid before the death says the door\'s reason INSTEAD of the plain line; every other refusal keeps the plain line', () => {
+    const told = deriveAppealView({ ...base, can_initiate: true, refusal_reason: 'not_a_member_when_died' })
+    expect(told.showFileAffordance).toBe(true)
+    expect(told.eligibleKey).toBe(REFUSED_NOT_MEMBER_KEY)
+    expect(REFUSED_NOT_MEMBER_KEY).toBe('appeal.refused_not_member')
+    expect(deriveAppealView({ ...base, can_initiate: true }).eligibleKey).toBe('appeal.eligible')
   })
 
   it('a denied claim with no prior journey shows the file affordance (no deadline, D-E)', () => {

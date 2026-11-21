@@ -39,6 +39,7 @@ import {
 } from '../schema/claim_membership_checks.js';
 import { eventsLog } from '../schema/events_log.js';
 import { vyawasthaShulkReceipts } from '../schema/vyawastha_shulk_receipts.js';
+import { FEE_PAID_AFTER_DEATH_REASON_CODE } from './membership-check-approval.js';
 
 /** The joining receipt, as the comparison needs it. `paidAt` is the SERVER instant of the member's self-attest. */
 export interface JoiningFeeReceipt {
@@ -131,4 +132,55 @@ export async function getLiveMembershipCheck(
       ),
     );
   return row ? { ...row, hasNote: row.hasNote === true } : null;
+}
+
+/**
+ * ⭐ `2026-11-21-473` Q3 B (built `-474` item 4) — does the claim's refusal STAND on `fee_paid_after_death`? Feeds the
+ * family's appeal card, which then shows the door's general reason (*"the person was not a member of the Trust when
+ * they died"*). ⛔ The reason code itself never leaves the server. TRUE iff:
+ *   · the claim is `denied`, AND
+ *   · its LIVE P1 verifier decision, OR any LIVE final-vote / trustee decision, is `denied` with that reason (DL9 gives
+ *     the reason to BOTH vocabularies), AND
+ *   · ⛔ appeal of the claim was `reversed` — an allowed appeal leaves the decision row live (the RF1 / F3 precedent,
+ *     `standingSuspicionRefusalSql`), so a LATER denial for another reason must ⛔ inherit this one's words.
+ * RLS-scoped with the explicit `pariwar_id` predicate on every table. ⛔ No ciphertext.
+ */
+export async function isFeePaidAfterDeathRefusalStanding(
+  db: Db,
+  pariwarId: PariwarId,
+  claimCaseId: ClaimId,
+): Promise<boolean> {
+  const result = await db.execute<{ standing: boolean }>(sql`
+    SELECT EXISTS (
+      SELECT 1 FROM claims fr_c
+       WHERE fr_c.pariwar_id = ${pariwarId}::uuid
+         AND fr_c.claim_case_id = ${claimCaseId}::uuid
+         AND fr_c.current_state = 'denied'
+         AND (
+           EXISTS (
+             SELECT 1 FROM claim_verifier_decisions fr_v
+              WHERE fr_v.pariwar_id = fr_c.pariwar_id
+                AND fr_v.claim_case_id = fr_c.claim_case_id
+                AND fr_v.superseded_at IS NULL
+                AND fr_v.outcome = 'denied'
+                AND fr_v.reason_code = ${FEE_PAID_AFTER_DEATH_REASON_CODE}
+           )
+           OR EXISTS (
+             SELECT 1 FROM claim_state_trustee_decisions fr_t
+              WHERE fr_t.pariwar_id = fr_c.pariwar_id
+                AND fr_t.claim_case_id = fr_c.claim_case_id
+                AND fr_t.superseded_at IS NULL
+                AND fr_t.outcome = 'denied'
+                AND fr_t.reason_code = ${FEE_PAID_AFTER_DEATH_REASON_CODE}
+           )
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM claim_appeals fr_a
+            WHERE fr_a.pariwar_id = fr_c.pariwar_id
+              AND fr_a.claim_case_id = fr_c.claim_case_id
+              AND fr_a.status = 'reversed'
+         )
+    ) AS standing
+  `);
+  return result.rows?.[0]?.standing === true;
 }

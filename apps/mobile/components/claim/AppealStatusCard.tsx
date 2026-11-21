@@ -33,7 +33,8 @@ export function AppealStatusCard({ status, onFileAppeal, filing }: AppealStatusC
     <YStack gap="$3" testID="appeal-status-card">
       {view.showFileAffordance ? (
         <YStack gap="$2" testID="appeal-file-affordance">
-          <Paragraph>{t('appeal.eligible')}</Paragraph>
+          {/* Story 6.39 (`-473` Q3 B) — the door's reason, for a refusal for a fee ⛔ paid before the death. */}
+          <Paragraph testID="appeal-eligible-line">{t(view.eligibleKey)}</Paragraph>
           <Paragraph size="$2" opacity={0.7}>
             {t('appeal.no_deadline')}
           </Paragraph>

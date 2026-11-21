@@ -16,6 +16,8 @@ import {
   MembershipCheckPreviewResponse,
   MembershipCheckRequest,
   isMembershipCheckWaitReason,
+  MemberAppealStatusResponse,
+  MemberDeathCertificateStatusResponse,
 } from '../src/index.js';
 
 const REVIEW = '6b1f0b7e-2c56-4b55-9d0b-3a0a2b1c4d5e';
@@ -117,5 +119,50 @@ describe('Story 6.39 — the preview and the console section', () => {
       MembershipCheckGateStatus.safeParse({ available: true, passed: false, reason: 'fee_after_death', viewer: { canCheckMembership: true } }).success,
     ).toBe(true);
     expect(MembershipCheckGateStatus.safeParse({ available: true, passed: true, reason: null, viewer: {} }).success).toBe(false);
+  });
+});
+
+// ── Story 6.39 Task 8 — what the family is told (`2026-11-21-473` Q3 B, Q4 B; `-474` items 4–5) ─────────────────────
+describe('Story 6.39 — the two member-read fields the Panel\'s ruling adds', () => {
+  const appeal = {
+    claim_case_id: '00000000-0000-4000-8000-000000000001',
+    claim_state: 'denied',
+    can_initiate: true,
+    appeal_status: null,
+    current_stage: null,
+    appeal_exhausted: false,
+    closed_no_response: false,
+    refusal_reason: 'not_a_member_when_died',
+  };
+  it('AC16 — `refusal_reason` is REQUIRED, nullable, and ONE closed value — ⛔ the reason code', () => {
+    expect(MemberAppealStatusResponse.safeParse(appeal).success).toBe(true);
+    expect(MemberAppealStatusResponse.safeParse({ ...appeal, refusal_reason: null }).success).toBe(true);
+    for (const leak of ['fee_paid_after_death', 'post_death_nominee_change', 'other']) {
+      expect(MemberAppealStatusResponse.safeParse({ ...appeal, refusal_reason: leak }).success, leak).toBe(false);
+    }
+    const without: Record<string, unknown> = { ...appeal };
+    delete without['refusal_reason'];
+    expect(MemberAppealStatusResponse.safeParse(without).success).toBe(false);
+  });
+
+  it('AC17 — `identity_check_waiting` is a REQUIRED boolean — ⛔ the gate\'s reason', () => {
+    const read = {
+      status: 'accepted',
+      replacement_reason: null,
+      replacement_allowed: false,
+      upload_allowed: false,
+      certificate_token: null,
+      claim_live: true,
+      reassurance: null,
+      closed_no_response: false,
+      refile_requires_confirmation: false,
+      claim_closed: false,
+      identity_check_waiting: true,
+    };
+    expect(MemberDeathCertificateStatusResponse.safeParse(read).success).toBe(true);
+    expect(MemberDeathCertificateStatusResponse.safeParse({ ...read, identity_check_waiting: 'identity_not_confirmed' }).success).toBe(false);
+    const without: Record<string, unknown> = { ...read };
+    delete without['identity_check_waiting'];
+    expect(MemberDeathCertificateStatusResponse.safeParse(without).success).toBe(false);
   });
 });

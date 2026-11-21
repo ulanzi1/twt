@@ -952,7 +952,7 @@ export const verifierConsoleEn = {
       stale: 'The certificate changed since the membership check — check again.',
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death:
-        'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — deny it with the reason "Fee paid after the death".',
+        'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — deny it with the reason "Fee paid after the death".',
       unavailable:
         'Whether the membership check has passed could not be checked. Reload the page — approval stays unavailable until it can be checked.',
     } as Record<string, string>,
@@ -962,14 +962,14 @@ export const verifierConsoleEn = {
       stale: 'The certificate changed since the membership check — check again.',
       identity_not_confirmed: "The person's identity has not been confirmed.",
       fee_after_death:
-        'The joining fee was paid after the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
+        'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim — refuse it in the final vote with the reason "Fee paid after the death".',
     } as Record<string, string>,
     // The same 409 on the R9 panel — ⛔ instruction: the R9 denial does not take the reason. DL12.
     r9Gate: {
       not_checked: 'Membership check needed before approval.',
       stale: 'The certificate changed since the membership check — check again.',
       identity_not_confirmed: "The person's identity has not been confirmed.",
-      fee_after_death: 'The joining fee was paid after the date of death on the certificate. No drive can open for this claim.',
+      fee_after_death: 'The joining fee was not paid before the date of death on the certificate. No drive can open for this claim.',
     } as Record<string, string>,
     passed: 'The membership check has passed.',
     // The fee half — the comparison the system made. DL12.

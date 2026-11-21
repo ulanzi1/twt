@@ -110,11 +110,12 @@ export type MembershipCheckApprovalState =
 export const FEE_PAID_AFTER_DEATH_REASON_CODE = 'fee_paid_after_death' as const;
 
 /**
- * ⭐ PQ1 (a) — the fee outcomes that STOP a drive. `-430` Q1 B's words stop it only when the fee was paid *after*
- * the death, so `same_day` PASSES (the literal side, built until the Panel rules). A ruling of B (the day of death
- * counts as after, as `2026-09-20-235` Y) is `['after_death', 'same_day']` HERE — the one arm that flips.
+ * ⭐ PQ1 (a) — the fee outcomes that STOP a drive. RULED `2026-11-21-473` Q1 B (DR + KB): *"The same day counts as
+ * after — ⛔ drive"* (the Panel's own day-of-death line, as `2026-09-20-235` Y). Built `-474` item 2: a `same_day`
+ * check gives the gate's `fee_after_death` answer (⛔ new wait reason), so the `fee_paid_after_death` deny is accepted
+ * for it too (DL9's guard reads that answer). Until the ruling it was `['after_death']` (built A).
  */
-export const MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES: readonly MembershipCheckFeeOutcome[] = ['after_death'];
+export const MEMBERSHIP_CHECK_BLOCKING_FEE_OUTCOMES: readonly MembershipCheckFeeOutcome[] = ['after_death', 'same_day'];
 
 /**
  * ⭐ THE ONE DEFINITION of "the membership check passes" (N1). Pure. Precedence (DL5): `not_checked` → `stale` →

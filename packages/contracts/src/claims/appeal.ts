@@ -312,6 +312,14 @@ export const MemberAppealStatusResponse = z
      * disclosure for it.
      */
     closed_no_response: z.boolean(),
+    /**
+     * ⭐ Story 6.39 (`2026-11-21-473` Q3 B; built `-474` item 4) — the ONE reason the family is told: `not_a_member_when_died`
+     * iff the claim is `denied` and its live refusal is for a joining fee ⛔ paid before the death (`fee_paid_after_death`,
+     * on the P1 or the final-vote denial) and ⛔ appeal reversed it; else `null`. The card then says the door's words
+     * (*"…the person was not a member of the Trust when they died…"*). ⛔ The reason CODE never leaves the server; every
+     * other refusal stays `null` (no reason shown — as before).
+     */
+    refusal_reason: z.enum(['not_a_member_when_died']).nullable(),
   })
   .strict();
 export type MemberAppealStatusResponse = z.output<typeof MemberAppealStatusResponse>;

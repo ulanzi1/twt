@@ -40,6 +40,7 @@ describe('Story 6.24a — the wire changes', () => {
       closed_no_response: false,
       refile_requires_confirmation: false,
       claim_closed: true,
+      identity_check_waiting: false, // Story 6.39 (`-473` Q4 B)
     };
     expect(MemberDeathCertificateStatusResponse.safeParse(read).success).toBe(true);
     const without: Record<string, unknown> = { ...read };

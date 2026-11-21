@@ -385,6 +385,9 @@ export function createAppealHandlers(deps: AppDeps) {
         const journey = await claim.getAppealJourney(tx.tx, pariwarId, claimCaseId);
         // Story 6.19c (AC7, `-273` §9) — a claim closed for no response is ⛔ appealable: ⛔ no affordance.
         const closedNoResponse = (await claim.readClosedClosureRow(tx.tx, pariwarId, claimCaseId)) !== null;
+        // ⭐ Story 6.39 (`2026-11-21-473` Q3 B; `-474` item 4) — the ONE reason a family is told, as a closed value
+        // (⛔ the reason code).
+        const feeRefusalStanding = await claim.isFeePaidAfterDeathRefusalStanding(tx.tx, pariwarId, claimCaseId);
         ok = true;
         void reply.status(200);
         return {
@@ -395,6 +398,7 @@ export function createAppealHandlers(deps: AppDeps) {
           current_stage: journey?.currentStage ?? null,
           appeal_exhausted: journey?.status === 'upheld_final',
           closed_no_response: closedNoResponse,
+          refusal_reason: feeRefusalStanding ? 'not_a_member_when_died' : null,
         };
       } finally {
         await closeScopeTx(tx, ok);

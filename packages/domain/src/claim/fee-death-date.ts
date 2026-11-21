@@ -23,7 +23,7 @@ export type FeeDeathDateOutcome = 'before_death' | 'same_day' | 'after_death';
  *   · two `YYYY-MM-DD` strings compare correctly as strings.
  *
  * `same_day` is its OWN outcome, ⛔ folded into either neighbour: what a fee paid ON the day of death means is
- * PQ1 (a), open with the Panel — the gate decides which side it falls on, in ONE place.
+ * decided by the gate, in ONE place — `2026-11-21-473` Q1 B ruled it counts as after (it stops the drive).
  *
  * @throws when `deathDate` is not a real calendar date, or `paidAt` is not a valid instant. The caller (the API
  *   handler) turns an unreadable / anonymized date into a typed 409 BEFORE calling — this throw is a programming

@@ -28,6 +28,9 @@ export interface CertificateNoticeView {
   readonly reassurance: MemberDeathCertificateStatusResponse['reassurance']
   /** Whether the surface may OFFER an upload control for this (possibly marker-overridden) view. */
   readonly uploadAllowed: boolean
+  /** ⭐ Story 6.39 (`2026-11-21-473` Q4 B; `-474` item 5) — the claim waits on an identity staff cannot yet confirm:
+   *  the `accepted` notice adds ONE line beneath it. The server decides (`identity_check_waiting`); ⛔ the reason. */
+  readonly identityCheckWaiting: boolean
 }
 
 export interface CertificateNoticeResolution {
@@ -58,6 +61,7 @@ export function resolveCertificateNotice(
     replacementReason: serverRead.replacement_reason,
     reassurance: serverRead.reassurance,
     uploadAllowed: serverRead.upload_allowed,
+    identityCheckWaiting: serverRead.identity_check_waiting,
   }
 
   if (marker === null) {
@@ -91,6 +95,7 @@ export function resolveCertificateNotice(
       replacementReason: null,
       reassurance: null,
       uploadAllowed: false,
+      identityCheckWaiting: false,
     },
     clearMarker: false,
   }
@@ -111,6 +116,8 @@ export interface CertificateNoticeCopy {
 }
 
 const UPLOAD_LABEL_KEY = 'certificate.replacement_upload'
+/** `-473` Q4 B — the Panel's line (`-474` item 5: the Hindi approved by BigDev). */
+export const IDENTITY_WAIT_KEY = 'certificate.identity_wait'
 /** BigDev's helpline line (D4) — the ONE constant every helpline CTA on the certificate surfaces carries. */
 export const HELPLINE_LABEL_KEY = 'certificate.replacement_helpline'
 
@@ -153,11 +160,13 @@ function certificateNoticeFlags(notice: CertificateNoticeView): NoticeFlags {
         showUpload: false,
         showHelpline: false,
       }
+    // ⭐ Story 6.39 (`-473` Q4 B; `-474` item 5) — "accepted" stays (it is true); while the claim waits on an identity
+    // staff cannot yet confirm, ONE line beneath it — and only then.
     case 'accepted':
       return {
         titleKey: null,
         bodyKey: 'certificate.accepted',
-        reassuranceKey: null,
+        reassuranceKey: notice.identityCheckWaiting ? IDENTITY_WAIT_KEY : null,
         showUpload: false,
         showHelpline: false,
       }

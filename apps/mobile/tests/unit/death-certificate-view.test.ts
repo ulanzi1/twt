@@ -10,6 +10,7 @@ import {
   certificateNoticeCopy,
   resolveCertificateNotice,
   CERTIFICATE_MARKER_TTL_MS,
+  IDENTITY_WAIT_KEY,
   type DeathCertificatePendingMarker,
 } from '../../lib/death-certificate-view'
 
@@ -28,6 +29,7 @@ function read(over: Partial<MemberDeathCertificateStatusResponse> = {}): MemberD
     closed_no_response: false,
     refile_requires_confirmation: false,
     claim_closed: false,
+    identity_check_waiting: false,
     ...over,
   }
 }
@@ -135,6 +137,7 @@ describe('resolveCertificateNotice — precedence rule 4: otherwise, awaiting_re
       replacementReason: null,
       reassurance: null,
       uploadAllowed: false,
+      identityCheckWaiting: false,
     })
     expect(r.clearMarker).toBe(false)
   })
@@ -175,8 +178,22 @@ describe('certificateNoticeCopy — the copy-key selection (D3, AC3)', () => {
   })
 
   it('accepted renders exactly one line', () => {
-    const copy = certificateNoticeCopy({ status: 'accepted', replacementReason: null, reassurance: null, uploadAllowed: false })
+    const copy = certificateNoticeCopy({ status: 'accepted', replacementReason: null, reassurance: null, uploadAllowed: false, identityCheckWaiting: false })
     expect(copy.bodyKey).toBe('certificate.accepted')
+    expect(copy.reassuranceKey).toBeNull()
+  })
+
+  it('⭐ AC17 — Story 6.39 (`-473` Q4 B): while the identity waits, "accepted" STAYS and ONE line is added beneath it — and only for `accepted`', () => {
+    const copy = certificateNoticeCopy({ status: 'accepted', replacementReason: null, reassurance: null, uploadAllowed: false, identityCheckWaiting: true })
+    expect(copy.bodyKey).toBe('certificate.accepted')
+    expect(copy.reassuranceKey).toBe(IDENTITY_WAIT_KEY)
+    expect(IDENTITY_WAIT_KEY).toBe('certificate.identity_wait')
+    expect([copy.showUpload, copy.showHelpline]).toEqual([false, false])
+    // The server's flag rides through the precedence unchanged; ⛔ another status shows the line.
+    expect(resolveCertificateNotice(read({ status: 'accepted', identity_check_waiting: true }), null, NOW).notice?.identityCheckWaiting).toBe(true)
+    for (const status of ['not_needed', 'missing', 'awaiting_review'] as const) {
+      expect(certificateNoticeCopy({ status, replacementReason: null, reassurance: null, uploadAllowed: false, identityCheckWaiting: true }).reassuranceKey).not.toBe(IDENTITY_WAIT_KEY)
+    }
   })
 
   it('replacement_requested + unclear_date ⇒ the unclear body, ⛔ never the future body', () => {

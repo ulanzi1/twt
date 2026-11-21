@@ -4399,6 +4399,28 @@ family-facing words until PQ2; ⛔ change to the door, any lifecycle state, or `
 > (to BigDev, or to the Panel where it changes whose family is helped): which staff member; when (before a refusal, after it, on appeal);
 > how a payment is matched to the Trust's bank statement; whether a bank date ON the day of death counts as after (`-473` "does NOT cover").
 > Builds on Story 6.39's membership check (`-472` N3 — binding until this lands). Holds roster Row 46 (b)'s PQ1 (b) half.
+> - ⚠ **2026-11-21 — written by `bmad-create-story 6.39a`** (story file
+>   `_bmad-output/implementation-artifacts/6-39a-bank-date-for-a-fee-recorded-after-the-death.md`). The build decisions (DL1–DL14) are
+>   PROPOSED there and answered at its Task 0.2; the three edges that change whose family is helped — after a refusal (on appeal), a
+>   payment reference that does not match, a bank date ON the day of death — are ONE non-blocking note (PQ1–PQ3), built on the literal
+>   side until ruled. The lines above are ⛔ edited.
+
+As a family whose member paid the joining fee in life but whose payment was recorded only after the death, the Trust's finance officer who
+holds the Trust's bank statements, and the District Admin who checks the claim, I want the finance officer to be able to record, with a
+reason, the date the Trust's own bank statement shows the payment arrived — matched to the member's payment by its reference — so that the
+membership check compares that date with the date of death, so that a member who really paid before they died is not treated as never
+having paid in time, while a fee paid after a death still never opens a drive.
+
+**Acceptance Criteria (in brief — the full set is in the story file):** ONE new recorded staff act per claim — the bank date (a new
+append-only table, one live row, a new record supersedes) — by the finance officer ONLY (new key `claim.record_fee_bank_date`; ⛔ the
+District Admin who checks, ⛔ the Pariwar Admin who votes), step-up, on a NEW admin page listing the claims the membership check holds on
+the fee date; accepted only while the claim is held on its fee, in the review window, when the payment reference typed from the statement
+EQUALS the member's recorded reference (⛔ stored), and for a date ⛔ in the future and ⛔ before the member joined, with a reason and a note;
+⛔ statement uploaded; ⛔ name or date of death shown to the finance officer. The claim then WAITS (a new gate reason `bank_date_recorded`;
+the fee deny refused meanwhile) until the District Admin checks again; the membership check compares the BANK's date by the SAME rule
+(a day before the death passes; the day itself and later do not); usable after an appeal reverses a fee refusal (PQ1, built B); ⛔
+family-facing words; ⛔ change to the receipt, any lifecycle state, the door, either deny vocabulary or the appeal; ⛔ Tier-1, date or
+reference in any event, log or audit.
 
 ---
 

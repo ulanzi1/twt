@@ -4,8 +4,8 @@
 asked until BigDev sends it.
 **Written from:** Story 12.5 (the transport that carries a member's registered interest to a partner), Task 0.5. The Trustee Panel is
 asked seven questions beside this one (`trustee-panel-routing-note-2026-11-21-12-5-partner-lead-data.md`, also not sent).
-**Roster:** the go-live row for this feature (`partner-lead-handoff-live`, to be appended as Row 54 or later — not written yet). Your
-answer is its leg (b); nothing reaches a partner before it.
+**Roster:** Row 54 (`partner-lead-handoff-live`), the go-live row for this feature. Your answer is its leg (b); nothing reaches a
+partner before it.
 
 ---
 

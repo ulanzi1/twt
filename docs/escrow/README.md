@@ -185,3 +185,7 @@ Specific cadence (monthly, quarterly, etc.) belongs in operations policy, not in
 - `credential-inventory.md` — the canonical list of credential domains, envelope classes, availability status, owning Stories, re-seal triggers, and envelope references.
 - `escrow-ledger.md` — trustee event-record (sealings, re-seals, dry-runs, table-tops, gaps, procedure revisions). **Sole source of truth for trustee-attested escrow events.**
 - `sealing-procedure.md` — five-section runbook for the sealing operation.
+
+## Dated note — 2026-11-21 (Story 12.5, Decision `2026-11-21-483`)
+
+"partner JWT signing keys" in the high-sensitivity tier, and "signing keys" in the partner-integrations row, do ⛔ describe the lead transport Story 12.5 decided: its per-module HMAC secrets are `prod-credential`s in the prod project (`-483` QE3 (A), a recorded variance from architecture §5.9). Each is entered in `credential-inventory.md` when a partner onboards (roster Row 54 (f)).

@@ -378,3 +378,7 @@ Per `docs/knowledge-transfer/README.md` §6 fallback:
 - [Source: `docs/adr/README.md`] — ADR directory README scaffolded by Story 0.5 Task 1
 - Memory: [[feedback_architecture_vs_adr_boundary]] — ADRs commit cloud controls; architecture commits properties
 - Memory: [[feedback_closure_language_precision]] — `slot-reserved-pre-write` is "Resolved via explicit deferral"; never collapsed with `ratified`
+
+## Dated note — 2026-11-21 (Story 12.5, Decision `2026-11-21-483`)
+
+The reserved row `ADR-NNNN-partner-jwt-signing-key-storage` is ⛔ needed for the lead transport: Story 12.5 decided an HMAC secret per module, in the prod project (`-483` QE3 (A)). Story 12.5 writes its own ADR (≥ `ADR-0046`, `partner-lead-handoff-transport`), which records the two variances from architecture §5.9. The reserved row is kept for a future asymmetric scheme.

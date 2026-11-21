@@ -2167,6 +2167,9 @@ JWT, APNs auth token, partner JWT signing keys, telephony provider tokens) must 
 automatically refreshed and verified. The architecture commits the property; SDK choice
 is an implementation decision.
 
+> ⚠ **ANNOTATION 2026-11-21 (Story `12-5` Task 0.4, `2026-11-21-483` — author-commit) — "partner JWT signing keys" above is SUPERSEDED for the lead transport: there is ⛔ partner JWT. The transport signs with an
+> HMAC secret per module, resolved from Secret Manager at each send (`-483` (S1), QE3 (A), QE9). ⭐ Annotated, ⛔ not rewritten.**
+
 **Provider-quota self-regulation.** The dispatcher self-regulates to stay within each
 provider's published quota and degrades gracefully when quota is approached or
 exceeded. Mechanism (token bucket, queue pacing, batching, or other) committed in
@@ -2607,6 +2610,15 @@ at PR time. A new consumer author points here and reads the event-derived state.
 **Decision:** Lead submission contract in `packages/contracts/module-leads/`. Per-partner
 endpoint receives leads with TWT attribution; partner authentication via signed JWT
 (asymmetric — partner holds TWT's public key for verification).
+
+> ⚠ **ANNOTATION 2026-11-21 (Story `12-5` Task 0.4, `2026-11-21-483` — author-commit) — §3.7 as DECIDED for the lead transport. ⭐ Annotated, ⛔ not
+> rewritten.** SUPERSEDED for this transport (`-483` (S1)): "partner authentication via signed JWT (asymmetric …)", the "signed-JWT lead
+> envelope" and "TWT lead JWT carries a nonce" below — the body is plain JSON signed with HMAC-SHA-256 (the epic AC's wording), and the
+> partner's dedupe key is `Idempotency-Key: <lead_id>`. VARIED (`-483` (V2)): there is ⛔ contract in `packages/contracts/module-leads/`
+> (the lead route is Story 12.3's); a jobs SWEEP sends, ⛔ the API; "dead-letter to the partner-coordination admin queue" is an alarm and a
+> `failed_delivery` row (the queue is carried); the breaker is per tick, ⛔ "opens after N consecutive failures". "scope-redacted to
+> partner-allowed fields per FR-66 wizard" is ONE closed list of four details for every partner. ⛔ Nothing is built yet, and ⛔ member's
+> details reach a partner before roster Row 54 closes.
 
 **Architectural shape:**
 - Member taps Apply on a module card (FR-65) → consent capture (DPDPA, per surface
@@ -3674,6 +3686,9 @@ KEK references, and webhook signing secrets.
 - **Database credentials:** managed via Secret Manager + IAM authentication where
   Cloud SQL supports it.
 
+> ⚠ **ANNOTATION 2026-11-21 (Story `12-5` Task 0.4, `2026-11-21-483` — author-commit) — "Partner JWT signing keys" above is SUPERSEDED for the lead transport (`-483` (S1)): the secret is an HMAC secret per module;
+> a rotation is a new Secret Manager version, with the PARTNER accepting old and new for the agreed window. ⭐ Annotated, ⛔ not rewritten.**
+
 **Audit-mirror credential separation** (§2.10) implemented via separate GCP project
 with separate IAM service-account chains; sole-engineer prod credentials cannot
 reach either the mirror-write or mirror-read role.
@@ -3690,6 +3705,10 @@ lives in a separate GCP project (or projects) from prod:
 - KEK roots.
 - Partner JWT signing keys.
 - Telephony recording-storage credentials.
+
+> ⚠ **ANNOTATION 2026-11-21 (Story `12-5` Task 0.4, `2026-11-21-483` — author-commit) — a recorded VARIANCE for the lead transport (`-483` (S1), QE3 (A) cost (v)): the per-module HMAC secret lives in the PROD
+> project, ⛔ this tier — the manifest stores a bare secret NAME and the resolver reads the prod project. What a leaked secret allows is
+> forging a lead TO that partner; it opens ⛔ member data. ⭐ Annotated, ⛔ not rewritten.**
 
 The prod project has cross-project IAM grants to use these but does not store them.
 Compromising the prod project does not compromise the high-sensitivity tier.
@@ -4913,6 +4932,10 @@ Short — not governance. Just discoverability.
 - **GCP services** — Cloud SQL, Cloud Storage, Cloud KMS, Secret Manager, Cloud
   Monitoring, Cloud Logging, Artifact Registry.
 - **Cloudflare** — edge WAF + Bot Management + Turnstile.
+
+> ⚠ **ANNOTATION 2026-11-21 (Story `12-5` Task 0.4, `2026-11-21-483` — author-commit) — "signed-JWT lead handoff" above, and the tree's `partner/        # JWT verification for partner endpoints`, are SUPERSEDED
+> for the lead transport (`-483` (S1)): an HMAC-signed POST, and ⛔ inbound partner endpoint at all (Story 12.5's boundary fence). ⭐
+> Annotated, ⛔ not rewritten.**
 
 #### Data flow — monthly contribution cycle (canonical)
 

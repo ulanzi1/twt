@@ -104,3 +104,7 @@ Specific cadence (monthly, quarterly, etc.) belongs in operations policy, not in
 - `job-queue-operations.md` — pg-boss job queue + idempotency keyed store operations (Story 1.12; architecture §1.4 / §5.9 / §5.11). The copy-me reference for every downstream queue consumer.
 - `trustee-credential-loss-succession.md` — admin credential-loss recovery (lost passkeys, exhausted recovery codes, lockout) + Super-Admin succession (death / resignation / incapacity / transfer / revocation) + break-glass via escrow. Governance runbook discharging `.decision-log.md` Decision 2026-06-21-059 amendment A (ADR-0009 + ADR-0008); **signed-off 2026-06-23 (Decision 2026-06-23-060).**
 - `deploy-rollback-execution-validation-checklist.md` — the performable checklist for the documented staging deploy + rollback drill required by Decision 2026-06-23-060 (the trustee execution-validation directive). Maps to the signed `deploy.md` + `rollback.md`; results land in the `operational-readiness-ledger.md` Execution-validation log. **Not yet executed.**
+
+## Dated note — 2026-11-21 (Story 12.5, Decision `2026-11-21-483`)
+
+The "Partner-coordination escalation procedure" row names Story 12.5 as its candidate. Story 12.5 does ⛔ write it: the runbook is carried (`deferred-work.md`, 12.5's K-10) and its owner is named before roster Row 54 closes (leg (j)). What 12.5 decides is the `module_lead_handoff_failed` alarm the procedure will start from.

@@ -142,3 +142,7 @@ Per `docs/knowledge-transfer/README.md` §6 fallback:
 - [Source: `docs/knowledge-transfer/on-call-playbook.md`] — on-call escalation routing for vendor-side incidents
 - Memory: [[feedback_architecture_vs_adr_boundary]] — architecture commits properties; ADRs commit cloud controls
 - Memory: [[feedback_closure_language_precision]] — `pending-system-availability` / `pending-ADR-selection` / `deferred-with-ADR` are distinct deferral states; never collapsed with `active`
+
+## Dated note — 2026-11-21 (Story 12.5, Decision `2026-11-21-483`)
+
+For the "Module Marketplace partner integrations" row: before the first partner's details are sent, the partner data-handling agreement must be signed and ratified (roster Row 54 (e)); its minimum terms are asked of counsel (`counsel-question-2026-11-21-12-5-partner-lead-transfer.md`, WRITTEN, ⛔ sent).

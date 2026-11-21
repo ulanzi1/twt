@@ -153,3 +153,7 @@ The review event itself is logged in `escrow-ledger.md`'s "Periodic re-attestati
 - Architecture §2.7 (PII tier KEK / HMAC); §2.10 (audit log access controls); §2.10a (isolation commitment); §5.7 (DR runbook PDF custody); §5.9 (high-sensitivity tier separation); §5.10 (backup engineer access posture)
 - PRD §9.1.1 — bus-factor mitigation rationale + seven credential domains
 - AR-67 — solo-build operational continuity commitment
+
+## Dated note — 2026-11-21 (Story 12.5, Decision `2026-11-21-483`)
+
+For the `partner-integration-{partner}-credentials` row: the credential Story 12.5's transport uses is ONE HMAC signing secret per module (a Secret Manager name on the module's manifest), ⛔ a partner JWT key. A row is added per partner at onboarding, with the rotation window agreed with the partner (roster Row 54 (f)).

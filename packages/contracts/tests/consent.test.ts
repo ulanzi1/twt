@@ -75,7 +75,7 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
     );
   });
 
-  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9/11b.1 publication + 6.19a agreement additives', () => {
+  it('consent_type declares the seven AC1 values + the 5.4/5.5 opt-in + 6.9/11b.1 publication + 6.19a agreement + 12.5 lead additives (14)', () => {
     expect([...ConsentTypeSchema.options].sort()).toEqual(
       [
         // Story 6.19a (D15) — the filer's per-claim agreement to be contacted (additive via ALTER TYPE 0124 + lockstep).
@@ -87,6 +87,8 @@ describe('Story 2.7 — consent enum lockstep (dual anti-drift guard)', () => {
         'in_memoriam_listing',
         'marketing',
         'medical_disclosure_ack',
+        // Story 12.5 (`2026-11-21-483` QE2 (A)) — the per-lead partner-handoff agreement (additive via ALTER TYPE 0214 + lockstep).
+        'module_lead_handoff',
         'nominee_share_split',
         // Story 11b.1 (D4(b)) — the deceased member's NAME on the public Sahyog Drive pool index
         // (additive via ALTER TYPE 0112 + lockstep). Minted PRE-LAUNCH on purpose: consent is

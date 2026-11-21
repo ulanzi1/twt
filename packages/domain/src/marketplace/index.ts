@@ -30,3 +30,10 @@ export * from './publication.js';
 export * from './scope-options.js';
 // The activation sweep's SCAN + CLASSIFIER only — ⛔ an audit wrapper in the domain (QE7 (A), I11).
 export * from './activation-sweep.js';
+// ── Story 12.5 (`2026-11-21-483`) — the lead-handoff transport's domain half ──
+// The v1 member-field allow-list + the seal / open (QE5 (A), QE11 (A)).
+export * from './lead-member-fields.js';
+// The v1 body, the HMAC signature and the attribution header — PURE (QE3 (A), QE12).
+export * from './lead-envelope.js';
+// The seam 12.3 calls (seal, record), the W table's writes, the predicates P0–P5 and the reads (QE4, QE6, QE7, QE18, QE21 (C)).
+export * from './lead-handoff.js';

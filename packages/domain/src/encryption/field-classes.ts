@@ -127,6 +127,15 @@ export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = 'claim_fraud_investigation'
 export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = 'claim_membership_check';
 
 /**
+ * ⭐ NEW (Story 12.5, `2026-11-21-483` QE11 (A)) — the Tier-1 class of a partner LEAD's sealed member fields
+ * (`marketplace_lead_handoffs.member_fields_ciphertext`): ONE envelope of the canonical JSON `{ version, nonce, full_name, mobile,
+ * district, preferred_language }`, keyed on the lead's REAL `pariwarId` with `rowKey = lead_id`, so a sealed string cannot be opened
+ * as another lead's. Sealed by `marketplace.sealLeadMemberFields` (12.3's caller, in `apps/api`) and opened by the lead-handoff sweep
+ * in `apps/jobs` — the two apps cannot share a by-value copy (the 8.8 precedent above), hence here. ⛔ Never re-declare it.
+ */
+export const MODULE_LEAD_FIELDS_FIELD_CLASS = 'module_lead_fields';
+
+/**
  * Envelope-encryption + blind-index key material for the member PII families. Structurally identical
  * to `apps/api`'s `EncryptionDeps` and `apps/jobs`'s `JobsEncryptionDeps` (both are
  * `{ kms, kekRef, hmacKeyRef }` over these same domain types), so BOTH apps pass their own bundle

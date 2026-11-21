@@ -517,6 +517,9 @@ export * from './marketplace_modules.js';
 // tenant-isolated; composite FKs on `pariwar_id`).
 export * from './marketplace_partners.js';
 export * from './marketplace_module_publications.js';
+// Story 12.5 (0215) — the partner lead HANDOFF record: one row per lead, the outbox 12.3's lead route writes beside
+// `module.lead_submitted` and the jobs sweep's delivery record (status, the closed detail grammar, the sealed member fields).
+export * from './marketplace_lead_handoffs.js';
 // Story 13.2 (0199) — the field-worker attribution-code registry: one permanent Pariwar-scoped 6-digit code per field worker
 // + the durable allocation-exhaustion flags (both append-only for every role — grant + guard triggers, bypassed only by replica
 // mode or DDL; tenant-isolated).

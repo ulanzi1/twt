@@ -297,6 +297,9 @@ export * from './marketplace-modules-rls.js';
 // only — both tables are insert-only).
 export * from './marketplace-partners-rls.js';
 export * from './marketplace-module-publications-rls.js';
+// Story 12.5 (0215) — marketplace_lead_handoffs tenant-isolation policies (select / insert / update — the UPDATE one at birth, for
+// erasure and the requeue; ⛔ `FOR ALL`, ⛔ DELETE). The marketplace_lead_handoffs_guard trigger is ORTHOGONAL.
+export * from './marketplace-lead-handoffs-rls.js';
 // Story 13.2 (0199) — field_worker_attribution_codes + attribution_code_allocation_flags tenant-isolation policies (select /
 // insert only, ⛔ `FOR ALL` — both tables are append-only).
 export * from './field-worker-attribution-codes-rls.js';

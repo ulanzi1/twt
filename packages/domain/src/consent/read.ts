@@ -136,3 +136,38 @@ export async function resolveConsentById(
     .limit(1);
   return rows[0] ?? null;
 }
+
+/** The default page of {@link listConsentsForArtifact} — small on purpose: one lead has ONE consent row in the ordinary case. */
+export const CONSENTS_FOR_ARTIFACT_DEFAULT_LIMIT = 20;
+
+/**
+ * ⭐ Story 12.5 (`2026-11-21-483` QE7 P1; G5, G6) — every consent row of `consentType` that the SUBJECT recorded for ONE artifact
+ * (`consent_artifact_ref = artifactRef`, compared lower-case), REVOKED ROWS INCLUDED, newest `granted_at` first, clamped. The read a
+ * per-artifact consent needs: `consentExists` is per subject + type and ignores the artifact, and `listConsents` hides revoked rows
+ * and pages by subject — either would let one offer's consent mask another offer's revoke (TR2).
+ *
+ * A caller that must judge "none revoked" over ALL of them treats a FULL page as a fault, never an answer (the lead sweep holds the
+ * row). Takes an explicit `pariwarId` (defence in depth beside RLS; the jobs pool bypasses RLS).
+ */
+export async function listConsentsForArtifact(
+  db: Db,
+  pariwarId: PariwarId,
+  subjectId: string,
+  consentType: ConsentType,
+  artifactRef: string,
+  opts: { limit?: number } = {},
+): Promise<ConsentRecordRow[]> {
+  return db
+    .select()
+    .from(consentRecords)
+    .where(
+      and(
+        eq(consentRecords.pariwarId, pariwarId),
+        eq(consentRecords.subjectId, subjectId),
+        eq(consentRecords.consentType, consentType),
+        sql`lower(${consentRecords.consentArtifactRef}) = lower(${artifactRef})`,
+      ),
+    )
+    .orderBy(desc(consentRecords.grantedAt))
+    .limit(clampLimit(opts.limit, { default: CONSENTS_FOR_ARTIFACT_DEFAULT_LIMIT, cap: 50 }));
+}

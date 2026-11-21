@@ -84,6 +84,11 @@ import { auditLogEntries } from './audit_log_entries.js';
  * added by the epic that FIRST WRITES them via an additive `ALTER TYPE … ADD VALUE`
  * migration. Do NOT seed types for surfaces that do not exist yet.
  *
+ * ⚠ DATED 2026-11-21 (Story 12.5, Decision `2026-11-21-483` QE2 (A)) — a recorded DEPARTURE from the
+ * sentence above: `module_lead_handoff` is minted by 12.5, which writes ⛔ row of it (its tests do),
+ * so the transport's "revocation … cancels the delivery" leg is typed and tested before its writer
+ * (12.3's lead route) exists. It also AMENDS `2026-10-31-427` QE10 ("is 12.3's to add"), by name.
+ *
  * NOTE (Story 6.9, D2): `sahyog_vivran_publication` + `in_memoriam_listing` were
  * TENTATIVELY assigned to Epic 11b here originally, but consent is CAPTURED at
  * claim-time (Story 6.9) and only CONSUMED at publication-time (Epic 11b) — the enum
@@ -173,6 +178,13 @@ export const consentTypeEnum = pgEnum('consent_type', [
   // v1 — whether it must be, and whether it may be a condition of approval, is counsel's (M). APPENDED at the
   // END — never reorder. Migration 0124, its OWN file.
   'claim_contact_agreement',
+  // Story 12.5 (Decision `2026-11-21-483` QE2 (A)) — the member's agreement that the details they confirmed on a partner
+  // offer's form may be passed to that partner. ⭐ PER LEAD: `consent_artifact_ref` = the lead's `lead_id`, and
+  // `marketplace_lead_handoffs.consent_id` names the row; read ONLY through those (`consent.listConsentsForArtifact`),
+  // ⛔ never by subject — one offer's consent must not keep another offer's lead alive (12.5 G6). Revocable (P1: a revoke
+  // before the send cancels it). The WRITER is 12.3's lead route (12.5 K-1); 12.5 writes ⛔ row. APPENDED at the END —
+  // never reorder. Migration 0214, its OWN file.
+  'module_lead_handoff',
 ]);
 
 /**

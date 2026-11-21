@@ -402,3 +402,86 @@ export class ModuleCursorInvalidError extends Error {
     super(`module list cursor is invalid: ${reason}`);
   }
 }
+
+// ── Story 12.5 — the lead-handoff transport (`2026-11-21-483`) ──────────────────────────────────────
+// Typed, ⛔ HTTP: 12.5 has ⛔ route. 12.3's lead route (the seam's caller) maps the ones it can meet; the sweep classifies the rest.
+// ⛔ A member field, a URL or a secret in any message (I8) — ids and field NAMES only.
+
+/**
+ * The fields failed the allow-list (AC2): a key outside it, a missing one, a blank or over-long value, a mobile `normalizeMobile`
+ * rejects. `fields` are the failing FIELD NAMES only — ⛔ a value (I8).
+ */
+export class LeadHandoffFieldsInvalidError extends Error {
+  public readonly name = 'LeadHandoffFieldsInvalidError';
+  public readonly fields: readonly string[];
+  public constructor(fields: readonly string[]) {
+    super(`lead member fields are invalid: ${fields.length === 0 ? '(root)' : [...new Set(fields)].join(', ')}`);
+    this.fields = fields;
+  }
+}
+
+/**
+ * The stored fields cannot be read — retry never helps (→ W8 `failed_delivery:fields_unreadable`). `stage` says WHERE, the
+ * `field-worker/crypto.ts` split: `envelope` (not an envelope), `key_rejected` (the key service refused THIS envelope — gRPC 3;
+ * the same reading `-449` records, un-attested against the live service), `authentication` (the key unwrapped but the AES-GCM
+ * tag failed — tampered, or sealed for another lead), `schema` (it opened, but is not a `SealedLeadMemberFieldsV1`).
+ */
+export class LeadHandoffFieldsUnreadableError extends Error {
+  public readonly name = 'LeadHandoffFieldsUnreadableError';
+  public constructor(public readonly stage: 'envelope' | 'key_rejected' | 'authentication' | 'schema') {
+    super(`the lead's stored member fields cannot be read (${stage})`);
+  }
+}
+
+/** The key service, or the way to it, failed — retry helps (→ W6 `held:kms_unavailable`). */
+export class LeadHandoffDecryptUnavailableError extends Error {
+  public readonly name = 'LeadHandoffDecryptUnavailableError';
+  public constructor() {
+    super("the lead's member fields could not be decrypted: the key service is unavailable");
+  }
+}
+
+/**
+ * `recordLeadHandoff` refused the consent (AC2): it is not a `module_lead_handoff` consent, it is for another subject or
+ * another Pariwar, it is revoked, or its `consent_artifact_ref` is not this `lead_id`. A caller bug — 12.3 records the consent
+ * for THIS lead in the same transaction (QE18). `reason` is a closed word.
+ */
+export class LeadHandoffConsentInvalidError extends Error {
+  public readonly name = 'LeadHandoffConsentInvalidError';
+  public constructor(
+    public readonly leadId: string,
+    public readonly reason: 'not_found' | 'wrong_type' | 'wrong_subject' | 'revoked' | 'wrong_artifact',
+  ) {
+    super(`lead ${leadId}: the consent cannot back this handoff (${reason})`);
+  }
+}
+
+/**
+ * A handoff row for this `lead_id`, or one backed by this `consent_id`, already exists (a 23505, rolled back to the savepoint so the
+ * caller's transaction stays usable — 12.1 TR3). With QE18's order (submit first, write nothing on a replay) it is a caller bug.
+ */
+export class LeadHandoffAlreadyRecordedError extends Error {
+  public readonly name = 'LeadHandoffAlreadyRecordedError';
+  public constructor(
+    public readonly leadId: string,
+    public readonly constraint: 'lead_id' | 'consent_id',
+  ) {
+    super(`lead ${leadId}: a handoff is already recorded for this ${constraint}`);
+  }
+}
+
+/** W13 refused: the row's member fields are gone (cancelled, erased, or purged after 30 days), so there is nothing to re-send. */
+export class LeadHandoffFieldsGoneError extends Error {
+  public readonly name = 'LeadHandoffFieldsGoneError';
+  public constructor(public readonly leadId: string) {
+    super(`lead ${leadId}: the member fields are gone — it cannot be re-sent`);
+  }
+}
+
+/** W13 refused: the row is not `failed_delivery` (or not this Pariwar's) — only a failed lead is requeued. */
+export class LeadHandoffNotRequeueableError extends Error {
+  public readonly name = 'LeadHandoffNotRequeueableError';
+  public constructor(public readonly leadId: string) {
+    super(`lead ${leadId}: only a failed handoff can be re-sent`);
+  }
+}

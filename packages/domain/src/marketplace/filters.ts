@@ -62,8 +62,11 @@ function hasUnstorableChar(s: string): boolean {
   return false;
 }
 
-/** Refuse a NUL / an unpaired surrogate in a free-text string schema. */
-function storableText<T extends z.ZodTypeAny>(schema: T) {
+/**
+ * Refuse a NUL / an unpaired surrogate in a free-text string schema. EXPORTED by Story 12.5 (`-483` QE5) for the lead's member
+ * fields (`lead-member-fields.ts`) — the ONE copy of the rule, ⛔ a lockstep twin.
+ */
+export function storableText<T extends z.ZodTypeAny>(schema: T) {
   return schema.refine((v: unknown) => typeof v !== 'string' || !hasUnstorableChar(v), {
     message: 'must not contain a NUL or an unpaired surrogate',
   });

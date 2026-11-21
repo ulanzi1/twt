@@ -58,6 +58,9 @@ export const ConsentTypeSchema = z.enum([
   // may be contacted (`2026-09-27-253` cl.1). Lockstep with the domain `consent_type` pgEnum (migration 0124).
   // ⭐ Per claim (linked by `claim_contacts.agreement_consent_id`); ⛔ NOT a `DpdpaConsentType`.
   'claim_contact_agreement',
+  // Story 12.5 (`2026-11-21-483` QE2 (A)) — the member's per-lead agreement to pass the confirmed details to the partner.
+  // Lockstep with the domain `consent_type` pgEnum (migration 0214). ⭐ Per lead (`consent_artifact_ref` = `lead_id`).
+  'module_lead_handoff',
 ]);
 export type ConsentTypeSchema = z.output<typeof ConsentTypeSchema>;
 

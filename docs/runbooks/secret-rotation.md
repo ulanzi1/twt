@@ -134,6 +134,11 @@ Service-account credentials for CI use WIF (architecture §5.4); short-lived tok
 
 Partner JWT signing keys are rotated per partner contract terms; coordinated with the partner-side public-key update.
 
+> ⚠ **Dated note 2026-11-21 (Story 12.5, Decision `2026-11-21-483` QE3 (A)) — this section does ⛔ describe the lead transport.** That transport has ⛔
+> partner JWT: it signs with an HMAC secret per module. Its rotation is a new Secret Manager version under the same name, with the PARTNER
+> accepting the old and the new secret for the agreed window (roster Row 54 (f)). The procedure below is kept for a future asymmetric
+> scheme; ⛔ rewritten.
+
 1. **Confirm partner readiness.** Partner has scheduled their public-key consumer to accept the new key during the rotation window. Cite the partner contract terms.
 
 2. **Generate new signing key.** Two-person approval per architecture §5.9 (high-sensitivity tier). Store in the high-sensitivity GCP project per architecture §5.9 "High-sensitivity secret separation".

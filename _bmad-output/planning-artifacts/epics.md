@@ -7420,6 +7420,13 @@ So that I see relevant partner offers without irrelevant noise.
 > - **RVD2:** this story's lead route is the first LEAD caller — `submitModuleLead`'s internal retry turns a stream drift into a loop (`-433` QE21's re-trigger).
 > - **(12.2 code review, deferred RD5) The admin console's "no member can be in these statuses yet" copy** — `NO_MEMBER_YET_STATUSES`, the wizard notice and warning, and the detail-page warning name the same four statuses as the point above; when row `3-14-lock-in-expiry-producer` lands (or at this story's create-story, whichever is first) they must change with the shelf's handling.
 
+> ⭐ **INHERITED FROM 12.5 (Decision `2026-11-21-483`; `deferred-work.md` "Deferred from: story 12-5-…").** The transport is decided (⛔ built yet), and ⛔ member's details reach a partner before roster Row 54 closes. These bind this story:
+> - **The seam (QE18).** Seal FIRST, outside the transaction: `sealLeadMemberFields(encDeps, { pariwarId, leadId, fields })` on what the member confirmed. Then, in ONE READ COMMITTED transaction: `submitModuleLead` FIRST; on `{ replayed: true }` write nothing more; otherwise `consent.recordConsent` (`consentType: 'module_lead_handoff'`, `consentArtifactRef: leadId`), then `recordLeadHandoff`. The consent VALUE already exists (12.5 adds it; `-483` (A1) amends `-427` QE10); this story is its first writer.
+> - **The form shows exactly four details** — full name, mobile, district, preferred language — and sends nothing else (QE5 (A)). The Panel is asked whether these four may go (routing note `2026-11-21-12-5-partner-lead-data` Q3).
+> - **This story builds the member's "withdraw my interest" act:** revoke every `module_lead_handoff` consent row whose `consent_artifact_ref` is that lead. ⛔ member screen takes a consent back today, and ⛔ offer goes live before this one exists (Row 54 (d)).
+> - **One registration per offer now has a member cost:** a lead that is cancelled, or fails and is not re-sent by staff inside 30 days, does not give the place back. WHETHER the member is told, and in what words, goes through §0 at this story's create-story. The status words to render come from `getLeadHandoffStatus`: `pending_retry`, `delivered`, `failed_delivery`; a cancelled handoff is ⛔ a delivery status.
+> - **Still this story's:** the consent copy; the data-export lead section (12.1's C8 (b)); RVD2's retry decision; the commission-disclosure question (`-433` QE6 (A)'s trigger).
+
 ### Story 12.4: Grief-Context Module Shelf Suppression — State-Machine-Enforced + Structural-Not-Cosmetic Invariant `[GOVERNANCE]`
 
 As a relative or nominee opening the deceased member's phone post-claim,
@@ -7442,6 +7449,8 @@ So that grief-context dignity is preserved at the architectural layer, not at re
 **And** the philosophy is documented: the trust does not market to grieving families; absence is the architectural commitment, not cosmetic concealment
 
 > ⭐ **INHERITED FROM 12.1 (Decisions `2026-10-31-427`, `2026-10-31-429`; C4, C9).** ⚠ The `account-frozen` overlay this story keys on **LIFTS** on `claim.settled` / `claim.denied_no_appeal` (`2026-09-20-233`) and `claim.closed` (`2026-10-07-292` RF4). Keying instead on the durable "a claim was ever filed" fact (`claim/nominee-lock.ts`) would suppress a LIVING member after an erroneous claim, which IS a new reason under `2026-08-21-147` cl.3 ⇒ the re-examination is MANDATORY here. **C9:** suppression must also bind the lead route, not only the rendered shelf. 12.1 added ⛔ freeze source.
+
+> ⭐ **INHERITED FROM 12.5 (Decision `2026-11-21-483`).** The transport cancels a pending lead on a death by itself — on the `account-frozen` overlay AND on the durable `isDeathReportStanding` fact (QE7 P4 / P5; QE26 (A)) — so this story owns the shelf and the lead route, ⛔ the transport. ⚠ A FACT for this story's own `-147` cl.3 re-examination (12.1's C4): the freeze LIFTS when the claim is settled, and `isDeathReportStanding` does not. P5 is put to the Panel (routing note `2026-11-21-12-5-partner-lead-data` Q7) — WRITTEN, ⛔ sent.
 
 ### Story 12.5: Module Lead-Handoff Transport + Partners-as-Downstream-Consumers Invariant `[PRIMITIVE]`
 
@@ -7477,6 +7486,8 @@ So that partner systems receive valid leads with provenance, and partner integra
 > - **Architecture §3.7's lead envelope** ("scope-redacted to partner-allowed fields per FR-66 wizard") — 12.2 builds ⛔ field allow-list; carried with C6. **§3.7 "Partner contract evolution: versioned per-partner"** has ⛔ home — carried with C7.
 > - **RVD2:** the first LEAD caller is where a stream drift becomes a loop (`-433` QE21's re-trigger).
 
+> ⭐ **BUILD DECISIONS (Decision `2026-11-21-483`, author-commit).** The AC above is varied in three places, each recorded there (V1): the row's primary key, status and claim token are the idempotency key — ⛔ Story 1.12 keyed-store entry; 401 / 403 / 404 and a refused address are retried before they fail; the audit line exists per REQUEST. The signing scheme is the AC's (HMAC per module, one signature) and supersedes the architecture's partner-JWT text for this transport. ⛔ Nothing reaches a partner before roster Row 54 closes: the Panel (seven questions) and counsel are asked first.
+
 ### Story 12.6: Time-Bombed Module Lifecycle + Auto-Archive `[CONSUMER]`
 
 As Solo Builder authoring the module-archive lifecycle,
@@ -7503,6 +7514,8 @@ So that modules don't linger on shelves past their valid window or after slot ex
 > - **Still this story's:** archive at `valid_until` (incl. a `scheduled` module whose `valid_until` passed — the 12.2 sweep never selects it, C2 (c)), slot-exhaustion archive (C2 (a)), the `(valid_until) WHERE current_state <> 'archived'` index, the reason-precedence rule, `module.restored` (C3) and RVD5's archive leg.
 > - **(12.2 code review, deferred RD4) A scheduled window shorter than the 5-minute sweep tick can be skipped entirely and sit `scheduled`** — decide here, with the expiry rule, whether a minimum window at author or publish time is the guard (`deferred-work.md` "Deferred from: code review of 12-2-…").
 > - **Built by 12.2:** the `(valid_from) WHERE current_state = 'scheduled'` partial index, and `GRANT SELECT, UPDATE ON marketplace_modules TO twt_service`. Recorded cost now: a past-start offer goes live up to 5 minutes late (⛔ a day); a past-`valid_until` offer still stalls until this story's sweep.
+
+> ⭐ **INHERITED FROM 12.5 (Decision `2026-11-21-483` QE22 (A)).** An archive writes ⛔ handoff: the transport reads the module's `archive_reason` itself. A lead whose offer was WITHDRAWN (`trustee_archived`) is cancelled for good; a lead whose offer simply ended (`valid_until_reached`, `slot_capacity_exhausted`) is still delivered. If this story restores an archived module, a cancelled lead stays cancelled.
 
 ---
 

@@ -4,6 +4,8 @@
 > interest to a partner), Task 0.5. ⛔ No member uses the system yet, and none of this is built. Nothing here blocks building or merging.
 > Every answer must be in before the first member's details can reach a partner. A question for counsel was written beside this note
 > (`counsel-question-2026-11-21-12-5-partner-lead-transfer.md`), also ⛔ not sent.
+> **Made current 2026-11-21, before sending:** BigDev's build decisions are now recorded as Decision `2026-11-21-483` (an author-commit,
+> ⛔ a ruling), and the go-live row is roster Row 54 (`partner-lead-handoff-live`). No question or option below was changed.
 
 ## §0 — the gate
 
@@ -228,8 +230,8 @@ worse than one member's lost place. We are building A meanwhile; your answer doe
   - Whether any partner will in fact want to pay per lead. The terms are not agreed.
   - Two drafts of the trust deed exist and say different things about partner arrangements. Which one governs is recorded nowhere. We
     have not relied on either here.
-  - Nothing is built. Everything above describes a plan, and "as planned" means BigDev's decisions of 21 November, which are still to
-    be entered in the decision log.
+  - Nothing is built. Everything above describes a plan, and "as planned" means BigDev's decisions of 21 November (recorded as his
+    own decisions, not rulings of yours).
   - Counsel has not been asked yet.
 
 ---
@@ -287,8 +289,9 @@ directory's exclusion and the `-146` sentence are untouched; the transport only 
   registers for an offer once — `-427` Consequence 3: "A member who registered interest and wants to register again (for example after
   a partner lost the lead) cannot, until a later story adds a re-register or withdraw path."), `2026-11-01-433` (the admin screens; ⛔
   commission data is stored — QE6 (A)).
-- BigDev answered Story 12.5's twelve build questions on 2026-11-21 ("all as recommended"). That author-commit is owed to the decision
-  log (≥ `-483`) before any code and is ⛔ there yet.
+- BigDev answered Story 12.5's twelve build questions on 2026-11-21 ("all as recommended") and accepted the rest as a set. That is
+  Decision `2026-11-21-483`, an **author-commit**, ⛔ a ruling. It records two readings of `-423` as the author's, put to the Panel here
+  (Q4's edge and Q7).
 - The privacy policy and the trust deed are **drafts**. `2026-11-20-469` item 3: "The privacy policy and the Terms are published at
   go-live." `docs/legal-corpus-location.md` rule 2: they are a design reference, ⛔ binding authority. They are cited here by section
   and described in our own words; their text is ⛔ reproduced (the legal files are kept out of this repository).
@@ -329,8 +332,8 @@ grep -n 'published at go-live' .decision-log.md
 # no Trustee-ratified ruling names partners, offers, modules, leads or commission (expect 0)
 grep -nE '^### Decision .*(TRUSTEE-RATIFIED|Trustee Panel RATIFIES)' .decision-log.md | grep -icE 'partner|module|marketplace|commission|lead-handoff'
 
-# BigDev's 2026-11-21 answers are not in the log yet (expect 0 until the author-commit lands)
-grep -cE '^### Decision 2026-11-21-48[3-9].*12\.5' .decision-log.md
+# BigDev's 2026-11-21 answers are an author-commit, not a ruling (expect ONE heading, and "AUTHOR-COMMIT" in it)
+grep -nE '^### Decision 2026-11-21-483:' .decision-log.md | grep -c 'AUTHOR-COMMIT'
 
 # the draft policy (private copy, main checkout): partners absent from §6 (expect 0), and it is a draft (expect 1)
 grep -ciE 'partner' /Users/dev/Developer/projects/TWT/docs/legal/privacy-policy.md
@@ -350,6 +353,6 @@ grep -rln 'revokeConsent\b\|revokeOpenConsentsOfType' apps/*/src packages/*/src
 # no route takes anything from a partner; the only "partners" path is the admin list
 grep -rnE "'/api/v1/[^']*partner[^']*'" apps/api/src
 
-# the go-live row this note is carried on — not written yet (Story 12.5 Task 0.6, >= Row 54)
-grep -n 'partner-lead-handoff-live' docs/launch-gate-inventory/inventory-roster.md
+# the go-live row this note is carried on (expect the Row 54 heading)
+grep -n '^### Row 54 — `partner-lead-handoff-live`' docs/launch-gate-inventory/inventory-roster.md
 ```

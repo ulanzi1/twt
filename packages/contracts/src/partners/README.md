@@ -20,3 +20,9 @@ them on **tenant** routes (`/api/v1/p/<pariwar_id>/modules/partners`), with thei
 (`CreateModulePartnerRequest`, `ModulePartnerResponse`, `ModulePartnerListResponse`). This directory stays reserved for the
 **global** partner surfaces — the v2 self-service partner portal and per-partner signing-key storage. D10-1.4's
 `partners/` leg is Resolved via explicit deferral (re-trigger: Story 12.5's per-partner keys, or the v2 partner portal).
+
+## ⭐ Dated note — 2026-11-21 (Story 12.5, Decision `2026-11-21-483` QE3 (A))
+
+The re-trigger above ("Story 12.5's per-partner keys") was MET at Story 12.5's create-story and is **Resolved via explicit deferral**
+again: the lead transport signs with an HMAC secret named per MODULE on the manifest (`lead_handoff_signing_key_secret_name`), so there
+is no per-partner key to store and this directory stays reserved. Re-trigger: a per-partner key, or the v2 partner portal.

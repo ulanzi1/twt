@@ -197,6 +197,7 @@ plaintext facts beside them. Each line is a table and what it holds.
 - **Staff:** `users`, `admin_credentials` (email).
 - **Exports:** `data_exports`, `report_exports` (an encrypted copy of whatever was exported), `data_export_delivery_grants`.
 - **Helpdesk:** `helpdesk_tickets` (what a member wrote).
+- **Partner leads** (Story 12.5, added 2026-11-22): `marketplace_lead_handoffs`. Each row holds the four details a member agreed to send to one partner (whole name, mobile, district, preferred language) as ONE Tier-1 ciphertext, `member_fields_ciphertext`. The details are dropped on a cancel or an erasure, and 30 days after delivery or a final failure. The row itself stays and says which partner was sent a member's details. No production code writes a row until Story 12.3.
 - **The logs themselves:** `audit_log_entries` and `events_log` record who did what to whom; payloads are designed to carry ids, not names.
 - **The breach register:** `breach_incidents`, `breach_incident_entries` — no member columns; free text is typed by staff.
 
@@ -206,7 +207,7 @@ memorial photos, helpdesk attachments, bank statements, self-verify payment scre
 **Where encrypted fields are decrypted** — method: `decrypt…(` call sites under `apps/` and `packages/domain/src`.
 
 - **API** (`apps/api/src/modules/`): claims (the largest by far), kyc, field-worker (the admin field-worker screens), reports, public-pages, memorial, memorial-review, memorial-takedown, member-pool, member-moderation, member-moderation-appeals, known-people, data-export, auth, wa-opt-in, reconciliation-review, payment, nominee, nominee-links, member-validity, member-data-rights, medical.
-- **Jobs** (`apps/jobs/src/scheduler/`): `field-worker-code-sms.ts` (the SMS sweep), `field-worker-notice-emails.ts`, `claim-peer-mesh-requests.ts`, `claim-peer-mesh-wa-reminders.ts`, `claim-suspicion-notices.ts`, `claim-suspicion-staff-emails.ts`, `memorial-takedown-approver-emails.ts`.
+- **Jobs** (`apps/jobs/src/scheduler/`): `module-lead-handoff.ts` (the partner lead sweep — the four details, once per attempt), `field-worker-code-sms.ts` (the SMS sweep), `field-worker-notice-emails.ts`, `claim-peer-mesh-requests.ts`, `claim-peer-mesh-wa-reminders.ts`, `claim-suspicion-notices.ts`, `claim-suspicion-staff-emails.ts`, `memorial-takedown-approver-emails.ts`.
 
 **Outside parties that RECEIVE personal data (processors)** — method: outbound hosts and provider adapters in `apps/*/src` and
 `packages/*/src`.
@@ -219,6 +220,7 @@ memorial photos, helpdesk attachments, bank statements, self-verify payment scre
 - **DigiLocker** (`api.digitallocker.gov.in`): the KYC exchange for a member's identity.
 - **Google Cloud** (storage, database, key management): hosts the data and the files above.
 - **Cloudflare** (edge): all traffic passes through it.
+- **Partners** (Story 12.5; ⛔ live — roster Row 54 gates the first send): each receives, at its own HTTPS endpoint, the four details above for a member who registered interest in its offer. It is listed here because it receives the data. This list does not decide whether a partner is the Trust's processor; that is for counsel (Row 54 (b)), and the partner's duties are in its agreement (Row 54 (e)).
 
 A breach at any of these is the Trust's breach to report for the Trust's data: add the processor's own account of it as timeline events.
 
@@ -233,3 +235,4 @@ A breach at any of these is the Trust's breach to report for the Trust's data: a
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the owner's contact and capacity (Decision `2026-11-20-469`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-20 | (this commit) | Solo Builder (Story 14.3) | yes — the incident sign-off is by two trustees OTHER THAN the breach owner (Decision `2026-11-20-470`) | yes (≥2 trustees) — not yet signed | none yet |
 | 2026-11-21 | (this commit) | Solo Builder (Story 14.3 code review) | yes — a Super Admin records the owner's review on the owner's behalf (step 16, prerequisites); a wrong extension is withdrawn (15a); a missed deadline stays shown and is explained (15b, §4) (Decision `2026-11-20-471`) | yes (≥2 trustees) — not yet signed | none yet |
+| 2026-11-22 | (this commit) | Solo Builder (Story 12.5 code review) | no — the appendix's working list only: the partner-lead table, its decrypt site and partners as recipients; no step changed | no — ⚠ BigDev to confirm | none yet |

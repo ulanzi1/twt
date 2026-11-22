@@ -571,8 +571,8 @@ async function main(): Promise<void> {
     // Every minute: each `due` lead is checked on the member's side (P0–P5) and sent, signed, to its module's partner endpoint, at
     // least once. ⛔ Production caller writes a row yet (12.3 is the seam's caller — I1), so with no rows it claims nothing. Refuses,
     // with ONE `rls_bound_role` alarm, under a login that cannot read across Pariwars (roster Row 26); where the jobs login lacks the
-    // table grant the claim fails 42501 every minute as ONE `sweep_failed` alarm — Row 54 (g) ends it. The secret resolves per row by
-    // NAME (QE9; NOT_FOUND ⇒ null). The egress client is built inside with NO argument (fence rule (e)).
+    // table grant the lapse (S2's first statement) fails 42501 every minute as ONE `sweep_failed` alarm — Row 54 (g) ends it. The
+    // secret resolves per row by NAME (QE9; NOT_FOUND ⇒ null). The egress client is built inside with NO argument (fence rule (e)).
     await registerModuleLeadHandoffCron(
       boss,
       { pool: moduleLeadHandoffPool, encryption: jobsEncryption, resolveSecret: resolveSmsDltConfig },

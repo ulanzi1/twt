@@ -35,7 +35,8 @@
 ONE row per lead in `marketplace_lead_handoffs` (migration 0215) — the outbox and the delivery record in one — written by
 `recordLeadHandoff` in 12.3's lead transaction, beside `module.lead_submitted`. A per-minute jobs sweep
 (`apps/jobs/src/scheduler/module-lead-handoff.ts`) is the only sender. The row's writes are QE6's table W1–W13 (record, claim, delivered,
-release, exhausted, hold, hold expired, permanent, cancel, lapse, erasure, purge, requeue); a guard trigger refuses every other edge, a
+release, exhausted, hold, hold expired, permanent, cancel, lapse, erasure, purge, requeue) and W14 (the waiting cancel, added by Decision
+`2026-11-22-487` (2)); a guard trigger refuses every other edge, a
 DELETE, an identity change and any change to the fields other than present → absent. Every settle is compare-and-set on the claim token.
 
 **Delivery is AT LEAST ONCE.** A timeout or a dropped connection after the request was written is retried. The partner dedupes on
@@ -43,17 +44,26 @@ DELETE, an identity change and any change to the fields other than present → a
 transient outcome is final (`failed_delivery:retries_exhausted`). 401 / 403 / 404 and an address refusal are COUNTED TRANSIENT (setup
 faults get the window to be mended, with a `module_lead_handoff_setup_fault` alarm); every other 4xx and every 3xx are permanent at once.
 A fault that DEFINITELY sent nothing (the secret, KMS, the audit line, the database, DNS) is a HOLD: the attempt is given back, retried in
-a minute, final after 24 h of unbroken holds. Every `failed_delivery` raises ONE `module_lead_handoff_failed` alarm — the epic's
-"flagged for partner-relationship review". A staff requeue (`requeueLeadHandoff`, W13) is the one edge out of `failed_delivery`, while
-the fields are kept; it has no caller until an admin view exists (K-3).
+a minute, final after 24 h of unbroken holds. A key the key service REJECTS is a KMS hold that ends the tick, ⛔ a final failure
+(`-487` (1)): the rejection cannot tell a wrong key reference, which rejects every row, from one bad row. Sealed fields that will not parse
+or authenticate, or that fail the schema, are a permanent failure (`failed_delivery:fields_unreadable`). Every `failed_delivery` raises
+ONE `module_lead_handoff_failed` alarm — the epic's "flagged for partner-relationship review". A staff requeue (`requeueLeadHandoff`,
+W13) is the one edge out of `failed_delivery`, while the fields are kept; it has no caller until an admin view exists (K-3).
 
 **The member's side decides first, on every attempt.** Before any request the sweep re-checks, in one committed scope transaction: P0 the
 read is sound; P1 the consent for THIS lead stands (read through `consent_artifact_ref = lead_id`, revoked rows included — ⛔ by subject);
 P2 not erased; P3 still a member (not `withdrawn`, not `terminated`; a suspended member is still one); P4 not account-frozen; P5 no
-standing death report (stays stopped after a claim settles — `-484` Q7 A). Any failure CANCELS, finally, with the fields dropped at once.
+standing death report (stays stopped after a claim settles — `-484` Q7 A). A P1–P5 failure CANCELS, finally, with the fields dropped at
+once. A P0 failure cancels NOTHING: an unsound read (or a consent read that returns a full page) is a `db` HOLD — nothing is sent, the
+attempt is given back, the row comes back in a minute — and a member-side read that throws is a `db` hold that ends the tick.
 A lead whose offer the Trust withdrew (`trustee_archived`) is cancelled too; an offer that simply ended is delivered. ⚠ A change that
 lands after that commit is not honoured for the request in flight (a sent lead cannot be recalled); `-484` Q6 A makes the follow-up a
 staff duty (K-13).
+
+**A lead waiting on a retry is re-checked every tick** (`-487` (2), W14). Before it claims anything, the sweep re-reads P0–P5 and the
+offer's withdrawal for every `due` row whose next attempt is still ahead. It cancels the row at once on a stop, so the Trust's copy goes
+within the sweep's minute (`-484` Q4 A's *"Removed at once if the send is stopped"*), ⛔ at the end of a retry's backoff. An unsound read
+there writes nothing; the row's own attempt holds it. The pass is paged, under its own time budget, and resumes from a cursor.
 
 ### 2. The signing scheme and rotation (QE3 (A))
 
@@ -79,8 +89,11 @@ provider webhooks). Several modules of one partner may name the same secret.
 **Recorded costs and variances.** (i) No non-repudiation: the partner holds the key, so a signature cannot prove in a dispute that TWT
 sent a lead; TWT's evidence is its own row, audit line and the partner's 2xx. (ii) **Variance from §3.7 / §5.9's partner JWT** —
 superseded for this transport, annotated in place. (iii) **Variance from §5.9's high-sensitivity tier**: the secret lives in the PROD
-project, because 12.1's NAME carries no project and `resolveSecretValue` reads `GOOGLE_CLOUD_PROJECT`. A leaked secret allows forging a
-lead TO that partner; it opens no member data. (iv) The secret reaches the partner over a secure channel at onboarding (Row 54 (f)).
+project, because 12.1's NAME carries no project. `boot.ts` wires `resolveSmsDltConfig`, which calls `resolveChannelSecret` and then
+`resolveSecretValue`; that reads `GOOGLE_CLOUD_PROJECT`, and a Secret Manager NOT_FOUND comes back as null. Outside production (no
+`NODE_ENV=production`, no `GOOGLE_APPLICATION_CREDENTIALS`, no `DRIZZLE_FORCE_SECRET_MANAGER=1`), `resolveSecretValue` falls back to an
+environment variable named after the secret: upper-cased, with each non-alphanumeric character turned into `_`. A leaked secret allows
+forging a lead TO that partner; it opens no member data. (iv) The secret reaches the partner over a secure channel at onboarding (Row 54 (f)).
 The reserved `ADR-NNNN-partner-jwt-signing-key-storage` slot is kept for a future asymmetric scheme.
 
 ### 3. The envelope v1 (QE5 (A), QE11 (A), QE12)
@@ -124,9 +137,13 @@ verbatim), `X-TWT-Signature`, `Idempotency-Key`. ⛔ Any other.
 
 ONE `module.lead_handoff_fields_decrypted` line per attempt that decrypts (the decrypt is its `mutate` and nothing else), and ONE bare
 `module.lead_handoff_attempted` line per REQUEST — locator `module_lead/<lead_id>/attempt/<n>`, `requestPayloadHash = sha256(body)` (the
-epic's "full payload reference"), the HTTP status or `599` (timeout) / `598` (network). ⚠ **Variance from the epic's "every handoff is
-audit-logged … + delivery status":** the line exists per request; an outcome with no request (a cancel, a refusal, an expired hold) is
-recorded on the row and alarmed when it fails, without a line of its own. ⛔ A member field or the URL in any line.
+epic's "full payload reference"), the HTTP status or `599` (timeout) / `598` (network). That line is written AFTER the response and
+BEFORE the settle, with up to 3 tries. ⚠ **If all three fail, the sweep gives up on the row:** it writes nothing more, raises an alarm
+and ends the tick. The row stays `attempting` and lapses at the end of its lease (W10). It is then sent again (at least once), or, if that
+was its last attempt, it ends `failed_delivery:outcome_unknown`. So a request CAN be left with no attempted line; the alarm and the
+lapse are its record.
+⚠ **Variance from the epic's "every handoff is audit-logged … + delivery status":** the line exists per request; an outcome with no
+request (a cancel, a refusal, an expired hold) is recorded on the row and alarmed when it fails, without a line of its own. ⛔ A member field or the URL in any line.
 
 ### 6. Variances from the architecture tree and the epic (recorded in `-483` QE20)
 
@@ -211,8 +228,8 @@ story.
 - `_bmad-output/planning-artifacts/epics.md` — Epic 12, Story 12.5 (the ACs and the invariant quoted above).
 - `_bmad-output/planning-artifacts/architecture.md` — §3.7, §3.11, §3.12, §5.9, "Egress controls" (each partner-JWT sentence annotated
   "superseded for the lead transport by `-483` QE3").
-- `.decision-log.md` — `2026-11-21-483` (QE1–QE26), `2026-11-21-484` (Q1 C, Q2 A … Q7 A), `2026-10-31-427`, `2026-10-31-429`,
-  `2026-11-01-433`, `2026-10-30-423`.
+- `.decision-log.md` — `2026-11-21-483` (QE1–QE26), `2026-11-21-484` (Q1 C, Q2 A … Q7 A), `2026-11-22-487` (the code review's two decisions),
+  `2026-10-31-427`, `2026-10-31-429`, `2026-11-01-433`, `2026-10-30-423`.
 - `_bmad-output/implementation-artifacts/12-5-module-lead-handoff-transport-partners-as-downstream-consumers-invariant.md` — the W table,
   S1–S10, P0–P5, the K items.
 - [ADR-0044](ADR-0044-module-manifest-schema-versioning.md) — the immutable manifest that holds the URL and the secret NAME (cross-
@@ -227,3 +244,4 @@ story.
 | Date | Status | Change |
 |---|---|---|
 | 2026-11-21 | drafted | Authored by Story 12.5 (Task 8) on the decisions of `-483` and the Panel's ruling `-484`. ⚠ `drafted`, ⛔ ratified — ⛔ trustee ratification is claimed, and none is a merge fence. Roster Row 54 does ⛔ list this ADR's ratification as a leg; whether it should is for the Panel when the first partner agreement is presented. |
+| 2026-11-22 | drafted | Story 12.5 code review, patch 12: §1 says a P0 failure HOLDS (it said every failure cancels), and adds Decision `2026-11-22-487` — a rejected key is a KMS hold, and the waiting pass (W14); §2 (iii) names the resolver `boot.ts` wires and its non-production env fallback; §5 names S9's give-up (a request can be left with no attempted line). Still `drafted`; no decision changed. |

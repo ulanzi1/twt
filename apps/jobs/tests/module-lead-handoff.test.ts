@@ -115,11 +115,11 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
     expect(result.claimed).toBe(0);
     expect(alarms).toHaveLength(1);
-    // The step is THIS one (⛔ any of them), and nothing after it ran: the order is lapse → purge → waiting pass → claim. Story 12.5b:
-    // W15 runs AFTER the claim loop however it ended (a claim throw included) — ⛔ after a lapse or purge throw (`-488` item 2).
+    // The step is THIS one (⛔ any of them), and nothing of the `trust_sends` part after it ran: the order is lapse → purge → waiting pass
+    // → claim. Story 12.5b, `-491`: W15 runs on EVERY one of these ticks — after the claim loop, or in place of the rest of the tick.
     expect(alarms[0]).toContain(`module_lead_handoff.sweep_failed:Error [code:42501] at the ${step} —`);
     const order = ['lapse', 'purge', 'waiting pass', 'claim'];
-    expect(reached).toEqual([...order.slice(0, order.indexOf(step) + 1), ...(step === 'claim' ? ['visit purge'] : [])]);
+    expect(reached).toEqual([...order.slice(0, order.indexOf(step) + 1), 'visit purge']);
     expect(alarms[0]).not.toContain('permission denied');
   });
 
@@ -142,8 +142,63 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     expect(result).toMatchObject({ refused: false, cancelledWaiting: 0, claimed: 0 });
   });
 
-  // Story 12.5b (QE5, AC5) — W15 is LAST and its throw is its own: ONE alarm (a name and a SQLSTATE — ⛔ the message), nothing else.
-  it('W15 runs LAST, after the claim; a throw in it ⇒ ONE `visit_purge_failed:<error>` alarm and the tick still resolves', async () => {
+  // `-491` — a throw in the ROLE CHECK (S1) also leaves W15 to run; ⛔ the `rls_bound_role` REFUSAL (above: one statement, nothing more).
+  it('a throw in the role check ⇒ ONE `sweep_failed` alarm, the trust_sends part ends, and W15 STILL RUNS (`-491`)', async () => {
+    const reached: string[] = [];
+    const pool = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes('rolbypassrls')) throw Object.assign(new Error('connection terminated'), { code: '57P01' });
+        const at = stepOf(text);
+        if (at !== null) reached.push(at);
+        return { rows: [], rowCount: 0 };
+      }),
+    } as unknown as pg.Pool;
+    const alarms: string[] = [];
+    const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
+    expect(reached).toEqual(['visit purge']);
+    expect(alarms).toEqual([expect.stringContaining('module_lead_handoff.sweep_failed:Error [code:57P01] at the role check —')]);
+    expect(result).toMatchObject({ refused: false, claimed: 0 });
+  });
+
+  // `-491` — the two faults are independent: a lapse throw AND a W15 throw in one tick give TWO alarms, each naming its own step.
+  it('a throw in the lapse AND in W15 in the same tick ⇒ TWO alarms (`sweep_failed … lapse`, `visit_purge_failed`), neither hiding the other (`-491`)', async () => {
+    const reached: string[] = [];
+    const pool = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
+        const at = stepOf(text);
+        if (at !== null) reached.push(at);
+        if (at === 'lapse') throw Object.assign(new Error('permission denied for table marketplace_lead_handoffs'), { code: '42501' });
+        if (at === 'visit purge') throw Object.assign(new Error('permission denied for table marketplace_partner_form_visits'), { code: '42501' });
+        return { rows: [], rowCount: 0 };
+      }),
+    } as unknown as pg.Pool;
+    const alarms: string[] = [];
+    await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
+    expect(reached).toEqual(['lapse', 'visit purge']);
+    expect(alarms).toHaveLength(2);
+    expect(alarms[0]).toContain('sweep_failed:Error [code:42501] at the lapse');
+    expect(alarms[1]).toContain('visit_purge_failed:Error [code:42501]');
+    expect(alarms.join(' ')).not.toContain('permission denied');
+  });
+
+  // `-491` (QE5) — W15 runs although the tick's time budget is spent before the claim loop starts.
+  it('W15 runs even when the tick budget is already spent (`tickBudgetMs: 0`)', async () => {
+    const reached: string[] = [];
+    const pool = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
+        const at = stepOf(text);
+        if (at !== null) reached.push(at);
+        return { rows: [], rowCount: 0 };
+      }),
+    } as unknown as pg.Pool;
+    await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, tickBudgetMs: 0, onAlarm: () => undefined });
+    expect(reached.at(-1)).toBe('visit purge');
+  });
+
+  // Story 12.5b (QE5, AC5) — W15 is its own scope and its throw is its own: ONE alarm (a name and a SQLSTATE — ⛔ the message), nothing else.
+  it('W15 runs after the claim on a normal tick; a throw in it ⇒ ONE `visit_purge_failed:<error>` alarm and the tick still resolves', async () => {
     const reached: string[] = [];
     const pool = {
       query: vi.fn(async (text: string) => {
@@ -1426,6 +1481,29 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     await runModuleLeadHandoffTick(deps({ pool: passOutOfTheWay(), retryScheduleMs: HOUR_SCHEDULE }));
     expect(await row(first.leadId)).toMatchObject({ status: 'due', outcome_detail: 'released:http_5xx:503' });
     expect(await row(leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:partner_form_route' });
+  });
+
+  // Review R2P10 — "the route is decided FIRST" is only proved by a row the OTHER checks would have cancelled under a different word: with a
+  // healthy member and module, a regression that read the member's side first would still end `partner_form_route`.
+  it.each<[string, (w: World) => Promise<void>]>([
+    ['the offer is withdrawn', async (w) => archive(w.moduleId, 'trustee_archived')],
+    ['the member has withdrawn', async (w) => memberEvents(w, [{ type: 'member.withdrawal_completed' }])],
+  ])('R2P10: a partner_form row whose %s is STILL cancelled partner_form_route — in the claim AND in the waiting pass', async (_label, condition) => {
+    const claimed = await plantPartnerFormRow();
+    const waiting = await plantPartnerFormRow({ nextAttemptAtSql: "now() + interval '1 hour'" });
+    await condition(claimed.w);
+    await condition(waiting.w);
+    alarms.length = 0;
+    // The waiting pass is out of the way for the CLAIM leg (the claim is what meets `claimed`); the second tick lets the pass meet `waiting`.
+    await runModuleLeadHandoffTick(deps({ pool: passOutOfTheWay() }));
+    expect(await row(claimed.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:partner_form_route', member_fields_ciphertext: null });
+    const result = await runModuleLeadHandoffTick(deps());
+    expect(result.cancelledWaiting).toBeGreaterThanOrEqual(1);
+    expect(await row(waiting.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:partner_form_route', member_fields_ciphertext: null });
+    for (const l of [claimed.leadId, waiting.leadId]) {
+      expect(alarmsFor(l).filter((a) => a.includes('module_lead_handoff_route_refused'))).toHaveLength(1);
+      expect(sentFor(l)).toHaveLength(0);
+    }
   });
 
   /** A visit row `ageSql` old, for `w`'s module and member (committed). */

@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { bindScopedDb } from '../../../src/db.js';
 import { createFakeKmsProvider } from '../../../src/encryption/index.js';
 import { memberId as toMemberId, moduleId as toModuleId, type PariwarId } from '../../../src/ids/index.js';
-import { ModuleNotPartnerFormError, PartnerFormTotalsInvalidError, PartnerFormVisitRefusedError } from '../../../src/marketplace/errors.js';
+import { ModuleNotPartnerFormError, PartnerFormTotalsInvalidError, PartnerFormTotalsOverlapError, PartnerFormVisitRefusedError } from '../../../src/marketplace/errors.js';
 import {
   countPartnerFormEvent,
   listPartnerFormFigures,
@@ -119,14 +119,18 @@ describe.skipIf(!hasDatabase)('Story 12.5b — openPartnerFormVisit (AC6, AC8; Q
     const { client } = getTx();
     const w = await world(client);
     await enterAppScope(client, PARIWAR_A);
-    await open(client, w.moduleId, w.memberId);
+    const visit = await open(client, w.moduleId, w.memberId);
     await client.query('RESET ROLE');
-    // By CONTENT (⛔ global row counts — other specs commit concurrently). ⛔ event on the module's stream, and ⛔ audit line naming the module — the visit wrote neither.
-    expect((await client.query(`SELECT 1 FROM events_log WHERE stream_id = $1`, [w.moduleId])).rows).toHaveLength(0);
-    expect((await client.query(`SELECT 1 FROM audit_log_entries WHERE resource_locator LIKE '%' || $1 || '%'`, [w.moduleId])).rows).toHaveLength(0);
-    expect((await client.query(`SELECT 1 FROM audit_log_entries WHERE resource_locator LIKE '%' || $1 || '%'`, [w.memberId])).rows).toHaveLength(0);
-    // And the visit's own transaction wrote ⛔ events_log row at all (this transaction's xid).
-    expect((await client.query(`SELECT 1 FROM events_log WHERE xmin::text = txid_current()::text AND stream_id <> $1`, [w.memberId])).rows).toHaveLength(0);
+    // By CONTENT (⛔ global row counts — other specs commit concurrently). ⛔ event on the module's stream or the visit's, and ⛔ audit line
+    // naming the module, the member or the visit — the visit wrote none. ⚠ NOT by transaction id (review R2P2, round 3): the visit writes
+    // inside a SAVEPOINT, and a row written there carries the SUBTRANSACTION's xid in `xmin`, so an `xmin = txid_current()` predicate cannot see
+    // it — a "no events_log row" claim built on it would hold whatever the visit wrote.
+    for (const id of [w.moduleId, visit.visitId]) {
+      expect((await client.query(`SELECT 1 FROM events_log WHERE stream_id = $1`, [id])).rows, `events_log ${id}`).toHaveLength(0);
+    }
+    for (const id of [w.moduleId, w.memberId, visit.visitId]) {
+      expect((await client.query(`SELECT 1 FROM audit_log_entries WHERE resource_locator LIKE '%' || $1 || '%'`, [id])).rows, `audit ${id}`).toHaveLength(0);
+    }
   });
 
   type Setup = (client: Client, w: Awaited<ReturnType<typeof world>>) => Promise<{ moduleId?: string; memberId?: string }>;
@@ -247,6 +251,10 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the counts and the partner\'s tot
     for (let i = 0; i < 3; i += 1) await countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), kind: 'card_shown' });
     await countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), kind: 'came_back' });
     await expect(countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(ts), kind: 'card_shown' })).rejects.toBeInstanceOf(ModuleNotPartnerFormError);
+    // R2P3: the visit's own kind is refused here (and nothing was counted), so `went_to_partner` can only ever equal the visit openings.
+    await expect(
+      countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), kind: 'went_to_partner' as never }),
+    ).rejects.toBeInstanceOf(RangeError);
     // The transaction stays usable after the refusal.
     await countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), kind: 'card_shown' });
     await client.query('RESET ROLE');
@@ -381,6 +389,44 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the counts and the partner\'s tot
       { order: 1, label: 'Started', figure: 41, belowFloor: false },
       { order: 2, label: 'Finished', figure: null, belowFloor: true },
     ]);
+  });
+
+  // R2P17 (from R2D1) — the review's case: a month (100) and its two halves (3, 97) would let the hidden 3 be worked out as 100 − 97.
+  it('R2P17: a period that overlaps a DIFFERENT period of the offer is refused, writing nothing; the same period (a correction) and an adjacent one pass', async () => {
+    const { client } = getTx();
+    const w = await world(client);
+    await enterAppScope(client, PARIWAR_A);
+    const base = { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), enteredByActorId: randomUUID(), auditId: randomUUID() };
+    const month = { period_start: '2026-01-01', period_end: '2026-01-31', stages: [{ label: 'Started', figure: 100 }] };
+    await recordPartnerFormTotals(client, { ...base, totals: month });
+    const rows = async (): Promise<number> => {
+      await client.query('RESET ROLE');
+      const n = (await client.query('SELECT 1 FROM marketplace_partner_form_totals WHERE module_id = $1', [w.moduleId])).rows.length;
+      await enterAppScope(client, PARIWAR_A);
+      return n;
+    };
+    expect(await rows()).toBe(1);
+    // Nested (the review's first half), containing, straddling the start, straddling the end, and sharing exactly one day: ALL refused.
+    for (const [start, end] of [
+      ['2026-01-01', '2026-01-15'],
+      ['2025-12-01', '2026-02-28'],
+      ['2025-12-20', '2026-01-01'],
+      ['2026-01-31', '2026-02-10'],
+      ['2026-01-10', '2026-01-10'],
+    ] as const) {
+      const err = await recordPartnerFormTotals(client, { ...base, totals: { period_start: start, period_end: end, stages: [{ label: 'Started', figure: 3 }] } }).catch((e: unknown) => e);
+      expect(err, `${start}..${end}`).toBeInstanceOf(PartnerFormTotalsOverlapError);
+      expect((err as PartnerFormTotalsOverlapError).existingPeriodStart).toBe('2026-01-01');
+      expect((err as PartnerFormTotalsOverlapError).existingPeriodEnd).toBe('2026-01-31');
+    }
+    expect(await rows()).toBe(1);
+    // The same pair again is a CORRECTION; a period that only touches (the next day) is adjacent, not overlapping.
+    await recordPartnerFormTotals(client, { ...base, totals: { ...month, stages: [{ label: 'Started', figure: 101 }] } });
+    await recordPartnerFormTotals(client, { ...base, totals: { period_start: '2026-02-01', period_end: '2026-02-28', stages: [{ label: 'Started', figure: 7 }] } });
+    expect(await rows()).toBe(3);
+    // Another offer's periods never clash with this one's.
+    const other = await world(client);
+    await recordPartnerFormTotals(client, { ...base, moduleId: toModuleId(other.moduleId), totals: { period_start: '2026-01-01', period_end: '2026-01-15', stages: [{ label: 'Started', figure: 9 }] } });
   });
 
   it.each([

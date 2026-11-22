@@ -29,6 +29,7 @@ export {
   ModulePartnerFormCountKind,
   MODULE_PARTNER_FORM_STAGES_MAX,
   MODULE_PARTNER_FORM_STAGE_LABEL_MAX,
+  MODULE_PARTNER_FORM_FIGURE_MAX,
 } from './enums.js';
 
 export {

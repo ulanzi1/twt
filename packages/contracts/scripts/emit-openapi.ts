@@ -5314,7 +5314,8 @@ registry.registerPath({
   description:
     "`module.manage`; `Idempotency-Key`. A period and 1–20 stages in the partner's order (a label and a whole number). A figure " +
     'below 5 is stored as "fewer than 5" — the number is never kept. Advisory; names no member. Only for an offer that uses the ' +
-    "partner's own page (409 `module.not_partner_form`).",
+    "partner's own page (409 `module.not_partner_form`). A period that shares a day with a DIFFERENT period already entered is refused " +
+    '(409 `module.partner_form_totals_overlap`, carrying that period\'s dates); the same period again is a correction.',
   tags: ['modules'],
   request: { params: modulesModule, body: { content: jsonOf(RecordPartnerFormTotalsRequestSchema), required: true } },
   responses: {
@@ -5323,7 +5324,7 @@ registry.registerPath({
     401: modulesNoSession,
     403: errorResponse('Missing module.manage'),
     404: errorResponse(`${modulesNoGrant} · module.not_found`),
-    409: errorResponse('module.not_partner_form · module.idempotency_in_progress'),
+    409: errorResponse('module.not_partner_form · module.partner_form_totals_overlap · module.idempotency_in_progress'),
     422: errorResponse('module.partner_form_totals_invalid'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });

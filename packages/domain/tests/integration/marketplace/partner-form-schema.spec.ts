@@ -248,17 +248,65 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the three figure tables (0217)', 
       `twt_service:${VISITS}:DELETE`,
       `twt_service:${VISITS}:SELECT`,
     ]);
-    // Column grants: the visits INSERT is narrowed (opened_at is the DB clock); the counts UPDATE is `count` alone.
-    const cols = await client.query<{ table_name: string; privilege_type: string; column_name: string }>(
-      `SELECT table_name, privilege_type, column_name FROM information_schema.column_privileges
-        WHERE grantee = 'twt_app' AND table_name = ANY($1::text[]) AND privilege_type IN ('INSERT', 'UPDATE')`,
-      [[VISITS, COUNTS]],
+    // Column grants: the visits INSERT is narrowed (opened_at is the DB clock); the counts UPDATE is `count` alone. Review R2P13: for BOTH
+    // grantees and ALL THREE tables (the earlier query read `twt_app` and the visits / counts only, so a column grant to `twt_service`, or a
+    // column UPDATE on the totals, was never seen).
+    const cols = await client.query<{ grantee: string; table_name: string; privilege_type: string; column_name: string }>(
+      `SELECT grantee, table_name, privilege_type, column_name FROM information_schema.column_privileges
+        WHERE grantee IN ('twt_app', 'twt_service') AND table_name = ANY($1::text[]) AND privilege_type IN ('INSERT', 'UPDATE')`,
+      [[VISITS, COUNTS, TOTALS]],
     );
-    const of = (t: string, p: string) => cols.rows.filter((r) => r.table_name === t && r.privilege_type === p).map((r) => r.column_name).sort();
-    expect(of(VISITS, 'INSERT')).toEqual(['member_id', 'module_id', 'pariwar_id', 'visit_id']);
-    expect(of(VISITS, 'UPDATE')).toEqual([]);
-    expect(of(COUNTS, 'UPDATE')).toEqual(['count']);
-    expect(of(COUNTS, 'INSERT')).toEqual(['count', 'day', 'kind', 'module_id', 'pariwar_id']);
+    const of = (g: string, t: string, p: string) =>
+      cols.rows.filter((r) => r.grantee === g && r.table_name === t && r.privilege_type === p).map((r) => r.column_name).sort();
+    expect(of('twt_app', VISITS, 'INSERT')).toEqual(['member_id', 'module_id', 'pariwar_id', 'visit_id']);
+    expect(of('twt_app', VISITS, 'UPDATE')).toEqual([]);
+    expect(of('twt_app', COUNTS, 'UPDATE')).toEqual(['count']);
+    expect(of('twt_app', COUNTS, 'INSERT')).toEqual(['count', 'day', 'kind', 'module_id', 'pariwar_id']);
+    expect(of('twt_app', TOTALS, 'UPDATE')).toEqual([]); // insert-only: a correction is a NEW entry
+    // The jobs login holds SELECT + DELETE on the visits and NOTHING that writes — on any of the three, at any granularity.
+    for (const t of [VISITS, COUNTS, TOTALS]) {
+      expect(of('twt_service', t, 'INSERT'), `twt_service INSERT ${t}`).toEqual([]);
+      expect(of('twt_service', t, 'UPDATE'), `twt_service UPDATE ${t}`).toEqual([]);
+    }
+    // Round 3: and by what the ROLES can actually do — `has_*_privilege` follows PUBLIC grants and role membership, which the
+    // `information_schema` reads above (by literal grantee) do not.
+    const can = async (role: string, table: string, priv: string): Promise<boolean> =>
+      (await client.query<{ ok: boolean }>('SELECT has_table_privilege($1, $2, $3) AS ok', [role, table, priv])).rows[0]!.ok;
+    const canAnyColumn = async (role: string, table: string, priv: string): Promise<boolean> =>
+      (await client.query<{ ok: boolean }>('SELECT has_any_column_privilege($1, $2, $3) AS ok', [role, table, priv])).rows[0]!.ok;
+    for (const t of [VISITS, COUNTS, TOTALS]) {
+      for (const priv of ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']) {
+        // twt_service: only the visits' DELETE (W15). Nothing else, on any table.
+        const allowed = t === VISITS && priv === 'DELETE';
+        expect(await can('twt_service', t, priv), `twt_service ${priv} ${t}`).toBe(allowed);
+      }
+      expect(await canAnyColumn('twt_service', t, 'INSERT'), `twt_service any-column INSERT ${t}`).toBe(false);
+      expect(await canAnyColumn('twt_service', t, 'UPDATE'), `twt_service any-column UPDATE ${t}`).toBe(false);
+    }
+    expect(await canAnyColumn('twt_app', VISITS, 'UPDATE')).toBe(false);
+    expect(await canAnyColumn('twt_app', TOTALS, 'UPDATE')).toBe(false);
+    expect(await can('twt_app', TOTALS, 'DELETE')).toBe(false); // insert-only
+  });
+
+  // Review R2P13 (checklist family 5): the indexes and primary keys are asserted, so dropping the purge index (W15 would become a
+  // sequential scan) or a tenant-scoped one is seen.
+  it('the indexes and primary keys of the three tables are exactly these (the purge index included)', async () => {
+    const { client } = getTx();
+    const { rows } = await client.query<{ indexname: string; indexdef: string }>(
+      `SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = ANY($1::text[])`,
+      [[VISITS, COUNTS, TOTALS]],
+    );
+    const cols = (d: string): string => /\((.*)\)\s*$/.exec(d)?.[1]?.replaceAll('"', '') ?? d;
+    // Sorted HERE (code-point order), ⛔ by the database: `ORDER BY indexname` follows the cluster's collation, which CI and a laptop may not share.
+    expect(rows.map((r) => `${r.indexname} (${cols(r.indexdef)})`).sort()).toEqual([
+      `${COUNTS}_pkey (pariwar_id, module_id, day, kind)`,
+      `${TOTALS}_pariwar_module_idx (pariwar_id, module_id, entered_at)`,
+      `${TOTALS}_pkey (totals_id, stage_order)`,
+      `${VISITS}_opened_at_idx (opened_at)`,
+      `${VISITS}_pariwar_member_idx (pariwar_id, member_id)`,
+      `${VISITS}_pariwar_module_idx (pariwar_id, module_id)`,
+      `${VISITS}_pkey (visit_id)`,
+    ]);
   });
 
   it('FORCE RLS on all three, with exactly the per-command policies (⛔ FOR ALL), each on the Pariwar GUC', async () => {

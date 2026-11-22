@@ -57,6 +57,8 @@ export type ModulePartnerFormCountKind = z.output<typeof ModulePartnerFormCountK
 /** Story 12.5b (QE12) — the partner's totals' bounds (domain: `PARTNER_FORM_STAGES_MAX`, `PARTNER_FORM_STAGE_LABEL_MAX`). */
 export const MODULE_PARTNER_FORM_STAGES_MAX = 20;
 export const MODULE_PARTNER_FORM_STAGE_LABEL_MAX = 80;
+/** The largest whole number a stage's figure may be (a Postgres `integer`; domain: the totals schema's `.max`). */
+export const MODULE_PARTNER_FORM_FIGURE_MAX = 2_147_483_647;
 
 /** Where the no-tree / tree district options came from (QE5). */
 export const MODULE_DISTRICT_SOURCES = ['geo_tree', 'workplace_districts'] as const;

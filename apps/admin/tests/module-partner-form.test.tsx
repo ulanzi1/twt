@@ -8,7 +8,7 @@
 // is SENT, ⛔ that it left a disabled control.
 
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import type { ModuleDetailResponse, ModuleScopeOptionsResponse } from '@twt/contracts';
+import { MODULE_PARTNER_FORM_STAGE_LABEL_MAX, type ModuleDetailResponse, type ModuleScopeOptionsResponse } from '@twt/contracts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithClient } from './_helpers.js';
@@ -196,6 +196,44 @@ describe('Story 12.5b — the wizard asks the route (QE7 (A))', () => {
       t('module.wizard.issueField', { field: t('module.field.partnerFormUrl'), message: 'partner_form_url must not name a port' }),
     );
     expect(screen.getByTestId('field-partner-form-url')).toHaveAttribute('aria-invalid', 'true');
+    // Review R2P14: the issue text did NOT replace the page-copy description — the field is described by BOTH.
+    const field = screen.getByTestId('field-partner-form-url');
+    expect(field).toHaveAccessibleDescription(expect.stringContaining(t('module.partnerForm.copy')));
+    expect(field).toHaveAccessibleDescription(expect.stringContaining('partner_form_url must not name a port'));
+  });
+
+  it('R2P14 (round 3): a 422 at [lead_route] opens step (e); BOTH radios carry aria-invalid and are described by the hint AND the issue', { timeout: 30_000 }, async () => {
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await toRouteStep();
+    fireEvent.click(screen.getByTestId('route-partner_form'));
+    next();
+    fireEvent.change(screen.getByTestId('field-partner-form-url'), { target: { value: PAGE } });
+    next();
+    authorModule.mockRejectedValue(new ApiError(422, 'module.manifest_invalid', 'invalid', { issues: [{ path: ['lead_route'], message: 'lead_route is not valid' }] }));
+    fireEvent.click(screen.getByTestId('wizard-create'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-heading')).toHaveTextContent(t('module.wizard.step.e')));
+    for (const route of ['trust_sends', 'partner_form'] as const) {
+      const radio = screen.getByTestId(`route-${route}`);
+      expect(radio).toHaveAttribute('aria-invalid', 'true');
+      expect(radio).toHaveAccessibleName(derive.describeRoute(route).name);
+      expect(radio).toHaveAccessibleDescription(expect.stringContaining(derive.describeRoute(route).meaning));
+      expect(radio).toHaveAccessibleDescription(expect.stringContaining('lead_route is not valid'));
+    }
+    expect(screen.getByTestId('route-question')).not.toHaveAttribute('aria-invalid');
+    // The whole option is ONE label — clicking the hint selects the radio (the click target is the row, ⛔ the short name).
+    fireEvent.click(screen.getByText(derive.describeRoute('trust_sends').meaning));
+    expect(screen.getByTestId('route-trust_sends')).toBeChecked();
+  });
+
+  it('R2P14: each route radio is NAMED by its name only and DESCRIBED by its hint once; an unchosen route marks the radios, ⛔ the group', { timeout: 30_000 }, async () => {
+    renderWithClient(<ModuleWizard pariwarId={PARIWAR} onCreated={vi.fn()} />);
+    await toRouteStep();
+    for (const route of ['trust_sends', 'partner_form'] as const) {
+      const radio = screen.getByTestId(`route-${route}`);
+      expect(radio).toHaveAccessibleName(derive.describeRoute(route).name);
+      expect(radio).toHaveAccessibleDescription(derive.describeRoute(route).meaning);
+    }
+    expect(screen.getByTestId('route-question')).not.toHaveAttribute('aria-invalid');
   });
 
   it('a trust_sends offer still asks places and the hand-off fields; switching routes clears the places answer', { timeout: 30_000 }, async () => {
@@ -240,15 +278,27 @@ describe('Story 12.5b — derivations', () => {
     expect(derive.moduleErrorGuidance('module.lead_route_mismatch', 'detail')).toBe(t('module.error.lead_route_mismatch'));
   });
 
-  it('⛔ "report", "receipt" or "invoice" in any of the new copy (the microcopy gate scans admin code)', () => {
-    for (const k of MODULE_EN_KEYS.filter((x) => /route|partnerForm|figures|totals|lead_route|not_partner_form/.test(x))) {
-      let text: string;
-      try {
-        text = t(k);
-      } catch {
-        text = t(k, { n: 1, route: 'x', url: 'x', from: 'x', until: 'x', at: 'x' });
+  it('⛔ "report", "receipt" or "invoice" in ANY admin copy key (the microcopy gate scans admin code) — every key, ⛔ a name filter, ⛔ a swallowed throw', () => {
+    // Review R2P5: the earlier filter was a case-sensitive regex over key names and missed six new keys (`module.reason.leadRoute`,
+    // `module.field.leadRoute`, `module.detail.publishRoute*`, `module.detail.leadsNotUsed`, `module.places.none`). Walk them ALL.
+    // A key's own variables are supplied as the resolver names them ("needs the parameter 'total'"); any OTHER failure fails the test.
+    const render = (k: string): string => {
+      const params: Record<string, string | number> = {};
+      for (let tries = 0; tries < 12; tries += 1) {
+        try {
+          return t(k, params);
+        } catch (e) {
+          const missing = /needs the parameter '(\w+)'/.exec(String(e))?.[1];
+          if (missing === undefined) throw e;
+          params[missing] = 'x';
+        }
       }
-      expect(text).not.toMatch(/report|receipt|invoice/i);
+      throw new Error(`${k}: too many parameters`);
+    };
+    for (const k of MODULE_EN_KEYS) expect(render(k), k).not.toMatch(/report|receipt|invoice/i);
+    // The six keys the old filter skipped are among those walked.
+    for (const k of ['module.reason.leadRoute', 'module.field.leadRoute', 'module.detail.publishRoute', 'module.detail.publishRouteReason', 'module.detail.leadsNotUsed', 'module.places.none']) {
+      expect(MODULE_EN_KEYS, k).toContain(k);
     }
   });
 });
@@ -363,5 +413,176 @@ describe('Story 12.5b — the detail page (AC10, AC11)', () => {
     await waitFor(() => expect(publishModule).toHaveBeenCalledTimes(1));
     expect((publishModule.mock.calls[0]![2] as { lead_route: string }).lead_route).toBe('trust_sends');
     await waitFor(() => expect(screen.getByTestId('module-detail-message')).toHaveTextContent(t('module.error.lead_route_mismatch')));
+  });
+
+  // ── Review round 2 (R2P7, R2P8, R2P14, R2P17) ──
+  const fillTotals = (): void => {
+    fireEvent.change(screen.getByTestId('totals-period-start'), { target: { value: '2026-11-01' } });
+    fireEvent.change(screen.getByTestId('totals-period-end'), { target: { value: '2026-11-30' } });
+    fireEvent.change(screen.getByTestId('totals-stage-label-0'), { target: { value: 'Started' } });
+    fireEvent.change(screen.getByTestId('totals-stage-figure-0'), { target: { value: '41' } });
+  };
+
+  it('R2P7: editing the form retires the last result ("saved" is about what was sent, ⛔ the next period)', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    recordPartnerFormTotals.mockResolvedValue({ totals_id: '9b2c4a10-0d8f-4b8e-9f43-1c2d3e4f5a6c', stages: 1 });
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    fillTotals();
+    fireEvent.click(screen.getByTestId('totals-save'));
+    await waitFor(() => expect(screen.getByTestId('module-totals-live')).toHaveTextContent(t('module.totals.saved')));
+    fireEvent.change(screen.getByTestId('totals-period-start'), { target: { value: '2026-12-01' } });
+    expect(screen.getByTestId('module-totals-live')).not.toHaveTextContent(t('module.totals.saved'));
+  });
+
+  it('R2P7: a double click sends ONE write; focus returns to the form only when the admin has not moved on', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    let settle!: (v: { totals_id: string; stages: number }) => void;
+    recordPartnerFormTotals.mockReturnValue(new Promise((resolve) => (settle = resolve)));
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    fillTotals();
+    const save = screen.getByTestId('totals-save');
+    fireEvent.click(save);
+    fireEvent.click(save);
+    await waitFor(() => expect(recordPartnerFormTotals).toHaveBeenCalledTimes(1));
+    // The admin moves on while the write runs: focus is claimed by another control, ⛔ pulled back to the heading.
+    const other = screen.getByTestId('module-withdraw');
+    other.focus();
+    settle({ totals_id: '9b2c4a10-0d8f-4b8e-9f43-1c2d3e4f5a6c', stages: 1 });
+    await waitFor(() => expect(screen.getByTestId('module-totals-live')).toHaveTextContent(t('module.totals.saved')));
+    expect(document.activeElement).toBe(other);
+    expect(recordPartnerFormTotals).toHaveBeenCalledTimes(1);
+  });
+
+  it('R2P7: a date before 2000 or an impossible date is named BEFORE Save (⛔ the generic 422)', () => {
+    const d = { periodStart: '2026-11-01', periodEnd: '2026-11-30', stages: [{ label: 'S', figure: '9' }] };
+    for (const bad of [{ periodStart: '1999-12-31' }, { periodStart: '2026-02-30', periodEnd: '2026-03-01' }]) {
+      expect(derive.validateTotalsDraft({ ...d, ...bad })).toBe(t('module.totals.reasonYear'));
+    }
+    expect(derive.validateTotalsDraft({ ...d, periodStart: '2000-01-01' })).toBeNull();
+  });
+
+  it('R2P17: a 409 module.partner_form_totals_overlap names the way out (enter the same dates to correct)', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    recordPartnerFormTotals.mockRejectedValue(
+      new ApiError(409, 'module.partner_form_totals_overlap', 'overlap', { existing_period_start: '2026-11-01', existing_period_end: '2026-11-30' }),
+    );
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    fillTotals();
+    fireEvent.click(screen.getByTestId('totals-save'));
+    await waitFor(() =>
+      expect(screen.getByTestId('module-totals-error')).toHaveTextContent(t('module.error.partner_form_totals_overlap_dates', { from: '2026-11-01', until: '2026-11-30' })),
+    );
+  });
+
+  it('R2P14: removing a step says so in the live region, renumbers, and sends focus to the row now in its place (⛔ the heading)', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    fireEvent.click(screen.getByTestId('totals-stage-add'));
+    fireEvent.click(screen.getByTestId('totals-stage-add'));
+    fireEvent.change(screen.getByTestId('totals-stage-label-1'), { target: { value: 'Second' } });
+    fireEvent.change(screen.getByTestId('totals-stage-label-2'), { target: { value: 'Third' } });
+    fireEvent.click(screen.getByTestId('totals-stage-remove-1'));
+    expect(screen.getByTestId('module-totals-live')).toHaveTextContent(t('module.totals.stageRemoved', { n: 2 }));
+    expect(screen.getAllByTestId(/^totals-stage-label-/)).toHaveLength(2);
+    expect(screen.getByTestId('totals-stage-label-1')).toHaveValue('Third'); // renumbered
+    expect(document.activeElement).toBe(screen.getByTestId('totals-stage-label-1'));
+    // The last row removed: focus goes to the one before it.
+    fireEvent.click(screen.getByTestId('totals-stage-remove-1'));
+    expect(document.activeElement).toBe(screen.getByTestId('totals-stage-label-0'));
+  });
+
+  it('R2P14: the reason regions are ALWAYS mounted (a live region inserted with its text is not announced); the figures table has a name', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    expect(screen.getByTestId('module-publish-route-reason')).toHaveAttribute('role', 'status');
+    expect(screen.getByTestId('module-totals-reason')).toHaveAttribute('role', 'status');
+    // Once a route is chosen / the form is valid the regions stay, empty.
+    fireEvent.click(screen.getByTestId('module-publish-route-trust_sends'));
+    expect(screen.getByTestId('module-publish-route-reason')).toBeEmptyDOMElement();
+    fillTotals();
+    expect(screen.getByTestId('module-totals-reason')).toBeEmptyDOMElement();
+    expect(within(screen.getByTestId('module-figures')).getByRole('table')).toHaveAccessibleName(t('module.figures.caption'));
+  });
+
+  it('R2P8: the mismatch copy says which way the offer works and that choosing it publishes; withdraw is the way out only if that is not wanted', () => {
+    const text = t('module.error.lead_route_mismatch');
+    expect(text).toMatch(/Choose that way to publish it/);
+    expect(text).toMatch(/withdraw the offer and start a corrected copy/);
+  });
+
+  // ── Review round 3 (the adversarial review of the round-2 patches) ──
+  it('R3: focus goes back to the totals heading when the admin has NOT moved on (the positive leg of focusIfUnclaimed)', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    recordPartnerFormTotals.mockResolvedValue({ totals_id: '9b2c4a10-0d8f-4b8e-9f43-1c2d3e4f5a6c', stages: 1 });
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    fillTotals();
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.click(screen.getByTestId('totals-save'));
+    await waitFor(() => expect(screen.getByTestId('module-totals-live')).toHaveTextContent(t('module.totals.saved')));
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: t('module.totals.heading') }));
+  });
+
+  it('R3: a "Step n removed" note is announced EVERY time (a new node), the last-step wording does not claim a renumbering, and a save retires it', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    recordPartnerFormTotals.mockResolvedValue({ totals_id: '9b2c4a10-0d8f-4b8e-9f43-1c2d3e4f5a6c', stages: 1 });
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    const live = screen.getByTestId('module-totals-live');
+    for (let n = 0; n < 3; n += 1) fireEvent.click(screen.getByTestId('totals-stage-add')); // 4 steps
+    fireEvent.click(screen.getByTestId('totals-stage-remove-1'));
+    const first = within(live).getByText(t('module.totals.stageRemoved', { n: 2 }));
+    fireEvent.click(screen.getByTestId('totals-stage-remove-1')); // the same step number again
+    const second = within(live).getByText(t('module.totals.stageRemoved', { n: 2 }));
+    expect(second).not.toBe(first); // a REMOUNTED node: identical text in place is not re-read
+    fireEvent.click(screen.getByTestId('totals-stage-remove-1')); // now the LAST step (2 → 1 step left)
+    expect(within(live).getByText(t('module.totals.lastStageRemoved', { n: 2 }))).toBeInTheDocument();
+    expect(live).not.toHaveTextContent('renumbered');
+  });
+
+  it('R3: Save itself retires a "Step n removed" note — the form is already valid when the note appears, so no edit clears it first', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    recordPartnerFormTotals.mockResolvedValue({ totals_id: '9b2c4a10-0d8f-4b8e-9f43-1c2d3e4f5a6c', stages: 1 });
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    const live = screen.getByTestId('module-totals-live');
+    fillTotals();
+    fireEvent.click(screen.getByTestId('totals-stage-add'));
+    fireEvent.click(screen.getByTestId('totals-stage-remove-1')); // the note appears AFTER the last edit; the form is valid
+    expect(live).toHaveTextContent(t('module.totals.lastStageRemoved', { n: 2 }));
+    fireEvent.click(screen.getByTestId('totals-save'));
+    await waitFor(() => expect(live).toHaveTextContent(t('module.totals.saved')));
+    expect(live).not.toHaveTextContent(t('module.totals.lastStageRemoved', { n: 2 }));
+  });
+
+  it('R3: an overlap 409 names the period it clashes with (the 409 carries it)', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    recordPartnerFormTotals.mockRejectedValue(
+      new ApiError(409, 'module.partner_form_totals_overlap', 'overlap', { existing_period_start: '2026-10-01', existing_period_end: '2026-10-31' }),
+    );
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    fillTotals();
+    fireEvent.click(screen.getByTestId('totals-save'));
+    await waitFor(() =>
+      expect(screen.getByTestId('module-totals-error')).toHaveTextContent(t('module.error.partner_form_totals_overlap_dates', { from: '2026-10-01', until: '2026-10-31' })),
+    );
+    expect(screen.getByTestId('module-totals-error')).toHaveTextContent('2026-10-01');
+    // ⛔ details (an older server): the general sentence, ⛔ a hole in it.
+    recordPartnerFormTotals.mockRejectedValue(new ApiError(409, 'module.partner_form_totals_overlap', 'overlap'));
+    fireEvent.click(screen.getByTestId('totals-save'));
+    await waitFor(() => expect(screen.getByTestId('module-totals-error')).toHaveTextContent(t('module.error.partner_form_totals_overlap')));
+  });
+
+  it('R3: a number too large is NAMED as too large; the "80 characters" in the step copy is the contract bound', () => {
+    const d = { periodStart: '2026-11-01', periodEnd: '2026-11-30', stages: [{ label: 'S', figure: '9999999999' }] };
+    expect(derive.validateTotalsDraft(d)).toBe(t('module.totals.reasonFigure'));
+    expect(derive.validateTotalsDraft({ ...d, stages: [{ label: 'S', figure: '2147483647' }] })).toBeNull();
+    expect(t('module.totals.reasonStage')).toContain(String(MODULE_PARTNER_FORM_STAGE_LABEL_MAX));
   });
 });

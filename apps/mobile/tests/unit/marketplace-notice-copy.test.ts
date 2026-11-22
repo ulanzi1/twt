@@ -23,6 +23,9 @@ describe('partnerForm.notice — the real t() (AC12)', () => {
   })
 
   it('a missing partner name is an error, ⛔ a sentence with a hole in it', () => {
-    expect(() => t('partnerForm.notice', {}, { namespace: 'marketplace', locale: 'en' })).toThrow()
+    // Review R2P5: it is the MISSING-VARIABLE error (not a wrong namespace or a typo'd key), proved by naming the variable — and the
+    // same call with the variable succeeds.
+    expect(() => t('partnerForm.notice', {}, { namespace: 'marketplace', locale: 'en' })).toThrow(/missing interpolation param 'partner' for 'en\/marketplace:partnerForm.notice'/)
+    expect(() => t('partnerForm.notice', { partner: 'LIC' }, { namespace: 'marketplace', locale: 'en' })).not.toThrow()
   })
 })

@@ -215,6 +215,12 @@ describe('time, the request and the 422 mapping', () => {
     });
   });
 
+  // Review R2P4 — the `trust_sends` arm names its route and carries no partner URL; an unchosen route is ⛔ defaulted (QE7 (A)).
+  it('toAuthorRequest — the trust_sends arm sends lead_route and a NULL partner_form_url; an unchosen route THROWS (⛔ default)', () => {
+    expect(toAuthorRequest(full())).toMatchObject({ lead_route: 'trust_sends', partner_form_url: null, lead_handoff_url: full().leadHandoffUrl.trim() });
+    expect(() => toAuthorRequest({ ...full(), leadRoute: null })).toThrow(/route is not chosen/);
+  });
+
   // DN3 (`-435` item 2): the client cleans pasted text so the server's refusals (non-NFC, a space other than U+0020, a
   // doubled space in a name) are not met by an ordinary paste. Built from code points — no invisible character in source.
   it('DN3: normaliseDisplayText — NFC, every other space separator → U+0020, a run of spaces → one in a NAME only', () => {

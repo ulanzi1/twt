@@ -34,6 +34,7 @@ import { memberExists } from '../member/read.js';
 import { PARTNER_FORM_COUNT_KINDS, type PartnerFormCountKind } from '../schema/marketplace_partner_form_counts.js';
 import {
   PARTNER_FORM_FIGURE_FLOOR,
+  PARTNER_FORM_FIGURE_MAX,
   PARTNER_FORM_STAGE_LABEL_MAX,
   PARTNER_FORM_STAGES_MAX,
 } from '../schema/marketplace_partner_form_totals.js';
@@ -41,6 +42,7 @@ import {
   ModuleGenesisMissingError,
   ModuleNotPartnerFormError,
   PartnerFormTotalsInvalidError,
+  PartnerFormTotalsOverlapError,
   PartnerFormVisitRefusedError,
 } from './errors.js';
 import { storableText } from './filters.js';
@@ -161,10 +163,15 @@ export async function openPartnerFormVisit(
  */
 export async function countPartnerFormEvent(
   client: pg.PoolClient,
-  input: { readonly pariwarId: PariwarId; readonly moduleId: ModuleId; readonly kind: PartnerFormCountKind },
+  input: { readonly pariwarId: PariwarId; readonly moduleId: ModuleId; readonly kind: Exclude<PartnerFormCountKind, 'went_to_partner'> },
 ): Promise<void> {
   if (!(PARTNER_FORM_COUNT_KINDS as readonly string[]).includes(input.kind)) {
     throw new RangeError(`countPartnerFormEvent: an unknown kind`);
+  }
+  // Review R2P3: `went_to_partner` is written ONLY by `openPartnerFormVisit`, beside the visit record, in one savepoint — a caller of this
+  // function could otherwise bump it with no visit (or twice), and the figure would drift from the records it counts.
+  if ((input.kind as string) === 'went_to_partner') {
+    throw new RangeError(`countPartnerFormEvent: 'went_to_partner' is counted by openPartnerFormVisit only`);
   }
   const P = input.pariwarId.toLowerCase();
   const moduleId = input.moduleId.toLowerCase();
@@ -190,7 +197,7 @@ const isoDate = z
 const PartnerFormStageSchema = z
   .object({
     label: storableText(z.string().trim().min(1).max(PARTNER_FORM_STAGE_LABEL_MAX)),
-    figure: z.number().int().nonnegative().max(2_147_483_647),
+    figure: z.number().int().nonnegative().max(PARTNER_FORM_FIGURE_MAX),
   })
   .strict();
 
@@ -226,6 +233,32 @@ export function partnerFormTotalsAuditShape(t: PartnerFormTotalsInput): Record<s
 }
 
 /**
+ * The period already entered for the offer that shares a day with `[start, end]` and is NOT that same pair (review R2P17), or `null`.
+ * Two overlapping periods let a figure below 5 be worked out by subtraction; the SAME pair is a correction and never clashes. The route
+ * calls this as a PRE-CHECK (before its audit line — a refusal writes none); {@link recordPartnerFormTotals} repeats it under the
+ * offer's advisory lock, which is the check that holds against a concurrent entry.
+ */
+export async function findOverlappingTotalsPeriod(
+  client: pg.PoolClient,
+  pariwarId: PariwarId,
+  moduleId: ModuleId,
+  start: string,
+  end: string,
+): Promise<{ readonly periodStart: string; readonly periodEnd: string } | null> {
+  const r = await client.query<{ period_start: string; period_end: string }>(
+    `SELECT period_start::text AS period_start, period_end::text AS period_end
+       FROM marketplace_partner_form_totals
+      WHERE pariwar_id = $1 AND module_id = $2 AND stage_order = 1
+        AND NOT (period_start = $3::date AND period_end = $4::date)
+        AND period_start <= $4::date AND period_end >= $3::date
+      ORDER BY period_start, period_end LIMIT 1`,
+    [pariwarId.toLowerCase(), moduleId.toLowerCase(), start, end],
+  );
+  const row = r.rows[0];
+  return row === undefined ? null : { periodStart: row.period_start, periodEnd: row.period_end };
+}
+
+/**
  * ⭐ QE12 (A) — record ONE entry of the partner's totals for a period (INSERT-ONLY: a correction is a NEW entry for the same period; the
  * read shows the newest). A figure below {@link PARTNER_FORM_FIGURE_FLOOR} is stored as `below_floor = true` with a NULL figure — the
  * number itself is NEVER stored (`-486` R3 B: "totals below 5 are not shown"; the 0217 floor CHECK). Advisory: it changes nothing about
@@ -235,6 +268,7 @@ export function partnerFormTotalsAuditShape(t: PartnerFormTotalsInput): Record<s
  * @throws PartnerFormTotalsInvalidError  the shape (paths + messages).
  * @throws ModuleGenesisMissingError      ⛔ row in this Pariwar.
  * @throws ModuleNotPartnerFormError      a `trust_sends` offer (→ 409 `module.not_partner_form`).
+ * @throws PartnerFormTotalsOverlapError   a period that shares a day with a DIFFERENT period already entered (→ 409; R2P17).
  */
 export async function recordPartnerFormTotals(
   client: pg.PoolClient,
@@ -255,6 +289,12 @@ export async function recordPartnerFormTotals(
     const route = await moduleRoute(client, P, moduleId);
     if (route === null) throw new ModuleGenesisMissingError(moduleId);
     if (route !== 'partner_form') throw new ModuleNotPartnerFormError(moduleId);
+    // R2P17 (from R2D1): ⛔ a period that shares a day with a DIFFERENT period of this offer (the SAME pair is a correction). Two overlapping
+    // periods let a figure below 5 be worked out by subtraction (100 − 97 = 3). Serialised per offer, so two concurrent entries cannot both
+    // pass the check: a transaction-scoped advisory lock, held until the caller commits; ⛔ a row lock (twt_app holds no UPDATE on modules).
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`partner-form-totals:${moduleId}`]);
+    const clash = await findOverlappingTotalsPeriod(client, input.pariwarId, input.moduleId, t.period_start, t.period_end);
+    if (clash !== null) throw new PartnerFormTotalsOverlapError(moduleId, clash.periodStart, clash.periodEnd);
     const totalsId = randomUUID();
     for (const [i, stage] of t.stages.entries()) {
       const below = stage.figure < PARTNER_FORM_FIGURE_FLOOR;
@@ -428,19 +468,27 @@ export const PARTNER_FORM_VISIT_PURGE_BATCH = 500;
  * ⭐ W15 (Story 12.5b QE5; `-486` R2 C: *"removed after a number of days"* — the Panel set 90) — DELETE up to `limit` visit records whose
  * own `opened_at` is MORE than `retentionDays` old (`< clock_timestamp() - 90 days`), whoever the member is (QE10 (A) — ⛔ a
  * death-report rule). The batch is picked by a MATERIALIZED CTE and deleted by id (⛔ an `IN (subquery LIMIT)` —
- * [[project_in_subquery_limit_skip_locked_overclaim]]). Returns how many rows it removed. The sweep runs it LAST in the tick, after
- * the claim loop, and a throw ends only W15 (one alarm; the next tick retries) — ⇒ a record goes at most about one minute after its
- * 90th day.
+ * [[project_in_subquery_limit_skip_locked_overclaim]]). Returns how many rows it removed. The sweep runs it once a tick in its own scope
+ * (Decision `2026-11-22-491`: after the claim loop, or in place of the rest of a tick the `trust_sends` part ended), and a throw ends
+ * only W15 (one alarm; the next tick retries) — ⇒ a record goes at most about one minute after its 90th day, bar a persistent fault.
  *
  * ⚠ ⛔ `FOR UPDATE SKIP LOCKED` (review RP1; Decision `2026-11-22-490` (2)): a row lock needs an UPDATE privilege on some column, the
  * jobs login holds SELECT + DELETE only (0217 — the visits are never updated, by anyone), and BYPASSRLS waives policies, ⛔ privileges —
  * so the locking form was 42501 on every production tick. No lock is needed: the only other writer of these rows is erasure's DELETE,
  * and a DELETE that meets a row another transaction is deleting waits for it, then skips it (READ COMMITTED re-check) — never a double
- * count, never an error. Proven on the jobs login's own privilege shape by `lead-handoff-commands.spec.ts` (RP1).
+ * count. Proven on the jobs login's own privilege shape by `lead-handoff-commands.spec.ts` (RP1).
+ * ⚠ Residual, stated (review R2P12 — NOT closed, and ⛔ proven live): "never an error" holds for ONE row. Both statements delete SEVERAL
+ * rows and neither fixes its lock order (this one by the plan's join, erasure's by its index scan), so two transactions that each delete
+ * two or more of the SAME member's expired rows in opposite order can deadlock (40P01) — W15 in the minute a member is erased AND their
+ * visits cross the 90th day (erasure deletes ALL of a member's visits, so the overlap is every row they have, ⛔ only the expired ones).
+ * Postgres aborts ONE of the two: if W15, it alarms (`visit_purge_failed … [code:40P01]`) and the next tick retries; if erasure, its
+ * single anonymize transaction rolls back whole and the caller sees the error — ⛔ shown here to retry on its own. A deterministic order needs a row lock, which the jobs login cannot take
+ * (the reason for `-490` (2)); a two-connection test would only show Postgres's deadlock detector, ⛔ these statements' order.
  *
  * DELIBERATE (checklist family 9): every Pariwar's rows in one statement on the sweep's pool (bypasses RLS; the jobs login holds 0217's
- * `twt_service` DELETE grant — G24) — retention is a platform-wide clock and the statement returns a count only. Re-examine under the
- * claim's triggers.
+ * `twt_service` DELETE grant — G24) — retention is a platform-wide clock and the statement returns a count only. ⭐ Re-examine when a
+ * second statement is added that deletes across Pariwars on the sweep's pool, or when retention stops being one clock (a per-Pariwar
+ * setting) — either makes "every Pariwar's rows in one statement" a tenancy question again.
  */
 export async function purgeExpiredPartnerFormVisits(
   q: Queryable,

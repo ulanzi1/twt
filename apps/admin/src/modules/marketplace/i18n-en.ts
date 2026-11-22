@@ -222,8 +222,12 @@ const EN: Record<string, string> = {
   'module.error.forbidden': 'You do not have permission to manage partner offers in this Pariwar.',
   // Story 12.5b
   'module.error.lead_route_mismatch':
-    'This offer was written to work the other way, and that cannot be changed. Withdraw it, then start a corrected copy that works the way you chose.',
+    'The way you chose is not the way this offer was written to work (shown above). Choose that way to publish it. If it is not the way you want, withdraw the offer and start a corrected copy.',
   'module.error.not_partner_form': 'This offer does not use the partner’s own page.',
+  'module.error.partner_form_totals_overlap':
+    'These dates overlap figures already entered for another period. Enter the same dates again to correct a period, or choose dates that do not overlap.',
+  'module.error.partner_form_totals_overlap_dates':
+    'These dates overlap figures already entered for {from} to {until}. To correct that period, enter exactly those dates again; otherwise choose dates that do not overlap it.',
   'module.error.partner_form_totals_invalid': 'Some of the figures are not valid. Check the dates, the step names and the numbers.',
   'module.error.generic': 'Something went wrong. Try again.',
 
@@ -281,7 +285,8 @@ const EN: Record<string, string> = {
   'module.figures.kind.went_to_partner': 'Went to the partner’s page',
   'module.figures.kind.came_back': 'Came back to the app',
   'module.figures.total': 'All days',
-  'module.figures.byDay': 'By day (India date)',
+  'module.figures.caption': 'Figures for this offer: all days, then each day (India date)',
+  'module.figures.byDay': 'Day (India date)',
   'module.figures.noDays': 'Nothing has been counted yet.',
   'module.figures.partner.heading': 'Figures from the partner',
   'module.figures.partner.none': 'The partner’s figures have not been entered yet.',
@@ -299,8 +304,12 @@ const EN: Record<string, string> = {
   'module.totals.removeStage': 'Remove step {n}',
   'module.totals.save': 'Save the figures',
   'module.totals.saving': 'Saving…',
+  'module.totals.lastStageRemoved': 'Step {n} removed.',
+  'module.totals.stageRemoved': 'Step {n} removed. The steps after it are renumbered.',
   'module.totals.saved': 'The partner’s figures were saved.',
   'module.totals.reasonPeriod': 'Enter both dates; the second must not be before the first.',
+  'module.totals.reasonYear': 'Use real dates from the year 2000 on.',
+  'module.totals.reasonFigure': 'A number can be at most 2,147,483,647.',
   'module.totals.reasonStage': 'Each step needs the partner’s word for it (at most 80 characters) and a whole number.',
   'module.detail.leadWarningOne':
     '1 member registered interest in this offer. A corrected copy starts with all places free; that member can register again, and the partner may receive a second lead for the same member.',

@@ -175,9 +175,13 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the seal reads the route in its O
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1::uuid[])', [[pf, ts]]);
-    await pool.query('DELETE FROM marketplace_partners WHERE partner_id = $1', [partnerId]);
-    await pool.end();
+    // Review R2P15: the pool is ALWAYS ended, and a refused DELETE does not leave the committed rows behind unreported.
+    try {
+      await pool.query('DELETE FROM marketplace_modules WHERE module_id = ANY($1::uuid[])', [[pf, ts]]);
+      await pool.query('DELETE FROM marketplace_partners WHERE partner_id = $1', [partnerId]);
+    } finally {
+      await pool.end();
+    }
   });
 
   it('a partner_form module refuses with ModuleLeadRouteRefusedError BEFORE any KMS call (the fake records zero)', async () => {

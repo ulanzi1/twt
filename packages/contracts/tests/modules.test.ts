@@ -15,6 +15,7 @@ import {
   MODULE_ELIGIBILITY_MEMBER_STATES,
   MODULE_LEAD_ROUTES,
   MODULE_PARTNER_FORM_COUNT_KINDS,
+  MODULE_PARTNER_FORM_FIGURE_MAX,
   MODULE_PARTNER_FORM_STAGE_LABEL_MAX,
   MODULE_PARTNER_FORM_STAGES_MAX,
   MODULE_MAX_SCOPE_VALUE_LENGTH,
@@ -48,6 +49,7 @@ describe('modules contract ↔ domain sync-guard', () => {
     expect([...MODULE_PARTNER_FORM_COUNT_KINDS]).toEqual([...schema.PARTNER_FORM_COUNT_KINDS]);
     expect(MODULE_PARTNER_FORM_STAGES_MAX).toBe(schema.PARTNER_FORM_STAGES_MAX);
     expect(MODULE_PARTNER_FORM_STAGE_LABEL_MAX).toBe(schema.PARTNER_FORM_STAGE_LABEL_MAX);
+    expect(MODULE_PARTNER_FORM_FIGURE_MAX).toBe(schema.PARTNER_FORM_FIGURE_MAX);
     // The DTO is refined (RD1's second floor), so its object is the effect's inner type.
     const figures = ModulePartnerFormFiguresDto.innerType();
     expect(Object.keys(figures.shape.counts.shape).sort()).toEqual([...MODULE_PARTNER_FORM_COUNT_KINDS].sort());

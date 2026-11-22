@@ -491,7 +491,7 @@ export class LeadHandoffNotRequeueableError extends Error {
 // offer in a message that could reach a log).
 
 /** Where a `partner_form` offer was asked to pass a member on (QE4 (a)–(d)). */
-export type ModuleLeadRouteOperation = 'lead' | 'lead_check' | 'projector' | 'seal' | 'record';
+export type ModuleLeadRouteOperation = 'lead' | 'projector' | 'seal' | 'record';
 
 /**
  * ⭐ THE SEND GUARD (Story 12.5b QE4; I2). A `partner_form` offer never passes a member on: ⛔ `module.lead_submitted`, ⛔ sealed
@@ -542,6 +542,24 @@ export class ModuleNotPartnerFormError extends Error {
   public readonly code = 'module.not_partner_form';
   public constructor(public readonly moduleId: string) {
     super(`module ${moduleId} does not use the partner's own page`);
+  }
+}
+
+/**
+ * A partner's totals entry whose period overlaps ANOTHER period already entered for the offer (Story 12.5b review R2P17, from R2D1) — 409
+ * `module.partner_form_totals_overlap`. The same period again is a correction and is allowed; a period that shares a day with a different
+ * one is not, because two overlapping periods let a figure below 5 be worked out by subtraction (`-486` R3 B: "totals below 5 are not
+ * shown"). It carries the existing period's dates (the admin's own entry — ⛔ a member, ⛔ a figure).
+ */
+export class PartnerFormTotalsOverlapError extends Error {
+  public readonly name = 'PartnerFormTotalsOverlapError';
+  public readonly code = 'module.partner_form_totals_overlap';
+  public constructor(
+    public readonly moduleId: string,
+    public readonly existingPeriodStart: string,
+    public readonly existingPeriodEnd: string,
+  ) {
+    super(`module ${moduleId}: the period overlaps ${existingPeriodStart}..${existingPeriodEnd}`);
   }
 }
 

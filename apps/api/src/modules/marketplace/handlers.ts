@@ -620,7 +620,8 @@ export function createMarketplaceHandlers(deps: AppDeps) {
   /**
    * ⭐ Story 12.5b (QE12 (A); `-486` R3 B) — record the partner's OWN totals for one period, entered by staff (`module.manage`).
    * PRE-CHECKS before the wrapper (⛔ audit line on a refusal): the shape (422 `module.partner_form_totals_invalid`), the module is
-   * in this Pariwar (404) and is a `partner_form` offer (409 `module.not_partner_form`). Audited `module.partner_form_totals_recorded`
+   * in this Pariwar (404), is a `partner_form` offer (409 `module.not_partner_form`) and the period overlaps no DIFFERENT one (409
+   * `module.partner_form_totals_overlap`, R2P17). Audited `module.partner_form_totals_recorded`
    * on `module/<id>` — it names ⛔ member. ⛔ An inbound partner route: staff type in what the partner sent (the 12.5 boundary
    * fence is unchanged — I10).
    */
@@ -637,6 +638,16 @@ export function createMarketplaceHandlers(deps: AppDeps) {
         const m = await marketplace.getModule(ctx.scopeTx.tx, toPariwarId(ctx.pariwarId), mid);
         if (m === null) throw new marketplace.ModuleGenesisMissingError(mid);
         if (m.leadRoute !== 'partner_form') throw new marketplace.ModuleNotPartnerFormError(mid);
+        // Review R2P17: a period overlapping a DIFFERENT one is refused BEFORE the audit line (a refusal writes none); the command repeats
+        // the check under the offer's lock, so two concurrent entries cannot both pass.
+        const clash = await marketplace.findOverlappingTotalsPeriod(
+          ctx.scopeTx.client,
+          toPariwarId(ctx.pariwarId),
+          mid,
+          parsed.data.period_start,
+          parsed.data.period_end,
+        );
+        if (clash !== null) throw new marketplace.PartnerFormTotalsOverlapError(mid, clash.periodStart, clash.periodEnd);
         return audited(
           ctx,
           // Review RP2: the hash is of the validated, FLOORED entry (⛔ the raw body) — the line is permanent and the hash unkeyed, so a raw

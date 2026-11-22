@@ -31,10 +31,12 @@
 //   S8  Build the body, sign it, POST it — ⛔ connection held (TR8).
 //   S9  The `module.lead_handoff_attempted` line: up to 3 tries; if all fail, write nothing more — the row lapses (at least once).
 //   S10 Settle: W3, W4 / W5, or W8. A transient outcome adds the authority to `open`.
-//   W15 (Story 12.5b QE5; `-486` R2 C) — LAST, after the claim loop ends (⛔ inside S2: a visits fault there would stop the waiting pass
-//       and every `trust_sends` delivery of the tick — a fault in one route must ⛔ stop the other): ONE bounded DELETE of the
-//       partner-form visit records more than 90 days old. It runs even when the budget is spent. A throw ends ONLY W15: ONE
-//       `visit_purge_failed:<error>` alarm (an error name and a SQLSTATE only); the next tick retries.
+//   W15 (Story 12.5b QE5; `-486` R2 C; ordering amended by `-491`) — ONE bounded DELETE of the partner-form visit records more than 90
+//       days old, in its OWN scope: after the claim loop on a normal tick (even when the budget is spent), and in place of the rest of the
+//       tick when the role check, the lapse or the lead-fields purge threw — a fault in one route must ⛔ stop the other, in EITHER
+//       direction. (⛔ inside S2: a visits fault there would stop the waiting pass and every `trust_sends` delivery of the tick.) Only
+//       the `rls_bound_role` refusal skips it (the same role would see no rows). A throw ends ONLY W15: ONE `visit_purge_failed:<error>`
+//       alarm (an error name and a SQLSTATE only); the next tick retries.
 // ⭐ Story 12.5b (QE5; amends `-483` QE13 and `-487`'s W14 pass by name, Decision `2026-11-22-489`): a row whose module is a `partner_form`
 // offer is a BUG UPSTREAM (such an offer never passes a member on — I2; the record command and the 0216 trigger refuse it). S4 decides
 // it FIRST — before withdrawn, the URL, S5 and S6 — and the waiting pass before the member's side: cancelled `partner_form_route` at
@@ -239,7 +241,9 @@ async function processRow(deps: ModuleLeadHandoffDeps, tick: Tick, row: marketpl
   if (module.currentState === 'archived' && module.archiveReason === 'trustee_archived') {
     verdict = { kind: 'withdrawn' };
   } else if (module.leadHandoffUrl === null || module.signingKeySecretName === null) {
-    // Unreachable for a `trust_sends` row (0216 `marketplace_modules_route_columns`) — refused, ⛔ guessed.
+    // Unreachable for a `trust_sends` row (0216 `marketplace_modules_route_columns`) — refused, ⛔ guessed. KEPT on purpose (review R2P10):
+    // both columns are nullable now (a `partner_form` row has neither), so this narrows them for the code below, and it is the refusal if the
+    // CHECK were ever dropped. ⛔ Pinned by a test: the CHECK makes the state un-plantable, which is the point.
     verdict = { kind: 'refuse', detail: 'failed_delivery:url_refused' };
   } else {
     const url = checkLeadUrl(module.leadHandoffUrl);
@@ -492,9 +496,30 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
   const alarm = deps.onAlarm ?? ((m: string): void => console.warn(m));
   const sweepFailed = (step: string, err: unknown): void => {
     const fault = faultClass(err);
-    alarm(`[jobs] module-lead-handoff: module_lead_handoff.sweep_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} at the ${step} — this tick swept nothing further`);
+    alarm(`[jobs] module-lead-handoff: module_lead_handoff.sweep_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} at the ${step} — the rest of this tick's lead sweep is skipped (the visit purge still runs)`);
   };
   const empty = { lapsed: 0, purged: 0, cancelledWaiting: 0, claimed: 0, sent: 0, visitsPurged: 0 };
+  // ── W15 (Story 12.5b QE5; `-491`) — the visit purge. Its own scope: a throw ends ONLY W15 (ONE alarm), and a `trust_sends` fault
+  // (the role check, the lapse, the lead-fields purge) no longer holds it — it runs on those ticks too, and after the claim loop on a
+  // normal one, even when the budget is spent. Only the `rls_bound_role` refusal skips it (the same role would see no rows).
+  // `alone`: the early-return paths (no summary line follows) log what W15 removed, so a fault tick's deletions are not silent.
+  const purgeVisits = async (alone = false): Promise<number> => {
+    try {
+      const removed = await marketplace.purgeExpiredPartnerFormVisits(
+        deps.pool,
+        deps.visitRetentionDays === undefined ? {} : { retentionDays: deps.visitRetentionDays },
+      );
+      if (alone && removed > 0) console.info('[jobs] module-lead-handoff tick', JSON.stringify({ visitsPurged: removed }));
+      return removed;
+    } catch (err) {
+      const fault = faultClass(err);
+      alarm(
+        `[jobs] module-lead-handoff: module_lead_handoff.visit_purge_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} — ` +
+          'the partner-form visit records were not purged this tick; the next tick retries',
+      );
+      return 0;
+    }
+  };
 
   // ── S1 ──
   try {
@@ -507,7 +532,7 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     }
   } catch (err) {
     sweepFailed('role check', err);
-    return { refused: false, ...empty };
+    return { refused: false, ...empty, visitsPurged: await purgeVisits(true) };
   }
 
   // ── S2 ──
@@ -521,7 +546,7 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     });
   } catch (err) {
     sweepFailed('lapse', err);
-    return { refused: false, ...empty };
+    return { refused: false, ...empty, visitsPurged: await purgeVisits(true) };
   }
   for (const l of lapsed) {
     if (l.status === 'failed_delivery') {
@@ -532,7 +557,7 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     purged = await marketplace.purgeLeadHandoffFields(deps.pool, deps.retentionDays === undefined ? {} : { retentionDays: deps.retentionDays });
   } catch (err) {
     sweepFailed('purge', err);
-    return { refused: false, ...empty, lapsed: lapsed.length };
+    return { refused: false, ...empty, lapsed: lapsed.length, visitsPurged: await purgeVisits(true) };
   }
   // `-488` (2): the waiting pass never throws — a throw in it ends the PASS (its own alarm), ⛔ the tick.
   const cancelledWaiting = await runWaitingPass(deps);
@@ -562,20 +587,8 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     }
   } while (Date.now() - started < budget);
 
-  // ── W15 (Story 12.5b QE5) — LAST, even when the budget is spent; a throw ends ONLY W15 ──
-  let visitsPurged = 0;
-  try {
-    visitsPurged = await marketplace.purgeExpiredPartnerFormVisits(
-      deps.pool,
-      deps.visitRetentionDays === undefined ? {} : { retentionDays: deps.visitRetentionDays },
-    );
-  } catch (err) {
-    const fault = faultClass(err);
-    alarm(
-      `[jobs] module-lead-handoff: module_lead_handoff.visit_purge_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} — ` +
-        'the partner-form visit records were not purged this tick; the next tick retries',
-    );
-  }
+  // ── W15 — after the claim loop, even when the budget is spent (`-491`) ──
+  const visitsPurged = await purgeVisits();
 
   if (lapsed.length > 0 || purged > 0 || cancelledWaiting > 0 || claimed > 0 || visitsPurged > 0) {
     console.info('[jobs] module-lead-handoff tick', JSON.stringify({ lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent, visitsPurged }));

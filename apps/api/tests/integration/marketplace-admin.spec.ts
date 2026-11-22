@@ -283,6 +283,30 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect(await counts(q)).toEqual(beforeQ);
   });
 
+  // Review R2P9 (family 3 / family 12): the cross-Pariwar leg above is stopped by the SCOPE HOOK (the admin holds no grant in Q), so it never
+  // reaches the handler's own `getModule(…, scopePariwar, id)`. Here ONE admin holds `module.manage` in BOTH Pariwars and names P's offer
+  // under Q's path: the hook lets it through, and only the handler's scoping can refuse — 404, nothing written in either Pariwar.
+  it('R2P9: an admin granted module.manage in BOTH Pariwars naming P\'s offer under Q\'s path is 404 on the totals route, with nothing written', async () => {
+    const p = freshPariwar();
+    const q = freshPariwar();
+    const both = await pariwarAdmin(p);
+    await td.pool.query(`INSERT INTO role_grants (user_id, pariwar_id, role, scope_dimension, scope_value) VALUES ($1, $2, 'pariwar_admin', 'pariwar', $3)`, [both.userId, q, q]);
+    const pfId = json(await post(both.client, M(p), partnerFormManifest(await partner(both.client, p))))['module_id'] as string;
+    // Control: the same admin can list in Q (the grant is real), so a 404 below is the handler's, ⛔ the hook's.
+    expect((await both.client.inject({ method: 'GET', url: M(q) })).statusCode).toBe(200);
+    const writes = async (): Promise<number[]> => [
+      (await td.pool.query('SELECT 1 FROM marketplace_partner_form_totals WHERE module_id = $1', [pfId])).rows.length,
+      (await td.pool.query(`SELECT 1 FROM audit_log_entries WHERE pariwar_id = ANY($1) AND action LIKE 'module.partner_form_totals%'`, [[p, q]])).rows.length,
+    ];
+    expect(await writes()).toEqual([0, 0]);
+    const r = await post(both.client, `${M(q)}/${pfId}/partner-form-totals`, TOTALS_ENTRY);
+    expect(r.statusCode, r.body).toBe(404);
+    expect(errOf(r).code).toBe('module.not_found');
+    expect(await writes()).toEqual([0, 0]);
+    // Control: the SAME call under P's own path succeeds, so the 404 is the Pariwar mismatch and nothing else.
+    expect((await post(both.client, `${M(p)}/${pfId}/partner-form-totals`, TOTALS_ENTRY)).statusCode).toBe(201);
+  });
+
   // Review round 1, RP12 (checklist family 3, per mutation route). The questionnaire twin's RV11 is the house standard:
   // POSITIVE CONTROLS first (the same clients DO write on every route, so a refusal is the actor / tenant boundary and not a
   // session that never took), then a TAMPERED session — its userId rewritten to a stranger's — must get EXACTLY 404 (a 401
@@ -1287,6 +1311,59 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     const [h0, h1, h3, h4, h5, h6] = hashes;
     expect(new Set([h0, h1, h3, h4]).size).toBe(1);
     expect(new Set([h0, h5, h6]).size).toBe(3);
+  });
+
+  // Review R2P17 (from R2D1): two overlapping periods would let a figure below 5 be worked out by subtraction (100 − 97 = 3).
+  it('R2P17 / AC10: a period overlapping a DIFFERENT one → 409 module.partner_form_totals_overlap naming that period, ⛔ row, ⛔ audit line; the same period and an adjacent one → 201', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const id = json(await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p))))['module_id'] as string;
+    const url = `${M(p)}/${id}/partner-form-totals`;
+    const entry = (period_start: string, period_end: string, figure: number) => ({ period_start, period_end, stages: [{ label: 'Started', figure }] });
+    expect((await post(admin.client, url, entry('2026-01-01', '2026-01-31', 100))).statusCode).toBe(201);
+    const rows = async (): Promise<number> => (await td.pool.query('SELECT 1 FROM marketplace_partner_form_totals WHERE module_id = $1', [id])).rows.length;
+    const audits = async (): Promise<number> => (await moduleAudit(p)).filter((a) => a.action === 'module.partner_form_totals_recorded').length;
+    expect([await rows(), await audits()]).toEqual([1, 1]);
+    for (const [from, to] of [['2026-01-01', '2026-01-15'], ['2026-01-16', '2026-01-31'], ['2025-12-15', '2026-02-15']] as const) {
+      const r = await post(admin.client, url, entry(from, to, 3));
+      expect(r.statusCode, `${from}..${to}: ${r.body}`).toBe(409);
+      expect(errOf(r).code).toBe('module.partner_form_totals_overlap');
+      expect(errOf(r).details).toEqual({ existing_period_start: '2026-01-01', existing_period_end: '2026-01-31' });
+    }
+    // ⛔ a row and ⛔ an audit line for any refused entry.
+    expect([await rows(), await audits()]).toEqual([1, 1]);
+    // The same pair is a correction; the next day's period only touches.
+    expect((await post(admin.client, url, entry('2026-01-01', '2026-01-31', 101))).statusCode).toBe(201);
+    expect((await post(admin.client, url, entry('2026-02-01', '2026-02-28', 7))).statusCode).toBe(201);
+  });
+
+  // Round 3: an END-TO-END check of the race outcome — two admins, two requests on two pool connections, overlapping periods, fired together:
+  // exactly ONE lands and the other is the 409. ⚠ It does NOT prove the LOCK (the requests' own timing usually keeps the check ahead of
+  // the insert even without it — mutated and shown): the lock is proved by `partner-form-totals-race.spec.ts` (domain), which holds A's
+  // uncommitted entry and asserts B WAITS.
+  it('R2P17 / round 3: two OVERLAPPING entries fired concurrently → exactly one 201 and one 409 module.partner_form_totals_overlap; one entry\'s rows', async () => {
+    for (let round = 0; round < 3; round += 1) {
+      const p = freshPariwar();
+      // TWO admins: `tenantWrite` already serialises one actor's writes on one offer (its own lock key carries the actor), so a race
+      // between two requests of ONE admin never reaches the check — the race that matters is two admins of the Pariwar.
+      const admin = await pariwarAdmin(p);
+      const other = await pariwarAdmin(p, 'Bina (Pariwar Admin)');
+      const id = json(await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p))))['module_id'] as string;
+      const url = `${M(p)}/${id}/partner-form-totals`;
+      const entry = (period_start: string, period_end: string, figure: number) => ({ period_start, period_end, stages: [{ label: 'Started', figure }] });
+      const [a, b] = await Promise.all([
+        post(admin.client, url, entry('2026-01-01', '2026-01-31', 100)),
+        post(other.client, url, entry('2026-01-01', '2026-01-15', 30)),
+      ]);
+      expect([a.statusCode, b.statusCode].sort(), `round ${round}: ${a.body} / ${b.body}`).toEqual([201, 409]);
+      const loser = a.statusCode === 409 ? a : b;
+      expect(errOf(loser).code).toBe('module.partner_form_totals_overlap');
+      const periods = (await td.pool.query<{ period_start: string; period_end: string }>(
+        'SELECT DISTINCT period_start::text AS period_start, period_end::text AS period_end FROM marketplace_partner_form_totals WHERE module_id = $1',
+        [id],
+      )).rows;
+      expect(periods, `round ${round}`).toHaveLength(1);
+    }
   });
 
   it('AC10: totals on a trust_sends offer → 409 module.not_partner_form; a bad period → 422 at its path — each with ⛔ audit line', async () => {

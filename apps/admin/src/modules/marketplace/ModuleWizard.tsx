@@ -407,26 +407,34 @@ export function ModuleWizard({
         {WIZARD_STEPS[step] === 'e' ? (
           <div className="flex flex-col gap-3">
             {/* Story 12.5b (QE7 (A)) — the route FIRST, ⛔ default: neither option is pre-selected. */}
-            <fieldset className="flex flex-col gap-2" data-testid="route-question" {...bad('lead_route')}>
+            {/* Review R2P14: the whole option is ONE label (the click target stays the full row), but the input's NAME is the option's name alone
+                (`aria-labelledby`) and the hint is its description — read once, ⛔ twice. `aria-invalid` sits on the radios (a group role does
+                not carry it) and the issue text joins the description. */}
+            <fieldset className="flex flex-col gap-2" data-testid="route-question">
               <legend className="text-sm font-medium">{t('module.route.question')}</legend>
-              {(['trust_sends', 'partner_form'] as const).map((route) => (
-                <label key={route} className="flex items-start gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="lead-route"
-                    checked={state.leadRoute === route}
-                    onChange={() => set(route === 'partner_form' ? { leadRoute: route, placesMode: null, places: '' } : { leadRoute: route })}
-                    aria-describedby={`route-${route}-hint`}
-                    data-testid={`route-${route}`}
-                  />
-                  <span className="flex flex-col">
-                    <span>{describeRoute(route).name}</span>
-                    <span className="text-xs" id={`route-${route}-hint`}>
-                      {describeRoute(route).meaning}
+              {(['trust_sends', 'partner_form'] as const).map((route) => {
+                const invalid = bad('lead_route');
+                return (
+                  <label key={route} className="flex items-start gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="lead-route"
+                      checked={state.leadRoute === route}
+                      onChange={() => set(route === 'partner_form' ? { leadRoute: route, placesMode: null, places: '' } : { leadRoute: route })}
+                      aria-labelledby={`route-${route}-name`}
+                      aria-describedby={[`route-${route}-hint`, invalid['aria-describedby']].filter(Boolean).join(' ')}
+                      aria-invalid={invalid['aria-invalid']}
+                      data-testid={`route-${route}`}
+                    />
+                    <span className="flex flex-col">
+                      <span id={`route-${route}-name`}>{describeRoute(route).name}</span>
+                      <span className="text-xs" id={`route-${route}-hint`}>
+                        {describeRoute(route).meaning}
+                      </span>
                     </span>
-                  </span>
-                </label>
-              ))}
+                  </label>
+                );
+              })}
             </fieldset>
             {state.leadRoute === 'trust_sends' ? (
               <fieldset className="flex flex-col gap-2" data-testid="places-question">
@@ -458,7 +466,14 @@ export function ModuleWizard({
           <div className="flex flex-col gap-2">
             <label className="flex flex-col text-sm">
               {t('module.field.partnerFormUrl')}
-              <input className={input} value={state.partnerFormUrl} onChange={(e) => set({ partnerFormUrl: e.target.value })} data-testid="field-partner-form-url" aria-describedby="partner-form-copy" {...bad('partner_form_url')} />
+              <input
+                className={input}
+                value={state.partnerFormUrl}
+                onChange={(e) => set({ partnerFormUrl: e.target.value })}
+                data-testid="field-partner-form-url"
+                {...bad('partner_form_url')}
+                aria-describedby={['partner-form-copy', bad('partner_form_url')['aria-describedby']].filter(Boolean).join(' ')}
+              />
             </label>
             <p className="text-xs" id="partner-form-copy" data-testid="partner-form-copy">
               {t('module.partnerForm.copy')}

@@ -18,7 +18,7 @@ import type {
   ModuleScopeFilterDto,
   ModuleState,
 } from '@twt/contracts';
-import { MODULE_ELIGIBILITY_MEMBER_STATES } from '@twt/contracts';
+import { MODULE_ELIGIBILITY_MEMBER_STATES, MODULE_PARTNER_FORM_FIGURE_MAX, MODULE_PARTNER_FORM_STAGE_LABEL_MAX } from '@twt/contracts';
 
 import { resolveEn as t } from './i18n-en.js';
 
@@ -341,6 +341,9 @@ function orderedStates(states: readonly ModuleEligibilityMemberState[]): ModuleE
  * are sent EXACTLY as picked (TR7); the window as UTC `Z` instants. ⛔ `module_id` (server-minted), ⛔ `branding_bundle`.
  */
 export function toAuthorRequest(s: WizardState): AuthorModuleRequest {
+  // QE7 (A): the route has ⛔ default. `firstInvalidStep` blocks Create until it is chosen; if a caller skipped that, fail loudly here
+  // rather than write the offer as `trust_sends` (review R2P4).
+  if (s.leadRoute === null) throw new Error('toAuthorRequest: the offer route is not chosen');
   return {
     partner_id: s.partnerId ?? '',
     name_en: normaliseDisplayText(s.nameEn, 'name'),
@@ -529,6 +532,7 @@ export function moduleErrorGuidance(code: string, surface: 'wizard' | 'detail' =
     'module.lead_route_mismatch': 'module.error.lead_route_mismatch',
     'module.not_partner_form': 'module.error.not_partner_form',
     'module.partner_form_totals_invalid': 'module.error.partner_form_totals_invalid',
+    'module.partner_form_totals_overlap': 'module.error.partner_form_totals_overlap',
     // The API's permission-denied code is `authz.forbidden` (this row was keyed `auth.forbidden`, which nothing emits — RP22).
     'authz.forbidden': 'module.error.forbidden',
   };
@@ -562,18 +566,21 @@ export function emptyTotalsDraft(): TotalsDraft {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const WHOLE = /^(0|[1-9][0-9]{0,9})$/;
-/** The stage label bound (the contract's `MODULE_PARTNER_FORM_STAGE_LABEL_MAX`). */
-const STAGE_LABEL_MAX = 80;
 
 /** The first reason the totals form cannot be saved yet, or null. Mirrors what the admin sees; the domain decides. */
 export function validateTotalsDraft(d: TotalsDraft): string | null {
   if (!ISO_DATE.test(d.periodStart) || !ISO_DATE.test(d.periodEnd) || d.periodEnd < d.periodStart) return t('module.totals.reasonPeriod');
+  // Review R2P7: the domain takes a real date from the year 2000 (the wizard's `module.reason.windowYear` is the same rule) — say so here,
+  // ⛔ the generic 422 after Save.
+  for (const day of [d.periodStart, d.periodEnd]) {
+    const at = new Date(`${day}T00:00:00Z`);
+    if (Number.isNaN(at.getTime()) || at.toISOString().slice(0, 10) !== day || at.getUTCFullYear() < 2000) return t('module.totals.reasonYear');
+  }
   if (d.stages.length === 0) return t('module.totals.reasonStage');
   for (const st of d.stages) {
     const label = st.label.trim();
-    if (label === '' || label.length > STAGE_LABEL_MAX || !WHOLE.test(st.figure.trim()) || Number(st.figure.trim()) > MAX_PLACES) {
-      return t('module.totals.reasonStage');
-    }
+    if (label === '' || label.length > MODULE_PARTNER_FORM_STAGE_LABEL_MAX || !WHOLE.test(st.figure.trim())) return t('module.totals.reasonStage');
+    if (Number(st.figure.trim()) > MODULE_PARTNER_FORM_FIGURE_MAX) return t('module.totals.reasonFigure'); // a whole number, but too large — say so
   }
   return null;
 }

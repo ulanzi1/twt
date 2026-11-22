@@ -24,6 +24,8 @@ import {
   ModuleDistrictSource,
   ModuleEligibilityMemberState,
   MODULE_PARTNER_FORM_COUNT_KINDS,
+  MODULE_PARTNER_FORM_FIGURE_MAX,
+  MODULE_PARTNER_FORM_STAGE_LABEL_MAX,
   MODULE_PARTNER_FORM_STAGES_MAX,
   ModuleLeadRoute,
   ModulePublishedEventType,
@@ -363,7 +365,15 @@ export const RecordPartnerFormTotalsRequest = z
     period_start: z.string().max(10),
     period_end: z.string().max(10),
     stages: z
-      .array(z.object({ label: z.string().max(200), figure: z.number().int().nonnegative().max(2_147_483_647) }).strict())
+      .array(
+        z
+          .object({
+            // The domain trims, then bounds the label at 80 (review R2P6: this said 200, so 81–200 passed here and failed there).
+            label: z.string().trim().max(MODULE_PARTNER_FORM_STAGE_LABEL_MAX),
+            figure: z.number().int().nonnegative().max(MODULE_PARTNER_FORM_FIGURE_MAX),
+          })
+          .strict(),
+      )
       .min(1)
       .max(MODULE_PARTNER_FORM_STAGES_MAX),
   })

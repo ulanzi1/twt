@@ -72,6 +72,17 @@ function stateLabel(m: ModuleDetailResponse): string {
   return t(`module.state.${m.current_state}`);
 }
 
+/** The totals save's refusal in words. An overlap names the period it clashes with (the 409 carries it — the admin's own entry). */
+function totalsErrorText(err: ApiError): string {
+  if (err.code === 'module.partner_form_totals_overlap') {
+    const d = err.details as { existing_period_start?: unknown; existing_period_end?: unknown } | null | undefined;
+    if (typeof d?.existing_period_start === 'string' && typeof d?.existing_period_end === 'string') {
+      return t('module.error.partner_form_totals_overlap_dates', { from: d.existing_period_start, until: d.existing_period_end });
+    }
+  }
+  return moduleErrorGuidance(err.code, 'detail');
+}
+
 export function ModuleDetailPage({
   pariwarId,
   moduleId,
@@ -90,6 +101,10 @@ export function ModuleDetailPage({
   const [totals, setTotals] = useState<TotalsDraft>(emptyTotalsDraft);
   const [totalsMessage, setTotalsMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const totalsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const totalsFormRef = useRef<HTMLFieldSetElement>(null);
+  // Review R2P14: what a removal changed, said in the always-mounted live region (the rows renumber under the reader).
+  const [totalsNote, setTotalsNote] = useState<{ seq: number; text: string } | null>(null);
+  const noteSeq = useRef(0);
   const totalsInFlight = useRef(false);
   // Review RP3: the label field of each step, and the step "Add a step" just made — focus moves there once it has rendered.
   const stageLabelRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -213,19 +228,28 @@ export function ModuleDetailPage({
     if (totalsInFlight.current) return;
     totalsInFlight.current = true;
     setTotalsMessage(null);
+    setTotalsNote(null); // "Step 2 removed" is about the form as it WAS, ⛔ beside the result of saving it
     try {
       await recordTotals.mutateAsync({ body: toTotalsRequest(totals), idempotencyKey: newIdempotencyKey() });
       setTotals(emptyTotalsDraft());
       setTotalsMessage({ kind: 'ok', text: t('module.totals.saved') });
     } catch (err) {
-      setTotalsMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code, 'detail') : t('module.error.generic') });
+      setTotalsMessage({ kind: 'error', text: err instanceof ApiError ? totalsErrorText(err) : t('module.error.generic') });
     } finally {
       totalsInFlight.current = false;
-      totalsHeadingRef.current?.focus(); // the Save button was disabled under focus while the write ran (RC2)
+      // The Save button was disabled under focus while the write ran (RC2) — but only when focus is still there: an admin who has moved on
+      // (the publish ticks, Withdraw) keeps it (review R2P7; `focusIfUnclaimed`, as the other handlers do).
+      focusIfUnclaimed(totalsHeadingRef.current, totalsFormRef.current);
     }
   };
+  // Any edit of the form retires the last result: "saved" (or the refusal) is about what was sent, ⛔ about the next period being typed (R2P7).
+  const editTotals = (change: (d: TotalsDraft) => TotalsDraft): void => {
+    setTotals(change);
+    setTotalsMessage(null);
+    setTotalsNote(null);
+  };
   const setStage = (i: number, patch: Partial<TotalsDraft['stages'][number]>): void =>
-    setTotals((d) => ({ ...d, stages: d.stages.map((st, j) => (j === i ? { ...st, ...patch } : st)) }));
+    editTotals((d) => ({ ...d, stages: d.stages.map((st, j) => (j === i ? { ...st, ...patch } : st)) }));
 
   return (
     <section className="flex max-w-3xl flex-col gap-4 p-4" data-testid="module-detail">
@@ -356,11 +380,9 @@ export function ModuleDetailPage({
           >
             {publish.isPending ? t('module.detail.publishing') : t('module.detail.publish')}
           </button>
-          {!m.authored_by_viewer && publishRoute === null ? (
-            <p className="text-xs" role="status" id="module-publish-route-reason" data-testid="module-publish-route-reason">
-              {t('module.detail.publishRouteReason')}
-            </p>
-          ) : null}
+          <p className="text-xs empty:hidden" role="status" id="module-publish-route-reason" data-testid="module-publish-route-reason">
+            {!m.authored_by_viewer && publishRoute === null ? t('module.detail.publishRouteReason') : ''}
+          </p>
         </div>
       ) : null}
 
@@ -369,6 +391,7 @@ export function ModuleDetailPage({
           <h2 className="font-medium">{t('module.figures.heading')}</h2>
           <p className="text-xs">{t('module.figures.note')}</p>
           <table className="text-sm">
+            <caption className="text-left text-xs">{t('module.figures.caption')}</caption>
             <thead>
               <tr>
                 <th scope="col" className="text-left">{t('module.figures.byDay')}</th>
@@ -419,15 +442,15 @@ export function ModuleDetailPage({
 
           <h3 ref={totalsHeadingRef} tabIndex={-1} className="font-medium outline-none">{t('module.totals.heading')}</h3>
           <p className="text-xs" id="module-totals-hint">{t('module.totals.hint')}</p>
-          <fieldset disabled={recordTotals.isPending} className="flex flex-col gap-2" aria-describedby="module-totals-hint" data-testid="module-totals-form">
+          <fieldset ref={totalsFormRef} disabled={recordTotals.isPending} className="flex flex-col gap-2" aria-describedby="module-totals-hint" data-testid="module-totals-form">
             <div className="flex gap-2">
               <label className="flex flex-col text-sm">
                 {t('module.totals.periodStart')}
-                <input type="date" className="rounded border px-2 py-1 text-sm" value={totals.periodStart} onChange={(e) => setTotals((d) => ({ ...d, periodStart: e.target.value }))} data-testid="totals-period-start" />
+                <input type="date" className="rounded border px-2 py-1 text-sm" value={totals.periodStart} onChange={(e) => editTotals((d) => ({ ...d, periodStart: e.target.value }))} data-testid="totals-period-start" />
               </label>
               <label className="flex flex-col text-sm">
                 {t('module.totals.periodEnd')}
-                <input type="date" className="rounded border px-2 py-1 text-sm" value={totals.periodEnd} onChange={(e) => setTotals((d) => ({ ...d, periodEnd: e.target.value }))} data-testid="totals-period-end" />
+                <input type="date" className="rounded border px-2 py-1 text-sm" value={totals.periodEnd} onChange={(e) => editTotals((d) => ({ ...d, periodEnd: e.target.value }))} data-testid="totals-period-end" />
               </label>
             </div>
             {totals.stages.map((st, i) => (
@@ -453,8 +476,17 @@ export function ModuleDetailPage({
                     type="button"
                     className="rounded border px-2 py-1 text-xs"
                     onClick={() => {
-                      setTotals((d) => ({ ...d, stages: d.stages.filter((_x, j) => j !== i) }));
-                      totalsHeadingRef.current?.focus(); // the pressed button unmounts with its row
+                      // Focus goes to the label of the row that now sits where this one was (the one before it, for the last row) — ⛔ the heading
+                      // above the whole form; the renumbering is announced (review R2P14).
+                      focusStage.current = Math.min(i, totals.stages.length - 2);
+                      editTotals((d) => ({ ...d, stages: d.stages.filter((_x, j) => j !== i) }));
+                      // A fresh `seq` each time: the same sentence twice in a row must still be announced twice (a node REMOUNTS; identical text
+                      // in place is not re-read). The "renumbered" half is only true when a later step exists.
+                      noteSeq.current += 1;
+                      setTotalsNote({
+                        seq: noteSeq.current,
+                        text: t(i + 1 < totals.stages.length ? 'module.totals.stageRemoved' : 'module.totals.lastStageRemoved', { n: i + 1 }),
+                      });
                     }}
                     data-testid={`totals-stage-remove-${i}`}
                   >
@@ -470,7 +502,7 @@ export function ModuleDetailPage({
                   className="rounded border px-3 py-1 text-sm"
                   onClick={() => {
                     focusStage.current = totals.stages.length; // the new step's index (RP3)
-                    setTotals((d) => ({ ...d, stages: [...d.stages, { label: '', figure: '' }] }));
+                    editTotals((d) => ({ ...d, stages: [...d.stages, { label: '', figure: '' }] }));
                   }}
                   data-testid="totals-stage-add"
                 >
@@ -489,13 +521,13 @@ export function ModuleDetailPage({
               </button>
             </div>
           </fieldset>
-          {totalsReason !== null ? (
-            <p className="text-xs" role="status" id="module-totals-reason" data-testid="module-totals-reason">
-              {totalsReason}
-            </p>
-          ) : null}
+          {/* ALWAYS mounted (review R2P14): a status region inserted together with its text is usually not announced. */}
+          <p className="text-xs empty:hidden" role="status" id="module-totals-reason" data-testid="module-totals-reason">
+            {totalsReason ?? ''}
+          </p>
           <div role="status" aria-live="polite" data-testid="module-totals-live">
             {totalsMessage !== null && totalsMessage.kind === 'ok' ? <p className="text-sm">{totalsMessage.text}</p> : null}
+            {totalsNote !== null ? <p key={totalsNote.seq} className="text-xs">{totalsNote.text}</p> : null}
             {/* Review RP3: why "Add a step" has gone — said in this ALWAYS-mounted region, so it is announced when the limit is reached. */}
             {totals.stages.length >= TOTALS_STAGES_MAX ? <p className="text-xs">{t('module.totals.stagesLimit', { n: TOTALS_STAGES_MAX })}</p> : null}
           </div>

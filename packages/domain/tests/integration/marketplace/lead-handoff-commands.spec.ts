@@ -707,17 +707,24 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the sweep\'s domain half (QE5; AC
       );
       return id;
     };
-    const old1 = await ins('91 days');
-    const old2 = await ins('90 days 1 hour');
+    // The two rows the BATCH LIMIT is proved on are the OLDEST possible (a century), so no other spec's committed expired row can sort before them
+    // (the purge is oldest-first and global); the cut-off is proved on the other three.
+    const old1 = await ins('36500 days');
+    const old2 = await ins('36499 days');
+    await ins('91 days');
+    await ins('90 days 1 hour');
     const young = await ins('89 days 23 hours');
     const left = async (): Promise<string[]> =>
       (await client.query<{ visit_id: string }>('SELECT visit_id FROM marketplace_partner_form_visits WHERE member_id = $1', [memberId])).rows.map((r) => r.visit_id);
-    // Bounded: a limit of 1 removes exactly one (the oldest).
-    expect(await purgeExpiredPartnerFormVisits(client, { limit: 1 })).toBeGreaterThanOrEqual(1);
-    expect(await left()).not.toContain(old1);
-    await purgeExpiredPartnerFormVisits(client);
+    // Bounded (review R2P1): a limit of 1 removes EXACTLY one — the oldest — and leaves the next-oldest. Without `LIMIT`, both would go.
+    expect(await purgeExpiredPartnerFormVisits(client, { limit: 1 })).toBe(1);
+    const afterOne = await left();
+    expect(afterOne).not.toContain(old1);
+    expect(afterOne).toContain(old2);
+    expect(afterOne).toHaveLength(4);
+    // The rest: every row MORE than 90 days old goes, the one at 89 days 23 hours stays.
+    await purgeExpiredPartnerFormVisits(client, { limit: 5000 });
     expect((await left()).sort()).toEqual([young]);
-    void old2;
   });
 
   // Review RP1 (Decision `2026-11-22-490` (2)). Every other leg here runs as the superuser, which holds every privilege, so a statement

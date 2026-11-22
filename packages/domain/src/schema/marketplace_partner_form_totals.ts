@@ -18,6 +18,8 @@ import { marketplaceModules } from './marketplace_modules.js';
 export const PARTNER_FORM_FIGURE_FLOOR = 5 as const;
 /** A stage label's bound (`marketplace_partner_form_totals_stage_label_check`). */
 export const PARTNER_FORM_STAGE_LABEL_MAX = 80 as const;
+/** The largest whole number a stage's figure may be (the `integer` column; ⚠ LOCKSTEP with the contracts' `MODULE_PARTNER_FORM_FIGURE_MAX`). */
+export const PARTNER_FORM_FIGURE_MAX = 2_147_483_647 as const;
 /** The most stages one entry may carry (`marketplace_partner_form_totals_stage_order_check`). */
 export const PARTNER_FORM_STAGES_MAX = 20 as const;
 

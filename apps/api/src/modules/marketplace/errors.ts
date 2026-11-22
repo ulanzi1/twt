@@ -85,6 +85,13 @@ export function mapModuleError(err: unknown, op: ModuleOperation): never {
       issues: err.issues.map((i) => ({ path: i.path.map(String), message: i.message })),
     });
   }
+  if (err instanceof marketplace.PartnerFormTotalsOverlapError) {
+    // The existing period's DATES are the admin's own entry (⛔ a member, ⛔ a figure).
+    throw new ApiError(409, 'module.partner_form_totals_overlap', 'That period overlaps one already entered for this offer', {
+      existing_period_start: err.existingPeriodStart,
+      existing_period_end: err.existingPeriodEnd,
+    });
+  }
   if (err instanceof marketplace.ModuleLeadRouteRefusedError) {
     // Unreachable from these routes (none submits a lead) — mapped so a future caller gets a typed 409, ⛔ a 500.
     throw new ApiError(409, err.code, "This offer uses the partner's own page — it never passes a member on", {});

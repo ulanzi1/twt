@@ -4,6 +4,14 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 3-15-assisted-signup-field-worker-code.md, round 2 (2026-11-23)
+
+- **W1 — Hindi-first digits: the six-digit box refuses Devanagari digits.** [`apps/mobile/app/(signup)/assisted.tsx:44` (`SIX_DIGITS = /^\d{6}$/`); `packages/contracts/src/members/assisted-code.ts`; `packages/contracts/tests/members-assisted-code.test.ts` pins the refusal of Arabic-Indic digits on purpose] `\d` is ASCII-only. If the number pad on a Hindi device emits Devanagari digits, a correct code cannot be entered. Un-attested. Owner: the next device pass on the signup wizard (same as D2 above). Trigger: that pass shows what the pad emits; if it is Devanagari, normalise on the client before the regex and the send (the server stays ASCII).
+- **W2 — Native side effects of the review R1 / R2 fixes, not visible in jsdom.** [`assisted.tsx:191` (`disabled={busy}` maps to `editable: !disabled` in `@tamagui/input`'s native build), `assisted.tsx:57-98`] (i) Flipping a focused TextInput to non-editable normally drops focus and the keyboard, so DL8's "focus stays" after a 422 is not attested on a device; (ii) the 5 s status-read bound now starts after `useFocusEffect` reports focus, not at mount, and the test's focus mock fires synchronously. Un-attested. Owner: the same device pass (D2). Trigger: that pass.
+- **W3 — `whatsapp.tsx:227` carries a `Spinner` with `accessibilityLabel` on a container that is not `accessible` (checklist family 13a).** [`apps/mobile/app/(signup)/whatsapp.tsx:227`] Pre-existing; the 3.15 screen copied it (review P5 fixes only the copy). Owner: NONE YET. Trigger: the next change to `whatsapp.tsx`, or 11b.8's accessibility audit.
+
+---
+
 ## Deferred from: story 3-15-assisted-signup-field-worker-code (dev-story, 2026-11-22)
 
 - **D1 — ⛔ route back into the signup wizard for a returning member** (observed, F8) → ⛔ owner. `(auth)/otp.tsx` sends a signed-in member to `/(tabs)`, so the `assisted` step (like `whatsapp`) is asked on the FIRST pass only: a member who quits the wizard after `tc` and logs in again can never record a helper's code. Pre-existing for every wizard step; ⛔ fixed here (3.15 DL13 — "a second chance after the wizard"). Trigger: any story that adds a way back into the wizard, or Story 13.9 (a field-worker draft carries the code itself).

@@ -61,6 +61,7 @@ deliberately accepted.
 | member (marking a nominee who is also a member, on the Life Events nominee screen — Story 6.36e: *"Is this nominee a TWT member? Find them in your contacts"* → a note in the app BEFORE the system prompt, ONE contact check per form session, one tap on the match — or the iOS picker / a typed number; and, when they edit a marked nominee's name or mobile, *"Is this still …? Keep the mark / Remove it"* before the save) and the member MARKED (answering *"Yes, that's me"* / *"No, that's not me"* in the app) | that the people the Trust asks about a member's death are ⛔ the member's own nominee, even when the nominee signs in with a different number from the one declared (`2026-10-24-396` Q1 A / Q2 A; `-397` NE2–NE7) | optional |
 | member of a Pariwar with WhatsApp switched on, at signup (one more screen — an UNTICKED *"Send me WhatsApp messages from TWT"* box just before payment — and, if they leave it unticked, ONE reminder with two equal choices) — Story 5.10 | a WhatsApp yes asked for plainly, on its own screen, ⛔ pre-ticked and ⛔ bundled with the Terms (§3.4 origination rule; `-375`) | forced |
 | member signing up on a phone without their WhatsApp who opens "WhatsApp on another phone?" (asks for a WhatsApp code, reads it on their own phone, types it in) — Story 5.13 | the registered number proven to have WhatsApp and the member's own act before WhatsApp is switched on (`-374`) | optional |
+| member at signup (one more screen right after the Terms — *"Did someone help you register?"* Yes / No of equal weight; Yes shows a 6-digit code box with *"Continue"* and *"Continue without a code"*) — Story 3.15 | the credit of the field worker who helped, from the member's own answer, recorded once (`2026-11-22-494`; ⛔ affects the member's own membership or cover) | forced |
 | family (the nominee, writing the memorial — the code sent to the NOMINEE's phone is asked at Send, and the words go to the Trust for review before they can appear; Story 11b.4) | the family's words reach the page as they wrote them, and only with their permission (`-162` cl.3; `-398` MA5 / MA6) | optional |
 | family (the nominee who sent the memorial, asking for it to be TAKEN DOWN — ⛔ no button in the app: they phone the helpline and are CALLED BACK on the number recorded for them before anything is recorded; only that nominee may ask; and when the Trust approved the memorial exactly as written, a smaller change needs the take-down first, so it is off the page while the new version is reviewed; Story 11b.4a) | only the nominee who gave the permission withdraws it (`-395` item 3, `-411` item 1), verified by a call-back (`-412` MP7); a smaller fix is the family's own new version, ⛔ never an operator's edit (`-412` MP8 (b), accepted by `-411` item 4) | forced |
 | member of a Pariwar whose Trust announcement channels are switched on (seeing ONE card on the home — *"The Trust's announcement channels"*, with a button to open the WhatsApp Channel and / or the Telegram channel, and *"Not now"*; once per phone per account, ⛔ shown again after "Not now" or an opened link — until a sign-out, a reinstall or a new phone, which shows it once more; plus a settings entry while a link exists) — Story 5.14 | a second way to hear about a pool opening or a cycle's last day when the app's notification does not reach the member (`2026-10-23-390` Q2 A — members are ASKED, ⛔ required, to join one; the app stays the official channel, R10(B)). ⭐ Shown ONLY while a Pariwar admin has switched the channels on and a link exists; ⛔ blocks any step; ⛔ a word about consequences of not joining | optional |
@@ -3108,3 +3109,25 @@ that anyone can reach.
    read-only line or a step the member must pass (a forced tap before the browser opens) is THAT story's to declare here — a new or
    amended row if it is a forced or optional step, or its own disposition if it is not. The member-app bundle facet is still a no-op (no
    measurable native build output). ⛔ Live: go-live is gated on roster Row 55 (c) and (d).
+
+---
+
+**Story 3.15 disposition (ONE new row — the signup "Did someone help you register?" step; ⛔ no row retired, ⛔ row amended):** the
+story's member-facing changes are `apps/mobile/app/(signup)/assisted.tsx` (new — the step between `tc` and `kyc`),
+`lib/wizard-steps.ts` (the step inserted), `app/(signup)/tc.tsx` (its next step), `app/(signup)/_layout.tsx` (a comment),
+`app/(signup)/payment.tsx` (the optional Reference Code box REMOVED), `packages/i18n/locales/{en,hi}/common.json`
+(`signup.assisted.*` added, `payment.reference_code_*` removed) and their tests.
+
+1. ⭐ **The new row (above).** Payer: every new member — one more signup screen with one tap (*No*), or, for a member someone helped,
+   a 6-digit code typed once. Protects: the field worker's credit, taken from the member's own answer (Story 13.5 decides it from the
+   stored code). `forced`: every new member passes the screen (the 5.10 `whatsapp` / 6.36a `workplace` precedent) — but it ⛔ never
+   BLOCKS or delays signup (N1): *No*, *Continue without a code*, an unknown code (retry or continue), and any failure or timeout all
+   move the member on; a member whose code is already recorded is passed straight through (the label jumps *Step 1 → 3 of 8* — the
+   `-375` accepted cost). The member is told ⛔ about the worker (`-493` A).
+2. ⭐ **Friction REMOVED:** the payment step no longer shows the optional Reference Code box and its help line (3.15 DL6) — the
+   member reaches the UTR and *Confirm payment* with one field fewer. ⛔ Row existed for it (it was optional and unannounced).
+
+⛔ No measured delta is claimed for the mobile files ([[feedback_record_unattested_no_backfill]]); ⛔ demonstrated on a device (the
+step's render tests mount real React with native primitives mocked in jsdom — ⛔ native layout, the Hindi skip label's wrapping, or a
+real screen reader). `apps/public` is ⛔ touched ⇒ the page-weight baseline is unchanged and is ⛔ ratcheted
+([[project_friction_budget_baseline_ratchet]]). ⭐ Written for changes UNCOMMITTED at the time of writing; AC-4 reads it once committed.

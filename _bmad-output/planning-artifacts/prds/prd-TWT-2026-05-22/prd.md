@@ -1182,6 +1182,8 @@ Field worker can be deactivated; existing attributions preserved; new attributio
 
 > ⚠ **ANNOTATION 2026-11-17 (Story `13-1f`, decision `2026-11-17-465`, Trustee-ratified) — ⭐ Annotated, ⛔ not rewritten.** For a field worker whose ENDING is later UNDONE — as a mistake or on an allowed appeal — a new signup on their code while they were ended is HELD, and credited to them once the ending is undone (the Panel's Q1 B). This narrows the 2026-11-07 annotation's "for an ENDED worker, the sentence above stands" to an ending that is never undone. How long the hold lasts after the Panel refuses an appeal (when only a new Panel decision can undo the ending) is not ruled. The credit recorder (Stories 13.8 / 13.5) builds it.
 
+> ⚠ **ANNOTATION 2026-11-22 (Story `3-15`, decision `2026-11-22-493`, Trustee-ratified; author-commit `2026-11-22-494`) — ⭐ Annotated, ⛔ not rewritten.** For the 6-digit code a person types at signup (Story 3.15), "new attributions on deactivated code rejected" does ⛔ mean the code is refused: a code held by any field worker in the Pariwar — active, never approved, suspended, ended or died — is ACCEPTED and recorded the same way, and the person is told nothing about the worker (the Panel's `-493` A). "Rejected" survives only as ⛔ CREDITED, under the 2026-11-07 and 2026-11-17 annotations above and `-441` Q2 A. The credit recorder is Story 13.5 for 6-digit codes captured at signup (Story 3.15); Story 13.8 keeps member usernames / eHRMS.
+
 #### FR-86: Anti-fraud throttling on attribution code `[v1-S]`
 
 Code usage > X/day or > Y unique devices → flag for trustee review. X, Y thresholds set by trustee.

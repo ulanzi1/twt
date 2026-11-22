@@ -1906,6 +1906,7 @@ So that signup completes in a single session and downstream lock-in / contributi
 **When** the signup payment + lock-in entry flow is implemented
 **Then** UPI Intent fires pre-filled with VPA, amount ₹110, `tn=signup-shulk-{member_id}`, `tr=signup-{member_id}-{nonce}`; member completes payment in their UPI app; returns to TWT and confirms
 **And** the member can paste a 6-digit Reference Code; the code is validated against Epic 13's field-worker allocation registry; unknown codes are rejected with "Please ask your introducer for the correct code or skip if you don't have one"; skipping is permitted (Reference Code is not mandatory)
+> 📝 **2026-11-22 — the payment step's Reference Code moved to Story 3.15 (DL6; author-commit [`2026-11-22-494`](../../.decision-log.md#decision-2026-11-22-494)).** The code is asked in its own signup step after the terms, validated against Story 13.2's registry there, and the box is removed from the payment step (the payment itself is unchanged). As built by row `3-6b`, the box stored the code unvalidated. Text above not rewritten.
 **And** the Vyawastha Shulk receipt is persisted with `paid_at`, `valid_through`, `amount`, `utr`, `payment_method` — indefinitely retained per AR-67 (forward-compat for FR-100)
 **And** events emitted: `vyawastha_shulk.paid` (with receipt fields), `reference_code.captured` (with `attributed_to_fieldworker_id` if code valid)
 
@@ -2045,6 +2046,8 @@ So that my DPDPA Right To Be Forgotten is honored while the trust's audit histor
 ### Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup `[SURFACE]`
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). ⛔ Panel question. Takes Story 13.8's C2 / C4 for 6-digit field-worker codes only.
+
+> 📝 **2026-11-22 — CORRECTED** (Story 3.15 v1.4; author-commit [`2026-11-22-494`](../../.decision-log.md#decision-2026-11-22-494), amending `-482` decision 4 by name): *"⛔ Panel question"* was wrong — what a member is told when the code belongs to a worker who is not active WAS a Panel question (inherited from Story 13.8 C2), RULED [`2026-11-22-493`](../../.decision-log.md#decision-2026-11-22-493) A: the member is ⛔ told, the code is accepted like any other. And the code is ⛔ classified for credit at capture: *"FR-85's `acceptsNewAttributions`, and `-454` Q6 C's held credit"* below MOVE to Story 13.5 (3.15 DL11), which reads the stored capture. The payment step's Reference Code box is REMOVED, ⛔ narrowed (3.15 DL6 — it took only 6-digit codes, so narrowing it would leave it taking nothing; the payment screen itself is unchanged). Text below not rewritten.
 
 As a person signing up whom a field worker helped, I want to say so and enter their code, so that the worker who helped me is credited.
 
@@ -8187,6 +8190,8 @@ So that commissions disburse only after canonical financial-truth confirmation a
 
 > 📝 **2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)): if the joining fee becomes optional (Story 3.17), *"qualified acquisition"* (PRD FR-84: KYC + ₹110 paid + first contribution) needs a new rule — put to the Panel in the fee note.
 
+> ⭐ **2026-11-22 — FROM STORY 3.15** (author-commit [`2026-11-22-494`](../../.decision-log.md#decision-2026-11-22-494); DL11, DL14 A). ⛔ closed. **(1)** This story owns FR-85 and the held credit for every Story 3.15 capture — `getFieldWorkerStateAt({ captureId })` on the holder `resolveAttribution({ captureId })` returns (3.15 DL11); 3.15 stores only the code and its DB `captured_at` and classifies nothing (⛔ stored worker id, ⛔ "credited" flag). **(2)** This story supplies `-459` Q2 A's count of members a worker brought in (by worker, inside one Pariwar, a number, ⛔ a member's name) for 13.1d's move-request read; decide 13.2's D2 (`EXPLAIN` / index on a read of `member_attribution` BY CODE) with it (3.15 DL14 A — BigDev: *"DL14 A"*). "Onboarded" ≠ "credited": say which the view shows. Trigger: 13.5 create-story.
+
 ### Story 13.6: Field Worker Anti-Fraud Throttling — Assistive-Not-Auto-Punitive Invariant `[GOVERNANCE]`
 
 As Solo Builder authoring anti-fraud safeguards for the attribution system,
@@ -8271,6 +8276,8 @@ So that the trust knows my chain origin (for Phase B future activation) without 
 
 > 📝 **NARROWED 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)): a 6-digit FIELD-WORKER code typed at signup is now Story 3.15's (with this block's C2 / C4 for those
 > codes). This story keeps the member-invite deep link, the adopter chain, and member usernames / eHRMS as codes.
+
+> 📝 **2026-11-22 — Story 3.15** (author-commit [`2026-11-22-494`](../../.decision-log.md#decision-2026-11-22-494)). Capture + resolution of a 6-digit field-worker code at signup: PICKED UP by Story 3.15 (closes when its code lands). The payment step's Reference Code box is REMOVED (3.15 DL6), so this story builds its own capture surface for member usernames / eHRMS, writing through the same one-row rule (`member_attribution` `UNIQUE(member_id)` — a worker's code and an inviter are mutually exclusive for one member). The 13.1 C2 line *"FR-85 is applied HERE"*: MOVED to Story 13.5 (3.15 DL11). Its *"Whether and how a member is told is a PANEL question"*: RULED [`2026-11-22-493`](../../.decision-log.md#decision-2026-11-22-493) A for 6-digit codes at signup (the member is ⛔ told); the adopter-username form, if it ever has a not-credited case, stays this story's. The `-459` Q2 A worker count (13.1d's block above): MOVED to Story 13.5 (3.15 DL14 A). Text above not rewritten.
 
 ---
 

@@ -32,7 +32,7 @@ ancestor of HEAD" is durable; "the code claims were re-derived" is perishable �
 
 # Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -287,25 +287,31 @@ option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
-  - [ ] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 99922af1 HEAD` (the pin; the governance branch landed in it, PR #336);
+- [x] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
+  - [x] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 99922af1 HEAD` (the pin; the governance branch landed in it, PR #336);
         `git diff --name-only 99922af1..origin/main -- apps packages` and re-read every F-fact whose file moved; if `origin/main` moved,
         rebase onto it. Re-read the next free decision id and the ledger letter across EVERY ref and worktree (`git branch -a`,
         `git worktree list`, the working copies) — ⛔ HEAD only. Check rows `13-8`, `13-9`, `13-5`, `3-16` (it edits the wizard's `kyc`
         step) for any start that touches `member_attribution` or `WIZARD_STEPS`.
-  - [ ] 0.2 Put DL1–DL13 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box) and DL9 (the words,
+        ✅ 2026-11-22: `origin/main` = `99922af1` = the pin (⛔ drift, ⛔ rebase; `99922af1..origin/main -- apps packages` empty);
+        highest decision id on every ref and worktree `-493` (this branch) ⇒ `-494`; highest ledger letter `2026-11-22p` (this branch)
+        ⇒ `q`; rows 13-8 / 13-9 / 13-5 / 3-16 `backlog` with ⛔ branch; the 3-13 and 6-39a branches touch ⛔ wizard / attribution file.
+  - [x] 0.2 Put DL1–DL13 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box) and DL9 (the words,
         en + hi) as separate questions. Record the answers verbatim here. ✅ DL14 already ANSWERED: *"DL14 A"* (BigDev, 2026-11-22).
+        ✅ 2026-11-22, verbatim: DL1–DL5, DL7, DL8, DL10–DL13 — *"Accept all (Recommended)"*; DL9 — *"Approve as written
+        (Recommended)"*; DL6 — *"remove it, just to confirm, member would still see the membership payment screen"* (confirmed: yes —
+        only the code box goes; the payment screen is unchanged).
   - [x] 0.3 ~~Add PQ1 to the field-worker drafts note~~ — DROPPED: BigDev asked the Panel directly; RULED A, Decision `2026-11-22-493`
         (Trustee-ratified, DR and KB), committed alone at `c88268f5` (2026-11-22, before dev-story). ⛔ edit the drafts note.
-  - [ ] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL14 as answered, the §0 split, PQ1 RULED A (cite `-493`), AMENDING `-482` decision 4
+  - [x] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL14 as answered, the §0 split, PQ1 RULED A (cite `-493`), AMENDING `-482` decision 4
         by name (PQ1 was a Panel question; credit is ⛔ classified at capture), and recording that the inherited *"FR-85 is applied HERE"*
         moves to Story 13.5 (DL11); committed ALONE. ⚠ If refused, ask once
-        ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 Dated lines: the `3-15` sprint row comment (*"⛔ Panel question"* and *"FR-85 acceptsNewAttributions; -454 Q6 C held credit"*
+        ([[project_decision_log_writes_user_inserted]]). ✅ `2026-11-22-494`, committed alone at `77c23484`.
+  - [x] 0.5 Dated lines: the `3-15` sprint row comment (*"⛔ Panel question"* and *"FR-85 acceptsNewAttributions; -454 Q6 C held credit"*
         corrected), epics.md 3.15 / 3.6b / 13.8 / 13.5, PRD FR-85, and the `deferred-work.md` sites (DL12; DL14 as answered) — plus
         `-493`'s Consequence 2: PRD FR-85's signup annotation, and *"whether and how a member is told is a PANEL question"* marked RULED
         `-493` A at epics.md 13.8 C2 and `deferred-work.md` 13.1 C2.
-  - [ ] 0.6 Sprint row `3-15-…` `ready-for-dev → in-progress` (map only; one ledger entry at the end — [[project_sprint_status_safe_prepend]]).
+  - [x] 0.6 Sprint row `3-15-…` `ready-for-dev → in-progress` (map only; one ledger entry at the end — [[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — Contracts (AC2, AC5).** `packages/contracts/src/members/`: `MemberAssistedCodeRequest` (`{ code }`, `^\d{6}$`, strict),
       `MemberAssistedCodeResponse` (`{ recorded: true }`, strict), `MemberAssistedCodeStatusResponse` (`{ recorded: boolean }`); the error
       codes; export from the index. Remove `referenceCode` from `VyawasthaShulkConfirmRequest` (and its doc comment). Register the three

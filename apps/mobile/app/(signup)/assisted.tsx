@@ -14,6 +14,10 @@
 // Review R2 — every continuation that navigates is bound to FOCUS: the status read and the "saved" timer run only while the step
 // is focused, and are cancelled on blur (a route pushed over the still-mounted step must ⛔ be replaced by KYC). On re-focus a
 // step still `loading` reads the status again, and a `saved` step shows its line again before moving on — never stuck (N1).
+// Review P3 — a POST that settles while the step is blurred keeps its RESULT (the saved line, the error line, or "move on") and only
+// its NAVIGATION waits for focus: the capture is permanent, so the screen must never forget that it was made.
+// Review P7 — "Continue without a code" stays enabled while the POST is pending (N1): `goNext` sets `leaving`, which drops the
+// POST's late result; a capture that still lands is stored, as it is when the POST times out.
 // ⛔ a lock-in step (`payment.tsx`'s `LockInGateStep` is unchanged). A skipped step is ⛔ subtracted from "Step N of M" (the
 // whatsapp `-375` accepted cost). `t` is ⛔ in any effect's deps ([[project_uset_fresh_closure_memo_trap]]).
 //
@@ -55,36 +59,50 @@ export default function AssistedStepScreen() {
   const [error, setError] = useState<CodeError>(null)
   const [busy, setBusy] = useState(false)
   const [focused, setFocused] = useState(false)
+  // The POST ended in a way that moves the member on (409 / 429 / 5xx / timeout / no network): the move itself waits for focus (P3).
+  const [exiting, setExiting] = useState(false)
   // Refs, ⛔ state: two presses inside one frame both see the pre-update closure (a double tap must make ONE request).
   const busyRef = useRef(false)
   const leaving = useRef(false)
   const codeRef = useRef('')
-  const actionVersion = useRef(0)
+  const exitingRef = useRef(false)
+  // The same fact as `focused`, set SYNCHRONOUSLY: the effects that stop a continuation on blur clean up after a render, so a
+  // continuation can still run in the instant between the blur and that cleanup (review P3 round 2).
+  const focusedRef = useRef(false)
 
-  // A request may finish after navigation blurs or unmounts this step: invalidate its continuation, and stop the status read and
-  // the "saved" timer, which run only while `focused` (review R2).
+  // The status read and the "saved" timer run only while `focused`, and stop on blur (review R2). Nothing is invalidated here:
+  // a request that settles after blur keeps its result (review P3).
   useFocusEffect(
     useCallback(() => {
+      focusedRef.current = true
       setFocused(true)
       return () => {
-        actionVersion.current += 1
+        focusedRef.current = false
         setFocused(false)
       }
     }, []),
   )
 
+  // Only a FOCUSED step moves the member on: a blurred one has another route in front, which KYC must not replace.
   const goNext = useCallback(() => {
-    if (leaving.current) return
+    if (leaving.current || !focusedRef.current) return
     leaving.current = true
     router.replace('/(signup)/kyc')
   }, [router])
+
+  // A POST that failed in a way that moves the member on, once the step is focused (immediately when it already is) — P3.
+  useEffect(() => {
+    if (focused && exiting) goNext()
+  }, [focused, exiting, goNext])
 
   useEffect(() => {
     if (!focused || stage !== 'loading') return
     let cancelled = false
     withTimeout(memberAuth.assistedCodeStatus(), STATUS_TIMEOUT_MS).then(
       (status) => {
-        if (cancelled) return
+        // `focusedRef`: the cleanup that sets `cancelled` runs after a render — an answer in the instant after the blur must ⛔ speak
+        // the question over another screen. The effect re-reads at re-focus (stage is still `loading`).
+        if (cancelled || !focusedRef.current) return
         if (status.recorded) goNext()
         else setStage('ask')
       },
@@ -105,7 +123,8 @@ export default function AssistedStepScreen() {
   }, [focused, stage, goNext])
 
   const onContinue = useCallback(async (): Promise<void> => {
-    if (busyRef.current || leaving.current) return
+    // `exitingRef`: after a failure that moves the member on, the box is unlocked for the moment before the move — no second request.
+    if (busyRef.current || leaving.current || exitingRef.current) return
     const value = codeRef.current.trim()
     if (!SIX_DIGITS.test(value)) {
       setError('format')
@@ -114,14 +133,13 @@ export default function AssistedStepScreen() {
     busyRef.current = true
     setBusy(true)
     setError(null)
-    const version = ++actionVersion.current
-    const isCurrent = () => actionVersion.current === version && !leaving.current
     try {
       await withTimeout(memberAuth.assistedCodeRecord(value), CALL_TIMEOUT_MS)
-      if (!isCurrent()) return
+      // The member already left (No / Skip): the result is moot. A BLURRED step is ⛔ moot — it keeps the result (P3).
+      if (leaving.current) return
       setStage('saved')
     } catch (err) {
-      if (!isCurrent()) return
+      if (leaving.current) return
       if (err instanceof ApiError && err.status === 422) {
         setError('not_found')
         return
@@ -130,13 +148,14 @@ export default function AssistedStepScreen() {
         setError('format')
         return
       }
-      // 409 / 429 / 5xx / a timeout / no network — never block the signup (N1): on, with ⛔ message.
-      goNext()
+      // 409 / 429 / 5xx / a timeout / no network — never block the signup (N1): on, with ⛔ message (when focused — P3).
+      exitingRef.current = true
+      setExiting(true)
     } finally {
       busyRef.current = false
       setBusy(false)
     }
-  }, [goNext])
+  }, [])
 
   useAnnounceOnChange(
     stage === 'ask' ? t('signup.assisted.title') : stage === 'code' ? t('signup.assisted.code_label') : null,
@@ -145,7 +164,8 @@ export default function AssistedStepScreen() {
   if (stage === 'loading') {
     return (
       <YStack flex={1} justify="center" items="center" px="$6" bg="$background">
-        <Spinner accessibilityLabel={t('loading')} testID="assisted-loading" />
+        {/* `accessible`: a label on a container that is not an accessibility element is never announced (family 13 (a), review P5). */}
+        <Spinner accessible accessibilityLabel={t('loading')} testID="assisted-loading" />
       </YStack>
     )
   }
@@ -201,8 +221,9 @@ export default function AssistedStepScreen() {
                 accessibilityLabel={t('signup.assisted.code_label')}
                 testID="assisted-code"
               />
-              {error === 'format' ? <AnnouncedText kind="error" text={t('signup.assisted.format')} /> : null}
-              {error === 'not_found' ? <AnnouncedText kind="error" text={t('signup.assisted.not_found')} /> : null}
+              {/* The lines mount only while FOCUSED: one set while the step is blurred is spoken at re-focus, ⛔ over another screen. */}
+              {error === 'format' && focused ? <AnnouncedText kind="error" text={t('signup.assisted.format')} /> : null}
+              {error === 'not_found' && focused ? <AnnouncedText kind="error" text={t('signup.assisted.not_found')} /> : null}
               <Button
                 theme="accent"
                 height={56}
@@ -220,10 +241,8 @@ export default function AssistedStepScreen() {
                 minH={56}
                 py="$2"
                 noTextWrap
-                disabled={busy}
                 accessibilityRole="button"
                 accessibilityLabel={t('signup.assisted.skip')}
-                accessibilityState={{ disabled: busy }}
                 onPress={goNext}
                 testID="assisted-skip"
               >
@@ -234,7 +253,7 @@ export default function AssistedStepScreen() {
             </YStack>
           ) : null}
 
-          {stage === 'saved' ? <AnnouncedText kind="status" text={t('signup.assisted.saved')} /> : null}
+          {stage === 'saved' && focused ? <AnnouncedText kind="status" text={t('signup.assisted.saved')} /> : null}
         </YStack>
       </ScrollView>
     </YStack>

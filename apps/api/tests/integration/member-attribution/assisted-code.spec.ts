@@ -38,7 +38,9 @@ type WorkerState =
   | 'suspended_under_review'
   | 'suspended_at_worker_request'
   | 'terminated_from_active'
-  | 'terminated_from_pending_kyc';
+  | 'terminated_from_pending_kyc'
+  | 'terminated_from_suspended' // review P6 — `-493`: "ended (from any state)"
+  | 'terminated_died'; // review P6 — `-493`: "or died" (an ending whose reason is the date of death)
 
 describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (live DB)', () => {
   let t: TestApp;
@@ -123,6 +125,11 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
       if (state === 'suspended_under_review') await actTestFieldWorker(scopeTx.client, pariwarId, w, 'suspend', 'under_review');
       if (state === 'suspended_at_worker_request') await actTestFieldWorker(scopeTx.client, pariwarId, w, 'suspend', 'at_worker_request');
       if (state === 'terminated_from_active' || state === 'terminated_from_pending_kyc') await terminateTestFieldWorker(scopeTx.client, pariwarId, w);
+      if (state === 'terminated_from_suspended') {
+        await actTestFieldWorker(scopeTx.client, pariwarId, w, 'suspend', 'under_review');
+        await terminateTestFieldWorker(scopeTx.client, pariwarId, w);
+      }
+      if (state === 'terminated_died') await terminateTestFieldWorker(scopeTx.client, pariwarId, w, 'trustee_panel', 'died');
       ok = true;
       return code;
     } finally {
@@ -446,7 +453,7 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
 
   // ── AC4 ──────────────────────────────────────────────────────────────────────────────────────────────
 
-  it('AC4 — the POST answers byte-identically (status + body) for a worker in each of six states (Decision 2026-11-22-493 A)', async () => {
+  it('AC4 — the POST answers byte-identically (status + body) for a worker in each of eight states (Decision 2026-11-22-493 A; the last two added at review P6: "ended from any state, or died")', async () => {
     const P = newPariwar();
     const states: WorkerState[] = [
       'pending_kyc',
@@ -455,6 +462,8 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
       'suspended_at_worker_request',
       'terminated_from_active',
       'terminated_from_pending_kyc',
+      'terminated_from_suspended',
+      'terminated_died',
     ];
     const expected: Record<WorkerState, { state: string; reason: string | null }> = {
       pending_kyc: { state: 'pending_kyc', reason: null },
@@ -463,6 +472,8 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
       suspended_at_worker_request: { state: 'suspended', reason: 'at_worker_request' },
       terminated_from_active: { state: 'terminated', reason: 'inactive' },
       terminated_from_pending_kyc: { state: 'terminated', reason: 'inactive' },
+      terminated_from_suspended: { state: 'terminated', reason: 'inactive' },
+      terminated_died: { state: 'terminated', reason: 'died' },
     };
     const answers: Array<{ status: number; raw: string }> = [];
     for (const s of states) {
@@ -476,5 +487,42 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
     }
     expect(answers[0]).toEqual({ status: 201, raw: JSON.stringify({ recorded: true }) });
     for (const a of answers) expect(a).toEqual(answers[0]);
+    expect(answers).toHaveLength(states.length);
+  });
+
+  // ── DL1 / DL13 — the per-member limit is the ONLY bound on the 201-vs-422 "is this code held" oracle (review P4) ───────────────────
+
+  it('the POST is rate-limited PER MEMBER: misses count, the N+1th POST is 429 and stores nothing; another member in the Pariwar is untouched', async () => {
+    // The `member-language.spec.ts` shape: a LOW ceiling by env override on its own app; `perMemberKey` + `hook: 'preHandler'` ⇒ the
+    // bucket is the member's actor id, ⛔ the shared IP. The two misses show the limit is what bounds PROBING (a 422 stores nothing, so
+    // the one-code-per-member rule never bites a miss); the third POST carries the HELD code and is refused before the handler.
+    const t2 = await createTestApp({ env: { WRITE_RATE_MAX: '2' } });
+    try {
+      const P = newPariwar();
+      const held = await seedWorkerCode(P);
+      const m = await seedMember(P);
+      const other = await seedMember(P);
+      const post = async (memberId: string, code: string): Promise<number> =>
+        (
+          await t2.app.inject({
+            method: 'POST',
+            url: PATH,
+            payload: { code },
+            headers: {
+              origin: 'http://localhost:3001',
+              authorization: `Bearer ${signAccessToken(t2.app, { memberId, pariwarId: P, deviceId: 'test-device' }, ACCESS_TTL_MS)}`,
+            },
+          })
+        ).statusCode;
+      const miss = unheldCode([held]);
+      expect([await post(m, miss), await post(m, miss), await post(m, held)]).toEqual([422, 422, 429]);
+      expect(await capturesOf(m)).toEqual([]); // the held code was refused by the limiter, not recorded
+      // CONTROL — another member in the same Pariwar is on their own bucket and records the same code.
+      expect(await post(other, held)).toBe(201);
+      expect(await capturesOf(other)).toEqual([held]);
+      expect(t2.auditSink.ofType('rate_limit.exceeded').length).toBeGreaterThanOrEqual(1);
+    } finally {
+      await teardown(t2);
+    }
   });
 });

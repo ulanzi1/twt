@@ -73,7 +73,13 @@ vi.mock('tamagui', async () => {
     }, props.children)
   return {
     YStack: container, Paragraph: container, Text: container, H2: container, View: container,
-    Spinner: ({ testID }: { testID?: string }) => createElement('div', { 'data-testid': testID ?? 'spinner' }),
+    // Keeps the label AND the `accessible` flag: a mock that drops them cannot see a label on a non-accessible container (review P5).
+    Spinner: ({ testID, accessible, accessibilityLabel }: { testID?: string; accessible?: boolean; accessibilityLabel?: string }) =>
+      createElement('div', {
+        'data-testid': testID ?? 'spinner',
+        'aria-label': accessibilityLabel,
+        'data-accessible': accessible === true ? 'true' : undefined,
+      }),
     Input: (props: { value?: string; onChangeText?: (v: string) => void; testID?: string; accessibilityLabel?: string; maxLength?: number; keyboardType?: string; disabled?: boolean }) =>
       createElement('input', {
         value: props.value ?? '', 'data-testid': props.testID, 'aria-label': props.accessibilityLabel, maxLength: props.maxLength,
@@ -82,10 +88,12 @@ vi.mock('tamagui', async () => {
         onChange: (e: { target: { value: string } }) => props.onChangeText?.(e.target.value),
       }),
     Button: (props: Record<string, unknown> & { children?: ReactNode; onPress?: () => void; disabled?: boolean; testID?: string;
-      accessibilityRole?: string; accessibilityLabel?: string }) => {
+      accessibilityRole?: string; accessibilityLabel?: string; accessibilityState?: { disabled?: boolean } }) => {
       if (props.testID) mock.buttons[props.testID] = props
       return createElement('button', {
         onClick: props.onPress, disabled: props.disabled, role: props.accessibilityRole, 'aria-label': props.accessibilityLabel,
+        // The screen-reader state: a Skip that is pressable but READ as disabled would be a defect the DOM `disabled` cannot show (P7).
+        'aria-disabled': props.accessibilityState?.disabled === true ? 'true' : undefined,
         'data-testid': props.testID,
       }, props.children)
     },
@@ -337,6 +345,51 @@ describe('Review R2 — ⛔ navigation from a step that has lost focus', () => {
     expect(mock.router.replace).toHaveBeenCalledTimes(1)
   })
 
+  it('a status read that answers "recorded" in the very instant of the blur (before the effect cleanup flushes) does ⛔ move a blurred step', async () => {
+    // `focusedRef` is set synchronously in the focus callback and its cleanup; the effect that cancels the read cleans up only
+    // after a render, so a continuation can run in between (review P3, round 2). Blur and the answer share ONE act().
+    let resolve!: (v: { recorded: boolean }) => void
+    mock.assistedCodeStatus.mockReturnValueOnce(new Promise((r) => { resolve = r }))
+    renderStep()
+    await act(async () => { mock.blur(); resolve({ recorded: true }) })
+    expect(mock.router.replace).not.toHaveBeenCalled()
+    mock.assistedCodeStatus.mockResolvedValueOnce({ recorded: true })
+    act(() => { mock.refocus() })
+    await settle()
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    expect(mock.router.replace).toHaveBeenCalledTimes(1)
+  })
+
+  it('a status read that answers "not recorded" in the very instant of the blur does ⛔ show (or speak) the question; at re-focus it reads again and asks', async () => {
+    let resolve!: (v: { recorded: boolean }) => void
+    mock.assistedCodeStatus.mockReturnValueOnce(new Promise((r) => { resolve = r }))
+    renderStep()
+    mock.announce.mockClear()
+    await act(async () => { mock.blur(); resolve({ recorded: false }) })
+    expect(screen.queryByTestId('assisted-yes')).toBeNull()
+    expect(mock.announce).not.toHaveBeenCalledWith(words['signup.assisted.title'])
+    mock.assistedCodeStatus.mockResolvedValueOnce({ recorded: false })
+    act(() => { mock.refocus() })
+    expect(await screen.findByTestId('assisted-yes')).toBeInTheDocument()
+    expect(mock.announce).toHaveBeenCalledWith(words['signup.assisted.title'])
+    expect(mock.assistedCodeStatus).toHaveBeenCalledTimes(2)
+  })
+
+  it('a status read that FAILS in the very instant of the blur does ⛔ move a blurred step; at re-focus it reads again and moves on, once', async () => {
+    // The rejected branch calls `goNext` straight from the continuation: only `goNext`'s own focus guard stops it in this window.
+    let reject!: (e: unknown) => void
+    mock.assistedCodeStatus.mockReturnValueOnce(new Promise((_r, j) => { reject = j }))
+    renderStep()
+    await act(async () => { mock.blur(); reject(new ApiError(500, 'http.500', 'x')) })
+    expect(mock.router.replace).not.toHaveBeenCalled()
+    mock.assistedCodeStatus.mockRejectedValueOnce(new ApiError(500, 'http.500', 'x'))
+    act(() => { mock.refocus() })
+    await settle()
+    expect(mock.assistedCodeStatus).toHaveBeenCalledTimes(2)
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    expect(mock.router.replace).toHaveBeenCalledTimes(1)
+  })
+
   it('a status read that FAILS or HANGS past its bound after blur does ⛔ move', async () => {
     vi.useFakeTimers()
     let reject!: (e: unknown) => void
@@ -367,6 +420,143 @@ describe('Review R2 — ⛔ navigation from a step that has lost focus', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1_300) })
     expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
     expect(mock.router.replace).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Review P3 — a POST that settles while the step is BLURRED keeps its result; only the move waits for focus', () => {
+  const held = () => {
+    const h: { resolve: (v: { recorded: true }) => void; reject: (e: unknown) => void } = { resolve: () => undefined, reject: () => undefined }
+    mock.assistedCodeRecord.mockReturnValue(new Promise((res, rej) => { h.resolve = res; h.reject = rej }))
+    return h
+  }
+
+  it('201 after blur: the result is KEPT but ⛔ spoken or moved on while blurred; at re-focus the saved line shows, is spoken, and THEN the step moves on, once', async () => {
+    const h = held()
+    await typed('482913')
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    act(() => { mock.blur() })
+    mock.announce.mockClear()
+    await act(async () => { h.resolve({ recorded: true }) })
+    // KEPT: the box is unlocked and the stage is `saved` — but the line is not mounted, so nothing is spoken over another screen.
+    expect(screen.queryByText(words['signup.assisted.saved']!)).toBeNull()
+    expect(mock.announce).not.toHaveBeenCalledWith(words['signup.assisted.saved'])
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_300) })
+    expect(mock.router.replace).not.toHaveBeenCalled()
+    act(() => { mock.refocus() })
+    expect(screen.getByText(words['signup.assisted.saved']!)).toBeInTheDocument()
+    expect(mock.announce).toHaveBeenCalledWith(words['signup.assisted.saved'])
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_300) })
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    expect(mock.router.replace).toHaveBeenCalledTimes(1)
+    expect(mock.assistedCodeRecord).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['422', new ApiError(422, 'attribution.code_not_found', 'x'), 'signup.assisted.not_found'],
+    ['400', new ApiError(400, 'request.validation', 'x'), 'signup.assisted.format'],
+  ])('%s after blur: the error line is kept and spoken at re-focus (⛔ while blurred), the box is editable again, ⛔ move', async (_label, err, key) => {
+    const h = held()
+    await typed('482913')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    act(() => { mock.blur() })
+    mock.announce.mockClear()
+    await act(async () => { h.reject(err) })
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(mock.announce).not.toHaveBeenCalledWith(words[key])
+    expect(screen.getByTestId('assisted-code')).not.toHaveAttribute('readonly')
+    act(() => { mock.refocus() })
+    expect(screen.getByRole('alert')).toHaveTextContent(words[key]!)
+    expect(mock.announce).toHaveBeenCalledWith(words[key])
+    expect(mock.router.replace).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['409', new ApiError(409, 'attribution.already_recorded', 'x')],
+    ['429', new ApiError(429, 'http.429', 'x')],
+    ['500', new ApiError(500, 'http.500', 'x')],
+    ['no network', new TypeError('Network request failed')],
+  ])('%s after blur: ⛔ move while blurred; on re-focus the step moves on, once, with ⛔ message', async (_label, err) => {
+    const h = held()
+    await typed('482913')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    act(() => { mock.blur() })
+    await act(async () => { h.reject(err) })
+    expect(mock.router.replace).not.toHaveBeenCalled()
+    // The box is unlocked while the step waits for focus — a second press must ⛔ make a second request (`exitingRef`).
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(mock.assistedCodeRecord).toHaveBeenCalledTimes(1)
+    act(() => { mock.refocus() })
+    await settle()
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    expect(mock.router.replace).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText(words['signup.assisted.saved']!)).toBeNull()
+  })
+
+  it('a HUNG request that times out (15 s) while the step is blurred ⛔ moves it; on re-focus the step moves on, once', async () => {
+    mock.assistedCodeRecord.mockReturnValue(never())
+    await typed('482913')
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    act(() => { mock.blur() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_100) })
+    expect(mock.router.replace).not.toHaveBeenCalled()
+    act(() => { mock.refocus() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(100) })
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    expect(mock.router.replace).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Review P7 — "Continue without a code" is never held back by a pending request (N1)', () => {
+  it('during the POST Skip is ENABLED (CONTROL: Continue is disabled) and moves on; the POST\'s late answer changes nothing', async () => {
+    let resolve!: (v: { recorded: true }) => void
+    mock.assistedCodeRecord.mockReturnValue(new Promise((r) => { resolve = r }))
+    await typed('482913')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    expect(screen.getByTestId('assisted-continue')).toBeDisabled()
+    expect(screen.getByTestId('assisted-continue')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByTestId('assisted-skip')).not.toBeDisabled()
+    // ⛔ READ as disabled by a screen reader either (the Button mock now carries `accessibilityState`).
+    expect(screen.getByTestId('assisted-skip')).not.toHaveAttribute('aria-disabled')
+    fireEvent.click(screen.getByTestId('assisted-skip'))
+    expect(mock.router.replace).toHaveBeenCalledWith(NEXT)
+    await act(async () => { resolve({ recorded: true }) })
+    expect(screen.queryByText(words['signup.assisted.saved']!)).toBeNull()
+    expect(mock.router.replace).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Review P5 — checklist family 13: a label needs an accessibility element; a line a sighted member sees is SPOKEN', () => {
+  it('(a) the loading spinner carries its label AND is an accessibility element', () => {
+    mock.assistedCodeStatus.mockReturnValue(never())
+    renderStep()
+    const spinner = screen.getByTestId('assisted-loading')
+    expect(spinner).toHaveAttribute('aria-label', words['loading']!)
+    expect(spinner).toHaveAttribute('data-accessible', 'true')
+  })
+
+  it('(d) the format, not-found and saved lines are each ANNOUNCED — a bare alert role would not be', async () => {
+    await typed('48291')
+    mock.announce.mockClear()
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    expect(mock.announce).toHaveBeenCalledWith(words['signup.assisted.format'])
+
+    mock.assistedCodeRecord.mockRejectedValueOnce(new ApiError(422, 'attribution.code_not_found', 'x'))
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '482913' } })
+    mock.announce.mockClear()
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(mock.announce).toHaveBeenCalledWith(words['signup.assisted.not_found'])
+
+    mock.assistedCodeRecord.mockResolvedValueOnce({ recorded: true })
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '135790' } })
+    mock.announce.mockClear()
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(mock.announce).toHaveBeenCalledWith(words['signup.assisted.saved'])
   })
 })
 

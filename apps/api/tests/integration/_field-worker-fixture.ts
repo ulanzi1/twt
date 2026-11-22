@@ -185,8 +185,17 @@ async function districtAndVersion(client: pg.PoolClient, id: string): Promise<{ 
 }
 const istToday = async (client: pg.PoolClient) => (await client.query<{ d: string }>("SELECT ((now() AT TIME ZONE 'Asia/Kolkata')::date)::text AS d")).rows[0]!.d;
 
-/** END a worker (`inactive`, today IST) through `terminateFieldWorker`; `heardBy` as the terminate route would fix it. */
-export async function terminateTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, heardBy: Hearer = 'trustee_panel'): Promise<void> {
+/**
+ * END a worker (today IST — for `died`, the date of death) through `terminateFieldWorker`; `heardBy` as the terminate route would
+ * fix it. `reasonCode` defaults to `inactive` (every existing caller); Story 3.15 review P6 passes `died`.
+ */
+export async function terminateTestFieldWorker(
+  client: pg.PoolClient,
+  pariwarId: string,
+  id: ids.FieldWorkerId,
+  heardBy: Hearer = 'trustee_panel',
+  reasonCode: 'left_voluntarily' | 'inactive' | 'registered_in_error' | 'died' = 'inactive',
+): Promise<void> {
   const actorId = randomUUID();
   const { district, version } = await districtAndVersion(client, id);
   await fieldWorker.terminateFieldWorker(client, {
@@ -195,7 +204,7 @@ export async function terminateTestFieldWorker(client: pg.PoolClient, pariwarId:
     auditId: randomUUID(),
     actor: 'operator',
     actorId,
-    reasonCode: 'inactive',
+    reasonCode,
     endedOn: await istToday(client),
     authorization: actAuthorization('field_worker.terminate', pariwarId, district, actorId),
     appealHeardBy: heardBy,

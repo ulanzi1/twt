@@ -49,7 +49,7 @@ number belongs to the first COMMIT, on any branch (`-366` decision 6).
 
 # Story 12.5b: Partner's-Own-Form Route — Offer Route Marker + Send Guard + Outbound Link `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1508,6 +1508,7 @@ tests: `packages/domain/tests/integration/marketplace/partner-form-totals-race.s
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-22 | 1.8 | LANDED on `main` by fast-forward (BigDev: "land it"): PR #335, `4db122e0..42e0202f`; ledger 2026-11-22m; row review → done; roster Row 55 (d) MET (the row stays open for (c)); deferred-work K-12 and the external-URL CTA: scoped "Closed by" lines. |
 | 2026-11-22 | 1.7 | Review round 3 (the adversarial review of the round-2 patches): `-491` clarified and `-492` (the overlap rule) committed alone; the `xmin` check replaced by content checks; the lock proved by a two-connection domain spec (mutated); admin note / focus / label / copy fixes with mutated tests; `PARTNER_FORM_FIGURE_MAX`; jobs alarm wording and fault-tick log. |
 | 2026-11-22 | 1.6 | `bmad-code-review 12.5b` round 2 at `e33241a5` (3 decisions, 19 patches, 5 defer, 28 dismissed) and all 19 patches applied: `-491` (W15 in its own scope), the totals overlap refusal (409), the test-strength and a11y patches; records. |
 | 2026-11-22 | 1.5 | `bmad-dev-story 12.5b` review follow-up → **review**: Decision `-490` alone (`483cfcca`; RD1 complementary suppression, RP1 W15 without a row lock); all six findings resolved with regressions (RED shown, or a mutation for RP4); OpenAPI additive (`withheld`); `friction-budget.md` Story 12.5b disposition (the AC-4 gate first saw `714b30a9`'s mobile files); `ci:local` 40/41 on a fresh container, then code committed `5607475c` and `friction-budget` green. |

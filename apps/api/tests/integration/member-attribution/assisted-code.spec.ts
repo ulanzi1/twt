@@ -13,7 +13,7 @@ import { ids, member as memberDomain } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { signAccessToken } from '../../../src/modules/auth/member/tokens.js';
+import { signAccessToken, signPariwarSelect, signSignupContinuation } from '../../../src/modules/auth/member/tokens.js';
 import { allocateAttributionCodeForRequest } from '../../../src/modules/field-worker/attribution-code-access.js';
 import { closeScopeTx, openScopeTx } from '../../../src/modules/multi-tenant/scope-tx.js';
 import {
@@ -141,6 +141,39 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
     return r.rows[0]!;
   }
 
+  /**
+   * A worker registered in `pariwarId` whose code row carries the GIVEN digits, dated an hour in the past or the future — inserted
+   * on the owner pool under replica mode, because the BEFORE INSERT trigger stamps `allocated_at` from the DB clock otherwise
+   * (F7). Lets a leg CONSTRUCT the digits it needs instead of hoping two random draws differ (codes are unique per Pariwar only).
+   */
+  async function seedWorkerWithCode(pariwarId: string, code: string, when: 'past' | 'future'): Promise<void> {
+    const scopeTx = await openScopeTx(t.deps, pariwarId);
+    let ok = false;
+    let w: string;
+    try {
+      w = await registerTestFieldWorker(scopeTx.client, pariwarId);
+      ok = true;
+    } finally {
+      await closeScopeTx(scopeTx, ok);
+    }
+    const c = await t.pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      await c.query(
+        `INSERT INTO field_worker_attribution_codes (pariwar_id, field_worker_id, code, allocation_attempts, allocated_at)
+         VALUES ($1, $2, $3, 1, now() + CASE WHEN $4 = 'future' THEN interval '1 hour' ELSE interval '-1 hour' END)`,
+        [pariwarId, w!, code, when],
+      );
+      await c.query('COMMIT');
+    } catch (err) {
+      await c.query('ROLLBACK');
+      throw err;
+    } finally {
+      c.release();
+    }
+  }
+
   function token(memberId: string, pariwarId: string): string {
     return signAccessToken(t.app, { memberId, pariwarId, deviceId: 'test-device' }, ACCESS_TTL_MS);
   }
@@ -256,6 +289,47 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
     expect((await call('POST', null, { code })).status).toBe(401);
   });
 
+  it('R4 / family 3 — tampered, wrong-kind, non-member and other-Pariwar bearers cannot record a code; CONTROL — the member’s own token records it (201)', async () => {
+    const P = newPariwar();
+    const code = await seedWorkerCode(P);
+    const m = await seedMember(P);
+    const victim = await seedMember(P);
+    const tok = token(m, P);
+    // The signature kept, the subject swapped for ANOTHER signing-up member of the same Pariwar: JWT verification must fail.
+    const [header, encoded, signature] = tok.split('.');
+    const claims = JSON.parse(Buffer.from(encoded!, 'base64url').toString('utf8')) as Json;
+    const tampered = `${header}.${Buffer.from(JSON.stringify({ ...claims, sub: victim })).toString('base64url')}.${signature}`;
+    const wrongKinds = [
+      signSignupContinuation(t.app, { mobileBlindIndex: `idx-${randomUUID()}`, jti: randomUUID() }, ACCESS_TTL_MS),
+      signPariwarSelect(t.app, { mobileBlindIndex: `idx-${randomUUID()}`, deviceId: 'test-device', jti: randomUUID() }, ACCESS_TTL_MS),
+      // Validly signed, outside MemberJwtClaims, naming the real member and Pariwar: the guard must refuse it on `typ` alone.
+      t.app.jwt.sign({ typ: 'system', sub: m, pariwar_id: P, device_id: 'test-device' } as never, { expiresIn: 60 }),
+    ];
+    const audited = () => t.auditSink.events.filter((e) => e.type === 'member_attribution.captured').length;
+    const auditBefore = audited();
+    for (const bearer of [tampered, ...wrongKinds]) {
+      for (const method of ['POST', 'GET'] as const) {
+        const r = await call(method, bearer, method === 'POST' ? { code } : undefined);
+        expect([method, r.status, errorCode(r.body)]).toEqual([method, 401, 'auth.session_required']);
+      }
+    }
+    // A valid access token for a principal with ⛔ member row in that Pariwar — a ghost, or the real member under another
+    // Pariwar's claim — is ⛔ signing up there: 409, nothing stored.
+    for (const bearer of [token(randomUUID(), P), token(m, randomUUID())]) {
+      const r = await call('POST', bearer, { code });
+      expect([r.status, errorCode(r.body)]).toEqual([409, 'attribution.not_signing_up']);
+    }
+    expect(await capturesOf(m)).toEqual([]);
+    expect(await capturesOf(victim)).toEqual([]);
+    expect(audited()).toBe(auditBefore);
+
+    const control = await call('POST', tok, { code });
+    expect(control.status).toBe(201);
+    expect(await capturesOf(m)).toEqual([code]);
+    expect(await capturesOf(victim)).toEqual([]);
+    expect(audited()).toBe(auditBefore + 1);
+  });
+
   it('AC2 — two concurrent POSTs of one code ⇒ ONE row, both answered (one 201, one 200)', async () => {
     const P = newPariwar();
     const code = await seedWorkerCode(P);
@@ -306,52 +380,46 @@ describe.skipIf(!hasDatabase)('Story 3.15 — the signup assisted-code routes (l
 
   // ── AC3 ──────────────────────────────────────────────────────────────────────────────────────────────
 
-  it('AC3 — a code allocated in ANOTHER Pariwar ⇒ 422 (the Pariwar is the session’s); CONTROL — this Pariwar’s code ⇒ 201', async () => {
+  it('AC3 — a code held only in ANOTHER Pariwar ⇒ 422 (the Pariwar is the session’s); CONTROLS — it records in its own Pariwar (201), and this Pariwar’s code ⇒ 201', async () => {
     const P = newPariwar();
     const Q = newPariwar();
-    const theirs = await seedWorkerCode(Q);
     const ours = await seedWorkerCode(P);
+    // R5: Q's digits are CONSTRUCTED to differ from P's — codes are unique per Pariwar only, so two random draws may legally match.
+    const theirs = unheldCode([ours]);
+    await seedWorkerWithCode(Q, theirs, 'past');
     const m = await seedMember(P);
     const tok = token(m, P);
-    // The other Pariwar's code must not also be held here (the codes are random per Pariwar).
-    expect(theirs).not.toBe(ours);
     const res = await call('POST', tok, { code: theirs });
     expect(res.status).toBe(422);
+    expect(errorCode(res.body)).toBe('attribution.code_not_found');
     expect(await capturesOf(m)).toEqual([]);
+    // The refusal is about the Pariwar, ⛔ the fixture: a member of Q records the same code.
+    const q = await seedMember(Q);
+    expect((await call('POST', token(q, Q), { code: theirs })).status).toBe(201);
+    expect(await capturesOf(q)).toEqual([theirs]);
     expect((await call('POST', tok, { code: ours })).status).toBe(201);
+    expect(await capturesOf(m)).toEqual([ours]);
+  });
+
+  it('AC3 — the SAME digits held in two Pariwars is legal: a member of each records them (201 + 201, one row each)', async () => {
+    const P = newPariwar();
+    const Q = newPariwar();
+    const shared = await seedWorkerCode(P);
+    await seedWorkerWithCode(Q, shared, 'past');
+    const p = await seedMember(P);
+    const q = await seedMember(Q);
+    expect((await call('POST', token(p, P), { code: shared })).status).toBe(201);
+    expect((await call('POST', token(q, Q), { code: shared })).status).toBe(201);
+    expect(await capturesOf(p)).toEqual([shared]);
+    expect(await capturesOf(q)).toEqual([shared]);
   });
 
   it('AC3 — a code allocated AFTER the capture instant cannot match it (13.2 AT4 (c)) ⇒ 422; CONTROL — a code allocated in the past ⇒ 201', async () => {
     const P = newPariwar();
     const past = await seedWorkerCode(P);
-    // A second worker whose code row is dated an hour ahead — inserted on the owner pool under replica mode, because the
-    // BEFORE INSERT trigger stamps `allocated_at` from the DB clock otherwise (F7).
-    const scopeTx = await openScopeTx(t.deps, P);
-    let ok = false;
-    let w: string;
-    try {
-      w = await registerTestFieldWorker(scopeTx.client, P);
-      ok = true;
-    } finally {
-      await closeScopeTx(scopeTx, ok);
-    }
+    // A second worker whose code row is dated an hour ahead (owner pool, replica mode — F7).
     const future = unheldCode([past]);
-    const c = await t.pool.connect();
-    try {
-      await c.query('BEGIN');
-      await c.query("SET LOCAL session_replication_role = 'replica'");
-      await c.query(
-        `INSERT INTO field_worker_attribution_codes (pariwar_id, field_worker_id, code, allocation_attempts, allocated_at)
-         VALUES ($1, $2, $3, 1, now() + interval '1 hour')`,
-        [P, w!, future],
-      );
-      await c.query('COMMIT');
-    } catch (err) {
-      await c.query('ROLLBACK');
-      throw err;
-    } finally {
-      c.release();
-    }
+    await seedWorkerWithCode(P, future, 'future');
     const stamped = await t.pool.query<{ ahead: boolean }>(
       'SELECT allocated_at > now() AS ahead FROM field_worker_attribution_codes WHERE pariwar_id = $1 AND code = $2',
       [P, future],

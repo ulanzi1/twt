@@ -9,11 +9,17 @@
 //             not-found line under the box (the member may retry or continue without); 400 → the "6 digits" line; 409 / 429 /
 //             5xx / timeout → on to KYC with ⛔ message (N1).
 // N2 — nothing here names or describes the worker: the server answers only `{ recorded }`.
+// Review R1 — while the POST is open the box is read-only and a change is ignored: a capture is permanent, so the screen must
+// never say "saved" (or show a not-found line) beside digits other than the ones it SENT.
+// Review R2 — every continuation that navigates is bound to FOCUS: the status read and the "saved" timer run only while the step
+// is focused, and are cancelled on blur (a route pushed over the still-mounted step must ⛔ be replaced by KYC). On re-focus a
+// step still `loading` reads the status again, and a `saved` step shows its line again before moving on — never stuck (N1).
 // ⛔ a lock-in step (`payment.tsx`'s `LockInGateStep` is unchanged). A skipped step is ⛔ subtracted from "Step N of M" (the
 // whatsapp `-375` accepted cost). `t` is ⛔ in any effect's deps ([[project_uset_fresh_closure_memo_trap]]).
 //
 // ── Accessibility ──────────────────────────────────────────────────────────────────────────────
-// The question is spoken when it appears (`useAnnounceOnChange`); the not-found and format lines are `AnnouncedText kind='error'`,
+// The question is spoken when it appears, and so is the code box when Yes reveals it (by its label — review R3)
+// (`useAnnounceOnChange`); the not-found and format lines are `AnnouncedText kind='error'`,
 // the saved line `kind='status'`. The two choice buttons share one component, size and theme. "Continue without a code" is long
 // in Hindi: its own `Text` inside a `noTextWrap` button so it wraps ([[project_tamagui_button_text_one_line]] — ⚠ wrapping is
 // un-attested on a device).
@@ -48,14 +54,24 @@ export default function AssistedStepScreen() {
   const [code, setCode] = useState('')
   const [error, setError] = useState<CodeError>(null)
   const [busy, setBusy] = useState(false)
+  const [focused, setFocused] = useState(false)
   // Refs, ⛔ state: two presses inside one frame both see the pre-update closure (a double tap must make ONE request).
   const busyRef = useRef(false)
   const leaving = useRef(false)
   const codeRef = useRef('')
   const actionVersion = useRef(0)
 
-  // A request may finish after navigation blurs or unmounts this step: invalidate its continuation.
-  useFocusEffect(useCallback(() => () => { actionVersion.current += 1 }, []))
+  // A request may finish after navigation blurs or unmounts this step: invalidate its continuation, and stop the status read and
+  // the "saved" timer, which run only while `focused` (review R2).
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true)
+      return () => {
+        actionVersion.current += 1
+        setFocused(false)
+      }
+    }, []),
+  )
 
   const goNext = useCallback(() => {
     if (leaving.current) return
@@ -64,6 +80,7 @@ export default function AssistedStepScreen() {
   }, [router])
 
   useEffect(() => {
+    if (!focused || stage !== 'loading') return
     let cancelled = false
     withTimeout(memberAuth.assistedCodeStatus(), STATUS_TIMEOUT_MS).then(
       (status) => {
@@ -78,14 +95,14 @@ export default function AssistedStepScreen() {
     return () => {
       cancelled = true
     }
-  }, [goNext])
+  }, [focused, stage, goNext])
 
-  // The "saved" line shows briefly, then the step moves on.
+  // The "saved" line shows briefly, then the step moves on — only while focused (R2).
   useEffect(() => {
-    if (stage !== 'saved') return
+    if (!focused || stage !== 'saved') return
     const timer = setTimeout(goNext, SAVED_MS)
     return () => clearTimeout(timer)
-  }, [stage, goNext])
+  }, [focused, stage, goNext])
 
   const onContinue = useCallback(async (): Promise<void> => {
     if (busyRef.current || leaving.current) return
@@ -121,7 +138,9 @@ export default function AssistedStepScreen() {
     }
   }, [goNext])
 
-  useAnnounceOnChange(stage === 'ask' ? t('signup.assisted.title') : null)
+  useAnnounceOnChange(
+    stage === 'ask' ? t('signup.assisted.title') : stage === 'code' ? t('signup.assisted.code_label') : null,
+  )
 
   if (stage === 'loading') {
     return (
@@ -169,7 +188,10 @@ export default function AssistedStepScreen() {
               <Text accessibilityRole="text">{t('signup.assisted.code_label')}</Text>
               <Input
                 value={code}
+                disabled={busy}
                 onChangeText={(v) => {
+                  // R1: the code being recorded is frozen until its answer arrives.
+                  if (busyRef.current) return
                   codeRef.current = v
                   setCode(v)
                   setError(null)

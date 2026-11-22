@@ -1,9 +1,10 @@
 ---
-baseline_commit: 0bb128df
+baseline_commit: 47b656d6
 ---
 
 <!--
-PINNED: `0bb128df` = the tip of `governance/registration-change-2026-11-21` (2026-11-21), which sits on `origin/main` `90535934` and
+PINNED: `47b656d6` = the tip of `governance/registration-change-2026-11-21` after its 2026-11-22 rebase, which sits on `origin/main`
+`aa17300a` (created at `0bb128df` on `90535934`, 2026-11-21; that commit survives only on `backup/governance-registration-pre-rebase`) and
 carries this row, the epics.md Story 3.15 block and author-commit `2026-11-21-482`. Authored in its OWN worktree
 `/Users/dev/Developer/projects/TWT/.claude/worktrees/3-15-assisted-signup-field-worker-code`, branch
 `story/3-15-assisted-signup-field-worker-code` (upstream UNSET — push with an explicit refspec, [[project_story_branch_upstream_is_main]]).
@@ -116,7 +117,8 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
   `packages/i18n/scripts/check-parity.ts`). The microcopy gate (`microcopy.yaml` `scope.code_globs`) lists specific mobile files (e.g.
   `apps/mobile/app/(signup)/kyc.tsx`) — a new screen is unscanned until added.
 - **F12 — Numbers.** ⛔ migration, ⛔ permission key, ⛔ roster row (PQ1 is non-blocking — built on the silent side). Decision: `-482` is
-  on the governance branch, `-481` on `story/6-22b-…` ⇒ next free ≥ `-483` — RE-READ at Task 0.1 across every ref and worktree.
+  on the governance branch, `-481` on `story/6-22b-…` ⇒ next free ≥ `-483` at creation; ⭐ at `origin/main` `aa17300a` (2026-11-22) `main` holds up to `-492` ⇒ next free ≥ `-493` —
+  RE-READ at Task 0.1 across every ref and worktree.
 
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
 
@@ -214,7 +216,8 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
-  - [ ] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 0bb128df HEAD`; `git diff --name-only 90535934..origin/main -- apps
+  - [ ] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 47b656d6 HEAD` (the governance tip after the 2026-11-22 rebase onto
+        `aa17300a`; it was `0bb128df` before); `git diff --name-only 90535934..origin/main -- apps
         packages` and re-read every F-fact whose file moved. Has the governance branch landed? (If yes, rebase onto `origin/main`.) Re-read
         the next free decision id and the ledger letter across EVERY ref and worktree (`git branch -a`, `git worktree list`, the working
         copies) — ⛔ HEAD only. Check rows `13-8`, `13-9`, `13-5` for any start that touches `member_attribution`.
@@ -304,3 +307,4 @@ assertion has a passing control beside it. A domain red hides the other packages
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-21 | Created by `bmad-create-story 3.15` in its own worktree, stacked on `governance/registration-change-2026-11-21` (`0bb128df`). §0 applied: PQ1 (is the member told about a worker's status) is the Panel's, inherited from 13.8 C2 — correcting `-482` decision 4's "⛔ Panel question"; credit left to 13.5 (N4); ⛔ migration. DL1–DL13 PROPOSED. ⛔ Code. |
+| 1.1 | 2026-11-22 | Both branches rebased onto `origin/main` `aa17300a` (BigDev: "rebase both branches onto main"); the governance tip `0bb128df` is now `47b656d6`. The pin (`baseline_commit` and the PINNED comment) moves to `47b656d6`; Task 0.1's ancestor check names `47b656d6`; F12's decision floor re-read: next free ≥ `-493`. ⛔ F-fact re-traced (Task 0.1 still does that against `90535934..origin/main`). |

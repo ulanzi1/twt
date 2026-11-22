@@ -4,6 +4,16 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: code review of story 12-5b-partner-own-form-route.md, round 2 (2026-11-22, whole branch at `e33241a5`)
+
+- **R2W1 — an Idempotency-Key replay with a different body returns the first result and drops the correction** [`apps/api/src/modules/marketplace/handlers.ts` `withIdempotency`] → ⛔ owner. Pre-existing and shared by every module write route: the store keys on the key alone and records only the response. It bites the partner-totals route most, whose purpose is "newest entry per period wins" corrections. ⭐ Trigger: any client that reuses one key across edits, or the first time a module write route is given a body hash. Fix sketch: store a hash of the body with the claim; answer 409 `idempotency_key_reused` when a replay's body differs.
+- **R2W2 — every count bump holds one row lock until the caller's commit** [`packages/domain/src/marketplace/partner-form.ts` `bumpCount`] → **Story 12.3** (KB-3 owns the emitters). Shelf renders for one offer on one IST day queue on one `(pariwar, module, day, kind)` row; two kinds bumped in opposite order inside one transaction can deadlock (40P01). Nothing calls it yet. Bump after the caller's own work, in a fixed kind order, or in its own short transaction.
+- **R2W3 — `marketplace_partner_form_visits.member_id` is a single-column FK to `members`** [`packages/domain/migrations/0217_marketplace-partner-form-figures.sql`] → ⛔ owner. Project convention (`members` has a single-column primary key; `memberExists` checks the Pariwar in the writer); the module FK beside it is composite. A hand-written row can pair one Pariwar with another's member; erasure and the export are keyed on `(pariwar_id, member_id)`. ⭐ Trigger: a second table that needs the same pairing guarantee, or a `UNIQUE (pariwar_id, member_id)` on `members`.
+- **R2W4 — one `module_lead_handoff_route_refused` alarm per cancelled row in the waiting pass** [`apps/jobs/src/scheduler/module-lead-handoff.ts`] → ⛔ owner. The file's convention for other holds is once per module per tick. ⭐ Trigger: the first time a bug creates many `partner_form` leads.
+- **R2W5 — stage labels admit zero-width, control and bidi characters** [`packages/domain/src/marketplace/partner-form.ts` `storableText`] → ⛔ owner. Staff-only input shown on the admin page; `.trim().min(1)` does not strip U+200B, so a blank-looking stage can be stored. Choose the character classes once, for every staff-typed label.
+
+---
+
 ## Deferred from: story 12-5b-partner-own-form-route.md — the build decisions `2026-11-22-489` (2026-11-22)
 
 > Story 12.5b decides (⛔ builds yet) the partner's-own-form route: the route marker, the send guard, the outbound link, the 90-day visit record, the per-offer counts and the partner totals intake ([Decision `2026-11-22-489`](../../.decision-log.md#decision-2026-11-22-489), carrying out `-484` Q1 C and `-486` R1–R5). Nothing reaches a member from 12.5b alone (there is no shelf until Story 12.3), and ⛔ offer of this kind is shown to members before roster Row 55 `partner-form-route-live` closes. The items below are what 12.5b carries onward; each is NOT built by 12.5b and names its owner or its trigger. This story's own items are lettered `KB-n` (⛔ 12.5's `K-n`, ⛔ 12.1's `Cn`).

@@ -864,6 +864,198 @@ and policy-meaning statement. Families 3, 5 and 13 have REAL GAPs above; RP1 and
 suppression failures despite the existing tests. System/non-human admin-session actors are not constructible on this
 surface. RD1 is the aggregate suppression design issue; no test result is claimed to close it.
 
+#### Review Findings — round 2 (`bmad-code-review 12.5b`, 2026-11-22, whole branch at `e33241a5`)
+
+Baseline `4db122e0` (= `origin/main`, after `git fetch origin`); reviewed HEAD `e33241a5` on `story/12-5b-partner-own-form-route`,
+chunked by BigDev ("3, all groups at once"): **A** `packages/domain` + `packages/events` (4547 diff lines) · **B** `apps/api` +
+`apps/jobs` + `packages/contracts` (1657) · **C** `apps/admin` + `apps/mobile` + `packages/i18n` + `microcopy.yaml` + the tone-review
+checklist (1699). `openapi/v1.yaml` and the records files were not in any chunk diff (the Auditors read them as references). Nine layer
+runs, all completed (Blind Hunter, Edge Case Hunter, Acceptance Auditor × 3 chunks); none failed. After deduplication and a check of
+each claim against the tree: **3 decision-needed (resolved), 16 patch (19 after the three — all applied), 5 defer, 28 dismissed**. No Panel note: every decision-needed item below
+passes the routing template's §0 as the author's (engineering, or the status of a record), none changes what a member is told or owed.
+No acceptance-criterion violation and no conflict with `-486` / `-489` / `-490` was found by any Auditor; the invariant-lens REAL GAP
+is R2P12. ⚠ Executed this round: nothing (read-only layers; no test was run). Claims below marked *verified* were re-read in the tree.
+
+**Decision-needed (BigDev's call, not the Panel's):**
+
+- [x] [Review][Decision] **R2D1 — Overlapping or nested partner-total periods let staff work out a figure the floor hides.**
+  [`packages/domain/migrations/0217_marketplace-partner-form-figures.sql` — only `period_end >= period_start`;
+  `packages/domain/src/marketplace/partner-form.ts` `listPartnerFormFigures` — newest entry per EXACT `(period_start, period_end)` pair]
+  *verified (no overlap rule anywhere; the story's QE12 says only "a correction is a new entry for the same period").* Enter 1–31 Jan
+  = 100, 1–15 Jan = 3 and 16–31 Jan = 97: three distinct pairs, all "newest"; the page shows 100 and 97 and "fewer than 5" for the 3,
+  and 100 − 97 = 3. It is the attack RD1 closed for the Trust's own counts; `-486` R3 B says *"totals below 5 are not shown"*.
+  A partner that reports a month and its weeks is the ordinary way to meet it. Sources: blind (A) + edge (A).
+  **The one fact that decides it:** whether staff may enter periods that overlap. **Options:** (1) refuse an entry whose period overlaps
+  an existing one for the module (cost: a partner's month-and-weeks reporting must be entered as one or the other; a corrected
+  period must be re-entered as the SAME pair) — recommended; (2) accept overlaps and withhold any figure whose period is contained
+  in, or contains, another (cost: a second suppression rule on a surface staff read, and it hides numbers at or above 5 — the RD1
+  trade again); (3) accept and record the residual (cost: `-486` R3 B is met in form, not in effect). Not the Panel's: it concerns
+  how staff-entered aggregate figures are shown to staff, not what a person is owed.
+- [x] [Review][Decision] **R2D2 — A fault in the `trust_sends` lapse or lead-fields purge stops the visit purge (W15), so the 90-day removal waits.**
+  [`apps/jobs/src/scheduler/module-lead-handoff.ts` `runModuleLeadHandoffTick` (the `lapse` / `purge` early returns before W15)]
+  *verified in the tick and its unit test; four layers (blind B, edge B, auditor B, auditor A's QE5 reading).* QE5 states *"a fault in
+  one route must ⛔ stop the other"*; the code isolates one direction (a W15 fault never stops a delivery), not the other. `-488`
+  item 2 keeps *"The lapse and the purge are unchanged (a throw there still ends the tick)"*, and the unit test pins the early return, so
+  this is deliberate; it is disclosed only in a test comment. While such a fault lasts (e.g. a persistent `42501` on
+  `purgeLeadHandoffFields`), partner-form visit records older than 90 days are kept (`-486` R2 C). It catches up once the fault clears
+  (the purge is `< now − 90 d`, 500 a tick). **Options:** (1) leave the coupling and record it (one line here and in ADR-0046;
+  cost: the retention promise slips for as long as a `trust_sends` fault lasts) — nothing to amend; (2) run W15 before the early
+  returns or in its own scope (cost: it AMENDS `-488` item 2 by name — a decision entry committed ALONE first — and the pinned tick
+  test changes). Engineering either way; nothing a member is told changes.
+- [x] [Review][Decision] **R2D3 — The Hindi "tone review" row records an acceptance, not a walk of the checklist, yet it discharges Row 55 (b).**
+  [`docs/tone-review-checklist.md` — the 2026-11-22 rows for `marketplace.json` (hi) `partnerForm.notice`] *verified.* Row 1 records the
+  Hindi as agent-drafted and the review as owed; row 2 records *"Hindi accepted as drafted (पेज) — BigDev, by selection in the session"*
+  and says it *"Discharges roster Row 55 (b)'s 'Hindi by tone review' for this key"*. The checklist asks a non-author to work items 1–5,
+  including the grief-context gate (§4), and the §5 attestation; the row does not say they were worked. The 2026-10-25 row is the
+  precedent for the narrower wording ("Hindi accepted … the tone review is NOT yet run"); the 2026-08-31 row is the plain shape.
+  This review cannot see the session's selection. Sources: auditor (C) + blind (C). **The one fact that decides it:** did BigDev walk
+  the checklist items, or accept the sentence? **Options:** (1) he walked it — say so in the row (no other change); (2) he accepted
+  the sentence — narrow the row to "Hindi reviewed and accepted by BigDev; checklist items not walked", and Row 55 (b)'s wording to
+  match (cost: (b) stays open if counsel or the house rule wants the walk). Your word on a fact; not the Panel's.
+
+**Decisions resolved (BigDev, 2026-11-22, by selection: *"D1 1, D2 2, D3 1"*):** R2D1 → option 1 (refuse overlapping periods) = **R2P17**;
+R2D2 → option 2 (run W15 before the early returns; amends `-488` item 2 by name, a decision entry committed ALONE first) = **R2P18**; R2D3 → option 1
+(BigDev walked the checklist; say so in the row) = **R2P19**, with R2P16 following it. Current disposition: **0 decision-needed, 19 patch, 5 defer, 28 dismissed.**
+Each of the three is the author's under the routing template's §0 (R2D2 amends an author-commit, not ratified text); no Panel note.
+
+- [x] [Review][Decision] R2D1 → R2P17 · R2D2 → R2P18 · R2D3 → R2P19 (resolved as above; the three items' text is kept under "Decision-needed" for the record).
+
+**Patch (all 19 applied in the working tree on 2026-11-22, ⛔ committed yet; see the Completion Notes' round-2 block — R2P12 is resolved by recording the residual, ⛔ a live proof, and R2P10's S4 branch is KEPT on purpose):**
+
+- [x] [Review][Patch] **R2P17 [P2, from R2D1] Refuse a partner-totals entry whose period overlaps an existing period of the offer.**
+  [`packages/domain/src/marketplace/partner-form.ts` `recordPartnerFormTotals`; `0217` is applied-migration territory — do not regenerate it; any DB-level backstop is a NEW migration]
+  The same `(period_start, period_end)` pair stays allowed (that is a correction, newest wins). Any other period that shares a day with an existing
+  entry's period for the module is refused with a typed error mapped to a 409/422 at the route and a copy line in admin. Serialise the check with the
+  insert (the module's row lock or an advisory lock keyed on the module) so two concurrent entries cannot both pass. Regressions: the review's 100 / 3 / 97 case
+  is refused; an exact-period correction passes; an adjacent (non-overlapping) period passes; a concurrent pair. Update OpenAPI additively.
+- [x] [Review][Patch] **R2P18 [P2, from R2D2] Run W15 before the `trust_sends` lapse / purge early returns, so a `trust_sends` fault cannot hold the 90-day visit removal.**
+  Governance FIRST: Decision `2026-11-22-491` (author-commit, BigDev: *"D2 2"*) committed ALONE — it amends `-488` item 2 by name ("a throw in the lapse or the
+  purge ends the tick" no longer ends W15) and `-489` QE5's ordering (W15 "runs LAST, after the claim loop"); supersedes no ratified text. Re-grep the decision number on
+  every ref and worktree first. Then code: [`apps/jobs/src/scheduler/module-lead-handoff.ts` `runModuleLeadHandoffTick`] — W15 gets its own scope that runs whatever S1 / the lapse /
+  the purge / the claim do, and its own throw still ends only W15 (one alarm). Change the pinned tick test (`reached` order) and add: a lapse throw, a purge throw and an S1
+  throw each still reach W15. Records: ADR-0046 and roster Row 54 / 55 dated lines, the story's QE5 note. Keep the claim loop's behaviour unchanged.
+- [x] [Review][Patch] **R2P19 [P3, from R2D3] Record that BigDev walked the tone-review checklist for `partnerForm.notice` (Hindi).**
+  [`docs/tone-review-checklist.md` — the 2026-11-22 acceptance row] Add that BigDev worked the checklist items (including the §4 grief-context gate) and the §5 attestation,
+  on his word in the session (*"D3 1"*), keeping the "by selection" quote and `reviewedBy ≠ authoredBy`. ⚠ This is his statement of a fact I cannot see; write it as his statement,
+  not as an observation.
+- [x] [Review][Patch] **R2P1 [P2, vacuous test] The W15 "bounded by its limit" test cannot fail.**
+  [`packages/domain/tests/integration/marketplace/lead-handoff-commands.spec.ts:716`–`:720`] *verified.* `old2` is seeded, then dropped
+  with `void old2`; the assertion is `toBeGreaterThanOrEqual(1)`. Delete `LIMIT $2` from the CTE: both old rows go, every assertion
+  still holds. Assert `toBe(1)` and that `left()` still contains `old2` after the first call. Sources: blind (A) + auditor (A).
+- [x] [Review][Patch] **R2P2 [P3, vacuous test] "No `events_log` row" compares a 32-bit `xmin` with a 64-bit `txid_current()`.**
+  [`packages/domain/tests/integration/marketplace/partner-form-visit.spec.ts:129`] *verified.* `xmin::text = txid_current()::text`
+  matches nothing once the cluster's xid epoch is above 0, so the claim passes for free; and there is no positive control. Count the
+  member's stream rows before and after, or compare with `(txid_current() % 4294967296)`; add a control that writes one row.
+- [x] [Review][Patch] **R2P3 [P3] `countPartnerFormEvent` accepts `went_to_partner`, so the count can drift from the visit rows.**
+  [`packages/domain/src/marketplace/partner-form.ts` `countPartnerFormEvent`] *verified (the guard is `PARTNER_FORM_COUNT_KINDS.includes`, which
+  holds all four; the doc says `went_to_partner` is `openPartnerFormVisit`'s).* Any caller can bump it without a visit or twice.
+  Refuse it (`RangeError`, as for an unknown kind) and type the input to the other three; one regression. Sources: blind (A) + edge (A).
+- [x] [Review][Patch] **R2P4 [P3] `toAuthorRequest` turns an unchosen route into `trust_sends`, and no test pins the `trust_sends` arm.**
+  [`apps/admin/src/modules/marketplace/derive.ts` `toAuthorRequest` (the else branch of the `partner_form` ternary)] *verified.* `leadRoute === null`
+  is not reachable today (`firstInvalidStep` gates Create), but QE7 says "⛔ default". Throw on `null`. Also assert, on the `trust_sends`
+  request, `lead_route: 'trust_sends'` and `partner_form_url: null` (today only the `partner_form` arm is asserted, in
+  `module-partner-form.test.tsx`; `marketplace-derive.test.ts` never reads either). Sources: blind (C) + edge (C) + auditor (C).
+- [x] [Review][Patch] **R2P5 [P3] The new-key copy walk skips six new keys, and the notice test passes for any throw.**
+  [`apps/admin/tests/module-partner-form.test.tsx:244` — the filter `/route|partnerForm|figures|totals|lead_route|not_partner_form/` has no
+  `i` flag] *verified.* It misses `module.reason.leadRoute`, `module.field.leadRoute`, `module.detail.publishRoute`,
+  `module.detail.publishRouteReason`, `module.detail.leadsNotUsed`, `module.places.none`. Walk every key added by this diff (diff the key
+  list, not a regex), and do not swallow a throw. `apps/mobile/tests/unit/marketplace-notice-copy.test.ts` ("missing partner"):
+  assert the missing-variable error, and add a control call with `{partner}` that succeeds. The microcopy gate is the backstop and is green.
+  Sources: blind (C) + auditor (C).
+- [x] [Review][Patch] **R2P6 [P3] Contract drift on the label bound and the figure cap.**
+  [`packages/contracts/src/modules/dto.ts` `RecordPartnerFormTotalsRequest` (`label.max(200)`); `apps/admin/src/modules/marketplace/derive.ts:566`
+  (`STAGE_LABEL_MAX = 80`) and `:574` (`MAX_PLACES` as the figure cap)] *verified.* `MODULE_PARTNER_FORM_STAGE_LABEL_MAX` (80) is exported
+  and unused by the request DTO, so the OpenAPI advertises 200 and 81–200 reaches the domain as a 422 (not a 500). Use the constant in
+  the DTO and import it in `derive.ts`; give the figure cap its own name (its value, 2 147 483 647, equals the domain's). Regenerate
+  OpenAPI additively. Sources: blind (B, C) + auditor (C).
+- [x] [Review][Patch] **R2P7 [P3] Totals form: a stale "saved", a failed refetch behind it, focus pulled back, a pre-2000 date, no double-submit test.**
+  [`apps/admin/src/modules/marketplace/ModuleDetailPage.tsx` `runTotals`; `derive.ts` `validateTotalsDraft`] The "saved" / error message stays
+  while the admin types the next period; if the post-save refetch fails the page says "saved" with the new entry missing (publish and
+  withdraw use `awaitingRefresh`; totals do not); `finally` focuses the totals heading even if the admin has moved on (other handlers
+  use `focusIfUnclaimed`); `1999-12-31` passes the client check and the server's year-2000 rule answers the generic message
+  (`module.reason.windowYear` exists for the same rule); `totalsInFlight` plus a fresh Idempotency-Key per click has no double-click
+  test. Sources: blind (C), edge (C), auditor (C).
+- [x] [Review][Patch] **R2P8 [P3, copy] `module.error.lead_route_mismatch` sends a mis-click to Withdraw.**
+  [`apps/admin/src/modules/marketplace/i18n-en.ts`; mapped in `derive.ts`; asserted in `module-partner-form.test.tsx`] The 409 writes nothing, the page
+  already shows the offer's route and the radios stay as picked, yet the message says the offer "cannot be changed" and to withdraw it
+  and start a corrected copy. That follows `-489` QE6 (A)'s consequence for a publisher who disagrees with the author's route, and
+  stays true for that case; it misleads a publisher who only picked the wrong radio. Say which route the offer has (the 409 body carries
+  `offer_lead_route`) and that picking it publishes; keep Withdraw for "this is not the route you want". Admin copy: the microcopy gate
+  and the "no report / receipt / invoice" words apply. Sources: blind (C), edge (C), auditor (C).
+- [x] [Review][Patch] **R2P9 [P3, test] The cross-Pariwar leg for the totals route cannot reach the handler's own scoping.**
+  [`apps/api/tests/integration/marketplace-admin.spec.ts:278`] *verified.* It calls with `pa.client`, which has no grant in Q, so the scope
+  hook answers 404 before `getModule(…, scopePariwar, mid)` runs. Add the leg with ONE admin granted `module.manage` in BOTH Pariwars
+  posting P's `moduleId` under Q's path (404, no totals row, no audit line). Sources: blind (B) + auditor (B).
+- [x] [Review][Patch] **R2P10 [P3, test] "Route decided FIRST" and "W15 runs when the budget is spent" are unproven.**
+  [`apps/jobs/tests/module-lead-handoff.test.ts` (`plantPartnerFormRow`)] The route-cancel tests use a healthy member and module, so a
+  regression that read the member's side first still gives `partner_form_route`; plant a withdrawn module or a death-reported member and
+  assert the word is still `partner_form_route` (S4 and the waiting pass). Add the spent-budget W15 case. The S4 branch
+  `leadHandoffUrl === null || signingKeySecretName === null` (verdict `url_refused`) cannot be reached for `trust_sends` (the 0216
+  CHECK) and is unexercised: delete it or pin it. Source: auditor (B).
+- [x] [Review][Patch] **R2P11 [P3, closure honesty] Record the contract rename and the W15 coupling.**
+  QE16 specified `counts: { [kind]: { total, below_floor } }`; the code and OpenAPI use `{ figure, below_floor, withheld }`. `withheld` is
+  disclosed under `-490`; the `total` → `figure` rename is not in the Completion Notes' variance list. Add it (and, if R2D2 is left as
+  option 1, the coupling). Source: auditor (B).
+- [x] [Review][Patch] **R2P12 [P2, checklist family 2 — REAL GAP] W15 against erasure is not proven live, and `-490` (2)'s "never an error" is stronger than the code.**
+  [`packages/domain/src/marketplace/partner-form.ts` `purgeExpiredPartnerFormVisits`; `packages/domain/src/member/anonymize.ts`] W15 is a plain
+  multi-row `DELETE` by id (a MATERIALIZED CTE, no lock); erasure is a multi-row `DELETE` on `(pariwar_id, member_id)`. Neither fixes its
+  row order, so two transactions each deleting ≥ 2 of the same member's expired rows in opposite order can deadlock (40P01); the
+  erasure transaction could be the victim. The window is narrow (a member erased in the minute their visits cross 90 days). There is no
+  two-connection test; RP1's is single-connection. Add one and, if it deadlocks, make the order deterministic; otherwise state the residual
+  where `-490` (2) is cited (a dated line, not a rewrite of the decision). Source: auditor (A). The persistent-fact rule: a REAL GAP is not
+  downgraded to a note.
+- [x] [Review][Patch] **R2P13 [P3, test] The grants test is narrower than AC8, and no test asserts the new tables' indexes.**
+  [`packages/domain/tests/integration/marketplace/partner-form-schema.spec.ts`] The `column_privileges` query filters `grantee = 'twt_app'` and
+  `[VISITS, COUNTS]`; a column grant to `twt_service`, or a column UPDATE on totals, is not seen. The "named CHECKs" test lists
+  `contype IN ('c','f')` only: the purge index (`…_opened_at_idx`) and the other indexes and PKs are unasserted, so dropping the purge
+  index turns W15 into a sequential scan unnoticed. Source: auditor (A).
+- [x] [Review][Patch] **R2P14 [P3, a11y] Admin accessibility polish (family 13, covered in substance).**
+  [`ModuleWizard.tsx`, `ModuleDetailPage.tsx`] (a) each route radio's `<label>` wraps its hint and the input also has `aria-describedby` on the
+  same hint, so a screen reader reads it twice; (b) `module-totals-reason` and `module-publish-route-reason` are mounted as
+  `role="status"` only while the condition holds (a region inserted with its text is usually not announced; the file's own
+  "ALWAYS-mounted region" comment says so); (c) removing a step renumbers the rest with no announcement and sends focus to the heading above
+  the form; (d) the figures table has no `<caption>`, and its first header ("By day (India date)") heads the "All days" row. Not reproduced
+  with a screen reader; the speculative `bad()` clobbering claims (blind C #9, #10) were not carried. Sources: blind (C), edge (C), auditor (C).
+- [x] [Review][Patch] **R2P15 [P4, nits] Dead surface and a leaking test fixture.**
+  `ModuleLeadRouteOperation` has `'lead_check'` and nothing throws it (`errors.ts`, `commands.ts`); `partner-form-send-guard.spec.ts` `afterAll`
+  deletes without `try / finally`, so a refused DELETE leaks committed rows and the pool; W15's DELIBERATE block ends "Re-examine under the
+  claim's triggers" without naming one (checklist family 9 wants a trigger). Sources: blind (A), auditor (A).
+- [x] [Review][Patch] **R2P16 [P3, closure honesty — AFTER R2D3] The `$comment.partnerForm` in both `marketplace.json` files is stale.**
+  [`packages/i18n/locales/en/marketplace.json:2`, `…/hi/marketplace.json:2`] *verified:* both still say the Hindi "was drafted by the dev agent …
+  BigDev signs it off (roster Row 55 (b) …)". Update to the outcome of R2D3. Source: blind (C).
+
+**Defer (real, not caused by this diff or not actionable now; also appended to `deferred-work.md`):**
+
+- [x] [Review][Defer] **R2W1 — An Idempotency-Key replay with a DIFFERENT body returns the first result and drops the correction.** [`apps/api/src/modules/marketplace/handlers.ts` `withIdempotency`] — deferred, pre-existing: the store keys on the key alone and holds only the response; every module write route shares it. It bites the totals route most (its purpose is "newest entry wins" corrections). *Verified (the store records `{totals_id, stages}` only).*
+- [x] [Review][Defer] **R2W2 — Every count bump takes one row lock held to the caller's commit.** [`partner-form.ts` `bumpCount`] — deferred to Story 12.3 (the first caller): shelf renders for one offer queue on one `(pariwar, module, day, kind)` row; two kinds bumped in opposite order in one transaction can deadlock. Nothing calls it yet (KB-3 owns the emitters).
+- [x] [Review][Defer] **R2W3 — `marketplace_partner_form_visits.member_id` is a single-column FK to `members`.** [0217] — deferred, project convention: `members` has a single-column PK, the writer checks `memberExists` in the Pariwar, and the module FK beside it IS composite. A hand-written row pairing one Pariwar with another's member passes the DB. No DB-level test pins it.
+- [x] [Review][Defer] **R2W4 — One `module_lead_handoff_route_refused` alarm per cancelled row in the waiting pass.** [`module-lead-handoff.ts`] — deferred, low: the file's convention for other holds is once per module per tick; a bug that created many `partner_form` leads would raise one alarm each.
+- [x] [Review][Defer] **R2W5 — Stage labels admit zero-width, control and bidi characters.** [`partner-form.ts` `storableText`] — deferred, staff-only input shown on the admin page: `.trim().min(1)` does not strip U+200B, so a blank-looking stage can be stored. A cosmetic hardening; choose the character classes once.
+
+**Dismissed (28, with the reason, so they are not re-found):** a sparse day makes the detail GET 500 (`countTotals` reads EVERY day in `byDay`, so a total is `withheld`
+whenever any day's kind is below 5, a 0 included — the DTO's second floor cannot fire on domain output); `ModuleGenesisMissingError` is the wrong error for a missing module
+(`errors.ts` maps it to the 404); the route backstop trigger fails open (it runs as the inserter, the INSERT policy requires the scope the SELECT sees; a role that cannot see
+the module falls to the composite FK); `twt_app` SELECT on visits makes "no staff read" a convention (a `DELETE … WHERE` needs SELECT; ratified in the grants table); the
+purge login must hold BYPASSRLS itself (0195's precedent; RP1 runs the real statement on that shape); the partner URL is not checked against the partner's domain (not in the
+story; the server canonicalises, the Trust hands the string out byte for byte); `openPartnerForm` does not check the scheme (the server stores only canonical `https`; the fence
+bans rewriting); the totals route accepts any offer state (advisory figures, `-489` QE12 has no state rule); the publish mismatch check runs before the tone gate (the
+publisher is never the author); a third route would be labelled `partner_form_route` (the enum has two); `err.code` surfaces on an unreachable 409; zod issues echo values
+(they carry paths and messages); `ProfileSection.partnerOfferVisits` is required on a strict export (the one parser is `assemble.ts`' consumer, same change); the new
+refinements are not in OpenAPI (zod-to-openapi drops refinements project-wide); one W15 batch of 500 a tick with no drain (a 500 a minute tick); `entered_at` differs per stage
+row (the winner is still one `totals_id`); duplicate UNIQUE and FK on the modules table; free text and non-UUID ids on the totals insert (staff-only; a 22P02 is a 4xx
+path); the audit hash comes from `parsed.data` while the domain gets `body` (the schema does not transform; RP2's test asserts 0–4 hash alike); `useMarketplaceT` returns a
+fresh closure (same shape as `helpdesk-i18n.ts`; no consumer yet); new `marketplace` imports out of alphabetical order (no lint rule); the notice-opener fence test is narrow
+(it pins the one file that may call `Linking`); loose `toHaveTextContent('12')` assertions; client URL validation is minimal (the server decides, the 422 names the field); the
+corrected-copy leg is derive-level only for `partner_form` (the mapping is tested); `useMarketplaceT` untested; speculative `aria-invalid` on a fieldset and an
+`aria-describedby` clobber (they depend on `bad()`, which was not in the diff); `entered_by_actor_id` / `audit_id` unvalidated (always set by the handler);
+the tone-review wording "UN-ATTESTED then accepted" (folded into R2D3); an Idempotency-Key per click on totals (folded into R2P7).
+
+**Invariant lens (Acceptance Auditors, families the diff touches):** 1, 4, 6, 7, 8, 12 covered by named tests or by construction; 2 — W15 against erasure
+is **R2P12** (REAL GAP); 3 — covered by test for totals (RP12 / PT15), cross-Pariwar leg weak (R2P9); 5 — covered, grants / index assertions narrower than the AC (R2P13);
+9 — DELIBERATE blocks present, one trigger vague (R2P15); 10 — R2D3, R2P11; 13 — covered in substance (R2P14); 11 — the story's policy-meaning statement stands.
+Verified clean by the layers: the floor of 5 at 0 / 4 / 5 / 6; the IST day from the DB clock; the 90-day window to the minute; v1 manifests read as `trust_sends`;
+the send guard in five places; the R5 member sentence verbatim in English; the `marketplace` namespace in all three registrations; `microcopy.yaml` over the new files.
+
 ## Dev Notes
 
 ### Current state (what this story changes, what must be preserved)
@@ -1197,6 +1389,58 @@ where the finding was missing evidence only, a mutation that turns it red.
   other 40 jobs green on the same code in the fresh-container run, every `ci:local` job is now green; the code is unchanged since that
   run. These records after the commit. ⛔ Pushed. Row 55 (d)'s line waits for `done`.
 
+⭐ **Review follow-up, round 2 — `bmad-code-review 12.5b` whole branch at `e33241a5`, then "Apply every patch" (BigDev, 2026-11-22).** Governance first:
+Decision `2026-11-22-491` (author-commit; BigDev *"D2 2"*; amends `-488` item 2 and `-489` QE5's ordering by name) written ALONE in the log before the jobs
+change — ⛔ committed yet. BigDev's other two answers: D1 *"1"* (refuse overlapping periods), D3 *"1"* (he walked the tone-review checklist). The 19 patches:
+- **R2P17 (D1).** `findOverlappingTotalsPeriod` + `PartnerFormTotalsOverlapError` (domain); the route PRE-CHECKS it before the audit line (a refusal writes none) and
+  `recordPartnerFormTotals` repeats it under a per-offer `pg_advisory_xact_lock` (⛔ a row lock — `twt_app` holds no UPDATE on the modules); 409
+  `module.partner_form_totals_overlap` carries the existing period's dates; admin copy says "enter the same dates to correct". ⛔ A new migration (an
+  exclusion constraint would need `btree_gist` and a one-row-per-entry period table; the check holds the way every other rule on this table does). Tests: domain (five
+  clashing shapes, the same pair, an adjacent period, another offer), API (409 body, ⛔ row, ⛔ audit line, the correction and the adjacent entry 201), admin (the copy).
+- **R2P18 (D2).** `runModuleLeadHandoffTick`: W15 is a local `purgeVisits()` run on a role-check, lapse or lead-fields-purge throw AND after the claim loop; only the
+  `rls_bound_role` refusal skips it. Tests: the three throw legs reach `visit purge`; a role-check throw; a lapse throw AND a W15 throw give two alarms; `tickBudgetMs: 0`.
+- **R2P1, R2P2.** The limit test seeds the two OLDEST possible rows (a century) so no other spec's row sorts first, asserts `toBe(1)` and that the next-oldest survives;
+  the no-`events_log` check compares `xmin::text::bigint` with `txid_current() % 2^32` and has a POSITIVE control (a row written in the same transaction is matched).
+- **R2P3.** `countPartnerFormEvent` refuses `went_to_partner` (type and `RangeError`); a regression.
+- **R2P4, R2P5.** `toAuthorRequest` throws on an unchosen route; the `trust_sends` arm's `lead_route` / `partner_form_url: null` are asserted; the copy walk covers EVERY admin
+  key (the resolver names its missing variables, ⛔ a swallowed throw); the mobile missing-partner test names the missing variable and has a succeeding control.
+- **R2P6.** `MODULE_PARTNER_FORM_FIGURE_MAX` (new, contracts) and the existing label bound are used by the request DTO (`label` now `.trim().max(80)`, was 200 — OpenAPI
+  regenerated, additive) and by `derive.ts`.
+- **R2P7.** Editing the form retires the last result; focus returns to the form only when it is unclaimed; a pre-2000 or impossible date is named before Save
+  (`module.totals.reasonYear`); a double click sends one write. ⚠ The "saved while the refetch failed" half of the finding was NOT carried: the existing
+  `module-detail-refresh-error` alert already says so.
+- **R2P8.** The mismatch copy names the offer's way (shown above), says choosing it publishes, and keeps Withdraw for "not the way you want".
+- **R2P9, R2P10.** One admin granted in BOTH Pariwars naming P's offer under Q's path → 404, ⛔ writes, with controls (Q listing 200; the same call under P 201). Route-first: a
+  `partner_form` row whose offer is withdrawn / whose member withdrew is STILL `cancelled:partner_form_route`, in the claim and in the waiting pass. ⚠ The S4 branch
+  `leadHandoffUrl === null || signingKeySecretName === null` is KEPT (type narrowing for the nullable columns; the 0216 CHECK makes it un-plantable), its comment says so.
+- **R2P11.** Contract variance recorded: QE16's `{ total, below_floor }` became `{ figure, below_floor, withheld }` (`withheld` under `-490`; the `total` → `figure` rename is
+  new here); and the W15 coupling is now fixed by `-491`, ⛔ left as a note.
+- **R2P12 — resolved by recording, ⛔ by a live proof.** Both statements delete several rows and neither fixes its lock order, so a deadlock (40P01) is possible in the minute a
+  member is erased AND their visits cross the 90th day. A deterministic order needs a row lock, which the jobs login cannot take (`-490` (2)); a two-connection test
+  would show Postgres's detector, ⛔ these statements' order. The residual is stated in `purgeExpiredPartnerFormVisits`'s comment (`-490` (2)'s "never an error" holds per
+  row). ⚠ This leaves the checklist family 2 verdict on W15-against-erasure as "residual stated", ⛔ "proven live".
+- **R2P13.** The grants test reads BOTH grantees on ALL THREE tables (no `twt_service` INSERT / UPDATE anywhere; no `twt_app` UPDATE on the totals); a new test asserts the
+  indexes and primary keys by name and columns (the purge index included).
+- **R2P14.** Route radios: the label holds the name only, the hint is the description (once), `aria-invalid` on the radios; the partner-URL input is described by the copy AND
+  the issue (the spread had replaced one with the other — verified); the two reason regions are always mounted; removing a step announces it and focuses the row now in
+  its place; the figures table has a caption and an honest first header.
+- **R2P15, R2P16, R2P19.** `'lead_check'` removed; the send-guard spec ends its pool in `finally`; W15's DELIBERATE block names its re-examination triggers; the tone-review row
+  records BigDev's statement (his word, as his); both `$comment.partnerForm` lines say the Hindi was reviewed and accepted.
+- **Records.** ADR-0046 and roster Row 55 dated lines (W15 no longer waits behind the `trust_sends` half; the overlap refusal). `deferred-work.md` R2W1–R2W5.
+- **Verification (story DB `twt-125b-pg4`, :5458; the shell's `DATABASE_URL` is :5432 — prefixed on every run):** `turbo typecheck` 20/20; lint on the six touched packages green;
+  whole suites: domain 553 files / 8905 tests, contracts 98 / 1795, admin 113 / 2372 — green. mobile: one failure (`known-people-find-render.test.ts`, a parallel-load flake;
+  52/52 alone, ⛔ touched by this story). jobs 98 files / 2401, api 248 / 3396, i18n 16 / 130 — green (the round-2 patches, before round 3). ⛔ `ci:local` run (the 41-job gate) — owed before a push, on a FRESH container. ⚠ The R2P2 note above (the `xmin` predicate with a positive control) was SUPERSEDED in round 3: it was still vacuous for a savepoint write.
+
+⭐ **Review follow-up, round 3 — the adversarial review of the round-2 patches (BigDev: "run the adversarial review on patches applied once done", then "apply the patches found in adversarial review and then open pr").** Two reviewers on the patch diff (one blind, one with the worktree). No high finding; the valid ones are applied:
+- **Governance first.** `-491`'s wording made unambiguous (a role-check THROW runs W15, a REFUSAL does not; the residual after a throw stated) — committed alone (`62041933`). **`-492` NEW** (author-commit, BigDev *"D1 1"*; amends `-489` QE12 (A) by name): the overlap rule had no decision entry of its own and the roster had pinned it to `-491`; committed alone (`01df89b7`).
+- **The R2P2 "fix" was still vacuous** (a visit writes in a SAVEPOINT, and a row there carries the subtransaction's xid, so `xmin = txid_current()` could never see it). The `xmin` predicate is dropped; the check is by CONTENT — no `events_log` row on the module's or the visit's stream, no audit line naming the module, the member or the visit.
+- **The lock was unpinned.** New `partner-form-totals-race.spec.ts`: A holds an uncommitted overlapping entry, B must be seen WAITING (still unsettled after 400 ms), then is refused once A commits. ⚠ Mutated: with the lock line removed B settles at once and the test FAILS. The API-level concurrent test stays as an end-to-end outcome check and says plainly that it does NOT prove the lock (it passes without it — mutated and shown); it uses two admins, since `tenantWrite` already serialises one actor's writes.
+- **Admin.** The "Step n removed" note REMOUNTS on every removal (a sequence key), so the same sentence twice is announced twice; the last-step wording no longer claims a renumbering (`module.totals.lastStageRemoved`); Save retires the note (mutated: the test fails without it); the overlap 409 names the clashing period from the 409's own `details`; a figure too large is named (`module.totals.reasonFigure`); the empty status regions take no space (`empty:hidden`); the route options are ONE label again (the click target is the row; `aria-labelledby` keeps the NAME the option's name alone, the hint its description once); a `[lead_route]` 422 marks both radios (`aria-invalid`, described by the hint AND the issue) — a test now produces it; the focus test has its positive leg (mutated: fails without the focus call).
+- **Jobs.** The `sweep_failed` alarm no longer says "swept nothing further" (the visit purge still runs); the early-return paths log what W15 removed.
+- **Contracts / domain.** `PARTNER_FORM_FIGURE_MAX` (domain) with a sync test against the contracts' constant (was a literal on one side).
+- **Tests.** The purge spec drops its leftover `void`s and purges with `limit: 5000`; the grants test adds `has_table_privilege` / `has_any_column_privilege` for the roles (PUBLIC and membership included); the index test sorts in JS (collation-proof).
+- **Not carried (with the reason).** Overlap pre-check before date validation (the handler parses the shape first — verified); `went_to_partner` as a 500 (no route calls `countPartnerFormEvent` yet); `toAuthorRequest` throwing on render (one caller, Create is disabled until a route is chosen); sole-row removal focus (the remove button exists only with ≥ 2 steps); `world()` under app scope (the test passes; helper inserts as the login); asserting copy constants; the pre-existing overlaps that could not be corrected by the same pair (none exist before go-live — stated in `-492`); a label of 81–200 characters is now a 400 from request validation instead of a 422 from the domain (the admin form blocks it first; OpenAPI says 80).
+
 ### File List
 
 Migrations / schema / policies (domain):
@@ -1253,10 +1497,19 @@ tests `packages/domain/tests/integration/marketplace/lead-handoff-commands.spec.
 `packages/contracts/tests/modules.test.ts` (RD1); `apps/admin/tests/module-partner-form.test.tsx` (RP3, RD1);
 `apps/jobs/tests/module-lead-handoff.test.ts` (RP1).
 
+Review rounds 2 and 3 (2026-11-22), additional files: `packages/domain/src/marketplace/errors.ts`, `partner-form.ts`, `packages/domain/src/schema/marketplace_partner_form_totals.ts`
+(`PARTNER_FORM_FIGURE_MAX`); `packages/contracts/src/modules/enums.ts`, `index.ts`, `dto.ts`, `scripts/emit-openapi.ts`, `openapi/v1.yaml`; `apps/api/src/modules/marketplace/errors.ts`, `handlers.ts`;
+`apps/jobs/src/scheduler/module-lead-handoff.ts`; `apps/admin/src/modules/marketplace/ModuleDetailPage.tsx`, `ModuleWizard.tsx`, `derive.ts`, `i18n-en.ts`; `packages/i18n/locales/{en,hi}/marketplace.json`;
+tests: `packages/domain/tests/integration/marketplace/partner-form-totals-race.spec.ts` (NEW), `partner-form-visit.spec.ts`, `lead-handoff-commands.spec.ts`, `partner-form-schema.spec.ts`, `partner-form-send-guard.spec.ts`;
+`packages/contracts/tests/modules.test.ts`; `apps/api/tests/integration/marketplace-admin.spec.ts`; `apps/jobs/tests/module-lead-handoff.test.ts`; `apps/admin/tests/module-partner-form.test.tsx`, `marketplace-derive.test.ts`;
+`apps/mobile/tests/unit/marketplace-notice-copy.test.ts`; docs / records: `.decision-log.md` (Decisions `-491`, `-492`), `docs/adr/ADR-0046-…`, `docs/launch-gate-inventory/inventory-roster.md`, `docs/tone-review-checklist.md`, `deferred-work.md`.
+
 ### Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-22 | 1.7 | Review round 3 (the adversarial review of the round-2 patches): `-491` clarified and `-492` (the overlap rule) committed alone; the `xmin` check replaced by content checks; the lock proved by a two-connection domain spec (mutated); admin note / focus / label / copy fixes with mutated tests; `PARTNER_FORM_FIGURE_MAX`; jobs alarm wording and fault-tick log. |
+| 2026-11-22 | 1.6 | `bmad-code-review 12.5b` round 2 at `e33241a5` (3 decisions, 19 patches, 5 defer, 28 dismissed) and all 19 patches applied: `-491` (W15 in its own scope), the totals overlap refusal (409), the test-strength and a11y patches; records. |
 | 2026-11-22 | 1.5 | `bmad-dev-story 12.5b` review follow-up → **review**: Decision `-490` alone (`483cfcca`; RD1 complementary suppression, RP1 W15 without a row lock); all six findings resolved with regressions (RED shown, or a mutation for RP4); OpenAPI additive (`withheld`); `friction-budget.md` Story 12.5b disposition (the AC-4 gate first saw `714b30a9`'s mobile files); `ci:local` 40/41 on a fresh container, then code committed `5607475c` and `friction-budget` green. |
 | 2026-11-22 | 1.4 | Full code review at `09be56ef`: all three layers completed; 597 existing targeted tests passed; isolated retention-privilege, audit-hash and focus probes reproduced defects. BigDev selected complementary suppression for RD1, then option 2, "Leave as action items": six unchecked patch findings, no implementation patches applied, status review → in-progress. |
 | 2026-11-22 | 1.0 | Created at pin `4db122e0` on `story/12-5b-partner-own-form-route`; row backlog → ready-for-dev. |

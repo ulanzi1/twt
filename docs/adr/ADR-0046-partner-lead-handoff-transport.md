@@ -44,7 +44,8 @@ DELETE, an identity change and any change to the fields other than present → a
 `marketplace_lead_handoffs_route_guard` refuses the row in the database whatever the commands do. Should one exist anyway, the sweep
 decides it FIRST — S4 and the waiting pass cancel it `cancelled:partner_form_route` at once (⛔ secret, DNS, member read, decrypt, audit
 line or request) and raise ONE `module_lead_handoff_route_refused` alarm; the claim COALESCEs the missing URL's authority so such a row is
-never stranded. The same tick also removes the partner-form visit records more than 90 days old (W15, LAST — `-486` R2 C).
+never stranded. The same tick also removes the partner-form visit records more than 90 days old (W15 — `-486` R2 C).
+⭐ *Dated 2026-11-22 — Story 12.5b code review round 2 (author-commit `2026-11-22-491`; amends `-488` item 2 and `-489` QE5's ordering by name):* W15 runs in its OWN scope, once a tick — after the claim loop on a normal tick, and in place of the rest of the tick when the role check, the lapse or the lead-fields purge threw (those still end the `trust_sends` part, as `-488` item 2 says). A fault in one route therefore stops neither the other's delivery nor its retention; only the `rls_bound_role` refusal skips W15. A W15 throw still ends only W15 (one `visit_purge_failed` alarm).
 
 **Delivery is AT LEAST ONCE.** A timeout or a dropped connection after the request was written is retried. The partner dedupes on
 `Idempotency-Key: <lead_id>` — THE dedupe key. Retries follow `1 min, 5 min, 30 min, 2 h, 6 h, 24 h` (7 attempts, ≈ 32.6 h); the 7th
@@ -260,4 +261,5 @@ story.
 | 2026-11-21 | drafted | Authored by Story 12.5 (Task 8) on the decisions of `-483` and the Panel's ruling `-484`. ⚠ `drafted`, ⛔ ratified — ⛔ trustee ratification is claimed, and none is a merge fence. Roster Row 54 does ⛔ list this ADR's ratification as a leg; whether it should is for the Panel when the first partner agreement is presented. |
 | 2026-11-22 | drafted | Story 12.5 code review, patch 12: §1 says a P0 failure HOLDS (it said every failure cancels), and adds Decision `2026-11-22-487` — a rejected key is a KMS hold, and the waiting pass (W14); §2 (iii) names the resolver `boot.ts` wires and its non-production env fallback; §5 names S9's give-up (a request can be left with no attempted line). Still `drafted`; no decision changed. |
 | 2026-11-22 | drafted | Story 12.5 code review, rounds 2 and 3: §1's re-check covers EVERY `due` lead, one full cycle a pass (it wraps to the top), and a throw in it ends only the pass (Decision `2026-11-22-488`); the residuals stated. Still `drafted`. |
+| 2026-11-22 | drafted | Story 12.5b code review round 2 (`2026-11-22-491`): a second dated line at §1 — W15 no longer waits behind the `trust_sends` lapse / purge (own scope; `-488` item 2 amended by name). Still `drafted`. |
 | 2026-11-22 | drafted | Story 12.5b (`2026-11-22-489` QE17): a dated line at §1 — a `partner_form` offer never has a handoff row (the commands, the 0216 trigger); the sweep cancels one `partner_form_route` with an alarm; W15 purges the 90-day visit records. Still `drafted`; no 12.5 decision changed. |

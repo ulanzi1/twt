@@ -49,7 +49,7 @@ number belongs to the first COMMIT, on any branch (`-366` decision 6).
 
 # Story 12.5b: Partner's-Own-Form Route — Offer Route Marker + Send Guard + Outbound Link `[PRIMITIVE]`
 
-Status: ready-for-dev
+Status: review
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -745,40 +745,40 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
           ([[feedback_closure_language_precision]]);
         - a dated line on 12.1's *"An external-URL CTA (FR-64 `target_url_or_form`) is Not addressed"* (G27): owned by
           12.5b as `partner_form_url`, NOT built yet — "Closed by" only at `done`.
-- [ ] **Task 1 — migrations (AC1, AC2, AC4, AC8–AC11)** — QE1. Hand-author both files and their journal entries; run
+- [x] **Task 1 — migrations (AC1, AC2, AC4, AC8–AC11)** — QE1. Hand-author both files and their journal entries; run
       `db:migrate` on a FRESH container (BigDev runs it if the classifier refuses — [[project_admin_browser_pass_launcher]]).
       Mirror every new CHECK / enum in the drizzle schema files (`schema/marketplace_modules.ts` — including replacing its
       `check('marketplace_modules_manifest_schema_version_v1', …)` by the two new names, TR5 —
       `schema/marketplace_module_publications.ts`, `schema/marketplace_lead_handoffs.ts`, three NEW schema files) and in
       `LEAD_HANDOFF_DETAIL_PATTERN` (LOCKSTEP). Grants and policies exactly as the QE1 table, with the grants catalog test
       (AC8).
-- [ ] **Task 2 — manifest v2 in the domain (AC1–AC3)** — QE2, QE3: `schema/marketplace_modules.ts` (the constant → 2,
+- [x] **Task 2 — manifest v2 in the domain (AC1–AC3)** — QE2, QE3: `schema/marketplace_modules.ts` (the constant → 2,
       plus `MODULE_MANIFEST_SCHEMA_VERSION_V1 = 1`), `filters.ts` (`modulePartnerFormUrlSchema`, the route-first input
       parse, `ModuleManifest`), `events.ts` (the v1 arm's version literal moved to `…_V1` — its ONLY edit — plus the two v2
       arms), `project.ts` (genesis writes v2 and the new columns), `state.ts` fold, `read.ts` types; tests for every AC3
       case, the issue paths (G25) and a stored-v1 replay built from the literal `1` (AC2).
-- [ ] **Task 3 — the send guard (AC4)** — QE4 (a)–(e): `errors.ts`, `commands.ts`, `project.ts`, `lead-handoff.ts`
+- [x] **Task 3 — the send guard (AC4)** — QE4 (a)–(e): `errors.ts`, `commands.ts`, `project.ts`, `lead-handoff.ts`
       (the seal's pool + own short route read before KMS, the record check), the trigger's live-DB test; update the seal's
       existing tests (TR28).
-- [ ] **Task 4 — the sweep (AC5, AC8 purge)** — QE5: `lead-handoff.ts` (claim COALESCE, `readLeadHandoffModule`, the
+- [x] **Task 4 — the sweep (AC5, AC8 purge)** — QE5: `lead-handoff.ts` (claim COALESCE, `readLeadHandoffModule`, the
       waiting list, the cancel word, `purgeExpiredPartnerFormVisits`), `apps/jobs/src/scheduler/module-lead-handoff.ts`
       (S4 first, the alarm, the waiting pass, W15 after the claim loop with its own alarm); the tick tests, with the bad
       row planted as AC5 says (G26).
-- [ ] **Task 5 — visits, counts, totals (AC6, AC8–AC10)** — QE8, QE11–QE13: NEW `marketplace/partner-form.ts` + barrel
+- [x] **Task 5 — visits, counts, totals (AC6, AC8–AC10)** — QE8, QE11–QE13: NEW `marketplace/partner-form.ts` + barrel
       exports (⛔ any staff-read export); the shared member-side reader extracted from `readLeadHandoffPredicates` (QE11);
       `member/anonymize.ts` (import the visit SCHEMA directly — G18) + the THREE RTBF pins + the live-DB erasure spec;
       `data-export/assemble.ts` + `contracts/data-export` `ProfileSection` + the jobs export test.
-- [ ] **Task 6 — contracts + API (AC10, AC11)** — QE6, QE16: `packages/contracts/src/modules/dto.ts`, handlers (author,
+- [x] **Task 6 — contracts + API (AC10, AC11)** — QE6, QE16: `packages/contracts/src/modules/dto.ts`, handlers (author,
       publish with the mismatch pre-check BEFORE `withCompensatingAudit`, detail with figures, the totals route),
       `recordModulePublication` (`leadRoute`), the API error map, the OpenAPI emit if present (TR25).
-- [ ] **Task 7 — admin (AC10, AC11)** — QE7, QE16: `derive.ts` (state, validation, request, prefill, `FIELD_STEP`,
+- [x] **Task 7 — admin (AC10, AC11)** — QE7, QE16: `derive.ts` (state, validation, request, prefill, `FIELD_STEP`,
       `FIELD_LABEL`), `ModuleWizard.tsx`, `ModuleDetailPage.tsx` (route, URL, figures, totals form, publish radio),
       `i18n-en.ts`; component tests; the microcopy gate.
-- [ ] **Task 8 — mobile (AC6, AC7, AC12)** — QE14, QE15: `lib/partner-form-link.ts`, `lib/marketplace-i18n.ts`, the two
+- [x] **Task 8 — mobile (AC6, AC7, AC12)** — QE14, QE15: `lib/partner-form-link.ts`, `lib/marketplace-i18n.ts`, the two
       locale files, their registration in `packages/i18n/src/catalog.ts` (imports, `catalogs`, `KNOWN_NAMESPACES`), the two
       `microcopy.yaml` `copy_globs` lines, the real-`t()` leg, the import fence; the tone review of the Hindi and BigDev's
       sign-off.
-- [ ] **Task 9 — docs, gates, records (AC13)** — QE17 ADR dated lines; the Row 26 and Row 55 grant dated lines once the
+- [x] **Task 9 — docs, gates, records (AC13)** — QE17 ADR dated lines; the Row 26 and Row 55 grant dated lines once the
       migration is committed.
   - Run the fences: the partner-boundary fence, the marketplace AST gate, the source fence in `apps/api` unit
     ([[project_source_fence_lives_in_api_unit_suite]]), the microcopy gate, i18n parity and `catalog-registration.test.ts`.
@@ -949,7 +949,16 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5b` on the story worktree, 2026-11-22.
+
 ### Debug Log References
+
+- Story DB: Docker `twt-125b-pg` (:5455, DB `twt_dev`), fresh. The auto-mode classifier refused `pnpm db:migrate` against it; BigDev ran
+  it (217 journal rows, `0217`'s `when` the max) — [[project_admin_browser_pass_launcher]]'s known refusal.
+- Red proofs: the genesis writer without the route failed `publication.spec.ts` with 23502 on `lead_route` (⛔ default — AC1); the TR1
+  leg (`AC5 / TR1: a NULL-authority row is claimed …`) FAILED with the claim's COALESCE reverted and passed with it restored.
+- The waiting pass re-reads EVERY `due` row (`-488` (1)), so a planted `partner_form` row is cancelled there before the claim meets it;
+  the S4 legs therefore fail the pass's page read (`-488` (2): its throw ends only the pass) so the CLAIM is what meets the row.
 
 ### Completion Notes List
 
@@ -967,8 +976,136 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
 - 2026-11-22 — Task 0.4: `deferred-work.md` "Deferred from: story 12-5b-…" (KB-1 … KB-9); dated lines on 12.5's K-12 and
   12.1's external-URL CTA item (⛔ "Closed by"); roster Row 55 dated line (⛔ leg moves; KB-6 recorded). The Row 26 / Row 55
   grant lines wait for the `NNNN+1` migration's commit (Task 9).
+- 2026-11-22 — Task 0.1 re-check at dev start: `origin/main` still `4db122e0`; migrations `0216` / `0217` free on every ref and worktree
+  (siblings stop at `0212`); journal `when` `1797998760000` / `1797998820000`, above every sibling's.
+- 2026-11-22 — **Task 1 (QE1).** `0216_marketplace-module-lead-route.sql`: the enum, `lead_route` (DEFAULT then DROP DEFAULT — TR2, ⛔
+  UPDATE), `partner_form_url`, the two lead columns nullable, the v1 CHECK replaced BY NAME by `…_manifest_schema_version` + `…_v1_is_
+  trust_sends`, `…_route_columns`, the route unique, the publication `lead_route` + composite FK (the old FK kept beside it), the
+  detail CHECK replaced with `cancelled:partner_form_route` (LOCKSTEP), and the NEW trigger `marketplace_lead_handoffs_route_guard`
+  (⛔ `marketplace_lead_handoffs_guard` touched). `0217_marketplace-partner-form-figures.sql`: the three tables with FORCE RLS, per-command
+  policies (the visits' FOR DELETE at birth), composite module FKs, and exactly the QE1 grants incl. `twt_service` SELECT + DELETE on
+  visits. Drizzle mirrors (three new schema + three RLS files). Live specs: `partner-form-schema.spec.ts` (pairing CHECKs, ⛔ default,
+  immutability, the trigger as superuser AND `twt_app` with a `trust_sends` control, unknown module → 23503, the grants catalog for
+  `twt_app` + `twt_service` — TR33, FORCE RLS + policies, the FOR DELETE policy under FORCE, the floor CHECK); catalog pins moved in
+  `projector-trigger`, `lead-handoff-schema`, the two RLS regression specs and `publication.spec.ts`.
+- 2026-11-22 — **Task 2 (QE2, QE3).** `MODULE_MANIFEST_SCHEMA_VERSION = 2` + `…_V1 = 1`; the v1 genesis arm's ONLY edit is its literal's
+  name (TR4); the payload is a `z.union` of v1 + two v2 route arms; `parseModuleManifest` parses `lead_route` FIRST, then that route's
+  strict arm, so every issue keeps its field path (G25, TR31); `ModuleManifest` is a discriminated union. `modulePartnerFormUrlSchema`
+  (QE3). Tests: `partner-form-manifest.test.ts` (paths, AC3's every case), `manifest-v2-payload.test.ts` (AC2 — a stored v1 genesis
+  built from the literal `1`, folded with the constant at 2), `partner-form-authoring.spec.ts` (live: both routes through
+  `authorModule`, and a stored v1 stream folding to its row).
+- 2026-11-22 — **Task 3 (QE4).** `ModuleLeadRouteRefusedError` (code `module.lead_route_partner_form`); `decideLead` refuses
+  `partner_form_route` after `not_found` and BEFORE the replay (TR27 — a planted lead event is NOT replayed); the projector refuses on
+  `lockedRow.leadRoute`; `sealLeadMemberFields(pool, enc, { pariwarId, moduleId, leadId, fields })` reads the route in its OWN short
+  `withPariwarScope` read that commits before KMS (at the KMS call every client of the test's pool is idle; a `partner_form` module →
+  zero KMS calls); `recordLeadHandoff` checks first inside its savepoint. `partner-form-send-guard.spec.ts` + the two unit stubs.
+- 2026-11-22 — **Task 4 (QE5).** Claim COALESCE in BOTH places (TR1); `readLeadHandoffModule` returns the route and nullable lead
+  fields; S4 decides a `partner_form` row FIRST (cancel + ONE `module_lead_handoff_route_refused` alarm, ⛔ secret / DNS / member read /
+  decrypt / audit / request); the waiting pass cancels such a row before the member's side; W15 `purgeExpiredPartnerFormVisits`
+  (MATERIALIZED-CTE, batch 500, `< clock − 90 days`) runs LAST after the claim loop, its throw ends only W15 (ONE
+  `visit_purge_failed:<error>` alarm). Live tick legs: AC5's planted row (`session_replication_role = replica`, committed — G26), the
+  waiting-pass cancel, TR1, W15 at 90d+1m vs 89d for an ordinary AND a death-reported member (QE10 (A), ⛔ special rule), a W15 throw with
+  a `trust_sends` row still delivered the same tick.
+- 2026-11-22 — **Task 5 (QE8, QE11–QE13).** `partner-form.ts`: `openPartnerFormVisit` (QE11's order; the shared reader
+  `readMemberStandingP2toP5` EXTRACTED from `readLeadHandoffPredicates` — its order, words and `unsound` cases unchanged, the 12.5 tick
+  tests green; ONE visit + ONE `went_to_partner` in one savepoint; the stored URL returned byte for byte; ⛔ audit line, ⛔ event — QE9 (A)),
+  `countPartnerFormEvent` (⛔ member by type), `recordPartnerFormTotals` (below 5 stored as `below_floor`), `listPartnerFormFigures` (every
+  figure floored). ⛔ Staff-read export of visits. Erasure: ONE `.delete(` (the file's first) on `(pariwar_id, member_id)`; RTBF pins
+  35 / 32 / 31 with the mock extended to record a `.delete()`; the live erasure spec shows the member's two rows gone and another
+  member's control row kept. Export: `profile.json` `partnerOfferVisits` + `ProfileSection` in the same change; the jobs strict-parse leg.
+- 2026-11-22 — **Task 6 (QE6, QE16).** DTOs (route on author / publish / detail / publication; the floored figures DTO REFUSES a figure
+  below 5 — the serializer is a second floor; `RecordPartnerFormTotalsRequest`); the publish pre-check → 409 `module.lead_route_mismatch`
+  BEFORE the wrapper (⛔ write, ⛔ audit line); `recordModulePublication({ leadRoute })`; the detail's figures (null for `trust_sends`);
+  NEW `POST …/modules/:moduleId/partner-form-totals` (pre-checks → 422 / 404 / 409 `module.not_partner_form`, then audited
+  `module.partner_form_totals_recorded`, Idempotency-Key replay). OpenAPI re-emitted — the semantic diff (anchors resolved) is additive
+  only (TR25); determinism green. `marketplace-admin.spec.ts` 45/45 incl. the new legs.
+- 2026-11-22 — **Task 7 (QE7 (A), QE16).** Wizard step (e) asks the route FIRST with ⛔ default, places only for `trust_sends`; step (f)
+  the route's fields; the summary restates the route; `FIELD_STEP` / `FIELD_LABEL` carry `lead_route` (e) and `partner_form_url` (f); the
+  publish panel's route radio (⛔ default; Publish disabled until chosen); the detail's route / page / "not used" lines, the figures
+  table ("fewer than 5"), and the totals form. ⛔ "report" / "receipt" / "invoice" (a test walks the new keys); the microcopy gate green.
+  Admin suite 2362/2362.
+- 2026-11-22 — **Task 8 (QE14, QE15).** `partner-form-link.ts` (`Linking.openURL` and nothing else) with its argument-identity test and
+  an import fence; `marketplace-i18n.ts`; the `marketplace` namespace registered in `catalog.ts` in all three places (the registration
+  test green); `microcopy.yaml` scans both files; the real-`t()` leg in both locales. ⭐ **Hindi tone review:** BigDev, by selection,
+  *"Accept as drafted (पेज)"* — recorded in `docs/tone-review-checklist.md`'s ad-hoc table (an owed row, then the acceptance row); Row
+  55 (b)'s "Hindi by tone review" is discharged for this key. Invisible-character scan of the Hindi: none (TR11).
+- 2026-11-22 — **Task 9 (QE17, AC13).** ADR-0044 dated lines at D3 and Consequences, ADR-0046 at §1 (+ changelog rows); ⛔ new ADR.
+  Fences: partner-boundary (after the W15 move), marketplace AST gate, the `apps/api` unit source fences, microcopy, i18n parity and
+  `catalog-registration.test.ts` — all green. **`ci:local` 41 / 41 in ONE run** on a FRESH container (`twt-125b-pg3`, :5457, DB `twt_dev`,
+  migrated by `ci:local` itself), after two earlier runs that found real defects: run 1 — lint (unused destructure names) and the
+  partner-boundary rule (c) finding; run 2 (fresh `twt-125b-pg2`) — `apps/jobs/tests/module-activation.test.ts` still authored a manifest
+  without `lead_route` (fixed), and a mobile a11y spec in an untouched file (`wa-signup-step-render.test.ts`) that passed alone (80/80) —
+  a parallel-load flake. Code committed `714b30a9` (BigDev: "Commit, then finish records"); AFTER it, roster Row 26 and Row 55 got their
+  grant dated lines (the `0217` `twt_service` grants are in the migration; the jobs login itself stays Row 26's). ⛔ pushed. Row 55 (d)'s
+  line waits for `done`.
+
+⭐ **Engineering variances from the story text (each the narrow or the house-consistent side; none changes a ruling):**
+1. The copy token is `{partner}` (single brace), ⛔ the story's `{{partner}}`: the house resolver's token is `/\{(\w+)\}/` — a doubled
+   brace would render the partner's name inside stray braces (the 11a.2 `{{max}}` defect).
+2. The export keys are camelCase (`partnerOfferVisits: [{ moduleId, offerNameEn, offerNameHi, openedAt }]`) like every other
+   `profile.json` key, ⛔ QE8's snake_case spelling.
+3. The partner totals: `totals_id` is the ENTRY's id and the PK is `(totals_id, stage_order)`; `stage_order` is bounded 1–20
+   (`PARTNER_FORM_STAGES_MAX`, a new bound — QE12 named none).
+4. `AuthorModuleRequest`'s three route-specific fields are `.nullable().optional()`; `lead_route` is required (⛔ default).
+5. The publication's old `(pariwar_id, module_id)` FK is KEPT beside the new route FK (stricter; ⛔ dropped).
+6. `countPartnerFormEvent` refuses an unknown or `trust_sends` module only — it does ⛔ check the offer is active (12.3's emitters call it
+   where the card is shown).
+7. W15's `purgeExpiredPartnerFormVisits` lives in `partner-form.ts`, ⛔ `lead-handoff.ts` as Task 4 listed: the partner-boundary fence's
+   rule (c) holds the transport file to writing `marketplace_lead_handoffs` alone, and the first `ci:local` caught the DELETE there. The
+   sweep still calls it LAST in its tick, on its own pool — only the file moved.
+8. The lint and fence findings of the first `ci:local` (unused destructure names in three test files; the rule (c) finding above) were
+   fixed; the run's only live-DB failure was that move landing mid-run.
+
+⚠ **An observation for BigDev — ⛔ fixed here (QE13 (A) was answered as put):** the detail page shows each kind's ALL-DAYS total AND a
+per-day list, each floored at 5. When the total is 5 or more and only one day is below the floor, the hidden day can be worked out
+(total minus the days shown) — the small-number residual R3 B's floor was meant to close. If that matters, the narrow fixes are a
+per-day list without a total, or a floor on the difference too; it is a QE13 amendment (author-commit), ⛔ a Panel question.
 
 ### File List
+
+Migrations / schema / policies (domain):
+- `packages/domain/migrations/0216_marketplace-module-lead-route.sql` (new)
+- `packages/domain/migrations/0217_marketplace-partner-form-figures.sql` (new)
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/schema/marketplace_modules.ts`, `marketplace_module_publications.ts`, `marketplace_lead_handoffs.ts`, `index.ts`
+- `packages/domain/src/schema/marketplace_partner_form_visits.ts`, `marketplace_partner_form_counts.ts`, `marketplace_partner_form_totals.ts` (new)
+- `packages/domain/src/policies/marketplace-partner-form-visits-rls.ts`, `marketplace-partner-form-counts-rls.ts`, `marketplace-partner-form-totals-rls.ts` (new), `policies/index.ts`
+
+Domain:
+- `packages/domain/src/marketplace/partner-form.ts` (new)
+- `packages/domain/src/marketplace/commands.ts`, `errors.ts`, `events.ts`, `filters.ts`, `index.ts`, `lead-handoff.ts`, `project.ts`, `publication.ts`, `state.ts`
+- `packages/domain/src/member/anonymize.ts`, `packages/domain/src/data-export/assemble.ts`
+- `packages/events/src/registry.ts`
+
+Contracts / API / jobs:
+- `packages/contracts/src/modules/dto.ts`, `enums.ts`, `index.ts`; `packages/contracts/src/data-export/data-export.ts`
+- `packages/contracts/scripts/emit-openapi.ts`, `openapi/v1.yaml`
+- `apps/api/src/modules/marketplace/errors.ts`, `handlers.ts`, `routes.ts`
+- `apps/jobs/src/scheduler/module-lead-handoff.ts`
+
+Admin / mobile / i18n:
+- `apps/admin/src/api/client.ts`, `apps/admin/src/api/hooks.ts`
+- `apps/admin/src/modules/marketplace/ModuleDetailPage.tsx`, `ModuleWizard.tsx`, `derive.ts`, `i18n-en.ts`
+- `apps/mobile/lib/partner-form-link.ts`, `apps/mobile/lib/marketplace-i18n.ts` (new)
+- `packages/i18n/locales/en/marketplace.json`, `packages/i18n/locales/hi/marketplace.json` (new); `packages/i18n/src/catalog.ts`
+- `microcopy.yaml`
+
+Tests:
+- `packages/domain/tests/integration/marketplace/partner-form-schema.spec.ts`, `partner-form-authoring.spec.ts`, `partner-form-send-guard.spec.ts`, `partner-form-visit.spec.ts` (new)
+- `packages/domain/tests/marketplace/partner-form-manifest.test.ts`, `manifest-v2-payload.test.ts` (new)
+- `packages/domain/tests/integration/marketplace/_fixtures.ts`, `_lead-handoff-fixtures.ts`, `commands.spec.ts`, `lead-handoff-commands.spec.ts`, `lead-handoff-schema.spec.ts`, `projector-trigger.spec.ts`, `publication.spec.ts`
+- `packages/domain/tests/integration/rls/marketplace-lead-handoffs-policy-regression.spec.ts`, `marketplace-module-publications-policy-regression.spec.ts`
+- `packages/domain/tests/marketplace/commands-guards.test.ts`, `filters.test.ts`, `lead-retry.test.ts`; `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/contracts/tests/modules.test.ts`
+- `apps/api/tests/integration/marketplace-admin.spec.ts`
+- `apps/jobs/tests/module-lead-handoff.test.ts`, `apps/jobs/tests/data-export.test.ts`
+- `apps/admin/tests/module-partner-form.test.tsx` (new); `marketplace-derive.test.ts`, `module-detail.test.tsx`, `module-wizard.test.tsx`, `modules-route.test.tsx`
+- `apps/mobile/tests/unit/partner-form-link.test.ts`, `marketplace-notice-copy.test.ts` (new)
+
+Docs / records:
+- `docs/adr/ADR-0044-module-manifest-schema-versioning.md`, `docs/adr/ADR-0046-partner-lead-handoff-transport.md`
+- `docs/tone-review-checklist.md`
+- `_bmad-output/implementation-artifacts/12-5b-partner-own-form-route.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ### Change Log
 
@@ -976,4 +1113,5 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
 |---|---|---|
 | 2026-11-22 | 1.0 | Created at pin `4db122e0` on `story/12-5b-partner-own-form-route`; row backlog → ready-for-dev. |
 | 2026-11-22 | 1.2 | Task 0 complete: answers recorded, Decision `-489` (`7b4f93db`), the Task 0.4 records; status header and Completion Notes updated. ⛔ code. |
+| 2026-11-22 | 1.3 | `bmad-dev-story 12.5b` → **review**: Tasks 1–9 done; code `714b30a9`; ci:local 41/41 on a fresh container; Row 26 / Row 55 grant lines after the commit. Tasks 1–8 built and tested (migrations `0216` / `0217`; manifest v2; the send guard in five places; the sweep's route cancel + W15; visits / counts / totals; contracts + API + OpenAPI; admin wizard / publish / detail; mobile opener + the `marketplace` namespace, Hindi accepted by BigDev); Task 9's ADR dated lines; engineering variances and one observation recorded in the Completion Notes. |
 | 2026-11-22 | 1.1 | Validated at the same pin (`origin/main` unmoved; numbers re-grepped). G4, G8, G17, G18 extended; G24–G27 added. QE1 grants + policies table (a FOR DELETE policy for erasure; `twt_service` for W15 and the export); QE2 v1 arm pointed at `…_V1`, route-first input parse; QE4 (c) seal's own short read before KMS (amends `-483` QE18); QE4 (e) visibility reason + unknown-module behaviour; QE5 W15 after the claim loop with its own alarm; QE6 wiring + the epic note's variance; QE8 erasure / RTBF pins (three); QE10 re-grounded (Told 3), option (C) added, ⭐ ASK; QE11 names `readLeadHandoffPredicates`; QE14 catalog registration + microcopy scope; QE16 `FIELD_STEP` / `FIELD_LABEL`; `-485` item 3 superseded in part at Task 0.3; the 12.1 CTA item's dated line at Task 0.4; ACs 2, 4, 5, 8, 11, 12, 13 and Tasks 0–9 to match; TR4, TR5, TR13, TR26, TR28 rewritten; TR31–TR33 added. |

@@ -10,8 +10,8 @@
 //   · Idempotency (AC1) — re-confirm with the same tr → same receipt (no 2nd row), no 2nd event.
 //   · Policy-unavailable (AC3) — gate satisfied but clause unprovisioned → 503; then provision +
 //     re-confirm (same tr) → lock-in completes.
-//   · Reference Code (AC4) — 6-digit code → member_attribution row, no validation; omitted → no row;
-//     malformed → 400 (contract regex).
+//   · Reference Code (3.6b AC4) — REMOVED by Story 3.15 (DL6): a confirm carrying `referenceCode` → 400; the
+//     confirm writes ⛔ member_attribution row (the code is recorded by the signup `assisted` step).
 //   · Auth — no session → 401; terminal-state member → 409. Intent unconfigured VPA → 503.
 //
 // Member creation is the signup flow (3.6a); this harness SEEDS members + clauses directly (committed,
@@ -462,56 +462,35 @@ describe.skipIf(!hasDatabase)('Vyawastha Shulk — E2E (:5433)', () => {
     }
   });
 
-  it('Reference Code (AC4): a 6-digit code → member_attribution row (no validation); omitted → no row', async () => {
-    const t = await createTestApp({ env: VPA_ENV });
-    try {
-      const withCode = await seedMemberPendingFee(t);
-      await seedAllGateFacts(t, withCode.pariwarId, withCode.memberId);
-      const tokA = token(t, withCode.memberId, withCode.pariwarId);
-      const intentA = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/intent', { token: tokA });
-      const withRes = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
-        payload: { tr: String(intentA.body.tr), utr: goodUtr, referenceCode: '654321' },
-        token: tokA,
-      });
-      expect(withRes.status).toBe(200);
-      const attr = await t.pool.query<{ attribution_source: string }>(
-        `SELECT attribution_source FROM member_attribution WHERE member_id = $1`,
-        [withCode.memberId],
-      );
-      expect(attr.rows).toHaveLength(1);
-      expect(attr.rows[0]?.attribution_source).toBe('654321');
-
-      // Omitted code → no attribution row.
-      const noCode = await seedMemberPendingFee(t);
-      await seedAllGateFacts(t, noCode.pariwarId, noCode.memberId);
-      const tokB = token(t, noCode.memberId, noCode.pariwarId);
-      const intentB = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/intent', { token: tokB });
-      await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
-        payload: { tr: String(intentB.body.tr), utr: goodUtr }, token: tokB,
-      });
-      const none = await t.pool.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM member_attribution WHERE member_id = $1`,
-        [noCode.memberId],
-      );
-      expect(none.rows[0]?.n).toBe(0);
-    } finally {
-      await teardown(t);
-    }
-  });
-
-  it('Reference Code (AC4): a malformed (non-6-digit) code → 400 (contract regex)', async () => {
+  it('Story 3.15 DL6 (AC5): a confirm carrying a referenceCode → 400, ⛔ receipt, ⛔ attribution; the same body without it → 200, ⛔ attribution', async () => {
     const t = await createTestApp({ env: VPA_ENV });
     try {
       const { memberId, pariwarId } = await seedMemberPendingFee(t);
       await seedAllGateFacts(t, pariwarId, memberId);
       const tok = token(t, memberId, pariwarId);
       const intent = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/intent', { token: tok });
-      const res = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
-        payload: { tr: String(intent.body.tr), utr: goodUtr, referenceCode: '12ab' },
+      const attributionRows = async (): Promise<number> =>
+        (await t.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM member_attribution WHERE member_id = $1`, [memberId])).rows[0]?.n ?? -1;
+
+      // The payment step no longer takes a code (`.strict()` refuses the key) — for a well-formed code AND a malformed one.
+      for (const referenceCode of ['654321', '12ab']) {
+        const refused = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
+          payload: { tr: String(intent.body.tr), utr: goodUtr, referenceCode },
+          token: tok,
+        });
+        expect(refused.status).toBe(400);
+      }
+      expect(await receiptCount(t, memberId)).toBe(0);
+      expect(await attributionRows()).toBe(0);
+
+      // Control — the same confirm without the key persists the receipt (AR-67) and still writes ⛔ attribution (N6).
+      const ok = await inject(t, 'POST', '/api/v1/member/vyawastha-shulk/confirm', {
+        payload: { tr: String(intent.body.tr), utr: goodUtr },
         token: tok,
       });
-      expect(res.status).toBe(400);
-      expect(await receiptCount(t, memberId)).toBe(0);
+      expect(ok.status).toBe(200);
+      expect(await receiptCount(t, memberId)).toBe(1);
+      expect(await attributionRows()).toBe(0);
     } finally {
       await teardown(t);
     }

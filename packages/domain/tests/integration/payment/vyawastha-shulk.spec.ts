@@ -21,7 +21,9 @@ import {
   getReceiptByTr,
   insertMemberAttribution,
   insertVyawasthaShulkReceipt,
+  isMemberAttributionDuplicate,
   isReceiptTrDuplicate,
+  readMemberAttributionForMember,
 } from '../../../src/payment/index.js';
 import * as schema from '../../../src/schema/index.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
@@ -118,6 +120,46 @@ describe.skipIf(!hasDatabase)(
       await enterAppScope(client, PARIWAR_A);
       const rows = await tx.select().from(schema.memberAttribution);
       expect(rows.every((r) => r.pariwarId !== PARIWAR_B)).toBe(true);
+    });
+
+    it('Story 3.15 — readMemberAttributionForMember: null before, the code after, per member; RLS hides another Pariwar', async () => {
+      const { tx, client } = getTx();
+      const mid = randomUUID();
+      const other = randomUUID();
+      const midB = randomUUID();
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      await seedMember(tx, PARIWAR_A, { memberId: other });
+      await seedMember(tx, PARIWAR_B, { memberId: midB });
+      expect(await readMemberAttributionForMember(tx, toMemberId(mid))).toBeNull();
+      await insertMemberAttribution(tx, { memberId: toMemberId(mid), pariwarId: PARIWAR_A, attributionSource: '135790' });
+      await insertMemberAttribution(tx, { memberId: toMemberId(midB), pariwarId: PARIWAR_B, attributionSource: '246801' });
+
+      await enterAppScope(client, PARIWAR_A);
+      expect(await readMemberAttributionForMember(tx, toMemberId(mid))).toEqual({ attributionSource: '135790' });
+      expect(await readMemberAttributionForMember(tx, toMemberId(other))).toBeNull();
+      // Another Pariwar's capture is invisible under this scope — with the control: under its own scope it reads.
+      expect(await readMemberAttributionForMember(tx, toMemberId(midB))).toBeNull();
+      await enterAppScope(client, PARIWAR_B);
+      expect(await readMemberAttributionForMember(tx, toMemberId(midB))).toEqual({ attributionSource: '246801' });
+    });
+
+    it('Story 3.15 — a second capture for one member raises 23505 on member_attribution_member_uq (isMemberAttributionDuplicate)', async () => {
+      const { tx } = getTx();
+      const mid = randomUUID();
+      await seedMember(tx, PARIWAR_A, { memberId: mid });
+      await insertMemberAttribution(tx, { memberId: toMemberId(mid), pariwarId: PARIWAR_A, attributionSource: '111111' });
+      let caught: unknown;
+      try {
+        await insertMemberAttribution(tx, { memberId: toMemberId(mid), pariwarId: PARIWAR_A, attributionSource: '222222' });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeDefined();
+      expect(isMemberAttributionDuplicate(caught)).toBe(true);
+      // Narrow: another 23505 (the receipt's `tr`) and a non-pg error are ⛔ this one.
+      expect(isMemberAttributionDuplicate({ code: '23505', constraint: 'vyawastha_shulk_receipts_tr_uq' })).toBe(false);
+      expect(isMemberAttributionDuplicate({ cause: { code: '23505', constraint: 'member_attribution_member_uq' } })).toBe(true);
+      expect(isMemberAttributionDuplicate(new Error('x'))).toBe(false);
     });
 
     it('FK cascade (RTBF): deleting the member sweeps its receipt + attribution rows', async () => {

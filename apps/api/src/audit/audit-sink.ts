@@ -159,8 +159,9 @@ export type AuthAuditEventType =
   | 'member_contribution.failure_app_issue'
   | 'member_contribution.failure_network_issue'
   | 'member_contribution.failure_other'
-  // The Reference Code port-seam capture (D2/R5) — attribution_source stored; NO registry validation,
-  // NO new lifecycle event (the 14-event member vocabulary is frozen). Context carries no PII.
+  // A helper's 6-digit code recorded at signup (Story 3.15's `assisted` step; was the 3.6b payment
+  // step's Reference Code) — stored once it resolves to a holder in the Pariwar. NO new lifecycle event
+  // (the 14-event member vocabulary is frozen). Context carries no PII and ⛔ worker.
   | 'member_attribution.captured'
   // The lock-in clock-start marker (member.lock_in_entered emitted) — context carries the FR-8
   // lock_in_days_at_join snapshot + the resolved lock_in_policy_version (both NON-PII).

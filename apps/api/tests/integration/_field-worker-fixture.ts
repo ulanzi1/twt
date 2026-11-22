@@ -90,11 +90,17 @@ export function actAuthorization(
 }
 
 /**
- * Story 13.1c review (CR10) — SUSPEND (`under_review`) or REACTIVATE a worker through the PUBLIC commands on `client`, under the
- * act's own key at the district the row holds now. Like `moveTestFieldWorker`, the row lock is held until the caller's transaction
- * ends — a race leg commits it while a request waits.
+ * Story 13.1c review (CR10) — SUSPEND (`under_review` by default) or REACTIVATE a worker through the PUBLIC commands on `client`, under
+ * the act's own key at the district the row holds now. Like `moveTestFieldWorker`, the row lock is held until the caller's transaction
+ * ends — a race leg commits it while a request waits. Story 3.15 (AC4) — `reason` picks the suspension's reason (`at_worker_request`).
  */
-export async function actTestFieldWorker(client: pg.PoolClient, pariwarId: string, id: ids.FieldWorkerId, act: 'suspend' | 'reactivate'): Promise<void> {
+export async function actTestFieldWorker(
+  client: pg.PoolClient,
+  pariwarId: string,
+  id: ids.FieldWorkerId,
+  act: 'suspend' | 'reactivate',
+  reason: 'under_review' | 'at_worker_request' = 'under_review',
+): Promise<void> {
   const actorId = randomUUID();
   const { rows } = await client.query<{ district: string }>('SELECT district FROM field_workers WHERE field_worker_id = $1', [id]);
   if (rows[0] === undefined) throw new Error('[_field-worker-fixture] actTestFieldWorker: no such worker');
@@ -106,7 +112,7 @@ export async function actTestFieldWorker(client: pg.PoolClient, pariwarId: strin
     actorId,
     authorization: actAuthorization(act === 'suspend' ? 'field_worker.suspend' : 'field_worker.reactivate', pariwarId, rows[0].district, actorId),
   };
-  if (act === 'suspend') await fieldWorker.suspendFieldWorker(client, { ...base, reasonCode: 'under_review' });
+  if (act === 'suspend') await fieldWorker.suspendFieldWorker(client, { ...base, reasonCode: reason });
   else await fieldWorker.reactivateFieldWorker(client, base);
 }
 

@@ -9,8 +9,12 @@
 // activates. NO `member.reference_code.captured` lifecycle event is minted (the 14-event member
 // vocabulary is frozen — R5); the capture is recorded via a Story 1.10 audit line only.
 // ⭐ Story 13.2 (2026-11-03): the registry and its Pariwar-scoped lookup now EXIST in `../attribution-code/` (codes table
-// `field_worker_attribution_codes`, migration 0199). This capture is STILL unvalidated and un-resolved — Story 13.8 wires the
-// lookup into signup (through the API door), resolving each capture as of its own `captured_at`.
+// `field_worker_attribution_codes`, migration 0199).
+// ⭐ Story 3.15 (2026-11-22): the capture is now made at signup by its own `assisted` step and RESOLVED there through Story
+// 13.2's API door, `asOf: { captureId }` in the same transaction — a code nobody in the Pariwar holds is refused and ⛔ stored.
+// The payment step no longer captures (3.15 DL6). The column still holds only the code (⛔ field-worker id): Story 13.5
+// derives the holder and the worker's state AT `captured_at` for credit. Rows written by the 3.6b payment step before 3.15
+// are unvalidated (13.2 C4's backfill).
 //
 // ── NO FK to any field-worker / Epic-13 table (D2) ────────────────────────────────────────────────
 // There is deliberately no FK on `attribution_source` — the registry it would reference does not
@@ -44,8 +48,8 @@ export const memberAttribution = pgTable(
     // Multi-tenant scope (RLS predicate column; branded).
     pariwarId: uuid('pariwar_id').notNull().$type<PariwarId>(),
 
-    // The captured 6-digit Reference Code, verbatim — NO field-worker FK, NO registry validation (D2).
-    // Epic 13 backfills attribution/commission from this when it activates.
+    // The captured 6-digit code, verbatim — NO field-worker FK (D2). Validated against the registry at capture since
+    // Story 3.15 (resolved, ⛔ stored resolved); Story 13.5 derives credit from it.
     attributionSource: text('attribution_source').notNull(),
 
     // DB-authoritative capture instant (§1.11).

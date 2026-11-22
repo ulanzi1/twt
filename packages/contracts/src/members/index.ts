@@ -17,3 +17,5 @@ export * from './validity.js';
 export * from './workplace.js';
 // Story 6.36b — PEOPLE WHO KNOW ME: contact matching (positions only), the named people, the requests naming the member.
 export * from './known-people.js';
+// Story 3.15 — "Did someone help you register?": the field worker's 6-digit code at signup (GET status / POST record).
+export * from './assisted-code.js';

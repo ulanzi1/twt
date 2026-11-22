@@ -4,7 +4,7 @@
 //   · intent  — build a SERVER-authoritative UPI Intent URL (VPA + amount from config; never
 //               client-named — R4) + the `tr` idempotency nonce. No DB; the OS UPI app handles payment.
 //   · confirm — THE load-bearing path. Self-attest the UTR → ALWAYS persist the AR-67 receipt (D3),
-//               capture the optional Reference Code (D2 port seam), then evaluate the 5-condition
+//               then evaluate the 5-condition
 //               lock-in gate (AC2) and emit member.vyawastha_shulk_paid + member.lock_in_entered ONLY
 //               when all five hold (R2). The receipt and the gated transition run in TWO scope-txs so a
 //               gate-fail / policy-503 leaves the receipt durably committed (R2 ordering decision).
@@ -30,7 +30,7 @@ import type {
   VyawasthaShulkRenewalStatusResponse,
   VyawasthaShulkStatusResponse,
 } from '@twt/contracts';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { ids, member as memberDomain, payment as paymentDomain, schema } from '@twt/domain';
 import type { FastifyRequest } from 'fastify';
 
@@ -125,11 +125,11 @@ export function createVyawasthaShulkHandlers(deps: AppDeps) {
       const now = deps.clock();
       const amountInr = deps.config.vyawasthaShulkAmountInr;
 
-      // ── tx-1: persist the receipt (+ optional attribution) and COMMIT (D3 — receipt always retained,
-      //    even if the gate/policy step in tx-2 later fails) ────────────────────────────────────────
+      // ── tx-1: persist the receipt and COMMIT (D3 — receipt always retained, even if the gate/policy
+      //    step in tx-2 later fails). ⛔ Reference Code is captured here any more: Story 3.15 (DL6) moved it to
+      //    its own signup step (`modules/member-attribution/`), the ONE writer of `member_attribution` (N6). ──
       let receiptView: VyawasthaShulkConfirmResponse['receipt'] | undefined;
       let idempotent = false;
-      let attributionCaptured = false;
       const scopeTx1 = await openScopeTx(deps, pariwarIdStr);
       let ok1 = false;
       try {
@@ -165,26 +165,8 @@ export function createVyawasthaShulkHandlers(deps: AppDeps) {
             utr: row.utr,
             paymentMethod: row.paymentMethod,
           };
-          // Receipt committed — set ok1 BEFORE attribution so the commit fires even if attribution
-          // fails (AR-67 requires the receipt to survive any attribution outcome; D3).
+          // Receipt inserted — commit it (AR-67; D3).
           ok1 = true;
-          // Capture the optional Reference Code (D2) under a SAVEPOINT so any attribution error
-          // can be rolled back to the savepoint without aborting the receipt commit.
-          if (body.referenceCode !== undefined) {
-            await scopeTx1.tx.execute(sql`SAVEPOINT attr_capture`);
-            try {
-              await paymentDomain.insertMemberAttribution(scopeTx1.tx, {
-                memberId,
-                pariwarId,
-                attributionSource: body.referenceCode,
-              });
-              await scopeTx1.tx.execute(sql`RELEASE SAVEPOINT attr_capture`);
-              attributionCaptured = true;
-            } catch {
-              await scopeTx1.tx.execute(sql`ROLLBACK TO SAVEPOINT attr_capture`);
-              // Attribution failure suppressed — receipt must always commit (AR-67/D3).
-            }
-          }
         } catch (err) {
           // Same-`tr` re-confirm (AC1): the UNIQUE violation marks the idempotent path — do NOT insert
           // a second receipt or re-capture; load the existing receipt below and re-evaluate lock-in.
@@ -205,13 +187,6 @@ export function createVyawasthaShulkHandlers(deps: AppDeps) {
         throw err;
       }
       await closeScopeTx(scopeTx1, ok1);
-
-      if (attributionCaptured) {
-        emitAuthAudit(deps, request, 'member_attribution.captured', {
-          actorId: memberIdStr,
-          pariwarId: pariwarIdStr,
-        });
-      }
 
       // ── tx-2: evaluate the gate + (if satisfied) emit the two events + write the snapshot column ──
       const scopeTx2 = await openScopeTx(deps, pariwarIdStr);

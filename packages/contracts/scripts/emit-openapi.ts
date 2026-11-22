@@ -132,6 +132,10 @@ const {
   MemberStepUpVerifyResponse,
   // Story 3.6a — first-signup member-creation request (response reuses MemberFullSession).
   MemberSignupCreateRequest,
+  // Story 3.15 — "Did someone help you register?" (the field worker's 6-digit code at signup).
+  MemberAssistedCodeRequest,
+  MemberAssistedCodeResponse,
+  MemberAssistedCodeStatusResponse,
 } = await import('../src/members/index.js');
 // Story 3.6a — the member-facing T&C read/accept DTOs (the signup wizard's `tc` step; the SECOND
 // consent-registry consumer). The MEMBER surface, distinct from the trustee authoring contracts.
@@ -401,6 +405,16 @@ const memberComponents = {
   MemberSignupCreateRequest: MemberSignupCreateRequest.openapi('MemberSignupCreateRequest'),
 } as const;
 for (const [name, schema] of Object.entries(memberComponents)) {
+  registry.register(name, schema);
+}
+
+// Story 3.15 — the assisted-code components (the signup wizard's `assisted` step).
+const memberAssistedCodeComponents = {
+  MemberAssistedCodeRequest: MemberAssistedCodeRequest.openapi('MemberAssistedCodeRequest'),
+  MemberAssistedCodeResponse: MemberAssistedCodeResponse.openapi('MemberAssistedCodeResponse'),
+  MemberAssistedCodeStatusResponse: MemberAssistedCodeStatusResponse.openapi('MemberAssistedCodeStatusResponse'),
+} as const;
+for (const [name, schema] of Object.entries(memberAssistedCodeComponents)) {
   registry.register(name, schema);
 }
 
@@ -2794,6 +2808,46 @@ registry.registerPath({
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 
+// ── Story 3.15 — "Did someone help you register?" (member-session-gated; the wizard's `assisted` step) ──
+// N2: both answers carry ONLY `recorded` — ⛔ a worker id, name or state (Decision 2026-11-22-493 A).
+const memberAssistedCodeTags = ['member-signup'];
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/member/signup/assisted-code',
+  summary: 'Signup — is a helper’s code already recorded for this member?',
+  description:
+    'Returns whether a 6-digit code from the person who helped the member register is already recorded (the signup step is ' +
+    'skipped when it is). A read ⛔ records anything and says nothing about the code or its holder. Requires a member session.',
+  tags: memberAssistedCodeTags,
+  responses: {
+    200: { description: 'Whether a code is recorded', content: jsonOf(memberAssistedCodeComponents.MemberAssistedCodeStatusResponse) },
+    401: errorResponse('Authentication required'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/member/signup/assisted-code',
+  summary: 'Signup — record the 6-digit code from the person who helped the member register',
+  description:
+    'Records the code once, while the member is signing up (pending-kyc / pending-fee), if someone in the member’s Pariwar ' +
+    '(taken from the session, ⛔ the body) holds it. A known code is answered the same way whatever its holder’s standing; the ' +
+    'answer names ⛔ holder. The same code again answers 200; a different code after one is recorded is refused 409. A code ' +
+    'nobody holds is refused 422 and ⛔ stored. Rate-limited per member.',
+  tags: memberAssistedCodeTags,
+  request: { body: { content: jsonOf(memberAssistedCodeComponents.MemberAssistedCodeRequest), required: true } },
+  responses: {
+    200: { description: 'The same code was already recorded', content: jsonOf(memberAssistedCodeComponents.MemberAssistedCodeResponse) },
+    201: { description: 'The code is recorded', content: jsonOf(memberAssistedCodeComponents.MemberAssistedCodeResponse) },
+    400: errorResponse('Request validation failed (not 6 digits, or an extra key)'),
+    401: errorResponse('Authentication required'),
+    409: errorResponse('The member is past signup (attribution.not_signing_up) or a different code is recorded (attribution.already_recorded)'),
+    422: errorResponse('Nobody in the member’s Pariwar holds the code (attribution.code_not_found)'),
+    429: errorResponse('Too many attempts — retry later'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+
 // ── Story 3.6b — signup ₹110 Vyawastha Shulk (member-session-gated; the wizard's final step) ──
 // intent (build the server-authoritative upi://pay URL + the tr idempotency nonce) + confirm
 // (self-attest the UTR → ALWAYS persist the AR-67 receipt; emit member.vyawastha_shulk_paid +
@@ -2824,8 +2878,8 @@ registry.registerPath({
   summary: 'Signup fee — self-attest the UTR → persist the receipt + the GATED lock-in transition',
   description:
     'Persists a vyawastha_shulk_receipts row ALWAYS (AR-67 indefinite retention; idempotent on the ' +
-    '`tr` — a re-confirm returns the existing receipt without a second insert or re-emit). Captures ' +
-    'the optional 6-digit Reference Code (D2 port seam — stored, NOT validated). Then evaluates the ' +
+    '`tr` — a re-confirm returns the existing receipt without a second insert or re-emit). ⛔ code is ' +
+    'captured here (Story 3.15: a helper’s code is recorded at POST /api/v1/member/signup/assisted-code). Then evaluates the ' +
     '5-condition lock-in gate (KYC + nominees + medical + T&C + the receipt); emits ' +
     'member.vyawastha_shulk_paid (pending-fee → lock-in) + member.lock_in_entered (with the FR-8 ' +
     'lock_in_days_at_join snapshot) ONLY when all five hold — otherwise the receipt persists, no ' +
@@ -2836,7 +2890,7 @@ registry.registerPath({
   request: { body: { content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkConfirmRequest), required: true } },
   responses: {
     200: { description: 'Receipt persisted (lock-in entered, or outstanding steps listed)', content: jsonOf(vyawasthaShulkComponents.VyawasthaShulkConfirmResponse) },
-    400: errorResponse('Validation failed (bad UTR format or Reference Code)'),
+    400: errorResponse('Validation failed (bad UTR format, or an extra key)'),
     401: vyawasthaShulkAuth,
     409: errorResponse('Member not found / terminal state'),
     503: errorResponse('The lock-in policy is not provisioned for this Pariwar (lock_in.policy_unavailable)'),

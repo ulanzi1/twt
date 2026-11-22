@@ -12,8 +12,10 @@
 // ── Server-authoritative money/payee (R4) ───────────────────────────────────────────────────────────
 // The intent RESPONSE carries the `upiUrl` + `vpa` + `amountInr` the SERVER built/resolved from config
 // — the client NEVER names the amount or payee (a malicious client could otherwise pay ₹0 / a wrong
-// VPA). The confirm REQUEST carries only `tr` (the server-minted idempotency ref), the self-attested
-// `utr`, and the optional `referenceCode` — never an amount/VPA.
+// VPA). The confirm REQUEST carries only `tr` (the server-minted idempotency ref) and the self-attested
+// `utr` — never an amount/VPA. (Story 3.15 DL6 REMOVED the optional `referenceCode`: the field worker's
+// code is asked in its own signup step — `members/assisted-code.ts` — and a confirm still sending it is
+// refused 400 by `.strict()`.)
 
 import { z } from 'zod';
 
@@ -49,17 +51,13 @@ export type VyawasthaShulkIntentResponse = z.output<typeof VyawasthaShulkIntentR
  * `POST /member/vyawastha-shulk/confirm` — self-attest the UTR after returning from the UPI app.
  * `tr` is the intent's idempotency nonce (a re-confirm with the same `tr` returns the existing receipt).
  * `utr` is validated PERMISSIVELY (12-digit numeric OR 22-char alphanumeric NEFT/RTGS — UX §"UTR
- * self-attest"; not matcher-verified). `referenceCode` is the OPTIONAL 6-digit field-worker code (D2
- * port seam — format-checked here, stored as attribution_source, NOT validated against a registry).
+ * self-attest"; not matcher-verified). ⛔ `referenceCode` — moved to `POST /member/signup/assisted-code`
+ * (Story 3.15 DL6); `.strict()` refuses it.
  */
 export const VyawasthaShulkConfirmRequest = z
   .object({
     tr: z.string().min(1),
     utr: z.string().regex(/^\d{12}$|^[A-Za-z0-9]{22}$/, 'UTR must be 12 digits or 22 alphanumerics'),
-    referenceCode: z
-      .string()
-      .regex(/^\d{6}$/, 'Reference Code must be 6 digits')
-      .optional(),
   })
   .strict();
 export type VyawasthaShulkConfirmRequest = z.output<typeof VyawasthaShulkConfirmRequest>;
@@ -140,8 +138,8 @@ export type VyawasthaShulkRenewalStatusResponse = z.output<
 // The renewal intent reuses the SIGNUP intent shape (`VyawasthaShulkIntentResponse`) — same
 // server-authoritative VPA/amount + `tr` nonce, differing only in the `tn` grammar
 // (`renewal-shulk-{memberId}-{year}`) which is server-internal and not part of the wire contract. The
-// renewal confirm REQUEST reuses `VyawasthaShulkConfirmRequest` (`tr` + `utr`; `referenceCode` is
-// signup-only and simply unused on renewal). Only the confirm RESPONSE differs — a renewal has NO
+// renewal confirm REQUEST reuses `VyawasthaShulkConfirmRequest` (`tr` + `utr`; Story 3.15 removed the
+// signup-only `referenceCode`). Only the confirm RESPONSE differs — a renewal has NO
 // lock-in gate, so it carries the receipt + whether a fresh receipt was persisted this request.
 
 /**

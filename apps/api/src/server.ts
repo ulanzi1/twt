@@ -27,6 +27,7 @@ import { registerMemberAuthModule } from './modules/auth/member/index.js';
 import { registerKycModule } from './modules/kyc/index.js';
 import { registerKnownPeopleModule } from './modules/known-people/index.js';
 import { registerLifeEventsModule } from './modules/life-events/index.js';
+import { registerMemberAttributionModule } from './modules/member-attribution/index.js';
 import { registerMemberLanguageModule } from './modules/member-language/index.js';
 import { registerNomineeLinksModule } from './modules/nominee-links/index.js';
 import { registerMedicalModule } from './modules/medical/index.js';
@@ -205,6 +206,9 @@ export async function buildServer(deps: AppDeps, opts: BuildServerOptions = {}):
   // AR-67 receipt always; the FIRST production member.vyawastha_shulk_paid + member.lock_in_entered
   // caller, emitted ONLY when the 5-condition lock-in gate passes). Member-session-gated.
   registerVyawasthaShulkModule(app, deps);
+  // Story 3.15 — "Did someone help you register?" (the signup `assisted` step: GET status / POST a helper's 6-digit code,
+  // resolved through Story 13.2's door as of its own capture). Member-session-gated; the ONE member_attribution writer.
+  registerMemberAttributionModule(app, deps);
   // Story 3.7 — member home-screen lock-in clock widget read surface (GET /member/lock-in-status; the
   // read seam over the 3.6b member.lock_in_entered marker — countdown + clause ref + unlock date).
   // Member-session-gated; NO write path / event / schema change.

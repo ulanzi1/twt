@@ -60,10 +60,17 @@ A lead whose offer the Trust withdrew (`trustee_archived`) is cancelled too; an 
 lands after that commit is not honoured for the request in flight (a sent lead cannot be recalled); `-484` Q6 A makes the follow-up a
 staff duty (K-13).
 
-**A lead waiting on a retry is re-checked every tick** (`-487` (2), W14). Before it claims anything, the sweep re-reads P0–P5 and the
-offer's withdrawal for every `due` row whose next attempt is still ahead. It cancels the row at once on a stop, so the Trust's copy goes
-within the sweep's minute (`-484` Q4 A's *"Removed at once if the send is stopped"*), ⛔ at the end of a retry's backoff. An unsound read
-there writes nothing; the row's own attempt holds it. The pass is paged, under its own time budget, and resumes from a cursor.
+**Every pending lead is re-checked every tick** (`-487` (2), W14; widened by `-488`). Before it claims anything, the sweep re-reads
+P0–P5 and the offer's withdrawal for EVERY `due` row — one waiting out a retry, and one due now that the claim may not reach this tick
+(its module's key held, its host in the tick's breaker, the tick ended by a global hold, the budget spent). It cancels the row at once
+on a stop, so the Trust's copy goes within the sweep's minute (`-484` Q4 A's *"Removed at once if the send is stopped"*), ⛔ at the end
+of a retry's backoff or at the row's turn. An unsound read there writes nothing; the row's own attempt holds it. The pass is paged,
+under its own 10 s budget, and resumes from a cursor — ONE full cycle a pass: it runs from behind the cursor to the end, wraps to the
+top and stops where it began, so a pass that stopped part-way still leaves the next tick re-checking every row. A throw in the pass ends
+the PASS with one alarm, ⛔ the tick: the claim still runs (`-488` (2)). ⚠ Residuals, stated: (i) under a backlog larger than one
+budget, one full cycle takes several ticks, so "within the minute" holds for a queue the pass covers in one budget; (ii) a lead whose
+read ALWAYS throws ends every pass at itself — the cursor then sits on it, so the next cycle checks every other lead first and that
+one last, with one `waiting_pass_failed` alarm a tick; its own attempt holds it (`db`) until the read is mended or the hold expires.
 
 ### 2. The signing scheme and rotation (QE3 (A))
 
@@ -228,7 +235,7 @@ story.
 - `_bmad-output/planning-artifacts/epics.md` — Epic 12, Story 12.5 (the ACs and the invariant quoted above).
 - `_bmad-output/planning-artifacts/architecture.md` — §3.7, §3.11, §3.12, §5.9, "Egress controls" (each partner-JWT sentence annotated
   "superseded for the lead transport by `-483` QE3").
-- `.decision-log.md` — `2026-11-21-483` (QE1–QE26), `2026-11-21-484` (Q1 C, Q2 A … Q7 A), `2026-11-22-487` (the code review's two decisions),
+- `.decision-log.md` — `2026-11-21-483` (QE1–QE26), `2026-11-21-484` (Q1 C, Q2 A … Q7 A), `2026-11-22-487` and `2026-11-22-488` (the code review's decisions),
   `2026-10-31-427`, `2026-10-31-429`, `2026-11-01-433`, `2026-10-30-423`.
 - `_bmad-output/implementation-artifacts/12-5-module-lead-handoff-transport-partners-as-downstream-consumers-invariant.md` — the W table,
   S1–S10, P0–P5, the K items.
@@ -245,3 +252,4 @@ story.
 |---|---|---|
 | 2026-11-21 | drafted | Authored by Story 12.5 (Task 8) on the decisions of `-483` and the Panel's ruling `-484`. ⚠ `drafted`, ⛔ ratified — ⛔ trustee ratification is claimed, and none is a merge fence. Roster Row 54 does ⛔ list this ADR's ratification as a leg; whether it should is for the Panel when the first partner agreement is presented. |
 | 2026-11-22 | drafted | Story 12.5 code review, patch 12: §1 says a P0 failure HOLDS (it said every failure cancels), and adds Decision `2026-11-22-487` — a rejected key is a KMS hold, and the waiting pass (W14); §2 (iii) names the resolver `boot.ts` wires and its non-production env fallback; §5 names S9's give-up (a request can be left with no attempted line). Still `drafted`; no decision changed. |
+| 2026-11-22 | drafted | Story 12.5 code review, rounds 2 and 3: §1's re-check covers EVERY `due` lead, one full cycle a pass (it wraps to the top), and a throw in it ends only the pass (Decision `2026-11-22-488`); the residuals stated. Still `drafted`. |

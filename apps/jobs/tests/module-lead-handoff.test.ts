@@ -85,19 +85,26 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     expect(statements).toHaveLength(1);
   });
 
-  it.each(['lapse', 'purge', 'waiting pass', 'claim'])('a throw in the %s ⇒ ONE `sweep_failed:<error name>` alarm NAMING THAT STEP, and the tick ends', async (step) => {
+  /** Which step a statement belongs to — the lapse, the purge, the waiting pass's page read, the claim. */
+  const stepOf = (text: string): string | null =>
+    text.includes("WHERE status = 'attempting' AND claimed_at")
+      ? 'lapse'
+      : text.includes('WITH old AS MATERIALIZED')
+        ? 'purge'
+        : text.includes('AS module_withdrawn')
+          ? 'waiting pass'
+          : text.includes('WITH next AS MATERIALIZED')
+            ? 'claim'
+            : null;
+
+  it.each(['lapse', 'purge', 'claim'])('a throw in the %s ⇒ ONE `sweep_failed:<error name>` alarm NAMING THAT STEP, and the tick ends', async (step) => {
     const reached: string[] = [];
     const pool = {
       query: vi.fn(async (text: string) => {
         if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
-        const isLapse = text.includes("WHERE status = 'attempting' AND claimed_at");
-        const isPurge = text.includes('WITH old AS MATERIALIZED');
-        const isWaiting = text.includes('h.next_attempt_at > clock_timestamp()');
-        const isClaim = text.includes('WITH next AS MATERIALIZED');
-        for (const [name, hit] of [['lapse', isLapse], ['purge', isPurge], ['waiting pass', isWaiting], ['claim', isClaim]] as const) if (hit) reached.push(name);
-        if ((step === 'lapse' && isLapse) || (step === 'purge' && isPurge) || (step === 'waiting pass' && isWaiting) || (step === 'claim' && isClaim)) {
-          throw Object.assign(new Error('permission denied for table marketplace_lead_handoffs'), { code: '42501' });
-        }
+        const at = stepOf(text);
+        if (at !== null) reached.push(at);
+        if (at === step) throw Object.assign(new Error('permission denied for table marketplace_lead_handoffs'), { code: '42501' });
         return { rows: [], rowCount: 0 };
       }),
     } as unknown as pg.Pool;
@@ -110,6 +117,31 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     const order = ['lapse', 'purge', 'waiting pass', 'claim'];
     expect(reached).toEqual(order.slice(0, order.indexOf(step) + 1));
     expect(alarms[0]).not.toContain('permission denied');
+  });
+
+  it('a throw in the waiting pass ⇒ ONE `waiting_pass_failed` alarm, the PASS ends and the CLAIM STILL RUNS (`-488` (2))', async () => {
+    const reached: string[] = [];
+    const pool = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
+        const at = stepOf(text);
+        if (at !== null) reached.push(at);
+        if (at === 'waiting pass') throw Object.assign(new Error('permission denied for table marketplace_lead_handoffs'), { code: '42501' });
+        return { rows: [], rowCount: 0 };
+      }),
+    } as unknown as pg.Pool;
+    const alarms: string[] = [];
+    const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
+    expect(alarms).toEqual([expect.stringContaining('module_lead_handoff.waiting_pass_failed:Error [code:42501] listing a page — the pass ends here, the claim still runs')]);
+    expect(alarms[0]).not.toContain('permission denied');
+    expect(reached).toEqual(['lapse', 'purge', 'waiting pass', 'claim']);
+    expect(result).toMatchObject({ refused: false, cancelledWaiting: 0, claimed: 0 });
+  });
+
+  it('waitingPageSize clamps the page option as the read does — the pass compares against THIS (round 2; the live "page option of 0" leg runs the pass)', () => {
+    expect(marketplace.waitingPageSize(undefined)).toBe(marketplace.LEAD_HANDOFF_WAITING_PAGE);
+    expect(marketplace.waitingPageSize(0)).toBe(1);
+    expect(marketplace.waitingPageSize(10_000)).toBe(marketplace.LEAD_HANDOFF_WAITING_PAGE_CAP);
   });
 });
 
@@ -1008,6 +1040,18 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     expect(sentFor(control.leadId)).toHaveLength(1);
   });
 
+  it('a secret with whitespace AROUND it is not used: held:signing_key_unavailable with its own reason, ⛔ request, the bytes ⛔ trimmed (round 2)', async () => {
+    const w = await world('https://partner.test/ok', { secretName: 'echoed-key' });
+    const { leadId } = await lead(w);
+    const control = await lead(await world('https://other.test/ok'));
+    await runModuleLeadHandoffTick(deps({ resolveSecret: async (n) => (n === 'echoed-key' ? `${SECRET}\n` : SECRET) }));
+    expect(await row(leadId)).toMatchObject({ status: 'due', outcome_detail: 'held:signing_key_unavailable', attempt_count: 0 });
+    expect(sentFor(leadId)).toHaveLength(0);
+    expect(alarms.filter((a) => a.includes('signing_key_unavailable'))).toEqual([expect.stringContaining('the secret value has whitespace around it')]);
+    expect(alarms.join('\n')).not.toContain(SECRET);
+    expect(sentFor(control.leadId)).toHaveLength(1);
+  });
+
   // ── Checklist family 2 — the claim under two workers, on two connections ──
 
   it('two workers: a row LOCKED by another transaction is passed over (SKIP LOCKED), and N concurrent claims of M due rows give exactly M winners', async () => {
@@ -1125,12 +1169,15 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     const two = await runModuleLeadHandoffTick(deps({ waitingBudgetMs: 0, waitingCursor: cursor }));
     expect(two.cancelledWaiting).toBe(1);
     expect([(await row(la.leadId))['status'], (await row(lb.leadId))['status']]).toEqual(['cancelled', 'cancelled']);
-    // The end of the list: the next tick starts over.
-    await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    // The budget ran out on the LAST row of the list: the cursor stays there, and the next pass reads an empty page, WRAPS to the top
+    // and completes its cycle (round 3) — ⛔ a tick that re-checks nothing.
+    expect(cursor.leadId).toBe([la.leadId, lb.leadId].sort()[1]);
+    const three = await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    expect(three.cancelledWaiting).toBe(0);
     expect(cursor.leadId).toBeNull();
   });
 
-  it('a THROW in the waiting pass ⇒ ONE sweep_failed alarm naming it, the tick ends (⛔ claim) — and the next tick resumes BEHIND that row (no stall)', async () => {
+  it('a THROW in the waiting pass ⇒ ONE waiting_pass_failed alarm naming the lead; the PASS ends and the claim still sends (`-488` (2)) — and a later tick reaches that row', async () => {
     const w = await world('https://partner.test/s503');
     const l = await waitingLead(w);
     await revoke(w, l);
@@ -1138,22 +1185,69 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     alarms.length = 0;
     received.length = 0;
     const cursor = { leadId: null as string | null };
-    const broken = await runModuleLeadHandoffTick(deps({ pool: faultyPool(pool, (text) => /from "consent_records"/i.test(text), 1), waitingCursor: cursor }));
-    // (The injected fault reaches the sweep wrapped by the query layer, so its NAME is the wrapper's — the step is what is pinned.)
+    // The fault hits the read of THIS lead's consents, once — the first read of it is the pass's.
+    const broken = await runModuleLeadHandoffTick(
+      deps({ pool: faultyPool(pool, (text, values) => /from "consent_records"/i.test(text) && values.includes(l.leadId), 1), waitingCursor: cursor }),
+    );
+    // (The injected fault reaches the sweep wrapped by the query layer, so its NAME is the wrapper's — the lead and the step are pinned.)
     expect(alarms).toHaveLength(1);
-    expect(alarms[0]).toMatch(/module_lead_handoff\.sweep_failed:\w+ at the waiting pass — this tick swept nothing further/);
-    expect(broken).toMatchObject({ cancelledWaiting: 0, claimed: 0, sent: 0 });
-    expect(sentFor(dueNow.leadId)).toHaveLength(0);
-    expect(await row(l.leadId)).toMatchObject({ status: 'due' });
-    // The cursor moved BEFORE the read that threw: the next tick does not meet that row first, so sends go on.
-    expect(cursor.leadId).toBe(l.leadId);
-    const next = await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    expect(alarms[0]).toMatch(new RegExp(`module_lead_handoff\\.waiting_pass_failed:\\w+ at lead ${l.leadId} — the pass ends here, the claim still runs`));
+    expect(broken).toMatchObject({ cancelledWaiting: 0, sent: 1 });
+    // The claim RAN in the same tick: the lead that is due now was sent.
     expect(sentFor(dueNow.leadId)).toHaveLength(1);
-    expect(next.cancelledWaiting).toBe(0);
-    // And the tick after that starts over and reaches it.
-    const third = await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
-    expect(third.cancelledWaiting).toBe(1);
+    expect(await row(l.leadId)).toMatchObject({ status: 'due' });
+    // The cursor moved BEFORE the read that threw; a later tick's pass comes round to the row and cancels it.
+    expect(cursor.leadId).toBe(l.leadId);
+    // Round 3: the NEXT tick's pass starts behind it, wraps to the top and comes round to it — one tick, ⛔ a tick later.
+    const next = await runModuleLeadHandoffTick(deps({ waitingCursor: cursor }));
+    expect(next.cancelledWaiting).toBe(1);
     expect(await row(l.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:consent_revoked', member_fields_ciphertext: null });
+  });
+
+  it('a lead DUE NOW that the claim does not reach this tick is re-checked too: its stop is honoured in THIS tick (`-488` (1))', async () => {
+    // Two leads due now; the claim's budget is 0, so it takes ONE. Whichever it takes, the revoked one is cancelled by the pass, before
+    // the claim, and is never sent — under `-487` alone a due-now row the claim did not reach waited for its turn.
+    const a = await world('https://partner.test/s503');
+    const kept = await lead(a);
+    const b = await world('https://other.test/s503');
+    const stopped = await lead(b);
+    await revoke(b, stopped);
+    const result = await runModuleLeadHandoffTick(deps({ tickBudgetMs: 0 }));
+    expect(result.cancelledWaiting).toBe(1);
+    expect(result.claimed).toBe(1);
+    expect(await row(stopped.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:consent_revoked', member_fields_ciphertext: null, attempt_count: 0 });
+    expect(sentFor(stopped.leadId)).toHaveLength(0);
+    // CONTROL: the unstopped lead is untouched by the pass — the claim took it (one request).
+    expect(sentFor(kept.leadId)).toHaveLength(1);
+  });
+
+  it('ONE cycle per pass: started from a cursor in the MIDDLE, the pass runs to the end, wraps, and stops where it began — every row in one tick (round 3)', async () => {
+    const leads: Array<{ leadId: string; consentId: string; w: World }> = [];
+    for (const url of ['https://partner.test/s503', 'https://other.test/s503', 'https://partner.test/s503']) {
+      const w = await world(url);
+      leads.push({ ...(await waitingLead(w)), w });
+    }
+    for (const l of leads) await revoke(l.w, l);
+    const ids = leads.map((l) => l.leadId).sort();
+    // Started behind the middle row: the third, then (wrapped) the first and the middle one itself.
+    const cursor = { leadId: ids[1]! as string | null };
+    const result = await runModuleLeadHandoffTick(deps({ waitingPage: 1, waitingCursor: cursor }));
+    expect(result.cancelledWaiting).toBe(3);
+    for (const l of leads) expect(await row(l.leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:consent_revoked' });
+    expect(cursor.leadId).toBeNull();
+  });
+
+  it('a page option of 0 still ends: the pass reads pages of one and reaches every row (round 2)', async () => {
+    const a = await world('https://partner.test/s503');
+    const la = await waitingLead(a);
+    const b = await world('https://other.test/s503');
+    const lb = await waitingLead(b);
+    await revoke(a, la);
+    await revoke(b, lb);
+    const cursor = { leadId: null as string | null };
+    const result = await runModuleLeadHandoffTick(deps({ waitingPage: 0, waitingCursor: cursor }));
+    expect(result.cancelledWaiting).toBe(2);
+    expect(cursor.leadId).toBeNull();
   });
 
   // ── AC9 — the purge half ──

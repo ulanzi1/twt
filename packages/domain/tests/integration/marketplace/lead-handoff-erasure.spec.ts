@@ -34,7 +34,8 @@ describe.skipIf(!hasDatabase)('Story 12.5 — erasure meets the lead handoffs (W
   it('NULLs the fields on every row that holds them, in every status, and cancels a due row (cancelled:member_erased)', async () => {
     const { client } = getTx();
     const due = await seedHandoffWorld(client, PARIWAR_A);
-    await insertHandoffRaw(client, due);
+    // An hour old, so "erasure takes the clock" is a STRICT inequality (round 2: `>=` passed the regression it rules out).
+    await insertHandoffRaw(client, due, { updatedAtSql: "now() - interval '1 hour'" });
     const att = await another(client, due);
     await insertHandoffRaw(client, att, { status: 'attempting', attemptCount: 1 });
     const del = await another(client, due);
@@ -59,7 +60,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — erasure meets the lead handoffs (W
     // the clock.
     expect(((await handoffRow(client, del.leadId))['updated_at'] as Date).getTime()).toBe(finalTimes[0]!.getTime());
     expect(((await handoffRow(client, fail.leadId))['updated_at'] as Date).getTime()).toBe(finalTimes[1]!.getTime());
-    expect(((await handoffRow(client, due.leadId))['updated_at'] as Date).getTime()).toBeGreaterThanOrEqual(dueTime.getTime());
+    expect(((await handoffRow(client, due.leadId))['updated_at'] as Date).getTime()).toBeGreaterThan(dueTime.getTime());
     // What it leaves (QE16; `-484` Q5 A): the ids, the status and the times — the member↔offer link.
     expect(await handoffRow(client, del.leadId)).toMatchObject({ member_id: due.memberId, module_id: del.moduleId, consent_id: del.consentId });
   });

@@ -48,6 +48,33 @@ describe('rule (b) — the member-facing read cannot go missing (not vacuous)', 
     expect(scanReferenceNames(DOMAIN, `export async function readLeadStatus(q) { return q.query('SELECT partner_reference FROM t'); }`)).toHaveLength(1);
     expect(scanReferenceNames(DOMAIN, `export const getLeadHandoffStatus = async (q) => q.query('SELECT partner_reference FROM t');`)).toHaveLength(1);
   });
+  it('FAILS a read of EVERY column inside getLeadHandoffStatus — it returns the reference without naming it (round 2)', () => {
+    for (const body of [
+      `return q.query('SELECT * FROM marketplace_lead_handoffs WHERE lead_id = $1');`,
+      `return q.query('SELECT h.* FROM marketplace_lead_handoffs h');`,
+      'return q.query(`UPDATE marketplace_lead_handoffs SET x = 1 RETURNING *`);',
+      `return db.select().from(marketplaceLeadHandoffs);`,
+    ]) {
+      expect(scanReferenceNames(DOMAIN, `export async function getLeadHandoffStatus(q, db) { ${body} }`), body).toHaveLength(1);
+    }
+    // A count is not a read of every column.
+    expect(scanReferenceNames(DOMAIN, `export async function getLeadHandoffStatus(q) { return q.query('SELECT count(*) FROM t'); }`)).toHaveLength(0);
+  });
+  it('round 3: every other whole-row shape fails too, any case — and a regex source with `.*` is not SQL', () => {
+    for (const body of [
+      `return q.query('select * from marketplace_lead_handoffs');`,
+      `return q.query('SELECT "h".* FROM marketplace_lead_handoffs h');`,
+      `return q.query('SELECT lead_id, * FROM marketplace_lead_handoffs');`,
+      `return q.query('SELECT DISTINCT ON (lead_id) * FROM marketplace_lead_handoffs');`,
+      `return q.query('SELECT to_jsonb(h) FROM marketplace_lead_handoffs h');`,
+      `return q.query('SELECT row_to_json(h) FROM marketplace_lead_handoffs h');`,
+      `return db.query.marketplaceLeadHandoffs.findFirst();`,
+      `return db.select(getTableColumns(marketplaceLeadHandoffs)).from(marketplaceLeadHandoffs);`,
+    ]) {
+      expect(scanReferenceNames(DOMAIN, `export async function getLeadHandoffStatus(q, db) { ${body} }`), body).toHaveLength(1);
+    }
+    expect(scanReferenceNames(DOMAIN, `export async function getLeadHandoffStatus(q) { const re = new RegExp('^lead.*$'); return q.query('SELECT status FROM t'); }`)).toHaveLength(0);
+  });
   it('asks it of lead-handoff.ts ONLY — the other three allowed files hold no member-facing read', () => {
     for (const f of [SWEEP, CLIENT, 'packages/domain/src/schema/marketplace_lead_handoffs.ts']) expect(scanReferenceNames(f, `const x = 1;`)).toHaveLength(0);
   });
@@ -93,6 +120,31 @@ describe('rule (c) — the transport uses only the allow-listed authority READS'
     expect(scanAuthorityUse(SWEEP, `import { invalidateValidity } from '@twt/validity-service';`).map((f) => f.what)).toEqual([expect.stringContaining('authority package')]);
   });
 
+  it('RESOLVES a relative path against the file, so a climb out and back in is the same module (round 2)', () => {
+    // `../../src/consent/write.js` from `packages/domain/src/marketplace/` IS `../consent/write.js`.
+    expect(scanAuthorityUse(DOMAIN, `import { recordConsent } from '../../src/consent/write.js';`).map((f) => f.what)).toEqual([expect.stringContaining('../consent/write.js')]);
+    expect(scanAuthorityUse(DOMAIN, `import { consent } from '../../src/index.js';`).map((f) => f.what)).toEqual([expect.stringContaining('domain barrel')]);
+    // The directory itself (Bundler resolution reads its index).
+    expect(scanAuthorityUse(DOMAIN, `import { recordConsent } from '../consent';`)).toHaveLength(1);
+    // An allow-listed read reached by a detour is still that read.
+    expect(scanAuthorityUse(DOMAIN, `import { listConsentsForArtifact } from '../../src/consent/read.js';`)).toHaveLength(0);
+    expect(authorityReadsImported(DOMAIN, `import { listConsentsForArtifact } from '../../src/consent/read.js';`)).toEqual(['../consent/read.js#listConsentsForArtifact']);
+  });
+
+  it('round 3: a SIDE-EFFECT import fails when it leaves the root or names an authority module; a type-only one never', () => {
+    expect(scanAuthorityUse(SWEEP, `import '../../../../packages/domain/src/consent/write.js';`).map((f) => f.what)).toEqual([expect.stringContaining('out of apps/jobs/src')]);
+    expect(scanAuthorityUse(DOMAIN, `import '../consent/write.js';`).map((f) => f.what)).toEqual([expect.stringContaining('side-effect import')]);
+    expect(scanAuthorityUse(SWEEP, `import '@twt/domain';`).map((f) => f.what)).toEqual([expect.stringContaining('side-effect import')]);
+    expect(scanAuthorityUse(SWEEP, `import type { X } from '../../../../packages/domain/src/consent/write.js';`)).toHaveLength(0);
+    expect(scanAuthorityUse(SWEEP, `import './partner-lead-client.js';`)).toHaveLength(0);
+  });
+
+  it('FAILS a relative import that LEAVES the file\'s own source root (round 2)', () => {
+    expect(scanAuthorityUse(SWEEP, `import { revokeConsent } from '../../../../packages/domain/src/consent/write.js';`).map((f) => f.what)).toEqual([expect.stringContaining('out of apps/jobs/src')]);
+    expect(scanAuthorityUse(DOMAIN, `import { x } from '../../../../apps/jobs/src/boot.js';`).map((f) => f.what)).toEqual([expect.stringContaining('out of packages/domain/src')]);
+    expect(scanAuthorityUse(SWEEP, `import { checkLeadUrl } from './partner-lead-client.js';\nimport { y } from '../boot.js';`)).toHaveLength(0);
+  });
+
   it('FAILS what an import scan cannot see: a dynamic import, a require, a re-export', () => {
     expect(scanAuthorityUse(SWEEP, `const d = await import('@twt/domain');`)).toHaveLength(1);
     expect(scanAuthorityUse(CLIENT, `const d = require('@twt/domain');`)).toHaveLength(1);
@@ -105,6 +157,7 @@ describe('rule (c) — the transport uses only the allow-listed authority READS'
     expect(scanAuthorityUse(DOMAIN, `await q.query('INSERT INTO events_log (id) VALUES ($1)');`)).toHaveLength(1);
     expect(scanAuthorityUse(SWEEP, 'await pool.query(`DELETE FROM consent_records WHERE consent_id = ${id}`);')).toHaveLength(1);
     expect(scanAuthorityUse(SWEEP, `await pool.query('UPDATE "consent_records" SET revoked_at = now()');`)).toHaveLength(1);
+    expect(scanAuthorityUse(DOMAIN, 'await q.query(`MERGE INTO members m USING x ON true WHEN MATCHED THEN UPDATE SET state = 1`);').map((f) => f.what)).toEqual([expect.stringContaining('`members`')]);
     const own =
       'await q.query(`UPDATE marketplace_lead_handoffs s SET status = $1 FROM next WHERE s.lead_id = next.lead_id`);\n' +
       'await q.query(`INSERT INTO marketplace_lead_handoffs (lead_id) VALUES ($1)`);\n' +
@@ -148,6 +201,34 @@ describe('rule (e) — production passes no test seam', () => {
     expect(scanSeamCalls(SWEEP, `const c = createPartnerLeadClient.call(null, { testSeam: {} });`)).toHaveLength(1);
     expect(scanSeamCalls(SWEEP, `const mk = createPartnerLeadClient.bind(null, { testSeam: {} });`)).toHaveLength(1);
     expect(scanSeamCalls(SWEEP, `import { createPartnerLeadClient as mk } from './partner-lead-client.js';\nconst c = mk();`)).toHaveLength(0);
+  });
+  it('FAILS every reference that is not a direct zero-argument call: a const alias, a pass, a paren call, a re-export (round 2)', () => {
+    for (const src of [
+      `const mk = createPartnerLeadClient;\nconst c = mk({ testSeam: {} });`,
+      `const c = Reflect.apply(createPartnerLeadClient, null, [{ testSeam: {} }]);`,
+      `const c = (createPartnerLeadClient)({ testSeam: {} });`,
+      `export { createPartnerLeadClient as x } from './partner-lead-client.js';`,
+      `const deps = { createPartnerLeadClient };`,
+    ]) {
+      expect(scanSeamCalls(SWEEP, src), src).toHaveLength(1);
+    }
+    // Round 3: a STRING-keyed access, a namespace import of the client module, and `export *` of it.
+    for (const src of [
+      `import { createPartnerLeadClient } from './partner-lead-client.js';\nconst c = clients['createPartnerLeadClient']({ testSeam: {} });`,
+      `import * as plc from './partner-lead-client.js';\nconst c = plc.checkLeadUrl('x');`,
+      `export * from './partner-lead-client.js';`,
+    ]) {
+      expect(scanSeamCalls(SWEEP, src), src).toHaveLength(1);
+    }
+    // Round 3: what is NOT a reference — an interface member, a non-null direct call, an import type.
+    expect(
+      scanSeamCalls(
+        SWEEP,
+        `interface D { createPartnerLeadClient?: () => void; m(): void }\ninterface E { createPartnerLeadClient(): void }\nconst c = createPartnerLeadClient!();\ntype T = typeof import('./partner-lead-client.js').createPartnerLeadClient;`,
+      ),
+    ).toHaveLength(0);
+    // Its own definition, a type position and a property key are not references.
+    expect(scanSeamCalls(CLIENT, `export function createPartnerLeadClient(options = {}) { return options; }\ntype C = ReturnType<typeof createPartnerLeadClient>;\nconst o = { createPartnerLeadClient: 1 };`)).toHaveLength(0);
   });
   it('PASSES the zero-argument call, and ignores a test file outside apps/jobs/src', () => {
     expect(scanSeamCalls(SWEEP, `sharedClient ??= createPartnerLeadClient();`)).toHaveLength(0);

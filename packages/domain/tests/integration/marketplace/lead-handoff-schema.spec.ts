@@ -332,7 +332,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — marketplace_lead_handoffs (0215)',
       expect(await handoffRow(client, due.leadId)).toMatchObject({ status: 'cancelled', member_fields_ciphertext: null });
     });
 
-    it('ADMITS on a final row the fields going NULL ALONE — updated_at left as the time it became final (patch 10)', async () => {
+    it('the GUARD admits on a final row the fields going NULL ALONE, ⛔ an updated_at bump required (patch 10 — that W11 / W12 leave updated_at is proved by the commands and erasure specs)', async () => {
       const { client } = getTx();
       const a = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, a, { status: 'failed_delivery', outcomeDetail: 'failed_delivery:http_4xx:400', updatedAtSql: "now() - interval '31 days'" });
@@ -343,7 +343,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — marketplace_lead_handoffs (0215)',
       expect((row['updated_at'] as Date).getTime()).toBe(before.getTime());
     });
 
-    it('ADMITS on a final row exactly: the fields going NULL with updated_at (W11 / W12)', async () => {
+    it('the GUARD also admits on a final row the fields going NULL WITH an updated_at bump (a writer may still set it)', async () => {
       const { client } = getTx();
       const a = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, a, { status: 'delivered', outcomeDetail: 'delivered:http_2xx:200' });

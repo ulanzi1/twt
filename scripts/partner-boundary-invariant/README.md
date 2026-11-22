@@ -29,15 +29,44 @@ Added by the code review of 2026-11-22 (patch 8), so that no rule passes on noth
   move to a file this gate does not judge, or an allowance goes unused, the gate fails.
 - **(e)** an import alias of `createPartnerLeadClient`, and `.call(` / `.apply(` / `.bind(` on it, are judged.
 
+Added by the review of that fix (round 2, 2026-11-22):
+
+- **(a)** the marketplace shape is any `…/modules/:moduleId/lead…` segment (`lead-status`, `leadback`, `leads`), and the pin holds
+  every body-accepting route spelled `/webhooks/`, `/webhook/`, `/hooks/` or `/callback(s)` — which brought in the DigiLocker OAuth
+  callback, now named there with its reason.
+- **(b)** a read of EVERY column inside `getLeadHandoffStatus` fails too — `SELECT *`, `RETURNING *`, `t.*`, or the query builder's
+  `.select()` / `.returning()` with no column list — because it returns the reference without naming it.
+- **(c)** a relative specifier is RESOLVED against the importing file's directory, so `../../src/consent/write.js` is judged as
+  `../consent/write.js` and `../../src/index.js` as the barrel; a directory import (`../consent`) counts as that directory; a relative
+  import that leaves the file's own source root (`apps/jobs/src`, `packages/domain/src`) fails; and `MERGE INTO` is a write.
+- **(e)** EVERY reference to the factory that is not the callee of a zero-argument call fails — a `const` alias, passing it
+  (`Reflect.apply(createPartnerLeadClient, …)`), `(createPartnerLeadClient)(…)`, a shorthand property, a re-export. Its own definition,
+  a type position and a property key are not references.
+
+And by the review of THAT fix (round 3, 2026-11-22):
+
+- **(b)** "every column" is judged on any SQL string in the body holding `SELECT` / `RETURNING` (any case): a `*` that is not a
+  `count(*)`, or a whole-row value (`to_json(b)(h)`, `row_to_json(h)`); and the builder's `findFirst` / `findMany` /
+  `getTableColumns(`. A string without the verb (a regex source with `.*`) is not judged.
+- **(c)** a side-effect import (`import '…'`) that leaves the file's source root, or names an authority module or the domain barrel,
+  fails.
+- **(e)** a string-keyed access (`ns['createPartnerLeadClient']`) is a reference; a namespace import or an `export *` of the client
+  module fails outright. An interface member, `createPartnerLeadClient!()` and `typeof import('…').createPartnerLeadClient` are not
+  references.
+
 ## ⚠ The semantic limit
 
 This gate proves the **absence of the patterns it names**. It does **NOT** prove that no future code path could launder partner data
 into what TWT believes about a member — a new table, a new namespace, a value copied through an innocently named field, or an inbound
 path that is session-guarded but fed by a partner's export would all pass it. Nor does it see, in the transport itself: a write made
 through a helper in ANOTHER file (the scan reads four files, not their callees); SQL assembled from pieces, in lower-case keywords, or
-through the query builder; a namespace of the `@twt/domain` barrel outside the six it names; a response header other than
+through the query builder (rule (c)'s write check reads SQL strings only); what `getLeadHandoffStatus` CALLS, or a SQL constant it uses that is defined outside its body, or a composite row
+(`SELECT h FROM … h`) (rule (b) judges the strings and calls IN its own body); a key to the factory BUILT at run time (rule (e) judges
+names and string keys); an alias made by anything but an import inside a file the factory is passed to (rule (e) judges each file on its
+own); a namespace of the `@twt/domain` barrel outside the six it names; an inbound route under a spelling rule (a) does not name, or a
+GET carrying data in its query string; a response header other than
 `X-Partner-Reference` read in the client (rule (d) looks for JSON parsing only); or a hand-built client passed to the sweep as
-`deps.client` (that one is pinned by the sweep's own test on `boot.ts`'s text, ⛔ by this gate). A green run means "none of these five shapes", nothing
+`deps.client` (that one is pinned by the sweep's own test on `boot.ts`'s text, ⛔ by this gate). A green run means "none of the named shapes", nothing
 more ([[feedback_gate_scope_semantic_coverage]]).
 
 The human half is the review question ADR-0046 sets for **every** future inbound integration (K-5's lead-outcome callback first):

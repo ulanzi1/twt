@@ -13,6 +13,9 @@
 // provider (`/webhooks/<provider>/…`), and a marketplace route is `/modules/:moduleId/…`. So (1) the pattern also names the marketplace
 // lead shape, and (2) the body-accepting `/webhooks/` routes are PINNED to an exact list: a new inbound webhook fails here until it is
 // added by name — and a partner's is never added (ADR-0046's review question).
+// ⚠ What this spec does NOT see (round 2 of that review): an inbound path under another spelling than the ones named above; a GET that
+// carries data in its query string (only body-accepting methods are judged); a session-guarded route fed by a partner's export. Each
+// is ADR-0046's review question at the story that adds it.
 
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
@@ -23,12 +26,18 @@ import { collectRoutes, getCollectedRoutes, type CollectedRoute } from '../../sr
 import { createTestApp, teardown } from './_setup.js';
 
 /** The URL shapes that name a partner or a lead outcome (QE15 (a)). */
-const INBOUND_PARTNER_URL = /partner|lead-outcome|lead_outcome|module-lead|\/modules\/[^/]+\/leads?(\/|$)/i;
+// Round 3: a LEAD segment anywhere (`/leads/`, `/lead-status`, `/leadback`, `/lead_x`) — ⛔ `/leaderboard`, `/leadership`.
+const INBOUND_PARTNER_URL = /partner|lead-outcome|lead_outcome|module-lead|\/leads?(back|[-_][a-z_-]*)?(\/|$)/i;
+/** The URL shapes of an inbound delivery ingress: `/webhooks/`, and the other spellings (code review 2026-11-22, round 2). */
+const INGRESS_URL = /\/(webhooks?|hooks?|callbacks?)(\/|$)/i;
 /**
- * EVERY body-accepting route under `/webhooks/` — each a channel PROVIDER's delivery ingress, public by design (login-wall.spec.ts's
+ * EVERY body-accepting ingress-shaped route ({@link INGRESS_URL}) — each a channel PROVIDER's delivery ingress, public by design (login-wall.spec.ts's
  * `PUBLIC_ALLOWLIST` holds the reason for each). ⛔ A partner's callback is never added here: partners are downstream consumers.
  */
 const KNOWN_INBOUND_WEBHOOKS: readonly string[] = [
+  // The DigiLocker OAuth callback (Story 3.3b) — a KYC PROVIDER's ingress, public by design (login-wall.spec.ts holds its reason); seen once
+  // the pin took the `/callback` spelling too (code review 2026-11-22, round 2).
+  'POST /api/v1/kyc/callback',
   'POST /api/v1/webhooks/msg91/sms-reports',
   'POST /api/v1/webhooks/telegram/:pariwarId',
   'POST /api/v1/webhooks/whatsapp/:pariwarId',
@@ -56,10 +65,10 @@ function partnerShaped(routes: readonly CollectedRoute[]): { readonly guarded: s
   return { guarded, inbound };
 }
 
-/** Every body-accepting `/webhooks/` route, as `METHOD url`, sorted. */
+/** Every body-accepting ingress-shaped route (`/webhooks/`, `/webhook/`, `/hooks/`, `/callback(s)/`), as `METHOD url`, sorted. */
 function inboundWebhooks(routes: readonly CollectedRoute[]): string[] {
   return routes
-    .filter((r) => BODY_METHODS.has(r.method.toUpperCase()) && /\/webhooks\//i.test(r.url))
+    .filter((r) => BODY_METHODS.has(r.method.toUpperCase()) && INGRESS_URL.test(r.url))
     .map((r) => `${r.method.toUpperCase()} ${r.url}`)
     .sort();
 }
@@ -95,6 +104,16 @@ describe('partner boundary — rule (a): ⛔ inbound partner route (hermetic)', 
     app.post('/api/v1/p/:pariwarId/modules/partners', { preHandler: [guard] }, async () => ({ ok: true }));
     app.post('/api/v1/p/:pariwarId/modules/:moduleId/leads/:leadId/outcome', async () => ({ ok: true })); // the marketplace shape
     app.post('/api/v1/webhooks/acme-insurer/lead-status', async () => ({ ok: true })); // the webhook shape: no partner word in it
+    // Round 2 (code review 2026-11-22): a lead-WORD route under a module, and the other ingress spellings.
+    app.post('/api/v1/p/:pariwarId/modules/:moduleId/lead-status', async () => ({ ok: true }));
+    app.post('/api/v1/webhook/acme-insurer/leads', async () => ({ ok: true }));
+    app.post('/api/v1/hooks/acme-insurer', async () => ({ ok: true }));
+    app.post('/api/v1/hook/acme-insurer', async () => ({ ok: true }));
+    // Round 3: a lead route outside `/modules/`, and two NON-lead words that must not match.
+    app.post('/api/v1/leads/:leadId/status', async () => ({ ok: true }));
+    app.post('/api/v1/p/:pariwarId/modules/:moduleId/leaderboard', async () => ({ ok: true }));
+    app.post('/api/v1/p/:pariwarId/leadership', async () => ({ ok: true }));
+    app.patch('/api/v1/callbacks/acme-insurer/status', async () => ({ ok: true }));
     app.get('/api/v1/partners/:partnerId', async () => ({ ok: true })); // GET carries no body: out of scope
     await app.ready();
     try {
@@ -104,10 +123,23 @@ describe('partner boundary — rule (a): ⛔ inbound partner route (hermetic)', 
           'POST /api/v1/partners/:partnerId/lead-outcome',
           'PUT /api/v1/p/:pariwarId/module-lead/:leadId/status',
           'POST /api/v1/p/:pariwarId/modules/:moduleId/leads/:leadId/outcome',
+          'POST /api/v1/p/:pariwarId/modules/:moduleId/lead-status',
+          'POST /api/v1/leads/:leadId/status',
+          // Round 3: these two webhooks now carry a lead SEGMENT, so the lead pattern sees them as well as the pin.
+          'POST /api/v1/webhook/acme-insurer/leads',
+          'POST /api/v1/webhooks/acme-insurer/lead-status',
         ].sort(),
       );
-      // The provider-named callback carries no partner word — the webhook PIN is what catches it.
-      expect(inboundWebhooks(getCollectedRoutes(app)).filter((w) => !KNOWN_INBOUND_WEBHOOKS.includes(w))).toEqual(['POST /api/v1/webhooks/acme-insurer/lead-status']);
+      // A provider-named callback with no lead or partner word (`/hooks/acme-insurer`) — the webhook PIN is what catches it.
+      expect(inboundWebhooks(getCollectedRoutes(app)).filter((w) => !KNOWN_INBOUND_WEBHOOKS.includes(w))).toEqual(
+        [
+          'POST /api/v1/webhooks/acme-insurer/lead-status',
+          'POST /api/v1/webhook/acme-insurer/leads',
+          'POST /api/v1/hooks/acme-insurer',
+          'POST /api/v1/hook/acme-insurer',
+          'PATCH /api/v1/callbacks/acme-insurer/status',
+        ].sort(),
+      );
       expect(guarded).toEqual(['POST /api/v1/p/:pariwarId/modules/partners']);
     } finally {
       await app.close();

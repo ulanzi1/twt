@@ -70,10 +70,19 @@ export const LEAD_HANDOFF_TICK_BUDGET_MS = 45_000;
 export const LEAD_FIELDS_RETENTION_DAYS = 30;
 /** The purge's batch per tick (S2). */
 export const LEAD_HANDOFF_PURGE_BATCH = 100;
-/** The waiting pass's page (S2, `-487`): `due` rows whose next attempt is still ahead, read this many at a time. */
+/** The waiting pass's page (S2, `-487`; `-488` (1)): EVERY `due` row, read this many at a time. */
 export const LEAD_HANDOFF_WAITING_PAGE = 50;
 /** The waiting pass stops after this much time and resumes from its cursor on the next tick (`-487`) — a time budget, ⛔ a row count. */
 export const LEAD_HANDOFF_WAITING_BUDGET_MS = 10_000;
+/** The most rows one {@link listWaitingLeadHandoffs} page returns. */
+export const LEAD_HANDOFF_WAITING_PAGE_CAP = 500;
+/**
+ * The page {@link listWaitingLeadHandoffs} really reads for a requested `limit` (1 … the cap). ⚠ A caller that reads a SHORT page as
+ * "the end of the list" must compare against THIS, ⛔ its own option — else `0` never ends and `> cap` ends after the first page.
+ */
+export function waitingPageSize(limit?: number): number {
+  return clampLimit(limit, { default: LEAD_HANDOFF_WAITING_PAGE, cap: LEAD_HANDOFF_WAITING_PAGE_CAP });
+}
 
 /** The consent type that backs a handoff (QE2 (A); migration 0214). */
 export const LEAD_HANDOFF_CONSENT_TYPE = 'module_lead_handoff' as const;
@@ -512,7 +521,7 @@ export async function cancelLeadHandoff(q: Queryable, ref: LeadHandoffClaimRef &
 
 // ── S2 — the waiting pass (W14; Decision `2026-11-22-487`) ────────────────────────────────────────────
 
-/** One `due` row whose next attempt is still ahead — ids, and whether its offer was withdrawn (QE22 (A)). */
+/** One `due` row the waiting pass re-checks — ids, and whether its offer was withdrawn (QE22 (A)). */
 export interface WaitingLeadHandoff {
   readonly leadId: string;
   readonly pariwarId: string;
@@ -524,10 +533,12 @@ export interface WaitingLeadHandoff {
 }
 
 /**
- * ⭐ S2 (`-487`) — a page of `due` rows that are WAITING (`next_attempt_at` still ahead: a retry's backoff or a hold's minute), in
- * `lead_id` order after `afterLeadId`. The sweep re-reads the member's side for each so a stop is honoured within the tick's minute,
- * ⛔ at the next retry (`-484` Q4 A: "Removed at once if the send is stopped"). A READ: ⛔ lock, ⛔ write — the cancel is W14's
- * compare on `status = 'due'`.
+ * ⭐ S2 (`-487`, AMENDED by `-488` (1)) — a page of EVERY `due` row, in `lead_id` order after `afterLeadId`: one waiting out a retry's
+ * backoff or a hold's minute AND one that is due now but that the claim may not reach this tick (its module key-held, its authority
+ * open, the tick ended by a global hold, the budget spent). The sweep re-reads the member's side for each so a stop is honoured within
+ * the tick's minute, ⛔ at the row's claim (`-484` Q4 A: "Removed at once if the send is stopped"). A row the claim takes in the same
+ * tick is read twice — accepted (`-488`). A READ: ⛔ lock, ⛔ write — the cancel is W14's compare on `status = 'due'`, and the claim's
+ * SKIP LOCKED keeps the two apart.
  *
  * DELIBERATE (checklist family 9): every Pariwar's waiting rows in one statement on the sweep's pool (bypasses RLS) — the pass is the
  * same platform-wide job as the claim, and it returns ids and one boolean only. The caller checks `canReadAcrossPariwars` first. Re-examine
@@ -546,15 +557,14 @@ export async function listWaitingLeadHandoffs(
     module_withdrawn: boolean;
   }>(
     `SELECT h.lead_id, h.pariwar_id, h.module_id, h.member_id, h.consent_id,
-            (m.current_state = 'archived' AND m.archive_reason = 'trustee_archived') AS module_withdrawn
+            COALESCE(m.current_state = 'archived' AND m.archive_reason = 'trustee_archived', false) AS module_withdrawn
        FROM marketplace_lead_handoffs h
        JOIN marketplace_modules m ON m.pariwar_id = h.pariwar_id AND m.module_id = h.module_id
       WHERE h.status = 'due'
-        AND h.next_attempt_at > clock_timestamp()
         AND ($1::uuid IS NULL OR h.lead_id > $1::uuid)
       ORDER BY h.lead_id
       LIMIT $2`,
-    [opts.afterLeadId ?? null, clampLimit(opts.limit, { default: LEAD_HANDOFF_WAITING_PAGE, cap: 500 })],
+    [opts.afterLeadId ?? null, waitingPageSize(opts.limit)],
   );
   return rows.map((r) => ({
     leadId: r.lead_id,

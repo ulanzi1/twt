@@ -479,7 +479,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
   });
 
   describe('the waiting pass\'s read and W14 (Decision 2026-11-22-487)', () => {
-    it('listWaitingLeadHandoffs returns ONLY due rows whose next attempt is still ahead, with the offer\'s withdrawal, in lead_id order after the cursor', async () => {
+    it('listWaitingLeadHandoffs returns EVERY due row — waiting OR due now (`-488` (1)) — and no other, with the offer\'s withdrawal, in lead_id order after the cursor', async () => {
       const { client } = getTx();
       const waiting = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, waiting, { nextAttemptAtSql: "now() + interval '1 hour'", outcomeDetail: 'released:timeout', attemptCount: 3 });
@@ -498,7 +498,8 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
 
       const mine = [waiting, withdrawn, ended, dueNow, inFlight, final].map((x) => x.leadId);
       const all = (await listWaitingLeadHandoffs(client, { limit: 500 })).filter((r) => mine.includes(r.leadId));
-      expect(all.map((r) => r.leadId)).toEqual([waiting.leadId, withdrawn.leadId, ended.leadId].sort());
+      // A due-NOW row is in the list too (`-488` (1)): the claim may not reach it this tick. ⛔ In flight, ⛔ final.
+      expect(all.map((r) => r.leadId)).toEqual([waiting.leadId, withdrawn.leadId, ended.leadId, dueNow.leadId].sort());
       expect(all.find((r) => r.leadId === waiting.leadId)).toEqual({
         leadId: waiting.leadId, pariwarId: PARIWAR_A, moduleId: waiting.moduleId, memberId: waiting.memberId, consentId: waiting.consentId, moduleWithdrawn: false,
       });
@@ -506,7 +507,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       expect(all.find((r) => r.leadId === withdrawn.leadId)?.moduleWithdrawn).toBe(true);
       expect(all.find((r) => r.leadId === ended.leadId)?.moduleWithdrawn).toBe(false);
       // The cursor: strictly AFTER it, so a pass resumes behind the last row it looked at.
-      const [firstId, secondId] = [waiting.leadId, withdrawn.leadId, ended.leadId].sort();
+      const [firstId, secondId] = [waiting.leadId, withdrawn.leadId, ended.leadId, dueNow.leadId].sort();
       const after = (await listWaitingLeadHandoffs(client, { afterLeadId: firstId!, limit: 500 })).filter((r) => mine.includes(r.leadId));
       expect(after.map((r) => r.leadId)).not.toContain(firstId);
       expect(after[0]?.leadId).toBe(secondId);
@@ -516,10 +517,12 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       const { client } = getTx();
       const w = await seedHandoffWorld(client, PARIWAR_A);
       await insertHandoffRaw(client, w, { nextAttemptAtSql: "now() + interval '6 hours'", outcomeDetail: 'held:dns_unavailable', attemptCount: 4, heldSinceSql: "now() - interval '2 hours'" });
+      const nextBefore = (await handoffRow(client, w.leadId))['next_attempt_at'] as Date;
       expect(await cancelWaitingLeadHandoff(client, { pariwarId: w.pariwarId, leadId: w.leadId, word: 'consent_revoked' })).toBe(true);
       expect(await handoffRow(client, w.leadId)).toMatchObject({
         status: 'cancelled', outcome_detail: 'cancelled:consent_revoked', member_fields_ciphertext: null, held_since: null, attempt_count: 4, claim_token: null, claimed_at: null,
       });
+      expect(((await handoffRow(client, w.leadId))['next_attempt_at'] as Date).getTime()).toBe(nextBefore.getTime());
       // Final: a second cancel, and a claim, find nothing to do.
       expect(await cancelWaitingLeadHandoff(client, { pariwarId: w.pariwarId, leadId: w.leadId, word: 'member_withdrawn' })).toBe(false);
       expect((await handoffRow(client, w.leadId))['outcome_detail']).toBe('cancelled:consent_revoked');

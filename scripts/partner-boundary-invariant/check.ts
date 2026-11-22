@@ -84,8 +84,10 @@ function main(): void {
   }
   console.log('✓ partner-boundary-invariant: none of the named shapes — the advisory reference is named only in its four files; the four');
   console.log('  transport files import only the allow-listed member / consent / claim reads (all ' + String(allowed.length) + ' seen), write no other table by raw SQL');
-  console.log('  and load nothing dynamically; the client calls no JSON parser; no createPartnerLeadClient( call carries an argument.');
-  console.log('  ⚠ NOT proven (README, the semantic limit): a write through a helper in another file, a value laundered through a new field.');
+  console.log('  and load nothing dynamically; the client calls no JSON parser; no reference to createPartnerLeadClient is anything but a');
+  console.log('  zero-argument call. Rule (a) — the inbound routes — is the api spec\'s, ⛔ this script\'s.');
+  console.log('  ⚠ NOT proven (README, the semantic limit): a write through a helper in another file, SQL assembled from pieces or through the');
+  console.log('  query builder, what getLeadHandoffStatus calls, a value laundered through a new field.');
 }
 
 main();

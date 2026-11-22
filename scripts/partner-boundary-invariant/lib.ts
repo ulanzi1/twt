@@ -24,6 +24,8 @@
 // stated in the README: this proves the ABSENCE of the patterns it names — ⛔ that no future code path could launder partner data
 // ([[feedback_gate_scope_semantic_coverage]]). The ADR names the review question every inbound integration must answer.
 
+import * as path from 'node:path';
+
 import * as ts from 'typescript';
 
 export interface BoundaryFinding {
@@ -98,24 +100,44 @@ export const AUTHORITY_IMPORT_ALLOWLIST: Readonly<Record<string, readonly string
 export const TRANSPORT_TABLE = 'marketplace_lead_handoffs';
 /** A raw-SQL write and the table it names. House SQL is upper-case keywords and lower-case names, so prose ("update the …") and
  *  `FOR UPDATE OF h` / `FOR UPDATE SKIP LOCKED` never match. */
-const SQL_WRITE = /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?)\s+(?:ONLY\s+)?"?([a-z_][a-z0-9_]*)"?/g;
+const SQL_WRITE = /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM|MERGE\s+INTO|TRUNCATE(?:\s+TABLE)?)\s+(?:ONLY\s+)?"?([a-z_][a-z0-9_]*)"?/g;
+/** A read of EVERY column (rule (b)): `SELECT *`, `RETURNING *`, `t.*` — it returns the advisory reference without naming it. */
+const SQL_VERB = /\b(select|returning)\b/i;
+/** A whole-row value: `to_json(h)`, `to_jsonb(h)`, `row_to_json(h)` — every column, under no name. */
+const SQL_WHOLE_ROW = /\b(to_jsonb?|row_to_json)\s*\(/i;
+/**
+ * ⭐ Rule (b)'s "every column" test on ONE SQL string (code review 2026-11-22, rounds 2 and 3): a string that holds `SELECT` or
+ * `RETURNING` and, once every `count(*)` / `(*)` is taken out, still holds a `*` (`SELECT *`, `t.*`, `"t".*`, `lead_id, *`,
+ * `DISTINCT ON (…) *`, any case); or a whole-row JSON value. A string without the verb is not SQL here — a regex source is not judged.
+ */
+function readsEveryColumn(text: string): boolean {
+  if (!SQL_VERB.test(text)) return false;
+  return /\*/.test(text.replace(/\(\s*\*\s*\)/g, '')) || SQL_WHOLE_ROW.test(text);
+}
+/** The query builder's whole-row reads (rule (b)): a relational `findFirst` / `findMany`, and `getTableColumns(`. */
+const BUILDER_WHOLE_ROW = ['findFirst', 'findMany', 'getTableColumns'];
 /** Packages that ARE an authority (rule (c), jobs files): their truth is never the transport's to read or write. */
 export const AUTHORITY_PACKAGES: readonly string[] = ['@twt/validity-service'];
 /** The function rule (b)'s member-read leg judges — it must exist in `lead-handoff.ts` as a named declaration. */
 export const MEMBER_STATUS_READ = 'getLeadHandoffStatus';
 const DOMAIN_TRANSPORT_FILE = 'packages/domain/src/marketplace/lead-handoff.ts';
 
-/** `./../member/x.js` → `../member/x.js`: one spelling per relative specifier, so a detour cannot dodge the directory match. */
-function normaliseSpecifier(spec: string): string {
-  if (!spec.startsWith('.')) return spec;
-  const out: string[] = [];
-  for (const part of spec.split('/')) {
-    if (part === '.' || part === '') continue;
-    if (part === '..' && out.length > 0 && out[out.length - 1] !== '..') out.pop();
-    else out.push(part);
-  }
-  const joined = out.join('/');
-  return joined.startsWith('..') ? joined : `./${joined}`;
+/** The directory every domain transport file sits in — the base the allow-list's relative specifiers are written from. */
+const DOMAIN_TRANSPORT_DIR = 'packages/domain/src/marketplace';
+const DOMAIN_SRC = 'packages/domain/src';
+
+/**
+ * ONE spelling per module, by RESOLVING (code review 2026-11-22, round 2): a relative specifier is joined to the importing file's
+ * directory and normalised, so `../../src/consent/write.js` IS `../consent/write.js`. Returns the repo path it lands on (`resolved`) and,
+ * for a domain file, the specifier rewritten relative to {@link DOMAIN_TRANSPORT_DIR} (`spec`) — the form the allow-list is keyed by.
+ * A bare specifier (`@twt/domain`, `node:crypto`) is returned as it is, with `resolved` null.
+ */
+function resolveSpecifier(file: string, raw: string): { spec: string; resolved: string | null } {
+  if (!raw.startsWith('.')) return { spec: raw, resolved: null };
+  const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(file), raw));
+  if (!file.startsWith(`${DOMAIN_SRC}/`)) return { spec: raw, resolved };
+  const rel = path.posix.relative(DOMAIN_TRANSPORT_DIR, resolved);
+  return { spec: rel.startsWith('..') ? rel : `./${rel}`, resolved };
 }
 
 const parse = (file: string, source: string): ts.SourceFile => ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
@@ -160,6 +182,22 @@ export function scanReferenceNames(file: string, source: string): BoundaryFindin
       if (ts.isFunctionDeclaration(node) && node.name?.text === MEMBER_STATUS_READ && node.body !== undefined) {
         found = true;
         for (const h of referenceHits(sf, node.body)) out.push({ rule: 'b', file, line: h.line, what: `${MEMBER_STATUS_READ} ${h.what}` });
+        // A read of every column returns the reference WITHOUT naming it (code review 2026-11-22, round 2): `SELECT *` / `RETURNING *`
+        // / `t.*` in SQL, and the query builder's `.select()` / `.returning()` with no column list.
+        const star = (n: ts.Node): void => {
+          const text = stringText(n);
+          if (text !== null && readsEveryColumn(text)) out.push({ rule: 'b', file, line: lineOf(sf, n), what: `${MEMBER_STATUS_READ} reads every column (a \`*\` or a whole-row value)` });
+          if (ts.isCallExpression(n)) {
+            const callee = n.expression;
+            const name = ts.isPropertyAccessExpression(callee) ? callee.name.text : ts.isIdentifier(callee) ? callee.text : null;
+            if (name !== null && ['select', 'returning'].includes(name) && ts.isPropertyAccessExpression(callee) && n.arguments.length === 0) {
+              out.push({ rule: 'b', file, line: lineOf(sf, n), what: `${MEMBER_STATUS_READ} calls .${name}() with no column list` });
+            }
+            if (name !== null && BUILDER_WHOLE_ROW.includes(name)) out.push({ rule: 'b', file, line: lineOf(sf, n), what: `${MEMBER_STATUS_READ} calls ${name}( — a whole-row read` });
+          }
+          ts.forEachChild(n, star);
+        };
+        star(node.body);
       }
       ts.forEachChild(node, visit);
     };
@@ -219,9 +257,23 @@ export function scanAuthorityUse(file: string, source: string): BoundaryFinding[
   const locals = new Map<string, string>();
   for (const stmt of sf.statements) {
     if (!ts.isImportDeclaration(stmt) || !ts.isStringLiteral(stmt.moduleSpecifier)) continue;
-    const spec = normaliseSpecifier(stmt.moduleSpecifier.text);
+    const { spec, resolved } = resolveSpecifier(file, stmt.moduleSpecifier.text);
     const clause = stmt.importClause;
-    if (clause === undefined || clause.isTypeOnly) continue;
+
+    // A relative import that LEAVES the file's own source root reaches code no rule here judges (a jobs file into
+    // `packages/domain/src`, a domain file out of `packages/domain/src`) — a side-effect import too (round 3: it runs that module's
+    // top-level code). A TYPE-only import carries no behaviour.
+    if (resolved !== null && clause?.isTypeOnly !== true) {
+      const root = inDomain ? DOMAIN_SRC : JOBS_SRC_ROOT;
+      if (resolved !== root && !resolved.startsWith(`${root}/`)) push(stmt, `a relative import out of ${root} (${stmt.moduleSpecifier.text}) — only that root's own modules are judged`);
+    }
+    if (clause === undefined) {
+      // A side-effect import of an authority module runs its code with nothing named — ⛔ a read the allow-list can admit.
+      const dir = Object.keys(AUTHORITY_MODULE_DIRS).find((d) => spec.startsWith(d) || spec === d.slice(0, -1));
+      if (dir !== undefined || spec === '@twt/domain' || spec.startsWith('@twt/domain/')) push(stmt, `a side-effect import of ${spec} — its code runs with nothing judged`);
+      continue;
+    }
+    if (clause.isTypeOnly) continue;
 
     if (spec.startsWith('@twt/domain/')) push(stmt, `a deep import of ${spec} — only the \`@twt/domain\` barrel's namespaces are judged`);
     if (AUTHORITY_PACKAGES.includes(spec) || AUTHORITY_PACKAGES.some((p) => spec.startsWith(`${p}/`))) push(stmt, `imports the authority package ${spec}`);
@@ -239,7 +291,8 @@ export function scanAuthorityUse(file: string, source: string): BoundaryFinding[
       }
     }
 
-    const dir = Object.keys(AUTHORITY_MODULE_DIRS).find((d) => spec.startsWith(d));
+    // The directory itself (`../consent`, which resolves to its index) counts as that directory.
+    const dir = Object.keys(AUTHORITY_MODULE_DIRS).find((d) => spec.startsWith(d) || spec === d.slice(0, -1));
     if (dir !== undefined) {
       if (clause.name !== undefined) push(stmt, `a default import from ${spec}`);
       const bindings = clause.namedBindings;
@@ -288,7 +341,7 @@ export function authorityReadsImported(file: string, source: string): string[] {
   const seen: string[] = [];
   for (const stmt of sf.statements) {
     if (!ts.isImportDeclaration(stmt) || !ts.isStringLiteral(stmt.moduleSpecifier)) continue;
-    const spec = normaliseSpecifier(stmt.moduleSpecifier.text);
+    const { spec } = resolveSpecifier(file, stmt.moduleSpecifier.text);
     const bindings = stmt.importClause?.namedBindings;
     if (stmt.importClause === undefined || stmt.importClause.isTypeOnly || bindings === undefined || !ts.isNamedImports(bindings)) continue;
     for (const el of bindings.elements) {
@@ -324,8 +377,14 @@ export function scanBodyParsing(file: string, source: string): BoundaryFinding[]
 }
 
 /**
- * ⭐ Rule (e). Every `createPartnerLeadClient(` call has ZERO arguments (production passes no test seam) — under an import ALIAS too
- * (`import { createPartnerLeadClient as mk }`), and `.call(` / `.apply(` / `.bind(` on it fail (each can carry the seam).
+ * ⭐ Rule (e). Production passes no test seam: every REFERENCE to `createPartnerLeadClient` — or to an import alias of it — under
+ * `apps/jobs/src` must be the callee of a call with ZERO arguments (or its own definition, or an import binding). Anything else fails,
+ * because it can carry the seam: an argument; `.call(` / `.apply(` / `.bind(`; `const mk = createPartnerLeadClient`; passing it
+ * (`Reflect.apply(createPartnerLeadClient, …)`); `(createPartnerLeadClient)(…)`; a re-export (code review 2026-11-22, round 2).
+ * Type positions (`typeof createPartnerLeadClient`, `typeof import('…').createPartnerLeadClient`) and keys (a property, a method or
+ * an interface member named like it) carry no behaviour and are not judged; `createPartnerLeadClient!()` is a direct call. Round 3: a
+ * STRING-keyed access (`ns['createPartnerLeadClient']`) is a reference too, and a namespace import or an `export *` of the client
+ * module fails outright (what it is used for cannot be followed). ⚠ A key BUILT at run time is not seen (README).
  */
 export function scanSeamCalls(file: string, source: string): BoundaryFinding[] {
   const sf = parse(file, source);
@@ -336,18 +395,56 @@ export function scanSeamCalls(file: string, source: string): BoundaryFinding[] {
     if (bindings === undefined || !ts.isNamedImports(bindings)) continue;
     for (const el of bindings.elements) if ((el.propertyName ?? el.name).text === SEAM_FACTORY) names.add(el.name.text);
   }
-  const isFactory = (e: ts.Expression): boolean => (ts.isIdentifier(e) ? names.has(e.text) : ts.isPropertyAccessExpression(e) && e.name.text === SEAM_FACTORY);
-  const visit = (node: ts.Node): void => {
-    if (ts.isCallExpression(node)) {
-      const callee = node.expression;
-      if (isFactory(callee) && node.arguments.length > 0) {
-        out.push({ rule: 'e', file, line: lineOf(sf, node), what: 'createPartnerLeadClient( is called WITH an argument (a test seam in production)' });
-      }
-      if (ts.isPropertyAccessExpression(callee) && ['call', 'apply', 'bind'].includes(callee.name.text) && isFactory(callee.expression)) {
-        out.push({ rule: 'e', file, line: lineOf(sf, node), what: `createPartnerLeadClient.${callee.name.text}( — an indirect call can carry a test seam` });
-      }
+  const push = (node: ts.Node, what: string): void => {
+    out.push({ rule: 'e', file, line: lineOf(sf, node), what });
+  };
+  // The client module taken WHOLE — a namespace import or `export *` — hands the factory on under no name.
+  for (const stmt of sf.statements) {
+    const spec = (ts.isImportDeclaration(stmt) || ts.isExportDeclaration(stmt)) && stmt.moduleSpecifier !== undefined && ts.isStringLiteral(stmt.moduleSpecifier) ? stmt.moduleSpecifier.text : null;
+    if (spec === null || !/(^|\/)partner-lead-client(\.js|\.ts)?$/.test(spec)) continue;
+    if (ts.isImportDeclaration(stmt) && stmt.importClause?.namedBindings !== undefined && ts.isNamespaceImport(stmt.importClause.namedBindings) && !stmt.importClause.isTypeOnly) {
+      push(stmt, 'a namespace import of the client module — the factory can be reached under no name');
     }
+    if (ts.isExportDeclaration(stmt) && stmt.exportClause === undefined && !stmt.isTypeOnly) push(stmt, '`export *` of the client module — another file could call the factory with a test seam');
+  }
+  const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && names.has(node.text)) judge(node);
+    if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) && node.argumentExpression.text === SEAM_FACTORY) judgeRef(node);
     ts.forEachChild(node, visit);
+  };
+  const judge = (id: ts.Identifier): void => {
+    const parent = id.parent;
+    if (ts.isImportSpecifier(parent) || ts.isImportClause(parent)) return;
+    if (ts.isFunctionDeclaration(parent) && parent.name === id) return;
+    if (ts.isTypeQueryNode(parent) || ts.isQualifiedName(parent) || ts.isImportTypeNode(parent)) return;
+    // A KEY named like it (`{ createPartnerLeadClient: … }`, a method, a class field, an interface member) is not a reference.
+    if (
+      (ts.isPropertyAssignment(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent) || ts.isPropertySignature(parent) || ts.isMethodSignature(parent)) &&
+      parent.name === id
+    ) {
+      return;
+    }
+    // `x.createPartnerLeadClient` — the property access is the reference; `createPartnerLeadClient.call` — the identifier is.
+    judgeRef(ts.isPropertyAccessExpression(parent) && parent.name === id ? parent : id);
+  };
+  const judgeRef = (start: ts.Expression): void => {
+    // `createPartnerLeadClient!` is the same reference.
+    let ref: ts.Expression = start;
+    while (ts.isNonNullExpression(ref.parent) && ref.parent.expression === ref) ref = ref.parent;
+    const holder = ref.parent;
+    if (ts.isCallExpression(holder) && holder.expression === ref) {
+      if (holder.arguments.length > 0) push(holder, 'createPartnerLeadClient( is called WITH an argument (a test seam in production)');
+      return;
+    }
+    if (ts.isPropertyAccessExpression(holder) && holder.expression === ref && ['call', 'apply', 'bind'].includes(holder.name.text)) {
+      push(holder, `createPartnerLeadClient.${holder.name.text}( — an indirect call can carry a test seam`);
+      return;
+    }
+    if (ts.isExportSpecifier(holder)) {
+      push(holder, 'a re-export of createPartnerLeadClient — another file could call it with a test seam');
+      return;
+    }
+    push(ref, 'a reference to createPartnerLeadClient that is not a direct zero-argument call (an alias, a pass, a wrapper) — it can carry a test seam');
   };
   visit(sf);
   return out;

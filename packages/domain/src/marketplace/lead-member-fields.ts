@@ -40,11 +40,15 @@ export const LEAD_PREFERRED_LANGUAGES = ['hi', 'en'] as const;
 export type LeadPreferredLanguage = (typeof LEAD_PREFERRED_LANGUAGES)[number];
 
 /**
- * ⛔ Blank: a name or district of spaces — or of nothing a reader can see (separators `\p{Z}`, format characters `\p{Cf}` such as a lone
- * zero-width joiner, which `trim()` does not strip) — is not a value. A TEST only: the value itself is kept byte for byte, joiners and
- * all ([[feedback_never_mangle_member_names]]).
+ * ⛔ Blank: a name or district of spaces — or of nothing a reader can see — is not a value. "Nothing a reader can see" is: white space
+ * and separators (`\s`, `\p{Z}`), format characters (`\p{Cf}`, such as a lone zero-width joiner, which `trim()` does not strip),
+ * control characters (`\p{Cc}`, which `\s` mostly omits), marks with no base (`\p{M}` — a lone combining accent, a variation selector,
+ * the combining grapheme joiner), the Hangul fillers (U+115F, U+1160, U+3164, U+FFA0) and the Braille blank (U+2800) — code review
+ * 2026-11-22, round 2 — and private-use and unassigned code points (`\p{Co}`, `\p{Cn}`, a noncharacter such as U+FFFE; round 3). A WHOLE-STRING test only: a real name keeps its matras and joiners, and the value itself is kept byte for byte
+ * ([[feedback_never_mangle_member_names]]).
  */
-const notBlank = (v: string): boolean => v.replace(/[\s\p{Z}\p{Cf}]/gu, '').length > 0;
+const INVISIBLE = /[\s\p{Z}\p{Cf}\p{Cc}\p{Co}\p{Cn}\p{M}\u115F\u1160\u3164\uFFA0\u2800]/gu;
+const notBlank = (v: string): boolean => v.replace(INVISIBLE, '').length > 0;
 
 const fullName = storableText(z.string().min(1).max(120)).refine(notBlank, { message: 'must not be blank' });
 const district = storableText(z.string().min(1).max(120)).refine(notBlank, { message: 'must not be blank' });
@@ -105,9 +109,7 @@ export interface LeadFieldsCryptoDeps {
   readonly kekRef: KmsKeyRef;
 }
 
-/** What an unknown key must look like to be echoed in an error (I8). */
-const FIELD_NAME_SHAPE = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
-/** The word that stands for an unknown key that does not look like a field name. */
+/** The word that stands for EVERY unknown key (I8): its text is never echoed — a one-word key can be a name or a district. */
 export const UNNAMED_KEY = '(unrecognised key)';
 
 /** Validate the caller's fields, or throw {@link LeadHandoffFieldsInvalidError} naming the failing fields. */
@@ -116,11 +118,9 @@ export function parseLeadMemberFieldsInput(fields: unknown): LeadMemberFieldsV1 
   if (!parsed.success) {
     throw new LeadHandoffFieldsInvalidError(
       parsed.error.issues.flatMap((i) =>
-        // An unknown key is named by its KEY only when it LOOKS like a field name (I8: a mis-keyed object can carry a value as a key);
-        // anything else is the closed word. Every other issue is named by its path.
-        i.code === 'unrecognized_keys'
-          ? i.keys.map((k) => (FIELD_NAME_SHAPE.test(k) ? k : UNNAMED_KEY))
-          : [i.path.length === 0 ? '(root)' : String(i.path[0])],
+        // An unknown key is ALWAYS the closed word (I8: a mis-keyed object can carry a value as a key, and `Gaya` or `Sunita` looks
+        // like a field name — code review 2026-11-22, round 2). Every other issue is named by its path, which is one of the four.
+        i.code === 'unrecognized_keys' ? i.keys.map(() => UNNAMED_KEY) : [i.path.length === 0 ? '(root)' : String(i.path[0])],
       ),
     );
   }

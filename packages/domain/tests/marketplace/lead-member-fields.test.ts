@@ -16,6 +16,7 @@ import {
 } from '../../src/marketplace/errors.js';
 import {
   UNNAMED_KEY,
+  leadMemberFieldsInputSchema,
   leadMemberFieldsV1Schema,
   openLeadMemberFieldsV1,
   parseLeadMemberFieldsInput,
@@ -51,7 +52,8 @@ describe('LeadMemberFieldsV1 — the allow-list (QE5 (A))', () => {
   });
 
   it.each([
-    ['a fifth key (.strict())', { ...valid, date_of_birth: '1980-01-01' }, 'date_of_birth'],
+    // A fifth key is the closed word, ⛔ its name (round 2: a key's text is never echoed — I8).
+    ['a fifth key (.strict())', { ...valid, date_of_birth: '1980-01-01' }, UNNAMED_KEY],
     ['a missing mobile', { full_name: 'A', district: null, preferred_language: 'en' }, 'mobile'],
     ['a mobile normalizeMobile rejects', { ...valid, mobile: '12345' }, 'mobile'],
     ['a landline-shaped number', { ...valid, mobile: '0412-2234567' }, 'mobile'],
@@ -83,10 +85,29 @@ describe('LeadMemberFieldsV1 — the allow-list (QE5 (A))', () => {
     ['a word joiner and a byte-order mark', String.fromCharCode(0x2060, 0xfeff)],
     ['a no-break space and an ideographic space', String.fromCharCode(0x00a0, 0x3000)],
     ['a soft hyphen between spaces', ` ${String.fromCharCode(0x00ad)} `],
+    // Round 2 (code review 2026-11-22): what `\s`, `\p{Z}` and `\p{Cf}` did not cover.
+    ['control characters', String.fromCharCode(0x0001, 0x007f, 0x0085)],
+    ['a lone combining accent', String.fromCharCode(0x0301)],
+    ['a combining grapheme joiner and a variation selector', String.fromCharCode(0x034f, 0xfe0f)],
+    ['the Hangul fillers', String.fromCharCode(0x115f, 0x1160, 0x3164, 0xffa0)],
+    ['a Braille blank', String.fromCharCode(0x2800)],
+    // Round 3: private-use and unassigned code points.
+    ['a private-use character', String.fromCharCode(0xe000)],
+    ['a noncharacter', String.fromCharCode(0xfffe)],
   ])('refuses a name or district of nothing a reader can see: %s (built from code points — TR13)', (_label, invisible) => {
-    for (const input of [{ ...valid, full_name: invisible }, { ...valid, district: invisible }]) {
+    for (const [field, input] of [['full_name', { ...valid, full_name: invisible }], ['district', { ...valid, district: invisible }]] as const) {
       expect(() => parseLeadMemberFieldsInput(input)).toThrow(LeadHandoffFieldsInvalidError);
+      // The BLANK rule is what refuses it (round 3: ⛔ another rule that happens to throw the same error class).
+      const parsed = leadMemberFieldsInputSchema.safeParse(input);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error?.issues.map((i) => `${String(i.path[0])}: ${i.message}`)).toEqual([`${field}: must not be blank`]);
     }
+  });
+
+  it('a real name whose letters carry combining marks is NOT blank — the test is whole-string', () => {
+    // "किरण": KA, VOWEL SIGN I (a combining mark), RA, NNA — the marks are removed only in the TEST, and letters remain.
+    const name = String.fromCharCode(0x0915, 0x093f, 0x0930, 0x0923);
+    expect(parseLeadMemberFieldsInput({ ...valid, full_name: name }).full_name).toBe(name);
   });
 
   it('a joiner INSIDE a real name is kept, byte for byte — the blank test never edits the value', () => {
@@ -95,8 +116,8 @@ describe('LeadMemberFieldsV1 — the allow-list (QE5 (A))', () => {
     expect(parseLeadMemberFieldsInput({ ...valid, full_name: name }).full_name).toBe(name);
   });
 
-  it('an unknown key is echoed ONLY when it looks like a field name — a value-shaped key becomes the closed word (I8)', () => {
-    const valueShaped = { ...valid, 'Sita Devi, +91 98765 43210': true, ['x'.repeat(300)]: 1, 'line\nbreak': 1 };
+  it('an unknown key is NEVER echoed — every one becomes the closed word, a one-word name or district too (I8)', () => {
+    const valueShaped = { ...valid, 'Sita Devi, +91 98765 43210': true, ['x'.repeat(300)]: 1, 'line\nbreak': 1, Gaya: true, Sunita: 1 };
     let caught: unknown;
     try {
       parseLeadMemberFieldsInput(valueShaped);
@@ -105,9 +126,11 @@ describe('LeadMemberFieldsV1 — the allow-list (QE5 (A))', () => {
     }
     const e = caught as LeadHandoffFieldsInvalidError;
     expect(e).toBeInstanceOf(LeadHandoffFieldsInvalidError);
-    expect(e.fields).toEqual([UNNAMED_KEY, UNNAMED_KEY, UNNAMED_KEY]);
+    expect(e.fields).toEqual([UNNAMED_KEY, UNNAMED_KEY, UNNAMED_KEY, UNNAMED_KEY, UNNAMED_KEY]);
     expect(e.message).not.toContain('98765');
     expect(e.message).not.toContain('Sita');
+    expect(e.message).not.toContain('Gaya');
+    expect(e.message).not.toContain('Sunita');
     expect(e.message.length).toBeLessThan(200);
   });
 

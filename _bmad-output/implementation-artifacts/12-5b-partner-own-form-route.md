@@ -9,7 +9,9 @@ PINNED: `4db122e0` = `origin/main` (2026-11-22e, after `git fetch origin`). The 
 `scripts/` claim below was re-derived at the pin on 2026-11-22 (perishable — `git diff --name-only 4db122e0..origin/main
 -- packages apps scripts` at Task 0.1). Re-locate by FUNCTION, ⛔ by line.
 
-STATUS: ready-for-dev (2026-11-22 — v1.1; created by `bmad-create-story 12.5b` as v1.0, validated the same day). ⭐ **NO CODE BEFORE TASK 0.3.** The build
+STATUS: ready-for-dev (2026-11-22 — v1.2; created by `bmad-create-story 12.5b` as v1.0, validated the same day). ⭐ **TASK 0
+COMPLETE (2026-11-22):** BigDev answered every ask as recommended; Decision `2026-11-22-489` committed ALONE (`7b4f93db`);
+the records committed after it. Task 1 may start (re-run 0.1's `git diff` first if `origin/main` has moved). ⭐ **NO CODE BEFORE TASK 0.3.** The build
 decisions QE1–QE18 carry SIX asks (QE6, QE7, QE9, QE10, QE12, QE13). BigDev answers them at Task 0.2; the author-commit
 (≥ `-489`) is committed ALONE before any code ([[feedback_governance_commits_precede_implementation]]). Nothing in this story
 is the Panel's as proposed (the §0 table below): the Panel already ruled R1–R5 (`-486`), and every edge left open is either
@@ -717,14 +719,14 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — governance FIRST (no code before 0.3)**
-  - [ ] 0.1 `git fetch origin`; `git diff --name-only 4db122e0..origin/main -- packages apps scripts`; re-locate every G
+- [x] **Task 0 — governance FIRST (no code before 0.3)**
+  - [x] 0.1 `git fetch origin`; `git diff --name-only 4db122e0..origin/main -- packages apps scripts`; re-locate every G
         by function; re-grep the NUMBERS (decision ≥ `-489`, migrations ≥ `0216`/`0217`, ledger ≥ `2026-11-22f`) on every
         ref and worktree ([[feedback_check_story_branches_before_analysis]]).
-  - [ ] 0.2 BigDev answers QE6, QE7, QE9, QE10, QE12, QE13, and accepts or amends the rest as a set. For QE10, BigDev also
+  - [x] 0.2 BigDev answers QE6, QE7, QE9, QE10, QE12, QE13, and accepts or amends the rest as a set. For QE10, BigDev also
         says whether (A)'s reading of `-423` is the author's to make; if not, write the Panel note from the template
         (R2 C vs `-423`) before 0.3, and 0.3 records only the interim W15 behaviour BigDev picks.
-  - [ ] 0.3 Author-commit Decision ≥ `-489` ALONE, on this branch. It records QE1–QE18 as answered, and names what it
+  - [x] 0.3 Author-commit Decision ≥ `-489` ALONE, on this branch. It records QE1–QE18 as answered, and names what it
         amends or supersedes:
         - `-483` QE13's tick (S3 COALESCE, S4 route first, W15 after the claim loop with its own alarm) and `-487`'s W14
           pass;
@@ -737,7 +739,7 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
         - QE10's answer, stating (A)'s reading of `-423` AS a reading if (A) is chosen.
         It supersedes ⛔ ratified text. It quotes `-486` R1–R5 verbatim where it carries them out
         ([[feedback_supersede_never_reinterpret]]).
-  - [ ] 0.4 Records (a separate commit after 0.3):
+  - [x] 0.4 Records (a separate commit after 0.3):
         - `deferred-work.md` "Deferred from: story 12-5b-…" with KB-1 … KB-9;
         - a dated line on 12.5's K-12 ("Story 12.5b ready-for-dev; items (1)–(3) owned") — ⛔ "Closed by" before code
           ([[feedback_closure_language_precision]]);
@@ -953,6 +955,18 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
 
 - 2026-11-22 — Story created by `bmad-create-story 12.5b` (v1.0): Ultimate context engine analysis completed —
   comprehensive developer guide created. Six ASKs open (QE6, QE7, QE9, QE10, QE12, QE13); no code before Task 0.3.
+- 2026-11-22 — Task 0.1: `git fetch origin`; `origin/main` is still `4db122e0`, so `git diff --name-only 4db122e0..origin/main
+  -- packages apps scripts` is empty and every G holds as re-derived at v1.1. Numbers re-grepped on every ref and worktree:
+  newest decision `-488`, migrations stop at `0215`, ledger letter `2026-11-22f` was this branch's.
+- 2026-11-22 — Task 0.2: BigDev, verbatim: *"QE6 A, QE7 A, QE9 A, QE10 A, QE12 A, QE13 A"*; the other twelve by selection,
+  "Accept as a set (Recommended)"; QE10's reading of `-423`, by selection, "My call, no Panel note (Recommended)". ⇒ ⛔ Panel
+  note.
+- 2026-11-22 — Task 0.3: Decision `2026-11-22-489` (author-commit) committed ALONE, `7b4f93db`. It amends `-483` QE13 and
+  QE18 and `-487` item 3 by name, supersedes `-485` item 3's *"⛔ member↔offer link"* in part, varies `-485` item 8 and the
+  epic note, and supersedes ⛔ ratified text.
+- 2026-11-22 — Task 0.4: `deferred-work.md` "Deferred from: story 12-5b-…" (KB-1 … KB-9); dated lines on 12.5's K-12 and
+  12.1's external-URL CTA item (⛔ "Closed by"); roster Row 55 dated line (⛔ leg moves; KB-6 recorded). The Row 26 / Row 55
+  grant lines wait for the `NNNN+1` migration's commit (Task 9).
 
 ### File List
 
@@ -961,4 +975,5 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
 | Date | Version | Change |
 |---|---|---|
 | 2026-11-22 | 1.0 | Created at pin `4db122e0` on `story/12-5b-partner-own-form-route`; row backlog → ready-for-dev. |
+| 2026-11-22 | 1.2 | Task 0 complete: answers recorded, Decision `-489` (`7b4f93db`), the Task 0.4 records; status header and Completion Notes updated. ⛔ code. |
 | 2026-11-22 | 1.1 | Validated at the same pin (`origin/main` unmoved; numbers re-grepped). G4, G8, G17, G18 extended; G24–G27 added. QE1 grants + policies table (a FOR DELETE policy for erasure; `twt_service` for W15 and the export); QE2 v1 arm pointed at `…_V1`, route-first input parse; QE4 (c) seal's own short read before KMS (amends `-483` QE18); QE4 (e) visibility reason + unknown-module behaviour; QE5 W15 after the claim loop with its own alarm; QE6 wiring + the epic note's variance; QE8 erasure / RTBF pins (three); QE10 re-grounded (Told 3), option (C) added, ⭐ ASK; QE11 names `readLeadHandoffPredicates`; QE14 catalog registration + microcopy scope; QE16 `FIELD_STEP` / `FIELD_LABEL`; `-485` item 3 superseded in part at Task 0.3; the 12.1 CTA item's dated line at Task 0.4; ACs 2, 4, 5, 8, 11, 12, 13 and Tasks 0–9 to match; TR4, TR5, TR13, TR26, TR28 rewritten; TR31–TR33 added. |

@@ -23,6 +23,7 @@ import {
   ModuleArchiveReason,
   ModuleDistrictSource,
   ModuleEligibilityMemberState,
+  MODULE_PARTNER_FORM_COUNT_KINDS,
   MODULE_PARTNER_FORM_STAGES_MAX,
   ModuleLeadRoute,
   ModulePublishedEventType,
@@ -250,12 +251,34 @@ const FlooredCounts = z
 // The object's keys are the four count kinds (`MODULE_PARTNER_FORM_COUNT_KINDS`; the sync-guard test pins both).
 
 /**
+ * Story 12.5b review RD1 (Decision `2026-11-22-490` (1)) — an ALL-DAYS figure: a floored figure (`withheld: false`), or "not shown"
+ * (`withheld: true` — ⛔ a number, ⛔ `below_floor`) when a day of that kind is below 5, so the hidden day cannot be worked out by
+ * subtraction. The two forms are exclusive.
+ */
+export const ModuleCountTotalDto = z
+  .object({ ...flooredFields, withheld: z.boolean() })
+  .strict()
+  .refine((f) => (f.withheld ? f.figure === null && !f.below_floor : isFloored(f)), {
+    message: 'an all-days figure is either floored or withheld, never both',
+  });
+export type ModuleCountTotalDto = z.output<typeof ModuleCountTotalDto>;
+
+const CountTotals = z
+  .object({
+    card_shown: ModuleCountTotalDto,
+    card_opened: ModuleCountTotalDto,
+    went_to_partner: ModuleCountTotalDto,
+    came_back: ModuleCountTotalDto,
+  })
+  .strict();
+
+/**
  * Story 12.5b (QE12 (A), QE13 (A)) — what the Trust knows about a `partner_form` offer: its OWN counts (totals and the newest days)
  * and the partner's totals (the newest entry per period), every figure below 5 as "fewer than 5". ⛔ A member, ⛔ a visit record.
  */
 export const ModulePartnerFormFiguresDto = z
   .object({
-    counts: FlooredCounts,
+    counts: CountTotals,
     days: z.array(z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), counts: FlooredCounts }).strict()),
     partner_totals: z.array(
       z
@@ -274,7 +297,16 @@ export const ModulePartnerFormFiguresDto = z
         .strict(),
     ),
   })
-  .strict();
+  .strict()
+  // RD1 — the SECOND floor (the domain is the first): ⛔ a numeric all-days figure beside a listed day of that kind below 5. (A day past
+  // the list is the domain's alone to see.)
+  .superRefine((v, ctx) => {
+    for (const k of MODULE_PARTNER_FORM_COUNT_KINDS) {
+      if (v.counts[k].figure !== null && v.days.some((d) => d.counts[k].below_floor)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['counts', k], message: 'an all-days figure is never shown beside a day below 5' });
+      }
+    }
+  });
 export type ModulePartnerFormFiguresDto = z.output<typeof ModulePartnerFormFiguresDto>;
 
 /**

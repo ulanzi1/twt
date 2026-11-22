@@ -40,6 +40,8 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 // Story 12.5b (QE6 (A)) — the publisher's route rides with the ticks (⛔ default); every 12.2 module here is `trust_sends`.
 const TICKS = { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true, lead_route: 'trust_sends' } as const;
+// Story 12.5b (QE12 (A)) — one valid entry of a partner's totals, for the denial legs (review RP4).
+const TOTALS_ENTRY = { period_start: '2026-11-01', period_end: '2026-11-30', stages: [{ label: 'Started', figure: 9 }] } as const;
 const EMPTY_JSON = { headers: { 'content-type': 'application/json' }, payload: '{}' } as const;
 
 describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through HTTP', { timeout: 60000 }, () => {
@@ -227,11 +229,13 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
 
   // ── AC2 ─────────────────────────────────────────────────────────────────────────────────────────────
 
-  it('AC2: an admin of the Pariwar WITHOUT module.manage gets 403 on all eight routes; a Pariwar with NO grant is 404', async () => {
+  it('AC2: an admin of the Pariwar WITHOUT module.manage gets 403 on all nine routes; a Pariwar with NO grant is 404', async () => {
     const p = freshPariwar();
     const pa = await pariwarAdmin(p);
     const partnerId = await partner(pa.client, p);
     const moduleId = await authored(pa.client, p, partnerId);
+    // Story 12.5b review RP4: the totals route needs a `partner_form` offer, so the denial cannot be its 409 `module.not_partner_form`.
+    const pfId = json(await post(pa.client, M(p), partnerFormManifest(partnerId)))['module_id'] as string;
     const da = await actorWithId(p, 'district_admin', 'district', 'Patna', 'Dev (District Admin)');
     const c = da.client;
     // 12.2 review RB4: "nothing written" is asserted on every table a route writes, not on the audit table alone — an
@@ -243,6 +247,7 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       publications: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_module_publications WHERE pariwar_id = $1', [x])).rows[0].n as number,
       events: (await td.pool.query('SELECT count(*)::int AS n FROM events_log WHERE pariwar_id = $1', [x])).rows[0].n as number,
       audit: (await td.pool.query('SELECT count(*)::int AS n FROM audit_log_entries WHERE pariwar_id = $1', [x])).rows[0].n as number,
+      totals: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_partner_form_totals WHERE pariwar_id = $1', [x])).rows[0].n as number,
     });
     const q = freshPariwar();
     const before = await counts(p);
@@ -256,6 +261,7 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       () => c.inject({ method: 'GET', url: `${M(p)}/${moduleId}` }),
       () => post(c, `${M(p)}/${moduleId}/publish`, TICKS),
       () => post(c, `${M(p)}/${moduleId}/withdraw`, {}),
+      () => post(c, `${M(p)}/${pfId}/partner-form-totals`, TOTALS_ENTRY),
     ];
     // Review round 1, RP11: publish ALSO answers 403 when the step-up is missing, so the status alone cannot tell a dropped
     // permission check from the step-up gate. Every response must carry the SAME permission-denial code, never the step-up one.
@@ -269,6 +275,8 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     // The Pariwar admin of P on ANOTHER Pariwar (no grant there) — the scope hook's 404, on reads and writes alike.
     expect((await pa.client.inject({ method: 'GET', url: M(q) })).statusCode).toBe(404);
     expect((await post(pa.client, `${M(q)}/partners`, { display_name_en: 'LIC', display_name_hi: 'एलआईसी' })).statusCode).toBe(404);
+    // …and on the totals route, naming P's own `partner_form` offer under Q's path (Story 12.5b review RP4).
+    expect((await post(pa.client, `${M(q)}/${pfId}/partner-form-totals`, TOTALS_ENTRY)).statusCode).toBe(404);
     // Nothing was written by the refused calls.
     expect((await moduleAudit(p)).filter((a) => a.actor_id === da.userId)).toEqual([]);
     expect(await counts(p)).toEqual(before);
@@ -279,9 +287,9 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
   // POSITIVE CONTROLS first (the same clients DO write on every route, so a refusal is the actor / tenant boundary and not a
   // session that never took), then a TAMPERED session — its userId rewritten to a stranger's — must get EXACTLY 404 (a 401
   // would pass without ever reaching the scope hook) on every mutation route, with nothing written; and an admin with NO grant
-  // in the Pariwar gets 404 on all eight routes. A non-human or system actor is not constructible on this surface: every route
+  // in the Pariwar gets 404 on all nine routes (Story 12.5b review RP4 added the partner's totals). A non-human or system actor is not constructible on this surface: every route
   // sits behind the admin session guard and nothing else authenticates.
-  it('RP12 / family 3: a TAMPERED session is EXACTLY 404 on all four mutation routes with nothing written; an admin with NO grant is 404 on all eight', async () => {
+  it('RP12 / family 3: a TAMPERED session is EXACTLY 404 on all five mutation routes with nothing written; an admin with NO grant is 404 on all nine', async () => {
     const p = freshPariwar();
     const author = await pariwarAdmin(p);
     const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
@@ -295,6 +303,9 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     // The open draft the refused sessions will try to act on; the publisher HOLDS a fresh step-up, so a 404 is not the elevation.
     const open = await authored(author.client, p, partnerId);
     await elevate(publisher.client, 'module_publish');
+    // Story 12.5b review RP4 — the fifth mutation route, the partner's totals: its positive control writes for this very client.
+    const pfOpen = json(await post(author.client, M(p), partnerFormManifest(partnerId)))['module_id'] as string;
+    expect((await post(author.client, `${M(p)}/${pfOpen}/partner-form-totals`, TOTALS_ENTRY)).statusCode).toBe(201);
 
     const outsider = await pariwarAdmin(freshPariwar(), 'Omar (Other Pariwar)');
     const counts = async () => ({
@@ -303,8 +314,10 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       publications: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_module_publications WHERE pariwar_id = $1', [p])).rows[0].n as number,
       events: (await moduleEvents(p)).length,
       audit: (await moduleAudit(p)).length,
+      totals: (await td.pool.query('SELECT count(*)::int AS n FROM marketplace_partner_form_totals WHERE pariwar_id = $1', [p])).rows[0].n as number,
     });
     const before = await counts();
+    expect(before.totals).toBe(1); // the positive control's one stage
 
     // An admin with NO grant in P: 404 on every route, reads and writes alike (the module routes name P's real open draft).
     const noGrant = [
@@ -316,6 +329,7 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       outsider.client.inject({ method: 'GET', url: `${M(p)}/${open}` }),
       post(outsider.client, `${M(p)}/${open}/publish`, TICKS),
       post(outsider.client, `${M(p)}/${open}/withdraw`, {}),
+      post(outsider.client, `${M(p)}/${pfOpen}/partner-form-totals`, TOTALS_ENTRY),
     ];
     for (const r of await Promise.all(noGrant)) expect(r.statusCode, r.body).toBe(404);
 
@@ -328,6 +342,7 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       post(author.client, M(p), manifest(partnerId)),
       post(publisher.client, `${M(p)}/${open}/publish`, TICKS),
       post(author.client, `${M(p)}/${open}/withdraw`, {}),
+      post(author.client, `${M(p)}/${pfOpen}/partner-form-totals`, TOTALS_ENTRY),
     ];
     for (const r of await Promise.all(tampered)) expect(r.statusCode, r.body).toBe(404); // EXACTLY 404, ⛔ a 401
 
@@ -335,10 +350,10 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect((await td.pool.query('SELECT current_state FROM marketplace_modules WHERE module_id = $1', [open])).rows[0]).toEqual({ current_state: 'draft' });
   });
 
-  // Review PT15: the OpenAPI documents 400 on all eight routes because Fastify validates the path params BEFORE the session
+  // Review PT15: the OpenAPI documents 400 on all nine routes because Fastify validates the path params BEFORE the session
   // and scope hooks — a malformed pariwarId is 400 `request.validation` even with NO session (⛔ a 401), and a non-UUID
   // moduleId is 400 for a signed-in admin (⛔ the scope hook's or the read's 404).
-  it('PT15: a malformed pariwarId is 400 request.validation on all eight routes before the session gate; a non-UUID moduleId is 400', async () => {
+  it('PT15: a malformed pariwarId is 400 request.validation on all nine routes before the session gate; a non-UUID moduleId is 400', async () => {
     const anon = makeClient(app);
     const bad = '/api/v1/p/not-a-uuid/modules';
     const mid = randomUUID();
@@ -351,6 +366,7 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       anon.inject({ method: 'GET', url: `${bad}/${mid}` }),
       post(anon, `${bad}/${mid}/publish`, TICKS),
       post(anon, `${bad}/${mid}/withdraw`, {}),
+      post(anon, `${bad}/${mid}/partner-form-totals`, TOTALS_ENTRY),
     ];
     for (const r of await Promise.all(noSession)) {
       expect(r.statusCode, r.body).toBe(400);
@@ -362,6 +378,7 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       await client.inject({ method: 'GET', url: `${M(p)}/not-a-uuid` }),
       await post(client, `${M(p)}/not-a-uuid/publish`, TICKS),
       await post(client, `${M(p)}/not-a-uuid/withdraw`, {}),
+      await post(client, `${M(p)}/not-a-uuid/partner-form-totals`, TOTALS_ENTRY),
     ]) {
       expect(r.statusCode, r.body).toBe(400);
       expect(errOf(r).code).toBe('request.validation');
@@ -1105,7 +1122,8 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     expect(r.statusCode, r.body).toBe(201);
     const id = json(r)['module_id'] as string;
     const d = json(await admin.client.inject({ method: 'GET', url: `${M(p)}/${id}` }));
-    const below = { figure: null, below_floor: true };
+    // Nothing counted yet: every all-days figure is the floored 0, ⛔ withheld (no day to protect — Decision `2026-11-22-490` (1)).
+    const below = { figure: null, below_floor: true, withheld: false };
     expect(d).toMatchObject({
       lead_route: 'partner_form',
       partner_form_url: PAGE,
@@ -1127,6 +1145,29 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       partner_form_url: null,
       partner_form_figures: null,
     });
+  });
+
+  // Review RD1 (Decision `2026-11-22-490` (1)) through the real route: days 5 and 1 must not give the all-days 6 (6 − 5 = 1).
+  it('RD1: the detail withholds an all-days figure beside a day below 5 — the 6 − 5 = 1 case — and shows it when every day is 5 or more', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const partnerId = await partner(admin.client, p);
+    const id = json(await post(admin.client, M(p), partnerFormManifest(partnerId)))['module_id'] as string;
+    const plant = `INSERT INTO marketplace_partner_form_counts (pariwar_id, module_id, day, kind, count) VALUES ($1, $2, $3::date, $4, $5)`;
+    await td.pool.query(plant, [p, id, '2026-11-01', 'card_shown', 5]);
+    await td.pool.query(plant, [p, id, '2026-11-02', 'card_shown', 1]);
+    await td.pool.query(plant, [p, id, '2026-11-01', 'card_opened', 5]);
+    await td.pool.query(plant, [p, id, '2026-11-02', 'card_opened', 8]);
+    const r = await admin.client.inject({ method: 'GET', url: `${M(p)}/${id}` });
+    expect(r.statusCode, r.body).toBe(200);
+    const f = json(r)['partner_form_figures'] as { counts: Record<string, Json>; days: { day: string; counts: Record<string, Json> }[] };
+    expect(f.counts['card_shown']).toEqual({ figure: null, below_floor: false, withheld: true });
+    expect(f.counts['card_opened']).toEqual({ figure: 13, below_floor: false, withheld: false }); // control: 5 + 8, every day shown
+    expect(f.days.map((x) => [x.day, x.counts['card_shown']])).toEqual([
+      ['2026-11-02', { figure: null, below_floor: true }],
+      ['2026-11-01', { figure: 5, below_floor: false }],
+    ]);
+    expect(r.body).not.toMatch(/"figure":6[,}]/);
   });
 
   it.each([
@@ -1221,6 +1262,31 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       { figure: 40, below_floor: false },
       { figure: null, below_floor: true },
     ]);
+  });
+
+  // Review RP2 (QE12 (A): "the number itself is never stored"). The audit line is PERMANENT and its hash is an unkeyed SHA-256 of the
+  // request shape: hashed from the raw body, a one-stage entry's below-5 figure was recoverable by hashing the five candidates 0–4. The
+  // hash is now built from the validated, FLOORED entry, so every figure below 5 gives the SAME line for otherwise identical input.
+  it('RP2 / AC10: the audit hash is of the FLOORED entry — figures 0, 1, 3 and 4 give ONE hash; 5 and 6 (controls) each their own', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const id = json(await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p))))['module_id'] as string;
+    const url = `${M(p)}/${id}/partner-form-totals`;
+    const entry = (figure: number) => ({ period_start: '2026-11-01', period_end: '2026-11-30', stages: [{ label: 'Started', figure }] });
+    for (const figure of [0, 1, 3, 4, 5, 6]) {
+      const r = await post(admin.client, url, entry(figure));
+      expect(r.statusCode, r.body).toBe(201);
+    }
+    const hashes = (
+      await td.pool.query<{ request_payload_hash: string }>(
+        `SELECT request_payload_hash FROM audit_log_entries WHERE pariwar_id = $1 AND action = 'module.partner_form_totals_recorded' ORDER BY seq`,
+        [p],
+      )
+    ).rows.map((r) => r.request_payload_hash);
+    expect(hashes).toHaveLength(6);
+    const [h0, h1, h3, h4, h5, h6] = hashes;
+    expect(new Set([h0, h1, h3, h4]).size).toBe(1);
+    expect(new Set([h0, h5, h6]).size).toBe(3);
   });
 
   it('AC10: totals on a trust_sends offer → 409 module.not_partner_form; a bad period → 422 at its path — each with ⛔ audit line', async () => {

@@ -50,7 +50,7 @@ import {
   type HandoffWorld,
 } from './_lead-handoff-fixtures.js';
 import { purgeExpiredPartnerFormVisits } from '../../../src/marketplace/partner-form.js';
-import { seedPartner } from './_fixtures.js';
+import { expectSqlRejected, seedPartner } from './_fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
@@ -718,5 +718,42 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the sweep\'s domain half (QE5; AC
     await purgeExpiredPartnerFormVisits(client);
     expect((await left()).sort()).toEqual([young]);
     void old2;
+  });
+
+  // Review RP1 (Decision `2026-11-22-490` (2)). Every other leg here runs as the superuser, which holds every privilege, so a statement
+  // the jobs login cannot run passes them all. This leg runs the REAL purge on a role shaped as the production jobs login (0007 DD-3:
+  // BYPASSRLS, `IN ROLE twt_service`, created inside this test's transaction): it must remove the old rows on 0217's SELECT + DELETE
+  // alone. A row lock (`FOR UPDATE`) would need an UPDATE privilege — 42501 — and the visits must stay un-updatable, which is asserted too.
+  it('RP1 / W15: the purge runs on the jobs login\'s own privileges (BYPASSRLS, IN ROLE twt_service) — every Pariwar\'s old rows go; ⛔ UPDATE, ⛔ row lock', async () => {
+    const { client } = getTx();
+    const pa = await seedPartner(client, PARIWAR_A);
+    const pb = await seedPartner(client, PARIWAR_B);
+    const ma = await seedModule(client, PARIWAR_A, pa, { route: 'partner_form' });
+    const mb = await seedModule(client, PARIWAR_B, pb, { route: 'partner_form' });
+    const memA = await seedMemberRow(client, PARIWAR_A);
+    const memB = await seedMemberRow(client, PARIWAR_B);
+    const ins = async (p: string, m: string, member: string, age: string): Promise<string> => {
+      const id = randomUUID();
+      await client.query(
+        `INSERT INTO marketplace_partner_form_visits (visit_id, pariwar_id, module_id, member_id, opened_at) VALUES ($1, $2, $3, $4, clock_timestamp() - interval '${age}')`,
+        [id, p, m, member],
+      );
+      return id;
+    };
+    await ins(PARIWAR_A, ma, memA, '91 days');
+    await ins(PARIWAR_B, mb, memB, '120 days');
+    const youngA = await ins(PARIWAR_A, ma, memA, '89 days 23 hours');
+    const login = `twt_service_login_spec_${randomUUID().replaceAll('-', '')}`;
+    await client.query(`CREATE ROLE ${login} NOLOGIN BYPASSRLS IN ROLE twt_service`);
+    await client.query(`SET LOCAL ROLE ${login}`);
+    expect(await purgeExpiredPartnerFormVisits(client)).toBeGreaterThanOrEqual(2);
+    // The no-UPDATE contract holds for this login: ⛔ UPDATE, ⛔ a row lock (each refusal in its own savepoint).
+    await expectSqlRejected(client, 'UPDATE marketplace_partner_form_visits SET opened_at = opened_at WHERE visit_id = $1', [youngA], '42501');
+    await expectSqlRejected(client, 'SELECT 1 FROM marketplace_partner_form_visits WHERE visit_id = $1 FOR UPDATE', [youngA], '42501');
+    await client.query('RESET ROLE');
+    const left = (
+      await client.query<{ visit_id: string }>('SELECT visit_id FROM marketplace_partner_form_visits WHERE member_id = ANY($1::uuid[])', [[memA, memB]])
+    ).rows.map((r) => r.visit_id);
+    expect(left).toEqual([youngA]);
   });
 });

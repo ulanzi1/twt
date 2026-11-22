@@ -284,11 +284,87 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the three figure tables (0217)', 
       `${VISITS}:SELECT`,
     ]);
     const onGuc = /^\(pariwar_id = \(NULLIF\(current_setting\('app\.pariwar_id'::text, true\), ''::text\)\)::uuid\)$/;
+    // Review RP5: each command's REQUIRED clause must be PRESENT and on the GUC — filtering NULLs first let a policy with its tenant
+    // predicate left out pass, and a policy with no USING / WITH CHECK admits every row for its command. SELECT and DELETE filter by
+    // USING alone; INSERT checks by WITH CHECK alone; UPDATE needs both. (Postgres stores no clause a command cannot have.)
+    const required: Record<string, { qual: boolean; withCheck: boolean }> = {
+      SELECT: { qual: true, withCheck: false },
+      DELETE: { qual: true, withCheck: false },
+      INSERT: { qual: false, withCheck: true },
+      UPDATE: { qual: true, withCheck: true },
+    };
     for (const p of pol.rows) {
       expect(p.roles).toBe('{twt_app}');
       expect(p.policyname).toBe(`${p.tablename}_tenant_isolation_${p.cmd.toLowerCase()}`);
-      for (const clause of [p.qual, p.with_check].filter((x): x is string => x !== null)) expect(clause).toMatch(onGuc);
+      const need = required[p.cmd];
+      expect(need, `${p.policyname}: an unexpected command ${p.cmd}`).toBeDefined();
+      if (need!.qual) expect(p.qual, `${p.policyname} USING`).toMatch(onGuc);
+      else expect(p.qual, `${p.policyname} USING`).toBeNull();
+      if (need!.withCheck) expect(p.with_check, `${p.policyname} WITH CHECK`).toMatch(onGuc);
+      else expect(p.with_check, `${p.policyname} WITH CHECK`).toBeNull();
     }
+  });
+
+  // Review RP5 (checklist family 5): the catalog says WHAT the policies are; these say they WORK, for the two tables the visits legs
+  // below do not reach. As `twt_app`: another Pariwar's rows are invisible and un-updatable, a row naming another Pariwar is refused
+  // on INSERT, and with ⛔ scope nothing is seen and nothing is written. Every leg has a control that lands in its own scope.
+  it('RP5 / counts: as twt_app, another Pariwar\'s counts are invisible and un-updatable; a row for another Pariwar or with ⛔ scope is refused', async () => {
+    const { client } = getTx();
+    const ma = await seedModule(client, PARIWAR_A, await seedPartner(client, PARIWAR_A), { route: 'partner_form' });
+    const mb = await seedModule(client, PARIWAR_B, await seedPartner(client, PARIWAR_B), { route: 'partner_form' });
+    const insertCount = `INSERT INTO ${COUNTS} (pariwar_id, module_id, day, kind, count) VALUES ($1, $2, current_date, 'card_shown', 1)`;
+    await client.query(insertCount, [PARIWAR_B, mb]); // B's row, as the superuser
+    await enterAppScope(client, PARIWAR_A);
+    // Control: A's own row lands and is seen and bumped.
+    expect((await client.query(insertCount, [PARIWAR_A, ma])).rowCount).toBe(1);
+    expect((await client.query(`UPDATE ${COUNTS} SET count = count + 1 WHERE module_id = $1`, [ma])).rowCount).toBe(1);
+    expect((await client.query(`SELECT pariwar_id, count FROM ${COUNTS} WHERE module_id = ANY($1::uuid[])`, [[ma, mb]])).rows).toEqual([
+      { pariwar_id: PARIWAR_A, count: '2' },
+    ]);
+    // B's row: invisible, and an UPDATE matches nothing.
+    expect((await client.query(`UPDATE ${COUNTS} SET count = count + 1 WHERE module_id = $1`, [mb])).rowCount).toBe(0);
+    // A row naming B, from A's scope → the INSERT WITH CHECK (42501).
+    await expectSqlRejected(client, `INSERT INTO ${COUNTS} (pariwar_id, module_id, day, kind, count) VALUES ($1, $2, current_date, 'came_back', 1)`, [PARIWAR_B, mb], '42501');
+    // ⛔ scope: nothing seen, nothing updated, nothing inserted.
+    await client.query('RESET ROLE');
+    await enterAppRoleNoScope(client);
+    await client.query("SELECT set_config('app.pariwar_id', '', true)");
+    expect((await client.query(`SELECT 1 FROM ${COUNTS} WHERE module_id = ANY($1::uuid[])`, [[ma, mb]])).rows).toHaveLength(0);
+    expect((await client.query(`UPDATE ${COUNTS} SET count = count + 1 WHERE module_id = ANY($1::uuid[])`, [[ma, mb]])).rowCount).toBe(0);
+    await expectSqlRejected(client, `INSERT INTO ${COUNTS} (pariwar_id, module_id, day, kind, count) VALUES ($1, $2, current_date, 'came_back', 1)`, [PARIWAR_A, ma], '42501');
+    await client.query('RESET ROLE');
+    // B's row is exactly as the superuser wrote it.
+    expect((await client.query(`SELECT count FROM ${COUNTS} WHERE module_id = $1`, [mb])).rows).toEqual([{ count: '1' }]);
+  });
+
+  it('RP5 / totals: as twt_app, another Pariwar\'s totals are invisible; an entry for another Pariwar or with ⛔ scope is refused', async () => {
+    const { client } = getTx();
+    const ma = await seedModule(client, PARIWAR_A, await seedPartner(client, PARIWAR_A), { route: 'partner_form' });
+    const mb = await seedModule(client, PARIWAR_B, await seedPartner(client, PARIWAR_B), { route: 'partner_form' });
+    await insertTotals(client, PARIWAR_B, mb, { figure: 7, belowFloor: false }); // B's entry, as the superuser
+    await enterAppScope(client, PARIWAR_A);
+    // Control: A's own entry lands and is seen.
+    await insertTotals(client, PARIWAR_A, ma, { figure: 9, belowFloor: false });
+    expect((await client.query(`SELECT pariwar_id, figure FROM ${TOTALS} WHERE module_id = ANY($1::uuid[])`, [[ma, mb]])).rows).toEqual([
+      { pariwar_id: PARIWAR_A, figure: 9 },
+    ]);
+    // An entry naming B, from A's scope → the INSERT WITH CHECK (42501).
+    await client.query('SAVEPOINT other_pariwar');
+    await expect(insertTotals(client, PARIWAR_B, mb, { figure: 8, belowFloor: false })).rejects.toMatchObject({ code: '42501' });
+    await client.query('ROLLBACK TO SAVEPOINT other_pariwar');
+    // ⛔ scope: nothing seen, nothing inserted.
+    await client.query('RESET ROLE');
+    await enterAppRoleNoScope(client);
+    await client.query("SELECT set_config('app.pariwar_id', '', true)");
+    expect((await client.query(`SELECT 1 FROM ${TOTALS} WHERE module_id = ANY($1::uuid[])`, [[ma, mb]])).rows).toHaveLength(0);
+    await client.query('SAVEPOINT noscope');
+    await expect(insertTotals(client, PARIWAR_A, ma, { figure: 8, belowFloor: false })).rejects.toMatchObject({ code: '42501' });
+    await client.query('ROLLBACK TO SAVEPOINT noscope');
+    await client.query('RESET ROLE');
+    expect((await client.query(`SELECT pariwar_id, figure FROM ${TOTALS} WHERE module_id = ANY($1::uuid[]) ORDER BY figure`, [[ma, mb]])).rows).toEqual([
+      { pariwar_id: PARIWAR_B, figure: 7 },
+      { pariwar_id: PARIWAR_A, figure: 9 },
+    ]);
   });
 
   it('visits: under FORCE RLS a twt_app DELETE removes only its own Pariwar\'s rows (the FOR DELETE policy works); ⛔ UPDATE (42501)', async () => {

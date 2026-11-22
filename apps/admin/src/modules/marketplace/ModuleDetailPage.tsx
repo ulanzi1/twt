@@ -24,7 +24,12 @@
 // page shows its FIGURES — the Trust's own counts and the partner's totals, every figure below 5 as "fewer than 5" (the server never
 // sends one) — and a form to enter the partner's totals for a period. ⛔ A member anywhere on this page.
 
-import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse, type ModuleLeadRoute } from '@twt/contracts';
+import {
+  MODULE_PARTNER_FORM_STAGES_MAX as TOTALS_STAGES_MAX,
+  MODULE_PUBLISH_STEP_UP_CONTEXT,
+  type ModuleDetailResponse,
+  type ModuleLeadRoute,
+} from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -86,6 +91,9 @@ export function ModuleDetailPage({
   const [totalsMessage, setTotalsMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const totalsHeadingRef = useRef<HTMLHeadingElement>(null);
   const totalsInFlight = useRef(false);
+  // Review RP3: the label field of each step, and the step "Add a step" just made — focus moves there once it has rendered.
+  const stageLabelRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const focusStage = useRef<number | null>(null);
   const [pending, setPending] = useState<PendingWrite<'publish'>>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const holdSeq = useRef(0);
@@ -122,6 +130,15 @@ export function ModuleDetailPage({
     if (pending === null) return;
     stepUpRef.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]):not([type=hidden])')?.focus();
   }, [pending]);
+
+  // Review RP3 (checklist family 13): "Add a step" moves focus to the NEW step's first field — the next thing to type — on every add.
+  // On the twentieth the button itself unmounts under the keyboard, which would otherwise drop focus to <body>.
+  useEffect(() => {
+    const i = focusStage.current;
+    if (i === null) return;
+    focusStage.current = null;
+    stageLabelRefs.current[i]?.focus();
+  }, [totals.stages.length]);
 
   if (detail.isLoading) return <p role="status">{t('module.loading')}</p>;
   // The error REPLACES the page only when there is nothing to show: a failed background refetch (window focus — the admin
@@ -417,7 +434,15 @@ export function ModuleDetailPage({
               <div key={i} className="flex items-end gap-2">
                 <label className="flex flex-col text-sm">
                   {t('module.totals.stageLabel', { n: i + 1 })}
-                  <input className="rounded border px-2 py-1 text-sm" value={st.label} onChange={(e) => setStage(i, { label: e.target.value })} data-testid={`totals-stage-label-${i}`} />
+                  <input
+                    ref={(el) => {
+                      stageLabelRefs.current[i] = el;
+                    }}
+                    className="rounded border px-2 py-1 text-sm"
+                    value={st.label}
+                    onChange={(e) => setStage(i, { label: e.target.value })}
+                    data-testid={`totals-stage-label-${i}`}
+                  />
                 </label>
                 <label className="flex flex-col text-sm">
                   {t('module.totals.stageFigure', { n: i + 1 })}
@@ -439,8 +464,16 @@ export function ModuleDetailPage({
               </div>
             ))}
             <div className="flex gap-2">
-              {totals.stages.length < 20 ? (
-                <button type="button" className="rounded border px-3 py-1 text-sm" onClick={() => setTotals((d) => ({ ...d, stages: [...d.stages, { label: '', figure: '' }] }))} data-testid="totals-stage-add">
+              {totals.stages.length < TOTALS_STAGES_MAX ? (
+                <button
+                  type="button"
+                  className="rounded border px-3 py-1 text-sm"
+                  onClick={() => {
+                    focusStage.current = totals.stages.length; // the new step's index (RP3)
+                    setTotals((d) => ({ ...d, stages: [...d.stages, { label: '', figure: '' }] }));
+                  }}
+                  data-testid="totals-stage-add"
+                >
                   {t('module.totals.addStage')}
                 </button>
               ) : null}
@@ -463,6 +496,8 @@ export function ModuleDetailPage({
           ) : null}
           <div role="status" aria-live="polite" data-testid="module-totals-live">
             {totalsMessage !== null && totalsMessage.kind === 'ok' ? <p className="text-sm">{totalsMessage.text}</p> : null}
+            {/* Review RP3: why "Add a step" has gone — said in this ALWAYS-mounted region, so it is announced when the limit is reached. */}
+            {totals.stages.length >= TOTALS_STAGES_MAX ? <p className="text-xs">{t('module.totals.stagesLimit', { n: TOTALS_STAGES_MAX })}</p> : null}
           </div>
           {totalsMessage !== null && totalsMessage.kind === 'error' ? (
             <p role="alert" className="text-sm text-status-fail-fg" data-testid="module-totals-error">

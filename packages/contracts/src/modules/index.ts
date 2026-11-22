@@ -54,6 +54,7 @@ export {
   WithdrawModuleResponse,
   // Story 12.5b — the floored figures, the partner's totals intake.
   ModuleFlooredFigureDto,
+  ModuleCountTotalDto,
   ModulePartnerFormFiguresDto,
   RecordPartnerFormTotalsRequest,
   RecordPartnerFormTotalsResponse,

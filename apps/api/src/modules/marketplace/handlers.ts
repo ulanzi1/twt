@@ -136,8 +136,15 @@ function toFiguresDto(f: marketplace.PartnerFormFigures): z.input<typeof ModuleP
     went_to_partner: fig(k.went_to_partner),
     came_back: fig(k.came_back),
   });
+  // RD1 (Decision `2026-11-22-490` (1)) — the all-days figures carry `withheld` (the domain decided it; the DTO re-checks it).
+  const total = (x: marketplace.CountTotalFigure) => ({ ...fig(x), withheld: x.withheld });
   return {
-    counts: kinds(f.counts),
+    counts: {
+      card_shown: total(f.counts.card_shown),
+      card_opened: total(f.counts.card_opened),
+      went_to_partner: total(f.counts.went_to_partner),
+      came_back: total(f.counts.came_back),
+    },
     days: f.days.map((d) => ({ day: d.day, counts: kinds(d.kinds) })),
     partner_totals: f.partnerTotals.map((t) => ({
       totals_id: t.totalsId,
@@ -632,7 +639,13 @@ export function createMarketplaceHandlers(deps: AppDeps) {
         if (m.leadRoute !== 'partner_form') throw new marketplace.ModuleNotPartnerFormError(mid);
         return audited(
           ctx,
-          { action: 'module.partner_form_totals_recorded', resourceLocator: marketplace.moduleResourceLocator(mid), hashShape: { module_id: mid, ...body } },
+          // Review RP2: the hash is of the validated, FLOORED entry (⛔ the raw body) — the line is permanent and the hash unkeyed, so a raw
+          // below-5 figure could be recovered from its five candidates. Every figure 0–4 now gives the same line.
+          {
+            action: 'module.partner_form_totals_recorded',
+            resourceLocator: marketplace.moduleResourceLocator(mid),
+            hashShape: { module_id: mid, ...marketplace.partnerFormTotalsAuditShape(parsed.data) },
+          },
           async (auditId) => {
             const r = await marketplace.recordPartnerFormTotals(ctx.scopeTx.client, {
               pariwarId: toPariwarId(ctx.pariwarId),

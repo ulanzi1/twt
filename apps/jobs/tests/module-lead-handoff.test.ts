@@ -162,7 +162,7 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     expect(result).toMatchObject({ refused: false, visitsPurged: 0 });
   });
 
-  it('W15 removes only visit records MORE than 90 days old, in the W12 MATERIALIZED shape, bounded (⛔ an IN-subquery)', async () => {
+  it('W15 removes only visit records MORE than 90 days old, by a MATERIALIZED batch, bounded (⛔ an IN-subquery, ⛔ a row lock — RP1)', async () => {
     const seen: { text: string; values: unknown[] }[] = [];
     const pool = {
       query: vi.fn(async (text: string, values: unknown[] = []) => {
@@ -179,7 +179,10 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     expect(seen).toHaveLength(1);
     expect(seen[0]!.text).toMatch(/WITH old AS MATERIALIZED/);
     expect(seen[0]!.text).toMatch(/opened_at < clock_timestamp\(\) - \$1::double precision \* interval '1 day'/);
-    expect(seen[0]!.text).toMatch(/FOR UPDATE SKIP LOCKED\s+LIMIT \$2/);
+    expect(seen[0]!.text).toMatch(/ORDER BY opened_at, visit_id\s+LIMIT \$2/);
+    // Review RP1 (Decision `2026-11-22-490` (2)): a row lock needs an UPDATE privilege the jobs login does not hold (the live leg in
+    // `lead-handoff-commands.spec.ts` runs it on that login's shape).
+    expect(seen[0]!.text).not.toMatch(/FOR (UPDATE|NO KEY UPDATE|SHARE|KEY SHARE)/);
     expect(seen[0]!.text).not.toMatch(/IN \(/);
     expect(seen[0]!.values).toEqual([90, 500]);
   });

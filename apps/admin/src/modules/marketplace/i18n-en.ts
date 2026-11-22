@@ -271,8 +271,11 @@ const EN: Record<string, string> = {
     '{n} members registered interest in this offer. A corrected copy starts with all places free; those members can register again, and the partner may receive a second lead for the same member.',
   // ── Story 12.5b — the figures of an offer that uses the partner's own page (QE12 (A), QE13 (A); I4) ──
   'module.figures.heading': 'Figures for this offer',
-  'module.figures.note': 'Counts for this offer only — no member is named. A figure below 5 is shown as “fewer than 5”.',
+  'module.figures.note':
+    'Counts for this offer only — no member is named. A figure below 5 is shown as “fewer than 5”. An all-days figure is not shown when a day below 5 could be worked out from it.',
   'module.figures.fewerThan5': 'fewer than 5',
+  // Review RD1 (Decision `2026-11-22-490` (1)) — an all-days figure withheld beside a day below 5 (complementary suppression).
+  'module.figures.notShown': 'not shown',
   'module.figures.kind.card_shown': 'Offer shown',
   'module.figures.kind.card_opened': 'Offer opened',
   'module.figures.kind.went_to_partner': 'Went to the partner’s page',
@@ -292,6 +295,7 @@ const EN: Record<string, string> = {
   'module.totals.stageLabel': 'Step {n}: the partner’s word for it',
   'module.totals.stageFigure': 'Step {n}: how many',
   'module.totals.addStage': 'Add a step',
+  'module.totals.stagesLimit': 'That is the last step: one entry holds at most {n} steps.',
   'module.totals.removeStage': 'Remove step {n}',
   'module.totals.save': 'Save the figures',
   'module.totals.saving': 'Saving…',

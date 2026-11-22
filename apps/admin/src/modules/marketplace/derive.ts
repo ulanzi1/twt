@@ -537,8 +537,12 @@ export function moduleErrorGuidance(code: string, surface: 'wizard' | 'detail' =
 
 // ── Story 12.5b — the figures (QE12 (A), QE13 (A); I4) and the partner's totals form ────────────────────
 
-/** A floored figure as text: the number, or "fewer than 5" (the server never sends a number below 5). */
-export function figureText(f: { figure: number | null; below_floor: boolean }): string {
+/**
+ * A floored figure as text: the number, or "fewer than 5" (the server never sends a number below 5). An ALL-DAYS figure may instead be
+ * `withheld` — "not shown", because beside a day below 5 it would let that day be worked out (review RD1; Decision `2026-11-22-490` (1)).
+ */
+export function figureText(f: { figure: number | null; below_floor: boolean; withheld?: boolean }): string {
+  if (f.withheld === true) return t('module.figures.notShown');
   return f.below_floor || f.figure === null ? t('module.figures.fewerThan5') : String(f.figure);
 }
 

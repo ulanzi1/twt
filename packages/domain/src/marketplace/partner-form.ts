@@ -210,6 +210,22 @@ export const PartnerFormTotalsInputSchema = z
 export type PartnerFormTotalsInput = z.infer<typeof PartnerFormTotalsInputSchema>;
 
 /**
+ * Review RP2 — the shape the route's PERMANENT audit line hashes for a totals entry: the VALIDATED entry with every figure FLOORED, exactly
+ * as it is stored. The hash is an unkeyed SHA-256, so a hash of the raw body let a below-5 figure be recovered by hashing its five
+ * candidates; from this shape, every figure 0–4 gives the SAME hash for otherwise identical input (QE12 (A): the number is never kept).
+ */
+export function partnerFormTotalsAuditShape(t: PartnerFormTotalsInput): Record<string, unknown> {
+  return {
+    period_start: t.period_start,
+    period_end: t.period_end,
+    stages: t.stages.map((s) => {
+      const f = floorFigure(s.figure);
+      return { label: s.label, figure: f.figure, below_floor: f.belowFloor };
+    }),
+  };
+}
+
+/**
  * ⭐ QE12 (A) — record ONE entry of the partner's totals for a period (INSERT-ONLY: a correction is a NEW entry for the same period; the
  * read shows the newest). A figure below {@link PARTNER_FORM_FIGURE_FLOOR} is stored as `below_floor = true` with a NULL figure — the
  * number itself is NEVER stored (`-486` R3 B: "totals below 5 are not shown"; the 0217 floor CHECK). Advisory: it changes nothing about
@@ -260,9 +276,17 @@ export interface FlooredFigure {
   readonly belowFloor: boolean;
 }
 
+/**
+ * An ALL-DAYS figure (Decision `2026-11-22-490` (1)): a {@link FlooredFigure}, or `withheld` — "not shown", ⛔ a number and ⛔ "fewer
+ * than 5" — when a day of that kind is below the floor, so the hidden day can never be worked out by subtraction.
+ */
+export interface CountTotalFigure extends FlooredFigure {
+  readonly withheld: boolean;
+}
+
 export interface PartnerFormFigures {
-  /** Each kind's total over every day (floored). */
-  readonly counts: Readonly<Record<PartnerFormCountKind, FlooredFigure>>;
+  /** Each kind's total over every day — floored, and withheld when any day of that kind is below 5 (complementary suppression). */
+  readonly counts: Readonly<Record<PartnerFormCountKind, CountTotalFigure>>;
   /** The newest days first, at most {@link PARTNER_FORM_FIGURE_DAYS_SHOWN}; each kind floored. */
   readonly days: readonly { readonly day: string; readonly kinds: Readonly<Record<PartnerFormCountKind, FlooredFigure>> }[];
   /** The NEWEST entry per period (a correction replaces the earlier one), newest period first. */
@@ -289,6 +313,31 @@ const zeroKinds = (): Record<PartnerFormCountKind, number> =>
   Object.fromEntries(PARTNER_FORM_COUNT_KINDS.map((k) => [k, 0])) as Record<PartnerFormCountKind, number>;
 const floorKinds = (n: Record<PartnerFormCountKind, number>): Record<PartnerFormCountKind, FlooredFigure> =>
   Object.fromEntries(PARTNER_FORM_COUNT_KINDS.map((k) => [k, floorFigure(n[k])])) as Record<PartnerFormCountKind, FlooredFigure>;
+
+/** An all-days figure "not shown" (Decision `2026-11-22-490` (1)). */
+const WITHHELD_TOTAL: CountTotalFigure = { figure: null, belowFloor: false, withheld: true };
+
+/**
+ * ⭐ Review RD1 — complementary suppression (Decision `2026-11-22-490` (1), amending `-489` QE13 (A)). The all-days figure of a kind,
+ * beside the per-day figures, gives the sum of the days NOT shown as numbers: the days "fewer than 5", and the days older than the
+ * newest {@link PARTNER_FORM_FIGURE_DAYS_SHOWN} the page lists. With one such day, the subtraction gives it exactly (days 5 and 1 → all
+ * days 6, a day of 5 shown → the hidden day is 1). So the all-days figure is shown as a number ONLY when EVERY day on which anything was
+ * counted for the offer has that kind at 5 or more — every such day, listed or not, a 0 included. Otherwise it is withheld, whatever its
+ * own size: the rule reads only which days are below the floor (what the page shows or once showed), ⛔ their hidden values, so the
+ * figure's form tells nothing about them ([[feedback_withholding_must_be_uniform]]). With no day counted it is the floored 0.
+ * ⚠ Cost, stated in the decision: one day below 5 hides that kind's all-days figure for the offer's whole life.
+ */
+function countTotals(
+  totals: Record<PartnerFormCountKind, number>,
+  allDays: readonly Record<PartnerFormCountKind, number>[],
+): Record<PartnerFormCountKind, CountTotalFigure> {
+  return Object.fromEntries(
+    PARTNER_FORM_COUNT_KINDS.map((k) => [
+      k,
+      allDays.some((d) => d[k] < PARTNER_FORM_FIGURE_FLOOR) ? WITHHELD_TOTAL : { ...floorFigure(totals[k]), withheld: false },
+    ]),
+  ) as Record<PartnerFormCountKind, CountTotalFigure>;
+}
 
 /**
  * The figures of a `partner_form` offer for the admin detail page: the Trust's own counts (totals and the newest days) and the partner's
@@ -364,7 +413,8 @@ export async function listPartnerFormFigures(db: Db, pariwarId: PariwarId, modul
     const shown = r.below_floor || r.figure === null ? { figure: null, belowFloor: true } : floorFigure(r.figure);
     e.stages.push({ order: r.stage_order, label: r.stage_label, ...shown });
   }
-  return { counts: floorKinds(totals), days, partnerTotals: [...entries.values()] };
+  // ⚠ EVERY day (`byDay`), ⛔ only the listed ones: a day past the list would otherwise be the all-days figure minus the listed days.
+  return { counts: countTotals(totals, [...byDay.values()]), days, partnerTotals: [...entries.values()] };
 }
 
 // ── W15 — the visit purge (Story 12.5b QE5; `-486` R2 C) ─────────────────────────────────────────────────
@@ -377,10 +427,16 @@ export const PARTNER_FORM_VISIT_PURGE_BATCH = 500;
 /**
  * ⭐ W15 (Story 12.5b QE5; `-486` R2 C: *"removed after a number of days"* — the Panel set 90) — DELETE up to `limit` visit records whose
  * own `opened_at` is MORE than `retentionDays` old (`< clock_timestamp() - 90 days`), whoever the member is (QE10 (A) — ⛔ a
- * death-report rule). The W12 MATERIALIZED-CTE shape (⛔ an `IN (subquery LIMIT)` with SKIP LOCKED —
+ * death-report rule). The batch is picked by a MATERIALIZED CTE and deleted by id (⛔ an `IN (subquery LIMIT)` —
  * [[project_in_subquery_limit_skip_locked_overclaim]]). Returns how many rows it removed. The sweep runs it LAST in the tick, after
  * the claim loop, and a throw ends only W15 (one alarm; the next tick retries) — ⇒ a record goes at most about one minute after its
  * 90th day.
+ *
+ * ⚠ ⛔ `FOR UPDATE SKIP LOCKED` (review RP1; Decision `2026-11-22-490` (2)): a row lock needs an UPDATE privilege on some column, the
+ * jobs login holds SELECT + DELETE only (0217 — the visits are never updated, by anyone), and BYPASSRLS waives policies, ⛔ privileges —
+ * so the locking form was 42501 on every production tick. No lock is needed: the only other writer of these rows is erasure's DELETE,
+ * and a DELETE that meets a row another transaction is deleting waits for it, then skips it (READ COMMITTED re-check) — never a double
+ * count, never an error. Proven on the jobs login's own privilege shape by `lead-handoff-commands.spec.ts` (RP1).
  *
  * DELIBERATE (checklist family 9): every Pariwar's rows in one statement on the sweep's pool (bypasses RLS; the jobs login holds 0217's
  * `twt_service` DELETE grant — G24) — retention is a platform-wide clock and the statement returns a count only. Re-examine under the
@@ -395,7 +451,6 @@ export async function purgeExpiredPartnerFormVisits(
        SELECT visit_id FROM marketplace_partner_form_visits
         WHERE opened_at < clock_timestamp() - $1::double precision * interval '1 day'
         ORDER BY opened_at, visit_id
-        FOR UPDATE SKIP LOCKED
         LIMIT $2
      )
      DELETE FROM marketplace_partner_form_visits v USING old WHERE v.visit_id = old.visit_id`,

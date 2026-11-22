@@ -52,6 +52,7 @@ const options = (): ModuleScopeOptionsResponse => ({
 });
 
 const below = { figure: null, below_floor: true };
+const withheld = { figure: null, below_floor: false, withheld: true };
 function partnerFormDetail(over: Partial<ModuleDetailResponse> = {}): ModuleDetailResponse {
   return {
     module_id: MODULE,
@@ -83,7 +84,8 @@ function partnerFormDetail(over: Partial<ModuleDetailResponse> = {}): ModuleDeta
     publication: null,
     lead_count: 0,
     partner_form_figures: {
-      counts: { card_shown: { figure: 12, below_floor: false }, card_opened: below, went_to_partner: below, came_back: below },
+      // RD1 (Decision `2026-11-22-490` (1)): the day below lists three kinds below 5, so their all-days figures are withheld.
+      counts: { card_shown: { figure: 12, below_floor: false, withheld: false }, card_opened: withheld, went_to_partner: withheld, came_back: withheld },
       days: [{ day: '2026-11-20', counts: { card_shown: { figure: 12, below_floor: false }, card_opened: below, went_to_partner: below, came_back: below } }],
       partner_totals: [
         {
@@ -225,6 +227,8 @@ describe('Story 12.5b — derivations', () => {
   it('figureText shows "fewer than 5" for a floored figure; the totals draft validates and builds its request', () => {
     expect(derive.figureText({ figure: 12, below_floor: false })).toBe('12');
     expect(derive.figureText({ figure: null, below_floor: true })).toBe(t('module.figures.fewerThan5'));
+    expect(derive.figureText({ figure: null, below_floor: false, withheld: true })).toBe(t('module.figures.notShown'));
+    expect(derive.figureText({ figure: 12, below_floor: false, withheld: false })).toBe('12');
     const d = { periodStart: '2026-11-01', periodEnd: '2026-11-30', stages: [{ label: ' Started ', figure: '3' }] };
     expect(derive.validateTotalsDraft(d)).toBeNull();
     expect(derive.toTotalsRequest(d)).toEqual({ period_start: '2026-11-01', period_end: '2026-11-30', stages: [{ label: 'Started', figure: 3 }] });
@@ -262,7 +266,10 @@ describe('Story 12.5b — the detail page (AC10, AC11)', () => {
     expect(screen.getByTestId('module-detail-leads-not-used')).toHaveTextContent(t('module.detail.leadsNotUsed'));
     const total = screen.getByTestId('module-figures-total');
     expect(total).toHaveTextContent('12');
-    expect(within(total).getAllByText(t('module.figures.fewerThan5'))).toHaveLength(3);
+    // RD1: the all-days figure of each kind with a day below 5 reads "not shown" — ⛔ "fewer than 5" (its form tells nothing).
+    expect(within(total).getAllByText(t('module.figures.notShown'))).toHaveLength(3);
+    expect(within(total).queryByText(t('module.figures.fewerThan5'))).toBeNull();
+    expect(within(screen.getByTestId('module-figures-day-2026-11-20')).getAllByText(t('module.figures.fewerThan5'))).toHaveLength(3);
     expect(screen.getByTestId('module-figures-day-2026-11-20')).toBeInTheDocument();
     const totals = screen.getByTestId('module-partner-totals');
     expect(totals).toHaveTextContent('Started: 40');
@@ -285,6 +292,33 @@ describe('Story 12.5b — the detail page (AC10, AC11)', () => {
     expect(await screen.findByTestId('module-detail-route')).toHaveTextContent(t('module.route.trust_sends'));
     expect(screen.queryByTestId('module-figures')).toBeNull();
     expect(screen.queryByTestId('module-totals-form')).toBeNull();
+  });
+
+  // Review RP3 (checklist family 13). "Add a step" unmounts when the twentieth step is added, and a button that unmounts under the
+  // keyboard drops focus to <body>. Every add now moves focus to the NEW step's first field (the next thing to type), and the
+  // twentieth also says, in the always-mounted live region, that no more steps can be added.
+  it('RP3: "Add a step" moves focus to the new step\'s label; adding the 20th (the button goes) keeps focus there and announces the limit', { timeout: 20_000 }, async () => {
+    getModuleDetail.mockResolvedValue(partnerFormDetail());
+    renderDetail();
+    await screen.findByTestId('module-totals-form');
+    const live = screen.getByTestId('module-totals-live');
+    const add = (): HTMLElement => screen.getByTestId('totals-stage-add');
+    add().focus();
+    fireEvent.click(add());
+    expect(document.activeElement).toBe(screen.getByTestId('totals-stage-label-1'));
+    expect(live).toHaveTextContent('');
+    for (let n = 3; n <= 19; n += 1) fireEvent.click(add());
+    expect(screen.getAllByTestId(/^totals-stage-label-/)).toHaveLength(19);
+    add().focus();
+    fireEvent.click(add()); // the 20th — the button unmounts with this press
+    expect(screen.queryByTestId('totals-stage-add')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByTestId('totals-stage-label-19'));
+    expect(document.activeElement).not.toBe(document.body);
+    expect(live).toHaveTextContent(t('module.totals.stagesLimit', { n: 20 }));
+    // Removing one brings the button back and clears the limit line.
+    fireEvent.click(screen.getByTestId('totals-stage-remove-19'));
+    expect(add()).toBeInTheDocument();
+    expect(live).not.toHaveTextContent(t('module.totals.stagesLimit', { n: 20 }));
   });
 
   it('AC10: the totals form — Save waits for a valid period and stages; it sends the request and says it was saved', { timeout: 20_000 }, async () => {

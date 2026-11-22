@@ -26,6 +26,7 @@ import {
   ModuleEligibilityFilterDto,
   ModuleListResponse,
   ModuleScopeFilterDto,
+  ModuleCountTotalDto,
   ModuleFlooredFigureDto,
   ModulePartnerFormFiguresDto,
   ModuleScopeOptionDto,
@@ -47,7 +48,9 @@ describe('modules contract ↔ domain sync-guard', () => {
     expect([...MODULE_PARTNER_FORM_COUNT_KINDS]).toEqual([...schema.PARTNER_FORM_COUNT_KINDS]);
     expect(MODULE_PARTNER_FORM_STAGES_MAX).toBe(schema.PARTNER_FORM_STAGES_MAX);
     expect(MODULE_PARTNER_FORM_STAGE_LABEL_MAX).toBe(schema.PARTNER_FORM_STAGE_LABEL_MAX);
-    expect(Object.keys(ModulePartnerFormFiguresDto.shape.counts.shape).sort()).toEqual([...MODULE_PARTNER_FORM_COUNT_KINDS].sort());
+    // The DTO is refined (RD1's second floor), so its object is the effect's inner type.
+    const figures = ModulePartnerFormFiguresDto.innerType();
+    expect(Object.keys(figures.shape.counts.shape).sort()).toEqual([...MODULE_PARTNER_FORM_COUNT_KINDS].sort());
   });
 
   it('the scope kinds equal the domain ScopeFilterV1 discriminants, and the scope bounds equal the domain constants', () => {
@@ -174,6 +177,40 @@ describe('modules request DTOs — shape-only and strict (QE18)', () => {
     expect(ModuleFlooredFigureDto.safeParse({ figure: 4, below_floor: false }).success).toBe(false);
     expect(ModuleFlooredFigureDto.safeParse({ figure: 7, below_floor: true }).success).toBe(false);
     expect(ModuleFlooredFigureDto.safeParse({ figure: null, below_floor: false }).success).toBe(false);
+  });
+
+  // Review RD1 (Decision `2026-11-22-490` (1)): an all-days figure is floored OR withheld ("not shown"), never both; and the figures DTO
+  // is a second floor — ⛔ a numeric all-days figure beside a listed day of that kind below 5 (the 6 − 5 = 1 case).
+  it('RD1: an all-days figure is floored or withheld, never both; ⛔ a numeric all-days figure beside a day below 5', () => {
+    expect(ModuleCountTotalDto.safeParse({ figure: 12, below_floor: false, withheld: false }).success).toBe(true);
+    expect(ModuleCountTotalDto.safeParse({ figure: null, below_floor: true, withheld: false }).success).toBe(true);
+    expect(ModuleCountTotalDto.safeParse({ figure: null, below_floor: false, withheld: true }).success).toBe(true);
+    for (const bad of [
+      { figure: 12, below_floor: false, withheld: true },
+      { figure: null, below_floor: true, withheld: true },
+      { figure: 3, below_floor: false, withheld: false },
+      { figure: null, below_floor: false, withheld: false },
+    ]) {
+      expect(ModuleCountTotalDto.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+    }
+    expect(ModuleCountTotalDto.safeParse({ figure: 12, below_floor: false }).success).toBe(false); // `withheld` is required
+    const shown = (figure: number) => ({ figure, below_floor: false });
+    const below = { figure: null, below_floor: true };
+    const allShown = { card_shown: shown(5), card_opened: shown(5), went_to_partner: shown(5), came_back: shown(5) };
+    const total = (figure: number) => ({ figure, below_floor: false, withheld: false });
+    const withheld = { figure: null, below_floor: false, withheld: true };
+    const figuresWith = (cardShownTotal: unknown) => ({
+      counts: { card_shown: cardShownTotal, card_opened: total(5), went_to_partner: total(5), came_back: total(5) },
+      days: [
+        { day: '2026-11-02', counts: { ...allShown, card_shown: below } },
+        { day: '2026-11-01', counts: allShown },
+      ],
+      partner_totals: [],
+    });
+    const leak = ModulePartnerFormFiguresDto.safeParse(figuresWith(total(6)));
+    expect(leak.success).toBe(false);
+    expect(leak.error?.issues.map((i) => i.path)).toEqual([['counts', 'card_shown']]);
+    expect(ModulePartnerFormFiguresDto.safeParse(figuresWith(withheld)).success).toBe(true);
   });
 
   it('CreateModulePartnerRequest is shape-only and strict', () => {

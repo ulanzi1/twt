@@ -28,6 +28,11 @@ import { seedMemberRow, seedModule } from './_lead-handoff-fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
+/** Decision `2026-11-22-490` (1) — an all-days figure "not shown": ⛔ a number, ⛔ "fewer than 5" (its form tells nothing). */
+const WITHHELD = { figure: null, belowFloor: false, withheld: true } as const;
+/** `base` + `n` days, as YYYY-MM-DD (UTC arithmetic on a date-only string). */
+const isoDay = (base: string, n: number): string => new Date(Date.parse(`${base}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
 const kms = createFakeKmsProvider({ kekBytes: new Uint8Array(32).fill(7), hmacKeyBytes: new Uint8Array(32).fill(9) });
 const kekRef = { resourceName: 'fake:rtbf-12-5b-kek' };
 
@@ -259,17 +264,81 @@ describe.skipIf(!hasDatabase)('Story 12.5b — the counts and the partner\'s tot
     for (let i = 0; i < 5; i += 1) await countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), kind: 'card_shown' });
     for (let i = 0; i < 4; i += 1) await countPartnerFormEvent(client, { pariwarId: PARIWAR_A, moduleId: toModuleId(w.moduleId), kind: 'card_opened' });
     const f = await listPartnerFormFigures(bindScopedDb(client), PARIWAR_A, toModuleId(w.moduleId));
+    // Decision `2026-11-22-490` (1): a kind with a day below 5 has its all-days figure "not shown" (withheld), whatever its size.
     expect(f.counts).toEqual({
-      card_shown: { figure: 5, belowFloor: false },
-      card_opened: { figure: null, belowFloor: true },
-      went_to_partner: { figure: null, belowFloor: true },
-      came_back: { figure: null, belowFloor: true },
+      card_shown: { figure: 5, belowFloor: false, withheld: false },
+      card_opened: WITHHELD,
+      went_to_partner: WITHHELD,
+      came_back: WITHHELD,
     });
     expect(f.days).toHaveLength(1);
     expect(f.days[0]!.kinds.card_opened).toEqual({ figure: null, belowFloor: true });
     expect(f.days[0]!.kinds.card_shown).toEqual({ figure: 5, belowFloor: false });
     // ⛔ a figure below 5 anywhere in what leaves.
     expect(JSON.stringify(f)).not.toMatch(/"figure":[0-4][,}]/);
+  });
+
+  // Review RD1 (Decision `2026-11-22-490` (1) — complementary suppression). The all-days figure beside the per-day list gave a hidden
+  // day by subtraction: days 5 and 1 → all days 6, a day of 5 shown → the hidden day is 6 − 5 = 1. Days are planted directly (as the
+  // superuser) because `countPartnerFormEvent` writes only the DB's own IST today.
+  it('RD1: the all-days figure is "not shown" whenever a day of that kind is below 5 — so 6 − 5 = 1 cannot be worked out; every other case', async () => {
+    const { client } = getTx();
+    const plant = async (moduleId: string, rows: [day: string, kind: string, count: number][]): Promise<void> => {
+      for (const [day, kind, count] of rows) {
+        await client.query(
+          'INSERT INTO marketplace_partner_form_counts (pariwar_id, module_id, day, kind, count) VALUES ($1, $2, $3::date, $4, $5)',
+          [PARIWAR_A, moduleId, day, kind, count],
+        );
+      }
+    };
+    const read = async (moduleId: string) => listPartnerFormFigures(bindScopedDb(client), PARIWAR_A, toModuleId(moduleId));
+    const shown = (n: number) => ({ figure: n, belowFloor: false, withheld: false });
+
+    // (a) The review's case: days 5 and 1.
+    const a = (await world(client)).moduleId;
+    await plant(a, [['2026-11-01', 'card_shown', 5], ['2026-11-02', 'card_shown', 1]]);
+    const fa = await read(a);
+    expect(fa.counts.card_shown).toEqual(WITHHELD);
+    expect(fa.days.map((d) => [d.day, d.kinds.card_shown])).toEqual([
+      ['2026-11-02', { figure: null, belowFloor: true }],
+      ['2026-11-01', { figure: 5, belowFloor: false }],
+    ]);
+    expect(JSON.stringify(fa)).not.toMatch(/"figure":6[,}]/); // ⛔ the all-days 6 leaves
+
+    // (b) Control: every day at 5 or more → the all-days figure is shown (5 + 7 = 12).
+    const b = (await world(client)).moduleId;
+    await plant(b, [['2026-11-01', 'card_shown', 5], ['2026-11-02', 'card_shown', 7]]);
+    expect((await read(b)).counts.card_shown).toEqual(shown(12));
+
+    // (c) A day OLDER than the newest 60 the page lists counts too: 60 listed days of 5 and one older day of 2. Shown, the all-days
+    //     figure (302) minus the listed days (300) would give the unlisted day exactly.
+    const c = (await world(client)).moduleId;
+    const listed = Array.from({ length: 60 }, (_x, i): [string, string, number] => [isoDay('2026-09-01', i + 1), 'card_opened', 5]);
+    await plant(c, [['2026-09-01', 'card_opened', 2], ...listed]);
+    const fc = await read(c);
+    expect(fc.days).toHaveLength(60);
+    expect(fc.days.every((d) => d.kinds.card_opened.figure === 5)).toBe(true);
+    expect(fc.counts.card_opened).toEqual(WITHHELD);
+
+    // (d) A ZERO on a counted day is below 5 too: card_shown 7 on a day with ⛔ card_opened → card_opened's all-days figure is withheld
+    //     (shown, it would say the hidden day is 0), card_shown's is shown.
+    const d = (await world(client)).moduleId;
+    await plant(d, [['2026-11-03', 'card_shown', 7]]);
+    const fd = await read(d);
+    expect(fd.counts.card_shown).toEqual(shown(7));
+    expect(fd.counts.card_opened).toEqual(WITHHELD);
+
+    // (e) Uniform (⛔ a rule that reads the hidden values): two offers whose shown cells are the same and whose hidden day differs
+    //     (0 against 3) read EXACTLY alike.
+    const e0 = (await world(client)).moduleId;
+    const e3 = (await world(client)).moduleId;
+    await plant(e0, [['2026-11-01', 'card_shown', 9], ['2026-11-02', 'card_opened', 6]]);
+    await plant(e3, [['2026-11-01', 'card_shown', 9], ['2026-11-02', 'card_opened', 6], ['2026-11-02', 'card_shown', 3]]);
+    expect(await read(e3)).toEqual(await read(e0));
+
+    // (f) Nothing counted at all: every all-days figure is "fewer than 5" (0), ⛔ withheld — there is no day to protect.
+    const f0 = (await world(client)).moduleId;
+    expect((await read(f0)).counts.came_back).toEqual({ figure: null, belowFloor: true, withheld: false });
   });
 
   it('AC10: totals — a figure below 5 is stored below_floor with a NULL figure; the read shows the NEWEST entry per period; refuses trust_sends', async () => {

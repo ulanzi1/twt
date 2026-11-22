@@ -3093,3 +3093,18 @@ built under `-474` items 4–5):** two family-facing lines change on surfaces th
 3. ⇒ ⛔ payer: reading a sentence is ⛔ friction under UX Stance #2 (no forced or optional action, no wait the family must sit
    through that was not already there — the claim waited before this line existed; the line only says so). The member-app bundle
    facet is still a no-op (no measurable native build output). ⛔ Dark: nothing is live until roster Row 46 closes.
+
+**Story 12.5b disposition (declaration affirmed — ⛔ NO new row, ⛔ no row retired, ⛔ no row amended; `2026-11-22-489` QE14 / QE15,
+`2026-11-22-486` R5; recorded at the code-review follow-up, 2026-11-22):** the story adds member-app CODE, and ⛔ a member-facing surface
+that anyone can reach.
+1. **The opener** (`apps/mobile/lib/partner-form-link.ts`): `openPartnerForm(url)` calls `Linking.openURL` on the offer's stored partner
+   page — the phone's own browser, ⛔ an in-app tab or web view. **The notice copy** (`apps/mobile/lib/marketplace-i18n.ts`, the
+   `marketplace` namespace's ONE key `partnerForm.notice`): the Panel's own sentence (R5), *"You are being directed to {partner}'s page,
+   where {partner} may ask for your contact information."* Their two unit tests are `apps/mobile/tests/unit/partner-form-link.test.ts`
+   and `marketplace-notice-copy.test.ts`.
+2. ⛔ Production caller: no screen imports either (I1). The first caller is Story 12.3's offer card, which is ⛔ built; ⛔ a member sees,
+   taps or waits on anything from this story.
+3. ⇒ ⛔ payer today. ⚠ Owed by Story 12.3, which builds the card that shows the notice and opens the page: whether the notice is a
+   read-only line or a step the member must pass (a forced tap before the browser opens) is THAT story's to declare here — a new or
+   amended row if it is a forced or optional step, or its own disposition if it is not. The member-app bundle facet is still a no-op (no
+   measurable native build output). ⛔ Live: go-live is gated on roster Row 55 (c) and (d).

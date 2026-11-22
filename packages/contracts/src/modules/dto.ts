@@ -23,6 +23,8 @@ import {
   ModuleArchiveReason,
   ModuleDistrictSource,
   ModuleEligibilityMemberState,
+  MODULE_PARTNER_FORM_STAGES_MAX,
+  ModuleLeadRoute,
   ModulePublishedEventType,
   ModuleState,
 } from './enums.js';
@@ -54,8 +56,13 @@ export const AuthorModuleRequest = z
     valid_from: z.string().max(64),
     valid_until: z.string().max(64),
     slot_capacity: z.number().nullable(),
-    lead_handoff_url: z.string().max(4_096),
-    lead_handoff_signing_key_secret_name: z.string().max(1_024),
+    // Story 12.5b (manifest v2; `-486` R1 A — the AUTHOR proposes the route, the publisher chooses it again at publish). ⛔ default.
+    // The route's own fields: a `partner_form` offer carries `partner_form_url` and NULL lead fields / places; a `trust_sends` one
+    // the reverse. Which pairing is VALID is the domain parse's (422 `module.manifest_invalid`, the issue at the field's path).
+    lead_route: ModuleLeadRoute,
+    lead_handoff_url: z.string().max(4_096).nullable().optional(),
+    lead_handoff_signing_key_secret_name: z.string().max(1_024).nullable().optional(),
+    partner_form_url: z.string().max(4_096).nullable().optional(),
   })
   .strict();
 export type AuthorModuleRequest = z.output<typeof AuthorModuleRequest>;
@@ -70,6 +77,12 @@ export const PublishModuleRequest = z
     tone_checklist_confirmed: z.literal(true),
     hindi_reviewed: z.literal(true),
     partner_agreement_confirmed: z.literal(true),
+    /**
+     * Story 12.5b (QE6 (A); `-486` R1 A: "The admin who publishes the offer chooses, offer by offer. The choice is on the publish
+     * record.") — the PUBLISHER's route, chosen with ⛔ default. It must equal the manifest's: a mismatch is 409
+     * `module.lead_route_mismatch` with ⛔ write and ⛔ audit line (the publisher Withdraws and has a corrected copy authored).
+     */
+    lead_route: ModuleLeadRoute,
   })
   .strict();
 export type PublishModuleRequest = z.output<typeof PublishModuleRequest>;
@@ -210,9 +223,59 @@ export const ModulePublicationDto = z
     hindi_reviewed: z.literal(true),
     partner_agreement_confirmed: z.literal(true),
     tone_signoff_content_hash: z.string().regex(/^[0-9a-f]{64}$/),
+    /** Story 12.5b (QE6) — the route the publisher chose (= the module's — a database fact, I8). */
+    lead_route: ModuleLeadRoute,
   })
   .strict();
 export type ModulePublicationDto = z.output<typeof ModulePublicationDto>;
+
+/** Story 12.5b (I4) — the floor, as a refinement: ⛔ a number below 5 leaves the server; `figure` NULL ⇔ `below_floor`. */
+const isFloored = (f: { figure: number | null; below_floor: boolean }): boolean =>
+  (f.figure === null) === f.below_floor && (f.figure === null || f.figure >= 5);
+const FLOOR_MESSAGE = 'a figure below 5 is never shown';
+const flooredFields = { figure: z.number().int().nonnegative().nullable(), below_floor: z.boolean() };
+
+/** Story 12.5b (I4) — a figure as staff may see it: the number at or above 5, else `null` with `below_floor` ("fewer than 5"). */
+export const ModuleFlooredFigureDto = z.object(flooredFields).strict().refine(isFloored, { message: FLOOR_MESSAGE });
+export type ModuleFlooredFigureDto = z.output<typeof ModuleFlooredFigureDto>;
+
+const FlooredCounts = z
+  .object({
+    card_shown: ModuleFlooredFigureDto,
+    card_opened: ModuleFlooredFigureDto,
+    went_to_partner: ModuleFlooredFigureDto,
+    came_back: ModuleFlooredFigureDto,
+  })
+  .strict();
+// The object's keys are the four count kinds (`MODULE_PARTNER_FORM_COUNT_KINDS`; the sync-guard test pins both).
+
+/**
+ * Story 12.5b (QE12 (A), QE13 (A)) — what the Trust knows about a `partner_form` offer: its OWN counts (totals and the newest days)
+ * and the partner's totals (the newest entry per period), every figure below 5 as "fewer than 5". ⛔ A member, ⛔ a visit record.
+ */
+export const ModulePartnerFormFiguresDto = z
+  .object({
+    counts: FlooredCounts,
+    days: z.array(z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), counts: FlooredCounts }).strict()),
+    partner_totals: z.array(
+      z
+        .object({
+          totals_id: UuidString,
+          period_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          period_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          entered_at: Iso8601Datetime,
+          stages: z.array(
+            z
+              .object({ order: z.number().int().positive(), label: z.string(), ...flooredFields })
+              .strict()
+              .refine(isFloored, { message: FLOOR_MESSAGE }),
+          ),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type ModulePartnerFormFiguresDto = z.output<typeof ModulePartnerFormFiguresDto>;
 
 /**
  * One module, ADMIN SHAPE: the manifest, its partner's names, its state, its author (a display name — a fallback label
@@ -236,8 +299,11 @@ export const ModuleDetailResponse = z
     valid_until: Iso8601Datetime,
     slot_capacity: z.number().int().nullable(),
     slots_remaining: z.number().int().nullable(),
-    lead_handoff_url: z.string(),
-    lead_handoff_signing_key_secret_name: z.string(),
+    /** Story 12.5b — the route; a `partner_form` offer has the partner's page and ⛔ lead fields. */
+    lead_route: ModuleLeadRoute,
+    lead_handoff_url: z.string().nullable(),
+    lead_handoff_signing_key_secret_name: z.string().nullable(),
+    partner_form_url: z.string().nullable(),
     branding_bundle: ModuleBrandingBundleDto,
     current_state: ModuleState,
     archive_reason: ModuleArchiveReason.nullable(),
@@ -246,10 +312,34 @@ export const ModuleDetailResponse = z
     author_display_name: z.string(),
     authored_by_viewer: z.boolean(),
     publication: ModulePublicationDto.nullable(),
+    /** Always 0 for a `partner_form` offer (it never records a lead — I2); the page says "Not used for this offer". */
     lead_count: z.number().int().nonnegative(),
+    /** Story 12.5b — null for a `trust_sends` offer (QE18: ⛔ counters for those). */
+    partner_form_figures: ModulePartnerFormFiguresDto.nullable(),
   })
   .strict();
 export type ModuleDetailResponse = z.output<typeof ModuleDetailResponse>;
+
+/**
+ * Story 12.5b (QE12 (A); `-486` R3 B) — `POST …/modules/:moduleId/partner-form-totals` (Idempotency-Key header required): the
+ * partner's OWN figures for one period, entered by staff from what the partner sent — a period, then 1–20 stages in the partner's
+ * order. ⛔ A member, by shape. A figure below 5 is stored as "fewer than 5" (the number is never kept). The domain re-validates
+ * (dates, label text — 422 `module.partner_form_totals_invalid`).
+ */
+export const RecordPartnerFormTotalsRequest = z
+  .object({
+    period_start: z.string().max(10),
+    period_end: z.string().max(10),
+    stages: z
+      .array(z.object({ label: z.string().max(200), figure: z.number().int().nonnegative().max(2_147_483_647) }).strict())
+      .min(1)
+      .max(MODULE_PARTNER_FORM_STAGES_MAX),
+  })
+  .strict();
+export type RecordPartnerFormTotalsRequest = z.output<typeof RecordPartnerFormTotalsRequest>;
+
+export const RecordPartnerFormTotalsResponse = z.object({ totals_id: UuidString, stages: z.number().int().positive() }).strict();
+export type RecordPartnerFormTotalsResponse = z.output<typeof RecordPartnerFormTotalsResponse>;
 
 /** `POST …/modules` — the new draft's server-minted id. */
 export const AuthorModuleResponse = z.object({ module_id: UuidString, state: z.literal('draft') }).strict();

@@ -20,7 +20,7 @@ import { marketplace, ModuleStateDirectWriteError } from '@twt/domain';
 import { ApiError } from '../../http-errors.js';
 
 /** Which command an `OutsideWindow` / `IllegalTransition` came from — the same domain error maps per operation. */
-export type ModuleOperation = 'author' | 'publish' | 'withdraw' | 'read' | 'partner';
+export type ModuleOperation = 'author' | 'publish' | 'withdraw' | 'read' | 'partner' | 'totals';
 
 const NOT_FOUND = (): ApiError => new ApiError(404, 'module.not_found', 'This offer was not found');
 
@@ -75,6 +75,19 @@ export function mapModuleError(err: unknown, op: ModuleOperation): never {
     throw new ApiError(422, 'module_partner.name_invalid', 'The partner name is not valid', {
       issues: err.issues.map((i) => ({ path: i.path.map(String), message: i.message })),
     });
+  }
+  // ── Story 12.5b ──
+  if (err instanceof marketplace.ModuleNotPartnerFormError) {
+    throw new ApiError(409, 'module.not_partner_form', "This offer does not use the partner's own page", {});
+  }
+  if (err instanceof marketplace.PartnerFormTotalsInvalidError) {
+    throw new ApiError(422, 'module.partner_form_totals_invalid', "The partner's figures are not valid", {
+      issues: err.issues.map((i) => ({ path: i.path.map(String), message: i.message })),
+    });
+  }
+  if (err instanceof marketplace.ModuleLeadRouteRefusedError) {
+    // Unreachable from these routes (none submits a lead) — mapped so a future caller gets a typed 409, ⛔ a 500.
+    throw new ApiError(409, err.code, "This offer uses the partner's own page — it never passes a member on", {});
   }
   if (err instanceof marketplace.ModuleCursorInvalidError) {
     throw new ApiError(400, 'module.cursor_invalid', 'The list position is not valid — start again from the first page', {});

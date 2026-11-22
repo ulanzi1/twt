@@ -353,7 +353,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — lifecycle (AC5)', () => 
         auditId: randomUUID(),
         actor: 'operator',
         actorId: OPERATOR,
-        lockedRow: { currentState: 'draft', stateEventVersion: 1, slotsRemaining: 5, slotCapacity: 5 },
+        lockedRow: { currentState: 'draft', stateEventVersion: 1, slotsRemaining: 5, slotCapacity: 5, leadRoute: 'trust_sends' },
       }),
     ).rejects.toBeInstanceOf(ModuleGenesisAlreadyExistsError);
   });
@@ -410,7 +410,7 @@ describe.skipIf(!hasDatabase)('marketplace commands — the I11 actor rules (AC5
           auditId: randomUUID(),
           actor: 'member',
           actorId: randomUUID(),
-          lockedRow: { currentState: 'active', stateEventVersion: 2, slotsRemaining: 5, slotCapacity: 5 },
+          lockedRow: { currentState: 'active', stateEventVersion: 2, slotsRemaining: 5, slotCapacity: 5, leadRoute: 'trust_sends' },
         }),
       ModuleProjectorInputError,
     );
@@ -637,7 +637,7 @@ describe.skipIf(!hasDatabase)('marketplace projector — the write-side integrit
   setupLiveDb();
 
   // An active module is at version 2 (authored, activated), capacity 5, five places left.
-  const LOCKED = { currentState: 'active' as const, stateEventVersion: 2, slotsRemaining: 5, slotCapacity: 5 };
+  const LOCKED = { currentState: 'active' as const, stateEventVersion: 2, slotsRemaining: 5, slotCapacity: 5, leadRoute: 'trust_sends' as const };
 
   /** Run `run` inside a savepoint that is ALWAYS rolled back, and return what it threw. A guard that fires AFTER the append must not leave the stray event behind. */
   async function thrown(client: pg.PoolClient, run: () => Promise<unknown>): Promise<unknown> {
@@ -736,7 +736,7 @@ describe.skipIf(!hasDatabase)('marketplace projector — the write-side integrit
         auditId: randomUUID(),
         actor: 'operator',
         actorId: OPERATOR,
-        lockedRow: { currentState: 'draft', stateEventVersion: 0, slotsRemaining: null, slotCapacity: null },
+        lockedRow: { currentState: 'draft', stateEventVersion: 0, slotsRemaining: null, slotCapacity: null, leadRoute: 'trust_sends' },
       }),
     );
 

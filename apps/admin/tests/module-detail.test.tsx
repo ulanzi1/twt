@@ -53,8 +53,10 @@ function detail(over: Partial<ModuleDetailResponse> = {}): ModuleDetailResponse 
     valid_until: '2026-12-05T05:00:00.000Z',
     slot_capacity: null,
     slots_remaining: null,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://leads.partner.example/hdfc',
     lead_handoff_signing_key_secret_name: 'hdfc-signing-key',
+    partner_form_url: null,
     branding_bundle: { version: 1, logo_object_key: null, accent_color_hex: null },
     current_state: 'draft',
     archive_reason: null,
@@ -64,6 +66,7 @@ function detail(over: Partial<ModuleDetailResponse> = {}): ModuleDetailResponse 
     authored_by_viewer: false,
     publication: null,
     lead_count: 0,
+    partner_form_figures: null,
     ...over,
   };
 }
@@ -76,6 +79,8 @@ function render(): void {
   renderWithClient(<ModuleDetailPage pariwarId={PARIWAR} moduleId={MODULE} onBack={vi.fn()} onStartCorrectedCopy={vi.fn()} />);
 }
 function tickAll(): void {
+  // Story 12.5b (QE6 (A)) — the publisher also chooses the route (⛔ default); every 12.2 fixture is `trust_sends`.
+  fireEvent.click(screen.getByTestId('module-publish-route-trust_sends'));
   for (const k of ['tone', 'hindi', 'partner']) fireEvent.click(screen.getByTestId(`module-tick-${k}`));
 }
 
@@ -122,7 +127,7 @@ describe('ModuleDetailPage (AC12)', () => {
     fireEvent.click(screen.getByTestId('module-step-up-verify'));
     await waitFor(() => expect(publishModule).toHaveBeenCalledTimes(2));
     expect(publishModule.mock.calls[1]![3]).toBe(publishModule.mock.calls[0]![3]);
-    expect(publishModule.mock.calls[0]![2]).toEqual({ tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true });
+    expect(publishModule.mock.calls[0]![2]).toEqual({ tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true, lead_route: 'trust_sends' });
     expect(await screen.findByTestId('module-detail-message')).toHaveTextContent(t('module.detail.published'));
     expect(panel).not.toBeInTheDocument();
   });
@@ -292,6 +297,7 @@ describe('ModuleDetailPage — code review round 2 (chunk C)', () => {
     hindi_reviewed: true as const,
     partner_agreement_confirmed: true as const,
     tone_signoff_content_hash: 'a'.repeat(64),
+    lead_route: 'trust_sends' as const,
   });
 
   it('RC1: arriving from Create draft announces "Draft created." in the live region and focuses the heading — once', { timeout: 20_000 }, async () => {

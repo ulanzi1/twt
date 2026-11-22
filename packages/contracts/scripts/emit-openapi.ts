@@ -5137,6 +5137,8 @@ const {
   AuthorModuleResponse: AuthorModuleResponseSchema,
   PublishModuleResponse: PublishModuleResponseSchema,
   WithdrawModuleResponse: WithdrawModuleResponseSchema,
+  RecordPartnerFormTotalsRequest: RecordPartnerFormTotalsRequestSchema,
+  RecordPartnerFormTotalsResponse: RecordPartnerFormTotalsResponseSchema,
 } = await import('../src/modules/index.js');
 const ModulePartnerComponent = ModulePartnerResponseSchema.openapi('ModulePartner');
 const ModulePartnerListComponent = ModulePartnerListResponseSchema.openapi('ModulePartnerList');
@@ -5146,6 +5148,7 @@ const ModuleDetailComponent = ModuleDetailResponseSchema.openapi('ModuleDetail')
 const AuthorModuleComponent = AuthorModuleResponseSchema.openapi('AuthorModuleResult');
 const PublishModuleComponent = PublishModuleResponseSchema.openapi('PublishModuleResult');
 const WithdrawModuleComponent = WithdrawModuleResponseSchema.openapi('WithdrawModuleResult');
+const RecordPartnerFormTotalsComponent = RecordPartnerFormTotalsResponseSchema.openapi('RecordPartnerFormTotalsResult');
 const modulesPariwar = z.object({ pariwarId: z.string().uuid() });
 const modulesModule = modulesPariwar.extend({ moduleId: z.string().uuid() });
 // 12.2 review RB3: the two refusals of the guard ahead of `module.manage`, on EVERY route — the admin session gate
@@ -5269,9 +5272,10 @@ registry.registerPath({
   path: '/api/v1/p/{pariwarId}/modules/{moduleId}/publish',
   summary: 'Publish a draft (a non-author, with step-up)',
   description:
-    '`module.manage`; `Idempotency-Key`; admin step-up `module_publish`. Three ticks, each `true`. The publisher must not be the ' +
-    'author (409 `tone_review.required`). A start date in the future schedules the module (`module.scheduled`); otherwise it ' +
-    'goes live (`module.activated`).',
+    '`module.manage`; `Idempotency-Key`; admin step-up `module_publish`. Three ticks, each `true`, and the publisher\'s ' +
+    '`lead_route` (Story 12.5b — it must equal the offer\'s, else 409 `module.lead_route_mismatch` with no write). The publisher ' +
+    'must not be the author (409 `tone_review.required`). A start date in the future schedules the module (`module.scheduled`); ' +
+    'otherwise it goes live (`module.activated`).',
   tags: ['modules'],
   request: { params: modulesModule, body: { content: jsonOf(PublishModuleRequestSchema), required: true } },
   responses: {
@@ -5281,7 +5285,7 @@ registry.registerPath({
     403: errorResponse('Missing module.manage, or the step-up (auth.step_up_required)'),
     404: errorResponse(`${modulesNoGrant} · module.not_found`),
     409: errorResponse(
-      'tone_review.required · module.not_draft · module.window_ended · module.already_published · module.concurrent_change · module.idempotency_in_progress',
+      'tone_review.required · module.not_draft · module.window_ended · module.lead_route_mismatch · module.already_published · module.concurrent_change · module.idempotency_in_progress',
     ),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
@@ -5300,6 +5304,27 @@ registry.registerPath({
     403: errorResponse('Missing module.manage'),
     404: errorResponse(`${modulesNoGrant} · module.not_found`),
     409: errorResponse('module.illegal_transition · module.concurrent_change · module.idempotency_in_progress'),
+  } as Parameters<typeof registry.registerPath>[0]['responses'],
+});
+// Story 12.5b (`2026-11-22-489` QE12 (A); `-486` R3 B) — staff enter a partner's OWN totals for a `partner_form` offer.
+registry.registerPath({
+  method: 'post',
+  path: '/api/v1/p/{pariwarId}/modules/{moduleId}/partner-form-totals',
+  summary: "Record a partner's totals for one period",
+  description:
+    "`module.manage`; `Idempotency-Key`. A period and 1–20 stages in the partner's order (a label and a whole number). A figure " +
+    'below 5 is stored as "fewer than 5" — the number is never kept. Advisory; names no member. Only for an offer that uses the ' +
+    "partner's own page (409 `module.not_partner_form`).",
+  tags: ['modules'],
+  request: { params: modulesModule, body: { content: jsonOf(RecordPartnerFormTotalsRequestSchema), required: true } },
+  responses: {
+    201: { description: 'Recorded', content: jsonOf(RecordPartnerFormTotalsComponent) },
+    400: errorResponse('Invalid input · module.idempotency_key_required'),
+    401: modulesNoSession,
+    403: errorResponse('Missing module.manage'),
+    404: errorResponse(`${modulesNoGrant} · module.not_found`),
+    409: errorResponse('module.not_partner_form · module.idempotency_in_progress'),
+    422: errorResponse('module.partner_form_totals_invalid'),
   } as Parameters<typeof registry.registerPath>[0]['responses'],
 });
 

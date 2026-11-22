@@ -26,7 +26,7 @@ import { sql } from 'drizzle-orm';
 import { boolean, check, foreignKey, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import type { ModuleId, PariwarId } from '../ids/index.js';
-import { marketplaceModules } from './marketplace_modules.js';
+import { marketplaceModuleLeadRouteEnum, marketplaceModules } from './marketplace_modules.js';
 
 /** The publish events a publication can record (QE7 (A): a future start schedules, otherwise it activates). */
 export const MODULE_PUBLISHED_EVENT_TYPES = ['module.scheduled', 'module.activated'] as const;
@@ -49,12 +49,22 @@ export const marketplaceModulePublications = pgTable(
     partnerAgreementConfirmed: boolean('partner_agreement_confirmed').notNull(),
     // The publish event's audit intent line (`module.scheduled` / `module.activated`). ⛔ FK.
     auditId: uuid('audit_id').notNull(),
+    // Story 12.5b (0216; `-486` R1 A: "The admin who publishes the offer chooses, offer by offer. The choice is on the publish
+    // record.") — the PUBLISHER's route, chosen again at publish with ⛔ default (QE6 (A)). The composite FK below makes it equal
+    // the module's own route — a database fact (I8).
+    leadRoute: marketplaceModuleLeadRouteEnum('lead_route').notNull(),
   },
   (t) => [
     foreignKey({
       name: 'marketplace_module_publications_module_fk',
       columns: [t.pariwarId, t.moduleId],
       foreignColumns: [marketplaceModules.pariwarId, marketplaceModules.moduleId],
+    }),
+    // Story 12.5b (QE6) → `marketplace_modules_pariwar_module_route_unique`. NO ACTION (0195's reason).
+    foreignKey({
+      name: 'marketplace_module_publications_module_route_fk',
+      columns: [t.pariwarId, t.moduleId, t.leadRoute],
+      foreignColumns: [marketplaceModules.pariwarId, marketplaceModules.moduleId, marketplaceModules.leadRoute],
     }),
     check(
       'marketplace_module_publications_event_type',

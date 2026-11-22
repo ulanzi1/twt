@@ -23,7 +23,7 @@
 //     everywhere (row lock → append → row UPDATE), which is what keeps a lead and an archive from
 //     deadlocking (40P01). The helpdesk projector's append-then-UPDATE order is ⛔ copied (TR12).
 //
-// ── The DB enforces the six named CHECKs + (Story 12.2) one FK and one unique ──────────────────────
+// ── The DB enforces the named CHECKs + (Story 12.2) one FK and one unique (+ 12.5b's route unique) ───
 // Every other content rule (text bounds, the URL rules, the secret-name pattern, the filter grammars,
 // the branding bundle) is zod-only, in `marketplace/filters.ts` `parseModuleManifest` (QE5). ⛔ Add a
 // content CHECK here without amending the story's QE5 table: the DB is the shape backstop, not a second
@@ -41,7 +41,15 @@
 // ── NOT in this table (deliberately) ──────────────────────────────────────────────────────────────
 // `commission_terms` (Story 12.2 stores ⛔ commission data — `2026-11-01-433` QE6 (A), amending `-427` QE5 /
 // `-429`; re-trigger: OQ-4 answered by the Panel, OR the first PRODUCTION publish, OR Story 12.3's create-story),
-// FR-64's `target_url_or_form` external CTA (Not addressed), lead delivery status (→ 12.5's entity).
+// lead delivery status (→ 12.5's entity). FR-64's `target_url_or_form` external CTA is `partner_form_url` since
+// Story 12.5b (below).
+//
+// ── The ROUTE (Story 12.5b, migration 0216; Decision `2026-11-22-489` QE1 / QE2) ───────────────────
+// `-484` Q1 C: an offer works one of two ways — `trust_sends` (12.5 sends the member's four details) or
+// `partner_form` (the member opens the partner's own page; the Trust sends NOTHING about the member). Manifest
+// schema v2 carries `lead_route` + `partner_form_url`; every v1 row reads as `trust_sends` and can be nothing else
+// (`marketplace_modules_v1_is_trust_sends`). `marketplace_modules_route_columns` says which columns each route
+// carries. Both new columns are immutable by the 0193 whole-row trigger with ⛔ change to it (I2).
 //
 // Naming discipline (architecture L3663-3677): DB columns snake_case, TS fields camelCase, table
 // snake_case-plural; JSONB inner keys snake_case.
@@ -96,8 +104,23 @@ export const marketplaceModuleArchiveReasonEnum = pgEnum(
 );
 export type MarketplaceModuleArchiveReason = (typeof MARKETPLACE_MODULE_ARCHIVE_REASONS)[number];
 
-/** The one manifest schema version 12.1 writes (`marketplace_modules_manifest_schema_version_v1`). */
-export const MODULE_MANIFEST_SCHEMA_VERSION = 1 as const;
+/**
+ * The ROUTE (Story 12.5b QE1) — the pgEnum source (`CREATE TYPE marketplace_module_lead_route`, 0216).
+ * `trust_sends`: the Trust sends the member's details to the partner (Story 12.5). `partner_form`: the member opens
+ * the partner's own page in the phone's own browser and the Trust sends nothing about the member (`-484` Q1 C).
+ */
+export const MARKETPLACE_MODULE_LEAD_ROUTES = ['trust_sends', 'partner_form'] as const;
+export const marketplaceModuleLeadRouteEnum = pgEnum('marketplace_module_lead_route', MARKETPLACE_MODULE_LEAD_ROUTES);
+export type MarketplaceModuleLeadRoute = (typeof MARKETPLACE_MODULE_LEAD_ROUTES)[number];
+
+/**
+ * The manifest schema version every NEW manifest is written with (Story 12.5b QE2 — v2 carries the route). Read by
+ * `project.ts` (the genesis writer). ⚠ ⛔ the v1 genesis arm's literal — that is {@link MODULE_MANIFEST_SCHEMA_VERSION_V1}
+ * (TR4: pointing the v1 arm at this constant would make every stored v1 stream unreadable).
+ */
+export const MODULE_MANIFEST_SCHEMA_VERSION = 2 as const;
+/** The 12.1 manifest version — every v1 row and stream stays as written and reads as `trust_sends` (ADR-0044 D3, I7). */
+export const MODULE_MANIFEST_SCHEMA_VERSION_V1 = 1 as const;
 
 export const marketplaceModules = pgTable(
   'marketplace_modules',
@@ -123,10 +146,14 @@ export const marketplaceModules = pgTable(
     validUntil: timestamp('valid_until', { withTimezone: true, mode: 'date' }).notNull(),
     // NULL = uncapped. When capped, `slots_remaining` is its projected counterpart.
     slotCapacity: integer('slot_capacity'),
+    // The route (Story 12.5b, 0216). NOT NULL, ⛔ default after the migration (every INSERT names it).
+    leadRoute: marketplaceModuleLeadRouteEnum('lead_route').notNull(),
     // Where leads go (Story 12.5 delivers them) and the Secret Manager NAME of the signing key (G6 —
-    // renamed from the epic's `_ref`; ⛔ a key value).
-    leadHandoffUrl: text('lead_handoff_url').notNull(),
-    leadHandoffSigningKeySecretName: text('lead_handoff_signing_key_secret_name').notNull(),
+    // renamed from the epic's `_ref`; ⛔ a key value). NULL for a `partner_form` offer (0216 — route_columns).
+    leadHandoffUrl: text('lead_handoff_url'),
+    leadHandoffSigningKeySecretName: text('lead_handoff_signing_key_secret_name'),
+    // The partner's own page (`partner_form` only; QE3's rule). Handed out byte for byte, never appended to (I3).
+    partnerFormUrl: text('partner_form_url'),
     // Partner presentation. ⚠ Partner colours never touch the shelf chrome (UX spec, carried item C5).
     brandingBundle: jsonb('branding_bundle').notNull().$type<ModuleBrandingBundle>(),
     manifestSchemaVersion: smallint('manifest_schema_version').notNull(),
@@ -150,6 +177,8 @@ export const marketplaceModules = pgTable(
     // ── Story 12.2 (`2026-11-01-433`) — keys, ⛔ content rules ──
     // The target of the publication FK (`marketplace_module_publications_module_fk`, QE4).
     unique('marketplace_modules_pariwar_module_unique').on(t.pariwarId, t.moduleId),
+    // Story 12.5b (QE6) — the target of `marketplace_module_publications_module_route_fk`: the publication's route = the module's.
+    unique('marketplace_modules_pariwar_module_route_unique').on(t.pariwarId, t.moduleId, t.leadRoute),
     // A module names a partner of its OWN Pariwar (QE3 (A)). ⛔ CASCADE / SET NULL: an FK action that updates this
     // table runs WITHOUT the writer guard and the 0193 trigger rejects it (P0001).
     foreignKey({
@@ -174,7 +203,14 @@ export const marketplaceModules = pgTable(
       'marketplace_modules_archive_reason_pair',
       sql`(${t.currentState} = 'archived') = (${t.archiveReason} IS NOT NULL)`,
     ),
-    check('marketplace_modules_manifest_schema_version_v1', sql`${t.manifestSchemaVersion} = 1`),
+    // Story 12.5b (0216) — the v1 CHECK REPLACED by name (TR5): v1 or v2; a v1 row is `trust_sends`; the route's columns.
+    check('marketplace_modules_manifest_schema_version', sql`${t.manifestSchemaVersion} IN (1, 2)`),
+    check('marketplace_modules_v1_is_trust_sends', sql`${t.manifestSchemaVersion} = 2 OR ${t.leadRoute} = 'trust_sends'`),
+    check(
+      'marketplace_modules_route_columns',
+      sql`(${t.leadRoute} = 'trust_sends' AND ${t.leadHandoffUrl} IS NOT NULL AND ${t.leadHandoffSigningKeySecretName} IS NOT NULL AND ${t.partnerFormUrl} IS NULL)
+        OR (${t.leadRoute} = 'partner_form' AND ${t.partnerFormUrl} IS NOT NULL AND ${t.leadHandoffUrl} IS NULL AND ${t.leadHandoffSigningKeySecretName} IS NULL AND ${t.slotCapacity} IS NULL)`,
+    ),
   ],
 );
 

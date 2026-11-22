@@ -1,0 +1,4 @@
+{
+  "$comment.partnerForm": "Story 12.5b (`2026-11-22-489` QE14; `2026-11-22-486` R5, Trustee-ratified). partnerForm.notice is the ONE sentence a member sees before an offer that uses the partner's own page opens in the phone's own browser. The English is the Panel's sentence VERBATIM (R5 amended: \"You are being directed to [partner]'s page, where [partner] may ask for your contact information.\"), with [partner] as the {partner} token: the partner's display name in the member's language. Do NOT add a second sentence and do NOT reword it (the Panel replaced the earlier draft). The Hindi was drafted by the dev agent and goes through docs/tone-review-checklist.md; BigDev signs it off (roster Row 55 (b), 'Hindi by tone review'). No production caller until Story 12.3's shelf.",
+  "partnerForm.notice": "आपको {partner} के पेज पर भेजा जा रहा है, जहाँ {partner} आपसे संपर्क की जानकारी माँग सकता है।"
+}

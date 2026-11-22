@@ -647,7 +647,7 @@ export const EVENT_TYPE_REGISTRY = {
   'module.authored': {
     type: 'module.authored',
     description:
-      '`module.authored` ((none) → draft) on the MODULE stream (stream_id = module_id) (Story 12.1). The genesis: snapshots the WHOLE immutable bilingual manifest (partner, text, filters, window, capacity, lead endpoint + signing-key secret NAME, branding). No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built).',
+      '`module.authored` ((none) → draft) on the MODULE stream (stream_id = module_id) (Story 12.1). The genesis: snapshots the WHOLE immutable bilingual manifest (partner, text, filters, window, capacity, lead endpoint + signing-key secret NAME, branding). No production emitter in 12.1 (I6); the emitting surface is 12.2 / 12.3 / 12.6 (unverified until built). Story 12.5b: manifest v2 adds the ROUTE (`lead_route` trust_sends | partner_form, `partner_form_url`); every v1 genesis parses unchanged and reads as trust_sends.',
     schema: marketplace.ModuleAuthoredPayloadSchema,
   },
   'module.scheduled': {

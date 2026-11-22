@@ -60,6 +60,8 @@ describe.skipIf(!hasDatabase)('Story 12.5 — marketplace_lead_handoffs (0215)',
       'failed_delivery:outcome_unknown',
       'cancelled:death_reported',
       'cancelled:module_withdrawn',
+      // Story 12.5b (0216, QE5) — the sweep's cancel of a `partner_form` row.
+      'cancelled:partner_form_route',
     ])('the grammar admits %s (JS and PG agree)', async (detail) => {
       const { client } = getTx();
       expect(isLeadHandoffDetail(detail)).toBe(true);

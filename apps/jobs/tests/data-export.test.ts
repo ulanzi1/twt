@@ -307,6 +307,67 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       await pool.query(`DELETE FROM members WHERE member_id = ANY($1::uuid[])`, [[memberId, confirmedB, askedD, declarerC, erasedE, removedF, chainG, erasedH]]);
     }
   });
+  it('⭐ Story 12.5b (QE8, AC8) — the member\'s partner-form visit records: the strict-parsed profile lists each with the offer\'s names, oldest first; ⛔ another member\'s', async () => {
+    const enc = fakeEncryption();
+    const { memberId, pariwarId, exportId } = await seedPendingExport();
+    const other = randomUUID();
+    const partnerId = randomUUID();
+    const moduleId = randomUUID();
+    try {
+      await withPariwarScope(pool, pariwarId, async (_tx, client) => {
+        await client.query(
+          `INSERT INTO marketplace_partners (partner_id, pariwar_id, display_name_en, display_name_hi, created_by_actor_id, audit_id)
+           VALUES ($1, $2, $3, 'एलआईसी', $4, $5)`,
+          [partnerId, pariwarId, `LIC ${randomUUID()}`, randomUUID(), randomUUID()],
+        );
+        await client.query("SET LOCAL app.marketplace_module_state_writer = 'on'");
+        await client.query(
+          `INSERT INTO marketplace_modules (module_id, pariwar_id, partner_id, name_en, name_hi, description_en, description_hi, eligibility_filter,
+             scope_filter, valid_from, valid_until, slot_capacity, branding_bundle, manifest_schema_version, lead_route, partner_form_url,
+             current_state, state_event_version, slots_remaining, archive_reason, audit_id)
+           VALUES ($1, $2, $3, 'LIC term plan', 'एलआईसी टर्म प्लान', 'd', 'द', '{"version":1,"clauses":[]}', '{"version":1,"scope":"members-all"}',
+                   now() - interval '1 hour', now() + interval '1 hour', NULL, '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 2,
+                   'partner_form', 'https://partner.example/apply?offer=twt', 'draft', 1, NULL, NULL, $4)`,
+          [moduleId, pariwarId, partnerId, randomUUID()],
+        );
+        await client.query("SET LOCAL app.marketplace_module_state_writer = 'off'");
+        await client.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [other, pariwarId]);
+        for (const [who, at] of [
+          [memberId, '2026-11-02T10:00:00Z'],
+          [memberId, '2026-11-01T09:00:00Z'],
+          [other, '2026-11-01T08:00:00Z'],
+        ] as const) {
+          await client.query(
+            `INSERT INTO marketplace_partner_form_visits (visit_id, pariwar_id, module_id, member_id, opened_at) VALUES ($1, $2, $3, $4, $5::timestamptz)`,
+            [randomUUID(), pariwarId, moduleId, who, at],
+          );
+        }
+      });
+      // the build STRICT-parses every section against its contract — `ProfileSection.partnerOfferVisits` included (TR12)
+      expect((await runDataExportBuild({ pool, ...enc }, { requestId: randomUUID(), pariwarId, actorId: memberId, traceId: randomUUID(), payload: { exportId } })).status).toBe('ready');
+      const bytes = await encryption.decryptTier1(encryption.parseEnvelope((await row(exportId)).artifact_ciphertext!), { pariwarId, fieldClass: 'data_export' }, enc.kms, enc.kekRef);
+      const zip = await JSZip.loadAsync(Buffer.from(bytes));
+      const profile = JSON.parse(await zip.file('profile.json')!.async('string')) as { partnerOfferVisits: unknown[] };
+      expect(profile.partnerOfferVisits).toEqual([
+        { moduleId, offerNameEn: 'LIC term plan', offerNameHi: 'एलआईसी टर्म प्लान', openedAt: '2026-11-01T09:00:00.000Z' },
+        { moduleId, offerNameEn: 'LIC term plan', offerNameHi: 'एलआईसी टर्म प्लान', openedAt: '2026-11-02T10:00:00.000Z' },
+      ]);
+      expect(JSON.stringify(profile.partnerOfferVisits)).not.toContain('partner.example');
+    } finally {
+      const c = await pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query("SET LOCAL session_replication_role = 'replica'");
+        await c.query('DELETE FROM marketplace_partner_form_visits WHERE pariwar_id = $1', [pariwarId]);
+        await c.query('DELETE FROM marketplace_modules WHERE pariwar_id = $1', [pariwarId]);
+        await c.query('DELETE FROM marketplace_partners WHERE pariwar_id = $1', [pariwarId]);
+        await c.query('DELETE FROM members WHERE member_id = ANY($1::uuid[])', [[memberId, other]]);
+        await c.query('COMMIT');
+      } finally {
+        c.release();
+      }
+    }
+  });
   // Live-DB suite timeout: these tests run several sequential live-DB round-trips (setup +
   // build/vacuum + row assertions) against a shared :5433 container; under concurrent `turbo`/
   // `ci:local` load they can exceed the 5s vitest default. 20s removes the contention flake without

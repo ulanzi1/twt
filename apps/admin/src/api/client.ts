@@ -229,11 +229,13 @@ import {
   ModulePartnerResponse,
   ModuleScopeOptionsResponse,
   PublishModuleResponse,
+  RecordPartnerFormTotalsResponse,
   WithdrawModuleResponse,
   type AuthorModuleRequest as AuthorModuleBody,
   type CreateModulePartnerRequest as CreateModulePartnerBody,
   type ModuleState,
   type PublishModuleRequest as PublishModuleBody,
+  type RecordPartnerFormTotalsRequest as RecordPartnerFormTotalsBody,
   // Story 10.9 — the Banner/Popup admin authoring surface DTOs.
   BannerResponse,
   BannerListResponse,
@@ -3665,6 +3667,15 @@ export function authorModule(pariwarId: string, body: AuthorModuleBody, idempote
 }
 export function publishModule(pariwarId: string, moduleId: string, body: PublishModuleBody, idempotencyKey: string) {
   return modulePost(`${modulesBase(pariwarId)}/${encodeURIComponent(moduleId)}/publish`, PublishModuleResponse, body, idempotencyKey);
+}
+/** Story 12.5b (QE12 (A)) — record a partner's totals for one period on a `partner_form` offer. */
+export function recordPartnerFormTotals(pariwarId: string, moduleId: string, body: RecordPartnerFormTotalsBody, idempotencyKey: string) {
+  return modulePost(
+    `${modulesBase(pariwarId)}/${encodeURIComponent(moduleId)}/partner-form-totals`,
+    RecordPartnerFormTotalsResponse,
+    body,
+    idempotencyKey,
+  );
 }
 /** Withdraw (archive) a module. The body is `{}` — Fastify answers 400 to an EMPTY JSON body (QE15). */
 export function withdrawModule(pariwarId: string, moduleId: string, idempotencyKey: string) {

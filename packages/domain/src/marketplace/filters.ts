@@ -1,7 +1,7 @@
 // Module manifest grammars + `parseModuleManifest` — Story 12.1 (QE5, QE9; AC7).
 //
-// The ONE place a module's content rules live. The DB enforces only the six named CHECKs of migration
-// 0193 (QE5); everything else — text bounds, the URL rules, the secret-name pattern, the two filter
+// The ONE place a module's content rules live. The DB enforces only the named CHECKs of migrations
+// 0193 / 0216 (QE5; Story 12.5b's route pairing); everything else — text bounds, the URL rules, the secret-name pattern, the two filter
 // grammars, the branding bundle — is validated HERE, at WRITE, by `parseModuleManifest`. The same field
 // schemas AND the window rule (`refineModuleWindow`) are reused by `ModuleAuthoredPayloadSchema` (events.ts),
 // so the genesis payload and the row can never be held to different rules.
@@ -35,6 +35,8 @@
 import { z } from 'zod';
 
 import { partnerId as toPartnerId, type PartnerId } from '../ids/index.js';
+// A VALUE import (the route tuple). Safe: `schema/marketplace_modules.ts` imports this file TYPE-ONLY (TR17), so ⛔ runtime cycle.
+import { MARKETPLACE_MODULE_LEAD_ROUTES } from '../schema/marketplace_modules.js';
 import type { MemberLifecycleState } from '../schema/members.js';
 import { ModuleManifestInvalidError } from './errors.js';
 
@@ -481,6 +483,67 @@ export const moduleLeadHandoffUrlSchema = z
     }
   });
 
+/**
+ * The RFC 3986 characters a `partner_form_url` QUERY may hold (Story 12.5b QE3): unreserved, sub-delims, `:`, `/`, `?` and `%`
+ * (as `%HH`). `@` is refused everywhere (the userinfo parser-differential), `#` too (⛔ fragment).
+ */
+const RFC3986_QUERY_CHARS = /^[A-Za-z0-9\-._~!$&'()*+,;=:/?%]+$/;
+
+/**
+ * The partner's OWN page a `partner_form` offer opens in the phone's own browser (Story 12.5b QE3; `-484` Q1 C option B). The
+ * {@link moduleLeadHandoffUrlSchema} rule with these differences: ONE fixed query the partner supplied IS allowed (the offer code —
+ * the same for every member; an empty one, a bare `?`, is refused); ⛔ fragment (raw `#` too); ⛔ explicit port — the phone opens it
+ * and nothing on the Trust's side checks it later (narrow side). Canonical form (`raw === url.href`, or a bare origin's `/`); ≤ 2048;
+ * `https:`; ⛔ userinfo or `@`; ⛔ IP literal / `localhost`; ⛔ whitespace / control / backslash; RFC 3986 characters only.
+ * ⭐ The Trust appends NOTHING to it, ever (I3): it is handed out byte for byte by `openPartnerFormVisit` alone.
+ */
+export const modulePartnerFormUrlSchema = z
+  .string()
+  .max(2048)
+  .superRefine((raw, ctx) => {
+    const fail = (message: string): void => {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+    };
+    if (hasUrlUnsafeChar(raw)) {
+      fail('partner_form_url must carry no whitespace, control character or backslash');
+      return;
+    }
+    let url: URL;
+    try {
+      url = new URL(raw);
+    } catch {
+      fail('partner_form_url must be an absolute URL');
+      return;
+    }
+    if (url.protocol !== 'https:') fail('partner_form_url must use https:');
+    if (url.username !== '' || url.password !== '' || raw.includes('@')) fail('partner_form_url must carry no userinfo');
+    if (url.hash !== '' || raw.includes('#')) fail('partner_form_url must carry no fragment');
+    const queryAt = raw.indexOf('?');
+    if (queryAt !== -1 && queryAt === raw.length - 1) fail('partner_form_url must not end in an empty query');
+    if (url.port !== '') fail('partner_form_url must not name a port');
+    const host = url.hostname.toLowerCase().replace(/\.$/, '');
+    if (isIpLiteralHost(host)) fail('partner_form_url host must not be an IP literal');
+    if (host === 'localhost' || host.endsWith('.localhost')) fail('partner_form_url host must not be localhost');
+    // Canonical form (the lead URL's RP1 reasons): the column stores `raw`, so `raw` must BE what the parser produces. A bare origin
+    // is canonical with its `/` added — only when there is ⛔ query (`https://h?x=1` reads as `https://h/?x=1`).
+    if (raw !== url.href && !(queryAt === -1 && `${raw}/` === url.href)) {
+      fail(
+        'partner_form_url must be in canonical form: https://<lower-case host>/<path>?<query>, no default port, no dot segments, special characters percent-encoded',
+      );
+    }
+    const path = queryAt === -1 ? raw : raw.slice(0, queryAt);
+    const query = queryAt === -1 ? null : raw.slice(queryAt + 1);
+    if (
+      !RFC3986_URL_CHARS.test(path) ||
+      (query !== null && query !== '' && !RFC3986_QUERY_CHARS.test(query)) ||
+      MALFORMED_PERCENT_ESCAPE.test(raw)
+    ) {
+      fail(
+        'partner_form_url must be RFC 3986-valid: only unreserved, sub-delim, ":", "/" (and "?" in the query) characters, and "%" only as a %HH escape',
+      );
+    }
+  });
+
 /** A Secret Manager secret NAME (G6) — ⛔ a resource path, ⛔ a key value. */
 export const moduleSigningKeySecretNameSchema = z
   .string()
@@ -523,26 +586,60 @@ export const moduleInstantSchema = z
 // ── The manifest ───────────────────────────────────────────────────────────────────────────────────
 
 /**
- * The parser's input: snake_case JSON with EXACTLY the QE5 content keys. `module_id`, `pariwar_id` and
- * `manifest_schema_version` are ⛔ input — they are command arguments / a constant — so `.strict()`
- * rejects them.
+ * The parser's input: snake_case JSON with EXACTLY the QE5 content keys plus (Story 12.5b, manifest v2) `lead_route` and
+ * `partner_form_url`. `module_id`, `pariwar_id` and `manifest_schema_version` are ⛔ input — they are command arguments / a
+ * constant — so `.strict()` rejects them.
+ *
+ * ⭐ Story 12.5b QE2 / TR31 — ⛔ a `z.union` over the two routes: a failed union reports ONE issue at path `[]`, so every field
+ * error would land on the wizard's summary step (G25). The route is parsed FIRST, alone (`ModuleManifestRouteSchema` — a missing or
+ * unknown value is one issue at `['lead_route']`); then the whole input with THAT route's strict arm, so every other issue keeps
+ * its own field path (`['slot_capacity']`, `['partner_form_url']`, …). Each arm accepts the OTHER route's fields only as `null`
+ * (the admin client sends every key) — a value there is an issue at that field's path.
  */
-const ModuleManifestInputSchema = z
+const moduleManifestInputBase = {
+  partner_id: z.string().uuid(),
+  // The WRITE-ONLY display schemas (Story 12.2 QE12) — ⛔ the shared payload schemas (TR16).
+  name_en: moduleDisplayNameEnSchema,
+  name_hi: moduleDisplayNameHiSchema,
+  description_en: moduleDisplayDescriptionEnSchema,
+  description_hi: moduleDisplayDescriptionHiSchema,
+  eligibility_filter: EligibilityFilterV1Schema,
+  scope_filter: ScopeFilterV1Schema,
+  valid_from: moduleInstantSchema,
+  valid_until: moduleInstantSchema,
+  branding_bundle: ModuleBrandingBundleSchema,
+};
+
+/** `lead_route` alone — the first step of {@link parseModuleManifest} (the rest of the object passes through). */
+const ModuleManifestRouteSchema = z.object({ lead_route: z.enum(MARKETPLACE_MODULE_LEAD_ROUTES) }).passthrough();
+
+const ModuleManifestTrustSendsInputSchema = z
   .object({
-    partner_id: z.string().uuid(),
-    // The WRITE-ONLY display schemas (Story 12.2 QE12) — ⛔ the shared payload schemas (TR16).
-    name_en: moduleDisplayNameEnSchema,
-    name_hi: moduleDisplayNameHiSchema,
-    description_en: moduleDisplayDescriptionEnSchema,
-    description_hi: moduleDisplayDescriptionHiSchema,
-    eligibility_filter: EligibilityFilterV1Schema,
-    scope_filter: ScopeFilterV1Schema,
-    valid_from: moduleInstantSchema,
-    valid_until: moduleInstantSchema,
+    ...moduleManifestInputBase,
+    lead_route: z.literal('trust_sends'),
     slot_capacity: moduleSlotCapacitySchema,
     lead_handoff_url: moduleLeadHandoffUrlSchema,
     lead_handoff_signing_key_secret_name: moduleSigningKeySecretNameSchema,
-    branding_bundle: ModuleBrandingBundleSchema,
+    partner_form_url: z
+      .null({ invalid_type_error: "partner_form_url is only for an offer that uses the partner's own page" })
+      .optional(),
+  })
+  .strict()
+  .superRefine(refineModuleWindow);
+
+const ModuleManifestPartnerFormInputSchema = z
+  .object({
+    ...moduleManifestInputBase,
+    lead_route: z.literal('partner_form'),
+    partner_form_url: modulePartnerFormUrlSchema,
+    // ⛔ places: nothing is sent, so there is nothing to count down (0216 `marketplace_modules_route_columns`).
+    slot_capacity: z.null({ invalid_type_error: "an offer that uses the partner's own page has no places" }).optional(),
+    lead_handoff_url: z
+      .null({ invalid_type_error: "an offer that uses the partner's own page sends nothing — it has no lead_handoff_url" })
+      .optional(),
+    lead_handoff_signing_key_secret_name: z
+      .null({ invalid_type_error: "an offer that uses the partner's own page sends nothing — it has no signing key" })
+      .optional(),
   })
   .strict()
   .superRefine(refineModuleWindow);
@@ -569,8 +666,8 @@ export function refineModuleWindow(v: { valid_from: string; valid_until: string 
   }
 }
 
-/** A parsed, valid v1 manifest — the ONE object that feeds both the genesis payload and the row. */
-export interface ModuleManifestV1 {
+/** The fields every route shares. */
+interface ModuleManifestBase {
   readonly partnerId: PartnerId;
   readonly nameEn: string;
   readonly nameHi: string;
@@ -580,22 +677,43 @@ export interface ModuleManifestV1 {
   readonly scopeFilter: ScopeFilterV1;
   readonly validFrom: Date;
   readonly validUntil: Date;
+  readonly brandingBundle: ModuleBrandingBundle;
+}
+
+/** A `trust_sends` manifest — the 12.1 shape (Story 12.5 sends the member's details). */
+export interface ModuleManifestTrustSends extends ModuleManifestBase {
+  readonly leadRoute: 'trust_sends';
   readonly slotCapacity: number | null;
   readonly leadHandoffUrl: string;
   readonly leadHandoffSigningKeySecretName: string;
-  readonly brandingBundle: ModuleBrandingBundle;
+  readonly partnerFormUrl: null;
 }
+
+/** A `partner_form` manifest (Story 12.5b) — the partner's own page; ⛔ places, ⛔ handoff URL, ⛔ signing key. */
+export interface ModuleManifestPartnerForm extends ModuleManifestBase {
+  readonly leadRoute: 'partner_form';
+  readonly slotCapacity: null;
+  readonly leadHandoffUrl: null;
+  readonly leadHandoffSigningKeySecretName: null;
+  readonly partnerFormUrl: string;
+}
+
+/**
+ * A parsed, valid manifest (schema v2, Story 12.5b QE2) — the ONE object that feeds both the genesis payload and the row.
+ * Discriminated on `leadRoute`.
+ */
+export type ModuleManifest = ModuleManifestTrustSends | ModuleManifestPartnerForm;
 
 /**
  * Validate a module manifest at WRITE (QE9). Throws `ModuleManifestInvalidError` wrapping the ZodError.
  * ⚠ It does NOT check the window against `now()` — `authorModule` does that against DB time (A5), so a
  * past `valid_from` is accepted here.
+ * Story 12.5b (QE2): the route FIRST, then its strict arm — so each issue keeps its field path (G25, TR31).
  */
-export function parseModuleManifest(input: unknown): ModuleManifestV1 {
-  const parsed = ModuleManifestInputSchema.safeParse(input);
-  if (!parsed.success) throw new ModuleManifestInvalidError(parsed.error);
-  const v = parsed.data;
-  return {
+export function parseModuleManifest(input: unknown): ModuleManifest {
+  const route = ModuleManifestRouteSchema.safeParse(input);
+  if (!route.success) throw new ModuleManifestInvalidError(route.error);
+  const base = (v: z.infer<typeof ModuleManifestTrustSendsInputSchema> | z.infer<typeof ModuleManifestPartnerFormInputSchema>) => ({
     partnerId: toPartnerId(v.partner_id),
     nameEn: v.name_en,
     nameHi: v.name_hi,
@@ -605,9 +723,28 @@ export function parseModuleManifest(input: unknown): ModuleManifestV1 {
     scopeFilter: v.scope_filter,
     validFrom: new Date(v.valid_from),
     validUntil: new Date(v.valid_until),
-    slotCapacity: v.slot_capacity,
-    leadHandoffUrl: v.lead_handoff_url,
-    leadHandoffSigningKeySecretName: v.lead_handoff_signing_key_secret_name,
     brandingBundle: v.branding_bundle,
+  });
+  if (route.data.lead_route === 'partner_form') {
+    const parsed = ModuleManifestPartnerFormInputSchema.safeParse(input);
+    if (!parsed.success) throw new ModuleManifestInvalidError(parsed.error);
+    return {
+      ...base(parsed.data),
+      leadRoute: 'partner_form',
+      slotCapacity: null,
+      leadHandoffUrl: null,
+      leadHandoffSigningKeySecretName: null,
+      partnerFormUrl: parsed.data.partner_form_url,
+    };
+  }
+  const parsed = ModuleManifestTrustSendsInputSchema.safeParse(input);
+  if (!parsed.success) throw new ModuleManifestInvalidError(parsed.error);
+  return {
+    ...base(parsed.data),
+    leadRoute: 'trust_sends',
+    slotCapacity: parsed.data.slot_capacity,
+    leadHandoffUrl: parsed.data.lead_handoff_url,
+    leadHandoffSigningKeySecretName: parsed.data.lead_handoff_signing_key_secret_name,
+    partnerFormUrl: null,
   };
 }

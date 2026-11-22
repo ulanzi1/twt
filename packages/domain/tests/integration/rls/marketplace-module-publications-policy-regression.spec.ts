@@ -15,8 +15,8 @@ import { RAW_INSERT_SQL, expectSqlRejected, rawInsertParams, seedPartner } from 
 const GUARD_ON = "SET LOCAL app.marketplace_module_state_writer = 'on'";
 const INSERT_PUBLICATION = `INSERT INTO marketplace_module_publications
   (module_id, pariwar_id, published_event_type, tone_signoff_content_hash, reviewed_by_actor_id, hindi_reviewed,
-   partner_agreement_confirmed, audit_id)
-  VALUES ($1, $2, 'module.activated', $3, $4, true, true, $5)`;
+   partner_agreement_confirmed, audit_id, lead_route)
+  VALUES ($1, $2, 'module.activated', $3, $4, true, true, $5, 'trust_sends')`;
 const pubParams = (moduleId: string, pariwar: string) => [moduleId, pariwar, 'e'.repeat(64), randomUUID(), randomUUID()];
 
 describe.skipIf(!hasDatabase)('marketplace_module_publications RLS policy regression', () => {
@@ -70,6 +70,8 @@ describe.skipIf(!hasDatabase)('marketplace_module_publications RLS policy regres
       { column_name: 'hindi_reviewed', data_type: 'boolean', is_nullable: 'NO', column_default: null },
       { column_name: 'partner_agreement_confirmed', data_type: 'boolean', is_nullable: 'NO', column_default: null },
       { column_name: 'audit_id', data_type: 'uuid', is_nullable: 'NO', column_default: null },
+      // Story 12.5b (0216, QE6) — the publisher's route; ⛔ default (it was dropped after the column was added).
+      { column_name: 'lead_route', data_type: 'USER-DEFINED', is_nullable: 'NO', column_default: null },
     ]);
   });
 
@@ -133,5 +135,29 @@ describe.skipIf(!hasDatabase)('marketplace_module_publications RLS policy regres
       "SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'marketplace_module_publications_module_fk'",
     );
     expect(fk.rows[0]!.def).toBe('FOREIGN KEY (pariwar_id, module_id) REFERENCES marketplace_modules(pariwar_id, module_id)');
+    // Story 12.5b (QE6, I8) — the publication's route = the module's, by a second composite FK; NO ACTION (0195's reason).
+    const fks = await client.query<{ conname: string; def: string; del: string; upd: string }>(
+      `SELECT conname, pg_get_constraintdef(oid) AS def, confdeltype::text AS del, confupdtype::text AS upd FROM pg_constraint
+        WHERE conrelid = 'marketplace_module_publications'::regclass AND contype = 'f' ORDER BY conname`,
+    );
+    expect(fks.rows.map((r) => r.conname)).toEqual(['marketplace_module_publications_module_fk', 'marketplace_module_publications_module_route_fk']);
+    expect(fks.rows[1]!.def).toBe(
+      'FOREIGN KEY (pariwar_id, module_id, lead_route) REFERENCES marketplace_modules(pariwar_id, module_id, lead_route)',
+    );
+    expect(fks.rows.every((r) => r.del === 'a' && r.upd === 'a')).toBe(true);
+  });
+
+  it('Story 12.5b (AC11, I8): a publication whose route differs from the module\'s → 23503 on marketplace_module_publications_module_route_fk', async () => {
+    const { client } = getTx();
+    const a = await moduleIn(client, PARIWAR_A);
+    await expectSqlRejected(
+      client,
+      INSERT_PUBLICATION.replace("$5, 'trust_sends')", "$5, 'partner_form')"),
+      pubParams(a, PARIWAR_A),
+      '23503',
+      'marketplace_module_publications_module_route_fk',
+    );
+    // Control: the same row with the module's own route lands.
+    expect((await client.query(INSERT_PUBLICATION, pubParams(a, PARIWAR_A))).rowCount).toBe(1);
   });
 });

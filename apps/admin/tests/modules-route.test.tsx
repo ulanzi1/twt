@@ -53,8 +53,10 @@ function moduleDetail(moduleId: string, over: Record<string, unknown> = {}) {
     valid_until: '2026-12-05T05:00:00.000Z',
     slot_capacity: null,
     slots_remaining: null,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://leads.partner.example/hdfc',
     lead_handoff_signing_key_secret_name: 'hdfc-signing-key',
+    partner_form_url: null,
     branding_bundle: { version: 1, logo_object_key: null, accent_color_hex: null },
     current_state: 'draft',
     archive_reason: null,
@@ -64,6 +66,7 @@ function moduleDetail(moduleId: string, over: Record<string, unknown> = {}) {
     authored_by_viewer: true,
     publication: null,
     lead_count: 0,
+    partner_form_figures: null,
     ...over,
   };
 }

@@ -22,6 +22,7 @@ import { memberId as toMemberId, pariwarId as toPariwarId } from '../../src/ids/
 import {
   dataExportDeliveryGrants,
   marketplaceLeadHandoffs,
+  marketplacePartnerFormVisits,
   memberAuthOtps,
   dataExports,
   memberAddresses,
@@ -75,7 +76,8 @@ interface Captured {
   from?: unknown;
 }
 
-/** A mock Drizzle client that records every `update(table).set(obj).where(cond)` chain (DB-free).
+/** A mock Drizzle client that records every `update(table).set(obj).where(cond)` chain (DB-free) — and (Story 12.5b, QE8) every
+ *  `delete(table).where(cond)` the same way (`set` = {}), so the statement and table counts see the visit record's DELETE.
  *  ⭐ Story 6.26a (GI13): it also answers the ONE read the anonymizer makes — the deceased's claim ids
  *  (`select(...).from(claims).where(...)`) — with `claimIds`, so the inspection scrub runs. */
 function mockClient(
@@ -93,6 +95,14 @@ function mockClient(
           if (table === memorialSubmissions) return { where: () => Promise.resolve(memorials) };
           if (table !== claims) throw new Error('anonymizeMember: unexpected read');
           return { where: () => Promise.resolve(claimIds.map((claimCaseId) => ({ claimCaseId }))) };
+        },
+      };
+    },
+    delete(table: unknown) {
+      return {
+        where(cond: unknown) {
+          captured.push({ table, set: {}, where: cond });
+          return Promise.resolve();
         },
       };
     },
@@ -261,7 +271,9 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     const { captured } = await run();
     // ⭐ MOVED AGAIN by Story 12.5 (QE16): THIRTY-ONE tables, THIRTY-FOUR statements. `marketplace_lead_handoffs` — the sealed lead
     // fields → NULL, a `due` row cancelled — ONE statement, keyed on the member (⛔ claim-scoped).
-    expect(captured).toHaveLength(34);
+    // ⭐ MOVED AGAIN by Story 12.5b (QE8): THIRTY-TWO tables, THIRTY-FIVE statements. `marketplace_partner_form_visits` — the 90-day
+    // record that the member opened a partner's page — ONE DELETE (the file's first), keyed on the member (⛔ claim-scoped).
+    expect(captured).toHaveLength(35);
     const tables = captured.map((c) => c.table);
     for (const t of [
       memberIdentities,
@@ -295,6 +307,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
       memorialReviewDecisions,
       memorialWithdrawals,
       marketplaceLeadHandoffs,
+      marketplacePartnerFormVisits, // Story 12.5b (QE8)
     ]) {
       expect(tables).toContain(t);
     }
@@ -307,7 +320,7 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(tables.filter((t) => t === dataExports)).toHaveLength(2);
     expect(tables.filter((t) => t === dataExportDeliveryGrants)).toHaveLength(2);
     expect(tables.filter((t) => t === memberModerationAppeals)).toHaveLength(2);
-    expect(new Set(tables).size).toBe(31); // Story 12.5 (QE16) — 30 → 31: `marketplace_lead_handoffs`; Story 6.39 (DL14) — 29 → 30: `claim_membership_checks`; Story 6.22 (DL15) — 28 → 29: `claim_fraud_investigation_steps`; Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
+    expect(new Set(tables).size).toBe(32); // Story 12.5b (QE8) — 31 → 32: `marketplace_partner_form_visits` (a DELETE); Story 12.5 (QE16) — 30 → 31: `marketplace_lead_handoffs`; Story 6.39 (DL14) — 29 → 30: `claim_membership_checks`; Story 6.22 (DL15) — 28 → 29: `claim_fraud_investigation_steps`; Story 6.32 (AC9) — 27 → 28: `claim_ground_inspection_answers`; Story 11b.4 (MA15) — 24 → 27: the three memorial tables; Story 6.36e (NE10) — 23 → 24: `member_nominee_links`; Story 6.36b (SW17) — 22 → 23: `member_known_people`; Story 6.36a (AC9) — 21 → 22: `workplace_requests`; Story 6.27d (PM17 d) — 20 → 21: `claim_ground_inspection_discrepancy_notes`; Story 6.27a (PM17) — 19 → 20: `claim_peer_mesh_reply_answers`
   });
 
   it('⭐ Story 6.26a (GI13): the inspection\'s date and time of death → sentinel, the date\'s blind index → NULL', async () => {
@@ -357,13 +370,23 @@ describe('anonymizeMember — field-level PII overwrite (DB-free)', () => {
     expect(where.sql).toMatch(/"member_id" = \$\d+/);
   });
 
+  it('⭐ Story 12.5b (QE8): the partner-form visit records in ONE DELETE keyed on (pariwar_id, member_id) — ⛔ a scrub', async () => {
+    const { captured, pariwar } = await run();
+    const found = captured.filter((c) => c.table === marketplacePartnerFormVisits);
+    expect(found).toHaveLength(1);
+    expect(found[0]!.set).toEqual({});
+    const where = new PgDialect().sqlToQuery(found[0]!.where as SQL);
+    expect(where.sql).toMatch(/"marketplace_partner_form_visits"\."pariwar_id" = \$\d+ and "marketplace_partner_form_visits"\."member_id" = \$\d+/i);
+    expect(where.params).toContain(pariwar);
+  });
+
   it('⭐ Story 6.26a (GI13): a member with ⛔ no claims writes ⛔ no inspection statement', async () => {
     const { captured } = await run([]);
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspections);
     expect(captured.map((c) => c.table)).not.toContain(claimPeerMeshReplyAnswers); // Story 6.27a — ⛔ claims, ⛔ answers
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionDiscrepancyNotes); // Story 6.27d — ⛔ claims, ⛔ notes
     expect(captured.map((c) => c.table)).not.toContain(claimGroundInspectionAnswers); // Story 6.32 — ⛔ claims, ⛔ family answers
-    expect(captured).toHaveLength(30); // Story 12.5 — 29 → 30: the lead handoffs (⛔ claim-scoped — keyed on the member); Story 6.39 — 28 → 29: the membership check's note (⛔ claim-scoped — keyed on the member); Story 6.22 — 27 → 28: the investigation steps (⛔ claim-scoped — keyed on the member); Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
+    expect(captured).toHaveLength(31); // Story 12.5b — 30 → 31: the partner-form visit records (⛔ claim-scoped — keyed on the member); Story 12.5 — 29 → 30: the lead handoffs (⛔ claim-scoped — keyed on the member); Story 6.39 — 28 → 29: the membership check's note (⛔ claim-scoped — keyed on the member); Story 6.22 — 27 → 28: the investigation steps (⛔ claim-scoped — keyed on the member); Story 11b.4 — 24 → 27: the memorial scrub is ⛔ claim-scoped; Story 6.36e — 23 → 24: `member_nominee_links`; Story 6.36b — 22 → 23: `member_known_people`; Story 6.36a — 21 → 22: `workplace_requests` (⛔ claim-scoped)
   });
 
   it('⭐ Story 6.36a (AC9): the typed workplace → NULL and an open request → closed, in ONE statement, ONLY the member\'s rows', async () => {

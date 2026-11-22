@@ -21,7 +21,7 @@ import type pg from 'pg';
 
 import { isDeathReportStanding } from '../claim/death-report.js';
 import { listConsentsForArtifact, resolveConsentById } from '../consent/read.js';
-import { bindScopedDb, type Db } from '../db.js';
+import { bindScopedDb, withPariwarScope, type Db } from '../db.js';
 import { parseEnvelope } from '../encryption/envelope.js';
 import type { ConsentId, MemberId, PariwarId } from '../ids/index.js';
 import { getCurrentMemberModerationOverlay } from '../member/moderation/overlay.js';
@@ -34,13 +34,15 @@ import {
   LEAD_HANDOFF_PARTNER_REFERENCE_PATTERN,
   type LeadHandoffStatus,
 } from '../schema/marketplace_lead_handoffs.js';
-import type { MarketplaceModuleArchiveReason, MarketplaceModuleState } from '../schema/marketplace_modules.js';
+import type { MarketplaceModuleArchiveReason, MarketplaceModuleLeadRoute, MarketplaceModuleState } from '../schema/marketplace_modules.js';
 import {
   LeadHandoffAlreadyRecordedError,
   LeadHandoffConsentInvalidError,
   LeadHandoffFieldsGoneError,
   LeadHandoffFieldsInvalidError,
   LeadHandoffNotRequeueableError,
+  ModuleGenesisMissingError,
+  ModuleLeadRouteRefusedError,
   uniqueViolationConstraint,
 } from './errors.js';
 import { sealLeadMemberFieldsV1, type LeadFieldsCryptoDeps } from './lead-member-fields.js';
@@ -110,12 +112,29 @@ export function sanitizePartnerReference(raw: string | null | undefined): string
  * ⭐ QE18 step 1 — seal what the member confirmed, BEFORE 12.3 opens its transaction. Validates against `LeadMemberFieldsV1`
  * (`LeadHandoffFieldsInvalidError`, naming the fields), mints a FRESH nonce on every call, and encrypts under the lead's context
  * (`rowKey = leadId`). Returns the sealed string for {@link recordLeadHandoff}. NO production caller in 12.5 (I1).
+ *
+ * ⭐ Story 12.5b (QE4 (c); amends `-483` QE18 step 1's inputs by name, Decision `2026-11-22-489`) — the SEND GUARD's third line. The
+ * seal runs OUTSIDE any caller transaction by contract (no KMS round trip may run while `submitModuleLead` holds the module row), so
+ * it opens its OWN short read — `withPariwarScope(pool, pariwarId, …)` selecting the module's `lead_route` — which COMMITS before the
+ * first KMS call. A `partner_form` module refuses (`ModuleLeadRouteRefusedError`), an unknown one throws `ModuleGenesisMissingError`;
+ * only then does it seal. ⛔ caller-supplied route is trusted, and ⛔ KMS call runs while that read is open (TR28: an unscoped read on a
+ * caller's client under FORCE RLS would see NO row).
  */
 export async function sealLeadMemberFields(
+  pool: pg.Pool,
   enc: LeadFieldsCryptoDeps,
-  input: { readonly pariwarId: string; readonly leadId: string; readonly fields: unknown },
+  input: { readonly pariwarId: string; readonly moduleId: string; readonly leadId: string; readonly fields: unknown },
 ): Promise<string> {
-  return sealLeadMemberFieldsV1(enc, input);
+  const route = await withPariwarScope(pool, input.pariwarId, async (_db, client) => {
+    const { rows } = await client.query<{ lead_route: string }>(
+      'SELECT lead_route FROM marketplace_modules WHERE pariwar_id = $1 AND module_id = $2',
+      [input.pariwarId.toLowerCase(), input.moduleId.toLowerCase()],
+    );
+    return rows[0]?.lead_route ?? null;
+  });
+  if (route === null) throw new ModuleGenesisMissingError(input.moduleId);
+  if (route !== 'trust_sends') throw new ModuleLeadRouteRefusedError(input.moduleId, 'seal');
+  return sealLeadMemberFieldsV1(enc, { pariwarId: input.pariwarId, leadId: input.leadId, fields: input.fields });
 }
 
 /** What {@link recordLeadHandoff} records. */
@@ -145,6 +164,9 @@ const CONSENT_UNIQUE_CONSTRAINT = 'marketplace_lead_handoffs_consent_id_unique';
  * RLS, so without it a row could name another Pariwar's member — one the sweep can only hold and that member's erasure never reaches.
  * Under a SAVEPOINT (12.1 TR3): a 23505 on `lead_id` or `consent_id` is rolled back to it and mapped to
  * `LeadHandoffAlreadyRecordedError`, so the caller's transaction stays usable. NO production caller in 12.5 (I1).
+ * Story 12.5b (QE4 (d)): FIRST inside the savepoint, before the consent checks, a `partner_form` module refuses
+ * (`ModuleLeadRouteRefusedError`); an unknown module goes on to the composite FK's usual 23503. The trigger
+ * `marketplace_lead_handoffs_route_guard` (0216) refuses the same INSERT in the database (QE4 (e)).
  */
 export async function recordLeadHandoff(client: pg.PoolClient, input: RecordLeadHandoffInput): Promise<void> {
   const leadId = input.leadId.toLowerCase();
@@ -157,6 +179,13 @@ export async function recordLeadHandoff(client: pg.PoolClient, input: RecordLead
   }
   await client.query(`SAVEPOINT ${RECORD_SAVEPOINT}`);
   try {
+    const route = await client.query<{ lead_route: string }>(
+      'SELECT lead_route FROM marketplace_modules WHERE pariwar_id = $1 AND module_id = $2',
+      [pariwarId, input.moduleId.toLowerCase()],
+    );
+    if (route.rows[0] !== undefined && route.rows[0].lead_route !== 'trust_sends') {
+      throw new ModuleLeadRouteRefusedError(input.moduleId, 'record');
+    }
     const db: Db = bindScopedDb(client);
     const consent = await resolveConsentById(db, pariwarId as PariwarId, input.consentId.toLowerCase() as ConsentId);
     if (consent === null) throw new LeadHandoffConsentInvalidError(leadId, 'not_found');
@@ -197,7 +226,10 @@ export interface ClaimedLeadHandoff {
   readonly heldSince: Date | null;
   /** The body's `submitted_at` (QE12). */
   readonly createdAt: Date;
-  /** The module's URL authority (`split_part(url, '/', 3)` — exact: the stored URL is canonical). */
+  /**
+   * The module's URL authority (`split_part(url, '/', 3)` — exact: the stored URL is canonical). `''` when the module has ⛔ handoff URL
+   * (a `partner_form` offer — Story 12.5b TR1: the claim COALESCEs it, so such a row is claimable in every tick and S4 cancels it).
+   */
   readonly authority: string;
 }
 
@@ -228,13 +260,15 @@ export async function claimDueLeadHandoff(
     authority: string;
   }>(
     `WITH next AS MATERIALIZED (
-       SELECT h.lead_id, split_part(m.lead_handoff_url, '/', 3) AS authority
+       SELECT h.lead_id, COALESCE(split_part(m.lead_handoff_url, '/', 3), '') AS authority
          FROM marketplace_lead_handoffs h
          JOIN marketplace_modules m ON m.pariwar_id = h.pariwar_id AND m.module_id = h.module_id
         WHERE h.status = 'due'
           AND h.next_attempt_at <= clock_timestamp()
           AND NOT (h.module_id = ANY($2::uuid[]))
-          AND NOT (split_part(m.lead_handoff_url, '/', 3) = ANY($3::text[]))
+          -- Story 12.5b (TR1): a NULL URL (a partner_form module) would make this NOT (NULL = ANY('{a}')) = NULL — never claimed while
+          -- any authority is open. COALESCE in BOTH places (the select above and here).
+          AND NOT (COALESCE(split_part(m.lead_handoff_url, '/', 3), '') = ANY($3::text[]))
         ORDER BY h.next_attempt_at, h.updated_at, h.lead_id
         FOR UPDATE OF h SKIP LOCKED
         LIMIT 1
@@ -265,12 +299,16 @@ export async function claimDueLeadHandoff(
 
 // ── S4 — the module, read with an explicit Pariwar predicate ──────────────────────────────────────────
 
-/** What S4 reads. The URL and the secret NAME stay inside the sweep (⛔ logged, ⛔ alarmed, ⛔ stored — I8). */
+/**
+ * What S4 reads. The URL and the secret NAME stay inside the sweep (⛔ logged, ⛔ alarmed, ⛔ stored — I8). Story 12.5b (QE5): the route,
+ * and the two lead columns are NULL for a `partner_form` module (0216) — S4 decides such a row FIRST and never reaches them.
+ */
 export interface LeadHandoffModule {
   readonly moduleId: string;
   readonly partnerId: string;
-  readonly leadHandoffUrl: string;
-  readonly signingKeySecretName: string;
+  readonly leadRoute: MarketplaceModuleLeadRoute;
+  readonly leadHandoffUrl: string | null;
+  readonly signingKeySecretName: string | null;
   readonly currentState: MarketplaceModuleState;
   readonly archiveReason: MarketplaceModuleArchiveReason | null;
 }
@@ -283,12 +321,13 @@ export async function readLeadHandoffModule(
   const { rows } = await q.query<{
     module_id: string;
     partner_id: string;
-    lead_handoff_url: string;
-    lead_handoff_signing_key_secret_name: string;
+    lead_route: MarketplaceModuleLeadRoute;
+    lead_handoff_url: string | null;
+    lead_handoff_signing_key_secret_name: string | null;
     current_state: MarketplaceModuleState;
     archive_reason: MarketplaceModuleArchiveReason | null;
   }>(
-    `SELECT module_id, partner_id, lead_handoff_url, lead_handoff_signing_key_secret_name, current_state, archive_reason
+    `SELECT module_id, partner_id, lead_route, lead_handoff_url, lead_handoff_signing_key_secret_name, current_state, archive_reason
        FROM marketplace_modules
       WHERE pariwar_id = $1 AND module_id = $2`,
     [input.pariwarId, input.moduleId],
@@ -298,6 +337,7 @@ export async function readLeadHandoffModule(
   return {
     moduleId: r.module_id,
     partnerId: r.partner_id,
+    leadRoute: r.lead_route,
     leadHandoffUrl: r.lead_handoff_url,
     signingKeySecretName: r.lead_handoff_signing_key_secret_name,
     currentState: r.current_state,
@@ -307,7 +347,10 @@ export async function readLeadHandoffModule(
 
 // ── S6 — the member's side: P0–P5, IN THIS ORDER ─────────────────────────────────────────────────────
 
-/** The cancel words P1–P5 write (W9), and QE22's. */
+/**
+ * The cancel words P1–P5 write (W9), and QE22's. `partner_form_route` (Story 12.5b QE5) — S4 and the waiting pass cancel a row whose
+ * module is a `partner_form` offer (a bug upstream: such an offer never passes a member on — I2). ⚠ LOCKSTEP with the detail grammar.
+ */
 export const LEAD_HANDOFF_CANCEL_WORDS = [
   'consent_revoked',
   'member_erased',
@@ -316,6 +359,7 @@ export const LEAD_HANDOFF_CANCEL_WORDS = [
   'account_frozen',
   'death_reported',
   'module_withdrawn',
+  'partner_form_route',
 ] as const;
 export type LeadHandoffCancelWord = (typeof LEAD_HANDOFF_CANCEL_WORDS)[number];
 
@@ -325,7 +369,7 @@ export const LEAD_HANDOFF_CONSENT_PAGE = 20;
 /** What S6 found. `unsound` ⇒ W6 `held:db_unavailable` (the read is broken), ⛔ a send. */
 export type LeadHandoffPredicateVerdict =
   | { readonly kind: 'unsound'; readonly why: 'member_not_visible' | 'consent_page_full' }
-  | { readonly kind: 'cancel'; readonly word: Exclude<LeadHandoffCancelWord, 'module_withdrawn'> }
+  | { readonly kind: 'cancel'; readonly word: Exclude<LeadHandoffCancelWord, 'module_withdrawn' | 'partner_form_route'> }
   | { readonly kind: 'ok'; readonly ciphertext: string };
 
 /**
@@ -367,17 +411,43 @@ export async function readLeadHandoffPredicates(
     [P, leadId],
   );
   const ciphertext = rows[0]?.member_fields_ciphertext ?? null;
-  const state = await getCurrentMemberState(db, M);
-  if (ciphertext === null || state === 'anonymized') return { kind: 'cancel', word: 'member_erased' };
+  // P2's lifecycle half, P3, P4, P5 — the member-side reader Story 12.5b shares (its order and words are these, exactly).
+  const standing = await readMemberStandingP2toP5(db, client, P, M, { fieldsGone: ciphertext === null });
+  if (standing !== null) return { kind: 'cancel', word: standing };
+  if (ciphertext === null) return { kind: 'cancel', word: 'member_erased' }; // unreachable — `fieldsGone` already said so
+  return { kind: 'ok', ciphertext };
+}
+
+/** What {@link readMemberStandingP2toP5} can stop on, in its order. */
+export type MemberStandingStop = 'member_erased' | 'member_withdrawn' | 'member_terminated' | 'account_frozen' | 'death_reported';
+
+/**
+ * ⭐ The member-side half of P0–P5 that Story 12.5b SHARES (QE11 — one reader, ⛔ a copy): P2's lifecycle check (`anonymized`, or the
+ * caller's `fieldsGone` — the lead's own ciphertext, lead-only) ⇒ `member_erased`; P3 `withdrawn` ⇒ `member_withdrawn`, the moderation
+ * overlay `terminated` ⇒ `member_terminated`; P4 the account-frozen overlay at the DB clock ⇒ `account_frozen`; P5 a standing death report
+ * ⇒ `death_reported`. The FIRST stop, or null. P0 (`memberExists`) is the caller's — it must run FIRST, because `getCurrentMemberState`'s
+ * default is permissive — and P1 (the lead's consents) is lead-only. Used by {@link readLeadHandoffPredicates} (unchanged order, words
+ * and `unsound` cases — the 12.5 tick tests are the regression check) and by `openPartnerFormVisit` (`partner-form.ts`).
+ */
+export async function readMemberStandingP2toP5(
+  db: Db,
+  client: Pick<pg.PoolClient, 'query'>,
+  pariwarId: PariwarId,
+  memberId: MemberId,
+  opts: { readonly fieldsGone: boolean },
+): Promise<MemberStandingStop | null> {
+  // P2
+  const state = await getCurrentMemberState(db, memberId);
+  if (opts.fieldsGone || state === 'anonymized') return 'member_erased';
   // P3
-  if (state === 'withdrawn') return { kind: 'cancel', word: 'member_withdrawn' };
-  if ((await getCurrentMemberModerationOverlay(db, M)).status === 'terminated') return { kind: 'cancel', word: 'member_terminated' };
+  if (state === 'withdrawn') return 'member_withdrawn';
+  if ((await getCurrentMemberModerationOverlay(db, memberId)).status === 'terminated') return 'member_terminated';
   // P4 — `at` from the database clock, in this transaction.
   const at = (await client.query<{ at: Date }>('SELECT clock_timestamp() AS at')).rows[0]?.at ?? new Date();
-  if ((await listAccountFrozenMemberIds(db, [M], at)).has(M)) return { kind: 'cancel', word: 'account_frozen' };
+  if ((await listAccountFrozenMemberIds(db, [memberId], at)).has(memberId)) return 'account_frozen';
   // P5
-  if (await isDeathReportStanding(db, P, M)) return { kind: 'cancel', word: 'death_reported' };
-  return { kind: 'ok', ciphertext };
+  if (await isDeathReportStanding(db, pariwarId, memberId)) return 'death_reported';
+  return null;
 }
 
 // ── S10 / S6 — the compare-and-set writes (W3–W9) ────────────────────────────────────────────────────
@@ -530,6 +600,11 @@ export interface WaitingLeadHandoff {
   readonly consentId: string;
   /** The module is `archived` for `trustee_archived` — the test S4 applies. */
   readonly moduleWithdrawn: boolean;
+  /**
+   * Story 12.5b (QE5) — the module is a `partner_form` offer: a bug upstream (such an offer never passes a member on — I2). The pass
+   * cancels it `partner_form_route` BEFORE reading the member's side.
+   */
+  readonly routePartnerForm: boolean;
 }
 
 /**
@@ -555,9 +630,11 @@ export async function listWaitingLeadHandoffs(
     member_id: string;
     consent_id: string;
     module_withdrawn: boolean;
+    route_partner_form: boolean;
   }>(
     `SELECT h.lead_id, h.pariwar_id, h.module_id, h.member_id, h.consent_id,
-            COALESCE(m.current_state = 'archived' AND m.archive_reason = 'trustee_archived', false) AS module_withdrawn
+            COALESCE(m.current_state = 'archived' AND m.archive_reason = 'trustee_archived', false) AS module_withdrawn,
+            m.lead_route = 'partner_form' AS route_partner_form
        FROM marketplace_lead_handoffs h
        JOIN marketplace_modules m ON m.pariwar_id = h.pariwar_id AND m.module_id = h.module_id
       WHERE h.status = 'due'
@@ -573,6 +650,7 @@ export async function listWaitingLeadHandoffs(
     memberId: r.member_id,
     consentId: r.consent_id,
     moduleWithdrawn: r.module_withdrawn,
+    routePartnerForm: r.route_partner_form,
   }));
 }
 

@@ -22,6 +22,13 @@ export {
   MODULE_PUBLISH_STEP_UP_CONTEXT,
   MODULE_MAX_SCOPE_VALUES,
   MODULE_MAX_SCOPE_VALUE_LENGTH,
+  // Story 12.5b — the route, the count kinds, the totals bounds.
+  MODULE_LEAD_ROUTES,
+  ModuleLeadRoute,
+  MODULE_PARTNER_FORM_COUNT_KINDS,
+  ModulePartnerFormCountKind,
+  MODULE_PARTNER_FORM_STAGES_MAX,
+  MODULE_PARTNER_FORM_STAGE_LABEL_MAX,
 } from './enums.js';
 
 export {
@@ -45,4 +52,9 @@ export {
   AuthorModuleResponse,
   PublishModuleResponse,
   WithdrawModuleResponse,
+  // Story 12.5b — the floored figures, the partner's totals intake.
+  ModuleFlooredFigureDto,
+  ModulePartnerFormFiguresDto,
+  RecordPartnerFormTotalsRequest,
+  RecordPartnerFormTotalsResponse,
 } from './dto.js';

@@ -585,6 +585,11 @@ scope:
     # other member surface; ⛔ no number, ⛔ no urgency.
     - packages/i18n/locales/hi/app-links.json
     - packages/i18n/locales/en/app-links.json
+    # Story 12.5b (`2026-11-22-489` QE14; `-486` R5) — the `marketplace` namespace: the ONE member sentence shown before an offer
+    # that uses the partner's own page opens in the phone's browser. The English is the Panel's, VERBATIM — if a rule here ever
+    # flags it, do NOT reword ratified text and do NOT allow-list it silently: raise it with BigDev (the story's QE14).
+    - packages/i18n/locales/hi/marketplace.json
+    - packages/i18n/locales/en/marketplace.json
 
 # Allow-list — a finding is suppressed when an entry's `pattern` (regex, case-insensitive)
 # matches the finding's line AND (if `file` is set) the file path ends with it. GENUINE

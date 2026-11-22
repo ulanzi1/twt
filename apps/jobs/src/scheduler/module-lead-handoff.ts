@@ -31,6 +31,16 @@
 //   S8  Build the body, sign it, POST it — ⛔ connection held (TR8).
 //   S9  The `module.lead_handoff_attempted` line: up to 3 tries; if all fail, write nothing more — the row lapses (at least once).
 //   S10 Settle: W3, W4 / W5, or W8. A transient outcome adds the authority to `open`.
+//   W15 (Story 12.5b QE5; `-486` R2 C) — LAST, after the claim loop ends (⛔ inside S2: a visits fault there would stop the waiting pass
+//       and every `trust_sends` delivery of the tick — a fault in one route must ⛔ stop the other): ONE bounded DELETE of the
+//       partner-form visit records more than 90 days old. It runs even when the budget is spent. A throw ends ONLY W15: ONE
+//       `visit_purge_failed:<error>` alarm (an error name and a SQLSTATE only); the next tick retries.
+// ⭐ Story 12.5b (QE5; amends `-483` QE13 and `-487`'s W14 pass by name, Decision `2026-11-22-489`): a row whose module is a `partner_form`
+// offer is a BUG UPSTREAM (such an offer never passes a member on — I2; the record command and the 0216 trigger refuse it). S4 decides
+// it FIRST — before withdrawn, the URL, S5 and S6 — and the waiting pass before the member's side: cancelled `partner_form_route` at
+// once, ONE `module_lead_handoff_route_refused` alarm (ids only); ⛔ secret, ⛔ DNS, ⛔ member read, ⛔ decrypt, ⛔ audit line, ⛔
+// request. ⚠ A deliberate departure from 12.5's I2 ("the member's side decides first"): I2 orders the checks before a SEND, and this
+// row is never sent — reading the member's side for it would only add a way to HOLD a row that must go.
 // ⚠ A hold whose cause is GLOBAL (`kms`, `audit`, a THROWN `db`) ENDS THE TICK — each further row would cost two audit lines under the
 // global audit lock. A key, DNS or unsound-read hold is ONE row's problem: the tick goes on.
 //
@@ -39,7 +49,8 @@
 //     partner-relationship review" (K-3's trigger);
 //   · `module_lead_handoff_held:<word>` — once per module per tick (once per tick for the global words);
 //   · `module_lead_handoff_setup_fault` — the first 401 / 403 / 404 / `address_refused` per module per tick (QE21 (C));
-//   · `stale_claim` — a settle that lost its claim (I11); `rls_bound_role`; `sweep_failed:<error>`; `waiting_pass_failed:<error>`.
+//   · `stale_claim` — a settle that lost its claim (I11); `rls_bound_role`; `sweep_failed:<error>`; `waiting_pass_failed:<error>`;
+//   · (Story 12.5b) `module_lead_handoff_route_refused` — every `partner_form` row cancelled; `visit_purge_failed:<error>` — W15.
 //
 // ⚠ The access-wrapper gate does ⛔ scan `apps/jobs` (its README); this file's audit pairing is pinned by its test. The bare attempted
 // line (S9) is BY DESIGN outside the marketplace domain roots (Task 7).
@@ -87,6 +98,8 @@ export interface ModuleLeadHandoffDeps {
   readonly auditRetryPauseMs?: number;
   readonly tickBudgetMs?: number;
   readonly retentionDays?: number;
+  /** Story 12.5b (W15) — the visit record's retention (default 90 — `-486` R2 C). */
+  readonly visitRetentionDays?: number;
   /** The waiting pass's time budget and page (S2, `-487`). */
   readonly waitingBudgetMs?: number;
   readonly waitingPage?: number;
@@ -109,6 +122,8 @@ export interface ModuleLeadHandoffTickResult {
   readonly claimed: number;
   /** Requests made (S8). */
   readonly sent: number;
+  /** Story 12.5b — partner-form visit records removed by W15 (90 days old). */
+  readonly visitsPurged: number;
 }
 
 /** After one row: take the next, or end the tick. */
@@ -212,9 +227,20 @@ async function processRow(deps: ModuleLeadHandoffDeps, tick: Tick, row: marketpl
   }
   if (module === null) return hold('db', 'module read found no row', false);
 
+  // ── Story 12.5b (QE5) — a `partner_form` offer's row is decided FIRST: cancelled at once, ONE alarm, nothing else ──
+  if (module.leadRoute !== 'trust_sends') {
+    if (await marketplace.cancelLeadHandoff(deps.pool, { ...ref, word: 'partner_form_route' })) {
+      say("module_lead_handoff_route_refused (cancelled:partner_form_route) — a partner's-own-page offer never passes a member on; a bug upstream");
+    } else stale();
+    return 'next';
+  }
+
   let verdict: PartnerVerdict;
   if (module.currentState === 'archived' && module.archiveReason === 'trustee_archived') {
     verdict = { kind: 'withdrawn' };
+  } else if (module.leadHandoffUrl === null || module.signingKeySecretName === null) {
+    // Unreachable for a `trust_sends` row (0216 `marketplace_modules_route_columns`) — refused, ⛔ guessed.
+    verdict = { kind: 'refuse', detail: 'failed_delivery:url_refused' };
   } else {
     const url = checkLeadUrl(module.leadHandoffUrl);
     if (url.kind === 'url_refused') verdict = { kind: 'refuse', detail: 'failed_delivery:url_refused' };
@@ -418,6 +444,18 @@ async function runWaitingPass(deps: ModuleLeadHandoffDeps): Promise<number> {
         }
         cursor.leadId = waiting.leadId;
         at = waiting.leadId;
+        // Story 12.5b (QE5) — a `partner_form` offer's row: cancelled BEFORE the member's side is read (it is never sent).
+        if (waiting.routePartnerForm) {
+          if (await marketplace.cancelWaitingLeadHandoff(deps.pool, { pariwarId: waiting.pariwarId, leadId: waiting.leadId, word: 'partner_form_route' })) {
+            cancelled += 1;
+            alarm(
+              `[jobs] module-lead-handoff: module_lead_handoff_route_refused (cancelled:partner_form_route) — a partner's-own-page offer never passes a member on; a bug upstream — pariwar ${waiting.pariwarId} module ${waiting.moduleId} lead ${waiting.leadId}`,
+            );
+          }
+          at = null;
+          if (Date.now() - started >= budget) return cancelled;
+          continue;
+        }
         const member = await withPariwarScope(deps.pool, waiting.pariwarId, (db: Db, c: pg.PoolClient) => marketplace.readLeadHandoffPredicates(db, c, waiting));
         const word: marketplace.LeadHandoffCancelWord | null =
           member.kind === 'cancel' ? member.word : member.kind === 'ok' && waiting.moduleWithdrawn ? 'module_withdrawn' : null;
@@ -456,7 +494,7 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     const fault = faultClass(err);
     alarm(`[jobs] module-lead-handoff: module_lead_handoff.sweep_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} at the ${step} — this tick swept nothing further`);
   };
-  const empty = { lapsed: 0, purged: 0, cancelledWaiting: 0, claimed: 0, sent: 0 };
+  const empty = { lapsed: 0, purged: 0, cancelledWaiting: 0, claimed: 0, sent: 0, visitsPurged: 0 };
 
   // ── S1 ──
   try {
@@ -524,10 +562,25 @@ export async function runModuleLeadHandoffTick(deps: ModuleLeadHandoffDeps): Pro
     }
   } while (Date.now() - started < budget);
 
-  if (lapsed.length > 0 || purged > 0 || cancelledWaiting > 0 || claimed > 0) {
-    console.info('[jobs] module-lead-handoff tick', JSON.stringify({ lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent }));
+  // ── W15 (Story 12.5b QE5) — LAST, even when the budget is spent; a throw ends ONLY W15 ──
+  let visitsPurged = 0;
+  try {
+    visitsPurged = await marketplace.purgeExpiredPartnerFormVisits(
+      deps.pool,
+      deps.visitRetentionDays === undefined ? {} : { retentionDays: deps.visitRetentionDays },
+    );
+  } catch (err) {
+    const fault = faultClass(err);
+    alarm(
+      `[jobs] module-lead-handoff: module_lead_handoff.visit_purge_failed:${errorName(err)}${fault.startsWith('code:') ? ` [${fault}]` : ''} — ` +
+        'the partner-form visit records were not purged this tick; the next tick retries',
+    );
   }
-  return { refused: false, lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent };
+
+  if (lapsed.length > 0 || purged > 0 || cancelledWaiting > 0 || claimed > 0 || visitsPurged > 0) {
+    console.info('[jobs] module-lead-handoff tick', JSON.stringify({ lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent, visitsPurged }));
+  }
+  return { refused: false, lapsed: lapsed.length, purged, cancelledWaiting, claimed, sent: tick.sent, visitsPurged };
 }
 
 /**

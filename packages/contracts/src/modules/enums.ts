@@ -40,6 +40,24 @@ export const MODULE_PUBLISHED_EVENT_TYPES = ['module.scheduled', 'module.activat
 export const ModulePublishedEventType = z.enum(MODULE_PUBLISHED_EVENT_TYPES);
 export type ModulePublishedEventType = z.output<typeof ModulePublishedEventType>;
 
+/**
+ * Story 12.5b (`-484` Q1 C) — how a member's interest reaches the partner: `trust_sends` (the Trust sends four details — Story 12.5) or
+ * `partner_form` (the member opens the partner's own page; the Trust sends nothing about the member). The domain's source tuple is
+ * `MARKETPLACE_MODULE_LEAD_ROUTES` (the sync-guard test pins them).
+ */
+export const MODULE_LEAD_ROUTES = ['trust_sends', 'partner_form'] as const;
+export const ModuleLeadRoute = z.enum(MODULE_LEAD_ROUTES);
+export type ModuleLeadRoute = z.output<typeof ModuleLeadRoute>;
+
+/** Story 12.5b (QE13) — the Trust's own per-offer count kinds (domain: `PARTNER_FORM_COUNT_KINDS`). */
+export const MODULE_PARTNER_FORM_COUNT_KINDS = ['card_shown', 'card_opened', 'went_to_partner', 'came_back'] as const;
+export const ModulePartnerFormCountKind = z.enum(MODULE_PARTNER_FORM_COUNT_KINDS);
+export type ModulePartnerFormCountKind = z.output<typeof ModulePartnerFormCountKind>;
+
+/** Story 12.5b (QE12) — the partner's totals' bounds (domain: `PARTNER_FORM_STAGES_MAX`, `PARTNER_FORM_STAGE_LABEL_MAX`). */
+export const MODULE_PARTNER_FORM_STAGES_MAX = 20;
+export const MODULE_PARTNER_FORM_STAGE_LABEL_MAX = 80;
+
 /** Where the no-tree / tree district options came from (QE5). */
 export const MODULE_DISTRICT_SOURCES = ['geo_tree', 'workplace_districts'] as const;
 export const ModuleDistrictSource = z.enum(MODULE_DISTRICT_SOURCES);

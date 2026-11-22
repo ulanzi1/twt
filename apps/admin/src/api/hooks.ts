@@ -3052,13 +3052,26 @@ export function useAuthorModule(pariwarId: string) {
 export function usePublishModule(pariwarId: string, moduleId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { idempotencyKey: string }) =>
+    // Story 12.5b (QE6 (A)) — the PUBLISHER's route rides with the ticks; the page passes the radio the publisher chose (⛔ default).
+    mutationFn: (input: { idempotencyKey: string; leadRoute: import('@twt/contracts').ModuleLeadRoute }) =>
       api.publishModule(
         pariwarId,
         moduleId,
-        { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true },
+        { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true, lead_route: input.leadRoute },
         input.idempotencyKey,
       ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) });
+    },
+  });
+}
+
+/** Story 12.5b (QE12 (A)) — staff enter a partner's totals; the detail refetches to show the newest entry per period. */
+export function useRecordPartnerFormTotals(pariwarId: string, moduleId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { body: import('@twt/contracts').RecordPartnerFormTotalsRequest; idempotencyKey: string }) =>
+      api.recordPartnerFormTotals(pariwarId, moduleId, input.body, input.idempotencyKey),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: modulesRoot(pariwarId) });
     },

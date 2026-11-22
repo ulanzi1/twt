@@ -53,6 +53,7 @@ describe.skipIf(!hasDatabase)('marketplace publication record (Story 12.2 AC6)',
       partnerAgreementConfirmed: true,
       contentHash,
       auditId,
+      leadRoute: 'trust_sends',
     });
     expect(row).toMatchObject({
       moduleId: id,
@@ -63,6 +64,8 @@ describe.skipIf(!hasDatabase)('marketplace publication record (Story 12.2 AC6)',
       hindiReviewed: true,
       partnerAgreementConfirmed: true,
       auditId,
+      // Story 12.5b (QE6) — the publisher's route, stored on the row.
+      leadRoute: 'trust_sends',
     });
     expect(row.reviewedAt).toBeInstanceOf(Date);
     expect(await getModulePublication(db, p, id)).toEqual(row);
@@ -96,6 +99,7 @@ describe.skipIf(!hasDatabase)('marketplace publication record (Story 12.2 AC6)',
       partnerAgreementConfirmed: true as const,
       contentHash: 'a'.repeat(64),
       auditId: randomUUID(),
+      leadRoute: 'trust_sends' as const,
     };
     await recordModulePublication(client, input);
     await client.query('SAVEPOINT again');
@@ -123,8 +127,8 @@ describe.skipIf(!hasDatabase)('marketplace publication record (Story 12.2 AC6)',
       client,
       `INSERT INTO marketplace_module_publications
          (module_id, pariwar_id, published_event_type, tone_signoff_content_hash, reviewed_by_actor_id, hindi_reviewed,
-          partner_agreement_confirmed, audit_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          partner_agreement_confirmed, audit_id, lead_route)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'trust_sends')`,
       [id, p, o.type ?? 'module.activated', o.hash ?? 'f'.repeat(64), REVIEWER, o.hindi ?? true, o.partner ?? true, randomUUID()],
       '23514',
       name,

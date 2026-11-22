@@ -13,6 +13,7 @@ import type {
   ModuleDetailResponse,
   ModuleEligibilityFilterDto,
   ModuleEligibilityMemberState,
+  ModuleLeadRoute,
   ModulePublicationDto,
   ModuleScopeFilterDto,
   ModuleState,
@@ -56,8 +57,12 @@ export interface WizardState {
   validUntil: string;
   placesMode: 'unlimited' | 'fixed' | null;
   places: string;
+  /** Story 12.5b (QE7 (A)) — asked FIRST in step (e), `null` until chosen (⛔ default). Places are asked only for `trust_sends`. */
+  leadRoute: ModuleLeadRoute | null;
   leadHandoffUrl: string;
   secretName: string;
+  /** Story 12.5b — the partner's own page (`partner_form` only), sent exactly as typed (trimmed). */
+  partnerFormUrl: string;
 }
 
 export function emptyWizardState(): WizardState {
@@ -75,8 +80,10 @@ export function emptyWizardState(): WizardState {
     validUntil: '',
     placesMode: null,
     places: '',
+    leadRoute: null,
     leadHandoffUrl: '',
     secretName: '',
+    partnerFormUrl: '',
   };
 }
 
@@ -168,6 +175,16 @@ export function describeScope(scope: ModuleScopeFilterDto): string[] {
   ];
 }
 
+/** Story 12.5b — the route in plain language: its name and what it means for the member's details. */
+export function describeRoute(route: ModuleLeadRoute): { name: string; meaning: string } {
+  return { name: t(`module.route.${route}`), meaning: t(`module.route.${route}.hint`) };
+}
+
+/** Story 12.5b — the places line: a `partner_form` offer has none (⛔ "unlimited"). */
+export function describePlacesFor(route: ModuleLeadRoute | null, capacity: number | null): string {
+  return route === 'partner_form' ? t('module.places.none') : describePlaces(capacity);
+}
+
 export function describePlaces(capacity: number | null): string {
   if (capacity === null) return t('module.places.unlimited');
   return capacity === 1 ? t('module.places.one') : t('module.places.count', { n: capacity });
@@ -244,12 +261,24 @@ export function validateStep(step: number, s: WizardState): string | null {
       return null;
     }
     case 'e':
+      // Story 12.5b (QE7 (A)) — the route first (⛔ default); places only for an offer the Trust sends details for.
+      if (s.leadRoute === null) return t('module.reason.leadRoute');
+      if (s.leadRoute === 'partner_form') return null;
       if (s.placesMode === null) return t('module.reason.placesMode');
       if (s.placesMode === 'fixed' && (!POSITIVE_INT.test(s.places.trim()) || Number(s.places.trim()) > MAX_PLACES)) {
         return t('module.reason.places');
       }
       return null;
     case 'f':
+      if (s.leadRoute === 'partner_form') {
+        // Mirrors only what the admin can see; the domain's QE3 rule decides (a 422 names the field).
+        const url = s.partnerFormUrl.trim();
+        if (url === '') return t('module.reason.partnerFormUrl');
+        if (!url.startsWith('https://')) return t('module.reason.partnerFormUrlHttps');
+        if (url.length > MAX_LEAD_URL) return t('module.reason.partnerFormUrlTooLong');
+        if (url.includes('#')) return t('module.reason.partnerFormUrlFragment');
+        return null;
+      }
       if (s.leadHandoffUrl.trim() === '') return t('module.reason.leadUrl');
       if (!s.leadHandoffUrl.trim().startsWith('https://')) return t('module.reason.leadUrlHttps');
       if (s.leadHandoffUrl.trim().length > MAX_LEAD_URL) return t('module.reason.leadUrlTooLong');
@@ -322,9 +351,22 @@ export function toAuthorRequest(s: WizardState): AuthorModuleRequest {
     scope_filter: scopeFilterOf(s),
     valid_from: toIsoOrNull(s.validFrom) ?? '',
     valid_until: toIsoOrNull(s.validUntil) ?? '',
-    slot_capacity: s.placesMode === 'fixed' ? Number(s.places.trim()) : null,
-    lead_handoff_url: s.leadHandoffUrl.trim(),
-    lead_handoff_signing_key_secret_name: s.secretName.trim(),
+    // Story 12.5b — the route's own fields only; the other route's are sent as null (the domain refuses a value there).
+    ...(s.leadRoute === 'partner_form'
+      ? {
+          lead_route: 'partner_form' as const,
+          slot_capacity: null,
+          lead_handoff_url: null,
+          lead_handoff_signing_key_secret_name: null,
+          partner_form_url: s.partnerFormUrl.trim(),
+        }
+      : {
+          lead_route: 'trust_sends' as const,
+          slot_capacity: s.placesMode === 'fixed' ? Number(s.places.trim()) : null,
+          lead_handoff_url: s.leadHandoffUrl.trim(),
+          lead_handoff_signing_key_secret_name: s.secretName.trim(),
+          partner_form_url: null,
+        }),
   };
 }
 
@@ -343,10 +385,14 @@ export function fromModule(m: ModuleDetailResponse): WizardState {
     scopeValues: m.scope_filter.scope === 'members-all' ? [] : [...m.scope_filter.values],
     validFrom: toLocalInput(m.valid_from),
     validUntil: toLocalInput(m.valid_until),
-    placesMode: m.slot_capacity === null ? 'unlimited' : 'fixed',
+    // A `partner_form` offer asks no places (Story 12.5b); a `trust_sends` one keeps 12.2's mapping.
+    placesMode: m.lead_route === 'partner_form' ? null : m.slot_capacity === null ? 'unlimited' : 'fixed',
     places: m.slot_capacity === null ? '' : String(m.slot_capacity),
-    leadHandoffUrl: m.lead_handoff_url,
-    secretName: m.lead_handoff_signing_key_secret_name,
+    // "Start a corrected copy" carries the route (AC11).
+    leadRoute: m.lead_route,
+    leadHandoffUrl: m.lead_handoff_url ?? '',
+    secretName: m.lead_handoff_signing_key_secret_name ?? '',
+    partnerFormUrl: m.partner_form_url ?? '',
   };
 }
 
@@ -363,8 +409,11 @@ const FIELD_STEP: Record<string, WizardStep> = {
   valid_from: 'd',
   valid_until: 'd',
   slot_capacity: 'e',
+  // Story 12.5b (G25) — a 422 on the route or the page opens the step that asks it.
+  lead_route: 'e',
   lead_handoff_url: 'f',
   lead_handoff_signing_key_secret_name: 'f',
+  partner_form_url: 'f',
 };
 
 /** A 422 issue's path → the step that owns the field (the summary when the path names none). */
@@ -386,6 +435,8 @@ const FIELD_LABEL: Record<string, string> = {
   slot_capacity: 'module.field.places',
   lead_handoff_url: 'module.field.leadUrl',
   lead_handoff_signing_key_secret_name: 'module.field.secretName',
+  lead_route: 'module.field.leadRoute',
+  partner_form_url: 'module.field.partnerFormUrl',
 };
 
 /** The request field a 422 issue's path starts at, when it is one with a single input on screen; else null. */
@@ -474,8 +525,60 @@ export function moduleErrorGuidance(code: string, surface: 'wizard' | 'detail' =
     'module_partner.name_taken': 'module.partner.nameTaken',
     'module_partner.name_invalid': 'module.partner.nameInvalid',
     'tone_review.required': 'module.detail.authorCannotPublish',
+    // Story 12.5b
+    'module.lead_route_mismatch': 'module.error.lead_route_mismatch',
+    'module.not_partner_form': 'module.error.not_partner_form',
+    'module.partner_form_totals_invalid': 'module.error.partner_form_totals_invalid',
     // The API's permission-denied code is `authz.forbidden` (this row was keyed `auth.forbidden`, which nothing emits — RP22).
     'authz.forbidden': 'module.error.forbidden',
   };
   return t(own[code] ?? 'module.error.generic');
+}
+
+// ── Story 12.5b — the figures (QE12 (A), QE13 (A); I4) and the partner's totals form ────────────────────
+
+/** A floored figure as text: the number, or "fewer than 5" (the server never sends a number below 5). */
+export function figureText(f: { figure: number | null; below_floor: boolean }): string {
+  return f.below_floor || f.figure === null ? t('module.figures.fewerThan5') : String(f.figure);
+}
+
+/** One stage row of the totals form. */
+export interface TotalsStageDraft {
+  label: string;
+  figure: string;
+}
+export interface TotalsDraft {
+  periodStart: string;
+  periodEnd: string;
+  stages: TotalsStageDraft[];
+}
+export function emptyTotalsDraft(): TotalsDraft {
+  return { periodStart: '', periodEnd: '', stages: [{ label: '', figure: '' }] };
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const WHOLE = /^(0|[1-9][0-9]{0,9})$/;
+/** The stage label bound (the contract's `MODULE_PARTNER_FORM_STAGE_LABEL_MAX`). */
+const STAGE_LABEL_MAX = 80;
+
+/** The first reason the totals form cannot be saved yet, or null. Mirrors what the admin sees; the domain decides. */
+export function validateTotalsDraft(d: TotalsDraft): string | null {
+  if (!ISO_DATE.test(d.periodStart) || !ISO_DATE.test(d.periodEnd) || d.periodEnd < d.periodStart) return t('module.totals.reasonPeriod');
+  if (d.stages.length === 0) return t('module.totals.reasonStage');
+  for (const st of d.stages) {
+    const label = st.label.trim();
+    if (label === '' || label.length > STAGE_LABEL_MAX || !WHOLE.test(st.figure.trim()) || Number(st.figure.trim()) > MAX_PLACES) {
+      return t('module.totals.reasonStage');
+    }
+  }
+  return null;
+}
+
+/** The totals request: the stages in order, each label trimmed, each number as a whole number. */
+export function toTotalsRequest(d: TotalsDraft): import('@twt/contracts').RecordPartnerFormTotalsRequest {
+  return {
+    period_start: d.periodStart,
+    period_end: d.periodEnd,
+    stages: d.stages.map((st) => ({ label: st.label.trim(), figure: Number(st.figure.trim()) })),
+  };
 }

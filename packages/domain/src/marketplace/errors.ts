@@ -485,3 +485,72 @@ export class LeadHandoffNotRequeueableError extends Error {
     super(`lead ${leadId}: only a failed handoff can be re-sent`);
   }
 }
+
+// ── Story 12.5b — the partner's-own-form route (`2026-11-22-489`) ────────────────────────────────────
+// Typed, ⛔ HTTP here. ⛔ A member field or a URL in any message — ids and words only (TR8: a visit's member is never paired with its
+// offer in a message that could reach a log).
+
+/** Where a `partner_form` offer was asked to pass a member on (QE4 (a)–(d)). */
+export type ModuleLeadRouteOperation = 'lead' | 'lead_check' | 'projector' | 'seal' | 'record';
+
+/**
+ * ⭐ THE SEND GUARD (Story 12.5b QE4; I2). A `partner_form` offer never passes a member on: ⛔ `module.lead_submitted`, ⛔ sealed
+ * envelope, ⛔ handoff row. Thrown by `submitModuleLead`, `projectModuleTransition`, `sealLeadMemberFields` and
+ * `recordLeadHandoff` — so a Story 12.3 bug fails LOUDLY and never sends quietly. The database trigger
+ * `marketplace_lead_handoffs_route_guard` (0216) is the backstop behind all four.
+ */
+export class ModuleLeadRouteRefusedError extends Error {
+  public readonly name = 'ModuleLeadRouteRefusedError';
+  public readonly code = 'module.lead_route_partner_form';
+  public constructor(
+    public readonly moduleId: string,
+    public readonly operation: ModuleLeadRouteOperation,
+  ) {
+    super(`module ${moduleId} uses the partner's own page — it never passes a member on (refused at ${operation})`);
+  }
+}
+
+/**
+ * Why `openPartnerFormVisit` refused (Story 12.5b QE11), in its order: the offer (`not_found`, `not_partner_form`, `not_active`,
+ * `outside_window`), then the member — R4 A's narrow side and C9's belt-and-braces (12.3 still re-checks scope, eligibility and
+ * suppression first). ⛔ A member id in the message (TR8).
+ */
+export const PARTNER_FORM_VISIT_REFUSALS = [
+  'not_found',
+  'not_partner_form',
+  'not_active',
+  'outside_window',
+  'member_not_in_pariwar',
+  'member_erased',
+  'member_withdrawn',
+  'member_terminated',
+  'account_frozen',
+  'death_reported',
+] as const;
+export type PartnerFormVisitRefusal = (typeof PARTNER_FORM_VISIT_REFUSALS)[number];
+
+export class PartnerFormVisitRefusedError extends Error {
+  public readonly name = 'PartnerFormVisitRefusedError';
+  public constructor(public readonly reason: PartnerFormVisitRefusal) {
+    super(`the partner's page was not opened: ${reason}`);
+  }
+}
+
+/** A partner-form operation on a `trust_sends` offer (Story 12.5b — the counts, the totals: 409 `module.not_partner_form`). */
+export class ModuleNotPartnerFormError extends Error {
+  public readonly name = 'ModuleNotPartnerFormError';
+  public readonly code = 'module.not_partner_form';
+  public constructor(public readonly moduleId: string) {
+    super(`module ${moduleId} does not use the partner's own page`);
+  }
+}
+
+/** The partner's totals failed their shape (Story 12.5b QE12): `issues` carry PATHS and messages — ⛔ a value. */
+export class PartnerFormTotalsInvalidError extends Error {
+  public readonly name = 'PartnerFormTotalsInvalidError';
+  public readonly issues: readonly { readonly path: readonly (string | number)[]; readonly message: string }[];
+  public constructor(error: ZodError) {
+    super(`the partner's totals are invalid: ${error.issues.map((i) => i.path.join('.') || '(root)').join(', ')}`);
+    this.issues = error.issues.map((i) => ({ path: [...i.path], message: i.message }));
+  }
+}

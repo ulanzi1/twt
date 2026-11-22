@@ -114,6 +114,9 @@ export interface ModuleProjection {
  * `slotsRemaining: null`), and an archive's `reason` is read on its own (an unknown value yields
  * `archiveReason: null`). Only events the reducer actually APPLIES count — an inapplicable lead in a corrupt
  * stream takes no place.
+ * Story 12.5b (QE2): the schema is a union of the v1 arm (every stored 12.1 genesis — read as `trust_sends`) and the two v2
+ * route arms; a `partner_form` genesis carries `slot_capacity: null`, so it folds to ⛔ places. The route itself is read with
+ * `moduleAuthoredLeadRoute` (events.ts) — ⛔ part of the four-value projection I4 compares.
  */
 export function foldModuleProjection(rows: readonly ModuleReplayEvent[]): ModuleProjection {
   let state: MarketplaceModuleState = moduleStateMachine.initial;

@@ -31,6 +31,8 @@ function manifest(overrides: Record<string, unknown> = {}): Record<string, unkno
     valid_from: '2026-11-01T00:00:00.000Z',
     valid_until: '2026-12-01T00:00:00.000Z',
     slot_capacity: 50,
+    // Story 12.5b (manifest v2) — the route is named on every input.
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://leads.partner.example/hdfc/twt-bihar',
     lead_handoff_signing_key_secret_name: 'marketplace-hdfc-signing-key',
     branding_bundle: { version: 1, logo_object_key: 'partners/hdfc/logo.png', accent_color_hex: '#004c8f' },

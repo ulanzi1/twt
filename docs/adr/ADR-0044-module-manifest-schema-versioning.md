@@ -53,6 +53,13 @@ the grammars growing additively inside `version: 1` and every breaking change ta
    marketplace_modules_manifest_schema_version_v1 CHECK (manifest_schema_version = 1)`. A v2 manifest is a migration
    that relaxes this CHECK together with a new parser arm and a new genesis payload schema — ⛔ a silent reinterpretation
    of v1 rows.
+   ⭐ *Dated 2026-11-22 — Story 12.5b, author-commit `2026-11-22-489` QE1 / QE2 (carrying out `2026-11-21-484` Q1 C):* **v2 exists**,
+   done exactly this way. Migration `0216` replaced `…_manifest_schema_version_v1` by `marketplace_modules_manifest_schema_version`
+   (`IN (1, 2)`) and `marketplace_modules_v1_is_trust_sends`, and added the route: `lead_route` (`trust_sends` | `partner_form`, ⛔
+   default) + `partner_form_url`, with `marketplace_modules_route_columns` saying which columns each route carries (a `partner_form`
+   offer has the partner's page and ⛔ handoff URL, ⛔ signing key, ⛔ places). Every v1 row and stream stays as written and reads as
+   `trust_sends`; the v1 genesis arm's ONE edit is its version literal's name (`MODULE_MANIFEST_SCHEMA_VERSION_V1`), so it keeps
+   accepting exactly what it accepted (the payload is a union of the v1 arm and two v2 route arms). New manifests are v2.
 4. **Grammar-level version (QE9).** `scope_filter` (`members-all` / `state` / `district`), `eligibility_filter`
    (`{ version: 1, clauses }`, v1 clause `member_state_in`) and `branding_bundle` are closed, `.strict()` and carry
    `version: 1`. They grow ADDITIVELY within `version: 1` (a new scope, a new clause kind, a new optional-by-absence
@@ -128,6 +135,8 @@ the grammars growing additively inside `version: 1` and every breaking change ta
 - **Failure modes accepted.** `commission_terms`, FR-64's external `target_url_or_form` CTA and a `module.restored`
   event are ⛔ in v1 (carried to 12.2 / no owner / 12.6). A capped module stays `active` at 0 places until an archive is
   emitted (C2).
+  ⭐ *Dated 2026-11-22 — Story 12.5b (`2026-11-22-489`):* FR-64's `target_url_or_form` is now the v2 `partner_form_url` of a
+  `partner_form` offer (owned by 12.5b since `-485` (A1)); the member-facing card that opens it is Story 12.3's.
   ⭐ *Amended in part 2026-11-01 by `2026-11-01-433` (Story 12.2 QE20):* `commission_terms` is ⛔ stored by 12.2 either (QE6 (A);
   `-433` A1 / A2) — it moves to QE6's re-trigger: OQ-4 answered by the Panel, OR the first PRODUCTION publish of a module,
   OR Story 12.3's create-story, whichever comes first.
@@ -160,3 +169,4 @@ the grammars growing additively inside `version: 1` and every breaking change ta
 | 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-434` (Story 12.2 code review DN1 + DN2, A2): a second dated line at D3 / D4 — QE12's display rules tightened (ZWJ / ZWNJ `*_hi` only; every other invisible code point refused except U+FE0E / U+FE0F) |
 | 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commit `2026-11-01-435` (Story 12.2 code review DN3 + DN4): a third dated line at D3 / D4 — NFC, U+0020 the only space, no doubled space in a name; ZWJ between two emoji in the English module texts |
 | 2026-11-01 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Amended IN PART by author-commits `2026-11-01-436` / `-437` (Story 12.2 code review DN6 + DN7): a fourth dated line at D3 / D4 — a presentation selector only where it changes the look |
+| 2026-11-22 | (no flip — stays `drafted`) | BigDev (Solo Builder) | Story 12.5b (author-commit `2026-11-22-489` QE17): dated lines at D3 (manifest v2 — the route, `0216`) and Consequences (FR-64's CTA is `partner_form_url`). ⛔ A decision changed: the pivot path ran as written |

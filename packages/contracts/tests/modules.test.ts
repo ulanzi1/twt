@@ -13,6 +13,10 @@ import {
   MODULE_ARCHIVE_REASONS,
   MODULE_DISTRICT_SOURCES,
   MODULE_ELIGIBILITY_MEMBER_STATES,
+  MODULE_LEAD_ROUTES,
+  MODULE_PARTNER_FORM_COUNT_KINDS,
+  MODULE_PARTNER_FORM_STAGE_LABEL_MAX,
+  MODULE_PARTNER_FORM_STAGES_MAX,
   MODULE_MAX_SCOPE_VALUE_LENGTH,
   MODULE_MAX_SCOPE_VALUES,
   MODULE_PUBLISHED_EVENT_TYPES,
@@ -22,8 +26,11 @@ import {
   ModuleEligibilityFilterDto,
   ModuleListResponse,
   ModuleScopeFilterDto,
+  ModuleFlooredFigureDto,
+  ModulePartnerFormFiguresDto,
   ModuleScopeOptionDto,
   PublishModuleRequest,
+  RecordPartnerFormTotalsRequest,
   WithdrawModuleRequest,
 } from '../src/modules/index.js';
 
@@ -33,6 +40,14 @@ describe('modules contract ↔ domain sync-guard', () => {
     expect([...MODULE_ARCHIVE_REASONS]).toEqual([...schema.MARKETPLACE_MODULE_ARCHIVE_REASONS]);
     expect([...MODULE_ELIGIBILITY_MEMBER_STATES]).toEqual([...marketplace.ELIGIBILITY_MEMBER_STATES]);
     expect([...MODULE_PUBLISHED_EVENT_TYPES]).toEqual([...schema.MODULE_PUBLISHED_EVENT_TYPES]);
+  });
+
+  it('Story 12.5b: the route, the count kinds and the totals bounds equal the domain\'s; the figures DTO carries exactly the kinds', () => {
+    expect([...MODULE_LEAD_ROUTES]).toEqual([...schema.MARKETPLACE_MODULE_LEAD_ROUTES]);
+    expect([...MODULE_PARTNER_FORM_COUNT_KINDS]).toEqual([...schema.PARTNER_FORM_COUNT_KINDS]);
+    expect(MODULE_PARTNER_FORM_STAGES_MAX).toBe(schema.PARTNER_FORM_STAGES_MAX);
+    expect(MODULE_PARTNER_FORM_STAGE_LABEL_MAX).toBe(schema.PARTNER_FORM_STAGE_LABEL_MAX);
+    expect(Object.keys(ModulePartnerFormFiguresDto.shape.counts.shape).sort()).toEqual([...MODULE_PARTNER_FORM_COUNT_KINDS].sort());
   });
 
   it('the scope kinds equal the domain ScopeFilterV1 discriminants, and the scope bounds equal the domain constants', () => {
@@ -95,6 +110,7 @@ describe('modules request DTOs — shape-only and strict (QE18)', () => {
     valid_from: 'not a date',
     valid_until: 'not a date',
     slot_capacity: -3,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'http://x',
     lead_handoff_signing_key_secret_name: '!!',
   };
@@ -110,10 +126,30 @@ describe('modules request DTOs — shape-only and strict (QE18)', () => {
     expect(AuthorModuleRequest.safeParse({ ...author, commission_terms: 'x' }).success).toBe(false);
   });
 
-  it('PublishModuleRequest needs all three ticks TRUE; WithdrawModuleRequest is an empty strict object', () => {
-    const ok = { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true };
+  it('Story 12.5b: AuthorModuleRequest requires lead_route (⛔ default) and takes the route fields as nullable', () => {
+    const noRoute: Record<string, unknown> = { ...author };
+    delete noRoute['lead_route'];
+    expect(AuthorModuleRequest.safeParse(noRoute).success).toBe(false);
+    expect(AuthorModuleRequest.safeParse({ ...author, lead_route: 'both' }).success).toBe(false);
+    expect(
+      AuthorModuleRequest.safeParse({
+        ...author,
+        lead_route: 'partner_form',
+        partner_form_url: 'https://partner.example/apply?offer=x',
+        lead_handoff_url: null,
+        lead_handoff_signing_key_secret_name: null,
+        slot_capacity: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('PublishModuleRequest needs all three ticks TRUE and the publisher\'s lead_route; WithdrawModuleRequest is an empty strict object', () => {
+    const ticks = { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true };
+    const ok = { ...ticks, lead_route: 'partner_form' };
     expect(PublishModuleRequest.safeParse(ok).success).toBe(true);
-    for (const k of Object.keys(ok)) {
+    // Story 12.5b (QE6 (A)) — ⛔ default: a publish without the route is refused.
+    expect(PublishModuleRequest.safeParse(ticks).success).toBe(false);
+    for (const k of Object.keys(ticks)) {
       expect(PublishModuleRequest.safeParse({ ...ok, [k]: false }).success).toBe(false);
       const without: Record<string, unknown> = { ...ok };
       delete without[k];
@@ -121,6 +157,23 @@ describe('modules request DTOs — shape-only and strict (QE18)', () => {
     }
     expect(WithdrawModuleRequest.safeParse({}).success).toBe(true);
     expect(WithdrawModuleRequest.safeParse({ reason: 'x' }).success).toBe(false);
+  });
+
+  it('Story 12.5b: RecordPartnerFormTotalsRequest — 1–20 stages of a label and a whole number; ⛔ a member key', () => {
+    const ok = { period_start: '2026-11-01', period_end: '2026-11-30', stages: [{ label: 'Started', figure: 3 }] };
+    expect(RecordPartnerFormTotalsRequest.safeParse(ok).success).toBe(true);
+    expect(RecordPartnerFormTotalsRequest.safeParse({ ...ok, stages: [] }).success).toBe(false);
+    expect(RecordPartnerFormTotalsRequest.safeParse({ ...ok, stages: Array.from({ length: 21 }, () => ({ label: 'S', figure: 9 })) }).success).toBe(false);
+    expect(RecordPartnerFormTotalsRequest.safeParse({ ...ok, stages: [{ label: 'S', figure: 1.5 }] }).success).toBe(false);
+    expect(RecordPartnerFormTotalsRequest.safeParse({ ...ok, stages: [{ label: 'S', figure: 9, member_id: 'x' }] }).success).toBe(false);
+  });
+
+  it('Story 12.5b (I4): a floored figure below 5 cannot be serialized — the response DTO refuses it', () => {
+    expect(ModuleFlooredFigureDto.safeParse({ figure: 5, below_floor: false }).success).toBe(true);
+    expect(ModuleFlooredFigureDto.safeParse({ figure: null, below_floor: true }).success).toBe(true);
+    expect(ModuleFlooredFigureDto.safeParse({ figure: 4, below_floor: false }).success).toBe(false);
+    expect(ModuleFlooredFigureDto.safeParse({ figure: 7, below_floor: true }).success).toBe(false);
+    expect(ModuleFlooredFigureDto.safeParse({ figure: null, below_floor: false }).success).toBe(false);
   });
 
   it('CreateModulePartnerRequest is shape-only and strict', () => {

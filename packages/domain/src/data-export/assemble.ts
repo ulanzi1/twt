@@ -86,6 +86,9 @@ import { nomineeDeterminationItems, nomineeDeterminations } from '../schema/nomi
 import { memberPostings } from '../schema/member_postings.js';
 import { workplaceRequests } from '../schema/workplace_requests.js';
 import { workplaces } from '../schema/workplaces.js';
+// Story 12.5b (QE8) — the partner-form visit record + the offer's names, imported DIRECTLY (⛔ the `marketplace` barrel).
+import { marketplaceModules } from '../schema/marketplace_modules.js';
+import { marketplacePartnerFormVisits } from '../schema/marketplace_partner_form_visits.js';
 import { resolvePublicNamePresentationMode } from '../kyc/presentation-policy.js';
 import { ANONYMIZED_SENTINEL } from '../member/anonymize.js';
 import { getKnownPeopleForExport, type KnownPeopleExportRow } from '../member/known-people.js';
@@ -425,6 +428,31 @@ export async function assembleMemberExport(
   }
   const knownPeople = { named, namedBy };
 
+  // ── Story 12.5b (`2026-11-22-489` QE8; `-486` R2 C) — the record that the member opened a partner's own page: each opening the
+  // Trust still holds (it removes each one 90 days after it was made — W15), with the offer's two names and when. ⛔ Anything the
+  // member typed on the partner's page — the Trust never sees it. An export lists them "like any other member record" (`-486`).
+  // ⚠ The matching `ProfileSection.partnerOfferVisits` field is in the SAME change (the jobs strict-parse — G19, TR12).
+  const partnerOfferVisitRows = await client
+    .select({
+      moduleId: marketplacePartnerFormVisits.moduleId,
+      offerNameEn: marketplaceModules.nameEn,
+      offerNameHi: marketplaceModules.nameHi,
+      openedAt: marketplacePartnerFormVisits.openedAt,
+    })
+    .from(marketplacePartnerFormVisits)
+    .innerJoin(
+      marketplaceModules,
+      and(eq(marketplaceModules.pariwarId, marketplacePartnerFormVisits.pariwarId), eq(marketplaceModules.moduleId, marketplacePartnerFormVisits.moduleId)),
+    )
+    .where(and(eq(marketplacePartnerFormVisits.pariwarId, pariwarId), eq(marketplacePartnerFormVisits.memberId, memberId)))
+    .orderBy(asc(marketplacePartnerFormVisits.openedAt), asc(marketplacePartnerFormVisits.visitId));
+  const partnerOfferVisits = partnerOfferVisitRows.map((v) => ({
+    moduleId: v.moduleId,
+    offerNameEn: v.offerNameEn,
+    offerNameHi: v.offerNameHi,
+    openedAt: v.openedAt.toISOString(),
+  }));
+
   // ── Story 6.36e (NE10, V25) — the nominee MARKS, each with ONLY the name the member already saw. ⭐ `2026-10-24-399` (extends
   // `-333` call 3(a) and `-334` call 1 to these lists): `getNomineeLinksForExport` has already read an ERASED link as `ended`,
   // marked a name SEEN only where the app showed it (the marked member's once they CONFIRMED; the declarer's only on a `live`
@@ -493,6 +521,7 @@ export async function assembleMemberExport(
     })),
     knownPeople,
     nomineeLinks,
+    partnerOfferVisits,
   };
 
   // ── consent_records.json ── full history (grants + revocations); no cap — this is a data-export,

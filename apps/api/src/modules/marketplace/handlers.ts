@@ -44,8 +44,11 @@ import {
   ModulePartnerResponse,
   ModuleScopeOptionsResponse,
   PublishModuleRequest,
+  RecordPartnerFormTotalsRequest,
   type AuthorModuleResponse,
+  type ModulePartnerFormFiguresDto,
   type PublishModuleResponse,
+  type RecordPartnerFormTotalsResponse,
   type WithdrawModuleResponse,
 } from '@twt/contracts';
 import {
@@ -121,6 +124,28 @@ function toSummary(m: ModuleRow): z.input<typeof ModuleListResponse>['items'][nu
     slot_capacity: m.slotCapacity,
     slots_remaining: m.slotsRemaining,
     created_at: iso(m.createdAt),
+  };
+}
+
+/** Story 12.5b (QE12 (A), QE13 (A)) — the floored figures, snake_case on the wire. The floor was applied by the domain (I4). */
+function toFiguresDto(f: marketplace.PartnerFormFigures): z.input<typeof ModulePartnerFormFiguresDto> {
+  const fig = (x: marketplace.FlooredFigure) => ({ figure: x.figure, below_floor: x.belowFloor });
+  const kinds = (k: Readonly<Record<marketplace.PartnerFormCountKind, marketplace.FlooredFigure>>) => ({
+    card_shown: fig(k.card_shown),
+    card_opened: fig(k.card_opened),
+    went_to_partner: fig(k.went_to_partner),
+    came_back: fig(k.came_back),
+  });
+  return {
+    counts: kinds(f.counts),
+    days: f.days.map((d) => ({ day: d.day, counts: kinds(d.kinds) })),
+    partner_totals: f.partnerTotals.map((t) => ({
+      totals_id: t.totalsId,
+      period_start: t.periodStart,
+      period_end: t.periodEnd,
+      entered_at: iso(t.enteredAt),
+      stages: t.stages.map((s) => ({ order: s.order, label: s.label, figure: s.figure, below_floor: s.belowFloor })),
+    })),
   };
 }
 
@@ -270,11 +295,13 @@ export function createMarketplaceHandlers(deps: AppDeps) {
     const mid = toModuleId((request.params as { moduleId: string }).moduleId);
     const m = await marketplace.getModule(tx, pid, mid);
     if (m === null) throw new ApiError(404, 'module.not_found', 'This offer was not found');
-    const [partner, authorId, publication, leadCount] = await Promise.all([
+    const [partner, authorId, publication, leadCount, figures] = await Promise.all([
       marketplace.getPartner(tx, pid, m.partnerId),
       marketplace.getModuleAuthorActorId(tx, pid, mid),
       marketplace.getModulePublication(tx, pid, mid),
       marketplace.countModuleLeads(tx, pid, mid),
+      // Story 12.5b — the figures of a `partner_form` offer only (QE18: ⛔ counters for a `trust_sends` one).
+      m.leadRoute === 'partner_form' ? marketplace.listPartnerFormFigures(tx, pid, mid) : Promise.resolve(null),
     ]);
     // The FK guarantees a same-Pariwar partner; a missing one is a broken invariant.
     if (partner === null) throw new Error(`[marketplace] module ${mid} names a partner this Pariwar does not hold`);
@@ -298,8 +325,10 @@ export function createMarketplaceHandlers(deps: AppDeps) {
       valid_until: iso(m.validUntil),
       slot_capacity: m.slotCapacity,
       slots_remaining: m.slotsRemaining,
+      lead_route: m.leadRoute,
       lead_handoff_url: m.leadHandoffUrl,
       lead_handoff_signing_key_secret_name: m.leadHandoffSigningKeySecretName,
+      partner_form_url: m.partnerFormUrl,
       branding_bundle: {
         version: 1,
         logo_object_key: (m.brandingBundle.logo_object_key as string | null | undefined) ?? null,
@@ -323,8 +352,10 @@ export function createMarketplaceHandlers(deps: AppDeps) {
               hindi_reviewed: storedTick(publication.hindiReviewed, 'hindi_reviewed'),
               partner_agreement_confirmed: storedTick(publication.partnerAgreementConfirmed, 'partner_agreement_confirmed'),
               tone_signoff_content_hash: publication.toneSignoffContentHash,
+              lead_route: publication.leadRoute,
             },
       lead_count: leadCount,
+      partner_form_figures: figures === null ? null : toFiguresDto(figures),
     };
     return body;
   }
@@ -460,6 +491,16 @@ export function createMarketplaceHandlers(deps: AppDeps) {
         if (now.getTime() >= m.validUntil.getTime()) {
           throw new ApiError(409, 'module.window_ended', 'The offer window has already ended');
         }
+        // Story 12.5b (QE6 (A); `-486` R1 A) — the PUBLISHER chooses the route again; it must be the manifest's (immutable). A
+        // mismatch is refused HERE, before the audit wrapper: ⛔ write, ⛔ audit line. The remedy is Withdraw + a corrected copy.
+        if (ticks.lead_route !== m.leadRoute) {
+          throw new ApiError(
+            409,
+            'module.lead_route_mismatch',
+            'The way this offer works was set when it was written and cannot be changed — withdraw it and have a corrected copy written',
+            { offer_lead_route: m.leadRoute },
+          );
+        }
         // The tone gate (Story 2.2 / ADR-0019 invariant (b)): the publisher is NEVER the author (QE9, I4).
         const authorId = await marketplace.getModuleAuthorActorId(db, pid, mid);
         const partner = await marketplace.getPartner(db, pid, m.partnerId);
@@ -515,6 +556,8 @@ export function createMarketplaceHandlers(deps: AppDeps) {
               partnerAgreementConfirmed: true,
               contentHash,
               auditId,
+              // The publisher's choice (QE6 (A)) — equal to the module's by the pre-check AND by the composite FK (I8).
+              leadRoute: ticks.lead_route,
             });
             return {
               module_id: mid,
@@ -567,5 +610,44 @@ export function createMarketplaceHandlers(deps: AppDeps) {
     );
   }
 
-  return { list, get, scopeOptions, listPartners, createPartner, author, publish, withdraw };
+  /**
+   * ⭐ Story 12.5b (QE12 (A); `-486` R3 B) — record the partner's OWN totals for one period, entered by staff (`module.manage`).
+   * PRE-CHECKS before the wrapper (⛔ audit line on a refusal): the shape (422 `module.partner_form_totals_invalid`), the module is
+   * in this Pariwar (404) and is a `partner_form` offer (409 `module.not_partner_form`). Audited `module.partner_form_totals_recorded`
+   * on `module/<id>` — it names ⛔ member. ⛔ An inbound partner route: staff type in what the partner sent (the 12.5 boundary
+   * fence is unchanged — I10).
+   */
+  async function recordTotals(request: FastifyRequest, reply: FastifyReply) {
+    const mid = toModuleId((request.params as { moduleId: string }).moduleId);
+    const body = request.body as z.output<typeof RecordPartnerFormTotalsRequest>;
+    const out = await tenantWrite(
+      request,
+      'totals',
+      (p, a) => `module.partner_form_totals:${p}:${a}:${mid}`,
+      async (ctx): Promise<RecordPartnerFormTotalsResponse> => {
+        const parsed = marketplace.PartnerFormTotalsInputSchema.safeParse(body);
+        if (!parsed.success) throw new marketplace.PartnerFormTotalsInvalidError(parsed.error);
+        const m = await marketplace.getModule(ctx.scopeTx.tx, toPariwarId(ctx.pariwarId), mid);
+        if (m === null) throw new marketplace.ModuleGenesisMissingError(mid);
+        if (m.leadRoute !== 'partner_form') throw new marketplace.ModuleNotPartnerFormError(mid);
+        return audited(
+          ctx,
+          { action: 'module.partner_form_totals_recorded', resourceLocator: marketplace.moduleResourceLocator(mid), hashShape: { module_id: mid, ...body } },
+          async (auditId) => {
+            const r = await marketplace.recordPartnerFormTotals(ctx.scopeTx.client, {
+              pariwarId: toPariwarId(ctx.pariwarId),
+              moduleId: mid,
+              totals: body,
+              enteredByActorId: ctx.actorId,
+              auditId,
+            });
+            return { totals_id: r.totalsId, stages: r.stages };
+          },
+        );
+      },
+    );
+    return reply.code(201).send(out);
+  }
+
+  return { list, get, scopeOptions, listPartners, createPartner, author, publish, withdraw, recordTotals };
 }

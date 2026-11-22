@@ -300,6 +300,11 @@ export * from './marketplace-module-publications-rls.js';
 // Story 12.5 (0215) — marketplace_lead_handoffs tenant-isolation policies (select / insert / update — the UPDATE one at birth, for
 // erasure and the requeue; ⛔ `FOR ALL`, ⛔ DELETE). The marketplace_lead_handoffs_guard trigger is ORTHOGONAL.
 export * from './marketplace-lead-handoffs-rls.js';
+// Story 12.5b (0217) — the three partner-form figure tables: visits select / insert / DELETE (erasure — at birth, under FORCE), counts
+// select / insert / update (the UPSERT), totals select / insert (insert-only). ⛔ `FOR ALL`.
+export * from './marketplace-partner-form-visits-rls.js';
+export * from './marketplace-partner-form-counts-rls.js';
+export * from './marketplace-partner-form-totals-rls.js';
 // Story 13.2 (0199) — field_worker_attribution_codes + attribution_code_allocation_flags tenant-isolation policies (select /
 // insert only, ⛔ `FOR ALL` — both tables are append-only).
 export * from './field-worker-attribution-codes-rls.js';

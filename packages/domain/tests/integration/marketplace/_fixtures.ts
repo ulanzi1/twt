@@ -46,6 +46,7 @@ export async function seedPartner(client: pg.PoolClient, pariwarId: string): Pro
 /**
  * A valid snake_case manifest input; `valid_*` default to `[now − 1h, now + 1h)` (offerable now). `partner_id` is
  * REQUIRED (Story 12.2): it must name a partner of the module's OWN Pariwar (`seedPartner`) — a missing seed fails loudly.
+ * Story 12.5b: a `trust_sends` manifest (v2 — the route is named); `partnerFormManifestInput` is the other route's.
  */
 export function manifestInput(
   now: Date,
@@ -61,11 +62,22 @@ export function manifestInput(
     valid_from: new Date(now.getTime() - HOUR_MS).toISOString(),
     valid_until: new Date(now.getTime() + HOUR_MS).toISOString(),
     slot_capacity: 5,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://leads.partner.example/hdfc/twt-bihar',
     lead_handoff_signing_key_secret_name: 'marketplace-hdfc-signing-key',
     branding_bundle: { version: 1, logo_object_key: 'partners/hdfc/logo.png', accent_color_hex: '#004c8f' },
     ...overrides,
   };
+}
+
+/** Story 12.5b — a valid `partner_form` manifest input: the partner's page; ⛔ places, ⛔ handoff URL, ⛔ signing key. */
+export function partnerFormManifestInput(
+  now: Date,
+  overrides: { partner_id: string } & Record<string, unknown>,
+): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...manifestInput(now, overrides) };
+  for (const k of ['lead_handoff_url', 'lead_handoff_signing_key_secret_name', 'slot_capacity']) delete rest[k];
+  return { ...rest, lead_route: 'partner_form', partner_form_url: SEEDED_PARTNER_FORM_URL, ...overrides };
 }
 
 interface RawRow {
@@ -143,31 +155,50 @@ export async function expectSqlRejected(
 export const RAW_INSERT_SQL = `INSERT INTO marketplace_modules (
     module_id, pariwar_id, partner_id, name_en, name_hi, description_en, description_hi,
     eligibility_filter, scope_filter, valid_from, valid_until, slot_capacity,
-    lead_handoff_url, lead_handoff_signing_key_secret_name, branding_bundle, manifest_schema_version,
+    lead_handoff_url, lead_handoff_signing_key_secret_name, branding_bundle, manifest_schema_version, lead_route, partner_form_url,
     current_state, state_event_version, slots_remaining, archive_reason, audit_id
   ) VALUES (
     $1, $2, $3, 'n', 'n', 'd', 'd',
     '{"version":1,"clauses":[]}', '{"version":1,"scope":"members-all"}',
     now() - interval '1 hour', now() + interval '1 hour', $4,
-    'https://leads.partner.example/x', 'k', '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 1,
+    'https://leads.partner.example/x', 'k', '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 1, 'trust_sends', NULL,
     $5, $6, $7, $8, $9
   )`;
+
+/** The partner page a seeded `partner_form` module carries (QE3's rule; AC3's accepted example). */
+export const SEEDED_PARTNER_FORM_URL = 'https://partner.example/apply?offer=twt-bihar-lic';
 
 /**
  * {@link RAW_INSERT_SQL} with ONE content value bent so exactly one CHECK can fire (RP2): an inverted window, or a
  * `manifest_schema_version`. The substitutions are asserted, so a change to the template fails loudly here.
  */
-export function rawInsertSqlWith(o: { invertedWindow?: boolean; schemaVersion?: number }): string {
+export function rawInsertSqlWith(o: {
+  invertedWindow?: boolean;
+  schemaVersion?: number;
+  /**
+   * Story 12.5b — a v2 `partner_form` row: ⛔ handoff URL, ⛔ signing key, the partner's page (pass `capacity: null`). `route` and
+   * `schemaVersion` are applied in that order, so `{ route: 'partner_form', schemaVersion: 1 }` bends the version alone (AC2's CHECK).
+   */
+  route?: 'partner_form';
+}): string {
   let text = RAW_INSERT_SQL;
   const window = "now() - interval '1 hour', now() + interval '1 hour', $4,";
-  const version = `'{"version":1,"logo_object_key":null,"accent_color_hex":null}', 1,`;
+  const routeCols = `'https://leads.partner.example/x', 'k', '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 1, 'trust_sends', NULL,`;
+  if (o.route === 'partner_form') {
+    expect(text).toContain(routeCols);
+    text = text.replace(
+      routeCols,
+      `NULL, NULL, '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 2, 'partner_form', '${SEEDED_PARTNER_FORM_URL}',`,
+    );
+  }
+  const version = new RegExp(`('\\{"version":1,"logo_object_key":null,"accent_color_hex":null\\}', )([12]),`);
   if (o.invertedWindow) {
     expect(text).toContain(window);
     text = text.replace(window, "now() + interval '1 hour', now() - interval '1 hour', $4,");
   }
   if (o.schemaVersion !== undefined) {
-    expect(text).toContain(version);
-    text = text.replace(version, `'{"version":1,"logo_object_key":null,"accent_color_hex":null}', ${String(o.schemaVersion)},`);
+    expect(text).toMatch(version);
+    text = text.replace(version, `$1${String(o.schemaVersion)},`);
   }
   return text;
 }

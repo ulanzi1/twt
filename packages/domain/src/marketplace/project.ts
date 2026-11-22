@@ -35,6 +35,7 @@ import {
   MODULE_MANIFEST_SCHEMA_VERSION,
   marketplaceModules,
   type MarketplaceModuleArchiveReason,
+  type MarketplaceModuleLeadRoute,
   type MarketplaceModuleState,
 } from '../schema/marketplace_modules.js';
 import {
@@ -44,6 +45,7 @@ import {
   ModuleGenesisAlreadyExistsError,
   ModuleIllegalTransitionError,
   ModuleLeadAlreadySubmittedError,
+  ModuleLeadRouteRefusedError,
   ModuleLeadDuplicateError,
   ModulePersistError,
   ModuleProjectorInputError,
@@ -62,7 +64,7 @@ import {
   type ModuleEventType,
   type ModuleStaffActor,
 } from './events.js';
-import type { ModuleManifestV1 } from './filters.js';
+import type { ModuleManifest } from './filters.js';
 import { nextModuleState } from './state.js';
 
 /** The genesis savepoint name (the caller's transaction survives a refused genesis). */
@@ -137,8 +139,8 @@ export function mapModuleWriteError(
 export interface ProjectModuleGenesisInput {
   pariwarId: PariwarId;
   moduleId: ModuleId;
-  /** An already-parsed manifest (`parseModuleManifest`). ONE object feeds both the payload and the row. */
-  manifest: ModuleManifestV1;
+  /** An already-parsed manifest (`parseModuleManifest`). ONE object feeds both the payload and the row. Schema v2 (Story 12.5b). */
+  manifest: ModuleManifest;
   /** The caller's intent audit line (`withCompensatingAudit`'s id) — the row's first `audit_id`. */
   auditId: string;
   actor: ModuleStaffActor;
@@ -181,10 +183,12 @@ export async function projectModuleGenesis(
 
     // (3) Build + strict-parse the payload — the WHOLE manifest snapshot, from the SAME object the row
     // is written from below, so payload and row cannot disagree.
+    // Story 12.5b (QE2): every NEW genesis is manifest schema v2 and names its route; the route's own keys only (a
+    // `partner_form` genesis carries ⛔ handoff URL and ⛔ signing-key key at all).
     const m = input.manifest;
-    const payload: ModuleAuthoredPayload = {
+    const common = {
       from_state: null,
-      to_state: 'draft',
+      to_state: 'draft' as const,
       trigger: 'module.author',
       actor: input.actor,
       module_id: input.moduleId,
@@ -199,11 +203,18 @@ export async function projectModuleGenesis(
       scope_filter: m.scopeFilter,
       valid_from: m.validFrom.toISOString(),
       valid_until: m.validUntil.toISOString(),
-      slot_capacity: m.slotCapacity,
-      lead_handoff_url: m.leadHandoffUrl,
-      lead_handoff_signing_key_secret_name: m.leadHandoffSigningKeySecretName,
       branding_bundle: m.brandingBundle,
     };
+    const payload: ModuleAuthoredPayload =
+      m.leadRoute === 'partner_form'
+        ? { ...common, lead_route: 'partner_form', partner_form_url: m.partnerFormUrl, slot_capacity: null }
+        : {
+            ...common,
+            lead_route: 'trust_sends',
+            slot_capacity: m.slotCapacity,
+            lead_handoff_url: m.leadHandoffUrl,
+            lead_handoff_signing_key_secret_name: m.leadHandoffSigningKeySecretName,
+          };
     const parsed = ModuleAuthoredPayloadSchema.safeParse(payload);
     if (!parsed.success) {
       // A programming error: the manifest was already parsed by `parseModuleManifest`.
@@ -245,8 +256,10 @@ export async function projectModuleGenesis(
             validFrom: m.validFrom,
             validUntil: m.validUntil,
             slotCapacity: m.slotCapacity,
+            leadRoute: m.leadRoute,
             leadHandoffUrl: m.leadHandoffUrl,
             leadHandoffSigningKeySecretName: m.leadHandoffSigningKeySecretName,
+            partnerFormUrl: m.partnerFormUrl,
             brandingBundle: m.brandingBundle,
             manifestSchemaVersion: MODULE_MANIFEST_SCHEMA_VERSION,
             currentState: 'draft',
@@ -300,6 +313,8 @@ export interface ModuleLockedRow {
   stateEventVersion: number;
   slotsRemaining: number | null;
   slotCapacity: number | null;
+  /** Story 12.5b (QE4 (b)) — the locked row's route: a `partner_form` row refuses `module.lead_submitted` here too. */
+  leadRoute: MarketplaceModuleLeadRoute;
 }
 
 export interface ProjectModuleTransitionInput {
@@ -334,6 +349,8 @@ function zodMessage(e: ZodError): string {
  * @throws ModuleProjectorInputError        actor rules (I11), or a payload that disagrees with the locked row / its schema.
  * @throws ModuleStreamConcurrencyError     the stream head ≠ the locked version, or a 23505 on the version slot.
  * @throws ModuleIllegalTransitionError     `nextModuleState(from, type)` is null.
+ * @throws ModuleLeadRouteRefusedError      a `module.lead_submitted` on a `partner_form` row (Story 12.5b QE4 (b) — the second
+ *                                          line, in the only writer, behind `submitModuleLead`'s own refusal).
  * @throws ModuleLeadAlreadySubmittedError / ModuleLeadDuplicateError  a lead 23505 (the QE8 indexes).
  * @throws ModulePersistError               the row UPDATE failed or matched ≠ 1 row.
  */
@@ -344,6 +361,10 @@ export async function projectModuleTransition(
   const eventType: string = input.eventType;
   if (eventType === 'module.authored') throw new ModuleGenesisAlreadyExistsError(input.moduleId);
   assertModuleActor(input.eventType, input.actor, input.actorId);
+  // Story 12.5b (QE4 (b); I2) — before any statement: a `partner_form` offer never records a lead.
+  if (input.eventType === 'module.lead_submitted' && input.lockedRow.leadRoute !== 'trust_sends') {
+    throw new ModuleLeadRouteRefusedError(input.moduleId, 'projector');
+  }
 
   const db = bindScopedDb(client);
   const { lockedRow } = input;

@@ -181,6 +181,8 @@ describe.skipIf(!hasDatabase)('module-activation — live ticks (own pool, own c
           valid_from: new Date(now.getTime() + startInMs).toISOString(),
           valid_until: new Date(now.getTime() + 3_600_000).toISOString(),
           slot_capacity: null,
+          // Story 12.5b (manifest v2) — the route is named on every manifest.
+          lead_route: 'trust_sends',
           lead_handoff_url: 'https://leads.partner.example/camp',
           lead_handoff_signing_key_secret_name: 'marketplace-camp-key',
           branding_bundle: { version: 1, logo_object_key: null, accent_color_hex: null },

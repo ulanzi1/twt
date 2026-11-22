@@ -235,14 +235,19 @@ describe.skipIf(!hasDatabase)('the partner lead-handoff record — migration 021
     ]);
   });
 
-  it('the guard is ONE row trigger, BEFORE UPDATE OR DELETE, enabled', async () => {
+  // Story 12.5b (0216, QE4 (e)) added the route backstop BESIDE the guard — ⛔ a replacement of it.
+  it('the triggers are EXACTLY two row triggers, enabled: the guard (BEFORE UPDATE OR DELETE) and the route guard (BEFORE INSERT)', async () => {
     const { client } = getTx();
     const { rows } = await client.query<{ tgname: string; tgenabled: string; def: string }>(
-      `SELECT tgname, tgenabled::text AS tgenabled, pg_get_triggerdef(oid) AS def FROM pg_trigger WHERE tgrelid = $1::regclass AND NOT tgisinternal`,
+      `SELECT tgname, tgenabled::text AS tgenabled, pg_get_triggerdef(oid) AS def FROM pg_trigger WHERE tgrelid = $1::regclass AND NOT tgisinternal
+        ORDER BY tgname`,
       [TABLE],
     );
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ tgname: 'marketplace_lead_handoffs_guard', tgenabled: 'O' });
+    expect(rows.map((r) => r.tgname)).toEqual(['marketplace_lead_handoffs_guard', 'marketplace_lead_handoffs_route_guard']);
+    expect(rows.every((r) => r.tgenabled === 'O')).toBe(true);
     expect(rows[0]!.def).toMatch(/BEFORE DELETE OR UPDATE ON .*marketplace_lead_handoffs FOR EACH ROW EXECUTE FUNCTION marketplace_lead_handoffs_guard\(\)/);
+    expect(rows[1]!.def).toMatch(
+      /BEFORE INSERT ON .*marketplace_lead_handoffs FOR EACH ROW EXECUTE FUNCTION marketplace_lead_handoffs_reject_partner_form_route\(\)/,
+    );
   });
 });

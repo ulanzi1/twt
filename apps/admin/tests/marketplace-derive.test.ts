@@ -192,8 +192,10 @@ describe('time, the request and the 422 mapping', () => {
     validUntil: '2026-12-05T10:30',
     placesMode: 'fixed',
     places: '25',
+    leadRoute: 'trust_sends',
     leadHandoffUrl: 'https://leads.partner.example/hdfc',
     secretName: 'hdfc-signing-key',
+    partnerFormUrl: '',
   });
 
   it('toAuthorRequest — CRLF / CR → LF, scope values EXACT (TR7), statuses in catalogue order, ⛔ module_id / branding', () => {
@@ -277,9 +279,12 @@ describe('time, the request and the 422 mapping', () => {
     expect(validateStep(step('d'), s)).toBe(t('module.reason.validFrom'));
     expect(validateStep(step('d'), { ...s, validFrom: '2026-11-05T10:30', validUntil: '2026-11-05T10:30' })).toBe(t('module.reason.windowOrder'));
     expect(validateStep(step('d'), { ...s, validFrom: '1999-11-05T10:30', validUntil: '2026-11-05T10:30' })).toBe(t('module.reason.windowYear'));
-    expect(validateStep(step('e'), s)).toBe(t('module.reason.placesMode'));
+    // Story 12.5b (QE7 (A)) — the route first; places only for `trust_sends`; a `partner_form` offer asks none.
+    expect(validateStep(step('e'), s)).toBe(t('module.reason.leadRoute'));
+    expect(validateStep(step('e'), { ...s, leadRoute: 'trust_sends' })).toBe(t('module.reason.placesMode'));
+    expect(validateStep(step('e'), { ...s, leadRoute: 'partner_form' })).toBeNull();
     for (const bad of ['0', '-1', '2.5', 'ten', '']) {
-      expect(validateStep(step('e'), { ...s, placesMode: 'fixed', places: bad })).toBe(t('module.reason.places'));
+      expect(validateStep(step('e'), { ...s, leadRoute: 'trust_sends', placesMode: 'fixed', places: bad })).toBe(t('module.reason.places'));
     }
     expect(validateStep(step('f'), { ...s, leadHandoffUrl: 'http://x' })).toBe(t('module.reason.leadUrlHttps'));
     expect(validateStep(step('f'), { ...s, leadHandoffUrl: 'https://x', secretName: 'a b' })).toBe(t('module.reason.secretNameShape'));
@@ -315,8 +320,10 @@ describe('time, the request and the 422 mapping', () => {
       valid_from: '2026-11-05T05:00:00.000Z',
       valid_until: '2026-12-05T05:00:00.000Z',
       slot_capacity: null,
+      lead_route: 'trust_sends',
       lead_handoff_url: 'https://x.example/y',
       lead_handoff_signing_key_secret_name: 'k',
+      partner_form_url: null,
     } as unknown as ModuleDetailResponse;
     const s = fromModule(m);
     expect(s).toMatchObject({
@@ -326,6 +333,7 @@ describe('time, the request and the 422 mapping', () => {
       scopeKind: 'state',
       scopeValues: ['Bihar'],
       placesMode: 'unlimited',
+      leadRoute: 'trust_sends',
       leadHandoffUrl: 'https://x.example/y',
       secretName: 'k',
     });

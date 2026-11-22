@@ -15,6 +15,9 @@
 // goes to the step heading (PT8, PU3). A wizard opened by "Start a blank offer" focuses that heading on mount (PU1).
 // A Create that resolves after the admin has left the wizard does not navigate them (RC6); a failed Create leaves focus on the
 // step heading, never on <body> (RC2).
+// ⭐ Story 12.5b (`2026-11-22-489` QE7 (A)): step (e) asks HOW a member's interest reaches the partner FIRST, with ⛔ default; places
+// are asked only for an offer the Trust sends details for. Step (f) shows the chosen route's fields: the partner's own page, or the
+// lead hand-off address and signing key. The AUTHOR proposes the route here; the publisher chooses it again at publish (QE6 (A)).
 
 import type { ModuleEligibilityMemberState } from '@twt/contracts';
 import { MODULE_ELIGIBILITY_MEMBER_STATES } from '@twt/contracts';
@@ -27,7 +30,8 @@ import {
   codeToStep,
   describeEligibility,
   describeInstant,
-  describePlaces,
+  describePlacesFor,
+  describeRoute,
   describeScope,
   describeWindow,
   eligibilityFilterOf,
@@ -401,26 +405,68 @@ export function ModuleWizard({
         ) : null}
 
         {WIZARD_STEPS[step] === 'e' ? (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium">{t('module.wizard.step.e')}</legend>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="radio" name="places" checked={state.placesMode === 'unlimited'} onChange={() => set({ placesMode: 'unlimited', places: '' })} data-testid="places-unlimited" />
-              {t('module.places.unlimited')}
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="radio" name="places" checked={state.placesMode === 'fixed'} onChange={() => set({ placesMode: 'fixed' })} data-testid="places-fixed" />
-              {t('module.places.fixed')}
-            </label>
-            {state.placesMode === 'fixed' ? (
-              <label className="flex flex-col text-sm">
-                {t('module.field.places')}
-                <input inputMode="numeric" className={input} value={state.places} onChange={(e) => set({ places: e.target.value })} data-testid="field-places" {...bad('slot_capacity')} />
-              </label>
+          <div className="flex flex-col gap-3">
+            {/* Story 12.5b (QE7 (A)) — the route FIRST, ⛔ default: neither option is pre-selected. */}
+            <fieldset className="flex flex-col gap-2" data-testid="route-question" {...bad('lead_route')}>
+              <legend className="text-sm font-medium">{t('module.route.question')}</legend>
+              {(['trust_sends', 'partner_form'] as const).map((route) => (
+                <label key={route} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="lead-route"
+                    checked={state.leadRoute === route}
+                    onChange={() => set(route === 'partner_form' ? { leadRoute: route, placesMode: null, places: '' } : { leadRoute: route })}
+                    aria-describedby={`route-${route}-hint`}
+                    data-testid={`route-${route}`}
+                  />
+                  <span className="flex flex-col">
+                    <span>{describeRoute(route).name}</span>
+                    <span className="text-xs" id={`route-${route}-hint`}>
+                      {describeRoute(route).meaning}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            {state.leadRoute === 'trust_sends' ? (
+              <fieldset className="flex flex-col gap-2" data-testid="places-question">
+                <legend className="text-sm font-medium">{t('module.summary.places')}</legend>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="places" checked={state.placesMode === 'unlimited'} onChange={() => set({ placesMode: 'unlimited', places: '' })} data-testid="places-unlimited" />
+                  {t('module.places.unlimited')}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="places" checked={state.placesMode === 'fixed'} onChange={() => set({ placesMode: 'fixed' })} data-testid="places-fixed" />
+                  {t('module.places.fixed')}
+                </label>
+                {state.placesMode === 'fixed' ? (
+                  <label className="flex flex-col text-sm">
+                    {t('module.field.places')}
+                    <input inputMode="numeric" className={input} value={state.places} onChange={(e) => set({ places: e.target.value })} data-testid="field-places" {...bad('slot_capacity')} />
+                  </label>
+                ) : null}
+              </fieldset>
+            ) : state.leadRoute === 'partner_form' ? (
+              <p className="text-sm" data-testid="places-none">
+                {t('module.places.none')}
+              </p>
             ) : null}
-          </fieldset>
+          </div>
         ) : null}
 
-        {WIZARD_STEPS[step] === 'f' ? (
+        {WIZARD_STEPS[step] === 'f' && state.leadRoute === 'partner_form' ? (
+          <div className="flex flex-col gap-2">
+            <label className="flex flex-col text-sm">
+              {t('module.field.partnerFormUrl')}
+              <input className={input} value={state.partnerFormUrl} onChange={(e) => set({ partnerFormUrl: e.target.value })} data-testid="field-partner-form-url" aria-describedby="partner-form-copy" {...bad('partner_form_url')} />
+            </label>
+            <p className="text-xs" id="partner-form-copy" data-testid="partner-form-copy">
+              {t('module.partnerForm.copy')}
+            </p>
+          </div>
+        ) : null}
+
+        {WIZARD_STEPS[step] === 'f' && state.leadRoute !== 'partner_form' ? (
           <div className="flex flex-col gap-2">
             <label className="flex flex-col text-sm">
               {t('module.field.leadUrl')}
@@ -483,14 +529,29 @@ export function ModuleWizard({
                 {t('module.summary.window')}: {describeWindow(toIsoOrNull(state.validFrom)!, toIsoOrNull(state.validUntil)!)}
               </p>
             ) : null}
+            {state.leadRoute !== null ? (
+              <div data-testid="summary-route">
+                <p className="text-sm font-medium">{t('module.summary.route')}</p>
+                <p className="text-sm">{describeRoute(state.leadRoute).name}</p>
+                <p className="text-xs">{describeRoute(state.leadRoute).meaning}</p>
+              </div>
+            ) : null}
             <p className="text-sm" data-testid="summary-places">
-              {t('module.summary.places')}: {describePlaces(state.placesMode === 'fixed' ? Number(state.places.trim()) : null)}
+              {t('module.summary.places')}: {describePlacesFor(state.leadRoute, state.placesMode === 'fixed' ? Number(state.places.trim()) : null)}
             </p>
             {/* Step (f) as it will be SENT (trimmed): a typo here goes into an immutable draft, so it is reviewed too (RC10). */}
             <div data-testid="summary-handoff">
               <p className="text-sm font-medium">{t('module.wizard.step.f')}</p>
-              <p className="text-sm break-all">{t('module.detail.leadUrl', { url: state.leadHandoffUrl.trim() })}</p>
-              <p className="text-sm">{t('module.detail.secretName', { name: state.secretName.trim() })}</p>
+              {state.leadRoute === 'partner_form' ? (
+                <p className="text-sm break-all" data-testid="summary-partner-form-url">
+                  {t('module.detail.partnerFormUrl', { url: state.partnerFormUrl.trim() })}
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm break-all">{t('module.detail.leadUrl', { url: state.leadHandoffUrl.trim() })}</p>
+                  <p className="text-sm">{t('module.detail.secretName', { name: state.secretName.trim() })}</p>
+                </>
+              )}
             </div>
           </div>
         ) : null}

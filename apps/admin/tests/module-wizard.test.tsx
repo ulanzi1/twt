@@ -106,8 +106,11 @@ async function fillAll(opts: { places?: string } = {}): Promise<void> {
   // component; the zone itself is pinned with fixed instants in marketplace-derive.test.ts (RP35).
   expect(screen.getByTestId('field-validFrom-ist')).toHaveTextContent(describeInstant(toIsoOrNull('2026-11-05T10:30')!).ist);
   next();
-  // (e)
-  expect(screen.getByRole('group', { name: t('module.wizard.step.e') })).toBeInTheDocument(); // RP33: the radios are a named group
+  // (e) — Story 12.5b (QE7 (A)): the route FIRST (⛔ default), then places for an offer the Trust sends details for.
+  expect(screen.getByRole('group', { name: t('module.route.question') })).toBeInTheDocument();
+  expect(screen.queryByTestId('places-question')).toBeNull(); // ⛔ places before the route is chosen
+  fireEvent.click(screen.getByTestId('route-trust_sends'));
+  expect(screen.getByRole('group', { name: t('module.summary.places') })).toBeInTheDocument(); // RP33: the radios are a named group
   if (opts.places === undefined) {
     fireEvent.click(screen.getByTestId('places-unlimited'));
   } else {
@@ -249,8 +252,10 @@ describe('ModuleWizard (AC11)', () => {
       valid_from: '2026-11-05T05:00:00.000Z',
       valid_until: '2026-12-05T05:00:00.000Z',
       slot_capacity: 10,
+      lead_route: 'trust_sends',
       lead_handoff_url: 'https://x.example/y',
       lead_handoff_signing_key_secret_name: 'k',
+      partner_form_url: null,
     });
     renderWithClient(<ModuleWizard pariwarId={PARIWAR} fromModuleId={MODULE} onCreated={vi.fn()} />);
     await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
@@ -319,8 +324,10 @@ describe('ModuleWizard (AC11)', () => {
       valid_from: '2026-11-05T05:00:00.000Z',
       valid_until: '2026-12-05T05:00:00.000Z',
       slot_capacity: null,
+      lead_route: 'trust_sends',
       lead_handoff_url: 'https://x.example/y',
       lead_handoff_signing_key_secret_name: 'k',
+      partner_form_url: null,
     });
     await waitFor(() => expect(screen.getByTestId('field-name-en')).toHaveValue('Old name'));
     expect(screen.getByTestId('wizard-step-a')).toBeEnabled();
@@ -372,8 +379,10 @@ describe('ModuleWizard — code review round 2 (chunk C)', () => {
     valid_from: '2026-11-05T05:00:00.000Z',
     valid_until: '2026-12-05T05:00:00.000Z',
     slot_capacity: null,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://x.example/y',
     lead_handoff_signing_key_secret_name: 'k',
+    partner_form_url: null,
     ...over,
   });
 
@@ -518,8 +527,10 @@ describe('ModuleWizard — patch-diff review of round 2 (PT)', () => {
     valid_from: '2026-11-05T05:00:00.000Z',
     valid_until: '2026-12-05T05:00:00.000Z',
     slot_capacity: null,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://x.example/y',
     lead_handoff_signing_key_secret_name: 'k',
+    partner_form_url: null,
     ...over,
   });
 
@@ -570,8 +581,10 @@ describe('ModuleWizard — final review (PU)', () => {
     valid_from: '2026-11-05T05:00:00.000Z',
     valid_until: '2026-12-05T05:00:00.000Z',
     slot_capacity: null,
+    lead_route: 'trust_sends',
     lead_handoff_url: 'https://x.example/y',
     lead_handoff_signing_key_secret_name: 'k',
+    partner_form_url: null,
     ...over,
   });
   const refocusWindow = (): void => {

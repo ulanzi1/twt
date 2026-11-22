@@ -46,8 +46,11 @@ import {
   seedHandoffWorld,
   seedLeadConsent,
   seedMemberRow,
+  seedModule,
   type HandoffWorld,
 } from './_lead-handoff-fixtures.js';
+import { purgeExpiredPartnerFormVisits } from '../../../src/marketplace/partner-form.js';
+import { seedPartner } from './_fixtures.js';
 
 type Client = ReturnType<typeof getTx>['client'];
 
@@ -502,6 +505,8 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       expect(all.map((r) => r.leadId)).toEqual([waiting.leadId, withdrawn.leadId, ended.leadId, dueNow.leadId].sort());
       expect(all.find((r) => r.leadId === waiting.leadId)).toEqual({
         leadId: waiting.leadId, pariwarId: PARIWAR_A, moduleId: waiting.moduleId, memberId: waiting.memberId, consentId: waiting.consentId, moduleWithdrawn: false,
+        // Story 12.5b (QE5) — the route flag the pass reads first.
+        routePartnerForm: false,
       });
       // Withdrawn = `trustee_archived` ONLY (QE22 (A)); an offer that simply ended is not.
       expect(all.find((r) => r.leadId === withdrawn.leadId)?.moduleWithdrawn).toBe(true);
@@ -660,5 +665,58 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff domain commands (
       await archiveModuleRow(client, w.moduleId, 'trustee_archived');
       expect((await predicates(client, w)).kind).toBe('ok');
     });
+  });
+});
+
+describe.skipIf(!hasDatabase)('Story 12.5b — the sweep\'s domain half (QE5; AC5, AC8)', () => {
+  setupLiveDb();
+
+  it('listWaitingLeadHandoffs flags a partner_form offer\'s row (routePartnerForm); readLeadHandoffModule reads the route and NULL lead columns', async () => {
+    const { client } = getTx();
+    const partnerId = await seedPartner(client, PARIWAR_A);
+    const pf = await seedModule(client, PARIWAR_A, partnerId, { route: 'partner_form' });
+    const memberId = await seedMemberRow(client, PARIWAR_A);
+    const leadId = randomUUID();
+    const consentId = await seedLeadConsent(client, PARIWAR_A, { subjectId: memberId, artifactRef: leadId });
+    // Planted past the 0216 trigger (session-local, inside the per-test transaction).
+    await client.query("SET LOCAL session_replication_role = 'replica'");
+    await insertHandoffRaw(client, { pariwarId: PARIWAR_A, partnerId, moduleId: pf, memberId, leadId, consentId });
+    await client.query("SET LOCAL session_replication_role = 'origin'");
+    const rows = (await listWaitingLeadHandoffs(client, { limit: 500 })).filter((r) => r.leadId === leadId);
+    expect(rows).toEqual([expect.objectContaining({ leadId, routePartnerForm: true, moduleWithdrawn: false })]);
+    expect(await readLeadHandoffModule(client, { pariwarId: PARIWAR_A, moduleId: pf })).toMatchObject({
+      leadRoute: 'partner_form',
+      leadHandoffUrl: null,
+      signingKeySecretName: null,
+    });
+    // The claim returns it with an EMPTY authority (TR1), ⛔ NULL — even with another authority excluded.
+    const claimed = await claimDueLeadHandoff(client, { claimToken: randomUUID(), excludeAuthorities: ['leads.partner.example'] });
+    expect(claimed).toMatchObject({ leadId, authority: '' });
+  });
+
+  it('W15 purgeExpiredPartnerFormVisits: removes rows MORE than 90 days old (by the DB clock), keeps an 89-day one; bounded by its limit', async () => {
+    const { client } = getTx();
+    const partnerId = await seedPartner(client, PARIWAR_A);
+    const pf = await seedModule(client, PARIWAR_A, partnerId, { route: 'partner_form' });
+    const memberId = await seedMemberRow(client, PARIWAR_A);
+    const ins = async (age: string): Promise<string> => {
+      const id = randomUUID();
+      await client.query(
+        `INSERT INTO marketplace_partner_form_visits (visit_id, pariwar_id, module_id, member_id, opened_at) VALUES ($1, $2, $3, $4, clock_timestamp() - interval '${age}')`,
+        [id, PARIWAR_A, pf, memberId],
+      );
+      return id;
+    };
+    const old1 = await ins('91 days');
+    const old2 = await ins('90 days 1 hour');
+    const young = await ins('89 days 23 hours');
+    const left = async (): Promise<string[]> =>
+      (await client.query<{ visit_id: string }>('SELECT visit_id FROM marketplace_partner_form_visits WHERE member_id = $1', [memberId])).rows.map((r) => r.visit_id);
+    // Bounded: a limit of 1 removes exactly one (the oldest).
+    expect(await purgeExpiredPartnerFormVisits(client, { limit: 1 })).toBeGreaterThanOrEqual(1);
+    expect(await left()).not.toContain(old1);
+    await purgeExpiredPartnerFormVisits(client);
+    expect((await left()).sort()).toEqual([young]);
+    void old2;
   });
 });

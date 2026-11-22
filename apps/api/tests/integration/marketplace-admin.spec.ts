@@ -38,7 +38,8 @@ type Json = Record<string, unknown>;
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
-const TICKS = { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true } as const;
+// Story 12.5b (QE6 (A)) — the publisher's route rides with the ticks (⛔ default); every 12.2 module here is `trust_sends`.
+const TICKS = { tone_checklist_confirmed: true, hindi_reviewed: true, partner_agreement_confirmed: true, lead_route: 'trust_sends' } as const;
 const EMPTY_JSON = { headers: { 'content-type': 'application/json' }, payload: '{}' } as const;
 
 describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through HTTP', { timeout: 60000 }, () => {
@@ -67,6 +68,10 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       const mods = await c.query<{ module_id: string }>('SELECT module_id FROM marketplace_modules WHERE pariwar_id = ANY($1)', [createdPariwars]);
       const ids = mods.rows.map((r) => r.module_id);
       await c.query('DELETE FROM marketplace_module_publications WHERE pariwar_id = ANY($1)', [createdPariwars]);
+      // Story 12.5b — the partner-form figure tables reference the modules.
+      for (const t of ['marketplace_partner_form_visits', 'marketplace_partner_form_counts', 'marketplace_partner_form_totals']) {
+        await c.query(`DELETE FROM ${t} WHERE pariwar_id = ANY($1)`, [createdPariwars]);
+      }
       await c.query('DELETE FROM marketplace_modules WHERE pariwar_id = ANY($1)', [createdPariwars]);
       await c.query('DELETE FROM events_log WHERE stream_id = ANY($1)', [ids]);
       await c.query('DELETE FROM marketplace_partners WHERE pariwar_id = ANY($1)', [createdPariwars]);
@@ -155,10 +160,24 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
       valid_from: new Date(now - HOUR_MS).toISOString(),
       valid_until: new Date(now + 7 * DAY_MS).toISOString(),
       slot_capacity: 10,
+      lead_route: 'trust_sends',
       lead_handoff_url: 'https://leads.partner.example/hdfc/twt',
       lead_handoff_signing_key_secret_name: 'marketplace-hdfc-signing-key',
       ...o,
     };
+  }
+
+  /** Story 12.5b — a `partner_form` manifest: the partner's page; ⛔ places, ⛔ handoff URL, ⛔ signing key (sent as null). */
+  const PAGE = 'https://partner.example/apply?offer=twt-bihar-lic';
+  function partnerFormManifest(partnerId: string, o: Json = {}): Json {
+    return manifest(partnerId, {
+      lead_route: 'partner_form',
+      partner_form_url: PAGE,
+      slot_capacity: null,
+      lead_handoff_url: null,
+      lead_handoff_signing_key_secret_name: null,
+      ...o,
+    });
   }
 
   async function authored(c: Client, p: string, partnerId: string, o: Json = {}): Promise<string> {
@@ -875,8 +894,9 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     const seededReviewer = randomUUID();
     await td.pool.query(
       `INSERT INTO marketplace_module_publications
-         (module_id, pariwar_id, published_event_type, tone_signoff_content_hash, reviewed_by_actor_id, hindi_reviewed, partner_agreement_confirmed, audit_id)
-       VALUES ($1, $2, 'module.activated', $3, $4, true, true, $5)`,
+         (module_id, pariwar_id, published_event_type, tone_signoff_content_hash, reviewed_by_actor_id, hindi_reviewed, partner_agreement_confirmed, audit_id,
+          lead_route)
+       VALUES ($1, $2, 'module.activated', $3, $4, true, true, $5, 'trust_sends')`,
       [id, p, 'a'.repeat(64), seededReviewer, randomUUID()],
     );
     await elevate(publisher.client, 'module_publish');
@@ -1074,6 +1094,150 @@ describe.skipIf(!hasDatabase)('Story 12.2 — the admin module surface through H
     const r = await admin.client.inject({ method: 'GET', url: `${M(p)}/${id}` });
     expect(r.statusCode, r.body).toBe(200);
     expect(json(r)['branding_bundle']).toEqual({ version: 1, logo_object_key: null, accent_color_hex: null });
+  });
+
+  // ── Story 12.5b (`2026-11-22-489`; AC10, AC11) — the route through HTTP ─────────────────────────────────────────────────
+
+  it('AC11: a partner_form offer is authored; the detail carries the route, the page, ⛔ lead fields, ⛔ places, and figures all "fewer than 5"', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const r = await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p)));
+    expect(r.statusCode, r.body).toBe(201);
+    const id = json(r)['module_id'] as string;
+    const d = json(await admin.client.inject({ method: 'GET', url: `${M(p)}/${id}` }));
+    const below = { figure: null, below_floor: true };
+    expect(d).toMatchObject({
+      lead_route: 'partner_form',
+      partner_form_url: PAGE,
+      lead_handoff_url: null,
+      lead_handoff_signing_key_secret_name: null,
+      slot_capacity: null,
+      slots_remaining: null,
+      lead_count: 0,
+      partner_form_figures: {
+        counts: { card_shown: below, card_opened: below, went_to_partner: below, came_back: below },
+        days: [],
+        partner_totals: [],
+      },
+    });
+    // A trust_sends offer: the route, ⛔ page, ⛔ figures (QE18).
+    const ts = await authored(admin.client, p, await partner(admin.client, p));
+    expect(json(await admin.client.inject({ method: 'GET', url: `${M(p)}/${ts}` }))).toMatchObject({
+      lead_route: 'trust_sends',
+      partner_form_url: null,
+      partner_form_figures: null,
+    });
+  });
+
+  it.each([
+    ['partner_form with places', { slot_capacity: 5 }, ['slot_capacity']],
+    ['partner_form with ⛔ page', { partner_form_url: null }, ['partner_form_url']],
+    ['partner_form with a handoff URL', { lead_handoff_url: 'https://leads.partner.example/x' }, ['lead_handoff_url']],
+    ['partner_form with a fragment in the page', { partner_form_url: 'https://partner.example/apply#x' }, ['partner_form_url']],
+  ])('AC11 / G25: %s → 422 module.manifest_invalid with the issue at THAT field\'s path; ⛔ write, ⛔ audit line', async (_l, o, path) => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const r = await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p), o));
+    expect(r.statusCode, r.body).toBe(422);
+    expect(errOf(r).code).toBe('module.manifest_invalid');
+    expect((errOf(r).details as { issues: { path: string[] }[] }).issues.map((i) => i.path)).toContainEqual(path);
+    expect(await moduleEvents(p)).toEqual([]);
+  });
+
+  it('AC11: a manifest with ⛔ lead_route is refused at the DTO (400) — ⛔ default', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const body = manifest(await partner(admin.client, p));
+    delete body['lead_route'];
+    expect((await post(admin.client, M(p), body)).statusCode).toBe(400);
+  });
+
+  it('AC11 (QE6 (A)): a publish whose lead_route differs from the offer\'s → 409 module.lead_route_mismatch — ⛔ publication row, ⛔ publish event, ⛔ audit line', async () => {
+    const p = freshPariwar();
+    const author = await pariwarAdmin(p);
+    const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
+    const id = await authored(author.client, p, await partner(author.client, p));
+    await elevate(publisher.client, 'module_publish');
+    const r = await post(publisher.client, `${M(p)}/${id}/publish`, { ...TICKS, lead_route: 'partner_form' });
+    expect(r.statusCode, r.body).toBe(409);
+    expect(errOf(r).code).toBe('module.lead_route_mismatch');
+    expect(await publicationRows(id)).toEqual([]);
+    expect((await moduleEvents(p)).map((e) => e.event_type)).toEqual(['module.authored']);
+    expect((await moduleAudit(p)).map((a) => a.action)).toEqual(['module_partner.created', 'module.authored']);
+    // A publish WITHOUT the route is a 400 (⛔ default).
+    const ticksOnly: Json = { ...TICKS };
+    delete ticksOnly['lead_route'];
+    expect((await post(publisher.client, `${M(p)}/${id}/publish`, ticksOnly)).statusCode).toBe(400);
+  });
+
+  it('AC11 (R1 A): the publisher chooses partner_form for a partner_form offer → 200; the publication row and the detail carry the route', async () => {
+    const p = freshPariwar();
+    const author = await pariwarAdmin(p);
+    const publisher = await pariwarAdmin(p, 'Ravi (Pariwar Admin)');
+    const r0 = await post(author.client, M(p), partnerFormManifest(await partner(author.client, p)));
+    const id = json(r0)['module_id'] as string;
+    await elevate(publisher.client, 'module_publish');
+    const r = await post(publisher.client, `${M(p)}/${id}/publish`, { ...TICKS, lead_route: 'partner_form' });
+    expect(r.statusCode, r.body).toBe(200);
+    const row = await td.pool.query<{ lead_route: string }>('SELECT lead_route FROM marketplace_module_publications WHERE module_id = $1', [id]);
+    expect(row.rows).toEqual([{ lead_route: 'partner_form' }]);
+    expect((json(await author.client.inject({ method: 'GET', url: `${M(p)}/${id}` }))['publication'] as Json)['lead_route']).toBe('partner_form');
+  });
+
+  it('AC10: a module.manage admin records the partner\'s totals → 201, audited (⛔ member); the detail shows the NEWEST entry per period, below 5 as "fewer than 5"; a replay returns the same result', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const id = json(await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p))))['module_id'] as string;
+    const url = `${M(p)}/${id}/partner-form-totals`;
+    const key = randomUUID();
+    const body = { period_start: '2026-11-01', period_end: '2026-11-30', stages: [{ label: 'Started', figure: 40 }, { label: 'Finished', figure: 3 }] };
+    const first = await post(admin.client, url, body, key);
+    expect(first.statusCode, first.body).toBe(201);
+    expect(json(first)).toMatchObject({ totals_id: expect.any(String), stages: 2 });
+    expect(json(await post(admin.client, url, body, key))).toEqual(json(first));
+    const corrected = await post(admin.client, url, { ...body, stages: [{ label: 'Started', figure: 41 }, { label: 'Finished', figure: 6 }] });
+    expect(corrected.statusCode).toBe(201);
+    const d = json(await admin.client.inject({ method: 'GET', url: `${M(p)}/${id}` }));
+    expect((d['partner_form_figures'] as Json)['partner_totals']).toEqual([
+      {
+        totals_id: json(corrected)['totals_id'],
+        period_start: '2026-11-01',
+        period_end: '2026-11-30',
+        entered_at: expect.any(String),
+        stages: [
+          { order: 1, label: 'Started', figure: 41, below_floor: false },
+          { order: 2, label: 'Finished', figure: 6, below_floor: false },
+        ],
+      },
+    ]);
+    const lines = (await moduleAudit(p)).filter((a) => a.action === 'module.partner_form_totals_recorded');
+    expect(lines).toHaveLength(2);
+    expect(lines.every((a) => a.resource_locator === `module/${id}`)).toBe(true);
+    const stored = await td.pool.query<{ figure: number | null; below_floor: boolean }>(
+      'SELECT figure, below_floor FROM marketplace_partner_form_totals WHERE totals_id = $1 ORDER BY stage_order',
+      [json(first)['totals_id']],
+    );
+    expect(stored.rows).toEqual([
+      { figure: 40, below_floor: false },
+      { figure: null, below_floor: true },
+    ]);
+  });
+
+  it('AC10: totals on a trust_sends offer → 409 module.not_partner_form; a bad period → 422 at its path — each with ⛔ audit line', async () => {
+    const p = freshPariwar();
+    const admin = await pariwarAdmin(p);
+    const ts = await authored(admin.client, p, await partner(admin.client, p));
+    const ok = { period_start: '2026-11-01', period_end: '2026-11-30', stages: [{ label: 'Started', figure: 9 }] };
+    const r = await post(admin.client, `${M(p)}/${ts}/partner-form-totals`, ok);
+    expect(r.statusCode, r.body).toBe(409);
+    expect(errOf(r).code).toBe('module.not_partner_form');
+    const pf = json(await post(admin.client, M(p), partnerFormManifest(await partner(admin.client, p))))['module_id'] as string;
+    const bad = await post(admin.client, `${M(p)}/${pf}/partner-form-totals`, { ...ok, period_end: '2026-10-01' });
+    expect(bad.statusCode, bad.body).toBe(422);
+    expect(errOf(bad).code).toBe('module.partner_form_totals_invalid');
+    expect((errOf(bad).details as { issues: { path: string[] }[] }).issues.map((i) => i.path)).toContainEqual(['period_end']);
+    expect((await post(admin.client, `${M(p)}/${randomUUID()}/partner-form-totals`, ok)).statusCode).toBe(404);
+    expect((await moduleAudit(p)).filter((a) => a.action.startsWith('module.partner_form_totals'))).toEqual([]);
   });
 });
 

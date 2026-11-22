@@ -275,6 +275,20 @@ export const ProfileSection = z
         namedBy: z.array(NomineeLinkNamedByExport),
       })
       .strict(),
+    /**
+     * Story 12.5b (`2026-11-22-489` QE8; `-486` R2 C) — each time the member opened a partner's own page from the app that the Trust
+     * still holds a record of (each is removed 90 days after it was made): the offer and when. ⛔ Anything typed on the partner's page.
+     */
+    partnerOfferVisits: z.array(
+      z
+        .object({
+          moduleId: z.string(),
+          offerNameEn: z.string(),
+          offerNameHi: z.string(),
+          openedAt: Iso8601Datetime,
+        })
+        .strict(),
+    ),
   })
   .strict();
 export type ProfileSection = z.output<typeof ProfileSection>;

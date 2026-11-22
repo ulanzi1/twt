@@ -37,3 +37,7 @@ export * from './lead-member-fields.js';
 export * from './lead-envelope.js';
 // The seam 12.3 calls (seal, record), the W table's writes, the predicates P0–P5 and the reads (QE4, QE6, QE7, QE18, QE21 (C)).
 export * from './lead-handoff.js';
+// ── Story 12.5b (`2026-11-22-489`) — the partner's-own-form route ──
+// The visit (the ONLY place the stored page URL is handed out), the Trust's own counts, the partner's totals and the floored admin read.
+// ⛔ A staff read of the visit records is exported — none exists (I5).
+export * from './partner-form.js';

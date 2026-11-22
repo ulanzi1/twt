@@ -32,6 +32,7 @@ import {
   MARKETPLACE_MODULE_ARCHIVE_REASONS,
   MARKETPLACE_MODULE_STATES,
   MODULE_MANIFEST_SCHEMA_VERSION,
+  MODULE_MANIFEST_SCHEMA_VERSION_V1,
 } from '../schema/marketplace_modules.js';
 import {
   EligibilityFilterV1Schema,
@@ -41,6 +42,7 @@ import {
   moduleInstantSchema,
   moduleLeadHandoffUrlSchema,
   moduleNameSchema,
+  modulePartnerFormUrlSchema,
   moduleSigningKeySecretNameSchema,
   moduleSlotCapacitySchema,
   refineModuleWindow,
@@ -74,8 +76,13 @@ const triggerSchema = z.string().min(1);
  * emitter in 12.1 — I6). The FIRST event of the stream; it snapshots the WHOLE manifest, so the module is
  * audit-replayable from its stream alone. The content keys are the QE5 columns in snake_case, held to the
  * SAME field schemas `parseModuleManifest` uses.
+ *
+ * ⭐ THE v1 ARM (Story 12.5b QE2, TR4). Every stored 12.1 genesis is v1 and is re-parsed on EVERY fold (`state.ts`) and by the
+ * registry. Its ONE edit since 12.1 is the version literal's NAME: `MODULE_MANIFEST_SCHEMA_VERSION_V1` (= 1) — the old spelling,
+ * `MODULE_MANIFEST_SCHEMA_VERSION`, is 2 since Story 12.5b and would have made every v1 stream unreadable. Same keys, same rules;
+ * ⛔ tighten it (ADR-0044 RPD1). A v1 genesis reads as `trust_sends`.
  */
-export const ModuleAuthoredPayloadSchema = z
+export const ModuleAuthoredPayloadV1Schema = z
   .object({
     from_state: z.null(),
     to_state: z.literal('draft'),
@@ -83,7 +90,7 @@ export const ModuleAuthoredPayloadSchema = z
     actor: moduleStaffActorSchema,
     module_id: lowerUuidSchema,
     pariwar_id: lowerUuidSchema,
-    manifest_schema_version: z.literal(MODULE_MANIFEST_SCHEMA_VERSION),
+    manifest_schema_version: z.literal(MODULE_MANIFEST_SCHEMA_VERSION_V1),
     partner_id: lowerUuidSchema,
     name_en: moduleNameSchema,
     name_hi: moduleNameSchema,
@@ -101,7 +108,69 @@ export const ModuleAuthoredPayloadSchema = z
   .strict()
   // The SAME window rule as the manifest input (RV7): a hand-built genesis is refused at the registry too.
   .superRefine(refineModuleWindow);
+export type ModuleAuthoredPayloadV1 = z.infer<typeof ModuleAuthoredPayloadV1Schema>;
+
+/** The keys every v2 genesis shares (Story 12.5b QE2): the v1 keys less the route-specific four, at version 2. */
+const moduleAuthoredV2Common = {
+  from_state: z.null(),
+  to_state: z.literal('draft'),
+  trigger: triggerSchema,
+  actor: moduleStaffActorSchema,
+  module_id: lowerUuidSchema,
+  pariwar_id: lowerUuidSchema,
+  manifest_schema_version: z.literal(MODULE_MANIFEST_SCHEMA_VERSION),
+  partner_id: lowerUuidSchema,
+  name_en: moduleNameSchema,
+  name_hi: moduleNameSchema,
+  description_en: moduleDescriptionSchema,
+  description_hi: moduleDescriptionSchema,
+  eligibility_filter: EligibilityFilterV1Schema,
+  scope_filter: ScopeFilterV1Schema,
+  valid_from: moduleInstantSchema,
+  valid_until: moduleInstantSchema,
+  branding_bundle: ModuleBrandingBundleSchema,
+};
+
+/** A v2 `trust_sends` genesis: the v1 manifest plus `lead_route: 'trust_sends'`. */
+export const ModuleAuthoredPayloadV2TrustSendsSchema = z
+  .object({
+    ...moduleAuthoredV2Common,
+    lead_route: z.literal('trust_sends'),
+    slot_capacity: moduleSlotCapacitySchema,
+    lead_handoff_url: moduleLeadHandoffUrlSchema,
+    lead_handoff_signing_key_secret_name: moduleSigningKeySecretNameSchema,
+  })
+  .strict()
+  .superRefine(refineModuleWindow);
+
+/** A v2 `partner_form` genesis: the partner's page; ⛔ places (`null`), ⛔ handoff URL, ⛔ signing key (the keys are ABSENT). */
+export const ModuleAuthoredPayloadV2PartnerFormSchema = z
+  .object({
+    ...moduleAuthoredV2Common,
+    lead_route: z.literal('partner_form'),
+    partner_form_url: modulePartnerFormUrlSchema,
+    slot_capacity: z.null(),
+  })
+  .strict()
+  .superRefine(refineModuleWindow);
+
+/**
+ * The genesis payload: v1, or v2 for either route (Story 12.5b QE2; ADR-0044 D3's pivot path). A `z.union` — ⛔
+ * `z.discriminatedUnion`: zod 3 accepts only plain `ZodObject` options and every arm here is `.superRefine`-wrapped, and the v1 arm
+ * has no `lead_route` key (G25). The payload is never shown to a person, so a union's root-level issue is acceptable HERE (the
+ * manifest INPUT parses route-first instead — `parseModuleManifest`).
+ */
+export const ModuleAuthoredPayloadSchema = z.union([
+  ModuleAuthoredPayloadV1Schema,
+  ModuleAuthoredPayloadV2TrustSendsSchema,
+  ModuleAuthoredPayloadV2PartnerFormSchema,
+]);
 export type ModuleAuthoredPayload = z.infer<typeof ModuleAuthoredPayloadSchema>;
+
+/** The route a parsed genesis payload declares — a v1 genesis is `trust_sends` (I7). */
+export function moduleAuthoredLeadRoute(p: ModuleAuthoredPayload): 'trust_sends' | 'partner_form' {
+  return 'lead_route' in p ? p.lead_route : 'trust_sends';
+}
 
 /** `module.scheduled`: `draft` → `scheduled` (before `valid_from`). Owner: Story 12.2. */
 export const ModuleScheduledPayloadSchema = z

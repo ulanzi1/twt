@@ -56,7 +56,8 @@ const EN: Record<string, string> = {
   'module.wizard.step.b': 'Who is eligible',
   'module.wizard.step.c': 'Audience',
   'module.wizard.step.d': 'When it is open',
-  'module.wizard.step.e': 'Places',
+  // Story 12.5b (QE7 (A)) — step (e) asks the ROUTE first, then places (a `trust_sends` offer only); step (f) the route's fields.
+  'module.wizard.step.e': 'How it reaches the partner, and places',
   'module.wizard.step.f': 'Partner hand-off',
   'module.wizard.step.summary': 'Summary',
   'module.wizard.issue': 'Please fix: {message}',
@@ -142,7 +143,17 @@ const EN: Record<string, string> = {
   'module.reason.windowOrder': 'The closing time must be after the opening time.',
   'module.reason.windowYear': 'Dates before the year 2000 are not accepted.',
 
-  // ── Step (e) ──
+  // ── Step (e) — Story 12.5b: the route (⛔ default), then places ──
+  'module.route.question': 'How does a member’s interest reach the partner?',
+  'module.route.trust_sends': 'The Trust sends the partner the member’s details',
+  'module.route.trust_sends.hint':
+    'When a member registers interest, the Trust sends the partner four details: their name, mobile number, district and language.',
+  'module.route.partner_form': 'The member uses the partner’s own page',
+  'module.route.partner_form.hint':
+    'The member opens the partner’s own page in their phone’s browser and fills it in there. The Trust sends the partner nothing about the member. This kind of offer has no places.',
+  'module.field.leadRoute': 'How it reaches the partner',
+  'module.reason.leadRoute': 'Choose how a member’s interest reaches the partner.',
+  'module.places.none': 'No places (the partner’s own page has none)',
   'module.places.unlimited': 'Unlimited places',
   'module.places.fixed': 'A fixed number of places',
   'module.field.places': 'Number of places',
@@ -158,6 +169,14 @@ const EN: Record<string, string> = {
   'module.reason.leadUrlTooLong': 'The address can be at most 4096 characters.',
   'module.reason.secretName': 'Enter the secret name.',
   'module.reason.secretNameShape': 'A secret name uses only letters, digits, - and _ (at most 255).',
+  // Story 12.5b — step (f) for an offer that uses the partner's own page.
+  'module.field.partnerFormUrl': 'The partner’s page (https://…)',
+  'module.partnerForm.copy':
+    'The page is opened exactly as written here, the same for every member. If the partner gave a code for this offer, it goes in this address. Nothing about the member is ever added to it.',
+  'module.reason.partnerFormUrl': 'Enter the address of the partner’s page.',
+  'module.reason.partnerFormUrlHttps': 'The address must start with https://.',
+  'module.reason.partnerFormUrlTooLong': 'The address can be at most 4096 characters.',
+  'module.reason.partnerFormUrlFragment': 'The address must not contain #.',
 
   // ── Summary (the Policy-meaning restatements — 12.1's meanings, restated, ⛔ changed) ──
   'module.summary.previewEn': 'Preview (English)',
@@ -167,6 +186,7 @@ const EN: Record<string, string> = {
   'module.summary.eligibility': 'Statuses',
   'module.summary.window': 'Open',
   'module.summary.places': 'Places',
+  'module.summary.route': 'How it reaches the partner',
   'module.audience.membersAll': 'Offered to: every member of the Pariwar',
   'module.audience.state': 'Only members whose state is one of: {places}',
   'module.audience.district': 'Only members whose district is one of: {places}',
@@ -200,6 +220,11 @@ const EN: Record<string, string> = {
   'module.error.not_found': 'This offer was not found.',
   'module.error.idempotency_in_progress': 'The last attempt is still being processed. Wait a moment and try again.',
   'module.error.forbidden': 'You do not have permission to manage partner offers in this Pariwar.',
+  // Story 12.5b
+  'module.error.lead_route_mismatch':
+    'This offer was written to work the other way, and that cannot be changed. Withdraw it, then start a corrected copy that works the way you chose.',
+  'module.error.not_partner_form': 'This offer does not use the partner’s own page.',
+  'module.error.partner_form_totals_invalid': 'Some of the figures are not valid. Check the dates, the step names and the numbers.',
   'module.error.generic': 'Something went wrong. Try again.',
 
   // ── Detail page ──
@@ -212,6 +237,12 @@ const EN: Record<string, string> = {
   // The Hindi name follows this text in its own `lang="hi"` element (RC18), so it is not a token here.
   'module.detail.partner': 'Partner: {en} /',
   'module.detail.leadUrl': 'Lead hand-off address: {url}',
+  // Story 12.5b
+  'module.detail.route': 'How it reaches the partner: {route}',
+  'module.detail.partnerFormUrl': 'The partner’s page: {url}',
+  'module.detail.leadsNotUsed': 'Member registrations are not used for this offer: the member goes to the partner’s own page.',
+  'module.detail.publishRoute': 'How this offer reaches the partner (choose; it must be how the offer was written)',
+  'module.detail.publishRouteReason': 'Choose how this offer reaches the partner.',
   'module.detail.secretName': 'Signing key secret name: {name}',
   'module.detail.notPublished': 'Not published yet.',
   'module.detail.publishedScheduled': 'Published by {name} on {at} — goes live at its opening time.',
@@ -238,6 +269,35 @@ const EN: Record<string, string> = {
     'An offer cannot be edited. To correct it, withdraw it and start a corrected copy, which is a new draft.',
   'module.detail.leadWarning':
     '{n} members registered interest in this offer. A corrected copy starts with all places free; those members can register again, and the partner may receive a second lead for the same member.',
+  // ── Story 12.5b — the figures of an offer that uses the partner's own page (QE12 (A), QE13 (A); I4) ──
+  'module.figures.heading': 'Figures for this offer',
+  'module.figures.note': 'Counts for this offer only — no member is named. A figure below 5 is shown as “fewer than 5”.',
+  'module.figures.fewerThan5': 'fewer than 5',
+  'module.figures.kind.card_shown': 'Offer shown',
+  'module.figures.kind.card_opened': 'Offer opened',
+  'module.figures.kind.went_to_partner': 'Went to the partner’s page',
+  'module.figures.kind.came_back': 'Came back to the app',
+  'module.figures.total': 'All days',
+  'module.figures.byDay': 'By day (India date)',
+  'module.figures.noDays': 'Nothing has been counted yet.',
+  'module.figures.partner.heading': 'Figures from the partner',
+  'module.figures.partner.none': 'The partner’s figures have not been entered yet.',
+  'module.figures.partner.period': '{from} to {until}',
+  'module.figures.partner.entered': 'Entered on {at}',
+  'module.totals.heading': 'Enter the partner’s figures',
+  'module.totals.hint':
+    'Type in the totals the partner sent for one period: how many started, reached each step and finished, in the partner’s order. A number below 5 is kept only as “fewer than 5”. To correct a period, enter it again — the newest entry is shown.',
+  'module.totals.periodStart': 'From (date)',
+  'module.totals.periodEnd': 'To (date)',
+  'module.totals.stageLabel': 'Step {n}: the partner’s word for it',
+  'module.totals.stageFigure': 'Step {n}: how many',
+  'module.totals.addStage': 'Add a step',
+  'module.totals.removeStage': 'Remove step {n}',
+  'module.totals.save': 'Save the figures',
+  'module.totals.saving': 'Saving…',
+  'module.totals.saved': 'The partner’s figures were saved.',
+  'module.totals.reasonPeriod': 'Enter both dates; the second must not be before the first.',
+  'module.totals.reasonStage': 'Each step needs the partner’s word for it (at most 80 characters) and a whole number.',
   'module.detail.leadWarningOne':
     '1 member registered interest in this offer. A corrected copy starts with all places free; that member can register again, and the partner may receive a second lead for the same member.',
 };

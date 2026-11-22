@@ -41,6 +41,8 @@ import { memberAuthOtps } from '../schema/member_auth_otps.js';
 import { dataExports } from '../schema/data_exports.js';
 // Story 12.5 (QE16) — the lead-handoff table, imported DIRECTLY (⛔ the `marketplace` barrel — a member ↔ marketplace init cycle).
 import { marketplaceLeadHandoffs } from '../schema/marketplace_lead_handoffs.js';
+// Story 12.5b (QE8) — the partner-form visit record, imported DIRECTLY too (the same cycle).
+import { marketplacePartnerFormVisits } from '../schema/marketplace_partner_form_visits.js';
 import { memberDataRightsCorrections } from '../schema/member_data_rights_corrections.js';
 import { memberModerationAppeals } from '../schema/member_moderation_appeals.js';
 import { memberAddresses } from '../schema/member_addresses.js';
@@ -751,6 +753,16 @@ export async function anonymizeMember(
         sql`(${marketplaceLeadHandoffs.memberFieldsCiphertext} IS NOT NULL OR ${marketplaceLeadHandoffs.status} = 'due')`,
       ),
     );
+
+  // ── marketplace_partner_form_visits (Story 12.5b, `2026-11-22-489` QE8; `-486` R2 C) ── the record that the member opened a
+  // `partner_form` offer's page (kept 90 days, W15). ⭐ The FIRST `.delete(` in this file, DELIBERATELY: the row holds nothing but the
+  // member↔offer link and nothing references it, so a scrub would leave exactly the fact to be erased; erasure reaches it "like any
+  // other member record" (`-486`). ONE statement keyed on `(pariwar_id, member_id)`. ⚠ Under FORCE RLS a DELETE with ⛔ matching policy
+  // matches 0 rows SILENTLY — 0217 grants `twt_app` DELETE and creates the FOR DELETE tenant policy AT BIRTH for exactly this (the
+  // live erasure spec proves the rowCount, the mock below cannot).
+  await client
+    .delete(marketplacePartnerFormVisits)
+    .where(and(eq(marketplacePartnerFormVisits.pariwarId, pariwarId), eq(marketplacePartnerFormVisits.memberId, memberId)));
 
   await client
     .update(dataExports)

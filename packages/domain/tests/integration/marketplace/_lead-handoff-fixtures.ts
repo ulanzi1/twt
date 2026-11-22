@@ -9,7 +9,7 @@ import type pg from 'pg';
 import { expect } from 'vitest';
 
 import { serializeEnvelope } from '../../../src/encryption/envelope.js';
-import { RAW_INSERT_SQL, rawInsertParams, seedPartner } from './_fixtures.js';
+import { RAW_INSERT_SQL, rawInsertParams, rawInsertSqlWith, seedPartner } from './_fixtures.js';
 
 /** The ids one handoff needs. */
 export interface HandoffWorld {
@@ -26,12 +26,17 @@ export async function seedModule(
   client: pg.PoolClient,
   pariwarId: string,
   partnerId: string,
-  o: { state?: 'active' | 'archived'; reason?: string | null } = {},
+  o: { state?: 'active' | 'archived'; reason?: string | null; route?: 'trust_sends' | 'partner_form' } = {},
 ): Promise<string> {
   const id = randomUUID();
   await client.query("SET LOCAL app.marketplace_module_state_writer = 'on'");
   // The genesis is `draft` / version 1 (12.1 I3); each later state is a guarded UPDATE with a strictly higher version.
-  await client.query(RAW_INSERT_SQL, rawInsertParams(id, pariwarId, { partnerId }));
+  // Story 12.5b — `route: 'partner_form'` seeds a v2 partner-form row (no places, no handoff URL, the partner's page).
+  if (o.route === 'partner_form') {
+    await client.query(rawInsertSqlWith({ route: 'partner_form' }), rawInsertParams(id, pariwarId, { partnerId, capacity: null }));
+  } else {
+    await client.query(RAW_INSERT_SQL, rawInsertParams(id, pariwarId, { partnerId }));
+  }
   await client.query(`UPDATE marketplace_modules SET current_state = 'active', state_event_version = 2 WHERE module_id = $1`, [id]);
   if (o.state === 'archived') {
     await archiveModuleRow(client, id, o.reason ?? 'trustee_archived');

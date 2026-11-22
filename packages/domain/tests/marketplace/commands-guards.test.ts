@@ -17,6 +17,7 @@ import {
   ModuleGenesisMissingError,
   ModuleLeadAlreadySubmittedError,
   ModuleLeadDuplicateError,
+  ModuleLeadRouteRefusedError,
   ModuleNotActiveError,
   ModuleOutsideWindowError,
   ModuleSlotsExhaustedError,
@@ -45,6 +46,8 @@ interface StubRow {
   slotCapacity: number | null;
   validFrom: Date;
   validUntil: Date;
+  /** Story 12.5b (QE4 (a)) — the guard columns carry the route. */
+  leadRoute: 'trust_sends' | 'partner_form';
 }
 const ROW: StubRow = {
   state: 'active',
@@ -53,6 +56,7 @@ const ROW: StubRow = {
   slotCapacity: 10,
   validFrom: at(-HOUR),
   validUntil: at(HOUR),
+  leadRoute: 'trust_sends',
 };
 
 interface Behaviour {
@@ -102,6 +106,7 @@ function stub(b: Behaviour = {}): { client: pg.PoolClient; calls: string[] } {
                   slot_capacity: row.slotCapacity,
                   valid_from: row.validFrom,
                   valid_until: row.validUntil,
+                  lead_route: row.leadRoute,
                 },
               ],
         );
@@ -161,8 +166,20 @@ describe('submitModuleLead — the QE7 order, exhaustively (RP3, RP13)', () => {
     expect(calls).not.toContain('APPEND');
   });
 
+  // Story 12.5b (QE4 (a), TR27) — the route refusal is right AFTER not_found and BEFORE the replay: a lead that can never exist is
+  // never "replayed", even when a matching lead event is (somehow) on the stream.
+  it('partner_form_route BEATS the replay, and every later refusal — ModuleLeadRouteRefusedError, no new event', async () => {
+    for (const row of [{ leadRoute: 'partner_form' as const }, { leadRoute: 'partner_form' as const, state: 'draft' as const, slotsRemaining: 0 }]) {
+      const { client, calls } = stub({ row, existing: [MINE] });
+      await expect(submitModuleLead(client, leadInput)).rejects.toBeInstanceOf(ModuleLeadRouteRefusedError);
+      expect(calls).not.toContain('APPEND');
+      expect(calls).not.toContain('HEAD');
+    }
+  });
+
   it.each([
     ['not_found: no row in this Pariwar', { row: null }, ModuleGenesisMissingError],
+    ['not_found BEATS partner_form_route (no row to read a route from)', { row: null }, ModuleGenesisMissingError],
     ['not_active: a draft module', { row: { state: 'draft' as const } }, ModuleNotActiveError],
     ['not_active: a scheduled module', { row: { state: 'scheduled' as const } }, ModuleNotActiveError],
     ['not_active: an archived module', { row: { state: 'archived' as const } }, ModuleNotActiveError],

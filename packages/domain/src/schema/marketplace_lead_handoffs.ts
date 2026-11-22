@@ -15,6 +15,7 @@
 //     of truth for anything. The partner-boundary fence (rule (b)) keeps its name to the four files that may touch it.
 //
 // The hand-authored half (the guard trigger, the GRANTs, FORCE RLS, the per-command policies) lives in 0215. PII: the ONE ciphertext.
+// Story 12.5b (0216) adds the BACKSTOP `marketplace_lead_handoffs_route_guard` (BEFORE INSERT): a `partner_form` module never gets a row (I2).
 // TENANT-ISOLATED; RLS in policies/marketplace-lead-handoffs-rls.ts. ⚠ The sweep's login BYPASSES RLS (roster Row 26), so every
 // sweep statement carries `pariwar_id` itself (TR11).
 
@@ -46,11 +47,12 @@ export const LEAD_ENVELOPE_VERSION = 1 as const;
 /**
  * ⭐ QE10 — the CLOSED grammar of `outcome_detail`: every word the sweep, erasure and the requeue write, ⛔ anything else (⛔ an error
  * message, a body, a header value, a hostname, an IP, a secret name — I8). An HTTP code is three digits of its own class.
- * ⚠ LOCKSTEP with 0215's `marketplace_lead_handoffs_outcome_detail_check` (the schema spec reads the constraint and compares).
+ * ⚠ LOCKSTEP with `marketplace_lead_handoffs_outcome_detail_check` — 0215's, REPLACED by 0216 to add `cancelled:partner_form_route`
+ * (Story 12.5b QE4 / QE5; the schema spec reads the constraint and compares).
  * ⛔ Backslashes — the same string must read the same in a JS `RegExp` and a PG ARE.
  */
 export const LEAD_HANDOFF_DETAIL_PATTERN =
-  '^(delivered:http_2xx:2[0-9]{2}|released:(http_5xx:5[0-9]{2}|http_408|http_429|timeout|network|http_401|http_403|http_404|address_refused)|held:(signing_key|kms|audit|db|dns)_unavailable|lapsed:lease_expired|requeued:manual|failed_delivery:(http_4xx:4[0-9]{2}|http_3xx:3[0-9]{2}|port_refused|url_refused|fields_unreadable|retries_exhausted|outcome_unknown|hold_expired:(signing_key|kms|audit|db|dns))|cancelled:(consent_revoked|member_erased|member_withdrawn|member_terminated|account_frozen|death_reported|module_withdrawn))$';
+  '^(delivered:http_2xx:2[0-9]{2}|released:(http_5xx:5[0-9]{2}|http_408|http_429|timeout|network|http_401|http_403|http_404|address_refused)|held:(signing_key|kms|audit|db|dns)_unavailable|lapsed:lease_expired|requeued:manual|failed_delivery:(http_4xx:4[0-9]{2}|http_3xx:3[0-9]{2}|port_refused|url_refused|fields_unreadable|retries_exhausted|outcome_unknown|hold_expired:(signing_key|kms|audit|db|dns))|cancelled:(consent_revoked|member_erased|member_withdrawn|member_terminated|account_frozen|death_reported|module_withdrawn|partner_form_route))$';
 
 /** ADVISORY (I3): the only partner-provided value stored. ⚠ LOCKSTEP with `marketplace_lead_handoffs_partner_reference_check`. */
 export const LEAD_HANDOFF_PARTNER_REFERENCE_PATTERN = '^[A-Za-z0-9_.-]{1,64}$';

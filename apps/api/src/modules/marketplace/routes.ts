@@ -1,6 +1,6 @@
 // The admin MODULE routes — Story 12.2 (`2026-11-01-433`; Task 5.1).
 //
-// EIGHT scope-gated admin routes under the path `packages/contracts/src/modules/README.md` reserved:
+// NINE scope-gated admin routes under the path `packages/contracts/src/modules/README.md` reserved:
 //   · GET  …/p/:pariwarId/modules                      → the cursor list (`state?`, `limit` ≤ 200, `cursor?`)
 //   · GET  …/p/:pariwarId/modules/scope-options        → the audience picker's places (QE5)
 //   · GET  …/p/:pariwarId/modules/partners             → the Pariwar's partners (`limit` 1–200; ⛔ cursor)
@@ -9,6 +9,7 @@
 //   · GET  …/p/:pariwarId/modules/:moduleId            → one module (admin shape)
 //   · POST …/p/:pariwarId/modules/:moduleId/publish    → publish (a NON-author; step-up `module_publish` — I5)
 //   · POST …/p/:pariwarId/modules/:moduleId/withdraw   → archive `trustee_archived` (⛔ step-up — QE10)
+//   · POST …/p/:pariwarId/modules/:moduleId/partner-form-totals → Story 12.5b (QE12 (A)): staff enter a partner's totals
 //
 // The route IS the security control: an authenticated HUMAN admin session (`requireAdminSession` — the login-wall gate)
 // → the scope hook (zero grants in this Pariwar ⇒ 404, so tenants cannot be probed; a super_admin needs a grant ROW here)
@@ -30,6 +31,8 @@ import {
   ModuleScopeOptionsResponse,
   PublishModuleRequest,
   PublishModuleResponse,
+  RecordPartnerFormTotalsRequest,
+  RecordPartnerFormTotalsResponse,
   WithdrawModuleRequest,
   WithdrawModuleResponse,
 } from '@twt/contracts';
@@ -137,5 +140,21 @@ export function registerMarketplaceRoutes(app: FastifyInstance, deps: AppDeps): 
       preHandler: guard,
     },
     h.withdraw,
+  );
+
+  // Story 12.5b (`-486` R3 B; QE12 (A)) — staff enter the partner's OWN totals for a `partner_form` offer. `module.manage`; ⛔ step-up
+  // (advisory figures, ⛔ a member — the withdraw precedent); Idempotency-Key as the author route. ⛔ An inbound partner route (I10).
+  r.post(
+    '/api/v1/p/:pariwarId/modules/:moduleId/partner-form-totals',
+    {
+      schema: {
+        params: ModuleParam,
+        body: RecordPartnerFormTotalsRequest,
+        response: { 201: RecordPartnerFormTotalsResponse },
+        tags: [TAG],
+      },
+      preHandler: guard,
+    },
+    h.recordTotals,
   );
 }

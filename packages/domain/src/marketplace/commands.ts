@@ -40,10 +40,11 @@ import type pg from 'pg';
 
 import type { Db } from '../db.js';
 import type { MemberId, ModuleId, ModuleLeadId, PariwarId } from '../ids/index.js';
-import type { MarketplaceModuleArchiveReason, MarketplaceModuleState } from '../schema/marketplace_modules.js';
+import type { MarketplaceModuleArchiveReason, MarketplaceModuleLeadRoute, MarketplaceModuleState } from '../schema/marketplace_modules.js';
 import {
   ModuleArchiveReasonNotSatisfiedError,
   ModuleGenesisMissingError,
+  ModuleLeadRouteRefusedError,
   ModuleIllegalTransitionError,
   ModuleLeadAlreadySubmittedError,
   ModuleLeadDuplicateError,
@@ -110,10 +111,11 @@ type LockedModuleRaw = {
   // A raw `pg` client parses timestamptz to a Date; drizzle's `execute` hands back the string.
   valid_from: Date | string;
   valid_until: Date | string;
+  lead_route: MarketplaceModuleLeadRoute;
 };
 
-/** The row columns every lock / pre-check reads (one list, two readers). */
-const MODULE_GUARD_COLUMNS = 'current_state, state_event_version, slots_remaining, slot_capacity, valid_from, valid_until';
+/** The row columns every lock / pre-check reads (one list, two readers). Story 12.5b (QE4 (a)) added `lead_route`. */
+const MODULE_GUARD_COLUMNS = 'current_state, state_event_version, slots_remaining, slot_capacity, valid_from, valid_until, lead_route';
 
 function toLockedModule(r: LockedModuleRaw | undefined): LockedModule | null {
   if (!r) return null;
@@ -124,6 +126,7 @@ function toLockedModule(r: LockedModuleRaw | undefined): LockedModule | null {
     slotCapacity: r.slot_capacity,
     validFrom: r.valid_from instanceof Date ? r.valid_from : new Date(r.valid_from),
     validUntil: r.valid_until instanceof Date ? r.valid_until : new Date(r.valid_until),
+    leadRoute: r.lead_route,
   };
 }
 
@@ -311,9 +314,10 @@ export async function archiveModule(
 
 // ── Leads ──────────────────────────────────────────────────────────────────────────────────────────
 
-/** Why a lead is refused, in QE7 order. */
+/** Why a lead is refused, in QE7 order. `partner_form_route` (Story 12.5b QE4 (a)) right after `not_found`, BEFORE the replay. */
 export type ModuleLeadRefusal =
   | 'not_found'
+  | 'partner_form_route'
   | 'not_active'
   | 'outside_window'
   | 'slots_exhausted'
@@ -334,8 +338,9 @@ type LeadDecision =
 
 /**
  * The ONE lead decision both the pre-check and the locked command run (QE7 order, first failure wins):
- * 1 row present · 2 replay (same lead_id, same member) · 3 active · 4 in window · 5 a place left (when
- * capped) · 6 the lead_id is not another member's · 7 the member has no other lead on this module.
+ * 1 row present · 1b the offer is `trust_sends` (Story 12.5b QE4 (a)) · 2 replay (same lead_id, same member) · 3 active ·
+ * 4 in window · 5 a place left (when capped) · 6 the lead_id is not another member's · 7 the member has no other lead on
+ * this module. ⚠ 1b is BEFORE the replay (TR27): a lead that can never exist is never "replayed".
  */
 function decideLead(
   row: LockedModule | null,
@@ -345,6 +350,7 @@ function decideLead(
   leadId: string,
 ): LeadDecision {
   if (row === null) return { kind: 'refuse', refusal: 'not_found' };
+  if (row.leadRoute !== 'trust_sends') return { kind: 'refuse', refusal: 'partner_form_route' };
   const sameLead = existing.find((e) => e.leadId === leadId);
   if (sameLead && sameLead.memberId === memberId) return { kind: 'replay', lead: sameLead };
   if (row.currentState !== 'active') return { kind: 'refuse', refusal: 'not_active' };
@@ -416,6 +422,8 @@ function leadRefusalError(
   switch (refusal) {
     case 'not_found':
       return new ModuleGenesisMissingError(i.moduleId);
+    case 'partner_form_route':
+      return new ModuleLeadRouteRefusedError(i.moduleId, 'lead');
     case 'not_active':
       return new ModuleNotActiveError(i.moduleId, row?.currentState ?? 'unknown');
     case 'outside_window':
@@ -439,7 +447,8 @@ const LEAD_SAVEPOINT = 'module_lead_append';
  * decrement. A `ModuleStreamConcurrencyError` is retried, `MAX_LEAD_APPEND_ATTEMPTS` attempts in total,
  * inside this ONE call (so one `auditId`); after the last it propagates. The lead path ⛔ replays the stream.
  *
- * @throws ModuleProjectorInputError (I11) · ModuleGenesisMissingError · ModuleNotActiveError ·
+ * @throws ModuleProjectorInputError (I11) · ModuleGenesisMissingError · ModuleLeadRouteRefusedError (a `partner_form` offer —
+ *         Story 12.5b) · ModuleNotActiveError ·
  *         ModuleOutsideWindowError · ModuleSlotsExhaustedError · ModuleLeadDuplicateError ·
  *         ModuleLeadAlreadySubmittedError · ModuleStreamConcurrencyError (after the last attempt).
  */

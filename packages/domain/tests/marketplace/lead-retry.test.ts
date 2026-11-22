@@ -52,6 +52,7 @@ function stubClient(insertError: unknown): { client: pg.PoolClient; calls: strin
             slot_capacity: 10,
             valid_from: new Date('2000-01-01T00:00:00Z'),
             valid_until: new Date('2999-01-01T00:00:00Z'),
+            lead_route: 'trust_sends',
           },
         ]);
       case 'NOW':

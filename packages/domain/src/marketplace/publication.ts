@@ -19,7 +19,7 @@ import {
   type MarketplaceModulePublication,
   type ModulePublishedEventType,
 } from '../schema/marketplace_module_publications.js';
-import type { MarketplaceModule } from '../schema/marketplace_modules.js';
+import type { MarketplaceModule, MarketplaceModuleLeadRoute } from '../schema/marketplace_modules.js';
 import type { MarketplacePartner } from '../schema/marketplace_partners.js';
 
 /** The constraint a second publish of one module violates (→ 409 `module.already_published`). Keep IN SYNC with 0195. */
@@ -63,6 +63,9 @@ export function moduleToneContentHash(
  * `pariwarId` comes FROM `module` (⛔ a separate argument), so the row can only ever name the module's own Pariwar. Both
  * confirmations are `true` by type AND by the table's CHECKs. A second publish rethrows the pg 23505 on
  * `MODULE_PUBLICATION_PKEY_CONSTRAINT` UNCHANGED (the route maps it).
+ * Story 12.5b (QE6 (A); `-486` R1 A): `leadRoute` is the PUBLISHER's choice, stored on the row. The publish route refuses a
+ * mismatch with the module's own route BEFORE any write (409 `module.lead_route_mismatch`); the composite FK
+ * `marketplace_module_publications_module_route_fk` makes it a database fact too (a mismatch reaching here is a 23503).
  */
 export async function recordModulePublication(
   client: pg.PoolClient,
@@ -74,6 +77,7 @@ export async function recordModulePublication(
     partnerAgreementConfirmed: true;
     contentHash: string;
     auditId: string;
+    leadRoute: MarketplaceModuleLeadRoute;
   },
 ): Promise<MarketplaceModulePublication> {
   const rows = await bindScopedDb(client)
@@ -87,6 +91,7 @@ export async function recordModulePublication(
       hindiReviewed: i.hindiReviewed,
       partnerAgreementConfirmed: i.partnerAgreementConfirmed,
       auditId: i.auditId,
+      leadRoute: i.leadRoute,
     })
     .returning();
   const row = rows[0];

@@ -520,6 +520,11 @@ export * from './marketplace_module_publications.js';
 // Story 12.5 (0215) — the partner lead HANDOFF record: one row per lead, the outbox 12.3's lead route writes beside
 // `module.lead_submitted` and the jobs sweep's delivery record (status, the closed detail grammar, the sealed member fields).
 export * from './marketplace_lead_handoffs.js';
+// Story 12.5b (0217) — what the Trust may learn about a `partner_form` offer (`-486`): the 90-day visit record (R2 C; ⛔ staff read),
+// the Trust's own per-offer counts (⛔ member column) and the partner's totals entered by staff (R3 B; below 5 never stored).
+export * from './marketplace_partner_form_visits.js';
+export * from './marketplace_partner_form_counts.js';
+export * from './marketplace_partner_form_totals.js';
 // Story 13.2 (0199) — the field-worker attribution-code registry: one permanent Pariwar-scoped 6-digit code per field worker
 // + the durable allocation-exhaustion flags (both append-only for every role — grant + guard triggers, bypassed only by replica
 // mode or DDL; tenant-isolated).

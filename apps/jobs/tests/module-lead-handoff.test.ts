@@ -17,7 +17,7 @@ import https from 'node:https';
 import type { AddressInfo } from 'node:net';
 import tls from 'node:tls';
 
-import { encryption, marketplace, withPariwarScope, type Db } from '@twt/domain';
+import { claim, encryption, marketplace, withPariwarScope, type Db } from '@twt/domain';
 import { QUEUE_NAMES } from '@twt/queue';
 import pg from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -79,17 +79,20 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
       cancelledWaiting: 0,
       claimed: 0,
       sent: 0,
+      visitsPurged: 0,
     });
     expect(alarms).toHaveLength(1);
     expect(alarms[0]).toContain('module_lead_handoff.rls_bound_role');
     expect(statements).toHaveLength(1);
   });
 
-  /** Which step a statement belongs to — the lapse, the purge, the waiting pass's page read, the claim. */
+  /** Which step a statement belongs to — the lapse, the purge, the waiting pass's page read, the claim, (12.5b) W15's visit purge. */
   const stepOf = (text: string): string | null =>
     text.includes("WHERE status = 'attempting' AND claimed_at")
       ? 'lapse'
-      : text.includes('WITH old AS MATERIALIZED')
+      : text.includes('marketplace_partner_form_visits')
+        ? 'visit purge'
+        : text.includes('WITH old AS MATERIALIZED')
         ? 'purge'
         : text.includes('AS module_withdrawn')
           ? 'waiting pass'
@@ -112,10 +115,11 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
     expect(result.claimed).toBe(0);
     expect(alarms).toHaveLength(1);
-    // The step is THIS one (⛔ any of them), and nothing after it ran: the order is lapse → purge → waiting pass → claim.
+    // The step is THIS one (⛔ any of them), and nothing after it ran: the order is lapse → purge → waiting pass → claim. Story 12.5b:
+    // W15 runs AFTER the claim loop however it ended (a claim throw included) — ⛔ after a lapse or purge throw (`-488` item 2).
     expect(alarms[0]).toContain(`module_lead_handoff.sweep_failed:Error [code:42501] at the ${step} —`);
     const order = ['lapse', 'purge', 'waiting pass', 'claim'];
-    expect(reached).toEqual(order.slice(0, order.indexOf(step) + 1));
+    expect(reached).toEqual([...order.slice(0, order.indexOf(step) + 1), ...(step === 'claim' ? ['visit purge'] : [])]);
     expect(alarms[0]).not.toContain('permission denied');
   });
 
@@ -134,8 +138,50 @@ describe('module-lead-handoff — registration and pool (unit)', () => {
     const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
     expect(alarms).toEqual([expect.stringContaining('module_lead_handoff.waiting_pass_failed:Error [code:42501] listing a page — the pass ends here, the claim still runs')]);
     expect(alarms[0]).not.toContain('permission denied');
-    expect(reached).toEqual(['lapse', 'purge', 'waiting pass', 'claim']);
+    expect(reached).toEqual(['lapse', 'purge', 'waiting pass', 'claim', 'visit purge']);
     expect(result).toMatchObject({ refused: false, cancelledWaiting: 0, claimed: 0 });
+  });
+
+  // Story 12.5b (QE5, AC5) — W15 is LAST and its throw is its own: ONE alarm (a name and a SQLSTATE — ⛔ the message), nothing else.
+  it('W15 runs LAST, after the claim; a throw in it ⇒ ONE `visit_purge_failed:<error>` alarm and the tick still resolves', async () => {
+    const reached: string[] = [];
+    const pool = {
+      query: vi.fn(async (text: string) => {
+        if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
+        const at = stepOf(text);
+        if (at !== null) reached.push(at);
+        if (at === 'visit purge') throw Object.assign(new Error('permission denied for table marketplace_partner_form_visits'), { code: '42501' });
+        return { rows: [], rowCount: 0 };
+      }),
+    } as unknown as pg.Pool;
+    const alarms: string[] = [];
+    const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null, onAlarm: (m) => alarms.push(m) });
+    expect(reached).toEqual(['lapse', 'purge', 'waiting pass', 'claim', 'visit purge']);
+    expect(alarms).toEqual([expect.stringContaining('module_lead_handoff.visit_purge_failed:Error [code:42501] — the partner-form visit records were not purged this tick')]);
+    expect(alarms[0]).not.toContain('permission denied');
+    expect(result).toMatchObject({ refused: false, visitsPurged: 0 });
+  });
+
+  it('W15 removes only visit records MORE than 90 days old, in the W12 MATERIALIZED shape, bounded (⛔ an IN-subquery)', async () => {
+    const seen: { text: string; values: unknown[] }[] = [];
+    const pool = {
+      query: vi.fn(async (text: string, values: unknown[] = []) => {
+        if (text.includes('rolbypassrls')) return { rows: [{ ok: true }], rowCount: 1 };
+        if (text.includes('marketplace_partner_form_visits')) {
+          seen.push({ text, values });
+          return { rows: [], rowCount: 3 };
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+    } as unknown as pg.Pool;
+    const result = await runModuleLeadHandoffTick({ pool, encryption: {} as never, resolveSecret: async () => null });
+    expect(result.visitsPurged).toBe(3);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.text).toMatch(/WITH old AS MATERIALIZED/);
+    expect(seen[0]!.text).toMatch(/opened_at < clock_timestamp\(\) - \$1::double precision \* interval '1 day'/);
+    expect(seen[0]!.text).toMatch(/FOR UPDATE SKIP LOCKED\s+LIMIT \$2/);
+    expect(seen[0]!.text).not.toMatch(/IN \(/);
+    expect(seen[0]!.values).toEqual([90, 500]);
   });
 
   it('waitingPageSize clamps the page option as the read does — the pass compares against THIS (round 2; the live "page option of 0" leg runs the pass)', () => {
@@ -242,7 +288,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     try {
       await c.query('BEGIN');
       await c.query("SET LOCAL session_replication_role = 'replica'");
-      for (const t of ['marketplace_lead_handoffs', 'consent_records', 'marketplace_modules', 'marketplace_partners', 'members', 'claims', 'events_log']) {
+      for (const t of ['marketplace_lead_handoffs', 'marketplace_partner_form_visits', 'consent_records', 'marketplace_modules', 'marketplace_partners', 'members', 'claims', 'events_log']) {
         await c.query(`DELETE FROM ${t} WHERE pariwar_id::text = ANY($1)`, [pariwars]);
       }
       await c.query('COMMIT');
@@ -299,10 +345,10 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
       await c.query(
         `INSERT INTO marketplace_modules (module_id, pariwar_id, partner_id, name_en, name_hi, description_en, description_hi, eligibility_filter,
            scope_filter, valid_from, valid_until, slot_capacity, lead_handoff_url, lead_handoff_signing_key_secret_name, branding_bundle,
-           manifest_schema_version, current_state, state_event_version, slots_remaining, archive_reason, audit_id)
+           manifest_schema_version, lead_route, current_state, state_event_version, slots_remaining, archive_reason, audit_id)
          VALUES ($1, $2, $3, 'n', 'n', 'd', 'd', '{"version":1,"clauses":[]}', '{"version":1,"scope":"members-all"}',
                  now() - interval '1 hour', now() + interval '1 hour', NULL, $4, $5,
-                 '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 1, 'draft', 1, NULL, NULL, $6)`,
+                 '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 1, 'trust_sends', 'draft', 1, NULL, NULL, $6)`,
         [moduleId, pariwarId, partnerId, url, o.secretName ?? SECRET_NAME, randomUUID()],
       );
       await c.query(`UPDATE marketplace_modules SET current_state = 'active', state_event_version = 2 WHERE module_id = $1`, [moduleId]);
@@ -344,8 +390,10 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
        VALUES ($1, $2, $3, 'module_lead_handoff', $4, 'member_self', '{}')`,
       [consentId, w.memberId, w.pariwarId, leadId],
     );
-    const sealedFields = await marketplace.sealLeadMemberFields(enc, {
+    // Story 12.5b (QE4 (c)) — the seal takes the pool and the module: it reads the route in its own short scope before KMS.
+    const sealedFields = await marketplace.sealLeadMemberFields(pool, enc, {
       pariwarId: w.pariwarId,
+      moduleId: w.moduleId,
       leadId,
       fields: { full_name: o.fullName ?? MEMBER_NAME, mobile: MOBILE_RAW, district: 'Gaya', preferred_language: 'hi' },
     });
@@ -1011,7 +1059,7 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
        VALUES ($1, $2, $3, 'module_lead_handoff', $4, 'member_self', '{}')`,
       [consentId, foreign.memberId, w.pariwarId, leadId],
     );
-    const sealed = await marketplace.sealLeadMemberFields(enc, { pariwarId: w.pariwarId, leadId, fields: { full_name: 'X Y', mobile: MOBILE_RAW, district: null, preferred_language: 'en' } });
+    const sealed = await marketplace.sealLeadMemberFields(pool, enc, { pariwarId: w.pariwarId, moduleId: w.moduleId, leadId, fields: { full_name: 'X Y', mobile: MOBILE_RAW, district: null, preferred_language: 'en' } });
     // `recordLeadHandoff` now REFUSES this row (`member_not_in_pariwar` — code review 2026-11-22, patch 1), so a row that predates the
     // check, or one written around it, is seeded raw: P0 at send stays the backstop.
     await expect(
@@ -1259,5 +1307,176 @@ describe.skipIf(!hasDatabase)('Story 12.5 — the lead-handoff sweep (live DB, o
     expect((await row(leadId))['member_fields_ciphertext']).not.toBeNull();
     await runModuleLeadHandoffTick(deps({ retentionDays: 0 }));
     expect(await row(leadId)).toMatchObject({ status: 'delivered', member_fields_ciphertext: null });
+  });
+
+  // ── Story 12.5b (AC5, AC8's purge; QE5) — a `partner_form` row fails LOUDLY; W15 ──
+
+  /**
+   * A `partner_form` offer in a fresh Pariwar, its member, and a `due` handoff row for it — a row the commands AND the 0216 trigger refuse,
+   * so it is PLANTED (G26, TR26): ONE committed superuser transaction under `SET LOCAL session_replication_role = 'replica'` (skips the
+   * triggers and the FK checks — the parents are real), set back to `'origin'` before COMMIT. ⛔ a `pg_temp` clone (the tick's own
+   * connections never see it), ⛔ a "flip" of the immutable route, ⛔ `ALTER TABLE … DISABLE TRIGGER`.
+   */
+  async function plantPartnerFormRow(o: { nextAttemptAtSql?: string } = {}): Promise<{ w: World; leadId: string }> {
+    const pariwarId = randomUUID();
+    pariwars.push(pariwarId);
+    const partnerId = randomUUID();
+    const moduleId = randomUUID();
+    const memberId = randomUUID();
+    const leadId = randomUUID();
+    const consentId = randomUUID();
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query(
+        `INSERT INTO marketplace_partners (partner_id, pariwar_id, display_name_en, display_name_hi, created_by_actor_id, audit_id)
+         VALUES ($1, $2, $3, 'साझेदार', $4, $5)`,
+        [partnerId, pariwarId, `Partner ${randomUUID()}`, randomUUID(), randomUUID()],
+      );
+      await c.query("SET LOCAL app.marketplace_module_state_writer = 'on'");
+      await c.query(
+        `INSERT INTO marketplace_modules (module_id, pariwar_id, partner_id, name_en, name_hi, description_en, description_hi, eligibility_filter,
+           scope_filter, valid_from, valid_until, slot_capacity, branding_bundle, manifest_schema_version, lead_route, partner_form_url,
+           current_state, state_event_version, slots_remaining, archive_reason, audit_id)
+         VALUES ($1, $2, $3, 'n', 'n', 'd', 'd', '{"version":1,"clauses":[]}', '{"version":1,"scope":"members-all"}',
+                 now() - interval '1 hour', now() + interval '1 hour', NULL, '{"version":1,"logo_object_key":null,"accent_color_hex":null}', 2,
+                 'partner_form', 'https://partner.test/apply?offer=twt', 'draft', 1, NULL, NULL, $4)`,
+        [moduleId, pariwarId, partnerId, randomUUID()],
+      );
+      await c.query(`UPDATE marketplace_modules SET current_state = 'active', state_event_version = 2 WHERE module_id = $1`, [moduleId]);
+      await c.query(`INSERT INTO members (member_id, pariwar_id, state, state_event_version) VALUES ($1, $2, 'active', 1)`, [memberId, pariwarId]);
+      await c.query(
+        `INSERT INTO consent_records (consent_id, subject_id, pariwar_id, consent_type, consent_artifact_ref, granted_via_actor, consent_payload)
+         VALUES ($1, $2, $3, 'module_lead_handoff', $4, 'member_self', '{}')`,
+        [consentId, memberId, pariwarId, leadId],
+      );
+      await c.query("SET LOCAL session_replication_role = 'replica'");
+      await c.query(
+        `INSERT INTO marketplace_lead_handoffs (lead_id, pariwar_id, module_id, member_id, consent_id, envelope_version, member_fields_ciphertext,
+           audit_id, next_attempt_at) VALUES ($1, $2, $3, $4, $5, 1, 'enc:v1:planted', $6, ${o.nextAttemptAtSql ?? "now() - interval '100 years'"})`,
+        [leadId, pariwarId, moduleId, memberId, consentId, randomUUID()],
+      );
+      await c.query("SET LOCAL session_replication_role = 'origin'");
+      await c.query('COMMIT');
+    } catch (e) {
+      await c.query('ROLLBACK').catch(() => undefined);
+      throw e;
+    } finally {
+      c.release();
+    }
+    return { w: { pariwarId, partnerId, moduleId, memberId }, leadId };
+  }
+
+  /** The pool with its `pool.query` statements that `match` refused (⛔ a checked-out client's — `faultyPool` covers those). */
+  function poolQueryFaulting(match: (text: string) => boolean): pg.Pool {
+    return new Proxy(pool, {
+      get(t, prop) {
+        if (prop === 'query') {
+          return (q: unknown, v?: unknown) =>
+            match(String(typeof q === 'string' ? q : ((q as { text?: unknown }).text ?? '')))
+              ? Promise.reject(Object.assign(new Error('injected fault'), { code: '42501' }))
+              : (t.query as (...a: unknown[]) => unknown).call(t, q, v);
+        }
+        const value: unknown = Reflect.get(t, prop, t);
+        return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(t) : value;
+      },
+    });
+  }
+  /** The waiting pass's page read fails (its throw ends only the PASS — `-488` (2)), so the CLAIM is what meets the row. */
+  const passOutOfTheWay = (): pg.Pool => poolQueryFaulting((text) => text.includes('AS module_withdrawn'));
+
+  it('AC5: a due row for a partner_form offer is claimed and CANCELLED partner_form_route — the fields gone, ONE route alarm; ⛔ secret, DNS, decrypt, audit line or request', async () => {
+    const { w, leadId } = await plantPartnerFormRow();
+    alarms.length = 0;
+    lookups.length = 0;
+    const secrets: string[] = [];
+    const result = await runModuleLeadHandoffTick(deps({ pool: passOutOfTheWay(), resolveSecret: async (n) => (secrets.push(n), SECRET) }));
+    expect(result.claimed).toBeGreaterThanOrEqual(1);
+    expect(result.cancelledWaiting).toBe(0);
+    expect(await row(leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:partner_form_route', member_fields_ciphertext: null, claim_token: null });
+    const routeAlarms = alarmsFor(leadId).filter((a) => a.includes('module_lead_handoff_route_refused'));
+    expect(routeAlarms).toHaveLength(1);
+    expect(alarmsFor(leadId)).toHaveLength(1);
+    expect(sentFor(leadId)).toHaveLength(0);
+    expect(secrets).toEqual([]);
+    expect(lookups).toEqual([]);
+    expect(await auditLines(w.pariwarId, leadId)).toEqual([]);
+  });
+
+  it('AC5: the WAITING pass cancels such a row the same way, before reading the member\'s side (a row the claim does not reach)', async () => {
+    const { w, leadId } = await plantPartnerFormRow({ nextAttemptAtSql: "now() + interval '1 hour'" });
+    alarms.length = 0;
+    const result = await runModuleLeadHandoffTick(deps());
+    expect(result.cancelledWaiting).toBeGreaterThanOrEqual(1);
+    expect(await row(leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:partner_form_route', member_fields_ciphertext: null });
+    expect(alarmsFor(leadId).filter((a) => a.includes('module_lead_handoff_route_refused'))).toHaveLength(1);
+    expect(sentFor(leadId)).toHaveLength(0);
+    expect(await auditLines(w.pariwarId, leadId)).toEqual([]);
+  });
+
+  it('AC5 / TR1: a NULL-authority row is claimed even while another authority is OPEN in the same tick', async () => {
+    // The trust_sends row first (recorded first: an older next_attempt_at); its 503 opens partner.test's authority for the rest of the
+    // tick. The planted row's next_attempt_at is its own plant time — later, so the claim reaches it SECOND, with that authority open.
+    const w = await world('https://partner.test/s503');
+    const first = await lead(w);
+    const { leadId } = await plantPartnerFormRow({ nextAttemptAtSql: 'clock_timestamp()' });
+    await runModuleLeadHandoffTick(deps({ pool: passOutOfTheWay(), retryScheduleMs: HOUR_SCHEDULE }));
+    expect(await row(first.leadId)).toMatchObject({ status: 'due', outcome_detail: 'released:http_5xx:503' });
+    expect(await row(leadId)).toMatchObject({ status: 'cancelled', outcome_detail: 'cancelled:partner_form_route' });
+  });
+
+  /** A visit row `ageSql` old, for `w`'s module and member (committed). */
+  async function visit(w: World, ageSql: string): Promise<string> {
+    const id = randomUUID();
+    await pool.query(
+      `INSERT INTO marketplace_partner_form_visits (visit_id, pariwar_id, module_id, member_id, opened_at) VALUES ($1, $2, $3, $4, clock_timestamp() - ${ageSql})`,
+      [id, w.pariwarId, w.moduleId, w.memberId],
+    );
+    return id;
+  }
+  const visitExists = async (id: string): Promise<boolean> =>
+    (await pool.query('SELECT 1 FROM marketplace_partner_form_visits WHERE visit_id = $1', [id])).rows.length === 1;
+
+  it('W15 (AC8; QE10 (A)): a visit record MORE than 90 days old is removed, one at 89 days kept — and the same for a member whose death is reported (⛔ special rule)', async () => {
+    const plain = (await plantPartnerFormRow()).w;
+    const died = (await plantPartnerFormRow()).w;
+    // A standing death report for `died` (the P5 seeding: an intake, then a settlement — the report stands after the freeze lifts).
+    const claimId = randomUUID();
+    const c = await pool.connect();
+    try {
+      await c.query('BEGIN');
+      await c.query("SET LOCAL app.claim_state_writer = 'on'");
+      await c.query(`INSERT INTO claims (claim_case_id, pariwar_id, deceased_member_id, intake_channels, current_state, state_event_version) VALUES ($1, $2, $3, '{member_app}', 'intake_pending', 1)`, [
+        claimId,
+        died.pariwarId,
+        died.memberId,
+      ]);
+      await c.query('COMMIT');
+    } finally {
+      c.release();
+    }
+    await pool.query(`INSERT INTO events_log (stream_id, event_type, payload, event_version, pariwar_id, occurred_at) VALUES ($1, 'claim.intake_initiated', $2, 1, $3, now() - interval '2 hours')`, [
+      claimId,
+      JSON.stringify({ deceased_member_id: died.memberId }),
+      died.pariwarId,
+    ]);
+    expect(await withPariwarScope(pool, died.pariwarId, (db: Db) => claim.isDeathReportStanding(db, died.pariwarId as never, died.memberId as never))).toBe(true);
+    const old = [await visit(plain, "interval '90 days 1 minute'"), await visit(died, "interval '90 days 1 minute'")];
+    const young = [await visit(plain, "interval '89 days'"), await visit(died, "interval '89 days'")];
+    const result = await runModuleLeadHandoffTick(deps());
+    expect(result.visitsPurged).toBeGreaterThanOrEqual(2);
+    for (const id of old) expect(await visitExists(id)).toBe(false);
+    for (const id of young) expect(await visitExists(id)).toBe(true);
+  });
+
+  it('AC5: a W15 throw ⇒ ONE visit_purge_failed alarm, and a trust_sends row due in the SAME tick is still delivered', async () => {
+    const { leadId } = await lead(await world());
+    alarms.length = 0;
+    // W15 runs on `pool.query` (⛔ a checked-out client), so the fault is injected there; every other statement passes through.
+    const result = await runModuleLeadHandoffTick(deps({ pool: poolQueryFaulting((text) => text.includes('marketplace_partner_form_visits')) }));
+    expect(sentFor(leadId)).toHaveLength(1);
+    expect(await row(leadId)).toMatchObject({ status: 'delivered' });
+    expect(result.visitsPurged).toBe(0);
+    expect(alarms.filter((a) => a.includes('visit_purge_failed'))).toHaveLength(1);
   });
 });

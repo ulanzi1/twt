@@ -17,24 +17,37 @@
 // opens; Cancel, the held retry and every write's result return it to the heading. Arriving from "Create draft" (the admin's
 // own draft) announces it and focuses the heading, unless the admin has already moved focus elsewhere (PT2, PT10). A change
 // made elsewhere (another admin publishing, seen on a refresh) can still unmount the publish form under focus.
+//
+// ⭐ Story 12.5b (`2026-11-22-489` QE6 (A), QE12 (A), QE13 (A); `-486` R1 A, R3 B): the page says how the offer reaches the partner and
+// shows that route's fields. PUBLISH asks the publisher to choose the route again, with ⛔ default (it must be the one the offer was
+// written with — the server answers 409 `module.lead_route_mismatch` otherwise, with ⛔ write). An offer that uses the partner's own
+// page shows its FIGURES — the Trust's own counts and the partner's totals, every figure below 5 as "fewer than 5" (the server never
+// sends one) — and a form to enter the partner's totals for a period. ⛔ A member anywhere on this page.
 
-import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse } from '@twt/contracts';
+import { MODULE_PUBLISH_STEP_UP_CONTEXT, type ModuleDetailResponse, type ModuleLeadRoute } from '@twt/contracts';
 import type { ReactElement } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
 import { ApiError } from '../../api/client.js';
-import { newIdempotencyKey, useModuleDetail, usePublishModule, useWithdrawModule } from '../../api/hooks.js';
+import { newIdempotencyKey, useModuleDetail, usePublishModule, useRecordPartnerFormTotals, useWithdrawModule } from '../../api/hooks.js';
 import { holdKey, holdOnce, needsStepUp, StepUpPanel, type PendingWrite } from '../workplaces/StepUpPanel.js';
 import {
   describeEligibility,
-  describePlaces,
+  describePlacesFor,
   describePublication,
+  describeRoute,
   describeScope,
   describeWindow,
   eligibilityStatesOf,
+  emptyTotalsDraft,
+  figureText,
+  formatIst,
   leadWarning,
   moduleErrorGuidance,
   reachesNoMemberYet,
+  toTotalsRequest,
+  validateTotalsDraft,
+  type TotalsDraft,
 } from './derive.js';
 import { focusIfUnclaimed } from './focus.js';
 import { resolveEn as t } from './i18n-en.js';
@@ -65,7 +78,14 @@ export function ModuleDetailPage({
   const detail = useModuleDetail(pariwarId, moduleId);
   const publish = usePublishModule(pariwarId, moduleId);
   const withdraw = useWithdrawModule(pariwarId, moduleId);
+  const recordTotals = useRecordPartnerFormTotals(pariwarId, moduleId);
   const [ticks, setTicks] = useState({ tone: false, hindi: false, partner: false });
+  // Story 12.5b (QE6 (A)) — the publisher's route, ⛔ default.
+  const [publishRoute, setPublishRoute] = useState<ModuleLeadRoute | null>(null);
+  const [totals, setTotals] = useState<TotalsDraft>(emptyTotalsDraft);
+  const [totalsMessage, setTotalsMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const totalsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const totalsInFlight = useRef(false);
   const [pending, setPending] = useState<PendingWrite<'publish'>>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const holdSeq = useRef(0);
@@ -119,10 +139,10 @@ export function ModuleDetailPage({
   const busy = publish.isPending || withdraw.isPending || pending !== null || refreshing;
   const canWithdraw = m.current_state !== 'archived';
 
-  const runPublish = async (idempotencyKey: string, retried: boolean): Promise<void> => {
+  const runPublish = async (idempotencyKey: string, leadRoute: ModuleLeadRoute, retried: boolean): Promise<void> => {
     setMessage(null);
     try {
-      await publish.mutateAsync({ idempotencyKey });
+      await publish.mutateAsync({ idempotencyKey, leadRoute });
       setAwaitingRefresh(true);
       setMessage({ kind: 'ok', text: t('module.detail.published') });
       headingRef.current?.focus(); // the form that held focus is about to unmount (RP32)
@@ -136,7 +156,7 @@ export function ModuleDetailPage({
         }
         holdSeq.current += 1;
         setPending(
-          holdOnce({ owner: 'publish', id: holdSeq.current, label: t('module.detail.stepUpLabel'), retry: () => void runPublish(idempotencyKey, true) }),
+          holdOnce({ owner: 'publish', id: holdSeq.current, label: t('module.detail.stepUpLabel'), retry: () => void runPublish(idempotencyKey, leadRoute, true) }),
         );
         return;
       }
@@ -168,6 +188,27 @@ export function ModuleDetailPage({
   };
 
   const allTicked = ticks.tone && ticks.hindi && ticks.partner;
+  const partnerForm = m.lead_route === 'partner_form';
+  const totalsReason = validateTotalsDraft(totals);
+
+  // Story 12.5b (QE12 (A)) — save the partner's totals; each click a new intent (a new key). Focus returns to the form's heading.
+  const runTotals = async (): Promise<void> => {
+    if (totalsInFlight.current) return;
+    totalsInFlight.current = true;
+    setTotalsMessage(null);
+    try {
+      await recordTotals.mutateAsync({ body: toTotalsRequest(totals), idempotencyKey: newIdempotencyKey() });
+      setTotals(emptyTotalsDraft());
+      setTotalsMessage({ kind: 'ok', text: t('module.totals.saved') });
+    } catch (err) {
+      setTotalsMessage({ kind: 'error', text: err instanceof ApiError ? moduleErrorGuidance(err.code, 'detail') : t('module.error.generic') });
+    } finally {
+      totalsInFlight.current = false;
+      totalsHeadingRef.current?.focus(); // the Save button was disabled under focus while the write ran (RC2)
+    }
+  };
+  const setStage = (i: number, patch: Partial<TotalsDraft['stages'][number]>): void =>
+    setTotals((d) => ({ ...d, stages: d.stages.map((st, j) => (j === i ? { ...st, ...patch } : st)) }));
 
   return (
     <section className="flex max-w-3xl flex-col gap-4 p-4" data-testid="module-detail">
@@ -221,9 +262,26 @@ export function ModuleDetailPage({
         </p>
       ) : null}
       <p className="text-sm">{describeWindow(m.valid_from, m.valid_until)}</p>
-      <p className="text-sm">{describePlaces(m.slot_capacity)}</p>
-      <p className="text-xs break-all">{t('module.detail.leadUrl', { url: m.lead_handoff_url })}</p>
-      <p className="text-xs">{t('module.detail.secretName', { name: m.lead_handoff_signing_key_secret_name })}</p>
+      <div data-testid="module-detail-route">
+        <p className="text-sm">{t('module.detail.route', { route: describeRoute(m.lead_route).name })}</p>
+        <p className="text-xs">{describeRoute(m.lead_route).meaning}</p>
+      </div>
+      <p className="text-sm">{describePlacesFor(m.lead_route, m.slot_capacity)}</p>
+      {partnerForm ? (
+        <>
+          <p className="text-xs break-all" data-testid="module-detail-partner-form-url">
+            {t('module.detail.partnerFormUrl', { url: m.partner_form_url ?? '' })}
+          </p>
+          <p className="text-xs" data-testid="module-detail-leads-not-used">
+            {t('module.detail.leadsNotUsed')}
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-xs break-all">{t('module.detail.leadUrl', { url: m.lead_handoff_url ?? '' })}</p>
+          <p className="text-xs">{t('module.detail.secretName', { name: m.lead_handoff_signing_key_secret_name ?? '' })}</p>
+        </>
+      )}
 
       <p className="text-sm" data-testid="module-detail-publication">
         {describePublication(m.publication, m.current_state)}
@@ -242,6 +300,23 @@ export function ModuleDetailPage({
               </p>
             </>
           ) : null}
+          {/* Story 12.5b (QE6 (A); `-486` R1 A) — the publisher chooses the route, ⛔ default. */}
+          <fieldset className="flex flex-col gap-1" data-testid="module-publish-route">
+            <legend className="text-sm">{t('module.detail.publishRoute')}</legend>
+            {(['trust_sends', 'partner_form'] as const).map((route) => (
+              <label key={route} className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="publish-route"
+                  checked={publishRoute === route}
+                  disabled={m.authored_by_viewer || busy}
+                  onChange={() => setPublishRoute(route)}
+                  data-testid={`module-publish-route-${route}`}
+                />
+                {describeRoute(route).name}
+              </label>
+            ))}
+          </fieldset>
           {(['tone', 'hindi', 'partner'] as const).map((k) => (
             <label key={k} className="flex items-start gap-2 text-sm">
               <input
@@ -257,13 +332,143 @@ export function ModuleDetailPage({
           <button
             type="button"
             className="w-fit rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
-            disabled={m.authored_by_viewer || !allTicked || busy}
-            aria-describedby={m.authored_by_viewer ? 'module-publish-author' : undefined}
-            onClick={once(() => runPublish(newIdempotencyKey(), false))}
+            disabled={m.authored_by_viewer || !allTicked || publishRoute === null || busy}
+            aria-describedby={m.authored_by_viewer ? 'module-publish-author' : publishRoute === null ? 'module-publish-route-reason' : undefined}
+            onClick={once(() => (publishRoute === null ? Promise.resolve() : runPublish(newIdempotencyKey(), publishRoute, false)))}
             data-testid="module-publish-button"
           >
             {publish.isPending ? t('module.detail.publishing') : t('module.detail.publish')}
           </button>
+          {!m.authored_by_viewer && publishRoute === null ? (
+            <p className="text-xs" role="status" id="module-publish-route-reason" data-testid="module-publish-route-reason">
+              {t('module.detail.publishRouteReason')}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {partnerForm && m.partner_form_figures !== null ? (
+        <div className="flex flex-col gap-2 rounded border p-3" data-testid="module-figures">
+          <h2 className="font-medium">{t('module.figures.heading')}</h2>
+          <p className="text-xs">{t('module.figures.note')}</p>
+          <table className="text-sm">
+            <thead>
+              <tr>
+                <th scope="col" className="text-left">{t('module.figures.byDay')}</th>
+                {(['card_shown', 'card_opened', 'went_to_partner', 'came_back'] as const).map((k) => (
+                  <th key={k} scope="col" className="text-left">{t(`module.figures.kind.${k}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-testid="module-figures-total">
+                <th scope="row" className="text-left">{t('module.figures.total')}</th>
+                {(['card_shown', 'card_opened', 'went_to_partner', 'came_back'] as const).map((k) => (
+                  <td key={k}>{figureText(m.partner_form_figures!.counts[k])}</td>
+                ))}
+              </tr>
+              {m.partner_form_figures.days.map((d) => (
+                <tr key={d.day} data-testid={`module-figures-day-${d.day}`}>
+                  <th scope="row" className="text-left">{d.day}</th>
+                  {(['card_shown', 'card_opened', 'went_to_partner', 'came_back'] as const).map((k) => (
+                    <td key={k}>{figureText(d.counts[k])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {m.partner_form_figures.days.length === 0 ? <p className="text-xs">{t('module.figures.noDays')}</p> : null}
+
+          <h3 className="font-medium">{t('module.figures.partner.heading')}</h3>
+          {m.partner_form_figures.partner_totals.length === 0 ? (
+            <p className="text-xs" data-testid="module-partner-totals-none">{t('module.figures.partner.none')}</p>
+          ) : (
+            <ul className="flex flex-col gap-2" data-testid="module-partner-totals">
+              {m.partner_form_figures.partner_totals.map((entry) => (
+                <li key={entry.totals_id} className="text-sm">
+                  <p className="font-medium">{t('module.figures.partner.period', { from: entry.period_start, until: entry.period_end })}</p>
+                  <p className="text-xs">{t('module.figures.partner.entered', { at: formatIst(entry.entered_at) })}</p>
+                  <ol className="list-decimal pl-5">
+                    {entry.stages.map((st) => (
+                      <li key={st.order}>
+                        {st.label}: {figureText(st)}
+                      </li>
+                    ))}
+                  </ol>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h3 ref={totalsHeadingRef} tabIndex={-1} className="font-medium outline-none">{t('module.totals.heading')}</h3>
+          <p className="text-xs" id="module-totals-hint">{t('module.totals.hint')}</p>
+          <fieldset disabled={recordTotals.isPending} className="flex flex-col gap-2" aria-describedby="module-totals-hint" data-testid="module-totals-form">
+            <div className="flex gap-2">
+              <label className="flex flex-col text-sm">
+                {t('module.totals.periodStart')}
+                <input type="date" className="rounded border px-2 py-1 text-sm" value={totals.periodStart} onChange={(e) => setTotals((d) => ({ ...d, periodStart: e.target.value }))} data-testid="totals-period-start" />
+              </label>
+              <label className="flex flex-col text-sm">
+                {t('module.totals.periodEnd')}
+                <input type="date" className="rounded border px-2 py-1 text-sm" value={totals.periodEnd} onChange={(e) => setTotals((d) => ({ ...d, periodEnd: e.target.value }))} data-testid="totals-period-end" />
+              </label>
+            </div>
+            {totals.stages.map((st, i) => (
+              <div key={i} className="flex items-end gap-2">
+                <label className="flex flex-col text-sm">
+                  {t('module.totals.stageLabel', { n: i + 1 })}
+                  <input className="rounded border px-2 py-1 text-sm" value={st.label} onChange={(e) => setStage(i, { label: e.target.value })} data-testid={`totals-stage-label-${i}`} />
+                </label>
+                <label className="flex flex-col text-sm">
+                  {t('module.totals.stageFigure', { n: i + 1 })}
+                  <input inputMode="numeric" className="rounded border px-2 py-1 text-sm" value={st.figure} onChange={(e) => setStage(i, { figure: e.target.value })} data-testid={`totals-stage-figure-${i}`} />
+                </label>
+                {totals.stages.length > 1 ? (
+                  <button
+                    type="button"
+                    className="rounded border px-2 py-1 text-xs"
+                    onClick={() => {
+                      setTotals((d) => ({ ...d, stages: d.stages.filter((_x, j) => j !== i) }));
+                      totalsHeadingRef.current?.focus(); // the pressed button unmounts with its row
+                    }}
+                    data-testid={`totals-stage-remove-${i}`}
+                  >
+                    {t('module.totals.removeStage', { n: i + 1 })}
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            <div className="flex gap-2">
+              {totals.stages.length < 20 ? (
+                <button type="button" className="rounded border px-3 py-1 text-sm" onClick={() => setTotals((d) => ({ ...d, stages: [...d.stages, { label: '', figure: '' }] }))} data-testid="totals-stage-add">
+                  {t('module.totals.addStage')}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="rounded bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
+                disabled={totalsReason !== null || recordTotals.isPending}
+                aria-describedby={totalsReason !== null ? 'module-totals-reason' : undefined}
+                onClick={() => void runTotals()}
+                data-testid="totals-save"
+              >
+                {recordTotals.isPending ? t('module.totals.saving') : t('module.totals.save')}
+              </button>
+            </div>
+          </fieldset>
+          {totalsReason !== null ? (
+            <p className="text-xs" role="status" id="module-totals-reason" data-testid="module-totals-reason">
+              {totalsReason}
+            </p>
+          ) : null}
+          <div role="status" aria-live="polite" data-testid="module-totals-live">
+            {totalsMessage !== null && totalsMessage.kind === 'ok' ? <p className="text-sm">{totalsMessage.text}</p> : null}
+          </div>
+          {totalsMessage !== null && totalsMessage.kind === 'error' ? (
+            <p role="alert" className="text-sm text-status-fail-fg" data-testid="module-totals-error">
+              {totalsMessage.text}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

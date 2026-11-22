@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MARKETPLACE_MODULE_ARCHIVE_REASONS,
+  MARKETPLACE_MODULE_LEAD_ROUTES,
   MARKETPLACE_MODULE_STATES,
 } from '../../../src/schema/marketplace_modules.js';
 import { getTx, hasDatabase, setupLiveDb } from '../../../src/test-utils/integration-setup.js';
@@ -47,8 +48,9 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
       ['valid_from', 'timestamptz', 'NO'],
       ['valid_until', 'timestamptz', 'NO'],
       ['slot_capacity', 'int4', 'YES'],
-      ['lead_handoff_url', 'text', 'NO'],
-      ['lead_handoff_signing_key_secret_name', 'text', 'NO'],
+      // Story 12.5b (0216) — nullable: a `partner_form` offer has neither (`marketplace_modules_route_columns`).
+      ['lead_handoff_url', 'text', 'YES'],
+      ['lead_handoff_signing_key_secret_name', 'text', 'YES'],
       ['branding_bundle', 'jsonb', 'NO'],
       ['manifest_schema_version', 'int2', 'NO'],
       ['current_state', 'marketplace_module_state', 'NO'],
@@ -58,12 +60,16 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
       ['audit_id', 'uuid', 'NO'],
       ['created_at', 'timestamptz', 'NO'],
       ['updated_at', 'timestamptz', 'NO'],
+      // Story 12.5b (0216) — ADD COLUMN appends; the route has ⛔ default after the migration (every INSERT names it).
+      ['lead_route', 'marketplace_module_lead_route', 'NO'],
+      ['partner_form_url', 'text', 'YES'],
     ]);
     // ⛔ default on module_id (caller-minted, QE15); now() on the two timestamps only.
     const defaults = Object.fromEntries(r.rows.map((c) => [c.column_name, c.column_default]));
     expect(defaults['module_id']).toBeNull();
     expect(defaults['created_at']).toBe('now()');
     expect(defaults['updated_at']).toBe('now()');
+    expect(defaults['lead_route']).toBeNull();
   });
 
   it('the pgEnums are sourced from the domain tuples', async () => {
@@ -77,10 +83,12 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
       ).rows.map((x) => x.enumlabel);
     expect(await labels('marketplace_module_state')).toEqual([...MARKETPLACE_MODULE_STATES]);
     expect(await labels('marketplace_module_archive_reason')).toEqual([...MARKETPLACE_MODULE_ARCHIVE_REASONS]);
+    expect(await labels('marketplace_module_lead_route')).toEqual([...MARKETPLACE_MODULE_LEAD_ROUTES]);
   });
 
   // Story 12.2 (QE3 / QE4 / QE7 (A)) added ONE unique, ONE composite FK and ONE partial index — ⛔ a CHECK.
-  it('carries exactly the six named CHECKs, the PK, the 12.2 unique + partner FK, and the five indexes', async () => {
+  // Story 12.5b (0216) REPLACED the v1 CHECK by two and added the route-pairing CHECK and the route unique.
+  it('carries exactly the eight named CHECKs, the PK, the two uniques + partner FK, and the six indexes', async () => {
     const { client } = getTx();
     const cons = await client.query<{ conname: string; contype: string }>(
       `SELECT conname, contype FROM pg_constraint WHERE conrelid = 'marketplace_modules'::regclass ORDER BY conname`,
@@ -88,17 +96,20 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
     expect(cons.rows.filter((c) => c.contype === 'c').map((c) => c.conname)).toEqual([
       'marketplace_modules_archive_reason_pair',
       'marketplace_modules_capacity_positive',
-      'marketplace_modules_manifest_schema_version_v1',
+      'marketplace_modules_manifest_schema_version',
+      'marketplace_modules_route_columns',
       'marketplace_modules_slots_pair',
       'marketplace_modules_slots_range',
+      'marketplace_modules_v1_is_trust_sends',
       'marketplace_modules_window',
     ]);
     expect(cons.rows.filter((c) => c.contype === 'p').map((c) => c.conname)).toEqual(['marketplace_modules_pkey']);
     expect(cons.rows.filter((c) => c.contype === 'u').map((c) => c.conname)).toEqual([
+      'marketplace_modules_pariwar_module_route_unique',
       'marketplace_modules_pariwar_module_unique',
     ]);
     expect(cons.rows.filter((c) => c.contype === 'f').map((c) => c.conname)).toEqual(['marketplace_modules_partner_fk']);
-    expect(cons.rows).toHaveLength(9);
+    expect(cons.rows).toHaveLength(12);
     // The FK BY COLUMNS (both sides, in order) and its actions — ⛔ CASCADE / SET NULL (an FK action updating this table
     // would run without the writer guard and the 0193 trigger would reject it).
     const fk = await client.query<{ def: string }>(
@@ -112,6 +123,7 @@ describe.skipIf(!hasDatabase)('marketplace_modules — table shape (AC1)', () =>
     );
     expect(idx.rows.map((i) => i.indexname)).toEqual([
       'marketplace_modules_pariwar_id_idx',
+      'marketplace_modules_pariwar_module_route_unique',
       'marketplace_modules_pariwar_module_unique',
       'marketplace_modules_pariwar_state_idx',
       'marketplace_modules_pkey',
@@ -316,6 +328,9 @@ describe.skipIf(!hasDatabase)('marketplace_modules — the whole-row write guard
       branding_bundle: `'{"version":1,"logo_object_key":"x","accent_color_hex":null}'::jsonb`,
       manifest_schema_version: '2',
       created_at: "created_at - interval '1 day'",
+      // Story 12.5b (0216, G2) — immutable with ⛔ trigger change.
+      lead_route: "'partner_form'",
+      partner_form_url: "'https://partner.example/apply?offer=x'",
     };
     const cols = await client.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'marketplace_modules' ORDER BY column_name`,
@@ -406,7 +421,8 @@ describe.skipIf(!hasDatabase)('marketplace_modules — the whole-row write guard
   it.each([
     ['marketplace_modules_window', 'valid_until before valid_from', () => rawInsertSqlWith({ invertedWindow: true }), {}],
     ['marketplace_modules_capacity_positive', 'slot_capacity = 0', () => RAW_INSERT_SQL, { capacity: 0 }],
-    ['marketplace_modules_manifest_schema_version_v1', 'manifest_schema_version = 2', () => rawInsertSqlWith({ schemaVersion: 2 }), {}],
+    // Story 12.5b (0216) — the v1 CHECK was REPLACED by `IN (1, 2)`: 2 is legal now (partner-form-schema.spec.ts), 3 is not.
+    ['marketplace_modules_manifest_schema_version', 'manifest_schema_version = 3', () => rawInsertSqlWith({ schemaVersion: 3 }), {}],
   ])('RP2: %s fires for %s (23514, by name)', async (name, _why, sqlOf, opts) => {
     const { client } = getTx();
     await enterAppScope(client, PARIWAR_A);

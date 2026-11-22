@@ -32,7 +32,7 @@ ancestor of HEAD" is durable; "the code claims were re-derived" is perishable �
 
 # Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -342,6 +342,25 @@ option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in 
       ✅ `ci:local` **41/41 green** at `e3105ae7` on a FRESH `twt-3-15-pg` (:5447), `.expo/types` moved aside (run 2; run 1's two reds in Debug Log).
 - [x] **Task 5 — Records.** DL12; story Dev Agent Record, File List, Change Log; sprint row → `review`; ONE ledger entry (safe prepend,
       YAML parses, row count holds).
+
+### Review Findings
+
+Code review 2026-11-22: `99922af1..83fb1ee2`, full story review with Blind Hunter, Edge Case Hunter and Acceptance Auditor.
+After deduplication: **0 decision-needed, 5 patch, 0 defer, 1 dismissed**. Findings below remain open; implementation was not patched.
+
+Disposition (BigDev, 2026-11-22): **2 — Leave as action items**. R1–R5 remain unchecked; no implementation patches applied. Story and sprint row returned to `in-progress`.
+
+- [ ] [Review][Patch] **R1 / P2 — Freeze the submitted code while its immutable capture is pending.** [`apps/mobile/app/(signup)/assisted.tsx:170`] The input remains editable during the POST. Submit A, edit the displayed value to B, then let A succeed: the screen says the code is saved and advances although A, not the displayed B, was permanently captured. A rejection likewise attaches A's error to B. Disable editing while busy and guard `onChangeText` against in-flight changes. Sources: blind + edge. Reproduced with a held POST in the temporary review harness.
+- [ ] [Review][Patch] **R2 / P2 — Cancel status-read and saved-timer navigation on blur.** [`apps/mobile/app/(signup)/assisted.tsx:66`] The focus cleanup invalidates only the POST continuation. A pending GET (recorded or failure/timeout) or the saved-state timer can still call `router.replace` while the screen remains mounted behind another route, replacing the active screen with KYC. Bind these continuations to focus and cancel/restart them appropriately. Sources: blind + edge. Both the late GET and saved timer reproduced after invoking focus cleanup without unmounting.
+- [ ] [Review][Patch] **R3 / P2 — Announce the code-entry phase after Yes.** [`apps/mobile/app/(signup)/assisted.tsx:124`] Checklist family 13(d), AC6 / DL8: Yes removes the choice buttons and shows the code form, but the announcement hook covers only `ask`; the new phase has neither an announcement nor focus transfer. Announce the code-entry phase using the existing localized label, with a regression assertion. Source: auditor. Temporary render check confirmed no announcement or input focus after Yes; native device behavior remains un-attested.
+- [ ] [Review][Patch] **R4 / P2 — Add runtime denial evidence for hostile/non-access bearers on the new mutation route.** [`apps/api/tests/integration/member-attribution/assisted-code.spec.ts:255`] Checklist family 3 requires these cases per new mutation route. Current tests exercise valid access tokens and an absent token only. Exercise a tampered token and validly signed non-access token kinds (including signup-continuation / Pariwar-select), plus a non-member actor as applicable, asserting denial and no capture beside a valid-member control. The shared guard appears correct; this is missing required regression evidence, not a demonstrated authentication bypass. Source: auditor.
+- [ ] [Review][Patch] **R5 / P3 — Make the cross-Pariwar isolation fixture deterministic.** [`apps/api/tests/integration/member-attribution/assisted-code.spec.ts:312`] Independently allocated codes in P and Q may legally contain the same digits: uniqueness is per Pariwar. The test assumes they differ, causing a legitimate collision to fail CI; simply removing the inequality assertion would still leave the expected 422 incorrect. Construct distinct fixture codes deterministically, and preferably cover the valid same-digits-in-two-Pariwars case separately. Source: blind.
+
+Review validation: **191 existing targeted tests passed** (35 mobile, 124 API one-writer/reach-fence, 5 contracts, 27 live-DB assisted-code/payment on the story's isolated :5447 container). Four temporary mobile reproduction checks passed, demonstrating R1, both R2 continuations and R3; these checks assert the observed defects and are not permanent regression coverage. Temporary harness: `/private/tmp/twt-315-review-repro/`.
+
+Triage: the disabled skip button during the bounded POST was dismissed because DL7/DL8 and AC6 expressly accept bounded request waiting before automatic continuation. The overlapping member-lifecycle candidate was not promoted: the capture's transaction-start timestamp permits capture-before-transition ordering. Authorized inactive-worker capture, credit deferral to 13.5, payment-contract narrowing and the declared lack of a device pass were not treated as new defects.
+
+Checklist: families 1 and 2 covered by state/idempotency tests; family 3 has R4 (cross-Pariwar and per-member reads otherwise covered); family 6 covered by explicit field selection and insert-only capture; family 8 covered by awaited commit before session-attributed audit (no admin mutation); family 10 covered by explicit un-attested/deferred records; family 12 covered by session identity, strict request shape and unique capture; family 13 has R3. Families 4, 5, 7, 9 and 11 untouched.
 
 ## Dev Notes
 

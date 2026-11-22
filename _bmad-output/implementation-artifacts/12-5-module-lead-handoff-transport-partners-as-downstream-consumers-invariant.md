@@ -14,7 +14,7 @@ SHAs cited here are the post-rebase ones). Between the pin and `e5e13f92` eight 
 cited here — `member/anonymize.ts`, where only a comment changed (the three pinned counts in `rtbf-anonymize.test.ts`
 are unchanged). Migration `0213` and decisions `-477`–`-481` are now on `main`.
 
-STATUS: ready-for-dev (2026-11-21 — v1.8). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
+STATUS: done (2026-11-22 — v1.10: code review complete, three rounds; ⛔ landed). Earlier: ready-for-dev (2026-11-21 — v1.8). ⭐ **Task 0 is DONE except 0.1** (the re-check `bmad-dev-story` runs first).
 The build decisions QE1–QE26 carried TWELVE asks (QE2, QE3, QE5, QE6, QE8, QE11, QE21–QE26). BigDev answered them on
 2026-11-21, all as recommended (QE21 is (C)), and accepted the rest as a set. The author-commit is **Decision
 `2026-11-21-483`**, committed ALONE (`24d930fc`) before any code ([[feedback_governance_commits_precede_implementation]]).
@@ -70,7 +70,7 @@ COMMIT, on any branch.
 
 # Story 12.5: Module Lead-Handoff Transport + Partners-as-Downstream-Consumers Invariant `[PRIMITIVE]`
 
-Status: review
+Status: done
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -1430,7 +1430,7 @@ a ratified clause and would be the Panel's.
 - [x] [Review][Patch] R2-12 — (applied, round-2 patch commit) `module_withdrawn` can be NULL though typed boolean (`current_state = 'archived' AND archive_reason = …` with a NULL reason) — `COALESCE(…, false)`. [packages/domain/src/marketplace/lead-handoff.ts:549]
 - [x] [Review][Patch] R2-13 — (applied, round-2 patch commit) test legs that cannot fail: the erasure spec's "the row erasure CANCELS takes the clock" uses `toBeGreaterThanOrEqual(dueTime)` (equal passes the regression it rules out) [packages/domain/tests/integration/marketplace/lead-handoff-erasure.spec.ts:62]; the W14 leg's "next attempt untouched" asserts no `next_attempt_at` [lead-handoff-commands.spec.ts:515]; the schema spec's "final row … updated_at left" proves only that the guard admits it (its raw UPDATE never sets `updated_at`) — retitle it to what it proves.
 - [x] [Review][Patch] R2-14 — (applied, round-2 patch commit) patch 11 made a trailing-dot host a send-time `url_refused` (final at once, one failure alarm per lead), and 12.1's publish rule ACCEPTS `https://partner.example./hook` (the dot is stripped only for its IP / localhost tests; the canonical test passes it). Nothing carries that: add it to K-6 (the wizard / publish rule should refuse it at author time) and a dated line on Row 54 (check at each publish, beside (k)). [apps/jobs/src/scheduler/partner-lead-client.ts:184; packages/domain/src/marketplace/filters.ts:463]
-- [ ] [Review][Patch] R2-15 — AC12's evidence predates the fix: the only `ci:local` run is 41/41 at `8269daaf`; the fix edits unlanded 0215 in place (`_cancelled_fields_check`) and adds the policy-regression spec, the two-worker leg, the waiting-pass legs and the route pin. Run `ci:local` on a FRESH container (a DB that applied the old 0215 lacks the CHECK and must not be reused) and record it with the counts. [packages/domain/migrations/0215_marketplace-lead-handoffs.sql:55]
+- [x] [Review][Patch] R2-15 — (DONE: `ci:local` on a FRESH container at `70a3df80` — 40 of 41 jobs green; the one red, `test (unit)`, was a mobile focus/announce leg (`wa-signup-step-render` AC8) outside 12.5 that passes alone (80/80), and turbo then stopped admin / jobs / domain; the WHOLE unit job re-run is green, 37/37 tasks) AC12's evidence predates the fix: the only `ci:local` run is 41/41 at `8269daaf`; the fix edits unlanded 0215 in place (`_cancelled_fields_check`) and adds the policy-regression spec, the two-worker leg, the waiting-pass legs and the route pin. Run `ci:local` on a FRESH container (a DB that applied the old 0215 lacks the CHECK and must not be reused) and record it with the counts. [packages/domain/migrations/0215_marketplace-lead-handoffs.sql:55]
 
 Dismissed (4): a rejected key costing a tick a minute for 24 h, and its stored word `held:kms_unavailable` — both decided in `-487` (1) with that cost "as put"; an EXPIRED global hold still ending the tick (the cause is global; one tick); the live sweep tests reading other tests' rows (`beforeAll` clears the table, `afterEach` removes each test's Pariwars; the pool is `max: 6`, so the two-worker leg is concurrent); rule (b)'s existence check not following callees (a limit the README states).
 
@@ -1721,6 +1721,17 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5` on the story worktree
   correct-course for K-12 (being run by a separate session on `correct-course/12-5-k12-partner-form-route`, cut from `8269daaf`, which takes
   decision ≥ `-485` and ledger ≥ `ap`); ADR-0046 ratification (⛔ claimed).
 
+- **Code review (2026-11-22), three rounds** — § Review Findings. Round 1 over `e5e13f92..28feaa58`: 2 decisions (`-487`), 12
+  patches (`769541ec`, `12899a65`), 4 defers, 18 dismissed. Round 2 over the fix diff: 2 decisions (`-488`), 15 patches, 4 dismissed.
+  Round 3 over the round-2 patches: 11 patches, 4 dismissed. All patches in `70a3df80`. Counts at `70a3df80` (targeted, on the review
+  container :5456): domain lead-handoff specs + marketplace unit 19 files / 673 tests; jobs sweep / client / address 183; fence 25;
+  api route spec 3. **`ci:local` on a FRESH container (:5458) at `70a3df80`:** 40 / 41 jobs green — `integration-tests` green (domain
+  547 files / 8776 tests, jobs 98 / 2388); the red `test (unit)` was `apps/mobile` `wa-signup-step-render` AC8 (outside 12.5; 80 / 80
+  alone; the run before it, at the round-2 tree, reddened on an `apps/admin` focus leg that also passes alone), and the WHOLE unit
+  job re-run is green (37 / 37 tasks). ⚠ Recorded, not hidden: a lost `export` in this session ran the four domain lead-handoff specs
+  ONCE against the shell's native `:5432` dev DB; every one is rollback-only (`getTx`, no own pool, no migration), so nothing was
+  written there.
+
 ### File List
 
 - `packages/domain/migrations/0214_consent-type-module-lead-handoff.sql` (new)
@@ -1764,3 +1775,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5` on the story worktree
 | 2026-11-21 | v1.7 | Validated by `bmad-create-story validate 12.5` (BigDev: "all"), after `git fetch origin` (`origin/main` = `e5e13f92`; no code moved since the rebase; pin an ancestor). The Panel ruled the note: Decision `2026-11-21-484` (Q1 C, Q2 A … Q7 A) — absorbed throughout: header, Names, Policy meaning (ratified acts; the sentences scoped to the sending route, with `-484`'s own sentence quoted; Q6 A beside "cannot be called back"; Q2 A on the no-sale line), the rulings table (seven rows + the Told list, verbatim), §0 edges 1 / 8 / 11 / 12, QE5, QE16, QE24 (the requeue's 30 days restated), QE26, AC0, Task 0.5, PQ6, Task 0.6 ((a) MET), K-1 (Q3 A's form), K-8. NO build decision changed: every built answer the note asked about was ratified as put. K-12's trigger is MET, and BigDev chose "Build 12.5 now": its "before this story's Task 1" is superseded for C, and the five things the correct-course owes are listed (incl. `recordLeadHandoff` refusing a partner's-own-form module). New: Task 0.7 (the records `-484` makes owed, before Task 1) and K-13 (Q6 A's staff duty, not built). NUMBERS: decision ≥ `-485`, ledger ≥ `am`, others' roster ≥ `Row 55`; a fifth sibling worktree (`3-15-…`) noted. The unused Task 0.3 rewrite map is collapsed to a pointer to `97bc9c26`. |
 | 2026-11-21 | v1.8 | Task 0.7 done (BigDev: "yes, commit and write the Task 0.7 records"): `deferred-work.md` (dated lines on 12.1's C6 / C8, 12.2's field-list item, 12.5's K-1 / K-4 / K-8 / K-12; new K-13), `epics.md` (a dated line under 12.3's inherited note), the counsel question revised to `-484` (still not sent). Task 0 is complete except 0.1. No decision, AC or build task changed. |
 | 2026-11-21 | v1.9 | `bmad-dev-story 12.5`: Task 0.1 re-check (nothing moved; 0214 / 0215 / ADR-0046 taken) and Tasks 1–9 BUILT on the story branch — migrations 0214 + 0215, the domain seam / W writes / P0–P5 / reads, the egress client, the sweep (registered in `boot.ts`), the W11 erasure step, the partner-boundary fence (41st CI job) and the api route spec, ADR-0046 + its index row. `ci:local` 41/41 on a fresh container. 9.3's three "Closed by" lines written. Status → `review`. ⛔ decision or AC changed. |
+| 2026-11-22 | v1.10 | Code review, three rounds (§ Review Findings): Decisions `2026-11-22-487` (rejected key HOLDS; the waiting pass, W14) and `-488` (the pass re-checks EVERY due lead; a throw ends only the pass), each committed ALONE before its code; all patches applied (`769541ec`, `12899a65`, `70a3df80`); dated lines carry `-487` / `-488` in QE4, QE6 (W14), QE9, QE13 S2 (and round 3's one-cycle pass and tick-start budget), S7, QE17, K-1 and K-6. `ci:local` on a fresh container at `70a3df80`: 40 / 41, the unit job re-run whole green. Status → `done`. ⛔ landed; Row 54 (b)–(k) still gate go-live. |

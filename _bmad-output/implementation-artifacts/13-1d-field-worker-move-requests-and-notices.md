@@ -317,7 +317,7 @@ worker's name; (3) the worker is told by the officer, not the system.**
   OWN stream: registered on; active since (the first `activated`, or none); the current state's NAME (⛔ its reason); each district with its
   dates (the `registered` district, then each `posted` `to_district`, oldest first, the last open-ended); each suspension's dates (`suspended`
   to the next `reactivated`, or open-ended) - ⛔ any reason, ⛔ any officer's name or role, ⛔ KYC, ⛔ code, ⛔ mobile; and `members_onboarded:
-  null`, shown as "Not counted yet" until Story 13.8 (C4). "etc." adds nothing. ONE audit line per detail view
+  null`, shown as "Not counted yet" until Story 13.8 (C4) [dated 2026-11-23, Story 3.15 DL14 A: the count is now Story 13.5's — `deferred-work.md` 13.1d C4; go-live does not wait for it, `-460` item 4]. "etc." adds nothing. ONE audit line per detail view
   (`field_worker.move_request_worker_viewed`, naming the request and the worker), written BEFORE the name is decrypted (the `-447` shape). The
   history read is bounded (a cap of at least 200 events, saying so if it stops); ⛔ a new column or table for it. On the page, each item opens its
   detail panel. A **Move requests** page (`FieldWorkerNav` gains `'requests'`, route `/p/$pariwarId/field-workers/requests`): (1) "Waiting

@@ -32,7 +32,7 @@ ancestor of HEAD" is durable; "the code claims were re-derived" is perishable �
 
 # Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -350,11 +350,11 @@ After deduplication: **0 decision-needed, 5 patch, 0 defer, 1 dismissed**. Findi
 
 Disposition (BigDev, 2026-11-22): **2 — Leave as action items**. R1–R5 remain unchecked; no implementation patches applied. Story and sprint row returned to `in-progress`.
 
-- [ ] [Review][Patch] **R1 / P2 — Freeze the submitted code while its immutable capture is pending.** [`apps/mobile/app/(signup)/assisted.tsx:170`] The input remains editable during the POST. Submit A, edit the displayed value to B, then let A succeed: the screen says the code is saved and advances although A, not the displayed B, was permanently captured. A rejection likewise attaches A's error to B. Disable editing while busy and guard `onChangeText` against in-flight changes. Sources: blind + edge. Reproduced with a held POST in the temporary review harness.
-- [ ] [Review][Patch] **R2 / P2 — Cancel status-read and saved-timer navigation on blur.** [`apps/mobile/app/(signup)/assisted.tsx:66`] The focus cleanup invalidates only the POST continuation. A pending GET (recorded or failure/timeout) or the saved-state timer can still call `router.replace` while the screen remains mounted behind another route, replacing the active screen with KYC. Bind these continuations to focus and cancel/restart them appropriately. Sources: blind + edge. Both the late GET and saved timer reproduced after invoking focus cleanup without unmounting.
-- [ ] [Review][Patch] **R3 / P2 — Announce the code-entry phase after Yes.** [`apps/mobile/app/(signup)/assisted.tsx:124`] Checklist family 13(d), AC6 / DL8: Yes removes the choice buttons and shows the code form, but the announcement hook covers only `ask`; the new phase has neither an announcement nor focus transfer. Announce the code-entry phase using the existing localized label, with a regression assertion. Source: auditor. Temporary render check confirmed no announcement or input focus after Yes; native device behavior remains un-attested.
-- [ ] [Review][Patch] **R4 / P2 — Add runtime denial evidence for hostile/non-access bearers on the new mutation route.** [`apps/api/tests/integration/member-attribution/assisted-code.spec.ts:255`] Checklist family 3 requires these cases per new mutation route. Current tests exercise valid access tokens and an absent token only. Exercise a tampered token and validly signed non-access token kinds (including signup-continuation / Pariwar-select), plus a non-member actor as applicable, asserting denial and no capture beside a valid-member control. The shared guard appears correct; this is missing required regression evidence, not a demonstrated authentication bypass. Source: auditor.
-- [ ] [Review][Patch] **R5 / P3 — Make the cross-Pariwar isolation fixture deterministic.** [`apps/api/tests/integration/member-attribution/assisted-code.spec.ts:312`] Independently allocated codes in P and Q may legally contain the same digits: uniqueness is per Pariwar. The test assumes they differ, causing a legitimate collision to fail CI; simply removing the inequality assertion would still leave the expected 422 incorrect. Construct distinct fixture codes deterministically, and preferably cover the valid same-digits-in-two-Pariwars case separately. Source: blind.
+- [x] [Review][Patch] **R1 / P2 — Freeze the submitted code while its immutable capture is pending.** [`apps/mobile/app/(signup)/assisted.tsx:170`] The input remains editable during the POST. Submit A, edit the displayed value to B, then let A succeed: the screen says the code is saved and advances although A, not the displayed B, was permanently captured. A rejection likewise attaches A's error to B. Disable editing while busy and guard `onChangeText` against in-flight changes. Sources: blind + edge. Reproduced with a held POST in the temporary review harness.
+- [x] [Review][Patch] **R2 / P2 — Cancel status-read and saved-timer navigation on blur.** [`apps/mobile/app/(signup)/assisted.tsx:66`] The focus cleanup invalidates only the POST continuation. A pending GET (recorded or failure/timeout) or the saved-state timer can still call `router.replace` while the screen remains mounted behind another route, replacing the active screen with KYC. Bind these continuations to focus and cancel/restart them appropriately. Sources: blind + edge. Both the late GET and saved timer reproduced after invoking focus cleanup without unmounting.
+- [x] [Review][Patch] **R3 / P2 — Announce the code-entry phase after Yes.** [`apps/mobile/app/(signup)/assisted.tsx:124`] Checklist family 13(d), AC6 / DL8: Yes removes the choice buttons and shows the code form, but the announcement hook covers only `ask`; the new phase has neither an announcement nor focus transfer. Announce the code-entry phase using the existing localized label, with a regression assertion. Source: auditor. Temporary render check confirmed no announcement or input focus after Yes; native device behavior remains un-attested.
+- [x] [Review][Patch] **R4 / P2 — Add runtime denial evidence for hostile/non-access bearers on the new mutation route.** [`apps/api/tests/integration/member-attribution/assisted-code.spec.ts:255`] Checklist family 3 requires these cases per new mutation route. Current tests exercise valid access tokens and an absent token only. Exercise a tampered token and validly signed non-access token kinds (including signup-continuation / Pariwar-select), plus a non-member actor as applicable, asserting denial and no capture beside a valid-member control. The shared guard appears correct; this is missing required regression evidence, not a demonstrated authentication bypass. Source: auditor.
+- [x] [Review][Patch] **R5 / P3 — Make the cross-Pariwar isolation fixture deterministic.** [`apps/api/tests/integration/member-attribution/assisted-code.spec.ts:312`] Independently allocated codes in P and Q may legally contain the same digits: uniqueness is per Pariwar. The test assumes they differ, causing a legitimate collision to fail CI; simply removing the inequality assertion would still leave the expected 422 incorrect. Construct distinct fixture codes deterministically, and preferably cover the valid same-digits-in-two-Pariwars case separately. Source: blind.
 
 Review validation: **191 existing targeted tests passed** (35 mobile, 124 API one-writer/reach-fence, 5 contracts, 27 live-DB assisted-code/payment on the story's isolated :5447 container). Four temporary mobile reproduction checks passed, demonstrating R1, both R2 continuations and R3; these checks assert the observed defects and are not permanent regression coverage. Temporary harness: `/private/tmp/twt-315-review-repro/`.
 
@@ -462,6 +462,37 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15` on the story's worktr
   comment.
 - ⚠ **Un-attested** ([[feedback_record_unattested_no_backfill]]): ⛔ run on a device or emulator; the Hindi skip label's wrapping and
   the screen-reader announcements are unproven outside jsdom (deferred D2). ⛔ pushed, ⛔ PR.
+- **Review follow-up (`bmad-dev-story 3.15`, 2026-11-22, after the review record `34cfa95a`):** all five findings fixed, each leg
+  shown RED before the fix (or by a mutation after it), then green:
+  - ✅ Resolved review finding [P2]: **R1** — while the POST is open the code box is `disabled` (the repo's `Input` lock, as in
+    `nominee-review.tsx`) AND `onChangeText` ignores a change (`busyRef`), so "saved" / the not-found line always sit beside the digits
+    that were SENT. Two legs (held POST + an edit ⇒ the value and the sent code stay `482913`; a held 422 ⇒ the line on the sent code,
+    the box editable again, the retry sends the new code). Mutation: the `busyRef` guard removed ⇒ both legs red (the mock forwards a
+    change to a read-only box, so the guard itself is what is tested).
+  - ✅ Resolved review finding [P2]: **R2** — a `focused` state set by `useFocusEffect`; the status read runs only while focused and
+    `loading`, the "saved" timer only while focused and `saved`; both cancelled on blur. On re-focus a `loading` step reads again and
+    a `saved` step shows its line again, then moves on once (never stuck — N1). The test's `useFocusEffect` mock now BLURS and
+    RE-FOCUSES the still-mounted step. Three legs: a late "recorded" read after blur ⛔ moves, re-focus reads again and moves once; a
+    failed and a hung-past-the-bound read after blur ⛔ move; the saved timer ⛔ fires after blur, re-focus moves once.
+  - ✅ Resolved review finding [P2]: **R3** — the code-entry phase is announced by its label (`signup.assisted.code_label`) through
+    the same `useAnnounceOnChange`; the question is ⛔ re-announced. Focus is ⛔ moved (the hook's own rule). One leg; mutation: the
+    `code` branch removed ⇒ red. ⚠ A real screen reader is still un-attested (deferred D2).
+  - ✅ Resolved review finding [P2]: **R4** — live-DB leg (family 3): a tampered access token (the signature kept, `sub` swapped for
+    ANOTHER signing-up member of the same Pariwar), a signup-continuation token, a Pariwar-select token and a validly signed
+    `typ: 'system'` token naming the real member and Pariwar ⇒ 401 `auth.session_required` on BOTH routes; a ghost member and the real
+    member under another Pariwar's claim ⇒ 409 `attribution.not_signing_up`; ⛔ capture for either member, ⛔ audit line — CONTROL: the
+    member's own token ⇒ 201, one row, one audit line. Mutation: the guard's `typ` check disabled ⇒ red (the `system` token recorded
+    201); restored, `git diff` empty.
+  - ✅ Resolved review finding [P3]: **R5** — the cross-Pariwar leg no longer hopes two random draws differ: Q's code is CONSTRUCTED
+    (`unheldCode([ours])`) and inserted by a new `seedWorkerWithCode` helper (owner pool, replica mode, `allocated_at` an hour back or
+    ahead — the future-dated AC3 leg now uses it too); a control proves the inserted row resolves in Q (a Q member records it, 201).
+    New leg: the SAME digits held in P and Q is legal — a member of each records them (201 + 201, one row each).
+  - Tests: mobile `assisted-step-render` 18 → 24 legs, full mobile suite 2318 green; `assisted-code.spec.ts` 12 → 14 legs green on
+    the story's container; mobile `tsc` + eslint clean on the changed files; ⛔ invisible characters in the added lines.
+  - Gate: `ci:local` on a FRESH `twt-3-15-pg` (:5447) — run 1 was 40/41: `integration-tests` never ran (MY `DATABASE_URL` lacked
+    `?sslmode=disable`, so `db:migrate` could not connect — ⛔ a code red; the container stayed unwritten); the agent's re-run of the
+    job was refused by the auto-mode classifier (`db:migrate`); BigDev ran `ci:local` with the corrected URL: **41/41 green**
+    (*"ci:local PASSED — 41 job(s) green"*). Code committed `f1a5e585`. ⛔ pushed, ⛔ PR. A device pass is still owed (deferred D2).
 
 ### File List
 
@@ -484,6 +515,9 @@ API: `apps/api/src/modules/member-attribution/{handlers,routes,index}.ts` (new),
 
 API client / i18n: `packages/api-client/src/index.ts`, `packages/i18n/locales/en/common.json`, `packages/i18n/locales/hi/common.json`.
 
+Review follow-up (v1.6) touched only files already listed: `apps/mobile/app/(signup)/assisted.tsx`,
+`apps/mobile/tests/unit/assisted-step-render.test.ts`, `apps/api/tests/integration/member-attribution/assisted-code.spec.ts`.
+
 Mobile: `apps/mobile/app/(signup)/assisted.tsx` (new), `apps/mobile/app/(signup)/tc.tsx`, `apps/mobile/app/(signup)/payment.tsx`,
 `apps/mobile/app/(signup)/_layout.tsx` (comment), `apps/mobile/lib/wizard-steps.ts`,
 `apps/mobile/tests/unit/assisted-step-render.test.ts` (new), `apps/mobile/tests/unit/workplace.test.ts`.
@@ -498,3 +532,4 @@ Mobile: `apps/mobile/app/(signup)/assisted.tsx` (new), `apps/mobile/app/(signup)
 | 1.3 | 2026-11-22 | PQ1 RULED A by the Panel (DR and KB; BigDev asked directly: *"by DR and KB / go with option A."*) — Decision `2026-11-22-493`, Trustee-ratified, committed alone at `c88268f5`. Task 0.3 dropped; AC1, §0, N2, F12 (next free ≥ `-494`), DL4, Task 0.4 / 0.5 updated. ⛔ built behaviour changes (DL4 was already A). ⛔ Code. |
 | 1.4 | 2026-11-22 | DL14 ANSWERED A by BigDev (*"DL14 A"*): the `-459` Q2 A worker count is MOVED to Story 13.5 (with 13.2's D2); ⛔ built here, ⛔ migration. §0, F13, DL12's 13.1d C4 / 13.5 lines, DL14, Task 0.2, AC9 updated. Task 0.4's author-commit records it with DL1–DL13. ⛔ Code. |
 | 1.5 | 2026-11-22 | `bmad-dev-story 3.15`: Task 0 (author-commit `-494` alone; DL1–DL13 answered — *"Accept all"*, DL9 *"Approve as written"*, DL6 *"remove it"*; dated lines), Tasks 1–3 built (contracts + OpenAPI, the member-attribution module, the payment step's capture removed, the `assisted` wizard step), Task 4 gates, Task 5 records (friction-budget row + disposition, deferred-work). Status → review. |
+| 1.6 | 2026-11-22 | Review follow-up (`bmad-dev-story 3.15`): addressed code review findings — 5 items resolved (R1–R5; review record `34cfa95a`, code `f1a5e585`). R1 code frozen while pending; R2 status read + saved timer bound to focus; R3 code-entry phase announced; R4 hostile-bearer denial legs; R5 deterministic cross-Pariwar fixture + same-digits leg. `ci:local` 41/41 on a fresh container (run by BigDev). Status → review. |

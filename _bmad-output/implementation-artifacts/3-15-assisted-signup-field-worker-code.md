@@ -24,7 +24,7 @@ ancestor of HEAD" is durable; "the code claims were re-derived" is perishable �
     and are applied by Story 13.5 from the stored capture. This story records the capture those rules read. ⚠ The inherited 13.8 C2
     says *"FR-85 is applied HERE"*; this story MOVES that check to 13.5 (DL11) — recorded at every site that names it (DL12), ⛔ "discharged".
   · WHO supplies the Panel-ruled worker count (`-459` Q2 A, `deferred-work.md` 13.1d C4) now that this story wires the resolution — the
-    AUTHOR's (DL14, BigDev at Task 0.2): the ruling is made; only where it is built is open.
+    AUTHOR's (DL14): the ruling is made; only where it is built was open — ✅ ANSWERED A by BigDev 2026-11-22 (*"DL14 A"*): Story 13.5.
   ⚠ CORRECTION of the author's own record: author-commit `2026-11-21-482` decision 4, the epics.md Story 3.15 block and the sprint row
   say "⛔ Panel question" and list FR-85 / `-454` Q6 C as applied here. Both are wrong: PQ1 IS a Panel question (Story 13.8 C2), and
   credit is ⛔ classified at capture. Task 0.4's entry amends `-482` decision 4 by name; the block and row get dated lines.
@@ -139,10 +139,10 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
   on the governance branch, `-481` on `story/6-22b-…` ⇒ next free ≥ `-483` at creation; ⭐ at `origin/main` `aa17300a` (2026-11-22) `main` holds up to `-492`; this branch holds `-493` (PQ1's ruling, 2026-11-22) ⇒ next free ≥ `-494` —
   RE-READ at Task 0.1 across every ref and worktree.
 - **F13 — Reads owed by "the first story that resolves a capture".** (a) `-459` Q2 A's worker count (`deferred-work.md` 13.1d C4,
-  trigger *"13.8 create-story"*; 13.1d is `done`, its request read has ⛔ count) — DL14. (b) 13.2's D2: the allocator's AT4 probe reads
+  trigger *"13.8 create-story"*; 13.1d is `done`, its request read has ⛔ count) — DL14, ANSWERED A: Story 13.5 builds it. (b) 13.2's D2: the allocator's AT4 probe reads
   `member_attribution WHERE pariwar_id = $1 AND attribution_source = $2` with ⛔ index; *"run `EXPLAIN` at real volumes when this story
   first reads `member_attribution` by code"*. This story reads ONLY by `attribution_id` (PK, inside `resolveAttribution`) and `member_id`
-  (`UNIQUE`) ⇒ D2 is ⛔ triggered — unless DL14 B builds the count here (a read BY CODE). (c) 13.2 C4 / 13.5 C4 — backfilling 3.6b's
+  (`UNIQUE`) ⇒ D2 is ⛔ triggered (DL14 A keeps the read BY CODE out of this story; it travels with the count to 13.5). (c) 13.2 C4 / 13.5 C4 — backfilling 3.6b's
   payment-step captures — stays 13.5's: this story resolves only the rows it writes.
 
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
@@ -208,13 +208,15 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
     13.1's state"*) and 13.2's C2 (*"FR-85 lives in the caller … by whoever records an attribution"*) — *"capture + resolution for 6-digit
     codes at signup: Closed by Story 3.15; the FR-85 check: MOVED to Story 13.5 (3.15 DL11); the adopter-username form stays 13.8's"*;
     13.2's C4 / 13.5 C4 (backfilling 3.6b's captures) — *"not addressed by 3.15 (it resolves only the rows it writes); owner unchanged"*;
-    13.1d C4 (the count) — per DL14's answer; 13.1c C5 (the silence warning, `-454` Q4 A) — *"the record of which teachers a worker
+    13.1d C4 (the count) — *"not addressed by 3.15; MOVED to Story 13.5 (3.15 DL14 A, BigDev 2026-11-22); trigger: 13.5 create-story;
+    13.2's D2 (`EXPLAIN` on a read BY CODE) travels with it"*; 13.1c C5 (the silence warning, `-454` Q4 A) — *"the record of which teachers a worker
     brings in now exists (3.15); the warning and its period are still unbuilt and unruled — owner unchanged"*; a new observed line: ⛔
     route back into the signup wizard for a returning member (F8).
   - epics.md dated lines: 3.6b (*"the payment step's Reference Code moved to Story 3.15 (DL6)"*); 3.15 (the §0 correction); 13.8 (6-digit
     capture + resolution Closed by 3.15; the payment box is REMOVED, so 13.8 builds its own capture surface for usernames / eHRMS through
     the same one-row rule; the FR-85 check moved to 13.5); ⭐ 13.5 (*"owns FR-85 and the held credit for every Story 3.15 capture —
-    `getFieldWorkerStateAt({ captureId })` on the holder `resolveAttribution({ captureId })` returns (3.15 DL11)"* + DL14 if A).
+    `getFieldWorkerStateAt({ captureId })` on the holder `resolveAttribution({ captureId })` returns (3.15 DL11)"* + *"supplies `-459` Q2 A's count of members a worker brought in (by worker, inside one Pariwar, a number,
+    ⛔ a member's name) for 13.1d's move-request read; decide 13.2's D2 (`EXPLAIN` / index) with it (3.15 DL14 A)"*).
   - PRD FR-85: a dated annotation line — *"the credit recorder is Story 13.5 for 6-digit codes captured at signup (Story 3.15)"*
     (annotated, ⛔ rewritten).
   - Code comments (Task 2.1): the headers of `schema/member_attribution.ts` and `payment/attribution-write.ts` and the contract's
@@ -222,11 +224,12 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
 - **DL13 — Not in scope:** member usernames / eHRMS as codes (13.8); a field-worker draft's automatic code (13.9 — it must use THIS
   route's writer, ⛔ a second); showing the worker anything; commission (13.5); the silence warning; FR-86's anti-fraud throttling
   (code use per day / per device — Epic 13); changing or removing a recorded code; a second chance after the wizard (F8).
-- **DL14 — The worker count (`-459` Q2 A; F13 (a)).** The ruling is made; this decides only WHERE it is built.
-  - **A (recommended):** ⛔ here — MOVED to Story 13.5, which already resolves each capture to its holder for credit; dated lines on
+- **DL14 — The worker count (`-459` Q2 A; F13 (a)).** The ruling is made; this decides only WHERE it is built. ✅ **ANSWERED A**
+  (BigDev, 2026-11-22, verbatim: *"DL14 A"*) — recorded in Task 0.4's author-commit with DL1–DL13.
+  - **A (recommended — CHOSEN):** ⛔ here — MOVED to Story 13.5, which already resolves each capture to its holder for credit; dated lines on
     `deferred-work.md` 13.1d C4 (trigger *"13.8 create-story"* → *"13.5 create-story"*) and the 13.5 block. *Cost:* the District Admin's
     move-request view keeps showing ⛔ count until 13.5 lands; ⛔ migration here.
-  - **B:** build `countMembersOnboardedByFieldWorker(db, pariwarId, fieldWorkerId) → number` here (a count of this worker's
+  - **B (⛔ taken):** build `countMembersOnboardedByFieldWorker(db, pariwarId, fieldWorkerId) → number` here (a count of this worker's
     `member_attribution` rows whose `captured_at >= allocated_at`; Pariwar-scoped; ⛔ a member's name) and wire it into 13.1d's request
     read. *Cost:* a read BY CODE ⇒ 13.2's D2 fires (`EXPLAIN`, likely an index on `(pariwar_id, attribution_source)` = a migration);
     touches 13.1d's shipped read and its tests; counts every capture, including ones 13.5 will not credit — "onboarded" ≠ "credited"
@@ -279,7 +282,7 @@ option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in 
    regenerated and `tsc` checks the two new `router.replace` literals (F8).
 8. **AC8 (F5).** The attribution reach fence is green with ⛔ edit to its ALLOWED list (the new module imports the door only); the door's
    export pin is unchanged.
-9. **AC9 (records).** DL12 written at EVERY site it lists (a grep for each quoted anchor finds its dated line); DL14 applied as answered; `pnpm ci:local` green on a FRESH container with `DATABASE_URL` pointing at it
+9. **AC9 (records).** DL12 written at EVERY site it lists (a grep for each quoted anchor finds its dated line); DL14 A applied (the 13.1d C4 and 13.5 dated lines; ⛔ count built here); `pnpm ci:local` green on a FRESH container with `DATABASE_URL` pointing at it
    ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]]).
 
 ## Tasks / Subtasks
@@ -290,8 +293,8 @@ option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in 
         rebase onto it. Re-read the next free decision id and the ledger letter across EVERY ref and worktree (`git branch -a`,
         `git worktree list`, the working copies) — ⛔ HEAD only. Check rows `13-8`, `13-9`, `13-5`, `3-16` (it edits the wizard's `kyc`
         step) for any start that touches `member_attribution` or `WIZARD_STEPS`.
-  - [ ] 0.2 Put DL1–DL14 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box), DL9 (the words, en +
-        hi) and DL14 (where the worker count is built) as separate questions. Record the answers verbatim here.
+  - [ ] 0.2 Put DL1–DL13 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box) and DL9 (the words,
+        en + hi) as separate questions. Record the answers verbatim here. ✅ DL14 already ANSWERED: *"DL14 A"* (BigDev, 2026-11-22).
   - [x] 0.3 ~~Add PQ1 to the field-worker drafts note~~ — DROPPED: BigDev asked the Panel directly; RULED A, Decision `2026-11-22-493`
         (Trustee-ratified, DR and KB), committed alone at `c88268f5` (2026-11-22, before dev-story). ⛔ edit the drafts note.
   - [ ] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL14 as answered, the §0 split, PQ1 RULED A (cite `-493`), AMENDING `-482` decision 4
@@ -393,3 +396,4 @@ assertion has a passing control beside it. A domain red hides the other packages
 | 1.1 | 2026-11-22 | Both branches rebased onto `origin/main` `aa17300a` (BigDev: "rebase both branches onto main"); the governance tip `0bb128df` is now `47b656d6`. The pin (`baseline_commit` and the PINNED comment) moves to `47b656d6`; Task 0.1's ancestor check names `47b656d6`; F12's decision floor re-read: next free ≥ `-493`. ⛔ F-fact re-traced (Task 0.1 still does that against `90535934..origin/main`). |
 | 1.2 | 2026-11-22 | Validate pass (`bmad-create-story validate 3.15`, on its worktree, at `99922af1`): re-pinned to `99922af1` (the governance branch LANDED, PR #336 — ⛔ stacked); F7 corrected (codes are allocated at REGISTRATION ⇒ a `pending_kyc` worker holds one; AC4 now six states); the inherited *"FR-85 is applied HERE"* quoted in full and recorded as MOVED to 13.5 at every site (DL11, DL12 — ⛔ "discharged"); the Panel-ruled worker count (`-459` Q2 A, 13.1d C4) surfaced as DL14 (F13); 13.2 D2 shown ⛔ triggered; Task 2.3's fixtures re-pointed to the `apps/api` fixture (⛔ domain tests); the api-client, `emit-openapi.ts`, a new domain read, the rate limit, the lock-in gate, the stale code comments, DL6's epics-block wording and FR-86 named; PQ1 gets its own deciding fact. ⛔ Code. |
 | 1.3 | 2026-11-22 | PQ1 RULED A by the Panel (DR and KB; BigDev asked directly: *"by DR and KB / go with option A."*) — Decision `2026-11-22-493`, Trustee-ratified, committed alone at `c88268f5`. Task 0.3 dropped; AC1, §0, N2, F12 (next free ≥ `-494`), DL4, Task 0.4 / 0.5 updated. ⛔ built behaviour changes (DL4 was already A). ⛔ Code. |
+| 1.4 | 2026-11-22 | DL14 ANSWERED A by BigDev (*"DL14 A"*): the `-459` Q2 A worker count is MOVED to Story 13.5 (with 13.2's D2); ⛔ built here, ⛔ migration. §0, F13, DL12's 13.1d C4 / 13.5 lines, DL14, Task 0.2, AC9 updated. Task 0.4's author-commit records it with DL1–DL13. ⛔ Code. |

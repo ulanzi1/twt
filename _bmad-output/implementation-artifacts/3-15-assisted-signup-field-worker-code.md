@@ -1,17 +1,18 @@
 ---
-baseline_commit: 47b656d6
+baseline_commit: 99922af1
 ---
 
 <!--
-PINNED: `47b656d6` = the tip of `governance/registration-change-2026-11-21` after its 2026-11-22 rebase, which sits on `origin/main`
-`aa17300a` (created at `0bb128df` on `90535934`, 2026-11-21; that commit survives only on `backup/governance-registration-pre-rebase`) and
-carries this row, the epics.md Story 3.15 block and author-commit `2026-11-21-482`. Authored in its OWN worktree
+PINNED: `99922af1` = `origin/main` on 2026-11-22, after `governance/registration-change-2026-11-21` LANDED by fast-forward (PR #336,
+`aa17300a..47b656d6`; then ledger `2026-11-22n`). `main` now carries this row, the epics.md Story 3.15 block, author-commit
+`2026-11-21-482` and the two unsent registration Panel notes. Authored in its OWN worktree
 `/Users/dev/Developer/projects/TWT/.claude/worktrees/3-15-assisted-signup-field-worker-code`, branch
 `story/3-15-assisted-signup-field-worker-code` (upstream UNSET — push with an explicit refspec, [[project_story_branch_upstream_is_main]]).
-⚠ This branch STACKS on the governance branch: it lands only after `governance/registration-change-2026-11-21` has landed on `main`
-(rebase onto `origin/main` then). Every `apps/` / `packages/` claim was traced by hand at `90535934` (the governance branch changes ⛔ code).
-Re-locate by FUNCTION, ⛔ by line number. "The pin is an ancestor of HEAD" is durable; "the code claims were re-derived" is perishable —
-Task 0.1 re-derives them ([[feedback_story_validate_footguns]] #24).
+The branch sits directly on `99922af1` (merge-base = that tip) and lands on its own — ⛔ stacked on anything. Every `apps/` / `packages/`
+claim was traced by hand at `90535934` and RE-TRACED at `99922af1` (code that moved in between: marketplace work, plus
+`data-export/assemble.ts` and `member/anonymize.ts` with ⛔ attribution change). Re-locate by FUNCTION, ⛔ by line number. "The pin is an
+ancestor of HEAD" is durable; "the code claims were re-derived" is perishable — Task 0.1 re-derives them
+([[feedback_story_validate_footguns]] #24).
 
 §0 GATE (the routing template's, applied FIRST):
   · HOW a code is captured, WHERE the question sits in the wizard, WHAT the route returns, THAT the payment step stops taking a code —
@@ -20,7 +21,10 @@ Task 0.1 re-derives them ([[feedback_story_validate_footguns]] #24).
     status — inherited verbatim from Story 13.8's block, C2). PQ1, ONE non-blocking question, added to the field-worker drafts note
     (unsent) at Task 0.3; built on the silent side.
   · WHETHER and HOW MUCH the worker is credited — ⛔ this story: the credit rules are ruled (`-454` Q6 C, `-465` Q1 B, FR-85 / `-441`)
-    and are applied by Story 13.5 from the stored capture. This story records the capture those rules read.
+    and are applied by Story 13.5 from the stored capture. This story records the capture those rules read. ⚠ The inherited 13.8 C2
+    says *"FR-85 is applied HERE"*; this story MOVES that check to 13.5 (DL11) — recorded at every site that names it (DL12), ⛔ "discharged".
+  · WHO supplies the Panel-ruled worker count (`-459` Q2 A, `deferred-work.md` 13.1d C4) now that this story wires the resolution — the
+    AUTHOR's (DL14, BigDev at Task 0.2): the ruling is made; only where it is built is open.
   ⚠ CORRECTION of the author's own record: author-commit `2026-11-21-482` decision 4, the epics.md Story 3.15 block and the sprint row
   say "⛔ Panel question" and list FR-85 / `-454` Q6 C as applied here. Both are wrong: PQ1 IS a Panel question (Story 13.8 C2), and
   credit is ⛔ classified at capture. Task 0.4's entry amends `-482` decision 4 by name; the block and row get dated lines.
@@ -42,10 +46,12 @@ so that **the worker who helped me can be credited — without it changing anyth
 |---|---|---|
 | `2026-11-21-482` decision 4 | *"Signup asks whether someone helped; Yes takes the field worker's 6-digit code, resolved to the worker (Story 13.2's door; FR-85; `-454` Q6 C held credit). It never blocks a signup. 13.8 keeps the member-invite deep link and adopter chain."* — ⚠ the credit clause is corrected here (§0). | author-commit |
 | BigDev, 2026-11-21 | *"when self registeration a form should ask have you been assisted ? If yes enter the code shared. In which field worker shared code will be entered."* | session |
-| epics.md Story 13.8, C2 / C4 (inherited) | *"INSERT the capture, then `resolveAttributionForRequest(request, scopeTx, { code, asOf: { captureId: <the new row's attributionId> } })` in the same `ScopeTx` — ONLY for a 6-digit code"* · *"A not-credited code must ⛔ block or delay a signup. Whether and how a member is told is a PANEL question this story raises (it discloses a third person's status — template §0); a known-but-not-credited code must ⛔ reuse Story 3.6's unknown-code rejection copy … send nothing, or neutral wording. Policy meaning for the member: "who introduced you never changes what you are covered for.""* | inherited (13.8 block, NARROWED 2026-11-21 to this story for 6-digit codes) |
+| epics.md Story 13.8, C2 / C4 (inherited) | *"INSERT the capture, then `resolveAttributionForRequest(request, scopeTx, { code, asOf: { captureId: <the new row's attributionId> } })` in the same `ScopeTx` — ONLY for a 6-digit code"* · *"apply FR-85's deactivated-code rejection from 13.1's lifecycle state (⛔ in the lookup)"* · 13.1's C2: *"**FR-85 is applied HERE, from 13.1's state.** Call `fieldWorker.acceptsNewAttributions(state)` … on the worker `resolveAttributionForRequest` returned … When resolving a STORED capture (13.5's backfill), ask `getFieldWorkerStateAt(db, pariwarId, id, { captureId })`"* — ⚠ this story MOVES the FR-85 check to 13.5 (DL11, DL12) · *"A not-credited code must ⛔ block or delay a signup. Whether and how a member is told is a PANEL question this story raises (it discloses a third person's status — template §0); a known-but-not-credited code must ⛔ reuse Story 3.6's unknown-code rejection copy … send nothing, or neutral wording. Policy meaning for the member: "who introduced you never changes what you are covered for.""* | inherited (13.8 block, NARROWED 2026-11-21 to this story for 6-digit codes) |
 | `2026-11-07-454` Q6 C | *"under review — held, and credited if cleared; at the worker's own request — not credited."* | **Trustee-ratified** — applied by 13.5, ⛔ here |
 | `2026-11-17-465` Q1 B | *"Held, and credited if the ending is undone — by mistake or on appeal."* | **Trustee-ratified** — applied by 13.5 |
 | `2026-11-03-441` Q2 A / 13.1 QE11 | `acceptsNewAttributions` = `active` only | **Trustee-confirmed** — applied by 13.5 |
+| `2026-11-08-459` Q2 A (WIDENED) / `deferred-work.md` 13.1d C4 | The District Admin at the other end of a move request sees *"other details like work history with organization, number of member onboarded, etc."* · C4: *"When 13.8 wires that resolution, it also supplies a count read (by worker, inside one Pariwar; a number, never a member's name) for 13.1d's request read."* | **Trustee-ratified** — where it is built: DL14 |
+| PRD FR-85 (+ annotations `-454`, `-465`) | *"Field worker can be deactivated; existing attributions preserved; new attributions on deactivated code rejected."* · *"The credit recorder (Stories 13.8 / 13.5) builds the held credit."* | PRD — "rejected" is applied as ⛔ credited, by 13.5 (13.8 C2: a not-credited code ⛔ blocks a signup) |
 | epics.md Story 3.6b AC | *"the member can paste a 6-digit Reference Code; the code is validated against Epic 13's field-worker allocation registry; unknown codes are rejected with "Please ask your introducer for the correct code or skip if you don't have one"; skipping is permitted"* — built as a raw capture with ⛔ validation (D2 port seam); this story moves it out of payment and validates it. | spec |
 | PRD FR-1 consequence (edited 2026-11-21) / FR-82 | *"Signup asks "Did someone help you register?" — Yes takes a 6-digit field-worker code (Story 3.15)…"* · FR-82: *"Accepts: 6-digit numeric (field worker), member username/eHRMS (adopter), empty (organic). Parsed and stored as `attribution_source`."* | PRD |
 
@@ -70,14 +76,16 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
 - **N5 — The Pariwar comes from the member's session, ⛔ the body.** Through 13.2's API door only.
 - **N6 — ONE writer of `member_attribution`.** After this story the payment step writes ⛔ capture.
 
-## Found facts (traced at `90535934`)
+## Found facts (traced at `90535934`, re-traced at `99922af1`)
 
 - **F1 — The table.** `member_attribution` (`packages/domain/src/schema/member_attribution.ts`; migration `0027_vyawastha-shulk-receipts.sql`):
   `attribution_id` (uuid PK), `member_id` (FK `members`, cascade), `pariwar_id`, `attribution_source` (text, verbatim, *"NO field-worker
   FK, NO registry validation (D2)"*), `captured_at` (`defaultNow()` — the TRANSACTION start). `UNIQUE(member_id)`
   (`member_attribution_member_uq`). RLS tenant-isolated + FORCE; `GRANT SELECT, INSERT` only (⛔ UPDATE, ⛔ DELETE). ⇒ ⛔ migration needed.
 - **F2 — The writer.** `insertMemberAttribution(db, { memberId, pariwarId, attributionSource })` in `packages/domain/src/payment/attribution-write.ts`
-  (exported through the `payment` domain namespace).
+  (exported through the `payment` domain namespace). It is the ONLY accessor: ⛔ read of `member_attribution` by member exists (DL2 adds
+  one). Its header, the schema header (`schema/member_attribution.ts`: *"STILL unvalidated … Story 13.8 wires the lookup into signup"*)
+  and the contract's `referenceCode` doc comment describe the 3.6b seam — they go stale with this story (Task 2.1).
 - **F3 — Today's capture, in the payment step.** `apps/api/src/modules/vyawastha-shulk/handlers.ts` (signup confirm, tx-1): after the
   receipt, `if (body.referenceCode !== undefined)` → `SAVEPOINT attr_capture` → `insertMemberAttribution` → any error rolled back to the
   savepoint and SUPPRESSED (AR-67: the receipt always commits); after commit, audit `member_attribution.captured`. Contract
@@ -99,8 +107,12 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
   only) and `getFieldWorkerStateAt(db, pariwarId, fieldWorkerId, { captureId })` (`field-worker/read.ts` — the worker's state AT the
   capture, in SQL, with the transaction-start clock caveat (8)) exist for Story 13.5's backfill. ⇒ storing the code + `captured_at` is
   ALL 13.5 needs (N4).
-- **F7 — Codes exist only for approved workers, per Pariwar.** Allocated at approval (13.1a); a code from another Pariwar resolves to
-  `null` in this one. Signup always joins the configured default Pariwar (`defaultSignupPariwarId`).
+- **F7 — Codes are allocated at REGISTRATION, per Pariwar.** `apps/api/src/modules/field-worker/handlers.ts` (the register handler)
+  runs `registerFieldWorker` THEN `allocateAttributionCodeForRequest` on the SAME transaction (I11) — so a `pending_kyc` worker (never
+  approved) already HOLDS a code that resolves, and so does a worker ended from `pending_kyc`. The worker can READ their code only after
+  approval (13.1a's code route / 13.1b's SMS). One permanent code per worker, ⛔ freed or reused (migration 0199, append-only). A code from
+  another Pariwar resolves to `null` in this one. Signup always joins the configured default Pariwar (`defaultSignupPariwarId`).
+  `allocated_at` is stamped by a `BEFORE INSERT` trigger (DB clock) — a `twt_app` insert can ⛔ set it (AC3's test, Task 2.3).
 - **F8 — The wizard.** `apps/mobile/lib/wizard-steps.ts` `WIZARD_STEPS = ['tc', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp',
   'payment']` (pinned by `apps/mobile/tests/unit/workplace.test.ts`); `(signup)/tc.tsx` advances with the literal
   `router.replace('/(signup)/kyc')`; `(signup)/_layout.tsx` derives "Step N of M". Typed routes: `.expo/types/router.d.ts` is absent in
@@ -111,6 +123,13 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
   per-member rate limit: `apps/api/src/modules/member-language/routes.ts` (`perMemberKey`, `hook: 'preHandler'` —
   [[project_rate_limit_prehandler_hook_order]]). Mobile optional step: `apps/mobile/app/(signup)/whatsapp.tsx` (a bounded status read
   that skips the step, refs against double taps, `withTimeout`, `AnnouncedText`, `useAnnounceOnChange`, every failure continues).
+  Mobile API calls: the signup screens import `memberAuth` from `apps/mobile/lib/member-api.ts`, which is
+  `createMemberAuthClient` in `packages/api-client/src/index.ts` (e.g. `memberTermsAccept`) — new methods go THERE. Errors:
+  `new ApiError(422, CODE, msg)` (`known-people/handlers.ts` precedent), `ConflictError(msg, code)` (`apps/api/src/http-errors.ts`).
+  Member state: `memberDomain.getCurrentMemberState(tx, memberId)` (`packages/domain/src/member/read.ts`).
+- **F9b — OpenAPI is a hand-kept list.** `openapi/v1.yaml` is emitted by `packages/contracts/scripts/emit-openapi.ts`, which imports each
+  schema and registers each path by hand (e.g. `/api/v1/member/language`); `VyawasthaShulkConfirmRequest.referenceCode` is in it today.
+  `ci:local` runs `contracts:check-openapi-determinism`.
 - **F10 — Audit, export, erasure.** `apps/api/src/audit/audit-sink.ts` already has `member_attribution.captured` (no PII). The data export
   already carries `attribution` (`packages/domain/src/data-export/assemble.ts`); RTBF keeps it (`member/anonymize.ts` — governance history).
 - **F11 — Copy and gates.** Words in `packages/i18n/locales/{en,hi}/common.json` (the `common` namespace is registered; parity gate
@@ -119,31 +138,49 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
 - **F12 — Numbers.** ⛔ migration, ⛔ permission key, ⛔ roster row (PQ1 is non-blocking — built on the silent side). Decision: `-482` is
   on the governance branch, `-481` on `story/6-22b-…` ⇒ next free ≥ `-483` at creation; ⭐ at `origin/main` `aa17300a` (2026-11-22) `main` holds up to `-492` ⇒ next free ≥ `-493` —
   RE-READ at Task 0.1 across every ref and worktree.
+- **F13 — Reads owed by "the first story that resolves a capture".** (a) `-459` Q2 A's worker count (`deferred-work.md` 13.1d C4,
+  trigger *"13.8 create-story"*; 13.1d is `done`, its request read has ⛔ count) — DL14. (b) 13.2's D2: the allocator's AT4 probe reads
+  `member_attribution WHERE pariwar_id = $1 AND attribution_source = $2` with ⛔ index; *"run `EXPLAIN` at real volumes when this story
+  first reads `member_attribution` by code"*. This story reads ONLY by `attribution_id` (PK, inside `resolveAttribution`) and `member_id`
+  (`UNIQUE`) ⇒ D2 is ⛔ triggered — unless DL14 B builds the count here (a read BY CODE). (c) 13.2 C4 / 13.5 C4 — backfilling 3.6b's
+  payment-step captures — stays 13.5's: this story resolves only the rows it writes.
 
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
 
 - **DL1 — Two member routes**, new module `apps/api/src/modules/member-attribution/`: `GET /api/v1/member/signup/assisted-code` →
   `{ recorded: boolean }` (lets the step skip when a code is already recorded); `POST /api/v1/member/signup/assisted-code` with
-  `{ code }` (`^\d{6}$`, `.strict()`) → `201 { recorded: true }`. `requireMemberSession`; the POST rate-limited per member (F9).
-  Contracts in `packages/contracts/src/members/` (exported from the index); OpenAPI regenerated.
-- **DL2 — The POST, in ONE scope tx, in this order:** (1) the member's state is `pending-kyc` or `pending-fee`, else 409
-  `attribution.not_signing_up`; (2) read the member's existing capture — same code ⇒ 200 `{ recorded: true }` (idempotent, ⛔ new row);
+  `{ code }` (`^\d{6}$`, `.strict()`) → `201 { recorded: true }`. `requireMemberSession`; the POST rate-limited per member exactly as
+  member-language (F9): `max: deps.config.writeRateMax` (env `WRITE_RATE_MAX`, default 30), `timeWindow: '1 minute'`, `perMemberKey`,
+  `hook: 'preHandler'`. ⚠ 201-vs-422 tells a caller whether a code is held (3.6b's AC requires refusing unknown codes); the rate limit
+  is the bound, and FR-86's throttling is ⛔ here (DL13). Contracts in `packages/contracts/src/members/` (exported from the index);
+  schemas + both paths registered in `emit-openapi.ts` (F9b), then OpenAPI regenerated.
+- **DL2 — The POST, in ONE scope tx, in this order:** (1) `memberDomain.getCurrentMemberState(tx, memberId)` is `pending-kyc` or
+  `pending-fee`, else `ConflictError` 409 `attribution.not_signing_up`; (2) read the member's existing capture with a NEW domain read
+  `readMemberAttributionForMember(db, memberId) → { attributionSource } | null` beside the writer in `payment/attribution-write.ts`
+  (exported through the `payment` namespace; the GET uses it too) — same code ⇒ 200 `{ recorded: true }` (idempotent, ⛔ new row);
   a different code ⇒ 409 `attribution.already_recorded`; (3) `insertMemberAttribution`; (4) `resolveAttributionForRequest(request,
-  scopeTx, { code, asOf: { captureId: row.attributionId } })`; `null` ⇒ throw 422 `attribution.code_not_found` — the tx ROLLS BACK, ⛔
-  row stored; (5) commit, THEN audit `member_attribution.captured`. A `23505` on `member_attribution_member_uq` (two taps racing) ⇒
+  scopeTx, { code, asOf: { captureId: row.attributionId } })`; `null` ⇒ throw `new ApiError(422, 'attribution.code_not_found', …)` — the
+  tx ROLLS BACK, ⛔ row stored; (5) commit, THEN audit `member_attribution.captured`. Error codes live in the contracts (Task 1). A `23505` on `member_attribution_member_uq` (two taps racing) ⇒
   the tx rolls back, then re-read and answer as (2) ([[project_domain_limit_clamp_and_savepoint_retry]]: ⛔ continue a tx after 23505).
 - **DL3 — The response says nothing about the worker** (N2): ⛔ id, ⛔ name, ⛔ state.
-- **DL4 — A known code of a worker who is not `active`** (suspended for any reason, ended, died) is recorded and answered EXACTLY as an
-  active worker's (201). Built PQ1 A; the credit consequence is 13.5's.
+- **DL4 — A known code of a worker who is not `active`** (never approved — `pending_kyc`, F7 —, suspended for any reason, ended — from
+  any state —, died) is recorded and answered EXACTLY as an active worker's (201). Built PQ1 A; the credit consequence is 13.5's.
 - **DL5 — "No" stores nothing** and calls nothing (as today: ⛔ code ⇒ ⛔ row ⇒ `organic` by absence).
 - **DL6 — The payment step stops capturing** (N6): remove `referenceCode` from `VyawasthaShulkConfirmRequest`, the handler's capture
   block (savepoint + audit), the input and its state in `payment.tsx`, and the two `payment.reference_code_*` keys (en + hi); update the
   AC4 tests to prove a body with `referenceCode` is refused 400 (`.strict()`). *Considered:* keep the payment box as a second chance for a
   member who skipped — rejected: two writers of one `UNIQUE` row, and the payment savepoint would silently swallow the conflict.
-  ⚠ ⛔ app is live, so ⛔ old client sends the field.
+  ⚠ ⛔ app is live, so ⛔ old client sends the field. ⚠ The epics.md 3.15 block says the box *"stops taking 6-digit codes (member-invite
+  usernames stay Story 13.8's)"*; the contract accepts ONLY `^\d{6}$` today, so stopping 6-digit codes leaves it taking nothing — the
+  box is REMOVED, and Story 13.8 builds its own capture surface for usernames / eHRMS (DL12 line). `UNIQUE(member_id)` + FR-82's one
+  field make a worker's code and an inviter MUTUALLY EXCLUSIVE for one member — by design, ⛔ changed here; 13.8 must write through the
+  same one-row rule. The renewal confirm reuses `VyawasthaShulkConfirmRequest`: ⛔ renewal client sends `referenceCode` (grep: only
+  `(signup)/payment.tsx`), so the narrowing is safe there too.
 - **DL7 — The wizard:** `WIZARD_STEPS` becomes `['tc', 'assisted', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp', 'payment']`;
   `tc.tsx` routes to `/(signup)/assisted`; the new `(signup)/assisted.tsx` routes to `/(signup)/kyc`. On mount: the GET (bounded, 5 s);
-  recorded, failed or hung ⇒ straight on to `kyc` (the whatsapp precedent).
+  recorded, failed or hung ⇒ straight on to `kyc` (the whatsapp precedent). `assisted` is ⛔ a lock-in step: ⛔ add it to `payment.tsx`'s
+  `LockInGateStep` / `packages/domain/src/member/lock-in-gate.ts` outstanding steps (N1). A skipped step is ⛔ subtracted from
+  *"Step N of M"* (the whatsapp `-375` accepted cost).
 - **DL8 — The screen:** the question with two equal buttons, *Yes* / *No*. Yes shows a numeric code box (6 digits, `keyboardType` number
   pad), *Continue* and *Continue without a code*. Continue ⇒ POST: 201 / 200 ⇒ a short confirmation, then on; 422 ⇒ the not-found line
   under the box (focus stays; the member may retry or continue without); 400 ⇒ the "6 digits" line; 409 / 429 / 5xx / timeout ⇒ on to
@@ -162,19 +199,44 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
   - `signup.assisted.saved` — *"Thank you. The code is saved."* / *"धन्यवाद। कोड सहेज लिया गया है।"*
 - **DL10 — ⛔ new member event, ⛔ schema change, ⛔ permission key.** The member event vocabulary is untouched (the schema comment: *"NO
   `member.reference_code.captured` lifecycle event is minted"*); the existing audit action is reused.
-- **DL11 — Credit is ⛔ classified here** (N4) — 13.5 reads the capture. ⛔ `acceptsNewAttributions` call in this story.
-- **DL12 — Records:** `deferred-work.md` — 13.8 C2 / C4 DISCHARGED for 6-digit codes at signup (the adopter-username widening stays
-  13.8's); C5 (the silence warning, `-454` Q4 A) annotated *"the record of which teachers a worker brings in now exists (3.15); the
-  warning and its period are still unbuilt and unruled — owner unchanged"*; a new observed line: ⛔ route back into the signup wizard
-  for a returning member (F8). epics.md: dated lines on 3.6b (*"the payment step's Reference Code moved to Story 3.15 (DL6)"*), 3.15
-  (the §0 correction) and 13.8.
+- **DL11 — Credit is ⛔ classified here** (N4) — 13.5 reads the capture. ⛔ `acceptsNewAttributions` call in this story. This MOVES the
+  inherited *"FR-85 is applied HERE"* (13.8 C2 / 13.1 C2) to Story 13.5, which applies it to every 3.15 capture with
+  `getFieldWorkerStateAt(…, { captureId })` (the worker's state AT the capture, in SQL) and builds the held credit (`-454` Q6 C,
+  `-465` Q1 B). Lossless: the capture + its `captured_at` are all that check needs (F6). Recorded at every site (DL12).
+- **DL12 — Records (closure language exact — [[feedback_closure_language_precision]]):**
+  - `deferred-work.md`, one scoped dated line at EACH site: 13.1's C2 (*"Story 13.8 (the first signup consumer): FR-85 is applied from
+    13.1's state"*) and 13.2's C2 (*"FR-85 lives in the caller … by whoever records an attribution"*) — *"capture + resolution for 6-digit
+    codes at signup: Closed by Story 3.15; the FR-85 check: MOVED to Story 13.5 (3.15 DL11); the adopter-username form stays 13.8's"*;
+    13.2's C4 / 13.5 C4 (backfilling 3.6b's captures) — *"not addressed by 3.15 (it resolves only the rows it writes); owner unchanged"*;
+    13.1d C4 (the count) — per DL14's answer; 13.1c C5 (the silence warning, `-454` Q4 A) — *"the record of which teachers a worker
+    brings in now exists (3.15); the warning and its period are still unbuilt and unruled — owner unchanged"*; a new observed line: ⛔
+    route back into the signup wizard for a returning member (F8).
+  - epics.md dated lines: 3.6b (*"the payment step's Reference Code moved to Story 3.15 (DL6)"*); 3.15 (the §0 correction); 13.8 (6-digit
+    capture + resolution Closed by 3.15; the payment box is REMOVED, so 13.8 builds its own capture surface for usernames / eHRMS through
+    the same one-row rule; the FR-85 check moved to 13.5); ⭐ 13.5 (*"owns FR-85 and the held credit for every Story 3.15 capture —
+    `getFieldWorkerStateAt({ captureId })` on the holder `resolveAttribution({ captureId })` returns (3.15 DL11)"* + DL14 if A).
+  - PRD FR-85: a dated annotation line — *"the credit recorder is Story 13.5 for 6-digit codes captured at signup (Story 3.15)"*
+    (annotated, ⛔ rewritten).
+  - Code comments (Task 2.1): the headers of `schema/member_attribution.ts` and `payment/attribution-write.ts` and the contract's
+    `referenceCode` comment — the capture is now resolved at signup by Story 3.15; ⛔ "13.8 wires the lookup".
 - **DL13 — Not in scope:** member usernames / eHRMS as codes (13.8); a field-worker draft's automatic code (13.9 — it must use THIS
-  route's writer, ⛔ a second); showing the worker anything; commission (13.5); the silence warning; changing or removing a recorded code;
-  a second chance after the wizard (F8).
+  route's writer, ⛔ a second); showing the worker anything; commission (13.5); the silence warning; FR-86's anti-fraud throttling
+  (code use per day / per device — Epic 13); changing or removing a recorded code; a second chance after the wizard (F8).
+- **DL14 — The worker count (`-459` Q2 A; F13 (a)).** The ruling is made; this decides only WHERE it is built.
+  - **A (recommended):** ⛔ here — MOVED to Story 13.5, which already resolves each capture to its holder for credit; dated lines on
+    `deferred-work.md` 13.1d C4 (trigger *"13.8 create-story"* → *"13.5 create-story"*) and the 13.5 block. *Cost:* the District Admin's
+    move-request view keeps showing ⛔ count until 13.5 lands; ⛔ migration here.
+  - **B:** build `countMembersOnboardedByFieldWorker(db, pariwarId, fieldWorkerId) → number` here (a count of this worker's
+    `member_attribution` rows whose `captured_at >= allocated_at`; Pariwar-scoped; ⛔ a member's name) and wire it into 13.1d's request
+    read. *Cost:* a read BY CODE ⇒ 13.2's D2 fires (`EXPLAIN`, likely an index on `(pariwar_id, attribution_source)` = a migration);
+    touches 13.1d's shipped read and its tests; counts every capture, including ones 13.5 will not credit — "onboarded" ≠ "credited"
+    must be said in the view.
 
 ## Panel question — PROPOSED (non-blocking; added to the UNSENT field-worker drafts note at Task 0.3)
 
-- **PQ1 — When a person types the code of a field worker who is suspended or has been ended, is the person told?**
+- **PQ1 — When a person types the code of a field worker who is suspended, has been ended, or was never approved, is the person told?**
+  - **The one fact that decides it:** telling the person anything about the code is telling them something about the worker who gave it
+    — a third person's standing with the Trust.
   - **A (our suggestion):** ⛔ — the code is accepted like any other; whether the worker is credited follows your credit rulings
     (held while under review or ended; ⛔ credited at the worker's own request). *Cost:* the person cannot know the code may earn nothing.
   - **B:** the app says *"This code can't be used right now"* and lets them continue. *Cost:* it tells a member that a named worker's code
@@ -190,17 +252,21 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
    carries ⛔ worker field (a schema test: the response is exactly `{ recorded: true }`); the same code again ⇒ 200, still one row; a
    different code after one is recorded ⇒ 409 `attribution.already_recorded`, the row unchanged; a code nobody holds ⇒ 422
    `attribution.code_not_found` and ⛔ row (with a passing control beside it — [[feedback_assertion_after_savepoint_rollback_is_vacuous]]);
+   the GET ⇒ `{ recorded: false }` before and `{ recorded: true }` after; `readMemberAttributionForMember` has its own live-DB test;
    `'12ab'` / 5 digits / extra key ⇒ 400; a member in `lock-in` ⇒ 409 `attribution.not_signing_up`; ⛔ member session ⇒ 401; two
    concurrent POSTs ⇒ one row, both answered (201 + 200, or 200 + 200).
 3. **AC3 (N5, F4).** A code allocated in ANOTHER Pariwar ⇒ 422 (the door's Pariwar is the session's); a code allocated AFTER the capture
-   instant cannot credit (13.2's AT4 (c) — a test with an allocation stamped after `captured_at` ⇒ 422); the GET returns `recorded` for
-   the session's member only.
-4. **AC4 (DL4, N2).** For each worker state — `active`, suspended `under_review`, suspended `at_worker_request`, `terminated` — the POST
-   answers byte-identically (status + body); a test asserts the four responses are equal.
+   instant cannot credit (13.2's AT4 (c) — a code row inserted with `allocated_at` = `now() + interval '1 hour'` under
+   `session_replication_role = 'replica'` (the stamp trigger would overwrite it otherwise — F7) ⇒ 422, with a control code allocated in the
+   past ⇒ 201); the GET returns `recorded` for the session's member only.
+4. **AC4 (DL4, N2).** For each worker state — `pending_kyc` (registered, never approved), `active`, suspended `under_review`, suspended
+   `at_worker_request`, `terminated` from `active`, `terminated` from `pending_kyc` — the POST answers byte-identically (status + body); a
+   test asserts the six responses are equal.
 5. **AC5 (DL6, N6).** `referenceCode` is gone from `VyawasthaShulkConfirmRequest`; a confirm carrying it ⇒ 400; the confirm handler
    writes ⛔ `member_attribution` row (grep-test: `insertMemberAttribution` is called from exactly one `apps/api/src` file — the new
-   module); `payment.tsx` has ⛔ code input; the two keys are removed in en AND hi (parity green). OpenAPI regenerated (compare with
-   anchors resolved — [[project_openapi_yaml_anchor_renumbering]]).
+   module); `payment.tsx` has ⛔ code input; the two keys are removed in en AND hi (parity green). The three new schemas and both paths
+   are registered in `packages/contracts/scripts/emit-openapi.ts`; `openapi/v1.yaml` regenerated — it shows both paths and ⛔
+   `referenceCode` (compare with anchors resolved — [[project_openapi_yaml_anchor_renumbering]]); the determinism check is green.
 6. **AC6 (DL7, DL8, N1) — mobile vitest.** `WIZARD_STEPS` updated (and `workplace.test.ts`'s pin); the step: renders both buttons; No ⇒
    `kyc` with ⛔ request; Yes + 6 digits + Continue ⇒ one POST (a double tap makes ONE), then `kyc`; 422 ⇒ the not-found line and the
    member can still continue without; 409 / 429 / 500 / timeout ⇒ `kyc`, ⛔ message; GET `recorded: true` ⇒ straight to `kyc`; a hung
@@ -210,42 +276,54 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
    regenerated and `tsc` checks the two new `router.replace` literals (F8).
 8. **AC8 (F5).** The attribution reach fence is green with ⛔ edit to its ALLOWED list (the new module imports the door only); the door's
    export pin is unchanged.
-9. **AC9 (records).** DL12 written; `pnpm ci:local` green on a FRESH container with `DATABASE_URL` pointing at it
+9. **AC9 (records).** DL12 written at EVERY site it lists (a grep for each quoted anchor finds its dated line); DL14 applied as answered; `pnpm ci:local` green on a FRESH container with `DATABASE_URL` pointing at it
    ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]]).
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
-  - [ ] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 47b656d6 HEAD` (the governance tip after the 2026-11-22 rebase onto
-        `aa17300a`; it was `0bb128df` before); `git diff --name-only 90535934..origin/main -- apps
-        packages` and re-read every F-fact whose file moved. Has the governance branch landed? (If yes, rebase onto `origin/main`.) Re-read
-        the next free decision id and the ledger letter across EVERY ref and worktree (`git branch -a`, `git worktree list`, the working
-        copies) — ⛔ HEAD only. Check rows `13-8`, `13-9`, `13-5` for any start that touches `member_attribution`.
-  - [ ] 0.2 Put DL1–DL13 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box) and DL9 (the words, en +
-        hi) as separate questions. Record the answers verbatim here.
+  - [ ] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 99922af1 HEAD` (the pin; the governance branch landed in it, PR #336);
+        `git diff --name-only 99922af1..origin/main -- apps packages` and re-read every F-fact whose file moved; if `origin/main` moved,
+        rebase onto it. Re-read the next free decision id and the ledger letter across EVERY ref and worktree (`git branch -a`,
+        `git worktree list`, the working copies) — ⛔ HEAD only. Check rows `13-8`, `13-9`, `13-5`, `3-16` (it edits the wizard's `kyc`
+        step) for any start that touches `member_attribution` or `WIZARD_STEPS`.
+  - [ ] 0.2 Put DL1–DL14 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box), DL9 (the words, en +
+        hi) and DL14 (where the worker count is built) as separate questions. Record the answers verbatim here.
   - [ ] 0.3 Add PQ1 as Q4 to `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-registration-field-worker-drafts.md`
-        (on `governance/registration-change-2026-11-21`, ⛔ SENT — if it has been sent by now, write a short separate note instead);
-        template order; commit it ALONE.
-  - [ ] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL13 as answered, the §0 split, PQ1 open + built side, and AMENDING `-482`
-        decision 4 by name (PQ1 is a Panel question; credit is ⛔ classified at capture); committed ALONE. ⚠ If refused, ask once
+        (on `main` since PR #336 — edit it on THIS branch; ⛔ SENT per ledger `2026-11-22n` — if it has been sent by now, write a short
+        separate note instead); template order, with PQ1's OWN "one fact that decides it" line (the note's existing one is about drafts);
+        commit it ALONE.
+  - [ ] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL14 as answered, the §0 split, PQ1 open + built side, AMENDING `-482` decision 4
+        by name (PQ1 is a Panel question; credit is ⛔ classified at capture), and recording that the inherited *"FR-85 is applied HERE"*
+        moves to Story 13.5 (DL11); committed ALONE. ⚠ If refused, ask once
         ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 Dated lines: the `3-15` sprint row comment (*"⛔ Panel question"* corrected), epics.md 3.15 / 3.6b / 13.8 (DL12).
+  - [ ] 0.5 Dated lines: the `3-15` sprint row comment (*"⛔ Panel question"* and *"FR-85 acceptsNewAttributions; -454 Q6 C held credit"*
+        corrected), epics.md 3.15 / 3.6b / 13.8 / 13.5, PRD FR-85, and the `deferred-work.md` sites (DL12; DL14 as answered).
   - [ ] 0.6 Sprint row `3-15-…` `ready-for-dev → in-progress` (map only; one ledger entry at the end — [[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — Contracts (AC2, AC5).** `packages/contracts/src/members/`: `MemberAssistedCodeRequest` (`{ code }`, `^\d{6}$`, strict),
       `MemberAssistedCodeResponse` (`{ recorded: true }`, strict), `MemberAssistedCodeStatusResponse` (`{ recorded: boolean }`); the error
-      codes; export from the index. Remove `referenceCode` from `VyawasthaShulkConfirmRequest`. Fixture / contract tests outside `tsc`
+      codes; export from the index. Remove `referenceCode` from `VyawasthaShulkConfirmRequest` (and its doc comment). Register the three
+      schemas and both paths in `scripts/emit-openapi.ts` (F9b). Fixture / contract tests outside `tsc`
       ([[project_contracts_tests_outside_tsc]]).
 - [ ] **Task 2 — API (AC2, AC3, AC4, AC8).**
   - [ ] 2.1 `apps/api/src/modules/member-attribution/` (routes, handlers, index): DL2's order; `openScopeTx` / `closeScopeTx`; import
-        `resolveAttributionForRequest` FROM THE DOOR (⛔ `@twt/domain`'s `attributionCode`); `insertMemberAttribution` via the `payment`
-        domain namespace; the member state through the existing member read (`getCurrentMemberState`); audit after commit. Register in
-        `server.ts`.
-  - [ ] 2.2 Remove the capture block from `vyawastha-shulk/handlers.ts`' signup confirm (DL6) — keep AR-67's "the receipt always commits".
-  - [ ] 2.3 Integration tests (own container, DB named `twt_dev`): AC2–AC4; update the 3.6b AC4 tests (now: `referenceCode` ⇒ 400). Seed
-        field workers + codes with `packages/domain/tests/integration/attribution-code/_fixtures.ts` (read it first).
+        `resolveAttributionForRequest` FROM THE DOOR (⛔ `@twt/domain`'s `attributionCode`); `insertMemberAttribution` and the new
+        `readMemberAttributionForMember` (DL2) via the `payment` domain namespace; the member state through `getCurrentMemberState`; audit
+        after commit. Register in `server.ts`. Update the stale headers of `schema/member_attribution.ts` and `payment/attribution-write.ts`
+        (comments only — DL12; ⛔ schema change).
+  - [ ] 2.2 Remove the capture block from `vyawastha-shulk/handlers.ts`' signup confirm (DL6) — keep AR-67's "the receipt always commits"
+        (drop `attributionCaptured` and its post-commit audit with it).
+  - [ ] 2.3 Integration tests (own container, DB named `twt_dev`): AC2–AC4; update the 3.6b AC4 tests (now: `referenceCode` ⇒ 400). ⛔
+        import `packages/domain/tests/**` — `apps/api` tests cannot (`_field-worker-fixture.ts`'s header). Seed workers with
+        `apps/api/tests/integration/_field-worker-fixture.ts` (`registerTestFieldWorker`, `approveTestFieldWorker`,
+        `actTestFieldWorker` — it suspends with `under_review` only: add a reason parameter for `at_worker_request` —,
+        `terminateTestFieldWorker`) and allocate each code through the door's `allocateAttributionCodeForRequest` (as
+        `attribution-code-access.spec.ts` does); clean up like `field-worker/_registration-harness.ts` (the codes table is append-only —
+        replica mode). AC3's future-dated code: an owner-pool insert under `SET LOCAL session_replication_role = 'replica'` (F7).
   - [ ] 2.4 Run the reach fence and the whole `apps/api` unit suite (AC8).
 - [ ] **Task 3 — Mobile (AC6, AC7).** `lib/wizard-steps.ts`; `(signup)/tc.tsx` target; `(signup)/assisted.tsx` (the whatsapp model, F9);
-      `lib/member-api.ts` (or the api-client) GET + POST; remove the box from `payment.tsx`; `common.json` en + hi (DL9) and the removed
+      GET + POST as two methods on `createMemberAuthClient` in `packages/api-client/src/index.ts` (reached through `memberAuth` in
+      `lib/member-api.ts` — F9); remove the box from `payment.tsx`; `common.json` en + hi (DL9) and the removed
       keys; `microcopy.yaml`; vitest. Regenerate typed routes (`CI=1 npx expo start --port <free>` until `.expo/types/router.d.ts`
       exists). ⚠ [[project_tamagui_button_text_one_line]] for the two buttons; [[project_uset_fresh_closure_memo_trap]] (⛔ `t` in deps).
 - [ ] **Task 4 — Gates (AC9).** i18n parity; microcopy; OpenAPI emit; `pnpm ci:local` on a fresh container.
@@ -277,9 +355,11 @@ build the silence warning, or let a returning member back into the wizard.
 - New: `apps/api/src/modules/member-attribution/{routes,handlers,index}.ts`, `apps/mobile/app/(signup)/assisted.tsx`, contracts in
   `packages/contracts/src/members/`, tests beside each.
 - Updated: `apps/api/src/server.ts`, `apps/api/src/modules/vyawastha-shulk/handlers.ts`, `packages/contracts/src/payments/vyawastha-shulk.ts`,
-  `apps/mobile/lib/wizard-steps.ts`, `apps/mobile/app/(signup)/{tc,payment}.tsx`, `apps/mobile/lib/member-api.ts`,
-  `packages/i18n/locales/{en,hi}/common.json`, `microcopy.yaml`, `apps/mobile/tests/unit/workplace.test.ts`, the two vyawastha-shulk specs,
-  the OpenAPI output.
+  `packages/contracts/scripts/emit-openapi.ts`, `openapi/v1.yaml`, `packages/domain/src/payment/attribution-write.ts` (+ the `payment`
+  index), `packages/domain/src/schema/member_attribution.ts` (comment only), `packages/api-client/src/index.ts`,
+  `apps/mobile/lib/wizard-steps.ts`, `apps/mobile/app/(signup)/{tc,payment}.tsx`, `packages/i18n/locales/{en,hi}/common.json`,
+  `microcopy.yaml`, `apps/mobile/tests/unit/workplace.test.ts`, `apps/api/tests/integration/_field-worker-fixture.ts` (reason parameter),
+  the two vyawastha-shulk specs. Records: `deferred-work.md`, epics.md, PRD FR-85, the drafts note, `.decision-log.md`, sprint-status.
 
 ### Testing
 Unit (contracts, api with `DATABASE_URL` UNSET), live-DB (api, own container, `twt_dev`), mobile vitest. Every "nothing written"
@@ -307,4 +387,5 @@ assertion has a passing control beside it. A domain red hides the other packages
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-21 | Created by `bmad-create-story 3.15` in its own worktree, stacked on `governance/registration-change-2026-11-21` (`0bb128df`). §0 applied: PQ1 (is the member told about a worker's status) is the Panel's, inherited from 13.8 C2 — correcting `-482` decision 4's "⛔ Panel question"; credit left to 13.5 (N4); ⛔ migration. DL1–DL13 PROPOSED. ⛔ Code. |
+| 1.2 | 2026-11-22 | Validate pass (`bmad-create-story validate 3.15`, on its worktree, at `99922af1`): re-pinned to `99922af1` (the governance branch LANDED, PR #336 — ⛔ stacked); F7 corrected (codes are allocated at REGISTRATION ⇒ a `pending_kyc` worker holds one; AC4 now six states); the inherited *"FR-85 is applied HERE"* quoted in full and recorded as MOVED to 13.5 at every site (DL11, DL12 — ⛔ "discharged"); the Panel-ruled worker count (`-459` Q2 A, 13.1d C4) surfaced as DL14 (F13); 13.2 D2 shown ⛔ triggered; Task 2.3's fixtures re-pointed to the `apps/api` fixture (⛔ domain tests); the api-client, `emit-openapi.ts`, a new domain read, the rate limit, the lock-in gate, the stale code comments, DL6's epics-block wording and FR-86 named; PQ1 gets its own deciding fact. ⛔ Code. |
 | 1.1 | 2026-11-22 | Both branches rebased onto `origin/main` `aa17300a` (BigDev: "rebase both branches onto main"); the governance tip `0bb128df` is now `47b656d6`. The pin (`baseline_commit` and the PINNED comment) moves to `47b656d6`; Task 0.1's ancestor check names `47b656d6`; F12's decision floor re-read: next free ≥ `-493`. ⛔ F-fact re-traced (Task 0.1 still does that against `90535934..origin/main`). |

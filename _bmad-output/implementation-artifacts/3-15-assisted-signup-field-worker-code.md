@@ -18,8 +18,8 @@ ancestor of HEAD" is durable; "the code claims were re-derived" is perishable �
   · HOW a code is captured, WHERE the question sits in the wizard, WHAT the route returns, THAT the payment step stops taking a code —
     the AUTHOR's (DL1–DL13, BigDev at Task 0.2).
   · WHAT A MEMBER IS TOLD when they type the code of a worker who is suspended or ended — the Panel's (it discloses a third person's
-    status — inherited verbatim from Story 13.8's block, C2). PQ1, ONE non-blocking question, added to the field-worker drafts note
-    (unsent) at Task 0.3; built on the silent side.
+    status — inherited verbatim from Story 13.8's block, C2). PQ1 — ✅ RULED A by the Panel (DR and KB), Decision `2026-11-22-493`:
+    the person is ⛔ told; asked directly, ⛔ through a note.
   · WHETHER and HOW MUCH the worker is credited — ⛔ this story: the credit rules are ruled (`-454` Q6 C, `-465` Q1 B, FR-85 / `-441`)
     and are applied by Story 13.5 from the stored capture. This story records the capture those rules read. ⚠ The inherited 13.8 C2
     says *"FR-85 is applied HERE"*; this story MOVES that check to 13.5 (DL11) — recorded at every site that names it (DL12), ⛔ "discharged".
@@ -67,7 +67,7 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
 - **N1 — It never blocks or delays a signup.** "No", a skipped step, a timeout, an unknown code, a server error — every path lets the
   member continue to the next step.
 - **N2 — The member learns nothing about the worker.** ⛔ name, ⛔ number, ⛔ status. A known code is accepted the same way whatever the
-  worker's state (PQ1 built silent); only a code nobody holds is refused.
+  worker's state (PQ1 RULED A, `-493`); only a code nobody holds is refused.
 - **N3 — One capture per member, made while signing up.** `member_attribution` keeps `UNIQUE(member_id)`; captures only in `pending-kyc`
   / `pending-fee`; a recorded code is ⛔ changed by this story.
 - **N4 — Credit is ⛔ decided here.** The capture is stored verbatim with its DB `captured_at`; 13.5 derives the holder and the worker's
@@ -135,8 +135,8 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
 - **F11 — Copy and gates.** Words in `packages/i18n/locales/{en,hi}/common.json` (the `common` namespace is registered; parity gate
   `packages/i18n/scripts/check-parity.ts`). The microcopy gate (`microcopy.yaml` `scope.code_globs`) lists specific mobile files (e.g.
   `apps/mobile/app/(signup)/kyc.tsx`) — a new screen is unscanned until added.
-- **F12 — Numbers.** ⛔ migration, ⛔ permission key, ⛔ roster row (PQ1 is non-blocking — built on the silent side). Decision: `-482` is
-  on the governance branch, `-481` on `story/6-22b-…` ⇒ next free ≥ `-483` at creation; ⭐ at `origin/main` `aa17300a` (2026-11-22) `main` holds up to `-492` ⇒ next free ≥ `-493` —
+- **F12 — Numbers.** ⛔ migration, ⛔ permission key, ⛔ roster row (PQ1 is RULED — `-493`). Decision: `-482` is
+  on the governance branch, `-481` on `story/6-22b-…` ⇒ next free ≥ `-483` at creation; ⭐ at `origin/main` `aa17300a` (2026-11-22) `main` holds up to `-492`; this branch holds `-493` (PQ1's ruling, 2026-11-22) ⇒ next free ≥ `-494` —
   RE-READ at Task 0.1 across every ref and worktree.
 - **F13 — Reads owed by "the first story that resolves a capture".** (a) `-459` Q2 A's worker count (`deferred-work.md` 13.1d C4,
   trigger *"13.8 create-story"*; 13.1d is `done`, its request read has ⛔ count) — DL14. (b) 13.2's D2: the allocator's AT4 probe reads
@@ -164,7 +164,7 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
   the tx rolls back, then re-read and answer as (2) ([[project_domain_limit_clamp_and_savepoint_retry]]: ⛔ continue a tx after 23505).
 - **DL3 — The response says nothing about the worker** (N2): ⛔ id, ⛔ name, ⛔ state.
 - **DL4 — A known code of a worker who is not `active`** (never approved — `pending_kyc`, F7 —, suspended for any reason, ended — from
-  any state —, died) is recorded and answered EXACTLY as an active worker's (201). Built PQ1 A; the credit consequence is 13.5's.
+  any state —, died) is recorded and answered EXACTLY as an active worker's (201). PQ1 RULED A (`-493`); the credit consequence is 13.5's.
 - **DL5 — "No" stores nothing** and calls nothing (as today: ⛔ code ⇒ ⛔ row ⇒ `organic` by absence).
 - **DL6 — The payment step stops capturing** (N6): remove `referenceCode` from `VyawasthaShulkConfirmRequest`, the handler's capture
   block (savepoint + audit), the input and its state in `payment.tsx`, and the two `payment.reference_code_*` keys (en + hi); update the
@@ -232,7 +232,10 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
     touches 13.1d's shipped read and its tests; counts every capture, including ones 13.5 will not credit — "onboarded" ≠ "credited"
     must be said in the view.
 
-## Panel question — PROPOSED (non-blocking; added to the UNSENT field-worker drafts note at Task 0.3)
+## Panel question — ✅ RULED (Decision `2026-11-22-493`, Trustee-ratified, DR and KB)
+
+BigDev asked the Panel directly (*"let me ask Panel directly, PQ1 is simple question"*); the ruling, verbatim: *"by DR and KB / go with
+option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in `-493`.
 
 - **PQ1 — When a person types the code of a field worker who is suspended, has been ended, or was never approved, is the person told?**
   - **The one fact that decides it:** telling the person anything about the code is telling them something about the worker who gave it
@@ -241,12 +244,12 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
     (held while under review or ended; ⛔ credited at the worker's own request). *Cost:* the person cannot know the code may earn nothing.
   - **B:** the app says *"This code can't be used right now"* and lets them continue. *Cost:* it tells a member that a named worker's code
     is not working — a disclosure about the worker — and may make them doubt the person who helped them.
-  - *Built:* A. ⛔ gate on go-live (A is the safe side).
+  - ✅ **Ruled: A.** Built as DL4. PRD FR-85 is annotated for the signup capture (`-493`; Task 0.5).
 
 ## Acceptance Criteria
 
 1. **AC1 (Task 0 — governance FIRST).** Before any `apps/` / `packages/` change: Task 0.1 recorded; Task 0.2 answers recorded verbatim;
-   PQ1 added to the unsent drafts note (committed alone); the author-commit entry (amending `-482` decision 4) committed ALONE; the
+   PQ1's ruling `-493` committed alone (✅ done, `c88268f5`); the author-commit entry (amending `-482` decision 4) committed ALONE; the
    sprint row `in-progress`. ([[feedback_governance_commits_precede_implementation]])
 2. **AC2 (DL1, DL2, DL3).** Live-DB API tests on the POST: a held code ⇒ 201, one row with `attribution_source` = the code; the body
    carries ⛔ worker field (a schema test: the response is exactly `{ recorded: true }`); the same code again ⇒ 200, still one row; a
@@ -289,16 +292,16 @@ admission) — ⛔ conflict. The capture feeds only the field worker's credit (S
         step) for any start that touches `member_attribution` or `WIZARD_STEPS`.
   - [ ] 0.2 Put DL1–DL14 to BigDev (the question dialog; recommended first), with DL6 (removing the payment box), DL9 (the words, en +
         hi) and DL14 (where the worker count is built) as separate questions. Record the answers verbatim here.
-  - [ ] 0.3 Add PQ1 as Q4 to `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-21-registration-field-worker-drafts.md`
-        (on `main` since PR #336 — edit it on THIS branch; ⛔ SENT per ledger `2026-11-22n` — if it has been sent by now, write a short
-        separate note instead); template order, with PQ1's OWN "one fact that decides it" line (the note's existing one is about drafts);
-        commit it ALONE.
-  - [ ] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL14 as answered, the §0 split, PQ1 open + built side, AMENDING `-482` decision 4
-        by name (PQ1 is a Panel question; credit is ⛔ classified at capture), and recording that the inherited *"FR-85 is applied HERE"*
+  - [x] 0.3 ~~Add PQ1 to the field-worker drafts note~~ — DROPPED: BigDev asked the Panel directly; RULED A, Decision `2026-11-22-493`
+        (Trustee-ratified, DR and KB), committed alone at `c88268f5` (2026-11-22, before dev-story). ⛔ edit the drafts note.
+  - [ ] 0.4 Author-commit entry (`<date>-<next>`): DL1–DL14 as answered, the §0 split, PQ1 RULED A (cite `-493`), AMENDING `-482` decision 4
+        by name (PQ1 was a Panel question; credit is ⛔ classified at capture), and recording that the inherited *"FR-85 is applied HERE"*
         moves to Story 13.5 (DL11); committed ALONE. ⚠ If refused, ask once
         ([[project_decision_log_writes_user_inserted]]).
   - [ ] 0.5 Dated lines: the `3-15` sprint row comment (*"⛔ Panel question"* and *"FR-85 acceptsNewAttributions; -454 Q6 C held credit"*
-        corrected), epics.md 3.15 / 3.6b / 13.8 / 13.5, PRD FR-85, and the `deferred-work.md` sites (DL12; DL14 as answered).
+        corrected), epics.md 3.15 / 3.6b / 13.8 / 13.5, PRD FR-85, and the `deferred-work.md` sites (DL12; DL14 as answered) — plus
+        `-493`'s Consequence 2: PRD FR-85's signup annotation, and *"whether and how a member is told is a PANEL question"* marked RULED
+        `-493` A at epics.md 13.8 C2 and `deferred-work.md` 13.1 C2.
   - [ ] 0.6 Sprint row `3-15-…` `ready-for-dev → in-progress` (map only; one ledger entry at the end — [[project_sprint_status_safe_prepend]]).
 - [ ] **Task 1 — Contracts (AC2, AC5).** `packages/contracts/src/members/`: `MemberAssistedCodeRequest` (`{ code }`, `^\d{6}$`, strict),
       `MemberAssistedCodeResponse` (`{ recorded: true }`, strict), `MemberAssistedCodeStatusResponse` (`{ recorded: boolean }`); the error
@@ -387,5 +390,6 @@ assertion has a passing control beside it. A domain red hides the other packages
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-11-21 | Created by `bmad-create-story 3.15` in its own worktree, stacked on `governance/registration-change-2026-11-21` (`0bb128df`). §0 applied: PQ1 (is the member told about a worker's status) is the Panel's, inherited from 13.8 C2 — correcting `-482` decision 4's "⛔ Panel question"; credit left to 13.5 (N4); ⛔ migration. DL1–DL13 PROPOSED. ⛔ Code. |
-| 1.2 | 2026-11-22 | Validate pass (`bmad-create-story validate 3.15`, on its worktree, at `99922af1`): re-pinned to `99922af1` (the governance branch LANDED, PR #336 — ⛔ stacked); F7 corrected (codes are allocated at REGISTRATION ⇒ a `pending_kyc` worker holds one; AC4 now six states); the inherited *"FR-85 is applied HERE"* quoted in full and recorded as MOVED to 13.5 at every site (DL11, DL12 — ⛔ "discharged"); the Panel-ruled worker count (`-459` Q2 A, 13.1d C4) surfaced as DL14 (F13); 13.2 D2 shown ⛔ triggered; Task 2.3's fixtures re-pointed to the `apps/api` fixture (⛔ domain tests); the api-client, `emit-openapi.ts`, a new domain read, the rate limit, the lock-in gate, the stale code comments, DL6's epics-block wording and FR-86 named; PQ1 gets its own deciding fact. ⛔ Code. |
 | 1.1 | 2026-11-22 | Both branches rebased onto `origin/main` `aa17300a` (BigDev: "rebase both branches onto main"); the governance tip `0bb128df` is now `47b656d6`. The pin (`baseline_commit` and the PINNED comment) moves to `47b656d6`; Task 0.1's ancestor check names `47b656d6`; F12's decision floor re-read: next free ≥ `-493`. ⛔ F-fact re-traced (Task 0.1 still does that against `90535934..origin/main`). |
+| 1.2 | 2026-11-22 | Validate pass (`bmad-create-story validate 3.15`, on its worktree, at `99922af1`): re-pinned to `99922af1` (the governance branch LANDED, PR #336 — ⛔ stacked); F7 corrected (codes are allocated at REGISTRATION ⇒ a `pending_kyc` worker holds one; AC4 now six states); the inherited *"FR-85 is applied HERE"* quoted in full and recorded as MOVED to 13.5 at every site (DL11, DL12 — ⛔ "discharged"); the Panel-ruled worker count (`-459` Q2 A, 13.1d C4) surfaced as DL14 (F13); 13.2 D2 shown ⛔ triggered; Task 2.3's fixtures re-pointed to the `apps/api` fixture (⛔ domain tests); the api-client, `emit-openapi.ts`, a new domain read, the rate limit, the lock-in gate, the stale code comments, DL6's epics-block wording and FR-86 named; PQ1 gets its own deciding fact. ⛔ Code. |
+| 1.3 | 2026-11-22 | PQ1 RULED A by the Panel (DR and KB; BigDev asked directly: *"by DR and KB / go with option A."*) — Decision `2026-11-22-493`, Trustee-ratified, committed alone at `c88268f5`. Task 0.3 dropped; AC1, §0, N2, F12 (next free ≥ `-494`), DL4, Task 0.4 / 0.5 updated. ⛔ built behaviour changes (DL4 was already A). ⛔ Code. |

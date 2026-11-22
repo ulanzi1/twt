@@ -312,34 +312,34 @@ option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in 
         `-493`'s Consequence 2: PRD FR-85's signup annotation, and *"whether and how a member is told is a PANEL question"* marked RULED
         `-493` A at epics.md 13.8 C2 and `deferred-work.md` 13.1 C2.
   - [x] 0.6 Sprint row `3-15-…` `ready-for-dev → in-progress` (map only; one ledger entry at the end — [[project_sprint_status_safe_prepend]]).
-- [ ] **Task 1 — Contracts (AC2, AC5).** `packages/contracts/src/members/`: `MemberAssistedCodeRequest` (`{ code }`, `^\d{6}$`, strict),
+- [x] **Task 1 — Contracts (AC2, AC5).** `packages/contracts/src/members/`: `MemberAssistedCodeRequest` (`{ code }`, `^\d{6}$`, strict),
       `MemberAssistedCodeResponse` (`{ recorded: true }`, strict), `MemberAssistedCodeStatusResponse` (`{ recorded: boolean }`); the error
       codes; export from the index. Remove `referenceCode` from `VyawasthaShulkConfirmRequest` (and its doc comment). Register the three
       schemas and both paths in `scripts/emit-openapi.ts` (F9b). Fixture / contract tests outside `tsc`
       ([[project_contracts_tests_outside_tsc]]).
-- [ ] **Task 2 — API (AC2, AC3, AC4, AC8).**
-  - [ ] 2.1 `apps/api/src/modules/member-attribution/` (routes, handlers, index): DL2's order; `openScopeTx` / `closeScopeTx`; import
+- [x] **Task 2 — API (AC2, AC3, AC4, AC8).**
+  - [x] 2.1 `apps/api/src/modules/member-attribution/` (routes, handlers, index): DL2's order; `openScopeTx` / `closeScopeTx`; import
         `resolveAttributionForRequest` FROM THE DOOR (⛔ `@twt/domain`'s `attributionCode`); `insertMemberAttribution` and the new
         `readMemberAttributionForMember` (DL2) via the `payment` domain namespace; the member state through `getCurrentMemberState`; audit
         after commit. Register in `server.ts`. Update the stale headers of `schema/member_attribution.ts` and `payment/attribution-write.ts`
         (comments only — DL12; ⛔ schema change).
-  - [ ] 2.2 Remove the capture block from `vyawastha-shulk/handlers.ts`' signup confirm (DL6) — keep AR-67's "the receipt always commits"
+  - [x] 2.2 Remove the capture block from `vyawastha-shulk/handlers.ts`' signup confirm (DL6) — keep AR-67's "the receipt always commits"
         (drop `attributionCaptured` and its post-commit audit with it).
-  - [ ] 2.3 Integration tests (own container, DB named `twt_dev`): AC2–AC4; update the 3.6b AC4 tests (now: `referenceCode` ⇒ 400). ⛔
+  - [x] 2.3 Integration tests (own container, DB named `twt_dev`): AC2–AC4; update the 3.6b AC4 tests (now: `referenceCode` ⇒ 400). ⛔
         import `packages/domain/tests/**` — `apps/api` tests cannot (`_field-worker-fixture.ts`'s header). Seed workers with
         `apps/api/tests/integration/_field-worker-fixture.ts` (`registerTestFieldWorker`, `approveTestFieldWorker`,
         `actTestFieldWorker` — it suspends with `under_review` only: add a reason parameter for `at_worker_request` —,
         `terminateTestFieldWorker`) and allocate each code through the door's `allocateAttributionCodeForRequest` (as
         `attribution-code-access.spec.ts` does); clean up like `field-worker/_registration-harness.ts` (the codes table is append-only —
         replica mode). AC3's future-dated code: an owner-pool insert under `SET LOCAL session_replication_role = 'replica'` (F7).
-  - [ ] 2.4 Run the reach fence and the whole `apps/api` unit suite (AC8).
-- [ ] **Task 3 — Mobile (AC6, AC7).** `lib/wizard-steps.ts`; `(signup)/tc.tsx` target; `(signup)/assisted.tsx` (the whatsapp model, F9);
+  - [x] 2.4 Run the reach fence and the whole `apps/api` unit suite (AC8).
+- [x] **Task 3 — Mobile (AC6, AC7).** `lib/wizard-steps.ts`; `(signup)/tc.tsx` target; `(signup)/assisted.tsx` (the whatsapp model, F9);
       GET + POST as two methods on `createMemberAuthClient` in `packages/api-client/src/index.ts` (reached through `memberAuth` in
       `lib/member-api.ts` — F9); remove the box from `payment.tsx`; `common.json` en + hi (DL9) and the removed
       keys; `microcopy.yaml`; vitest. Regenerate typed routes (`CI=1 npx expo start --port <free>` until `.expo/types/router.d.ts`
       exists). ⚠ [[project_tamagui_button_text_one_line]] for the two buttons; [[project_uset_fresh_closure_memo_trap]] (⛔ `t` in deps).
 - [ ] **Task 4 — Gates (AC9).** i18n parity; microcopy; OpenAPI emit; `pnpm ci:local` on a fresh container.
-- [ ] **Task 5 — Records.** DL12; story Dev Agent Record, File List, Change Log; sprint row → `review`; ONE ledger entry (safe prepend,
+- [x] **Task 5 — Records.** DL12; story Dev Agent Record, File List, Change Log; sprint row → `review`; ONE ledger entry (safe prepend,
       YAML parses, row count holds).
 
 ## Dev Notes
@@ -387,12 +387,86 @@ assertion has a passing control beside it. A domain red hides the other packages
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15` on the story's worktree, 2026-11-22.
+
 ### Debug Log References
+
+- Own DB container `twt-3-15-pg` (:5447, `twt_dev`, postgres:16-alpine), recreated FRESH before `ci:local`; ⛔ :5432 / :5433 used.
+- Task 0.1 (2026-11-22): `origin/main` = `99922af1` = the pin; highest decision id anywhere `-493` ⇒ `-494`; ledger letter ⇒ `q`.
+- `ci:local` run 1 (fresh container, `.expo/types` moved aside): 39/41 — `integration-tests` green; red: `friction-budget` (AC-4:
+  the new member-facing step had no declaration — a REAL finding, fixed by a new row + disposition, gate re-run green) and
+  `test (unit)` (two `apps/admin` 5 s timeouts in files this story does ⛔ touch — `moderation-section`, `news-page`; 4/4 alone; the
+  whole unit job re-run: 37/37 tasks green — the known concurrency-4 load class, [[project_ci_local_concurrency_oversubscription]]).
+- Mutation checks (each restored, `cmp`-verified): the 422 refusal disabled ⇒ 3 legs red; the 23505 retry removed ⇒ the two
+  deterministic race legs red (the plain `Promise.all` race leg stayed green — it never reached 23505, hence the held-lock legs);
+  a planted `#FF0000` in `assisted.tsx` ⇒ the microcopy gate red; `tc.tsx` pointed back at `kyc` ⇒ the route source test red.
+- Typed routes regenerated (`CI=1 npx expo start --port 8197`); mobile `tsc` green WITH and WITHOUT `.expo/types`. ⚠ As
+  [[project_mobile_typed_routes_worktree]] records, `tsc` does ⛔ catch a wrong `'/(signup)/…'` literal under expo-router 55 — the
+  two new literals are guarded by a SOURCE test (proved red), ⛔ by `tsc` (AC7's "tsc checks the literals" is met only in that sense).
 
 ### Completion Notes List
 - Ultimate context engine analysis completed - comprehensive developer guide created (create-story, 2026-11-21, at `90535934` via `0bb128df`).
+- **Governance first (AC1):** author-commit `2026-11-22-494` committed ALONE (`77c23484`) — DL1–DL14 as answered, amending `-482`
+  decision 4 by name; then the Task 0 records (`64a410bd`): dated lines at epics.md 3.15 / 3.6 / 13.8 / 13.5, PRD FR-85, the
+  `deferred-work.md` sites, the sprint row → `in-progress`. ⚠ epics.md has ⛔ "3.6b" block — the AC the story calls "3.6b's" is under
+  Story 3.6 (row `3-6b`); the dated line sits there.
+- **Contracts (Task 1):** `members/assisted-code.ts` — request `{ code }` (`^\d{6}$`, strict), responses `{ recorded: true }` /
+  `{ recorded: boolean }` (strict — ⛔ worker field), `MEMBER_ASSISTED_CODE_ERROR_CODES`; `referenceCode` removed from
+  `VyawasthaShulkConfirmRequest`; both paths + three schemas in `emit-openapi.ts`; `openapi/v1.yaml` regenerated — compared with
+  anchors resolved: +1 path, +3 schemas, changed only the confirm path + its request schema; `referenceCode` appears nowhere;
+  determinism green.
+- **API (Task 2):** `modules/member-attribution/` — DL2's order in one scope tx; the door imported from
+  `../field-worker/attribution-code-access.js` (reach fence green, ⛔ ALLOWED edit, export pin unchanged — AC8); a 23505 on
+  `member_attribution_member_uq` rolls back and the attempt re-runs in a FRESH tx (new `isMemberAttributionDuplicate`); audit
+  `member_attribution.captured` after commit, only on a new row. Domain: `readMemberAttributionForMember` beside the writer. The
+  payment confirm's capture block (savepoint + audit) removed; `ok1 = true` right after the receipt (AR-67 unchanged). The fixture's
+  `actTestFieldWorker` takes a suspension reason.
+- **Tests:** live-DB `assisted-code.spec.ts` 12 legs (AC2: 201 + one row + strict body, 200 repeat, 409 different, 422 + ⛔ row WITH a
+  control, 400 ×5, `pending-kyc` may, lock-in 409, 401 ×2, a concurrent pair, two DETERMINISTIC 23505 legs (a held uncommitted
+  capture, `waitForBlockedBy`); AC3: another Pariwar 422 + control, a future-dated code 422 + control (replica-mode insert, the
+  stamp checked), the GET per member; AC4: six worker states, each seed's state asserted from `field_workers`, six byte-identical
+  answers). Domain live-DB: the new read (per member, RLS + control) and the 23505 narrowing. Unit: the one-writer AST gate (AC5). The
+  3.6b AC4 legs now prove a `referenceCode` ⇒ 400, ⛔ receipt, ⛔ attribution, and a control confirm writes ⛔ attribution.
+- **Mobile (Task 3):** `(signup)/assisted.tsx`; `WIZARD_STEPS` + the `workplace.test.ts` pin; `tc.tsx` → `assisted`; the payment box,
+  its state and its two keys removed (en + hi); `signup.assisted.*` en + hi — checked word for word against DL9; ⛔ invisible
+  characters in the added lines; api-client `assistedCodeStatus` / `assistedCodeRecord`; `microcopy.yaml` scans the screen (proved
+  red). 18 render legs in a real `<LocaleProvider>`: both buttons' props equal, No ⛔ request, recorded / failed / hung (held open,
+  ⛔ moved before 5 s) status ⇒ KYC, one request for a double tap, saved then on, format line ⛔ request + server 400, 422 retry or
+  skip, 409 ×2 / 429 / 500 / network ⇒ KYC ⛔ message, a hung POST ⇒ KYC at 15 s ⛔ before; the route source check. Full mobile
+  suite 2312 green.
+- **Records (Task 5):** `friction-budget.md` — ONE new row (the screen, `forced`, never blocking) + the Story 3.15 disposition (the
+  payment box removed = friction removed); `deferred-work.md` — "BUILT on the story branch, ⛔ merged" lines at 13.1 C2 / 13.2 C2
+  carrying *"capture + resolution for 6-digit codes at signup: Closed by Story 3.15"* (once it lands), and a new 3.15 section: D1 ⛔
+  way back into the wizard (F8), D2 ⛔ device pass, D3 the 201-vs-422 signal → FR-86. AC9 sites checked by grep: 13.1 C2, 13.2 C2,
+  13.2 C4, 13.1d C4, 13.1c C5 (deferred-work); 3.15, 3.6, 13.8, 13.5 (epics.md); FR-85 (PRD); the two code headers + the contract
+  comment.
+- ⚠ **Un-attested** ([[feedback_record_unattested_no_backfill]]): ⛔ run on a device or emulator; the Hindi skip label's wrapping and
+  the screen-reader announcements are unproven outside jsdom (deferred D2). ⛔ pushed, ⛔ PR.
 
 ### File List
+
+Governance / records: `.decision-log.md`, `_bmad-output/implementation-artifacts/3-15-assisted-signup-field-worker-code.md`,
+`_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`,
+`_bmad-output/planning-artifacts/epics.md`, `_bmad-output/planning-artifacts/prds/prd-TWT-2026-05-22/prd.md`, `friction-budget.md`,
+`microcopy.yaml`.
+
+Contracts / OpenAPI: `packages/contracts/src/members/assisted-code.ts` (new), `packages/contracts/src/members/index.ts`,
+`packages/contracts/src/payments/vyawastha-shulk.ts`, `packages/contracts/scripts/emit-openapi.ts`, `openapi/v1.yaml`,
+`packages/contracts/tests/members-assisted-code.test.ts` (new).
+
+Domain: `packages/domain/src/payment/attribution-write.ts`, `packages/domain/src/payment/index.ts`,
+`packages/domain/src/schema/member_attribution.ts` (comments only), `packages/domain/tests/integration/payment/vyawastha-shulk.spec.ts`.
+
+API: `apps/api/src/modules/member-attribution/{handlers,routes,index}.ts` (new), `apps/api/src/server.ts`,
+`apps/api/src/modules/vyawastha-shulk/handlers.ts`, `apps/api/src/audit/audit-sink.ts` (comment),
+`apps/api/tests/integration/member-attribution/assisted-code.spec.ts` (new), `apps/api/tests/integration/_field-worker-fixture.ts`,
+`apps/api/tests/integration/vyawastha-shulk/vyawastha-shulk.spec.ts`, `apps/api/tests/unit/member-attribution-one-writer.test.ts` (new).
+
+API client / i18n: `packages/api-client/src/index.ts`, `packages/i18n/locales/en/common.json`, `packages/i18n/locales/hi/common.json`.
+
+Mobile: `apps/mobile/app/(signup)/assisted.tsx` (new), `apps/mobile/app/(signup)/tc.tsx`, `apps/mobile/app/(signup)/payment.tsx`,
+`apps/mobile/app/(signup)/_layout.tsx` (comment), `apps/mobile/lib/wizard-steps.ts`,
+`apps/mobile/tests/unit/assisted-step-render.test.ts` (new), `apps/mobile/tests/unit/workplace.test.ts`.
 
 ## Change Log
 
@@ -403,3 +477,4 @@ assertion has a passing control beside it. A domain red hides the other packages
 | 1.2 | 2026-11-22 | Validate pass (`bmad-create-story validate 3.15`, on its worktree, at `99922af1`): re-pinned to `99922af1` (the governance branch LANDED, PR #336 — ⛔ stacked); F7 corrected (codes are allocated at REGISTRATION ⇒ a `pending_kyc` worker holds one; AC4 now six states); the inherited *"FR-85 is applied HERE"* quoted in full and recorded as MOVED to 13.5 at every site (DL11, DL12 — ⛔ "discharged"); the Panel-ruled worker count (`-459` Q2 A, 13.1d C4) surfaced as DL14 (F13); 13.2 D2 shown ⛔ triggered; Task 2.3's fixtures re-pointed to the `apps/api` fixture (⛔ domain tests); the api-client, `emit-openapi.ts`, a new domain read, the rate limit, the lock-in gate, the stale code comments, DL6's epics-block wording and FR-86 named; PQ1 gets its own deciding fact. ⛔ Code. |
 | 1.3 | 2026-11-22 | PQ1 RULED A by the Panel (DR and KB; BigDev asked directly: *"by DR and KB / go with option A."*) — Decision `2026-11-22-493`, Trustee-ratified, committed alone at `c88268f5`. Task 0.3 dropped; AC1, §0, N2, F12 (next free ≥ `-494`), DL4, Task 0.4 / 0.5 updated. ⛔ built behaviour changes (DL4 was already A). ⛔ Code. |
 | 1.4 | 2026-11-22 | DL14 ANSWERED A by BigDev (*"DL14 A"*): the `-459` Q2 A worker count is MOVED to Story 13.5 (with 13.2's D2); ⛔ built here, ⛔ migration. §0, F13, DL12's 13.1d C4 / 13.5 lines, DL14, Task 0.2, AC9 updated. Task 0.4's author-commit records it with DL1–DL13. ⛔ Code. |
+| 1.5 | 2026-11-22 | `bmad-dev-story 3.15`: Task 0 (author-commit `-494` alone; DL1–DL13 answered — *"Accept all"*, DL9 *"Approve as written"*, DL6 *"remove it"*; dated lines), Tasks 1–3 built (contracts + OpenAPI, the member-attribution module, the payment step's capture removed, the `assisted` wizard step), Task 4 gates, Task 5 records (friction-budget row + disposition, deferred-work). Status → review. |

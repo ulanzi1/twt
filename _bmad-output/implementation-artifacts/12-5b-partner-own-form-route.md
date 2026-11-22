@@ -49,7 +49,7 @@ number belongs to the first COMMIT, on any branch (`-366` decision 6).
 
 # Story 12.5b: Partner's-Own-Form Route — Offer Route Marker + Send Guard + Outbound Link `[PRIMITIVE]`
 
-Status: in-progress
+Status: review
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -797,7 +797,7 @@ On 2026-11-22 BigDev selected patch-action option **2 — Leave as action items*
 no implementation patches applied. Story and sprint status return to **in-progress** for these unresolved actions.
 RD1 is the author's engineering choice under the routing template's §0, not a Panel referral.
 
-- [ ] [Review][Patch] **RD1 [P2, decision resolved] Add complementary suppression to the daily-count display.**
+- [x] [Review][Patch] **RD1 [P2, decision resolved] Add complementary suppression to the daily-count display.**
   `packages/domain/src/marketplace/partner-form.ts:307` accumulates all-days totals and separately floors each day
   (`:316`–`:319`), then returns both. Two days with counts 5 and 1 yield a visible total 6, a visible day 5 and a
   hidden day: the hidden count is exactly `6 - 5 = 1`. This is the residual already disclosed in the Completion Notes.
@@ -808,7 +808,7 @@ RD1 is the author's engineering choice under the routing template's §0, not a P
   count. Preserve the total-and-daily layout, accepting that some counts at or above 5 will also be hidden. The
   implementation must include a regression for the `6 - 5 = 1` case and a dated author amendment to QE13 (A), not a
   Panel note. Sources: blind + auditor.
-- [ ] [Review][Patch] **RP1 [P1] The jobs role cannot execute the 90-day visit purge.**
+- [x] [Review][Patch] **RP1 [P1] The jobs role cannot execute the 90-day visit purge.**
   [packages/domain/migrations/0217_marketplace-partner-form-figures.sql:38]
   The migration grants `twt_service` SELECT and DELETE only, but
   `purgeExpiredPartnerFormVisits` uses `FOR UPDATE SKIP LOCKED`
@@ -819,7 +819,7 @@ RD1 is the author's engineering choice under the routing template's §0, not a P
   fails `42501: permission denied for table marketplace_partner_form_visits`. Repair the privilege/query boundary
   while preserving visits' no-UPDATE contract, and execute the purge with the actual jobs privilege shape in a
   regression test; a superuser success or a grants-list assertion is insufficient. Sources: blind + edge.
-- [ ] [Review][Patch] **RP2 [P2] The permanent audit hash preserves recoverable below-floor partner figures.**
+- [x] [Review][Patch] **RP2 [P2] The permanent audit hash preserves recoverable below-floor partner figures.**
   [apps/api/src/modules/marketplace/handlers.ts:635]
   `recordTotals` hashes the raw body, including a figure 0–4, before `recordPartnerFormTotals` suppresses it. The hash
   is unkeyed SHA-256 (`payloadHash`, same file). For a one-stage entry, the module, dates and label are known from the
@@ -828,13 +828,13 @@ RD1 is the author's engineering choice under the routing template's §0, not a P
   only for 3. This defeats QE12's "the number itself is never stored" / AC10's floor. Build the audit hash from the
   validated, floored representation (all values 0–4 must produce the same hash for otherwise identical input), with
   an actual-route regression. Source: edge (independently reproduced during triage).
-- [ ] [Review][Patch] **RP3 [P2] Adding the twentieth stage drops keyboard focus to the page body.**
+- [x] [Review][Patch] **RP3 [P2] Adding the twentieth stage drops keyboard focus to the page body.**
   [apps/admin/src/modules/marketplace/ModuleDetailPage.tsx:442]
   Adding stage 20 removes the focused Add stage button without transferring focus or announcing the limit. This
   violates the preserved focus behavior / invariant checklist family 13. **Executed component proof:** focus Add
   at 19 rows, activate it, and `document.activeElement` becomes `document.body`. Move focus intentionally (for
   example to the new stage label) and announce the limit, with a regression for this boundary. Source: auditor.
-- [ ] [Review][Patch] **RP4 [P2, REAL GAP] The new totals mutation is absent from actor/tenant denial regressions.**
+- [x] [Review][Patch] **RP4 [P2, REAL GAP] The new totals mutation is absent from actor/tenant denial regressions.**
   [apps/api/tests/integration/marketplace-admin.spec.ts:284]
   The existing RP12 matrix still tests four mutations/eight routes and omits `partner-form-totals` from positive
   controls, tampered-session and no-grant vectors; the permission-denial vector also omits it. Its before/after
@@ -842,7 +842,7 @@ RD1 is the author's engineering choice under the routing template's §0, not a P
   not an assertion that authorization is currently bypassed. Extend those vectors with authorized entry, cross-Pariwar
   / no-grant, tampered actor and narrower-scope denial, asserting no totals or audit writes. Required by checklist
   family 3 per new mutation route. Source: auditor.
-- [ ] [Review][Patch] **RP5 [P2, REAL GAP] Policy assertions silently accept absent tenant predicates.**
+- [x] [Review][Patch] **RP5 [P2, REAL GAP] Policy assertions silently accept absent tenant predicates.**
   [packages/domain/tests/integration/marketplace/partner-form-schema.spec.ts:290]
   Filtering null `qual` / `with_check` before checking their content lets an expected policy with an omitted
   required predicate pass the catalog assertion. A policy declared without its tenant predicate permits all rows
@@ -1137,6 +1137,65 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 12.5b` on the story worktre
 per-day list, each floored at 5. When the total is 5 or more and only one day is below the floor, the hidden day can be worked out
 (total minus the days shown) — the small-number residual R3 B's floor was meant to close. If that matters, the narrow fixes are a
 per-day list without a total, or a floor on the difference too; it is a QE13 amendment (author-commit), ⛔ a Panel question.
+⇒ 2026-11-22: taken up by the code review as RD1 and resolved below (Decision `-490` (1)).
+
+⭐ **Review follow-up — `bmad-dev-story 12.5b`, 2026-11-22 (the six action items of the code review at `09be56ef`).** Governance first: the
+review record committed (`4c7647ab`), then Decision `2026-11-22-490` (author-commit) ALONE (`483cfcca`) — it amends `-489` QE13 (A) (RD1)
+and QE5's W15 statement (RP1) by name; supersedes ⛔ ratified text; ⛔ Panel note. Numbering re-grepped on every ref and worktree first:
+newest decision `-489`, newest ledger letter `2026-11-22j` (this branch). Each fix has a regression that FAILED before it (RED shown) or,
+where the finding was missing evidence only, a mutation that turns it red.
+- ✅ Resolved review finding [P1] **RP1 — the jobs role could not run the 90-day purge.** `purgeExpiredPartnerFormVisits` drops
+  `FOR UPDATE SKIP LOCKED` (a row lock needs an UPDATE privilege; the visits stay un-updatable and 0217's grants are UNCHANGED — ⛔ new
+  migration). The batch is still a MATERIALIZED CTE, deleted by id; erasure's DELETE is the only other writer, and a DELETE meeting a row
+  being deleted waits then skips it. Regression (`lead-handoff-commands.spec.ts`, RP1): the REAL purge on a role shaped as the production
+  jobs login (`CREATE ROLE … NOLOGIN BYPASSRLS IN ROLE twt_service`, inside the test's transaction) removes two Pariwars' old rows and keeps
+  the 89-day one; that login is refused `UPDATE` and `FOR UPDATE` (42501). RED before the fix: `42501 permission denied for table
+  marketplace_partner_form_visits`. The jobs unit pin of the SQL shape now asserts ⛔ any row-lock clause.
+- ✅ Resolved review finding [P2] **RP2 — the audit hash kept a recoverable below-5 figure.** NEW `partnerFormTotalsAuditShape` (domain):
+  the validated entry with every figure FLOORED (`{ label, figure: null, below_floor: true }` below 5); the totals route hashes
+  `{ module_id, ...that }`, ⛔ the raw body. Regression (`marketplace-admin.spec.ts`, RP2, over HTTP): one-stage entries with figures 0, 1,
+  3, 4 give ONE `request_payload_hash`; 5 and 6 each their own. RED before the fix (four distinct hashes).
+- ✅ Resolved review finding [P2] **RP3 — adding the 20th stage dropped focus to `<body>`.** Every "Add a step" moves focus to the NEW
+  step's label field (a ref per row, focused once it renders); at 20 the always-mounted `module-totals-live` region says *"That is the
+  last step: one entry holds at most 20 steps."* (NEW key `module.totals.stagesLimit`); the bound is the contracts'
+  `MODULE_PARTNER_FORM_STAGES_MAX` (⛔ a literal 20). Regression (`module-partner-form.test.tsx`, RP3): focus on the new label after an
+  add and after the 20th, ⛔ `<body>`, the limit line announced, and cleared when a step is removed. RED before the fix.
+- ✅ Resolved review finding [P2] **RP4 — the totals route was missing from the actor / tenant denial legs.** `marketplace-admin.spec.ts`:
+  AC2 (a `district_admin` WITHOUT `module.manage` — the narrower-scope admin) now covers NINE routes incl. `partner-form-totals` on a real
+  `partner_form` offer (so the 403 is not its 409), the cross-Pariwar leg (P's admin under Q's path → 404), and counts the totals table
+  for P and Q; RP12 has a POSITIVE control on the totals route (201 for that very client), then no-grant → 404 and a TAMPERED session →
+  EXACTLY 404, with the totals rows and audit lines unchanged; PT15 covers the ninth route (400 before the session gate). Mutation proof:
+  with the totals route's `preHandler` guard removed, AC2 and RP12 both FAIL; restored.
+- ✅ Resolved review finding [P2] **RP5 — the policy catalog test let a missing predicate pass.** `partner-form-schema.spec.ts` now
+  REQUIRES each command's clause (SELECT / DELETE: USING; INSERT: WITH CHECK; UPDATE: both) on the Pariwar GUC, and asserts the clause a
+  command cannot have is NULL — ⛔ filtering NULLs. NEW live legs as `twt_app` for COUNTS (another Pariwar's row invisible and
+  un-updatable; an INSERT naming it 42501; ⛔ scope: nothing seen, updated or inserted; a control that lands) and TOTALS (the same for
+  SELECT / INSERT). The migration predicates were correct; these were missing evidence.
+- ✅ Resolved review finding [P2] **RD1 — the all-days count gave a hidden day by subtraction (6 − 5 = 1).** As BigDev chose (option 1,
+  complementary suppression; Decision `-490` (1)): `listPartnerFormFigures` shows a kind's ALL-DAYS figure as a number only when EVERY
+  counted day has that kind at 5 or more — every day, incl. those older than the 60 listed (else 302 − 300 gives the unlisted day) and a
+  day where that kind is 0. Otherwise it is `withheld` ("not shown"), whatever its size, so its form tells nothing about the hidden days
+  (the rule reads only which days are below the floor). Nothing counted → the floored 0, ⛔ withheld. Contracts: NEW `ModuleCountTotalDto`
+  (`withheld`; floored XOR withheld) on `counts`; `ModulePartnerFormFiguresDto` is a SECOND floor (⛔ a numeric all-days figure beside a
+  listed day of that kind below 5 — issue at `['counts', <kind>]`). Admin: `figureText` → "not shown" for `withheld`; the figures note says
+  why. OpenAPI re-emitted: semantic diff (anchors resolved) ADDITIVE only — `withheld` on the four all-days figures, required; determinism
+  green. Regressions: domain live (`partner-form-visit.spec.ts`, RD1 — the review's 5 + 1, a control 5 + 7 = 12 shown, a 61st-day 2, a zero,
+  a UNIFORMITY leg: two offers alike but for a hidden 0 vs 3 read identically, and nothing counted); API (`marketplace-admin.spec.ts`, RD1 —
+  ⛔ `"figure":6` in the body, a 13 control shown); contracts (`modules.test.ts`, RD1); admin (the fixture's three withheld kinds read
+  "not shown", each day still "fewer than 5"). RED before the fix: `{ figure: 6, belowFloor: false }` returned. ⚠ Cost, as the decision
+  states: one day below 5 hides that kind's all-days figure for the offer's life.
+- **Gates for the follow-up.** Typecheck + lint (domain, contracts, api, admin, jobs: 36/36 tasks); domain unit 4308, contracts 1795, api unit
+  1154, admin 2363, jobs lead-handoff + export 81; live: domain marketplace + member 619, api marketplace 47; partner-boundary fence +
+  its spec, microcopy gate. **`ci:local` on a FRESH container** (`twt-125b-pg4`, :5458, DB `twt_dev`, migrated by `ci:local` itself): **40 /
+  41 — `friction-budget` RED**, and NOT from the follow-up: its AC-4 check diffs COMMITTED history, so it first saw the mobile files of
+  `714b30a9` (`partner-form-link.ts`, `marketplace-i18n.ts` and their two tests) now that they are committed; the dev run's 41/41 was
+  before that commit ([[project_friction_budget_baseline_ratchet]] — it passes vacuously on uncommitted work). Fixed by a **Story 12.5b
+  disposition** in `friction-budget.md` (⛔ new row: ⛔ production caller; the notice's forced-or-not question is owed by Story 12.3).
+  ⚠ That gate can only be re-checked once the disposition is COMMITTED.
+- **Committed** (BigDev: "Commit, then finish records"): code + tests + OpenAPI + the friction disposition in `5607475c`; then
+  `pnpm friction:check` → **green** ("a new story disposition was recorded (12.5b) — declaration affirmed with no new row"). With the
+  other 40 jobs green on the same code in the fresh-container run, every `ci:local` job is now green; the code is unchanged since that
+  run. These records after the commit. ⛔ Pushed. Row 55 (d)'s line waits for `done`.
 
 ### File List
 
@@ -1183,11 +1242,22 @@ Docs / records:
 - `docs/adr/ADR-0044-module-manifest-schema-versioning.md`, `docs/adr/ADR-0046-partner-lead-handoff-transport.md`
 - `docs/tone-review-checklist.md`
 - `_bmad-output/implementation-artifacts/12-5b-partner-own-form-route.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `.decision-log.md` (Decision `2026-11-22-490`, review follow-up)
+- `friction-budget.md` (the Story 12.5b disposition — review follow-up; the AC-4 gate)
+
+Review follow-up (2026-11-22, every file already listed above except the decision log): `packages/domain/src/marketplace/partner-form.ts`
+(RP1, RP2, RD1); `apps/api/src/modules/marketplace/handlers.ts` (RP2, RD1); `packages/contracts/src/modules/dto.ts`, `index.ts`,
+`openapi/v1.yaml` (RD1); `apps/admin/src/modules/marketplace/ModuleDetailPage.tsx` (RP3), `derive.ts` (RD1), `i18n-en.ts` (RP3, RD1);
+tests `packages/domain/tests/integration/marketplace/lead-handoff-commands.spec.ts` (RP1), `partner-form-schema.spec.ts` (RP5),
+`partner-form-visit.spec.ts` (RD1); `apps/api/tests/integration/marketplace-admin.spec.ts` (RP2, RP4, RD1);
+`packages/contracts/tests/modules.test.ts` (RD1); `apps/admin/tests/module-partner-form.test.tsx` (RP3, RD1);
+`apps/jobs/tests/module-lead-handoff.test.ts` (RP1).
 
 ### Change Log
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-22 | 1.5 | `bmad-dev-story 12.5b` review follow-up → **review**: Decision `-490` alone (`483cfcca`; RD1 complementary suppression, RP1 W15 without a row lock); all six findings resolved with regressions (RED shown, or a mutation for RP4); OpenAPI additive (`withheld`); `friction-budget.md` Story 12.5b disposition (the AC-4 gate first saw `714b30a9`'s mobile files); `ci:local` 40/41 on a fresh container, then code committed `5607475c` and `friction-budget` green. |
 | 2026-11-22 | 1.4 | Full code review at `09be56ef`: all three layers completed; 597 existing targeted tests passed; isolated retention-privilege, audit-hash and focus probes reproduced defects. BigDev selected complementary suppression for RD1, then option 2, "Leave as action items": six unchecked patch findings, no implementation patches applied, status review → in-progress. |
 | 2026-11-22 | 1.0 | Created at pin `4db122e0` on `story/12-5b-partner-own-form-route`; row backlog → ready-for-dev. |
 | 2026-11-22 | 1.2 | Task 0 complete: answers recorded, Decision `-489` (`7b4f93db`), the Task 0.4 records; status header and Completion Notes updated. ⛔ code. |

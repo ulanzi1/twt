@@ -32,7 +32,7 @@ ancestor of HEAD" is durable; "the code claims were re-derived" is perishable �
 
 # Story 3.15: "Have You Been Assisted?" — A Field Worker's Code at Signup
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -338,7 +338,8 @@ option A."* ⛔ routing-note file carries PQ1. The question as put is quoted in 
       `lib/member-api.ts` — F9); remove the box from `payment.tsx`; `common.json` en + hi (DL9) and the removed
       keys; `microcopy.yaml`; vitest. Regenerate typed routes (`CI=1 npx expo start --port <free>` until `.expo/types/router.d.ts`
       exists). ⚠ [[project_tamagui_button_text_one_line]] for the two buttons; [[project_uset_fresh_closure_memo_trap]] (⛔ `t` in deps).
-- [ ] **Task 4 — Gates (AC9).** i18n parity; microcopy; OpenAPI emit; `pnpm ci:local` on a fresh container.
+- [x] **Task 4 — Gates (AC9).** i18n parity; microcopy; OpenAPI emit; `pnpm ci:local` on a fresh container.
+      ✅ `ci:local` **41/41 green** at `e3105ae7` on a FRESH `twt-3-15-pg` (:5447), `.expo/types` moved aside (run 2; run 1's two reds in Debug Log).
 - [x] **Task 5 — Records.** DL12; story Dev Agent Record, File List, Change Log; sprint row → `review`; ONE ledger entry (safe prepend,
       YAML parses, row count holds).
 

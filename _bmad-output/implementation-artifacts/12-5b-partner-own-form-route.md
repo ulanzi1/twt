@@ -49,7 +49,7 @@ number belongs to the first COMMIT, on any branch (`-366` decision 6).
 
 # Story 12.5b: Partner's-Own-Form Route — Offer Route Marker + Send Guard + Outbound Link `[PRIMITIVE]`
 
-Status: review
+Status: in-progress
 
 ## ⭐⭐ WHAT THIS STORY IS, IN ONE PARAGRAPH
 
@@ -787,6 +787,83 @@ nothing else: ⛔ `canOpenURL`, ⛔ URL rewriting, ⛔ query appended, ⛔ `expo
   - Update `sprint-status.yaml` (safe prepend, YAML parsed after — [[project_sprint_status_safe_prepend]]).
   - Add the Row 55 (d) dated line only at `done`.
 
+### Review Findings
+
+Full `bmad-code-review`, 2026-11-22; baseline `4db122e0`, reviewed HEAD `09be56ef` on
+`story/12-5b-partner-own-form-route`. All three layers completed (Blind Hunter, Edge Case Hunter, Acceptance Auditor).
+After deduplication: **1 decision-needed, 5 patch, 0 defer, 6 dismissed**. On 2026-11-22 BigDev selected option **1 —
+complementary suppression** for RD1. Current disposition: **0 decision-needed, 6 patch, 0 defer, 6 dismissed**.
+On 2026-11-22 BigDev selected patch-action option **2 — Leave as action items**. All six findings remain unchecked;
+no implementation patches applied. Story and sprint status return to **in-progress** for these unresolved actions.
+RD1 is the author's engineering choice under the routing template's §0, not a Panel referral.
+
+- [ ] [Review][Patch] **RD1 [P2, decision resolved] Add complementary suppression to the daily-count display.**
+  `packages/domain/src/marketplace/partner-form.ts:307` accumulates all-days totals and separately floors each day
+  (`:316`–`:319`), then returns both. Two days with counts 5 and 1 yield a visible total 6, a visible day 5 and a
+  hidden day: the hidden count is exactly `6 - 5 = 1`. This is the residual already disclosed in the Completion Notes.
+  The implementation follows the expressly selected QE13 (A) layout, so this is a design conflict with I4 / AC9's
+  suppression intent, not a claim that QE13's requested layout was omitted. R3 B directly governs the partner's
+  totals; the floor on the Trust's own daily counts is the author's narrowing. **BigDev's choice, 2026-11-22:** option
+  **1 — complementary suppression**: hide another published cell or the total when it would reveal a protected daily
+  count. Preserve the total-and-daily layout, accepting that some counts at or above 5 will also be hidden. The
+  implementation must include a regression for the `6 - 5 = 1` case and a dated author amendment to QE13 (A), not a
+  Panel note. Sources: blind + auditor.
+- [ ] [Review][Patch] **RP1 [P1] The jobs role cannot execute the 90-day visit purge.**
+  [packages/domain/migrations/0217_marketplace-partner-form-figures.sql:38]
+  The migration grants `twt_service` SELECT and DELETE only, but
+  `purgeExpiredPartnerFormVisits` uses `FOR UPDATE SKIP LOCKED`
+  (`packages/domain/src/marketplace/partner-form.ts:398`), which also requires UPDATE privilege on at least one column.
+  BYPASSRLS does not waive privileges. Every production W15 call therefore fails with `42501`, so visit records remain
+  past 90 days (AC8 / QE8 / R2 C). **Executed proof:** the story DB reports SELECT=true, DELETE=true,
+  any-column-UPDATE=false for `twt_service`; a read-only EXPLAIN of the actual purge under `SET LOCAL ROLE twt_service`
+  fails `42501: permission denied for table marketplace_partner_form_visits`. Repair the privilege/query boundary
+  while preserving visits' no-UPDATE contract, and execute the purge with the actual jobs privilege shape in a
+  regression test; a superuser success or a grants-list assertion is insufficient. Sources: blind + edge.
+- [ ] [Review][Patch] **RP2 [P2] The permanent audit hash preserves recoverable below-floor partner figures.**
+  [apps/api/src/modules/marketplace/handlers.ts:635]
+  `recordTotals` hashes the raw body, including a figure 0–4, before `recordPartnerFormTotals` suppresses it. The hash
+  is unkeyed SHA-256 (`payloadHash`, same file). For a one-stage entry, the module, dates and label are known from the
+  stored entry; five candidate hashes identify the suppressed number. **Executed HTTP proof:** submitted one stage
+  with figure 3; the totals row contained NULL/`below_floor=true`, but candidate hashes 0–4 matched the real audit row
+  only for 3. This defeats QE12's "the number itself is never stored" / AC10's floor. Build the audit hash from the
+  validated, floored representation (all values 0–4 must produce the same hash for otherwise identical input), with
+  an actual-route regression. Source: edge (independently reproduced during triage).
+- [ ] [Review][Patch] **RP3 [P2] Adding the twentieth stage drops keyboard focus to the page body.**
+  [apps/admin/src/modules/marketplace/ModuleDetailPage.tsx:442]
+  Adding stage 20 removes the focused Add stage button without transferring focus or announcing the limit. This
+  violates the preserved focus behavior / invariant checklist family 13. **Executed component proof:** focus Add
+  at 19 rows, activate it, and `document.activeElement` becomes `document.body`. Move focus intentionally (for
+  example to the new stage label) and announce the limit, with a regression for this boundary. Source: auditor.
+- [ ] [Review][Patch] **RP4 [P2, REAL GAP] The new totals mutation is absent from actor/tenant denial regressions.**
+  [apps/api/tests/integration/marketplace-admin.spec.ts:284]
+  The existing RP12 matrix still tests four mutations/eight routes and omits `partner-form-totals` from positive
+  controls, tampered-session and no-grant vectors; the permission-denial vector also omits it. Its before/after
+  mutation counts omit the totals table. The new route has a guard, so this finding is missing required evidence,
+  not an assertion that authorization is currently bypassed. Extend those vectors with authorized entry, cross-Pariwar
+  / no-grant, tampered actor and narrower-scope denial, asserting no totals or audit writes. Required by checklist
+  family 3 per new mutation route. Source: auditor.
+- [ ] [Review][Patch] **RP5 [P2, REAL GAP] Policy assertions silently accept absent tenant predicates.**
+  [packages/domain/tests/integration/marketplace/partner-form-schema.spec.ts:290]
+  Filtering null `qual` / `with_check` before checking their content lets an expected policy with an omitted
+  required predicate pass the catalog assertion. A policy declared without its tenant predicate permits all rows
+  for that command. Behavioral cross-tenant / absent-scope coverage exists for visits but not counts or totals,
+  leaving this failure invisible there. Assert each command's required USING / WITH CHECK clause is present and
+  exercise counts/totals reads and writes as `twt_app` with another tenant and absent scope. Required by checklist
+  family 5; current migration predicates are correct. Source: auditor.
+
+**Verification:** 597 existing targeted tests passed: domain unit 334; domain live integration 55; contracts 16;
+admin 58; mobile 8; API live integration 45; jobs lead-handoff/export 81. The isolated audit and keyboard regressions
+failed as described, and the restricted-role read-only purge probe was rejected as described. Reproduction artifacts
+are under `/private/tmp/twt-12-5b-review/`, `/private/tmp/twt-125b-auditor/`, and
+`/private/tmp/twt-12-5b-review-role.cjs`; they are local review artifacts, not committed regression coverage.
+
+**Invariant lens:** touched families 1, 4 and 12 are covered by named route-guard, v1/v2 replay and scoped visit/erasure
+tests; 2 by atomic UPSERT/savepoint construction and existing claim concurrency tests; 6–9 by field-picked reads,
+atomic audit pairing, sanctioned actor-id attribution and the documented W15 bypass; 10–11 by the disclosed variances
+and policy-meaning statement. Families 3, 5 and 13 have REAL GAPs above; RP1 and RP2 additionally expose retention and
+suppression failures despite the existing tests. System/non-human admin-session actors are not constructible on this
+surface. RD1 is the aggregate suppression design issue; no test result is claimed to close it.
+
 ## Dev Notes
 
 ### Current state (what this story changes, what must be preserved)
@@ -1111,6 +1188,7 @@ Docs / records:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-22 | 1.4 | Full code review at `09be56ef`: all three layers completed; 597 existing targeted tests passed; isolated retention-privilege, audit-hash and focus probes reproduced defects. BigDev selected complementary suppression for RD1, then option 2, "Leave as action items": six unchecked patch findings, no implementation patches applied, status review → in-progress. |
 | 2026-11-22 | 1.0 | Created at pin `4db122e0` on `story/12-5b-partner-own-form-route`; row backlog → ready-for-dev. |
 | 2026-11-22 | 1.2 | Task 0 complete: answers recorded, Decision `-489` (`7b4f93db`), the Task 0.4 records; status header and Completion Notes updated. ⛔ code. |
 | 2026-11-22 | 1.3 | `bmad-dev-story 12.5b` → **review**: Tasks 1–9 done; code `714b30a9`; ci:local 41/41 on a fresh container; Row 26 / Row 55 grant lines after the commit. Tasks 1–8 built and tested (migrations `0216` / `0217`; manifest v2; the send guard in five places; the sweep's route cancel + W15; visits / counts / totals; contracts + API + OpenAPI; admin wizard / publish / detail; mobile opener + the `marketplace` namespace, Hindi accepted by BigDev); Task 9's ADR dated lines; engineering variances and one observation recorded in the Completion Notes. |

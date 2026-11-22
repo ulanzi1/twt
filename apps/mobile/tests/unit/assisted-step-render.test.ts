@@ -113,11 +113,17 @@ function renderStep() {
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)) })
 const never = () => new Promise<never>(() => undefined)
 
-/** Render with ⛔ code recorded; wait for the question. */
+/**
+ * Render with ⛔ code recorded; wait for the question — AND for its passive effects. `findByTestId` resolves as soon as the node is in
+ * the DOM; the question is spoken from an effect (`useAnnounceOnChange`) that React may flush a macrotask later, so on a loaded
+ * machine (`ci:local` runs ~37 tasks at once) an assertion made straight after it saw `announce` with 0 calls (seen once, in
+ * `ci:local` at 3fefcae1; ⛔ reproduced locally). Settling here makes every caller's "spoken" / "not re-spoken" assertion deterministic.
+ */
 async function ask() {
   mock.assistedCodeStatus.mockResolvedValue({ recorded: false })
   renderStep()
   await screen.findByTestId('assisted-yes')
+  await settle()
 }
 /** Ask, press Yes, type `code`. */
 async function typed(code: string) {
@@ -371,6 +377,7 @@ describe('Review R2 — ⛔ navigation from a step that has lost focus', () => {
     mock.assistedCodeStatus.mockResolvedValueOnce({ recorded: false })
     act(() => { mock.refocus() })
     expect(await screen.findByTestId('assisted-yes')).toBeInTheDocument()
+    await settle() // the question is spoken from an effect — let it flush (see `ask()`)
     expect(mock.announce).toHaveBeenCalledWith(words['signup.assisted.title'])
     expect(mock.assistedCodeStatus).toHaveBeenCalledTimes(2)
   })

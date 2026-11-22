@@ -4,8 +4,9 @@
 //
 // Flow: fetch the server-built UPI Intent on mount (the amount + VPA are server-authoritative — the
 // client never names them; R4) → "Pay via UPI" opens the OS UPI app via Linking.openURL → on return
-// the member pastes the UTR (long-press paste; permissive — the server validates) + an OPTIONAL 6-digit
-// Reference Code (D2 port seam) → "Confirm payment" posts /confirm. On lockInEntered → home; on
+// the member pastes the UTR (long-press paste; permissive — the server validates) → "Confirm payment"
+// posts /confirm. (Story 3.15 DL6 removed the optional Reference Code box: a helper's code is asked in
+// its own `assisted` step after the terms.) On lockInEntered → home; on
 // outstanding steps → surface which is incomplete; on 503 lock_in.policy_unavailable → graceful retry
 // (the receipt is already saved; re-confirm completes once provisioned — mirror 3.5/3.6a loadFailed+retry).
 //
@@ -42,7 +43,6 @@ export default function PaymentScreen() {
   const [loadFailed, setLoadFailed] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [utr, setUtr] = useState('')
-  const [referenceCode, setReferenceCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [outstanding, setOutstanding] = useState<LockInGateStep[]>([])
@@ -103,7 +103,6 @@ export default function PaymentScreen() {
       const res = await memberAuth.vyawasthaShulkConfirm({
         tr: intent.tr,
         utr: utr.trim(),
-        ...(referenceCode.trim() ? { referenceCode: referenceCode.trim() } : {}),
       })
       if (res.lockInEntered) {
         // Lock-in entered — the signup loop is closed. Story 3.7's clock widget renders on the tabs.
@@ -201,20 +200,6 @@ export default function PaymentScreen() {
         />
         <Text color="$colorPress" accessibilityRole="text">
           {t('payment.utr_help')}
-        </Text>
-
-        {/* Optional 6-digit Reference Code (D2 port seam) — skippable. */}
-        <Text accessibilityRole="text">{t('payment.reference_code_label')}</Text>
-        <Input
-          value={referenceCode}
-          onChangeText={setReferenceCode}
-          keyboardType="number-pad"
-          maxLength={6}
-          accessibilityLabel={t('payment.reference_code_label')}
-          accessibilityHint={t('payment.reference_code_help')}
-        />
-        <Text color="$colorPress" accessibilityRole="text">
-          {t('payment.reference_code_help')}
         </Text>
 
         {/* Outstanding-step list — announced when the receipt saved but a prior step is incomplete.

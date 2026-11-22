@@ -125,7 +125,7 @@ export default function TcScreen() {
     try {
       await memberAuth.memberTermsAccept({ tcVersionId: terms.tcVersionId, locale })
       setDone(true)
-      router.replace('/(signup)/kyc')
+      router.replace('/(signup)/assisted')
     } catch {
       setError(t('tc.error_generic'))
     } finally {

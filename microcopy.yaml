@@ -356,6 +356,9 @@ scope:
     - apps/mobile/lib/app-language.ts
     - apps/mobile/app/(auth)/login.tsx
     - apps/mobile/app/(claim)/contact.tsx
+    # ⭐ Story 3.15 (AC7; Decision 2026-11-22-494 DL9) — the signup "Did someone help you register?" step. Its words are the
+    # `signup.assisted.*` keys (common.json, scanned by copy_globs); the screen is scanned here for literals and tone.
+    - apps/mobile/app/(signup)/assisted.tsx
   # Member-visible copy (locale strings) — POPULATED at Story 2.5 (AC6c) for the first
   # member surface: the public Niyamavali (apps/public). These globs scan the PURE
   # member copy (the `niyamavali` i18n namespace strings), so the member-register

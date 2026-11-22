@@ -61,6 +61,8 @@ import {
   MemberStepUpVerifyResponse,
   MemberTermsResponse,
   MemberTermsAcceptResponse,
+  MemberAssistedCodeResponse,
+  MemberAssistedCodeStatusResponse,
   NomineeStatusResponse,
   VyawasthaShulkConfirmResponse,
   VyawasthaShulkIntentResponse,
@@ -129,6 +131,8 @@ import {
   type MemberTermsResponse as MemberTermsResult,
   type MemberTermsAcceptRequest,
   type MemberTermsAcceptResponse as MemberTermsAcceptResult,
+  type MemberAssistedCodeResponse as MemberAssistedCodeResult,
+  type MemberAssistedCodeStatusResponse as MemberAssistedCodeStatusResult,
   type MemberTermsLocale,
   type NomineeDeclareRequest,
   type NomineeMarksSaveRequest,
@@ -251,6 +255,7 @@ const NOMINEE_BASE = '/api/v1/member/nominees';
 const MEDICAL_BASE = '/api/v1/member/medical-disclosure';
 const TERMS_BASE = '/api/v1/member/terms';
 const VYAWASTHA_SHULK_BASE = '/api/v1/member/vyawastha-shulk';
+const ASSISTED_CODE_PATH = '/api/v1/member/signup/assisted-code';
 const MEMBER_HOME_BASE = '/api/v1/member';
 const CONTRIBUTION_BASE = '/api/v1/member/contribution';
 const LIFE_EVENTS_BASE = '/api/v1/member/life-events';
@@ -512,6 +517,21 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
       return call(`${TERMS_BASE}/accept`, MemberTermsAcceptResponse, input, true);
     },
 
+    // ── "Did someone help you register?" (Story 3.15) ──────────────────────────
+    /** Whether a helper's code is already recorded for the session's member — the signup step skips when it is (auth). */
+    assistedCodeStatus(): Promise<MemberAssistedCodeStatusResult> {
+      return call(ASSISTED_CODE_PATH, MemberAssistedCodeStatusResponse, undefined, true, 'GET');
+    },
+
+    /**
+     * Record the 6-digit code the person who helped gave the member (auth). 201 / 200 → `{ recorded: true }` (the answer names
+     * ⛔ worker); 422 `attribution.code_not_found` — nobody holds it; 409 — past signup or a different code recorded; 400 — not
+     * 6 digits. Errors arrive as `ApiError` (`status`, `code`).
+     */
+    assistedCodeRecord(code: string): Promise<MemberAssistedCodeResult> {
+      return call(ASSISTED_CODE_PATH, MemberAssistedCodeResponse, { code }, true);
+    },
+
     // ── Signup ₹110 Vyawastha Shulk (Story 3.6b) ────────────────────────────────
     /**
      * Build the server-constructed UPI Intent for the ₹110 signup fee (Story 3.6b). The VPA + amount
@@ -525,8 +545,8 @@ export function createMemberAuthClient(opts: MemberAuthClientOptions) {
     /**
      * Self-attest the UTR after returning from the UPI app (Story 3.6b). ALWAYS persists the AR-67
      * receipt; emits member.vyawastha_shulk_paid + member.lock_in_entered ONLY when the 5-condition
-     * lock-in gate passes (else `outstanding` names the incomplete steps). Optionally captures the
-     * 6-digit Reference Code (D2 port seam). Idempotent on `tr` (auth).
+     * lock-in gate passes (else `outstanding` names the incomplete steps). ⛔ code is captured here
+     * (Story 3.15 moved it to `assistedCodeRecord`). Idempotent on `tr` (auth).
      */
     vyawasthaShulkConfirm(input: VyawasthaShulkConfirmRequest): Promise<VyawasthaShulkConfirmResult> {
       return call(`${VYAWASTHA_SHULK_BASE}/confirm`, VyawasthaShulkConfirmResponse, input, true);

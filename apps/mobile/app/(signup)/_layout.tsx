@@ -7,6 +7,8 @@
 // (2026-10-21, Story 5.10 — the line above is stale; the order lives in lib/wizard-steps.ts, today
 //   tc → kyc → workplace → nominees → medical → whatsapp → payment. A skipped `whatsapp` step is not
 //   subtracted from the count: the label jumps Step 5 → 7 of 7 — `-375` decision 3's accepted cost.)
+// (2026-11-22, Story 3.15 — `assisted` now sits after `tc`: tc → assisted → kyc → …; 8 steps. A skipped
+//   `assisted` step is not subtracted either: Step 1 → 3 of 8.)
 // The progress header derives the active step from the current route segment (resumable: re-entering
 // any step within the session shows the right position). Headers stay hidden (like (auth)); the
 // shared progress header sits ABOVE the Stack. Payment is a 3.6a PLACEHOLDER — Story 3.6b replaces

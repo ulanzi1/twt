@@ -20,6 +20,11 @@
 // medical). OPTIONAL: leaving it unticked never blocks a signup, and it is ⛔ a lock-in step (`payment.tsx`'s `LockInGateStep`).
 // A Pariwar without WhatsApp passes straight through it (SB3 (a) — the label jumps *Step 5 → 7 of 7*, an accepted cost).
 
-export const WIZARD_STEPS = ['tc', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp', 'payment'] as const
+//
+// ⭐ 2026-11-22 — Story 3.15 (`2026-11-22-494` DL7): `assisted` — "Did someone help you register?" and a helper's 6-digit code —
+// sits right AFTER `tc` and BEFORE `kyc`. OPTIONAL: No, a skip, an unknown code or a failure never blocks a signup, and it is ⛔
+// a lock-in step. A member whose code is already recorded passes straight through it (the label jumps, as for `whatsapp`).
+
+export const WIZARD_STEPS = ['tc', 'assisted', 'kyc', 'workplace', 'nominees', 'medical', 'whatsapp', 'payment'] as const
 
 export type WizardStep = (typeof WIZARD_STEPS)[number]

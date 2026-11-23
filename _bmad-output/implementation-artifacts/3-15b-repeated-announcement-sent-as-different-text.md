@@ -1,9 +1,9 @@
 ---
-baseline_commit: 034c3aa5
+baseline_commit: d686c419
 ---
 
 <!--
-PINNED: `034c3aa5` = this branch's row-added record, on top of `78393b18` (the Story 3.15a branch tip, pushed; it lands on `main` by
+PINNED: `d686c419` = this branch's row-added record REBASED onto `origin/main` `3e3b888e` at dev start (2026-11-23; was `034c3aa5` on top of `78393b18`); originally on top of `78393b18` (the Story 3.15a branch tip, pushed; it lands on `main` by
 fast-forward, so its SHAs do not change). Authored in its OWN worktree
 `/Users/dev/Developer/projects/TWT/.claude/worktrees/3-15b-repeated-announcement-sent-as-different-text`, branch
 `story/3-15b-repeated-announcement-sent-as-different-text` (upstream UNSET — first push with an explicit refspec,
@@ -22,7 +22,7 @@ story 3.15b"* (one shared helper + a lint fence + a device sweep, with a speech-
 
 # Story 3.15b: A Repeated Announcement Is Spoken Again on Android — One Shared Helper, a Lint Fence, and a Device Sweep
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 

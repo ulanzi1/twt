@@ -22,7 +22,7 @@ story 3.15b"* (one shared helper + a lint fence + a device sweep, with a speech-
 
 # Story 3.15b: A Repeated Announcement Is Spoken Again on Android — One Shared Helper, a Lint Fence, and a Device Sweep
 
-Status: review
+Status: done
 
 ## Story
 
@@ -645,6 +645,12 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
   round, the held-logout leg RED on the first code, then 6/6. Final tree: `tsc --noEmit` 0, `eslint .` 0, `vitest run` 121 files /
   2368 tests passed. Not run: `ci:local` for this tree at the time of writing; any device.
 
+- **Landing (2026-11-23).** The pre-push hook's `ci:local PASSED — 41 job(s) green` at `57f541b3` on a fresh container (:5461, removed
+  after), first push with an explicit refspec. PR #340; GitHub CI 41 / 41 on the PR. Fast-forward: `git push origin 57f541b3:refs/heads/main`
+  (`3e3b888e..57f541b3`, 10 commits, SHAs unchanged; no squash, no merge commit; the hook skipped `ci:local` for already-pushed commits);
+  GitHub marked #340 merged (2026-11-23T12:15:58Z). The push to `main`: CI run `45172653375` 41 / 41 success; `code-escrow-mirror`
+  (`45172653644`) red as on every push (its secret unset). Merged ≠ live: nothing is in production.
+
 ### Completion Notes List
 
 - Story created (`bmad-create-story 3.15b`, 2026-11-23): call-site inventory by two read-only passes over `apps/mobile` at `78393b18`;
@@ -722,3 +728,4 @@ language screen was ⛔ run (the record says so). On the final tree: mobile `tsc
 | 1.3 | 2026-11-23 | `ci:local` 41 / 41 at `264912aa` on a fresh container (not pushed). Status → `review`. |
 | 1.4 | 2026-11-23 | Code review (`bmad-code-review 3.15b`, range `d686c419..faea140c`, all three layers): 0 decision-needed, 6 patch, 0 new defer, 15 dismissed; BigDev: "apply every patch" — all six applied. P1 the counter cleared at every session boundary (new `announce-repeat-session-end.test.ts`, RED first); P2 the fence names the property only (DL5 superseded, stated); P3 X2 / `language.tsx` closure reworded; P4 V4 remainder's owner (NONE YET); P5 the speech-ON scope, "iOS unchanged" and `assisted.tsx` credit reworded; P6 a blank line. Status stays `review`. |
 | 1.5 | 2026-11-23 | Second, adversarial review of those patches (three layers; BigDev: "run adversarial review on patches, then open pr"): 0 decision-needed, 6 patch (R1–R6), 0 new defer, 10 dismissed. `signOut` also clears the counter AFTER its awaits (a held-logout leg, RED first); the `announce-repeat.ts` header states the boundary caveat and "not capped" in plain words; the new test resets locally and clears `ctx.current`; the ledger 2026-11-23p "iOS unchanged" and "(j) fixed", the friction wording and the finding labels corrected. Status stays `review`. |
+| 1.6 | 2026-11-23 | LANDED on `main` by fast-forward (PR #340, `3e3b888e..57f541b3`, SHAs unchanged): pre-push `ci:local` 41 / 41 on a fresh container; GitHub CI 41 / 41 on the PR and on the push to `main` (run `45172653375`); `code-escrow-mirror` red as on every push. Status `review` → `done`. Merged ≠ live; V4 stays open (remainder owner NONE YET); X1 / X2 are Story 3.15c's. |

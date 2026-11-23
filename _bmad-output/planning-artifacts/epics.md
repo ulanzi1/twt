@@ -2108,6 +2108,30 @@ deferred item with an owner. ⛔ changing `AnnouncedText`'s live region (other s
 
 ---
 
+### Story 3.15c: An Unchanged Standing Line Said Again Is Spoken Again, and a Language Switch Speaks Its Line Once `[SURFACE]`
+
+> ⚠ **Added 2026-11-23** (BigDev: *"let's give X1 and X2 an owner"*, then *"New story 3.15c, both"*, after Story 3.15b's dev).
+> Owns **X1** and **X2** in `deferred-work.md` ("Deferred from: dev of story 3-15b"). ⛔ Panel question (how the app's lines reach a
+> screen reader; nothing about who is credited, told or paid).
+
+As a member who uses a screen reader on Android, I want an error that stays on screen to be read to me again when my next try fails the
+same way, and a line to be read once — not twice — when I change the app's language, so that what I hear matches what happened.
+
+**Acceptance Criteria (in brief):** (1) **X1 — the standing line.** When an `AnnouncedText` line is SET again with the same words (in
+`WaCodeEntry`: `verify_failed` after a second failed Confirm, `send_failed` after a released send fails again), TalkBack is told again on
+Android. The remedy is the author's (e.g. re-keying the line per set, or a direct `announce()` from `lib/announce.ts` for a re-set), and
+it changes `AnnouncedText` / its callers — so the story FIRST inventories every `AnnouncedText` caller that can re-set identical words and
+states, for the others, that nothing they say changes (a line shown once is still spoken once; ⛔ a re-read on an unrelated re-render —
+[[project_android_live_region_reread_on_rerender]]). (2) **X2 — the language switch.** On `(settings)/language.tsx`, choosing the other
+language while the "not recorded" line shows is spoken ONCE in the new language (today the live region and the direct announcement may
+both fire). (3) **Device sweep** on the Android emulator (TalkBack ON, TTS-off capture; the served bundle checked for the change first):
+X2 reached (API stopped); X1 reached if a setup can mount `WaCodeEntry` (the code offer needs a delivery whose availability reads Secret
+Manager) — else recorded NOT REACHED with that gate and unit-shown only; each `AnnouncedText` caller the inventory names re-checked for
+⛔ new re-reads. (4) A speech-ON listen of X2 (BigDev), or recorded un-attested. ⛔ change to the copy, the routes, the contracts, or
+`lib/announce.ts`'s rule; iOS behaviour unchanged unless the story shows VoiceOver needs it.
+
+---
+
 ### Story 3.16: Upload a PAN, a Masked Aadhaar and a Selfie When DigiLocker Is Unavailable `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Replaces the typed-in route (`POST /api/v1/member/kyc/manual`). ⚠ Go-live waits on the Panel's ruling on

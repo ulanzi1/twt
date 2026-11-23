@@ -176,6 +176,12 @@ refused, stored or credited is unchanged. ⛔ Niyamavali check needed — no pre
   TalkBack compares to the LAST announcement or to a longer history is ⛔ known; per-text is safe either way. *Cost:* a text's first send
   on a later screen may carry spaces from an earlier one — invisible and, after DL1, silent; the Map grows by one entry per distinct text
   (a few hundred strings at most in a session).
+  ⚠ **Amended at code review (2026-11-23), recorded, ⛔ silently:** (P1) the Map's keys are the announced STRINGS, some holding another
+  member's name, so `session-context.tsx` clears it at every session boundary (sign-in, sign-out, a refused refresh, a termination) —
+  the "a few hundred strings" bound becomes one session's; (P5) "silent" is attested for 1 and 2 trailing spaces on one Hindi line, ⛔
+  for three or more — the suffix is ⛔ capped (a cycle would re-open the last-vs-history question above); (P3) on the language screen
+  the helper probably unmasks a double-speak (a live region plus the direct send, which used to be dropped as identical) — deferred-work
+  X2, now Story 3.15c's.
 - **DL4 — every direct call goes through `announce()`, the iOS-only ones included.** One rule, so the fence (DL5) has no exceptions but
   the helper itself. Platform guards at the call sites STAY (`if (Platform.OS === 'ios') announce(…)`) — the helper does not replace them.
   `assisted.tsx` loses its own `NBSP` / `announced` ref and calls `announce()` (its 3.15a tests keep their Android meaning — the per-text
@@ -194,6 +200,11 @@ refused, stored or credited is unchanged. ⛔ Niyamavali check needed — no pre
   at `78393b18`; AC 3's grep backs the fence up for the aliased form only by review. ⚠ ⛔ widen the fence with `no-restricted-imports` or
   `@typescript-eslint/no-restricted-imports` in `apps/mobile/eslint.config.mjs`: the shared config already sets both, and a later
   flat-config entry for the same rule REPLACES its options — it would silently drop the shared cross-package import bans.
+  ⚠ **Superseded at code review (2026-11-23, P2), ⛔ reinterpreted:** the two entries now name the PROPERTY only — `{ property:
+  'announceForAccessibility' }` and `{ property: 'announceForAccessibilityWithOptions' }` — because an entry with `object:
+  'AccessibilityInfo'` missed an aliased import, a namespace import, a variable alias and a `require(…)` chain (the "blind spots" above,
+  and two more). Over `app components lib tests` the only reports are the two calls in the carve-out file; each of those forms is shown
+  RED, and the carve-out file clean. What is left: a computed key built at run time.
 - **DL6 — the per-test reset lives in a NEW vitest setup file.** `apps/mobile/tests/unit/setup-announce-repeat.ts`:
   `beforeEach(() => resetAnnouncementRepeats())`, importing ONLY `lib/announce-repeat.ts` (a `react-native` import there would load the
   real module before each file's `vi.mock`). Wired as `setupFiles` in `vitest.config.ts`. Shown by a RED-first leg (Task 3.3).
@@ -318,6 +329,146 @@ refused, stored or credited is unchanged. ⛔ Niyamavali check needed — no pre
   - [x] 9.1 Commit on `story/3-15b-…` only ([[feedback_commit_on_story_branch]]); check the branch before every commit.
   - [x] 9.2 `ci:local` on a FRESH container (`DATABASE_URL=…?sslmode=disable` — [[project_prepush_hook_inherits_5432]]). The push is
         BigDev's word (3.15a precedent).
+
+### Review Findings
+
+Code review 2026-11-23 (`bmad-code-review 3.15b`), pinned range `d686c419..faea140c` (`apps/` identical at HEAD `78971e1f`, a 3.15c
+records commit), full mode. All three layers returned findings (Blind Hunter, Edge Case Hunter, Acceptance Auditor); the reviewer
+verified each claim against the code at `faea140c` and deduplicated. **0 decision-needed, 6 patch, 0 new defer, 15 dismissed.**
+No Panel question: nothing here changes what a person is told, owed or asked to consent to (§0 holds); every item is an
+implementation, lint or records-wording call, decided below by the reviewer — BigDev may overrule any of them. AC 1–8 are delivered
+as written (the Auditor traced all 32 calls hunk by hunk; the code-only grep finds only `lib/announce.ts`; no raw U+00A0 or
+zero-width character in any changed file); the patches below are what the layers found AROUND them.
+
+**Disposition (2026-11-23):** BigDev selected option 1, "Apply every patch". P1–P6 applied (see Completion Notes, "Code review follow-up"). Story status stays `review` — `done` is reserved for a story landed on `main`
+(the 3.15 round-2 precedent: all patches applied, row stays `review`).
+
+- [x] [Review][Patch] **P1 — MEDIUM: the announce counter keeps other members' names for the whole app process; sign-out does not
+  clear it.** [`apps/mobile/lib/announce-repeat.ts:22-30`, `apps/mobile/lib/session-context.tsx:117,135,152,174`] On Android
+  `distinctAnnouncement` stores every announced string as a Map key and nothing but the vitest setup file ever clears it. Some keys
+  hold another member's name: `nominees.tsx:154` announces `ltRef.current('form.marked', { name })`. `session-context.tsx` clears
+  exactly this class at every session boundary — *"the nominee marks (other members' names)"* beside `clearNomineeLinksCache`, and
+  *"the two IN-MEMORY 6.36c stores, which outlived a sign-out for the rest of the app process"* — so the new module store is the
+  one that outlives it (it is never read back, so nothing is shown; it is the cleanup convention for a shared phone). iOS stores
+  nothing (the `platform !== 'android'` return is before `sent.set`). Fix: call `resetAnnouncementRepeats()` beside each of the four
+  `clearNomineeLinksCache(queryClient)` calls (the two session-end paths, `signIn`, `signOut`), say so in the `announce-repeat.ts`
+  header (it also bounds the Map per session — DL3's "a few hundred strings" becomes true by construction), and add a unit leg: a
+  text sent twice on `'android'`, a reset, then the plain text again. *(Blind #1 + Edge #1.)*
+- [x] [Review][Patch] **P2 — LOW-MEDIUM: the fence has more blind spots than its comment admits.** [`apps/mobile/eslint.config.mjs`
+  the `no-restricted-properties` block] Both entries carry `object: 'AccessibilityInfo'`, so an aliased import, a namespace import
+  (the two the comment names), `const AI = AccessibilityInfo; AI.announceForAccessibility(…)` and
+  `require('react-native').AccessibilityInfo.announceForAccessibility(…)` all pass lint (the Auditor probed three of them through
+  `eslint --stdin`). **Verified read-only by the reviewer:** the same two entries WITHOUT `object`, run over `app components lib
+  tests` with `--no-cache`, report exactly two errors — `lib/announce.ts:19` and `:21`, the carve-out — and nothing else, so
+  dropping `object` costs no false positive today and closes every receiver form. Fix: drop `object` from both entries (the
+  `lib/announce.ts` carve-out stays); rewrite the comment's blind-spot sentence (what is left: a computed key built at run time);
+  show the aliased, namespace and variable-alias mutations RED and restore them byte-for-byte (Task 5.2 style); re-run `pnpm
+  --filter @twt/mobile lint`. This overrides DL5's `{ object, property }` wording on the reviewer's call (lint coverage is
+  engineering, not the Panel's). *(Edge #2 + Blind #3 + Auditor #7.)*
+- [x] [Review][Patch] **P3 — MEDIUM (records): 3.15b's suffix plausibly UNMASKS a double-speak on the language screen, and the records
+  call it "not 3.15b's" and the language case "ADDRESSED".** [`deferred-work.md` X2 and the V4 dated line; `friction-budget.md`
+  "Cost, recorded"; DL3's cost] `language.tsx:98` sends `if (alreadyShowing || Platform.OS === 'ios') announce(text)` while the same
+  line is an `assertive` live region (`:126`) whose words follow the chosen language. Before 3.15b the direct send was the plain
+  text, identical to the live region's, and TalkBack drops an identical announcement (V4) — heard once. From the second direct send
+  of a text in a session the helper makes it differ, so both can be spoken: the TTS-off log in X2 shows `plain` and `1×U+00A0` 3 ms
+  apart. X2's heading says *"observed, ⛔ 3.15b's"* (⛔ = not) and DL3 / the friction "Cost" list name only the invisible suffix.
+  Second, the sweep **alternated** हिन्दी / English (F3 (j) is the SAME language failing twice), so the log shows the suffix applied
+  and the double-send — not an adjacent identical repeat cured; the V4 line lists `language.tsx` under *ADDRESSED*. Fix (records
+  only): reword X2's heading and body to say the helper is the probable cause (an inference, un-attested with speech ON) and that
+  the code half is Story 3.15c's X2 (`78971e1f` already owns it: *"spoken once on a language switch"*); add it to the friction
+  "Cost" and DL3's cost; move `language.tsx` in the V4 line from *ADDRESSED* to *routed; suffix logged on a non-adjacent repeat;
+  the same-language-twice case not run* — or run that case on the emulator (the same language failing twice) and keep ADDRESSED.
+  *(Auditor #1 + #3; Blind #2 in part.)*
+- [x] [Review][Patch] **P4 — LOW (records): V4's remainder has no owner or trigger, and its owner line still names this story.**
+  [`deferred-work.md` V4, the 2026-11-23 *OWNER: Story 3.15b* line and the not-reached list] The V4 dated line leaves `known-people-find`,
+  `nominees`, `ChannelLinkError`, `WaCodeEntry`, `PanchayatNoticeboard` and `useMemorialAnnounce` as *routed, ⛔ device-shown*; five of
+  the six gates are "not seeded", an effort gate, not a structural one. AC 8 only requires "stays open with what remains", so this is
+  not an AC miss — it is the same ownerless-residue shape the story's own DL7 narrowing was careful to state for X1. Fix: one dated
+  line under V4 — *"Owner of the remainder: NONE YET (BigDev assigns). Trigger: the next change to any of those six files, or a setup
+  that reaches them"* — plus the un-attested ≥3-suffix scope from P5. (The name is BigDev's to assign; NONE YET is the established
+  form.) *(Auditor #2.)*
+- [x] [Review][Patch] **P5 — LOW (records): three closure-language overstatements.** [`sprint-status.yaml` 2026-11-23p; `deferred-work.md`
+  V4 dated line] (i) The ledger says *"the trailing U+00A0 are silent with speech ON"* — unscoped. The listen covered **1 and 2**
+  trailing U+00A0 on **one** Hindi line (Google TTS), where AC 1 / DL1 said "1 and 3" (the Debug Log discloses the difference);
+  the counter has no cap, so a text sent four or more times carries three or more, **never heard**. *Reviewer's call (Blind #1,
+  Edge #1):* do ⛔ cap the suffix — a cycle would re-open the question DL3 deliberately closed (does TalkBack compare with the last
+  announcement only, or a longer history?) — and record the scope instead: *silent with speech ON for 1 and 2; ≥3 un-attested*.
+  (ii) The V4 line and the ledger say *"iOS unchanged"*; for `assisted.tsx` on iOS that is false against 3.15a (3.15a sent the suffix on
+  both platforms; DL2 and Task 6.3 record the inversion, the V4 line does not). Say *"iOS gets the copy exactly (`assisted.tsx` on iOS
+  loses 3.15a's suffix — DL2)"*. (iii) `assisted.tsx` sits under *ADDRESSED by Story 3.15b* though 3.15a's review P1 addressed it; 3.15b
+  only moved it onto the helper — say *"re-shown through the helper (addressed by 3.15a P1)"*. *(Auditor #4, #5, #6; Blind #1.)*
+- [x] [Review][Patch] **P6 — NIT: a blank line was dropped.** [`apps/mobile/app/(signup)/assisted.tsx:56-57`] Removing 3.15a's NBSP
+  constant left `const SIX_DIGITS = /^\d{6}$/` and `type Stage = …` on adjacent lines (the baseline had a blank line between them).
+  Restore it. *(Auditor #9, first nit.)*
+
+**Dismissed (15), so BigDev can overrule:** *Blind* — #2 "blanket behaviour change speaks every redundant path twice" (a repeat being
+spoken is the design, DL4 / F3 (h); the one real instance is P3); #3 second half "no test shows the fence fires / the carve-out turns
+the whole rule off" (Task 5.2 mutations are recorded; the Auditor re-probed `lib/announce.ts` clean and the same content at another
+path red; the shared config sets no `no-restricted-properties`, so nothing is replaced); #4 "iOS reverted on absence of evidence"
+(DL2 decided it and recorded its cost; the wording is P5 (ii)); #5 "Android `AnnouncedText` repeats not covered" (F4 / F9 / DL7 — X1,
+now Story 3.15c); #6 "`distinctAnnouncement` is not pure, a throw burns a count, the reset is public" (the header says *PURE: it does
+not import `react-native`*; the setup file needs the export; a burnt count is invisible); #7 "empty text sends a lone NBSP" (the sites
+read — `if (text)`, `if (!text) return`, `spokenKey === null` — guard it, and no call site was shown to pass `''`; not reachable as
+found); #8 "source pins are substring matches" (the Auditor found them equal or stricter than before, and the fence is the real guard);
+#9 "the reset pair is order-dependent" (it is RED when the setup file is dropped — mutation (iii) — and only vacuous when run alone with
+`-t`); #10 "conditional assertions in the `.each` legs" (each platform row carries its own distinguishing assertion); #11 "two modules
+named `announce`" (naming; `contact.tsx` is aliased on purpose, F12); #12 "Hindi NBSP not shown" (the listen WAS the Hindi assisted
+line); #13 "smaller items" (unknown platforms plain by design; comment length; a test-side NBSP constant is deliberately independent).
+*Auditor* — #8 "(b) is *not reproduced*, should be *not reached*" (AC 6 defines not reproduced as *reached, and the repeat cannot be
+produced*, and the Debug Log states why: `openURL` left at once); #9 "the `epics.md` 3.15b block keeps the premise F9 corrects" (the
+correction is recorded where AC 7 requires it — X1); #9 "`death-refusal-claim-screens.test.ts:4` mentions `announceForAccessibility`"
+(a historical 6.38 comment about another file's old pin; nothing depends on it).
+
+**Not constructible here, stated:** whether the language-screen double (P3) and a ≥3-suffix are heard with speech ON needs a device
+and a listener — both are carried as un-attested in P3 / P5, ⛔ closed by this review.
+
+### Review Findings — second round (adversarial review of the patches)
+
+**2026-11-23, BigDev: *"run adversarial review on patches, then open pr"*.** The patch set above (then uncommitted, on top of
+`78971e1f`) went through the three layers again: Blind Hunter 12, Edge Case Hunter 4, Acceptance Auditor 5 findings (plus three
+informational notes). Verified against the code and deduplicated: **0 decision-needed, 6 patch (R1–R6), 0 new defer, 10 dismissed.**
+No Panel question (the Auditor and the reviewer agree: in-memory cleanup, lint coverage and records wording).
+
+- [x] [Review][Patch] **R1 — MEDIUM: `signOut` cleared the counter only at its START.** [`apps/mobile/lib/session-context.tsx` `signOut`]
+  The reset sits beside the other stores, before `await memberAuth.logout()` and `await clearSession()`; the screens stay mounted
+  until `setSession(null)`, so a line announced while the logout is in flight re-seeded the counter with the old account's strings. The
+  new held-logout leg proves it: RED on the first code (*expected `Marked Sita Devi as a nominee`, received it plus one no-break space*),
+  green after `signOut` clears AGAIN after its last await (`clearLinkTarget()`, before `setSession(null)`). `signIn`'s only await is
+  `saveSession` and it follows a signed-out state, so it keeps its single clear. *(Edge #1; Blind #4 (b).)*
+- [x] [Review][Patch] **R2 — LOW: the `announce-repeat.ts` header claimed more than the boundary reset can promise.** It said per-text
+  is "safe either way" and also that a cap "would re-open the question"; yet a reset sets the next send of a text back to plain, so the
+  SAME text being the last announcement before a boundary and the first after it (on a screen that survives it) could be dropped.
+  The header now says per-text is safe within a session, names that across-boundary case as un-attested (sign-out leaves the screen, so
+  other speech normally sits between), and says "NOT capped" in words. ⛔ built: remembering a hash of the last text across the reset
+  (the Edge suggestion) — more machinery than a rare, un-attested case earns; it stays recorded here. *(Blind #1; Edge #2.)*
+- [x] [Review][Patch] **R3 — LOW: the new test leaned on things it did not state.** `beforeEach` now resets the counter itself (it
+  depended on the vitest setup file), clears `ctx.current` (a stale provider from an earlier leg could be driven), the rejected and
+  terminated legs are no longer `async` without an `await`, and the `signIn` leg says it is a sign-in OVER a present session (the only
+  way `signIn` is a boundary of its own). *(Blind #2, #12, #9 in part; Edge #4.)*
+- [x] [Review][Patch] **R4 — LOW: comments in the patch read the wrong way round or lost their context.** "⛔ capped" and "⛔ the
+  receiver" are now "NOT capped" and "not the receiver" in the source comments; each reset call in `session-context.tsx` carries its own
+  one-line comment (it sat under the nominee-marks comment). *(Blind #8.)*
+- [x] [Review][Patch] **R5 — MEDIUM (records): the first patch round left claims it said it had fixed.** The ledger line `2026-11-23p`
+  still read "iOS unchanged" in both copies though the `2026-11-23r` entry said it was reworded, and still called `(j) language` FIXED
+  (also the row comment, the Debug Log line and Completion Notes AC 6); the friction-budget item 2 still listed the language screen as
+  friction removed in its first sentence, and its "written for changes committed at" line was silent about the amendment. All reworded;
+  Change Log 1.2 is dated history and stays as written, the corrections are carried by 1.4 and 1.5. *(Auditor #1, #2, #3.)*
+- [x] [Review][Patch] **R6 — LOW (records): finding labels and evidence.** P5's sources now read "Auditor #4, #5, #6; Blind #1" (it
+  cited a dismissed Blind item) and P6's "Auditor #9, first nit"; the per-form probe results for P2 are recorded in the Debug Log below.
+  *(Auditor #4, #5.)*
+
+**Dismissed (10), so BigDev can overrule:** *Blind* — #3 "the test cannot tell the map emptied from counts zeroed" (the implementation
+is `sent.clear()`, one line and unit-tested; the Map is private and exporting it only for this is more API than the property earns);
+#4 (c) "a sync `act` around a handler that returns a promise" (both handlers return `void`); #5 "four hand-copied sites; a shared
+helper" (out of scope — the four legs fence these four, and another boundary would be a new story); #6 "the suffix is unbounded"
+(decided at P5 and recorded); #7 "the property-only rule widens the false-positive surface" (the Auditor probed 431 files: two reports,
+both in the carve-out; an object-literal key in a mock is not reported; recorded in the config comment); #8 (a) "the P-labels are
+unresolvable" (the repo's comments cite review rounds the same way); #9 "the test overstates what it executes" (its header says what
+is real and what is mocked); #10 "the control leg is weaker than its title" (it shows the count continues; R3's local reset removes the
+doubt about what else clears); #11 "the blank line is unexplained noise" (it is P6, deliberate). *Edge* — #3 "a test spy named
+`mock.announceForAccessibility` is a false positive" (none exists; the message names `lib/announce.ts`, and the existing tests name
+their spy `mock.announce`). *Auditor informational* — "0 new defer", "BigDev's option 1 is not checkable from the repo", "`ci:local`
+not re-run": stated, not findings.
 
 ## Dev Notes
 
@@ -456,7 +607,7 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
   so the dev client kept 3.15a's bundle; caught on the language screen (`uiautomator events`, TalkBack OFF: the third हिन्दी failure SENT
   with 0 U+00A0) — that round is DISCARDED (its assisted numbers equal 3.15a's own counter). Metro restarted with `-c` → the served bundle
   contains `distinctAnnouncement` (3 hits) → app relaunched. Results (counts are trailing U+00A0 in the logged speech text):
-  - (j) `language.tsx` — **fixed**: API stopped; हिन्दी, English, हिन्दी, English, हिन्दी; the second English send logged 1 (15:49:39.954),
+  - (j) `language.tsx` — **[re-labelled at code review: routed; suffix logged on a NON-ADJACENT repeat — the two languages alternated, same-language-twice NOT RUN; see deferred-work V4 / X2]** was written *fixed*: API stopped; हिन्दी, English, हिन्दी, English, हिन्दी; the second English send logged 1 (15:49:39.954),
     the second हिन्दी 1 (15:49:46.101); each first send 0; the live region's plain entry logged beside each (see X2).
   - (k) `assisted.tsx` — **fixed**: fresh member `9876500303`; 5 digits, Continue ×3 → 0 / 1 / 2 (15:52:09.103 / 13.228 / 17.504);
     `111111` → 422 ×2 → 0 / 1 (15:52:32.737 / 38.368). (A Continue tap after the line appeared missed once — the line moves the button
@@ -485,6 +636,15 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
 - **Task 9.** Every commit made on `story/3-15b-…` (branch checked before each). `ci:local PASSED — 41 job(s) green` at `264912aa`,
   `DATABASE_URL` = a fresh `postgres:16-alpine` (:5461, `?sslmode=disable`, removed after) — run directly, ⛔ pushed (the push is
   BigDev's word). `friction:check` passed on committed history (AC-4 read the `Story 3.15b disposition`).
+- **Code review follow-up — verification record (2026-11-23).** `eslint --no-cache --stdin --stdin-filename …` from `apps/mobile`
+  (writes nothing), each `no-restricted-properties` count: bare call 1; destructured call 1; computed literal 1; aliased import 1;
+  namespace import with `…WithOptions` 1; variable alias 1; `require('react-native').AccessibilityInfo…` 1; the same code as
+  `lib/announce.ts` 0; the same code as `lib/other.ts` 2 (the Auditor, independently: a run-time-built key 0 — the stated blind spot —
+  and an object-literal key in a mock 0). With the carve-out removed through a scratchpad config, `app components lib tests` reported
+  `lib/announce.ts:19` and `:21` only (431 files). New test, first run: 4 failed / the control passed (session boundaries); second
+  round, the held-logout leg RED on the first code, then 6/6. Final tree: `tsc --noEmit` 0, `eslint .` 0, `vitest run` 121 files /
+  2368 tests passed. Not run: `ci:local` for this tree at the time of writing; any device.
+
 ### Completion Notes List
 
 - Story created (`bmad-create-story 3.15b`, 2026-11-23): call-site inventory by two read-only passes over `apps/mobile` at `78393b18`;
@@ -499,13 +659,26 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
   mutations (member, destructured, computed, `…WithOptions`) each RED. **AC 5:** the vitest `setupFiles` reset (RED-first leg); F7 pins
   moved to the helper at equal or greater strictness; F6 Android rows count by the words and assert the repeat differs; the new Android
   nominees leg; the `wa-notifications` `Platform` mock; 3.15a's `ios` P1 legs inverted; one F6 gap found and fixed (the memorial limit-line
-  `android` rows); mutations (i)–(v) each RED; 120 files / 2362 tests, `tsc`, `eslint` green. **AC 6:** (a), (j), (k) and (i) (on a
+  `android` rows); mutations (i)–(v) each RED; 120 files / 2362 tests, `tsc`, `eslint` green. **AC 6:** (a), (k) and (i) (on a
   remount) **fixed** with the suffix in the TTS-off log on the new bundle; (b) and (i) within one mount **not reproduced**; (c), (d), (e),
   (f), (g), (h) **not reached**, each with its gate (Debug Log Task 7). A first round on an OLD bundle (Metro had not resolved the new
   module) was caught and discarded. **AC 7:** deferred-work X1 (the F9 analysis, owner NONE YET, both narrowings stated). **AC 8:** V4's
   dated line (addressed / not reproduced / routed-not-device-shown; V4 stays OPEN); also X2 (observed: the language line may be spoken
   twice when the language switches while it shows — owner NONE YET); the `Story 3.15b disposition` in `friction-budget.md`; the emulator
   restored. ⛔ Panel question, ⛔ decision entry, ⛔ migration, ⛔ copy key.
+
+**Code review follow-up (2026-11-23, `bmad-code-review 3.15b`; BigDev: "apply every patch"), all six patches applied.**
+P1 — `lib/session-context.tsx` calls `resetAnnouncementRepeats()` beside each of the four `clearNomineeLinksCache(queryClient)` calls; the
+new `tests/unit/announce-repeat-session-end.test.ts` drives the REAL `SessionProvider` through sign-out, sign-in, a refused refresh and a
+termination (RED first: 4 failed, the control passed; then 5/5; a sixth, held-logout leg was added after the second review round, below). P2 — `eslint.config.mjs` entries name the property only; probed by
+`eslint --stdin` (writes nothing): a bare call, a destructured call, a computed literal, an aliased import, a namespace import with
+`…WithOptions`, a variable alias and a `require(…)` chain each report `no-restricted-properties`; the same code as `lib/announce.ts` reports
+nothing. P3, P4, P5 — records only: deferred-work X2 (heading and body), the V4 line (`language.tsx` moved from ADDRESSED to *routed; suffix
+logged on a non-adjacent repeat*, `assisted.tsx` to *re-shown through the helper*, "iOS unchanged" and the speech-ON scope reworded, a new
+dated line with the remainder's owner NONE YET), the friction-budget disposition (language screen, the Cost list), DL3 / DL5 amended
+above, the sprint-status ledger line `2026-11-23p` reworded. P6 — the blank line restored in `assisted.tsx`. Same-language-twice on the
+language screen was ⛔ run (the record says so). On the final tree: mobile `tsc` 0, `eslint .` 0, `vitest` 121 files / 2368 tests green
+(2362 + the 6 new). `ci:local` NOT re-run for this tree (the pre-push hook runs it); the device is ⛔ re-visited.
 
 ### File List
 
@@ -515,6 +688,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
 - `apps/mobile/tests/unit/announce.test.ts` (new)
 - `apps/mobile/tests/unit/announce-text.ts` (new — shared test helpers)
 - `apps/mobile/tests/unit/setup-announce-repeat.ts` (new)
+- `apps/mobile/tests/unit/announce-repeat-session-end.test.ts` (new — code review P1)
+- `apps/mobile/lib/session-context.tsx` (code review P1 — the counter cleared at each session boundary)
 - `apps/mobile/vitest.config.ts`
 - `apps/mobile/eslint.config.mjs`
 - `apps/mobile/app/(claim)/cannot-file.tsx`, `certificate-replacement.tsx`, `closed-helpline.tsx`, `contact.tsx`, `nominee-review.tsx`,
@@ -545,3 +720,5 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
 | 1.1 | 2026-11-23 | Validated (`bmad-create-story validate 3.15b`; BigDev: "all"). 3.15a LANDED (`3e3b888e`): Task 0.1 rebases and RE-PINS `baseline_commit` (the rebase rewrites `034c3aa5`). F5: `wa-notifications-screen-render`'s mock has no `Platform` — the file would throw once routed (Task 6.0); DL3 reads `Platform.OS` per call. F6 re-sorted by each leg's real platform (`nominee-marks-mode-render` and the memorial blur-then-focus leg are iOS; the `.each` legs change their `android` row only) + a new Android nominees leg. AC 3: a code-only grep (two comment lines in `lib/death-certificate-announce.ts` are expected and the file stays unedited). F12: `contact.tsx`'s local `announce` — aliased import. DL5: one `no-restricted-properties` rule (it already catches destructuring and the computed form in ESLint 9.39.4), the blind spots recorded, ⛔ `no-restricted-imports` in mobile's config. DL7: the epics AC (5) narrowing stated (⛔ fixed even if seen; owner NONE YET — none named at validate). F11: all of `apps/mobile/**` is member-facing. DL4: per-mount vs per-session count. Row stays `ready-for-dev`; ⛔ code. |
 | 1.2 | 2026-11-23 | Dev (`bmad-dev-story 3.15b`): rebased onto `3e3b888e`, baseline re-pinned to `d686c419`; the listen passed (BigDev: "All 3, clean"); the helper, the fence, the harness reset, 32 calls routed, tests updated (code `044e62d3`); device sweep (a)/(j)/(k)/(i) fixed, (b) not reproduced, (c)–(h) not reached; deferred-work V4 dated line + X1 (F9, owner NONE YET) + X2 (observed); friction-budget disposition. |
 | 1.3 | 2026-11-23 | `ci:local` 41 / 41 at `264912aa` on a fresh container (not pushed). Status → `review`. |
+| 1.4 | 2026-11-23 | Code review (`bmad-code-review 3.15b`, range `d686c419..faea140c`, all three layers): 0 decision-needed, 6 patch, 0 new defer, 15 dismissed; BigDev: "apply every patch" — all six applied. P1 the counter cleared at every session boundary (new `announce-repeat-session-end.test.ts`, RED first); P2 the fence names the property only (DL5 superseded, stated); P3 X2 / `language.tsx` closure reworded; P4 V4 remainder's owner (NONE YET); P5 the speech-ON scope, "iOS unchanged" and `assisted.tsx` credit reworded; P6 a blank line. Status stays `review`. |
+| 1.5 | 2026-11-23 | Second, adversarial review of those patches (three layers; BigDev: "run adversarial review on patches, then open pr"): 0 decision-needed, 6 patch (R1–R6), 0 new defer, 10 dismissed. `signOut` also clears the counter AFTER its awaits (a held-logout leg, RED first); the `announce-repeat.ts` header states the boundary caveat and "not capped" in plain words; the new test resets locally and clears `ctx.current`; the ledger 2026-11-23p "iOS unchanged" and "(j) fixed", the friction wording and the finding labels corrected. Status stays `review`. |

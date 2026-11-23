@@ -3164,14 +3164,18 @@ is member-facing for AC-4).
 1. ⛔ **Step added or removed:** no screen, button, copy key, route or order changes; what is shown, accepted, refused or stored is
    unchanged. Every existing row stands as written.
 2. ⭐ **Friction REMOVED:** a member using TalkBack who presses again and gets the same answer (the same error after a second press,
-   the language not recorded again, the name not in English letters again) is now TOLD again instead of hearing nothing — shown on
-   the Android emulator for the KYC name line, the language screen, the assisted step and a remounted WhatsApp step with the speech
-   engine off (what TalkBack would say; the repeat logged with its suffix). With speech ON, BigDev heard the repeats as the plain
-   sentence (*"All 3, clean"* — 3.15a's assisted line, 1 and 2 trailing no-break spaces). The other call sites are routed and unit-shown
-   only (deferred-work V4, 2026-11-23 line).
+   the name not in English letters again) is now TOLD again instead of hearing nothing — shown on
+   the Android emulator for the KYC name line, the assisted step and a remounted WhatsApp step with the speech engine off (what
+   TalkBack would say; the repeat logged with its suffix). The language screen's line was logged with its suffix on a NON-adjacent
+   repeat only (two languages alternated; the same language failing twice was not run). With speech ON, BigDev heard the repeats as
+   the plain sentence (*"All 3, clean"* — 3.15a's assisted line, 1 and 2 trailing no-break spaces; three or more are un-attested).
+   The other call sites are routed and unit-shown only (deferred-work V4, 2026-11-23 lines).
 3. ⚠ **Cost, recorded:** ⛔ visible change. A text's FIRST announcement on a later screen may carry trailing no-break spaces left from
-   an earlier one (the count is per text for the session) — invisible, and silent where heard.
+   an earlier one (the count is per text, cleared at every sign-in, sign-out and session end) — invisible, and silent where heard
+   (1 and 2 spaces; more are un-attested). On the language screen, a member who switches language while the not-recorded line shows
+   may now hear it twice on Android (the live region plus the direct send, which used to be dropped as identical) — un-attested with
+   speech ON; Story 3.15c's X2 owns the fix.
 
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
-unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]). Written for changes COMMITTED at `044e62d3`; AC-4 reads
-it once this block is committed.
+unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]). Written for changes COMMITTED at `044e62d3`; amended at code review for the session-boundary clear and the language-screen
+wording (committed with that patch); AC-4 reads it once this block is committed.

@@ -31,6 +31,8 @@ const mock = vi.hoisted(() => ({
   router: { replace: vi.fn() },
   buttons: {} as Record<string, Record<string, unknown>>,
   inputs: {} as Record<string, Record<string, unknown>[]>,
+  // Review P2: the next alert line to MOUNT blurs the step from its ref callback — inside the commit, BEFORE the passive effects run.
+  blurOnAlert: false,
   os: 'ios' as 'ios' | 'android',
   blur:() => undefined as void,
   refocus: () => undefined as void,
@@ -73,6 +75,12 @@ vi.mock('tamagui', async () => {
     accessibilityLiveRegion?: string; color?: string; fontSize?: string }
   const container = (props: Props) =>
     createElement('div', {
+      ref: (node: unknown) => {
+        if (node && props.accessibilityRole === 'alert' && mock.blurOnAlert) {
+          mock.blurOnAlert = false
+          mock.blur()
+        }
+      },
       'data-testid': props.testID,
       role: props.accessibilityRole === 'alert' ? 'alert' : undefined,
       'aria-label': props.accessibilityLabel,
@@ -124,8 +132,18 @@ function renderStep() {
 }
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)) })
 const never = () => new Promise<never>(() => undefined)
-/** How many times `text` was spoken — the question and the code label are spoken too, so a bare call count would not do. */
-const spoken = (text: string | undefined) => mock.announce.mock.calls.filter(([s]) => s === text).length
+// Built, ⛔ typed: an escape or a literal no-break space can land on disk as a raw invisible ([[project_unicode_escapes_written_raw]]).
+const NBSP = String.fromCharCode(0xa0)
+const TRAILING_NBSP = new RegExp(`${NBSP}+$`)
+/** The words of an announcement, without the trailing no-break spaces a repeat carries (review P1). */
+const bare = (s: unknown) => String(s).replace(TRAILING_NBSP, '')
+/**
+ * How many times `text` was spoken — the question and the code label are spoken too, so a bare call count would not do. A repeat
+ * carries trailing no-break spaces (review P1) and is counted as the same words.
+ */
+const spoken = (text: string | undefined) => mock.announce.mock.calls.filter(([s]) => bare(s) === text).length
+/** Every announcement whose words are `text`, as sent (with any trailing no-break spaces). */
+const sent = (text: string | undefined) => mock.announce.mock.calls.map(([s]) => String(s)).filter((s) => bare(s) === text)
 /** A POST held open until the leg settles it. */
 const held = () => {
   const h: { resolve: (v: { recorded: true }) => void; reject: (e: unknown) => void } = { resolve: () => undefined, reject: () => undefined }
@@ -156,6 +174,7 @@ beforeEach(() => {
   for (const f of [mock.assistedCodeStatus, mock.assistedCodeRecord, mock.announce, mock.router.replace]) f.mockReset()
   mock.buttons = {}
   mock.inputs = {}
+  mock.blurOnAlert = false
   mock.os = 'ios'
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
@@ -425,6 +444,93 @@ describe('Story 3.15a V1 — the error lines are spoken ONCE, ⛔ a live region'
     expect(line).toHaveTextContent(FORMAT!)
     expect(line).not.toHaveAttribute('data-live')
     expect(spoken(FORMAT)).toBe(1)
+  })
+})
+
+describe('Story 3.15a review P1 — a repeated error is sent as DIFFERENT text, so TalkBack speaks it again', () => {
+  // The 3.15a device pass (deferred-work V4): the app sent one announcement per set, but TalkBack spoke only the FIRST of identical
+  // texts — a repeat press, a fresh set after an edit, a repeat 422 were silent; a DIFFERENT text right after was spoken. So every
+  // announcement of the same line after its first carries one more trailing no-break space (not shown — the line renders the plain
+  // copy — and not a word). ⚠ jsdom shows only what is SENT; that TalkBack speaks it is the device pass's to show.
+  const FORMAT = words['signup.assisted.format']
+  const NOT_FOUND = words['signup.assisted.not_found']
+  const distinct = (xs: string[]) => new Set(xs).size === xs.length
+
+  it.each(['android', 'ios'] as const)('%s: three presses answered by the format line ⇒ three announcements, each the copy, no two the same', async (os) => {
+    mock.os = os
+    await typed('48291')
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(screen.getByTestId('assisted-continue'))
+      await settle()
+    }
+    const xs = sent(FORMAT)
+    expect(xs).toHaveLength(3)
+    // The FIRST is the copy exactly; each repeat only adds trailing no-break spaces.
+    expect(xs[0]).toBe(FORMAT)
+    for (const x of xs) expect(x.slice(FORMAT!.length)).toBe(NBSP.repeat(x.length - FORMAT!.length))
+    expect(distinct(xs)).toBe(true)
+    // The line on screen is the plain copy (⛔ a trailing space shown).
+    expect(screen.getByRole('alert').textContent).toBe(FORMAT)
+  })
+
+  it.each(['android', 'ios'] as const)('%s: a 422, an edit, a second 422 ⇒ two not-found announcements that differ; the format line\'s count is its own', async (os) => {
+    mock.os = os
+    mock.assistedCodeRecord.mockRejectedValue(new ApiError(422, 'attribution.code_not_found', 'x'))
+    await typed('48291')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '482913' } })
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '135790' } })
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(sent(FORMAT)).toEqual([FORMAT])
+    const xs = sent(NOT_FOUND)
+    // The FIRST not-found line is the copy exactly — a format line before it does not change its words.
+    expect(xs).toEqual([NOT_FOUND, `${NOT_FOUND}${NBSP}`])
+  })
+
+  it('android: a line still showing at re-focus (DL2 (d)) is sent as text DIFFERENT from its first announcement', async () => {
+    mock.os = 'android'
+    await typed('48291')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    act(() => { mock.blur() })
+    act(() => { mock.refocus() })
+    await settle()
+    const xs = sent(FORMAT)
+    expect(xs).toHaveLength(2)
+    expect(distinct(xs)).toBe(true)
+  })
+})
+
+describe('Story 3.15a review P2 — a blur between the error\'s commit and its effect does ⛔ speak it over the next route', () => {
+  // `focused` is captured at render; the blur's cleanup sets `focusedRef` at once but `focused` only on the NEXT render. A blur that
+  // lands inside the commit that mounts the line (here: from the line's ref callback, before the passive effects) left the effect
+  // seeing `focused === true` — the reviewer's reproduction spoke the format line over the next route.
+  it.each([
+    ['android', 'format (client check)', null],
+    ['ios', 'format (client check)', null],
+    ['android', 'not-found (422)', new ApiError(422, 'attribution.code_not_found', 'x')],
+    ['ios', 'not-found (422)', new ApiError(422, 'attribution.code_not_found', 'x')],
+  ] as const)('%s — %s: ⛔ spoken while blurred; spoken ONCE at re-focus', async (os, _label, err) => {
+    mock.os = os
+    const text = err ? words['signup.assisted.not_found'] : words['signup.assisted.format']
+    if (err) mock.assistedCodeRecord.mockRejectedValueOnce(err)
+    await typed(err ? '482913' : '48291')
+    mock.announce.mockClear()
+    mock.blurOnAlert = true
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    // CONTROL: the blur DID land inside the line's commit (the flag was consumed and the line is gone again).
+    expect(mock.blurOnAlert).toBe(false)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(spoken(text)).toBe(0)
+    act(() => { mock.refocus() })
+    await settle()
+    expect(screen.getByRole('alert')).toHaveTextContent(text!)
+    expect(spoken(text)).toBe(1)
   })
 })
 

@@ -422,6 +422,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
   - Restored: TalkBack off, `accessibility_enabled 0`, TTS `enabled`, font 1.0; `adb reverse` removed; API and Metro stopped;
     container `twt-3-15a-pg` removed; seed spec, env copies and `apps/mobile/android` deleted. The 3.15 pass's two containers
     (`twt-3-15-pg`, `twt-3-15-push2-pg`) were found running and left as they were (not this story's).
+- **`ci:local` (run directly, ⛔ pushed):** `ci:local PASSED — 41 job(s) green` at `98db8f78`, `DATABASE_URL` = a fresh `postgres:16-alpine`
+  (:5450, removed after); friction-budget AC-4 read the committed `Story 3.15a disposition`.
 - **Task 5:** 5.1 not triggered (AC 4 held on the device); 5.2 not triggered (nothing heard — un-attested, ⛔ "not cut"); 5.3 not
   triggered (`whatsapp.tsx` re-read not seen; `WaCodeEntry` not reached).
 

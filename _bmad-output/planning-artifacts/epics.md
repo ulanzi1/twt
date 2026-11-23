@@ -2085,6 +2085,29 @@ pass with speech ON, and fixed here only if it is heard.
 
 ---
 
+### Story 3.15b: A Repeated Announcement Is Spoken Again on Android — One Shared Helper, a Lint Fence, and a Device Sweep `[PRIMITIVE]` `[SURFACE]`
+
+> ⚠ **Added 2026-11-23** (BigDev: *"option 3, create it as story 3.15b"*, after Story 3.15a's review follow-up). Owns **V4** in
+> `deferred-work.md` ("Deferred from: device pass of story 3-15a"): TalkBack does not speak an announcement identical to one it was already
+> sent, so a repeated message is silent on Android; Story 3.15a fixed it for `assisted.tsx` only (review P1 — a repeat carries trailing
+> no-break spaces). ⛔ Panel question (how the app's announcements reach a screen reader; nothing about who is credited, told or paid).
+
+As a member who uses a screen reader on Android, I want a message the app says again — the same error after a second press, a second "code
+sent" — to be read to me again, so that I know my second action was answered.
+
+**Acceptance Criteria (in brief):** (1) **FIRST**, with speech ON (heard by BigDev, or recorded): is a trailing U+00A0 silent? If it is
+heard, the remedy changes before anything is rolled out (recorded, with the replacement shown on the emulator). (2) **One shared helper**
+in `apps/mobile/lib` sends a repeat of identical text as different text (the 3.15a P1 remedy); the FIRST send of a text is unchanged; every
+direct `AccessibilityInfo.announceForAccessibility` / `announceForAccessibilityWithOptions` call in `apps/mobile` goes through it —
+`useAnnounceOnChange` and `assisted.tsx`'s own copy included. (3) **A lint fence** in `apps/mobile` rejects a bare call outside the helper,
+shown RED by a mutation. (4) **Device sweep** on the Android emulator (TTS-off capture): every case that can repeat identical text —
+`ChannelLinkError`, `WaCodeEntry`'s "sent" line, and the others the story's inventory finds — triggered twice, each recorded as fixed /
+not reached (with the reason) / not reproduced. (5) `WaCodeEntry`'s wrong-code line (an `AnnouncedText` live region that stays while the
+member types) — whether an identical second wrong code is announced at all is CHECKED and recorded; fixed here only if seen, else a dated
+deferred item with an owner. ⛔ changing `AnnouncedText`'s live region (other screens rely on it), the copy, the routes or the contracts.
+
+---
+
 ### Story 3.16: Upload a PAN, a Masked Aadhaar and a Selfie When DigiLocker Is Unavailable `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Replaces the typed-in route (`POST /api/v1/member/kyc/manual`). ⚠ Go-live waits on the Panel's ruling on

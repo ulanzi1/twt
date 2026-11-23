@@ -20,7 +20,7 @@ each with its reason and an honest cost; BigDev may overrule any of them at vali
 
 # Story 3.15a: The "Did Someone Help You?" Step — the Error Spoken Once, and the Code Box Keeps Focus After a Wrong Code
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -313,6 +313,52 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
         ([[project_prepush_hook_inherits_5432]]); first push with an explicit refspec (upstream unset). Run it in the background; it
         takes many minutes. A friction-budget red at commit time is F13, ⛔ a flake.
 
+### Review Findings
+
+Code review 2026-11-23 (`bmad-code-review`), baseline `f18f934f` through `be38140c`, full mode. All three layers returned findings
+(Blind Hunter, Edge Case Hunter, Acceptance Auditor); the reviewer verified and deduplicated them. **0 decision-needed, 3 patch,
+0 new defer, 5 dismissed.** No Panel question: these are implementation and validation obligations under the existing ACs.
+
+**Disposition (2026-11-23):** BigDev selected option 2, "Leave as action items". P1-P3 remain unchecked; no implementation patches
+were applied. Story and sprint status: `review` -> `in-progress`.
+
+- [ ] [Review][Patch] **P1 — HIGH: repeated identical errors are silent on TalkBack.** [`apps/mobile/app/(signup)/assisted.tsx:136`]
+  AC 2 / DL2 (a) requires a second error-setting press to be spoken again. The new counter sends the same announcement text again,
+  but the committed device record (`deferred-work.md`, Story 3.15a V4) explicitly reports silence for repeated format errors,
+  fresh errors after editing, and a repeated 422. A mocked API-call count does not establish speech delivery. Fix repeated-error
+  delivery locally without restoring a live region or losing the code box's focus, and verify it with TalkBack. V4 is an open
+  acceptance failure of this story; its existing deferred entry does not discharge AC 2. Correct the unconditional delivery claims
+  in the source comments and friction-budget disposition when recording the outcome. Sources: blind + edge + auditor.
+- [ ] [Review][Patch] **P2 — MEDIUM: an error can be announced after the route has blurred.** [`apps/mobile/app/(signup)/assisted.tsx:137`]
+  AC 2 / P3 forbids speech while blurred. The new passive effect checks captured `focused` state but ignores the existing synchronous
+  `focusedRef.current`. A blur between the error's commit and its passive effect leaves the captured value true, so it speaks over
+  the next route. Reproduced with the existing harness plus an alert ref callback that calls `mock.blur()` at commit: the line was
+  removed, but the format announcement still fired. A test-only Vite transform adding `!focusedRef.current` to the guard made the
+  same regression pass, including one announcement at refocus. Add that guard and a lasting regression for this window; retain the
+  focus dependency so delivery waits for refocus. Sources: reviewer reproduction + auditor confirmation.
+- [ ] [Review][Patch] **P3 — MEDIUM: the required clipboard-paste leg remains unverified.** [`_bmad-output/implementation-artifacts/deferred-work.md:42`]
+  AC 4 / AC 6 (d) and Task 4.3 require select-all plus a real clipboard paste during a held POST. The record explicitly says only
+  typed replacement was exercised; a real paste is un-attested. That does not prove the native paste path restores the SENT code.
+  Run the actual paste leg, capture the displayed six SENT digits, then verify the stored attribution after releasing the POST.
+  Until it can be run, leave the paste portion of Task 4.3 explicitly open rather than treating the typed replacement as completion.
+  This is a validation gap, not a demonstrated restoration failure. Sources: blind + auditor.
+
+Validation: the existing `assisted-step-render.test.ts` passed **47/47** in this review. The separate blur-window reproducer failed
+on the committed implementation and passed with the test-only synchronous-ref guard; production source was not modified. Temporary
+worktree test/config files were removed; copies are at `/private/tmp/twt-3-15a-blur-repro.test.ts` and
+`/private/tmp/twt-3-15a-blur-control.config.ts` (restore to their original mobile test/config locations to rerun). The existing device
+records support P1 and P3; no new emulator pass or heard-audio claim is made here.
+
+Touched invariant families: **1** — outcome/guard paths covered by the existing AC6, R1, R2, P3 and P7 tests, with P2's timing gap
+and P3's native validation gap remaining open; **10** — covered by construction, since missing evidence is disclosed and the record
+of BigDev's accepted un-attested AC 7 is respected; **13** — REAL GAP for repeated delivery (P1) and blurred speech (P2). The loading
+element's accessible label has an existing test; buttons have handlers; no measurable-value role was introduced. Untouched families
+were skipped. Existing V2, W2 (ii)/(iii), sibling-screen limitations and V5 remain in their existing records; no duplicate deferrals.
+
+Dismissed: additional iOS device coverage beyond this story's specified pass; an unproven delayed-native-event failure; AC 7's
+already accepted lack of heard audio; speculative bundle-revision mismatch; and push-authorization bookkeeping outside this review.
+Test wording, refocus delivery concerns and unconditional speech claims were merged into P1 rather than counted separately.
+
 ## Dev Notes
 
 ### Traps
@@ -465,3 +511,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15a`) in its own worktree off `f18f934f`. §0: ⛔ Panel question. DL1–DL6 decided by the author (DL3: ⛔ lock the box — F7 / F8). Row `backlog` → `ready-for-dev`. ⛔ Code. |
 | 1.1 | 2026-11-23 | Validate pass (`bmad-create-story validate 3.15a`; BigDev: *"all"*). F1–F14 re-traced at `f18f934f` and found to hold (`origin/main` unmoved). Added: F8 the dropped-revert case (`canUpdateWithEventCount`), with a rapid multi-edit in AC 4 / AC 6 (d) / Task 4.3 and in DL3's fallback trigger; AC 6 (a) / Task 4.2 `mInputShown` read with TalkBack ON (`dumpsys`, ⛔ a dump); DL7 (the not-found line heard cut — the DL5 rule), wired into AC 7 / Task 5.2; DL2 records its narrowing of epics AC (1)'s *"where the error is set"*; Task 2.3 sweeps the stale "unlocked" comments; Task 3.2 (a) counts calls by text. Status stays `ready-for-dev`. ⛔ Code. |
 | 1.2 | 2026-11-23 | Implemented (`bmad-dev-story 3.15a`): V1 and W2 (i) in `assisted.tsx` (`40feef55`), tests RED-first (10) then 47 / 47, mutations (i)–(v) RED; mobile suite / `tsc` / `eslint` green. Device pass on the Android emulator: V1 and W2 (i) CLOSED with evidence; AC 4 held (single, multi, select-replace); AC 7 un-attested (not heard — BigDev); AC 8 `whatsapp.tsx` re-read not seen, `WaCodeEntry` not reached. New findings V4 (TalkBack drops an identical repeated announcement) and V5 (signup nominee step does not scroll) in `deferred-work.md`, owner NONE YET. Friction-budget disposition. Status → `review`; ⛔ pushed (Task 7.2 awaits BigDev). |
+| 1.3 | 2026-11-23 | Code review at `be38140c`: three layers completed; 0 decision-needed, 3 patch, 0 new defer, 5 dismissed. P1 repeated errors silent on TalkBack; P2 blur-to-effect announcement race reproduced; P3 actual clipboard-paste validation outstanding. Existing targeted tests 47/47 passed; blur reproduction failed on current code and passed with a test-only synchronous-ref guard. BigDev selected option 2, "Leave as action items"; P1-P3 remain unchecked, no implementation patches applied. Story and sprint status `review` -> `in-progress`. |

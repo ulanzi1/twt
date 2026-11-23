@@ -42,6 +42,10 @@
 
 If you choose A, the developer's own computer stops repeating all 41 checks on every change. The copy stays available and is recommended for risky changes (changes to the database, or to the checks themselves). If GitHub's checker is switched off again, the developer turns it back on and records the date.
 
+## A second, smaller ask — only if you answer A
+
+The decision is written up as ADR-0047, a short technical record that replaces the June one. **If you answer A, we also ask two of you to sign it off**, so that the written record matches your answer. Two trustees' sign-off is how a written record of this kind becomes binding on the Trust, and it is how the June one was agreed. You would be signing what the table above and "What changes in practice" say, and nothing more. We would bring the sign-off page in the same form as June's. **If you answer B, there is nothing to sign:** ADR-0047 would be rewritten or withdrawn, and the June record stays as it is.
+
 ---
 
 # What is at stake right now
@@ -54,7 +58,7 @@ If you choose A, the developer's own computer stops repeating all 41 checks on e
 
 # How much to trust this note
 
-- **Earlier versions of this question:** the first wording (decision `-496`, 2026-11-23) asked whether "the pre-push hook" should be off by default. That is an engineer's term and an engineering choice, and BigDev pointed out that the Panel would not know it. It is replaced by this note and by decision `-497`.
+- **Earlier versions of this question:** the first wording (decision `-496`, 2026-11-23) asked whether "the pre-push hook" should be off by default. That is an engineer's term and an engineering choice, and BigDev pointed out that the Panel would not know it. It is replaced by this note and by decision `-497`. This note also first asked only the one question; the request for two trustees' sign-off ("A second, smaller ask") was added on 2026-11-23 before sending, because answering a question does not by itself make the written record binding (decision `-498`).
 - **Corrected in this note:** an earlier count said six changes had a failing laptop run. Re-reading each change's record, it is five; the sixth failed in its own new test. That count is the records' own words, not re-run. Running the evidence commands also corrected two more things before this was written down: the run counts had already moved by one, and an earlier draft misdescribed what the last command returns (see E4).
 - **Still uncertain:** the dates GitHub was switched off come from our notes, not from a fresh check, and we do not know that it was off continuously. We have not checked whether the laptop copy ever caught a problem that GitHub would not have. The point that an administrator can delete a run is our understanding of GitHub, not re-checked.
 
@@ -62,7 +66,7 @@ If you choose A, the developer's own computer stops repeating all 41 checks on e
 
 # In plain English
 
-Every change to the TWT software goes through 41 automated checks before it goes live. In June, GitHub's service that runs them was switched off, so the developer ran the same checks on their own computer and wrote down the result, and you agreed that note would count as the proof, for as long as GitHub was off. GitHub is back. It now runs all 41 checks on every change and keeps its own record. The question is whether that record can be the proof from now on. We suggest yes: it is kept by a third party, it already exists for every change, and the laptop copy adds no check that GitHub lacks. If you say yes, the developer stops repeating the checks on their own computer every time; it stays available when they want it. If you prefer to keep the June arrangement, nothing breaks. The developer simply keeps doing both. If this section and the evidence below ever disagree, the evidence is the record.
+Every change to the TWT software goes through 41 automated checks before it goes live. In June, GitHub's service that runs them was switched off, so the developer ran the same checks on their own computer and wrote down the result, and you agreed that note would count as the proof, for as long as GitHub was off. GitHub is back. It now runs all 41 checks on every change and keeps its own record. The question is whether that record can be the proof from now on. We suggest yes: it is kept by a third party, it already exists for every change, and the laptop copy adds no check that GitHub lacks. If you say yes, the developer stops repeating the checks on their own computer every time; it stays available when they want it. If you say yes, we also ask two of you to sign the written record, so it matches your answer. If you prefer to keep the June arrangement, nothing breaks. The developer simply keeps doing both. If this section and the evidence below ever disagree, the evidence is the record.
 
 ---
 ---
@@ -89,7 +93,7 @@ Decision `2026-06-20-052`, open follow-up: *"Successor ADR required when GitHub 
 
 ## E2 — What is NOT ratified
 
-- **ADR-0047** (`docs/adr/ADR-0047-github-actions-primary-gate-ci-local-advisory.md`, landed on `main` 2026-11-23) is `drafted`, ⛔ not ratified. ADR-0017 stays `ratified` and in force until the Panel rules.
+- **ADR-0047** (`docs/adr/ADR-0047-github-actions-primary-gate-ci-local-advisory.md`, landed on `main` 2026-11-23) is `drafted`, ⛔ not ratified. ADR-0017 stays `ratified` and in force until the Panel rules. Ratifying ADR-0047 needs two trustees' sign-off; the note asks for it only if the answer is A ("A second, smaller ask"), and ⛔ a ruling on PQ1 alone does not flip the ADR.
 - **How the hook is made off by default** is not decided; a separate change, the author's.
 - **Required status checks on `main`** are not decided and untested (ADR-0047 alternative D).
 - **ADR-0017 §5's sentence on the hook** is superseded only if the Panel ratifies ADR-0047 as a whole. The Panel is told this in "What changes in practice"; it is ⛔ not put as a question. ⛔ **No Panel delegation of the hook's mechanics was found**, so this note does not claim one.
@@ -120,4 +124,4 @@ git log --since=2026-11-06 --format='%h %s' | grep -iE 'ci:local.*(untouched|fla
 
 ---
 
-<!-- AFTER THE PANEL RULES: (1) transcribe into the block at the top AND into `.decision-log.md` as a new decision id; (2) keep every section below it UNEDITED; (3) record what the ruling does NOT cover — it does not decide the hook's mechanics, nor the required-checks switch; (4) discharge the item in ADR-0047's "On ratification, apply" list, marking it DISCHARGED, never deleting it; (5) the implementation (ADR-0017 → superseded, index rows and counts, the hook and `ci-local.sh` headers, `gate-inventory.md` lines 13–16 and 112) needs a ROW — a discharge with no row is a decision nobody schedules. -->
+<!-- AFTER THE PANEL RULES: (1) transcribe into the block at the top AND into `.decision-log.md` as a new decision id; (2) keep every section below it UNEDITED; (3) record what the ruling does NOT cover — it does not decide the hook's mechanics, nor the required-checks switch; (4) discharge the item in ADR-0047's "On ratification, apply" list, marking it DISCHARGED, never deleting it; (5) the implementation (ADR-0017 → superseded, index rows and counts, the hook and `ci-local.sh` headers, `gate-inventory.md` lines 13–16 and 112) is carried by **Row 56 (`adr-0047-checks-proof-ratified-and-applied`) of `docs/launch-gate-inventory/inventory-roster.md`** (decision `-498`) — add a dated line there for each step; a discharge with no row is a decision nobody schedules. -->

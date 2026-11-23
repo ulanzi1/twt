@@ -51,7 +51,7 @@ The architecture's enforcement model (ADR-0017 Context: *"every PR must pass the
 
 **Interim, until ratified.** ADR-0017 stays `ratified`. Its §2 and §4 literally stand until the Panel rules; a push that skips `ci:local` says so where §2 says to (the commit or the ledger line), including why. Drafting this ADR waives nothing in ADR-0017.
 
-**PQ1 — the one question put to the Panel, in plain words.** *"Do you accept the record that GitHub keeps of the 41 automated checks as the proof that they ran, in place of the developer's own written note?"* Option A: yes (our reading). Option B: no, keep the June arrangement. It decides **cl.2** (which supersedes ADR-0017 §4, a ratified clause) and with it the evidence cl.1 relies on. The note is `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-23-checks-proof-github-record.md` — written, ⛔ **not sent**, and ⛔ not "shown to the Panel" until BigDev sends it. cl.3–5 (the hook and `ci:local`) are the author's engineering half and are *told* in that note, ⛔ not asked.
+**PQ1 — the one question put to the Panel, in plain words.** *"Do you accept the record that GitHub keeps of the 41 automated checks as the proof that they ran, in place of the developer's own written note?"* Option A: yes (our reading). Option B: no, keep the June arrangement. It decides **cl.2** (which supersedes ADR-0017 §4, a ratified clause) and with it the evidence cl.1 relies on. The note is `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-23-checks-proof-github-record.md` — written, ⛔ **not sent**, and ⛔ not "shown to the Panel" until BigDev sends it. cl.3–5 (the hook and `ci:local`) are the author's engineering half and are *told* in that note, ⛔ not asked. **If the answer is A, the same note also asks two trustees to sign this ADR off.** A ruling on PQ1 alone does not make it `ratified`; the sign-off is its own step (Decision 2026-11-23-498), and the On-ratification list below is carried by roster Row 56.
 
 ## Alternatives considered
 
@@ -84,7 +84,8 @@ The architecture's enforcement model (ADR-0017 Context: *"every PR must pass the
 - ADR-0017-local-ci-mirror-merge-gate — the predecessor; §1 amendments (drift), §2, §4, §5, Consequences, Migration path
 - Decision 2026-06-20-052 (successor ADR required on restoration); Decision 2026-06-21-059 (ratification as interim policy)
 - Decision 2026-11-23-496 — this ADR's decision-log entry (author-commit, ⛔ not ratified); Decision 2026-11-23-497 — amends `-496`'s PQ1 (plain question; the hook is the author's choice, told)
-- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-23-checks-proof-github-record.md` — the Panel note for PQ1 (written, ⛔ not sent)
+- `_bmad-output/planning-artifacts/trustee-panel-routing-note-2026-11-23-checks-proof-github-record.md` — the Panel note for PQ1 and the conditional sign-off ask (written, ⛔ not sent)
+- Decision 2026-11-23-498 — the sign-off ask and roster Row 56; `docs/launch-gate-inventory/inventory-roster.md` Row 56 `adr-0047-checks-proof-ratified-and-applied` — carries the On-ratification list
 - `.github/workflows/ci.yml` (`on.paths`, 41 jobs); `.github/workflows/code-escrow-mirror.yml`; `.githooks/pre-push`; `scripts/ci-local.sh`
 - `_bmad-output/implementation-artifacts/gate-inventory.md` — stale "Suspended" rows (above)
 - [Source: `docs/knowledge-transfer/adr-index.md`] — the live index row for this ADR
@@ -95,5 +96,6 @@ The architecture's enforcement model (ADR-0017 Context: *"every PR must pass the
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-11-23 | (revision, still `drafted`) | BigDev (Solo Builder), revised by the session | The Panel note also asks two trustees to sign this ADR off if the answer to PQ1 is A (a PQ1 ruling alone does not ratify it); the On-ratification list is carried by roster Row 56. `.decision-log.md` Decision 2026-11-23-498. ⛔ Still `drafted`, ⛔ not sent. |
 | 2026-11-23 | (revision, still `drafted`) | BigDev (Solo Builder), revised by the session | PQ1 reworded as the plain question "do you accept GitHub's record as the proof the checks ran" (decides cl.2); cl.4 (the hook's default) recorded as the author's engineering choice, told to the Panel and ⛔ not asked; ⛔ no delegation claimed. Panel note written, ⛔ not sent. `.decision-log.md` Decision 2026-11-23-497. |
 | 2026-11-23 | (initial draft) | BigDev (Solo Builder), drafted by the session | Successor to ADR-0017 per its §5 and migration path; steps 1–2 checked live 2026-11-23 (813 runs; 41/41 on PR run `45169126164` and `main` run `45172653375`). `drafted`, ⛔ not ratified; one open Panel question (PQ1: cl.4, hook default off vs ADR-0017 §5 read literally). `.decision-log.md` Decision 2026-11-23-496. |

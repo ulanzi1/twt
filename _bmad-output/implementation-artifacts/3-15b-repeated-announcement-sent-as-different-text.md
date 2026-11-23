@@ -252,66 +252,66 @@ refused, stored or credited is unchanged. ⛔ Niyamavali check needed — no pre
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight**
-  - [ ] 0.1 `git fetch origin`; rebase this branch onto `origin/main` FIRST (3.15a landed at `3e3b888e`; ledger conflict —
+- [x] **Task 0 — Preflight**
+  - [x] 0.1 `git fetch origin`; rebase this branch onto `origin/main` FIRST (3.15a landed at `3e3b888e`; ledger conflict —
         [[project_rebase_ledger_conflict_separator]]; verify the YAML parses). Then RE-PIN `baseline_commit` (front matter + the PINNED
         comment) to the rebased SHA of the row record (`records(3.15b): row added …`) and check `git merge-base --is-ancestor <pin> HEAD`.
         `pnpm install`; `ListAgents`; `git status` clean on `story/3-15b-…`.
-  - [ ] 0.2 Re-derive F1, F2 (the grep), F5, F7, F8 at HEAD by function. If the call-site count differs from 32 (19 files), the grep wins — list the
+  - [x] 0.2 Re-derive F1, F2 (the grep), F5, F7, F8 at HEAD by function. If the call-site count differs from 32 (19 files), the grep wins — list the
         difference in the Debug Log.
-- [ ] **Task 1 — The listen (AC 1; DL1) — BEFORE any code**
-  - [ ] 1.1 A debug build of THIS branch (unchanged code = 3.15a's `assisted.tsx`) on the emulator; TTS ENABLED; TalkBack ON; signup to
+- [x] **Task 1 — The listen (AC 1; DL1) — BEFORE any code**
+  - [x] 1.1 A debug build of THIS branch (unchanged code = 3.15a's `assisted.tsx`) on the emulator; TTS ENABLED; TalkBack ON; signup to
         the assisted step; 5 digits; Continue ×3 (the 2nd and 3rd carry 1 and 2 U+00A0). Ask BigDev to listen; record their words.
-  - [ ] 1.2 Silent → proceed. Audible → DL1's candidates, each heard before adoption; record which. Nobody listens → STOP and ask BigDev.
-- [ ] **Task 2 — The helper (AC 2; DL2, DL3) — RED first**
-  - [ ] 2.1 `tests/unit/announce-repeat.test.ts` (pure) and `tests/unit/announce.test.ts` (mocks `react-native`, both methods): every AC 2
+  - [x] 1.2 Silent → proceed. Audible → DL1's candidates, each heard before adoption; record which. Nobody listens → STOP and ask BigDev.
+- [x] **Task 2 — The helper (AC 2; DL2, DL3) — RED first**
+  - [x] 2.1 `tests/unit/announce-repeat.test.ts` (pure) and `tests/unit/announce.test.ts` (mocks `react-native`, both methods): every AC 2
         leg; watch them fail (no module) then write `lib/announce-repeat.ts` and `lib/announce.ts`.
-  - [ ] 2.2 Header comments: why (V4, F1), the per-text rule and its cost (DL3), Android-only (DL2), and that a unit test shows only what
+  - [x] 2.2 Header comments: why (V4, F1), the per-text rule and its cost (DL3), Android-only (DL2), and that a unit test shows only what
         is SENT ([[project_talkback_drops_identical_announcement]]).
-- [ ] **Task 3 — The harness reset (AC 5; DL6)**
-  - [ ] 3.1 `tests/unit/setup-announce-repeat.ts` + `setupFiles` in `apps/mobile/vitest.config.ts`.
-  - [ ] 3.2 Comment in `vitest.config.ts`: why the reset (F5), and that the setup file must ⛔ import `react-native`.
-  - [ ] 3.3 RED-first: in `announce.test.ts`, two tests each sending the same text on `'android'` and expecting the PLAIN text first —
+- [x] **Task 3 — The harness reset (AC 5; DL6)**
+  - [x] 3.1 `tests/unit/setup-announce-repeat.ts` + `setupFiles` in `apps/mobile/vitest.config.ts`.
+  - [x] 3.2 Comment in `vitest.config.ts`: why the reset (F5), and that the setup file must ⛔ import `react-native`.
+  - [x] 3.3 RED-first: in `announce.test.ts`, two tests each sending the same text on `'android'` and expecting the PLAIN text first —
         the second fails without the setup file, passes with it.
-- [ ] **Task 4 — Route every call (AC 3; DL4)**
-  - [ ] 4.1 Replace each direct call in F2 with `announce(…)` (keep text, guard, deps, `queue` options); `useAnnounceOnChange` and
+- [x] **Task 4 — Route every call (AC 3; DL4)**
+  - [x] 4.1 Replace each direct call in F2 with `announce(…)` (keep text, guard, deps, `queue` options); `useAnnounceOnChange` and
         `announceLine` in `announce.tsx` included; remove `assisted.tsx`'s `NBSP` constant and `announced` ref (and update its header
         comment's P1 sentence to point at the helper). `contact.tsx`: aliased import, local `announce` wrapper kept (F12).
-  - [ ] 4.2 The code-only grep in AC 3 returns only `lib/announce.ts`. `git diff` on `lib/death-certificate-announce.ts`
+  - [x] 4.2 The code-only grep in AC 3 returns only `lib/announce.ts`. `git diff` on `lib/death-certificate-announce.ts`
         (`announcementPlan`), `AnnouncedText`'s JSX, `packages/i18n`: empty.
-- [ ] **Task 5 — The fence (AC 4; DL5)**
-  - [ ] 5.1 The one rule + the carve-out in `apps/mobile/eslint.config.mjs`, with a comment (V4, DL5, the carve-out's one file, the two
+- [x] **Task 5 — The fence (AC 4; DL5)**
+  - [x] 5.1 The one rule + the carve-out in `apps/mobile/eslint.config.mjs`, with a comment (V4, DL5, the carve-out's one file, the two
         blind spots).
-  - [ ] 5.2 Mutations (each restored byte-for-byte, `diff` against a saved copy): a bare member call, a destructured call, a computed call
+  - [x] 5.2 Mutations (each restored byte-for-byte, `diff` against a saved copy): a bare member call, a destructured call, a computed call
         — each `pnpm --filter @twt/mobile lint` RED; the carve-out file itself green. Record each in the Debug Log.
-- [ ] **Task 6 — Tests updated (AC 5)**
-  - [ ] 6.0 `wa-notifications-screen-render`: add `Platform: { get OS() { return mock.os } }` to its `react-native` mock (`mock.os =
+- [x] **Task 6 — Tests updated (AC 5)**
+  - [x] 6.0 `wa-notifications-screen-render`: add `Platform: { get OS() { return mock.os } }` to its `react-native` mock (`mock.os =
         'android'`, reset in `beforeEach`) — WITHOUT it the whole file throws once `notifications.tsx` is routed (F5). Do this in the same
         commit as Task 4.
-  - [ ] 6.1 F7's source pins: pin the same guard / text / deps through `announce(`; ⛔ weaken.
-  - [ ] 6.2 F6's Android rows: count by the words; add "the repeat differs from the first". F6's iOS legs and the `ios` rows of its
+  - [x] 6.1 F7's source pins: pin the same guard / text / deps through `announce(`; ⛔ weaken.
+  - [x] 6.2 F6's Android rows: count by the words; add "the repeat differs from the first". F6's iOS legs and the `ios` rows of its
         `.each` legs: ⛔ change (DL2). F6 Gap: the new Android leg in `nominee-marks-mode-render` (two no-name marks ⇒ the second
         `form.marked_no_name` differs from the first) — RED with mutation 6.4 (i).
-  - [ ] 6.3 `assisted-step-render`: the two `ios` P1 legs inverted (identical on iOS — DL2), Android legs unchanged; its local `NBSP` /
+  - [x] 6.3 `assisted-step-render`: the two `ios` P1 legs inverted (identical on iOS — DL2), Android legs unchanged; its local `NBSP` /
         `bare` / `sent` helpers stay valid.
-  - [ ] 6.4 Mutation checks, restored each: (i) helper returns `text` on Android → the AC 2 repeat legs and F6's "differs" legs RED;
+  - [x] 6.4 Mutation checks, restored each: (i) helper returns `text` on Android → the AC 2 repeat legs and F6's "differs" legs RED;
         (ii) suffix on iOS too → the F6 iOS legs RED; (iii) drop the setup file → Task 3.3's leg RED; (iv) `announce` drops `options` →
         the `{ queue: true }` legs RED. Record each.
-  - [ ] 6.5 `pnpm --filter @twt/mobile test` (whole suite), `tsc`, `eslint` green; added lines scanned for invisible characters.
-- [ ] **Task 7 — The device sweep (AC 6, 7; DL7, DL8)** — recipe in [[project_mobile_android_emulator_setup]]
-  - [ ] 7.1 Throwaway `postgres:16-alpine`, migrated; seed through an env-guarded UNCOMMITTED spec (an approved T&C, a field worker
+  - [x] 6.5 `pnpm --filter @twt/mobile test` (whole suite), `tsc`, `eslint` green; added lines scanned for invisible characters.
+- [x] **Task 7 — The device sweep (AC 6, 7; DL7, DL8)** — recipe in [[project_mobile_android_emulator_setup]]
+  - [x] 7.1 Throwaway `postgres:16-alpine`, migrated; seed through an env-guarded UNCOMMITTED spec (an approved T&C, a field worker
         code; more only as a case needs it — e.g. a `pariwar_wa_config` row for (b) / (i), channel URLs for (e)). Copy main's git-ignored
         `.env` files. A fresh prebuild + debug build of this branch; Metro with `-c`.
-  - [ ] 7.2 TalkBack ON, TTS disabled, `logcat` captured; F3 cases in DL8's order; for each: the sequence run, the log lines (with the
+  - [x] 7.2 TalkBack ON, TTS disabled, `logcat` captured; F3 cases in DL8's order; for each: the sequence run, the log lines (with the
         trailing U+00A0 count), and fixed / not reached / not reproduced. `WaCodeEntry` (F3 (f)) and the F9 standing line: try to reach;
         record.
-  - [ ] 7.3 Restore the emulator (TalkBack off, TTS on, font 1.0); drop the container; delete the seed spec, env copies and
+  - [x] 7.3 Restore the emulator (TalkBack off, TTS on, font 1.0); drop the container; delete the seed spec, env copies and
         `apps/mobile/android`; `git status` clean except this story's files.
-- [ ] **Task 8 — Records (AC 7, 8)**
-  - [ ] 8.1 `deferred-work.md`: dated lines under V4 (per AC 8) and the new F9 item (DL7).
-  - [ ] 8.2 `friction-budget.md`: the `**Story 3.15b disposition (…)**` block, after Story 3.15a's (F11). `pnpm friction:check` after the
+- [x] **Task 8 — Records (AC 7, 8)**
+  - [x] 8.1 `deferred-work.md`: dated lines under V4 (per AC 8) and the new F9 item (DL7).
+  - [x] 8.2 `friction-budget.md`: the `**Story 3.15b disposition (…)**` block, after Story 3.15a's (F11). `pnpm friction:check` after the
         commit.
-  - [ ] 8.3 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
+  - [x] 8.3 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
         comment, a prepended `# last_updated:` entry (read the head LIVE across branches for the next free letter —
         [[project_sprint_status_ledger]]; the safe prepend — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 9 — Gates**
@@ -380,7 +380,107 @@ RED, then restored. The device sweep (AC 6) and the listen (AC 1) are required p
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktree.
+
 ### Debug Log References
+
+- **Task 0 (2026-11-23).** `git fetch origin`; `origin/main` = `3e3b888e` (3.15a LANDED, records only past `78393b18`). Rebased: the three
+  records commits rewritten — `034c3aa5` → `d686c419` (row added), `13ed8eb3` → `1d0a46f5` (created), `2e99ab82` → `398b5195` (validated).
+  Each `sprint-status.yaml` conflict was the ledger head / `last_updated` block / the 3.15a row: both sides kept in letter order
+  (`n`, `m`, `l`, `k`), 3.15a's row kept as `done` (main's), 3.15b's row kept; ⛔ `---` separator involved; YAML parses. `baseline_commit`
+  re-pinned to `d686c419` (`git merge-base --is-ancestor d686c419 HEAD` ✓). `ListAgents`: no other session. Ledger head read LIVE across
+  every branch and worktree: highest `2026-11-23n` (this branch) → dev start is `2026-11-23o` (`6e893ad7`).
+  Re-derived at HEAD by function: F1 (`AccessibilityInfoModule.kt` `announceForAccessibility` — a bare `TYPE_ANNOUNCEMENT`, `event.text.add(message)`,
+  no source view) holds; F2 grep = 32 calls in 19 files, the same files and counts (⛔ difference); F5 (`vitest.config.ts` ⛔ `setupFiles`) holds;
+  F7 (the six pins) holds; F8 (`WaCodeEntry` `announceForAccessibilityWithOptions(waitLine, { queue: true })`) holds.
+- **Task 1 — the listen (AC 1), 2026-11-23 ~15:24 IST.** `Pixel_9` / Android 15 emulator; the INSTALLED dev client (built 13:09 today for
+  3.15a's `8b5f4c01`; `git diff 78393b18 HEAD -- apps/ packages/ pnpm-lock.yaml` is EMPTY, so the native side is this branch's) pointed at a
+  Metro started from THIS worktree with `-c` (bundled 4587 modules); throwaway `postgres:16-alpine` `twt-3-15b-pg` on :5460, migrated (188
+  tables); UNCOMMITTED env-guarded seed spec (an approved T&C; three active workers `248551`, `193500`, `805887`); API from the worktree.
+  Found on arrival: `tts_default_synth = com.example.nonexistent.tts` (speech effectively OFF — left by an earlier TTS-off capture; the
+  3.15a "TTS enabled" restore did not reset it). Set `tts_default_synth = com.google.android.tts`, TalkBack ON, accessibility + media
+  volume 12/15. Fresh member `9876500301` → T&C → assisted step → हाँ → `48291` → Continue ×3 (Mac 15:24:15.3 / 20.9 / 26.5; the 2nd and
+  3rd send 1 and 2 trailing U+00A0 — 3.15a's code). **BigDev, asked "What did you hear on the three Continue presses?": *"All 3, clean"***
+  (the option read: the sentence spoken 3 times, presses 2 and 3 sounded exactly like press 1 — no click, no "space", no odd pause).
+  ⇒ DL1 passes; the remedy stays U+00A0; ⛔ DL1 candidate tried. Note: with TTS ON TalkBack logs ⛔ the spoken text (the "TTS is not ready …
+  text:" lines exist only with TTS off) — the log shows one accessibility audio-focus request at 15:24:13.3 (device clock) and its
+  abandon at 15:24:22.6; the attestation is BigDev's ear, ⛔ the log. Checked at 1 and 2 NBSP (the AC 1 wording says "1 and 3"; Task 1.1's
+  sequence gives 1 and 2) — recorded.
+- **Task 2 — the helper (AC 2), RED first.** `announce-repeat.test.ts` (5 legs) and `announce.test.ts` (6 legs) failed to load
+  (`Failed to load url ../../lib/announce-repeat` / `../../lib/announce`), then `lib/announce-repeat.ts` (pure, ⛔ `react-native`; NBSP
+  built with `String.fromCharCode(0xa0)`) and `lib/announce.ts` (`Platform.OS` read inside `announce()`, `options` forwarded as-is) →
+  green except 3 `announce.test.ts` legs that leaked the previous test's count — the Task 3.3 RED.
+- **Task 3 — the harness reset (AC 5).** RED first: without a setup file, `harness reset (2 of 2)` failed (`expected [ [ 'Harness reset
+  probe' + U+00A0 ] ]`) as did the repeat and per-call-OS legs (state from earlier tests). `tests/unit/setup-announce-repeat.ts`
+  (imports ONLY `lib/announce-repeat.ts`) wired as `setupFiles` in `vitest.config.ts` → 11 / 11.
+- **Task 4 — routing (AC 3).** 31 calls rewritten by a script (code lines only; `AccessibilityInfo` dropped from each `react-native`
+  import once unused; `import { announce } from '../../lib/announce'` placed in sort order among the relative imports; `contact.tsx`
+  `import { announce as sendAnnouncement }`, its local `announce` wrapper, iOS guard and four call sites unchanged) + `assisted.tsx` by
+  hand (its `NBSP` constant and `announced` ref removed; header and effect comments point at the helper). `useAnnounceOnChange` and
+  `announceLine` in `announce.tsx` routed. AC 3's code-only grep → `lib/announce.ts:19` and `:21` only; without the filter, also the two
+  comment lines of `lib/death-certificate-announce.ts` (unedited). `git diff` on `lib/death-certificate-announce.ts` and `packages/i18n`:
+  empty. `announce.tsx` changes its two call lines and its two import lines (the `AccessibilityInfo` import removed, the helper's added) —
+  the import change is the call change's, recorded. ⛔ local name `announce` in any other routed file (checked per file).
+  First whole-suite run after routing: 24 failed / 2337 — exactly F5 (`wa-notifications` ×9, the missing `Platform`), F7 (8 pins in 6
+  files), F6's two Android rows, 3.15a's two `ios` P1 legs, and ONE leg F6 did not list: `memorial-screens-render` "the 20th row …
+  spoken once; again at the next 20th" (`it.each` over locale × `ios` / `android`) — its `android` rows send `family.limit_reached` twice
+  through `useMemorialAnnounce`. Recorded as an F6 gap; its `android` rows now expect `[limit, limit + U+00A0]`, the `ios` rows unchanged.
+  F6's "two-waits" leg in `wa-code-entry-render` runs on iOS (the file's `beforeEach` sets `mock.os = 'ios'`) → unchanged.
+- **Task 5 — the fence (AC 4).** One `no-restricted-properties` entry (two properties) + a `files: ['lib/announce.ts']` carve-out in
+  `apps/mobile/eslint.config.mjs`; the shared config sets neither `no-restricted-properties` nor `no-restricted-syntax` (grep), so nothing is
+  overridden. Mutations in `components/announcement-channels/ChannelLinkError.tsx` (appended, each restored from a saved copy, `diff`
+  identical after): (1) `AccessibilityInfo.announceForAccessibility('x')`, (2) `const { announceForAccessibility } = AccessibilityInfo`,
+  (3) `AccessibilityInfo['announceForAccessibility']('x')`, (4) `AccessibilityInfo.announceForAccessibilityWithOptions('x', { queue:
+  true })` — each `pnpm --filter @twt/mobile lint` exit 1 with `no-restricted-properties`; ⛔ selector needed. Final tree: lint exit 0
+  (the carve-out file included).
+- **Task 6 — tests (AC 5).** 6.0 `wa-notifications-screen-render`: `Platform` getter (`mock.os = 'android'`, reset in `beforeEach`); its
+  two-mount "not on" leg now asserts each mount sends it once and the second is the words + U+00A0. 6.1 the F7 pins now pin the same
+  thing through the helper: `announce(body)` unconditional + the import (`closed`), `` announce(`${title}. ${body}`) `` + import (`refile`,
+  `cannot-file`), `if (Platform.OS === 'ios') sendAnnouncement(text)` + the aliased import (`claim-contact`), the iOS gates / `[showBeingChecked]`
+  deps / texts (`nominee-review-announcements`), the `[locked]` iOS gate with its full text + import (`nominee-history-copy`) — each as
+  strict as before or stricter. 6.2 Android rows count by the words (`bare`) and assert the repeat is the first + U+00A0 (and the first is
+  the copy exactly); the `ios` rows keep the exact text. New shared `tests/unit/announce-text.ts` (`NBSP`, `bare`, `sentAs`), used by 5
+  files; `assisted-step-render` keeps its own. F6 gap leg added to `nominee-marks-mode-render` (the mock's `OS` now a getter, default
+  `ios`). 6.3 `assisted-step-render`: the two `.each(['android','ios'])` P1 legs split — `android` unchanged, `ios` inverted (the copy
+  exactly each time). 6.4 mutations, each restored (`diff` identical): (i) the helper returns `text` on Android → 15 RED (the AC 2 repeat
+  legs, every F6 Android "differs" leg, the new nominees leg, the memorial `android` rows, 3.15a's three Android P1 legs); (ii) the suffix on
+  iOS too → 26 RED (the AC 2 iOS legs and every iOS repeat leg, F6's included); (iii) no `setupFiles` → `announce.test.ts` 3 RED incl. the
+  harness leg; (iv) `options` replaced by `{}` → the F8 leg, the repeat leg and `wa-code-entry`'s `[ios] R2` `{ queue: true }` leg RED;
+  (iv-b) the options branch never taken → the same three RED; (v) `Platform.OS` captured once at module load → the per-call-OS leg RED.
+  6.5 `@twt/mobile` 120 files / 2362 tests green, `tsc --noEmit` exit 0, `eslint .` exit 0; added lines and new files scanned — 0 raw
+  U+00A0 / U+200B–D / U+FEFF.
+- **Task 7 — the sweep (AC 6), 2026-11-23 15:40–15:57 IST.** Same emulator / container / API / Metro as Task 1; TalkBack ON with TTS OFF.
+  ⚠ Setting `tts_default_synth` to a nonexistent engine was NOT enough: TalkBack fell back to Google TTS and spoke (no text in the log);
+  TTS-off = `pm disable-user com.google.android.tts` (3.15a's "TTS `enabled`" restore meant this package). ⚠ A first round (15:40–15:45)
+  ran an OLD bundle: Metro (started before `lib/announce.ts` existed) answered the bundle request with `UnableToResolveError … ../../lib/announce`,
+  so the dev client kept 3.15a's bundle; caught on the language screen (`uiautomator events`, TalkBack OFF: the third हिन्दी failure SENT
+  with 0 U+00A0) — that round is DISCARDED (its assisted numbers equal 3.15a's own counter). Metro restarted with `-c` → the served bundle
+  contains `distinctAnnouncement` (3 hits) → app relaunched. Results (counts are trailing U+00A0 in the logged speech text):
+  - (j) `language.tsx` — **fixed**: API stopped; हिन्दी, English, हिन्दी, English, हिन्दी; the second English send logged 1 (15:49:39.954),
+    the second हिन्दी 1 (15:49:46.101); each first send 0; the live region's plain entry logged beside each (see X2).
+  - (k) `assisted.tsx` — **fixed**: fresh member `9876500303`; 5 digits, Continue ×3 → 0 / 1 / 2 (15:52:09.103 / 13.228 / 17.504);
+    `111111` → 422 ×2 → 0 / 1 (15:52:32.737 / 38.368). (A Continue tap after the line appeared missed once — the line moves the button
+    ~80 px; re-aimed, not counted.)
+  - (a) `kyc.tsx` — **fixed**: manual entry, name `Ram1` (digits fail `ENGLISH_NAME_REGEX`; `adb input text` cannot type Devanagari),
+    Submit ×3 → 0 / 1 / 2 (15:53:11.654 / 15.863 / 20.015).
+  - (i) `useAnnounceOnChange` — **fixed on a remount**, **not reproduced within one mount**: `pariwar_wa_config` row enabled; the WhatsApp
+    step by deep link; Continue unticked → `popup_title` (0); Go back; Continue → straight to step 8 (the reminder opens once per mount —
+    `reminder.current = 'shown'`). Back → tabs; deep link again (a new mount) → `waSignup.title` 1 (15:55:00.739); Continue →
+    `popup_title` 1 (15:55:06.418).
+  - (b) `whatsapp.tsx` `sent_title` — **not reproduced**: box ticked + Continue → `openURL` opened Chrome AT ONCE (no 2 s grace);
+    back → the line logged once (0, 15:56:35.674); "open again" + back → not sent again (once per departure, by design). The grace →
+    return repeat needs a late departure.
+  - (f) `WaCodeEntry` and the F9 standing line — **not reached**: "WhatsApp on another phone?" showed the number + phrase, no code entry
+    (`codeAvailable` false here).
+  - (c) `known-people-find` — **not reached**: the screen opens (deep link), but the emulator's contacts provider is empty and no
+    matchable member was seeded. (d) `nominees.tsx` marks mode — **not reached**: needs an active member with a saved declaration (V5
+    blocks the wizard's nominee step); not seeded. (e) `ChannelLinkError` — **not reached**: no channel URL seeded. (g)
+    `PanchayatNoticeboard` — **not reached**: no live banner seeded. (h) `useMemorialAnnounce` — **not reached**: no memorial-eligible
+    member seeded.
+  - Restored (Task 7.3): TalkBack off (`accessibility_enabled 0`, services deleted), Google TTS package enabled and `tts_default_synth =
+    com.google.android.tts`, font 1.0 (unchanged), accessibility / media volume back to 6 / 5; `adb reverse --remove-all`; API and Metro
+    stopped; container `twt-3-15b-pg` removed (with its `pariwar_wa_config` row); seed spec and both env copies deleted; `apps/mobile/android`
+    never created (the installed dev client was used — native side unchanged); `git status` clean except this story's files.
 
 ### Completion Notes List
 
@@ -388,8 +488,51 @@ RED, then restored. The device sweep (AC 6) and the listen (AC 1) are required p
   facts F1–F11; DL1–DL8 the author's.
 - Validated (`bmad-create-story validate 3.15b`, 2026-11-23; BigDev: *"all"*): F2 (32 calls / 19 files), F5, F8, F9
   (`WA_OPT_IN_CODE_MAX_ATTEMPTS = 2`), F10 re-checked at `78393b18` and found to hold; 3.15a found LANDED (`3e3b888e`).
+- Dev (`bmad-dev-story 3.15b`, 2026-11-23). **AC 1:** BigDev listened with speech ON — *"All 3, clean"* — the U+00A0 remedy stays (⛔ DL1
+  candidate needed). **AC 2:** `lib/announce-repeat.ts` (pure per-text counter, Android only) + `lib/announce.ts` (the one sender,
+  `Platform.OS` per call, options forwarded), 11 unit legs, RED first. **AC 3:** all 32 direct calls in 19 files routed (`contact.tsx`
+  aliased; `assisted.tsx`'s own counter removed); the code-only grep finds only `lib/announce.ts`; `announcementPlan`, `AnnouncedText`'s
+  JSX, `packages/i18n`, routes, contracts unchanged. **AC 4:** one `no-restricted-properties` rule + the `lib/announce.ts` carve-out; four
+  mutations (member, destructured, computed, `…WithOptions`) each RED. **AC 5:** the vitest `setupFiles` reset (RED-first leg); F7 pins
+  moved to the helper at equal or greater strictness; F6 Android rows count by the words and assert the repeat differs; the new Android
+  nominees leg; the `wa-notifications` `Platform` mock; 3.15a's `ios` P1 legs inverted; one F6 gap found and fixed (the memorial limit-line
+  `android` rows); mutations (i)–(v) each RED; 120 files / 2362 tests, `tsc`, `eslint` green. **AC 6:** (a), (j), (k) and (i) (on a
+  remount) **fixed** with the suffix in the TTS-off log on the new bundle; (b) and (i) within one mount **not reproduced**; (c), (d), (e),
+  (f), (g), (h) **not reached**, each with its gate (Debug Log Task 7). A first round on an OLD bundle (Metro had not resolved the new
+  module) was caught and discarded. **AC 7:** deferred-work X1 (the F9 analysis, owner NONE YET, both narrowings stated). **AC 8:** V4's
+  dated line (addressed / not reproduced / routed-not-device-shown; V4 stays OPEN); also X2 (observed: the language line may be spoken
+  twice when the language switches while it shows — owner NONE YET); the `Story 3.15b disposition` in `friction-budget.md`; the emulator
+  restored. ⛔ Panel question, ⛔ decision entry, ⛔ migration, ⛔ copy key.
 
 ### File List
+
+- `apps/mobile/lib/announce-repeat.ts` (new)
+- `apps/mobile/lib/announce.ts` (new)
+- `apps/mobile/tests/unit/announce-repeat.test.ts` (new)
+- `apps/mobile/tests/unit/announce.test.ts` (new)
+- `apps/mobile/tests/unit/announce-text.ts` (new — shared test helpers)
+- `apps/mobile/tests/unit/setup-announce-repeat.ts` (new)
+- `apps/mobile/vitest.config.ts`
+- `apps/mobile/eslint.config.mjs`
+- `apps/mobile/app/(claim)/cannot-file.tsx`, `certificate-replacement.tsx`, `closed-helpline.tsx`, `contact.tsx`, `nominee-review.tsx`,
+  `refile-helpline.tsx`
+- `apps/mobile/app/(life-events)/known-people-find.tsx`, `nominees.tsx`
+- `apps/mobile/app/(memorial)/family.tsx`
+- `apps/mobile/app/(settings)/language.tsx`, `notifications.tsx`
+- `apps/mobile/app/(signup)/assisted.tsx`, `kyc.tsx`, `whatsapp.tsx`
+- `apps/mobile/components/announcement-channels/ChannelLinkError.tsx`
+- `apps/mobile/components/memorial-authorship/useMemorialAnnounce.ts`
+- `apps/mobile/components/notifications/WaCodeEntry.tsx`
+- `apps/mobile/components/panchayat/PanchayatNoticeboard.tsx`
+- `apps/mobile/components/peer-request/announce.tsx`
+- `apps/mobile/tests/unit/assisted-step-render.test.ts`, `cannot-file-copy-resolves.test.ts`, `claim-contact.test.ts`,
+  `closed-copy-resolves.test.ts`, `memorial-screens-render.test.ts`, `nominee-history-copy.test.ts`, `nominee-marks-mode-render.test.ts`,
+  `nominee-review-announcements.test.ts`, `refile-copy-resolves.test.ts`, `wa-code-entry-render.test.ts`,
+  `wa-notifications-screen-render.test.ts`, `wa-signup-step-render.test.ts`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `friction-budget.md`
+- `_bmad-output/implementation-artifacts/3-15b-repeated-announcement-sent-as-different-text.md` (this file)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
@@ -397,3 +540,4 @@ RED, then restored. The device sweep (AC 6) and the listen (AC 1) are required p
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15b`) in its own worktree off `78393b18` (row record `034c3aa5`). §0: ⛔ Panel question. DL1–DL8 decided by the author (DL1: the listen is a gate; DL2: Android only — changes 3.15a's iOS repeat behaviour; DL7: the epics AC (5) premise corrected by F9). Row `backlog` → `ready-for-dev`. ⛔ Code. |
 | 1.1 | 2026-11-23 | Validated (`bmad-create-story validate 3.15b`; BigDev: "all"). 3.15a LANDED (`3e3b888e`): Task 0.1 rebases and RE-PINS `baseline_commit` (the rebase rewrites `034c3aa5`). F5: `wa-notifications-screen-render`'s mock has no `Platform` — the file would throw once routed (Task 6.0); DL3 reads `Platform.OS` per call. F6 re-sorted by each leg's real platform (`nominee-marks-mode-render` and the memorial blur-then-focus leg are iOS; the `.each` legs change their `android` row only) + a new Android nominees leg. AC 3: a code-only grep (two comment lines in `lib/death-certificate-announce.ts` are expected and the file stays unedited). F12: `contact.tsx`'s local `announce` — aliased import. DL5: one `no-restricted-properties` rule (it already catches destructuring and the computed form in ESLint 9.39.4), the blind spots recorded, ⛔ `no-restricted-imports` in mobile's config. DL7: the epics AC (5) narrowing stated (⛔ fixed even if seen; owner NONE YET — none named at validate). F11: all of `apps/mobile/**` is member-facing. DL4: per-mount vs per-session count. Row stays `ready-for-dev`; ⛔ code. |
+| 1.2 | 2026-11-23 | Dev (`bmad-dev-story 3.15b`): rebased onto `3e3b888e`, baseline re-pinned to `d686c419`; the listen passed (BigDev: "All 3, clean"); the helper, the fence, the harness reset, 32 calls routed, tests updated (code `044e62d3`); device sweep (a)/(j)/(k)/(i) fixed, (b) not reproduced, (c)–(h) not reached; deferred-work V4 dated line + X1 (F9, owner NONE YET) + X2 (observed); friction-budget disposition. |

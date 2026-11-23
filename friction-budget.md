@@ -3153,3 +3153,25 @@ code box is no longer locked while the code is being checked (3.15a W2 (i)).
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
 unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]). Written for changes COMMITTED at `40feef55`; AC-4 reads
 it once this block is committed.
+
+**Story 3.15b disposition (⛔ new row, ⛔ row retired, ⛔ row amended — taps unchanged):** the story's member-facing change is in
+`apps/mobile` only: every direct screen-reader announcement (32 calls in 19 files — signup, claim, life events, memorial, settings,
+announcement channels, the noticeboard, the WhatsApp code entry) now goes through one helper, `apps/mobile/lib/announce.ts`, which on
+Android sends a repeat of the same text with trailing no-break spaces (V4 — TalkBack does not speak an announcement identical to one
+it was already sent); iOS gets the text unchanged. Plus an ESLint fence, a vitest setup file and test updates (all of `apps/mobile/**`
+is member-facing for AC-4).
+
+1. ⛔ **Step added or removed:** no screen, button, copy key, route or order changes; what is shown, accepted, refused or stored is
+   unchanged. Every existing row stands as written.
+2. ⭐ **Friction REMOVED:** a member using TalkBack who presses again and gets the same answer (the same error after a second press,
+   the language not recorded again, the name not in English letters again) is now TOLD again instead of hearing nothing — shown on
+   the Android emulator for the KYC name line, the language screen, the assisted step and a remounted WhatsApp step with the speech
+   engine off (what TalkBack would say; the repeat logged with its suffix). With speech ON, BigDev heard the repeats as the plain
+   sentence (*"All 3, clean"* — 3.15a's assisted line, 1 and 2 trailing no-break spaces). The other call sites are routed and unit-shown
+   only (deferred-work V4, 2026-11-23 line).
+3. ⚠ **Cost, recorded:** ⛔ visible change. A text's FIRST announcement on a later screen may carry trailing no-break spaces left from
+   an earlier one (the count is per text for the session) — invisible, and silent where heard.
+
+⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
+unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]). Written for changes COMMITTED at `044e62d3`; AC-4 reads
+it once this block is committed.

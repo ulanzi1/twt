@@ -507,6 +507,8 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
     - Restored: TTS enabled, TalkBack off (`accessibility_enabled 0`, services deleted), font 1.0 (unchanged), Gboard untouched;
       `adb reverse` removed; API and Metro stopped; container `twt-3-15a-p-pg` removed; seed spec, env copies and `apps/mobile/android`
       deleted; `git status` clean. Not done: speech ON (no one listened — whether the no-break spaces are silent is un-attested).
+  - **`ci:local` (run directly, ⛔ pushed):** `ci:local PASSED — 41 job(s) green` at `de099c1f`, `DATABASE_URL` = a fresh
+    `postgres:16-alpine` (:5452, removed after). `friction:check` passed on committed history (AC-4 read the 3.15a disposition).
 
 ### Completion Notes List
 

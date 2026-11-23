@@ -20,7 +20,7 @@ each with its reason and an honest cost; BigDev may overrule any of them at vali
 
 # Story 3.15a: The "Did Someone Help You?" Step — the Error Spoken Once, and the Code Box Keeps Focus After a Wrong Code
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -224,91 +224,91 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Preflight**
-  - [ ] 0.1 In the worktree: `pnpm install`; confirm `git status` clean and on `story/3-15a-…`; `ListAgents` before touching a shared
+- [x] **Task 0 — Preflight**
+  - [x] 0.1 In the worktree: `pnpm install`; confirm `git status` clean and on `story/3-15a-…`; `ListAgents` before touching a shared
         checkout ([[feedback_shared_tree_branch_switch]]). Typed routes in a worktree are blind until regenerated
         ([[project_mobile_typed_routes_worktree]]).
-  - [ ] 0.2 Re-derive F1, F2, F6, F8, F9, F10, F11 at HEAD by function (⛔ by line number). If `assisted.tsx` or the test moved since
+  - [x] 0.2 Re-derive F1, F2, F6, F8, F9, F10, F11 at HEAD by function (⛔ by line number). If `assisted.tsx` or the test moved since
         `f18f934f`, re-read both whole files before editing.
-- [ ] **Task 1 — V1 in `assisted.tsx` (AC 1, 2)**
-  - [ ] 1.1 Replace the two `AnnouncedText kind="error"` lines with plain tamagui `Text` (`accessibilityRole="alert"`, `color="$red10"`,
+- [x] **Task 1 — V1 in `assisted.tsx` (AC 1, 2)**
+  - [x] 1.1 Replace the two `AnnouncedText kind="error"` lines with plain tamagui `Text` (`accessibilityRole="alert"`, `color="$red10"`,
         `fontSize="$2"`, ⛔ `accessibilityLiveRegion`), keeping the `&& focused` render guard and their position under the box. Give each
         a `testID` (`assisted-error-format` / `assisted-error-not-found`) for the Android legs.
-  - [ ] 1.2 Add the per-set counter (DL2) — bump it everywhere `onContinue` sets `'format'` or `'not_found'` (three sites, F1), in the
+  - [x] 1.2 Add the per-set counter (DL2) — bump it everywhere `onContinue` sets `'format'` or `'not_found'` (three sites, F1), in the
         SAME update as the `setError` call. ⛔ bump it on `setError(null)`.
-  - [ ] 1.3 One effect keyed on `[focused, counter]`: if `focused` and `error !== null`, `AccessibilityInfo.announceForAccessibility(
+  - [x] 1.3 One effect keyed on `[focused, counter]`: if `focused` and `error !== null`, `AccessibilityInfo.announceForAccessibility(
         error === 'format' ? t('signup.assisted.format') : t('signup.assisted.not_found'))`. ⛔ `t` in the deps. Import
         `AccessibilityInfo` from `react-native`. Leave `AnnouncedText` in use for the saved line (`kind="status"`) unless DL5 changes it.
-  - [ ] 1.4 Update the file's header comment: the "Accessibility" paragraph (the lines are plain text spoken once — ⛔ a live region —
+  - [x] 1.4 Update the file's header comment: the "Accessibility" paragraph (the lines are plain text spoken once — ⛔ a live region —
         3.15a V1, citing [[project_android_live_region_reread_on_rerender]] / 6.36f D1) and the R1 paragraph (Task 2).
-- [ ] **Task 2 — W2 (i) in `assisted.tsx` (AC 3, 4)**
-  - [ ] 2.1 Remove `disabled={busy}` from the `Input` only. Keep `busyRef` and the early return in `onChangeText` exactly as they are
+- [x] **Task 2 — W2 (i) in `assisted.tsx` (AC 3, 4)**
+  - [x] 2.1 Remove `disabled={busy}` from the `Input` only. Keep `busyRef` and the early return in `onChangeText` exactly as they are
         (that guard is now R1's whole mechanism on the box). ⛔ add `editable` / `readOnly`.
-  - [ ] 2.2 Rewrite the R1 header lines: *"while the POST is open a change to the box is ignored (the box stays editable so focus and
+  - [x] 2.2 Rewrite the R1 header lines: *"while the POST is open a change to the box is ignored (the box stays editable so focus and
         the keyboard stay — 3.15a W2 (i)); React Native restores the controlled value, so the box shows the code that was SENT"*.
-  - [ ] 2.3 Sweep every comment that still says the box is locked / unlocked (find them by grepping `unlocked`, ⛔ by line number):
+  - [x] 2.3 Sweep every comment that still says the box is locked / unlocked (find them by grepping `unlocked`, ⛔ by line number):
         `assisted.tsx` `onContinue`'s `exitingRef` comment (*"the box is unlocked for the moment before the move"* → the moment
         before the move, with Continue enabled again), and in `assisted-step-render.test.ts` the P3 comments *"KEPT: the box is
         unlocked and the stage is `saved`"* and *"The box is unlocked while the step waits for focus"* (→ Continue is enabled again).
         Comments only — ⛔ change to what those legs assert.
-- [ ] **Task 3 — Tests, RED first (AC 1–5)** — in `apps/mobile/tests/unit/assisted-step-render.test.ts`
-  - [ ] 3.1 Harness: make the platform switchable (`Platform: { get OS() { return mock.os } }`, default `'ios'`, reset in
+- [x] **Task 3 — Tests, RED first (AC 1–5)** — in `apps/mobile/tests/unit/assisted-step-render.test.ts`
+  - [x] 3.1 Harness: make the platform switchable (`Platform: { get OS() { return mock.os } }`, default `'ios'`, reset in
         `beforeEach`); make the `Text` mock forward `accessibilityLiveRegion` as `data-live` and `testID` (the 6.36f mock, F10); make the
         `Input` mock RECORD its props per `testID` (as the `Button` mock does) so a leg can assert `disabled` is never passed.
-  - [ ] 3.2 New `describe('Story 3.15a V1 — the error lines are spoken ONCE, ⛔ a live region')`, `it.each` over `['android', 'ios']`:
+  - [x] 3.2 New `describe('Story 3.15a V1 — the error lines are spoken ONCE, ⛔ a live region')`, `it.each` over `['android', 'ios']`:
         (a) 422 → the not-found line has ⛔ `data-live`, keeps `role="alert"`, `announce` called exactly ONCE with the `not_found`
         text (count calls WITH THAT TEXT — the question and code-label announcements also call `announce`); then a backspace
         (`'48291'`), then a new full code typed with ⛔ press → that count still 1; (b) 5 digits + Continue → ONCE with
         `format`; backspace → still 1; (c) Continue again with the same 5 digits → 2 (a repeat is spoken); (d) a second 422 after a
         retry → spoken again. RED on the current code: Android sees 0 calls and a `data-live` (the live region); write it, watch it
         fail, then Task 1.
-  - [ ] 3.3 New `describe('Story 3.15a W2 (i) — the box is never locked')`: through a HELD POST (`held()`), the recorded `Input` props
+  - [x] 3.3 New `describe('Story 3.15a W2 (i) — the box is never locked')`: through a HELD POST (`held()`), the recorded `Input` props
         never carry `disabled: true` (check before, during and after); a change during the POST is ignored (value stays the SENT code);
         Continue is `aria-disabled` during it (CONTROL). ⚠ jsdom cannot show the native focus drop
         ([[project_jsdom_disabled_button_keeps_focus]]) — this leg pins the CAUSE (the prop); the device pass (AC 6 (c)) proves the
         effect. Say so in the leg's comment.
-  - [ ] 3.4 Update R1's two legs and the P3 `it.each` where they assert `readonly` (F10) — and ONLY that assertion; keep every value /
+  - [x] 3.4 Update R1's two legs and the P3 `it.each` where they assert `readonly` (F10) — and ONLY that assertion; keep every value /
         request assertion.
-  - [ ] 3.5 The P3 legs (error after blur → ⛔ spoken while blurred, spoken at re-focus) must pass on Android too: add the `'android'`
+  - [x] 3.5 The P3 legs (error after blur → ⛔ spoken while blurred, spoken at re-focus) must pass on Android too: add the `'android'`
         variant to that `it.each` (it is iOS-only today because the mount-time announce is iOS-only — after DL2 both platforms speak).
-  - [ ] 3.6 Mutation checks, each restored byte-for-byte: (i) bring back `AnnouncedText` for the not-found line → 3.2 RED (Android);
+  - [x] 3.6 Mutation checks, each restored byte-for-byte: (i) bring back `AnnouncedText` for the not-found line → 3.2 RED (Android);
         (ii) key the effect on `error` instead of the counter → 3.2 (c) RED; (iii) drop the `focused` condition → the P3 "⛔ while
         blurred" leg RED; (iv) put `disabled={busy}` back on the `Input` → 3.3 RED; (v) delete R1's `busyRef` early return → R1's
         "value stays SENT" RED. Record each in the Debug Log.
-  - [ ] 3.7 `pnpm --filter @twt/mobile test` (whole suite), `tsc` and `eslint` in `apps/mobile` green.
-- [ ] **Task 4 — Device pass on the Android emulator (AC 6, 7, 8)** — recipe in [[project_mobile_android_emulator_setup]]
-  - [ ] 4.1 Throwaway `postgres:16-alpine` container (`twt_dev_app` / `devpass`, DB `twt_dev`), `NODE_ENV=development
+  - [x] 3.7 `pnpm --filter @twt/mobile test` (whole suite), `tsc` and `eslint` in `apps/mobile` green.
+- [x] **Task 4 — Device pass on the Android emulator (AC 6, 7, 8)** — recipe in [[project_mobile_android_emulator_setup]]
+  - [x] 4.1 Throwaway `postgres:16-alpine` container (`twt_dev_app` / `devpass`, DB `twt_dev`), `NODE_ENV=development
         DATABASE_URL=…?sslmode=disable pnpm db:migrate`; seed through an env-guarded UNCOMMITTED spec: one approved T&C version (a fresh
         DB has none — signup stops at step 1) and one ACTIVE field worker with a code (for the 201 leg; Story 13.2's door). Copy main's
         git-ignored `apps/api/.env` and `apps/mobile/.env`. API with `DATABASE_URL=` prefixed. `expo run:android --no-bundler` with
         `CI=1`; Metro with `CI=1 … < /dev/null`.
-  - [ ] 4.2 TalkBack ON, TTS engine DISABLED (`pm disable-user com.google.android.tts`), `logcat` filtered on the TTS line: legs AC 6
+  - [x] 4.2 TalkBack ON, TTS engine DISABLED (`pm disable-user com.google.android.tts`), `logcat` filtered on the TTS line: legs AC 6
         (a), (b), (e) — one fresh member per leg (`pm clear …` + a new mobile; OTP = `"devCode"` in the API log). In (a), after the
         422 and before any tap: `dumpsys input_method | grep mInputShown` (allowed — it is ⛔ a `uiautomator dump`). ⛔ `uiautomator dump`.
-  - [ ] 4.3 TalkBack OFF: AC 6 (c) (focus + `mInputShown=true` after the 422, no tap) and (d) (held POST: `kill -STOP`; a single
+  - [x] 4.3 TalkBack OFF: AC 6 (c) (focus + `mInputShown=true` after the 422, no tap) and (d) (held POST: `kill -STOP`; a single
         backspace → screenshot; a held / multi-key backspace → screenshot; select-all + paste of six other digits → screenshot;
         `kill -CONT`, then the `member_attribution` row's code). A dump is allowed here.
-  - [ ] 4.4 Speech ON (AC 7): TTS re-enabled; the not-found line after a 422 and the saved line after a 201. Ask BigDev to listen, or
+  - [x] 4.4 Speech ON (AC 7): TTS re-enabled; the not-found line after a 422 and the saved line after a 201. Ask BigDev to listen, or
         record that it was not heard — ⛔ infer.
-  - [ ] 4.5 AC 8: `whatsapp.tsx` `request` line (fail the request by stopping / holding the API past 15 s), then a later press — re-read?
+  - [x] 4.5 AC 8: `whatsapp.tsx` `request` line (fail the request by stopping / holding the API past 15 s), then a later press — re-read?
         `WaCodeEntry` — try to reach it; if `codeAvailable` cannot be had locally (F11), record NOT REACHED and why.
-  - [ ] 4.6 Restore the emulator (font scale 1.0, Gboard English only, TalkBack off, TTS on); drop the container; delete the seed spec
+  - [x] 4.6 Restore the emulator (font scale 1.0, Gboard English only, TalkBack off, TTS on); drop the container; delete the seed spec
         and env copies; `git status` clean except this story's files.
-- [ ] **Task 5 — Conditional fixes from the pass** (only what the pass SAW)
-  - [ ] 5.1 DL3 fallback if AC 4 failed on the device (record the evidence; re-run Task 3's mutations for the new shape).
-  - [ ] 5.2 DL5 if the saved line was heard cut; DL7 if the not-found line was heard cut.
-  - [ ] 5.3 DL6 for `whatsapp.tsx` / `WaCodeEntry.tsx` if a re-read was seen (RED-first test each; F12's W3 if `whatsapp.tsx` changes).
+- [x] **Task 5 — Conditional fixes from the pass** (only what the pass SAW)
+  - [x] 5.1 DL3 fallback if AC 4 failed on the device (record the evidence; re-run Task 3's mutations for the new shape).
+  - [x] 5.2 DL5 if the saved line was heard cut; DL7 if the not-found line was heard cut.
+  - [x] 5.3 DL6 for `whatsapp.tsx` / `WaCodeEntry.tsx` if a re-read was seen (RED-first test each; F12's W3 if `whatsapp.tsx` changes).
         Re-run the affected device leg after any fix.
-- [ ] **Task 6 — Records (AC 9)**
-  - [ ] 6.1 `deferred-work.md` dated lines under V1, V2, W2, W3 (if it fired) and a line for the `whatsapp.tsx` / `WaCodeEntry.tsx`
+- [x] **Task 6 — Records (AC 9)**
+  - [x] 6.1 `deferred-work.md` dated lines under V1, V2, W2, W3 (if it fired) and a line for the `whatsapp.tsx` / `WaCodeEntry.tsx`
         check — closure language exact ([[feedback_closure_language_precision]]: "closed by Story 3.15a" only with evidence;
         "not reproduced" / "not reached" / "still un-attested" otherwise).
-  - [ ] 6.2 `friction-budget.md`: the `**Story 3.15a disposition (…)**` block (F13), after the Story 3.15 disposition.
-  - [ ] 6.3 This story: Dev Agent Record, File List, Change Log; Status → `review`.
-  - [ ] 6.4 `sprint-status.yaml`: row → `review`, a dated comment line on the row, and a prepended `# last_updated:` entry (read the
+  - [x] 6.2 `friction-budget.md`: the `**Story 3.15a disposition (…)**` block (F13), after the Story 3.15 disposition.
+  - [x] 6.3 This story: Dev Agent Record, File List, Change Log; Status → `review`.
+  - [x] 6.4 `sprint-status.yaml`: row → `review`, a dated comment line on the row, and a prepended `# last_updated:` entry (read the
         head LIVE for the next free letter; the safe prepend — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
 - [ ] **Task 7 — Gates and push**
-  - [ ] 7.1 Commit on `story/3-15a-…` only ([[feedback_commit_on_story_branch]]); check the branch before every commit.
+  - [x] 7.1 Commit on `story/3-15a-…` only ([[feedback_commit_on_story_branch]]); check the branch before every commit.
   - [ ] 7.2 `git push` runs `ci:local` through the pre-push hook: prefix `DATABASE_URL=<a fresh container's URL>?sslmode=disable`
         ([[project_prepush_hook_inherits_5432]]); first push with an explicit refspec (upstream unset). Run it in the background; it
         takes many minutes. A friction-budget red at commit time is F13, ⛔ a flake.
@@ -373,11 +373,88 @@ Each new leg shown RED before the fix; each mutation in Task 3.6 RED, then resto
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the story's own worktree.
+
 ### Debug Log References
+
+- **Task 0.** `origin/main` unmoved at `f18f934f` after `git fetch origin`; `ListAgents` empty. F1, F2, F3, F6, F8, F9, F10, F11 re-derived at
+  HEAD by function: `assisted.tsx` and its test unchanged since the pin (only records commits after it); RN 0.83.6 —
+  `TextInput.js` `lastNativeText` (3 hits), `ReactEditText.kt` `canUpdateWithEventCount = eventCounter >= nativeEventCount`,
+  `ReactTextInputManager.kt` `view.isEnabled = editable`, `ReactAccessibilityDelegate.kt` `ALERT -> roleDescription`;
+  `@tamagui/input` `editable: !disabled && !readOnly`. All hold.
+- **RED (Task 3, before Tasks 1–2):** 10 failed / 37 passed — V1 legs (android + ios) on the missing `testID` / the live region; the 400
+  legs on `data-live`; W2 (i) on `disabled: true` recorded during the POST; R1 on `readonly`; P3 android 422 / 400 on the missing
+  re-focus announce. **GREEN:** 47 / 47.
+- **Mutations (3.6), each restored byte-for-byte (`diff` against a saved copy):** (i) `AnnouncedText` back for the not-found line → the
+  two V1 422 legs RED (android + ios); (ii) effect keyed on `error` instead of `errorSet` → the two V1 format-repeat legs RED; (iii)
+  `focused` dropped from the effect's condition → the four P3 error legs RED; (iv) `disabled={busy}` back on the `Input` → R1 leg 1 and
+  the W2 (i) leg RED; (v) R1's `busyRef` early return deleted → both R1 legs and the W2 (i) leg RED.
+- **3.7:** `@twt/mobile` 118 files / 2341 tests green; `tsc --noEmit` clean; `eslint .` clean. Added lines scanned for invisible
+  characters: none. `announce.tsx`, `death-certificate-announce.ts`, `packages/i18n` — `git diff` empty.
+- **Disk.** The first `expo run:android` failed `No space left on device` (208 MB free of 228 GB). My own build output removed; then,
+  BigDev's choice, the 3.15 worktree's git-ignored `apps/mobile/android` removed and `docker volume prune` (13.5 GB; `fstrim` in the
+  Docker VM returned it to macOS) → 15 GB free. A stale Gradle daemon from the failed build held the hash-cache lock; stopped, rebuilt:
+  BUILD SUCCESSFUL in 3m 14s, installed 11:43.
+- **Device pass (Task 4)** — `Pixel_9` / Android 15, app Hindi, Gboard, font 1.0; throwaway `postgres:16-alpine` on :5449, migrated;
+  UNCOMMITTED seed spec (one approved T&C, three active workers: `413973`, `644932`, `916914`); API and Metro from the worktree.
+  - (c) TalkBack OFF: `111111` + Continue → 422 → with ⛔ tap `mInputShown=true`, served view the focused `ReactEditText`
+    (`VFED..CL. .F......`); screenshot: cursor in the box, number pad up, not-found line under it.
+  - (d) TalkBack OFF: `413973`, API `kill -STOP`, Continue (spinner) → one backspace → box `413973`; five backspaces in one
+    `input keyevent` → `413973`; `keycombination CTRL+A` + `input text 999999` → `413973` (screenshots e1–e3, keyboard up throughout);
+    `kill -CONT` → saved, KYC; `member_attribution.attribution_source = 413973`. A first attempt was DISCARDED: its Continue tap missed
+    (the cleared error line had moved the button), no POST was sent (POST count and row count unchanged) — recorded, not counted.
+  - (a) TalkBack ON, TTS off: 422 → not-found line logged ONCE (11:51:19.666); `mInputShown=true` with TalkBack on, ⛔ tap; backspace
+    → "1 deleted"; backspace → "1 deleted"; four more + `135790` → digits only. ⛔ re-read.
+  - (b) TalkBack ON: `48291` + Continue → format line logged ONCE (11:53:56.320); backspace → "1 deleted" only. The repeat press
+    (same 5 digits) logged NOTHING. Investigated: with TalkBack OFF, `uiautomator events` showed the app sending one
+    `TYPE_ANNOUNCEMENT` ("कोड में 6 अंक होते हैं।") per press (two repeats + one press after an edit), ⛔ one on the backspace; with
+    TalkBack ON the repeat 422 (it reached the server) was silent too, while a DIFFERENT text right after (not-found after format)
+    was spoken. ⇒ the app does DL2 (a); TalkBack does not re-speak an identical announcement → `deferred-work.md` V4. A probe that
+    made each text unique (`+ ' PROBE' + errorSet`, uncommitted) never reached the device — the dev client kept serving an older
+    bundle (no "PROBE" in any logged or event text, so every leg above ran the COMMITTED code); reverted, `git diff HEAD` empty.
+  - (e) TalkBack ON: `644932` → saved line logged, 0.8 s later "keyboard hidden", then "चरण 8 में से 3" + KYC heading; none with
+    `flushGlobalTtsQueue:true`; row stored `644932`.
+  - AC 7 (speech ON): ⛔ heard — BigDev: *"Not now: un-attested"*. Not inferred from the log.
+  - AC 8: `pariwar_wa_config` row inserted (enabled) so the WhatsApp step shows; the wizard could not be walked past the nominee step
+    (no scroll — V5), so the step was opened by deep link `twtp05://whatsapp`. Request held past 15 s → `request` line logged ONCE;
+    untick / retick → nothing logged; later press → "चरण 8 में से 8", ⛔ re-read. `WaCodeEntry`: NOT REACHED (no code offer on this
+    setup; F11).
+  - Restored: TalkBack off, `accessibility_enabled 0`, TTS `enabled`, font 1.0; `adb reverse` removed; API and Metro stopped;
+    container `twt-3-15a-pg` removed; seed spec, env copies and `apps/mobile/android` deleted. The 3.15 pass's two containers
+    (`twt-3-15-pg`, `twt-3-15-push2-pg`) were found running and left as they were (not this story's).
+- **Task 5:** 5.1 not triggered (AC 4 held on the device); 5.2 not triggered (nothing heard — un-attested, ⛔ "not cut"); 5.3 not
+  triggered (`whatsapp.tsx` re-read not seen; `WaCodeEntry` not reached).
 
 ### Completion Notes List
 
+- **V1 (AC 1, 2):** the not-found and format lines are plain tamagui `Text` (`accessibilityRole="alert"`, `$red10`, `$2`,
+  `testID` `assisted-error-format` / `assisted-error-not-found`, ⛔ `accessibilityLiveRegion`), spoken by ONE
+  `announceForAccessibility` from an effect keyed on `[focused, errorSet]`; `errorSet` is bumped with every `setError('format' |
+  'not_found')` (helper `showError`, three sites), ⛔ on clear. `AnnouncedText` stays for the saved line. On the device: spoken once,
+  ⛔ re-read on the backspaces that clear it.
+- **W2 (i) (AC 3, 4):** `disabled={busy}` removed from the `Input` only; Continue keeps `disabled` + spinner; Skip unchanged; R1 is
+  the `busyRef` guard plus RN's controlled-value revert. On the device: focus and keyboard kept after a 422 (TalkBack off and on), and
+  a held POST's single, multi and select-replace edits all left the SENT code, which is what was stored.
+- **Tests:** harness — switchable `Platform.OS`, `Text` mock forwards `accessibilityLiveRegion` (`data-live`), colour and size,
+  `Input` mock records every render's props; new V1 legs (422 once / backspace / new code / second 422; format once / repeat / backspace;
+  400) on android AND ios; new W2 (i) leg (held POST: ⛔ `disabled` / `readOnly` / `editable={false}` before, during, after; change
+  ignored; Continue disabled CONTROL); R1's `readonly` assertion inverted, its value / retry assertions kept; P3 error legs on both
+  platforms. 47 / 47.
+- **Findings for BigDev (recorded in `deferred-work.md`, owner NONE YET):** **V4** — TalkBack does not speak an announcement equal to
+  the last one, so DL2 (a)'s repeat is silent on Android (the app sends it; also bears on `use-wa-code.ts` and `ChannelLinkError`);
+  **V5** — the signup nominee step has no scroll container and its lower half was not reachable on a Pixel 9 (pre-existing; possibly
+  blocks signup on such phones — not established). V2 and AC 7: un-attested (not heard).
+- **Not done here:** Task 7.2 (`git push`, which runs `ci:local` through the pre-push hook) — an outward action, left for BigDev's
+  word.
+
 ### File List
+
+- `apps/mobile/app/(signup)/assisted.tsx` (modified)
+- `apps/mobile/tests/unit/assisted-step-render.test.ts` (modified)
+- `friction-budget.md` (modified — the Story 3.15a disposition)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (modified — dated lines on V1, V2, W2; the 3.15a device-pass section)
+- `_bmad-output/implementation-artifacts/3-15a-assisted-step-error-spoken-once-and-focus-kept.md` (this file)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — row and ledger)
 
 ## Change Log
 
@@ -385,3 +462,4 @@ Each new leg shown RED before the fix; each mutation in Task 3.6 RED, then resto
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15a`) in its own worktree off `f18f934f`. §0: ⛔ Panel question. DL1–DL6 decided by the author (DL3: ⛔ lock the box — F7 / F8). Row `backlog` → `ready-for-dev`. ⛔ Code. |
 | 1.1 | 2026-11-23 | Validate pass (`bmad-create-story validate 3.15a`; BigDev: *"all"*). F1–F14 re-traced at `f18f934f` and found to hold (`origin/main` unmoved). Added: F8 the dropped-revert case (`canUpdateWithEventCount`), with a rapid multi-edit in AC 4 / AC 6 (d) / Task 4.3 and in DL3's fallback trigger; AC 6 (a) / Task 4.2 `mInputShown` read with TalkBack ON (`dumpsys`, ⛔ a dump); DL7 (the not-found line heard cut — the DL5 rule), wired into AC 7 / Task 5.2; DL2 records its narrowing of epics AC (1)'s *"where the error is set"*; Task 2.3 sweeps the stale "unlocked" comments; Task 3.2 (a) counts calls by text. Status stays `ready-for-dev`. ⛔ Code. |
+| 1.2 | 2026-11-23 | Implemented (`bmad-dev-story 3.15a`): V1 and W2 (i) in `assisted.tsx` (`40feef55`), tests RED-first (10) then 47 / 47, mutations (i)–(v) RED; mobile suite / `tsc` / `eslint` green. Device pass on the Android emulator: V1 and W2 (i) CLOSED with evidence; AC 4 held (single, multi, select-replace); AC 7 un-attested (not heard — BigDev); AC 8 `whatsapp.tsx` re-read not seen, `WaCodeEntry` not reached. New findings V4 (TalkBack drops an identical repeated announcement) and V5 (signup nominee step does not scroll) in `deferred-work.md`, owner NONE YET. Friction-budget disposition. Status → `review`; ⛔ pushed (Task 7.2 awaits BigDev). |

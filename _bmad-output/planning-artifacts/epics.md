@@ -2062,6 +2062,29 @@ number is shown to the person.
 
 ---
 
+### Story 3.15a: The "Did Someone Help You?" Step — the Error Spoken Once, and the Code Box Keeps Focus After a Wrong Code `[SURFACE]`
+
+> ⚠ **Added 2026-11-23** (BigDev: *"go ahead with 3.15a"*, after the Story 3.15 device pass on the Android emulator — `deferred-work.md`,
+> "Deferred from: device pass of story 3-15"). Owns **V1** and **W2 (i)** from that pass. BigDev ruled W2 (i) a defect to fix: *"I think we
+> should fix W2 (i)"*. ⛔ Panel question (accessibility and focus on a screen Story 3.15 built; nothing about who is credited or told).
+
+As a person signing up who uses a screen reader, or who mistypes the helper's code, I want the "wrong code" message read to me once and the
+cursor left in the code box, so that I can correct the code without hearing the error again or having to find the box.
+
+**Acceptance Criteria (in brief):** on `apps/mobile/app/(signup)/assisted.tsx`, (1) **V1** — the not-found and format lines are ⛔ a live
+region: plain text, spoken ONCE through `AccessibilityInfo.announceForAccessibility` where the error is set (the Story 6.36f D1 fix); on
+Android, TalkBack ⛔ re-reads the line on the backspace that clears it, nor on a press. (2) **W2 (i)** — after a 422 (not found) the code
+box is focused again with the keyboard up, so the member can correct the code at once; the story chooses between restoring focus after the
+lock (R1's `disabled={busy}` kept) and not locking the input (relying on the `busyRef` guard in `onChangeText`) — either way R1's guarantee
+holds (the code that is saved is the code on screen) and its regression stays green. (3) Shown on the Android emulator by the Story 3.15
+device-pass setup, TalkBack by TTS-off capture (⚠ `uiautomator dump` turns TalkBack off — never dump during a capture). (4) `whatsapp.tsx`
+and `components/notifications/WaCodeEntry.tsx` render `AnnouncedText kind="error"` the same way: CHECK them on the emulator and record
+what is seen; ⛔ change them unless the re-read is seen (then the same fix, or a deferred item with an owner). ⛔ changing the shared
+`AnnouncedText` component (other screens rely on its live region). V2 (the saved line possibly cut by the heading) is checked in the same
+pass with speech ON, and fixed here only if it is heard.
+
+---
+
 ### Story 3.16: Upload a PAN, a Masked Aadhaar and a Selfie When DigiLocker Is Unavailable `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Replaces the typed-in route (`POST /api/v1/member/kyc/manual`). ⚠ Go-live waits on the Panel's ruling on

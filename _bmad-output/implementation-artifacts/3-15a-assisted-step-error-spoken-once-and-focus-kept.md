@@ -20,7 +20,7 @@ each with its reason and an honest cost; BigDev may overrule any of them at vali
 
 # Story 3.15a: The "Did Someone Help You?" Step — the Error Spoken Once, and the Code Box Keeps Focus After a Wrong Code
 
-Status: review
+Status: done
 
 ## Story
 
@@ -307,9 +307,9 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
   - [x] 6.3 This story: Dev Agent Record, File List, Change Log; Status → `review`.
   - [x] 6.4 `sprint-status.yaml`: row → `review`, a dated comment line on the row, and a prepended `# last_updated:` entry (read the
         head LIVE for the next free letter; the safe prepend — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
-- [ ] **Task 7 — Gates and push**
+- [x] **Task 7 — Gates and push**
   - [x] 7.1 Commit on `story/3-15a-…` only ([[feedback_commit_on_story_branch]]); check the branch before every commit.
-  - [ ] 7.2 `git push` runs `ci:local` through the pre-push hook: prefix `DATABASE_URL=<a fresh container's URL>?sslmode=disable`
+  - [x] 7.2 `git push` runs `ci:local` through the pre-push hook: prefix `DATABASE_URL=<a fresh container's URL>?sslmode=disable`
         ([[project_prepush_hook_inherits_5432]]); first push with an explicit refspec (upstream unset). Run it in the background; it
         takes many minutes. A friction-budget red at commit time is F13, ⛔ a flake.
 
@@ -509,6 +509,11 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
       deleted; `git status` clean. Not done: speech ON (no one listened — whether the no-break spaces are silent is un-attested).
   - **`ci:local` (run directly, ⛔ pushed):** `ci:local PASSED — 41 job(s) green` at `de099c1f`, `DATABASE_URL` = a fresh
     `postgres:16-alpine` (:5452, removed after). `friction:check` passed on committed history (AC-4 read the 3.15a disposition).
+- **Landed (BigDev: *"push it, open the PR, land when CI is green"*, then *"land it when ci is green"*).** `git push` at `78393b18`
+  (first push, explicit refspec): the pre-push hook's `ci:local PASSED — 41 job(s) green` on a fresh container (:5453, removed after).
+  PR #339; GitHub CI 41 / 41 on the PR. Fast-forward: `git push origin 78393b18:main` (`f18f934f..78393b18`, 9 commits, SHAs unchanged;
+  no squash, no merge commit); GitHub marked #339 merged (2026-11-23T08:55:35Z). The push to `main`: CI run `45142550627` 41 / 41
+  success; `code-escrow-mirror` red as on every push (its secret unset). Merged ≠ live: nothing is in production.
 
 ### Completion Notes List
 
@@ -560,3 +565,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
 | 1.2 | 2026-11-23 | Implemented (`bmad-dev-story 3.15a`): V1 and W2 (i) in `assisted.tsx` (`40feef55`), tests RED-first (10) then 47 / 47, mutations (i)–(v) RED; mobile suite / `tsc` / `eslint` green. Device pass on the Android emulator: V1 and W2 (i) CLOSED with evidence; AC 4 held (single, multi, select-replace); AC 7 un-attested (not heard — BigDev); AC 8 `whatsapp.tsx` re-read not seen, `WaCodeEntry` not reached. New findings V4 (TalkBack drops an identical repeated announcement) and V5 (signup nominee step does not scroll) in `deferred-work.md`, owner NONE YET. Friction-budget disposition. Status → `review`; ⛔ pushed (Task 7.2 awaits BigDev). |
 | 1.3 | 2026-11-23 | Code review at `be38140c`: three layers completed; 0 decision-needed, 3 patch, 0 new defer, 5 dismissed. P1 repeated errors silent on TalkBack; P2 blur-to-effect announcement race reproduced; P3 actual clipboard-paste validation outstanding. Existing targeted tests 47/47 passed; blur reproduction failed on current code and passed with a test-only synchronous-ref guard. BigDev selected option 2, "Leave as action items"; P1-P3 remain unchecked, no implementation patches applied. Story and sprint status `review` -> `in-progress`. |
 | 1.4 | 2026-11-23 | Review follow-up (`bmad-dev-story 3.15a`): review record `e7625e94` first; code `8b5f4c01`. P1 — a repeat of the same error line is sent with one more trailing no-break space (per line; the first is the copy); P2 — `focusedRef` in the error effect's guard. 9 legs RED first, then 56 / 56; mutations (vi)–(ix) RED; mobile 2350 / 2350, `tsc`, `eslint` green. Emulator: every repeated error passed to speech (TalkBack ON, TTS-off capture); a real clipboard paste during a held POST left the SENT code, which was stored. Records: `deferred-work.md` V4 and W2 dated lines; friction-budget disposition claims corrected (SENT, not heard). Status → `review`; ⛔ pushed (Task 7.2 awaits BigDev). |
+| 1.5 | 2026-11-23 | LANDED on `main` by fast-forward (PR #339, `f18f934f..78393b18`, SHAs unchanged): pre-push `ci:local` 41 / 41 on a fresh container; GitHub CI 41 / 41 on the PR and on the push to `main` (run `45142550627`); `code-escrow-mirror` red as on every push. Task 7.2 done. Status `review` → `done`. Merged ≠ live. |

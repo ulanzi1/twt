@@ -13,7 +13,7 @@ worktree `/Users/dev/Developer/projects/TWT/.claude/worktrees/3-15a-assisted-ste
 
 §0 GATE (the routing template's, applied FIRST): ⛔ Panel question. Everything here is HOW a screen Story 3.15 built speaks an error
 and keeps the cursor — the AUTHOR's. Nothing changes who is credited, who is told what, or what is stored. The two choices the epics
-block leaves open ("the story chooses between restoring focus after the lock … and not locking the input") are made below as DL1–DL6,
+block leaves open ("the story chooses between restoring focus after the lock … and not locking the input") are made below as DL1–DL7,
 each with its reason and an honest cost; BigDev may overrule any of them at validate or review. BigDev's ruling that W2 (i) is a defect
 ("I think we should fix W2 (i)") is the input, quoted, ⛔ reinterpreted.
 -->
@@ -89,7 +89,11 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
   updates, and a layout effect that calls `viewCommands.setTextAndSelection` when `lastNativeText !== props.value` — so an ignored
   change is REVERTED on screen to the controlled `value` (the SENT code). And the box holds exactly 6 digits during any POST (the client
   sends only `/^\d{6}$/`), so `maxLength={6}` refuses an insert natively; only a delete / select-replace / paste can produce a change,
-  and that change is reverted.
+  and that change is reverted. ⚠ **The revert can be DROPPED:** the command carries JS's `mostRecentEventCount`, and
+  `ReactEditText.kt` `maybeSetText` returns early unless `canUpdateWithEventCount(jsEventCounter)` (`eventCounter >= nativeEventCount`).
+  During a rapid multi-edit (a held backspace) native is already ahead, so each revert but the LAST is discarded. Each change event
+  triggers a fresh revert at its own count, so in theory the box settles on the SENT code after the last edit. Only a device can show
+  that, and the single backspace is the easy case — AC 4 runs a multi-edit too.
 - **F9 — the focus rules the fix must keep (R2 / P3).** The error and saved lines render only while `focused` (state set by
   `useFocusEffect`); `focusedRef` is the synchronous copy. Test `Review P3 … '%s after blur: the error line is kept and spoken at
   re-focus (⛔ while blurred)'` pins: an error that lands while blurred is ⛔ spoken then, and IS spoken at re-focus. Today that works
@@ -132,7 +136,11 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
   again (ChannelLinkError's *"a REPEAT failure … included"*); (b) an edit, a backspace, a press — anything that does not SET an error —
   speaks nothing; (c) an error set while the step is BLURRED is ⛔ spoken then and IS spoken at the next focus (keeps P3's pinned
   behaviour, F9); (d) an error still showing when the step regains focus is spoken again at that re-focus (today's mount-time
-  behaviour, W2 (iii)). ⛔ `t` in the deps ([[project_uset_fresh_closure_memo_trap]]) — resolve the text inside the effect.
+  behaviour, W2 (iii)). ⛔ `t` in the deps ([[project_uset_fresh_closure_memo_trap]]) — resolve the text inside the effect (the
+  repo has no `react-hooks` lint rule, so omitting `error` and `t` from the deps passes `eslint`).
+  *Narrows the epics text:* epics AC (1) says *"spoken ONCE … where the error is set"*. DL2 speaks from the effect after that render,
+  ⛔ at the set site — a call at the set site would speak a 422 that lands while the step is blurred over another screen (P3, F9).
+  Recorded here, ⛔ silently.
   *Cost:* (d) means a member who left with the line showing hears it again on return; that is today's behaviour, kept.
 - **DL3 — W2 (i): ⛔ lock the code box; keep R1's guard. (The epics block's second option.)** Remove `disabled={busy}` from the `Input`
   ONLY (Continue keeps `disabled={busy}` and its spinner; Skip stays enabled, P7). The box never goes non-editable, so focus and the
@@ -144,7 +152,8 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
   `readonly` during the POST, and the change is ignored so the SENT code stays. The first is the mechanism this option removes, so
   that one assertion is inverted; the second is R1's guarantee and stays exactly as written (AC 4). *Cost of DL3:* during a POST the box LOOKS editable; a delete there is undone with no message
   (TalkBack may echo the deletion and then the restored text — un-attested until the pass). **Fallback, decided now:** if the device
-  pass shows the revert does NOT happen (the box ends up showing digits other than the ones sent), DL3 is wrong — put `disabled={busy}`
+  pass shows the revert does NOT happen — after a single backspace OR after a rapid multi-edit (F8's dropped-revert case) — and the box
+  ends up showing digits other than the ones sent, DL3 is wrong — put `disabled={busy}`
   back, restore focus after the unlock with a deferral that the device proves takes (F7), and record which deferral and why in the
   Debug Log. ⛔ ship a box that can show other digits than the ones sent.
 - **DL4 — every error that keeps the member on the box keeps the box usable: 422, the server 400 and the client format line.** The epics
@@ -158,6 +167,11 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
   (⛔ in `AnnouncedText`), with its own RED-first test; and F12's W3 trigger fires for `whatsapp.tsx`. Not seen → record what was done
   and what was heard. Not reached (F11) → record "NOT REACHED" with the reason and keep a deferred item (owner: NONE YET — BigDev
   assigns). ⛔ write "not seen" for a leg that was not run ([[feedback_record_unattested_no_backfill]]).
+- **DL7 — the not-found line heard CUT (AC 7): the same rule as DL5.** One likely cutter: the 422's render also swaps Continue's
+  spinner back to its label, and TalkBack may speak that change on the focused button. Heard in full → recorded. Heard cut → fix here
+  with the smallest change the device proves (candidate: speak the line one frame after the render that re-enables Continue), with its
+  own RED-first unit leg where one can be written — ⛔ a change to `AnnouncedText`; ⛔ a new copy key. Heard cut but no change proven
+  within the story → a dated deferred item with an owner (⛔ silent). Not heard by anyone → "un-attested" (AC 7).
 
 ## Acceptance Criteria
 
@@ -176,8 +190,11 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
 4. **R1 still holds.** During a POST a change to the box is ignored and the box shows the SENT code; the saved / not-found result refers
    to the code that was sent; a retry after a 422 sends the new code. The R1 legs are updated only where they asserted `readonly`
    (now: ⛔ read-only, and the change still ignored); their "value stays the SENT code" and "the retry sends the new code" assertions are
-   kept. On the device: during a held POST (`kill -STOP <api pid>`), a backspace leaves the box showing all six SENT digits (screenshot),
-   and the stored row after `kill -CONT` carries the sent code. If this fails → DL3's fallback, recorded.
+   kept. On the device: during a held POST (`kill -STOP <api pid>`), a single backspace leaves the box showing all six SENT digits
+   (screenshot); then a RAPID multi-edit — a held backspace (`adb shell input keyevent --longpress KEYCODE_DEL`, or several `KEYCODE_DEL`
+   in one `input keyevent` call) and a select-all + paste of six other digits — also ends with the six SENT digits (screenshot after
+   each, F8's dropped-revert case); the stored row after `kill -CONT` carries the sent code. If any of these fails → DL3's fallback,
+   recorded.
 5. **Nothing else changes.** N1 (409 / 429 / 5xx / timeout / no network → on to KYC, ⛔ message, ⛔ error spoken), P3 (a result that lands
    while blurred is kept), R2 (⛔ navigation while blurred), R3 (the code label announced on Yes), P7, the saved line and its timer, the
    copy keys (⛔ change to `packages/i18n/locales/{en,hi}/common.json`), the route and the contracts — every existing leg in
@@ -185,13 +202,15 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
 6. **Shown on the Android emulator** with the Story 3.15 device-pass setup (memory [[project_mobile_android_emulator_setup]], "Device-pass
    recipe that worked 2026-11-23"): Hindi, Gboard, `Pixel_9` / Android 15, a debug build of THIS branch. TalkBack speech captured with
    the TTS engine disabled (every utterance logged as `TTS is not ready … text:…`), ⚠ ⛔ `uiautomator dump` during a speech capture (it
-   turns TalkBack off); drive by coordinates. Legs, each recorded with what was seen: (a) 422 → the not-found line logged ONCE; then
-   backspace ×2 and a new code typed → ⛔ second utterance of it; (b) 5 digits + Continue → the format line ONCE; backspace → ⛔ re-read;
-   (c) after the 422 the box is focused with the keyboard up (TalkBack OFF for this leg, so a dump is allowed); (d) AC 4's held-POST
-   backspace; (e) a 201 → the saved line, then KYC.
+   turns TalkBack off); drive by coordinates. Legs, each recorded with what was seen: (a) 422 → the not-found line logged ONCE, and —
+   with TalkBack still ON, so the screen-reader member's case — `adb shell dumpsys input_method | grep mInputShown` →
+   `mInputShown=true` with no tap (`dumpsys` is ⛔ a `uiautomator dump` and leaves TalkBack on); then backspace ×2 and a new code typed →
+   ⛔ second utterance of it; (b) 5 digits + Continue → the format line ONCE; backspace → ⛔ re-read; (c) after the 422 the box is
+   focused with the keyboard up (TalkBack OFF for this leg, so a dump is allowed); (d) AC 4's held-POST single backspace AND rapid
+   multi-edit; (e) a 201 → the saved line, then KYC.
 7. **Speech ON** (TTS re-enabled, TalkBack on, audio heard by BigDev or recorded — say which): the not-found line is heard in FULL after
-   the 422 (not cut by a keyboard or field announcement); V2's saved line heard in full or cut (DL5). Whatever cannot be heard by the
-   agent is recorded as un-attested, ⛔ inferred from the TTS-off log.
+   the 422 (not cut by a keyboard or field announcement, nor by Continue's label returning — DL7), or heard cut → DL7; V2's saved line
+   heard in full or cut (DL5). Whatever cannot be heard by the agent is recorded as un-attested, ⛔ inferred from the TTS-off log.
 8. **The two sibling screens are checked** (DL6): `whatsapp.tsx`'s `request` line (reachable by holding or stopping the API so the
    request fails) → a later press: re-read or not; `WaCodeEntry.tsx`'s wrong-code line → typing the next code: re-read or not — or NOT
    REACHED with the reason. Each result is recorded in `deferred-work.md`; a re-read that is seen is fixed here (DL6) or carried with an
@@ -227,13 +246,19 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
         (that guard is now R1's whole mechanism on the box). ⛔ add `editable` / `readOnly`.
   - [ ] 2.2 Rewrite the R1 header lines: *"while the POST is open a change to the box is ignored (the box stays editable so focus and
         the keyboard stay — 3.15a W2 (i)); React Native restores the controlled value, so the box shows the code that was SENT"*.
+  - [ ] 2.3 Sweep every comment that still says the box is locked / unlocked (find them by grepping `unlocked`, ⛔ by line number):
+        `assisted.tsx` `onContinue`'s `exitingRef` comment (*"the box is unlocked for the moment before the move"* → the moment
+        before the move, with Continue enabled again), and in `assisted-step-render.test.ts` the P3 comments *"KEPT: the box is
+        unlocked and the stage is `saved`"* and *"The box is unlocked while the step waits for focus"* (→ Continue is enabled again).
+        Comments only — ⛔ change to what those legs assert.
 - [ ] **Task 3 — Tests, RED first (AC 1–5)** — in `apps/mobile/tests/unit/assisted-step-render.test.ts`
   - [ ] 3.1 Harness: make the platform switchable (`Platform: { get OS() { return mock.os } }`, default `'ios'`, reset in
         `beforeEach`); make the `Text` mock forward `accessibilityLiveRegion` as `data-live` and `testID` (the 6.36f mock, F10); make the
         `Input` mock RECORD its props per `testID` (as the `Button` mock does) so a leg can assert `disabled` is never passed.
   - [ ] 3.2 New `describe('Story 3.15a V1 — the error lines are spoken ONCE, ⛔ a live region')`, `it.each` over `['android', 'ios']`:
-        (a) 422 → the not-found line has ⛔ `data-live`, keeps `role="alert"`, `announce` called exactly ONCE with `not_found`; then a
-        backspace (`'48291'`), a new full code typed, and a press of nothing → count still 1; (b) 5 digits + Continue → ONCE with
+        (a) 422 → the not-found line has ⛔ `data-live`, keeps `role="alert"`, `announce` called exactly ONCE with the `not_found`
+        text (count calls WITH THAT TEXT — the question and code-label announcements also call `announce`); then a backspace
+        (`'48291'`), then a new full code typed with ⛔ press → that count still 1; (b) 5 digits + Continue → ONCE with
         `format`; backspace → still 1; (c) Continue again with the same 5 digits → 2 (a repeat is spoken); (d) a second 422 after a
         retry → spoken again. RED on the current code: Android sees 0 calls and a `data-live` (the live region); write it, watch it
         fail, then Task 1.
@@ -258,9 +283,11 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
         git-ignored `apps/api/.env` and `apps/mobile/.env`. API with `DATABASE_URL=` prefixed. `expo run:android --no-bundler` with
         `CI=1`; Metro with `CI=1 … < /dev/null`.
   - [ ] 4.2 TalkBack ON, TTS engine DISABLED (`pm disable-user com.google.android.tts`), `logcat` filtered on the TTS line: legs AC 6
-        (a), (b), (e) — one fresh member per leg (`pm clear …` + a new mobile; OTP = `"devCode"` in the API log). ⛔ `uiautomator dump`.
-  - [ ] 4.3 TalkBack OFF: AC 6 (c) (focus + `mInputShown=true` after the 422, no tap) and (d) (held POST: `kill -STOP`, backspace,
-        screenshot, `kill -CONT`, then the `member_attribution` row's code). A dump is allowed here.
+        (a), (b), (e) — one fresh member per leg (`pm clear …` + a new mobile; OTP = `"devCode"` in the API log). In (a), after the
+        422 and before any tap: `dumpsys input_method | grep mInputShown` (allowed — it is ⛔ a `uiautomator dump`). ⛔ `uiautomator dump`.
+  - [ ] 4.3 TalkBack OFF: AC 6 (c) (focus + `mInputShown=true` after the 422, no tap) and (d) (held POST: `kill -STOP`; a single
+        backspace → screenshot; a held / multi-key backspace → screenshot; select-all + paste of six other digits → screenshot;
+        `kill -CONT`, then the `member_attribution` row's code). A dump is allowed here.
   - [ ] 4.4 Speech ON (AC 7): TTS re-enabled; the not-found line after a 422 and the saved line after a 201. Ask BigDev to listen, or
         record that it was not heard — ⛔ infer.
   - [ ] 4.5 AC 8: `whatsapp.tsx` `request` line (fail the request by stopping / holding the API past 15 s), then a later press — re-read?
@@ -269,7 +296,7 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
         and env copies; `git status` clean except this story's files.
 - [ ] **Task 5 — Conditional fixes from the pass** (only what the pass SAW)
   - [ ] 5.1 DL3 fallback if AC 4 failed on the device (record the evidence; re-run Task 3's mutations for the new shape).
-  - [ ] 5.2 DL5 if the saved line was heard cut.
+  - [ ] 5.2 DL5 if the saved line was heard cut; DL7 if the not-found line was heard cut.
   - [ ] 5.3 DL6 for `whatsapp.tsx` / `WaCodeEntry.tsx` if a re-read was seen (RED-first test each; F12's W3 if `whatsapp.tsx` changes).
         Re-run the affected device leg after any fix.
 - [ ] **Task 6 — Records (AC 9)**
@@ -303,7 +330,8 @@ step's error lines are spoken and whether the code box keeps focus; what is acce
    updates; a focus right after the unlock can land on a disabled `EditText` and do nothing — invisible to jsdom.
 7. **A jsdom "focus kept" assertion is vacuous** ([[project_jsdom_disabled_button_keeps_focus]]): pin the prop, prove the effect on the
    device.
-8. **`uiautomator dump` turns TalkBack off** — never during a speech capture. Gboard's "useful tools" banner eats a tap. Changing font
+8. **`uiautomator dump` turns TalkBack off** — never during a speech capture (`dumpsys input_method` does ⛔, and is how the
+   TalkBack-ON leg reads `mInputShown`). Gboard's "useful tools" banner eats a tap. Changing font
    scale restarts the activity at step 1 (V3 (c)).
 9. **Friction-budget AC-4 fires only after the commit** (F13) — write the disposition before pushing.
 10. **Every `git push` needs `DATABASE_URL=<your container>`**; hand-format (Prettier ⛔ enforced — [[project_prettier_not_enforced]]);
@@ -356,3 +384,4 @@ Each new leg shown RED before the fix; each mutation in Task 3.6 RED, then resto
 | Version | Date | Change |
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15a`) in its own worktree off `f18f934f`. §0: ⛔ Panel question. DL1–DL6 decided by the author (DL3: ⛔ lock the box — F7 / F8). Row `backlog` → `ready-for-dev`. ⛔ Code. |
+| 1.1 | 2026-11-23 | Validate pass (`bmad-create-story validate 3.15a`; BigDev: *"all"*). F1–F14 re-traced at `f18f934f` and found to hold (`origin/main` unmoved). Added: F8 the dropped-revert case (`canUpdateWithEventCount`), with a rapid multi-edit in AC 4 / AC 6 (d) / Task 4.3 and in DL3's fallback trigger; AC 6 (a) / Task 4.2 `mInputShown` read with TalkBack ON (`dumpsys`, ⛔ a dump); DL7 (the not-found line heard cut — the DL5 rule), wired into AC 7 / Task 5.2; DL2 records its narrowing of epics AC (1)'s *"where the error is set"*; Task 2.3 sweeps the stale "unlocked" comments; Task 3.2 (a) counts calls by text. Status stays `ready-for-dev`. ⛔ Code. |

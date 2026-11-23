@@ -12,5 +12,9 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',
+    // Story 3.15b (DL6) — `lib/announce-repeat.ts` keeps a per-text counter in module state, and vitest isolates modules per
+    // FILE, not per test: this setup file resets it before every test. It must ⛔ import `react-native` (it runs before each
+    // file's `vi.mock`).
+    setupFiles: ['tests/unit/setup-announce-repeat.ts'],
   },
 })

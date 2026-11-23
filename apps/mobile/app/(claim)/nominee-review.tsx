@@ -27,11 +27,12 @@ import type { NomineeStatusResponse, RecordNomineeBankRequest } from '@twt/contr
 import { NAME_DIFFERENCE_NOTE_MAX_CHARS, isEnglishScriptName } from '@twt/contracts'
 import { useT } from '@twt/i18n/react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { AccessibilityInfo, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { Button, Input, Paragraph, Separator, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
 import { CallHelplineCTA } from '../../components/claim/CallHelplineCTA'
+import { announce } from '../../lib/announce'
 import { claimApi } from '../../lib/claim-api'
 import { memberAuth } from '../../lib/member-api'
 import { useClaimT } from '../../lib/claim-i18n'
@@ -167,7 +168,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
   })
   useEffect(() => {
     if (showBeingChecked && Platform.OS === 'ios') {
-      AccessibilityInfo.announceForAccessibility(tRef.current('nominee.bank.being_checked'))
+      announce(tRef.current('nominee.bank.being_checked'))
     }
   }, [showBeingChecked])
 
@@ -282,7 +283,7 @@ export default function NomineeReviewScreen(): React.ReactElement {
     // `PanchayatNoticeboard.tsx` precedent).
     // ⚠ iOS ONLY (code review 2026-09-23b): unguarded, TalkBack spoke "saved" TWICE — once from this
     // call and once from the live region.
-    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))
+    if (Platform.OS === 'ios') announce(t('nominee.bank.saved'))
     // ⭐ Hold on this screen long enough for the `saved` live region to be announced (code review
     // 2026-09-22) — navigating on the same tick as `setSubmit('saved')` unmounted the message
     // before a screen reader had any chance to read it.

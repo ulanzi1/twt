@@ -14,10 +14,10 @@
 import { useEffect } from 'react'
 
 import { useRouter } from 'expo-router'
-import { AccessibilityInfo } from 'react-native'
 import { Button, H2, Paragraph, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
+import { announce } from '../../lib/announce'
 import { CANNOT_FILE_COPY } from '../../lib/cannot-file-copy'
 import { useClaimT } from '../../lib/claim-i18n'
 
@@ -28,7 +28,7 @@ export default function CannotFileScreen(): React.ReactElement {
   const body = t(CANNOT_FILE_COPY.body)
 
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(`${title}. ${body}`)
+    announce(`${title}. ${body}`)
   }, [title, body])
 
   return (

@@ -30,7 +30,7 @@
 // foreground, so it is spoken when the member is back in TWT (second review P1).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, AppState, Linking, Modal, ScrollView, StyleSheet } from 'react-native'
+import { AppState, Linking, Modal, ScrollView, StyleSheet } from 'react-native'
 
 import { ApiError } from '@twt/api-client'
 import type { CreateWaOptInResponse } from '@twt/contracts'
@@ -42,6 +42,7 @@ import { Button, H2, Paragraph, Spinner, View, YStack } from 'tamagui'
 import { AnnouncedText, useAnnounceOnChange } from '../../components/peer-request/announce'
 import { OtherPhoneCodeHint } from '../../components/notifications/OtherPhoneCodeHint'
 import { OtherPhoneHint } from '../../components/notifications/OtherPhoneHint'
+import { announce } from '../../lib/announce'
 import { memberAuth } from '../../lib/member-api'
 import { CALL_TIMEOUT_MS, withTimeout } from '../../lib/with-timeout'
 
@@ -203,7 +204,7 @@ export default function WhatsappStepScreen() {
       if (next === 'background') left = true
       else if (next === 'active' && (left || deferred) && sentSpoken.current !== 'return' && !activatedRef.current) {
         sentSpoken.current = 'return'
-        AccessibilityInfo.announceForAccessibility(sentTitle)
+        announce(sentTitle)
       }
     })
     const grace = setTimeout(() => {
@@ -213,7 +214,7 @@ export default function WhatsappStepScreen() {
         return
       }
       sentSpoken.current = 'grace'
-      AccessibilityInfo.announceForAccessibility(sentTitle)
+      announce(sentTitle)
     }, SENT_ANNOUNCE_GRACE_MS)
     return () => {
       sub.remove()

@@ -30,12 +30,13 @@
 // description only, ⛔ a live region), SENT ONCE by `announceForAccessibility` on both platforms each time an error is SET,
 // once the step is focused (Story 3.15a V1, DL2): as live regions TalkBack re-read them on the edit that cleared them (the 3.15
 // device pass; 6.36f D1 — [[project_android_live_region_reread_on_rerender]]). TalkBack drops an announcement identical to one
-// it was already sent (3.15a V4), so a REPEAT carries trailing no-break spaces (review P1). The saved line stays `AnnouncedText kind='status'`. The two choice buttons share one component, size and theme. "Continue without a code" is long
+// it was already sent (3.15a V4), so a REPEAT is sent as different text by the shared `announce()` (`lib/announce.ts`, Story
+// 3.15b — trailing no-break spaces, Android only; 3.15a review P1 had its own counter here). The saved line stays `AnnouncedText kind='status'`. The two choice buttons share one component, size and theme. "Continue without a code" is long
 // in Hindi: its own `Text` inside a `noTextWrap` button so it wraps ([[project_tamagui_button_text_one_line]] — ⚠ wrapping is
 // un-attested on a device).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, ScrollView } from 'react-native'
+import { ScrollView } from 'react-native'
 
 import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
@@ -43,6 +44,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { AnnouncedText, useAnnounceOnChange } from '../../components/peer-request/announce'
+import { announce } from '../../lib/announce'
 import { memberAuth } from '../../lib/member-api'
 import { CALL_TIMEOUT_MS, withTimeout } from '../../lib/with-timeout'
 
@@ -52,9 +54,6 @@ const STATUS_TIMEOUT_MS = 5_000
 const SAVED_MS = 1_200
 
 const SIX_DIGITS = /^\d{6}$/
-// Built, ⛔ typed — a literal one can land on disk as a raw invisible ([[project_unicode_escapes_written_raw]]).
-const NBSP = String.fromCharCode(0xa0)
-
 type Stage = 'loading' | 'ask' | 'code' | 'saved'
 type CodeError = 'format' | 'not_found' | null
 
@@ -80,9 +79,6 @@ export default function AssistedStepScreen() {
   // The same fact as `focused`, set SYNCHRONOUSLY: the effects that stop a continuation on blur clean up after a render, so a
   // continuation can still run in the instant between the blur and that cleanup (review P3 round 2).
   const focusedRef = useRef(false)
-  // How many times each line has been ANNOUNCED: TalkBack does not speak an announcement equal to one it was already sent (3.15a
-  // review P1, deferred-work V4), so each one after the first carries that many trailing no-break spaces — ⛔ shown, ⛔ a word.
-  const announced = useRef({ format: 0, not_found: 0 })
 
   // The status read and the "saved" timer run only while `focused`, and stop on blur (review R2). Nothing is invalidated here:
   // a request that settles after blur keeps its result (review P3).
@@ -140,15 +136,11 @@ export default function AssistedStepScreen() {
   // spoken at re-focus, ⛔ over another screen (review P3). `focusedRef` too: `focused` is captured at render, so a blur that lands
   // between the line's commit and this effect would still read `true` (3.15a review P2); the `focused` dep re-runs it at re-focus.
   // `t` and `error` are ⛔ deps: `errorSet` changes in the same update as `error`, and a fresh `t` must not re-speak
-  // ([[project_uset_fresh_closure_memo_trap]]). A repeat is sent as DIFFERENT text (review P1) — whether TalkBack speaks it is
-  // what the device pass shows, ⛔ this effect.
+  // ([[project_uset_fresh_closure_memo_trap]]). A repeat is sent as DIFFERENT text by `announce()` (3.15a review P1, now the
+  // shared helper — Story 3.15b) — whether TalkBack speaks it is what the device pass shows, ⛔ this effect.
   useEffect(() => {
     if (!focused || !focusedRef.current || error === null) return
-    const n = announced.current[error]
-    announced.current[error] = n + 1
-    AccessibilityInfo.announceForAccessibility(
-      t(error === 'format' ? 'signup.assisted.format' : 'signup.assisted.not_found') + NBSP.repeat(n),
-    )
+    announce(t(error === 'format' ? 'signup.assisted.format' : 'signup.assisted.not_found'))
   }, [focused, errorSet])
 
   const showError = useCallback((e: 'format' | 'not_found') => {

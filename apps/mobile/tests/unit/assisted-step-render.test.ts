@@ -455,9 +455,11 @@ describe('Story 3.15a review P1 — a repeated error is sent as DIFFERENT text, 
   const FORMAT = words['signup.assisted.format']
   const NOT_FOUND = words['signup.assisted.not_found']
   const distinct = (xs: string[]) => new Set(xs).size === xs.length
+  // Story 3.15b (DL2) — the suffix now comes from the shared `lib/announce.ts` and is ANDROID ONLY: 3.15a sent it on both
+  // platforms; on iOS a repeat is now the copy exactly (VoiceOver was never seen to drop one). The two `ios` legs are inverted.
 
-  it.each(['android', 'ios'] as const)('%s: three presses answered by the format line ⇒ three announcements, each the copy, no two the same', async (os) => {
-    mock.os = os
+  it('android: three presses answered by the format line ⇒ three announcements, each the copy, no two the same', async () => {
+    mock.os = 'android'
     await typed('48291')
     for (let i = 0; i < 3; i++) {
       fireEvent.click(screen.getByTestId('assisted-continue'))
@@ -473,8 +475,19 @@ describe('Story 3.15a review P1 — a repeated error is sent as DIFFERENT text, 
     expect(screen.getByRole('alert').textContent).toBe(FORMAT)
   })
 
-  it.each(['android', 'ios'] as const)('%s: a 422, an edit, a second 422 ⇒ two not-found announcements that differ; the format line\'s count is its own', async (os) => {
-    mock.os = os
+  it('ios (Story 3.15b DL2): three presses answered by the format line ⇒ three announcements, each the copy EXACTLY', async () => {
+    mock.os = 'ios'
+    await typed('48291')
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(screen.getByTestId('assisted-continue'))
+      await settle()
+    }
+    expect(sent(FORMAT)).toEqual([FORMAT, FORMAT, FORMAT])
+    expect(screen.getByRole('alert').textContent).toBe(FORMAT)
+  })
+
+  it('android: a 422, an edit, a second 422 ⇒ two not-found announcements that differ; the format line\'s count is its own', async () => {
+    mock.os = 'android'
     mock.assistedCodeRecord.mockRejectedValue(new ApiError(422, 'attribution.code_not_found', 'x'))
     await typed('48291')
     fireEvent.click(screen.getByTestId('assisted-continue'))
@@ -489,6 +502,22 @@ describe('Story 3.15a review P1 — a repeated error is sent as DIFFERENT text, 
     const xs = sent(NOT_FOUND)
     // The FIRST not-found line is the copy exactly — a format line before it does not change its words.
     expect(xs).toEqual([NOT_FOUND, `${NOT_FOUND}${NBSP}`])
+  })
+
+  it('ios (Story 3.15b DL2): a 422, an edit, a second 422 ⇒ two not-found announcements, each the copy EXACTLY', async () => {
+    mock.os = 'ios'
+    mock.assistedCodeRecord.mockRejectedValue(new ApiError(422, 'attribution.code_not_found', 'x'))
+    await typed('48291')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '482913' } })
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '135790' } })
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(sent(FORMAT)).toEqual([FORMAT])
+    expect(sent(NOT_FOUND)).toEqual([NOT_FOUND, NOT_FOUND])
   })
 
   it('android: a line still showing at re-focus (DL2 (d)) is sent as text DIFFERENT from its first announcement', async () => {

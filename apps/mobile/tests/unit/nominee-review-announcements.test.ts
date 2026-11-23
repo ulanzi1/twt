@@ -135,7 +135,9 @@ describe('nominee-review — the `saved` hold (code review 2026-09-23)', () => {
   const src = stripComments(read(REVIEW))
 
   it('⭐ `saved` is announced on iOS too — `accessibilityLiveRegion` is Android-only', () => {
-    expect(src).toContain("AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))")
+    // Story 3.15b — through the shared helper (`lib/announce.ts`, V4), the SAME text.
+    expect(src).toMatch(/\bannounce\(t\('nominee\.bank\.saved'\)\)/)
+    expect(src).toContain("import { announce } from '../../lib/announce'")
   })
 
   it('⛔ the announcement delay is NOT a re-submit window — `saved` blocks Save and every field', () => {
@@ -183,7 +185,7 @@ describe('nominee-review — code review 2026-09-23b', () => {
 
   it('⛔ the imperative announcement is iOS-only — TalkBack already speaks the live region', () => {
     expect(src).toContain(
-      "if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(t('nominee.bank.saved'))",
+      "if (Platform.OS === 'ios') announce(t('nominee.bank.saved'))",
     )
   })
 })
@@ -226,10 +228,10 @@ describe('nominee-review — Story 6.19b (AC16, D28: the staff case)', () => {
     // `accessibilityLiveRegion` is Android-only: VoiceOver heard nothing when the line replaced the correction line.
     expect(src).toContain('const showBeingChecked = correctionNeeded && beingChecked')
     expect(src).toMatch(
-      /if \(showBeingChecked && Platform\.OS === 'ios'\) \{\s*AccessibilityInfo\.announceForAccessibility\(tRef\.current\('nominee\.bank\.being_checked'\)\)/,
+      /if \(showBeingChecked && Platform\.OS === 'ios'\) \{\s*announce\(tRef\.current\('nominee\.bank\.being_checked'\)\)/,
     )
     // ⛔ Keyed on the BOOLEAN, ⛔ never on `t` (a fresh closure every render ⇒ an announcement every render).
-    expect(src).toMatch(/announceForAccessibility\(tRef\.current\('nominee\.bank\.being_checked'\)\)\s*\}\s*\}, \[showBeingChecked\]\)/)
+    expect(src).toMatch(/\bannounce\(tRef\.current\('nominee\.bank\.being_checked'\)\)\s*\}\s*\}, \[showBeingChecked\]\)/)
     // ⭐ The ref is written in a LAYOUT effect, ⛔ never during render (fourth-pass review 2026-10-01).
     expect(src).toMatch(/useLayoutEffect\(\(\) => \{\s*tRef\.current = t\s*\}\)/)
     expect(src.match(/tRef\.current = t\b/g)).toHaveLength(1)

@@ -32,7 +32,7 @@
 // a save runs; *Change names or numbers instead* offers *Continue draft* again when a named draft is stored.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 
 import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
@@ -41,6 +41,7 @@ import { Stack, useFocusEffect, useRouter } from 'expo-router'
 import type { NomineeMarksRankView, NomineeMarksSaveRequest } from '@twt/contracts'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { memberAuth } from '../../lib/member-api'
 import {
   NomineeForm,
@@ -150,7 +151,7 @@ export default function LifeEventsNomineesScreen() {
         setMarks((m) => applyMarksPick(m, pick.rank, pick.mark))
         setMarksError(null)
         const name = markName(pick.mark)
-        AccessibilityInfo.announceForAccessibility(name ? ltRef.current('form.marked', { name }) : ltRef.current('form.marked_no_name'))
+        announce(name ? ltRef.current('form.marked', { name }) : ltRef.current('form.marked_no_name'))
         return
       }
       const base = latestForms.current ?? initialForms ?? freshForms()
@@ -180,7 +181,7 @@ export default function LifeEventsNomineesScreen() {
   // would speak it twice).
   useEffect(() => {
     if (locked && Platform.OS === 'ios') {
-      AccessibilityInfo.announceForAccessibility(`${t('nominees.locked_title')}. ${t('nominees.locked_body')}`)
+      announce(`${t('nominees.locked_title')}. ${t('nominees.locked_body')}`)
     }
     // `t` is a fresh closure each render (`useT()`) — keyed on `locked` only, or it re-announced every render.
   }, [locked])
@@ -277,7 +278,7 @@ export default function LifeEventsNomineesScreen() {
     marksModeRef.current = true
     setMarksMode(true)
     // The tapped card vanishes with the form — ⛔ in silence (the page-change rule, `announce.tsx`).
-    AccessibilityInfo.announceForAccessibility(lt('marks.title'))
+    announce(lt('marks.title'))
   }
 
   /** "Change names or numbers instead" — back to the FULL form, remounted fresh (⛔ a draft written); a named draft stored before
@@ -302,12 +303,12 @@ export default function LifeEventsNomineesScreen() {
    *  press (device run D1, 2026-10-27: re-read whether the line stayed or was cleared). */
   function sayMarksNotice(text: string): void {
     setMarksNotice({ text, seq: Date.now() })
-    AccessibilityInfo.announceForAccessibility(text)
+    announce(text)
   }
 
   /** A 200: SAY it on both platforms (a live region unmounted by `router.back()` is never read), then leave as a full save does. */
   async function marksSaved(): Promise<void> {
-    AccessibilityInfo.announceForAccessibility(lt('marks.saved'))
+    announce(lt('marks.saved'))
     await invalidateAndLeave()
   }
 

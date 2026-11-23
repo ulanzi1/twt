@@ -30,11 +30,12 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { AccessibilityInfo, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { Button, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
 import { DeathCertificateNotice } from '../../components/claim/DeathCertificateNotice'
+import { announce } from '../../lib/announce'
 import { useClaimT } from '../../lib/claim-i18n'
 import { announcementPlan } from '../../lib/death-certificate-announce'
 import { isSettledOutcome } from '../../lib/death-certificate-upload-outcome'
@@ -110,12 +111,12 @@ export default function CertificateReplacementScreen(): React.ReactElement {
         : (outcomeMessageKey ?? (permissionNeeded ? 'document.permission_needed' : null))
   useEffect(() => {
     if (spokenKey === null) return
-    if (announcementPlan(Platform.OS).iosAnnounce) AccessibilityInfo.announceForAccessibility(t(spokenKey))
+    if (announcementPlan(Platform.OS).iosAnnounce) announce(t(spokenKey))
   }, [spokenKey, outcome])
   // The OTP error is already a resolved string (the hook translates it).
   useEffect(() => {
     if (otp.error === null) return
-    if (announcementPlan(Platform.OS).iosAnnounce) AccessibilityInfo.announceForAccessibility(otp.error)
+    if (announcementPlan(Platform.OS).iosAnnounce) announce(otp.error)
   }, [otp.error])
 
   // ONE leave per screen — the `upload_not_allowed` refetch and the `leaveBlank` effect can both ask.

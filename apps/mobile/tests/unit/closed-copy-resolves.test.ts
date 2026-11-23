@@ -50,7 +50,9 @@ describe('Story 6.24a — the closed claim', () => {
 
   it('code review round 2: the closed screen announces and labels the BODY once — its first sentence IS the title (⛔ read twice)', () => {
     const src = stripComments(read('app/(claim)/closed-helpline.tsx'))
-    expect(src).toContain('announceForAccessibility(body)')
+    // Story 3.15b — through the shared helper (`lib/announce.ts`, V4), the SAME text.
+    expect(src).toContain('announce(body)')
+    expect(src).toContain("import { announce } from '../../lib/announce'")
     expect(src).toContain('accessibilityLabel={body}')
     expect(src).not.toContain('`${title}. ${body}`')
   })
@@ -59,7 +61,7 @@ describe('Story 6.24a — the closed claim', () => {
     const src = stripComments(read('app/(claim)/closed-helpline.tsx'))
     expect(src).toContain('<CallHelplineCTA')
     expect(src).toContain('accessible={true}')
-    expect(src).toContain('announceForAccessibility')
+    expect(src).toMatch(/^\s*announce\(body\)$/m) // Story 3.15b — the helper, unconditionally
     expect(src).toMatch(/onPress=\{\(\) => router\.replace\('\/\(tabs\)'\)\}/)
   })
 

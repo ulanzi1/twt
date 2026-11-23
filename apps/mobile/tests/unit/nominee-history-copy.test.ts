@@ -268,7 +268,9 @@ describe('Story 6.20 — the correction screen finds the claim and guards the st
 
   it('⭐ family 13(d) — the locked state is announced on iOS too (the live region is Android-only)', () => {
     const src = code(read('apps/mobile/app/(life-events)/nominees.tsx'))
-    expect(src).toMatch(/if \(locked && Platform\.OS === 'ios'\) \{\s*AccessibilityInfo\.announceForAccessibility\(/)
+    // Story 3.15b — through the shared helper (`lib/announce.ts`, V4), the same iOS gate and the same text.
+    expect(src).toMatch(/if \(locked && Platform\.OS === 'ios'\) \{\s*announce\(`\$\{t\('nominees\.locked_title'\)\}\. \$\{t\('nominees\.locked_body'\)\}`\)/)
+    expect(src).toContain("import { announce } from '../../lib/announce'")
   })
 
   it('⭐ family 13(a) — neither the done screen nor the locked screen groups its Button away', () => {

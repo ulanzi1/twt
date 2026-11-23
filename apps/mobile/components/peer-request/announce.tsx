@@ -5,14 +5,15 @@
 // iOS only (⛔ both, or TalkBack speaks it twice). A page / phase CHANGE has no live region, so it is announced on both.
 
 import { useEffect, useRef } from 'react'
-import { AccessibilityInfo, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { Text } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { announcementPlan, type AnnouncementKind } from '../../lib/death-certificate-announce'
 
 /** Speak a LINE's text (iOS only — on Android its own live region speaks it; both would speak it twice). */
 function announceLine(text: string, kind: AnnouncementKind): void {
-  if (announcementPlan(Platform.OS, kind).iosAnnounce) AccessibilityInfo.announceForAccessibility(text)
+  if (announcementPlan(Platform.OS, kind).iosAnnounce) announce(text)
 }
 
 /**
@@ -27,7 +28,7 @@ export function useAnnounceOnChange(text: string | null, opts: { readonly skipIn
       initial.current = false // the first render is read by the screen reader itself (fourth-pass review V9)
       return
     }
-    if (text) AccessibilityInfo.announceForAccessibility(text)
+    if (text) announce(text)
   }, [text])
 }
 

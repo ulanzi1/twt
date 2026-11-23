@@ -146,6 +146,7 @@ vi.mock('tamagui', async () => {
 })
 
 import WhatsappStepScreen from '../../app/(signup)/whatsapp'
+import { bare, NBSP } from './announce-text'
 
 const NEXT = '/(signup)/payment'
 const LINK = 'https://wa.me/919876543210?text=TWT-ABCDEFGH'
@@ -631,7 +632,11 @@ describe.each(['ios', 'android'])('AC8 — accessible (Platform.OS = %s)', (os) 
   })
 
   // Second review P1: the `sent` stage lands as WhatsApp takes the foreground — it is spoken on the member's RETURN, once.
-  const sentSpoken = () => mock.announce.mock.calls.filter(([text]) => text === words['waSignup.sent_title']).length
+  // Story 3.15b — on Android a repeat is SENT with trailing no-break spaces (`lib/announce.ts`, V4): the android row counts by
+  // the WORDS; the ios row keeps the exact text (DL2 — iOS gets the copy unchanged).
+  const sentTexts = () =>
+    mock.announce.mock.calls.map(([text]) => String(text)).filter((text) => (os === 'android' ? bare(text) : text) === words['waSignup.sent_title'])
+  const sentSpoken = () => sentTexts().length
 
   it('openURL settling AFTER the switch (TWT already in the background): ⛔ spoken then; spoken on the return, once', async () => {
     await ask()
@@ -746,6 +751,11 @@ describe.each(['ios', 'android'])('AC8 — accessible (Platform.OS = %s)', (os) 
     setAppState('background')
     setAppState('active')
     expect(sentSpoken()).toBe(2)
+    // Story 3.15b — the return's announcement is the grace's words; on Android it is SENT as different text (V4), on iOS the same.
+    const [grace, back] = sentTexts()
+    expect(grace).toBe(words['waSignup.sent_title'])
+    if (os === 'android') expect(back).toBe(`${grace}${NBSP}`)
+    else expect(back).toBe(grace)
   })
 
   it('leaving the step during the grace: ⛔ spoken afterwards, and the listener is removed', async () => {

@@ -26,7 +26,7 @@
 // app's local-persistence primitive if any were ever needed ([[project_mmkv_asyncstorage_equivalent]]).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, AppState, Linking, ScrollView } from 'react-native'
+import { AppState, Linking, ScrollView } from 'react-native'
 
 import { useT } from '@twt/i18n/react'
 import type { WaOptInStatusResponse } from '@twt/contracts'
@@ -34,6 +34,7 @@ import { Stack, useFocusEffect } from 'expo-router'
 import { Button, H2, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { OtherPhoneHint } from '../../components/notifications/OtherPhoneHint'
+import { announce } from '../../lib/announce'
 import { memberAuth } from '../../lib/member-api'
 // Story 5.10 (SB10): the bound moved to the shared helper, behaviour unchanged.
 import { CALL_TIMEOUT_MS, withTimeout } from '../../lib/with-timeout'
@@ -146,7 +147,7 @@ export default function NotificationSettingsScreen() {
     const previous = shownKey.current
     shownKey.current = shownState
     if (previous === null || previous === shownState) return
-    if (focused && AppState.currentState === 'active' && announcement) AccessibilityInfo.announceForAccessibility(announcement)
+    if (focused && AppState.currentState === 'active' && announcement) announce(announcement)
   }, [shownState, announcement, focused])
 
   /** Mint (or re-use) a PENDING opt-in, then open WhatsApp pre-filled with the verification phrase. */

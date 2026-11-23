@@ -16,10 +16,10 @@
 import { useEffect } from 'react'
 
 import { useRouter } from 'expo-router'
-import { AccessibilityInfo } from 'react-native'
 import { Button, H2, Paragraph, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
+import { announce } from '../../lib/announce'
 import { useClaimT } from '../../lib/claim-i18n'
 import { REFILE_HELPLINE_COPY } from '../../lib/refile-helpline-copy'
 
@@ -30,7 +30,7 @@ export default function RefileHelplineScreen(): React.ReactElement {
   const body = t(REFILE_HELPLINE_COPY.body)
 
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(`${title}. ${body}`)
+    announce(`${title}. ${body}`)
   }, [title, body])
 
   return (

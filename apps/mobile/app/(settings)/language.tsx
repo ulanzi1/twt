@@ -13,12 +13,13 @@
 // ⛔ `[t]` dependency anywhere here (`useT()` is a fresh closure every render — depend on `locale`).
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 import { t as translate } from '@twt/i18n'
 import { useLocale, useT } from '@twt/i18n/react'
 import { Stack } from 'expo-router'
 import { H2, Paragraph, Text, XStack, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { type AppLanguage, accountChoiceDiffers, chooseLanguage } from '../../lib/app-language'
 import { useSession } from '../../lib/session-context'
 
@@ -94,7 +95,7 @@ export default function LanguageScreen(): React.ReactElement {
         setNotRecorded(true)
         // The words in the language just chosen (the package `t`, ⛔ the render's `useT()` closure — bound to the old one).
         const text = translate('language.error_not_recorded', undefined, { locale: next })
-        if (alreadyShowing || Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(text)
+        if (alreadyShowing || Platform.OS === 'ios') announce(text)
       })
     },
     [locale, setLocale, memberId, currentMemberId],

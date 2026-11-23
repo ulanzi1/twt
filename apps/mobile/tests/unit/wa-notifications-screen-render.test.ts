@@ -27,6 +27,8 @@ const mock = vi.hoisted(() => ({
   focused: true,
   focusListeners: new Set<() => void>(),
   announce: vi.fn(),
+  // Story 3.15b (F5) — `lib/announce.ts` reads `Platform.OS` on every call; this file's legs keep their Android meaning.
+  os: 'android',
 }))
 
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
@@ -64,6 +66,11 @@ vi.mock('react-native', async () => {
     ScrollView: ({ children }: { children?: ReactNode }) => createElement('div', null, children),
     Linking: { openURL: mock.openURL },
     AccessibilityInfo: { announceForAccessibility: mock.announce },
+    Platform: {
+      get OS() {
+        return mock.os
+      },
+    },
     AppState: {
       get currentState() { return mock.appState },
       addEventListener: (_: string, listener: (state: string) => void) => {
@@ -91,6 +98,7 @@ vi.mock('tamagui', async () => {
 })
 
 import NotificationSettingsScreen from '../../app/(settings)/notifications'
+import { NBSP, sentAs } from './announce-text'
 
 const NO_EXPIRY = /expir|समाप्त/i
 
@@ -115,6 +123,7 @@ const settle = () => new Promise((r) => setTimeout(r, 50))
 beforeEach(() => {
   for (const f of [mock.getWaOptInStatus, mock.requestWaOptIn, mock.revokeWaOptIn, mock.openURL, mock.announce]) f.mockReset()
   mock.appState = 'active'
+  mock.os = 'android'
   mock.focused = true
   mock.revokeWaOptIn.mockResolvedValue({ state: 'REVOKED' })
 })
@@ -395,6 +404,8 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
   }
 
   it('⭐ P6 — ACTIVE → off from a foreground refresh (an external STOP) is announced as "not on"; ACTIVE while sending is disabled → off too', async () => {
+    // Story 3.15b — one test, two mounts: the second "not on" is the same words SENT as different text (Android, V4).
+    const notOn: string[] = []
     for (const available of [true, false]) {
       mock.announce.mockReset()
       mock.getWaOptInStatus.mockReset()
@@ -404,9 +415,12 @@ describe('NotificationSettingsScreen — Story 5.12 (AC7)', () => {
       expect(mock.announce).not.toHaveBeenCalled()
       await act(async () => { changeAppState('background'); changeAppState('active') })
       expect(screen.queryByTestId('wa-opt-in-revoke')).toBeNull()
-      expect(mock.announce, String(available)).toHaveBeenCalledWith('WhatsApp notifications are not on')
+      const sent = sentAs(mock.announce.mock.calls, 'WhatsApp notifications are not on')
+      expect(sent, String(available)).toHaveLength(1)
+      notOn.push(...sent)
       cleanup()
     }
+    expect(notOn).toEqual(['WhatsApp notifications are not on', `WhatsApp notifications are not on${NBSP}`])
   })
 
   it('⭐ P6 — a change read while the app is not in front is not announced', async () => {

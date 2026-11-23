@@ -43,7 +43,9 @@ describe('Story 6.38 — the "a claim cannot be filed" state', () => {
     const src = stripComments(read('app/(claim)/cannot-file.tsx'))
     expect(src).toContain('<CallHelplineCTA')
     expect(src).toContain('accessible={true}')
-    expect(src).toContain('announceForAccessibility')
+    // Story 3.15b — through the shared helper (`lib/announce.ts`, V4), unconditionally, the SAME text.
+    expect(src).toMatch(/^\s*announce\(`\$\{title\}\. \$\{body\}`\)$/m)
+    expect(src).toContain("import { announce } from '../../lib/announce'")
     expect(src).toContain('[title, body]')
     expect(src).toMatch(/onPress=\{\(\) => router\.replace\('\/\(tabs\)'\)\}/)
   })

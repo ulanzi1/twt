@@ -26,9 +26,9 @@ import { ApiError } from '@twt/api-client'
 import { useT } from '@twt/i18n/react'
 import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
-import { AccessibilityInfo } from 'react-native'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { manualNameMessageKey, manualSubmitErrorKey } from '../../lib/kyc-manual-name'
 import { memberAuth } from '../../lib/member-api'
 
@@ -183,7 +183,7 @@ export default function KycScreen() {
     // and VoiceOver ignores the live region — ⛔ the iOS-only guard nominee-review.tsx needs.
     if (nameKey === 'kyc.manual_name_english') {
       setError(null)
-      AccessibilityInfo.announceForAccessibility(t('kyc.manual_name_english'))
+      announce(t('kyc.manual_name_english'))
       return
     }
     if (!dob.trim()) {

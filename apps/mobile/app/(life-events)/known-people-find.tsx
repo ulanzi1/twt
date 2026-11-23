@@ -19,7 +19,7 @@
 // (`handKnownPeopleNotice`), which shows and speaks it.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 
 import { FlashList } from '@shopify/flash-list'
 import { Stack, useRouter } from 'expo-router'
@@ -27,6 +27,7 @@ import { Button, H2, H3, Input, Paragraph, Spinner, Text, XStack, YStack } from 
 
 import { errorCodeOf, useKnownPeopleWrites, useMyKnownPeopleQuery } from '../../components/known-people/useKnownPeopleQueries'
 import { AnnouncedText, useAnnounceOnChange } from '../../components/peer-request/announce'
+import { announce } from '../../lib/announce'
 import { applyMatches, fallbackFor, filterBySavedName, isDenied, refusalCopyKey, toggleSelection, type ContactEntry } from '../../lib/known-people'
 import { pickOneContact, readContactsForMatching, shareMoreContacts } from '../../lib/known-people-contacts'
 import { knownPeopleApi } from '../../lib/known-people-api'
@@ -124,7 +125,7 @@ export default function KnownPeopleFindScreen() {
     slotsPending.current = false
     // The slots' words ALONE — ⛔ the whole phase again (its count and notes were spoken at entry, and something else may
     // have been said since, e.g. an empty search — round 7).
-    if (mounted.current) AccessibilityInfo.announceForAccessibility(settledSlots)
+    if (mounted.current) announce(settledSlots)
   }, [phase, settledSlots])
   // A Retry of THIS screen is running: its row stays, busy — a refetch of a list with ⛔ data resets TanStack to `pending`
   // (⛔ `isError`), which unmounted the Retry into a spinner and took the screen reader's focus (round 6).
@@ -171,7 +172,7 @@ export default function KnownPeopleFindScreen() {
         if (!mounted.current || savedNamesGeneration() !== since) return
         if (messageSeq.current !== seqAtPress || checkSeq.current !== checkAtPress || latestBusy.current || !slotsPhaseRef.current) return
         if (r.isError) {
-          AccessibilityInfo.announceForAccessibility(t('error.load'))
+          announce(t('error.load'))
           return
         }
         if (r.data === undefined) return
@@ -179,7 +180,7 @@ export default function KnownPeopleFindScreen() {
         // twice (round 7).
         const free = isDenied(r.data) ? null : (r.data as { freeSlots: number }).freeSlots
         if (free !== null && latestSelected.current.size > free && latestMessage.current === null) return
-        AccessibilityInfo.announceForAccessibility(slotsHintFor(r.data, latestSelected.current.size))
+        announce(slotsHintFor(r.data, latestSelected.current.size))
       })
       .finally(() => {
         if (mounted.current) setRetrying(false)

@@ -43,4 +43,35 @@ export default [
       '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
+  {
+    // Story 3.15b (DL5) — every direct screen-reader announcement goes through `lib/announce.ts`, so a repeat of the same
+    // text is SENT as different text on Android and TalkBack speaks it again (deferred-work V4: TalkBack does not speak an
+    // announcement identical to one it was already sent). `no-restricted-properties` also reports the destructured form
+    // (`const { announceForAccessibility } = AccessibilityInfo`) and the computed one (`AccessibilityInfo['…']`).
+    // Blind spots (neither exists in apps/mobile at Story 3.15b): an aliased import (`import { AccessibilityInfo as A11y }`)
+    // and a namespace import (`RN.AccessibilityInfo.…`) are NOT caught.
+    // ⛔ Widen this with `no-restricted-imports` / `@typescript-eslint/no-restricted-imports` here: the shared config sets
+    // both, and a later flat-config entry for the same rule REPLACES its options (the cross-package import bans would go).
+    files: ['**/*.{ts,tsx,js,jsx,mjs,cjs}'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'AccessibilityInfo',
+          property: 'announceForAccessibility',
+          message: 'Use announce() from lib/announce.ts — a repeat must be sent as different text on Android (Story 3.15b, V4).',
+        },
+        {
+          object: 'AccessibilityInfo',
+          property: 'announceForAccessibilityWithOptions',
+          message: 'Use announce(text, options) from lib/announce.ts — a repeat must be sent as different text on Android (Story 3.15b, V4).',
+        },
+      ],
+    },
+  },
+  {
+    // The ONE file that may call the two methods (cwd-relative glob — [[project_eslint_config_per_package_cwd]]).
+    files: ['lib/announce.ts'],
+    rules: { 'no-restricted-properties': 'off' },
+  },
 ];

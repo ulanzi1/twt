@@ -2,9 +2,10 @@ import { useLocale } from '@twt/i18n/react'
 import { NOTICEBOARD_ROW_DISMISSED_A11Y_KEY, deriveNoticeboardViewModel } from '@twt/ui'
 import type { NoticeboardSection, NoticeboardStripViewModel } from '@twt/ui'
 import { useCallback, useMemo, useState } from 'react'
-import { AccessibilityInfo, ScrollView, StyleSheet } from 'react-native'
+import { ScrollView, StyleSheet } from 'react-native'
 import { Text, View, XStack, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { useNoticeboardT } from '../../lib/noticeboard-i18n'
 import { useSession } from '../../lib/session-context'
 import { bannerDismissalKey } from '../banners/copy'
@@ -108,7 +109,7 @@ export function PanchayatNoticeboard() {
     // reaches the row's label once `acknowledged` flips (the presenter's `labelParts`), but the control
     // just activated is GONE on the next render (absent once acknowledged, so it cannot double-fire) —
     // a focused screen-reader user hears nothing on that transition unless it is announced explicitly.
-    AccessibilityInfo.announceForAccessibility(t(NOTICEBOARD_ROW_DISMISSED_A11Y_KEY))
+    announce(t(NOTICEBOARD_ROW_DISMISSED_A11Y_KEY))
     dismissMutate(
       { bannerId: banner.banner_id, kind: 'dismissed' },
       {

@@ -123,6 +123,7 @@ vi.mock('tamagui', async () => {
 })
 
 import WhatsappStepScreen from '../../app/(signup)/whatsapp'
+import { bare, NBSP } from './announce-text'
 
 const NEXT = '/(signup)/payment'
 const words = getCatalog('en', 'common')!
@@ -461,11 +462,19 @@ describe('AC9 — Send', () => {
     mock.sendWaOptInCode.mockResolvedValue({ delivery: 'sent', codesRemaining: 1, retryAfterSeconds: null })
     await toSent(OFFER)
     expand()
+    // Story 3.15b — on Android the second is SENT as different text (`lib/announce.ts`, V4), so the android row counts by the
+    // WORDS; the ios row keeps the exact text (DL2).
+    const sent = () =>
+      mock.announce.mock.calls.map(([t]) => String(t)).filter((t) => (os === 'android' ? bare(t) : t) === words['waCode.sent'])
     await press('wa-code-send')
-    expect(mock.announce.mock.calls.filter(([t]) => t === words['waCode.sent'])).toHaveLength(1)
+    expect(sent()).toHaveLength(1)
     mock.sendWaOptInCode.mockResolvedValue({ delivery: 'sent', codesRemaining: 0, retryAfterSeconds: null })
     await press('wa-code-resend')
-    expect(mock.announce.mock.calls.filter(([t]) => t === words['waCode.sent'])).toHaveLength(2)
+    expect(sent()).toHaveLength(2)
+    const [first, second] = sent()
+    expect(first).toBe(words['waCode.sent'])
+    if (os === 'android') expect(second).toBe(`${first}${NBSP}`)
+    else expect(second).toBe(first)
   })
 })
 

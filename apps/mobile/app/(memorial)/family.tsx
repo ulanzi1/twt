@@ -20,7 +20,7 @@
 // announced.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { Button, H2, Input, Paragraph, XStack, YStack } from 'tamagui'
 
@@ -47,6 +47,7 @@ import {
   useMemorialScreenAnnounce,
 } from '../../components/memorial-authorship/useMemorialAnnounce'
 import { useMemorialViewQuery } from '../../components/memorial-authorship/useMemorialQueries'
+import { announce } from '../../lib/announce'
 import { loadMemorialDraft, memorialPhotoUri, saveMemorialDraft, type MemorialDraft } from '../../lib/memorial-draft'
 import { useMemorialT } from '../../lib/memorial-i18n'
 import { announcementPlan } from '../../lib/death-certificate-announce'
@@ -130,7 +131,7 @@ export default function MemorialFamilyScreen(): React.ReactElement {
       // device session — [[project_android_live_region_reread_on_rerender]]) and a call here would be spoken twice. ⚠ Android's
       // repeat is ⛔ checked on a device (Row 41's TalkBack pass).
       if (incomplete && announcementPlan(Platform.OS, 'error').iosAnnounce) {
-        AccessibilityInfo.announceForAccessibility(t('family.row_incomplete'))
+        announce(t('family.row_incomplete'))
       }
       setIncomplete(true)
       return

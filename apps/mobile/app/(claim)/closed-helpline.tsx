@@ -11,10 +11,10 @@
 import { useEffect } from 'react'
 
 import { useRouter } from 'expo-router'
-import { AccessibilityInfo } from 'react-native'
 import { Button, H2, Paragraph, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../../components/common/CallHelplineCTA'
+import { announce } from '../../lib/announce'
 import { useClaimT } from '../../lib/claim-i18n'
 import { CLOSED_HELPLINE_COPY } from '../../lib/closed-helpline-copy'
 
@@ -27,7 +27,7 @@ export default function ClosedHelplineScreen(): React.ReactElement {
   // ⭐ The BODY alone is announced and labelled: its first sentence IS the title (RF12's words), so `${title}. ${body}`
   // read "This claim has been closed" twice (code review round 2, 2026-10-08).
   useEffect(() => {
-    AccessibilityInfo.announceForAccessibility(body)
+    announce(body)
   }, [body])
 
   return (

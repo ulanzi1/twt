@@ -9,11 +9,11 @@
 // QUEUED (iOS) so it follows a `send_failed` line spoken in the same render instead of cutting it off (code review round 2).
 
 import { useEffect, useRef } from 'react'
-import { AccessibilityInfo } from 'react-native'
 
 import { useT } from '@twt/i18n/react'
 import { Button, Input, Paragraph, Spinner, YStack } from 'tamagui'
 
+import { announce } from '../../lib/announce'
 import { AnnouncedText } from '../peer-request/announce'
 import { OtherPhoneDetails } from './OtherPhoneDetails'
 import type { WaCode } from './use-wa-code'
@@ -34,14 +34,14 @@ export function WaCodeEntry({
   useEffect(() => {
     if (form.sendCount === spokenFor.current) return
     spokenFor.current = form.sendCount
-    if (sentLine) AccessibilityInfo.announceForAccessibility(sentLine)
+    if (sentLine) announce(sentLine)
   }, [form.sendCount, sentLine])
   const waitLine = t('waCode.resend_wait')
   const waitSpokenFor = useRef(form.waitCount)
   useEffect(() => {
     if (form.waitCount === waitSpokenFor.current) return
     waitSpokenFor.current = form.waitCount
-    AccessibilityInfo.announceForAccessibilityWithOptions(waitLine, { queue: true })
+    announce(waitLine, { queue: true })
   }, [form.waitCount, waitLine])
 
   const errorText =

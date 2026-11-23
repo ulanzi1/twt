@@ -9,10 +9,11 @@
 // later successful read (new or corrected links, or the read recovering after the card / screen hid on `isError`) clears it.
 
 import { useState } from 'react'
-import { AccessibilityInfo } from 'react-native'
 
 import { useT } from '@twt/i18n/react'
 import { Text } from 'tamagui'
+
+import { announce } from '../../lib/announce'
 
 /** The failure state for one surface: `failed` while the read it happened on is still the one shown; `onFailed` records and SPEAKS it. */
 export function useChannelLinkFailure(dataUpdatedAt: number): { failed: boolean; onFailed: () => void; clear: () => void } {
@@ -22,7 +23,7 @@ export function useChannelLinkFailure(dataUpdatedAt: number): { failed: boolean;
     failed: failedAt !== null && failedAt === dataUpdatedAt,
     onFailed: () => {
       setFailedAt(dataUpdatedAt)
-      AccessibilityInfo.announceForAccessibility(t('announcementChannels.link_error'))
+      announce(t('announcementChannels.link_error'))
     },
     clear: () => setFailedAt(null),
   }

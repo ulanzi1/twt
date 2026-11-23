@@ -16,9 +16,10 @@
 // TalkBack happened to move focus there). `useMemorialScreenAnnounce` speaks the screen's heading on arrival.
 
 import { useCallback, useEffect, useRef, type ReactElement } from 'react'
-import { AccessibilityInfo, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { useFocusEffect } from 'expo-router'
 
+import { announce } from '../../lib/announce'
 import { announcementPlan, type AnnouncementKind } from '../../lib/death-certificate-announce'
 
 export type MemorialLiveRegion = 'polite' | 'assertive'
@@ -47,7 +48,7 @@ export function useMemorialAnnounce(
     }
     if (!text) return
     if (hasLiveRegion && !announcementPlan(Platform.OS, kind).iosAnnounce) return
-    AccessibilityInfo.announceForAccessibility(text)
+    announce(text)
   }, [text, hasLiveRegion, kind])
   return memorialLiveRegion(kind)
 }
@@ -67,7 +68,7 @@ export function useMemorialScreenAnnounce(heading: string | null): void {
     useCallback(() => {
       focused.current = true
       spoken.current = latest.current !== null
-      if (latest.current !== null) AccessibilityInfo.announceForAccessibility(latest.current)
+      if (latest.current !== null) announce(latest.current)
       return () => {
         focused.current = false
       }
@@ -76,7 +77,7 @@ export function useMemorialScreenAnnounce(heading: string | null): void {
   useEffect(() => {
     if (!focused.current || spoken.current || heading === null) return
     spoken.current = true
-    AccessibilityInfo.announceForAccessibility(heading)
+    announce(heading)
   }, [heading])
 }
 

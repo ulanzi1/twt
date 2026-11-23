@@ -86,7 +86,9 @@ describe('the contact screen (source pins)', () => {
   it('⭐ every reachable state is announced (a live region + the iOS call)', () => {
     for (const phase of ['saved', 'incomplete', 'agreement_required', 'not_writable', 'error']) expect(src).toContain(`${phase}:`)
     expect(src).toContain('accessibilityLiveRegion="polite"')
-    expect(src).toContain('AccessibilityInfo.announceForAccessibility')
+    // Story 3.15b — the iOS call goes through the shared helper, imported aliased (the screen's own `announce` wrapper keeps its name).
+    expect(src).toContain("if (Platform.OS === 'ios') sendAnnouncement(text)")
+    expect(src).toContain("import { announce as sendAnnouncement } from '../../lib/announce'")
   })
 
   it('⭐ the choices are explicit accessibility elements with a role and a state (family 13(a))', () => {

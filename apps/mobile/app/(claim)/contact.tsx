@@ -22,11 +22,12 @@ import { CLAIMANT_NOMINEE_RELATIONSHIP_CODES } from '@twt/contracts'
 import { ApiError } from '@twt/api-client'
 import { LocaleProvider, useLocale, useT } from '@twt/i18n/react'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { AccessibilityInfo, Platform, ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 import { Button, Input, Paragraph, Spinner, Text, XStack, YStack } from 'tamagui'
 
 import { CallHelplineCTA } from '../../components/claim/CallHelplineCTA'
 import { ClaimProxyFlowShell } from '../../components/claim/ClaimProxyFlowShell'
+import { announce as sendAnnouncement } from '../../lib/announce'
 import { claimApi } from '../../lib/claim-api'
 import { type ClaimantChoice, type ClaimantNomineeRelationshipCode, buildMemberContactBody } from '../../lib/claim-contact'
 import { useClaimT } from '../../lib/claim-i18n'
@@ -173,7 +174,7 @@ function ContactStep(): React.ReactElement {
   function announce(text: string): void {
     // `accessibilityLiveRegion` is Android-only; iOS needs the explicit call (and only iOS — TalkBack would
     // speak it twice).
-    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(text)
+    if (Platform.OS === 'ios') sendAnnouncement(text)
   }
 
   const phaseText: Partial<Record<Phase, string>> = {

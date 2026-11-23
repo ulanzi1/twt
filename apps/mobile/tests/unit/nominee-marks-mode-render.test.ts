@@ -48,13 +48,20 @@ const mock = vi.hoisted(() => ({
   nextLinks: null as null | { ranks: unknown[]; links: unknown[] },
   refetches: 0,
   refetchWait: null as null | Promise<void>,
+  // Story 3.15b — a getter so ONE leg can run on Android (the F6 gap leg); every other leg stays iOS.
+  os: 'ios' as string,
 }))
 
 vi.mock('react-native', async () => {
   const { createElement } = await import('react')
   return {
     ScrollView: ({ children }: { children: React.ReactNode }) => createElement('div', null, children),
-    Platform: { OS: 'ios' }, // `AnnouncedText` SPEAKS on iOS (Android: a live region); *Marks saved.* is announced on both
+    // `AnnouncedText` SPEAKS on iOS (Android: a live region); *Marks saved.* is announced on both
+    Platform: {
+      get OS() {
+        return mock.os
+      },
+    },
     AccessibilityInfo: { announceForAccessibility: mock.announce },
   }
 })
@@ -140,6 +147,7 @@ vi.mock('tamagui', async () => {
 
 import LifeEventsNomineesScreen from '../../app/(life-events)/nominees'
 import { clearNomineeLinkSession, handNomineeLinkPick } from '../../lib/nominee-links'
+import { NBSP, sentAs } from './announce-text'
 
 const status = (n: number) => ({
   nominees: Array.from({ length: n }, (_, i) => ({ rank: i + 1, relationship: i === 0 ? 'spouse' : 'son', splitPct: n === 1 ? 100 : i === 0 ? 75 : 25, mobilePresent: true, addressPresent: false })),
@@ -159,6 +167,7 @@ async function openMarks() {
 
 beforeEach(() => {
   clearNomineeLinkSession()
+  mock.os = 'ios'
   mock.canFind = true
   mock.links = { ranks: RANKS, links: [{ rank: 2, linkId: L2, label: 'confirmed', name: 'Ravi K.' }] }
   mock.nextLinks = null
@@ -355,6 +364,16 @@ describe('Story 6.36f — marks mode', () => {
     act(() => mock.focus!())
     expect(mock.announce).toHaveBeenCalledWith('Marked as a member')
     expect(screen.getByTestId('nominee-marks-rank-1')).toHaveTextContent('Marked as a member')
+  })
+
+  it('Story 3.15b (F6 gap) — android: a second no-name pick is the same words SENT as different text, so TalkBack speaks it again (V4)', async () => {
+    mock.os = 'android'
+    await openMarks()
+    handNomineeLinkPick(2, { kind: 'new', mobile: '9876500003', foundBy: 'typed' })
+    act(() => mock.focus!())
+    handNomineeLinkPick(1, { kind: 'new', mobile: '9876500002', foundBy: 'typed' }) // the SAME words, a second pick
+    act(() => mock.focus!())
+    expect(sentAs(mock.announce.mock.calls, 'Marked as a member')).toEqual(['Marked as a member', `Marked as a member${NBSP}`])
   })
 
   it('device run D3 — *Find…* renders its OWN label Text (Tamagui\'s wrapper is one line; `ellipsis={false}` was inert on the device) and keeps its 48 dp floor', async () => {

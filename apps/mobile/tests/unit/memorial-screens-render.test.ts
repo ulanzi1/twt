@@ -254,6 +254,7 @@ import MemorialWriteScreen from '../../app/(memorial)/write'
 import { ApiError } from '@twt/api-client'
 import { loadMemorialDraft, memorialDraftKey, saveMemorialDraft } from '../../lib/memorial-draft'
 import { handoverGateAnswerOf, useHandoverGatedAction } from '../../lib/use-memorial-send'
+import { NBSP } from './announce-text'
 
 const tr = (key: string, locale: 'hi' | 'en', params?: Record<string, string>) => t(key, params, { locale, namespace: 'memorial' })
 
@@ -3892,7 +3893,8 @@ describe('Story 11b.5a — the family screen (AC2)', () => {
         expect(screen.getByTestId('memorial-family-add')).toBeInTheDocument()
         expect(announced()).toEqual([limit])
         fireEvent.click(screen.getByTestId('memorial-family-add'))
-        expect(announced()).toEqual([limit, limit])
+        // Story 3.15b — the same words again: on Android SENT as different text (`lib/announce.ts`, V4); on iOS the copy (DL2).
+        expect(announced()).toEqual(os === 'android' ? [limit, `${limit}${NBSP}`] : [limit, limit])
       },
     )
 

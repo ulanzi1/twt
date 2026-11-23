@@ -1,0 +1,382 @@
+---
+baseline_commit: 78971e1f
+---
+
+<!--
+PINNED: `78971e1f` = the tip of `story/3-15b-repeated-announcement-sent-as-different-text` on 2026-11-23, the commit that added this
+row as `backlog` with the `epics.md` Story 3.15c block and the owner lines on X1 and X2 in `deferred-work.md` (ledger `2026-11-23q`).
+Authored in its OWN worktree `/Users/dev/Developer/projects/TWT/.claude/worktrees/3-15c-standing-line-spoken-again-and-language-switch-spoken-once`,
+branch `story/3-15c-standing-line-spoken-again-and-language-switch-spoken-once`, STACKED on the 3.15b branch (the row exists only
+there; 3.15b is in `review`, ⛔ landed). Upstream UNSET — first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
+The worktree was created without `node_modules` — `pnpm install` first (Task 0.1).
+
+⚠ At authoring time another session was applying 3.15b's code-review patches UNCOMMITTED in the 3.15b worktree (ledger `2026-11-23r`:
+`lib/announce-repeat.ts` cleared at every session boundary in `lib/session-context.tsx`, the lint fence widened to the property name,
+`assisted.tsx`, records; ⛔ `WaCodeEntry.tsx`, `use-wa-code.ts`, `language.tsx`, `announce.tsx`). Its X2 re-attribution (review P3) is
+quoted below as UNCOMMITTED. So Task 0.1 REBASES this branch onto 3.15b's final tip (or onto `origin/main` if 3.15b has landed) and
+RE-PINS `baseline_commit` to the rebased SHA of the row record (`records(3.15c): row added …`), then re-derives F1–F10 by function
+([[feedback_story_validate_footguns]] #11, #24 — RE-LOCATE BY FUNCTION, ⛔ by line number).
+
+§0 GATE (the routing template's, applied FIRST): ⛔ Panel question. Everything here is HOW two existing lines reach a screen reader —
+the AUTHOR's. Nothing changes who is credited, told, paid, or what is stored. The remedies the epics block leaves open ("The remedy is the
+author's") are chosen below as DL1–DL7, each with its reason and an honest cost; BigDev may overrule any of them at validate or review.
+BigDev's scope — *"let's give X1 and X2 an owner"*, then *"New story 3.15c, both"* — is the input, quoted, ⛔ reinterpreted.
+-->
+
+# Story 3.15c: An Unchanged Standing Line Said Again Is Spoken Again, and a Language Switch Speaks Its Line Once
+
+Status: ready-for-dev
+
+## Story
+
+As a member who uses a screen reader on Android,
+I want an error that stays on screen to be read to me again when my next try fails the same way, and a line to be read once — not
+twice — when I change the app's language,
+so that what I hear matches what happened.
+
+## 📜 Policy meaning (AI-10-1)
+
+**This story introduces ⛔ predicate that gates a member's access to a benefit, and changes none.** It changes only WHEN two existing
+lines are handed to the screen reader (the WhatsApp code form's error line; the language screen's "not recorded" line); what is shown,
+accepted, refused, stored or credited is unchanged, and so is every copy key. ⛔ Niyamavali check needed — no predicate.
+
+## The rulings and records this story builds on
+
+- **X1** — `deferred-work.md`, "Deferred from: dev of story 3-15b" (2026-11-23): an identical STANDING error line in `WaCodeEntry`
+  (`verify_failed`, `send_failed`) is not spoken again on Android; the epics 3.15b premise ("an identical second wrong code") cannot
+  happen (`WA_OPT_IN_CODE_MAX_ATTEMPTS = 2`). Owner line: *"OWNER: Story 3.15c"* (2026-11-23, `78971e1f`).
+- **X2** — same section: with the not-recorded line showing, choosing the OTHER language makes the live region speak the new words AND
+  the direct announcement send them — two TTS-off log entries ~3 ms apart (15:49:39.951 plain + 15:49:39.954 with one U+00A0). Owner
+  line: *"OWNER: Story 3.15c"*. ⚠ UNCOMMITTED at authoring (3.15b review P3, ledger `2026-11-23r`): X2 is re-worded as *"probably
+  UNMASKED by Story 3.15b's suffix"* — before 3.15b the direct send was the plain text, identical to the live region's, and TalkBack drops
+  an identical announcement (V4), so it was heard once; the helper now makes it differ. Inference, ⛔ proven. Either way the fix is the same.
+- **BigDev, 2026-11-23:** *"let's give X1 and X2 an owner"*, then *"New story 3.15c, both"*.
+- `epics.md` Story 3.15c block — AC (1)–(4) in brief; the source of the ACs below (two narrowings stated in DL4 and DL5).
+- **The pattern this story reuses** — Story 3.15a DL1 (`assisted.tsx`): an error line as PLAIN `Text` (`accessibilityRole="alert"`
+  kept — on Android a role description only, ⛔ a live region), sent ONCE by a direct announcement each time it is SET; 6.36f D1 before
+  it. Device-shown on `assisted.tsx` (3.15a pass + review P1; 3.15b sweep (k)).
+- **Story 3.15b** — `lib/announce.ts` `announce(text, options?)`: on Android the n-th send of the same text carries n trailing U+00A0
+  (BigDev heard 1 and 2 as the plain sentence, *"All 3, clean"*); the ESLint fence bars `AccessibilityInfo.announceForAccessibility*`
+  outside it. NEW code calls `announce()`.
+- Memory [[project_android_live_region_reread_on_rerender]] (a standing live region is re-read at a later PRESS — 6.36f D1, 3.15 V1),
+  [[project_talkback_drops_identical_announcement]], [[project_mobile_android_emulator_setup]].
+
+## Found facts (traced at `78971e1f`)
+
+- **F1 — X1 is not Android-only: an identical re-set sends NOTHING on either platform.** `components/peer-request/announce.tsx`
+  `AnnouncedText`: on Android a `Text` with `accessibilityLiveRegion` (it calls nothing); on iOS `useEffect(() => { if (text)
+  announceLine(text, kind) }, [text, kind])`. When `WaCodeEntry` sets the same `line` again, `errorText` is the same string, the element
+  stays mounted (⛔ `key`), so the Android live region has ⛔ content change AND the iOS effect does ⛔ re-run. The epics block's
+  *"iOS behaviour unchanged unless the story shows VoiceOver needs it"* is met by the code, not by VoiceOver: iOS is sent nothing today
+  (VoiceOver itself is un-attested — no iOS device in this repo's passes).
+- **F2 — the X1 lines and their re-set paths** (`components/notifications/use-wa-code.ts`; `WaCodeEntry.tsx` derives `errorText` from
+  `form.line`; ⛔ path clears `line` at a press — `send()` and `confirm()` patch only `busy`):
+  (a) `verify_failed` — `confirm()` → a non-`ApiError` (client timeout) or an unlisted `ApiError` (5xx, 429, `invalid_state`) →
+  `reread()` → status `PENDING` ⇒ `patch({ line: 'verify_failed' })`, or the re-read throws ⇒ the same. The typed code is ⛔ cleared, so a
+  second Confirm of the same six digits is the ordinary retry, and it lands on the same line.
+  (b) `send_failed` — `send()` → `ApiError` `wa_opt_in.code_send_failed` with parseable details and ⛔ newly told ⇒ `line: 'send_failed'`;
+  with `codesRemaining` 2 or 1 `sendBlocked` stays false and "Send another code" stays (after any wait), so Send again → the same line.
+  (c) The `default` arm (`code_unavailable`, `code_not_offered`, `channel_unavailable`, any other 4xx) also writes `send_failed` but
+  sets `sendBlocked` — ⛔ a second send, so ⛔ a re-set. (d) `wrong_retry` → `wrong_final`, and `no_longer_valid` / `no_more`, are each
+  followed by different words or a closed route — ⛔ an identical re-set in ordinary use (Task 1 re-derives this list — F5).
+- **F3 — the baseline on a device is ⛔ known, and may not be "silent".** A standing `AnnouncedText` line on Android was re-read by
+  TalkBack at a later PRESS, before any answer (6.36f D1, API stopped), and on the edit that cleared it (3.15 V1). So on the second
+  Confirm the `verify_failed` line may be (i) silent, (ii) re-read at the PRESS (≈30 s before the answer — the wrong moment), or (iii)
+  re-read at the answer. X1 was ⛔ reached in 3.15a's or 3.15b's pass.
+- **F4 — `WaCodeEntry` is very probably REACHABLE locally; "needs Secret Manager" is a production fact, not a local one.**
+  `packages/domain/src/secrets.ts` `resolveSecretValue` uses Secret Manager only when `NODE_ENV=production`, `GOOGLE_APPLICATION_CREDENTIALS`
+  is set, or `DRIZZLE_FORCE_SECRET_MANAGER=1` — main's git-ignored `apps/api/.env` sets none of the three (key names checked, values ⛔
+  read); otherwise it reads an ENV FALLBACK. `apps/api/src/deps.ts` `resolveChannelSecret` derives the env name from the secret NAME
+  (`[^A-Za-z0-9]` → `_`, upper-cased). `code-delivery.ts` `availability` needs: a complete config (`phone_number_id`,
+  `access_token_secret_name`, `graph_api_version` non-blank) AND a template name for `hi` or `en` matching `TEMPLATE_NAME_FORM` AND a
+  non-blank token. `packages/domain/src/wa-opt-in/code.ts` `checkCodeSendAllowed` also needs `enabled` and `display_phone_number`, a
+  PENDING opt-in (the WhatsApp step's mint makes it) and the member in a signup state. So a seed of ONE `pariwar_wa_config` row (those
+  columns) plus three env vars on the API process — `WA_TEMPLATE_WA_OPT_IN_CODE_HI_<PARIWAR UUID, upper-cased, '-' → '_'>` = a
+  form-valid name (e.g. `twt_code_hi`), the same for `_EN_`, and `<TOKEN SECRET NAME upper-cased>` = any non-blank string — should make
+  the mint answer `codeAvailable: true` and "WhatsApp on another phone?" show the code form. ⚠ Un-run (the first pass to try it is this
+  story's).
+  **The `verify_failed` leg needs ⛔ outbound call:** with the API `kill -STOP`-ed BEFORE Send, the Send times out on the client (15 s,
+  `CALL_TIMEOUT_MS`) → a non-`ApiError` → `mayHaveSent` → `sent_uncertain` + the field; type six digits; Confirm → the verify times out
+  (15 s) → the re-read times out (15 s) → `verify_failed`; Confirm again → `verify_failed` again (≈30 s each). Then `kill -9` the API —
+  ⛔ `kill -CONT`: a resumed process would run the held Send against Meta's real Graph API with a fake token and the seeded member's
+  mobile. **The `send_failed` leg (F2 (b)) needs the server's send to ANSWER**, i.e. a real call to `graph.facebook.com` — ⛔ made from a
+  dev machine (DL5).
+- **F5 — the `AnnouncedText` caller inventory (epics AC (1)) — traced at `78971e1f`** (one read-only pass over every usage in
+  `apps/mobile/app` + `apps/mobile/components`; three classifications spot-checked by hand — `address.tsx`, `nominees.tsx` `marksError`,
+  `PeerQuestionnaire.tsx` `dateError`). **50 usages: 13 K, 11 S, 21 U, 5 O.** K = keyed, remounted on every set; S = unkeyed, the SAME
+  words can be set again while it stays mounted (X1's defect); U = unkeyed, every path clears it first, so a re-set remounts; O = set at
+  most once per mount / static.
+  **S (11):** `WaCodeEntry.tsx` `errorText` (this story — paths below); `(life-events)/address.tsx` `address_required` (Submit with the
+  field empty, Submit again — only `onChange` clears it); `(life-events)/posting.tsx` the "Show more" `history_error` (`hasNextPage &&
+  isFetchNextPageError` stays true through a `fetchNextPage` retry — TanStack v5 keeps `status: 'error'` on a refetch that has data);
+  `(life-events)/known-people-find.tsx` `find.no_search_results` (type "ab" → none, "abc" → still none — a STATUS line; arguably correct
+  to stay quiet); `components/peer-request/PeerQuestionnaire.tsx` `peer_request.unsaved` on the load-error view (Back, Back again),
+  `t(actionNotice)` (Next on an unanswered page, Next again — `required`; also `date_unsaved`), `unsavedWarning` (Back while saving,
+  Back again), `peer_request.date_invalid` (Save unparseable text, Save again); `components/workplace/WorkplacePicker.tsx`
+  `districts_error` once data exists (a failed retry keeps `status: 'error'`) and the "Show more" `search_error` (as `posting.tsx`);
+  `components/life-events/MedicalForm.tsx` `ack_required` (Submit unacknowledged, Submit again).
+  **K (13):** `known-people-find.tsx` ×2 and `nominee-link-find.tsx` (`message.seq`), `known-people.tsx` `notice.seq` and five
+  `errorUpdatedAt` lines, `nominees.tsx` `marksError` / `pickNotice` (`seq: Date.now()` — two sets in one millisecond would collide) and
+  `links.errorUpdatedAt`, `nominee-link-requests.tsx` (`Date.now()`, `q.errorUpdatedAt`), `NomineeForm.tsx` `notice` (`Date.now()`) and
+  `${errorSeq}:${shownError}`. ⛔ key found that moves on a non-set event. All rely on *"a remounted live region holding the same words
+  is spoken"* on Android — ⛔ device-shown.
+  **U (21) / O (5)** — the rest (`whatsapp.tsx` `request_failed` O / `link_failed` U; `assisted.tsx` `saved` O; `(withdrawal)/index.tsx`
+  U; the workplace question outcome U; the loading lines; …); nothing they say changes here.
+  **`line` writes in `use-wa-code.ts`** (15; `busy: true` never touches `line`, so the line STANDS through every call): init; send 200;
+  `mayHaveSent`; send `not_pending`; `code_resend_too_soon` (writes `s.line` — the CURRENT value — on purpose when ⛔ newly told; the wait
+  is spoken through `waitCount`); `code_send_failed` (`send_failed` or `sent_uncertain`); `code_limit_reached`; the default arm
+  (`send_failed` + `sendBlocked`); re-read PENDING (`verify_failed`); re-read other (`no_longer_valid`); re-read threw (`verify_failed`);
+  verify `not_pending`; `code_wrong` ×2 (`wrong_retry` / `wrong_final`); `code_no_longer_valid`. Same-value writes in ordinary use:
+  `verify_failed` (the code is ⛔ cleared, so Confirm is enabled again) and a released `send_failed` (`codesRemaining` 2 OR 1 leaves
+  `sendBlocked` false, so "Send another code" stays). ⚠ The `code_resend_too_soon` arm's `line: s.line` is a write that must ⛔ bump
+  `lineCount` — it is not a new SET of the line (the answer's news is the wait); DL1 counts only writes that set a line from the answer.
+- **F6 — X2's mechanics** (`app/(settings)/language.tsx` `choose`). `setLocale(next)` runs at once, so a line already showing re-renders
+  in the NEW language before the PUT's outcome; its `accessibilityLiveRegion="assertive"` speaks the new words AT THE SWITCH. Then a
+  `not_recorded` outcome with `alreadyShowing` calls `announce(text)` on both platforms ⇒ twice. Two more cases follow from the same code
+  (⛔ device-shown — the 3.15b sweep ran with the API stopped throughout): (i) **a FALSE "not recorded"**: line showing, the member
+  switches, the PUT SUCCEEDS — the live region has already spoken "not recorded" in the new language at the switch, then the line is
+  removed; (ii) **a press re-read**: the radio press re-renders beside the standing live region (F3's class). The first failure on
+  Android is the live region's MOUNT (spoken — the language screen's first failures were logged in the 3.15b sweep). The `-388` item 1
+  retry (the account holds the other language → a tap on the SHOWN one) failing again sets the SAME words while showing ⇒ `announce()`
+  — the "same-language twice" case 3.15b's review recorded as NOT RUN.
+- **F7 — tests that pin today's behaviour** (re-locate by leg name): `tests/unit/language-screen-render.test.ts` *"⭐ a failed PUT keeps
+  the new language, leaves pending, shows ONE assertive alert line; announce rule (${os})"* — asserts `aria-live="assertive"`, Android
+  `announce` 0 at the first failure, then a switch to Hindi while showing ⇒ announce on BOTH (that second half IS X2's double on
+  Android); *"a later successful PUT removes the line"*; *"-388 item 1 … retries it and clears the alert"*. `tests/unit/wa-code-entry-render.test.ts`
+  (default `mock.os = 'ios'`; `alertText()` = `screen.queryByRole('alert')?.textContent`): every `send_failed` / `verify_failed` leg reads
+  the line through `alertText()` — they keep working if `accessibilityRole="alert"` is kept; ⛔ leg asserts a whole-call count on
+  `mock.announce` (filters by words only — checked: `toHaveBeenCalledWith(words['waCode.done'])` and word filters). The `[ios] R2 a 502
+  code_send_failed WITH a wait` leg asserts `resend_wait` once with `{ queue: true }`, ⛔ the order.
+- **F8 — the iOS order, today.** `send_failed` + a wait in ONE answer: `AnnouncedText` is a CHILD, so its effect (iOS: `send_failed`)
+  runs BEFORE `WaCodeEntry`'s own effects (the `waitCount` one queues `resend_wait`) — that is what *"QUEUED (iOS) so it follows a
+  `send_failed` line spoken in the same render"* (the file header) relies on. Moving the error announcement INTO `WaCodeEntry` keeps the
+  order only if its effect is DECLARED BEFORE the wait effect (effects of one component run in declaration order). On Android RN ignores
+  `queue`; the order beside the live region was ⛔ device-proven, and neither is the order of two back-to-back direct announcements.
+- **F9 — copy-key scans.** `tests/unit/wa-signup-copy-keys.test.ts` scans `WaCodeEntry.tsx` / `use-wa-code.ts` for LITERAL
+  `t('waCode.…')` keys; `tests/unit/language-copy-keys.test.ts` does the same for the language screen — keep every key a literal
+  (`translate('language.error_not_recorded', …)` included).
+- **F10 — friction-budget AC-4.** All of `apps/mobile/**` is member-facing (3.15b F11), so this story owes a `**Story 3.15c disposition
+  (…)**` block in `friction-budget.md`, checked against COMMITTED history ([[project_friction_budget_baseline_ratchet]]).
+
+## Build decisions (the author's — §0; BigDev may overrule at validate / review)
+
+- **DL1 — X1's remedy: `WaCodeEntry`'s error line becomes plain text, spoken ONCE per time it is SET, on both platforms.** (The
+  3.15a / 6.36f pattern; `AnnouncedText` itself ⛔ changed.) `use-wa-code.ts` gains `lineCount: number` in `WaCodeState` (initial 0),
+  bumped by every write that SETS `line` from an answer — each `patch({ line: … })` and each `setState` that sets `line`, the same value
+  included — EXCEPT the `code_resend_too_soon` arm's `line: s.line` keep (F5; its news is the wait, spoken through `waitCount`). `WaCodeEntry.tsx` renders `errorText` as a tamagui `Text` (the same font size and colour as `AnnouncedText kind="error"` gives
+  it today — `$2`, `$red10`), `accessibilityRole="alert"`, ⛔ `accessibilityLiveRegion`, with a `testID`; and ONE effect:
+  `useEffect(() => { … if (errorText) announce(errorText) }, [form.lineCount, form.line])` guarded by a ref so it speaks (a) when
+  `lineCount` moves and the line is an error, and (b) when the view MOUNTS holding an error (an expand after a collapse — today's
+  `AnnouncedText` speaks on mount; kept). ⛔ `t` / `errorText` in the deps ([[project_uset_fresh_closure_memo_trap]] — `useT()` is a fresh
+  closure each render; depend on `form.line`, compute the words inside). Declared BEFORE the `waitCount` effect (F8).
+  *Why not re-key `AnnouncedText` (`key={form.lineCount}`) — the shape five callers already use (F5):* it relies on a remounted live region
+  holding the SAME words being spoken by TalkBack, which no pass in this repo has shown, and it keeps the standing live region that is
+  re-read at a press (F3). *Why not a `seq` prop on `AnnouncedText`:* it changes the shared component other screens rely on (the 3.15b
+  epics bar). *Cost:* on Android the line is now a plain announcement — TalkBack ⛔ appends "Alert" (3.15a accepted the same); one more
+  screen with its own announce effect instead of the shared component; iOS changes (a re-set is now spoken — F1 shows nothing was sent).
+- **DL2 — the X1 baseline is recorded FIRST on the device, then DL1 applies unless the baseline already shows it right.** Before the
+  `WaCodeEntry` change (Task 2), on the unchanged code, run F4's `verify_failed` leg and record what TalkBack logs at the second Confirm's
+  PRESS and at its ANSWER. If it is logged exactly ONCE, at the answer, and ⛔ at the press → X1 NOT REPRODUCED: STOP and ask BigDev
+  whether DL1 still applies (it would still remove the press re-read risk) — ⛔ decide alone. Otherwise (silent, or at the press) → DL1.
+  If `WaCodeEntry` cannot be reached (F4 fails) → DL1 applies on F1's code evidence, recorded *"⛔ device-shown"*.
+- **DL3 — X2's remedy: the language screen's "not recorded" line becomes plain text, and EVERY `not_recorded` outcome is announced ONCE,
+  on both platforms, in the chosen language.** In `choose`: on `not_recorded`, `setNotRecorded(true)` and `announce(translate(
+  'language.error_not_recorded', undefined, { locale: next }))` — ⛔ `alreadyShowing || Platform.OS === 'ios'` branch, and
+  `notRecordedRef` goes if nothing else reads it. The line: `Text accessibilityRole="alert"`, ⛔ `accessibilityLiveRegion`, same `testID`.
+  Result: a switch while showing → ONE announcement, at the failure, in the new language (X2); a switch while showing that SUCCEEDS →
+  ⛔ "not recorded" spoken (F6 (i)); the radio press → ⛔ live region to re-read (F6 (ii)); the same-language retry failing again → once,
+  as different text (`announce()`); the first failure → once (on Android now by `announce()` instead of the mount's live region). ⛔
+  clearing the line at the switch: while the PUT is pending the line keeps showing, in the new language — as today, now silent.
+  *Why not keep the live region and skip `announce()` when the words changed:* the live region speaks at the SWITCH — before the outcome,
+  and on a success too (F6 (i)). *Cost:* TalkBack ⛔ appends "Alert"; the screen header comment's 3.3c `kyc.tsx` / `contact.tsx` reasoning
+  is replaced (rewrite it); iOS is unchanged (it already announced every failure).
+- **DL4 — the inventory (epics AC (1)) is RECORDED, and only `WaCodeEntry` is changed — a narrowing, stated.** `AnnouncedText` is ⛔
+  changed, so for every other caller nothing it says changes (`git diff` shows `announce.tsx` and every other caller untouched — AC 1).
+  The callers F5 classes **S** (an unkeyed line that can be set again with the same words while it stays mounted) carry X1's defect too;
+  they are written up as ONE new dated `deferred-work.md` item naming each with its sequence, owner NONE YET (BigDev assigns) — ⛔ fixed
+  here: BigDev's scope is X1 (`WaCodeEntry`) and X2. The class **K** callers (keyed remount) are recorded in the same item as relying on
+  *"a remounted live region holding the same words is spoken"* — ⛔ device-shown.
+- **DL5 — the device pass is bounded by reach and by ⛔ outbound calls.** X2 is reachable (API stopped). X1: F4's seed and env, the
+  `verify_failed` leg only; the `send_failed` leg (F2 (b)) is recorded **NOT REACHED** — its only route is a real call from a dev machine
+  to Meta's Graph API with a fake token and a member's mobile, which this story does ⛔ make (unit-shown only). If F4's recipe fails,
+  record the gate exactly (which check answered false — the API log's `code_unavailable` detail names it) and X1 NOT REACHED. The epics
+  AC (3)'s *"each `AnnouncedText` caller the inventory names re-checked for ⛔ new re-reads"* is met by the DIFF for the unchanged callers
+  (a narrowing, stated: ⛔ device sweep of ~50 lines whose code did not change) and on the device for the lines that sit on the two changed
+  screens — `whatsapp.tsx`'s `request` / `link` lines if they show during the X1 leg.
+- **DL6 — the speech-ON listen (epics AC (4)) is asked, ⛔ assumed.** After the TTS-off capture, with TTS re-enabled, BigDev listens to X2's
+  switch-while-showing leg (expect: the line once, in the new language). ⛔ Listened → recorded un-attested in BigDev's words (3.15a AC 7
+  precedent: *"Not now: un-attested"*). ⛔ inferred from the log.
+- **DL7 — ⛔ focus gate on `WaCodeEntry`'s announcement.** `use-wa-code.ts` already drops every late result after a blur (its `version`
+  counter, bumped on blur and unmount), so a line is SET only while the step is focused. The commit-to-effect instant across a blur
+  (3.15a review P2) is accepted here — recorded, ⛔ fixed: 3.15a's line stayed mounted across the blur; here the step's late results are
+  dropped before they are set.
+
+## Acceptance Criteria
+
+1. **The inventory first (epics AC (1); DL4).** Before any code, Task 1 re-derives F5 at HEAD (`grep -rn '<AnnouncedText'
+   apps/mobile/app apps/mobile/components`) — every usage classed K / S / U / O with its state trace — and lists any difference from F5
+   in the Debug Log. The final `git diff <baseline>..HEAD -- apps/mobile/components/peer-request/announce.tsx apps/mobile/lib/announce.ts
+   apps/mobile/lib/announce-repeat.ts apps/mobile/lib/death-certificate-announce.ts` is EMPTY, and every `AnnouncedText` caller other
+   than `WaCodeEntry.tsx` is untouched.
+2. **X1 — the standing line (DL1, DL2).** In `WaCodeEntry`, each time an error line is SET — the same words included — `announce()` is
+   called once with its words, on Android and on iOS; the line is ⛔ a live region (role `alert` kept). Unit legs, under `android` AND
+   `ios`: (a) `verify_failed` twice (Confirm → verify rejects with a 503 → status `PENDING`; Confirm again, same) ⇒ two announcements of
+   `waCode.verify_failed` (Android: the second is the words + one U+00A0; iOS: identical); (b) a released `send_failed` twice (502
+   `code_send_failed`, `codesRemaining: 2`) ⇒ two of `waCode.send_failed`; (c) an unrelated re-render while the line shows — a digit
+   typed, a countdown tick, the `busy` flip of the next press ⇒ ⛔ further announcement of the line; (d) collapse → expand with an error
+   showing ⇒ spoken once on the mount (kept behaviour); (e) iOS: `send_failed` is announced BEFORE the queued `resend_wait` in one answer
+   (F8 — an ORDER assertion added); (f) the element has `role="alert"` and ⛔ `aria-live`. RED first (legs (a), (b), (f) fail on today's
+   code), and mutation: drop the `lineCount` bump from the `reread()` arm ⇒ (a) RED; restored.
+3. **X2 — the language switch (DL3).** Unit legs, under `android` AND `ios`: (a) the first failure ⇒ ONE announcement in the chosen
+   language; (b) a switch while the line shows, failing ⇒ exactly ONE more, in the NEW language (the F7 leg's second half rewritten — on
+   Android it asserted the double); (c) a switch while the line shows, SUCCEEDING ⇒ ⛔ announcement and the line removed; (d) the `-388`
+   item 1 retry failing twice with the line showing ⇒ two announcements of the same words (Android: the second + one U+00A0); (e) the line
+   has `role="alert"` and ⛔ `aria-live`. Every other leg in `language-screen-render.test.ts` green unchanged. RED first for (a)-android,
+   (b)-android, (e).
+4. **The device pass (epics AC (3); DL2, DL5)** on the Android emulator (TalkBack ON, TTS OFF capture; the served bundle checked for a
+   code-only marker of THIS branch first — [[project_mobile_android_emulator_setup]] 3.15b additions): **X2** (API stopped): (a), (b),
+   (d) above, plus (c) with the API resumed — each with its log lines (timestamps, trailing U+00A0 count) and an outcome **fixed** /
+   **not reproduced** / **not reached**. **X1**: DL2's baseline on the unchanged code, then the `verify_failed` leg on the new code; or
+   NOT REACHED with the exact gate (DL5). The `send_failed` leg recorded NOT REACHED (DL5 — ⛔ outbound call). The `whatsapp.tsx` lines on
+   the same step re-checked for ⛔ new re-read if they show. ⛔ "not seen" for a leg not run ([[feedback_record_unattested_no_backfill]]).
+5. **The listen (epics AC (4); DL6).** BigDev's words on X2's switch-while-showing leg with speech ON, or *"un-attested"* in BigDev's words.
+6. **Records.** `deferred-work.md`: a dated line under X1 and under X2 — **CLOSED by Story 3.15c** only with device evidence on this
+   branch's bundle; otherwise *"addressed in code, ⛔ device-shown"* with the gate ([[feedback_closure_language_precision]]); the X1 line
+   states the `send_failed` leg's NOT REACHED and why. The DL4 inventory item (new, dated, owner NONE YET). Under V4: a dated line for
+   `language.tsx`'s same-language-twice leg (AC 4 (d)) — its result, ⛔ an owner claim (V4's remainder owner stays NONE YET).
+   `friction-budget.md`: `**Story 3.15c disposition (…)**` (⛔ new row, ⛔ row retired, ⛔ row amended — taps unchanged). `mobile`
+   `tsc`, `eslint`, whole vitest suite green; the emulator restored; ⛔ seed spec, env copy or container committed or left running.
+
+## Tasks / Subtasks
+
+- [ ] **Task 0 — Preflight**
+  - [ ] 0.1 `git fetch origin`; `ListAgents`; read the 3.15b branch tip LIVE. Rebase this branch onto 3.15b's final tip — or onto
+        `origin/main` if 3.15b has landed (expect a `sprint-status.yaml` ledger conflict — [[project_rebase_ledger_conflict_separator]];
+        verify the YAML parses). RE-PIN `baseline_commit` (front matter + the PINNED comment) to the rebased row record and check
+        `git merge-base --is-ancestor <pin> HEAD`. `pnpm install`.
+  - [ ] 0.2 Re-derive F1, F2, F4, F6, F7, F8 at HEAD by function; differences → the Debug Log (the grep / the code wins).
+- [ ] **Task 1 — The inventory (AC 1; DL4) — before any code**
+  - [ ] 1.1 Re-derive F5 at HEAD; record the table (file:line, words, kind, class, the state trace) in the Debug Log.
+- [ ] **Task 2 — The device baseline (DL2) — before the `WaCodeEntry` change**
+  - [ ] 2.1 Throwaway `postgres:16-alpine`, migrated; an env-guarded UNCOMMITTED seed spec (an approved T&C; one `pariwar_wa_config`
+        row per F4 — `enabled`, a display number, `phone_number_id`, `access_token_secret_name`); the API with F4's three env vars
+        prefixed (⛔ written into any `.env`). Fresh member → the WhatsApp step (`twtp05://whatsapp`) → "WhatsApp on another phone?".
+        `codeAvailable` false → read the API log's `code_unavailable` detail, fix the seed / env once; still false → X1 NOT REACHED (DL5).
+  - [ ] 2.2 Reached: TalkBack ON, TTS OFF (`pm disable-user --user 0 com.google.android.tts`), `logcat` captured; F4's `verify_failed`
+        sequence on the UNCHANGED code; record the press and answer log lines of BOTH Confirms. `kill -9` the API at the end (⛔ `-CONT`).
+        Apply DL2's rule.
+- [ ] **Task 3 — X1 (AC 2; DL1) — RED first**
+  - [ ] 3.1 Write AC 2's legs in `wa-code-entry-render.test.ts` (both platforms; reuse `tests/unit/announce-text.ts` `bare` / `NBSP`);
+        watch (a), (b), (f) fail.
+  - [ ] 3.2 `use-wa-code.ts`: `lineCount` (type, `initialWaCodeState`, every `line` write — F5's path list). `WaCodeEntry.tsx`: plain
+        `Text` line + the one effect (DL1), declared before the wait effect; header comment rewritten (the `AnnouncedText kind="error"`
+        sentence → DL1's why, X1, the order rule F8). `AnnouncedText` import removed if unused.
+  - [ ] 3.3 Mutation: drop the bump from `reread()` ⇒ (a) RED; restore byte-for-byte (`diff` against a saved copy).
+- [ ] **Task 4 — X2 (AC 3; DL3) — RED first**
+  - [ ] 4.1 Rewrite the F7 announce-rule leg and add AC 3's legs in `language-screen-render.test.ts`; watch (a)-android, (b)-android,
+        (e) fail.
+  - [ ] 4.2 `language.tsx`: DL3; header comment lines on the announcement rewritten (why plain text: F6, X2; the 3.3c / `contact.tsx`
+        sentence replaced). ⛔ `[t]` dependency (the file's own rule).
+- [ ] **Task 5 — Gates in the package**
+  - [ ] 5.1 `pnpm --filter @twt/mobile test` (whole suite), `tsc --noEmit`, `eslint .` green; added lines scanned for raw U+00A0 /
+        zero-width characters ([[project_unicode_escapes_written_raw]]).
+- [ ] **Task 6 — The device pass (AC 4, 5; DL5, DL6)**
+  - [ ] 6.1 Metro `-c` from this worktree; prove the served bundle carries this branch (e.g. `grep -c lineCount` on the bundle URL).
+        Reuse the installed dev client only if `git diff <its built sha> HEAD -- apps/ packages/ pnpm-lock.yaml` touches no native dep.
+  - [ ] 6.2 X2 legs (a)–(d) (API `kill -STOP` / `-CONT`; the account holding the other language for (d) — fail a switch first); X1's
+        `verify_failed` leg on the new code (F4; `kill -9` at the end). Record each with log lines and outcome.
+  - [ ] 6.3 Speech ON: BigDev's listen of X2 (b) (DL6).
+  - [ ] 6.4 Restore: TalkBack off, Google TTS enabled + `tts_default_synth`, font 1.0, volumes; `adb reverse --remove-all`; API / Metro
+        stopped; container removed; seed spec and env copies deleted; `git status` clean except this story's files.
+- [ ] **Task 7 — Records (AC 6)**
+  - [ ] 7.1 `deferred-work.md` lines (X1, X2, the DL4 inventory item, the V4 line); `friction-budget.md` disposition after 3.15b's.
+  - [ ] 7.2 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
+        comment, a prepended `# last_updated:` entry + the `last_updated:` block line (read the head LIVE across every branch AND
+        worktree for the next free letter — [[project_sprint_status_ledger]]; [[project_sprint_status_safe_prepend]]; YAML parses).
+- [ ] **Task 8 — Gates**
+  - [ ] 8.1 Commit on `story/3-15c-…` only, branch checked before each commit ([[feedback_commit_on_story_branch]]); `friction:check`
+        after the commit.
+  - [ ] 8.2 `ci:local` on a FRESH container (`DATABASE_URL=…?sslmode=disable` — [[project_prepush_hook_inherits_5432]]). The push is
+        BigDev's word.
+
+## Dev Notes
+
+### Traps
+
+1. **⛔ Change `AnnouncedText`, `announcementPlan`, `lib/announce.ts` or `lib/announce-repeat.ts`** (AC 1; the epics block bars
+   `lib/announce.ts`'s rule). The fix is in the two screens.
+2. **`lineCount` must move on EVERY write that sets `line` from an answer, the same value included** — one that does not is exactly X1
+   again; the one exception is `code_resend_too_soon`'s `line: s.line` keep (F5). And ONLY on such a write: a bump on `busy` / `code` / `wait` writes would re-speak the line on an unrelated re-render
+   (the ⛔ in the epics AC (1)).
+3. **Effect order (F8)** — the error effect above the `waitCount` effect, or iOS's queued `resend_wait` no longer follows
+   `send_failed`.
+4. **`useT()` is a fresh closure every render** — ⛔ `t` or a `t(...)` result in any effect's deps ([[project_uset_fresh_closure_memo_trap]]).
+5. **⛔ `kill -CONT` after a held WhatsApp Send** — the API would run the Send against Meta's Graph API (F4). `kill -9`.
+6. **⛔ F4's env vars into a committed or copied `.env`** — prefix them on the API command line; nothing secret is in them, but the
+   pattern stays clean.
+7. **⛔ `uiautomator dump` during a speech capture** (it turns TalkBack off); one `adb input tap` = one press with TalkBack ON.
+8. **A stale bundle looks fine** — prove the served bundle before any leg (3.15b's first round ran 3.15a's code).
+9. **Unit tests show what is SENT, ⛔ what TalkBack speaks** ([[project_talkback_drops_identical_announcement]]) — "fixed" needs the log.
+10. **Hand-format** (Prettier ⛔ enforced — [[project_prettier_not_enforced]]); every `git push` needs `DATABASE_URL=<your container>`.
+
+### What this story does ⛔ do
+
+It does not change `AnnouncedText` or any of its other callers, `announcementPlan`, `lib/announce.ts`'s rule, any copy key, route or
+contract, what is stored or credited, or the language screen's visual behaviour; it does not fix the class-S callers (DL4 — recorded),
+or make a call to Meta (DL5).
+
+### Project Structure Notes
+
+- Updated: `apps/mobile/components/notifications/use-wa-code.ts`, `apps/mobile/components/notifications/WaCodeEntry.tsx`,
+  `apps/mobile/app/(settings)/language.tsx`; tests `apps/mobile/tests/unit/wa-code-entry-render.test.ts`,
+  `apps/mobile/tests/unit/language-screen-render.test.ts`; records `deferred-work.md`, `friction-budget.md`, this file,
+  `sprint-status.yaml`.
+- ⛔ New file in `apps/`, ⛔ package, migration, contract, copy key, decision-log entry.
+
+### Testing
+
+Mobile vitest only (jsdom render tests with mocked `react-native` — the two files' existing harnesses; `announce()` reaches the mocked
+`AccessibilityInfo`, and the vitest setup file resets its counter per test). Each new leg RED first; the mutation in Task 3.3 RED, then
+restored. The device pass (AC 4) is a required part of done; the listen (AC 5) is asked.
+
+### Previous story intelligence (3.15b, 3.15a)
+
+- 3.15b's sweep found the language screen easy to reach (`twtp05://language`, API stopped) and logged X2; `WaCodeEntry` NOT REACHED
+  because "the other-phone details showed the number and phrase only — `codeAvailable` false" — F4 is the first attempt to reach it.
+- The TTS-off log line is `E/talkback: SpeechControllerImpl … TTS is not ready … text:<…>`; count trailing U+00A0 with a `python3 -I`
+  regex. TTS-off = `pm disable-user` the TTS package (a nonexistent `tts_default_synth` is NOT enough).
+- Metro started before a new symbol existed can keep serving an old bundle silently — restart `-c`, `curl` the bundle, grep a marker.
+- 3.15a's `assisted.tsx` is the model for a plain-text error line spoken by an effect keyed on a per-set counter (its header comment
+  states the why; its `focusedRef` gate is ⛔ needed here — DL7).
+- `tests/unit/announce-text.ts` (3.15b) has `NBSP`, `bare`, `sentAs` for Android-row assertions.
+
+### References
+
+- `deferred-work.md` — X1, X2, V4 and their dated lines; the 3.15a / 3.15b sections.
+- `3-15b-repeated-announcement-sent-as-different-text.md` — F4, F9, DL7, the Task 7 sweep; `3-15a-…` DL1, review P1 / P2.
+- `apps/mobile/components/peer-request/announce.tsx`, `lib/announce.ts`, `components/notifications/use-wa-code.ts`,
+  `WaCodeEntry.tsx`, `app/(settings)/language.tsx`, `lib/app-language.ts` `chooseLanguage`.
+- `apps/api/src/modules/wa-opt-in/code-handlers.ts` `readCodeOffer`, `code-delivery.ts` `availability` / `readCodeSecrets`,
+  `apps/api/src/deps.ts` `resolveChannelSecret`, `packages/domain/src/secrets.ts` `resolveSecretValue`,
+  `packages/domain/src/wa-opt-in/code.ts` `checkCodeSendAllowed`.
+- `epics.md` Story 3.15c.
+
+## Dev Agent Record
+
+### Agent Model Used
+
+### Debug Log References
+
+### Completion Notes List
+
+- Story created (`bmad-create-story 3.15c`, 2026-11-23; BigDev asked to validate it, none existed — *"Create in new worktree"*): own
+  worktree stacked on `story/3-15b-…` at `78971e1f`; facts F1–F10 traced by hand and one read-only inventory pass (F5); DL1–DL7 the
+  author's. Ultimate context engine analysis completed - comprehensive developer guide created.
+
+### File List
+
+## Change Log
+
+| Version | Date | Change |
+| --- | --- | --- |
+| 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15c`) in its own worktree stacked on the 3.15b branch (`78971e1f`). §0: ⛔ Panel question. F1: X1 sends nothing on iOS either. F4: `WaCodeEntry` very probably reachable locally (the secrets' env fallback; ⛔ Secret Manager) — the `verify_failed` leg with ⛔ outbound call, the `send_failed` leg ⛔ (it needs Meta). DL1 plain text + one `announce()` per set (`lineCount`); DL3 the same for the language line; DL4 the inventory recorded, only `WaCodeEntry` changed. Row `backlog` → `ready-for-dev`. ⛔ Code. |

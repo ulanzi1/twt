@@ -20,7 +20,7 @@ each with its reason and an honest cost; BigDev may overrule any of them at vali
 
 # Story 3.15a: The "Did Someone Help You?" Step — the Error Spoken Once, and the Code Box Keeps Focus After a Wrong Code
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -322,21 +322,21 @@ Code review 2026-11-23 (`bmad-code-review`), baseline `f18f934f` through `be3814
 **Disposition (2026-11-23):** BigDev selected option 2, "Leave as action items". P1-P3 remain unchecked; no implementation patches
 were applied. Story and sprint status: `review` -> `in-progress`.
 
-- [ ] [Review][Patch] **P1 — HIGH: repeated identical errors are silent on TalkBack.** [`apps/mobile/app/(signup)/assisted.tsx:136`]
+- [x] [Review][Patch] **P1 — HIGH: repeated identical errors are silent on TalkBack.** [`apps/mobile/app/(signup)/assisted.tsx:136`]
   AC 2 / DL2 (a) requires a second error-setting press to be spoken again. The new counter sends the same announcement text again,
   but the committed device record (`deferred-work.md`, Story 3.15a V4) explicitly reports silence for repeated format errors,
   fresh errors after editing, and a repeated 422. A mocked API-call count does not establish speech delivery. Fix repeated-error
   delivery locally without restoring a live region or losing the code box's focus, and verify it with TalkBack. V4 is an open
   acceptance failure of this story; its existing deferred entry does not discharge AC 2. Correct the unconditional delivery claims
   in the source comments and friction-budget disposition when recording the outcome. Sources: blind + edge + auditor.
-- [ ] [Review][Patch] **P2 — MEDIUM: an error can be announced after the route has blurred.** [`apps/mobile/app/(signup)/assisted.tsx:137`]
+- [x] [Review][Patch] **P2 — MEDIUM: an error can be announced after the route has blurred.** [`apps/mobile/app/(signup)/assisted.tsx:137`]
   AC 2 / P3 forbids speech while blurred. The new passive effect checks captured `focused` state but ignores the existing synchronous
   `focusedRef.current`. A blur between the error's commit and its passive effect leaves the captured value true, so it speaks over
   the next route. Reproduced with the existing harness plus an alert ref callback that calls `mock.blur()` at commit: the line was
   removed, but the format announcement still fired. A test-only Vite transform adding `!focusedRef.current` to the guard made the
   same regression pass, including one announcement at refocus. Add that guard and a lasting regression for this window; retain the
   focus dependency so delivery waits for refocus. Sources: reviewer reproduction + auditor confirmation.
-- [ ] [Review][Patch] **P3 — MEDIUM: the required clipboard-paste leg remains unverified.** [`_bmad-output/implementation-artifacts/deferred-work.md:42`]
+- [x] [Review][Patch] **P3 — MEDIUM: the required clipboard-paste leg remains unverified.** [`_bmad-output/implementation-artifacts/deferred-work.md:42`]
   AC 4 / AC 6 (d) and Task 4.3 require select-all plus a real clipboard paste during a held POST. The record explicitly says only
   typed replacement was exercised; a real paste is un-attested. That does not prove the native paste path restores the SENT code.
   Run the actual paste leg, capture the displayed six SENT digits, then verify the stored attribution after releasing the POST.
@@ -472,6 +472,41 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
   (:5450, removed after); friction-budget AC-4 read the committed `Story 3.15a disposition`.
 - **Task 5:** 5.1 not triggered (AC 4 held on the device); 5.2 not triggered (nothing heard — un-attested, ⛔ "not cut"); 5.3 not
   triggered (`whatsapp.tsx` re-read not seen; `WaCodeEntry` not reached).
+- **Review follow-up (2026-11-23, `bmad-dev-story 3.15a`, v1.4).** Review record committed FIRST (`e7625e94`), then the code (`8b5f4c01`).
+  - **P1 — the remedy, the author's (§0; BigDev may overrule):** within the reviewer's bounds (⛔ a live region, ⛔ losing the box's
+    focus) and the story's (⛔ copy key, ⛔ `AnnouncedText`), the one lever left is the TEXT: RN's Android `announceForAccessibility`
+    (`AccessibilityInfoModule.kt`) sends a bare `TYPE_ANNOUNCEMENT` carrying only the text, and V4 showed a DIFFERENT text was spoken.
+    So each announcement of the same line after its first carries one more trailing U+00A0 (built with `String.fromCharCode`, ⛔
+    typed), counted per line in a ref (`announced`), so the FIRST of each line is the copy exactly and a re-focus re-speak (DL2 (d))
+    differs from the first too. NBSP, ⛔ an ASCII space: `String.trim()` / `strip()` do not remove it. Not chosen: moving accessibility
+    focus to the line (takes the screen-reader member off the box). A web search for TalkBack's rule settled nothing; the device did.
+  - **P2:** the effect's guard is now `!focused || !focusedRef.current || error === null` (the reviewer's guard); the `focused` dep
+    re-runs it at re-focus.
+  - **RED first:** 9 new legs failed on `e7625e94` (P1 ×5 — repeats sent identical; P2 ×4 — `expected 1 to be +0`, the line spoken
+    while blurred, AFTER the leg's control showed the blur landed inside the commit); harness: the `Text` mock's ref callback blurs on
+    the next alert mount (`mock.blurOnAlert`, the reviewer's reproducer, now lasting); `spoken()` counts a repeat's words. **GREEN:**
+    56 / 56. **Mutations,** each restored and `diff`-checked: (vi) drop the `focusedRef` guard → the 4 P2 legs RED; (vii) drop the
+    suffix → the 5 P1 legs RED; (viii) one counter for both lines → the two 422 legs + P5 (d) RED; (ix) suffix keyed on `errorSet` →
+    the 422 legs, the re-focus leg and P5 (d) RED. `@twt/mobile` 118 files / 2350 tests, `tsc`, `eslint` green; added lines scanned —
+    ⛔ raw U+00A0 / zero-width characters.
+  - **Device pass (P1, P3)** — `Pixel_9` / Android 15, Hindi, Gboard, a fresh prebuild + debug build of `8b5f4c01`; throwaway
+    `postgres:16-alpine` on :5451, migrated; UNCOMMITTED seed spec (one approved T&C; workers `657454`, `687409`, `163417`); Metro started
+    with `-c`. One fresh member (`9876500101`). `adb shell input tap` is delivered to the app window, ⛔ intercepted by TalkBack's touch
+    exploration — one tap = one press with TalkBack ON (two parallel taps logged "Inconsistent event" and closed the keyboard; recorded,
+    not counted). Device clock ≈ 3.5 s behind the Mac's.
+    - P1, TalkBack ON, TTS off (`TTS is not ready … text:` lines; trailing U+00A0 counted by a script): 5 digits, four presses →
+      the format line logged four times with 0 / 1 / 2 / 3 no-break spaces (the pass before this fix logged only the first); a
+      backspace → "1 deleted" only; a fresh format set after the edit → logged (4); `111111` → 422 → not-found logged (0), with
+      `mInputShown=true`; the same press again → logged (1); backspace + `1` + press → logged (2). The suffixes show the device ran the
+      new bundle.
+    - P3, TalkBack OFF: CONTROL — `999999` typed, select-all, `KEYCODE_COPY`; `123123` typed; select-all + `KEYCODE_PASTE` → the box
+      showed `999999`. Held leg — `657454` typed; 0 rows; API `kill -STOP`; Continue (spinner); select-all + `KEYCODE_PASTE` → the box
+      showed `657454`, spinner on (screenshots). `kill -CONT` ≈ 18 s after the press — past the 15 s bound, so the step most likely moved
+      on by its timeout (⛔ saved line seen); it was on KYC. `member_attribution`: one row, `attribution_source = 657454`.
+    - P2: ⛔ a device leg — the window (a blur between a commit and its passive effect) cannot be hit by hand; unit-only.
+    - Restored: TTS enabled, TalkBack off (`accessibility_enabled 0`, services deleted), font 1.0 (unchanged), Gboard untouched;
+      `adb reverse` removed; API and Metro stopped; container `twt-3-15a-p-pg` removed; seed spec, env copies and `apps/mobile/android`
+      deleted; `git status` clean. Not done: speech ON (no one listened — whether the no-break spaces are silent is un-attested).
 
 ### Completion Notes List
 
@@ -494,6 +529,16 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
   blocks signup on such phones — not established). V2 and AC 7: un-attested (not heard).
 - **Not done here:** Task 7.2 (`git push`, which runs `ci:local` through the pre-push hook) — an outward action, left for BigDev's
   word.
+- ✅ Resolved review finding [HIGH]: P1 — repeated identical errors silent on TalkBack. A repeat is sent as different text (trailing
+  no-break spaces, per line); on the emulator every repeat (format ×4, 422 ×3, after an edit and without one) was passed to speech
+  (TTS-off capture, ⛔ heard). Source comments say SENT, ⛔ "spoken"; the friction-budget disposition corrected the same way. V4: dated
+  line — `assisted.tsx` addressed; `use-wa-code.ts` / `ChannelLinkError` ⛔ addressed (owner NONE YET).
+- ✅ Resolved review finding [MEDIUM]: P2 — an error could be announced after the route blurred. `focusedRef` added to the effect's
+  guard; a lasting regression on both platforms for the 422 and the format line (blur inside the commit → ⛔ spoken; once at re-focus).
+- ✅ Resolved review finding [MEDIUM]: P3 — the clipboard-paste leg. Run with a real `KEYCODE_PASTE` (control first: it pastes into the
+  idle box); during the held POST the box kept the SENT code and the stored row is the sent code. The earlier note that adb cannot
+  paste was wrong and is corrected by a dated line in `deferred-work.md` (W2). ⚠ The hold ran past the 15 s bound; a paste from
+  Gboard's clipboard chip was ⛔ run.
 
 ### File List
 
@@ -512,3 +557,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15a`, 2026-11-23, in the 
 | 1.1 | 2026-11-23 | Validate pass (`bmad-create-story validate 3.15a`; BigDev: *"all"*). F1–F14 re-traced at `f18f934f` and found to hold (`origin/main` unmoved). Added: F8 the dropped-revert case (`canUpdateWithEventCount`), with a rapid multi-edit in AC 4 / AC 6 (d) / Task 4.3 and in DL3's fallback trigger; AC 6 (a) / Task 4.2 `mInputShown` read with TalkBack ON (`dumpsys`, ⛔ a dump); DL7 (the not-found line heard cut — the DL5 rule), wired into AC 7 / Task 5.2; DL2 records its narrowing of epics AC (1)'s *"where the error is set"*; Task 2.3 sweeps the stale "unlocked" comments; Task 3.2 (a) counts calls by text. Status stays `ready-for-dev`. ⛔ Code. |
 | 1.2 | 2026-11-23 | Implemented (`bmad-dev-story 3.15a`): V1 and W2 (i) in `assisted.tsx` (`40feef55`), tests RED-first (10) then 47 / 47, mutations (i)–(v) RED; mobile suite / `tsc` / `eslint` green. Device pass on the Android emulator: V1 and W2 (i) CLOSED with evidence; AC 4 held (single, multi, select-replace); AC 7 un-attested (not heard — BigDev); AC 8 `whatsapp.tsx` re-read not seen, `WaCodeEntry` not reached. New findings V4 (TalkBack drops an identical repeated announcement) and V5 (signup nominee step does not scroll) in `deferred-work.md`, owner NONE YET. Friction-budget disposition. Status → `review`; ⛔ pushed (Task 7.2 awaits BigDev). |
 | 1.3 | 2026-11-23 | Code review at `be38140c`: three layers completed; 0 decision-needed, 3 patch, 0 new defer, 5 dismissed. P1 repeated errors silent on TalkBack; P2 blur-to-effect announcement race reproduced; P3 actual clipboard-paste validation outstanding. Existing targeted tests 47/47 passed; blur reproduction failed on current code and passed with a test-only synchronous-ref guard. BigDev selected option 2, "Leave as action items"; P1-P3 remain unchecked, no implementation patches applied. Story and sprint status `review` -> `in-progress`. |
+| 1.4 | 2026-11-23 | Review follow-up (`bmad-dev-story 3.15a`): review record `e7625e94` first; code `8b5f4c01`. P1 — a repeat of the same error line is sent with one more trailing no-break space (per line; the first is the copy); P2 — `focusedRef` in the error effect's guard. 9 legs RED first, then 56 / 56; mutations (vi)–(ix) RED; mobile 2350 / 2350, `tsc`, `eslint` green. Emulator: every repeated error passed to speech (TalkBack ON, TTS-off capture); a real clipboard paste during a held POST left the SENT code, which was stored. Records: `deferred-work.md` V4 and W2 dated lines; friction-budget disposition claims corrected (SENT, not heard). Status → `review`; ⛔ pushed (Task 7.2 awaits BigDev). |

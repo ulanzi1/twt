@@ -3136,16 +3136,19 @@ real screen reader). `apps/public` is ⛔ touched ⇒ the page-weight baseline i
 
 **Story 3.15a disposition (⛔ new row, ⛔ row retired, ⛔ row amended — the "Did someone help you register?" step keeps its taps):**
 the story's member-facing change is `apps/mobile/app/(signup)/assisted.tsx` (and its render test): the not-found and "6 digits"
-lines are plain text spoken ONCE each time the error is set (⛔ a live region — 3.15a V1), and the code box is no longer locked while
-the code is being checked (3.15a W2 (i)).
+lines are plain text SENT to the screen reader once each time the error is set (⛔ a live region — 3.15a V1; a repeat of the same
+line carries trailing no-break spaces, because TalkBack drops an announcement identical to one it was sent — review P1, V4), and the
+code box is no longer locked while the code is being checked (3.15a W2 (i)).
 
 1. ⛔ **Step added or removed:** the step, its buttons, its copy (⛔ copy key changed) and its order are unchanged; the Story 3.15 row
    (above) stands as written.
 2. ⭐ **Friction REMOVED:** a member who mistypes the code no longer has to tap the box again — after the "not found" answer the cursor
-   is still in the box with the keyboard up (shown on the Android emulator: `mInputShown=true`, no tap). A screen-reader member no
-   longer hears the error a second time on the backspace that starts the correction.
+   is still in the box with the keyboard up (shown on the Android emulator: `mInputShown=true`, no tap). TalkBack no longer re-reads
+   the error on the backspace that starts the correction, and a repeated error is passed to speech again (both shown on the emulator
+   with the speech engine off — what TalkBack would say, ⛔ heard audio; speech ON is un-attested).
 3. ⚠ **Cost, recorded:** while the code is being checked the box LOOKS editable; an edit there is undone with no message (React Native
-   puts the sent code back — shown on the emulator for a single backspace, a run of backspaces and digits typed over a selection).
+   puts the sent code back — shown on the emulator for a single backspace, a run of backspaces, digits typed over a selection and a
+   clipboard paste over a selection).
 
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
 unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]). Written for changes COMMITTED at `40feef55`; AC-4 reads

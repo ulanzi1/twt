@@ -46,10 +46,12 @@ export default [
   {
     // Story 3.15b (DL5) — every direct screen-reader announcement goes through `lib/announce.ts`, so a repeat of the same
     // text is SENT as different text on Android and TalkBack speaks it again (deferred-work V4: TalkBack does not speak an
-    // announcement identical to one it was already sent). `no-restricted-properties` also reports the destructured form
-    // (`const { announceForAccessibility } = AccessibilityInfo`) and the computed one (`AccessibilityInfo['…']`).
-    // Blind spots (neither exists in apps/mobile at Story 3.15b): an aliased import (`import { AccessibilityInfo as A11y }`)
-    // and a namespace import (`RN.AccessibilityInfo.…`) are NOT caught.
+    // announcement identical to one it was already sent). The entries name the PROPERTY only, not the receiver (code review):
+    // a rule on `AccessibilityInfo.<method>` misses an aliased import, a namespace import (`RN.AccessibilityInfo.…`), a
+    // variable alias (`const AI = AccessibilityInfo`) and `require('react-native').AccessibilityInfo.…`, while a property-only
+    // rule reports every receiver. It also reports the destructured form (`const { announceForAccessibility } = …`) and the
+    // computed string-literal one (`AccessibilityInfo['…']`). Verified at review: over app / components / lib / tests the
+    // only reports are the two calls in the carve-out file below. Blind spot left: a computed key built at run time.
     // ⛔ Widen this with `no-restricted-imports` / `@typescript-eslint/no-restricted-imports` here: the shared config sets
     // both, and a later flat-config entry for the same rule REPLACES its options (the cross-package import bans would go).
     files: ['**/*.{ts,tsx,js,jsx,mjs,cjs}'],
@@ -57,12 +59,10 @@ export default [
       'no-restricted-properties': [
         'error',
         {
-          object: 'AccessibilityInfo',
           property: 'announceForAccessibility',
           message: 'Use announce() from lib/announce.ts — a repeat must be sent as different text on Android (Story 3.15b, V4).',
         },
         {
-          object: 'AccessibilityInfo',
           property: 'announceForAccessibilityWithOptions',
           message: 'Use announce(text, options) from lib/announce.ts — a repeat must be sent as different text on Android (Story 3.15b, V4).',
         },

@@ -54,6 +54,7 @@ const STATUS_TIMEOUT_MS = 5_000
 const SAVED_MS = 1_200
 
 const SIX_DIGITS = /^\d{6}$/
+
 type Stage = 'loading' | 'ask' | 'code' | 'saved'
 type CodeError = 'format' | 'not_found' | null
 

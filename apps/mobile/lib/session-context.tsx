@@ -40,6 +40,8 @@ import { clearAnnouncementCardDismissal } from './announcement-channels-dismissa
 import { clearNomineeLinksCache } from '../components/nominee-links/nominee-links-cache'
 import { clearAnswerKeys } from '../components/workplace/suggestion-answer-key-cache'
 import { clearSavedNames } from './known-people-saved-names'
+// Story 3.15b code review P1 — the per-text announcement counter keys on the announced STRING, which can hold another member's name.
+import { resetAnnouncementRepeats } from './announce-repeat'
 import { clearHomeCardDismissals, clearSessionSuggestionDismissals } from './home-card-dismissals'
 import { queryClient } from './query-client'
 
@@ -116,6 +118,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
       clearNomineeLinksCache(queryClient)
       clearSavedNames()
+      // Story 3.15b — the announcement repeat counter (its keys are announced strings, which can hold a name).
+      resetAnnouncementRepeats()
       // Story 6.36c (fix-review) — the home cards' dismissals are now namespaced per account (`lib/home-card-dismissals`),
       // so they no longer need clearing here: this handler (registered once, at mount) cannot reliably name the OLD
       // account to target anyway, and a DIFFERENT account signing in next is already isolated by its own key.
@@ -134,6 +138,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
       // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
       clearNomineeLinksCache(queryClient)
       clearSavedNames()
+      // Story 3.15b — the announcement repeat counter (its keys are announced strings, which can hold a name).
+      resetAnnouncementRepeats()
       // Story 6.36c (fix-review) — see the comment above: the namespaced dismissal key makes this clear unnecessary.
     })
     return () => {
@@ -150,6 +156,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     clearAnnouncementChannelsCache(queryClient)
     // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
     clearNomineeLinksCache(queryClient)
+    // Story 3.15b — the announcement repeat counter (its keys are announced strings, which can hold a name).
+    resetAnnouncementRepeats()
     // Story 6.36c (fix-review) — the dismissal key is namespaced per account (`lib/home-card-dismissals`), so a
     // DIFFERENT account's dismissals are already isolated from this one; clearing here would ALSO lose a same-account
     // sign-out/sign-in's own dismissals, which is exactly the bug this fixed.
@@ -173,6 +181,8 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     // Story 6.36e — the nominee marks (other members' names), the form session's matched contacts and pick.
     clearNomineeLinksCache(queryClient)
     clearSavedNames()
+    // Story 3.15b — the announcement repeat counter (its keys are announced strings, which can hold a name).
+    resetAnnouncementRepeats()
     // Story 6.36c (fix-review) — sign-out IS a reliable point to name the account (`session` is still in scope, below),
     // so its dismissals are cleared here for privacy/cleanup on a shared device.
     clearHomeCardDismissals(session?.memberId)
@@ -193,6 +203,9 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
     await clearSession()
     // Story 6.30 AL6 (iv) — a link target ⛔ never survives a sign-out.
     clearLinkTarget()
+    // Cleared AGAIN, after the awaits: the screens stay mounted until `setSession(null)`, so a line announced while the logout
+    // was in flight (the first clear is above) would otherwise survive the sign-out (Story 3.15b code review, held-logout leg).
+    resetAnnouncementRepeats()
     setSession(null)
   }
 

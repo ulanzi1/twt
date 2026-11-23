@@ -9,7 +9,10 @@
 //   · the `Button` mock RECORDS its full props per `testID`, so Yes and No are compared on every prop;
 //   · the `useFocusEffect` mock lets a leg BLUR and RE-FOCUS the still-mounted step (`mock.blur()` / `mock.refocus()`), as a route
 //     pushed over it would — an unmount would hide a continuation that outlives the focus (review R2);
-//   · the `Input` mock maps `disabled` to `readOnly` but STILL forwards a change event, so the screen's own guard is tested.
+//   · the `Input` mock maps `disabled` to `readOnly` but STILL forwards a change event, so the screen's own guard is tested; it
+//     RECORDS every render's props per `testID`, so a leg can show `disabled` is never passed (Story 3.15a W2 (i));
+//   · `Platform.OS` is switchable (`mock.os`, reset to `'ios'`), and the `Text` mock forwards `accessibilityLiveRegion` as
+//     `data-live` — an Android live region was INVISIBLE to the old mock (Story 3.15a V1; the 6.36f `device run D1` mock).
 // Native layout, the Hindi label's wrapping and a real screen reader still need a device ([[feedback_record_unattested_no_backfill]]).
 import '@testing-library/jest-dom/vitest'
 import { existsSync, readFileSync } from 'node:fs'
@@ -27,7 +30,9 @@ const mock = vi.hoisted(() => ({
   announce: vi.fn(),
   router: { replace: vi.fn() },
   buttons: {} as Record<string, Record<string, unknown>>,
-  blur: () => undefined as void,
+  inputs: {} as Record<string, Record<string, unknown>[]>,
+  os: 'ios' as 'ios' | 'android',
+  blur:() => undefined as void,
   refocus: () => undefined as void,
 }))
 
@@ -59,17 +64,22 @@ vi.mock('react-native', async () => {
   return {
     ScrollView: (props: { children?: ReactNode; testID?: string }) => createElement('div', { 'data-testid': props.testID }, props.children),
     AccessibilityInfo: { announceForAccessibility: mock.announce },
-    Platform: { OS: 'ios' },
+    Platform: { get OS() { return mock.os } },
   }
 })
 vi.mock('tamagui', async () => {
   const { createElement } = await import('react')
-  type Props = { children?: ReactNode; testID?: string; accessibilityRole?: string; accessibilityLabel?: string }
+  type Props = { children?: ReactNode; testID?: string; accessibilityRole?: string; accessibilityLabel?: string;
+    accessibilityLiveRegion?: string; color?: string; fontSize?: string }
   const container = (props: Props) =>
     createElement('div', {
       'data-testid': props.testID,
       role: props.accessibilityRole === 'alert' ? 'alert' : undefined,
       'aria-label': props.accessibilityLabel,
+      // `data-live` ⇒ an Android live region (TalkBack re-reads one on a nearby re-render — 3.15 device pass V1, 6.36f D1).
+      'data-live': props.accessibilityLiveRegion,
+      'data-color': props.color,
+      'data-font-size': props.fontSize,
     }, props.children)
   return {
     YStack: container, Paragraph: container, Text: container, H2: container, View: container,
@@ -80,13 +90,15 @@ vi.mock('tamagui', async () => {
         'aria-label': accessibilityLabel,
         'data-accessible': accessible === true ? 'true' : undefined,
       }),
-    Input: (props: { value?: string; onChangeText?: (v: string) => void; testID?: string; accessibilityLabel?: string; maxLength?: number; keyboardType?: string; disabled?: boolean }) =>
-      createElement('input', {
+    Input: (props: { value?: string; onChangeText?: (v: string) => void; testID?: string; accessibilityLabel?: string; maxLength?: number; keyboardType?: string; disabled?: boolean }) => {
+      if (props.testID) (mock.inputs[props.testID] ??= []).push(props)
+      return createElement('input', {
         value: props.value ?? '', 'data-testid': props.testID, 'aria-label': props.accessibilityLabel, maxLength: props.maxLength,
         readOnly: props.disabled === true,
         inputMode: props.keyboardType === 'number-pad' ? 'numeric' : undefined,
         onChange: (e: { target: { value: string } }) => props.onChangeText?.(e.target.value),
-      }),
+      })
+    },
     Button: (props: Record<string, unknown> & { children?: ReactNode; onPress?: () => void; disabled?: boolean; testID?: string;
       accessibilityRole?: string; accessibilityLabel?: string; accessibilityState?: { disabled?: boolean } }) => {
       if (props.testID) mock.buttons[props.testID] = props
@@ -112,6 +124,14 @@ function renderStep() {
 }
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 0)) })
 const never = () => new Promise<never>(() => undefined)
+/** How many times `text` was spoken — the question and the code label are spoken too, so a bare call count would not do. */
+const spoken = (text: string | undefined) => mock.announce.mock.calls.filter(([s]) => s === text).length
+/** A POST held open until the leg settles it. */
+const held = () => {
+  const h: { resolve: (v: { recorded: true }) => void; reject: (e: unknown) => void } = { resolve: () => undefined, reject: () => undefined }
+  mock.assistedCodeRecord.mockReturnValue(new Promise((res, rej) => { h.resolve = res; h.reject = rej }))
+  return h
+}
 
 /**
  * Render with ⛔ code recorded; wait for the question — AND for its passive effects. `findByTestId` resolves as soon as the node is in
@@ -135,6 +155,8 @@ async function typed(code: string) {
 beforeEach(() => {
   for (const f of [mock.assistedCodeStatus, mock.assistedCodeRecord, mock.announce, mock.router.replace]) f.mockReset()
   mock.buttons = {}
+  mock.inputs = {}
+  mock.os = 'ios'
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
@@ -300,13 +322,14 @@ describe('AC6 — the code', () => {
 })
 
 describe('Review R1 — the code is frozen while its (permanent) capture is pending', () => {
-  it('during the POST the box is read-only and a change is IGNORED; the saved line follows the code that was SENT', async () => {
+  it('during the POST a change is IGNORED (the box stays editable — Story 3.15a W2 (i)); the saved line follows the code that was SENT', async () => {
     let resolve!: (v: { recorded: true }) => void
     mock.assistedCodeRecord.mockReturnValue(new Promise((r) => { resolve = r }))
     await typed('482913')
     fireEvent.click(screen.getByTestId('assisted-continue'))
     const input = screen.getByTestId('assisted-code')
-    expect(input).toHaveAttribute('readonly')
+    // 3.15a DL3: ⛔ locked (locking it dropped focus and the keyboard on Android) — R1 is the ignored change below.
+    expect(input).not.toHaveAttribute('readonly')
     fireEvent.change(input, { target: { value: '135790' } })
     expect(screen.getByTestId('assisted-code')).toHaveValue('482913')
     await act(async () => { resolve({ recorded: true }) })
@@ -315,7 +338,7 @@ describe('Review R1 — the code is frozen while its (permanent) capture is pend
     expect(mock.assistedCodeRecord).toHaveBeenCalledWith('482913')
   })
 
-  it('a 422 lands on the code that was SENT, and the box is editable again (CONTROL — the retry with a new code is sent)', async () => {
+  it('a 422 lands on the code that was SENT, and the box is editable (CONTROL — the retry with a new code is sent)', async () => {
     let reject!: (e: unknown) => void
     mock.assistedCodeRecord.mockReturnValueOnce(new Promise((_r, j) => { reject = j }))
     await typed('482913')
@@ -332,6 +355,102 @@ describe('Review R1 — the code is frozen while its (permanent) capture is pend
     fireEvent.click(screen.getByTestId('assisted-continue'))
     await settle()
     expect(mock.assistedCodeRecord).toHaveBeenLastCalledWith('135790')
+  })
+})
+
+describe('Story 3.15a V1 — the error lines are spoken ONCE, ⛔ a live region', () => {
+  // The 3.15 device pass (V1): TalkBack re-read the not-found line on the backspace that removed it — a live region is re-read on a
+  // nearby re-render, whether the line stays or is being removed (6.36f device run D1). The lines are plain text now, spoken by ONE
+  // `announceForAccessibility` per time an error is SET (DL2), on BOTH platforms.
+  const NOT_FOUND = words['signup.assisted.not_found']
+  const FORMAT = words['signup.assisted.format']
+
+  it.each(['android', 'ios'] as const)('%s: a 422 ⇒ the not-found line, ⛔ a live region, spoken ONCE; a backspace and a new code ⇒ ⛔ again; a second 422 ⇒ spoken again', async (os) => {
+    mock.os = os
+    mock.assistedCodeRecord.mockRejectedValueOnce(new ApiError(422, 'attribution.code_not_found', 'x'))
+    await typed('482913')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    const line = screen.getByRole('alert')
+    expect(line).toHaveTextContent(NOT_FOUND!)
+    expect(line).toHaveAttribute('data-testid', 'assisted-error-not-found')
+    expect(line).not.toHaveAttribute('data-live')
+    // The look `AnnouncedText kind="error"` gave it (AC 1).
+    expect(line).toHaveAttribute('data-color', '$red10')
+    expect(line).toHaveAttribute('data-font-size', '$2')
+    expect(spoken(NOT_FOUND)).toBe(1)
+    // The edit that clears the line (the device pass's re-read) — and typing a whole new code, ⛔ press.
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '48291' } })
+    await settle()
+    expect(screen.queryByRole('alert')).toBeNull()
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '135790' } })
+    await settle()
+    expect(spoken(NOT_FOUND)).toBe(1)
+    // A retry answered by a 422 again SETS the error again ⇒ spoken again (DL2 (a)).
+    mock.assistedCodeRecord.mockRejectedValueOnce(new ApiError(422, 'attribution.code_not_found', 'x'))
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(screen.getByRole('alert')).toHaveTextContent(NOT_FOUND!)
+    expect(spoken(NOT_FOUND)).toBe(2)
+  })
+
+  it.each(['android', 'ios'] as const)('%s: 5 digits + Continue ⇒ the format line spoken ONCE; the same press again ⇒ spoken again (a repeat); a backspace ⇒ ⛔ again', async (os) => {
+    mock.os = os
+    await typed('48291')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    const line = screen.getByRole('alert')
+    expect(line).toHaveTextContent(FORMAT!)
+    expect(line).toHaveAttribute('data-testid', 'assisted-error-format')
+    expect(line).not.toHaveAttribute('data-live')
+    expect(spoken(FORMAT)).toBe(1)
+    // The same 5 digits, pressed again with ⛔ edit between: the error is SET again ('format' → 'format') ⇒ spoken again.
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    expect(spoken(FORMAT)).toBe(2)
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '4829' } })
+    await settle()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(spoken(FORMAT)).toBe(2)
+    expect(mock.assistedCodeRecord).not.toHaveBeenCalled()
+  })
+
+  it.each(['android', 'ios'] as const)('%s: a server 400 ⇒ the format line spoken ONCE, ⛔ a live region', async (os) => {
+    mock.os = os
+    mock.assistedCodeRecord.mockRejectedValueOnce(new ApiError(400, 'request.validation', 'x'))
+    await typed('482913')
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    await settle()
+    const line = screen.getByRole('alert')
+    expect(line).toHaveTextContent(FORMAT!)
+    expect(line).not.toHaveAttribute('data-live')
+    expect(spoken(FORMAT)).toBe(1)
+  })
+})
+
+describe('Story 3.15a W2 (i) — the code box is never locked; R1 still holds', () => {
+  // ⚠ jsdom cannot show the native focus drop ([[project_jsdom_disabled_button_keeps_focus]]): on Android `disabled` → tamagui
+  // `editable: false` → RN `view.isEnabled = false`, which drops focus and closes the keyboard. This leg pins the CAUSE (the prop is
+  // never passed); the device pass (AC 6 (c)) proves the effect.
+  it('through a HELD POST the box never gets `disabled` / `readOnly` / `editable={false}`; a change is ignored; Continue is disabled (CONTROL)', async () => {
+    const h = held()
+    await typed('482913')
+    const log = () => mock.inputs['assisted-code'] ?? []
+    const atPress = log().length
+    expect(atPress).toBeGreaterThan(0)
+    fireEvent.click(screen.getByTestId('assisted-continue'))
+    // CONTROL: the POST is open (Continue disabled, with its spinner) and the box HAS re-rendered while it is.
+    expect(screen.getByTestId('assisted-continue')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByTestId('assisted-continue')).toBeDisabled()
+    expect(log().length).toBeGreaterThan(atPress)
+    fireEvent.change(screen.getByTestId('assisted-code'), { target: { value: '48291' } })
+    expect(screen.getByTestId('assisted-code')).toHaveValue('482913')
+    await act(async () => { h.reject(new ApiError(422, 'attribution.code_not_found', 'x')) })
+    expect(screen.getByRole('alert')).toHaveTextContent(words['signup.assisted.not_found']!)
+    expect(screen.getByTestId('assisted-continue')).not.toBeDisabled()
+    const locked = log().filter((p) => p.disabled === true || p.readOnly === true || p.editable === false)
+    expect(locked).toEqual([])
+    expect(mock.assistedCodeRecord).toHaveBeenCalledWith('482913')
   })
 })
 
@@ -431,12 +550,6 @@ describe('Review R2 — ⛔ navigation from a step that has lost focus', () => {
 })
 
 describe('Review P3 — a POST that settles while the step is BLURRED keeps its result; only the move waits for focus', () => {
-  const held = () => {
-    const h: { resolve: (v: { recorded: true }) => void; reject: (e: unknown) => void } = { resolve: () => undefined, reject: () => undefined }
-    mock.assistedCodeRecord.mockReturnValue(new Promise((res, rej) => { h.resolve = res; h.reject = rej }))
-    return h
-  }
-
   it('201 after blur: the result is KEPT but ⛔ spoken or moved on while blurred; at re-focus the saved line shows, is spoken, and THEN the step moves on, once', async () => {
     const h = held()
     await typed('482913')
@@ -445,7 +558,7 @@ describe('Review P3 — a POST that settles while the step is BLURRED keeps its 
     act(() => { mock.blur() })
     mock.announce.mockClear()
     await act(async () => { h.resolve({ recorded: true }) })
-    // KEPT: the box is unlocked and the stage is `saved` — but the line is not mounted, so nothing is spoken over another screen.
+    // KEPT: Continue is enabled again and the stage is `saved` — but the line is not mounted, so nothing is spoken over another screen.
     expect(screen.queryByText(words['signup.assisted.saved']!)).toBeNull()
     expect(mock.announce).not.toHaveBeenCalledWith(words['signup.assisted.saved'])
     await act(async () => { await vi.advanceTimersByTimeAsync(1_300) })
@@ -459,10 +572,14 @@ describe('Review P3 — a POST that settles while the step is BLURRED keeps its 
     expect(mock.assistedCodeRecord).toHaveBeenCalledTimes(1)
   })
 
+  // Both platforms (Story 3.15a): the line is no longer a live region, so the re-focus announce is the ONLY way TalkBack hears it.
   it.each([
-    ['422', new ApiError(422, 'attribution.code_not_found', 'x'), 'signup.assisted.not_found'],
-    ['400', new ApiError(400, 'request.validation', 'x'), 'signup.assisted.format'],
-  ])('%s after blur: the error line is kept and spoken at re-focus (⛔ while blurred), the box is editable again, ⛔ move', async (_label, err, key) => {
+    ['ios', '422', new ApiError(422, 'attribution.code_not_found', 'x'), 'signup.assisted.not_found'],
+    ['android', '422', new ApiError(422, 'attribution.code_not_found', 'x'), 'signup.assisted.not_found'],
+    ['ios', '400', new ApiError(400, 'request.validation', 'x'), 'signup.assisted.format'],
+    ['android', '400', new ApiError(400, 'request.validation', 'x'), 'signup.assisted.format'],
+  ] as const)('%s — %s after blur: the error line is kept and spoken at re-focus (⛔ while blurred), the box is editable, ⛔ move', async (os, _label, err, key) => {
+    mock.os = os
     const h = held()
     await typed('482913')
     fireEvent.click(screen.getByTestId('assisted-continue'))
@@ -490,7 +607,7 @@ describe('Review P3 — a POST that settles while the step is BLURRED keeps its 
     act(() => { mock.blur() })
     await act(async () => { h.reject(err) })
     expect(mock.router.replace).not.toHaveBeenCalled()
-    // The box is unlocked while the step waits for focus — a second press must ⛔ make a second request (`exitingRef`).
+    // Continue is enabled again while the step waits for focus — a second press must ⛔ make a second request (`exitingRef`).
     fireEvent.click(screen.getByTestId('assisted-continue'))
     await settle()
     expect(mock.assistedCodeRecord).toHaveBeenCalledTimes(1)

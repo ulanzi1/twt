@@ -22,7 +22,7 @@ story 3.15b"* (one shared helper + a lint fence + a device sweep, with a speech-
 
 # Story 3.15b: A Repeated Announcement Is Spoken Again on Android — One Shared Helper, a Lint Fence, and a Device Sweep
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -314,9 +314,9 @@ refused, stored or credited is unchanged. ⛔ Niyamavali check needed — no pre
   - [x] 8.3 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
         comment, a prepended `# last_updated:` entry (read the head LIVE across branches for the next free letter —
         [[project_sprint_status_ledger]]; the safe prepend — [[project_sprint_status_safe_prepend]]; verify the YAML parses).
-- [ ] **Task 9 — Gates**
-  - [ ] 9.1 Commit on `story/3-15b-…` only ([[feedback_commit_on_story_branch]]); check the branch before every commit.
-  - [ ] 9.2 `ci:local` on a FRESH container (`DATABASE_URL=…?sslmode=disable` — [[project_prepush_hook_inherits_5432]]). The push is
+- [x] **Task 9 — Gates**
+  - [x] 9.1 Commit on `story/3-15b-…` only ([[feedback_commit_on_story_branch]]); check the branch before every commit.
+  - [x] 9.2 `ci:local` on a FRESH container (`DATABASE_URL=…?sslmode=disable` — [[project_prepush_hook_inherits_5432]]). The push is
         BigDev's word (3.15a precedent).
 
 ## Dev Notes
@@ -482,6 +482,9 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
     stopped; container `twt-3-15b-pg` removed (with its `pariwar_wa_config` row); seed spec and both env copies deleted; `apps/mobile/android`
     never created (the installed dev client was used — native side unchanged); `git status` clean except this story's files.
 
+- **Task 9.** Every commit made on `story/3-15b-…` (branch checked before each). `ci:local PASSED — 41 job(s) green` at `264912aa`,
+  `DATABASE_URL` = a fresh `postgres:16-alpine` (:5461, `?sslmode=disable`, removed after) — run directly, ⛔ pushed (the push is
+  BigDev's word). `friction:check` passed on committed history (AC-4 read the `Story 3.15b disposition`).
 ### Completion Notes List
 
 - Story created (`bmad-create-story 3.15b`, 2026-11-23): call-site inventory by two read-only passes over `apps/mobile` at `78393b18`;
@@ -541,3 +544,4 @@ Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.15b`, in the story worktr
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15b`) in its own worktree off `78393b18` (row record `034c3aa5`). §0: ⛔ Panel question. DL1–DL8 decided by the author (DL1: the listen is a gate; DL2: Android only — changes 3.15a's iOS repeat behaviour; DL7: the epics AC (5) premise corrected by F9). Row `backlog` → `ready-for-dev`. ⛔ Code. |
 | 1.1 | 2026-11-23 | Validated (`bmad-create-story validate 3.15b`; BigDev: "all"). 3.15a LANDED (`3e3b888e`): Task 0.1 rebases and RE-PINS `baseline_commit` (the rebase rewrites `034c3aa5`). F5: `wa-notifications-screen-render`'s mock has no `Platform` — the file would throw once routed (Task 6.0); DL3 reads `Platform.OS` per call. F6 re-sorted by each leg's real platform (`nominee-marks-mode-render` and the memorial blur-then-focus leg are iOS; the `.each` legs change their `android` row only) + a new Android nominees leg. AC 3: a code-only grep (two comment lines in `lib/death-certificate-announce.ts` are expected and the file stays unedited). F12: `contact.tsx`'s local `announce` — aliased import. DL5: one `no-restricted-properties` rule (it already catches destructuring and the computed form in ESLint 9.39.4), the blind spots recorded, ⛔ `no-restricted-imports` in mobile's config. DL7: the epics AC (5) narrowing stated (⛔ fixed even if seen; owner NONE YET — none named at validate). F11: all of `apps/mobile/**` is member-facing. DL4: per-mount vs per-session count. Row stays `ready-for-dev`; ⛔ code. |
 | 1.2 | 2026-11-23 | Dev (`bmad-dev-story 3.15b`): rebased onto `3e3b888e`, baseline re-pinned to `d686c419`; the listen passed (BigDev: "All 3, clean"); the helper, the fence, the harness reset, 32 calls routed, tests updated (code `044e62d3`); device sweep (a)/(j)/(k)/(i) fixed, (b) not reproduced, (c)–(h) not reached; deferred-work V4 dated line + X1 (F9, owner NONE YET) + X2 (observed); friction-budget disposition. |
+| 1.3 | 2026-11-23 | `ci:local` 41 / 41 at `264912aa` on a fresh container (not pushed). Status → `review`. |

@@ -1137,7 +1137,11 @@ jobs:
     name: integration-tests (RLS + multi-tenant + events_log)
     runs-on: ubuntu-latest
     # 20 → 30 (BigDev 2026-10-24): PR #300 ran 19m48s; PR #301 was cancelled at 20m19s with every finished package green.
-    timeout-minutes: 30
+    # 30 → 45 (2026-11-23): run 45197309422 (PR #342) — the `Run integration tests` step PASSED in 29m20s and the job was
+    # then marked cancelled at 30m02s by this cap, with the test step already complete. Over 14 sampled runs (2026-11-04 → 2026-11-23) the job took 17.2–29.4m,
+    # and 20.0–29.4m on 2026-11-22 alone, so the spread is run-to-run, not steady growth. 45 is 1.5× the longest run seen,
+    # the ratio the 20 → 30 step used. ⚠ A cap cancels a PASSING job as readily as a failing one: a cancelled run is not a red run.
+    timeout-minutes: 45
     needs: install
     # Live-DB integration tests: events_log RLS policy regression +
     # cross-Pariwar adversarial leak test (Story 1.6) + events_log

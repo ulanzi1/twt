@@ -3,8 +3,10 @@
 # ci-local.sh — local mirror of .github/workflows/ci.yml
 #
 # Runs every CI job that needs no external service (18 jobs), plus the live-DB
-# `integration-tests` job (the 19th) when DATABASE_URL is set. Stopgap while
-# GitHub Actions is unavailable (account under review). Each job reproduces its
+# `integration-tests` job (the 19th) when DATABASE_URL is set. An ADVISORY developer tool since
+# ADR-0047 (ratified 2026-11-24): GitHub's ci.yml is the primary merge gate again, and the pre-push hook runs this only when
+# opted in (RUN_CI_LOCAL=1) — recommended for a migration, a gate script, or an edit to ci.yml / this file. (It was the
+# sanctioned merge gate while GitHub Actions was suspended — ADR-0017, superseded.) Each job reproduces its
 # ci.yml counterpart's ENVIRONMENT SEMANTICS — not a byte-identical command
 # string — so a green run here means a green run there. Where a job's text differs
 # from its ci.yml counterpart, the divergence is annotated AT THAT LINE and must be

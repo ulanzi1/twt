@@ -10,10 +10,10 @@
 
 | Mechanism | Status |
 |---|---|
-| GitHub Actions | ⚠️ **Suspended** (account under review since ~1.11). 1.11–1.17 merged via `pnpm ci:local` + pre-push hook (commit 480128e). |
-| `pnpm ci:local` | ✅ Active as merge gate. Mirrors all 15 ci.yml gate jobs sequentially. Integration jobs need `DATABASE_URL` on `:5433`. _(`cadence-check` retired — ADR-0025; `domain-invariants` added — AI-2-2; both 2026-06-24.)_ |
-| Pre-push hook | ✅ Active. `.githooks/pre-push` runs `ci:local` before every push. |
-| AI-4 | ✅ Done (ADR-0017 authored, adopting `ci:local` + pre-push as the sanctioned merge gate). ⚠️ Formal trustee ratification of ADR-0017 still pending. |
+| GitHub Actions | ✅ **Running** — restored after the suspension (mid-June to the end of July 2026, by our notes). `ci.yml` is the primary merge gate again (ADR-0047, ratified 2026-11-24, Decision 2026-11-24-499). Live check 2026-11-24: 828 runs; the last 400 `ci.yml` runs 353 success / 25 failure / 22 cancelled; the `main` run `45403292304` 41 of 41. _(Was, until 2026-11-24: "⚠️ **Suspended** (account under review since ~1.11). 1.11–1.17 merged via `pnpm ci:local` + pre-push hook (commit 480128e).")_ |
+| `pnpm ci:local` | ℹ️ **Advisory developer tool** since 2026-11-24 (ADR-0047). Recommended for a migration, a gate script, or an edit to `ci.yml` / `ci-local.sh`; integration jobs need `DATABASE_URL` on `:5433`. _(Was, until 2026-11-24: "✅ Active as merge gate. Mirrors all 15 ci.yml gate jobs sequentially. Integration jobs need `DATABASE_URL` on `:5433`." — with the note "`cadence-check` retired — ADR-0025; `domain-invariants` added — AI-2-2; both 2026-06-24.")_ |
+| Pre-push hook | ℹ️ **Advisory — off by default.** `.githooks/pre-push` runs `ci:local` only when opted in with `RUN_CI_LOCAL=1` (ADR-0047 cl.4; roster Row 56 (c)); `SKIP_CI_LOCAL=1` needs no justification (cl.5). _(Was, until 2026-11-24: "✅ Active. `.githooks/pre-push` runs `ci:local` before every push.")_ |
+| AI-4 | ✅ Done (ADR-0017 authored, adopting `ci:local` + pre-push as the sanctioned merge gate). ✅ ADR-0017 was ratified as interim policy on 2026-06-21 (Decision 2026-06-21-059) and is **superseded by ADR-0047, ratified 2026-11-24** (Decision 2026-11-24-499) — its sunset carried out. _(Was: "⚠️ Formal trustee ratification of ADR-0017 still pending." — already out of date from 2026-06-21.)_ |
 | AI-5 | ✅ Done — `timeout-minutes` + `cache-dependency-path: pnpm-lock.yaml` applied across **all** ci.yml jobs (not just 1.16x); `tsx` pinned to an exact version in `package.json`. |
 
 ---
@@ -109,7 +109,7 @@ Infrastructure is expressed in code / IaC but the `terraform apply` or activatio
 | **CI (per PR)** | lint · typecheck · test · build · db-check · contracts-check · crypto-check · tokens-theme-check · friction-budget · schema-diff · microcopy (admin) · governance-boundary · custom-field-governance · integration-tests | pii-scrape · benefit-mechanism (a)(c) · bundle-subsetting · friction-budget critical-render | — |
 | **DB runtime** | append-only events_log · RBAC fail-closed · RLS | — | — |
 | **Infra / edge** | Dokploy deploy pipeline | — | Cloudflare zone (DPDPA-gated) · KMS staging/prod · image signing · prod grants · GCS mirror |
-| **CI floor** | ci:local + pre-push | — | GitHub Actions (suspended) |
+| **CI floor** | GitHub Actions `ci.yml` (primary — ADR-0047); `ci:local` + pre-push are advisory _(was, until 2026-11-24: "ci:local + pre-push")_ | — | — _(was, until 2026-11-24: "GitHub Actions (suspended)")_ |
 
 ---
 

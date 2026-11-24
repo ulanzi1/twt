@@ -702,7 +702,10 @@ describe('fix-diff review round 6', () => {
     view.rerender(createElement(KnownPeopleFindScreen))
     resolveMatch({ matched: [0, 1] })
     await screen.findByText('find.matches_heading')
-    expect(mock.announce).toHaveBeenCalledWith('find.matches_count:2 find.select_hint:3')
+    // The announcement is made by an effect AFTER the commit that shows the heading, and `resolveMatch` above is called
+    // outside `act` - so the heading can be seen a tick before it is spoken. WAIT for it (a bare assertion here lost that
+    // race once on CI: the only call so far was "find.checking").
+    await waitFor(() => expect(mock.announce).toHaveBeenCalledWith('find.matches_count:2 find.select_hint:3'))
     // ⛔ read from the list as it stood when the check BEGAN (loading — the count alone, then a late "settle" line)
     expect(mock.announce).not.toHaveBeenCalledWith('find.matches_count:2')
   })

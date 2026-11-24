@@ -21,6 +21,9 @@
 #   3  origin/main is an ancestor of the tip — a clean fast-forward (main requires linear history; no rebase, no merge commit)
 #   4  no `ci.yml` run is in progress on main. ci.yml's concurrency group cancels an in-progress run for the same ref when a
 #      newer push arrives, so landing now would throw away the previous landing's evidence. Wait for it to finish.
+#   5  ADVISORY, never blocks: the newest FINISHED ci.yml run on main. When it is not `success` the script says so (run id,
+#      commit, conclusion) and goes on: a red main run is often a flake (the same commit was green on its PR run), and a
+#      block would stop every landing until some other run happened to pass. Look at it, re-run it, or fix the flake.
 #
 # Not covered: a direct push of a docs-only commit that has no PR (a records commit) — those stay a plain `git push`.
 # `code-escrow-mirror` is a separate workflow, not part of this gate.
@@ -34,9 +37,10 @@ GATE_INPUTS_RE='^(\.decision-log\.md|friction-budget\.md|docs/launch-gate-invent
 FAILED=0
 pass() { printf '  ✓ %s\n' "$*"; }
 fail() { FAILED=1; printf '  ✗ %s\n' "$*"; }
+warn() { printf '  ! %s\n' "$*"; }
 die() { printf '[land] %s\n' "$*" >&2; exit 2; }
 
-usage() { sed -n '3,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '3,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # ── the gh queries, as functions so they can be run (and tested) on their own ────────────────────────────────────────
 pr_info() { # PR -> "STATE<TAB>BASE<TAB>TIP<TAB>HEADREF"
@@ -51,6 +55,11 @@ run_summary() { # RUN ID -> "STATUS<TAB>CONCLUSION<TAB>HEADSHA<TAB>OK<TAB>TOTAL"
 }
 main_runs_in_progress() { # -> how many ci.yml runs on main are not completed
   gh run list --workflow "$WORKFLOW" --branch "$BASE" --limit 10 --json status --jq '[.[]|select(.status!="completed")]|length'
+}
+
+main_last_finished() { # -> "ID<TAB>CONCLUSION<TAB>HEADSHA" of the newest ci.yml run on main that has finished, or nothing
+  gh run list --workflow "$WORKFLOW" --branch "$BASE" --limit 10 --json databaseId,status,conclusion,headSha \
+    --jq '([.[]|select(.status=="completed")][0] // empty)|[.databaseId,.conclusion,.headSha]|@tsv'
 }
 
 docs_only() { # TIP -> 0 if every file the PR changes vs main is documentation (and none is a file a gate reads)
@@ -122,6 +131,16 @@ main() {
   local busy; busy=$(main_runs_in_progress) || die "cannot read the $WORKFLOW runs on $BASE"
   if [ "$busy" = 0 ]; then pass "no $WORKFLOW run is in progress on $BASE"
   else fail "$busy $WORKFLOW run(s) in progress on $BASE — a push now would cancel them; wait for them to finish"; fi
+
+  # 5 — advisory: how the newest finished run on main ended. It never changes the verdict.
+  local lrun lconcl lsha last
+  last=$(main_last_finished || true)
+  if [ -z "$last" ]; then warn "could not read the newest finished $WORKFLOW run on $BASE — look at it yourself"
+  else
+    IFS=$'\t' read -r lrun lconcl lsha <<< "$last"
+    if [ "$lconcl" = success ]; then pass "the newest finished $WORKFLOW run on $BASE ($lrun, ${lsha:0:8}) succeeded"
+    else warn "the newest finished $WORKFLOW run on $BASE ($lrun, ${lsha:0:8}) is $lconcl, not success — landing goes on (advisory), but look at it: is it a flake? re-run it, or fix it"; fi
+  fi
 
   if [ "$FAILED" != 0 ]; then printf '[land] NOT landing — a check failed.\n'; exit 1; fi
   if [ "$dry" = 1 ]; then printf '[land] dry run: every check passed; nothing pushed.\n'; exit 0; fi

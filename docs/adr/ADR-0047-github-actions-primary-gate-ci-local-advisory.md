@@ -70,6 +70,14 @@ The architecture's enforcement model (ADR-0017 Context: *"every PR must pass the
 - **Failure modes accepted** — (1) cl.1 is discipline, not provider enforcement (alternative D). (2) GitHub CI is not flake-free: run `44889919025` failed the `test` job on a push to `main` (2026-11-21) and the next `main` run, `44909175460`, passed; the cause was ⛔ not investigated here. (3) GitHub can withhold runs again (cl.6).
 - **Migration / pivot path** — Trigger: no `ci.yml` run for a pushed non-docs-only PR head. Steps: cl.6. Re-adopting a local gate as policy is a new ADR.
 
+> **Update 2026-11-24 (recorded after ratification; ⛔ no ratified sentence above is changed — the ADR-0017 "Update" precedent, Decision 2026-11-24-499):** *Failure modes accepted* (2) says GitHub CI "is not flake-free" and cites one run. Two further failure modes were found on PR #342's runs on 2026-11-23, **after this ADR was drafted**, and are named here because the list above does not.
+>
+> **(a) A cap can cancel a PASSING job.** Run `45197309422`: attempt 1 — the `Run integration tests` step passed in 29m20s and the job was then marked cancelled at 30m02s by `timeout-minutes: 30`; attempt 3 — cancelled again at 30m18s. `integration-tests` varies run to run (17.2–29.4 min over 14 sampled runs), so the cap was raised 30 → 45 (`d1373b0c`, PR #343); the `main` run on that commit took 30m08s and passed. The `test` job is different — its time has **grown** (6.5–10 min on 2026-10-12, 11.8–17.6 min now) — and its cap was raised 20 → 30 on 2026-11-24. ⚠ **A cancelled run is neither red nor green.** Under cl.1 a landing waits for `success`, so a cancel costs a re-run, ⛔ a wrong result: it never produced a false pass.
+>
+> **(b) A coincidence flake can fail a run.** Attempt 2 of the same run failed `nominee-member-link.spec.ts` AC9: the six digits it searched for (`398000`) appeared inside a timer value, `"responseTime":35.52739800000563`; the planted digits themselves were absent from the log. Fixed in `0dd17c10` (PR #344): the search now ignores the machine-made keys and UUID tokens and nothing else. ⚠ This one **was** a false red.
+>
+> Neither changes the decision. Both are visible in GitHub's run record, which is what cl.2 relies on, and both were found and fixed within a day. ⛔ Not covered: other coincidence flakes, and any job whose cap sits close to its run time — `test` was at 88% of its old cap; of the 40 jobs I could match to a cap, no other was above 50% in the 14 sampled runs.
+
 ## On ratification, apply (⛔ none of this is applied by drafting)
 
 1. ADR-0017: `Status: superseded`, `Superseded by:` this ADR, a Changelog row (byte-unchanged until then).

@@ -706,6 +706,31 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
 
   // ── AC9 — the number ───────────────────────────────────────────────────────────────────────────────────────────────
 
+  // The needles below are SIX digits, searched in a serialised blob. ⚠ That blob also holds numbers a MACHINE makes up — the clock
+  // (`time`), the process id, the request timer (`responseTime`, a float whose fraction is padded with noise) and random ids — and
+  // `398000` (the last six digits of the "miss" number) once turned up inside `"responseTime":35.52739800000563` (CI run
+  // 45197309422, attempt 2; the planted digits themselves were absent from that log). A needle that ends in zeros collides with
+  // that padding far more often than one in a million. So the search runs over what the code CHOSE to write: the three machine-made
+  // keys are dropped from each log line and UUID-shaped tokens are blanked. ⛔ NOTHING ELSE is dropped — a number planted in `msg`,
+  // `url`, `err`, a context value or a response body is still found, which is the leak this test exists to catch.
+  const UUID_TOKEN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+  const dropMachineNumbers = (chunk: string): string =>
+    chunk
+      .split('\n')
+      .map((line) => {
+        try {
+          const o = JSON.parse(line) as Json;
+          delete o.time;
+          delete o.pid;
+          delete o.responseTime;
+          return JSON.stringify(o);
+        } catch {
+          return line; // empty, or not JSON: searched exactly as written
+        }
+      })
+      .join('\n');
+  const asWritten = (value: unknown): string => JSON.stringify(value).replace(UUID_TOKEN, '<uuid>');
+
   it('AC9 — a planted mark number: ⛔ its digits in a log line, an audit line, the KMS line or an error body', async () => {
     const p = randomUUID();
     const d = await declarer(p);
@@ -720,8 +745,8 @@ describe.skipIf(!hasDatabase)('Story 6.36e — a nominee who is also a member (m
     const miss = await call('POST', LIFE_EVENTS, { tok, payload: body(mark(`+91${planted.replace('765', '000')}`)) });
     expect(miss.status).toBe(422);
     const dupBody = await call('POST', LIFE_EVENTS, { tok, payload: body(mark(planted), mark(`0${planted}`)) });
-    for (const r of [ok, miss, dupBody]) expect(r.raw).not.toContain(planted.slice(-6));
-    const sinks = JSON.stringify([logLines, kmsLines, t.auditSink.events]);
+    for (const r of [ok, miss, dupBody]) expect(asWritten(r.raw)).not.toContain(planted.slice(-6));
+    const sinks = asWritten([logLines.map(dropMachineNumbers), kmsLines, t.auditSink.events]);
     expect(sinks).not.toContain(planted.slice(-6));
     expect(sinks).not.toContain(planted.replace('765', '000').slice(-6));
     for (const e of t.auditSink.events.filter((x) => x.type.startsWith('member_nominee_links.'))) {

@@ -1,11 +1,11 @@
 # ADR-0017: Local CI mirror (`pnpm ci:local` + pre-push hook) as sanctioned merge gate during GitHub Actions suspension
 
-> **Status:** ratified
-> **Date:** 2026-06-21 (date entered current status)
+> **Status:** superseded
+> **Date:** 2026-11-24 (date entered current status)
 > **Author:** BigDev (Solo Builder), at Epic 1 retrospective AI-4 closure
 > **Ratifying trustees:** Dhiraj Rahul (Trustee 1) + Kalpana Bharti (Trustee 2) — Trustee Panel session 2026-06-21 (continuation of the ADR-0010 session). Ratified as **interim policy** until GitHub Actions is restored — a successor ADR is required on restoration (Decision 2026-06-20-052). Logged in `.decision-log.md` Decision 2026-06-21-059; consent sheet `docs/knowledge-transfer/adr-ratification-consent-sheet-2026-06-21.md`
 > **Supersedes:** —
-> **Superseded by:** —
+> **Superseded by:** [ADR-0047-github-actions-primary-gate-ci-local-advisory](ADR-0047-github-actions-primary-gate-ci-local-advisory.md) — ratified 2026-11-24 (Decision 2026-11-24-499). This ADR's end condition (GitHub Actions restored) is met; the body below is kept byte-unchanged as it was ratified.
 
 ## Context
 
@@ -108,5 +108,6 @@ When GitHub Actions is restored, this ADR is superseded by a successor entry tha
 
 | Date | Status flip | Author | Notes |
 |---|---|---|---|
+| 2026-11-24 | ratified → superseded | DR + KB (by ratifying ADR-0047), relayed by BigDev | Superseded by ADR-0047, ratified the same day. The sunset recorded on 2026-06-21 — *"a successor ADR is required when GitHub Actions is restored"* — is carried out: §4 (the developer's ledger note as the proof) and §2's bypass wording are replaced by ADR-0047 cl.2 and cl.5; §5 and the migration path were followed (Actions running and 41 of 41 on a PR, checked live 2026-11-23 and re-run 2026-11-24). `.decision-log.md` Decision 2026-11-24-499. Body kept byte-unchanged. |
 | 2026-06-21 | drafted → ratified | Dhiraj Rahul + Kalpana Bharti | Ratified at the 2026-06-21 Trustee Panel session as **interim policy** — discharges the "formal trustee ratification pending" caveat from the initial draft. **Sunset:** a successor ADR is required when GitHub Actions is restored (Decision 2026-06-20-052). `.decision-log.md` Decision 2026-06-21-059; consent sheet `adr-ratification-consent-sheet-2026-06-21.md`. Cascade applied 2026-06-22. |
 | 2026-06-20 | (initial draft) | BigDev (Solo Builder) | Authored at Epic 1 retrospective AI-4 closure — adopts `ci:local` + pre-push as sanctioned merge gate (formal trustee ratification pending); back-attests 1.11–1.17 reconciliation green 2026-06-17; records AI-5 hardening gaps as open follow-ups |

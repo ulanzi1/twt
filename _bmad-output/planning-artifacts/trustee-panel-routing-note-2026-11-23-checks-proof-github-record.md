@@ -1,8 +1,14 @@
 # Trustee Panel routing note — 2026-11-23 — what counts as proof that the checks ran
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-24 — OPTION A — Trustee-ratified (DR + KB, relayed by BigDev) — [Decision 2026-11-24-499](../../.decision-log.md#decision-2026-11-24-499)
 >
-> ⛔ **Nothing is recorded here yet.** ⛔ **NOT SENT.** Written 2026-11-23 by the session for BigDev. It is ⛔ **not** "shown to the Panel" until BigDev sends it ([[feedback_shown_to_panel_means_sent]]). When the Panel rules, transcribe the ruling into this block **and** into `.decision-log.md` as a new decision id. Everything below is then kept **unedited** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
+> **BigDev's relay, verbatim (2026-11-24, in session):** *"by DR and KB"* · *"option A"*. Asked whether they also signed off ADR-0047 itself (this note's second, conditional ask), BigDev answered: *"Answered A and also signed off ADR-0047"*. ⚠ DR + KB are expanded by this log's convention. ⛔ No sign-off page was written: the evidence is the relay, recorded as given.
+>
+> **What was ruled:** **A** — the Trust accepts the record GitHub keeps of the 41 automated checks as the proof that they ran, in place of the developer's own written note. ADR-0047 is `ratified`; ADR-0017 is `superseded`.
+>
+> **What the ruling does ⛔ NOT cover:** the hook's default and `scripts/ci-local.sh` (told, ⛔ asked: the author's, on BigDev's word, ⛔ changed yet); the required-checks switch on `main` (untested); and the date this note was SENT — BigDev gave none, and his relay implies it was sent.
+>
+> This block was written in place of "AWAITING PANEL RULING"; everything below it is kept **UNEDITED** as the question **as it was put** ([[feedback_supersede_never_reinterpret]]).
 
 ---
 

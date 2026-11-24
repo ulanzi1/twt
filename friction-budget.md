@@ -3179,3 +3179,9 @@ is member-facing for AC-4).
 ⛔ No measured delta is claimed ([[feedback_record_unattested_no_backfill]]). `apps/public` is ⛔ touched ⇒ the page-weight baseline is
 unchanged and is ⛔ ratcheted ([[project_friction_budget_baseline_ratchet]]). Written for changes COMMITTED at `044e62d3`; amended at code review for the session-boundary clear and the language-screen
 wording (committed with that patch); AC-4 reads it once this block is committed.
+
+**Story 6.36b-announce-test disposition (declaration affirmed - no new row, no row retired, no row amended; a TEST-ONLY change, 2026-11-25, branch `fix/known-people-find-announce-race`):** the only file changed is `apps/mobile/tests/unit/known-people-find-render.test.ts` - one assertion, now waited for with `waitFor`. It sits under `apps/mobile/`, which AC-4 counts as member-facing for every path, so the gate asks for a declaration; no screen, copy key, route, component or behaviour of the app changes.
+
+1. **Step added or removed:** none. No screen, button, copy key, route, order, field or wait changes; what a member sees, hears, enters or is refused is unchanged. Every existing row stands as written.
+2. **Friction added or removed:** none claimed, and no measured delta. The test asserted the matches-count announcement a moment before the screen made it and failed once on CI (`ci.yml` run 45441304530 on `main`, `cdda206a`; the same commit passed on its pull-request run); it now waits for the announcement the screen already makes. Not run on a device: nothing a member meets changed.
+3. **Cost:** none. `apps/public` is not touched, so the page-weight baseline is unchanged.

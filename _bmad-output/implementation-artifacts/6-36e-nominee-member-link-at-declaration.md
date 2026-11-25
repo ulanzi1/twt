@@ -56,7 +56,7 @@ validate findings (Change Log).
 
 # Story 6.36e: A Member May Mark a Nominee Who Is Also a Member — Found From Their Own Contacts, Told in the App — So That Nominee Is Never Among the Five, Even if They Sign In on a Different Number From the One Declared `[PRIMITIVE]` `[SURFACE]`
 
-Status: review
+Status: done
 
 > ✅ **v1.4 (2026-10-24): Task 0.4 DONE — AC0 MET. ⭐ Next: Task 1 (the table).**
 >
@@ -1398,6 +1398,7 @@ i18n copy test, `member-links.spec.ts`); `deferred-work.md`: the supersession it
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-11-25 | 1.21 | **Status `review` → `done` — BigDev's call** (asked: flip now, as 3.15c and 3.15d were flipped at landing, or keep `review` until roster Row 31 (j) closes, as recorded at 1.20; BigDev: *"1"* — flip now). The story LANDED 2026-10-24 (1.20: PR #302, `ec6de2b8`); its follow-up test fix landed as PR #344 (2026-11-24). Row 1.20's "Status stays `review`" is kept as history and SUPERSEDED here. ⛔ a go-live claim: merged ≠ live. **Still open, unchanged by this flip:** roster Row 31 (j) — counsel's written basis and the privacy-policy line (the Panel half is met, `-396`) — still gates go-live on the roster; the iOS / VoiceOver pass is uncovered. Ledger `2026-11-25n`. |
 | 2026-10-24 | 1.20 | LANDED on main by fast-forward (BigDev: *"land it"*): `origin/main` `6c4c1e47` → `ec6de2b8`, PR #302 MERGED, the branch tip's SHA unchanged. Status stays `review` — roster Row 31 (j) (counsel's written basis + a privacy-policy line) still gates go-live; iOS / VoiceOver uncovered. |
 | 2026-10-24 | 1.19 | HINDI APPROVED for the four lines `-402` / `-403` changed (BigDev: *"your Hindi draft is fine. Use it."*, no edit); the follow-up push passed the hook (`ci:local` 36 / 36 at `92fb4365`). Every Hindi string the story touches is now approved. Status stays `review`. |
 | 2026-10-24 | 1.18 | PR #302 OPENED (`ci:local` 36 / 36 green at `21eecf3e`); **6.36b screen + `label.not_me_note` decided** (BigDev): `2026-10-24-402` (the intro says what each named person is asked + a generic purpose; ⛔ the order; `label.not_me_note` an action prompt) and `-403` (two lines → "no longer available"), each committed alone before its copy; pins + a `known_people` guard (en + hi). New Hindi awaits BigDev. Status stays `review`. |

@@ -7,8 +7,14 @@
 // PII (envelope-encrypted); storing the raw string client-side would undermine that posture. Members
 // re-enter their address if they leave mid-flow (review D1). Dignified validation (UX-DR55 Pattern 4)
 // — a calm prompt, never aggressive. Bilingual via @twt/i18n; accessible.
+//
+// The error line (`address_required`, and the failure of the request) is spoken ONCE each time it is SET, on both platforms —
+// Story 3.15d (S1, 3.15c-dev Y1). It is plain `Text` (`accessibilityRole="alert"`, ⛔ a live region), and ONE effect keyed on a
+// counter that every set bumps (`showError`, the only writer — a clear never bumps) calls `announce()`. As `AnnouncedText` an
+// identical re-set (Submit with the field empty, Submit again) was sent NOTHING. ⛔ `t` / the words in the effect's deps: `useT()`
+// is a fresh function each render and a language switch must not re-speak a standing line (`error` holds the translated string).
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ScrollView } from 'react-native'
 
 import { useLocale, useT } from '@twt/i18n/react'
@@ -17,8 +23,8 @@ import { Stack, useRouter } from 'expo-router'
 import { Button, H2, Input, Paragraph, Spinner, Text, YStack } from 'tamagui'
 
 import { lifeEventsDeathReportedKey } from '../../lib/death-report-copy'
+import { announce } from '../../lib/announce'
 import { memberAuth } from '../../lib/member-api'
-import { AnnouncedText } from '../../components/peer-request/announce'
 
 export default function AddressScreen() {
   const t = useT()
@@ -29,6 +35,18 @@ export default function AddressScreen() {
   const [addressLine, setAddressLine] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Bumped by EVERY set of the line, the same words included — ⛔ by a clear.
+  const [errorSet, setErrorSet] = useState(0)
+
+  function showError(text: string): void {
+    setError(text)
+    setErrorSet((n) => n + 1)
+  }
+
+  // Counter-only deps (⛔ `error`, ⛔ `t`): the body reads this render's line; it runs on mount too, where `error` is null.
+  useEffect(() => {
+    if (error) announce(error)
+  }, [errorSet])
 
   function onChange(v: string): void {
     setError(null)
@@ -37,7 +55,7 @@ export default function AddressScreen() {
 
   async function onSubmit(): Promise<void> {
     if (!addressLine.trim()) {
-      setError(t('lifeEvents.address_required'))
+      showError(t('lifeEvents.address_required'))
       return
     }
     setBusy(true)
@@ -48,7 +66,7 @@ export default function AddressScreen() {
       router.back()
     } catch (e) {
       // Story 6.38 (DL19): a claim filed for this member's death refuses a direct change — its own calm line.
-      setError(t(lifeEventsDeathReportedKey(e) ?? 'lifeEvents.error_generic'))
+      showError(t(lifeEventsDeathReportedKey(e) ?? 'lifeEvents.error_generic'))
     } finally {
       setBusy(false)
     }
@@ -75,7 +93,11 @@ export default function AddressScreen() {
             {t('lifeEvents.address_field_help')}
           </Paragraph>
 
-          {error ? <AnnouncedText text={error} kind="error" color="#C0392B" /> : null}
+          {error ? (
+            <Text fontSize="$2" color="#C0392B" accessibilityRole="alert" testID="address-error">
+              {error}
+            </Text>
+          ) : null}
 
           <Button
             theme="accent"

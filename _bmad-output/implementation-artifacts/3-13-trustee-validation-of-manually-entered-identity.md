@@ -439,8 +439,20 @@ unchanged side meanwhile.
         apps` — re-read every F-fact whose file moved. Re-read the next free migration number, decision id and roster row across EVERY ref
         and worktree (`git branch -a`, `git worktree list`, `git ls-tree`) — ⛔ HEAD only. Check row `3-14`'s status: if it has started, read
         its story file for its reading of `kyc_verified` and reconcile with N1 BEFORE 0.2.
-  - [ ] 0.2 Put DL1–DL16 to BigDev (the question dialog; recommended option first), with DL6 (who), DL8b (how staff reach the member),
+  - [x] 0.2 Put DL1–DL16 to BigDev (the question dialog; recommended option first), with DL6 (who), DL8b (how staff reach the member),
         DL12 (the words) and DL14 (the export) as separate questions. Record the answers verbatim in this file.
+        ⭐ 2026-11-21 — DL6 *"District + Pariwar Admin (Recommended)"*; DL8b *"Ask Panel: show full mobile"* (⇒ PQ3; built masked).
+        ⭐ 2026-11-25 — the rest, at `74839891` after the v1.5 validate, in two dialogs (BigDev: "put Task 0.2 questions to me"),
+        EVERY answer the recommended option, ⛔ a change to any DL's text:
+        · DL1–DL5 + N1a (one question): *"Accept all as written (Recommended)"*.
+        · DL7 + DL9 + DL10: *"Accept as written (Recommended)"* — ⛔ attempt limit; all six document kinds; ⛔ undo.
+        · DL12 (its own question; the strings shown word for word in the preview, as DL12 lists them): *"Approve as shown
+          (Recommended)"* ⇒ DL12's text is APPROVED, including the 6.39 label *"Typed in at joining, checked by staff"*.
+        · DL14 (its own question): *"Include, no staff names (Recommended)"*.
+        · DL8 (detail read, masked mobile, live-row note only): *"Accept as written (Recommended)"*.
+        · DL11 (queue; ⛔ name / mobile; the `lock-in` widening of FR-2 named in the question): *"Accept, incl. lock-in (Recommended)"*.
+        · DL13 + DL15 + DL16: *"Accept all as written (Recommended)"* — staff notifications stay out of scope.
+        ⇒ DL1–DL16 all ANSWERED; Task 0.4's entry records them as answered.
   - [x] 0.3 Write the Panel note from the TEMPLATE (§0 first; plain question; the one deciding fact; options with an honest cost; evidence
         last): `_bmad-output/planning-artifacts/trustee-panel-routing-note-<date>-3-13-checking-a-typed-in-identity.md`, PQ1 + PQ2 (+ PQ3
         iff DL8b (b)). PQ1's deciding fact is the at-death consequence, stated first. Commit it ALONE. ⛔ "Sent" until BigDev says it went
@@ -589,3 +601,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 | 1.3 | 2026-11-21 | Task 0.3: the Panel note SENT (BigDev: "sent to panel"); awaiting the ruling. Channel, send time and whether the text sent equals `9f7da520` ⛔ recorded. ⛔ Code. |
 | 1.4 | 2026-11-21 | Follow-up Panel note WRITTEN (⛔ sent), `a18654f2`: Q1 option E + Q4, after the registration proposal (author-commit `2026-11-21-482`, on `governance/registration-change-2026-11-21`). The story is reshaped by a re-validate once both notes are ruled. ⛔ Code. |
 | 1.5 | 2026-11-25 | Rebased onto `origin/main` `74839891` (179 commits; backup `backup/3-13-pre-rebase-2026-11-25`; changed-line sets verified equal) and re-validated (`bmad-create-story validate 3.13`, BigDev: "All 7"). Re-pinned `90535934` → `74839891`; every F1–F9 / F10a file unchanged. (1) AC15 / Task 6 / Trap 10: the merge proof is the PR's GitHub `ci.yml` run (ADR-0047, `-499`), ⛔ `ci:local`; a plain push touches ⛔ database. (2) F10 / Task 0.5 / Task 1: next migration `0218`, decision `-501`, roster row 57. (3) N1a (new): staff-checkable strengths are ONE total map `satisfies Record<MemberKycVerificationStrength, boolean>` — DL2 / DL4 read it; AC7 iterates `MEMBER_KYC_VERIFICATION_STRENGTHS`, ⛔ "3 strengths" (3.16 mints a new value). (4) `-482` decisions 1 / 6 and BigDev's 2026-11-25 answers in the rulings table; F12 and Task 0.3 annotated (follow-up ⛔ sent; build now, typed-in only). (5) DL13 / Task 4 / AC14 / Project Structure: the `RootLayout.tsx` nav link (#69 (g)). (6) Pin note. (7) Ledger letter `2026-11-21s` → `2026-11-21aq`; `21w` collision with `story/6-39a-…` recorded, open. ⛔ Code. |
+| 1.6 | 2026-11-25 | Task 0.2 DONE: DL1–DL5 + N1a, DL7 / DL9 / DL10, DL8, DL11 (incl. the `lock-in` widening), DL12 (words approved verbatim), DL13 / DL15 / DL16 and DL14 (export without staff names) put to BigDev in two question dialogs — every answer the recommended option, recorded verbatim at Task 0.2. Next: Task 0.4 (decision `-501`, committed alone), 0.5 (roster Row 57), 0.6. ⛔ Code. |

@@ -37,7 +37,7 @@ re-derived at `90535934`" is perishable — Task 0.1 re-derives them.
 
 # Story 3.13: Staff Check a Typed-In Identity While the Member Is Alive
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -435,7 +435,10 @@ unchanged side meanwhile.
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
-  - [ ] 0.1 `git fetch origin`; confirm `merge-base --is-ancestor 90535934 HEAD`; `git diff --name-only 90535934..origin/main -- packages
+  - [x] 0.1 ⭐ DONE 2026-11-25 at `74839891` by the v1.5 validate (the header's RE-PINNED note + F10): fetched; `origin/main` is an
+        ancestor of HEAD (rebased); every F-fact file unchanged since `90535934`; numbers re-read across every ref and worktree (migration
+        `0218`, decision `-501`, roster 57); row `3-14` still `backlog` with ⛔ story file on any ref ⇒ ⛔ reconcile owed.
+        (As written:) `git fetch origin`; confirm `merge-base --is-ancestor 90535934 HEAD`; `git diff --name-only 90535934..origin/main -- packages
         apps` — re-read every F-fact whose file moved. Re-read the next free migration number, decision id and roster row across EVERY ref
         and worktree (`git branch -a`, `git worktree list`, `git ls-tree`) — ⛔ HEAD only. Check row `3-14`'s status: if it has started, read
         its story file for its reading of `kyc_verified` and reconcile with N1 BEFORE 0.2.
@@ -470,14 +473,21 @@ unchanged side meanwhile.
         ⭐ 2026-11-25 (validate v1.5) — follow-up `a18654f2` still ⛔ SENT (BigDev: *"Not sent yet"*); neither note ruled at `74839891`
         (⛔ decision cites either). BigDev: *"Build now, typed-in only (Recommended)"* — dev-story may start once Task 0.2 / 0.4 are done;
         it builds DL7 option A for `self_declared` members only, and N1a keeps 3.16's new strength out until the reshape.
-  - [ ] 0.4 Author-commit decision entry (`<date>-<next>`): DL1–DL16 as answered, the §0 split, the `-424` match quoted verbatim, the
+  - [x] 0.4 Author-commit decision entry (`<date>-<next>`): DL1–DL16 as answered, the §0 split, the `-424` match quoted verbatim, the
         Policy meaning, PQ1/PQ2/PQ3 open + built side; committed ALONE. ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 Roster row (next free number — 57 at `74839891`; 54 at the old pin, since taken by 12.5) `identity-validation-live` with legs: (a) PQ1 ruled and DL7's vocabulary matches
+        ⭐ 2026-11-25 — [`2026-11-25-501`](../../.decision-log.md#decision-2026-11-25-501), committed ALONE `f6987b0d` (BigDev: "yes,
+        write 0.4, 0.5 and 0.6"); `-500` was the highest id on every ref. It also carries N1a and the follow-up's Q1 E / Q4 as open.
+  - [x] 0.5 ⭐ 2026-11-25 — roster **Row 57** `identity-validation-live` (legs (a), (b), (b2), (c), (d) as below, plus **(e)** the
+        follow-up note sent, ruled and this story re-validated against it — added because the follow-up postdates this task's text);
+        `deferred-work.md` section *"governance of story 3-13-… — Task 0.5"* (PQ1, PQ2, PQ3, the follow-up — each open with its trigger);
+        a dated line on the `3-13` sprint row. (As written:) Roster row (next free number — 57 at `74839891`; 54 at the old pin, since taken by 12.5) `identity-validation-live` with legs: (a) PQ1 ruled and DL7's vocabulary matches
         the ruling; (b) PQ2 ruled (and, if B/C, its row built); (b2) PQ3 ruled (and, if B, the audited number read built; if C, its row
         built); (c) a real-browser pass of the admin module; (d) row `3-14` built (until
         then the check changes only the at-death half). `deferred-work.md`: PQ1 / PQ2 / PQ3 as open; a dated comment on the `3-13` sprint row.
-  - [ ] 0.6 Sprint row `3-13-…` `ready-for-dev → in-progress` (map only; the ledger entry is written once at the end —
+  - [x] 0.6 Sprint row `3-13-…` `ready-for-dev → in-progress` (map only; the ledger entry is written once at the end —
         [[project_sprint_status_ledger]], safe prepend — [[project_sprint_status_safe_prepend]]).
+        ⭐ 2026-11-25 — flipped. One governance ledger line (`2026-11-25q`) records Tasks 0.4–0.6, as Tasks 0.2 / 0.3 had theirs; the
+        dev-story's single entry is still written at the end. ⇒ **Task 0 is COMPLETE; AC1 is met** — dev-story starts at Task 1.
 - [ ] **Task 1 — Schema (AC2, AC13).** Hand-authored migrations (⛔ `db:generate` — [[project_live_db_test_gotchas]]): each new enum
       value set in its own file if 0212's precedent did so, then the table + RLS + FORCE + the F10a grants (SELECT, INSERT, column UPDATE
       on the two supersession columns + the note) + the per-command UPDATE policy + CHECKs + the guard (note left out of the frozen list) +
@@ -602,3 +612,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 | 1.4 | 2026-11-21 | Follow-up Panel note WRITTEN (⛔ sent), `a18654f2`: Q1 option E + Q4, after the registration proposal (author-commit `2026-11-21-482`, on `governance/registration-change-2026-11-21`). The story is reshaped by a re-validate once both notes are ruled. ⛔ Code. |
 | 1.5 | 2026-11-25 | Rebased onto `origin/main` `74839891` (179 commits; backup `backup/3-13-pre-rebase-2026-11-25`; changed-line sets verified equal) and re-validated (`bmad-create-story validate 3.13`, BigDev: "All 7"). Re-pinned `90535934` → `74839891`; every F1–F9 / F10a file unchanged. (1) AC15 / Task 6 / Trap 10: the merge proof is the PR's GitHub `ci.yml` run (ADR-0047, `-499`), ⛔ `ci:local`; a plain push touches ⛔ database. (2) F10 / Task 0.5 / Task 1: next migration `0218`, decision `-501`, roster row 57. (3) N1a (new): staff-checkable strengths are ONE total map `satisfies Record<MemberKycVerificationStrength, boolean>` — DL2 / DL4 read it; AC7 iterates `MEMBER_KYC_VERIFICATION_STRENGTHS`, ⛔ "3 strengths" (3.16 mints a new value). (4) `-482` decisions 1 / 6 and BigDev's 2026-11-25 answers in the rulings table; F12 and Task 0.3 annotated (follow-up ⛔ sent; build now, typed-in only). (5) DL13 / Task 4 / AC14 / Project Structure: the `RootLayout.tsx` nav link (#69 (g)). (6) Pin note. (7) Ledger letter `2026-11-21s` → `2026-11-21aq`; `21w` collision with `story/6-39a-…` recorded, open. ⛔ Code. |
 | 1.6 | 2026-11-25 | Task 0.2 DONE: DL1–DL5 + N1a, DL7 / DL9 / DL10, DL8, DL11 (incl. the `lock-in` widening), DL12 (words approved verbatim), DL13 / DL15 / DL16 and DL14 (export without staff names) put to BigDev in two question dialogs — every answer the recommended option, recorded verbatim at Task 0.2. Next: Task 0.4 (decision `-501`, committed alone), 0.5 (roster Row 57), 0.6. ⛔ Code. |
+| 1.7 | 2026-11-25 | Task 0 COMPLETE (BigDev: "yes, write 0.4, 0.5 and 0.6"): 0.1 ticked against the v1.5 re-derivation; 0.4 — Decision `2026-11-25-501` committed ALONE `f6987b0d`; 0.5 — roster Row 57 `identity-validation-live` (legs (a)–(e); (e) = the follow-up note) + a `deferred-work.md` section for PQ1–PQ3 and the follow-up; 0.6 — row `ready-for-dev → in-progress`, Status in-progress. AC1 met. ⛔ Code. |

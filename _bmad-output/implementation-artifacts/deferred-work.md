@@ -4,6 +4,27 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: governance of story 3-13-trustee-validation-of-manually-entered-identity — Task 0.5 (2026-11-25)
+
+Under [Decision 2026-11-25-501](../../.decision-log.md#decision-2026-11-25-501). Each item is OPEN, is built on its narrow side meanwhile,
+and blocks GO-LIVE through roster Row 57 (`identity-validation-live`), ⛔ the build or the merge.
+
+- **PQ1 — what staff must see before they confirm a typed-in identity.** OPEN — routing note
+  `trustee-panel-routing-note-2026-11-21-3-13-checking-a-typed-in-identity.md` Q1 (`9f7da520`), SENT 2026-11-21, ⛔ ruled. Built: option
+  A (an original government photo ID, in person or on a video call; ⛔ number, ⛔ copy — Story 3.13 DL7). Trigger: the ruling ⇒ Row 57 (a);
+  B drops `photo_id_video_call`, C adds an employer confirmation, D withdraws the write route.
+- **PQ2 — is the member told when staff cannot confirm?** OPEN — the same note, Q2. Built: A (nothing new is said; DL16). Trigger: B or C ⇒
+  a new row for member-facing words (Hindi + English, Panel-approved) ⇒ Row 57 (b).
+- **PQ3 — may the District Admin and Pariwar Admin see a member's full mobile to arrange the check?** OPEN — the same note, Q3 (BigDev's
+  DL8b, 2026-11-21: *"Ask Panel: show full mobile"*). Built: A (masked only — DL8). Trigger: B ⇒ one audited number read on the detail
+  route; C ⇒ its own row ⇒ Row 57 (b2).
+- **Follow-up — Q1 option E (an uploaded PAN + masked Aadhaar + selfie) and Q4 (how long copies are kept).** WRITTEN, ⛔ SENT —
+  `trustee-panel-routing-note-2026-11-21-3-13-follow-up-uploaded-documents.md` (`a18654f2`; BigDev, 2026-11-25: *"Not sent yet"*).
+  ⛔ built in 3.13 (row `3-16`'s upload store). Trigger: sent and ruled ⇒ `bmad-create-story validate 3.13` (the reshape: DL7
+  `uploaded_documents`, N1a classifies 3.16's strength, DL8 shows the uploads) ⇒ Row 57 (e).
+
+---
+
 ## Deferred from: code review of story 3-15d-remaining-standing-lines-spoken-again-and-a-language-switch-speaks-one-line (2026-11-25)
 
 - **A successful posting save whose awaited districts refetch FAILS flips the picker to the districts error screen and speaks it before "Saved".** [`apps/mobile/components/workplace/WorkplacePicker.tsx` `save()` — `await Promise.all([queryClient.invalidateQueries({ queryKey: workplaceKeys.all }), …])` before `onSaved()`; the `if (districts.isError)` early return has no `busy` guard] `workplaceKeys.all` covers the districts query, so a network drop right after the POST succeeds puts the query in `error` (data kept) while `save()` is still awaiting: the picker renders the districts error screen and S7's line is spoken, then `onSaved()` runs. **Pre-existing** — the old `AnnouncedText` spoke the same line when that screen mounted; 3.15d does not change it (the count moves once, `isFetching` clears with it, so it is spoken once, as before). Found by the Edge Case Hunter, `bmad-code-review 3.15d`. Fix direction (⛔ chosen): skip the districts screen while `busy`, or stop awaiting the workplace invalidation before `onSaved()` (the 6.36c comment there explains why the PROMPTS invalidation is awaited — the workplace one has no such reason recorded). Trigger: any edit to `save()` or to the districts early return. Owner: NONE YET.

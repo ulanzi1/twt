@@ -37,7 +37,7 @@ re-derived at `90535934`" is perishable — Task 0.1 re-derives them.
 
 # Story 3.13: Staff Check a Typed-In Identity While the Member Is Alive
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -497,7 +497,7 @@ unchanged side meanwhile.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
+- [x] **Task 0 — Governance FIRST (AC1).** ⛔ No `apps/` / `packages/` file before 0.4 is committed.
   - [x] 0.1 ⭐ DONE 2026-11-25 at `74839891` by the v1.5 validate (the header's RE-PINNED note + F10): fetched; `origin/main` is an
         ancestor of HEAD (rebased); every F-fact file unchanged since `90535934`; numbers re-read across every ref and worktree (migration
         `0218`, decision `-501`, roster 57); row `3-14` still `backlog` with ⛔ story file on any ref ⇒ ⛔ reconcile owed.
@@ -556,48 +556,48 @@ unchanged side meanwhile.
         [[project_sprint_status_ledger]], safe prepend — [[project_sprint_status_safe_prepend]]).
         ⭐ 2026-11-25 — flipped. One governance ledger line (`2026-11-25q`) records Tasks 0.4–0.6, as Tasks 0.2 / 0.3 had theirs; the
         dev-story's single entry is still written at the end. ⇒ **Task 0 is COMPLETE; AC1 is met** — dev-story starts at Task 1.
-- [ ] **Task 1 — Schema (AC2, AC13).** Hand-authored migrations (⛔ `db:generate` — [[project_live_db_test_gotchas]]): each new enum
+- [x] **Task 1 — Schema (AC2, AC13).** Hand-authored migrations (⛔ `db:generate` — [[project_live_db_test_gotchas]]): each new enum
       value set in its own file if 0212's precedent did so, then the table + RLS + FORCE + the F10a grants (SELECT, INSERT, column UPDATE
       on the two supersession columns + the note) + the per-command UPDATE policy + CHECKs + the guard (note left out of the frozen list) +
       the one-way-supersession trigger, all at birth. The field class `MEMBER_IDENTITY_VALIDATION_FIELD_CLASS` in
       `encryption/field-classes.ts` + its export. Drizzle schema `packages/domain/src/schema/member_identity_validations.ts` with
       `piiColumn(1, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS)` on the note (the PII gate reads it). Migration number `0218` at `74839891` (F10 — re-read at Task 0.1);
       journal `when` strictly after every sibling's ([[project_sibling_migration_when_order_shared_db]]).
-- [ ] **Task 2 — Domain (AC3, AC4, AC5, AC6, AC7).**
-  - [ ] 2.1 `packages/domain/src/kyc/`: `isKycIdentityVerified` (N1) + `markKycTrusteeVerified` (DL2). Lockstep test with 6.39 (AC7).
-  - [ ] 2.2 `packages/domain/src/member/identity-validation.ts` (transport-free): `recordIdentityValidation(client, input)` — in order:
+- [x] **Task 2 — Domain (AC3, AC4, AC5, AC6, AC7).**
+  - [x] 2.1 `packages/domain/src/kyc/`: `isKycIdentityVerified` (N1) + `markKycTrusteeVerified` (DL2). Lockstep test with 6.39 (AC7).
+  - [x] 2.2 `packages/domain/src/member/identity-validation.ts` (transport-free): `recordIdentityValidation(client, input)` — in order:
         `lockAndReadDeathReport` (DL5) → read state + overlay + KYC standing → DL4 eligibility → insert row (supersede) → DL2 flag (confirmed)
         → `projectMemberState` marker (DL3) → `kyc_completed` if `pending-valid` + confirmed. Reads: `listIdentityCheckQueue` (DL11,
         `clampLimit`), `readIdentityCheckDetail` (ciphertext as stored — the API decrypts).
-  - [ ] 2.3 `member.identity_validation_recorded` in `MEMBER_EVENT_TYPES` / `MEMBER_EVENT_PAYLOAD_SCHEMAS` / `@twt/events` registry; update
+  - [x] 2.3 `member.identity_validation_recorded` in `MEMBER_EVENT_TYPES` / `MEMBER_EVENT_PAYLOAD_SCHEMAS` / `@twt/events` registry; update
         the tests that enumerate member events (F4) — ⛔ weaken any.
-  - [ ] 2.4 Unit + live-DB tests for AC3–AC6 (live tests on your own container, DB named `twt_dev`).
-- [ ] **Task 3 — RBAC + API (AC8, AC9, AC10, AC12).**
-  - [ ] 3.1 Key + grants + catalog note in `permissions.ts` (the house REUSE-CHECK paragraph) and `roles.ts`; contracts mirror if one exists.
+  - [x] 2.4 Unit + live-DB tests for AC3–AC6 (live tests on your own container, DB named `twt_dev`).
+- [x] **Task 3 — RBAC + API (AC8, AC9, AC10, AC12).**
+  - [x] 3.1 Key + grants + catalog note in `permissions.ts` (the house REUSE-CHECK paragraph) and `roles.ts`; contracts mirror if one exists.
         (v1.9) BOTH keys (DL6, DL6a), one bump 65 → 66, 96 → 98; the grant comments name `-502` Q3 and why `field_worker` / `block_admin`
         are ⛔ granted (F13 — an inert grant is refused, the roles.ts house rule).
-  - [ ] 3.2 The scope preHandler (DL6, F7a): a per-file copy of 6.18's `resolveQueueScope` shape — the caller's own grant scope decides the
+  - [x] 3.2 The scope preHandler (DL6, F7a): a per-file copy of 6.18's `resolveQueueScope` shape — the caller's own grant scope decides the
         dimension; a district-ceiling caller is checked against `getMemberCurrentDistrict(…, deps.clock())` (per-member routes) or their own
         district (the list); a pariwar-ceiling caller at `pariwar`. Server-derived only; ⛔ client district or dimension.
-  - [ ] 3.3 `@twt/contracts`: request/response DTOs (`.strict()`, snake/camel per house), the error codes, the list's bounded `limit`.
-  - [ ] 3.4 `apps/api/src/modules/identity-checks/` (routes with the chain inlined, handlers, decrypt per F8's `adminMemberSearch`
+  - [x] 3.3 `@twt/contracts`: request/response DTOs (`.strict()`, snake/camel per house), the error codes, the list's bounded `limit`.
+  - [x] 3.4 `apps/api/src/modules/identity-checks/` (routes with the chain inlined, handlers, decrypt per F8's `adminMemberSearch`
         precedent, the `createKeyedStore` idempotency shape of DL13); register in `server.ts`; OpenAPI emit. ⛔ gate enrolment exists to
         do (F7b) — AC12's tests carry it.
-  - [ ] 3.5 API integration tests for AC8–AC12 (including the pariwar-admin-on-an-unposted-member leg and the per-route chain tests).
-- [ ] **Task 4 — Admin UI (AC11, AC14).** `apps/admin/src/modules/identity-checks/` (queue page, detail, two forms), i18n-en entries
+  - [x] 3.5 API integration tests for AC8–AC12 (including the pariwar-admin-on-an-unposted-member leg and the per-route chain tests).
+- [x] **Task 4 — Admin UI (AC11, AC14).** `apps/admin/src/modules/identity-checks/` (queue page, detail, two forms), i18n-en entries
       (DL12), router entry + the `RootLayout.tsx` nav link (DL13); (v1.9) the reveal press (DL6a); the 6.39 label change; vitest. ⚠ jsdom traps ([[project_jsdom_disabled_button_keeps_focus]],
       [[project_tanstack_instant_mock_hides_notready_flip]]).
-- [ ] **Task 5 — Erasure + export (AC13).** `anonymize.ts` scrub (`encSentinel` under the new field class, beside the
+- [x] **Task 5 — Erasure + export (AC13).** `anonymize.ts` scrub (`encSentinel` under the new field class, beside the
       `claimMembershipChecks` scrub); export section (⛔ staff attribution) + contract + fixture. ⛔ guard migration — the guard was written
       at birth (Task 1).
-- [ ] **Task 6 — Gates.** Run the source fence in `apps/api`'s unit suite ([[project_source_fence_lives_in_api_unit_suite]]); the PII
+- [x] **Task 6 — Gates.** ⭐ 2026-11-25 — local gates ALL green (below); the PR's GitHub CI run is OWED AT LANDING by BigDev's answer (*"At landing, after review"*) — AC15's CI clause stays open until then. Run the source fence in `apps/api`'s unit suite ([[project_source_fence_lives_in_api_unit_suite]]); the PII
       gate; microcopy; `domain-accessor-invariants`; the live-DB suites on your own container; then the PR's GitHub CI run (AC15 — the
       proof; `scripts/land.sh --dry-run <pr>` before landing, [[feedback_land_prs_by_fast_forward]]). `ci:local` optional.
-- [ ] **Task 7 — Records (AC15).**
-  - [ ] 7.1 Story file: Dev Agent Record, File List, Change Log.
-  - [ ] 7.2 DL15's stale comments (F1 schema comment; F5's `membership-check-approval.ts` doc line).
-  - [ ] 7.3 Sprint row → `review`; ONE ledger entry (safe prepend; verify the YAML parses and the row count holds).
-  - [ ] 7.4 `deferred-work.md`: annotate the `-424` Q2 (b) item (*"Trigger fired by 3.13; ⛔ breached — the story writes ⛔ identity
+- [x] **Task 7 — Records (AC15).**
+  - [x] 7.1 Story file: Dev Agent Record, File List, Change Log.
+  - [x] 7.2 DL15's stale comments (F1 schema comment; F5's `membership-check-approval.ts` doc line).
+  - [x] 7.3 Sprint row → `review`; ONE ledger entry (safe prepend; verify the YAML parses and the row count holds).
+  - [x] 7.4 `deferred-work.md`: annotate the `-424` Q2 (b) item (*"Trigger fired by 3.13; ⛔ breached — the story writes ⛔ identity
         field (N2)"*), the 2026-10-31 identity item (*"staff step built by 3.13; the lock-in exit is still 3-14's"*), the 2026-08-10
         collision item row 4 (*"a reviewer surface exists (3.13); rows 1–3 unchanged"*); add DL10's undo gap as a new item.
 
@@ -665,12 +665,150 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 
 ### Agent Model Used
 
+Claude Opus 5.5 (`claude-opus-5-5`), `bmad-dev-story 3.13 on worktree`, 2026-11-25, in this story's own worktree on
+`story/3-13-trustee-validation-of-manually-entered-identity` (based on `origin/main` `74839891`, 0 behind at start).
+
 ### Debug Log References
+
+- Live DB: the story's OWN fresh container `twt-3-13-pg` (postgres 16.14, `127.0.0.1:5461`, DB `twt_dev`), migrated through `0218`.
+  ⛔ `:5432`, ⛔ `:5433`.
+- Fixture fixes while writing tests (⛔ code defects): `events_log.actor_id` is a uuid (a string actor id failed 22P02);
+  `member_moderation_actions` needs escalation columns for a `terminate` row (0099's CHECK) — the queue test seeds moderation EVENTS
+  instead, which is also what the queue now reads (Completion note 2).
+- `pnpm turbo run typecheck` caught one test-only typing error that `tsc --noEmit` in `apps/api` did not (the package's typecheck
+  includes `tests/`); fixed in the spec.
+- **Task 6 gates (2026-11-25, at the records commit's parent):** `pnpm turbo run typecheck` 20 / 20; lint on domain / contracts / api /
+  admin / events / jobs 18 / 18; `schema:check`, `microcopy:check`, `domain-invariants:check`, `member-state:check`,
+  `claim-adjudication-human-actor:check`, `access-wrapper:check`, `governance-boundary:check`, `kyc-provider:check`, `pii:check` — PASS;
+  the source fence (`apps/api` unit suite, 1207 passed); admin vitest 2393 / 2393; contracts 1817 / 1817. ⭐ The live suite with CI's
+  OWN command (`pnpm turbo run test --concurrency=1 --force --filter=@twt/domain … --filter=@twt/public`) on the story's container:
+  **24 / 24 tasks** — domain 8969 passed (1 skipped), api 3435 (1 skipped), jobs 2402, public 826, channels 468, validity-service 284,
+  niyamavali-engine 144, events 50, queue 4. ⛔ `ci:local` run (optional under ADR-0047).
+- Mutation checks (each reverted, `cmp` against a scratch backup): (a) the scope preHandler forced to a fixed `district` gate ⇒ 3 API
+  tests red, incl. AC8's Pariwar-Admin-on-an-unposted-member leg (the F7a trap) — so that leg bites; (b) `requireAdminSession` dropped
+  from the reveal route ⇒ AC12's per-route chain test red (Trap 12 — the only guard).
 
 ### Completion Notes List
 - Ultimate context engine analysis completed - comprehensive developer guide created (create-story, 2026-11-21, at `90535934`).
+- **Task 1 (AC2)** — migration `0218_member-identity-validations.sql` (journal `when` 1797998880000, after 0217's) hand-authored in
+  0212's statement order: text + CHECK vocabularies (0212 used ⛔ pgEnum), RLS + FORCE, SELECT/INSERT + the column-level UPDATE on
+  `superseded_at` / `superseded_reason` / `note_ciphertext`, the per-command UPDATE policy, the partial-unique one-live index, the
+  append-only guard AT BIRTH (note left out of the frozen list) and the one-way supersession trigger. Schema, policy file, branded id
+  `MemberIdentityValidationId`, field class `MEMBER_IDENTITY_VALIDATION_FIELD_CLASS`. 18 live-DB backstop tests (every CHECK refused by
+  its own NAME, the NULL traps, grants, owner-level guard, one-way, scrub as `twt_app`, TRUNCATE, cascade; AC9's ⛔-number-column leg).
+- **Task 2 (AC3–AC7)** — `kyc/identity-verified.ts`: `isKycIdentityVerified` (N1) + `KYC_STRENGTH_STAFF_CHECKABLE` (N1a, `satisfies
+  Record<MemberKycVerificationStrength, boolean>`) + the derived list; the lockstep test iterates `MEMBER_KYC_VERIFICATION_STRENGTHS`
+  (7 inputs); `membership-check-approval.ts` imports nothing new (comment only). `markKycTrusteeVerified` — the narrow conditional
+  UPDATE (⛔ the UPSERT). `member.identity_validation_recorded` (`.strict()`, `trigger`/`actor` literals) in the vocabulary (24 → 25,
+  both count fixtures moved together) and `@twt/events`' registry. `member/identity-validation.ts`: `recordIdentityValidation` (shape →
+  ⭐ death lock FIRST → state / overlay / KYC → DL4 → supersede + insert → flag → marker → `kyc_completed` only from `pending-valid`),
+  `assertIdentityCheckAwaited` (DL6a's purpose check, the same lock + DL4), `listIdentityCheckQueue` (raw SQL, `clampLimit`, district
+  pushed into SQL), `readIdentityCheckDetail` (ciphertext as stored). 28 live tests: AC3 byte-identical KYC row + a forced failure
+  after the UPDATE (reason asserted, both writes seen inside the tx as the control, then gone after the rollback); AC4 both states;
+  AC5 twelve refused cases each with a passing control + a "⛔ INSERT/UPDATE issued" recorder proof; AC6 the first statement is the
+  intake lock and the key is held (`pg_locks`), refused under a standing report, released by an innocence finding.
+  `git diff` of `member/state.ts` is EMPTY (N7).
+- **Task 3 (AC8–AC10, AC12)** — catalog 65 → 66, 96 → 98 (`member.validate_identity`: DA + PA; `member.reveal_mobile_for_identity_check`:
+  DA, PA, verifier, helpline; super admin derived; ⛔ field_worker / block_admin, the house inert-grant rule). Contracts
+  `members/identity-check.ts` (+ lockstep test). `apps/api/src/modules/identity-checks/`: four routes, plain literal paths, the chain
+  inlined, `namedRateLimits` per-session ceilings (the admin precedent DL13 asked to find — read / write). 22 API tests: AC12 per
+  route; AC8 / AC8a loops over `rbac.defaultRoleBundles` (13), each role granted at its own ceiling; DA other district / unposted 403,
+  PA unposted 200 + 201; queue scope; AC8a two presses ⇒ two lines, ⛔ the digits in any line; refused once confirmed / under a
+  standing report; AC9 six 400s; AC10 detail (masked mobile, live note only, ONE read line with ⛔ name / DOB / note / number);
+  idempotent replay. `forced-pagination.spec.ts` green on `app.swagger()`.
+- **Task 4 (AC11, AC14)** — `apps/admin/src/modules/identity-checks/` (queue, detail, two forms, `RevealMobile`), router entries,
+  `RootLayout.tsx` nav link `nav-identity-checks`, client calls in `api/client.ts` (`apiFetch` is module-private), hooks beside the
+  module. The 6.39 label now reads *"Typed in at joining, checked by staff"*. 15 vitest tests. Microcopy gate green (its config scans
+  `apps/admin/src/**`). Admin suite 2393 / 2393.
+- **Task 5 (AC13)** — `anonymizeMember` scrubs the note where present (its unit test 35 → 36 statements, 32 → 33 tables, a new leg);
+  live RTBF spec (2 notes → sentinel, note-less row untouched, every other column unchanged); the export's `ProfileSection.identityChecks`
+  (contract + assembler in one change; jobs strict-parse leg; contracts fixture leg refusing any staff attribution).
+- **Task 7.2 / 7.4** — the two stale comments (F1 schema, F5 6.39 leaf); `deferred-work.md`: the `-424` Q2 (b) item (fired, ⛔ breached),
+  the 2026-10-31 identity item, the 2026-08-10 collision table row 4, and a NEW item for DL10's undo gap.
+- **Interpretations the reviewer should look at (each within the DLs, ⛔ a new decision):**
+  1. DL1 / DL9 — what each `not_confirmed` reason carries: a mismatch names evidence AND document; `no_document_shown` names the
+     evidence (how they met), ⛔ document; `member_not_reached` names neither (they never met). DL1's text said only "document_kind NULL for
+     `no_document_shown`"; `member_not_reached` with an evidence kind would record a meeting that never happened.
+  2. DL11's "`terminated`" in the QUEUE reads the member's latest `member.moderation.*` action EVENT (the stream the writer's overlay
+     folds), ⛔ `member_moderation_actions` — one source for the list and the writer.
+  3. DL11 + DL6a — the queue is gated on the REVEAL key only (every holder of the check key holds it too); the response carries
+     `can_check` so a verifier / helpline sees the press and ⛔ an Open button.
+  4. DL6 — the scope preHandler prefers a pariwar-or-broader grant over a district one (6.18 preferred district first): a caller who
+     holds both is never narrowed to one district.
+  5. AC12 "OpenAPI regenerated" — `pnpm contracts:emit-openapi` re-emits `openapi/v1.yaml` BYTE-IDENTICAL: the contracts emitter
+     registers ⛔ path for these routes (6.39's routes are not registered either). The route surface is the app's `swagger()`, which
+     `forced-pagination.spec.ts` walks.
+  6. DL14's "a new strict section" is a new strict FIELD of `profile.json` (`ProfileSection.identityChecks` — the 12.5b
+     `partnerOfferVisits` precedent), ⛔ a new export file.
+  7. The reveal's transaction is ROLLED BACK (nothing is written; the advisory lock is transaction-scoped).
+- **Two answers from BigDev at the dev-story's end (one question dialog, 2026-11-25):**
+  (a) AC11 — the admin strings DL12 did ⛔ list (form labels, document names, loading / error lines, the nav link), shown word for word
+  in the dialog's preview: *"Approve as shown (Recommended)"* ⇒ APPROVED; the `// (label)` markers were removed from
+  `modules/identity-checks/i18n-en.ts` and its header records the approval. ⇒ AC11 met.
+  (b) AC15 / Task 6's GitHub leg — *"At landing, after review (Recommended)"* ⇒ the PR's `ci.yml` run at the tip (ADR-0047, the merge
+  proof) is OWED AT LANDING, the 6.39 / 3.15d order; ⛔ pushed, ⛔ PR opened in this session. AC15's CI clause stays OPEN until then.
 
 ### File List
+
+- `_bmad-output/implementation-artifacts/3-13-trustee-validation-of-manually-entered-identity.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `apps/admin/src/api/client.ts`
+- `apps/admin/src/modules/claim-verification/i18n-en.ts`
+- `apps/admin/src/modules/identity-checks/IdentityCheckDetailPage.tsx`
+- `apps/admin/src/modules/identity-checks/IdentityChecksPage.tsx`
+- `apps/admin/src/modules/identity-checks/RevealMobile.tsx`
+- `apps/admin/src/modules/identity-checks/format.ts`
+- `apps/admin/src/modules/identity-checks/hooks.ts`
+- `apps/admin/src/modules/identity-checks/i18n-en.ts`
+- `apps/admin/src/router.tsx`
+- `apps/admin/src/routes/RootLayout.tsx`
+- `apps/admin/src/routes/login-next.ts`
+- `apps/admin/tests/identity-checks.test.tsx`
+- `apps/api/src/audit/audit-sink.ts`
+- `apps/api/src/context.ts`
+- `apps/api/src/modules/identity-checks/crypto.ts`
+- `apps/api/src/modules/identity-checks/handlers.ts`
+- `apps/api/src/modules/identity-checks/routes.ts`
+- `apps/api/src/server.ts`
+- `apps/api/src/types.ts`
+- `apps/api/tests/integration/identity-checks/identity-checks.spec.ts`
+- `apps/jobs/tests/data-export.test.ts`
+- `packages/contracts/src/data-export/data-export.ts`
+- `packages/contracts/src/members/identity-check.ts`
+- `packages/contracts/src/members/index.ts`
+- `packages/contracts/tests/members-identity-check.test.ts`
+- `packages/domain/migrations/0218_member-identity-validations.sql`
+- `packages/domain/migrations/meta/_journal.json`
+- `packages/domain/src/claim/membership-check-approval.ts`
+- `packages/domain/src/data-export/assemble.ts`
+- `packages/domain/src/encryption/field-classes.ts`
+- `packages/domain/src/encryption/index.ts`
+- `packages/domain/src/ids/index.ts`
+- `packages/domain/src/kyc/identity-verified.ts`
+- `packages/domain/src/kyc/index.ts`
+- `packages/domain/src/kyc/profile-write.ts`
+- `packages/domain/src/member/anonymize.ts`
+- `packages/domain/src/member/events.ts`
+- `packages/domain/src/member/identity-validation.ts`
+- `packages/domain/src/member/index.ts`
+- `packages/domain/src/policies/index.ts`
+- `packages/domain/src/policies/member-identity-validation-rls.ts`
+- `packages/domain/src/rbac/permissions.ts`
+- `packages/domain/src/rbac/roles.ts`
+- `packages/domain/src/schema/index.ts`
+- `packages/domain/src/schema/member_identity_validations.ts`
+- `packages/domain/src/schema/member_kyc_profiles.ts`
+- `packages/domain/tests/integration/member/identity-validation-rtbf.spec.ts`
+- `packages/domain/tests/integration/member/identity-validation.spec.ts`
+- `packages/domain/tests/integration/rls/member-identity-validation-policy-regression.spec.ts`
+- `packages/domain/tests/kyc/identity-verified.test.ts`
+- `packages/domain/tests/member/life-events-markers.test.ts`
+- `packages/domain/tests/member/personal-event-assertion.test.ts`
+- `packages/domain/tests/member/rtbf-anonymize.test.ts`
+- `packages/domain/tests/rbac/permissions.test.ts`
+- `packages/domain/tests/rbac/roles.test.ts`
+- `packages/events/src/registry.ts`
 
 ## Change Log
 
@@ -687,3 +825,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 | 1.8 | 2026-11-25 | Both Panel notes RULED — Decision `2026-11-25-502` (Trustee-ratified, DR + KB, committed alone `6cb66cef`): PQ1 A + follow-up Q1 E, Q4 B, PQ2 C (⛔ our suggestion), PQ3 B widened to four more roles (the Panel's). Ruled banner above the Panel questions; Task 0.3 annotated; ruling blocks filled in both notes; Row 57 / `deferred-work.md` dated lines; new row `3-13a`. The text below the banner is AS PROPOSED — the reshape re-validate is owed before Task 1. ⛔ Code. |
 | 1.9 | 2026-11-25 | RE-VALIDATED after the rulings (`bmad-create-story validate 3.13`, the reshape; BigDev R1–R4, all as recommended; author-commit `2026-11-25-503`). F13 (traced at `74839891`): `verifier` district / `helpline_operator` pariwar ceilings fit; `field_worker` has ⛔ login and ⛔ keys (13.3); a member has ⛔ block (`no-member-attribute`, permanent) ⇒ ⛔ `block_admin` scope; the `-328` precedent shows on page load, `-502` Q3 B needs a press. NEW DL6a — `member.reveal_mobile_for_identity_check` (DA, PA, verifier, helpline; SA derived), one audited POST per press, refused once the purpose ends (DL4) or a death is reported; also reads the queue; field worker + Block Admin DEFERRED, the Panel TOLD (R3). DL7: A stands; E's review + `uploaded_documents` mint are row `3-16`'s (R1). N5 / N6 / Policy meaning / DL8b / DL11 / DL12 (R4 words) / DL13 (4th route) / DL16 / AC8 (98 keys) / AC8a (new) / AC9 / AC10 / AC12 / AC14 / Task 3.1 / Task 4 / Traps 6–7 / "does not do" amended in place, each marked (v1.9). Catalog 65 → 66 once, 96 → 98. Dev-story may start Task 1. ⛔ Code. |
 | 1.10 | 2026-11-25 | The told note (`72fd4561`) SENT (BigDev: "told note sent to panel"); Task 0.3 annotated; Row 57 dated line. ⛔ Code. |
+| 1.11 | 2026-11-25 | DEV-STORY (`bmad-dev-story 3.13 on worktree`): Tasks 1–7 done — migration `0218` + schema / RLS / field class / id; the domain (N1 helper + N1a map, the narrow flag writer, the marker event, the writer with the death lock first, the reveal's purpose check, the queue, the detail); catalog 65 → 66 (98 keys); four admin routes; contracts; the admin module + nav link + the 6.39 label; the RTBF scrub + the export field; DL15 comments; `deferred-work.md` annotated (+ the DL10 undo item). BigDev: the extra admin strings *"Approve as shown"*; the PR *"At landing, after review"* (AC15's CI clause open until landing). Live suite 24 / 24 on the story's own container. Status review; ledger `2026-11-25u`. ⛔ Pushed. |

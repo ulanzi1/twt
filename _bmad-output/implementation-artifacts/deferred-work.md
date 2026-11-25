@@ -4,6 +4,18 @@ Tracks findings deferred from code reviews and other quality gates. Each section
 
 ---
 
+## Deferred from: dev-story of story 3-13-trustee-validation-of-manually-entered-identity (2026-11-25)
+
+- **⛔ undo of a wrong identity confirmation (Story 3.13 DL10).** [`packages/domain/src/member/identity-validation.ts` — DL4 refuses an
+  already-verified member, so ⛔ later act supersedes a `confirmed`; `member/state.ts` has ⛔ `active → pending-valid` arm] Once staff
+  confirm a typed-in identity, ⛔ route makes it unverified again — and 6.39's after-death identity half would then be skipped for that
+  member's claim. A wrongful confirmation found later is the fraud register's (Story 6.22; *"identity fraud"* is ground 2 of Niyamavali
+  §8.5), ⛔ built here. ⛔ Panel question yet: what the Trust owes a member whose confirmation was wrong is the Panel's when a story
+  proposes the undo. Owner: NONE YET (BigDev assigns). Trigger: the first wrongful confirmation found, a story touching the fraud
+  register's outcomes, or row `3-14` (once lock-in ends, a confirmation also decides coverage).
+
+---
+
 ## Deferred from: governance of story 3-13-trustee-validation-of-manually-entered-identity — Task 0.5 (2026-11-25)
 
 Under [Decision 2026-11-25-501](../../.decision-log.md#decision-2026-11-25-501). Each item is OPEN, is built on its narrow side meanwhile,
@@ -1179,6 +1191,11 @@ Each is real and traced, but waits on a caller or a house-wide pass, and none is
   correction writes a new version (`member_nominee_versions` — the old one kept) — whether the staff screens SHOW the old version with
   the new one is ⛔ traced. Trigger: the first story that lets staff change a member's record (any field), any change to the KYC profile
   write path, or the next story touching the nominee-correction screens.
+  - **2026-11-25 — Trigger FIRED by Story 3.13; ⛔ breached.** 3.13 adds a staff write on the KYC profile (`markKycTrusteeVerified`,
+    `packages/domain/src/kyc/profile-write.ts`), but it writes ⛔ identity field (N2): only `trustee_verified` false → true and
+    `updated_at` — ⛔ through the latest-wins UPSERT. Every staff act is an append-only row (`member_identity_validations`, migration
+    0218 — a later act supersedes, ⛔ removes) and the act is refused while a death report stands (DL5). The item stays open for the
+    first story that lets staff change a name, a date of birth or a photo.
 
 ---
 
@@ -1210,6 +1227,9 @@ Escalated to BigDev in session, and to the Panel only as the one fact behind Q1 
   `kyc_manual_fallback` flag (default — manual AVAILABLE, `manual-fallback-seam.ts`), and any member whose DigiLocker check fails on a
   stale certificate (`providers/digilocker/staleness-policy.ts`). Whether a deployment has real DigiLocker secrets (else the fixture
   provider — `config.ts`) is ⛔ visible in the repo. Trigger: the Panel's answer to Q1 (a) of the 2026-10-31 note, or before members go live.
+  - **2026-11-25 — the staff step is built by Story 3.13** (`member.validate_identity`; `recordIdentityValidation` writes the first
+    `trustee_verified = true`, and from `pending-valid` a staff `member.kyc_completed`). The lock-in exit is still row `3-14`'s (⛔ built)
+    — so a confirmed member stays in `lock-in` today; the confirmation changes the after-death identity half (6.39) only.
 
 ---
 
@@ -10977,7 +10997,7 @@ architecture already commits to, recorded here because nothing else records it.
 | 1 | **Signup dedup** | `resolveMembersByMobile` (`member-auth.repo.ts:82`) resolves by `mobile_blind_index` **and nothing else**. A different mobile ⇒ a different blind index ⇒ zero rows ⇒ `priorInThisPariwar` undefined ⇒ signup proceeds clean. No 409, no 403, no flag. |
 | 2 | **The moderation rejoin lock** | Keys on `moderationStatus === 'terminated'` (`signup.handlers.ts:119`). A **suspended** member has no rejoin lock at all — not even on the same mobile. The lock is also scoped to `priorInThisPariwar`, so it is per-Pariwar by construction. |
 | 3 | **Automatic (DigiLocker) KYC** | The Aadhaar reference is discarded at the provider boundary — `mapper.ts:89` calls `maskAadhaar(referenceId)`, keeping the **last 4 digits only**. `member_kyc_profiles.aadhaar_masked_id` is nullable Tier-3 `text` with **no unique constraint** (migration `0024:33`). Last-4 is not an identity key (1-in-10⁴ collisions). |
-| 4 | **Manual KYC** | Stores name/dob/photo as `self_declared`, `trusteeVerified: false` (`kyc.handlers.ts:416`). **Nothing ever writes `true`** — the schema comment says "Epic 4 flips `trustee_verified`"; Epic 4 closed and no writer exists. `find apps/admin/src -ipath "*kyc*"` is **empty**: there is no reviewer surface. "Manual KYC" today means *self-declared and unreviewed*. |
+| 4 | **Manual KYC** | Stores name/dob/photo as `self_declared`, `trusteeVerified: false` (`kyc.handlers.ts:416`). **Nothing ever writes `true`** — the schema comment says "Epic 4 flips `trustee_verified`"; Epic 4 closed and no writer exists. `find apps/admin/src -ipath "*kyc*"` is **empty**: there is no reviewer surface. "Manual KYC" today means *self-declared and unreviewed*. **2026-11-25 — a reviewer surface exists (Story 3.13: `apps/admin/src/modules/identity-checks/`, staff confirm a typed-in identity against an original photo ID); rows 1–3 unchanged** — the check is of the person in front of staff, ⛔ a duplicate-identity search. |
 
 ### The control is architecturally committed and unbuilt
 

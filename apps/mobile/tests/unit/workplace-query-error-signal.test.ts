@@ -23,6 +23,8 @@
 // If the count does ⛔ move on any leg here, STOP and re-derive: a local counter bumped from the retry handler is ⛔ a
 // substitute (S7 is also set by the mount-time refetch and by `invalidateQueries` after a refusal — neither passes through Retry).
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createElement, type ReactNode } from 'react'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -33,7 +35,7 @@ vi.mock('../../lib/session-context', () => ({ useSession: () => ({ session: { me
 // `lib/query-client.ts` builds a persister over MMKV at import; the test reads only its `defaultOptions`.
 vi.mock('../../lib/mmkv', () => ({ mmkvStorage: { getItem: () => null, setItem: () => undefined, removeItem: () => undefined } }))
 
-import { useWorkplaceDistrictsQuery, useWorkplaceSearchQuery, usePostingHistoryQuery } from '../../components/workplace/useWorkplaceQueries'
+import { useWorkplaceDistrictsQuery, useWorkplaceSearchQuery, usePostingHistoryQuery, workplaceKeys } from '../../components/workplace/useWorkplaceQueries'
 import { queryClient as appQueryClient } from '../../lib/query-client'
 
 afterEach(() => cleanup())
@@ -75,6 +77,12 @@ function harness() {
 describe('the premise: the app retries ONCE (one press = one final error)', () => {
   it("lib/query-client.ts' default is retry: 1, and the workplace hooks set none of their own", () => {
     expect(appQueryClient.getDefaultOptions().queries?.retry).toBe(1)
+    // The hooks' own options, by SOURCE (comments stripped): a `retry` / `retryDelay` key there would override the default above.
+    const hooks = readFileSync(resolve(__dirname, '../../components/workplace/useWorkplaceQueries.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|\s)\/\/.*$/gm, '$1')
+    expect(hooks).toContain('useInfiniteQuery(') // the pin reads the hooks file (a moved file would make the next line vacuous)
+    expect(hooks).not.toMatch(/\bretry(Delay)?\b/) // a key, a shorthand (`retry,`) — ⚠ an options object spread in from ANOTHER module is ⛔ seen
   })
 })
 
@@ -136,6 +144,32 @@ describe('an INFINITE query with data — the Show-more line (S2: usePostingHist
       }
     })
 
+    it(`${name}: a page-1 REFETCH that fails after a Show-more failure moves the SAME count with the Show-more flag FALSE (the child unmounts)`, async () => {
+      const { client, wrapper } = harness()
+      fn.mockReset()
+      fn.mockResolvedValueOnce({ items: [], nextCursor: 'c2' })
+      fn.mockImplementation(() => offline())
+      const { result } = renderHook(() => tracked(use()), { wrapper })
+      try {
+        await waitFor(() => expect(result.current.isSuccess).toBe(true))
+        await act(async () => {
+          await result.current.fetchNextPage()
+        })
+        await waitFor(() => expect(result.current.isFetchNextPageError).toBe(true))
+        expect(result.current.errorUpdateCount).toBe(1)
+        // the whole query refetches (focus, pull, invalidation) and fails: `fetchMeta` is cleared, so the Show-more flag goes false
+        await act(async () => {
+          await result.current.refetch()
+        })
+        await waitFor(() => expect(result.current.errorUpdateCount).toBe(2))
+        expect(result.current.isError).toBe(true)
+        expect(result.current.isFetchNextPageError).toBe(false)
+        expect(result.current.data?.pages).toHaveLength(1)
+      } finally {
+        client.clear()
+      }
+    })
+
     it(`${name}: a later SUCCESS clears the flag but ⛔ resets the count (a remount after a success holds a non-zero count)`, async () => {
       const { client, wrapper } = harness()
       fn.mockReset()
@@ -164,11 +198,15 @@ describe('an INFINITE query with data — the Show-more line (S2: usePostingHist
   }
 })
 
+/** The contract's `WorkplaceDistrictsResponse` shape (`packages/contracts/src/members/workplace.ts`). */
+const DISTRICTS_1 = { items: [{ district: 'd1' }], nextCursor: null, hasMore: false, hasList: true }
+const DISTRICTS_2 = { items: [{ district: 'd1' }, { district: 'd2' }], nextCursor: null, hasMore: false, hasList: true }
+
 describe('a PLAIN query with data — useWorkplaceDistrictsQuery (S7)', () => {
   it('each failed refetch adds exactly one; the error state AND the data stay through the retry; ⛔ moves while it runs', async () => {
     const { client, wrapper } = harness()
     api.workplaceDistricts.mockReset()
-    api.workplaceDistricts.mockResolvedValueOnce({ hasList: true, districts: ['d1'] })
+    api.workplaceDistricts.mockResolvedValueOnce(DISTRICTS_1)
     api.workplaceDistricts.mockImplementation(() => offline())
     const { result } = renderHook(() => tracked(useWorkplaceDistrictsQuery()), { wrapper })
     try {
@@ -180,7 +218,7 @@ describe('a PLAIN query with data — useWorkplaceDistrictsQuery (S7)', () => {
         await result.current.refetch()
       })
       await waitFor(() => expect(result.current.isError).toBe(true))
-      expect(result.current.data).toEqual({ hasList: true, districts: ['d1'] })
+      expect(result.current.data).toEqual(DISTRICTS_1)
       expect(result.current.isPending).toBe(false)
       expect(result.current.errorUpdateCount).toBe(1)
       const stamp1 = result.current.errorUpdatedAt
@@ -209,12 +247,56 @@ describe('a PLAIN query with data — useWorkplaceDistrictsQuery (S7)', () => {
 
       // 3 — a later SUCCESS: the error state clears, the count does ⛔ reset (a remount holds 2 and must stay silent — S7's isError re-check)
       api.workplaceDistricts.mockReset()
-      api.workplaceDistricts.mockResolvedValue({ hasList: true, districts: ['d1', 'd2'] })
+      api.workplaceDistricts.mockResolvedValue(DISTRICTS_2)
       await act(async () => {
         await result.current.refetch()
       })
       await waitFor(() => expect(result.current.isError).toBe(false))
       expect(result.current.errorUpdateCount).toBe(2)
+    } finally {
+      client.clear()
+    }
+  })
+
+  it('a NEW observer over ANY cached failure renders FIRST with `isError` AND `isFetching` — the `error` reducer invalidates (S7: the mount speaks, the mount refetch\'s failure is ⛔ spoken again)', async () => {
+    const { client, wrapper } = harness()
+    api.workplaceDistricts.mockReset()
+    api.workplaceDistricts.mockResolvedValueOnce(DISTRICTS_1)
+    api.workplaceDistricts.mockImplementation(() => offline())
+    const first = renderHook(() => tracked(useWorkplaceDistrictsQuery()), { wrapper })
+    try {
+      await waitFor(() => expect(first.result.current.isSuccess).toBe(true))
+      await act(async () => {
+        await first.result.current.refetch()
+      })
+      await waitFor(() => expect(first.result.current.errorUpdateCount).toBe(1))
+      first.unmount() // the picker is left (Cancel / back) while its districts are in `error`
+      // ⛔ an `invalidateQueries` call: the failure itself marked the cached data invalidated, well inside the 10-minute staleTime
+      const key = client.getQueryCache().findAll({ queryKey: workplaceKeys.all })[0]!.queryKey
+      expect(client.getQueryState(key)?.isInvalidated).toBe(true)
+      const held = deferred()
+      api.workplaceDistricts.mockImplementationOnce(() => held.promise)
+      const renders: Array<{ isError: boolean; isFetching: boolean; count: number }> = []
+      const second = renderHook(
+        () => {
+          const r = tracked(useWorkplaceDistrictsQuery())
+          renders.push({ isError: r.isError, isFetching: r.isFetching, count: r.errorUpdateCount })
+          return r
+        },
+        { wrapper },
+      )
+      // the FIRST render (the one S7's effect runs on at mount): the cached failure AND the mount refetch, together
+      expect(renders[0]).toEqual({ isError: true, isFetching: true, count: 1 })
+      await act(async () => {
+        held.reject(new TypeError('Network request failed'))
+        await Promise.resolve()
+      })
+      await waitFor(() => expect(second.result.current.errorUpdateCount).toBe(2))
+      await waitFor(() => expect(second.result.current.isFetching).toBe(false))
+      // the count moved ONLY together with `isFetching` false — ⛔ a render holding the new count while still fetching (the picker's
+      // second S7 effect, keyed on `isFetching`, therefore runs in the SAME commit as the count's, after it)
+      expect(renders.filter((r) => r.count === 2 && r.isFetching)).toHaveLength(0)
+      second.unmount()
     } finally {
       client.clear()
     }

@@ -3,7 +3,7 @@
 // mocked native primitives. There was NO render test for it (`workplace-screen-render.test.ts` mocks it away; only source scans touched
 // it), so this is a NEW harness: FlashList (the `known-people-find-render` precedent), tamagui (recording `testID` / `color` /
 // `fontSize`, forwarding `accessibilityLiveRegion` → `aria-live`), `react-native` (`Platform` is a getter), the two query hooks (MUTABLE
-// results carrying `errorUpdateCount`, `isError`, `isPending`, `hasNextPage`, `isFetchNextPageError`) and a workplace `t` that is a NEW
+// results carrying `errorUpdateCount`, `isError`, `isPending`, `isFetching`, `hasNextPage`, `isFetchNextPageError`) and a workplace `t` that is a NEW
 // function each render and locale-DISTINCT after a switch. Native layout and a real screen reader still need a device.
 //
 // What it shows — two lines the story makes "spoken again", per platform (3.15c-dev Y1):
@@ -11,7 +11,9 @@
 //     query is in `error` (cached districts + a Retry that failed again: `status` stays `error`, the screen stays mounted, the words are
 //     the same). The effect sits in the picker body ABOVE the `isPending` early return (mobile has ⛔ `react-hooks` lint — the leg that
 //     takes ONE mounted picker from `isPending` to loaded is the only guard against a misplaced hook), and re-checks `districts.isError`
-//     (live here: the count never resets, so a remount after a SUCCESS holds a non-zero count and must stay silent).
+//     (live here: the count never resets, so a remount after a SUCCESS holds a non-zero count and must stay silent). 3.15d review:
+//     every remount over a cached failure REFETCHES at once (TanStack's `error` reducer invalidates) — the line is spoken at that
+//     mount and the mount refetch's own failure is ⛔ spoken again; a Retry press or the refetch settling ends that skip.
 //   · S8 `search_error` beside "Show more" — a CHILD rendered inside the `hasNextPage && isFetchNextPageError` branch, so a page-1 refetch
 //     failure (which moves the same count, and shows the OTHER `search_error` line) unmounts it: the structure is the answer, ⛔ a re-check.
 // Counts are RUNNING TOTALS of `announce` calls BY TEXT (`useAnnounceOnChange` also announces each phase's title); every positive is awaited,
@@ -120,15 +122,18 @@ const districtsLoaded = (over: Record<string, unknown> = {}) => ({
   ...base(),
   isPending: false,
   isError: false,
+  isFetching: false,
   errorUpdateCount: 0,
   data: { hasList: true, items: [{ district: 'Patna' }] },
   ...over,
 })
-const districtsPending = () => ({ ...base(), isPending: true, isError: false, errorUpdateCount: 0, data: undefined })
+const districtsPending = () => ({ ...base(), isPending: true, isError: false, isFetching: true, errorUpdateCount: 0, data: undefined })
 /** The query is in `error` WITH its cached districts (a refetch failed): `status` stays `error`, `isPending` is false, the data is kept. */
 const districtsFailed = (count: number) => districtsLoaded({ isError: true, errorUpdateCount: count })
+/** The same, while a refetch of it is IN FLIGHT (any mount over a cached failure — the `error` reducer invalidates — or a Retry): `status` stays `error` (data kept). */
+const districtsFailedRefetching = (count: number) => districtsLoaded({ isError: true, isFetching: true, errorUpdateCount: count })
 /** A first load that failed: ⛔ cached data. */
-const districtsFailedNoData = (count: number) => ({ ...base(), isPending: false, isError: true, errorUpdateCount: count, data: undefined })
+const districtsFailedNoData = (count: number) => ({ ...base(), isPending: false, isError: true, isFetching: false, errorUpdateCount: count, data: undefined })
 // ── the search query ──
 const WP = { workplaceId: 'w-1', name: 'GMS RAMPUR', villageName: 'Rampur', clusterName: 'North' }
 const searchOk = (over: Record<string, unknown> = {}) => ({
@@ -191,7 +196,7 @@ for (const os of ['ios', 'android'] as const) {
       expect(sentOf(WORDS)).toEqual(sends(os, WORDS, 2))
     })
 
-    it('(e) a view that MOUNTS in `error` speaks it once', async () => {
+    it('(e) a view that MOUNTS in `error` with NO refetch running speaks it once (a mock state — an enabled query refetches a cached failure at mount; the legs below)', async () => {
       mock.districts = districtsFailed(1)
       mountPicker()
       await waitFor(() => expect(sentOf(WORDS)).toHaveLength(1))
@@ -199,7 +204,63 @@ for (const os of ['ios', 'android'] as const) {
       expect(sentOf(WORDS)).toHaveLength(1)
     })
 
-    it('(e) a REMOUNT after a SUCCESS holds a non-zero count and stays SILENT — the `isError` re-check (the one re-check that is live)', async () => {
+    it('(e) a view that MOUNTS over a cached failure (its mount refetch in flight) speaks it ONCE; that refetch failing too says ⛔ more; a Retry that fails IS spoken (3.15d review)', async () => {
+      mock.districts = districtsFailedRefetching(1)
+      const view = mountPicker()
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(1)) // spoken at the mount — the read has no timeout
+      mock.districts = districtsFailed(2) // the mount refetch failed: no act by the member, the same line
+      rerender(view)
+      await flush()
+      expect(sentOf(WORDS)).toHaveLength(1)
+      await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+      mock.districts = districtsFailedRefetching(2)
+      rerender(view)
+      mock.districts = districtsFailed(3) // the Retry failed
+      rerender(view)
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(2))
+      await flush()
+      expect(sentOf(WORDS)).toEqual(sends(os, WORDS, 2))
+    })
+
+    it('(e) a mount refetch that HANGS: spoken once at the mount; a Retry pressed during it, failing, is spoken (3.15d review)', async () => {
+      mock.districts = districtsFailedRefetching(1)
+      const view = mountPicker()
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(1))
+      await userEvent.click(screen.getByRole('button', { name: 'retry' })) // cancels the hung read and starts its own
+      mock.districts = districtsFailed(2)
+      rerender(view)
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(2))
+    })
+
+    it('(a) through the Retry\'s IN-FLIGHT state (the count still, `isFetching` true) nothing is sent; its failure is spoken again (3.15d review)', async () => {
+      mock.districts = districtsFailed(1)
+      const view = mountPicker()
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(1))
+      await userEvent.click(screen.getByRole('button', { name: 'retry' }))
+      mock.districts = districtsFailedRefetching(1) // Retry pressed: the refetch runs, the line stands
+      rerender(view)
+      await flush()
+      expect(sentOf(WORDS)).toHaveLength(1)
+      mock.districts = districtsFailed(2)
+      rerender(view)
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(2))
+      expect(sentOf(WORDS)).toEqual(sends(os, WORDS, 2))
+    })
+
+    it('(e) a mount refetch that SUCCEEDS ends the skip: a LATER failure while the picker stays open is spoken (3.15d review)', async () => {
+      mock.districts = districtsFailedRefetching(1)
+      const view = mountPicker()
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(1))
+      mock.districts = districtsLoaded({ errorUpdateCount: 1 })
+      rerender(view)
+      await flush()
+      expect(screen.getByRole('radio', { name: 'Patna' })).toBeInTheDocument()
+      mock.districts = districtsFailed(2) // a later background refetch fails
+      rerender(view)
+      await waitFor(() => expect(sentOf(WORDS)).toHaveLength(2))
+    })
+
+    it('(e) a REMOUNT after a SUCCESS holds a non-zero count and stays SILENT — the `isError` re-check', async () => {
       mock.districts = districtsLoaded({ errorUpdateCount: 2 })
       mountPicker()
       await flush()

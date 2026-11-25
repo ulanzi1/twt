@@ -26,7 +26,10 @@
 //   · S7 `districts_error` — plain `Text`; its effect sits in THIS component's body, ABOVE the `isPending` early return (a hook
 //     after it would change the hook count when the query settles — mobile has ⛔ `react-hooks` lint, `workplace-picker-render.test.ts`
 //     holds the leg that takes one mounted picker from `isPending` to loaded) and re-checks `districts.isError`: the count never
-//     resets, so a remount after a SUCCESS holds a non-zero count and must stay silent.
+//     resets, so a remount after a SUCCESS holds a non-zero count and must stay silent. 3.15d review: TanStack's `error` reducer
+//     INVALIDATES the query, so EVERY remount over a cached failure refetches at once (first render: `isError` AND `isFetching`). The
+//     line is spoken at that mount (as `AnnouncedText` did — the request carries ⛔ timeout, so it may never settle) and the mount
+//     refetch's OWN failure is ⛔ spoken again (no new act by the member); a Retry press, or the refetch settling, ends that skip.
 //   · S8 `search_error` beside "Show more" — `<SearchMoreError>`, a child rendered INSIDE the `hasNextPage && isFetchNextPageError`
 //     branch: a failed refetch of page 1 moves the same count but shows the OTHER `search_error` line and unmounts this child, so its
 //     effect cannot run — ⛔ a re-check in its body, ⛔ an effect in the picker body (it would fire for a line that is not rendered).
@@ -108,9 +111,20 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
   useAnnounceOnChange(phase === 'district' ? null : t(phaseTitleKey(phase, answer.kind), { district: answer.district ?? '' }), { skipInitial: true })
 
   // S7 — spoken once per FINAL failure of the districts query (counter-only deps). ABOVE every early return below; re-checks `isError`.
+  // 3.15d review: a picker that MOUNTS over a cached failure refetches at once (the `error` reducer invalidates; v5's first render is
+  // `isError` AND `isFetching`, data kept). The line is spoken at that mount — the read has ⛔ timeout, so a silent mount could stay
+  // silent — and `skipMountRefetchFailure` keeps the mount refetch's own failure from saying it a second time. The skip ends when that
+  // refetch SETTLES (the second effect, declared AFTER this one so the failing render reads it first) or when the member presses Retry.
+  const skipMountRefetchFailure = useRef<boolean | null>(null) // null until the first run
   useEffect(() => {
-    if (districts.isError) announce(t('districts_error'))
+    const mounting = skipMountRefetchFailure.current === null
+    const skip = skipMountRefetchFailure.current === true
+    skipMountRefetchFailure.current = mounting && districts.isError && districts.isFetching
+    if (districts.isError && !skip) announce(t('districts_error'))
   }, [districts.errorUpdateCount])
+  useEffect(() => {
+    if (!districts.isFetching) skipMountRefetchFailure.current = false
+  }, [districts.isFetching])
 
   const today = todayInIst(new Date())
 
@@ -168,7 +182,13 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
         <Text fontSize="$2" color={ERROR_COLOR} accessibilityRole="alert" testID="workplace-districts-error">
           {t('districts_error')}
         </Text>
-        <Button accessibilityRole="button" onPress={() => void districts.refetch()}>
+        <Button
+          accessibilityRole="button"
+          onPress={() => {
+            skipMountRefetchFailure.current = false // a Retry's failure is the member's own news — spoken (S7)
+            void districts.refetch()
+          }}
+        >
           {t('retry')}
         </Button>
       </YStack>
@@ -511,7 +531,6 @@ export function WorkplacePicker({ submitLabel, onSaved, onCancel }: WorkplacePic
   )
 }
 
-/** The phase's spoken title (announced on a phase change — ⛔ a navigation event fires). */
 /**
  * The failed "Show more" line of the search (Story 3.15d, S8): plain `Text` (role alert, ⛔ a live region), spoken when it MOUNTS and
  * again whenever the query's `errorUpdateCount` moves while it stays mounted (a Retry that failed again). Counter-only deps — ⛔ `t` /
@@ -529,6 +548,7 @@ function SearchMoreError({ errorCount }: { errorCount: number }) {
   )
 }
 
+/** The phase's spoken title (announced on a phase change — ⛔ a navigation event fires). */
 function phaseTitleKey(phase: Phase, kind: WorkplaceAnswerKind | null): string {
   switch (phase) {
     case 'kind':

@@ -8,11 +8,12 @@
 // Why a source pin and not an ESLint fence: the repo has ⛔ `no-restricted-syntax`, the `:has()` selector it would need is
 // unproven on this ESLint, a later flat-config entry for the same rule REPLACES an earlier one's options, and the 3.15b fence has
 // ⛔ unit test of its own — a positive control would be new tooling. The type of `patch` (below) is the first line of defence:
-// `tsc` bars `patch({ line: … })` as an object literal; this pin covers what `tsc` cannot (a non-fresh object variable, a literal
-// that forgets its bump, a reverted type).
+// `tsc` bars `patch({ line: … })` as an object literal; this pin covers what `tsc` cannot (a non-fresh object variable — by requiring
+// every `patch(` argument to BE a literal, since a variable's text names no key —, a literal that forgets its bump, a reverted type).
 //
 // ⚠ Blind spots, accepted (DL4): the pin is FORMATTING-DEPENDENT (Prettier is not enforced; it reads `line:` and `lineCount:` as
-// written), and blind to a `line` set by SHORTHAND (`{ ...s, line }` — `setLine`'s own body) or by a literal built in a variable.
+// written), and blind to a `line` set by SHORTHAND (`{ ...s, line }` — `setLine`'s own body) or by a `setState(` literal built in a
+// variable (a `patch(` argument, by contrast, must BE a literal with ⛔ spread, and `patch` may ⛔ be passed by reference — below).
 // The `sendCount` / `waitCount` bumps have no such pin (the same shape could carry one — a follow-up, not owed).
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -55,10 +56,30 @@ describe('use-wa-code.ts — every write that sets `line` bumps `lineCount` (the
     expect(source, NEW_WRITER).toContain("const patch = useCallback((next: Partial<Omit<WaCodeState, 'line' | 'lineCount'>>) =>")
   })
 
-  it('`patch(` is called with ⛔ `line` / `lineCount` — a non-fresh object variable would slip past the type', () => {
+  it('`patch(` is called with an object LITERAL only, and ⛔ `line` / `lineCount` — a non-fresh object variable would slip past the type', () => {
     const calls = callsOf('patch')
     expect(calls.length, 'patch( is called in the hook body').toBeGreaterThan(0)
-    for (const args of calls) expect(args, `${NEW_WRITER}: patch(${args})`).not.toMatch(/\bline(Count)?\b/)
+    for (const args of calls) {
+      // A variable (`patch(next)`) is where `tsc`'s excess-property check stops, and its text names no key the next line could see —
+      // so the argument must BE a literal, read here, ⛔ merely mention no `line` (3.15d review).
+      expect(args.trim(), `${NEW_WRITER}: patch(${args}) — pass an object literal`).toMatch(/^\{[\s\S]*\}$/)
+      // `patch({ ...next })` is a literal whose keys `tsc` does ⛔ check (a spread escapes the excess-property check) — ⛔ a spread
+      expect(args, `${NEW_WRITER}: patch(${args}) — ⛔ a spread`).not.toMatch(/\.\.\./)
+      expect(args, `${NEW_WRITER}: patch(${args})`).not.toMatch(/\bline(Count)?\b/)
+    }
+  })
+
+  it('`patch` is ⛔ passed by reference (`.then(patch)`, `patch.call(…)` would hide a call from the leg above) — only its definition, its calls and hook deps', () => {
+    const refs = [...hook.matchAll(/\bpatch\b(?!\()/g)].map((m) => ({
+      before: hook.slice(Math.max(0, m.index! - 8), m.index!),
+      after: hook.slice(m.index! + 'patch'.length, m.index! + 'patch'.length + 24),
+    }))
+    expect(refs.length, 'the definition is found').toBeGreaterThan(0)
+    for (const { before, after } of refs) {
+      const definition = /\bconst\s+$/.test(before) && /^\s*=\s*useCallback\(/.test(after)
+      const depsEntry = /[[,]\s*$/.test(before) && /^\s*[,\]]/.test(after)
+      expect(definition || depsEntry, `${NEW_WRITER}: \`${before}patch${after}\``).toBe(true)
+    }
   })
 
   it('NINE `setLine(` calls — each one bumps through the helper', () => {

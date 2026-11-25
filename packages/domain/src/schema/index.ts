@@ -220,6 +220,9 @@ export * from './claim_fraud_investigation_steps.js';
 // append-only, tenant-isolated. It stores the OUTCOME of the fee-date / death-date comparison and of the identity
 // judgment — ⛔ either date.
 export * from './claim_membership_checks.js';
+// Story 3.13 (0218) — staff checking a typed-in identity in life: one LIVE row per member (a later check supersedes),
+// append-only, tenant-isolated. ⛔ Document number, ⛔ copy (N5).
+export * from './member_identity_validations.js';
 // Story 6.19a — the claim's CONTACT RECORD: `claim_contacts` (one per claim — the claimant side and the filer's
 // per-claim agreement, D15) + `claim_contact_nominees` (one per nominee VERSION — the Tier-1 postal address and
 // the claimant-to-nominee relationship, D5 / D16). Tenant-isolated; SELECT / INSERT / UPDATE, ⛔ no DELETE.

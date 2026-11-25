@@ -829,6 +829,14 @@ export type ClaimMembershipCheckId = Brand<'ClaimMembershipCheckId'>;
 /** Smart constructor: validates UUID shape, returns a branded `ClaimMembershipCheckId`. */
 export const claimMembershipCheckId = uuidBrand('ClaimMembershipCheckId');
 
+/**
+ * Per-row address of one identity check in life (`member_identity_validations.validation_id` — Story 3.13, DL1): a
+ * staff member's recorded act — confirmed or not confirmed — on a typed-in identity. At most one live per member.
+ */
+export type MemberIdentityValidationId = Brand<'MemberIdentityValidationId'>;
+/** Smart constructor: validates UUID shape, returns a branded `MemberIdentityValidationId`. */
+export const memberIdentityValidationId = uuidBrand('MemberIdentityValidationId');
+
 // ── Workplace ids (Story 6.36a, Task 1; `2026-10-14-330` SW2, SW3, SW9) ───────────────────────────
 // Three NEW branded ids, each a ROW address (⛔ an event stream id):
 //   · `WorkplaceId` — one school or office on a Pariwar's list (`workplaces.workplace_id`); a posting names it.

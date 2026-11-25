@@ -127,6 +127,14 @@ export const CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS = 'claim_fraud_investigation'
 export const CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS = 'claim_membership_check';
 
 /**
+ * ⭐ NEW (Story 3.13, DL1 / DL14) — the identity check's Tier-1 field class: the staff member's note on checking a
+ * typed-in identity in life (`member_identity_validations.note_ciphertext`; required when `not_confirmed`). Keys on the
+ * member's REAL `pariwarId`; matches `piiColumn(1, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS)`. Declared ONCE here — the
+ * API's handlers and `anonymizeMember`'s scrub both bind it. ⛔ Never re-declare it.
+ */
+export const MEMBER_IDENTITY_VALIDATION_FIELD_CLASS = 'member_identity_validation';
+
+/**
  * ⭐ NEW (Story 12.5, `2026-11-21-483` QE11 (A)) — the Tier-1 class of a partner LEAD's sealed member fields
  * (`marketplace_lead_handoffs.member_fields_ciphertext`): ONE envelope of the canonical JSON `{ version, nonce, full_name, mobile,
  * district, preferred_language }`, keyed on the lead's REAL `pariwarId` with `rowKey = lead_id`, so a sealed string cannot be opened

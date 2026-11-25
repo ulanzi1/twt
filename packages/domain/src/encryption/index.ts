@@ -72,6 +72,8 @@ export {
   CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS,
   // Story 6.39 (DL1 / DL14) — the membership check's optional staff note.
   CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS,
+  // Story 3.13 (DL1 / DL14) — the identity check's staff note.
+  MEMBER_IDENTITY_VALIDATION_FIELD_CLASS,
   // Story 12.5 (QE11 (A)) — a partner lead's sealed member fields.
   MODULE_LEAD_FIELDS_FIELD_CLASS,
   // Story 13.1 (QE4) — the field worker's Tier-1 class (name, mobile) and its disjoint mobile blind-index class.

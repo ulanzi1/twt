@@ -13,15 +13,24 @@ and blocks GO-LIVE through roster Row 57 (`identity-validation-live`), ⛔ the b
   `trustee-panel-routing-note-2026-11-21-3-13-checking-a-typed-in-identity.md` Q1 (`9f7da520`), SENT 2026-11-21, ⛔ ruled. Built: option
   A (an original government photo ID, in person or on a video call; ⛔ number, ⛔ copy — Story 3.13 DL7). Trigger: the ruling ⇒ Row 57 (a);
   B drops `photo_id_video_call`, C adds an employer confirmation, D withdraws the write route.
+  - **2026-11-25 — RULED A, with the follow-up's E** ([Decision 2026-11-25-502](../../.decision-log.md#decision-2026-11-25-502)): A and E both
+    stand; DL7 keeps A's vocabulary and gains E's in Story 3.13's re-validate (row `3-16` builds the uploads). Open until built.
 - **PQ2 — is the member told when staff cannot confirm?** OPEN — the same note, Q2. Built: A (nothing new is said; DL16). Trigger: B or C ⇒
   a new row for member-facing words (Hindi + English, Panel-approved) ⇒ Row 57 (b).
+  - **2026-11-25 — RULED C** (`-502`; ⛔ our suggestion B): the member is told, and told the reason ⇒ NEW row `3-13a` (backlog). Open
+    until built.
 - **PQ3 — may the District Admin and Pariwar Admin see a member's full mobile to arrange the check?** OPEN — the same note, Q3 (BigDev's
   DL8b, 2026-11-21: *"Ask Panel: show full mobile"*). Built: A (masked only — DL8). Trigger: B ⇒ one audited number read on the detail
   route; C ⇒ its own row ⇒ Row 57 (b2).
+  - **2026-11-25 — RULED B, widened** (`-502`): option B's admins AND field workers, verifiers, helpline operators and Block Admins, for
+    arranging the check only ⇒ the audited number read for all of them (Story 3.13's re-validate scopes it; `field_worker` waits on
+    Story 13.3). Open until built.
 - **Follow-up — Q1 option E (an uploaded PAN + masked Aadhaar + selfie) and Q4 (how long copies are kept).** WRITTEN, ⛔ SENT —
   `trustee-panel-routing-note-2026-11-21-3-13-follow-up-uploaded-documents.md` (`a18654f2`; BigDev, 2026-11-25: *"Not sent yet"*).
   ⛔ built in 3.13 (row `3-16`'s upload store). Trigger: sent and ruled ⇒ `bmad-create-story validate 3.13` (the reshape: DL7
   `uploaded_documents`, N1a classifies 3.16's strength, DL8 shows the uploads) ⇒ Row 57 (e).
+  - **2026-11-25 — SENT (inferred from the ruling) and RULED Q1 E, Q4 B** (`-502`) ⇒ the trigger FIRED: `bmad-create-story validate
+    3.13` is owed; Q4 B's retention goes to row `3-16`.
 
 ---
 

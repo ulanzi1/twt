@@ -332,6 +332,14 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
 
 ## Panel questions — PROPOSED (one non-blocking note at Task 0.3)
 
+> ✅ **RULED 2026-11-25 — [Decision `2026-11-25-502`](../../.decision-log.md#decision-2026-11-25-502)** (Trustee-ratified, DR + KB;
+> relayed by BigDev: *"by DR and KB / follow up - Q1 E, Q4 B / identity - Q1 A, Q2 C, Q3 Staff will see the number for this purpose in
+> addition to option B."*). **PQ1 — A**, and the follow-up's **E** (A and E both stand: A for a typed-in member, E with A as fallback for
+> uploads); **PQ2 — C** (⛔ our B: the member is told, AND the reason — new row `3-13a`); **PQ3 — B, widened** to field workers,
+> verifiers, helpline operators and Block Admins, for arranging the check only (the roles are the Panel's); **follow-up Q4 — B** (row
+> `3-16`). ⚠ **Everything below is the text AS PROPOSED.** The DLs, ACs and Tasks are reshaped by a re-validate (Task 0.3's own rule),
+> and dev-story does ⛔ start Task 1 before it. `-501` items 8 (DL7) and 9 (DL8b) are amended by `-502`.
+
 ⭐ All three pass §0: PQ1 and PQ2 are what the Trust OWES a member (whether their identity counts as verified — and so whether they are
 covered once lock-in ends — and whether they are told); PQ3 is what the Trust DISCLOSES about a member, and to which staff. None blocks
 the build or the merge; all three block GO-LIVE (Task 0.5). Built on the narrow /
@@ -473,6 +481,8 @@ unchanged side meanwhile.
         ⭐ 2026-11-25 (validate v1.5) — follow-up `a18654f2` still ⛔ SENT (BigDev: *"Not sent yet"*); neither note ruled at `74839891`
         (⛔ decision cites either). BigDev: *"Build now, typed-in only (Recommended)"* — dev-story may start once Task 0.2 / 0.4 are done;
         it builds DL7 option A for `self_declared` members only, and N1a keeps 3.16's new strength out until the reshape.
+        ⭐ 2026-11-25 — BOTH NOTES RULED, `-502` (above the Panel questions). The follow-up's sending is INFERRED from the ruling. ⇒ the
+        reshape re-validate is OWED now, before Task 1 (it supersedes the "build now, typed-in only" plan above where they differ).
   - [x] 0.4 Author-commit decision entry (`<date>-<next>`): DL1–DL16 as answered, the §0 split, the `-424` match quoted verbatim, the
         Policy meaning, PQ1/PQ2/PQ3 open + built side; committed ALONE. ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
         ⭐ 2026-11-25 — [`2026-11-25-501`](../../.decision-log.md#decision-2026-11-25-501), committed ALONE `f6987b0d` (BigDev: "yes,
@@ -613,3 +623,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 | 1.5 | 2026-11-25 | Rebased onto `origin/main` `74839891` (179 commits; backup `backup/3-13-pre-rebase-2026-11-25`; changed-line sets verified equal) and re-validated (`bmad-create-story validate 3.13`, BigDev: "All 7"). Re-pinned `90535934` → `74839891`; every F1–F9 / F10a file unchanged. (1) AC15 / Task 6 / Trap 10: the merge proof is the PR's GitHub `ci.yml` run (ADR-0047, `-499`), ⛔ `ci:local`; a plain push touches ⛔ database. (2) F10 / Task 0.5 / Task 1: next migration `0218`, decision `-501`, roster row 57. (3) N1a (new): staff-checkable strengths are ONE total map `satisfies Record<MemberKycVerificationStrength, boolean>` — DL2 / DL4 read it; AC7 iterates `MEMBER_KYC_VERIFICATION_STRENGTHS`, ⛔ "3 strengths" (3.16 mints a new value). (4) `-482` decisions 1 / 6 and BigDev's 2026-11-25 answers in the rulings table; F12 and Task 0.3 annotated (follow-up ⛔ sent; build now, typed-in only). (5) DL13 / Task 4 / AC14 / Project Structure: the `RootLayout.tsx` nav link (#69 (g)). (6) Pin note. (7) Ledger letter `2026-11-21s` → `2026-11-21aq`; `21w` collision with `story/6-39a-…` recorded, open. ⛔ Code. |
 | 1.6 | 2026-11-25 | Task 0.2 DONE: DL1–DL5 + N1a, DL7 / DL9 / DL10, DL8, DL11 (incl. the `lock-in` widening), DL12 (words approved verbatim), DL13 / DL15 / DL16 and DL14 (export without staff names) put to BigDev in two question dialogs — every answer the recommended option, recorded verbatim at Task 0.2. Next: Task 0.4 (decision `-501`, committed alone), 0.5 (roster Row 57), 0.6. ⛔ Code. |
 | 1.7 | 2026-11-25 | Task 0 COMPLETE (BigDev: "yes, write 0.4, 0.5 and 0.6"): 0.1 ticked against the v1.5 re-derivation; 0.4 — Decision `2026-11-25-501` committed ALONE `f6987b0d`; 0.5 — roster Row 57 `identity-validation-live` (legs (a)–(e); (e) = the follow-up note) + a `deferred-work.md` section for PQ1–PQ3 and the follow-up; 0.6 — row `ready-for-dev → in-progress`, Status in-progress. AC1 met. ⛔ Code. |
+| 1.8 | 2026-11-25 | Both Panel notes RULED — Decision `2026-11-25-502` (Trustee-ratified, DR + KB, committed alone `6cb66cef`): PQ1 A + follow-up Q1 E, Q4 B, PQ2 C (⛔ our suggestion), PQ3 B widened to four more roles (the Panel's). Ruled banner above the Panel questions; Task 0.3 annotated; ruling blocks filled in both notes; Row 57 / `deferred-work.md` dated lines; new row `3-13a`. The text below the banner is AS PROPOSED — the reshape re-validate is owed before Task 1. ⛔ Code. |

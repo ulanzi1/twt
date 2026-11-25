@@ -1,6 +1,9 @@
 # Trustee Panel routing note — FOLLOW-UP to today's note on checking a typed-in identity: a fifth way for Q1 (uploaded documents and a selfie), and how long the copies are kept
 
-> **Status: WRITTEN 2026-11-21; ⛔ NOT YET SENT.** A follow-up to the note sent earlier today,
+> **Status: SENT and RULED 2026-11-25 — Decision `2026-11-25-502` (Trustee-ratified, DR + KB; relayed by BigDev).** That it was sent is
+> INFERRED from the relayed ruling (it was recorded as ⛔ sent earlier the same day). Everything below the ruling block is kept as the
+> questions were put. The original status line follows.
+> **Status (as written): WRITTEN 2026-11-21; ⛔ NOT YET SENT.** A follow-up to the note sent earlier today,
 > `trustee-panel-routing-note-2026-11-21-3-13-checking-a-typed-in-identity.md` (⏳ unruled). ⭐ **Please read the two together and answer
 > them together.** This note adds one option to that note's Q1 and one new question (Q4); that note's Q2 and Q3 are unchanged.
 > ⚠ If you have already answered Q1, please say whether this option changes your answer.
@@ -15,11 +18,19 @@ their PAN card and Aadhaar and a selfie for staff to check — and if so, how lo
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-25 — Decision `2026-11-25-502` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
-
+> As relayed by BigDev: *"by DR and KB / follow up - Q1 E, Q4 B / identity - Q1 A, Q2 C, Q3 Staff will see the number for this
+> purpose in addition to option B."*
+>
+> - **Q1 — E:** uploaded PAN + an Aadhaar showing only the last four digits + a selfie, checked by a District Admin or the Pariwar
+>   Admin; on any mismatch staff record "could not confirm" and may ask for a meeting (option A) (our suggestion). The first note's Q1
+>   was ruled A in the same message — A and E both stand (the decision).
+> - **Q4 — B:** the copies are kept while the person is a member, deleted when they leave or ask for erasure — except that once a death
+>   is reported nothing is erased (our suggestion). Built by row `3-16`.
+>
+> ⛔ NOT covered: how the copies are stored and protected, and the masking test (ours, row `3-16`). Everything below is **unedited** —
+> the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
 ---
 
 # The questions

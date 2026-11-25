@@ -1,6 +1,8 @@
 # Trustee Panel routing note — checking a typed-in identity while the member is alive: what staff must see, whether the member is told, and whether staff may see the member's phone number
 
-> **Status: WRITTEN 2026-11-21; SENT 2026-11-21 (BigDev: "sent to panel"); ⏳ AWAITING RULING.** ⚠ Not recorded: the channel, the send
+> **Status: SENT and RULED 2026-11-25 — Decision `2026-11-25-502` (Trustee-ratified, DR + KB; relayed by BigDev).** Everything below
+> the ruling block is kept as the questions were put. The original status line follows.
+> **Status (as written): WRITTEN 2026-11-21; SENT 2026-11-21 (BigDev: "sent to panel"); ⏳ AWAITING RULING.** ⚠ Not recorded: the channel, the send
 > time, and whether the text sent is identical to this file as committed at `9f7da520`.
 > Written from Story 3.13 (Task 0.3), which builds the staff step that checks the
 > identity of a member who typed their own details in when they joined. ⛔ Member uses the system yet. ⛔ Nothing waits on this note to be
@@ -21,11 +23,23 @@ people, ⛔ about code.
 
 ---
 
-> ## ⏳ AWAITING PANEL RULING
+> ## ✅ RULED 2026-11-25 — Decision `2026-11-25-502` (Trustee-ratified, DR + KB)
 >
-> ⛔ **Nothing is recorded here yet.** When the Panel rules, transcribe it into this block **and** into `.decision-log.md` as a new
-> decision id. ⭐ Everything below is then kept **unedited** as the questions **as they were put** ([[feedback_supersede_never_reinterpret]]).
-
+> As relayed by BigDev: *"by DR and KB / follow up - Q1 E, Q4 B / identity - Q1 A, Q2 C, Q3 Staff will see the number for this
+> purpose in addition to option B."*
+>
+> - **Q1 — A:** an original government photo ID, in person or on a video call, to a District Admin or the Pariwar Admin; nothing copied
+>   or kept (our suggestion). Read with the follow-up's Q1 E (BigDev's clarification, in the decision): A and E both stand — A for a
+>   member who typed their details in, E (with A as its fallback) for a person who uploaded documents.
+> - **Q2 — C:** the app tells the member that their identity could not be checked yet and how to arrange it, AND the reason staff
+>   recorded (⛔ our suggestion, which was B). Built by a new row `3-13a`.
+> - **Q3 — B, widened:** the District Admin, the Pariwar Admin and the Super Admin as B put it, and also the member's field worker, the
+>   verifiers, the helpline operators and the Block Admins (the roles are the Panel's — BigDev, in the decision) — for arranging the
+>   identity check only.
+>
+> ⛔ NOT covered (see the decision): what surface the four further roles see the number on; the member's words for Q2 (the Panel
+> approves them with row `3-13a`). Everything below is **unedited** — the questions **as they were put**
+> ([[feedback_supersede_never_reinterpret]]).
 ---
 
 # The questions

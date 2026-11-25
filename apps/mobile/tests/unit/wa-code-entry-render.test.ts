@@ -995,6 +995,8 @@ describe('Story 3.15c AC 2 — an error line set again with the same words is SE
   // `code_send_failed` arm (legs (b) / (c) / (e)) and the hand-bumped `code_limit_reached` arm (the `no_more` row). The effect keys on
   // `lineCount` alone, so a write that forgets its bump (a `patch({ line })`, or a hand-written `lineCount` left out) silences a line
   // `AnnouncedText` used to speak whenever its WORDS changed — and no other leg would notice. A NEW write site needs its row here.
+  // ⭐ Story 3.15d (DL4): `tests/unit/use-wa-code-source-pins.test.ts` pins the write sites by SOURCE (the nine `setLine` calls, the five
+  // `setState` literals that carry `line:`, `patch` never carrying `line`) and fails when one is added — update BOTH, this table and the pin.
   const atField = async () => {
     await toSent(LIVE)
     typeCode('123456')

@@ -119,7 +119,10 @@ export function useWaCode(minted: CreateWaOptInResponse, onActivated: () => void
   const [state, setState] = useState<WaCodeState>(() => initialWaCodeState(minted))
   const busyRef = useRef(false)
   const version = useRef(0)
-  const patch = useCallback((next: Partial<WaCodeState>) => setState((s) => ({ ...s, ...next })), [])
+  // Story 3.15d (DL4): `patch` cannot name `line` or `lineCount` — a write that sets the line goes through `setLine`, or is a hand-written
+  // `setState` literal that bumps `lineCount` (pinned by `tests/unit/use-wa-code-source-pins.test.ts`). The excess-property check bars an
+  // object LITERAL here; a non-fresh object variable would slip through, which the pin's "`patch(` never mentions `line`" covers.
+  const patch = useCallback((next: Partial<Omit<WaCodeState, 'line' | 'lineCount'>>) => setState((s) => ({ ...s, ...next })), [])
   /** Set `line` from an answer — ALWAYS a new set, so `lineCount` moves (DL1); `patch` stays for writes that never touch `line`. */
   const setLine = useCallback(
     (line: WaCodeLine, rest: Partial<WaCodeState> = {}) => setState((s) => ({ ...s, ...rest, line, lineCount: s.lineCount + 1 })),

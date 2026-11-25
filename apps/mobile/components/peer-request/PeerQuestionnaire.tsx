@@ -15,6 +15,13 @@
 // who cannot save (offline) may leave after saying so (S32); Android's back steps back through the pages (S33); a typed
 // but unsaved date is an unresolved edit (S35); a fast second tap builds on the first (S37); a saved answer that could
 // ⛔ not be shown counts as answered (S38); the helpline is on the closing page too (S40).
+//
+// ⭐ Story 3.15d (DL1, 3.15c-dev Y1): four STANDING lines — the load-error view's "please wait" (S3), the action notice (S4), the
+// questionnaire's "please wait" (S5) and a date that cannot be read (S6) — are plain `Text` (role alert, ⛔ a live region), each
+// SPOKEN once per time it is SET, on both platforms: a counter bumped at every set (the same words included, ⛔ a clear) and ONE
+// effect on it that calls `announce()`. As `AnnouncedText` an identical re-set, while the line stayed mounted, was sent nothing.
+// ⛔ `t` / the words in an effect's deps (a language switch must not re-speak a standing line); every such effect sits ABOVE the
+// early return of its component. The other lines of this screen are still `AnnouncedText`.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { BackHandler, ScrollView } from 'react-native'
@@ -26,6 +33,7 @@ import { useLocale } from '@twt/i18n/react'
 
 import type { PeerRequestAnswerValue, PeerRequestDetailResponse, PeerRequestQuestion } from '@twt/contracts'
 
+import { announce } from '../../lib/announce'
 import { useClaimT } from '../../lib/claim-i18n'
 import {
   canLeavePage,
@@ -161,9 +169,16 @@ function LoadError({
   const [allowLeave, setAllowLeave] = useState(false)
   const pendingLeave = useRef<(() => void) | null>(null)
   const hasUnsent = carried.current.length > 0
+  // Bumped by EVERY prevented removal (Back, Back again) — the same words included (S3).
+  const [leaveSet, setLeaveSet] = useState(0)
   usePreventRemove(hasUnsent && !allowLeave, ({ data }) => {
     setLeaveTo(() => () => navigation.dispatch(data.action))
+    setLeaveSet((n) => n + 1)
   })
+  // Counter-only deps (⛔ `t`, ⛔ the words); the body reads this render's state. Runs on mount too, where nothing is set yet.
+  useEffect(() => {
+    if (leaveTo !== null && hasUnsent) announce(t('peer_request.unsaved'))
+  }, [leaveSet])
   useEffect(() => {
     if (!allowLeave || pendingLeave.current === null) return
     const go = pendingLeave.current
@@ -175,7 +190,11 @@ function LoadError({
   return (
     <YStack p="$4" gap="$3">
       <Paragraph>{t('peer_request.load_error')}</Paragraph>
-      {leaveTo !== null && hasUnsent && <AnnouncedText text={t('peer_request.unsaved')} kind="error" />}
+      {leaveTo !== null && hasUnsent && (
+        <Text fontSize="$2" color="$red10" accessibilityRole="alert" testID="peer-load-unsaved">
+          {t('peer_request.unsaved')}
+        </Text>
+      )}
       <Button onPress={onTryAgain} accessibilityRole="button">
         {t('peer_request.try_again')}
       </Button>
@@ -234,6 +253,19 @@ function Questionnaire({
   //   · the UNSAVED warning ("please wait…") is a flag beside the leave offer, cleared once nothing is unresolved.
   const [actionNotice, setActionNotice] = useState<'peer_request.required' | 'peer_request.date_unsaved' | null>(null)
   const [unsavedWarning, setUnsavedWarning] = useState(false)
+  // Story 3.15d (S4, S5): bumped by EVERY SET of the line — the same words included, ⛔ a clear — and the one effect each keys on.
+  const [actionSet, setActionSet] = useState(0)
+  const [warningSet, setWarningSet] = useState(0)
+  /** The ONE writer of the action notice that SETS it (Next ⇒ required / date_unsaved, `pageBack` ⇒ date_unsaved). */
+  const showActionNotice = useCallback((key: 'peer_request.required' | 'peer_request.date_unsaved') => {
+    setActionNotice(key)
+    setActionSet((n) => n + 1)
+  }, [])
+  /** The ONE writer of the "please wait" warning that SETS it (`leaveQuestions`, the prevented-removal callback). */
+  const showUnsavedWarning = useCallback(() => {
+    setUnsavedWarning(true)
+    setWarningSet((n) => n + 1)
+  }, [])
   const [submitFailed, setSubmitFailed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   // A date TYPED but ⛔ saved — an unresolved edit, ⛔ silently dropped (review S35).
@@ -338,9 +370,17 @@ function Questionnaire({
     setUnsavedWarning(false)
   }, [busy, isSubmitting])
   usePreventRemove((phase === 'pages' || phase === 'closing') && (busy || isSubmitting) && !allowLeave, ({ data }) => {
-    setUnsavedWarning(true)
+    showUnsavedWarning()
     if (!isSubmitting) setLeaveTo(() => () => navigation.dispatch(data.action))
   })
+  // S4 / S5 — spoken once per SET; counter-only deps (⛔ `t`, ⛔ the words), the body reads this render's state. Both sit above the
+  // early return below (a hook order that changed with `phase` would be a bug nothing here lints for).
+  useEffect(() => {
+    if (actionNotice !== null) announce(t(actionNotice))
+  }, [actionSet])
+  useEffect(() => {
+    if (unsavedWarning) announce(t('peer_request.unsaved'))
+  }, [warningSet])
   useEffect(() => {
     if (!allowLeave || pendingLeave.current === null) return
     const go = pendingLeave.current
@@ -396,18 +436,18 @@ function Questionnaire({
   const leaveQuestions = useCallback(() => {
     if (submitting.current) return
     if (state.pending > 0 || state.failed.size > 0 || dirtyDates.size > 0) {
-      setUnsavedWarning(true)
+      showUnsavedWarning()
       setLeaveTo(() => onBack)
       return
     }
     onBack()
-  }, [state.pending, state.failed.size, dirtyDates.size, onBack])
+  }, [state.pending, state.failed.size, dirtyDates.size, onBack, showUnsavedWarning])
   const pageBack = useCallback(() => {
-    if (dirtyDates.size > 0) return setActionNotice('peer_request.date_unsaved')
+    if (dirtyDates.size > 0) return showActionNotice('peer_request.date_unsaved')
     if (pageIndex === 0) return leaveQuestions()
     setActionNotice(null)
     setPageIndex(pageIndex - 1)
-  }, [dirtyDates.size, pageIndex, leaveQuestions])
+  }, [dirtyDates.size, pageIndex, leaveQuestions, showActionNotice])
 
   // ⭐ Android's back steps back through the in-screen pages, ⛔ pops the whole request (review S33) — ONLY while this
   // screen is FOCUSED (third-pass review U8: ⛔ a back press meant for a screen pushed on top).
@@ -452,8 +492,16 @@ function Questionnaire({
   const notices = (
     <>
       {failureNotice !== null && <AnnouncedText text={failureNotice} kind="error" />}
-      {actionNotice !== null && <AnnouncedText text={t(actionNotice)} kind="error" />}
-      {unsavedWarning && <AnnouncedText text={t('peer_request.unsaved')} kind="error" />}
+      {actionNotice !== null && (
+        <Text fontSize="$2" color="$red10" accessibilityRole="alert" testID="peer-action-notice">
+          {t(actionNotice)}
+        </Text>
+      )}
+      {unsavedWarning && (
+        <Text fontSize="$2" color="$red10" accessibilityRole="alert" testID="peer-unsaved-warning">
+          {t('peer_request.unsaved')}
+        </Text>
+      )}
     </>
   )
   const keepSaved = state.failed.size > 0 && (
@@ -563,12 +611,12 @@ function Questionnaire({
           accessibilityRole="button"
           onPress={() => {
             if (page.some((q) => dirtyDates.has(q.key))) {
-              setActionNotice('peer_request.date_unsaved')
+              showActionNotice('peer_request.date_unsaved')
               return
             }
             // A saved answer that could ⛔ not be shown IS answered (review S38) — the map WITH those entries.
             if (!canLeavePage(page, state.answers)) {
-              setActionNotice('peer_request.required')
+              showActionNotice('peer_request.required')
               return
             }
             setActionNotice(null)
@@ -630,6 +678,12 @@ function QuestionField({
   const savedText = savedDate === null ? '' : toDisplayDate(savedDate)
   const [dateText, setDateText] = useState(savedText)
   const [dateError, setDateError] = useState(false)
+  // Story 3.15d (S6): bumped ONLY by a Save that cannot be read (⛔ by a clear) — per question, so several date questions on one page
+  // each keep their own count. Spoken once per such Save; counter-only deps (⛔ `t`).
+  const [dateInvalidSet, setDateInvalidSet] = useState(0)
+  useEffect(() => {
+    if (dateError) announce(t('peer_request.date_invalid'))
+  }, [dateInvalidSet])
   useEffect(() => {
     setDateText(savedText)
     setDateError(false)
@@ -662,14 +716,21 @@ function QuestionField({
             keyboardType="numbers-and-punctuation"
             accessibilityLabel={label}
           />
-          {dateError && <AnnouncedText text={t('peer_request.date_invalid')} kind="error" />}
+          {dateError && (
+            <Text fontSize="$2" color="$red10" accessibilityRole="alert" testID={`peer-date-invalid-${question.key}`}>
+              {t('peer_request.date_invalid')}
+            </Text>
+          )}
           <Button
             disabled={disabled}
             accessibilityRole="button"
             onPress={() => {
               const iso = parseDisplayDate(dateText, todayInIst(new Date()))
               setDateError(iso === null)
-              if (iso === null) return // keep what was typed, under "date invalid" (V2 — ⛔ erase it)
+              if (iso === null) {
+                setDateInvalidSet((n) => n + 1)
+                return // keep what was typed, under "date invalid" (V2 — ⛔ erase it)
+              }
               if (iso === savedDate) setDateText(savedText) // the SAVED date, typed another way — show it as saved
               else onAnswer({ date: iso })
             }}

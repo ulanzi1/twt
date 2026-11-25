@@ -12,10 +12,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PeerQuestionnaire } from '../../components/peer-request/PeerQuestionnaire';
 import { retryDelayMs } from '../../lib/peer-request';
+import { NBSP, sentAs } from './announce-text';
 
 const mock = vi.hoisted(() => ({
   detail: null as PeerRequestDetailResponse | null, error: null as unknown, save: vi.fn(), submit: vi.fn(), refetch: vi.fn(),
-  announce: vi.fn(), dispatch: vi.fn(), backHandlers: [] as (() => boolean)[], os: 'ios' as string, focused: true, loading: false,
+  announce: vi.fn(), dispatch: vi.fn(), backHandlers: [] as (() => boolean)[], os: 'ios' as string, focused: true, loading: false, locale: 'en',
 }));
 vi.mock('../../components/peer-request/usePeerRequestQueries', () => ({
   usePeerRequestQuery: () => ({ data: mock.loading ? undefined : mock.detail, error: mock.error, isLoading: mock.loading, refetch: mock.refetch }),
@@ -28,8 +29,11 @@ vi.mock('@react-navigation/native', () => ({
   useIsFocused: () => mock.focused,
 }));
 vi.mock('expo-router', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
-vi.mock('@twt/i18n/react', () => ({ useLocale: () => ({ locale: 'en' }) }));
-vi.mock('../../lib/claim-i18n', () => ({ useClaimT: () => (key: string) => key }));
+// MUTABLE (Story 3.15d AC 2 (f)): `mock.locale` is read on every render and `useClaimT()` hands back a NEW function each call (as the real
+// hook does). In `en` the words are the bare KEY (every existing assertion reads that); in any other locale they are `<locale>:<key>` — so
+// a switch changes the words, and a "words / t in the deps" mutation is ⛔ an equivalent mutant.
+vi.mock('@twt/i18n/react', () => ({ useLocale: () => ({ locale: mock.locale }) }));
+vi.mock('../../lib/claim-i18n', () => ({ useClaimT: () => (key: string) => (mock.locale === 'en' ? key : `${mock.locale}:${key}`) }));
 vi.mock('../../components/common/CallHelplineCTA', async () => {
   const { createElement } = await import('react');
   return { CallHelplineCTA: () => createElement('span', { 'data-testid': 'helpline-cta' }) };
@@ -53,8 +57,15 @@ vi.mock('react-native', async () => {
 const hardwareBack = () => mock.backHandlers.at(-1)?.() ?? false;
 vi.mock('tamagui', async () => {
   const { createElement } = await import('react');
-  const container = ({ children, accessibilityRole, accessibilityLabel }: { children: React.ReactNode; accessibilityRole?: string; accessibilityLabel?: string }) =>
-    createElement('div', { role: accessibilityRole === 'alert' || accessibilityRole === 'radiogroup' ? accessibilityRole : undefined, 'aria-label': accessibilityLabel }, children);
+  // Story 3.15d: also RECORDS `testID` / `color` / `fontSize` and FORWARDS `accessibilityLiveRegion` → `aria-live` (it forwarded neither, so
+  // AC 2 (d)'s "⛔ a live region" was vacuous here — a mutation that plants the prop on a new line turns it RED).
+  const container = ({ children, accessibilityRole, accessibilityLabel, accessibilityLiveRegion, testID, color, fontSize }: {
+    children: React.ReactNode; accessibilityRole?: string; accessibilityLabel?: string; accessibilityLiveRegion?: string; testID?: string; color?: string; fontSize?: string;
+  }) =>
+    createElement('div', {
+      role: accessibilityRole === 'alert' || accessibilityRole === 'radiogroup' ? accessibilityRole : undefined,
+      'aria-label': accessibilityLabel, 'aria-live': accessibilityLiveRegion, 'data-testid': testID, 'data-color': color, 'data-font-size': fontSize,
+    }, children);
   return {
     Paragraph: container, Text: container, XStack: container, YStack: container,
     Button: ({ children, onPress, disabled, accessibilityRole, accessibilityLabel, accessibilityState }: {
@@ -94,6 +105,7 @@ describe('mobile questionnaire interaction regressions', () => {
     mock.os = 'ios';
     mock.focused = true;
     mock.loading = false;
+    mock.locale = 'en';
   });
 
   it('a failed Submit exposes an enabled retry and reaches Thank-you without an unrelated save (R4)', async () => {
@@ -771,4 +783,360 @@ describe('mobile questionnaire interaction regressions', () => {
     expect(vi.mocked(usePreventRemove).mock.lastCall?.[0]).toBe(false);
     expect(screen.queryByRole('button', { name: 'peer_request.leave_anyway' })).not.toBeInTheDocument();
   });
+
+  // ══ Story 3.15d (DL1, AC 2) — S3–S6: the four standing lines are plain Text, spoken ONCE per SET, on BOTH platforms ══════════════════
+  // 3.15c-dev Y1: as `AnnouncedText` a line set AGAIN with the same words, while it stayed mounted, was sent NOTHING (Android: the live
+  // region has no content change; iOS: the effect keys on the words). Each site below has a counter bumped at EVERY set (⛔ a clear) and
+  // ONE effect on it. Counts are RUNNING TOTALS of `announce` calls BY TEXT (`sentAs`) — `useAnnounceOnChange` re-speaks the page title
+  // on a language switch and `SaveLineText` re-speaks on iOS, so a bare `mock.announce` total would be noise; every positive is
+  // awaited, every "nothing more" is asserted only after a flush (an `act` + one macrotask).
+  const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+  const sentOf = (text: string) => sentAs(mock.announce.mock.calls, text);
+  /** What n sends of `text` look like: identical on iOS; on Android the k-th (from 0) carries k trailing U+00A0. */
+  const sends = (os: string, text: string, n: number) => Array.from({ length: n }, (_, k) => text + (os === 'android' ? NBSP.repeat(k) : ''));
+  const prevented = () => vi.mocked(usePreventRemove).mock.lastCall?.[1] as (e: { data: { action: unknown } }) => void;
+  const prevent = () => act(() => prevented()({ data: { action: { type: 'GO_BACK' } } }));
+  const UNSAVED = 'peer_request.unsaved';
+  const REQUIRED = 'peer_request.required';
+  const DATE_UNSAVED = 'peer_request.date_unsaved';
+  const DATE_INVALID = 'peer_request.date_invalid';
+  const click = (name: string) => userEvent.click(screen.getByRole('button', { name }));
+  const expectLook = (el: HTMLElement) => {
+    expect(el).toHaveAttribute('role', 'alert');
+    expect(el).not.toHaveAttribute('aria-live'); // ⛔ a live region (the mock forwards `accessibilityLiveRegion` → `aria-live`)
+    expect(el).toHaveAttribute('data-color', '$red10'); // ⛔ a hex literal in this file (the microcopy gate)
+    expect(el).toHaveAttribute('data-font-size', '$2');
+  };
+  /** One page with a REQUIRED single question AND an optional date question that is always shown. */
+  const requiredAndDate = (answers: PeerRequestDetailResponse['answers'] = []): PeerRequestDetailResponse => {
+    const d = detail(answers);
+    d.questionnaire.pages[0]!.questions[1]!.showIf = null;
+    return d;
+  };
+  const dateInput = (label = 'When?') => screen.getByLabelText(label, { selector: 'input' });
+  const withSecondDate = (d: PeerRequestDetailResponse): PeerRequestDetailResponse => {
+    d.questionnaire.pages[0]!.questions.push({ key: 'when_met', kind: 'date', words: words('When did you meet?'), options: [{ code: 'unknown', words: words('Unknown'), exclusive: false }], optional: true, showIf: null });
+    return d;
+  };
+
+  for (const os of ['ios', 'android'] as const) {
+    // ── S3 — `peer_request.unsaved` on the load-error view (the prevented-removal callback sets it) ──
+    describe(`S3 — the load-error view's unsaved line (${os})`, () => {
+      const toLoadError = async () => {
+        mock.os = os;
+        mock.save.mockRejectedValueOnce(stale);
+        mock.refetch.mockImplementation(async () => ({ data: undefined, isError: true })); // the reload's refetch FAILED (RP8)
+        const view = render(createElement(PeerQuestionnaire, props));
+        await userEvent.click(screen.getByRole('radio', { name: 'not_died' }));
+        expect(await screen.findByText('peer_request.load_error')).toBeInTheDocument();
+        return view;
+      };
+
+      it('(a) a prevented removal set twice with the SAME words is spoken twice; (e) the view mounted silent', async () => {
+        await toLoadError();
+        await flush();
+        expect(sentOf(UNSAVED)).toHaveLength(0);
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(2));
+        expect(sentOf(UNSAVED)).toEqual(sends(os, UNSAVED, 2));
+      });
+
+      it('(b) a re-render beside the standing line sends nothing more; (d) role alert, ⛔ live region, testID, the look', async () => {
+        const view = await toLoadError();
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        expectLook(screen.getByTestId('peer-load-unsaved'));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+      });
+
+      it('(c) "Leave without saving" CLEARS the line and speaks nothing', async () => {
+        await toLoadError();
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await click('peer_request.leave_anyway');
+        await flush();
+        expect(screen.queryByTestId('peer-load-unsaved')).toBeNull();
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+      });
+
+      it('(f) a LOCALE SWITCH while the line stands sends nothing more (the line itself shows the new words)', async () => {
+        const view = await toLoadError();
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        mock.locale = 'hi';
+        view.rerender(createElement(PeerQuestionnaire, props)); // `useClaimT()` is a NEW function now, the words are `hi:…`
+        await flush();
+        expect(screen.getByTestId('peer-load-unsaved')).toHaveTextContent(`hi:${UNSAVED}`);
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+        expect(sentOf(`hi:${UNSAVED}`)).toHaveLength(0);
+      });
+    });
+
+    // ── S4 — `actionNotice` (required / date_unsaved): THREE set sites on one state variable ──
+    describe(`S4 — the action notice (${os})`, () => {
+      beforeEach(() => { mock.os = os; });
+
+      it('(a) Next with a required question unanswered, twice ⇒ `required` spoken twice; (e) mounted silent', async () => {
+        mock.detail = detail([]);
+        render(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(sentOf(REQUIRED)).toHaveLength(0);
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(REQUIRED)).toHaveLength(1));
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(REQUIRED)).toHaveLength(2));
+        expect(sentOf(REQUIRED)).toEqual(sends(os, REQUIRED, 2));
+      });
+
+      it('(a) Next with a TYPED-but-unsaved date, twice ⇒ `date_unsaved` spoken twice', async () => {
+        render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput(), '01-10-2026');
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(DATE_UNSAVED)).toHaveLength(1));
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(DATE_UNSAVED)).toHaveLength(2));
+        expect(sentOf(DATE_UNSAVED)).toEqual(sends(os, DATE_UNSAVED, 2));
+      });
+
+      it('(a) `pageBack` with a TYPED-but-unsaved date, twice ⇒ `date_unsaved` spoken twice (the THIRD set site)', async () => {
+        render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput(), '01-10-2026');
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(DATE_UNSAVED)).toHaveLength(1));
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(DATE_UNSAVED)).toHaveLength(2));
+        expect(sentOf(DATE_UNSAVED)).toEqual(sends(os, DATE_UNSAVED, 2));
+      });
+
+      it('a switch between the two keys speaks each ONCE; the `[dirtyDates.size]` clear speaks NOTHING', async () => {
+        mock.detail = requiredAndDate();
+        render(createElement(PeerQuestionnaire, props));
+        await click('peer_request.next'); // has_died unanswered ⇒ required
+        await waitFor(() => expect(sentOf(REQUIRED)).toHaveLength(1));
+        await userEvent.type(dateInput(), '01-10-2026');
+        await click('peer_request.next'); // the unsaved date is checked first ⇒ date_unsaved
+        await waitFor(() => expect(sentOf(DATE_UNSAVED)).toHaveLength(1));
+        expect(sentOf(REQUIRED)).toHaveLength(1);
+        await click('peer_request.date_clear'); // no date is unsaved ⇒ the effect clears the line
+        await flush();
+        expect(screen.queryByTestId('peer-action-notice')).toBeNull();
+        expect(sentOf(DATE_UNSAVED)).toHaveLength(1);
+        expect(sentOf(REQUIRED)).toHaveLength(1);
+      });
+
+      it('(b) a re-render beside the standing line sends nothing more; (d) role alert, ⛔ live region, testID, the look', async () => {
+        mock.detail = detail([]);
+        const view = render(createElement(PeerQuestionnaire, props));
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(REQUIRED)).toHaveLength(1));
+        expectLook(screen.getByTestId('peer-action-notice'));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(sentOf(REQUIRED)).toHaveLength(1);
+      });
+
+      it('(c) answering the question CLEARS the line and speaks nothing', async () => {
+        mock.detail = detail([]);
+        render(createElement(PeerQuestionnaire, props));
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(REQUIRED)).toHaveLength(1));
+        await userEvent.click(screen.getByRole('radio', { name: 'died' }));
+        await flush();
+        expect(screen.queryByTestId('peer-action-notice')).toBeNull();
+        expect(sentOf(REQUIRED)).toHaveLength(1);
+      });
+
+      it('(f) a LOCALE SWITCH while the line stands sends nothing more (counted BY TEXT — the page title is re-spoken on a switch)', async () => {
+        mock.detail = detail([]);
+        const view = render(createElement(PeerQuestionnaire, props));
+        await click('peer_request.next');
+        await waitFor(() => expect(sentOf(REQUIRED)).toHaveLength(1));
+        mock.locale = 'hi';
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(screen.getByTestId('peer-action-notice')).toHaveTextContent(`hi:${REQUIRED}`);
+        expect(sentOf(REQUIRED)).toHaveLength(1);
+        expect(sentOf(`hi:${REQUIRED}`)).toHaveLength(0);
+      });
+    });
+
+    // ── S5 — `unsavedWarning`: TWO set sites (`leaveQuestions`, the `usePreventRemove` callback in `Questionnaire`) ──
+    describe(`S5 — the unsaved warning (${os})`, () => {
+      let finish!: (value: unknown) => void;
+      const withPendingSave = async () => {
+        mock.os = os;
+        mock.save.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+        const view = render(createElement(PeerQuestionnaire, props));
+        await userEvent.click(screen.getByRole('radio', { name: 'not_died' })); // a save in flight — `busy` stays true
+        return view;
+      };
+      const settleSave = () => act(async () => finish({ answers: saved('not_died') }));
+
+      it('(a) Back while a save is pending, twice ⇒ spoken twice (`leaveQuestions`); (e) mounted silent', async () => {
+        await withPendingSave();
+        await flush();
+        expect(sentOf(UNSAVED)).toHaveLength(0);
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(2));
+        expect(sentOf(UNSAVED)).toEqual(sends(os, UNSAVED, 2));
+        await settleSave();
+      });
+
+      it('(a) a prevented removal while a save is pending, twice ⇒ spoken twice (the `usePreventRemove` callback in `Questionnaire`)', async () => {
+        await withPendingSave();
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(2));
+        expect(sentOf(UNSAVED)).toEqual(sends(os, UNSAVED, 2));
+        await settleSave();
+      });
+
+      it('the callback is reachable in `closing` too — spoken there', async () => {
+        await withPendingSave();
+        await click('peer_request.next'); // has_died is answered ⇒ the closing page
+        await screen.findByText('Closing note');
+        await prevent();
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await settleSave();
+      });
+
+      it('a standing warning across the `pages` → `closing` swap is NOT re-spoken (the old AnnouncedText was, on the remount) — recorded, accepted (DL1)', async () => {
+        await withPendingSave();
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await click('peer_request.next');
+        await screen.findByText('Closing note');
+        expect(screen.getByTestId('peer-unsaved-warning')).toBeInTheDocument(); // the line stands in the other tree
+        await flush();
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+        await settleSave();
+      });
+
+      it('(b) a re-render beside the standing line sends nothing more (⛔ a busy flip — its effect clears the line); (d) the look', async () => {
+        const view = await withPendingSave();
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        expectLook(screen.getByTestId('peer-unsaved-warning'));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+        await settleSave();
+      });
+
+      it('(c) the save settling CLEARS the line and speaks nothing', async () => {
+        await withPendingSave();
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        await settleSave();
+        await waitFor(() => expect(screen.queryByTestId('peer-unsaved-warning')).toBeNull());
+        await flush();
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+      });
+
+      it('(f) a LOCALE SWITCH while the warning stands sends nothing more', async () => {
+        const view = await withPendingSave();
+        await click('peer_request.back');
+        await waitFor(() => expect(sentOf(UNSAVED)).toHaveLength(1));
+        mock.locale = 'hi';
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(screen.getByTestId('peer-unsaved-warning')).toHaveTextContent(`hi:${UNSAVED}`);
+        expect(sentOf(UNSAVED)).toHaveLength(1);
+        expect(sentOf(`hi:${UNSAVED}`)).toHaveLength(0);
+        await settleSave();
+      });
+    });
+
+    // ── S6 — `peer_request.date_invalid`, one line per date question ──
+    describe(`S6 — the invalid-date line (${os})`, () => {
+      beforeEach(() => { mock.os = os; });
+      const saveButtons = () => screen.getAllByRole('button', { name: 'peer_request.date_save' });
+
+      it('(a) an unparseable Save, twice ⇒ spoken twice; (e) mounted silent', async () => {
+        render(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(sentOf(DATE_INVALID)).toHaveLength(0);
+        await userEvent.type(dateInput(), 'abc');
+        await userEvent.click(saveButtons()[0]!);
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(1));
+        await userEvent.click(saveButtons()[0]!);
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(2));
+        expect(sentOf(DATE_INVALID)).toEqual(sends(os, DATE_INVALID, 2));
+      });
+
+      it('a PARSEABLE Save speaks nothing', async () => {
+        render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput(), '01-10-2026');
+        await userEvent.click(saveButtons()[0]!);
+        await flush();
+        expect(sentOf(DATE_INVALID)).toHaveLength(0);
+        expect(screen.queryByTestId('peer-date-invalid-death_date')).toBeNull();
+      });
+
+      it('(b) a re-render beside the standing line sends nothing more; (d) role alert, ⛔ live region, a testID per question, the look', async () => {
+        const view = render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput(), 'abc');
+        await userEvent.click(saveButtons()[0]!);
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(1));
+        expectLook(screen.getByTestId('peer-date-invalid-death_date'));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(sentOf(DATE_INVALID)).toHaveLength(1);
+      });
+
+      it('(c) typing CLEARS the line and speaks nothing', async () => {
+        render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput(), 'abc');
+        await userEvent.click(saveButtons()[0]!);
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(1));
+        await userEvent.type(dateInput(), '1');
+        await flush();
+        expect(screen.queryByTestId('peer-date-invalid-death_date')).toBeNull();
+        expect(sentOf(DATE_INVALID)).toHaveLength(1);
+      });
+
+      it('(f) a LOCALE SWITCH while the line stands sends nothing more', async () => {
+        const view = render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput(), 'abc');
+        await userEvent.click(saveButtons()[0]!);
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(1));
+        mock.locale = 'hi';
+        view.rerender(createElement(PeerQuestionnaire, props));
+        await flush();
+        expect(screen.getByTestId('peer-date-invalid-death_date')).toHaveTextContent(`hi:${DATE_INVALID}`);
+        expect(sentOf(DATE_INVALID)).toHaveLength(1);
+        expect(sentOf(`hi:${DATE_INVALID}`)).toHaveLength(0);
+      });
+
+      it('two date questions on ONE page count independently — a Save on one speaks ONCE and never re-speaks the other\'s standing line', async () => {
+        mock.detail = withSecondDate(detail());
+        render(createElement(PeerQuestionnaire, props));
+        await userEvent.type(dateInput('When?'), 'abc');
+        await userEvent.type(dateInput('When did you meet?'), 'xyz');
+        await userEvent.click(saveButtons()[0]!); // question 1: its line mounts — total 1
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(1));
+        await userEvent.click(saveButtons()[1]!); // question 2: its line mounts — total 2, ⛔ 3 (question 1's effect must not run)
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(2));
+        await flush();
+        expect(sentOf(DATE_INVALID)).toHaveLength(2);
+        await userEvent.click(saveButtons()[1]!); // question 2 AGAIN: total 3
+        await waitFor(() => expect(sentOf(DATE_INVALID)).toHaveLength(3));
+        await flush();
+        expect(sentOf(DATE_INVALID)).toHaveLength(3);
+        expect(screen.getByTestId('peer-date-invalid-death_date')).toBeInTheDocument();
+        expect(screen.getByTestId('peer-date-invalid-when_met')).toBeInTheDocument();
+      });
+    });
+  }
 });

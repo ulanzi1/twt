@@ -4,58 +4,58 @@
 // `queue.empty`, `detail.lead`, the two buttons, `history.confirmed` / `history.notConfirmed`, the four reasons,
 // `detail.deathBanner`, `detail.notEligible`, and the reveal's `reveal.button` / `reveal.purpose` / `reveal.recorded` /
 // `reveal.refused`. ⛔ Change one without a new approval.
-// ⚠ Every OTHER string here is marked `// (label)` — form labels, document names, loading and error lines the DL12 list did
-// not cover; put to BigDev with the story's completion (AC11).
+// ⭐ Every OTHER string here (form labels, document names, loading and error lines, the nav link — the ones DL12's list did
+// not cover) was APPROVED as written at the dev-story's end (2026-11-25, BigDev: "Approve as shown (Recommended)") — AC11.
 // ⚠ The microcopy gate scans this file for the whole words it bars (`microcopy.yaml`) — say "a claim filed for the death",
 // ⛔ the bare word for what a family files.
 // ⛔ A staff hint that the member is TOLD the reason — row `3-13a` adds it when its message ships (it would be false before).
 
 export const identityCheckEn = {
   title: 'Identity checks',
-  // (label) the console nav link.
+  // The console nav link.
   nav: 'Identity checks',
   queue: {
     empty: 'No member is waiting for an identity check.',
-    loading: 'Loading…', // (label)
-    forbidden: 'You do not have access to identity checks in this Pariwar.', // (label)
-    loadError: 'The list could not be loaded. Try again.', // (label)
-    member: 'Member', // (label)
-    signedUp: 'Joined on', // (label)
-    district: 'District', // (label)
-    noDistrict: 'No posting on record', // (label)
-    lastCheck: 'Last check', // (label)
-    notYetChecked: 'Not checked yet', // (label)
-    attempts: 'Checks recorded', // (label)
-    open: 'Open', // (label)
+    loading: 'Loading…',
+    forbidden: 'You do not have access to identity checks in this Pariwar.',
+    loadError: 'The list could not be loaded. Try again.',
+    member: 'Member',
+    signedUp: 'Joined on',
+    district: 'District',
+    noDistrict: 'No posting on record',
+    lastCheck: 'Last check',
+    notYetChecked: 'Not checked yet',
+    attempts: 'Checks recorded',
+    open: 'Open',
     stateLabels: {
-      'lock-in': 'In lock-in', // (label)
-      'pending-valid': 'Waiting for identity check', // (label)
+      'lock-in': 'In lock-in',
+      'pending-valid': 'Waiting for identity check',
     } as Record<string, string>,
     outcomeLabels: {
-      confirmed: 'Confirmed', // (label)
-      not_confirmed: 'Not confirmed', // (label)
+      confirmed: 'Confirmed',
+      not_confirmed: 'Not confirmed',
     } as Record<string, string>,
   },
   detail: {
     lead: 'This member typed in their identity details when they joined. Check them against an original photo ID, shown to you in person or on a video call. Do not copy or keep the document or its number.',
     deathBanner: 'The Trust has been told this member has died. Their identity is checked on the claim instead.',
     notEligible: 'This member does not need an identity check.',
-    loading: 'Loading…', // (label)
-    forbidden: 'You do not have access to this member’s identity check.', // (label)
-    notFound: 'Member not found.', // (label)
-    loadError: 'The identity check could not be loaded. Try again.', // (label)
-    back: 'Back to identity checks', // (label)
-    name: 'Name', // (label)
-    dateOfBirth: 'Date of birth', // (label)
-    photo: 'Photo on record', // (label)
-    noPhoto: 'No photo on record', // (label)
-    mobile: 'Mobile', // (label)
-    joinedOn: 'Joined on', // (label)
-    posting: 'Posting', // (label)
-    noPosting: 'No posting on record', // (label)
-    history: 'Checks recorded', // (label)
-    noHistory: 'Not checked yet', // (label)
-    note: 'Note', // (label)
+    loading: 'Loading…',
+    forbidden: 'You do not have access to this member’s identity check.',
+    notFound: 'Member not found.',
+    loadError: 'The identity check could not be loaded. Try again.',
+    back: 'Back to identity checks',
+    name: 'Name',
+    dateOfBirth: 'Date of birth',
+    photo: 'Photo on record',
+    noPhoto: 'No photo on record',
+    mobile: 'Mobile',
+    joinedOn: 'Joined on',
+    posting: 'Posting',
+    noPosting: 'No posting on record',
+    history: 'Checks recorded',
+    noHistory: 'Not checked yet',
+    note: 'Note',
   },
   history: {
     confirmed: 'Identity confirmed by {name} on {date}.',
@@ -70,26 +70,26 @@ export const identityCheckEn = {
   form: {
     confirm: 'Confirm identity',
     couldNotConfirm: 'Could not confirm',
-    evidenceKind: 'How was the ID shown?', // (label)
-    documentKind: 'Which ID?', // (label)
-    reason: 'Why could you not confirm?', // (label)
-    note: 'Note', // (label)
-    noteOptional: 'Note (optional)', // (label)
-    noteRequired: 'Write a note saying what happened.', // (label)
-    choose: 'Choose…', // (label)
-    saving: 'Saving…', // (label)
-    saveError: 'The check could not be saved. Try again.', // (label)
+    evidenceKind: 'How was the ID shown?',
+    documentKind: 'Which ID?',
+    reason: 'Why could you not confirm?',
+    note: 'Note',
+    noteOptional: 'Note (optional)',
+    noteRequired: 'Write a note saying what happened.',
+    choose: 'Choose…',
+    saving: 'Saving…',
+    saveError: 'The check could not be saved. Try again.',
     evidenceKinds: {
-      photo_id_in_person: 'In person', // (label)
-      photo_id_video_call: 'On a video call', // (label)
+      photo_id_in_person: 'In person',
+      photo_id_video_call: 'On a video call',
     } as Record<string, string>,
     documentKinds: {
-      aadhaar_card: 'Aadhaar card', // (label)
-      pan_card: 'PAN card', // (label)
-      voter_id: 'Voter ID card', // (label)
-      driving_licence: 'Driving licence', // (label)
-      passport: 'Passport', // (label)
-      government_service_id: 'Government service ID card', // (label)
+      aadhaar_card: 'Aadhaar card',
+      pan_card: 'PAN card',
+      voter_id: 'Voter ID card',
+      driving_licence: 'Driving licence',
+      passport: 'Passport',
+      government_service_id: 'Government service ID card',
     } as Record<string, string>,
   },
   reveal: {

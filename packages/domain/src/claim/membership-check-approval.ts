@@ -41,7 +41,8 @@ import {
 /**
  * How the deceased's identity record stands (DL4) — plaintext columns of `member_kyc_profiles`, ⛔ a name.
  *   · `digilocker`         — `verification_strength = 'aadhaar_kyc'`: checked through DigiLocker;
- *   · `trustee_verified`   — typed in, and since verified by a trustee (row `3-13` — ⛔ built: unreachable today);
+ *   · `trustee_verified`   — typed in, and since checked by staff in life (Story 3.13's `markKycTrusteeVerified` —
+ *                            the only writer of `true`; `isKycIdentityVerified` agrees with this route, a lockstep test);
  *   · `typed_in_unchecked` — typed in at joining (`self_declared`), never checked: the Panel's case;
  *   · `unverified`         — the enum's third value, never written in production (fail-closed defence);
  *   · `no_record`          — no KYC row at all (unreachable past the door; fail-closed defence).

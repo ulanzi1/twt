@@ -87,9 +87,10 @@ export const memberKycProfiles = pgTable('member_kyc_profiles', {
   // Which path wrote this row — `digilocker` | `manual`.
   source: memberKycSourceEnum('source').notNull(),
 
-  // Manual records await trustee verification (Epic 4/trustee surface flips this true
-  // and emits `member.kyc_completed` from pending-valid → active). DigiLocker rows are
-  // already cryptographically verified; they are NOT trustee-gated.
+  // Manual records await staff verification. Story 3.13's `markKycTrusteeVerified` (kyc/profile-write.ts) is the ONLY
+  // writer of `true` — when a District / Pariwar Admin CONFIRMS a typed-in identity in life (`member_identity_validations`);
+  // from `pending-valid` the same act appends `member.kyc_completed` (→ `active`). DigiLocker rows are already
+  // cryptographically verified; they are NOT staff-gated. "Verified" is defined ONCE: `kyc/identity-verified.ts`.
   trusteeVerified: boolean('trustee_verified').notNull().default(false),
 
   // The DigiLocker `kyc_transactions` row this profile came from; NULL for manual.

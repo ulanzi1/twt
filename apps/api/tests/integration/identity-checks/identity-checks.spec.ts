@@ -208,7 +208,7 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     const w = await world();
     const url = route === 'queue' ? queueUrl(w) : route === 'reveal' ? revealUrl(w, w.memberId) : detailUrl(w, w.memberId);
     const payload = route === 'record' ? confirmBody : undefined;
-    const headers = route === 'record' ? { 'idempotency-key': randomUUID() } : {};
+    const headers: Record<string, string> = route === 'record' ? { 'idempotency-key': randomUUID() } : {};
     const anon = await app.inject({ method, url, ...(payload ? { payload } : {}), headers });
     expect(anon.statusCode, anon.body).toBe(401);
     const memberToken = signAccessToken(app, { memberId: w.memberId, pariwarId: w.pariwarId, deviceId: 'test-device' }, 15 * 60 * 1000);
@@ -219,7 +219,7 @@ describe.skipIf(!hasDatabase)('Story 3.13 — the identity check surface — E2E
     expect(keyless.statusCode, keyless.body).toBe(403);
     // The control: a District Admin of the member's district passes the same chain.
     const { client: da } = await actor(w.pariwarId, 'district_admin', 'district', w.district);
-    const allowed = await da.inject({ method, url, ...(payload ? { payload } : {}), headers: route === 'record' ? { 'idempotency-key': randomUUID() } : {} });
+    const allowed = await da.inject({ method, url, ...(payload ? { payload } : {}), headers: route === 'record' ? { 'idempotency-key': randomUUID() } : ({} as Record<string, string>) });
     expect([200, 201], allowed.body).toContain(allowed.statusCode);
     expect(await validations(w.memberId)).toHaveLength(route === 'record' ? 1 : 0);
   });

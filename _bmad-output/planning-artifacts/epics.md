@@ -2132,6 +2132,32 @@ Manager) — else recorded NOT REACHED with that gate and unit-shown only; each 
 
 ---
 
+### Story 3.15d: The Remaining Standing Lines Are Spoken Again, and a Language Switch Speaks One Line — in the Language Now on Screen `[SURFACE]`
+
+> ⚠ **Added 2026-11-25** (BigDev: *"create story for unowned items"*, after Story 3.15c LANDED — PR #351, `main` `56817eaa`). Owns the four
+> things 3.15c left with no owner: **3.15c-review W1** and **3.15c-dev Y1** and **Y2** in `deferred-work.md` ("Deferred from: code review of
+> story 3-15c" and "…dev of story 3-15c"), and the **leg (g) completeness guard** (the 3.15c story's Review Findings, round 2). ⛔ Panel
+> question (how the app's lines reach a screen reader; nothing about who is credited, told or paid).
+
+As a member who uses a screen reader, I want an error that stays on screen to be read to me again when my next try fails the same way — on
+every screen that shows one, not only two — and a language switch made twice in a row to read me ONE sentence, in the language now on my
+screen, so that what I hear matches what happened.
+
+**Acceptance Criteria (in brief):** (1) **Y1 — eight more standing lines**, in the shape 3.15c built: plain text (role `alert`, no live
+region), `announce()` once per time the line is SET — the same words included — on both platforms; the eight are `address.tsx`
+`address_required`, `posting.tsx`'s "Show more" `history_error`, `PeerQuestionnaire.tsx`'s `peer_request.unsaved` (load-error view),
+`actionNotice`, `unsavedWarning` and `date_invalid`, and `WorkplacePicker.tsx`'s `districts_error` (cached) and "Show more" `search_error`.
+⛔ changing `AnnouncedText`, `lib/announce.ts`, the copy, the routes or the contracts; the other 41 `AnnouncedText` usages are untouched.
+(2) **W1 — overlapping taps.** On `(settings)/language.tsx`, two taps inside one PUT window speak ONE sentence, in the language now shown
+(the LATEST tap wins; a stale tap's outcome sets nothing and speaks nothing). (3) **Y2 — reach.** Whether a member can have a signup step
+mounted under the language screen without a deep link is ESTABLISHED and recorded, and the story records its disposition — ⛔ a change to
+the shared `useAnnounceOnChange` hook or its nine call lines unless BigDev overrules. (4) **The guard.** A write to `use-wa-code.ts`'s error line
+that skips the announcement counter fails a check: `patch` can no longer carry `line` / `lineCount` (tsc) and a source pin counts the
+write sites. (5) **Device sweep** on the Android emulator (TalkBack ON, TTS-off capture), each site triggered twice and recorded fixed /
+not reached (with the gate) / not reproduced. (6) A speech-ON listen of W1 (BigDev), or recorded un-attested.
+
+---
+
 ### Story 3.16: Upload a PAN, a Masked Aadhaar and a Selfie When DigiLocker Is Unavailable `[PRIMITIVE]` `[SURFACE]`
 
 > ⚠ **Added 2026-11-21** (sprint change proposal [`2026-11-21-registration`](sprint-change-proposal-2026-11-21-registration.md); author-commit [`2026-11-21-482`](../../.decision-log.md#decision-2026-11-21-482)). Replaces the typed-in route (`POST /api/v1/member/kyc/manual`). ⚠ Go-live waits on the Panel's ruling on

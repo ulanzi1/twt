@@ -368,6 +368,38 @@ describe.skipIf(!hasDatabase)('data-export build + vacuum — live DB (:5433)', 
       }
     }
   });
+  it('⭐ Story 3.13 (DL14, AC13) — the staff identity checks: the strict-parsed profile lists each act, oldest first, with the note decrypted; ⛔ staff attribution', async () => {
+    const enc = fakeEncryption();
+    const { memberId, pariwarId, exportId } = await seedPendingExport();
+    const note = await encryption.serializeEnvelope(
+      await encryption.encryptTier1(Buffer.from('ZZ came without an ID', 'utf-8'), { pariwarId, fieldClass: 'member_identity_validation' }, enc.kms, enc.kekRef),
+    );
+    try {
+      await withPariwarScope(pool, pariwarId, async (_tx, client) => {
+        await client.query(
+          `INSERT INTO member_identity_validations (pariwar_id, member_id, outcome, evidence_kind, document_kind, not_confirmed_reason, note_ciphertext,
+             kyc_profile_updated_at, decided_by_actor_id, decided_by_display, decided_at, superseded_at, superseded_reason)
+           VALUES ($1, $2, 'not_confirmed', 'photo_id_in_person', NULL, 'no_document_shown', $3, now(), $4, 'ZZ-STAFF-NAME', '2026-11-01T09:00:00Z', now(), 're_checked'),
+                  ($1, $2, 'confirmed', 'photo_id_video_call', 'passport', NULL, NULL, now(), $4, 'ZZ-STAFF-NAME', '2026-11-02T09:00:00Z', NULL, NULL)`,
+          [pariwarId, memberId, note, randomUUID()],
+        );
+      });
+      // the build STRICT-parses every section against its contract — `ProfileSection.identityChecks` included (TR12)
+      expect((await runDataExportBuild({ pool, ...enc }, { requestId: randomUUID(), pariwarId, actorId: memberId, traceId: randomUUID(), payload: { exportId } })).status).toBe('ready');
+      const bytes = await encryption.decryptTier1(encryption.parseEnvelope((await row(exportId)).artifact_ciphertext!), { pariwarId, fieldClass: 'data_export' }, enc.kms, enc.kekRef);
+      const zip = await JSZip.loadAsync(Buffer.from(bytes));
+      const profile = JSON.parse(await zip.file('profile.json')!.async('string')) as { identityChecks: unknown[] };
+      expect(profile.identityChecks).toEqual([
+        { decidedAt: '2026-11-01T09:00:00.000Z', outcome: 'not_confirmed', evidenceKind: 'photo_id_in_person', documentKind: null, notConfirmedReason: 'no_document_shown', note: 'ZZ came without an ID' },
+        { decidedAt: '2026-11-02T09:00:00.000Z', outcome: 'confirmed', evidenceKind: 'photo_id_video_call', documentKind: 'passport', notConfirmedReason: null, note: null },
+      ]);
+      const all = JSON.stringify(profile);
+      expect(all).not.toContain('ZZ-STAFF-NAME');
+      expect(all).not.toMatch(/decidedBy|decided_by/);
+    } finally {
+      await cleanup(memberId);
+    }
+  });
   // Live-DB suite timeout: these tests run several sequential live-DB round-trips (setup +
   // build/vacuum + row assertions) against a shared :5433 container; under concurrent `turbo`/
   // `ci:local` load they can exceed the 5s vitest default. 20s removes the contention flake without

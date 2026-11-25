@@ -20,6 +20,12 @@
 import { z } from 'zod';
 
 import { Iso8601Datetime } from '../_common/primitives.js';
+import {
+  IdentityCheckDocumentKind,
+  IdentityCheckEvidenceKind,
+  IdentityCheckNotConfirmedReason,
+  IdentityCheckOutcome,
+} from '../members/identity-check.js';
 
 /** The export lifecycle status (mirrors the `data_exports.status` value set; validated app-layer). */
 export const DataExportStatus = z.enum(['pending', 'ready', 'failed', 'consumed', 'expired']);
@@ -286,6 +292,24 @@ export const ProfileSection = z
           offerNameEn: z.string(),
           offerNameHi: z.string(),
           openedAt: Iso8601Datetime,
+        })
+        .strict(),
+    ),
+    /**
+     * Story 3.13 (DL14; `2026-11-25-501`, BigDev: "Include, no staff names") — every time staff checked the member's typed-in
+     * identity in life: when, the outcome, how the ID was shown, which ID, the reason it could not be confirmed, and the staff
+     * note (`null` when none was written, or once erased). ⛔ Staff attribution AT ALL — a staff name or user id is the staff
+     * member's data, ⛔ the member's. Oldest first.
+     */
+    identityChecks: z.array(
+      z
+        .object({
+          decidedAt: Iso8601Datetime,
+          outcome: IdentityCheckOutcome,
+          evidenceKind: IdentityCheckEvidenceKind.nullable(),
+          documentKind: IdentityCheckDocumentKind.nullable(),
+          notConfirmedReason: IdentityCheckNotConfirmedReason.nullable(),
+          note: z.string().nullable(),
         })
         .strict(),
     ),

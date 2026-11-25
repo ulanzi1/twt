@@ -15,6 +15,7 @@ import {
   IdentityCheckQueueEntry,
   IdentityCheckQueueQuery,
   IdentityCheckRecordRequest,
+  ProfileSection,
 } from '../src/index.js';
 
 describe('Story 3.13 — the identity check vocabulary', () => {
@@ -84,5 +85,26 @@ describe('Story 3.13 — DL11: the queue is bounded and carries ⛔ PII', () => 
   it('a queue row has ⛔ name, ⛔ mobile', () => {
     const keys = Object.keys(IdentityCheckQueueEntry.shape);
     expect(keys.filter((k) => /name|mobile|dob|birth|photo/.test(k))).toEqual([]);
+  });
+});
+
+describe('Story 3.13 — DL14: the data export\'s identity checks (⛔ staff attribution)', () => {
+  const item = ProfileSection.shape.identityChecks.element;
+  const ok = {
+    decidedAt: '2026-11-01T09:00:00.000Z',
+    outcome: 'not_confirmed',
+    evidenceKind: 'photo_id_in_person',
+    documentKind: null,
+    notConfirmedReason: 'no_document_shown',
+    note: 'came without an ID',
+  };
+
+  it('a well-formed act parses (the control)', () => {
+    expect(item.safeParse(ok).success).toBe(true);
+    expect(item.safeParse({ ...ok, outcome: 'confirmed', notConfirmedReason: null, documentKind: 'passport', note: null }).success).toBe(true);
+  });
+
+  it.each([['decidedByDisplay', 'Asha'], ['decidedByActorId', 'x'], ['staffName', 'Asha']])('⛔ `%s` (strict)', (key, value) => {
+    expect(item.safeParse({ ...ok, [key]: value }).success).toBe(false);
   });
 });

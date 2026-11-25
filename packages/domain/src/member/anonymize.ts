@@ -58,6 +58,7 @@ import { nomineeDeterminations } from '../schema/nominee_determinations.js';
 import { claimDeathCertificateReviews } from '../schema/claim_death_certificate_reviews.js';
 import { claimFraudInvestigationSteps } from '../schema/claim_fraud_investigation_steps.js';
 import { claimMembershipChecks } from '../schema/claim_membership_checks.js';
+import { memberIdentityValidations } from '../schema/member_identity_validations.js';
 import { claimWarningApprovals } from '../schema/claim_warning_approvals.js';
 import { claimGroundInspections } from '../schema/claim_ground_inspections.js';
 import { claimGroundInspectionDiscrepancyNotes } from '../schema/claim_ground_inspection_discrepancies.js';
@@ -72,6 +73,7 @@ import { memorialWithdrawals } from '../schema/memorial_withdrawals.js';
 import {
   CLAIM_FRAUD_INVESTIGATION_FIELD_CLASS,
   CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS,
+  MEMBER_IDENTITY_VALIDATION_FIELD_CLASS,
   MEMORIAL_FIELD_CLASS,
 } from '../encryption/field-classes.js';
 import { eraseKnownPeopleLinks } from './known-people.js';
@@ -359,6 +361,22 @@ export async function anonymizeMember(
     .update(claimMembershipChecks)
     .set({ noteCiphertext: await encSentinel(pariwarId, CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS, enc) })
     .where(and(eq(claimMembershipChecks.deceasedMemberId, memberId), isNotNull(claimMembershipChecks.noteCiphertext)));
+
+  // ── ⭐ Story 3.13 (DL14) — the staff IDENTITY CHECK in life, keyed on the member: the staff note (Tier-1) → sentinel,
+  // where present (a `confirmed` may carry none). The sentinel is ciphertext, so 0218's "`not_confirmed` ⇒ a note" CHECK
+  // still holds. The outcome, the evidence / document kind, the reason and the attribution are the record — kept. 0218
+  // grants the column UPDATE and the per-command UPDATE policy AT BIRTH, and its guard leaves `note_ciphertext` out of the
+  // frozen list — ⛔ a later guard REPLACE ([[project_append_only_guard_names_erasure_columns]] binds an existing table).
+  await client
+    .update(memberIdentityValidations)
+    .set({ noteCiphertext: await encSentinel(pariwarId, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS, enc) })
+    .where(
+      and(
+        eq(memberIdentityValidations.pariwarId, pariwarId),
+        eq(memberIdentityValidations.memberId, memberId),
+        isNotNull(memberIdentityValidations.noteCiphertext),
+      ),
+    );
 
   // ── ⭐ Story 6.23a (NW13, Trap 14) — the APPROVAL-OVER-WARNING record, keyed on the DECEASED member (the
   // `nominee_determinations` shape — ⛔ never a subquery inside this UPDATE): a late-warning reason's Tier-1 note →

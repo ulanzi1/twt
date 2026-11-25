@@ -1,22 +1,21 @@
 ---
-baseline_commit: 78971e1f
+baseline_commit: 8d0c1ae9
 ---
 
 <!--
-PINNED: `78971e1f` = the tip of `story/3-15b-repeated-announcement-sent-as-different-text` on 2026-11-23, the commit that added this
-row as `backlog` with the `epics.md` Story 3.15c block and the owner lines on X1 and X2 in `deferred-work.md` (ledger `2026-11-23q`).
+PINNED: `8d0c1ae9` = `origin/main` on 2026-11-25, the merge-base of this branch after its rebase (only this story's own commits sit
+above it, so `<baseline>..HEAD` is this story's work alone — the code-review range and AC 1's diff). The row itself was added at
+`78971e1f` (`records(3.15c): row added as backlog …`, ledger `2026-11-23q`), which reached `main` unchanged when 3.15b LANDED by
+fast-forward (`57f541b3`, records `faf3ab7a`, ledger `2026-11-23u`). ⛔ Pin `78971e1f`: `78971e1f..HEAD` carries 3.15b's review code
+(`0a56ec0f` — `lib/announce-repeat.ts`, `lib/session-context.tsx`, `eslint.config.mjs`) and ~17 main commits, so AC 1's empty diff
+would be RED before any code. RULE: every later rebase RE-PINS `baseline_commit` (front matter + this comment) to the new
+`git merge-base origin/main HEAD`.
 Authored in its OWN worktree `/Users/dev/Developer/projects/TWT/.claude/worktrees/3-15c-standing-line-spoken-again-and-language-switch-spoken-once`,
-branch `story/3-15c-standing-line-spoken-again-and-language-switch-spoken-once`, STACKED on the 3.15b branch (the row exists only
-there; 3.15b is in `review`, ⛔ landed). Upstream UNSET — first push with an explicit refspec ([[project_story_branch_upstream_is_main]]).
-The worktree was created without `node_modules` — `pnpm install` first (Task 0.1).
-
-⚠ 3.15b's code review is COMMITTED on its branch after this pin: `0a56ec0f` (code) and `57f541b3` (records; ledger `2026-11-23r`; row
-`review`). `78971e1f..57f541b3` touches `assisted.tsx`, `eslint.config.mjs` (the fence names the property only), `lib/announce-repeat.ts`
-+ `lib/session-context.tsx` (the counter cleared at every session boundary), a new `announce-repeat-session-end.test.ts`, and records —
-⛔ `WaCodeEntry.tsx`, `use-wa-code.ts`, `language.tsx`, `announce.tsx`, or either test file this story edits. Its X2 re-attribution
-(review P3) is quoted below from `57f541b3`. So Task 0.1 REBASES this branch onto `57f541b3` (or 3.15b's later tip, or `origin/main` if
-3.15b has landed) and RE-PINS `baseline_commit` to the rebased SHA of the row record (`records(3.15c): row added …`), then re-derives
-F1–F10 by function ([[feedback_story_validate_footguns]] #11, #24 — RE-LOCATE BY FUNCTION, ⛔ by line number).
+branch `story/3-15c-standing-line-spoken-again-and-language-switch-spoken-once`; rebased onto `8d0c1ae9` on 2026-11-25 (backup
+`backup/3-15c-pre-rebase-2026-11-25` = the pre-rebase tip `fb813ef8`). Upstream UNSET — first push with an explicit refspec
+([[project_story_branch_upstream_is_main]]). The worktree was created without `node_modules` — `pnpm install` first (Task 0.1).
+F1–F10 were traced at `78971e1f` and re-checked at `8d0c1ae9`; the dev still re-derives them by function at HEAD (Task 0.2 —
+[[feedback_story_validate_footguns]] #11, #24 — RE-LOCATE BY FUNCTION, ⛔ by line number).
 
 §0 GATE (the routing template's, applied FIRST): ⛔ Panel question. Everything here is HOW two existing lines reach a screen reader —
 the AUTHOR's. Nothing changes who is credited, told, paid, or what is stored. The remedies the epics block leaves open ("The remedy is the
@@ -63,7 +62,12 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
 - Memory [[project_android_live_region_reread_on_rerender]] (a standing live region is re-read at a later PRESS — 6.36f D1, 3.15 V1),
   [[project_talkback_drops_identical_announcement]], [[project_mobile_android_emulator_setup]].
 
-## Found facts (traced at `78971e1f`)
+## Found facts (traced at `78971e1f`; re-checked at `8d0c1ae9`)
+
+Re-check at `8d0c1ae9` (2026-11-25): `78971e1f..8d0c1ae9` under `apps/mobile/{app,components,lib}` changes only a blank line in
+`assisted.tsx`, the counter clear in `lib/session-context.tsx` and comments in `lib/announce-repeat.ts` (3.15b review `0a56ec0f`), plus
+the ESLint fence now naming the PROPERTY only (`announceForAccessibility*` on ANY receiver is an error — new code calls `announce()`).
+⛔ file this story edits moved; `<AnnouncedText` usages still 50; the `epics.md` Story 3.15c block and the X1 / X2 lines unchanged.
 
 - **F1 — X1 is not Android-only: an identical re-set sends NOTHING on either platform.** `components/peer-request/announce.tsx`
   `AnnouncedText`: on Android a `Text` with `accessibilityLiveRegion` (it calls nothing); on iOS `useEffect(() => { if (text)
@@ -178,6 +182,13 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
   3.15a / 6.36f pattern; `AnnouncedText` itself ⛔ changed.) `use-wa-code.ts` gains `lineCount: number` in `WaCodeState` (initial 0),
   bumped by every write that SETS `line` from an answer — each `patch({ line: … })` and each `setState` that sets `line`, the same value
   included — EXCEPT the `code_resend_too_soon` arm's `line: s.line` keep (F5: that arm bumps only when `told`).
+  *The mechanism* (`patch(next)` cannot read `s`, so it cannot bump): ONE helper in the hook,
+  `const setLine = useCallback((line: WaCodeLine, rest: Partial<WaCodeState> = {}) => setState((s) => ({ ...s, ...rest, line,
+  lineCount: s.lineCount + 1 })), [])`, used by ALL 9 `patch({ line: … })` calls (send `not_pending`; the send `default` arm; re-read
+  PENDING / other / threw; verify `not_pending`; `code_wrong` retry and final; `code_no_longer_valid` — the other fields go in `rest`);
+  and `lineCount: s.lineCount + 1` written into the 5 `setState` arms that set `line` (send 200, `mayHaveSent`, `code_send_failed`,
+  `code_limit_reached`, and `code_resend_too_soon` as `told ? s.lineCount + 1 : s.lineCount`). 9 + 5 + the initial state = F5's 15
+  writes. `patch` stays for the writes that never touch `line` (`busy`); add `setLine` to `send` / `confirm`'s `useCallback` deps.
   `WaCodeEntry.tsx` renders `errorText` as a tamagui `Text` (the same font size and colour as `AnnouncedText kind="error"` gives
   it today — `$2`, `$red10`), `accessibilityRole="alert"`, ⛔ `accessibilityLiveRegion`, with a `testID`; and ONE effect, in
   `assisted.tsx`'s shape (its error effect keys on `errorSet` alone): `useEffect(() => { if (errorText) announce(errorText) },
@@ -249,9 +260,14 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
    the answer itself re-sets the line and is announced (that is (a)); (d) collapse → expand with an error
    showing ⇒ spoken once on the mount (kept behaviour); (e) iOS: `send_failed` is announced BEFORE the queued `resend_wait` in one answer
    (F8 — an ORDER assertion added: the index of the `send_failed` call < the index of the `resend_wait` call); (f) the element has
-   `role="alert"` and ⛔ `aria-live`. RED first (legs (a), (b), (f) fail on today's code, (f) on BOTH platforms — F7; (e) is GREEN on
-   today's code, where the child `AnnouncedText`'s effect runs first). Mutations, each RED then restored: drop the `lineCount` bump from
-   the `reread()` arm ⇒ (a) RED; declare the error effect AFTER the `waitCount` effect ⇒ (e) RED.
+   `role="alert"`, ⛔ `aria-live`, its `testID`, and the look `AnnouncedText kind="error"` gave it — `data-color` `$red10`,
+   `data-font-size` `$2` (extend this file's `tamagui` mock to record `color` / `fontSize` as `data-color` / `data-font-size`, the
+   `assisted-step-render.test.ts` shape, 3.15a AC 1). RED first (legs (a), (b), (f) fail on today's code, (f) on BOTH platforms — F7;
+   (e) is GREEN on today's code, where the child `AnnouncedText`'s effect runs first). Mutations, each RED then restored: in `reread()`
+   call `patch` instead of `setLine` for the PENDING arm ⇒ (a) RED; declare the error effect AFTER the `waitCount` effect ⇒ (e) RED.
+   Every positive count is awaited (`await waitFor(() => expect(sentAs(…)).toHaveLength(n))`); every "⛔ further announcement" is
+   asserted only after a settle (an `act` flush + one macrotask) — a bare assertion straight after `findBy…` races the effect (main's
+   `014b7198`, [[project_mobile_announce_after_heading_race]]) and a negative asserted before the effect ran cannot fail.
 3. **X2 — the language switch (DL3).** Unit legs, under `android` AND `ios`, every count a RUNNING TOTAL of `mock.announce` calls
    (⛔ a delta — on today's Android code (b) is "one more" too: 0 then 1): (a) the first failure ⇒ total 1, in the chosen language;
    (b) a switch while the line shows, failing ⇒ total 2, the second in the NEW language (the F7 leg's second half rewritten — on Android
@@ -261,6 +277,7 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
    identical); (e) the line has `role="alert"` and ⛔ `aria-live`. Every other leg in `language-screen-render.test.ts` green unchanged.
    RED first for (a)-android, (b)-android, (e). In jsdom the live region's own speech (X2's double; F6 (i)'s false "not recorded" at a
    switch that then succeeds) shows ONLY as `aria-live` — (e) is the leg that catches it; the counts of (b) and (c) cannot (F7).
+   Totals are awaited and "stays 1" is asserted after a settle, as in AC 2.
 4. **The device pass (epics AC (3); DL2, DL5)** on the Android emulator (TalkBack ON, TTS OFF capture; the served bundle checked for a
    code-only marker of THIS branch first — [[project_mobile_android_emulator_setup]] 3.15b additions): **X2** (API stopped): (a), (b),
    (d) above, plus (c) with the API resumed — each with its log lines (timestamps, trailing U+00A0 count) and an outcome **fixed** /
@@ -270,18 +287,25 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
 5. **The listen (epics AC (4); DL6).** BigDev's words on X2's switch-while-showing leg with speech ON, or *"un-attested"* in BigDev's words.
 6. **Records.** `deferred-work.md`: a dated line under X1 and under X2 — **CLOSED by Story 3.15c** only with device evidence on this
    branch's bundle; otherwise *"addressed in code, ⛔ device-shown"* with the gate ([[feedback_closure_language_precision]]); the X1 line
-   states the `send_failed` leg's NOT REACHED and why. The DL4 inventory item (new, dated, owner NONE YET). Under V4: a dated line for
-   `language.tsx`'s same-language-twice leg (AC 4 (d)) — its result, ⛔ an owner claim (V4's remainder owner stays NONE YET).
-   `friction-budget.md`: `**Story 3.15c disposition (…)**` (⛔ new row, ⛔ row retired, ⛔ row amended — taps unchanged). `mobile`
-   `tsc`, `eslint`, whole vitest suite green; the emulator restored; ⛔ seed spec, env copy or container committed or left running.
+   states the `send_failed` leg's NOT REACHED and why. The DL4 inventory item (new, dated, owner NONE YET). Under V4 (its 3.15b
+   code-review remainder line names `WaCodeEntry` among six "Routed, ⛔ device-shown" sites, trigger *"the next change to any of those
+   files"* — this story is that change): a dated line for `language.tsx`'s same-language-twice leg (AC 4 (d)) AND for `WaCodeEntry` —
+   the X1 leg's second `verify_failed` is a same-text repeat through `announce()`: its log line and trailing U+00A0 count, or NOT
+   REACHED with the gate (its `sendCount` / `waitCount` calls are unchanged — say so). Each a result, ⛔ an owner claim (V4's remainder
+   owner stays NONE YET). `friction-budget.md`: `**Story 3.15c disposition (…)**` APPENDED at the END of the file (after the
+   `6.36b-announce-test` block, the newest at `8d0c1ae9`) — ⛔ new row, ⛔ row retired, ⛔ row amended, taps unchanged; and it states
+   where the cost 3.15b's disposition item 3 left to this story stands (*"may now hear it twice on Android … Story 3.15c's X2 owns the
+   fix"*): fixed on the device, or addressed in code ⛔ device-shown. `mobile` `tsc`, `eslint`, whole vitest suite green; the emulator
+   restored; ⛔ seed spec, env copy or container committed or left running.
 
 ## Tasks / Subtasks
 
 - [ ] **Task 0 — Preflight**
-  - [ ] 0.1 `git fetch origin`; `ListAgents`; read the 3.15b branch tip LIVE (`57f541b3` at validate). Rebase this branch onto it — or onto
-        `origin/main` if 3.15b has landed (expect a `sprint-status.yaml` ledger conflict — [[project_rebase_ledger_conflict_separator]];
-        verify the YAML parses). RE-PIN `baseline_commit` (front matter + the PINNED comment) to the rebased row record and check
-        `git merge-base --is-ancestor <pin> HEAD`. `pnpm install`.
+  - [ ] 0.1 `git fetch origin`; `ListAgents`. The branch was rebased onto `origin/main` `8d0c1ae9` on 2026-11-25 (3.15b LANDED) and
+        pinned there. If `origin/main` has moved since: rebase again (expect a `sprint-status.yaml` ledger conflict —
+        [[project_rebase_ledger_conflict_separator]]; keep both, verify the YAML parses), then RE-PIN `baseline_commit` (front matter +
+        the PINNED comment) to the new `git merge-base origin/main HEAD`. Either way: `git merge-base --is-ancestor <pin> HEAD`, and run
+        AC 1's `git diff <pin>..HEAD -- …` now — it must be EMPTY before any code. `pnpm install`.
   - [ ] 0.2 Re-derive F1, F2, F4, F6, F7, F8 at HEAD by function; differences → the Debug Log (the grep / the code wins).
 - [ ] **Task 1 — The inventory (AC 1; DL4) — before any code**
   - [ ] 1.1 Re-derive F5 at HEAD; record the table (file:line, words, kind, class, the state trace) in the Debug Log.
@@ -298,10 +322,12 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
 - [ ] **Task 3 — X1 (AC 2; DL1) — RED first**
   - [ ] 3.1 Write AC 2's legs in `wa-code-entry-render.test.ts` (both platforms — `mock.os` set per leg, the file defaults to `ios`;
         reuse `tests/unit/announce-text.ts` `bare` / `NBSP` / `sentAs`); watch (a), (b), (f) fail; (e) passes on today's code.
-  - [ ] 3.2 `use-wa-code.ts`: `lineCount` (type, `initialWaCodeState`, every `line` write — F5's path list). `WaCodeEntry.tsx`: plain
+  - [ ] 3.2 `use-wa-code.ts`: `lineCount` (type, `initialWaCodeState`), the `setLine` helper for the 9 `patch({ line })` calls and the
+        explicit bump in the 5 `setState` arms (DL1 — F5's 15 writes; `grep -n 'line:' use-wa-code.ts` afterwards, every hit accounted
+        for). `WaCodeEntry.tsx`: plain
         `Text` line + the one effect (DL1), declared before the wait effect; header comment rewritten (the `AnnouncedText kind="error"`
         sentence → DL1's why, X1, the order rule F8). `AnnouncedText` import removed if unused.
-  - [ ] 3.3 Mutations (AC 2): drop the bump from `reread()` ⇒ (a) RED; move the error effect below the `waitCount` effect ⇒ (e) RED;
+  - [ ] 3.3 Mutations (AC 2): `patch` for `setLine` in `reread()`'s PENDING arm ⇒ (a) RED; move the error effect below the `waitCount` effect ⇒ (e) RED;
         restore each byte-for-byte (`diff` against a saved copy).
 - [ ] **Task 4 — X2 (AC 3; DL3) — RED first**
   - [ ] 4.1 Rewrite the F7 announce-rule leg and add AC 3's legs in `language-screen-render.test.ts` (running totals — AC 3); watch
@@ -320,15 +346,20 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
   - [ ] 6.4 Restore: TalkBack off, Google TTS enabled + `tts_default_synth`, font 1.0, volumes; `adb reverse --remove-all`; API / Metro
         stopped; container removed; seed spec and env copies deleted; `git status` clean except this story's files.
 - [ ] **Task 7 — Records (AC 6)**
-  - [ ] 7.1 `deferred-work.md` lines (X1, X2, the DL4 inventory item, the V4 line); `friction-budget.md` disposition after 3.15b's.
+  - [ ] 7.1 `deferred-work.md` lines (X1, X2, the DL4 inventory item, the V4 lines — `language.tsx` AND `WaCodeEntry`);
+        `friction-budget.md` disposition appended at the END of the file, with the X2 cost's status (AC 6).
   - [ ] 7.2 This story: Dev Agent Record, File List, Change Log; Status → `review`. `sprint-status.yaml`: row → `review`, a dated row
         comment, a prepended `# last_updated:` entry + the `last_updated:` block line (read the head LIVE across every branch AND
         worktree for the next free letter — [[project_sprint_status_ledger]]; [[project_sprint_status_safe_prepend]]; YAML parses).
 - [ ] **Task 8 — Gates**
   - [ ] 8.1 Commit on `story/3-15c-…` only, branch checked before each commit ([[feedback_commit_on_story_branch]]); `friction:check`
         after the commit.
-  - [ ] 8.2 `ci:local` on a FRESH container (`DATABASE_URL=…?sslmode=disable` — [[project_prepush_hook_inherits_5432]]). The push is
-        BigDev's word.
+  - [ ] 8.2 The gate is GitHub `ci.yml` (ADR-0047, ratified 2026-11-24): the push and the PR are BigDev's word; the story lands only
+        when the PR's `ci.yml` run AT THE EXACT TIP SHA concluded `success` on every job (cl.1) — `scripts/land.sh --dry-run <pr>` first,
+        then `scripts/land.sh <pr>` (fast-forward; ⛔ squash, ⛔ merge commit). The ledger line cites the run id, the tip SHA and jobs
+        passed / total for the PR run AND the push to `main` (cl.2); `code-escrow-mirror` is red on every push — not part of the gate.
+        `ci:local` is advisory (cl.3 — not needed for a mobile-only change; if run, a FRESH container, `DATABASE_URL=…?sslmode=disable`);
+        the pre-push hook runs it only with `RUN_CI_LOCAL=1` (cl.4 — [[project_prepush_hook_inherits_5432]]).
 
 ## Dev Notes
 
@@ -348,7 +379,10 @@ accepted, refused, stored or credited is unchanged, and so is every copy key. �
 7. **⛔ `uiautomator dump` during a speech capture** (it turns TalkBack off); one `adb input tap` = one press with TalkBack ON.
 8. **A stale bundle looks fine** — prove the served bundle before any leg (3.15b's first round ran 3.15a's code).
 9. **Unit tests show what is SENT, ⛔ what TalkBack speaks** ([[project_talkback_drops_identical_announcement]]) — "fixed" needs the log.
-10. **Hand-format** (Prettier ⛔ enforced — [[project_prettier_not_enforced]]); every `git push` needs `DATABASE_URL=<your container>`.
+10. **Hand-format** (Prettier ⛔ enforced — [[project_prettier_not_enforced]]). A `git push` runs ⛔ `ci:local` unless `RUN_CI_LOCAL=1`
+    is set (ADR-0047 cl.4); only then does it need `DATABASE_URL=<your container>` (the shell's is `:5432`).
+11. **An announcement is made by an EFFECT after the commit** — await positive counts with `waitFor`, settle before a negative (AC 2;
+    main's `014b7198` lost that race once on CI).
 
 ### What this story does ⛔ do
 
@@ -411,4 +445,5 @@ restored. The device pass (AC 4) is a required part of done; the listen (AC 5) i
 | Version | Date | Change |
 | --- | --- | --- |
 | 1.0 | 2026-11-23 | Created (`bmad-create-story 3.15c`) in its own worktree stacked on the 3.15b branch (`78971e1f`). §0: ⛔ Panel question. F1: X1 sends nothing on iOS either. F4: `WaCodeEntry` very probably reachable locally (the secrets' env fallback; ⛔ Secret Manager) — the `verify_failed` leg with ⛔ outbound call, the `send_failed` leg ⛔ (it needs Meta). DL1 plain text + one `announce()` per set (`lineCount`); DL3 the same for the language line; DL4 the inventory recorded, only `WaCodeEntry` changed. Row `backlog` → `ready-for-dev`. ⛔ Code. |
+| 1.2 | 2026-11-25 | Re-validated (`bmad-create-story validate 3.15c`; BigDev: *"all"*) after rebasing onto `origin/main` `8d0c1ae9` (3.15b LANDED; backup `backup/3-15c-pre-rebase-2026-11-25`). `baseline_commit` re-pinned `78971e1f` → `8d0c1ae9` (AC 1's empty diff was RED at `78971e1f` — `0a56ec0f` changed `lib/announce-repeat.ts`), with a re-pin rule for later rebases. Task 8.2 / Trap 10 follow ADR-0047 (GitHub `ci.yml` at the tip SHA is the gate; `land.sh`; `ci:local` advisory). AC 6: V4 lines for `WaCodeEntry` too (V4's trigger fires on this story); the friction disposition at the file's end, with the X2 cost's status. DL1 names the `setLine` helper (9 + 5 + initial = 15 writes); the AC 2 mutation re-worded. AC 2 (f) asserts the look (`$red10`, `$2`). AC 2 / AC 3: awaited counts, settled negatives. F1–F10 re-checked at `8d0c1ae9`. ⛔ Code. |
 | 1.1 | 2026-11-23 | Validated (`bmad-create-story validate 3.15c`; BigDev: *"all"*). 3.15b's review is COMMITTED (`0a56ec0f` / `57f541b3`, ⛔ any file this story edits) — the PINNED caveat and X2's quote updated, Task 0.1 rebases onto `57f541b3`. AC 3 counts are RUNNING TOTALS (a delta "one more" is green on today's Android code); jsdom sees the live region only as `aria-live` — (e). AC 2 (c) holds the next call for the `busy` flip; (e) gains a mutation (it is green today). DL1 in `assisted.tsx`'s shape (`[form.lineCount]`, ⛔ ref); the `code_resend_too_soon` arm bumps only when `told`; the iOS change stated as a departure from the epics text. F4 adds the template key's source, the env rule, and why 3.15b's seeded row still read false; Task 2.1 copies main's `.env` files. F7: (f) RED on iOS too; the first Android `verify_failed` legs. ⛔ Code. |

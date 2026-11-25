@@ -61,6 +61,14 @@ export function fraudInvestigationsPath(pariwarId: string): string {
   return `/p/${pariwarId.toLowerCase()}/fraud-investigations`;
 }
 
+/** Story 3.13 (DL13) — the identity-check queue, and one member's identity check. */
+export function identityChecksPath(pariwarId: string): string {
+  return `/p/${pariwarId.toLowerCase()}/identity-checks`;
+}
+export function identityCheckPath(pariwarId: string, memberId: string): string {
+  return `/p/${pariwarId.toLowerCase()}/identity-checks/${memberId.toLowerCase()}`;
+}
+
 /** Story 13.1g (AD10) — the field worker Move requests page (13.1d): the move-notice email's link, and what its own sign-in redirects pass. */
 export function fieldWorkerRequestsPath(pariwarId: string): string {
   return `/p/${pariwarId.toLowerCase()}/field-workers/requests`;

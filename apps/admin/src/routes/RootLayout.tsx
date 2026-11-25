@@ -5,6 +5,7 @@
 // degrades to a recoverable message instead of a blank screen.
 
 import { fraudInvestigationEn } from '../modules/claim-verification/i18n-en.js';
+import { identityCheckEn } from '../modules/identity-checks/i18n-en.js';
 import { Link, Outlet, useNavigate, useParams, useRouter } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
@@ -115,6 +116,14 @@ function TopBar(): ReactElement {
           {pariwarId && (
             <Link to="/p/$pariwarId/fraud-investigations" params={{ pariwarId }} className="text-sm underline" data-testid="nav-fraud-investigations">
               {fraudInvestigationEn.workList.nav}
+            </Link>
+          )}
+          {/* Story 3.13 (DL13) — the identity-check queue (FR-2's trustee-action queue): every member whose typed-in identity
+              nobody has confirmed. ⛔ A page in the router alone has ⛔ way in from the console (#69 (g)). The server's key check
+              is the boundary (District / Pariwar Admins check; verifiers and helpline operators arrange). */}
+          {pariwarId && (
+            <Link to="/p/$pariwarId/identity-checks" params={{ pariwarId }} className="text-sm underline" data-testid="nav-identity-checks">
+              {identityCheckEn.nav}
             </Link>
           )}
           {/* Story 6.19c (AC8c) — the closure's queues, linked INSIDE a Pariwar context (`deferred-work.md` 6.18 chunk 3):

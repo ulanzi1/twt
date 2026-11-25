@@ -992,7 +992,7 @@ export const verifierConsoleEn = {
     kycRoute: {
       typed_in_unchecked: 'Typed in at joining, never checked',
       digilocker: 'Checked through DigiLocker',
-      trustee_verified: 'Typed in at joining, checked by a trustee',
+      trustee_verified: 'Typed in at joining, checked by staff',
       unverified: 'Not checked',
       no_record: 'No identity record',
     } as Record<string, string>,

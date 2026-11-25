@@ -37,6 +37,8 @@ import { WorkplaceRequestsRoute } from './routes/WorkplaceRequestsRoute.js';
 import { WorkplacesRoute } from './routes/WorkplacesRoute.js';
 import { NomineeRefusalsRoute } from './routes/NomineeRefusalsRoute.js';
 import { FraudInvestigationsRoute } from './routes/FraudInvestigationsRoute.js';
+import { IdentityCheckDetailRoute } from './modules/identity-checks/IdentityCheckDetailPage.js';
+import { IdentityChecksRoute } from './modules/identity-checks/IdentityChecksPage.js';
 import { NomineeCorrectionsRoute } from './routes/NomineeCorrectionsRoute.js';
 import { HelpdeskQueueRoute } from './routes/HelpdeskQueueRoute.js';
 import { NewsRoute } from './routes/NewsRoute.js';
@@ -424,6 +426,18 @@ const fraudInvestigationsRoute = createRoute({
   component: FraudInvestigationsRoute,
 });
 
+// Story 3.13 (DL11, DL13) — the identity-check queue (FR-2's trustee-action queue) and one member's identity check.
+const identityChecksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/identity-checks',
+  component: IdentityChecksRoute,
+});
+const identityCheckDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/p/$pariwarId/identity-checks/$memberId',
+  component: IdentityCheckDetailRoute,
+});
+
 // Story 6.20 (AC7) — the Pariwar Admin's queue of NOMINEE corrections awaiting step 2.
 const nomineeCorrectionsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -552,6 +566,8 @@ const routeTree = rootRoute.addChildren([
   escalationsPickerRoute,
   nomineeRefusalsRoute,
   fraudInvestigationsRoute,
+  identityChecksRoute,
+  identityCheckDetailRoute,
   nomineeCorrectionsRoute,
   cycleFreezeRoute,
   r9VotingRoute,

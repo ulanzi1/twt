@@ -432,6 +432,14 @@ import {
   type SuspendFieldWorkerRequest,
   type TerminateFieldWorkerRequest,
 } from '@twt/contracts';
+// Story 3.13 — staff check a typed-in identity in life (the queue, the detail, the record, the audited number reveal).
+import {
+  IdentityCheckDetailResponse,
+  IdentityCheckMobileResponse,
+  IdentityCheckQueueResponse,
+  IdentityCheckRecordResponse,
+  type IdentityCheckRecordRequest,
+} from '@twt/contracts';
 import { z } from 'zod';
 
 /** A typed transport error — carries the HTTP status + the server's error code. */
@@ -3917,4 +3925,40 @@ export function listBreachSignals(limit = 20): Promise<z.output<typeof BreachSig
 /** GET members on record, trust-wide — the monthly review's input (a count; not a threshold). */
 export function getBreachMembersOnRecord(): Promise<z.output<typeof BreachMembersOnRecordResponse>> {
   return apiFetch(`${BREACH_BASE}/members-on-record`, BreachMembersOnRecordResponse);
+}
+
+// ── Story 3.13 — staff check a typed-in identity while the member is alive ──────────────────────────────────────────
+
+const identityCheckBase = (pariwarId: string) => `/api/v1/p/${encodeURIComponent(pariwarId)}/admin/members`;
+
+/** The queue (⛔ name, ⛔ mobile) — readable by the check key's holders AND the reveal key's (verifier, helpline). */
+export function getIdentityCheckQueue(pariwarId: string): Promise<z.output<typeof IdentityCheckQueueResponse>> {
+  return apiFetch(`${identityCheckBase(pariwarId)}/identity-checks?limit=200`, IdentityCheckQueueResponse);
+}
+
+/** One member's detail — decrypts the typed-in identity; AUDITED per view (⛔ a window-focus refetch). */
+export function getIdentityCheckDetail(pariwarId: string, memberId: string): Promise<z.output<typeof IdentityCheckDetailResponse>> {
+  return apiFetch(`${identityCheckBase(pariwarId)}/${encodeURIComponent(memberId)}/identity-check`, IdentityCheckDetailResponse);
+}
+
+/** Record the act. `Idempotency-Key` is REQUIRED — one per attempt of ONE decision (the caller holds it). */
+export function recordIdentityCheck(
+  pariwarId: string,
+  memberId: string,
+  body: IdentityCheckRecordRequest,
+  idempotencyKey: string,
+): Promise<z.output<typeof IdentityCheckRecordResponse>> {
+  return apiFetch(`${identityCheckBase(pariwarId)}/${encodeURIComponent(memberId)}/identity-check`, IdentityCheckRecordResponse, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(body),
+  });
+}
+
+/** The member's full number — ONE audited showing per call (⛔ cached, ⛔ retried by the client). */
+export function revealIdentityCheckMobile(pariwarId: string, memberId: string): Promise<z.output<typeof IdentityCheckMobileResponse>> {
+  return apiFetch(`${identityCheckBase(pariwarId)}/${encodeURIComponent(memberId)}/identity-check/mobile`, IdentityCheckMobileResponse, {
+    method: 'POST',
+    body: '{}',
+  });
 }

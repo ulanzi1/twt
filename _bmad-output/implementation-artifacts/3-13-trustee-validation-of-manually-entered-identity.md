@@ -1,5 +1,5 @@
 ---
-baseline_commit: 90535934
+baseline_commit: 74839891
 ---
 
 <!--
@@ -10,6 +10,14 @@ PINNED: `90535934` = `origin/main` (`git fetch origin` 2026-11-21, at authoring 
 Every `apps/` / `packages/` claim below was traced by hand at `90535934` on 2026-11-21. Re-locate by FUNCTION, ⛔ by line number.
 ⚠ The two facts are separate ([[feedback_story_validate_footguns]] #24): "the pin is an ancestor of HEAD" is durable; "the code claims were
 re-derived at `90535934`" is perishable — Task 0.1 re-derives them.
+⭐ RE-PINNED 2026-11-25 to `74839891` (`origin/main` after `git fetch origin`): the branch was REBASED onto it (179 commits; backup
+`backup/3-13-pre-rebase-2026-11-25`; every file's changed-line set vs `origin/main` equals the backup's vs `90535934`), then re-validated
+(v1.5). `git diff 90535934 74839891` is EMPTY for every file F1–F9 / F10a names (KYC writers + schema, `member/state.ts`, `events.ts`,
+`audit-shape.ts`, `membership-check-approval.ts`, `death-report-lock.ts`, `member-moderation/`, the 6.18 / 6.39 routes, `member-geo/`,
+`rbac/`, the human-actor gate, `member-status/`, `search-read.ts`, `member-validity/handlers.ts`, `forced-pagination.spec.ts`,
+`personal-event-handlers.ts`) ⇒ those claims hold at `74839891`. Moved (re-read, F10 / F11 / AC15): migrations, decisions, roster rows,
+`anonymize.ts` + the data export (12.5's lead steps, beside — ⛔ instead of — the `claimMembershipChecks` scrub), `field-classes.ts`
+(`MODULE_LEAD_FIELDS_FIELD_CLASS`), and the merge gate (ADR-0047).
 
 §0 GATE (the routing template's, applied FIRST — `_bmad-output/planning-artifacts/trustee-panel-routing-note-TEMPLATE.md`):
   · THAT a typed-in identity is validated by the Trust before the member is fully a member — PRD FR-2 (*"the member becomes `pending-valid`
@@ -53,6 +61,8 @@ say, for each such member, who checked, when, and from what.**
 | `2026-10-31-424` Q2 (b) addition | *"even though staff can change, old entry cannot be gone in this particular case, but clearly visible along with new entry made by staff"* — `deferred-work.md` item *"A staff change to the record of a member whose death is reported…"* — Trigger includes *"any change to the KYC profile write path"* ⇒ **this story fires it** (Task 7.4). | **Trustee-ratified** |
 | `2026-11-21-472` DL4 | The 6.39 identity half applies iff the deceased's KYC record is ⛔ DigiLocker-verified **and** ⛔ trustee-verified (or absent). DL16: *"Not in scope: … writing `trusteeVerified`"* — left to this row. | author-commit |
 | `sprint-status.yaml` row block `3-13-…` | *"⚠⚠ ORDER: 3-13 BEFORE (or WITH) 3-14."* · *"WHO validates and from WHAT evidence is likely the Panel's — its create-story applies the §0 gate."* · 2026-11-21 (6.39 Task 0.5): *"a typed-in member this row verifies in life SKIPS the identity half at death (the fee half still applies). Until this row is built, every typed-in member is checked at death."* | ledger |
+| `2026-11-21-482` decisions 1 and 6 | *"The typed-in route is replaced. Staff check the documents (row `3-13`, reshaped after the Panel rules the follow-up note). What is kept and for how long is the Panel's."* · *"Four rows, in this order after the notes: `3-15` (now — no Panel question); `3-16` with `3-13` and then `3-14`; …"* · Story 3.16's `epics.md` block: *"A document-checked identity gets its own `verification_strength` value (enum mint delegated, `-210` cl.2)."* ⇒ N1a. | author-commit |
+| BigDev, 2026-11-25 (validate v1.5, question dialog) | *"Build now, typed-in only (Recommended)"* — 3.13 is built now for members whose identity is ALREADY `self_declared` (they exist whatever 3.16 does), to DL7 option A; the upload half joins in the reshape after both notes are ruled. Follow-up note `a18654f2`: *"Not sent yet"*. | author |
 | `deferred-work.md` — *"Deferred from: BigDev's question while preparing Story 6.38's routing note — how is identity being verified today? (2026-10-31)"* | *"⛔ step verifies a self-declared identity … `trusteeVerified` is set `true` nowhere, and the only `member.kyc_completed` emitter is the member's own DigiLocker confirm; ⛔ staff or trustee surface exists."* — ✅ DISCHARGED into rows 3-13 / 3-14. | observed |
 | `deferred-work.md` — *"investigation — identity collision at signup is unenforced (2026-08-10)"*, row 4 | *"Manual KYC … Nothing ever writes `true` … there is no reviewer surface."* | observed — this story builds the reviewer surface; it does ⛔ close the collision gap (rows 1–3 of that table) |
 
@@ -87,6 +97,13 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   agree with it on every input (a lockstep unit test over the full cross-product of the three enum values × the boolean × null — ⛔ a
   refactor of 6.39's leaf: `membership-check-approval.ts` must stay a LEAF, its own header's TR4), and row `3-14` will read it. Two readers
   of one fact must not be able to disagree ([[feedback_told_line_must_not_carry_panel_choice]] "How to apply").
+- **N1a — WHICH identities staff may check is ONE total map, ⛔ a literal at each site (v1.5).** Story 3.16 mints a new
+  `verification_strength` for a document-checked identity (`-482` row above). Every place this story says "`self_declared`" (DL2's UPDATE,
+  DL4's eligibility, DL11's queue, AC5's cases) reads ONE map in `packages/domain/src/kyc/`:
+  `KYC_STRENGTH_STAFF_CHECKABLE = { aadhaar_kyc: false, self_declared: true, unverified: false } satisfies
+  Record<MemberKycVerificationStrength, boolean>` (the key type from `schema/member_kyc_profiles.ts`; the F4 total-map precedent), with
+  the checkable list derived from it. So 3.16's new value FAILS TO COMPILE here until the reshape classifies it — it cannot silently fall
+  out of the queue. SQL sites bind the derived list (`= ANY($n)`), ⛔ a string literal.
 - **N2 — ⛔ identity DATA is changed.** This story never writes `name_ciphertext`, `dob_ciphertext`, `photo_ciphertext`,
   `aadhaar_masked_id`, `verification_strength` or `source`. It writes `trustee_verified` (false → true only) and `updated_at`. A staff
   correction of a typed-in name is ⛔ this story (`-424` Q2 (b)'s addition would bind it — the KYC store is latest-wins).
@@ -166,6 +183,11 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   migration `0213` for itself, and its ledger uses the letter `2026-11-21s` — the SAME letter this branch's creation ledger used
   (`f73a18d2`). Whichever branch lands second relabels its letter ([[project_sprint_status_ledger]]); take the migration number after
   6-22b's.
+  ⭐ **Re-read 2026-11-25 at `74839891`, across every ref and worktree (v1.5):** 6-22b LANDED (`-477`–`-481`, migration `0213`); 12.5 /
+  12.5b took `0214`–`0217` and roster Rows 54 / 55; ADR-0047 took Row 56 and `-496`–`-500`. ⇒ **next migration `0218`, next decision
+  `-501`, next roster row `57`**; `PERMISSION_CATALOG_VERSION` still `65`, 96 keys (`permissions.ts` unchanged). This branch's creation
+  ledger letter was RELABELLED `2026-11-21s` → `2026-11-21aq` (main holds `s`; the unmerged `story/6-39a-…` holds `u` and `z`). ⚠ OPEN:
+  `story/6-39a-…` ALSO holds `2026-11-21w`, this branch's Task 0.3 letter — whichever lands second relabels. Task 0.1 re-reads all of it.
 - **F10a — The 0212 live-row mechanism, as built.** `claim_membership_checks` (migration `0212`): `superseded_at` + `superseded_reason`
   (a CHECK: both null, or both set with a reason from a closed list); a partial UNIQUE index `WHERE superseded_at IS NULL`; GRANT SELECT,
   INSERT + a COLUMN-LEVEL `GRANT UPDATE ("superseded_at", "superseded_reason", "note_ciphertext")` AT BIRTH, with a per-command UPDATE
@@ -180,6 +202,9 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   strict-parsed ([[project_data_export_sections_strict_parsed]]).
 - **F12 — Who is in the queue today.** Every member whose KYC row is `self_declared` and who has paid (`lock-in`). The manual route is ON
   by default (`kyc_manual_fallback` inverted, `apps/api/src/modules/kyc/manual-fallback-seam.ts`) ⇒ possibly most members.
+  ⭐ (v1.5) Still true at `74839891` — row `3-16` (which REPLACES `POST /api/v1/member/kyc/manual`, `-482` decision 1) is `backlog`. Once
+  it lands, ⛔ NEW `self_declared` row is written: the `self_declared` half of the queue becomes a FIXED, shrinking set, and 3.16's new
+  strength joins it only when the reshape classifies it (N1a). That is why the build starts now (BigDev, 2026-11-25).
 
 ## Build decisions — PROPOSED (BigDev answers at Task 0.2)
 
@@ -198,7 +223,7 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   New field class `MEMBER_IDENTITY_VALIDATION_FIELD_CLASS = 'member_identity_validation'` in `packages/domain/src/encryption/field-classes.ts`,
   exported from `encryption/index.ts` (the `CLAIM_MEMBERSHIP_CHECK_FIELD_CLASS` precedent); the write, the read and the scrub all bind it.
 - **DL2 — The flag.** On `confirmed`, in the SAME transaction: `UPDATE member_kyc_profiles SET trustee_verified = true, updated_at = now()
-  WHERE pariwar_id = $1 AND member_id = $2 AND verification_strength = 'self_declared' AND trustee_verified = false` — zero rows ⇒ 409
+  WHERE pariwar_id = $1 AND member_id = $2 AND verification_strength = ANY($3 /* N1a's checkable list */) AND trustee_verified = false` — zero rows ⇒ 409
   `identity_validation.not_eligible` (and the whole tx rolls back). A new domain writer `markKycTrusteeVerified` in
   `packages/domain/src/kyc/profile-write.ts` (⛔ through `upsertMemberKycProfile` — that would rewrite the identity columns, N2). On
   `not_confirmed`: the flag is ⛔ touched (it is already false; a `confirmed` is ⛔ undone by a later `not_confirmed` — DL10).
@@ -209,7 +234,8 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   'pending-valid'`, `to_state: 'active'`, `trigger: 'staff_identity_validation'`, `actor: 'trustee'`, `kyc_reference: <validation_id>`),
   through `projectMemberState` (the ONE projector — the `member-state-invariant` gate). From `lock-in`, ⛔ `kyc_completed` is appended (the
   reducer would ignore it, but an identity transition with `to_state: 'active'` in its payload would be a lie in the audit metadata).
-- **DL4 — Who can be validated.** A KYC row exists, `verification_strength = 'self_declared'`, `trustee_verified = false`, and the member's
+- **DL4 — Who can be validated.** A KYC row exists, its `verification_strength` is staff-checkable under N1a (`self_declared` only, at
+  `74839891`), `trustee_verified = false`, and the member's
   state is `lock-in` or `pending-valid`. Refused (409 `identity_validation.not_eligible`, one code, the reason in the log only): no KYC row;
   `aadhaar_kyc` / `unverified`; already verified; `pending-kyc` / `pending-fee` (⛔ yet a member — Niyamavali §2.1 (c)); `withdrawn` /
   `anonymized`; `active` / `active-in-grace` / `lapsed-unpaid` (unreachable for a `self_declared` member except by a hand-seeded fixture —
@@ -288,7 +314,9 @@ by row `3-14`, and belongs in ITS Policy-meaning note — this story only makes 
   `withIdempotency` helper — several modules define a local one — and 6.39's route takes ⛔ key, so it is ⛔ the model here).
   Plain string-literal paths, each route inlining the full chain `[requireAdminSession, scopeResolutionHook, <scope stash>,
   requirePermissionHook]` (the member-moderation literal-array style). ⚠ ⛔ CI gate scans this module (F7b): the chain is proved by AC12's
-  tests, ⛔ by an enrolment. Admin UI: a new module `apps/admin/src/modules/identity-checks/`, routed in `apps/admin/src/router.tsx`.
+  tests, ⛔ by an enrolment. Admin UI: a new module `apps/admin/src/modules/identity-checks/`, routed in `apps/admin/src/router.tsx` AND linked in
+  `apps/admin/src/routes/RootLayout.tsx` (a Pariwar-scoped `<Link to="/p/$pariwarId/…">` beside `nav-fraud-investigations`, its own
+  `data-testid`) — a page in the router alone has ⛔ way in from the console ([[feedback_story_validate_footguns]] #69 (g)).
 - **DL14 — Erasure and export.** RTBF (`anonymize.ts`) scrubs `note_ciphertext` with `encSentinel(pariwarId,
   MEMBER_IDENTITY_VALIDATION_FIELD_CLASS, enc)` where it is non-null — the 6.39 `claimMembershipChecks` scrub beside it is the model.
   Because the table is NEW, its guard is written at birth with `note_ciphertext` left out of the frozen list (DL1, F10a) — ⛔ guard REPLACE
@@ -369,8 +397,10 @@ unchanged side meanwhile.
    precedent); with the claim released as innocent (`isDeathReportStanding` false), the POST succeeds. The detail read shows the banner and
    ⛔ form.
 7. **AC7 (N1).** `isKycIdentityVerified` exists in `packages/domain/src/kyc/`; a unit test proves `!isKycIdentityVerified(x) ===
-   isIdentityCheckRequired(x)` for every `x` in {null} ∪ {3 strengths} × {true, false}; `membership-check-approval.ts` imports ⛔ new module
-   (its leaf scan stays green).
+   isIdentityCheckRequired(x)` for every `x` in {null} ∪ (`MEMBER_KYC_VERIFICATION_STRENGTHS` × {true, false}) — the strengths READ from
+   the enum const, ⛔ a hand list of three (so 3.16's new value enters the lockstep the day it is minted); `membership-check-approval.ts`
+   imports ⛔ new module (its leaf scan stays green). N1a's map is `satisfies Record<MemberKycVerificationStrength, boolean>` (a
+   compile-time leg) and a unit test pins today's classification (`self_declared` only).
 8. **AC8 (DL6).** Key `member.validate_identity` in the catalog (v66, 97 keys), granted to `district_admin` and `pariwar_admin`, derived to
    `super_admin`; a test per role: district admin of the member's district → 200/201; of another district → 403; of a member with no
    posting → 403; pariwar admin → allowed, INCLUDING for a member with no posting (the F7a trap — this leg is red under a fixed
@@ -396,9 +426,11 @@ unchanged side meanwhile.
     test covers it ([[project_contracts_tests_outside_tsc]]).
 14. **AC14 (admin UI).** The admin module renders the queue, the detail and both forms; vitest covers: empty queue copy, the death-lock
     banner hides the form, `not_confirmed` requires a note before submit, a 409 shows the not-eligible line, a successful confirm refreshes
-    the detail. A real-browser pass is a GO-LIVE leg, ⛔ a merge condition ([[project_not_in_production_merge_is_not_golive]]).
-15. **AC15 (records).** DL15's comments re-worded; `deferred-work.md` annotated (Task 7.4); `pnpm ci:local` green on a FRESH container with
-    `DATABASE_URL` pointing at it ([[project_prepush_hook_inherits_5432]], [[project_known_livedb_test_failures]]).
+    the detail, and the console nav shows the link to the queue (DL13). A real-browser pass is a GO-LIVE leg, ⛔ a merge condition ([[project_not_in_production_merge_is_not_golive]]).
+15. **AC15 (records).** DL15's comments re-worded; `deferred-work.md` annotated (Task 7.4); the PR's GitHub `ci.yml` run at the EXACT tip
+    SHA being landed concluded `success`, all jobs (41 at `74839891`) — ADR-0047 cl.1, ratified by `2026-11-24-499`; the ledger line cites
+    the run id, the tip SHA and jobs passed / total for the PR run AND the push to `main` (cl.2). `pnpm ci:local` may be cited, ⛔ required;
+    if run, on a FRESH container with `DATABASE_URL` pointing at it ([[project_known_livedb_test_failures]]).
 
 ## Tasks / Subtasks
 
@@ -423,9 +455,12 @@ unchanged side meanwhile.
         author-commit `2026-11-21-482` decision 1 (BigDev: the upload route replaces typing; row `3-16`). Read with the first note.
         ⚠ This story is RESHAPED once both are ruled (DL7 `uploaded_documents`; N5 replaced by row `3-16`'s storage rules; DL8
         shows the uploads; PQ3 may become moot) — by a re-validate, ⛔ before the ruling.
+        ⭐ 2026-11-25 (validate v1.5) — follow-up `a18654f2` still ⛔ SENT (BigDev: *"Not sent yet"*); neither note ruled at `74839891`
+        (⛔ decision cites either). BigDev: *"Build now, typed-in only (Recommended)"* — dev-story may start once Task 0.2 / 0.4 are done;
+        it builds DL7 option A for `self_declared` members only, and N1a keeps 3.16's new strength out until the reshape.
   - [ ] 0.4 Author-commit decision entry (`<date>-<next>`): DL1–DL16 as answered, the §0 split, the `-424` match quoted verbatim, the
         Policy meaning, PQ1/PQ2/PQ3 open + built side; committed ALONE. ⚠ If the write is refused, ask once ([[project_decision_log_writes_user_inserted]]).
-  - [ ] 0.5 Roster row (next free number — 54 at the pin) `identity-validation-live` with legs: (a) PQ1 ruled and DL7's vocabulary matches
+  - [ ] 0.5 Roster row (next free number — 57 at `74839891`; 54 at the old pin, since taken by 12.5) `identity-validation-live` with legs: (a) PQ1 ruled and DL7's vocabulary matches
         the ruling; (b) PQ2 ruled (and, if B/C, its row built); (b2) PQ3 ruled (and, if B, the audited number read built; if C, its row
         built); (c) a real-browser pass of the admin module; (d) row `3-14` built (until
         then the check changes only the at-death half). `deferred-work.md`: PQ1 / PQ2 / PQ3 as open; a dated comment on the `3-13` sprint row.
@@ -436,7 +471,7 @@ unchanged side meanwhile.
       on the two supersession columns + the note) + the per-command UPDATE policy + CHECKs + the guard (note left out of the frozen list) +
       the one-way-supersession trigger, all at birth. The field class `MEMBER_IDENTITY_VALIDATION_FIELD_CLASS` in
       `encryption/field-classes.ts` + its export. Drizzle schema `packages/domain/src/schema/member_identity_validations.ts` with
-      `piiColumn(1, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS)` on the note (the PII gate reads it). Migration number after 6-22b's (F10);
+      `piiColumn(1, MEMBER_IDENTITY_VALIDATION_FIELD_CLASS)` on the note (the PII gate reads it). Migration number `0218` at `74839891` (F10 — re-read at Task 0.1);
       journal `when` strictly after every sibling's ([[project_sibling_migration_when_order_shared_db]]).
 - [ ] **Task 2 — Domain (AC3, AC4, AC5, AC6, AC7).**
   - [ ] 2.1 `packages/domain/src/kyc/`: `isKycIdentityVerified` (N1) + `markKycTrusteeVerified` (DL2). Lockstep test with 6.39 (AC7).
@@ -458,13 +493,14 @@ unchanged side meanwhile.
         do (F7b) — AC12's tests carry it.
   - [ ] 3.5 API integration tests for AC8–AC12 (including the pariwar-admin-on-an-unposted-member leg and the per-route chain tests).
 - [ ] **Task 4 — Admin UI (AC11, AC14).** `apps/admin/src/modules/identity-checks/` (queue page, detail, two forms), i18n-en entries
-      (DL12), router entry; the 6.39 label change; vitest. ⚠ jsdom traps ([[project_jsdom_disabled_button_keeps_focus]],
+      (DL12), router entry + the `RootLayout.tsx` nav link (DL13); the 6.39 label change; vitest. ⚠ jsdom traps ([[project_jsdom_disabled_button_keeps_focus]],
       [[project_tanstack_instant_mock_hides_notready_flip]]).
 - [ ] **Task 5 — Erasure + export (AC13).** `anonymize.ts` scrub (`encSentinel` under the new field class, beside the
       `claimMembershipChecks` scrub); export section (⛔ staff attribution) + contract + fixture. ⛔ guard migration — the guard was written
       at birth (Task 1).
 - [ ] **Task 6 — Gates.** Run the source fence in `apps/api`'s unit suite ([[project_source_fence_lives_in_api_unit_suite]]); the PII
-      gate; microcopy; `domain-accessor-invariants`; `pnpm ci:local` on a fresh container (AC15).
+      gate; microcopy; `domain-accessor-invariants`; the live-DB suites on your own container; then the PR's GitHub CI run (AC15 — the
+      proof; `scripts/land.sh --dry-run <pr>` before landing, [[feedback_land_prs_by_fast_forward]]). `ci:local` optional.
 - [ ] **Task 7 — Records (AC15).**
   - [ ] 7.1 Story file: Dev Agent Record, File List, Change Log.
   - [ ] 7.2 DL15's stale comments (F1 schema comment; F5's `membership-check-approval.ts` doc line).
@@ -494,7 +530,10 @@ unchanged side meanwhile.
 8. **Clock ties.** Two acts in one test transaction share `now()` — "latest" must not rest on `created_at` alone (DL1).
 9. **Hand-format; Prettier is not enforced** ([[project_prettier_not_enforced]]); `**cl.3**`-style text in a JSDoc closes it
    ([[project_markdown_emphasis_closes_jsdoc]]).
-10. **Every `git push` needs `DATABASE_URL=<your container>`** — the hook inherits `:5432`.
+10. **The shell's `DATABASE_URL` is the native `:5432`.** A plain `git push` no longer runs `ci:local` (the hook is advisory since
+    `3675a228`, ADR-0047 cl.4) — only `RUN_CI_LOCAL=1 git push` does, and then it needs `DATABASE_URL=<your container>`. `pnpm dev` and an
+    UNSCOPED `vitest run` still hit `:5432` ([[project_prepush_hook_inherits_5432]]). The hook runs from the MAIN checkout
+    ([[project_hookspath_absolute_main_checkout]]).
 11. **A fixed `district` gate refuses everyone for an unposted member** (F7a) — `super_admin` included. The dimension must move with the
     caller (DL6); AC8's pariwar-admin-on-an-unposted-member leg is the test that catches it.
 12. **No gate watches these routes** (F7b). A missing `requireAdminSession` would ship green — AC12's per-route chain tests are the only
@@ -512,7 +551,7 @@ sees, tell any member anything, change any typed-in detail, undo a confirmation,
   (the new field class), `member/events.ts`, `packages/events/src/registry.ts`,
   `rbac/permissions.ts`, `rbac/roles.ts`, `member/anonymize.ts`, `data-export/assemble.ts` + its contract, `schema/member_kyc_profiles.ts`
   (comment), `claim/membership-check-approval.ts` (comment only), `apps/admin/src/modules/claim-verification/i18n-en.ts` (one label),
-  `apps/api/src/server.ts`, the admin router.
+  `apps/api/src/server.ts`, the admin router, `apps/admin/src/routes/RootLayout.tsx` (nav link).
 
 ### Testing
 Unit (domain, contracts, api with `DATABASE_URL` UNSET), live-DB (domain + api, own container, `twt_dev`), admin vitest. Every "nothing
@@ -549,3 +588,4 @@ other packages — re-run the whole job ([[project_known_livedb_test_failures]])
 | 1.2 | 2026-11-21 | Task 0.3: the Panel note WRITTEN (⛔ sent), committed alone `9f7da520` (BigDev: "prepare routing note"). Task 0.2 in part: DL6 *"District + Pariwar Admin (Recommended)"*, DL8b *"Ask Panel: show full mobile"* ⇒ PQ3 in the note. PQ1 gains option B (in person only; old B / C become C / D); §0 / Task 0.4 / Task 0.5 roster legs / `deferred-work.md` lines carry PQ3. ⛔ Code. |
 | 1.3 | 2026-11-21 | Task 0.3: the Panel note SENT (BigDev: "sent to panel"); awaiting the ruling. Channel, send time and whether the text sent equals `9f7da520` ⛔ recorded. ⛔ Code. |
 | 1.4 | 2026-11-21 | Follow-up Panel note WRITTEN (⛔ sent), `a18654f2`: Q1 option E + Q4, after the registration proposal (author-commit `2026-11-21-482`, on `governance/registration-change-2026-11-21`). The story is reshaped by a re-validate once both notes are ruled. ⛔ Code. |
+| 1.5 | 2026-11-25 | Rebased onto `origin/main` `74839891` (179 commits; backup `backup/3-13-pre-rebase-2026-11-25`; changed-line sets verified equal) and re-validated (`bmad-create-story validate 3.13`, BigDev: "All 7"). Re-pinned `90535934` → `74839891`; every F1–F9 / F10a file unchanged. (1) AC15 / Task 6 / Trap 10: the merge proof is the PR's GitHub `ci.yml` run (ADR-0047, `-499`), ⛔ `ci:local`; a plain push touches ⛔ database. (2) F10 / Task 0.5 / Task 1: next migration `0218`, decision `-501`, roster row 57. (3) N1a (new): staff-checkable strengths are ONE total map `satisfies Record<MemberKycVerificationStrength, boolean>` — DL2 / DL4 read it; AC7 iterates `MEMBER_KYC_VERIFICATION_STRENGTHS`, ⛔ "3 strengths" (3.16 mints a new value). (4) `-482` decisions 1 / 6 and BigDev's 2026-11-25 answers in the rulings table; F12 and Task 0.3 annotated (follow-up ⛔ sent; build now, typed-in only). (5) DL13 / Task 4 / AC14 / Project Structure: the `RootLayout.tsx` nav link (#69 (g)). (6) Pin note. (7) Ledger letter `2026-11-21s` → `2026-11-21aq`; `21w` collision with `story/6-39a-…` recorded, open. ⛔ Code. |

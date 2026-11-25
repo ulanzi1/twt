@@ -11,10 +11,11 @@
 // member's real `pariwarId` context and passes ciphertext in (the 3.2 identity-write +
 // email-index precedent). NO HTTP, NO audit, NO event emission here — the route orchestrates.
 
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db.js';
 import type { KycTransactionId, MemberId, PariwarId } from '../ids/index.js';
+import { KYC_STAFF_CHECKABLE_STRENGTHS } from './identity-verified.js';
 import {
   type MemberKycProfileRow,
   type MemberKycSource,
@@ -85,4 +86,31 @@ export async function upsertMemberKycProfile(
     throw new Error('[upsertMemberKycProfile] upsert returned no row — check session scope');
   }
   return row;
+}
+
+/**
+ * ⭐ Story 3.13 (DL2, N2) — staff CONFIRMED a typed-in identity: flip `trustee_verified` false → true, and ONLY that
+ * (+ `updated_at`). ⛔ Through `upsertMemberKycProfile` — that rewrites the identity ciphertexts (the latest-wins store
+ * `-424` Q2 (b)'s addition warns about; Trap 1). Conditional: the row must be in this Pariwar, of a staff-checkable
+ * strength (N1a — the DERIVED list is bound, ⛔ a literal) and still unverified. Returns `false` when ⛔ row matched —
+ * the caller refuses `identity_validation.not_eligible` and rolls the whole transaction back. Runs on the caller's
+ * scoped transaction (⛔ its own).
+ */
+export async function markKycTrusteeVerified(
+  db: Db,
+  input: { pariwarId: PariwarId; memberId: MemberId },
+): Promise<boolean> {
+  const updated = await db
+    .update(memberKycProfiles)
+    .set({ trusteeVerified: true, updatedAt: sql`now()` })
+    .where(
+      and(
+        eq(memberKycProfiles.pariwarId, input.pariwarId),
+        eq(memberKycProfiles.memberId, input.memberId),
+        inArray(memberKycProfiles.verificationStrength, [...KYC_STAFF_CHECKABLE_STRENGTHS]),
+        eq(memberKycProfiles.trusteeVerified, false),
+      ),
+    )
+    .returning({ memberId: memberKycProfiles.memberId });
+  return updated.length === 1;
 }

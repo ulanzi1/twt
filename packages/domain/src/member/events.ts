@@ -18,6 +18,7 @@
 
 import { z } from 'zod';
 
+import { IDENTITY_VALIDATION_OUTCOMES } from '../schema/member_identity_validations.js';
 import { auditShape } from './audit-shape.js';
 import { MODERATION_EVENT_PAYLOAD_SCHEMAS } from './moderation/events.js';
 import { RESTORATION_DISCIPLINE_EVENT_PAYLOAD_SCHEMAS } from './restoration-discipline/events.js';
@@ -320,6 +321,25 @@ export const PersonalEventAssertedPayloadSchema = z
   })
   .strict();
 
+/**
+ * Story 3.13 (DL3): a staff member RECORDED an identity check on a typed-in identity, while the member is alive — a
+ * NON-TRANSITION marker (`from_state === to_state`; the reducer's `default` arm makes it IDENTITY, N7). NON-PII: the
+ * record (`member_identity_validations`) holds what was seen, the reason and the Tier-1 note; this payload carries
+ * only the row's id and the outcome — ⛔ name, ⛔ note, ⛔ document kind, ⛔ reason.
+ * `actor: 'trustee'` is the architecture §1.14 word for a staff actor (⛔ widen the shared enum — Trap 4); the human
+ * is the event's `actor_id`. When a `confirmed` lands on a `pending-valid` member, the SAME transaction ALSO appends
+ * `member.kyc_completed` (`pending-valid → active`, the reducer's existing arm) — from `lock-in` it does ⛔ (Trap 2).
+ */
+export const IdentityValidationRecordedPayloadSchema = z
+  .object({
+    ...auditShape,
+    trigger: z.literal('staff_identity_validation'),
+    actor: z.literal('trustee'),
+    validation_id: z.string().uuid(),
+    outcome: z.enum(IDENTITY_VALIDATION_OUTCOMES),
+  })
+  .strict();
+
 // ── The 20-event vocabulary + the type→schema map (single source) ─────────────
 //
 // Story 10.10 adds the THREE `member.moderation.*` events. They are declared in
@@ -375,12 +395,15 @@ export const MEMBER_EVENT_TYPES = [
   // and never `members.state`. ⚠ There is deliberately NO `…expired` sibling: expiry is DERIVED at
   // read from `expires_at` (AC4/D6), because this overlay has no lifecycle state that must move.
   'member.restoration_discipline.imposed',
+  // Story 3.13 — a staff identity check in life recorded: a NON-TRANSITION marker on the member's own stream (DL3).
+  'member.identity_validation_recorded',
 ] as const;
 
 /**
  * The dotted `member.*` event-type literal union — the 16 AC1 events + the 3 Story 10.10 moderation
  * events + Story 10.26's `personal_event_asserted` + Story 10.23's restoration-discipline
- * imposition + Story 10.20's `moderation.ground-appended` = **22**.
+ * imposition + Story 10.20's `moderation.ground-appended` = **22**; + Story 10.22's two appeal events = 24; + Story
+ * 3.13's `identity_validation_recorded` = **25**.
  */
 export type MemberEventType = (typeof MEMBER_EVENT_TYPES)[number];
 
@@ -414,4 +437,6 @@ export const MEMBER_EVENT_PAYLOAD_SCHEMAS = {
   ...MODERATION_EVENT_PAYLOAD_SCHEMAS,
   // Story 10.23 — restoration-discipline overlay (non-transition; reducer treats it as identity).
   ...RESTORATION_DISCIPLINE_EVENT_PAYLOAD_SCHEMAS,
+  // Story 3.13 — the staff identity check in life (non-transition; reducer treats it as identity).
+  'member.identity_validation_recorded': IdentityValidationRecordedPayloadSchema,
 } as const satisfies Record<MemberEventType, z.ZodTypeAny>;

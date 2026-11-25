@@ -53,6 +53,9 @@ export * from './known-people-prompts.js';
 export * from './anonymize.js';
 // Story 10.21 — the ONE RTBF legality predicate, shared by both erasure callers so they cannot diverge.
 export * from './rtbf-legality.js';
+// Story 3.13 — staff check a typed-in identity in life: the writer (death lock FIRST), the DL4 eligibility rule, the
+// queue and the detail (ciphertext as stored). Transport-free.
+export * from './identity-validation.js';
 export * from './display-name.js';
 export * from './errors.js';
 // Story 10.10 — member moderation (suspend / terminate / restore). A NESTED namespace

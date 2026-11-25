@@ -67,7 +67,7 @@ describe('AC2/D2 — the event is on the MEMBER stream, NOT in the contribution.
     expect(MEMBER_EVENT_PAYLOAD_SCHEMAS[ASSERTION_EVENT]).toBe(PersonalEventAssertedPayloadSchema);
   });
 
-  it('the vocabulary is now TWENTY-FOUR member.* events (22 + Story 10.22\'s two appeal events)', () => {
+  it('the vocabulary is now TWENTY-FIVE member.* events (22 + Story 10.22\'s two appeal events + Story 3.13\'s identity check)', () => {
     // The stale-count class Story 10.25 AC6 catalogued: a doc comment that says 19 while the tuple
     // says 20. Pinned as a number so the comment cannot drift silently.
     // ⚠ Story 10.23 took it 20 → 21 with `member.restoration_discipline.imposed` — the SECOND
@@ -79,8 +79,10 @@ describe('AC2/D2 — the event is on the MEMBER stream, NOT in the contribution.
     // moderation overlay (no status moves on a filing, and — the load-bearing half — none moves on an
     // `allowed` outcome either, because §8.8 makes an allowed appeal DIRECT a restore rather than
     // perform one), so they join the same identity family as the rest.
-    expect(MEMBER_EVENT_TYPES.length).toBe(24);
-    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(24);
+    // ⭐ Story 3.13 took it 24 → 25 with `member.identity_validation_recorded` (a staff identity check in life —
+    // a non-transition marker).
+    expect(MEMBER_EVENT_TYPES.length).toBe(25);
+    expect(new Set(MEMBER_EVENT_TYPES).size).toBe(25);
   });
 });
 

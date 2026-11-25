@@ -31,7 +31,7 @@ const TO_ACTIVE: MemberEventInput[] = [
 ];
 
 describe('Story 3.9 — event vocabulary wiring', () => {
-  it('extends the vocabulary to 24 types including the two Life Events markers', () => {
+  it('extends the vocabulary to 25 types including the two Life Events markers', () => {
     // 14 (Story 3.1) + 2 (Story 3.9 Life Events markers, this story) + 3 (Story 10.10 moderation)
     // + 1 (Story 10.26 `member.personal_event_asserted`)
     // + 1 (Story 10.23 `member.restoration_discipline.imposed`).
@@ -47,9 +47,12 @@ describe('Story 3.9 — event vocabulary wiring', () => {
     // overlay: no status moves on a filing (§8.8 has no suspensive effect), and — the load-bearing
     // half — none moves on an `allowed` outcome either, because §8.8 makes an allowed appeal DIRECT a
     // restore rather than perform one. Same identity family, same reason.
+    // ⭐ Story 3.13's `member.identity_validation_recorded` takes it 24 → 25: a staff identity check in life, a
+    // non-transition marker (the `pending-valid → active` move rides the EXISTING `member.kyc_completed` arm, N7).
     // ⚠ This is the SECOND of the repo's two count fixtures; the other is in
     // `personal-event-assertion.test.ts`, and BOTH must move together or the pair itself goes stale.
-    expect(MEMBER_EVENT_TYPES).toHaveLength(24);
+    expect(MEMBER_EVENT_TYPES).toHaveLength(25);
+    expect(MEMBER_EVENT_TYPES).toContain('member.identity_validation_recorded');
     expect(MEMBER_EVENT_TYPES).toContain('member.address_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.posting_updated');
     expect(MEMBER_EVENT_TYPES).toContain('member.restoration_discipline.imposed');
